@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Quiz CAS-IN · Investigation Numérique</title>
+<style>
+:root {
+  --bg:#080c14;--surface:#0d1526;--surface2:#111d35;--border:#1e3058;
+  --cyan:#00e5cc;--gold:#f0c040;--red:#ff4060;--green:#30e88a;
+  --text:#ccd8f0;--dim:#6a80a8;
+  --easy:#30e88a;--medium:#f0c040;--hard:#ff4060;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+button{cursor:pointer;border:none;background:none;color:inherit;font-family:inherit}
+/* HEADER */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+.logo-text{font-size:15px;font-weight:800;color:var(--cyan);letter-spacing:1px}
+.header-sub{font-size:11px;color:var(--dim);flex:1}
+#score-display{font-size:18px;font-weight:700;color:var(--gold);white-space:nowrap}
+.hbtn{padding:6px 10px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--surface2);transition:.15s}
+.hbtn:hover{border-color:var(--cyan);color:var(--cyan)}
+/* LOADING */
+#loading{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* MAIN */
+#main{flex:1;display:none;flex-direction:column;max-width:680px;width:100%;margin:0 auto;padding:16px}
+/* TIMER */
+#timer-bar-wrap{height:4px;background:var(--border);border-radius:2px;margin-bottom:12px;display:none}
+#timer-bar{height:100%;width:100%;border-radius:2px;background:var(--cyan);transition:width 1s linear,background .3s}
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:12px}
+.card.easy{border-top:3px solid var(--easy)}
+.card.medium{border-top:3px solid var(--medium)}
+.card.hard{border-top:3px solid var(--hard)}
+.card-top{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.theme-tag{font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;background:#0a1020;border-left:3px solid currentColor}
+.diff-badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px}
+.diff-badge.easy{background:#0d2a1a;color:var(--easy)}
+.diff-badge.medium{background:#2a200a;color:var(--medium)}
+.diff-badge.hard{background:#2a0d15;color:var(--hard)}
+.spacer{flex:1}
+#bookmark-btn{font-size:18px;padding:2px 4px;line-height:1;transition:.15s}
+#bookmark-btn.active{color:var(--gold)}
+.question-text{font-size:15px;line-height:1.55;margin-bottom:6px}
+.multi-hint{font-size:11px;color:var(--dim);margin-bottom:10px;font-style:italic}
+/* CHOICES */
+#choices{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.choice-btn{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);text-align:left;font-size:14px;transition:.15s;width:100%}
+.choice-btn:hover:not(:disabled){border-color:var(--cyan);background:#0d1e36}
+.choice-btn.selected{border-color:var(--cyan);background:#0d1e36}
+.choice-btn.correct{border-color:var(--green)!important;background:#0a1e14!important;color:var(--green)}
+.choice-btn.wrong{border-color:var(--red)!important;background:#1e0a10!important;color:var(--red)}
+.choice-btn:disabled{opacity:.85;cursor:default}
+.choice-letter{width:22px;height:22px;border-radius:4px;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+/* ACTIONS */
+.action-row{display:flex;gap:8px;flex-wrap:wrap}
+#validate-btn{flex:1;padding:11px 16px;border-radius:8px;font-size:14px;font-weight:700;background:var(--cyan);color:#08101c;transition:.15s;min-width:100px}
+#validate-btn:hover{filter:brightness(1.1)}
+#validate-btn:disabled{opacity:.4;cursor:default}
+#skip-btn{padding:11px 14px;border-radius:8px;font-size:13px;border:1px solid var(--border);background:var(--surface2);color:var(--dim);transition:.15s}
+#skip-btn:hover{border-color:var(--dim);color:var(--text)}
+#next-btn{flex:1;padding:11px 16px;border-radius:8px;font-size:14px;font-weight:700;background:var(--surface2);border:1px solid var(--cyan);color:var(--cyan);display:none;transition:.15s}
+#next-btn:hover{background:#0d1e36}
+/* FEEDBACK */
+#feedback{display:none;padding:12px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;line-height:1.6}
+#feedback.ok{background:#0a1e14;border:1px solid var(--green);color:#b0f0c0}
+#feedback.ko{background:#1e0a10;border:1px solid var(--red);color:#f0b0b8}
+/* OVERLAYS */
+.overlay{display:none;position:fixed;inset:0;background:#000000bb;z-index:100;overflow-y:auto;padding:16px}
+.overlay.show{display:flex;align-items:flex-start;justify-content:center}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;width:100%;max-width:600px;margin:auto}
+.panel h2{font-size:16px;font-weight:700;margin-bottom:16px;color:var(--cyan)}
+.close-btn{float:right;font-size:18px;color:var(--dim);padding:0 4px;line-height:1}
+.close-btn:hover{color:var(--text)}
+/* SETTINGS */
+.fsec{margin-bottom:16px}
+.fsec h3{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:.15s;user-select:none}
+.chip.active{border-color:currentColor}
+.timer-opt{padding:6px 12px;border-radius:6px;font-size:13px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:.15s;margin-right:6px;margin-bottom:6px}
+.timer-opt.active{border-color:var(--cyan);color:var(--cyan)}
+.mode-btn{padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid var(--border);background:var(--surface2);transition:.15s;margin-right:6px;margin-bottom:6px}
+.mode-btn.active{border-color:var(--gold);color:var(--gold)}
+.apply-btn{width:100%;padding:11px;border-radius:8px;background:var(--cyan);color:#08101c;font-weight:700;font-size:14px;margin-top:12px;transition:.15s}
+.apply-btn:hover{filter:brightness(1.1)}
+/* EXAM */
+.exam-prog-bar{height:4px;background:var(--border);border-radius:2px;margin-top:4px}
+.exam-prog-fill{height:100%;background:var(--cyan);border-radius:2px;transition:width .3s}
+.exam-result-item{padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);margin-bottom:8px;font-size:13px}
+.exam-result-item.correct{border-color:var(--green)}
+.exam-result-item.wrong{border-color:var(--red)}
+/* BILAN */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.stat-val{font-size:24px;font-weight:700;color:var(--cyan)}
+.stat-lbl{font-size:11px;color:var(--dim);margin-top:2px}
+.diff-row{display:flex;gap:8px;margin-bottom:14px}
+.diff-pill{flex:1;padding:8px;border-radius:8px;text-align:center;background:var(--surface2);border:1px solid var(--border)}
+.diff-pill .dv{font-size:16px;font-weight:700}
+.diff-pill .dl{font-size:10px;color:var(--dim);margin-top:2px}
+.tbar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
+.tbar-name{width:90px;flex-shrink:0}
+.tbar-bg{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.tbar-fill{height:100%;border-radius:4px;transition:width .5s}
+.tbar-pct{width:34px;text-align:right;color:var(--dim)}
+#evo-canvas{width:100%;height:80px;display:block;margin:6px 0 12px}
+.flop-item{padding:8px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);margin-bottom:6px;font-size:12px}
+.flop-pct{color:var(--red);font-weight:700;margin-right:6px}
+/* MILESTONE */
+#milestone-overlay{position:fixed;inset:0;z-index:200;display:none;pointer-events:none}
+#milestone-overlay.show{display:block}
+#milestone-box{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:2px solid var(--gold);border-radius:16px;padding:24px 28px;text-align:center;max-width:300px;width:90%;pointer-events:all}
+#ms-emoji{font-size:48px;margin-bottom:8px}
+#ms-title{font-size:20px;font-weight:800;color:var(--gold);margin-bottom:4px}
+#ms-sub{font-size:13px;color:var(--dim);margin-bottom:8px}
+#ms-stats{font-size:13px;margin-bottom:14px}
+#ms-close{padding:8px 24px;border-radius:8px;background:var(--gold);color:#08101c;font-weight:700}
+#confetti-wrap{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+@keyframes cffall{to{transform:translateY(105vh) rotate(720deg);opacity:0}}
+/* INSTALL */
+#install-banner{display:none;background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 14px;font-size:12px;color:var(--dim);align-items:center;gap:8px}
+/* THEME COLORS via inline style, not CSS vars with special chars */
+@media(max-width:480px){#main{padding:10px}header{padding:8px 12px}}
+</style>
+</head>
+<body>
+
+<div id="install-banner">
+  💡 <strong>iPhone :</strong> Partager ⎙ → "Sur l'écran d'accueil"
+  <button onclick="this.parentElement.style.display='none';lsSet('installDismissed',true)" style="margin-left:auto;color:var(--cyan);font-weight:600">✕</button>
+</div>
+
+<header>
+  <span class="logo-text">CAS-IN</span>
+  <span class="header-sub">Investigation Numérique</span>
+  <span id="score-display">0 pts</span>
+  <button class="hbtn" onclick="openSettings()">⚙ Filtres</button>
+  <button class="hbtn" onclick="openExam()">📝 Examen</button>
+  <button class="hbtn" onclick="openBilan()">📊 Bilan</button>
+</header>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <span style="color:var(--dim);font-size:13px">Chargement des questions…</span>
+</div>
+
+<div id="main">
+  <div id="timer-bar-wrap"><div id="timer-bar"></div></div>
+  <div class="card" id="question-card">
+    <div class="card-top">
+      <span class="theme-tag" id="theme-tag"></span>
+      <span class="diff-badge" id="diff-badge"><span id="diff-text"></span> · <span id="pts-text"></span></span>
+      <span class="spacer"></span>
+      <button id="bookmark-btn" onclick="toggleBookmark()">☆</button>
+    </div>
+    <p class="question-text" id="question-text"></p>
+    <p class="multi-hint" id="multi-hint" style="display:none">Plusieurs réponses possibles</p>
+    <div id="choices"></div>
+    <div id="feedback"></div>
+    <div class="action-row">
+      <button id="validate-btn" onclick="validate()" disabled>Valider</button>
+      <button id="skip-btn" onclick="doSkip()">Passer ›</button>
+      <button id="next-btn" onclick="nextQuestion()">Question suivante →</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="overlay" id="settings-overlay">
+  <div class="panel">
+    <button class="close-btn" onclick="closeOverlay('settings-overlay')">✕</button>
+    <h2>⚙ Filtres &amp; Options</h2>
+    <div class="fsec"><h3>Thèmes</h3><div class="chips" id="theme-chips"></div></div>
+    <div class="fsec"><h3>Difficulté</h3><div class="chips" id="diff-chips"></div></div>
+    <div class="fsec"><h3>Chronomètre</h3><div id="timer-opts"></div></div>
+    <div class="fsec">
+      <h3>Mode</h3>
+      <button class="mode-btn" data-mode="normal" onclick="pickMode(this)">🎯 Normal</button>
+      <button class="mode-btn" data-mode="bookmarks" onclick="pickMode(this)">⭐ Favoris</button>
+      <button class="mode-btn" data-mode="errors" onclick="pickMode(this)">⚠ Erreurs</button>
+    </div>
+    <button class="apply-btn" onclick="applySettings()">Appliquer &amp; Recommencer</button>
+  </div>
+</div>
+
+<!-- EXAM -->
+<div class="overlay" id="exam-overlay">
+  <div class="panel">
+    <button class="close-btn" onclick="closeOverlay('exam-overlay')">✕</button>
+    <h2>📝 Mode Examen</h2>
+    <div id="exam-setup">
+      <div class="fsec">
+        <h3>Questions</h3>
+        <span class="chip active" data-n="10" onclick="pickExamN(this)">10</span>
+        <span class="chip" data-n="20" onclick="pickExamN(this)" style="margin-left:6px">20</span>
+        <span class="chip" data-n="30" onclick="pickExamN(this)" style="margin-left:6px">30</span>
+        <span class="chip" data-n="50" onclick="pickExamN(this)" style="margin-left:6px">50</span>
+      </div>
+      <div class="fsec"><h3>Thèmes</h3><div class="chips" id="exam-theme-chips"></div></div>
+      <button class="apply-btn" onclick="startExam()">Commencer l'examen</button>
+    </div>
+    <div id="exam-active" style="display:none">
+      <div id="exam-progress"></div>
+      <div class="card" id="exam-card" style="margin-top:10px">
+        <div class="card-top">
+          <span class="theme-tag" id="exam-theme-tag"></span>
+          <span class="diff-badge" id="exam-diff-badge"></span>
+        </div>
+        <p class="question-text" id="exam-question-text"></p>
+        <p class="multi-hint" id="exam-multi-hint" style="display:none">Plusieurs réponses possibles</p>
+        <div id="exam-choices"></div>
+      </div>
+      <button class="apply-btn" onclick="examNext()">Suivant →</button>
+    </div>
+    <div id="exam-results" style="display:none">
+      <div class="stat-grid" id="exam-stat-grid"></div>
+      <div id="exam-review"></div>
+      <button class="apply-btn" onclick="closeOverlay('exam-overlay')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- BILAN -->
+<div class="overlay" id="bilan-overlay">
+  <div class="panel">
+    <button class="close-btn" onclick="closeOverlay('bilan-overlay')">✕</button>
+    <h2>📊 Bilan</h2>
+    <div class="stat-grid" id="bilan-stats"></div>
+    <div class="diff-row" id="bilan-diffs"></div>
+    <h3 style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Par thème</h3>
+    <div id="theme-bars"></div>
+    <h3 style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px">Évolution</h3>
+    <canvas id="evo-canvas"></canvas>
+    <h3 style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Top questions ratées</h3>
+    <div id="flop-list"></div>
+    <button class="apply-btn" onclick="closeOverlay('bilan-overlay')">Fermer</button>
+  </div>
+</div>
+
+<!-- MILESTONE -->
+<div id="milestone-overlay">
+  <div id="confetti-wrap"></div>
+  <div id="milestone-box">
+    <div id="ms-emoji"></div>
+    <div id="ms-title"></div>
+    <div id="ms-sub"></div>
+    <div id="ms-stats"></div>
+    <button id="ms-close" onclick="closeMilestone()">Super !</button>
+  </div>
+</div>
+
+<script>
+// ── CONSTANTS ──────────────────────────────────────────
+const DIFF_LABELS = {easy:'Facile',medium:'Moyen',hard:'Difficile'};
+const DIFF_PTS    = {easy:1,medium:2,hard:3};
+const TC = {
+  'RÉSEAUX':'#7ab8ff','FAT':'#ff9f40','NTFS':'#c97df5','FORENSIQUE':'#00e5cc',
+  'CRYPTO':'#f0c040','WINDOWS':'#ff6b9d','OUTILS':'#80ff80','X-WAYS':'#e8a0ff',
+  'PROGRAMMES':'#ff9f7a','FILESYSTEMS':'#7affea','OSINT':'#ffd580'
+};
+const MILESTONES = [
+  {id:'m50', emoji:'🦉',title:'BIEN JOUÉ !',sub:'Never Out Of Sight !',minQ:50,minAcc:75},
+  {id:'m90', emoji:'🏆',title:'EXCEPTIONNEL !',sub:'Maîtrise parfaite',minQ:50,minAcc:90},
+  {id:'m100',emoji:'💯',title:'CENTAINE !',sub:'100 questions !',minQ:100,minAcc:75},
+  {id:'m200',emoji:'🎯',title:'MARATHON',sub:'200 questions !',minQ:200,minAcc:70},
+];
+let ALL_Q=[], ALL_T=[];
+
+// ── STATE ──────────────────────────────────────────────
+let S={
+  score:0,correct:0,total:0,streak:0,maxStreak:0,
+  answered:false,sel:new Set(),
+  curQ:null,curIdx:-1,
+  byDiff:{easy:{ok:0,tot:0},medium:{ok:0,tot:0},hard:{ok:0,tot:0}},
+  byTheme:{},errors:[],bookmarks:new Set(),
+  activeT:new Set(),activeD:new Set(['easy','medium','hard']),
+  timerSec:0,timerLeft:0,timerInt:null,
+  mode:'normal',pool:[],pi:0,qstats:{}
+};
+
+// ── STORAGE ────────────────────────────────────────────
+function lsGet(k,d){try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):d;}catch{return d;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+
+function loadPersist(){
+  S.bookmarks=new Set(lsGet('bm',[]));
+  S.timerSec=lsGet('timer',0);
+  const at=lsGet('at',ALL_T); S.activeT=new Set(at.filter(t=>ALL_T.includes(t)));
+  if(!S.activeT.size) S.activeT=new Set(ALL_T);
+  S.activeD=new Set(lsGet('ad',['easy','medium','hard']));
+  S.qstats=lsGet('qs',{});
+}
+function savePersist(){
+  lsSet('bm',[...S.bookmarks]);lsSet('timer',S.timerSec);
+  lsSet('at',[...S.activeT]);lsSet('ad',[...S.activeD]);lsSet('qs',S.qstats);
+}
+function saveSession(){
+  const h=lsGet('sessions',[]);
+  const acc=S.total?Math.round(S.correct/S.total*100):0;
+  h.push({date:new Date().toLocaleDateString('fr'),score:S.score,acc,total:S.total});
+  if(h.length>20)h.shift(); lsSet('sessions',h);
+  const th=lsGet('th',{});
+  ALL_T.forEach(t=>{
+    const b=S.byTheme[t];if(!b||!b.tot)return;
+    if(!th[t])th[t]=[];
+    th[t].push(Math.round(b.ok/b.tot*100));
+    if(th[t].length>12)th[t].shift();
+  });
+  lsSet('th',th);
+}
+
+// ── POOL ───────────────────────────────────────────────
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=0|Math.random()*(i+1);[b[i],b[j]]=[b[j],b[i]];}return b;}
+
+function buildPool(){
+  let p;
+  if(S.mode==='bookmarks') p=[...S.bookmarks].map(i=>({q:ALL_Q[i],idx:i})).filter(x=>x.q);
+  else if(S.mode==='errors') p=S.errors.map(i=>({q:ALL_Q[i],idx:i})).filter(x=>x.q);
+  else p=ALL_Q.map((q,i)=>({q,idx:i})).filter(x=>S.activeT.has(x.q.theme)&&S.activeD.has(x.q.diff));
+  if(!p.length) p=ALL_Q.map((q,i)=>({q,idx:i}));
+  if(S.mode==='normal'){
+    const bd={easy:[],medium:[],hard:[]};
+    p.forEach(x=>bd[x.q.diff].push(x));
+    Object.values(bd).forEach(shuffle);
+    const r=[],cnt={easy:0,medium:0,hard:0},cy=['easy','medium','hard'];
+    let ci=0;
+    while(r.length<p.length&&ci<p.length*4){
+      const d=cy[ci%3];
+      if(bd[d].length){r.push(bd[d][cnt[d]%bd[d].length]);cnt[d]++;}
+      ci++;
+    }
+    S.pool=r;
+  } else S.pool=shuffle(p);
+  S.pi=0;
+}
+function getNext(){
+  if(S.pi>=S.pool.length){if(S.mode==='normal')buildPool();else S.pi=0;}
+  return S.pool[S.pi++]||{q:ALL_Q[0],idx:0};
+}
+
+// ── TIMER ──────────────────────────────────────────────
+function stopTimer(){
+  if(S.timerInt){clearInterval(S.timerInt);S.timerInt=null;}
+  document.getElementById('timer-bar-wrap').style.display=S.timerSec>0?'':'none';
+}
+function startTimer(){
+  stopTimer();if(!S.timerSec)return;
+  const wrap=document.getElementById('timer-bar-wrap'),bar=document.getElementById('timer-bar');
+  wrap.style.display='';S.timerLeft=S.timerSec;
+  bar.style.width='100%';bar.style.background='var(--cyan)';
+  S.timerInt=setInterval(()=>{
+    S.timerLeft--;
+    const p=Math.max(0,S.timerLeft/S.timerSec*100);
+    bar.style.width=p+'%';
+    bar.style.background=p<33?'var(--red)':p<66?'var(--gold)':'var(--cyan)';
+    if(S.timerLeft<=0){stopTimer();if(!S.answered)doSkip();}
+  },1000);
+}
+
+// ── RENDER ─────────────────────────────────────────────
+function renderQuestion(item){
+  const {q,idx}=item;
+  S.curQ=q;S.curIdx=idx;S.answered=false;S.sel=new Set();
+
+  document.getElementById('question-card').className='card '+q.diff;
+  const tt=document.getElementById('theme-tag');
+  tt.textContent='▸ '+q.theme;tt.style.color=TC[q.theme]||'#ccd8f0';
+  const db=document.getElementById('diff-badge');
+  db.className='diff-badge '+q.diff;
+  document.getElementById('diff-text').textContent=DIFF_LABELS[q.diff];
+  document.getElementById('pts-text').textContent=DIFF_PTS[q.diff]+' pt'+(DIFF_PTS[q.diff]>1?'s':'');
+  document.getElementById('question-text').textContent=q.q;
+  document.getElementById('multi-hint').style.display=q.type==='multi'?'':'none';
+
+  const bb=document.getElementById('bookmark-btn');
+  bb.textContent=S.bookmarks.has(idx)?'⭐':'☆';
+  bb.className='bookmark-btn'+(S.bookmarks.has(idx)?' active':'');
+
+  const ch=document.getElementById('choices');ch.innerHTML='';
+  const L=['A','B','C','D','E'];
+  q.opts.forEach((opt,i)=>{
+    const btn=document.createElement('button');
+    btn.className='choice-btn';btn.dataset.idx=i;
+    btn.innerHTML=`<span class="choice-letter">${L[i]}</span><span>${opt}</span>`;
+    btn.addEventListener('click',()=>toggleChoice(btn,i,q.type));
+    ch.appendChild(btn);
+  });
+
+  document.getElementById('feedback').style.display='none';
+  document.getElementById('feedback').innerHTML='';
+  document.getElementById('validate-btn').style.display='';
+  document.getElementById('validate-btn').disabled=true;
+  document.getElementById('skip-btn').style.display='';
+  document.getElementById('next-btn').style.display='none';
+  startTimer();
+}
+
+function toggleChoice(btn,i,type){
+  if(S.answered)return;
+  if(type==='single'){
+    document.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('selected'));
+    S.sel=new Set([i]);
+  } else {
+    S.sel.has(i)?(S.sel.delete(i),btn.classList.remove('selected')):(S.sel.add(i));
+  }
+  btn.classList.toggle('selected',S.sel.has(i));
+  document.getElementById('validate-btn').disabled=S.sel.size===0;
+}
+
+// ── VALIDATE ───────────────────────────────────────────
+function validate(){
+  if(S.answered||!S.sel.size)return;
+  stopTimer();S.answered=true;
+  const q=S.curQ,sel=[...S.sel].sort(),ans=[...q.answers].sort();
+  const ok=sel.length===ans.length&&sel.every((v,i)=>v===ans[i]);
+  const pts=ok?DIFF_PTS[q.diff]:0;
+  S.total++;
+  if(ok){S.score+=pts;S.correct++;S.streak++;S.maxStreak=Math.max(S.maxStreak,S.streak);}
+  else{S.streak=0;S.errors.push(S.curIdx);}
+  S.byDiff[q.diff].tot++;if(ok)S.byDiff[q.diff].ok++;
+  if(!S.byTheme[q.theme])S.byTheme[q.theme]={ok:0,tot:0};
+  S.byTheme[q.theme].tot++;if(ok)S.byTheme[q.theme].ok++;
+  const qs=S.qstats[S.curIdx]||{ok:0,tot:0};
+  qs.tot++;if(ok)qs.ok++;S.qstats[S.curIdx]=qs;
+
+  document.getElementById('score-display').textContent=S.score+' pts';
+
+  document.querySelectorAll('.choice-btn').forEach(btn=>{
+    const i=+btn.dataset.idx;btn.disabled=true;
+    if(ans.includes(i))btn.classList.add('correct');
+    else if(sel.includes(i))btn.classList.add('wrong');
+  });
+
+  const fb=document.getElementById('feedback');
+  fb.className='feedback '+(ok?'ok':'ko');
+  fb.innerHTML=(ok?'✅ Correct !':'❌ Incorrect')+(q.expl?'<br><br>'+q.expl:'');
+  fb.style.display='block';
+
+  document.getElementById('validate-btn').style.display='none';
+  document.getElementById('skip-btn').style.display='none';
+  document.getElementById('next-btn').style.display='';
+
+  playSound(ok);savePersist();checkMilestone();
+}
+
+function doSkip(){stopTimer();playSound(null);nextQuestion();}
+function nextQuestion(){renderQuestion(getNext());}
+
+// ── BOOKMARK ───────────────────────────────────────────
+function toggleBookmark(){
+  const idx=S.curIdx;
+  S.bookmarks.has(idx)?S.bookmarks.delete(idx):S.bookmarks.add(idx);
+  const bb=document.getElementById('bookmark-btn');
+  bb.textContent=S.bookmarks.has(idx)?'⭐':'☆';
+  bb.className='bookmark-btn'+(S.bookmarks.has(idx)?' active':'');
+  savePersist();
+}
+
+// ── SOUND ──────────────────────────────────────────────
+let _ac=null;
+function ac(){if(!_ac)try{_ac=new(window.AudioContext||window.webkitAudioContext)();}catch{}return _ac;}
+function playSound(ok){
+  const a=ac();if(!a)return;const t=a.currentTime;
+  if(ok===null){const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=400;g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+.2);o.start(t);o.stop(t+.2);}
+  else if(ok){[523,659,784].forEach((f,i)=>{const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=f;g.gain.setValueAtTime(.12,t+i*.08);g.gain.exponentialRampToValueAtTime(.001,t+i*.08+.2);o.start(t+i*.08);o.stop(t+i*.08+.2);});}
+  else{const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(110,t+.3);g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.3);o.start(t);o.stop(t+.3);}
+}
+
+// ── SETTINGS ───────────────────────────────────────────
+function openSettings(){
+  const tc=document.getElementById('theme-chips');tc.innerHTML='';
+  ALL_T.forEach(t=>{
+    const c=document.createElement('span');c.className='chip'+(S.activeT.has(t)?' active':'');
+    c.textContent=t;c.style.color=TC[t]||'#fff';if(S.activeT.has(t))c.style.borderColor=TC[t]||'#fff';
+    c.onclick=()=>{if(S.activeT.has(t)){S.activeT.delete(t);c.classList.remove('active');c.style.borderColor='';}else{S.activeT.add(t);c.classList.add('active');c.style.borderColor=TC[t]||'#fff';}};
+    tc.appendChild(c);
+  });
+  const dc=document.getElementById('diff-chips');dc.innerHTML='';
+  ['easy','medium','hard'].forEach(d=>{
+    const col=d==='easy'?'var(--easy)':d==='medium'?'var(--medium)':'var(--hard)';
+    const c=document.createElement('span');c.className='chip'+(S.activeD.has(d)?' active':'');
+    c.textContent=DIFF_LABELS[d];c.style.color=col;if(S.activeD.has(d))c.style.borderColor=col;
+    c.onclick=()=>{if(S.activeD.has(d)){S.activeD.delete(d);c.classList.remove('active');c.style.borderColor='';}else{S.activeD.add(d);c.classList.add('active');c.style.borderColor=col;}};
+    dc.appendChild(c);
+  });
+  const to=document.getElementById('timer-opts');to.innerHTML='';
+  [{l:'Off',v:0},{l:'30s',v:30},{l:'60s',v:60},{l:'90s',v:90},{l:'2 min',v:120}].forEach(o=>{
+    const b=document.createElement('button');b.className='timer-opt'+(S.timerSec===o.v?' active':'');
+    b.textContent=o.l;b.onclick=()=>{S.timerSec=o.v;to.querySelectorAll('.timer-opt').forEach(x=>x.classList.remove('active'));b.classList.add('active');};
+    to.appendChild(b);
+  });
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===S.mode));
+  document.getElementById('settings-overlay').classList.add('show');
+}
+function pickMode(btn){document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');S.mode=btn.dataset.mode;}
+function applySettings(){
+  savePersist();saveSession();
+  S.score=0;S.correct=0;S.total=0;S.streak=0;
+  S.byDiff={easy:{ok:0,tot:0},medium:{ok:0,tot:0},hard:{ok:0,tot:0}};
+  S.byTheme={};
+  document.getElementById('score-display').textContent='0 pts';
+  buildPool();closeOverlay('settings-overlay');renderQuestion(getNext());
+}
+
+// ── EXAM ───────────────────────────────────────────────
+let EX={n:10,themes:new Set(),pool:[],idx:0,answers:[],sel:new Set()};
+function openExam(){
+  EX.themes=new Set(ALL_T);EX.n=10;
+  const tc=document.getElementById('exam-theme-chips');tc.innerHTML='';
+  ALL_T.forEach(t=>{
+    const c=document.createElement('span');c.className='chip active';c.textContent=t;c.style.color=TC[t]||'#fff';c.style.borderColor=TC[t]||'#fff';
+    c.onclick=()=>{if(EX.themes.has(t)){EX.themes.delete(t);c.classList.remove('active');c.style.borderColor='';}else{EX.themes.add(t);c.classList.add('active');c.style.borderColor=TC[t]||'#fff';}};
+    tc.appendChild(c);
+  });
+  document.querySelectorAll('[data-n]').forEach(c=>c.classList.toggle('active',+c.dataset.n===10));
+  document.getElementById('exam-setup').style.display='';
+  document.getElementById('exam-active').style.display='none';
+  document.getElementById('exam-results').style.display='none';
+  document.getElementById('exam-overlay').classList.add('show');
+}
+function pickExamN(c){document.querySelectorAll('[data-n]').forEach(x=>x.classList.remove('active'));c.classList.add('active');EX.n=+c.dataset.n;}
+function startExam(){
+  let p=ALL_Q.map((q,i)=>({q,idx:i})).filter(x=>EX.themes.has(x.q.theme));
+  EX.pool=shuffle(p).slice(0,EX.n);EX.idx=0;EX.answers=[];
+  document.getElementById('exam-setup').style.display='none';
+  document.getElementById('exam-active').style.display='';
+  renderExamQ();
+}
+function renderExamQ(){
+  const {q}=EX.pool[EX.idx];EX.sel=new Set();
+  const prog=document.getElementById('exam-progress');
+  prog.innerHTML=`<span style="font-size:12px;color:var(--dim)">${EX.idx+1} / ${EX.pool.length}</span><div class="exam-prog-bar"><div class="exam-prog-fill" style="width:${EX.idx/EX.pool.length*100}%"></div></div>`;
+  const tt=document.getElementById('exam-theme-tag');tt.textContent='▸ '+q.theme;tt.style.color=TC[q.theme]||'#fff';
+  document.getElementById('exam-diff-badge').textContent=DIFF_LABELS[q.diff];
+  document.getElementById('exam-diff-badge').className='diff-badge '+q.diff;
+  document.getElementById('exam-question-text').textContent=q.q;
+  document.getElementById('exam-multi-hint').style.display=q.type==='multi'?'':'none';
+  const ch=document.getElementById('exam-choices');ch.innerHTML='';
+  const L=['A','B','C','D','E'];
+  q.opts.forEach((opt,i)=>{
+    const btn=document.createElement('button');btn.className='choice-btn';btn.dataset.idx=i;
+    btn.innerHTML=`<span class="choice-letter">${L[i]}</span><span>${opt}</span>`;
+    btn.onclick=()=>{
+      if(q.type==='single'){ch.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('selected'));EX.sel=new Set([i]);}
+      else{EX.sel.has(i)?(EX.sel.delete(i),btn.classList.remove('selected')):(EX.sel.add(i));}
+      btn.classList.toggle('selected',EX.sel.has(i));
+    };
+    ch.appendChild(btn);
+  });
+}
+function examNext(){
+  const {q,idx}=EX.pool[EX.idx];
+  const sel=[...EX.sel].sort(),ans=[...q.answers].sort();
+  const ok=sel.length===ans.length&&sel.every((v,i)=>v===ans[i]);
+  EX.answers.push({q,idx,sel,ans,ok});EX.idx++;
+  if(EX.idx>=EX.pool.length){showExamResults();return;}
+  renderExamQ();
+}
+function showExamResults(){
+  document.getElementById('exam-active').style.display='none';
+  document.getElementById('exam-results').style.display='';
+  const n=EX.answers.filter(a=>a.ok).length,pct=Math.round(n/EX.answers.length*100);
+  document.getElementById('exam-stat-grid').innerHTML=
+    `<div class="stat-box"><div class="stat-val">${n}/${EX.answers.length}</div><div class="stat-lbl">Bonnes réponses</div></div>
+     <div class="stat-box"><div class="stat-val" style="color:${pct>=70?'var(--green)':'var(--red)'}">${pct}%</div><div class="stat-lbl">Score</div></div>`;
+  const rev=document.getElementById('exam-review');
+  rev.innerHTML='<h3 style="font-size:11px;color:var(--dim);text-transform:uppercase;margin-bottom:8px">Révision</h3>';
+  EX.answers.forEach((a,i)=>{
+    const d=document.createElement('div');d.className='exam-result-item '+(a.ok?'correct':'wrong');
+    d.innerHTML=`<strong>${i+1}. ${a.q.q}</strong><br>
+      <span style="color:var(--dim)">Ta réponse : ${a.sel.map(s=>a.q.opts[s]).join(', ')||'—'}</span>
+      ${!a.ok?`<br><span style="color:var(--green)">Bonne réponse : ${a.ans.map(s=>a.q.opts[s]).join(', ')}</span>`:''}
+      ${a.q.expl?`<br><span style="color:var(--dim);font-size:11px">${a.q.expl}</span>`:''}`;
+    rev.appendChild(d);
+  });
+}
+
+// ── BILAN ──────────────────────────────────────────────
+function openBilan(){
+  const acc=S.total?Math.round(S.correct/S.total*100):0;
+  document.getElementById('bilan-stats').innerHTML=
+    `<div class="stat-box"><div class="stat-val">${S.score}</div><div class="stat-lbl">Score</div></div>
+     <div class="stat-box"><div class="stat-val">${S.total}</div><div class="stat-lbl">Questions</div></div>
+     <div class="stat-box"><div class="stat-val" style="color:${acc>=70?'var(--green)':'var(--red)'}">${acc}%</div><div class="stat-lbl">Précision</div></div>
+     <div class="stat-box"><div class="stat-val" style="color:var(--gold)">${S.maxStreak}</div><div class="stat-lbl">Meilleure série</div></div>`;
+  document.getElementById('bilan-diffs').innerHTML=['easy','medium','hard'].map(d=>{
+    const {ok,tot}=S.byDiff[d];const p=tot?Math.round(ok/tot*100):0;
+    const col=d==='easy'?'var(--easy)':d==='medium'?'var(--medium)':'var(--hard)';
+    return `<div class="diff-pill"><div class="dv" style="color:${col}">${p}%</div><div class="dl">${DIFF_LABELS[d]}</div></div>`;
+  }).join('');
+  const tb=document.getElementById('theme-bars');tb.innerHTML='';
+  ALL_T.forEach(t=>{
+    const {ok,tot}=S.byTheme[t]||{ok:0,tot:0};const p=tot?Math.round(ok/tot*100):0;
+    const row=document.createElement('div');row.className='tbar-row';
+    row.innerHTML=`<span class="tbar-name" style="color:${TC[t]||'#fff'}">${t}</span>
+      <div class="tbar-bg"><div class="tbar-fill" style="width:${p}%;background:${TC[t]||'#fff'}"></div></div>
+      <span class="tbar-pct">${tot?p+'%':'—'}</span>`;
+    tb.appendChild(row);
+  });
+  // Evo graph
+  const c=document.getElementById('evo-canvas');
+  const ctx=c.getContext('2d');
+  c.width=c.offsetWidth||560;c.height=80;ctx.clearRect(0,0,c.width,c.height);
+  const hist=lsGet('sessions',[]);
+  if(hist.length>=2){
+    const vals=hist.map(h=>h.acc),n=vals.length;
+    const xp=i=>i*(c.width/(n-1));
+    const yp=v=>c.height-6-(v/100)*(c.height-12);
+    ctx.strokeStyle='#00e5cc';ctx.lineWidth=2;ctx.beginPath();
+    vals.forEach((v,i)=>i===0?ctx.moveTo(xp(i),yp(v)):ctx.lineTo(xp(i),yp(v)));
+    ctx.stroke();
+    vals.forEach((v,i)=>{ctx.fillStyle='#00e5cc';ctx.beginPath();ctx.arc(xp(i),yp(v),3,0,Math.PI*2);ctx.fill();ctx.fillStyle='#6a80a8';ctx.font='10px sans-serif';ctx.fillText(v+'%',xp(i)-8,yp(v)-6);});
+  } else {ctx.fillStyle='#6a80a8';ctx.font='12px sans-serif';ctx.fillText('Pas encore assez de sessions',10,40);}
+  // Flop
+  const fl=document.getElementById('flop-list');fl.innerHTML='';
+  const flops=Object.entries(S.qstats).filter(([,s])=>s.tot>=2&&s.ok/s.tot<.6)
+    .sort((a,b)=>a[1].ok/a[1].tot-b[1].ok/b[1].tot).slice(0,5);
+  if(!flops.length)fl.innerHTML='<p style="font-size:12px;color:var(--dim)">Pas encore assez de données.</p>';
+  else flops.forEach(([idx,s])=>{
+    const q=ALL_Q[idx];if(!q)return;
+    const d=document.createElement('div');d.className='flop-item';
+    d.innerHTML=`<span class="flop-pct">${Math.round(s.ok/s.tot*100)}%</span>${q.q.substring(0,80)}…`;
+    fl.appendChild(d);
+  });
+  document.getElementById('bilan-overlay').classList.add('show');
+}
+
+// ── MILESTONES ─────────────────────────────────────────
+function checkMilestone(){
+  if(!S.total)return;
+  const acc=Math.round(S.correct/S.total*100);
+  const shown=lsGet('ms',[]);
+  MILESTONES.forEach(m=>{
+    if(shown.includes(m.id))return;
+    if(S.total>=m.minQ&&acc>=m.minAcc){
+      shown.push(m.id);lsSet('ms',shown);
+      document.getElementById('ms-emoji').textContent=m.emoji;
+      document.getElementById('ms-title').textContent=m.title;
+      document.getElementById('ms-sub').textContent=m.sub;
+      document.getElementById('ms-stats').textContent=S.total+' questions · '+acc+'% de réussite';
+      document.getElementById('milestone-overlay').classList.add('show');
+      launchConfetti();
+    }
+  });
+}
+function closeMilestone(){document.getElementById('milestone-overlay').classList.remove('show');document.getElementById('confetti-wrap').innerHTML='';}
+function launchConfetti(){
+  const w=document.getElementById('confetti-wrap');w.innerHTML='';
+  const cols=['#00e5cc','#f0c040','#ff6b9d','#30e88a','#7ab8ff'];
+  for(let i=0;i<60;i++){
+    const p=document.createElement('div');const sz=6+Math.random()*6;
+    p.style.cssText=`position:absolute;width:${sz}px;height:${sz}px;border-radius:${Math.random()>.5?'50%':'2px'};background:${cols[0|Math.random()*5]};left:${Math.random()*100}%;top:-10px;animation:cffall ${1.5+Math.random()*2}s ${Math.random()}s forwards`;
+    w.appendChild(p);
+  }
+}
+
+// ── HELPERS ────────────────────────────────────────────
+function closeOverlay(id){document.getElementById(id).classList.remove('show');}
+
+// ── BOOT ───────────────────────────────────────────────
+fetch('questions.json')
+  .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+  .then(data=>{
+    ALL_Q=data;
+    ALL_T=[...new Set(ALL_Q.map(q=>q.theme))].sort();
+    ALL_T.forEach(t=>{S.byTheme[t]={ok:0,tot:0};});
+    loadPersist();
+    // iOS install banner
+    if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.navigator.standalone&&!lsGet('installDismissed',false)){
+      document.getElementById('install-banner').style.display='flex';
+    }
+    buildPool();
+    document.getElementById('loading').style.display='none';
+    document.getElementById('main').style.display='flex';
+    renderQuestion(getNext());
+  })
+  .catch(err=>{
+    document.getElementById('loading').innerHTML=`
+      <div style="text-align:center;padding:20px;max-width:380px">
+        <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+        <p style="font-weight:700;color:var(--red);margin-bottom:8px">Impossible de charger les questions</p>
+        <p style="font-size:13px;color:var(--dim);margin-bottom:8px">${err.message}</p>
+        <p style="font-size:12px;color:var(--dim)">Vérifiez que <code style="background:#ffffff15;padding:2px 5px;border-radius:3px">questions.json</code> est dans le même dossier que <code style="background:#ffffff15;padding:2px 5px;border-radius:3px">index.html</code>.</p>
+      </div>`;
+  });
+</script>
+</body>
+</html>
