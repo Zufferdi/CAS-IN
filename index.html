@@ -336,7 +336,7 @@ const DIFF_PTS    = {easy:1,medium:2,hard:3};
 const TC = {
   'RÉSEAUX':'#7ab8ff','FAT':'#ff9f40','NTFS':'#c97df5','FORENSIQUE':'#00e5cc',
   'CRYPTO':'#f0c040','WINDOWS':'#ff6b9d','OUTILS':'#80ff80','X-WAYS':'#e8a0ff',
-  'PROGRAMMES':'#ff9f7a','FILESYSTEMS':'#7affea','OSINT':'#ffd580'
+  'PROGRAMMES':'#ff9f7a','FILESYSTEMS':'#7affea','OSINT':'#ffd580','DROIT':'#ff8c42'
 };
 const MILESTONES = [
   {id:'m50', emoji:'🦉',title:'BIEN JOUÉ !',sub:'Never Out Of Sight !',minQ:50,minAcc:75},
@@ -440,7 +440,7 @@ function startTimer(){
 // ── RENDER ─────────────────────────────────────────────
 function renderQuestion(item){
   const {q,idx}=item;
-  S.curQ=q;S.curIdx=idx;S.answered=false;S.sel=new Set();
+  S.curQ=q;S.curIdx=idx;S.answered=false;S.sel=new Set();S.selCorrect=new Map();
 
   document.getElementById('question-card').className='card '+q.diff;
   const tt=document.getElementById('theme-tag');
@@ -458,11 +458,18 @@ function renderQuestion(item){
 
   const ch=document.getElementById('choices');ch.innerHTML='';
   const L=['A','B','C','D','E'];
-  q.opts.forEach((opt,i)=>{
+  // Shuffle options — new order each time, remap correct answers
+  const origIdx=q.opts.map((_,i)=>i);
+  const shuffled=[...origIdx];
+  for(let i=shuffled.length-1;i>0;i--){const j=0|Math.random()*(i+1);[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
+  // shuffled[newPos] = originalIdx
+  const ansSet=new Set(q.answers);
+  shuffled.forEach((origI,newI)=>{
     const btn=document.createElement('button');
-    btn.className='choice-btn';btn.dataset.idx=i;
-    btn.innerHTML=`<span class="choice-letter">${L[i]}</span><span>${opt}</span>`;
-    btn.addEventListener('click',()=>toggleChoice(btn,i,q.type));
+    btn.className='choice-btn';btn.dataset.idx=newI;btn.dataset.origIdx=origI;
+    btn.innerHTML=`<span class="choice-letter">${L[newI]}</span><span>${q.opts[origI]}</span>`;
+    const isCorrect=ansSet.has(origI);
+    btn.addEventListener('click',()=>toggleChoice(btn,newI,q.type,isCorrect));
     ch.appendChild(btn);
   });
 
@@ -479,16 +486,19 @@ function renderQuestion(item){
   startTimer();
 }
 
-function toggleChoice(btn,i,type){
+function toggleChoice(btn,i,type,isCorrect){
   if(S.answered)return;
+  // Track selections as {newIdx, isCorrect}
   if(type==='single'){
     document.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('selected'));
     S.sel=new Set([i]);
+    S.selCorrect=new Map([[i,isCorrect]]);
     btn.classList.add('selected');
-    // Auto-validate for single choice
     validate();
   } else {
-    S.sel.has(i)?(S.sel.delete(i),btn.classList.remove('selected')):(S.sel.add(i),btn.classList.add('selected'));
+    if(!S.selCorrect)S.selCorrect=new Map();
+    if(S.sel.has(i)){S.sel.delete(i);S.selCorrect.delete(i);btn.classList.remove('selected');}
+    else{S.sel.add(i);S.selCorrect.set(i,isCorrect);btn.classList.add('selected');}
     const vb=document.getElementById('validate-btn');
     vb.disabled=S.sel.size===0;
     vb.textContent=S.sel.size>0?'Valider ('+S.sel.size+' sél.)':'Valider';
@@ -499,8 +509,14 @@ function toggleChoice(btn,i,type){
 function validate(){
   if(S.answered||!S.sel.size)return;
   stopTimer();S.answered=true;
-  const q=S.curQ,sel=[...S.sel].sort(),ans=[...q.answers].sort();
-  const ok=sel.length===ans.length&&sel.every((v,i)=>v===ans[i]);
+  const q=S.curQ;
+  // Check correctness via isCorrect flags (works regardless of shuffle order)
+  const selCorrect=S.selCorrect||new Map();
+  const numCorrectSelected=[...selCorrect.values()].filter(Boolean).length;
+  const numCorrectTotal=q.answers.length;
+  const numSelected=S.sel.size;
+  const ok=numCorrectSelected===numCorrectTotal&&numSelected===numCorrectTotal;
+  const sel=[...S.sel],ans=[];// kept for compat
   const pts=ok?DIFF_PTS[q.diff]:0;
   S.total++;
   if(ok){S.score+=pts;S.correct++;S.streak++;S.maxStreak=Math.max(S.maxStreak,S.streak);}
@@ -514,9 +530,13 @@ function validate(){
   document.getElementById('score-display').textContent=S.score+' pts';
 
   document.querySelectorAll('.choice-btn').forEach(btn=>{
-    const i=+btn.dataset.idx;btn.disabled=true;
-    if(ans.includes(i))btn.classList.add('correct');
-    else if(sel.includes(i))btn.classList.add('wrong');
+    btn.disabled=true;
+    const origI=+btn.dataset.origIdx;
+    const newI=+btn.dataset.idx;
+    const isCorrectBtn=q.answers.includes(origI);
+    const wasSelected=S.sel.has(newI);
+    if(isCorrectBtn)btn.classList.add('correct');
+    else if(wasSelected)btn.classList.add('wrong');
   });
 
   const fb=document.getElementById('feedback');
