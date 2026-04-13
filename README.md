@@ -8,7 +8,7 @@ Application web de révision pour le **Certificate of Advanced Studies en Invest
 
 ## 📚 Contenu des questions
 
-Plus de **800 questions** à choix multiples couvrant l'ensemble des modules du CAS-IN :
+Plus de **1200 questions** à choix multiples couvrant l'ensemble des modules du CAS-IN :
 
 | Thème | Description |
 |---|---|
