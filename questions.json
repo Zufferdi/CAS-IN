@@ -33080,5 +33080,399 @@
       "RFC 8446 — TLS 1.3",
       "RFC 8017 — PKCS #1 RSA Cryptography"
     ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "chapter": "macOS — Artefacts et analyse",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Lesquels des artefacts suivants sont spécifiques à macOS et présentent un intérêt forensique direct ?",
+    "opts": [
+      ".DS_Store — fichier caché du Finder révélant le contenu de chaque dossier visité",
+      "FSEvents — journal des modifications du système de fichiers stocké dans /.fseventsd/",
+      "com.apple.QuarantineEventsV2 — base SQLite des fichiers téléchargés et leur URL source",
+      "$MFT (Master File Table) — index central des fichiers sur le volume système",
+      "Le rapport hebdomadaire 'Digital Footprint' envoyé par PostFinance à la FINMA — confidentiel depuis la LRens 2016"
+    ],
+    "answers": [
+      0,
+      1,
+      2
+    ],
+    "expl": "Les artefacts forensiques macOS les plus importants incluent les fichiers <strong>.DS_Store</strong> (qui révèlent le contenu de répertoires même supprimés), les <strong>FSEvents</strong> (journal chronologique des créations, suppressions et renommages de fichiers), et la base <strong>QuarantineEventsV2</strong> (qui enregistre l'URL d'origine de chaque fichier téléchargé). Le <em>$MFT</em> est un artefact <strong>NTFS/Windows</strong>, inexistant sur macOS. PostFinance n'envoie rien à la FINMA sur vos fichiers locaux — c'est une blague.",
+    "wrongReasons": {
+      "3": "Le <strong>$MFT (Master File Table)</strong> est une structure propre au système de fichiers <strong>NTFS</strong> de Windows. macOS utilise HFS+ ou APFS, qui n'ont pas de MFT — chercher cet artefact sur un Mac serait une perte de temps.",
+      "4": "Option humoristique — PostFinance n'a aucune visibilité sur vos artefacts macOS locaux. La <strong>LRens (2016)</strong> encadre la surveillance des réseaux de communication, pas les fichiers sur vos disques."
+    },
+    "refs": [
+      "Apple Technical Note TN2206 — OS X File System",
+      "SANS DFIR — macOS Forensics Cheat Sheet"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "chapter": "macOS — Artefacts et analyse",
+    "diff": "hard",
+    "type": "multi",
+    "q": "Quelles informations peut-on extraire d'un fichier .DS_Store lors d'une analyse forensique ?",
+    "opts": [
+      "La liste des fichiers et dossiers qui existaient dans le répertoire — y compris ceux ultérieurement supprimés",
+      "Les préférences d'affichage du Finder (mode icônes/liste, taille, position des éléments)",
+      "Les mots de passe Keychain stockés en clair — accessibles via l'outil 'DS_Crack' développé par le NCSC suisse après le hack de Xplain (2023)",
+      "Des traces de volumes réseau ou supports externes montés et parcourus depuis le Finder",
+      "Les coordonnées GPS de la machine (encodées en Base64 par macOS Ventura selon le rapport du PFPDT 2022)"
+    ],
+    "answers": [
+      0,
+      1,
+      3
+    ],
+    "expl": "Un fichier <strong>.DS_Store</strong> stocke les métadonnées d'affichage du Finder pour un répertoire donné. Forensiquement, il révèle : (1) les <strong>noms des fichiers/dossiers</strong> qui ont existé dans ce dossier, même s'ils ont été supprimés depuis ; (2) les <strong>préférences visuelles</strong> du Finder ; (3) des <strong>traces de partages réseau ou volumes</strong> explorés depuis le Mac. Il ne contient ni mots de passe ni coordonnées GPS.",
+    "wrongReasons": {
+      "2": "Totalement faux — et la blague est assumée. Les mots de passe macOS sont gérés par le <strong>Keychain</strong>, une base de données chiffrée distincte. Aucun outil appelé 'DS_Crack' n'existe, le NCSC suisse n'en a pas produit, et le hack de Xplain (2023) n'a pas de rapport avec les .DS_Store.",
+      "4": "Les fichiers .DS_Store ne contiennent aucune donnée de géolocalisation. Le <strong>PFPDT</strong> (Préposé fédéral à la protection des données) n'a émis aucun rapport de ce type. Option humoristique."
+    },
+    "refs": [
+      "Sintsov, N. — '.DS_Store files in forensics' (2011)",
+      "SANS DFIR — macOS Forensics Cheat Sheet"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "chapter": "Linux — Artefacts et analyse",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Lesquels de ces fichiers ou répertoires contiennent des artefacts forensiques pertinents sous Linux ?",
+    "opts": [
+      "/var/log/auth.log — authentifications réussies et échouées, commandes sudo, sessions SSH",
+      "~/.bash_history — historique des commandes tapées dans le shell par l'utilisateur",
+      "/var/log/wtmp et /var/log/btmp — historique des connexions réussies et des tentatives échouées",
+      "/etc/fondue.conf — configuration du service de partage de fichiers inter-cantonal, intégré depuis le kernel Linux 5.15 (patch DETEC/SEFRI)",
+      "/proc/[pid]/maps — cartographie mémoire des processus actifs (volatile, disparaît au redémarrage)"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl": "<ul><li><strong>/var/log/auth.log</strong> : toutes les tentatives d'auth (SSH, sudo, PAM) avec timestamps précis — source forensique de premier plan.</li><li><strong>~/.bash_history</strong> : commandes tapées par l'utilisateur ; attention, il peut être tronqué, vidé ou manipulé.</li><li><strong>wtmp/btmp</strong> : lisibles avec <code>last</code> et <code>lastb</code>, permettent de reconstruire les sessions utilisateur.</li><li><strong>/proc/[pid]/maps</strong> : artefact volatile crucial pour l'analyse de malware en mémoire — à capturer avant tout redémarrage.</li></ul><em>/etc/fondue.conf</em> n'existe pas — ni le patch SEFRI.",
+    "wrongReasons": {
+      "3": "Ce fichier et ce patch n'existent pas. Option humoristique : le kernel Linux 5.15 ne contient aucun service de partage inter-cantonal suisse. La forensique Linux se concentre sur les fichiers de logs standard (syslog, auth.log, wtmp…)."
+    },
+    "refs": [
+      "The Linux Programming Interface — Michael Kerrisk",
+      "SANS DFIR — Linux Forensics Cheat Sheet"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "chapter": "Linux — Artefacts et analyse",
+    "diff": "hard",
+    "type": "multi",
+    "q": "Lesquelles des commandes suivantes laissent des traces forensiques exploitables sous Linux ?",
+    "opts": [
+      "sudo — chaque invocation est journalisée dans /var/log/auth.log avec utilisateur, timestamp et commande complète",
+      "ssh — les connexions entrantes sont enregistrées dans /var/log/auth.log ou /var/log/secure selon la distribution",
+      "wget / curl — traces dans ~/.bash_history et éventuellement dans les logs du proxy ou du pare-feu",
+      "Les requêtes adressées à l'assistant IA des CFF (Monica) via le terminal — stockées dans ~/.cff_monica_history depuis l'intégration SD 2024",
+      "crontab — les modifications de tâches planifiées sont journalisées dans /var/log/cron et le contenu est lisible dans /var/spool/cron/"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl": "<strong>sudo</strong>, <strong>ssh</strong>, <strong>wget/curl</strong> et <strong>crontab</strong> laissent tous des artefacts dans les journaux système ou l'historique shell. L'analyse croisée de ces sources permet de reconstituer une chronologie d'actions précise. <em>~/.cff_monica_history</em> est une fiction humoristique — les CFF n'ont pas d'IA intégrée au terminal Linux (pas encore).",
+    "wrongReasons": {
+      "3": "Option fictive et humoristique. Il n'existe pas de commande CFF dans le terminal Linux, ni de fichier ~/.cff_monica_history. Les CFF ont bien un assistant digital, mais il ne laisse pas de traces forensiques dans votre système de fichiers local."
+    },
+    "refs": [
+      "SANS DFIR — Linux Forensics Cheat Sheet",
+      "man 8 sudo, man 1 ssh, man 5 crontab"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "chapter": "EXT2 / EXT3 / EXT4",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Lesquelles des fonctionnalités suivantes sont présentes dans EXT4 mais ABSENTES dans EXT2 ?",
+    "opts": [
+      "Journalisation (journal des transactions garantissant la cohérence après un crash)",
+      "Extents (remplacement des blocs indirects par des plages de blocs contigus pour les grands fichiers)",
+      "Nanosecond timestamps (horodatages à la nanoseconde contre la seconde en EXT2)",
+      "Chiffrement natif au niveau de l'inode — présent depuis EXT2 'Helvetica Edition' publiée par l'ETH Zurich en 1993",
+      "Delayed allocation (les blocs ne sont alloués qu'au flush, optimisant les performances)"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl": "<strong>EXT2</strong> ne dispose d'aucune journalisation (d'où les longs fsck au redémarrage). <strong>EXT3</strong> a ajouté la journalisation. <strong>EXT4</strong> ajoute les <em>extents</em> (efficacité pour les gros fichiers), les <em>timestamps à la nanoseconde</em> (précieux forensiquement) et la <em>delayed allocation</em>. Le chiffrement EXT4 (fscrypt) existe depuis le kernel 4.1 (2015), mais n'a jamais été présent en EXT2 — et l'ETH Zurich n'a pas publié d' 'Helvetica Edition'.",
+    "wrongReasons": {
+      "3": "Option humoristique. Il n'existe pas d''Helvetica Edition' d'EXT2. Le chiffrement au niveau du système de fichiers Linux (fscrypt) a été introduit dans le <strong>kernel 4.1 en 2015</strong>, d'abord pour EXT4, bien après EXT2."
+    },
+    "refs": [
+      "Ext4 wiki — kernel.org",
+      "The Design and Implementation of the 4.4BSD Operating System (référence de comparaison)"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "chapter": "EXT2 / EXT3 / EXT4",
+    "diff": "hard",
+    "type": "multi",
+    "q": "Quelles informations sont stockées dans un inode EXT4 ?",
+    "opts": [
+      "Les timestamps MAC : mtime (modification), atime (accès), ctime (changement d'inode)",
+      "Les permissions UNIX (propriétaire UID/GID, bits rwx)",
+      "Le nombre de liens physiques (hard links) pointant vers cet inode",
+      "Le nom du fichier — stocké directement dans l'inode pour accélérer les recherches",
+      "La taille du fichier en octets et les pointeurs vers ses blocs de données (ou extents)"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl": "Un inode EXT4 contient : timestamps, permissions, propriétaire, nombre de liens, taille et localisation des blocs/extents. Ce qu'il ne contient <strong>pas</strong> : le <em>nom du fichier</em>. Le nom est stocké dans l'<strong>entrée de répertoire</strong> (directory entry), qui associe un nom à un numéro d'inode. C'est pourquoi plusieurs noms (hard links) peuvent pointer vers le même inode.",
+    "wrongReasons": {
+      "3": "C'est un piège classique. Le <strong>nom du fichier n'est jamais dans l'inode</strong> — il est stocké dans l'entrée de répertoire parent. Cette séparation est fondamentale : elle explique pourquoi les <em>hard links</em> fonctionnent (plusieurs noms → même inode) et pourquoi renommer un fichier ne modifie pas son inode."
+    },
+    "refs": [
+      "Ext4 wiki — Inode structure (kernel.org)",
+      "Brian W. Kernighan & Rob Pike — The Unix Programming Environment"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "chapter": "Formats de fichiers et Magic Bytes",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Lesquels des couples Magic Bytes → format sont corrects ?",
+    "opts": [
+      "FF D8 FF → JPEG (début de tout fichier JPEG)",
+      "89 50 4E 47 0D 0A 1A 0A → PNG",
+      "25 50 44 46 → PDF (correspondant à la chaîne ASCII '%PDF')",
+      "CH F1 FR → Format propriétaire d'archivage des CFF (Swiss Federal Railways Archive Format, RFC non encore publiée)",
+      "50 4B 03 04 → ZIP (et par extension : DOCX, XLSX, PPTX, JAR, APK)"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl": "Les <strong>Magic Bytes</strong> permettent d'identifier le vrai format d'un fichier indépendamment de son extension. <br>• <strong>FF D8 FF</strong> → JPEG <br>• <strong>89 50 4E 47</strong> → PNG <br>• <strong>25 50 44 46</strong> → PDF <br>• <strong>50 4B 03 04</strong> → ZIP (utilisé par tous les formats Office 2007+ et les archives Android). <br>La séquence 'CH F1 FR' n'existe pas — c'est une blague avec les plaques cantonales suisses.",
+    "wrongReasons": {
+      "3": "Option humoristique. Les octets 'CH F1 FR' n'existent pas dans un fichier réel — 'CH' et 'FR' ne sont pas des valeurs hexadécimales valides. Les CFF n'ont pas de format d'archive propriétaire avec RFC. Les Magic Bytes sont des valeurs hexadécimales (0-9, A-F), pas des abréviations géographiques."
+    },
+    "refs": [
+      "Gary Kessler — File Signature Table (https://www.garykessler.net/library/file_sigs.html)",
+      "ISO 32000-1 — PDF Reference"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "chapter": "Signature et PKI",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Lesquels des éléments suivants sont inclus dans un certificat X.509 v3 ?",
+    "opts": [
+      "La clé publique du titulaire et l'algorithme associé",
+      "Le nom distinctif (Distinguished Name) du titulaire et de l'autorité de certification émettrice",
+      "La période de validité : notBefore et notAfter",
+      "La clé privée du titulaire — nécessaire pour vérifier la signature lors de la présentation du certificat",
+      "La signature numérique de l'autorité de certification (CA) couvrant l'ensemble du certificat",
+      "Le score de solvabilité de l'entité — fourni par la ZEK (Centrale d'information de crédit suisse) depuis la révision de la LCA 2024"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl": "Un certificat <strong>X.509 v3</strong> contient : la clé publique, les DN du titulaire et de l'émetteur, la période de validité, les extensions (SAN, usage, etc.) et la signature de la CA. <br>La <strong>clé privée</strong> n'est <em>jamais</em> incluse dans un certificat — elle reste secrète chez son propriétaire. La ZEK suisse évalue les crédits bancaires, pas les certificats TLS — option humoristique.",
+    "wrongReasons": {
+      "3": "C'est une erreur fondamentale à ne jamais commettre : la <strong>clé privée ne figure jamais dans un certificat X.509</strong>. Le certificat contient la clé <em>publique</em>. La clé privée est gardée secrète par son détenteur et n'est jamais transmise. Inclure la clé privée dans un certificat serait une catastrophe de sécurité.",
+      "5": "Option humoristique. La <strong>ZEK</strong> (Zentralstelle für Kreditinformation) gère les données de crédit bancaire en Suisse — elle n'a aucun rôle dans la PKI ou les certificats X.509. La révision de la LCA (Loi sur le contrat d'assurance) 2024 ne concerne pas les infrastructures à clé publique."
+    },
+    "refs": [
+      "RFC 5280 — Internet X.509 PKI Certificate and CRL Profile",
+      "NIST SP 800-57 — Key Management Guidelines"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "chapter": "Technologie des disques",
+    "diff": "hard",
+    "type": "multi",
+    "q": "Lesquelles des affirmations suivantes sur les SSD sont correctes d'un point de vue forensique ?",
+    "opts": [
+      "Le TRIM efface silencieusement les blocs libres, rendant la récupération de données difficile voire impossible",
+      "Le wear leveling répartit les écritures sur l'ensemble des cellules, ce qui peut brouiller l'ordre chronologique des données",
+      "Les SSD conservent les données supprimées pendant 30 jours dans une zone de 'quarantaine hardware' — standard JEDEC 2020",
+      "L'espace de réserve (over-provisioning) est inaccessible au système d'exploitation mais peut contenir des données récupérables forensiquement",
+      "L'extraction directe de puces NAND ('chip-off') peut être nécessaire pour contourner le contrôleur et accéder à des données non visibles via l'interface standard"
+    ],
+    "answers": [
+      0,
+      1,
+      3,
+      4
+    ],
+    "expl": "<strong>TRIM</strong> est l'ennemi du forensicien : il efface proactivement les cellules libres, souvent avant toute tentative de récupération. Le <strong>wear leveling</strong> complexifie la reconstruction chronologique. L'<strong>over-provisioning</strong> (5 à 28% de la capacité NAND) est hors du périmètre du système d'exploitation mais accessible via l'interface native du fabricant. Le <strong>chip-off</strong> permet de lire directement les puces NAND sans passer par le contrôleur — technique avancée, coûteuse. Il n'existe pas de 'quarantaine hardware' de 30 jours dans le standard JEDEC.",
+    "wrongReasons": {
+      "2": "Il n'existe pas de mécanisme de 'quarantaine hardware' de 30 jours dans les SSD. Le standard <strong>JEDEC</strong> définit des caractéristiques électriques et de fiabilité, pas de politique de rétention des données supprimées. C'est le comportement contraire qui pose problème : le <strong>TRIM</strong> efface les données le plus tôt possible."
+    },
+    "refs": [
+      "Gubanov & Afonin — 'Why SSD Drives Destroy Evidence and What to Do About It' (Belkasoft, 2012)",
+      "JEDEC JESD218 — Solid State Drive (SSD) Requirements and Endurance Test Method"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "chapter": "Recherche web et Google Dorks",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Lesquels des opérateurs Google Dorks suivants sont réels et utilisables en OSINT ?",
+    "opts": [
+      "site:example.com — restreint les résultats à un domaine ou sous-domaine précis",
+      "filetype:pdf — recherche des fichiers d'un type spécifique indexés par Google",
+      "intitle:\"index of\" — identifie les serveurs avec listage de répertoires activé",
+      "infondue:valais — opérateur avancé filtrant les résultats selon la teneur en fromage régional (Google Switzerland API v3, bêta)",
+      "cache:example.com — affiche la version mise en cache par Google d'une page web"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl": "Les opérateurs Google valides incluent <code>site:</code>, <code>filetype:</code>, <code>intitle:</code>, <code>inurl:</code>, <code>cache:</code> et leurs combinaisons. La requête <code>intitle:\"index of\"</code> est un classique pour trouver des serveurs web mal configurés exposant leurs fichiers. <code>cache:</code> permet d'accéder à des pages supprimées ou modifiées. <code>infondue:valais</code> n'existe pas — Google n'indexe pas (encore) la teneur en fromage.",
+    "wrongReasons": {
+      "3": "Option humoristique. L'opérateur <code>infondue:</code> n'existe pas dans l'arsenal Google Dorks. Les opérateurs réels sont : site:, filetype:, intitle:, inurl:, intext:, cache:, related:, define:. Il n'y a pas d'API régionale suisse pour le fromage — mais si elle existait, elle serait probablement gérée par l'OFAG (Office fédéral de l'agriculture)."
+    },
+    "refs": [
+      "Google Search Operators — support.google.com",
+      "Johnny Long — 'Google Hacking for Penetration Testers' (Syngress, 2004)"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "chapter": "Représentation des données",
+    "diff": "medium",
+    "type": "multi",
+    "q": "Lesquelles des affirmations suivantes sur l'encodage Base64 sont correctes ?",
+    "opts": [
+      "Base64 encode 3 octets binaires en 4 caractères ASCII (taux d'expansion : 4/3 ≈ +33%)",
+      "Le caractère '=' en fin de chaîne sert de padding quand le message n'est pas un multiple de 3 octets",
+      "Base64 est un encodage, pas un chiffrement — il ne protège pas la confidentialité des données",
+      "Base64 a été inventé par les PTT suisses en 1982 pour la transmission de télégrammes chiffrés via le réseau Natel A",
+      "L'alphabet Base64 standard comprend : A–Z, a–z, 0–9, '+' et '/'"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl": "<strong>Base64</strong> est défini dans la RFC 4648. Ses caractéristiques clés : expansion 4/3, padding avec '=', alphabet de 64 caractères imprimables. Il est universellement utilisé pour encoder des données binaires dans des contextes texte (email MIME, JWT, PEM). Ce n'est <strong>pas du chiffrement</strong> — n'importe qui peut décoder du Base64 instantanément. L'histoire des PTT suisses est fictive.",
+    "wrongReasons": {
+      "3": "Option humoristique et fausse sur tous les points. Base64 a été formalisé dans les années 1980–1990 pour les besoins du courrier électronique (MIME), et non par les PTT suisses. Le réseau Natel A était un réseau téléphonique analogique — sans lien avec l'encodage Base64. La RFC 4648 (2006) est la référence actuelle."
+    },
+    "refs": [
+      "RFC 4648 — The Base16, Base32, and Base64 Data Encodings"
+    ]
+  },
+  {
+    "theme": "Droit",
+    "chapter": "Entraide judiciaire internationale",
+    "diff": "hard",
+    "type": "multi",
+    "q": "Dans le cadre d'une demande d'entraide judiciaire internationale en matière pénale (EIMP suisse), lesquels des éléments suivants doivent figurer dans la demande ?",
+    "opts": [
+      "L'exposé des faits et la qualification juridique de l'infraction selon le droit de l'État requérant",
+      "L'indication de l'autorité requérante et sa compétence selon le droit national",
+      "L'objet et le motif de la demande, ainsi que les mesures sollicitées",
+      "La signature manuscrite du juge fédéral suisse destinataire, notariée par un officier public valaisan — exigée depuis l'ATF 1C_42/2019",
+      "La garantie de réciprocité ou l'existence d'un traité bilatéral avec l'État requis (ou son équivalent conventionnel)"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl": "Selon l'<strong>EIMP (art. 28)</strong>, une demande valide doit contenir : l'autorité requérante, l'objet et le motif, la qualification de l'infraction, les actes sollicités et la garantie de réciprocité. La Suisse exécute les demandes sur la base de traités (CEEJ, conventions bilatérales) ou de la réciprocité garantie. <br>La prétendue exigence de signature notariée valaisanne dans l'ATF 1C_42/2019 est une invention humoristique.",
+    "wrongReasons": {
+      "3": "Option fictive. L'ATF 1C_42/2019 porte sur un autre objet, et aucune disposition de l'<strong>EIMP</strong> n'exige une signature notariée valaisanne. Les demandes d'entraide passent par les voies diplomatiques ou par l'OFJ (Office fédéral de la justice) — sans notaire cantonal."
+    },
+    "refs": [
+      "Loi fédérale sur l'entraide internationale en matière pénale (EIMP) — RS 351.1",
+      "Convention européenne d'entraide judiciaire en matière pénale (CEEJ) — 1959"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "chapter": "Chiffrement asymétrique et RSA",
+    "diff": "hard",
+    "type": "multi",
+    "q": "Lesquelles des affirmations suivantes sur RSA sont correctes ?",
+    "opts": [
+      "La sécurité de RSA repose sur la difficulté calculatoire de factoriser le produit de deux grands nombres premiers (n = p × q)",
+      "RSA peut être utilisé à la fois pour le chiffrement asymétrique et pour la signature numérique",
+      "Une clé RSA de 2048 bits est le minimum recommandé par le NIST pour les usages courants jusqu'en 2030",
+      "RSA a été inventé à l'EPFL en 1977 par Rivest, Shamir et Adleman lors d'un séjour de recherche à Lausanne — d'où les initiales 'R-S-A'",
+      "RSA est vulnérable à l'algorithme de Shor exécuté sur un ordinateur quantique suffisamment puissant"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl": "RSA (1977) repose sur la <strong>difficulté de la factorisation</strong> de grands entiers. Il permet chiffrement ET signature. Le <strong>NIST</strong> recommande 2048 bits minimum jusqu'en 2030, 3072+ après. L'<strong>algorithme de Shor</strong> (1994) casse RSA en temps polynomial sur un ordinateur quantique — d'où les travaux en cryptographie post-quantique. <br>RSA a été développé au <strong>MIT</strong> à Cambridge (Massachusetts), pas à l'EPFL.",
+    "wrongReasons": {
+      "3": "Option humoristique. RSA a été inventé au <strong>MIT (Massachusetts Institute of Technology)</strong> en 1977 par <strong>Ron Rivest, Adi Shamir et Leonard Adleman</strong> — à Cambridge, Massachusetts, et non à Lausanne. L'EPFL était à l'époque encore en cours de transformation en école polytechnique fédérale."
+    },
+    "refs": [
+      "Rivest, Shamir, Adleman — 'A Method for Obtaining Digital Signatures and Public-Key Cryptosystems' (1978)",
+      "NIST SP 800-131A Rev. 2 — Transitioning the Use of Cryptographic Algorithms"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "chapter": "Infrastructure, DNS et pivots",
+    "diff": "hard",
+    "type": "multi",
+    "q": "Lesquelles des techniques suivantes sont utilisées pour le pivotement (pivoting) lors d'une investigation OSINT sur une infrastructure ?",
+    "opts": [
+      "Énumération de sous-domaines via brute force DNS ou Certificate Transparency logs (crt.sh)",
+      "Corrélation d'adresses IP via WHOIS et recherche ASN (Autonomous System Number) pour identifier l'hébergeur",
+      "Analyse des enregistrements MX et SPF pour cartographier l'infrastructure email et identifier les prestataires",
+      "Consultation du 'Registre fédéral des infrastructures cybercriminelles' tenu par fedpol — accessible aux enquêteurs accrédités via eIAM",
+      "Pivot via les adresses IP historiques dans les bases PassiveDNS (ex. SecurityTrails, CIRCL.lu pdns)"
+    ],
+    "answers": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "expl": "Le pivotement OSINT sur une infrastructure s'appuie sur : les <strong>Certificate Transparency logs</strong> (crt.sh révèle tous les sous-domaines certifiés), la <strong>corrélation WHOIS/ASN</strong> (identifier les blocs d'IP d'un acteur), les <strong>enregistrements DNS</strong> (MX, SPF, DKIM révèlent les prestataires email) et le <strong>PassiveDNS</strong> (historique des résolutions IP/nom). <br>Le 'Registre fédéral des infrastructures cybercriminelles' de fedpol n'existe pas sous cette forme publique — c'est une fiction administrative.",
+    "wrongReasons": {
+      "3": "Option fictive et humoristique. <strong>fedpol</strong> gère des bases de données criminelles, mais il n'existe pas de 'Registre fédéral des infrastructures cybercriminelles' accessible aux enquêteurs via eIAM sous cette dénomination. Les investigations OSINT sur les infrastructures utilisent des sources ouvertes réelles : Shodan, Censys, SecurityTrails, CIRCL PassiveDNS, crt.sh."
+    },
+    "refs": [
+      "crt.sh — Certificate Transparency Search",
+      "CIRCL.lu — Passive DNS",
+      "RFC 7208 — SPF (Sender Policy Framework)"
+    ]
   }
 ]
