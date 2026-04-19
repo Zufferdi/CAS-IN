@@ -1,28 +1,104 @@
-// CAS-IN Investigation Numérique — Service Worker v9
-const CACHE = 'casIn-v9';
+// Service Worker — CAS-IN Investigation Numérique
+// B5 fix: version bumped to v10 pour invalider les anciens caches
+const CACHE_VERSION = 'cas-in-v10';
+const STATIC_ASSETS = [
+  './',
+  './index.html',
+  './quiz.html',
+  './style.css',
+  './tp.html',
+  './tp.css',
+  './scene.html',
+  './scene.css',
+  './manifest.json',
+  './questions.json',
+  './fiches/index.html',
+  './fiches/fiche.css',
+  './fiches/preuve.html',
+  './fiches/suisse.html',
+  './fiches/encodage.html',
+  './fiches/methodologie.html',
+  './fiches/ntfs.html',
+  './fiches/windows.html',
+  './fiches/fat16.html',
+  './fiches/fat12.html',
+  './fiches/exfat.html',
+  './fiches/ext.html',
+  './fiches/hfs.html',
+  './fiches/acquisition.html',
+  './fiches/formats.html',
+  './fiches/hash.html',
+  './fiches/outils.html',
+  './fiches/crypto.html',
+  './fiches/disques.html',
+  './fiches/reseau.html',
+  './fiches/osint.html',
+  './fiches/droit.html',
+];
 
-self.addEventListener('install', e => {
+// Installation : mise en cache des assets statiques
+self.addEventListener('install', event => {
+  console.log('[SW] Install v' + CACHE_VERSION);
+  event.waitUntil(
+    caches.open(CACHE_VERSION).then(cache => {
+      return cache.addAll(STATIC_ASSETS).catch(err => {
+        console.warn('[SW] Some assets failed to cache:', err);
+      });
+    })
+  );
   self.skipWaiting();
 });
 
-self.addEventListener('activate', e => {
-  // Vider tous les anciens caches (v6, v7, v8...)
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
+// Activation : nettoyage des anciens caches
+self.addEventListener('activate', event => {
+  console.log('[SW] Activate v' + CACHE_VERSION);
+  event.waitUntil(
+    caches.keys().then(keys => {
+      return Promise.all(
+        keys.filter(k => k !== CACHE_VERSION).map(k => {
+          console.log('[SW] Deleting old cache:', k);
+          return caches.delete(k);
+        })
+      );
+    })
   );
   self.clients.claim();
 });
 
-// Réseau en premier pour TOUT — pas de cache SW
-// Le cache HTTP du navigateur gère les performances
-self.addEventListener('fetch', e => {
-  e.respondWith(
-    fetch(e.request).catch(() =>
-      caches.match(e.request).then(cached =>
-        cached || new Response('Hors ligne', { status: 503 })
-      )
-    )
-  );
+// Fetch : Network First pour HTML/JSON, Cache First pour CSS/JS
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+  
+  // Ignorer les requêtes non-GET et hors origine
+  if (event.request.method !== 'GET') return;
+  if (!url.origin === location.origin) return;
+  
+  const isHTML = event.request.headers.get('accept')?.includes('text/html');
+  const isJSON = url.pathname.endsWith('.json');
+  
+  if (isHTML || isJSON) {
+    // Network First : toujours essayer le réseau en premier
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_VERSION).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(event.request))
+    );
+  } else {
+    // Cache First : CSS, JS, images
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        return cached || fetch(event.request).then(response => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_VERSION).then(cache => cache.put(event.request, clone));
+          }
+          return response;
+        });
+      })
+    );
+  }
 });

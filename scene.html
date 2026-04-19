@@ -146,17 +146,10 @@ function updateScore() {
   document.getElementById('sc-errors').textContent = GAME.errors;
 }
 
-function launchScenario(id) {
-  GAME.currentScenario = id;
-  GAME.currentStep = 0;
-  GAME.history = [];
-  document.getElementById('sc-selector').style.display = 'none';
-  document.getElementById('sc-game').style.display = 'block';
-  document.getElementById('sc-scenario-num').textContent = id.toUpperCase();
-  renderStep(SCENARIOS[id], 0);
-}
+// B1 fix: launchScenario merged into timer_scenario.js version below
 
 function backToMenu() {
+  clearTimer(); // B3 fix: always clear timer on menu return
   document.getElementById('sc-selector').style.display = 'block';
   document.getElementById('sc-game').style.display = 'none';
   document.getElementById('sc-scenario-num').textContent = '—';
@@ -1152,6 +1145,9 @@ function renderTimerScenario() {
              ondragstart="piDragStart(event)"
              ondragover="event.preventDefault()"
              ondrop="piDrop(event)"
+             ontouchstart="piTouchStart(event)"
+             ontouchmove="piTouchMove(event)"
+             ontouchend="piTouchEnd(event)" 
              style="display:flex;align-items:center;gap:.75rem;padding:.7rem .9rem;
                     background:rgba(255,255,255,.04);border:1px solid var(--border);
                     border-radius:8px;cursor:grab;transition:.15s;user-select:none">
@@ -1172,6 +1168,10 @@ function renderTimerScenario() {
 }
 
 let _dragSrc = null;
+let _touchSrc = null;
+let _touchClone = null;
+
+// Desktop drag
 function piDragStart(e) {
   startTimer();
   _dragSrc = e.currentTarget;
@@ -1185,12 +1185,53 @@ function piDrop(e) {
   const items = [...list.querySelectorAll('.pi-action')];
   const srcIdx = items.indexOf(_dragSrc);
   const dstIdx = items.indexOf(e.currentTarget);
-  if (srcIdx < dstIdx) {
-    e.currentTarget.after(_dragSrc);
-  } else {
-    e.currentTarget.before(_dragSrc);
-  }
+  if (srcIdx < dstIdx) { e.currentTarget.after(_dragSrc); }
+  else { e.currentTarget.before(_dragSrc); }
   updateRanks();
+}
+
+// B6 fix: Touch support for mobile drag-and-drop
+function piTouchStart(e) {
+  startTimer();
+  _touchSrc = e.currentTarget;
+  _touchSrc.style.opacity = '.5';
+  // Créer un clone visuel qui suit le doigt
+  _touchClone = _touchSrc.cloneNode(true);
+  _touchClone.style.cssText = 'position:fixed;opacity:.8;pointer-events:none;z-index:999;width:' + _touchSrc.offsetWidth + 'px;border:1px solid var(--cyan);border-radius:8px;background:var(--surface2);';
+  document.body.appendChild(_touchClone);
+}
+function piTouchMove(e) {
+  e.preventDefault();
+  if (!_touchClone) return;
+  const touch = e.touches[0];
+  _touchClone.style.left = (touch.clientX - _touchSrc.offsetWidth/2) + 'px';
+  _touchClone.style.top = (touch.clientY - 20) + 'px';
+  // Trouver l'élément sous le doigt
+  _touchClone.style.display = 'none';
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  _touchClone.style.display = '';
+  const target = el ? el.closest('.pi-action') : null;
+  document.querySelectorAll('.pi-action').forEach(a => a.style.borderColor = '');
+  if (target && target !== _touchSrc) target.style.borderColor = 'var(--cyan)';
+}
+function piTouchEnd(e) {
+  if (!_touchSrc || !_touchClone) return;
+  const touch = e.changedTouches[0];
+  _touchClone.style.display = 'none';
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const target = el ? el.closest('.pi-action') : null;
+  document.querySelectorAll('.pi-action').forEach(a => a.style.borderColor = '');
+  if (target && target !== _touchSrc) {
+    const list = document.getElementById('pi-ranking');
+    const items = [...list.querySelectorAll('.pi-action')];
+    if (items.indexOf(_touchSrc) < items.indexOf(target)) { target.after(_touchSrc); }
+    else { target.before(_touchSrc); }
+    updateRanks();
+  }
+  _touchSrc.style.opacity = '1';
+  document.body.removeChild(_touchClone);
+  _touchSrc = null;
+  _touchClone = null;
 }
 function moveUp(el) {
   startTimer();
@@ -1285,10 +1326,35 @@ function validateRanking(timeUp = false) {
     </div>
   `;
 
-  const scenario = SCENARIOS.premier_intervenant;
-  if (pct >= 83) {
-    setTimeout(() => renderEnd(scenario), 100);
+  // B2 fix: renderTimerEnd au lieu de renderEnd (qui nécessite GAME.history)
+  if (pct === 100) {
+    setTimeout(() => renderTimerEnd(score, 6, timeUsed, timeUp), 600);
   }
+}
+
+function renderTimerEnd(correct, total, timeUsed, timeUp) {
+  const pct = Math.round(correct / total * 100);
+  const scenario = SCENARIOS.premier_intervenant;
+  const grade = pct >= 100 ? { label: '🏆 Expert First Responder', color: 'var(--green)' }
+              : pct >= 83  ? { label: '✅ Intervenant confirmé', color: 'var(--cyan)' }
+              : pct >= 66  ? { label: '⚠️ Révisions nécessaires', color: 'var(--gold)' }
+              : { label: '🔄 Ordre non maîtrisé', color: 'var(--red)' };
+
+  const debriefHtml = scenario.debrief
+    ? '<div class="sc-debrief"><div class="sc-debrief-label">📚 Débriefing pédagogique</div>' + scenario.debrief + '</div>'
+    : '';
+  const timeText = timeUp ? ' (temps écoulé)' : ' en ' + timeUsed + 's';
+
+  document.getElementById('sc-narrative').innerHTML =
+    '<div class="sc-end">' +
+    '<div class="sc-end-emoji">' + grade.label.split(' ')[0] + '</div>' +
+    '<div class="sc-end-title" style="color:' + grade.color + '">' + grade.label.replace(/^.\s/,'') + '</div>' +
+    '<div class="sc-end-score">' + correct + '/' + total + ' positions correctes' + timeText + '</div>' +
+    debriefHtml +
+    '<div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem">' +
+    '<button class="sc-replay-btn" onclick="renderTimerScenario()">↺ Rejouer le chrono</button>' +
+    '<button class="sc-replay-btn sc-menu-btn" onclick="backToMenu()">← Autres scénarios</button>' +
+    '</div></div>';
 }
 
 
