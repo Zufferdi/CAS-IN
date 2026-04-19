@@ -1,0 +1,84 @@
+{
+  "id": "veracrypt",
+  "type": "standard",
+  "title": "Le Volume VeraCrypt",
+  "debrief": "<p>Le Manuel (Ch. 24.2) est explicite : «&nbsp;affirmer qu'un volume VeraCrypt contient des données compromettantes sans en connaître le contenu constitue une opinion inadmissible, non un fait forensique.&nbsp;»</p><p>La détection d'un volume chiffré repose sur des indicateurs statistiques (haute entropie, absence de magic bytes) — jamais sur une certitude. La formulation correcte décrit les <em>conditions</em> dans lesquelles un volume caché <em>pourrait</em> exister.</p>",
+  "steps": [
+    {
+      "phase": "🔐 Le fichier mystérieux",
+      "scene": "Sur le disque analysé, X-Ways signale un fichier de 8 Go nommé <code>backup_photos.dat</code> avec une entropie de 0.998 (quasi-maximale). Aucune magic bytes reconnue. Le fichier n'a aucune structure interne identifiable.",
+      "law": "<strong>Manuel Ch. 24.2</strong> — Entropie maximale = probable chiffrement ou compression forte.<br><strong>Art. 113 CPP</strong> — Le suspect peut refuser de déchiffrer : nemo tenetur.",
+      "question": "<strong>Comment qualifiez-vous ce fichier dans votre rapport ?</strong>",
+      "choices": [
+        {
+          "text": "«&nbsp;Le fichier backup_photos.dat est un volume VeraCrypt contenant des données cachées.&nbsp;»",
+          "correct": false,
+          "penalty": 25,
+          "explain": "Affirmation inadmissible. Sans déchiffrement du volume, il est impossible de prouver qu'il s'agit de VeraCrypt (pas de signature, c'est précisément la conception de VeraCrypt) ni qu'il contient quoi que ce soit.",
+          "legal": "Art. 251 CP — Un expert qui présente une opinion comme un fait dans son rapport engage sa responsabilité pénale (faux dans les titres).",
+          "consequence": "<div class='sc-consequence-item bad'>❌ Affirmation non étayée — opinion présentée comme fait</div><div class='sc-consequence-item bad'>❌ Risque art. 251 CP pour le rédacteur</div>",
+          "source": "Manuel Ch. 24.2 + Art. 251 CP",
+          "next": "end"
+        },
+        {
+          "text": "«&nbsp;Le fichier backup_photos.dat présente une entropie de 0.998/1.000 et ne contient aucune signature de format reconnue, conditions caractéristiques d'un conteneur chiffré. Son contenu ne peut être examiné sans la clé de déchiffrement.&nbsp;»",
+          "correct": true,
+          "points": 25,
+          "explain": "Formulation forensique correcte. Elle décrit les faits mesurables (entropie, absence de signature), leur interprétation probable (conteneur chiffré) et la limite claire de l'analyse (sans la clé). Elle ne sur-affirme pas.",
+          "legal": "Manuel Ch. 29.3 — Fait (entropie mesurée) → interprétation (probable chiffrement) → limite (sans clé, inaccessible). Jamais d'opinion déguisée en fait.",
+          "consequence": "<div class='sc-consequence-item good'>✓ Formulation défendable devant le juge</div><div class='sc-consequence-item good'>✓ Limite clairement explicitée</div>",
+          "source": "Ch. 24.2 + Ch. 29.3 — Fait vs opinion",
+          "next": 1
+        },
+        {
+          "text": "«&nbsp;Il s'agit probablement d'une image disque compressée ou d'un fichier corrompu.&nbsp;»",
+          "correct": false,
+          "penalty": 10,
+          "explain": "Inexact. Une entropie de 0.998 est trop élevée pour une compression standard (qui conserve des patterns) et une image disque compressée aurait des headers reconnaissables. L'hypothèse chiffrement est plus probable.",
+          "legal": "Manuel Ch. 24.2 — Entropie 0.99+ avec absence de structure = chiffrement fort, pas compression.",
+          "consequence": "<div class='sc-consequence-item neutral'>⚠️ Hypothèse plausible mais peu probable</div><div class='sc-consequence-item bad'>❌ Sous-estimation de l'indice forensique</div>",
+          "source": "Ch. 24.2 — Analyse entropique",
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "🔑 La demande de clé",
+      "scene": "Le MP veut contraindre le suspect à fournir le mot de passe VeraCrypt. Le suspect invoque le droit au silence (art. 113 CPP). Le MP vous demande s'il existe une alternative technique.",
+      "law": "<strong>Art. 113 CPP</strong> — Nemo tenetur : nul n'est tenu de s'auto-incriminer.<br><strong>Manuel Ch. 24.3</strong> — Alternatives : RAM dump, keyfile externe, historique de montage.",
+      "question": "<strong>Quelles alternatives techniques proposez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Brute force du mot de passe VeraCrypt.",
+          "correct": false,
+          "penalty": 20,
+          "explain": "Irréalisable dans un délai judiciaire raisonnable. VeraCrypt utilise PBKDF2/Argon2 avec un grand nombre d'itérations précisément pour rendre le brute force impossible. Un mot de passe de 12 caractères aléatoires prendrait des siècles.",
+          "legal": "Manuel Ch. 24.3 — VeraCrypt est conçu pour résister au brute force. Ne pas promettre ce qui est impossible.",
+          "consequence": "<div class='sc-consequence-item bad'>❌ Promesse irréalisable au MP</div>",
+          "source": "Ch. 24.3 — Résistance au brute force",
+          "next": "end"
+        },
+        {
+          "text": "Analyser le dump RAM capturé lors du live forensics — le volume monté y laisse des traces de clé.",
+          "correct": true,
+          "points": 20,
+          "explain": "Méthode valide si le dump a été fait pendant que le volume était monté. Volatility peut extraire les clés AES de la RAM. C'est pourquoi le dump RAM au moment de la saisie est critique.",
+          "legal": "Manuel Ch. 11.1 — La RAM d'un système avec VeraCrypt monté contient la clé de déchiffrement en clair.",
+          "consequence": "<div class='sc-consequence-item good'>✓ Méthode techniquement valide</div><div class='sc-consequence-item neutral'>⚠️ Nécessite un dump RAM préalable</div>",
+          "source": "Ch. 11.1 + Ch. 24.3 — Clés en RAM",
+          "next": "end"
+        },
+        {
+          "text": "Chercher un keyfile sur les autres supports saisis (USB, cloud, NAS).",
+          "correct": true,
+          "points": 15,
+          "explain": "Approche valide. Un keyfile est un fichier binaire qui remplace ou complète le mot de passe. Il peut être stocké sur une clé USB, dans le cloud ou sur un NAS. Si trouvé, il permet l'ouverture du volume.",
+          "legal": "Manuel Ch. 24.2 — Keyfile : alternative au mot de passe, chercher sur tous les supports saisis.",
+          "consequence": "<div class='sc-consequence-item good'>✓ Méthode légitime</div><div class='sc-consequence-item neutral'>⚠️ Résultat incertain selon la configuration</div>",
+          "source": "Ch. 24.2 — Keyfiles VeraCrypt",
+          "next": "end"
+        }
+      ]
+    }
+  ]
+}

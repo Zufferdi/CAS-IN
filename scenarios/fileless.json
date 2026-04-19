@@ -1,0 +1,74 @@
+{
+  "id": "fileless",
+  "type": "standard",
+  "title": "Malware Fileless",
+  "debrief": "<p>Les malwares fileless (sans fichier sur disque) sont l'un des défis les plus avancés de la forensique numérique. Ils opèrent entièrement en mémoire RAM, injectent du code dans des processus légitimes et ne laissent aucun exécutable sur le disque.</p><p>En Suisse, l'<strong>art. 143bis CP</strong> couvre l'accès indu au système même si le malware ne laisse aucune trace persistante. L'<strong>OFCS (GovCERT)</strong> recommande de capturer la RAM avant toute extinction lors d'une suspicion de malware fileless — une recommandation intégrée dans le Manuel forensique suisse (Ch. 11.2). La notification éventuelle au <strong>PFPDT</strong> (LPD 2023 Art. 24) reste obligatoire si des données personnelles sont compromises, quelle que soit la technique d'attaque.</p><p>La preuve de l'infection repose exclusivement sur l'analyse Volatility de la RAM. Sans dump préalable, la preuve est irrémédiablement perdue.</p>",
+  "steps": [
+    {
+      "phase": "⚡ Le système compromis",
+      "scene": "Un IDS a déclenché une alerte sur le réseau d'une banque. Le système suspect est <strong>allumé et actif</strong>. L'analyse antivirus ne trouve rien. Aucun fichier exécutable suspect sur le disque. Pourtant, des connexions sortantes vers 185.x.x.x (IP malveillante connue) sont actives.",
+      "law": "<strong>Manuel Ch. 11.2</strong> — Malware fileless : RAM = seule preuve possible.<br><strong>Art. 143bis CP</strong> — Accès indu même si aucun fichier persistant sur le disque.<br><strong>GovCERT / OFCS</strong> — Recommandation : isolation réseau puis capture RAM avant extinction.",
+      "question": "<strong>Quelle est votre priorité absolue ?</strong>",
+      "choices": [
+        {
+          "text": "Éteindre le système pour stopper les connexions malveillantes.",
+          "correct": false,
+          "penalty": 25,
+          "explain": "Erreur critique. Éteindre détruit la RAM — et avec elle la seule preuve de l'infection fileless. Sans dump RAM, il sera impossible de prouver l'infection ou d'identifier le malware. Les connexions peuvent être coupées en isolant réseau sans éteindre.",
+          "legal": "Manuel Ch. 11.2 — Malware fileless : RAM = seule preuve. Extinction = destruction de preuve.",
+          "consequence": "<div class='sc-consequence-item bad'>❌ Destruction irréversible de la preuve principale</div><div class='sc-consequence-item bad'>❌ Impossible d'identifier le malware a posteriori</div>",
+          "source": "Ch. 11.2 — Live forensics obligatoire pour fileless",
+          "next": "end"
+        },
+        {
+          "text": "Isoler le réseau (débrancher câble Ethernet, désactiver WiFi) puis capturer immédiatement la RAM avec WinPmem.",
+          "correct": true,
+          "points": 25,
+          "explain": "Procédure correcte. Isolation réseau = stoppe les connexions malveillantes sans éteindre. Capture RAM = préserve la preuve de l'infection. L'ordre est critique : d'abord isoler, ensuite capturer.",
+          "legal": "Manuel Ch. 11.2 — Malware fileless : séquence isolation réseau → capture RAM → analyse avec Volatility.",
+          "consequence": "<div class='sc-consequence-item good'>✓ Connexions malveillantes coupées</div><div class='sc-consequence-item good'>✓ Preuve RAM préservée</div><div class='sc-consequence-item good'>✓ Analyse possible</div>",
+          "source": "Ch. 11.2 + ISO 27037 — Isolation + préservation",
+          "next": 1
+        },
+        {
+          "text": "Lancer une analyse forensique du disque avec X-Ways en live.",
+          "correct": false,
+          "penalty": 10,
+          "explain": "Inadapté. Un malware fileless ne laisse rien sur le disque — l'analyse disque ne trouvera pas la cause. La priorité est la RAM, pas le disque.",
+          "legal": "Manuel Ch. 11.2 — Pour un malware fileless, l'analyse disque est une perte de temps. RAM first.",
+          "consequence": "<div class='sc-consequence-item neutral'>⚠️ Analyse non pertinente pour ce type de malware</div>",
+          "source": "Ch. 11.2 — Forensique adapté au type de menace",
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "🔍 L'analyse Volatility",
+      "scene": "Vous avez capturé 16 Go de RAM. Volatility 3 montre : le processus <code>svchost.exe</code> (PID 1284) a des connexions actives vers 185.x.x.x:443. Il n'est pas dans la liste habituelle des svchost légitimes. La commande <code>malfind</code> détecte une zone mémoire avec droits RWX (lecture-écriture-exécution) contenant du shellcode.",
+      "law": "<strong>Volatility 3 / malfind</strong> — Détecte zones mémoire RWX avec shellcode.<br><strong>MITRE ATT&CK T1055</strong> — Process Injection : technique référencée internationalement.<br><strong>Art. 143bis + 144bis CP</strong> — Cumul possible si injection = accès indu + dommages aux données système.",
+      "question": "<strong>Que concluez-vous et comment le formulez-vous dans le rapport ?</strong>",
+      "choices": [
+        {
+          "text": "«&nbsp;Le système est infecté par un malware.&nbsp;»",
+          "correct": false,
+          "penalty": 10,
+          "explain": "Trop vague. Un rapport forensique doit être précis et référencé. Quelle preuve ? Quel artefact ? Quelle commande Volatility ?",
+          "legal": "Manuel Ch. 29.1 — Précision et traçabilité. Chaque conclusion doit être étayée par un artefact spécifique.",
+          "consequence": "<div class='sc-consequence-item neutral'>⚠️ Conclusion correcte mais non étayée</div>",
+          "source": "Ch. 29.1 — Précision du rapport",
+          "next": "end"
+        },
+        {
+          "text": "«&nbsp;L'analyse RAM (Volatility 3, commande malfind) révèle que le processus svchost.exe (PID 1284) contient une zone mémoire à droits RWX avec du shellcode non signé. Ce processus maintient une connexion active vers 185.x.x.x:443 (voir netscan). Ces éléments sont caractéristiques d'une injection de code en mémoire (technique T1055 MITRE ATT&CK).&nbsp;»",
+          "correct": true,
+          "points": 25,
+          "explain": "Formulation forensiquement correcte. Elle cite : l'outil (Volatility 3), la commande (malfind, netscan), les artefacts spécifiques (PID, droits RWX, shellcode, IP cible) et une référence de classification (MITRE T1055). Reproductible et vérifiable.",
+          "legal": "Manuel Ch. 29.1 — Précision + traçabilité + reproductibilité. MITRE ATT&CK comme référence standardisée.",
+          "consequence": "<div class='sc-consequence-item good'>✓ Standard forensique avancé</div><div class='sc-consequence-item good'>✓ Reproductible et vérifiable</div><div class='sc-consequence-item good'>✓ Référence MITRE internationale</div>",
+          "source": "Ch. 29.1 + MITRE ATT&CK T1055",
+          "next": "end"
+        }
+      ]
+    }
+  ]
+}
