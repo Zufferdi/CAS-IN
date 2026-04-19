@@ -1,4 +1,4 @@
-# 🔍 Quiz CAS-IN — Investigation Numérique
+# 🔍 CAS-IN — Investigation Numérique
 
 Application web de révision pour le **Certificate of Advanced Studies en Investigation Numérique (CAS-IN)**. Déployée automatiquement via GitHub Pages à chaque push sur `main`.
 
@@ -6,38 +6,95 @@ Application web de révision pour le **Certificate of Advanced Studies en Invest
 
 ---
 
-## 📚 Contenu des questions
+## 🆕 Nouveautés v2.0
 
-Plus de **1200 questions** à choix multiples couvrant l'ensemble des modules du CAS-IN :
-
-| Thème | Description |
-|---|---|
-| **RÉSEAUX** | Modèle OSI, TCP/IP, ARP, DNS, BGP, VLANs, protocoles |
-| **FAT** | Structures FAT12/16/32/exFAT, suppression, récupération |
-| **NTFS** | MFT, attributs, journaux, ADS, VSS, timestamps |
-| **FILESYSTEMS** | EXT2/3/4, HFS+, APFS, secteurs, clusters, MBR/GPT |
-| **FORENSIQUE** | Méthodologie, chaîne de conservation, acquisitions, anti-forensique |
-| **CRYPTO** | AES, RSA, TLS, hachage, BitLocker, VeraCrypt, PKI |
-| **WINDOWS** | Registre, artefacts (Prefetch, LNK, ShellBags), Event Logs |
-| **OUTILS** | Autopsy, X-Ways, Volatility, Wireshark, FTK, KAPE, CyberChef… |
-| **PROGRAMMES** | Cellebrite, YARA, Ghidra, Metasploit, Plaso, Chainsaw… |
-| **X-WAYS** | Workflow, Volume Snapshot, recherches, carving, rapports |
-| **OSINT** | Opérateurs Google, Maltego, Tor, Dark Web, métadonnées |
-| **DROIT** | CPP suisse, expertises, perquisitions, entraide internationale (EIMP) |
-
-Les questions sont de trois niveaux : **Facile** (1 pt) · **Moyen** (2 pts) · **Difficile** (3 pts).
+- **Page d'accueil Matrix** — choix entre révision (💊 pilule bleue) et quiz (💊 pilule rouge)
+- **14 fiches de révision** thématiques avec citations, anecdotes forensiques et références bibliographiques
+- **Gamification complète** — Boss Battles, Scènes de crime, Mission 30 questions, Rapport d'expertise PDF
+- **1439 questions** · 36 chapitres · 10 thèmes (vs ~1200 en v1)
+- Architecture restructurée : `index.html` (accueil) + `quiz.html` + `fiches/`
 
 ---
 
-## 🏗️ Structure du projet
+## 🗂 Structure du projet
 
 ```
 CAS-IN/
-├── index.html          # Application principale (quiz interactif)
-├── questions.js        # Base de questions (format JS/JSON)
-├── Quizz CASIN.htm     # Version alternative standalone
-└── .github/workflows/  # Déploiement automatique GitHub Pages
+├── index.html              # Page d'accueil Matrix (pilule bleue / rouge)
+├── quiz.html               # Quiz interactif complet
+├── style.css               # Styles du quiz
+├── sw.js                   # Service Worker (cache offline)
+├── manifest.json           # PWA manifest
+├── questions.json          # 1439 questions (JSON)
+└── fiches/
+    ├── index.html          # Hub de navigation des fiches
+    ├── fiche.css           # CSS partagé entre toutes les fiches
+    ├── fat16.html          # FAT12 / FAT16 / FAT32
+    ├── exfat.html          # exFAT
+    ├── ntfs.html           # NTFS
+    ├── disques.html        # Technologie des disques & Représentation
+    ├── ext.html            # EXT2 / EXT3 / EXT4
+    ├── hfs.html            # HFS+ et APFS
+    ├── acquisition.html    # Acquisition · Formats · MAC times · Méthodologie
+    ├── windows.html        # Windows — Registre · Artefacts · Event Logs
+    ├── macos-linux.html    # macOS & Linux
+    ├── crypto.html         # Cryptologie — AES · RSA · PKI · Hashcat
+    ├── droit.html          # Droit pénal suisse — CPP · Expertise · EIMP
+    ├── reseau.html         # Réseau · IP · DNS · Infrastructure
+    ├── osint.html          # OSINT · Dorks · EXIF · Métadonnées
+    └── outils.html         # Outils forensiques — X-Ways · Zimmerman · Volatility
 ```
+
+---
+
+## 📚 Contenu des questions
+
+**1439 questions** à choix multiples couvrant l'ensemble des modules du CAS-IN :
+
+| Thème | Chapitres | Questions |
+|---|---|---|
+| **Système de fichiers** | FAT12/16/32, exFAT, NTFS, EXT2/3/4, HFS+, APFS, Disques | ~300 |
+| **Acquisition et analyse** | Acquisition, Formats, MAC times, Outils, Méthodologie | ~190 |
+| **Spécificité des OS** | Windows, macOS, Linux | ~190 |
+| **Cryptologie** | AES, RSA, PKI, Hachage, Cassage | ~170 |
+| **Droit** | CPP suisse, Perquisition, Expertise, EIMP | ~125 |
+| **OSINT** | Fondamentaux, Outils, Google Dorks, EXIF | ~110 |
+| **Informatique de base** | Représentation, Adressage IP, Réseaux | ~145 |
+
+Trois niveaux de difficulté : **Facile** (1 pt) · **Moyen** (2 pts) · **Difficile** (3 pts).
+
+---
+
+## 🎮 Modes de jeu
+
+| Mode | Description |
+|---|---|
+| **Normal** | Questions aléatoires selon tes filtres (thème, chapitre, difficulté) |
+| **SM-2** | Répétition espacée — les questions difficiles reviennent plus souvent |
+| **Survie** | 3 vies · une erreur = une vie perdue |
+| **Focus** | Interface épurée, sans distractions |
+| **Favoris** | Uniquement les questions marquées ⭐ |
+| **Erreurs** | Réviser les questions ratées |
+| **📝 Examen** | Séquence chronométrée configurable + rapport d'expertise PDF |
+| **🔍 Scène** | 5 enquêtes narratives séquencées (Gabriel, Javier, Dimitri, Ludovic…) |
+| **🎯 Mission** | 30 questions · 6 phases · de la perquisition au rapport · note /6 |
+
+### Gamification
+
+- **XP et rangs** — 20 niveaux de Stagiaire à Grand Maître DFIR (avec références : Elliot Alderson, Lisbeth Salander, Sherlock Holmes…)
+- **Boss Battle** — après 20 bonnes réponses sur un chapitre, 5 questions hard chronométrées · victoire = badge + fiche débloquée
+- **Fiches débloquables** — les fiches se déverrouillent au fil de la progression (🔒 → 🔓)
+- **Carte des territoires** — 7 zones thématiques colorées selon la maîtrise
+- **Rapport d'expertise PDF** — à la fin d'un examen, génère un faux rapport judiciaire avec les erreurs formulées comme des fautes d'expert forensique contestables en audience
+- **Achievements, streak quotidien, combo multiplier, God Mode**
+
+---
+
+## 📄 Fiches de révision
+
+Chaque fiche couvre un thème en mode **cheatsheet** : structure on-disk, offsets hex essentiels, tableaux de valeurs, étapes forensiques clés, citation d'expert et anecdote geek.
+
+Accès : pilule bleue depuis l'accueil → hub des fiches → fiche individuelle → bouton 💊 pour lancer le quiz sur ce chapitre.
 
 ---
 
@@ -48,80 +105,65 @@ Aucune installation requise. L'application fonctionne entièrement côté client
 ```bash
 git clone https://github.com/Zufferdi/CAS-IN.git
 cd CAS-IN
-# Ouvrir index.html dans un navigateur
-open index.html
+python3 -m http.server 8080
+# puis ouvrir http://localhost:8080
 ```
 
-> **Note :** Pour charger `questions.js` via `fetch()`, un serveur HTTP local peut être nécessaire sur certains navigateurs en raison des restrictions CORS.
->
-> ```bash
-> python3 -m http.server 8080
-> # puis ouvrir http://localhost:8080
-> ```
+> Un serveur HTTP local est nécessaire pour que `questions.json` soit chargé correctement (restrictions CORS des navigateurs sur `file://`).
 
 ---
 
-## ➕ Ajouter ou modifier des questions
+## ➕ Structure d'une question
 
-Les questions sont stockées dans `questions.js` sous forme d'un tableau JSON. Chaque question suit cette structure :
+Les questions sont stockées dans `questions.json`. Chaque question suit cette structure :
 
 ```json
 {
-  "theme": "FORENSIQUE",
-  "diff": "medium",
-  "q": "Qu'est-ce que le file carving ?",
-  "opts": [
-    "Une technique de chiffrement",
-    "La récupération de fichiers par leurs signatures binaires",
-    "Un outil de copie de disques",
-    "Un format d'image forensique"
-  ],
-  "answers": [1],
+  "theme": "Système de fichiers",
+  "chapter": "NTFS",
+  "diff": "hard",
   "type": "single",
-  "expl": "Le <strong>file carving</strong> consiste à récupérer des fichiers depuis un flux brut en détectant les magic bytes, sans s'appuyer sur le système de fichiers."
+  "q": "Quelle est la différence forensique entre $STANDARD_INFORMATION et $FILE_NAME ?",
+  "options": [
+    "$STANDARD_INFORMATION contient les vraies dates, $FILE_NAME est modifiable",
+    "$FILE_NAME est modifiable par les programmes, $STANDARD_INFORMATION ne l'est pas",
+    "$STANDARD_INFORMATION est modifiable par les programmes, $FILE_NAME uniquement par le noyau",
+    "Les deux attributs sont identiques et redondants"
+  ],
+  "answers": [2],
+  "expl_ok": "Exact — $SI est modifiable par tout programme (cible du timestomping), $FN uniquement par le noyau Windows.",
+  "expl_ko": "$STANDARD_INFORMATION est l'attribut ciblé par le timestomping. $FILE_NAME ne peut être modifié que par le noyau — c'est pourquoi une divergence entre les deux révèle une manipulation.",
+  "refs": ["Harlan Carvey, Windows Forensic Analysis Toolkit, Syngress, 2014", "SANS FOR500"]
 }
 ```
 
-### Champs obligatoires
+### Champs
 
-| Champ | Valeurs possibles | Description |
+| Champ | Valeurs | Description |
 |---|---|---|
-| `theme` | `RÉSEAUX`, `FAT`, `NTFS`, `FILESYSTEMS`, `FORENSIQUE`, `CRYPTO`, `WINDOWS`, `OUTILS`, `PROGRAMMES`, `X-WAYS`, `OSINT`, `DROIT` | Catégorie de la question |
-| `diff` | `easy`, `medium`, `hard` | Niveau de difficulté |
-| `q` | chaîne de texte | Énoncé de la question |
-| `opts` | tableau de 3–5 chaînes | Options de réponse |
-| `answers` | tableau d'indices (ex: `[1]` ou `[0,2]`) | Index des bonnes réponses dans `opts` |
-| `type` | `single` ou `multi` | Une ou plusieurs réponses correctes |
-| `expl` | chaîne HTML | Explication affichée après validation (balises `<strong>`, `<code>` acceptées) |
+| `theme` | voir tableau thèmes | Catégorie principale |
+| `chapter` | 36 chapitres | Sous-catégorie |
+| `diff` | `easy` `medium` `hard` | Difficulté |
+| `type` | `single` `multi` | Réponse unique ou multiple |
+| `q` | texte | Énoncé |
+| `options` | tableau 3–5 chaînes | Options de réponse |
+| `answers` | tableau d'indices | Indices des bonnes réponses dans `options` |
+| `expl_ok` | texte | Explication si bonne réponse |
+| `expl_ko` | texte | Explication si mauvaise réponse |
+| `refs` | tableau de chaînes | Références bibliographiques (optionnel) |
 
-### Règles de rédaction
+---
 
-- Les **longueurs des options** doivent être comparables — éviter que la réponse correcte soit systématiquement la plus longue.
-- Toujours inclure une **explication** (`expl`) : c'est la valeur pédagogique principale.
-- Pour les questions `multi`, indiquer `"type": "multi"` et lister tous les indices corrects dans `answers`.
-- Les **balises HTML** sont acceptées dans `expl` : `<strong>`, `<em>`, `<code>`.
+## 🔧 Après un déploiement
 
-### Workflow pour contribuer
+Le Service Worker met les fichiers en cache. Après chaque push, vider le cache dans le navigateur :
 
-```bash
-# 1. Cloner et créer une branche
-git checkout -b add-questions-osint
-
-# 2. Éditer questions.js (ajouter les nouvelles questions dans le tableau)
-
-# 3. Vérifier la syntaxe JSON
-python3 -c "import json; data=open('questions.js').read(); \
-  json.loads(data[data.index('['): data.rindex(']')+1]); print('OK')"
-
-# 4. Pousser et créer une Pull Request
-git add questions.js
-git commit -m "feat: ajout de 15 questions OSINT niveau hard"
-git push origin add-questions-osint
+```
+F12 → Application → Service Workers → Unregister → F5
 ```
 
 ---
 
 ## 📄 Licence
 
-Usage pédagogique interne — CAS-IN, HE-Arc.
-
+Usage pédagogique interne — CAS-IN, HE-Arc / Police Valaisanne.
