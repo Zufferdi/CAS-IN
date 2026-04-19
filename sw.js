@@ -1,6 +1,6 @@
 // Service Worker — CAS-IN Investigation Numérique
-// B5 fix: version bumped to v10 pour invalider les anciens caches
-const CACHE_VERSION = 'cas-in-v10';
+// v12 : fix opérateur (!url.origin → url.origin !==), scene.css retiré (CSS inline), URL scheme guard
+const CACHE_VERSION = 'cas-in-v12';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -9,7 +9,6 @@ const STATIC_ASSETS = [
   './tp.html',
   './tp.css',
   './scene.html',
-  './scene.css',
   './manifest.json',
   './questions.json',
   './fiches/index.html',
@@ -67,15 +66,18 @@ self.addEventListener('activate', event => {
 
 // Fetch : Network First pour HTML/JSON, Cache First pour CSS/JS
 self.addEventListener('fetch', event => {
+  // Ignorer tout ce qui n'est pas http(s) — bloque chrome-extension://
+  if (!event.request.url.startsWith('http')) return;
+
   const url = new URL(event.request.url);
-  
-  // Ignorer les requêtes non-GET et hors origine
+
+  // Ignorer les requêtes non-GET et hors origine — OPERATEUR CORRIGÉ (était: !url.origin ===)
   if (event.request.method !== 'GET') return;
-  if (!url.origin === location.origin) return;
-  
+  if (url.origin !== self.location.origin) return;
+
   const isHTML = event.request.headers.get('accept')?.includes('text/html');
   const isJSON = url.pathname.endsWith('.json');
-  
+
   if (isHTML || isJSON) {
     // Network First : toujours essayer le réseau en premier
     event.respondWith(
