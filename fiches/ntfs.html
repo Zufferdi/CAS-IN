@@ -4,282 +4,290 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NTFS — CAS-IN Forensique</title>
-<link rel="stylesheet" href="fiche.css">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap');
+  :root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--accent:#f0883e;--accent2:#58a6ff;--accent3:#3fb950;--accent4:#ff7b72;--accent5:#bc8cff;--text:#e6edf3;--muted:#8b949e;--mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;padding:2rem;line-height:1.6;}
+  .page{max-width:900px;margin:0 auto;}
+  .header{display:flex;align-items:baseline;gap:1rem;margin-bottom:2.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border);animation:fadeIn .4s ease;}
+  .fs-badge{font-family:var(--sans);font-size:2.6rem;font-weight:800;letter-spacing:-1px;color:var(--accent2);}
+  .header-meta{font-size:.75rem;color:var(--muted);}
+  .tag{display:inline-block;padding:.15rem .5rem;border-radius:4px;font-size:.7rem;font-weight:600;letter-spacing:.05em;background:rgba(88,166,255,.12);border:1px solid rgba(88,166,255,.3);color:var(--accent2);}
+  .section{margin-bottom:2rem;animation:slideUp .4s ease both;}
+  .section:nth-child(2){animation-delay:.05s}.section:nth-child(3){animation-delay:.1s}.section:nth-child(4){animation-delay:.15s}.section:nth-child(5){animation-delay:.2s}.section:nth-child(6){animation-delay:.25s}.section:nth-child(7){animation-delay:.3s}.section:nth-child(8){animation-delay:.35s}
+  .section-title{font-family:var(--sans);font-size:.7rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem;}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+  .hex{display:inline-block;background:var(--surface2);border:1px solid var(--border);color:var(--accent4);padding:.05rem .4rem;border-radius:4px;font-size:.78em;font-weight:700;}
+  .card-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem 1.1rem;position:relative;overflow:hidden;}
+  .card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+  .card.blue::before{background:var(--accent2)}.card.orange::before{background:var(--accent)}.card.green::before{background:var(--accent3)}.card.purple::before{background:var(--accent5)}.card.red::before{background:var(--accent4)}
+  .card-title{font-size:.7rem;font-weight:700;letter-spacing:.05em;margin-bottom:.5rem;}
+  .card.blue .card-title{color:var(--accent2)}.card.orange .card-title{color:var(--accent)}.card.green .card-title{color:var(--accent3)}.card.purple .card-title{color:var(--accent5)}.card.red .card-title{color:var(--accent4)}
+  .card p{font-size:.8rem;color:var(--text);line-height:1.5;}
+  /* Layout on-disk */
+  .layout{display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:.72rem;font-weight:600;}
+  .lb{flex:1;padding:.6rem .4rem;text-align:center;border-right:1px solid var(--border);transition:background .2s;cursor:default;}
+  .lb:last-child{border-right:none}
+  .lb:hover{filter:brightness(1.3)}
+  .lb span{display:block;font-size:.62rem;color:var(--muted);margin-top:.2rem;font-weight:400;}
+  /* MFT entry */
+  .mft-entry{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .mft-row{display:grid;grid-template-columns:120px 1fr;border-bottom:1px solid var(--border);}
+  .mft-row:last-child{border-bottom:none}
+  .mft-label{padding:.5rem .75rem;background:var(--surface2);font-size:.7rem;color:var(--muted);font-weight:600;display:flex;align-items:center;}
+  .mft-val{padding:.5rem .75rem;font-size:.78rem;}
+  /* Run list decoder */
+  .rl-demo{background:var(--surface);border:1px solid rgba(88,166,255,.3);border-radius:10px;padding:1rem 1.2rem;}
+  .rl-bytes{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.75rem;}
+  .rl-byte{width:44px;height:38px;border-radius:6px;border:1px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;}
+  .rl-byte span{font-size:.58rem;font-weight:400;margin-top:.1rem;}
+  .rl-header{border-color:rgba(240,192,64,.5);background:rgba(240,192,64,.1);color:#f0c040;}
+  .rl-len{border-color:rgba(63,185,80,.5);background:rgba(63,185,80,.1);color:var(--accent3);}
+  .rl-off{border-color:rgba(88,166,255,.5);background:rgba(88,166,255,.1);color:var(--accent2);}
+  .rl-end{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:var(--muted);}
+  .rl-step{font-size:.78rem;color:var(--text);margin:.35rem 0;padding:.35rem .5rem;border-radius:5px;}
+  .rl-step.good{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.2);}
+  .rl-step.info{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);}
+  .rl-step.warn{background:rgba(240,192,64,.08);border:1px solid rgba(240,192,64,.2);}
+  /* Attributs table */
+  table{width:100%;border-collapse:collapse;font-size:.78rem;}
+  th{background:var(--surface2);color:var(--muted);font-size:.68rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.55rem .9rem;text-align:left;border-bottom:1px solid var(--border);}
+  td{padding:.6rem .9rem;border-bottom:1px solid var(--border);vertical-align:top;}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:var(--surface2)}
+  /* Timestamps */
+  .ts-compare{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;}
+  .ts-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;}
+  .ts-title{font-size:.7rem;font-weight:700;margin-bottom:.5rem;}
+  .ts-content{font-size:.78rem;color:var(--text);line-height:1.6;}
+  .ts-alert{background:rgba(255,64,96,.06);border:1px solid rgba(255,64,96,.3);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;margin-top:.5rem;}
+  .footer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.68rem;color:var(--muted);display:flex;justify-content:space-between;}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  @media(max-width:600px){.card-grid,.ts-compare{grid-template-columns:1fr}.layout{flex-wrap:wrap}}
+</style>
 </head>
 <body>
-<div class="topnav">
-  <div style="display:flex;gap:.5rem;align-items:center">
-    <a href="index.html" class="tn-back">← Fiches</a>
-    <a href="../index.html" class="tn-home">🏠 Accueil</a>
-  </div>
-  <a href="../quiz.html" class="tn-quiz">💊 Lancer le quiz →</a>
-</div>
-<div style="margin:1.25rem 0;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
-  <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Citation</span><br>
-  <em style="color:var(--text)">"The Windows Registry and the NTFS file system are, without question, the richest sources of forensic artifacts for the Windows investigator. Every user action leaves a trace — if you know where to look."</em><br>
-  <span style="font-size:.72rem;margin-top:.3rem;display:block">— Harlan Carvey, <em>Windows Forensic Analysis Toolkit</em>, 4e éd., Syngress, 2014</span>
-</div>
-<a href="../quiz.html" style="color:#ff8888;text-decoration:none;padding:.3rem .7rem;border:1px solid rgba(255,136,136,.35);border-radius:5px;background:rgba(255,136,136,.08)">💊 Lancer le quiz →</a>
-</div>
 <div class="page">
 
-  <!-- Header -->
   <div class="header">
     <div class="fs-badge">NTFS</div>
     <div>
-      <div><span class="tag">Forensique</span> <span class="tag">Filesystem</span> <span class="tag">Windows</span></div>
-      <div class="header-meta" style="margin-top:0.3rem;">New Technology File System — Windows NT 1993 → présent · Philosophie : <em>Tout est fichier</em></div>
+      <div><span class="tag">DFIR</span> <span class="tag" style="background:rgba(63,185,80,.12);border-color:rgba(63,185,80,.3);color:var(--accent3)">Filesystem</span></div>
+      <div class="header-meta" style="margin-top:.3rem">New Technology File System · Tout est fichier · Windows standard depuis 1993</div>
     </div>
   </div>
 
-  <!-- Alerte clé -->
-  <div class="alert">
-    <strong>⚠ NTFS commence au cluster 0</strong> (contrairement à FAT qui commence à 2). Entrée MFT = 1024 octets (1 Ko). La $MFT n'est pas forcément au début du disque — consulter le boot sector offset <span class="hex hex-green">0x30</span>.
+  <!-- STRUCTURE ON-DISK -->
+  <div class="section">
+    <div class="section-title">Structure on-disk — « Tout est fichier »</div>
+    <div class="layout">
+      <div class="lb" style="background:#1a2030;color:var(--accent2)">$Boot<span>VBR secteur 0</span></div>
+      <div class="lb" style="background:#1f2d1f;color:var(--accent3)">$MFT<span>~4/5e du disque</span></div>
+      <div class="lb" style="background:#2a1f1a;color:var(--accent)">$MFTMirr<span>miroir partiel</span></div>
+      <div class="lb" style="background:#1a2030;flex:3;color:var(--accent2)">Data Area<span>Tous les fichiers + métafichiers</span></div>
+    </div>
+    <p style="font-size:.75rem;color:var(--muted);margin-top:.5rem">Contrairement à FAT, il n'y a pas de zone technique fixe (boot record, FAT1/2, root dir) — tout est dans la Data Area sous forme de fichiers accessibles par les mêmes mécanismes.</p>
   </div>
 
-  <!-- Boot Sector -->
+  <!-- MFT -->
   <div class="section">
-    <div class="section-title">Boot Sector — Point de départ</div>
-    <table class="offset-table">
-      <thead>
-        <tr><th>Offset</th><th>Taille</th><th>Champ</th><th>Notes forensiques</th></tr>
-      </thead>
-      <tbody>
-        <tr class="hi">
-          <td><span class="hex">0x03</span></td>
-          <td>8 octets</td>
-          <td>OEM ID</td>
-          <td><span class="hex hex-green">4E 54 46 53</span> = <strong>NTFS</strong> en ASCII. Signature d'identification.</td>
-        </tr>
-        <tr class="hi">
-          <td><span class="hex">0x0B</span></td>
-          <td>2 octets</td>
-          <td>BytesPerSector</td>
-          <td>Généralement <span class="hex">0x0200</span> = 512 octets. Lire en Little Endian : "00 02" → 0x0200.</td>
-        </tr>
-        <tr class="hi">
-          <td><span class="hex">0x0D</span></td>
-          <td>1 octet</td>
-          <td>SectorsPerCluster</td>
-          <td>Valeur directe. Ex: <span class="hex">0x10</span> = 16 secteurs/cluster → cluster = 16 × 512 = 8192 octets.</td>
-        </tr>
-        <tr>
-          <td><span class="hex">0x28</span></td>
-          <td>8 octets</td>
-          <td>TotalSectors</td>
-          <td>Nombre total de secteurs du volume.</td>
-        </tr>
-        <tr class="hi">
-          <td><span class="hex">0x30</span></td>
-          <td>8 octets</td>
-          <td>MFT LCN</td>
-          <td><strong>LCN (Logical Cluster Number) de la $MFT.</strong> Lire en Little Endian. Ex: "80 14 00 00" → 0x1480 = 5248. Offset $MFT = 5248 × 8192 = 42'991'616 octets.</td>
-        </tr>
-        <tr>
-          <td><span class="hex">0x38</span></td>
-          <td>8 octets</td>
-          <td>MFTMirr LCN</td>
-          <td>LCN de la copie de secours des 4 premiers records MFT.</td>
-        </tr>
-        <tr>
-          <td><span class="hex">0x40</span></td>
-          <td>4 octets</td>
-          <td>ClustersPerMFT</td>
-          <td>Négatif → exposant : ex −10 → 2¹⁰ = 1024 octets/record. Positif → nombre de clusters.</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="formula-box">
-      <div><span class="f">TailleCluster</span> = BytesPerSector × SectorsPerCluster</div>
-      <div><span class="f">Offset $MFT</span> = MFT_LCN × TailleCluster</div>
-      <div><span class="f">Offset cluster N</span> = N × TailleCluster &nbsp;(les clusters NTFS commencent à 0)</div>
+    <div class="section-title">Master File Table ($MFT) — Le cœur de NTFS</div>
+    <div class="card-grid">
+      <div class="card blue">
+        <div class="card-title">Structure</div>
+        <p>Chaque fichier/dossier = <strong>1 entrée de 1 KB</strong> (tuple). Entête de 42 bytes + séquence d'attributs. La MFT elle-même est un fichier (<code>$MFT</code>, entrée 0).<br><br>
+        Si un fichier est petit (< 1 KB), ses données sont stockées <strong>directement dans le tuple</strong> (attribut résident).</p>
+      </div>
+      <div class="card orange">
+        <div class="card-title">Métafichiers système</div>
+        <p>
+          <code>$MFT</code> (0) — La table elle-même<br>
+          <code>$MFTMirr</code> (1) — Miroir des 4 premières entrées<br>
+          <code>$LogFile</code> (2) — Journal des transactions<br>
+          <code>$Volume</code> (3) — Nom et version du volume<br>
+          <code>.</code> (5) — Répertoire racine<br>
+          <code>$Bitmap</code> (6) — Table d'allocation clusters<br>
+          <code>$Boot</code> (7) — Secteur de démarrage<br>
+          <code>$UsnJrnl</code> — Journal USN (long terme)
+        </p>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:.6rem">
+      <table>
+        <thead><tr><th>Entrée MFT</th><th>Métafichier</th><th>Rôle forensique</th></tr></thead>
+        <tbody>
+          <tr><td><span class="hex">0</span></td><td><code>$MFT</code></td><td>Table complète — 1 entrée par fichier/dossier</td></tr>
+          <tr><td><span class="hex">1</span></td><td><code>$MFTMirr</code></td><td>Miroir des 4 premières entrées — récupération si corruption</td></tr>
+          <tr><td><span class="hex">2</span></td><td><code>$LogFile</code></td><td>Journal transactions — historique récent des opérations</td></tr>
+          <tr><td><span class="hex">8</span></td><td><code>$BadClus</code></td><td>Liste des clusters défectueux</td></tr>
+          <tr><td><span class="hex">$UsnJrnl</span></td><td><code>$UsnJrnl</code></td><td>Journal USN — création/suppression/renommage avec timestamps</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
-  <!-- MFT records réservés -->
+  <!-- ATTRIBUTS -->
   <div class="section">
-    <div class="section-title">$MFT — Records réservés (0–15)</div>
-    <div class="mft-grid">
-      <div class="mft-cell mc-sys"><div class="mft-num">0</div><div class="mft-name">$MFT</div><div class="mft-desc">La MFT elle-même</div></div>
-      <div class="mft-cell mc-sys"><div class="mft-num">1</div><div class="mft-name">$MFTMirr</div><div class="mft-desc">Copie 4 premiers records</div></div>
-      <div class="mft-cell mc-sys"><div class="mft-num">2</div><div class="mft-name">$LogFile</div><div class="mft-desc">Journal transactions</div></div>
-      <div class="mft-cell mc-sys"><div class="mft-num">3</div><div class="mft-name">$Volume</div><div class="mft-desc">Nom, version, flags</div></div>
-      <div class="mft-cell mc-meta"><div class="mft-num">4</div><div class="mft-name">$AttrDef</div><div class="mft-desc">Types d'attributs</div></div>
-      <div class="mft-cell mc-meta"><div class="mft-num">5</div><div class="mft-name">. (root)</div><div class="mft-desc">Répertoire racine</div></div>
-      <div class="mft-cell mc-sys"><div class="mft-num">6</div><div class="mft-name">$Bitmap</div><div class="mft-desc">Clusters libres/occupés</div></div>
-      <div class="mft-cell mc-sys"><div class="mft-num">7</div><div class="mft-name">$Boot</div><div class="mft-desc">Secteur de boot</div></div>
-      <div class="mft-cell mc-meta"><div class="mft-num">8</div><div class="mft-name">$BadClus</div><div class="mft-desc">Clusters défectueux</div></div>
-      <div class="mft-cell mc-meta"><div class="mft-num">9</div><div class="mft-name">$Secure</div><div class="mft-desc">Descripteurs sécurité (ACL)</div></div>
-      <div class="mft-cell mc-meta"><div class="mft-num">10</div><div class="mft-name">$UpCase</div><div class="mft-desc">Conversion majuscules Unicode</div></div>
-      <div class="mft-cell mc-ext"><div class="mft-num">11</div><div class="mft-name">$Extend</div><div class="mft-desc">$Quota, $ObjId, $UsnJrnl</div></div>
-      <div class="mft-cell mc-free"><div class="mft-num">12</div><div class="mft-name">(réservé)</div><div class="mft-desc">Futur usage</div></div>
-      <div class="mft-cell mc-free"><div class="mft-num">13</div><div class="mft-name">(réservé)</div><div class="mft-desc">Futur usage</div></div>
-      <div class="mft-cell mc-free"><div class="mft-num">14</div><div class="mft-name">(réservé)</div><div class="mft-desc">Futur usage</div></div>
-      <div class="mft-cell mc-free"><div class="mft-num">15</div><div class="mft-name">(réservé)</div><div class="mft-desc">Futur usage</div></div>
+    <div class="section-title">Attributs NTFS — Résident vs Non-résident</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:.6rem">
+      <table>
+        <thead><tr><th>Type hex</th><th>Nom</th><th>Contenu</th><th>Note forensique</th></tr></thead>
+        <tbody>
+          <tr><td><span class="hex">0x10</span></td><td><strong>$STANDARD_INFORMATION</strong></td><td>Dates MAC times, flags (caché/système), droits basiques</td><td style="color:var(--accent4)">⚠️ Modifiable par les applis — cible du timestomping</td></tr>
+          <tr><td><span class="hex">0x30</span></td><td><strong>$FILE_NAME</strong></td><td>Nom long + court (8.3), dates. Peut en avoir 2 (LFN + SFN)</td><td style="color:var(--accent3)">✓ Mis à jour par le noyau uniquement — difficile à falsifier</td></tr>
+          <tr><td><span class="hex">0x80</span></td><td><strong>$DATA</strong></td><td>Contenu réel du fichier (résident si < 1 KB, sinon run list)</td><td>Plusieurs flux $DATA possibles → ADS</td></tr>
+          <tr><td><span class="hex">0x20</span></td><td><strong>$ATTRIBUTE_LIST</strong></td><td>Liste d'attributs supplémentaires si tuple saturé</td><td>Rare mais complexe à analyser</td></tr>
+          <tr><td><span class="hex">0x90</span></td><td><strong>$INDEX_ROOT</strong></td><td>Racine d'un index (B-tree) — pour les répertoires</td><td>Stocke les entrées de répertoire</td></tr>
+          <tr><td><span class="hex">0xB0</span></td><td><strong>$BITMAP</strong></td><td>Bitmap d'allocation (MFT ou répertoire)</td><td>≠ fichier <code>$Bitmap</code> (entrée 6)</td></tr>
+        </tbody>
+      </table>
     </div>
-  </div>
-
-  <!-- Structure d'un record MFT -->
-  <div class="section">
-    <div class="section-title">Structure d'un record MFT (1024 octets)</div>
     <div class="card-grid">
       <div class="card green">
-        <div class="card-title">En-tête du record</div>
-        <p>Signature <span class="hex hex-green">46 49 4C 45</span> = "<strong>FILE</strong>" en ASCII (lecture gauche→droite).</p>
-        <p>Offset <span class="hex">0x14</span> (2 octets, WORD LE) = <strong>FirstAttributeOffset</strong>. Valeur typique : <span class="hex">0x38</span> = 56 décimal.</p>
-        <p style="margin-top:0.4rem;font-size:0.75rem;color:var(--muted);">Structure : En-tête (≥42 bytes) · Série d'attributs · Espace libre · FIN à <span class="hex">0xFFFFFFFF</span></p>
+        <div class="card-title">Attribut résident</div>
+        <p>Données < 1 KB → stockées <strong>directement dans le tuple MFT</strong>. L'attribut $DATA contient le contenu du fichier. Accès immédiat sans aller chercher des clusters sur le disque.<br><br>
+        Repérable dans X-Ways : flag <code>R</code> (Resident) allumé.</p>
       </div>
-      <div class="card blue">
-        <div class="card-title">$BITMAP de la $MFT</div>
-        <p>Chaque bit = 1 record MFT. <span class="hex">1</span> = occupé, <span class="hex">0</span> = libre ou effacé.</p>
-        <p>1 octet gère 8 records. Chercher le record 42 : 42/8=5 reste 2 → <strong>octet 5, bit 2</strong>.</p>
-        <p style="margin-top:0.4rem;font-size:0.75rem;color:var(--muted);">$Bitmap (record 6) = bitmap des clusters du volume. $MFT.$BITMAP = bitmap des records MFT.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Attributs -->
-  <div class="section">
-    <div class="section-title">Attributs principaux</div>
-    <table class="attr-table">
-      <thead>
-        <tr><th>Type (LE)</th><th>ID dec</th><th>Nom</th><th>Description forensique</th></tr>
-      </thead>
-      <tbody>
-        <tr><td><span class="hex">0x10000000</span></td><td>16</td><td>$STANDARD_INFORMATION</td><td>Dates MACE, attributs DOS, compteur liens. <strong>Modifiable par les programmes → cible du timestomping.</strong></td></tr>
-        <tr class="hi"><td><span class="hex">0x30000000</span></td><td>48</td><td>$FILE_NAME</td><td>Nom + dates MACE. <strong>Modifiable uniquement par le noyau.</strong> Divergence avec $SI = timestomping détecté.</td></tr>
-        <tr><td><span class="hex">0x40000000</span></td><td>64</td><td>$OBJECT_ID</td><td>Identifiant unique 16 bytes. Lien vers le fichier original même si renommé/déplacé.</td></tr>
-        <tr><td><span class="hex">0x50000000</span></td><td>80</td><td>$SECURITY_DESCRIPTOR</td><td>ACL. Référencé via $Secure (record 9) pour éviter les doublons.</td></tr>
-        <tr class="hi"><td><span class="hex">0x80000000</span></td><td>128</td><td>$DATA</td><td>Contenu du fichier. Résident (petit fichier dans le record MFT) ou non-résident (runlist).</td></tr>
-        <tr><td><span class="hex">0x90000000</span></td><td>144</td><td>$INDEX_ROOT</td><td>Nœud racine d'un index (ex: index $I30 d'un répertoire). Toujours résident.</td></tr>
-        <tr><td><span class="hex">0xA0000000</span></td><td>160</td><td>$INDEX_ALLOCATION</td><td>Nœuds d'un grand index. Non-résident. <strong>$I30 résiduel forensique : traces de fichiers supprimés.</strong></td></tr>
-        <tr class="hi"><td><span class="hex">0xB0000000</span></td><td>176</td><td>$BITMAP</td><td>Bitmap pour la $MFT ou pour un index. 1 bit par entrée/cluster.</td></tr>
-      </tbody>
-    </table>
-
-    <div style="margin-top:0.75rem;padding:0.75rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:0.78rem;">
-      <strong style="color:var(--accent3)">En-tête commune à tous les attributs :</strong>
-      <div style="margin-top:0.35rem;display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;font-size:0.75rem;">
-        <div><span class="hex">0x00</span> Type (4 bytes)</div>
-        <div><span class="hex">0x04</span> Longueur totale (4)</div>
-        <div><span class="hex">0x08</span> Résident ? (1) 0=oui / 1=non</div>
-        <div><span class="hex">0x0C</span> Flags : Compressed=0x0001 · Encrypted=0x4000 · Sparse=0x8000</div>
-      </div>
-      <div style="margin-top:0.4rem;font-size:0.75rem;">Attr. <strong>résident</strong> → offset <span class="hex">0x14</span> (2 octets) = offset interne vers le contenu. &nbsp;|&nbsp; Attr. <strong>non-résident</strong> → offset <span class="hex">0x20</span> (2 octets) = offset vers la RUNLIST.</div>
-    </div>
-  </div>
-
-  <!-- Runlist -->
-  <div class="section">
-    <div class="section-title">Data Runlist — Décoder la fragmentation</div>
-
-    <div class="card-grid">
       <div class="card orange">
-        <div class="card-title">Format du header de run</div>
-        <p>1 octet header : <strong>nibble gauche</strong> (poids fort) = nombre d'octets pour l'offset LCN. <strong>Nibble droit</strong> (poids faible) = nombre d'octets pour la longueur.</p>
-        <p style="margin-top:0.4rem;">Ex: <span class="hex hex-orange">22</span> → offset sur <strong>2</strong> octets, longueur sur <strong>2</strong> octets.</p>
-        <p>Ex: <span class="hex hex-orange">31</span> → offset sur <strong>3</strong> octets, longueur sur <strong>1</strong> octet.</p>
+        <div class="card-title">Attribut non-résident</div>
+        <p>Données > 1 KB → stockées <strong>dans des clusters</strong> pointés par une <strong>run list</strong> dans l'attribut. Le tuple MFT ne contient que la run list, pas les données elles-mêmes.<br><br>
+        Le $DATA est presque toujours non-résident pour les fichiers utilisateur.</p>
       </div>
+    </div>
+  </div>
+
+  <!-- RUN LIST DÉCODAGE -->
+  <div class="section">
+    <div class="section-title">Run List — Décodage nibble par nibble</div>
+    <div class="rl-demo">
+      <div style="font-size:.72rem;color:var(--accent2);font-weight:700;margin-bottom:.6rem">Exemple : <code>21 1C 7A 0A 00</code> — tiré de l'image 173088.jpg</div>
+      <div class="rl-bytes">
+        <div class="rl-byte rl-header">21<span>header</span></div>
+        <div class="rl-byte rl-len">1C<span>longueur</span></div>
+        <div class="rl-byte rl-off">7A<span>offset lo</span></div>
+        <div class="rl-byte rl-off">0A<span>offset hi</span></div>
+        <div class="rl-byte rl-end">00<span>fin liste</span></div>
+      </div>
+      <div class="rl-step warn">
+        <strong style="color:#f0c040">① Octet header <span class="hex">21</span></strong> — Nibble droit = <strong>1</strong> → lire 1 byte pour la longueur · Nibble gauche = <strong>2</strong> → lire 2 bytes pour l'offset LCN
+      </div>
+      <div class="rl-step good">
+        <strong style="color:var(--accent3)">② Longueur <span class="hex">1C</span></strong> → 1×16 + 12 = <strong>28 clusters</strong>
+      </div>
+      <div class="rl-step info">
+        <strong style="color:var(--accent2)">③ Offset LCN <span class="hex">7A 0A</span></strong> → Little Endian → inverser → <span class="hex">0A 7A</span> = 10×256 + 7×16 + 10 = <strong>LCN 2682</strong>
+      </div>
+      <div class="rl-step good">
+        <strong style="color:var(--accent3)">④ Résultat</strong> → <strong>28 clusters consécutifs débutant au cluster 2682</strong>. Fin de liste : <span class="hex">00</span>
+      </div>
+    </div>
+
+    <div style="margin-top:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      <table>
+        <thead><tr><th>Header nibble</th><th>Signification</th><th>Exemple</th></tr></thead>
+        <tbody>
+          <tr><td>Nibble droit (bits 0–3)</td><td>Nombre de bytes pour la longueur du run</td><td><span class="hex">x1</span> → 1 byte · <span class="hex">x2</span> → 2 bytes</td></tr>
+          <tr><td>Nibble gauche (bits 4–7)</td><td>Nombre de bytes pour l'offset LCN</td><td><span class="hex">2x</span> → 2 bytes · <span class="hex">3x</span> → 3 bytes</td></tr>
+          <tr><td><span class="hex">00</span></td><td>Fin de la run list</td><td>Toujours présent en dernier byte</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:.6rem;background:rgba(255,64,96,.06);border:1px solid rgba(255,64,96,.2);border-radius:8px;padding:.75rem 1rem;font-size:.78rem">
+      <strong style="color:var(--accent4)">Offsets négatifs (nombres signés)</strong> — L'offset de chaque run est <strong>relatif au run précédent</strong> (sauf le premier qui est absolu). Un bit de signe à 1 indique un déplacement vers l'arrière.<br><br>
+      Exemple : <span class="hex">FE 61</span> = <code>1111 1110 0110 0001</code> → signe = 1 → inverser + 1 → <strong>-415</strong>. Ce run commence 415 clusters <em>avant</em> le run précédent.
+    </div>
+  </div>
+
+  <!-- TIMESTAMPS -->
+  <div class="section">
+    <div class="section-title">Timestamps NTFS — 1601 vs 1970</div>
+    <div class="ts-compare">
+      <div class="ts-box" style="border-color:rgba(88,166,255,.3)">
+        <div class="ts-title" style="color:var(--accent2)">NTFS — Depuis le 1er janvier 1601</div>
+        <div class="ts-content">
+          Résolution : <strong>100 nanosecondes</strong><br>
+          Stockage : 8 bytes (QWORD) — Little Endian<br>
+          Introduit en 1601 : début du calendrier grégorien<br><br>
+          <span class="hex">$STANDARD_INFORMATION</span> — modifiable<br>
+          <span class="hex">$FILE_NAME</span> — protégé par le noyau
+        </div>
+      </div>
+      <div class="ts-box" style="border-color:rgba(63,185,80,.3)">
+        <div class="ts-title" style="color:var(--accent3)">UNIX — Depuis le 1er janvier 1970</div>
+        <div class="ts-content">
+          Résolution : <strong>1 seconde</strong> (ou ms selon impl.)<br>
+          Stockage : 4 bytes (DWORD) pour Unix classique<br>
+          EXT, HFS+, macOS utilisent cette époque<br><br>
+          Outil de conversion : DC3dd, DCode, X-Ways Data Interpreter
+        </div>
+      </div>
+    </div>
+    <div class="ts-alert">
+      <strong style="color:var(--accent4)">Timestomping (anti-forensique)</strong> — Technique qui modifie <code>$STANDARD_INFORMATION</code> (facilement modifiable par les applications) sans toucher <code>$FILE_NAME</code> (protégé par le noyau). Indicateur : <code>$SI.Created</code> <strong>postérieur</strong> à <code>$FN.Created</code> → physiquement impossible → manipulation détectée.
+    </div>
+  </div>
+
+  <!-- B-TREES & RÉPERTOIRES -->
+  <div class="section">
+    <div class="section-title">B-Trees — Index et répertoires NTFS</div>
+    <div class="card-grid">
       <div class="card purple">
-        <div class="card-title">Offset positif ou négatif ?</div>
-        <p>L'offset LCN est un <strong>entier signé</strong> en complément à 2. Regarder le MSB (bit poids fort du dernier octet après LE).</p>
-        <p>Si dernier octet ≥ <span class="hex hex-purple">0x80</span> → <strong>offset négatif</strong>.</p>
-        <p style="margin-top:0.3rem;font-size:0.76rem;color:var(--muted);">Ex: "C8 E2" → 0xE2C8 → 0x10000 − 0xE2C8 = 0x1D38 = −7480.<br>Le run commence à <em>LCN précédent − 7480</em>.</p>
-      </div>
-    </div>
-
-    <div class="runlist-example">
-      <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:0.5rem;">Exemple : 22 7C 07 02 0C | 22 C7 07 B6 29 | 22 C0 03 C8 E2 | 00</div>
-
-      <div style="margin-bottom:0.5rem;">
-        <span class="rl-header">22</span> <span class="rl-len">7C 07</span> <span class="rl-lcn">02 0C</span>
-        <span style="color:var(--muted);margin-left:0.5rem;font-size:0.75rem;">→ longueur 0x077C=1916 clusters · LCN absolu 0x0C02=3074 · Début : cluster 3074</span>
-      </div>
-      <div style="margin-bottom:0.5rem;">
-        <span class="rl-header">22</span> <span class="rl-len">C7 07</span> <span class="rl-lcn">B6 29</span>
-        <span style="color:var(--muted);margin-left:0.5rem;font-size:0.75rem;">→ longueur 0x07C7=1991 clusters · Offset +0x29B6=+10678 · Début : 3074+10678=13752</span>
-      </div>
-      <div style="margin-bottom:0.5rem;">
-        <span class="rl-header">22</span> <span class="rl-len">C0 03</span> <span class="rl-lcn" style="color:#ff7b72">C8 E2</span>
-        <span style="color:var(--muted);margin-left:0.5rem;font-size:0.75rem;">→ longueur 960 clusters · Offset 0xE2C8→négatif −7480 · Début : 13752−7480=6272</span>
-      </div>
-      <div>
-        <span class="rl-term">00</span>
-        <span style="color:var(--muted);margin-left:0.5rem;font-size:0.75rem;">→ Fin de la runlist. Ignorer tout ce qui suit.</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Sauvegarde et effacement -->
-  <div class="section">
-    <div class="section-title">Sauvegarde d'un fichier (ex: lioba.wav)</div>
-    <div class="steps">
-      <div class="step"><div class="step-num">1</div><div class="step-text">Chercher une entrée libre dans la <strong>$BITMAP de la $MFT</strong> → mettre le bit à 1. Naviguer à <em>entrée × 1024</em> dans la $MFT.</div></div>
-      <div class="step"><div class="step-num">2</div><div class="step-text">Écrire l'entrée <span class="hex hex-green">FILE</span> avec tous ses attributs. Si fichier trop grand → $DATA non-résident avec runlist.</div></div>
-      <div class="step"><div class="step-num">3</div><div class="step-text">Chercher des clusters contigus libres dans <strong>$Bitmap</strong> (record 6). Marquer comme occupés.</div></div>
-      <div class="step"><div class="step-num">4</div><div class="step-text">Copier les données dans les clusters. Écrire l'action dans <strong>$LogFile</strong>. Vérifier quotas dans <strong>$Quota</strong>.</div></div>
-      <div class="step"><div class="step-num">5</div><div class="step-text">Journaliser dans <strong>$UsnJrnl</strong>. Mettre à jour le répertoire parent (ex: "Musique", record 57).</div></div>
-    </div>
-
-    <div style="margin-top:1rem;">
-      <div class="section-title" style="margin-bottom:0.5rem;">Effacement d'un fichier</div>
-      <div class="steps">
-        <div class="step"><div class="step-num red">1</div><div class="step-text">Mettre à <span class="hex">0</span> le bit de l'entrée MFT dans <strong>$BITMAP de la $MFT</strong>. L'entrée FILE reste sur le disque jusqu'à réallocation.</div></div>
-        <div class="step"><div class="step-num red">2</div><div class="step-text">Libérer les clusters dans <strong>$Bitmap</strong> (record 6) → bits à 0. Données non effacées.</div></div>
-        <div class="step"><div class="step-num red">3</div><div class="step-text">Supprimer le nœud du répertoire parent (<strong>$I30</strong>). Des nœuds résiduels peuvent subsister → source forensique.</div></div>
-        <div class="step"><div class="step-num red">4</div><div class="step-text">Journaliser dans <strong>$LogFile</strong> et <strong>$UsnJrnl</strong> — ces journaux conservent une trace de la suppression.</div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Points clés forensiques -->
-  <div class="section">
-    <div class="section-title">Points clés forensiques</div>
-    <div class="card-grid">
-      <div class="card green">
-        <div class="card-title">Timestomping</div>
-        <p>Les outils (TimeStomp, Metasploit) modifient <strong>$STANDARD_INFORMATION</strong> mais oublient souvent <strong>$FILE_NAME</strong>.</p>
-        <p>Divergence $SI vs $FN = timestomping probable. MFTECmd exporte les deux colonnes.</p>
+        <div class="card-title">Pourquoi des B-Trees ?</div>
+        <p>Un arbre binaire de 100 éléments a une hauteur de 7 (car 2⁷ = 128). Les B-Trees NTFS utilisent des <strong>nœuds larges</strong> (65 à 128 clés par nœud) → hauteur très faible → accès rapide même pour des millions de fichiers.<br><br>
+        Les B-Trees sont en RAM pendant l'exécution, accès disque seulement pour les feuilles.</p>
       </div>
       <div class="card blue">
-        <div class="card-title">Timestamps NTFS</div>
-        <p>Format : nombre de <strong>100 nanosecondes</strong> depuis le <strong>01.01.1601</strong> (vs Unix : secondes depuis 01.01.1970).</p>
-        <p>4 timestamps MACE : <strong>M</strong>odified · <strong>A</strong>ccessed · <strong>C</strong>hanged (metadata) · (created) <strong>B</strong>orn</p>
+        <div class="card-title">Application forensique</div>
+        <p>Chaque répertoire NTFS est un <strong>B-Tree d'entrées $INDEX</strong>. Les nœuds sont stockés dans des attributs <span class="hex">$INDEX_ROOT</span> et <span class="hex">$INDEX_ALLOCATION</span>.<br><br>
+        Après suppression, les entrées restent parfois dans les nœuds B-Tree jusqu'à réorganisation — source de données récupérables.</p>
       </div>
+    </div>
+  </div>
+
+  <!-- ADS -->
+  <div class="section">
+    <div class="section-title">Alternate Data Streams (ADS) & $Bitmap</div>
+    <div class="card-grid">
       <div class="card orange">
-        <div class="card-title">$I30 résiduel</div>
-        <p>$INDEX_ALLOCATION d'un répertoire organise ses entrées en B-tree. Après suppression et réorganisation, des <strong>nœuds orphelins</strong> subsistent.</p>
-        <p>Dernière source quand $MFT écrasé + $UsnJrnl purgé.</p>
+        <div class="card-title">Alternate Data Streams</div>
+        <p>Un fichier NTFS peut avoir <strong>plusieurs flux $DATA nommés</strong>.<br>
+        Syntaxe : <code>fichier.txt:caché.exe</code><br><br>
+        L'Explorateur Windows affiche uniquement le flux principal. La taille visible ne reflète pas les ADS cachés. Outil : <code>streams.exe</code> (Sysinternals), X-Ways les détecte nativement.</p>
+      </div>
+      <div class="card green">
+        <div class="card-title">$Bitmap — Table d'allocation</div>
+        <p>Le fichier <code>$Bitmap</code> (entrée 6 MFT) contient <strong>1 bit par cluster</strong> : 0 = libre, 1 = occupé.<br><br>
+        1 byte gère 8 clusters. Pour savoir si le cluster 42 est libre : byte 5 (42÷8), bit 2 (42%8).<br><br>
+        ≠ attribut <span class="hex">$BITMAP</span> utilisé par la MFT elle-même pour ses propres entrées.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- JOURNAL USN -->
+  <div class="section">
+    <div class="section-title">Journal USN ($UsnJrnl) — Historique long terme</div>
+    <div class="card-grid">
+      <div class="card blue">
+        <div class="card-title">Ce qu'il enregistre</div>
+        <p>Toutes les modifications de fichiers : <strong>création, suppression, renommage, modification</strong>, avec horodatage précis. Taille configurable (par défaut ~32 Mo). Rétention : heures à semaines selon l'activité.</p>
       </div>
       <div class="card red">
-        <div class="card-title">Alternate Data Streams</div>
-        <p>Un fichier peut avoir <strong>plusieurs attributs $DATA</strong> nommés. Ex: <code>fichier.txt:cache</code> cache une autre donnée dans le flux alterné.</p>
-        <p>X-Ways les liste dans le Volume Snapshot. Non visible via l'Explorateur Windows standard.</p>
-      </div>
-    </div>
-
-    <div class="card-grid" style="margin-top:0.75rem;">
-      <div class="card purple">
-        <div class="card-title">$UsnJrnl (Change Journal)</div>
-        <p>Journal de toutes les modifications de fichiers. Taille configurable (typiquement 32–64 Mo). Tronqué régulièrement → fenêtre temporelle limitée.</p>
-        <p>Outil : <strong>MFTECmd</strong> ou <strong>fsutil usn readjournal</strong>. Survivance de preuves après effacement volontaire.</p>
-      </div>
-      <div class="card green">
-        <div class="card-title">X-Ways — Raccourcis NTFS</div>
-        <p>Clic droit sur $MFT → <strong>Navigate → List Clusters</strong> → voir la fragmentation de la MFT.</p>
-        <p>Navigation → <strong>Seek FAT Entry</strong> / <strong>Seek MFT Record</strong>. En-tête "FILE" toujours cherché pour les enregistrements résiduels.</p>
+        <div class="card-title">Valeur forensique</div>
+        <p>Même si le fichier supprimé est irrecupérable (clusters réalloués), le journal USN peut prouver qu'il <strong>a existé et quand il a disparu</strong>. Outil : <code>MFTECmd.exe</code> (Zimmerman) avec l'option <code>--csv</code>.</p>
       </div>
     </div>
   </div>
 
   <div class="footer">
-    <span>CAS-IN · Forensique Numérique</span>
-    <span>NTFS Filesystem Internals</span>
-    <span>2025</span>
+    <span>CAS-IN · 2025–2026</span>
+    <span>NTFS — Master File Table & Run List</span>
+    <span>Manuel Ch. 8 · Notes de cours DFIR</span>
   </div>
 
-</div>
 </div>
 </body>
 </html>

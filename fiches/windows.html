@@ -2,167 +2,278 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Windows Forensics — CAS-IN Forensique</title>
-<link rel="stylesheet" href="fiche.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analyse Windows — CAS-IN Forensique</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap');
+  :root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--accent:#f0883e;--accent2:#58a6ff;--accent3:#3fb950;--accent4:#ff7b72;--accent5:#bc8cff;--text:#e6edf3;--muted:#8b949e;--mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;padding:2rem;line-height:1.6;}
+  .page{max-width:900px;margin:0 auto;}
+  .header{display:flex;align-items:baseline;gap:1rem;margin-bottom:2.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border);animation:fadeIn .4s ease;}
+  .fs-badge{font-family:var(--sans);font-size:2.6rem;font-weight:800;letter-spacing:-1px;color:var(--accent);}
+  .header-meta{font-size:.75rem;color:var(--muted);}
+  .tag{display:inline-block;padding:.15rem .5rem;border-radius:4px;font-size:.7rem;font-weight:600;letter-spacing:.05em;background:rgba(240,136,62,.12);border:1px solid rgba(240,136,62,.3);color:var(--accent);}
+  .section{margin-bottom:2rem;animation:slideUp .4s ease both;}
+  .section:nth-child(n+2){animation-delay:calc(.05s * (var(--i,0) + 1));}
+  .section-title{font-family:var(--sans);font-size:.7rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem;}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+  .hex{display:inline-block;background:var(--surface2);border:1px solid var(--border);color:var(--accent4);padding:.05rem .4rem;border-radius:4px;font-size:.78em;font-weight:700;}
+  .card-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem 1.1rem;position:relative;overflow:hidden;}
+  .card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+  .card.blue::before{background:var(--accent2)}.card.orange::before{background:var(--accent)}.card.green::before{background:var(--accent3)}.card.purple::before{background:var(--accent5)}.card.red::before{background:var(--accent4)}
+  .card-title{font-size:.7rem;font-weight:700;letter-spacing:.05em;margin-bottom:.5rem;}
+  .card.blue .card-title{color:var(--accent2)}.card.orange .card-title{color:var(--accent)}.card.green .card-title{color:var(--accent3)}.card.purple .card-title{color:var(--accent5)}.card.red .card-title{color:var(--accent4)}
+  .card p,.card ul{font-size:.8rem;color:var(--text);line-height:1.5;}
+  .card ul{padding-left:1rem;}
+  /* Artefact rows */
+  .art-list{display:flex;flex-direction:column;gap:.5rem;}
+  .art{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;display:grid;grid-template-columns:180px 1fr;gap:.75rem;align-items:start;transition:background .15s;}
+  .art:hover{background:var(--surface2)}
+  .art-name{font-weight:700;font-size:.8rem;color:var(--accent2);}
+  .art-path{font-size:.68rem;color:var(--muted);margin:.15rem 0;font-family:var(--mono);}
+  .art-tool{font-size:.68rem;color:var(--accent3);font-weight:600;}
+  .art-body{font-size:.78rem;color:var(--text);line-height:1.5;}
+  /* Registre */
+  .reg-table{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .reg-row{display:grid;grid-template-columns:170px 1fr;border-bottom:1px solid var(--border);}
+  .reg-row:last-child{border-bottom:none}
+  .reg-key{padding:.6rem .85rem;background:var(--surface2);font-size:.7rem;font-family:var(--mono);color:var(--muted);display:flex;align-items:center;}
+  .reg-val{padding:.6rem .85rem;font-size:.77rem;color:var(--text);}
+  /* Event IDs */
+  .events{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .ev{display:grid;grid-template-columns:80px 1fr;border-bottom:1px solid var(--border);transition:background .15s;}
+  .ev:last-child{border-bottom:none}
+  .ev:hover{background:var(--surface2)}
+  .ev-id{padding:.55rem .85rem;background:rgba(240,136,62,.08);border-right:1px solid var(--border);font-weight:800;color:var(--accent);display:flex;align-items:center;font-size:.82rem;}
+  .ev-desc{padding:.55rem .85rem;font-size:.78rem;color:var(--text);}
+  /* Shellbags */
+  .sb-arch{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .sb-row{display:grid;grid-template-columns:120px 200px 1fr;border-bottom:1px solid var(--border);font-size:.78rem;}
+  .sb-row:last-child{border-bottom:none}
+  .sb-cell{padding:.55rem .85rem;border-right:1px solid var(--border);}
+  .sb-cell:last-child{border-right:none}
+  /* Corbeille */
+  .bin-demo{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .bin-row{display:flex;gap:1rem;padding:.6rem 1rem;border-bottom:1px solid var(--border);font-size:.78rem;align-items:center;}
+  .bin-row:last-child{border-bottom:none}
+  .bin-file{font-weight:700;min-width:80px;}
+  table{width:100%;border-collapse:collapse;font-size:.78rem;}
+  th{background:var(--surface2);color:var(--muted);font-size:.68rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.55rem .9rem;text-align:left;border-bottom:1px solid var(--border);}
+  td{padding:.6rem .9rem;border-bottom:1px solid var(--border);vertical-align:top;}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:var(--surface2)}
+  .footer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.68rem;color:var(--muted);display:flex;justify-content:space-between;}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  @media(max-width:600px){.card-grid{grid-template-columns:1fr}.art{grid-template-columns:1fr}.sb-row{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-<div class="topnav">
-  <div style="display:flex;gap:.5rem;align-items:center">
-    <a href="index.html" class="tn-back">← Fiches</a>
-    <a href="../index.html" class="tn-home">🏠 Accueil</a>
-  </div>
-  <a href="../quiz.html" class="tn-quiz">💊 Lancer le quiz →</a>
-</div>
-<div style="margin:1.25rem 0;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
-  <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Citation</span><br>
-  <em style="color:var(--text)">"The Windows Registry is a forensic gold mine. It records not just current configuration but the residue of past configuration — timestamps of last writes, deleted keys still visible in slack space, and artefacts of programs long since uninstalled."</em><br>
-  <span style="font-size:.72rem;margin-top:.3rem;display:block">— Harlan Carvey, <em>Windows Registry Forensics</em>, 2e éd., Syngress, 2016</span>
-</div>
-<div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(240,192,64,.05);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
-  <span style="color:var(--gold);font-weight:700">🕵 Anecdote BTK (2005) :</span> Dennis Rader a été identifié via les métadonnées Word d'un fichier .doc envoyé à la police. Le fichier contenait le nom "Dennis" dans les propriétés du document et le nom de l'église "Christ Lutheran Church" dans les métadonnées de l'imprimante. Rader avait utilisé l'ordinateur de l'église.
-</div>
-<a href="../quiz.html" style="color:#ff8888;text-decoration:none;padding:.3rem .7rem;border:1px solid rgba(255,136,136,.35);border-radius:5px;background:rgba(255,136,136,.08)">💊 Lancer le quiz →</a>
-</div>
 <div class="page">
-<div class="header">
-  <div class="badge" style="color:#30e88a">WIN</div>
-  <div>
-    <div style="margin-bottom:.25rem"><span class="tag tag-green">Forensique</span> <span class="tag tag-green">Windows</span> <span class="tag tag-green">Registre</span></div>
-    <div class="meta">Ruches · USBSTOR · Prefetch · Amcache · ShellBags · LNK · VSS · Event IDs essentiels</div>
-  </div>
-</div>
 
-<div class="sec">
-<div class="ch-header">Windows — Registre et artefacts</div>
-<div class="g2">
-  <div class="card card-blue">
-    <div class="ct">Ruches système (C:\Windows\System32\Config\)</div>
-    <ul>
-      <li><strong>SYSTEM</strong> : config matérielle, services, réseau, USB connectés</li>
-      <li><strong>SOFTWARE</strong> : logiciels installés, clés licence, programmes récents</li>
-      <li><strong>SAM</strong> : comptes locaux, hashes mots de passe, dates connexion</li>
-      <li><strong>SECURITY</strong> : politiques locales, droits, audit</li>
-      <li><strong>DEFAULT</strong> : profil par défaut nouveaux utilisateurs</li>
-    </ul>
+  <div class="header">
+    <div class="fs-badge">Windows</div>
+    <div>
+      <div><span class="tag">DFIR</span> <span class="tag" style="background:rgba(88,166,255,.12);border-color:rgba(88,166,255,.3);color:var(--accent2)">Artefacts</span></div>
+      <div class="header-meta" style="margin-top:.3rem">Registre · Prefetch · ShellBags · USBSTOR · Thumbcache · Corbeille · EventLog</div>
+    </div>
   </div>
-  <div class="card card-green">
-    <div class="ct">Ruches utilisateur</div>
-    <ul>
-      <li><strong>NTUSER.DAT</strong> : C:\Users\&lt;nom&gt;\ — préférences utilisateur</li>
-      <li><strong>USRCLASS.DAT</strong> : C:\Users\&lt;nom&gt;\AppData\Local\Microsoft\Windows\ — ShellBags !</li>
-      <li>HKCU = référence NTUSER.DAT chargé</li>
-      <li>Modifiable SANS droits administrateur → malwares sans élévation</li>
-    </ul>
-  </div>
-</div>
-<table class="tbl" style="margin-top:.75rem">
-<thead><tr><th>Artefact</th><th>Chemin de registre</th><th>Valeur forensique</th></tr></thead>
-<tbody>
-<tr class="hi"><td><strong>USBSTOR</strong></td><td>HKLM\SYSTEM\CurrentControlSet\Enum\USBSTOR</td><td>Historique USB : fabricant, modèle, n° série, timestamps 1ère connexion</td></tr>
-<tr><td><strong>Run Keys</strong></td><td>HKLM & HKCU\SOFTWARE\...\CurrentVersion\Run</td><td>Persistance. HKCU = sans droits admin. Malwares ciblent HKCU.</td></tr>
-<tr class="hi"><td><strong>UserAssist</strong></td><td>HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist</td><td>Programmes lancés via GUI. Données ROT13.</td></tr>
-<tr><td><strong>ShimCache</strong></td><td>HKLM\SYSTEM\...\AppCompatCache</td><td>Exécutable présent sur le système (pas forcément exécuté)</td></tr>
-<tr class="hi"><td><strong>MountPoints2</strong></td><td>HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2</td><td>Volumes montés par l'utilisateur</td></tr>
-<tr><td><strong>NetworkList</strong></td><td>HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\NetworkList</td><td>Réseaux WiFi historiques avec SSID et dates</td></tr>
-<tr class="hi"><td><strong>Services</strong></td><td>HKLM\SYSTEM\CurrentControlSet\Services</td><td>Services persistants. Type=1 = Kernel Driver (rootkit potentiel)</td></tr>
-<tr><td><strong>WMI Repository</strong></td><td>C:\Windows\System32\wbem\Repository\</td><td>Persistance furtive WMI — absent des Run Keys et Services</td></tr>
-</tbody>
-</table>
-</div>
 
-<div class="sec">
-<div class="ch-header">Windows — Artefacts d'exécution</div>
-<div class="g3">
-  <div class="card card-orange">
-    <div class="ct">Prefetch (.pf)</div>
-    <ul>
-      <li>Chemin : C:\Windows\Prefetch\</li>
-      <li>Prouve l'<strong>exécution</strong> d'un programme</li>
-      <li>Contient : timestamps (jusqu'à 8), compteur lancements, DLL chargées</li>
-      <li><strong>Désactivé</strong> sur Windows Server</li>
-      <li>Outil : <strong>PECmd</strong> (Zimmerman)</li>
-    </ul>
+  <!-- REGISTRE -->
+  <div class="section">
+    <div class="section-title">Base de registre — Ruches (Hives)</div>
+    <div class="reg-table">
+      <div class="reg-row"><div class="reg-key">HKLM\SAM</div><div class="reg-val">Comptes locaux, hash des mots de passe (NTLM), groupes. Accès restreint — analyse hors-ligne nécessaire.</div></div>
+      <div class="reg-row"><div class="reg-key">HKLM\SYSTEM</div><div class="reg-val">Configuration système, services, USBSTOR (périphériques USB connectés), MountedDevices, timezone.</div></div>
+      <div class="reg-row"><div class="reg-key">HKLM\SOFTWARE</div><div class="reg-val">Applications installées, Run Keys, Amcache, ShimCache (AppCompatCache). Programmes au démarrage.</div></div>
+      <div class="reg-row"><div class="reg-key">HKCU\NTUSER.DAT</div><div class="reg-val">Profil utilisateur : UserAssist (ROT13), MRU, ShellBags (HKCU), Run Keys utilisateur, wallpaper.</div></div>
+      <div class="reg-row"><div class="reg-key">HKCU\USRCLASS.DAT</div><div class="reg-val">ShellBags pour lecteurs réseaux et supports amovibles. BagMRU + Bags pour les dossiers explorés.</div></div>
+    </div>
+    <p style="font-size:.72rem;color:var(--muted);margin-top:.4rem">Chemin physique : <code>C:\Windows\System32\config\</code> (SYSTEM, SAM, SOFTWARE) · <code>C:\Users\&lt;user&gt;\NTUSER.DAT</code></p>
   </div>
-  <div class="card card-blue">
-    <div class="ct">Amcache.hve</div>
-    <ul>
-      <li>Chemin : C:\Windows\AppCompat\Programs\</li>
-      <li>Hash <strong>SHA-1</strong> des exécutables</li>
-      <li>Prouve la <strong>présence physique</strong> du binaire sur le disque</li>
-      <li>Persiste après désinstallation</li>
-      <li>Outil : AmcacheParser (Zimmerman)</li>
-    </ul>
-  </div>
-  <div class="card card-green">
-    <div class="ct">LNK & Jump Lists</div>
-    <ul>
-      <li>LNK : C:\...\AppData\Roaming\Microsoft\Windows\Recent\</li>
-      <li>Contient : chemin cible, Volume Serial Number, timestamps cible</li>
-      <li>Prouve l'accès à un fichier même si supprimé</li>
-      <li>Jump Lists : AutomaticDestinations & CustomDestinations</li>
-      <li>Outil : <strong>LECmd</strong> (Zimmerman)</li>
-    </ul>
-  </div>
-  <div class="card card-purple">
-    <div class="ct">ShellBags (USRCLASS.DAT)</div>
-    <ul>
-      <li>Mémorise les dossiers <strong>explorés via l'interface graphique</strong></li>
-      <li>Survive à la suppression des dossiers explorés</li>
-      <li>Prouve la navigation humaine (≠ malware)</li>
-      <li>Outil : <strong>ShellBagsExplorer</strong> (Zimmerman)</li>
-    </ul>
-  </div>
-  <div class="card card-red">
-    <div class="ct">$I30 Résiduel (NTFS)</div>
-    <ul>
-      <li>$INDEX_ALLOCATION d'un répertoire = B-Tree</li>
-      <li>Après suppressions, des nœuds orphelins subsistent</li>
-      <li>Révèle les fichiers supprimés même si MFT réalloué</li>
-      <li>Outil : X-Ways, Autopsy, indxparser</li>
-    </ul>
-  </div>
-  <div class="card card-gold">
-    <div class="ct">VSS (Volume Shadow Copies)</div>
-    <ul>
-      <li>Snapshots copy-on-write automatiques</li>
-      <li>Accès : <code>\\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1</code></li>
-      <li><strong>Ransomwares suppriment les VSS en premier</strong></li>
-      <li>Commande : <code>vssadmin list shadows</code></li>
-    </ul>
-  </div>
-</div>
-</div>
 
-<div class="sec">
-<div class="ch-header">Windows — Event Logs (.evtx)</div>
-<div class="g2">
-  <div class="card card-blue">
-    <div class="ct">Event IDs essentiels</div>
-    <table style="width:100%;font-size:.75rem;border-collapse:collapse">
-      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.3rem .4rem"><span class="h h-blue">4624</span></td><td>Connexion réussie (type 2=local, 3=réseau, 10=RDP)</td></tr>
-      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.3rem .4rem"><span class="h h-red">4625</span></td><td>Échec d'authentification → brute force ?</td></tr>
-      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.3rem .4rem"><span class="h h-orange">4688</span></td><td>Création d'un processus (audit requis)</td></tr>
-      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.3rem .4rem"><span class="h h-purple">4698</span></td><td>Tâche planifiée créée → persistance ?</td></tr>
-      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.3rem .4rem"><span class="h h-red">7045</span></td><td>Nouveau service installé → rootkit ?</td></tr>
-      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.3rem .4rem"><span class="h h-blue">4720</span></td><td>Création d'un compte utilisateur</td></tr>
-      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.3rem .4rem"><span class="h h-orange">4663</span></td><td>Accès à un objet (audit fichiers)</td></tr>
-      <tr><td style="padding:.3rem .4rem"><span class="h h-red">1102</span></td><td>Log Security effacé (Security.evtx)</td></tr>
-    </table>
+  <!-- PREFETCH -->
+  <div class="section">
+    <div class="section-title">Prefetch — Preuve d'exécution</div>
+    <div class="card-grid">
+      <div class="card blue">
+        <div class="card-title">Qu'est-ce que c'est ?</div>
+        <p>Windows crée un fichier <code>.pf</code> dans <code>C:\Windows\Prefetch\</code> lors du premier lancement d'un programme. Optimisation de démarrage : mémorise les 10 premières secondes d'accès disque.<br><br>
+        <strong>Preuve d'exécution</strong> même si le programme est supprimé — le .pf survit.</p>
+      </div>
+      <div class="card green">
+        <div class="card-title">Contenu forensique</div>
+        <p>
+          ✓ Nom de l'exécutable + chemin<br>
+          ✓ Nombre d'exécutions (compteur)<br>
+          ✓ Jusqu'à 8 dates d'exécution (W8+)<br>
+          ✓ Liste des DLL et fichiers accédés<br>
+          ✓ Hash de vérification intégré<br><br>
+          <strong>Outil :</strong> <code>PECmd.exe</code> (Eric Zimmerman) → <code>--csv</code>
+        </p>
+      </div>
+    </div>
+    <div style="background:rgba(255,64,96,.06);border:1px solid rgba(255,64,96,.2);border-radius:8px;padding:.7rem 1rem;margin-top:.5rem;font-size:.78rem">
+      <strong style="color:var(--accent4)">Limites à mentionner dans le rapport :</strong> Prefetch <strong>désactivé par défaut sur les serveurs</strong> Windows. Sur SSD, peut être désactivé (paramètre EnablePrefetcher=0). Sur Windows 10+, format compressé XPRESS Huffman — seul PECmd peut le lire correctement.
+    </div>
   </div>
-  <div class="card card-green">
-    <div class="ct">Corrélation multi-sources</div>
-    <p><strong>Scénario type :</strong> 4624 (connexion réseau) + ShellBag créé même instant + Prefetch horodaté = tableau cohérent difficile à contester.</p>
-    <p style="margin-top:.4rem"><strong>Effacement paradoxal :</strong> Event ID 1102 (log effacé) est lui-même journalisé si l'audit est actif.</p>
-    <p style="margin-top:.4rem"><strong>Logs alternatifs :</strong> Chercher IIS, Apache, antivirus — souvent oubliés par l'attaquant.</p>
-    <p style="margin-top:.4rem;font-size:.75rem;color:var(--muted)">Outil : <strong>EvtxECmd</strong> (Zimmerman) → export CSV pour analyse temporelle</p>
-  </div>
-</div>
-</div>
-<div class="tip">💡 <strong>Suite Eric Zimmerman (gratuite)</strong> : PECmd · MFTECmd · LECmd · ShellBagsExplorer · EvtxECmd · AmcacheParser · AppCompatCacheParser. Standard de facto Forensique Windows. Citer l'outil dans le rapport renforce la crédibilité judiciaire.</div>
 
-<div class="footer"><span>CAS-IN · Forensique Numérique</span><span>Windows — Registre · Artefacts · Event Logs</span><span>2025</span></div>
-</div>
+  <!-- SHELLBAGS -->
+  <div class="section">
+    <div class="section-title">ShellBags — Navigation humaine prouvée</div>
+    <div style="background:rgba(240,136,62,.05);border:1px solid rgba(240,136,62,.2);border-radius:8px;padding:.7rem 1rem;margin-bottom:.6rem;font-size:.78rem">
+      Les ShellBags sont créés par <strong>l'Explorateur Windows</strong> lors de la navigation. Un virus ou un logiciel de sync n'utilise pas l'interface graphique → <strong>présence de ShellBags = action humaine</strong>.
+    </div>
+    <div class="sb-arch" style="margin-bottom:.6rem">
+      <div class="sb-row" style="background:var(--surface2);font-size:.68rem;color:var(--muted)">
+        <div class="sb-cell">Clé registre</div>
+        <div class="sb-cell">Rôle</div>
+        <div class="sb-cell">Contenu</div>
+      </div>
+      <div class="sb-row">
+        <div class="sb-cell" style="color:var(--accent2);font-weight:700">BagMRU</div>
+        <div class="sb-cell">La carte — arborescence</div>
+        <div class="sb-cell">Nœuds numérotés (0, 1, 2…) représentant les dossiers visités. Reconstruit l'arborescence complète avec timestamps.</div>
+      </div>
+      <div class="sb-row">
+        <div class="sb-cell" style="color:var(--accent3);font-weight:700">Bags</div>
+        <div class="sb-cell">Le contenu — préférences</div>
+        <div class="sb-cell">Préférences d'affichage (tri, taille de fenêtre, position). Moins forensiquement pertinent que BagMRU.</div>
+      </div>
+    </div>
+    <div class="card-grid">
+      <div class="card orange">
+        <div class="card-title">NTUSER.DAT (dossiers locaux)</div>
+        <p><code>HKCU\Software\Microsoft\Windows\Shell\BagMRU</code><br>
+        <code>HKCU\Software\Microsoft\Windows\Shell\Bags</code><br><br>
+        Dossiers locaux, bureau, documents. Persiste même après suppression du dossier cible.</p>
+      </div>
+      <div class="card purple">
+        <div class="card-title">USRCLASS.DAT (réseau/amovibles)</div>
+        <p><code>HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell</code><br><br>
+        Lecteurs réseau (UNC <code>\\serveur\partage</code>), supports amovibles. Plus riche en informations sur les déplacements de données.</p>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem;margin-top:.5rem;font-size:.78rem">
+      <strong>Outil :</strong> ShellBags Explorer (Eric Zimmerman) — parse USRCLASS.DAT + NTUSER.DAT et reconstruit l'arborescence.<br>
+      <strong>Anti-forensique :</strong> CCleaner/BleachBit peuvent supprimer les ShellBags. Absence totale sur un système ancien = suspect.
+    </div>
+  </div>
+
+  <!-- USBSTOR -->
+  <div class="section">
+    <div class="section-title">Périphériques USB — USBSTOR</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      <table>
+        <thead><tr><th>Clé registre</th><th>Information disponible</th></tr></thead>
+        <tbody>
+          <tr><td><code>HKLM\SYSTEM\...\USBSTOR</code></td><td>Modèle, fabricant, <strong>numéro de série unique</strong>, première/dernière connexion</td></tr>
+          <tr><td><code>HKLM\SYSTEM\...\MountedDevices</code></td><td>Lettre de lecteur assignée (ex. E:\\)</td></tr>
+          <tr><td><code>HKCU\...\RemovableMedia</code> (par utilisateur)</td><td>Attribution à un utilisateur spécifique via SID</td></tr>
+          <tr><td><code>C:\Windows\INF\setupapi.dev.log</code></td><td>Timestamp horodaté de chaque installation de périphérique</td></tr>
+          <tr><td>Event ID <span class="hex">4663</span></td><td>Accès à des fichiers sur le lecteur (si audit activé)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="background:rgba(63,185,80,.05);border:1px solid rgba(63,185,80,.2);border-radius:8px;padding:.7rem 1rem;margin-top:.5rem;font-size:.78rem">
+      <strong style="color:var(--accent3)">Corrélation USB :</strong> USBSTOR (identification) + MountedDevices (lettre) + ShellBags (dossiers explorés) + .lnk (fichiers ouverts) + NTUSER.DAT (par utilisateur via SID) = preuve complète de qui a connecté quelle clé et quels fichiers ont été accédés.
+    </div>
+  </div>
+
+  <!-- THUMBCACHE -->
+  <div class="section">
+    <div class="section-title">Thumbcache — Miniatures persistantes</div>
+    <div class="card-grid">
+      <div class="card blue">
+        <div class="card-title">Localisation</div>
+        <p><code>C:\Users\&lt;user&gt;\AppData\Local\Microsoft\Windows\Explorer\</code><br><br>
+        Fichiers : <code>thumbcache_1280.db</code>, <code>thumbcache_96.db</code>, <code>thumbcache_48.db</code>, <code>thumbcache_32.db</code>
+        </p>
+      </div>
+      <div class="card red">
+        <div class="card-title">Valeur forensique critique</div>
+        <p>Les miniatures <strong>persistent après suppression</strong> de l'image originale. Une image illicite supprimée peut continuer d'exister dans le thumbcache en résolution identifiable.<br><br>
+        <code>_1280</code> = images vues dans l'explorateur · <code>_96</code> = images issues de la navigation web</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- USERASSIST & CORBEILLE -->
+  <div class="section">
+    <div class="section-title">UserAssist (ROT13) & Corbeille</div>
+    <div class="card-grid">
+      <div class="card purple">
+        <div class="card-title">UserAssist — Obfuscation ROT13</div>
+        <p>Clé : <code>HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist</code><br><br>
+        Enregistre les programmes exécutés depuis le menu Démarrer ou le bureau. Les chemins sont <strong>encodés en ROT13</strong>.<br><br>
+        Décodage : CyberChef → recette ROT13 · ou RegRipper automatiquement.<br><br>
+        Contient : nombre d'exécutions + timestamp de dernière exécution.</p>
+      </div>
+      <div class="card orange">
+        <div class="card-title">Corbeille — $R et $I</div>
+        <p>Chemin : <code>C:\$Recycle.Bin\&lt;SID_utilisateur&gt;\</code><br><br>
+        Pour chaque fichier supprimé :<br>
+        <strong>$RXXXXXX</strong> — données du fichier (contenu récupérable)<br>
+        <strong>$IXXXXXX</strong> — métadonnées : nom original, chemin complet, taille, date/heure exacte de suppression<br><br>
+        Le $I subsiste <strong>après vidage</strong> de la corbeille — prouve l'acte conscient de suppression. Identifier l'utilisateur via le SID du sous-répertoire.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREFETCH + SPOOLER -->
+  <div class="section">
+    <div class="section-title">Spooler & Autres artefacts</div>
+    <div class="art-list">
+      <div class="art">
+        <div>
+          <div class="art-name">🖨 Spooler</div>
+          <div class="art-path">C:\Windows\system32\spool\PRINTERS\</div>
+          <div class="art-tool">Analyser avec éditeur hex</div>
+        </div>
+        <div class="art-body">Fichiers <code>.SPL</code> (données d'impression) et <code>.SHD</code> (métadonnées). Un fichier .SPL copié vers une imprimante identique peut être réimprimé. Prouve qu'un document a été envoyé à l'impression.</div>
+      </div>
+      <div class="art">
+        <div>
+          <div class="art-name">📁 Fichiers .lnk</div>
+          <div class="art-path">C:\Users\&lt;user&gt;\AppData\Roaming\Microsoft\Windows\Recent\</div>
+          <div class="art-tool">LECmd.exe (Zimmerman)</div>
+        </div>
+        <div class="art-body">Créés automatiquement à chaque ouverture de fichier. Contiennent : chemin complet de la cible, Volume ID + numéro de série du support, timestamps du fichier cible au moment de l'ouverture. <strong>Survit à la suppression du fichier cible.</strong></div>
+      </div>
+      <div class="art">
+        <div>
+          <div class="art-name">⚡ Amcache & ShimCache</div>
+          <div class="art-path">HKLM\SYSTEM\...\AppCompatCache + Amcache.hve</div>
+          <div class="art-tool">AmcacheParser + AppCompatCacheParser</div>
+        </div>
+        <div class="art-body">Compatibilité applicative. Enregistrent les exécutables avec leur <strong>hash SHA-1</strong> (Amcache) — permet d'identifier un programme même supprimé. ShimCache : chemin + timestamp des exécutables.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVENT IDS -->
+  <div class="section">
+    <div class="section-title">Event IDs essentiels (journaux .evtx)</div>
+    <div class="events">
+      <div class="ev"><div class="ev-id">4624</div><div class="ev-desc">Connexion réussie d'un utilisateur — type de connexion (interactive, réseau, batch)</div></div>
+      <div class="ev"><div class="ev-id">4625</div><div class="ev-desc">Tentative de connexion échouée — bruteforce, mauvais mot de passe</div></div>
+      <div class="ev"><div class="ev-id">4634</div><div class="ev-desc">Déconnexion d'une session — calculer la durée de session</div></div>
+      <div class="ev"><div class="ev-id">4688</div><div class="ev-desc">Création d'un nouveau processus — liste des programmes lancés (si audit activé)</div></div>
+      <div class="ev"><div class="ev-id">4698</div><div class="ev-desc">Création d'une tâche planifiée — vecteur de persistance malware</div></div>
+      <div class="ev"><div class="ev-id">4663</div><div class="ev-desc">Tentative d'accès à un objet (fichier) — prouver qu'un fichier a été ouvert</div></div>
+      <div class="ev"><div class="ev-id">7045</div><div class="ev-desc">Installation d'un nouveau service — malware, backdoor</div></div>
+    </div>
+    <p style="font-size:.72rem;color:var(--muted);margin-top:.4rem">Outils : <code>EvtxECmd.exe</code> (Zimmerman) → export CSV · <code>Timeline Explorer</code> pour visualisation chronologique</p>
+  </div>
+
+  <div class="footer">
+    <span>CAS-IN · 2025–2026</span>
+    <span>Analyse Windows — Artefacts forensiques</span>
+    <span>Manuel Ch. 16–19 · Notes de cours</span>
+  </div>
+
 </div>
 </body>
 </html>
