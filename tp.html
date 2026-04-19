@@ -36,6 +36,9 @@
   <button class="tp-tab" data-cat="bases" onclick="switchCat('bases',this)">🔢 Bases & Encodages</button>
   <button class="tp-tab" data-cat="effacement" onclick="switchCat('effacement',this)">🗑 Effacement FAT</button>
   <button class="tp-tab" data-cat="examen" onclick="switchCat('examen',this)" style="border-color:rgba(255,64,96,.4);color:var(--red)">📋 Série Examen</button>
+  <button class="tp-tab" data-cat="timestomping" onclick="switchCat('timestomping',this)">🕰 Timestomping</button>
+  <button class="tp-tab" data-cat="droitpenal" onclick="switchCat('droitpenal',this)">⚖️ Droit pénal</button>
+  <button class="tp-tab" data-cat="glossaire" onclick="switchCat('glossaire',this)">🗂 Glossaire</button>
 </div>
 
 <div class="tp-progress" id="tp-progress">
@@ -121,7 +124,7 @@ function newExercise() {
 // GÉNÉRATEURS D'EXERCICES
 // ═══════════════════════════════════════════════════
 
-const GENERATORS = { endian: genEndian, timestamp: genTimestamp, bitmap: genBitmap, fat: genFAT, magic: genMagic, mismatch: genMismatch, runlist: genRunList, bases: genBases, effacement: genEffacement, examen: genExamen };
+const GENERATORS = { endian: genEndian, timestamp: genTimestamp, bitmap: genBitmap, fat: genFAT, magic: genMagic, mismatch: genMismatch, runlist: genRunList, bases: genBases, effacement: genEffacement, examen: genExamen, timestomping: genTimestomping, droitpenal: genDroitPenal, glossaire: genGlossaire };
 
 // ── 1. ENDIANNESS ──────────────────────────────────
 function genEndian() {
@@ -1014,6 +1017,23 @@ const HINT_LIBRARY = {
     "Les examens CAS-IN combinent lecture hex directe, calculs LE et connaissance des structures.",
     "Commencer toujours par identifier le contexte : FAT12/16/32, exFAT, NTFS, EXT, HFS+.",
     "Pour les offsets : toujours lire en Little Endian sauf HFS+ (Big Endian).",
+  ],
+  timestomping: [
+    "$STANDARD_INFORMATION (0x10) est modifiable par n'importe quelle application — c'est la cible de l'anti-forensique.",
+    "$FILE_NAME (0x30) est mis à jour par le noyau Windows uniquement — difficile à falsifier.",
+    "Si $SI.Created > $FN.Created : impossible, le fichier ne peut pas être créé après avoir été nommé → timestomping détecté.",
+    "Si $SI et $FN ont exactement les mêmes dates au milliseconde près : probablement naturel (copie fraîche).",
+  ],
+  droitpenal: [
+    "Art. 143 CP — Soustraction de données : accès sans droit + soustraction (copier ne soustrait pas !)",
+    "Art. 143bis CP — Accès indu : pénétrer dans un système informatique sans autorisation.",
+    "Art. 144bis CP — Dommages aux données : modifier, effacer, rendre inutilisable.",
+    "Art. 147 CP — Abus d'un ordinateur : obtenir un enrichissement illégitime par manipulation informatique.",
+  ],
+  glossaire: [
+    "Méthode : voir le terme, deviner la traduction, vérifier. Alterner FR→EN et EN→FR.",
+    "Focus sur les termes qui trompent : 'décrypter' n'existe pas en bon français — on dit 'déchiffrer'.",
+    "Les termes MAC times = Modified, Accessed, Created — trois horodatages distincts en forensique.",
   ],
 };
 
@@ -1981,6 +2001,422 @@ function checkExamen(expected, explain) {
     fb.innerHTML = `✗ "${val}" incorrect. Utilise 💡 Indice pour débloquer.`;
     setTimeout(() => inp.className='ex-input', 700);
   }
+}
+
+
+
+
+// ═══════════════════════════════════════════════════════════════
+// TIMESTOMPING DETECTION
+// ═══════════════════════════════════════════════════════════════
+
+function randDate(yearFrom, yearTo) {
+  const y = rand(yearFrom, yearTo);
+  const m = rand(1, 12);
+  const d = rand(1, 28);
+  const h = rand(0, 23);
+  const mi = rand(0, 59);
+  const s  = rand(0, 59);
+  return { y, m, d, h, mi, s,
+    str: `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')} ${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}:${String(s).padStart(2,'0')}` };
+}
+
+function genTimestomping() {
+  // 4 cas possibles
+  const caseType = rand(0, 3);
+
+  let SI_created, SI_modified, SI_accessed, SI_mftchanged;
+  let FN_created, FN_modified, FN_accessed, FN_mftchanged;
+  let isTimestomped = false;
+  let explanation = "";
+  let indicator = "";
+
+  if (caseType === 0) {
+    // CAS NORMAL — tout cohérent
+    const base = randDate(2018, 2023);
+    SI_created   = { ...base };
+    FN_created   = { ...base };
+    const mod = randDate(base.y, 2024);
+    SI_modified  = mod;
+    FN_modified  = mod;
+    SI_accessed  = randDate(mod.y, 2024);
+    FN_accessed  = { ...SI_accessed };
+    SI_mftchanged = SI_modified;
+    FN_mftchanged = FN_modified;
+    isTimestomped = false;
+    explanation = `Aucune anomalie. $STANDARD_INFORMATION et $FILE_NAME sont cohérents entre eux. Les dates de création sont identiques, les modifications postérieures à la création. Pas de timestomping détecté.`;
+    indicator = "Dates $SI et $FN cohérentes · Chronologie logique";
+
+  } else if (caseType === 1) {
+    // SI_created APRÈS FN_created — impossible → timestomping classique
+    FN_created   = randDate(2018, 2020);
+    SI_created   = randDate(2021, 2024); // postérieur → impossible
+    FN_modified  = randDate(FN_created.y, 2021);
+    SI_modified  = randDate(2015, 2017); // aussi dans le passé → double anomalie
+    SI_accessed  = randDate(2015, 2017);
+    FN_accessed  = randDate(2022, 2024);
+    SI_mftchanged = SI_modified;
+    FN_mftchanged = FN_modified;
+    isTimestomped = true;
+    explanation = `Timestomping détecté — double anomalie : (1) $SI.Created (${SI_created.str}) est POSTÉRIEUR à $FN.Created (${FN_created.str}), ce qui est physiquement impossible — le fichier ne peut pas être créé après avoir été nommé. (2) $SI.Modified est antérieur à $FN.Created, suggérant une manipulation dans le passé. Outil probable : timestomp, Meterpreter ou manipulation manuelle via SetFileTime().`;
+    indicator = "⚠️ $SI.Created > $FN.Created — physiquement impossible";
+
+  } else if (caseType === 2) {
+    // SI dates toutes identiques à la seconde près → timestamps écrasés en bloc
+    const fakeDate = randDate(2010, 2015);
+    SI_created = SI_modified = SI_accessed = SI_mftchanged = fakeDate;
+    FN_created   = randDate(2019, 2022);
+    FN_modified  = randDate(FN_created.y, 2023);
+    FN_accessed  = randDate(FN_modified.y, 2024);
+    FN_mftchanged = FN_modified;
+    isTimestomped = true;
+    explanation = `Timestomping détecté — les 4 timestamps $STANDARD_INFORMATION sont identiques à la seconde près (${SI_created.str}). Une utilisation normale d'un fichier ne produit jamais 4 dates strictement identiques. Cela indique un écrasement en bloc via SetFileTime() ou l'outil timestomp. Les dates $FILE_NAME, plus difficiles à modifier, révèlent la chronologie réelle.`;
+    indicator = "⚠️ 4 timestamps $SI identiques — écrasement en bloc suspect";
+
+  } else {
+    // CAS NORMAL avec légère différence acceptable
+    const base = randDate(2020, 2022);
+    SI_created   = { ...base };
+    FN_created   = { ...base };
+    // +quelques secondes — normal lors d'une copie
+    const mod = randDate(base.y, 2024);
+    SI_modified  = mod; FN_modified = mod;
+    SI_accessed  = randDate(mod.y, 2024);
+    FN_accessed  = { ...SI_accessed };
+    SI_mftchanged = mod; FN_mftchanged = mod;
+    isTimestomped = false;
+    explanation = `Aucune anomalie détectée. Les timestamps $STANDARD_INFORMATION et $FILE_NAME sont cohérents. La chronologie Création → Modification → Accès est logique. La légère différence entre $SI et $FN (quelques secondes) est normale lors d'une copie Windows.`;
+    indicator = "Cohérence $SI ↔ $FN · Chronologie normale";
+  }
+
+  const renderRow = (label, SI, FN) => `
+    <tr>
+      <td style="padding:.4rem .6rem;color:var(--dim);font-family:var(--mono);font-size:.72rem;white-space:nowrap">${label}</td>
+      <td style="padding:.4rem .6rem;font-family:var(--mono);font-size:.75rem;color:${isTimestomped && label.includes('Créé') ? 'var(--red)' : 'var(--cyan)'}">${SI.str}</td>
+      <td style="padding:.4rem .6rem;font-family:var(--mono);font-size:.75rem;color:${isTimestomped && label.includes('Créé') ? 'var(--gold)' : 'var(--green)'}">${FN.str}</td>
+    </tr>`;
+
+  const div = document.createElement('div');
+  div.className = 'ex-card';
+  div.innerHTML = `
+    <div class="ex-header">
+      <div class="ex-num" id="ex-num-ts">🕰</div>
+      <div class="ex-title">Détection de Timestomping</div>
+      <span class="ex-badge medium">NTFS · $MFT</span>
+    </div>
+    <div class="ex-scenario">
+      Tu analyses l'entrée MFT d'un fichier suspect sur un volume NTFS. X-Ways affiche les timestamps des deux attributs.<br>
+      <strong>Y a-t-il eu manipulation des horodatages (timestomping) ?</strong>
+    </div>
+
+    <div class="sec-title">Attributs de l'entrée MFT</div>
+    <div style="background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:8px;overflow:auto;margin-bottom:.75rem">
+      <table style="border-collapse:collapse;width:100%;min-width:500px">
+        <thead><tr style="background:var(--surface2)">
+          <th style="padding:.4rem .6rem;font-size:.68rem;color:var(--dim);text-align:left;border-bottom:1px solid var(--border)">Horodatage</th>
+          <th style="padding:.4rem .6rem;font-size:.68rem;color:var(--cyan);text-align:left;border-bottom:1px solid var(--border)">$STANDARD_INFORMATION (0x10)</th>
+          <th style="padding:.4rem .6rem;font-size:.68rem;color:var(--green);text-align:left;border-bottom:1px solid var(--border)">$FILE_NAME (0x30)</th>
+        </tr></thead>
+        <tbody>
+          ${renderRow('Créé (Created)', SI_created, FN_created)}
+          ${renderRow('Modifié (Modified)', SI_modified, FN_modified)}
+          ${renderRow('Accédé (Accessed)', SI_accessed, FN_accessed)}
+          ${renderRow('MFT modifié', SI_mftchanged, FN_mftchanged)}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.15);border-radius:8px;padding:.6rem .9rem;margin-bottom:.75rem;font-size:.75rem">
+      <strong style="color:var(--cyan)">Rappel :</strong> $STANDARD_INFORMATION est modifiable par les applications. $FILE_NAME est mis à jour uniquement par le noyau Windows — beaucoup plus difficile à falsifier.
+    </div>
+
+    <div class="ex-input-row" style="flex-direction:column;align-items:flex-start;gap:.5rem">
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap" id="ts-choices">
+        <button class="tp-choice" onclick="checkTimestomping(true, ${isTimestomped}, '${explanation.replace(/'/g,"\\'").replace(/\n/g,' ')}', this)">
+          <span class="tp-choice-letter">A</span>
+          <span>✅ Oui — des horodatages ont été manipulés</span>
+        </button>
+        <button class="tp-choice" onclick="checkTimestomping(false, ${isTimestomped}, '${explanation.replace(/'/g,"\\'").replace(/\n/g,' ')}', this)">
+          <span class="tp-choice-letter">B</span>
+          <span>❌ Non — chronologie normale, pas de timestomping</span>
+        </button>
+      </div>
+    </div>
+    <div class="ex-feedback" id="ex-feedback-tss"></div>
+    <div id="ts-indicator" style="display:none;margin-top:.5rem;font-size:.72rem;font-family:var(--mono);color:var(--dim)">${indicator}</div>
+    <button class="btn-next" id="btn-next-ts2" onclick="newExercise()" style="display:none;margin-top:.5rem">Nouvel exercice →</button>
+  `;
+  return div;
+}
+
+function checkTimestomping(userSaysYes, isActuallyTimestomped, explanation, btn) {
+  const btns = document.querySelectorAll('#ts-choices .tp-choice');
+  if (btns[0].disabled) return;
+  btns.forEach(b => { b.disabled = true; b.style.cursor = 'default'; });
+  const isOk = userSaysYes === isActuallyTimestomped;
+  btn.style.borderColor = isOk ? 'var(--green)' : 'var(--red)';
+  btn.style.background  = isOk ? 'rgba(48,232,138,.1)' : 'rgba(255,64,96,.08)';
+  btn.style.color       = isOk ? 'var(--green)' : 'var(--red)';
+  const fb = document.getElementById('ex-feedback-tss');
+  fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+  fb.innerHTML = (isOk ? '✓ ' : '✗ ') + explanation;
+  document.getElementById('ts-indicator').style.display = 'block';
+  document.getElementById('ex-num-ts').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+  document.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+  document.getElementById('btn-next-ts2').style.display = 'block';
+  if (isOk && !STATE.hintUsed) incSolved(STATE.cat);
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// DROIT PÉNAL — QUALIFICATIONS
+// ═══════════════════════════════════════════════════════════════
+
+const DROIT_CASES = [
+  {
+    action: "Un analyste accède au système informatique d'une entreprise concurrente sans autorisation pour copier des fichiers confidentiels. L'original reste en place.",
+    correct: "143bis",
+    choices: [
+      { art: "143", label: "Art. 143 CP — Soustraction de données", explain: "Art. 143 exige une soustraction (priver le détenteur). Ici l'original reste → pas de soustraction au sens strict. C'est l'accès sans droit qui est sanctionné." },
+      { art: "143bis", label: "Art. 143bis CP — Accès indu à un système", explain: "✓ Correct. Art. 143bis punit l'accès sans droit à un système informatique, indépendamment de ce que l'on y fait. La copie sans soustraction de l'original ne constitue pas un vol de données au sens de 143 CP." },
+      { art: "144bis", label: "Art. 144bis CP — Dommages aux données", explain: "Art. 144bis exige une modification, suppression ou inutilisation des données. La simple copie sans altération ne suffit pas." },
+      { art: "147", label: "Art. 147 CP — Abus d'un ordinateur", explain: "Art. 147 vise l'obtention d'un avantage pécuniaire illicite par manipulation informatique (fraude informatique). La copie de données n'est pas une fraude au sens de 147 CP." },
+    ],
+    note: "Le droit suisse ne connaît pas le 'vol de données' — copier sans priver n'est pas une soustraction (art. 143 CP). C'est l'accès sans droit (143bis) qui est sanctionné.",
+  },
+  {
+    action: "Un employé mécontent efface délibérément 50'000 fichiers clients de la base de données de son employeur avant de démissionner.",
+    correct: "144bis",
+    choices: [
+      { art: "143", label: "Art. 143 CP — Soustraction de données", explain: "Art. 143 punit la soustraction (s'approprier). L'effacement n'est pas une soustraction mais une destruction." },
+      { art: "143bis", label: "Art. 143bis CP — Accès indu à un système", explain: "L'employé avait accès légitimement au système. L'infraction n'est pas l'accès (autorisé) mais la destruction des données." },
+      { art: "144bis", label: "Art. 144bis CP — Dommages aux données", explain: "✓ Correct. Art. 144bis punit quiconque modifie, efface ou rend inutilisables des données. L'effacement volontaire de fichiers clients constitue des dommages aux données." },
+      { art: "146", label: "Art. 146 CP — Escroquerie", explain: "Art. 146 requiert une tromperie astucieuse pour obtenir un enrichissement. L'effacement de données n'est pas une escroquerie." },
+    ],
+    note: "Art. 144bis CP : 'Quiconque modifie, efface ou rend inutilisables des données sans en avoir le droit...' — s'applique même si l'auteur avait accès légitimement.",
+  },
+  {
+    action: "Un hacker manipule le système bancaire informatique pour transférer 50'000 CHF d'un compte client vers le sien, en exploitant une faille du logiciel.",
+    correct: "147",
+    choices: [
+      { art: "143bis", label: "Art. 143bis CP — Accès indu", explain: "Bien qu'il y ait accès sans droit, l'infraction centrale est l'enrichissement illégitime obtenu par manipulation du système — ce qui relève de 147 CP." },
+      { art: "144bis", label: "Art. 144bis CP — Dommages aux données", explain: "Il n'y a pas destruction de données mais manipulation pour obtenir un avantage financier." },
+      { art: "147", label: "Art. 147 CP — Abus d'un ordinateur", explain: "✓ Correct. Art. 147 punit 'quiconque, dans le dessein de se procurer ou de procurer à un tiers un enrichissement illégitime, influence électroniquement ou de manière analogue le résultat d'un traitement de données'. Le virement frauduleux correspond exactement." },
+      { art: "143", label: "Art. 143 CP — Soustraction de données", explain: "Art. 143 porte sur les données informatiques, pas sur l'argent. L'infraction ici est le détournement de fonds par manipulation informatique." },
+    ],
+    note: "Art. 147 CP est l'équivalent informatique de l'escroquerie (art. 146) — il couvre les fraudes aux systèmes de paiement, virements frauduleux, manipulation de bases de données pour enrichissement.",
+  },
+  {
+    action: "Un enquêteur installe secrètement un GPS sur le véhicule d'un suspect sans autorisation judiciaire du Ministère public.",
+    correct: "269",
+    choices: [
+      { art: "143bis", label: "Art. 143bis CP — Accès indu", explain: "143bis porte sur les systèmes informatiques. Un GPS physique n'est pas un système informatique au sens de 143bis." },
+      { art: "179", label: "Art. 179 CPP — Mesure sans autorisation", explain: "Proche mais la référence exacte est art. 269 ss CPP qui encadre les mesures de surveillance secrètes, dont l'ATF rendu dans l'affaire de Soleure (2015-2025) confirme la violation." },
+      { art: "269", label: "Art. 269 ss CPP — Mesures de surveillance sans autorisation", explain: "✓ Correct. Le TF a confirmé dans l'affaire de Soleure (ATF 2015-2025) que l'installation d'un GPS sans autorisation préalable du MP viole art. 269 ss CPP. La preuve peut être écartée mais la condamnation maintenue si d'autres preuves autonomes existent (65'000 CHF de frais supplémentaires)." },
+      { art: "144bis", label: "Art. 144bis CP — Dommages aux données", explain: "Aucun dommage aux données n'est causé par l'installation d'un GPS." },
+    ],
+    note: "Référence : Affaire de Soleure 2015-2025 — GPS installé sans art. 269 CPP → preuve écartée mais condamnation maintenue (autres preuves autonomes). Coût : 65'000 CHF de frais de justice supplémentaires.",
+  },
+  {
+    action: "Mettre un fichier dans la corbeille Windows d'une autre personne sans sa connaissance.",
+    correct: "144bis",
+    choices: [
+      { art: "143", label: "Art. 143 CP — Soustraction", explain: "Mettre à la corbeille ne supprime pas définitivement les données et n'est pas une soustraction au sens de 143 CP." },
+      { art: "144bis", label: "Art. 144bis CP — Dommages aux données", explain: "✓ Correct. Selon le cours CAS-IN (notes de cours) : 'Mettre un fichier à la poubelle à l'insu d'un utilisateur est une infraction au sens de l'article 144bis CPS.' La modification non autorisée de l'emplacement ou de l'état d'un fichier constitue des dommages au sens de 144bis." },
+      { art: "143bis", label: "Art. 143bis CP — Accès indu", explain: "Si l'auteur avait accès légitimement à la machine, 143bis ne s'applique pas. L'infraction est la modification non autorisée des données (144bis)." },
+      { art: "147", label: "Art. 147 CP — Abus d'un ordinateur", explain: "Art. 147 requiert un enrichissement illégitime. Mettre un fichier à la corbeille sans enrichissement ne relève pas de 147 CP." },
+    ],
+    note: "Source directe : Notes de cours CAS-IN — 'Mettre un fichier à la poubelle à l'insu d'un utilisateur est une infraction au sens de l'article 144bis du CPS.' Art. 144bis couvre aussi le 'rendre inutilisable'.",
+  },
+  {
+    action: "Un ransomware chiffre tous les fichiers d'un hôpital, rendant les dossiers patients inaccessibles.",
+    correct: "both",
+    choices: [
+      { art: "143bis", label: "Art. 143bis + 144bis — Accès indu + Dommages", explain: "✓ Correct. Double infraction : (1) Art. 143bis — accès sans droit aux systèmes de l'hôpital. (2) Art. 144bis — les données sont rendues inutilisables par le chiffrement. Les deux infractions se cumulent." },
+      { art: "147", label: "Art. 147 CP — Abus d'un ordinateur", explain: "Art. 147 requiert un enrichissement illégitime par manipulation. Si la rançon est exigée, 147 peut s'ajouter, mais les infractions centrales sont 143bis + 144bis." },
+      { art: "143", label: "Art. 143 CP — Soustraction de données", explain: "Les données ne sont pas soustraites (elles restent sur le système, chiffrées). Il n'y a pas de soustraction au sens de 143 CP." },
+      { art: "146", label: "Art. 146 CP — Escroquerie", explain: "L'escroquerie (146) requiert une tromperie astucieuse. Un ransomware est une contrainte informatique, pas une escroquerie au sens classique." },
+    ],
+    note: "L'affaire Xplain 2023 a utilisé exactement ce cumul 143bis + 144bis pour qualifier l'attaque du groupe Play. Si rançon exigée, art. 156 CP (extorsion) peut s'ajouter.",
+  },
+];
+
+let _droitIdx = 0;
+
+function genDroitPenal() {
+  const case_ = DROIT_CASES[_droitIdx % DROIT_CASES.length];
+  _droitIdx++;
+
+  const opts = [...case_.choices].sort(() => Math.random() - .5);
+  const correctOpt = opts.find(o => o.art === case_.correct || (case_.correct === 'both' && o.art === '143bis') || (case_.correct === '269' && o.art === '269'));
+  const correctIdx = opts.indexOf(correctOpt || opts.find(o => o.art === case_.correct));
+
+  const div = document.createElement('div');
+  div.className = 'ex-card';
+  div.innerHTML = `
+    <div class="ex-header">
+      <div class="ex-num" id="ex-num-dp">⚖️</div>
+      <div class="ex-title">Qualification pénale — Droit suisse</div>
+      <span class="ex-badge medium">CP / CPP</span>
+    </div>
+    <div class="ex-scenario">${case_.action}</div>
+    <div class="sec-title">Quel article s'applique principalement ?</div>
+    <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="dp-choices">
+      ${opts.map((o, i) => `
+        <button class="tp-choice" onclick="checkDroitPenal(this, ${i === correctIdx}, '${o.explain.replace(/'/g,"\\'")}', '${case_.note.replace(/'/g,"\\'")}')">
+          <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
+          <span>${o.label}</span>
+        </button>`).join('')}
+    </div>
+    <div class="ex-feedback" id="ex-feedback-dp"></div>
+    <button class="btn-next" id="btn-next-dp" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+  `;
+  return div;
+}
+
+function checkDroitPenal(btn, isOk, explain, note) {
+  const btns = document.querySelectorAll('#dp-choices .tp-choice');
+  if (btns[0].disabled) return;
+  btns.forEach(b => { b.disabled = true; b.style.cursor = 'default'; });
+  btn.style.borderColor = isOk ? 'var(--green)' : 'var(--red)';
+  btn.style.background  = isOk ? 'rgba(48,232,138,.1)' : 'rgba(255,64,96,.08)';
+  btn.style.color       = isOk ? 'var(--green)' : 'var(--red)';
+  const fb = document.getElementById('ex-feedback-dp');
+  fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+  fb.innerHTML = (isOk ? '✓ ' : '✗ ') + explain +
+    `<div style="margin-top:.5rem;padding:.5rem .75rem;background:rgba(240,192,64,.06);border:1px solid rgba(240,192,64,.2);border-radius:6px;font-size:.75rem;color:var(--gold)">📌 ${note}</div>`;
+  document.getElementById('ex-num-dp').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+  document.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+  document.getElementById('btn-next-dp').style.display = 'block';
+  if (isOk && !STATE.hintUsed) incSolved(STATE.cat);
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// GLOSSAIRE BILINGUE — FLASHCARDS
+// ═══════════════════════════════════════════════════════════════
+
+const GLOSSAIRE = [
+  { fr: "Investigation numérique", en: "Digital forensics", note: "Science de l'analyse des preuves numériques" },
+  { fr: "Empreinte numérique", en: "Hash / Checksum", note: "Valeur calculée garantissant l'intégrité" },
+  { fr: "Bloqueur en écriture", en: "Write blocker", note: "Dispositif empêchant toute écriture sur le support" },
+  { fr: "Image forensique", en: "Forensic image", note: "Copie bit à bit d'un support, avec métadonnées" },
+  { fr: "Espace non alloué", en: "Unallocated space", note: "Zones du disque non assignées à des fichiers — contient des données récupérables" },
+  { fr: "Espace résiduel", en: "Slack space", note: "Espace perdu entre la fin d'un fichier et la fin du cluster" },
+  { fr: "Récupération par signature", en: "File carving", note: "Reconstruction de fichiers par leur magic bytes, sans système de fichiers" },
+  { fr: "Chaîne de possession", en: "Chain of custody", note: "Documentation complète de la continuité de la preuve" },
+  { fr: "Artefact", en: "Artifact", note: "Trace laissée par une activité sur un système numérique" },
+  { fr: "Ruche", en: "Hive", note: "Fichier physique constituant une partie du registre Windows" },
+  { fr: "Cluster", en: "Cluster / Block", note: "Unité d'allocation du système de fichiers (Linux : bloc)" },
+  { fr: "Secteur", en: "Sector", note: "Plus petite unité physique d'un disque (512 ou 4096 octets)" },
+  { fr: "Temps MAC", en: "MAC times", note: "Modified, Accessed, Created — trois horodatages de fichiers" },
+  { fr: "Boutisme", en: "Endianness", note: "Ordre de stockage des octets (Little Endian = LSB en premier)" },
+  { fr: "Déchiffrement", en: "Decryption", note: "Transformation d'un chiffré en clair avec la clé correcte" },
+  { fr: "Décryptage", en: "Cryptanalysis", note: "Cassage d'un chiffrement SANS la clé — terme souvent mal utilisé" },
+  { fr: "Forensique vivante", en: "Live forensics", note: "Investigation sur un système en cours de fonctionnement" },
+  { fr: "Forensique morte", en: "Dead forensics", note: "Investigation sur un système éteint (image disque)" },
+  { fr: "Vidage mémoire", en: "Memory dump / RAM dump", note: "Capture du contenu de la RAM — préserve clés de chiffrement" },
+  { fr: "Anti-forensique", en: "Anti-forensics", note: "Techniques visant à effacer ou falsifier des traces numériques" },
+  { fr: "Table d'allocation de fichiers", en: "File Allocation Table (FAT)", note: "Système de fichiers + structure interne qui chaîne les clusters" },
+  { fr: "Entrée de répertoire", en: "Directory entry", note: "Structure de 32 octets décrivant un fichier dans FAT" },
+  { fr: "Nom court", en: "Short File Name (SFN)", note: "Format 8.3 (8 chars + 3 extension) — héritage DOS" },
+  { fr: "Nom long", en: "Long File Name (LFN)", note: "Nom UTF-16, stocké en entrées de 13 caractères avant le SFN" },
+  { fr: "Secteur de démarrage", en: "Boot sector / Boot record", note: "Secteur 0 du volume — contient les paramètres du système de fichiers" },
+  { fr: "Nombre magique", en: "Magic number / File signature", note: "Signature interne (octets de début) identifiant le type réel d'un fichier" },
+  { fr: "Table de fichiers maîtresse", en: "Master File Table (MFT)", note: "Structure centrale de NTFS — une entrée de 1 KB par fichier/dossier" },
+  { fr: "Liste de fragments", en: "Run list / Data run", note: "Séquence encodant l'emplacement physique des clusters d'un fichier NTFS" },
+  { fr: "Attribut résident", en: "Resident attribute", note: "Données stockées directement dans le tuple MFT (< 1 KB)" },
+  { fr: "Attribut non résident", en: "Non-resident attribute", note: "Données trop grandes pour le tuple MFT — pointées par une run list" },
+  { fr: "Manipulation des dates", en: "Timestomping", note: "Technique anti-forensique : modifier $STANDARD_INFORMATION sans toucher $FILE_NAME" },
+  { fr: "Flux de données alternatif", en: "Alternate Data Stream (ADS)", note: "NTFS : flux de données caché associé à un fichier (fichier.txt:caché.exe)" },
+  { fr: "Zone protégée par l'hôte", en: "Host Protected Area (HPA)", note: "Zone cachée du disque dur, hors adressage LBA normal" },
+  { fr: "Secteur de démarrage maître", en: "Master Boot Record (MBR)", note: "Premier secteur du disque (LBA 0) — 440B code + 4 partitions + 55AA" },
+  { fr: "Adressage par blocs logiques", en: "Logical Block Addressing (LBA)", note: "Numérotation séquentielle des secteurs — remplace CHS" },
+  { fr: "Identificateur de sécurité", en: "Security Identifier (SID)", note: "Identifiant unique d'un utilisateur/groupe Windows dans le registre" },
+  { fr: "Fichier de prélecture", en: "Prefetch file (.pf)", note: "Preuve d'exécution — Windows enregistre les 10 premières secondes de chaque lancement" },
+  { fr: "Vignette", en: "Thumbnail", note: "Miniature d'image dans thumbcache — persiste après suppression de l'original" },
+  { fr: "Clé de registre Run", en: "Registry Run key", note: "HKLM/HKCU\\...\\Run — programmes lancés au démarrage (cible malware)" },
+  { fr: "Sachets d'obus", en: "ShellBags", note: "Artefacts registre Windows (BagMRU/Bags) — traces de navigation dans l'Explorateur" },
+  { fr: "Journaux d'événements", en: "Event logs (.evtx)", note: "Fichiers Windows contenant les Event IDs (4624 connexion, 4688 processus, 7045 service)" },
+  { fr: "Vecteur d'initialisation", en: "Initialization Vector (IV)", note: "Aléa ajouté au début du chiffrement AES pour éviter les patterns" },
+  { fr: "Infrastructure à clé publique", en: "Public Key Infrastructure (PKI)", note: "Système de certification liant identité et clé publique via une CA" },
+  { fr: "Soustraction de données", en: "Data theft (≠ vol au sens strict)", note: "Art. 143 CP — en droit suisse, copier sans priver n'est pas une soustraction" },
+  { fr: "Accès indu", en: "Unauthorized access", note: "Art. 143bis CP — pénétrer dans un système sans droit, quelle que soit l'action" },
+  { fr: "Dommages aux données", en: "Data damage", note: "Art. 144bis CP — modifier, effacer ou rendre inutilisables des données" },
+  { fr: "Déni plausible", en: "Plausible deniability", note: "VeraCrypt hidden volume — impossible de prouver l'existence du volume caché" },
+  { fr: "Entropie", en: "Entropy", note: "Mesure du caractère aléatoire — haute entropie = probable chiffrement ou compression" },
+  { fr: "Scellés", en: "Judicial seals", note: "Art. 248 CPP — suspension d'analyse sur demande du propriétaire, décision TMC sous 20 jours" },
+];
+
+let _glossIdx = 0;
+let _glossMode = 'fr_to_en'; // 'fr_to_en' or 'en_to_fr'
+let _glossSessionCorrect = 0;
+let _glossSessionTotal = 0;
+
+function genGlossaire() {
+  const term = GLOSSAIRE[_glossIdx % GLOSSAIRE.length];
+  _glossIdx++;
+  _glossSessionTotal++;
+
+  // Alterner le mode
+  _glossMode = (_glossIdx % 2 === 0) ? 'fr_to_en' : 'en_to_fr';
+
+  // Générer 3 distracteurs
+  const pool = GLOSSAIRE.filter(t => t !== term);
+  const distractors = pool.sort(() => Math.random() - .5).slice(0, 3);
+  const correct = _glossMode === 'fr_to_en' ? term.en : term.fr;
+  const question = _glossMode === 'fr_to_en' ? term.fr : term.en;
+  const options = [
+    { text: correct, isCorrect: true },
+    ...distractors.map(d => ({ text: _glossMode === 'fr_to_en' ? d.en : d.fr, isCorrect: false })),
+  ].sort(() => Math.random() - .5);
+
+  const langLabel = _glossMode === 'fr_to_en' ? '🇫🇷 → 🇬🇧' : '🇬🇧 → 🇫🇷';
+
+  const div = document.createElement('div');
+  div.className = 'ex-card';
+  div.innerHTML = `
+    <div class="ex-header">
+      <div class="ex-num" id="ex-num-gl">🗂</div>
+      <div class="ex-title">Glossaire Bilingue ${langLabel}</div>
+      <span class="ex-badge easy">${_glossSessionCorrect}/${_glossSessionTotal} cette session</span>
+    </div>
+    <div class="ex-scenario">
+      <div style="text-align:center;padding:.5rem 0">
+        <div style="font-size:1.3rem;font-weight:800;color:var(--text);font-family:var(--sans);margin-bottom:.3rem">${question}</div>
+        <div style="font-size:.75rem;color:var(--dim)">${term.note}</div>
+      </div>
+    </div>
+    <div class="sec-title">Quelle est la traduction correcte ?</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.75rem" id="gl-choices">
+      ${options.map((o, i) => `
+        <button class="tp-choice" onclick="checkGlossaire(this, ${o.isCorrect}, '${correct.replace(/'/g,"\\'")}', '${term.note.replace(/'/g,"\\'")}')">
+          <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
+          <span style="font-size:.78rem">${o.text}</span>
+        </button>`).join('')}
+    </div>
+    <div class="ex-feedback" id="ex-feedback-gl"></div>
+    <button class="btn-next" id="btn-next-gl" onclick="newExercise()" style="display:none;margin-top:.5rem">Terme suivant →</button>
+  `;
+  return div;
+}
+
+function checkGlossaire(btn, isOk, correct, note) {
+  const btns = document.querySelectorAll('#gl-choices .tp-choice');
+  if (btns[0].disabled) return;
+  btns.forEach(b => {
+    b.disabled = true; b.style.cursor = 'default';
+    const bText = b.querySelector('span:last-child').textContent;
+    if (bText === correct) { b.style.borderColor='var(--green)'; b.style.background='rgba(48,232,138,.1)'; b.style.color='var(--green)'; }
+    else if (b === btn && !isOk) { b.style.borderColor='var(--red)'; b.style.background='rgba(255,64,96,.08)'; b.style.color='var(--red)'; }
+  });
+  if (isOk) _glossSessionCorrect++;
+  const fb = document.getElementById('ex-feedback-gl');
+  fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+  fb.innerHTML = (isOk ? `✓ Correct — ` : `✗ La bonne réponse était : <strong>${correct}</strong> — `) + note;
+  document.getElementById('ex-num-gl').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+  document.getElementById('btn-next-gl').style.display = 'block';
+  if (isOk && !STATE.hintUsed) incSolved(STATE.cat);
 }
 
 
