@@ -166,4 +166,4 @@ F12 → Application → Service Workers → Unregister → F5
 
 ## 📄 Licence
 
-Usage pédagogique interne — CAS-IN, HE-Arc / Police Valaisanne.
+Usage pédagogique interne — CAS-IN, HE-Arc.
