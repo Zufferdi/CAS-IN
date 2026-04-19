@@ -1832,12 +1832,476 @@ function makeBinaryExercise() {
 }
 
 // ── Registre des générateurs ──
+// ═══════════════════════════════════════════════════════════════
+// EXERCICES D'EXAMEN — NOUVEAUX
+// ═══════════════════════════════════════════════════════════════
+
+// ── EX-EXAM-1 : FAT16 — Lire cluster + date dans une entrée SFN ──
+function makeFAT16SFNExercise() {
+  const le16 = v => [v & 0xFF, (v >> 8) & 0xFF];
+  const le32 = v => [v & 0xFF, (v>>8)&0xFF, (v>>16)&0xFF, (v>>24)&0xFF];
+  const rand16 = (lo,hi) => Math.floor(Math.random()*(hi-lo+1))+lo;
+
+  // Générer un cluster de départ réaliste pour FAT16
+  const cluster = rand16(2, 255);
+  // Générer une date FAT16 : bits 15-9=années depuis 1980, 8-5=mois, 4-0=jour
+  const year  = rand16(10, 43); // 1990-2023
+  const month = rand16(1, 12);
+  const day   = rand16(1, 28);
+  const dateWord = (year << 9) | (month << 5) | day;
+
+  // Générer une taille de fichier
+  const filesize = rand16(1024, 500000);
+
+  // Construire les 32 octets SFN
+  const sfn = new Array(32).fill(0);
+  // Nom + extension
+  const names = ['RAPPORT ', 'IMAGES  ', 'RAPPORT ', 'PHOTOS  ', 'DONNEES '];
+  const exts  = ['TXT', 'JPG', 'PDF', 'DOC', 'XLS'];
+  const ni = rand16(0, names.length-1);
+  names[ni].split('').forEach((c,i) => sfn[i] = c.charCodeAt(0));
+  exts[ni].split('').forEach((c,i) => sfn[8+i] = c.charCodeAt(0));
+  sfn[0x0B] = 0x20; // archive
+  // Date écriture at 0x18-0x19
+  le16(dateWord).forEach((b,i) => sfn[0x18+i] = b);
+  // Date création at 0x10-0x11 (même)
+  le16(dateWord).forEach((b,i) => sfn[0x10+i] = b);
+  // Cluster de départ at 0x1A-0x1B
+  le16(cluster).forEach((b,i) => sfn[0x1A+i] = b);
+  // Taille at 0x1C-0x1F
+  le32(filesize).forEach((b,i) => sfn[0x1C+i] = b);
+
+  const row0 = { offset: '00000000', bytes: sfn.slice(0,16) };
+  const row1 = { offset: '00000010', bytes: sfn.slice(16,32) };
+
+  const questionType = rand16(0,1);
+  let qText, answer, hints, explain;
+
+  const clusterHex = cluster.toString(16).toUpperCase().padStart(4,'0');
+  const dateHex    = dateWord.toString(16).toUpperCase().padStart(4,'0');
+
+  const monthNames = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+
+  if (questionType === 0) {
+    // Demander le cluster de départ
+    answer = clusterHex;
+    qText = `Quel est le <strong>numéro de cluster de départ</strong> du fichier (en hexadécimal) ?`;
+    hints = [
+      `Le cluster de départ est aux offsets <strong>0x1A–0x1B</strong> sur 2 octets en Little Endian.`,
+      `Lis les octets aux positions 0x1A et 0x1B (bytes 26-27 de l'entrée).`,
+      `Octets = <span style="color:var(--cyan);font-weight:700">${sfn[0x1A].toString(16).toUpperCase().padStart(2,'0')} ${sfn[0x1B].toString(16).toUpperCase().padStart(2,'0')}</span> → Little Endian → inverse les deux octets.`,
+      `Cluster = <strong>${clusterHex}</strong> (0x${sfn[0x1B].toString(16).toUpperCase()}${sfn[0x1A].toString(16).toUpperCase().padStart(2,'0')})`
+    ];
+    explain = `Offset 0x1A-0x1B = <code>${sfn[0x1A].toString(16).toUpperCase().padStart(2,'0')} ${sfn[0x1B].toString(16).toUpperCase().padStart(2,'0')}</code> → Little Endian → cluster <strong>0x${clusterHex}</strong> = ${cluster} déc.`;
+  } else {
+    // Demander la date
+    answer = `${String(day).padStart(2,'0')} ${monthNames[month-1]} ${1980+year}`;
+    qText = `Quelle est la <strong>date de création</strong> du fichier (jj mois aaaa) ? <em>Offset 0x10–0x11</em>`;
+    hints = [
+      `La date est encodée sur 2 octets à l'offset <strong>0x10–0x11</strong> en Little Endian.`,
+      `Lis les 2 octets, inverse (LE), tu obtiens le mot de date (16 bits).`,
+      `Mot de date = <span style="color:var(--gold);font-weight:700">0x${dateHex}</span> = ${dateWord} en décimal = ${dateWord.toString(2).padStart(16,'0')} en binaire.`,
+      `Bits 15-9 = années depuis 1980 (${year} → ${1980+year}), bits 8-5 = mois (${month} = ${monthNames[month-1]}), bits 4-0 = jour (${day}).`,
+      `Réponse : <strong>${String(day).padStart(2,'0')} ${monthNames[month-1]} ${1980+year}</strong>`
+    ];
+    explain = `0x${sfn[0x10].toString(16).toUpperCase().padStart(2,'0')} ${sfn[0x11].toString(16).toUpperCase().padStart(2,'0')} → LE → 0x${dateHex} = ${dateWord.toString(2).padStart(16,'0')} → année=${1980+year}, mois=${monthNames[month-1]}, jour=${day}.`;
+  }
+
+  return {
+    title: 'FAT16 — Lecture d\'une entrée SFN',
+    category: 'Système de fichiers FAT',
+    difficulty: 'medium',
+    scenario: `Tu analyses une entrée SFN (Short File Name) de 32 octets issue du répertoire racine d'une clé USB FAT16.`,
+    hexDump: renderHexDump([row0, row1], [
+      questionType === 0
+        ? {from:0x1A,to:0x1B,color:'--cyan',label:'Cluster départ'}
+        : {from:0x10,to:0x11,color:'--gold',label:'Date création'},
+    ]),
+    legend: `<div style="font-size:.7rem;color:var(--dim);margin-top:.25rem">🔵 Offset 0x00–0x07 : Nom · 0x08–0x0A : Ext · 0x0B : Attr · 0x10–0x11 : Date création · 0x18–0x19 : Date écriture · 0x1A–0x1B : Cluster départ · 0x1C–0x1F : Taille</div>`,
+    question: qText,
+    answer,
+    hints,
+    explain,
+  };
+}
+
+// ── EX-EXAM-2 : FAT16 — Diagnostic Root Directory plein ──
+function makeFAT16RootFullExercise() {
+  // Générer un nombre d'entrées root aléatoire
+  const rootCount = [64, 128, 224, 512][Math.floor(Math.random()*4)];
+  const usedAll   = true; // problème = root plein
+
+  // Simuler une entrée SFN normale au début du root dir
+  const sfn = new Array(32).fill(0);
+  'FICHIER '.split('').forEach((c,i) => sfn[i] = c.charCodeAt(0));
+  'TXT'.split('').forEach((c,i) => sfn[8+i] = c.charCodeAt(0));
+  sfn[0x0B] = 0x20;
+  // Date quelconque
+  [0x24, 0x58].forEach((b,i) => sfn[0x10+i] = b);
+  // Taille 2 Ko
+  [0x00, 0x08, 0x00, 0x00].forEach((b,i) => sfn[0x1C+i] = b);
+  // Cluster
+  [0x03, 0x00].forEach((b,i) => sfn[0x1A+i] = b);
+
+  // Entrée qui semble vide (0xE5 = effacée, pas libre)
+  const sfnDel = new Array(32).fill(0);
+  sfnDel[0] = 0xE5; // effacée
+  'ANCIEN  '.slice(1).split('').forEach((c,i) => sfnDel[i+1] = c.charCodeAt(0));
+  'DOC'.split('').forEach((c,i) => sfnDel[8+i] = c.charCodeAt(0));
+  sfnDel[0x0B] = 0x20;
+  [0x02, 0x00].forEach((b,i) => sfnDel[0x1A+i] = b);
+  [0x00, 0x10, 0x00, 0x00].forEach((b,i) => sfnDel[0x1C+i] = b);
+
+  const row0 = { offset: '00000000', bytes: sfn.slice(0,16) };
+  const row1 = { offset: '00000010', bytes: sfn.slice(16,32) };
+  const row2 = { offset: '00000020', bytes: sfnDel.slice(0,16) };
+  const row3 = { offset: '00000030', bytes: sfnDel.slice(16,32) };
+
+  const q = Math.floor(Math.random()*2);
+  let qText, answer, hints, explain;
+
+  if (q === 0) {
+    answer = '0xe5';
+    qText = `Dans le répertoire racine FAT16, qu'indique l'octet <strong>0xE5</strong> au premier octet d'une entrée SFN ?`;
+    hints = [
+      `L'octet 0 d'une entrée SFN indique l'état de l'entrée.`,
+      `0x00 = fin du répertoire (aucune entrée valide après). 0xE5 = …`,
+      `0xE5 = entrée <strong>marquée comme supprimée</strong>. Les données peuvent encore être récupérées !`,
+    ];
+    explain = `0xE5 = entrée supprimée. Les clusters et la taille sont souvent encore présents → récupération possible par file carving.`;
+  } else {
+    answer = String(rootCount);
+    qText = `Un volume FAT16 a <strong>RootEntryCount = ${rootCount}</strong> (offset BPB 0x11). Combien d'entrées de fichiers/dossiers au maximum peut contenir ce répertoire racine ?`;
+    hints = [
+      `En FAT16, le Root Directory est de <strong>taille fixe</strong>. Il contient exactement RootEntryCount entrées de 32 octets chacune.`,
+      `Taille total root dir = ${rootCount} × 32 = ${rootCount*32} octets.`,
+      `Le nombre max d'entrées (fichiers + dossiers + LFN) = <strong>${rootCount}</strong>.`,
+      `En FAT32, ce problème n'existe plus : le Root Dir est dynamique dans la zone de données.`,
+    ];
+    explain = `FAT16 Root Entry Count = ${rootCount} → maximum ${rootCount} entrées. Chaque LFN utilise 1 entrée supplémentaire par tranche de 13 caractères.`;
+  }
+
+  return {
+    title: 'FAT16 — Répertoire Racine',
+    category: 'Système de fichiers FAT',
+    difficulty: 'easy',
+    scenario: `Extrait du répertoire racine d'une clé USB FAT16. Le 1er octet de l'entrée indique son statut. Le 2ème offset commence une entrée supprimée (0xE5).`,
+    hexDump: renderHexDump([row0, row1, row2, row3], [
+      {from:0x00, to:0x00, color:'--cyan', label:'État 1ère entrée'},
+      {from:0x20, to:0x20, color:'--red',  label:'0xE5 = supprimée'},
+    ]),
+    question: qText,
+    answer,
+    hints,
+    explain,
+  };
+}
+
+// ── EX-EXAM-3 : NTFS — Identifier les attributs dans une entrée MFT ──
+function makeNTFSMFTAttributeExercise() {
+  const rand16 = (lo,hi) => Math.floor(Math.random()*(hi-lo+1))+lo;
+
+  // Attributs NTFS courants
+  const ATTRS = {
+    0x10: '$STANDARD_INFORMATION',
+    0x30: '$FILE_NAME',
+    0x40: '$OBJECT_ID',
+    0x80: '$DATA',
+    0x90: '$INDEX_ROOT',
+    0xA0: '$INDEX_ALLOCATION',
+    0xB0: '$BITMAP',
+  };
+
+  // Générer 3-4 attributs pour cet enregistrement MFT
+  const attrSet = [0x10, 0x30, 0x80]; // standard, filename, data (toujours présents)
+  if (Math.random() > 0.5) attrSet.push(0x40); // object id
+
+  // Construire une représentation simplifiée de la MFT entry
+  // Header MFT (16 octets simplifiés)
+  const mft = [];
+
+  // FILE signature
+  [0x46,0x49,0x4C,0x45, 0x30,0x00, 0x03,0x00, 0x00,0x00,0x00,0x00,0x00,0x00, 0x01,0x00].forEach(b => mft.push(b));
+  // Record flags + size
+  [0x01,0x00, 0x00,0x01, 0x00,0x04, 0x00,0x00].forEach(b => mft.push(b));
+
+  // Offset vers 1er attribut (0x38 typique)
+  const attrStart = 0x38;
+  [attrStart,0x00].forEach(b => mft.push(b));
+  [0x00,0x00,0x00,0x00,0x00,0x00].forEach(b => mft.push(b));
+
+  // Numéro d'entrée MFT
+  const mftNum = rand16(100,9999);
+  [mftNum & 0xFF, (mftNum>>8)&0xFF, 0x00, 0x00, 0x01, 0x00].forEach(b => mft.push(b));
+
+  // Padding jusqu'à attrStart
+  while (mft.length < attrStart) mft.push(0);
+
+  // Encoder les attributs
+  const attrOffsets = {};
+  for (const aType of attrSet) {
+    attrOffsets[aType] = mft.length;
+    mft.push(aType); mft.push(0x00); mft.push(0x00); mft.push(0x00); // type
+    const aLen = aType === 0x80 ? 0x48 : 0x38; // DATA plus long
+    [aLen, 0x00, 0x00, 0x00].forEach(b => mft.push(b)); // length
+    mft.push(aType === 0x80 ? 0x01 : 0x00); // non-resident flag (0x80 = non-résidant)
+    mft.push(0x00); // name length
+    [0x18, 0x00].forEach(b => mft.push(b)); // attr offset
+    [0x00, 0x00].forEach(b => mft.push(b)); // flags
+    [0x00, 0x00].forEach(b => mft.push(b)); // ID
+    // Body simplifié
+    const bodyLen = aLen - 0x10;
+    for (let i=0; i<bodyLen; i++) mft.push(Math.floor(Math.random()*256));
+  }
+  // END marker
+  [0xFF, 0xFF, 0xFF, 0xFF].forEach(b => mft.push(b));
+
+  // Construire les rows pour affichage (max 6 rows = 96 octets)
+  const rows = [];
+  for (let i=0; i < Math.min(mft.length, 96); i+=16) {
+    rows.push({
+      offset: i.toString(16).toUpperCase().padStart(8,'0'),
+      bytes: mft.slice(i, i+16).map(b => b || 0)
+    });
+  }
+
+  // Question sur le type d'attribut
+  const qAttrType = attrSet[rand16(0, attrSet.length-1)];
+  const qOffset = attrOffsets[qAttrType];
+  const attrTypeHex = qAttrType.toString(16).toUpperCase().padStart(2,'0');
+
+  let qText, answer, hints, explain;
+  const q = rand16(0,2);
+
+  if (q === 0) {
+    answer = ATTRS[qAttrType];
+    qText = `À l'offset <strong>0x${qOffset.toString(16).toUpperCase()}</strong>, le type d'attribut commence par l'octet <span style="color:var(--cyan);font-weight:700">0x${attrTypeHex} 00 00 00</span>. Quel est le <strong>nom de cet attribut NTFS</strong> ?`;
+    hints = [
+      `Les attributs NTFS ont un type encodé sur 4 octets en Little Endian au début de chaque attribut.`,
+      `0x10 = $STANDARD_INFORMATION · 0x30 = $FILE_NAME · 0x80 = $DATA · 0x90 = $INDEX_ROOT`,
+      `Type 0x${attrTypeHex} = <strong>${ATTRS[qAttrType]}</strong>`,
+    ];
+    explain = `Type 0x${attrTypeHex} → <strong>${ATTRS[qAttrType]}</strong>. Chaque attribut commence par son type sur 4 octets LE.`;
+  } else if (q === 1) {
+    answer = 'FILE';
+    qText = `Quels sont les <strong>4 premiers octets</strong> (signature) d'un enregistrement MFT valide ? (répondre en ASCII)`;
+    hints = [
+      `La signature MFT est visible aux offsets 0x00–0x03.`,
+      `0x46 = 'F', 0x49 = 'I', 0x4C = 'L', 0x45 = 'E'`,
+      `Signature = <strong>"FILE"</strong>`,
+    ];
+    explain = `Tout enregistrement MFT valide commence par la signature ASCII <strong>"FILE"</strong> (0x46 0x49 0x4C 0x45).`;
+  } else {
+    const nonResidentAttr = attrSet.find(a => a === 0x80) || attrSet[0];
+    const nrOffset = attrOffsets[nonResidentAttr] + 8; // flag non-résident
+    answer = 'NON RESIDENT';
+    qText = `L'attribut <strong>$DATA</strong> (type 0x80) a son flag Non-Résident (offset 0x08 dans l'attribut) mis à <strong>0x01</strong>. Que signifie cela ?`;
+    hints = [
+      `Le flag Non-Résident est à l'offset 0x08 de chaque header d'attribut.`,
+      `0x00 = Résident → les données sont <strong>dans l'enregistrement MFT lui-même</strong>.`,
+      `0x01 = Non-Résident → les données sont dans la <strong>zone de données</strong>, pointées par une runlist.`,
+      `Réponse : le contenu de l'attribut est stocké <strong>hors du MFT</strong> dans la zone de données.`,
+    ];
+    explain = `Non-Résident (flag=1) = les données de l'attribut sont trop grandes pour tenir dans le MFT. Une runlist (Data Runs) pointe vers les clusters de la zone de données.`;
+  }
+
+  return {
+    title: 'NTFS — Enregistrement MFT',
+    category: 'Système de fichiers NTFS',
+    difficulty: 'hard',
+    scenario: `Tu examines un enregistrement MFT de 1024 octets (extrait simplifié). La signature "FILE" confirme un enregistrement valide. Les attributs s'enchaînent après l'offset 0x38.`,
+    hexDump: renderHexDump(rows, [
+      {from:0x00, to:0x03, color:'--green',  label:'Signature FILE'},
+      {from:attrOffsets[qAttrType], to:attrOffsets[qAttrType]+3, color:'--cyan', label:'Type attribut'},
+    ]),
+    question: qText,
+    answer,
+    hints,
+    explain,
+  };
+}
+
+// ── EX-EXAM-4 : EXT3 — Lire l'inode d'une entrée de répertoire ──
+function makeEXT3InodeExercise() {
+  const rand16 = (lo,hi) => Math.floor(Math.random()*(hi-lo+1))+lo;
+  const le32   = v => [v & 0xFF, (v>>8)&0xFF, (v>>16)&0xFF, (v>>24)&0xFF];
+  const le16   = v => [v & 0xFF, (v >> 8) & 0xFF];
+
+  // Fichiers avec leurs inodes aléatoires
+  const files = [
+    { name: 'rapport_final.pdf', inode: rand16(10, 99), type: 0x08 },
+    { name: 'image.jpg',          inode: rand16(100,999), type: 0x08 },
+    { name: 'script.sh',          inode: rand16(10, 99), type: 0x08 },
+  ];
+  // Ajouter des entrées fixes
+  const allEntries = [
+    { name: '.',             inode: 2,                type: 0x04 },
+    { name: '..',            inode: 2,                type: 0x04 },
+    { name: 'lost+found',    inode: 11,               type: 0x04 },
+    ...files,
+  ];
+
+  // Target = le 3ème fichier (fichier de vrai type)
+  const target = files[rand16(0, files.length-1)];
+  const targetInode = target.inode;
+  const targetInodeHex = targetInode.toString(16).toUpperCase().padStart(8,'0');
+
+  // Construire le dump hex du répertoire EXT3
+  // Structure ext3 dir_entry_2 : inode(4) + rec_len(2) + name_len(1) + file_type(1) + name(name_len)
+  const buildEntry = (entry, isLast) => {
+    const nameBytes = entry.name.split('').map(c => c.charCodeAt(0));
+    const nameLen = nameBytes.length;
+    // rec_len aligné sur 4 : minimum 8 + nameLen, padded to multiple of 4
+    const minLen = 8 + nameLen;
+    const recLen = isLast ? 128 : (Math.ceil(minLen/4)*4);
+    const bytes = [
+      ...le32(entry.inode),
+      ...le16(recLen),
+      nameLen,
+      entry.type,
+      ...nameBytes,
+      ...new Array(recLen - 8 - nameLen).fill(0)
+    ];
+    return bytes;
+  };
+
+  // Construire un bloc de ~128 octets avec 2-3 entrées
+  const entryBytes = [];
+  const displayEntries = [
+    { name: '.', inode: 2, type: 0x04 },
+    { name: '..', inode: 2, type: 0x04 },
+    target
+  ];
+  displayEntries.forEach((e, i) => {
+    const isLast = i === displayEntries.length-1;
+    entryBytes.push(...buildEntry(e, isLast));
+  });
+
+  // Rows hex (max 128 octets = 8 rows)
+  const rows = [];
+  for (let i=0; i < Math.min(entryBytes.length, 96); i+=16) {
+    rows.push({
+      offset: i.toString(16).toUpperCase().padStart(8,'0'),
+      bytes: entryBytes.slice(i, i+16).map(b => b||0)
+    });
+  }
+
+  // Trouver l'offset de l'inode du target dans le dump
+  let targetOffset = 0;
+  let pos = 0;
+  for (let e of displayEntries) {
+    if (e === target) { targetOffset = pos; break; }
+    const nameLen = e.name.length;
+    const minLen = 8 + nameLen;
+    const recLen = Math.ceil(minLen/4)*4;
+    pos += recLen;
+  }
+
+  const answer = String(targetInode);
+  const qText = `Dans ce contenu de répertoire EXT3, à quel <strong>numéro d'inode</strong> dois-tu aller pour trouver les informations du fichier <strong>"${target.name}"</strong> ?`;
+  const hints = [
+    `En EXT3, le répertoire stocke pour chaque fichier : inode (4 octets LE) + rec_len (2 octets) + name_len (1 octet) + file_type (1 octet) + nom.`,
+    `Les entrées "." et ".." viennent en premier. L'entrée "<strong>${target.name}</strong>" suit.`,
+    `Les 4 premiers octets de l'entrée target sont <span style="color:var(--cyan);font-weight:700">${le32(targetInode).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</span> → LE → inode = <strong>${targetInode}</strong>.`,
+    `Réponse : numéro d'inode = <strong>${targetInode}</strong>`,
+  ];
+  const explain = `Structure EXT3 dir_entry : 4 octets inode (LE) → ${le32(targetInode).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')} → inode <strong>${targetInode}</strong> pour "${target.name}".`;
+
+  return {
+    title: 'EXT3 — Répertoire et Inodes',
+    category: 'Système de fichiers EXT',
+    difficulty: 'hard',
+    scenario: `Tu examines un bloc de répertoire EXT3 en liste chaînée. Chaque entrée contient : inode (4 o LE), rec_len (2 o), name_len (1 o), file_type (1 o), puis le nom.`,
+    hexDump: renderHexDump(rows, [
+      {from: targetOffset, to: targetOffset+3, color:'--cyan', label:'Inode du fichier cible'},
+    ]),
+    legend: `<div style="font-size:.7rem;color:var(--dim);margin-top:.25rem">Structure dir_entry_2 EXT3 : [Inode 4o LE] [rec_len 2o] [name_len 1o] [type 1o] [nom]<br>file_type : 0x04 = répertoire · 0x08 = fichier ordinaire</div>`,
+    question: qText,
+    answer,
+    hints,
+    explain,
+  };
+}
+
+// ── EX-EXAM-5 : HFS+ — Trouver le cluster de début (Extents Overflow) ──
+function makeHFSPlusClusterExercise() {
+  const rand16 = (lo,hi) => Math.floor(Math.random()*(hi-lo+1))+lo;
+
+  // Générer un numéro de cluster de départ pour un fichier HFS+
+  const startBlock = rand16(0x100, 0xFFFF);
+  const blockCount = rand16(10, 200); // nombre de blocs contigus
+  const startBlockHex = startBlock.toString(16).toUpperCase().padStart(8,'0');
+
+  // HFS+ Catalog Fork Data : fork_type(1) + pad(3) + clump(4) + total_blocks(4) + extents[8][2 per extent]
+  // Extent = startBlock(4) + blockCount(4)
+  const forkBytes = [
+    0x00, 0x00, 0x00, 0x00, // type + padding
+    0x00, 0x00, 0x00, 0x00, // clump_size
+    blockCount & 0xFF, (blockCount>>8)&0xFF, (blockCount>>16)&0xFF, (blockCount>>24)&0xFF, // total_blocks BE
+  ];
+
+  // Extent 0 (premier et seul)
+  forkBytes.push(
+    (startBlock>>24)&0xFF, (startBlock>>16)&0xFF, (startBlock>>8)&0xFF, startBlock&0xFF, // startBlock BE
+    (blockCount>>24)&0xFF, (blockCount>>16)&0xFF, (blockCount>>8)&0xFF, blockCount&0xFF  // blockCount BE
+  );
+
+  // 7 extents vides
+  for (let i=0; i<7; i++) {
+    forkBytes.push(0,0,0,0, 0,0,0,0);
+  }
+
+  // Padding jusqu'à 80 octets
+  while (forkBytes.length < 80) forkBytes.push(0);
+
+  const rows = [];
+  for (let i=0; i<80; i+=16) {
+    rows.push({
+      offset: i.toString(16).toUpperCase().padStart(8,'0'),
+      bytes: forkBytes.slice(i, i+16)
+    });
+  }
+
+  const answer = startBlockHex;
+  const qText = `Ce fork descriptor HFS+ décrit un fichier occupant <strong>${blockCount} blocs dans un seul extent</strong>. À quel <strong>numéro de bloc de départ</strong> se trouvent les données ? (en hexadécimal)`;
+  const hints = [
+    `En HFS+, les données sont organisées en "forks" (data fork + resource fork). Chaque fork a jusqu'à 8 extents.`,
+    `La structure : total_blocks (4 o Big Endian) puis 8 extents de 8 octets chacun (startBlock 4 o BE + blockCount 4 o BE).`,
+    `Le premier extent commence à l'offset 0x0C de ce fork descriptor.`,
+    `Octets 12–15 = <span style="color:var(--cyan);font-weight:700">${[((startBlock>>24)&0xFF),((startBlock>>16)&0xFF),((startBlock>>8)&0xFF),(startBlock&0xFF)].map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</span> → Big Endian → startBlock = <strong>0x${startBlockHex}</strong>`,
+  ];
+  const explain = `HFS+ utilise le Big Endian. Offset 0x0C–0x0F = startBlock = <strong>0x${startBlockHex}</strong> = ${startBlock} décimal. Contrairement à FAT/NTFS qui utilisent le Little Endian.`;
+
+  return {
+    title: 'HFS+ — Fork Descriptor (Catalog)',
+    category: 'Système de fichiers HFS+',
+    difficulty: 'hard',
+    scenario: `Tu analyses un <strong>Fork Descriptor HFS+</strong> issu du fichier Catalog. Ce format est en <strong>Big Endian</strong> (contrairement à FAT/NTFS). Le fichier tient dans un seul extent.`,
+    hexDump: renderHexDump(rows, [
+      {from:0x08, to:0x0B, color:'--gold', label:'total_blocks (BE)'},
+      {from:0x0C, to:0x0F, color:'--cyan', label:'startBlock extent 0 (BE)'},
+      {from:0x10, to:0x13, color:'--green',label:'blockCount extent 0 (BE)'},
+    ]),
+    legend: `<div style="font-size:.7rem;color:var(--dim);margin-top:.25rem">⚠️ HFS+ = <strong>Big Endian</strong> · Structure : [pad 4o][clump 4o][total_blocks 4o BE][extent0: startBlock 4o BE + blockCount 4o BE][extents 1-7…]</div>`,
+    question: qText,
+    answer,
+    hints,
+    explain,
+  };
+}
+
+// ── Registre des générateurs ──
 const EXAM_GENERATORS = [
   makeBootSectorExercise,
   makeRunListExercise,
   makeBitmapExercise,
   makeSignedLEExercise,
   makeBinaryExercise,
+  makeFAT16SFNExercise,
+  makeFAT16RootFullExercise,
+  makeNTFSMFTAttributeExercise,
+  makeEXT3InodeExercise,
+  makeHFSPlusClusterExercise,
 ];
 
 // État multi-indices
