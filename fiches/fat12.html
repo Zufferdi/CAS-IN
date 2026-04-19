@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>FAT12 — CAS-IN Forensique</title>
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--dim:#6e7681;--cyan:#00e5cc;--gold:#f0c040;--red:#ff4060;--green:#30e88a;--blue:#58a6ff;--orange:#f0883e;--purple:#bc8cff;--mono:'JetBrains Mono','Courier New',monospace;--sans:'Syne','Segoe UI',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;line-height:1.6}
+.tn-nav{display:flex;align-items:center;justify-content:space-between;padding:.65rem 1.5rem;border-bottom:1px solid var(--border);background:rgba(13,17,23,.96);backdrop-filter:blur(10px);position:sticky;top:0;z-index:100}
+.tn-back{color:var(--cyan);text-decoration:none;font-size:.75rem;letter-spacing:.05em;display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .75rem;border:1px solid rgba(0,229,204,.3);border-radius:6px;background:rgba(0,229,204,.06);transition:filter .15s}
+.tn-back:hover{filter:brightness(1.3)}
+.tn-title{font-family:var(--mono);font-size:.72rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+.tn-quiz{color:#ff8888;text-decoration:none;font-size:.75rem;letter-spacing:.05em;display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .75rem;border:1px solid rgba(255,64,96,.3);border-radius:6px;background:rgba(255,64,96,.07);transition:filter .15s}
+.tn-quiz:hover{filter:brightness(1.3)}
+.page{max-width:960px;margin:0 auto;padding:2rem}
+.header{display:flex;align-items:baseline;gap:1rem;margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.badge{font-family:var(--sans);font-size:2.6rem;font-weight:800;color:var(--gold)}
+.meta{font-size:.75rem;color:var(--muted)}
+.tag{display:inline-block;padding:.15rem .5rem;border-radius:4px;font-size:.7rem;font-weight:600;letter-spacing:.05em;border:1px solid}
+.tag-gold{background:rgba(240,192,64,.1);border-color:rgba(240,192,64,.3);color:var(--gold)}
+.tag-cyan{background:rgba(0,229,204,.1);border-color:rgba(0,229,204,.3);color:var(--cyan)}
+.tag-red{background:rgba(255,64,96,.1);border-color:rgba(255,64,96,.3);color:var(--red)}
+.sec{margin-bottom:1.75rem}
+.sec-title{font-family:var(--sans);font-size:.7rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.9rem 1rem;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.card-gold::before{background:var(--gold)}
+.card-cyan::before{background:var(--cyan)}
+.card-red::before{background:var(--red)}
+.card-green::before{background:var(--green)}
+.card-blue::before{background:var(--blue)}
+.ct{font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.4rem}
+.card-gold .ct{color:var(--gold)}.card-cyan .ct{color:var(--cyan)}.card-red .ct{color:var(--red)}.card-green .ct{color:var(--green)}.card-blue .ct{color:var(--blue)}
+.card p{font-size:.8rem;line-height:1.55;color:var(--text)}
+.h{display:inline-block;background:var(--surface2);border:1px solid var(--border);padding:.03rem .4rem;border-radius:4px;font-size:.78em;font-weight:700}
+.h-gold{color:var(--gold)}.h-cyan{color:var(--cyan)}.h-red{color:var(--red)}
+
+/* Layout partition */
+.layout{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:.72rem;font-weight:600}
+.lb{flex:1;padding:.6rem .4rem;text-align:center;border-right:1px solid var(--border);transition:filter .15s;cursor:default}
+.lb:last-child{border-right:none}
+.lb:hover{filter:brightness(1.25)}
+.lb span{display:block;font-size:.6rem;color:var(--dim);margin-top:.2rem;font-weight:400}
+.lb-boot{background:rgba(255,64,96,.08);color:var(--red)}
+.lb-fat{background:rgba(240,192,64,.08);color:var(--gold)}
+.lb-root{background:rgba(0,229,204,.08);color:var(--cyan)}
+.lb-data{background:rgba(48,232,138,.08);color:var(--green)}
+
+/* BPB table */
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+th{background:var(--surface2);color:var(--dim);font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:.55rem .9rem;text-align:left;border-bottom:2px solid var(--border)}
+td{padding:.55rem .9rem;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.4}
+tr:hover td{background:var(--surface)}
+tr:last-child td{border-bottom:none}
+
+/* FAT12 bits decoder */
+.bit-demo{background:var(--surface);border:1px solid rgba(240,192,64,.3);border-radius:10px;padding:1.25rem;margin-top:.75rem}
+.bit-row{display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.75rem}
+.bit{width:36px;height:32px;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;border:1px solid}
+.bit-pair{background:rgba(240,192,64,.12);border-color:rgba(240,192,64,.4);color:var(--gold)}
+.bit-pair2{background:rgba(0,229,204,.1);border-color:rgba(0,229,204,.35);color:var(--cyan)}
+.bit-byte{background:rgba(88,166,255,.1);border-color:rgba(88,166,255,.3);color:var(--blue)}
+.bit span{font-size:.5rem;color:var(--dim);font-weight:400;margin-top:.05rem}
+.bit-explain{font-size:.75rem;color:var(--text);line-height:1.6;padding:.5rem .75rem;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border)}
+
+.alert{background:rgba(255,64,96,.07);border:1px solid rgba(255,64,96,.3);border-radius:8px;padding:.7rem 1rem;font-size:.8rem;color:var(--red);margin-bottom:1rem}
+.info{background:rgba(0,229,204,.06);border:1px solid rgba(0,229,204,.25);border-radius:8px;padding:.7rem 1rem;font-size:.8rem;color:var(--cyan);margin:.75rem 0}
+.tip{background:rgba(240,192,64,.06);border:1px solid rgba(240,192,64,.25);border-radius:8px;padding:.7rem 1rem;font-size:.8rem;color:var(--gold);margin-top:.5rem}
+.footer{margin-top:2rem;padding-top:.75rem;border-top:1px solid var(--border);font-size:.65rem;color:var(--dim);display:flex;justify-content:space-between}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.page{animation:fadeIn .3s ease}
+@media(max-width:640px){.g2{grid-template-columns:1fr}.layout{flex-wrap:wrap}.page{padding:1rem}}
+</style>
+</head>
+<body>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">FAT12</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page">
+<div class="header">
+  <div class="badge">FAT12</div>
+  <div>
+    <div><span class="tag tag-gold">Système de fichiers</span> <span class="tag tag-cyan">Disquette</span> <span class="tag tag-red">Ch. 3 Manuel</span></div>
+    <div class="meta" style="margin-top:.4rem">Entrées 12 bits · Secteur de boot 512 o · Root Directory fixe</div>
+  </div>
+</div>
+
+<!-- SECTION 1 : Organisation logique -->
+<div class="sec">
+  <div class="sec-title">Organisation logique du disque FAT12</div>
+  <div class="layout" style="margin-bottom:.75rem">
+    <div class="lb lb-boot">Boot Record<span>Secteur 0</span></div>
+    <div class="lb lb-fat">FAT 1<span>Table principale</span></div>
+    <div class="lb lb-fat" style="opacity:.65">FAT 2<span>Copie sauvegarde</span></div>
+    <div class="lb lb-root">Root Dir<span>Fixe · 224 entrées max</span></div>
+    <div class="lb lb-data" style="flex:3">Zone de données<span>Clusters 2, 3, 4…</span></div>
+  </div>
+  <div class="info">⚠️ FAT12 est le seul système FAT où <strong>deux entrées FAT partagent parfois un même octet</strong>. L'encodage 12 bits nécessite une lecture par paires d'entrées.</div>
+</div>
+
+<!-- SECTION 2 : BPB -->
+<div class="sec">
+  <div class="sec-title">BIOS Parameter Block (BPB) — Offsets clés FAT12</div>
+  <table>
+    <thead><tr><th>Offset (hex)</th><th>Champ</th><th>Valeur typique disquette 1.44 Mo</th></tr></thead>
+    <tbody>
+      <tr><td><span class="h h-cyan">0x00–0x02</span></td><td>JMP instruction + NOP</td><td><span class="h h-red">EB 3C 90</span></td></tr>
+      <tr><td><span class="h h-cyan">0x03–0x0A</span></td><td>OEM Identifier (8 bytes ASCII)</td><td>"MSDOS5.0"</td></tr>
+      <tr><td><span class="h h-cyan">0x0B–0x0C</span></td><td>Bytes per Sector</td><td>512 (0x0200 LE)</td></tr>
+      <tr><td><span class="h h-cyan">0x0D</span></td><td>Sectors per Cluster</td><td>1</td></tr>
+      <tr><td><span class="h h-cyan">0x0E–0x0F</span></td><td>Reserved Sectors</td><td>1 (le Boot Sector)</td></tr>
+      <tr><td><span class="h h-cyan">0x10</span></td><td>Number of FATs</td><td>2</td></tr>
+      <tr><td><span class="h h-cyan">0x11–0x12</span></td><td>Root Entry Count</td><td>224 (0xE0 00 LE)</td></tr>
+      <tr><td><span class="h h-cyan">0x16–0x17</span></td><td>Sectors per FAT</td><td>9 (0x09 00)</td></tr>
+      <tr><td><span class="h h-cyan">0x36–0x3D</span></td><td>File System Type (ASCII)</td><td>"FAT12   "</td></tr>
+      <tr><td><span class="h h-cyan">0x1FE–0x1FF</span></td><td>Boot Signature</td><td><span class="h h-red">55 AA</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SECTION 3 : Encodage 12 bits -->
+<div class="sec">
+  <div class="sec-title">Encodage FAT12 — Entrées de 12 bits</div>
+  <p style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem">La FAT12 utilise 12 bits par entrée cluster. Deux entrées occupent donc 3 octets. La lecture diffère selon la parité du numéro d'entrée.</p>
+  
+  <div class="bit-demo">
+    <div style="font-size:.75rem;color:var(--gold);font-weight:700;margin-bottom:.65rem">Exemple : FAT = <span class="h h-red">F8 FF FF</span> → entrées 0 et 1</div>
+    <div class="bit-row">
+      <div class="bit bit-pair">F8<span>oct.0</span></div>
+      <div class="bit bit-pair2">FF<span>oct.1</span></div>
+      <div class="bit bit-byte">FF<span>oct.2</span></div>
+    </div>
+    <div class="bit-explain">
+      <strong style="color:var(--gold)">Entrée 0 (paire)</strong> → lire octets [0] + nibble bas de [1] = <strong>0xFF8</strong> → Média descriptor<br>
+      <strong style="color:var(--cyan)">Entrée 1 (impaire)</strong> → lire nibble haut de [1] + octet [2] = <strong>0xFFF</strong> → EOF<br><br>
+      Formule paire n : <code>val = byte[pos] | ((byte[pos+1] &amp; 0x0F) &lt;&lt; 8)</code><br>
+      Formule impaire n : <code>val = (byte[pos] >> 4) | (byte[pos+1] &lt;&lt; 4)</code>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 4 : Valeurs spéciales -->
+<div class="sec">
+  <div class="sec-title">Valeurs spéciales FAT12</div>
+  <div class="g2">
+    <div class="card card-cyan">
+      <div class="ct">Cluster libre</div>
+      <p><span class="h h-cyan">0x000</span> — Cluster disponible pour allocation</p>
+    </div>
+    <div class="card card-gold">
+      <div class="ct">Cluster suivant</div>
+      <p><span class="h h-gold">0x002–0xFEF</span> — Numéro du prochain cluster de la chaîne</p>
+    </div>
+    <div class="card card-red">
+      <div class="ct">Secteur défectueux</div>
+      <p><span class="h h-red">0xFF7</span> — Bad cluster, physiquement inutilisable</p>
+    </div>
+    <div class="card card-green">
+      <div class="ct">Fin de fichier (EOF)</div>
+      <p><span class="h h-cyan" style="color:var(--green)">0xFF8–0xFFF</span> — Dernier cluster du fichier</p>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 5 : Comparaison FAT -->
+<div class="sec">
+  <div class="sec-title">FAT12 vs FAT16 vs FAT32 — Points clés</div>
+  <table>
+    <thead><tr><th>Caractéristique</th><th style="color:var(--gold)">FAT12</th><th style="color:var(--blue)">FAT16</th><th style="color:var(--green)">FAT32</th></tr></thead>
+    <tbody>
+      <tr><td>Bits par entrée FAT</td><td>12</td><td>16</td><td>32 (28 utilisés)</td></tr>
+      <tr><td>Clusters max</td><td>4 086</td><td>65 526</td><td>268 millions</td></tr>
+      <tr><td>Volume max</td><td>32 Mo</td><td>4 Go</td><td>8 To</td></tr>
+      <tr><td>Fichier max</td><td>32 Mo</td><td>4 Go − 1 o</td><td>4 Go − 1 o</td></tr>
+      <tr><td>Root dir</td><td>Fixe (max 224)</td><td>Fixe (max 512)</td><td>Dynamique</td></tr>
+      <tr><td>Usage typique</td><td>Disquettes, cartes SD &lt; 32 Mo</td><td>Clés USB, XP</td><td>USB, SD, Windows</td></tr>
+      <tr><td>Identifier la variante</td><td>Offset 0x36 : "FAT12   "</td><td>Offset 0x36 : "FAT16   "</td><td>Offset 0x52 : "FAT32   "</td></tr>
+    </tbody>
+  </table>
+  <div class="tip" style="margin-top:.75rem">💡 Règle pratique : compter les clusters de données. &lt; 4087 → FAT12 · &lt; 65527 → FAT16 · le reste → FAT32.</div>
+</div>
+
+<!-- SECTION 6 : Forensique -->
+<div class="sec">
+  <div class="sec-title">Points forensiques FAT12</div>
+  <div class="g2">
+    <div class="card card-red">
+      <div class="ct">⚠️ Attention examen</div>
+      <p>Le premier cluster utilisable est le <strong>cluster 2</strong> (0 et 1 réservés). Offset dans la zone de données = (cluster − 2) × taille_cluster + début_données.</p>
+    </div>
+    <div class="card card-gold">
+      <div class="ct">Récupération fichiers</div>
+      <p>Fichier supprimé : 1er octet = <span class="h h-red">0xE5</span>. Clusters libérés dans la FAT mais données encore présentes → carving possible.</p>
+    </div>
+    <div class="card card-cyan">
+      <div class="ct">Slack space FAT12</div>
+      <p>Avec 512 o/cluster, même un fichier de 1 octet occupe 512 octets. Jusqu'à 511 octets de slack exploitables forensiquement.</p>
+    </div>
+    <div class="card card-green">
+      <div class="ct">Signature bootable</div>
+      <p>Offset 510 = <span class="h h-red">55</span>, offset 511 = <span class="h h-red">AA</span>. Absent → secteur non bootable. Vérifier aussi l'OEM ID à l'offset 0x03.</p>
+    </div>
+  </div>
+</div>
+
+<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> La FAT12 utilise des entrées de 12 bits — deux entrées partagent 3 octets. Entrée paire n : bits 0–11 des octets n×3/2 et n×3/2+1. Entrée impaire n : bits 4–15 des mêmes octets.</div>
+
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Chapitre 3 Manuel · ISO/IEC 27037</span>
+</div>
+</div>
+</body>
+</html>

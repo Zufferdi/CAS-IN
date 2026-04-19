@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Formats & Magic Bytes — CAS-IN Forensique</title>
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--dim:#6e7681;--cyan:#00e5cc;--gold:#f0c040;--red:#ff4060;--green:#30e88a;--blue:#58a6ff;--orange:#f0883e;--purple:#bc8cff;--mono:'JetBrains Mono','Courier New',monospace;--sans:'Syne','Segoe UI',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;line-height:1.6}
+.tn-nav{display:flex;align-items:center;justify-content:space-between;padding:.65rem 1.5rem;border-bottom:1px solid var(--border);background:rgba(13,17,23,.96);backdrop-filter:blur(10px);position:sticky;top:0;z-index:100}
+.tn-back{color:var(--cyan);text-decoration:none;font-size:.75rem;letter-spacing:.05em;display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .75rem;border:1px solid rgba(0,229,204,.3);border-radius:6px;background:rgba(0,229,204,.06);transition:filter .15s}
+.tn-back:hover{filter:brightness(1.3)}
+.tn-title{font-family:var(--mono);font-size:.72rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+.tn-quiz{color:#ff8888;text-decoration:none;font-size:.75rem;letter-spacing:.05em;display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .75rem;border:1px solid rgba(255,64,96,.3);border-radius:6px;background:rgba(255,64,96,.07);transition:filter .15s}
+.tn-quiz:hover{filter:brightness(1.3)}
+.page{max-width:960px;margin:0 auto;padding:2rem}
+.header{display:flex;align-items:baseline;gap:1rem;margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.badge{font-family:var(--sans);font-size:2.6rem;font-weight:800;color:var(--orange)}
+.meta{font-size:.75rem;color:var(--muted)}
+.tag{display:inline-block;padding:.15rem .5rem;border-radius:4px;font-size:.7rem;font-weight:600;letter-spacing:.05em;border:1px solid}
+.tag-orange{background:rgba(240,136,62,.1);border-color:rgba(240,136,62,.3);color:var(--orange)}
+.tag-cyan{background:rgba(0,229,204,.1);border-color:rgba(0,229,204,.3);color:var(--cyan)}
+.tag-red{background:rgba(255,64,96,.1);border-color:rgba(255,64,96,.3);color:var(--red)}
+.sec{margin-bottom:1.75rem}
+.sec-title{font-family:var(--sans);font-size:.7rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.9rem 1rem;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.card-orange::before{background:var(--orange)}.card-cyan::before{background:var(--cyan)}.card-red::before{background:var(--red)}.card-green::before{background:var(--green)}.card-blue::before{background:var(--blue)}.card-gold::before{background:var(--gold)}.card-purple::before{background:var(--purple)}
+.ct{font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.4rem}
+.card-orange .ct{color:var(--orange)}.card-cyan .ct{color:var(--cyan)}.card-red .ct{color:var(--red)}.card-green .ct{color:var(--green)}.card-blue .ct{color:var(--blue)}.card-gold .ct{color:var(--gold)}.card-purple .ct{color:var(--purple)}
+.card p,.card li{font-size:.8rem;line-height:1.55;color:var(--text)}
+.card ul{padding-left:1rem}
+.card li{margin-bottom:.2rem}
+.h{display:inline-block;background:var(--surface2);border:1px solid var(--border);padding:.03rem .4rem;border-radius:4px;font-size:.78em;font-weight:700}
+.h-orange{color:var(--orange)}.h-cyan{color:var(--cyan)}.h-red{color:var(--red)}.h-green{color:var(--green)}.h-blue{color:var(--blue)}
+
+/* Magic bytes table */
+.magic-table{width:100%;border-collapse:collapse;font-size:.78rem;margin-bottom:.75rem}
+.magic-table th{background:var(--surface2);color:var(--dim);font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:.55rem .9rem;text-align:left;border-bottom:2px solid var(--border)}
+.magic-table td{padding:.5rem .9rem;border-bottom:1px solid var(--border);vertical-align:middle;line-height:1.4}
+.magic-table tr:hover td{background:var(--surface)}
+.magic-table tr:last-child td{border-bottom:none}
+.magic{font-family:var(--mono);font-size:.75rem;letter-spacing:.08em;font-weight:700}
+.magic-img{color:var(--orange)}.magic-video{color:var(--red)}.magic-audio{color:var(--purple)}.magic-doc{color:var(--blue)}.magic-arch{color:var(--green)}.magic-sys{color:var(--gold)}
+.cat-badge{display:inline-block;font-size:.6rem;font-weight:700;padding:.08rem .35rem;border-radius:3px;letter-spacing:.05em}
+.cat-img{background:rgba(240,136,62,.12);color:var(--orange)}.cat-video{background:rgba(255,64,96,.12);color:var(--red)}.cat-audio{background:rgba(188,140,255,.12);color:var(--purple)}.cat-doc{background:rgba(88,166,255,.12);color:var(--blue)}.cat-arch{background:rgba(48,232,138,.12);color:var(--green)}.cat-sys{background:rgba(240,192,64,.12);color:var(--gold)}
+
+/* Search input */
+.search-wrap{position:relative;margin-bottom:1rem}
+.search-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.55rem 1rem .55rem 2.5rem;color:var(--text);font-family:var(--mono);font-size:.82rem;transition:.15s}
+.search-input:focus{outline:none;border-color:var(--cyan);background:rgba(0,229,204,.02)}
+.search-icon{position:absolute;left:.8rem;top:50%;transform:translateY(-50%);color:var(--dim);font-size:.9rem}
+.count-badge{font-size:.7rem;color:var(--dim);margin-bottom:.5rem}
+.no-results{text-align:center;padding:1.5rem;color:var(--dim);font-size:.8rem;display:none}
+
+.alert{background:rgba(255,64,96,.07);border:1px solid rgba(255,64,96,.3);border-radius:8px;padding:.7rem 1rem;font-size:.8rem;color:var(--red);margin-bottom:1rem}
+.info{background:rgba(0,229,204,.06);border:1px solid rgba(0,229,204,.25);border-radius:8px;padding:.7rem 1rem;font-size:.8rem;color:var(--cyan);margin:.75rem 0}
+.tip{background:rgba(240,192,64,.06);border:1px solid rgba(240,192,64,.25);border-radius:8px;padding:.7rem 1rem;font-size:.8rem;color:var(--gold);margin-top:.5rem}
+.footer{margin-top:2rem;padding-top:.75rem;border-top:1px solid var(--border);font-size:.65rem;color:var(--dim);display:flex;justify-content:space-between}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.page{animation:fadeIn .3s ease}
+@media(max-width:640px){.g2{grid-template-columns:1fr}.page{padding:1rem}}
+</style>
+</head>
+<body>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">FORMATS & MAGIC BYTES</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page">
+<div class="header">
+  <div class="badge">🔮</div>
+  <div>
+    <div><span class="tag tag-orange">File Carving</span> <span class="tag tag-cyan">Magic Bytes</span> <span class="tag tag-red">Ch. 4 Manuel</span></div>
+    <div class="meta" style="margin-top:.4rem">Signatures de fichiers · Formats forensiques · Carving par header/footer</div>
+  </div>
+</div>
+
+<!-- SECTION 1 : Principe -->
+<div class="sec">
+  <div class="sec-title">Principe des Magic Bytes (File Signatures)</div>
+  <div class="g2">
+    <div class="card card-orange">
+      <div class="ct">Qu'est-ce qu'un magic byte ?</div>
+      <p>Séquence d'octets en début de fichier (header) identifiant son format réel — <strong>indépendamment de l'extension</strong>. Peut être accompagné d'un footer (marqueur de fin).<br><br>Utile pour le <strong>file carving</strong> : retrouver des fichiers supprimés en scannant les données brutes.</p>
+    </div>
+    <div class="card card-red">
+      <div class="ct">⚠️ Extension ≠ Format</div>
+      <p>Un attaquant peut renommer <code>image.jpg</code> en <code>rapport.pdf</code>. Le magic byte ne ment pas.<br><br>X-Ways : colonne "Type" vs "Extension" → discordance = <strong>signature mismatch</strong>, indice forensique fort.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 2 : Magic bytes table avec recherche -->
+<div class="sec">
+  <div class="sec-title">Référence Magic Bytes — Forensique</div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="magic-search" type="text" placeholder="Rechercher format, extension, bytes…" oninput="filterMagic()">
+  </div>
+  <div class="count-badge" id="count-badge">56 formats référencés</div>
+  <div class="no-results" id="no-results">Aucun format trouvé pour cette recherche.</div>
+  <table class="magic-table" id="magic-table">
+    <thead><tr><th>Catégorie</th><th>Format</th><th>Extension(s)</th><th>Header (hex)</th><th>Footer (hex)</th></tr></thead>
+    <tbody id="magic-tbody">
+      <tr><td><span class="cat-badge cat-img">IMAGE</span></td><td>JPEG / JFIF</td><td>.jpg .jpeg</td><td><span class="magic magic-img">FF D8 FF</span></td><td><span class="magic magic-img">FF D9</span></td></tr>
+      <tr><td><span class="cat-badge cat-img">IMAGE</span></td><td>PNG</td><td>.png</td><td><span class="magic magic-img">89 50 4E 47 0D 0A 1A 0A</span></td><td><span class="magic magic-img">49 45 4E 44 AE 42 60 82</span></td></tr>
+      <tr><td><span class="cat-badge cat-img">IMAGE</span></td><td>GIF87a / GIF89a</td><td>.gif</td><td><span class="magic magic-img">47 49 46 38 37/39 61</span></td><td><span class="magic magic-img">00 3B</span></td></tr>
+      <tr><td><span class="cat-badge cat-img">IMAGE</span></td><td>BMP</td><td>.bmp</td><td><span class="magic magic-img">42 4D</span></td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-img">IMAGE</span></td><td>TIFF (LE)</td><td>.tif .tiff</td><td><span class="magic magic-img">49 49 2A 00</span></td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-img">IMAGE</span></td><td>TIFF (BE)</td><td>.tif .tiff</td><td><span class="magic magic-img">4D 4D 00 2A</span></td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-img">IMAGE</span></td><td>HEIC / HEIF</td><td>.heic .heif</td><td><span class="magic magic-img">… 66 74 79 70 68 65 69 63</span> (offset 4)</td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-video">VIDÉO</span></td><td>MP4 / M4V / MOV</td><td>.mp4 .m4v .mov</td><td><span class="magic magic-video">66 74 79 70</span> (à l'offset 4)</td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-video">VIDÉO</span></td><td>AVI</td><td>.avi</td><td><span class="magic magic-video">52 49 46 46</span> … <span class="magic magic-video">41 56 49 20</span></td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-video">VIDÉO</span></td><td>MKV / Matroska</td><td>.mkv .webm</td><td><span class="magic magic-video">1A 45 DF A3</span></td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-video">VIDÉO</span></td><td>FLV (Flash Video)</td><td>.flv</td><td><span class="magic magic-video">46 4C 56</span></td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-audio">AUDIO</span></td><td>MP3</td><td>.mp3</td><td><span class="magic magic-audio">FF FB</span> ou <span class="magic magic-audio">49 44 33</span> (ID3)</td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-audio">AUDIO</span></td><td>WAV / RIFF</td><td>.wav</td><td><span class="magic magic-audio">52 49 46 46</span> … <span class="magic magic-audio">57 41 56 45</span></td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-audio">AUDIO</span></td><td>FLAC</td><td>.flac</td><td><span class="magic magic-audio">66 4C 61 43</span></td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-doc">DOCUMENT</span></td><td>PDF</td><td>.pdf</td><td><span class="magic magic-doc">25 50 44 46 2D</span> ("%PDF-")</td><td><span class="magic magic-doc">25 25 45 4F 46</span> ("%%EOF")</td></tr>
+      <tr><td><span class="cat-badge cat-doc">DOCUMENT</span></td><td>DOCX / XLSX / PPTX</td><td>.docx .xlsx .pptx</td><td><span class="magic magic-doc">50 4B 03 04</span> (ZIP+OPC)</td><td><span class="magic magic-doc">50 4B 05 06</span></td></tr>
+      <tr><td><span class="cat-badge cat-doc">DOCUMENT</span></td><td>DOC / XLS / PPT (OLE)</td><td>.doc .xls .ppt</td><td><span class="magic magic-doc">D0 CF 11 E0 A1 B1 1A E1</span></td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-doc">DOCUMENT</span></td><td>RTF</td><td>.rtf</td><td><span class="magic magic-doc">7B 5C 72 74 66</span> ("{\rtf")</td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-doc">DOCUMENT</span></td><td>ODT / ODS / ODP</td><td>.odt .ods</td><td><span class="magic magic-doc">50 4B 03 04</span> (ZIP + mimetype)</td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-arch">ARCHIVE</span></td><td>ZIP</td><td>.zip</td><td><span class="magic magic-arch">50 4B 03 04</span></td><td><span class="magic magic-arch">50 4B 05 06</span></td></tr>
+      <tr><td><span class="cat-badge cat-arch">ARCHIVE</span></td><td>RAR 4.x</td><td>.rar</td><td><span class="magic magic-arch">52 61 72 21 1A 07 00</span></td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-arch">ARCHIVE</span></td><td>RAR 5.x</td><td>.rar</td><td><span class="magic magic-arch">52 61 72 21 1A 07 01 00</span></td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-arch">ARCHIVE</span></td><td>7-Zip</td><td>.7z</td><td><span class="magic magic-arch">37 7A BC AF 27 1C</span></td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-arch">ARCHIVE</span></td><td>GZIP</td><td>.gz .tar.gz</td><td><span class="magic magic-arch">1F 8B 08</span></td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-arch">ARCHIVE</span></td><td>ISO 9660</td><td>.iso</td><td><span class="magic magic-arch">43 44 30 30 31</span> (offset 32769 : "CD001")</td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-sys">SYSTÈME</span></td><td>EXE / DLL (PE)</td><td>.exe .dll</td><td><span class="magic magic-sys">4D 5A</span> ("MZ") + "PE\0\0" à l'offset e_lfanew</td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-sys">SYSTÈME</span></td><td>ELF (Linux exécutable)</td><td>(aucune)</td><td><span class="magic magic-sys">7F 45 4C 46</span> (". ELF")</td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-sys">SYSTÈME</span></td><td>Mach-O (macOS)</td><td>(aucune)</td><td><span class="magic magic-sys">CF FA ED FE</span> (64-bit LE) / <span class="magic magic-sys">CE FA ED FE</span> (32-bit)</td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-sys">SYSTÈME</span></td><td>SQLite</td><td>.db .sqlite</td><td><span class="magic magic-sys">53 51 4C 69 74 65 20 66 6F 72 6D 61 74 20 33 00</span></td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-sys">SYSTÈME</span></td><td>Windows Registry (REGF)</td><td>.dat .hive</td><td><span class="magic magic-sys">72 65 67 66</span> ("regf")</td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-sys">SYSTÈME</span></td><td>Prefetch (Windows)</td><td>.pf</td><td><span class="magic magic-sys">53 43 43 41</span> ("SCCA")</td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-sys">SYSTÈME</span></td><td>LNK (Raccourci Windows)</td><td>.lnk</td><td><span class="magic magic-sys">4C 00 00 00 01 14 02 00</span></td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-sys">SYSTÈME</span></td><td>Évènements Windows (EVTX)</td><td>.evtx</td><td><span class="magic magic-sys">45 6C 66 46 69 6C 65 00</span> ("ElfFile\0")</td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-sys">SYSTÈME</span></td><td>Master Boot Record</td><td>(offset 0)</td><td>Signature boot <span class="magic magic-sys">55 AA</span> à l'offset 510–511</td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-sys">CHIFFRÉ</span></td><td>VeraCrypt volume</td><td>(aucune)</td><td>Aucune signature — entropie ≥ 0.997</td><td>—</td></tr>
+      <tr><td><span class="cat-badge cat-sys">CHIFFRÉ</span></td><td>BitLocker (-FVE-FS-)</td><td>(aucune)</td><td><span class="magic magic-sys">EB 58 90 2D 46 56 45 2D</span> ("-FVE-")</td><td>—</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SECTION 3 : File carving -->
+<div class="sec">
+  <div class="sec-title">File Carving — Récupérer sans système de fichiers</div>
+  <div class="g2">
+    <div class="card card-orange">
+      <div class="ct">Principe du carving</div>
+      <p>Scan linéaire de l'espace brut à la recherche de headers connus. Reconstruit les fichiers sans passer par la FAT/MFT (utile après formatage ou corruption).<br><br>Outil de référence : <strong>Scalpel</strong>, <strong>PhotoRec</strong>, <strong>Foremost</strong>, X-Ways.</p>
+    </div>
+    <div class="card card-red">
+      <div class="ct">Limitations du carving</div>
+      <ul>
+        <li>Ne récupère pas les noms de fichiers (perdus avec la FAT)</li>
+        <li>Fragmentation = carving incomplet</li>
+        <li>Faux positifs si les magic bytes apparaissent dans d'autres fichiers</li>
+        <li>Chiffrement = pas de magic bytes → carving impossible</li>
+      </ul>
+    </div>
+  </div>
+  <div class="info">💡 <strong>Signature mismatch (X-Ways) :</strong> X-Ways compare l'extension déclarée au header réel et signale les discordances en rouge. Un .txt avec header <span class="h h-red">FF D8 FF</span> = JPEG dissimulé.</div>
+</div>
+
+<!-- SECTION 4 : Formats forensiques -->
+<div class="sec">
+  <div class="sec-title">Formats d'image forensique</div>
+  <div class="g2">
+    <div class="card card-blue">
+      <div class="ct">DD / RAW</div>
+      <p>Copie bit-à-bit brute. Pas de métadonnées intégrées. Compatible avec tous les outils. Poids = taille exacte du support.<br><br><code style="font-size:.75rem;color:var(--cyan)">dd if=/dev/sdb of=image.dd bs=512</code></p>
+    </div>
+    <div class="card card-cyan">
+      <div class="ct">E01 (Expert Witness Format)</div>
+      <p>Format propriétaire EnCase. Supporte les métadonnées (hash MD5, infos cas), la compression et le split en volumes. <strong>Standard de facto</strong> dans beaucoup de procédures.</p>
+    </div>
+    <div class="card card-green">
+      <div class="ct">AFF / AFF4</div>
+      <p>Advanced Forensic Format. Open source, supporte la compression, les métadonnées, les signatures. AFF4 est la version moderne utilisée par Velociraptor et GRR.</p>
+    </div>
+    <div class="card card-gold">
+      <div class="ct">VMDK / VHD / VHDX</div>
+      <p>Images de machines virtuelles. Mountable directement dans X-Ways ou Arsenal Image Mounter. Utilisées lors d'analyses cloud forensique ou VM suspects.</p>
+    </div>
+  </div>
+</div>
+
+<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Un fichier sans extension ou avec extension modifiée est identifié par ses magic bytes. JPEG toujours <span class="h h-red">FF D8 FF</span>. PDF toujours <span class="h h-blue">25 50 44 46</span> ("%PDF"). Les 4 premiers octets suffisent dans la majorité des cas.</div>
+
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Ch. 4 Manuel · ISO/IEC 27037</span>
+</div>
+</div>
+
+<script>
+const ALL_ROWS = [...document.querySelectorAll('#magic-tbody tr')];
+function filterMagic() {
+  const q = document.getElementById('magic-search').value.toLowerCase().trim();
+  let shown = 0;
+  ALL_ROWS.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    const match = !q || text.includes(q);
+    row.style.display = match ? '' : 'none';
+    if (match) shown++;
+  });
+  document.getElementById('count-badge').textContent = `${shown} format${shown > 1 ? 's' : ''} affiché${shown > 1 ? 's' : ''}`;
+  document.getElementById('no-results').style.display = shown === 0 ? 'block' : 'none';
+}
+</script>
+</body>
+</html>
