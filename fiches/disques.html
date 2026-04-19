@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Technologie des disques & Représentation — Notes DFIR</title>
+<link rel="stylesheet" href="fiche.css">
+</head>
+<body>
+<div class="topnav">
+  <div style="display:flex;gap:.5rem;align-items:center">
+    <a href="index.html" class="tn-back">← Fiches</a>
+    <a href="../index.html" class="tn-home">🏠 Accueil</a>
+  </div>
+  <a href="../quiz.html" class="tn-quiz">💊 Lancer le quiz →</a>
+</div>
+<div class="page">
+<a href="../quiz.html" style="color:#ff8888;text-decoration:none;padding:.3rem .7rem;border:1px solid rgba(255,136,136,.35);border-radius:5px;background:rgba(255,136,136,.08)">💊 Lancer le quiz →</a>
+</div>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:#58a6ff">DISQUES</div>
+  <div>
+    <div style="margin-bottom:.25rem"><span class="tag tag-blue">DFIR</span> <span class="tag tag-blue">Hardware</span></div>
+    <div class="meta">Technologie HDD/SSD · MBR/GPT · HPA/DCO · Cluster · Endianness · Encodages</div>
+  </div>
+</div>
+
+<div style="margin-bottom:1.5rem;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+  <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Citation</span><br>
+  <em style="color:var(--text)">"The computer forensic examiner must understand the underlying hardware and software to reliably interpret the data it contains. Misidentifying a byte order or encoding may invalidate an entire analysis."</em><br>
+  <span style="font-size:.72rem;margin-top:.3rem;display:block">— Brian Carrier, <em>File System Forensic Analysis</em>, Addison-Wesley, 2005</span>
+</div>
+<div class="sec">
+<div class="sec-title">Technologie des disques — Structures physiques</div>
+<div class="zones" style="margin-bottom:.75rem">
+  <div class="zone z-gray">MBR / GPT<span class="zl">Secteur 0</span></div>
+  <div class="zone z-blue">Partition 1<span class="zl">FS quelconque</span></div>
+  <div class="zone z-orange">Partition 2<span class="zl">FS quelconque</span></div>
+  <div class="zone z-green" style="flex:2">Espace non alloué<span class="zl">Slack space · données résiduelles</span></div>
+</div>
+<div class="g2">
+  <div class="card card-blue">
+    <div class="ct">HDD — Disque mécanique</div>
+    <ul>
+      <li>Plateaux magnétiques + têtes de lecture</li>
+      <li>Rotation : 5400 ou 7200 tr/min</li>
+      <li>Adressage CHS (Cylinder/Head/Sector) → LBA</li>
+      <li>Secteur = 512 octets (standard) ou 4096 (Advanced Format)</li>
+    </ul>
+  </div>
+  <div class="card card-orange">
+    <div class="ct">SSD — Mémoire flash</div>
+    <ul>
+      <li>Pas de partie mécanique — cellules NAND</li>
+      <li><strong>TRIM</strong> : efface activement les blocs libérés → données irrécupérables</li>
+      <li>Wear leveling : répartit les écritures → données peuvent migrer <span style="color:var(--dim);font-size:.72rem">// En forensique, une cellule NAND peut contenir des données "fantômes" de plusieurs cycles d'écriture antérieurs — technique de récupération avancée</span></li>
+      <li>Write blocker moins efficace si TRIM actif</li>
+    </ul>
+  </div>
+  <div class="card card-green">
+    <div class="ct">MBR (Master Boot Record)</div>
+    <ul>
+      <li>Secteur 0 — 512 octets</li>
+      <li>440 octets bootstrap code + table partitions (4 primaires max)</li>
+      <li>Signature : <span class="h h-green">55 AA</span> aux octets 510–511</li>
+      <li>Limite 2,2 To (adressage 32 bits)</li>
+    </ul>
+  </div>
+  <div class="card card-purple">
+    <div class="ct">GPT (GUID Partition Table)</div>
+    <ul>
+      <li>Dépasse la limite 2,2 To du MBR</li>
+      <li>Protective MBR (type <span class="h h-purple">0xEE</span>) en secteur 0</li>
+      <li>Header GPT primary + backup (fin du disque)</li>
+      <li>128 partitions max</li>
+    </ul>
+  </div>
+  <div class="card card-red">
+    <div class="ct">HPA & DCO — Zones cachées</div>
+    <ul>
+      <li><strong>HPA</strong> (Host Protected Area) : SET MAX ADDRESS — réduit taille visible</li>
+      <li><strong>DCO</strong> (Device Configuration Overlay) : masque des features</li>
+      <li>Vérifier systématiquement en forensique</li>
+      <li>Accès via commandes ATA directes</li>
+    </ul>
+  </div>
+  <div class="card card-gold">
+    <div class="ct">Cluster & Slack Space</div>
+    <ul>
+      <li>Cluster = N secteurs (unité minimale d'allocation)</li>
+      <li><strong>File slack</strong> : espace entre fin fichier et fin cluster → données résiduelles</li>
+      <li><strong>RAM slack</strong> : remplissage jusqu'au prochain secteur</li>
+      <li>Espace non alloué : clusters jamais écrits ou libérés</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-title">Représentation des données</div>
+<div class="g2">
+  <div class="card card-blue">
+    <div class="ct">Bases numériques</div>
+    <p><strong>Binaire</strong> (base 2) : 0/1. Nibble = 4 bits. Octet = 8 bits.<br>
+    <strong>Hexadécimal</strong> (base 16) : 0–9, A–F. 1 octet = 2 digits hex.<br>
+    Conversions clés : <span class="h h-blue">0xFF</span>=255 · <span class="h h-blue">0xE5</span>=229 · <span class="h h-blue">0x4D5A</span>=MZ (PE)</p>
+  </div>
+  <div class="card card-green">
+    <div class="ct">Endianness (boutisme)</div>
+    <p><strong>Little Endian</strong> (Intel/Windows/FAT/NTFS) : octet poids faible en premier.<br>
+    <span class="h h-green">0x1234</span> stocké → <span class="h h-green">34 12</span><br>
+    <strong>Big Endian</strong> (réseau/HFS+) : poids fort en premier.<br>
+    <span class="h h-red">PIÈGE</span> : HFS+ = Big Endian ≠ Windows</p>
+  </div>
+  <div class="card card-orange">
+    <div class="ct">Encodages texte</div>
+    <p><strong>ASCII</strong> : 7 bits, 127 caractères. A=65=0x41, a=97=0x61<br>
+    <strong>UTF-8</strong> : 1–4 octets/char. Rétro-compatible ASCII.<br>
+    <strong>UTF-16</strong> : 2 octets/char. Utilisé dans LFN (FAT) et NTFS.<br>
+    EBCDIC (IBM) : rare, héritage mainframe.</p>
+  </div>
+  <div class="card card-red">
+    <div class="ct">Entiers signés (complément à 2)</div>
+    <p>Bit 7 = bit de signe. <span class="h h-red">0xFF</span> = −1 (signé) ou 255 (non signé).<br>
+    Négatif hex → soustraction : <span class="h h-red">0xE2C8</span> : 0x10000 − 0xE2C8 = 0x1D38 = −7480<br>
+    Règle : si MSB ≥ 0x80 → valeur négative</p>
+  </div>
+</div>
+<div class="formula">
+  <div><span class="f">Nibble</span> = 4 bits (1 digit hex). <span class="f">Octet</span> = 8 bits = 2 nibbles = 1 byte.</div>
+  <div><span class="f">WORD</span> = 2 octets (16 bits) · <span class="f">DWORD</span> = 4 octets (32 bits) · <span class="f">QWORD</span> = 8 octets (64 bits)</div>
+  <div>Timestamps NTFS = 100 ns depuis 01.01.1601 · Timestamps Unix = secondes depuis 01.01.1970</div>
+</div>
+</div>
+
+<div class="tip">💡 <strong>Tip forensique :</strong> Toujours noter l'endianness avant de lire une valeur. Sur Windows/x86 : tout est Little Endian (FAT, NTFS, exFAT). Sur les protocoles réseau IP/TCP : Big Endian. Sur HFS+ : Big Endian. La confusion endianness est l'erreur la plus fréquente en lecture manuelle d'un dump hexadécimal.</div>
+
+<div class="footer"><span>CAS-IN · Forensique Numérique</span><span>Technologie des disques & Représentation</span><span>2025</span></div>
+</div>
+</div>
+</body>
+</html>

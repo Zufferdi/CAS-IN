@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Cryptologie — Sym · RSA · PKI · Hash · Cassage — Notes DFIR</title>
+<link rel="stylesheet" href="fiche.css">
+</head>
+<body>
+<div class="topnav">
+  <div style="display:flex;gap:.5rem;align-items:center">
+    <a href="index.html" class="tn-back">← Fiches</a>
+    <a href="../index.html" class="tn-home">🏠 Accueil</a>
+  </div>
+  <a href="../quiz.html" class="tn-quiz">💊 Lancer le quiz →</a>
+</div>
+<div style="margin:1.25rem 0;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+  <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Citation — Kerckhoffs (1883)</span><br>
+  <em style="color:var(--text)">"Il faut qu'il n'exige pas le secret, et qu'il puisse sans inconvénient tomber entre les mains de l'ennemi."</em><br>
+  <span style="font-size:.72rem;margin-top:.3rem;display:block">— Auguste Kerckhoffs, <em>La cryptographie militaire</em>, Journal des sciences militaires, vol. IX, janvier 1883. Le 2e des 6 principes — la base de toute cryptographie moderne.</span>
+</div>
+<div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(240,192,64,.05);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
+  <span style="color:var(--gold);font-weight:700">🔑 Paradoxe AES-256 :</span> Casser AES-256 par brute force nécessiterait plus d'énergie que ce que le soleil produira dans toute sa vie. Pourtant, en 2023, Cl0p a exfiltré des données de 2000 organisations en exploitant non pas AES, mais une faille SQL dans MOVEit — le serveur de transfert de fichiers. L'algorithme résiste. L'écosystème cède.
+</div>
+<a href="../quiz.html" style="color:#ff8888;text-decoration:none;padding:.3rem .7rem;border:1px solid rgba(255,136,136,.35);border-radius:5px;background:rgba(255,136,136,.08)">💊 Lancer le quiz →</a>
+</div>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:#bc8cff">CRYPTO</div>
+  <div>
+    <div style="margin-bottom:.25rem"><span class="tag" style="background:rgba(188,140,255,.12);border-color:rgba(188,140,255,.3);color:#bc8cff">DFIR</span> <span class="tag" style="background:rgba(188,140,255,.12);border-color:rgba(188,140,255,.3);color:#bc8cff">Cryptologie</span></div>
+    <div class="meta">AES · Modes · RSA · PKI · SHA-256 · Hashcat · BitLocker · VeraCrypt · TLS 1.3</div>
+  </div>
+</div>
+
+<div class="sec">
+<div class="ch-header">Chiffrement symétrique</div>
+<div class="g2">
+  <div class="card card-blue">
+    <div class="ct">AES — Standard de référence</div>
+    <ul>
+      <li>Blocs de <strong>128 bits</strong>. Clés : 128 / 192 / 256 bits</li>
+      <li>Nombre de tours : 10 / 12 / 14 selon la taille de clé</li>
+      <li>Étapes/tour : SubBytes (S-box) → ShiftRows → MixColumns → AddRoundKey</li>
+      <li><strong>AES-256 ne sera pas cassé par force brute</strong> (2²⁵⁶ opérations)</li>
+      <li>Ce qui cède : écosystème (mdp faible, clé en RAM, backup non protégé)</li>
+    </ul>
+  </div>
+  <div class="card card-orange">
+    <div class="ct">Modes opératoires</div>
+    <table style="width:100%;font-size:.75rem;border-collapse:collapse">
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.25rem"><strong>ECB</strong></td><td>❌ Motifs visibles. Proscrire absolument.</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.25rem"><strong>CBC</strong></td><td>IV aléatoire. ⚠ Padding oracle si mal implémenté.</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.25rem"><strong>CTR</strong></td><td>Flux. ⚠ Réutilisation nonce = C1⊕C2 = P1⊕P2.</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.25rem"><strong>GCM</strong></td><td>✅ CTR + authentification. Standard actuel.</td></tr>
+      <tr><td style="padding:.25rem"><strong>XTS</strong></td><td>✅ Pour disques (BitLocker, FileVault).</td></tr>
+    </table>
+  </div>
+  <div class="card card-red">
+    <div class="ct">XOR & piège two-time pad</div>
+    <p>XOR réversible : si C = M ⊕ K, alors M = C ⊕ K.<br>
+    <strong>Réutilisation de clé/nonce :</strong><br>
+    C1 ⊕ C2 = (M1 ⊕ K) ⊕ (M2 ⊕ K) = <strong>M1 ⊕ M2</strong><br>
+    La clé est éliminée → relation entre plaintexts visible.</p>
+  </div>
+  <div class="card card-purple">
+    <div class="ct">Chiffrement de disques</div>
+    <ul>
+      <li><strong>BitLocker</strong> : clé en RAM si volume monté. Clé dans l'AD (entreprise). VMK récupérable.</li>
+      <li><strong>LUKS</strong> : header en-tête du volume → contient clés chiffrées. Forensiquement exploitable.</li>
+      <li><strong>VeraCrypt</strong> : plausible deniability — volume caché indiscernable de l'espace libre.</li>
+      <li><strong>FileVault</strong> : recovery key dans iCloud.</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<div class="ch-header">Chiffrement asymétrique et RSA</div>
+<div class="g2">
+  <div class="card card-blue">
+    <div class="ct">RSA — Formules clés</div>
+    <p>n = p × q (deux grands premiers) · φ(n) = (p−1)(q−1)<br>
+    Clé publique : (e, n) avec pgcd(e, φ(n)) = 1<br>
+    Clé privée : d tel que e × d ≡ 1 (mod φ(n))</p>
+    <p style="margin-top:.35rem"><strong>Chiffrement :</strong> C = M<sup>e</sup> mod n<br>
+    <strong>Déchiffrement :</strong> M = C<sup>d</sup> mod n<br>
+    <strong>Signature :</strong> S = M<sup>d</sup> mod n · <strong>Vérification :</strong> M = S<sup>e</sup> mod n</p>
+    <p style="margin-top:.35rem;font-size:.75rem;color:var(--muted)">Python : <code>pow(c, d, n)</code> — exponentiation modulaire native</p>
+  </div>
+  <div class="card card-green">
+    <div class="ct">Sécurité et attaques RSA</div>
+    <ul>
+      <li>RSA-512 : cassé (1999). RSA-1024 : déconseillé. RSA-2048 : minimum actuel.</li>
+      <li><strong>Håstad (Broadcast) :</strong> même message pour 3 dest avec e=3 → CRT → M³ extrait</li>
+      <li><strong>Side-channel :</strong> timing, power analysis — exploitent l'implémentation</li>
+      <li><strong>Diffie-Hellman :</strong> échange clé sur canal non sécurisé → base de PFS (TLS)</li>
+    </ul>
+  </div>
+  <div class="card card-orange">
+    <div class="ct">PKCS#12 (.p12/.pfx)</div>
+    <ul>
+      <li>Conteneur chiffré = certificat X.509 + <strong>clé privée</strong></li>
+      <li>Criticité maximale : obtenir le fichier + le mot de passe = usurpation totale d'identité</li>
+      <li>L'attaquant peut déchiffrer les TLS sessions passées enregistrées</li>
+      <li>Cassage : hashcat mode 12600 (PKCS#12)</li>
+    </ul>
+  </div>
+  <div class="card card-purple">
+    <div class="ct">PKI et certificats</div>
+    <ul>
+      <li>Hiérarchie : Root CA → Intermediate CA → Leaf certificate</li>
+      <li><strong>Révocation :</strong> CRL (périodique) ou OCSP (temps réel)</li>
+      <li><strong>Certificate Transparency (CT)</strong> : tous les certs publics loggés → crt.sh pour OSINT</li>
+      <li><strong>Certificate Pinning :</strong> bloque les proxy MITM (Burp, mitmproxy)</li>
+      <li>TLS 1.3 : RSA key exchange supprimé, PFS obligatoire (ECDHE/DHE)</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<div class="ch-header">Hachage et intégrité</div>
+<div class="g2">
+  <div class="card card-blue">
+    <div class="ct">Fonctions de hachage</div>
+    <table style="width:100%;font-size:.75rem;border-collapse:collapse">
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.25rem"><strong>MD5</strong></td><td>128 bits (32 hex). Rapide. Collisions connues. Acceptable en forensique (chain of custody), pas pour signatures.</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.25rem"><strong>SHA-1</strong></td><td>160 bits. Cassé en 2017 (SHAttered). Ne plus utiliser pour signatures numériques.</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.25rem"><strong>SHA-256</strong></td><td>256 bits. Standard forensique actuel pour chain of custody.</td></tr>
+      <tr><td style="padding:.25rem"><strong>bcrypt/Argon2</strong></td><td>Intentionnellement lent (facteur de coût). Pour les mots de passe uniquement.</td></tr>
+    </table>
+  </div>
+  <div class="card card-green">
+    <div class="ct">Fuzzy hashing (ssdeep)</div>
+    <ul>
+      <li>Compare la <strong>similarité</strong> entre fichiers (≠ hashing cryptographique)</li>
+      <li>Score 85% = 85% de contenu commun</li>
+      <li>Détecte les variantes de malwares légèrement recompilés</li>
+      <li><strong>NSRL</strong> (NIST) : base de hash de logiciels connus → éliminer les fichiers système</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<div class="ch-header">Cassage de mots de passe</div>
+<div class="g3">
+  <div class="card card-orange">
+    <div class="ct">Hashcat — Modes</div>
+    <ul>
+      <li><strong>-a 0</strong> : Dictionnaire (rockyou.txt)</li>
+      <li><strong>-a 1</strong> : Combinaison (dict1 × dict2)</li>
+      <li><strong>-a 3</strong> : Masque (?l?u?d?s?a)</li>
+      <li><strong>-a 6</strong> : Hybride dict + masque</li>
+      <li>?l=minuscule · ?u=majuscule · ?d=chiffre · ?s=symbole</li>
+    </ul>
+  </div>
+  <div class="card card-red">
+    <div class="ct">Vitesses typiques (GPU)</div>
+    <ul>
+      <li>MD5 : milliards/sec</li>
+      <li>SHA-256 : centaines M/sec</li>
+      <li>bcrypt cost 12 : ~milliers/sec</li>
+      <li>Argon2 : encore plus lent</li>
+    </ul>
+  </div>
+  <div class="card card-blue">
+    <div class="ct">Attaques forensiques courantes</div>
+    <ul>
+      <li>Cold boot : clés AES récupérables en RAM (1–2 min après extinction)</li>
+      <li>Padding oracle (CBC) : déchiffrement sans clé</li>
+      <li>Two-time pad (CTR/nonce réutilisé) : M1⊕M2 visible</li>
+      <li>PKCS#12 : hashcat mode 12600</li>
+    </ul>
+  </div>
+</div>
+</div>
+<div class="tip">💡 <strong>Principe de Kerckhoffs (1883) :</strong> La sécurité doit reposer sur la clé, pas sur le secret de l'algorithme. AES est sûr précisément parce qu'il a été analysé publiquement pendant des années. Un algorithme "secret maison" n'a pas subi ce test.</div>
+
+<div class="footer"><span>CAS-IN · Forensique Numérique</span><span>Cryptologie — Sym · RSA · PKI · Hash · Cassage</span><span>2025</span></div>
+</div>
+</div>
+</body>
+</html>

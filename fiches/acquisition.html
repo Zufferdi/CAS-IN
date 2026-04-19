@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Acquisition · Formats · MAC times · Méthodologie — Notes DFIR</title>
+<link rel="stylesheet" href="fiche.css">
+</head>
+<body>
+<div class="topnav">
+  <div style="display:flex;gap:.5rem;align-items:center">
+    <a href="index.html" class="tn-back">← Fiches</a>
+    <a href="../index.html" class="tn-home">🏠 Accueil</a>
+  </div>
+  <a href="../quiz.html" class="tn-quiz">💊 Lancer le quiz →</a>
+</div>
+<div style="margin:1.25rem 0;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+  <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Citation</span><br>
+  <em style="color:var(--text)">"La première règle sur une scène de crime numérique est identique à celle d'une scène physique : ne touchez à rien avant d'avoir documenté l'état initial. Chaque action irréversible rétrécit irrémédiablement le champ des possibles."</em><br>
+  <span style="font-size:.72rem;margin-top:.3rem;display:block">— National Institute of Justice (NIJ), <em>Electronic Crime Scene Investigation: A Guide for First Responders</em>, 2e éd., U.S. Department of Justice, 2008</span>
+</div>
+<div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(240,192,64,.05);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
+  <span style="color:var(--gold);font-weight:700">📺 Référence Mr. Robot :</span> Dans l'épisode S01E05, Elliot effectue une "dead acquisition" correcte — il monte l'image en read-only. Les scénaristes ont consulté de vrais experts DFIR. Rare exemple de réalisme technique à Hollywood.
+</div>
+<a href="../quiz.html" style="color:#ff8888;text-decoration:none;padding:.3rem .7rem;border:1px solid rgba(255,136,136,.35);border-radius:5px;background:rgba(255,136,136,.08)">💊 Lancer le quiz →</a>
+</div>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:#f0883e">ACQ</div>
+  <div>
+    <div style="margin-bottom:.25rem"><span class="tag tag-orange">DFIR</span> <span class="tag tag-orange">Forensique</span> <span class="tag tag-orange">ISO 27037</span></div>
+    <div class="meta">Acquisition forensique · Magic Bytes · Timestamps · 5 phases d'investigation</div>
+  </div>
+</div>
+
+<div class="sec">
+<div class="ch-header">Acquisition et préservation</div>
+<div class="alert">⚠ L'original ne doit JAMAIS être modifié. Write blocker physique obligatoire. Hash SHA-256 calculé sur l'original ET sur chaque copie. Toute divergence de hash = preuve inadmissible.</div>
+<div class="g2">
+  <div class="card card-blue">
+    <div class="ct">Ordre de volatilité (RFC 3227)</div>
+    <ol style="padding-left:1.2rem;font-size:.8rem">
+      <li>RAM (registres, cache CPU)</li>
+      <li>Connexions réseau actives</li>
+      <li>Processus en cours</li>
+      <li>Disque dur / SSD</li>
+      <li>Logs distants</li>
+      <li>Données archivées</li>
+    </ol>
+    <p style="margin-top:.4rem;font-size:.75rem;color:var(--muted)">Capturer du plus volatil au plus stable.</p>
+  </div>
+  <div class="card card-green">
+    <div class="ct">Live vs Dead Forensics</div>
+    <p><strong>Dead Box :</strong> éteindre → acquisition statique. Pas d'altération. Perd RAM et clés de chiffrement.</p>
+    <p style="margin-top:.35rem"><strong>Live Forensics :</strong> système allumé → capture RAM puis disque. <strong>Obligatoire</strong> si chiffrement actif (BitLocker/LUKS/FileVault).</p>
+    <p style="margin-top:.35rem;font-size:.75rem;color:var(--muted)">Outils RAM : WinPmem, DumpIt (Windows) · LiME (Linux module)</p>
+  </div>
+  <div class="card card-orange">
+    <div class="ct">Formats d'image forensique</div>
+    <ul>
+      <li><strong>DD/RAW</strong> : copie bit-à-bit brute. Simple, universelle. Pas de métadonnées.</li>
+      <li><strong>E01/EWF</strong> (EnCase) : compression + métadonnées + hash intégré. Standard judiciaire.</li>
+      <li><strong>AFF</strong> (Garfinkel) : format ouvert, segmentable (.aff/.afd/.afm). Supporté X-Ways nativement.</li>
+      <li><strong>AFF4</strong> : successeur moderne, meilleure compression.</li>
+    </ul>
+  </div>
+  <div class="card card-purple">
+    <div class="ct">Outils d'acquisition</div>
+    <ul>
+      <li><strong>dd</strong> (Linux) : <code>dd if=/dev/sda of=img.dd bs=4M conv=noerror,sync</code></li>
+      <li><strong>Guymager</strong> : GUI Linux, AFF/E01/DD avec hash automatique</li>
+      <li><strong>FTK Imager</strong> : Windows GUI, E01, preview sans modifier</li>
+      <li><strong>OSFClone</strong> : sans écran, copie de disque autonome</li>
+      <li>Write blockers : Tableau T35689iu, WiebeTech</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<div class="ch-header">Formats de fichiers et Magic Bytes</div>
+<table class="tbl">
+<thead><tr><th>Magic Bytes (hex)</th><th>Format</th><th>Notes forensiques</th></tr></thead>
+<tbody>
+<tr class="hi"><td><span class="h h-red">FF D8 FF</span></td><td>JPEG</td><td>Footer : <span class="h h-red">FF D9</span>. Très courant, EXIF embarqué.</td></tr>
+<tr><td><span class="h h-blue">89 50 4E 47 0D 0A 1A 0A</span></td><td>PNG</td><td>"PNG" en ASCII (octets 1–3). Chunks IEND en footer.</td></tr>
+<tr class="hi"><td><span class="h h-orange">4D 5A</span></td><td>PE Windows (EXE/DLL)</td><td>"MZ" = Mark Zbikowski. Structure PE après.</td></tr>
+<tr><td><span class="h h-green">50 4B 03 04</span></td><td>ZIP / DOCX / XLSX / APK</td><td>"PK" = Phil Katz. Tous les formats Office 2007+ sont des ZIP.</td></tr>
+<tr class="hi"><td><span class="h h-purple">7F 45 4C 46</span></td><td>ELF Linux</td><td>Exécutable/lib Linux. Architecture dans le header.</td></tr>
+<tr><td><span class="h h-red">25 50 44 46</span></td><td>PDF</td><td>"%PDF". Footer : %%EOF. Peut contenir JS, pièces jointes.</td></tr>
+<tr class="hi"><td><span class="h h-blue">D4 C3 B2 A1</span></td><td>PCAP (little-endian)</td><td><span class="h h-orange">A1 B2 C3 D4</span> = big-endian. Captures réseau Wireshark.</td></tr>
+<tr><td><span class="h h-orange">4B 44 4D 56</span></td><td>VMDK VMware</td><td>Format sparse : seuls les blocs écrits sont stockés.</td></tr>
+<tr class="hi"><td><span class="h h-green">46 4C 56 01</span></td><td>FLV Video</td><td>"FLV". Signature vidéo courante dans les enquêtes.</td></tr>
+<tr><td><span class="h h-purple">52 61 72 21</span></td><td>RAR</td><td>"Rar!". RAR5 commence par <span class="h h-purple">52 61 72 21 1A 07 01 00</span></td></tr>
+</tbody>
+</table>
+<div class="formula" style="border-left-color:var(--orange)">
+  <div>Entropie élevée (~8 bits/octet) → données chiffrées ou compressées. Entropie basse → texte ou données structurées.</div>
+  <div>File carving : rechercher par header+footer dans l'espace brut. Limite : fragmentation → reconstruction partielle.</div>
+</div>
+</div>
+
+<div class="sec">
+<div class="ch-header">Artefacts temporels et MAC times</div>
+<div class="g2">
+  <div class="card card-red">
+    <div class="ct">Timestomping — Détection</div>
+    <p>NTFS maintient <strong>deux jeux de timestamps</strong> :</p>
+    <ul style="margin-top:.3rem">
+      <li><strong>$STANDARD_INFORMATION</strong> : modifiable par les programmes (TimeStomp, Metasploit)</li>
+      <li><strong>$FILE_NAME</strong> : modifiable uniquement par le noyau Windows</li>
+    </ul>
+    <p style="margin-top:.35rem"><strong>Divergence $SI vs $FN = timestomping probable.</strong></p>
+    <p style="margin-top:.2rem;font-size:.75rem;color:var(--muted)">MFTECmd exporte les deux colonnes. Comparer systématiquement.</p>
+  </div>
+  <div class="card card-blue">
+    <div class="ct">Précisions par système de fichiers</div>
+    <ul>
+      <li><strong>NTFS</strong> : 100 nanosecondes depuis 01.01.1601. 4 timestamps MACE.</li>
+      <li><strong>FAT</strong> : 2 secondes (dernière modif) / 10 ms (création, selon implémentation)</li>
+      <li><strong>exFAT</strong> : 10 ms + UtcOffset (timezone explicite)</li>
+      <li><strong>EXT</strong> : secondes Unix depuis 01.01.1970 (EXT4 : nanosecondes)</li>
+      <li><strong>HFS+</strong> : secondes depuis 01.01.1904 (Mac Epoch)</li>
+    </ul>
+  </div>
+</div>
+<div class="formula">
+  <div><span class="f">Copie Windows</span> : met à jour Btime (création) mais PAS Mtime. Un fichier "créé" après sa "modification" = probablement copié.</div>
+  <div><span class="f">Super-timeline</span> : log2timeline/Plaso fusionne toutes les sources. Outil : <code>log2timeline.py timeline.plaso image.E01</code></div>
+</div>
+</div>
+
+<div class="sec">
+<div class="ch-header">Méthodologie forensique (5 phases)</div>
+<div class="steps">
+  <div class="step"><div class="sn sn-b">1</div><div class="st"><strong>Identification</strong> : cartographier la scène numérique. Quels équipements, lesquels sont allumés, profil technique de la cible (chiffrement probable ?). Matériel prêt avant d'entrer.</div></div>
+  <div class="step"><div class="sn sn-b">2</div><div class="st"><strong>Collecte</strong> : saisie physique selon procédures légales (mandat). Isolation réseau (Faraday bag pour téléphones). Documentation photographique. Début de la chain of custody.</div></div>
+  <div class="step"><div class="sn sn-b">3</div><div class="st"><strong>Acquisition</strong> : write blocker + image forensique (E01/DD) + hash SHA-256 original ET copie. Dump RAM si chiffrement actif. Original mis sous scellés.</div></div>
+  <div class="step"><div class="sn sn-b">4</div><div class="st"><strong>Analyse</strong> : examen des copies uniquement. Reconstruction timeline, fichiers supprimés, artefacts, corrélations. Outils : X-Ways, Autopsy, Volatility, Plaso.</div></div>
+  <div class="step"><div class="sn sn-b">5</div><div class="st"><strong>Interprétation & Rapport</strong> : distinguer faits / interprétations / opinions. Rédaction avec niveau de certitude. L'expert ne prononce jamais la culpabilité.</div></div>
+</div>
+</div>
+<div class="tip">💡 <strong>ISO/IEC 27037</strong> · NIST SP 800-86 · RFC 3227 sont les références normatives. Les citer dans le rapport renforce sa valeur probante devant un tribunal.</div>
+
+<div class="footer"><span>CAS-IN · Forensique Numérique</span><span>Acquisition · Formats · MAC times · Méthodologie</span><span>2025</span></div>
+</div>
+</div>
+</body>
+</html>

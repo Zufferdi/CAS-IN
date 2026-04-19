@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Logiciels et outils forensiques — Notes DFIR</title>
+<link rel="stylesheet" href="fiche.css">
+</head>
+<body>
+<div class="topnav">
+  <div style="display:flex;gap:.5rem;align-items:center">
+    <a href="index.html" class="tn-back">← Fiches</a>
+    <a href="../index.html" class="tn-home">🏠 Accueil</a>
+  </div>
+  <a href="../quiz.html" class="tn-quiz">💊 Lancer le quiz →</a>
+</div>
+<div style="margin:1.25rem 0;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+  <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Citation X-Ways</span><br>
+  <em style="color:var(--text)">"Un outil forensique ne remplace pas la réflexion de l'analyste. La valeur d'X-Ways tient précisément à ce qu'il oblige l'examinateur à comprendre ce qu'il cherche avant de lancer la moindre opération automatique."</em><br>
+  <span style="font-size:.72rem;margin-top:.3rem;display:block">— Stefan Fleischmann, <em>Computer Forensic Examinations with X-Ways Forensics</em>, cours officiel X-Ways, 2022</span>
+</div>
+<div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(240,192,64,.05);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
+  <span style="color:var(--gold);font-weight:700">🤓 Eric Zimmerman :</span> Ancien analyste FBI, il a publié gratuitement 18+ outils forensiques Windows de référence — PECmd, MFTECmd, etc. En réponse aux questions sur pourquoi il les offrait gratuitement, il a répondu : "parce que le FBI m'a payé pour les créer et que la communauté m'a tout appris". Ses outils sont aujourd'hui cités dans des dizaines de procès fédéraux américains.
+</div>
+<a href="../quiz.html" style="color:#ff8888;text-decoration:none;padding:.3rem .7rem;border:1px solid rgba(255,136,136,.35);border-radius:5px;background:rgba(255,136,136,.08)">💊 Lancer le quiz →</a>
+</div>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:#f0883e">OUTILS</div>
+  <div>
+    <div style="margin-bottom:.25rem"><span class="tag tag-orange">DFIR</span> <span class="tag tag-orange">X-Ways</span> <span class="tag tag-orange">Zimmerman</span></div>
+    <div class="meta">X-Ways · Suite Zimmerman · Volatility · Autopsy · Cellebrite · Passware · exiftool</div>
+  </div>
+</div>
+
+<div class="sec">
+<div class="ch-header">X-Ways Forensics — Philosophie et workflow</div>
+<div class="info">ℹ X-Ways oblige l'analyste à comprendre ce qu'il cherche avant de lancer la moindre opération. Rien n'est automatisé sans validation explicite — en contexte judiciaire, l'expert doit pouvoir justifier chaque résultat.</div>
+<div class="g2">
+  <div class="card card-blue">
+    <div class="ct">Accès physique vs logique</div>
+    <ul>
+      <li><strong>Physical Media (F9)</strong> : bypasse l'OS, lit chaque secteur (MBR, espace non alloué, HPA). <strong>Méthode forensique correcte.</strong></li>
+      <li><strong>Logical Drive</strong> : passe par Windows → peut bloquer des zones, modifier des timestamps, ignorer l'espace non alloué.</li>
+      <li>Toujours ouvrir en Physical Media.</li>
+    </ul>
+  </div>
+  <div class="card card-green">
+    <div class="ct">Volume Snapshot & Refine</div>
+    <ul>
+      <li><strong>Snapshot simple</strong> : vue globale rapide</li>
+      <li><strong>Refine Snapshot</strong> : carving par signature, fausses extensions, archives, messagerie, calcul hashes</li>
+      <li>Un snapshot mal configuré = résultats manquants ou trop de faux positifs</li>
+      <li>Nouveau cas pour chaque investigation (évite la contamination)</li>
+    </ul>
+  </div>
+</div>
+<table class="tbl" style="margin-top:.75rem">
+<thead><tr><th>Fonctionnalité X-Ways</th><th>Usage forensique</th></tr></thead>
+<tbody>
+<tr class="hi"><td>Navigate → Seek FAT Entry / MFT Record</td><td>Aller directement à une entrée connue</td></tr>
+<tr><td>Navigate → Seek Directory Entry</td><td>Trouver l'entrée de répertoire d'un fichier</td></tr>
+<tr class="hi"><td>View → Template Manager</td><td>Décoder les structures (exFAT C0, MFT, etc.)</td></tr>
+<tr><td>Clic droit → Navigate → List Clusters</td><td>Voir tous les clusters d'un fichier + fragmentation</td></tr>
+<tr class="hi"><td>Simultaneous Search</td><td>Recherche hexadécimale et texte simultanée</td></tr>
+<tr><td>Hash Database (NSRL)</td><td>Éliminer les fichiers système connus</td></tr>
+<tr class="hi"><td>Block hash (hash sectoriel)</td><td>Identifier des données dans l'espace non alloué</td></tr>
+<tr><td>Case Report</td><td>Rapport configurable (hash, chemin, taille, timestamps, commentaires analyste)</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="sec">
+<div class="ch-header">Suite Eric Zimmerman (outils gratuits, référence DFIR Windows)</div>
+<div class="g3">
+  <div class="card card-orange">
+    <div class="ct">PECmd</div>
+    <p>Parse les fichiers Prefetch (.pf). Extrait : timestamps (8 max), compteur, DLL chargées, hash interne.</p>
+    <p style="margin-top:.3rem;font-size:.75rem"><code>PECmd.exe -d C:\Windows\Prefetch --csv output.csv</code></p>
+  </div>
+  <div class="card card-blue">
+    <div class="ct">MFTECmd</div>
+    <p>Parse la $MFT entière → CSV exploitable sous Excel. $SI vs $FN (timestomping). Fichiers supprimés.</p>
+    <p style="margin-top:.3rem;font-size:.75rem"><code>MFTECmd.exe -f $MFT --csv output.csv</code></p>
+  </div>
+  <div class="card card-green">
+    <div class="ct">LECmd</div>
+    <p>Parse les fichiers .LNK. Extrait : chemin cible, Volume Serial Number, timestamps cible, machine source.</p>
+    <p style="margin-top:.3rem;font-size:.75rem"><code>LECmd.exe -d C:\...\Recent --csv output.csv</code></p>
+  </div>
+  <div class="card card-purple">
+    <div class="ct">EvtxECmd</div>
+    <p>Parse les Event Logs .evtx → CSV normalisé pour Timesketch ou Excel.</p>
+    <p style="margin-top:.3rem;font-size:.75rem"><code>EvtxECmd.exe -d C:\...\winevt\Logs --csv output.csv</code></p>
+  </div>
+  <div class="card card-red">
+    <div class="ct">ShellBagsExplorer</div>
+    <p>Analyse USRCLASS.DAT et NTUSER.DAT. Reconstruit l'arborescence des dossiers explorés avec timestamps.</p>
+  </div>
+  <div class="card card-gold">
+    <div class="ct">AmcacheParser</div>
+    <p>Parse Amcache.hve. Hash SHA-1 des exécutables présents sur le système.</p>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<div class="ch-header">Autres outils forensiques de référence</div>
+<div class="g2">
+  <div class="card card-blue">
+    <div class="ct">Acquisition & Analyse disque</div>
+    <ul>
+      <li><strong>Autopsy/TSK</strong> : open-source, modules automatiques, bonne entrée de gamme</li>
+      <li><strong>FTK Imager</strong> : acquisition E01, preview sans modification</li>
+      <li><strong>Guymager</strong> : acquisition Linux GUI, AFF/E01/DD</li>
+      <li><strong>Scalpel/Foremost</strong> : file carving par signatures</li>
+      <li><strong>PhotoRec</strong> : récupération multiformat (y compris EXT4)</li>
+    </ul>
+  </div>
+  <div class="card card-green">
+    <div class="ct">Mémoire & Réseau</div>
+    <ul>
+      <li><strong>Volatility3</strong> : analyse RAM. <code>vol.py -f mem.raw windows.pslist</code></li>
+      <li><strong>WinPmem / DumpIt</strong> : capture RAM Windows</li>
+      <li><strong>Wireshark</strong> : analyse PCAP. Filtres : <code>tcp.flags.syn==1</code></li>
+      <li><strong>Zeek (Bro)</strong> : analyse logs réseau longue durée</li>
+      <li><strong>Plaso (log2timeline)</strong> : super-timeline multiformat</li>
+    </ul>
+  </div>
+  <div class="card card-purple">
+    <div class="ct">Mobile & OSINT</div>
+    <ul>
+      <li><strong>Cellebrite UFED</strong> : extraction physique/logique mobile</li>
+      <li><strong>Magnet AXIOM</strong> : mobile + desktop + cloud, corrélation cross-appareils</li>
+      <li><strong>DB Browser for SQLite</strong> : Chrome/Firefox history, WhatsApp, iOS databases</li>
+      <li><strong>exiftool</strong> : métadonnées EXIF multiformat</li>
+    </ul>
+  </div>
+  <div class="card card-orange">
+    <div class="ct">Malware & Hachage</div>
+    <ul>
+      <li><strong>pestudio</strong> : analyse statique PE Windows (imports, exports, entropy)</li>
+      <li><strong>Ghidra</strong> : décompilateur/désassembleur (NSA, open-source)</li>
+      <li><strong>Hashcat</strong> : cassage passwords GPU</li>
+      <li><strong>Passware</strong> : cassage fichiers chiffrés (Office, PDF, p12)</li>
+      <li><strong>ssdeep</strong> : fuzzy hashing pour variantes malware</li>
+    </ul>
+  </div>
+</div>
+</div>
+<div class="tip">💡 <strong>Règle judiciaire :</strong> "J'ai utilisé PECmd d'Eric Zimmerman, outil open-source documenté et reconnu par la communauté DFIR" est bien plus défendable que "le logiciel m'a dit que...". Toujours nommer l'outil, la version et la commande exacte dans le rapport.</div>
+
+<div class="footer"><span>CAS-IN · Forensique Numérique</span><span>Logiciels et outils forensiques</span><span>2025</span></div>
+</div>
+</div>
+</body>
+</html>

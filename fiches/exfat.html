@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>exFAT — Notes DFIR</title>
+<link rel="stylesheet" href="fiche.css">
+</head>
+<body>
+<div class="topnav">
+  <div style="display:flex;gap:.5rem;align-items:center">
+    <a href="index.html" class="tn-back">← Fiches</a>
+    <a href="../index.html" class="tn-home">🏠 Accueil</a>
+  </div>
+  <a href="../quiz.html" class="tn-quiz">💊 Lancer le quiz →</a>
+</div>
+<div style="margin:1.25rem 0;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+  <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Fact geek</span><br>
+  <em style="color:var(--text)">"La précision de 10 ms d'exFAT n'est pas anecdotique : elle permet de corréler les timestamps avec les logs réseau NetFlow (résolution similaire) et les journaux système — une chaîne de preuve temporelle quasiment infaillible."</em><br>
+  <span style="font-size:.72rem;margin-top:.3rem;display:block">— Microsoft, <em>exFAT File System Specification</em>, v1.00, 2019 (open specification)</span>
+</div>
+<a href="../quiz.html" style="color:#ff8888;text-decoration:none;padding:.3rem .7rem;border:1px solid rgba(255,136,136,.35);border-radius:5px;background:rgba(255,136,136,.08)">💊 Lancer le quiz →</a>
+</div>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="fs-badge">exFAT</div>
+    <div>
+      <div><span class="tag">DFIR</span> <span class="tag">Filesystem</span> <span class="tag">Microsoft</span></div>
+      <div class="header-meta" style="margin-top:0.3rem;">Extensible File Allocation Table — Apparu après NTFS · Conçu pour les supports flash</div>
+    </div>
+  </div>
+
+  <!-- Alerte clé -->
+  <div class="alert">
+    <strong>⚠ ATTENTION :</strong> En exFAT, les clusters commencent à <span class="hex">2</span> (comme FAT). L'index 0 de la bitmap correspond au cluster 2. Ne jamais commencer à compter depuis 0 ou 1.
+  </div>
+
+  <!-- Structure on-disk -->
+  <div class="section">
+    <div class="section-title">Structure on-disk</div>
+    <div class="layout">
+      <div class="layout-block lb-boot">Boot Sector<span class="layout-label">Zone principale (offset 0)</span></div>
+      <div class="layout-block lb-bootcp">Copie Boot<span class="layout-label">Backup zone</span></div>
+      <div class="layout-block lb-fat">Zone FAT<span class="layout-label">1 seule FAT</span></div>
+      <div class="layout-block lb-data">Zone des données<span class="layout-label">Bitmap · Up-case · Root Dir · Fichiers</span></div>
+    </div>
+    <div style="margin-top:0.5rem;font-size:0.75rem;color:var(--muted);">Premiers clusters utilisés : <span class="hex hex-purple">cluster 2</span> Bitmap d'allocation · <span class="hex hex-purple">cluster 3</span> Up-case table · <span class="hex hex-purple">cluster 5</span> Root Directory (typiquement)</div>
+  </div>
+
+  <!-- Comparatif FAT32 vs exFAT -->
+  <div class="section">
+    <div class="section-title">FAT32 vs exFAT</div>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Propriété</th>
+          <th class="fat32">FAT32</th>
+          <th class="exfat">exFAT</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Volume max</td><td class="v-fat32">8 TB</td><td class="v-exfat">128 PB</td></tr>
+        <tr><td>Taille max fichier</td><td class="v-fat32">4 GB</td><td class="v-exfat">16 EB</td></tr>
+        <tr><td>Cluster max</td><td class="v-fat32">32 KB</td><td class="v-exfat">32 MB</td></tr>
+        <tr><td>Clusters max</td><td class="v-fat32">2²⁸</td><td class="v-exfat">2³²</td></tr>
+        <tr><td>Résolution timestamp</td><td class="v-fat32">2 secondes</td><td class="v-exfat">10 millisecondes</td></tr>
+        <tr><td>ID partition MBR</td><td class="v-fat32">0x0B, 0x0C</td><td class="v-exfat">0x07</td></tr>
+        <tr><td>Nombre de FAT</td><td class="v-fat32">2 (FAT1 + FAT2)</td><td class="v-exfat">1 seule</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Boot Sector — offsets essentiels -->
+  <div class="section">
+    <div class="section-title">Boot Sector — Offsets essentiels</div>
+    <table class="offset-table">
+      <thead>
+        <tr><th>Offset</th><th>Taille</th><th>Champ</th><th>Notes forensiques</th></tr>
+      </thead>
+      <tbody>
+        <tr class="hi">
+          <td><span class="hex">0x03</span></td>
+          <td>8 octets</td>
+          <td>FileSystemName</td>
+          <td><span class="hex hex-blue">45 58 46 41 54</span> = <strong>EXFAT</strong> en ASCII. Signature d'identification du FS.</td>
+        </tr>
+        <tr>
+          <td><span class="hex">0x40</span></td>
+          <td>8 octets</td>
+          <td>PartitionOffset</td>
+          <td>En secteurs. Si 0, ignorer.</td>
+        </tr>
+        <tr>
+          <td><span class="hex">0x48</span></td>
+          <td>8 octets</td>
+          <td>VolumeLength</td>
+          <td>Taille du volume exFAT en secteurs.</td>
+        </tr>
+        <tr class="hi">
+          <td><span class="hex">0x50</span></td>
+          <td>4 octets</td>
+          <td>FatOffset</td>
+          <td>Position de la FAT en secteurs. Entrées FAT identiques à FAT32.</td>
+        </tr>
+        <tr>
+          <td><span class="hex">0x54</span></td>
+          <td>4 octets</td>
+          <td>FatLength</td>
+          <td>Longueur de la FAT en secteurs. Peut dépasser l'espace requis (alignement).</td>
+        </tr>
+        <tr class="hi">
+          <td><span class="hex">0x58</span></td>
+          <td>4 octets</td>
+          <td>ClusterHeapOffset</td>
+          <td>Début du tas de clusters en secteurs. <strong>Le cluster 2 se trouve ici.</strong> Peut varier.</td>
+        </tr>
+        <tr>
+          <td><span class="hex">0x5C</span></td>
+          <td>4 octets</td>
+          <td>ClusterCount</td>
+          <td>2³²-11 = nombre max de clusters descriptibles.</td>
+        </tr>
+        <tr class="hi">
+          <td><span class="hex">0x60</span></td>
+          <td>4 octets</td>
+          <td>RootDirectoryCluster</td>
+          <td><strong>Premier cluster du répertoire racine.</strong> Point d'entrée pour lister les fichiers.</td>
+        </tr>
+        <tr>
+          <td><span class="hex">0x64</span></td>
+          <td>4 octets</td>
+          <td>VolumeSerialNumber</td>
+          <td>Numéro de série du volume.</td>
+        </tr>
+        <tr class="hi">
+          <td><span class="hex">0x6C</span></td>
+          <td>1 octet</td>
+          <td>BytesPerSectorShift</td>
+          <td><strong>Exposant puissance de 2.</strong> 0x09 → 2⁹ = 512 octets/secteur. Min=9, Max=12.</td>
+        </tr>
+        <tr class="hi">
+          <td><span class="hex">0x6D</span></td>
+          <td>1 octet</td>
+          <td>SectorsPerClusterShift</td>
+          <td><strong>Exposant puissance de 2.</strong> 0x03 → 2³ = 8 secteurs/cluster = 4096 octets/cluster.</td>
+        </tr>
+        <tr>
+          <td><span class="hex">0x6E</span></td>
+          <td>1 octet</td>
+          <td>NumberOfFats</td>
+          <td>= 2 pour TexFAT uniquement. Standard = 1.</td>
+        </tr>
+        <tr>
+          <td><span class="hex">0x1FE</span></td>
+          <td>2 octets</td>
+          <td>BootSignature</td>
+          <td><span class="hex hex-green">AA 55</span> — signature universelle de boot.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Formules de calcul -->
+    <div class="formula-box">
+      <div><span class="f">TailleSecteur</span> = 2^BytesPerSectorShift &nbsp;→ &nbsp;ex: 2<sup>9</sup> = 512 octets</div>
+      <div><span class="f">TailleCluster</span> = 2^SectorsPerClusterShift × TailleSecteur &nbsp;→ &nbsp;ex: 2<sup>3</sup> × 512 = 4096 octets</div>
+      <div><span class="f">Offset cluster N</span> = ClusterHeapOffset × TailleSecteur + (N − 2) × TailleCluster</div>
+      <div style="margin-top:0.4rem;font-size:0.75rem;color:var(--muted);">Exemple : ClusterHeapOffset=384 secteurs, TailleSecteur=512, TailleCluster=4096 → Offset cluster 2 = 384×512 = 196'608. Root dir (cluster 5) = 196'608 + 3×4096 = 208'896</div>
+    </div>
+  </div>
+
+  <!-- Bitmap d'allocation -->
+  <div class="section">
+    <div class="section-title">Bitmap d'allocation</div>
+    <div class="card-grid">
+      <div class="card blue">
+        <div class="card-title">Fonctionnement</div>
+        <p>La bitmap commence au <strong>cluster 2</strong> (bit 0 de l'octet 0 = cluster 2). Chaque bit = 1 cluster. 1 octet = 8 clusters.</p>
+        <p style="margin-top:0.4rem;"><span class="hex">1</span> = occupé &nbsp;·&nbsp; <span class="hex">0</span> = libre</p>
+        <p style="margin-top:0.4rem;">Lecture bit : <strong>poids faible à droite = cluster de plus petit numéro.</strong></p>
+      </div>
+      <div class="card green">
+        <div class="card-title">Formule pour cluster N</div>
+        <p>Offset octet = ⌊(N − 2) / 8⌋<br>Bit = (N − 2) mod 8 (depuis la droite)</p>
+        <p style="margin-top:0.4rem;">Ex: cluster 21 → (21−2)/8 = 2 reste 3 → <strong>octet 2, bit 3</strong></p>
+        <p style="margin-top:0.3rem;font-size:0.75rem;color:var(--muted);">Valeur <span class="hex">7F</span> = 0111 1111 → bit 7 = 0 (libre), bits 0–6 = 1 (occupés)</p>
+      </div>
+    </div>
+    <div class="card-grid" style="margin-top:0.75rem;">
+      <div class="card orange">
+        <div class="card-title">Exercice type : 28 clusters occupés</div>
+        <p>28 / 8 = 3 octets pleins + reste (4 clusters)<br>
+        On part du cluster 2 (offset 0) → on décale de −1 :<br>
+        <strong>FF FF FF 07 00 00 00 00</strong></p>
+        <p style="margin-top:0.3rem;font-size:0.75rem;color:var(--muted);">0x07 = 0000 0111 → clusters 26,27,28 occupés (bits 0,1,2)</p>
+      </div>
+      <div class="card red">
+        <div class="card-title">Effacement d'un fichier</div>
+        <p>On met à <span class="hex">0</span> les bits des clusters concernés dans la bitmap.</p>
+        <p style="margin-top:0.4rem;">La FAT n'est pas utilisée si <strong>NoFatChain = 1</strong> (clusters contigus).</p>
+        <p style="margin-top:0.4rem;">Bit 7 de l'EntryType → 0 : <span class="hex">0x85</span>→<span class="hex">0x05</span> &nbsp;·&nbsp; <span class="hex">0xC0</span>→<span class="hex">0x40</span> &nbsp;·&nbsp; <span class="hex">0xC1</span>→<span class="hex">0x41</span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAT ou NoFatChain -->
+  <div class="section">
+    <div class="section-title">FAT ou NoFatChain</div>
+    <div class="card-grid">
+      <div class="card green">
+        <div class="card-title">NoFatChain = 1 (contigu)</div>
+        <p>Les clusters du fichier sont contigus. La FAT <strong>n'est pas utilisée</strong> pour ce fichier. Seul FirstCluster + DataLength suffisent pour trouver toutes les données.</p>
+        <p style="margin-top:0.4rem;font-size:0.75rem;color:var(--muted);">Forensique : carving plus facile, récupération directe depuis FirstCluster.</p>
+      </div>
+      <div class="card orange">
+        <div class="card-title">NoFatChain = 0 (fragmenté)</div>
+        <p>Le fichier est fragmenté. La FAT contient le chaînage des clusters (comme FAT32). On la consulte depuis le FirstCluster.</p>
+        <p style="margin-top:0.4rem;font-size:0.75rem;color:var(--muted);">Forensique : Navigation → Seek FAT entry → FirstCluster, puis chaînage normal.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Entrées du répertoire -->
+  <div class="section">
+    <div class="section-title">Structure des entrées (RootDirectory)</div>
+
+    <div style="margin-bottom:0.75rem;font-size:0.8rem;color:var(--muted);">Un fichier normal occupe <strong style="color:var(--text)">3 à 19 entrées</strong> de 32 octets chacune (vs 1024 octets/entrée en NTFS). Toutes les entrées d'un fichier sont contiguës.</div>
+
+    <div class="entry-seq" style="margin-bottom:1rem;">
+      <div class="entry-block eb-primary"><span class="hex hex-blue">0x85</span> File Entry<span class="entry-label">Entrée primaire critique</span></div>
+      <div class="entry-block eb-stream"><span class="hex hex-purple">0xC0</span> Stream Extension<span class="entry-label">FirstCluster + DataLength</span></div>
+      <div class="entry-block eb-name"><span class="hex hex-green">0xC1</span> File Name<span class="entry-label">15 chars UTF-16</span></div>
+      <div class="entry-block eb-name2"><span class="hex hex-green">0xC1</span> File Name (suite)<span class="entry-label">si nom &gt; 15 chars</span></div>
+    </div>
+
+    <table class="offset-table">
+      <thead>
+        <tr><th>EntryType</th><th>Primary</th><th>Critical</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="hex">0x81</span></td><td>✓</td><td>✓</td><td>Allocation Bitmap — toujours présente (1 seule)</td></tr>
+        <tr><td><span class="hex">0x82</span></td><td>✓</td><td>✓</td><td>Up-case Table — table des majuscules Unicode</td></tr>
+        <tr><td><span class="hex">0x83</span></td><td>✓</td><td>✓</td><td>Volume Label</td></tr>
+        <tr class="hi"><td><span class="hex">0x85</span></td><td>✓</td><td></td><td>File Entry — entrée fichier principale. Suivi de 0xC0 obligatoirement.</td></tr>
+        <tr class="hi"><td><span class="hex">0xC0</span></td><td></td><td>✓</td><td>Stream Extension — contient <strong>FirstCluster</strong> (offset 0x14) et <strong>DataLength</strong> (offset 0x18)</td></tr>
+        <tr class="hi"><td><span class="hex">0xC1</span></td><td></td><td>✓</td><td>File Name — nom en UTF-16, 15 caractères par entrée. Min 1, max 17 entrées.</td></tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:0.75rem;padding:0.75rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:0.78rem;">
+      <strong style="color:var(--accent5)">Bits de l'EntryType (octet 0x00) :</strong>
+      <div style="margin-top:0.35rem;">Bits 0–4 = Code | Bit 5 = Importance (0=Critical, 1=Benign) | Bit 6 = Category (0=Primary, 1=Secondary) | Bit 7 = <strong>In-use (1=actif, 0=effacé)</strong></div>
+    </div>
+  </div>
+
+  <!-- Workflow X-Ways -->
+  <div class="section">
+    <div class="section-title">Procédure X-Ways — Trouver un fichier</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num blue">1</div>
+        <div class="step-text">Clic droit sur le fichier → <strong>Navigate → Seek Directory Entry</strong> (Atteindre enreg. de fichier)</div>
+      </div>
+      <div class="step">
+        <div class="step-num blue">2</div>
+        <div class="step-text">Localiser l'entrée <span class="hex hex-blue">0x85</span> (File Entry) suivie de <span class="hex hex-purple">0xC0</span> (Stream Extension). Se placer sur le <strong>"C" de C0</strong>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num blue">3</div>
+        <div class="step-text">Menu <strong>View → Template Manager</strong> → choisir le template <em>"ExFAT Rcrd Type C0"</em>. Le détail affiche FirstCluster et DataLength.</div>
+      </div>
+      <div class="step">
+        <div class="step-num blue">4</div>
+        <div class="step-text">Calculer le nombre de clusters : <strong>DataLength / TailleCluster</strong> (arrondi au supérieur). Ex: 53'910 / 4096 = 13.16 → 14 clusters.</div>
+      </div>
+      <div class="step">
+        <div class="step-num blue">5</div>
+        <div class="step-text">Si fichier non contigu : <strong>Navigation → Seek FAT Entry → FirstCluster</strong>. Suivre le chaînage FAT normalement jusqu'à <span class="hex">0xFFFFFFFF</span>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num blue">6</div>
+        <div class="step-text">Raccourci : clic droit sur le fichier → <strong>Navigate → List Clusters</strong> — voir immédiatement tous les clusters et la fragmentation.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Points clés forensiques -->
+  <div class="section">
+    <div class="section-title">Notions forensiques clés</div>
+    <div class="card-grid">
+      <div class="card purple">
+        <div class="card-title">Enregistrement</div>
+        <p>Le FS cherche d'abord le <strong>plus petit bloc</strong> pouvant contenir le fichier entier. Sinon, prend le plus grand trou → flag NoFatChain = 0 (fragmenté).</p>
+        <p style="margin-top:0.4rem;">Copie réseau : taille inconnue au départ → copie dans un dossier temporaire puis déplacement. Cela peut créer de la fragmentation.</p>
+      </div>
+      <div class="card blue">
+        <div class="card-title">Timestamps</div>
+        <p>Résolution : <strong>10 ms</strong> (vs 2 secondes en FAT32). Champ <em>UtcOffset</em> présent → timezone stockée explicitement.</p>
+        <p style="margin-top:0.4rem;font-size:0.75rem;color:var(--muted);">Forensiquement supérieur à FAT32 pour la reconstruction de timeline.</p>
+      </div>
+      <div class="card green">
+        <div class="card-title">Boot Signature</div>
+        <p>2 derniers octets du 1er secteur de la partition : toujours <span class="hex hex-green">AA 55</span> (= 0xAA55 little-endian).</p>
+        <p style="margin-top:0.4rem;">Flag <em>VolumeDirty</em> : indique si le volume est proprement démonté ou corrompu.</p>
+      </div>
+      <div class="card red">
+        <div class="card-title">Récupération</div>
+        <p>Suppression : bit 7 des entrées mis à 0. Bitmap libérée. <strong>Contenu non effacé</strong> → récupération possible si clusters non réalloués.</p>
+        <p style="margin-top:0.4rem;font-size:0.75rem;color:var(--muted);">SecondaryCount (offset 0x01 de l'entrée primaire) indique le nombre d'entrées secondaires qui suivent (0–255).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>CAS-IN · Forensique Numérique</span>
+    <span>exFAT Filesystem Internals</span>
+    <span>2025</span>
+  </div>
+
+</div>
+</div>
+</body>
+</html>

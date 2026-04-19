@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>EXT2 / EXT3 / EXT4 — Notes DFIR</title>
+<link rel="stylesheet" href="fiche.css">
+</head>
+<body>
+<div class="topnav">
+  <div style="display:flex;gap:.5rem;align-items:center">
+    <a href="index.html" class="tn-back">← Fiches</a>
+    <a href="../index.html" class="tn-home">🏠 Accueil</a>
+  </div>
+  <a href="../quiz.html" class="tn-quiz">💊 Lancer le quiz →</a>
+</div>
+<div style="margin:1.25rem 0;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+  <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Citation</span><br>
+  <em style="color:var(--text)">"The Linux kernel's journaling layer was designed for reliability, not anonymity. What it recovers for the system administrator, it preserves for the forensic examiner."</em><br>
+  <span style="font-size:.72rem;margin-top:.3rem;display:block">— Theodore Ts'o, annonce d'ext3, <em>Linux Kernel Mailing List</em>, 2001</span>
+</div>
+<div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(240,192,64,.05);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
+  <span style="color:var(--gold);font-weight:700">🤓 Fun fact :</span> Theodore Ts'o, créateur d'EXT3/4, est aujourd'hui ingénieur chez Google. L'inode 2 (répertoire racine /) est une constante universelle depuis EXT1 en 1992 — si jamais vous devez vous en souvenir en plein stress d'examen.
+</div>
+<a href="../quiz.html" style="color:#ff8888;text-decoration:none;padding:.3rem .7rem;border:1px solid rgba(255,136,136,.35);border-radius:5px;background:rgba(255,136,136,.08)">💊 Lancer le quiz →</a>
+</div>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:#30e88a">EXT</div>
+  <div>
+    <div style="margin-bottom:.25rem"><span class="tag tag-green">DFIR</span> <span class="tag tag-green">Linux</span> <span class="tag tag-green">Filesystem</span></div>
+    <div class="meta">Linux Extended File System · Groupes de blocs · Inodes · Journalisation · Récupération</div>
+  </div>
+</div>
+
+<div class="alert">⚠ EXT4 efface les pointeurs de blocs à la suppression (<em>block pointer zeroing</em>). La récupération passe par le journal ou le carving sur l'espace non alloué — contrairement à EXT2 qui laissait les pointeurs intacts.</div>
+<div class="sec">
+<div class="sec-title">Structure d'un volume EXT</div>
+<div class="zones" style="margin-bottom:.75rem">
+  <div class="zone z-orange">Superbloc<span class="zl">offset 1024, 1024 octets</span></div>
+  <div class="zone z-blue">GDT<span class="zl">Group Descriptor Table</span></div>
+  <div class="zone z-purple">Bitmap blocs<span class="zl">1 bit/bloc</span></div>
+  <div class="zone z-purple">Bitmap inodes<span class="zl">1 bit/inode</span></div>
+  <div class="zone z-green">Table inodes<span class="zl">128 o/inode (EXT2/3)</span></div>
+  <div class="zone z-blue" style="flex:2">Données<span class="zl">Blocs de données</span></div>
+</div>
+<div class="g2">
+  <div class="card card-orange">
+    <div class="ct">Superbloc</div>
+    <ul>
+      <li>Toujours à l'offset <strong>1024</strong> octets du début du volume</li>
+      <li>Contient : inode_count, block_count, s_inodes_per_group, s_blocks_per_group</li>
+      <li>Magic number : <span class="h h-orange">0xEF53</span> (LE : 53 EF)</li>
+      <li>Copies de secours dans certains groupes (sparse_super)</li>
+      <li>s_last_mounted, s_mkfs_time, s_uuid → forensique</li>
+    </ul>
+  </div>
+  <div class="card card-blue">
+    <div class="ct">Groupes de blocs</div>
+    <ul>
+      <li>Volume divisé en groupes de blocs de taille fixe</li>
+      <li>Chaque groupe contient : superbloc (copie), GDT, bitmap blocs, bitmap inodes, table inodes, blocs données</li>
+      <li>Taille typique : 32768 blocs × 4 Ko = 128 Mo par groupe</li>
+      <li>Formule groupe d'un inode : <strong>(inode−1) ÷ s_inodes_per_group</strong></li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-title">L'inode — Cœur du système EXT</div>
+<div class="g3">
+  <div class="card card-green">
+    <div class="ct">Inodes réservés</div>
+    <ul>
+      <li>Inode <strong>0</strong> : n'existe pas</li>
+      <li>Inode <strong>1</strong> : liste blocs défectueux</li>
+      <li>Inode <strong>2</strong> : répertoire racine /</li>
+      <li>Inode <strong>7</strong> : quota</li>
+      <li>Inode <strong>8</strong> : journal EXT3/4</li>
+      <li>Inodes normaux : ≥ 11</li>
+    </ul>
+  </div>
+  <div class="card card-blue">
+    <div class="ct">Contenu d'un inode</div>
+    <ul>
+      <li>Mode (type + permissions Unix)</li>
+      <li>UID/GID propriétaire</li>
+      <li>Taille du fichier</li>
+      <li>Timestamps : atime, mtime, ctime</li>
+      <li>i_links_count (hardlinks)</li>
+      <li>Pointeurs de blocs ou extents</li>
+    </ul>
+  </div>
+  <div class="card card-purple">
+    <div class="ct">Permissions Unix</div>
+    <ul>
+      <li><span class="h h-purple">0644</span> : rw-r--r-- (standard fichier)</li>
+      <li><span class="h h-purple">0755</span> : rwxr-xr-x (standard dossier)</li>
+      <li><span class="h h-purple">0777</span> : rwxrwxrwx (⚠ risque sécu)</li>
+      <li><span class="h h-purple">0000</span> : aucune permission</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-title">Évolution EXT2 → EXT3 → EXT4</div>
+<table class="tbl">
+<thead><tr><th>Fonctionnalité</th><th>EXT2 (1993)</th><th>EXT3 (2001)</th><th>EXT4 (2008)</th></tr></thead>
+<tbody>
+<tr><td>Journalisation</td><td>Non</td><td class="hi">✅ Write-Ahead Log</td><td class="hi">✅ amélioré</td></tr>
+<tr><td>Répertoires</td><td>Liste chaînée</td><td>HTree (Hash B-Tree)</td><td class="hi">HTree étendu</td></tr>
+<tr><td>Pointeurs blocs</td><td>Directs/indirects</td><td>Idem</td><td class="hi"><strong>Extents</strong> (plages)</td></tr>
+<tr><td>Suppression</td><td>Pointeurs conservés</td><td class="hi">Pointeurs effacés</td><td class="hi">Block pointer zeroing</td></tr>
+<tr><td>Récupération</td><td>✅ Facile</td><td>⚠ Difficile</td><td>❌ Très difficile</td></tr>
+<tr><td>Taille max volume</td><td>16 TB</td><td>16 TB</td><td class="hi">1 EB</td></tr>
+<tr><td>Taille max fichier</td><td>2 TB</td><td>2 TB</td><td class="hi">16 TB</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="sec">
+<div class="sec-title">Suppression et récupération forensique</div>
+<div class="steps">
+  <div class="step"><div class="sn sn-r">1</div><div class="st">L'entrée de répertoire est <strong>invalidée</strong> (rec_len étendu pour "sauter" l'entrée). Le nom reste lisible dans les répertoires EXT2.</div></div>
+  <div class="step"><div class="sn sn-r">2</div><div class="st"><strong>i_links_count</strong> passe à 0. Sur EXT3/4 : les pointeurs de blocs dans l'inode sont <strong>effacés</strong>. Sur EXT2 : pointeurs conservés → récupération directe possible.</div></div>
+  <div class="step"><div class="sn sn-r">3</div><div class="st">Les bits dans les bitmaps blocs et inodes sont remis à 0 (libres). Les données restent sur le disque jusqu'à réécriture.</div></div>
+</div>
+<div class="formula">
+  <div><span class="f">Formule groupe</span> = (inode − 1) ÷ s_inodes_per_group (division entière)</div>
+  <div><span class="f">Index dans groupe</span> = (inode − 1) mod s_inodes_per_group</div>
+  <div><span class="f">Offset inode</span> = Début_table_inodes + index × taille_inode</div>
+</div>
+</div>
+
+<div class="tip">💡 <strong>Récupération EXT4</strong> : Utiliser le journal (contient les anciens pointeurs), le carving sur l'espace non alloué (PhotoRec, Scalpel), ou l'outil ext4magic. La journalisation EXT4 en <em>writeback</em> protège moins les données qu'en <em>data=ordered</em> ou <em>data=journal</em>.</div>
+
+<div class="footer"><span>CAS-IN · Forensique Numérique</span><span>EXT2 / EXT3 / EXT4</span><span>2025</span></div>
+</div>
+</div>
+</body>
+</html>

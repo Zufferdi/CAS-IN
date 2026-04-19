@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>HFS+ et APFS — Notes DFIR</title>
+<link rel="stylesheet" href="fiche.css">
+</head>
+<body>
+<div class="topnav">
+  <div style="display:flex;gap:.5rem;align-items:center">
+    <a href="index.html" class="tn-back">← Fiches</a>
+    <a href="../index.html" class="tn-home">🏠 Accueil</a>
+  </div>
+  <a href="../quiz.html" class="tn-quiz">💊 Lancer le quiz →</a>
+</div>
+<div style="margin:1.25rem 0;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+  <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Citation</span><br>
+  <em style="color:var(--text)">"HFS+ volumes contain rich metadata structures including B-Tree catalogs that store full path history, creation events, and resource forks — often revealing more than the user intended to preserve."</em><br>
+  <span style="font-size:.72rem;margin-top:.3rem;display:block">— Apple Inc., <em>Technical Note TN1150: HFS Plus Volume Format</em>, 2004</span>
+</div>
+<div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(240,192,64,.05);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
+  <span style="color:var(--gold);font-weight:700">🍎 Fun fact :</span> HFS a été créé en 1985 pour le Mac 512K. Il ne supportait que 65536 fichiers par volume. En 2017, Apple a enfin migré vers APFS — 32 ans après. La forensique des vieux Macs reste donc pertinente sur une carrière entière d'enquêteur.
+</div>
+<a href="../quiz.html" style="color:#ff8888;text-decoration:none;padding:.3rem .7rem;border:1px solid rgba(255,136,136,.35);border-radius:5px;background:rgba(255,136,136,.08)">💊 Lancer le quiz →</a>
+</div>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:#bc8cff">HFS+</div>
+  <div>
+    <div style="margin-bottom:.25rem"><span class="tag" style="background:rgba(188,140,255,.12);border-color:rgba(188,140,255,.3);color:#bc8cff">DFIR</span> <span class="tag" style="background:rgba(188,140,255,.12);border-color:rgba(188,140,255,.3);color:#bc8cff">macOS</span></div>
+    <div class="meta">HFS+ Big Endian · B-Trees · CNID · APFS Snapshots · Récupération macOS</div>
+  </div>
+</div>
+
+<div class="info">ℹ HFS+ est <strong>Big Endian</strong> — inverse de Windows. X-Ways convertit automatiquement, mais en lecture manuelle hex : inverser les octets de chaque valeur multi-octets.</div>
+<div class="sec">
+<div class="sec-title">HFS+ — Architecture B-Trees</div>
+<div class="zones" style="margin-bottom:.75rem">
+  <div class="zone z-gray">Bootblocks<span class="zl">512 o × 2</span></div>
+  <div class="zone z-orange">Volume Header<span class="zl">offset 1024</span></div>
+  <div class="zone z-blue">Catalog B-Tree<span class="zl">Tous les fichiers</span></div>
+  <div class="zone z-purple">Extents Overflow<span class="zl">Fichiers fragmentés</span></div>
+  <div class="zone z-green" style="flex:2">Données<span class="zl">Allocation Blocks</span></div>
+  <div class="zone z-orange">Alternate VH<span class="zl">−512 o depuis fin</span></div>
+</div>
+<div class="g2">
+  <div class="card card-orange">
+    <div class="ct">Volume Header (offset 1024)</div>
+    <ul>
+      <li>Signature : <span class="h h-orange">0x482B</span> = 'H+' (HFS+)</li>
+      <li>Signature journalisé : <span class="h h-orange">0x4858</span> = 'HX'</li>
+      <li>Taille : 512 octets</li>
+      <li>Contient : taille volume, nombre blocs, timestamps création/modification</li>
+      <li>Alternate VH : −512 octets depuis la fin du volume</li>
+    </ul>
+  </div>
+  <div class="card card-blue">
+    <div class="ct">CNID — Catalog Node ID</div>
+    <ul>
+      <li>Identifiant unique de chaque objet (≈ inode EXT)</li>
+      <li>CNID <strong>1</strong> : parent fictif de la racine</li>
+      <li>CNID <strong>2</strong> : répertoire racine du volume</li>
+      <li>CNID <strong>3</strong> : Extents Overflow File</li>
+      <li>CNID <strong>4</strong> : Attributes File</li>
+      <li>CNID <strong>5</strong> : Startup File</li>
+      <li>CNIDs normaux ≥ 16. Persistant même si le fichier est renommé.</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-title">Les 5 fichiers spéciaux B-Tree</div>
+<table class="tbl">
+<thead><tr><th>Fichier</th><th>CNID</th><th>Rôle forensique</th></tr></thead>
+<tbody>
+<tr class="hi"><td><strong>Catalog File</strong></td><td>-</td><td>Répertoire principal de tous les fichiers/dossiers. Source primaire de métadonnées. Nœuds résiduels après suppression → forensique.</td></tr>
+<tr><td><strong>Extents Overflow File</strong></td><td>3</td><td>Stocke les extents supplémentaires des fichiers très fragmentés (> 8 extents). Clé = (forkType + CNID + startBlock).</td></tr>
+<tr class="hi"><td><strong>Attributes File</strong></td><td>4</td><td>Attributs étendus et ACL. Équivalent NTFS $EA.</td></tr>
+<tr><td><strong>Startup File</strong></td><td>5</td><td>Données pour le démarrage (peu utilisé sur macOS moderne).</td></tr>
+<tr class="hi"><td><strong>Allocation File</strong></td><td>6</td><td>Bitmap d'allocation : 1 bit par Allocation Block. Équivalent $Bitmap NTFS.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="sec">
+<div class="sec-title">Suppression HFS+ et récupération</div>
+<div class="steps">
+  <div class="step"><div class="sn sn-r">1</div><div class="st">L'entrée du <strong>Catalog File B-Tree</strong> est supprimée. Mais les nœuds B-Tree non réalloués peuvent contenir des entrées résiduelles avec les métadonnées complètes.</div></div>
+  <div class="step"><div class="sn sn-r">2</div><div class="st">Les blocs sont marqués libres dans l'<strong>Allocation File</strong> (bitmap). Données non effacées jusqu'à réallocation.</div></div>
+  <div class="step"><div class="sn sn-r">3</div><div class="st">Si journalisation active : le journal peut contenir des versions antérieures des métadonnées. X-Ways 20.3+ supporte l'analyse directe des structures HFS+.</div></div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-title">APFS — Apple File System (depuis 2017)</div>
+<div class="g2">
+  <div class="card card-purple">
+    <div class="ct">Nouveautés APFS vs HFS+</div>
+    <ul>
+      <li><strong>Snapshots</strong> : états du volume à un instant T (copy-on-write)</li>
+      <li><strong>Clones</strong> : copies sans duplication immédiate des données</li>
+      <li><strong>Chiffrement</strong> multi-clés natif (par fichier ou par volume)</li>
+      <li>Optimisé SSD/Flash : réduction de l'usure</li>
+      <li>Container partagé entre plusieurs volumes</li>
+    </ul>
+  </div>
+  <div class="card card-green">
+    <div class="ct">Valeur forensique APFS</div>
+    <ul>
+      <li>Snapshots Time Machine : versions antérieures de fichiers chiffrés</li>
+      <li>X-Ways 20.3+ : analyse B-Trees APFS, fichiers supprimés, snapshots</li>
+      <li>Chiffrement → impossible sans clé (iCloud peut contenir la clé)</li>
+      <li>Mactime précision nanoseconde</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<div class="formula">
+  <div><span class="f">Extents Overflow</span> : clé = (forkType + CNID + startBlock). forkType 0x00 = data fork, 0xFF = resource fork.</div>
+  <div><span class="f">Resource Fork</span> : données Mac classiques (icônes, ressources). Présence = ancien système ou application rosettified.</div>
+</div>
+<div class="tip">💡 <strong>Tip :</strong> Sur Mac saisi avec chiffrement FileVault actif, la clé est en RAM. La capturer avant extinction. Si macOS est verrouillé : mode DFU ou accès iCloud Recovery Key.</div>
+
+<div class="footer"><span>CAS-IN · Forensique Numérique</span><span>HFS+ et APFS</span><span>2025</span></div>
+</div>
+</div>
+</body>
+</html>

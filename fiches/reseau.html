@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Réseau · Adressage IP · Infrastructure · DNS — Notes DFIR</title>
+<link rel="stylesheet" href="fiche.css">
+</head>
+<body>
+<div class="topnav">
+  <div style="display:flex;gap:.5rem;align-items:center">
+    <a href="index.html" class="tn-back">← Fiches</a>
+    <a href="../index.html" class="tn-home">🏠 Accueil</a>
+  </div>
+  <a href="../quiz.html" class="tn-quiz">💊 Lancer le quiz →</a>
+</div>
+<div style="margin:1.25rem 0;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+  <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Citation</span><br>
+  <em style="color:var(--text)">"A reliable, robust network requires careful attention to protocol design at each layer. Weaknesses in any layer propagate upward; a compromise at layer 2 undermines all security assumptions built at layer 7."</em><br>
+  <span style="font-size:.72rem;margin-top:.3rem;display:block">— Vint Cerf & Robert Kahn, <em>A Protocol for Packet Network Intercommunication</em>, IEEE, 1974</span>
+</div>
+<div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(240,192,64,.05);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
+  <span style="color:var(--gold);font-weight:700">📡 Fun fact BGP :</span> Le 24 février 2008, Pakistan Telecom a accidentellement annoncé les préfixes BGP de YouTube au monde entier pour "bloquer" le site localement. Résultat : YouTube était inaccessible dans le monde entier pendant ~2h. Un seul opérateur, une erreur de config, et 1 milliard d'utilisateurs coupés. C'est ça, BGP.
+</div>
+<a href="../quiz.html" style="color:#ff8888;text-decoration:none;padding:.3rem .7rem;border:1px solid rgba(255,136,136,.35);border-radius:5px;background:rgba(255,136,136,.08)">💊 Lancer le quiz →</a>
+</div>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:#58a6ff">RÉSEAU</div>
+  <div>
+    <div style="margin-bottom:.25rem"><span class="tag tag-blue">DFIR</span> <span class="tag tag-blue">Réseau</span> <span class="tag tag-blue">OSINT</span></div>
+    <div class="meta">IPv4 · Ports · TCP flags · DNS forensique · DHCP · Beaconing C2 · BGP · Pivots réseau</div>
+  </div>
+</div>
+
+<div class="sec">
+<div class="ch-header">Adressage IP et protocoles fondamentaux</div>
+<div class="g2">
+  <div class="card card-blue">
+    <div class="ct">IPv4 — Classes et adresses spéciales</div>
+    <ul>
+      <li>Adresses privées (RFC 1918) : <span class="h h-blue">10.0.0.0/8</span> · <span class="h h-blue">172.16.0.0/12</span> · <span class="h h-blue">192.168.0.0/16</span></li>
+      <li>Loopback : <span class="h h-blue">127.0.0.1</span> · Broadcast : <span class="h h-blue">255.255.255.255</span></li>
+      <li>Multicast : <span class="h h-blue">224.0.0.0/4</span> (224 à 239)</li>
+      <li>APIPA : <span class="h h-orange">169.254.0.0/16</span> → pas de DHCP → anomalie</li>
+      <li>NAT : plusieurs machines partagent une IP publique → IP seule insuffisante pour identifier</li>
+    </ul>
+  </div>
+  <div class="card card-green">
+    <div class="ct">Ports essentiels</div>
+    <table style="width:100%;font-size:.75rem;border-collapse:collapse">
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.2rem"><span class="h h-green">21</span></td><td>FTP</td><td><span class="h h-green">22</span></td><td>SSH</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.2rem"><span class="h h-green">25</span></td><td>SMTP</td><td><span class="h h-green">53</span></td><td>DNS (UDP)</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.2rem"><span class="h h-green">80</span></td><td>HTTP</td><td><span class="h h-green">443</span></td><td>HTTPS</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.2rem"><span class="h h-green">110</span></td><td>POP3</td><td><span class="h h-green">143</span></td><td>IMAP</td></tr>
+      <tr><td style="padding:.2rem"><span class="h h-green">445</span></td><td>SMB</td><td><span class="h h-green">3389</span></td><td>RDP</td></tr>
+    </table>
+  </div>
+</div>
+<div class="g2" style="margin-top:.75rem">
+  <div class="card card-orange">
+    <div class="ct">TCP 3-way handshake</div>
+    <p>Client → SYN → Serveur<br>
+    Serveur → SYN-ACK → Client<br>
+    Client → ACK → Serveur</p>
+    <p style="margin-top:.3rem"><strong>Flags forensiques :</strong><br>
+    <span class="h h-orange">RST</span> = connexion refusée / scan de ports<br>
+    <span class="h h-orange">FIN</span> = fermeture gracieuse<br>
+    <span class="h h-green">SYN seul</span> = scan SYN (Nmap)</p>
+  </div>
+  <div class="card card-purple">
+    <div class="ct">TTL — Fingerprinting OS</div>
+    <ul>
+      <li>Windows : TTL initial = <strong>128</strong></li>
+      <li>Linux : TTL initial = <strong>64</strong></li>
+      <li>Cisco : TTL initial = <strong>255</strong></li>
+      <li>TTL observé < valeur initiale → nombre de hops traversés</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<div class="ch-header">DNS, protocoles et forensique réseau</div>
+<div class="g2">
+  <div class="card card-blue">
+    <div class="ct">DNS — Sources forensiques</div>
+    <ul>
+      <li><strong>pDNS (Passive DNS)</strong> : historique des résolutions archivé. Retrouver l'IP d'un domaine avant Cloudflare.</li>
+      <li><strong>Cache poisoning</strong> : injection de fausses réponses pour rediriger les utilisateurs</li>
+      <li><strong>DNS over HTTPS (DoH)</strong> : port 443 — protège la vie privée mais complique la forensique</li>
+      <li><strong>DGA (Domain Generation Algorithm)</strong> : malwares génèrent des milliers de noms → entropie élevée</li>
+      <li>Outils pDNS : SecurityTrails · VirusTotal · RiskIQ/PassiveTotal</li>
+    </ul>
+  </div>
+  <div class="card card-green">
+    <div class="ct">DHCP — Pivot réseau</div>
+    <ul>
+      <li>Logs DHCP = adresse MAC + IP privée + timestamp + nom d'hôte</li>
+      <li>Pivot NAT → machine précise : logs DHCP + logs routeur</li>
+      <li>APIPA 169.254.x.x = pas de DHCP = machine non sur réseau d'entreprise</li>
+    </ul>
+  </div>
+  <div class="card card-orange">
+    <div class="ct">Beaconing C2</div>
+    <ul>
+      <li>Connexions régulières à intervalle fixe vers un serveur C2</li>
+      <li>Jitter : variation aléatoire ±20% pour imiter le trafic légitime</li>
+      <li>Indicateurs : interval régulier + payload minimal + user-agent absent + IP sans rDNS</li>
+      <li>Détection : NetFlow, proxy logs, NGFW application_name</li>
+    </ul>
+  </div>
+  <div class="card card-red">
+    <div class="ct">BGP & Infrastructure</div>
+    <ul>
+      <li><strong>ASN</strong> (Autonomous System Number) : identifie l'organisation gérant un bloc d'IP</li>
+      <li><strong>BGP Hijacking</strong> : détournement de routes → interception ou blackhole de trafic</li>
+      <li><strong>WHOIS port 43/TCP</strong> : registres de domaines et IP (RIR : RIPE NCC en Europe)</li>
+      <li><strong>Shodan</strong> : <code>org:"Nom" ssl:"domain.com"</code> pour cartographier une infrastructure</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<div class="ch-header">Infrastructure, DNS et pivots OSINT</div>
+<div class="g2">
+  <div class="card card-purple">
+    <div class="ct">Techniques de pivot réseau</div>
+    <ul>
+      <li><strong>Favicon hash</strong> (MurmurHash3) : Shodan indexe les icônes → <code>http.favicon.hash:XXXXXX</code></li>
+      <li><strong>NS partagés</strong> : plusieurs domaines malveillants avec même nameserver = même acteur</li>
+      <li><strong>Certificate Transparency</strong> (crt.sh) : sous-domaines de dev/staging souvent exposés</li>
+      <li><strong>JARM fingerprint</strong> : empreinte du serveur TLS → identification d'infrastructure</li>
+    </ul>
+  </div>
+  <div class="card card-gold">
+    <div class="ct">Contourner Cloudflare</div>
+    <ul>
+      <li>pDNS historique (avant mise en place de Cloudflare)</li>
+      <li>SPF/DKIM records (révèlent l'IP du serveur mail)</li>
+      <li>CT logs : certificats émis avant Cloudflare</li>
+      <li>Sous-domaines qui bypass Cloudflare (mail., dev., etc.)</li>
+      <li>shodan.io avec SSL certificate</li>
+    </ul>
+  </div>
+</div>
+</div>
+<div class="tip">💡 <strong>Tip :</strong> Une adresse IP publique identifie un opérateur (FAI, hébergeur), pas un individu. Pour remonter à la machine précise derrière un NAT : logs DHCP du routeur (MAC + timestamp) + logs du FAI (IP publique + port source NAT). Ces deux sources ensemble permettent l'identification.</div>
+
+<div class="footer"><span>CAS-IN · Forensique Numérique</span><span>Réseau · Adressage IP · Infrastructure · DNS</span><span>2025</span></div>
+</div>
+</div>
+</body>
+</html>

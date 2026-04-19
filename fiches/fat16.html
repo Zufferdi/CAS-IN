@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAT16 — Notes DFIR</title>
+<style>
+
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@700;800&display=swap');
+  :root{--bg:#060b12;--surface:#0c1422;--surface2:#101c30;--border:#1a2d4a;--text:#ccd8f0;--dim:#6a80a8;--cyan:#00e5cc;--gold:#f0c040;--red:#ff4060;--green:#30e88a;--purple:#a78bfa;--orange:#f0883e;--blue:#58a6ff;--mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;padding:0;line-height:1.6}
+  .topnav{display:flex;align-items:center;justify-content:space-between;padding:.55rem 1.25rem;background:rgba(6,11,18,.97);border-bottom:1px solid var(--border);font-size:.75rem;flex-wrap:wrap;gap:.5rem;position:sticky;top:0;z-index:100;backdrop-filter:blur(8px)}
+  .topnav a{text-decoration:none;padding:.3rem .75rem;border-radius:5px;border:1px solid;transition:.15s;font-weight:600}
+  .topnav a:hover{filter:brightness(1.2)}
+  .tn-back{color:var(--cyan);border-color:rgba(0,229,204,.35);background:rgba(0,229,204,.07)}
+  .tn-home{color:var(--dim);border-color:rgba(106,128,168,.25);background:transparent}
+  .tn-quiz{color:#ff8888;border-color:rgba(255,64,96,.35);background:rgba(255,64,96,.07)}
+  .page{max-width:960px;margin:0 auto;padding:1.75rem 2rem}
+  .header{display:flex;align-items:baseline;gap:1rem;margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+  .badge{font-family:var(--sans);font-size:2.2rem;font-weight:800;letter-spacing:-1px}
+  .meta{font-size:.75rem;color:var(--dim)}
+  .tag{display:inline-block;padding:.15rem .5rem;border-radius:4px;font-size:.7rem;font-weight:600;letter-spacing:.05em;border:1px solid}
+  .tag-cyan{background:rgba(0,229,204,.1);border-color:rgba(0,229,204,.3);color:var(--cyan)}
+  .tag-green{background:rgba(48,232,138,.1);border-color:rgba(48,232,138,.3);color:var(--green)}
+  .tag-gold{background:rgba(240,192,64,.1);border-color:rgba(240,192,64,.3);color:var(--gold)}
+  .tag-red{background:rgba(255,64,96,.1);border-color:rgba(255,64,96,.3);color:var(--red)}
+  .tag-purple{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:var(--purple)}
+  .sec{margin-bottom:1.75rem}
+  .sec-title{font-family:var(--sans);font-size:.7rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+  .sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+  .ch-header{font-family:var(--sans);font-size:1rem;font-weight:700;color:var(--text);margin-bottom:.6rem;padding:.5rem 0;border-bottom:1px solid var(--border)}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+  .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.9rem 1rem;position:relative;overflow:hidden}
+  .card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+  .card-cyan::before,.card-blue::before{background:var(--cyan)}
+  .card-green::before{background:var(--green)}
+  .card-gold::before{background:var(--gold)}
+  .card-red::before{background:var(--red)}
+  .card-purple::before{background:var(--purple)}
+  .card-orange::before{background:var(--orange)}
+  .ct{font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.4rem}
+  .card-cyan .ct,.card-blue .ct{color:var(--cyan)}
+  .card-green .ct{color:var(--green)}
+  .card-gold .ct{color:var(--gold)}
+  .card-red .ct{color:var(--red)}
+  .card-purple .ct{color:var(--purple)}
+  .card-orange .ct{color:var(--orange)}
+  .card p,.card li{font-size:.8rem;line-height:1.55;color:var(--text)}
+  .card ul{padding-left:1rem}
+  .card li{margin-bottom:.2rem}
+  .h{display:inline-block;background:var(--surface2);border:1px solid var(--border);padding:.03rem .4rem;border-radius:4px;font-size:.78em;font-weight:700;letter-spacing:.03em}
+  .h-cyan,.h-blue{color:var(--cyan)}.h-green{color:var(--green)}.h-gold{color:var(--gold)}.h-red{color:var(--red)}.h-purple{color:var(--purple)}.h-orange{color:var(--orange)}
+  /* aliases anciens noms de classes hex */
+  .hex{display:inline-block;background:var(--surface2);border:1px solid var(--border);padding:.03rem .4rem;border-radius:4px;font-size:.78em;font-weight:700;letter-spacing:.03em;color:var(--red)}
+  .hex-blue{color:var(--cyan)}.hex-green{color:var(--green)}.hex-orange{color:var(--orange)}.hex-purple{color:var(--purple)}
+  .tbl{width:100%;border-collapse:collapse;font-size:.78rem}
+  .tbl th{background:var(--surface2);color:var(--dim);font-size:.65rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.55rem .9rem;text-align:left;border-bottom:1px solid var(--border)}
+  .tbl td{padding:.55rem .9rem;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.4}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl tr:hover td{background:var(--surface2)}
+  .tbl .hi{background:rgba(0,229,204,.04)}
+  .steps{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .step{display:flex;align-items:flex-start;gap:.9rem;padding:.75rem 1rem;border-bottom:1px solid var(--border);transition:background .15s}
+  .step:last-child{border-bottom:none}
+  .step:hover{background:var(--surface2)}
+  .sn{width:22px;height:22px;border-radius:50%;font-size:.68rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.05rem}
+  .sn-c,.sn-b{background:rgba(0,229,204,.15);border:1px solid rgba(0,229,204,.4);color:var(--cyan)}
+  .sn-g{background:rgba(48,232,138,.15);border:1px solid rgba(48,232,138,.4);color:var(--green)}
+  .sn-r{background:rgba(255,64,96,.15);border:1px solid rgba(255,64,96,.4);color:var(--red)}
+  .step-num{width:22px;height:22px;border-radius:50%;font-size:.68rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.05rem;background:rgba(0,229,204,.15);border:1px solid rgba(0,229,204,.4);color:var(--cyan)}
+  .step-num.blue{background:rgba(0,229,204,.15);border-color:rgba(0,229,204,.4);color:var(--cyan)}
+  .step-num.red,.step-num.sn-r{background:rgba(255,64,96,.15);border-color:rgba(255,64,96,.4);color:var(--red)}
+  .st,.step-text{font-size:.8rem;line-height:1.5;color:var(--text)}
+  .formula,.formula-box{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;padding:.7rem 1rem;font-size:.8rem;margin-top:.6rem;line-height:1.7}
+  .formula .f,.formula-box .f{color:var(--cyan);font-weight:600}
+  .alert{background:rgba(255,64,96,.07);border:1px solid rgba(255,64,96,.3);border-radius:8px;padding:.7rem 1rem;font-size:.8rem;color:var(--red);margin-bottom:1rem}
+  .info{background:rgba(0,229,204,.06);border:1px solid rgba(0,229,204,.25);border-radius:8px;padding:.7rem 1rem;font-size:.8rem;color:var(--cyan);margin-bottom:1rem}
+  .tip{background:rgba(240,192,64,.06);border:1px solid rgba(240,192,64,.25);border-radius:8px;padding:.7rem 1rem;font-size:.8rem;color:var(--gold);margin-top:.6rem}
+  .zones,.layout{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:.72rem;font-weight:600}
+  .zone,.layout-block{flex:1;padding:.6rem .4rem;text-align:center;border-right:1px solid var(--border);transition:filter .15s}
+  .zone:last-child,.layout-block:last-child{border-right:none}
+  .zone:hover,.layout-block:hover{filter:brightness(1.25)}
+  .zl,.layout-label{display:block;font-size:.6rem;color:var(--dim);margin-top:.15rem;font-weight:400}
+  .z-cyan,.lb-boot,.lb-fat,.z-blue{background:rgba(0,229,204,.08);color:var(--cyan)}
+  .z-green,.lb-data,.z-bootcp{background:rgba(48,232,138,.08);color:var(--green)}
+  .z-gold{background:rgba(240,192,64,.08);color:var(--gold)}
+  .z-orange,.lb-bootcp{background:rgba(240,136,62,.08);color:var(--orange)}
+  .z-purple{background:rgba(167,139,250,.08);color:var(--purple)}
+  .z-red{background:rgba(255,64,96,.08);color:var(--red)}
+  .z-gray{background:rgba(106,128,168,.06);color:var(--dim)}
+  .compare-table,.lfn-table,.attr-table,.offset-table{width:100%;border-collapse:collapse;font-size:.78rem}
+  .compare-table th,.lfn-table th,.attr-table th,.offset-table th{background:var(--surface2);color:var(--dim);font-size:.65rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.55rem .9rem;text-align:left;border-bottom:1px solid var(--border)}
+  .compare-table td,.lfn-table td,.attr-table td,.offset-table td{padding:.55rem .9rem;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.4}
+  .compare-table tr:last-child td,.lfn-table tr:last-child td,.attr-table tr:last-child td,.offset-table tr:last-child td{border-bottom:none}
+  .compare-table tr:hover td,.lfn-table tr:hover td,.attr-table tr:hover td,.offset-table tr:hover td{background:var(--surface2)}
+  .offset-table .hi{background:rgba(0,229,204,.04)}
+  .v-fat32{color:var(--orange);font-weight:600}.v-exfat{color:var(--cyan);font-weight:600}
+  .runlist-example{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem;font-size:.8rem;margin-top:.75rem}
+  .rl-header{color:var(--orange)}.rl-len{color:var(--purple)}.rl-lcn{color:var(--cyan)}.rl-term{color:var(--dim)}
+  .mft-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:.72rem}
+  .mft-cell{padding:.55rem .5rem;border-right:1px solid var(--border);border-bottom:1px solid var(--border);text-align:center;cursor:default;transition:filter .15s}
+  .mft-cell:hover{filter:brightness(1.4)}
+  .mft-cell:nth-child(4n){border-right:none}
+  .mft-cell:nth-last-child(-n+4){border-bottom:none}
+  .mc-sys{background:rgba(48,232,138,.08);color:var(--green)}
+  .mc-meta{background:rgba(0,229,204,.08);color:var(--cyan)}
+  .mc-ext{background:rgba(167,139,250,.08);color:var(--purple)}
+  .mc-free{background:rgba(106,128,168,.05);color:var(--dim)}
+  .mft-num{font-size:.65rem;opacity:.7;margin-bottom:.15rem}
+  .mft-name{font-weight:600}
+  .mft-desc{font-size:.62rem;color:var(--dim);margin-top:.15rem;font-weight:400}
+  .entry-seq{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:.75rem;font-weight:700}
+  .entry-block{flex:1;padding:.7rem .5rem;text-align:center;border-right:1px solid var(--border)}
+  .entry-block:last-child{border-right:none}
+  .eb-primary{background:rgba(0,229,204,.1);color:var(--cyan)}
+  .eb-stream{background:rgba(167,139,250,.1);color:var(--purple)}
+  .eb-name{background:rgba(48,232,138,.08);color:var(--green)}
+  .eb-name2{background:rgba(48,232,138,.05);color:var(--green);opacity:.7}
+  .entry-label{display:block;font-size:.62rem;color:var(--dim);margin-top:.15rem;font-weight:400}
+  .disk-order,.kv{display:flex;align-items:baseline;gap:.5rem;margin-bottom:.25rem;font-size:.8rem}
+  .kv-key{color:var(--dim);font-size:.7rem}
+  .disk-order{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-top:.75rem;font-size:.8rem;flex-direction:column}
+  .disk-order-label{font-size:.65rem;color:var(--dim);font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.6rem}
+  .disk-row{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+  .disk-entry{padding:.3rem .7rem;border-radius:5px;font-size:.78rem;font-weight:600;border:1px solid}
+  .disk-entry.last-lfn{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.4);color:var(--purple)}
+  .disk-entry.lfn{background:rgba(0,229,204,.1);border-color:rgba(0,229,204,.35);color:var(--cyan)}
+  .disk-entry.sfn{background:rgba(240,136,62,.1);border-color:rgba(240,136,62,.4);color:var(--orange)}
+  .disk-arrow{color:var(--dim);font-size:.9rem}
+  .disk-note{font-size:.72rem;color:var(--dim);margin-top:.5rem}
+  .footer{margin-top:2rem;padding-top:.75rem;border-top:1px solid var(--border);font-size:.65rem;color:var(--dim);display:flex;justify-content:space-between}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .page{animation:fadeIn .3s ease}
+  @media(max-width:640px){.g2,.g3{grid-template-columns:1fr}.zones,.layout{flex-wrap:wrap}.mft-grid{grid-template-columns:repeat(2,1fr)}.page{padding:1rem}}
+
+</style>
+</head>
+<body>
+<div class="topnav">
+  <div style="display:flex;gap:.5rem;align-items:center">
+    <a href="index.html" class="tn-back">← Fiches</a>
+    <a href="../index.html" class="tn-home">🏠 Accueil</a>
+  </div>
+  <a href="../quiz.html" class="tn-quiz">💊 Lancer le quiz →</a>
+</div>
+<div class="page">
+<a href="../quiz.html" style="color:#ff8888;text-decoration:none;padding:.3rem .7rem;border:1px solid rgba(255,136,136,.35);border-radius:5px;background:rgba(255,136,136,.08)">💊 Lancer le quiz →</a>
+</div>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="fs-badge">FAT16</div>
+    <div>
+      <div><span class="tag">DFIR</span> <span class="tag">Filesystem</span></div>
+      <div class="header-meta" style="margin-top:0.3rem;">File Allocation Table — 16 bits par entrée</div>
+    </div>
+  </div>
+
+  <!-- Structure on-disk -->
+  <div class="section">
+    <div class="section-title">Structure on-disk</div>
+    <div class="layout">
+      <div class="layout-block mbr">MBR<span class="layout-label">Master Boot Record</span></div>
+      <div class="layout-block reserved">Reserved<span class="layout-label">Secteurs réservés</span></div>
+      <div class="layout-block boot">Boot Record<span class="layout-label">VBR / BPB</span></div>
+      <div class="layout-block fat1">FAT1<span class="layout-label">Primaire</span></div>
+      <div class="layout-block fat2">FAT2<span class="layout-label">Miroir</span></div>
+      <div class="layout-block rootdir">Root Dir<span class="layout-label">Répertoire racine</span></div>
+      <div class="layout-block data">Data<span class="layout-label">Clusters 2, 3, 4…</span></div>
+    </div>
+  </div>
+
+  <!-- Infos clés -->
+  <div class="section">
+    <div class="section-title">Concepts clés</div>
+    <div class="card-grid">
+
+      <div class="card blue">
+        <div class="card-title">SFN / LFN</div>
+        <p>Chaque fichier possède une entrée <strong>SFN</strong> (8.3) et zéro ou plusieurs entrées <strong>LFN</strong>.<br>
+        Le champ <em>starting cluster</em> du SFN donne le <strong>n° du 1er cluster</strong> de données du fichier.
+        SFN + LFN du même fichier sont <strong>contigus</strong> dans le répertoire.</p>
+      </div>
+
+      <div class="card orange">
+        <div class="card-title">Chaînage FAT</div>
+        <p>FAT1 et FAT2 sont <strong>identiques</strong> (FAT2 = miroir de sécurité).<br>
+        Le chaînage FAT est la <strong>suite des entrées</strong> pointant d'un cluster au suivant, jusqu'à la valeur de fin de chaîne <span class="hex">0xFFFF</span>.</p>
+      </div>
+
+      <div class="card green">
+        <div class="card-title">Entrée FAT</div>
+        <p>Une entrée FAT = <strong>2 octets (16 bits)</strong> → d'où le nom FAT<strong>16</strong>.<br>
+        L'index de FAT1 commence à <span class="hex">0x00</span> mais les clusters <strong>0 et 1 sont réservés</strong>.<br>
+        Les données commencent au <strong>cluster 2</strong>.</p>
+      </div>
+
+      <div class="card purple">
+        <div class="card-title">Valeurs spéciales FAT</div>
+        <p>
+          <span class="kv"><span class="kv-key">Libre :</span><span class="kv-val"><span class="hex">0x0000</span></span></span>
+          <span class="kv"><span class="kv-key">Réservé :</span><span class="kv-val"><span class="hex">0x0001</span></span></span>
+          <span class="kv"><span class="kv-key">Cluster suivant :</span><span class="kv-val"><span class="hex">0x0002</span>–<span class="hex">0xFFEF</span></span></span>
+          <span class="kv"><span class="kv-key">Fin de chaîne :</span><span class="kv-val"><span class="hex">0xFFF8</span>–<span class="hex">0xFFFF</span></span></span>
+          <span class="kv"><span class="kv-key">Secteur défectueux :</span><span class="kv-val"><span class="hex">0xFFF7</span></span></span>
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Effacement -->
+  <div class="section">
+    <div class="section-title">Effacement d'un fichier</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          La <strong>1ère lettre du nom</strong> dans l'entrée SFN est remplacée par <span class="hex">0xE5</span> (marqueur de suppression).
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          Toutes les <strong>entrées LFN</strong> associées reçoivent également <span class="hex">0xE5</span> à leur premier octet.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          Le <strong>chaînage des clusters</strong> dans la FAT est remis à <span class="hex">0x0000</span> (clusters marqués libres) — les <strong>données ne sont pas effacées</strong>, ce qui permet la récupération forensique.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Entrées LFN -->
+
+
+  <div class="footer">
+    <span>Police Valaisanne · DFIR</span>
+    <span>FAT16 Filesystem Internals</span>
+    <span>2025</span>
+  </div>
+
+</div>
+</div>
+</body>
+</html>

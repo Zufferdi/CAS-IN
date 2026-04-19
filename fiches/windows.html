@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Windows — Registre · Artefacts · Event Logs — Notes DFIR</title>
+<link rel="stylesheet" href="fiche.css">
+</head>
+<body>
+<div class="topnav">
+  <div style="display:flex;gap:.5rem;align-items:center">
+    <a href="index.html" class="tn-back">← Fiches</a>
+    <a href="../index.html" class="tn-home">🏠 Accueil</a>
+  </div>
+  <a href="../quiz.html" class="tn-quiz">💊 Lancer le quiz →</a>
+</div>
+<div style="margin:1.25rem 0;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+  <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Citation</span><br>
+  <em style="color:var(--text)">"The Windows Registry is a forensic gold mine. It records not just current configuration but the residue of past configuration — timestamps of last writes, deleted keys still visible in slack space, and artefacts of programs long since uninstalled."</em><br>
+  <span style="font-size:.72rem;margin-top:.3rem;display:block">— Harlan Carvey, <em>Windows Registry Forensics</em>, 2e éd., Syngress, 2016</span>
+</div>
+<div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(240,192,64,.05);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
+  <span style="color:var(--gold);font-weight:700">🕵 Anecdote BTK (2005) :</span> Dennis Rader a été identifié via les métadonnées Word d'un fichier .doc envoyé à la police. Le fichier contenait le nom "Dennis" dans les propriétés du document et le nom de l'église "Christ Lutheran Church" dans les métadonnées de l'imprimante. Rader avait utilisé l'ordinateur de l'église.
+</div>
+<a href="../quiz.html" style="color:#ff8888;text-decoration:none;padding:.3rem .7rem;border:1px solid rgba(255,136,136,.35);border-radius:5px;background:rgba(255,136,136,.08)">💊 Lancer le quiz →</a>
+</div>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:#30e88a">WIN</div>
+  <div>
+    <div style="margin-bottom:.25rem"><span class="tag tag-green">DFIR</span> <span class="tag tag-green">Windows</span> <span class="tag tag-green">Registre</span></div>
+    <div class="meta">Ruches · USBSTOR · Prefetch · Amcache · ShellBags · LNK · VSS · Event IDs essentiels</div>
+  </div>
+</div>
+
+<div class="sec">
+<div class="ch-header">Windows — Registre et artefacts</div>
+<div class="g2">
+  <div class="card card-blue">
+    <div class="ct">Ruches système (C:\Windows\System32\Config\)</div>
+    <ul>
+      <li><strong>SYSTEM</strong> : config matérielle, services, réseau, USB connectés</li>
+      <li><strong>SOFTWARE</strong> : logiciels installés, clés licence, programmes récents</li>
+      <li><strong>SAM</strong> : comptes locaux, hashes mots de passe, dates connexion</li>
+      <li><strong>SECURITY</strong> : politiques locales, droits, audit</li>
+      <li><strong>DEFAULT</strong> : profil par défaut nouveaux utilisateurs</li>
+    </ul>
+  </div>
+  <div class="card card-green">
+    <div class="ct">Ruches utilisateur</div>
+    <ul>
+      <li><strong>NTUSER.DAT</strong> : C:\Users\&lt;nom&gt;\ — préférences utilisateur</li>
+      <li><strong>USRCLASS.DAT</strong> : C:\Users\&lt;nom&gt;\AppData\Local\Microsoft\Windows\ — ShellBags !</li>
+      <li>HKCU = référence NTUSER.DAT chargé</li>
+      <li>Modifiable SANS droits administrateur → malwares sans élévation</li>
+    </ul>
+  </div>
+</div>
+<table class="tbl" style="margin-top:.75rem">
+<thead><tr><th>Artefact</th><th>Chemin de registre</th><th>Valeur forensique</th></tr></thead>
+<tbody>
+<tr class="hi"><td><strong>USBSTOR</strong></td><td>HKLM\SYSTEM\CurrentControlSet\Enum\USBSTOR</td><td>Historique USB : fabricant, modèle, n° série, timestamps 1ère connexion</td></tr>
+<tr><td><strong>Run Keys</strong></td><td>HKLM & HKCU\SOFTWARE\...\CurrentVersion\Run</td><td>Persistance. HKCU = sans droits admin. Malwares ciblent HKCU.</td></tr>
+<tr class="hi"><td><strong>UserAssist</strong></td><td>HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist</td><td>Programmes lancés via GUI. Données ROT13.</td></tr>
+<tr><td><strong>ShimCache</strong></td><td>HKLM\SYSTEM\...\AppCompatCache</td><td>Exécutable présent sur le système (pas forcément exécuté)</td></tr>
+<tr class="hi"><td><strong>MountPoints2</strong></td><td>HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2</td><td>Volumes montés par l'utilisateur</td></tr>
+<tr><td><strong>NetworkList</strong></td><td>HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\NetworkList</td><td>Réseaux WiFi historiques avec SSID et dates</td></tr>
+<tr class="hi"><td><strong>Services</strong></td><td>HKLM\SYSTEM\CurrentControlSet\Services</td><td>Services persistants. Type=1 = Kernel Driver (rootkit potentiel)</td></tr>
+<tr><td><strong>WMI Repository</strong></td><td>C:\Windows\System32\wbem\Repository\</td><td>Persistance furtive WMI — absent des Run Keys et Services</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="sec">
+<div class="ch-header">Windows — Artefacts d'exécution</div>
+<div class="g3">
+  <div class="card card-orange">
+    <div class="ct">Prefetch (.pf)</div>
+    <ul>
+      <li>Chemin : C:\Windows\Prefetch\</li>
+      <li>Prouve l'<strong>exécution</strong> d'un programme</li>
+      <li>Contient : timestamps (jusqu'à 8), compteur lancements, DLL chargées</li>
+      <li><strong>Désactivé</strong> sur Windows Server</li>
+      <li>Outil : <strong>PECmd</strong> (Zimmerman)</li>
+    </ul>
+  </div>
+  <div class="card card-blue">
+    <div class="ct">Amcache.hve</div>
+    <ul>
+      <li>Chemin : C:\Windows\AppCompat\Programs\</li>
+      <li>Hash <strong>SHA-1</strong> des exécutables</li>
+      <li>Prouve la <strong>présence physique</strong> du binaire sur le disque</li>
+      <li>Persiste après désinstallation</li>
+      <li>Outil : AmcacheParser (Zimmerman)</li>
+    </ul>
+  </div>
+  <div class="card card-green">
+    <div class="ct">LNK & Jump Lists</div>
+    <ul>
+      <li>LNK : C:\...\AppData\Roaming\Microsoft\Windows\Recent\</li>
+      <li>Contient : chemin cible, Volume Serial Number, timestamps cible</li>
+      <li>Prouve l'accès à un fichier même si supprimé</li>
+      <li>Jump Lists : AutomaticDestinations & CustomDestinations</li>
+      <li>Outil : <strong>LECmd</strong> (Zimmerman)</li>
+    </ul>
+  </div>
+  <div class="card card-purple">
+    <div class="ct">ShellBags (USRCLASS.DAT)</div>
+    <ul>
+      <li>Mémorise les dossiers <strong>explorés via l'interface graphique</strong></li>
+      <li>Survive à la suppression des dossiers explorés</li>
+      <li>Prouve la navigation humaine (≠ malware)</li>
+      <li>Outil : <strong>ShellBagsExplorer</strong> (Zimmerman)</li>
+    </ul>
+  </div>
+  <div class="card card-red">
+    <div class="ct">$I30 Résiduel (NTFS)</div>
+    <ul>
+      <li>$INDEX_ALLOCATION d'un répertoire = B-Tree</li>
+      <li>Après suppressions, des nœuds orphelins subsistent</li>
+      <li>Révèle les fichiers supprimés même si MFT réalloué</li>
+      <li>Outil : X-Ways, Autopsy, indxparser</li>
+    </ul>
+  </div>
+  <div class="card card-gold">
+    <div class="ct">VSS (Volume Shadow Copies)</div>
+    <ul>
+      <li>Snapshots copy-on-write automatiques</li>
+      <li>Accès : <code>\\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1</code></li>
+      <li><strong>Ransomwares suppriment les VSS en premier</strong></li>
+      <li>Commande : <code>vssadmin list shadows</code></li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<div class="ch-header">Windows — Event Logs (.evtx)</div>
+<div class="g2">
+  <div class="card card-blue">
+    <div class="ct">Event IDs essentiels</div>
+    <table style="width:100%;font-size:.75rem;border-collapse:collapse">
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.3rem .4rem"><span class="h h-blue">4624</span></td><td>Connexion réussie (type 2=local, 3=réseau, 10=RDP)</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.3rem .4rem"><span class="h h-red">4625</span></td><td>Échec d'authentification → brute force ?</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.3rem .4rem"><span class="h h-orange">4688</span></td><td>Création d'un processus (audit requis)</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.3rem .4rem"><span class="h h-purple">4698</span></td><td>Tâche planifiée créée → persistance ?</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.3rem .4rem"><span class="h h-red">7045</span></td><td>Nouveau service installé → rootkit ?</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.3rem .4rem"><span class="h h-blue">4720</span></td><td>Création d'un compte utilisateur</td></tr>
+      <tr style="border-bottom:1px solid var(--border)"><td style="padding:.3rem .4rem"><span class="h h-orange">4663</span></td><td>Accès à un objet (audit fichiers)</td></tr>
+      <tr><td style="padding:.3rem .4rem"><span class="h h-red">1102</span></td><td>Log Security effacé (Security.evtx)</td></tr>
+    </table>
+  </div>
+  <div class="card card-green">
+    <div class="ct">Corrélation multi-sources</div>
+    <p><strong>Scénario type :</strong> 4624 (connexion réseau) + ShellBag créé même instant + Prefetch horodaté = tableau cohérent difficile à contester.</p>
+    <p style="margin-top:.4rem"><strong>Effacement paradoxal :</strong> Event ID 1102 (log effacé) est lui-même journalisé si l'audit est actif.</p>
+    <p style="margin-top:.4rem"><strong>Logs alternatifs :</strong> Chercher IIS, Apache, antivirus — souvent oubliés par l'attaquant.</p>
+    <p style="margin-top:.4rem;font-size:.75rem;color:var(--muted)">Outil : <strong>EvtxECmd</strong> (Zimmerman) → export CSV pour analyse temporelle</p>
+  </div>
+</div>
+</div>
+<div class="tip">💡 <strong>Suite Eric Zimmerman (gratuite)</strong> : PECmd · MFTECmd · LECmd · ShellBagsExplorer · EvtxECmd · AmcacheParser · AppCompatCacheParser. Standard de facto DFIR Windows. Citer l'outil dans le rapport renforce la crédibilité judiciaire.</div>
+
+<div class="footer"><span>CAS-IN · Forensique Numérique</span><span>Windows — Registre · Artefacts · Event Logs</span><span>2025</span></div>
+</div>
+</div>
+</body>
+</html>
