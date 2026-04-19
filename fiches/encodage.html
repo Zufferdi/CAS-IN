@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encodage Bas Niveau — CAS-IN Forensique</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap');
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface2: #1c2330; --border: #30363d;
+    --accent: #f0883e; --accent2: #58a6ff; --accent3: #3fb950;
+    --accent4: #ff7b72; --accent5: #bc8cff; --text: #e6edf3; --muted: #8b949e;
+    --mono: 'JetBrains Mono', monospace; --sans: 'Syne', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; padding: 2rem; line-height: 1.6; }
+  .page { max-width: 900px; margin: 0 auto; }
+  .header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 2.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); animation: fadeIn .4s ease; }
+  .fs-badge { font-family: var(--sans); font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; color: var(--accent5); }
+  .header-meta { font-size: .75rem; color: var(--muted); }
+  .tag { display: inline-block; background: rgba(188,140,255,.12); border: 1px solid rgba(188,140,255,.3); color: var(--accent5); padding: .15rem .5rem; border-radius: 4px; font-size: .7rem; font-weight: 600; letter-spacing: .05em; }
+  .tag.orange { background: rgba(240,136,62,.12); border-color: rgba(240,136,62,.3); color: var(--accent); }
+  .section { margin-bottom: 2rem; animation: slideUp .4s ease both; }
+  .section:nth-child(2){animation-delay:.05s} .section:nth-child(3){animation-delay:.1s}
+  .section:nth-child(4){animation-delay:.15s} .section:nth-child(5){animation-delay:.2s}
+  .section:nth-child(6){animation-delay:.25s} .section:nth-child(7){animation-delay:.3s}
+  .section-title { font-family: var(--sans); font-size: .7rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); margin-bottom: .75rem; display: flex; align-items: center; gap: .5rem; }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .hex { display: inline-block; background: var(--surface2); border: 1px solid var(--border); color: var(--accent4); padding: .05rem .4rem; border-radius: 4px; font-size: .78em; font-weight: 700; }
+  /* Bases */
+  .bases-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; }
+  .base-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .75rem; text-align: center; }
+  .base-name { font-family: var(--sans); font-size: .85rem; font-weight: 800; margin-bottom: .25rem; }
+  .base-desc { font-size: .7rem; color: var(--muted); margin-bottom: .4rem; }
+  .base-example { font-size: .8rem; color: var(--text); }
+  /* Endianness */
+  .endian-demo { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .endian-row { display: grid; grid-template-columns: 140px 1fr; border-bottom: 1px solid var(--border); }
+  .endian-row:last-child { border-bottom: none; }
+  .endian-label { padding: .65rem .9rem; background: var(--surface2); font-size: .72rem; font-weight: 700; color: var(--muted); display: flex; align-items: center; }
+  .endian-bytes { padding: .65rem .9rem; display: flex; gap: .35rem; align-items: center; flex-wrap: wrap; }
+  .byte-box { width: 38px; height: 34px; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; }
+  .byte-box.hi { border-color: rgba(88,166,255,.5); color: var(--accent2); background: rgba(88,166,255,.08); }
+  .byte-box.lo { border-color: rgba(63,185,80,.5); color: var(--accent3); background: rgba(63,185,80,.08); }
+  .byte-sub { font-size: .58rem; color: var(--muted); font-weight: 400; }
+  .endian-result { padding: .65rem .9rem; font-size: .8rem; color: var(--accent); display: flex; align-items: center; }
+  /* Tailles */
+  .sizes { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .size-row { display: grid; grid-template-columns: 100px 120px 1fr; padding: .55rem .9rem; border-bottom: 1px solid var(--border); font-size: .8rem; align-items: center; transition: background .15s; }
+  .size-row:last-child { border-bottom: none; }
+  .size-row:hover { background: var(--surface2); }
+  .size-name { font-weight: 700; color: var(--accent5); }
+  .size-bits { color: var(--muted); font-size: .75rem; }
+  /* Card grid */
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.1rem; position: relative; overflow: hidden; }
+  .card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+  .card.blue::before { background: var(--accent2); } .card.orange::before { background: var(--accent); }
+  .card.green::before { background: var(--accent3); } .card.purple::before { background: var(--accent5); }
+  .card-title { font-size: .7rem; font-weight: 700; letter-spacing: .05em; margin-bottom: .5rem; }
+  .card.blue .card-title { color: var(--accent2); } .card.orange .card-title { color: var(--accent); }
+  .card.green .card-title { color: var(--accent3); } .card.purple .card-title { color: var(--accent5); }
+  .card p { font-size: .8rem; color: var(--text); line-height: 1.5; }
+  /* Complément à 2 */
+  .c2-demo { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .c2-row { display: flex; gap: 1rem; align-items: center; padding: .55rem .9rem; border-bottom: 1px solid var(--border); font-size: .8rem; }
+  .c2-row:last-child { border-bottom: none; }
+  .c2-label { min-width: 60px; color: var(--muted); font-size: .72rem; }
+  .c2-bin { font-family: var(--mono); color: var(--accent2); font-size: .82rem; letter-spacing: .1em; }
+  .c2-dec { color: var(--accent); font-size: .82rem; }
+  /* ASCII table mini */
+  .ascii-mini { display: grid; grid-template-columns: repeat(6, 1fr); gap: .3rem; }
+  .ascii-cell { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: .3rem .4rem; text-align: center; font-size: .72rem; }
+  .ascii-char { font-weight: 700; color: var(--accent3); }
+  .ascii-dec { font-size: .65rem; color: var(--muted); }
+  .ascii-hex { font-size: .65rem; color: var(--accent4); }
+  .footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: .68rem; color: var(--muted); display: flex; justify-content: space-between; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @media (max-width: 600px) { .bases-grid { grid-template-columns: 1fr 1fr; } .card-grid { grid-template-columns: 1fr; } .size-row { grid-template-columns: 80px 100px 1fr; } .ascii-mini { grid-template-columns: repeat(4, 1fr); } }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="fs-badge">Encodage</div>
+    <div>
+      <div><span class="tag">Bas niveau</span> <span class="tag orange">Prérequis TP</span></div>
+      <div class="header-meta" style="margin-top:.3rem">Endianness · Bases · Complément à 2 · ASCII / UTF · Tailles de données</div>
+    </div>
+  </div>
+
+  <!-- BASES DE NUMÉRATION -->
+  <div class="section">
+    <div class="section-title">Bases de numération</div>
+    <div class="bases-grid">
+      <div class="base-card">
+        <div class="base-name" style="color:var(--accent2)">Base 2</div>
+        <div class="base-desc">Binaire — 0 ou 1</div>
+        <div class="base-example">1010 1111</div>
+      </div>
+      <div class="base-card">
+        <div class="base-name" style="color:var(--accent3)">Base 10</div>
+        <div class="base-desc">Décimal — 0 à 9</div>
+        <div class="base-example">175</div>
+      </div>
+      <div class="base-card">
+        <div class="base-name" style="color:var(--accent)">Base 16</div>
+        <div class="base-desc">Hexadécimal — 0–9, A–F</div>
+        <div class="base-example">AF</div>
+      </div>
+      <div class="base-card">
+        <div class="base-name" style="color:var(--accent5)">BCD</div>
+        <div class="base-desc">4 bits par chiffre décimal</div>
+        <div class="base-example">0001 0111 = 17</div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;margin-top:.6rem;font-size:.8rem">
+      <strong style="color:var(--accent)">Conversion rapide</strong> — Un nibble (4 bits) = 1 chiffre hex.<br>
+      <code style="color:var(--accent2)">1010</code> = A,&nbsp;&nbsp;<code style="color:var(--accent2)">1111</code> = F,&nbsp;&nbsp;<code style="color:var(--accent2)">0000</code> = 0,&nbsp;&nbsp;<code style="color:var(--accent2)">1001</code> = 9<br>
+      Exemple : <code style="color:var(--accent3)">AF</code> (hex) = <code style="color:var(--accent2)">1010 1111</code> (bin) = <code style="color:var(--accent)">175</code> (déc) = 10×16 + 15
+    </div>
+  </div>
+
+  <!-- TAILLES -->
+  <div class="section">
+    <div class="section-title">Tailles de données</div>
+    <div class="sizes">
+      <div class="size-row" style="background:var(--surface2);font-size:.68rem;color:var(--muted)">
+        <div>Nom</div><div>Bits</div><div>Valeurs (non signé)</div>
+      </div>
+      <div class="size-row"><div class="size-name">Bit</div><div class="size-bits">1 bit</div><div>0 ou 1</div></div>
+      <div class="size-row"><div class="size-name">Nibble</div><div class="size-bits">4 bits</div><div>0–15 · 1 chiffre hex · <span class="hex">0</span>–<span class="hex">F</span></div></div>
+      <div class="size-row"><div class="size-name">Byte / Octet</div><div class="size-bits">8 bits</div><div>0–255 · 2 chiffres hex · <span class="hex">00</span>–<span class="hex">FF</span></div></div>
+      <div class="size-row"><div class="size-name">Word</div><div class="size-bits">16 bits</div><div>0–65'535 · FAT16, ports réseau</div></div>
+      <div class="size-row"><div class="size-name">DWORD</div><div class="size-bits">32 bits</div><div>0–4'294'967'295 · FAT32, IPv4, secteurs MBR</div></div>
+      <div class="size-row"><div class="size-name">QWORD</div><div class="size-bits">64 bits</div><div>0–18'446'744'073'709'551'615 · NTFS timestamps, GPT</div></div>
+    </div>
+    <p style="font-size:.72rem;color:var(--muted);margin-top:.4rem">Convention : <strong>b</strong> (minuscule) = bit · <strong>B</strong> (majuscule) = byte. Confondre les deux = erreur d'un facteur 8.</p>
+  </div>
+
+  <!-- ENDIANNESS -->
+  <div class="section">
+    <div class="section-title">Endianness (boutisme) — Valeur exemple : 0x1A2B3C4D</div>
+    <div class="endian-demo">
+      <div class="endian-row">
+        <div class="endian-label">Big Endian<br><span style="font-size:.65rem;font-weight:400">(HFS+, réseau TCP/IP)</span></div>
+        <div class="endian-bytes">
+          <div class="byte-box hi">1A<div class="byte-sub">poids fort</div></div>
+          <div class="byte-box">2B</div>
+          <div class="byte-box">3C</div>
+          <div class="byte-box lo">4D<div class="byte-sub">poids faible</div></div>
+        </div>
+        <div class="endian-result">Lecture naturelle — octet fort en premier</div>
+      </div>
+      <div class="endian-row">
+        <div class="endian-label">Little Endian<br><span style="font-size:.65rem;font-weight:400">(FAT, NTFS, x86, Windows)</span></div>
+        <div class="endian-bytes">
+          <div class="byte-box lo">4D<div class="byte-sub">poids faible</div></div>
+          <div class="byte-box">3C</div>
+          <div class="byte-box">2B</div>
+          <div class="byte-box hi">1A<div class="byte-sub">poids fort</div></div>
+        </div>
+        <div class="endian-result">⚠️ Inverser les octets pour reconstruire la valeur</div>
+      </div>
+    </div>
+    <div style="background:rgba(240,136,62,.06);border:1px solid rgba(240,136,62,.2);border-radius:8px;padding:.7rem 1rem;margin-top:.6rem;font-size:.78rem">
+      <strong style="color:var(--accent)">Exemple run list NTFS :</strong> Bytes sur disque = <span class="hex">7A 0A</span> → Little Endian → inverser → <span class="hex">0A 7A</span> = 0×256 + 7×16 + 10 = <strong>2682</strong> (numéro de cluster)
+    </div>
+  </div>
+
+  <!-- COMPLÉMENT À 2 -->
+  <div class="section">
+    <div class="section-title">Complément à 2 — Nombres signés sur 8 bits</div>
+    <div class="c2-demo">
+      <div class="c2-row" style="background:var(--surface2);font-size:.68rem;color:var(--muted)">
+        <div class="c2-label">Valeur</div><div class="c2-bin">Binaire (8 bits)</div><div class="c2-dec">Décimal</div>
+      </div>
+      <div class="c2-row"><div class="c2-label">+15</div><div class="c2-bin">0000 1111</div><div class="c2-dec" style="color:var(--accent3)">+15</div></div>
+      <div class="c2-row"><div class="c2-label">+127</div><div class="c2-bin">0111 1111</div><div class="c2-dec" style="color:var(--accent3)">+127 (max positif)</div></div>
+      <div class="c2-row"><div class="c2-label">-1</div><div class="c2-bin">1111 1111</div><div class="c2-dec" style="color:var(--accent4)">-1</div></div>
+      <div class="c2-row"><div class="c2-label">-15</div><div class="c2-bin">1111 0001</div><div class="c2-dec" style="color:var(--accent4)">-15 (256−15=241)</div></div>
+      <div class="c2-row"><div class="c2-label">-128</div><div class="c2-bin">1000 0000</div><div class="c2-dec" style="color:var(--accent4)">-128 (min négatif)</div></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem;margin-top:.5rem;font-size:.78rem">
+      <strong>Règle du bit de signe :</strong> bit de poids fort = 0 → positif · = 1 → négatif.<br>
+      <strong>Inversion :</strong> inverser tous les bits + ajouter 1 → donne la valeur absolue.<br>
+      <strong>Exemple NTFS run list :</strong> <span class="hex">FE 61</span> = <code>1111 1110 0110 0001</code> → signe 1 → inverser = <code>0000 0001 1001 1110</code> + 1 = 415 → résultat = <strong>-415</strong>
+    </div>
+  </div>
+
+  <!-- ENCODAGES TEXTE -->
+  <div class="section">
+    <div class="section-title">Encodages de caractères</div>
+    <div class="card-grid">
+      <div class="card blue">
+        <div class="card-title">ASCII — 1 byte par caractère</div>
+        <p>128 caractères (0–127). Lettres A–Z (<span class="hex">41</span>–<span class="hex">5A</span>), a–z (<span class="hex">61</span>–<span class="hex">7A</span>), 0–9 (<span class="hex">30</span>–<span class="hex">39</span>).<br>
+        <strong>Mnémotechnique :</strong> A = 65 = 0x41 · a = 97 = 0x61 (diff = 32 = 0x20)</p>
+      </div>
+      <div class="card orange">
+        <div class="card-title">UTF-8 — 1 à 4 bytes</div>
+        <p>Compatible ASCII pour les 128 premiers. Europe occidentale = 2 bytes. Asiatiques = 3 bytes. Le plus utilisé sur le web et Linux. Encodage variable.</p>
+      </div>
+      <div class="card green">
+        <div class="card-title">UTF-16 — 2 bytes par caractère</div>
+        <p>Utilisé dans <strong>LFN des systèmes FAT</strong> et Windows. Dans un hexdump, chaque caractère a un octet nul intercalé : <span class="hex">68 00</span> = 'h', <span class="hex">65 00</span> = 'e'. Attention au Little Endian.</p>
+      </div>
+      <div class="card purple">
+        <div class="card-title">ROT13 — substitution +13</div>
+        <p>A→N, B→O… Utilisé dans <strong>UserAssist du registre Windows</strong> pour obfusquer les chemins d'exécutables. Outil : CyberChef (recette ROT13).</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ASCII RAPIDE -->
+  <div class="section">
+    <div class="section-title">Table ASCII essentielle (forensique)</div>
+    <div class="ascii-mini">
+      <div class="ascii-cell"><div class="ascii-char">NUL</div><div class="ascii-dec">0</div><div class="ascii-hex">00</div></div>
+      <div class="ascii-cell"><div class="ascii-char">E5</div><div class="ascii-dec">effacé FAT</div><div class="ascii-hex">E5</div></div>
+      <div class="ascii-cell"><div class="ascii-char">0</div><div class="ascii-dec">48</div><div class="ascii-hex">30</div></div>
+      <div class="ascii-cell"><div class="ascii-char">9</div><div class="ascii-dec">57</div><div class="ascii-hex">39</div></div>
+      <div class="ascii-cell"><div class="ascii-char">A</div><div class="ascii-dec">65</div><div class="ascii-hex">41</div></div>
+      <div class="ascii-cell"><div class="ascii-char">Z</div><div class="ascii-dec">90</div><div class="ascii-hex">5A</div></div>
+      <div class="ascii-cell"><div class="ascii-char">a</div><div class="ascii-dec">97</div><div class="ascii-hex">61</div></div>
+      <div class="ascii-cell"><div class="ascii-char">z</div><div class="ascii-dec">122</div><div class="ascii-hex">7A</div></div>
+      <div class="ascii-cell"><div class="ascii-char">MZ</div><div class="ascii-dec">exe Windows</div><div class="ascii-hex">4D 5A</div></div>
+      <div class="ascii-cell"><div class="ascii-char">PK</div><div class="ascii-dec">ZIP/DOCX</div><div class="ascii-hex">50 4B</div></div>
+      <div class="ascii-cell"><div class="ascii-char">%PDF</div><div class="ascii-dec">PDF</div><div class="ascii-hex">25 50 44 46</div></div>
+      <div class="ascii-cell"><div class="ascii-char">ÿØÿ</div><div class="ascii-dec">JPEG</div><div class="ascii-hex">FF D8 FF</div></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>CAS-IN · 2025–2026</span>
+    <span>Encodage Bas Niveau — Prérequis TP</span>
+    <span>Manuel Ch. 3</span>
+  </div>
+
+</div>
+</body>
+</html>

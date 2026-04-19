@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preuve Numérique — CAS-IN Forensique</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap');
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface2: #1c2330; --border: #30363d;
+    --accent: #f0883e; --accent2: #58a6ff; --accent3: #3fb950;
+    --accent4: #ff7b72; --accent5: #bc8cff; --text: #e6edf3; --muted: #8b949e;
+    --mono: 'JetBrains Mono', monospace; --sans: 'Syne', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; padding: 2rem; line-height: 1.6; }
+  .page { max-width: 900px; margin: 0 auto; }
+  .header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 2.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); animation: fadeIn .4s ease; }
+  .fs-badge { font-family: var(--sans); font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; color: var(--accent4); }
+  .header-meta { font-size: .75rem; color: var(--muted); }
+  .tag { display: inline-block; background: rgba(255,123,114,.12); border: 1px solid rgba(255,123,114,.3); color: var(--accent4); padding: .15rem .5rem; border-radius: 4px; font-size: .7rem; font-weight: 600; letter-spacing: .05em; }
+  .tag.blue { background: rgba(88,166,255,.12); border-color: rgba(88,166,255,.3); color: var(--accent2); }
+  .tag.green { background: rgba(63,185,80,.12); border-color: rgba(63,185,80,.3); color: var(--accent3); }
+  .section { margin-bottom: 2rem; animation: slideUp .4s ease both; }
+  .section:nth-child(2){animation-delay:.05s} .section:nth-child(3){animation-delay:.1s}
+  .section:nth-child(4){animation-delay:.15s} .section:nth-child(5){animation-delay:.2s}
+  .section:nth-child(6){animation-delay:.25s}
+  .section-title { font-family: var(--sans); font-size: .7rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); margin-bottom: .75rem; display: flex; align-items: center; gap: .5rem; }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.1rem; position: relative; overflow: hidden; }
+  .card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+  .card.blue::before { background: var(--accent2); } .card.orange::before { background: var(--accent); }
+  .card.green::before { background: var(--accent3); } .card.red::before { background: var(--accent4); }
+  .card.purple::before { background: var(--accent5); }
+  .card-title { font-size: .7rem; font-weight: 700; letter-spacing: .05em; margin-bottom: .5rem; }
+  .card.blue .card-title { color: var(--accent2); } .card.orange .card-title { color: var(--accent); }
+  .card.green .card-title { color: var(--accent3); } .card.red .card-title { color: var(--accent4); }
+  .card.purple .card-title { color: var(--accent5); }
+  .card p { font-size: .8rem; color: var(--text); line-height: 1.5; }
+  .hex { display: inline-block; background: var(--surface2); border: 1px solid var(--border); color: var(--accent4); padding: .05rem .4rem; border-radius: 4px; font-size: .78em; font-weight: 700; }
+  .law { display: inline-block; background: rgba(255,123,114,.08); border: 1px solid rgba(255,123,114,.3); color: var(--accent4); padding: .1rem .5rem; border-radius: 4px; font-size: .76em; font-weight: 700; white-space: nowrap; }
+  .law.blue { background: rgba(88,166,255,.08); border-color: rgba(88,166,255,.3); color: var(--accent2); }
+  .law.green { background: rgba(63,185,80,.08); border-color: rgba(63,185,80,.3); color: var(--accent3); }
+  /* 4 conditions */
+  .conditions { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+  .cond { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .85rem 1rem; display: flex; gap: .75rem; align-items: flex-start; }
+  .cond-num { width: 28px; height: 28px; border-radius: 50%; background: rgba(88,166,255,.15); border: 1px solid rgba(88,166,255,.4); color: var(--accent2); font-size: .8rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: var(--sans); }
+  .cond-title { font-size: .72rem; font-weight: 700; color: var(--accent2); margin-bottom: .25rem; }
+  .cond-text { font-size: .78rem; color: var(--text); line-height: 1.4; }
+  /* Steps */
+  .steps { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .step { display: flex; align-items: flex-start; gap: 1rem; padding: .85rem 1.1rem; border-bottom: 1px solid var(--border); transition: background .15s; }
+  .step:last-child { border-bottom: none; }
+  .step:hover { background: var(--surface2); }
+  .step-num { width: 22px; height: 22px; border-radius: 50%; background: rgba(63,185,80,.15); border: 1px solid rgba(63,185,80,.4); color: var(--accent3); font-size: .7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: .05rem; }
+  .step-text { font-size: .82rem; line-height: 1.5; color: var(--text); }
+  /* Principes ACPO */
+  .principles { display: flex; flex-direction: column; gap: .5rem; }
+  .principle { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .75rem 1rem; display: flex; gap: .75rem; align-items: flex-start; }
+  .p-badge { background: rgba(240,136,62,.1); border: 1px solid rgba(240,136,62,.3); color: var(--accent); font-size: .65rem; font-weight: 800; padding: .2rem .5rem; border-radius: 4px; white-space: nowrap; flex-shrink: 0; margin-top: .15rem; }
+  .p-text { font-size: .8rem; color: var(--text); line-height: 1.5; }
+  /* Chain */
+  .chain { display: flex; align-items: center; gap: 0; margin: .5rem 0; flex-wrap: wrap; }
+  .chain-node { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: .4rem .75rem; font-size: .72rem; text-align: center; }
+  .chain-arrow { color: var(--muted); padding: 0 .3rem; font-size: .9rem; }
+  /* 5 questions */
+  .questions { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .question { padding: .7rem 1rem; border-bottom: 1px solid var(--border); display: flex; gap: .75rem; align-items: flex-start; font-size: .8rem; }
+  .question:last-child { border-bottom: none; }
+  .q-num { color: var(--accent5); font-weight: 800; font-size: .75rem; min-width: 18px; }
+  .footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: .68rem; color: var(--muted); display: flex; justify-content: space-between; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @media (max-width: 600px) { .card-grid, .conditions { grid-template-columns: 1fr; } .chain { flex-direction: column; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="fs-badge">Preuve</div>
+    <div>
+      <div><span class="tag">DFIR</span> <span class="tag blue">Droit</span> <span class="tag green">Fondements</span></div>
+      <div class="header-meta" style="margin-top:.3rem">Preuve numérique · Cadre légal · Principes fondamentaux</div>
+    </div>
+  </div>
+
+  <!-- 4 CONDITIONS -->
+  <div class="section">
+    <div class="section-title">4 conditions cumulatives de la preuve numérique</div>
+    <div class="conditions">
+      <div class="cond">
+        <div class="cond-num">1</div>
+        <div>
+          <div class="cond-title">Obtenue légalement</div>
+          <div class="cond-text">Mandat de perquisition, décision judiciaire ou accord du titulaire. Une preuve techniquement irréprochable mais illégalement collectée peut être <strong>exclue</strong> par le tribunal.</div>
+        </div>
+      </div>
+      <div class="cond">
+        <div class="cond-num">2</div>
+        <div>
+          <div class="cond-title">Préservée sans modification</div>
+          <div class="cond-text">Bloqueur en écriture (write blocker) lors de toute connexion. Travail exclusif sur copie forensique. Identité bit-à-bit prouvée par <strong>hash</strong>.</div>
+        </div>
+      </div>
+      <div class="cond">
+        <div class="cond-num">3</div>
+        <div>
+          <div class="cond-title">Traçable à chaque instant</div>
+          <div class="cond-text">Chaîne de possession (chain of custody) documentée sans interruption : qui, quoi, quand, où, pourquoi à chaque transfert.</div>
+        </div>
+      </div>
+      <div class="cond">
+        <div class="cond-num">4</div>
+        <div>
+          <div class="cond-title">Interprétée par un compétent</div>
+          <div class="cond-text">L'analyste doit être capable de défendre ses méthodes et conclusions devant un tribunal, avec précision et sans ambiguïté.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PARTICULARITÉS NUMÉRIQUES -->
+  <div class="section">
+    <div class="section-title">Particularités de la preuve numérique</div>
+    <div class="card-grid">
+      <div class="card blue">
+        <div class="card-title">Pas d'"original" au sens juridique</div>
+        <p>Une copie binaire bit-à-bit est <strong>strictement identique</strong> à l'original — aucun outil ne peut les distinguer. Le hash prouve l'identité. L'original reste souvent en place pendant que la copie est créée.</p>
+      </div>
+      <div class="card orange">
+        <div class="card-title">Pas de "vol de données" en droit suisse</div>
+        <p>Copier des données <strong>ne prive pas</strong> le propriétaire de l'original — ce n'est pas un vol au sens de l'art. 139 CP. Les infractions applicables sont <span class="law">art. 143bis</span> (accès indu) et <span class="law">art. 144bis</span> (dommages).</p>
+      </div>
+      <div class="card red">
+        <div class="card-title">Volatilité — hiérarchie d'urgence</div>
+        <p>
+          <strong>RAM</strong> — disparaît à l'extinction (ms)<br>
+          <strong>Réseau</strong> — connexions actives (secondes)<br>
+          <strong>Fichiers temporaires</strong> — minutes à heures<br>
+          <strong>Disque</strong> — persiste sans alimentation<br>
+          <strong>CD/Bande</strong> — décennies
+        </p>
+      </div>
+      <div class="card green">
+        <div class="card-title">Un artefact isolé ≠ une preuve</div>
+        <p>La preuve naît de la <strong>corrélation</strong> de plusieurs sources indépendantes. Dix artefacts convergents forment un récit difficile à démolir. Un artefact seul peut toujours être expliqué autrement.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRINCIPES ACPO -->
+  <div class="section">
+    <div class="section-title">Principes ACPO — Non-altération</div>
+    <div class="principles">
+      <div class="principle">
+        <div class="p-badge">P1</div>
+        <div class="p-text">Aucune action entreprise par les services répressifs ne doit <strong>modifier des données</strong> susceptibles d'être présentées en justice.</div>
+      </div>
+      <div class="principle">
+        <div class="p-badge">P2</div>
+        <div class="p-text">Si un accès aux données originales est nécessaire, seul un compétent peut y accéder et doit être capable d'en expliquer la <strong>pertinence et les implications</strong>.</div>
+      </div>
+      <div class="principle">
+        <div class="p-badge">P3</div>
+        <div class="p-text">Un <strong>journal d'audit</strong> doit être créé et préservé. Un tiers indépendant doit pouvoir reproduire les mêmes résultats à partir des mêmes données.</div>
+      </div>
+      <div class="principle">
+        <div class="p-badge">P4</div>
+        <div class="p-text">Le responsable de l'investigation est <strong>responsable de l'application</strong> de ces principes et du respect de la loi.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAÎNE DE CUSTODY -->
+  <div class="section">
+    <div class="section-title">Chaîne de custody</div>
+    <div class="chain">
+      <div class="chain-node" style="background:rgba(255,123,114,.08);border-color:rgba(255,123,114,.3);color:var(--accent4)">🔍 Identification</div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node" style="background:rgba(88,166,255,.08);border-color:rgba(88,166,255,.3);color:var(--accent2)">📦 Collecte</div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node" style="background:rgba(240,136,62,.08);border-color:rgba(240,136,62,.3);color:var(--accent)">💾 Acquisition</div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node" style="background:rgba(63,185,80,.08);border-color:rgba(63,185,80,.3);color:var(--accent3)">🔬 Examen</div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node" style="background:rgba(188,140,255,.08);border-color:rgba(188,140,255,.3);color:var(--accent5)">📋 Rapport</div>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem">Hash calculé <strong>avant et après</strong> chaque étape. Toute rupture de traçabilité peut entraîner l'exclusion de la preuve (art. 141 CPP).</p>
+  </div>
+
+  <!-- 5 QUESTIONS DU MAGISTRAT -->
+  <div class="section">
+    <div class="section-title">5 questions du magistrat (Manuel ch. 29.6)</div>
+    <div class="questions">
+      <div class="question"><div class="q-num">①</div><div><strong>D'où vient la preuve ?</strong> — Lieu de saisie, cadre légal, état au moment de la saisie</div></div>
+      <div class="question"><div class="q-num">②</div><div><strong>Qui l'a saisie ?</strong> — Identité du premier intervenant, date, heure, qualité officielle</div></div>
+      <div class="question"><div class="q-num">③</div><div><strong>Qui l'a manipulée ?</strong> — Chaque transfert tracé : qui remet, qui reçoit, quand, où, pourquoi</div></div>
+      <div class="question"><div class="q-num">④</div><div><strong>Comment a-t-elle été conservée ?</strong> — Scellés, intégrité vérifiée par hash à chaque étape</div></div>
+      <div class="question"><div class="q-num">⑤</div><div><strong>Pourquoi est-elle fiable ?</strong> — Outils validés, méthodes reproductibles, résultats corroborés par plusieurs artefacts</div></div>
+    </div>
+  </div>
+
+  <!-- HASH & INTÉGRITÉ -->
+  <div class="section">
+    <div class="section-title">Hash et intégrité</div>
+    <div class="card-grid">
+      <div class="card blue">
+        <div class="card-title">Fonctions de hachage</div>
+        <p>
+          <span class="hex">MD5</span> — 128 bits — <em>déconseillé seul</em><br>
+          <span class="hex">SHA-1</span> — 160 bits — <em>déconseillé</em><br>
+          <span class="hex">SHA-256</span> — 256 bits — <em>standard actuel</em><br><br>
+          <strong>Effet avalanche</strong> : 1 bit modifié → hash entièrement différent. Calculer le hash ne nécessite pas le nom du fichier.
+        </p>
+      </div>
+      <div class="card green">
+        <div class="card-title">Protocole d'acquisition</div>
+        <p>
+          ① Brancher le write blocker<br>
+          ② Calculer le hash de l'original<br>
+          ③ Acquérir l'image (bit-à-bit)<br>
+          ④ Calculer le hash de l'image<br>
+          ⑤ Vérifier : <strong>hash original = hash image</strong><br>
+          ⑥ Documenter les deux valeurs dans le rapport
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TYPES DE FORENSIQUE -->
+  <div class="section">
+    <div class="section-title">Sous-spécialités forensiques</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="background:rgba(88,166,255,.15);border-color:rgba(88,166,255,.4);color:var(--accent2)">💀</div>
+        <div class="step-text"><strong>Dead Forensics</strong> — Système éteint. Travail sur image disque. Reproductible, non-altérant. Clés de chiffrement perdues.</div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:rgba(63,185,80,.15);border-color:rgba(63,185,80,.4);color:var(--accent3)">⚡</div>
+        <div class="step-text"><strong>Live Forensics</strong> — Système allumé. Capture RAM en premier. Récupère clés de chiffrement, processus actifs, connexions réseau. Altère légèrement le système (à documenter).</div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:rgba(240,136,62,.15);border-color:rgba(240,136,62,.4);color:var(--accent)">📱</div>
+        <div class="step-text"><strong>Mobile Forensics</strong> — Domaine à part. Chiffrement natif, effacement à distance, diversité OS. Mode avion + Faraday en priorité. Outil : Cellebrite UFED, MSAB XRY.</div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:rgba(188,140,255,.15);border-color:rgba(188,140,255,.4);color:var(--accent5)">🌐</div>
+        <div class="step-text"><strong>Network Forensics</strong> — Analyse des flux, logs, pcap. Données volatiles par nature. Souvent nécessite une autorisation judiciaire distincte.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>CAS-IN · 2025–2026</span>
+    <span>Preuve Numérique — Fondements</span>
+    <span>Manuel Ch. 1–2</span>
+  </div>
+
+</div>
+</body>
+</html>
