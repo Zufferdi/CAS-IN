@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Logs Windows (Event Logs) — CAS-IN</title>
+<link rel="stylesheet" href="fiche_style.css">
+<style>
+.evid{display:inline-block;font-family:var(--mono);font-size:.72rem;font-weight:700;background:rgba(88,166,255,.12);border:1px solid rgba(88,166,255,.3);color:var(--blue);padding:.1rem .4rem;border-radius:4px;white-space:nowrap}
+.ev-table{width:100%;border-collapse:collapse;font-size:.72rem;margin-bottom:.75rem}
+.ev-table th{background:var(--surface2);padding:.5rem .75rem;text-align:left;border-bottom:2px solid var(--border);font-size:.62rem;letter-spacing:.1em;color:var(--dim);font-weight:700}
+.ev-table td{padding:.48rem .75rem;border-bottom:1px solid rgba(48,54,61,.4);vertical-align:top;line-height:1.4}
+.ev-table tr:hover td{background:var(--surface)}
+.ev-table tr:last-child td{border-bottom:none}
+.ev-cat-auth td:first-child{border-left:3px solid var(--red)}
+.ev-cat-proc td:first-child{border-left:3px solid var(--blue)}
+.ev-cat-net td:first-child{border-left:3px solid var(--green)}
+.ev-cat-svc td:first-child{border-left:3px solid var(--purple)}
+.ev-cat-ps td:first-child{border-left:3px solid var(--orange)}
+.cli{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.85rem 1.1rem;font-size:.73rem;color:var(--green);font-family:var(--mono);line-height:1.9;margin:.5rem 0;overflow-x:auto}
+.cli .c{color:var(--dim)} .cli .a{color:var(--cyan)} .cli .v{color:var(--orange)} .cli .f{color:var(--gold)}
+</style>
+</head>
+<body>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">LOGS WINDOWS — EVENT IDs</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:var(--blue)">📋</div>
+  <div>
+    <div><span class="tag tag-blue">Event Logs</span><span class="tag tag-red">EVTX</span><span class="tag tag-orange">Chainsaw · Hayabusa</span></div>
+    <div class="meta" style="margin-top:.4rem">Event IDs forensiques · Security / System / Application · Analyse rapide</div>
+  </div>
+</div>
+
+<div class="sec"><div class="sec-title">Fichiers de logs Windows</div>
+<table class="ev-table">
+<thead><tr><th>Canal (Log)</th><th>Chemin</th><th>Contenu forensique</th></tr></thead>
+<tbody>
+<tr><td><strong>Security</strong></td><td><code style="color:var(--cyan);font-size:.7rem">C:\Windows\System32\winevt\Logs\Security.evtx</code></td><td>Authentifications, création de comptes, accès aux objets, modifications de politiques</td></tr>
+<tr><td><strong>System</strong></td><td><code style="color:var(--cyan);font-size:.7rem">…\System.evtx</code></td><td>Démarrage/arrêt, services, drivers, erreurs matérielles</td></tr>
+<tr><td><strong>Application</strong></td><td><code style="color:var(--cyan);font-size:.7rem">…\Application.evtx</code></td><td>Événements des applications installées</td></tr>
+<tr><td><strong>Microsoft-Windows-PowerShell/Operational</strong></td><td><code style="color:var(--cyan);font-size:.7rem">…\PowerShell\Operational.evtx</code></td><td>Commandes PowerShell exécutées (si ScriptBlock logging actif)</td></tr>
+<tr><td><strong>Microsoft-Windows-Sysmon/Operational</strong></td><td><code style="color:var(--cyan);font-size:.7rem">…\Sysmon\Operational.evtx</code></td><td>Si Sysmon installé : processus, réseau, registre, fichiers (logs très détaillés)</td></tr>
+<tr><td><strong>Microsoft-Windows-TerminalServices</strong></td><td><code style="color:var(--cyan);font-size:.7rem">…\RemoteConnectionManager\Operational.evtx</code></td><td>Sessions RDP entrantes</td></tr>
+<tr><td><strong>Microsoft-Windows-TaskScheduler</strong></td><td><code style="color:var(--cyan);font-size:.7rem">…\TaskScheduler\Operational.evtx</code></td><td>Tâches planifiées créées ou modifiées (persistance)</td></tr>
+</tbody></table></div>
+
+<div class="sec"><div class="sec-title">Event IDs forensiques essentiels</div>
+<table class="ev-table">
+<thead><tr><th>Event ID</th><th>Canal</th><th>Signification</th><th>Forensique</th></tr></thead>
+<tbody>
+<!-- AUTH -->
+<tr class="ev-cat-auth"><td><span class="evid">4624</span></td><td>Security</td><td>Ouverture de session réussie</td><td>Type 2=local, Type 3=réseau, Type 10=RDP → source IP</td></tr>
+<tr class="ev-cat-auth"><td><span class="evid">4625</span></td><td>Security</td><td>Échec de connexion</td><td>Brute force, mauvais MDP → SubStatus pour raison précise</td></tr>
+<tr class="ev-cat-auth"><td><span class="evid">4648</span></td><td>Security</td><td>Connexion explicite (runas)</td><td>Pass-the-hash, élévation de privilèges</td></tr>
+<tr class="ev-cat-auth"><td><span class="evid">4672</span></td><td>Security</td><td>Privilèges spéciaux à l'ouverture</td><td>Connexion admin — accompagne 4624</td></tr>
+<tr class="ev-cat-auth"><td><span class="evid">4720</span></td><td>Security</td><td>Compte utilisateur créé</td><td>Création de backdoor, compte de persistance</td></tr>
+<tr class="ev-cat-auth"><td><span class="evid">4732</span></td><td>Security</td><td>Ajout au groupe Administrateurs</td><td>Élévation de privilèges</td></tr>
+<!-- PROCESS -->
+<tr class="ev-cat-proc"><td><span class="evid">4688</span></td><td>Security</td><td>Processus créé</td><td>Nécessite audit activé — équivalent Sysmon Event 1</td></tr>
+<tr class="ev-cat-proc"><td><span class="evid">4689</span></td><td>Security</td><td>Processus terminé</td><td>Durée d'exécution (4688→4689)</td></tr>
+<tr class="ev-cat-proc"><td><span class="evid">Sysmon 1</span></td><td>Sysmon</td><td>Processus créé avec hash + PPID</td><td>Bien plus complet que 4688, hash SHA-256 inclus</td></tr>
+<tr class="ev-cat-proc"><td><span class="evid">Sysmon 3</span></td><td>Sysmon</td><td>Connexion réseau par processus</td><td>Corrélation processus ↔ connexion C2</td></tr>
+<!-- NETWORK -->
+<tr class="ev-cat-net"><td><span class="evid">4771</span></td><td>Security</td><td>Pré-auth Kerberos échouée</td><td>Brute force sur comptes AD</td></tr>
+<tr class="ev-cat-net"><td><span class="evid">5156</span></td><td>Security</td><td>Connexion réseau autorisée (WFP)</td><td>Nécessite audit activé — tout le trafic réseau</td></tr>
+<tr class="ev-cat-net"><td><span class="evid">5140</span></td><td>Security</td><td>Accès à un partage réseau</td><td>Accès SMB — lateral movement</td></tr>
+<!-- SERVICES -->
+<tr class="ev-cat-svc"><td><span class="evid">7045</span></td><td>System</td><td>Nouveau service installé</td><td>Malware installant un service de persistance</td></tr>
+<tr class="ev-cat-svc"><td><span class="evid">7036</span></td><td>System</td><td>État de service changé</td><td>Démarrage/arrêt de services</td></tr>
+<tr class="ev-cat-svc"><td><span class="evid">4698</span></td><td>Security</td><td>Tâche planifiée créée</td><td>Persistance via Task Scheduler</td></tr>
+<!-- POWERSHELL -->
+<tr class="ev-cat-ps"><td><span class="evid">4103</span></td><td>PowerShell</td><td>Pipeline exécuté (Module Logging)</td><td>Commandes PS exécutées module par module</td></tr>
+<tr class="ev-cat-ps"><td><span class="evid">4104</span></td><td>PowerShell</td><td>ScriptBlock exécuté</td><td>⭐ Contenu complet du script — même obfusqué décodé</td></tr>
+</tbody></table>
+<div style="font-size:.7rem;color:var(--dim);margin-top:.35rem">
+  <span style="border-left:3px solid var(--red);padding-left:.4rem;margin-right:.75rem">Authentification</span>
+  <span style="border-left:3px solid var(--blue);padding-left:.4rem;margin-right:.75rem">Processus</span>
+  <span style="border-left:3px solid var(--green);padding-left:.4rem;margin-right:.75rem">Réseau</span>
+  <span style="border-left:3px solid var(--purple);padding-left:.4rem;margin-right:.75rem">Services</span>
+  <span style="border-left:3px solid var(--orange);padding-left:.4rem">PowerShell</span>
+</div>
+</div>
+
+<div class="sec"><div class="sec-title">Types de Logon (Event 4624)</div>
+<div class="g2">
+<div class="card card-blue"><div class="ct">Types courants</div>
+<table style="font-size:.72rem"><tbody>
+<tr><td style="padding:.25rem .5rem"><strong style="color:var(--cyan)">Type 2</strong></td><td style="padding:.25rem .5rem">Interactif local (console)</td></tr>
+<tr><td style="padding:.25rem .5rem"><strong style="color:var(--cyan)">Type 3</strong></td><td style="padding:.25rem .5rem">Réseau (accès partage SMB)</td></tr>
+<tr><td style="padding:.25rem .5rem"><strong style="color:var(--cyan)">Type 4</strong></td><td style="padding:.25rem .5rem">Batch (tâche planifiée)</td></tr>
+<tr><td style="padding:.25rem .5rem"><strong style="color:var(--cyan)">Type 5</strong></td><td style="padding:.25rem .5rem">Service Windows</td></tr>
+<tr><td style="padding:.25rem .5rem"><strong style="color:var(--gold)">Type 7</strong></td><td style="padding:.25rem .5rem">Déverrouillage d'écran</td></tr>
+<tr><td style="padding:.25rem .5rem"><strong style="color:var(--red)">Type 10</strong></td><td style="padding:.25rem .5rem">RDP / RemoteInteractive ⭐</td></tr>
+<tr><td style="padding:.25rem .5rem"><strong style="color:var(--purple)">Type 11</strong></td><td style="padding:.25rem .5rem">CachedInteractive (offline)</td></tr>
+</tbody></table></div>
+<div class="card card-red"><div class="ct">Lateral Movement — à surveiller</div><ul>
+<li><strong>4624 Type 3</strong> entre postes internes → mouvement latéral SMB</li>
+<li><strong>4624 Type 10</strong> depuis un poste vers un autre → RDP interne suspect</li>
+<li><strong>4648</strong> + compte admin → pass-the-hash ou runas suspect</li>
+<li><strong>7045</strong> sur plusieurs machines → service de propagation</li>
+<li><strong>4698</strong> suivi de <strong>4624 Type 3</strong> → persistance à distance</li>
+</ul></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Outils d'analyse</div>
+<div class="g2">
+<div class="card card-orange"><div class="ct">Chainsaw</div><p>Analyse EVTX rapide basée sur des règles Sigma. Détecte les patterns d'attaque connus.</p>
+<div class="cli">
+<span class="c"># Chasse rapide aux attaques</span><br>
+<span class="v">chainsaw hunt</span> <span class="a">C:\evtx\</span> <span class="f">--rules rules/</span> <span class="a">--mapping mappings/sigma-event-logs-all.yml</span>
+</div></div>
+<div class="card card-cyan"><div class="ct">Hayabusa</div><p>Analyseur japonais rapide — génère des timelines forensiques et des alertes de niveau MITRE ATT&CK à partir des EVTX.</p>
+<div class="cli">
+<span class="c"># Timeline CSV en 1 commande</span><br>
+<span class="v">hayabusa</span> <span class="a">csv-timeline -d C:\evtx\ -o timeline.csv</span>
+</div></div>
+</div></div>
+
+<div class="info">💡 <strong>PowerShell ScriptBlock Logging (4104) :</strong> Même si le script utilise des techniques d'obfuscation (base64, IEX, Invoke-Expression), Windows décode le script avant exécution et l'enregistre <em>décodé</em> dans l'Event 4104. Une des sources forensiques les plus précieuses contre les attaques "living off the land".</div>
+
+<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> 4624 Type 10 = RDP · 4624 Type 3 = SMB réseau · 4625 = échec login (brute force) · 4688 = processus créé · 7045 = nouveau service (malware) · 4698 = tâche planifiée · 4104 = ScriptBlock PowerShell · Sysmon 1 = processus+hash · Sysmon 3 = connexion réseau par processus.</div>
+<div class="footer"><span>CAS-IN Investigation Numérique · Forensique Suisse</span><span>Ch. 16 Manuel · Artefacts Windows</span></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Timeline Forensique — CAS-IN</title>
+<link rel="stylesheet" href="fiche_style.css">
+<style>
+.tl{position:relative;padding-left:2rem;margin-bottom:1.25rem}
+.tl::before{content:'';position:absolute;left:.65rem;top:0;bottom:0;width:2px;background:var(--border)}
+.tl-item{position:relative;margin-bottom:1rem;padding:.75rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.tl-item::before{content:'';position:absolute;left:-1.6rem;top:50%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;background:var(--cyan);border:2px solid var(--bg)}
+.tl-time{font-size:.65rem;color:var(--dim);font-family:var(--mono);margin-bottom:.2rem}
+.tl-title{font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:.2rem}
+.tl-desc{font-size:.72rem;color:var(--muted);line-height:1.4}
+.tl-source{font-size:.62rem;color:var(--cyan);margin-top:.25rem;font-family:var(--mono)}
+.cli{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.85rem 1.1rem;font-size:.73rem;color:var(--green);font-family:var(--mono);line-height:1.9;margin:.5rem 0;overflow-x:auto}
+.cli .c{color:var(--dim)} .cli .a{color:var(--cyan)} .cli .v{color:var(--orange)}
+</style></head>
+<body>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">TIMELINE FORENSIQUE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:var(--orange)">⏱</div>
+  <div>
+    <div><span class="tag tag-orange">log2timeline</span><span class="tag tag-cyan">Plaso · Timesketch</span><span class="tag tag-blue">Corrélation temporelle</span></div>
+    <div class="meta" style="margin-top:.4rem">Reconstruction chronologique des événements · Supertimeline · Analyse temporelle</div>
+  </div>
+</div>
+
+<div class="sec"><div class="sec-title">Principe de la supertimeline</div>
+<div class="g2">
+<div class="card card-orange"><div class="ct">Concept</div><p>Regrouper <strong>toutes les sources de temps</strong> (FS, logs, registre, navigateur, artefacts) dans un seul fichier CSV ou base de données, trié chronologiquement. Permet de reconstituer un incident minute par minute.</p></div>
+<div class="card card-cyan"><div class="ct">Sources intégrées</div><ul>
+<li>NTFS : $MFT, $LogFile, $UsnJrnl</li>
+<li>Registre Windows (SAM, SYSTEM, NTUSER)</li>
+<li>Event Logs (Security, System, Sysmon)</li>
+<li>Prefetch, ShimCache, AmCache</li>
+<li>Historique navigateur (Chrome, Firefox, Edge)</li>
+<li>Logs applicatifs, LNK files, Jump Lists</li>
+</ul></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">log2timeline / Plaso</div>
+<div class="cli">
+<span class="c"># 1. Générer le fichier Plaso (.plaso) depuis une image disque</span><br>
+<span class="v">log2timeline.py</span> <span class="a">output.plaso /dev/sdb1</span><br><br>
+<span class="c"># 2. Filtrer et exporter en CSV (L2T format)</span><br>
+<span class="v">psort.py</span> <span class="a">-o l2tcsv output.plaso</span> <span class="a">-w timeline.csv</span><br><br>
+<span class="c"># 3. Filtrage par date</span><br>
+<span class="v">psort.py</span> <span class="a">-o l2tcsv output.plaso</span> <span class="a">"date > '2024-01-01 00:00:00' AND date < '2024-01-31 00:00:00'"</span><br><br>
+<span class="c"># 4. Importer dans Timesketch pour analyse collaborative</span><br>
+<span class="v">timesketch_importer.py</span> <span class="a">-u admin --host http://localhost timeline.csv</span>
+</div></div>
+
+<div class="sec"><div class="sec-title">Exemple de timeline d'incident</div>
+<div class="tl">
+<div class="tl-item"><div class="tl-time">2024-03-15 08:42:11 UTC</div><div class="tl-title">Connexion RDP externe réussie</div><div class="tl-desc">Compte "admin" depuis IP 185.220.x.x (nœud Tor)</div><div class="tl-source">Source: Security.evtx [4624 Type 10]</div></div>
+<div class="tl-item" style="border-color:rgba(255,64,96,.3)"><div class="tl-time">2024-03-15 08:43:02 UTC</div><div class="tl-title">PowerShell avec encodage Base64 exécuté</div><div class="tl-desc">cmd.exe → powershell.exe -enc [payload]</div><div class="tl-source">Source: PowerShell/Operational.evtx [4104] + Sysmon [1]</div></div>
+<div class="tl-item" style="border-color:rgba(255,64,96,.3)"><div class="tl-time">2024-03-15 08:43:15 UTC</div><div class="tl-title">Nouveau service "svcscan32" créé</div><div class="tl-desc">Malware installé comme service de persistance</div><div class="tl-source">Source: System.evtx [7045] + Registre SYSTEM</div></div>
+<div class="tl-item" style="border-color:rgba(240,192,64,.3)"><div class="tl-time">2024-03-15 08:44:30 UTC</div><div class="tl-title">Fichiers chiffrés dans C:\Users\</div><div class="tl-desc">Extension .locked ajoutée à 847 fichiers</div><div class="tl-source">Source: $UsnJrnl NTFS + $MFT timestamps</div></div>
+<div class="tl-item" style="border-color:rgba(48,232,138,.3)"><div class="tl-time">2024-03-15 08:47:00 UTC</div><div class="tl-title">Connexion vers IP externe (C2)</div><div class="tl-desc">Exfiltration de données vers 194.165.x.x:443</div><div class="tl-source">Source: Sysmon [3] + Firewall logs</div></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Points critiques</div>
+<div class="g2">
+<div class="card card-red"><div class="ct">⚠️ Timezone — Piège fréquent</div><p>Les sources utilisent des timezones différentes (NTFS = UTC · Event Logs = UTC · HFS+ = locale · FAT = locale). <strong>Normaliser en UTC</strong> avant de construire la timeline. Vérifier SYSTEM\TimeZoneInformation.</p></div>
+<div class="card card-gold"><div class="ct">Timestomping</div><p>Un attaquant peut modifier les timestamps NTFS ($STANDARD_INFORMATION) avec des outils comme <code style="color:var(--cyan)">timestomp</code>. Comparer $SI et $FILE_NAME — divergence = manipulation.</p></div>
+</div></div>
+
+<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> log2timeline → .plaso → psort → CSV · Sources : $MFT + Event Logs + Registre + Prefetch · Timezone : toujours normaliser en UTC · Timestomping : $SI ≠ $FN · Timesketch : outil collaboratif d'analyse de timeline · Corrélation temporelle = cœur de l'analyse forensique.</div>
+<div class="footer"><span>CAS-IN Investigation Numérique · Forensique Suisse</span><span>Ch. 19 Manuel · ISO/IEC 27037</span></div>
+</div></body></html>

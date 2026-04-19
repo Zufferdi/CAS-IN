@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Anti-Forensique — CAS-IN</title>
+<link rel="stylesheet" href="fiche_style.css">
+<style>
+.af-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.75rem;margin-bottom:1rem}
+.af-card{background:var(--surface);border:1px solid rgba(255,64,96,.25);border-radius:8px;padding:.9rem 1rem}
+.af-name{font-size:.78rem;font-weight:700;color:var(--red);margin-bottom:.25rem}
+.af-how{font-size:.72rem;color:var(--muted);line-height:1.4;margin-bottom:.35rem}
+.af-detect{font-size:.68rem;color:var(--green);font-style:italic}
+.af-detect::before{content:'🔍 Détecter : '}
+</style></head>
+<body>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">ANTI-FORENSIQUE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:var(--red)">🕵</div>
+  <div>
+    <div><span class="tag tag-red">Techniques d'évasion</span><span class="tag tag-gold">Contre-mesures</span><span class="tag tag-cyan">Détection</span></div>
+    <div class="meta" style="margin-top:.4rem">Dissimulation de preuves · Timestomping · Wiping · Stéganographie · Contre-mesures forensiques</div>
+  </div>
+</div>
+
+<div class="sec"><div class="sec-title">Techniques anti-forensiques</div>
+<div class="af-grid">
+<div class="af-card"><div class="af-name">Timestomping</div><div class="af-how">Modification des timestamps NTFS ($STANDARD_INFORMATION) pour faire apparaître un fichier malveillant comme ancien. Outils : timestomp (Metasploit), SetMace.</div><div class="af-detect">Comparer $SI et $FILE_NAME — divergence = manipulation. Vérifier $UsnJrnl et $LogFile pour les vraies dates.</div></div>
+<div class="af-card"><div class="af-name">Wiping sécurisé</div><div class="af-how">Écrasement des données avec des patterns aléatoires (DoD 5220.22-M : 7 passes). Outils : Eraser, SDelete, shred (Linux). Sur SSD, le trim rend le wiping partiellement inefficace.</div><div class="af-detect">Traces dans $UsnJrnl (fichier créé puis modifié intensivement), partitions formatées mais avec zones non allouées aléatoires.</div></div>
+<div class="af-card"><div class="af-name">ADS (Alternate Data Streams)</div><div class="af-how">Cacher un exécutable ou des données dans un flux alternatif NTFS. Ex: <code style="color:var(--cyan)">calc.exe:malware.exe</code>. Invisible dans l'explorateur Windows.</div><div class="af-detect">X-Ways → colonne ADS. Dir /r (cmd). SysinternalsSuite streams.exe. Tout fichier avec ":" dans le nom dans X-Ways.</div></div>
+<div class="af-card"><div class="af-name">Chiffrement / VeraCrypt</div><div class="af-how">Volumes chiffrés indiscernables d'un espace aléatoire. Volume caché (déni plausible) : deux MDP pour deux volumes dans le même fichier.</div><div class="af-detect">Entropie ≥ 0.997, taille ronde, absence de magic bytes. Passware + RAM dump pour FVEK. Le déni plausible est légalement reconnu en Suisse.</div></div>
+<div class="af-card"><div class="af-name">Stéganographie</div><div class="af-how">Cacher des données dans une image JPEG, PNG ou un fichier audio. Outils : Steghide, OpenStego, DeepSound. Le fichier apparaît normal visuellement.</div><div class="af-detect">StegDetect pour JPEG. Comparer la taille avec des images similaires. Analyser LSB (Least Significant Bit). Chi-square test sur distribution des pixels.</div></div>
+<div class="af-card"><div class="af-name">Effacement des logs</div><div class="af-how">Vidage ou falsification des Event Logs Windows (wevtutil cl Security), modification des logs Linux (/var/log). Rootkits : hooks kernel pour masquer les entrées.</div><div class="af-detect">Gap dans les Event IDs (séquence non continue). $LogFile NTFS peut révéler les opérations même après effacement log. Sysmon écrit dans son propre canal.</div></div>
+<div class="af-card"><div class="af-name">Living off the Land</div><div class="af-how">Utiliser des outils système légitimes (PowerShell, WMI, certutil, mshta) pour exécuter du code malveillant. Aucun binaire malveillant sur disque.</div><div class="af-detect">Event 4104 (ScriptBlock logging), Sysmon sur WMI et certutil, comparer les arguments de ligne de commande avec les usages normaux.</div></div>
+<div class="af-card"><div class="af-name">Rootkits</div><div class="af-how">Code s'installant dans le noyau OS pour masquer processus, fichiers, connexions réseau. UEFI rootkits survivent au formatage.</div><div class="af-detect">Volatility : pslist vs psscan (processus cachés). Comparer les fichiers sur disque vs en mémoire. Analyse depuis un OS live externe.</div></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Hiérarchie des contre-mesures</div>
+<div class="g2">
+<div class="card card-green"><div class="ct">Détection systématique</div><ul>
+<li>Toujours comparer $SI vs $FILE_NAME (timestomping)</li>
+<li>Analyser l'espace non alloué (données résiduelles)</li>
+<li>Vérifier les flux ADS sur chaque fichier suspect</li>
+<li>Calculer l'entropie des fichiers non reconnus</li>
+<li>pslist vs psscan (Volatility) → rootkit</li>
+</ul></div>
+<div class="card card-gold"><div class="ct">Sources alternatives</div><ul>
+<li>Si logs effacés → $UsnJrnl NTFS (difficile à effacer)</li>
+<li>Si fichiers effacés → $MFT résiduel + carving</li>
+<li>Si RAM sans volume chiffré → analyse Passware</li>
+<li>Si timestamps altérés → registre + Prefetch + Event Logs</li>
+<li>Si navigateur effacé → Volume Shadow Copy</li>
+</ul></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Volume Shadow Copies (VSS)</div>
+<div class="card card-blue" style="margin-bottom:.75rem"><div class="ct">Snapshots Windows — Contournement de l'effacement</div><p>Windows crée automatiquement des Shadow Copies avant les mises à jour et restaurations. Elles contiennent des versions antérieures de fichiers — même effacés depuis. X-Ways peut monter un VSS directement. <code style="color:var(--cyan)">vssadmin list shadows</code> pour lister.</p></div>
+</div>
+
+<div class="info">🇨🇭 <strong>Déni plausible (VeraCrypt) — droit suisse :</strong> Un suspect peut refuser de donner le mot de passe d'un volume caché en invoquant le nemo tenetur (art. 113 CPP). La preuve de l'existence d'un volume caché est forensiquement très difficile à établir par design.</div>
+<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Timestomping → $SI ≠ $FN · ADS → colon dans nom de fichier → streams.exe · Stéganographie → LSB + entropie + taille anormale · Living off the Land → Event 4104 ScriptBlock · VSS → versions antérieures même après effacement · pslist ≠ psscan → rootkit.</div>
+<div class="footer"><span>CAS-IN Investigation Numérique · Forensique Suisse</span><span>Ch. 20 Manuel · Art. 113 CPP</span></div>
+</div></body></html>

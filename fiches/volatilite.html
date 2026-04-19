@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Volatility & RAM — CAS-IN</title>
+<link rel="stylesheet" href="fiche_style.css">
+<style>
+.plugin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.6rem;margin-bottom:1rem}
+.plugin-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem}
+.plugin-name{font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--cyan);margin-bottom:.2rem}
+.plugin-desc{font-size:.72rem;color:var(--muted);line-height:1.4;margin-bottom:.3rem}
+.plugin-out{font-size:.67rem;color:var(--gold);font-family:var(--mono)}
+.cli{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.85rem 1.1rem;font-size:.74rem;color:var(--green);font-family:var(--mono);line-height:2;margin:.5rem 0;overflow-x:auto}
+.cli .c{color:var(--dim)} .cli .a{color:var(--cyan)} .cli .f{color:var(--gold)} .cli .v{color:var(--orange)}
+.tabs{display:flex;gap:.3rem;padding:.75rem 0 0;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;margin-bottom:1.25rem}
+.tabs::-webkit-scrollbar{display:none}
+.tb{padding:.4rem 1rem;border-radius:8px 8px 0 0;font-size:.72rem;cursor:pointer;border:1px solid var(--border);border-bottom:none;color:var(--muted);background:var(--surface2);font-family:var(--mono);transition:.15s;white-space:nowrap;margin-bottom:-1px}
+.tb.on{background:var(--surface);color:var(--text)}
+.tp{display:none}.tp.on{display:block;animation:fadeIn .2s ease}
+</style>
+</head>
+<body>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">VOLATILITY & ANALYSE RAM</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:var(--green)">🧠</div>
+  <div>
+    <div><span class="tag tag-green">Mémoire vive</span><span class="tag tag-cyan">Volatility 3</span><span class="tag tag-blue">Windows · Linux · macOS</span></div>
+    <div class="meta" style="margin-top:.4rem">Analyse de dump RAM · Extraction d'artefacts volatils · Forensique mémoire</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tb on" onclick="T('acq')">📥 Acquisition</button>
+  <button class="tb" onclick="T('plugins')">🔌 Plugins clés</button>
+  <button class="tb" onclick="T('malware')">🦠 Détection malware</button>
+  <button class="tb" onclick="T('crypto')">🔑 Clés & Chiffrement</button>
+</div>
+
+<div class="tp on" id="t-acq">
+<div class="sec"><div class="sec-title">Pourquoi analyser la RAM ?</div>
+<div class="g2">
+<div class="card card-red"><div class="ct">⚡ Contenu volatile</div><p>Processus actifs, connexions réseau, clés de chiffrement (FVEK BitLocker), mots de passe en clair, fichiers ouverts non sauvegardés — tout disparaît à l'extinction.</p></div>
+<div class="card card-cyan"><div class="ct">🎯 Priorité forensique</div><p>ISO/IEC 27037 : la RAM doit être capturée <strong>avant tout autre action</strong> sur un système actif. Sa volatilité en fait la preuve la plus fragile.</p></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Outils d'acquisition RAM</div>
+<table><thead><tr><th>Outil</th><th>OS</th><th>Format sortie</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><strong>WinPMem</strong></td><td>Windows</td><td>.raw .aff4</td><td>Open source, recommandé CAS-IN</td></tr>
+<tr><td><strong>Magnet RAM Capture</strong></td><td>Windows</td><td>.raw</td><td>Gratuit, GUI simple</td></tr>
+<tr><td><strong>FTK Imager</strong></td><td>Windows</td><td>.mem</td><td>Inclus dans FTK, large usage judiciaire</td></tr>
+<tr><td><strong>avml</strong></td><td>Linux</td><td>.raw .lime</td><td>Microsoft, sans kernel module</td></tr>
+<tr><td><strong>LiME</strong></td><td>Linux</td><td>.lime</td><td>Kernel module, très fiable</td></tr>
+<tr><td><strong>osxpmem</strong></td><td>macOS</td><td>.aff4</td><td>Limité sur macOS récents (SIP)</td></tr>
+<tr><td><strong>VMware Snapshot</strong></td><td>Tout</td><td>.vmem .vmsn</td><td>Pour VM : snapshot = RAM + état</td></tr>
+</tbody></table></div>
+
+<div class="sec"><div class="sec-title">Commandes d'acquisition</div>
+<div class="cli">
+<span class="c"># Windows — WinPMem</span><br>
+<span class="v">winpmem_mini_x64.exe</span> <span class="a">image_ram.raw</span><br><br>
+<span class="c"># Linux — avml</span><br>
+<span class="v">sudo avml</span> <span class="a">/tmp/ram.lime</span><br><br>
+<span class="c"># VM VMware — copier le .vmem pendant que la VM tourne</span><br>
+<span class="v">cp</span> <span class="a">/var/vmware/machine.vmem</span> <span class="f">/evidence/ram.vmem</span><br><br>
+<span class="c"># Hash immédiat après acquisition</span><br>
+<span class="v">sha256sum</span> <span class="a">image_ram.raw</span> <span class="f">> image_ram.sha256</span>
+</div></div>
+
+<div class="alert">⚖️ <strong>Art. 248 CPP :</strong> La saisie d'un ordinateur allumé nécessite une décision motivée — éteindre = perte définitive de la RAM. L'acquisition RAM est une mesure de contrainte à documenter scrupuleusement.</div>
+</div>
+
+<div class="tp" id="t-plugins">
+<div class="sec"><div class="sec-title">Plugins Volatility 3 — Windows</div>
+<div class="plugin-grid">
+<div class="plugin-card"><div class="plugin-name">windows.pslist</div><div class="plugin-desc">Liste tous les processus actifs (PID, PPID, nom, heure démarrage)</div><div class="plugin-out">→ Détecter processus suspects ou masqués</div></div>
+<div class="plugin-card"><div class="plugin-name">windows.pstree</div><div class="plugin-desc">Arbre des processus parents/enfants — visualiser les chaînes d'exécution</div><div class="plugin-out">→ cmd.exe enfant de Word = macro malveillante</div></div>
+<div class="plugin-card"><div class="plugin-name">windows.psscan</div><div class="plugin-desc">Scan mémoire pour les structures EPROCESS — trouve les processus cachés (rootkits)</div><div class="plugin-out">→ Divergence pslist vs psscan = rootkit</div></div>
+<div class="plugin-card"><div class="plugin-name">windows.netscan</div><div class="plugin-desc">Connexions réseau actives et fermées (IP, port, protocole, PID)</div><div class="plugin-out">→ Connexions C2, beacon malware</div></div>
+<div class="plugin-card"><div class="plugin-name">windows.cmdline</div><div class="plugin-desc">Arguments de ligne de commande de chaque processus</div><div class="plugin-out">→ PowerShell -enc = commande encodée suspecte</div></div>
+<div class="plugin-card"><div class="plugin-name">windows.dlllist</div><div class="plugin-desc">DLL chargées par chaque processus — détecter DLL injection</div><div class="plugin-out">→ DLL injectée dans lsass.exe = credential dumping</div></div>
+<div class="plugin-card"><div class="plugin-name">windows.handles</div><div class="plugin-desc">Handles ouverts (fichiers, clés registre, mutexes) par processus</div><div class="plugin-out">→ Fichiers ouverts non visibles sur disque</div></div>
+<div class="plugin-card"><div class="plugin-name">windows.malfind</div><div class="plugin-desc">Détecte les régions mémoire exécutables sans image disque associée</div><div class="plugin-out">→ Code injecté, shellcode en mémoire</div></div>
+<div class="plugin-card"><div class="plugin-name">windows.filescan</div><div class="plugin-desc">Scan les objets FILE_OBJECT en mémoire — fichiers ouverts ou récemment fermés</div><div class="plugin-out">→ Fichiers supprimés encore référencés</div></div>
+<div class="plugin-card"><div class="plugin-name">windows.registry.hivelist</div><div class="plugin-desc">Liste les ruches de registre chargées en mémoire</div><div class="plugin-out">→ Ruches volatiles (HKCU non sauvées)</div></div>
+<div class="plugin-card"><div class="plugin-name">windows.hashdump</div><div class="plugin-desc">Extrait les hashes NTLM depuis la mémoire (SAM en mémoire)</div><div class="plugin-out">→ Casser avec Hashcat -m 1000</div></div>
+<div class="plugin-card"><div class="plugin-name">windows.vadinfo</div><div class="plugin-desc">Virtual Address Descriptor — régions mémoire mappées par processus</div><div class="plugin-out">→ Analyse des segments de mémoire</div></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Commandes types</div>
+<div class="cli">
+<span class="c"># Structure générale Volatility 3</span><br>
+<span class="v">python3 vol.py</span> <span class="f">-f</span> <span class="a">image_ram.raw</span> <span class="v">windows.pslist</span><br><br>
+<span class="c"># Processus masqués (rootkit detection)</span><br>
+<span class="v">python3 vol.py</span> <span class="f">-f</span> <span class="a">ram.raw</span> <span class="v">windows.psscan</span> <span class="f">--</span><br>
+<span class="v">python3 vol.py</span> <span class="f">-f</span> <span class="a">ram.raw</span> <span class="v">windows.pslist</span><br>
+<span class="c"># → Comparer les deux listes</span><br><br>
+<span class="c"># Connexions réseau</span><br>
+<span class="v">python3 vol.py</span> <span class="f">-f</span> <span class="a">ram.raw</span> <span class="v">windows.netscan</span> <span class="f">| grep</span> <span class="a">ESTABLISHED</span><br><br>
+<span class="c"># Extraire un processus pour analyse</span><br>
+<span class="v">python3 vol.py</span> <span class="f">-f</span> <span class="a">ram.raw</span> <span class="v">windows.dumpfiles</span> <span class="f">--pid</span> <span class="a">1234</span>
+</div></div>
+</div>
+
+<div class="tp" id="t-malware">
+<div class="sec"><div class="sec-title">Détection de malware en mémoire</div>
+<div class="g2">
+<div class="card card-red"><div class="ct">Indicateurs de compromission RAM</div><ul>
+<li>Processus avec nom légitime mais PPID anormal (svchost sans services.exe)</li>
+<li>Processus dupliqués (2 × lsass.exe)</li>
+<li>Chemin d'exécution hors %SystemRoot% (lsass.exe dans C:\Temp)</li>
+<li>Connexions réseau vers IP suspectes depuis processus système</li>
+<li>malfind → régions PAGE_EXECUTE_READWRITE sans fichier</li>
+<li>DLL injectée dans processus légitime (hollowing)</li>
+</ul></div>
+<div class="card card-gold"><div class="ct">Processus système légitimes</div><ul>
+<li><strong>System</strong> — PID 4, toujours, PPID 0</li>
+<li><strong>smss.exe</strong> — 1 seul, enfant de System</li>
+<li><strong>csrss.exe</strong> — 1 par session, enfant smss</li>
+<li><strong>lsass.exe</strong> — 1 seul, enfant winlogon/wininit</li>
+<li><strong>services.exe</strong> — 1 seul, enfant wininit</li>
+<li><strong>svchost.exe</strong> — multiple, enfants services.exe uniquement</li>
+</ul></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Process Hollowing & Injection</div>
+<div class="g2">
+<div class="card card-purple"><div class="ct">Process Hollowing</div><p>Le malware crée un processus légitime (svchost.exe) <strong>suspendu</strong>, remplace son code en mémoire par du code malveillant, puis reprend l'exécution. L'apparence est celle d'un processus légitime.</p><br><p><strong>Détection :</strong> malfind + comparer le PE header en mémoire avec le fichier sur disque.</p></div>
+<div class="card card-orange"><div class="ct">DLL Injection</div><p>Forcer un processus légitime à charger une DLL malveillante via <code style="color:var(--cyan)">CreateRemoteThread</code> + <code style="color:var(--cyan)">LoadLibrary</code>. La DLL tourne dans le contexte du processus cible (et ses privilèges).</p><br><p><strong>Détection :</strong> dlllist → DLL avec chemin anormal ou sans signature.</p></div>
+</div></div>
+</div>
+
+<div class="tp" id="t-crypto">
+<div class="sec"><div class="sec-title">Extraction de clés de chiffrement</div>
+<div class="g2">
+<div class="card card-blue"><div class="ct">BitLocker — FVEK</div><p>Si le volume BitLocker était monté lors de la capture RAM, la <strong>FVEK</strong> (Full Volume Encryption Key) est présente en mémoire.<br><br>
+<strong>Passware :</strong> Analyze Encrypted Disk → sélectionner le dump RAM → extraction automatique.<br><br>
+<strong>Volatility :</strong> plugin <code style="color:var(--cyan)">windows.bitlocker</code> (Volatility 3 avec plugin tiers).</p></div>
+<div class="card card-cyan"><div class="ct">VeraCrypt / TrueCrypt</div><p>Les clés AES de VeraCrypt sont en mémoire tant que le volume est monté. Passware Kit Forensic les extrait automatiquement depuis le dump RAM.<br><br>
+Aucune attaque de MDP nécessaire — la clé symétrique déchiffre directement.</p></div>
+</div>
+<div class="g2" style="margin-top:.75rem">
+<div class="card card-green"><div class="ct">Hashes NTLM (hashdump)</div><p>Les hashes NTLM des comptes locaux sont en mémoire dans le processus <strong>lsass.exe</strong>.<br><br>
+<code style="color:var(--cyan)">windows.hashdump</code> → hashes → Hashcat <code style="color:var(--cyan)">-m 1000</code><br><br>
+Mimikatz : <code style="color:var(--cyan)">sekurlsa::logonpasswords</code> peut récupérer les MDP en clair si WDigest est actif.</p></div>
+<div class="card card-red"><div class="ct">Attention légale (Suisse)</div><p>L'extraction de clés de chiffrement depuis la RAM est une mesure de contrainte (art. 246–248 CPP). Elle doit être autorisée et documentée. Le résultat (clé ou hash) est une pièce à conviction soumise aux règles de la chaîne de possession.</p></div>
+</div></div>
+</div>
+
+<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Volatility 3 = <code>python3 vol.py -f ram.raw windows.[plugin]</code> · pslist vs psscan → rootkit · malfind → code injecté · netscan → connexions C2 · hashdump → NTLM → Hashcat -m 1000 · BitLocker FVEK extractible si volume monté lors de la capture RAM.</div>
+<div class="footer"><span>CAS-IN Investigation Numérique · Forensique Suisse</span><span>Ch. 15 Manuel · ISO/IEC 27037</span></div>
+</div>
+</div>
+<script>
+function T(id){document.querySelectorAll('.tp').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));document.getElementById('t-'+id).classList.add('on');event.target.classList.add('on');}
+</script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Registre Windows — CAS-IN</title>
+<link rel="stylesheet" href="fiche_style.css">
+<style>
+.hive-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:.6rem;margin-bottom:1rem}
+.hive-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;position:relative;overflow:hidden}
+.hive-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.hc-sam::before{background:var(--red)}.hc-sys::before{background:var(--blue)}.hc-sof::before{background:var(--green)}.hc-ntu::before{background:var(--gold)}.hc-sec::before{background:var(--purple)}.hc-am::before{background:var(--orange)}.hc-def::before{background:var(--cyan)}
+.hive-name{font-family:var(--mono);font-size:.8rem;font-weight:700;margin-bottom:.15rem}
+.hc-sam .hive-name{color:var(--red)}.hc-sys .hive-name{color:var(--blue)}.hc-sof .hive-name{color:var(--green)}.hc-ntu .hive-name{color:var(--gold)}.hc-sec .hive-name{color:var(--purple)}.hc-am .hive-name{color:var(--orange)}.hc-def .hive-name{color:var(--cyan)}
+.hive-path{font-size:.65rem;color:var(--dim);margin-bottom:.4rem;font-family:var(--mono)}
+.hive-desc{font-size:.72rem;color:var(--muted);line-height:1.4}
+.artefact-table{width:100%;border-collapse:collapse;font-size:.73rem;margin-bottom:.75rem}
+.artefact-table th{background:var(--surface2);padding:.5rem .75rem;text-align:left;border-bottom:2px solid var(--border);font-size:.62rem;letter-spacing:.1em;color:var(--dim);font-weight:700}
+.artefact-table td{padding:.5rem .75rem;border-bottom:1px solid rgba(48,54,61,.4);vertical-align:top;line-height:1.4}
+.artefact-table tr:hover td{background:var(--surface)}
+.artefact-table tr:last-child td{border-bottom:none}
+.rkey{font-family:var(--mono);font-size:.7rem;color:var(--cyan);word-break:break-all}
+.cli{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.85rem 1.1rem;font-size:.74rem;color:var(--green);font-family:var(--mono);line-height:2;margin:.5rem 0;overflow-x:auto}
+.cli .c{color:var(--dim)} .cli .a{color:var(--cyan)} .cli .v{color:var(--orange)}
+</style>
+</head>
+<body>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">REGISTRE WINDOWS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:var(--blue)">🗝</div>
+  <div>
+    <div><span class="tag tag-blue">Ruches Windows</span><span class="tag tag-cyan">Artefacts forensiques</span><span class="tag tag-red">RegRipper · Autopsy</span></div>
+    <div class="meta" style="margin-top:.4rem">SAM · SYSTEM · SOFTWARE · NTUSER.DAT · Persistance · Activité utilisateur</div>
+  </div>
+</div>
+
+<div class="sec"><div class="sec-title">Les ruches du registre (Hives)</div>
+<div class="hive-grid">
+<div class="hive-card hc-sam"><div class="hive-name">SAM</div><div class="hive-path">C:\Windows\System32\config\SAM</div><div class="hive-desc">Comptes locaux + hashes NTLM (avec SYSTEM). Nécessite les deux ruches pour extraire les hashes.</div></div>
+<div class="hive-card hc-sys"><div class="hive-name">SYSTEM</div><div class="hive-path">C:\Windows\System32\config\SYSTEM</div><div class="hive-desc">Configuration matérielle, périphériques USB connectés (USBSTOR), nom machine, clé de déchiffrement du SAM (SysKey).</div></div>
+<div class="hive-card hc-sof"><div class="hive-name">SOFTWARE</div><div class="hive-path">C:\Windows\System32\config\SOFTWARE</div><div class="hive-desc">Applications installées, autorun, MRU, dernières connexions réseau, type de timezone.</div></div>
+<div class="hive-card hc-sec"><div class="hive-name">SECURITY</div><div class="hive-path">C:\Windows\System32\config\SECURITY</div><div class="hive-desc">Politiques de sécurité, LSA secrets (MDP de services), sessions réseau.</div></div>
+<div class="hive-card hc-ntu"><div class="hive-name">NTUSER.DAT</div><div class="hive-path">C:\Users\[utilisateur]\NTUSER.DAT</div><div class="hive-desc">Préférences utilisateur, MRU (fichiers récents), TypedURLs (URLs tapées IE/Edge), UserAssist (programmes lancés).</div></div>
+<div class="hive-card hc-am"><div class="hive-name">USRCLASS.DAT</div><div class="hive-path">C:\Users\[user]\AppData\Local\Microsoft\Windows\UsrClass.dat</div><div class="hive-desc">ShellBags (navigation explorateur de fichiers, y compris dossiers supprimés), associations de fichiers.</div></div>
+<div class="hive-card hc-def"><div class="hive-name">DEFAULT</div><div class="hive-path">C:\Windows\System32\config\DEFAULT</div><div class="hive-desc">Profil par défaut pour les nouveaux utilisateurs. Parfois utilisé pour la persistance.</div></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Artefacts forensiques clés</div>
+<table class="artefact-table">
+<thead><tr><th>Artefact</th><th>Chemin registre</th><th>Information forensique</th></tr></thead>
+<tbody>
+<tr><td><strong>USB connectés</strong></td><td><span class="rkey">SYSTEM\CurrentControlSet\Enum\USBSTOR</span></td><td>Périphériques USB : nom, numéro de série, date 1ère/dernière connexion</td></tr>
+<tr><td><strong>USB — lettre de lecteur</strong></td><td><span class="rkey">SYSTEM\MountedDevices</span></td><td>Lettre de lecteur assignée à chaque périphérique</td></tr>
+<tr><td><strong>Programmes lancés (UserAssist)</strong></td><td><span class="rkey">NTUSER\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist</span></td><td>EXE lancés, nombre d'exécutions, horodatage (encodé ROT13)</td></tr>
+<tr><td><strong>Fichiers récents (MRU)</strong></td><td><span class="rkey">NTUSER\Software\Microsoft\Windows\CurrentVersion\Explorer\RecentDocs</span></td><td>Derniers fichiers ouverts par type d'extension</td></tr>
+<tr><td><strong>URLs tapées</strong></td><td><span class="rkey">NTUSER\Software\Microsoft\Internet Explorer\TypedURLs</span></td><td>URLs saisies manuellement dans IE/Edge</td></tr>
+<tr><td><strong>Réseau — dernières connexions</strong></td><td><span class="rkey">SOFTWARE\Microsoft\Windows NT\CurrentVersion\NetworkList\Profiles</span></td><td>Nom réseau, SSID, date 1ère/dernière connexion</td></tr>
+<tr><td><strong>ShellBags</strong></td><td><span class="rkey">USRCLASS.DAT\Local Settings\Software\Microsoft\Windows\Shell\Bags</span></td><td>Dossiers navigués dans l'explorateur — y compris dossiers supprimés ou sur support amovible</td></tr>
+<tr><td><strong>Autorun (persistance)</strong></td><td><span class="rkey">SOFTWARE\Microsoft\Windows\CurrentVersion\Run</span></td><td>Programmes lancés au démarrage — vecteur de persistance malware courant</td></tr>
+<tr><td><strong>ShimCache (AppCompatCache)</strong></td><td><span class="rkey">SYSTEM\CurrentControlSet\Control\Session Manager\AppCompatCache</span></td><td>Programmes exécutés ou présents sur le système (même supprimés)</td></tr>
+<tr><td><strong>AmCache</strong></td><td><span class="rkey">C:\Windows\AppCompat\Programs\Amcache.hve</span></td><td>Hash SHA-1, chemin, date d'exécution des programmes</td></tr>
+<tr><td><strong>Derniers MDP tapés (SAM)</strong></td><td><span class="rkey">SAM + SYSTEM</span></td><td>Hashes NTLM — extraire avec impacket ou Passware</td></tr>
+<tr><td><strong>Timezone</strong></td><td><span class="rkey">SYSTEM\CurrentControlSet\Control\TimeZoneInformation</span></td><td>Fuseau horaire de la machine — critique pour la timeline</td></tr>
+</tbody></table></div>
+
+<div class="sec"><div class="sec-title">Outils d'analyse</div>
+<div class="g2">
+<div class="card card-blue"><div class="ct">RegRipper</div><p>Extracteur de plugins Perl — analyse automatique des ruches. Plus de 200 plugins spécialisés (usbstor, userassist, shellbags, autoruns, etc.).</p><br>
+<div class="cli">
+<span class="c"># Analyser NTUSER.DAT</span><br>
+<span class="v">rip.pl</span> <span class="a">-r NTUSER.DAT -f ntuser</span><br><br>
+<span class="c"># Plugin spécifique USB</span><br>
+<span class="v">rip.pl</span> <span class="a">-r SYSTEM -p usbstor</span>
+</div></div>
+<div class="card card-green"><div class="ct">Registry Explorer (Eric Zimmermann)</div><p>GUI Windows pour l'analyse de ruches hors ligne. Supporte les ruches de transactions (.LOG), la reconstruction de ruches corrompues, la recherche full-text.</p><br><p>Outil de référence forensique — gratuit sur <strong>ericzimmermantools.com</strong></p></div>
+</div>
+<div class="g2" style="margin-top:.75rem">
+<div class="card card-cyan"><div class="ct">impacket-secretsdump</div><div class="cli"><span class="v">impacket-secretsdump</span> <span class="a">-sam SAM -system SYSTEM LOCAL</span></div><p>Extrait les hashes NTLM à partir des fichiers SAM+SYSTEM copiés hors ligne. Nécessite les deux fichiers ensemble.</p></div>
+<div class="card card-gold"><div class="ct">ShellBags Explorer (EZtools)</div><p>Analyse des ShellBags — révèle les dossiers navigués même si supprimés, les lecteurs réseau et périphériques amovibles accédés.</p><br><p><strong>Clé forensique :</strong> prouve qu'un utilisateur a accédé à un dossier à une date donnée.</p></div>
+</div></div>
+
+<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> USBSTOR → périphériques USB · UserAssist ROT13 → programmes lancés · ShellBags → dossiers navigués (même supprimés) · Run/RunOnce → persistance malware · SAM+SYSTEM → hashes NTLM → Hashcat -m 1000 · AmCache → SHA-1 des exécutables · ShimCache → preuve d'exécution.</div>
+<div class="footer"><span>CAS-IN Investigation Numérique · Forensique Suisse</span><span>Ch. 17 Manuel · Artefacts Windows</span></div>
+</div>
+</body>
+</html>
