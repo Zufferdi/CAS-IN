@@ -689,17 +689,25 @@ const CATALOG_INLINE = [
 ];
 
 async function loadCatalog() {
-  // Afficher immédiatement avec les données inline (toujours disponible)
-  renderCatalog(CATALOG_INLINE);
+  const container = document.getElementById('sc-cards');
+  try {
+    // Afficher immédiatement avec les données inline
+    renderCatalog(CATALOG_INLINE);
+  } catch(e) {
+    if(container) container.innerHTML =
+      '<div style="color:#ff4060;padding:2rem;font-family:monospace;background:rgba(255,64,96,.1);border-radius:8px;margin:1rem">'+
+      '❌ Erreur renderCatalog: ' + e.message + '<br><small>' + e.stack + '</small></div>';
+    return;
+  }
 
-  // Tenter de récupérer le catalogue enrichi depuis le serveur en arrière-plan
+  // Tenter de récupérer le catalogue serveur en arrière-plan
   try {
     const res = await fetch('scenarios/index.json');
-    if (!res.ok) return; // JSON pas encore uploadé → garder le fallback
+    if (!res.ok) return;
     const catalog = await res.json();
-    renderCatalog(catalog); // Met à jour silencieusement si le fetch réussit
+    renderCatalog(catalog);
   } catch (e) {
-    // Pas de JSON sur le serveur — le catalogue inline est déjà affiché
+    // JSON pas encore uploadé — catalogue inline déjà affiché, c'est OK
   }
 }
 
@@ -785,6 +793,7 @@ function renderFilteredCards() {
     : _catalog;
 
   const container = document.getElementById('sc-cards');
+  if (!container) { console.error('sc-cards introuvable'); return; }
 
   if (filtered.length === 0) {
     container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--dim)">Aucun scénario pour ce filtre.</div>';
@@ -1078,8 +1087,9 @@ let SCENARIOS = {}; // Loaded dynamically from scenarios/
 // Actions now loaded from premier_intervenant.json
 
 
-let _timerInterval = null; let _currentTimerScenario = null;
-let _timerSecondes = scenario.duration || 90; _currentTimerScenario = scenario;
+let _timerInterval = null;
+let _currentTimerScenario = null;
+let _timerSecondes = 90;
 let _timerStarted = false;
 let _rankingDone = false;
 let _userOrder = [];
@@ -1107,7 +1117,8 @@ async function launchScenario(id) {
 }
 
 function renderTimerScenario(scenario) {
-  _timerSecondes = 90;
+  _timerSecondes = scenario.duration || 90;
+  _currentTimerScenario = scenario;
   _timerStarted = false;
   _rankingDone = false;
   _userOrder = [];
