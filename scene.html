@@ -2,15 +2,12 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Simulation Scène de Crime — CAS-IN Forensique</title>
-<meta name="description" content="Serious Game forensique numérique suisse — Prise de décision irréversible, droit suisse CPP/CP, chaîne de custody.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚨</text></svg>">
-<link rel="stylesheet" href="fiches/fiche.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1117">
+<title>CAS-IN · Scénarios DFIR</title>
 <link rel="stylesheet" href="scene.css">
 </head>
 <body>
-
 <div class="topnav">
   <div style="display:flex;gap:.5rem;align-items:center">
     <a href="index.html" class="tn-back">← Accueil</a>
@@ -55,15 +52,9 @@
 <!-- SCENARIO SELECTOR -->
 <div class="sc-selector" id="sc-selector">
   <div class="sc-selector-title">Choisissez votre mission</div>
-  <div class="sc-cards">
-
-    <div class="sc-card" onclick="launchScenario('bitlocker')">
-      <div class="sc-card-icon">💻</div>
-      <div class="sc-card-diff diff-hard">Critique</div>
-      <div class="sc-card-title">Le Dilemme de l'Intervenant</div>
-      <div class="sc-card-desc">Ordinateur allumé, BitLocker actif, suspect présent. Éteindre ou ne pas éteindre ? Chaque seconde compte.</div>
-      <div class="sc-card-law">Art. 245 CPP · Ch. 11 Manuel</div>
-    </div>
+  <div class="sc-filters" id="sc-filters"></div>
+  <div class="sc-cards" id="sc-cards"><div style="text-align:center;padding:2rem;color:var(--dim)">⏳ Chargement des scénarios...</div></div>
+  </div>
 
     <div class="sc-card" onclick="launchScenario('smartphone')">
       <div class="sc-card-icon">📱</div>
@@ -128,8 +119,142 @@
 <div class="sc-game" id="sc-game" style="display:none">
   <div id="sc-narrative"></div>
 </div>
-
 <script>
+
+// ═══════════════════════════════════════════════════════════════
+// CHARGEMENT DYNAMIQUE DES SCÉNARIOS DEPUIS JSON
+// ═══════════════════════════════════════════════════════════════
+
+async function loadCatalog() {
+  try {
+    const res = await fetch('scenarios/index.json');
+    const catalog = await res.json();
+    renderCatalog(catalog);
+  } catch (e) {
+    console.error('Erreur chargement catalogue:', e);
+    document.getElementById('sc-cards').innerHTML =
+      '<div style="color:var(--red);padding:1rem">Erreur de chargement des scénarios. Vérifiez la connexion.</div>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SYSTÈME DE TAGS & FILTRAGE
+// ═══════════════════════════════════════════════════════════════
+
+let _catalog = [];
+let _activeTag = null;
+
+// Ordre d'affichage et couleurs des tags
+const TAG_META = {
+  'Tous':          { color: 'var(--text)',    bg: 'rgba(255,255,255,.08)',  border: 'rgba(255,255,255,.2)'  },
+  'Débutant':      { color: '#30e88a',        bg: 'rgba(48,232,138,.08)',   border: 'rgba(48,232,138,.25)'  },
+  'Intermédiaire': { color: '#f0c040',        bg: 'rgba(240,192,64,.08)',   border: 'rgba(240,192,64,.25)'  },
+  'Avancé':        { color: '#ff4060',        bg: 'rgba(255,64,96,.08)',    border: 'rgba(255,64,96,.25)'   },
+  'Suisse':        { color: '#ff6b6b',        bg: 'rgba(255,107,107,.08)', border: 'rgba(255,107,107,.25)' },
+  'Procédure':     { color: '#58a6ff',        bg: 'rgba(88,166,255,.08)',   border: 'rgba(88,166,255,.25)'  },
+  'Acquisition':   { color: '#3fb950',        bg: 'rgba(63,185,80,.08)',    border: 'rgba(63,185,80,.25)'   },
+  'Analyse':       { color: '#f0883e',        bg: 'rgba(240,136,62,.08)',   border: 'rgba(240,136,62,.25)'  },
+  'Rapport':       { color: '#bc8cff',        bg: 'rgba(188,140,255,.08)', border: 'rgba(188,140,255,.25)' },
+  'Cryptologie':   { color: '#a5d6ff',        bg: 'rgba(165,214,255,.08)', border: 'rgba(165,214,255,.25)' },
+  'Corrélation':   { color: '#00e5cc',        bg: 'rgba(0,229,204,.08)',   border: 'rgba(0,229,204,.25)'   },
+  'Qualification': { color: '#ffa657',        bg: 'rgba(255,166,87,.08)',  border: 'rgba(255,166,87,.25)'  },
+  'Réseau':        { color: '#79c0ff',        bg: 'rgba(121,192,255,.08)', border: 'rgba(121,192,255,.25)' },
+  'Chrono':        { color: '#ff4060',        bg: 'rgba(255,64,96,.08)',   border: 'rgba(255,64,96,.25)'   },
+};
+
+function renderCatalog(catalog) {
+  _catalog = catalog;
+
+  // Lire le tag depuis l'URL (?tag=Suisse)
+  const urlTag = new URLSearchParams(location.search).get('tag');
+  if (urlTag && urlTag !== 'Tous') _activeTag = urlTag;
+
+  // Construire la liste ordonnée des tags disponibles
+  const tagOrder = Object.keys(TAG_META);
+  const tagCounts = {};
+  catalog.forEach(sc => (sc.tags || []).forEach(t => { tagCounts[t] = (tagCounts[t] || 0) + 1; }));
+  const allTags = ['Tous', ...tagOrder.filter(t => t !== 'Tous' && tagCounts[t])];
+
+  // Rendre les filtres
+  const filterEl = document.getElementById('sc-filters');
+  if (filterEl) {
+    filterEl.innerHTML = allTags.map(tag => {
+      const meta = TAG_META[tag] || TAG_META['Tous'];
+      const count = tag === 'Tous' ? catalog.length : (tagCounts[tag] || 0);
+      const isActive = (tag === 'Tous' && !_activeTag) || tag === _activeTag;
+      return `<button class="sc-filter-chip ${isActive ? 'active' : ''}"
+        data-tag="${tag}"
+        style="--chip-color:${meta.color};--chip-bg:${meta.bg};--chip-border:${meta.border}"
+        onclick="filterByTag('${tag}')">
+        ${tag} <span class="sc-filter-count">${count}</span>
+      </button>`;
+    }).join('');
+  }
+
+  renderFilteredCards();
+}
+
+function filterByTag(tag) {
+  _activeTag = (tag === 'Tous') ? null : tag;
+
+  // Mettre à jour les chips
+  document.querySelectorAll('.sc-filter-chip').forEach(btn => {
+    const btnTag = btn.dataset.tag;
+    const isActive = (btnTag === 'Tous' && !_activeTag) || btnTag === _activeTag;
+    btn.classList.toggle('active', isActive);
+  });
+
+  // Mettre à jour l'URL sans rechargement
+  const url = new URL(location.href);
+  if (_activeTag) { url.searchParams.set('tag', _activeTag); }
+  else { url.searchParams.delete('tag'); }
+  history.pushState({}, '', url);
+
+  renderFilteredCards();
+}
+
+function renderFilteredCards() {
+  const filtered = _activeTag
+    ? _catalog.filter(sc => (sc.tags || []).includes(_activeTag))
+    : _catalog;
+
+  const container = document.getElementById('sc-cards');
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--dim)">Aucun scénario pour ce filtre.</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(sc => {
+    const tagPills = (sc.tags || []).map(t => {
+      const meta = TAG_META[t] || {};
+      return `<span class="sc-tag-pill" style="color:${meta.color || 'var(--dim)'};background:${meta.bg || 'transparent'};border-color:${meta.border || 'var(--border)'};">${t}</span>`;
+    }).join('');
+
+    return `<div class="sc-card" onclick="launchScenario('${sc.id}')">
+      <div class="sc-card-icon">${sc.icon}</div>
+      <div class="sc-card-diff diff-${sc.diff_class}">${sc.diff}</div>
+      <div class="sc-card-title">${sc.title}</div>
+      <div class="sc-card-desc">${sc.desc}</div>
+      <div class="sc-card-tags">${tagPills}</div>
+      <div class="sc-card-law">${sc.laws.join(' · ')}</div>
+    </div>`;
+  }).join('');
+}
+
+async function loadScenario(id) {
+  if (SCENARIOS[id]) return SCENARIOS[id]; // cache
+  try {
+    const res = await fetch('scenarios/' + id + '.json');
+    const data = await res.json();
+    SCENARIOS[id] = data;
+    return data;
+  } catch (e) {
+    console.error('Erreur chargement scénario ' + id + ':', e);
+    return null;
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════
 // ÉTAT GLOBAL
 // ═══════════════════════════════════════════════════════════════
@@ -341,585 +466,8 @@ function renderEnd(scenario) {
 // SCÉNARIOS
 // ═══════════════════════════════════════════════════════════════
 
-const SCENARIOS = {
-
-// ─────────────────────────────────────────────
-// 1. BITLOCKER / LE DILEMME DE L'INTERVENANT
-// ─────────────────────────────────────────────
-bitlocker: {
-  title: "Le Dilemme de l'Intervenant",
-  debrief: `<p>Ce scénario illustre le principe fondamental du Manuel (Ch. 11) : <em>«&nbsp;La première décision face à un système allumé — éteindre ou ne pas éteindre — engage irrévocablement toute la suite de l'enquête.&nbsp;»</em></p>
-  <p>En droit suisse, la preuve numérique doit satisfaire à 4 conditions cumulatives (Ch. 1 Manuel) : légalement obtenue, préservée sans modification, traçable, interprétée par un compétent. Éteindre un ordinateur BitLocker actif sans capture RAM viole la condition 2 : les clés de déchiffrement en mémoire disparaissent définitivement.</p>
-  <p><strong>Références :</strong> CPP art. 245 (perquisition supports) · ISO/IEC 27037 · Manuel Ch. 11.1–11.2</p>`,
-  steps: [
-    {
-      phase: "🚨 Phase 1 — Arrivée sur scène",
-      urgent: true,
-      scene: `Appartement d'un suspect de fraude fiscale à Zurich. Il est <strong>11h47</strong>. Un laptop <strong>Dell XPS ouvert et allumé</strong> affiche un bureau Windows avec plusieurs fenêtres ouvertes. Dans le coin inférieur droit de l'écran, vous apercevez l'icône <strong>BitLocker activé</strong>. Le suspect est présent, les mains sur la tête. Votre mandat de perquisition (art. 245 CPP) est en règle.`,
-      law: `<strong>Art. 245 CPP</strong> — Perquisition de supports de données : les supports peuvent être examinés si des données utiles à l'enquête y sont stockées.<br><strong>ISO/IEC 27037</strong> — L'analyste doit prioriser les sources selon leur volatilité : RAM d'abord.`,
-      question: `<strong>Quelle est votre première action face à l'ordinateur allumé avec BitLocker actif ?</strong>`,
-      choices: [
-        {
-          text: "Débrancher immédiatement le câble d'alimentation pour «geler» l'état.",
-          correct: false, penalty: 15,
-          explain: "Erreur critique. Débrancher l'alimentation efface instantanément la RAM, où réside la clé de déchiffrement BitLocker en session active. Le disque devient un bloc de données chiffrées inaccessibles — la preuve principale est détruite.",
-          legal: "Viole ISO/IEC 27037 (préservation des données volatiles) et rend irrecevable la preuve si le juge estime que l'analyste a compromis la chaîne de custody.",
-          consequence: `<div class="sc-consequence-item bad">❌ Clé BitLocker définitivement perdue</div>
-            <div class="sc-consequence-item bad">❌ Disque chiffré inaccessible sans clé de récupération</div>
-            <div class="sc-consequence-item bad">❌ Risque de remise en cause de la preuve (art. 140 CPP)</div>`,
-          source: "Ch. 11.1 — Les premières minutes sont irréversibles",
-          next: 1,
-        },
-        {
-          text: "Photographier l'écran, puis lancer immédiatement une capture RAM (WinPmem/DumpIt).",
-          correct: true, points: 20,
-          explain: "Décision optimale. La capture RAM preserve les clés BitLocker actives, les processus, les connexions réseau et les documents non sauvegardés. La photographie préalable documente l'état initial — premier maillon de la chaîne de custody.",
-          legal: "Conforme à ISO/IEC 27037 et Ch. 11.2 du manuel : «&nbsp;La capture de la mémoire vive doit être la première action lorsqu'on décide de pratiquer la Live Forensics.&nbsp;»",
-          consequence: `<div class="sc-consequence-item good">✓ Clés BitLocker préservées en mémoire</div>
-            <div class="sc-consequence-item good">✓ État initial documenté (chaîne de custody)</div>
-            <div class="sc-consequence-item good">✓ Processus actifs, connexions et documents capturés</div>`,
-          source: "Ch. 11.2 — Capture de la mémoire vive (RAM Dump)",
-          next: 1,
-        },
-        {
-          text: "Demander au suspect son mot de passe BitLocker.",
-          correct: false, penalty: 5,
-          explain: "Approche problématique. Le suspect a le droit de garder le silence (nemo tenetur, art. 113 CPP). En pratique, cette demande peut alerter le suspect et le pousser à invoquer ses droits. La Live Forensics est la voie correcte si le système est déjà allumé.",
-          legal: "Art. 113 CPP — Le prévenu n'est pas tenu de déposer contre lui-même. Toutefois, le MP peut requérir la production de documents (art. 265 CPP) — ce qui ne couvre pas les mots de passe.",
-          consequence: `<div class="sc-consequence-item neutral">⚠️ Le suspect peut légalement refuser</div>
-            <div class="sc-consequence-item bad">❌ Perd du temps précieux pendant lequel la RAM est volatile</div>`,
-          source: "Ch. 1.4 — La chaîne de custody",
-          next: 1,
-        },
-        {
-          text: "Mettre le laptop en mode veille (fermer l'écran) et appeler votre expert.",
-          correct: false, penalty: 10,
-          explain: "Erreur. Sur certains systèmes, la mise en veille peut déclencher une hibernation qui chiffre le contenu mémoire sur disque. Sur d'autres, elle verrouille BitLocker. Vous perdez l'accès aux données volatiles et potentiellement aux clés. L'expert doit être contacté AVANT toute action, pas après.",
-          legal: "Viole le principe de préservation sans modification (ISO/IEC 27037). La mise en veille est une action qui modifie l'état du système.",
-          consequence: `<div class="sc-consequence-item bad">❌ Risque de verrouillage BitLocker</div>
-            <div class="sc-consequence-item bad">❌ Possible écrasement de la RAM</div>
-            <div class="sc-consequence-item neutral">⚠️ Expert averti tardivement</div>`,
-          source: "Ch. 11.1 — Phase amont : anticiper avant d'entrer",
-          next: 1,
-        }
-      ]
-    },
-    {
-      phase: "🔬 Phase 2 — Acquisition en cours",
-      scene: `La capture RAM est lancée (18 Go, durée estimée : 4 minutes). WinPmem tourne sur une clé USB forensique. Le suspect est calmement assis avec son avocat qui vient d'arriver. L'avocat demande : <em>«&nbsp;Pouvez-vous me montrer le mandat et arrêter votre logiciel pendant que nous examinons la situation ?&nbsp;»</em>`,
-      law: `<strong>Art. 248 CPP</strong> — L'avocat peut demander la mise sous scellés des données pour suspendre l'analyse. Mais la mise sous scellés protège les données déjà saisies, pas les données en cours d'acquisition légale.<br><strong>Art. 241 CPP</strong> — Le mandat de perquisition autorise les actes nécessaires à son exécution.`,
-      question: `<strong>Que répondez-vous à l'avocat qui demande d'arrêter la capture RAM ?</strong>`,
-      choices: [
-        {
-          text: "Arrêter immédiatement la capture — le droit de l'avocat prime.",
-          correct: false, penalty: 15,
-          explain: "Erreur juridique. La mise sous scellés (art. 248 CPP) suspend l'analyse ultérieure, mais n'annule pas une acquisition déjà en cours sous mandat valide. Arrêter une capture RAM en milieu de processus peut corrompre le dump et rendre la preuve inutilisable.",
-          legal: "Art. 248 CPP ne s'applique qu'aux données «&nbsp;saisies&nbsp;» non encore analysées. La capture en cours est un acte d'exécution du mandat (art. 241 CPP).",
-          consequence: `<div class="sc-consequence-item bad">❌ Dump RAM potentiellement corrompu</div>
-            <div class="sc-consequence-item bad">❌ Clés BitLocker irrécupérables si session verrouillée entre-temps</div>`,
-          source: "Ch. 2.5 — La règle d'or : corréler, jamais conclure sur un artefact isolé",
-          next: 2,
-        },
-        {
-          text: "Montrer le mandat, expliquer que la capture est un acte légal en cours d'exécution, continuer.",
-          correct: true, points: 15,
-          explain: "Réponse correcte. Le mandat (art. 245 CPP) autorise l'acquisition. La mise sous scellés demandée par l'avocat peut s'appliquer aux données une fois saisies, mais pas interrompre une opération légale en cours. Montrer le mandat est obligatoire (art. 241 al. 3 CPP).",
-          legal: "Art. 241 al. 3 CPP — Le mandat doit être présenté. Art. 248 CPP — Les scellés protègent les données saisies, applicables après l'acquisition, pas pendant.",
-          consequence: `<div class="sc-consequence-item good">✓ Acquisition légalement complétée</div>
-            <div class="sc-consequence-item good">✓ Mandat présenté — chaîne de custody respectée</div>
-            <div class="sc-consequence-item good">✓ Droits de la défense préservés (scellés possibles après)</div>`,
-          source: "Ch. 11 — Saisie et transport des équipements",
-          next: 2,
-        },
-        {
-          text: "Suspendre la capture et attendre la décision du Tribunal des mesures de contrainte.",
-          correct: false, penalty: 10,
-          explain: "Trop prudent et contreproductif. Le TMC statue sur les scellés après saisie, pas pendant l'exécution d'un mandat valide. Attendre peut prendre des heures — la RAM sera perdue dès que l'alimentation sera coupée.",
-          legal: "Le TMC n'a pas compétence pour suspendre l'exécution d'un mandat judiciaire valide. Il statue sur la levée des scellés (art. 248 al. 3 CPP).",
-          consequence: `<div class="sc-consequence-item bad">❌ Clés BitLocker perdues si alimentation coupée</div>
-            <div class="sc-consequence-item neutral">⚠️ Confusion sur les compétences du TMC</div>`,
-          source: "Ch. 39 — Cas suisses : mécanisme des scellés",
-          next: 2,
-        }
-      ]
-    },
-    {
-      phase: "✅ Phase 3 — Après l'acquisition",
-      scene: `La capture RAM est terminée. Vous disposez d'un fichier .raw de 18 Go sur votre clé USB forensique. Vous devez maintenant acquérir le disque. Le laptop est toujours allumé. L'avocat a demandé la mise sous scellés de l'ordinateur.`,
-      law: `<strong>Art. 248 CPP</strong> — Le propriétaire peut demander la mise sous scellés. Le TMC doit statuer dans les 20 jours. Pendant ce délai, aucune analyse n'est possible sur les données sous scellés.<br><strong>Bonne pratique :</strong> Acquérir l'image disque avant que les scellés ne soient formellement prononcés, si le mandat le permet.`,
-      question: `<strong>L'avocat invoque l'art. 248 CPP pour les scellés. Quelle est la procédure correcte ?</strong>`,
-      choices: [
-        {
-          text: "Acquérir immédiatement l'image disque avec le write blocker avant de sceller l'appareil.",
-          correct: false, penalty: 10,
-          explain: "Problématique. Si la demande de scellés est valide et formellement déposée, toute acquisition ultérieure est susceptible d'être annulée par le TMC. Il faut vérifier si la demande de scellés est formelle ou informelle.",
-          legal: "Une fois la demande de scellés formellement déposée (art. 248 al. 1 CPP), l'autorité doit suspendre toute analyse jusqu'à décision du TMC.",
-          consequence: `<div class="sc-consequence-item bad">❌ Image disque potentiellement irrecevable</div>
-            <div class="sc-consequence-item neutral">⚠️ Risque de violation art. 248 CPP</div>`,
-          source: "Ch. 39 — TF 1B_602/2020",
-          next: 'end',
-        },
-        {
-          text: "Consigner la demande de scellés, apposer les scellés physiques sur l'appareil, transmettre au TMC.",
-          correct: true, points: 20,
-          explain: "Procédure correcte selon l'art. 248 CPP. La demande de scellés est documentée, les scellés physiques apposés (évitant toute modification ultérieure), le dossier transmis au TMC qui statue sous 20 jours. La capture RAM déjà effectuée est hors scellés car acquise avant la demande.",
-          legal: "Art. 248 al. 1 CPP : mise sous scellés immédiate dès demande formelle. Art. 248 al. 3 CPP : TMC statue dans les 20 jours. La RAM déjà capturée n'est pas concernée par les scellés.",
-          consequence: `<div class="sc-consequence-item good">✓ Procédure art. 248 CPP respectée</div>
-            <div class="sc-consequence-item good">✓ Dump RAM conservé légalement</div>
-            <div class="sc-consequence-item good">✓ TMC peut autoriser l'analyse ultérieure</div>`,
-          source: "Ch. 39 — Spécificités du contexte helvétique",
-          next: 'end',
-        },
-        {
-          text: "Refuser les scellés — le mandat de perquisition prévaut sur l'art. 248 CPP.",
-          correct: false, penalty: 20,
-          explain: "Erreur juridique grave. Le mécanisme des scellés (art. 248 CPP) est un droit fondamental qui s'applique même en présence d'un mandat de perquisition. Le refuser expose l'enquêteur à des sanctions et rend la preuve inadmissible.",
-          legal: "Art. 248 CPP est impératif — il ne peut pas être écarté par un mandat de perquisition. Le TF a rappelé ce principe dans de nombreuses décisions (ATF 137 IV 189).",
-          consequence: `<div class="sc-consequence-item bad">❌ Violation droits fondamentaux du prévenu</div>
-            <div class="sc-consequence-item bad">❌ Toute preuve acquise peut être exclue (art. 141 CPP)</div>
-            <div class="sc-consequence-item bad">❌ Responsabilité pénale de l'enquêteur</div>`,
-          source: "Ch. 39 — Mécanisme des scellés (art. 248 CPP)",
-          next: 'end',
-        }
-      ]
-    }
-  ]
-},
-
-// ─────────────────────────────────────────────
-// 2. SMARTPHONE
-// ─────────────────────────────────────────────
-smartphone: {
-  title: "Le Smartphone Déverrouillé",
-  debrief: `<p>Le mécanisme des scellés (art. 248 CPP) est une contrainte opérationnelle réelle en Suisse. Dans <strong>TF 1B_602/2020</strong>, le Tribunal fédéral a jugé qu'un tri préalable s'impose lorsque le propriétaire indique suffisamment précisément quelles applications relèvent de sa sphère privée.</p>
-  <p>La pochette Faraday est obligatoire dès qu'un téléphone est saisi : elle empêche l'effacement à distance (Find My iPhone / Find My Device). Un iPhone peut être effacé en quelques secondes par un complice ou par le suspect lui-même.</p>
-  <p><strong>Références :</strong> CPP art. 248 · TF 1B_602/2020 · Manuel Ch. 11 (saisie téléphones) · Ch. 28.3</p>`,
-  steps: [
-    {
-      phase: "🚨 Phase 1 — Découverte",
-      urgent: true,
-      scene: `Perquisition dans le bureau d'un comptable suspecté de fraude. Sur la table, un <strong>iPhone 15 Pro déverrouillé</strong> — l'écran allumé affiche une conversation WhatsApp apparemment pertinente. Le propriétaire est absent (convoqué au MP zurichois). Votre mandat couvre les «&nbsp;supports de données, téléphones et documents électroniques&nbsp;».`,
-      law: `<strong>Art. 248 CPP</strong> — Le propriétaire peut demander la mise sous scellés pour protéger sa sphère privée.<br><strong>Manuel Ch. 11</strong> — Pour un téléphone : première action = mode avion + pochette Faraday.<br><strong>TF 1B_602/2020</strong> — Droit au tri préalable si le propriétaire précise les applications privées.`,
-      question: `<strong>L'iPhone est déverrouillé et affiche des messages pertinents. Que faites-vous en PREMIER ?</strong>`,
-      choices: [
-        {
-          text: "Prendre des screenshots de la conversation WhatsApp visible.",
-          correct: false, penalty: 10,
-          explain: "Insuffisant comme première action et potentiellement problématique. Les screenshots modifient les horodatages de lecture. De plus, l'appareil reste connecté au réseau — un effacement à distance est possible à tout moment. La priorité absolue est l'isolation réseau.",
-          legal: "Un screenshot «&nbsp;à la volée&nbsp;» peut être contesté : il n'est pas un acte d'acquisition forensique documenté. La valeur probante est réduite sans hash et without write blocker.",
-          consequence: `<div class="sc-consequence-item bad">❌ Appareil toujours connecté — effacement possible</div>
-            <div class="sc-consequence-item neutral">⚠️ Screenshots sans valeur probante forte</div>`,
-          source: "Ch. 11 — Pour un téléphone, première action : mode avion",
-          next: 1,
-        },
-        {
-          text: "Activer le mode avion immédiatement, puis placer dans une pochette Faraday.",
-          correct: true, points: 20,
-          explain: "Action correcte. L'isolation réseau est la priorité absolue sur un smartphone. Mode avion + Faraday empêche tout effacement à distance (MDM, Find My iPhone). Le téléphone reste déverrouillé pour l'acquisition ultérieure par l'expert Cellebrite/UFED.",
-          legal: "Manuel Ch. 11 : «&nbsp;Première action : activation du mode avion si l'appareil est accessible, puis placement dans une pochette Faraday.&nbsp;» — TF 1B_602/2020 n'empêche pas la saisie, il encadre l'analyse.",
-          consequence: `<div class="sc-consequence-item good">✓ Effacement à distance impossible</div>
-            <div class="sc-consequence-item good">✓ Téléphone déverrouillé préservé</div>
-            <div class="sc-consequence-item good">✓ Acquisition Cellebrite possible</div>`,
-          source: "Ch. 11 — Saisie et transport des équipements",
-          next: 1,
-        },
-        {
-          text: "Tenter de connecter un câble USB pour extraire les données directement.",
-          correct: false, penalty: 15,
-          explain: "Erreur grave. Brancher un câble USB non vérifié peut déclencher des protections iOS (trust dialog), charger l'appareil, ou modifier les métadonnées. De plus, une connexion USB peut déclencher des automatismes de sauvegarde/sync qui modifient les données.",
-          legal: "Viole le principe de non-altération (ISO/IEC 27037). L'acquisition doit se faire via des outils forensiques certifiés (Cellebrite UFED) après isolation réseau.",
-          consequence: `<div class="sc-consequence-item bad">❌ Trust dialog peut verrouiller l'appareil</div>
-            <div class="sc-consequence-item bad">❌ Métadonnées potentiellement modifiées</div>`,
-          source: "Ch. 15.7 — Cellebrite UFED",
-          next: 1,
-        },
-        {
-          text: "Ne rien toucher et attendre le retour du propriétaire pour procéder avec lui.",
-          correct: false, penalty: 5,
-          explain: "Erreur stratégique. En attendant, le propriétaire peut être averti et déclencher un effacement à distance depuis n'importe où. Chaque minute d'attente est une opportunité d'effacement. Le mandat autorise la saisie immédiate.",
-          legal: "Art. 245 CPP autorise la saisie immédiate des supports. Attendre sans sécuriser = risque de destruction de preuve (art. 305 CP).",
-          consequence: `<div class="sc-consequence-item bad">❌ Effacement à distance possible pendant l'attente</div>
-            <div class="sc-consequence-item bad">❌ Art. 305 CP : risque d'entrave à l'action pénale</div>`,
-          source: "Ch. 11 — La saisie d'un téléphone",
-          next: 1,
-        }
-      ]
-    },
-    {
-      phase: "⚖️ Phase 2 — Le propriétaire invoque ses droits",
-      scene: `Le propriétaire revient. L'iPhone est sécurisé dans la Faraday. Il invoque l'art. 248 CPP et demande la mise sous scellés, en précisant : «&nbsp;Mes échanges avec mon avocat, mes données bancaires personnelles et mes photos de famille dans les applications Photos, Mail et Signal sont privés et sans rapport avec l'enquête.&nbsp;»`,
-      law: `<strong>TF 1B_602/2020</strong> — Le TF a jugé que lorsque le propriétaire indique de manière suffisamment précise quelles applications contiennent des données privées, un tri préalable s'impose.<br><strong>Art. 248 al. 2 CPP</strong> — Le TMC décide si les données sont couvertes par les scellés.`,
-      question: `<strong>Face à cette demande de scellés précise, quelle est la procédure correcte ?</strong>`,
-      choices: [
-        {
-          text: "Refuser les scellés — le mandat couvre explicitement les téléphones.",
-          correct: false, penalty: 20,
-          explain: "Erreur juridique grave. Selon TF 1B_602/2020, quand le propriétaire désigne précisément les applications privées (avocat, famille, banque), la mise sous scellés partielle est un droit. La refuser expose l'enquête à une annulation complète.",
-          legal: "TF 1B_602/2020 : «&nbsp;Le Tribunal fédéral y mit le holà — le propriétaire avait indiqué de manière suffisamment précise dans quelles applications se trouvaient ses données privées.&nbsp;»",
-          consequence: `<div class="sc-consequence-item bad">❌ Violation art. 248 CPP</div>
-            <div class="sc-consequence-item bad">❌ Toute l'analyse potentiellement irrecevable</div>
-            <div class="sc-consequence-item bad">❌ ATF → recours possible</div>`,
-          source: "Ch. 39 — TF 1B_602/2020",
-          next: 'end',
-        },
-        {
-          text: "Accepter les scellés, documenter les applications désignées, transmettre au TMC pour décision de tri.",
-          correct: true, points: 20,
-          explain: "Procédure correcte selon TF 1B_602/2020. Le TMC statue sur quelles applications sont couvertes par les scellés (Photos, Mail, Signal) et lesquelles peuvent être analysées (WhatsApp professionnel, agenda, contacts). Le tri préalable protège la sphère privée tout en préservant l'enquête.",
-          legal: "Art. 248 al. 2-3 CPP · TF 1B_602/2020 : tri préalable obligatoire si désignation précise des données privées. TMC statue sous 20 jours.",
-          consequence: `<div class="sc-consequence-item good">✓ Art. 248 CPP respecté</div>
-            <div class="sc-consequence-item good">✓ Procédure de tri TMC lancée</div>
-            <div class="sc-consequence-item good">✓ Enquête préservée sur les données professionnelles</div>`,
-          source: "Ch. 39 — Fouille des smartphones et droit au tri",
-          next: 'end',
-        },
-        {
-          text: "Analyser uniquement WhatsApp (visible sur l'écran) et ignorer les autres applications.",
-          correct: false, penalty: 5,
-          explain: "Insuffisant. Sans décision formelle du TMC, même l'analyse de WhatsApp peut être contestée. Si le propriétaire invoque les scellés globaux, il faut la décision du TMC avant toute analyse — même partielle.",
-          legal: "Art. 248 CPP : la demande de scellés suspend toute analyse jusqu'à décision du TMC. Une analyse partielle sans autorisation reste contestable.",
-          consequence: `<div class="sc-consequence-item neutral">⚠️ Analyse partielle contestable</div>
-            <div class="sc-consequence-item bad">❌ Sans décision TMC, risque d'exclusion de preuve</div>`,
-          source: "Ch. 39 — Mécanisme des scellés",
-          next: 'end',
-        }
-      ]
-    }
-  ]
-},
-
-// ─────────────────────────────────────────────
-// 3. AUDIT CHAÎNE DE POSSESSION
-// ─────────────────────────────────────────────
-custody: {
-  title: "Audit Chaîne de Possession",
-  debrief: `<p>La chaîne de custody est le pilier de la preuve numérique suisse. Selon le Manuel (Ch. 1.4), elle doit répondre aux 5 questions du magistrat : D'où vient la preuve ? Qui l'a saisie ? Qui l'a manipulée ? Comment a-t-elle été conservée ? Pourquoi est-elle fiable ?</p>
-  <p>Un rapport d'acquisition incomplet ou incohérent peut faire exclure l'intégralité des preuves par le juge suisse (art. 141 CPP).</p>`,
-  steps: [
-    {
-      phase: "📋 Audit — Rapport soumis",
-      scene: `<p>Vous êtes expert forensique mandaté par la défense. Vous recevez le rapport d'acquisition suivant :</p>
-        <div style="background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:1rem;font-size:.8rem;font-family:var(--font-mono);line-height:1.8;margin-top:.5rem">
-          <div style="color:var(--dim);font-size:.72rem;margin-bottom:.5rem">RAPPORT D'ACQUISITION — Affaire n° CH-2024-ZH-0147</div>
-          <div><strong>Date d'acquisition :</strong> <span style="color:var(--gold)">15.03.2024</span></div>
-          <div><strong>Enquêteur :</strong> <span style="color:var(--gold)">Inspecteur R.M.</span></div>
-          <div><strong>Matériel saisi :</strong> Laptop Dell XPS 15 (S/N inconnu)</div>
-          <div><strong>Outil d'acquisition :</strong> <span style="color:var(--gold)">X-Ways (version non précisée)</span></div>
-          <div><strong>Type d'acquisition :</strong> Image DD du disque SSD 1TB</div>
-          <div><strong>Hash de l'image :</strong> <span style="color:var(--gold)">Non calculé — «&nbsp;temps manquant&nbsp;»</span></div>
-          <div><strong>Write blocker utilisé :</strong> <span style="color:var(--gold)">Oui, hardware</span></div>
-          <div><strong>Heure de début :</strong> 14h22</div>
-          <div><strong>Heure de fin :</strong> <span style="color:var(--gold)">Non documentée</span></div>
-          <div><strong>Témoin présent :</strong> <span style="color:var(--gold)">Aucun</span></div>
-          <div><strong>Signature de l'enquêteur :</strong> Présente</div>
-          <div><strong>Conservation :</strong> Clé USB dans véhicule de service pendant 3 jours</div>
-        </div>`,
-      law: `<strong>5 questions du magistrat (Manuel Ch. 29.6) :</strong><br>
-        1. D'où vient la preuve ? 2. Qui l'a saisie ? 3. Qui l'a manipulée ?<br>
-        4. Comment a-t-elle été conservée ? 5. Pourquoi est-elle fiable ?<br>
-        <strong>Art. 141 CPP</strong> — Preuves obtenues de manière illicite : exclusion possible.`,
-      question: `<strong>Combien de ruptures de traçabilité identifiez-vous dans ce rapport d'acquisition ?</strong>`,
-      choices: [
-        {
-          text: "1 rupture : absence de hash.",
-          correct: false, penalty: 5,
-          explain: "Sous-estimation. L'absence de hash est critique, mais d'autres lacunes sont tout aussi graves. Un rapport complet doit documenter : le numéro de série du matériel, la version exacte de l'outil, l'heure de fin, la présence d'un témoin, les conditions de conservation, et calculer un hash.",
-          legal: "ISO/IEC 27037 exige la documentation complète de chaque étape. Art. 141 CPP : une preuve mal documentée peut être exclue.",
-          consequence: `<div class="sc-consequence-item bad">❌ Analyse incomplète — 5 ruptures identifiées</div>`,
-          source: "Ch. 29 — Le rapport d'expertise forensique",
-          next: 'end',
-        },
-        {
-          text: "2-3 ruptures : hash absent + version outil non précisée.",
-          correct: false, penalty: 3,
-          explain: "Partiel. Vous avez identifié 2 ruptures importantes, mais il en reste au moins 3 autres : numéro de série manquant, heure de fin absente, absence de témoin, et conservation inadéquate (clé USB dans un véhicule ≠ local sécurisé).",
-          legal: "5 ruptures minimales dans ce rapport selon ISO/IEC 27037.",
-          consequence: `<div class="sc-consequence-item neutral">⚠️ Analyse partielle — d'autres ruptures existent</div>`,
-          source: "Ch. 13 — Intégrité de la preuve",
-          next: 'end',
-        },
-        {
-          text: "5+ ruptures : hash absent, version outil, n° série, heure fin, absence témoin, conservation inadéquate.",
-          correct: true, points: 25,
-          explain: "Analyse complète. Les 6 ruptures identifiées : (1) Hash non calculé → intégrité non vérifiable. (2) Version X-Ways non précisée → reproductibilité impossible. (3) N° de série du disque inconnu → identification du support impossible. (4) Heure de fin manquante → durée de l'acquisition non documentée. (5) Absence de témoin → chaîne de custody non attestée. (6) Conservation dans un véhicule → conditions non sécurisées, chaîne de température/humidité non garantie.",
-          legal: "Art. 141 CPP : un expert contradictoire peut demander l'exclusion sur ces 6 points. ISO/IEC 27037 §5.3 : documentation obligatoire de chaque étape.",
-          consequence: `<div class="sc-consequence-item good">✓ Toutes les ruptures identifiées</div>
-            <div class="sc-consequence-item good">✓ Rapport d'expertise contradictoire fondé</div>
-            <div class="sc-consequence-item good">✓ 6 motifs d'exclusion possibles (art. 141 CPP)</div>`,
-          source: "Ch. 29 — Structure d'un rapport d'expertise",
-          next: 'end',
-        }
-      ]
-    }
-  ]
-},
-
-// ─────────────────────────────────────────────
-// 4. VERACRYPT
-// ─────────────────────────────────────────────
-veracrypt: {
-  title: "Le Volume VeraCrypt",
-  debrief: `<p>Le Manuel (Ch. 24.2) est explicite : «&nbsp;il n'existe aucun moyen technique de déduire le contenu d'un volume chiffré non monté. Toute affirmation sur ce qu'il contient sans accès en clair est une spéculation inadmissible dans un rapport d'expertise.&nbsp;»</p>
-  <p>Le volume caché (hidden volume) rend la situation encore plus délicate : on ne peut pas prouver son existence. En droit suisse, formuler une conclusion d'impossibilité technique bien argumentée est une preuve forensique en elle-même — elle établit que le système a été délibérément utilisé pour protéger des informations.</p>`,
-  steps: [
-    {
-      phase: "🔐 Investigation — Volume chiffré",
-      scene: `Analyse forensique d'un laptop saisi. X-Ways détecte un fichier de 50 Go nommé «&nbsp;backup_photos.old&nbsp;» à haute entropie — signature caractéristique d'un conteneur VeraCrypt. Le suspect dit : «&nbsp;C'est juste une ancienne sauvegarde corrompue, je n'ai pas le mot de passe.&nbsp;» Le MP vous demande un rapport sur le contenu probable.`,
-      law: `<strong>Art. 143 CP</strong> — La «&nbsp;soustraction de données&nbsp;» n'existe pas au sens strict en droit suisse (copier des données ne les soustrait pas).<br><strong>Manuel Ch. 24.2</strong> — Volume caché VeraCrypt : aucun test ne peut prouver ou infirmer son existence.<br><strong>Manuel Ch. 29.3</strong> — Distinction fait / interprétation / opinion dans le rapport.`,
-      question: `<strong>Le MP vous demande d'affirmer que le volume contient «&nbsp;probablement des données compromettantes&nbsp;». Que répondez-vous ?</strong>`,
-      choices: [
-        {
-          text: "Confirmer — la haute entropie et la taille indiquent très probablement des données chiffrées illicites.",
-          correct: false, penalty: 20,
-          explain: "Erreur professionnelle grave. Affirmer le contenu probable d'un volume non monté est une spéculation inadmissible dans un rapport d'expertise forensique. La haute entropie peut indiquer : données chiffrées, données compressées, données aléatoires, firmware. Vous ne savez pas.",
-          legal: "Manuel Ch. 29.3 : «&nbsp;Une opinion est un jugement qui va au-delà des données. Les opinions doivent être utilisées avec la plus grande parcimonie.&nbsp;» Une spéculation présentée comme fait peut engager votre responsabilité pénale (faux dans les titres, art. 251 CP).",
-          consequence: `<div class="sc-consequence-item bad">❌ Rapport partialement contestable</div>
-            <div class="sc-consequence-item bad">❌ Risque art. 251 CP (faux dans les titres)</div>
-            <div class="sc-consequence-item bad">❌ Expert contradictoire peut démolir le rapport</div>`,
-          source: "Ch. 24.2 — VeraCrypt et déni plausible",
-          next: 1,
-        },
-        {
-          text: "Refuser de spéculer sur le contenu, formuler uniquement ce qui est techniquement démontrable.",
-          correct: true, points: 20,
-          explain: "Réponse professionnellement correcte. Vous pouvez établir : (1) existence d'un fichier de 50 Go à haute entropie, (2) signature statistiquement cohérente avec un conteneur chiffré type VeraCrypt/TrueCrypt, (3) impossibilité d'accès sans mot de passe, (4) aucun moyen de prouver le contenu sans accès en clair. C'est une preuve forensique en elle-même.",
-          legal: "Manuel Ch. 24.2 : «&nbsp;Toute affirmation sur ce qu'il contient sans accès en clair est une spéculation inadmissible dans un rapport d'expertise.&nbsp;» · Manuel Ch. 28.4 : l'impossibilité technique bien démontrée est une preuve.",
-          consequence: `<div class="sc-consequence-item good">✓ Rapport d'expertise défendable</div>
-            <div class="sc-consequence-item good">✓ Preuve indirecte : utilisation délibérée du chiffrement</div>
-            <div class="sc-consequence-item good">✓ Aucun risque d'art. 251 CP</div>`,
-          source: "Ch. 28.4 — Savoir s'arrêter : l'impossibilité comme résultat",
-          next: 1,
-        },
-        {
-          text: "Tenter un dictionnaire avec Hashcat pour trouver le mot de passe avant de rédiger.",
-          correct: false, penalty: 5,
-          explain: "Approche valide mais mal séquencée. Hashcat peut être pertinent, mais doit être documenté dans le rapport (version, dictionnaires, règles, durée). Sans résultat, l'impossibilité doit être formulée correctement. Ne pas reporter la rédaction du rapport jusqu'à un éventuel succès improbable.",
-          legal: "Ch. 24.5 : «&nbsp;Un analyste forensique sérieux ne promet jamais qu'il peut casser un mot de passe.&nbsp;» Tout ce qui a été tenté doit être documenté.",
-          consequence: `<div class="sc-consequence-item neutral">⚠️ Valide si documenté — mais sans résultat probable</div>`,
-          source: "Ch. 24.5 — Cassage de mots de passe : Hashcat",
-          next: 1,
-        }
-      ]
-    },
-    {
-      phase: "🕳 Volume caché — Déni plausible",
-      scene: `Le suspect affirme maintenant qu'il existe peut-être un volume caché dans le conteneur VeraCrypt, avec un deuxième mot de passe donnant accès à un volume «&nbsp;leurre&nbsp;» contenant des fichiers anodins. Il prétend que c'est la seule utilisation de VeraCrypt.`,
-      law: `<strong>Manuel Ch. 24.2</strong> — «&nbsp;Du point de vue technique : il n'existe aucun test permettant de prouver l'existence d'un volume caché. L'espace chiffré non utilisé est statistiquement indistinguable d'un volume caché.&nbsp;»`,
-      question: `<strong>Comment formulez-vous cette conclusion dans votre rapport d'expertise pour le juge ?</strong>`,
-      choices: [
-        {
-          text: "«&nbsp;Le suspect ment — un volume caché existe certainement.&nbsp;»",
-          correct: false, penalty: 20,
-          explain: "Formulation inadmissible. Vous ne pouvez pas affirmer l'existence d'un volume caché — c'est techniquement impossible à prouver. Cette affirmation transforme votre opinion en fait, ce qui est une faute professionnelle grave et potentiellement pénale.",
-          legal: "Art. 251 CP (faux dans les titres) · Manuel Ch. 29.3 : distinction obligatoire fait/interprétation/opinion.",
-          consequence: `<div class="sc-consequence-item bad">❌ Rapport démoli par expert contradictoire en 2 minutes</div>`,
-          source: "Ch. 24.2 — Volume caché VeraCrypt",
-          next: 'end',
-        },
-        {
-          text: "«&nbsp;Il n'existe aucun test permettant de prouver ou d'infirmer l'existence d'un volume caché. L'espace chiffré est statistiquement indistinguable. La présence du logiciel VeraCrypt et du conteneur constitue néanmoins un indice de l'usage intentionnel d'un mécanisme de dissimulation.&nbsp;»",
-          correct: true, points: 25,
-          explain: "Formulation parfaite. Elle : (1) énonce l'impossibilité technique prouvable, (2) reste dans le périmètre des faits démontrables, (3) propose une interprétation prudente et défendable, (4) laisse au juge la qualification juridique. C'est exactement ce que le Manuel (Ch. 24.2 et 29.3) prescrit.",
-          legal: "Manuel Ch. 24.2 : «&nbsp;on peut seulement décrire les conditions dans lesquelles un volume caché pourrait exister — jamais l'affirmer.&nbsp;» · Manuel Ch. 29.3 : «&nbsp;L'interprétation doit toujours être présentée comme telle, avec ses limites.&nbsp;»",
-          consequence: `<div class="sc-consequence-item good">✓ Rapport défendable en audience</div>
-            <div class="sc-consequence-item good">✓ Indice forensique légalement présenté</div>
-            <div class="sc-consequence-item good">✓ Aucune spéculation non étayée</div>`,
-          source: "Ch. 29.3 — Fait, interprétation et opinion",
-          next: 'end',
-        },
-        {
-          text: "«&nbsp;Impossible de conclure — le volume est inaccessible.&nbsp;» (sans autre information)",
-          correct: false, penalty: 5,
-          explain: "Trop minimaliste. L'impossibilité technique est correcte, mais vous pouvez et devez fournir plus d'informations : la signature statistique du conteneur, la présence de VeraCrypt dans les artefacts système (Prefetch, registre), les éventuelles traces d'utilisation passée. L'impossibilité bien documentée est une preuve.",
-          legal: "Manuel Ch. 28.4 : l'impossibilité technique «&nbsp;bien démontrée&nbsp;» requiert identification correcte, caractérisation précise, estimation des coûts, exclusion des alternatives.",
-          consequence: `<div class="sc-consequence-item neutral">⚠️ Correct mais incomplet</div>
-            <div class="sc-consequence-item neutral">⚠️ Manque les éléments indirects exploitables</div>`,
-          source: "Ch. 28.4 — L'impossibilité comme résultat",
-          next: 'end',
-        }
-      ]
-    }
-  ]
-},
-
-// ─────────────────────────────────────────────
-// 5. RANSOMWARE HÔPITAL
-// ─────────────────────────────────────────────
-ransomware: {
-  title: "Ransomware à l'Hôpital",
-  debrief: `<p>Le scénario Ransomware illustre la coordination multi-acteurs requise par le droit suisse. La LPD révisée (en vigueur depuis sept. 2023) impose une notification au PFPDT «&nbsp;dans les meilleurs délais&nbsp;» — délai plus court que les 72h RGPD en pratique opérationnelle.</p>
-  <p>Selon le Manuel (Ch. 11.1) : ne pas éteindre les serveurs si le disque est chiffré ou si l'attaque est «&nbsp;fileless&nbsp;». La RAM contient les seules preuves disponibles pour identifier la souche et retracer l'infiltration.</p>`,
-  steps: [
-    {
-      phase: "🚨 3h du matin — Alerte",
-      urgent: true,
-      scene: `Un hôpital zurichois découvre à <strong>3h12</strong> que ses serveurs de dossiers patients sont chiffrés. Une note de rançon en anglais et en allemand apparaît sur tous les écrans. Le responsable IT vous appelle. Les serveurs sont encore allumés. Les backups sont sur un NAS connecté — aussi chiffré.`,
-      law: `<strong>LPD révisée (sept. 2023)</strong> — Notification au PFPDT «&nbsp;dans les meilleurs délais&nbsp;».<br><strong>Art. 147 CP</strong> — Abus d'un ordinateur.<br><strong>Manuel Ch. 11.1</strong> — Ne pas éteindre si disque chiffré ou attaque fileless.`,
-      question: `<strong>Première action du responsable IT face aux serveurs chiffrés allumés ?</strong>`,
-      choices: [
-        {
-          text: "Éteindre immédiatement tous les serveurs pour «&nbsp;stopper&nbsp;» le chiffrement.",
-          correct: false, penalty: 20,
-          explain: "Erreur critique documentée dans le Manuel (Ch. 10) : «&nbsp;Éteindre immédiatement le système compromis : si le disque est chiffré ou si l'attaque est «&nbsp;fileless&nbsp;», l'extinction détruit les seules preuves disponibles.&nbsp;» La RAM contient potentiellement les clés de déchiffrement et les IoC.",
-          legal: "Manuel Ch. 11.1 : «&nbsp;Ne pas éteindre les serveurs afférents.&nbsp;» — LPD : la destruction de preuves complique la notification au PFPDT.",
-          consequence: `<div class="sc-consequence-item bad">❌ Clés de déchiffrement en RAM perdues</div>
-            <div class="sc-consequence-item bad">❌ Processus malveillants et IoC détruits</div>
-            <div class="sc-consequence-item bad">❌ Reconstruction de l'attaque impossible</div>`,
-          source: "Ch. 11.1 — Ce qu'il ne faut pas faire",
-          next: 1,
-        },
-        {
-          text: "Isoler les serveurs du réseau (désactiver les interfaces réseau), capturer la RAM, puis analyser.",
-          correct: true, points: 20,
-          explain: "Action correcte. L'isolation réseau stoppe la propagation et la communication C2 sans perdre les données en RAM. La capture RAM préserve les clés de déchiffrement potentielles, les processus malveillants actifs, et les artefacts pour identifier la souche (Event IDs 7045, 4698, 4688).",
-          legal: "Manuel Ch. 11.1 + 11.2 · Manuel Scénario ransomware Ch. 11-12 : isolation → dump RAM → images disques → analyse journaux Windows.",
-          consequence: `<div class="sc-consequence-item good">✓ Propagation stoppée</div>
-            <div class="sc-consequence-item good">✓ RAM et preuves préservées</div>
-            <div class="sc-consequence-item good">✓ Souche identifiable via VirusTotal + MITRE ATT&amp;CK</div>`,
-          source: "Ch. 11.2 — RAM Dump · Ch. 11 Scénario ransomware",
-          next: 1,
-        },
-        {
-          text: "Payer immédiatement la rançon pour récupérer les données patients.",
-          correct: false, penalty: 15,
-          explain: "Décision déconseillée et potentiellement illégale. Le paiement ne garantit pas la récupération des données, finance la criminalité organisée, et peut violer des sanctions internationales. De plus, les attaquants conservent souvent un accès persistant.",
-          legal: "Risque de violer les sanctions SECO (si groupe étatique sanctionné). Aucune base légale en Suisse n'autorise ce paiement sans vérification préalable.",
-          consequence: `<div class="sc-consequence-item bad">❌ Aucune garantie de récupération</div>
-            <div class="sc-consequence-item bad">❌ Finance la criminalité organisée</div>
-            <div class="sc-consequence-item bad">❌ Risque violations sanctions SECO</div>`,
-          source: "Ch. 8 — Scénario Ransomware hôpital",
-          next: 1,
-        }
-      ]
-    },
-    {
-      phase: "📢 Phase 2 — Notification légale",
-      scene: `Il est <strong>5h30</strong>. L'attaque est containée. Des données personnelles de patients (probablement 50'000+ dossiers) ont été exfiltrées selon les logs. L'avocat de l'hôpital vous pose la question : «&nbsp;Quand devons-nous notifier le PFPDT ?&nbsp;»`,
-      law: `<strong>LPD révisée (en vigueur 1er sept. 2023)</strong> — Art. 24 LPD : notification au PFPDT «&nbsp;dans les meilleurs délais&nbsp;» si violation de sécurité susceptible de porter préjudice aux personnes concernées.<br><strong>RGPD</strong> — 72 heures pour référence comparative (si traitement EU).`,
-      question: `<strong>Dans quel délai l'hôpital doit-il notifier le PFPDT selon la LPD suisse révisée ?</strong>`,
-      choices: [
-        {
-          text: "72 heures, comme le RGPD européen.",
-          correct: false, penalty: 5,
-          explain: "Confusion fréquente. La LPD suisse révisée ne fixe pas de délai de 72h. Elle impose une notification «&nbsp;dans les meilleurs délais&nbsp;» — formulation délibérément plus vague qui crée une pression opérationnelle immédiate sans délai fixe.",
-          legal: "Art. 24 LPD révisée : «&nbsp;dans les meilleurs délais&nbsp;» ≠ 72h RGPD. Manuel Ch. 11 : «&nbsp;LPD suisse — délai non fixé légalement — mais dans les meilleurs délais&nbsp;», ce qui crée une pression opérationnelle réelle.",
-          consequence: `<div class="sc-consequence-item neutral">⚠️ Confusion LPD suisse / RGPD européen</div>`,
-          source: "Ch. 8 — Scénario ransomware / LPD révisée 2023",
-          next: 'end',
-        },
-        {
-          text: "«&nbsp;Dans les meilleurs délais&nbsp;» selon la LPD suisse — sans délai fixe mais immédiatement.",
-          correct: true, points: 15,
-          explain: "Correct. La LPD révisée suisse impose une notification «&nbsp;dans les meilleurs délais&nbsp;» — ce qui dans la pratique signifie dès que la violation est confirmée et suffisamment caractérisée (nature des données, portée, risques). Pour 50'000+ dossiers patients, c'est une urgence immédiate.",
-          legal: "Art. 24 LPD révisée · Manuel Ch. 12 : «&nbsp;LPD suisse — délai de notification : dans les meilleurs délais, contrairement aux 72 heures du RGPD — mais pression opérationnelle réelle.&nbsp;» PFPDT = Préposé fédéral à la protection des données (edoeb.admin.ch).",
-          consequence: `<div class="sc-consequence-item good">✓ LPD suisse correctement appliquée</div>
-            <div class="sc-consequence-item good">✓ PFPDT notifié promptement</div>
-            <div class="sc-consequence-item good">✓ Responsabilité de l'hôpital couverte</div>`,
-          source: "Ch. 8 + Ch. 39 — LPD révisée 2023",
-          next: 'end',
-        },
-        {
-          text: "Attendre la fin de l'enquête forensique avant de notifier.",
-          correct: false, penalty: 10,
-          explain: "Erreur. La notification au PFPDT ne doit pas attendre la fin de l'enquête. Elle peut être faite avec les informations disponibles au moment de la notification et complétée ultérieurement. Attendre expose l'hôpital à une violation de la LPD.",
-          legal: "Art. 24 LPD révisée : la notification doit intervenir dès que la violation est «&nbsp;vraisemblablement&nbsp;» susceptible de porter préjudice — pas seulement confirmée avec certitude.",
-          consequence: `<div class="sc-consequence-item bad">❌ Violation art. 24 LPD</div>
-            <div class="sc-consequence-item bad">❌ Responsabilité de l'hôpital engagée</div>`,
-          source: "Ch. 39 — Contexte institutionnel suisse",
-          next: 'end',
-        }
-      ]
-    }
-  ]
-},
-
-// ─────────────────────────────────────────────
-// 6. XPLAIN
-// ─────────────────────────────────────────────
-xplain: {
-  title: "Affaire Xplain (2023)",
-  debrief: `<p>L'affaire Xplain 2023 illustre une problématique forensique interne unique : comment des données opérationnelles de fedpol se sont retrouvées chez un prestataire sans protection adéquate ?</p>
-  <p>La question forensique centrale n'était pas l'attaque elle-même, mais la reconstruction de la chaîne de responsabilité interne. Le rapport OFCS (mars 2024) est un modèle de communication transparente sur les défis de l'analyse forensique de masse.</p>`,
-  steps: [
-    {
-      phase: "🏛 Incident Xplain — Juin 2023",
-      scene: `Le groupe ransomware <strong>Play</strong> publie 907 Go de données sur le dark web. Parmi elles, des données de <strong>fedpol, de l'Office fédéral des douanes, de l'Armée et des CFF</strong>. Xplain SA, le prestataire informatique, a été compromis. Vous êtes mandaté par le Conseil fédéral pour l'enquête forensique. <strong>La question centrale n'est pas «&nbsp;comment Play a attaqué&nbsp;», mais «&nbsp;pourquoi des données opérationnelles de fedpol étaient chez Xplain&nbsp;».</strong>`,
-      law: `<strong>Art. 143 CP</strong> — Soustraction de données (la copie ne soustrait pas l'original).<br><strong>LPD révisée 2023</strong> — Notification PFPDT · <strong>LMSI</strong> — Données de fedpol.<br><strong>Manuel Ch. 39</strong> — Affaire Xplain : forensique interne vs attaque externe.`,
-      question: `<strong>Votre première priorité forensique dans cette affaire ?</strong>`,
-      choices: [
-        {
-          text: "Analyser les serveurs de Play et retracer l'attaque initiale.",
-          correct: false, penalty: 10,
-          explain: "Méprise sur la mission. Les serveurs de Play sont hors juridiction suisse et inaccessibles légalement. La question forensique mandatée est interne : comment les données de fedpol sont arrivées chez Xplain. Ce n'est pas une investigation sur l'attaquant.",
-          legal: "Manuel Ch. 39 : «&nbsp;La question forensique centrale était une question forensique interne : comment des données opérationnelles de fedpol sont-elles parvenues sur les serveurs de Xplain ?&nbsp;»",
-          consequence: `<div class="sc-consequence-item bad">❌ Mission mal comprise</div>
-            <div class="sc-consequence-item bad">❌ Hors juridiction suisse</div>`,
-          source: "Ch. 39 — L'affaire Xplain (2023)",
-          next: 1,
-        },
-        {
-          text: "Reconstruire la chaîne de transfert des données fedpol vers Xplain — journaux, emails, tickets.",
-          correct: true, points: 20,
-          explain: "Mission correcte. L'enjeu est forensique interne : identifier quels processus opérationnels ont permis le transfert de données sensibles vers un prestataire non habilité. Logs d'accès, emails, tickets de support, contrats — tous les artefacts permettant de reconstruire la chaîne de responsabilité.",
-          legal: "Manuel Ch. 39 : «&nbsp;La forensique d'incident ne concerne pas seulement l'attaquant externe : elle doit aussi reconstruire la chaîne de responsabilité interne.&nbsp;» OFCS rapport mars 2024.",
-          consequence: `<div class="sc-consequence-item good">✓ Mission forensique interne correctement comprise</div>
-            <div class="sc-consequence-item good">✓ Reconstruction de la chaîne de responsabilité</div>`,
-          source: "Ch. 39 — Affaire Xplain 2023",
-          next: 1,
-        },
-        {
-          text: "Publier immédiatement un communiqué sur les données compromises.",
-          correct: false, penalty: 15,
-          explain: "Prématuré et contre-productif. Communiquer avant d'avoir délimité le périmètre exact de la violation peut créer une panique injustifiée, donner des informations inexactes au public, et compromettre l'enquête pénale en cours.",
-          legal: "La LPD impose la notification au PFPDT «&nbsp;dans les meilleurs délais&nbsp;» — mais la communication publique est une décision distincte, coordonnée avec le MP et le Conseil fédéral.",
-          consequence: `<div class="sc-consequence-item bad">❌ Périmètre de violation pas encore établi</div>
-            <div class="sc-consequence-item bad">❌ Risque d'informations inexactes</div>`,
-          source: "Ch. 39 — Rapport OFCS mars 2024",
-          next: 1,
-        }
-      ]
-    },
-    {
-      phase: "⚖️ Qualification juridique",
-      scene: `L'enquête révèle que des collaborateurs de fedpol envoyaient régulièrement des données opérationnelles à Xplain par email pour des questions de support, sans procédure de sécurité. Xplain stockait ces données sur ses serveurs de production. Le MP vous demande la qualification de l'infraction.`,
-      law: `<strong>Art. 143 CP</strong> — Soustraction de données : «&nbsp;le vol de données n'existe pas au sens strict&nbsp;» (la copie ne soustrait pas l'original).<br><strong>Art. 143bis CP</strong> — Accès indu à un système informatique.<br><strong>Art. 144bis CP</strong> — Dommages aux données.`,
-      question: `<strong>Comment qualifiez-vous l'acte de Play (exfiltration des données Xplain) en droit pénal suisse ?</strong>`,
-      choices: [
-        {
-          text: "Vol de données (équivalent à l'art. 139 CP sur le vol).",
-          correct: false, penalty: 10,
-          explain: "Qualification incorrecte. Le «&nbsp;vol de données&nbsp;» n'existe pas au sens strict en droit suisse. Comme l'explique le Manuel (Ch. 1.2) : une copie binaire bit à bit est strictement identique à l'original — les deux coexistent. Il n'y a pas de soustraction au sens du vol.",
-          legal: "Manuel Ch. 1.2 : «&nbsp;L'exemple suisse : pourquoi le vol de données n'existe pas au sens strict.&nbsp;» Art. 143 CP parle de «&nbsp;soustraction de données&nbsp;» dans un cas très spécifique (accès sans droit à un système protégé).",
-          consequence: `<div class="sc-consequence-item bad">❌ Qualification juridique erronée</div>
-            <div class="sc-consequence-item bad">❌ Risque de rejet de l'accusation</div>`,
-          source: "Ch. 1.2 — L'exemple suisse : pourquoi le vol de données n'existe pas",
-          next: 'end',
-        },
-        {
-          text: "Art. 143bis CP (accès indu) + art. 144bis CP (dommages aux données) selon les faits établis.",
-          correct: true, points: 20,
-          explain: "Qualification correcte. Art. 143bis CP : accès sans droit à un système informatique (compromission des serveurs Xplain). Art. 144bis CP : dommages aux données (chiffrement + destruction partielle). La combinaison est correcte et correspond à la jurisprudence helvétique en matière de ransomware.",
-          legal: "Art. 143bis CP + 144bis CP · Manuel Ch. 1.2 : le droit suisse distingue finement soustraction de données, accès indu et dommages. Manuel Ch. 13 (Scénario avocat) : «&nbsp;art. 146 CP escroquerie si erreur humaine exploitée, ou art. 147 CP si détournement système.&nbsp;»",
-          consequence: `<div class="sc-consequence-item good">✓ Qualification juridique correcte</div>
-            <div class="sc-consequence-item good">✓ Base légale solide pour poursuites</div>`,
-          source: "Ch. 1.2 + Ch. 39 — Droit suisse de la cybercriminalité",
-          next: 'end',
-        },
-        {
-          text: "Art. 147 CP — Abus d'un ordinateur (détournement système).",
-          correct: false, penalty: 5,
-          explain: "Partiellement pertinent mais incomplet. Art. 147 CP vise le détournement d'un système à des fins frauduleuses (fraude informatique) — adapté si l'objectif était de modifier des données pour obtenir un avantage. Un ransomware vise plutôt l'art. 143bis + 144bis.",
-          legal: "Art. 147 CP : adapté aux attaques d'escroquerie par ordinateur. Pour un ransomware (accès + destruction/chiffrement), art. 143bis + 144bis est plus précis.",
-          consequence: `<div class="sc-consequence-item neutral">⚠️ Partiellement correct — incomplet</div>`,
-          source: "Ch. 27 — Taxonomie juridique suisse",
-          next: 'end',
-        }
-      ]
-    }
-  ]
-}
-
-}; // fin SCENARIOS
+let SCENARIOS = {}; // Loaded dynamically from scenarios/
+ // fin SCENARIOS
 
 // ═══════════════════════════════════════════════════════════════
 // INIT
@@ -1069,49 +617,44 @@ SCENARIOS.trois_artefacts = {
 // MOTEUR PREMIER INTERVENANT — Timer + Ranking
 // ═══════════════════════════════════════════════════════════════
 
-const ACTIONS_ORDRE = [
-  { id: 1, label: "📸 Photographier l'état initial de chaque appareil", correct_pos: 1,
-    explain: "Première action obligatoire — documente l'état exact avant toute intervention (chaîne de custody)." },
-  { id: 2, label: "🔌 Isoler du réseau (câble + WiFi + mode avion mobile)", correct_pos: 2,
-    explain: "Stoppe l'effacement à distance, les connexions C2, les mises à jour automatiques qui modifieraient des données." },
-  { id: 3, label: "💾 Capturer la RAM du laptop (WinPmem)", correct_pos: 3,
-    explain: "Plus haute priorité de volatilité — la RAM disparaît à l'extinction. Contient clés BitLocker, processus actifs, connexions réseau." },
-  { id: 4, label: "📱 Saisir l'iPhone et placer en pochette Faraday", correct_pos: 4,
-    explain: "Le mobile est déjà protégé du réseau par la Faraday. Vient après la RAM du laptop (moins volatile)." },
-  { id: 5, label: "🖥 Acquérir l'image disque avec write blocker", correct_pos: 5,
-    explain: "Le disque est non volatile — priorité inférieure à la RAM. Peut attendre que la RAM soit capturée." },
-  { id: 6, label: "🔒 Apposer les scellés physiques et documenter la chaîne de custody", correct_pos: 6,
-    explain: "Dernière étape — scelle l'état final une fois toutes les acquisitions volatiles terminées." },
-];
+// Actions now loaded from premier_intervenant.json
 
-let _timerInterval = null;
-let _timerSecondes = 90;
+
+let _timerInterval = null; let _currentTimerScenario = null;
+let _timerSecondes = scenario.duration || 90; _currentTimerScenario = scenario;
 let _timerStarted = false;
 let _rankingDone = false;
 let _userOrder = [];
 
-function launchScenario(id) {
+async function launchScenario(id) {
   GAME.currentScenario = id;
   GAME.currentStep = 0;
   GAME.history = [];
   document.getElementById('sc-selector').style.display = 'none';
   document.getElementById('sc-game').style.display = 'block';
   document.getElementById('sc-scenario-num').textContent = id.toUpperCase();
+  document.getElementById('sc-narrative').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--dim)">⏳ Chargement du scénario...</div>';
+  
+  const scenario = await loadScenario(id);
+  if (!scenario) {
+    document.getElementById('sc-narrative').innerHTML = '<div style="color:var(--red);padding:1rem">❌ Erreur de chargement du scénario.</div>';
+    return;
+  }
 
-  if (id === 'premier_intervenant') {
-    renderTimerScenario();
+  if (scenario.type === 'timer') {
+    renderTimerScenario(scenario);
   } else {
     renderStep(SCENARIOS[id], 0);
   }
 }
 
-function renderTimerScenario() {
+function renderTimerScenario(scenario) {
   _timerSecondes = 90;
   _timerStarted = false;
   _rankingDone = false;
   _userOrder = [];
 
-  const shuffled = [...ACTIONS_ORDRE].sort(() => Math.random() - .5);
+  const shuffled = [...scenario.actions].sort(() => Math.random() - .5);
 
   const container = document.getElementById('sc-narrative');
   container.innerHTML = `
@@ -1327,14 +870,15 @@ function validateRanking(timeUp = false) {
   `;
 
   // B2 fix: renderTimerEnd au lieu de renderEnd (qui nécessite GAME.history)
-  if (pct === 100) {
-    setTimeout(() => renderTimerEnd(score, 6, timeUsed, timeUp), 600);
+  if (pct >= 66) {
+    setTimeout(() => renderTimerEnd(_currentTimerScenario, score, 6, timeUsed, timeUp), 600);
   }
 }
 
-function renderTimerEnd(correct, total, timeUsed, timeUp) {
+function renderTimerEnd(scenario, correct, total, timeUsed, timeUp) {
   const pct = Math.round(correct / total * 100);
-  const scenario = SCENARIOS.premier_intervenant;
+  // scenario passed as param
+
   const grade = pct >= 100 ? { label: '🏆 Expert First Responder', color: 'var(--green)' }
               : pct >= 83  ? { label: '✅ Intervenant confirmé', color: 'var(--cyan)' }
               : pct >= 66  ? { label: '⚠️ Révisions nécessaires', color: 'var(--gold)' }
@@ -1357,6 +901,15 @@ function renderTimerEnd(correct, total, timeUsed, timeUp) {
     '</div></div>';
 }
 
+
+
+// Timer & trois_artefacts scenarios loaded from JSON
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', () => {
+  loadCatalog();
+  updateScore();
+});
 
 </script>
 </body>
