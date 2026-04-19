@@ -31,6 +31,11 @@
   <button class="tp-tab" data-cat="bitmap" onclick="switchCat('bitmap',this)">🗺 Bitmap exFAT / FAT</button>
   <button class="tp-tab" data-cat="fat" onclick="switchCat('fat',this)">⛓ Chaîne FAT</button>
   <button class="tp-tab" data-cat="magic" onclick="switchCat('magic',this)">✨ Magic Bytes</button>
+  <button class="tp-tab" data-cat="mismatch" onclick="switchCat('mismatch',this)">🎭 Signature Mismatch</button>
+  <button class="tp-tab" data-cat="runlist" onclick="switchCat('runlist',this)">🧩 Run List NTFS</button>
+  <button class="tp-tab" data-cat="bases" onclick="switchCat('bases',this)">🔢 Bases & Encodages</button>
+  <button class="tp-tab" data-cat="effacement" onclick="switchCat('effacement',this)">🗑 Effacement FAT</button>
+  <button class="tp-tab" data-cat="examen" onclick="switchCat('examen',this)" style="border-color:rgba(255,64,96,.4);color:var(--red)">📋 Série Examen</button>
 </div>
 
 <div class="tp-progress" id="tp-progress">
@@ -116,7 +121,7 @@ function newExercise() {
 // GÉNÉRATEURS D'EXERCICES
 // ═══════════════════════════════════════════════════
 
-const GENERATORS = { endian: genEndian, timestamp: genTimestamp, bitmap: genBitmap, fat: genFAT, magic: genMagic };
+const GENERATORS = { endian: genEndian, timestamp: genTimestamp, bitmap: genBitmap, fat: genFAT, magic: genMagic, mismatch: genMismatch, runlist: genRunList, bases: genBases, effacement: genEffacement, examen: genExamen };
 
 // ── 1. ENDIANNESS ──────────────────────────────────
 function genEndian() {
@@ -637,6 +642,1348 @@ document.addEventListener('DOMContentLoaded', () => {
   updateProgress();
   newExercise();
 });
+
+
+// ═══════════════════════════════════════════════════
+// 6. SIGNATURE MISMATCH (File Carving)
+// ═══════════════════════════════════════════════════
+
+const MISMATCH_DB = [
+  { fake:"vacances.jpg",     bytes:"4D 5A 90 00",         real:"exe / dll",          sig_name:"MZ Header",         note:"Un exécutable Windows déguisé en photo. 4D 5A = 'MZ', initiales de Mark Zbikowski (MS-DOS).", color:"--red" },
+  { fake:"rapport.pdf",      bytes:"50 4B 03 04",         real:"zip / docx",         sig_name:"PK Header",         note:"50 4B = 'PK' (Phil Katz, créateur de ZIP). Les formats Office (.docx, .xlsx) sont en réalité des archives ZIP.", color:"--gold" },
+  { fake:"photo.png",        bytes:"FF D8 FF E0",         real:"jpg",                sig_name:"SOI JPEG",          note:"FF D8 FF = Start Of Image JPEG. Le fichier est un JPEG malgré l'extension .png.", color:"--cyan" },
+  { fake:"document.doc",     bytes:"89 50 4E 47",         real:"png",                sig_name:"PNG Header",        note:"0x89 en premier octet détecte la corruption 7-bit. Suivi de PNGx0D 0A 1A 0A. C'est un PNG renommé en .doc.", color:"--cyan" },
+  { fake:"archive.tar",      bytes:"1F 8B 08 00",         real:"gz",                 sig_name:"GZip Header",       note:"1F 8B = magic GZip. 0x08 = méthode deflate. Utilisé pour compresser des données avant exfiltration.", color:"--purple" },
+  { fake:"video.avi",        bytes:"25 50 44 46",         real:"pdf",                sig_name:"PDF Header",        note:"25 50 44 46 = '%PDF' en ASCII. La chaîne %PDF est toujours en clair — détectable par grep même dans un dump brut.", color:"--orange" },
+  { fake:"image.bmp",        bytes:"D0 CF 11 E0",         real:"xls / doc (ancien)", sig_name:"OLE2 Compound",     note:"D0 CF 11 E0 = signature OLE2. Tous les anciens formats Office partagent ce header. Très utilisé dans les malwares macro.", color:"--red" },
+  { fake:"config.ini",       bytes:"7F 45 4C 46",         real:"elf",                sig_name:"ELF Header",        note:"0x7F 'ELF' = Executable and Linkable Format. Un binaire Linux déguisé en fichier de config — indicateur d'implant.", color:"--red" },
+  { fake:"backup.zip",       bytes:"37 7A BC AF",         real:"7z",                 sig_name:"7-Zip Header",       note:"37 7A = '7z' en ASCII. BC AF 27 1C complète la signature. Les archives 7z sont souvent utilisées pour l'exfiltration.", color:"--purple" },
+  { fake:"readme.txt",       bytes:"EF BB BF",            real:"utf-8 bom txt",      sig_name:"UTF-8 BOM",          note:"EF BB BF = BOM UTF-8. Windows l'ajoute souvent. Un BOM en premier indique encodage UTF-8 avec marqueur, pas ASCII pur.", color:"--dim" },
+  { fake:"font.ttf",         bytes:"76 2F 31 01",         real:"vmdk",               sig_name:"VMDK Header",        note:"76 2F 31 01 = disque virtuel VMware (Sparse Extent). Un disque VM déguisé en fonte — technique d'évasion connue.", color:"--gold" },
+  { fake:"audio.mp3",        bytes:"42 5A 68 39",         real:"bz2",                sig_name:"BZip2 Header",       note:"42 5A 68 = 'BZh'. Le 39 = '9' = niveau de compression maximal. Un bzip2 renommé .mp3 pour passer les filtres.", color:"--purple" },
+];
+
+let _mismatchAnswered = false;
+
+function genMismatch() {
+  _mismatchAnswered = false;
+  const items = [...MISMATCH_DB].sort(() => Math.random() - .5).slice(0, 5);
+
+  const div = document.createElement('div');
+  div.className = 'ex-card';
+  div.innerHTML = `
+    <div class="ex-header">
+      <div class="ex-num" id="ex-num-mm">🎭</div>
+      <div class="ex-title">Identification par Signature — Extension Trompeuse</div>
+      <span class="ex-badge medium">medium</span>
+    </div>
+    <div class="ex-scenario">
+      Lors d'une acquisition, tu analyses un répertoire contenant des fichiers suspects.<br>
+      Plusieurs fichiers ont des <strong>extensions ne correspondant pas</strong> à leurs premiers octets (magic bytes).<br>
+      Pour chacun, identifie le <strong>vrai type</strong> du fichier.
+    </div>
+
+    <div class="sec-title" style="margin-top:.75rem">Fichiers à analyser</div>
+    <div id="mm-items">
+      ${items.map((item, i) => `
+        <div class="mm-row" id="mm-row-${i}" style="margin-bottom:.75rem;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;transition:.2s">
+          <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.6rem;flex-wrap:wrap">
+            <span style="font-family:var(--mono);font-size:.85rem;font-weight:700;color:var(--text)">📄 ${item.fake}</span>
+            <div class="hex-display" style="margin:0;padding:.3rem .6rem;flex:1;min-width:160px">
+              ${item.bytes.split(' ').map(b => `<span class="hex-byte" style="font-size:.8rem;padding:.25rem .45rem">${b}</span>`).join('')}
+            </div>
+          </div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap" id="mm-choices-${i}">
+            ${buildMismatchChoices(item, i, items)}
+          </div>
+          <div class="ex-feedback" id="mm-fb-${i}"></div>
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:.75rem;display:flex;gap:.6rem">
+      <button class="btn-next" id="btn-next-mm" onclick="newExercise()" style="display:none">Nouvel exercice →</button>
+    </div>
+  `;
+  return div;
+}
+
+function buildMismatchChoices(item, idx, allItems) {
+  // 4 choix : le bon + 3 distracteurs
+  const correct = item.real;
+  const pool = MISMATCH_DB.map(d => d.real).filter(r => r !== correct);
+  const shuffled = pool.sort(() => Math.random() - .5).slice(0, 3);
+  const options = [correct, ...shuffled].sort(() => Math.random() - .5);
+
+  return options.map((opt, i) => {
+    const isCorrect = opt === correct;
+    return `<button class="mm-choice-btn" data-correct="${isCorrect}" data-row="${idx}"
+      onclick="checkMismatch(this, '${correct}', '${item.sig_name}', '${item.note.replace(/'/g, String.fromCharCode(39))}')"
+      style="padding:.4rem .85rem;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,.03);
+             color:var(--dim);font-size:.76rem;font-family:var(--mono);cursor:pointer;transition:.15s;white-space:nowrap">
+      .${opt.replace(/\//g,' / ')}
+    </button>`;
+  }).join('');
+}
+
+function checkMismatch(btn, correct, sigName, note) {
+  const rowIdx = btn.dataset.row;
+  const row = document.getElementById('mm-row-' + rowIdx);
+  if (!row || row.dataset.answered) return;
+  row.dataset.answered = '1';
+
+  const isOk = btn.dataset.correct === 'true';
+  const allBtns = row.querySelectorAll('.mm-choice-btn');
+
+  allBtns.forEach(b => {
+    b.disabled = true;
+    b.style.cursor = 'default';
+    if (b.dataset.correct === 'true') {
+      b.style.borderColor = 'var(--green)';
+      b.style.background  = 'rgba(48,232,138,.12)';
+      b.style.color       = 'var(--green)';
+    } else if (b === btn && !isOk) {
+      b.style.borderColor = 'var(--red)';
+      b.style.background  = 'rgba(255,64,96,.1)';
+      b.style.color       = 'var(--red)';
+    }
+  });
+
+  row.style.borderColor = isOk ? 'rgba(48,232,138,.4)' : 'rgba(255,64,96,.3)';
+
+  const fb = document.getElementById('mm-fb-' + rowIdx);
+  fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+  fb.innerHTML = (isOk ? '✓ ' : '✗ ') +
+    '<strong>' + sigName + '</strong> — ' + note;
+
+  // Vérifier si tout est répondu
+  const rows = document.querySelectorAll('.mm-row[data-answered]');
+  const total = document.querySelectorAll('.mm-row').length;
+  if (rows.length >= total) {
+    document.getElementById('btn-next-mm').style.display = 'block';
+    const correct_count = [...document.querySelectorAll('.mm-row')].filter(r => {
+      const chosen = r.querySelector('.mm-choice-btn[data-correct="false"][disabled][style*="var(--red)"]');
+      return !chosen;
+    }).length;
+    if (correct_count >= total) incSolved(STATE.cat);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// 7. RUN LIST NTFS
+// ═══════════════════════════════════════════════════
+
+function genRunList() {
+  // Générer une Run List aléatoire avec 1 à 3 fragments
+  const numFragments = rand(1, 3);
+  const fragments = [];
+
+  let prevLCN = 0;
+  for (let i = 0; i < numFragments; i++) {
+    const length  = rand(1, 40);      // clusters du fragment
+    const offset  = rand(1, 200);     // delta LCN
+    const lcn     = prevLCN + offset;
+    prevLCN = lcn;
+    fragments.push({ length, delta: offset, lcn });
+  }
+
+  // Encoder chaque fragment en bytes Run List NTFS
+  // Header byte : nibble haut = taille delta, nibble bas = taille longueur
+  const encodedFragments = fragments.map(f => {
+    const lenBytes  = encodeVarInt(f.length);
+    const deltaBytes = encodeSignedVarInt(f.delta);
+    const headerByte = ((deltaBytes.length << 4) | lenBytes.length);
+    return {
+      ...f,
+      headerByte,
+      lenBytes,
+      deltaBytes,
+      raw: [headerByte, ...lenBytes, ...deltaBytes],
+    };
+  });
+
+  // Construire la séquence hex complète
+  const allBytes = [...encodedFragments.flatMap(f => f.raw), 0x00]; // 0x00 = terminaison
+  const hexStr = allBytes.map(b => b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+
+  const div = document.createElement('div');
+  div.className = 'ex-card';
+  div.innerHTML = `
+    <div class="ex-header">
+      <div class="ex-num" id="ex-num-rl">🧩</div>
+      <div class="ex-title">Décodage d'une Run List NTFS</div>
+      <span class="ex-badge hard">hard</span>
+    </div>
+    <div class="ex-scenario">
+      Dans un attribut <strong>$DATA</strong> d'un enregistrement MFT, tu trouves cette séquence de Run List.<br>
+      Décode <strong>chaque fragment</strong> : nombre de clusters alloués et LCN de départ.<br>
+      <em style="color:var(--dim);font-size:.78rem">Format : [Header][Length][Delta] · 0x00 = fin · LCN delta = relatif au fragment précédent</em>
+    </div>
+
+    <div class="sec-title">Séquence Run List</div>
+    <div class="hex-display" style="margin-bottom:1rem">
+      ${buildRunListHex(encodedFragments, allBytes)}
+    </div>
+
+    <div class="sec-title">Structure du Header Byte</div>
+    <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-family:var(--mono);font-size:.8rem">
+      <div style="margin-bottom:.4rem"><span style="color:var(--purple);font-weight:700">Nibble haut (bits 7-4)</span> = nombre d'octets pour le delta LCN</div>
+      <div style="margin-bottom:.6rem"><span style="color:var(--cyan);font-weight:700">Nibble bas (bits 3-0)</span> = nombre d'octets pour la longueur (run length)</div>
+      <div>Ex : <span style="color:var(--gold)">0x21</span> → <span style="color:var(--purple)">2</span> octets delta, <span style="color:var(--cyan)">1</span> octet longueur</div>
+    </div>
+
+    <div class="sec-title">Décodage par fragment</div>
+    <div id="rl-inputs">
+      ${encodedFragments.map((f, i) => `
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;margin-bottom:.6rem">
+          <div style="font-size:.75rem;font-weight:700;color:var(--dim);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Fragment ${i+1}</div>
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.4rem">
+            <span class="ex-input-label">Header :</span>
+            <span style="font-family:var(--mono);font-weight:700;color:var(--gold)">0x${f.headerByte.toString(16).toUpperCase().padStart(2,'0')}</span>
+            <span class="ex-input-label" style="margin-left:.5rem">→ delta:</span>
+            <span style="color:var(--purple);font-family:var(--mono);font-weight:700">${f.deltaBytes.length} octet(s)</span>
+            <span class="ex-input-label">/ longueur:</span>
+            <span style="color:var(--cyan);font-family:var(--mono);font-weight:700">${f.lenBytes.length} octet(s)</span>
+          </div>
+          <div class="ex-input-row" style="margin-top:.4rem">
+            <span class="ex-input-label">Nb clusters :</span>
+            <input class="ex-input" id="rl-len-${i}" type="number" placeholder="?" style="max-width:100px" min="1">
+            <span class="ex-input-label" style="margin-left:.5rem">LCN départ :</span>
+            <input class="ex-input" id="rl-lcn-${i}" type="number" placeholder="?" style="max-width:120px" min="0">
+          </div>
+          <div class="ex-feedback" id="rl-fb-${i}"></div>
+        </div>`).join('')}
+    </div>
+    <div class="ex-input-row" style="margin-top:.5rem">
+      <button class="btn-hint" onclick="showRunListHint(${JSON.stringify(encodedFragments.map(f=>({l:f.length,d:f.delta,lcn:f.lcn})))})">💡 Décomposition</button>
+      <button class="btn-validate" id="btn-rl-validate" onclick="checkRunList(${JSON.stringify(encodedFragments.map(f=>({l:f.length,lcn:f.lcn})))}, ${numFragments})">Valider ✓</button>
+      <button class="btn-next" id="btn-next-rl" onclick="newExercise()" style="display:none">Exercice suivant →</button>
+    </div>
+    <div class="ex-feedback" id="rl-feedback-global"></div>
+  `;
+  return div;
+}
+
+function encodeVarInt(val) {
+  if (val <= 0xFF)       return [val & 0xFF];
+  if (val <= 0xFFFF)     return [val & 0xFF, (val >> 8) & 0xFF];
+  if (val <= 0xFFFFFF)   return [val & 0xFF, (val >> 8) & 0xFF, (val >> 16) & 0xFF];
+  return [val & 0xFF, (val >> 8) & 0xFF, (val >> 16) & 0xFF, (val >> 24) & 0xFF];
+}
+function encodeSignedVarInt(val) {
+  // On génère des valeurs positives uniquement ici (exercice pédagogique)
+  return encodeVarInt(val);
+}
+
+function buildRunListHex(fragments, allBytes) {
+  let byteIdx = 0;
+  const colors = ['--cyan', '--green', '--gold', '--purple'];
+  let html = '';
+  fragments.forEach((f, fi) => {
+    const col = colors[fi % colors.length];
+    // Header byte
+    html += `<span class="hex-byte" style="border-color:rgba(255,255,255,.3);color:var(--gold)" title="Header fragment ${fi+1}: 0x${f.headerByte.toString(16).toUpperCase()}">${f.headerByte.toString(16).toUpperCase().padStart(2,'0')}</span>`;
+    byteIdx++;
+    // Length bytes
+    f.lenBytes.forEach(b => {
+      html += `<span class="hex-byte" style="color:var(${col})" title="Longueur frag ${fi+1}">${b.toString(16).toUpperCase().padStart(2,'0')}</span>`;
+      byteIdx++;
+    });
+    // Delta bytes
+    f.deltaBytes.forEach(b => {
+      html += `<span class="hex-byte highlight" title="Delta LCN frag ${fi+1}">${b.toString(16).toUpperCase().padStart(2,'0')}</span>`;
+      byteIdx++;
+    });
+    if (fi < fragments.length - 1) html += `<span class="hex-sep">·</span>`;
+  });
+  html += `<span class="hex-byte dim-byte" title="Fin de Run List">00</span>`;
+  return html;
+}
+
+function showRunListHint(frags) {
+  STATE.hintUsed = true;
+  frags.forEach((f, i) => {
+    const fb = document.getElementById('rl-fb-' + i);
+    if (fb) {
+      fb.className = 'ex-feedback correct';
+      fb.style.display = 'block';
+      fb.innerHTML = `Fragment ${i+1} : <strong>${f.l} clusters</strong> · delta = <strong>+${f.d}</strong> → LCN = <strong>${f.lcn}</strong>`;
+    }
+    const lenEl = document.getElementById('rl-len-' + i);
+    const lcnEl = document.getElementById('rl-lcn-' + i);
+    if (lenEl) { lenEl.value = f.l; lenEl.className = 'ex-input correct'; }
+    if (lcnEl) { lcnEl.value = f.lcn; lcnEl.className = 'ex-input correct'; }
+  });
+}
+
+function checkRunList(expected, numFragments) {
+  let allOk = true;
+  let score = 0;
+
+  for (let i = 0; i < numFragments; i++) {
+    const lenVal = parseInt(document.getElementById('rl-len-' + i)?.value);
+    const lcnVal = parseInt(document.getElementById('rl-lcn-' + i)?.value);
+    const exp = expected[i];
+    const fb  = document.getElementById('rl-fb-' + i);
+
+    const lenOk = lenVal === exp.l;
+    const lcnOk = lcnVal === exp.lcn;
+    const ok = lenOk && lcnOk;
+
+    if (!ok) allOk = false; else score++;
+
+    const lenEl = document.getElementById('rl-len-' + i);
+    const lcnEl = document.getElementById('rl-lcn-' + i);
+    if (lenEl) lenEl.className = 'ex-input ' + (lenOk ? 'correct' : 'wrong');
+    if (lcnEl) lcnEl.className = 'ex-input ' + (lcnOk ? 'correct' : 'wrong');
+
+    if (fb) {
+      fb.className = 'ex-feedback ' + (ok ? 'correct' : 'wrong');
+      if (!ok) {
+        fb.innerHTML = `✗ Fragment ${i+1} : attendu ${exp.l} clusters, LCN ${exp.lcn}.${!lenOk ? ` (clusters: ${lenVal||'?'} ≠ ${exp.l})` : ''}${!lcnOk ? ` (LCN: ${lcnVal||'?'} ≠ ${exp.lcn})` : ''}`;
+      } else {
+        fb.innerHTML = `✓ Fragment ${i+1} correct : ${exp.l} clusters @ LCN ${exp.lcn}`;
+      }
+    }
+  }
+
+  const globalFb = document.getElementById('rl-feedback-global');
+  if (allOk) {
+    document.querySelector('.ex-card').className = 'ex-card solved';
+    document.getElementById('ex-num-rl').className = 'ex-num solved';
+    document.getElementById('btn-rl-validate').disabled = true;
+    document.getElementById('btn-next-rl').style.display = 'block';
+    if (globalFb) {
+      globalFb.className = 'ex-feedback correct';
+      globalFb.innerHTML = `✓ Run List complète décodée — ${numFragments} fragment(s) · Connaissance NTFS validée.`;
+    }
+    if (!STATE.hintUsed) incSolved(STATE.cat);
+  } else {
+    if (globalFb) {
+      globalFb.className = 'ex-feedback wrong';
+      globalFb.innerHTML = `✗ ${score}/${numFragments} fragments corrects. Utilise "💡 Décomposition" pour voir le calcul.`;
+    }
+  }
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════
+// SYSTÈME D'INDICES CONTEXTUEL
+// ═══════════════════════════════════════════════════════════════
+
+const HINT_LIBRARY = {
+  endian: [
+    "Les octets Little Endian se lisent de droite à gauche. Le premier octet est le moins significatif (LSB).",
+    "Exemple : 0A 7A 00 00 → inverser → 00 00 7A 0A → 0x00007A0A = 31242 en décimal.",
+    "Sur Windows, presque toutes les valeurs multi-octets sont en Little Endian.",
+  ],
+  timestamp: [
+    "Format FAT MS-DOS : Time (2 octets LE) puis Date (2 octets LE).",
+    "Date : bits 15-9 = année (+1980), bits 8-5 = mois (1-12), bits 4-0 = jour.",
+    "Heure : bits 15-11 = heures, bits 10-5 = minutes, bits 4-0 = secondes ÷ 2 (précision 2s).",
+    "La précision MS-DOS est de 2 secondes — c'est pourquoi les secondes sont toujours paires.",
+  ],
+  bitmap: [
+    "Dans une bitmap d'allocation, chaque bit représente un cluster : 0 = libre, 1 = occupé.",
+    "L'ordre est LSB first : le cluster 0 correspond au bit 0 de l'octet 0 (bit de poids faible).",
+    "Exemple : clusters 0, 1, 3 occupés → byte 0 = 00001011 = 0x0B (bit 0, bit 1, bit 3 à 1).",
+  ],
+  fat: [
+    "Chaque entrée FAT16 est sur 2 octets (Little Endian). Lire : 0x07 0x00 → 0x0007 = cluster 7.",
+    "Valeurs spéciales FAT16 : 0xFFFF = fin de chaîne, 0x0000 = cluster libre, 0xFFF7 = défectueux.",
+    "Suivre la chaîne : cluster de départ → entrée FAT → cluster suivant → ... → 0xFFFF (EOC).",
+  ],
+  runlist: [
+    "Header byte : nibble haut = nb octets pour le delta LCN, nibble bas = nb octets pour la longueur.",
+    "Exemple 0x21 : 2 octets de delta, 1 octet de longueur. Lire ensuite 1 octet longueur puis 2 octets delta.",
+    "Les valeurs longueur et delta sont en Little Endian. Le delta est relatif au fragment précédent.",
+    "0x00 = terminateur de Run List (fin des fragments).",
+  ],
+  bases: [
+    "Hex → Binaire : chaque chiffre hex = 4 bits (F = 1111, A = 1010, 0 = 0000).",
+    "Décimal → Hex : diviser par 16 répétitivement, les restes donnent les chiffres hex.",
+    "BCD : chaque groupe de 4 bits encode un chiffre décimal (0-9 uniquement, pas A-F).",
+    "Complément à 2 : pour un nombre négatif, inverser tous les bits et ajouter 1.",
+  ],
+  effacement: [
+    "En FAT, effacer un fichier = remplacer le premier octet du nom par 0xE5 (σ en DOS).",
+    "Les entrées FAT correspondantes sont mises à 0x0000 (cluster libre).",
+    "Les données sur le disque ne sont PAS effacées — elles restent jusqu'à réécriture.",
+    "C'est pourquoi la récupération de fichiers FAT est souvent possible.",
+  ],
+  examen: [
+    "Les examens CAS-IN combinent lecture hex directe, calculs LE et connaissance des structures.",
+    "Commencer toujours par identifier le contexte : FAT12/16/32, exFAT, NTFS, EXT, HFS+.",
+    "Pour les offsets : toujours lire en Little Endian sauf HFS+ (Big Endian).",
+  ],
+};
+
+let _hintPanel = null;
+let _currentHints = [];
+let _currentHintIdx = 0;
+
+function initHintSystem(cat) {
+  _currentHints = HINT_LIBRARY[cat] || HINT_LIBRARY.endian;
+  _currentHintIdx = 0;
+}
+
+function showContextHint(cat) {
+  initHintSystem(cat || STATE.cat);
+  const existing = document.getElementById('ctx-hint-panel');
+  if (existing) { existing.remove(); return; }
+
+  const panel = document.createElement('div');
+  panel.id = 'ctx-hint-panel';
+  panel.style.cssText = `
+    position:fixed; bottom:70px; right:16px; width:320px; max-width:90vw;
+    background:linear-gradient(135deg,#0c1422,#101c30);
+    border:1px solid rgba(240,192,64,.4); border-radius:12px;
+    padding:14px 16px; z-index:8000;
+    box-shadow: 0 8px 32px rgba(0,0,0,.6);
+    animation: slideUp .25s ease;
+    font-size:.8rem; line-height:1.65;
+  `;
+
+  function render() {
+    const hints = _currentHints;
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:.72rem;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em">💡 Aide contextuelle</span>
+        <button onclick="document.getElementById('ctx-hint-panel').remove()"
+          style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;line-height:1;padding:0">✕</button>
+      </div>
+      <div style="color:var(--text);margin-bottom:10px">${hints[_currentHintIdx]}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:.68rem;color:var(--dim)">${_currentHintIdx+1} / ${hints.length}</span>
+        <div style="display:flex;gap:6px">
+          <button onclick="_currentHintIdx=Math.max(0,_currentHintIdx-1);document.getElementById('ctx-hint-panel')&&initHintRender()"
+            style="padding:3px 10px;border-radius:5px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--dim);cursor:pointer;font-size:.75rem;font-family:var(--mono)">←</button>
+          <button onclick="_currentHintIdx=Math.min(_currentHints.length-1,_currentHintIdx+1);document.getElementById('ctx-hint-panel')&&initHintRender()"
+            style="padding:3px 10px;border-radius:5px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--dim);cursor:pointer;font-size:.75rem;font-family:var(--mono)">→</button>
+        </div>
+      </div>
+    `;
+  }
+
+  window.initHintRender = function() {
+    const hints = _currentHints;
+    const textEl = document.querySelector('#ctx-hint-panel div:nth-child(2)');
+    const idxEl  = document.querySelector('#ctx-hint-panel .idx-label');
+    if (textEl) textEl.textContent = hints[_currentHintIdx];
+    if (idxEl)  idxEl.textContent  = `${_currentHintIdx+1} / ${hints.length}`;
+  };
+
+  render();
+  document.body.appendChild(panel);
+}
+
+// Bouton flottant d'aide
+function addFloatingHelp() {
+  if (document.getElementById('float-help')) return;
+  const btn = document.createElement('button');
+  btn.id = 'float-help';
+  btn.innerHTML = '💡';
+  btn.title = 'Aide contextuelle';
+  btn.style.cssText = `
+    position:fixed; bottom:20px; right:16px;
+    width:44px; height:44px; border-radius:50%;
+    background:rgba(240,192,64,.15); border:1px solid rgba(240,192,64,.4);
+    color:var(--gold); font-size:20px; cursor:pointer;
+    box-shadow:0 4px 16px rgba(0,0,0,.4);
+    transition:.2s; z-index:7999;
+    display:flex; align-items:center; justify-content:center;
+  `;
+  btn.onclick = () => showContextHint(STATE.cat);
+  btn.onmouseenter = () => btn.style.transform = 'scale(1.1)';
+  btn.onmouseleave = () => btn.style.transform = 'scale(1)';
+  document.body.appendChild(btn);
+}
+
+// CSS animation
+if (!document.querySelector('#hint-anim-style')) {
+  const s = document.createElement('style');
+  s.id = 'hint-anim-style';
+  s.textContent = `@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}`;
+  document.head.appendChild(s);
+}
+
+document.addEventListener('DOMContentLoaded', addFloatingHelp);
+
+
+// ═══════════════════════════════════════════════════════════════
+// 8. BASES & ENCODAGES (inspiré de l'examen 2022)
+// ═══════════════════════════════════════════════════════════════
+
+const BASES_EXERCISES = [
+  {
+    type: "hex_to_bin",
+    gen: () => {
+      const val = rand(0, 255);
+      const hex = val.toString(16).toUpperCase().padStart(2,'0');
+      const bin = val.toString(2).padStart(8,'0');
+      return {
+        question: `Donner la représentation binaire de <span class="hex-byte">0x${hex}</span>`,
+        answer: bin,
+        hint: `${hex} hex = ${Math.floor(val/16)} × 16 + ${val%16} = ${val} déc → ${bin} bin`,
+        validate: (inp) => inp.replace(/\s/g,'') === bin,
+        placeholder: "00000000",
+        label: "Binaire (8 bits) :",
+        explain: `0x${hex} = ${val} en décimal = ${bin} en binaire`,
+      };
+    }
+  },
+  {
+    type: "le_signed",
+    gen: () => {
+      const bits = [16, 24, 32][rand(0,2)];
+      const bytes = bits / 8;
+      const maxPos = Math.pow(2, bits-1) - 1;
+      const isNeg = Math.random() > 0.5;
+      const absVal = rand(1, Math.min(maxPos, 0xFFFFFF));
+      const val = isNeg ? -absVal : absVal;
+      // Encode as Little Endian bytes
+      let v = isNeg ? (Math.pow(2, bits) + val) : val;
+      const hexBytes = [];
+      for (let i = 0; i < bytes; i++) { hexBytes.push((v & 0xFF).toString(16).toUpperCase().padStart(2,'0')); v >>= 8; }
+      return {
+        question: `Sachant qu'il y a un entier <strong>signé sur ${bits} bits</strong>, quelle est sa valeur ?<br>Octets (Little Endian) : <span class="hex-display" style="margin:4px 0;display:inline-flex">${hexBytes.map(b=>`<span class="hex-byte">${b}</span>`).join('')}</span>`,
+        answer: String(val),
+        hint: `Inverser les octets (LE) : ${[...hexBytes].reverse().join(' ')} → 0x${[...hexBytes].reverse().join('')}. ${isNeg ? "Bit de poids fort = 1 → nombre négatif. Complément à 2 requis." : "Bit de poids fort = 0 → nombre positif."}`,
+        validate: (inp) => parseInt(inp.replace(/\s/g,'')) === val,
+        placeholder: val > 0 ? "nombre positif" : "nombre négatif",
+        label: `Valeur signée (${bits} bits LE) :`,
+        explain: `Octets inversés : 0x${[...hexBytes].reverse().join('')} → ${isNeg ? `Négatif (complément à 2) → ${val}` : val}`,
+      };
+    }
+  },
+  {
+    type: "bcd",
+    gen: () => {
+      const d1 = rand(0,9), d2 = rand(0,9), d3 = rand(0,9);
+      const bcd = `${d1.toString(2).padStart(4,'0')} ${d2.toString(2).padStart(4,'0')} ${d3.toString(2).padStart(4,'0')}`;
+      const dec = d1*100 + d2*10 + d3;
+      return {
+        question: `Quelle est la valeur en base 10 du nombre en <strong>BCD (Décimal Codé Binaire)</strong> suivant ?<br><code style="font-size:1rem;letter-spacing:.1em;color:var(--cyan)">${bcd}</code>`,
+        answer: String(dec),
+        hint: `BCD : chaque groupe de 4 bits = 1 chiffre décimal. ${d1.toString(2).padStart(4,'0')} = ${d1}, ${d2.toString(2).padStart(4,'0')} = ${d2}, ${d3.toString(2).padStart(4,'0')} = ${d3} → ${dec}`,
+        validate: (inp) => parseInt(inp) === dec,
+        placeholder: "xxx",
+        label: "Valeur décimale :",
+        explain: `${bcd} → chiffres ${d1}, ${d2}, ${d3} → ${dec}`,
+      };
+    }
+  },
+  {
+    type: "parity",
+    gen: () => {
+      const rows = [[],[],[]];
+      for (let r = 0; r < 2; r++) for (let b = 0; b < 8; b++) rows[r].push(rand(0,1));
+      // Calculer le byte de parité PAIR
+      const parity = rows[0].map((_, b) => (rows[0][b] + rows[1][b]) % 2);
+      const parityHex = parseInt(parity.join(''),2).toString(16).toUpperCase().padStart(2,'0');
+      const row0str = rows[0].join(' ');
+      const row1str = rows[1].join(' ');
+      return {
+        question: `Calculer le <strong>byte de parité PAIR</strong> pour les deux bytes suivants :<br>
+          <div class="bits-row" style="margin:6px 0">${rows[0].map(b=>`<span class="bit bit-${b}">${b}</span>`).join('')}</div>
+          <div class="bits-row" style="margin:6px 0">${rows[1].map(b=>`<span class="bit bit-${b}">${b}</span>`).join('')}</div>`,
+        answer: parityHex,
+        hint: `Parité PAIR : le bit de parité vaut 1 si la somme des bits de la colonne est IMPAIRE (pour rendre la somme totale paire). XOR colonne par colonne : ${parity.join(' ')} → 0x${parityHex}`,
+        validate: (inp) => inp.replace(/\s/g,'').toUpperCase() === parityHex,
+        placeholder: "0x??",
+        label: "Byte de parité (hex) :",
+        explain: `Résultat : ${parity.join(' ')} = 0x${parityHex}`,
+      };
+    }
+  },
+  {
+    type: "bits_min",
+    gen: () => {
+      const n = rand(3, 256);
+      const bits = Math.ceil(Math.log2(n));
+      return {
+        question: `Combien de bits <strong>minimum</strong> faut-il pour coder <strong>${n} caractères différents</strong> ?`,
+        answer: String(bits),
+        hint: `Il faut 2^n ≥ ${n}. 2^${bits-1} = ${Math.pow(2,bits-1)} < ${n}. 2^${bits} = ${Math.pow(2,bits)} ≥ ${n}. Donc ${bits} bits.`,
+        validate: (inp) => parseInt(inp) === bits,
+        placeholder: "nb de bits",
+        label: "Nombre de bits minimum :",
+        explain: `⌈log₂(${n})⌉ = ${bits} bits (donne ${Math.pow(2,bits)} combinaisons possibles)`,
+      };
+    }
+  },
+];
+
+function genBases() {
+  const ex = BASES_EXERCISES[rand(0, BASES_EXERCISES.length-1)];
+  const data = ex.gen();
+  const id = `bases-${Date.now()}`;
+
+  const div = document.createElement('div');
+  div.className = 'ex-card';
+  div.innerHTML = `
+    <div class="ex-header">
+      <div class="ex-num" id="ex-num-bs">🔢</div>
+      <div class="ex-title">Bases & Encodages — Examen CAS-IN</div>
+      <span class="ex-badge easy">calcul</span>
+    </div>
+    <div class="ex-scenario">${data.question}</div>
+    <div class="ex-input-row">
+      <span class="ex-input-label">${data.label}</span>
+      <input class="ex-input" id="inp-bases" placeholder="${data.placeholder}" autocomplete="off" style="max-width:200px">
+      <button class="btn-hint" onclick="showBasesHint('${data.hint.replace(/'/g,"\\'")}')">💡 Méthode</button>
+      <button class="btn-validate" onclick="checkBases(this, '${data.answer.replace(/'/g,"\\'")}', '${data.explain.replace(/'/g,"\\'")}')">Valider ✓</button>
+      <button class="btn-next" id="btn-next-bs" onclick="newExercise()">Exercice suivant →</button>
+    </div>
+    <div class="ex-feedback" id="ex-feedback-bs"></div>
+  `;
+  setTimeout(() => {
+    const inp = div.querySelector('#inp-bases');
+    if (inp) inp.addEventListener('keydown', e => { if(e.key==='Enter') div.querySelector('.btn-validate').click(); });
+  }, 50);
+  return div;
+}
+
+function showBasesHint(hint) {
+  STATE.hintUsed = true;
+  const fb = document.getElementById('ex-feedback-bs');
+  if (!fb) return;
+  fb.className = 'ex-feedback correct';
+  fb.innerHTML = `💡 Méthode : ${hint}`;
+}
+
+function checkBases(btn, expected, explain) {
+  const inp = document.getElementById('inp-bases');
+  const fb  = document.getElementById('ex-feedback-bs');
+  const val = inp.value.trim();
+  const ok  = val.toUpperCase().replace(/\s/g,'') === expected.toUpperCase().replace(/\s/g,'') || val === expected;
+
+  if (ok) {
+    inp.className = 'ex-input correct';
+    btn.disabled = true;
+    document.getElementById('btn-next-bs').style.display = 'block';
+    document.querySelector('.ex-card').className = 'ex-card solved';
+    document.getElementById('ex-num-bs').className = 'ex-num solved';
+    fb.className = 'ex-feedback correct';
+    fb.innerHTML = `✓ Correct ! ${explain}`;
+    if (!STATE.hintUsed) incSolved(STATE.cat);
+  } else {
+    inp.className = 'ex-input wrong';
+    fb.className = 'ex-feedback wrong';
+    fb.innerHTML = `✗ "${val}" incorrect. Réponse attendue : <strong>${expected}</strong>. Utilise 💡 Méthode pour voir les étapes.`;
+    setTimeout(() => inp.className = 'ex-input', 700);
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// 9. EFFACEMENT FAT (inspiré Q4 examen système de fichiers)
+// ═══════════════════════════════════════════════════════════════
+
+function genEffacement() {
+  const noms = ["Jules", "rapport", "vacances", "notes", "budget", "config", "archive", "backup"];
+  const extensions = ["txt", "docx", "pdf", "jpg", "xlsx"];
+  const nom = noms[rand(0, noms.length-1)];
+  const ext = extensions[rand(0, extensions.length-1)];
+  const filename = `${nom}.${ext}`;
+  const sfn = nom.toUpperCase().padEnd(8,' ').slice(0,8) + ext.toUpperCase().padEnd(3,' ').slice(0,3);
+  const sfnBytes = sfn.split('').map(c => c.charCodeAt(0).toString(16).toUpperCase().padStart(2,'0'));
+
+  const numClusters = rand(2, 5);
+  const startCluster = rand(2, 50);
+  const clusters = [startCluster];
+  for (let i = 1; i < numClusters; i++) clusters.push(clusters[i-1] + rand(1,10));
+
+  const sizeMB = rand(1, 10);
+  const questions = [
+    {
+      q: `Par quoi est remplacé le premier octet du nom <strong>${filename}</strong> dans son entrée de répertoire FAT ?`,
+      choices: ["0x00 (zéro)", "0xE5 (sigma)", "0xFF (effacement)", "Le nom est supprimé"],
+      correct: 1,
+      explain: "0xE5 remplace le premier octet du nom de fichier dans l'entrée du répertoire. C'est le marqueur d'effacement FAT depuis MS-DOS — 0xE5 correspond au caractère σ.",
+      note: "Les données ne sont PAS effacées — seule l'entrée de répertoire est marquée. C'est pourquoi la récupération forensique est possible."
+    },
+    {
+      q: `Que deviennent les entrées FAT des clusters ${clusters.join(', ')} après l'effacement de <strong>${filename}</strong> ?`,
+      choices: [
+        `Elles passent à 0x0000 (cluster libre)`,
+        `Elles passent à 0xFFFF (fin de chaîne)`,
+        `Elles sont supprimées physiquement du disque`,
+        `Elles restent inchangées — FAT ne se met pas à jour`
+      ],
+      correct: 0,
+      explain: `Les entrées FAT des clusters ${clusters.join(', ')} passent à 0x0000, les marquant comme libres. Mais les données dans ces clusters restent intactes sur le disque jusqu'à réécriture.`,
+      note: "C'est le principe de la récupération forensique FAT : les données survivent à l'effacement."
+    },
+    {
+      q: `Un fichier <strong>${filename}</strong> de ${sizeMB} Mo vient d'être effacé. Ses données sont-elles récupérables ?`,
+      choices: [
+        "Non — les données sont immédiatement écrasées",
+        "Oui — si les clusters n'ont pas été réalloués",
+        "Seulement si le disque a un journal (journaling)",
+        "Non — l'effacement supprime les données et l'entrée FAT"
+      ],
+      correct: 1,
+      explain: `Oui, les données sont potentiellement récupérables. L'effacement FAT ne fait que marquer les clusters comme libres (0x0000). Les données physiques dans les clusters ${clusters.join(', ')} restent jusqu'à ce qu'un nouveau fichier les réécrive.`,
+      note: `En forensique, on recherche les entrées avec 0xE5 en premier octet pour identifier les fichiers effacés. La taille (${sizeMB} Mo) et le cluster de départ sont encore lisibles dans l'entrée corrompue.`
+    },
+  ];
+
+  const q = questions[rand(0, questions.length-1)];
+  const opts = q.choices.map((c,i) => ({text:c, correct: i===q.correct})).sort(()=>Math.random()-.5);
+  const correctIdx = opts.findIndex(o => o.correct);
+
+  const div = document.createElement('div');
+  div.className = 'ex-card';
+  div.innerHTML = `
+    <div class="ex-header">
+      <div class="ex-num" id="ex-num-ef">🗑</div>
+      <div class="ex-title">Effacement de fichier — FAT</div>
+      <span class="ex-badge medium">medium</span>
+    </div>
+    <div class="ex-scenario">
+      Tu analyses une clé USB FAT16. Un suspect vient d'effacer le fichier <strong>${filename}</strong>
+      (${sizeMB} Mo, clusters ${clusters.join(' → ')}).
+    </div>
+    <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem;margin-bottom:.75rem">
+      <div style="font-size:.72rem;font-weight:700;color:var(--dim);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em">Entrée de répertoire avant effacement</div>
+      <div class="hex-display" style="font-size:.8rem;margin:0;flex-wrap:wrap;gap:3px">
+        ${sfnBytes.map((b,i) => `<span class="hex-byte ${i===0?'highlight':''}" title="${i<8?'Nom: '+sfn[i]:i<11?'Ext: '+sfn[i]:'Attributs'}">${b}</span>`).join('')}
+        <span class="hex-sep">···</span>
+      </div>
+      <div style="font-size:.7rem;color:var(--dim);margin-top:.3rem">Premier octet = <span style="color:var(--gold)">${sfnBytes[0]}</span> = "${sfn[0]}" du nom</div>
+    </div>
+
+    <div class="sec-title">Question</div>
+    <div class="ex-scenario">${q.q}</div>
+    <div style="display:flex;flex-direction:column;gap:.4rem;margin:.75rem 0" id="ef-choices">
+      ${opts.map((o,i) => `
+        <button class="tp-choice" onclick="checkEffacement(this, ${i===correctIdx}, '${q.explain.replace(/'/g,"\\'")}', '${q.note.replace(/'/g,"\\'")}')">
+          <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
+          <span>${o.text}</span>
+        </button>`).join('')}
+    </div>
+    <div class="ex-feedback" id="ex-feedback-ef"></div>
+    <button class="btn-next" id="btn-next-ef" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+  `;
+  return div;
+}
+
+function checkEffacement(btn, isOk, explain, note) {
+  const btns = document.querySelectorAll('#ef-choices .tp-choice');
+  if (btns[0].disabled) return;
+  btns.forEach(b => { b.disabled = true; b.style.cursor='default'; });
+  btn.style.borderColor = isOk ? 'var(--green)' : 'var(--red)';
+  btn.style.background  = isOk ? 'rgba(48,232,138,.1)' : 'rgba(255,64,96,.08)';
+  btn.style.color       = isOk ? 'var(--green)' : 'var(--red)';
+  const fb = document.getElementById('ex-feedback-ef');
+  fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+  fb.innerHTML = (isOk ? '✓ ' : '✗ ') + explain + `<div style="margin-top:6px;padding:6px 8px;background:rgba(0,229,204,.06);border-radius:6px;font-size:.76rem;color:var(--cyan)">📌 Note forensique : ${note}</div>`;
+  document.getElementById('ex-num-ef').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+  document.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+  document.getElementById('btn-next-ef').style.display = 'block';
+  if (isOk && !STATE.hintUsed) incSolved(STATE.cat);
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// 10. SÉRIE EXAMEN (questions inspirées des vrais examens CAS-IN)
+// ═══════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════
+// SÉRIE EXAMEN — Questions originales avec tables hex et indices
+// ═══════════════════════════════════════════════════════════════
+
+// Générateur de dumps hex réalistes
+function fakeHexRow(offset, bytes) {
+  const hex = bytes.map(b => b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+  const ascii = bytes.map(b => (b >= 32 && b < 127) ? String.fromCharCode(b) : '.').join('');
+  return { offset: offset.toString(16).toUpperCase().padStart(8,'0'), hex, ascii, bytes };
+}
+
+function renderHexDump(rows, highlights=[]) {
+  return `<div style="background:rgba(0,0,0,.45);border:1px solid var(--border);border-radius:8px;overflow:auto;margin:.6rem 0;font-family:var(--mono);font-size:.76rem">
+    <table style="border-collapse:collapse;width:100%">
+      <thead><tr style="background:var(--surface2)">
+        <th style="padding:.3rem .6rem;color:var(--dim);font-size:.65rem;text-align:left;border-bottom:1px solid var(--border)">Offset</th>
+        <th style="padding:.3rem .6rem;color:var(--dim);font-size:.65rem;text-align:left;border-bottom:1px solid var(--border)">0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F</th>
+        <th style="padding:.3rem .6rem;color:var(--dim);font-size:.65rem;border-bottom:1px solid var(--border)">ASCII</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(r => `<tr style="border-bottom:1px solid rgba(255,255,255,.03)">
+          <td style="padding:.3rem .6rem;color:var(--dim)">${r.offset}</td>
+          <td style="padding:.3rem .8rem">${r.bytes.map((b,i) => {
+            const globalIdx = r.offset ? parseInt(r.offset,16) + i : i;
+            const isHL = highlights.some(h => h.from <= (parseInt(r.offset,16)+i) && (parseInt(r.offset,16)+i) <= h.to);
+            const col = highlights.find(h => h.from <= (parseInt(r.offset,16)+i) && (parseInt(r.offset,16)+i) <= h.to);
+            const style = col ? `color:var(${col.color||'--cyan'});font-weight:700` : `color:var(--text)`;
+            return `<span style="${style}" title="${col?col.label:''}">${b.toString(16).toUpperCase().padStart(2,'0')}</span>`;
+          }).join(' ')}</td>
+          <td style="padding:.3rem .6rem;color:var(--dim);font-size:.7rem">${r.bytes.map(b=>(b>=32&&b<127)?String.fromCharCode(b):'.').join('')}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// ── Exercice type FAT Boot Sector ──
+function makeBootSectorExercise() {
+  // Paramètres réalistes aléatoires
+  const bps   = [512, 1024, 2048][rand(0,2)];
+  const spc   = [1,2,4,8,16][rand(0,4)];
+  const rsvd  = rand(2, 8);
+  const nFATs = 2;
+  const sectPerFAT = rand(2, 16);
+  const rootEntries = 512;
+  
+  // Encoder en Little Endian
+  const le16 = v => [v & 0xFF, (v >> 8) & 0xFF];
+  const le32 = v => [v & 0xFF, (v>>8)&0xFF, (v>>16)&0xFF, (v>>24)&0xFF];
+
+  const bytes = new Array(64).fill(0);
+  // OEM at 0x03
+  "MSDOS5.0".split('').forEach((c,i) => bytes[3+i] = c.charCodeAt(0));
+  // BPB
+  le16(bps).forEach((b,i)   => bytes[0x0B+i] = b);  // BytesPerSector
+  bytes[0x0D] = spc;                                  // SectorsPerCluster
+  le16(rsvd).forEach((b,i)  => bytes[0x0E+i] = b);  // ReservedSectors
+  bytes[0x10] = nFATs;                                // NumFATs
+  le16(rootEntries).forEach((b,i) => bytes[0x11+i] = b); // RootEntryCount
+  le16(sectPerFAT).forEach((b,i) => bytes[0x16+i] = b); // SectorsPerFAT
+
+  const question = rand(0,2);
+  let qText, answer, hints, explain;
+
+  if (question === 0) {
+    answer = sectPerFAT;
+    qText = `Combien de secteurs occupe <strong>chacune des FAT</strong> de ce volume ?`;
+    hints = [
+      `L'offset de SectorsPerFAT (FAT16) est <strong>0x16</strong> sur 2 octets en Little Endian.`,
+      `Localise l'offset 0x16 dans le dump. Lis 2 octets, inverse (Little Endian), convertis en décimal.`,
+      `Offset 0x16 = octets <span style="color:var(--cyan);font-weight:700">${bytes[0x16].toString(16).toUpperCase().padStart(2,'0')} ${bytes[0x17].toString(16).toUpperCase().padStart(2,'0')}</span> → LE → ${sectPerFAT} secteurs`,
+    ];
+    explain = `SectorsPerFAT @ 0x16 = ${bytes[0x16].toString(16).toUpperCase().padStart(2,'0')} ${bytes[0x17].toString(16).toUpperCase().padStart(2,'0')} en LE = ${sectPerFAT} secteurs par FAT.`;
+  } else if (question === 1) {
+    answer = bps;
+    qText = `Quelle est la taille d'un <strong>secteur</strong> (en octets) sur ce volume ?`;
+    hints = [
+      `BytesPerSector se trouve à l'offset <strong>0x0B</strong> sur 2 octets Little Endian dans le BPB.`,
+      `Offset 0x0B dans le dump : lis 2 octets consécutifs, inverse l'ordre des octets (LE).`,
+      `0x0B = octets <span style="color:var(--cyan);font-weight:700">${bytes[0x0B].toString(16).toUpperCase().padStart(2,'0')} ${bytes[0x0C].toString(16).toUpperCase().padStart(2,'0')}</span> → LE → ${bps} octets/secteur`,
+    ];
+    explain = `BytesPerSector @ 0x0B = ${bytes[0x0B].toString(16).toUpperCase().padStart(2,'0')} ${bytes[0x0C].toString(16).toUpperCase().padStart(2,'0')} → LE → ${bps} octets.`;
+  } else {
+    answer = spc;
+    qText = `Combien de secteurs contient <strong>chaque cluster</strong> sur ce volume ?`;
+    hints = [
+      `SectorsPerCluster est à l'offset <strong>0x0D</strong> sur 1 seul octet — pas de Little Endian sur 1 octet.`,
+      `Offset 0x0D → lire directement 1 octet et convertir en décimal.`,
+      `0x0D = octet <span style="color:var(--cyan);font-weight:700">${bytes[0x0D].toString(16).toUpperCase().padStart(2,'0')}</span> = ${spc} secteurs/cluster`,
+    ];
+    explain = `SectorsPerCluster @ 0x0D = 0x${bytes[0x0D].toString(16).toUpperCase().padStart(2,'0')} = ${spc} secteur(s) par cluster.`;
+  }
+
+  const row0 = { offset: '00000000', bytes: bytes.slice(0, 16) };
+  const row1 = { offset: '00000010', bytes: bytes.slice(16, 32) };
+  const row2 = { offset: '00000020', bytes: bytes.slice(32, 48) };
+  const rows = [row0, row1, row2];
+
+  const hlTarget = question === 0 ? {from:0x16,to:0x17,color:'--gold',label:'SectorsPerFAT'}
+                 : question === 1 ? {from:0x0B,to:0x0C,color:'--cyan',label:'BytesPerSector'}
+                 : {from:0x0D,to:0x0D,color:'--green',label:'SectorsPerCluster'};
+
+  return {
+    title: "FAT — Lecture du Boot Sector (BPB)",
+    category: "Système de fichiers",
+    difficulty: "medium",
+    scenario: `Tu examines le <strong>secteur de boot</strong> d'une clé USB FAT16.`,
+    hexDump: renderHexDump(rows, [
+      {from:0x03,to:0x0A,color:'--dim',label:'OEM ID'},
+      hlTarget
+    ]),
+    question: qText,
+    type: "number",
+    answer: String(answer),
+    hints,
+    explain,
+  };
+}
+
+// ── Exercice type Run List NTFS ──
+function makeRunListExercise() {
+  // Générer 2-4 fragments réalistes
+  const n = rand(2,4);
+  const fragments = [];
+  let lcn = 0;
+
+  for (let i = 0; i < n; i++) {
+    const len   = rand(1, 30);
+    const delta = rand(1, 100);
+    lcn += delta;
+    const lenOcts  = len  <= 0xFF ? 1 : 2;
+    const delOcts  = delta <= 0xFF ? 1 : 2;
+    const header   = (delOcts << 4) | lenOcts;
+    const lenBytes = lenOcts === 1 ? [len] : [len & 0xFF, (len >> 8) & 0xFF];
+    const delBytes = delOcts === 1 ? [delta] : [delta & 0xFF, (delta >> 8) & 0xFF];
+    fragments.push({ len, delta, lcn, header, lenBytes, delBytes });
+  }
+
+  const allBytes = [
+    ...fragments.flatMap(f => [f.header, ...f.lenBytes, ...f.delBytes]),
+    0x00
+  ];
+
+  const hexStr = allBytes.map(b => b.toString(16).toUpperCase().padStart(2,'0'));
+
+  const question = rand(0,2);
+  let qText, answer, hints, explain;
+
+  if (question === 0) {
+    answer = String(n);
+    qText = "Sur combien de <strong>fragments</strong> (runs) ce fichier est-il réparti ?";
+    hints = [
+      `Chaque fragment commence par un <strong>octet header</strong>. L'octet <span style="color:var(--gold)">0x00</span> est le terminateur — il marque la fin de la Run List.`,
+      `Header : nibble haut (bits 7-4) = nb octets pour le delta LCN, nibble bas (bits 3-0) = nb octets pour la longueur. Un header ≠ 0x00 = un fragment.`,
+      `Lis chaque header, saute ses octets longueur + delta, puis passe au header suivant. Compte les headers jusqu'au 0x00.`,
+    ];
+    explain = `${n} headers non-nuls avant le 0x00 terminateur = ${n} fragments.`;
+  } else if (question === 1) {
+    answer = String(fragments[0].len);
+    qText = `Combien de clusters contient le <strong>premier fragment</strong> ?`;
+    hints = [
+      `Le premier octet est le header : <span style="color:var(--gold)">${fragments[0].header.toString(16).toUpperCase().padStart(2,'0')}</span>. Nibble bas = nombre d'octets pour la longueur (Run Length).`,
+      `Nibble bas de 0x${fragments[0].header.toString(16).toUpperCase().padStart(2,'0')} = ${fragments[0].header & 0xF}. Lis ${fragments[0].header & 0xF} octet(s) en Little Endian après le header.`,
+      `Octet(s) longueur : ${fragments[0].lenBytes.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')} → LE → <strong>${fragments[0].len} clusters</strong>`,
+    ];
+    explain = `Header 0x${fragments[0].header.toString(16).toUpperCase().padStart(2,'0')} → nibble bas=${fragments[0].header&0xF} → ${fragments[0].header&0xF} octet(s) longueur = ${fragments[0].lenBytes.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')} (LE) = ${fragments[0].len} clusters.`;
+  } else {
+    answer = String(fragments[0].lcn);
+    qText = `À quel <strong>LCN (Logical Cluster Number)</strong> débute le premier fragment ?`;
+    hints = [
+      `Après le header et les octets longueur, les octets delta indiquent le LCN de départ (relatif au début pour le premier fragment).`,
+      `Header 0x${fragments[0].header.toString(16).toUpperCase().padStart(2,'0')} → nibble haut=${fragments[0].header>>4} → ${fragments[0].header>>4} octet(s) de delta après les ${fragments[0].header&0xF} octet(s) de longueur.`,
+      `Octets delta : ${fragments[0].delBytes.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')} → LE → <strong>${fragments[0].lcn}</strong>`,
+    ];
+    explain = `Octets delta du fragment 1 : ${fragments[0].delBytes.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')} (LE) = ${fragments[0].lcn}. (Delta relatif : premier fragment → LCN absolu.)`;
+  }
+
+  // Colorier les bytes par fragment
+  const rows = [];
+  for (let i = 0; i < allBytes.length; i += 16) {
+    const slice = allBytes.slice(i, i+16);
+    rows.push({ offset: i.toString(16).toUpperCase().padStart(8,'0'), bytes: slice });
+  }
+
+  // Build highlights
+  const highlights = [];
+  let pos = 0;
+  fragments.forEach((f, fi) => {
+    const colors = ['--cyan','--green','--gold','--purple'];
+    highlights.push({from:pos, to:pos, color:'--gold', label:`Header F${fi+1}`});
+    pos++;
+    highlights.push({from:pos, to:pos+f.lenBytes.length-1, color:colors[fi%4], label:`Longueur F${fi+1}`});
+    pos += f.lenBytes.length;
+    highlights.push({from:pos, to:pos+f.delBytes.length-1, color:'--orange', label:`Delta F${fi+1}`});
+    pos += f.delBytes.length;
+  });
+  highlights.push({from:pos, to:pos, color:'--dim', label:'Terminateur 0x00'});
+
+  return {
+    title: "NTFS — Décodage d'une Run List",
+    category: "Système de fichiers",
+    difficulty: "hard",
+    scenario: `Dans un attribut <strong>$DATA</strong> non-résident d'un enregistrement MFT, tu trouves cette Run List.`,
+    hexDump: renderHexDump(rows, highlights),
+    question: qText,
+    type: "number",
+    answer,
+    hints,
+    explain,
+    legend: `<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:.7rem;margin-top:.4rem">
+      <span><span style="color:var(--gold)">■</span> Header</span>
+      <span><span style="color:var(--cyan)">■</span> Longueur</span>
+      <span><span style="color:var(--orange)">■</span> Delta LCN</span>
+      <span><span style="color:var(--dim)">■</span> Terminateur</span>
+    </div>`,
+  };
+}
+
+// ── Exercice Bitmap exFAT ──
+function makeBitmapExercise() {
+  // Générer des octets bitmap réalistes avec des clusters occupés
+  const bitmapOctets = Array.from({length:24}, () => rand(0,255));
+  // Assurer qu'il y a au moins un octet non-FF
+  let firstFreeOctetIdx = -1;
+  for (let i = 0; i < bitmapOctets.length; i++) {
+    if (bitmapOctets[i] !== 0xFF) { firstFreeOctetIdx = i; break; }
+  }
+  if (firstFreeOctetIdx === -1) {
+    bitmapOctets[rand(4,12)] = rand(0, 254);
+    for (let i = 0; i < bitmapOctets.length; i++) {
+      if (bitmapOctets[i] !== 0xFF) { firstFreeOctetIdx = i; break; }
+    }
+  }
+
+  // Trouver le premier bit libre
+  let firstFreeCluster = -1;
+  for (let i = 0; i < bitmapOctets.length; i++) {
+    const b = bitmapOctets[i];
+    for (let bit = 0; bit < 8; bit++) {
+      if (!((b >> bit) & 1)) {
+        firstFreeCluster = 2 + i * 8 + bit; // exFAT commence à 2
+        break;
+      }
+    }
+    if (firstFreeCluster >= 0) break;
+  }
+
+  const question = rand(0,1);
+  let qText, answer, hints, explain;
+
+  const firstFreeOctet = bitmapOctets[firstFreeOctetIdx];
+  const firstFreeBit   = [...Array(8)].findIndex((_,b) => !((firstFreeOctet >> b) & 1));
+
+  if (question === 0) {
+    answer = String(firstFreeCluster);
+    qText = `Quel est le numéro du <strong>premier cluster libre</strong> sur ce volume exFAT ?`;
+    hints = [
+      `En exFAT, la bitmap d'allocation est <strong>LSB first</strong> : le bit 0 de l'octet 0 correspond au cluster 2 (les clusters 0 et 1 sont réservés).`,
+      `Un bit à <strong>1</strong> = cluster occupé. Un bit à <strong>0</strong> = cluster libre. Cherche le premier bit 0 en lisant de gauche à droite, bit 0 à bit 7 dans chaque octet.`,
+      `Offset 0x${(firstFreeOctetIdx).toString(16).padStart(2,'0')} = <span style="color:var(--gold);font-weight:700">0x${firstFreeOctet.toString(16).toUpperCase().padStart(2,'0')}</span> = ${firstFreeOctet.toString(2).padStart(8,'0')}b. Le bit ${firstFreeBit} est à 0 → cluster ${2 + firstFreeOctetIdx*8 + firstFreeBit}.`,
+    ];
+    explain = `Octet ${firstFreeOctetIdx} = 0x${firstFreeOctet.toString(16).toUpperCase().padStart(2,'0')} = ${firstFreeOctet.toString(2).padStart(8,'0')}. Bit ${firstFreeBit} = 0 → cluster 2 + ${firstFreeOctetIdx}×8 + ${firstFreeBit} = <strong>${firstFreeCluster}</strong>.`;
+  } else {
+    const targetOctet = firstFreeOctetIdx;
+    const hexVal = bitmapOctets[targetOctet].toString(16).toUpperCase().padStart(2,'0');
+    answer = `0x${hexVal}`;
+    qText = `L'offset <strong>0x${targetOctet.toString(16).toUpperCase().padStart(2,'0').padStart(4,'0')}</strong> de la bitmap correspond à quels clusters ? Donne la valeur hex de cet octet.`;
+    hints = [
+      `Chaque octet représente 8 clusters consécutifs. L'octet à l'offset N représente les clusters 2+N×8 à 2+N×8+7.`,
+      `Offset 0x${targetOctet.toString(16)} → clusters ${2+targetOctet*8} à ${2+targetOctet*8+7}. Lis directement la valeur hex à cet offset.`,
+      `L'octet est <span style="color:var(--gold);font-weight:700">0x${hexVal}</span> = ${bitmapOctets[targetOctet].toString(2).padStart(8,'0')}b. Les bits à 0 indiquent les clusters libres dans cette plage.`,
+    ];
+    explain = `Offset 0x${targetOctet.toString(16).padStart(4,'0')} = 0x${hexVal}. Représente les clusters ${2+targetOctet*8}-${2+targetOctet*8+7}.`;
+    answer = hexVal;
+  }
+
+  const rows = [];
+  for (let i = 0; i < bitmapOctets.length; i += 16) {
+    const slice = bitmapOctets.slice(i, i+16);
+    const paddedSlice = slice.length < 16 ? [...slice, ...new Array(16-slice.length).fill(null)] : slice;
+    rows.push({
+      offset: i.toString(16).toUpperCase().padStart(8,'0'),
+      bytes: slice,
+    });
+  }
+
+  return {
+    title: "exFAT — Analyse de la $Bitmap",
+    category: "Système de fichiers",
+    difficulty: "hard",
+    scenario: `Tu examines la <strong>bitmap d'allocation</strong> ($Bitmap) d'un volume exFAT.`,
+    hexDump: renderHexDump(rows, [
+      {from: firstFreeOctetIdx, to: firstFreeOctetIdx, color:'--gold', label:'Premier octet avec cluster libre'},
+    ]),
+    question: qText,
+    type: "text",
+    answer,
+    hints,
+    explain,
+  };
+}
+
+// ── Exercice Entier signé Little Endian ──
+function makeSignedLEExercise() {
+  const bits = [16,24,32][rand(0,2)];
+  const nBytes = bits / 8;
+  const isNeg  = Math.random() > 0.4;
+  const maxAbs = Math.min(Math.pow(2, bits-1)-1, 0xFFFFFF);
+  const absVal = rand(256, maxAbs);
+  const val    = isNeg ? -absVal : absVal;
+  let raw = isNeg ? (Math.pow(2, bits) + val) : val;
+  const leBytes = [];
+  for (let i = 0; i < nBytes; i++) { leBytes.push(raw & 0xFF); raw >>= 8; }
+
+  const context = rand(0,2);
+  const scenarios = [
+    `À l'offset <strong>0x1A</strong> d'un enregistrement MFT, tu trouves un entier <strong>signé ${bits} bits</strong> en Little Endian.`,
+    `Dans un header de volume FAT, l'offset <strong>0x2C</strong> contient un entier <strong>signé ${bits} bits</strong> LE.`,
+    `Lors d'une analyse de RAM dump, tu repères ces ${nBytes} octets correspondant à une valeur <strong>signée ${bits} bits</strong> LE.`,
+  ];
+
+  const row0 = { offset: '00000000', bytes: [...new Array(nBytes>1?rand(0,4):0).fill(0), ...leBytes, ...new Array(16-nBytes).fill(0)].slice(0,16) };
+
+  return {
+    title: `Entier signé ${bits} bits — Little Endian`,
+    category: "Représentation des données",
+    difficulty: bits === 16 ? "easy" : bits === 24 ? "medium" : "hard",
+    scenario: scenarios[context],
+    hexDump: `<div class="hex-display" style="gap:6px;margin:.5rem 0">
+      ${leBytes.map(b => `<span class="hex-byte highlight">${b.toString(16).toUpperCase().padStart(2,'0')}</span>`).join('')}
+      <span class="hex-sep" style="margin-left:4px">(${nBytes} octets, LE)</span>
+    </div>`,
+    question: `Quelle est la <strong>valeur décimale signée</strong> de cet entier ${bits} bits ?`,
+    type: "number",
+    answer: String(val),
+    hints: [
+      `Inverser les octets (Little Endian) : ${[...leBytes].reverse().map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')} → 0x${[...leBytes].reverse().map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join('')}`,
+      isNeg
+        ? `Le bit de poids fort est à 1 → nombre négatif. Appliquer le complément à 2 : complément de 0x${[...leBytes].reverse().map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join('')} sur ${bits} bits.`
+        : `Le bit de poids fort est à 0 → nombre positif. Convertir directement en décimal.`,
+      `Résultat : <strong>${val.toLocaleString('fr-CH')}</strong>`,
+    ],
+    explain: `Octets LE inversés : 0x${[...leBytes].reverse().map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join('')}${isNeg ? ` → négatif (complément à 2) → ${val}` : ` = ${val}`}`,
+  };
+}
+
+// ── Exercice Représentation binaire ──
+function makeBinaryExercise() {
+  const mode = rand(0,3);
+  let qText, answer, hints, explain, display;
+
+  if (mode === 0) {
+    // Hex → Binaire
+    const val = rand(16, 255);
+    const hex = val.toString(16).toUpperCase().padStart(2,'0');
+    const bin = val.toString(2).padStart(8,'0');
+    answer = bin;
+    display = `<span class="hex-byte" style="font-size:1.1rem;padding:.4rem .8rem">0x${hex}</span>`;
+    qText = `Donner la <strong>représentation binaire sur 8 bits</strong> de <span class="hex-byte">0x${hex}</span>`;
+    hints = [
+      `Chaque chiffre hexadécimal = 4 bits. ${hex[0]} (0x${hex[0]}) = ${parseInt(hex[0],16).toString(2).padStart(4,'0')} · ${hex[1]} (0x${hex[1]}) = ${parseInt(hex[1],16).toString(2).padStart(4,'0')}`,
+      `${hex} = ${parseInt(hex[0],16)} × 16 + ${parseInt(hex[1],16)} = ${val}. ${val} en binaire = ?`,
+      `Réponse : <strong>${bin}</strong> (vérif : ${bin.split('').map((b,i)=>b==='1'?Math.pow(2,7-i):0).reduce((a,b)=>a+b)} = ${val})`,
+    ];
+    explain = `0x${hex} = ${val} = <strong>${bin}</strong>. Méthode : ${hex[0]}→${parseInt(hex[0],16).toString(2).padStart(4,'0')}, ${hex[1]}→${parseInt(hex[1],16).toString(2).padStart(4,'0')}`;
+  } else if (mode === 1) {
+    // Binaire → Hex
+    const val = rand(16, 255);
+    const hex = val.toString(16).toUpperCase().padStart(2,'0');
+    const bin = val.toString(2).padStart(8,'0');
+    answer = hex;
+    display = `<div class="bits-row" style="margin:.5rem 0">${bin.split('').map(b=>`<span class="bit bit-${b}">${b}</span>`).join('')}</div>`;
+    qText = `Convertir ce nombre binaire 8 bits en <strong>hexadécimal</strong> :`;
+    hints = [
+      `Diviser en 2 groupes de 4 bits : ${bin.slice(0,4)} | ${bin.slice(4,8)}`,
+      `${bin.slice(0,4)} = ${parseInt(bin.slice(0,4),2)} = 0x${parseInt(bin.slice(0,4),2).toString(16).toUpperCase()} · ${bin.slice(4,8)} = ${parseInt(bin.slice(4,8),2)} = 0x${parseInt(bin.slice(4,8),2).toString(16).toUpperCase()}`,
+      `→ <strong>0x${hex}</strong>`,
+    ];
+    explain = `${bin} → ${bin.slice(0,4)}=${parseInt(bin.slice(0,4),2)} (0x${parseInt(bin.slice(0,4),2).toString(16).toUpperCase()}) | ${bin.slice(4,8)}=${parseInt(bin.slice(4,8),2)} (0x${parseInt(bin.slice(4,8),2).toString(16).toUpperCase()}) → <strong>0x${hex}</strong>`;
+  } else if (mode === 2) {
+    // Bits minimum pour N caractères
+    const n = rand(3, 200);
+    const bits = Math.ceil(Math.log2(n));
+    answer = String(bits);
+    display = `<div style="font-size:1.2rem;font-weight:700;color:var(--cyan);margin:.5rem 0">${n} caractères</div>`;
+    qText = `Combien de <strong>bits minimum</strong> faut-il pour représenter <strong>${n} caractères distincts</strong> ?`;
+    hints = [
+      `Avec N bits, on peut représenter 2ᴺ combinaisons différentes. Il faut 2ᴺ ≥ ${n}.`,
+      `2^${bits-1} = ${Math.pow(2,bits-1)} ${Math.pow(2,bits-1) < n ? `< ${n}` : `≥ ${n}`}. 2^${bits} = ${Math.pow(2,bits)} ${Math.pow(2,bits) >= n ? `≥ ${n}` : ``}. Donc ${bits} bits.`,
+      `⌈log₂(${n})⌉ = <strong>${bits} bits</strong>`,
+    ];
+    explain = `2^${bits-1}=${Math.pow(2,bits-1)} < ${n} ≤ ${Math.pow(2,bits)}=2^${bits} → <strong>${bits} bits</strong> minimum.`;
+  } else {
+    // BCD
+    const digits = [rand(0,9), rand(0,9), rand(0,9)];
+    const bcd = digits.map(d => d.toString(2).padStart(4,'0')).join(' ');
+    const dec = digits[0]*100 + digits[1]*10 + digits[2];
+    answer = String(dec);
+    display = `<code style="font-size:1rem;color:var(--cyan);letter-spacing:.12em">${bcd}</code>`;
+    qText = `Quelle est la valeur en <strong>base 10</strong> de ce nombre en <strong>BCD</strong> ?`;
+    hints = [
+      `BCD (Binary Coded Decimal) : chaque groupe de 4 bits encode UN chiffre décimal (0–9).`,
+      `${digits[0].toString(2).padStart(4,'0')} → ${digits[0]} · ${digits[1].toString(2).padStart(4,'0')} → ${digits[1]} · ${digits[2].toString(2).padStart(4,'0')} → ${digits[2]}`,
+      `→ <strong>${dec}</strong>`,
+    ];
+    explain = `${bcd} → chiffres ${digits.join(', ')} → <strong>${dec}</strong>`;
+  }
+
+  return {
+    title: "Représentation — Bases & Encodages",
+    category: "Représentation des données",
+    difficulty: "easy",
+    scenario: "Exercice de représentation des données, fondamental en forensique numérique.",
+    hexDump: display,
+    question: qText,
+    type: "text",
+    answer,
+    hints,
+    explain,
+  };
+}
+
+// ── Registre des générateurs ──
+const EXAM_GENERATORS = [
+  makeBootSectorExercise,
+  makeRunListExercise,
+  makeBitmapExercise,
+  makeSignedLEExercise,
+  makeBinaryExercise,
+];
+
+// État multi-indices
+let _examHintIdx = 0;
+let _examHints   = [];
+let _examData    = null;
+
+function genExamen() {
+  _examHintIdx = 0;
+  const gen = EXAM_GENERATORS[rand(0, EXAM_GENERATORS.length - 1)];
+  _examData = gen();
+
+  const d = _examData;
+  _examHints = d.hints || [];
+
+  const div = document.createElement('div');
+  div.className = 'ex-card';
+  div.innerHTML = `
+    <div class="ex-header">
+      <div class="ex-num" id="ex-num-ex">📋</div>
+      <div class="ex-title">${d.title}</div>
+      <span class="ex-badge ${d.difficulty}">${d.difficulty}</span>
+    </div>
+    <div style="margin-bottom:.5rem;font-size:.7rem;color:var(--dim);font-family:var(--mono);background:rgba(48,232,138,.05);border:1px solid rgba(48,232,138,.15);border-radius:5px;padding:.3rem .7rem;display:inline-block">
+      🧩 ${d.category}
+    </div>
+    <div class="ex-scenario">${d.scenario}</div>
+
+    ${d.hexDump}
+    ${d.legend || ''}
+
+    <div class="sec-title" style="margin-top:.75rem">Question</div>
+    <div style="font-size:.85rem;color:var(--text);line-height:1.6;margin-bottom:.75rem">${d.question}</div>
+
+    <div class="ex-input-row">
+      <input class="ex-input" id="inp-exam" placeholder="Votre réponse" autocomplete="off"
+             style="max-width:200px" type="text">
+      <button class="btn-hint" id="exam-hint-btn" onclick="nextExamHint()">💡 Indice (${_examHints.length})</button>
+      <button class="btn-validate" onclick="checkExamen()">Valider ✓</button>
+      <button class="btn-next" id="btn-next-ex" onclick="newExercise()" style="display:none">Exercice suivant →</button>
+    </div>
+    <div class="ex-feedback" id="ex-feedback-ex"></div>
+    <div id="exam-hint-display" style="margin-top:.5rem;display:none;padding:.65rem .9rem;background:rgba(240,192,64,.06);border:1px solid rgba(240,192,64,.2);border-radius:7px;font-size:.8rem;color:var(--text);line-height:1.6"></div>
+  `;
+  setTimeout(() => {
+    const inp = div.querySelector('#inp-exam');
+    if (inp) inp.addEventListener('keydown', e => { if(e.key==='Enter') checkExamen(); });
+  }, 50);
+  return div;
+}
+
+function nextExamHint() {
+  if (!_examHints.length) return;
+  STATE.hintUsed = true;
+  const hdisplay = document.getElementById('exam-hint-display');
+  const hbtn     = document.getElementById('exam-hint-btn');
+  if (!hdisplay) return;
+
+  const hint = _examHints[_examHintIdx];
+  _examHintIdx = Math.min(_examHintIdx + 1, _examHints.length - 1);
+
+  hdisplay.style.display = 'block';
+  hdisplay.innerHTML = `<strong style="color:var(--gold)">Indice ${_examHintIdx} / ${_examHints.length} :</strong> ${hint}`;
+  if (hbtn) hbtn.textContent = _examHintIdx < _examHints.length
+    ? `💡 Indice suivant (${_examHints.length - _examHintIdx} restants)`
+    : `💡 Tous les indices affichés`;
+}
+
+function checkExamen() {
+  if (!_examData) return;
+  const inp = document.getElementById('inp-exam');
+  const fb  = document.getElementById('ex-feedback-ex');
+  const val = (inp.value||'').trim().replace(/\s/g,'').toUpperCase().replace(/^0X/,'');
+  const exp = _examData.answer.replace(/\s/g,'').toUpperCase().replace(/^0X/,'');
+  const ok  = val === exp;
+
+  if (ok) {
+    inp.className = 'ex-input correct';
+    document.querySelector('.btn-validate').disabled = true;
+    document.getElementById('btn-next-ex').style.display = 'block';
+    document.querySelector('.ex-card').className = 'ex-card solved';
+    document.getElementById('ex-num-ex').className = 'ex-num solved';
+    fb.className = 'ex-feedback correct';
+    fb.innerHTML = `✓ Correct ! ${_examData.explain}`;
+    if (!STATE.hintUsed) incSolved(STATE.cat);
+  } else {
+    inp.className = 'ex-input wrong';
+    fb.className  = 'ex-feedback wrong';
+    fb.innerHTML  = `✗ Réponse incorrecte. Utilise 💡 Indice pour progresser étape par étape.`;
+    setTimeout(() => inp.className='ex-input', 700);
+  }
+}
+
+
+
+function genExamen() {
+  const ex = EXAM_SERIES[_examSerieIdx % EXAM_SERIES.length];
+  _examSerieIdx++;
+
+  const div = document.createElement('div');
+  div.className = 'ex-card';
+
+  let inputHTML = '';
+  if (ex.type === 'number' || ex.type === 'text') {
+    inputHTML = `
+      <div class="ex-input-row">
+        <input class="ex-input" id="inp-exam" placeholder="Votre réponse" autocomplete="off" style="max-width:220px"
+               ${ex.type==='number' ? 'type="text"' : ''}>
+        <button class="btn-hint" onclick="showExamHint('${ex.hint.replace(/'/g,"\\'")}')">💡 Indice</button>
+        <button class="btn-validate" onclick="checkExamen('${ex.answer.replace(/'/g,"\\'")}', '${ex.explain.replace(/'/g,"\\'")}')">Valider ✓</button>
+        <button class="btn-next" id="btn-next-ex" onclick="newExercise()">Suivant →</button>
+      </div>`;
+  }
+
+  div.innerHTML = `
+    <div class="ex-header">
+      <div class="ex-num" id="ex-num-ex">📋</div>
+      <div class="ex-title">${ex.title}</div>
+      <span class="ex-badge ${ex.difficulty}">${ex.difficulty}</span>
+    </div>
+    <div style="margin-bottom:.6rem;font-size:.7rem;color:var(--dim);font-family:var(--mono);background:rgba(240,192,64,.06);border:1px solid rgba(240,192,64,.2);border-radius:5px;padding:.3rem .7rem;display:inline-block">
+      📚 ${ex.ref}
+    </div>
+    <div class="ex-scenario">${ex.scenario}</div>
+    ${inputHTML}
+    <div class="ex-feedback" id="ex-feedback-ex"></div>
+  `;
+
+  setTimeout(() => {
+    const inp = div.querySelector('#inp-exam');
+    if (inp) inp.addEventListener('keydown', e => { if(e.key==='Enter') checkExamen(ex.answer, ex.explain); });
+  }, 50);
+  return div;
+}
+
+function showExamHint(hint) {
+  STATE.hintUsed = true;
+  const fb = document.getElementById('ex-feedback-ex');
+  if (fb) { fb.className='ex-feedback correct'; fb.innerHTML=`💡 Indice : ${hint}`; }
+}
+
+function checkExamen(expected, explain) {
+  const inp = document.getElementById('inp-exam');
+  const fb  = document.getElementById('ex-feedback-ex');
+  const val = (inp.value||'').trim().replace(/\s/g,'');
+  const exp = expected.replace(/\s/g,'');
+  const ok  = val.toUpperCase() === exp.toUpperCase();
+
+  if (ok) {
+    inp.className = 'ex-input correct';
+    document.querySelector('.btn-validate').disabled = true;
+    document.getElementById('btn-next-ex').style.display = 'block';
+    document.querySelector('.ex-card').className = 'ex-card solved';
+    document.getElementById('ex-num-ex').className = 'ex-num solved';
+    fb.className = 'ex-feedback correct';
+    fb.innerHTML = `✓ Correct ! ${explain}`;
+    if (!STATE.hintUsed) incSolved(STATE.cat);
+  } else {
+    inp.className = 'ex-input wrong';
+    fb.className = 'ex-feedback wrong';
+    fb.innerHTML = `✗ "${val}" incorrect. Utilise 💡 Indice pour débloquer.`;
+    setTimeout(() => inp.className='ex-input', 700);
+  }
+}
+
+
 </script>
 </body>
 </html>
