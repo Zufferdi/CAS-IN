@@ -118,6 +118,42 @@
 </div>
 <div class="tip">💡 <strong>Tip :</strong> Sur macOS, les QuarantineEventsV2 contiennent l'URL complète du téléchargement, le nom de l'application et le hash du fichier — tout cela persiste après suppression du fichier lui-même. Source forensique souvent négligée mais très riche.</div>
 
+
+
+<div class="sec">
+  <div class="sec-title">Récupération forensique Linux — Outils TSK</div>
+  <div class="g2">
+    <div class="card card-red">
+      <div class="ct">Commandes The Sleuth Kit (TSK)</div>
+      <table style="font-size:.72rem;margin-top:.3rem">
+        <tbody>
+          <tr><td style="padding:.3rem .5rem"><code style="color:var(--cyan)">fls -r image.dd</code></td><td style="padding:.3rem .5rem">Lister <strong>tous</strong> les fichiers (y compris supprimés) récursivement</td></tr>
+          <tr><td style="padding:.3rem .5rem"><code style="color:var(--cyan)">istat image.dd 42</code></td><td style="padding:.3rem .5rem">Détail de l'inode 42 : timestamps, blocs alloués, taille</td></tr>
+          <tr><td style="padding:.3rem .5rem"><code style="color:var(--cyan)">icat image.dd 42</code></td><td style="padding:.3rem .5rem">Extraire le contenu de l'inode 42</td></tr>
+          <tr><td style="padding:.3rem .5rem"><code style="color:var(--cyan)">ext4magic image.dd -r -d ./recov/</code></td><td style="padding:.3rem .5rem">Récupération EXT4 via le journal</td></tr>
+          <tr><td style="padding:.3rem .5rem"><code style="color:var(--cyan)">fsstat image.dd</code></td><td style="padding:.3rem .5rem">Informations sur le système de fichiers (superbloc)</td></tr>
+          <tr><td style="padding:.3rem .5rem"><code style="color:var(--cyan)">blkcat image.dd 1024</code></td><td style="padding:.3rem .5rem">Afficher le contenu brut du bloc 1024</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card card-green">
+      <div class="ct">/proc/[pid]/fd/ — Fichiers ouverts en temps réel</div>
+      <p>Si un fichier est <strong>supprimé pendant qu'un processus l'a ouvert</strong>, il reste accessible via <code style="color:var(--cyan)">/proc/[pid]/fd/[numéro]</code> jusqu'à la fermeture du processus.</p>
+      <br>
+      <p><code style="color:var(--cyan)">ls -la /proc/$(pidof apache2)/fd/</code><br>
+      → Liens symboliques vers les fichiers ouverts, même supprimés.</p>
+      <br>
+      <p><code style="color:var(--cyan)">cp /proc/[pid]/fd/4 /tmp/recovered.log</code><br>
+      → Copie d'un log supprimé encore ouvert par le daemon.</p>
+      <br>
+      <p style="color:var(--muted);font-size:.72rem">Technique critique pour récupérer des fichiers supprimés sur un système live sans redémarrage.</p>
+    </div>
+  </div>
+  <div class="info" style="margin-top:.75rem">💡 <strong>EXT4 vs EXT2 récupération :</strong> EXT2 conserve les pointeurs de blocs après suppression → récupération directe. EXT4 efface les pointeurs (block pointer zeroing) → obligatoire de passer par le journal (<code style="color:var(--cyan)">ext4magic</code>) ou le carving. Voir aussi : <code style="color:var(--cyan)">debugfs</code> pour inspection interactive.</div>
+</div>
+
+<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> macOS epoch HFS+ = 1904, APFS = 2001, plist = 2001 · QuarantineEventsV2 = URL source exacte de chaque téléchargement · FSEvents ≈ $UsnJrnl NTFS · LaunchDaemons = persistance root · Linux inode 2 = racine / · EXT4 : block pointer zeroing → journal obligatoire pour récupérer · /proc/[pid]/fd/ = fichiers ouverts même après suppression · ~/.ssh/authorized_keys = accès SSH persistant.</div>
+
 <div class="footer"><span>CAS-IN · Forensique Numérique</span><span>macOS & Linux — Artefacts et analyse</span><span>2025</span></div>
 </div>
 </div>

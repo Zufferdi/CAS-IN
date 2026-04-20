@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Wireshark & PCAP — CAS-IN</title>
+<link rel="stylesheet" href="fiche_style.css">
+<style>
+.tabs{display:flex;gap:.3rem;padding:.75rem 0 0;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;margin-bottom:1.25rem}
+.tabs::-webkit-scrollbar{display:none}
+.tb{padding:.4rem 1rem;border-radius:8px 8px 0 0;font-size:.72rem;cursor:pointer;border:1px solid var(--border);border-bottom:none;color:var(--muted);background:var(--surface2);font-family:var(--mono);transition:.15s;white-space:nowrap;margin-bottom:-1px}
+.tb.on{background:var(--surface);color:var(--text);border-bottom-color:var(--surface)}
+.tp{display:none}.tp.on{display:block;animation:fadeIn .2s ease}
+.cli{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.85rem 1.1rem;font-size:.72rem;color:var(--green);font-family:var(--mono);line-height:1.9;margin:.5rem 0;overflow-x:auto}
+.cli .c{color:var(--dim)}.cli .a{color:var(--cyan)}.cli .v{color:var(--orange)}.cli .f{color:var(--gold)}
+.filter-box{background:var(--surface);border:1px solid rgba(0,229,204,.3);border-radius:8px;padding:1rem 1.1rem;margin-bottom:.75rem}
+.filter-row{display:flex;gap:1rem;align-items:flex-start;padding:.35rem 0;border-bottom:1px solid rgba(48,54,61,.3);font-size:.73rem}
+.filter-row:last-child{border-bottom:none}
+.filter-val{font-family:var(--mono);color:var(--cyan);font-size:.72rem;min-width:220px;flex-shrink:0}
+.filter-desc{color:var(--muted);line-height:1.4}
+</style>
+</head>
+<body>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">WIRESHARK & PCAP</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:var(--green)">📡</div>
+  <div>
+    <div><span class="tag tag-green">Wireshark</span><span class="tag tag-cyan">tcpdump</span><span class="tag tag-blue">tshark · NetworkMiner</span><span class="tag tag-red">Ch. 25 Manuel</span></div>
+    <div class="meta" style="margin-top:.4rem">Filtres BPF · Analyse PCAP · Beaconing · Extraction de fichiers · Forensique réseau</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tb on" onclick="T('capture')">📥 Capture & Filtres</button>
+  <button class="tb" onclick="T('analyse')">🔍 Analyse forensique</button>
+  <button class="tb" onclick="T('beaconing')">🕐 Beaconing C2</button>
+  <button class="tb" onclick="T('tshark')">⚡ tshark CLI</button>
+</div>
+
+<!-- CAPTURE & FILTRES -->
+<div class="tp on" id="t-capture">
+<div class="sec"><div class="sec-title">Filtres Wireshark — Référence essentielle</div>
+<div class="filter-box">
+<div class="filter-row"><code class="filter-val">ip.addr == 10.0.0.42</code><span class="filter-desc">Tout le trafic vers/depuis une IP spécifique</span></div>
+<div class="filter-row"><code class="filter-val">ip.src == 185.220.1.0/24</code><span class="filter-desc">Source dans un sous-réseau (notation CIDR)</span></div>
+<div class="filter-row"><code class="filter-val">tcp.port == 443</code><span class="filter-desc">Trafic HTTPS (TCP port 443)</span></div>
+<div class="filter-row"><code class="filter-val">tcp.flags.syn == 1 && tcp.flags.ack == 0</code><span class="filter-desc">Paquets SYN uniquement (début de connexions)</span></div>
+<div class="filter-row"><code class="filter-val">http.request.method == "POST"</code><span class="filter-desc">Requêtes HTTP POST (envoi de données)</span></div>
+<div class="filter-row"><code class="filter-val">dns.qry.name contains "suspicious"</code><span class="filter-desc">Requêtes DNS contenant un mot-clé</span></div>
+<div class="filter-row"><code class="filter-val">frame.time_delta > 3.9 && frame.time_delta < 4.1</code><span class="filter-desc">Paquets à intervalle régulier ≈ 4 s (beaconing)</span></div>
+<div class="filter-row"><code class="filter-val">!(arp || dns || icmp)</code><span class="filter-desc">Exclure protocoles parasites (focus trafic applicatif)</span></div>
+<div class="filter-row"><code class="filter-val">tls.handshake.type == 1</code><span class="filter-desc">TLS Client Hello (début de sessions HTTPS)</span></div>
+<div class="filter-row"><code class="filter-val">smtp || pop || imap</code><span class="filter-desc">Trafic email (si non chiffré)</span></div>
+<div class="filter-row"><code class="filter-val">ftp-data</code><span class="filter-desc">Données FTP transférées (pas les commandes)</span></div>
+<div class="filter-row"><code class="filter-val">tcp.len > 0 && tcp.analysis.retransmission</code><span class="filter-desc">Retransmissions TCP (instabilité réseau ou exfiltration)</span></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Capture avec tcpdump</div>
+<div class="cli">
+<span class="c"># Capture basique sur eth0</span><br>
+<span class="v">tcpdump</span> <span class="a">-i eth0</span> <span class="f">-w</span> <span class="a">/evidence/capture.pcap</span><br><br>
+<span class="c"># Capturer seulement le trafic vers/depuis une IP</span><br>
+<span class="v">tcpdump</span> <span class="a">-i eth0 host 185.220.1.42</span> <span class="f">-w</span> <span class="a">suspect.pcap</span><br><br>
+<span class="c"># Limiter la taille de capture (rotation toutes les 100 Mo)</span><br>
+<span class="v">tcpdump</span> <span class="a">-i eth0</span> <span class="f">-C 100 -W 10 -w</span> <span class="a">capture_%n.pcap</span><br><br>
+<span class="c"># Capturer seulement les en-têtes (pas le contenu) pour audit de masse</span><br>
+<span class="v">tcpdump</span> <span class="a">-i eth0</span> <span class="f">-s 96 -w</span> <span class="a">headers_only.pcap</span><br><br>
+<span class="c"># Hash de la capture pour chaîne de custody</span><br>
+<span class="v">sha256sum</span> <span class="a">capture.pcap</span> <span class="f">></span> <span class="a">capture.sha256</span>
+</div></div>
+
+<div class="sec"><div class="sec-title">Statistiques Wireshark utiles</div>
+<div class="g2">
+<div class="card card-green"><div class="ct">Statistics → Conversations</div><p>Liste toutes les paires IP qui ont communiqué avec volumes de données. Identifier rapidement les connexions volumineuses (exfiltration) ou anormales.</p><br><p>Trier par "Bytes" décroissant → les plus grosses transferts en haut.</p></div>
+<div class="card card-cyan"><div class="ct">Statistics → Protocol Hierarchy</div><p>Vue globale des protocoles présents dans la capture et leur proportion. Un PCAP avec 95% de TLS vers une seule IP extérieure = suspect.</p></div>
+<div class="card card-gold"><div class="ct">Statistics → IO Graph</div><p>Graphe du volume de trafic dans le temps. Les pics réguliers et espacés trahissent un beaconing C2.</p></div>
+<div class="card card-blue"><div class="ct">Statistics → DNS</div><p>Toutes les requêtes/réponses DNS. Identifier les domaines résolus (et ceux qui ne le sont pas — DGA). Longueur anormale = DNS tunneling.</p></div>
+</div></div>
+</div>
+
+<!-- ANALYSE FORENSIQUE -->
+<div class="tp" id="t-analyse">
+<div class="sec"><div class="sec-title">Extraction de fichiers depuis un PCAP</div>
+<div class="g2">
+<div class="card card-green"><div class="ct">Wireshark — Export Objects</div>
+<p>File → Export Objects → HTTP (ou SMB, FTP, DICOM…). Wireshark reconstruit les fichiers transférés depuis les flux TCP.</p>
+<br><p>Puis hasher chaque fichier extrait pour l'intégrer dans la chaîne de custody.</p></div>
+<div class="card card-cyan"><div class="ct">NetworkMiner</div>
+<p>Outil GUI spécialisé dans l'extraction passive depuis PCAP. Reconstruit automatiquement les fichiers, les images, les emails, les credentials HTTP.</p>
+<br><p>Classé par hôte → visualiser immédiatement ce que chaque machine a téléchargé/uploadé.</p></div>
+</div>
+<div class="cli" style="margin-top:.75rem">
+<span class="c"># Extraire tous les fichiers HTTP d'un PCAP avec tshark</span><br>
+<span class="v">tshark</span> <span class="a">-r capture.pcap --export-objects http,/tmp/http_exports/</span><br><br>
+<span class="c"># Extraire les credentials HTTP Basic Auth</span><br>
+<span class="v">tshark</span> <span class="a">-r capture.pcap -Y "http.authorization" -T fields -e http.authorization</span><br><br>
+<span class="c"># Reconstruire un flux TCP (File → Follow → TCP Stream dans Wireshark)</span><br>
+<span class="v">tshark</span> <span class="a">-r capture.pcap -q -z follow,tcp,ascii,0</span>
+</div></div>
+
+<div class="sec"><div class="sec-title">Indicateurs forensiques réseau</div>
+<table>
+<thead><tr><th>Indicateur</th><th>Comment le détecter</th><th>Signification</th></tr></thead>
+<tbody>
+<tr><td><strong>Exfiltration de données</strong></td><td>Statistics → Conversations : upload > download vers IP externe</td><td>Transfert anormal de données hors du réseau</td></tr>
+<tr><td><strong>DNS Tunneling</strong></td><td>Requêtes DNS avec subdomaines très longs (> 60 car.) ou inhabituels</td><td>Données encodées dans des requêtes DNS pour contourner les firewalls</td></tr>
+<tr><td><strong>DGA (Domain Generation)</strong></td><td>Nombreuses requêtes DNS NXDOMAIN vers des domaines aléatoires</td><td>Malware cherchant son C2 via domaines générés algorithmiquement</td></tr>
+<tr><td><strong>Port non standard</strong></td><td>TLS sur port 8443, 4444, 1337…</td><td>C2 ou tunnel sur port atypique pour éviter l'inspection</td></tr>
+<tr><td><strong>Lateral movement SMB</strong></td><td>Connexions SMB (port 445) entre postes internes</td><td>Propagation réseau interne, pass-the-hash</td></tr>
+<tr><td><strong>ARP Spoofing</strong></td><td>Multiples ARP Reply depuis la même MAC pour des IPs différentes</td><td>Man-in-the-Middle sur le segment local</td></tr>
+<tr><td><strong>Scan réseau</strong></td><td>Nombreux SYN vers ports différents d'une même IP cible</td><td>Reconnaissance réseau (nmap-style)</td></tr>
+</tbody></table></div>
+</div>
+
+<!-- BEACONING -->
+<div class="tp" id="t-beaconing">
+<div class="sec"><div class="sec-title">Détecter le beaconing C2</div>
+<div class="info">🎯 Le <strong>beaconing</strong> est la communication régulière d'un malware avec son serveur de commande et contrôle (C2). La régularité est la signature la plus facilement détectable.</div>
+<div class="g2">
+<div class="card card-red"><div class="ct">Caractéristiques du beaconing</div><ul>
+<li><strong>Intervalles réguliers</strong> : toutes les 60s, 300s, 3600s</li>
+<li>Petites tailles de paquets (heartbeat) alternant avec des bursts</li>
+<li>Destination : IP ou domaine fixe non lié à l'activité légitime</li>
+<li>Persistance : fonctionne même la nuit (pas de comportement humain)</li>
+<li>HTTPS : chiffré → contenu non visible mais pattern temporel visible</li>
+</ul></div>
+<div class="card card-gold"><div class="ct">Méthode de détection</div>
+<ol style="font-size:.78rem;padding-left:1.2rem;line-height:1.8">
+<li>Statistics → IO Graph : chercher des pics réguliers</li>
+<li>Statistics → Conversations : trier par durée longue</li>
+<li>Filtre : <code style="color:var(--cyan)">ip.dst == [ip suspecte]</code> → examiner les intervalles</li>
+<li>Extraire timestamps : frame.time_delta entre paquets successifs</li>
+<li>Calculer l'écart-type des intervalles → faible = beaconing</li>
+</ol></div>
+</div>
+<div class="cli" style="margin-top:.75rem">
+<span class="c"># Extraire les timestamps des connexions vers une IP suspecte</span><br>
+<span class="v">tshark</span> <span class="a">-r capture.pcap -Y "ip.dst==185.220.1.42 && tcp.flags.syn==1"</span> <span class="f">-T fields -e frame.time</span><br><br>
+<span class="c"># Calculer les intervalles avec awk</span><br>
+<span class="v">tshark</span> <span class="a">-r capture.pcap -Y "ip.dst==185.220.1.42"</span> <span class="f">-T fields -e frame.time_epoch</span> <span class="f">|</span><br>
+<span class="v">awk</span> <span class="a">'NR>1{print $1-prev} {prev=$1}'</span> <span class="f">| sort -n | uniq -c</span><br><br>
+<span class="c"># Détecter le DNS tunneling (requêtes très longues)</span><br>
+<span class="v">tshark</span> <span class="a">-r capture.pcap -Y "dns.qry.name" -T fields -e dns.qry.name</span> <span class="f">| awk 'length($0)>60'</span>
+</div></div>
+
+<div class="sec"><div class="sec-title">Jitter — Beaconing avec variation</div>
+<div class="g2">
+<div class="card card-purple"><div class="ct">Qu'est-ce que le jitter ?</div>
+<p>Les malwares sophistiqués ajoutent une variation aléatoire (±20%) à leur intervalle de beacon pour éviter la détection par des règles d'intervalle fixe.</p>
+<br><p>Cobalt Strike, par exemple, a un paramètre <code style="color:var(--cyan)">sleep</code> et <code style="color:var(--cyan)">jitter</code> configurables.</p></div>
+<div class="card card-cyan"><div class="ct">Détection malgré le jitter</div><ul>
+<li>Analyser la distribution statistique des intervalles</li>
+<li>Chercher un intervalle médian constant malgré la variation</li>
+<li>Volume de données : constant malgré les variations de temps</li>
+<li>Outils : <strong>RITA</strong> (Real Intelligence Threat Analytics) — détection beaconing automatique</li>
+<li>Zeek/Bro : analyseur de logs réseau avec détection comportementale</li>
+</ul></div>
+</div></div>
+</div>
+
+<!-- TSHARK -->
+<div class="tp" id="t-tshark">
+<div class="sec"><div class="sec-title">tshark — Wireshark en ligne de commande</div>
+<div class="cli">
+<span class="c"># Lire un PCAP et afficher les conversations HTTP</span><br>
+<span class="v">tshark</span> <span class="a">-r capture.pcap -Y http -T fields -e ip.src -e ip.dst -e http.request.uri</span><br><br>
+<span class="c"># Statistiques de protocoles</span><br>
+<span class="v">tshark</span> <span class="a">-r capture.pcap -q -z io,phs</span><br><br>
+<span class="c"># Top 10 des paires IP par volume</span><br>
+<span class="v">tshark</span> <span class="a">-r capture.pcap -q -z conv,ip</span> <span class="f">| sort -k5 -rn | head -10</span><br><br>
+<span class="c"># Extraire toutes les requêtes DNS</span><br>
+<span class="v">tshark</span> <span class="a">-r capture.pcap -Y "dns.flags.response==0" -T fields -e ip.src -e dns.qry.name</span><br><br>
+<span class="c"># User-Agents HTTP (révèle les outils utilisés)</span><br>
+<span class="v">tshark</span> <span class="a">-r capture.pcap -Y http -T fields -e http.user_agent</span> <span class="f">| sort | uniq -c | sort -rn</span><br><br>
+<span class="c"># Extraire les credentials FTP en clair</span><br>
+<span class="v">tshark</span> <span class="a">-r capture.pcap -Y "ftp.request.command == USER || ftp.request.command == PASS"</span><br><span class="a">-T fields -e ftp.request.command -e ftp.request.arg</span><br><br>
+<span class="c"># Rechercher des chaînes dans le contenu des paquets</span><br>
+<span class="v">tshark</span> <span class="a">-r capture.pcap -Y 'frame contains "password"' -T text</span>
+</div></div>
+
+<div class="sec"><div class="sec-title">PCAP en investigation judiciaire</div>
+<div class="g2">
+<div class="card card-cyan"><div class="ct">Chaîne de custody PCAP</div><ul>
+<li>Hash SHA-256 immédiatement après capture</li>
+<li>Documenter : interface, timestamp début/fin, outil + version</li>
+<li>PCAP = preuve directe du trafic réseau → haute valeur probatoire</li>
+<li>En entreprise : autorisation préalable obligatoire (surveillance réseau)</li>
+</ul></div>
+<div class="card card-red"><div class="ct">⚖️ Légalité de la capture</div><ul>
+<li>Réseau d'entreprise : autorisation de l'employeur + mention dans le règlement IT</li>
+<li>Réseau privé tiers : interdit sans mandat judiciaire (art. 269 CPP)</li>
+<li>LPD : la capture PCAP contient des données personnelles → mesures de protection</li>
+<li>ATF 136 II 508 : IP = abonné, pas auteur → PCAP doit être corrélé avec d'autres preuves</li>
+</ul></div>
+</div></div>
+</div>
+
+<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Filtres Wireshark : ip.addr= · tcp.port= · http.request.method= · dns.qry.name= · Beaconing = intervalles réguliers vers IP externe · DGA = NXDOMAIN en masse · DNS Tunneling = subdomaines longs (> 60 car.) · Statistics → Conversations = volumes par paire IP · Follow TCP Stream = reconstruire une session · tshark -Y = filtre display · PCAP en CHaine de custody : SHA-256 immédiat · tcpdump -i eth0 -w capture.pcap</div>
+<div class="footer"><span>CAS-IN Investigation Numérique · Forensique Suisse</span><span>Ch. 25 Manuel · Wireshark User Guide</span></div>
+</div>
+<script>
+function T(id){document.querySelectorAll('.tp').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));document.getElementById('t-'+id).classList.add('on');event.target.classList.add('on');}
+</script>
+</body>
+</html>

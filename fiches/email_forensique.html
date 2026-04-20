@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Email Forensics — CAS-IN</title>
+<link rel="stylesheet" href="fiche_style.css">
+<style>
+.tabs{display:flex;gap:.3rem;padding:.75rem 0 0;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;margin-bottom:1.25rem}
+.tabs::-webkit-scrollbar{display:none}
+.tb{padding:.4rem 1rem;border-radius:8px 8px 0 0;font-size:.72rem;cursor:pointer;border:1px solid var(--border);border-bottom:none;color:var(--muted);background:var(--surface2);font-family:var(--mono);transition:.15s;white-space:nowrap;margin-bottom:-1px}
+.tb.on{background:var(--surface);color:var(--text);border-bottom-color:var(--surface)}
+.tp{display:none}.tp.on{display:block;animation:fadeIn .2s ease}
+
+.header-box{background:var(--surface);border:1px solid rgba(0,229,204,.25);border-radius:10px;padding:1.1rem 1.25rem;font-family:var(--mono);font-size:.72rem;line-height:2;margin-bottom:1rem;overflow-x:auto}
+.hh{color:var(--gold);font-weight:700}
+.hv{color:var(--text)}
+.hc{color:var(--dim);font-style:italic;margin-left:1rem}
+.hop{color:var(--red);font-weight:700}
+
+.spf-pass{color:var(--green);font-weight:700}.spf-fail{color:var(--red);font-weight:700}.spf-soft{color:var(--gold);font-weight:700}
+
+.cli{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.85rem 1.1rem;font-size:.73rem;color:var(--green);font-family:var(--mono);line-height:1.9;margin:.5rem 0;overflow-x:auto}
+.cli .c{color:var(--dim)}.cli .a{color:var(--cyan)}.cli .v{color:var(--orange)}.cli .f{color:var(--gold)}
+</style>
+</head>
+<body>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">EMAIL FORENSICS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:var(--gold)">✉️</div>
+  <div>
+    <div><span class="tag tag-gold">En-têtes SMTP</span><span class="tag tag-green">SPF · DKIM · DMARC</span><span class="tag tag-red">Attribution · Phishing</span></div>
+    <div class="meta" style="margin-top:.4rem">Analyse des en-têtes · Authentification email · Chaîne de relais · Recevabilité CPP</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tb on" onclick="T('headers')">📨 En-têtes SMTP</button>
+  <button class="tb" onclick="T('auth')">🔐 SPF / DKIM / DMARC</button>
+  <button class="tb" onclick="T('phishing')">🎣 Phishing & Attribution</button>
+  <button class="tb" onclick="T('outils')">🛠 Outils & Formats</button>
+</div>
+
+<!-- EN-TÊTES SMTP -->
+<div class="tp on" id="t-headers">
+<div class="sec"><div class="sec-title">Anatomie d'un en-tête email complet</div>
+<div class="header-box">
+<span class="hh">Return-Path:</span> <span class="hv">&lt;suspect@domain.ch&gt;</span><br>
+<span class="hop">Received:</span> <span class="hv">from mail.attacker.ru (mail.attacker.ru [185.220.1.42])</span><br>
+<span class="hv">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;by mx.victime.ch with ESMTP id x7sm123456; <strong>Tue, 15 Apr 2025 14:32:11 +0000 (UTC)</strong></span><span class="hc">← 1er relais</span><br>
+<span class="hop">Received:</span> <span class="hv">from webmail.suspect.ch (10.0.0.5)</span><br>
+<span class="hv">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;by mail.attacker.ru; Tue, 15 Apr 2025 14:32:09 +0200</span><span class="hc">← 2ème relais</span><br>
+<span class="hh">Message-ID:</span> <span class="hv">&lt;abc123@mail.attacker.ru&gt;</span><span class="hc">← Identifiant unique</span><br>
+<span class="hh">Date:</span> <span class="hv">Tue, 15 Apr 2025 14:32:08 +0200</span><span class="hc">← Peut être falsifié</span><br>
+<span class="hh">From:</span> <span class="hv">"Service Client" &lt;noreply@ubs.ch-secure-login.com&gt;</span><span class="hc">← Domaine typosquat</span><br>
+<span class="hh">To:</span> <span class="hv">victime@entreprise.ch</span><br>
+<span class="hh">Subject:</span> <span class="hv">Votre compte a été suspendu</span><br>
+<span class="hh">X-Originating-IP:</span> <span class="hv">185.220.1.42</span><span class="hc">← IP réelle de l'expéditeur</span><br>
+<span class="hh">X-Mailer:</span> <span class="hv">PhishKit v3.2</span><span class="hc">← Outil de phishing</span><br>
+<span class="hh">Authentication-Results:</span> <span class="hv">mx.victime.ch; spf=<span class="spf-fail">fail</span>; dkim=<span class="spf-fail">none</span>; dmarc=<span class="spf-fail">fail</span></span>
+</div>
+<div class="info">🔑 <strong>Règle de lecture :</strong> Les en-têtes <code style="color:var(--gold)">Received:</code> se lisent <strong>du bas vers le haut</strong> — le plus récent est en haut, le plus ancien (l'origine) est en bas. Chaque serveur SMTP ajoute son propre Received en tête de liste.</div>
+</div>
+
+<div class="sec"><div class="sec-title">En-têtes clés — Référence forensique</div>
+<table>
+<thead><tr><th>En-tête</th><th>Rôle forensique</th><th>Fiabilité</th></tr></thead>
+<tbody>
+<tr><td><code style="color:var(--gold)">Received:</code></td><td>Trace de chaque serveur relais (IP + timestamp)</td><td style="color:var(--green)">✅ Difficile à falsifier (ajouté par les serveurs)</td></tr>
+<tr><td><code style="color:var(--gold)">X-Originating-IP:</code></td><td>IP réelle de l'expéditeur (Gmail, Outlook l'ajoutent)</td><td style="color:var(--green)">✅ Fiable si ajouté par le serveur légitime</td></tr>
+<tr><td><code style="color:var(--gold)">Message-ID:</code></td><td>Identifiant unique — révèle souvent le domaine source réel</td><td style="color:var(--gold)">⚠️ Peut être falsifié par l'expéditeur</td></tr>
+<tr><td><code style="color:var(--gold)">From:</code></td><td>Adresse affichée à l'utilisateur</td><td style="color:var(--red)">❌ Facilement falsifié (spoofing)</td></tr>
+<tr><td><code style="color:var(--gold)">Return-Path:</code></td><td>Adresse pour les bounces — souvent différente du From</td><td style="color:var(--gold)">⚠️ Modifiable mais laisse des traces SPF</td></tr>
+<tr><td><code style="color:var(--gold)">Date:</code></td><td>Date déclarée par l'expéditeur</td><td style="color:var(--red)">❌ Falsifiable — comparer avec Received</td></tr>
+<tr><td><code style="color:var(--gold)">X-Mailer:</code></td><td>Client email utilisé — peut révéler l'outil de phishing</td><td style="color:var(--gold)">⚠️ Modifiable mais souvent oublié de falsifier</td></tr>
+<tr><td><code style="color:var(--gold)">Authentication-Results:</code></td><td>Résultats SPF/DKIM/DMARC du serveur destinataire</td><td style="color:var(--green)">✅ Ajouté par le serveur de réception — fiable</td></tr>
+<tr><td><code style="color:var(--gold)">MIME-Version: / Content-Type:</code></td><td>Structure du message — pièces jointes, encodage</td><td style="color:var(--gold)">⚠️ Peut indiquer le client utilisé</td></tr>
+</tbody></table>
+</div>
+</div>
+
+<!-- SPF / DKIM / DMARC -->
+<div class="tp" id="t-auth">
+<div class="sec"><div class="sec-title">SPF — Sender Policy Framework</div>
+<div class="g2">
+<div class="card card-green"><div class="ct">Principe</div>
+<p>Le domaine expéditeur publie dans son DNS TXT les serveurs autorisés à envoyer en son nom. Le serveur destinataire vérifie si l'IP de l'expéditeur est dans cette liste.</p>
+<br><p><code style="color:var(--cyan)">dig TXT ubs.ch | grep spf</code><br>→ <code style="color:var(--dim)">v=spf1 include:_spf.ubs.ch ip4:195.0.0.0/8 -all</code></p></div>
+<div class="card card-gold"><div class="ct">Résultats SPF</div>
+<table style="font-size:.72rem"><tbody>
+<tr><td><code class="spf-pass">pass</code></td><td style="padding:.2rem .4rem">IP autorisée → email probablement légitime</td></tr>
+<tr><td><code class="spf-fail">fail (-all)</code></td><td style="padding:.2rem .4rem">IP non autorisée → probable usurpation</td></tr>
+<tr><td><code class="spf-soft">softfail (~all)</code></td><td style="padding:.2rem .4rem">IP non autorisée mais pas rejeté</td></tr>
+<tr><td><code style="color:var(--muted)">neutral (?all)</code></td><td style="padding:.2rem .4rem">Pas de politique définie</td></tr>
+<tr><td><code style="color:var(--dim)">none</code></td><td style="padding:.2rem .4rem">Pas d'enregistrement SPF</td></tr>
+<tr><td><code style="color:var(--red)">permerror</code></td><td style="padding:.2rem .4rem">Erreur de configuration DNS</td></tr>
+</tbody></table></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">DKIM — DomainKeys Identified Mail</div>
+<div class="g2">
+<div class="card card-cyan"><div class="ct">Principe</div>
+<p>Le serveur expéditeur signe cryptographiquement (RSA ou Ed25519) le corps du message et certains en-têtes. La clé publique est publiée en DNS TXT sous un sélecteur.</p>
+<br><p><code style="color:var(--dim)">DKIM-Signature: v=1; a=rsa-sha256; d=domain.ch; s=mail; h=from:to:subject:date; bh=[hash_body]; b=[signature_base64]</code></p></div>
+<div class="card card-gold"><div class="ct">Forensique DKIM</div><ul>
+<li><strong>pass</strong> = corps + en-têtes signés non altérés</li>
+<li><strong>fail</strong> = signature invalide → message modifié en transit</li>
+<li><strong>none</strong> = pas de signature → pas de garantie</li>
+<li>Vérifier le sélecteur <code style="color:var(--cyan)">s=</code> : <code style="color:var(--cyan)">dig TXT mail._domainkey.domain.ch</code></li>
+<li>DKIM valide ≠ expéditeur légitime (peut être compromis)</li>
+</ul></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">DMARC — Domain-based Message Authentication</div>
+<div class="card card-purple" style="margin-bottom:.75rem"><div class="ct">Politique DMARC</div>
+<p>DMARC combine SPF et DKIM et définit la politique du domaine pour les messages qui échouent les deux vérifications. Publié en DNS TXT sous <code style="color:var(--cyan)">_dmarc.domain.ch</code></p></div>
+<div class="g2">
+<div class="card card-red"><div class="ct">p=reject (le plus strict)</div>
+<p>Messages qui échouent SPF ET DKIM → rejetés. Un email "From: ubs.ch" depuis une IP non autorisée sans signature DKIM valide ne sera pas délivré.</p></div>
+<div class="card card-gold"><div class="ct">p=quarantine / p=none</div>
+<p><strong>quarantine</strong> = envoi en spam. <strong>none</strong> = surveiller seulement. Beaucoup de domaines restent sur none → les attaquants exploitent cette faille pour du phishing.</p></div>
+</div>
+<div class="tip" style="margin-top:.75rem">💡 <strong>SPF pass + DKIM pass + DMARC pass</strong> = email probablement authentique. Mais : un compte légitime compromis passe tous les tests. L'authentification ne prouve pas que l'humain derrière était le propriétaire du compte.</div>
+</div>
+</div>
+
+<!-- PHISHING -->
+<div class="tp" id="t-phishing">
+<div class="sec"><div class="sec-title">Attribution d'un email suspect</div>
+<div class="steps">
+<div class="step"><div class="step-num">1</div><div><div class="strat-title">Extraire les en-têtes complets</div><div class="strat-desc">Outlook : Fichier → Propriétés → En-têtes. Gmail : ⋮ → Afficher l'original. Thunderbird : Ctrl+U. Copier tout le contenu brut.</div></div></div>
+<div class="step"><div class="step-num">2</div><div><div class="strat-title">Identifier l'IP d'origine</div><div class="strat-desc">Chercher le Received le plus bas (le plus ancien). Extraire l'IP entre crochets. Vérifier X-Originating-IP si présent (ajouté par Gmail/Outlook pour les comptes connectés).</div></div></div>
+<div class="step"><div class="step-num">3</div><div><div class="strat-title">WHOIS + géolocalisation de l'IP</div><div class="strat-desc"><code style="color:var(--cyan)">whois 185.220.1.42</code> → ASN, organisation, pays. IPinfo.io, Shodan pour plus de contexte. Attention : VPN, Tor, bullet-proof hosting = attribution difficile.</div></div></div>
+<div class="step"><div class="step-num">4</div><div><div class="strat-title">Vérifier SPF / DKIM / DMARC</div><div class="strat-desc">Authentication-Results dans les en-têtes. Vérifier manuellement : <code style="color:var(--cyan)">dig TXT domain.ch | grep spf</code>. MXToolbox pour analyse rapide.</div></div></div>
+<div class="step"><div class="step-num">5</div><div><div class="strat-title">Analyser les pièces jointes</div><div class="strat-desc">Hash SHA-256 → VirusTotal. Extraire les macros (oletools : <code style="color:var(--cyan)">olevba document.docx</code>). Sandbox (Any.run, Hybrid Analysis). Ne jamais ouvrir directement.</div></div></div>
+<div class="step"><div class="step-num">6</div><div><div class="strat-title">Demande de logs au fournisseur</div><div class="strat-desc">Gmail/Outlook : logs d'accès via Legal Process. FAI suisse : logs via art. 265 CPP. Logs révèlent l'IP réelle de connexion (même si envoi via SMTP d'un tiers).</div></div></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Outils d'analyse de phishing</div>
+<div class="g2">
+<div class="card card-red"><div class="ct">oletools — Macros malveillantes</div>
+<div class="cli" style="font-size:.7rem">
+<span class="c"># Analyser les macros d'un document Office</span><br>
+<span class="v">olevba</span> <span class="a">document_suspect.docx</span><br>
+<span class="v">olevba</span> <span class="f">--decode</span> <span class="a">macro.bin</span><br>
+<span class="c"># Extraire tous les OLE objects</span><br>
+<span class="v">oleid</span> <span class="a">document.xls</span>
+</div></div>
+<div class="card card-orange"><div class="ct">Email Header Analyzers</div><ul>
+<li><strong>MXToolbox</strong> (mxtoolbox.com) — analyse complète en ligne</li>
+<li><strong>Google Admin Toolbox</strong> — vérification SPF/DKIM/DMARC</li>
+<li><strong>mail-tester.com</strong> — score d'authentification</li>
+<li><strong>PhishTool</strong> — analyse forensique emails de phishing</li>
+</ul></div>
+</div></div>
+</div>
+
+<!-- OUTILS -->
+<div class="tp" id="t-outils">
+<div class="sec"><div class="sec-title">Formats email forensiques</div>
+<table>
+<thead><tr><th>Format</th><th>Extension</th><th>Outil d'analyse</th><th>Notes forensiques</th></tr></thead>
+<tbody>
+<tr><td><strong>PST / OST</strong></td><td>.pst .ost</td><td>Autopsy, X-Ways, Aid4Mail</td><td>Outlook. PST = archivage local. OST = cache Exchange. Peut contenir des emails supprimés dans le dossier "Éléments récupérables"</td></tr>
+<tr><td><strong>MBOX</strong></td><td>.mbox</td><td>Autopsy, Thunderbird, rfc-mbox-parser</td><td>Format texte universel (Thunderbird, Apple Mail). Chaque message séparé par "From " (sans >)</td></tr>
+<tr><td><strong>EML</strong></td><td>.eml</td><td>Outlook, Thunderbird, notepad</td><td>Un fichier = un email. Contient les en-têtes bruts + corps + pièces jointes encodées Base64</td></tr>
+<tr><td><strong>MSG</strong></td><td>.msg</td><td>Outlook, MsgViewer</td><td>Format binaire propriétaire Outlook (Compound Document OLE). Les pièces jointes sont intégrées en objets OLE</td></tr>
+<tr><td><strong>DBX</strong></td><td>.dbx</td><td>DBXtract, Autopsy</td><td>Ancien Outlook Express. Encore trouvé sur de vieux systèmes Windows XP/Vista</td></tr>
+</tbody></table></div>
+
+<div class="sec"><div class="sec-title">Emails supprimés — Récupération</div>
+<div class="g2">
+<div class="card card-cyan"><div class="ct">PST / Exchange</div><ul>
+<li>Éléments supprimés → "Éléments récupérables" (14–30 jours selon config)</li>
+<li>Exchange : eDiscovery permet l'accès admin aux boîtes supprimées</li>
+<li>Analyse PST hors-ligne : Autopsy ou Kernel PST Viewer</li>
+<li>Stellar Repair for Outlook : PST corrompus</li>
+</ul></div>
+<div class="card card-blue"><div class="ct">Logs serveur SMTP</div><ul>
+<li>Microsoft 365 Unified Audit Log : 90 jours (E3) ou 1 an (E5)</li>
+<li>Google Workspace : Admin Reports → Gmail → envois/réceptions</li>
+<li>Postfix/Sendmail : <code style="color:var(--cyan)">/var/log/mail.log</code></li>
+<li>Logs contiennent IP source, taille, destinataires, horodatage</li>
+</ul></div>
+</div></div>
+</div>
+
+<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Received: se lit du bas vers le haut · SPF = DNS TXT du domaine expéditeur · DKIM = signature RSA du corps + en-têtes · DMARC = politique sur SPF/DKIM fail · From: = falsifiable librement · X-Originating-IP = IP réelle (ajoutée par Gmail/Outlook) · Authentication-Results = ajouté par le serveur de réception (fiable) · PST = format Outlook · EML = un fichier = un email · olevba = analyser les macros.</div>
+<div class="footer"><span>CAS-IN Investigation Numérique · Forensique Suisse</span><span>Ch. 27 Manuel · RFC 7208 (SPF) · RFC 6376 (DKIM)</span></div>
+</div>
+<script>
+function T(id){document.querySelectorAll('.tp').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));document.getElementById('t-'+id).classList.add('on');event.target.classList.add('on');}
+</script>
+</body>
+</html>

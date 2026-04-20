@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Browser Forensics — CAS-IN</title>
+<link rel="stylesheet" href="fiche_style.css">
+<style>
+.tabs{display:flex;gap:.3rem;padding:.75rem 0 0;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;margin-bottom:1.25rem}
+.tabs::-webkit-scrollbar{display:none}
+.tb{padding:.4rem 1rem;border-radius:8px 8px 0 0;font-size:.72rem;cursor:pointer;border:1px solid var(--border);border-bottom:none;color:var(--muted);background:var(--surface2);font-family:var(--mono);transition:.15s;white-space:nowrap;margin-bottom:-1px}
+.tb.on{background:var(--surface);color:var(--text);border-bottom-color:var(--surface)}
+.tb:hover:not(.on){color:var(--text)}
+.tp{display:none}.tp.on{display:block;animation:fadeIn .2s ease}
+.cli{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.85rem 1.1rem;font-size:.73rem;color:var(--green);font-family:var(--mono);line-height:1.9;margin:.5rem 0;overflow-x:auto}
+.cli .c{color:var(--dim)}.cli .a{color:var(--cyan)}.cli .v{color:var(--orange)}.cli .f{color:var(--gold)}
+.art-table{width:100%;border-collapse:collapse;font-size:.74rem;margin-bottom:.75rem}
+.art-table th{background:var(--surface2);padding:.5rem .75rem;text-align:left;border-bottom:2px solid var(--border);font-size:.62rem;letter-spacing:.1em;color:var(--dim);font-weight:700}
+.art-table td{padding:.48rem .75rem;border-bottom:1px solid rgba(48,54,61,.4);vertical-align:top;line-height:1.4}
+.art-table tr:hover td{background:var(--surface)}
+.art-table tr:last-child td{border-bottom:none}
+.path{font-family:var(--mono);font-size:.7rem;color:var(--cyan);word-break:break-all}
+.browser-badge{display:inline-flex;align-items:center;gap:.3rem;font-size:.68rem;font-weight:700;padding:.12rem .45rem;border-radius:4px}
+.bb-chrome{background:rgba(52,211,153,.1);color:#34d399;border:1px solid rgba(52,211,153,.3)}
+.bb-firefox{background:rgba(255,130,64,.1);color:#ff8240;border:1px solid rgba(255,130,64,.3)}
+.bb-edge{background:rgba(88,166,255,.1);color:var(--blue);border:1px solid rgba(88,166,255,.3)}
+.bb-safari{background:rgba(0,229,204,.1);color:var(--cyan);border:1px solid rgba(0,229,204,.3)}
+</style>
+</head>
+<body>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">BROWSER FORENSICS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:var(--blue)">🌐</div>
+  <div>
+    <div><span class="tag tag-blue">Chrome</span><span class="tag tag-orange">Firefox</span><span class="tag tag-cyan">Edge · Safari</span><span class="tag tag-red">Ch. 16 Manuel</span></div>
+    <div class="meta" style="margin-top:.4rem">Historique · Cookies · Téléchargements · Mots de passe · Cache · Sessions</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tb on" onclick="T('chrome')">🟢 Chrome / Edge</button>
+  <button class="tb" onclick="T('firefox')">🦊 Firefox</button>
+  <button class="tb" onclick="T('artefacts')">🔍 Artefacts clés</button>
+  <button class="tb" onclick="T('outils')">🛠 Outils & SQL</button>
+</div>
+
+<!-- CHROME / EDGE -->
+<div class="tp on" id="t-chrome">
+<div class="sec"><div class="sec-title">Profil Chrome — Localisation & Structure</div>
+<div class="g2">
+<div class="card card-blue"><div class="ct">Chemin du profil Windows</div>
+<p><span class="path">C:\Users\[user]\AppData\Local\Google\Chrome\User Data\Default\</span></p>
+<br><p>Chaque profil Chrome = un sous-dossier de <code style="color:var(--cyan)">User Data\</code>. Le profil par défaut = <code style="color:var(--cyan)">Default\</code>. Les profils supplémentaires = <code style="color:var(--cyan)">Profile 1\</code>, <code style="color:var(--cyan)">Profile 2\</code>…</p>
+<br><p><strong>Edge :</strong> <span class="path">C:\Users\[user]\AppData\Local\Microsoft\Edge\User Data\Default\</span></p></div>
+<div class="card card-cyan"><div class="ct">Fichiers principaux (SQLite)</div>
+<table style="font-size:.71rem"><tbody>
+<tr><td style="padding:.25rem .4rem"><code style="color:var(--gold)">History</code></td><td style="padding:.25rem .4rem">URLs visitées, timestamps, fréquence</td></tr>
+<tr><td style="padding:.25rem .4rem"><code style="color:var(--gold)">Cookies</code></td><td style="padding:.25rem .4rem">Cookies par domaine, valeurs, expiration</td></tr>
+<tr><td style="padding:.25rem .4rem"><code style="color:var(--gold)">Login Data</code></td><td style="padding:.25rem .4rem">Identifiants sauvegardés (chiffrés AES)</td></tr>
+<tr><td style="padding:.25rem .4rem"><code style="color:var(--gold)">Web Data</code></td><td style="padding:.25rem .4rem">Formulaires, recherches, auto-complétion</td></tr>
+<tr><td style="padding:.25rem .4rem"><code style="color:var(--gold)">Bookmarks</code></td><td style="padding:.25rem .4rem">Favoris (JSON)</td></tr>
+<tr><td style="padding:.25rem .4rem"><code style="color:var(--gold)">Network Action Predictor</code></td><td style="padding:.25rem .4rem">Requêtes réseau préemptives</td></tr>
+<tr><td style="padding:.25rem .4rem"><code style="color:var(--gold)">Extension Cookies</code></td><td style="padding:.25rem .4rem">Données des extensions Chrome</td></tr>
+</tbody></table></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Requêtes SQL directes — History</div>
+<div class="cli">
+<span class="c"># Ouvrir le fichier History avec sqlite3 (copier d'abord — Chrome le verrouille si ouvert)</span><br>
+<span class="v">cp</span> <span class="a">History</span> <span class="f">/tmp/History_copy</span><br>
+<span class="v">sqlite3</span> <span class="a">/tmp/History_copy</span><br><br>
+<span class="c">-- Historique trié par date (epoch Chrome = microsecondes depuis 1601-01-01)</span><br>
+<span class="f">SELECT</span> <span class="a">datetime((last_visit_time/1000000)-11644473600, 'unixepoch') AS date,</span><br>
+<span class="a">       url, title, visit_count FROM urls ORDER BY last_visit_time DESC LIMIT 100;</span><br><br>
+<span class="c">-- Téléchargements</span><br>
+<span class="f">SELECT</span> <span class="a">datetime((start_time/1000000)-11644473600, 'unixepoch') AS date,</span><br>
+<span class="a">       target_path, tab_url, received_bytes FROM downloads;</span><br><br>
+<span class="c">-- Recherches (mots tapés dans la barre)</span><br>
+<span class="f">SELECT</span> <span class="a">term, normalized_term FROM keyword_search_terms ORDER BY id DESC;</span><br><br>
+<span class="c">-- Cookies (valeur peut être chiffrée)</span><br>
+<span class="f">SELECT</span> <span class="a">host_key, name, value, path, expires_utc FROM cookies WHERE host_key LIKE '%suspect%';</span>
+</div>
+<div class="info" style="margin-top:.5rem">⚠️ <strong>Epoch Chrome :</strong> Chrome stocke les timestamps en <strong>microsecondes depuis le 1er janvier 1601</strong> (Windows FILETIME). Convertir : <code style="color:var(--cyan)">(valeur / 1000000) - 11644473600</code> → Unix timestamp.</div>
+</div>
+
+<div class="sec"><div class="sec-title">Mots de passe Chrome — Déchiffrement</div>
+<div class="g2">
+<div class="card card-red"><div class="ct">⚠️ Chiffrement AES-256-GCM</div>
+<p>Depuis Chrome 80, les mots de passe dans <code style="color:var(--cyan)">Login Data</code> sont chiffrés avec une clé maître stockée dans <code style="color:var(--cyan)">Local State</code> (JSON), elle-même chiffrée par l'API DPAPI Windows (liée au compte utilisateur).</p>
+<br><p>Pour déchiffrer : il faut être connecté avec <strong>le même compte Windows</strong>, ou disposer de la clé DPAPI (dans le registre + hash NTLM du compte).</p></div>
+<div class="card card-gold"><div class="ct">Outils de récupération</div>
+<ul>
+<li><strong>Hindsight</strong> (open source) — analyse complète du profil Chrome</li>
+<li><strong>Autopsy Browser History module</strong> — intégré</li>
+<li><strong>NirSoft ChromePass</strong> — si accès au compte Windows</li>
+<li><strong>DB Browser for SQLite</strong> — inspection manuelle</li>
+<li><strong>AXIOM / Magnet</strong> — extraction + déchiffrement automatique</li>
+</ul></div>
+</div></div>
+</div>
+
+<!-- FIREFOX -->
+<div class="tp" id="t-firefox">
+<div class="sec"><div class="sec-title">Profil Firefox — Structure</div>
+<div class="g2">
+<div class="card card-orange"><div class="ct">Chemin du profil</div>
+<p><span class="path">C:\Users\[user]\AppData\Roaming\Mozilla\Firefox\Profiles\[hash].default-release\</span></p>
+<br><p>Le nom du dossier contient un hash aléatoire + suffixe. Sur Linux : <span class="path">~/.mozilla/firefox/[hash].default/</span>. Sur macOS : <span class="path">~/Library/Application Support/Firefox/Profiles/</span></p></div>
+<div class="card card-cyan"><div class="ct">Fichiers principaux</div>
+<table style="font-size:.71rem"><tbody>
+<tr><td style="padding:.25rem .4rem"><code style="color:var(--gold)">places.sqlite</code></td><td style="padding:.25rem .4rem">Historique + signets (tables moz_places, moz_historyvisits)</td></tr>
+<tr><td style="padding:.25rem .4rem"><code style="color:var(--gold)">cookies.sqlite</code></td><td style="padding:.25rem .4rem">Cookies (table moz_cookies)</td></tr>
+<tr><td style="padding:.25rem .4rem"><code style="color:var(--gold)">formhistory.sqlite</code></td><td style="padding:.25rem .4rem">Données de formulaires auto-complétées</td></tr>
+<tr><td style="padding:.25rem .4rem"><code style="color:var(--gold)">logins.json</code></td><td style="padding:.25rem .4rem">Identifiants sauvegardés (chiffrés NSS)</td></tr>
+<tr><td style="padding:.25rem .4rem"><code style="color:var(--gold)">key4.db</code></td><td style="padding:.25rem .4rem">Clés de chiffrement (remplace key3.db)</td></tr>
+<tr><td style="padding:.25rem .4rem"><code style="color:var(--gold)">sessionstore.jsonlz4</code></td><td style="padding:.25rem .4rem">Session actuelle : onglets ouverts + historique récent</td></tr>
+<tr><td style="padding:.25rem .4rem"><code style="color:var(--gold)">downloads.sqlite</code></td><td style="padding:.25rem .4rem">Anciens Firefox. Depuis FF 26 : intégré dans places.sqlite</td></tr>
+</tbody></table></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Requêtes SQL Firefox</div>
+<div class="cli">
+<span class="c">-- Historique Firefox (microsecondes depuis 1970-01-01, puis ÷ 1 000 000)</span><br>
+<span class="f">SELECT</span> <span class="a">datetime(v.visit_date/1000000, 'unixepoch') AS date,</span><br>
+<span class="a">       p.url, p.title, p.visit_count</span><br>
+<span class="f">FROM</span> <span class="a">moz_historyvisits v JOIN moz_places p ON v.place_id = p.id</span><br>
+<span class="f">ORDER BY</span> <span class="a">v.visit_date DESC LIMIT 100;</span><br><br>
+<span class="c">-- Téléchargements (dans moz_annos depuis Firefox 26)</span><br>
+<span class="f">SELECT</span> <span class="a">datetime(a.dateAdded/1000000,'unixepoch') AS date,</span><br>
+<span class="a">       p.url, a.content FROM moz_annos a JOIN moz_places p ON a.place_id=p.id</span><br>
+<span class="f">WHERE</span> <span class="a">a.anno_attribute_id = (SELECT id FROM moz_anno_attributes WHERE name='downloads/destinationFileURI');</span><br><br>
+<span class="c">-- Cookies</span><br>
+<span class="f">SELECT</span> <span class="a">host, name, value, datetime(expiry,'unixepoch') AS expires FROM moz_cookies</span><br>
+<span class="f">WHERE</span> <span class="a">host LIKE '%suspect.ch%';</span>
+</div>
+<div class="tip">💡 <strong>sessionstore.jsonlz4 :</strong> Ce fichier contient les onglets ouverts au moment du crash ou de la fermeture du navigateur. Format propriétaire LZ4 de Mozilla — décompresser avec <code style="color:var(--cyan)">python-lz4</code> ou des outils comme <code style="color:var(--cyan)">sessionstore-parser</code>. Mine d'informations sur les dernières activités.</div>
+</div>
+</div>
+
+<!-- ARTEFACTS CLÉS -->
+<div class="tp" id="t-artefacts">
+<div class="sec"><div class="sec-title">Artefacts forensiques par navigateur</div>
+<table class="art-table">
+<thead><tr><th>Artefact</th><th><span class="browser-badge bb-chrome">Chrome</span> <span class="browser-badge bb-edge">Edge</span></th><th><span class="browser-badge bb-firefox">Firefox</span></th><th><span class="browser-badge bb-safari">Safari</span></th><th>Valeur forensique</th></tr></thead>
+<tbody>
+<tr><td><strong>Historique navigation</strong></td><td><code style="color:var(--cyan);font-size:.7rem">History (SQLite)</code></td><td><code style="color:var(--cyan);font-size:.7rem">places.sqlite</code></td><td><code style="color:var(--cyan);font-size:.7rem">History.db</code></td><td>URLs, timestamps, fréquence, titre des pages</td></tr>
+<tr><td><strong>Téléchargements</strong></td><td><code style="color:var(--cyan);font-size:.7rem">History (downloads)</code></td><td><code style="color:var(--cyan);font-size:.7rem">places.sqlite (moz_annos)</code></td><td><code style="color:var(--cyan);font-size:.7rem">Downloads.plist</code></td><td>URL source, chemin destination, timestamps, taille</td></tr>
+<tr><td><strong>Recherches</strong></td><td><code style="color:var(--cyan);font-size:.7rem">History (keyword_search_terms)</code></td><td><code style="color:var(--cyan);font-size:.7rem">formhistory.sqlite</code></td><td><code style="color:var(--cyan);font-size:.7rem">History.db</code></td><td>Termes tapés dans la barre de recherche</td></tr>
+<tr><td><strong>Cookies</strong></td><td><code style="color:var(--cyan);font-size:.7rem">Cookies (SQLite)</code></td><td><code style="color:var(--cyan);font-size:.7rem">cookies.sqlite</code></td><td><code style="color:var(--cyan);font-size:.7rem">Cookies.binarycookies</code></td><td>Sessions authentifiées, préférences, tracking</td></tr>
+<tr><td><strong>Mots de passe</strong></td><td><code style="color:var(--cyan);font-size:.7rem">Login Data (chiffré DPAPI)</code></td><td><code style="color:var(--cyan);font-size:.7rem">logins.json + key4.db</code></td><td>Keychain macOS</td><td>Credentials de sites (si déchiffrables)</td></tr>
+<tr><td><strong>Session ouverte</strong></td><td><code style="color:var(--cyan);font-size:.7rem">Current Session / Tabs</code></td><td><code style="color:var(--cyan);font-size:.7rem">sessionstore.jsonlz4</code></td><td><code style="color:var(--cyan);font-size:.7rem">LastSession.plist</code></td><td>Onglets ouverts au moment de la saisie</td></tr>
+<tr><td><strong>Cache web</strong></td><td><code style="color:var(--cyan);font-size:.7rem">Cache/</code></td><td><code style="color:var(--cyan);font-size:.7rem">cache2/</code></td><td><code style="color:var(--cyan);font-size:.7rem">Cache.db</code></td><td>Contenu des pages visitées (images, JS, HTML)</td></tr>
+<tr><td><strong>Extensions</strong></td><td><code style="color:var(--cyan);font-size:.7rem">Extensions/ + Local Storage/</code></td><td><code style="color:var(--cyan);font-size:.7rem">extensions.json</code></td><td>—</td><td>Plugins installés — peuvent modifier le trafic</td></tr>
+<tr><td><strong>Auto-complétion</strong></td><td><code style="color:var(--cyan);font-size:.7rem">Web Data</code></td><td><code style="color:var(--cyan);font-size:.7rem">formhistory.sqlite</code></td><td>—</td><td>Données saisies dans formulaires web</td></tr>
+<tr><td><strong>Favoris</strong></td><td><code style="color:var(--cyan);font-size:.7rem">Bookmarks (JSON)</code></td><td><code style="color:var(--cyan);font-size:.7rem">places.sqlite</code></td><td><code style="color:var(--cyan);font-size:.7rem">Bookmarks.plist</code></td><td>Sites marqués — révèle les intérêts de la cible</td></tr>
+</tbody></table>
+</div>
+
+<div class="sec"><div class="sec-title">Navigation privée — Persistance</div>
+<div class="g2">
+<div class="card card-red"><div class="ct">❌ Ce que la navigation privée SUPPRIME</div><ul>
+<li>Historique de navigation dans le profil</li>
+<li>Cookies et sessions après fermeture</li>
+<li>Données de formulaires</li>
+<li>Téléchargements dans l'historique du navigateur (pas le fichier lui-même)</li>
+</ul></div>
+<div class="card card-gold"><div class="ct">✅ Ce qui persiste malgré tout</div><ul>
+<li>Fichiers téléchargés sur le disque</li>
+<li>DNS cache Windows (<code style="color:var(--cyan)">ipconfig /displaydns</code>)</li>
+<li>Prefetch Windows (si navigateur lancé)</li>
+<li>Mémoire RAM (pendant la session)</li>
+<li>Logs du proxy/firewall d'entreprise</li>
+<li>Logs du routeur domestique (FAI)</li>
+<li>ShellBags (si dossier téléchargements exploré)</li>
+</ul></div>
+</div>
+<div class="info" style="margin-top:.75rem">💡 <strong>Tip forensique :</strong> Même si le navigateur ne conserve pas l'historique, le fichier <code style="color:var(--cyan)">NTUSER.DAT</code> Windows peut contenir des traces via UserAssist (navigateur lancé) et les LNK files pointant vers les fichiers téléchargés.</div>
+</div>
+</div>
+
+<!-- OUTILS -->
+<div class="tp" id="t-outils">
+<div class="sec"><div class="sec-title">Outils d'analyse navigateur</div>
+<div class="g2">
+<div class="card card-blue"><div class="ct">Hindsight (open source)</div>
+<p>L'outil de référence pour Chrome/Edge. Analyse le profil complet, décode les epochs, reconstruit la timeline, exporte en HTML/Excel/JSON.</p>
+<div class="cli" style="font-size:.7rem"><span class="v">hindsight.py</span> <span class="a">-i "C:\Users\user\AppData\Local\Google\Chrome\User Data\Default"</span> <span class="f">-o rapport_chrome</span></div></div>
+<div class="card card-orange"><div class="ct">Browser History Examiner</div>
+<p>GUI Windows supportant Chrome, Firefox, Edge, IE, Opera. Reconstitue la timeline complète. Intégration AXIOM disponible.</p>
+<br><p>Format de sortie : HTML, CSV, PDF pour inclusion directe dans un rapport judiciaire.</p></div>
+</div>
+<div class="g2" style="margin-top:.75rem">
+<div class="card card-green"><div class="ct">Autopsy — Recent Activity</div>
+<p>Module intégré qui analyse automatiquement tous les navigateurs présents sur l'image. Résultats dans Web History, Web Downloads, Web Cookies, Web Search.</p>
+<br><p>Idéal pour une première vue d'ensemble sans requêtes SQL manuelles.</p></div>
+<div class="card card-cyan"><div class="ct">DB Browser for SQLite</div>
+<p>Outil GUI pour inspecter manuellement les fichiers SQLite du navigateur. Permet les requêtes SQL ad hoc et l'export CSV.</p>
+<br><p><strong>⚠️</strong> Toujours copier le fichier SQLite avant ouverture — Chrome/Firefox le verrouillent si le navigateur est actif.</p></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Points anti-forensique navigateur</div>
+<div class="g2">
+<div class="card card-red"><div class="ct">Techniques de suppression</div><ul>
+<li>CCleaner / BleachBit : efface les profils complets</li>
+<li>Extension "History Eraser" : suppression sélective</li>
+<li>Modification manuelle des SQLite (timestamps, entrées)</li>
+<li>Navigation privée + VPN pour éviter les logs côté serveur</li>
+</ul></div>
+<div class="card card-gold"><div class="ct">Détection de manipulation</div><ul>
+<li>Gaps dans les timestamps (séquences non continues)</li>
+<li>Fichier SQLite avec <code style="color:var(--cyan)">last_modified</code> récent mais peu d'entrées</li>
+<li>Présence de CCleaner dans Prefetch/AmCache</li>
+<li>Journal NTFS ($UsnJrnl) révèle les suppressions récentes de fichiers profil</li>
+</ul></div>
+</div></div>
+</div>
+
+<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Chrome History = SQLite · Epoch Chrome = microsecondes depuis 1601 (convertir : valeur/1000000 − 11644473600) · Firefox = places.sqlite (moz_historyvisits + moz_places) · Navigation privée : fichiers téléchargés persistent · DNS cache + Prefetch restent même en mode privé · Login Data = chiffré DPAPI (clé liée au compte Windows) · Hindsight = outil de référence Chrome.</div>
+<div class="footer"><span>CAS-IN Investigation Numérique · Forensique Suisse</span><span>Ch. 16 Manuel · Artefacts Windows</span></div>
+</div>
+<script>
+function T(id){document.querySelectorAll('.tp').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));document.getElementById('t-'+id).classList.add('on');event.target.classList.add('on');}
+</script>
+</body>
+</html>

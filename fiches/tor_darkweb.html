@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Tor & Dark Web — CAS-IN</title>
+<link rel="stylesheet" href="fiche_style.css">
+<style>
+.onion-path{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:1rem 0;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem}
+.onion-node{text-align:center;flex:1;min-width:80px}
+.on-label{font-size:.7rem;font-weight:700;margin-bottom:.3rem}
+.on-enc{font-size:.62rem;color:var(--muted);margin-top:.2rem}
+.on-arrow{color:var(--dim);font-size:1.2rem;flex-shrink:0}
+.cli{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.85rem 1.1rem;font-size:.72rem;color:var(--green);font-family:var(--mono);line-height:1.9;margin:.5rem 0;overflow-x:auto}
+.cli .c{color:var(--dim)}.cli .a{color:var(--cyan)}.cli .v{color:var(--orange)}.cli .f{color:var(--gold)}
+</style>
+</head>
+<body>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">TOR & DARK WEB</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+<div class="page">
+<div class="header">
+  <div class="badge" style="color:var(--purple)">🧅</div>
+  <div>
+    <div><span class="tag tag-purple">Tor Browser</span><span class="tag tag-blue">Onion Services</span><span class="tag tag-red">Attribution</span><span class="tag tag-cyan">Droit suisse</span></div>
+    <div class="meta" style="margin-top:.4rem">Architecture Tor · Artefacts Tor Browser · Attribution · LSCPT · Techniques d'investigation</div>
+  </div>
+</div>
+
+<div class="sec"><div class="sec-title">Architecture Tor — Fonctionnement</div>
+<div class="onion-path">
+  <div class="onion-node">
+    <div class="on-label" style="color:var(--cyan)">Client</div>
+    <div style="font-size:1.5rem">💻</div>
+    <div class="on-enc">Connaît la destination</div>
+  </div>
+  <div class="on-arrow">→</div>
+  <div class="onion-node">
+    <div class="on-label" style="color:var(--green)">Guard Node</div>
+    <div style="font-size:1.5rem">🔒</div>
+    <div class="on-enc">Voit l'IP client. Ne voit pas la destination.</div>
+  </div>
+  <div class="on-arrow">→</div>
+  <div class="onion-node">
+    <div class="on-label" style="color:var(--gold)">Middle Node</div>
+    <div style="font-size:1.5rem">🔒</div>
+    <div class="on-enc">Ne voit ni source ni destination</div>
+  </div>
+  <div class="on-arrow">→</div>
+  <div class="onion-node">
+    <div class="on-label" style="color:var(--red)">Exit Node</div>
+    <div style="font-size:1.5rem">🔓</div>
+    <div class="on-enc">Voit la destination. Ne voit pas le client.</div>
+  </div>
+  <div class="on-arrow">→</div>
+  <div class="onion-node">
+    <div class="on-label" style="color:var(--muted)">Serveur</div>
+    <div style="font-size:1.5rem">🌐</div>
+    <div class="on-enc">Ne voit que l'IP du nœud de sortie</div>
+  </div>
+</div>
+<div class="g2">
+<div class="card card-purple"><div class="ct">Chiffrement en couches (oignon)</div>
+<p>Le client chiffre le message avec 3 clés successives (Exit → Middle → Guard). Chaque relais ne décrypte qu'une couche et ne connaît que ses voisins immédiats dans la chaîne.</p>
+<br><p>Circuit Tor = 3 relais minimum. Renouvelé toutes les 10 minutes.</p></div>
+<div class="card card-red"><div class="ct">Limites de l'anonymat Tor</div><ul>
+<li>Le <strong>nœud de garde</strong> voit l'IP réelle du client</li>
+<li>Le <strong>nœud de sortie</strong> voit le trafic non chiffré (HTTP, DNS)</li>
+<li>Corrélation temporelle : observer entrée ET sortie = désanonymisation</li>
+<li>JavaScript activé = fuites d'IP potentielles (exploits navigateur)</li>
+<li>Habitudes comportementales (timing, contenu) = fingerprinting</li>
+</ul></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Artefacts Tor Browser — Investigation forensique</div>
+<div class="g2">
+<div class="card card-blue"><div class="ct">Localisation Tor Browser</div>
+<p>Tor Browser est portable — pas d'installation standard. Peut être sur n'importe quel chemin, clé USB ou dossier.</p>
+<br><table style="font-size:.71rem"><tbody>
+<tr><td style="padding:.2rem .35rem"><code style="color:var(--cyan)">Browser\TorBrowser\Data\Tor\</code></td><td style="padding:.2rem .35rem">Config + logs de circuit</td></tr>
+<tr><td style="padding:.2rem .35rem"><code style="color:var(--cyan)">Browser\TorBrowser\Data\Browser\profile.default\</code></td><td style="padding:.2rem .35rem">Profil Firefox (SQLite)</td></tr>
+<tr><td style="padding:.2rem .35rem"><code style="color:var(--cyan)">Browser\TorBrowser\Tor\tor.exe</code></td><td style="padding:.2rem .35rem">L'exécutable Tor</td></tr>
+</tbody></table></div>
+<div class="card card-gold"><div class="ct">Artefacts persistants malgré le mode privé</div><ul>
+<li><strong>Prefetch</strong> : <code style="color:var(--cyan)">TOR.EXE-XXXXXX.pf</code> → preuve d'exécution</li>
+<li><strong>AmCache / ShimCache</strong> : tor.exe référencé même après suppression</li>
+<li><strong>LNK files</strong> : raccourci vers tor.exe si lancé depuis l'interface</li>
+<li><strong>Registre UserAssist</strong> : tor.exe dans les programmes exécutés (ROT13)</li>
+<li><strong>$UsnJrnl</strong> : création/suppression des fichiers Tor</li>
+<li><strong>RAM</strong> : circuits actifs, pages visitées, identifiants de session</li>
+</ul></div>
+</div>
+<div class="g2" style="margin-top:.75rem">
+<div class="card card-cyan"><div class="ct">Fichiers SQLite du profil Tor Browser</div>
+<p>Tor Browser est basé sur Firefox → mêmes fichiers SQLite :</p>
+<ul style="margin-top:.35rem">
+<li><code style="color:var(--gold)">places.sqlite</code> : historique (souvent vide en mode privé)</li>
+<li><code style="color:var(--gold)">cookies.sqlite</code> : effacé à la fermeture</li>
+<li><code style="color:var(--gold)">sessionstore.jsonlz4</code> : session courante (très utile en live)</li>
+<li><code style="color:var(--gold)">formhistory.sqlite</code> : formulaires remplis</li>
+</ul></div>
+<div class="card card-orange"><div class="ct">Tor — Fichiers de configuration</div>
+<p><code style="color:var(--cyan)">torrc</code> : configuration Tor (bridges, proxy, ports). Peut révéler des bridges personnalisés ou des configurations spéciales.</p>
+<br><p><code style="color:var(--cyan)">state</code> : état du daemon Tor. Contient les statistiques de connexion et les nœuds de garde utilisés.</p>
+<br><p><code style="color:var(--cyan)">cached-microdescs</code> : liste des relais Tor connus. La présence de ce fichier confirme l'utilisation de Tor.</p></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Services .onion (Hidden Services)</div>
+<div class="g2">
+<div class="card card-purple"><div class="ct">Qu'est-ce qu'un service .onion ?</div>
+<p>Un service onion est un serveur accessible uniquement via le réseau Tor, sans passer par un nœud de sortie. L'adresse .onion est dérivée cryptographiquement de la clé publique du serveur (Ed25519 en v3).</p>
+<br><p>Format v3 (actuel) : <code style="color:var(--dim);font-size:.68rem">xyz[56 caractères]d.onion</code><br>Format v2 (obsolète, 2021) : 16 caractères</p></div>
+<div class="card card-red"><div class="ct">Investigation des services .onion</div><ul>
+<li>Les adresses .onion <strong>ne peuvent pas être résolues en DNS classique</strong></li>
+<li>Recherche via moteurs spécialisés : Ahmia.fi (indexe les .onion)</li>
+<li>Hunchly : capture automatique des pages visitées</li>
+<li>L'hébergeur du serveur .onion n'est pas connu des autorités sans infiltration ou exploit</li>
+<li>Les saisies de serveurs onion nécessitent souvent une coopération internationale (FBI, Europol)</li>
+</ul></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Attribution — Techniques légales</div>
+<div class="g2">
+<div class="card card-green"><div class="ct">Méthodes d'attribution documentées</div><ul>
+<li><strong>Nœud de garde</strong> : si l'État contrôle le nœud de garde d'un suspect, il voit l'IP réelle</li>
+<li><strong>Corrélation temporelle</strong> : observer le pattern de connexion côté client + serveur</li>
+<li><strong>HUMINT / infiltration</strong> : achats sur les marketplaces, communication avec le suspect</li>
+<li><strong>OPSEC failure</strong> : erreur humaine (même email, même alias qu'en clearnet)</li>
+<li><strong>Exploit navigateur</strong> : faille Tor Browser → reveal IP réelle (utilisé par le FBI)</li>
+<li><strong>Métadonnées de fichiers</strong> : EXIF GPS dans photo partagée sur forum onion</li>
+</ul></div>
+<div class="card card-cyan"><div class="ct">Cas Silk Road (Ross Ulbricht, 2013)</div>
+<p>Identifié via un post public datant d'avant SR utilisant son vrai email pour recruter. Arrestation physique dans une bibliothèque SF quand son ordinateur était <strong>déverrouillé</strong>.</p>
+<br><p>Leçon : l'OPSEC humain est le maillon faible, pas Tor lui-même. Un seul écart (même pseudo, même email, même écriture) peut tout faire tomber.</p></div>
+</div></div>
+
+<div class="sec"><div class="sec-title">Cadre légal suisse — Tor & surveillance</div>
+<div class="g2">
+<div class="card card-red"><div class="ct">⚖️ LSCPT — Loi sur la surveillance des communications</div>
+<p>La LSCPT (RS 780.1) encadre la surveillance des communications en Suisse. Pour surveiller un suspect utilisant Tor :</p>
+<ul style="margin-top:.35rem">
+<li>Surveillance de l'abonné (IP + métadonnées) : ordonnance du TMC</li>
+<li>Surveillance du contenu : conditions plus strictes (soupçon grave)</li>
+<li>Tor rend la surveillance du contenu inutile (chiffrement) → focus sur les métadonnées de connexion chez l'ISP</li>
+<li>Timing attacks sur les logs ISP possibles si Tor est utilisé régulièrement</li>
+</ul></div>
+<div class="card card-gold"><div class="ct">Logs ISP et Tor</div>
+<p>L'ISP voit que le client <strong>se connecte à un nœud Tor</strong> (IP connue publiquement via le directory Tor), mais pas la destination finale.</p>
+<br><p>Les ISP suisses conservent les métadonnées de connexion 6 mois (LSCPT art. 26). Ces logs peuvent confirmer l'utilisation de Tor à une heure précise.</p>
+<br><p>Bridges Tor : relais non listés publiquement → l'ISP ne voit qu'une connexion vers une IP inconnue.</p></div>
+</div>
+<div class="info" style="margin-top:.75rem">🇨🇭 <strong>Coopération internationale :</strong> Les takedowns de marketplaces onion (Hydra, AlphaBay, DarkMarket) ont tous impliqué une coopération entre le FBI, Europol, la BKA (Allemagne) et d'autres services. La Suisse participe via le MLAT et les accords bilatéraux.</div>
+</div></div>
+
+<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Tor = 3 relais (Guard → Middle → Exit) · Guard voit l'IP client · Exit voit la destination · .onion v3 = 56 caractères + Ed25519 · Artefacts Tor Browser : Prefetch tor.exe + AmCache + UserAssist (ROT13) + sessionstore.jsonlz4 si live · LSCPT : ISP conserve métadonnées 6 mois · ISP voit connexion au réseau Tor (pas la destination) · Silk Road : identifié par OPSEC failure (email), pas par cassage de Tor.</div>
+<div class="footer"><span>CAS-IN Investigation Numérique · Forensique Suisse</span><span>LSCPT RS 780.1 · Tor Project Documentation</span></div>
+</div>
+</body>
+</html>
