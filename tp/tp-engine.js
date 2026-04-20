@@ -2253,36 +2253,6 @@ function showExamHint(hint) {
   if (fb) { fb.className='ex-feedback correct'; fb.innerHTML=`💡 Indice : ${hint}`; }
 }
 
-function checkExamen(expected, explain) {
-  const inp = document.getElementById('inp-exam');
-  const fb  = document.getElementById('ex-feedback-ex');
-  const val = (inp.value||'').trim().replace(/\s/g,'');
-  const exp = expected.replace(/\s/g,'');
-  const ok  = val.toUpperCase() === exp.toUpperCase();
-
-  if (ok) {
-    inp.className = 'ex-input correct';
-    document.querySelector('.btn-validate').disabled = true;
-    document.getElementById('btn-next-ex').style.display = 'block';
-    document.querySelector('.ex-card').className = 'ex-card solved';
-    document.getElementById('ex-num-ex').className = 'ex-num solved';
-    fb.className = 'ex-feedback correct';
-    fb.innerHTML = `✓ Correct ! ${explain}`;
-    if (!STATE.hintUsed) incSolved(STATE.cat);
-  } else {
-    inp.className = 'ex-input wrong';
-    fb.className = 'ex-feedback wrong';
-    fb.innerHTML = `✗ "${val}" incorrect. Utilise 💡 Indice pour débloquer.`;
-    setTimeout(() => inp.className='ex-input', 700);
-  }
-}
-
-
-
-
-// ═══════════════════════════════════════════════════════════════
-// TIMESTOMPING DETECTION
-// ═══════════════════════════════════════════════════════════════
 
 function randDate(yearFrom, yearTo) {
   const y = rand(yearFrom, yearTo);
