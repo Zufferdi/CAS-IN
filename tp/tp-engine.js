@@ -202,6 +202,61 @@ function checkEndian(expected, hexBytes) {
 
 // ── 2. HORODATAGES MS-DOS ─────────────────────────
 function genTimestamp() {
+  // Mode 0 = FAT timestamp (existant), Mode 1 = NTFS FILETIME
+  const tsMode = rand(0, 1);
+  if (tsMode === 1) {
+    // NTFS FILETIME : intervalles de 100ns depuis 01/01/1601
+    // Valeur type : ~133000000000000000 (env. 2023)
+    const yr = rand(2015, 2024);
+    // Approximation : epoch FILETIME pour le 01/01/yr
+    const secsSince1601 = (yr - 1601) * 365.25 * 24 * 3600;
+    const filetime = Math.floor(secsSince1601 * 1e7);
+    const ft_lo = filetime % 0x100000000;
+    const ft_hi = Math.floor(filetime / 0x100000000);
+    const b = [ft_lo&0xFF, (ft_lo>>8)&0xFF, (ft_lo>>16)&0xFF, (ft_lo>>24)&0xFF,
+               ft_hi&0xFF, (ft_hi>>8)&0xFF, (ft_hi>>16)&0xFF, (ft_hi>>24)&0xFF];
+    const hexBytes = b.map(x=>pad(x.toString(16).toUpperCase(),2));
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-ts">🕐</div>
+        <div class="ex-title">NTFS FILETIME — Epoch 1601</div>
+        <span class="ex-badge hard">NTFS · $STANDARD_INFORMATION</span>
+      </div>
+      <div class="ex-scenario">
+        Les timestamps NTFS ($STANDARD_INFORMATION, $FILE_NAME) utilisent le format <strong>FILETIME</strong> :
+        intervalles de <strong>100 nanosecondes</strong> depuis le <strong>01 janvier 1601 00:00:00 UTC</strong>.<br>
+        Les 8 octets ci-dessous représentent un timestamp FILETIME en Little Endian.
+        À quelle <strong>année approximative</strong> correspond cette valeur ?
+      </div>
+      <div class="sec-title">Octets FILETIME (Little Endian, 8 octets)</div>
+      <div class="hex-display">${hexBytes.map(h=>`<span class="hex-byte highlight">${h}</span>`).join('')}</div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;margin:.75rem 0;font-size:.78rem">
+        <div style="color:var(--dim);margin-bottom:.3rem">Formule :</div>
+        <div style="font-family:var(--mono);color:var(--cyan)">date = 1601 + (FILETIME ÷ 10<sup>7</sup>) ÷ (365.25 × 86400)</div>
+      </div>
+      <div class="ex-input-row">
+        <span class="ex-input-label">Année :</span>
+        <input class="ex-input" id="ans-year" type="number" placeholder="${yr}" style="max-width:90px" min="1970" max="2100">
+        <button class="btn-hint" onclick="document.getElementById('ex-feedback-ts').innerHTML='💡 FILETIME en décimal ≈ ${filetime.toExponential(2)}. Diviser par 10 000 000 = secondes depuis 1601. Diviser par 31 557 600 = années depuis 1601. Ajouter 1601.';document.getElementById('ex-feedback-ts').style.display='block'">💡 Méthode</button>
+        <button class="btn-validate" onclick="(function(){
+          const v=parseInt(document.getElementById('ans-year').value);
+          const fb=document.getElementById('ex-feedback-ts');
+          const ok=Math.abs(v-${yr})<=1;
+          document.getElementById('ans-year').className='ex-input '+(ok?'correct':'wrong');
+          fb.className='ex-feedback '+(ok?'correct':'wrong');
+          fb.innerHTML=ok?'✅ Correct ! Année ≈ ${yr} — FILETIME = ${filetime.toExponential(3)} intervalles de 100ns depuis 1601.':'❌ Réponse attendue : <strong>${yr}</strong> (±1 an accepté). FILETIME ≈ ${filetime.toExponential(3)} → ÷10⁷ = secondes → ÷31 557 600 = années → +1601.';
+          fb.style.display='block';
+          if(ok){incSolved('timestamp');}
+          document.getElementById('btn-next-ts').style.display='inline-block';
+        })()">Valider ✓</button>
+        <button class="btn-next" id="btn-next-ts" onclick="newExercise()" style="display:none">Suivant →</button>
+      </div>
+      <div class="ex-feedback" id="ex-feedback-ts" style="display:none"></div>
+    `;
+    return div;
+  }
   // Date FAT : bits 15-9 = année (offset 1980), 8-5 = mois, 4-0 = jour
   // Time FAT : bits 15-11 = heures, 10-5 = minutes, 4-0 = secondes/2
   const year  = rand(1990, 2024); const month = rand(1,12); const day = rand(1,28);
@@ -332,7 +387,7 @@ function checkTimestamp(ey, emo, ed, eh, emi, es) {
 
 // ── 3. BITMAP exFAT / FAT ──────────────────────────
 function genBitmap() {
-  const numClusters = 16;
+  const numClusters = [8, 16, 32, 64][rand(0,3)];
   const occupiedCount = rand(3,10);
   const occupied = new Set();
   while (occupied.size < occupiedCount) occupied.add(rand(0, numClusters-1));
@@ -2698,7 +2753,7 @@ function checkNetwork(btn, isCorrect, explain) {
 // 17. CALCUL OFFSET FS (NTFS, FAT32, exFAT)
 // ═══════════════════════════════════════════════════
 function genOffset() {
-  const fsType = rand(0, 2);
+  const fsType = rand(0, 4);
   const configs = [
     { // NTFS
       name: 'NTFS', badge: 'MFT Offset',
@@ -2758,13 +2813,61 @@ function genOffset() {
           unit: 'octets' };
       }
     }
+    ,
+    { // EXT4 inode offset
+      name: 'EXT4', badge: 'Inode Offset',
+      blockSize: [1024, 2048, 4096][rand(0,2)],
+      inodesPerGroup: [1024, 2048, 4096][rand(0,2)],
+      inodeSize: 256,
+      inode_n: rand(10, 4000),
+      color: 'var(--blue)',
+      compute(blockSize, inodesPerGroup, inodeSize, inode_n) {
+        const group = Math.floor((inode_n - 1) / inodesPerGroup);
+        const indexInGroup = (inode_n - 1) % inodesPerGroup;
+        // Offset du groupe = 2 blocs (superbloc + descripteur) × blockSize
+        const groupOffset = (group * 8 + 2) * blockSize; // 8 blocs par groupe
+        const inodeTableOffset = groupOffset + 2 * blockSize; // après superbloc + group desc
+        const offset = inodeTableOffset + indexInGroup * inodeSize;
+        return {
+          answer: offset,
+          question: `EXT4 : blockSize=<strong>${blockSize}</strong>o, inodesPerGroup=<strong>${inodesPerGroup}</strong>, inodeSize=<strong>${inodeSize}</strong>o.<br>Calculer l'offset de l'inode <strong>${inode_n}</strong> en octets.`,
+          steps: [
+            `Groupe = (${inode_n}-1) ÷ ${inodesPerGroup} = ${group}`,
+            `Index dans groupe = (${inode_n}-1) mod ${inodesPerGroup} = ${indexInGroup}`,
+            `Offset inode table = (${group}×8+2)×${blockSize} + 2×${blockSize} = ${inodeTableOffset}`,
+            `Offset inode ${inode_n} = ${inodeTableOffset} + ${indexInGroup}×${inodeSize} = ${offset}`
+          ],
+          unit: 'octets'
+        };
+      }
+    },
+    { // HFS+ allocation block
+      name: 'HFS+', badge: 'Block Offset',
+      blockSize: [4096, 8192, 16384][rand(0,2)],
+      block_n: rand(10, 5000),
+      color: 'var(--gold)',
+      compute(blockSize, block_n) {
+        const offset = block_n * blockSize;
+        return {
+          answer: offset,
+          question: `HFS+ : blockSize=<strong>${blockSize}</strong>o (allocation block).<br>Calculer l'offset de l'allocation block <strong>${block_n}</strong> en octets.`,
+          steps: [
+            `HFS+ : les blocs commencent à 0 (contrairement à FAT qui commence à 2)`,
+            `Offset = ${block_n} × ${blockSize} = ${offset}`
+          ],
+          unit: 'octets'
+        };
+      }
+    }
   ];
 
   const cfg = configs[fsType];
   let data;
   if (fsType === 0) data = cfg.compute(cfg.bps, cfg.spc, cfg.mft_lcn);
   else if (fsType === 1) data = cfg.compute(cfg.bps, cfg.spc, cfg.reserved, cfg.fat_size, cfg.cluster_n);
-  else data = cfg.compute(cfg.bpss, cfg.spcs, cfg.heap_offset, cfg.cluster_n);
+  else if (fsType === 2) data = cfg.compute(cfg.bpss, cfg.spcs, cfg.heap_offset, cfg.cluster_n);
+  else if (fsType === 3) data = cfg.compute(cfg.blockSize, cfg.inodesPerGroup, cfg.inodeSize, cfg.inode_n);
+  else data = cfg.compute(cfg.blockSize, cfg.block_n);
 
   const answer = data.answer;
   // Distracteurs plausibles
@@ -2997,6 +3100,18 @@ function checkHexTable(correctOff, explain, val) {
 function genFSIdentify() {
   const fsOptions = [
     {
+      fs: 'FAT12',
+      build: () => {
+        const bytes = new Array(64).fill(0x20);
+        bytes[0]=0xEB; bytes[2]=0x90;
+        'MSDOS5.0'.split('').forEach((c,i)=>bytes[3+i]=c.charCodeAt(0));
+        bytes[0x0B]=0x00; bytes[0x0C]=0x02; bytes[0x0D]=1; bytes[0x10]=2;
+        bytes[0x11]=0xE0; bytes[0x12]=0x00; // RootEntries=224
+        'FAT12   '.split('').forEach((c,i)=>bytes[0x36+i]=c.charCodeAt(0));
+        return { key: '"FAT12   " à l\'offset 0x36 + RootEntries=224 (0xE0) et SectorsPerCluster=1 identifient FAT12 (typique des disquettes 1.44 Mo).' };
+      }
+    },
+    {
       fs: 'FAT16',
       build: () => {
         const bytes = new Array(64).fill(0x20);
@@ -3038,12 +3153,40 @@ function genFSIdentify() {
         return { key: '"EXFAT   " (3 espaces) à l\'offset 0x03 + octets 0x0B-0x3F à zéro = signature exFAT.' };
       }
     }
+,
+    {
+      fs: 'EXT4',
+      build: () => {
+        const bytes = new Array(64).fill(0);
+        // Superbloc EXT4 commence à l'offset 1024 — on simule le début
+        // magic 0xEF53 à l'offset 0x38 du superbloc
+        bytes[0x38]=0x53; bytes[0x39]=0xEF; // magic LE: 53 EF
+        // s_inodes_count at 0x00 (LE32)
+        bytes[0]=0x00; bytes[1]=0x08; bytes[2]=0x00; bytes[3]=0x00;
+        // s_log_block_size at 0x18 = 2 → blocksize = 4096
+        bytes[0x18]=0x02; bytes[0x19]=0x00; bytes[0x1A]=0x00; bytes[0x1B]=0x00;
+        return { key: 'Le magic number 0xEF53 (octets 53 EF en LE) à l\'offset 0x38 du superbloc identifie EXT2/3/4. Couplé à s_log_block_size, on détermine la version.' };
+      }
+    },
+    {
+      fs: 'HFS+',
+      build: () => {
+        const bytes = new Array(64).fill(0);
+        // Volume Header HFS+ à l'offset 1024 — signature 0x482B = 'H+'
+        bytes[0]=0x48; bytes[1]=0x2B; // signature Big Endian
+        bytes[2]=0x00; bytes[3]=0x04; // version = 4 (HFS+)
+        // blockSize à l'offset 0x14 (Big Endian) = 4096 = 0x00001000
+        bytes[0x14]=0x00; bytes[0x15]=0x00; bytes[0x16]=0x10; bytes[0x17]=0x00;
+        return { key: 'La signature 0x482B ("H+") en Big Endian aux 2 premiers octets du Volume Header (offset 1024) identifie HFS+. 0x4858 ("HX") = HFS+ journalisé. Tout est Big Endian (inverse de Windows).' };
+      }
+    }
   ];
 
   const cfg = fsOptions[rand(0, fsOptions.length-1)];
   const ex = cfg.build();
   const bytes = ex.bytes || new Array(64).fill(0);
-  const choices = ['FAT12','FAT16','FAT32','NTFS','exFAT'].sort(()=>Math.random()-.5);
+  const choices = ['FAT12','FAT16','FAT32','NTFS','exFAT','EXT4','HFS+'].sort(()=>Math.random()-.5).slice(0,5);
+  // 5 choix parmi 7 possibles
   const COLS = 16;
   let rows = '';
   for (let r=0; r<Math.min(bytes.length,64); r+=COLS) {
