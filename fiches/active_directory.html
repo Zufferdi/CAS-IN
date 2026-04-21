@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Active Directory Forensique — CAS-IN</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+
+.ad-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.75rem;margin-bottom:1.25rem}
+.attack-card{border-radius:10px;padding:.9rem 1rem;border-left:4px solid}
+.attack-name{font-size:.82rem;font-weight:700;margin-bottom:.2rem}
+.attack-how{font-size:.71rem;color:var(--muted);line-height:1.45}
+.attack-detect{font-size:.68rem;margin-top:.4rem;padding:.3rem .6rem;border-radius:5px;background:rgba(0,0,0,.2)}
+.evid{font-family:var(--mono);font-size:.7rem;color:var(--cyan)}
+.log-ref{font-family:var(--mono);font-size:.68rem;color:var(--gold);background:rgba(240,192,64,.08);padding:.2rem .4rem;border-radius:4px;display:inline-block;margin:.1rem 0}
+
+</style>
+<style>
+.back-top{position:fixed;bottom:1.5rem;right:1.5rem;width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--cyan);font-size:1.1rem;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:200;transition:.2s}
+.back-top:hover{background:rgba(0,229,204,.12);border-color:var(--cyan)}
+.back-top.visible{display:flex}
+</style>
+</head>
+<body>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">ARTEFACTS WINDOWS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Artefacts Windows</span>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Active Directory Forensique</span>
+  </div>
+</div>
+
+<div class="page">
+  <div class="header">
+    <div class="badge">🏢 Kerberos · Pass-the-Hash · Golden Ticket</div>
+    <h1>Active Directory Forensique</h1>
+  </div>
+
+  <div class="info">
+    ℹ️ Active Directory (AD) est la cible n°1 des attaquants dans les environnements Windows d'entreprise. Sa compromission donne un accès total au réseau. La forensique AD analyse les logs d'authentification, les tickets Kerberos et les modifications d'objets AD.
+  </div>
+
+  <div class="sec-title">Architecture — Composants clés</div>
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1.25rem">
+    <table class="tbl">
+      <tr><th>Composant</th><th>Rôle</th><th>Intérêt forensique</th></tr>
+      <tr><td><strong>Domain Controller (DC)</strong></td><td>Authentification centralisée</td><td>Logs Security Event (EVTX) — source principale</td></tr>
+      <tr><td><strong>NTDS.dit</strong></td><td>Base de données AD (hashes, objets)</td><td>Extraction des hashes NTLM de tous les utilisateurs</td></tr>
+      <tr><td><strong>SYSVOL</strong></td><td>GPO, scripts de connexion</td><td>Persistance via GPO malveillante</td></tr>
+      <tr><td><strong>KDC (Kerberos)</strong></td><td>Émet les tickets TGT et TGS</td><td>Logs 4768/4769/4771 — golden/silver ticket</td></tr>
+      <tr><td><strong>LSASS.exe</strong></td><td>Stocke les credentials en RAM</td><td>Cible de Mimikatz — dump hashes et tickets</td></tr>
+    </table>
+  </div>
+
+  <div class="sec-title">Attaques AD courantes — Détection forensique</div>
+  <div class="ad-grid">
+    <div class="attack-card" style="border-color:var(--red);background:rgba(255,64,96,.04)">
+      <div class="attack-name" style="color:var(--red)">Pass-the-Hash (PtH)</div>
+      <div class="attack-how">L'attaquant utilise le hash NTLM volé sans connaître le mot de passe en clair. Mouvement latéral via SMB ou WMI.</div>
+      <div class="attack-detect">
+        <span class="log-ref">EID 4624 LogonType=3</span> + <span class="log-ref">NtLmSsp</span><br>
+        <span class="log-ref">EID 4776</span> (validation NTLM DC)<br>
+        Indicateur : connexion depuis IP inhabituelle sans TGT préalable
+      </div>
+    </div>
+    <div class="attack-card" style="border-color:var(--orange);background:rgba(240,136,62,.04)">
+      <div class="attack-name" style="color:var(--orange)">Pass-the-Ticket (PtT)</div>
+      <div class="attack-how">Vol d'un ticket Kerberos TGT ou TGS en RAM (Mimikatz sekurlsa::tickets) et réutilisation. Contourne l'authentification NTLM.</div>
+      <div class="attack-detect">
+        <span class="log-ref">EID 4768</span> (TGT demandé depuis IP inattendue)<br>
+        <span class="log-ref">EID 4769</span> (TGS demandé pour service inhabituel)<br>
+        Ticket avec durée anormale (> 10h par défaut)
+      </div>
+    </div>
+    <div class="attack-card" style="border-color:var(--gold);background:rgba(240,192,64,.04)">
+      <div class="attack-name" style="color:var(--gold)">Golden Ticket</div>
+      <div class="attack-how">Forge d'un TGT avec le hash du compte krbtgt (compromis). Accès total à n'importe quel service du domaine sans limite de temps.</div>
+      <div class="attack-detect">
+        <span class="log-ref">EID 4769</span> sans <span class="log-ref">EID 4768</span> préalable<br>
+        Ticket avec RenewUntil &gt; 7 jours ou EncType = 0x17 (RC4 suspect)<br>
+        Domaine dans le ticket ≠ domaine réel
+      </div>
+    </div>
+    <div class="attack-card" style="border-color:var(--purple);background:rgba(188,140,255,.04)">
+      <div class="attack-name" style="color:var(--purple)">Kerberoasting</div>
+      <div class="attack-how">Demande de TGS pour des comptes de service (SPN), puis crackage hors-ligne du hash RC4. Cible les comptes de service avec mots de passe faibles.</div>
+      <div class="attack-detect">
+        <span class="log-ref">EID 4769</span> avec EncType=0x17 (RC4) en masse<br>
+        Multiples requêtes TGS depuis un même compte en peu de temps<br>
+        Comptes demandeurs inhabituels pour des services sensibles
+      </div>
+    </div>
+    <div class="attack-card" style="border-color:var(--cyan);background:rgba(0,229,204,.04)">
+      <div class="attack-name" style="color:var(--cyan)">DCSync</div>
+      <div class="attack-how">Simule un contrôleur de domaine pour répliquer NTDS.dit et obtenir tous les hashes. Requiert les droits DS-Replication-Get-Changes.</div>
+      <div class="attack-detect">
+        <span class="log-ref">EID 4662</span> — accès à objet AD avec droit de réplication<br>
+        Trafic réseau : DRSUAPI depuis un hôte non-DC<br>
+        Commande : <code style="color:var(--cyan)">mimikatz lsadump::dcsync /domain:X /all</code>
+      </div>
+    </div>
+    <div class="attack-card" style="border-color:var(--blue);background:rgba(88,166,255,.04)">
+      <div class="attack-name" style="color:var(--blue)">Persistance via GPO</div>
+      <div class="attack-how">Modification d'une GPO pour exécuter un script malveillant sur tous les postes du domaine. Persistence furtive et massive.</div>
+      <div class="attack-detect">
+        <span class="log-ref">EID 5136</span> — modification d'objet AD (GPO)<br>
+        Vérifier SYSVOL pour des scripts PowerShell ajoutés<br>
+        <span class="log-ref">EID 4739</span> — changement de politique de domaine
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-title">NTDS.dit — Extraction forensique</div>
+  <div class="card card-red" style="margin-bottom:1rem">
+    <div class="ct">⚠️ Fichier verrouillé par le DC en cours d'exécution</div>
+    <p>NTDS.dit est verrouillé par le processus LSASS. Méthodes d'extraction légitimes (forensique autorisée) :</p>
+    <code style="display:block;font-family:var(--mono);font-size:.7rem;color:var(--cyan);background:var(--bg);padding:.4rem .7rem;border-radius:5px;margin:.4rem 0">
+# Méthode 1 : Volume Shadow Copy (VSS)<br>
+vssadmin create shadow /for=C:<br>
+copy \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1\Windows\NTDS\NTDS.dit .<br><br>
+# Méthode 2 : ntdsutil (builtin Windows)<br>
+ntdsutil "ac i ntds" "ifm" "create full c:\temp\AD" quit quit<br><br>
+# Extraction des hashes (post-acquisition, hors ligne)<br>
+python3 secretsdump.py -ntds NTDS.dit -system SYSTEM LOCAL
+    </code>
+  </div>
+
+  <div class="sec-title">Event IDs AD clés</div>
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1.25rem">
+    <table class="tbl">
+      <tr><th>EID</th><th>Événement</th><th>Intérêt</th></tr>
+      <tr><td class="evid">4624</td><td>Connexion réussie</td><td>Type 3=réseau (PtH), Type 10=RemoteInteractive (RDP)</td></tr>
+      <tr><td class="evid">4625</td><td>Échec de connexion</td><td>Brute force, spray password</td></tr>
+      <tr><td class="evid">4648</td><td>Connexion avec credentials explicites</td><td>RunAs, mouvement latéral</td></tr>
+      <tr><td class="evid">4672</td><td>Privilèges spéciaux assignés</td><td>Escalade de privilèges</td></tr>
+      <tr><td class="evid">4720</td><td>Compte créé</td><td>Backdoor utilisateur</td></tr>
+      <tr><td class="evid">4728/4732</td><td>Ajout à groupe</td><td>Escalade (Domain Admins)</td></tr>
+      <tr><td class="evid">4768</td><td>TGT Kerberos demandé</td><td>Golden Ticket (si sans préauthentification)</td></tr>
+      <tr><td class="evid">4769</td><td>TGS Kerberos demandé</td><td>Kerberoasting (RC4 en masse)</td></tr>
+      <tr><td class="evid">4771</td><td>Échec préauthentification Kerberos</td><td>AS-REP Roasting (compte sans préauth)</td></tr>
+      <tr><td class="evid">4776</td><td>Validation NTLM</td><td>Pass-the-Hash</td></tr>
+    </table>
+  </div>
+
+  <div class="sec-title">Outils d'analyse AD</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.6rem;margin-bottom:1.25rem">
+    <div class="card card-blue"><div class="ct">BloodHound</div><p>Cartographie graphique des chemins d'attaque AD. Ingère les données via SharpHound. Identifie les paths vers Domain Admin.</p></div>
+    <div class="card card-red"><div class="ct">Mimikatz</div><p>Extraction de credentials depuis LSASS. Fonctions : sekurlsa::logonpasswords, kerberos::list, lsadump::dcsync.</p></div>
+    <div class="card card-green"><div class="ct">Plaso / log2timeline</div><p>Timeline des logs AD. Correlate EID 4624/4625/4768 pour reconstituer les mouvements latéraux.</p></div>
+    <div class="card card-purple"><div class="ct">Impacket</div><p>Suite Python : secretsdump (hashes), smbclient, psexec. Standard pour l'analyse post-exploitation AD.</p></div>
+  </div>
+
+
+<div class="prereq-block">
+<div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="windows.html" class="prereq-pill">📖 Artefacts Windows</a><a href="logs_windows.html" class="prereq-pill">📖 Logs Windows</a><a href="registre_windows.html" class="prereq-pill">📖 Registre Windows</a></div>
+<div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html" class="tp-pill">🧪 🔑 Hash & Intégrité</a><a href="../tp.html" class="tp-pill">🧪 ⚖️ Droit pénal</a></div>
+<div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="logs_windows.html" class="related-pill">🔗 Logs Windows</a><a href="volatilite.html" class="related-pill">🔗 Volatility & RAM</a><a href="timeline.html" class="related-pill">🔗 Timeline Forensique</a></div>
+</div>
+
+  <div class="alert">
+    ⚖️ <strong>Examen CAS-IN</strong> — Cette fiche couvre des notions évaluées à l'examen.
+    Maîtrisez les procédures, les articles de loi et les outils cités.
+  </div>
+</div>
+
+<div class="footer">CAS-IN · Forensique Numérique · Active Directory Forensique · 2025</div>
+
+<script>
+(function(){
+  var btn = document.getElementById('back-top');
+  if(btn) window.addEventListener('scroll', function(){
+    btn.classList.toggle('visible', window.scrollY > 300);
+  });
+})();
+</script>
+</body>
+</html>

@@ -3,310 +3,157 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>SQLite & Bases de données forensique — CAS-IN Forensique</title>
-<meta name="description" content="SQLite forensique · WAL journal · Free pages · Recovery de records supprimés · DB Browser · Artefacts browser mobile Windows · Requêtes SQL forensiques">
-<meta name="theme-color" content="#0d1117">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<title>SQLite Forensique — CAS-IN</title>
 <link rel="stylesheet" href="../style/fiche_style.css">
 <style>
-.page-layout{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:.75rem}
-.page-row{display:grid;grid-template-columns:110px 90px 1fr;align-items:center;padding:.55rem .9rem;border-bottom:1px solid var(--border);font-size:.78rem;gap:.5rem}
-.page-row:last-child{border-bottom:none}
-.page-row:hover{background:var(--surface2)}
-.page-type{font-size:.68rem;font-weight:700;padding:.1rem .35rem;border-radius:3px}
-.pt-meta{background:rgba(88,166,255,.12);color:var(--blue)}
-.pt-data{background:rgba(48,232,138,.1);color:var(--green)}
-.pt-free{background:rgba(255,64,96,.1);color:var(--red)}
-.pt-overflow{background:rgba(240,192,64,.1);color:var(--gold)}
-.artefact-db{width:100%;border-collapse:collapse;font-size:.76rem}
-.artefact-db th{background:var(--surface2);color:var(--dim);font-size:.63rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.5rem .75rem;text-align:left;border-bottom:1px solid var(--border)}
-.artefact-db td{padding:.5rem .75rem;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.35}
-.artefact-db tr:last-child td{border-bottom:none}
-.artefact-db tr:hover td{background:var(--surface2)}
-.sql-block{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;padding:.7rem 1rem;font-size:.78rem;margin-bottom:.75rem;line-height:1.75}
-.sql-kw{color:var(--cyan);font-weight:700}
-.sql-fn{color:var(--blue)}
-.sql-str{color:var(--green)}
-.sql-com{color:var(--dim);font-style:italic}
-.sql-tbl{color:var(--gold)}
-.wal-flow{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden}
-.wal-step{display:flex;align-items:flex-start;gap:.8rem;padding:.65rem 1rem;border-bottom:1px solid var(--border);font-size:.79rem}
-.wal-step:last-child{border-bottom:none}
-.wn{width:22px;height:22px;border-radius:50%;font-size:.68rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.05rem;background:rgba(0,229,204,.15);border:1px solid rgba(0,229,204,.4);color:var(--cyan)}
-@media(max-width:600px){.page-row{grid-template-columns:1fr}}
+
+.db-card{border-radius:10px;padding:.9rem 1rem;border:1px solid var(--border);background:var(--surface);margin-bottom:.6rem}
+.db-path{font-family:var(--mono);font-size:.68rem;color:var(--cyan);background:var(--bg);padding:.25rem .5rem;border-radius:4px;display:block;margin:.3rem 0;word-break:break-all}
+.sql-query{font-family:var(--mono);font-size:.7rem;color:var(--gold);background:rgba(240,192,64,.06);border:1px solid rgba(240,192,64,.15);border-radius:6px;padding:.4rem .7rem;display:block;margin:.3rem 0;overflow-x:auto}
+.db-name{font-size:.82rem;font-weight:700;margin-bottom:.2rem}
+.db-desc{font-size:.71rem;color:var(--muted);line-height:1.45}
+.artifact-tag{display:inline-block;font-size:.58rem;padding:.1rem .35rem;border-radius:8px;margin:.1rem .1rem 0 0;font-weight:600}
+
 </style>
-<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+<style>
+.back-top{position:fixed;bottom:1.5rem;right:1.5rem;width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--cyan);font-size:1.1rem;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:200;transition:.2s}
+.back-top:hover{background:rgba(0,229,204,.12);border-color:var(--cyan)}
+.back-top.visible{display:flex}
+</style>
 </head>
 <body>
-<a href="#main-content" class="skip-link">Aller au contenu</a>
-<nav class="tn-nav" aria-label="Navigation fiche">
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<nav class="tn-nav">
   <a href="index.html" class="tn-back">← Fiches</a>
-  <span class="tn-title">SQLITE & BASES DE DONNÉES</span>
+  <span class="tn-title">RÉSEAUX & INVESTIGATION</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
+
 <div class="page" style="padding-top:.5rem;padding-bottom:0">
   <div class="breadcrumb">
     <a href="../index.html">🏠 Accueil</a>
     <span class="bc-sep">›</span>
     <a href="index.html">Fiches</a>
     <span class="bc-sep">›</span>
-    <a href="index.html#cat-outilsDFIR">Outils DFIR</a>
+    <span class="bc-current">Réseaux & Investigation</span>
     <span class="bc-sep">›</span>
     <span class="bc-current">SQLite Forensique</span>
-    <span class="read-time-badge">⏱ ~8 min</span>
   </div>
 </div>
-<main id="main-content">
-<div class="page">
 
-<div class="header">
-  <div class="badge" style="color:var(--blue)">🗄</div>
-  <div>
-    <div><span class="tag tag-blue">SQLite</span> <span class="tag tag-cyan">WAL · Free Pages</span> <span class="tag tag-green">Recovery</span> <span class="tag tag-gold">Browser · Mobile · Windows</span></div>
-    <div class="meta" style="margin-top:.4rem">Structure B-tree · Pages libres · Journal WAL · Artefacts navigateurs · iOS/Android · DB Browser · Récupération de records supprimés</div>
+<div class="page">
+  <div class="header">
+    <div class="badge">🗄️ Bases de données embarquées</div>
+    <h1>SQLite Forensique</h1>
   </div>
-</div>
+
+  <div class="info">
+    ℹ️ SQLite est la base de données la plus répandue au monde. Chrome, Firefox, WhatsApp, Telegram, iOS, Android l'utilisent massivement. Un seul fichier = une base complète, portable, souvent récupérable même après suppression.
+  </div>
+
+  <div class="sec-title">Bases SQLite forensiquement critiques</div>
+
+  <div class="db-card">
+    <div class="db-name">🌐 Google Chrome / Chromium</div>
+    <code class="db-path">Windows: C:\Users\[user]\AppData\Local\Google\Chrome\User Data\Default\History</code>
+    <code class="db-path">macOS: ~/Library/Application Support/Google/Chrome/Default/History</code>
+    <code class="db-path">Linux: ~/.config/google-chrome/Default/History</code>
+    <div class="db-desc">Tables clés : <strong>urls</strong> (url, title, visit_count, last_visit_time), <strong>visits</strong> (timestamps précis), <strong>downloads</strong> (URL source, chemin local, état), <strong>keyword_search_terms</strong> (termes recherchés).</div>
+    <code class="sql-query">SELECT url, title, visit_count, datetime(last_visit_time/1000000-11644473600,'unixepoch') as last_visit FROM urls ORDER BY last_visit_time DESC LIMIT 50;</code>
+    <div style="margin-top:.4rem">
+      <span class="artifact-tag" style="background:rgba(88,166,255,.15);color:var(--blue)">Historique</span>
+      <span class="artifact-tag" style="background:rgba(48,232,138,.15);color:var(--green)">Téléchargements</span>
+      <span class="artifact-tag" style="background:rgba(240,192,64,.15);color:var(--gold)">Recherches</span>
+      <span class="artifact-tag" style="background:rgba(188,140,255,.15);color:var(--purple)">Favoris</span>
+    </div>
+    <div class="info" style="margin-top:.5rem;font-size:.7rem">⚠️ Les timestamps Chrome utilisent l'epoch Windows (microsecondes depuis 01/01/1601). Formule : <code>datetime(ts/1000000-11644473600,'unixepoch')</code></div>
+  </div>
+
+  <div class="db-card">
+    <div class="db-name">💬 WhatsApp (Android)</div>
+    <code class="db-path">Android: /data/data/com.whatsapp/databases/msgstore.db</code>
+    <code class="db-path">Backup chiffré: /sdcard/WhatsApp/Databases/msgstore.db.crypt15</code>
+    <div class="db-desc">Tables clés : <strong>messages</strong> (key_remote_jid, data = texte du message, timestamp), <strong>media_refs</strong> (médias partagés), <strong>jid</strong> (contacts). Le fichier .crypt15 est chiffré avec la clé stockée dans /data/data/com.whatsapp/files/key (accessible root uniquement).</div>
+    <code class="sql-query">SELECT m.key_remote_jid, m.data, datetime(m.timestamp/1000,'unixepoch') as date, m.media_url FROM messages m WHERE m.data IS NOT NULL ORDER BY m.timestamp DESC LIMIT 100;</code>
+    <div class="info" style="margin-top:.5rem;font-size:.7rem">🔑 Déchiffrement crypt15 : Cellebrite UFED, WhatsApp Viewer (avec la clé exportée), ou extraction physique root.</div>
+  </div>
+
+  <div class="db-card">
+    <div class="db-name">🦊 Firefox</div>
+    <code class="db-path">Windows: C:\Users\[user]\AppData\Roaming\Mozilla\Firefox\Profiles\[profil]\places.sqlite</code>
+    <code class="db-path">macOS: ~/Library/Application Support/Firefox/Profiles/[profil]/places.sqlite</code>
+    <div class="db-desc">Tables clés : <strong>moz_places</strong> (url, title, visit_count, last_visit_date), <strong>moz_historyvisits</strong> (timestamps précis + type de visite), <strong>moz_bookmarks</strong>. Attention : Firefox utilise des microsecondes depuis l'epoch UNIX standard.</div>
+    <code class="sql-query">SELECT p.url, p.title, datetime(v.visit_date/1000000,'unixepoch') as visited FROM moz_historyvisits v JOIN moz_places p ON v.place_id=p.id ORDER BY v.visit_date DESC LIMIT 50;</code>
+  </div>
+
+  <div class="db-card">
+    <div class="db-name">📱 iOS — Points d'intérêt</div>
+    <code class="db-path">SMS: /var/mobile/Library/SMS/sms.db (table: message)</code>
+    <code class="db-path">Contacts: /var/mobile/Library/AddressBook/AddressBook.sqlitedb</code>
+    <code class="db-path">Appels: /var/mobile/Library/CallHistoryDB/CallHistory.storedata</code>
+    <div class="db-desc">Accessible via extraction logique (iTunes backup non chiffré) ou physique (Cellebrite, UFED). Les backups iTunes chiffrés contiennent plus de données mais nécessitent le mot de passe.</div>
+    <code class="sql-query">SELECT datetime(date+978307200,'unixepoch') as date_msg, text, is_from_me FROM message ORDER BY date DESC LIMIT 50;</code>
+    <div class="info" style="margin-top:.5rem;font-size:.7rem">⚠️ iOS utilise l'epoch Mac (01/01/2001 = 978307200 secondes UNIX). Formule : <code>datetime(ts+978307200,'unixepoch')</code></div>
+  </div>
+
+  <div class="db-card">
+    <div class="db-name">✈️ Telegram (Desktop)</div>
+    <code class="db-path">Windows: C:\Users\[user]\AppData\Roaming\Telegram Desktop\tdata\</code>
+    <div class="db-desc">Telegram Desktop utilise un format propriétaire (pas SQLite pur). Les messages sont dans des fichiers binaires du dossier tdata. Outils : TelegramDesktop-Dumper. Sur Android : SQLite accessible root, table <strong>messages</strong>.</div>
+  </div>
+
+  <div class="sec-title">Récupération de données supprimées</div>
+  <div class="card card-orange" style="margin-bottom:1rem">
+    <div class="ct">🔍 SQLite : pages non réallouées</div>
+    <p>SQLite marque les pages supprimées comme libres (<em>freelist</em>) mais ne les efface pas. Les données restent jusqu'à un VACUUM ou réallocation. Outils : <strong>sqlite3</strong> avec <code>PRAGMA freelist_count</code>, ou <strong>SQLite Deleted Records Recoverer</strong>, ou <strong>Autopsy SQLite module</strong>.</p>
+    <code class="sql-query">-- Voir le nombre de pages libres (données supprimées potentielles)
+PRAGMA freelist_count;
+-- Forcer un VACUUM pour effacer (action à NE PAS faire en forensique)
+-- VACUUM;</code>
+  </div>
+
+  <div class="sec-title">Outils d'analyse SQLite</div>
+  <div class="tbl" style="margin-bottom:1.25rem">
+    <table class="tbl">
+      <tr><th>Outil</th><th>Usage</th><th>Avantage</th></tr>
+      <tr><td><strong>DB Browser for SQLite</strong></td><td>Analyse manuelle</td><td>Gratuit, GUI, requêtes SQL directes</td></tr>
+      <tr><td><strong>Autopsy</strong></td><td>Analyse automatique</td><td>Module SQLite intégré, récupération supprimés</td></tr>
+      <tr><td><strong>SQLiteCrypt</strong></td><td>Bases chiffrées</td><td>Déchiffrement SQLCipher (WhatsApp crypt)</td></tr>
+      <tr><td><strong>Hindsight</strong></td><td>Chrome/Chromium</td><td>Timeline complète, artefacts Chrome</td></tr>
+      <tr><td><strong>sqlite3 CLI</strong></td><td>Scripts forensiques</td><td>Portable, scriptable, dans tout OS</td></tr>
+    </table>
+  </div>
+
+  <div class="sec-title">Conversions d'epochs — Aide-mémoire</div>
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-family:var(--mono);font-size:.72rem">
+    <div style="margin-bottom:.3rem;color:var(--dim)">SQLITE</div>
+    <div style="color:var(--cyan)">UNIX epoch (standard)    : datetime(ts, 'unixepoch')</div>
+    <div style="color:var(--gold)">Chrome (µs depuis 1601)  : datetime(ts/1000000 - 11644473600, 'unixepoch')</div>
+    <div style="color:var(--green)">iOS/macOS (s depuis 2001): datetime(ts + 978307200, 'unixepoch')</div>
+    <div style="color:var(--purple)">Firefox (µs depuis 1970) : datetime(ts/1000000, 'unixepoch')</div>
+    <div style="color:var(--blue)">WhatsApp (ms depuis 1970): datetime(ts/1000, 'unixepoch')</div>
+  </div>
+
 
 <div class="prereq-block">
-<div class="prereq-row">
-  <span class="prereq-label">Prérequis :</span>
-  <a href="encodage.html" class="prereq-pill">📖 Encodage</a>
-  <a href="formats.html" class="prereq-pill">📖 Formats & Magic Bytes</a>
-</div>
-<div class="prereq-row">
-  <span class="prereq-label">Voir aussi :</span>
-  <a href="browser_forensique.html" class="related-pill">🔗 Browser Forensique</a>
-  <a href="mobile.html" class="related-pill">🔗 Mobile Forensique</a>
-  <a href="windows.html" class="related-pill">🔗 Artefacts Windows</a>
-</div>
+<div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="browser_forensique.html" class="prereq-pill">📖 Browser Forensics</a><a href="mobile.html" class="prereq-pill">📖 Mobile Forensics</a></div>
+<div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html" class="tp-pill">🧪 🔍 Identifier le FS</a><a href="../tp.html" class="tp-pill">🧪 📡 Réseau & PCAP</a></div>
+<div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="browser_forensique.html" class="related-pill">🔗 Browser Forensics</a><a href="mobile.html" class="related-pill">🔗 Mobile Forensics</a><a href="windows.html" class="related-pill">🔗 Artefacts Windows</a></div>
 </div>
 
-<!-- POURQUOI SQLite -->
-<div class="sec" id="pourquoi-sqlite-forensique">
-<div class="sec-title">SQLite — omniprésence forensique</div>
-<div class="g2">
-  <div class="card card-cyan">
-    <div class="ct">Magic bytes & identification</div>
-    <ul>
-      <li>Header SQLite : <code style="color:var(--cyan)">53 51 4C 69 74 65 20 66 6F 72 6D 61 74 20 33 00</code></li>
-      <li>ASCII : <code>"SQLite format 3\0"</code> — 16 premiers octets</li>
-      <li>Extension variable : <code>.db</code>, <code>.sqlite</code>, <code>.sqlite3</code>, <code>.db3</code>, sans extension</li>
-      <li>Taille de page : offset 16, 2 octets big-endian (512–65536, puissance de 2)</li>
-      <li>Version SQLite : offset 96, 4 octets</li>
-    </ul>
-  </div>
-  <div class="card card-blue">
-    <div class="ct">Présence dans les systèmes forensiques</div>
-    <ul>
-      <li><strong>Navigateurs</strong> : History, Cookies, Login Data, Web Data (Chrome/Edge/Firefox/Safari)</li>
-      <li><strong>iOS</strong> : Messages (sms.db), Contacts (AddressBook.sqlitedb), Photos (Photos.sqlite), Mail</li>
-      <li><strong>Android</strong> : mmssms.db, contacts2.db, calendar.db, WhatsApp (msgstore.db)</li>
-      <li><strong>Windows</strong> : ActivityCache.db (Timeline), SRUDB.dat, thumbcache, Cortana</li>
-      <li><strong>Autopsy</strong> : toute la base de cas (autopsy.db)</li>
-    </ul>
-  </div>
-</div>
-</div>
-
-<!-- STRUCTURE INTERNE -->
-<div class="sec" id="structure-interne-sqlite">
-<div class="sec-title">Structure interne — pages et B-tree</div>
-
-<div class="page-layout">
-  <div class="page-row" style="background:var(--surface2)">
-    <span style="font-size:.63rem;font-weight:700;color:var(--dim);text-transform:uppercase">Type de page</span>
-    <span style="font-size:.63rem;font-weight:700;color:var(--dim);text-transform:uppercase">Taille typ.</span>
-    <span style="font-size:.63rem;font-weight:700;color:var(--dim);text-transform:uppercase">Contenu forensique</span>
-  </div>
-  <div class="page-row">
-    <div><span class="page-type pt-meta">Header</span><br><span style="font-size:.68rem">Page 1</span></div>
-    <span>100 bytes</span>
-    <span>Magic bytes, taille de page, version, nombre de pages, free list, numéro de schéma</span>
-  </div>
-  <div class="page-row">
-    <div><span class="page-type pt-data">B-tree interior</span></div>
-    <span>4 KB</span>
-    <span>Nœuds internes — clés de tri pour naviguer dans l'arbre. Peu de données utilisateur.</span>
-  </div>
-  <div class="page-row">
-    <div><span class="page-type pt-data">B-tree leaf</span></div>
-    <span>4 KB</span>
-    <span><strong>Données des lignes (records)</strong> — format variable length. Stocke les valeurs de chaque colonne.</span>
-  </div>
-  <div class="page-row">
-    <div><span class="page-type pt-free">Free page</span></div>
-    <span>4 KB</span>
-    <span><strong>Pages libérées après DELETE / VACUUM</strong> — les données peuvent subsister jusqu'à réutilisation. Clé de la récupération forensique.</span>
-  </div>
-  <div class="page-row">
-    <div><span class="page-type pt-overflow">Overflow</span></div>
-    <span>variable</span>
-    <span>Données trop volumineuses pour une page (BLOBs, textes longs). Chaîne de pages overflow.</span>
+  <div class="alert">
+    ⚖️ <strong>Examen CAS-IN</strong> — Cette fiche couvre des notions évaluées à l'examen.
+    Maîtrisez les procédures, les articles de loi et les outils cités.
   </div>
 </div>
 
-<div class="info">
-  📌 <strong>Free list forensique :</strong> SQLite ne wipe pas les pages libérées — il les ajoute à une liste chaînée. Les données supprimées restent lisibles jusqu'au prochain VACUUM ou réutilisation de la page. DB Browser for SQLite ne montre pas ces pages — utiliser un éditeur hex ou un outil forensique (SQLiteRecovery, Oxygen, AXIOM).
-</div>
-</div>
-
-<!-- WAL JOURNAL -->
-<div class="sec" id="wal-journal">
-<div class="sec-title">WAL — Write-Ahead Log</div>
-<div class="wal-flow" style="margin-bottom:.75rem">
-  <div class="wal-step"><span class="wn">1</span><div><strong>Transaction démarrée</strong> — SQLite crée ou utilise le fichier <code>database.db-wal</code>. Les nouvelles pages modifiées sont écrites <em>dans le WAL</em>, pas directement dans la DB principale.</div></div>
-  <div class="wal-step"><span class="wn">2</span><div><strong>Checkpoint</strong> — périodiquement (ou au COMMIT/CLOSE), les pages du WAL sont recopiées dans la DB principale. Le WAL peut être truncated ou preserved.</div></div>
-  <div class="wal-step"><span class="wn">3</span><div><strong>Valeur forensique</strong> — le WAL peut contenir des versions antérieures de lignes (avant mise à jour) et des lignes supprimées. Même si la DB principale est intacte, le WAL ajoute un layer de données récupérables.</div></div>
-</div>
-
-<div class="g2">
-  <div class="card card-gold">
-    <div class="ct">Fichiers associés à une DB SQLite</div>
-    <ul>
-      <li><code>database.db</code> — base principale</li>
-      <li><code>database.db-wal</code> — Write-Ahead Log (transactions en cours)</li>
-      <li><code>database.db-shm</code> — Shared Memory (index WAL, fichier temporaire)</li>
-      <li><code>database.db-journal</code> — mode journal rollback (alternatif au WAL)</li>
-    </ul>
-    <p style="font-size:.75rem;margin-top:.5rem;color:var(--dim)">Toujours acquérir les 4 fichiers ensemble — le WAL non checkpointé peut contenir les données les plus récentes.</p>
-  </div>
-  <div class="card card-red">
-    <div class="ct">Pièges d'acquisition</div>
-    <ul>
-      <li><strong>DB chiffrée</strong> (SQLCipher) → entropie ~8, impossible sans clé. Clé souvent dérivée du mot de passe ou stockée dans la mémoire du processus.</li>
-      <li><strong>DB verrouillée</strong> (processus actif) → copier à chaud peut donner un état inconsistant. Préférer l'acquisition via API (iTunes Backup, ADB) ou dump RAM pour la clé SQLCipher.</li>
-      <li><strong>VACUUM récent</strong> → free pages écrasées, pages WAL checkpointées. Vérifier les sauvegardes système.</li>
-    </ul>
-  </div>
-</div>
-</div>
-
-<!-- REQUÊTES SQL FORENSIQUES -->
-<div class="sec" id="requetes-forensiques">
-<div class="sec-title">Requêtes SQL forensiques — exemples clés</div>
-
-<div class="sql-block">
-  <span class="sql-com">-- Historique Chrome : URLs triées par date (epoch microsecondes depuis 1601)</span><br>
-  <span class="sql-kw">SELECT</span> url, title,<br>
-  &nbsp;&nbsp;<span class="sql-fn">datetime</span>((visit_time<span class="sql-kw">/</span>1000000)<span class="sql-kw">-</span>11644473600, <span class="sql-str">'unixepoch'</span>) <span class="sql-kw">AS</span> visit_date,<br>
-  &nbsp;&nbsp;visit_count<br>
-  <span class="sql-kw">FROM</span> <span class="sql-tbl">urls</span> <span class="sql-kw">JOIN</span> <span class="sql-tbl">visits</span> <span class="sql-kw">ON</span> urls.id <span class="sql-kw">=</span> visits.url<br>
-  <span class="sql-kw">ORDER BY</span> visit_time <span class="sql-kw">DESC LIMIT</span> 50;
-</div>
-
-<div class="sql-block">
-  <span class="sql-com">-- Firefox : historique (epoch microsecondes depuis 1970)</span><br>
-  <span class="sql-kw">SELECT</span> url, title,<br>
-  &nbsp;&nbsp;<span class="sql-fn">datetime</span>(last_visit_date<span class="sql-kw">/</span>1000000, <span class="sql-str">'unixepoch'</span>) <span class="sql-kw">AS</span> last_visit,<br>
-  &nbsp;&nbsp;visit_count<br>
-  <span class="sql-kw">FROM</span> <span class="sql-tbl">moz_places</span><br>
-  <span class="sql-kw">WHERE</span> visit_count <span class="sql-kw">></span> 0 <span class="sql-kw">ORDER BY</span> last_visit_date <span class="sql-kw">DESC</span>;
-</div>
-
-<div class="sql-block">
-  <span class="sql-com">-- iOS sms.db : messages SMS avec timestamps (epoch Mac Absolute, depuis 2001)</span><br>
-  <span class="sql-kw">SELECT</span> text, is_from_me,<br>
-  &nbsp;&nbsp;<span class="sql-fn">datetime</span>(date<span class="sql-kw">+</span>978307200, <span class="sql-str">'unixepoch'</span>) <span class="sql-kw">AS</span> message_date,<br>
-  &nbsp;&nbsp;service<br>
-  <span class="sql-kw">FROM</span> <span class="sql-tbl">message</span><br>
-  <span class="sql-kw">ORDER BY</span> date <span class="sql-kw">DESC LIMIT</span> 100;
-</div>
-
-<div class="sql-block">
-  <span class="sql-com">-- Lister toutes les tables d'une base inconnue</span><br>
-  <span class="sql-kw">SELECT</span> name, type, sql <span class="sql-kw">FROM</span> <span class="sql-tbl">sqlite_master</span><br>
-  <span class="sql-kw">WHERE</span> type <span class="sql-kw">IN</span> (<span class="sql-str">'table'</span>, <span class="sql-str">'view'</span>) <span class="sql-kw">ORDER BY</span> name;<br><br>
-  <span class="sql-com">-- Nombre de lignes par table (vue d'ensemble)</span><br>
-  <span class="sql-kw">SELECT</span> <span class="sql-str">'messages'</span>, <span class="sql-fn">COUNT</span>(*) <span class="sql-kw">FROM</span> <span class="sql-tbl">messages</span><br>
-  <span class="sql-kw">UNION ALL SELECT</span> <span class="sql-str">'contacts'</span>, <span class="sql-fn">COUNT</span>(*) <span class="sql-kw">FROM</span> <span class="sql-tbl">contacts</span>;
-</div>
-</div>
-
-<!-- ARTEFACTS PAR OS -->
-<div class="sec" id="artefacts-sqlite-par-os">
-<div class="sec-title">Bases SQLite par OS — référence forensique</div>
-<div class="epoch-box" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
-  <table class="artefact-db">
-    <thead><tr><th>OS / App</th><th>Fichier SQLite</th><th>Tables clés</th><th>Epoch</th></tr></thead>
-    <tbody>
-      <tr><td><strong>Chrome (Win)</strong></td><td><code>User Data\Default\History</code></td><td>urls, visits, downloads</td><td>WebKit (µs/1601)</td></tr>
-      <tr><td><strong>Firefox (Win)</strong></td><td><code>Profiles\*.default\places.sqlite</code></td><td>moz_places, moz_historyvisits</td><td>Unix µs (1970)</td></tr>
-      <tr><td><strong>Chrome (Win)</strong></td><td><code>User Data\Default\Login Data</code></td><td>logins (MDP chiffrés DPAPI)</td><td>WebKit</td></tr>
-      <tr><td><strong>iOS</strong></td><td><code>Library/SMS/sms.db</code></td><td>message, chat, handle</td><td>Mac Abs. (2001)</td></tr>
-      <tr><td><strong>iOS</strong></td><td><code>Library/AddressBook/AddressBook.sqlitedb</code></td><td>ABPerson, ABMultiValue</td><td>Mac Abs.</td></tr>
-      <tr><td><strong>iOS</strong></td><td><code>Media/PhotoData/Photos.sqlite</code></td><td>ZASSET, ZGENERICASSET (GPS!)</td><td>Mac Abs.</td></tr>
-      <tr><td><strong>Android</strong></td><td><code>data/data/com.android.providers.telephony/mmssms.db</code></td><td>sms, mms, threads</td><td>Unix ms (1970)</td></tr>
-      <tr><td><strong>Android/WhatsApp</strong></td><td><code>com.whatsapp/msgstore.db</code></td><td>messages, chat_list, jid</td><td>Unix ms</td></tr>
-      <tr><td><strong>Windows 10+</strong></td><td><code>%LocalAppData%\ConnectedDevicePlatform\ActivityCache.db</code></td><td>Activity, ActivityOperation</td><td>FILETIME</td></tr>
-      <tr><td><strong>Windows</strong></td><td><code>System32\sru\SRUDB.dat</code></td><td>{NetworkUsage}, {AppTimeline}</td><td>FILETIME</td></tr>
-    </tbody>
-  </table>
-</div>
-</div>
-
-<!-- RÉCUPÉRATION -->
-<div class="sec" id="recuperation-records">
-<div class="sec-title">Récupération de records supprimés</div>
-<div class="g2">
-  <div class="card card-green">
-    <div class="ct">Méthode 1 — DB Browser + hex</div>
-    <ul>
-      <li>Ouvrir la DB en hex (010 Editor, HxD)</li>
-      <li>Rechercher les patterns de données dans les free pages (offset après le header de page)</li>
-      <li>Les records SQLite commencent par un varint encodant la taille du payload</li>
-      <li>DB Browser → onglet "Parcourir les données" : les lignes supprimées n'apparaissent plus, mais elles sont dans le fichier</li>
-    </ul>
-  </div>
-  <div class="card card-purple">
-    <div class="ct">Méthode 2 — Outils spécialisés</div>
-    <ul>
-      <li><strong>Oxygen Forensic Detective</strong> — parse les free pages automatiquement</li>
-      <li><strong>AXIOM (Magnet)</strong> — récupération SQLite intégrée</li>
-      <li><strong>SQLiteRecovery</strong> (open source) — extrait les records des free pages</li>
-      <li><strong>Autopsy</strong> — module SQLite Parser inclut les free pages optionnellement</li>
-      <li><strong>Undark</strong> — outil CLI spécialisé récupération SQLite</li>
-    </ul>
-  </div>
-</div>
-
-<div class="cli" style="margin-top:.75rem">
-  <span class="c"># Vérifier l'intégrité d'une base SQLite (détecte corruption)</span><br>
-  <span class="v">sqlite3</span> <span class="f">suspect.db</span> <span class="a">"PRAGMA integrity_check;"</span><br><br>
-  <span class="c"># Lister les pages libres</span><br>
-  <span class="v">sqlite3</span> <span class="f">suspect.db</span> <span class="a">"PRAGMA freelist_count;"</span><br><br>
-  <span class="c"># Extraire le WAL et le merger dans la DB principale (checkpoint)</span><br>
-  <span class="v">sqlite3</span> <span class="f">suspect.db</span> <span class="a">"PRAGMA wal_checkpoint(FULL);"</span><br><br>
-  <span class="c"># Rechercher un terme dans toutes les tables (forensique rapide)</span><br>
-  <span class="v">grep</span> <span class="a">-a</span> <span class="f">"suspect@email.ch"</span> <span class="f">database.db</span> <span class="a">| strings</span>
-</div>
-
-<div class="tip" style="margin-top:.75rem">
-  💡 <strong>Astuce examen :</strong> Une base de données chiffrée (SQLCipher) se reconnaît à l'absence du magic bytes SQLite dans les 16 premiers octets — à la place, du pseudo-aléatoire (entropie ~8). La taille de page peut rester lisible à l'offset 16 selon la version de SQLCipher.
-</div>
-</div>
-
-</div><!-- end .page -->
-</main>
-
-<div class="page" style="padding-top:0">
-<div class="footer">
-  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
-  <span>SQLite Documentation · Oxygen Forensic · Magnet AXIOM · Autopsy SQLite Parser</span>
-</div>
-</div>
+<div class="footer">CAS-IN · Forensique Numérique · SQLite Forensique · 2025</div>
 
 <script>
 (function(){
-  var btn=document.getElementById('back-top');
-  if(btn) window.addEventListener('scroll',function(){ btn.classList.toggle('visible',window.scrollY>300); });
-  document.querySelectorAll('.cli').forEach(function(el){
-    if(el.querySelector('.copy-btn')) return;
-    var b=document.createElement('button');
-    b.className='copy-btn'; b.title='Copier';
-    b.innerHTML='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11V3a2 2 0 012-2h6"/></svg>';
-    b.onclick=function(){ navigator.clipboard.writeText(el.innerText.replace(/^copier$/mi,'').trim()).then(function(){ b.style.color='var(--green)'; setTimeout(function(){ b.style.color=''; },1500); }); };
-    el.style.position='relative'; el.appendChild(b);
+  var btn = document.getElementById('back-top');
+  if(btn) window.addEventListener('scroll', function(){
+    btn.classList.toggle('visible', window.scrollY > 300);
   });
 })();
 </script>

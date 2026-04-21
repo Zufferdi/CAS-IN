@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>RAM Forensique — CAS-IN</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+
+.ram-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.75rem;margin-bottom:1.25rem}
+.tool-card{border-radius:10px;padding:.9rem 1rem;border:1px solid var(--border);background:var(--surface)}
+.tool-name{font-size:.82rem;font-weight:700;margin-bottom:.2rem}
+.tool-cmd{font-family:var(--mono);font-size:.7rem;color:var(--cyan);background:var(--bg);padding:.3rem .6rem;border-radius:5px;margin:.3rem 0;overflow-x:auto;display:block}
+.tool-note{font-size:.7rem;color:var(--muted);line-height:1.45}
+.vol-cmd{font-family:var(--mono);font-size:.72rem;color:var(--green);background:rgba(48,232,138,.06);border:1px solid rgba(48,232,138,.15);border-radius:6px;padding:.35rem .65rem;display:block;margin:.25rem 0}
+.priority-badge{font-size:.6rem;font-weight:700;padding:.15rem .45rem;border-radius:10px;display:inline-block;margin-left:.4rem;vertical-align:middle}
+.p-urgent{background:rgba(255,64,96,.15);color:var(--red)}
+.p-high{background:rgba(240,136,62,.15);color:var(--orange)}
+.p-medium{background:rgba(0,229,204,.1);color:var(--cyan)}
+
+</style>
+<style>
+.back-top{position:fixed;bottom:1.5rem;right:1.5rem;width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--cyan);font-size:1.1rem;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:200;transition:.2s}
+.back-top:hover{background:rgba(0,229,204,.12);border-color:var(--cyan)}
+.back-top.visible{display:flex}
+</style>
+</head>
+<body>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">ACQUISITION & OUTILS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Acquisition, Méthodes & Outils</span>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">RAM Forensique</span>
+  </div>
+</div>
+
+<div class="page">
+  <div class="header">
+    <div class="badge">🧠 Mémoire Volatile</div>
+    <h1>RAM Forensique</h1>
+  </div>
+
+  <div class="info">
+    ℹ️ La RAM est le support forensique le plus volatile — toutes les données disparaissent à l'extinction. Elle contient des artefacts impossibles à trouver ailleurs : clés de chiffrement, processus actifs, connexions réseau, malwares fileless, mots de passe en clair.
+  </div>
+
+  <div class="sec-title">Ordre de volatilité — RFC 3227</div>
+  <p>Collecter du plus volatile au moins volatile. Ne jamais inverser cet ordre.</p>
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1.25rem">
+    <table class="tbl">
+      <tr><th>#</th><th>Source</th><th>Volatilité</th><th>Exemples</th></tr>
+      <tr><td style="color:var(--red);font-weight:700">1</td><td><strong>Registres CPU</strong></td><td><span class="priority-badge p-urgent">secondes</span></td><td>Processus actifs, threads</td></tr>
+      <tr><td style="color:var(--red);font-weight:700">2</td><td><strong>Cache CPU L1/L2</strong></td><td><span class="priority-badge p-urgent">secondes</span></td><td>Instructions récentes</td></tr>
+      <tr><td style="color:var(--orange);font-weight:700">3</td><td><strong>RAM</strong></td><td><span class="priority-badge p-high">minutes</span></td><td>Clés BitLocker, malwares, sessions</td></tr>
+      <tr><td style="color:var(--orange);font-weight:700">4</td><td><strong>État réseau</strong></td><td><span class="priority-badge p-high">minutes</span></td><td>Connexions TCP établies</td></tr>
+      <tr><td style="color:var(--cyan);font-weight:700">5</td><td><strong>Processus en cours</strong></td><td><span class="priority-badge p-medium">variable</span></td><td>PID, handles, DLLs chargées</td></tr>
+      <tr><td style="color:var(--green);font-weight:700">6</td><td><strong>Disque dur</strong></td><td style="color:var(--green)">persistant</td><td>Fichiers, registre, logs</td></tr>
+      <tr><td style="color:var(--green);font-weight:700">7</td><td><strong>Sauvegardes / journaux</strong></td><td style="color:var(--green)">persistant</td><td>SIEM, backup, cloud logs</td></tr>
+    </table>
+  </div>
+
+  <div class="sec-title">Outils d'acquisition RAM</div>
+  <div class="ram-grid">
+    <div class="tool-card card-cyan">
+      <div class="tool-name">WinPmem <span style="font-size:.65rem;color:var(--muted)">Windows</span></div>
+      <code class="tool-cmd">winpmem.exe memdump.raw</code>
+      <div class="tool-note">Outil open-source d'Rekall. Produit un dump brut (.raw) ou un AFF4. Fonctionne depuis Windows XP jusqu'à Windows 11. Recommandé par SANS.</div>
+    </div>
+    <div class="tool-card card-cyan">
+      <div class="tool-name">DumpIt <span style="font-size:.65rem;color:var(--muted)">Windows</span></div>
+      <code class="tool-cmd">DumpIt.exe /output memdump.raw</code>
+      <div class="tool-note">Un seul exécutable, interface minimale. Écrit le dump dans le répertoire courant. Très utilisé en intervention d'urgence.</div>
+    </div>
+    <div class="tool-card card-green">
+      <div class="tool-name">LiME <span style="font-size:.65rem;color:var(--muted)">Linux — kernel module</span></div>
+      <code class="tool-cmd">insmod lime.ko "path=/mnt/usb/mem.lime format=lime"</code>
+      <div class="tool-note">Linux Memory Extractor. Chargé comme module kernel. Format LiME ou raw. Peut exporter via réseau (path=tcp:4444). Indispensable sur Linux/Android.</div>
+    </div>
+    <div class="tool-card card-blue">
+      <div class="tool-name">osxpmem <span style="font-size:.65rem;color:var(--muted)">macOS</span></div>
+      <code class="tool-cmd">sudo osxpmem memdump.aff4</code>
+      <div class="tool-note">macOS impose des restrictions kernel. SIP doit être désactivé ou l'outil signé. Alternativement : Cellebrite UFED pour Mac saisi verrouillé.</div>
+    </div>
+    <div class="tool-card card-purple">
+      <div class="tool-name">Magnet RAM Capture <span style="font-size:.65rem;color:var(--muted)">Windows · Gratuit</span></div>
+      <code class="tool-cmd">MRC.exe</code>
+      <div class="tool-note">Interface graphique simple. Capture la RAM physique et le fichier de page. Format brut + compression optionnelle. Très utilisé par les forces de l'ordre.</div>
+    </div>
+    <div class="tool-card card-gold">
+      <div class="tool-name">Belkasoft RAM Capturer <span style="font-size:.65rem;color:var(--muted)">Windows</span></div>
+      <code class="tool-cmd">RamCapture64.exe</code>
+      <div class="tool-note">Capture même sur systèmes protégés (ELAM/Early Launch). Format .mem. Intégration directe avec Belkasoft Evidence Center.</div>
+    </div>
+  </div>
+
+  <div class="sec-title">Ce que la RAM contient — Artefacts clés</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.65rem;margin-bottom:1.25rem">
+    <div class="card card-red"><div class="ct">🔑 Clés de chiffrement</div>
+      <p>Clés BitLocker VMK (Volume Master Key), clés TrueCrypt/VeraCrypt, clés de session TLS, clés PGP — toutes présentes en RAM tant que la session est active.</p>
+    </div>
+    <div class="card card-orange"><div class="ct">🦠 Malwares fileless</div>
+      <p>Malwares qui ne s'écrivent jamais sur disque (PowerShell Empire, Cobalt Strike). Invisibles à l'analyse disque — RAM uniquement.</p>
+    </div>
+    <div class="card card-cyan"><div class="ct">🌐 Connexions réseau</div>
+      <p>Toutes les connexions TCP/UDP actives avec IPs, ports et processus associés — même après que l'attaquant a fermé sa session.</p>
+    </div>
+    <div class="card card-blue"><div class="ct">👤 Sessions & credentials</div>
+      <p>Hashes NTLM, tickets Kerberos, mots de passe en clair (XP/Vista), tokens d'accès, secrets LSA — extractibles avec Mimikatz.</p>
+    </div>
+    <div class="card card-green"><div class="ct">📋 Processus & DLLs</div>
+      <p>Processus masqués par rootkits (détection par comparaison PsList vs PsScan), DLLs injectées, handles ouverts.</p>
+    </div>
+    <div class="card card-purple"><div class="ct">📄 Données en transit</div>
+      <p>Contenu des pages web HTTPS, pièces jointes email avant chiffrement, texte de documents Word ouverts.</p>
+    </div>
+  </div>
+
+  <div class="sec-title">Analyse avec Volatility 3</div>
+  <div class="info" style="margin-bottom:.75rem">
+    Volatility est le standard forensique RAM. La v3 (Python) est plus rapide que v2. Profils remplacés par les Symbol Tables (ISF).
+  </div>
+
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;margin-bottom:1.25rem">
+    <div style="font-size:.7rem;color:var(--dim);margin-bottom:.5rem">COMMANDES ESSENTIELLES — Volatility 3</div>
+    <code class="vol-cmd">python3 vol.py -f memdump.raw windows.pslist          # Liste des processus (PEB)</code>
+    <code class="vol-cmd">python3 vol.py -f memdump.raw windows.psscan          # Scan brut MFT (détecte rootkits)</code>
+    <code class="vol-cmd">python3 vol.py -f memdump.raw windows.cmdline         # Arguments ligne de commande</code>
+    <code class="vol-cmd">python3 vol.py -f memdump.raw windows.netscan         # Connexions réseau (actives+fermées)</code>
+    <code class="vol-cmd">python3 vol.py -f memdump.raw windows.malfind         # Injection de code (rwx regions)</code>
+    <code class="vol-cmd">python3 vol.py -f memdump.raw windows.dlllist          # DLLs chargées par processus</code>
+    <code class="vol-cmd">python3 vol.py -f memdump.raw windows.hashdump        # Hashes NTLM (SAM)</code>
+    <code class="vol-cmd">python3 vol.py -f memdump.raw windows.cachedump       # Credentials cachés</code>
+    <code class="vol-cmd">python3 vol.py -f memdump.raw windows.lsadump         # Secrets LSA</code>
+    <code class="vol-cmd">python3 vol.py -f memdump.raw windows.registry.hivelist # Registre en RAM</code>
+    <code class="vol-cmd">python3 vol.py -f memdump.raw bitlocker               # Clé VMK BitLocker</code>
+  </div>
+
+  <div class="sec-title">Cas particulier — BitLocker & FileVault</div>
+  <div class="card card-red" style="margin-bottom:1.25rem">
+    <div class="ct">⚠️ Procédure si chiffrement actif</div>
+    <p style="margin-bottom:.5rem"><strong>BitLocker (Windows) :</strong> Si la session est déverrouillée, la VMK est en RAM. Capturer avec WinPmem puis extraire avec <code>python3 vol.py bitlocker</code> ou Elcomsoft Forensic Disk Decryptor. Ensuite monter le volume avec la VMK avant extinction.</p>
+    <p><strong>FileVault (macOS) :</strong> Si la session est ouverte, clé en RAM. Utiliser osxpmem + Volafox. Sinon demander la clé de récupération iCloud au prestataire cloud (via MLAT si nécessaire).</p>
+  </div>
+
+  <div class="sec-title">Intégrité du dump RAM</div>
+  <p>Contrairement au disque, un dump RAM <strong>ne peut pas être parfaitement identique à l'original</strong> — la RAM évolue pendant la capture (processus actifs continuent). C'est forensiquement acceptable et documenté. L'hash MD5/SHA-256 du fichier dump suffit à prouver que le fichier n'a pas été altéré <em>après</em> la capture.</p>
+  <div class="formula">Hash(dump_après_capture) == Hash(dump_à_l'analyse) → intégrité prouvée</div>
+
+
+<div class="prereq-block">
+<div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="acquisition.html" class="prereq-pill">📖 Acquisition</a><a href="volatilite.html" class="prereq-pill">📖 Volatility & RAM</a></div>
+<div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html" class="tp-pill">🧪 🚨 Incident Response</a><a href="../tp.html" class="tp-pill">🧪 🔑 Hash & Intégrité</a></div>
+<div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="volatilite.html" class="related-pill">🔗 Volatility & RAM</a><a href="acquisition.html" class="related-pill">🔗 Acquisition</a><a href="windows.html" class="related-pill">🔗 Artefacts Windows</a></div>
+</div>
+
+  <div class="alert">
+    ⚖️ <strong>Examen CAS-IN</strong> — Cette fiche couvre des notions évaluées à l'examen.
+    Maîtrisez les procédures, les articles de loi et les outils cités.
+  </div>
+</div>
+
+<div class="footer">CAS-IN · Forensique Numérique · RAM Forensique · 2025</div>
+
+<script>
+(function(){
+  var btn = document.getElementById('back-top');
+  if(btn) window.addEventListener('scroll', function(){
+    btn.classList.toggle('visible', window.scrollY > 300);
+  });
+})();
+</script>
+</body>
+</html>
