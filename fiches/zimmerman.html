@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suite Zimmerman — CAS-IN Forensique</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+
+<nav class="tn-nav">
+  <a class="tn-back" href="index.html">← Fiches</a>
+  <span class="tn-title">Suite Zimmerman</span>
+  <a class="tn-quiz" href="../quiz.html">💊 Quiz →</a>
+</nav>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <span class="fs-badge">🗝</span>
+    <div>
+      <h1 style="font-family:var(--sans);font-size:1.8rem;font-weight:800;letter-spacing:-.5px;margin-bottom:.35rem">
+        Suite Eric Zimmerman
+      </h1>
+      <div class="header-meta">
+        <span class="tag tag-green">Gratuit · Open Source</span>
+        <span class="tag tag-cyan">CLI</span>
+        <span class="tag tag-purple">Artefacts Windows</span>
+        <span class="tag tag-gold">Standard DFIR international</span>
+      </div>
+      <p class="meta" style="margin-top:.5rem;max-width:680px;line-height:1.5">
+        La boîte à outils forensique de référence pour les <strong>artefacts Windows</strong> :
+        Prefetch, $MFT, fichiers LNK, ShellBags, journaux d'événements, Amcache. Des outils
+        <span class="cyan">mono-objectifs</span>, chirurgicaux, en ligne de commande, fiables et reproductibles
+        — conçus pour transformer une hypothèse en preuve.
+      </p>
+    </div>
+  </div>
+
+  <!-- BREADCRUMB -->
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-outilsdfir">Outils DFIR</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Suite Zimmerman</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~14 min</span>
+  </div>
+
+  <!-- PREREQ BLOCK -->
+  <div class="prereq-block">
+    <div class="prereq-row">
+      <span class="prereq-label">Prérequis</span>
+      <a class="prereq-pill" href="acquisition.html">📖 Acquisition</a>
+      <a class="prereq-pill" href="windows.html">📖 Artefacts Windows</a>
+      <a class="prereq-pill" href="registre_windows.html">📖 Registre Windows</a>
+      <a class="prereq-pill" href="ntfs.html">📖 NTFS</a>
+    </div>
+    <div class="prereq-row">
+      <span class="prereq-label">Pratiquer</span>
+      <a class="tp-pill" href="../tp.html">🧪 Prefetch triage</a>
+      <a class="tp-pill" href="../tp.html">🧪 $MFT carving</a>
+      <a class="tp-pill" href="../tp.html">🧪 Event IDs 4624/4688</a>
+    </div>
+    <div class="prereq-row">
+      <span class="prereq-label">Voir aussi</span>
+      <a class="related-pill" href="outils.html">🔗 X-Ways &amp; WinHex</a>
+      <a class="related-pill" href="logs_windows.html">🔗 Logs Windows</a>
+      <a class="related-pill" href="timeline.html">🔗 Timeline</a>
+      <a class="related-pill" href="anti_forensique.html">🔗 Anti-forensique</a>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <div class="toc-title">Sommaire</div>
+    <ol>
+      <li><a href="#philosophie">Philosophie — outils mono-objectifs</a></li>
+      <li><a href="#suite">Vue d'ensemble de la suite</a></li>
+      <li><a href="#pecmd">PECmd — Prefetch</a></li>
+      <li><a href="#prefetch">Concept — le fichier Prefetch</a></li>
+      <li><a href="#pecmd-usage">PECmd — commandes &amp; sorties</a></li>
+      <li><a href="#lecmd">LECmd — fichiers LNK</a></li>
+      <li><a href="#mftecmd">MFTECmd — la $MFT</a></li>
+      <li><a href="#evtxecmd">EvtxECmd — journaux .evtx</a></li>
+      <li><a href="#shellbags">ShellBags Explorer</a></li>
+      <li><a href="#amcache">AmcacheParser</a></li>
+      <li><a href="#timeline-exp">Timeline Explorer</a></li>
+      <li><a href="#workflow">Workflow forensique type</a></li>
+      <li><a href="#bonnes-pratiques">Bonnes pratiques</a></li>
+    </ol>
+  </div>
+
+  <!-- PHILOSOPHIE -->
+  <div class="section" id="philosophie">
+    <div class="section-title">① Philosophie — outils mono-objectifs</div>
+    <p class="meta" style="margin-bottom:.75rem">Chaque outil fait <em>une</em> chose — et la fait très bien.</p>
+
+    <div class="card card-purple">
+      <div class="card-title">🎯 Un outil, un artefact</div>
+      <p>Contrairement à des suites généralistes (X-Ways, Autopsy) qui parsent « tout » avec des heuristiques,
+      les outils Zimmerman sont <strong>spécialisés par artefact</strong>. PECmd ne fait que du Prefetch.
+      MFTECmd ne fait que la $MFT. Cette spécialisation garantit :</p>
+      <ul style="margin-top:.3rem">
+        <li><strong class="green">Exhaustivité</strong> — chaque champ du format est extrait et documenté</li>
+        <li><strong class="cyan">Fiabilité</strong> — code testé intensivement par la communauté DFIR</li>
+        <li><strong class="gold">Reproductibilité</strong> — commandes CLI auditables, sorties CSV/JSON standardisées</li>
+        <li><strong class="orange">Rapidité</strong> — pas de surcouche, traitement direct du format binaire</li>
+      </ul>
+    </div>
+
+    <div class="info" style="margin-top:.75rem">
+      ⚖️ <strong>Valeur judiciaire.</strong> En audience, dire « <em>Analyse réalisée avec PECmd, outil
+      reconnu de la communauté forensique internationale</em> » est beaucoup plus solide que « <em>Le logiciel
+      a indiqué que…</em> ». Les outils Zimmerman sont <strong>fréquemment cités dans les rapports d'expertise</strong>.
+    </div>
+
+    <div class="tip">
+      💡 <strong>X-Ways vs Zimmerman — complémentarité.</strong>
+      X-Ways donne la <strong>vision globale</strong>, les outils Zimmerman apportent la <strong>précision
+      chirurgicale</strong> sur chaque artefact Windows. Workflow type : X-Ways pour extraire les artefacts →
+      outils Zimmerman pour les parser → Timeline Explorer pour corréler.
+    </div>
+  </div>
+
+  <!-- SUITE -->
+  <div class="section" id="suite">
+    <div class="section-title">② Vue d'ensemble de la suite</div>
+    <p class="meta" style="margin-bottom:.75rem">Sept outils, sept artefacts — la couverture quasi-complète des traces Windows.</p>
+
+    <table class="tbl">
+      <thead>
+        <tr><th>Outil</th><th>Artefact</th><th>Preuve apportée</th><th>Sortie</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong class="green">PECmd</strong></td><td>Prefetch <span class="hex">.pf</span></td><td>Exécution d'un programme (dates, compteur, DLL)</td><td class="mono">CSV / JSON</td></tr>
+        <tr><td><strong class="cyan">LECmd</strong></td><td>Raccourcis <span class="hex">.lnk</span></td><td>Fichier récemment ouvert, chemin cible, volume</td><td class="mono">CSV / JSON</td></tr>
+        <tr><td><strong class="purple">MFTECmd</strong></td><td><span class="hex">$MFT</span> + <span class="hex">$UsnJrnl</span></td><td>Structure NTFS · timestamps · supprimés</td><td class="mono">CSV</td></tr>
+        <tr><td><strong class="gold">EvtxECmd</strong></td><td>Journaux <span class="hex">.evtx</span></td><td>Connexions, services, erreurs · Event IDs parsés</td><td class="mono">CSV / JSON / XML</td></tr>
+        <tr><td><strong class="red">ShellBags Expl.</strong></td><td><span class="hex">NTUSER.DAT</span> + <span class="hex">USRCLASS.DAT</span></td><td>Dossiers visités (même supprimés)</td><td class="mono">GUI + CSV</td></tr>
+        <tr><td><strong class="blue">AmcacheParser</strong></td><td><span class="hex">Amcache.hve</span></td><td>SHA-1 de tous les exécutables connus</td><td class="mono">CSV</td></tr>
+        <tr><td><strong class="orange">Timeline Expl.</strong></td><td>CSV issus des outils ci-dessus</td><td>Visualisation chronologique unifiée · filtres</td><td class="mono">GUI interactive</td></tr>
+      </tbody>
+    </table>
+
+    <div class="info" style="margin-top:.75rem">
+      📥 <strong>Téléchargement.</strong> Tous les outils sont disponibles sur le site officiel d'Eric Zimmerman :
+      <a href="https://ericzimmerman.github.io/" target="_blank" rel="noopener" style="color:var(--cyan)">ericzimmerman.github.io</a>.
+      <strong>Exécutables autonomes</strong> — aucune installation, aucun droit administrateur. Extraire et lancer.
+    </div>
+  </div>
+
+  <!-- PECmd -->
+  <div class="section" id="pecmd">
+    <div class="section-title">③ PECmd — analyse des fichiers Prefetch</div>
+    <p class="meta" style="margin-bottom:.75rem">L'outil de référence pour prouver une exécution de programme sur Windows.</p>
+
+    <div class="card card-green">
+      <div class="card-title">⚡ PECmd — Prefetch Command</div>
+      <p>Spécialisé dans l'analyse des fichiers Prefetch <span class="hex">.pf</span> générés par Windows.
+      Contrairement à un outil généraliste comme X-Ways qui identifie la <em>présence</em> d'un
+      <span class="hex">.pf</span>, PECmd permet de <strong>comprendre précisément ce que Windows a
+      enregistré</strong> sur l'exécution d'un programme.</p>
+    </div>
+
+    <div class="card card-cyan" style="margin-top:.75rem">
+      <div class="card-title">🎯 Pourquoi utiliser PECmd ?</div>
+      <p style="margin-bottom:.3rem">Les fichiers Prefetch sont une <strong class="green">preuve d'exécution</strong>.
+      Un <span class="hex">.pf</span> permet de démontrer :</p>
+      <ul>
+        <li>qu'un programme a été <strong>exécuté</strong> sur le système</li>
+        <li><strong>combien de fois</strong> il l'a été</li>
+        <li><strong>à quelles dates</strong> approximatives (jusqu'à 8 timestamps)</li>
+        <li>quels <strong>fichiers et DLL</strong> ont été chargés au démarrage</li>
+      </ul>
+      <p style="margin-top:.4rem">Dans les enquêtes <strong class="red">malware, intrusion, exécution de scripts,
+      usage d'outils d'effacement</strong>, le Prefetch est un artefact clé.</p>
+    </div>
+  </div>
+
+  <!-- PREFETCH CONCEPT -->
+  <div class="section" id="prefetch">
+    <div class="section-title">④ Concept clé — le fichier Prefetch</div>
+
+    <div class="g2">
+      <div class="card card-cyan">
+        <div class="card-title">💾 Qu'est-ce qu'un Prefetch ?</div>
+        <p>Windows crée un fichier <span class="hex">.pf</span> lors de l'exécution d'un programme, pour
+        <strong>accélérer ses prochains lancements</strong>.</p>
+        <p style="margin-top:.3rem"><strong>Localisation :</strong></p>
+        <pre class="formula" style="line-height:1.4">C:\Windows\Prefetch\</pre>
+        <p style="margin-top:.3rem"><strong>Nommage :</strong> <span class="hex">NOM.EXE-HASH.pf</span>
+        (le hash dépend du chemin d'exécution).</p>
+      </div>
+      <div class="card card-gold">
+        <div class="card-title">📦 Ce que contient un Prefetch</div>
+        <ul>
+          <li>Nom de l'exécutable</li>
+          <li>Nombre d'exécutions (compteur)</li>
+          <li>Jusqu'à <strong class="cyan">8 timestamps</strong> d'exécution</li>
+          <li>Liste complète des fichiers/DLL chargés</li>
+          <li>Chemin d'origine de l'exécutable</li>
+          <li>Version du format Prefetch (dépend de Windows)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="alert" style="margin-top:.75rem">
+      ⚖️ <strong>Valeur probante.</strong> La présence d'un Prefetch <strong>prouve une exécution</strong>, même si :
+      <ul style="margin-top:.3rem;padding-left:1.5rem">
+        <li>le programme a été <strong>supprimé</strong></li>
+        <li>l'exécutable <strong>n'existe plus</strong> sur le disque</li>
+        <li>l'utilisateur <strong>nie</strong> l'avoir lancé</li>
+      </ul>
+    </div>
+
+    <div class="tip">
+      ⚠️ <strong>Limite importante.</strong> L'<strong>absence</strong> d'un Prefetch ne prouve
+      <strong>pas</strong> l'absence d'exécution. Le Prefetch peut être :
+      <ul style="margin-top:.3rem;padding-left:1.5rem">
+        <li>désactivé via <span class="hex">EnablePrefetcher</span> (Windows Server, certains SSD)</li>
+        <li>nettoyé volontairement par un outil anti-forensique</li>
+        <li>écrasé par rotation (limite de 1024 fichiers depuis Win8+)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- PECmd USAGE -->
+  <div class="section" id="pecmd-usage">
+    <div class="section-title">⑤ PECmd — commandes &amp; sorties</div>
+    <p class="meta" style="margin-bottom:.75rem">Ligne de commande uniquement — traçabilité, reproductibilité, auditabilité.</p>
+
+    <div class="card card-green">
+      <div class="card-title">📂 Analyse d'un dossier complet</div>
+      <p>Cas standard : analyser tout le dossier Prefetch d'un système.</p>
+      <pre class="formula" style="line-height:1.4"><span class="cyan">PECmd.exe</span> <span class="gold">-d</span> C:\Windows\Prefetch <span class="gold">--csv</span> C:\Export\prefetch.csv</pre>
+      <table class="tbl" style="margin-top:.4rem">
+        <tbody>
+          <tr><td class="mono gold">-d</td><td>dossier contenant les fichiers <span class="hex">.pf</span></td></tr>
+          <tr><td class="mono gold">--csv</td><td>export des résultats au format CSV</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card card-cyan" style="margin-top:.75rem">
+      <div class="card-title">🎯 Analyse d'un fichier unique</div>
+      <p>Cas ciblé : un exécutable suspect identifié en amont.</p>
+      <pre class="formula" style="line-height:1.4"><span class="cyan">PECmd.exe</span> <span class="gold">-f</span> NOTEPAD.EXE-3A4F2C1B.pf</pre>
+      <p style="margin-top:.3rem">Usage typique :</p>
+      <ul>
+        <li>vérifier l'exécution d'un outil précis</li>
+        <li>analyser un <span class="hex">.pf</span> extrait d'un échantillon malware</li>
+        <li>confirmer ou infirmer une hypothèse d'usage</li>
+      </ul>
+    </div>
+
+    <div class="card card-purple" style="margin-top:.75rem">
+      <div class="card-title">📊 Export JSON (usage avancé)</div>
+      <pre class="formula" style="line-height:1.4"><span class="cyan">PECmd.exe</span> <span class="gold">-d</span> C:\Windows\Prefetch <span class="gold">--json</span> C:\Export\</pre>
+      <p style="margin-top:.3rem">Utile pour l'intégration dans des pipelines automatisés, le traitement par scripts,
+      ou l'import dans des plateformes SIEM / Splunk / Elastic.</p>
+    </div>
+
+    <div class="card card-gold" style="margin-top:.75rem">
+      <div class="card-title">📋 Informations extraites (colonnes CSV principales)</div>
+      <ul>
+        <li><strong class="cyan">ExecutableName</strong> — nom de l'exécutable</li>
+        <li><strong class="cyan">RunCount</strong> — nombre d'exécutions enregistrées</li>
+        <li><strong class="cyan">SourceCreated / SourceModified</strong> — timestamps du <span class="hex">.pf</span> lui-même</li>
+        <li><strong class="cyan">LastRun + RunN (1..7)</strong> — jusqu'à 8 timestamps d'exécution</li>
+        <li><strong class="cyan">FilesLoaded</strong> — liste des fichiers et DLL chargés</li>
+        <li><strong class="cyan">VolumeName / VolumeSerialNumber</strong> — identification du volume source</li>
+        <li><strong class="cyan">Hashs internes</strong> du format Prefetch</li>
+        <li><strong class="cyan">Version</strong> du format Prefetch (indique la version Windows)</li>
+      </ul>
+      <p style="margin-top:.4rem"><em>Ces données sont beaucoup plus complètes que celles affichées par un outil généraliste.</em></p>
+    </div>
+
+    <div class="info" style="margin-top:.75rem">
+      ✅ <strong>Ce que PECmd permet d'affirmer.</strong>
+      « Le programme X a été exécuté sur ce système » · « Il a été exécuté au moins N fois » ·
+      « La dernière exécution a eu lieu à une date compatible avec les faits ». Mais en forensique,
+      <strong>on ne s'arrête jamais là</strong>. Les résultats PECmd se corrèlent avec <em>UserAssist</em>
+      (registre), <em>Jump Lists</em>, <em>ShellBags</em>, <em>journaux Windows</em>, artefacts <em>$MFT</em>.
+    </div>
+  </div>
+
+  <!-- LECmd -->
+  <div class="section" id="lecmd">
+    <div class="section-title">⑥ LECmd — parsing des fichiers LNK</div>
+
+    <div class="card card-cyan">
+      <div class="card-title">🔗 LECmd — Lnk Explorer Command</div>
+      <p>Les fichiers <span class="hex">.lnk</span> sont créés automatiquement par Windows dès qu'un fichier
+      est ouvert — ils contiennent le <strong>chemin absolu cible</strong>, le <strong>numéro de série du
+      volume</strong> d'origine, les MAC times cibles, et même l'adresse MAC de la machine.</p>
+    </div>
+
+    <div class="card card-blue" style="margin-top:.75rem">
+      <div class="card-title">💻 Commande type</div>
+      <pre class="formula" style="line-height:1.4"><span class="cyan">LECmd.exe</span> <span class="gold">-d</span> "%AppData%\Microsoft\Windows\Recent" <span class="gold">--csv</span> C:\Export\</pre>
+      <p style="margin-top:.3rem">Emplacements clés à analyser :</p>
+      <ul>
+        <li><span class="hex">%AppData%\Microsoft\Windows\Recent\</span> — fichiers récemment ouverts</li>
+        <li><span class="hex">%AppData%\Microsoft\Office\Recent\</span> — documents Office récents</li>
+        <li>Bureau et menu Démarrer</li>
+      </ul>
+    </div>
+
+    <div class="card card-gold" style="margin-top:.75rem">
+      <div class="card-title">🎯 Preuves typiques extraites d'un .lnk</div>
+      <ul>
+        <li><strong class="cyan">Chemin cible complet</strong> — même si le fichier a été supprimé ou volume absent</li>
+        <li><strong class="cyan">Volume d'origine</strong> — numéro de série, label, type (fixe/amovible)</li>
+        <li><strong class="red">Preuve d'utilisation d'une clé USB</strong> — via numéro de série du volume amovible</li>
+        <li><strong class="cyan">MAC times cibles</strong> — dates du fichier au moment de la création du raccourci</li>
+        <li><strong class="cyan">NetBIOS name + MAC address</strong> dans le TrackerDataBlock</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- MFTECmd -->
+  <div class="section" id="mftecmd">
+    <div class="section-title">⑦ MFTECmd — parsing de la $MFT NTFS</div>
+
+    <div class="card card-purple">
+      <div class="card-title">🗂 MFTECmd — Master File Table ECmd</div>
+      <p>Chaque fichier, chaque dossier, chaque attribut NTFS a une entrée dans la <span class="hex">$MFT</span>.
+      MFTECmd parse cette table binaire (souvent plusieurs Go) et produit un CSV exploitable contenant
+      <strong>tous les fichiers — existants ET supprimés</strong>, avec timestamps complets.</p>
+    </div>
+
+    <div class="card card-blue" style="margin-top:.75rem">
+      <div class="card-title">💻 Commandes clés</div>
+      <pre class="formula" style="line-height:1.5"><span class="dim">// Parser la $MFT principale</span>
+<span class="cyan">MFTECmd.exe</span> <span class="gold">-f</span> C:\Extract\$MFT <span class="gold">--csv</span> C:\Export\
+
+<span class="dim">// Parser $UsnJrnl (journal NTFS des changements)</span>
+<span class="cyan">MFTECmd.exe</span> <span class="gold">-f</span> C:\Extract\$J <span class="gold">--csv</span> C:\Export\
+
+<span class="dim">// Parser $Boot et $LogFile également</span>
+<span class="cyan">MFTECmd.exe</span> <span class="gold">-f</span> C:\Extract\$Boot <span class="gold">--csv</span> C:\Export\</pre>
+    </div>
+
+    <div class="card card-gold" style="margin-top:.75rem">
+      <div class="card-title">📊 Ce que révèle le CSV</div>
+      <ul>
+        <li>Tous les fichiers, avec leur chemin reconstitué</li>
+        <li>Les <strong class="cyan">4 timestamps</strong> de chaque attribut <span class="hex">$STANDARD_INFORMATION</span>
+        et <span class="hex">$FILE_NAME</span> — détection de <em>timestomping</em></li>
+        <li>Fichiers supprimés (entrée MFT encore présente, bit occupé à 0)</li>
+        <li>ADS (Alternate Data Streams) — données cachées derrière un fichier</li>
+        <li>Pistes de run list pour reconstruire les clusters</li>
+      </ul>
+    </div>
+
+    <div class="info" style="margin-top:.75rem">
+      🔍 <strong>Détection de timestomping.</strong> Comparer les timestamps <span class="hex">$SI</span>
+      (modifiables par l'utilisateur) avec <span class="hex">$FN</span> (modifiables uniquement par le kernel)
+      révèle une manipulation. MFTECmd expose les deux colonnes — si <span class="hex">$SI.Created</span> est
+      <em>antérieure</em> à <span class="hex">$FN.Created</span>, l'horodatage a été falsifié.
+    </div>
+  </div>
+
+  <!-- EvtxECmd -->
+  <div class="section" id="evtxecmd">
+    <div class="section-title">⑧ EvtxECmd — journaux d'événements Windows</div>
+
+    <div class="card card-gold">
+      <div class="card-title">📋 EvtxECmd — Windows Event Log ECmd</div>
+      <p>Les journaux <span class="hex">.evtx</span>
+      (<span class="hex">C:\Windows\System32\winevt\Logs\</span>) contiennent des milliers d'événements XML
+      imbriqués. EvtxECmd les parse en CSV linéaire, avec <strong class="cyan">plus de 1000 « maps »</strong>
+      qui enrichissent les Event IDs courants (logons, exécutions, services, PowerShell…).</p>
+    </div>
+
+    <div class="card card-cyan" style="margin-top:.75rem">
+      <div class="card-title">💻 Commande type</div>
+      <pre class="formula" style="line-height:1.5"><span class="cyan">EvtxECmd.exe</span> <span class="gold">-d</span> C:\Windows\System32\winevt\Logs <span class="gold">--csv</span> C:\Export\
+
+<span class="dim">// Avec filtre sur une plage temporelle</span>
+<span class="cyan">EvtxECmd.exe</span> <span class="gold">-f</span> Security.evtx <span class="gold">--csv</span> C:\Export\ <span class="gold">--sd</span> "2024-10-01" <span class="gold">--ed</span> "2024-10-07"</pre>
+    </div>
+
+    <div class="card card-red" style="margin-top:.75rem">
+      <div class="card-title">🎯 Event IDs clés à surveiller</div>
+      <table class="tbl">
+        <thead><tr><th>Event ID</th><th>Signification</th></tr></thead>
+        <tbody>
+          <tr><td><span class="hex h-cyan">4624</span></td><td>Connexion réussie (Logon Type : 2=local, 3=réseau, 10=RDP)</td></tr>
+          <tr><td><span class="hex h-red">4625</span></td><td>Échec de connexion</td></tr>
+          <tr><td><span class="hex h-gold">4688</span></td><td>Création de processus (si audit activé)</td></tr>
+          <tr><td><span class="hex h-orange">4720</span></td><td>Création de compte utilisateur</td></tr>
+          <tr><td><span class="hex h-purple">7045</span></td><td>Installation d'un nouveau service</td></tr>
+          <tr><td><span class="hex h-red">1102</span></td><td>Journal Security effacé (anti-forensique)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ShellBags -->
+  <div class="section" id="shellbags">
+    <div class="section-title">⑨ ShellBags Explorer — dossiers visités</div>
+
+    <div class="card card-red">
+      <div class="card-title">📁 ShellBags Explorer (SBE) — GUI</div>
+      <p>Windows enregistre dans le registre (<span class="hex">NTUSER.DAT</span> et
+      <span class="hex">USRCLASS.DAT</span>) la <strong>liste des dossiers visités</strong> dans l'explorateur
+      de fichiers — y compris ceux qui ont été supprimés, ceux sur des volumes amovibles absents, et les
+      dossiers réseau.</p>
+    </div>
+
+    <div class="card card-cyan" style="margin-top:.75rem">
+      <div class="card-title">🖥 Utilisation</div>
+      <p>Interface graphique (pas de CLI). Charger les ruches :</p>
+      <ol style="padding-left:1.2rem">
+        <li><span class="hex">File → Load hive</span></li>
+        <li>Sélectionner <span class="hex">NTUSER.DAT</span> (généralement <span class="hex">C:\Users\&lt;user&gt;\NTUSER.DAT</span>)</li>
+        <li>Ajouter <span class="hex">USRCLASS.DAT</span> (<span class="hex">AppData\Local\Microsoft\Windows\UsrClass.dat</span>)</li>
+        <li>Explorer l'arborescence reconstituée dans le panneau principal</li>
+        <li>Exporter : <span class="hex">File → Export → All bags → CSV</span></li>
+      </ol>
+    </div>
+
+    <div class="card card-gold" style="margin-top:.75rem">
+      <div class="card-title">🎯 Valeur probante</div>
+      <ul>
+        <li>Prouve qu'un utilisateur a <strong>navigué dans un dossier</strong> donné</li>
+        <li>Reconstruit les chemins de <strong class="red">clés USB</strong> explorées même une fois la clé débranchée</li>
+        <li>Révèle des dossiers <strong>supprimés depuis longtemps</strong></li>
+        <li>Timestamps d'accès (<em>first interacted</em>, <em>last interacted</em>)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Amcache -->
+  <div class="section" id="amcache">
+    <div class="section-title">⑩ AmcacheParser — tous les exécutables connus</div>
+
+    <div class="card card-blue">
+      <div class="card-title">🧬 AmcacheParser — Amcache.hve</div>
+      <p><span class="hex">Amcache.hve</span> est une ruche de registre Windows (Win8+) qui stocke des
+      informations sur <strong>chaque exécutable ayant tourné sur la machine</strong>, y compris le
+      <strong class="cyan">SHA-1 complet</strong> du binaire. L'un des artefacts les plus précieux en réponse à incident.</p>
+    </div>
+
+    <div class="card card-cyan" style="margin-top:.75rem">
+      <div class="card-title">💻 Commande type</div>
+      <pre class="formula" style="line-height:1.4"><span class="cyan">AmcacheParser.exe</span> <span class="gold">-f</span> C:\Windows\AppCompat\Programs\Amcache.hve <span class="gold">--csv</span> C:\Export\</pre>
+    </div>
+
+    <div class="card card-green" style="margin-top:.75rem">
+      <div class="card-title">🎯 Ce qu'on y trouve</div>
+      <ul>
+        <li><strong class="cyan">SHA-1</strong> de l'exécutable — à vérifier dans VirusTotal ou bases IOC</li>
+        <li>Chemin complet d'exécution</li>
+        <li>Taille, éditeur signé (s'il l'est), première exécution</li>
+        <li>Liste des pilotes, drivers, programmes installés</li>
+      </ul>
+      <p style="margin-top:.4rem"><em>Usage typique :</em> lister tous les exécutables → calculer les hashs →
+      comparer à une baseline → isoler les binaires inconnus ou malveillants.</p>
+    </div>
+  </div>
+
+  <!-- Timeline Explorer -->
+  <div class="section" id="timeline-exp">
+    <div class="section-title">⑪ Timeline Explorer — corrélation visuelle</div>
+
+    <div class="card card-orange">
+      <div class="card-title">⏱ Timeline Explorer — GUI</div>
+      <p>Tous les outils précédents produisent des CSV. Timeline Explorer est <strong>la visionneuse
+      officielle</strong> pour les ouvrir, les filtrer, les trier, les empiler — tout en restant performant
+      sur des fichiers de plusieurs millions de lignes.</p>
+    </div>
+
+    <div class="card card-gold" style="margin-top:.75rem">
+      <div class="card-title">🎛 Fonctions clés</div>
+      <ul>
+        <li>Ouverture rapide de CSV massifs (millions de lignes)</li>
+        <li>Filtres colonnes type Excel, mais instantanés</li>
+        <li>Marquage/tagging de lignes pour le rapport</li>
+        <li>Export des lignes filtrées vers un nouveau CSV</li>
+        <li>Coloration conditionnelle pour faire ressortir les anomalies</li>
+        <li>Ouverture simultanée de plusieurs CSV dans des onglets</li>
+      </ul>
+    </div>
+
+    <div class="info" style="margin-top:.75rem">
+      🔗 <strong>Corrélation multi-artefacts.</strong> Le vrai pouvoir de Timeline Explorer : charger
+      <strong>simultanément</strong> la sortie de PECmd, MFTECmd, LECmd, EvtxECmd et observer une même
+      fenêtre temporelle à travers tous les artefacts. Un processus lancé à 14:32:11 apparaîtra dans 4624
+      (logon), 4688 (création proc), Prefetch, $MFT — la corrélation élimine les faux positifs et consolide
+      la chronologie.
+    </div>
+  </div>
+
+  <!-- WORKFLOW -->
+  <div class="section" id="workflow">
+    <div class="section-title">⑫ Workflow forensique type</div>
+    <p class="meta" style="margin-bottom:.75rem">L'intervention des outils Zimmerman dans une enquête complète.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num sn">1</div>
+        <div class="step-text"><strong>Analyse disque avec X-Ways.</strong> Vue globale, identification des artefacts pertinents selon l'hypothèse d'enquête.</div>
+      </div>
+      <div class="step">
+        <div class="step-num sn">2</div>
+        <div class="step-text"><strong>Extraction des artefacts ciblés.</strong> Depuis X-Ways, extraire : dossier <span class="hex">Prefetch\</span>, <span class="hex">$MFT</span>, <span class="hex">NTUSER.DAT</span>, <span class="hex">Amcache.hve</span>, dossier <span class="hex">winevt\Logs\</span>, dossier <span class="hex">Recent\</span>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num sn">3</div>
+        <div class="step-text"><strong>Parsing avec les outils Zimmerman.</strong> PECmd sur Prefetch · MFTECmd sur $MFT · EvtxECmd sur les logs · AmcacheParser sur Amcache · LECmd sur Recent · SBE sur NTUSER/USRCLASS.</div>
+      </div>
+      <div class="step">
+        <div class="step-num sn-g">4</div>
+        <div class="step-text"><strong>Export CSV standardisé.</strong> Tous les CSV dans un même dossier <span class="hex">C:\Export\</span>. Conserver ces CSV comme <strong>pièces annexes</strong> du rapport (reproductibilité).</div>
+      </div>
+      <div class="step">
+        <div class="step-num sn">5</div>
+        <div class="step-text"><strong>Corrélation dans Timeline Explorer.</strong> Charger tous les CSV, filtrer autour de la fenêtre temporelle d'intérêt, marquer les lignes pertinentes.</div>
+      </div>
+      <div class="step">
+        <div class="step-num sn-g">6</div>
+        <div class="step-text"><strong>Construction de la chronologie finale.</strong> Export des lignes taggées vers un timeline consolidé. Intégration dans le rapport avec la commande exacte et les hashs des fichiers analysés.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BONNES PRATIQUES -->
+  <div class="section" id="bonnes-pratiques">
+    <div class="section-title">⑬ Bonnes pratiques forensiques</div>
+
+    <div class="card-grid">
+      <div class="card card-cyan">
+        <div class="card-title">💾 Toujours sur copie</div>
+        <p>Ne jamais parser les ruches ou artefacts sur un système vivant — travailler sur une copie
+        forensique (image E01/DD montée en lecture seule, ou extraction dans un dossier de travail).</p>
+      </div>
+      <div class="card card-green">
+        <div class="card-title">📝 Documenter la commande exacte</div>
+        <p>Enregistrer dans le journal d'analyse la ligne de commande complète, y compris la version de
+        l'outil (<span class="hex">-v</span> ou <span class="hex">--version</span>). Reproductibilité = validité judiciaire.</p>
+      </div>
+      <div class="card card-gold">
+        <div class="card-title">🔗 Toujours corréler</div>
+        <p>Un artefact isolé est faible en preuve. Un Prefetch + un 4688 + une entrée $MFT + un 4624 sur
+        la même fenêtre temporelle = chronologie solide.</p>
+      </div>
+      <div class="card card-red">
+        <div class="card-title">⚠️ Expliquer les limites</div>
+        <p>Prefetch désactivable · journaux écrasables · ruches verrouillées sur système vivant ·
+        timestomping possible sur $SI. L'analyste mentionne ces limites dans le rapport.</p>
+      </div>
+      <div class="card card-purple">
+        <div class="card-title">📦 Conserver les exports</div>
+        <p>Les CSV/JSON produits sont des <strong>pièces techniques</strong> du dossier. Ils doivent être
+        conservés avec leur hash et accompagner le rapport final.</p>
+      </div>
+      <div class="card card-orange">
+        <div class="card-title">🎯 Ne pas sur-interpréter</div>
+        <p>PECmd prouve une exécution — il ne prouve pas l'intention. Corréler avec UserAssist, Jump Lists,
+        logs, et le contexte factuel avant toute conclusion.</p>
+      </div>
+    </div>
+
+    <div class="info" style="margin-top:.75rem">
+      🎓 <strong>PECmd n'est pas un outil de découverte.</strong> C'est un outil de
+      <strong class="green">confirmation</strong>. Il permet à l'analyste de transformer une hypothèse en
+      preuve, de démontrer une exécution passée, de renforcer une chronologie technique. La découverte se
+      fait en amont (X-Ways, Autopsy, triage) — la confirmation par PECmd / LECmd / MFTECmd vient ensuite
+      consolider le dossier.
+    </div>
+  </div>
+
+  <!-- EXAM -->
+  <div class="section" style="margin-top:2rem">
+    <div class="section-title">⚖️ Examen CAS-IN — à retenir</div>
+    <div class="card card-purple">
+      <p style="font-size:.78rem;line-height:1.75">
+        Eric Zimmerman = <strong class="cyan">suite forensique gratuite</strong> de référence pour les artefacts Windows ·
+        tous CLI sauf SBE et Timeline Explorer (GUI) ·
+        <strong class="green">PECmd</strong> → Prefetch <span class="hex">.pf</span> → preuve d'exécution (jusqu'à 8 timestamps, RunCount, DLL) ·
+        localisation <span class="hex">C:\Windows\Prefetch\</span> ·
+        commande <span class="hex">PECmd.exe -d DOSSIER --csv EXPORT</span> ·
+        présence <span class="hex">.pf</span> = exécution prouvée, <strong class="red">absence ≠ non-exécution</strong> (désactivable) ·
+        <strong class="cyan">LECmd</strong> → <span class="hex">.lnk</span> → chemin cible + numéro de série volume USB ·
+        <strong class="purple">MFTECmd</strong> → <span class="hex">$MFT</span> + <span class="hex">$UsnJrnl</span> → timestomping via <span class="hex">$SI</span> vs <span class="hex">$FN</span> ·
+        <strong class="gold">EvtxECmd</strong> → journaux <span class="hex">.evtx</span> · IDs clés :
+        <span class="hex h-cyan">4624</span> logon · <span class="hex h-gold">4688</span> process ·
+        <span class="hex h-purple">7045</span> service · <span class="hex h-red">1102</span> log effacé ·
+        <strong class="red">ShellBags Explorer</strong> → dossiers visités (<span class="hex">NTUSER.DAT</span> + <span class="hex">USRCLASS.DAT</span>) ·
+        <strong class="blue">AmcacheParser</strong> → SHA-1 de tous les exécutables connus ·
+        <strong class="orange">Timeline Explorer</strong> → visualisation &amp; corrélation ·
+        toujours corréler plusieurs artefacts avant conclusion.
+      </p>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+    <span>Ch. 14–16 Manuel · ericzimmerman.github.io</span>
+  </div>
+
+</div>
+
+<button class="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Retour en haut">↑</button>
+<script>
+  const bt = document.querySelector('.back-top');
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 400) bt.classList.add('visible');
+    else bt.classList.remove('visible');
+  });
+</script>
+
+</body>
+</html>
