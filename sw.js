@@ -1,6 +1,6 @@
 // Service Worker — CAS-IN Investigation Numérique
 // v13 : fix opérateur (!url.origin → url.origin !==), scene.css retiré (CSS inline), URL scheme guard
-const CACHE_VERSION = 'cas-in-v14';
+const CACHE_VERSION = 'cas-in-v15';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -54,7 +54,10 @@ const STATIC_ASSETS = [
   './fiches/tor_darkweb.html',
   './fiches/volatilite.html',
   './fiches/windows.html',
-  './fiches/wireshark_pcap.html'
+  './fiches/wireshark_pcap.html',
+  './fiches/mac_times.html',
+  './fiches/pki_certificats.html',
+  './fiches/sqlite_forensique.html'
 ];
 
 // Installation : mise en cache des assets statiques
