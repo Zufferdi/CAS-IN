@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MAC Times & Artefacts Temporels — CAS-IN Forensique</title>
+<meta name="description" content="MACB timestamps · FILETIME Windows · Epoch Unix/Chrome · Timestomping · ShellBags · MFTECmd · Détection de manipulation temporelle">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+.timeline-row{display:flex;align-items:flex-start;gap:.75rem;padding:.65rem .9rem;border-bottom:1px solid var(--border);font-size:.8rem}
+.timeline-row:last-child{border-bottom:none}
+.timeline-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:.25rem}
+.tl-normal{background:var(--green)}
+.tl-suspect{background:var(--red)}
+.tl-warn{background:var(--gold)}
+.epoch-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.epoch-row{display:grid;grid-template-columns:160px 1fr 110px;align-items:center;padding:.55rem .9rem;border-bottom:1px solid var(--border);font-size:.78rem;gap:.5rem}
+.epoch-row:last-child{border-bottom:none}
+.epoch-row:hover{background:var(--surface2)}
+.epoch-name{font-weight:700}
+.epoch-formula{font-size:.72rem;color:var(--dim)}
+.epoch-tool{font-size:.68rem;color:var(--cyan);text-align:right}
+.detect-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.anomaly{background:var(--surface);border:1px solid rgba(255,64,96,.3);border-left:3px solid var(--red);border-radius:0 8px 8px 0;padding:.7rem 1rem;font-size:.8rem;margin-bottom:.5rem}
+.anomaly-title{color:var(--red);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem}
+.tool-row{display:flex;align-items:center;gap:.75rem;padding:.55rem .9rem;border-bottom:1px solid var(--border);font-size:.78rem}
+.tool-row:last-child{border-bottom:none}
+.tool-name{font-weight:700;color:var(--cyan);min-width:120px;flex-shrink:0}
+.artefact-table{width:100%;border-collapse:collapse;font-size:.76rem}
+.artefact-table th{background:var(--surface2);color:var(--dim);font-size:.63rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.5rem .75rem;text-align:left;border-bottom:1px solid var(--border)}
+.artefact-table td{padding:.5rem .75rem;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.4}
+.artefact-table tr:last-child td{border-bottom:none}
+.artefact-table tr:hover td{background:var(--surface2)}
+.macb-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.macb-cell{padding:.7rem .5rem;text-align:center;border-right:1px solid var(--border)}
+.macb-cell:last-child{border-right:none}
+.macb-letter{font-family:var(--sans);font-size:1.8rem;font-weight:800;display:block;margin-bottom:.25rem}
+.macb-label{font-size:.65rem;color:var(--dim);display:block}
+.macb-desc{font-size:.7rem;color:var(--text);margin-top:.3rem;line-height:1.4;display:block}
+@media(max-width:600px){.detect-grid{grid-template-columns:1fr}.epoch-row{grid-template-columns:1fr}}
+</style>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Aller au contenu</a>
+<nav class="tn-nav" aria-label="Navigation fiche">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">MAC TIMES & ARTEFACTS TEMPORELS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-acquisitionméthodes">Acquisition & Méthodes</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">MAC Times</span>
+    <span class="read-time-badge">⏱ ~9 min</span>
+  </div>
+</div>
+<main id="main-content">
+<div class="page">
+
+<div class="header">
+  <div class="badge" style="color:var(--gold)">⏱</div>
+  <div>
+    <div><span class="tag tag-gold">Timestamps</span> <span class="tag tag-orange">Anti-forensique</span> <span class="tag tag-cyan">NTFS · FAT</span></div>
+    <div class="meta" style="margin-top:.4rem">MACB · FILETIME · Epoch Unix · ShellBags · MFTECmd · Timestomping · Horodatage certifié TSA</div>
+  </div>
+</div>
+
+<div class="prereq-block">
+<div class="prereq-row">
+  <span class="prereq-label">Prérequis :</span>
+  <a href="ntfs.html" class="prereq-pill">📖 NTFS</a>
+  <a href="acquisition.html" class="prereq-pill">📖 Acquisition</a>
+  <a href="encodage.html" class="prereq-pill">📖 Encodage</a>
+</div>
+<div class="prereq-row">
+  <span class="prereq-label">Voir aussi :</span>
+  <a href="anti_forensique.html" class="related-pill">🔗 Anti-forensique</a>
+  <a href="timeline.html" class="related-pill">🔗 Timeline</a>
+  <a href="windows.html" class="related-pill">🔗 Artefacts Windows</a>
+</div>
+</div>
+
+<!-- MACB -->
+<div class="sec" id="macb-definition">
+<div class="sec-title">MACB — Les 4 timestamps NTFS</div>
+
+<div class="macb-grid" style="margin-bottom:.9rem">
+  <div class="macb-cell" style="background:rgba(0,229,204,.05)">
+    <span class="macb-letter" style="color:var(--cyan)">M</span>
+    <span class="macb-label">Modified</span>
+    <span class="macb-desc">Contenu du fichier modifié (écriture)</span>
+  </div>
+  <div class="macb-cell" style="background:rgba(240,192,64,.05)">
+    <span class="macb-letter" style="color:var(--gold)">A</span>
+    <span class="macb-label">Accessed</span>
+    <span class="macb-desc">Dernier accès en lecture (souvent désactivé Win Vista+)</span>
+  </div>
+  <div class="macb-cell" style="background:rgba(88,166,255,.05)">
+    <span class="macb-letter" style="color:var(--blue)">C</span>
+    <span class="macb-label">Changed</span>
+    <span class="macb-desc">Métadonnées MFT modifiées (taille, perms, attr.)</span>
+  </div>
+  <div class="macb-cell" style="background:rgba(48,232,138,.05)">
+    <span class="macb-letter" style="color:var(--green)">B</span>
+    <span class="macb-label">Born</span>
+    <span class="macb-desc">Date de création du fichier (création initiale)</span>
+  </div>
+</div>
+
+<div class="g2">
+  <div class="card card-blue">
+    <div class="ct">Deux niveaux dans NTFS</div>
+    <ul>
+      <li><strong>$STANDARD_INFORMATION</strong> — accessible via API Windows (SetFileTime). C'est ce que l'Explorateur affiche. <span style="color:var(--red)">Modifiable par timestomping.</span></li>
+      <li><strong>$FILE_NAME</strong> — mis à jour uniquement par le kernel NTFS. Résiste au timestomping classique. Clé de détection.</li>
+    </ul>
+  </div>
+  <div class="card card-gold">
+    <div class="ct">Règle d'or forensique</div>
+    <ul>
+      <li>Si <code>$SI.M</code> &lt; <code>$FN.M</code> → timestomping probable</li>
+      <li>Si date création &gt; date modification → fichier copié (la copie crée une nouvelle date de création)</li>
+      <li>Précision NTFS : <strong>100 nanosecondes</strong>. Les outils anti-forensiques arrondissent souvent à la seconde → détectable</li>
+      <li>X-Ways affiche les deux colonnes séparément</li>
+    </ul>
+  </div>
+</div>
+
+<div class="tip" style="margin-top:.75rem">
+  💡 <strong>Mnémo examen :</strong> MACB = <em>"Ma Chère Alice Bouge"</em> → <strong>M</strong>odified · <strong>A</strong>ccessed · <strong>C</strong>hanged · <strong>B</strong>orn. Sur FAT, seuls M et B (+ A tronqué à la date) existent — pas de $FILE_NAME.
+</div>
+</div>
+
+<!-- FORMATS DE TIMESTAMPS -->
+<div class="sec" id="formats-timestamps">
+<div class="sec-title">Formats d'horodatage — conversions clés</div>
+<div class="epoch-box">
+  <div class="epoch-row" style="background:var(--surface2)">
+    <span style="font-size:.63rem;font-weight:700;color:var(--dim);text-transform:uppercase">Format</span>
+    <span style="font-size:.63rem;font-weight:700;color:var(--dim);text-transform:uppercase">Référence & Formule</span>
+    <span style="font-size:.63rem;font-weight:700;color:var(--dim);text-transform:uppercase;text-align:right">Outils</span>
+  </div>
+  <div class="epoch-row">
+    <div><div class="epoch-name">FILETIME (Windows)</div><code style="color:var(--cyan)">01D9F3A2B4C5D6E0</code></div>
+    <div>64 bits · <strong>100 ns depuis 1601-01-01 UTC</strong><br><span class="epoch-formula">Epoch Unix = (FILETIME − 116444736000000000) ÷ 10000000</span></div>
+    <div class="epoch-tool">DCode<br>CyberChef<br>X-Ways Data Interpreter</div>
+  </div>
+  <div class="epoch-row">
+    <div><div class="epoch-name">Epoch Unix</div><code style="color:var(--green)">1700000000</code></div>
+    <div>32/64 bits · <strong>secondes depuis 1970-01-01 UTC</strong><br><span class="epoch-formula">Utilisé dans EXT4, macOS HFS+, logs syslog</span></div>
+    <div class="epoch-tool">date -d @EPOCH<br>DCode</div>
+  </div>
+  <div class="epoch-row">
+    <div><div class="epoch-name">Chrome / WebKit</div><code style="color:var(--orange)">13300000000000000</code></div>
+    <div><strong>microsecondes depuis 1601-01-01</strong><br><span class="epoch-formula">= FILETIME ÷ 10 (même époque, précision ×10)</span></div>
+    <div class="epoch-tool">DB Browser<br>DCode</div>
+  </div>
+  <div class="epoch-row">
+    <div><div class="epoch-name">Firefox / Mozilla</div><code style="color:var(--purple)">1700000000000000</code></div>
+    <div><strong>microsecondes depuis 1970-01-01</strong><br><span class="epoch-formula">= Epoch Unix × 1 000 000</span></div>
+    <div class="epoch-tool">DB Browser<br>DCode</div>
+  </div>
+  <div class="epoch-row">
+    <div><div class="epoch-name">Mac Absolute Time</div><code style="color:var(--blue)">720000000</code></div>
+    <div><strong>secondes depuis 2001-01-01</strong> (Apple Core Data)<br><span class="epoch-formula">Epoch Unix = Mac Abs. + 978307200</span></div>
+    <div class="epoch-tool">DCode<br>sqlite3</div>
+  </div>
+  <div class="epoch-row">
+    <div><div class="epoch-name">FAT Date/Time</div><code style="color:var(--red)">bits packed</code></div>
+    <div><strong>2 octets date + 2 octets time</strong>, précision <strong>2 secondes</strong><br><span class="epoch-formula">Année: bits 15-9 (+1980) · Mois: 8-5 · Jour: 4-0</span></div>
+    <div class="epoch-tool">X-Ways<br>010 Editor</div>
+  </div>
+</div>
+</div>
+
+<!-- DÉTECTION TIMESTOMPING -->
+<div class="sec" id="detection-timestomping">
+<div class="sec-title">Détecter le timestomping</div>
+<div class="detect-grid">
+  <div>
+    <div class="anomaly">
+      <div class="anomaly-title">🔴 Indicateur #1 — $SI vs $FN</div>
+      <p>Date <code>$STANDARD_INFORMATION</code> antérieure à <code>$FILE_NAME</code>. Impossible naturellement — <code>$FN</code> est créé en même temps que le fichier et ne se met à jour que par le kernel.</p>
+    </div>
+    <div class="anomaly">
+      <div class="anomaly-title">🔴 Indicateur #2 — Précision suspecte</div>
+      <p>Timestamp NTFS se terminant par <code>:00.0000000</code> (arrondi à la seconde). SetFileTime ne permet pas la précision sub-seconde → signature de timestomping via Metasploit, Timestomp, PowerShell.</p>
+    </div>
+    <div class="anomaly">
+      <div class="anomaly-title">🟡 Indicateur #3 — Chronologie incohérente</div>
+      <p>Fichier dans le Prefetch ou les Event Logs avant sa date de création affichée. Le Prefetch capte la première exécution — si elle précède la "naissance" du fichier, c'est une contradiction.</p>
+    </div>
+  </div>
+  <div>
+    <div class="anomaly">
+      <div class="anomaly-title">🔴 Indicateur #4 — USN Journal</div>
+      <p>Le journal <code>$UsnJrnl</code> ($Extend\$UsnJrnl) enregistre toutes les modifications de fichiers avec leur vrai timestamp kernel. Un fichier timestompé apparaît dans l'USN avec ses vraies dates.</p>
+    </div>
+    <div class="anomaly">
+      <div class="anomaly-title">🟡 Indicateur #5 — Création après modification</div>
+      <p>Date B (Born) postérieure à date M (Modified) → le fichier a été copié depuis une autre source. Windows met la date de création à "maintenant" lors d'une copie, mais préserve la date de modification.</p>
+    </div>
+    <div class="anomaly">
+      <div class="anomaly-title">🟡 Indicateur #6 — Shadow Copy</div>
+      <p>Comparer les timestamps dans un Volume Shadow Copy (VSS) avec ceux du système live. Si différents sans justification, manipulation possible.</p>
+    </div>
+  </div>
+</div>
+
+<div class="cli">
+  <span class="c"># MFTECmd — exporter la MFT complète avec $SI et $FN séparés</span><br>
+  <span class="v">MFTECmd.exe</span> <span class="a">-f</span> <span class="f">C:\$MFT</span> <span class="a">--csv</span> <span class="f">C:\output</span> <span class="a">--csvf</span> <span class="f">mft.csv</span><br><br>
+  <span class="c"># Rechercher les anomalies $SI < $FN dans le CSV généré</span><br>
+  <span class="v">python3</span> <span class="a">-c</span> <span class="f">"import pandas as pd; df=pd.read_csv('mft.csv'); print(df[df['Created0x10'] &lt; df['Created0x30']][['FileName','Created0x10','Created0x30']])"</span>
+</div>
+</div>
+
+<!-- ARTEFACTS TEMPORELS WINDOWS -->
+<div class="sec" id="artefacts-temporels-windows">
+<div class="sec-title">Artefacts temporels Windows — référence</div>
+<div class="epoch-box">
+  <table class="artefact-table">
+    <thead><tr><th>Artefact</th><th>Emplacement</th><th>Info temporelle</th><th>Outil</th></tr></thead>
+    <tbody>
+      <tr><td><strong>$MFT</strong></td><td><code>C:\$MFT</code></td><td>MACB complets ($SI + $FN) pour chaque fichier</td><td>MFTECmd, X-Ways</td></tr>
+      <tr><td><strong>Prefetch</strong></td><td><code>C:\Windows\Prefetch\</code></td><td>Première exécution + 8 dernières exécutions + heure de création PF</td><td>PECmd, WinPrefetchView</td></tr>
+      <tr><td><strong>ShellBags</strong></td><td><code>USRCLASS.DAT</code>, <code>NTUSER.DAT</code></td><td>Dossiers ouverts + timestamp d'accès/modification</td><td>ShellBags Explorer (SBE)</td></tr>
+      <tr><td><strong>LNK files</strong></td><td><code>%AppData%\...\Recent\</code></td><td>Création LNK = première ouverture · Modification = dernière</td><td>LECmd, LinkParser</td></tr>
+      <tr><td><strong>Jump Lists</strong></td><td><code>%AppData%\...\AutomaticDestinations\</code></td><td>Derniers fichiers ouverts par application + timestamps</td><td>JLECmd</td></tr>
+      <tr><td><strong>Event Logs</strong></td><td><code>%SystemRoot%\System32\winevt\Logs\</code></td><td>Timestamps précis (FILETIME) pour chaque event ID</td><td>EvtxECmd, Chainsaw</td></tr>
+      <tr><td><strong>$UsnJrnl</strong></td><td><code>C:\$Extend\$UsnJrnl</code></td><td>Historique de toutes les opérations FS avec vrais timestamps</td><td>MFTECmd --usn, X-Ways</td></tr>
+      <tr><td><strong>SRUM</strong></td><td><code>C:\Windows\System32\sru\SRUDB.dat</code></td><td>Activité réseau/CPU/app par heure sur ~30 jours</td><td>SrumECmd</td></tr>
+      <tr><td><strong>Amcache.hve</strong></td><td><code>C:\Windows\AppCompat\Programs\</code></td><td>Première exécution + hash SHA-1 de l'exécutable</td><td>AmcacheParser</td></tr>
+      <tr><td><strong>ActivityCache.db</strong></td><td><code>%LocalAppData%\ConnectedDevicesPlatform\</code></td><td>Timeline Windows 10+ (activités app avec timestamps)</td><td>WxTCmd</td></tr>
+    </tbody>
+  </table>
+</div>
+</div>
+
+<!-- ERIC ZIMMERMAN TOOLS -->
+<div class="sec" id="outils-zimmerman">
+<div class="sec-title">Outils Eric Zimmerman — timestamps</div>
+<div class="epoch-box">
+  <div class="tool-row">
+    <span class="tool-name">MFTECmd</span>
+    <span>Parse la <code>$MFT</code> entière → CSV avec $SI et $FN séparés. Détecte les anomalies temporelles automatiquement.</span>
+  </div>
+  <div class="tool-row">
+    <span class="tool-name">PECmd</span>
+    <span>Parse les fichiers Prefetch → 8 dernières exécutions avec timestamps précis. Idéal pour prouver qu'un programme a tourné.</span>
+  </div>
+  <div class="tool-row">
+    <span class="tool-name">LECmd</span>
+    <span>Parse les fichiers LNK (raccourcis) → timestamps de création/modif du LNK + du fichier cible + chemin réseau si applicable.</span>
+  </div>
+  <div class="tool-row">
+    <span class="tool-name">JLECmd</span>
+    <span>Parse les Jump Lists → fichiers récents par application avec timestamps d'accès. Très utile pour les affaires de fuite de données.</span>
+  </div>
+  <div class="tool-row">
+    <span class="tool-name">SBECmd / SBE</span>
+    <span>ShellBags Explorer → dossiers parcourus avec timestamps. Révèle même les dossiers supprimés et les clés USB connectées.</span>
+  </div>
+  <div class="tool-row">
+    <span class="tool-name">EvtxECmd</span>
+    <span>Parse les Event Logs EVTX → CSV avec timestamps normalisés. Supporte les maps personnalisées (Chainsaw, Hayabusa).</span>
+  </div>
+  <div class="tool-row">
+    <span class="tool-name">DCode</span>
+    <span>Convertit les timestamps de tous les formats (FILETIME, Epoch, Chrome, Mac Abs., etc.) → outil indispensable pour les analyses manuelles.</span>
+  </div>
+</div>
+</div>
+
+<!-- HORODATAGE CERTIFIÉ -->
+<div class="sec" id="horodatage-certifie">
+<div class="sec-title">Horodatage certifié (TSA) — valeur probante</div>
+<div class="g2">
+  <div class="card card-cyan">
+    <div class="ct">Autorité d'Horodatage (TSA)</div>
+    <ul>
+      <li>Tiers de confiance (ex: SwissSign, GlobalSign) qui signe le hash d'un document avec son propre certificat</li>
+      <li>Résultat : preuve que le document <strong>existait avant T</strong> sous cette forme exacte</li>
+      <li>Standard : <strong>RFC 3161</strong> (timestamp token = hash + heure + signature TSA)</li>
+      <li>Valeur probante : art. 177 CPC + ZertES (Suisse)</li>
+    </ul>
+  </div>
+  <div class="card card-gold">
+    <div class="ct">Pourquoi ça vaut plus qu'une date système</div>
+    <ul>
+      <li>Date système = modifiable trivialement (SetFileTime, tzutil, VM snapshot)</li>
+      <li>TSA = signature cryptographique d'un tiers — impossible à falsifier rétroactivement</li>
+      <li>Le hash garantit l'intégrité : si le doc change, la signature TSA invalide</li>
+      <li>En Suisse : seule la signature électronique qualifiée (SEQ) sur une TSA accréditée a valeur légale pleine</li>
+    </ul>
+  </div>
+</div>
+
+<div class="cli" style="margin-top:.75rem">
+  <span class="c"># Horodatage RFC 3161 avec OpenSSL (TSA FreeTSA)</span><br>
+  <span class="v">openssl</span> <span class="a">ts -query</span> <span class="f">-data rapport.pdf</span> <span class="a">-sha256</span> <span class="a">-cert</span> <span class="a">-out</span> <span class="f">rapport.tsq</span><br>
+  <span class="v">curl</span> <span class="a">-H "Content-Type: application/timestamp-query"</span> <span class="a">--data-binary</span> <span class="f">@rapport.tsq</span> <span class="f">https://freetsa.org/tsr</span> <span class="a">-o</span> <span class="f">rapport.tsr</span><br><br>
+  <span class="c"># Vérification</span><br>
+  <span class="v">openssl</span> <span class="a">ts -verify</span> <span class="a">-in</span> <span class="f">rapport.tsr</span> <span class="a">-data</span> <span class="f">rapport.pdf</span> <span class="a">-CAfile</span> <span class="f">cacert.pem</span>
+</div>
+</div>
+
+<!-- ERREURS FRÉQUENTES -->
+<div class="sec" id="erreurs-frequentes">
+<div class="sec-title">Erreurs fréquentes à l'examen</div>
+<div class="g2">
+  <div>
+    <div class="alert">❌ <strong>Confondre M et C</strong> — M (Modified) = contenu modifié. C (Changed) = métadonnées modifiées. Renommer un fichier ne touche pas M mais touche C.</div>
+    <div class="alert" style="margin-top:.5rem">❌ <strong>Croire que A est toujours actif</strong> — Windows Vista+ désactive NtfsDisableLastAccessUpdate par défaut. La date A peut être figée depuis des années.</div>
+    <div class="alert" style="margin-top:.5rem">❌ <strong>Ignorer $FILE_NAME</strong> — Beaucoup d'examens portent sur la différence $SI / $FN. Si vous ne citez que $STANDARD_INFORMATION, vous ratez la détection de timestomping.</div>
+  </div>
+  <div>
+    <div class="alert">❌ <strong>Confondre les époques Chrome et Firefox</strong> — Chrome part de 1601, Firefox de 1970. Dans une base de données de navigateur, une valeur de 13 chiffres ≠ une de 16 chiffres.</div>
+    <div class="alert" style="margin-top:.5rem">❌ <strong>Oublier la précision FAT</strong> — FAT32 stocke les timestamps avec une précision de <strong>2 secondes</strong>. Des fichiers qui semblent avoir exactement le même timestamp peuvent ne pas l'avoir été créés simultanément.</div>
+    <div class="tip" style="margin-top:.5rem">✅ <strong>Règle de copie</strong> : lors d'une copie Windows, B devient "maintenant" mais M est préservé. Donc B &gt; M → copie. B &lt; M → fichier original ou timestompé.</div>
+  </div>
+</div>
+</div>
+
+</div><!-- end .page -->
+</main>
+
+<div class="page" style="padding-top:0">
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Ch. 22 Manuel · ISO/IEC 27037 · Eric Zimmerman Tools</span>
+</div>
+</div>
+
+<script>
+(function(){
+  var btn=document.getElementById('back-top');
+  if(btn) window.addEventListener('scroll',function(){ btn.classList.toggle('visible',window.scrollY>300); });
+  document.querySelectorAll('.cli').forEach(function(el){
+    if(el.querySelector('.copy-btn')) return;
+    var b=document.createElement('button');
+    b.className='copy-btn'; b.title='Copier';
+    b.innerHTML='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11V3a2 2 0 012-2h6"/></svg>';
+    b.onclick=function(){ navigator.clipboard.writeText(el.innerText.replace(/^copier$/mi,'').trim()).then(function(){ b.style.color='var(--green)'; setTimeout(function(){ b.style.color=''; },1500); }); };
+    el.style.position='relative'; el.appendChild(b);
+  });
+})();
+</script>
+</body>
+</html>
