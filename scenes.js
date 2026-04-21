@@ -27,6 +27,12 @@ const SCENES = [
     title: "Audit Chaîne de Possession",
     icon: "⛓",
     difficulty: "easy",
+    atmosphere: "legal",
+    narrative: {
+      success: "Le rapport corrigé est transmis au Ministère public. Aucune rupture de chaîne de custody ne permet à la défense de contester les preuves. L'enquête avance sur des bases solides.",
+      degraded: "Le rapport est transmis avec des réserves. Certaines preuves pourront être contestées par la défense. Le dossier reste recevable mais fragilisé.",
+      failure: "Le rapport est rejeté par le Ministère public. Des preuves cruciales sont désormais irrémédiablement exclues. L'enquête recommence à zéro — quand c'est encore possible."
+    },
     tags: ["FORENSIQUE", "DROIT"],
     legalRefs: ["ACPO Principles 1–4", "Art. 141 CPP"],
     intro: "Vous relisez un rapport d'investigation reçu d'un collègue. Quelque chose ne va pas. Saurez-vous identifier toutes les ruptures de chaîne de custody ?",
@@ -91,6 +97,12 @@ const SCENES = [
     title: "La Métadonnée Fatale",
     icon: "📸",
     difficulty: "easy",
+    atmosphere: "network",
+    narrative: {
+      success: "Le rapport EXIF tient en audience. L'avocat tente de contester la valeur probante, mais la triangulation avec les logs Instagram et les tours GSM rend sa contestation vaine. Le suspect est confondu.",
+      degraded: "Le juge accepte les métadonnées EXIF mais ordonne une expertise contradictoire. L'enquête continue, ralentie.",
+      failure: "L'expert contradictoire démonte le rapport. Les métadonnées EXIF sont écartées des débats, votre crédibilité d'expert est entamée."
+    },
     tags: ["FORENSIQUE", "OUTILS"],
     legalRefs: ["Manuel Ch. 4.3", "Manuel Ch. 29.3", "ACPO Principle 3"],
     intro: "Un suspect a posté une photo sur Instagram le jour du délit. L'iPhone saisi contient le fichier original. ExifTool révèle des coordonnées GPS précises. Comment exploitez-vous cette preuve ?",
@@ -169,6 +181,12 @@ const SCENES = [
     title: "Le Dilemme de l'Intervenant",
     icon: "🔐",
     difficulty: "medium",
+    atmosphere: "crypto",
+    narrative: {
+      success: "La clé FVEK est capturée à temps depuis la RAM. Volatility l'extrait avec précision, le disque est déchiffré en laboratoire. L'enquête avance — 750 Go de preuves accessibles.",
+      degraded: "La capture RAM est partielle. Quelques indices exploitables, mais la clé complète manque. Il faudra explorer les canaux alternatifs (compte Microsoft, Active Directory).",
+      failure: "Le laptop a été éteint avant la capture RAM. La clé BitLocker est perdue à jamais — AES-256 reste inviolable. Des téraoctets de preuves potentielles sont désormais inaccessibles."
+    },
     tags: ["WINDOWS", "FORENSIQUE"],
     legalRefs: ["Art. 248 CPP", "Manuel Ch. 11.1", "ISO/IEC 27037"],
     intro: "Vous arrivez dans un appartement zurichois. Sur le bureau : un laptop Windows allumé avec session active et BitLocker activé. Votre collègue s'apprête à fermer l'écran. Chaque seconde compte.",
@@ -254,6 +272,12 @@ const SCENES = [
     title: "Rédiger la Conclusion",
     icon: "📋",
     difficulty: "medium",
+    atmosphere: "legal",
+    narrative: {
+      success: "Le rapport passe l'examen du juge d'instruction sans difficulté. Les niveaux d'affirmation sont justes, la distinction fait/interprétation/opinion respectée. Votre expertise s'impose en audience.",
+      degraded: "Le rapport est accepté avec des réserves. Certaines formulations devront être reprises lors de l'audience contradictoire.",
+      failure: "Le rapport est renvoyé pour correction. Votre crédibilité d'expert est durablement entamée — les prochains mandats tarderont à venir."
+    },
     tags: ["FORENSIQUE", "DROIT"],
     legalRefs: ["Manuel Ch. 29.3", "Art. 182 CPP", "Art. 251 CP"],
     intro: "Un fichier Excel a été copié sur une clé USB depuis la session de jmartin. Les caméras confirment sa présence. Vous rédigez le rapport. Chaque mot compte devant le tribunal.",
@@ -332,6 +356,12 @@ const SCENES = [
     title: "L'Adresse IP Accusatrice",
     icon: "🌐",
     difficulty: "medium",
+    atmosphere: "network",
+    narrative: {
+      success: "L'arrestation est différée jusqu'à l'analyse du Raspberry Pi. Découverte : c'est un appareil compromis par un botnet. M. Dupont est victime, pas auteur. Votre rigueur a évité une erreur judiciaire grave.",
+      degraded: "L'enquête s'oriente dans plusieurs directions — l'IP seule ne suffit pas, les pistes restent partielles.",
+      failure: "M. Dupont est arrêté sur la seule base de l'IP. Après 48h de garde à vue, l'analyse forensique le disculpe. Il poursuit l'État pour arrestation arbitraire — et gagne."
+    },
     tags: ["RÉSEAUX", "DROIT"],
     legalRefs: ["ATF 136 II 508", "Manuel Ch. 25.6", "Art. 197 CPP"],
     intro: "Les logs d'un serveur piraté pointent vers une IP attribuée à M. Dupont par Swisscom. Le MP veut une arrestation immédiate. Mais une IP identifie-t-elle vraiment une personne ?",
@@ -410,6 +440,12 @@ const SCENES = [
     title: "Contrôle aux Frontières",
     icon: "🛂",
     difficulty: "medium",
+    atmosphere: "legal",
+    narrative: {
+      success: "La procédure est respectée. Le mandat du MP obtenu en 2h a permis une saisie incontestable. Les preuves trouvées seront pleinement recevables en audience.",
+      degraded: "La saisie est effectuée mais avec des réserves. Un recours du voyageur sur le fondement de l'art. 13 Cst. reste possible et peut ralentir la procédure.",
+      failure: "La saisie est déclarée illégale par le TMC. Toutes les preuves obtenues sont écartées. Le voyageur dépose plainte contre l'Administration fédérale des douanes."
+    },
     tags: ["DROIT", "RÉSEAUX"],
     legalRefs: ["LMAD Art. 100", "CPP Art. 245", "ATF 149 I 218", "Art. 13 Cst."],
     intro: "Un voyageur en provenance de Moscou arrive à Zurich. Un douanier veut accéder au contenu de son laptop. Le voyageur refuse de donner son mot de passe. Quels sont les droits des douaniers ?",
@@ -488,6 +524,12 @@ const SCENES = [
     title: "Ransomware à l'Hôpital",
     icon: "🏥",
     difficulty: "medium",
+    atmosphere: "hospital",
+    narrative: {
+      success: "Les preuves forensiques sont préservées, le PFPDT notifié dans les délais, l'hôpital restaure depuis des backups sains. L'équipe DFIR identifie le groupe criminel. Aucune sanction LPD. Les blocs opératoires n'ont jamais été interrompus.",
+      degraded: "La restauration a eu lieu mais certaines preuves sont perdues. Le PFPDT est notifié tardivement. Une enquête administrative est ouverte — l'hôpital devra renforcer ses procédures.",
+      failure: "Les preuves sont détruites par la restauration hâtive. Le PFPDT apprend la violation par la presse. L'hôpital écope d'une sanction LPD maximale et d'une couverture médiatique désastreuse. 12'000 patients poursuivent."
+    },
     tags: ["WINDOWS", "DROIT"],
     legalRefs: ["LPD 2023 Art. 24", "Manuel Ch. 11.1", "ISO/IEC 27035"],
     intro: "03h00. L'hôpital cantonal est frappé par un ransomware. L'équipe IT veut restaurer depuis les backups immédiatement. Mais capturer les preuves maintenant ou les perdre à jamais ?",
@@ -573,6 +615,12 @@ const SCENES = [
     title: "Le Smartphone Déverrouillé",
     icon: "📱",
     difficulty: "medium",
+    atmosphere: "legal",
+    narrative: {
+      success: "Le TMC ordonne un tri préalable par un juge neutre. Les données pertinentes à l'enquête sont remises — les données privées non pertinentes restent scellées. La défense ne peut rien contester, la procédure est irréprochable.",
+      degraded: "La procédure est suivie mais le délai de 20 jours bloque significativement l'enquête. Le MP grogne mais ne peut rien faire.",
+      failure: "L'analyse prématurée entraîne l'exclusion totale des preuves du téléphone (art. 141 CPP). L'avocat a gagné — et Signal protège à jamais les échanges qu'il aurait fallu analyser."
+    },
     tags: ["DROIT", "FORENSIQUE"],
     legalRefs: ["Art. 248 CPP", "Art. 141 CPP", "TF 1B_602/2020"],
     intro: "L'iPhone du suspect est posé sur la table, déverrouillé. Des notifications Signal sont visibles. L'avocat de la défense entre dans l'appartement et annonce les scellés. Chaque seconde compte.",
@@ -658,6 +706,12 @@ const SCENES = [
     title: "Les 3 Artefacts",
     icon: "🔍",
     difficulty: "medium",
+    atmosphere: "",
+    narrative: {
+      success: "La corrélation des 3 artefacts convaincs le juge. La défense tente l'argument du logiciel de synchronisation, mais ne peut pas l'étayer techniquement face à votre démonstration. Condamnation obtenue pour vol de données.",
+      degraded: "Le juge accepte la corrélation mais demande une expertise contradictoire. L'affaire traîne plusieurs mois.",
+      failure: "L'expert de la défense obtient le rejet du rapport. Les 3 artefacts sont écartés individuellement, la corrélation n'est pas retenue. Le suspect est acquitté au bénéfice du doute."
+    },
     tags: ["FORENSIQUE", "WINDOWS"],
     legalRefs: ["Manuel Ch. 2.5", "Art. 139 CPP", "Manuel Ch. 18", "ATF 147 IV 409"],
     intro: "X-Ways vous présente 3 artefacts convergents : ShellBag, USBSTOR, fichier .lnk. Tout pointe vers le même événement. Mais comment formuler la conclusion et résister à l'avocat de la défense ?",
@@ -754,6 +808,12 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     title: "Le Virement Frauduleux",
     icon: "💰",
     difficulty: "medium",
+    atmosphere: "network",
+    narrative: {
+      success: "Les qualifications 143bis + 147 en concours réel permettent une poursuite complète. L'auteur est identifié via la remontée des logs Tor (erreur OPSEC) puis arrêté à Lugano. Condamnation à 4 ans ferme.",
+      degraded: "La qualification est partiellement correcte, la peine d'ensemble reste symbolique.",
+      failure: "La qualification erronée empêche toute poursuite efficace. L'auteur s'en sort avec une amende dérisoire. Les 50'000 CHF restent introuvables."
+    },
     tags: ["DROIT", "RÉSEAUX"],
     legalRefs: ["Art. 147 CP", "Art. 146 CP", "Art. 143bis CP", "ATF 140 IV 11"],
     intro: "50'000 CHF virés à 03h47 via l'API bancaire. Manipulation de requêtes HTTP. Aucun humain impliqué côté banque. La qualification pénale est cruciale pour la poursuite.",
@@ -832,6 +892,12 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     title: "Attribution Incertaine",
     icon: "👤",
     difficulty: "hard",
+    atmosphere: "",
+    narrative: {
+      success: "L'attribution triangulée (RDP + DHCP + badgeuse + pattern horaire) est retenue par le juge. Alice est confondue par la convergence des 4 sources. Elle finit par reconnaître les faits et révèle avoir agi pour le compte du concurrent.",
+      degraded: "L'attribution est acceptée avec réserves. Alice nie fermement, mais ne peut pas contester techniquement. L'affaire va en appel.",
+      failure: "L'attribution repose sur trop peu de sources indépendantes. Le doute profite à Alice. Elle est acquittée — le vrai coupable, peut-être elle, peut-être un autre, reste impuni."
+    },
     tags: ["WINDOWS", "FORENSIQUE"],
     legalRefs: ["Manuel Ch. 29.4", "Art. 139 CPP", "Art. 182 CPP"],
     intro: "Une infraction a eu lieu depuis un compte Windows partagé par 3 collaborateurs. Il faut désigner l'auteur probable — sans jamais outrepasser le rôle de l'expert forensique.",
@@ -910,6 +976,12 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     title: "BitLocker à Froid",
     icon: "❄️",
     difficulty: "hard",
+    atmosphere: "crypto",
+    narrative: {
+      success: "La clé de récupération est retrouvée via le compte Microsoft après réquisition judiciaire. 2 To de données exploitables s'ouvrent. L'enquête peut enfin avancer sur le contenu réel du laptop.",
+      degraded: "La clé n'est pas trouvée, mais votre rapport d'impossibilité est honnête et bien documenté. Le MP accepte, l'enquête continue sans les données chiffrées.",
+      failure: "Vous avez promis l'impossible au MP. Semaines perdues à tenter du brute-force inutile. Quand vous devez reconnaître l'échec, votre crédibilité d'expert est atteinte — et le temps a fait son œuvre."
+    },
     tags: ["WINDOWS", "CRYPTO"],
     legalRefs: ["Manuel Ch. 24.3", "Manuel Ch. 28.4", "Art. 251 CP"],
     intro: "Le laptop du suspect est éteint. L'écran affiche la demande de clé BitLocker. Aucune clé trouvée dans l'appartement. Le MP veut savoir combien de temps pour déchiffrer. Votre réponse va définir toute la stratégie d'enquête.",
@@ -988,6 +1060,12 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     title: "Malware Fileless",
     icon: "⚡",
     difficulty: "hard",
+    atmosphere: "network",
+    narrative: {
+      success: "La RAM est capturée à temps. Volatility identifie l'injection T1055 dans svchost.exe avec précision. La compromission est documentée, les IoC extraits, le CERT national alerté. L'intrusion est endiguée sur toute la flotte bancaire.",
+      degraded: "La RAM est partielle, les IoC fragmentaires. L'attribution reste floue, mais le compromis sur cette machine est avéré.",
+      failure: "Le système a été éteint trop vite « pour stopper l'attaque ». Le malware fileless disparaît avec la RAM. Aucune preuve technique exploitable. La banque ne saura jamais ce qui a été exfiltré."
+    },
     tags: ["RÉSEAUX", "FORENSIQUE"],
     legalRefs: ["Manuel Ch. 11.2", "Art. 143bis CP", "MITRE ATT&CK T1055", "LPD 2023 Art. 24"],
     intro: "Un IDS alerte sur des connexions sortantes suspectes depuis un poste bancaire. L'antivirus ne trouve rien. Aucun exécutable suspect sur le disque. Pourtant le malware est actif. Comment le prouver ?",
@@ -1066,6 +1144,12 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     title: "Ransomware + RAID 5",
     icon: "💾",
     difficulty: "hard",
+    atmosphere: "ransomware",
+    narrative: {
+      success: "60% des données sont récupérées depuis les disques 1 et 3. Le rapport honnête sur les 40% irrécupérables est accepté par le DG. La PME survit grâce aux imageries forensiques préalables et à la méthode rigoureuse.",
+      degraded: "La récupération est partielle, la méthode fait débat en interne. La PME survit mais garde des séquelles.",
+      failure: "La reconstruction RAID hâtive sur les 3 disques propage la corruption. La PME perd 100% de ses données — 18 ans de business effacés en une nuit. Faillite prononcée 6 mois plus tard."
+    },
     tags: ["FORENSIQUE", "CRYPTO"],
     legalRefs: ["Manuel Ch. 24.3", "Manuel Ch. 28.4", "GovCERT recommandations"],
     intro: "RAID 5 sur 3 disques. Un disque chiffré par ransomware. Le backup également chiffré. 60% des données potentiellement récupérables. La stratégie de récupération engage votre crédibilité.",
@@ -1150,6 +1234,12 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     title: "Corrélation Timeline",
     icon: "🧩",
     difficulty: "hard",
+    atmosphere: "",
+    narrative: {
+      success: "La chronologie normalisée UTC est acceptée par le juge. La séquence causale est limpide : connexion → lancement → navigation → ouverture. Le suspect est confondu, la timeline est irréfutable.",
+      degraded: "La chronologie est acceptée mais contestée par la défense qui invoque des imprécisions de fuseau. L'affaire traîne.",
+      failure: "Les erreurs de fuseau horaire invalident toute la timeline. Le juge la rejette intégralement. L'enquête perd son pilier chronologique."
+    },
     tags: ["FORENSIQUE", "WINDOWS"],
     legalRefs: ["Manuel Ch. 29.4", "Art. 139 CPP", "ATF 143 IV 330"],
     intro: "5 artefacts, 5 timestamps, 2 fuseaux différents. Vous devez reconstruire la chronologie exacte des événements. Une seule erreur de conversion UTC peut invalider toute votre analyse.",
@@ -1216,6 +1306,12 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     title: "Le Volume VeraCrypt",
     icon: "🔒",
     difficulty: "hard",
+    atmosphere: "crypto",
+    narrative: {
+      success: "Le rapport formulé correctement (entropie + absence de signature = probable conteneur chiffré) est accepté sans réserve. Le droit au silence du suspect est respecté. Le volume reste inaccessible, mais le rapport tient juridiquement.",
+      degraded: "Le rapport est accepté avec réserves. Le contenu reste inaccessible — les 8 Go gardent leur secret.",
+      failure: "Votre affirmation trop forte (« contient des données compromettantes ») est qualifiée de faux dans les titres (art. 251 CP). Plainte est déposée contre vous. Votre carrière d'expert s'arrête."
+    },
     tags: ["CRYPTO", "DROIT"],
     legalRefs: ["Manuel Ch. 24.2", "Art. 113 CPP", "Art. 251 CP", "Manuel Ch. 28.4"],
     intro: "Un fichier de 8 Go avec entropie 0.998. Aucune signature reconnue. Probablement un volume VeraCrypt. Le MP veut savoir ce qu'il contient. Mais sans la clé, que peut-on affirmer ?",
@@ -1301,6 +1397,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     title: "Affaire Xplain (2023)",
     icon: "🏛",
     difficulty: "hard",
+    atmosphere: "state",
+    realCase: "Affaire Xplain, juin 2023 — 907 Go de données fédérales suisses (fedpol, SRC, Armée, CFF, cantons) publiées sur le darknet par le groupe ransomware Play. Rapport OFCS mars 2024.",
+    narrative: {
+      success: "Le rapport OFCS est rendu et retient l'attention des autorités. Il met en évidence la responsabilité partagée Xplain/autorités. De nouvelles directives contractuelles strictes sont imposées à tous les prestataires IT de la Confédération — minimisation, classification, chiffrement obligatoire.",
+      degraded: "Le rapport identifie les failles principales mais reste partiel. Les réformes tardent à être adoptées, les prestataires conservent leurs pratiques.",
+      failure: "Le rapport mal cadré passe à côté de l'essentiel (la responsabilité contractuelle). Aucune leçon structurelle n'est tirée. La même catégorie d'incident se reproduira chez un autre prestataire 18 mois plus tard."
+    },
     tags: ["DROIT", "RÉSEAUX"],
     legalRefs: ["Art. 143bis CP", "Art. 144bis CP", "LPD 2023", "OFCS Rapport 2024"],
     intro: "907 Go de données fédérales publiées sur le darknet par le groupe Play. Données fedpol, SRC, Armée, CFF. L'OFCS vous mandate. Quelle est la vraie question forensique ?",
@@ -1368,6 +1471,989 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
       if (pct >= 85 && custodyPct >= 75) return { icon: "🏛", title: "Expert Forensique Étatique", sub: "Maîtrise avancée des incidents prestataires" };
       if (pct >= 65) return { icon: "🔬", title: "Analyste Sécurité", sub: "Bonnes bases sur la forensique prestataire" };
       return { icon: "📚", title: "Formation requise", sub: "Révisez le rapport OFCS Xplain 2024" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════
+     18. RUAG_2016 — APT chez le Fournisseur Défense  [HARD]
+     Basé sur le rapport Melani/OFCS 2016 (entreprise d'armement suisse)
+  ══════════════════════════════════════════════════ */
+  {
+    id: "ruag_2016",
+    title: "APT chez RUAG",
+    icon: "🛡",
+    difficulty: "hard",
+    atmosphere: "state",
+    realCase: "Affaire RUAG, mai 2016 — APT Turla (Epic Turla / Tavdig / Carbon) présent depuis septembre 2014, exfiltration d'environ 23 Go de données de défense pendant 21 mois. Rapport MELANI/OFCS du 23 mai 2016.",
+    tags: ["RÉSEAUX", "FORENSIQUE"],
+    legalRefs: ["Rapport MELANI 2016", "Art. 143bis CP", "Art. 86 Loi militaire", "MITRE ATT&CK T1071"],
+    intro: "L'entreprise d'armement RUAG détecte un trafic DNS suspect. L'analyse révèle un APT présent depuis 21 mois. Le nombre de machines infectées n'est pas encore connu. Melani vous mandate.",
+    alertLevel: "INCIDENT ÉTATIQUE — Intrusion APT de longue durée suspectée",
+    objectives: [
+      { icon: "🎯", text: "Caractériser le modus operandi de l'APT sans alerter l'attaquant" },
+      { icon: "📡", text: "Cartographier l'étendue de la compromission (timeline + lateral movement)" },
+      { icon: "⚖️", text: "Respecter la discrétion opérationnelle imposée par MELANI/OFCS" },
+    ],
+    debrief: "<p>L'affaire RUAG 2016 illustre la difficulté d'une <strong>réponse à un APT déjà installé</strong>. Le rapport public MELANI distingue clairement trois phases : reconnaissance (rootkit Tavdig), escalade et persistance (Turla Carbon), exfiltration silencieuse via des canaux DNS détournés.</p><p>Le piège classique : <em>éteindre ou isoler brutalement prévient l'attaquant que sa couverture est grillée</em>. Les bonnes pratiques OFCS préconisent une surveillance accrue + collecte préalable d'IoC avant tout confinement.</p>",
+    narrative: {
+      success: "Les IoC sont collectés discrètement pendant 3 semaines. La cartographie complète est rendue à MELANI. Le confinement coordonné préserve les preuves et neutralise l'APT sans alerter les opérateurs. Le rapport public de mai 2016 devient une référence internationale.",
+      degraded: "La détection tardive et les actions précipitées limitent la visibilité. Le rapport est rendu mais avec des lacunes. L'APT s'est peut-être déjà redéployé ailleurs.",
+      failure: "L'isolement hâtif alerte l'attaquant qui efface ses traces. Pas de cartographie complète possible, pas d'IoC exploitables par la communauté internationale. L'APT migre vers d'autres cibles suisses avant qu'on puisse le documenter."
+    },
+    steps: [
+      {
+        phase: "📡 Le trafic DNS suspect",
+        situation: "Le SOC de RUAG détecte un trafic DNS anormal vers <code>rasp.sanjosemaps.com</code> depuis une machine du département développement. La résolution ne correspond à aucun service légitime. Le SOC veut bloquer immédiatement le domaine au niveau firewall.",
+        law: "<strong>MITRE ATT&CK T1071.004</strong> — DNS tunneling : canal d'exfiltration discret, souvent utilisé par les APT étatiques.<br><strong>Bonne pratique MELANI/OFCS</strong> — Surveillance passive avant confinement pour cartographier l'étendue réelle.",
+        question: "<strong>Quelle est la première action correcte ?</strong>",
+        choices: [
+          {
+            text: "Bloquer immédiatement le domaine au firewall pour stopper l'exfiltration.",
+            ok: false, pts: -20,
+            fb: "Erreur stratégique. Bloquer alerte l'APT qui va effacer ses traces et se redéployer. Vous perdez la visibilité sur l'étendue de la compromission.",
+            legal: "Bonne pratique OFCS — Ne jamais alerter l'attaquant avant d'avoir cartographié son implantation.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Mettre en place une surveillance passive (DNS sinkhole, capture réseau complète) pour identifier toutes les machines affectées avant tout confinement.",
+            ok: true, pts: 25,
+            fb: "Approche correcte. Un sinkhole DNS permet de répondre aux requêtes de manière contrôlée et d'identifier toutes les machines compromises sans alerter l'APT. Collecte des IoC avant toute action de confinement.",
+            legal: "Rapport MELANI 2016 — Surveillance préalable permet la cartographie complète avant isolation coordonnée.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Demander à l'utilisateur de la machine s'il a récemment installé un logiciel suspect.",
+            ok: false, pts: -15,
+            fb: "Contre-productif. Si la machine est compromise, l'utilisateur peut être impliqué involontairement — ou être utilisé pour transmettre l'information à l'attaquant. Aucune enquête APT ne passe par l'interrogatoire direct de l'utilisateur en phase initiale.",
+            legal: "Bonne pratique DFIR — Phase d'observation discrète avant toute interaction humaine.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "🔬 Cartographie silencieuse",
+        situation: "Après 3 semaines de surveillance passive, vous avez identifié <strong>32 machines compromises</strong> réparties sur 4 sites (Emmen, Thun, Altdorf, Zurich). Le malware ressemble à <strong>Tavdig/Carbon</strong>, associé au groupe Turla (attribution étatique selon plusieurs CERT). MELANI demande un rapport opérationnel.",
+        law: "<strong>Art. 86 Loi militaire</strong> — Protection des informations militaires sensibles.<br><strong>Rapport public MELANI</strong> — Transparence vs sécurité opérationnelle.",
+        question: "<strong>Quelle formulation adoptez-vous dans le rapport public ?</strong>",
+        choices: [
+          {
+            text: "Publier l'analyse technique complète avec tous les IoC (hashes, domaines C2, TTPs, attribution Turla).",
+            ok: true, pts: 25,
+            fb: "Approche correcte — c'est exactement ce qu'a fait MELANI en mai 2016. Publier les IoC permet à la communauté internationale (autres CERT) de détecter l'APT sur d'autres réseaux. Le rapport public est devenu une référence.",
+            legal: "Rapport MELANI 23.05.2016 — Publication des TTP et IoC pour le bénéfice de la communauté DFIR internationale.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Garder le rapport strictement confidentiel pour ne pas révéler les capacités de détection suisses.",
+            ok: false, pts: -15,
+            fb: "Trop prudent. Le silence protège les futures cibles de l'APT ? Non : il les prive d'IoC qui pourraient les alerter. La Suisse a choisi la transparence — avec succès.",
+            legal: "Doctrine MELANI — La transparence contrôlée sur les IoC renforce la sécurité collective.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Publier un communiqué vague sans IoC « pour ne pas aider les attaquants ».",
+            ok: false, pts: -10,
+            fb: "L'inverse est vrai : les attaquants connaissent déjà leurs propres outils. Les IoC publiés aident uniquement les défenseurs qui ne les connaissent pas.",
+            legal: "Principe de sécurité collective — Security through obscurity ≠ sécurité réelle.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct, custodyPct) {
+      if (pct >= 85 && custodyPct >= 75) return { icon: "🛡", title: "Expert Contre-APT", sub: "Maîtrise avancée de la réponse à APT étatique" };
+      if (pct >= 65) return { icon: "🎯", title: "Analyste APT", sub: "Bonnes bases sur la détection d'APT longue durée" };
+      return { icon: "📚", title: "Formation requise", sub: "Révisez le rapport MELANI RUAG 2016" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════
+     19. CICR_2022 — Attaque contre la Croix-Rouge  [HARD]
+     Basé sur l'attaque de janvier 2022 contre un serveur hébergeant le
+     programme "Rétablissement des Liens Familiaux" — 515'000 personnes.
+  ══════════════════════════════════════════════════ */
+  {
+    id: "cicr_2022",
+    title: "La Croix-Rouge Compromise",
+    icon: "🏥",
+    difficulty: "hard",
+    atmosphere: "hospital",
+    realCase: "CICR, janvier 2022 — Compromission d'un serveur externe hébergeant le programme « Rétablissement des liens familiaux ». Données de 515'000 personnes vulnérables exposées. Exploitation d'une vulnérabilité Zoho ManageEngine ADSelfService Plus (CVE-2021-40539). Intrusion attribuée à un acteur étatique.",
+    tags: ["RÉSEAUX", "DROIT"],
+    legalRefs: ["CVE-2021-40539", "LPD 2023", "Conv. Genève (droit humanitaire)", "Communiqué CICR 19.01.2022"],
+    intro: "Le CICR détecte un accès non autorisé sur le serveur du programme « Rétablissement des liens familiaux ». 515'000 personnes déplacées, disparues ou séparées de leur famille pourraient être exposées. L'enjeu humanitaire est vital — chaque décision compte.",
+    alertLevel: "INCIDENT HUMANITAIRE CRITIQUE — Données de personnes vulnérables",
+    objectives: [
+      { icon: "🔍", text: "Identifier rapidement le vecteur d'intrusion (CVE exploitée)" },
+      { icon: "🏛", text: "Respecter les obligations humanitaires spécifiques du CICR" },
+      { icon: "📣", text: "Gérer la communication envers les populations concernées" },
+    ],
+    debrief: "<p>L'attaque contre le CICR de janvier 2022 reste l'une des cyberattaques les plus graves contre une organisation humanitaire. Elle a révélé une exploitation de <strong>CVE-2021-40539</strong> (Zoho ManageEngine ADSelfService Plus, patch publié 4 mois avant l'intrusion). Le délai de patching d'un composant critique a été la cause technique.</p><p>Sur le plan humanitaire, le CICR a fait un choix remarquable : <strong>communication publique complète dès la découverte</strong>, y compris un appel direct aux attaquants pour ne pas publier les données, au nom du droit humanitaire international.</p>",
+    narrative: {
+      success: "L'intrusion est contenue, le vecteur (Zoho ManageEngine non patché) est identifié. Le communiqué public du 19 janvier 2022 du CICR fait référence. Les attaquants, bien qu'étatiques présumés, ne publient aucune donnée — un succès diplomatique humanitaire sans précédent.",
+      degraded: "L'intrusion est contenue mais certains artefacts sont perdus. La communication arrive tardivement. L'incident est géré, mais la confiance envers l'outil numérique du CICR est durablement atteinte.",
+      failure: "Réponse chaotique, preuves détruites, communication incohérente. Les données des 515'000 personnes vulnérables finissent publiées. Des personnes en danger sont retrouvées et tuées par leurs persécuteurs. Le programme RLF est suspendu mondialement."
+    },
+    steps: [
+      {
+        phase: "🚨 L'alerte initiale",
+        situation: "Le SOC du CICR détecte un accès inhabituel sur le serveur RLF (<em>Restoring Family Links</em>) à 02h47. Le serveur héberge Zoho ManageEngine pour la gestion des identités. Vous arrivez sur site 35 minutes plus tard. <strong>L'attaquant est peut-être encore actif</strong>.",
+        law: "<strong>CVE-2021-40539</strong> — Zoho ManageEngine ADSelfService Plus, RCE non authentifiée, patch publié en septembre 2021.<br><strong>Convention IV Genève</strong> — Protection spéciale des données humanitaires du CICR.",
+        question: "<strong>Quelle est votre première action ?</strong>",
+        choices: [
+          {
+            text: "Arrêter immédiatement le serveur pour stopper l'intrusion et préserver l'intégrité des données.",
+            ok: false, pts: -25,
+            fb: "Erreur critique. Un arrêt brutal détruit la RAM et les indicateurs de compromission en cours. Sans IoC, on ne peut ni identifier le vecteur (quelle CVE ?), ni estimer l'étendue, ni chasser l'attaquant sur d'autres systèmes.",
+            legal: "Manuel Ch. 11.1 — Capture RAM obligatoire avant arrêt sur tout système suspect d'intrusion active.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Capturer la RAM et le trafic réseau en direct, puis isoler logiquement le serveur (VLAN quarantaine) sans l'éteindre.",
+            ok: true, pts: 25,
+            fb: "Approche correcte. Capture RAM + isolation VLAN préserve les preuves volatiles tout en coupant l'exfiltration active. Permet ensuite d'analyser les processus, connexions et mémoire sans alerter l'attaquant par un arrêt brutal.",
+            legal: "GovCERT/OFCS — Isolation logique plutôt qu'extinction pour préserver les preuves d'une intrusion active.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Informer immédiatement la presse pour que les 515'000 personnes concernées puissent se protéger.",
+            ok: false, pts: -20,
+            fb: "Prématuré. Sans analyse, impossible de dire si les données ont été exfiltrées ou simplement consultées. Une communication sans éléments concrets crée la panique et nuit à la confiance envers le CICR.",
+            legal: "LPD 2023 Art. 24 — Notification dans les meilleurs délais une fois les éléments factuels établis.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "🔬 Le vecteur d'intrusion",
+        situation: "L'analyse mémoire révèle un shell déposé via un endpoint ZohoFormsLogs. Le serveur fait tourner <strong>Zoho ManageEngine ADSelfService Plus version 6.1.18</strong>. La CVE-2021-40539 (RCE) affecte toutes les versions antérieures à 6.1.19. Le patch a été publié le 6 septembre 2021 — l'intrusion a eu lieu le 9 novembre 2021 (soit 4 mois après).",
+        law: "<strong>LPD 2023 Art. 8</strong> — Sécurité des données : mesures techniques et organisationnelles appropriées.<br><strong>CVE-2021-40539</strong> — Exploitation active documentée par CISA dès septembre 2021.",
+        question: "<strong>Comment qualifiez-vous cette situation dans le rapport ?</strong>",
+        choices: [
+          {
+            text: "« L'intrusion est le fait d'un acteur sophistiqué, aucune mesure raisonnable n'aurait pu l'empêcher. »",
+            ok: false, pts: -20,
+            fb: "Formulation malhonnête. La vulnérabilité était publique depuis 4 mois, activement exploitée selon CISA, avec patch disponible. Minimiser la responsabilité technique affaiblit la crédibilité et compromet les leçons à tirer.",
+            legal: "Art. 251 CP — Un rapport minimisant sciemment une faute de gestion engage la responsabilité pénale de l'expert.",
+            critical: false, next: "end",
+          },
+          {
+            text: "« Le vecteur d'intrusion est la CVE-2021-40539 (RCE sur Zoho ADSelfService Plus). Le patch était disponible depuis 4 mois. Le cycle de patching sur ce système critique n'a pas été respecté, ce qui constitue une faille de gestion documentée. »",
+            ok: true, pts: 25,
+            fb: "Formulation forensique correcte. Elle identifie le vecteur technique (CVE), documente le délai (4 mois), et qualifie honnêtement la faille de gestion. C'est ce type de rapport factuel qui permet d'améliorer la sécurité globale.",
+            legal: "LPD 2023 Art. 8 — Les mesures « appropriées » incluent un cycle de patching raisonnable pour les systèmes critiques.",
+            critical: false, next: 2,
+          },
+          {
+            text: "« L'intrusion prouve que Zoho est un logiciel dangereux à bannir. »",
+            ok: false, pts: -10,
+            fb: "Simpliste et techniquement faux. Toutes les suites logicielles ont eu des CVE critiques. Le problème n'est pas Zoho — c'est le cycle de patching. Un rapport qui stigmatise un produit plutôt qu'une pratique n'a pas de valeur.",
+            legal: "Manuel Ch. 29.1 — Analyse des causes-racines, pas des marques.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "🕊️ L'appel humanitaire",
+        situation: "L'analyse confirme l'exfiltration de <strong>515'000 dossiers</strong> de personnes vulnérables (familles séparées par la guerre, détenus, migrants). L'attribution est étatique présumée. La direction du CICR vous consulte sur l'approche communication.",
+        law: "<strong>Convention de Genève IV, Art. 26</strong> — Obligation spéciale de protéger les données des personnes cherchant leur famille.<br><strong>LPD 2023 Art. 24</strong> — Notification PFPDT.",
+        question: "<strong>Quelle approche communication recommandez-vous ?</strong>",
+        choices: [
+          {
+            text: "Communication publique complète (vecteur, volume, populations concernées) et appel direct aux attaquants au nom du droit humanitaire international.",
+            ok: true, pts: 25,
+            fb: "Approche retenue par le CICR dans son communiqué du 19 janvier 2022. La transparence complète a renforcé la crédibilité, et l'appel humanitaire direct aux attaquants a eu un effet — aucune donnée n'a jamais été publiée malgré l'attribution étatique présumée.",
+            legal: "Communiqué CICR 19.01.2022 — Transparence + appel humanitaire = modèle de réponse pour incidents contre ONG.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Communication minimaliste en interne pour ne pas compromettre l'enquête en cours.",
+            ok: false, pts: -15,
+            fb: "Contraire à la LPD 2023 et à la mission du CICR. Les personnes concernées — souvent en zone de conflit — doivent savoir que leurs données peuvent être compromises pour prendre leurs propres mesures de sécurité.",
+            legal: "LPD 2023 Art. 24 — Notification obligatoire en cas de risque élevé pour les personnes concernées.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Publier uniquement un communiqué technique sans mention des populations concernées pour éviter de paniquer.",
+            ok: false, pts: -10,
+            fb: "Insuffisant. Un communiqué purement technique laisse les familles dans l'ignorance du risque qui les concerne directement. Le droit humanitaire impose l'information des personnes en danger.",
+            legal: "Convention IV — Protection active, pas seulement passive, des données humanitaires.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct, custodyPct) {
+      if (pct >= 85 && custodyPct >= 75) return { icon: "🕊️", title: "Gardien Humanitaire", sub: "Maîtrise parfaite de la réponse en contexte humanitaire" };
+      if (pct >= 65) return { icon: "🏥", title: "Analyste Incident ONG", sub: "Bonnes bases sur la réponse spécifique aux ONG" };
+      return { icon: "📚", title: "Formation requise", sub: "Révisez la réponse CICR janvier 2022" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════
+     20. STADLER_2020 — Chantage Industriel  [HARD]
+     Basé sur la cyberattaque de mai 2020 contre Stadler Rail (Bussnang)
+  ══════════════════════════════════════════════════ */
+  {
+    id: "stadler_2020",
+    title: "Chantage chez Stadler Rail",
+    icon: "🚆",
+    difficulty: "hard",
+    atmosphere: "ransomware",
+    realCase: "Stadler Rail, mai 2020 — Ransomware + exfiltration. Attaquants réclament environ 6 millions USD en Bitcoin. Stadler refuse de payer. Publication partielle de documents sensibles sur le darknet, y compris des documents de projets de matériel militaire.",
+    tags: ["WINDOWS", "DROIT"],
+    legalRefs: ["Art. 147 CP", "Art. 156 CP (chantage)", "LFAIE", "GovCERT Guide ransomware"],
+    intro: "Stadler Rail (Bussnang, TG) est frappé par un ransomware. Les attaquants revendiquent 7 To exfiltrés et demandent 6M USD en BTC. Parmi les fichiers menacés : des documents de contrats militaires (biens à double usage). Le CEO vous appelle.",
+    alertLevel: "CHANTAGE INDUSTRIEL — Biens à double usage menacés",
+    objectives: [
+      { icon: "💰", text: "Arbitrer la question du paiement (GovCERT + SECO)" },
+      { icon: "🛠", text: "Lancer la reconstruction tout en préservant les preuves" },
+      { icon: "⚖️", text: "Gérer les aspects export-control (LFAIE) des documents à double usage" },
+    ],
+    debrief: "<p>L'affaire Stadler Rail 2020 a montré un groupe industriel suisse prendre une décision courageuse : <strong>ne pas payer la rançon</strong>, malgré la menace explicite de publication. Le raisonnement : payer finance la criminalité organisée, ne garantit pas la non-publication, et expose à des sanctions SECO si le destinataire est sur une liste.</p><p>La présence de <strong>documents à double usage</strong> (civil/militaire) a ajouté une dimension LFAIE : la publication de documents techniques de matériel militaire peut constituer une violation de contrôle à l'exportation.</p>",
+    narrative: {
+      success: "La reconstruction depuis backups isolés est réussie. Le refus de payer, bien communiqué aux collaborateurs, devient une position publique forte. La publication partielle sur le darknet a lieu, mais sans catastrophe commerciale ni sanction SECO. Stadler sort renforcé.",
+      degraded: "La reconstruction est longue et coûteuse. La publication partielle crée des tensions commerciales avec certains clients défense. L'affaire laisse des cicatrices.",
+      failure: "Paiement discret de la rançon : les attaquants publient quand même, la SECO ouvre une enquête (paiement à un groupe sanctionné). Stadler écope d'une amende fédérale et voit ses contrats défense résiliés."
+    },
+    steps: [
+      {
+        phase: "💰 Le dilemme du paiement",
+        situation: "Les attaquants (groupe DoppelPaymer présumé) exigent 6 millions USD en BTC sous 72h. Ils ont publié un échantillon de 50 fichiers sur leur leak site incluant des schémas techniques de rames <em>Flirt</em> en configuration militarisée pour un client étranger. Le CEO hésite — le paiement éviterait une crise.",
+        law: "<strong>GovCERT/NCSC</strong> — Recommandation officielle : <em>ne pas payer</em>.<br><strong>SECO</strong> — Paiement à un groupe sous sanctions internationales = infraction pénale.",
+        question: "<strong>Que recommandez-vous au CEO ?</strong>",
+        choices: [
+          {
+            text: "Payer discrètement via un intermédiaire crypto — 6M USD est dérisoire face à une publication de documents militaires.",
+            ok: false, pts: -30,
+            fb: "Erreur grave à triple titre. (1) Aucune garantie de non-publication. (2) Possibles sanctions SECO si le groupe est listé. (3) Financement direct de la criminalité organisée. L'argument « dérisoire » est exactement ce que ciblent les attaquants.",
+            legal: "GovCERT + SECO — Payer = financer la cybercriminalité ET s'exposer à des sanctions pénales si le destinataire est listé.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Refuser le paiement, lancer la reconstruction depuis les backups isolés, préparer un communiqué public assumant la position éthique.",
+            ok: true, pts: 25,
+            fb: "Position conforme aux recommandations officielles et à la décision réelle de Stadler en 2020. Le refus du paiement, accompagné d'une reconstruction solide, est la seule stratégie qui ne renforce pas l'écosystème criminel.",
+            legal: "GovCERT/NCSC 2023 — Position officielle : ne pas payer. Stadler Rail en 2020 a été un cas modèle.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Négocier à la baisse (proposer 1M USD) pour gagner du temps.",
+            ok: false, pts: -15,
+            fb: "Négocier, c'est déjà reconnaître la valeur du chantage. Gagner du temps à ce prix alimente la confiance des attaquants dans la méthode. La décision doit être ferme et communiquée en interne comme en externe.",
+            legal: "Doctrine GovCERT — Négocier nourrit le modèle économique criminel.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "🛠 La reconstruction forensique",
+        situation: "Vous devez reconstruire les systèmes Active Directory depuis les backups Veeam (offline, non chiffrés). L'équipe IT veut restaurer immédiatement pour minimiser l'arrêt de production. 2'400 employés sont au chômage technique depuis 48h.",
+        law: "<strong>Manuel Ch. 11.1</strong> — Capture forensique avant toute remédiation.<br><strong>GovCERT Guide ransomware</strong> — Vérification backup + reconstruction depuis système propre.",
+        question: "<strong>Quelle séquence opérationnelle adoptez-vous ?</strong>",
+        choices: [
+          {
+            text: "Restaurer immédiatement depuis les backups sur les serveurs existants — la production doit reprendre.",
+            ok: false, pts: -25,
+            fb: "Erreur classique. Restaurer sur des machines potentiellement compromises réintroduit l'infection. Le ransomware peut avoir créé des comptes de persistance dans l'AD sauvegardé. Il faut reconstruire de zéro sur infrastructure nettoyée.",
+            legal: "GovCERT — Ne jamais restaurer sur des systèmes potentiellement compromis.",
+            critical: true, next: "end",
+          },
+          {
+            text: "(1) Imager les systèmes compromis pour preuves. (2) Reconstruire sur infrastructure propre. (3) Restaurer les données depuis backup vérifié. (4) Auditer l'AD restauré avant mise en production.",
+            ok: true, pts: 25,
+            fb: "Séquence correcte. Préservation des preuves (pour enquête et réquisition pénale), reconstruction propre (pas de réinfection), vérification AD (pas de backdoor persistante dans les backups). Plus lent mais solide.",
+            legal: "Manuel Ch. 11.1 + GovCERT — Imagerie forensique → reconstruction → restauration → audit final.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Payer la rançon pour accélérer la reprise — la séquence forensique peut attendre.",
+            ok: false, pts: -30,
+            fb: "Contredit la décision précédente. Cohérence stratégique cruciale : le refus du paiement doit s'accompagner d'une reconstruction solide, pas d'une marche arrière.",
+            legal: "GovCERT — Le refus du paiement suppose une capacité de reconstruction indépendante.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "⚖️ Les documents à double usage",
+        situation: "Parmi les 7 To exfiltrés : des schémas techniques du tram <em>Flirt</em> en version militarisée pour un client étranger non-OTAN. Ces documents relèvent potentiellement de la <strong>LFAIE</strong> (Loi fédérale sur l'acquisition d'immeubles par des personnes à l'étranger — et par extension le contrôle de l'exportation de biens à double usage). Le SECO doit-il être informé ?",
+        law: "<strong>LFAIE / LFMG</strong> — Biens militaires et à double usage : contrôle d'exportation obligatoire.<br><strong>Art. 86 Loi militaire</strong> — Secret des données militaires.",
+        question: "<strong>Quelle est votre obligation de notification ?</strong>",
+        choices: [
+          {
+            text: "Notifier uniquement le PFPDT (LPD 2023) — c'est une fuite de données personnelles d'employés.",
+            ok: false, pts: -15,
+            fb: "Incomplet. La fuite concerne AUSSI des documents à double usage. La notification au SECO est obligatoire pour les biens sous contrôle d'exportation. Sinon, Stadler s'expose à des sanctions additionnelles.",
+            legal: "LFMG/LFAIE — Notification SECO pour toute compromission de données de biens militaires ou à double usage.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Notifier simultanément : PFPDT (données personnelles), GovCERT/OFCS (incident), SECO (biens à double usage), et éventuellement le MPC (plainte pénale).",
+            ok: true, pts: 25,
+            fb: "Correct. Une fuite de cette ampleur déclenche plusieurs obligations concurrentes. La notification coordonnée à toutes les autorités compétentes est la seule approche qui protège Stadler juridiquement.",
+            legal: "LPD 2023 + LFMG + Ordonnance OFCS — Multi-notification obligatoire pour incident touchant plusieurs domaines régulés.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Ne notifier personne — les documents sont maintenant dans la nature, inutile d'ajouter des ennuis administratifs.",
+            ok: false, pts: -25,
+            fb: "Erreur grave. L'absence de notification SECO sur des biens à double usage exfiltrés constitue elle-même une infraction. Les autorités apprennent tôt ou tard par le darknet ou par la presse — avec des conséquences bien pires que la notification spontanée.",
+            legal: "LFMG Art. 33 — L'omission de notification est elle-même punissable.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct, custodyPct) {
+      if (pct >= 85 && custodyPct >= 75) return { icon: "🚆", title: "Expert Gestion de Crise", sub: "Maîtrise parfaite d'un chantage industriel complexe" };
+      if (pct >= 65) return { icon: "🛠", title: "Gestionnaire Incident", sub: "Bonnes bases sur les ransomware industriels" };
+      return { icon: "📚", title: "Formation requise", sub: "Révisez le dossier Stadler Rail 2020 + Guide GovCERT" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════
+     21. COMPARIS_2021 — Hive chez le Comparateur  [MEDIUM]
+     Basé sur l'attaque Hive ransomware contre Comparis.ch, juillet 2021
+  ══════════════════════════════════════════════════ */
+  {
+    id: "comparis_2021",
+    title: "Hive frappe Comparis",
+    icon: "💸",
+    difficulty: "medium",
+    atmosphere: "ransomware",
+    realCase: "Comparis.ch, juillet 2021 — Ransomware Hive. Environ 20 Go de données clients exfiltrés (identifiants, recherches d'assurance). Comparis refuse de payer. Publication partielle sur le leak site Hive. Notification au PFPDT effectuée.",
+    tags: ["DROIT", "FORENSIQUE"],
+    legalRefs: ["LPD (ancienne)", "LPD 2023 Art. 24", "Art. 143bis CP", "GovCERT Hive report"],
+    intro: "Comparis.ch, comparateur en ligne, est frappé par le ransomware Hive. Les attaquants revendiquent 20 Go exfiltrés : identifiants clients, historiques de recherche d'assurance. Ils exigent 1M USD en BTC. Le CEO vous mandate pour l'analyse et la stratégie.",
+    alertLevel: "FUITE DE DONNÉES CLIENTS — Notification PFPDT critique",
+    objectives: [
+      { icon: "🔍", text: "Qualifier correctement l'étendue réelle de l'exfiltration" },
+      { icon: "📣", text: "Respecter le délai de notification PFPDT (LPD 2023)" },
+      { icon: "🛡", text: "Gérer la communication envers les clients concernés" },
+    ],
+    debrief: "<p>L'affaire Comparis 2021 illustre le dilemme classique du ransomware moderne : <strong>double extorsion</strong> (chiffrement + menace de publication). Comparis a choisi de refuser de payer tout en notifiant rapidement le PFPDT et en communiquant aux clients.</p><p>La décision clé : <strong>qualifier précisément les données exfiltrées</strong> avant la communication. Dire « peut-être des données clients » crée plus de panique qu'un inventaire précis. La rigueur forensique est au service de la qualité de communication.</p>",
+    narrative: {
+      success: "L'inventaire précis des données exfiltrées permet une notification PFPDT conforme et une communication clients factuelle. Le refus du paiement et la transparence communicationnelle renforcent plutôt qu'affaiblissent la marque Comparis. Les clients informés prennent leurs mesures (changement de mots de passe).",
+      degraded: "La notification arrive, mais avec des imprécisions. Certains clients mal informés se plaignent publiquement. L'image de marque est atteinte temporairement.",
+      failure: "Paiement en catimini, notification retardée ou omise. Le PFPDT apprend par la presse, ouvre une procédure. Les clients, informés tardivement, perdent confiance. Comparis perd 15% de parts de marché en 6 mois."
+    },
+    steps: [
+      {
+        phase: "🔍 Qualifier l'exfiltration",
+        situation: "Hive revendique 20 Go exfiltrés. Votre analyse des logs réseau montre <strong>12 Go de trafic sortant suspect</strong> sur 4 jours. L'équipe IT veut annoncer immédiatement « 20 Go exfiltrés » pour être transparent. Le CEO hésite — c'est peut-être exagéré.",
+        law: "<strong>LPD 2023 Art. 24</strong> — Notification PFPDT « dans les meilleurs délais ».<br><strong>Manuel Ch. 29.1</strong> — Rigueur factuelle dans les communications incident.",
+        question: "<strong>Quelle qualification retenez-vous dans la notification ?</strong>",
+        choices: [
+          {
+            text: "Reprendre le chiffre de Hive (20 Go) — l'attaquant est la meilleure source.",
+            ok: false, pts: -15,
+            fb: "Faux. L'attaquant a intérêt à gonfler les chiffres pour la pression négociation. Reprendre ses chiffres = lui donner le contrôle du narratif. Votre propre analyse forensique est la seule source crédible.",
+            legal: "Manuel Ch. 29.1 — Ne jamais reprendre les chiffres de l'attaquant sans vérification indépendante.",
+            critical: false, next: "end",
+          },
+          {
+            text: "« Nos logs confirment 12 Go de trafic sortant anormal. La revendication de Hive (20 Go) ne peut être ni confirmée ni infirmée à ce stade. Des identifiants clients et historiques de recherche sont probablement concernés. »",
+            ok: true, pts: 25,
+            fb: "Formulation forensique impeccable. Elle distingue fait mesuré (12 Go), revendication attaquant (20 Go, non vérifiable), et nature probable (basée sur les systèmes accédés). Honnête, précise, défendable.",
+            legal: "LPD 2023 Art. 24 + Manuel Ch. 29.3 — Notification factuelle avec niveaux d'affirmation distincts.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Minimiser : « Aucune donnée sensible n'a été confirmée exfiltrée. »",
+            ok: false, pts: -20,
+            fb: "Dangereusement faux. 12 Go de trafic sortant anormal sont des faits. Minimiser sciemment expose à une procédure PFPDT et à des plaintes civiles clients si des données apparaissent plus tard.",
+            legal: "LPD 2023 Art. 24 + Art. 251 CP — La minimisation fautive est sanctionnable pénalement.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "📣 Communication aux clients",
+        situation: "La notification PFPDT est envoyée dans les 48h. Il faut maintenant communiquer aux clients concernés. L'équipe marketing veut envoyer un email générique « Possible incident, par précaution changez votre mot de passe ». Vous avez identifié <strong>47'000 comptes</strong> probablement concernés par l'exfiltration de 12 Go.",
+        law: "<strong>LPD 2023 Art. 24 al. 3</strong> — Information des personnes concernées si risque élevé.<br><strong>Bonne pratique</strong> — Communication ciblée plutôt que générique.",
+        question: "<strong>Quelle stratégie de communication adoptez-vous ?</strong>",
+        choices: [
+          {
+            text: "Envoyer un email générique aux 3 millions d'utilisateurs par précaution.",
+            ok: false, pts: -10,
+            fb: "Approche floue qui crée de la panique inutile chez 2,95M clients non concernés et dilue le message pour les 47'000 réellement touchés. La précision protège la marque et les clients.",
+            legal: "LPD 2023 — Information proportionnée au risque réel.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Envoyer un email ciblé aux 47'000 clients identifiés, décrivant précisément les données concernées, les actions à prendre, et un lien vers FAQ détaillée.",
+            ok: true, pts: 20,
+            fb: "Approche correcte. La communication ciblée, précise et actionnable respecte le principe de proportionnalité et maximise l'efficacité pour les personnes réellement en risque.",
+            legal: "LPD 2023 Art. 24 al. 3 — Information des personnes concernées, proportionnelle au risque.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Ne rien communiquer aux clients — le PFPDT est notifié, l'obligation légale est remplie.",
+            ok: false, pts: -20,
+            fb: "Faux. La notification PFPDT et l'information aux clients sont deux obligations distinctes en cas de risque élevé (LPD 2023 Art. 24 al. 3). Des identifiants et historiques = risque élevé de phishing ciblé.",
+            legal: "LPD 2023 Art. 24 al. 3 — Obligation d'information directe des personnes concernées.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct, custodyPct) {
+      if (pct >= 80 && custodyPct >= 75) return { icon: "💸", title: "Expert Gestion Fuite", sub: "Maîtrise parfaite de la réponse à une fuite clients" };
+      if (pct >= 60) return { icon: "🔍", title: "Analyste Fuite", sub: "Bonnes bases sur la gestion d'une fuite B2C" };
+      return { icon: "📚", title: "Formation recommandée", sub: "Révisez le cas Comparis 2021 et LPD 2023 Art. 24" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════
+     22. DARKMARKET_2021 — Opération Darkmarket  [HARD]
+     Basé sur le démantèlement de Darkmarket, janvier 2021 (Europol + Allemagne + Suisse)
+  ══════════════════════════════════════════════════ */
+  {
+    id: "darkmarket_2021",
+    title: "Opération Darkmarket",
+    icon: "🕵",
+    difficulty: "hard",
+    atmosphere: "raid",
+    realCase: "Opération Darkmarket, janvier 2021 — Démantèlement coordonné Europol / BKA Allemagne / fedpol Suisse de la plus grande marketplace darknet de l'époque (500'000 utilisateurs). Perquisitions en plusieurs pays. Saisie de serveurs en Ukraine et Moldavie. Arrestations de vendeurs identifiés, y compris en Suisse.",
+    tags: ["RÉSEAUX", "DROIT"],
+    legalRefs: ["Art. 244 CPP", "Art. 248 CPP", "Art. 19 LStup", "Coordination Europol"],
+    intro: "Fedpol coordonne avec Europol la perquisition d'un vendeur identifié sur Darkmarket (marketplace darknet). L'intervention a lieu à Zurich, 6h00. Le suspect est un informaticien expérimenté. Matériel suspecté : Tails, HDD chiffrés, portefeuilles crypto. L'opération doit être discrète — d'autres vendeurs sont ciblés simultanément.",
+    alertLevel: "OPÉRATION COORDONNÉE — Suspect technophile, preuves numériques complexes",
+    objectives: [
+      { icon: "🚪", text: "Conduire la perquisition sans compromettre les preuves numériques" },
+      { icon: "💻", text: "Gérer un environnement Tails (OS amnésique) — live forensics critique" },
+      { icon: "₿", text: "Identifier et saisir les portefeuilles crypto (hot + cold wallets)" },
+    ],
+    debrief: "<p>L'opération Darkmarket de janvier 2021 a illustré la complexité des <strong>perquisitions chez des suspects technophiles</strong>. Contrairement à un suspect ordinaire, le vendeur darknet utilise généralement : Tails (OS live amnésique), conteneurs chiffrés, 2FA matériel, hot wallets actifs et cold wallets dormants.</p><p>La règle d'or : <strong>la porte ouverte, l'écran allumé</strong>. L'intervention doit arriver pendant que la machine est active — sinon tout est chiffré et inaccessible. Le timing d'intervention est aussi critique que la procédure forensique elle-même.</p>",
+    narrative: {
+      success: "L'intervention à 6h00 trouve le suspect connecté. Tails actif = RAM exploitable. 4 wallets Bitcoin identifiés (2 hot, 2 cold via seed phrases papier). Le rapport lie 340'000 CHF en BTC aux transactions Darkmarket. Condamnation à 5 ans ferme + confiscation. Opération modèle pour les formations futures.",
+      degraded: "L'intervention trouve le suspect éveillé mais rapide. Tails partiellement capturé. Certains wallets identifiés, d'autres restent inaccessibles. Condamnation partielle.",
+      failure: "Intervention mal chronométrée : suspect a eu le temps d'éteindre. Tails = rien en mémoire, rien sur disque (amnésique par design). Wallets chiffrés sans clé. Pas de lien crypto établi. Suspect ressort libre faute de preuves."
+    },
+    steps: [
+      {
+        phase: "🚪 L'entrée",
+        situation: "06h02. La porte du suspect s'ouvre. Dans le salon : un laptop ThinkPad allumé avec un bureau <strong>Tails 4.xx</strong> actif, session déverrouillée. À côté, un smartphone Pixel sous GrapheneOS (écran éteint) et un <strong>YubiKey</strong> branché en USB. Sur le bureau, un carnet manuscrit ouvert.",
+        law: "<strong>Tails</strong> — Live OS amnésique : tout disparaît à l'extinction. Les données utiles sont en RAM ou sur volumes chiffrés montés.<br><strong>Art. 244 CPP</strong> — Perquisition du domicile sur mandat.",
+        question: "<strong>Quelle est votre première action forensique ?</strong>",
+        choices: [
+          {
+            text: "Débrancher immédiatement l'alimentation du laptop pour préserver l'état du disque.",
+            ok: false, pts: -30,
+            fb: "Erreur catastrophique sur Tails. Tails est amnésique : à l'extinction, la RAM est effacée et aucune persistance n'existe sur le disque (sauf si Persistent Volume activé, déchiffré en RAM). Couper = tout détruire.",
+            legal: "Manuel Ch. 11.1 — Tails exige une capture RAM préalable obligatoire. Jamais d'extinction brutale.",
+            critical: true, next: "end",
+          },
+          {
+            text: "(1) Photographier l'écran et le carnet. (2) Lancer immédiatement un dump RAM via clé USB (WinPmem/LiME). (3) Ne rien fermer ni éteindre. (4) Ne pas retirer le YubiKey.",
+            ok: true, pts: 25,
+            fb: "Séquence correcte. Tails = RAM only = dump RAM critique. Ne pas éteindre. Ne pas retirer le YubiKey (il peut déverrouiller des conteneurs). Carnet = peut contenir des seed phrases de wallets cold.",
+            legal: "Manuel Ch. 11.1 + bonnes pratiques OFCS — Perquisition d'un environnement live : RAM first, photographier, ne jamais désactiver.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Demander immédiatement au suspect son mot de passe Tails pour sécuriser la procédure.",
+            ok: false, pts: -15,
+            fb: "Possible mais problématique. Le suspect peut invoquer le nemo tenetur (Art. 113 CPP). De plus, cela n'empêche pas la dégradation de la RAM si vous attendez avant le dump. Priorité : action technique, pas interaction humaine.",
+            legal: "Art. 113 CPP — Droit au silence. La contrainte directe à déverrouiller est contestable.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "₿ Les portefeuilles crypto",
+        situation: "Le dump RAM est réussi. Volatility identifie : <strong>2 hot wallets</strong> Bitcoin Core et Electrum actifs en mémoire (avec clés privées en clair). Le carnet manuscrit contient 24 mots suspects écrits en colonne — <strong>probable seed phrase BIP-39</strong> pour un cold wallet. Le YubiKey protège probablement un deuxième cold wallet.",
+        law: "<strong>Art. 263 CPP</strong> — Séquestre de valeurs patrimoniales.<br><strong>BIP-39</strong> — 12/24 mots permettent de reconstituer n'importe quel wallet compatible.",
+        question: "<strong>Comment procédez-vous à la saisie des wallets ?</strong>",
+        choices: [
+          {
+            text: "Extraire toutes les clés privées identifiées et transférer immédiatement les fonds vers un wallet fedpol sécurisé pour éviter le vol par un complice.",
+            ok: false, pts: -20,
+            fb: "Erreur procédurale grave. Le transfert sans décision du MP peut constituer un détournement. Le séquestre se fait en documentant les clés et en bloquant les transferts — pas en transférant soi-même.",
+            legal: "Art. 263 CPP — Le séquestre n'autorise pas le transfert de fonds, seulement leur blocage et documentation.",
+            critical: true, next: "end",
+          },
+          {
+            text: "(1) Documenter chaque wallet identifié (adresse + clé privée) avec hash. (2) Photographier le carnet (seed phrase). (3) Saisir physiquement le YubiKey sous scellés. (4) Demander ordonnance de séquestre au MP pour blocage des adresses via exchanges centralisés.",
+            ok: true, pts: 25,
+            fb: "Procédure correcte. Documentation forensique + scellés physiques + séquestre judiciaire via MP. Les exchanges reçoivent ensuite les adresses à bloquer. Chaîne de custody préservée, pas d'action unilatérale sur les fonds.",
+            legal: "Art. 263 CPP + Guide fedpol cryptomonnaies — Documentation + scellés + séquestre MP.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Laisser les wallets en place et revenir avec un expert crypto plus tard.",
+            ok: false, pts: -25,
+            fb: "Impossible. La session Tails sera perdue dès qu'elle s'éteint (écran de veille, coupure électrique). Les clés privées présentes en RAM disparaîtront. Revenir « plus tard » = tout perdre.",
+            legal: "Manuel Ch. 11.1 — Les preuves volatiles exigent une action immédiate, pas différée.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "⚖️ Les scellés",
+        situation: "L'analyse terminée, le suspect invoque <strong>Art. 248 CPP</strong> et demande la mise sous scellés de tous les dispositifs numériques. Il désigne précisément : le laptop Tails, le smartphone GrapheneOS, le YubiKey, <em>et le carnet manuscrit</em> (qu'il qualifie de « journal intime »).",
+        law: "<strong>Art. 248 CPP</strong> — Scellés : suspension de l'analyse, pas de la saisie.<br><strong>TF 1B_602/2020</strong> — Désignation précise = tri préalable obligatoire.",
+        question: "<strong>Comment répondez-vous à la demande de scellés, notamment sur le carnet ?</strong>",
+        choices: [
+          {
+            text: "Refuser les scellés sur le carnet — une seed phrase BIP-39 n'est pas un « journal intime ».",
+            ok: false, pts: -10,
+            fb: "Position à nuancer. Vous ne pouvez pas refuser la demande de scellés — c'est le TMC qui tranche. Mais vous pouvez argumenter devant lui que le contenu n'est pas un journal intime mais un outil technique d'accès à des avoirs patrimoniaux.",
+            legal: "Art. 248 CPP — La décision sur la levée des scellés appartient exclusivement au TMC.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Accepter la mise sous scellés de tous les éléments, documenter l'état actuel (photos, hash RAM dump, hash des disques images), et préparer une argumentation détaillée pour le TMC sur la levée partielle.",
+            ok: true, pts: 20,
+            fb: "Approche correcte. Les scellés sont acceptés (suspension de l'analyse). La documentation pré-scellés est validée par hash. Devant le TMC, on défend la levée ciblée : carnet = objet patrimonial lié à l'enquête, pas sphère privée intime.",
+            legal: "Art. 248 CPP + TF 1B_602/2020 — Acceptation des scellés + argumentation structurée devant TMC.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Refuser totalement les scellés — la perquisition était régulière, il n'y a rien à contester.",
+            ok: false, pts: -20,
+            fb: "Faux. L'art. 248 CPP est un droit procédural du propriétaire, indépendant de la régularité de la saisie. Refuser les scellés est une violation procédurale qui peut invalider toute la perquisition.",
+            legal: "Art. 248 CPP — Droit fondamental, non subordonné à la régularité de l'opération.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct, custodyPct) {
+      if (pct >= 85 && custodyPct >= 75) return { icon: "🕵", title: "Expert Perquisition Darknet", sub: "Maîtrise avancée des interventions techno-criminelles" };
+      if (pct >= 65) return { icon: "🚪", title: "Intervenant Spécialisé", sub: "Bonnes bases en live forensics et crypto" };
+      return { icon: "📚", title: "Formation requise", sub: "Révisez le guide fedpol cryptomonnaies + Op. Darkmarket" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════
+     23. UNINE_2022 — Université de Neuchâtel  [HARD]
+     Ransomware Conti, 17 février 2022 — 800 machines Windows touchées
+  ══════════════════════════════════════════════════ */
+  {
+    id: "unine_2022",
+    title: "Conti frappe l'Université",
+    icon: "🎓",
+    difficulty: "hard",
+    atmosphere: "ransomware",
+    realCase: "Université de Neuchâtel, 17 février 2022 — Ransomware Conti. ~800 machines Windows touchées (80-90% du parc). Vecteur probable : VPN avec matériel privé en télétravail. 26 Go de données publiés sur le darknet fin février (salaires, photos étudiants, données médicales AI, contrats Fedpol/DDPS/Syngenta). Fuite étendue au-delà du campus (cantons, Confédération).",
+    tags: ["WINDOWS", "DROIT"],
+    legalRefs: ["LPD (ancienne → LPD 2023)", "Art. 144bis CP", "Manuel Ch. 11.1", "Rapport Le Temps mars 2022"],
+    intro: "17 février 2022, 22h50. Les services informatiques de l'Université de Neuchâtel reçoivent les premières alertes : des fichiers sont chiffrés un à un. La rentrée du printemps a lieu dans 72h. 800 ordinateurs sont potentiellement touchés. L'équipe IT doit arbitrer : préserver ou restaurer ?",
+    alertLevel: "INCIDENT CRITIQUE — Rentrée académique dans 72h",
+    objectives: [
+      { icon: "🚨", text: "Arbitrer l'urgence opérationnelle vs la préservation forensique" },
+      { icon: "🔍", text: "Identifier le vecteur (VPN privé en télétravail)" },
+      { icon: "📣", text: "Gérer la communication quand les données débarquent sur le darknet" },
+    ],
+    debrief: "<p>L'attaque de l'Université de Neuchâtel illustre un piège classique : le <strong>travail hybride</strong> a forcé les institutions à ouvrir leurs réseaux à des équipements personnels mal sécurisés. Le VPN, conçu comme une solution, est devenu le vecteur principal d'intrusion.</p><p>Le deuxième enseignement est la <strong>portée systémique</strong> de la fuite : les données publiées contenaient des contrats Fedpol, DDPS, Syngenta. Une université n'est pas qu'un campus — c'est un nœud de données sensibles qui dépasse largement sa mission académique.</p>",
+    narrative: {
+      success: "La segmentation rapide du réseau limite Conti à ~100 machines sur les 800. La capture forensique pré-extinction permet d'identifier le vecteur VPN. Le PFPDT est notifié dans les 24h. Quand les données débarquent sur le darknet fin février, la communication honnête (étendue + tiers concernés) préserve la crédibilité de l'institution.",
+      degraded: "La restauration a lieu mais certaines preuves sont perdues. Les données sont publiées. La communication tardive laisse des traces dans la presse.",
+      failure: "Extinction massive sans capture = vecteur inconnu. Restauration depuis backups infectés = réinfection. Publication darknet + révélation des contrats Fedpol/DDPS = crise politique nationale. L'affaire Le Temps (mars 2022) devient un cas d'école de mauvaise gestion."
+    },
+    steps: [
+      {
+        phase: "🚨 La vague de chiffrement",
+        situation: "23h15. Le SOC reçoit 47 alertes en 8 minutes depuis des postes physiques du campus. Les logs montrent des connexions <strong>depuis des VPN personnels</strong> vers des partages SMB internes. L'équipe IT veut éteindre tous les postes touchés immédiatement pour stopper la propagation.",
+        law: "<strong>Manuel Ch. 11.1</strong> — Capture forensique avant toute remédiation massive.<br><strong>GovCERT Guide ransomware</strong> — Segmentation > extinction brutale.",
+        question: "<strong>Quelle action prenez-vous en priorité ?</strong>",
+        choices: [
+          {
+            text: "Éteindre immédiatement tous les postes du campus pour stopper la propagation.",
+            ok: false, pts: -25,
+            fb: "Erreur. L'extinction massive détruit les preuves volatiles (RAM, connexions actives) sur les machines potentiellement saines. Vous perdez la visibilité sur le vecteur d'intrusion — ici, le VPN personnel. Sans vecteur identifié, la restauration propre est impossible.",
+            legal: "Manuel Ch. 11.1 — Préserver les preuves avant toute action de masse. La panique est le meilleur ami du ransomware.",
+            critical: true, next: "end",
+          },
+          {
+            text: "(1) Isoler le VLAN affecté au niveau firewall (segmentation). (2) Bloquer immédiatement tous les accès VPN. (3) Lancer une capture RAM sur 3-5 machines représentatives avant tout arrêt. (4) Communiquer aux utilisateurs d'éteindre leurs postes <em>personnels</em> et de ne pas se reconnecter.",
+            ok: true, pts: 25,
+            fb: "Approche correcte. Segmentation = coupe la propagation sans détruire les preuves. Blocage VPN = stoppe l'afflux. Captures ciblées = échantillonnage forensique suffisant. Instruction aux utilisateurs = coupe le vecteur à la source.",
+            legal: "GovCERT recommandations 2022 — Segmentation + capture ciblée + communication claire aux utilisateurs en télétravail.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Négocier avec Conti pour gagner du temps avant la rentrée.",
+            ok: false, pts: -30,
+            fb: "Erreur grave. Négocier avant même de comprendre l'étendue = donner l'initiative aux attaquants. De plus, Conti (groupe russophone) est sur plusieurs listes de sanctions — payer exposerait à une sanction SECO en plus du préjudice.",
+            legal: "GovCERT + SECO — Pas de négociation avec groupes sanctionnés, même pour urgence opérationnelle.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "🔍 Le vecteur identifié",
+        situation: "La capture RAM de 3 machines révèle le vecteur : un <strong>VPN configuré sur un ordinateur personnel</strong> d'un enseignant, compromis par un malware Emotet déposé via phishing. Le vecteur touche potentiellement tous les 400+ enseignants/chercheurs qui utilisent le VPN avec leur matériel privé. Le rectorat demande si l'on peut garantir que la rentrée aura lieu dans 72h.",
+        law: "<strong>LPD (ancienne)</strong> — Obligation de mesures techniques appropriées.<br><strong>Art. 182 CPP</strong> — L'expert forensique ne surestime pas ses capacités.",
+        question: "<strong>Quelle réponse donnez-vous au rectorat ?</strong>",
+        choices: [
+          {
+            text: "« Oui, nous aurons tout restauré pour lundi. »",
+            ok: false, pts: -20,
+            fb: "Promesse imprudente. Reconstruire un Active Directory + vérifier 800 machines en 72h sans retomber dans une réinfection par un VPN personnel non audité est techniquement impossible. Une promesse non tenue casse la confiance.",
+            legal: "Art. 182 CPP — L'expert formule des constats techniques, pas des promesses commerciales.",
+            critical: false, next: "end",
+          },
+          {
+            text: "« L'enseignement à distance continue normalement. Les services critiques (emails, visio) seront rétablis pour lundi sur infrastructure isolée. Le parc Windows nécessitera 10-14 jours supplémentaires. Les VPN personnels sont désormais interdits — seul le matériel institutionnel est autorisé. »",
+            ok: true, pts: 25,
+            fb: "Réponse correcte. Elle priorise ce qui est tenable (à distance + services critiques), annonce honnêtement le délai réaliste (10-14 jours pour 800 machines), et tire les leçons du vecteur (fin des VPN privés). C'est exactement la position adoptée par l'UniNE en 2022.",
+            legal: "Retour d'expérience UniNE 2022 — La reprise en phases annoncée honnêtement protège la crédibilité de l'institution.",
+            critical: false, next: 2,
+          },
+          {
+            text: "« Nous ne pouvons pas rouvrir — tout est à l'arrêt indéfiniment. »",
+            ok: false, pts: -15,
+            fb: "Trop défaitiste. L'enseignement à distance reste fonctionnel. Les services critiques peuvent être remontés en isolation. Annoncer un « arrêt indéfini » dramatise inutilement et nuit à la mission de l'institution.",
+            legal: "Art. 182 CPP — L'expertise doit être pondérée : ni optimiste, ni catastrophiste.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "📣 Les données sur le darknet",
+        situation: "Fin février. Conti publie <strong>26 Go de données</strong> sur son leak site — 5% du volume exfiltré selon eux. Parmi les fichiers : salaires d'employés, données médicales AI, photos d'étudiants, contrats avec le DDPS, Fedpol et Syngenta, rondes des agents de sécurité du campus. Le canton, la Confédération et des multinationales sont concernés au-delà de l'université. La presse (Le Temps) a les fichiers.",
+        law: "<strong>LPD (ancienne → LPD 2023)</strong> — Notification des personnes concernées en cas de risque élevé.<br><strong>Art. 86 Loi militaire</strong> — Les contrats DDPS/Fedpol ont un régime de protection spécifique.",
+        question: "<strong>Quelle stratégie de communication adoptez-vous ?</strong>",
+        choices: [
+          {
+            text: "Minimiser : « Une partie mineure de données administratives a été concernée. »",
+            ok: false, pts: -30,
+            fb: "Mensonge qui se retourne dans les 48h. Le Temps a les fichiers. Minimiser crée un effet amplificateur catastrophique quand la presse révèle l'ampleur réelle. C'est l'erreur classique que l'UniNE a évitée en 2022.",
+            legal: "LPD 2023 Art. 24 — Minimisation fautive = sanction PFPDT aggravée.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Communiqué public détaillé : inventaire précis des catégories publiées, notification directe aux personnes concernées (employés + étudiants + partenaires externes Fedpol/DDPS/Syngenta), transparence totale sur le vecteur (VPN personnel) et les mesures prises.",
+            ok: true, pts: 25,
+            fb: "Correct. Transparence complète + notification aux tiers = seule stratégie qui préserve la crédibilité quand la presse a déjà les faits. Les institutions qui minimisent en 2022 ont toutes été humiliées publiquement ; celles qui ont été transparentes ont gardé leur autorité morale.",
+            legal: "Retour d'expérience LPD 2023 — La transparence précoce réduit l'impact réputationnel de 60-80%.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Nier publiquement puis publier une rectification discrète dans 15 jours.",
+            ok: false, pts: -25,
+            fb: "Double erreur : le déni public crée une perte de crédibilité immédiate ; la rectification discrète est ignorée médiatiquement. Combinaison pire que l'une ou l'autre isolément.",
+            legal: "Art. 251 CP — Le déni fautif dans une communication officielle engage la responsabilité.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct, custodyPct) {
+      if (pct >= 85 && custodyPct >= 75) return { icon: "🎓", title: "Expert Réponse Académique", sub: "Maîtrise parfaite de la gestion d'incident universitaire" };
+      if (pct >= 65) return { icon: "🏫", title: "Analyste EDU", sub: "Bonnes bases sur les incidents en milieu académique" };
+      return { icon: "📚", title: "Formation requise", sub: "Révisez le dossier UniNE 2022 et rapport Le Temps" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════
+     24. SWISSCOM_2018 — Fuite 800k clients  [MEDIUM]
+     Vol via sous-traitant tunisien, annoncée en février 2018
+  ══════════════════════════════════════════════════ */
+  {
+    id: "swisscom_2018",
+    title: "La Fuite du Sous-Traitant",
+    icon: "📡",
+    difficulty: "medium",
+    atmosphere: "legal",
+    realCase: "Swisscom, automne 2017 (annoncée février 2018) — Vol des données de 812'000 clients privés + 75'000 clients d'affaires. Nom, prénom, adresse, date de naissance, numéro de téléphone. Vecteur : une société de marketing genevoise avait transmis l'accès à un sous-traitant en Tunisie, où le login a été compromis. Swisscom initialement réticent à communiquer publiquement (décision forcée par le PFPDT).",
+    tags: ["DROIT", "RÉSEAUX"],
+    legalRefs: ["LPD 2023 Art. 24", "LPD 2023 Art. 9 (sous-traitance)", "Art. 143 CP", "Rapport PFPDT 2018"],
+    intro: "Octobre 2017. Swisscom découvre le vol des données de 800'000+ clients via l'accès compromis d'un partenaire commercial. Le vol remonte à l'été. Le Conseil d'administration hésite : faut-il communiquer publiquement ? Le PFPDT a son mot à dire.",
+    alertLevel: "FUITE MASSIVE — 800'000+ clients concernés, communication en débat",
+    objectives: [
+      { icon: "🔗", text: "Reconstituer la chaîne de sous-traitance (CH → Genève → Tunisie)" },
+      { icon: "⚖️", text: "Arbitrer la question de la communication publique (PFPDT + image)" },
+      { icon: "🛡", text: "Qualifier correctement la « sensibilité » des données volées" },
+    ],
+    debrief: "<p>L'affaire Swisscom 2018 reste un cas d'école sur deux dimensions : la <strong>responsabilité en cascade de sous-traitance</strong>, et le <strong>rôle arbitral du PFPDT</strong>.</p><p>Swisscom avait initialement choisi de ne pas communiquer, qualifiant les données de « non sensibles » (une qualification juridique contestée par tous les experts depuis). Le PFPDT Adrian Lobsiger a exigé la communication publique, conformément au devoir légal d'information. La LPD 2023 a depuis intégré explicitement l'obligation de notification rapide — l'affaire Swisscom a été un des déclencheurs de cette réforme.</p>",
+    narrative: {
+      success: "La communication rapide après notification PFPDT est saluée. Les 812'000 clients privés sont notifiés via SMS (info au 444). Les mesures techniques (2FA, alertes, limitation volume) sont imposées à tous les partenaires. La confiance envers Swisscom est ébréchée mais pas détruite.",
+      degraded: "La communication arrive mais avec réticence visible. La qualification « non sensible » crée une controverse médiatique qui dure des mois.",
+      failure: "Décision unilatérale de ne pas communiquer. Fuite révélée par la presse. Procédure PFPDT ouverte d'office. L'affaire devient un scandale national, accélérant la réforme LPD 2023 — à vos dépens."
+    },
+    steps: [
+      {
+        phase: "🔗 Reconstituer la chaîne",
+        situation: "Votre analyse technique révèle la cascade :<br><br><div style='background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.8'>① <strong>Swisscom</strong> octroie un accès à la base clients à une société de marketing.<br>② La société marketing, basée à <strong>Genève</strong>, transmet l'accès à un <strong>sous-traitant en Tunisie</strong> pour du télémarketing low-cost.<br>③ Le login tunisien est compromis (phishing ou malware).<br>④ L'attaquant utilise une <strong>IP française</strong> pour siphonner la base entre août et octobre 2017.</div>",
+        law: "<strong>LPD 2023 Art. 9</strong> — Sous-traitance : le responsable reste garant, même en cascade. Contrat obligatoire à chaque niveau.<br><strong>Swisscom interne</strong> — Politique « données traitées en Suisse uniquement ».",
+        question: "<strong>Quelle est votre analyse de la responsabilité dans votre rapport ?</strong>",
+        choices: [
+          {
+            text: "Responsabilité exclusive du sous-traitant tunisien — c'est là que le login a été compromis.",
+            ok: false, pts: -20,
+            fb: "Analyse juridiquement fausse. La LPD place le responsable du traitement (Swisscom) comme garant de la chaîne entière. Le sous-traitant tunisien a exécuté, mais l'autorisation de la chaîne Genève→Tunisie a été donnée par Swisscom (qui savait, selon les documents révélés par la loi sur la transparence en 2021).",
+            legal: "LPD Art. 10a (ancienne) / Art. 9 (2023) — Responsabilité du responsable sur toute la chaîne de traitement.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Responsabilité en cascade : Swisscom (responsable principal de la chaîne autorisée), société genevoise (sous-traitant direct, transmission non autorisée contractuellement ?), sous-traitant tunisien (exécutant immédiat de la compromission).",
+            ok: true, pts: 25,
+            fb: "Analyse correcte. Les trois niveaux ont une responsabilité propre. Le rapport doit les distinguer clairement : Swisscom pour la politique contractuelle, Genève pour la transmission effective, Tunis pour la compromission. Le PFPDT doit pouvoir identifier la chaîne complète.",
+            legal: "LPD 2023 Art. 9 + Rapport PFPDT 2018 — Responsabilité en cascade, pas exclusive.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Responsabilité exclusive de Swisscom — c'est eux qui ont donné l'accès initial.",
+            ok: false, pts: -10,
+            fb: "Simplification excessive. Swisscom a effectivement autorisé la chaîne, mais les deux maillons suivants ont leurs propres manquements (audit du sous-traitant, mesures de sécurité techniques, stockage des accès). Le rapport forensique doit refléter la complexité.",
+            legal: "LPD 2023 — Responsabilité du responsable ≠ exonération des sous-traitants.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "⚖️ La question de la communication",
+        situation: "Le Conseil d'administration de Swisscom vous consulte. Position initiale du CA : <strong>ne pas communiquer publiquement</strong>, qualifier les données de « non sensibles » selon la LPD (nom, prénom, adresse, date de naissance, téléphone) et prendre des mesures techniques discrètes. Le PFPDT, consulté, voudrait être rassuré sur l'information aux clients.",
+        law: "<strong>LPD (ancienne)</strong> — Notification PFPDT si risque élevé ; notification aux personnes concernées si protection nécessaire.<br><strong>LPD 2023</strong> — Notification obligatoire dans les meilleurs délais.",
+        question: "<strong>Quel conseil donnez-vous au Conseil d'administration ?</strong>",
+        choices: [
+          {
+            text: "Ne pas communiquer publiquement. Les données sont techniquement « non sensibles » au sens de la loi. Mesures techniques + silence préservent la réputation.",
+            ok: false, pts: -25,
+            fb: "Conseil dangereux. « Non sensible » juridiquement ≠ « sans risque ». Ces données permettent le social engineering ciblé (se faire passer pour Swisscom au téléphone, phishing personnalisé). Et surtout : quand le PFPDT sera informé, il forcera la communication — autant la faire volontairement.",
+            legal: "Réalité 2018 — C'est exactement ce que Swisscom voulait faire. Le PFPDT les a forcés à communiquer. La réputation a souffert bien plus de la perception d'opacité que des données elles-mêmes.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Communication publique complète : conférence de presse, notification des 812'000 clients privés via SMS (service au 444), inventaire précis des données, description des mesures prises (2FA pour partenaires, limitation volume, alertes automatiques).",
+            ok: true, pts: 25,
+            fb: "Position qui a finalement été adoptée par Swisscom en février 2018 (sous pression PFPDT). Le SMS au 444 « Info » a permis à chaque client de vérifier s'il était concerné. La stratégie a limité le dommage réputationnel — imparfaite mais correcte.",
+            legal: "LPD 2023 Art. 24 + précédent Swisscom 2018 — Transparence rapide + outil de vérification individuel = standard.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Communication partielle : communiqué technique vague sans mention du sous-traitant tunisien, « pour ne pas compliquer l'enquête ».",
+            ok: false, pts: -15,
+            fb: "Stratégie qui éclate tôt ou tard. En 2021, la loi sur la transparence a révélé l'existence du sous-traitant tunisien — occulté en 2018. La révélation a généré un second scandale, trois ans après. Mieux vaut tout dire au départ.",
+            legal: "Loi sur la transparence (LTrans) — Les omissions dans les communications initiales finissent par être révélées.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct, custodyPct) {
+      if (pct >= 80 && custodyPct >= 75) return { icon: "📡", title: "Expert Sous-Traitance", sub: "Maîtrise parfaite de la responsabilité en cascade" };
+      if (pct >= 60) return { icon: "🔗", title: "Analyste Partenariats", sub: "Bonnes bases sur la chaîne de responsabilité" };
+      return { icon: "📚", title: "Formation recommandée", sub: "Révisez le cas Swisscom 2018 et LPD 2023 Art. 9" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════
+     25. SWISSPORT_2022 — BlackCat à Zurich  [MEDIUM]
+     Ransomware BlackCat/ALPHV, 3 février 2022 — aéroport de Zurich
+  ══════════════════════════════════════════════════ */
+  {
+    id: "swissport_2022",
+    title: "BlackCat à l'Aéroport",
+    icon: "✈️",
+    difficulty: "medium",
+    atmosphere: "ransomware",
+    realCase: "Swissport, 3 février 2022 — Ransomware BlackCat/ALPHV (premier ransomware codé en Rust). Attaque contenue en 48h via infrastructures air-gapped et fallback manuel. 22 vols retardés à Zurich (3-20 min). 1,6 To revendiqués exfiltrés, publiés sur le leak site BlackCat (passeports, candidatures, documents internes).",
+    tags: ["FORENSIQUE", "WINDOWS"],
+    legalRefs: ["Manuel Ch. 11.1", "LPD (ancienne)", "Ordonnance Aviation", "ICAO Security Manual"],
+    intro: "3 février 2022, 6h00. L'aéroport de Zurich entre dans sa pointe matinale. Swissport, opérateur des services au sol (check-in, bagages, ravitaillement), détecte un ransomware sur son infrastructure IT globale. 310 aéroports dans 50 pays dépendent de ces systèmes. Les fallbacks manuels doivent tenir.",
+    alertLevel: "INFRASTRUCTURE AÉRONAUTIQUE — Fallback manuel critique",
+    objectives: [
+      { icon: "🎯", text: "Arbitrer le maintien opérationnel vs la capture forensique" },
+      { icon: "🛡", text: "Valider l'efficacité des air-gapped backups" },
+      { icon: "📢", text: "Communiquer aux passagers + compagnies aériennes clients" },
+    ],
+    debrief: "<p>L'affaire Swissport 2022 a été un cas d'école de <strong>réponse réussie</strong> à un ransomware : contenu en 48h, 22 vols retardés seulement, reprise des opérations via fallback manuel et air-gapped backups. Swissport a refusé de payer, illustrant qu'une préparation sérieuse (backups isolés, procédures dégradées) rend le refus crédible.</p><p>BlackCat (aussi ALPHV, Noberus) était à l'époque remarquable pour être le <strong>premier ransomware codé en Rust</strong>, ce qui compliquait significativement l'analyse forensique classique. Les 1,6 To publiés sur leur leak site ont néanmoins été un coût réputationnel réel — même sans paiement, la <em>double extorsion</em> fait mal.</p>",
+    narrative: {
+      success: "Le fallback manuel tient. 22 vols retardés de 3-20 minutes à Zurich, rien de plus. Les backups air-gapped permettent une restauration propre en 48h. Le refus du paiement tient, malgré la publication de 1,6 To sur le leak site BlackCat. Case study interne devenue référence chez les opérateurs aéroportuaires européens.",
+      degraded: "Le fallback tient partiellement. Des retards importants sur 2-3 jours. Image commerciale entamée mais opérations préservées.",
+      failure: "Pas de fallback efficace. Chaos sur 72h aux 310 aéroports. Compagnies aériennes clients résilient leurs contrats. Le paiement finit par être fait en urgence — Swissport finit devant la SECO pour paiement à un groupe listé."
+    },
+    steps: [
+      {
+        phase: "✈️ L'alerte à 6h du matin",
+        situation: "Le SOC détecte le chiffrement. Les systèmes de check-in, de planning et de gestion bagages sont touchés sur <strong>une partie de l'infrastructure mondiale</strong>. Les opérations physiques (tapis bagages, agents de piste) sont techniquement indépendantes. 22 vols décolleront dans les 90 minutes. Le directeur opérations veut activer immédiatement les procédures manuelles.",
+        law: "<strong>Manuel Ch. 11.1</strong> — Capture forensique préalable obligatoire.<br><strong>ICAO Security</strong> — Continuité opérationnelle prioritaire pour sécurité aviation.",
+        question: "<strong>Comment conciliez-vous forensique et continuité opérationnelle ?</strong>",
+        choices: [
+          {
+            text: "Tout arrêter pour capture forensique complète. Les vols attendront.",
+            ok: false, pts: -30,
+            fb: "Erreur catastrophique en contexte aéronautique. Chaque heure de blocage à Zurich = des centaines de vols affectés en cascade sur l'Europe. La forensique doit s'adapter au contexte critique, pas l'inverse.",
+            legal: "ICAO Security Manual — Priorité absolue à la sécurité et continuité des opérations aériennes.",
+            critical: true, next: "end",
+          },
+          {
+            text: "(1) Activer immédiatement les fallback manuels (check-in papier, tableaux physiques). (2) Capturer en parallèle la RAM + images disque d'un échantillon représentatif (3-5 serveurs) pendant que les autres continuent de servir en mode dégradé. (3) Isoler progressivement les systèmes touchés pour restauration depuis backups air-gapped.",
+            ok: true, pts: 25,
+            fb: "Approche correcte, exactement celle adoptée par Swissport en 2022. Continuité opérationnelle via fallback manuel + forensique ciblée sur échantillon + isolation progressive. 22 vols retardés de 3-20 min seulement au final.",
+            legal: "Retour d'expérience Swissport 2022 — Fallback + échantillonnage forensique + isolation progressive = modèle pour opérations critiques.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Payer discrètement la rançon pour restaurer rapidement — les enjeux opérationnels justifient le paiement.",
+            ok: false, pts: -30,
+            fb: "Erreur double. (1) Le paiement ne garantit rien et prend 12-48h de négociation. (2) Swissport a démontré qu'avec des air-gapped backups, le paiement est inutile. (3) Payer BlackCat (présumé lié à DarkSide/Colonial Pipeline) = risque SECO.",
+            legal: "GovCERT + SECO — Le paiement n'est ni rapide, ni fiable, ni légal pour groupes listés.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "🛡 Les backups air-gapped",
+        situation: "La capture forensique confirme : <strong>BlackCat/ALPHV</strong>, codé en Rust (premier ransomware dans ce langage — complexité forensique accrue). L'infection est propagée via Active Directory. L'équipe IT propose de restaurer depuis les backups air-gapped datant de 18h la veille. Le CISO hésite : est-on sûr que les backups ne sont pas compromis ?",
+        law: "<strong>Manuel Ch. 24.3</strong> — Vérification backup avant restauration sur système potentiellement compromis.<br><strong>Principe air-gap</strong> — Isolation physique = protection contre propagation.",
+        question: "<strong>Quelle séquence de validation des backups adoptez-vous ?</strong>",
+        choices: [
+          {
+            text: "Restaurer directement les backups — ils étaient déconnectés physiquement, donc intacts par définition.",
+            ok: false, pts: -15,
+            fb: "Raccourci dangereux. Les backups air-gapped protègent contre le chiffrement en live, mais pas contre un malware qui y aurait été <em>déjà présent</em> au moment du dernier backup (dormant, pas encore activé). Une vérification préalable hors-ligne est obligatoire.",
+            legal: "Manuel Ch. 24.3 — Restauration = vérification préalable dans un environnement isolé.",
+            critical: false, next: "end",
+          },
+          {
+            text: "(1) Monter les backups sur un environnement isolé (sandbox air-gap). (2) Scanner avec indicateurs BlackCat (hashes, YARA rules disponibles). (3) Vérifier l'intégrité de l'AD backup (comptes suspects, persistance). (4) Si clean : restaurer sur infrastructure propre ; sinon : utiliser un backup antérieur.",
+            ok: true, pts: 25,
+            fb: "Séquence correcte. Sandbox isolé = test sans risque. YARA rules BlackCat publiques depuis novembre 2021 = détection possible. Vérification AD = cruciale pour ransomware modernes. Si compromis : revenir à un backup antérieur, même si plus ancien.",
+            legal: "GovCERT Guide ransomware 2022 + Manuel Ch. 24.3 — Validation backup en sandbox obligatoire avant restauration.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Reconstruire tout de zéro sans restaurer — c'est plus sûr mais prendra 3 semaines.",
+            ok: false, pts: -10,
+            fb: "Conservateur à l'excès. 3 semaines d'impact opérationnel pour éviter une vérification qui prend 2-4h. Le coût opérationnel du choix est disproportionné alors que les outils de validation existent.",
+            legal: "Principe de proportionnalité opérationnelle — La prudence ne justifie pas des délais disproportionnés.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct, custodyPct) {
+      if (pct >= 80 && custodyPct >= 75) return { icon: "✈️", title: "Expert Aviation Resilience", sub: "Maîtrise parfaite des incidents en infrastructure aéronautique" };
+      if (pct >= 60) return { icon: "🛫", title: "Analyste Infrastructure Critique", sub: "Bonnes bases en continuité opérationnelle" };
+      return { icon: "📚", title: "Formation recommandée", sub: "Révisez le dossier Swissport 2022 et principes air-gap" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════
+     26. NONAME_2023 — Hacktivisme Étatique  [MEDIUM]
+     NoName057 — DDoS pro-russes contre la Suisse, juin 2023
+  ══════════════════════════════════════════════════ */
+  {
+    id: "noname_2023",
+    title: "Vague Pro-Russe sur la Suisse",
+    icon: "💥",
+    difficulty: "medium",
+    atmosphere: "state",
+    realCase: "NoName057, juin 2023 — Vague coordonnée d'attaques DDoS contre l'administration suisse durant le discours vidéo de Volodymyr Zelensky au Parlement (15 juin). Cibles : Parlement, Armée suisse, La Poste, aéroport de Genève, aéroport de Berne, Südostbahn, administration fédérale. Revendication publique par NoName sur Telegram.",
+    tags: ["RÉSEAUX", "DROIT"],
+    legalRefs: ["Art. 144bis CP (entrave)", "Ordonnance OFCS", "Rapport OFCS 2023", "Sanctions SECO Russie"],
+    intro: "15 juin 2023, 13h45. Zelensky doit s'adresser au Parlement suisse par vidéo à 14h. Depuis 48h, NoName057 a revendiqué des DDoS contre plusieurs sites d'administration fédérale. L'OFCS vous mandate pour coordonner la réponse. Les mesures prises dans les 15 prochaines minutes détermineront si le discours aura lieu normalement.",
+    alertLevel: "ATTAQUE ÉTATIQUE COORDONNÉE — Timing politique, pression temps critique",
+    objectives: [
+      { icon: "📡", text: "Mitiger les DDoS en temps réel sans couper l'accès légitime" },
+      { icon: "🎯", text: "Caractériser le profil de l'attaquant (hacktivisme, APT, ou hybride ?)" },
+      { icon: "🇨🇭", text: "Coordonner la réponse entre acteurs fédéraux, cantonaux et privés" },
+    ],
+    debrief: "<p>Les vagues d'attaques NoName057 en 2023 illustrent le <strong>hacktivisme étatique</strong> : DDoS à motivation politique, revendiqués publiquement, ciblant des symboles démocratiques (parlement, administration). L'objectif, comme l'a dit Stéphane Duguin (CyberPeace Institute), est de <em>« diminuer la confiance dans les institutions étatiques »</em>, par petites doses.</p><p>La réponse technique (CDN, anti-DDoS, filtrage géographique) est connue. La difficulté est <strong>politique</strong> : rester fonctionnel pendant un discours symbolique comme celui de Zelensky sans couper l'accès citoyen aux services publics.</p>",
+    narrative: {
+      success: "Le discours de Zelensky se déroule normalement. Les mitigations CDN absorbent les vagues DDoS. Le OFCS coordonne en temps réel avec les cantons et les opérateurs critiques. L'attaque révèle des faiblesses d'architecture qui deviennent un programme de renforcement en 2024. NoName revendique mais ne parvient pas à entraver réellement.",
+      degraded: "Le discours a lieu mais avec des services publics indisponibles par intermittence. Impact symbolique réel — NoName publie des captures d'écran d'erreur.",
+      failure: "Saturation massive. Le discours Zelensky est partiellement coupé. Plusieurs services fédéraux sont indisponibles durant 4-6h. NoName057 célèbre publiquement sur Telegram. La presse internationale amplifie. Cause politique réelle : perte de confiance dans la capacité de la Confédération à protéger l'accès numérique aux institutions."
+    },
+    steps: [
+      {
+        phase: "📡 Mitigation d'urgence",
+        situation: "13h47. Les premiers pics DDoS arrivent. <strong>Plusieurs dizaines de milliers de requêtes/seconde</strong> depuis botnets distribués. L'IP source principale est russe, mais 60% du trafic provient de botnets mondiaux (IoT compromis). Le OFCS doit choisir une stratégie de mitigation immédiate.",
+        law: "<strong>Art. 144bis CP</strong> — L'entrave au bon fonctionnement d'un système est pénalement réprimée.<br><strong>Ordonnance OFCS</strong> — Coordination fédérale pour infrastructures critiques.",
+        question: "<strong>Quelle stratégie de mitigation activez-vous ?</strong>",
+        choices: [
+          {
+            text: "Blocage géographique : couper tout le trafic depuis la Russie et les pays associés.",
+            ok: false, pts: -20,
+            fb: "Inefficace techniquement (60% du trafic vient de botnets mondiaux, pas de Russie) et problématique politiquement (blocage géographique d'un État est un acte qui peut être vu comme hostile). De plus, des citoyens/journalistes russes peuvent avoir un besoin légitime d'accès.",
+            legal: "Principe de proportionnalité — Le blocage géographique massif est rarement proportionnel à la menace DDoS.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Activation de la protection CDN anti-DDoS (Cloudflare/Akamai) avec challenge JavaScript et rate-limiting IP. Filtrage progressif des patterns NoName connus (User-Agent, signatures de requêtes). Alerte OFCS aux autres entités (cantons, opérateurs) pour préparation.",
+            ok: true, pts: 25,
+            fb: "Stratégie correcte. La mitigation moderne combine CDN + challenge progressif + signatures connues + coordination. Elle préserve l'accès légitime tout en absorbant la vague. C'est exactement ce que l'OFCS a coordonné en juin 2023.",
+            legal: "Rapport OFCS 2023 + bonnes pratiques — CDN + challenge + signatures + coordination = standard moderne.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Couper complètement les sites ciblés pour rétablir plus tard — éviter l'escalade.",
+            ok: false, pts: -25,
+            fb: "C'est exactement l'objectif de NoName : faire tomber les sites. Couper volontairement = livrer la victoire à l'adversaire. Le symbole politique (discours Zelensky) sera impacté, ce qui est précisément le but recherché.",
+            legal: "Doctrine cyber — Capituler devant un DDoS = reconnaître la victoire de l'attaquant.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "🎯 Caractérisation de l'adversaire",
+        situation: "Les vagues DDoS continuent mais sont absorbées. Le rectorat communication demande un rapport rapide sur le profil de l'adversaire pour le communiqué : <strong>« est-ce un acteur étatique russe ? »</strong> La tentation politique est d'affirmer clairement l'attribution.",
+        law: "<strong>Manuel Ch. 29.1</strong> — Attribution étatique : prudence extrême, réservée aux agences spécialisées.<br><strong>Art. 182 CPP</strong> — L'expert ne se substitue pas au politique.",
+        question: "<strong>Quelle caractérisation retenez-vous dans votre rapport public ?</strong>",
+        choices: [
+          {
+            text: "« Ces attaques sont le fait de services de renseignement russes visant à déstabiliser la démocratie suisse. »",
+            ok: false, pts: -25,
+            fb: "Attribution étatique directe sans base technique forte. NoName057 se revendique « hacktivistes pro-russes indépendants » — la frontière avec un acteur étatique est floue et discutée. Une affirmation aussi forte sans preuve engage la Suisse diplomatiquement.",
+            legal: "Manuel Ch. 29.1 + prudence diplomatique — L'attribution étatique publique engage l'État suisse ; elle ne se fait pas à la légère.",
+            critical: true, next: "end",
+          },
+          {
+            text: "« Les attaques sont revendiquées par le groupe hacktiviste pro-russe NoName057. L'outillage technique et les motivations politiques sont cohérentes avec cette revendication. Une attribution étatique directe n'est pas établie à ce stade et relève des services spécialisés. »",
+            ok: true, pts: 25,
+            fb: "Formulation forensique et diplomatiquement prudente. Elle rapporte le fait (revendication), caractérise techniquement (outillage), laisse l'attribution étatique aux services spécialisés (SRC). C'est exactement la posture adoptée par l'OFCS en juin 2023.",
+            legal: "Rapport OFCS 2023 — Attribution mesurée, factuelle, ne se substituant pas au renseignement.",
+            critical: false, next: 2,
+          },
+          {
+            text: "« L'origine des attaques n'est pas clairement identifiable, aucune revendication crédible. »",
+            ok: false, pts: -15,
+            fb: "Faux. NoName057 a revendiqué publiquement sur Telegram, avec captures d'écran à l'appui. Prétendre ignorer la revendication = déni d'un fait public, décrédibilise l'expertise.",
+            legal: "Manuel Ch. 29.1 — Rapporter les faits publics observables, même si leur auteur est controversé.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "🇨🇭 Coordination fédérale",
+        situation: "La vague se poursuit sur plusieurs jours. Des cantons (Argovie, Vaud, Genève) sont également ciblés. Des opérateurs critiques privés (La Poste, Swiss) reçoivent des attaques similaires. Le Conseil fédéral vous demande un <strong>cadre de coordination</strong> pour la suite.",
+        law: "<strong>Ordonnance OFCS</strong> — Coordination volontaire entre Confédération, cantons, opérateurs critiques.<br><strong>Future Loi InfoSec (en préparation)</strong> — Obligation de notification d'incident en cours de consolidation.",
+        question: "<strong>Quel cadre de coordination proposez-vous ?</strong>",
+        choices: [
+          {
+            text: "Centralisation totale : tout est géré par l'OFCS, les cantons et privés doivent suivre.",
+            ok: false, pts: -15,
+            fb: "Politiquement et juridiquement impossible. La Suisse a une structure fédérale : les cantons ont leurs compétences propres. Les opérateurs privés aussi. Le rôle de l'OFCS est de <em>coordonner</em>, pas de commander. Une tentative de centralisation crée des résistances et paralyse.",
+            legal: "Fédéralisme suisse — Coordination ≠ centralisation. Le rôle de l'OFCS est cadré par ordonnance.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Cadre fédéraliste : (1) OFCS comme hub d'information central et d'assistance technique volontaire. (2) Canaux sécurisés de partage d'IoC (MISP-CH). (3) Notification d'incident encouragée (puis obligatoire via future Loi InfoSec). (4) Cellules de crise activables par événement. (5) Communication publique coordonnée.",
+            ok: true, pts: 20,
+            fb: "Cadre correct et réaliste. Hub + partage volontaire + canaux sécurisés + notifications + cellules + com commune. C'est la direction qu'a prise l'OFCS depuis 2023, avec la préparation de la Loi InfoSec entrée en vigueur en 2024-25.",
+            legal: "Ordonnance OFCS + Loi InfoSec (en préparation) — Coordination fédéraliste moderne, volontaire puis progressivement obligatoire.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Laisser faire — chaque entité gère de son côté, la guerre cyber n'est pas un sujet pour la Confédération.",
+            ok: false, pts: -30,
+            fb: "Position inacceptable dans un contexte de hacktivisme étatique coordonné. Laisser les cantons et privés isolés face à des attaques mondialement coordonnées = garantir leur défaite individuelle. Le rôle de l'État fédéral est précisément la coordination en cyber-résilience nationale.",
+            legal: "Responsabilité fédérale — La cybersécurité des infrastructures critiques est une mission d'État, pas un optionnel.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct, custodyPct) {
+      if (pct >= 80 && custodyPct >= 75) return { icon: "💥", title: "Expert Cyber-Coordination", sub: "Maîtrise parfaite de la réponse nationale coordonnée" };
+      if (pct >= 60) return { icon: "🛰", title: "Analyste Hacktivisme", sub: "Bonnes bases sur les attaques étatiques coordonnées" };
+      return { icon: "📚", title: "Formation recommandée", sub: "Révisez le Rapport OFCS 2023 + doctrine cyber-défense suisse" };
     },
   },
 
