@@ -4,9 +4,53 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Analyse Windows — CAS-IN Forensique</title>
+<meta name="description" content="Artefacts Windows forensiques · Prefetch · LNK · Registry · Event Logs · Shellbags · DFIR">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../style/fiche_style.css">
-
-
+<style>.card.blue::before{background:var(--blue)}.card.orange::before{background:var(--orange)}.card.green::before{background:var(--green)}.card.purple::before{background:var(--purple)}.card.red::before{background:var(--red)}
+  .card.blue .card-title{color:var(--blue)}.card.orange .card-title{color:var(--orange)}.card.green .card-title{color:var(--green)}.card.purple .card-title{color:var(--purple)}.card.red .card-title{color:var(--red)}
+  /* Artefact rows */
+  .art-list{display:flex;flex-direction:column;gap:.5rem;}
+  .art{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;display:grid;grid-template-columns:180px 1fr;gap:.75rem;align-items:start;transition:background .15s;}
+  .art:hover{background:var(--surface2)}
+  .art-name{font-weight:700;font-size:.8rem;color:var(--blue);}
+  .art-path{font-size:.68rem;color:var(--muted);margin:.15rem 0;font-family:var(--mono);}
+  .art-tool{font-size:.68rem;color:var(--green);font-weight:600;}
+  .art-body{font-size:.78rem;color:var(--text);line-height:1.5;}
+  /* Registre */
+  .reg-table{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .reg-row{display:grid;grid-template-columns:170px 1fr;border-bottom:1px solid var(--border);}
+  .reg-row:last-child{border-bottom:none}
+  .reg-key{padding:.6rem .85rem;background:var(--surface2);font-size:.7rem;font-family:var(--mono);color:var(--muted);display:flex;align-items:center;}
+  .reg-val{padding:.6rem .85rem;font-size:.77rem;color:var(--text);}
+  /* Event IDs */
+  .events{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .ev{display:grid;grid-template-columns:80px 1fr;border-bottom:1px solid var(--border);transition:background .15s;}
+  .ev:last-child{border-bottom:none}
+  .ev:hover{background:var(--surface2)}
+  .ev-id{padding:.55rem .85rem;background:rgba(240,136,62,.08);border-right:1px solid var(--border);font-weight:800;color:var(--orange);display:flex;align-items:center;font-size:.82rem;}
+  .ev-desc{padding:.55rem .85rem;font-size:.78rem;color:var(--text);}
+  /* Shellbags */
+  .sb-arch{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .sb-row{display:grid;grid-template-columns:120px 200px 1fr;border-bottom:1px solid var(--border);font-size:.78rem;}
+  .sb-row:last-child{border-bottom:none}
+  .sb-cell{padding:.55rem .85rem;border-right:1px solid var(--border);}
+  .sb-cell:last-child{border-right:none}
+  /* Corbeille */
+  .bin-demo{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .bin-row{display:flex;gap:1rem;padding:.6rem 1rem;border-bottom:1px solid var(--border);font-size:.78rem;align-items:center;}
+  .bin-row:last-child{border-bottom:none}
+  .bin-file{font-weight:700;min-width:80px;}
+  table{width:100%;border-collapse:collapse;font-size:.78rem;}
+  th{background:var(--surface2);color:var(--muted);font-size:.68rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.55rem .9rem;text-align:left;border-bottom:1px solid var(--border);}
+  td{padding:.6rem .9rem;border-bottom:1px solid var(--border);vertical-align:top;}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:var(--surface2)}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  @media(max-width:600px){.card-grid{grid-template-columns:1fr}.art{grid-template-columns:1fr}.sb-row{grid-template-columns:1fr}}</style>
 
 <button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
 <script>
@@ -18,11 +62,11 @@
 })();
 </script>
 
-
 </head>
 <body>
 <div class="page">
-<nav class="tn-nav">
+<a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:0;z-index:999;padding:.5rem 1rem;background:var(--cyan);color:var(--bg);font-size:.8rem;border-radius:0 0 4px 0;text-decoration:none">Aller au contenu</a>
+<nav class="tn-nav" aria-label="Navigation fiche">
   <a href="index.html" class="tn-back">← Fiches</a>
   <span class="tn-title">ARTEFACTS WINDOWS</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
@@ -35,16 +79,17 @@
     <span class="bc-sep">›</span>
     <a href="index.html#cat-artefactswindows">Artefacts Windows</a>
     <span class="bc-sep">›</span>
-    <span class="bc-current">Artefacts Windows</span>
+    <span class="bc-current">Windows</span>
     <span class="read-time-badge">⏱ ~13 min</span>
   </div>
 </div>
+<main id="main-content">
 
 
   <div class="header">
-    <div class="fs-badge">🪟</div>
+    <div class="fs-badge">Windows</div>
     <div>
-      <div><span class="tag">DFIR</span> <span class="tag" style="background:rgba(88,166,255,.12);border-color:rgba(88,166,255,.3);color:var(--accent2)">Artefacts</span></div>
+      <div><span class="tag">DFIR</span> <span class="tag" style="background:rgba(88,166,255,.12);border-color:rgba(88,166,255,.3);color:var(--blue)">Artefacts</span></div>
       <div class="header-meta" style="margin-top:.3rem">Registre · Prefetch · ShellBags · USBSTOR · Thumbcache · Corbeille · EventLog</div>
     </div>
   </div>
@@ -66,12 +111,12 @@
   <div class="section">
     <div class="section-title">Prefetch — Preuve d'exécution</div>
     <div class="card-grid">
-      <div class="card blue">
+      <div class="card-blue">
         <div class="card-title">Qu'est-ce que c'est ?</div>
         <p>Windows crée un fichier <code>.pf</code> dans <code>C:\Windows\Prefetch\</code> lors du premier lancement d'un programme. Optimisation de démarrage : mémorise les 10 premières secondes d'accès disque.<br><br>
         <strong>Preuve d'exécution</strong> même si le programme est supprimé — le .pf survit.</p>
       </div>
-      <div class="card green">
+      <div class="card-green">
         <div class="card-title">Contenu forensique</div>
         <p>
           ✓ Nom de l'exécutable + chemin<br>
@@ -84,7 +129,7 @@
       </div>
     </div>
     <div style="background:rgba(255,64,96,.06);border:1px solid rgba(255,64,96,.2);border-radius:8px;padding:.7rem 1rem;margin-top:.5rem;font-size:.78rem">
-      <strong style="color:var(--accent4)">Limites à mentionner dans le rapport :</strong> Prefetch <strong>désactivé par défaut sur les serveurs</strong> Windows. Sur SSD, peut être désactivé (paramètre EnablePrefetcher=0). Sur Windows 10+, format compressé XPRESS Huffman — seul PECmd peut le lire correctement.
+      <strong style="color:var(--red)">Limites à mentionner dans le rapport :</strong> Prefetch <strong>désactivé par défaut sur les serveurs</strong> Windows. Sur SSD, peut être désactivé (paramètre EnablePrefetcher=0). Sur Windows 10+, format compressé XPRESS Huffman — seul PECmd peut le lire correctement.
     </div>
   </div>
 
@@ -101,24 +146,24 @@
         <div class="sb-cell">Contenu</div>
       </div>
       <div class="sb-row">
-        <div class="sb-cell" style="color:var(--accent2);font-weight:700">BagMRU</div>
+        <div class="sb-cell" style="color:var(--blue);font-weight:700">BagMRU</div>
         <div class="sb-cell">La carte — arborescence</div>
         <div class="sb-cell">Nœuds numérotés (0, 1, 2…) représentant les dossiers visités. Reconstruit l'arborescence complète avec timestamps.</div>
       </div>
       <div class="sb-row">
-        <div class="sb-cell" style="color:var(--accent3);font-weight:700">Bags</div>
+        <div class="sb-cell" style="color:var(--green);font-weight:700">Bags</div>
         <div class="sb-cell">Le contenu — préférences</div>
         <div class="sb-cell">Préférences d'affichage (tri, taille de fenêtre, position). Moins forensiquement pertinent que BagMRU.</div>
       </div>
     </div>
     <div class="card-grid">
-      <div class="card orange">
+      <div class="card-orange">
         <div class="card-title">NTUSER.DAT (dossiers locaux)</div>
         <p><code>HKCU\Software\Microsoft\Windows\Shell\BagMRU</code><br>
         <code>HKCU\Software\Microsoft\Windows\Shell\Bags</code><br><br>
         Dossiers locaux, bureau, documents. Persiste même après suppression du dossier cible.</p>
       </div>
-      <div class="card purple">
+      <div class="card-purple">
         <div class="card-title">USRCLASS.DAT (réseau/amovibles)</div>
         <p><code>HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell</code><br><br>
         Lecteurs réseau (UNC <code>\\serveur\partage</code>), supports amovibles. Plus riche en informations sur les déplacements de données.</p>
@@ -146,7 +191,7 @@
       </table>
     </div>
     <div style="background:rgba(63,185,80,.05);border:1px solid rgba(63,185,80,.2);border-radius:8px;padding:.7rem 1rem;margin-top:.5rem;font-size:.78rem">
-      <strong style="color:var(--accent3)">Corrélation USB :</strong> USBSTOR (identification) + MountedDevices (lettre) + ShellBags (dossiers explorés) + .lnk (fichiers ouverts) + NTUSER.DAT (par utilisateur via SID) = preuve complète de qui a connecté quelle clé et quels fichiers ont été accédés.
+      <strong style="color:var(--green)">Corrélation USB :</strong> USBSTOR (identification) + MountedDevices (lettre) + ShellBags (dossiers explorés) + .lnk (fichiers ouverts) + NTUSER.DAT (par utilisateur via SID) = preuve complète de qui a connecté quelle clé et quels fichiers ont été accédés.
     </div>
   </div>
 
@@ -154,13 +199,13 @@
   <div class="section">
     <div class="section-title">Thumbcache — Miniatures persistantes</div>
     <div class="card-grid">
-      <div class="card blue">
+      <div class="card-blue">
         <div class="card-title">Localisation</div>
         <p><code>C:\Users\&lt;user&gt;\AppData\Local\Microsoft\Windows\Explorer\</code><br><br>
         Fichiers : <code>thumbcache_1280.db</code>, <code>thumbcache_96.db</code>, <code>thumbcache_48.db</code>, <code>thumbcache_32.db</code>
         </p>
       </div>
-      <div class="card red">
+      <div class="card-red">
         <div class="card-title">Valeur forensique critique</div>
         <p>Les miniatures <strong>persistent après suppression</strong> de l'image originale. Une image illicite supprimée peut continuer d'exister dans le thumbcache en résolution identifiable.<br><br>
         <code>_1280</code> = images vues dans l'explorateur · <code>_96</code> = images issues de la navigation web</p>
@@ -172,14 +217,14 @@
   <div class="section">
     <div class="section-title">UserAssist (ROT13) & Corbeille</div>
     <div class="card-grid">
-      <div class="card purple">
+      <div class="card-purple">
         <div class="card-title">UserAssist — Obfuscation ROT13</div>
         <p>Clé : <code>HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist</code><br><br>
         Enregistre les programmes exécutés depuis le menu Démarrer ou le bureau. Les chemins sont <strong>encodés en ROT13</strong>.<br><br>
         Décodage : CyberChef → recette ROT13 · ou RegRipper automatiquement.<br><br>
         Contient : nombre d'exécutions + timestamp de dernière exécution.</p>
       </div>
-      <div class="card orange">
+      <div class="card-orange">
         <div class="card-title">Corbeille — $R et $I</div>
         <p>Chemin : <code>C:\$Recycle.Bin\&lt;SID_utilisateur&gt;\</code><br><br>
         Pour chaque fichier supprimé :<br>
@@ -248,11 +293,11 @@ ool">LECmd.exe (Zimmerman)</div>
 <div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Prefetch = C:\Windows\Prefetch\ · ShellBags = USRCLASS.DAT · USBSTOR = SYSTEM\CurrentControlSet\Enum · UserAssist : encodage ROT13 · Amcache = SHA-1 des exécutables.</div>
 
 <div class="footer">
-    <span>CAS-IN · 2025–2026</span>
-    <span>Analyse Windows — Artefacts forensiques</span>
-    <span>Manuel Ch. 16–19 · Notes de cours</span>
-  </div>
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Manuel Ch. 16–19 · Windows Forensics Documentation</span>
+</div>
 
 </div>
+</main>
 </body>
 </html>
