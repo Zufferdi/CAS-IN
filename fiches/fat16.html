@@ -467,8 +467,8 @@
   <div class="sec-title" style="margin-bottom:.75rem">Spécificités FAT12</div>
   <div style="background:var(--surface);border:1px solid rgba(240,192,64,.2);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem">
     <p style="font-size:.8rem;color:var(--muted);line-height:1.7">
-      FAT12 utilise des <strong style="color:var(--gold)">entrées de 12 bits</strong> — deux entrées partagent parfois un même octet. Pour lire l'entrée n°1 : lire 3 octets à partir de l'offset <code style="color:var(--cyan)">1 × 12 / 8 = 1</code>, puis extraire les 12 bits correspondants selon parité.<br><br>
-      Byte 0 : <code style="color:var(--cyan)">0xAB 0xCD 0xEF</code><br>
+      FAT12 utilise des <strong style="color:var(--gold)">entrées de 12 bits</strong> — deux entrées partagent parfois un même octet. Pour lire l'entrée n°1 : lire 3 octets à partir de l'offset <code style="color:var(--cyan)" class="copy-code">1 × 12 / 8 = 1</code>, puis extraire les 12 bits correspondants selon parité.<br><br>
+      Byte 0 : <code style="color:var(--cyan)" class="copy-code">0xAB 0xCD 0xEF</code><br>
       Cluster 0 = <code style="color:var(--cyan)">0xDAB</code> (pair → 12 bits bas)  |  Cluster 1 = <code style="color:var(--cyan)">0xEFC</code> (impair → 12 bits haut)
     </p>
   </div>
@@ -520,7 +520,7 @@ const details = {
     <strong>Forensique :</strong> Divergences entre FAT1 et FAT2 peuvent indiquer une modification manuelle ou une corruption partielle. Parfois, FAT2 est plus ancienne et révèle l'état antérieur du volume.
   `},
   root: {icon:'🔵', title:'Répertoire Racine (FAT16 seulement)', body:`
-    <strong>Spécificité FAT16 :</strong> Zone de taille fixe contenant exactement <code>Root Entry Count × 32</code> octets (ex: 512 × 32 = 16 384 octets = 32 secteurs).<br><br>
+    <strong>Spécificité FAT16 :</strong> Zone de taille fixe contenant exactement <code class="copy-code">Root Entry Count × 32</code> octets (ex: 512 × 32 = 16 384 octets = 32 secteurs).<br><br>
     <strong>FAT32 :</strong> Le répertoire racine est stocké dans la zone de données comme un répertoire ordinaire (pas de limite d'entrées).<br><br>
     <strong>Forensique :</strong> Même les entrées supprimées (premier octet = 0xE5) restent dans cette zone et sont analysables.
   `},
@@ -626,5 +626,65 @@ buildChain();
 </div>
 </div>
 </main>
+
+<script>
+(function(){
+  /* ── Bouton copier sur .cli et code standalone ── */
+  function addCopyButtons(){
+    /* .cli blocks */
+    document.querySelectorAll('.cli').forEach(function(el){
+      if(el.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.title = 'Copier';
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11V3a2 2 0 012-2h6"/></svg>';
+      btn.onclick = function(){
+        var text = el.innerText.replace(/^copier$/mi,'').trim();
+        navigator.clipboard.writeText(text).then(function(){
+          btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          btn.style.color='var(--green)';
+          setTimeout(function(){ btn.innerHTML='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11V3a2 2 0 012-2h6"/></svg>'; btn.style.color=''; }, 1500);
+        });
+      };
+      el.style.position='relative';
+      el.appendChild(btn);
+    });
+    /* <code> standalone (inside .h class or filter-row or step-text) */
+    document.querySelectorAll('.copy-code').forEach(function(el){
+      if(el.dataset.copyInit) return;
+      el.dataset.copyInit = '1';
+      el.style.cursor = 'pointer';
+      el.title = 'Cliquer pour copier';
+      el.onclick = function(){
+        navigator.clipboard.writeText(el.innerText).then(function(){
+          var orig = el.style.background;
+          el.style.background = 'rgba(48,232,138,.2)';
+          setTimeout(function(){ el.style.background = orig; }, 800);
+        });
+      };
+    });
+  }
+
+  /* ── TOC smooth scroll ── */
+  document.querySelectorAll('.toc a[href^="#"]').forEach(function(a){
+    a.addEventListener('click', function(e){
+      e.preventDefault();
+      var id = a.getAttribute('href').slice(1);
+      var el = document.getElementById(id);
+      if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+
+  /* ── Back-to-top ── */
+  var btn = document.getElementById('back-top');
+  if(btn) window.addEventListener('scroll', function(){
+    btn.classList.toggle('visible', window.scrollY > 300);
+  });
+
+  document.addEventListener('DOMContentLoaded', addCopyButtons);
+  if(document.readyState !== 'loading') addCopyButtons();
+})();
+</script>
+
 </body>
 </html>
