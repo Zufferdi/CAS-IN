@@ -4,13 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>FAT12/16/32 — CAS-IN Forensique</title>
-<meta name="description" content="FAT12 / FAT16 / FAT32 · Chaînage de clusters · SFN · Entrées de répertoire · Forensique bas niveau">
-<meta name="theme-color" content="#0d1117">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../style/fiche_style.css">
-<style>.hero{text-align:center;padding:3rem 2rem 1.5rem;position:relative}
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--dim:#6e7681;--cyan:#00e5cc;--gold:#f0c040;--red:#ff4060;--green:#30e88a;--blue:#58a6ff;--orange:#f0883e;--purple:#bc8cff;--mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;line-height:1.6}
+.tn-nav{display:flex;align-items:center;justify-content:space-between;padding:.75rem 2rem;border-bottom:1px solid var(--border);background:rgba(13,17,23,.9);backdrop-filter:blur(8px);position:sticky;top:0;z-index:100}
+.tn-back{color:var(--cyan);text-decoration:none;font-size:.78rem;letter-spacing:.06em}
+.tn-back:hover{color:var(--text)}
+.tn-title{font-family:var(--sans);font-size:.9rem;color:var(--muted);letter-spacing:.08em}
+.tn-quiz{background:rgba(255,64,96,.1);border:1px solid rgba(255,64,96,.3);color:var(--red);padding:.3rem .9rem;border-radius:6px;text-decoration:none;font-size:.72rem;letter-spacing:.06em;transition:.15s}
+.tn-quiz:hover{background:rgba(255,64,96,.2)}
+
+.hero{text-align:center;padding:3rem 2rem 1.5rem;position:relative}
 .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(240,192,64,.05),transparent);pointer-events:none}
 .hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(240,192,64,.08);border:1px solid rgba(240,192,64,.2);border-radius:20px;padding:.3rem 1rem;font-size:.72rem;color:var(--gold);letter-spacing:.1em;margin-bottom:1.25rem}
 .hero h1{font-family:var(--sans);font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;background:linear-gradient(135deg,var(--gold),var(--orange) 60%,var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.75rem}
@@ -21,8 +28,12 @@
 .tab{padding:.5rem 1.2rem;border-radius:8px;font-size:.75rem;letter-spacing:.06em;cursor:pointer;border:1px solid transparent;color:var(--muted);background:none;font-family:var(--mono);transition:.15s;white-space:nowrap}
 .tab.active{background:rgba(240,192,64,.1);border-color:rgba(240,192,64,.25);color:var(--gold)}
 .tab:hover:not(.active){background:var(--surface);color:var(--text)}
+
+.page{display:none;padding:2rem;max-width:1100px;margin:0 auto;animation:fadeIn .3s ease}
 .page.active{display:block}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.sec-title{font-family:var(--sans);font-size:1.3rem;font-weight:700;color:var(--text);margin-bottom:.35rem}
 .sec-sub{font-size:.8rem;color:var(--muted);margin-bottom:1.5rem}
 .sec-divider{border:none;border-top:1px solid var(--border);margin:2.5rem 0}
 
@@ -127,8 +138,27 @@
   .part-seg.data{flex:1}
   .memo-grid{grid-template-columns:1fr}
   .attr-grid{grid-template-columns:repeat(3,1fr)}
-}</style>
+}
+</style>
 
+<style>
+/* ── Prérequis & Liens croisés ── */
+.prereq-block{background:var(--surface2,#1c2330);border:1px solid var(--border,#30363d);border-radius:10px;padding:.7rem 1rem;margin:1rem 0 1.25rem;display:flex;flex-direction:column;gap:.4rem}
+.prereq-row{display:flex;align-items:center;flex-wrap:wrap;gap:.35rem;font-size:.72rem}
+.prereq-label{color:var(--dim,#6e7681);font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;min-width:70px}
+.prereq-pill{display:inline-flex;align-items:center;gap:.2rem;padding:.2rem .55rem;border-radius:20px;text-decoration:none;font-size:.68rem;font-weight:600;border:1px solid rgba(88,166,255,.35);color:var(--blue,#58a6ff);background:rgba(88,166,255,.07);transition:.15s}
+.prereq-pill:hover{background:rgba(88,166,255,.18);border-color:var(--blue,#58a6ff)}
+.tp-pill{display:inline-flex;align-items:center;gap:.2rem;padding:.2rem .55rem;border-radius:20px;text-decoration:none;font-size:.68rem;font-weight:600;border:1px solid rgba(48,232,138,.35);color:var(--green,#30e88a);background:rgba(48,232,138,.07);transition:.15s}
+.tp-pill:hover{background:rgba(48,232,138,.18);border-color:var(--green,#30e88a)}
+.related-pill{display:inline-flex;align-items:center;gap:.2rem;padding:.2rem .55rem;border-radius:20px;text-decoration:none;font-size:.68rem;font-weight:600;border:1px solid rgba(0,229,204,.3);color:var(--cyan,#00e5cc);background:rgba(0,229,204,.05);transition:.15s}
+.related-pill:hover{background:rgba(0,229,204,.15);border-color:var(--cyan,#00e5cc)}
+/* ── Back-to-top ── */
+.back-top{position:fixed;bottom:1.5rem;right:1.5rem;width:40px;height:40px;border-radius:50%;background:var(--surface,#161b22);border:1px solid var(--border,#30363d);color:var(--cyan,#00e5cc);font-size:1.1rem;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:200;transition:.2s;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.back-top:hover{background:rgba(0,229,204,.12);border-color:var(--cyan,#00e5cc);transform:translateY(-2px)}
+.back-top.visible{display:flex}
+/* ── Temps de lecture ── */
+.read-time{font-size:.65rem;color:var(--dim,#6e7681);display:inline-flex;align-items:center;gap:.25rem;margin-left:.5rem;vertical-align:middle}
+</style>
 <button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
 <script>
 (function(){
@@ -139,10 +169,19 @@
 })();
 </script>
 
+<style>
+/* ── Breadcrumb ── */
+.breadcrumb{display:flex;align-items:center;gap:.35rem;font-size:.65rem;color:var(--dim,#6e7681);padding:.5rem 0;margin-bottom:.5rem;flex-wrap:wrap}
+.breadcrumb a{color:var(--muted,#8b949e);text-decoration:none}
+.breadcrumb a:hover{color:var(--cyan,#00e5cc)}
+.breadcrumb .bc-sep{opacity:.4}
+.breadcrumb .bc-current{color:var(--text,#e6edf3)}
+/* ── Temps de lecture ── */
+
+</style>
 </head>
 <body>
-<a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:0;z-index:999;padding:.5rem 1rem;background:var(--cyan);color:var(--bg);font-size:.8rem;border-radius:0 0 4px 0;text-decoration:none">Aller au contenu</a>
-<nav class="tn-nav" aria-label="Navigation fiche">
+<nav class="tn-nav">
   <a href="index.html" class="tn-back">← Fiches</a>
   <span class="tn-title">SYSTÈMES DE FICHIERS</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
@@ -156,10 +195,8 @@
     <a href="index.html#cat-systèmesdefichiers">Systèmes de fichiers</a>
     <span class="bc-sep">›</span>
     <span class="bc-current">Fat16</span>
-    <span class="read-time-badge">⏱ ~22 min</span>
   </div>
 </div>
-<main id="main-content">
 
 <div class="hero">
   <div class="hero-badge">💾 Chapitres 3–7 · Manuel CAS-IN</div>
@@ -467,8 +504,8 @@
   <div class="sec-title" style="margin-bottom:.75rem">Spécificités FAT12</div>
   <div style="background:var(--surface);border:1px solid rgba(240,192,64,.2);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem">
     <p style="font-size:.8rem;color:var(--muted);line-height:1.7">
-      FAT12 utilise des <strong style="color:var(--gold)">entrées de 12 bits</strong> — deux entrées partagent parfois un même octet. Pour lire l'entrée n°1 : lire 3 octets à partir de l'offset <code style="color:var(--cyan)" class="copy-code">1 × 12 / 8 = 1</code>, puis extraire les 12 bits correspondants selon parité.<br><br>
-      Byte 0 : <code style="color:var(--cyan)" class="copy-code">0xAB 0xCD 0xEF</code><br>
+      FAT12 utilise des <strong style="color:var(--gold)">entrées de 12 bits</strong> — deux entrées partagent parfois un même octet. Pour lire l'entrée n°1 : lire 3 octets à partir de l'offset <code style="color:var(--cyan)">1 × 12 / 8 = 1</code>, puis extraire les 12 bits correspondants selon parité.<br><br>
+      Byte 0 : <code style="color:var(--cyan)">0xAB 0xCD 0xEF</code><br>
       Cluster 0 = <code style="color:var(--cyan)">0xDAB</code> (pair → 12 bits bas)  |  Cluster 1 = <code style="color:var(--cyan)">0xEFC</code> (impair → 12 bits haut)
     </p>
   </div>
@@ -520,7 +557,7 @@ const details = {
     <strong>Forensique :</strong> Divergences entre FAT1 et FAT2 peuvent indiquer une modification manuelle ou une corruption partielle. Parfois, FAT2 est plus ancienne et révèle l'état antérieur du volume.
   `},
   root: {icon:'🔵', title:'Répertoire Racine (FAT16 seulement)', body:`
-    <strong>Spécificité FAT16 :</strong> Zone de taille fixe contenant exactement <code class="copy-code">Root Entry Count × 32</code> octets (ex: 512 × 32 = 16 384 octets = 32 secteurs).<br><br>
+    <strong>Spécificité FAT16 :</strong> Zone de taille fixe contenant exactement <code>Root Entry Count × 32</code> octets (ex: 512 × 32 = 16 384 octets = 32 secteurs).<br><br>
     <strong>FAT32 :</strong> Le répertoire racine est stocké dans la zone de données comme un répertoire ordinaire (pas de limite d'entrées).<br><br>
     <strong>Forensique :</strong> Même les entrées supprimées (premier octet = 0xE5) restent dans cette zone et sont analysables.
   `},
@@ -620,71 +657,6 @@ function highlightChain(n) {
 buildChain();
 </script>
 <div class="alert">⚖️ <strong>Examen CAS-IN :</strong> 0xE5 = fichier supprimé · 0x00 = fin répertoire · SFN cluster départ = offset 0x1A-0x1B · FAT12 Root = 224 entrées max · FAT16 Root = 512 max · EOF FAT16 = 0xFFF8–0xFFFF · EOF FAT32 = 0x0FFFFFF8+ · Offset FS Type FAT12/16 = 0x36 · FAT32 = 0x52.</div>
-<div class="footer">
-  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
-  <span>Ch. 3–7 Manuel · Microsoft FAT Specification</span>
-</div>
-</div>
-</main>
-
-<script>
-(function(){
-  /* ── Bouton copier sur .cli et code standalone ── */
-  function addCopyButtons(){
-    /* .cli blocks */
-    document.querySelectorAll('.cli').forEach(function(el){
-      if(el.querySelector('.copy-btn')) return;
-      var btn = document.createElement('button');
-      btn.className = 'copy-btn';
-      btn.title = 'Copier';
-      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11V3a2 2 0 012-2h6"/></svg>';
-      btn.onclick = function(){
-        var text = el.innerText.replace(/^copier$/mi,'').trim();
-        navigator.clipboard.writeText(text).then(function(){
-          btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-          btn.style.color='var(--green)';
-          setTimeout(function(){ btn.innerHTML='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11V3a2 2 0 012-2h6"/></svg>'; btn.style.color=''; }, 1500);
-        });
-      };
-      el.style.position='relative';
-      el.appendChild(btn);
-    });
-    /* <code> standalone (inside .h class or filter-row or step-text) */
-    document.querySelectorAll('.copy-code').forEach(function(el){
-      if(el.dataset.copyInit) return;
-      el.dataset.copyInit = '1';
-      el.style.cursor = 'pointer';
-      el.title = 'Cliquer pour copier';
-      el.onclick = function(){
-        navigator.clipboard.writeText(el.innerText).then(function(){
-          var orig = el.style.background;
-          el.style.background = 'rgba(48,232,138,.2)';
-          setTimeout(function(){ el.style.background = orig; }, 800);
-        });
-      };
-    });
-  }
-
-  /* ── TOC smooth scroll ── */
-  document.querySelectorAll('.toc a[href^="#"]').forEach(function(a){
-    a.addEventListener('click', function(e){
-      e.preventDefault();
-      var id = a.getAttribute('href').slice(1);
-      var el = document.getElementById(id);
-      if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
-    });
-  });
-
-  /* ── Back-to-top ── */
-  var btn = document.getElementById('back-top');
-  if(btn) window.addEventListener('scroll', function(){
-    btn.classList.toggle('visible', window.scrollY > 300);
-  });
-
-  document.addEventListener('DOMContentLoaded', addCopyButtons);
-  if(document.readyState !== 'loading') addCopyButtons();
-})();
-</script>
 
 </body>
 </html>

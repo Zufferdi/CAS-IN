@@ -4,20 +4,43 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Analyse Windows — CAS-IN Forensique</title>
-<meta name="description" content="Artefacts Windows forensiques · Prefetch · LNK · Registry · Event Logs · Shellbags · DFIR">
-<meta name="theme-color" content="#0d1117">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../style/fiche_style.css">
-<style>.card.blue::before{background:var(--blue)}.card.orange::before{background:var(--orange)}.card.green::before{background:var(--green)}.card.purple::before{background:var(--purple)}.card.red::before{background:var(--red)}
-  .card.blue .card-title{color:var(--blue)}.card.orange .card-title{color:var(--orange)}.card.green .card-title{color:var(--green)}.card.purple .card-title{color:var(--purple)}.card.red .card-title{color:var(--red)}
+<style>.tn-nav{display:flex;align-items:center;justify-content:space-between;padding:.65rem 1.5rem;border-bottom:1px solid var(--border);background:rgba(13,17,23,.96);backdrop-filter:blur(10px);position:sticky;top:0;z-index:100}
+.tn-back{color:var(--cyan);text-decoration:none;font-size:.75rem;letter-spacing:.05em;display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .75rem;border:1px solid rgba(0,229,204,.3);border-radius:6px;background:rgba(0,229,204,.06);transition:filter .15s}
+.tn-back:hover{filter:brightness(1.3)}
+.tn-title{font-family:var(--mono,monospace);font-size:.72rem;color:var(--muted,#8b949e);letter-spacing:.12em;text-transform:uppercase}
+.tn-quiz{color:#ff8888;text-decoration:none;font-size:.75rem;letter-spacing:.05em;display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .75rem;border:1px solid rgba(255,64,96,.3);border-radius:6px;background:rgba(255,64,96,.07);transition:filter .15s}
+.tn-quiz:hover{filter:brightness(1.3)}
+
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap');
+  :root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--accent:#f0883e;--accent2:#58a6ff;--accent3:#3fb950;--accent4:#ff7b72;--accent5:#bc8cff;--text:#e6edf3;--muted:#8b949e;--mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;padding:2rem;line-height:1.6;}
+  .page{max-width:900px;margin:0 auto;}
+  .header{display:flex;align-items:baseline;gap:1rem;margin-bottom:2.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border);animation:fadeIn .4s ease;}
+  .fs-badge{font-family:var(--sans);font-size:2.6rem;font-weight:800;letter-spacing:-1px;color:var(--accent);}
+  .header-meta{font-size:.75rem;color:var(--muted);}
+  .tag{display:inline-block;padding:.15rem .5rem;border-radius:4px;font-size:.7rem;font-weight:600;letter-spacing:.05em;background:rgba(240,136,62,.12);border:1px solid rgba(240,136,62,.3);color:var(--accent);}
+  .section{margin-bottom:2rem;animation:slideUp .4s ease both;}
+  .section:nth-child(n+2){animation-delay:calc(.05s * (var(--i,0) + 1));}
+  .section-title{font-family:var(--sans);font-size:.7rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem;}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+  .hex{display:inline-block;background:var(--surface2);border:1px solid var(--border);color:var(--accent4);padding:.05rem .4rem;border-radius:4px;font-size:.78em;font-weight:700;}
+  .card-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem 1.1rem;position:relative;overflow:hidden;}
+  .card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+  .card.blue::before{background:var(--accent2)}.card.orange::before{background:var(--accent)}.card.green::before{background:var(--accent3)}.card.purple::before{background:var(--accent5)}.card.red::before{background:var(--accent4)}
+  .card-title{font-size:.7rem;font-weight:700;letter-spacing:.05em;margin-bottom:.5rem;}
+  .card.blue .card-title{color:var(--accent2)}.card.orange .card-title{color:var(--accent)}.card.green .card-title{color:var(--accent3)}.card.purple .card-title{color:var(--accent5)}.card.red .card-title{color:var(--accent4)}
+  .card p,.card ul{font-size:.8rem;color:var(--text);line-height:1.5;}
+  .card ul{padding-left:1rem;}
   /* Artefact rows */
   .art-list{display:flex;flex-direction:column;gap:.5rem;}
   .art{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;display:grid;grid-template-columns:180px 1fr;gap:.75rem;align-items:start;transition:background .15s;}
   .art:hover{background:var(--surface2)}
-  .art-name{font-weight:700;font-size:.8rem;color:var(--blue);}
+  .art-name{font-weight:700;font-size:.8rem;color:var(--accent2);}
   .art-path{font-size:.68rem;color:var(--muted);margin:.15rem 0;font-family:var(--mono);}
-  .art-tool{font-size:.68rem;color:var(--green);font-weight:600;}
+  .art-tool{font-size:.68rem;color:var(--accent3);font-weight:600;}
   .art-body{font-size:.78rem;color:var(--text);line-height:1.5;}
   /* Registre */
   .reg-table{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
@@ -30,7 +53,7 @@
   .ev{display:grid;grid-template-columns:80px 1fr;border-bottom:1px solid var(--border);transition:background .15s;}
   .ev:last-child{border-bottom:none}
   .ev:hover{background:var(--surface2)}
-  .ev-id{padding:.55rem .85rem;background:rgba(240,136,62,.08);border-right:1px solid var(--border);font-weight:800;color:var(--orange);display:flex;align-items:center;font-size:.82rem;}
+  .ev-id{padding:.55rem .85rem;background:rgba(240,136,62,.08);border-right:1px solid var(--border);font-weight:800;color:var(--accent);display:flex;align-items:center;font-size:.82rem;}
   .ev-desc{padding:.55rem .85rem;font-size:.78rem;color:var(--text);}
   /* Shellbags */
   .sb-arch{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
@@ -48,10 +71,39 @@
   td{padding:.6rem .9rem;border-bottom:1px solid var(--border);vertical-align:top;}
   tr:last-child td{border-bottom:none}
   tr:hover td{background:var(--surface2)}
+  .footer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.68rem;color:var(--muted);display:flex;justify-content:space-between;}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-  @media(max-width:600px){.card-grid{grid-template-columns:1fr}.art{grid-template-columns:1fr}.sb-row{grid-template-columns:1fr}}</style>
+  @media(max-width:600px){.card-grid{grid-template-columns:1fr}.art{grid-template-columns:1fr}.sb-row{grid-template-columns:1fr}}
 
+  /* ── Navigation bar ── */
+  .topnav{display:flex;align-items:center;justify-content:space-between;padding:.55rem 1.25rem;background:rgba(6,11,18,.97);border-bottom:1px solid var(--border);font-size:.75rem;flex-wrap:wrap;gap:.5rem;position:sticky;top:0;z-index:100;backdrop-filter:blur(8px);margin:-2rem -2rem 2rem;}
+  .tn-back{color:var(--muted);text-decoration:none;padding:.3rem .65rem;border:1px solid var(--border);border-radius:6px;transition:.15s;font-family:var(--mono);}
+  .tn-back:hover{color:var(--text);border-color:rgba(255,255,255,.2);}
+  .tn-home{color:var(--muted);text-decoration:none;padding:.3rem .65rem;border:1px solid var(--border);border-radius:6px;transition:.15s;font-family:var(--mono);}
+  .tn-home:hover{color:var(--text);border-color:rgba(255,255,255,.2);}
+  .tn-quiz{color:var(--accent2);text-decoration:none;padding:.3rem .65rem;border:1px solid rgba(88,166,255,.35);border-radius:6px;transition:.15s;font-family:var(--mono);background:rgba(88,166,255,.06);}
+  .tn-quiz:hover{background:rgba(88,166,255,.12);}
+</style>
+
+<style>
+/* ── Prérequis & Liens croisés ── */
+.prereq-block{background:var(--surface2,#1c2330);border:1px solid var(--border,#30363d);border-radius:10px;padding:.7rem 1rem;margin:1rem 0 1.25rem;display:flex;flex-direction:column;gap:.4rem}
+.prereq-row{display:flex;align-items:center;flex-wrap:wrap;gap:.35rem;font-size:.72rem}
+.prereq-label{color:var(--dim,#6e7681);font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;min-width:70px}
+.prereq-pill{display:inline-flex;align-items:center;gap:.2rem;padding:.2rem .55rem;border-radius:20px;text-decoration:none;font-size:.68rem;font-weight:600;border:1px solid rgba(88,166,255,.35);color:var(--blue,#58a6ff);background:rgba(88,166,255,.07);transition:.15s}
+.prereq-pill:hover{background:rgba(88,166,255,.18);border-color:var(--blue,#58a6ff)}
+.tp-pill{display:inline-flex;align-items:center;gap:.2rem;padding:.2rem .55rem;border-radius:20px;text-decoration:none;font-size:.68rem;font-weight:600;border:1px solid rgba(48,232,138,.35);color:var(--green,#30e88a);background:rgba(48,232,138,.07);transition:.15s}
+.tp-pill:hover{background:rgba(48,232,138,.18);border-color:var(--green,#30e88a)}
+.related-pill{display:inline-flex;align-items:center;gap:.2rem;padding:.2rem .55rem;border-radius:20px;text-decoration:none;font-size:.68rem;font-weight:600;border:1px solid rgba(0,229,204,.3);color:var(--cyan,#00e5cc);background:rgba(0,229,204,.05);transition:.15s}
+.related-pill:hover{background:rgba(0,229,204,.15);border-color:var(--cyan,#00e5cc)}
+/* ── Back-to-top ── */
+.back-top{position:fixed;bottom:1.5rem;right:1.5rem;width:40px;height:40px;border-radius:50%;background:var(--surface,#161b22);border:1px solid var(--border,#30363d);color:var(--cyan,#00e5cc);font-size:1.1rem;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:200;transition:.2s;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.back-top:hover{background:rgba(0,229,204,.12);border-color:var(--cyan,#00e5cc);transform:translateY(-2px)}
+.back-top.visible{display:flex}
+/* ── Temps de lecture ── */
+.read-time{font-size:.65rem;color:var(--dim,#6e7681);display:inline-flex;align-items:center;gap:.25rem;margin-left:.5rem;vertical-align:middle}
+</style>
 <button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
 <script>
 (function(){
@@ -62,11 +114,20 @@
 })();
 </script>
 
+<style>
+/* ── Breadcrumb ── */
+.breadcrumb{display:flex;align-items:center;gap:.35rem;font-size:.65rem;color:var(--dim,#6e7681);padding:.5rem 0;margin-bottom:.5rem;flex-wrap:wrap}
+.breadcrumb a{color:var(--muted,#8b949e);text-decoration:none}
+.breadcrumb a:hover{color:var(--cyan,#00e5cc)}
+.breadcrumb .bc-sep{opacity:.4}
+.breadcrumb .bc-current{color:var(--text,#e6edf3)}
+/* ── Temps de lecture ── */
+
+</style>
 </head>
 <body>
 <div class="page">
-<a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:0;z-index:999;padding:.5rem 1rem;background:var(--cyan);color:var(--bg);font-size:.8rem;border-radius:0 0 4px 0;text-decoration:none">Aller au contenu</a>
-<nav class="tn-nav" aria-label="Navigation fiche">
+<nav class="tn-nav">
   <a href="index.html" class="tn-back">← Fiches</a>
   <span class="tn-title">ARTEFACTS WINDOWS</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
@@ -80,16 +141,14 @@
     <a href="index.html#cat-artefactswindows">Artefacts Windows</a>
     <span class="bc-sep">›</span>
     <span class="bc-current">Windows</span>
-    <span class="read-time-badge">⏱ ~13 min</span>
   </div>
 </div>
-<main id="main-content">
 
 
   <div class="header">
     <div class="fs-badge">Windows</div>
     <div>
-      <div><span class="tag">DFIR</span> <span class="tag" style="background:rgba(88,166,255,.12);border-color:rgba(88,166,255,.3);color:var(--blue)">Artefacts</span></div>
+      <div><span class="tag">DFIR</span> <span class="tag" style="background:rgba(88,166,255,.12);border-color:rgba(88,166,255,.3);color:var(--accent2)">Artefacts</span></div>
       <div class="header-meta" style="margin-top:.3rem">Registre · Prefetch · ShellBags · USBSTOR · Thumbcache · Corbeille · EventLog</div>
     </div>
   </div>
@@ -104,19 +163,19 @@
       <div class="reg-row"><div class="reg-key">HKCU\NTUSER.DAT</div><div class="reg-val">Profil utilisateur : UserAssist (ROT13), MRU, ShellBags (HKCU), Run Keys utilisateur, wallpaper.</div></div>
       <div class="reg-row"><div class="reg-key">HKCU\USRCLASS.DAT</div><div class="reg-val">ShellBags pour lecteurs réseaux et supports amovibles. BagMRU + Bags pour les dossiers explorés.</div></div>
     </div>
-    <p style="font-size:.72rem;color:var(--muted);margin-top:.4rem">Chemin physique : <code class="copy-code">C:\Windows\System32\config\</code> (SYSTEM, SAM, SOFTWARE) · <code class="copy-code">C:\Users\&lt;user&gt;\NTUSER.DAT</code></p>
+    <p style="font-size:.72rem;color:var(--muted);margin-top:.4rem">Chemin physique : <code>C:\Windows\System32\config\</code> (SYSTEM, SAM, SOFTWARE) · <code>C:\Users\&lt;user&gt;\NTUSER.DAT</code></p>
   </div>
 
   <!-- PREFETCH -->
   <div class="section">
     <div class="section-title">Prefetch — Preuve d'exécution</div>
     <div class="card-grid">
-      <div class="card-blue">
+      <div class="card blue">
         <div class="card-title">Qu'est-ce que c'est ?</div>
-        <p>Windows crée un fichier <code>.pf</code> dans <code class="copy-code">C:\Windows\Prefetch\</code> lors du premier lancement d'un programme. Optimisation de démarrage : mémorise les 10 premières secondes d'accès disque.<br><br>
+        <p>Windows crée un fichier <code>.pf</code> dans <code>C:\Windows\Prefetch\</code> lors du premier lancement d'un programme. Optimisation de démarrage : mémorise les 10 premières secondes d'accès disque.<br><br>
         <strong>Preuve d'exécution</strong> même si le programme est supprimé — le .pf survit.</p>
       </div>
-      <div class="card-green">
+      <div class="card green">
         <div class="card-title">Contenu forensique</div>
         <p>
           ✓ Nom de l'exécutable + chemin<br>
@@ -124,12 +183,12 @@
           ✓ Jusqu'à 8 dates d'exécution (W8+)<br>
           ✓ Liste des DLL et fichiers accédés<br>
           ✓ Hash de vérification intégré<br><br>
-          <strong>Outil :</strong> <code class="copy-code">PECmd.exe</code> (Eric Zimmerman) → <code>--csv</code>
+          <strong>Outil :</strong> <code>PECmd.exe</code> (Eric Zimmerman) → <code>--csv</code>
         </p>
       </div>
     </div>
     <div style="background:rgba(255,64,96,.06);border:1px solid rgba(255,64,96,.2);border-radius:8px;padding:.7rem 1rem;margin-top:.5rem;font-size:.78rem">
-      <strong style="color:var(--red)">Limites à mentionner dans le rapport :</strong> Prefetch <strong>désactivé par défaut sur les serveurs</strong> Windows. Sur SSD, peut être désactivé (paramètre EnablePrefetcher=0). Sur Windows 10+, format compressé XPRESS Huffman — seul PECmd peut le lire correctement.
+      <strong style="color:var(--accent4)">Limites à mentionner dans le rapport :</strong> Prefetch <strong>désactivé par défaut sur les serveurs</strong> Windows. Sur SSD, peut être désactivé (paramètre EnablePrefetcher=0). Sur Windows 10+, format compressé XPRESS Huffman — seul PECmd peut le lire correctement.
     </div>
   </div>
 
@@ -146,27 +205,27 @@
         <div class="sb-cell">Contenu</div>
       </div>
       <div class="sb-row">
-        <div class="sb-cell" style="color:var(--blue);font-weight:700">BagMRU</div>
+        <div class="sb-cell" style="color:var(--accent2);font-weight:700">BagMRU</div>
         <div class="sb-cell">La carte — arborescence</div>
         <div class="sb-cell">Nœuds numérotés (0, 1, 2…) représentant les dossiers visités. Reconstruit l'arborescence complète avec timestamps.</div>
       </div>
       <div class="sb-row">
-        <div class="sb-cell" style="color:var(--green);font-weight:700">Bags</div>
+        <div class="sb-cell" style="color:var(--accent3);font-weight:700">Bags</div>
         <div class="sb-cell">Le contenu — préférences</div>
         <div class="sb-cell">Préférences d'affichage (tri, taille de fenêtre, position). Moins forensiquement pertinent que BagMRU.</div>
       </div>
     </div>
     <div class="card-grid">
-      <div class="card-orange">
+      <div class="card orange">
         <div class="card-title">NTUSER.DAT (dossiers locaux)</div>
-        <p><code class="copy-code">HKCU\Software\Microsoft\Windows\Shell\BagMRU</code><br>
-        <code class="copy-code">HKCU\Software\Microsoft\Windows\Shell\Bags</code><br><br>
+        <p><code>HKCU\Software\Microsoft\Windows\Shell\BagMRU</code><br>
+        <code>HKCU\Software\Microsoft\Windows\Shell\Bags</code><br><br>
         Dossiers locaux, bureau, documents. Persiste même après suppression du dossier cible.</p>
       </div>
-      <div class="card-purple">
+      <div class="card purple">
         <div class="card-title">USRCLASS.DAT (réseau/amovibles)</div>
-        <p><code class="copy-code">HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell</code><br><br>
-        Lecteurs réseau (UNC <code class="copy-code">\\serveur\partage</code>), supports amovibles. Plus riche en informations sur les déplacements de données.</p>
+        <p><code>HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell</code><br><br>
+        Lecteurs réseau (UNC <code>\\serveur\partage</code>), supports amovibles. Plus riche en informations sur les déplacements de données.</p>
       </div>
     </div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem;margin-top:.5rem;font-size:.78rem">
@@ -182,16 +241,16 @@
       <table>
         <thead><tr><th>Clé registre</th><th>Information disponible</th></tr></thead>
         <tbody>
-          <tr><td><code class="copy-code">HKLM\SYSTEM\...\USBSTOR</code></td><td>Modèle, fabricant, <strong>numéro de série unique</strong>, première/dernière connexion</td></tr>
-          <tr><td><code class="copy-code">HKLM\SYSTEM\...\MountedDevices</code></td><td>Lettre de lecteur assignée (ex. E:\\)</td></tr>
-          <tr><td><code class="copy-code">HKCU\...\RemovableMedia</code> (par utilisateur)</td><td>Attribution à un utilisateur spécifique via SID</td></tr>
-          <tr><td><code class="copy-code">C:\Windows\INF\setupapi.dev.log</code></td><td>Timestamp horodaté de chaque installation de périphérique</td></tr>
+          <tr><td><code>HKLM\SYSTEM\...\USBSTOR</code></td><td>Modèle, fabricant, <strong>numéro de série unique</strong>, première/dernière connexion</td></tr>
+          <tr><td><code>HKLM\SYSTEM\...\MountedDevices</code></td><td>Lettre de lecteur assignée (ex. E:\\)</td></tr>
+          <tr><td><code>HKCU\...\RemovableMedia</code> (par utilisateur)</td><td>Attribution à un utilisateur spécifique via SID</td></tr>
+          <tr><td><code>C:\Windows\INF\setupapi.dev.log</code></td><td>Timestamp horodaté de chaque installation de périphérique</td></tr>
           <tr><td>Event ID <span class="hex">4663</span></td><td>Accès à des fichiers sur le lecteur (si audit activé)</td></tr>
         </tbody>
       </table>
     </div>
     <div style="background:rgba(63,185,80,.05);border:1px solid rgba(63,185,80,.2);border-radius:8px;padding:.7rem 1rem;margin-top:.5rem;font-size:.78rem">
-      <strong style="color:var(--green)">Corrélation USB :</strong> USBSTOR (identification) + MountedDevices (lettre) + ShellBags (dossiers explorés) + .lnk (fichiers ouverts) + NTUSER.DAT (par utilisateur via SID) = preuve complète de qui a connecté quelle clé et quels fichiers ont été accédés.
+      <strong style="color:var(--accent3)">Corrélation USB :</strong> USBSTOR (identification) + MountedDevices (lettre) + ShellBags (dossiers explorés) + .lnk (fichiers ouverts) + NTUSER.DAT (par utilisateur via SID) = preuve complète de qui a connecté quelle clé et quels fichiers ont été accédés.
     </div>
   </div>
 
@@ -199,13 +258,13 @@
   <div class="section">
     <div class="section-title">Thumbcache — Miniatures persistantes</div>
     <div class="card-grid">
-      <div class="card-blue">
+      <div class="card blue">
         <div class="card-title">Localisation</div>
-        <p><code class="copy-code">C:\Users\&lt;user&gt;\AppData\Local\Microsoft\Windows\Explorer\</code><br><br>
-        Fichiers : <code class="copy-code">thumbcache_1280.db</code>, <code class="copy-code">thumbcache_96.db</code>, <code class="copy-code">thumbcache_48.db</code>, <code class="copy-code">thumbcache_32.db</code>
+        <p><code>C:\Users\&lt;user&gt;\AppData\Local\Microsoft\Windows\Explorer\</code><br><br>
+        Fichiers : <code>thumbcache_1280.db</code>, <code>thumbcache_96.db</code>, <code>thumbcache_48.db</code>, <code>thumbcache_32.db</code>
         </p>
       </div>
-      <div class="card-red">
+      <div class="card red">
         <div class="card-title">Valeur forensique critique</div>
         <p>Les miniatures <strong>persistent après suppression</strong> de l'image originale. Une image illicite supprimée peut continuer d'exister dans le thumbcache en résolution identifiable.<br><br>
         <code>_1280</code> = images vues dans l'explorateur · <code>_96</code> = images issues de la navigation web</p>
@@ -217,16 +276,16 @@
   <div class="section">
     <div class="section-title">UserAssist (ROT13) & Corbeille</div>
     <div class="card-grid">
-      <div class="card-purple">
+      <div class="card purple">
         <div class="card-title">UserAssist — Obfuscation ROT13</div>
-        <p>Clé : <code class="copy-code">HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist</code><br><br>
+        <p>Clé : <code>HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist</code><br><br>
         Enregistre les programmes exécutés depuis le menu Démarrer ou le bureau. Les chemins sont <strong>encodés en ROT13</strong>.<br><br>
         Décodage : CyberChef → recette ROT13 · ou RegRipper automatiquement.<br><br>
         Contient : nombre d'exécutions + timestamp de dernière exécution.</p>
       </div>
-      <div class="card-orange">
+      <div class="card orange">
         <div class="card-title">Corbeille — $R et $I</div>
-        <p>Chemin : <code class="copy-code">C:\$Recycle.Bin\&lt;SID_utilisateur&gt;\</code><br><br>
+        <p>Chemin : <code>C:\$Recycle.Bin\&lt;SID_utilisateur&gt;\</code><br><br>
         Pour chaque fichier supprimé :<br>
         <strong>$RXXXXXX</strong> — données du fichier (contenu récupérable)<br>
         <strong>$IXXXXXX</strong> — métadonnées : nom original, chemin complet, taille, date/heure exacte de suppression<br><br>
@@ -286,78 +345,18 @@ ool">LECmd.exe (Zimmerman)</div>
       <div class="ev"><div class="ev-id">4663</div><div class="ev-desc">Tentative d'accès à un objet (fichier) — prouver qu'un fichier a été ouvert</div></div>
       <div class="ev"><div class="ev-id">7045</div><div class="ev-desc">Installation d'un nouveau service — malware, backdoor</div></div>
     </div>
-    <p style="font-size:.72rem;color:var(--muted);margin-top:.4rem">Outils : <code class="copy-code">EvtxECmd.exe</code> (Zimmerman) → export CSV · <code class="copy-code">Timeline Explorer</code> pour visualisation chronologique</p>
+    <p style="font-size:.72rem;color:var(--muted);margin-top:.4rem">Outils : <code>EvtxECmd.exe</code> (Zimmerman) → export CSV · <code>Timeline Explorer</code> pour visualisation chronologique</p>
   </div>
 
   
 <div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Prefetch = C:\Windows\Prefetch\ · ShellBags = USRCLASS.DAT · USBSTOR = SYSTEM\CurrentControlSet\Enum · UserAssist : encodage ROT13 · Amcache = SHA-1 des exécutables.</div>
 
 <div class="footer">
-  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
-  <span>Manuel Ch. 16–19 · Windows Forensics Documentation</span>
-</div>
+    <span>CAS-IN · 2025–2026</span>
+    <span>Analyse Windows — Artefacts forensiques</span>
+    <span>Manuel</span>
+  </div>
 
 </div>
-</main>
-
-<script>
-(function(){
-  /* ── Bouton copier sur .cli et code standalone ── */
-  function addCopyButtons(){
-    /* .cli blocks */
-    document.querySelectorAll('.cli').forEach(function(el){
-      if(el.querySelector('.copy-btn')) return;
-      var btn = document.createElement('button');
-      btn.className = 'copy-btn';
-      btn.title = 'Copier';
-      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11V3a2 2 0 012-2h6"/></svg>';
-      btn.onclick = function(){
-        var text = el.innerText.replace(/^copier$/mi,'').trim();
-        navigator.clipboard.writeText(text).then(function(){
-          btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-          btn.style.color='var(--green)';
-          setTimeout(function(){ btn.innerHTML='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11V3a2 2 0 012-2h6"/></svg>'; btn.style.color=''; }, 1500);
-        });
-      };
-      el.style.position='relative';
-      el.appendChild(btn);
-    });
-    /* <code> standalone (inside .h class or filter-row or step-text) */
-    document.querySelectorAll('.copy-code').forEach(function(el){
-      if(el.dataset.copyInit) return;
-      el.dataset.copyInit = '1';
-      el.style.cursor = 'pointer';
-      el.title = 'Cliquer pour copier';
-      el.onclick = function(){
-        navigator.clipboard.writeText(el.innerText).then(function(){
-          var orig = el.style.background;
-          el.style.background = 'rgba(48,232,138,.2)';
-          setTimeout(function(){ el.style.background = orig; }, 800);
-        });
-      };
-    });
-  }
-
-  /* ── TOC smooth scroll ── */
-  document.querySelectorAll('.toc a[href^="#"]').forEach(function(a){
-    a.addEventListener('click', function(e){
-      e.preventDefault();
-      var id = a.getAttribute('href').slice(1);
-      var el = document.getElementById(id);
-      if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
-    });
-  });
-
-  /* ── Back-to-top ── */
-  var btn = document.getElementById('back-top');
-  if(btn) window.addEventListener('scroll', function(){
-    btn.classList.toggle('visible', window.scrollY > 300);
-  });
-
-  document.addEventListener('DOMContentLoaded', addCopyButtons);
-  if(document.readyState !== 'loading') addCopyButtons();
-})();
-</script>
-
 </body>
 </html>
