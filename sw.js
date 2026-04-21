@@ -1,6 +1,6 @@
 // Service Worker — CAS-IN Investigation Numérique
 // v13 : fix opérateur (!url.origin → url.origin !==), scene.css retiré (CSS inline), URL scheme guard
-const CACHE_VERSION = 'cas-in-v13';
+const CACHE_VERSION = 'cas-in-v14';
 const STATIC_ASSETS = [
   './',
   './index.html',
