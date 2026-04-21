@@ -2,1420 +2,1027 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0d1117">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>CAS-IN · Scénarios DFIR</title>
-<!-- CAS-IN scene.html v6-STANDALONE — 2026 -->
 <style>
-/* ═══════════════════════════════════════════════════════════════
-   scene.css — Simulation Scène de Crime CAS-IN
-   Variables CSS définies ici — autonome, sans dépendance externe
-   ═══════════════════════════════════════════════════════════════ */
-
+/* ── DESIGN TOKENS (aligned with index.html) ── */
 :root {
-  --bg:       #0d1117;
-  --surface:  #161b22;
-  --surface2: #1c2330;
-  --border:   #30363d;
-  --text:     #e6edf3;
-  --muted:    #8b949e;
-  --dim:      #6e7681;
-  --cyan:     #00e5cc;
-  --gold:     #f0c040;
-  --red:      #ff4060;
-  --green:    #30e88a;
-  --mono:     'JetBrains Mono', 'Courier New', monospace;
-  --sans:     'Syne', 'Segoe UI', sans-serif;
-  --body:     'JetBrains Mono', 'Courier New', monospace;
+  --bg:#080c14;--surface:#0d1526;--surface2:#111d35;--border:#1e3058;
+  --cyan:#00e5cc;--gold:#f0c040;--red:#ff4060;--green:#30e88a;--orange:#ff9f40;
+  --text:#ccd8f0;--dim:#6a80a8;
+  --easy:#30e88a;--medium:#f0c040;--hard:#ff4060;
+  --r:10px;
+  --scene-glow: 0 0 40px rgba(0,229,204,0.07);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden}
+button{cursor:pointer;border:none;background:none;color:inherit;font-family:inherit}
+*{-webkit-tap-highlight-color:transparent}
+
+/* ── SCANLINE ATMOSPHERE ── */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
 }
 
-/* ── Navigation bar ── */
-.topnav{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:.55rem 1.25rem;
-  background:rgba(6,11,18,.97);
-  border-bottom:1px solid var(--border);
-  font-size:.75rem;
-  flex-wrap:wrap;gap:.5rem;
-  position:sticky;top:0;z-index:100;
-  backdrop-filter:blur(8px);
+/* ── HEADER ── */
+header{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:10px 16px;display:flex;align-items:center;gap:10px;
+  position:sticky;top:0;z-index:10;
+  box-shadow:0 2px 20px rgba(0,0,0,0.4);
 }
-.topnav a, .topnav button {
-  display:inline-flex;align-items:center;gap:.35rem;
-  padding:.3rem .75rem;
-  border-radius:6px;
-  border:1px solid;
-  font-family:var(--mono);
-  font-size:.72rem;
-  font-weight:600;
-  letter-spacing:.04em;
-  text-decoration:none;
-  cursor:pointer;
-  transition:filter .15s,transform .1s;
-  white-space:nowrap;
+.logo-text{font-size:15px;font-weight:800;color:var(--cyan);letter-spacing:1px}
+.header-sub{font-size:11px;color:var(--dim);flex:1}
+.hbtn{padding:6px 10px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--surface2);transition:.15s;color:var(--text)}
+.hbtn:hover{border-color:var(--cyan);color:var(--cyan)}
+
+/* ── MAIN LAYOUT ── */
+#app{flex:1;display:flex;flex-direction:column;max-width:720px;width:100%;margin:0 auto;padding:16px;position:relative;z-index:1}
+
+/* ── SCREEN SYSTEM ── */
+.screen{display:none;flex-direction:column;gap:14px;animation:fadeIn .25s ease}
+.screen.active{display:flex}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ══════════════════════════════════════
+   SCREEN 0 — LOBBY (scenario selector)
+══════════════════════════════════════ */
+.lobby-header{text-align:center;padding:24px 0 8px}
+.lobby-header h1{font-size:22px;font-weight:800;color:var(--cyan);letter-spacing:.5px}
+.lobby-header p{font-size:13px;color:var(--dim);margin-top:6px;line-height:1.5}
+.legal-strip{
+  display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px
 }
-.topnav a:hover,.topnav button:hover{filter:brightness(1.25);transform:translateY(-1px)}
-.tn-back{color:var(--cyan);border-color:rgba(0,229,204,.35);background:rgba(0,229,204,.07)}
-.tn-home{color:var(--muted);border-color:rgba(255,255,255,.1);background:rgba(255,255,255,.04)}
-.tn-quiz{color:#ff8888;border-color:rgba(255,64,96,.35);background:rgba(255,64,96,.07)}
-
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap');
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--mono);
-  min-height: 100vh;
-  line-height: 1.6;
+.legal-pill{
+  font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;
+  border:1px solid var(--border);color:var(--dim);background:var(--surface2);
+  letter-spacing:.3px;
 }
 
+/* Scenario cards grid */
+.scene-grid{display:flex;flex-direction:column;gap:10px}
+.scene-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px 18px;cursor:pointer;transition:.2s;position:relative;overflow:hidden;
+  display:flex;align-items:center;gap:14px;
+}
+.scene-card::before{
+  content:'';position:absolute;inset:0;opacity:0;transition:.2s;
+  background:linear-gradient(135deg,rgba(0,229,204,0.04) 0%,transparent 60%);
+}
+.scene-card:hover{border-color:var(--cyan);transform:translateY(-1px);box-shadow:var(--scene-glow)}
+.scene-card:hover::before{opacity:1}
+.scene-card.locked{opacity:.45;cursor:not-allowed;filter:grayscale(.6)}
+.scene-card.locked:hover{transform:none;border-color:var(--border);box-shadow:none}
 
-/* ── Hero ── */
-.sc-hero {
-  background: linear-gradient(135deg,
-    rgba(255,64,96,.08) 0%,
-    rgba(240,192,64,.05) 50%,
-    rgba(0,229,204,.04) 100%);
-  border-bottom: 1px solid rgba(255,64,96,.2);
-  padding: 2.5rem 2rem 2rem;
-  text-align: center;
-}
-.sc-hero-badge { font-size: 3rem; margin-bottom: .5rem; }
-.sc-hero-title {
-  font-family: var(--sans);
-  font-size: clamp(1.4rem, 4vw, 2rem);
-  font-weight: 900;
-  color: var(--text);
-  letter-spacing: -.03em;
-  margin: 0 0 .5rem;
-}
-.sc-hero-sub {
-  font-size: .85rem;
-  color: var(--dim);
-  max-width: 600px;
-  margin: 0 auto 1rem;
-  line-height: 1.6;
-}
-.sc-hero-law {
-  display: flex;
-  gap: .5rem;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-.sc-law-tag {
-  font-size: .68rem;
-  font-family: var(--mono);
-  font-weight: 700;
-  padding: .2rem .7rem;
-  border-radius: 12px;
-  background: rgba(255,64,96,.1);
-  border: 1px solid rgba(255,64,96,.3);
-  color: var(--red);
-  letter-spacing: .04em;
-}
+.scene-icon{font-size:28px;flex-shrink:0;width:44px;text-align:center}
+.scene-info{flex:1;min-width:0}
+.scene-title{font-size:14px;font-weight:700;margin-bottom:3px}
+.scene-desc{font-size:12px;color:var(--dim);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scene-meta{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+.diff-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px}
+.diff-badge.easy{background:#0d2a1a;color:var(--easy)}
+.diff-badge.medium{background:#2a200a;color:var(--medium)}
+.diff-badge.hard{background:#2a0d15;color:var(--hard)}
+.scene-steps-count{font-size:10px;color:var(--dim)}
+.scene-status{margin-left:auto;font-size:11px;font-weight:700}
+.scene-status.done{color:var(--green)}
+.scene-status.locked-lbl{color:var(--dim)}
 
-/* ── Score bar ── */
-.sc-scorebar {
-  display: flex;
-  gap: 0;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+/* Difficulty accent bar on left */
+.scene-card[data-diff="easy"]{border-left:3px solid var(--easy)}
+.scene-card[data-diff="medium"]{border-left:3px solid var(--medium)}
+.scene-card[data-diff="hard"]{border-left:3px solid var(--hard)}
+
+/* Stats bar */
+.lobby-stats{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
 }
-.sc-score-item {
-  flex: 1;
-  text-align: center;
-  padding: .65rem .5rem;
-  border-right: 1px solid var(--border);
+.lstat{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:10px;text-align:center;
 }
-.sc-score-item:last-child { border-right: none; }
-.sc-score-val {
-  display: block;
-  font-family: var(--sans);
-  font-size: 1.3rem;
-  font-weight: 800;
-  color: var(--cyan);
+.lstat-val{font-size:20px;font-weight:700;color:var(--cyan)}
+.lstat-lbl{font-size:10px;color:var(--dim);margin-top:2px}
+
+/* ══════════════════════════════════════
+   SCREEN 1 — INTRO / BRIEFING
+══════════════════════════════════════ */
+.briefing-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:20px;box-shadow:var(--scene-glow);
 }
-.sc-score-lbl {
-  font-size: .62rem;
-  color: var(--dim);
-  text-transform: uppercase;
-  letter-spacing: .06em;
+.briefing-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.briefing-icon{font-size:36px}
+.briefing-title{font-size:18px;font-weight:800;color:var(--cyan)}
+.briefing-subtitle{font-size:11px;color:var(--dim);margin-top:2px}
+
+.alert-box{
+  background:#1a0a0a;border:1px solid var(--red);border-radius:8px;
+  padding:12px 14px;font-size:12px;color:#f0b0b8;line-height:1.6;margin-bottom:14px;
+}
+.alert-box strong{color:var(--red)}
+
+.context-text{
+  font-size:13px;line-height:1.7;color:var(--text);
+  border-left:3px solid var(--cyan);padding-left:14px;margin-bottom:16px;
 }
 
-/* ── Selector ── */
-.sc-selector { padding: 1.5rem 2rem; }
-.sc-selector-title {
-  font-family: var(--sans);
-  font-size: .72rem;
-  font-weight: 700;
-  letter-spacing: .15em;
-  text-transform: uppercase;
-  color: var(--dim);
-  margin-bottom: 1rem;
+.objective-list{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.objective-item{
+  display:flex;align-items:flex-start;gap:8px;
+  background:var(--surface2);border-radius:6px;padding:8px 10px;font-size:12px;
 }
-.sc-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
-}
-.sc-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.25rem;
-  cursor: pointer;
-  transition: border-color .2s, transform .15s;
-  position: relative;
-  overflow: hidden;
-}
-.sc-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--red);
-  transform: scaleX(0);
-  transition: transform .2s;
-}
-.sc-card:hover { border-color: rgba(255,64,96,.4); transform: translateY(-2px); }
-.sc-card:hover::before { transform: scaleX(1); }
-.sc-card-icon { font-size: 2rem; margin-bottom: .5rem; }
-.sc-card-diff {
-  font-size: .62rem;
-  font-weight: 700;
-  padding: .15rem .6rem;
-  border-radius: 10px;
-  display: inline-block;
-  margin-bottom: .5rem;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  border: 1px solid;
-}
-.diff-hard   { color: var(--red);   border-color: rgba(255,64,96,.3);  background: rgba(255,64,96,.08); }
-.diff-medium { color: var(--gold);  border-color: rgba(240,192,64,.3); background: rgba(240,192,64,.08); }
-.sc-card-title {
-  font-family: var(--sans);
-  font-size: .95rem;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: .4rem;
-}
-.sc-card-desc {
-  font-size: .78rem;
-  color: var(--dim);
-  line-height: 1.6;
-  margin-bottom: .5rem;
-}
-.sc-card-law {
-  font-size: .65rem;
-  font-family: var(--mono);
-  color: rgba(255,64,96,.6);
-  border-top: 1px solid var(--border);
-  padding-top: .4rem;
+.objective-item .obj-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+
+.refs-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+.ref-tag{
+  font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;
+  border:1px solid var(--border);color:var(--gold);background:#1a1500;
 }
 
-/* ── Game container ── */
-.sc-game { padding: 1.5rem 2rem; max-width: 800px; margin: 0 auto; }
+.start-btn{
+  width:100%;padding:13px;border-radius:8px;font-size:15px;font-weight:700;
+  background:var(--cyan);color:#08101c;transition:.15s;letter-spacing:.3px;
+}
+.start-btn:hover{filter:brightness(1.1)}
 
-/* Step header */
-.sc-step-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-  gap: .5rem;
-}
-.sc-phase-badge {
-  font-size: .75rem;
-  font-weight: 700;
-  color: var(--red);
-  background: rgba(255,64,96,.1);
-  border: 1px solid rgba(255,64,96,.3);
-  border-radius: 20px;
-  padding: .3rem .9rem;
-}
-.sc-back-btn {
-  font-size: .72rem;
-  color: var(--muted);
-  background: rgba(255,255,255,.05);
-  border: 1px solid rgba(255,255,255,.15);
-  border-radius: 6px;
-  padding: .35rem .85rem;
-  cursor: pointer;
-  font-family: var(--mono);
-  transition: .15s;
-  letter-spacing: .03em;
-}
-.sc-back-btn:hover {
-  color: var(--text);
-  background: rgba(255,255,255,.1);
-  border-color: rgba(255,255,255,.3);
-}
-.sc-back-btn:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
+/* ══════════════════════════════════════
+   SCREEN 2 — SCENE / STEP ENGINE
+══════════════════════════════════════ */
 
-/* Urgency */
-.sc-urgency {
-  background: rgba(255,64,96,.08);
-  border: 1px solid rgba(255,64,96,.3);
-  border-left: 4px solid var(--red);
-  border-radius: 8px;
-  padding: .6rem 1rem;
-  font-size: .8rem;
-  color: var(--red);
-  margin-bottom: 1rem;
-  font-weight: 600;
-  animation: pulse-red 2s ease-in-out 3; /* B7 fix: 3 fois seulement, pas infinite */
+/* Progress header */
+.scene-progress-bar{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:10px 14px;
 }
-@keyframes pulse-red {
-  0%,100% { box-shadow: 0 0 0 0 rgba(255,64,96,0); }
-  50%      { box-shadow: 0 0 0 6px rgba(255,64,96,.1); }
-}
+.prog-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.prog-title{font-size:12px;font-weight:700;color:var(--dim)}
+.prog-scores{display:flex;gap:14px;font-size:12px}
+.prog-score-ok{color:var(--green);font-weight:700}
+.prog-score-err{color:var(--red);font-weight:700}
+.prog-track{height:4px;background:var(--border);border-radius:2px}
+.prog-fill{height:100%;background:var(--cyan);border-radius:2px;transition:width .4s ease}
 
-/* Scene box */
-.sc-scene-box {
-  background: rgba(0,0,0,.3);
-  border: 1px solid rgba(0,229,204,.15);
-  border-radius: 10px;
-  padding: 1rem 1.2rem;
-  margin-bottom: 1rem;
+/* Chain of custody */
+.custody-bar{
+  display:flex;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:8px 14px;font-size:12px;
 }
-.sc-scene-label {
-  font-size: .68rem;
-  font-weight: 700;
-  color: var(--cyan);
-  text-transform: uppercase;
-  letter-spacing: .1em;
-  margin-bottom: .5rem;
-}
-.sc-scene-content {
-  font-size: .83rem;
-  color: var(--text);
-  line-height: 1.7;
-}
+.custody-label{color:var(--dim);flex-shrink:0}
+.custody-track{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.custody-fill{height:100%;border-radius:4px;transition:width .5s ease,background .5s ease}
+.custody-pct{font-weight:700;flex-shrink:0;min-width:32px;text-align:right}
 
-/* Law box */
-.sc-law-box {
-  background: rgba(240,192,64,.05);
-  border: 1px solid rgba(240,192,64,.25);
-  border-left: 4px solid var(--gold);
-  border-radius: 8px;
-  padding: .75rem 1rem;
-  margin-bottom: 1rem;
+/* Situation card */
+.situation-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:18px;
 }
-.sc-law-label {
-  font-size: .68rem;
-  font-weight: 700;
-  color: var(--gold);
-  text-transform: uppercase;
-  letter-spacing: .1em;
-  margin-bottom: .4rem;
+.situation-top{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.step-counter{
+  font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;
+  background:var(--surface2);border:1px solid var(--border);color:var(--dim);
 }
-.sc-law-content {
-  font-size: .79rem;
-  color: var(--text);
-  line-height: 1.65;
+.situation-scene-tag{
+  font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;
+  border-left:3px solid var(--cyan);background:var(--surface2);color:var(--cyan);
 }
-
-/* Question */
-.sc-question {
-  font-size: .95rem;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.5;
-  margin-bottom: 1rem;
-  padding: .75rem 1rem;
-  background: var(--surface2);
-  border-radius: 8px;
-  border: 1px solid var(--border);
+.situation-text{
+  font-size:14px;line-height:1.65;color:var(--text);margin-bottom:14px;
+}
+.situation-context{
+  font-size:12px;color:var(--dim);background:var(--surface2);
+  border-radius:6px;padding:10px 12px;margin-bottom:14px;
+  border-left:3px solid var(--border);line-height:1.5;
+}
+.situation-question{
+  font-size:15px;font-weight:700;color:var(--gold);line-height:1.5;
+  margin-bottom:14px;
 }
 
 /* Choices */
-.sc-choices { display: flex; flex-direction: column; gap: .5rem; margin-bottom: .75rem; }
-.sc-choice-btn {
-  display: flex;
-  align-items: flex-start;
-  gap: .75rem;
-  padding: .85rem 1rem;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,.03);
-  text-align: left;
-  cursor: pointer;
-  font-family: var(--body);
-  font-size: .83rem;
-  color: var(--text);
-  line-height: 1.55;
-  transition: border-color .15s, background .15s, transform .12s;
-  width: 100%;
+.choices-list{display:flex;flex-direction:column;gap:8px}
+.choice-btn{
+  display:flex;align-items:flex-start;gap:10px;padding:11px 14px;
+  border-radius:8px;border:1px solid var(--border);background:var(--surface2);
+  text-align:left;font-size:13px;transition:.15s;width:100%;line-height:1.5;
 }
-.sc-choice-btn:hover:not(:disabled) {
-  border-color: rgba(255,64,96,.4);
-  background: rgba(255,64,96,.05);
-  transform: translateX(3px);
-}
-.sc-choice-btn:disabled { cursor: default; }
-.sc-choice-btn.correct {
-  border-color: var(--green) !important;
-  background: rgba(48,232,138,.1) !important;
-  color: var(--green) !important;
-}
-.sc-choice-btn.wrong {
-  border-color: var(--red) !important;
-  background: rgba(255,64,96,.08) !important;
-  color: var(--red) !important;
-}
-.sc-choice-letter {
-  min-width: 24px; height: 24px;
-  border-radius: 5px;
-  background: rgba(255,64,96,.1);
-  border: 1px solid rgba(255,64,96,.3);
-  font-size: .72rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--red);
-  font-family: var(--mono);
-  transition: .15s;
-}
-.sc-choice-btn:hover:not(:disabled) .sc-choice-letter {
-  background: rgba(255,64,96,.2);
-  border-color: var(--red);
-}
-.sc-choice-text { flex: 1; }
-
-/* Feedback */
-.sc-feedback {
-  border-radius: 10px;
-  padding: 1rem 1.2rem;
-  margin-top: .75rem;
-  animation: feedIn .3s cubic-bezier(.34,1.1,.64,1);
-  font-size: .83rem;
-  line-height: 1.65;
-}
-@keyframes feedIn {
-  from { opacity:0; transform:translateY(-8px); }
-  to   { opacity:1; transform:translateY(0); }
-}
-.sc-fb-correct {
-  background: rgba(48,232,138,.07);
-  border: 1px solid rgba(48,232,138,.3);
-  border-left: 5px solid var(--green);
-}
-.sc-fb-wrong {
-  background: rgba(255,64,96,.07);
-  border: 1px solid rgba(255,64,96,.3);
-  border-left: 5px solid var(--red);
-}
-.sc-fb-verdict {
-  font-weight: 800;
-  font-size: .88rem;
-  margin-bottom: .5rem;
-  font-family: var(--sans);
-}
-.sc-fb-correct .sc-fb-verdict { color: var(--green); }
-.sc-fb-wrong   .sc-fb-verdict { color: var(--red);   }
-.sc-fb-explain  { color: var(--text); margin-bottom: .6rem; }
-.sc-fb-law {
-  background: rgba(240,192,64,.08);
-  border: 1px solid rgba(240,192,64,.2);
-  border-radius: 6px;
-  padding: .5rem .75rem;
-  font-size: .76rem;
-  color: var(--gold);
-  margin-bottom: .5rem;
-}
-.sc-fb-source {
-  font-size: .72rem;
-  color: var(--dim);
-  font-style: italic;
-  margin-bottom: .5rem;
-}
-.sc-fb-consequence {
-  background: rgba(0,0,0,.2);
-  border-radius: 8px;
-  padding: .65rem .85rem;
-  margin-bottom: .65rem;
-  font-size: .78rem;
-}
-.sc-fb-consequence-label {
-  font-size: .68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  color: var(--dim);
-  margin-bottom: .35rem;
-}
-.sc-consequence-item {
-  padding: .25rem 0;
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-  font-size: .79rem;
-}
-.sc-consequence-item.good    { color: var(--green); }
-.sc-consequence-item.bad     { color: var(--red); }
-.sc-consequence-item.neutral { color: var(--gold); }
-
-/* Next button */
-.sc-next-btn {
-  margin-top: .75rem;
-  padding: .6rem 1.4rem;
-  border-radius: 8px;
-  border: 1px solid rgba(0,229,204,.4);
-  background: rgba(0,229,204,.1);
-  color: var(--cyan);
-  font-size: .82rem;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: var(--mono);
-  transition: .15s;
-}
-.sc-next-btn:hover { background: rgba(0,229,204,.2); border-color: var(--cyan); transform: translateX(2px); }
-
-/* End screen */
-.sc-end {
-  text-align: center;
-  padding: 1.5rem 0;
-}
-.sc-end-emoji { font-size: 3.5rem; margin-bottom: .5rem; }
-.sc-end-title {
-  font-family: var(--sans);
-  font-size: 1.4rem;
-  font-weight: 900;
-  margin-bottom: .5rem;
-}
-.sc-end-score {
-  font-size: .85rem;
-  color: var(--dim);
-  margin-bottom: 1.5rem;
-}
-.sc-end-history {
-  max-width: 640px;
-  margin: 0 auto 1.5rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-.sc-end-row {
-  display: grid;
-  grid-template-columns: 24px 1fr 1fr;
-  gap: .5rem;
-  padding: .5rem .75rem;
-  font-size: .72rem;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-}
-.sc-end-row:last-child { border-bottom: none; }
-.sc-end-row.row-ok  { color: var(--green); }
-.sc-end-row.row-err { color: var(--red);   }
-.sc-debrief {
-  background: rgba(0,229,204,.04);
-  border: 1px solid rgba(0,229,204,.15);
-  border-radius: 10px;
-  padding: 1.2rem 1.4rem;
-  margin: 0 auto 1.5rem;
-  max-width: 640px;
-  text-align: left;
-  font-size: .82rem;
-  line-height: 1.7;
-  color: var(--text);
-}
-.sc-debrief-label {
-  font-weight: 700;
-  color: var(--cyan);
-  font-size: .72rem;
-  text-transform: uppercase;
-  letter-spacing: .1em;
-  margin-bottom: .5rem;
-}
-.sc-replay-btn {
-  padding: .6rem 1.4rem;
-  border-radius: 8px;
-  border: 1px solid rgba(0,229,204,.4);
-  background: rgba(0,229,204,.1);
-  color: var(--cyan);
-  font-size: .82rem;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: var(--mono);
-  transition: .15s;
-  display: inline-block;
-}
-.sc-replay-btn:hover { background: rgba(0,229,204,.2); transform: translateY(-1px); }
-.sc-menu-btn { border-color: rgba(255,255,255,.2); background: transparent; color: var(--dim); }
-.sc-menu-btn:hover { color: var(--text); border-color: rgba(255,255,255,.3); }
-
-/* ── Responsive ── */
-@media (max-width: 640px) {
-  .sc-selector { padding: 1rem; }
-  .sc-cards { grid-template-columns: 1fr; }
-  .sc-game { padding: 1rem; }
-  .sc-scorebar { flex-wrap: wrap; }
-  .sc-score-item { flex: 0 0 50%; border-bottom: 1px solid var(--border); }
-  .sc-end-row { grid-template-columns: 24px 1fr; }
-  .sc-end-row span:last-child { display: none; }
+.choice-btn:hover:not(:disabled){border-color:var(--cyan);background:#0d1e36}
+.choice-btn.selected-ok{border-color:var(--green)!important;background:#0a1e14!important;color:var(--green)}
+.choice-btn.selected-ko{border-color:var(--red)!important;background:#1e0a10!important;color:var(--red)}
+.choice-btn:disabled{cursor:default;opacity:.85}
+.choice-letter{
+  width:22px;height:22px;border-radius:4px;background:var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px;
 }
 
-/* ── Système de filtres par tag ── */
-.sc-filters {
-  display: flex;
-  gap: .45rem;
-  flex-wrap: wrap;
-  padding: .75rem 1.5rem .25rem;
-  max-width: 1100px;
-  margin: 0 auto;
+/* Feedback box */
+.feedback-box{
+  border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.6;
+  animation:fadeIn .2s ease;
+}
+.feedback-box.ok{background:#0a1e14;border:1px solid var(--green);color:#b0f0c0}
+.feedback-box.ko{background:#1e0a10;border:1px solid var(--red);color:#f0b0b8}
+.feedback-box .fb-legal{
+  font-size:11px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);
+  color:var(--gold);
+}
+.feedback-box .fb-pts{
+  font-size:11px;font-weight:700;float:right;
+  opacity:.8;
 }
 
-.sc-filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: .35rem;
-  padding: .3rem .75rem;
-  border-radius: 20px;
-  border: 1px solid var(--chip-border, var(--border));
-  background: var(--chip-bg, transparent);
-  color: var(--chip-color, var(--muted));
-  font-size: .7rem;
-  font-weight: 600;
-  font-family: var(--mono);
-  letter-spacing: .04em;
-  cursor: pointer;
-  transition: filter .15s, transform .1s;
-  white-space: nowrap;
+/* Critical error overlay */
+.critical-banner{
+  background:#1a0008;border:1px solid var(--red);border-radius:8px;
+  padding:12px 14px;font-size:12px;line-height:1.6;color:#f0b0b8;
+  animation:shake .4s ease;
+}
+.critical-banner strong{color:var(--red);font-size:13px;display:block;margin-bottom:4px}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-4px)}
+  40%{transform:translateX(4px)}
+  60%{transform:translateX(-3px)}
+  80%{transform:translateX(3px)}
 }
 
-.sc-filter-chip:hover {
-  filter: brightness(1.3);
-  transform: translateY(-1px);
+/* Action buttons */
+.scene-actions{display:flex;gap:8px}
+.next-step-btn{
+  flex:1;padding:12px 16px;border-radius:8px;font-size:14px;font-weight:700;
+  background:var(--surface2);border:1px solid var(--cyan);color:var(--cyan);
+  transition:.15s;
 }
+.next-step-btn:hover{background:#0d1e36}
+.next-step-btn:disabled{opacity:.35;cursor:default}
 
-.sc-filter-chip.active {
-  filter: brightness(1.4);
-  box-shadow: 0 0 0 1px var(--chip-color, var(--text));
+/* ══════════════════════════════════════
+   SCREEN 3 — RAPPORT FINAL
+══════════════════════════════════════ */
+.report-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:20px;box-shadow:var(--scene-glow);
 }
+.report-header{text-align:center;margin-bottom:20px}
+.report-badge{font-size:48px;margin-bottom:8px}
+.report-title{font-size:20px;font-weight:800;margin-bottom:4px}
+.report-subtitle{font-size:12px;color:var(--dim)}
 
-.sc-filter-count {
-  background: rgba(255,255,255,.12);
-  border-radius: 10px;
-  padding: .05rem .4rem;
-  font-size: .65rem;
-  font-weight: 700;
-  min-width: 18px;
-  text-align: center;
+.score-ring-wrap{display:flex;justify-content:center;margin:16px 0}
+.score-ring{position:relative;width:100px;height:100px}
+.score-ring svg{transform:rotate(-90deg)}
+.score-ring-center{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
 }
+.score-ring-pct{font-size:22px;font-weight:800}
+.score-ring-lbl{font-size:10px;color:var(--dim)}
 
-/* ── Tag pills sur les cartes ── */
-.sc-card-tags {
-  display: flex;
-  gap: .3rem;
-  flex-wrap: wrap;
-  margin: .35rem 0 .2rem;
+.report-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.rstat{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
+.rstat-val{font-size:18px;font-weight:700}
+.rstat-lbl{font-size:10px;color:var(--dim);margin-top:2px}
+
+.custody-result{
+  border-radius:8px;padding:12px 14px;font-size:12px;line-height:1.6;margin-bottom:14px;
 }
+.custody-result.intact{background:#0a1e14;border:1px solid var(--green);color:#b0f0c0}
+.custody-result.degraded{background:#2a1500;border:1px solid var(--orange);color:#f0d0b0}
+.custody-result.compromised{background:#1e0a10;border:1px solid var(--red);color:#f0b0b8}
 
-.sc-tag-pill {
-  font-size: .6rem;
-  font-weight: 700;
-  font-family: var(--mono);
-  padding: .1rem .45rem;
-  border-radius: 8px;
-  border: 1px solid;
-  letter-spacing: .04em;
-  white-space: nowrap;
+/* Decision review */
+.review-section{margin-bottom:14px}
+.review-title{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.review-item{
+  border-radius:8px;border:1px solid var(--border);padding:10px 12px;
+  margin-bottom:6px;font-size:12px;line-height:1.5;
 }
+.review-item.ok{border-color:var(--green);background:#080f0a}
+.review-item.ko{border-color:var(--red);background:#0f0508}
+.review-item-q{color:var(--dim);margin-bottom:3px;font-size:11px}
+.review-item-a{font-weight:600}
+.review-item-a.ok{color:var(--green)}
+.review-item-a.ko{color:var(--red)}
+.review-item-fb{color:var(--dim);font-size:11px;margin-top:4px;font-style:italic}
 
-/* ── Animation filtrage ── */
-.sc-card {
-  animation: cardIn .2s ease both;
+/* Final actions */
+.report-actions{display:flex;flex-direction:column;gap:8px}
+.retry-btn{
+  width:100%;padding:12px;border-radius:8px;font-size:14px;font-weight:700;
+  background:var(--cyan);color:#08101c;transition:.15s;
 }
-
-@keyframes cardIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+.retry-btn:hover{filter:brightness(1.1)}
+.back-btn{
+  width:100%;padding:11px;border-radius:8px;font-size:13px;font-weight:600;
+  border:1px solid var(--border);background:var(--surface2);color:var(--dim);transition:.15s;
 }
+.back-btn:hover{border-color:var(--dim);color:var(--text)}
 
+/* ── TIMELINE (visual step tracker) ── */
+.timeline{
+  display:flex;align-items:center;gap:0;overflow-x:auto;
+  padding:8px 0;scrollbar-width:none;
+}
+.timeline::-webkit-scrollbar{display:none}
+.tl-step{
+  display:flex;align-items:center;flex-shrink:0;
+}
+.tl-dot{
+  width:20px;height:20px;border-radius:50%;border:2px solid var(--border);
+  background:var(--surface2);display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;flex-shrink:0;transition:.3s;
+}
+.tl-dot.current{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 8px rgba(0,229,204,0.4)}
+.tl-dot.done-ok{border-color:var(--green);background:#0a1e14;color:var(--green)}
+.tl-dot.done-ko{border-color:var(--red);background:#1e0a10;color:var(--red)}
+.tl-dot.skipped{border-color:var(--dim);color:var(--dim)}
+.tl-line{width:20px;height:2px;background:var(--border);flex-shrink:0;transition:.3s}
+.tl-line.done{background:var(--cyan)}
+
+/* ── LAW BOX (champ légal avant question) ── */
+.law-box{
+  font-size:12px;color:var(--gold);background:#1a1500;
+  border:1px solid rgba(240,192,64,0.25);border-left:3px solid var(--gold);
+  border-radius:6px;padding:8px 12px;margin-bottom:12px;line-height:1.6;
+}
+.law-box strong{color:var(--gold)}
+
+/* ── DEBRIEF SECTION (rapport final) ── */
+.debrief-section{margin-bottom:14px}
+.debrief-content{
+  background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  padding:14px;font-size:12px;line-height:1.7;color:var(--text);
+}
+.debrief-content p{margin-bottom:8px}
+.debrief-content p:last-child{margin-bottom:0}
+.debrief-content strong{color:var(--cyan)}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:40px 20px;color:var(--dim);font-size:13px}
+.empty-state .es-icon{font-size:40px;margin-bottom:12px}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:10px 18px;font-size:12px;color:var(--text);
+  opacity:0;transition:.3s;pointer-events:none;z-index:999;white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:600px){
+  #app{padding:10px}
+  .lobby-header h1{font-size:18px}
+  .scene-card{padding:12px 14px;gap:10px}
+  .scene-icon{font-size:22px;width:34px}
+  .report-stats{grid-template-columns:1fr 1fr 1fr}
+  .lobby-stats{grid-template-columns:repeat(3,1fr)}
+  .situation-question{font-size:14px}
+  .choice-btn{font-size:12px;padding:10px 11px}
+}
+@media(max-width:380px){
+  .report-stats{grid-template-columns:1fr 1fr}
+  .prog-scores{gap:8px}
+}
 </style>
 </head>
 <body>
-<div class="topnav">
-  <div style="display:flex;gap:.5rem;align-items:center">
-    <a href="index.html" class="tn-back">← Accueil</a>
-    <a href="tp.html" class="tn-home">🧪 TP</a>
-  </div>
-  <a href="quiz.html" class="tn-quiz">💊 Quiz →</a>
-</div>
 
-<!-- HERO -->
-<div class="sc-hero">
-  <div class="sc-hero-badge">🚨</div>
-  <h1 class="sc-hero-title">Simulation Scène de Crime</h1>
-  <p class="sc-hero-sub">Chaque décision est <strong>irréversible</strong>. Les erreurs du premier intervenant peuvent invalider l'intégralité de l'enquête devant le Tribunal fédéral.</p>
-  <div class="sc-hero-law">
-    <span class="sc-law-tag">Art. 248 CPP</span>
-    <span class="sc-law-tag">Art. 143/143bis CP</span>
-    <span class="sc-law-tag">ISO/IEC 27037</span>
-    <span class="sc-law-tag">LPD révisée 2023</span>
-  </div>
-</div>
+<!-- HEADER -->
+<header>
+  <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%230d1526'/%3E%3Ctext x='50%25' y='55%25' text-anchor='middle' dominant-baseline='middle' font-size='18' fill='%2300e5cc'%3E🔍%3C/text%3E%3C/svg%3E"
+       alt="CAS-IN" style="height:34px;width:34px;border-radius:50%">
+  <span class="logo-text">CAS-IN</span>
+  <span class="header-sub">Simulation Scène de Crime</span>
+  <a href="index.html" class="hbtn">💊 Quiz</a>
+  <a href="index.html" class="hbtn" style="border-color:var(--border)">← Accueil</a>
+</header>
 
-<!-- SCORE BAR -->
-<div class="sc-scorebar" id="sc-scorebar">
-  <div class="sc-score-item">
-    <span class="sc-score-val" id="sc-score">0</span>
-    <span class="sc-score-lbl">Score</span>
-  </div>
-  <div class="sc-score-item">
-    <span class="sc-score-val" id="sc-correct">0</span>
-    <span class="sc-score-lbl">Bonnes décisions</span>
-  </div>
-  <div class="sc-score-item">
-    <span class="sc-score-val" id="sc-errors">0</span>
-    <span class="sc-score-lbl">Erreurs critiques</span>
-  </div>
-  <div class="sc-score-item">
-    <span class="sc-score-val" id="sc-scenario-num">—</span>
-    <span class="sc-score-lbl">Scénario</span>
-  </div>
-</div>
+<div id="app">
 
-<!-- SCENARIO SELECTOR -->
-<div class="sc-selector" id="sc-selector">
-  <div class="sc-selector-title">Choisissez votre mission</div>
-  <div class="sc-filters" id="sc-filters"></div>
-  <div class="sc-cards" id="sc-cards"><div style="text-align:center;padding:2rem;color:var(--dim)">⏳ Chargement des scénarios...</div></div>
-</div>
+  <!-- SCREEN 0 : LOBBY -->
+  <div class="screen active" id="screen-lobby">
 
-<!-- SCENARIO CONTAINER -->
-<div class="sc-game" id="sc-game" style="display:none">
-  <div id="sc-narrative"></div>
-</div>
-<script>
-
-// ═══════════════════════════════════════════════════════════════
-// CHARGEMENT DYNAMIQUE DES SCÉNARIOS DEPUIS JSON
-// ═══════════════════════════════════════════════════════════════
-
-const SCENARIOS_INLINE = {"bitlocker": {"id": "bitlocker", "type": "standard", "title": "Le Dilemme de l'Intervenant", "debrief": "<p>Ce scénario illustre le principe fondamental de la forensique numérique : <strong>ne jamais modifier la preuve</strong>, même involontairement. Éteindre un ordinateur BitLocker sans en avoir capturé la mémoire vive revient à détruire définitivement la clé de déchiffrement.</p><p><strong>Règle d'or (Manuel Ch. 11.1) :</strong> si le système est allumé et chiffré → live forensics d'abord. Le dump RAM est la priorité absolue. Les scellés (art. 248 CPP) ne s'opposent pas à l'acquisition — ils suspendent l'<em>analyse</em>, pas la <em>collecte</em>.</p>", "steps": [{"phase": "💻 La découverte", "scene": "Vous arrivez dans un appartement zurichois. Sur le bureau : un laptop Windows allumé avec session active. Dans l'angle inférieur droit, une icône indique <strong>BitLocker activé</strong>. Votre collègue s'apprête à fermer l'écran. Le propriétaire vient d'être arrêté à l'extérieur.", "law": "<strong>Art. 248 CPP</strong> — Les scellés suspendent l'analyse, pas l'acquisition.<br><strong>Manuel Ch. 11.1</strong> — Priorité : volatilité des données. La RAM contient la clé BitLocker.", "question": "<strong>Votre collègue s'apprête à fermer le laptop. Que faites-vous ?</strong>", "choices": [{"text": "Le laisser fermer — c'est plus simple pour le transport et les scellés.", "correct": false, "penalty": 25, "explain": "Erreur critique. Fermer l'écran peut déclencher la mise en veille ou l'hibernation — BitLocker rechiffre immédiatement la RAM. La clé de déchiffrement est perdue sans retour possible.", "legal": "Manuel Ch. 11.1 : «&nbsp;Un système BitLocker éteint sans capture RAM préalable équivaut à une destruction de preuve involontaire.&nbsp;»", "consequence": "<div class='sc-consequence-item bad'>❌ Clé BitLocker perdue définitivement</div><div class='sc-consequence-item bad'>❌ Analyse Dead Forensics impossible sans clé</div>", "source": "Ch. 11.1 — BitLocker et forensique live", "next": "end"}, {"text": "Brancher immédiatement un outil de dump RAM (WinPmem sur clé USB) avant tout déplacement.", "correct": true, "points": 25, "explain": "Décision correcte. La RAM contient la clé de chiffrement BitLocker active. WinPmem capture la mémoire sans modifier le contenu du disque. C'est la priorité absolue en live forensics.", "legal": "Manuel Ch. 11.1 + ISO/IEC 27037 : volatilité des données — RAM en premier, disque ensuite.", "consequence": "<div class='sc-consequence-item good'>✓ Clé BitLocker capturée en RAM</div><div class='sc-consequence-item good'>✓ Analyse complète possible</div>", "source": "Ch. 11.1 — Live forensics priorité RAM", "next": 1}, {"text": "Photographier l'écran et demander immédiatement les scellés.", "correct": false, "penalty": 10, "explain": "Incomplète. Photographier l'écran ne capture pas la clé BitLocker. Les scellés suspendent l'analyse mais la RAM volatile sera perdue dès qu'on déplace l'appareil.", "legal": "Art. 248 CPP — Les scellés n'interdisent pas la capture RAM préalable, qui est une mesure de préservation et non d'analyse.", "consequence": "<div class='sc-consequence-item neutral'>⚠️ Documentation correcte</div><div class='sc-consequence-item bad'>❌ Clé BitLocker non capturée</div>", "source": "Art. 248 CPP + Ch. 11", "next": "end"}]}, {"phase": "🔐 La clé de récupération", "scene": "Vous avez capturé la RAM (14 Go, 8 minutes). Volatility confirme : la clé BitLocker FVEK est présente à l'offset 0x7F3A2400. Mais votre supérieur vous demande maintenant de trouver une clé de récupération <em>sans</em> exploiter la RAM — pour des raisons procédurales.", "law": "<strong>BitLocker Recovery Key</strong> peut être dans : compte Microsoft, Active Directory, fichier texte sauvegardé, clé USB de récupération.", "question": "<strong>Où chercher la clé de récupération BitLocker sans exploiter la RAM ?</strong>", "choices": [{"text": "Compte Microsoft associé à la session Windows — microsoft.com/devicemanagement", "correct": true, "points": 20, "explain": "Principal emplacement de sauvegarde pour les particuliers. Si le propriétaire utilise un compte Microsoft, la clé de récupération y est souvent stockée automatiquement. Nécessite une réquisition judiciaire à Microsoft.", "legal": "Manuel Ch. 24.3 — Récupération clés BitLocker : compte MS > AD > fichier sauvegardé.", "consequence": "<div class='sc-consequence-item good'>✓ Source légitime et traçable</div><div class='sc-consequence-item good'>✓ Procédure documentable</div>", "source": "Ch. 24.3 — Sources de clés BitLocker", "next": "end"}, {"text": "Brute force sur le chiffrement AES-256.", "correct": false, "penalty": 20, "explain": "Irréalisable. AES-256 avec une clé aléatoire de 256 bits nécessiterait plus d'énergie que le soleil ne peut en produire pour être cassé par force brute. Cette option n'existe pas dans l'arsenal forensique réaliste.", "legal": "AES-256 — aucun ordinateur existant ou prévu ne peut casser par force brute en temps raisonnable.", "consequence": "<div class='sc-consequence-item bad'>❌ Impossible — temps infini</div>", "source": "Ch. 21 — Réalité du chiffrement AES", "next": "end"}, {"text": "Chercher un fichier .txt ou .pdf de sauvegarde sur les autres supports de l'appartement.", "correct": true, "points": 15, "explain": "Méthode valide. Beaucoup d'utilisateurs sauvegardent leur clé de récupération dans un fichier texte ou l'imprime. Vérifier aussi les clés USB, smartphones et le cloud.", "legal": "Manuel Ch. 24.3 — La recherche physique de supports de sauvegarde est une étape légitime de l'investigation.", "consequence": "<div class='sc-consequence-item good'>✓ Méthode forensique reconnue</div><div class='sc-consequence-item neutral'>⚠️ Résultat incertain</div>", "source": "Ch. 24.3 — Recherche de clés hors ligne", "next": "end"}]}]}, "smartphone": {"id": "smartphone", "type": "standard", "title": "Le Smartphone Déverrouillé", "debrief": "<p>Le mécanisme des scellés (art. 248 CPP) est une spécificité helvétique. Une fois demandés, <strong>toute analyse doit cesser immédiatement</strong>. Mais la mise sous Faraday préalable est une mesure de préservation, non d'analyse — elle est donc compatible avec une demande de scellés.</p><p><strong>TF 1B_602/2020</strong> : quand le propriétaire désigne avec précision les données privées (apps Signal, Photos, Mail), le TMC ordonne un tri préalable. Le résultat : l'enquête est bloquée 20 jours minimum.</p>", "steps": [{"phase": "📱 Le téléphone ouvert", "scene": "Lors d'une perquisition, vous trouvez l'iPhone du suspect posé sur la table, <strong>déverrouillé et avec une session active</strong>. Les notifications de l'app Signal sont visibles à l'écran. L'avocat de la défense entre dans l'appartement.", "law": "<strong>Art. 248 CPP</strong> — Demande de scellés possible à tout moment par le propriétaire ou son représentant.<br><strong>Art. 245 CPP</strong> — La saisie est autorisée par le mandat en cours.", "question": "<strong>L'avocat annonce qu'il va demander les scellés. Quelle est votre première action ?</strong>", "choices": [{"text": "Commencer immédiatement l'extraction des données Signal pendant que vous en avez encore accès.", "correct": false, "penalty": 30, "explain": "Erreur grave. Une fois l'avocat présent et la demande de scellés annoncée, toute analyse est une violation procédurale (art. 141 CPP). Les données obtenues seraient potentiellement exclues — et l'analyste expose sa responsabilité personnelle.", "legal": "Art. 141 CPP — Preuve illicite : exclusion possible si violation essentielle de la procédure.", "consequence": "<div class='sc-consequence-item bad'>❌ Violation procédurale</div><div class='sc-consequence-item bad'>❌ Preuves potentiellement exclues</div><div class='sc-consequence-item bad'>❌ Responsabilité personnelle de l'analyste</div>", "source": "Art. 141 + 248 CPP — Scellés et exclusion", "next": "end"}, {"text": "Placer immédiatement le téléphone dans une pochette Faraday et documenter l'état de l'écran.", "correct": true, "points": 25, "explain": "Action correcte. La pochette Faraday isole le téléphone du réseau (empêche effacement à distance et mise à jour des données) sans constituer une analyse. C'est une mesure de préservation compatible avec les scellés à venir.", "legal": "Manuel Ch. 11.2 — Isolation réseau = préservation, pas analyse. Art. 248 CPP ne s'oppose pas à la préservation physique.", "consequence": "<div class='sc-consequence-item good'>✓ Effacement à distance impossible</div><div class='sc-consequence-item good'>✓ Procédure respectée</div><div class='sc-consequence-item good'>✓ Scellés possibles</div>", "source": "Ch. 11.2 — Faraday et scellés compatibles", "next": 1}, {"text": "Photographier l'écran pour documenter les notifications Signal visibles.", "correct": true, "points": 10, "explain": "Acceptable mais insuffisant seul. Photographier ce qui est visible à l'écran documente l'état initial — ce n'est pas une analyse forensique. Mais la Faraday reste la priorité.", "legal": "Manuel Ch. 11.1 — Documentation de l'état initial : action légitime avant mise sous scellés.", "consequence": "<div class='sc-consequence-item good'>✓ Documentation initiale correcte</div><div class='sc-consequence-item neutral'>⚠️ Sans Faraday : risque effacement à distance</div>", "source": "Ch. 11.1 — État initial", "next": 1}]}, {"phase": "⚖️ Le TMC tranche", "scene": "Le TMC a reçu la demande de scellés. L'avocat a précisément listé : app Signal, Photos personnelles, app Mail. Il invoque la sphère privée. Le TMC a 20 jours pour statuer (art. 248 al. 3 CPP). Il vous demande votre position sur la levée des scellés.", "law": "<strong>TF 1B_602/2020</strong> — Désignation précise → tri préalable obligatoire.<br><strong>Art. 248 al. 3 CPP</strong> — TMC statue dans les 20 jours.", "question": "<strong>Quelle position défendez-vous devant le TMC ?</strong>", "choices": [{"text": "Levée totale — l'enquête criminelle prime sur la sphère privée.", "correct": false, "penalty": 10, "explain": "Trop radical. Le TF a clairement dit (1B_602/2020) que quand le propriétaire désigne précisément des données privées, un tri préalable s'impose. Une levée totale sera refusée.", "legal": "TF 1B_602/2020 — Obligation de tri quand désignation précise des données privées.", "consequence": "<div class='sc-consequence-item bad'>❌ Position rejetée par le TMC</div><div class='sc-consequence-item bad'>❌ Délai allongé</div>", "source": "TF 1B_602/2020", "next": "end"}, {"text": "Levée partielle avec tri : accès aux apps de communication professionnelle et metadata, exclusion des photos et messages privés non liés à l'enquête.", "correct": true, "points": 20, "explain": "Position conforme à la jurisprudence fédérale. Le TMC peut ordonner un tri par un juge neutre qui remet à l'enquête uniquement les données pertinentes. C'est ce que prescrit le TF dans 1B_602/2020.", "legal": "TF 1B_602/2020 — Tri préalable par un juge neutre, remise des seules données pertinentes à l'enquête.", "consequence": "<div class='sc-consequence-item good'>✓ Conforme à la jurisprudence</div><div class='sc-consequence-item neutral'>⚠️ Délai : 20+ jours pour le tri</div>", "source": "TF 1B_602/2020 + Art. 248 CPP", "next": "end"}, {"text": "Refus de levée — l'argumentation de l'avocat est correcte.", "correct": false, "penalty": 5, "explain": "Trop défaitiste. La désignation précise de certaines données privées ne bloque pas l'accès à toutes les données — un tri permet d'accéder aux éléments pertinents pour l'enquête.", "legal": "Art. 248 CPP — La protection de la sphère privée est proportionnelle. Elle ne bloque pas l'enquête, elle la canalise.", "consequence": "<div class='sc-consequence-item bad'>❌ Enquête bloquée sans raison</div>", "source": "Art. 248 CPP — Proportionnalité", "next": "end"}]}]}, "custody": {"id": "custody", "type": "standard", "title": "Audit Chaîne de Possession", "debrief": "<p>La chaîne de custody est le pilier de la recevabilité de la preuve numérique. Chaque rupture crée une opportunité pour la défense de contester l'authenticité ou l'intégrité des éléments de preuve.</p><p>Les 6 ruptures dans ce scénario illustrent les erreurs les plus fréquentes : absence de hash de référence, transfert non documenté, stockage inapproprié, accès non loggué, mélange de pièces et rapport sans référence aux scellés.</p>", "steps": [{"phase": "📋 Le rapport douteux", "scene": "Vous relisez un rapport d'investigation reçu d'un collègue. Il contient ces points :<br><br>\n<div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.8\">\n① Le disque dur <em>(marque, modèle, S/N non précisés)</em> a été saisi le 12 mars.<br>\n② Hash calculé <em>après</em> l'acquisition — «&nbsp;pour aller plus vite sur la scène.&nbsp;»<br>\n③ Le disque a été transporté dans le coffre de la voiture personnelle de l'inspecteur, sans pochette antistatique.<br>\n④ En laboratoire, le disque a été branché directement sur la station forensique <em>sans write blocker</em>.<br>\n⑤ L'analyse a été effectuée par deux analystes différents sur deux journées, sans journal d'accès.<br>\n⑥ Le rapport mentionne «&nbsp;un volume chiffré&nbsp;» mais ne précise pas s'il figure dans les pièces sous scellés.\n</div>", "law": "<strong>ACPO Principle 3</strong> — Journal d'audit complet, reproductible par un tiers.<br><strong>Art. 141 CPP</strong> — Preuve illicite ou non traçable : risque d'exclusion.", "question": "<strong>Combien de ruptures de chaîne de custody identifiez-vous dans ce rapport ?</strong>", "choices": [{"text": "3 ruptures — hash tardif, sans write blocker, journal d'accès manquant.", "correct": false, "penalty": 5, "explain": "Incomplet. Il y en a 6 : (1) support non identifié précisément, (2) hash calculé après acquisition, (3) transport non sécurisé, (4) absence de write blocker, (5) accès multiple sans journal, (6) volume chiffré non référencé dans les scellés.", "legal": "ACPO Principle 3 — Toute action doit être documentée et reproductible.", "consequence": "<div class='sc-consequence-item neutral'>⚠️ Sous-estimation du problème</div>", "source": "ACPO Principles + Art. 141 CPP", "next": "end"}, {"text": "6 ruptures — le rapport est fondamentalement non conforme.", "correct": true, "points": 25, "explain": "Correct. Les 6 ruptures : ① support non identifié (S/N manquant), ② hash post-acquisition (preuve non préconstituée), ③ transport non sécurisé (antistatique + véhicule privatif), ④ write blocker absent (risque d'écriture), ⑤ double accès sans log (non reproductible), ⑥ volume non référencé dans les scellés (chaîne rompue).", "legal": "Art. 141 CPP — Chaque rupture est une porte d'entrée pour la défense. Un rapport avec 6 violations peut être intégralement contesté.", "consequence": "<div class='sc-consequence-item bad'>❌ Rapport non conforme aux standards ACPO</div><div class='sc-consequence-item bad'>❌ Preuves contestables devant le TMC</div><div class='sc-consequence-item good'>✓ Diagnostic correct — refaire l'acquisition</div>", "source": "ACPO Principles 1–4 + Art. 141 CPP", "next": "end"}, {"text": "0 rupture — les pratiques décrites sont courantes en investigation.", "correct": false, "penalty": 30, "explain": "Erreur grave. «&nbsp;Courant&nbsp;» ne signifie pas «&nbsp;correct&nbsp;». Chacune des 6 pratiques décrites viole un principe fondamental de la forensique numérique et peut entraîner l'exclusion des preuves.", "legal": "Art. 141 CPP — La coutume interne d'un service ne protège pas contre l'exclusion judiciaire.", "consequence": "<div class='sc-consequence-item bad'>❌ Validation de pratiques non conformes</div>", "source": "Art. 141 CPP", "next": "end"}]}]}, "veracrypt": {"id": "veracrypt", "type": "standard", "title": "Le Volume VeraCrypt", "debrief": "<p>Le Manuel (Ch. 24.2) est explicite : «&nbsp;affirmer qu'un volume VeraCrypt contient des données compromettantes sans en connaître le contenu constitue une opinion inadmissible, non un fait forensique.&nbsp;»</p><p>La détection d'un volume chiffré repose sur des indicateurs statistiques (haute entropie, absence de magic bytes) — jamais sur une certitude. La formulation correcte décrit les <em>conditions</em> dans lesquelles un volume caché <em>pourrait</em> exister.</p>", "steps": [{"phase": "🔐 Le fichier mystérieux", "scene": "Sur le disque analysé, X-Ways signale un fichier de 8 Go nommé <code>backup_photos.dat</code> avec une entropie de 0.998 (quasi-maximale). Aucune magic bytes reconnue. Le fichier n'a aucune structure interne identifiable.", "law": "<strong>Manuel Ch. 24.2</strong> — Entropie maximale = probable chiffrement ou compression forte.<br><strong>Art. 113 CPP</strong> — Le suspect peut refuser de déchiffrer : nemo tenetur.", "question": "<strong>Comment qualifiez-vous ce fichier dans votre rapport ?</strong>", "choices": [{"text": "«&nbsp;Le fichier backup_photos.dat est un volume VeraCrypt contenant des données cachées.&nbsp;»", "correct": false, "penalty": 25, "explain": "Affirmation inadmissible. Sans déchiffrement du volume, il est impossible de prouver qu'il s'agit de VeraCrypt (pas de signature, c'est précisément la conception de VeraCrypt) ni qu'il contient quoi que ce soit.", "legal": "Art. 251 CP — Un expert qui présente une opinion comme un fait dans son rapport engage sa responsabilité pénale (faux dans les titres).", "consequence": "<div class='sc-consequence-item bad'>❌ Affirmation non étayée — opinion présentée comme fait</div><div class='sc-consequence-item bad'>❌ Risque art. 251 CP pour le rédacteur</div>", "source": "Manuel Ch. 24.2 + Art. 251 CP", "next": "end"}, {"text": "«&nbsp;Le fichier backup_photos.dat présente une entropie de 0.998/1.000 et ne contient aucune signature de format reconnue, conditions caractéristiques d'un conteneur chiffré. Son contenu ne peut être examiné sans la clé de déchiffrement.&nbsp;»", "correct": true, "points": 25, "explain": "Formulation forensique correcte. Elle décrit les faits mesurables (entropie, absence de signature), leur interprétation probable (conteneur chiffré) et la limite claire de l'analyse (sans la clé). Elle ne sur-affirme pas.", "legal": "Manuel Ch. 29.3 — Fait (entropie mesurée) → interprétation (probable chiffrement) → limite (sans clé, inaccessible). Jamais d'opinion déguisée en fait.", "consequence": "<div class='sc-consequence-item good'>✓ Formulation défendable devant le juge</div><div class='sc-consequence-item good'>✓ Limite clairement explicitée</div>", "source": "Ch. 24.2 + Ch. 29.3 — Fait vs opinion", "next": 1}, {"text": "«&nbsp;Il s'agit probablement d'une image disque compressée ou d'un fichier corrompu.&nbsp;»", "correct": false, "penalty": 10, "explain": "Inexact. Une entropie de 0.998 est trop élevée pour une compression standard (qui conserve des patterns) et une image disque compressée aurait des headers reconnaissables. L'hypothèse chiffrement est plus probable.", "legal": "Manuel Ch. 24.2 — Entropie 0.99+ avec absence de structure = chiffrement fort, pas compression.", "consequence": "<div class='sc-consequence-item neutral'>⚠️ Hypothèse plausible mais peu probable</div><div class='sc-consequence-item bad'>❌ Sous-estimation de l'indice forensique</div>", "source": "Ch. 24.2 — Analyse entropique", "next": "end"}]}, {"phase": "🔑 La demande de clé", "scene": "Le MP veut contraindre le suspect à fournir le mot de passe VeraCrypt. Le suspect invoque le droit au silence (art. 113 CPP). Le MP vous demande s'il existe une alternative technique.", "law": "<strong>Art. 113 CPP</strong> — Nemo tenetur : nul n'est tenu de s'auto-incriminer.<br><strong>Manuel Ch. 24.3</strong> — Alternatives : RAM dump, keyfile externe, historique de montage.", "question": "<strong>Quelles alternatives techniques proposez-vous ?</strong>", "choices": [{"text": "Brute force du mot de passe VeraCrypt.", "correct": false, "penalty": 20, "explain": "Irréalisable dans un délai judiciaire raisonnable. VeraCrypt utilise PBKDF2/Argon2 avec un grand nombre d'itérations précisément pour rendre le brute force impossible. Un mot de passe de 12 caractères aléatoires prendrait des siècles.", "legal": "Manuel Ch. 24.3 — VeraCrypt est conçu pour résister au brute force. Ne pas promettre ce qui est impossible.", "consequence": "<div class='sc-consequence-item bad'>❌ Promesse irréalisable au MP</div>", "source": "Ch. 24.3 — Résistance au brute force", "next": "end"}, {"text": "Analyser le dump RAM capturé lors du live forensics — le volume monté y laisse des traces de clé.", "correct": true, "points": 20, "explain": "Méthode valide si le dump a été fait pendant que le volume était monté. Volatility peut extraire les clés AES de la RAM. C'est pourquoi le dump RAM au moment de la saisie est critique.", "legal": "Manuel Ch. 11.1 — La RAM d'un système avec VeraCrypt monté contient la clé de déchiffrement en clair.", "consequence": "<div class='sc-consequence-item good'>✓ Méthode techniquement valide</div><div class='sc-consequence-item neutral'>⚠️ Nécessite un dump RAM préalable</div>", "source": "Ch. 11.1 + Ch. 24.3 — Clés en RAM", "next": "end"}, {"text": "Chercher un keyfile sur les autres supports saisis (USB, cloud, NAS).", "correct": true, "points": 15, "explain": "Approche valide. Un keyfile est un fichier binaire qui remplace ou complète le mot de passe. Il peut être stocké sur une clé USB, dans le cloud ou sur un NAS. Si trouvé, il permet l'ouverture du volume.", "legal": "Manuel Ch. 24.2 — Keyfile : alternative au mot de passe, chercher sur tous les supports saisis.", "consequence": "<div class='sc-consequence-item good'>✓ Méthode légitime</div><div class='sc-consequence-item neutral'>⚠️ Résultat incertain selon la configuration</div>", "source": "Ch. 24.2 — Keyfiles VeraCrypt", "next": "end"}]}]}, "ransomware": {"id": "ransomware", "type": "standard", "title": "Ransomware à l'Hôpital", "debrief": "<p>Ce scénario illustre la tension entre les obligations légales (LPD 2023 — notification PFPDT), les impératifs opérationnels (maintien des soins) et les besoins forensiques (préservation des preuves avant toute remédiation).</p><p>La règle d'or : <strong>capturer les preuves avant d'éteindre ou de restaurer</strong>. Un ransomware actif en RAM peut laisser des clés de déchiffrement et des indicateurs de compromission. La restauration depuis backup détruit irrémédiablement ces preuves.</p>", "steps": [{"phase": "🏥 L'alerte à 3h du matin", "scene": "L'hôpital cantonal est frappé par un ransomware. Les serveurs de dossiers patients affichent une demande de rançon. <strong>Les blocs opératoires fonctionnent toujours sur des systèmes isolés</strong>. L'équipe IT veut restaurer depuis les backups immédiatement. Le CISO vous appelle.", "law": "<strong>LPD 2023 Art. 24</strong> — Notification PFPDT «&nbsp;dans les meilleurs délais&nbsp;».<br><strong>Manuel Ch. 11.1</strong> — Capturer les preuves avant toute remédiation.", "question": "<strong>L'équipe IT veut restaurer dans l'heure. Quelle est votre position ?</strong>", "choices": [{"text": "Autoriser la restauration immédiate — les vies des patients priment sur les preuves.", "correct": false, "penalty": 15, "explain": "Trop hâtif. Les blocs opératoires fonctionnent sur systèmes isolés — il n'y a pas d'urgence vitale immédiate sur les serveurs administratifs. Une capture rapide des preuves (30-60 min) est faisable avant restauration sans compromettre les soins.", "legal": "Manuel Ch. 11.1 — La restauration sans capture préalable détruit les preuves. Raisonnement proportionnel obligatoire.", "consequence": "<div class='sc-consequence-item bad'>❌ Preuves forensiques perdues</div><div class='sc-consequence-item bad'>❌ Attribution de l'attaque impossible</div><div class='sc-consequence-item neutral'>⚠️ Systèmes opératoires non impactés</div>", "source": "Ch. 11.1 — Préservation avant remédiation", "next": "end"}, {"text": "Capture prioritaire : dump RAM des serveurs affectés + snapshot réseau avant toute action d'IT.", "correct": true, "points": 25, "explain": "Décision correcte. 30-60 minutes de capture forensique permettent de récupérer : clés de déchiffrement potentielles en RAM, IOC (Indicators of Compromise), latéralisation réseau. Les systèmes de soins critiques sont isolés et non impactés.", "legal": "Manuel Ch. 11.1 — RAM first. L'attribution forensique nécessite les artefacts des systèmes compromis avant remédiation.", "consequence": "<div class='sc-consequence-item good'>✓ Preuves préservées</div><div class='sc-consequence-item good'>✓ Attribution possible</div><div class='sc-consequence-item good'>✓ Soins non interrompus</div>", "source": "Ch. 11.1 + Manuel Ch. 24.3", "next": 1}, {"text": "Couper internet de l'hôpital et attendre les forces de l'ordre.", "correct": false, "penalty": 10, "explain": "Partiellement correct (isolation réseau = bonne pratique) mais attendre passivement est une erreur. L'isolation réseau doit s'accompagner d'une capture forensique active. Attendre sans capturer laisse la RAM se vider.", "legal": "ISO/IEC 27035 — Isolation + capture simultanées lors d'un incident de sécurité.", "consequence": "<div class='sc-consequence-item good'>✓ Isolation réseau correcte</div><div class='sc-consequence-item bad'>❌ Capture RAM non effectuée — preuves volatiles perdues</div>", "source": "ISO 27035 + Ch. 11.1", "next": "end"}]}, {"phase": "📣 La notification LPD", "scene": "48 heures plus tard, l'analyse confirme : <strong>données personnelles de 12'000 patients exfiltrées</strong> avant chiffrement. Le groupe ransomware menace de publier si la rançon n'est pas payée dans 72h.", "law": "<strong>LPD 2023 Art. 24</strong> — Notification au PFPDT obligatoire si risque élevé pour les personnes concernées.<br><strong>PFPDT</strong> — Délai : «&nbsp;dans les meilleurs délais&nbsp;» (pas de chiffre fixe contrairement au RGPD).", "question": "<strong>Quand et comment notifier le PFPDT ?</strong>", "choices": [{"text": "Notifier le PFPDT immédiatement, avant même de connaître l'étendue de la violation.", "correct": false, "penalty": 5, "explain": "Trop précipité. La LPD 2023 demande une notification quand on peut évaluer le risque. Une notification incomplète avec des informations erronées est pire qu'une notification un peu tardive mais précise.", "legal": "LPD 2023 Art. 24 — Notifier avec les informations disponibles sur la nature, les catégories de données concernées et les mesures prises.", "consequence": "<div class='sc-consequence-item neutral'>⚠️ Notification prématurée avec données incomplètes</div>", "source": "LPD 2023 Art. 24 — Contenu de la notification", "next": "end"}, {"text": "Notifier le PFPDT avec les éléments confirmés : 12'000 patients, données de santé, exfiltration confirmée, mesures prises.", "correct": true, "points": 20, "explain": "Correct. La notification LPD 2023 doit contenir : nature de la violation, catégories et volume de données, groupes de personnes concernées, conséquences probables, mesures prises. Délai : dans les meilleurs délais = dès que les éléments sont confirmés.", "legal": "LPD 2023 Art. 24 al. 1 — Notification si la violation est susceptible d'entraîner un risque élevé pour la personnalité des personnes concernées. Données de santé → risque élevé par définition.", "consequence": "<div class='sc-consequence-item good'>✓ Conformité LPD 2023</div><div class='sc-consequence-item good'>✓ Information complète et vérifiée</div>", "source": "LPD 2023 Art. 24 + PFPDT guidelines", "next": "end"}, {"text": "Payer la rançon discrètement pour éviter la publication et notifier dans 30 jours.", "correct": false, "penalty": 30, "explain": "Erreur grave à double niveau. (1) Payer la rançon finance des activités criminelles et ne garantit pas la non-publication. (2) 30 jours = violation flagrante de la LPD 2023. Les hackers publient souvent même après paiement.", "legal": "LPD 2023 Art. 24 — Délai : meilleurs délais ≠ 30 jours. GovCERT déconseille fortement le paiement de rançons.", "consequence": "<div class='sc-consequence-item bad'>❌ Violation LPD 2023</div><div class='sc-consequence-item bad'>❌ Financement de cybercriminalité</div><div class='sc-consequence-item bad'>❌ Publication probable malgré paiement</div>", "source": "LPD 2023 + GovCERT recommandations", "next": "end"}]}]}, "xplain": {"id": "xplain", "type": "standard", "title": "Affaire Xplain (2023)", "debrief": "<p>L'affaire Xplain 2023 illustre une problématique croissante : la <strong>forensique d'un prestataire</strong> est distincte de la forensique sur l'attaquant. La question centrale n'est pas «&nbsp;qui a attaqué ?&nbsp;» mais «&nbsp;pourquoi les données fédérales étaient-elles chez ce prestataire ?&nbsp;»</p><p>L'OFCS (rapport mars 2024) a relevé que des données fedpol et militaires non chiffrées se trouvaient dans les environnements de test de Xplain — violation des principes de minimisation et de classification des données.</p>", "steps": [{"phase": "🏛 La révélation", "scene": "Le groupe Play publie <strong>907 Go de données</strong> sur le darknet. Parmi elles : données fedpol, SRC (renseignement), Armée, CFF, canton de Vaud. Xplain est un prestataire IT qui fournit des logiciels aux autorités. L'OFCS vous mandate pour l'analyse forensique.", "law": "<strong>Art. 143bis CP</strong> — Accès indu au système Xplain.<br><strong>Art. 144bis CP</strong> — Dommages aux données par chiffrement ransomware.<br><strong>LPD 2023</strong> — Violation de données personnelles à grande échelle.", "question": "<strong>Quelle est la question forensique centrale de ce mandat ?</strong>", "choices": [{"text": "Identifier les membres du groupe Play et les attributer à un État.", "correct": false, "penalty": 5, "explain": "C'est une question d'attribution — elle relève du renseignement, pas du forensique judiciaire suisse. La question forensique opérationnelle est plus proche : comment les données fédérales se retrouvaient-elles chez un prestataire privé ?", "legal": "Manuel Ch. 29.1 — Le mandat forensique doit être clairement défini. Attribution étatique = renseignement, pas forensique judiciaire ordinaire.", "consequence": "<div class='sc-consequence-item neutral'>⚠️ Hors périmètre du mandat judiciaire ordinaire</div>", "source": "Ch. 29.1 — Définition du mandat", "next": "end"}, {"text": "Déterminer quelles données fédérales étaient chez Xplain, comment elles y étaient stockées, et si elles étaient protégées conformément aux directives.", "correct": true, "points": 25, "explain": "Question correcte. L'enquête forensique doit établir : catalogue des données fédérales chez Xplain, conditions de stockage (chiffrement ?), base contractuelle, conformité aux directives de classification. C'est ce que l'OFCS a investigué.", "legal": "OFCS Rapport mars 2024 — Données fedpol dans environnements de test non chiffrés : violation des principes de minimisation et classification.", "consequence": "<div class='sc-consequence-item good'>✓ Mandat correctement défini</div><div class='sc-consequence-item good'>✓ Réponses exploitables judiciairement</div>", "source": "OFCS Rapport Xplain mars 2024", "next": 1}, {"text": "Récupérer les 907 Go publiés et identifier les fichiers les plus sensibles.", "correct": false, "penalty": 10, "explain": "Problématique légalement. Télécharger des données publiées par un groupe criminel peut constituer une réception de données volées. L'analyse se fait sur les systèmes Xplain avec autorisation, pas depuis les publications sur le darknet.", "legal": "Art. 143 CP — Réception de données soustraites sans droit.", "consequence": "<div class='sc-consequence-item bad'>❌ Risque juridique pour l'analyste</div><div class='sc-consequence-item bad'>❌ Données potentiellement altérées par le groupe</div>", "source": "Art. 143 CP — Réception de données", "next": "end"}]}, {"phase": "🔍 La question contractuelle", "scene": "Votre analyse révèle que Xplain stockait <strong>des données fedpol réelles dans ses environnements de développement et de test</strong>, sans chiffrement supplémentaire. Les contrats entre Xplain et les autorités ne l'interdisaient pas explicitement.", "law": "<strong>Rapport OFCS 2024</strong> — Absence de directives claires sur la minimisation des données dans les contrats avec les prestataires.", "question": "<strong>Que concluez-vous forensiquement sur la responsabilité ?</strong>", "choices": [{"text": "Responsabilité exclusive de Xplain — ils n'auraient pas dû stocker ces données ainsi.", "correct": false, "penalty": 10, "explain": "Trop partiel. Si le contrat ne l'interdisait pas explicitement, la responsabilité de Xplain est atténuée. Les autorités fédérales qui ont transmis des données réelles à un prestataire sans imposer de mesures de protection partagent la responsabilité.", "legal": "OFCS 2024 — Responsabilité partagée : prestataire + autorités mandantes qui n'ont pas imposé les standards.", "consequence": "<div class='sc-consequence-item neutral'>⚠️ Analyse incomplète</div>", "source": "OFCS Rapport 2024 — Partage de responsabilité", "next": "end"}, {"text": "Responsabilité partagée : Xplain pour les mesures de sécurité, les autorités fédérales pour l'absence de directives contractuelles de classification.", "correct": true, "points": 20, "explain": "Analyse correcte selon les conclusions de l'OFCS. Les données réelles n'auraient pas dû être dans les environnements de test (principe de minimisation). Mais les contrats ne l'interdisant pas explicitement, les autorités mandantes ont une part de responsabilité dans cette lacune.", "legal": "OFCS Rapport 2024 + LPD 2023 Art. 7 — Minimisation des données : responsabilité du responsable du traitement (l'autorité fédérale) d'imposer ces standards contractuellement.", "consequence": "<div class='sc-consequence-item good'>✓ Analyse nuancée conforme au rapport OFCS</div><div class='sc-consequence-item good'>✓ Base pour amélioration contractuelle future</div>", "source": "OFCS 2024 + LPD 2023 Art. 7", "next": "end"}]}]}, "premier_intervenant": {"id": "premier_intervenant", "type": "timer", "title": "Mode Premier Intervenant", "duration": 90, "debrief": "<p>La checklist du premier intervenant numérique est documentée dans le Manuel (Ch. 11) et la norme ISO/IEC 27037. L'ordre correct respecte la hiérarchie de la volatilité : RAM (disparaît à l'extinction) → réseau → fichiers → disque.</p><p><strong>Ordre optimal :</strong> Photographier → Isoler réseau → Capturer RAM → Saisir mobile → Acquérir disque → Apposer scellés</p>", "scene": "Vous arrivez dans un appartement zurichois. Sur le bureau : un <strong>laptop Windows allumé, session ouverte</strong> (BitLocker actif visible), un <strong>iPhone sur la table</strong> (déverrouillé), une <strong>clé USB dans le port</strong>. Le suspect est absent. Mandat en règle (art. 245 CPP). Équipement : write blocker, WinPmem, pochette Faraday, appareil photo.", "law": "<strong>ISO/IEC 27037</strong> — Prioriser selon la volatilité : RAM > réseau > fichiers > disque.<br><strong>ACPO Principe 1</strong> — Aucune action ne doit modifier des données susceptibles d'être présentées en justice.", "actions": [{"id": 1, "label": "📸 Photographier l'état initial de chaque appareil", "correct_pos": 1, "explain": "Première action obligatoire — documente l'état exact avant toute intervention (chaîne de custody)."}, {"id": 2, "label": "🔌 Isoler du réseau (câble + WiFi + mode avion mobile)", "correct_pos": 2, "explain": "Stoppe l'effacement à distance, les connexions C2 et les mises à jour automatiques."}, {"id": 3, "label": "💾 Capturer la RAM du laptop (WinPmem)", "correct_pos": 3, "explain": "La RAM disparaît à l'extinction. Contient clés BitLocker, processus actifs, connexions réseau."}, {"id": 4, "label": "📱 Saisir l'iPhone et placer en pochette Faraday", "correct_pos": 4, "explain": "Le mobile est protégé du réseau par la Faraday. Vient après la RAM du laptop (moins volatile)."}, {"id": 5, "label": "🖥 Acquérir l'image disque avec write blocker", "correct_pos": 5, "explain": "Le disque est non volatile — priorité inférieure à la RAM."}, {"id": 6, "label": "🔒 Apposer les scellés physiques et documenter la chaîne de custody", "correct_pos": 6, "explain": "Dernière étape — scelle l'état final une fois toutes les acquisitions terminées."}]}, "trois_artefacts": {"id": "trois_artefacts", "type": "standard", "title": "Les 3 Artefacts", "debrief": "<p>Ce scénario illustre la règle fondamentale du Manuel (Ch. 2.5) : <em>«&nbsp;un artefact numérique isolé n'est jamais une preuve. La preuve naît de la corrélation.&nbsp;»</em></p><p>En droit suisse, l'<strong>art. 139 CPP</strong> autorise la preuve par indices (<em>Indizienbeweis</em>). Trois artefacts convergents et indépendants constituent une présomption sérieuse suffisante pour le TMC. La Cour dispose ensuite de l'appréciation libre des preuves (art. 10 CPP).</p><p>La TF a rappelé (ATF 147 IV 409) que l'absence de preuve directe ne fait pas obstacle à la condamnation si les indices sont graves, précis et concordants.</p>", "steps": [{"phase": "🔍 Analyse des artefacts", "scene": "Vous analysez le laptop d'un suspect (affaire de vol de données). X-Ways présente trois artefacts :<br><br>\n<div style=\"display:grid;gap:.5rem;margin-top:.3rem\">\n<div style=\"background:rgba(0,229,204,.05);border:1px solid rgba(0,229,204,.2);border-radius:8px;padding:.65rem .9rem;font-size:.78rem\">\n<strong style=\"color:var(--cyan)\">① ShellBag</strong><br>\nClé BagMRU : <code>HKCU\\Software\\Classes\\Local Settings\\...\\BagMRU</code><br>\nChemin reconstitué : <code>E:\\Projets\\Client_Nexia\\Contrats_2023\\</code><br>\nTimestamp dernière visite : <code>2024-03-15 10h43:22</code>\n</div>\n<div style=\"background:rgba(48,232,138,.05);border:1px solid rgba(48,232,138,.2);border-radius:8px;padding:.65rem .9rem;font-size:.78rem\">\n<strong style=\"color:var(--green)\">② USBSTOR (registre SYSTEM)</strong><br>\nAppareil : <code>SanDisk Ultra 64GB — S/N: 4C530000000</code><br>\nLettre assignée : <code>E:\\</code> · Première connexion : <code>2024-03-15 10h41:05</code>\n</div>\n<div style=\"background:rgba(240,192,64,.05);border:1px solid rgba(240,192,64,.2);border-radius:8px;padding:.65rem .9rem;font-size:.78rem\">\n<strong style=\"color:var(--gold)\">③ Fichier .lnk</strong><br>\nCible : <code>E:\\Projets\\Client_Nexia\\Contrats_2023\\Contrat_Nexia_Final.docx</code><br>\nTimestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>4C530000000</code>\n</div>\n</div>", "law": "<strong>Manuel Ch. 18</strong> — ShellBags : navigation humaine prouvée. USBSTOR : connexion physique. .lnk : ouverture de fichier.<br><strong>Ch. 2.5 + Art. 139 CPP</strong> — Preuve par indices convergents : trois sources indépendantes suffisent à établir une présomption sérieuse. Corréler toujours, ne jamais conclure sur un artefact isolé.", "question": "<strong>Quelle conclusion est forensiquement défendable devant le juge ?</strong>", "choices": [{"text": "L'utilisateur a volé les fichiers Nexia sur la clé SanDisk — c'est prouvé.", "correct": false, "penalty": 20, "explain": "Sur-interprétation grave. Les artefacts prouvent navigation, connexion et ouverture — pas un 'vol'. L'intention criminelle ne peut pas être déduite d'artefacts numériques seuls.", "legal": "Manuel Ch. 29.3 — Distinction obligatoire fait/interprétation/opinion. 'Vol' est une qualification juridique réservée au juge.", "consequence": "<div class='sc-consequence-item bad'>❌ Sur-interprétation — rapport non défendable</div>", "source": "Ch. 29.3 — Fait vs opinion", "next": 1}, {"text": "La corrélation des 3 artefacts établit qu'un utilisateur a navigué dans E:\\Projets\\Client_Nexia\\ et ouvert Contrat_Nexia_Final.docx le 15 mars 2024 à 10h44, depuis une clé SanDisk (S/N 4C530000000) connectée à 10h41.", "correct": true, "points": 25, "explain": "Formulation forensiquement parfaite. Elle corrèle 3 sources indépendantes, précise l'horodatage, identifie le périphérique par S/N et reste dans les faits démontrables.", "legal": "Manuel Ch. 29.4 — Corrélation multi-artefacts. Ch. 18.4 — USBSTOR + ShellBag + .lnk forment une démonstration solide.", "consequence": "<div class='sc-consequence-item good'>✓ Corrélation 3 sources indépendantes</div><div class='sc-consequence-item good'>✓ Défendable devant tout tribunal</div>", "source": "Ch. 18 + Ch. 29.4 — Corrélation", "next": 1}, {"text": "On ne peut rien conclure — sans le fichier original, pas de preuve.", "correct": false, "penalty": 10, "explain": "Trop conservateur. Un .lnk survit à la suppression du fichier cible — c'est précisément son intérêt forensique. 3 artefacts convergents forment une preuve solide.", "legal": "Manuel Ch. 18.1 — 'Un raccourci survit souvent à la suppression du fichier référencé.'", "consequence": "<div class='sc-consequence-item neutral'>⚠️ Sous-exploitation des artefacts disponibles</div>", "source": "Ch. 18.1 — Fichiers .lnk forensique", "next": "end"}]}, {"phase": "⚖️ L'objection de l'avocat", "scene": "L'avocat de la défense : <em>«&nbsp;Ces artefacts ont pu être générés par un logiciel de synchronisation automatique (OneDrive, Dropbox) sans intervention humaine délibérée.&nbsp;»</em>", "law": "<strong>Manuel Ch. 18.3</strong> — ShellBags sont créés par l'Explorateur Windows, pas par des scripts ou logiciels de sync.<br><strong>Art. 10 al. 2 CPP</strong> — Appréciation libre des preuves par le juge : les indices convergents valent preuve si non réfutés de façon crédible.", "question": "<strong>Quelle réponse technique apportez-vous ?</strong>", "choices": [{"text": "Les ShellBags sont créés uniquement par l'Explorateur Windows (interface graphique). Un logiciel de sync n'utilise pas l'Explorateur. La séquence temporelle 10h41→10h44 (3 minutes) est cohérente avec une interaction humaine.", "correct": true, "points": 20, "explain": "Réponse technique solide. ShellBags = interface graphique uniquement. La chronologie serrée renforce l'argument. Vérification complémentaire : chercher OneDrive/Dropbox dans les artefacts d'exécution (Prefetch).", "legal": "Manuel Ch. 18.3 — ShellBags créés par le shell graphique, pas par des malwares ou logiciels d'automatisation.", "consequence": "<div class='sc-consequence-item good'>✓ Objection réfutée techniquement</div><div class='sc-consequence-item good'>✓ Vérification supplémentaire proposée</div>", "source": "Ch. 18.3 — ShellBags : navigation humaine", "next": "end"}, {"text": "L'avocat a raison — on ne peut pas l'exclure. Retirer la conclusion.", "correct": false, "penalty": 15, "explain": "Trop défaitiste. L'hypothèse doit être évaluée, pas automatiquement acceptée. Un expert qui capitule sans vérification perd sa crédibilité.", "legal": "Manuel Ch. 2.5 — La contre-hypothèse doit être testée, pas simplement acceptée par défaut.", "consequence": "<div class='sc-consequence-item bad'>❌ Abandon prématuré d'une conclusion solide</div>", "source": "Ch. 2.5 — Contre-hypothèse", "next": "end"}]}]}};
-
-// Catalogue inline — toujours disponible même sans le dossier scenarios/
-const CATALOG_INLINE = [
-  {id:"bitlocker",title:"Le Dilemme de l'Intervenant",icon:"💻",diff:"Suisse",diff_class:"medium",desc:"Laptop chiffré BitLocker découvert allumé. Tirer la prise ou acquérir en live ?",laws:["Art. 248 CPP","LPD","Ch. 11 Manuel"],tags:["Suisse","Acquisition","Procédure","Intermédiaire"]},
-  {id:"smartphone",title:"Le Smartphone Déverrouillé",icon:"📱",diff:"Suisse",diff_class:"medium",desc:"Smartphone déverrouillé trouvé sur la scène. Les scellés sont demandés. Comment procéder ?",laws:["Art. 248 CPP","TF 1B_602/2020"],tags:["Suisse","Procédure","Intermédiaire"]},
-  {id:"custody",title:"Audit Chaîne de Possession",icon:"📋",diff:"Intermédiaire",diff_class:"easy",desc:"Identifiez les 6 ruptures de chaîne de custody dans ce rapport d'investigation.",laws:["Art. 141 CPP","ACPO Principle 3"],tags:["Procédure","Acquisition","Débutant"]},
-  {id:"veracrypt",title:"Le Volume VeraCrypt",icon:"🔐",diff:"Avancé",diff_class:"hard",desc:"Un volume VeraCrypt chiffré découvert. Que peut-on affirmer forensiquement devant le juge ?",laws:["Manuel Ch. 24.2","Art. 113 CPP"],tags:["Cryptologie","Rapport","Avancé"]},
-  {id:"ransomware",title:"Ransomware à l'Hôpital",icon:"🏥",diff:"Suisse",diff_class:"hard",desc:"Attaque ransomware sur un hôpital. LPD 2023, notification PFPDT, dump RAM : que prioriser ?",laws:["LPD 2023","Art. 143bis CP","Art. 144bis CP"],tags:["Suisse","Procédure","Avancé"]},
-  {id:"xplain",title:"Affaire Xplain (2023)",icon:"🏛",diff:"Suisse",diff_class:"medium",desc:"Données fedpol chez un prestataire. Ransomware Play publie 907 Go. Forensique interne vs enquête pénale.",laws:["Art. 143 CP","LPD","Ch. 39 Manuel"],tags:["Suisse","Analyse","Intermédiaire"]},
-  {id:"premier_intervenant",title:"Mode Premier Intervenant",icon:"⏱",diff:"Chrono 90s",diff_class:"hard",desc:"6 actions à ordonner en 90 secondes. Chaque erreur peut invalider l'enquête.",laws:["ISO/IEC 27037","Ch. 11 Manuel"],tags:["Acquisition","Chrono","Avancé"]},
-  {id:"trois_artefacts",title:"Les 3 Artefacts",icon:"🔍",diff:"Corrélation",diff_class:"medium",desc:"ShellBag + USBSTOR + fichier .lnk. Quelle conclusion est forensiquement défendable ?",laws:["Ch. 18 Manuel","Art. 29 Rapport"],tags:["Analyse","Corrélation","Rapport","Intermédiaire"]},
-  {id:"metadata",title:"La Métadonnée Fatale",icon:"🧬",diff:"EXIF",diff_class:"easy",desc:"Un suspect a posté une photo. Les données EXIF révèlent GPS et horodatage.",laws:["Ch. 4.3 Manuel","Art. 254 CPP"],tags:["Analyse","Rapport","Débutant"]},
-  {id:"virement",title:"Le Virement Frauduleux",icon:"💰",diff:"Qualification",diff_class:"medium",desc:"50 000 CHF transférés via une faille bancaire. Art. 147 CP ou Art. 146 CP ?",laws:["Art. 146 CP","Art. 147 CP"],tags:["Suisse","Qualification","Intermédiaire"]},
-  {id:"bitlocker_froid",title:"BitLocker à Froid",icon:"🔒",diff:"Avancé",diff_class:"hard",desc:"Laptop saisi éteint avec BitLocker actif. La clé de récupération est introuvable.",laws:["Ch. 24.3 Manuel","Art. 141 CPP"],tags:["Cryptologie","Acquisition","Rapport","Avancé"]},
-  {id:"ip_accusatrice",title:"L'Adresse IP Accusatrice",icon:"🌐",diff:"Réseau",diff_class:"medium",desc:"Une IP reliée à une attaque. L'opérateur dit : c'est M. X. Mais est-ce une preuve ?",laws:["Ch. 25.6 Manuel","ATF 136 II 508"],tags:["Réseau","Rapport","Intermédiaire"]},
-  {id:"conclusion",title:"Rédiger la Conclusion",icon:"📋",diff:"Rapport",diff_class:"easy",desc:"Quatre formulations d'une même découverte. Laquelle est défendable devant un juge ?",laws:["Ch. 29.3 Manuel","Art. 251 CP"],tags:["Rapport","Qualification","Débutant"]},
-  {id:"timeline",title:"Corrélation Timeline",icon:"🧩",diff:"Corrélation",diff_class:"hard",desc:"5 artefacts avec timestamps divergents. Construisez la chronologie défendable.",laws:["Ch. 29.4 Manuel","Ch. 18 Manuel"],tags:["Analyse","Corrélation","Avancé"]},
-  {id:"ransomware_raid",title:"Ransomware + RAID 5",icon:"💾",diff:"Récupération",diff_class:"hard",desc:"RAID 5 dont 1 disque chiffré + backup avec mot de passe perdu. Que récupérer ?",laws:["Ch. 24.3 Manuel","RAID forensics"],tags:["Acquisition","Cryptologie","Avancé"]},
-  {id:"frontieres",title:"Contrôle aux Frontières",icon:"🛂",diff:"Suisse",diff_class:"medium",desc:"Un douanier veut fouiller le laptop d'un voyageur. Faut-il un mandat ?",laws:["Art. 245 CPP","LMAD"],tags:["Suisse","Procédure","Intermédiaire"]},
-  {id:"attribution",title:"Attribution Incertaine",icon:"👤",diff:"Avancé",diff_class:"hard",desc:"Trois collègues partagent un compte Windows. Qui a commis l'infraction ?",laws:["Ch. 29.4 Manuel","Event ID 4624"],tags:["Analyse","Rapport","Avancé"]},
-  {id:"fileless",title:"Malware Fileless",icon:"⚡",diff:"Avancé",diff_class:"hard",desc:"Aucun fichier sur le disque. Tout en RAM. Comment prouver l'infection ?",laws:["Ch. 11.2 Manuel","Volatility"],tags:["Analyse","Acquisition","Avancé"]},
-];
-
-async function loadCatalog() {
-  const container = document.getElementById('sc-cards');
-  try {
-    // Afficher immédiatement avec les données inline
-    renderCatalog(CATALOG_INLINE);
-  } catch(e) {
-    if(container) container.innerHTML =
-      '<div style="color:#ff4060;padding:2rem;font-family:monospace;background:rgba(255,64,96,.1);border-radius:8px;margin:1rem">'+
-      '❌ Erreur renderCatalog: ' + e.message + '<br><small>' + e.stack + '</small></div>';
-    return;
-  }
-
-  // Tenter de récupérer le catalogue serveur en arrière-plan
-  try {
-    const res = await fetch('scenarios/index.json');
-    if (!res.ok) return;
-    const catalog = await res.json();
-    renderCatalog(catalog);
-  } catch (e) {
-    // JSON pas encore uploadé — catalogue inline déjà affiché, c'est OK
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// SYSTÈME DE TAGS & FILTRAGE
-// ═══════════════════════════════════════════════════════════════
-
-let _catalog = [];
-let _activeTag = null;
-
-// Ordre d'affichage et couleurs des tags
-const TAG_META = {
-  'Tous':          { color: 'var(--text)',    bg: 'rgba(255,255,255,.08)',  border: 'rgba(255,255,255,.2)'  },
-  'Débutant':      { color: '#30e88a',        bg: 'rgba(48,232,138,.08)',   border: 'rgba(48,232,138,.25)'  },
-  'Intermédiaire': { color: '#f0c040',        bg: 'rgba(240,192,64,.08)',   border: 'rgba(240,192,64,.25)'  },
-  'Avancé':        { color: '#ff4060',        bg: 'rgba(255,64,96,.08)',    border: 'rgba(255,64,96,.25)'   },
-  'Suisse':        { color: '#ff6b6b',        bg: 'rgba(255,107,107,.08)', border: 'rgba(255,107,107,.25)' },
-  'Procédure':     { color: '#58a6ff',        bg: 'rgba(88,166,255,.08)',   border: 'rgba(88,166,255,.25)'  },
-  'Acquisition':   { color: '#3fb950',        bg: 'rgba(63,185,80,.08)',    border: 'rgba(63,185,80,.25)'   },
-  'Analyse':       { color: '#f0883e',        bg: 'rgba(240,136,62,.08)',   border: 'rgba(240,136,62,.25)'  },
-  'Rapport':       { color: '#bc8cff',        bg: 'rgba(188,140,255,.08)', border: 'rgba(188,140,255,.25)' },
-  'Cryptologie':   { color: '#a5d6ff',        bg: 'rgba(165,214,255,.08)', border: 'rgba(165,214,255,.25)' },
-  'Corrélation':   { color: '#00e5cc',        bg: 'rgba(0,229,204,.08)',   border: 'rgba(0,229,204,.25)'   },
-  'Qualification': { color: '#ffa657',        bg: 'rgba(255,166,87,.08)',  border: 'rgba(255,166,87,.25)'  },
-  'Réseau':        { color: '#79c0ff',        bg: 'rgba(121,192,255,.08)', border: 'rgba(121,192,255,.25)' },
-  'Chrono':        { color: '#ff4060',        bg: 'rgba(255,64,96,.08)',   border: 'rgba(255,64,96,.25)'   },
-};
-
-function renderCatalog(catalog) {
-  _catalog = catalog;
-
-  // Lire le tag depuis l'URL (?tag=Suisse)
-  const urlTag = new URLSearchParams(location.search).get('tag');
-  if (urlTag && urlTag !== 'Tous') _activeTag = urlTag;
-
-  // Construire la liste ordonnée des tags disponibles
-  const tagOrder = Object.keys(TAG_META);
-  const tagCounts = {};
-  catalog.forEach(sc => (sc.tags || []).forEach(t => { tagCounts[t] = (tagCounts[t] || 0) + 1; }));
-  const allTags = ['Tous', ...tagOrder.filter(t => t !== 'Tous' && tagCounts[t])];
-
-  // Rendre les filtres
-  const filterEl = document.getElementById('sc-filters');
-  if (filterEl) {
-    filterEl.innerHTML = allTags.map(tag => {
-      const meta = TAG_META[tag] || TAG_META['Tous'];
-      const count = tag === 'Tous' ? catalog.length : (tagCounts[tag] || 0);
-      const isActive = (tag === 'Tous' && !_activeTag) || tag === _activeTag;
-      return `<button class="sc-filter-chip ${isActive ? 'active' : ''}"
-        data-tag="${tag}"
-        style="--chip-color:${meta.color};--chip-bg:${meta.bg};--chip-border:${meta.border}"
-        onclick="filterByTag('${tag}')">
-        ${tag} <span class="sc-filter-count">${count}</span>
-      </button>`;
-    }).join('');
-  }
-
-  renderFilteredCards();
-}
-
-function filterByTag(tag) {
-  _activeTag = (tag === 'Tous') ? null : tag;
-
-  // Mettre à jour les chips
-  document.querySelectorAll('.sc-filter-chip').forEach(btn => {
-    const btnTag = btn.dataset.tag;
-    const isActive = (btnTag === 'Tous' && !_activeTag) || btnTag === _activeTag;
-    btn.classList.toggle('active', isActive);
-  });
-
-  // Mettre à jour l'URL sans rechargement
-  const url = new URL(location.href);
-  if (_activeTag) { url.searchParams.set('tag', _activeTag); }
-  else { url.searchParams.delete('tag'); }
-  history.pushState({}, '', url);
-
-  renderFilteredCards();
-}
-
-function renderFilteredCards() {
-  const filtered = _activeTag
-    ? _catalog.filter(sc => (sc.tags || []).includes(_activeTag))
-    : _catalog;
-
-  const container = document.getElementById('sc-cards');
-  if (!container) { console.error('sc-cards introuvable'); return; }
-
-  if (filtered.length === 0) {
-    container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--dim)">Aucun scénario pour ce filtre.</div>';
-    return;
-  }
-
-  container.innerHTML = filtered.map(sc => {
-    const tagPills = (sc.tags || []).map(t => {
-      const meta = TAG_META[t] || {};
-      return `<span class="sc-tag-pill" style="color:${meta.color || 'var(--dim)'};background:${meta.bg || 'transparent'};border-color:${meta.border || 'var(--border)'};">${t}</span>`;
-    }).join('');
-
-    return `<div class="sc-card" onclick="launchScenario('${sc.id}')">
-      <div class="sc-card-icon">${sc.icon}</div>
-      <div class="sc-card-diff diff-${sc.diff_class}">${sc.diff}</div>
-      <div class="sc-card-title">${sc.title}</div>
-      <div class="sc-card-desc">${sc.desc}</div>
-      <div class="sc-card-tags">${tagPills}</div>
-      <div class="sc-card-law">${sc.laws.join(' · ')}</div>
-    </div>`;
-  }).join('');
-}
-
-async function loadScenario(id) {
-  if (SCENARIOS[id]) return SCENARIOS[id]; // cache
-  
-  // Tenter de charger depuis le JSON serveur
-  try {
-    const res = await fetch('scenarios/' + id + '.json');
-    if (res.ok) {
-      const data = await res.json();
-      SCENARIOS[id] = data;
-      return data;
-    }
-  } catch (e) { /* JSON pas encore sur le serveur */ }
-
-  // Fallback : scénarios inline (8 originaux)
-  if (SCENARIOS_INLINE[id]) {
-    SCENARIOS[id] = SCENARIOS_INLINE[id];
-    return SCENARIOS_INLINE[id];
-  }
-
-  // Scénario nouveau (JSON requis, pas encore uploadé)
-  return {
-    id, type: 'standard',
-    title: CATALOG_INLINE.find(s => s.id === id)?.title || id,
-    debrief: '',
-    steps: [{
-      phase: '⏳ Scénario en cours de déploiement',
-      scene: 'Ce scénario est disponible mais le fichier de données n\'a pas encore été déployé sur le serveur. Uploadez le dossier <code>scenarios/</code> sur GitHub pour l\'activer.',
-      law: 'Voir le fichier <code>scenarios/' + id + '.json</code>',
-      question: '<strong>Ce scénario sera disponible après le prochain déploiement.</strong>',
-      choices: [{text: '← Retour aux scénarios', correct: true, points: 0, explain: '', legal: '', consequence: '', source: '', next: 'end'}]
-    }]
-  };
-}
-
-// ═══════════════════════════════════════════════════════════════
-// ÉTAT GLOBAL
-// ═══════════════════════════════════════════════════════════════
-const GAME = {
-  score: 0, correct: 0, errors: 0,
-  currentScenario: null,
-  currentStep: 0,
-  history: [],
-};
-
-function updateScore() {
-  document.getElementById('sc-score').textContent = GAME.score;
-  document.getElementById('sc-correct').textContent = GAME.correct;
-  document.getElementById('sc-errors').textContent = GAME.errors;
-}
-
-// B1 fix: launchScenario merged into timer_scenario.js version below
-
-function backToMenu() {
-  clearTimer(); // B3 fix: always clear timer on menu return
-  document.getElementById('sc-selector').style.display = 'block';
-  document.getElementById('sc-game').style.display = 'none';
-  document.getElementById('sc-scenario-num').textContent = '—';
-  document.getElementById('sc-narrative').innerHTML = '';
-}
-
-// ═══════════════════════════════════════════════════════════════
-// MOTEUR DE SCÉNARIO
-// ═══════════════════════════════════════════════════════════════
-
-function renderStep(scenario, stepIdx) {
-  const step = scenario.steps[stepIdx];
-  if (!step) return;
-  GAME.currentStep = stepIdx;
-
-  const container = document.getElementById('sc-narrative');
-
-  // Phase + timer
-  const phaseHtml = step.phase ? `<div class="sc-phase-badge">${step.phase}</div>` : '';
-  const urgencyHtml = step.urgent ? `<div class="sc-urgency">⏱ Décision urgente — chaque action est irréversible</div>` : '';
-
-  // Scene context
-  const sceneHtml = step.scene ? `
-    <div class="sc-scene-box">
-      <div class="sc-scene-label">🔍 ÉTAT DE LA SCÈNE</div>
-      <div class="sc-scene-content">${step.scene}</div>
-    </div>` : '';
-
-  // Legal refs
-  const lawHtml = step.law ? `
-    <div class="sc-law-box">
-      <div class="sc-law-label">⚖️ Cadre légal applicable</div>
-      <div class="sc-law-content">${step.law}</div>
-    </div>` : '';
-
-  // Question
-  const questionHtml = `<div class="sc-question">${step.question}</div>`;
-
-  // Choices
-  const choicesHtml = `
-    <div class="sc-choices" id="sc-choices-${stepIdx}">
-      ${step.choices.map((c, i) => `
-        <button class="sc-choice-btn" onclick="resolveChoice(${i}, ${stepIdx})" data-idx="${i}">
-          <span class="sc-choice-letter">${String.fromCharCode(65+i)}</span>
-          <span class="sc-choice-text">${c.text}</span>
-        </button>`).join('')}
-    </div>`;
-
-  container.innerHTML = `
-    <div class="sc-step-header">
-      ${phaseHtml}
-      <button class="sc-back-btn" onclick="backToMenu()">← Retour aux scénarios</button>
+    <div class="lobby-header">
+      <div style="font-size:36px;margin-bottom:8px">🚨</div>
+      <h1>Simulation Scène de Crime</h1>
+      <p>Chaque décision est <strong style="color:var(--red)">irréversible</strong>.<br>
+         Les erreurs du premier intervenant peuvent invalider l'intégralité de l'enquête.</p>
+      <div class="legal-strip">
+        <span class="legal-pill">Art. 248 CPP</span>
+        <span class="legal-pill">Art. 143/143bis CP</span>
+        <span class="legal-pill">ISO/IEC 27037</span>
+        <span class="legal-pill">LPD révisée 2023</span>
+      </div>
     </div>
-    ${urgencyHtml}
-    ${sceneHtml}
-    ${lawHtml}
-    ${questionHtml}
-    ${choicesHtml}
-    <div id="sc-feedback-${stepIdx}"></div>
+
+    <!-- Global stats -->
+    <div class="lobby-stats" id="lobby-stats">
+      <div class="lstat"><div class="lstat-val" id="ls-completed">0</div><div class="lstat-lbl">Scénarios complétés</div></div>
+      <div class="lstat"><div class="lstat-val" id="ls-avg">—</div><div class="lstat-lbl">Score moyen</div></div>
+      <div class="lstat"><div class="lstat-val" id="ls-custody">—</div><div class="lstat-lbl">Meilleure chaîne</div></div>
+    </div>
+
+    <!-- Scenario cards -->
+    <div class="scene-grid" id="scene-grid">
+      <div class="empty-state">
+        <div class="es-icon">⏳</div>
+        <div>Chargement des scénarios…</div>
+        <div style="margin-top:6px;font-size:11px">Assurez-vous que <code>scenes.js</code> est chargé</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SCREEN 1 : BRIEFING -->
+  <div class="screen" id="screen-briefing">
+    <div class="briefing-card" id="briefing-content">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- SCREEN 2 : SCENE ENGINE -->
+  <div class="screen" id="screen-scene">
+
+    <!-- Progress -->
+    <div class="scene-progress-bar">
+      <div class="prog-top">
+        <span class="prog-title" id="prog-title">Étape 1/1</span>
+        <div class="prog-scores">
+          <span class="prog-score-ok">✓ <span id="prog-ok">0</span></span>
+          <span class="prog-score-err">✗ <span id="prog-err">0</span></span>
+        </div>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline" id="timeline"></div>
+
+    <!-- Chain of custody -->
+    <div class="custody-bar">
+      <span class="custody-label">⛓ Chaîne de custody</span>
+      <div class="custody-track"><div class="custody-fill" id="custody-fill" style="width:100%;background:var(--green)"></div></div>
+      <span class="custody-pct" id="custody-pct" style="color:var(--green)">100%</span>
+    </div>
+
+    <!-- Situation -->
+    <div class="situation-card" id="situation-card">
+      <!-- populated by JS -->
+    </div>
+
+    <!-- Feedback -->
+    <div id="feedback-area" style="display:none"></div>
+
+    <!-- Critical error -->
+    <div id="critical-area" style="display:none"></div>
+
+    <!-- Actions -->
+    <div class="scene-actions">
+      <button class="next-step-btn" id="next-step-btn" onclick="advanceStep()" disabled>
+        Étape suivante →
+      </button>
+    </div>
+
+  </div>
+
+  <!-- SCREEN 3 : RAPPORT -->
+  <div class="screen" id="screen-report">
+    <div class="report-card" id="report-content">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<!-- Load scenes.js — requis pour les scénarios -->
+<script src="scenes.js"></script>
+
+<!-- Fallback si scenes.js absent -->
+<script>
+if (typeof SCENES === 'undefined' || !SCENES || !SCENES.length) {
+  console.warn('scenes.js non chargé');
+  var SCENES = [];
+}
+</script>
+
+<!-- ══════════════════════════════════════
+     ENGINE
+══════════════════════════════════════ -->
+<script>
+// ── STORAGE UTILS ──────────────────────────────────────
+function lsGet(k, d) { try { const v = localStorage.getItem(k); return v !== null ? JSON.parse(v) : d; } catch { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+// ── STATE ──────────────────────────────────────────────
+let G = {
+  scene: null,
+  stepIdx: 0,
+  decisions: [],
+  score: 0,
+  maxScore: 0,
+  okCount: 0,
+  errCount: 0,
+  custodyPct: 100,
+  answered: false,
+  nextTarget: 'auto',  // 'auto' | 'end' | number
+};
+
+// ── SCREEN ROUTING ─────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+// ── TOAST ──────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── SOUND ──────────────────────────────────────────────
+let _ac = null;
+function getAC() { if (!_ac) try { _ac = new (window.AudioContext || window.webkitAudioContext)(); } catch {} return _ac; }
+function playSound(type) {
+  const a = getAC(); if (!a) return;
+  const t = a.currentTime;
+  if (type === 'ok') {
+    [523, 659, 784].forEach((f, i) => {
+      const o = a.createOscillator(), g = a.createGain();
+      o.connect(g); g.connect(a.destination);
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.1, t + i * 0.08);
+      g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.2);
+      o.start(t + i * 0.08); o.stop(t + i * 0.08 + 0.2);
+    });
+  } else if (type === 'ko') {
+    const o = a.createOscillator(), g = a.createGain();
+    o.connect(g); g.connect(a.destination);
+    o.frequency.setValueAtTime(220, t);
+    o.frequency.exponentialRampToValueAtTime(110, t + 0.4);
+    g.gain.setValueAtTime(0.15, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    o.start(t); o.stop(t + 0.4);
+  } else if (type === 'critical') {
+    [180, 140, 100].forEach((f, i) => {
+      const o = a.createOscillator(), g = a.createGain();
+      o.connect(g); g.connect(a.destination);
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.18, t + i * 0.12);
+      g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.25);
+      o.start(t + i * 0.12); o.stop(t + i * 0.12 + 0.25);
+    });
+  }
+}
+
+// ── LOBBY ──────────────────────────────────────────────
+function initLobby() {
+  const grid = document.getElementById('scene-grid');
+  grid.innerHTML = '';
+
+  // Load saved results
+  const saved = lsGet('scene_results', {});
+
+  // Stats
+  const done = Object.keys(saved).length;
+  const scores = Object.values(saved).map(r => r.pct);
+  const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+  const custodys = Object.values(saved).map(r => r.custodyPct || 0);
+  const bestCustody = custodys.length ? Math.max(...custodys) : null;
+
+  document.getElementById('ls-completed').textContent = done;
+  document.getElementById('ls-avg').textContent = avg !== null ? avg + '%' : '—';
+  document.getElementById('ls-custody').textContent = bestCustody !== null ? bestCustody + '%' : '—';
+
+  if (!SCENES || SCENES.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><div class="es-icon">⏳</div><div>Aucun scénario disponible.<br>Créez <code>scenes.js</code> pour en ajouter.</div></div>';
+    return;
+  }
+
+  SCENES.forEach((scene, i) => {
+    const res = saved[scene.id];
+    const isLocked = i > 0 && !saved[SCENES[i - 1].id]; // Progressive unlock
+
+    const card = document.createElement('div');
+    card.className = 'scene-card' + (isLocked ? ' locked' : '');
+    card.dataset.diff = scene.difficulty;
+
+    const statusHTML = res
+      ? `<span class="scene-status done">✓ ${res.pct}%</span>`
+      : isLocked
+        ? `<span class="scene-status locked-lbl">🔒 Verrouillé</span>`
+        : `<span class="scene-status" style="color:var(--cyan)">→ Jouer</span>`;
+
+    card.innerHTML = `
+      <div class="scene-icon">${scene.icon}</div>
+      <div class="scene-info">
+        <div class="scene-title">${scene.title}</div>
+        <div class="scene-desc">${scene.intro ? scene.intro.substring(0, 80) + '…' : ''}</div>
+        <div class="scene-meta">
+          <span class="diff-badge ${scene.difficulty}">${{easy:'Facile',medium:'Moyen',hard:'Difficile'}[scene.difficulty]}</span>
+          <span class="scene-steps-count">${scene.steps.length} décisions</span>
+          ${scene.tags ? scene.tags.map(t => `<span class="scene-steps-count" style="color:var(--cyan);border:1px solid var(--border);padding:1px 5px;border-radius:3px;font-size:10px">${t}</span>`).join('') : ''}
+        </div>
+      </div>
+      ${statusHTML}
+    `;
+
+    if (!isLocked) {
+      card.addEventListener('click', () => startScene(scene));
+    } else {
+      card.addEventListener('click', () => showToast('🔒 Complétez le scénario précédent d\'abord'));
+    }
+
+    grid.appendChild(card);
+  });
+}
+
+// ── BRIEFING ───────────────────────────────────────────
+function startScene(scene) {
+  G.scene = scene;
+
+  const diff = {easy:'Facile',medium:'Moyen',hard:'Difficile'};
+  const diffColor = {easy:'var(--easy)',medium:'var(--medium)',hard:'var(--hard)'};
+
+  document.getElementById('briefing-content').innerHTML = `
+    <div class="briefing-top">
+      <div class="briefing-icon">${scene.icon}</div>
+      <div>
+        <div class="briefing-title">${scene.title}</div>
+        <div class="briefing-subtitle">
+          <span class="diff-badge ${scene.difficulty}" style="margin-right:6px">${diff[scene.difficulty]}</span>
+          ${scene.steps.length} décisions · ${scene.tags ? scene.tags.join(' · ') : ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="alert-box">
+      <strong>⚠ ${scene.alertLevel || 'ATTENTION'}</strong>
+      Chaque décision est irréversible. Les erreurs critiques réduisent l'intégrité de la chaîne de custody.
+    </div>
+
+    <div class="context-text">${scene.intro}</div>
+
+    <div class="objective-list">
+      ${(scene.objectives || []).map(o => `
+        <div class="objective-item">
+          <span class="obj-icon">${o.icon}</span>
+          <span>${o.text}</span>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="refs-row">
+      ${(scene.legalRefs || []).map(r => `<span class="ref-tag">${r}</span>`).join('')}
+    </div>
+
+    <button class="start-btn" onclick="launchScene()">🚨 Débuter l'intervention</button>
   `;
 
-  // Animation d'entrée
-  container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showScreen('briefing');
 }
 
-function resolveChoice(choiceIdx, stepIdx) {
-  const scenario = SCENARIOS[GAME.currentScenario];
-  const step = scenario.steps[stepIdx];
+// ── SCENE LAUNCH ───────────────────────────────────────
+function launchScene() {
+  G.stepIdx = 0;
+  G.decisions = [];
+  G.score = 0;
+  G.maxScore = G.scene.steps.reduce((sum, step) => sum + Math.max(...step.choices.map(c => c.pts)), 0);
+  G.okCount = 0;
+  G.errCount = 0;
+  G.custodyPct = 100;
+  G.answered = false;
+  G.nextTarget = 'auto';
+
+  showScreen('scene');
+  renderStep();
+}
+
+// ── STEP RENDERER ──────────────────────────────────────
+function renderStep() {
+  const scene = G.scene;
+  const step = scene.steps[G.stepIdx];
+  G.answered = false;
+
+  // Progress bar
+  const pct = (G.stepIdx / scene.steps.length) * 100;
+  document.getElementById('prog-title').textContent = `Étape ${G.stepIdx + 1} / ${scene.steps.length}`;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-ok').textContent = G.okCount;
+  document.getElementById('prog-err').textContent = G.errCount;
+
+  // Timeline
+  renderTimeline();
+
+  // Custody bar
+  updateCustodyBar();
+
+  // Hide feedback
+  document.getElementById('feedback-area').style.display = 'none';
+  document.getElementById('critical-area').style.display = 'none';
+  document.getElementById('next-step-btn').disabled = true;
+
+  // Situation card
+  const L = ['A', 'B', 'C', 'D', 'E'];
+  // Shuffle choices
+  const order = shuffle([...step.choices.keys()]);
+
+  const card = document.getElementById('situation-card');
+  card.innerHTML = `
+    <div class="situation-top">
+      <span class="step-counter">Étape ${G.stepIdx + 1}/${scene.steps.length}</span>
+      <span class="situation-scene-tag">${step.phase || (scene.icon + ' ' + scene.title)}</span>
+    </div>
+    ${step.situation ? `<div class="situation-text">${step.situation}</div>` : ''}
+    ${step.context ? `<div class="situation-context">📍 ${step.context}</div>` : ''}
+    ${step.law ? `<div class="law-box">⚖️ ${step.law}</div>` : ''}
+    <div class="situation-question">▶ ${step.question}</div>
+    <div class="choices-list" id="choices-list">
+      ${order.map((origIdx, newIdx) => {
+        const c = step.choices[origIdx];
+        return `
+          <button class="choice-btn" onclick="selectChoice(${origIdx}, this)">
+            <span class="choice-letter">${L[newIdx]}</span>
+            <span>${c.text}</span>
+          </button>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ── TIMELINE ───────────────────────────────────────────
+function renderTimeline() {
+  const scene = G.scene;
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = '';
+
+  scene.steps.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'tl-step';
+
+    const d = G.decisions[i];
+    let dotClass = 'tl-dot';
+    let dotText = i + 1;
+
+    if (i === G.stepIdx) dotClass += ' current';
+    else if (d) { dotClass += d.ok ? ' done-ok' : ' done-ko'; dotText = d.ok ? '✓' : '✗'; }
+
+    dot.innerHTML = `<div class="${dotClass}">${dotText}</div>`;
+    tl.appendChild(dot);
+
+    if (i < scene.steps.length - 1) {
+      const line = document.createElement('div');
+      line.className = 'tl-line' + (G.decisions[i] ? ' done' : '');
+      tl.appendChild(line);
+    }
+  });
+}
+
+// ── CUSTODY BAR ────────────────────────────────────────
+function updateCustodyBar() {
+  const pct = G.custodyPct;
+  const fill = document.getElementById('custody-fill');
+  const label = document.getElementById('custody-pct');
+
+  fill.style.width = pct + '%';
+  const color = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--gold)' : 'var(--red)';
+  fill.style.background = color;
+  label.style.color = color;
+  label.textContent = pct + '%';
+}
+
+// ── CHOICE SELECTION ───────────────────────────────────
+function selectChoice(choiceIdx, btn) {
+  if (G.answered) return;
+  G.answered = true;
+
+  const step = G.scene.steps[G.stepIdx];
   const choice = step.choices[choiceIdx];
 
-  // Désactiver tous les boutons
-  const btns = document.querySelectorAll(`#sc-choices-${stepIdx} .sc-choice-btn`);
-  btns.forEach((b, i) => {
+  // Mark all buttons
+  document.querySelectorAll('.choice-btn').forEach(b => {
     b.disabled = true;
-    b.style.cursor = 'default';
-    if (i === choiceIdx) {
-      b.classList.add(choice.correct ? 'correct' : 'wrong');
-    }
-    if (choice.correct && i !== choiceIdx) {
-      // ne rien faire — on révélera dans le feedback
-    }
   });
+  btn.classList.add(choice.ok ? 'selected-ok' : 'selected-ko');
 
-  // Score
-  if (choice.correct) {
-    GAME.score += choice.points || 10;
-    GAME.correct++;
-  } else {
-    GAME.errors++;
-    GAME.score = Math.max(0, GAME.score - (choice.penalty || 5));
-  }
-  updateScore();
-  GAME.history.push({ step: stepIdx, choice: choiceIdx, correct: choice.correct });
+  // Update state
+  const pts = choice.pts || 0;
+  G.score += pts;
+  if (choice.ok) G.okCount++; else G.errCount++;
+  G.decisions[G.stepIdx] = { ok: choice.ok, pts, fb: choice.fb, legal: choice.legal, critical: choice.critical };
 
-  // Feedback
-  const fb = document.getElementById(`sc-feedback-${stepIdx}`);
-  fb.innerHTML = buildFeedback(choice, step, choiceIdx);
-
-  // Bouton suivant
-  if (step.next !== undefined || choice.next !== undefined) {
-    const nextStep = choice.next !== undefined ? choice.next : step.next;
-    setTimeout(() => {
-      const nextBtn = document.getElementById('sc-next-btn');
-      if (nextBtn) {
-        nextBtn.onclick = () => {
-          if (nextStep === 'end') {
-            renderEnd(scenario);
-          } else {
-            renderStep(scenario, nextStep);
-          }
-        };
-      }
-    }, 100);
-  } else {
-    setTimeout(() => renderEnd(scenario), 2000);
-  }
-}
-
-function buildFeedback(choice, step, choiceIdx) {
-  const isOk = choice.correct;
-  const icon = isOk ? '✓' : '✗';
-  const cls  = isOk ? 'sc-fb-correct' : 'sc-fb-wrong';
-
-  let html = `<div class="sc-feedback ${cls}">
-    <div class="sc-fb-verdict">${icon} ${isOk ? 'Décision correcte' : 'Erreur critique'}</div>
-    <div class="sc-fb-explain">${choice.explain}</div>`;
-
-  if (choice.legal) {
-    html += `<div class="sc-fb-law">⚖️ <strong>Référence légale :</strong> ${choice.legal}</div>`;
-  }
-  if (choice.source) {
-    html += `<div class="sc-fb-source">📖 <em>Manuel forensique, ${choice.source}</em></div>`;
-  }
-  if (choice.consequence) {
-    html += `<div class="sc-fb-consequence">
-      <div class="sc-fb-consequence-label">Conséquence procédurale :</div>
-      ${choice.consequence}
-    </div>`;
+  // Custody penalty for critical errors
+  if (choice.critical) {
+    G.custodyPct = Math.max(0, G.custodyPct - 25);
+  } else if (!choice.ok) {
+    G.custodyPct = Math.max(0, G.custodyPct - 10);
   }
 
-  const nextLabel = choice.next === 'end' ? 'Voir le bilan →' : 'Décision suivante →';
-  if (choice.next !== undefined || step.next !== undefined) {
-    html += `<button class="sc-next-btn" id="sc-next-btn">${nextLabel}</button>`;
-  }
+  updateCustodyBar();
+  renderTimeline();
+  playSound(choice.critical ? 'critical' : choice.ok ? 'ok' : 'ko');
 
-  html += '</div>';
-  return html;
-}
-
-function renderEnd(scenario) {
-  const total = GAME.history.length;
-  const correct = GAME.history.filter(h => h.correct).length;
-  const pct = Math.round(correct / total * 100);
-  const grade = pct >= 80 ? { label: 'Expert forensique', color: 'var(--green)', emoji: '🏆' }
-              : pct >= 60 ? { label: 'Analyste confirmé', color: 'var(--cyan)', emoji: '✅' }
-              : pct >= 40 ? { label: 'Intervenant junior', color: 'var(--gold)', emoji: '⚠️' }
-              : { label: 'Révisions nécessaires', color: 'var(--red)', emoji: '🔄' };
-
-  document.getElementById('sc-narrative').innerHTML = `
-    <div class="sc-end">
-      <div class="sc-end-emoji">${grade.emoji}</div>
-      <div class="sc-end-title" style="color:${grade.color}">${grade.label}</div>
-      <div class="sc-end-score">${correct} / ${total} décisions correctes (${pct}%)</div>
-
-      <div class="sc-end-history">
-        ${GAME.history.map((h, i) => {
-          const step = scenario.steps[h.step];
-          const choice = step.choices[h.choice];
-          return `<div class="sc-end-row ${h.correct ? 'row-ok' : 'row-err'}">
-            <span>${h.correct ? '✓' : '✗'}</span>
-            <span>${step.question.replace(/<[^>]+>/g, '').slice(0, 60)}…</span>
-            <span>${choice.text.slice(0, 40)}…</span>
-          </div>`;
-        }).join('')}
-      </div>
-
-      ${scenario.debrief ? `<div class="sc-debrief"><div class="sc-debrief-label">📚 Débriefing pédagogique</div>${scenario.debrief}</div>` : ''}
-
-      <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem">
-        <button class="sc-replay-btn" onclick="launchScenario('${GAME.currentScenario}')">↺ Rejouer</button>
-        <button class="sc-replay-btn sc-menu-btn" onclick="backToMenu()">← Autres scénarios</button>
-        <a href="quiz.html" class="sc-replay-btn" style="text-decoration:none">💊 Quiz CAS-IN →</a>
-      </div>
+  // Show feedback
+  const fbArea = document.getElementById('feedback-area');
+  fbArea.style.display = '';
+  fbArea.innerHTML = `
+    <div class="feedback-box ${choice.ok ? 'ok' : 'ko'}">
+      <span class="fb-pts">${pts > 0 ? '+' : ''}${pts} pts</span>
+      ${choice.ok ? '✅' : '❌'} ${choice.fb}
+      ${choice.legal ? `<div class="fb-legal">📖 ${choice.legal}</div>` : ''}
     </div>
   `;
+
+  // Critical banner
+  if (choice.critical) {
+    const critArea = document.getElementById('critical-area');
+    critArea.style.display = '';
+    critArea.innerHTML = `
+      <div class="critical-banner">
+        <strong>🚨 ERREUR CRITIQUE — Impact sur la chaîne de custody</strong>
+        Cette décision pourrait invalider des preuves devant le Tribunal fédéral. Chaîne de custody réduite à ${G.custodyPct}%.
+      </div>
+    `;
+  }
+
+  // Navigation next — support "next" conditionnel dans les choices
+  G.nextTarget = (choice.next !== undefined) ? choice.next : 'auto';
+
+  const nextBtn = document.getElementById('next-step-btn');
+  nextBtn.disabled = false;
+
+  const isEnd = G.nextTarget === 'end';
+  const isLast = G.stepIdx >= G.scene.steps.length - 1;
+  nextBtn.textContent = (isEnd || isLast) ? 'Voir le rapport final →' : 'Étape suivante →';
 }
 
-// ═══════════════════════════════════════════════════════════════
-// SCÉNARIOS
-// ═══════════════════════════════════════════════════════════════
+// ── ADVANCE STEP ───────────────────────────────────────
+function advanceStep() {
+  const target = G.nextTarget;
+  const isLast = G.stepIdx >= G.scene.steps.length - 1;
 
-let SCENARIOS = {}; // Loaded dynamically from scenarios/
- // fin SCENARIOS
-
-// ═══════════════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════════════
-// updateScore appelé par le DOMContentLoaded principal ci-dessous
-
-
-
-// ═══════════════════════════════════════════════════════════════
-// SCÉNARIO 7 — MODE PREMIER INTERVENANT (CHRONO);
-
-// ═══════════════════════════════════════════════════════════════
-// SCÉNARIO 8 — LES 3 ARTEFACTS;
-
-
-
-// ═══════════════════════════════════════════════════════════════
-// MOTEUR PREMIER INTERVENANT — Timer + Ranking
-// ═══════════════════════════════════════════════════════════════
-
-// Actions now loaded from premier_intervenant.json
-
-
-let _timerInterval = null;
-let _currentTimerScenario = null;
-let _timerSecondes = 90;
-let _timerStarted = false;
-let _rankingDone = false;
-let _userOrder = [];
-
-async function launchScenario(id) {
-  GAME.currentScenario = id;
-  GAME.currentStep = 0;
-  GAME.history = [];
-  document.getElementById('sc-selector').style.display = 'none';
-  document.getElementById('sc-game').style.display = 'block';
-  document.getElementById('sc-scenario-num').textContent = id.toUpperCase();
-  document.getElementById('sc-narrative').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--dim)">⏳ Chargement du scénario...</div>';
-  
-  const scenario = await loadScenario(id);
-  if (!scenario) {
-    document.getElementById('sc-narrative').innerHTML = '<div style="color:var(--red);padding:1rem">❌ Erreur de chargement du scénario.</div>';
+  // Si next="end" ou dernière étape → rapport
+  if (target === 'end' || isLast) {
+    showReport();
     return;
   }
 
-  if (scenario.type === 'timer') {
-    renderTimerScenario(scenario);
+  // Si next=number → aller à cet index précis
+  if (typeof target === 'number') {
+    G.stepIdx = target;
   } else {
-    renderStep(scenario, 0);
+    // 'auto' → étape suivante
+    G.stepIdx++;
   }
-}
 
-function renderTimerScenario(scenario) {
-  _timerSecondes = scenario.duration || 90;
-  _currentTimerScenario = scenario;
-  _timerStarted = false;
-  _rankingDone = false;
-  _userOrder = [];
-
-  const shuffled = [...scenario.actions].sort(() => Math.random() - .5);
-
-  const container = document.getElementById('sc-narrative');
-  container.innerHTML = `
-    <div class="sc-step-header">
-      <div class="sc-phase-badge">⏱ Mode Chrono</div>
-      <button class="sc-back-btn" onclick="clearTimer(); backToMenu()">← Retour</button>
-    </div>
-    <div class="sc-urgency">⏱ Timer 90s — démarre quand vous commencez à ordonner les actions</div>
-
-    <div class="sc-scene-box">
-      <div class="sc-scene-label">🔍 ÉTAT DE LA SCÈNE</div>
-      <div class="sc-scene-content">Vous arrivez sur une scène à Zurich. Sur le bureau : un <strong>laptop Windows allumé, session ouverte</strong> (BitLocker actif visible), un <strong>iPhone sur la table</strong> (déverrouillé), une <strong>clé USB dans le port USB-A</strong>. Le suspect est absent. Mandat en règle (art. 245 CPP). Équipement : write blocker, WinPmem sur clé USB, pochette Faraday, appareil photo.</div>
-    </div>
-
-    <div class="sc-law-box">
-      <div class="sc-law-label">⚖️ ISO/IEC 27037 — Règle de volatilité</div>
-      <div class="sc-law-content">Prioriser les sources selon leur volatilité : RAM (disparaît à l'extinction) → réseau (change) → fichiers système → disque (persist). Chaque action irréversible doit être justifiée.</div>
-    </div>
-
-    <div class="sc-question">Ordonnez les 6 actions — glissez ou cliquez pour les reclasser. <strong>Commencer à interagir déclenche le chrono.</strong></div>
-
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
-      <div style="font-size:.72rem;color:var(--dim)">Faites glisser pour réordonner</div>
-      <div id="pi-timer" style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:var(--cyan);min-width:60px;text-align:right">90s</div>
-    </div>
-
-    <div id="pi-ranking" style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem">
-      ${shuffled.map((a, i) => `
-        <div class="pi-action" data-id="${a.id}" draggable="true"
-             onmousedown="startTimer()"
-             ondragstart="piDragStart(event)"
-             ondragover="event.preventDefault()"
-             ondrop="piDrop(event)"
-             ontouchstart="piTouchStart(event)"
-             ontouchmove="piTouchMove(event)"
-             ontouchend="piTouchEnd(event)" 
-             style="display:flex;align-items:center;gap:.75rem;padding:.7rem .9rem;
-                    background:rgba(255,255,255,.04);border:1px solid var(--border);
-                    border-radius:8px;cursor:grab;transition:.15s;user-select:none">
-          <span style="font-family:var(--mono);font-size:.75rem;color:var(--dim);min-width:20px" class="pi-rank">${i+1}</span>
-          <span style="font-size:.83rem;flex:1">${a.label}</span>
-          <span style="font-size:.75rem;color:var(--dim);cursor:pointer" onclick="moveUp(this.parentElement)">▲</span>
-          <span style="font-size:.75rem;color:var(--dim);cursor:pointer" onclick="moveDown(this.parentElement)">▼</span>
-        </div>`).join('')}
-    </div>
-
-    <button class="sc-next-btn" onclick="validateRanking()" style="width:100%;padding:.75rem">
-      ✓ Valider mon ordre d'intervention
-    </button>
-    <div id="pi-feedback" style="margin-top:.75rem"></div>
-  `;
-
-  container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-let _dragSrc = null;
-let _touchSrc = null;
-let _touchClone = null;
-
-// Desktop drag
-function piDragStart(e) {
-  startTimer();
-  _dragSrc = e.currentTarget;
-  e.dataTransfer.effectAllowed = 'move';
-}
-function piDrop(e) {
-  e.preventDefault();
-  startTimer();
-  if (_dragSrc === e.currentTarget) return;
-  const list = document.getElementById('pi-ranking');
-  const items = [...list.querySelectorAll('.pi-action')];
-  const srcIdx = items.indexOf(_dragSrc);
-  const dstIdx = items.indexOf(e.currentTarget);
-  if (srcIdx < dstIdx) { e.currentTarget.after(_dragSrc); }
-  else { e.currentTarget.before(_dragSrc); }
-  updateRanks();
-}
-
-// B6 fix: Touch support for mobile drag-and-drop
-function piTouchStart(e) {
-  startTimer();
-  _touchSrc = e.currentTarget;
-  _touchSrc.style.opacity = '.5';
-  // Créer un clone visuel qui suit le doigt
-  _touchClone = _touchSrc.cloneNode(true);
-  _touchClone.style.cssText = 'position:fixed;opacity:.8;pointer-events:none;z-index:999;width:' + _touchSrc.offsetWidth + 'px;border:1px solid var(--cyan);border-radius:8px;background:var(--surface2);';
-  document.body.appendChild(_touchClone);
-}
-function piTouchMove(e) {
-  e.preventDefault();
-  if (!_touchClone) return;
-  const touch = e.touches[0];
-  _touchClone.style.left = (touch.clientX - _touchSrc.offsetWidth/2) + 'px';
-  _touchClone.style.top = (touch.clientY - 20) + 'px';
-  // Trouver l'élément sous le doigt
-  _touchClone.style.display = 'none';
-  const el = document.elementFromPoint(touch.clientX, touch.clientY);
-  _touchClone.style.display = '';
-  const target = el ? el.closest('.pi-action') : null;
-  document.querySelectorAll('.pi-action').forEach(a => a.style.borderColor = '');
-  if (target && target !== _touchSrc) target.style.borderColor = 'var(--cyan)';
-}
-function piTouchEnd(e) {
-  if (!_touchSrc || !_touchClone) return;
-  const touch = e.changedTouches[0];
-  _touchClone.style.display = 'none';
-  const el = document.elementFromPoint(touch.clientX, touch.clientY);
-  const target = el ? el.closest('.pi-action') : null;
-  document.querySelectorAll('.pi-action').forEach(a => a.style.borderColor = '');
-  if (target && target !== _touchSrc) {
-    const list = document.getElementById('pi-ranking');
-    const items = [...list.querySelectorAll('.pi-action')];
-    if (items.indexOf(_touchSrc) < items.indexOf(target)) { target.after(_touchSrc); }
-    else { target.before(_touchSrc); }
-    updateRanks();
+  // Si l'index dépasse les steps → rapport
+  if (G.stepIdx >= G.scene.steps.length) {
+    showReport();
+    return;
   }
-  _touchSrc.style.opacity = '1';
-  document.body.removeChild(_touchClone);
-  _touchSrc = null;
-  _touchClone = null;
-}
-function moveUp(el) {
-  startTimer();
-  const prev = el.previousElementSibling;
-  if (prev) { el.parentElement.insertBefore(el, prev); updateRanks(); }
-}
-function moveDown(el) {
-  startTimer();
-  const next = el.nextElementSibling;
-  if (next) { next.after(el); updateRanks(); }
-}
-function updateRanks() {
-  document.querySelectorAll('.pi-action').forEach((el, i) => {
-    el.querySelector('.pi-rank').textContent = i + 1;
-  });
+
+  renderStep();
+  document.getElementById('screen-scene').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function startTimer() {
-  if (_timerStarted) return;
-  _timerStarted = true;
-  _timerInterval = setInterval(() => {
-    _timerSecondes--;
-    const el = document.getElementById('pi-timer');
-    if (!el) { clearInterval(_timerInterval); return; }
-    el.textContent = _timerSecondes + 's';
-    if (_timerSecondes <= 20) el.style.color = 'var(--gold)';
-    if (_timerSecondes <= 10) el.style.color = 'var(--red)';
-    if (_timerSecondes <= 0) {
-      clearInterval(_timerInterval);
-      el.textContent = '0s';
-      validateRanking(true);
-    }
-  }, 1000);
-}
+// ── REPORT ─────────────────────────────────────────────
+function showReport() {
+  const scene = G.scene;
+  const maxScore = G.maxScore;
+  const score = G.score;
+  const pct = maxScore > 0 ? Math.max(0, Math.round((score / maxScore) * 100)) : 0;
+  const custodyPct = G.custodyPct;
 
-function clearTimer() {
-  if (_timerInterval) { clearInterval(_timerInterval); _timerInterval = null; }
-}
+  // Save result
+  const saved = lsGet('scene_results', {});
+  const prev = saved[scene.id];
+  if (!prev || pct > prev.pct) {
+    saved[scene.id] = { pct, custodyPct, score, date: new Date().toLocaleDateString('fr') };
+    lsSet('scene_results', saved);
+  }
 
-function validateRanking(timeUp = false) {
-  if (_rankingDone) return;
-  _rankingDone = true;
-  clearTimer();
-  if (!_timerStarted) startTimer();
+  // Badge
+  const badge = scene.badgeFn ? scene.badgeFn(pct, custodyPct) : { icon: '🔍', title: 'Terminé', sub: '' };
 
-  const items = [...document.querySelectorAll('.pi-action')];
-  const userIds = items.map(el => parseInt(el.dataset.id));
-  const correctIds = _currentTimerScenario.actions.map(a => a.id); // [1,2,3,4,5,6]
+  // Custody result
+  let custodyClass, custodyText;
+  if (custodyPct >= 80) {
+    custodyClass = 'intact';
+    custodyText = `✅ Chaîne de custody intacte (${custodyPct}%) — Preuves recevables au Tribunal fédéral.`;
+  } else if (custodyPct >= 50) {
+    custodyClass = 'degraded';
+    custodyText = `⚠ Chaîne de custody dégradée (${custodyPct}%) — Certaines preuves pourraient être contestées.`;
+  } else {
+    custodyClass = 'compromised';
+    custodyText = `❌ Chaîne de custody compromise (${custodyPct}%) — Les preuves risquent d'être déclarées irrecevables.`;
+  }
 
-  let score = 0;
-  let details = '';
-  items.forEach((el, i) => {
-    const actionId = parseInt(el.dataset.id);
-    const action = _currentTimerScenario.actions.find(a => a.id === actionId);
-    const expectedPos = action.correct_pos - 1; // 0-indexed
-    const isOk = i === expectedPos;
-    if (isOk) score++;
-    const color = isOk ? 'var(--green)' : 'var(--red)';
-    el.style.borderColor = color;
-    el.style.background = isOk ? 'rgba(48,232,138,.08)' : 'rgba(255,64,96,.06)';
-    el.querySelector('.pi-rank').style.color = color;
-    // Ajouter la position correcte
-    el.innerHTML += `<span style="font-size:.68rem;color:${color};font-family:var(--mono);margin-left:.25rem;flex-shrink:0">${isOk ? '✓' : '→'+action.correct_pos}</span>`;
-    details += `<div style="margin:.2rem 0;font-size:.75rem;color:${isOk ? 'var(--green)' : 'var(--dim)'}">
-      ${isOk ? '✓' : '✗'} Pos.${i+1} — ${action.label} : <em>${action.explain}</em>
-    </div>`;
-  });
+  // Score ring SVG
+  const radius = 40, circ = 2 * Math.PI * radius;
+  const dash = (pct / 100) * circ;
+  const ringColor = pct >= 70 ? '#30e88a' : pct >= 50 ? '#f0c040' : '#ff4060';
 
-  const timeUsed = 90 - _timerSecondes;
-  const pct = Math.round(score / 6 * 100);
-  const grade = pct >= 100 ? '🏆 Expert First Responder'
-               : pct >= 83 ? '✅ Intervenant confirmé (5/6)'
-               : pct >= 66 ? '⚠️ Révisions nécessaires (4/6)'
-               : '🔄 Ordre non maîtrisé';
+  // Decision review
+  const reviewHTML = G.decisions.map((d, i) => {
+    const step = scene.steps[i];
+    return `
+      <div class="review-item ${d.ok ? 'ok' : 'ko'}">
+        <div class="review-item-q">Étape ${i + 1} — ${step.question}</div>
+        <div class="review-item-a ${d.ok ? 'ok' : 'ko'}">${d.ok ? '✓' : '✗'} ${d.fb ? d.fb.split('.')[0] + '.' : ''}</div>
+        ${d.legal ? `<div class="review-item-fb">📖 ${d.legal}</div>` : ''}
+      </div>
+    `;
+  }).join('');
 
-  GAME.score += score * 5;
-  if (!timeUp) GAME.correct += score;
-  GAME.errors += (6 - score);
-  updateScore();
-
-  const fb = document.getElementById('pi-feedback');
-  fb.innerHTML = `
-    <div class="sc-feedback ${pct >= 83 ? 'sc-fb-correct' : 'sc-fb-wrong'}">
-      <div class="sc-fb-verdict">${grade} — ${score}/6 positions correctes${timeUp ? ' (temps écoulé)' : ` en ${timeUsed}s`}</div>
-      <div style="margin:.75rem 0;border-top:1px solid rgba(255,255,255,.1);padding-top:.75rem">${details}</div>
-      <div class="sc-fb-law">⚖️ <strong>Règle de la volatilité (ISO/IEC 27037) :</strong> RAM → réseau → fichiers → disque. Toujours photographier en premier pour documenter l'état initial.</div>
-      <div class="sc-fb-source">📖 <em>Manuel forensique, Ch. 11.1 — Les premières minutes sont irréversibles</em></div>
+  document.getElementById('report-content').innerHTML = `
+    <div class="report-header">
+      <div class="report-badge">${badge.icon}</div>
+      <div class="report-title" style="color:${pct >= 70 ? 'var(--green)' : pct >= 50 ? 'var(--gold)' : 'var(--red)'}">${badge.title}</div>
+      <div class="report-subtitle">${badge.sub}</div>
     </div>
-    <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.75rem">
-      <button class="sc-next-btn" onclick="renderTimerScenario()">↺ Rejouer le chrono</button>
-      <button class="sc-next-btn" style="background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.15);color:var(--dim)" onclick="backToMenu()">← Autres scénarios</button>
+
+    <div class="score-ring-wrap">
+      <div class="score-ring">
+        <svg viewBox="0 0 100 100" width="100" height="100">
+          <circle cx="50" cy="50" r="${radius}" fill="none" stroke="var(--border)" stroke-width="10"/>
+          <circle cx="50" cy="50" r="${radius}" fill="none" stroke="${ringColor}" stroke-width="10"
+            stroke-dasharray="${dash} ${circ}" stroke-linecap="round"/>
+        </svg>
+        <div class="score-ring-center">
+          <span class="score-ring-pct" style="color:${ringColor}">${pct}%</span>
+          <span class="score-ring-lbl">Score</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="report-stats">
+      <div class="rstat"><div class="rstat-val" style="color:var(--green)">${G.okCount}</div><div class="rstat-lbl">Bonnes décisions</div></div>
+      <div class="rstat"><div class="rstat-val" style="color:var(--red)">${G.errCount}</div><div class="rstat-lbl">Erreurs</div></div>
+      <div class="rstat"><div class="rstat-val" style="color:var(--gold)">${G.score}</div><div class="rstat-lbl">Points</div></div>
+    </div>
+
+    <div class="custody-result ${custodyClass}">${custodyText}</div>
+
+    <div class="review-section">
+      <div class="review-title">Revue des décisions</div>
+      ${reviewHTML}
+    </div>
+
+    ${scene.debrief ? `
+    <div class="debrief-section">
+      <div class="review-title">📖 Analyse pédagogique</div>
+      <div class="debrief-content">${scene.debrief}</div>
+    </div>
+    ` : ''}
+
+    <div class="refs-row">
+      ${(scene.legalRefs || []).map(r => `<span class="ref-tag">${r}</span>`).join('')}
+    </div>
+
+    <div class="report-actions">
+      <button class="retry-btn" onclick="launchScene()">🔄 Recommencer ce scénario</button>
+      <button class="back-btn" onclick="goLobby()">← Choisir un autre scénario</button>
     </div>
   `;
 
-  // B2 fix: renderTimerEnd au lieu de renderEnd (qui nécessite GAME.history)
-  if (pct >= 66) {
-    setTimeout(() => renderTimerEnd(_currentTimerScenario, score, 6, timeUsed, timeUp), 600);
-  }
+  showScreen('report');
 }
 
-function renderTimerEnd(scenario, correct, total, timeUsed, timeUp) {
-  const pct = Math.round(correct / total * 100);
-  // scenario passed as param
-
-  const grade = pct >= 100 ? { label: '🏆 Expert First Responder', color: 'var(--green)' }
-              : pct >= 83  ? { label: '✅ Intervenant confirmé', color: 'var(--cyan)' }
-              : pct >= 66  ? { label: '⚠️ Révisions nécessaires', color: 'var(--gold)' }
-              : { label: '🔄 Ordre non maîtrisé', color: 'var(--red)' };
-
-  const debriefHtml = scenario.debrief
-    ? '<div class="sc-debrief"><div class="sc-debrief-label">📚 Débriefing pédagogique</div>' + scenario.debrief + '</div>'
-    : '';
-  const timeText = timeUp ? ' (temps écoulé)' : ' en ' + timeUsed + 's';
-
-  document.getElementById('sc-narrative').innerHTML =
-    '<div class="sc-end">' +
-    '<div class="sc-end-emoji">' + grade.label.split(' ')[0] + '</div>' +
-    '<div class="sc-end-title" style="color:' + grade.color + '">' + grade.label.replace(/^.\s/,'') + '</div>' +
-    '<div class="sc-end-score">' + correct + '/' + total + ' positions correctes' + timeText + '</div>' +
-    debriefHtml +
-    '<div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem">' +
-    '<button class="sc-replay-btn" onclick="renderTimerScenario()">↺ Rejouer le chrono</button>' +
-    '<button class="sc-replay-btn sc-menu-btn" onclick="backToMenu()">← Autres scénarios</button>' +
-    '</div></div>';
+// ── NAV ────────────────────────────────────────────────
+function goLobby() {
+  initLobby();
+  showScreen('lobby');
 }
 
-
-
-// Timer & trois_artefacts scenarios loaded from JSON
-
-// Initialisation
-document.addEventListener('DOMContentLoaded', () => {
-  loadCatalog();
-  updateScore();
+// ── INIT ───────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  initLobby();
 });
-
 </script>
 </body>
 </html>
