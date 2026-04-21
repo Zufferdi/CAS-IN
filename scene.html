@@ -5,69 +5,247 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#080c14">
 <title>CAS-IN · Scénarios DFIR</title>
+
+<!-- Premium typography: display serif + grotesk body + technical mono -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
 <style>
-/* ── DESIGN TOKENS (aligned with index.html) ── */
+/* ═══════════════════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════════════════ */
 :root {
   --bg:#080c14;--surface:#0d1526;--surface2:#111d35;--border:#1e3058;
   --cyan:#00e5cc;--gold:#f0c040;--red:#ff4060;--green:#30e88a;--orange:#ff9f40;
+  --purple:#c97df5;--blue:#6ab8ff;
   --text:#ccd8f0;--dim:#6a80a8;
   --easy:#30e88a;--medium:#f0c040;--hard:#ff4060;
   --r:10px;
-  --scene-glow: 0 0 40px rgba(0,229,204,0.07);
+  --scene-glow:0 0 40px rgba(0,229,204,0.07);
+
+  /* Typography — display for authority, grotesk for body, mono for data */
+  --font-display:'Instrument Serif', 'Times New Roman', serif;
+  --font-body:'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+  --font-mono:'JetBrains Mono', 'Courier New', monospace;
+
+  /* Atmosphere — dynamically overridden via [data-atmosphere] */
+  --atm-glow-1:rgba(0,229,204,0.06);
+  --atm-glow-2:rgba(0,229,204,0.02);
+  --atm-accent:var(--cyan);
 }
+
+/* Atmosphere variants — per-scene mood lighting */
+body[data-atmosphere="ransomware"]{--atm-glow-1:rgba(255,64,96,0.08);--atm-glow-2:rgba(255,64,96,0.02);--atm-accent:var(--red)}
+body[data-atmosphere="hospital"]{--atm-glow-1:rgba(106,184,255,0.08);--atm-glow-2:rgba(106,184,255,0.02);--atm-accent:var(--blue)}
+body[data-atmosphere="crypto"]{--atm-glow-1:rgba(240,192,64,0.08);--atm-glow-2:rgba(240,192,64,0.02);--atm-accent:var(--gold)}
+body[data-atmosphere="network"]{--atm-glow-1:rgba(0,229,204,0.10);--atm-glow-2:rgba(0,229,204,0.03);--atm-accent:var(--cyan)}
+body[data-atmosphere="legal"]{--atm-glow-1:rgba(201,125,245,0.08);--atm-glow-2:rgba(201,125,245,0.02);--atm-accent:var(--purple)}
+body[data-atmosphere="raid"]{--atm-glow-1:rgba(255,159,64,0.10);--atm-glow-2:rgba(255,159,64,0.03);--atm-accent:var(--orange)}
+body[data-atmosphere="state"]{--atm-glow-1:rgba(240,192,64,0.06);--atm-glow-2:rgba(201,125,245,0.04);--atm-accent:var(--gold)}
+
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--font-body);font-weight:400;
+  min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;
+  transition:background 0.8s ease;
+  position:relative;
+}
 button{cursor:pointer;border:none;background:none;color:inherit;font-family:inherit}
 *{-webkit-tap-highlight-color:transparent}
+code, .mono{font-family:var(--font-mono)}
 
-/* ── SCANLINE ATMOSPHERE ── */
+/* ═══════════════════════════════════════════════════════
+   ATMOSPHERE — scanlines + dynamic ambient glow
+═══════════════════════════════════════════════════════ */
+/* Scanlines */
 body::before{
   content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
 }
+/* Dynamic ambient glow — shifts per scenario */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 70% 50% at 20% 10%, var(--atm-glow-1) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 90%, var(--atm-glow-2) 0%, transparent 50%);
+  transition:background 0.8s ease;
+}
 
-/* ── HEADER ── */
+/* ═══════════════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════════════ */
 header{
-  background:var(--surface);border-bottom:1px solid var(--border);
+  background:rgba(13,21,38,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
   padding:10px 16px;display:flex;align-items:center;gap:10px;
   position:sticky;top:0;z-index:10;
   box-shadow:0 2px 20px rgba(0,0,0,0.4);
 }
-.logo-text{font-size:15px;font-weight:800;color:var(--cyan);letter-spacing:1px}
-.header-sub{font-size:11px;color:var(--dim);flex:1}
-.hbtn{padding:6px 10px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--surface2);transition:.15s;color:var(--text)}
+.logo-text{font-size:15px;font-weight:700;color:var(--cyan);letter-spacing:2px;font-family:var(--font-body)}
+.header-sub{font-size:11px;color:var(--dim);flex:1;letter-spacing:.5px}
+.hbtn{padding:6px 10px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--surface2);transition:.15s;color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:4px}
 .hbtn:hover{border-color:var(--cyan);color:var(--cyan)}
 
-/* ── MAIN LAYOUT ── */
-#app{flex:1;display:flex;flex-direction:column;max-width:720px;width:100%;margin:0 auto;padding:16px;position:relative;z-index:1}
+/* Grade mini-badge in header */
+.grade-badge-mini{
+  display:flex;align-items:center;gap:6px;padding:5px 10px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+  font-size:11px;cursor:pointer;transition:.2s;
+}
+.grade-badge-mini:hover{border-color:var(--gold)}
+.grade-badge-mini-icon{font-size:14px}
+.grade-badge-mini-title{font-weight:700;color:var(--gold)}
+.grade-badge-mini-xp{color:var(--dim);font-family:var(--font-mono);font-size:10px}
 
-/* ── SCREEN SYSTEM ── */
-.screen{display:none;flex-direction:column;gap:14px;animation:fadeIn .25s ease}
+/* ═══════════════════════════════════════════════════════
+   MAIN LAYOUT
+═══════════════════════════════════════════════════════ */
+#app{flex:1;display:flex;flex-direction:column;max-width:760px;width:100%;margin:0 auto;padding:16px;position:relative;z-index:1}
+
+/* Screen system */
+.screen{display:none;flex-direction:column;gap:14px;animation:fadeIn .3s ease}
 .screen.active{display:flex}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-/* ══════════════════════════════════════
-   SCREEN 0 — LOBBY (scenario selector)
-══════════════════════════════════════ */
-.lobby-header{text-align:center;padding:24px 0 8px}
-.lobby-header h1{font-size:22px;font-weight:800;color:var(--cyan);letter-spacing:.5px}
-.lobby-header p{font-size:13px;color:var(--dim);margin-top:6px;line-height:1.5}
+/* ═══════════════════════════════════════════════════════
+   LOBBY SCREEN
+═══════════════════════════════════════════════════════ */
+.lobby-header{text-align:center;padding:20px 0 8px}
+
+/* Animated gyrophare SVG replaces static emoji */
+.hero-siren{
+  width:90px;height:90px;margin:0 auto 12px;position:relative;
+}
+.hero-siren svg{width:100%;height:100%;filter:drop-shadow(0 0 18px rgba(255,64,96,0.4))}
+.hero-siren .siren-base{fill:var(--surface)}
+.hero-siren .siren-dome{fill:var(--red);animation:sirenPulse 1.4s ease-in-out infinite}
+.hero-siren .siren-beam{
+  fill:var(--red);opacity:.25;transform-origin:center;
+  animation:sirenSpin 3s linear infinite;
+}
+@keyframes sirenPulse{
+  0%,100%{opacity:.92;filter:brightness(1)}
+  50%{opacity:1;filter:brightness(1.4)}
+}
+@keyframes sirenSpin{
+  from{transform:rotate(0deg)}
+  to{transform:rotate(360deg)}
+}
+
+.lobby-header h1{
+  font-family:var(--font-display);
+  font-size:34px;font-weight:400;font-style:italic;
+  color:var(--text);letter-spacing:.3px;line-height:1.1;
+}
+.lobby-header h1 .accent{color:var(--cyan);font-style:normal;font-weight:500}
+.lobby-header p{font-size:13px;color:var(--dim);margin-top:10px;line-height:1.6;max-width:480px;margin-left:auto;margin-right:auto}
+.lobby-header p strong{color:var(--red)}
+
 .legal-strip{
-  display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px
+  display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px
 }
 .legal-pill{
-  font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;
+  font-size:10px;font-weight:700;padding:3px 9px;border-radius:4px;
   border:1px solid var(--border);color:var(--dim);background:var(--surface2);
-  letter-spacing:.3px;
+  letter-spacing:.3px;font-family:var(--font-mono);
 }
 
-/* Scenario cards grid */
+/* Grade card */
+.grade-card{
+  background:linear-gradient(135deg,var(--surface) 0%,var(--surface2) 100%);
+  border:1px solid var(--border);border-radius:12px;padding:14px 16px;
+  display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;
+}
+.grade-card::before{
+  content:'';position:absolute;right:-30px;top:-30px;width:140px;height:140px;
+  background:radial-gradient(circle,var(--atm-accent) 0%,transparent 65%);
+  opacity:.12;
+}
+.grade-icon{font-size:34px;flex-shrink:0;z-index:1}
+.grade-info{flex:1;min-width:0;z-index:1}
+.grade-title{font-family:var(--font-display);font-size:20px;font-style:italic;color:var(--gold);line-height:1.1}
+.grade-subtitle{font-size:11px;color:var(--dim);margin-top:2px;letter-spacing:.5px;text-transform:uppercase}
+.grade-progress{margin-top:8px}
+.grade-progress-label{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-bottom:4px;font-family:var(--font-mono)}
+.grade-progress-track{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.grade-progress-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--orange));border-radius:3px;transition:width 0.8s ease}
+
+/* Stats row */
+.lobby-stats{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+}
+.lstat{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:10px;text-align:center;transition:.2s;
+}
+.lstat:hover{border-color:var(--cyan)}
+.lstat-val{font-size:22px;font-weight:700;color:var(--cyan);font-family:var(--font-display);font-style:italic}
+.lstat-lbl{font-size:10px;color:var(--dim);margin-top:2px;letter-spacing:.5px}
+
+/* Badges shelf */
+.badges-section{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;
+}
+.badges-header{
+  display:flex;justify-content:space-between;align-items:center;
+  cursor:pointer;user-select:none;
+}
+.badges-title{
+  font-size:11px;font-weight:700;color:var(--dim);
+  text-transform:uppercase;letter-spacing:.5px;
+}
+.badges-count{font-family:var(--font-mono);font-size:11px;color:var(--gold)}
+.badges-chevron{transition:.2s;color:var(--dim)}
+.badges-section.open .badges-chevron{transform:rotate(180deg)}
+.badges-grid{
+  display:none;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;
+  margin-top:12px;
+}
+.badges-section.open .badges-grid{display:grid}
+.badge-tile{
+  background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  padding:10px;text-align:center;transition:.2s;
+}
+.badge-tile.unlocked{border-color:var(--gold);background:linear-gradient(135deg,rgba(240,192,64,0.08),transparent)}
+.badge-tile.unlocked .badge-tile-icon{filter:none}
+.badge-tile-icon{font-size:24px;margin-bottom:4px;filter:grayscale(1) opacity(.4);transition:.3s}
+.badge-tile-title{font-size:10px;font-weight:700;color:var(--text);line-height:1.2}
+.badge-tile.unlocked .badge-tile-title{color:var(--gold)}
+.badge-tile-desc{font-size:9px;color:var(--dim);margin-top:2px;line-height:1.3}
+
+/* Mode Procureur toggle */
+.mode-strip{
+  display:flex;gap:8px;align-items:center;padding:10px 12px;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  flex-wrap:wrap;
+}
+.mode-strip-label{
+  font-size:11px;color:var(--dim);flex:1;
+  text-transform:uppercase;letter-spacing:.5px;
+}
+.mode-toggle{
+  display:flex;gap:0;background:var(--surface2);border-radius:6px;padding:2px;
+  border:1px solid var(--border);
+}
+.mode-btn{
+  padding:5px 10px;font-size:11px;font-weight:600;border-radius:4px;
+  color:var(--dim);transition:.15s;letter-spacing:.3px;
+}
+.mode-btn.active{background:var(--surface);color:var(--gold);box-shadow:0 1px 3px rgba(0,0,0,0.3)}
+.mode-btn.active.procureur{color:var(--red)}
+
+/* Scenario cards */
 .scene-grid{display:flex;flex-direction:column;gap:10px}
 .scene-card{
   background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
-  padding:16px 18px;cursor:pointer;transition:.2s;position:relative;overflow:hidden;
+  padding:14px 16px;cursor:pointer;transition:.2s;position:relative;overflow:hidden;
   display:flex;align-items:center;gap:14px;
 }
 .scene-card::before{
@@ -81,55 +259,64 @@ header{
 
 .scene-icon{font-size:28px;flex-shrink:0;width:44px;text-align:center}
 .scene-info{flex:1;min-width:0}
-.scene-title{font-size:14px;font-weight:700;margin-bottom:3px}
+.scene-title{font-size:14px;font-weight:700;margin-bottom:3px;font-family:var(--font-body)}
 .scene-desc{font-size:12px;color:var(--dim);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .scene-meta{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
-.diff-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px}
+.diff-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;font-family:var(--font-mono)}
 .diff-badge.easy{background:#0d2a1a;color:var(--easy)}
 .diff-badge.medium{background:#2a200a;color:var(--medium)}
 .diff-badge.hard{background:#2a0d15;color:var(--hard)}
-.scene-steps-count{font-size:10px;color:var(--dim)}
+.scene-steps-count{font-size:10px;color:var(--dim);font-family:var(--font-mono)}
 .scene-status{margin-left:auto;font-size:11px;font-weight:700}
 .scene-status.done{color:var(--green)}
 .scene-status.locked-lbl{color:var(--dim)}
+.scene-real-badge{
+  font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;
+  background:rgba(240,192,64,0.12);color:var(--gold);
+  border:1px solid rgba(240,192,64,0.25);letter-spacing:.5px;
+}
 
-/* Difficulty accent bar on left */
 .scene-card[data-diff="easy"]{border-left:3px solid var(--easy)}
 .scene-card[data-diff="medium"]{border-left:3px solid var(--medium)}
 .scene-card[data-diff="hard"]{border-left:3px solid var(--hard)}
 
-/* Stats bar */
-.lobby-stats{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
-}
-.lstat{
-  background:var(--surface);border:1px solid var(--border);border-radius:8px;
-  padding:10px;text-align:center;
-}
-.lstat-val{font-size:20px;font-weight:700;color:var(--cyan)}
-.lstat-lbl{font-size:10px;color:var(--dim);margin-top:2px}
-
-/* ══════════════════════════════════════
-   SCREEN 1 — INTRO / BRIEFING
-══════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   BRIEFING SCREEN
+═══════════════════════════════════════════════════════ */
 .briefing-card{
   background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
-  padding:20px;box-shadow:var(--scene-glow);
+  padding:20px;box-shadow:var(--scene-glow);position:relative;overflow:hidden;
+}
+.briefing-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,transparent,var(--atm-accent),transparent);
 }
 .briefing-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.briefing-icon{font-size:36px}
-.briefing-title{font-size:18px;font-weight:800;color:var(--cyan)}
-.briefing-subtitle{font-size:11px;color:var(--dim);margin-top:2px}
+.briefing-icon{font-size:40px}
+.briefing-title{
+  font-family:var(--font-display);font-size:22px;font-style:italic;
+  color:var(--cyan);font-weight:400;line-height:1.1;
+}
+.briefing-subtitle{font-size:11px;color:var(--dim);margin-top:3px;font-family:var(--font-mono)}
+
+.real-case-banner{
+  display:flex;align-items:center;gap:8px;
+  background:linear-gradient(90deg,rgba(240,192,64,0.12),transparent);
+  border:1px solid rgba(240,192,64,0.3);border-left:3px solid var(--gold);
+  border-radius:6px;padding:8px 12px;font-size:11px;color:var(--gold);
+  margin-bottom:14px;letter-spacing:.3px;
+}
+.real-case-banner strong{font-weight:700}
 
 .alert-box{
   background:#1a0a0a;border:1px solid var(--red);border-radius:8px;
   padding:12px 14px;font-size:12px;color:#f0b0b8;line-height:1.6;margin-bottom:14px;
 }
-.alert-box strong{color:var(--red)}
+.alert-box strong{color:var(--red);font-family:var(--font-body)}
 
 .context-text{
   font-size:13px;line-height:1.7;color:var(--text);
-  border-left:3px solid var(--cyan);padding-left:14px;margin-bottom:16px;
+  border-left:3px solid var(--atm-accent);padding-left:14px;margin-bottom:16px;
 }
 
 .objective-list{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
@@ -143,30 +330,48 @@ header{
 .ref-tag{
   font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;
   border:1px solid var(--border);color:var(--gold);background:#1a1500;
+  font-family:var(--font-mono);
 }
 
+.briefing-actions{display:flex;gap:8px}
 .start-btn{
-  width:100%;padding:13px;border-radius:8px;font-size:15px;font-weight:700;
+  flex:1;padding:13px;border-radius:8px;font-size:15px;font-weight:700;
   background:var(--cyan);color:#08101c;transition:.15s;letter-spacing:.3px;
 }
-.start-btn:hover{filter:brightness(1.1)}
+.start-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.start-btn.procureur{background:linear-gradient(135deg,var(--red),#c0304d)}
+.back-briefing-btn{
+  padding:13px 16px;border-radius:8px;font-size:13px;font-weight:600;
+  background:var(--surface2);border:1px solid var(--border);color:var(--dim);
+}
+.back-briefing-btn:hover{border-color:var(--dim);color:var(--text)}
 
-/* ══════════════════════════════════════
-   SCREEN 2 — SCENE / STEP ENGINE
-══════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   SCENE ENGINE
+═══════════════════════════════════════════════════════ */
 
-/* Progress header */
 .scene-progress-bar{
   background:var(--surface);border:1px solid var(--border);border-radius:8px;
   padding:10px 14px;
 }
 .prog-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-.prog-title{font-size:12px;font-weight:700;color:var(--dim)}
-.prog-scores{display:flex;gap:14px;font-size:12px}
+.prog-title{font-size:12px;font-weight:700;color:var(--dim);font-family:var(--font-mono)}
+.prog-scores{display:flex;gap:14px;font-size:12px;font-family:var(--font-mono)}
 .prog-score-ok{color:var(--green);font-weight:700}
 .prog-score-err{color:var(--red);font-weight:700}
 .prog-track{height:4px;background:var(--border);border-radius:2px}
-.prog-fill{height:100%;background:var(--cyan);border-radius:2px;transition:width .4s ease}
+.prog-fill{height:100%;background:var(--atm-accent);border-radius:2px;transition:width .4s ease}
+
+/* Procureur timer */
+.procureur-timer{
+  display:flex;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--red);border-radius:8px;
+  padding:8px 14px;font-size:12px;
+}
+.procureur-timer-label{color:var(--red);flex-shrink:0;font-weight:700;letter-spacing:.3px}
+.procureur-timer-track{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.procureur-timer-fill{height:100%;border-radius:3px;transition:width 1s linear,background .3s}
+.procureur-timer-val{font-family:var(--font-mono);font-weight:700;min-width:34px;text-align:right}
 
 /* Chain of custody */
 .custody-bar{
@@ -177,21 +382,22 @@ header{
 .custody-label{color:var(--dim);flex-shrink:0}
 .custody-track{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden}
 .custody-fill{height:100%;border-radius:4px;transition:width .5s ease,background .5s ease}
-.custody-pct{font-weight:700;flex-shrink:0;min-width:32px;text-align:right}
+.custody-pct{font-weight:700;flex-shrink:0;min-width:32px;text-align:right;font-family:var(--font-mono)}
 
 /* Situation card */
 .situation-card{
   background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
   padding:18px;
 }
-.situation-top{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.situation-top{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .step-counter{
   font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;
   background:var(--surface2);border:1px solid var(--border);color:var(--dim);
+  font-family:var(--font-mono);
 }
 .situation-scene-tag{
   font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;
-  border-left:3px solid var(--cyan);background:var(--surface2);color:var(--cyan);
+  border-left:3px solid var(--atm-accent);background:var(--surface2);color:var(--atm-accent);
 }
 .situation-text{
   font-size:14px;line-height:1.65;color:var(--text);margin-bottom:14px;
@@ -202,7 +408,8 @@ header{
   border-left:3px solid var(--border);line-height:1.5;
 }
 .situation-question{
-  font-size:15px;font-weight:700;color:var(--gold);line-height:1.5;
+  font-family:var(--font-display);font-style:italic;
+  font-size:17px;font-weight:400;color:var(--gold);line-height:1.4;
   margin-bottom:14px;
 }
 
@@ -213,17 +420,17 @@ header{
   border-radius:8px;border:1px solid var(--border);background:var(--surface2);
   text-align:left;font-size:13px;transition:.15s;width:100%;line-height:1.5;
 }
-.choice-btn:hover:not(:disabled){border-color:var(--cyan);background:#0d1e36}
+.choice-btn:hover:not(:disabled){border-color:var(--cyan);background:#0d1e36;transform:translateX(2px)}
 .choice-btn.selected-ok{border-color:var(--green)!important;background:#0a1e14!important;color:var(--green)}
 .choice-btn.selected-ko{border-color:var(--red)!important;background:#1e0a10!important;color:var(--red)}
-.choice-btn:disabled{cursor:default;opacity:.85}
+.choice-btn:disabled{cursor:default;opacity:.85;transform:none}
 .choice-letter{
   width:22px;height:22px;border-radius:4px;background:var(--border);
   display:flex;align-items:center;justify-content:center;
-  font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px;
+  font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px;font-family:var(--font-mono);
 }
 
-/* Feedback box */
+/* Feedback */
 .feedback-box{
   border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.6;
   animation:fadeIn .2s ease;
@@ -235,11 +442,10 @@ header{
   color:var(--gold);
 }
 .feedback-box .fb-pts{
-  font-size:11px;font-weight:700;float:right;
-  opacity:.8;
+  font-size:11px;font-weight:700;float:right;opacity:.8;font-family:var(--font-mono);
 }
 
-/* Critical error overlay */
+/* Critical error */
 .critical-banner{
   background:#1a0008;border:1px solid var(--red);border-radius:8px;
   padding:12px 14px;font-size:12px;line-height:1.6;color:#f0b0b8;
@@ -261,35 +467,136 @@ header{
   background:var(--surface2);border:1px solid var(--cyan);color:var(--cyan);
   transition:.15s;
 }
-.next-step-btn:hover{background:#0d1e36}
+.next-step-btn:hover:not(:disabled){background:#0d1e36}
 .next-step-btn:disabled{opacity:.35;cursor:default}
+.abort-scene-btn{
+  padding:12px 14px;border-radius:8px;font-size:12px;
+  background:var(--surface2);border:1px solid var(--border);color:var(--dim);
+}
+.abort-scene-btn:hover{border-color:var(--red);color:var(--red)}
 
-/* ══════════════════════════════════════
-   SCREEN 3 — RAPPORT FINAL
-══════════════════════════════════════ */
+/* Timeline */
+.timeline{
+  display:flex;align-items:center;gap:0;overflow-x:auto;
+  padding:8px 0;scrollbar-width:none;
+}
+.timeline::-webkit-scrollbar{display:none}
+.tl-step{display:flex;align-items:center;flex-shrink:0}
+.tl-dot{
+  width:20px;height:20px;border-radius:50%;border:2px solid var(--border);
+  background:var(--surface2);display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;flex-shrink:0;transition:.3s;font-family:var(--font-mono);
+}
+.tl-dot.current{border-color:var(--atm-accent);color:var(--atm-accent);box-shadow:0 0 10px var(--atm-glow-1)}
+.tl-dot.done-ok{border-color:var(--green);background:#0a1e14;color:var(--green)}
+.tl-dot.done-ko{border-color:var(--red);background:#1e0a10;color:var(--red)}
+.tl-dot.skipped{border-color:var(--dim);color:var(--dim)}
+.tl-line{width:20px;height:2px;background:var(--border);flex-shrink:0;transition:.3s}
+.tl-line.done{background:var(--atm-accent)}
+
+/* Law box */
+.law-box{
+  font-size:12px;color:var(--gold);background:#1a1500;
+  border:1px solid rgba(240,192,64,0.25);border-left:3px solid var(--gold);
+  border-radius:6px;padding:8px 12px;margin-bottom:12px;line-height:1.6;
+}
+.law-box strong{color:var(--gold);font-family:var(--font-body)}
+
+/* ═══════════════════════════════════════════════════════
+   REPORT SCREEN
+═══════════════════════════════════════════════════════ */
 .report-card{
   background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
-  padding:20px;box-shadow:var(--scene-glow);
+  padding:22px;box-shadow:var(--scene-glow);position:relative;overflow:hidden;
 }
-.report-header{text-align:center;margin-bottom:20px}
-.report-badge{font-size:48px;margin-bottom:8px}
-.report-title{font-size:20px;font-weight:800;margin-bottom:4px}
-.report-subtitle{font-size:12px;color:var(--dim)}
+.report-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,transparent,var(--atm-accent),transparent);
+}
+.report-header{text-align:center;margin-bottom:18px}
+.report-badge{font-size:52px;margin-bottom:8px;filter:drop-shadow(0 0 16px var(--atm-glow-1))}
+.report-title{
+  font-family:var(--font-display);font-size:24px;font-style:italic;
+  font-weight:400;margin-bottom:4px;line-height:1.1;
+}
+.report-subtitle{font-size:12px;color:var(--dim);font-family:var(--font-mono);letter-spacing:.3px}
 
-.score-ring-wrap{display:flex;justify-content:center;margin:16px 0}
-.score-ring{position:relative;width:100px;height:100px}
+/* Narrative ending */
+.narrative-ending{
+  background:linear-gradient(135deg,var(--surface2),rgba(26,16,32,0.6));
+  border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+  margin-bottom:16px;position:relative;
+}
+.narrative-ending::before{
+  content:'«';position:absolute;top:-8px;left:10px;
+  font-family:var(--font-display);font-size:42px;
+  color:var(--atm-accent);opacity:.3;line-height:1;
+}
+.narrative-ending-label{
+  font-size:10px;color:var(--dim);letter-spacing:1px;
+  text-transform:uppercase;margin-bottom:6px;
+}
+.narrative-ending-text{
+  font-family:var(--font-display);font-style:italic;font-size:15px;
+  line-height:1.6;color:var(--text);padding-left:8px;
+}
+
+.score-ring-wrap{display:flex;justify-content:center;margin:14px 0 16px}
+.score-ring{position:relative;width:110px;height:110px}
 .score-ring svg{transform:rotate(-90deg)}
 .score-ring-center{
   position:absolute;inset:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;
 }
-.score-ring-pct{font-size:22px;font-weight:800}
-.score-ring-lbl{font-size:10px;color:var(--dim)}
+.score-ring-pct{font-size:24px;font-weight:700;font-family:var(--font-display);font-style:italic}
+.score-ring-lbl{font-size:10px;color:var(--dim);letter-spacing:.5px}
 
 .report-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
 .rstat{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
-.rstat-val{font-size:18px;font-weight:700}
-.rstat-lbl{font-size:10px;color:var(--dim);margin-top:2px}
+.rstat-val{font-size:20px;font-weight:700;font-family:var(--font-display);font-style:italic}
+.rstat-lbl{font-size:10px;color:var(--dim);margin-top:2px;letter-spacing:.3px}
+
+/* XP gained animation */
+.xp-gained{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:10px;background:linear-gradient(90deg,rgba(240,192,64,0.1),transparent);
+  border:1px solid rgba(240,192,64,0.3);border-radius:8px;margin-bottom:14px;
+  font-size:13px;
+  animation:xpPulse 2s ease-in-out 1;
+}
+@keyframes xpPulse{
+  0%{box-shadow:0 0 0 0 rgba(240,192,64,0.4)}
+  70%{box-shadow:0 0 0 12px rgba(240,192,64,0)}
+  100%{box-shadow:0 0 0 0 rgba(240,192,64,0)}
+}
+.xp-gained-icon{font-size:18px}
+.xp-gained-text{color:var(--gold);font-weight:700}
+.xp-gained-new-grade{
+  display:block;margin-top:4px;font-size:11px;color:var(--text);
+  font-family:var(--font-display);font-style:italic;
+}
+
+/* New badges */
+.new-badges{
+  background:linear-gradient(135deg,rgba(240,192,64,0.08),transparent);
+  border:1px solid var(--gold);border-radius:8px;padding:12px 14px;
+  margin-bottom:14px;
+}
+.new-badges-title{
+  font-size:11px;font-weight:700;color:var(--gold);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;
+  display:flex;align-items:center;gap:6px;
+}
+.new-badge-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--surface2);border:1px solid var(--gold);border-radius:20px;
+  padding:4px 10px;font-size:11px;margin:2px;
+  animation:badgeShine 2s ease-in-out infinite;
+}
+@keyframes badgeShine{
+  0%,100%{box-shadow:0 0 0 0 rgba(240,192,64,0.3)}
+  50%{box-shadow:0 0 14px 2px rgba(240,192,64,0.5)}
+}
 
 .custody-result{
   border-radius:8px;padding:12px 14px;font-size:12px;line-height:1.6;margin-bottom:14px;
@@ -300,7 +607,10 @@ header{
 
 /* Decision review */
 .review-section{margin-bottom:14px}
-.review-title{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.review-title{
+  font-size:11px;font-weight:700;color:var(--dim);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;
+}
 .review-item{
   border-radius:8px;border:1px solid var(--border);padding:10px 12px;
   margin-bottom:6px;font-size:12px;line-height:1.5;
@@ -311,51 +621,9 @@ header{
 .review-item-a{font-weight:600}
 .review-item-a.ok{color:var(--green)}
 .review-item-a.ko{color:var(--red)}
-.review-item-fb{color:var(--dim);font-size:11px;margin-top:4px;font-style:italic}
+.review-item-fb{color:var(--dim);font-size:11px;margin-top:4px;font-style:italic;font-family:var(--font-display)}
 
-/* Final actions */
-.report-actions{display:flex;flex-direction:column;gap:8px}
-.retry-btn{
-  width:100%;padding:12px;border-radius:8px;font-size:14px;font-weight:700;
-  background:var(--cyan);color:#08101c;transition:.15s;
-}
-.retry-btn:hover{filter:brightness(1.1)}
-.back-btn{
-  width:100%;padding:11px;border-radius:8px;font-size:13px;font-weight:600;
-  border:1px solid var(--border);background:var(--surface2);color:var(--dim);transition:.15s;
-}
-.back-btn:hover{border-color:var(--dim);color:var(--text)}
-
-/* ── TIMELINE (visual step tracker) ── */
-.timeline{
-  display:flex;align-items:center;gap:0;overflow-x:auto;
-  padding:8px 0;scrollbar-width:none;
-}
-.timeline::-webkit-scrollbar{display:none}
-.tl-step{
-  display:flex;align-items:center;flex-shrink:0;
-}
-.tl-dot{
-  width:20px;height:20px;border-radius:50%;border:2px solid var(--border);
-  background:var(--surface2);display:flex;align-items:center;justify-content:center;
-  font-size:9px;font-weight:700;flex-shrink:0;transition:.3s;
-}
-.tl-dot.current{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 8px rgba(0,229,204,0.4)}
-.tl-dot.done-ok{border-color:var(--green);background:#0a1e14;color:var(--green)}
-.tl-dot.done-ko{border-color:var(--red);background:#1e0a10;color:var(--red)}
-.tl-dot.skipped{border-color:var(--dim);color:var(--dim)}
-.tl-line{width:20px;height:2px;background:var(--border);flex-shrink:0;transition:.3s}
-.tl-line.done{background:var(--cyan)}
-
-/* ── LAW BOX (champ légal avant question) ── */
-.law-box{
-  font-size:12px;color:var(--gold);background:#1a1500;
-  border:1px solid rgba(240,192,64,0.25);border-left:3px solid var(--gold);
-  border-radius:6px;padding:8px 12px;margin-bottom:12px;line-height:1.6;
-}
-.law-box strong{color:var(--gold)}
-
-/* ── DEBRIEF SECTION (rapport final) ── */
+/* Debrief */
 .debrief-section{margin-bottom:14px}
 .debrief-content{
   background:var(--surface2);border:1px solid var(--border);border-radius:8px;
@@ -365,58 +633,171 @@ header{
 .debrief-content p:last-child{margin-bottom:0}
 .debrief-content strong{color:var(--cyan)}
 
-/* ── EMPTY STATE ── */
+/* Final actions */
+.report-actions{display:flex;flex-direction:column;gap:8px}
+.retry-btn{
+  width:100%;padding:12px;border-radius:8px;font-size:14px;font-weight:700;
+  background:var(--cyan);color:#08101c;transition:.15s;
+}
+.retry-btn:hover{filter:brightness(1.1)}
+.pdf-btn{
+  width:100%;padding:11px;border-radius:8px;font-size:13px;font-weight:600;
+  background:var(--surface2);border:1px solid var(--gold);color:var(--gold);
+  transition:.15s;display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.pdf-btn:hover{background:#1a1500}
+.back-btn{
+  width:100%;padding:11px;border-radius:8px;font-size:13px;font-weight:600;
+  border:1px solid var(--border);background:var(--surface2);color:var(--dim);transition:.15s;
+}
+.back-btn:hover{border-color:var(--dim);color:var(--text)}
+
+/* ═══════════════════════════════════════════════════════
+   MISC
+═══════════════════════════════════════════════════════ */
 .empty-state{text-align:center;padding:40px 20px;color:var(--dim);font-size:13px}
 .empty-state .es-icon{font-size:40px;margin-bottom:12px}
 
-/* ── TOAST ── */
 #toast{
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);
   background:var(--surface);border:1px solid var(--border);border-radius:8px;
   padding:10px 18px;font-size:12px;color:var(--text);
   opacity:0;transition:.3s;pointer-events:none;z-index:999;white-space:nowrap;
+  box-shadow:0 4px 20px rgba(0,0,0,0.5);
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.gold{border-color:var(--gold);color:var(--gold)}
 
-/* ── RESPONSIVE ── */
+/* Responsive */
 @media(max-width:600px){
   #app{padding:10px}
-  .lobby-header h1{font-size:18px}
+  .lobby-header h1{font-size:26px}
   .scene-card{padding:12px 14px;gap:10px}
   .scene-icon{font-size:22px;width:34px}
   .report-stats{grid-template-columns:1fr 1fr 1fr}
   .lobby-stats{grid-template-columns:repeat(3,1fr)}
-  .situation-question{font-size:14px}
+  .situation-question{font-size:15px}
   .choice-btn{font-size:12px;padding:10px 11px}
+  .grade-title{font-size:17px}
+  .briefing-title{font-size:18px}
+  .report-title{font-size:20px}
 }
 @media(max-width:380px){
   .report-stats{grid-template-columns:1fr 1fr}
   .prog-scores{gap:8px}
+  .lobby-header h1{font-size:22px}
+  .legal-pill{font-size:9px;padding:2px 6px}
+  .header-sub{display:none}
 }
+
+/* ═══════════════════════════════════════════════════════
+   PRINT STYLES — PDF EXPORT
+═══════════════════════════════════════════════════════ */
+@media print {
+  @page{margin:15mm 15mm 20mm 15mm;size:A4}
+  body{background:#fff!important;color:#000!important;font-family:'Times New Roman',serif}
+  body::before,body::after{display:none}
+  header,.screen:not(#screen-report),#toast,.report-actions,.xp-gained,.new-badges,.scene-actions,
+  .abort-scene-btn,.pdf-btn,.retry-btn,.back-btn{display:none!important}
+  #screen-report{display:block!important}
+  #app{max-width:100%!important;padding:0!important;margin:0!important}
+  .report-card{
+    background:#fff!important;border:none!important;box-shadow:none!important;
+    padding:0!important;color:#000!important;
+  }
+  .report-card::before{display:none!important}
+  .report-header{border-bottom:2px solid #000;padding-bottom:10mm;margin-bottom:10mm}
+  .report-title{color:#000!important;font-size:22pt!important}
+  .report-subtitle{color:#555!important}
+  .narrative-ending{background:#f4f4f4!important;border:1px solid #888!important;color:#000!important}
+  .narrative-ending::before{display:none!important}
+  .narrative-ending-text{color:#000!important}
+  .report-stats{margin-bottom:8mm}
+  .rstat{background:#f4f4f4!important;border:1px solid #888!important;color:#000!important}
+  .rstat-val{color:#000!important}
+  .rstat-lbl{color:#444!important}
+  .score-ring-pct{color:#000!important}
+  .custody-result{
+    background:#f8f8f8!important;border:1px solid #888!important;color:#000!important;
+    page-break-inside:avoid;
+  }
+  .review-section, .debrief-section{page-break-inside:avoid}
+  .review-item{
+    background:#f8f8f8!important;border:1px solid #ccc!important;color:#000!important;
+    page-break-inside:avoid;
+  }
+  .review-item.ok{border-left:4px solid #080!important}
+  .review-item.ko{border-left:4px solid #c00!important}
+  .review-item-a.ok{color:#080!important}
+  .review-item-a.ko{color:#c00!important}
+  .review-title{color:#000!important;border-bottom:1px solid #888;padding-bottom:2mm}
+  .debrief-content{background:#f4f4f4!important;border:1px solid #aaa!important;color:#000!important}
+  .debrief-content strong{color:#000!important}
+  .ref-tag{background:#eee!important;color:#000!important;border:1px solid #888!important}
+  /* Force print-friendly header */
+  #print-header{display:block!important}
+}
+#print-header{display:none}
+
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
+<!-- Print-only header (visible in exported PDF) -->
+<div id="print-header" style="display:none;text-align:center;border-bottom:3px solid #000;padding-bottom:5mm;margin-bottom:8mm">
+  <div style="font-family:'Times New Roman',serif;font-size:24pt;font-weight:bold">CAS-IN</div>
+  <div style="font-size:11pt;font-style:italic;color:#444">Rapport de Simulation DFIR — Investigation Numérique</div>
+  <div style="font-size:9pt;color:#666;margin-top:3mm" id="print-date"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════════════ -->
 <header>
-  <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%230d1526'/%3E%3Ctext x='50%25' y='55%25' text-anchor='middle' dominant-baseline='middle' font-size='18' fill='%2300e5cc'%3E🔍%3C/text%3E%3C/svg%3E"
-       alt="CAS-IN" style="height:34px;width:34px;border-radius:50%">
+  <svg width="34" height="34" viewBox="0 0 40 40" style="border-radius:50%">
+    <circle cx="20" cy="20" r="20" fill="#0d1526"/>
+    <text x="50%" y="55%" text-anchor="middle" dominant-baseline="middle" font-size="18" fill="#00e5cc">🔍</text>
+  </svg>
   <span class="logo-text">CAS-IN</span>
   <span class="header-sub">Simulation Scène de Crime</span>
-  <a href="index.html" class="hbtn">💊 Quiz</a>
-  <a href="index.html" class="hbtn" style="border-color:var(--border)">← Accueil</a>
+
+  <div class="grade-badge-mini" id="grade-mini" onclick="openBadgesPanel()">
+    <span class="grade-badge-mini-icon" id="grade-mini-icon">🎓</span>
+    <span>
+      <span class="grade-badge-mini-title" id="grade-mini-title">Stagiaire</span>
+      <span class="grade-badge-mini-xp" id="grade-mini-xp">0 XP</span>
+    </span>
+  </div>
+
+  <a href="index.html" class="hbtn" title="Retour au Quiz">💊 Quiz</a>
+  <a href="index.html" class="hbtn" style="border-color:var(--border)" title="Accueil">← Accueil</a>
 </header>
 
 <div id="app">
 
-  <!-- SCREEN 0 : LOBBY -->
+  <!-- ═══════════════════════════════════════════════
+       SCREEN 0 : LOBBY
+  ═══════════════════════════════════════════════ -->
   <div class="screen active" id="screen-lobby">
 
     <div class="lobby-header">
-      <div style="font-size:36px;margin-bottom:8px">🚨</div>
-      <h1>Simulation Scène de Crime</h1>
-      <p>Chaque décision est <strong style="color:var(--red)">irréversible</strong>.<br>
-         Les erreurs du premier intervenant peuvent invalider l'intégralité de l'enquête.</p>
+      <div class="hero-siren">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <!-- Rotating beam -->
+          <g class="siren-beam">
+            <path d="M 50 50 L 95 35 A 48 48 0 0 1 95 65 Z"/>
+            <path d="M 50 50 L 5 35 A 48 48 0 0 0 5 65 Z" opacity=".7"/>
+          </g>
+          <!-- Base -->
+          <rect class="siren-base" x="20" y="60" width="60" height="20" rx="3"/>
+          <!-- Dome -->
+          <path class="siren-dome" d="M 22 60 A 28 28 0 0 1 78 60 Z"/>
+          <!-- Highlight -->
+          <ellipse cx="42" cy="42" rx="8" ry="5" fill="rgba(255,255,255,0.35)" transform="rotate(-25 42 42)"/>
+        </svg>
+      </div>
+      <h1><span style="font-family:var(--font-body);font-weight:500;font-style:normal;font-size:16px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:4px">Investigation Numérique</span> Simulation <span class="accent">Scène de Crime</span></h1>
+      <p>Chaque décision est <strong>irréversible</strong>. Les erreurs du premier intervenant peuvent invalider l'intégralité de l'enquête devant le Tribunal fédéral.</p>
       <div class="legal-strip">
         <span class="legal-pill">Art. 248 CPP</span>
         <span class="legal-pill">Art. 143/143bis CP</span>
@@ -425,11 +806,45 @@ header{
       </div>
     </div>
 
+    <!-- Grade card -->
+    <div class="grade-card" id="grade-card">
+      <div class="grade-icon" id="grade-card-icon">🎓</div>
+      <div class="grade-info">
+        <div class="grade-title" id="grade-card-title">Stagiaire</div>
+        <div class="grade-subtitle" id="grade-card-subtitle">Débutant en forensique numérique</div>
+        <div class="grade-progress">
+          <div class="grade-progress-label">
+            <span id="grade-progress-xp">0 / 100 XP</span>
+            <span id="grade-progress-next">→ Inspecteur</span>
+          </div>
+          <div class="grade-progress-track"><div class="grade-progress-fill" id="grade-progress-fill" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mode selector -->
+    <div class="mode-strip">
+      <span class="mode-strip-label">Mode d'entraînement</span>
+      <div class="mode-toggle" id="mode-toggle">
+        <button class="mode-btn active" data-mode="normal" onclick="setMode('normal')">🎯 Standard</button>
+        <button class="mode-btn procureur" data-mode="procureur" onclick="setMode('procureur')">⚖️ Procureur</button>
+      </div>
+    </div>
+
     <!-- Global stats -->
-    <div class="lobby-stats" id="lobby-stats">
+    <div class="lobby-stats">
       <div class="lstat"><div class="lstat-val" id="ls-completed">0</div><div class="lstat-lbl">Scénarios complétés</div></div>
       <div class="lstat"><div class="lstat-val" id="ls-avg">—</div><div class="lstat-lbl">Score moyen</div></div>
       <div class="lstat"><div class="lstat-val" id="ls-custody">—</div><div class="lstat-lbl">Meilleure chaîne</div></div>
+    </div>
+
+    <!-- Global badges shelf -->
+    <div class="badges-section" id="badges-section" onclick="toggleBadges()">
+      <div class="badges-header">
+        <span class="badges-title">🏅 Distinctions</span>
+        <span><span class="badges-count" id="badges-count">0 / 0</span> <span class="badges-chevron">▼</span></span>
+      </div>
+      <div class="badges-grid" id="badges-grid"></div>
     </div>
 
     <!-- Scenario cards -->
@@ -437,23 +852,23 @@ header{
       <div class="empty-state">
         <div class="es-icon">⏳</div>
         <div>Chargement des scénarios…</div>
-        <div style="margin-top:6px;font-size:11px">Assurez-vous que <code>scenes.js</code> est chargé</div>
       </div>
     </div>
 
   </div>
 
-  <!-- SCREEN 1 : BRIEFING -->
+  <!-- ═══════════════════════════════════════════════
+       SCREEN 1 : BRIEFING
+  ═══════════════════════════════════════════════ -->
   <div class="screen" id="screen-briefing">
-    <div class="briefing-card" id="briefing-content">
-      <!-- populated by JS -->
-    </div>
+    <div class="briefing-card" id="briefing-content"></div>
   </div>
 
-  <!-- SCREEN 2 : SCENE ENGINE -->
+  <!-- ═══════════════════════════════════════════════
+       SCREEN 2 : SCENE ENGINE
+  ═══════════════════════════════════════════════ -->
   <div class="screen" id="screen-scene">
 
-    <!-- Progress -->
     <div class="scene-progress-bar">
       <div class="prog-top">
         <span class="prog-title" id="prog-title">Étape 1/1</span>
@@ -465,51 +880,48 @@ header{
       <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
     </div>
 
-    <!-- Timeline -->
     <div class="timeline" id="timeline"></div>
 
-    <!-- Chain of custody -->
+    <!-- Procureur timer (hidden by default) -->
+    <div class="procureur-timer" id="procureur-timer" style="display:none">
+      <span class="procureur-timer-label">⚖️ MODE PROCUREUR</span>
+      <div class="procureur-timer-track"><div class="procureur-timer-fill" id="procureur-timer-fill" style="width:100%;background:var(--green)"></div></div>
+      <span class="procureur-timer-val" id="procureur-timer-val" style="color:var(--green)">60s</span>
+    </div>
+
     <div class="custody-bar">
       <span class="custody-label">⛓ Chaîne de custody</span>
       <div class="custody-track"><div class="custody-fill" id="custody-fill" style="width:100%;background:var(--green)"></div></div>
       <span class="custody-pct" id="custody-pct" style="color:var(--green)">100%</span>
     </div>
 
-    <!-- Situation -->
-    <div class="situation-card" id="situation-card">
-      <!-- populated by JS -->
-    </div>
+    <div class="situation-card" id="situation-card"></div>
 
-    <!-- Feedback -->
     <div id="feedback-area" style="display:none"></div>
-
-    <!-- Critical error -->
     <div id="critical-area" style="display:none"></div>
 
-    <!-- Actions -->
     <div class="scene-actions">
       <button class="next-step-btn" id="next-step-btn" onclick="advanceStep()" disabled>
         Étape suivante →
       </button>
+      <button class="abort-scene-btn" onclick="abortScene()" title="Abandonner">✕</button>
     </div>
 
   </div>
 
-  <!-- SCREEN 3 : RAPPORT -->
+  <!-- ═══════════════════════════════════════════════
+       SCREEN 3 : RAPPORT
+  ═══════════════════════════════════════════════ -->
   <div class="screen" id="screen-report">
-    <div class="report-card" id="report-content">
-      <!-- populated by JS -->
-    </div>
+    <div class="report-card" id="report-content"></div>
   </div>
 
 </div>
 
 <div id="toast"></div>
 
-<!-- Load scenes.js — requis pour les scénarios -->
+<!-- Load scenes.js -->
 <script src="scenes.js"></script>
-
-<!-- Fallback si scenes.js absent -->
 <script>
 if (typeof SCENES === 'undefined' || !SCENES || !SCENES.length) {
   console.warn('scenes.js non chargé');
@@ -517,15 +929,179 @@ if (typeof SCENES === 'undefined' || !SCENES || !SCENES.length) {
 }
 </script>
 
-<!-- ══════════════════════════════════════
+<!-- ══════════════════════════════════════════════════
      ENGINE
-══════════════════════════════════════ -->
+══════════════════════════════════════════════════ -->
 <script>
-// ── STORAGE UTILS ──────────────────────────────────────
+// ═══════════════════════════════════════════════════
+// STORAGE UTILS
+// ═══════════════════════════════════════════════════
 function lsGet(k, d) { try { const v = localStorage.getItem(k); return v !== null ? JSON.parse(v) : d; } catch { return d; } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 
-// ── STATE ──────────────────────────────────────────────
+// ═══════════════════════════════════════════════════
+// GRADE / XP SYSTEM
+// ═══════════════════════════════════════════════════
+const GRADES = [
+  { min: 0,    title: "Stagiaire",              icon: "🎓", sub: "Débutant en forensique numérique" },
+  { min: 100,  title: "Inspecteur",             icon: "🔍", sub: "Premiers pas en investigation" },
+  { min: 300,  title: "Enquêteur Spécialisé",   icon: "🎖",  sub: "Investigations complexes maîtrisées" },
+  { min: 600,  title: "Expert Forensique",      icon: "⚔️", sub: "Témoin expert devant tribunal" },
+  { min: 1000, title: "Juge d'Instruction",     icon: "⚖️", sub: "Autorité suprême de l'enquête" },
+  { min: 1500, title: "Procureur Fédéral",      icon: "🏛", sub: "Maîtrise absolue du droit pénal numérique" },
+];
+
+function getGrade(xp) {
+  for (let i = GRADES.length - 1; i >= 0; i--) {
+    if (xp >= GRADES[i].min) return { ...GRADES[i], index: i, next: GRADES[i+1] || null };
+  }
+  return { ...GRADES[0], index: 0, next: GRADES[1] };
+}
+
+function getXP() {
+  return lsGet('cas_xp', 0);
+}
+
+function addXP(amount) {
+  const prev = getXP();
+  const next = Math.max(0, prev + amount);
+  lsSet('cas_xp', next);
+  return { prev, next, gradeUp: getGrade(prev).index !== getGrade(next).index };
+}
+
+function updateGradeDisplay() {
+  const xp = getXP();
+  const grade = getGrade(xp);
+
+  // Header mini
+  document.getElementById('grade-mini-icon').textContent = grade.icon;
+  document.getElementById('grade-mini-title').textContent = grade.title;
+  document.getElementById('grade-mini-xp').textContent = xp + ' XP';
+
+  // Lobby card
+  document.getElementById('grade-card-icon').textContent = grade.icon;
+  document.getElementById('grade-card-title').textContent = grade.title;
+  document.getElementById('grade-card-subtitle').textContent = grade.sub;
+
+  if (grade.next) {
+    const range = grade.next.min - grade.min;
+    const progress = xp - grade.min;
+    const pct = Math.min(100, (progress / range) * 100);
+    document.getElementById('grade-progress-xp').textContent = `${xp} / ${grade.next.min} XP`;
+    document.getElementById('grade-progress-next').textContent = `→ ${grade.next.title}`;
+    document.getElementById('grade-progress-fill').style.width = pct + '%';
+  } else {
+    document.getElementById('grade-progress-xp').textContent = `${xp} XP — GRADE MAX`;
+    document.getElementById('grade-progress-next').textContent = '★ Maître du domaine ★';
+    document.getElementById('grade-progress-fill').style.width = '100%';
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// GLOBAL BADGES
+// ═══════════════════════════════════════════════════
+const GLOBAL_BADGES = [
+  { id: "first_blood",   icon: "🩸", title: "Premier Sang",       desc: "Premier scénario complété",                       check: (s) => s.completed >= 1 },
+  { id: "rookie_5",      icon: "🥉", title: "Recrue",              desc: "5 scénarios complétés",                           check: (s) => s.completed >= 5 },
+  { id: "veteran_10",    icon: "🥈", title: "Vétéran",             desc: "10 scénarios complétés",                          check: (s) => s.completed >= 10 },
+  { id: "completionist", icon: "🥇", title: "Complétionniste",     desc: "Tous les scénarios complétés",                    check: (s) => s.completed >= s.total },
+  { id: "chain_master",  icon: "⛓",  title: "Maître de la Chaîne", desc: "100% custody sur 3 scénarios",                    check: (s) => s.full_custody >= 3 },
+  { id: "perfectionist", icon: "💎", title: "Perfectionniste",      desc: "100% de score sur un scénario",                   check: (s) => s.hundreds >= 1 },
+  { id: "ransom_expert", icon: "💀", title: "Spécialiste Ransomware", desc: "3 scénarios RANSOMWARE ≥80%",                  check: (s) => (s.tag80.RANSOMWARE || 0) >= 3 },
+  { id: "crypto_sage",   icon: "🔐", title: "Sage du Chiffrement",  desc: "2 scénarios CRYPTO ≥80%",                         check: (s) => (s.tag80.CRYPTO || 0) >= 2 },
+  { id: "forensic_pro",  icon: "🔬", title: "Pro du Forensique",   desc: "5 scénarios FORENSIQUE ≥80%",                     check: (s) => (s.tag80.FORENSIQUE || 0) >= 5 },
+  { id: "swiss_jurist",  icon: "⚖️", title: "Juriste Confirmé",    desc: "4 scénarios DROIT ≥80%",                          check: (s) => (s.tag80.DROIT || 0) >= 4 },
+  { id: "windows_guru",  icon: "🪟", title: "Guru Windows",         desc: "3 scénarios WINDOWS ≥80%",                         check: (s) => (s.tag80.WINDOWS || 0) >= 3 },
+  { id: "network_ninja", icon: "🌐", title: "Ninja Réseau",         desc: "3 scénarios RÉSEAUX ≥80%",                         check: (s) => (s.tag80['RÉSEAUX'] || 0) >= 3 },
+  { id: "ethics_warden", icon: "🛡", title: "Gardien de l'Éthique", desc: "0 erreur critique sur 5 scénarios",              check: (s) => s.no_critical_streak >= 5 },
+  { id: "speed_demon",   icon: "⚡", title: "Démon de la Vitesse", desc: "Mode Procureur complété à ≥70%",                 check: (s) => s.procureur_wins >= 1 },
+  { id: "prosecutor",    icon: "🏛", title: "Accusation Implacable", desc: "3 scénarios Procureur à ≥70%",                   check: (s) => s.procureur_wins >= 3 },
+  { id: "historian",     icon: "📜", title: "Historien du DFIR",   desc: "3 affaires réelles complétées ≥70%",              check: (s) => s.real_cases_won >= 3 },
+];
+
+function getStatsSnapshot() {
+  const results = lsGet('scene_results', {});
+  const snap = {
+    total: SCENES.length,
+    completed: Object.keys(results).length,
+    full_custody: 0,
+    hundreds: 0,
+    tag80: {},
+    no_critical_streak: lsGet('cas_no_crit_streak', 0),
+    procureur_wins: lsGet('cas_procureur_wins', 0),
+    real_cases_won: 0,
+  };
+  Object.entries(results).forEach(([id, r]) => {
+    if (r.custodyPct >= 100) snap.full_custody++;
+    if (r.pct >= 100) snap.hundreds++;
+    const scene = SCENES.find(s => s.id === id);
+    if (scene && r.pct >= 80) {
+      (scene.tags || []).forEach(t => { snap.tag80[t] = (snap.tag80[t] || 0) + 1; });
+    }
+    if (scene && scene.realCase && r.pct >= 70) snap.real_cases_won++;
+  });
+  return snap;
+}
+
+function getUnlockedBadges() {
+  const snap = getStatsSnapshot();
+  return GLOBAL_BADGES.filter(b => b.check(snap)).map(b => b.id);
+}
+
+function detectNewBadges(beforeIds, afterIds) {
+  return afterIds.filter(id => !beforeIds.includes(id));
+}
+
+function renderBadgesGrid() {
+  const unlocked = getUnlockedBadges();
+  const grid = document.getElementById('badges-grid');
+  const count = document.getElementById('badges-count');
+  count.textContent = `${unlocked.length} / ${GLOBAL_BADGES.length}`;
+
+  grid.innerHTML = GLOBAL_BADGES.map(b => `
+    <div class="badge-tile ${unlocked.includes(b.id) ? 'unlocked' : ''}">
+      <div class="badge-tile-icon">${b.icon}</div>
+      <div class="badge-tile-title">${b.title}</div>
+      <div class="badge-tile-desc">${b.desc}</div>
+    </div>
+  `).join('');
+}
+
+function toggleBadges() {
+  document.getElementById('badges-section').classList.toggle('open');
+}
+
+function openBadgesPanel() {
+  const sec = document.getElementById('badges-section');
+  sec.classList.add('open');
+  sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ═══════════════════════════════════════════════════
+// MODE (standard / procureur)
+// ═══════════════════════════════════════════════════
+function getMode() { return lsGet('cas_mode', 'normal'); }
+function setMode(m) {
+  lsSet('cas_mode', m);
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  showToast(m === 'procureur' ? '⚖️ Mode Procureur activé — Timer + points doublés' : '🎯 Mode Standard');
+}
+
+function initModeToggle() {
+  const mode = getMode();
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+}
+
+// ═══════════════════════════════════════════════════
+// ATMOSPHERE
+// ═══════════════════════════════════════════════════
+function setAtmosphere(atm) {
+  document.body.setAttribute('data-atmosphere', atm || '');
+}
+
+// ═══════════════════════════════════════════════════
+// STATE (current run)
+// ═══════════════════════════════════════════════════
 let G = {
   scene: null,
   stepIdx: 0,
@@ -536,26 +1112,40 @@ let G = {
   errCount: 0,
   custodyPct: 100,
   answered: false,
-  nextTarget: 'auto',  // 'auto' | 'end' | number
+  nextTarget: 'auto',
+  mode: 'normal',
+  procureurTimer: null,
+  procureurTimeLeft: 0,
+  procureurDuration: 60,
+  hadCriticalError: false,
+  beforeBadges: [],
 };
 
-// ── SCREEN ROUTING ─────────────────────────────────────
+// ═══════════════════════════════════════════════════
+// SCREEN ROUTING
+// ═══════════════════════════════════════════════════
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + id).classList.add('active');
 }
 
-// ── TOAST ──────────────────────────────────────────────
+// ═══════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════
 let toastTimer;
-function showToast(msg) {
+function showToast(msg, variant) {
   const t = document.getElementById('toast');
   t.textContent = msg;
+  t.className = '';
   t.classList.add('show');
+  if (variant) t.classList.add(variant);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// ── SOUND ──────────────────────────────────────────────
+// ═══════════════════════════════════════════════════
+// SOUND
+// ═══════════════════════════════════════════════════
 let _ac = null;
 function getAC() { if (!_ac) try { _ac = new (window.AudioContext || window.webkitAudioContext)(); } catch {} return _ac; }
 function playSound(type) {
@@ -587,18 +1177,32 @@ function playSound(type) {
       g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.25);
       o.start(t + i * 0.12); o.stop(t + i * 0.12 + 0.25);
     });
+  } else if (type === 'badge') {
+    [440, 554, 659, 880].forEach((f, i) => {
+      const o = a.createOscillator(), g = a.createGain();
+      o.connect(g); g.connect(a.destination);
+      o.frequency.value = f;
+      o.type = 'triangle';
+      g.gain.setValueAtTime(0.08, t + i * 0.07);
+      g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.07 + 0.3);
+      o.start(t + i * 0.07); o.stop(t + i * 0.07 + 0.3);
+    });
   }
 }
 
-// ── LOBBY ──────────────────────────────────────────────
+// ═══════════════════════════════════════════════════
+// LOBBY
+// ═══════════════════════════════════════════════════
 function initLobby() {
+  setAtmosphere('');
+  updateGradeDisplay();
+  renderBadgesGrid();
+  initModeToggle();
+
   const grid = document.getElementById('scene-grid');
   grid.innerHTML = '';
 
-  // Load saved results
   const saved = lsGet('scene_results', {});
-
-  // Stats
   const done = Object.keys(saved).length;
   const scores = Object.values(saved).map(r => r.pct);
   const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
@@ -610,13 +1214,13 @@ function initLobby() {
   document.getElementById('ls-custody').textContent = bestCustody !== null ? bestCustody + '%' : '—';
 
   if (!SCENES || SCENES.length === 0) {
-    grid.innerHTML = '<div class="empty-state"><div class="es-icon">⏳</div><div>Aucun scénario disponible.<br>Créez <code>scenes.js</code> pour en ajouter.</div></div>';
+    grid.innerHTML = '<div class="empty-state"><div class="es-icon">⏳</div><div>Aucun scénario disponible.</div></div>';
     return;
   }
 
   SCENES.forEach((scene, i) => {
     const res = saved[scene.id];
-    const isLocked = i > 0 && !saved[SCENES[i - 1].id]; // Progressive unlock
+    const isLocked = i > 0 && !saved[SCENES[i - 1].id];
 
     const card = document.createElement('div');
     card.className = 'scene-card' + (isLocked ? ' locked' : '');
@@ -628,15 +1232,20 @@ function initLobby() {
         ? `<span class="scene-status locked-lbl">🔒 Verrouillé</span>`
         : `<span class="scene-status" style="color:var(--cyan)">→ Jouer</span>`;
 
+    const diffLabel = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile' }[scene.difficulty];
+
     card.innerHTML = `
       <div class="scene-icon">${scene.icon}</div>
       <div class="scene-info">
-        <div class="scene-title">${scene.title}</div>
-        <div class="scene-desc">${scene.intro ? scene.intro.substring(0, 80) + '…' : ''}</div>
+        <div class="scene-title">
+          ${scene.title}
+          ${scene.realCase ? '<span class="scene-real-badge">📜 AFFAIRE RÉELLE</span>' : ''}
+        </div>
+        <div class="scene-desc">${scene.intro ? scene.intro.substring(0, 90) + '…' : ''}</div>
         <div class="scene-meta">
-          <span class="diff-badge ${scene.difficulty}">${{easy:'Facile',medium:'Moyen',hard:'Difficile'}[scene.difficulty]}</span>
-          <span class="scene-steps-count">${scene.steps.length} décisions</span>
-          ${scene.tags ? scene.tags.map(t => `<span class="scene-steps-count" style="color:var(--cyan);border:1px solid var(--border);padding:1px 5px;border-radius:3px;font-size:10px">${t}</span>`).join('') : ''}
+          <span class="diff-badge ${scene.difficulty}">${diffLabel}</span>
+          <span class="scene-steps-count">${scene.steps.length} décision${scene.steps.length > 1 ? 's' : ''}</span>
+          ${(scene.tags || []).slice(0,2).map(t => `<span class="scene-steps-count" style="color:var(--cyan);border:1px solid var(--border);padding:1px 5px;border-radius:3px;font-size:10px">${t}</span>`).join('')}
         </div>
       </div>
       ${statusHTML}
@@ -652,12 +1261,28 @@ function initLobby() {
   });
 }
 
-// ── BRIEFING ───────────────────────────────────────────
+// ═══════════════════════════════════════════════════
+// BRIEFING
+// ═══════════════════════════════════════════════════
 function startScene(scene) {
   G.scene = scene;
+  setAtmosphere(scene.atmosphere || '');
 
-  const diff = {easy:'Facile',medium:'Moyen',hard:'Difficile'};
-  const diffColor = {easy:'var(--easy)',medium:'var(--medium)',hard:'var(--hard)'};
+  const diff = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile' };
+  const mode = getMode();
+
+  const realCaseHTML = scene.realCase ? `
+    <div class="real-case-banner">
+      📜 <strong>AFFAIRE RÉELLE</strong> — ${scene.realCase}
+    </div>
+  ` : '';
+
+  const procureurNotice = mode === 'procureur' ? `
+    <div class="alert-box" style="border-color:var(--red);background:#1a0008">
+      <strong>⚖️ MODE PROCUREUR ACTIF</strong>
+      Timer par décision. Points doublés. Une seule erreur critique interrompt le scénario.
+    </div>
+  ` : '';
 
   document.getElementById('briefing-content').innerHTML = `
     <div class="briefing-top">
@@ -666,10 +1291,13 @@ function startScene(scene) {
         <div class="briefing-title">${scene.title}</div>
         <div class="briefing-subtitle">
           <span class="diff-badge ${scene.difficulty}" style="margin-right:6px">${diff[scene.difficulty]}</span>
-          ${scene.steps.length} décisions · ${scene.tags ? scene.tags.join(' · ') : ''}
+          ${scene.steps.length} décisions · ${(scene.tags || []).join(' · ')}
         </div>
       </div>
     </div>
+
+    ${realCaseHTML}
+    ${procureurNotice}
 
     <div class="alert-box">
       <strong>⚠ ${scene.alertLevel || 'ATTENTION'}</strong>
@@ -691,13 +1319,20 @@ function startScene(scene) {
       ${(scene.legalRefs || []).map(r => `<span class="ref-tag">${r}</span>`).join('')}
     </div>
 
-    <button class="start-btn" onclick="launchScene()">🚨 Débuter l'intervention</button>
+    <div class="briefing-actions">
+      <button class="back-briefing-btn" onclick="goLobby()">← Retour</button>
+      <button class="start-btn ${mode === 'procureur' ? 'procureur' : ''}" onclick="launchScene()">
+        ${mode === 'procureur' ? '⚖️ Débuter (Procureur)' : '🚨 Débuter l\'intervention'}
+      </button>
+    </div>
   `;
 
   showScreen('briefing');
 }
 
-// ── SCENE LAUNCH ───────────────────────────────────────
+// ═══════════════════════════════════════════════════
+// SCENE LAUNCH
+// ═══════════════════════════════════════════════════
 function launchScene() {
   G.stepIdx = 0;
   G.decisions = [];
@@ -708,38 +1343,45 @@ function launchScene() {
   G.custodyPct = 100;
   G.answered = false;
   G.nextTarget = 'auto';
+  G.mode = getMode();
+  G.hadCriticalError = false;
+  G.beforeBadges = getUnlockedBadges();
+
+  // Procureur timer duration by difficulty
+  G.procureurDuration = { easy: 45, medium: 60, hard: 75 }[G.scene.difficulty] || 60;
+
+  // Show/hide procureur timer bar
+  document.getElementById('procureur-timer').style.display = G.mode === 'procureur' ? '' : 'none';
 
   showScreen('scene');
   renderStep();
 }
 
-// ── STEP RENDERER ──────────────────────────────────────
+// ═══════════════════════════════════════════════════
+// STEP RENDERER
+// ═══════════════════════════════════════════════════
 function renderStep() {
   const scene = G.scene;
   const step = scene.steps[G.stepIdx];
   G.answered = false;
 
-  // Progress bar
+  // Progress
   const pct = (G.stepIdx / scene.steps.length) * 100;
   document.getElementById('prog-title').textContent = `Étape ${G.stepIdx + 1} / ${scene.steps.length}`;
   document.getElementById('prog-fill').style.width = pct + '%';
   document.getElementById('prog-ok').textContent = G.okCount;
   document.getElementById('prog-err').textContent = G.errCount;
 
-  // Timeline
   renderTimeline();
-
-  // Custody bar
   updateCustodyBar();
 
-  // Hide feedback
+  // Reset feedback
   document.getElementById('feedback-area').style.display = 'none';
   document.getElementById('critical-area').style.display = 'none';
   document.getElementById('next-step-btn').disabled = true;
 
-  // Situation card
-  const L = ['A', 'B', 'C', 'D', 'E'];
   // Shuffle choices
+  const L = ['A', 'B', 'C', 'D', 'E'];
   const order = shuffle([...step.choices.keys()]);
 
   const card = document.getElementById('situation-card');
@@ -764,6 +1406,9 @@ function renderStep() {
       }).join('')}
     </div>
   `;
+
+  // Start procureur timer
+  if (G.mode === 'procureur') startProcureurTimer();
 }
 
 function shuffle(arr) {
@@ -775,7 +1420,80 @@ function shuffle(arr) {
   return a;
 }
 
-// ── TIMELINE ───────────────────────────────────────────
+// ═══════════════════════════════════════════════════
+// PROCUREUR TIMER
+// ═══════════════════════════════════════════════════
+function startProcureurTimer() {
+  stopProcureurTimer();
+  G.procureurTimeLeft = G.procureurDuration;
+
+  const fill = document.getElementById('procureur-timer-fill');
+  const val = document.getElementById('procureur-timer-val');
+  fill.style.width = '100%';
+  fill.style.background = 'var(--green)';
+  val.style.color = 'var(--green)';
+  val.textContent = G.procureurTimeLeft + 's';
+
+  G.procureurTimer = setInterval(() => {
+    G.procureurTimeLeft--;
+    const p = (G.procureurTimeLeft / G.procureurDuration) * 100;
+    fill.style.width = p + '%';
+    val.textContent = G.procureurTimeLeft + 's';
+
+    let color;
+    if (p < 25) color = 'var(--red)';
+    else if (p < 50) color = 'var(--orange)';
+    else color = 'var(--green)';
+    fill.style.background = color;
+    val.style.color = color;
+
+    if (G.procureurTimeLeft <= 0) {
+      stopProcureurTimer();
+      if (!G.answered) procureurTimeout();
+    }
+  }, 1000);
+}
+
+function stopProcureurTimer() {
+  if (G.procureurTimer) {
+    clearInterval(G.procureurTimer);
+    G.procureurTimer = null;
+  }
+}
+
+function procureurTimeout() {
+  if (G.answered) return;
+  G.answered = true;
+  G.errCount++;
+  G.custodyPct = Math.max(0, G.custodyPct - 15);
+  G.decisions[G.stepIdx] = { ok: false, pts: 0, fb: 'Temps écoulé. Décision non prise dans les délais procureur.', legal: null, critical: false, timeout: true };
+
+  updateCustodyBar();
+  renderTimeline();
+  playSound('critical');
+
+  document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+
+  const fbArea = document.getElementById('feedback-area');
+  fbArea.style.display = '';
+  fbArea.innerHTML = `
+    <div class="feedback-box ko">
+      <span class="fb-pts">⏱ Timeout</span>
+      ❌ Temps écoulé — En mode Procureur, l'indécision compte comme un échec procédural.
+      <div class="fb-legal">⚖️ En intervention réelle, la lenteur décisionnelle peut aggraver la compromission de preuves.</div>
+    </div>
+  `;
+
+  const nextBtn = document.getElementById('next-step-btn');
+  nextBtn.disabled = false;
+  const isLast = G.stepIdx >= G.scene.steps.length - 1;
+  nextBtn.textContent = isLast ? 'Voir le rapport final →' : 'Étape suivante →';
+  G.nextTarget = 'auto';
+}
+
+// ═══════════════════════════════════════════════════
+// TIMELINE
+// ═══════════════════════════════════════════════════
 function renderTimeline() {
   const scene = G.scene;
   const tl = document.getElementById('timeline');
@@ -803,7 +1521,9 @@ function renderTimeline() {
   });
 }
 
-// ── CUSTODY BAR ────────────────────────────────────────
+// ═══════════════════════════════════════════════════
+// CUSTODY BAR
+// ═══════════════════════════════════════════════════
 function updateCustodyBar() {
   const pct = G.custodyPct;
   const fill = document.getElementById('custody-fill');
@@ -816,28 +1536,30 @@ function updateCustodyBar() {
   label.textContent = pct + '%';
 }
 
-// ── CHOICE SELECTION ───────────────────────────────────
+// ═══════════════════════════════════════════════════
+// CHOICE SELECTION
+// ═══════════════════════════════════════════════════
 function selectChoice(choiceIdx, btn) {
   if (G.answered) return;
   G.answered = true;
+  stopProcureurTimer();
 
   const step = G.scene.steps[G.stepIdx];
   const choice = step.choices[choiceIdx];
 
-  // Mark all buttons
-  document.querySelectorAll('.choice-btn').forEach(b => {
-    b.disabled = true;
-  });
+  document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
   btn.classList.add(choice.ok ? 'selected-ok' : 'selected-ko');
 
-  // Update state
-  const pts = choice.pts || 0;
+  // Apply points — x2 in procureur mode
+  let pts = choice.pts || 0;
+  if (G.mode === 'procureur' && pts > 0) pts *= 2;
+
   G.score += pts;
   if (choice.ok) G.okCount++; else G.errCount++;
   G.decisions[G.stepIdx] = { ok: choice.ok, pts, fb: choice.fb, legal: choice.legal, critical: choice.critical };
 
-  // Custody penalty for critical errors
   if (choice.critical) {
+    G.hadCriticalError = true;
     G.custodyPct = Math.max(0, G.custodyPct - 25);
   } else if (!choice.ok) {
     G.custodyPct = Math.max(0, G.custodyPct - 10);
@@ -847,7 +1569,6 @@ function selectChoice(choiceIdx, btn) {
   renderTimeline();
   playSound(choice.critical ? 'critical' : choice.ok ? 'ok' : 'ko');
 
-  // Show feedback
   const fbArea = document.getElementById('feedback-area');
   fbArea.style.display = '';
   fbArea.innerHTML = `
@@ -858,7 +1579,6 @@ function selectChoice(choiceIdx, btn) {
     </div>
   `;
 
-  // Critical banner
   if (choice.critical) {
     const critArea = document.getElementById('critical-area');
     critArea.style.display = '';
@@ -866,12 +1586,17 @@ function selectChoice(choiceIdx, btn) {
       <div class="critical-banner">
         <strong>🚨 ERREUR CRITIQUE — Impact sur la chaîne de custody</strong>
         Cette décision pourrait invalider des preuves devant le Tribunal fédéral. Chaîne de custody réduite à ${G.custodyPct}%.
+        ${G.mode === 'procureur' ? '<br><em>Mode Procureur : le scénario prend fin immédiatement.</em>' : ''}
       </div>
     `;
   }
 
-  // Navigation next — support "next" conditionnel dans les choices
-  G.nextTarget = (choice.next !== undefined) ? choice.next : 'auto';
+  // In procureur mode, critical error = end
+  if (G.mode === 'procureur' && choice.critical) {
+    G.nextTarget = 'end';
+  } else {
+    G.nextTarget = (choice.next !== undefined) ? choice.next : 'auto';
+  }
 
   const nextBtn = document.getElementById('next-step-btn');
   nextBtn.disabled = false;
@@ -881,55 +1606,88 @@ function selectChoice(choiceIdx, btn) {
   nextBtn.textContent = (isEnd || isLast) ? 'Voir le rapport final →' : 'Étape suivante →';
 }
 
-// ── ADVANCE STEP ───────────────────────────────────────
+// ═══════════════════════════════════════════════════
+// ADVANCE
+// ═══════════════════════════════════════════════════
 function advanceStep() {
   const target = G.nextTarget;
   const isLast = G.stepIdx >= G.scene.steps.length - 1;
 
-  // Si next="end" ou dernière étape → rapport
-  if (target === 'end' || isLast) {
-    showReport();
-    return;
-  }
+  if (target === 'end' || isLast) { showReport(); return; }
 
-  // Si next=number → aller à cet index précis
-  if (typeof target === 'number') {
-    G.stepIdx = target;
-  } else {
-    // 'auto' → étape suivante
-    G.stepIdx++;
-  }
+  if (typeof target === 'number') G.stepIdx = target;
+  else G.stepIdx++;
 
-  // Si l'index dépasse les steps → rapport
-  if (G.stepIdx >= G.scene.steps.length) {
-    showReport();
-    return;
-  }
+  if (G.stepIdx >= G.scene.steps.length) { showReport(); return; }
 
   renderStep();
   document.getElementById('screen-scene').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// ── REPORT ─────────────────────────────────────────────
+function abortScene() {
+  if (!confirm('Abandonner ce scénario ? Votre progression actuelle sera perdue.')) return;
+  stopProcureurTimer();
+  setAtmosphere('');
+  goLobby();
+}
+
+// ═══════════════════════════════════════════════════
+// REPORT
+// ═══════════════════════════════════════════════════
 function showReport() {
+  stopProcureurTimer();
+
   const scene = G.scene;
-  const maxScore = G.maxScore;
+  const maxScore = G.mode === 'procureur' ? G.maxScore * 2 : G.maxScore;
   const score = G.score;
-  const pct = maxScore > 0 ? Math.max(0, Math.round((score / maxScore) * 100)) : 0;
+  const pct = maxScore > 0 ? Math.max(0, Math.min(100, Math.round((score / maxScore) * 100))) : 0;
   const custodyPct = G.custodyPct;
 
-  // Save result
+  // XP calculation — base pct × difficulty multiplier × mode multiplier
+  const diffMult = { easy: 1, medium: 1.5, hard: 2 }[scene.difficulty] || 1;
+  const modeMult = G.mode === 'procureur' ? 1.5 : 1;
+  const xpGained = Math.round(pct * diffMult * modeMult * 0.8);
+
+  // Save XP
+  const xpResult = addXP(xpGained);
+
+  // No-critical-error streak
+  if (!G.hadCriticalError) {
+    lsSet('cas_no_crit_streak', lsGet('cas_no_crit_streak', 0) + 1);
+  } else {
+    lsSet('cas_no_crit_streak', 0);
+  }
+
+  // Procureur win counter
+  if (G.mode === 'procureur' && pct >= 70) {
+    lsSet('cas_procureur_wins', lsGet('cas_procureur_wins', 0) + 1);
+  }
+
+  // Save result (keep best pct)
   const saved = lsGet('scene_results', {});
   const prev = saved[scene.id];
   if (!prev || pct > prev.pct) {
-    saved[scene.id] = { pct, custodyPct, score, date: new Date().toLocaleDateString('fr') };
+    saved[scene.id] = { pct, custodyPct, score, mode: G.mode, date: new Date().toLocaleDateString('fr') };
     lsSet('scene_results', saved);
   }
 
-  // Badge
+  // Detect new badges
+  const afterBadges = getUnlockedBadges();
+  const newBadges = detectNewBadges(G.beforeBadges, afterBadges);
+  if (newBadges.length > 0) playSound('badge');
+
+  // Scenario badge
   const badge = scene.badgeFn ? scene.badgeFn(pct, custodyPct) : { icon: '🔍', title: 'Terminé', sub: '' };
 
-  // Custody result
+  // Narrative ending
+  let narrative = null;
+  if (scene.narrative) {
+    if (pct >= 75 && custodyPct >= 75) narrative = scene.narrative.success;
+    else if (pct >= 50) narrative = scene.narrative.degraded;
+    else narrative = scene.narrative.failure;
+  }
+
+  // Custody result text
   let custodyClass, custodyText;
   if (custodyPct >= 80) {
     custodyClass = 'intact';
@@ -942,8 +1700,8 @@ function showReport() {
     custodyText = `❌ Chaîne de custody compromise (${custodyPct}%) — Les preuves risquent d'être déclarées irrecevables.`;
   }
 
-  // Score ring SVG
-  const radius = 40, circ = 2 * Math.PI * radius;
+  // Score ring
+  const radius = 42, circ = 2 * Math.PI * radius;
   const dash = (pct / 100) * circ;
   const ringColor = pct >= 70 ? '#30e88a' : pct >= 50 ? '#f0c040' : '#ff4060';
 
@@ -952,25 +1710,51 @@ function showReport() {
     const step = scene.steps[i];
     return `
       <div class="review-item ${d.ok ? 'ok' : 'ko'}">
-        <div class="review-item-q">Étape ${i + 1} — ${step.question}</div>
+        <div class="review-item-q">Étape ${i + 1} — ${step.question.replace(/<[^>]+>/g, '')}</div>
         <div class="review-item-a ${d.ok ? 'ok' : 'ko'}">${d.ok ? '✓' : '✗'} ${d.fb ? d.fb.split('.')[0] + '.' : ''}</div>
         ${d.legal ? `<div class="review-item-fb">📖 ${d.legal}</div>` : ''}
       </div>
     `;
   }).join('');
 
+  // Mode badge
+  const modeBadge = G.mode === 'procureur' ? `<span style="display:inline-block;padding:2px 8px;background:rgba(255,64,96,0.15);border:1px solid var(--red);color:var(--red);border-radius:3px;font-size:10px;font-family:var(--font-mono);letter-spacing:.5px;margin-left:6px">⚖️ PROCUREUR</span>` : '';
+
+  // Grade up notification
+  const gradeUpHTML = xpResult.gradeUp ? `
+    <span class="xp-gained-new-grade">🎖 Nouveau grade débloqué : <strong>${getGrade(xpResult.next).title}</strong></span>
+  ` : '';
+
+  // New badges HTML
+  const newBadgesHTML = newBadges.length > 0 ? `
+    <div class="new-badges">
+      <div class="new-badges-title">🏅 Nouvelles distinctions</div>
+      ${newBadges.map(id => {
+        const b = GLOBAL_BADGES.find(x => x.id === id);
+        return `<span class="new-badge-pill"><span>${b.icon}</span><span>${b.title}</span></span>`;
+      }).join('')}
+    </div>
+  ` : '';
+
   document.getElementById('report-content').innerHTML = `
     <div class="report-header">
       <div class="report-badge">${badge.icon}</div>
       <div class="report-title" style="color:${pct >= 70 ? 'var(--green)' : pct >= 50 ? 'var(--gold)' : 'var(--red)'}">${badge.title}</div>
-      <div class="report-subtitle">${badge.sub}</div>
+      <div class="report-subtitle">${badge.sub}${modeBadge}</div>
     </div>
+
+    ${narrative ? `
+    <div class="narrative-ending">
+      <div class="narrative-ending-label">Dénouement judiciaire</div>
+      <div class="narrative-ending-text">${narrative}</div>
+    </div>
+    ` : ''}
 
     <div class="score-ring-wrap">
       <div class="score-ring">
-        <svg viewBox="0 0 100 100" width="100" height="100">
-          <circle cx="50" cy="50" r="${radius}" fill="none" stroke="var(--border)" stroke-width="10"/>
-          <circle cx="50" cy="50" r="${radius}" fill="none" stroke="${ringColor}" stroke-width="10"
+        <svg viewBox="0 0 100 100" width="110" height="110">
+          <circle cx="50" cy="50" r="${radius}" fill="none" stroke="var(--border)" stroke-width="8"/>
+          <circle cx="50" cy="50" r="${radius}" fill="none" stroke="${ringColor}" stroke-width="8"
             stroke-dasharray="${dash} ${circ}" stroke-linecap="round"/>
         </svg>
         <div class="score-ring-center">
@@ -985,6 +1769,14 @@ function showReport() {
       <div class="rstat"><div class="rstat-val" style="color:var(--red)">${G.errCount}</div><div class="rstat-lbl">Erreurs</div></div>
       <div class="rstat"><div class="rstat-val" style="color:var(--gold)">${G.score}</div><div class="rstat-lbl">Points</div></div>
     </div>
+
+    <div class="xp-gained">
+      <span class="xp-gained-icon">✨</span>
+      <span class="xp-gained-text">+${xpGained} XP</span>
+      ${gradeUpHTML}
+    </div>
+
+    ${newBadgesHTML}
 
     <div class="custody-result ${custodyClass}">${custodyText}</div>
 
@@ -1006,20 +1798,38 @@ function showReport() {
 
     <div class="report-actions">
       <button class="retry-btn" onclick="launchScene()">🔄 Recommencer ce scénario</button>
+      <button class="pdf-btn" onclick="exportPDF()">📄 Exporter le rapport (PDF)</button>
       <button class="back-btn" onclick="goLobby()">← Choisir un autre scénario</button>
     </div>
   `;
 
+  // Update print header date
+  document.getElementById('print-date').textContent =
+    `Généré le ${new Date().toLocaleDateString('fr', { day: '2-digit', month: 'long', year: 'numeric' })} · Scénario : ${scene.title}`;
+
   showScreen('report');
 }
 
-// ── NAV ────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════
+// PDF EXPORT
+// ═══════════════════════════════════════════════════
+function exportPDF() {
+  showToast('📄 Boîte d\'impression ouverte — sélectionnez « Enregistrer au format PDF »');
+  setTimeout(() => window.print(), 400);
+}
+
+// ═══════════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════════
 function goLobby() {
+  setAtmosphere('');
   initLobby();
   showScreen('lobby');
 }
 
-// ── INIT ───────────────────────────────────────────────
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
   initLobby();
 });
