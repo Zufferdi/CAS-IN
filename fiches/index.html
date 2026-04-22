@@ -2,330 +2,531 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Fiches DFIR — CAS-IN Investigation Numérique</title>
 <link rel="stylesheet" href="../style/fiche_style.css">
 <style>
-  /* ── Styles spécifiques à la page index ── */
-  .stats-bar {
-    display: flex; gap: 1.5rem; flex-wrap: wrap;
-    padding: 1rem 1.25rem; margin: 1rem 0 1.5rem;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px;
-  }
-  .stat { display: flex; flex-direction: column; }
-  .stat-num {
-    font-family: var(--sans); font-size: 1.5rem; font-weight: 800;
-    color: var(--cyan); line-height: 1;
-  }
-  .stat-label {
-    font-size: .65rem; color: var(--dim); letter-spacing: .08em;
-    text-transform: uppercase; margin-top: .2rem;
-  }
-
-  .search-bar {
-    width: 100%; padding: .6rem .9rem;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text);
-    font-family: var(--mono); font-size: .85rem;
-    margin-bottom: 1.5rem; outline: none;
-    transition: border-color .15s;
-  }
-  .search-bar:focus { border-color: var(--cyan); }
-  .search-bar::placeholder { color: var(--dim); }
-
-  .cat-header {
-    display: flex; align-items: center; gap: .75rem;
-    margin: 1.5rem 0 .75rem; padding-bottom: .4rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .cat-header-icon { font-size: 1.4rem; }
-  .cat-header-title {
-    font-family: var(--sans); font-size: 1rem; font-weight: 700;
-    color: var(--text); letter-spacing: -.3px;
-  }
-  .cat-header-count {
-    font-family: var(--mono); font-size: .7rem; color: var(--dim);
-    padding: .15rem .5rem; border: 1px solid var(--border);
-    border-radius: 12px; background: var(--surface);
-  }
-
-  .fiche-badge-new {
-    display: inline-block; font-size: .6rem; font-weight: 700;
-    background: rgba(48,232,138,.15); border: 1px solid rgba(48,232,138,.4);
-    color: var(--green); padding: .05rem .4rem; border-radius: 4px;
-    letter-spacing: .05em; margin-left: .3rem;
-    text-transform: uppercase;
-  }
-
-  .empty-state {
-    text-align: center; padding: 3rem 1rem;
-    color: var(--dim); font-size: .85rem;
-  }
-
-  .loading {
-    text-align: center; padding: 3rem 1rem;
-    color: var(--dim); font-family: var(--mono);
-  }
-
-  @keyframes pulse-fade {
-    0%, 100% { opacity: .4; }
-    50% { opacity: 1; }
-  }
-  .loading span { animation: pulse-fade 1.4s infinite; }
+.page{max-width:1100px;margin:0 auto;padding:2rem}
+.hub-hero{text-align:center;padding:2.5rem 1rem 1.5rem;border-bottom:1px solid var(--border);margin-bottom:2rem}
+.hub-title{font-family:var(--sans);font-size:clamp(1.6rem,4vw,2.4rem);font-weight:800;color:var(--text);margin-bottom:.5rem}
+.hub-sub{font-size:.85rem;color:var(--muted);margin-bottom:1rem}
+.hub-stats{display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;font-size:.75rem;color:var(--dim)}
+.search-wrap{position:relative;max-width:500px;margin:0 auto 1.5rem}
+.search-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.55rem 1rem .55rem 2.5rem;color:var(--text);font-family:var(--mono);font-size:.82rem;transition:.15s}
+.search-input:focus{outline:none;border-color:var(--cyan);background:rgba(0,229,204,.02)}
+.search-icon{position:absolute;left:.8rem;top:50%;transform:translateY(-50%);color:var(--dim)}
+.fiche-card{cursor:pointer}
+.fiche-card.hidden{display:none}
+@media(max-width:640px){.hub-stats{gap:.75rem}}
+</style>
+<style>
+.fiche-card{position:relative}
+.read-dot{position:absolute;top:.45rem;right:.45rem;width:8px;height:8px;border-radius:50%;background:var(--green,#30e88a);box-shadow:0 0 5px rgba(48,232,138,.6)}
+#read-counter{font-size:.65rem;color:var(--cyan,#00e5cc);margin-left:.75rem;font-family:var(--mono,monospace)}
+.fiche-card.prereq-locked{opacity:.5;filter:grayscale(.6)}
+.cat-nav{display:flex;justify-content:space-between;align-items:center;margin-top:.6rem;padding:.3rem 0;font-size:.68rem;color:var(--dim)}
+.cat-nav-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:.25rem .65rem;color:var(--dim);cursor:pointer;font-size:.68rem;font-family:var(--mono);transition:.15s;text-decoration:none;display:inline-block}
+.cat-nav-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.cat-nav-btn.disabled{opacity:.3;pointer-events:none}
 </style>
 </head>
 <body>
 
 <nav class="tn-nav">
-  <a class="tn-back" href="../index.html">← Accueil</a>
-  <span class="tn-title">Fiches de révision</span>
-  <a class="tn-quiz" href="../quiz.html">💊 Quiz →</a>
+  <a href="../index.html" class="tn-back">← Accueil</a>
+  <span class="tn-title">FICHES DE RÉVISION</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
 
 <div class="page">
 
-  <div class="header">
-    <span class="fs-badge">📂</span>
-    <div>
-      <h1 style="font-family:var(--sans);font-size:1.7rem;font-weight:800;letter-spacing:-.5px;margin-bottom:.25rem">
-        Fiches DFIR
-      </h1>
-      <div class="header-meta" id="header-subtitle">
-        <span class="muted">Chargement…</span>
-      </div>
+  <div class="hub-hero">
+    <div class="hub-title">📂 Fiches DFIR</div>
+    <div class="hub-sub"><span id="total-count">49</span> fiches de référence · Investigation numérique · Droit suisse · CAS-IN 2025–26</div>
+    <div class="hub-stats">
+      <span><strong id="stat-total">49</strong> fiches</span>
+      <span><strong>8</strong> catégories</span>
     </div>
+    <span id="read-counter">0 / 0 lues</span>
   </div>
 
-  <!-- Statistiques (auto-générées depuis le manifest) -->
-  <div class="stats-bar" id="stats-bar">
-    <!-- rendu dynamiquement -->
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="search" type="text" placeholder="Rechercher une fiche…" oninput="filterFiches()">
   </div>
 
-  <!-- Recherche -->
-  <input type="text" class="search-bar" id="search"
-         placeholder="🔍 Filtrer les fiches par nom, description ou mot-clé…">
 
-  <!-- Conteneur des catégories -->
-  <div id="categories-container">
-    <div class="loading"><span>Chargement du manifest…</span></div>
+  <!-- ── 💾 Systèmes de Fichiers ── -->
+  <div class="fiche-category" id="cat-systèmesdefichiers" style="margin-bottom:2rem">
+    <div class="fiche-cat-title" style="font-family:var(--sans);font-size:.72rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem">
+      💾 Systèmes de Fichiers <span style="flex:1;height:1px;background:var(--border);opacity:.3"></span>
+      <span class="cat-count" style="font-size:.6rem;color:var(--dim);font-weight:400">6 fiches</span>
+    </div>
+    <div class="fiche-grid">
+      <a href="comparaison_fs.html" class="fiche-card" data-keywords="tableau comparatif fat12   fat16   fat32   exfat   ntfs   ext   hfs+  forensique suisse">
+        <div class="fiche-icon">🗂</div>
+        <div class="fiche-name">Comparaison Systèmes de Fichiers</div>
+        <div class="fiche-desc">Tableau comparatif FAT12 / FAT16 / FAT32 / exFAT / NTFS / EXT / HFS+ · Forensique suisse</div>
+        <span class="fiche-tag">FAT12</span>
+      </a>
+      <a href="exfat.html" class="fiche-card" data-keywords="système de fichiers exfat  forensique microsoft  structure boot  cluster chain  artefacts">
+        <div class="fiche-icon">📄</div>
+        <div class="fiche-name">exFAT</div>
+        <div class="fiche-desc">Système de fichiers exFAT · Forensique Microsoft · Structure boot · Cluster chain · Artefacts</div>
+        <span class="fiche-tag">Forensique</span>
+      </a>
+      <a href="ext.html" class="fiche-card" data-keywords="linux extended file system ext2 3 4  groupes de blocs  inodes  journalisation  récupération">
+        <div class="fiche-icon">EXT</div>
+        <div class="fiche-name">EXT2 / EXT3 / EXT4</div>
+        <div class="fiche-desc">Linux Extended File System EXT2/3/4 · Groupes de blocs · Inodes · Journalisation · Récupération</div>
+        <span class="fiche-tag">Forensique</span>
+      </a>
+      <a href="fat12.html" class="fiche-card" data-keywords="fat12 système de fichiers disquette  entrées 12 bits  secteur de boot  root directory fixe">
+        <div class="fiche-icon">FAT12</div>
+        <div class="fiche-name">FAT12</div>
+        <div class="fiche-desc">FAT12 système de fichiers disquette · Entrées 12 bits · Secteur de boot · Root Directory fixe</div>
+        <span class="fiche-tag">Système de fichiers</span>
+      </a>
+      <a href="hfs.html" class="fiche-card" data-keywords="hfs+ big endian  b-trees  cnid  apfs snapshots  récupération macos  forensique apple">
+        <div class="fiche-icon">HFS+</div>
+        <div class="fiche-name">HFS+ et APFS</div>
+        <div class="fiche-desc">HFS+ Big Endian · B-Trees · CNID · APFS Snapshots · Récupération macOS · Forensique Apple</div>
+        <span class="fiche-tag">Forensique</span>
+      </a>
+      <a href="ntfs.html" class="fiche-card" data-keywords="">
+        <div class="fiche-icon">📄</div>
+        <div class="fiche-name">NTFS</div>
+        <div class="fiche-desc"></div>
+        <span class="fiche-tag">DFIR</span>
+      </a>
+    </div>
+    <div class="cat-nav" data-cat="systèmesdefichiers"></div>
   </div>
 
-  <!-- CTA -->
+  <!-- ── 📥 Acquisition & Méthodes ── -->
+  <div class="fiche-category" id="cat-acquisitionméthodes" style="margin-bottom:2rem">
+    <div class="fiche-cat-title" style="font-family:var(--sans);font-size:.72rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--cyan);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem">
+      📥 Acquisition & Méthodes <span style="flex:1;height:1px;background:var(--border);opacity:.3"></span>
+      <span class="cat-count" style="font-size:.6rem;color:var(--dim);font-weight:400">7 fiches</span>
+    </div>
+    <div class="fiche-grid">
+      <a href="acquisition.html" class="fiche-card" data-keywords="">
+        <div class="fiche-icon">📄</div>
+        <div class="fiche-name">Acquisition</div>
+        <div class="fiche-desc"></div>
+        <span class="fiche-tag">DFIR</span>
+      </a>
+      <a href="formats.html" class="fiche-card" data-keywords="signatures de fichiers  magic bytes  formats forensiques  file carving par header footer">
+        <div class="fiche-icon">🔮</div>
+        <div class="fiche-name">Formats & Magic Bytes</div>
+        <div class="fiche-desc">Signatures de fichiers · Magic Bytes · Formats forensiques · File Carving par header/footer</div>
+        <span class="fiche-tag">File Carving</span>
+      </a>
+      <a href="mac_times.html" class="fiche-card" data-keywords="macb timestamps  filetime windows  epoch unix chrome  timestomping  shellbags  mftecmd  détection de manipulation temporelle">
+        <div class="fiche-icon">⏱</div>
+        <div class="fiche-name">MAC Times & Artefacts Temporels</div>
+        <div class="fiche-desc">MACB timestamps · FILETIME Windows · Epoch Unix/Chrome · Timestomping · ShellBags · MFTECmd · Détection de manipulation temporelle</div>
+        <span class="fiche-tag">Timestamps</span>
+      </a>
+      <a href="methodologie.html" class="fiche-card" data-keywords="méthodologie forensique  iso 27037  rapport d'expertise  procédure suisse  chaîne de custody">
+        <div class="fiche-icon">📄</div>
+        <div class="fiche-name">Méthodologie & Rapport</div>
+        <div class="fiche-desc">Méthodologie forensique · ISO 27037 · Rapport d'expertise · Procédure suisse · Chaîne de custody</div>
+        <span class="fiche-tag">ISO 27037</span>
+      </a>
+      <a href="premier_intervenant.html" class="fiche-card" data-keywords="sécurisation scène  faraday  saisie  transport  cas particuliers  chaîne de custody">
+        <div class="fiche-icon">🚔</div>
+        <div class="fiche-name">Premier Intervenant Numérique</div>
+        <div class="fiche-desc">Sécurisation scène · Faraday · Saisie · Transport · Cas particuliers · Chaîne de custody</div>
+        <span class="fiche-tag">Guide terrain</span>
+      </a>
+      <a href="rapport_forensique.html" class="fiche-card" data-keywords="rédaction du rapport forensique  recevabilité judiciaire  art. 182–184 cpp  5 questions magistrat">
+        <div class="fiche-icon">📄</div>
+        <div class="fiche-name">Rapport Forensique</div>
+        <div class="fiche-desc">Rédaction du rapport forensique · Recevabilité judiciaire · Art. 182–184 CPP · 5 questions magistrat</div>
+        <span class="fiche-tag">Structure rapport</span>
+      </a>
+      <a href="timeline.html" class="fiche-card" data-keywords="timeline forensique  reconstruction chronologique  log2timeline  plaso  timesketch  supertimeline">
+        <div class="fiche-icon">⏱</div>
+        <div class="fiche-name">Timeline Forensique</div>
+        <div class="fiche-desc">Timeline forensique · Reconstruction chronologique · log2timeline · Plaso · Timesketch · Supertimeline</div>
+        <span class="fiche-tag">log2timeline</span>
+      </a>
+    </div>
+    <div class="cat-nav" data-cat="acquisitionméthodes"></div>
+  </div>
+
+  <!-- ── 🪟 Artefacts Windows ── -->
+  <div class="fiche-category" id="cat-artefactswindows" style="margin-bottom:2rem">
+    <div class="fiche-cat-title" style="font-family:var(--sans);font-size:.72rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--blue);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem">
+      🪟 Artefacts Windows <span style="flex:1;height:1px;background:var(--border);opacity:.3"></span>
+      <span class="cat-count" style="font-size:.6rem;color:var(--dim);font-weight:400">6 fiches</span>
+    </div>
+    <div class="fiche-grid">
+      <a href="logs_windows.html" class="fiche-card" data-keywords="event ids forensiques windows  security   system   application  evtx  chainsaw  hayabusa">
+        <div class="fiche-icon">📋</div>
+        <div class="fiche-name">Logs Windows (Event IDs)</div>
+        <div class="fiche-desc">Event IDs forensiques Windows · Security / System / Application · EVTX · Chainsaw · Hayabusa</div>
+        <span class="fiche-tag">Event Logs</span>
+      </a>
+      <a href="registre_windows.html" class="fiche-card" data-keywords="registre windows forensique  sam  system  software  ntuser.dat  persistance  regripper">
+        <div class="fiche-icon">🗝</div>
+        <div class="fiche-name">Registre Windows</div>
+        <div class="fiche-desc">Registre Windows forensique · SAM · SYSTEM · SOFTWARE · NTUSER.DAT · Persistance · RegRipper</div>
+        <span class="fiche-tag">Ruches Windows</span>
+      </a>
+      <a href="shellbags.html" class="fiche-card" data-keywords="bagmru  usrclass.dat  navigation gui  preuve usb  dossiers supprimés">
+        <div class="fiche-icon">📁</div>
+        <div class="fiche-name">ShellBags</div>
+        <div class="fiche-desc">BagMRU · USRCLASS.DAT · Navigation GUI · Preuve USB · Dossiers supprimés</div>
+        <span class="fiche-tag">Registre Windows</span>
+      </a>
+      <a href="volatilite.html" class="fiche-card" data-keywords="volatility 3  analyse dump ram  extraction artefacts volatils  forensique mémoire windows linux">
+        <div class="fiche-icon">🧠</div>
+        <div class="fiche-name">Volatility & RAM</div>
+        <div class="fiche-desc">Volatility 3 · Analyse dump RAM · Extraction artefacts volatils · Forensique mémoire Windows/Linux</div>
+        <span class="fiche-tag">Mémoire vive</span>
+      </a>
+      <a href="windows.html" class="fiche-card" data-keywords="">
+        <div class="fiche-icon">📄</div>
+        <div class="fiche-name">Analyse Windows</div>
+        <div class="fiche-desc"></div>
+        <span class="fiche-tag">DFIR</span>
+      </a>
+      <a href="windows_forensique.html" class="fiche-card" data-keywords="méthodologie  artefacts  registre  sid  corrélation  chronologie">
+        <div class="fiche-icon">🪟</div>
+        <div class="fiche-name">Windows Forensique</div>
+        <div class="fiche-desc">Méthodologie · Artefacts · Registre · SID · Corrélation · Chronologie</div>
+        <span class="fiche-tag">Méthodologie</span>
+      </a>
+    </div>
+    <div class="cat-nav" data-cat="artefactswindows"></div>
+  </div>
+
+  <!-- ── 🔐 Cryptologie & Sécurité ── -->
+  <div class="fiche-category" id="cat-cryptologiesécurité" style="margin-bottom:2rem">
+    <div class="fiche-cat-title" style="font-family:var(--sans);font-size:.72rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--red);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem">
+      🔐 Cryptologie & Sécurité <span style="flex:1;height:1px;background:var(--border);opacity:.3"></span>
+      <span class="cat-count" style="font-size:.6rem;color:var(--dim);font-weight:400">5 fiches</span>
+    </div>
+    <div class="fiche-grid">
+      <a href="anti_forensique.html" class="fiche-card" data-keywords="dissimulation de preuves  timestomping  wiping  stéganographie  contre-mesures forensiques">
+        <div class="fiche-icon">🕵</div>
+        <div class="fiche-name">Anti-Forensique</div>
+        <div class="fiche-desc">Dissimulation de preuves · Timestomping · Wiping · Stéganographie · Contre-mesures forensiques</div>
+        <span class="fiche-tag">Techniques d'évasion</span>
+      </a>
+      <a href="cassage_mdp.html" class="fiche-card" data-keywords="cassage légal de mots de passe  forensique suisse  cadre cpp  passware  hashcat">
+        <div class="fiche-icon">🔓</div>
+        <div class="fiche-name">Cassage de Mots de Passe</div>
+        <div class="fiche-desc">Cassage légal de mots de passe · Forensique suisse · Cadre CPP · Passware · Hashcat</div>
+        <span class="fiche-tag">Passware</span>
+      </a>
+      <a href="crypto.html" class="fiche-card" data-keywords="">
+        <div class="fiche-icon">📄</div>
+        <div class="fiche-name">Cryptologie</div>
+        <div class="fiche-desc"></div>
+        <span class="fiche-tag"></span>
+      </a>
+      <a href="hash.html" class="fiche-card" data-keywords="md5  sha-1  sha-256  ssdeep  chaîne de possession numérique  intégrité des preuves">
+        <div class="fiche-icon">#</div>
+        <div class="fiche-name">Hachage & Intégrité</div>
+        <div class="fiche-desc">MD5 · SHA-1 · SHA-256 · SSDEEP · Chaîne de possession numérique · Intégrité des preuves</div>
+        <span class="fiche-tag">Intégrité</span>
+      </a>
+      <a href="pki_certificats.html" class="fiche-card" data-keywords="infrastructure à clé publique  chaîne de certification  tls 1.3  s mime  ocsp  crl  certificate pinning  veracrypt forensique  entropie shannon">
+        <div class="fiche-icon">🔏</div>
+        <div class="fiche-name">PKI & Certificats</div>
+        <div class="fiche-desc">Infrastructure à clé publique · Chaîne de certification · TLS 1.3 · S/MIME · OCSP · CRL · Certificate Pinning · VeraCrypt forensique · Entropie Shannon</div>
+        <span class="fiche-tag">PKI · X.509</span>
+      </a>
+    </div>
+    <div class="cat-nav" data-cat="cryptologiesécurité"></div>
+  </div>
+
+  <!-- ── 📡 Réseaux & Infrastructure ── -->
+  <div class="fiche-category" id="cat-réseauxinfrastructure" style="margin-bottom:2rem">
+    <div class="fiche-cat-title" style="font-family:var(--sans);font-size:.72rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--green);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem">
+      📡 Réseaux & Infrastructure <span style="flex:1;height:1px;background:var(--border);opacity:.3"></span>
+      <span class="cat-count" style="font-size:.6rem;color:var(--dim);font-weight:400">2 fiches</span>
+    </div>
+    <div class="fiche-grid">
+      <a href="reseau.html" class="fiche-card" data-keywords="">
+        <div class="fiche-icon">📄</div>
+        <div class="fiche-name">Réseaux & Infrastructure</div>
+        <div class="fiche-desc"></div>
+        <span class="fiche-tag"></span>
+      </a>
+      <a href="wireshark_pcap.html" class="fiche-card" data-keywords="wireshark et pcap  filtres bpf  tcpdump  tshark  beaconing  extraction de fichiers réseau">
+        <div class="fiche-icon">📡</div>
+        <div class="fiche-name">Wireshark & PCAP</div>
+        <div class="fiche-desc">Wireshark et PCAP · Filtres BPF · tcpdump · tshark · Beaconing · Extraction de fichiers réseau</div>
+        <span class="fiche-tag">Wireshark</span>
+      </a>
+    </div>
+    <div class="cat-nav" data-cat="réseauxinfrastructure"></div>
+  </div>
+
+  <!-- ── 📱 Systèmes Spéciaux ── -->
+  <div class="fiche-category" id="cat-systèmesspéciaux" style="margin-bottom:2rem">
+    <div class="fiche-cat-title" style="font-family:var(--sans);font-size:.72rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--orange);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem">
+      📱 Systèmes Spéciaux <span style="flex:1;height:1px;background:var(--border);opacity:.3"></span>
+      <span class="cat-count" style="font-size:.6rem;color:var(--dim);font-weight:400">5 fiches</span>
+    </div>
+    <div class="fiche-grid">
+      <a href="cloud_forensique.html" class="fiche-card" data-keywords="préservation de preuves cloud  mlat  logs cloud  microsoft 365  google workspace  aws  azure">
+        <div class="fiche-icon">☁️</div>
+        <div class="fiche-name">Cloud Forensics</div>
+        <div class="fiche-desc">Préservation de preuves cloud · MLAT · Logs cloud · Microsoft 365 · Google Workspace · AWS · Azure</div>
+        <span class="fiche-tag">Microsoft 365</span>
+      </a>
+      <a href="disques.html" class="fiche-card" data-keywords="technologie des disques et médias  endianness  secteurs  partitions  prérequis forensique">
+        <div class="fiche-icon">📄</div>
+        <div class="fiche-name">Technologie Disques</div>
+        <div class="fiche-desc">Technologie des disques et médias · Endianness · Secteurs · Partitions · Prérequis forensique</div>
+        <span class="fiche-tag">DFIR</span>
+      </a>
+      <a href="encodage.html" class="fiche-card" data-keywords="encodage bas niveau  binaire  hexadécimal  ascii  utf-8  big little endian  prérequis tp">
+        <div class="fiche-icon">📄</div>
+        <div class="fiche-name">Encodage Bas Niveau</div>
+        <div class="fiche-desc">Encodage bas niveau · Binaire · Hexadécimal · ASCII · UTF-8 · Big/Little Endian · Prérequis TP</div>
+        <span class="fiche-tag">Bas niveau</span>
+      </a>
+      <a href="macos-linux.html" class="fiche-card" data-keywords="forensique macos et linux  quarantine  fsevents  launchdaemons  crontabs  authorized_keys">
+        <div class="fiche-icon">POSIX</div>
+        <div class="fiche-name">macOS & Linux</div>
+        <div class="fiche-desc">Forensique macOS et Linux · Quarantine · FSEvents · LaunchDaemons · Crontabs · authorized_keys</div>
+        <span class="fiche-tag">Forensique</span>
+      </a>
+      <a href="mobile.html" class="fiche-card" data-keywords="niveaux d'extraction mobile  chiffrement ios android  ufed  adb  artefacts  forensique légale">
+        <div class="fiche-icon">📱</div>
+        <div class="fiche-name">Mobile Forensics</div>
+        <div class="fiche-desc">Niveaux d'extraction mobile · Chiffrement iOS/Android · UFED · ADB · Artefacts · Forensique légale</div>
+        <span class="fiche-tag">iOS · Android</span>
+      </a>
+    </div>
+    <div class="cat-nav" data-cat="systèmesspéciaux"></div>
+  </div>
+
+  <!-- ── ⚖️ Droit Suisse ── -->
+  <div class="fiche-category" id="cat-droitsuisse" style="margin-bottom:2rem">
+    <div class="fiche-cat-title" style="font-family:var(--sans);font-size:.72rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--purple);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem">
+      ⚖️ Droit Suisse <span style="flex:1;height:1px;background:var(--border);opacity:.3"></span>
+      <span class="cat-count" style="font-size:.6rem;color:var(--dim);font-weight:400">3 fiches</span>
+    </div>
+    <div class="fiche-grid">
+      <a href="droit.html" class="fiche-card" data-keywords="">
+        <div class="fiche-icon">DROIT</div>
+        <div class="fiche-name">Droit pénal suisse</div>
+        <div class="fiche-desc"></div>
+        <span class="fiche-tag">CPP</span>
+      </a>
+      <a href="preuve.html" class="fiche-card" data-keywords="preuve numérique  fondements juridiques  recevabilité  chaîne de custody  dfir  droit suisse">
+        <div class="fiche-icon">📄</div>
+        <div class="fiche-name">Preuve Numérique</div>
+        <div class="fiche-desc">Preuve numérique · Fondements juridiques · Recevabilité · Chaîne de custody · DFIR · Droit suisse</div>
+        <span class="fiche-tag">DFIR</span>
+      </a>
+      <a href="suisse.html" class="fiche-card" data-keywords="droit suisse dfir  cpp  cp  lpd révisée  spécificités helvétiques  forensique légale suisse">
+        <div class="fiche-icon">📄</div>
+        <div class="fiche-name">Droit Suisse</div>
+        <div class="fiche-desc">Droit suisse DFIR · CPP · CP · LPD révisée · Spécificités helvétiques · Forensique légale suisse</div>
+        <span class="fiche-tag">CPP</span>
+      </a>
+    </div>
+    <div class="cat-nav" data-cat="droitsuisse"></div>
+  </div>
+
+  <!-- ── 🛠 Outils DFIR ── -->
+  <div class="fiche-category" id="cat-outilsDFIR" style="margin-bottom:2rem">
+    <div class="fiche-cat-title" style="font-family:var(--sans);font-size:.72rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem">
+      🛠 Outils DFIR <span style="flex:1;height:1px;background:var(--border);opacity:.3"></span>
+      <span class="cat-count" style="font-size:.6rem;color:var(--dim);font-weight:400">15 fiches</span>
+    </div>
+    <div class="fiche-grid">
+      <a href="active_directory.html" class="fiche-card" data-keywords="">
+        <div class="fiche-icon">🏢 Kerberos · Pass-the-Hash · Golden Ticket</div>
+        <div class="fiche-name">Active Directory Forensique</div>
+        <div class="fiche-desc"></div>
+        <span class="fiche-tag"></span>
+      </a>
+      <a href="autopsy.html" class="fiche-card" data-keywords="plateforme forensique open source  analyse multi-fs  modules d'ingest  timeline  the sleuth kit">
+        <div class="fiche-icon">🔬</div>
+        <div class="fiche-name">Autopsy</div>
+        <div class="fiche-desc">Plateforme forensique open source · Analyse multi-FS · Modules d'ingest · Timeline · The Sleuth Kit</div>
+        <span class="fiche-tag">Autopsy</span>
+      </a>
+      <a href="browser_forensique.html" class="fiche-card" data-keywords="historique  cookies  téléchargements  mots de passe  cache  sessions chrome   firefox   edge">
+        <div class="fiche-icon">🌐</div>
+        <div class="fiche-name">Browser Forensics</div>
+        <div class="fiche-desc">Historique · Cookies · Téléchargements · Mots de passe · Cache · Sessions Chrome / Firefox / Edge</div>
+        <span class="fiche-tag">Chrome</span>
+      </a>
+      <a href="eimp_entraide.html" class="fiche-card" data-keywords="">
+        <div class="fiche-icon">🌍 MLAT · Quick Freeze · Convention Budapest</div>
+        <div class="fiche-name">EIMP & Entraide Internationale</div>
+        <div class="fiche-desc"></div>
+        <span class="fiche-tag"></span>
+      </a>
+      <a href="email_forensique.html" class="fiche-card" data-keywords="analyse des en-têtes smtp  spf  dkim  dmarc  attribution  phishing  chaîne de relais">
+        <div class="fiche-icon">✉️</div>
+        <div class="fiche-name">Email Forensics</div>
+        <div class="fiche-desc">Analyse des en-têtes SMTP · SPF · DKIM · DMARC · Attribution · Phishing · Chaîne de relais</div>
+        <span class="fiche-tag">En-têtes SMTP</span>
+      </a>
+      <a href="fat16.html" class="fiche-card" data-keywords="">
+        <div class="fiche-icon">💾 Systèmes de fichiers FAT</div>
+        <div class="fiche-name">FAT12 / FAT16 / FAT32</div>
+        <div class="fiche-desc"></div>
+        <span class="fiche-tag"></span>
+      </a>
+      <a href="incident_response.html" class="fiche-card" data-keywords="6 phases ir  triage  confinement  éradication  notification légale  nist sp 800-61  lpd">
+        <div class="fiche-icon">🚨</div>
+        <div class="fiche-name">Incident Response</div>
+        <div class="fiche-desc">6 phases IR · Triage · Confinement · Éradication · Notification légale · NIST SP 800-61 · LPD</div>
+        <span class="fiche-tag">IR Playbook</span>
+      </a>
+      <a href="malware_forensique.html" class="fiche-card" data-keywords="indicateurs de compromission ioc  yara  analyse pe  sandbox  forensique malware  mitre att&ck">
+        <div class="fiche-icon">🦠</div>
+        <div class="fiche-name">Malware Forensics</div>
+        <div class="fiche-desc">Indicateurs de compromission IOC · YARA · Analyse PE · Sandbox · Forensique malware · MITRE ATT&CK</div>
+        <span class="fiche-tag">IOC</span>
+      </a>
+      <a href="osint.html" class="fiche-card" data-keywords="">
+        <div class="fiche-icon">OSINT</div>
+        <div class="fiche-name">OSINT & Métadonnées</div>
+        <div class="fiche-desc"></div>
+        <span class="fiche-tag">Forensique</span>
+      </a>
+      <a href="outils.html" class="fiche-card" data-keywords="">
+        <div class="fiche-icon">📄</div>
+        <div class="fiche-name">X-Ways & WinHex</div>
+        <div class="fiche-desc"></div>
+        <span class="fiche-tag">Standard judiciaire CH</span>
+      </a>
+      <a href="ram_forensique.html" class="fiche-card" data-keywords="">
+        <div class="fiche-icon">🧠 Mémoire Volatile</div>
+        <div class="fiche-name">RAM Forensique</div>
+        <div class="fiche-desc"></div>
+        <span class="fiche-tag"></span>
+      </a>
+      <a href="ransomware_forensique.html" class="fiche-card" data-keywords="">
+        <div class="fiche-icon">🔒 Kill Chain · IOCs · LPD 2023</div>
+        <div class="fiche-name">Ransomware Forensique</div>
+        <div class="fiche-desc"></div>
+        <span class="fiche-tag"></span>
+      </a>
+      <a href="sqlite_forensique.html" class="fiche-card" data-keywords="">
+        <div class="fiche-icon">🗄️ Bases de données embarquées</div>
+        <div class="fiche-name">SQLite Forensique</div>
+        <div class="fiche-desc"></div>
+        <span class="fiche-tag"></span>
+      </a>
+      <a href="tor_darkweb.html" class="fiche-card" data-keywords="tor browser forensique  onion services  attribution  lscpt rs 780.1  dark web  droit suisse">
+        <div class="fiche-icon">🧅</div>
+        <div class="fiche-name">Tor & Dark Web</div>
+        <div class="fiche-desc">Tor Browser forensique · Onion Services · Attribution · LSCPT RS 780.1 · Dark Web · Droit suisse</div>
+        <span class="fiche-tag">Tor Browser</span>
+      </a>
+      <a href="zimmerman.html" class="fiche-card" data-keywords="pecmd  lecmd  mftecmd  evtxecmd  shellbags expl  amcache">
+        <div class="fiche-icon">🗝</div>
+        <div class="fiche-name">Suite Zimmerman</div>
+        <div class="fiche-desc">PECmd · LECmd · MFTECmd · EvtxECmd · ShellBags Expl · Amcache</div>
+        <span class="fiche-tag">Gratuit · Open Source</span>
+      </a>
+    </div>
+    <div class="cat-nav" data-cat="outilsDFIR"></div>
+  </div>
+
+  <!-- ── CTA ── -->
   <div class="fiche-cta-section">
     <div class="fiche-cta-text">Fiches consultées ? Passez à l'entraînement !</div>
     <div class="fiche-cta-buttons">
-      <a class="fiche-cta-btn fiche-cta-red" href="../quiz.html">💊 Quiz</a>
-      <a class="fiche-cta-btn fiche-cta-orange" href="../tp.html">🧪 Travaux Pratiques</a>
-      <a class="fiche-cta-btn fiche-cta-dim" href="../scene.html">🎭 Scénarios DFIR</a>
+      <a href="../quiz.html" class="fiche-cta-btn fiche-cta-red">💊 Quiz — 1439 questions</a>
+      <a href="../tp.html" class="fiche-cta-btn fiche-cta-orange">🧪 Travaux Pratiques</a>
+      <a href="../scene.html" class="fiche-cta-btn fiche-cta-orange" style="background:rgba(188,140,255,.1);color:var(--purple);border-color:rgba(188,140,255,.3)">🎭 Scénarios DFIR</a>
     </div>
   </div>
-
-  <div class="footer">
-    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
-    <span id="footer-version">Généré depuis manifest.json</span>
-  </div>
-
 </div>
 
-<button class="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Retour en haut">↑</button>
-
 <script>
-/* ═══════════════════════════════════════════════════════════════
-   CAS-IN — Générateur d'index dynamique
-   Charge manifest.json, regroupe par catégorie, rend les cartes.
-   Ajoute une nouvelle fiche = ajouter une ligne au manifest.
-   ═══════════════════════════════════════════════════════════════ */
-
-const STATE = {
-  manifest: null,
-  fichesByCategory: new Map(),
-  searchTerm: ''
-};
-
-async function loadManifest() {
-  try {
-    const res = await fetch('manifest.json', { cache: 'no-cache' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    STATE.manifest = await res.json();
-    buildIndex();
-  } catch (err) {
-    document.getElementById('categories-container').innerHTML =
-      `<div class="alert">❌ Impossible de charger manifest.json — ${err.message}</div>`;
-  }
-}
-
-function buildIndex() {
-  const { categories, fiches } = STATE.manifest;
-
-  // Regrouper fiches par catégorie (en préservant l'ordre du manifest)
-  STATE.fichesByCategory.clear();
-  for (const cat of categories) STATE.fichesByCategory.set(cat.id, []);
-  for (const fiche of fiches) {
-    if (STATE.fichesByCategory.has(fiche.category)) {
-      STATE.fichesByCategory.get(fiche.category).push(fiche);
-    } else {
-      // Catégorie inconnue — créer un bucket orphelin
-      if (!STATE.fichesByCategory.has('_unknown')) {
-        STATE.fichesByCategory.set('_unknown', []);
-      }
-      STATE.fichesByCategory.get('_unknown').push(fiche);
-    }
-  }
-
-  renderStats();
-  renderHeader();
-  renderCategories();
-  setupSearch();
-}
-
-function renderStats() {
-  const { fiches, categories } = STATE.manifest;
-  const newCount = fiches.filter(f => f.isNew).length;
-  const enrichedCount = fiches.filter(f => f.isEnriched).length;
-
-  const el = document.getElementById('stats-bar');
-  el.innerHTML = `
-    <div class="stat">
-      <span class="stat-num">${fiches.length}</span>
-      <span class="stat-label">fiches</span>
-    </div>
-    <div class="stat">
-      <span class="stat-num">${categories.length}</span>
-      <span class="stat-label">catégories</span>
-    </div>
-    ${newCount > 0 ? `
-      <div class="stat">
-        <span class="stat-num green">${newCount}</span>
-        <span class="stat-label">nouvelles</span>
-      </div>` : ''}
-    ${enrichedCount > 0 ? `
-      <div class="stat">
-        <span class="stat-num gold">${enrichedCount}</span>
-        <span class="stat-label">enrichies</span>
-      </div>` : ''}
-  `;
-}
-
-function renderHeader() {
-  const { fiches } = STATE.manifest;
-  document.getElementById('header-subtitle').innerHTML =
-    `<span class="muted">${fiches.length} fiches de référence · Investigation numérique · Droit suisse · CAS-IN 2025–26</span>`;
-
-  if (STATE.manifest.updatedAt) {
-    document.getElementById('footer-version').textContent =
-      `Mis à jour le ${STATE.manifest.updatedAt}`;
-  }
-}
-
-function renderCategories() {
-  const container = document.getElementById('categories-container');
-  const { categories } = STATE.manifest;
-  const term = STATE.searchTerm.toLowerCase().trim();
-
-  let html = '';
-  let anyVisible = false;
-
-  for (const cat of categories) {
-    const catFiches = STATE.fichesByCategory.get(cat.id) || [];
-
-    // Filtrer selon la recherche
-    const visible = term
-      ? catFiches.filter(f =>
-          f.title.toLowerCase().includes(term) ||
-          f.desc.toLowerCase().includes(term) ||
-          (f.meta || '').toLowerCase().includes(term) ||
-          f.file.toLowerCase().includes(term)
-        )
-      : catFiches;
-
-    if (visible.length === 0) continue;
-    anyVisible = true;
-
-    html += `
-      <div class="cat-header" id="cat-${cat.id}">
-        <span class="cat-header-icon">${cat.icon}</span>
-        <span class="cat-header-title">${cat.title}</span>
-        <span class="cat-header-count">${visible.length} fiche${visible.length > 1 ? 's' : ''}</span>
-      </div>
-      <div class="fiche-grid">
-        ${visible.map(renderFicheCard).join('')}
-      </div>
-    `;
-  }
-
-  // Catégorie orpheline (fiches sans catégorie reconnue)
-  const orphans = STATE.fichesByCategory.get('_unknown');
-  if (orphans && orphans.length > 0) {
-    const visible = term
-      ? orphans.filter(f =>
-          f.title.toLowerCase().includes(term) ||
-          f.desc.toLowerCase().includes(term))
-      : orphans;
-    if (visible.length > 0) {
-      anyVisible = true;
-      html += `
-        <div class="cat-header">
-          <span class="cat-header-icon">❓</span>
-          <span class="cat-header-title">Non catégorisées</span>
-          <span class="cat-header-count">${visible.length}</span>
-        </div>
-        <div class="fiche-grid">
-          ${visible.map(renderFicheCard).join('')}
-        </div>
-      `;
-    }
-  }
-
-  if (!anyVisible) {
-    html = `<div class="empty-state">Aucune fiche ne correspond à « ${escapeHtml(term)} »</div>`;
-  }
-
-  container.innerHTML = html;
-}
-
-function renderFicheCard(fiche) {
-  const newBadge  = fiche.isNew       ? '<span class="fiche-badge-new">nouveau</span>' : '';
-  const enrBadge  = fiche.isEnriched  ? '<span class="fiche-badge-new" style="background:rgba(240,192,64,.15);border-color:rgba(240,192,64,.4);color:var(--gold)">enrichi</span>' : '';
-  return `
-    <a class="fiche-card" href="${escapeAttr(fiche.file)}">
-      <div class="fiche-icon">${fiche.icon || '📄'}</div>
-      <div class="fiche-name">${escapeHtml(fiche.title)}${newBadge}${enrBadge}</div>
-      <div class="fiche-desc">${escapeHtml(fiche.desc)}</div>
-      ${fiche.meta ? `<span class="fiche-tag">${escapeHtml(fiche.meta)}</span>` : ''}
-    </a>
-  `;
-}
-
-function setupSearch() {
-  const input = document.getElementById('search');
-  let timer = null;
-  input.addEventListener('input', () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      STATE.searchTerm = input.value;
-      renderCategories();
-    }, 120);
+function filterFiches() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  document.querySelectorAll('.fiche-card').forEach(card => {
+    const text = card.textContent.toLowerCase();
+    const kw = (card.dataset.keywords || '').toLowerCase();
+    card.classList.toggle('hidden', q && !text.includes(q) && !kw.includes(q));
+  });
+  document.querySelectorAll('.fiche-category').forEach(cat => {
+    const visible = cat.querySelectorAll('.fiche-card:not(.hidden)').length;
+    cat.style.display = visible ? '' : 'none';
   });
 }
 
-function escapeHtml(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-function escapeAttr(s) {
-  return String(s ?? '').replace(/"/g, '&quot;');
-}
+(function updateCounts(){
+  const total = document.querySelectorAll('.fiche-card').length;
+  document.getElementById('total-count').textContent = total;
+  document.getElementById('stat-total').textContent = total;
+  document.querySelectorAll('.fiche-category').forEach(cat => {
+    const n = cat.querySelectorAll('.fiche-card').length;
+    const el = cat.querySelector('.cat-count');
+    if (el) el.textContent = n + ' fiche' + (n > 1 ? 's' : '');
+  });
+})();
 
-// Bouton retour en haut
-const bt = document.querySelector('.back-top');
-window.addEventListener('scroll', () => {
-  if (window.scrollY > 400) bt.classList.add('visible');
-  else bt.classList.remove('visible');
-});
+(function buildCatNav(){
+  const cats = Array.from(document.querySelectorAll('.fiche-category'));
+  cats.forEach((cat, idx) => {
+    const navEl = cat.querySelector('.cat-nav');
+    if (!navEl) return;
+    const prevCat = cats[idx - 1];
+    const nextCat = cats[idx + 1];
+    function catLabel(c) {
+      const title = c.querySelector('.fiche-cat-title');
+      return title ? title.textContent.trim().split('\n')[0].trim() : '';
+    }
+    const prevBtn = prevCat
+      ? `<a class="cat-nav-btn" href="#${prevCat.id}">← ${catLabel(prevCat)}</a>`
+      : `<span class="cat-nav-btn disabled">← Début</span>`;
+    const nextBtn = nextCat
+      ? `<a class="cat-nav-btn" href="#${nextCat.id}">${catLabel(nextCat)} →</a>`
+      : `<span class="cat-nav-btn disabled">Fin →</span>`;
+    navEl.innerHTML = prevBtn + nextBtn;
+  });
+})();
 
-// Lancement
-loadManifest();
+(function(){
+  var READ_KEY = 'cas_read_fiches';
+  var read = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
+  function markRead(href) {
+    var fname = href.split('/').pop();
+    if (!read.includes(fname)) { read.push(fname); localStorage.setItem(READ_KEY, JSON.stringify(read)); }
+  }
+  function applyDots() {
+    document.querySelectorAll('.fiche-card').forEach(function(card) {
+      var href = card.getAttribute('href') || '';
+      var fname = href.split('/').pop();
+      if (read.includes(fname)) {
+        var dot = card.querySelector('.read-dot');
+        if (!dot) {
+          dot = document.createElement('span');
+          dot.className = 'read-dot';
+          dot.title = 'Lu';
+          card.appendChild(dot);
+        }
+      }
+    });
+    var total = document.querySelectorAll('.fiche-card').length;
+    var counter = document.getElementById('read-counter');
+    if (counter) counter.textContent = read.length + ' / ' + total + ' lues';
+  }
+  document.addEventListener('click', function(e) {
+    var card = e.target.closest('.fiche-card');
+    if (card) markRead(card.getAttribute('href') || '');
+  });
+  document.addEventListener('DOMContentLoaded', applyDots);
+  setTimeout(applyDots, 100);
+})();
 </script>
 
 </body>
