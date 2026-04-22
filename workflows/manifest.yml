@@ -1,0 +1,43 @@
+name: Rebuild fiches manifest
+
+# Se déclenche à chaque push qui touche aux fiches
+on:
+  push:
+    paths:
+      - 'fiches/**.html'
+      - 'scripts/build_manifest.py'
+      - '.github/workflows/manifest.yml'
+  workflow_dispatch:  # exécution manuelle depuis l'onglet Actions
+
+permissions:
+  contents: write  # pour pouvoir commit le manifest régénéré
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Fetch complet pour pouvoir commit
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Rebuild manifest.json
+        run: python scripts/build_manifest.py --fiches-dir fiches
+
+      - name: Commit & push if changed
+        run: |
+          if [ -n "$(git status --porcelain fiches/manifest.json)" ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add fiches/manifest.json
+            git commit -m "chore(manifest): auto-rebuild fiches/manifest.json [skip ci]"
+            git push
+          else
+            echo "✓ manifest.json est déjà à jour."
+          fi
