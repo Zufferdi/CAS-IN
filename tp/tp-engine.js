@@ -106,99 +106,280 @@ const GENERATORS = {
 };
 
 // ── 1. ENDIANNESS ──────────────────────────────────
+// Sous-types : 0=LE→décimal, 1=BE→décimal, 2=détecter endian, 3=encodage inverse (LE), 4=encodage inverse (BE)
 function genEndian() {
-  const bytes = 4;
-  const val = rand(1, 0xFFFFFFF);
-  const hexBytes = [];
-  let v = val;
-  for (let i = 0; i < bytes; i++) { hexBytes.push(v & 0xFF); v >>= 8; }
-  // hexBytes[0] = LSB
+  const subtype = rand(0, 4);
 
-  const difficulty = val > 0xFFFF ? 'hard' : val > 0xFF ? 'medium' : 'easy';
-  const scenarios = [
-    `Dans un boot sector NTFS, l'offset 0x28 contient <strong>${hexBytes.map(b=>pad(b.toString(16).toUpperCase(),2)).join(' ')}</strong> — combien de secteurs contient le volume ?`,
-    `Une entrée MFT NTFS indique un cluster LCN à l'offset 0x30 : <strong>${hexBytes.map(b=>pad(b.toString(16).toUpperCase(),2)).join(' ')}</strong>. Quelle est la valeur de ce LCN ?`,
-    `Un champ de 4 octets dans la FAT32 (BytesPerSector × SectorsPerCluster) vaut <strong>${hexBytes.map(b=>pad(b.toString(16).toUpperCase(),2)).join(' ')}</strong>. Convertis en décimal.`,
+  // Valeurs forensiques raisonnables : max 4 octets, chiffres pas trop grands
+  // On choisit dans des plages réalistes pour FAT/NTFS
+  const FORENSIC_VALS_4 = [
+    { val: 0x00000002, label: 'nombre de FATs = 2' },
+    { val: 0x00000200, label: 'taille secteur = 512 o' },
+    { val: 0x00000008, label: 'SectorsPerCluster = 8' },
+    { val: 0x0000003E, label: 'secteurs réservés = 62' },
+    { val: 0x00000004, label: 'cluster racine = 4' },
+    { val: 0x00000003, label: 'cluster racine = 3' },
+    { val: 0x00001000, label: 'offset = 4 096 o' },
+    { val: 0x00004000, label: 'offset = 16 384 o' },
+    { val: 0x00010000, label: 'taille = 65 536 o' },
+    { val: 0x00000100, label: 'valeur = 256' },
+    { val: 0x00000010, label: 'valeur = 16' },
+    { val: 0x000000FF, label: 'valeur = 255' },
   ];
+  const FORENSIC_VALS_2 = [
+    { val: 0x0200, label: 'BPS = 512' },
+    { val: 0x0020, label: 'RootEntries lo' },
+    { val: 0x003E, label: 'reserved = 62' },
+    { val: 0x0008, label: 'SPC = 8' },
+    { val: 0x00FF, label: 'valeur = 255' },
+    { val: 0x0100, label: 'valeur = 256' },
+    { val: 0x1234, label: 'valeur = 4 660' },
+    { val: 0x00A0, label: 'valeur = 160' },
+  ];
+
+  // Contextes forensiques selon le type de champ
+  const CONTEXTS_4 = [
+    { field: 'Total Sectors',     fs: 'FAT32 BPB offset 0x20', endian: 'LE' },
+    { field: 'FAT Size (sectors)',fs: 'FAT32 BPB offset 0x24', endian: 'LE' },
+    { field: 'Root Cluster',      fs: 'FAT32 BPB offset 0x2C', endian: 'LE' },
+    { field: 'File Size',         fs: 'Directory Entry offset 0x1C', endian: 'LE' },
+    { field: 'Partition Start LBA',fs: 'MBR Partition Entry offset 0x08', endian: 'LE' },
+    { field: 'Partition Size',    fs: 'MBR Partition Entry offset 0x0C', endian: 'LE' },
+    { field: 'Block Count',       fs: 'HFS+ Volume Header offset 0x04', endian: 'BE' },
+    { field: 'Block Size',        fs: 'HFS+ Volume Header offset 0x14', endian: 'BE' },
+    { field: 'Total Blocks',      fs: 'EXT4 Superblock offset 0x04', endian: 'LE' },
+  ];
+  const CONTEXTS_2 = [
+    { field: 'Bytes Per Sector',  fs: 'BPB FAT offset 0x0B', endian: 'LE' },
+    { field: 'Reserved Sectors',  fs: 'BPB FAT offset 0x0E', endian: 'LE' },
+    { field: 'Last Modified Time',fs: 'Directory Entry offset 0x16', endian: 'LE' },
+    { field: 'Starting Cluster',  fs: 'Directory Entry offset 0x1A', endian: 'LE' },
+    { field: 'Volume Header Sig', fs: 'HFS+ Volume Header offset 0x00', endian: 'BE' },
+    { field: 'EXT4 Magic',        fs: 'EXT4 Superblock offset 0x38', endian: 'LE' },
+  ];
+
+  // Utilitaires internes
+  function toLeBytes(val, n) {
+    const b = [];
+    let v = val;
+    for (let i = 0; i < n; i++) { b.push(v & 0xFF); v >>>= 8; }
+    return b; // b[0] = LSB
+  }
+  function toBeBytes(val, n) {
+    return toLeBytes(val, n).reverse(); // b[0] = MSB
+  }
+  function hexStr(bytes) {
+    return bytes.map(b => pad(b.toString(16).toUpperCase(), 2)).join(' ');
+  }
+  function shuffle(arr) {
+    return [...arr].sort(() => Math.random() - .5);
+  }
+
+  // ─── Sous-type 0 : Little Endian → Décimal ───
+  if (subtype <= 1) {
+    const isLE = (subtype === 0);
+    const nBytes = Math.random() < 0.5 ? 4 : 2;
+    const pool = nBytes === 4 ? FORENSIC_VALS_4 : FORENSIC_VALS_2;
+    const chosen = pool[rand(0, pool.length - 1)];
+    const ctxPool = nBytes === 4 ? CONTEXTS_4 : CONTEXTS_2;
+    // Filtrer par endian correspondant
+    const ctxFiltered = ctxPool.filter(c => c.endian === (isLE ? 'LE' : 'BE'));
+    const ctx = ctxFiltered.length ? ctxFiltered[rand(0, ctxFiltered.length - 1)] : ctxPool[rand(0, ctxPool.length - 1)];
+
+    const val = chosen.val & (nBytes === 4 ? 0xFFFFFFFF : 0xFFFF);
+    const leBytes = toLeBytes(val, nBytes);
+    const beBytes = toBeBytes(val, nBytes);
+    const displayBytes = isLE ? leBytes : beBytes;
+
+    // Étapes
+    const revBytes = isLE ? [...leBytes].reverse() : leBytes;
+    const hexCat = '0x' + revBytes.map(b => pad(b.toString(16).toUpperCase(), 2)).join('');
+
+    // Distracteurs : valeur BE quand on demande LE, et inversement
+    const wrongVal1 = isLE
+      ? (nBytes === 4 ? (leBytes[0]<<24|leBytes[1]<<16|leBytes[2]<<8|leBytes[3])>>>0 : (leBytes[0]<<8|leBytes[1])>>>0)
+      : (nBytes === 4 ? leBytes.reduce((a,b,i)=>a+(b<<(8*i)),0) : leBytes.reduce((a,b,i)=>a+(b<<(8*i)),0));
+    const wrongVal2 = val === 0 ? 1 : Math.max(1, val >> 1);
+    const wrongVal3 = val + (nBytes === 4 ? 256 : 16);
+    const choices = shuffle([...new Set([val, wrongVal1, wrongVal2, wrongVal3])].slice(0,4));
+
+    const endianLabel = isLE ? 'Little Endian' : 'Big Endian';
+    const endianNote = isLE
+      ? 'Les octets sont stockés du moins significatif (LSB) au plus significatif (MSB).'
+      : 'Les octets sont stockés du plus significatif (MSB) au moins significatif (LSB).';
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-1">🔄</div>
+        <div class="ex-title">Conversion ${endianLabel} → Décimal</div>
+        <span class="ex-badge ${isLE ? 'medium' : 'hard'}">${endianLabel}</span>
+      </div>
+      <div class="ex-scenario">
+        Tu analyses le champ <strong>${ctx.field}</strong> (<em>${ctx.fs}</em>).<br>
+        Les ${nBytes} octets suivants sont stockés en <strong>${endianLabel}</strong> dans le dump :<br>
+        <span style="font-size:.7rem;color:var(--dim)">${endianNote}</span>
+      </div>
+      <div class="sec-title">Séquence hexadécimale (${endianLabel})</div>
+      <div class="hex-display" id="hex-display">
+        ${displayBytes.map((b,i)=>`<span class="hex-byte" id="hb${i}" title="Octet à l'adresse +${i}">${pad(b.toString(16).toUpperCase(),2)}</span>`).join('<span class="hex-sep">·</span>')}
+      </div>
+      <div class="sec-title" style="margin-top:.75rem">Étapes de résolution</div>
+      <div class="steps-wrap" id="steps-wrap">
+        ${isLE
+          ? `<div class="step-item pending"><span class="step-num">1</span><div>Inverser les octets (LE→BE) : <span class="step-val" id="step1-val">?</span></div></div>
+             <div class="step-item pending"><span class="step-num">2</span><div>Concaténer : <span class="step-val" id="step2-val">?</span></div></div>
+             <div class="step-item pending"><span class="step-num">3</span><div>Convertir en décimal : <span class="step-val" id="step3-val">?</span></div></div>`
+          : `<div class="step-item pending"><span class="step-num">1</span><div>Lire les octets tels quels (MSB en premier) : <span class="step-val" id="step1-val">?</span></div></div>
+             <div class="step-item pending"><span class="step-num">2</span><div>Concaténer : <span class="step-val" id="step2-val">?</span></div></div>
+             <div class="step-item pending"><span class="step-num">3</span><div>Convertir en décimal : <span class="step-val" id="step3-val">?</span></div></div>`}
+      </div>
+      <div class="sec-title" style="margin-top:.75rem">Quelle est la valeur décimale ?</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="endian-choices">
+        ${choices.map(c=>`<button class="tp-choice" style="flex:1;min-width:100px" data-correct="${c===val}"
+          onclick="checkEndianChoice(this,${c===val},${val},${JSON.stringify(displayBytes)},${JSON.stringify(revBytes)})">
+          ${c.toLocaleString('fr-CH')}</button>`).join('')}
+      </div>
+      <div class="ex-feedback" id="ex-feedback"></div>
+      <button class="btn-next" id="btn-next" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+    return div;
+  }
+
+  // ─── Sous-type 2 : Détecter l'endianness ───
+  if (subtype === 2) {
+    const nBytes = 4;
+    const pool = FORENSIC_VALS_4;
+    const chosen = pool[rand(0, pool.length - 1)];
+    const val = chosen.val;
+    const isLE = Math.random() < 0.5;
+    const leBytes = toLeBytes(val, nBytes);
+    const beBytes = toBeBytes(val, nBytes);
+    const displayBytes = isLE ? leBytes : beBytes;
+    const decodedVal = val; // Les deux donnent la même valeur si les octets correspondent
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-1">🔄</div>
+        <div class="ex-title">Détecter l'ordre d'octets</div>
+        <span class="ex-badge medium">Boutisme</span>
+      </div>
+      <div class="ex-scenario">
+        Un analyste décode ces 4 octets et obtient la valeur <strong>${val.toLocaleString('fr-CH')}</strong>
+        (<code>0x${val.toString(16).toUpperCase().padStart(8,'0')}</code>).<br>
+        Quel ordre d'octets a-t-il utilisé ?
+      </div>
+      <div class="sec-title">Octets dans le dump</div>
+      <div class="hex-display">
+        ${displayBytes.map((b,i)=>`<span class="hex-byte" id="hb${i}">${pad(b.toString(16).toUpperCase(),2)}</span>`).join('<span class="hex-sep">·</span>')}
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin:.75rem 0" id="endian-choices">
+        ${shuffle(['Little Endian (x86, FAT, NTFS)', 'Big Endian (réseau, HFS+)', 'Middle Endian (PDP-11)', 'Aucun ordre défini']).map(c=>{
+          const isCorrect = (isLE && c.startsWith('Little')) || (!isLE && c.startsWith('Big'));
+          return `<button class="tp-choice" style="flex:1;min-width:140px" data-correct="${isCorrect}"
+            onclick="checkEndianChoice(this,${isCorrect},0,${JSON.stringify(displayBytes)},${JSON.stringify(isLE?leBytes:beBytes)})">
+            ${c}</button>`;
+        }).join('')}
+      </div>
+      <div class="ex-feedback" id="ex-feedback"></div>
+      <button class="btn-next" id="btn-next" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+    return div;
+  }
+
+  // ─── Sous-types 3 & 4 : Encodage inverse (quelle séquence dans le dump ?) ───
+  const isLE = (subtype === 3);
+  const nBytes = Math.random() < 0.5 ? 4 : 2;
+  const pool = nBytes === 4 ? FORENSIC_VALS_4 : FORENSIC_VALS_2;
+  const chosen = pool[rand(0, pool.length - 1)];
+  const val = chosen.val & (nBytes === 4 ? 0xFFFFFFFF : 0xFFFF);
+  const correctBytes = isLE ? toLeBytes(val, nBytes) : toBeBytes(val, nBytes);
+  const wrongBytes1  = isLE ? toBeBytes(val, nBytes) : toLeBytes(val, nBytes);
+  // Distracteur : décalé d'un octet
+  const wrongBytes2 = [...correctBytes.slice(1), correctBytes[0]];
+  // Distracteur : un octet modifié
+  const wrongBytes3 = [...correctBytes];
+  wrongBytes3[0] = (wrongBytes3[0] + 1) & 0xFF;
+
+  function shuffle(arr) { return [...arr].sort(() => Math.random() - .5); }
+  const options = shuffle([correctBytes, wrongBytes1, wrongBytes2, wrongBytes3]);
+  const endianLabel = isLE ? 'Little Endian' : 'Big Endian';
 
   const div = document.createElement('div');
   div.className = 'ex-card';
   div.innerHTML = `
     <div class="ex-header">
-      <div class="ex-num" id="ex-num-1">1</div>
-      <div class="ex-title">Conversion Little Endian → Décimal</div>
-      <span class="ex-badge ${difficulty}">${difficulty}</span>
+      <div class="ex-num" id="ex-num-1">🔄</div>
+      <div class="ex-title">Encodage ${endianLabel} — quelle séquence ?</div>
+      <span class="ex-badge ${isLE ? 'medium' : 'hard'}">${endianLabel}</span>
     </div>
-    <div class="ex-scenario">${scenarios[rand(0,scenarios.length-1)]}</div>
-
-    <div class="sec-title">Séquence hexadécimale (Little Endian)</div>
-    <div class="hex-display" id="hex-display">
-      ${hexBytes.map((b,i)=>`<span class="hex-byte" id="hb${i}" title="Octet ${i} (poids ${['faible','2','3','fort'][i]})">${pad(b.toString(16).toUpperCase(),2)}</span>`).join('<span class="hex-sep">·</span>')}
+    <div class="ex-scenario">
+      Tu dois stocker la valeur <code>0x${val.toString(16).toUpperCase().padStart(nBytes*2,'0')}</code>
+      (= <strong>${val.toLocaleString('fr-CH')}</strong> — ${chosen.label})
+      sur ${nBytes} octets en <strong>${endianLabel}</strong>.<br>
+      Quelle séquence apparaît dans le dump hexadécimal ?
     </div>
-
-    <div class="sec-title" style="margin-top:.75rem">Étapes de résolution</div>
-    <div class="steps-wrap" id="steps-wrap">
-      <div class="step-item pending"><span class="step-num">1</span><div>Lire les octets en sens inverse (MSB → LSB) : <span class="step-val" id="step1-val">?</span></div></div>
-      <div class="step-item pending"><span class="step-num">2</span><div>Concaténer en hexadécimal : <span class="step-val" id="step2-val">?</span></div></div>
-      <div class="step-item pending"><span class="step-num">3</span><div>Convertir en décimal : <span class="step-val" id="step3-val">?</span></div></div>
-    </div>
-
-    <div class="ex-input-row">
-      <span class="ex-input-label">Résultat décimal :</span>
-      <input class="ex-input" id="ans-endian" type="number" placeholder="Entrez la valeur décimale" autocomplete="off">
-      <button class="btn-hint" onclick="showEndianHint(${JSON.stringify(hexBytes)})">💡 Étapes</button>
-      <button class="btn-validate" onclick="checkEndian(${val}, ${JSON.stringify(hexBytes)})">Valider ✓</button>
-      <button class="btn-next" id="btn-next" onclick="newExercise()">Exercice suivant →</button>
+    <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin:.75rem 0" id="endian-choices">
+      ${options.map(opt => {
+        const isCorrect = hexStr(opt) === hexStr(correctBytes);
+        return `<button class="tp-choice" style="flex:1;min-width:130px;font-family:var(--mono)"
+          data-correct="${isCorrect}"
+          onclick="checkEndianChoice(this,${isCorrect},0,${JSON.stringify(correctBytes)},${JSON.stringify(isLE ? [...correctBytes].reverse() : correctBytes)})">
+          ${hexStr(opt)}</button>`;
+      }).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback"></div>
+    <button class="btn-next" id="btn-next" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
-  // Enter key
-  setTimeout(() => {
-    const inp = div.querySelector('#ans-endian');
-    if (inp) inp.addEventListener('keydown', e => { if(e.key==='Enter') checkEndian(val, hexBytes); });
-  }, 50);
   return div;
 }
 
-function showEndianHint(hexBytes) {
-  STATE.hintUsed = true;
-  const rev = [...hexBytes].reverse();
+function checkEndianChoice(btn, isCorrect, expectedVal, displayBytes, orderedBytes) {
+  document.querySelectorAll('#endian-choices .tp-choice').forEach(b => { b.disabled = true; });
+  btn.classList.add(isCorrect ? 'correct' : 'wrong');
+  if (isCorrect) incSolved('endian');
+  else {
+    document.querySelectorAll('#endian-choices .tp-choice').forEach(b => {
+      if (b.dataset.correct === 'true') b.classList.add('correct');
+      else if (b !== btn) b.classList.add('dim');
+    });
+  }
+  // Afficher les étapes
   document.querySelectorAll('.step-item').forEach((s,i) => {
     s.className = 'step-item active';
-    if (i === 0) document.getElementById('step1-val').textContent = rev.map(b=>pad(b.toString(16).toUpperCase(),2)).join(' ');
-    if (i === 1) document.getElementById('step2-val').textContent = '0x' + rev.map(b=>pad(b.toString(16).toUpperCase(),2)).join('');
-    if (i === 2) document.getElementById('step3-val').textContent = parseInt(rev.map(b=>pad(b.toString(16).toUpperCase(),2)).join(''),16).toLocaleString('fr-CH');
+    const hexOrdered = orderedBytes.map(b=>pad(b.toString(16).toUpperCase(),2)).join(' ');
+    const hexCat = '0x' + orderedBytes.map(b=>pad(b.toString(16).toUpperCase(),2)).join('');
+    const decVal = parseInt(orderedBytes.map(b=>pad(b.toString(16).toUpperCase(),2)).join(''), 16);
+    const el1 = document.getElementById('step1-val');
+    const el2 = document.getElementById('step2-val');
+    const el3 = document.getElementById('step3-val');
+    if (el1) el1.textContent = hexOrdered;
+    if (el2) el2.textContent = hexCat;
+    if (el3) el3.textContent = decVal.toLocaleString('fr-CH');
   });
-  // Highlight bytes in order
-  hexBytes.forEach((_,i) => {
+  // Highlight hex bytes
+  displayBytes.forEach((_,i) => {
     const el = document.getElementById('hb'+i);
-    if(el) el.className = 'hex-byte highlight';
+    if (el) el.className = 'hex-byte highlight';
   });
-}
-
-function checkEndian(expected, hexBytes) {
-  const inp = document.getElementById('ans-endian');
   const fb = document.getElementById('ex-feedback');
-  const val = parseInt(inp.value.replace(/\s/g,''));
-  if (isNaN(val)) { inp.classList.add('wrong'); setTimeout(()=>inp.classList.remove('wrong'),600); return; }
-
-  if (val === expected) {
-    inp.className = 'ex-input correct';
-    document.querySelector('.btn-validate').disabled = true;
-    document.getElementById('btn-next').style.display = 'block';
-    document.getElementById('ex-num-1').className = 'ex-num solved';
-    document.querySelector('.ex-card').className = 'ex-card solved';
-    fb.className = 'ex-feedback correct';
-    fb.innerHTML = `✓ Correct ! <strong>${expected.toLocaleString('fr-CH')}</strong> — Les octets ${hexBytes.map(b=>pad(b.toString(16).toUpperCase(),2)).join(' ')} en Little Endian donnent 0x${hexBytes.slice().reverse().map(b=>pad(b.toString(16).toUpperCase(),2)).join('')} = ${expected.toLocaleString('fr-CH')}.`;
-    if (!STATE.hintUsed) incSolved(STATE.cat);
-    showEndianHint(hexBytes);
-  } else {
-    inp.className = 'ex-input wrong';
-    fb.className = 'ex-feedback wrong';
-    fb.innerHTML = `✗ Incorrect. Valeur reçue : ${val.toLocaleString('fr-CH')}. Rappel : lire les octets en sens inverse avant de convertir.`;
-    setTimeout(()=>{ inp.className='ex-input'; }, 700);
+  if (fb) {
+    fb.className = 'ex-feedback ' + (isCorrect ? 'correct' : 'wrong');
+    const ordHex = orderedBytes.map(b=>pad(b.toString(16).toUpperCase(),2)).join(' ');
+    const ordCat = '0x'+orderedBytes.map(b=>pad(b.toString(16).toUpperCase(),2)).join('');
+    const decVal = parseInt(ordCat.slice(2),16);
+    fb.innerHTML = isCorrect
+      ? `✅ Correct ! Octets dans l'ordre canonique : <code>${ordHex}</code> → <code>${ordCat}</code> = ${decVal.toLocaleString('fr-CH')}`
+      : `❌ Incorrect. Octets dans l'ordre canonique : <code>${ordHex}</code> → <code>${ordCat}</code> = ${decVal.toLocaleString('fr-CH')}`;
   }
+  const next = document.getElementById('btn-next');
+  if (next) next.style.display = 'inline-block';
 }
+
+
 
 // ── 2. HORODATAGES MS-DOS ─────────────────────────
 function genTimestamp() {
@@ -2750,110 +2931,123 @@ function checkNetwork(btn, isCorrect, explain) {
 }
 
 // ═══════════════════════════════════════════════════
-// 17. CALCUL OFFSET FS (NTFS, FAT32, exFAT)
+// 17. CALCUL OFFSET FS (NTFS, FAT32, exFAT, EXT4, HFS+)
 // ═══════════════════════════════════════════════════
 function genOffset() {
   const fsType = rand(0, 4);
+
   const configs = [
-    { // NTFS
+    { // 0 — NTFS : offset de la $MFT
       name: 'NTFS', badge: 'MFT Offset',
-      bps: [512, 512, 4096][rand(0,2)],
-      spc: [8, 4, 1][rand(0,2)],
-      mft_lcn: rand(2, 10),
+      bps:     [512, 512, 4096][rand(0,2)],
+      spc:     [4, 8, 16][rand(0,2)],
+      mft_lcn: rand(2, 8),           // LCN petit pour des résultats lisibles
       color: 'var(--purple)',
       compute(bps, spc, mft_lcn) {
-        const cluster_size = bps * spc;
-        const mft_offset = mft_lcn * cluster_size;
-        return { cluster_size, answer: mft_offset,
-          question: `BPB : BytesPerSector = <strong>${bps}</strong>, SectorsPerCluster = <strong>${spc}</strong>, MFT LCN = <strong>${mft_lcn}</strong>.<br>Calculer l'offset de la $MFT en octets.`,
-          steps: [`TailleCluster = ${bps} × ${spc} = ${cluster_size}`, `Offset $MFT = ${mft_lcn} × ${cluster_size} = ${mft_offset}`],
-          unit: 'octets' };
-      }
-    },
-    { // FAT32 cluster offset
-      name: 'FAT32', badge: 'Cluster Offset',
-      bps: 512,
-      spc: [4, 8, 16][rand(0,2)],
-      reserved: [32, 64][rand(0,1)],
-      fat_size: rand(50, 200),
-      cluster_n: rand(3, 20),
-      color: 'var(--green)',
-      compute(bps, spc, reserved, fat_size, cluster_n) {
-        const cluster_size = bps * spc;
-        const data_start = (reserved + 2 * fat_size) * bps;
-        const offset = data_start + (cluster_n - 2) * cluster_size;
-        return { cluster_size, answer: offset,
-          question: `FAT32 BPB : BPS=${bps}, SPC=${spc}, Reserved=${reserved}, FAT size=${fat_size} secteurs (2 FATs).<br>Calculer l'offset du cluster <strong>${cluster_n}</strong> en octets.`,
-          steps: [
-            `TailleCluster = ${bps} × ${spc} = ${cluster_size}`,
-            `Début données = (${reserved} + 2×${fat_size}) × ${bps} = ${data_start}`,
-            `Offset cluster ${cluster_n} = ${data_start} + (${cluster_n}-2) × ${cluster_size} = ${offset}`
-          ],
-          unit: 'octets' };
-      }
-    },
-    { // exFAT cluster offset
-      name: 'exFAT', badge: 'Cluster Offset',
-      bpss: [9, 9, 12][rand(0,2)], // BytesPerSectorShift
-      spcs: [3, 4, 0][rand(0,2)], // SectorsPerClusterShift
-      heap_offset: rand(300, 600),
-      cluster_n: rand(3, 15),
-      color: 'var(--orange)',
-      compute(bpss, spcs, heap_offset, cluster_n) {
-        const bps = Math.pow(2, bpss);
-        const cluster_size = Math.pow(2, spcs) * bps;
-        const offset = heap_offset * bps + (cluster_n - 2) * cluster_size;
-        return { cluster_size, answer: offset,
-          question: `exFAT BPB : BytesPerSectorShift=<strong>${bpss}</strong>, SectorsPerClusterShift=<strong>${spcs}</strong>, ClusterHeapOffset=<strong>${heap_offset}</strong> secteurs.<br>Calculer l'offset du cluster <strong>${cluster_n}</strong> en octets.`,
-          steps: [
-            `BPS = 2^${bpss} = ${bps}`,
-            `TailleCluster = 2^${spcs} × ${bps} = ${cluster_size}`,
-            `Offset cluster ${cluster_n} = ${heap_offset}×${bps} + (${cluster_n}-2)×${cluster_size} = ${offset}`
-          ],
-          unit: 'octets' };
-      }
-    }
-    ,
-    { // EXT4 inode offset
-      name: 'EXT4', badge: 'Inode Offset',
-      blockSize: [1024, 2048, 4096][rand(0,2)],
-      inodesPerGroup: [1024, 2048, 4096][rand(0,2)],
-      inodeSize: 256,
-      inode_n: rand(10, 4000),
-      color: 'var(--blue)',
-      compute(blockSize, inodesPerGroup, inodeSize, inode_n) {
-        const group = Math.floor((inode_n - 1) / inodesPerGroup);
-        const indexInGroup = (inode_n - 1) % inodesPerGroup;
-        // Offset du groupe = 2 blocs (superbloc + descripteur) × blockSize
-        const groupOffset = (group * 8 + 2) * blockSize; // 8 blocs par groupe
-        const inodeTableOffset = groupOffset + 2 * blockSize; // après superbloc + group desc
-        const offset = inodeTableOffset + indexInGroup * inodeSize;
+        const cs = bps * spc;
+        const answer = mft_lcn * cs;
         return {
-          answer: offset,
-          question: `EXT4 : blockSize=<strong>${blockSize}</strong>o, inodesPerGroup=<strong>${inodesPerGroup}</strong>, inodeSize=<strong>${inodeSize}</strong>o.<br>Calculer l'offset de l'inode <strong>${inode_n}</strong> en octets.`,
+          answer,
+          cs,
+          question: `BPB NTFS — BytesPerSector = <strong>${bps}</strong>, SectorsPerCluster = <strong>${spc}</strong>, MFT LCN = <strong>${mft_lcn}</strong>.<br>Calculer l'offset de la <code>$MFT</code> en octets.`,
           steps: [
-            `Groupe = (${inode_n}-1) ÷ ${inodesPerGroup} = ${group}`,
-            `Index dans groupe = (${inode_n}-1) mod ${inodesPerGroup} = ${indexInGroup}`,
-            `Offset inode table = (${group}×8+2)×${blockSize} + 2×${blockSize} = ${inodeTableOffset}`,
-            `Offset inode ${inode_n} = ${inodeTableOffset} + ${indexInGroup}×${inodeSize} = ${offset}`
+            `Taille cluster = ${bps} × ${spc} = ${cs} o`,
+            `Offset $MFT = LCN × taille_cluster = ${mft_lcn} × ${cs} = ${answer} o`
           ],
           unit: 'octets'
         };
       }
     },
-    { // HFS+ allocation block
-      name: 'HFS+', badge: 'Block Offset',
-      blockSize: [4096, 8192, 16384][rand(0,2)],
-      block_n: rand(10, 5000),
+    { // 1 — FAT32 : offset d'un cluster dans la zone données
+      name: 'FAT32', badge: 'Cluster Offset',
+      bps:      512,
+      spc:      [4, 8, 16][rand(0,2)],
+      reserved: [32, 64][rand(0,1)],
+      fat_size: rand(16, 64),        // FAT size petite pour des nombres raisonnables
+      cluster_n: rand(3, 12),
+      color: 'var(--green)',
+      compute(bps, spc, reserved, fat_size, cluster_n) {
+        const cs = bps * spc;
+        const data_start = (reserved + 2 * fat_size) * bps;
+        const answer = data_start + (cluster_n - 2) * cs;
+        return {
+          answer,
+          cs,
+          question: `FAT32 BPB — BPS=${bps}, SPC=${spc}, Réservés=${reserved} sect., FAT size=${fat_size} sect. (×2 FATs).<br>Calculer l'offset du cluster <strong>${cluster_n}</strong> en octets.`,
+          steps: [
+            `Taille cluster = ${bps} × ${spc} = ${cs} o`,
+            `Début zone données = (${reserved} + 2×${fat_size}) × ${bps} = ${data_start} o`,
+            `Offset cluster ${cluster_n} = ${data_start} + (${cluster_n}−2) × ${cs} = ${answer} o`
+          ],
+          unit: 'octets'
+        };
+      }
+    },
+    { // 2 — exFAT : offset d'un cluster
+      name: 'exFAT', badge: 'Cluster Offset',
+      bpss: [9, 9, 12][rand(0,2)],   // 512 ou 4096 o/sect
+      spcs: [0, 3, 4][rand(0,2)],    // 1, 8, ou 16 sect/cluster
+      heap_offset: rand(128, 512),   // plus petit que l'original
+      cluster_n: rand(3, 10),
+      color: 'var(--orange)',
+      compute(bpss, spcs, heap_offset, cluster_n) {
+        const bps = Math.pow(2, bpss);
+        const cs  = Math.pow(2, spcs) * bps;
+        const answer = heap_offset * bps + (cluster_n - 2) * cs;
+        return {
+          answer,
+          cs,
+          question: `exFAT BPB — BytesPerSectorShift=<strong>${bpss}</strong> (→${bps} o/sect), SectorsPerClusterShift=<strong>${spcs}</strong> (→${Math.pow(2,spcs)} sect/cluster), ClusterHeapOffset=<strong>${heap_offset}</strong> secteurs.<br>Calculer l'offset du cluster <strong>${cluster_n}</strong> en octets.`,
+          steps: [
+            `BPS = 2^${bpss} = ${bps} o`,
+            `Taille cluster = 2^${spcs} × ${bps} = ${cs} o`,
+            `Offset cluster ${cluster_n} = ${heap_offset}×${bps} + (${cluster_n}−2)×${cs} = ${answer} o`
+          ],
+          unit: 'octets'
+        };
+      }
+    },
+    { // 3 — EXT4 : offset d'un inode (cas simple : groupe 0)
+      name: 'EXT4', badge: 'Inode Offset',
+      blockSize:      [1024, 4096][rand(0,1)],
+      inodesPerGroup: [512, 1024][rand(0,1)],  // plus petit = résultats lisibles
+      inodeSize:      256,
+      inode_n:        rand(2, 50),              // inodes petits → groupe 0 certain
+      color: 'var(--blue)',
+      compute(blockSize, inodesPerGroup, inodeSize, inode_n) {
+        const group = Math.floor((inode_n - 1) / inodesPerGroup); // = 0 vu les petites valeurs
+        const indexInGroup = (inode_n - 1) % inodesPerGroup;
+        // En EXT4 : superbloc (1 bloc) + descripteurs (1 bloc) = 2 blocs avant l'inode table
+        const inodeTableOffset = (group === 0 ? 2 : group * 8 + 2) * blockSize;
+        const answer = inodeTableOffset + indexInGroup * inodeSize;
+        return {
+          answer,
+          cs: blockSize,
+          question: `EXT4 Superblock — blockSize=<strong>${blockSize}</strong> o, inodesPerGroup=<strong>${inodesPerGroup}</strong>, inodeSize=<strong>${inodeSize}</strong> o.<br>Calculer l'offset de l'inode <strong>${inode_n}</strong> en octets (groupe 0, inode table après 2 blocs de métadonnées).`,
+          steps: [
+            `Groupe = (${inode_n}−1) ÷ ${inodesPerGroup} = ${group}`,
+            `Index dans groupe = (${inode_n}−1) mod ${inodesPerGroup} = ${indexInGroup}`,
+            `Inode table = ${group===0?2:group*8+2} blocs × ${blockSize} = ${inodeTableOffset} o`,
+            `Offset inode ${inode_n} = ${inodeTableOffset} + ${indexInGroup}×${inodeSize} = ${answer} o`
+          ],
+          unit: 'octets'
+        };
+      }
+    },
+    { // 4 — HFS+ : offset d'un allocation block
+      name: 'HFS+', badge: 'Allocation Block Offset',
+      blockSize: [4096, 8192][rand(0,1)],
+      block_n:   rand(2, 30),          // petit → résultat lisible
       color: 'var(--gold)',
       compute(blockSize, block_n) {
-        const offset = block_n * blockSize;
+        const answer = block_n * blockSize;
         return {
-          answer: offset,
-          question: `HFS+ : blockSize=<strong>${blockSize}</strong>o (allocation block).<br>Calculer l'offset de l'allocation block <strong>${block_n}</strong> en octets.`,
+          answer,
+          cs: blockSize,
+          question: `HFS+ Volume Header — blockSize=<strong>${blockSize}</strong> o (allocation block).<br>Calculer l'offset du bloc <strong>${block_n}</strong> en octets.<br><span style="font-size:.75rem;color:var(--dim)">Note : en HFS+ les blocs commencent à 0, contrairement à FAT qui commence à 2.</span>`,
           steps: [
-            `HFS+ : les blocs commencent à 0 (contrairement à FAT qui commence à 2)`,
-            `Offset = ${block_n} × ${blockSize} = ${offset}`
+            `HFS+ : les blocs commencent à l\'index 0`,
+            `Offset = ${block_n} × ${blockSize} = ${answer} o`
           ],
           unit: 'octets'
         };
@@ -2863,17 +3057,23 @@ function genOffset() {
 
   const cfg = configs[fsType];
   let data;
-  if (fsType === 0) data = cfg.compute(cfg.bps, cfg.spc, cfg.mft_lcn);
+  if      (fsType === 0) data = cfg.compute(cfg.bps, cfg.spc, cfg.mft_lcn);
   else if (fsType === 1) data = cfg.compute(cfg.bps, cfg.spc, cfg.reserved, cfg.fat_size, cfg.cluster_n);
   else if (fsType === 2) data = cfg.compute(cfg.bpss, cfg.spcs, cfg.heap_offset, cfg.cluster_n);
   else if (fsType === 3) data = cfg.compute(cfg.blockSize, cfg.inodesPerGroup, cfg.inodeSize, cfg.inode_n);
-  else data = cfg.compute(cfg.blockSize, cfg.block_n);
+  else                   data = cfg.compute(cfg.blockSize, cfg.block_n);
 
   const answer = data.answer;
-  // Distracteurs plausibles
-  const distractors = [answer * 2, Math.max(0, answer - data.cluster_size), answer + 512, Math.round(answer * 1.5)]
-    .filter(d => d !== answer && d >= 0)
-    .sort(() => Math.random() - .5).slice(0, 3);
+  const cs     = data.cs || 512; // fallback safe
+
+  // Distracteurs plausibles (jamais négatifs, jamais égaux à la bonne réponse)
+  const rawDistractors = [
+    answer + cs,
+    answer - cs,
+    Math.round(answer * 2),
+    answer + 512,
+  ].filter(d => d !== answer && d > 0);
+  const distractors = [...new Set(rawDistractors)].sort(() => Math.random() - .5).slice(0, 3);
   const choices = [answer, ...distractors].sort(() => Math.random() - .5);
   const correctIdx = choices.indexOf(answer);
 
@@ -2892,7 +3092,7 @@ function genOffset() {
       ${choices.map((c, i) => `
         <button class="tp-choice" onclick="checkOffset(this, ${i === correctIdx}, ${JSON.stringify(data.steps)}, ${answer})">
           <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
-          <span>${c.toLocaleString()} ${data.unit}</span>
+          <span>${c.toLocaleString('fr-CH')} ${data.unit}</span>
         </button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-offset"></div>
@@ -3098,117 +3298,170 @@ function checkHexTable(correctOff, explain, val) {
 // 19. IDENTIFIER LE SYSTÈME DE FICHIERS
 // ═══════════════════════════════════════════════════
 function genFSIdentify() {
+  const ALL_FS = ['FAT12','FAT16','FAT32','NTFS','exFAT','EXT4','HFS+'];
+
   const fsOptions = [
     {
       fs: 'FAT12',
+      context: 'Secteur de boot — disquette ou très petite partition',
       build: () => {
-        const bytes = new Array(64).fill(0x20);
-        bytes[0]=0xEB; bytes[2]=0x90;
+        const bytes = new Array(64).fill(0x00);
+        bytes[0]=0xEB; bytes[1]=0x3C; bytes[2]=0x90;
         'MSDOS5.0'.split('').forEach((c,i)=>bytes[3+i]=c.charCodeAt(0));
-        bytes[0x0B]=0x00; bytes[0x0C]=0x02; bytes[0x0D]=1; bytes[0x10]=2;
+        bytes[0x0B]=0x00; bytes[0x0C]=0x02; // BPS=512
+        bytes[0x0D]=0x01;                    // SPC=1
+        bytes[0x0E]=0x01; bytes[0x0F]=0x00; // Reserved=1
+        bytes[0x10]=0x02;                    // NumFATs=2
         bytes[0x11]=0xE0; bytes[0x12]=0x00; // RootEntries=224
-        'FAT12   '.split('').forEach((c,i)=>bytes[0x36+i]=c.charCodeAt(0));
-        return { key: '"FAT12   " à l\'offset 0x36 + RootEntries=224 (0xE0) et SectorsPerCluster=1 identifient FAT12 (typique des disquettes 1.44 Mo).' };
+        bytes[0x13]=0x40; bytes[0x14]=0x0B; // TotalSectors16=2880
+        bytes[0x15]=0xF0;                    // Media=0xF0 (removable)
+        bytes[0x16]=0x09; bytes[0x17]=0x00; // FATsize=9
+        // FS type label à 0x36
+        if (0x36+8 <= 64) 'FAT12   '.split('').forEach((c,i)=>bytes[0x36+i]=c.charCodeAt(0));
+        return { bytes, key: 'OEM "MSDOS5.0" + RootEntries=224 + MediaType=0xF0 (amovible) + label "FAT12   " à 0x36 → FAT12 (disquette 1.44 Mo).' };
       }
     },
     {
       fs: 'FAT16',
+      context: 'Secteur de boot — partition entre 32 Mo et 2 Go',
       build: () => {
-        const bytes = new Array(64).fill(0x20);
-        bytes[0]=0xEB; bytes[2]=0x90;
+        const bytes = new Array(64).fill(0x00);
+        bytes[0]=0xEB; bytes[1]=0x58; bytes[2]=0x90;
         'MSDOS5.0'.split('').forEach((c,i)=>bytes[3+i]=c.charCodeAt(0));
-        bytes[0x0B]=0x00; bytes[0x0C]=0x02; bytes[0x0D]=4; bytes[0x10]=2;
+        bytes[0x0B]=0x00; bytes[0x0C]=0x02; // BPS=512
+        bytes[0x0D]=0x04;                    // SPC=4
+        bytes[0x0E]=0x04; bytes[0x0F]=0x00; // Reserved=4
+        bytes[0x10]=0x02;                    // NumFATs=2
         bytes[0x11]=0x00; bytes[0x12]=0x02; // RootEntries=512
-        'FAT16   '.split('').forEach((c,i)=>bytes[0x36+i]=c.charCodeAt(0));
-        return { key: '"FAT16   " à l\'offset 0x36 + RootEntries=512 (offset 0x11-0x12 ≠ 0) identifient FAT16.' };
+        bytes[0x13]=0x00; bytes[0x14]=0x00; // TotalSectors16=0 → utiliser TotalSectors32
+        bytes[0x15]=0xF8;                    // Media=0xF8 (fixe)
+        bytes[0x16]=0xFA; bytes[0x17]=0x00; // FATsize=250
+        if (0x36+8 <= 64) 'FAT16   '.split('').forEach((c,i)=>bytes[0x36+i]=c.charCodeAt(0));
+        return { bytes, key: 'RootEntries=512 (0x0200) aux offsets 0x11-0x12 ≠ 0, label "FAT16   " à 0x36 → FAT16. MediaType=0xF8 = partition fixe.' };
       }
     },
     {
       fs: 'FAT32',
+      context: 'Secteur de boot — partition > 2 Go (carte SD, USB, HDD)',
       build: () => {
-        const bytes = new Array(64).fill(0x20);
-        bytes[0]=0xEB; bytes[2]=0x90;
+        const bytes = new Array(64).fill(0x00);
+        bytes[0]=0xEB; bytes[1]=0x58; bytes[2]=0x90;
         'MSWIN4.1'.split('').forEach((c,i)=>bytes[3+i]=c.charCodeAt(0));
-        bytes[0x0B]=0x00; bytes[0x0C]=0x02; bytes[0x0D]=8; bytes[0x10]=2;
-        bytes[0x11]=0; bytes[0x12]=0; // RootEntries=0 → FAT32
-        return { key: 'RootEntryCount=0 aux offsets 0x11-0x12 → FAT32. En FAT32, le répertoire racine est dans la zone données.' };
+        bytes[0x0B]=0x00; bytes[0x0C]=0x02; // BPS=512
+        bytes[0x0D]=0x08;                    // SPC=8
+        bytes[0x0E]=0x20; bytes[0x0F]=0x00; // Reserved=32
+        bytes[0x10]=0x02;                    // NumFATs=2
+        bytes[0x11]=0x00; bytes[0x12]=0x00; // RootEntries=0 → FAT32 !
+        bytes[0x13]=0x00; bytes[0x14]=0x00; // TotalSectors16=0
+        bytes[0x15]=0xF8;                    // Media=0xF8
+        bytes[0x16]=0x00; bytes[0x17]=0x00; // FATSz16=0 → voir FAT32 BPB étendu
+        return { bytes, key: 'OEM "MSWIN4.1" + RootEntryCount=0 (offsets 0x11-0x12) + FATSz16=0 → FAT32. Le répertoire racine est dans la zone données (cluster 2+).' };
       }
     },
     {
       fs: 'NTFS',
+      context: 'Boot sector NTFS — partition Windows moderne',
       build: () => {
-        const bytes = new Array(64).fill(0);
+        const bytes = new Array(64).fill(0x00);
         bytes[0]=0xEB; bytes[1]=0x52; bytes[2]=0x90;
-        'NTFS    '.split('').forEach((c,i)=>bytes[3+i]=c.charCodeAt(0));
-        bytes[0x0B]=0x00; bytes[0x0C]=0x02; bytes[0x0D]=8;
-        return { key: 'OEM ID "NTFS    " (4 espaces) à l\'offset 0x03 identifie NTFS sans ambiguïté.' };
+        'NTFS    '.split('').forEach((c,i)=>bytes[3+i]=c.charCodeAt(0)); // 4 espaces !
+        bytes[0x0B]=0x00; bytes[0x0C]=0x02; // BPS=512
+        bytes[0x0D]=0x08;                    // SPC=8
+        bytes[0x0E]=0x00; bytes[0x0F]=0x00; // Reserved=0 (NTFS n'utilise pas ce champ)
+        bytes[0x10]=0x00;                    // NumFATs=0
+        bytes[0x11]=0x00; bytes[0x12]=0x00; // RootEntries=0
+        bytes[0x13]=0x00; bytes[0x14]=0x00; // TotalSectors16=0
+        bytes[0x15]=0xF8;
+        return { bytes, key: 'OEM ID "NTFS    " (exactement 4 espaces) à l\'offset 0x03 identifie NTFS. NumFATs=0 et Reserved=0 confirment (NTFS ignore le BPB standard).' };
       }
     },
     {
       fs: 'exFAT',
+      context: 'Boot sector exFAT — clés USB/SDXC > 32 Go',
       build: () => {
-        const bytes = new Array(64).fill(0);
+        const bytes = new Array(64).fill(0x00);
         bytes[0]=0xEB; bytes[1]=0x76; bytes[2]=0x90;
-        'EXFAT   '.split('').forEach((c,i)=>bytes[3+i]=c.charCodeAt(0));
-        return { key: '"EXFAT   " (3 espaces) à l\'offset 0x03 + octets 0x0B-0x3F à zéro = signature exFAT.' };
+        'EXFAT   '.split('').forEach((c,i)=>bytes[3+i]=c.charCodeAt(0)); // 3 espaces
+        // offsets 0x0B à 0x3F DOIVENT être à zéro en exFAT
+        // (déjà à 0 grâce à fill(0))
+        bytes[0x40]=0x00; bytes[0x41]=0x00; // VolumeSerialNumber lo
+        bytes[0x42]=0x01; bytes[0x43]=0x00; // (simulé)
+        return { bytes, key: '"EXFAT   " (3 espaces) à l\'offset 0x03 + octets 0x0B–0x3F tous à zéro = signature exFAT. BPS et SPC utilisent des champs décalés (0x6C+).' };
       }
-    }
-,
+    },
     {
       fs: 'EXT4',
+      context: 'Superbloc EXT4 — commence à l\'offset 1024 du volume',
       build: () => {
-        const bytes = new Array(64).fill(0);
-        // Superbloc EXT4 commence à l'offset 1024 — on simule le début
-        // magic 0xEF53 à l'offset 0x38 du superbloc
-        bytes[0x38]=0x53; bytes[0x39]=0xEF; // magic LE: 53 EF
-        // s_inodes_count at 0x00 (LE32)
-        bytes[0]=0x00; bytes[1]=0x08; bytes[2]=0x00; bytes[3]=0x00;
-        // s_log_block_size at 0x18 = 2 → blocksize = 4096
+        const bytes = new Array(64).fill(0x00);
+        // s_inodes_count (LE32) à 0x00
+        bytes[0]=0x00; bytes[1]=0x80; bytes[2]=0x00; bytes[3]=0x00; // 32768 inodes
+        // s_blocks_count (LE32) à 0x04
+        bytes[4]=0x00; bytes[5]=0x00; bytes[6]=0x04; bytes[7]=0x00; // 262144 blocs
+        // s_log_block_size (LE32) à 0x18 : 2 → blocksize=4096
         bytes[0x18]=0x02; bytes[0x19]=0x00; bytes[0x1A]=0x00; bytes[0x1B]=0x00;
-        return { key: 'Le magic number 0xEF53 (octets 53 EF en LE) à l\'offset 0x38 du superbloc identifie EXT2/3/4. Couplé à s_log_block_size, on détermine la version.' };
+        // s_magic (LE16) à 0x38 : 0xEF53 → 53 EF en mémoire
+        bytes[0x38]=0x53; bytes[0x39]=0xEF;
+        // s_rev_level à 0x3C : 1 = dynamic (EXT3/4)
+        bytes[0x3C]=0x01; bytes[0x3D]=0x00; bytes[0x3E]=0x00; bytes[0x3F]=0x00;
+        return { bytes, key: 'Magic 0xEF53 (53 EF en Little Endian) à l\'offset 0x38 du superbloc (offset 1024 du volume) identifie EXT2/3/4. s_log_block_size=2 → taille bloc = 4096 o.' };
       }
     },
     {
       fs: 'HFS+',
+      context: 'Volume Header HFS+ — commence à l\'offset 1024 du volume (Big Endian)',
       build: () => {
-        const bytes = new Array(64).fill(0);
-        // Volume Header HFS+ à l'offset 1024 — signature 0x482B = 'H+'
-        bytes[0]=0x48; bytes[1]=0x2B; // signature Big Endian
-        bytes[2]=0x00; bytes[3]=0x04; // version = 4 (HFS+)
-        // blockSize à l'offset 0x14 (Big Endian) = 4096 = 0x00001000
+        const bytes = new Array(64).fill(0x00);
+        // signature 0x482B = 'H+' en Big Endian
+        bytes[0]=0x48; bytes[1]=0x2B;
+        // version = 4 (HFS+) en Big Endian
+        bytes[2]=0x00; bytes[3]=0x04;
+        // attributes (Big Endian) à 0x04
+        bytes[4]=0x00; bytes[5]=0x00; bytes[6]=0x80; bytes[7]=0x00;
+        // blockSize (Big Endian) à 0x14 = 4096 = 0x00001000
         bytes[0x14]=0x00; bytes[0x15]=0x00; bytes[0x16]=0x10; bytes[0x17]=0x00;
-        return { key: 'La signature 0x482B ("H+") en Big Endian aux 2 premiers octets du Volume Header (offset 1024) identifie HFS+. 0x4858 ("HX") = HFS+ journalisé. Tout est Big Endian (inverse de Windows).' };
+        // totalBlocks (Big Endian) à 0x18
+        bytes[0x18]=0x00; bytes[0x19]=0x10; bytes[0x1A]=0x00; bytes[0x1B]=0x00;
+        return { bytes, key: 'Signature 0x482B ("H+") en Big Endian à l\'offset 0 du Volume Header (= offset 1024 du volume). Tout HFS+ est Big Endian, contrairement aux FS Windows. Version=4.' };
       }
     }
   ];
 
-  const cfg = fsOptions[rand(0, fsOptions.length-1)];
+  const cfg = fsOptions[rand(0, fsOptions.length - 1)];
   const ex = cfg.build();
-  const bytes = ex.bytes || new Array(64).fill(0);
-  const choices = ['FAT12','FAT16','FAT32','NTFS','exFAT','EXT4','HFS+'].sort(()=>Math.random()-.5).slice(0,5);
-  // 5 choix parmi 7 possibles
+  const bytes = ex.bytes;
+
+  // Garantir que la bonne réponse est toujours dans les choix
+  const others = ALL_FS.filter(f => f !== cfg.fs).sort(() => Math.random() - .5).slice(0, 4);
+  const choices = [...others, cfg.fs].sort(() => Math.random() - .5);
+
   const COLS = 16;
   let rows = '';
-  for (let r=0; r<Math.min(bytes.length,64); r+=COLS) {
-    const rb = bytes.slice(r,r+COLS);
-    const off = r.toString(16).toUpperCase().padStart(8,'0');
-    const hexP = rb.map(b=>`<span class="hex-byte">${b.toString(16).toUpperCase().padStart(2,'0')}</span>`).join(' ');
-    const ascii = rb.map(b=>(b>=0x20&&b<0x7F)?String.fromCharCode(b):'.').join('');
+  for (let r = 0; r < bytes.length; r += COLS) {
+    const rb = bytes.slice(r, r + COLS);
+    const off = r.toString(16).toUpperCase().padStart(8, '0');
+    const hexP = rb.map(b => `<span class="hex-byte">${b.toString(16).toUpperCase().padStart(2,'0')}</span>`).join(' ');
+    const ascii = rb.map(b => (b >= 0x20 && b < 0x7F) ? String.fromCharCode(b) : '.').join('');
     rows += `<div class="hex-row"><span class="hex-offset">${off}</span>${hexP}<span class="hex-ascii">${ascii}</span></div>`;
   }
+
   const div = document.createElement('div');
   div.className = 'ex-card';
   div.innerHTML = `
     <div class="ex-header">
       <div class="ex-num">🔍</div>
       <div class="ex-title">Identifier le système de fichiers</div>
-      <span class="ex-badge medium">OEM ID · BPB</span>
+      <span class="ex-badge medium">OEM ID · Magic · BPB</span>
     </div>
-    <div class="ex-scenario">Voici les 64 premiers octets du secteur de boot d'une partition. Quel système de fichiers ?</div>
+    <div class="ex-scenario">
+      <strong>Contexte :</strong> ${cfg.context}<br>
+      Analyse les 64 premiers octets ci-dessous et identifie le système de fichiers.
+    </div>
     <div style="font-family:var(--mono);font-size:.72rem;line-height:1.9;overflow-x:auto;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;margin:.5rem 0">${rows}</div>
-    <div class="sec-title" style="margin-top:.75rem">Système de fichiers détecté</div>
+    <div class="sec-title" style="margin-top:.75rem">Système de fichiers</div>
     <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="fsid-choices">
-      ${choices.map(c=>`<button class="tp-choice" style="flex:1;min-width:80px" data-correct="${c===cfg.fs}" onclick="checkFSIdentify(this,'${c}','${cfg.fs}',${JSON.stringify(ex.key)})">${c}</button>`).join('')}
+      ${choices.map(c => `<button class="tp-choice" style="flex:1;min-width:90px" data-correct="${c === cfg.fs}"
+        onclick="checkFSIdentify(this,'${c}','${cfg.fs}',${JSON.stringify(ex.key)})">${c}</button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-fsid" style="display:none"></div>
     <button class="btn-next" id="btn-next-fsid" onclick="newExercise()" style="display:none;margin-top:.5rem">Suivant →</button>
