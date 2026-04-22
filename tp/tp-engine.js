@@ -1210,10 +1210,10 @@ const HINT_LIBRARY = {
     "Si $SI et $FN ont exactement les mêmes dates au milliseconde près : probablement naturel (copie fraîche).",
   ],
   droitpenal: [
-    "Art. 143 CP — Soustraction de données : accès sans droit + soustraction (copier ne soustrait pas !)",
-    "Art. 143bis CP — Accès indu : pénétrer dans un système informatique sans autorisation.",
-    "Art. 144bis CP — Dommages aux données : modifier, effacer, rendre inutilisable.",
-    "Art. 147 CP — Abus d'un ordinateur : obtenir un enrichissement illégitime par manipulation informatique.",
+    "Art. 143 CP — Soustraction de données : obtenir sans droit des données protégées, dans un dessein d'enrichissement. Inclut la copie selon la jurisprudence du TF.",
+    "Art. 143bis CP — Accès indu : pénétrer dans un système informatique sans autorisation, même sans intention de nuire.",
+    "Art. 144bis CP — Dommages aux données : modifier, effacer, rendre inutilisable (inclut le chiffrement par ransomware).",
+    "Art. 147 CP — Utilisation frauduleuse d'un ordinateur : obtenir un enrichissement illégitime par manipulation informatique (fraude CEO, virements détournés).",
   ],
   glossaire: [
     "Méthode : voir le terme, deviner la traduction, vérifier. Alterner FR→EN et EN→FR.",
@@ -2215,15 +2215,15 @@ function makeEXT3InodeExercise() {
 
   // Fichiers avec leurs inodes aléatoires
   const files = [
-    { name: 'rapport_final.pdf', inode: rand16(10, 99), type: 0x08 },
-    { name: 'image.jpg',          inode: rand16(100,999), type: 0x08 },
-    { name: 'script.sh',          inode: rand16(10, 99), type: 0x08 },
+    { name: 'rapport_final.pdf', inode: rand16(10, 99), type: 0x01 },
+    { name: 'image.jpg',          inode: rand16(100,999), type: 0x01 },
+    { name: 'script.sh',          inode: rand16(10, 99), type: 0x01 },
   ];
   // Ajouter des entrées fixes
   const allEntries = [
-    { name: '.',             inode: 2,                type: 0x04 },
-    { name: '..',            inode: 2,                type: 0x04 },
-    { name: 'lost+found',    inode: 11,               type: 0x04 },
+    { name: '.',             inode: 2,                type: 0x02 },
+    { name: '..',            inode: 2,                type: 0x02 },
+    { name: 'lost+found',    inode: 11,               type: 0x02 },
     ...files,
   ];
 
@@ -2254,8 +2254,8 @@ function makeEXT3InodeExercise() {
   // Construire un bloc de ~128 octets avec 2-3 entrées
   const entryBytes = [];
   const displayEntries = [
-    { name: '.', inode: 2, type: 0x04 },
-    { name: '..', inode: 2, type: 0x04 },
+    { name: '.', inode: 2, type: 0x02 },
+    { name: '..', inode: 2, type: 0x02 },
     target
   ];
   displayEntries.forEach((e, i) => {
@@ -2301,7 +2301,7 @@ function makeEXT3InodeExercise() {
     hexDump: renderHexDump(rows, [
       {from: targetOffset, to: targetOffset+3, color:'--cyan', label:'Inode du fichier cible'},
     ]),
-    legend: `<div style="font-size:.7rem;color:var(--dim);margin-top:.25rem">Structure dir_entry_2 EXT3 : [Inode 4o LE] [rec_len 2o] [name_len 1o] [type 1o] [nom]<br>file_type : 0x04 = répertoire · 0x08 = fichier ordinaire</div>`,
+    legend: `<div style="font-size:.7rem;color:var(--dim);margin-top:.25rem">Structure dir_entry_2 EXT3 : [Inode 4o LE] [rec_len 2o] [name_len 1o] [type 1o] [nom]<br>file_type : 0x01 = fichier ordinaire · 0x02 = répertoire · 0x07 = symlink (spec ext2/3/4)</div>`,
     question: qText,
     answer,
     hints,
@@ -2317,19 +2317,39 @@ function makeHFSPlusClusterExercise() {
   const startBlock = rand16(0x100, 0xFFFF);
   const blockCount = rand16(10, 200); // nombre de blocs contigus
   const startBlockHex = startBlock.toString(16).toUpperCase().padStart(8,'0');
+  // logicalSize = blocCount × blockSize (on simule blockSize = 4096 = 0x1000)
+  const logicalSize = blockCount * 4096;
+  // clumpSize typique : 0 (hint à l'implémentation, souvent 0)
+  const clumpSize = 0;
 
-  // HFS+ Catalog Fork Data : fork_type(1) + pad(3) + clump(4) + total_blocks(4) + extents[8][2 per extent]
-  // Extent = startBlock(4) + blockCount(4)
-  const forkBytes = [
-    0x00, 0x00, 0x00, 0x00, // type + padding
-    0x00, 0x00, 0x00, 0x00, // clump_size
-    blockCount & 0xFF, (blockCount>>8)&0xFF, (blockCount>>16)&0xFF, (blockCount>>24)&0xFF, // total_blocks BE
-  ];
+  // HFS+ HFSPlusForkData (Apple TN1150) — Big Endian, 80 octets total :
+  //   0x00-0x07 : logicalSize (UInt64 BE)
+  //   0x08-0x0B : clumpSize   (UInt32 BE)
+  //   0x0C-0x0F : totalBlocks (UInt32 BE)
+  //   0x10-0x6F : 8 × HFSPlusExtentDescriptor (8 octets : startBlock + blockCount, tous 2 en BE)
+  const forkBytes = [];
 
-  // Extent 0 (premier et seul)
+  // logicalSize UInt64 BE (8 octets) — valeur assez grande pour tenir dans 64 bits
+  // On divise en 2 UInt32 pour gérer la taille côté JS (limite 32 bits sur shift)
+  const logicalHi = Math.floor(logicalSize / 0x100000000); // partie haute
+  const logicalLo = logicalSize % 0x100000000;              // partie basse
   forkBytes.push(
-    (startBlock>>24)&0xFF, (startBlock>>16)&0xFF, (startBlock>>8)&0xFF, startBlock&0xFF, // startBlock BE
-    (blockCount>>24)&0xFF, (blockCount>>16)&0xFF, (blockCount>>8)&0xFF, blockCount&0xFF  // blockCount BE
+    (logicalHi>>>24)&0xFF, (logicalHi>>>16)&0xFF, (logicalHi>>>8)&0xFF, logicalHi&0xFF,
+    (logicalLo>>>24)&0xFF, (logicalLo>>>16)&0xFF, (logicalLo>>>8)&0xFF, logicalLo&0xFF
+  );
+  // clumpSize UInt32 BE (4 octets)
+  forkBytes.push(
+    (clumpSize>>>24)&0xFF, (clumpSize>>>16)&0xFF, (clumpSize>>>8)&0xFF, clumpSize&0xFF
+  );
+  // totalBlocks UInt32 BE (4 octets)
+  forkBytes.push(
+    (blockCount>>>24)&0xFF, (blockCount>>>16)&0xFF, (blockCount>>>8)&0xFF, blockCount&0xFF
+  );
+
+  // Extent 0 (premier et seul) à l'offset 0x10
+  forkBytes.push(
+    (startBlock>>>24)&0xFF, (startBlock>>>16)&0xFF, (startBlock>>>8)&0xFF, startBlock&0xFF, // startBlock BE
+    (blockCount>>>24)&0xFF, (blockCount>>>16)&0xFF, (blockCount>>>8)&0xFF, blockCount&0xFF  // blockCount BE
   );
 
   // 7 extents vides
@@ -2337,7 +2357,7 @@ function makeHFSPlusClusterExercise() {
     forkBytes.push(0,0,0,0, 0,0,0,0);
   }
 
-  // Padding jusqu'à 80 octets
+  // Padding jusqu'à 80 octets (5 × 16)
   while (forkBytes.length < 80) forkBytes.push(0);
 
   const rows = [];
@@ -2349,26 +2369,352 @@ function makeHFSPlusClusterExercise() {
   }
 
   const answer = startBlockHex;
-  const qText = `Ce fork descriptor HFS+ décrit un fichier occupant <strong>${blockCount} blocs dans un seul extent</strong>. À quel <strong>numéro de bloc de départ</strong> se trouvent les données ? (en hexadécimal)`;
+  const qText = `Ce HFSPlusForkData décrit un fichier occupant <strong>${blockCount} blocs dans un seul extent</strong>. À quel <strong>numéro de bloc de départ</strong> (startBlock du premier extent) se trouvent les données ? (en hexadécimal, 8 chiffres)`;
   const hints = [
-    `En HFS+, les données sont organisées en "forks" (data fork + resource fork). Chaque fork a jusqu'à 8 extents.`,
-    `La structure : total_blocks (4 o Big Endian) puis 8 extents de 8 octets chacun (startBlock 4 o BE + blockCount 4 o BE).`,
-    `Le premier extent commence à l'offset 0x0C de ce fork descriptor.`,
-    `Octets 12–15 = <span style="color:var(--cyan);font-weight:700">${[((startBlock>>24)&0xFF),((startBlock>>16)&0xFF),((startBlock>>8)&0xFF),(startBlock&0xFF)].map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</span> → Big Endian → startBlock = <strong>0x${startBlockHex}</strong>`,
+    `En HFS+, les données sont organisées en "forks" (data fork + resource fork). Chaque fork est décrit par un HFSPlusForkData de 80 octets.`,
+    `Structure HFSPlusForkData (Apple TN1150) : logicalSize (UInt64 BE, 8 o) + clumpSize (UInt32 BE, 4 o) + totalBlocks (UInt32 BE, 4 o) + 8 extents × 8 o.`,
+    `Le premier extent commence à l'offset <strong>0x10</strong> (après les 16 octets d'en-tête). Il contient startBlock (4 o BE) puis blockCount (4 o BE).`,
+    `Octets 0x10–0x13 = <span style="color:var(--cyan);font-weight:700">${[((startBlock>>>24)&0xFF),((startBlock>>>16)&0xFF),((startBlock>>>8)&0xFF),(startBlock&0xFF)].map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</span> → Big Endian → startBlock = <strong>0x${startBlockHex}</strong>`,
   ];
-  const explain = `HFS+ utilise le Big Endian. Offset 0x0C–0x0F = startBlock = <strong>0x${startBlockHex}</strong> = ${startBlock} décimal. Contrairement à FAT/NTFS qui utilisent le Little Endian.`;
+  const explain = `HFS+ utilise le Big Endian (contrairement à FAT/NTFS). Offset 0x10–0x13 = startBlock du premier extent = <strong>0x${startBlockHex}</strong> = ${startBlock} décimal.`;
 
   return {
-    title: 'HFS+ — Fork Descriptor (Catalog)',
+    title: 'HFS+ — HFSPlusForkData (Catalog)',
     category: 'Système de fichiers HFS+',
     difficulty: 'hard',
-    scenario: `Tu analyses un <strong>Fork Descriptor HFS+</strong> issu du fichier Catalog. Ce format est en <strong>Big Endian</strong> (contrairement à FAT/NTFS). Le fichier tient dans un seul extent.`,
+    scenario: `Tu analyses un <strong>HFSPlusForkData</strong> issu du fichier Catalog (Apple TN1150). Ce format est en <strong>Big Endian</strong> (contrairement à FAT/NTFS). Le fichier tient dans un seul extent.`,
     hexDump: renderHexDump(rows, [
-      {from:0x08, to:0x0B, color:'--gold', label:'total_blocks (BE)'},
-      {from:0x0C, to:0x0F, color:'--cyan', label:'startBlock extent 0 (BE)'},
-      {from:0x10, to:0x13, color:'--green',label:'blockCount extent 0 (BE)'},
+      {from:0x00, to:0x07, color:'--dim',  label:'logicalSize (UInt64 BE)'},
+      {from:0x08, to:0x0B, color:'--dim',  label:'clumpSize (UInt32 BE)'},
+      {from:0x0C, to:0x0F, color:'--gold', label:'totalBlocks (UInt32 BE)'},
+      {from:0x10, to:0x13, color:'--cyan', label:'startBlock extent 0 (BE)'},
+      {from:0x14, to:0x17, color:'--green',label:'blockCount extent 0 (BE)'},
     ]),
-    legend: `<div style="font-size:.7rem;color:var(--dim);margin-top:.25rem">⚠️ HFS+ = <strong>Big Endian</strong> · Structure : [pad 4o][clump 4o][total_blocks 4o BE][extent0: startBlock 4o BE + blockCount 4o BE][extents 1-7…]</div>`,
+    legend: `<div style="font-size:.7rem;color:var(--dim);margin-top:.25rem">⚠️ HFS+ = <strong>Big Endian</strong> · Structure HFSPlusForkData (Apple TN1150) :<br>[logicalSize 8o BE][clumpSize 4o BE][totalBlocks 4o BE][extent0: startBlock 4o + blockCount 4o][extents 1-7…]</div>`,
+    question: qText,
+    answer,
+    hints,
+    explain,
+  };
+}
+
+// ── EX-EXAM-6 : FAT16 — Reconstruction d'un Long File Name (LFN) ──
+// Inspiré de l'examen rattrapage 2023-2024 Q2a (fichier "Bear").
+// Structure LFN : chaque entrée LFN (32 octets) porte l'attribut 0x0F à l'offset 0x0B.
+//   - Offset 0x00 : numéro de séquence (bit 6 = 0x40 pour la DERNIÈRE entrée logique).
+//   - Offsets 0x01–0x0A : 5 caractères UTF-16 LE (10 octets)
+//   - Offsets 0x0E–0x19 : 6 caractères UTF-16 LE (12 octets)
+//   - Offsets 0x1C–0x1F : 2 caractères UTF-16 LE (4 octets)
+// Les entrées sont stockées à l'envers : la dernière entrée (bit 0x40) est en tête,
+// puis #N-1, ... jusqu'à #1 juste avant le SFN.
+function makeFAT16LFNExercise() {
+  const rand16 = (lo,hi) => Math.floor(Math.random()*(hi-lo+1))+lo;
+
+  // Choisir un nom de fichier réaliste avec extension
+  const names = [
+    'Ma petite présentation finale.pptx',
+    'Vacances été 2023 - Italie.jpg',
+    'Rapport annuel intermédiaire.docx',
+    'Photo famille Noël 2022.png',
+    'Document confidentiel secret.pdf',
+    'Sauvegarde clients janvier.xlsx',
+    'Reçu dîner anniversaire Anne.pdf',
+    'Mon super projet forensique.txt',
+  ];
+  const longName = names[rand16(0, names.length-1)];
+  // Le LFN est terminé par 0x0000 et padde avec 0xFFFF
+  // Chaque entrée LFN porte 13 caractères UTF-16
+  const charsPerEntry = 13;
+  const numEntries = Math.ceil((longName.length + 1) / charsPerEntry); // +1 pour le \0 terminal
+
+  // Construire la séquence complète de caractères UTF-16 (code points ASCII simplifiés)
+  const utf16 = [];
+  for (const c of longName) utf16.push(c.charCodeAt(0));
+  utf16.push(0x0000); // terminateur
+  // Padder avec 0xFFFF jusqu'à numEntries * 13 caractères
+  while (utf16.length < numEntries * charsPerEntry) utf16.push(0xFFFF);
+
+  // Construire les entrées LFN (stockées du haut vers le bas : #N en premier, #1 en dernier)
+  const lfnEntries = []; // tableau d'arrays de 32 octets
+  for (let e = numEntries; e >= 1; e--) {
+    const entry = new Array(32).fill(0x00);
+    // Octet 0 : numéro de séquence, bit 6 (0x40) pour la dernière logique = #N
+    entry[0] = (e === numEntries) ? (0x40 | e) : e;
+    entry[0x0B] = 0x0F; // Attribut LFN
+    entry[0x0C] = 0x00; // reserved
+    entry[0x0D] = 0x00; // checksum (simplifié à 0 pour l'exo)
+    entry[0x1A] = 0x00; entry[0x1B] = 0x00; // cluster first always 0 pour LFN
+
+    // Les 13 caractères de cette entrée dans l'ordre logique
+    // Entrée #e contient les chars [ (e-1)*13 .. e*13 [
+    const charBase = (e - 1) * charsPerEntry;
+    // 5 chars UTF-16 LE à l'offset 0x01-0x0A
+    for (let i = 0; i < 5; i++) {
+      const c = utf16[charBase + i];
+      entry[0x01 + 2*i]     = c & 0xFF;
+      entry[0x01 + 2*i + 1] = (c >> 8) & 0xFF;
+    }
+    // 6 chars UTF-16 LE à l'offset 0x0E-0x19
+    for (let i = 0; i < 6; i++) {
+      const c = utf16[charBase + 5 + i];
+      entry[0x0E + 2*i]     = c & 0xFF;
+      entry[0x0E + 2*i + 1] = (c >> 8) & 0xFF;
+    }
+    // 2 chars UTF-16 LE à l'offset 0x1C-0x1F
+    for (let i = 0; i < 2; i++) {
+      const c = utf16[charBase + 11 + i];
+      entry[0x1C + 2*i]     = c & 0xFF;
+      entry[0x1C + 2*i + 1] = (c >> 8) & 0xFF;
+    }
+    lfnEntries.push(entry);
+  }
+
+  // Construire une entrée SFN minimaliste qui suit les LFN
+  const sfn = new Array(32).fill(0x00);
+  // Short name = "BEAR    TXT" style (simplifié à partir du vrai nom)
+  const base = longName.split('.')[0].toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) + '~1';
+  const ext = (longName.split('.').pop() || 'TXT').toUpperCase().slice(0, 3).padEnd(3, ' ');
+  for (let i = 0; i < 8; i++) sfn[i] = (base.charAt(i) || ' ').charCodeAt(0);
+  for (let i = 0; i < 3; i++) sfn[8+i] = ext.charCodeAt(i);
+  sfn[0x0B] = 0x20; // archive
+  // Cluster + taille quelconques
+  sfn[0x1A] = 0x08; sfn[0x1B] = 0x00;
+  sfn[0x1C] = 0x00; sfn[0x1D] = 0x20; sfn[0x1E] = 0x00; sfn[0x1F] = 0x00;
+
+  // Assembler les rows hex (toutes les LFN + le SFN, 32 octets = 2 rows de 16)
+  const allBytes = [];
+  lfnEntries.forEach(e => e.forEach(b => allBytes.push(b)));
+  sfn.forEach(b => allBytes.push(b));
+
+  const rows = [];
+  for (let i = 0; i < allBytes.length; i += 16) {
+    rows.push({
+      offset: i.toString(16).toUpperCase().padStart(8,'0'),
+      bytes: allBytes.slice(i, i+16)
+    });
+  }
+
+  // Question : reconstituer le long nom du fichier
+  const answer = longName;
+  const qText = `Cette entrée de répertoire FAT contient un <strong>Long File Name (LFN)</strong> réparti sur <strong>${numEntries} entrée(s)</strong> de 32 octets, suivi d'une entrée SFN. Reconstitue le <strong>nom complet du fichier</strong> (y compris extension, respecte majuscules/minuscules et espaces).`;
+  const hints = [
+    `Les entrées LFN ont l'attribut <strong>0x0F</strong> à l'offset 0x0B (facile à repérer).`,
+    `Chaque entrée LFN porte 13 caractères en UTF-16 LE aux offsets : 0x01–0x0A (5 chars) + 0x0E–0x19 (6 chars) + 0x1C–0x1F (2 chars).`,
+    `L'ordre physique est <strong>inverse</strong> de l'ordre logique : la 1ère entrée en mémoire porte le bit 0x40 sur son premier octet → c'est la <strong>dernière</strong> entrée logique (contient la fin du nom).`,
+    `Lis les entrées à l'envers : assemble les caractères dans l'ordre #1, #2, …, #${numEntries}. Les octets <code>FF FF</code> = padding, <code>00 00</code> = terminateur.`,
+    `Réponse : <strong>${longName}</strong>`,
+  ];
+  const explain = `LFN reconstruit : <strong>${longName}</strong>. Chaque entrée LFN se reconnaît à l'attribut 0x0F @ offset 0x0B. Ordre logique : entrée portant le bit 0x40 = dernière du nom ; les entrées précédentes contiennent le début. Encodage UTF-16 LE aux offsets 0x01 (5 chars), 0x0E (6 chars), 0x1C (2 chars).`;
+
+  return {
+    title: 'FAT16 — Reconstruction d\'un Long File Name (LFN)',
+    category: 'Système de fichiers FAT',
+    difficulty: 'hard',
+    scenario: `Extrait du répertoire racine d'une clé USB FAT16. Le fichier porte un nom long (> 8.3), réparti sur plusieurs entrées LFN (attribut 0x0F) suivies d'une entrée SFN classique.`,
+    hexDump: renderHexDump(rows, [
+      {from:0x00, to:0x00, color:'--gold', label:'Seq # + bit 0x40 (dernière)'},
+      {from:0x0B, to:0x0B, color:'--cyan', label:'Attr 0x0F = LFN'},
+    ]),
+    legend: `<div style="font-size:.7rem;color:var(--dim);margin-top:.25rem">Structure entrée LFN (32 o) : [seq 1o][chars UTF-16 LE : 5 @ 0x01, 6 @ 0x0E, 2 @ 0x1C][attr=0x0F @ 0x0B]. Ordre physique inverse de l'ordre logique. Padding 0xFFFF, terminateur 0x0000.</div>`,
+    question: qText,
+    answer,
+    hints,
+    explain,
+  };
+}
+
+// ── EX-EXAM-7 : NTFS Run List — Total de clusters occupés ──
+// Inspiré de l'examen Q8 (runlist "12 11 01 30 00" → combien de clusters ?).
+// On génère une Run List à 2-4 fragments et on demande la SOMME des length.
+function makeNTFSRunListTotalExercise() {
+  const rand16 = (lo,hi) => Math.floor(Math.random()*(hi-lo+1))+lo;
+  const encodeVar = (val) => {
+    if (val <= 0xFF)     return [val & 0xFF];
+    if (val <= 0xFFFF)   return [val & 0xFF, (val >> 8) & 0xFF];
+    if (val <= 0xFFFFFF) return [val & 0xFF, (val >> 8) & 0xFF, (val >> 16) & 0xFF];
+    return [val & 0xFF, (val >> 8) & 0xFF, (val >> 16) & 0xFF, (val >> 24) & 0xFF];
+  };
+
+  // Générer 2 à 4 fragments
+  const numFragments = rand16(2, 4);
+  const fragments = [];
+  let prevLCN = 0;
+  for (let i = 0; i < numFragments; i++) {
+    const length = rand16(1, 50);
+    const delta  = rand16(1, 200);
+    const lcn    = prevLCN + delta;
+    prevLCN = lcn;
+    fragments.push({ length, delta, lcn });
+  }
+
+  const totalClusters = fragments.reduce((s, f) => s + f.length, 0);
+
+  // Encoder la Run List
+  const allBytes = [];
+  const fragBytes = fragments.map(f => {
+    const lenBytes   = encodeVar(f.length);
+    const deltaBytes = encodeVar(f.delta);
+    const header     = (deltaBytes.length << 4) | lenBytes.length;
+    return { header, lenBytes, deltaBytes, ...f };
+  });
+  fragBytes.forEach(f => {
+    allBytes.push(f.header);
+    f.lenBytes.forEach(b => allBytes.push(b));
+    f.deltaBytes.forEach(b => allBytes.push(b));
+  });
+  allBytes.push(0x00); // terminator
+
+  const hexStr = allBytes.map(b => b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+
+  // Construction HTML : séquence hex colorée avec chaque fragment distinctivement coloré
+  const colors = ['--cyan', '--green', '--gold', '--purple'];
+  let hexDump = `<div class="hex-display" style="flex-wrap:wrap;gap:4px">`;
+  let idx = 0;
+  fragBytes.forEach((f, fi) => {
+    const col = colors[fi % colors.length];
+    // Header byte
+    hexDump += `<span class="hex-byte" style="color:var(${col});font-weight:700" title="Header fragment ${fi+1}">${f.header.toString(16).toUpperCase().padStart(2,'0')}</span>`;
+    idx++;
+    // Length bytes
+    f.lenBytes.forEach((b, j) => {
+      hexDump += `<span class="hex-byte" style="color:var(${col});border:1px dashed rgba(255,255,255,.2)" title="Length fragment ${fi+1}, octet ${j+1}">${b.toString(16).toUpperCase().padStart(2,'0')}</span>`;
+      idx++;
+    });
+    // Delta bytes
+    f.deltaBytes.forEach((b, j) => {
+      hexDump += `<span class="hex-byte" style="color:var(${col});opacity:.6" title="Delta fragment ${fi+1}, octet ${j+1}">${b.toString(16).toUpperCase().padStart(2,'0')}</span>`;
+      idx++;
+    });
+    if (fi < fragBytes.length - 1) hexDump += `<span style="color:var(--dim);padding:0 4px">·</span>`;
+  });
+  hexDump += `<span class="hex-byte dim-byte" title="Terminator">00</span>`;
+  hexDump += `</div>`;
+
+  const answer = String(totalClusters);
+  const fragDesc = fragBytes.map((f, i) => `fragment ${i+1} : ${f.length} clusters`).join(' · ');
+  const calc = fragBytes.map(f => f.length).join(' + ');
+
+  const qText = `Quel est le <strong>nombre total de clusters</strong> occupés par ce fichier ? (somme des longueurs de tous les fragments)`;
+  const hints = [
+    `Chaque fragment a un header : nibble haut = nb d'octets du delta LCN, nibble bas = nb d'octets de la longueur.`,
+    `On se moque des deltas LCN pour ce calcul — ce qui compte, c'est la <strong>longueur</strong> (run length) de chaque fragment.`,
+    `Les fragments détectés : ${fragDesc}.`,
+    `Total = ${calc} = <strong>${totalClusters} clusters</strong>.`,
+  ];
+  const explain = `Total = ${calc} = <strong>${totalClusters} clusters</strong>. La Run List décrit ${numFragments} fragments, chacun avec sa propre longueur. Pour le total, on ignore les deltas LCN et on additionne uniquement les longueurs.`;
+
+  return {
+    title: 'NTFS Run List — Total de clusters du fichier',
+    category: 'Système de fichiers NTFS',
+    difficulty: 'medium',
+    scenario: `Dans l'attribut <code>$DATA</code> non-résident d'une entrée MFT, tu trouves cette Run List. Le fichier est fragmenté sur ${numFragments} fragments.`,
+    hexDump,
+    legend: `<div style="font-size:.7rem;color:var(--dim);margin-top:.25rem">Run List : [header][length bytes][delta bytes] · 0x00 = fin. Header : nibble haut = taille delta, nibble bas = taille length. Les couleurs distinguent les fragments.</div>`,
+    question: qText,
+    answer,
+    hints,
+    explain,
+  };
+}
+
+// ── EX-EXAM-8 : exFAT — FirstCluster d'un fichier depuis son Stream Extension ──
+// Inspiré de l'examen Q11 (cluster du fichier aBoire.txt).
+// En exFAT, un fichier = 1 File Directory Entry (type 0x85) + 1 Stream Extension (type 0xC0)
+// + 1+ File Name (type 0xC1). Le FirstCluster est dans le Stream Extension à l'offset 0x14 (4 octets LE).
+function makeExFATDirentExercise() {
+  const rand16 = (lo,hi) => Math.floor(Math.random()*(hi-lo+1))+lo;
+
+  const fileNames = ['rapport.txt', 'photo.jpg', 'notes.md', 'secret.pdf', 'archive.zip', 'config.ini', 'donnees.csv'];
+  const fileName = fileNames[rand16(0, fileNames.length-1)];
+  const firstCluster = rand16(0x04, 0xFFF); // cluster entre 4 et 4095 (valeurs lisibles)
+  const fileSize     = rand16(100, 10000);
+  const firstClusterHex = firstCluster.toString(16).toUpperCase().padStart(8,'0');
+
+  // Construire les 3 entrées (3 × 32 octets = 96 octets)
+  const bytes = new Array(96).fill(0x00);
+
+  // === Entrée 1 : File Directory Entry (0x85) @ offset 0x00 ===
+  bytes[0x00] = 0x85; // EntryType = File
+  bytes[0x01] = 0x02; // SecondaryCount = 2 (stream + name)
+  // Checksum (simplifié)
+  bytes[0x02] = 0xC8; bytes[0x03] = 0x7D;
+  // FileAttributes (0x20 = Archive, LE 2 octets)
+  bytes[0x04] = 0x20; bytes[0x05] = 0x00;
+  // Reserved1 (2 octets)
+  // CreateTimestamp (4 octets LE)
+  bytes[0x08] = 0x48; bytes[0x09] = 0x7B; bytes[0x0A] = 0x66; bytes[0x0B] = 0x2F;
+  // LastModifiedTimestamp (4 octets LE)
+  bytes[0x0C] = 0x48; bytes[0x0D] = 0x7B; bytes[0x0E] = 0x66; bytes[0x0F] = 0x2F;
+  // LastAccessedTimestamp (4 octets LE)
+  bytes[0x10] = 0x48; bytes[0x11] = 0x7B; bytes[0x12] = 0x66; bytes[0x13] = 0x2F;
+
+  // === Entrée 2 : Stream Extension (0xC0) @ offset 0x20 ===
+  bytes[0x20] = 0xC0; // EntryType = Stream Extension
+  bytes[0x21] = 0x03; // GeneralSecondaryFlags
+  // Reserved (1 byte) @ 0x22
+  bytes[0x23] = fileName.length; // NameLength (nombre de chars UTF-16)
+  // NameHash (2 octets)
+  bytes[0x24] = 0xD9; bytes[0x25] = 0x7D;
+  // Reserved (2 octets)
+  // ValidDataLength (8 octets LE) @ 0x28
+  bytes[0x28] = fileSize & 0xFF;
+  bytes[0x29] = (fileSize >> 8) & 0xFF;
+  bytes[0x2A] = (fileSize >> 16) & 0xFF;
+  bytes[0x2B] = (fileSize >> 24) & 0xFF;
+  // Reserved (4 octets) @ 0x30
+  // FirstCluster (4 octets LE) @ 0x34  ← L'INFO CRITIQUE
+  bytes[0x34] = firstCluster & 0xFF;
+  bytes[0x35] = (firstCluster >> 8) & 0xFF;
+  bytes[0x36] = (firstCluster >> 16) & 0xFF;
+  bytes[0x37] = (firstCluster >> 24) & 0xFF;
+  // DataLength (8 octets LE) @ 0x38
+  bytes[0x38] = fileSize & 0xFF;
+  bytes[0x39] = (fileSize >> 8) & 0xFF;
+  bytes[0x3A] = (fileSize >> 16) & 0xFF;
+  bytes[0x3B] = (fileSize >> 24) & 0xFF;
+
+  // === Entrée 3 : File Name Extension (0xC1) @ offset 0x40 ===
+  bytes[0x40] = 0xC1;
+  bytes[0x41] = 0x00;
+  // Nom en UTF-16 LE à partir de 0x42 (max 15 chars par entrée)
+  for (let i = 0; i < fileName.length && i < 15; i++) {
+    bytes[0x42 + 2*i]     = fileName.charCodeAt(i) & 0xFF;
+    bytes[0x42 + 2*i + 1] = (fileName.charCodeAt(i) >> 8) & 0xFF;
+  }
+
+  // Rows pour affichage
+  const rows = [];
+  for (let i = 0; i < 96; i += 16) {
+    rows.push({
+      offset: i.toString(16).toUpperCase().padStart(8,'0'),
+      bytes: bytes.slice(i, i+16)
+    });
+  }
+
+  const answer = firstClusterHex;
+  const hexBytes = `${bytes[0x34].toString(16).toUpperCase().padStart(2,'0')} ${bytes[0x35].toString(16).toUpperCase().padStart(2,'0')} ${bytes[0x36].toString(16).toUpperCase().padStart(2,'0')} ${bytes[0x37].toString(16).toUpperCase().padStart(2,'0')}`;
+
+  const qText = `Dans quelle cluster se trouve le <strong>début des données</strong> du fichier <strong>"${fileName}"</strong> ? (numéro de cluster en hexadécimal, 8 chiffres)`;
+  const hints = [
+    `En exFAT, un fichier = 3 entrées : File (0x85) + Stream Extension (0xC0) + File Name (0xC1). Le FirstCluster est dans le Stream Extension.`,
+    `Le type d'entrée est le 1er octet : 0x85 à l'offset 0x00 → File · 0xC0 à l'offset 0x20 → Stream Extension · 0xC1 à 0x40 → File Name.`,
+    `Dans le Stream Extension, <strong>FirstCluster est à l'offset relatif 0x14</strong> (donc 0x20 + 0x14 = <strong>0x34 absolu</strong>) sur 4 octets en Little Endian.`,
+    `Octets 0x34–0x37 = <span style="color:var(--cyan);font-weight:700">${hexBytes}</span> → Little Endian → inverse → <strong>0x${firstClusterHex}</strong> = ${firstCluster} décimal.`,
+  ];
+  const explain = `FirstCluster @ offset 0x34 (= 0x20 + 0x14 dans le Stream Extension) = <code>${hexBytes}</code> LE → <strong>0x${firstClusterHex}</strong> = ${firstCluster} décimal.`;
+
+  return {
+    title: 'exFAT — Cluster de départ d\'un fichier',
+    category: 'Système de fichiers exFAT',
+    difficulty: 'hard',
+    scenario: `Tu analyses le répertoire racine d'une clé USB exFAT. Ces 3 entrées consécutives (96 octets) décrivent le fichier <strong>"${fileName}"</strong>. Retrouve son cluster de départ.`,
+    hexDump: renderHexDump(rows, [
+      {from:0x00, to:0x00, color:'--gold',  label:'0x85 = File Entry'},
+      {from:0x20, to:0x20, color:'--green', label:'0xC0 = Stream Ext'},
+      {from:0x34, to:0x37, color:'--cyan',  label:'FirstCluster (LE)'},
+      {from:0x40, to:0x40, color:'--purple',label:'0xC1 = File Name'},
+    ]),
+    legend: `<div style="font-size:.7rem;color:var(--dim);margin-top:.25rem">exFAT dirent : File (0x85) + Stream Extension (0xC0) + File Name (0xC1). FirstCluster @ Stream+0x14 = abs 0x34 (4 o LE). Nom à partir de 0x42 en UTF-16 LE.</div>`,
     question: qText,
     answer,
     hints,
@@ -2385,8 +2731,11 @@ const EXAM_GENERATORS = [
   makeBinaryExercise,
   makeFAT16SFNExercise,
   makeFAT16RootFullExercise,
+  makeFAT16LFNExercise,              // ← NOUVEAU : LFN reconstruction (examen Q2a)
   makeNTFSMFTAttributeExercise,
+  makeNTFSRunListTotalExercise,      // ← NOUVEAU : total clusters Run List (examen Q8)
   makeEXT3InodeExercise,
+  makeExFATDirentExercise,           // ← NOUVEAU : FirstCluster exFAT (examen Q11)
   makeHFSPlusClusterExercise,
 ];
 
