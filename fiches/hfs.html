@@ -3,251 +3,446 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>HFS+ et APFS — CAS-IN Forensique</title>
-<meta name="description" content="HFS+ Big Endian · B-Trees · CNID · APFS Snapshots · Récupération macOS · Forensique Apple">
+<title>HFS+ — CAS-IN Forensique</title>
+<meta name="description" content="HFS+ · Big Endian · B-Trees · CNID · Catalog File · Extents Overflow · Resource Forks · Journal · Epoch 1904">
 <meta name="theme-color" content="#0d1117">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
 <link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--dim:#6e7681;--cyan:#00e5cc;--gold:#f0c040;--red:#ff4060;--green:#30e88a;--blue:#58a6ff;--orange:#f0883e;--purple:#bc8cff;--mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;line-height:1.6}
 
-<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
-<script>
-(function(){
-  var btn=document.getElementById('back-top');
-  if(btn) window.addEventListener('scroll',function(){
-    btn.classList.toggle('visible',window.scrollY>300);
-  });
-})();
-</script>
+.tn-nav{display:flex;align-items:center;justify-content:space-between;padding:.75rem 2rem;border-bottom:1px solid var(--border);background:rgba(13,17,23,.9);backdrop-filter:blur(8px);position:sticky;top:0;z-index:100}
+.tn-back{color:var(--cyan);text-decoration:none;font-size:.78rem;letter-spacing:.06em}
+.tn-back:hover{color:var(--text)}
+.tn-title{font-family:var(--sans);font-size:.9rem;color:var(--muted);letter-spacing:.08em}
+.tn-quiz{background:rgba(255,64,96,.1);border:1px solid rgba(255,64,96,.3);color:var(--red);padding:.3rem .9rem;border-radius:6px;text-decoration:none;font-size:.72rem;letter-spacing:.06em;transition:.15s}
+.tn-quiz:hover{background:rgba(255,64,96,.2)}
 
+.page{max-width:1100px;margin:0 auto;padding:2rem}
+
+.breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--muted);margin:.5rem 0 1rem;flex-wrap:wrap}
+.breadcrumb a{color:var(--cyan);text-decoration:none}
+.breadcrumb a:hover{color:var(--text)}
+.breadcrumb .bc-sep{color:var(--dim)}
+.breadcrumb .bc-current{color:var(--text)}
+
+.header{padding:1rem 0 2rem}
+.badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(188,140,255,.08);border:1px solid rgba(188,140,255,.25);border-radius:20px;padding:.3rem 1rem;font-size:.72rem;color:var(--purple);letter-spacing:.1em;margin-bottom:1.25rem}
+.header h1{font-family:var(--sans);font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;background:linear-gradient(135deg,var(--purple),var(--blue) 60%,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.75rem}
+
+.sec-title{font-family:var(--sans);font-size:1.3rem;font-weight:700;color:var(--text);margin:2.5rem 0 .35rem}
+.sec-sub{font-size:.8rem;color:var(--muted);margin-bottom:1.5rem}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:1rem}
+.card h3{font-family:var(--sans);font-size:1rem;font-weight:700;color:var(--text);margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.card p,.card ul{font-size:.78rem;color:var(--muted);line-height:1.7}
+.card ul{list-style:none;padding-left:0;margin-top:.5rem}
+.card li{padding:.2rem 0;padding-left:1.25rem;position:relative}
+.card li::before{content:'→';position:absolute;left:0;color:var(--purple)}
+code{color:var(--cyan);background:rgba(0,229,204,.06);border:1px solid rgba(0,229,204,.1);padding:.05rem .35rem;border-radius:3px;font-size:.72rem;font-family:var(--mono);word-break:break-all}
+
+pre{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;overflow-x:auto;font-size:.72rem;color:var(--muted);line-height:1.6;margin:1rem 0;font-family:var(--mono)}
+pre code{background:none;border:none;padding:0;color:var(--muted)}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem}
+@media(max-width:700px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+/* Volume layout viz */
+.vol-viz{display:flex;gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:1rem 0 1.5rem}
+.vol-seg{padding:1rem .65rem;text-align:center;flex:1;position:relative;font-size:.7rem}
+.vol-seg::after{content:'';position:absolute;right:0;top:15%;height:70%;width:1px;background:var(--border)}
+.vol-seg:last-child::after{display:none}
+.vol-seg.boot{background:linear-gradient(135deg,rgba(110,118,129,.15),rgba(110,118,129,.03))}
+.vol-seg.vh{background:linear-gradient(135deg,rgba(240,136,62,.15),rgba(240,136,62,.04))}
+.vol-seg.cat{background:linear-gradient(135deg,rgba(88,166,255,.15),rgba(88,166,255,.04))}
+.vol-seg.ext{background:linear-gradient(135deg,rgba(188,140,255,.15),rgba(188,140,255,.04))}
+.vol-seg.data{background:linear-gradient(135deg,rgba(48,232,138,.15),rgba(48,232,138,.04));flex:2}
+.vol-seg.avh{background:linear-gradient(135deg,rgba(240,136,62,.15),rgba(240,136,62,.04))}
+.vol-lbl{font-size:.58rem;color:var(--dim);letter-spacing:.08em;margin-bottom:.3rem;text-transform:uppercase}
+.vol-name{font-size:.75rem;font-weight:700;margin-bottom:.2rem;color:var(--text)}
+.vol-desc{font-size:.6rem;color:var(--muted);line-height:1.4}
+
+table{width:100%;border-collapse:collapse;font-size:.76rem;margin:1rem 0;background:var(--surface);border-radius:8px;overflow:hidden}
+th{padding:.7rem .85rem;text-align:left;background:var(--surface2);font-size:.64rem;letter-spacing:.12em;color:var(--dim);border-bottom:2px solid var(--border);text-transform:uppercase}
+td{padding:.65rem .85rem;border-bottom:1px solid rgba(48,54,61,.4);color:var(--muted);line-height:1.5;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+td code{font-size:.7rem}
+
+.warning-box{background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.2);border-left:3px solid var(--red);border-radius:8px;padding:1rem 1.25rem;margin:1.25rem 0;font-size:.78rem;color:var(--muted);line-height:1.7}
+.warning-box strong{color:var(--red)}
+
+.tip-box{background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.2);border-left:3px solid var(--cyan);border-radius:8px;padding:1rem 1.25rem;margin:1.25rem 0;font-size:.78rem;color:var(--muted);line-height:1.7}
+.tip-box strong{color:var(--cyan)}
+
+.exam-box{background:rgba(240,192,64,.05);border:1px solid rgba(240,192,64,.25);border-left:3px solid var(--gold);border-radius:8px;padding:1rem 1.25rem;margin:1.5rem 0;font-size:.78rem;color:var(--muted);line-height:1.8}
+.exam-box strong{color:var(--gold)}
+.exam-box .exam-title{font-family:var(--sans);color:var(--gold);font-size:.72rem;letter-spacing:.12em;margin-bottom:.5rem;text-transform:uppercase}
+
+.epoch-viz{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin:1rem 0;font-family:var(--mono);font-size:.78rem;line-height:1.8}
+.epoch-viz .epoch-line{display:flex;gap:.75rem;align-items:baseline;padding:.3rem 0}
+.epoch-viz .epoch-label{color:var(--dim);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;min-width:90px}
+.epoch-viz .epoch-val{color:var(--gold);font-weight:700}
+.epoch-viz .epoch-date{color:var(--cyan)}
+
+.fiche-tag{display:none}
+</style>
 </head>
 <body>
-<a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:0;z-index:999;padding:.5rem 1rem;background:var(--cyan);color:var(--bg);font-size:.8rem;border-radius:0 0 4px 0;text-decoration:none">Aller au contenu</a>
-<nav class="tn-nav" aria-label="Navigation fiche">
+
+<nav class="tn-nav">
   <a href="index.html" class="tn-back">← Fiches</a>
-  <span class="tn-title">HFS+</span>
+  <span class="tn-title">SYSTÈMES DE FICHIERS</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
+
 <div class="page" style="padding-top:.5rem;padding-bottom:0">
   <div class="breadcrumb">
     <a href="../index.html">🏠 Accueil</a>
     <span class="bc-sep">›</span>
     <a href="index.html">Fiches</a>
     <span class="bc-sep">›</span>
-    <a href="index.html#cat-systèmesdefichiers">Systèmes de fichiers</a>
+    <a href="index.html#cat-systèmesdefichiers">Systèmes de Fichiers</a>
     <span class="bc-sep">›</span>
-    <span class="bc-current">Hfs</span>
-    <span class="read-time-badge">⏱ ~6 min</span>
+    <span class="bc-current">HFS+</span>
   </div>
 </div>
-<main id="main-content">
-<div style="margin:1.25rem 0;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
-  <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Citation</span><br>
-  <em style="color:var(--text)">"HFS+ volumes contain rich metadata structures including B-Tree catalogs that store full path history, creation events, and resource forks — often revealing more than the user intended to preserve."</em><br>
-  <span style="font-size:.72rem;margin-top:.3rem;display:block">— Apple Inc., <em>Technical Note TN1150: HFS Plus Volume Format</em>, 2004</span>
+
+<div class="page" style="padding-bottom:.5rem">
+  <div class="header">
+    <div class="badge">🍎 Legacy Apple FS</div>
+    <h1>HFS+ — Hierarchical File System Plus</h1>
+    <p style="font-size:.85rem;color:var(--muted);margin-top:.35rem;max-width:720px">
+      B-Trees Catalog, CNID, endianness inversée, epoch 1904, resource forks, journal —
+      le système Apple de 1998 à 2017 (et encore présent sur des millions de Macs antérieurs
+      à macOS High Sierra).
+    </p>
+  </div>
 </div>
-<div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(240,192,64,.05);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
-  <span style="color:var(--gold);font-weight:700">🍎 Fun fact :</span> HFS a été créé en 1985 pour le Mac 512K. Il ne supportait que 65536 fichiers par volume. En 2017, Apple a enfin migré vers APFS — 32 ans après. La forensique des vieux Macs reste donc pertinente sur une carrière entière d'enquêteur.
-</div>
-</div>
+
 <div class="page">
-<div class="header">
-  <div class="badge" style="color:#var(--purple)">HFS+</div>
-  <div>
-    <div style="margin-bottom:.25rem"><span class="tag" style="background:rgba(188,140,255,.12);border-color:rgba(188,140,255,.3);color:#var(--purple)">Forensique</span> <span class="tag" style="background:rgba(188,140,255,.12);border-color:rgba(188,140,255,.3);color:#var(--purple)">macOS</span></div>
-    <div class="meta">HFS+ Big Endian · B-Trees · CNID · APFS Snapshots · Récupération macOS</div>
+
+<div class="warning-box">
+  <strong>⚠️ Big Endian !</strong> HFS+ stocke toutes les valeurs multi-octets en <strong>Big Endian</strong>, à l'inverse de FAT/NTFS (Little Endian). En lecture hex manuelle : inverser l'ordre des octets pour chaque champ. X-Ways, Autopsy et mac_apt convertissent automatiquement.
+</div>
+
+<div class="sec-title">🏗 Architecture du volume</div>
+<div class="sec-sub">Un volume HFS+ commence à l'<strong>offset 1024</strong> (pas 0 comme FAT/NTFS) — les 1024 premiers octets sont réservés aux Bootblocks.</div>
+
+<div class="vol-viz">
+  <div class="vol-seg boot">
+    <div class="vol-lbl">OFFSET 0</div>
+    <div class="vol-name">Bootblocks</div>
+    <div class="vol-desc">2 × 512 octets</div>
+  </div>
+  <div class="vol-seg vh">
+    <div class="vol-lbl">OFFSET 1024</div>
+    <div class="vol-name">Volume Header</div>
+    <div class="vol-desc">Signature 'H+' / 'HX'</div>
+  </div>
+  <div class="vol-seg cat">
+    <div class="vol-lbl">B-TREE</div>
+    <div class="vol-name">Catalog File</div>
+    <div class="vol-desc">Métadonnées</div>
+  </div>
+  <div class="vol-seg ext">
+    <div class="vol-lbl">B-TREE</div>
+    <div class="vol-name">Extents Overflow</div>
+    <div class="vol-desc">Fragments extra</div>
+  </div>
+  <div class="vol-seg data">
+    <div class="vol-lbl">ZONE</div>
+    <div class="vol-name">Données utilisateur</div>
+    <div class="vol-desc">Allocation Blocks</div>
+  </div>
+  <div class="vol-seg avh">
+    <div class="vol-lbl">FIN −512 o</div>
+    <div class="vol-name">Alternate VH</div>
+    <div class="vol-desc">Backup</div>
   </div>
 </div>
 
-<div class="info">ℹ HFS+ est <strong>Big Endian</strong> — inverse de Windows. X-Ways convertit automatiquement, mais en lecture manuelle hex : inverser les octets de chaque valeur multi-octets.</div>
-<div class="sec" id="hfs-architecture-b-trees">
-<div class="sec-title">HFS+ — Architecture B-Trees</div>
-<div class="zones" style="margin-bottom:.75rem">
-  <div class="zone z-gray">Bootblocks<span class="zl">512 o × 2</span></div>
-  <div class="zone z-orange">Volume Header<span class="zl">offset 1024</span></div>
-  <div class="zone z-blue">Catalog B-Tree<span class="zl">Tous les fichiers</span></div>
-  <div class="zone z-purple">Extents Overflow<span class="zl">Fichiers fragmentés</span></div>
-  <div class="zone z-green" style="flex:2">Données<span class="zl">Allocation Blocks</span></div>
-  <div class="zone z-orange">Alternate VH<span class="zl">−512 o depuis fin</span></div>
-</div>
-<div class="g2">
-  <div class="card card-orange">
-    <div class="ct">Volume Header (offset 1024)</div>
+<div class="grid-2">
+  <div class="card">
+    <h3>🎯 Volume Header</h3>
     <ul>
-      <li>Signature : <span class="h h-orange">0x482B</span> = 'H+' (HFS+)</li>
-      <li>Signature journalisé : <span class="h h-orange">0x4858</span> = 'HX'</li>
-      <li>Taille : 512 octets</li>
-      <li>Contient : taille volume, nombre blocs, timestamps création/modification</li>
-      <li>Alternate VH : −512 octets depuis la fin du volume</li>
+      <li>Toujours à l'<strong>offset 1024</strong>, taille 512 octets</li>
+      <li>Signature : <code>0x482B</code> = 'H+' (HFS+) · <code>0x4858</code> = 'HX' (HFSX, case-sensitive)</li>
+      <li>Contient : taille volume, nombre de blocs d'allocation, nextCatalogID (prochain CNID libre), timestamps volume</li>
+      <li>Pointeurs vers les 5 fichiers spéciaux (Catalog, Extents Overflow, Attributes, Startup, Allocation)</li>
+      <li>Attributs : journalé, bootable, corrompu au démontage (<em>volumeInconsistent</em>)</li>
+      <li><strong>Alternate VH</strong> : copie à <code>−1024 octets depuis la fin</code> du volume (ancre de récupération)</li>
     </ul>
   </div>
-  <div class="card card-blue">
-    <div class="ct">CNID — Catalog Node ID</div>
+  <div class="card">
+    <h3>🔢 CNID — Catalog Node ID</h3>
+    <p>Identifiant unique <strong>32 bits</strong> de chaque objet (fichier, dossier, thread). Équivalent de l'inode EXT. <strong>Persistant</strong> même après renommage ou déplacement — traçable dans les LNK macOS (Aliases).</p>
     <ul>
-      <li>Identifiant unique de chaque objet (≈ inode EXT)</li>
-      <li>CNID <strong>1</strong> : parent fictif de la racine</li>
-      <li>CNID <strong>2</strong> : répertoire racine du volume</li>
-      <li>CNID <strong>3</strong> : Extents Overflow File</li>
-      <li>CNID <strong>4</strong> : Attributes File</li>
-      <li>CNID <strong>5</strong> : Startup File</li>
-      <li>CNIDs normaux ≥ 16. Persistant même si le fichier est renommé.</li>
+      <li><code>1</code> — parent fictif de la racine</li>
+      <li><code>2</code> — <strong>répertoire racine</strong> du volume</li>
+      <li><code>3</code> — Extents Overflow File</li>
+      <li><code>4</code> — Catalog File</li>
+      <li><code>5</code> — Bad Blocks File</li>
+      <li><code>6</code> — Allocation File</li>
+      <li><code>7</code> — Startup File</li>
+      <li><code>8</code> — Attributes File</li>
+      <li><code>≥ 16</code> — CNIDs utilisateurs normaux</li>
     </ul>
   </div>
-</div>
 </div>
 
-<div class="sec" id="les-5-fichiers-speciaux-b-tree">
-<div class="sec-title">Les 5 fichiers spéciaux B-Tree</div>
-<table class="tbl">
-<thead><tr><th>Fichier</th><th>CNID</th><th>Rôle forensique</th></tr></thead>
+<div class="sec-title">🌳 Les 5 fichiers spéciaux B-Tree</div>
+<div class="sec-sub">HFS+ est <strong>entièrement construit sur des B-Trees</strong>. Chaque structure critique est un fichier invisible.</div>
+
+<table>
+<thead>
+<tr>
+  <th>Fichier</th>
+  <th>CNID</th>
+  <th>Rôle forensique</th>
+</tr>
+</thead>
 <tbody>
-<tr class="hi"><td><strong>Catalog File</strong></td><td>-</td><td>Répertoire principal de tous les fichiers/dossiers. Source primaire de métadonnées. Nœuds résiduels après suppression → forensique.</td></tr>
-<tr><td><strong>Extents Overflow File</strong></td><td>3</td><td>Stocke les extents supplémentaires des fichiers très fragmentés (> 8 extents). Clé = (forkType + CNID + startBlock).</td></tr>
-<tr class="hi"><td><strong>Attributes File</strong></td><td>4</td><td>Attributs étendus et ACL. Équivalent NTFS $EA.</td></tr>
-<tr><td><strong>Startup File</strong></td><td>5</td><td>Données pour le démarrage (peu utilisé sur macOS moderne).</td></tr>
-<tr class="hi"><td><strong>Allocation File</strong></td><td>6</td><td>Bitmap d'allocation : 1 bit par Allocation Block. Équivalent $Bitmap NTFS.</td></tr>
+<tr>
+  <td><strong>Catalog File</strong></td>
+  <td><code>4</code></td>
+  <td>Répertoire principal : nom, dates, taille, CNID, parent, fork pointers de chaque objet. <strong>Source primaire de métadonnées.</strong> Les nœuds B-Tree libérés mais non réécrits conservent des entrées résiduelles → récupération forensique.</td>
+</tr>
+<tr>
+  <td><strong>Extents Overflow</strong></td>
+  <td><code>3</code></td>
+  <td>Stocke les extents supplémentaires des fichiers très fragmentés (&gt; 8 extents par fork). Clé = <code>(forkType, CNID, startBlock)</code> où forkType <code>0x00</code> = data, <code>0xFF</code> = resource.</td>
+</tr>
+<tr>
+  <td><strong>Attributes File</strong></td>
+  <td><code>8</code></td>
+  <td>Attributs étendus (xattr) et ACL POSIX. Équivalent de <code>$EA</code> NTFS. Contient les Finder Info (icône, couleur label, position), quarantine (<code>com.apple.quarantine</code>), metadata Spotlight.</td>
+</tr>
+<tr>
+  <td><strong>Allocation File</strong></td>
+  <td><code>6</code></td>
+  <td>Bitmap d'allocation des Allocation Blocks — 1 bit par bloc. Équivalent <code>$Bitmap</code> NTFS.</td>
+</tr>
+<tr>
+  <td><strong>Startup File</strong></td>
+  <td><code>7</code></td>
+  <td>Données de boot pour systèmes non-Mac bootant en HFS+ (rare). Souvent vide sur macOS moderne.</td>
+</tr>
 </tbody>
 </table>
-</div>
 
-<div class="sec" id="suppression-hfs-et-recuperation">
-<div class="sec-title">Suppression HFS+ et récupération</div>
-<div class="steps">
-  <div class="step"><div class="sn sn-r">1</div><div class="st">L'entrée du <strong>Catalog File B-Tree</strong> est supprimée. Mais les nœuds B-Tree non réalloués peuvent contenir des entrées résiduelles avec les métadonnées complètes.</div></div>
-  <div class="step"><div class="sn sn-r">2</div><div class="st">Les blocs sont marqués libres dans l'<strong>Allocation File</strong> (bitmap). Données non effacées jusqu'à réallocation.</div></div>
-  <div class="step"><div class="sn sn-r">3</div><div class="st">Si journalisation active : le journal peut contenir des versions antérieures des métadonnées. X-Ways 20.3+ supporte l'analyse directe des structures HFS+.</div></div>
-</div>
-</div>
+<div class="sec-title">📅 Timestamps HFS+ — Epoch 1904</div>
 
-<div class="sec" id="apfs-apple-file-system-depuis-2017">
-<div class="sec-title">APFS — Apple File System (depuis 2017)</div>
-<div class="g2">
-  <div class="card card-purple">
-    <div class="ct">Nouveautés APFS vs HFS+</div>
-    <ul>
-      <li><strong>Snapshots</strong> : états du volume à un instant T (copy-on-write)</li>
-      <li><strong>Clones</strong> : copies sans duplication immédiate des données</li>
-      <li><strong>Chiffrement</strong> multi-clés natif (par fichier ou par volume)</li>
-      <li>Optimisé SSD/Flash : réduction de l'usure</li>
-      <li>Container partagé entre plusieurs volumes</li>
-    </ul>
+<div class="epoch-viz">
+  <div class="epoch-line">
+    <span class="epoch-label">HFS+ epoch</span>
+    <span class="epoch-val">1er janvier 1904 00:00:00 UTC</span>
   </div>
-  <div class="card card-green">
-    <div class="ct">Valeur forensique APFS</div>
-    <ul>
-      <li>Snapshots Time Machine : versions antérieures de fichiers chiffrés</li>
-      <li>X-Ways 20.3+ : ana<div class="prereq-block">
-<div class="prereq-row">
-  <span class="prereq-label">Prérequis :</span><a href="encodage.html" class="prereq-pill">📖 Encodage</a><a href="disques.html" class="prereq-pill">📖 Disques</a>
-</div><div class="prereq-row">
-  <span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=offset" class="tp-pill" onclick="sessionStorage.setItem('tp_start_cat','offset')">🧪 📐 Calcul d'offset</a><a href="../tp.html?cat=hextable" class="tp-pill" onclick="sessionStorage.setItem('tp_start_cat','hextable')">🧪 🗺 Table Hex</a><a href="../tp.html?cat=fsidentify" class="tp-pill" onclick="sessionStorage.setItem('tp_start_cat','fsidentify')">🧪 🔍 Identifier le FS</a>
-</div><div class="prereq-row">
-  <span class="prereq-label">Voir aussi :</span><a href="macos-linux.html" class="related-pill">🔗 macOS/Linux</a><a href="comparaison_fs.html" class="related-pill">🔗 Comparaison FS</a>
-</div></div>
-lyse B-Trees APFS, fichiers supprimés, snapshots</li>
-      <li>Chiffrement → impossible sans clé (iCloud peut contenir la clé)</li>
-      <li>Mactime précision nanoseconde</li>
-    </ul>
+  <div class="epoch-line">
+    <span class="epoch-label">Unix epoch</span>
+    <span class="epoch-val">1er janvier 1970 00:00:00 UTC</span>
+  </div>
+  <div class="epoch-line">
+    <span class="epoch-label">Différence</span>
+    <span class="epoch-val">+2 082 844 800 secondes</span> <span style="color:var(--dim)">(66 ans)</span>
+  </div>
+  <div class="epoch-line">
+    <span class="epoch-label">Précision</span>
+    <span class="epoch-val">1 seconde</span>
+  </div>
+  <div class="epoch-line">
+    <span class="epoch-label">Conversion</span>
+    <span class="epoch-date">unix_ts = hfs_ts − 2 082 844 800</span>
+  </div>
+  <div class="epoch-line">
+    <span class="epoch-label">En Python</span>
+    <code>datetime(1904,1,1) + timedelta(seconds=hfs_ts)</code>
   </div>
 </div>
+
+<div class="card">
+  <h3>🕐 Quatre timestamps par fichier</h3>
+  <ul>
+    <li><code>createDate</code> — création du fichier (persistant même après modification)</li>
+    <li><code>contentModDate</code> — dernière modification du contenu (équivalent mtime)</li>
+    <li><code>attributeModDate</code> — dernière modif métadonnées (xattr, permissions)</li>
+    <li><code>accessDate</code> — dernier accès en lecture (peut être désactivé pour perfs SSD)</li>
+    <li><code>backupDate</code> — dernier backup Time Machine (si applicable)</li>
+  </ul>
+  <p style="margin-top:.75rem">Tous exprimés en secondes depuis epoch 1904, stockés en Big Endian 32 bits.</p>
 </div>
 
-<div class="formula">
-  <div><span class="f">Extents Overflow</span> : clé = (forkType + CNID + startBlock). forkType 0x00 = data fork, 0xFF = resource fork.</div>
-  <div><span class="f">Resource Fork</span> : données Mac classiques (icônes, ressources). Présence = ancien système ou application rosettified.</div>
-</div>
-<div class="tip">💡 <strong>Tip :</strong> Sur Mac saisi avec chiffrement FileVault actif, la clé est en RAM. La capturer avant extinction. Si macOS est verrouillé : mode DFU ou accès iCloud Recovery Key.</div>
+<div class="sec-title">📎 Resource Forks — héritage Classic Mac OS</div>
 
-
-
-<div class="sec" id="hfs-vs-apfs-differences-forensiques-cles">
-  <div class="sec-title">HFS+ vs APFS — Différences forensiques clés</div>
-  <table>
-    <thead><tr><th>Caractéristique</th><th style="color:var(--cyan)">HFS+</th><th style="color:var(--green)">APFS</th></tr></thead>
-    <tbody>
-      <tr><td>Introduit</td><td>1998 (Mac OS 8.1)</td><td>2017 (macOS High Sierra 10.13)</td></tr>
-      <tr><td><strong>Timestamp epoch</strong></td><td><strong style="color:var(--gold)">1er janv. 1904 · +2 082 844 800 s vs Unix</strong></td><td>1er janv. 2001 (Apple epoch) · +978 307 200 s vs Unix</td></tr>
-      <tr><td>Précision timestamps</td><td>1 seconde</td><td>1 nanoseconde</td></tr>
-      <tr><td>Endianness</td><td style="color:var(--red)"><strong>Big Endian ⚠️</strong></td><td>Little Endian</td></tr>
-      <tr><td>Chiffrement</td><td>FileVault 2 (couche OS)</td><td>Natif multi-clés (par fichier)</td></tr>
-      <tr><td>Snapshots</td><td style="color:var(--red)">Non</td><td style="color:var(--green)">✅ copy-on-write</td></tr>
-      <tr><td>Journalisation</td><td>Oui (depuis 10.2.2)</td><td>✅ Transactions atomiques</td></tr>
-      <tr><td>Structure</td><td>B-tree Catalog</td><td>B-tree APFS + container partagé</td></tr>
-      <tr><td>Récupération fichiers</td><td>Nœuds B-tree résiduels</td><td>Snapshots Time Machine</td></tr>
-      <tr><td>Outil X-Ways</td><td>Support complet</td><td>Support depuis v20.3</td></tr>
-    </tbody>
-  </table>
-  <div class="info" style="margin-top:.75rem">⚠️ <strong>Epoch HFS+ :</strong> Les timestamps HFS+ comptent depuis le <strong>1er janvier 1904</strong> (pas 1970). Ajouter 2 082 844 800 secondes pour convertir en Unix timestamp. Une date HFS+ de 0 = 1904-01-01 00:00:00 UTC.<br>
-  <strong>Epoch APFS :</strong> depuis le 1er janvier 2001. Ajouter 978 307 200 secondes pour Unix.</div>
+<div class="card">
+  <p>Chaque fichier HFS+ possède <strong>deux forks</strong> : le <em>data fork</em> (contenu principal) et le <em>resource fork</em> (icône custom, métadonnées d'application, code legacy).</p>
+  <ul>
+    <li>Accès CLI : <code>ls -l@ fichier</code> (montre xattr), <code>cat fichier/..namedfork/rsrc</code> (lecture directe)</li>
+    <li>Taille du rsrc fork visible via <code>xattr -l fichier</code> ou Finder (Get Info)</li>
+    <li>En copie vers FAT/NTFS : macOS crée des fichiers <strong>AppleDouble</strong> préfixés <code>._nomfichier</code> pour préserver le rsrc fork + xattr</li>
+    <li>Sur clé USB FAT : présence de <code>._</code> files = la clé a été utilisée sur Mac (empreinte forensique)</li>
+    <li>Dans archives <code>.zip</code> créées par Finder : dossier caché <code>__MACOSX/</code> contient les AppleDouble</li>
+  </ul>
 </div>
 
-<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Volume Header à offset <strong>1024</strong> (pas 0) · <strong>Big Endian</strong> (inverser les octets vs FAT/NTFS) · Epoch HFS+ = <strong>1er janvier 1904</strong> (+2 082 844 800 s vs Unix) · Alternate VH = −512 octets depuis la fin · CNID 2 = racine · Catalog B-tree = source primaire des métadonnées · APFS : snapshots Time Machine récupérables · X-Ways v20.3+ pour APFS.</div>
-<div class="footer">
-  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
-  <span>Apple HFS+ Volume Format · Ch. 12 Manuel</span>
+<div class="tip-box">
+  <strong>💡 Indice forensique :</strong> une clé USB qui contient des fichiers <code>._filename</code> ou un dossier <code>__MACOSX/</code> dans une archive ZIP a transité par un Mac. Permet d'établir qu'un fichier a été manipulé sur un appareil Apple avant d'arriver sur le système analysé.
 </div>
+
+<div class="sec-title">📖 Journalisation HFS+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>📝 Le journal HFS+</h3>
+    <p>Introduit avec Mac OS X 10.2.2 (2002). Activable via <code>diskutil enableJournal /dev/diskX</code>. Signature VH = <code>HX</code> ou flag <code>kHFSVolumeJournaledBit</code>.</p>
+    <ul>
+      <li>Fichier <strong>invisible</strong> <code>.journal</code> à la racine (CNID spécial)</li>
+      <li>Taille typique : 8–64 MB circulaire</li>
+      <li>Contient uniquement les métadonnées (pas le contenu utilisateur)</li>
+      <li>Structure : header + transactions séquentielles avec block list</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>🔬 Valeur forensique du journal</h3>
+    <ul>
+      <li>Historique récent des opérations sur métadonnées</li>
+      <li>Peut révéler des <strong>créations / suppressions / renommages</strong> non visibles dans le Catalog actuel</li>
+      <li>Anciens états de B-Tree nodes avant réécriture</li>
+      <li>Outils : <code>hfsinspect</code>, parsers custom Python (<code>pyhfs</code>)</li>
+      <li>Journal éphémère : bouclé rapidement sur système actif</li>
+    </ul>
+  </div>
 </div>
-</main>
 
-<script>
-(function(){
-  /* ── Bouton copier sur .cli et code standalone ── */
-  function addCopyButtons(){
-    /* .cli blocks */
-    document.querySelectorAll('.cli').forEach(function(el){
-      if(el.querySelector('.copy-btn')) return;
-      var btn = document.createElement('button');
-      btn.className = 'copy-btn';
-      btn.title = 'Copier';
-      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11V3a2 2 0 012-2h6"/></svg>';
-      btn.onclick = function(){
-        var text = el.innerText.replace(/^copier$/mi,'').trim();
-        navigator.clipboard.writeText(text).then(function(){
-          btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-          btn.style.color='var(--green)';
-          setTimeout(function(){ btn.innerHTML='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11V3a2 2 0 012-2h6"/></svg>'; btn.style.color=''; }, 1500);
-        });
-      };
-      el.style.position='relative';
-      el.appendChild(btn);
-    });
-    /* <code> standalone (inside .h class or filter-row or step-text) */
-    document.querySelectorAll('.copy-code').forEach(function(el){
-      if(el.dataset.copyInit) return;
-      el.dataset.copyInit = '1';
-      el.style.cursor = 'pointer';
-      el.title = 'Cliquer pour copier';
-      el.onclick = function(){
-        navigator.clipboard.writeText(el.innerText).then(function(){
-          var orig = el.style.background;
-          el.style.background = 'rgba(48,232,138,.2)';
-          setTimeout(function(){ el.style.background = orig; }, 800);
-        });
-      };
-    });
-  }
+<div class="sec-title">🗑 Suppression et récupération</div>
 
-  /* ── TOC smooth scroll ── */
-  document.querySelectorAll('.toc a[href^="#"]').forEach(function(a){
-    a.addEventListener('click', function(e){
-      e.preventDefault();
-      var id = a.getAttribute('href').slice(1);
-      var el = document.getElementById(id);
-      if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
-    });
-  });
+<div class="card">
+  <h3>🔄 Ce qui se passe à la suppression</h3>
+  <ol style="list-style:none;padding-left:0">
+    <li style="padding:.3rem 0"><strong style="color:var(--purple)">1.</strong> L'entrée est retirée du <strong>Catalog B-Tree</strong>. Le nœud B-Tree qui la contenait est marqué libre <em>mais pas écrasé immédiatement</em> tant que le nœud n'est pas réalloué.</li>
+    <li style="padding:.3rem 0"><strong style="color:var(--purple)">2.</strong> Les blocs de données sont marqués libres dans l'<strong>Allocation File</strong>. Le contenu brut n'est pas effacé avant réallocation.</li>
+    <li style="padding:.3rem 0"><strong style="color:var(--purple)">3.</strong> Si journalisation active : l'opération est enregistrée dans le <code>.journal</code> → fenêtre supplémentaire pour récupérer les métadonnées.</li>
+    <li style="padding:.3rem 0"><strong style="color:var(--purple)">4.</strong> Les CNIDs ne sont pas réutilisés avant épuisement de l'espace 32 bits → un CNID supprimé reste unique historiquement.</li>
+  </ol>
+</div>
 
-  /* ── Back-to-top ── */
-  var btn = document.getElementById('back-top');
-  if(btn) window.addEventListener('scroll', function(){
-    btn.classList.toggle('visible', window.scrollY > 300);
-  });
+<div class="card">
+  <h3>🔨 Stratégies de récupération</h3>
+  <ul>
+    <li><strong>Carving du Catalog</strong> : parser les nœuds B-Tree libérés pour extraire entrées résiduelles (outil : <code>hfsinspect</code>, Autopsy plugin HFS)</li>
+    <li><strong>Extents orphelins</strong> : les extents dans Extents Overflow peuvent pointer sur des données toujours lisibles</li>
+    <li><strong>Corbeille</strong> : <code>~/.Trash/</code> (volume système) + <code>.Trashes/</code> (volumes externes) — souvent peu vidée</li>
+    <li><strong>Time Machine</strong> : sauvegardes Time Machine historiques sur disque externe HFS+ → versions antérieures des fichiers</li>
+    <li><strong>Spotlight metadata</strong> : <code>.Spotlight-V100/</code> conserve des indices même après suppression</li>
+    <li><strong>Journal</strong> : lecture séquentielle avec parser custom — fenêtre courte mais informative</li>
+  </ul>
+</div>
 
-  document.addEventListener('DOMContentLoaded', addCopyButtons);
-  if(document.readyState !== 'loading') addCopyButtons();
-})();
-</script>
+<div class="sec-title">💾 Time Machine sur HFS+</div>
+
+<div class="card">
+  <p>Time Machine de Mac OS X 10.5 (2007) à macOS 10.15 utilisait HFS+ avec <strong>hard links vers des répertoires</strong> — fonctionnalité non-standard exclusive Apple.</p>
+  <ul>
+    <li>Stockage : <code>/Volumes/&lt;TM_Disk&gt;/Backups.backupdb/&lt;Mac&gt;/</code></li>
+    <li>Un dossier par snapshot : <code>YYYY-MM-DD-HHMMSS/</code></li>
+    <li>Hard links de répertoires → taille sur disque quasi-nulle pour snapshots incrémentaux</li>
+    <li>Lien symbolique <code>Latest</code> pointant sur la dernière sauvegarde</li>
+    <li><strong>Valeur forensique majeure</strong> : accès aux versions antérieures de tous les fichiers, parfois sur plusieurs années</li>
+    <li>Sur macOS 11+ : Time Machine migre vers APFS snapshots (voir fiche APFS)</li>
+  </ul>
+</div>
+
+<div class="sec-title">🔐 FileVault 1 (legacy, spécifique HFS+)</div>
+
+<div class="card">
+  <p>La <strong>première</strong> version de FileVault (Mac OS X 10.3 Panther → 10.6 Snow Leopard) ne chiffrait <u>que le répertoire personnel</u>, pas tout le volume :</p>
+  <ul>
+    <li>Home directory stocké dans un <strong>sparsebundle</strong> chiffré AES-128 : <code>/Users/.&lt;user&gt;/&lt;user&gt;.sparsebundle</code></li>
+    <li>Monté dynamiquement au login</li>
+    <li>Clé dérivée du mot de passe utilisateur + Master Password (optionnel)</li>
+    <li>Rest du volume HFS+ en <strong>clair</strong> → artefacts système accessibles sans la clé</li>
+    <li>FileVault 2 (10.7 Lion) = chiffrement complet du volume (CoreStorage / XTS-AES-128), voir fiche <em>Chiffrement de Volumes</em></li>
+  </ul>
+</div>
+
+<div class="sec-title">🛠 Outils d'analyse HFS+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>💼 Commerciaux</h3>
+    <ul>
+      <li><strong>X-Ways Forensics</strong> — parsing HFS+ complet, journal, resource forks</li>
+      <li><strong>EnCase</strong> — support legacy solide</li>
+      <li><strong>BlackLight / MacQuisition</strong> (BlackBag / Cellebrite) — spécialisé Mac</li>
+      <li><strong>Magnet AXIOM Mac Artifacts</strong></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>🆓 Open source</h3>
+    <ul>
+      <li><strong>hfsinspect</strong> (JP Grim) — CLI, analyse B-Trees en détail</li>
+      <li><strong>fsck_hfs</strong> (Apple, inclus macOS) — vérification cohérence</li>
+      <li><strong>iBored</strong> — éditeur hex avec templates HFS+</li>
+      <li><strong>Autopsy / Sleuth Kit</strong> — <code>fls</code>, <code>istat</code>, <code>icat</code> sur HFS+</li>
+      <li><strong>mac_apt</strong> (Yogesh Khatri) — macOS Artifact Parsing Tool</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title">💻 Commandes essentielles</div>
+
+<pre><code><span style="color:var(--dim)"># Identifier le type de filesystem sur un disque</span>
+<span style="color:var(--orange)">diskutil</span> info /dev/disk2s1 | grep "File System"
+
+<span style="color:var(--dim)"># Monter une image HFS+ en lecture seule (Linux)</span>
+<span style="color:var(--orange)">sudo</span> mount -t hfsplus -o ro,loop,offset=1048576 image.dd /mnt/hfs
+
+<span style="color:var(--dim)"># Sleuth Kit — lister tous les fichiers</span>
+<span style="color:var(--orange)">fls</span> -r -p -f hfs image.dd
+
+<span style="color:var(--dim)"># Inspecter le Volume Header avec hfsinspect</span>
+<span style="color:var(--orange)">hfsinspect</span> -d /dev/disk2s1 -v
+
+<span style="color:var(--dim)"># Parcourir le Catalog B-Tree</span>
+<span style="color:var(--orange)">hfsinspect</span> -d image.dd --btree catalog
+
+<span style="color:var(--dim)"># Extraire attributs étendus (resource forks + xattr)</span>
+<span style="color:var(--orange)">xattr</span> -l fichier.ext
+<span style="color:var(--orange)">ls</span> -l@ fichier.ext
+
+<span style="color:var(--dim)"># Convertir timestamp HFS+ (epoch 1904) en date lisible</span>
+<span style="color:var(--orange)">python3</span> -c "from datetime import datetime, timedelta; \
+  print(datetime(1904,1,1) + timedelta(seconds=3797928000))"
+</code></pre>
+
+<div class="exam-box">
+  <div class="exam-title">📚 Examen CAS-IN</div>
+  <ul style="list-style:none;padding-left:0;margin-top:.5rem">
+    <li style="padding:.2rem 0"><strong>Offset du Volume Header :</strong> <code>1024</code> (pas 0)</li>
+    <li style="padding:.2rem 0"><strong>Signature :</strong> <code>0x482B</code> ('H+') ou <code>0x4858</code> ('HX' journalisé / case-sensitive)</li>
+    <li style="padding:.2rem 0"><strong>Endianness :</strong> <u>Big Endian</u> (inverser vs FAT/NTFS)</li>
+    <li style="padding:.2rem 0"><strong>Epoch :</strong> 1er janvier 1904 (+2 082 844 800 secondes vs Unix)</li>
+    <li style="padding:.2rem 0"><strong>Alternate VH :</strong> à −1024 octets depuis la fin du volume</li>
+    <li style="padding:.2rem 0"><strong>CNID racine :</strong> 2</li>
+    <li style="padding:.2rem 0"><strong>Catalog File :</strong> source primaire des métadonnées, B-Tree</li>
+    <li style="padding:.2rem 0"><strong>Resource fork</strong> : forkType <code>0xFF</code> · data fork : <code>0x00</code></li>
+    <li style="padding:.2rem 0"><strong>AppleDouble</strong> (fichiers <code>._name</code>) = traces macOS sur volumes non-HFS</li>
+  </ul>
+</div>
+
+<div style="margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid var(--border);font-size:.72rem;color:var(--dim);text-align:center">
+  Voir aussi :
+  <a href="apfs.html" style="color:var(--cyan);text-decoration:none">🍏 APFS</a> ·
+  <a href="comparaison_fs.html" style="color:var(--cyan);text-decoration:none">📊 Comparaison FS</a> ·
+  <a href="macos-linux.html" style="color:var(--cyan);text-decoration:none">💻 macOS / Linux</a> ·
+  <a href="chiffrement_volumes.html" style="color:var(--cyan);text-decoration:none">🛡 FileVault</a>
+</div>
+
+</div>
+
+<span class="fiche-tag">HFS+ · Apple Legacy</span>
 
 </body>
 </html>
