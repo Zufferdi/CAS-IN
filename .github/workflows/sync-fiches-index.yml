@@ -1,0 +1,45 @@
+name: Sync fiches index
+
+# Régénère fiches/index.html à chaque ajout/modification de fiche
+on:
+  push:
+    paths:
+      - 'fiches/**.html'
+      - 'scripts/build_index.py'
+      - '.github/workflows/sync-fiches-index.yml'
+  workflow_dispatch:  # exécution manuelle depuis l'onglet Actions
+
+permissions:
+  contents: write  # nécessaire pour commit le nouvel index
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install beautifulsoup4 lxml
+
+      - name: Rebuild fiches/index.html
+        run: python scripts/build_index.py
+
+      - name: Commit & push if changed
+        run: |
+          if [ -n "$(git status --porcelain fiches/index.html)" ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add fiches/index.html
+            git commit -m "chore(index): auto-rebuild fiches/index.html [skip ci]"
+            git push
+          else
+            echo "✓ fiches/index.html est déjà à jour."
+          fi
