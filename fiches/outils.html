@@ -6,7 +6,7 @@
 <title>X-Ways &amp; WinHex — CAS-IN Forensique</title>
 <link rel="stylesheet" href="../style/fiche_style.css">
 <!-- Métadonnées auto-index -->
-<meta name="cas-in-category" content="outilsdfir">
+<meta name="cas-in-category" content="acquisition">
 <meta name="cas-in-icon" content="🔍">
 <meta name="cas-in-short-title" content="X-Ways & WinHex">
 <meta name="cas-in-desc" content="Snapshot · Refine · Carving · Fuzzy Doc · Éditeur hexadécimal">
@@ -96,6 +96,7 @@
       <li><a href="#fuzzy">Fuzzy Doc &amp; emails</a></li>
       <li><a href="#undelete">Récupération de fichiers supprimés</a></li>
       <li><a href="#winhex">WinHex — l'éditeur hexadécimal</a></li>
+      <li><a href="#reports">Report Tables — catégorisation professionnelle</a></li>
       <li><a href="#workflow">Workflow anti-erreurs</a></li>
     </ol>
   </div>
@@ -277,10 +278,12 @@
     </div>
 
     <div class="alert" style="margin-top:.75rem">
-      ⚠️ <strong>Règle du Snapshot unique :</strong> ne <strong>jamais</strong> refaire un snapshot partiel
-      sur un snapshot existant — risque de corruption des références internes.
-      Workflow : ① Snapshot simple (rapide) pour exploration initiale → ② Refine Snapshot ciblé sur les
-      objets pertinents.
+      ⚠️ <strong>Règle du Snapshot — à bien comprendre.</strong> On <strong>peut</strong> relancer
+      un Refine Snapshot plusieurs fois avec des options différentes — chaque passe enrichit le
+      snapshot existant. Par contre, il ne faut <strong class="red">jamais interrompre</strong>
+      un Refine en cours (corruption des références internes), ni <strong class="red">relancer
+      avec des options incompatibles</strong> qui écraseraient les précédentes.
+      Workflow recommandé : ① Snapshot simple (rapide) pour exploration → ② Refine Snapshot ciblé.
     </div>
   </div>
 
@@ -430,10 +433,24 @@
       <p>Parcours séquentiel de l'espace non alloué à la recherche de signatures connues. Fonctionne
       <strong>même sans entrée de répertoire valide</strong> — parfait pour les supports FAT après
       effacement (octet <span class="hex h-red">0xE5</span>).</p>
-      <p style="margin-top:.3rem"><strong>Magic bytes usuels :</strong>
-      <span class="hex h-orange">FF D8 FF</span> = JPEG ·
-      <span class="hex h-orange">50 4B 03 04</span> = ZIP/DOCX ·
-      <span class="hex h-orange">25 50 44 46</span> = PDF.</p>
+      <p style="margin-top:.3rem"><strong>Magic bytes les plus courants à connaître :</strong></p>
+      <table class="tbl">
+        <thead><tr><th>Signature</th><th>Type</th></tr></thead>
+        <tbody>
+          <tr><td><span class="hex h-orange">FF D8 FF</span></td><td>JPEG</td></tr>
+          <tr><td><span class="hex h-orange">89 50 4E 47</span></td><td>PNG (<em>‰PNG</em>)</td></tr>
+          <tr><td><span class="hex h-orange">47 49 46 38</span></td><td>GIF (<em>GIF8</em>)</td></tr>
+          <tr><td><span class="hex h-orange">50 4B 03 04</span></td><td>ZIP · DOCX · XLSX · PPTX (<em>PK..</em>)</td></tr>
+          <tr><td><span class="hex h-orange">25 50 44 46</span></td><td>PDF (<em>%PDF</em>)</td></tr>
+          <tr><td><span class="hex h-orange">4D 5A</span></td><td>EXE / DLL Windows (<em>MZ</em> — PE)</td></tr>
+          <tr><td><span class="hex h-orange">7F 45 4C 46</span></td><td>ELF Linux</td></tr>
+          <tr><td><span class="hex h-orange">52 61 72 21</span></td><td>RAR (<em>Rar!</em>)</td></tr>
+          <tr><td><span class="hex h-orange">52 49 46 46</span></td><td>RIFF — WAV · AVI (<em>RIFF</em>)</td></tr>
+          <tr><td><span class="hex h-orange">66 74 79 70</span></td><td>MP4 · MOV (à l'offset 4)</td></tr>
+          <tr><td><span class="hex h-orange">1F 8B 08</span></td><td>GZIP</td></tr>
+          <tr><td><span class="hex h-orange">53 51 4C 69</span></td><td>SQLite (<em>SQLite format 3</em>)</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <div class="card card-gold" style="margin-top:.75rem">
@@ -593,17 +610,24 @@ ASCII  = traduction humaine (41 = 'A') · '.' si non imprimable</pre>
       une <strong>grille de lecture</strong> sur les données brutes.</p>
       <p style="margin-top:.3rem"><strong>Cas pratique — analyser le MBR :</strong></p>
       <ol style="padding-left:1.2rem">
-        <li>Ouvrir le disque physique → secteur 0</li>
-        <li><kbd>Alt</kbd>+<kbd>F12</kbd> → template <em>Master Boot Record</em></li>
-        <li>WinHex décode automatiquement :
-          <ul style="margin-top:.2rem">
-            <li>« Les 446 premiers octets sont du code bootloader »</li>
-            <li>« La partition 1 commence au secteur X, finit au secteur Y »</li>
-            <li>« La signature <span class="hex h-orange">55 AA</span> à la fin est présente ✓ »</li>
-          </ul>
-        </li>
+        <li>Ouvrir le disque physique → se placer au secteur 0</li>
+        <li><kbd>Alt</kbd>+<kbd>F12</kbd> → choisir le template <em>Master Boot Record</em></li>
+        <li>WinHex décode automatiquement la structure des 512 octets :</li>
       </ol>
-      <p style="margin-top:.3rem">Idéal pour vérifier ses cours sur les structures FAT, NTFS, exFAT.</p>
+      <pre class="formula" style="line-height:1.45;margin-top:.4rem"><span class="dim">// Structure totale d'un MBR = 512 octets</span>
+
+<span class="gold">Offset 0   → 446 octets</span>   Code bootloader (chargé au boot BIOS)
+<span class="gold">Offset 446 →  64 octets</span>   Table de partitions (4 entrées × 16 octets)
+                           • Offset 446 : Partition 1
+                           • Offset 462 : Partition 2
+                           • Offset 478 : Partition 3
+                           • Offset 494 : Partition 4
+<span class="gold">Offset 510 →   2 octets</span>   Signature <span class="cyan">55 AA</span> (little-endian : <span class="cyan">AA 55</span>)
+
+<span class="dim">// TOTAL : 446 + 64 + 2 = 512 octets</span></pre>
+      <p style="margin-top:.3rem">Idéal pour vérifier ses cours sur les structures FAT, NTFS, exFAT. Autres
+      templates utiles disponibles : <em>FAT32 Boot Record</em> · <em>NTFS Boot Sector</em> ·
+      <em>GPT Header</em> · <em>$MFT Entry</em>.</p>
     </div>
 
     <div class="card card-green" style="margin-top:.75rem">
@@ -669,9 +693,67 @@ Bits R · H · S · V actifs  →  c'est un <span class="purple">LFN</span> (Lon
     </div>
   </div>
 
+  <!-- ═══════════════ REPORT TABLES ═══════════════ -->
+  <div class="section" id="reports">
+    <div class="section-title">⑭ Report Tables — le mécanisme pro de catégorisation</div>
+    <p class="meta" style="margin-bottom:.75rem">Au-delà du simple tag : la vraie manière de structurer une preuve pour le rapport.</p>
+
+    <div class="card card-cyan">
+      <div class="card-title">🏷 Tag vs Report Table — ne pas confondre</div>
+      <table class="tbl">
+        <thead><tr><th>Tag (coche)</th><th>Report Table (catégorie nommée)</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Marquage binaire (coché / non coché)</td>
+            <td>Catégorie structurée avec nom, couleur, description</td>
+          </tr>
+          <tr>
+            <td>Un seul tag par fichier</td>
+            <td>Un fichier peut appartenir à <strong>plusieurs</strong> Report Tables</td>
+          </tr>
+          <tr>
+            <td>Utile pour le triage rapide</td>
+            <td>Utile pour la <strong>structure du rapport final</strong></td>
+          </tr>
+          <tr>
+            <td>Non exporté dans le rapport officiel</td>
+            <td>Apparaît comme <strong>section dédiée</strong> dans le rapport</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card card-purple" style="margin-top:.75rem">
+      <div class="card-title">📋 Créer &amp; utiliser les Report Tables</div>
+      <div class="steps">
+        <div class="step"><div class="step-num sn">1</div><div class="step-text"><strong>Accéder :</strong> menu <span class="hex">Case → Edit Report Table Associations</span> (ou clic droit sur un fichier dans le Directory Browser).</div></div>
+        <div class="step"><div class="step-num sn">2</div><div class="step-text"><strong>Créer les catégories métier</strong> pertinentes : <em>Documents financiers</em> · <em>Échanges suspects</em> · <em>Images illicites</em> · <em>Malware</em> · <em>Mots de passe récupérés</em> · <em>Contact personnes d'intérêt</em>…</div></div>
+        <div class="step"><div class="step-num sn">3</div><div class="step-text"><strong>Assigner couleur + description</strong> à chaque catégorie. La description apparaîtra dans le rapport pour expliquer au magistrat ce que signifie la catégorie.</div></div>
+        <div class="step"><div class="step-num sn">4</div><div class="step-text"><strong>Associer les fichiers</strong> au fil de l'analyse (un fichier peut être dans plusieurs catégories — ex. un PDF suspect = <em>Documents financiers</em> + <em>Échanges suspects</em>).</div></div>
+        <div class="step"><div class="step-num sn-g">5</div><div class="step-text"><strong>Générer le rapport final</strong> — chaque Report Table devient une section du rapport, avec la liste des fichiers, hashs, chemins, dates, commentaires.</div></div>
+      </div>
+    </div>
+
+    <div class="info" style="margin-top:.75rem">
+      💡 <strong>Commenter au fil de l'eau.</strong> Pour chaque fichier ajouté à une Report Table,
+      X-Ways propose un champ <em>Comment</em>. <strong class="cyan">Toujours le remplir</strong>
+      (même brièvement) : <em>« reçu le 12/03, envoyé à X »</em>, <em>« contient des
+      numéros de compte IBAN »</em>. Ces commentaires apparaissent dans le rapport final et guident
+      le magistrat.
+    </div>
+
+    <div class="tip" style="margin-top:.75rem">
+      🎯 <strong>Workflow professionnel :</strong> pas de Tag à la volée sans plan.
+      Définir <strong>d'abord</strong> les Report Tables à partir de l'hypothèse d'enquête
+      (ex. <em>blanchiment</em> → catégories <em>Relevés bancaires</em> · <em>Transferts crypto</em> ·
+      <em>Contacts étrangers</em>). Puis l'analyse remplit ces catégories. Le rapport écrit
+      littéralement tout seul à la fin.
+    </div>
+  </div>
+
   <!-- ═══════════════ WORKFLOW ═══════════════ -->
   <div class="section" id="workflow">
-    <div class="section-title">⑭ Flux de travail anti-erreurs</div>
+    <div class="section-title">⑮ Flux de travail anti-erreurs</div>
 
     <p class="meta" style="margin-bottom:.75rem">L'ordre compte — un pas manqué et l'analyse s'écroule.</p>
 
@@ -702,9 +784,12 @@ Bits R · H · S · V actifs  →  c'est un <span class="purple">LFN</span> (Lon
         Le <span class="hex">.xfc</span> = mémoire du Cas · Copie bit-à-bit ≠ Snapshot (photo logique interne) ·
         Type Status <span class="hex h-gold">Mismatch</span> = extension falsifiée ·
         <span class="hex h-red">e</span> / <span class="hex h-red">e?</span> = chiffrement probable (entropie ≈ 1) ·
+        Magic bytes clés : <span class="hex h-orange">FF D8 FF</span>=JPEG · <span class="hex h-orange">89 50 4E 47</span>=PNG · <span class="hex h-orange">50 4B 03 04</span>=ZIP/DOCX · <span class="hex h-orange">25 50 44 46</span>=PDF · <span class="hex h-orange">4D 5A</span>=EXE/PE ·
         Fichier supprimé FAT → premier octet <span class="hex h-red">0xE5</span> → X-Ways affiche <span class="hex">?</span> → LFN restaure la lettre manquante ·
+        <strong class="purple">Report Tables</strong> ≠ Tag : catégories structurées (un fichier = N catégories), apparaissent en sections du rapport ·
         WinHex = éditeur bas-niveau, <strong class="orange">ancêtre</strong> de X-Ways ·
         <kbd>Alt</kbd>+<kbd>F12</kbd> = Templates (MBR, FAT, NTFS) ·
+        <strong class="gold">MBR = 512 octets</strong> : 446 (code) + 64 (table 4 partitions × 16) + 2 (signature <span class="hex">55 AA</span>) ·
         Toujours activer <strong class="red">Write Protection</strong> sur WinHex avant analyse ·
         Little Endian : <span class="hex h-orange">00 E4 00 00</span> = 58 368 octets.
       </p>

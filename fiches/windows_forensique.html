@@ -88,6 +88,7 @@
       <li><a href="#caches">Caches visuels — miniatures</a></li>
       <li><a href="#journaux">Journaux .evtx</a></li>
       <li><a href="#persistance">Persistance &amp; compromission</a></li>
+      <li><a href="#timezone">Timezone &amp; temps UTC</a></li>
       <li><a href="#shellbags">ShellBags — navigation utilisateur</a></li>
       <li><a href="#methodologie">Méthodologie recommandée</a></li>
       <li><a href="#justice">Ce que la justice attend</a></li>
@@ -226,7 +227,8 @@
       <strong class="cyan">SID</strong> (Security Identifier) :</p>
       <pre class="formula" style="line-height:1.4">S-1-5-21-<span class="gold">1234567890-987654321-111111111</span>-<span class="green">1001</span>
           └─────── machine / domaine ────────┘ └ RID
-RID 500 = Administrator · 501 = Guest · 1000+ = utilisateurs</pre>
+RID 500 = Administrator · 501 = Guest · 1001+ = utilisateurs
+(le RID 1000 n'est jamais attribué par Windows — commence à 1001)</pre>
       <p style="margin-top:.4rem">Le SID permet :</p>
       <ul>
         <li>d'attribuer une action à un <strong>utilisateur précis</strong></li>
@@ -260,6 +262,9 @@ RID 500 = Administrator · 501 = Guest · 1000+ = utilisateurs</pre>
         <p>Clé registre <span class="hex">NTUSER.DAT</span> qui enregistre les programmes lancés
         <strong>depuis l'interface graphique</strong> (double-clic, menu Démarrer).
         <strong class="green">Prouve l'usage par l'utilisateur</strong>, pas par le système.</p>
+        <p style="margin-top:.3rem"><strong class="red">⚠️ Les noms de programmes sont encodés en ROT13</strong>
+        — ne jamais oublier de décoder (CyberChef → recette <em>ROT13</em>, ou RegRipper le fait
+        automatiquement).</p>
         <p style="margin-top:.3rem"><em>Chemin : <span class="hex">NTUSER.DAT\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist</span></em></p>
       </div>
       <div class="card card-purple">
@@ -274,6 +279,27 @@ RID 500 = Administrator · 501 = Guest · 1000+ = utilisateurs</pre>
         Un échantillon malveillant laisse des traces croisées :
         Prefetch → UserAssist → Amcache → $MFT = preuve robuste.</p>
       </div>
+    </div>
+
+    <div class="card card-orange" style="margin-top:.75rem">
+      <div class="card-title">⏱ BAM / DAM — l'artefact Windows 10+ sous-estimé</div>
+      <p><strong>Background Activity Moderator</strong> (et son pendant Desktop) est une fonction Windows
+      qui régule les apps en arrière-plan. <strong class="green">Bonus forensique :</strong> il
+      garde des timestamps d'exécution précis par utilisateur (SID) — particulièrement utile quand
+      Prefetch est désactivé.</p>
+      <pre class="formula" style="line-height:1.4">SYSTEM\CurrentControlSet\Services\bam\State\UserSettings\&lt;SID&gt;\
+SYSTEM\CurrentControlSet\Services\dam\State\UserSettings\&lt;SID&gt;\</pre>
+      <p style="margin-top:.3rem">Parseable par <strong>RECmd</strong> (Zimmerman) avec les packages
+      de batch dédiés.</p>
+    </div>
+
+    <div class="card card-blue" style="margin-top:.75rem">
+      <div class="card-title">📆 Windows Timeline / Activities (Windows 10 1803–11)</div>
+      <p>Base SQLite <span class="hex">ActivitiesCache.db</span> située dans
+      <span class="hex">%LocalAppData%\ConnectedDevicesPlatform\&lt;L.USER&gt;\</span>. Garde trace de
+      toutes les activités (apps, documents, URLs) sur 7 à 30 jours.</p>
+      <p style="margin-top:.3rem"><em>Parseable directement en SQLite — voir fiche
+      <a href="sqlite_forensique.html" style="color:var(--cyan)">SQLite Forensique</a>.</em></p>
     </div>
   </div>
 
@@ -339,7 +365,8 @@ RID 500 = Administrator · 501 = Guest · 1000+ = utilisateurs</pre>
       <ul>
         <li><span class="hex">SYSTEM\CurrentControlSet\Enum\USBSTOR</span> — numéro de série, VID/PID</li>
         <li><span class="hex">SYSTEM\CurrentControlSet\Enum\USB</span> — énumération USB générale</li>
-        <li><span class="hex">setupapi.dev.log</span> — première connexion, datée</li>
+        <li><span class="hex">SYSTEM\MountedDevices</span> — lettre de lecteur assignée (à croiser avec USBSTOR)</li>
+        <li><span class="hex">C:\Windows\INF\setupapi.dev.log</span> (Vista+) · <span class="hex">C:\Windows\setupapi.log</span> (XP) — première connexion, datée</li>
         <li><span class="hex">SOFTWARE\Microsoft\Windows Portable Devices\Devices</span> — label du volume</li>
       </ul>
     </div>
@@ -399,18 +426,57 @@ RID 500 = Administrator · 501 = Guest · 1000+ = utilisateurs</pre>
         <thead><tr><th>Mécanisme</th><th>Emplacement</th><th>Détection</th></tr></thead>
         <tbody>
           <tr><td><strong class="cyan">Run Keys</strong></td><td><span class="hex">HKLM/HKCU\Software\Microsoft\Windows\CurrentVersion\Run</span></td><td>Exécution automatique au login</td></tr>
-          <tr><td><strong class="gold">Services</strong></td><td><span class="hex">SYSTEM\CurrentControlSet\Services</span></td><td>Event ID 7045 + analyse .evtx</td></tr>
+          <tr><td><strong class="cyan">RunOnce</strong></td><td><span class="hex">HKLM/HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce</span></td><td>Exécution unique puis effacement — furtif</td></tr>
+          <tr><td><strong class="gold">Services</strong></td><td><span class="hex">SYSTEM\CurrentControlSet\Services</span></td><td>Event ID 7045 / 4697 + analyse .evtx</td></tr>
           <tr><td><strong class="purple">Scheduled Tasks</strong></td><td><span class="hex">C:\Windows\System32\Tasks\</span></td><td>XML avec auteur + exécutable</td></tr>
-          <tr><td><strong class="blue">Drivers</strong></td><td>Dossier <span class="hex">drivers\</span> · enum PnP</td><td>Signatures à vérifier</td></tr>
-          <tr><td><strong class="orange">WMI</strong></td><td><span class="hex">WMI Event Subscriptions</span></td><td>Persistance fileless · difficile</td></tr>
+          <tr><td><strong class="blue">Startup Folder</strong></td><td><span class="hex">%AppData%\Microsoft\Windows\Start Menu\Programs\Startup\</span></td><td>Raccourcis / scripts qui se lancent au logon</td></tr>
+          <tr><td><strong class="orange">AppInit_DLLs</strong></td><td><span class="hex">HKLM\Software\Microsoft\Windows NT\CurrentVersion\Windows\AppInit_DLLs</span></td><td>DLL injectée dans tous les processus chargeant user32.dll</td></tr>
+          <tr><td><strong class="red">IFEO hijacking</strong></td><td><span class="hex">HKLM\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\&lt;exe&gt;</span></td><td>Clé <em>Debugger</em> détournée — remplace un exe légitime par un malware</td></tr>
+          <tr><td><strong class="red">Drivers</strong></td><td>Dossier <span class="hex">drivers\</span> · enum PnP</td><td>Signatures à vérifier</td></tr>
+          <tr><td><strong class="orange">WMI</strong></td><td><span class="hex">WMI Event Subscriptions</span></td><td>Persistance fileless · difficile à détecter</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
+  <!-- TIMEZONE -->
+  <div class="section" id="timezone">
+    <div class="section-title">⑬ Timezone &amp; temps UTC — vérifier AVANT toute timeline</div>
+    <p class="meta" style="margin-bottom:.75rem">C'est la première chose qu'un magistrat vérifie sur une chronologie.</p>
+
+    <div class="alert">
+      🚨 <strong>Windows stocke les timestamps en UTC dans NTFS, mais les AFFICHE en heure locale.</strong>
+      Chaque timestamp dans ton rapport doit être qualifié (UTC ou local+offset). Un décalage
+      horaire non identifié peut invalider toute une chronologie.
+    </div>
+
+    <div class="card card-orange" style="margin-top:.75rem">
+      <div class="card-title">🕰 Où trouver le fuseau horaire du système</div>
+      <pre class="formula" style="line-height:1.4">SYSTEM\CurrentControlSet\Control\TimeZoneInformation
+
+  TimeZoneKeyName   : "Romance Standard Time"
+  Bias              : -60           <span class="dim">// offset en minutes par rapport à UTC</span>
+  DaylightBias      : -60           <span class="dim">// décalage heure d'été</span>
+  StandardBias      : 0</pre>
+      <p style="margin-top:.3rem"><strong>Procédure :</strong></p>
+      <ol style="padding-left:1.2rem">
+        <li>Extraire le TimeZoneKeyName depuis <span class="hex">SYSTEM</span></li>
+        <li>Noter dans le rapport : « <em>Système configuré en UTC+2 (Romance Standard Time)</em> »</li>
+        <li>Tous les timestamps présentés : soit <strong>en UTC explicitement</strong>, soit <strong>heure locale + offset</strong></li>
+        <li>Attention aux BIOS/UEFI qui peuvent stocker l'heure en local ≠ NTFS UTC</li>
+      </ol>
+    </div>
+
+    <div class="info" style="margin-top:.75rem">
+      💡 <strong>Outils concernés :</strong> Timeline Explorer affiche en local par défaut — forcer
+      l'UTC dans les exports CSV. <strong>X-Ways</strong> laisse choisir. <strong>Autopsy</strong>
+      utilise UTC par défaut mais permet l'override.
+    </div>
+  </div>
+
   <!-- SHELLBAGS -->
   <div class="section" id="shellbags">
-    <div class="section-title">⑬ ShellBags — navigation utilisateur</div>
+    <div class="section-title">⑭ ShellBags — navigation utilisateur</div>
 
     <div class="card card-cyan">
       <div class="card-title">📁 Ce que prouvent les ShellBags</div>
@@ -427,7 +493,7 @@ RID 500 = Administrator · 501 = Guest · 1000+ = utilisateurs</pre>
 
   <!-- MÉTHODOLOGIE -->
   <div class="section" id="methodologie">
-    <div class="section-title">⑭ Méthodologie recommandée</div>
+    <div class="section-title">⑮ Méthodologie recommandée</div>
 
     <div class="steps">
       <div class="step"><div class="step-num sn">1</div><div class="step-text"><strong>Identifier les artefacts pertinents.</strong> Quelle hypothèse d'enquête ? Quels artefacts y répondent ?</div></div>
@@ -441,7 +507,7 @@ RID 500 = Administrator · 501 = Guest · 1000+ = utilisateurs</pre>
 
   <!-- JUSTICE -->
   <div class="section" id="justice">
-    <div class="section-title">⑮ Ce que la justice attend de l'analyste</div>
+    <div class="section-title">⑯ Ce que la justice attend de l'analyste</div>
 
     <div class="card card-purple">
       <div class="card-title">⚖️ Les 4 questions du magistrat</div>
@@ -461,7 +527,7 @@ RID 500 = Administrator · 501 = Guest · 1000+ = utilisateurs</pre>
 
   <!-- CONCLUSION -->
   <div class="section">
-    <div class="section-title">⑯ Conclusion opérationnelle</div>
+    <div class="section-title">⑰ Conclusion opérationnelle</div>
 
     <div class="card card-cyan">
       <p style="font-size:.85rem;line-height:1.75">
@@ -487,11 +553,13 @@ RID 500 = Administrator · 501 = Guest · 1000+ = utilisateurs</pre>
         toujours travailler sur <strong>copie forensique</strong> · 4 exigences : copie · traçabilité · reproductibilité · intelligibilité ·
         5 familles d'artefacts : FS · Registre · Journaux · Caches · Applicatifs ·
         6 ruches clés : <span class="hex">SYSTEM · SOFTWARE · SAM · SECURITY · NTUSER.DAT · USRCLASS.DAT</span> ·
-        Utilisateur identifié par <strong class="green">SID</strong> (pas le nom) · RID 500 = Admin · 1000+ = users ·
-        Prouver l'exécution : <strong class="cyan">Prefetch</strong> + <strong class="cyan">UserAssist</strong> + <strong class="cyan">Amcache/ShimCache</strong> ·
+        Utilisateur identifié par <strong class="green">SID</strong> (pas le nom) · RID 500 = Admin · 1001+ = users (jamais 1000) ·
+        Prouver l'exécution : <strong class="cyan">Prefetch</strong> + <strong class="cyan">UserAssist</strong> (<span class="red">encodé ROT13 !</span>) + <strong class="cyan">Amcache/ShimCache</strong> + <strong class="cyan">BAM/DAM</strong> (Win10+) ·
+        <span class="hex">ActivitiesCache.db</span> = Windows Timeline 7–30j ·
         Fichiers consultés : LNK · MRU · Jump Lists · Corbeille par SID (<span class="hex">$I</span> metadata + <span class="hex">$R</span> contenu) ·
-        USB : <span class="hex">USBSTOR</span> · <span class="hex">setupapi.dev.log</span> · Thumbcache survit à la suppression ·
-        5 zones de persistance : Run Keys · Services · Scheduled Tasks · Drivers · WMI ·
+        USB : <span class="hex">USBSTOR</span> + <span class="hex">MountedDevices</span> + <span class="hex">C:\Windows\INF\setupapi.dev.log</span> · Thumbcache survit à la suppression ·
+        8 zones de persistance : Run Keys · RunOnce · Services · Scheduled Tasks · Startup Folder · <strong class="red">AppInit_DLLs</strong> · <strong class="red">IFEO hijacking</strong> · Drivers · WMI ·
+        <strong class="gold">TIMEZONE :</strong> Windows stocke en UTC (NTFS) mais affiche en local — toujours qualifier les timestamps (<span class="hex">SYSTEM\...\TimeZoneInformation</span>) ·
         ShellBags = navigation GUI · <strong class="red">si l'analyse ne s'explique pas simplement, elle est juridiquement fragile</strong>.
       </p>
     </div>

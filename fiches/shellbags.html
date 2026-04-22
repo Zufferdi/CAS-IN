@@ -238,6 +238,19 @@ HKCU\Software\Microsoft\Windows\<span class="gold">ShellNoRoam</span></pre>
       <p style="margin-top:.4rem">Toute cette structure est reconstituable depuis le seul
       <span class="hex">USRCLASS.DAT</span> du suspect.</p>
     </div>
+
+    <div class="info" style="margin-top:.75rem">
+      🔗 <strong>Corréler pour identifier LA clé USB précisément.</strong> Un ShellBag
+      sur <span class="hex">E:\</span> prouve qu'un volume a été monté avec cette lettre, mais
+      <strong class="red">pas lequel</strong>. Pour identifier la clé USB précise, il faut croiser :
+      <ul style="margin-top:.3rem">
+        <li><strong class="cyan">USBSTOR</strong> → numéro de série unique de la clé</li>
+        <li><strong class="cyan">MountedDevices</strong> → lettre attribuée à cette clé</li>
+        <li><strong class="cyan">ShellBags</strong> → dossiers explorés sur cette lettre</li>
+        <li><strong class="cyan">LNK files</strong> → fichiers ouverts depuis cette clé</li>
+      </ul>
+      Les 4 ensemble = attribution certaine.
+    </div>
   </div>
 
   <!-- ARCHIVES -->
@@ -245,12 +258,20 @@ HKCU\Software\Microsoft\Windows\<span class="gold">ShellNoRoam</span></pre>
     <div class="section-title">⑦ Archives ZIP &amp; RAR</div>
 
     <div class="card card-orange">
-      <div class="card-title">📦 Windows traite les ZIP comme des dossiers</div>
+      <div class="card-title">📦 Windows traite les conteneurs comme des dossiers</div>
       <p>Si l'utilisateur double-clique sur un ZIP pour voir son contenu
       <strong>sans le décompresser</strong>, un ShellBag est créé pour ce ZIP.</p>
       <p style="margin-top:.3rem">Conséquence forensique : on peut prouver que l'utilisateur a
       <strong>ouvert et exploré</strong> le contenu d'une archive, même s'il n'a jamais extrait
-      les fichiers.</p>
+      les fichiers. <strong>Windows fait pareil pour :</strong></p>
+      <ul>
+        <li><strong class="cyan">ZIP</strong> — et navigation dans les sous-dossiers internes</li>
+        <li><strong class="cyan">RAR</strong> — si WinRAR associé à l'Explorer</li>
+        <li><strong class="cyan">.CAB</strong> — archives Microsoft</li>
+        <li><strong class="cyan">.ISO</strong> — images disque montées nativement (Windows 8+)</li>
+        <li><strong class="cyan">Sessions FTP</strong> ouvertes depuis l'Explorer</li>
+        <li><strong class="cyan">Chemins UNC</strong> — <span class="hex">\\serveur\partage</span></li>
+      </ul>
     </div>
   </div>
 
@@ -261,14 +282,32 @@ HKCU\Software\Microsoft\Windows\<span class="gold">ShellNoRoam</span></pre>
     <div class="card card-gold">
       <div class="card-title">⏱ Last Write Time — ce qu'il signifie vraiment</div>
       <p>Le <strong>Last Write Time</strong> de la clé de registre BagMRU indique la
-      <strong class="cyan">dernière fois que l'utilisateur a interagi</strong> avec ce dossier :</p>
+      <strong class="cyan">dernière fois que la clé a été écrite</strong> — ce qui correspond à :</p>
       <ul>
-        <li>l'a ouvert,</li>
-        <li>l'a fermé,</li>
-        <li>ou a changé la vue.</li>
+        <li>l'ouverture du dossier,</li>
+        <li>la fermeture du dossier,</li>
+        <li>le changement de vue,</li>
+        <li>OU la <strong class="red">création d'un sous-nœud</strong> (quand on ouvre un sous-dossier).</li>
       </ul>
-      <p style="margin-top:.4rem">👉 Permet de reconstituer une chronologie précise :
-      <em>« Le suspect a parcouru le dossier Photos le 12 janvier à 14h30 »</em>.</p>
+      <p style="margin-top:.4rem">⚠️ <strong>Nuance importante :</strong> si l'utilisateur ouvre un
+      sous-dossier de <em>Dossier A</em>, c'est la clé BagMRU de <em>Dossier A</em> qui est
+      mise à jour — donnant l'illusion d'une interaction directe avec A.
+      En audience, formuler : <em>« il y a eu une activité liée à ce dossier à telle heure »</em>
+      plutôt que <em>« l'utilisateur a ouvert ce dossier à telle heure »</em>.</p>
+    </div>
+
+    <div class="card card-purple" style="margin-top:.75rem">
+      <div class="card-title">📅 First interacted vs Last interacted</div>
+      <p>ShellBags Explorer expose <strong>deux timestamps distincts</strong> par entrée :</p>
+      <ul>
+        <li><strong class="cyan">First Interacted</strong> — timestamp <strong>figé</strong> à la première
+        interaction avec ce dossier. Utile pour prouver une <em>connaissance historique</em>.</li>
+        <li><strong class="gold">Last Interacted</strong> — timestamp qui évolue à chaque interaction
+        ultérieure. Utile pour la <em>dernière activité</em>.</li>
+      </ul>
+      <p style="margin-top:.3rem">Ces deux dates permettent d'évaluer la <strong>durée</strong> de la
+      connaissance d'un dossier par l'utilisateur — par exemple : dossier créé en janvier, première
+      visite en février, dernière visite en octobre → connaissance de 8 mois.</p>
     </div>
 
     <div class="alert" style="margin-top:.75rem">
@@ -288,8 +327,11 @@ HKCU\Software\Microsoft\Windows\<span class="gold">ShellNoRoam</span></pre>
       <ul>
         <li><strong>Fonctionnement :</strong> charger <span class="hex">USRCLASS.DAT</span> et/ou <span class="hex">NTUSER.DAT</span></li>
         <li><strong>Affichage :</strong> reconstruit l'arborescence comme si vous étiez dans l'explorateur</li>
-        <li><strong>Colonnes clés :</strong> <em>Absolute Path</em> · <em>Last Write Time</em> · <em>Slot Key</em></li>
+        <li><strong>Colonnes clés :</strong> <em>Absolute Path</em> · <em>First Interacted</em> · <em>Last Interacted</em> · <em>Last Write Time</em> · <em>Slot Key</em></li>
       </ul>
+      <p style="margin-top:.3rem">Version CLI : <strong class="gold">sbecmd.exe</strong> — même logique
+      en ligne de commande, utile pour les batchs et l'automation.</p>
+      <pre class="formula" style="line-height:1.4"><span class="cyan">sbecmd.exe</span> <span class="gold">-d</span> C:\Extract\HiveFolder <span class="gold">--csv</span> C:\Export\</pre>
       <p style="margin-top:.3rem"><em>Voir aussi : <a href="zimmerman.html" style="color:var(--cyan)">Suite Zimmerman</a></em></p>
     </div>
 
@@ -381,8 +423,11 @@ HKCU\Software\Microsoft\Windows\<span class="gold">ShellNoRoam</span></pre>
         Structure : <strong class="gold">BagMRU</strong> (carte hiérarchique) + <strong class="gold">Bags</strong> (réglages) ·
         Valeur forensique : prouve qu'un dossier a <strong class="green">existé</strong> et a été <strong class="green">visité via GUI</strong> ·
         Persistance : survit à la suppression du dossier · fonctionne même sur <strong class="red">clés USB absentes</strong> ·
-        Traite les <strong>ZIP comme des dossiers</strong> · <em>Last Write Time</em> = dernière interaction ·
-        Outil roi : <strong class="cyan">ShellBags Explorer</strong> (Zimmerman · gratuit) ·
+        Traite comme des dossiers : <strong>ZIP · RAR · CAB · ISO · FTP · UNC</strong> ·
+        <em>Last Write Time</em> = dernière écriture de la clé (pas forcément l'interaction directe !) ·
+        <em>First Interacted</em> figé · <em>Last Interacted</em> évolue ·
+        <strong class="cyan">Pour identifier LA clé USB</strong> : croiser USBSTOR (n° série) + MountedDevices (lettre) + ShellBags (dossiers) + LNK (fichiers) ·
+        Outil roi : <strong class="cyan">ShellBags Explorer</strong> (GUI) + <strong class="gold">sbecmd.exe</strong> (CLI) ·
         <strong class="red">Limites :</strong> prouve l'ouverture du dossier, pas des fichiers dedans · aucune trace si cmd/PowerShell · effaçables par CCleaner/BleachBit (absence = suspecte).
       </p>
     </div>

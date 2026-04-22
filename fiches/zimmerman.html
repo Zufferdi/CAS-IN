@@ -6,7 +6,7 @@
 <title>Suite Zimmerman — CAS-IN Forensique</title>
 <link rel="stylesheet" href="../style/fiche_style.css">
 <!-- Métadonnées auto-index -->
-<meta name="cas-in-category" content="outilsdfir">
+<meta name="cas-in-category" content="acquisition">
 <meta name="cas-in-icon" content="🗝">
 <meta name="cas-in-short-title" content="Suite Zimmerman">
 <meta name="cas-in-desc" content="PECmd · LECmd · MFTECmd · EvtxECmd · ShellBags Expl · Amcache">
@@ -95,6 +95,7 @@
       <li><a href="#evtxecmd">EvtxECmd — journaux .evtx</a></li>
       <li><a href="#shellbags">ShellBags Explorer</a></li>
       <li><a href="#amcache">AmcacheParser</a></li>
+      <li><a href="#autres">Autres outils — RECmd · JLECmd · SDBExplorer</a></li>
       <li><a href="#timeline-exp">Timeline Explorer</a></li>
       <li><a href="#workflow">Workflow forensique type</a></li>
       <li><a href="#bonnes-pratiques">Bonnes pratiques</a></li>
@@ -145,10 +146,13 @@
       <tbody>
         <tr><td><strong class="green">PECmd</strong></td><td>Prefetch <span class="hex">.pf</span></td><td>Exécution d'un programme (dates, compteur, DLL)</td><td class="mono">CSV / JSON</td></tr>
         <tr><td><strong class="cyan">LECmd</strong></td><td>Raccourcis <span class="hex">.lnk</span></td><td>Fichier récemment ouvert, chemin cible, volume</td><td class="mono">CSV / JSON</td></tr>
-        <tr><td><strong class="purple">MFTECmd</strong></td><td><span class="hex">$MFT</span> + <span class="hex">$UsnJrnl</span></td><td>Structure NTFS · timestamps · supprimés</td><td class="mono">CSV</td></tr>
+        <tr><td><strong class="gold">JLECmd</strong></td><td>Jump Lists <span class="hex">*.automaticDestinations-ms</span></td><td>Fichiers récents par application (souvent + riche que LNK)</td><td class="mono">CSV</td></tr>
+        <tr><td><strong class="purple">MFTECmd</strong></td><td><span class="hex">$MFT</span> + <span class="hex">$UsnJrnl</span> + <span class="hex">$SDS</span></td><td>Structure NTFS · timestamps · supprimés · ACL</td><td class="mono">CSV</td></tr>
         <tr><td><strong class="gold">EvtxECmd</strong></td><td>Journaux <span class="hex">.evtx</span></td><td>Connexions, services, erreurs · Event IDs parsés</td><td class="mono">CSV / JSON / XML</td></tr>
         <tr><td><strong class="red">ShellBags Expl.</strong></td><td><span class="hex">NTUSER.DAT</span> + <span class="hex">USRCLASS.DAT</span></td><td>Dossiers visités (même supprimés)</td><td class="mono">GUI + CSV</td></tr>
-        <tr><td><strong class="blue">AmcacheParser</strong></td><td><span class="hex">Amcache.hve</span></td><td>SHA-1 de tous les exécutables connus</td><td class="mono">CSV</td></tr>
+        <tr><td><strong class="blue">AmcacheParser</strong></td><td><span class="hex">Amcache.hve</span></td><td>SHA-1 de tous les exécutables + drivers connus</td><td class="mono">CSV</td></tr>
+        <tr><td><strong class="purple">RECmd</strong></td><td>N'importe quelle ruche registre</td><td>Extraction par batches (USBSTOR, UserAssist, BAM…)</td><td class="mono">CSV</td></tr>
+        <tr><td><strong class="red">SDBExplorer</strong></td><td>Shim Databases <span class="hex">.sdb</span></td><td>Persistance malware via shim hijack</td><td class="mono">GUI</td></tr>
         <tr><td><strong class="orange">Timeline Expl.</strong></td><td>CSV issus des outils ci-dessus</td><td>Visualisation chronologique unifiée · filtres</td><td class="mono">GUI interactive</td></tr>
       </tbody>
     </table>
@@ -230,7 +234,7 @@
       <ul style="margin-top:.3rem;padding-left:1.5rem">
         <li>désactivé via <span class="hex">EnablePrefetcher</span> (Windows Server, certains SSD)</li>
         <li>nettoyé volontairement par un outil anti-forensique</li>
-        <li>écrasé par rotation (limite de 1024 fichiers depuis Win8+)</li>
+        <li>écrasé par rotation (limite ~1024 fichiers depuis Win8+, variable selon la version)</li>
       </ul>
     </div>
   </div>
@@ -349,7 +353,13 @@
 <span class="cyan">MFTECmd.exe</span> <span class="gold">-f</span> C:\Extract\$J <span class="gold">--csv</span> C:\Export\
 
 <span class="dim">// Parser $Boot et $LogFile également</span>
-<span class="cyan">MFTECmd.exe</span> <span class="gold">-f</span> C:\Extract\$Boot <span class="gold">--csv</span> C:\Export\</pre>
+<span class="cyan">MFTECmd.exe</span> <span class="gold">-f</span> C:\Extract\$Boot <span class="gold">--csv</span> C:\Export\
+
+<span class="dim">// Parser $SDS — Security Descriptor Stream (audit ACL)</span>
+<span class="cyan">MFTECmd.exe</span> <span class="gold">-f</span> C:\Extract\$Secure:$SDS <span class="gold">--csv</span> C:\Export\</pre>
+      <p style="margin-top:.4rem"><em>Compatible avec les fichiers <span class="hex">.mft</span> exportés
+      par <strong>X-Ways</strong> — pipeline classique : X-Ways exporte → MFTECmd parse → Timeline
+      Explorer corrèle.</em></p>
     </div>
 
     <div class="card card-gold" style="margin-top:.75rem">
@@ -398,11 +408,15 @@
         <thead><tr><th>Event ID</th><th>Signification</th></tr></thead>
         <tbody>
           <tr><td><span class="hex h-cyan">4624</span></td><td>Connexion réussie (Logon Type : 2=local, 3=réseau, 10=RDP)</td></tr>
-          <tr><td><span class="hex h-red">4625</span></td><td>Échec de connexion</td></tr>
-          <tr><td><span class="hex h-gold">4688</span></td><td>Création de processus (si audit activé)</td></tr>
+          <tr><td><span class="hex h-red">4625</span></td><td>Échec de connexion — bruteforce, mauvais MDP</td></tr>
+          <tr><td><span class="hex h-cyan">4634</span></td><td>Déconnexion d'une session — calculer la durée de session avec 4624</td></tr>
+          <tr><td><span class="hex h-orange">4648</span></td><td>Logon avec credentials explicites — détection de mouvement latéral (<em>runas</em>, <em>PsExec</em>)</td></tr>
+          <tr><td><span class="hex h-purple">4672</span></td><td>Privilèges spéciaux assignés au logon — détection d'élévation (admin, backup, debug)</td></tr>
+          <tr><td><span class="hex h-gold">4688</span></td><td>Création de processus (si audit activé) — ligne de commande parfois incluse</td></tr>
           <tr><td><span class="hex h-orange">4720</span></td><td>Création de compte utilisateur</td></tr>
-          <tr><td><span class="hex h-purple">7045</span></td><td>Installation d'un nouveau service</td></tr>
-          <tr><td><span class="hex h-red">1102</span></td><td>Journal Security effacé (anti-forensique)</td></tr>
+          <tr><td><span class="hex h-purple">7045</span></td><td>Installation d'un nouveau service (legacy)</td></tr>
+          <tr><td><span class="hex h-purple">4697</span></td><td>Installation d'un nouveau service (moderne) — complément de 7045</td></tr>
+          <tr><td><span class="hex h-red">1102</span></td><td>Journal Security effacé (anti-forensique — très suspect)</td></tr>
         </tbody>
       </table>
     </div>
@@ -460,21 +474,67 @@
     </div>
 
     <div class="card card-green" style="margin-top:.75rem">
-      <div class="card-title">🎯 Ce qu'on y trouve</div>
-      <ul>
-        <li><strong class="cyan">SHA-1</strong> de l'exécutable — à vérifier dans VirusTotal ou bases IOC</li>
-        <li>Chemin complet d'exécution</li>
-        <li>Taille, éditeur signé (s'il l'est), première exécution</li>
-        <li>Liste des pilotes, drivers, programmes installés</li>
-      </ul>
+      <div class="card-title">🎯 Ce qu'on y trouve — bien plus que les exécutables</div>
+      <p><strong>L'Amcache contient plusieurs tables distinctes</strong>, chacune avec ses propres preuves :</p>
+      <table class="tbl">
+        <thead><tr><th>Table</th><th>Contenu forensique</th></tr></thead>
+        <tbody>
+          <tr><td><strong class="cyan">InventoryApplicationFile</strong></td><td>Exécutables : <strong>SHA-1</strong>, chemin, taille, éditeur, première exécution</td></tr>
+          <tr><td><strong class="cyan">InventoryApplication</strong></td><td>Programmes installés avec version, éditeur, langue, date d'installation</td></tr>
+          <tr><td><strong class="red">InventoryDriverBinary</strong></td><td>Pilotes chargés, <strong>SHA-1</strong> — <em>précieux pour détection rootkits</em></td></tr>
+          <tr><td><strong class="gold">InventoryApplicationShortcut</strong></td><td>Raccourcis vers apps — utile pour le triage d'activité</td></tr>
+          <tr><td><strong class="purple">InventoryDeviceContainer</strong></td><td>Périphériques connectés (y compris USB historiques)</td></tr>
+          <tr><td><strong class="orange">InventoryDevicePnp</strong></td><td>Matériel Plug-and-Play énuméré</td></tr>
+        </tbody>
+      </table>
       <p style="margin-top:.4rem"><em>Usage typique :</em> lister tous les exécutables → calculer les hashs →
-      comparer à une baseline → isoler les binaires inconnus ou malveillants.</p>
+      comparer à une baseline → isoler les binaires inconnus ou malveillants. Pour traquer un rootkit,
+      se concentrer sur <strong>InventoryDriverBinary</strong>.</p>
+    </div>
+  </div>
+
+  <!-- AUTRES OUTILS -->
+  <div class="section" id="autres">
+    <div class="section-title">⑪ Autres outils de la suite — souvent oubliés</div>
+    <p class="meta" style="margin-bottom:.75rem">Trois outils complémentaires qui couvrent des artefacts spécifiques.</p>
+
+    <div class="card-grid">
+      <div class="card card-purple">
+        <div class="card-title">🗝 RECmd — Registry Explorer CLI</div>
+        <p>Pendant CLI du GUI Registry Explorer. Parse n'importe quelle ruche de registre avec des
+        <strong>batches de requêtes</strong> — utile en pipeline automatisé.</p>
+        <pre class="formula" style="line-height:1.4"><span class="cyan">RECmd.exe</span> <span class="gold">-d</span> C:\Extract\Hives <span class="gold">--bn</span> BatchExamples\Kroll_Batch.reb <span class="gold">--csv</span> C:\Export\</pre>
+        <p style="margin-top:.3rem">Les <em>batch files</em> (<span class="hex">.reb</span>) définissent
+        des extractions standard : USBSTOR, UserAssist, BAM/DAM, ShellBags, MRU, etc.
+        Les plus utilisés : <strong>Kroll_Batch</strong>, <strong>RegistryASEPs</strong>.</p>
+      </div>
+
+      <div class="card card-gold">
+        <div class="card-title">📌 JLECmd — Jump Lists</div>
+        <p>Les <strong>Jump Lists</strong> (listes de fichiers récents par application, visibles
+        en clic droit sur la barre des tâches) sont <em>souvent plus riches</em> que les
+        <span class="hex">.lnk</span>.</p>
+        <pre class="formula" style="line-height:1.4"><span class="cyan">JLECmd.exe</span> <span class="gold">-d</span> "%AppData%\Microsoft\Windows\Recent\AutomaticDestinations" <span class="gold">--csv</span> C:\Export\</pre>
+        <p style="margin-top:.3rem">Extrait : chemins cibles, volumes, MAC times cibles, compteur
+        d'utilisation par app — ex. VLC a joué cette vidéo 12 fois.</p>
+      </div>
+    </div>
+
+    <div class="card card-red" style="margin-top:.75rem">
+      <div class="card-title">🛡 SDBExplorer — Shim Databases</div>
+      <p>Les fichiers <span class="hex">.sdb</span> (Shim Database) servent à ajuster la compatibilité
+      des applications. <strong class="red">Certains malwares s'en servent pour persister</strong> —
+      par exemple en injectant une DLL dans un processus cible via le mécanisme de shim.</p>
+      <pre class="formula" style="line-height:1.4"><span class="cyan">SDBExplorer.exe</span> <span class="gold">-f</span> C:\Windows\AppPatch\sysmain.sdb</pre>
+      <p style="margin-top:.3rem">Emplacements classiques :
+      <span class="hex">C:\Windows\AppPatch\</span> (système) et
+      <span class="hex">C:\Windows\AppPatch\Custom\</span> (shims personnalisés — à surveiller).</p>
     </div>
   </div>
 
   <!-- Timeline Explorer -->
   <div class="section" id="timeline-exp">
-    <div class="section-title">⑪ Timeline Explorer — corrélation visuelle</div>
+    <div class="section-title">⑫ Timeline Explorer — corrélation visuelle</div>
 
     <div class="card card-orange">
       <div class="card-title">⏱ Timeline Explorer — GUI</div>
@@ -506,7 +566,7 @@
 
   <!-- WORKFLOW -->
   <div class="section" id="workflow">
-    <div class="section-title">⑫ Workflow forensique type</div>
+    <div class="section-title">⑬ Workflow forensique type</div>
     <p class="meta" style="margin-bottom:.75rem">L'intervention des outils Zimmerman dans une enquête complète.</p>
 
     <div class="steps">
@@ -539,7 +599,7 @@
 
   <!-- BONNES PRATIQUES -->
   <div class="section" id="bonnes-pratiques">
-    <div class="section-title">⑬ Bonnes pratiques forensiques</div>
+    <div class="section-title">⑭ Bonnes pratiques forensiques</div>
 
     <div class="card-grid">
       <div class="card card-cyan">
@@ -589,18 +649,23 @@
     <div class="card card-purple">
       <p style="font-size:.78rem;line-height:1.75">
         Eric Zimmerman = <strong class="cyan">suite forensique gratuite</strong> de référence pour les artefacts Windows ·
-        tous CLI sauf SBE et Timeline Explorer (GUI) ·
+        tous CLI sauf SBE, Timeline Explorer, SDBExplorer (GUI) ·
         <strong class="green">PECmd</strong> → Prefetch <span class="hex">.pf</span> → preuve d'exécution (jusqu'à 8 timestamps, RunCount, DLL) ·
         localisation <span class="hex">C:\Windows\Prefetch\</span> ·
         commande <span class="hex">PECmd.exe -d DOSSIER --csv EXPORT</span> ·
-        présence <span class="hex">.pf</span> = exécution prouvée, <strong class="red">absence ≠ non-exécution</strong> (désactivable) ·
+        présence <span class="hex">.pf</span> = exécution prouvée, <strong class="red">absence ≠ non-exécution</strong> (désactivable, ~1024 fichiers max) ·
         <strong class="cyan">LECmd</strong> → <span class="hex">.lnk</span> → chemin cible + numéro de série volume USB ·
-        <strong class="purple">MFTECmd</strong> → <span class="hex">$MFT</span> + <span class="hex">$UsnJrnl</span> → timestomping via <span class="hex">$SI</span> vs <span class="hex">$FN</span> ·
+        <strong class="gold">JLECmd</strong> → Jump Lists → souvent + riche que LNK ·
+        <strong class="purple">MFTECmd</strong> → <span class="hex">$MFT</span> + <span class="hex">$UsnJrnl</span> + <span class="hex">$SDS</span> → timestomping via <span class="hex">$SI</span> vs <span class="hex">$FN</span> ·
         <strong class="gold">EvtxECmd</strong> → journaux <span class="hex">.evtx</span> · IDs clés :
-        <span class="hex h-cyan">4624</span> logon · <span class="hex h-gold">4688</span> process ·
-        <span class="hex h-purple">7045</span> service · <span class="hex h-red">1102</span> log effacé ·
+        <span class="hex h-cyan">4624</span> logon · <span class="hex h-cyan">4634</span> logoff ·
+        <span class="hex h-orange">4648</span> logon explicite (mouvement latéral) ·
+        <span class="hex h-purple">4672</span> privilèges spéciaux ·
+        <span class="hex h-gold">4688</span> process · <span class="hex h-purple">4697/7045</span> service · <span class="hex h-red">1102</span> log effacé ·
         <strong class="red">ShellBags Explorer</strong> → dossiers visités (<span class="hex">NTUSER.DAT</span> + <span class="hex">USRCLASS.DAT</span>) ·
-        <strong class="blue">AmcacheParser</strong> → SHA-1 de tous les exécutables connus ·
+        <strong class="blue">AmcacheParser</strong> → <strong>InventoryApplicationFile</strong> (SHA-1 exe) · <strong>InventoryDriverBinary</strong> (SHA-1 drivers, utile anti-rootkit) ·
+        <strong class="purple">RECmd</strong> → batches registre (Kroll_Batch) ·
+        <strong class="red">SDBExplorer</strong> → shim DB (persistance malware) ·
         <strong class="orange">Timeline Explorer</strong> → visualisation &amp; corrélation ·
         toujours corréler plusieurs artefacts avant conclusion.
       </p>
