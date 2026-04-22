@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Messagerie Instantanée Forensique — CAS-IN Forensique</title>
+<meta name="description" content="WhatsApp · Signal · Telegram · Bases SQLite chiffrées · Extraction iOS / Android · Signal Protocol · LSCPT">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--dim:#6e7681;--cyan:#00e5cc;--gold:#f0c040;--red:#ff4060;--green:#30e88a;--blue:#58a6ff;--orange:#f0883e;--purple:#bc8cff;--mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;line-height:1.6}
+
+.tn-nav{display:flex;align-items:center;justify-content:space-between;padding:.75rem 2rem;border-bottom:1px solid var(--border);background:rgba(13,17,23,.9);backdrop-filter:blur(8px);position:sticky;top:0;z-index:100}
+.tn-back{color:var(--cyan);text-decoration:none;font-size:.78rem;letter-spacing:.06em}
+.tn-back:hover{color:var(--text)}
+.tn-title{font-family:var(--sans);font-size:.9rem;color:var(--muted);letter-spacing:.08em}
+.tn-quiz{background:rgba(255,64,96,.1);border:1px solid rgba(255,64,96,.3);color:var(--red);padding:.3rem .9rem;border-radius:6px;text-decoration:none;font-size:.72rem;letter-spacing:.06em;transition:.15s}
+.tn-quiz:hover{background:rgba(255,64,96,.2)}
+
+.page{max-width:1100px;margin:0 auto;padding:2rem}
+
+.breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--muted);margin:.5rem 0 1rem;flex-wrap:wrap}
+.breadcrumb a{color:var(--cyan);text-decoration:none}
+.breadcrumb a:hover{color:var(--text)}
+.breadcrumb .bc-sep{color:var(--dim)}
+.breadcrumb .bc-current{color:var(--text)}
+
+.header{padding:1rem 0 2rem}
+.badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(48,232,138,.08);border:1px solid rgba(48,232,138,.25);border-radius:20px;padding:.3rem 1rem;font-size:.72rem;color:var(--green);letter-spacing:.1em;margin-bottom:1.25rem}
+.header h1{font-family:var(--sans);font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;background:linear-gradient(135deg,var(--green),var(--cyan) 60%,var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.75rem}
+
+.sec-title{font-family:var(--sans);font-size:1.3rem;font-weight:700;color:var(--text);margin:2.5rem 0 .35rem}
+.sec-sub{font-size:.8rem;color:var(--muted);margin-bottom:1.5rem}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:1rem}
+.card h3{font-family:var(--sans);font-size:1rem;font-weight:700;color:var(--text);margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.card p,.card ul{font-size:.78rem;color:var(--muted);line-height:1.7}
+.card ul{list-style:none;padding-left:0;margin-top:.5rem}
+.card li{padding:.2rem 0;padding-left:1.25rem;position:relative}
+.card li::before{content:'→';position:absolute;left:0;color:var(--green)}
+code{color:var(--cyan);background:rgba(0,229,204,.06);border:1px solid rgba(0,229,204,.1);padding:.05rem .35rem;border-radius:3px;font-size:.72rem;font-family:var(--mono)}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem}
+@media(max-width:700px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+.app-card{padding:1rem 1.25rem;border-radius:10px;border:1px solid var(--border);background:var(--surface)}
+.app-card .app-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.75rem}
+.app-card .app-icon{font-size:1.5rem}
+.app-card .app-name{font-family:var(--sans);font-size:1rem;font-weight:700;color:var(--text)}
+.app-card .app-meta{font-size:.65rem;color:var(--dim);letter-spacing:.08em;margin-top:.1rem}
+.app-card .app-body{font-size:.72rem;color:var(--muted);line-height:1.6}
+.app-card .app-body strong{color:var(--text)}
+.app-card.whatsapp{border-top:2px solid #25D366}
+.app-card.signal{border-top:2px solid #3A76F0}
+.app-card.telegram{border-top:2px solid #0088CC}
+
+.legal-box{background:rgba(188,140,255,.05);border:1px solid rgba(188,140,255,.2);border-left:3px solid var(--purple);border-radius:8px;padding:1rem 1.25rem;margin:1.5rem 0;font-size:.78rem;color:var(--muted);line-height:1.7}
+.legal-box strong{color:var(--purple)}
+.legal-box .legal-title{font-family:var(--sans);color:var(--purple);font-size:.7rem;letter-spacing:.12em;margin-bottom:.5rem}
+
+.warning-box{background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.2);border-left:3px solid var(--red);border-radius:8px;padding:1rem 1.25rem;margin:1.25rem 0;font-size:.78rem;color:var(--muted);line-height:1.7}
+.warning-box strong{color:var(--red)}
+
+table{width:100%;border-collapse:collapse;font-size:.76rem;margin:1rem 0;background:var(--surface);border-radius:8px;overflow:hidden}
+th{padding:.7rem .85rem;text-align:left;background:var(--surface2);font-size:.64rem;letter-spacing:.12em;color:var(--dim);border-bottom:2px solid var(--border);text-transform:uppercase}
+td{padding:.65rem .85rem;border-bottom:1px solid rgba(48,54,61,.4);color:var(--muted);line-height:1.5;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+
+.fiche-tag{display:none}
+</style>
+</head>
+<body>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">RÉSEAUX &amp; COMMUNICATIONS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-réseauxinfrastructure">Réseaux &amp; Communications</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Messagerie Instantanée</span>
+  </div>
+</div>
+
+<div class="page" style="padding-bottom:.5rem">
+  <div class="header">
+    <div class="badge">💬 Messagerie chiffrée</div>
+    <h1>Messagerie Instantanée Forensique</h1>
+    <p style="font-size:.85rem;color:var(--muted);margin-top:.35rem;max-width:720px">
+      Extraction et analyse des artefacts WhatsApp, Signal et Telegram : bases SQLite
+      chiffrées, clés de déchiffrement, Signal Protocol, cadre légal suisse (LSCPT)
+      et limites de l'end-to-end.
+    </p>
+  </div>
+</div>
+
+<div class="page">
+
+<div class="sec-title">🎯 Panorama des trois applications</div>
+<div class="sec-sub">Chaque messagerie stocke l'historique localement dans une base SQLite — c'est <strong>la cible principale</strong> d'une extraction forensique.</div>
+
+<div class="grid-3">
+
+  <div class="app-card whatsapp">
+    <div class="app-head">
+      <span class="app-icon">🟢</span>
+      <div>
+        <div class="app-name">WhatsApp</div>
+        <div class="app-meta">E2EE · Signal Protocol · ~2 Md users</div>
+      </div>
+    </div>
+    <div class="app-body">
+      <strong>Base :</strong> <code>msgstore.db.crypt15</code><br>
+      <strong>Chiffrement :</strong> AES-GCM · clé 32 octets<br>
+      <strong>Clé :</strong> <code>/data/data/com.whatsapp/files/key</code> (Android, root requis)<br>
+      <strong>Backups :</strong> Google Drive (Android) / iCloud (iOS), chiffrés E2E depuis 2021 (opt-in).
+    </div>
+  </div>
+
+  <div class="app-card signal">
+    <div class="app-head">
+      <span class="app-icon">🔵</span>
+      <div>
+        <div class="app-name">Signal</div>
+        <div class="app-meta">E2EE · Signal Protocol · open source</div>
+      </div>
+    </div>
+    <div class="app-body">
+      <strong>Base :</strong> <code>signal.db</code> (SQLCipher, AES-256-CBC)<br>
+      <strong>Clé :</strong> dérivée du <em>Signal PIN</em> + Android Keystore / iOS Keychain<br>
+      <strong>Backups :</strong> chiffrés localement par phrase de 30 mots (jamais cloud).<br>
+      <strong>Sealed Sender :</strong> expéditeur masqué côté serveur.
+    </div>
+  </div>
+
+  <div class="app-card telegram">
+    <div class="app-head">
+      <span class="app-icon">🔷</span>
+      <div>
+        <div class="app-name">Telegram</div>
+        <div class="app-meta">MTProto · E2EE optionnelle</div>
+      </div>
+    </div>
+    <div class="app-body">
+      <strong>Chats classiques :</strong> <u>pas chiffrés E2E</u> — déchiffrables par Telegram<br>
+      <strong>Secret Chats :</strong> E2E, device-to-device, pas de cloud<br>
+      <strong>Base :</strong> <code>cache4.db</code> (Android) / <code>db.sqlite</code> (Desktop)<br>
+      <strong>Cloud sync :</strong> récupération possible via login depuis nouvel appareil.
+    </div>
+  </div>
+
+</div>
+
+<div class="sec-title">📂 Artefacts locaux à cibler</div>
+<div class="sec-sub">Paths standards sur iOS (Full File System) et Android (root / ADB backup / chipoff).</div>
+
+<table>
+<thead>
+<tr>
+  <th>App</th>
+  <th>iOS (Full File System)</th>
+  <th>Android (/data/data/...)</th>
+  <th>Desktop (Win / macOS)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>WhatsApp</strong></td>
+  <td><code>AppDomainGroup-group.net.whatsapp.WhatsApp.shared/ChatStorage.sqlite</code></td>
+  <td><code>com.whatsapp/databases/msgstore.db</code></td>
+  <td><code>%AppData%/WhatsApp/Databases</code> (Desktop)</td>
+</tr>
+<tr>
+  <td><strong>Signal</strong></td>
+  <td><code>AppDomain-org.whispersystems.signal/Documents/signal.sqlite</code></td>
+  <td><code>org.thoughtcrime.securesms/databases/signal.db</code></td>
+  <td><code>%AppData%/Signal/sql/db.sqlite</code> (SQLCipher)</td>
+</tr>
+<tr>
+  <td><strong>Telegram</strong></td>
+  <td><code>AppDomain-ph.telegra.Telegraph/Documents/</code></td>
+  <td><code>org.telegram.messenger/files/cache4.db</code></td>
+  <td><code>%AppData%/Telegram Desktop/tdata/</code></td>
+</tr>
+</tbody>
+</table>
+
+<div class="sec-title">🔓 Déchiffrement — ordre opérationnel</div>
+
+<div class="grid-2">
+
+  <div class="card">
+    <h3>🟢 WhatsApp · msgstore.db.crypt15</h3>
+    <p>Méthode classique (Android root) :</p>
+    <ul>
+      <li>Extraire <code>/data/data/com.whatsapp/files/key</code> (ou <code>encrypted_backup.key</code> depuis Keystore)</li>
+      <li>Récupérer <code>msgstore.db.crypt15</code> dans <code>/sdcard/WhatsApp/Databases/</code></li>
+      <li>Outil : <code>wa-crypt-tools</code> (Python, open source) ou <code>WhatsApp Viewer</code></li>
+      <li>Si pas de root : extraction ADB <code>backup</code> (bloquée depuis Android 6+), ou chip-off</li>
+      <li>iOS : iTunes backup <em>non chiffré</em> + <code>ChatStorage.sqlite</code> directement</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>🔵 Signal · SQLCipher</h3>
+    <p>Signal utilise <strong>SQLCipher</strong> avec une clé dérivée du <em>Signal PIN</em>.</p>
+    <ul>
+      <li>Sans le PIN : déchiffrement <strong>impossible</strong> en pratique (PBKDF2 + Keystore)</li>
+      <li>Si l'appareil est déverrouillé : dump de la RAM avec la clé en mémoire (outil <code>volatility</code> + plugin custom)</li>
+      <li>Desktop : la clé est stockée dans <code>config.json</code> — lisible si l'OS est accessible</li>
+      <li>Sealed Sender complique l'attribution côté serveur — pas de logs récupérables auprès de Signal Foundation</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>🔷 Telegram · Chats classiques</h3>
+    <p>Chats cloud = <strong>non-E2E</strong> — récupération via entraide :</p>
+    <ul>
+      <li>Cloud non-chiffré côté Telegram (serveurs à Dubai, Londres) — accessible via MLAT, mais Telegram refuse quasi toutes les requêtes sauf terrorisme avéré</li>
+      <li>Base locale <code>cache4.db</code> : non chiffrée, SQLite standard → lecture directe avec DB Browser</li>
+      <li>Réauthentification sur nouveau device : possible sans le téléphone d'origine si SIM récupérée (risque d'altération de preuve)</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>🔷 Telegram · Secret Chats</h3>
+    <p>Les <em>Secret Chats</em> sont E2E et jamais sur serveur.</p>
+    <ul>
+      <li>Uniquement présents sur les deux devices qui ont initié la conversation</li>
+      <li>Si le mode « self-destruct » est activé : message effacé des deux côtés à expiration — récupération en <strong>slack space SQLite</strong> (pages WAL, freelist)</li>
+      <li>Outil : <code>sqlite-parser</code> / <code>undark</code> pour carving SQLite</li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="sec-title">🔬 Tables SQLite critiques (WhatsApp / msgstore.db)</div>
+
+<table>
+<thead>
+<tr>
+  <th>Table</th>
+  <th>Contenu forensique</th>
+  <th>Champs clés</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>messages</code></td>
+  <td>Tous les messages envoyés/reçus, texte + métadonnées</td>
+  <td><code>_id</code>, <code>key_remote_jid</code>, <code>timestamp</code>, <code>data</code>, <code>media_url</code>, <code>status</code></td>
+</tr>
+<tr>
+  <td><code>chat_list</code></td>
+  <td>Liste des conversations et groupes</td>
+  <td><code>key_remote_jid</code>, <code>subject</code>, <code>creation</code></td>
+</tr>
+<tr>
+  <td><code>group_participants</code></td>
+  <td>Membres des groupes avec rôles</td>
+  <td><code>gjid</code>, <code>jid</code>, <code>admin</code></td>
+</tr>
+<tr>
+  <td><code>messages_quotes</code></td>
+  <td>Messages cités (réponses) — peut contenir des messages supprimés</td>
+  <td><code>key_id</code>, <code>data</code></td>
+</tr>
+<tr>
+  <td><code>deleted_messages</code></td>
+  <td>Messages supprimés côté utilisateur — parfois toujours présents</td>
+  <td><code>_id</code>, <code>original_timestamp</code></td>
+</tr>
+</tbody>
+</table>
+
+<div class="warning-box">
+  <strong>Messages supprimés :</strong> même après « Delete for everyone » dans WhatsApp, des traces subsistent :
+  notifications Android (<code>NotificationHistory</code>), <code>messages_quotes</code> (citations), slack SQLite (pages
+  libérées mais non réécrites), pages WAL non-checkpointées. Toujours carver la base avec <code>undark</code> ou
+  <code>sqlite-dissect</code>.
+</div>
+
+<div class="sec-title">🇨🇭 Cadre légal suisse</div>
+
+<div class="legal-box">
+  <div class="legal-title">⚖️ LSCPT · CPP · ORVN</div>
+  <p><strong>LSCPT (RS 780.1) :</strong> Loi sur la surveillance de la correspondance par poste et télécommunication — régit l'obtention des données de communication auprès des opérateurs et fournisseurs de services dérivés (<em>OSCom</em>).</p>
+  <br>
+  <p><strong>Art. 269 CPP :</strong> surveillance de la correspondance par télécommunication en temps réel — réservée aux infractions graves du catalogue (art. 269 al. 2). Autorisation par le Tmc (Tribunal des mesures de contrainte).</p>
+  <br>
+  <p><strong>Art. 273 CPP :</strong> données rétroactives (qui, quand, avec qui) — durée de conservation obligatoire : <strong>6 mois</strong> pour les opérateurs.</p>
+  <br>
+  <p><strong>Limite E2E :</strong> Signal et WhatsApp ne transmettent <u>pas le contenu</u> à l'OSCom. Seules les métadonnées (heure de connexion, IP, numéro inscrit) sont accessibles via LSCPT. Le contenu chiffré n'est récupérable qu'<strong>au terminal</strong> (saisie du téléphone).</p>
+  <br>
+  <p><strong>Art. 280 CPP :</strong> utilisation d'appareils techniques de surveillance — inclut les IMSI-catchers et l'installation de logiciels de surveillance (<em>Govware</em>) autorisés depuis 2018.</p>
+</div>
+
+<div class="sec-title">🛠 Outils DFIR</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>🔓 Commerciaux (judiciaire CH)</h3>
+    <ul>
+      <li><strong>Cellebrite UFED / Physical Analyzer</strong> — extraction + décodage natif WA/Signal/TG</li>
+      <li><strong>Magnet AXIOM</strong> — artefacts IM + timeline automatique</li>
+      <li><strong>Oxygen Forensic Detective</strong> — forte couverture Telegram et apps chinoises (WeChat)</li>
+      <li><strong>MSAB XRY</strong> — utilisé par Fedpol</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>🆓 Open source / gratuits</h3>
+    <ul>
+      <li><strong>wa-crypt-tools</strong> — déchiffrement crypt12/14/15 WhatsApp</li>
+      <li><strong>WhatsApp Viewer</strong> — GUI Windows pour msgstore.db</li>
+      <li><strong>telegram-history-dump</strong> — export JSON via API</li>
+      <li><strong>ALEAPP / iLEAPP</strong> — Android/iOS Logs, Events, and Protobuf Parser (Python)</li>
+      <li><strong>undark / sqlite-dissect</strong> — carving SQLite (messages supprimés)</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title">📋 Mémo — à vérifier sur chaque saisie</div>
+
+<div class="card">
+  <ul>
+    <li>Mode avion <strong>immédiat</strong> + Faraday → empêche les commandes « Delete for everyone » à distance</li>
+    <li>Vérifier si le compte est lié à d'<strong>autres appareils</strong> (WhatsApp Web, Signal Desktop, Telegram multi-device)</li>
+    <li>Capture de la <strong>RAM avant extinction</strong> : clé SQLCipher parfois présente en clair</li>
+    <li>Backups locaux <code>.crypt14</code> sur <code>/sdcard/</code> — souvent plus anciens que msgstore.db actif</li>
+    <li>Sauvegardes cloud (Google Drive / iCloud) : requête LSCPT à l'opérateur + entraide au provider (art. 18 Convention de Budapest)</li>
+    <li>Timeline : corréler avec <code>usage_stats</code> Android et <code>KnowledgeC.db</code> iOS (activité applicative)</li>
+    <li>Toujours <strong>hacher</strong> les bases extraites avant décryptage — garder une copie brute chiffrée</li>
+  </ul>
+</div>
+
+<div style="margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid var(--border);font-size:.72rem;color:var(--dim);text-align:center">
+  Voir aussi : <a href="mobile.html" style="color:var(--cyan);text-decoration:none">📱 Mobile Forensics</a> ·
+  <a href="sqlite_forensique.html" style="color:var(--cyan);text-decoration:none">🗃 SQLite Forensique</a> ·
+  <a href="tor_darkweb.html" style="color:var(--cyan);text-decoration:none">🧅 Tor &amp; Dark Web</a>
+</div>
+
+</div>
+
+<span class="fiche-tag">IM · E2EE</span>
+
+</body>
+</html>

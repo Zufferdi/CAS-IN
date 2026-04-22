@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Chiffrement de Volumes — CAS-IN Forensique</title>
+<meta name="description" content="BitLocker · FileVault · LUKS · VeraCrypt · TPM · Recovery keys · Cold boot · Méthodologie face au FDE">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--dim:#6e7681;--cyan:#00e5cc;--gold:#f0c040;--red:#ff4060;--green:#30e88a;--blue:#58a6ff;--orange:#f0883e;--purple:#bc8cff;--mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;line-height:1.6}
+
+.tn-nav{display:flex;align-items:center;justify-content:space-between;padding:.75rem 2rem;border-bottom:1px solid var(--border);background:rgba(13,17,23,.9);backdrop-filter:blur(8px);position:sticky;top:0;z-index:100}
+.tn-back{color:var(--cyan);text-decoration:none;font-size:.78rem;letter-spacing:.06em}
+.tn-back:hover{color:var(--text)}
+.tn-title{font-family:var(--sans);font-size:.9rem;color:var(--muted);letter-spacing:.08em}
+.tn-quiz{background:rgba(255,64,96,.1);border:1px solid rgba(255,64,96,.3);color:var(--red);padding:.3rem .9rem;border-radius:6px;text-decoration:none;font-size:.72rem;letter-spacing:.06em;transition:.15s}
+.tn-quiz:hover{background:rgba(255,64,96,.2)}
+
+.page{max-width:1100px;margin:0 auto;padding:2rem}
+
+.breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--muted);margin:.5rem 0 1rem;flex-wrap:wrap}
+.breadcrumb a{color:var(--cyan);text-decoration:none}
+.breadcrumb a:hover{color:var(--text)}
+.breadcrumb .bc-sep{color:var(--dim)}
+.breadcrumb .bc-current{color:var(--text)}
+
+.header{padding:1rem 0 2rem}
+.badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(255,64,96,.08);border:1px solid rgba(255,64,96,.25);border-radius:20px;padding:.3rem 1rem;font-size:.72rem;color:var(--red);letter-spacing:.1em;margin-bottom:1.25rem}
+.header h1{font-family:var(--sans);font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;background:linear-gradient(135deg,var(--red),var(--orange) 60%,var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.75rem}
+
+.sec-title{font-family:var(--sans);font-size:1.3rem;font-weight:700;color:var(--text);margin:2.5rem 0 .35rem}
+.sec-sub{font-size:.8rem;color:var(--muted);margin-bottom:1.5rem}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:1rem}
+.card h3{font-family:var(--sans);font-size:1rem;font-weight:700;color:var(--text);margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.card p,.card ul{font-size:.78rem;color:var(--muted);line-height:1.7}
+.card ul{list-style:none;padding-left:0;margin-top:.5rem}
+.card li{padding:.2rem 0;padding-left:1.25rem;position:relative}
+.card li::before{content:'→';position:absolute;left:0;color:var(--red)}
+code{color:var(--cyan);background:rgba(0,229,204,.06);border:1px solid rgba(0,229,204,.1);padding:.05rem .35rem;border-radius:3px;font-size:.72rem;font-family:var(--mono);word-break:break-all}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem}
+@media(max-width:700px){.grid-2,.grid-4{grid-template-columns:1fr}}
+
+.fde-card{padding:1rem 1.25rem;border-radius:10px;border:1px solid var(--border);background:var(--surface);border-top:3px solid var(--border)}
+.fde-card.bitlocker{border-top-color:#58a6ff}
+.fde-card.filevault{border-top-color:#bc8cff}
+.fde-card.luks{border-top-color:#f0883e}
+.fde-card.veracrypt{border-top-color:#30e88a}
+.fde-card .fde-head{display:flex;align-items:center;gap:.5rem;margin-bottom:.65rem}
+.fde-card .fde-icon{font-size:1.4rem}
+.fde-card .fde-name{font-family:var(--sans);font-size:.95rem;font-weight:700;color:var(--text)}
+.fde-card .fde-os{font-size:.6rem;color:var(--dim);letter-spacing:.08em;margin-top:.1rem}
+.fde-card dl{font-size:.72rem;color:var(--muted);line-height:1.6}
+.fde-card dt{color:var(--text);font-weight:600;margin-top:.45rem}
+.fde-card dd{padding-left:0;margin-top:.1rem}
+
+.priority-box{background:rgba(48,232,138,.05);border:1px solid rgba(48,232,138,.2);border-left:3px solid var(--green);border-radius:8px;padding:1rem 1.25rem;margin:1.5rem 0;font-size:.78rem;color:var(--muted);line-height:1.7}
+.priority-box strong{color:var(--green)}
+.priority-box .legal-title{font-family:var(--sans);color:var(--green);font-size:.7rem;letter-spacing:.12em;margin-bottom:.5rem}
+
+.warning-box{background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.2);border-left:3px solid var(--red);border-radius:8px;padding:1rem 1.25rem;margin:1.25rem 0;font-size:.78rem;color:var(--muted);line-height:1.7}
+.warning-box strong{color:var(--red)}
+
+.legal-box{background:rgba(188,140,255,.05);border:1px solid rgba(188,140,255,.2);border-left:3px solid var(--purple);border-radius:8px;padding:1rem 1.25rem;margin:1.5rem 0;font-size:.78rem;color:var(--muted);line-height:1.7}
+.legal-box strong{color:var(--purple)}
+.legal-box .legal-title{font-family:var(--sans);color:var(--purple);font-size:.7rem;letter-spacing:.12em;margin-bottom:.5rem}
+
+.tip-box{background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.2);border-left:3px solid var(--cyan);border-radius:8px;padding:1rem 1.25rem;margin:1.25rem 0;font-size:.78rem;color:var(--muted);line-height:1.7}
+.tip-box strong{color:var(--cyan)}
+
+table{width:100%;border-collapse:collapse;font-size:.76rem;margin:1rem 0;background:var(--surface);border-radius:8px;overflow:hidden}
+th{padding:.7rem .85rem;text-align:left;background:var(--surface2);font-size:.64rem;letter-spacing:.12em;color:var(--dim);border-bottom:2px solid var(--border);text-transform:uppercase}
+td{padding:.65rem .85rem;border-bottom:1px solid rgba(48,54,61,.4);color:var(--muted);line-height:1.5;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+
+.fiche-tag{display:none}
+</style>
+</head>
+<body>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">CRYPTOLOGIE &amp; SÉCURITÉ</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-cryptologiesécurité">Cryptologie &amp; Sécurité</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Chiffrement de Volumes</span>
+  </div>
+</div>
+
+<div class="page" style="padding-bottom:.5rem">
+  <div class="header">
+    <div class="badge">🛡 Full Disk Encryption</div>
+    <h1>Chiffrement de Volumes</h1>
+    <p style="font-size:.85rem;color:var(--muted);margin-top:.35rem;max-width:720px">
+      BitLocker, FileVault, LUKS, VeraCrypt — fonctionnement, clés de récupération,
+      attaques forensiques (cold boot, DMA, TPM sniffing) et méthodologie de saisie
+      face au chiffrement.
+    </p>
+  </div>
+</div>
+
+<div class="page">
+
+<div class="priority-box">
+  <div class="legal-title">⚡ RÈGLE D'OR TERRAIN</div>
+  <strong>Ne jamais éteindre un ordinateur allumé sur scène de perquisition</strong> sans d'abord tenter une acquisition RAM.
+  Une fois éteint, si le disque est chiffré (FDE) et que ni le mot de passe ni la clé de récupération ne sont obtenus,
+  <u>la preuve peut être perdue définitivement</u>. AES-256 sans la clé = probabilité nulle de cassage par force brute.
+</div>
+
+<div class="sec-title">🔐 Panorama FDE</div>
+
+<div class="grid-4">
+
+  <div class="fde-card bitlocker">
+    <div class="fde-head">
+      <span class="fde-icon">🪟</span>
+      <div>
+        <div class="fde-name">BitLocker</div>
+        <div class="fde-os">WINDOWS · PRO/ENTERPRISE</div>
+      </div>
+    </div>
+    <dl>
+      <dt>Chiffrement</dt><dd>AES-128/256 XTS (AES-CBC en legacy)</dd>
+      <dt>Clés</dt><dd>VMK → FVEK → disk</dd>
+      <dt>Unlock</dt><dd>TPM seul · TPM+PIN · USB key · Recovery key (48 digits)</dd>
+      <dt>Stockage</dt><dd>Recovery key dans AD / Entra ID / compte MS</dd>
+    </dl>
+  </div>
+
+  <div class="fde-card filevault">
+    <div class="fde-head">
+      <span class="fde-icon">🍎</span>
+      <div>
+        <div class="fde-name">FileVault 2</div>
+        <div class="fde-os">MACOS · APFS</div>
+      </div>
+    </div>
+    <dl>
+      <dt>Chiffrement</dt><dd>AES-XTS 128 (APFS natif)</dd>
+      <dt>Clés</dt><dd>Secure Enclave (T2/Apple Silicon)</dd>
+      <dt>Unlock</dt><dd>Mot de passe utilisateur · Recovery key · iCloud escrow</dd>
+      <dt>Stockage</dt><dd>Clé liée au matériel — impossible à déplacer sur autre Mac</dd>
+    </dl>
+  </div>
+
+  <div class="fde-card luks">
+    <div class="fde-head">
+      <span class="fde-icon">🐧</span>
+      <div>
+        <div class="fde-name">LUKS / LUKS2</div>
+        <div class="fde-os">LINUX · dm-crypt</div>
+      </div>
+    </div>
+    <dl>
+      <dt>Chiffrement</dt><dd>AES-XTS 256 (défaut)</dd>
+      <dt>Clés</dt><dd>Master key + 8 keyslots (LUKS2 : argon2id)</dd>
+      <dt>Unlock</dt><dd>Passphrase · keyfile · TPM2 (systemd-cryptenroll)</dd>
+      <dt>Header</dt><dd><code>cryptsetup luksDump /dev/sdX</code></dd>
+    </dl>
+  </div>
+
+  <div class="fde-card veracrypt">
+    <div class="fde-head">
+      <span class="fde-icon">🛡</span>
+      <div>
+        <div class="fde-name">VeraCrypt</div>
+        <div class="fde-os">MULTIPLATEFORME</div>
+      </div>
+    </div>
+    <dl>
+      <dt>Chiffrement</dt><dd>AES · Serpent · Twofish (et cascade)</dd>
+      <dt>Clés</dt><dd>PBKDF2 (PIM) · keyfiles</dd>
+      <dt>Unlock</dt><dd>Passphrase (+ PIM, rend Hashcat lent)</dd>
+      <dt>Spécifique</dt><dd>Volumes cachés (plausible deniability) — indétectables</dd>
+    </dl>
+  </div>
+
+</div>
+
+<div class="sec-title">🎯 Méthodologie forensique face au FDE</div>
+<div class="sec-sub">Arbre de décision selon l'état du device sur scène.</div>
+
+<table>
+<thead>
+<tr>
+  <th>État device</th>
+  <th>Objectif prioritaire</th>
+  <th>Techniques</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>🟢 Allumé &amp; session ouverte</strong></td>
+  <td>Acquérir la RAM <u>avant toute chose</u></td>
+  <td>WinPmem / Magnet RAM Capture / lime (Linux) / osxpmem (Mac). La clé FVEK/VMK est en mémoire tant que le volume est monté.</td>
+</tr>
+<tr>
+  <td><strong>🟡 Allumé &amp; verrouillé</strong></td>
+  <td>Garder en charge, Faraday, éviter extinction</td>
+  <td>Attaques DMA via Thunderbolt (PCILeech), attaque cold boot possible mais destructrice. <em>Nouvelle</em> : cold-boot-ng fonctionne sur certains Lenovo.</td>
+</tr>
+<tr>
+  <td><strong>🔴 Éteint</strong></td>
+  <td>Obtenir la clé de récupération par voie légale ou administrative</td>
+  <td>BitLocker : requête Microsoft / Entra ID (si pro). LUKS : mot de passe de l'utilisateur. FileVault : iCloud escrow (peu documenté, entraide US).</td>
+</tr>
+<tr>
+  <td><strong>🟠 Hiberné</strong></td>
+  <td>Préserver <code>hiberfil.sys</code> — contient la RAM + clé</td>
+  <td>Extraction image bit-à-bit du disque, puis parse du hiberfil avec Volatility (<code>windows.hibernation</code>).</td>
+</tr>
+</tbody>
+</table>
+
+<div class="sec-title">🪟 BitLocker — anatomie</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>🔗 Hiérarchie des clés</h3>
+    <ul>
+      <li><strong>FVEK</strong> (Full Volume Encryption Key) — chiffre les données du disque (AES-XTS)</li>
+      <li><strong>VMK</strong> (Volume Master Key) — chiffre la FVEK</li>
+      <li><strong>Protectors</strong> chiffrent la VMK : TPM, PIN, USB key, Recovery Key (48 chiffres)</li>
+      <li>Lors du boot : protector → déchiffre VMK → déchiffre FVEK → mount</li>
+      <li>Outil : <code>manage-bde -status C:</code> puis <code>-protectors -get C:</code></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>🔑 Récupération de la clé</h3>
+    <ul>
+      <li><strong>Active Directory :</strong> attribut <code>msFVE-RecoveryInformation</code> (si BitLocker escrow activé)</li>
+      <li><strong>Entra ID / Intune :</strong> blade BitLocker keys dans Azure</li>
+      <li><strong>Compte Microsoft :</strong> <code>account.microsoft.com/devices/recoverykey</code></li>
+      <li><strong>USB recovery key :</strong> fichier <code>.BEK</code> (128 bits)</li>
+      <li><strong>Printed key :</strong> 48 chiffres groupés par 6 → saisir en pré-boot</li>
+      <li><strong>Suspension :</strong> <code>manage-bde -protectors -disable C:</code> — stocke la clé en clair <u>sur le disque</u> (backdoor temporaire, ne pas laisser)</li>
+    </ul>
+  </div>
+</div>
+
+<div class="warning-box">
+  <strong>TPM sniffing (attaque physique) :</strong> sur BitLocker avec <em>TPM seul</em> (sans PIN), la VMK transite en clair sur le bus LPC/SPI entre le TPM et le CPU au boot. Un analyseur logique à ~$10 permet de capturer la clé en quelques minutes. <u>Attaque pratique</u>, documentée (Dolos Group, 2021). Contremesure : activer un PIN.
+</div>
+
+<div class="sec-title">🍎 FileVault — Apple Silicon</div>
+
+<div class="card">
+  <p>Sur les Mac Apple Silicon (M1/M2/M3), FileVault utilise la <strong>Secure Enclave</strong> :</p>
+  <ul>
+    <li>Chaque Mac a une clé unique matérielle (UID) non-extractible</li>
+    <li>Le Secure Enclave Processor (SEP) dérive la clé de chiffrement à partir de l'UID + mot de passe utilisateur</li>
+    <li>Impossible de déplacer le disque sur un autre Mac (la clé UID est soudée dans l'AP)</li>
+    <li>Acquisition forensique : <code>mac_apt</code> (Yogesh Khatri) pour artefacts macOS — mais nécessite un Mac vivant</li>
+    <li>Mode DFU + Apple Configurator : utilisé par IC3D/Cellebrite pour passer en mode récupération (<em>acquisition via GrayKey</em> n'est pas disponible pour macOS)</li>
+    <li>Si mot de passe connu : boot sur Recovery (<code>⌘+R</code>) → Terminal → <code>diskutil apfs unlockVolume</code></li>
+  </ul>
+</div>
+
+<div class="sec-title">🐧 LUKS — Linux</div>
+
+<div class="card">
+  <h3>🔓 Workflow d'analyse</h3>
+  <ul>
+    <li>Identifier : <code>cryptsetup isLuks /dev/sdX</code></li>
+    <li>Dump du header : <code>cryptsetup luksDump /dev/sdX</code> → révèle algorithme, nombre de keyslots, UUID, itérations</li>
+    <li>Backup du header : <code>cryptsetup luksHeaderBackup</code> (à conserver pour bruteforce offline)</li>
+    <li>Unlock : <code>cryptsetup open /dev/sdX chiffred_vol</code> → <code>/dev/mapper/chiffred_vol</code></li>
+    <li>Puis : <code>mount /dev/mapper/chiffred_vol /mnt/...</code></li>
+    <li>Bruteforce : <code>hashcat -m 14600 luks_header.img wordlist.txt</code> (mode LUKS)</li>
+    <li>Coût LUKS2 + Argon2id : <strong>>100 ms par essai</strong> → force brute utile seulement si dico ciblé</li>
+  </ul>
+</div>
+
+<div class="sec-title">❄️ Cold Boot Attack</div>
+
+<div class="card">
+  <p>Les clés de chiffrement d'un volume monté résident en RAM. Or la DRAM conserve son contenu quelques secondes à température ambiante — <strong>jusqu'à plusieurs minutes à basse température</strong>.</p>
+  <ul>
+    <li>Procédure : pulvériser de l'azote liquide ou bombe air inversée sur les DRAM → <strong>−50°C</strong></li>
+    <li>Arracher l'alimentation, éjecter les barrettes, les placer dans une autre machine bootée sur USB (memimage, bitunlocker)</li>
+    <li>Scanner la RAM pour les patterns de clés AES (entropie élevée + structure de schedule)</li>
+    <li>Outils : <code>aeskeyfind</code>, <code>bitunlocker</code>, <code>rsakeyfind</code></li>
+    <li><strong>Contre-mesures modernes :</strong> TRESOR (stocke la clé dans registres CPU AES-NI), ECC RAM avec scrubbing, CPUs Intel avec SME/MKTME</li>
+    <li>Succès : ~50 % sur hardware &lt; 2015, ~10 % sur matériel récent</li>
+  </ul>
+</div>
+
+<div class="sec-title">🛠 Outils DFIR</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>💼 Commerciaux</h3>
+    <ul>
+      <li><strong>Passware Kit Forensic</strong> — référence pour BitLocker/FileVault/LUKS/VeraCrypt</li>
+      <li><strong>Elcomsoft Forensic Disk Decryptor</strong> — extraction clés depuis hiberfil, pagefile, RAM dump</li>
+      <li><strong>Magnet AXIOM</strong> — détection + décryption intégrée</li>
+      <li><strong>X-Ways Forensics</strong> — support BitLocker natif</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>🆓 Open source</h3>
+    <ul>
+      <li><strong>dislocker</strong> — lecture BitLocker sous Linux</li>
+      <li><strong>libbde</strong> (Joachim Metz) — bibliothèque BitLocker</li>
+      <li><strong>hashcat</strong> — modes 6223 (VeraCrypt), 14600 (LUKS)</li>
+      <li><strong>bulk_extractor</strong> — recherche de clés AES en mémoire</li>
+      <li><strong>Volatility 3</strong> — plugin <code>bitlocker</code> pour extraire FVEK depuis dump RAM</li>
+    </ul>
+  </div>
+</div>
+
+<div class="legal-box">
+  <div class="legal-title">⚖️ Cadre suisse · Art. 90 al. 1 CPP</div>
+  <p>Le prévenu a le <strong>droit de se taire</strong> et ne peut être contraint à fournir un mot de passe de chiffrement. Le refus ne constitue pas une infraction en soi (contrairement au Royaume-Uni, RIPA 2000). Toutefois, le refus peut entraîner un <em>indice de charge</em> dans l'appréciation des preuves (art. 113 CPP).</p>
+  <br>
+  <p><strong>Biométrie vs. mot de passe :</strong> la jurisprudence admet qu'un juge peut ordonner l'apposition d'une empreinte digitale ou du visage (Face ID) — acte <em>non testimonial</em> — mais pas la divulgation d'un mot de passe mental (<em>nemo tenetur se ipsum accusare</em>). <strong>Sur scène, éteindre le device après 5 min</strong> → Face ID se désactive et force le passcode.</p>
+</div>
+
+<div class="tip-box">
+  <strong>Astuce acquisition :</strong> si l'ordinateur est allumé et déverrouillé, avant tout RAM dump, copiez le contenu des répertoires importants (<code>Documents</code>, <code>Desktop</code>, <code>Downloads</code>) vers un disque externe : c'est le seul moment où ces fichiers sont accessibles en clair. Le RAM dump peut échouer, mais cette copie préservera l'essentiel.
+</div>
+
+<div class="sec-title">📋 Mémo — check FDE sur scène</div>
+
+<div class="card">
+  <ul>
+    <li>Device allumé ? → <strong>NE PAS ÉTEINDRE</strong>. Ne pas brancher de souris (risque lock screen)</li>
+    <li>Session ouverte ? → acquisition RAM immédiate + copie fichiers en clair</li>
+    <li>Session verrouillée ? → Faraday + charge + test BitLocker unlock avec clés AD / Entra ID avant extinction</li>
+    <li>Éteint ? → imager le disque <em>brut</em>, documenter que le FDE est présent, tenter la récupération de la clé par voie légale</li>
+    <li>Mac ? → noter le modèle exact (T2 / M1 / M2) — change totalement la stratégie</li>
+    <li>VeraCrypt détecté ? → chercher les <strong>keyfiles</strong> (photos, MP3, n'importe quoi) dans l'environnement</li>
+    <li>Hibernate : fichier <code>hiberfil.sys</code> peut contenir les clés → toujours acquérir avant toute action</li>
+    <li>TPM+PIN sur un Lenovo/Dell ancien ? → envisager TPM sniffing en laboratoire</li>
+  </ul>
+</div>
+
+<div style="margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid var(--border);font-size:.72rem;color:var(--dim);text-align:center">
+  Voir aussi : <a href="crypto.html" style="color:var(--cyan);text-decoration:none">🔐 Cryptologie</a> ·
+  <a href="cassage_mdp.html" style="color:var(--cyan);text-decoration:none">🔓 Cassage MDP</a> ·
+  <a href="ram_forensique.html" style="color:var(--cyan);text-decoration:none">🧠 RAM Forensique</a> ·
+  <a href="pki_certificats.html" style="color:var(--cyan);text-decoration:none">🔏 PKI &amp; Certificats</a>
+</div>
+
+</div>
+
+<span class="fiche-tag">BitLocker · LUKS</span>
+
+</body>
+</html>

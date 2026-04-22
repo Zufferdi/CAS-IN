@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>USB Forensique — CAS-IN Forensique</title>
+<meta name="description" content="USBSTOR · setupapi.dev.log · Event Logs · VID/PID · MountPoints2 · Timeline connexion · Mapping user · USB sous Windows/macOS/Linux">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--dim:#6e7681;--cyan:#00e5cc;--gold:#f0c040;--red:#ff4060;--green:#30e88a;--blue:#58a6ff;--orange:#f0883e;--purple:#bc8cff;--mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;line-height:1.6}
+
+.tn-nav{display:flex;align-items:center;justify-content:space-between;padding:.75rem 2rem;border-bottom:1px solid var(--border);background:rgba(13,17,23,.9);backdrop-filter:blur(8px);position:sticky;top:0;z-index:100}
+.tn-back{color:var(--cyan);text-decoration:none;font-size:.78rem;letter-spacing:.06em}
+.tn-back:hover{color:var(--text)}
+.tn-title{font-family:var(--sans);font-size:.9rem;color:var(--muted);letter-spacing:.08em}
+.tn-quiz{background:rgba(255,64,96,.1);border:1px solid rgba(255,64,96,.3);color:var(--red);padding:.3rem .9rem;border-radius:6px;text-decoration:none;font-size:.72rem;letter-spacing:.06em;transition:.15s}
+.tn-quiz:hover{background:rgba(255,64,96,.2)}
+
+.page{max-width:1100px;margin:0 auto;padding:2rem}
+
+.breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--muted);margin:.5rem 0 1rem;flex-wrap:wrap}
+.breadcrumb a{color:var(--cyan);text-decoration:none}
+.breadcrumb a:hover{color:var(--text)}
+.breadcrumb .bc-sep{color:var(--dim)}
+.breadcrumb .bc-current{color:var(--text)}
+
+.header{padding:1rem 0 2rem}
+.badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.25);border-radius:20px;padding:.3rem 1rem;font-size:.72rem;color:var(--blue);letter-spacing:.1em;margin-bottom:1.25rem}
+.header h1{font-family:var(--sans);font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;background:linear-gradient(135deg,var(--blue),var(--cyan) 60%,var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.75rem}
+
+.sec-title{font-family:var(--sans);font-size:1.3rem;font-weight:700;color:var(--text);margin:2.5rem 0 .35rem}
+.sec-sub{font-size:.8rem;color:var(--muted);margin-bottom:1.5rem}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:1rem}
+.card h3{font-family:var(--sans);font-size:1rem;font-weight:700;color:var(--text);margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.card p,.card ul{font-size:.78rem;color:var(--muted);line-height:1.7}
+.card ul{list-style:none;padding-left:0;margin-top:.5rem}
+.card li{padding:.2rem 0;padding-left:1.25rem;position:relative}
+.card li::before{content:'→';position:absolute;left:0;color:var(--blue)}
+code{color:var(--cyan);background:rgba(0,229,204,.06);border:1px solid rgba(0,229,204,.1);padding:.05rem .35rem;border-radius:3px;font-size:.72rem;font-family:var(--mono);word-break:break-all}
+
+pre{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;overflow-x:auto;font-size:.72rem;color:var(--muted);line-height:1.6;margin:1rem 0;font-family:var(--mono)}
+pre code{background:none;border:none;padding:0;color:var(--muted)}
+pre .c{color:var(--dim)}
+pre .k{color:var(--orange)}
+pre .s{color:var(--green)}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem}
+@media(max-width:700px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+.artifact-row{display:flex;gap:1rem;padding:1rem 1.25rem;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;margin-bottom:.75rem;font-size:.78rem}
+.artifact-row .artifact-head{font-family:var(--sans);font-weight:700;color:var(--text);margin-bottom:.3rem;display:flex;align-items:center;gap:.4rem}
+.artifact-row .artifact-path{color:var(--cyan);font-family:var(--mono);font-size:.72rem;background:rgba(0,229,204,.06);padding:.05rem .35rem;border-radius:3px;display:inline-block;margin-bottom:.4rem;word-break:break-all}
+.artifact-row .artifact-body{color:var(--muted);line-height:1.6}
+
+.tip-box{background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.2);border-left:3px solid var(--cyan);border-radius:8px;padding:1rem 1.25rem;margin:1.25rem 0;font-size:.78rem;color:var(--muted);line-height:1.7}
+.tip-box strong{color:var(--cyan)}
+
+.warning-box{background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.2);border-left:3px solid var(--red);border-radius:8px;padding:1rem 1.25rem;margin:1.25rem 0;font-size:.78rem;color:var(--muted);line-height:1.7}
+.warning-box strong{color:var(--red)}
+
+.vid-pid-viz{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin:1rem 0;font-family:var(--mono);font-size:.78rem;color:var(--muted);line-height:1.8}
+.vid-pid-viz .vp-label{color:var(--dim);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.3rem}
+.vid-pid-viz .vp-key{color:var(--cyan);word-break:break-all}
+.vid-pid-viz .vp-highlight{color:var(--gold);font-weight:700}
+
+table{width:100%;border-collapse:collapse;font-size:.76rem;margin:1rem 0;background:var(--surface);border-radius:8px;overflow:hidden}
+th{padding:.7rem .85rem;text-align:left;background:var(--surface2);font-size:.64rem;letter-spacing:.12em;color:var(--dim);border-bottom:2px solid var(--border);text-transform:uppercase}
+td{padding:.65rem .85rem;border-bottom:1px solid rgba(48,54,61,.4);color:var(--muted);line-height:1.5;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+
+.fiche-tag{display:none}
+</style>
+</head>
+<body>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">ARTEFACTS WINDOWS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-artefactswindows">Artefacts Windows</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">USB Forensique</span>
+  </div>
+</div>
+
+<div class="page" style="padding-bottom:.5rem">
+  <div class="header">
+    <div class="badge">🔌 Traces USB</div>
+    <h1>USB Forensique</h1>
+    <p style="font-size:.85rem;color:var(--muted);margin-top:.35rem;max-width:720px">
+      Identification des périphériques USB branchés à un système : USBSTOR,
+      <code>setupapi.dev.log</code>, Event Logs, mapping device ↔ utilisateur,
+      timeline de connexions — Windows, macOS et Linux.
+    </p>
+  </div>
+</div>
+
+<div class="page">
+
+<div class="sec-title">🎯 Question forensique typique</div>
+<div class="sec-sub">« Est-ce qu'<strong>une clé USB donnée</strong> a été branchée sur <strong>cet ordinateur</strong>, <strong>par quel utilisateur</strong>, et <strong>quand</strong> ? »</div>
+
+<div class="card">
+  <p>Chaque connexion d'un périphérique USB à Windows laisse des traces dans au moins <strong>5 emplacements</strong> du système. Croiser ces artefacts permet de reconstruire une timeline précise et d'attribuer l'action à un utilisateur.</p>
+  <ul>
+    <li>Identifier chaque device par <strong>VID/PID/Serial</strong> (fingerprint matériel)</li>
+    <li>Dater la <strong>première connexion</strong> et les suivantes</li>
+    <li>Retrouver le ou les <strong>utilisateurs</strong> qui l'ont branché</li>
+    <li>Déterminer la <strong>lettre de lecteur</strong> attribuée (ex : <code>E:</code>)</li>
+    <li>Vérifier s'il s'agissait d'un <strong>vrai stockage</strong> ou d'un HID malveillant (Rubber Ducky, BadUSB)</li>
+  </ul>
+</div>
+
+<div class="sec-title">🔑 Identifiants uniques : VID / PID / Serial</div>
+
+<div class="vid-pid-viz">
+  <div class="vp-label">Exemple — clé SanDisk branchée</div>
+  <div class="vp-key">HKLM\SYSTEM\CurrentControlSet\Enum\USBSTOR\Disk&amp;Ven_<span class="vp-highlight">SanDisk</span>&amp;Prod_<span class="vp-highlight">Cruzer_Blade</span>&amp;Rev_<span class="vp-highlight">1.26</span>\<span class="vp-highlight">4C530000071127120234&amp;0</span></div>
+  <br>
+  <div class="vp-label">Décomposition</div>
+  <div><span class="vp-label" style="margin:0 .4rem 0 0;display:inline-block">VID</span> = <span class="vp-highlight">0781</span> (SanDisk, assigné par USB-IF)</div>
+  <div><span class="vp-label" style="margin:0 .4rem 0 0;display:inline-block">PID</span> = <span class="vp-highlight">5567</span> (Cruzer Blade, assigné par le fabricant)</div>
+  <div><span class="vp-label" style="margin:0 .4rem 0 0;display:inline-block">Serial</span> = <span class="vp-highlight">4C530000071127120234</span> (unique à ce device)</div>
+</div>
+
+<div class="warning-box">
+  <strong>Piège :</strong> si le dernier caractère du serial est un <code>&amp;</code> (ex : <code>...234&amp;0</code>), cela signifie que le device <u>n'a pas fourni de numéro de série unique</u> — Windows en a généré un. Ces serials ne sont <strong>pas fiables</strong> pour identifier un device unique. Typique des clés low-cost, chinois génériques, ou chipset VIA Labs.
+</div>
+
+<div class="sec-title">🪟 Windows — artefacts clés</div>
+
+<div class="artifact-row">
+  <div style="flex:1">
+    <div class="artifact-head">🗄 USBSTOR (Registry)</div>
+    <div class="artifact-path">HKLM\SYSTEM\CurrentControlSet\Enum\USBSTOR</div>
+    <div class="artifact-body">
+      Liste <strong>tous les périphériques de stockage USB</strong> jamais connectés. Sous-clé par device (VID+PID+Serial). Les valeurs importantes :
+      <ul>
+        <li><code>FriendlyName</code> → nom lisible (« SanDisk Cruzer Blade USB Device »)</li>
+        <li><code>Properties\...\0064</code> → timestamp <strong>première installation</strong></li>
+        <li><code>Properties\...\0066</code> → timestamp <strong>dernière connexion</strong></li>
+        <li><code>Properties\...\0067</code> → timestamp <strong>dernière déconnexion</strong></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="artifact-row">
+  <div style="flex:1">
+    <div class="artifact-head">📜 setupapi.dev.log</div>
+    <div class="artifact-path">C:\Windows\INF\setupapi.dev.log</div>
+    <div class="artifact-body">
+      Log texte horodaté — enregistre la <strong>première installation du pilote</strong> pour chaque device. Ligne typique :
+      <pre><span class="c">&gt;&gt;&gt;  [Device Install (Hardware initiated)</span> <span class="k">- SWD\WPDBUSENUM\_??_USBSTOR#Disk&amp;Ven_SanDisk...</span>
+<span class="c">&gt;&gt;&gt;  Section start</span> <span class="s">2024/03/14 14:22:08.318</span></pre>
+      <strong>Intérêt majeur :</strong> ce timestamp est le <u>plus ancien fiable</u> de la première connexion du device à ce PC. Souvent persistant même après <code>DriveCleanUp</code>.
+    </div>
+  </div>
+</div>
+
+<div class="artifact-row">
+  <div style="flex:1">
+    <div class="artifact-head">👤 MountPoints2 (par utilisateur)</div>
+    <div class="artifact-path">NTUSER.DAT\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2</div>
+    <div class="artifact-body">
+      <strong>Clé cruciale pour l'attribution user ↔ device.</strong> Liste les volumes montés <u>par cet utilisateur</u>. Si un device apparaît ici, c'est <strong>ce compte</strong> qui l'a branché/monté (session active).
+      <ul>
+        <li>Sous-clés de type <code>{GUID}</code> ou <code>##?#Volume{GUID}</code></li>
+        <li>Croiser le GUID avec <code>HKLM\SYSTEM\MountedDevices</code> pour le matcher au VID/PID/Serial USBSTOR</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="artifact-row">
+  <div style="flex:1">
+    <div class="artifact-head">📝 Event Logs</div>
+    <div class="artifact-path">%SystemRoot%\System32\winevt\Logs\Microsoft-Windows-Partition%4Diagnostic.evtx</div>
+    <div class="artifact-body">
+      Depuis <strong>Windows 8+</strong>, traces riches dans Event Logs :
+      <ul>
+        <li><strong>Event ID 1006</strong> (Partition/Diagnostic) — informations complètes sur le device branché : VID, PID, Serial, Capacity, Manufacturer, Model, PartitionStyle</li>
+        <li><strong>Event ID 400/410</strong> (DriverFrameworks-UserMode) — installation du driver</li>
+        <li><strong>Event ID 2003/2004/2006/2100/2101</strong> (USB-Hub3) — connexion/déconnexion, utile pour une timeline fine</li>
+        <li><strong>Event ID 6416</strong> (Security) — uniquement si Object Access auditing est activé (rare sur workstation)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="artifact-row">
+  <div style="flex:1">
+    <div class="artifact-head">📋 MountedDevices</div>
+    <div class="artifact-path">HKLM\SYSTEM\MountedDevices</div>
+    <div class="artifact-body">
+      Liste tous les volumes jamais montés sur ce système, indexés par lettre de lecteur (<code>\DosDevices\E:</code>) et GUID. Permet de <strong>savoir à quelle lettre</strong> un device a été monté.
+    </div>
+  </div>
+</div>
+
+<div class="sec-title">🕰 Reconstruction d'une timeline USB</div>
+
+<div class="card">
+  <h3>📐 Corrélation multi-source</h3>
+  <p>Pour une investigation sérieuse, croiser plusieurs sources et valider chaque timestamp :</p>
+  <ol style="list-style-position:inside;font-size:.78rem;color:var(--muted);line-height:1.8;margin-top:.5rem">
+    <li>VID/PID/Serial depuis <strong>USBSTOR</strong> → fingerprint device</li>
+    <li><code>setupapi.dev.log</code> → <strong>première installation</strong> (ancre temporelle la plus fiable)</li>
+    <li>USBSTOR <code>Properties\0064/0066/0067</code> → first install / dernière connexion / dernière déconnexion</li>
+    <li><code>Microsoft-Windows-Partition%4Diagnostic.evtx</code> → liste de <strong>toutes</strong> les connexions successives avec détails device</li>
+    <li><code>NTUSER.DAT\...\MountPoints2</code> → <strong>utilisateur</strong> qui a monté le volume</li>
+    <li><code>MountedDevices</code> → lettre de lecteur attribuée (E:, F:, G:…)</li>
+    <li>Shellbags / LNK / JumpLists → prouver <strong>l'utilisation</strong> du device (fichiers ouverts depuis E:)</li>
+  </ol>
+</div>
+
+<div class="tip-box">
+  <strong>Astuce pro :</strong> pour automatiser, utiliser <strong>USBDetective</strong>, <strong>USB Detective</strong> ou <strong>USBDeview</strong> (NirSoft) sur une image montée. Zimmerman Tools <code>RECmd</code> avec le batch file <code>SANS_Triage.reb</code> extrait et formate tout ce qui est nécessaire pour une timeline USB complète.
+</div>
+
+<div class="sec-title">🎯 Attribution user ↔ device (cas concret)</div>
+
+<div class="card">
+  <h3>📁 Workflow d'enquête</h3>
+  <ul>
+    <li>Suspect : <code>bob.smith</code> soupçonné d'avoir exfiltré des fichiers vers une clé USB</li>
+    <li>Étape 1 : dans <code>HKLM\...\USBSTOR</code>, trouver les clés USB branchées sur le PC</li>
+    <li>Étape 2 : noter le GUID de volume de chaque clé (via <code>HKLM\...\MountedDevices</code>)</li>
+    <li>Étape 3 : charger <code>C:\Users\bob.smith\NTUSER.DAT</code> dans Regripper / RegRecon</li>
+    <li>Étape 4 : extraire <code>\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2</code></li>
+    <li>Étape 5 : si le GUID de la clé USB s'y trouve → <strong>bob.smith a monté ce device</strong></li>
+    <li>Étape 6 : croiser avec <code>Shellbags</code> / <code>RecentDocs</code> / <code>OpenSaveMRU</code> pour voir les fichiers consultés</li>
+    <li>Étape 7 : rechercher dans <code>UserAssist</code> si un .exe a été lancé depuis le device</li>
+    <li>Étape 8 : LNK / JumpLists sur le bureau de Bob → preuves d'ouverture de fichiers depuis E:\</li>
+  </ul>
+</div>
+
+<div class="sec-title">🔎 BadUSB / HID — détecter un device malveillant</div>
+
+<div class="card">
+  <p>Un périphérique peut se présenter comme <strong>plusieurs classes USB simultanément</strong> (stockage + HID clavier + HID souris). Les attaques <em>Rubber Ducky</em> et <em>BadUSB</em> se font passer pour un clavier pour exécuter des commandes automatiquement.</p>
+  <ul>
+    <li>Event Log <code>USB-Hub3</code> EID 2003 révèle les classes USB réelles du device</li>
+    <li>Si une clé « USB » apparaît aussi comme HID → suspect</li>
+    <li>Les <strong>OMG Cables</strong> (câbles USB piégés) sont quasi-indétectables — cherchez des câbles suspects sur la scène</li>
+    <li>Dans les Event Logs de sécurité : exécutions soudaines de cmd/powershell peu après insertion USB</li>
+  </ul>
+</div>
+
+<div class="sec-title">🍎 macOS — USB artifacts</div>
+
+<div class="card">
+  <ul>
+    <li><code>/private/var/log/system.log</code> (pré-Big Sur) — connexions USB loggées</li>
+    <li><code>log show --predicate 'eventMessage contains "USB"' --last 7d</code> (macOS moderne, Unified Logs)</li>
+    <li><code>ioreg -p IOUSB -l</code> → liste des devices actuellement branchés</li>
+    <li><strong>KnowledgeC.db</strong> et <strong>PowerLog</strong> (CurrentPowerlog.PLSQL) — traces de connexions</li>
+    <li><code>/Users/&lt;user&gt;/Library/Preferences/.GlobalPreferences.plist</code> → historique volumes montés</li>
+    <li>Outil : <strong>mac_apt</strong> (Yogesh Khatri) parse la plupart de ces artefacts automatiquement</li>
+  </ul>
+</div>
+
+<div class="sec-title">🐧 Linux — USB artifacts</div>
+
+<div class="card">
+  <ul>
+    <li><code>journalctl -k | grep -i usb</code> — messages kernel (connexions, VID/PID, vendeur)</li>
+    <li><code>dmesg</code> — même info, circular buffer (perdu au reboot)</li>
+    <li><code>/var/log/syslog</code> ou <code>/var/log/messages</code> — entries <code>udev</code> et <code>kernel</code></li>
+    <li><code>/var/log/udev</code> (si rsyslog config) — events udev détaillés</li>
+    <li><code>lsusb -v</code> → snapshot des devices actuellement branchés</li>
+    <li><code>/etc/udev/rules.d/</code> — règles custom (peuvent révéler une préparation)</li>
+    <li><code>~/.bash_history</code> et <code>~/.local/share/gvfs-metadata</code> — traces d'utilisation</li>
+    <li><code>/run/media/$USER/</code> ou <code>/media/$USER/</code> — points de montage actuels</li>
+  </ul>
+</div>
+
+<div class="sec-title">🛠 Outils DFIR</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>💼 Professionnels</h3>
+    <ul>
+      <li><strong>USB Detective</strong> — commercial, référence pour timeline USB Windows</li>
+      <li><strong>Magnet AXIOM</strong> — module USB intégré</li>
+      <li><strong>EnCase / FTK</strong> — parseurs USBSTOR natifs</li>
+      <li><strong>X-Ways Forensics</strong> — vue USB intégrée</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>🆓 Open source / gratuits</h3>
+    <ul>
+      <li><strong>Zimmerman RECmd</strong> + <code>SANS_Triage.reb</code> → extraction automatique</li>
+      <li><strong>Regripper</strong> (Harlan Carvey) — plugins <code>usb</code>, <code>usbstor</code>, <code>mountdev</code>, <code>mountpoints2</code></li>
+      <li><strong>USBDeview</strong> (NirSoft) — GUI sur système vivant</li>
+      <li><strong>EvtxECmd</strong> — parser Event Log Zimmerman</li>
+      <li><strong>KAPE</strong> — triage target <code>USBDevices</code> collecte tout en un</li>
+      <li><strong>mac_apt</strong> (macOS) · <strong>UAC</strong> (Linux) pour les autres OS</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title">📋 Mémo — checklist enquête USB</div>
+
+<div class="card">
+  <ul>
+    <li>Lister <strong>tous les USBSTOR</strong> (jamais branchés sur ce PC), noter VID/PID/Serial de chacun</li>
+    <li>Pour chaque device suspect : timestamps <code>0064</code>, <code>0066</code>, <code>0067</code></li>
+    <li>Corréler avec <code>setupapi.dev.log</code> pour la première install</li>
+    <li>Event Log <code>Microsoft-Windows-Partition%4Diagnostic</code> : toutes les connexions avec détails</li>
+    <li>Pour chaque utilisateur : parser <code>NTUSER.DAT\...\MountPoints2</code> → attribution</li>
+    <li>Vérifier <code>MountedDevices</code> pour la lettre de lecteur</li>
+    <li>Suivre l'<strong>usage</strong> : shellbags, LNK, JumpLists, RecentDocs, UserAssist, OpenSaveMRU</li>
+    <li>Si clé saisie : <strong>imager la clé</strong> (write blocker !) et comparer Serial avec USBSTOR</li>
+    <li>Attention aux Serials se terminant par <code>&amp;</code> (non-unique, faux positifs possibles)</li>
+    <li>Documenter les <strong>fuseaux horaires</strong> : USBSTOR = UTC, setupapi.dev.log = local time</li>
+  </ul>
+</div>
+
+<div style="margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid var(--border);font-size:.72rem;color:var(--dim);text-align:center">
+  Voir aussi : <a href="windows.html" style="color:var(--cyan);text-decoration:none">🖥 Windows Artefacts</a> ·
+  <a href="registre_windows.html" style="color:var(--cyan);text-decoration:none">🗝 Registre Windows</a> ·
+  <a href="logs_windows.html" style="color:var(--cyan);text-decoration:none">📝 Event Logs</a> ·
+  <a href="shellbags.html" style="color:var(--cyan);text-decoration:none">🗂 Shellbags</a>
+</div>
+
+</div>
+
+<span class="fiche-tag">USBSTOR</span>
+
+</body>
+</html>
