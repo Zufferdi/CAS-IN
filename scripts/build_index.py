@@ -4,12 +4,11 @@ build_index.py — Regénère fiches/index.html à partir des fichiers HTML du d
 
 Appelé par la GitHub Action .github/workflows/sync-fiches-index.yml.
 
-Pour chaque fiche HTML (hors index.html) il extrait :
-- <title>
-- <meta name="description">
-- Le premier .badge (emoji icône)
-- Le premier .fiche-cat-title via le breadcrumb (catégorie)
-- data-keywords depuis le breadcrumb <a> pointant vers index.html#cat-…
+Détection de la catégorie d'une fiche en trois étapes en cascade :
+  1. Breadcrumb avec href pointant vers index.html#cat-<id>    ← propre
+  2. Breadcrumb en texte brut (ex. 'Artefacts Windows')         ← fallback 1
+  3. Mots-clés dans le nom de fichier                           ← fallback 2
+  4. Sinon : Outils DFIR                                        ← dernier recours
 
 Les fiches sont regroupées par catégorie dans l'ordre défini par CATEGORY_ORDER.
 """
@@ -18,7 +17,6 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 
 # ── Répertoire des fiches ────────────────────────────────────────────
-# Le script est à repo/scripts/build_index.py, fiches à repo/fiches/
 FICHES_DIR = Path(__file__).resolve().parents[1] / "fiches"
 INDEX_PATH = FICHES_DIR / "index.html"
 
@@ -35,41 +33,114 @@ CATEGORY_ORDER = [
 ]
 CAT_IDS = {c[0] for c in CATEGORY_ORDER}
 
-# ── Extraction des métadonnées d'une fiche ──────────────────────────
+# ── Mapping texte breadcrumb → cat_id (pour fallback 1) ─────────────
+BREADCRUMB_TEXT_MAP = {
+    "systèmes de fichiers":           "systèmesdefichiers",
+    "systemes de fichiers":           "systèmesdefichiers",
+    "acquisition & méthodes":         "acquisitionméthodes",
+    "acquisition, méthodes & outils": "acquisitionméthodes",
+    "acquisition et méthodes":        "acquisitionméthodes",
+    "acquisition méthodes":           "acquisitionméthodes",
+    "acquisition":                    "acquisitionméthodes",
+    "artefacts windows":              "artefactswindows",
+    "cryptologie & sécurité":         "cryptologiesécurité",
+    "cryptologie et sécurité":        "cryptologiesécurité",
+    "cryptologie":                    "cryptologiesécurité",
+    "réseaux & infrastructure":       "réseauxinfrastructure",
+    "réseaux & investigation":        "réseauxinfrastructure",
+    "réseaux et investigation":       "réseauxinfrastructure",
+    "réseaux":                        "réseauxinfrastructure",
+    "systèmes spéciaux":              "systèmesspéciaux",
+    "plateformes & cloud":            "systèmesspéciaux",
+    "plateformes et cloud":           "systèmesspéciaux",
+    "droit suisse":                   "droitsuisse",
+    "droit":                          "droitsuisse",
+    "outils dfir":                    "outilsDFIR",
+    "outils":                         "outilsDFIR",
+}
+
+# ── Mapping filename → cat_id (pour fallback 2) ─────────────────────
+FILENAME_KEYWORDS = [
+    (("fat12", "fat16", "fat32", "exfat", "ntfs", "ext2", "ext3", "ext4", "hfs", "apfs",
+      "comparaison_fs", "formats", "encodage", "disques"), "systèmesdefichiers"),
+    (("acquisition", "methodologie", "méthodologie", "timeline", "rapport_forensique",
+      "premier_intervenant", "ram_forensique"), "acquisitionméthodes"),
+    (("windows", "registre", "shellbags", "logs_windows", "volatilite", "active_directory",
+      "prefetch", "amcache", "shimcache"), "artefactswindows"),
+    (("hash", "crypto", "cassage_mdp", "anti_forensique", "malware", "ransomware",
+      "yara"), "cryptologiesécurité"),
+    (("reseau", "réseau", "wireshark", "pcap", "email", "osint", "tor", "darkweb",
+      "incident", "browser", "sqlite"), "réseauxinfrastructure"),
+    (("mobile", "macos", "linux", "cloud", "ios", "android"), "systèmesspéciaux"),
+    (("suisse", "droit", "preuve", "eimp", "entraide", "cpp", "lpd"), "droitsuisse"),
+    (("autopsy", "outils", "zimmerman", "xways", "winhex", "ftk", "cellebrite",
+      "velociraptor", "kape"), "outilsDFIR"),
+]
+
+
+def _normalize(text: str) -> str:
+    return re.sub(r"\s+", " ", text.strip().lower())
+
+
+def detect_category(soup: BeautifulSoup, filename: str) -> tuple[str, str]:
+    """Détecte la catégorie en 3 étapes. Retourne (cat_id, méthode)."""
+    # Méthode 1 : href du breadcrumb
+    for a in soup.find_all("a", href=True):
+        m = re.search(r"index\.html#cat-(.+)", a["href"])
+        if m and m.group(1) in CAT_IDS:
+            return m.group(1), "href"
+
+    # Méthode 2 : texte du breadcrumb
+    candidates = []
+    for sel in [".breadcrumb", ".bc-current", "nav"]:
+        for el in soup.select(sel):
+            candidates.append(_normalize(el.get_text(" ", strip=True)))
+    for el in soup.find_all(class_=re.compile(r"(tag|cat|chip)", re.I)):
+        candidates.append(_normalize(el.get_text(" ", strip=True)))
+
+    for text in candidates:
+        for phrase, cid in BREADCRUMB_TEXT_MAP.items():
+            if re.search(rf"\b{re.escape(phrase)}\b", text):
+                return cid, "text"
+
+    # Méthode 3 : mots-clés dans le filename
+    fname_low = filename.lower().replace(".html", "")
+    for keywords, cid in FILENAME_KEYWORDS:
+        for kw in keywords:
+            if kw in fname_low:
+                return cid, "filename"
+
+    return "outilsDFIR", "fallback"
+
+
 def parse_fiche(path: Path) -> dict | None:
-    """Retourne un dict avec les métadonnées d'une fiche, ou None si invalide."""
     try:
         soup = BeautifulSoup(path.read_text(encoding="utf-8"), "lxml")
-    except Exception:
+    except Exception as e:
+        print(f"  ⚠ parse error on {path.name}: {e}")
         return None
 
     title_tag = soup.find("title")
     if not title_tag:
         return None
     full_title = title_tag.get_text()
-    # "MAC Times & Artefacts Temporels — CAS-IN Forensique" → "MAC Times & Artefacts Temporels"
     name = full_title.split("—")[0].strip()
 
     desc_tag = soup.find("meta", attrs={"name": "description"})
     desc = desc_tag["content"].strip() if desc_tag else ""
 
-    # Icône : premier .badge, sinon premier emoji du titre
-    badge_tag = soup.find(class_="badge")
-    icon = badge_tag.get_text().strip() if badge_tag else "📄"
+    # Icône : .badge ou .fs-badge, mais extraire SEULEMENT le premier emoji
+    # (pour éviter que "🏢 Kerberos · Pass-the-Hash" devienne l'icône entière)
+    badge_tag = soup.find(class_="badge") or soup.find(class_="fs-badge")
+    icon = "📄"
+    if badge_tag:
+        raw = badge_tag.get_text().strip()
+        if raw:
+            first = raw.split()[0] if raw.split() else raw
+            icon = first
 
-    # Catégorie : lire le breadcrumb → lien vers index.html#cat-…
-    cat_id = "outilsDFIR"  # fallback
-    for a in soup.find_all("a", href=True):
-        href = a["href"]
-        m = re.search(r"index\.html#cat-(.+)", href)
-        if m:
-            cid = m.group(1)
-            if cid in CAT_IDS:
-                cat_id = cid
-                break
+    cat_id, method = detect_category(soup, path.name)
 
-    # Tag (chip affiché sur la carte) : balise .fiche-tag dans la fiche elle-même
-    # ou premier .tag dans le header
     tag_text = ""
     tag_el = soup.find(class_="fiche-tag")
     if not tag_el:
@@ -83,20 +154,22 @@ def parse_fiche(path: Path) -> dict | None:
         "desc": desc,
         "icon": icon,
         "cat_id": cat_id,
+        "cat_method": method,
         "tag": tag_text,
     }
 
-# ── Construction du HTML d'une carte ────────────────────────────────
+
 def card_html(f: dict) -> str:
     kw = f["desc"].lower().replace("·", "").replace("/", " ")
+    tag_html = f'<span class="fiche-tag">{f["tag"]}</span>' if f["tag"] else ""
     return f"""      <a href="{f['file']}" class="fiche-card" data-keywords="{kw}">
         <div class="fiche-icon">{f['icon']}</div>
         <div class="fiche-name">{f['name']}</div>
         <div class="fiche-desc">{f['desc']}</div>
-        <span class="fiche-tag">{f['tag']}</span>
+        {tag_html}
       </a>"""
 
-# ── Construction du bloc catégorie ──────────────────────────────────
+
 def category_html(cat_id: str, label: str, color: str, fiches: list[dict]) -> str:
     n = len(fiches)
     cards = "\n".join(card_html(f) for f in fiches)
@@ -113,7 +186,7 @@ def category_html(cat_id: str, label: str, color: str, fiches: list[dict]) -> st
     <div class="cat-nav" data-cat="{cat_id}"></div>
   </div>"""
 
-# ── Template principal ───────────────────────────────────────────────
+
 def render(categories_html: str, total: int) -> str:
     return f"""<!DOCTYPE html>
 <html lang="fr">
@@ -134,6 +207,41 @@ def render(categories_html: str, total: int) -> str:
 .search-icon{{position:absolute;left:.8rem;top:50%;transform:translateY(-50%);color:var(--dim)}}
 .fiche-card{{cursor:pointer}}
 .fiche-card.hidden{{display:none}}
+
+/* ── Mise en page propre des cartes — protection contre titres longs ── */
+.fiche-card .fiche-icon{{
+  font-size: 1.6rem;
+  margin-bottom: .4rem;
+  line-height: 1;
+}}
+.fiche-card .fiche-name{{
+  font-family: var(--sans);
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  color: var(--text);
+  word-break: normal;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  margin-bottom: .4rem;
+  /* Limite à 2 lignes max */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}}
+.fiche-card .fiche-desc{{
+  font-size: .78rem !important;
+  line-height: 1.45 !important;
+  color: var(--muted);
+  margin-bottom: .5rem;
+  /* Limite à 3 lignes max */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}}
+
 @media(max-width:640px){{.hub-stats{{gap:.75rem}}}}
 </style>
 <style>
@@ -178,7 +286,7 @@ def render(categories_html: str, total: int) -> str:
   <div class="fiche-cta-section">
     <div class="fiche-cta-text">Fiches consultées ? Passez à l'entraînement !</div>
     <div class="fiche-cta-buttons">
-      <a href="../quiz.html" class="fiche-cta-btn fiche-cta-red">💊 Quiz — 1439 questions</a>
+      <a href="../quiz.html" class="fiche-cta-btn fiche-cta-red">💊 Quiz</a>
       <a href="../tp.html" class="fiche-cta-btn fiche-cta-orange">🧪 Travaux Pratiques</a>
       <a href="../scene.html" class="fiche-cta-btn fiche-cta-orange" style="background:rgba(188,140,255,.1);color:var(--purple);border-color:rgba(188,140,255,.3)">🎭 Scénarios DFIR</a>
     </div>
@@ -268,10 +376,11 @@ function filterFiches() {{
 </body>
 </html>"""
 
-# ── Main ─────────────────────────────────────────────────────────────
+
 def main():
-    # Lire toutes les fiches sauf index.html
     fiches_by_cat: dict[str, list[dict]] = {c[0]: [] for c in CATEGORY_ORDER}
+    method_stats = {"href": 0, "text": 0, "filename": 0, "fallback": 0}
+
     for path in sorted(FICHES_DIR.glob("*.html")):
         if path.name == "index.html":
             continue
@@ -283,9 +392,10 @@ def main():
         if cat not in fiches_by_cat:
             fiches_by_cat[cat] = []
         fiches_by_cat[cat].append(data)
-        print(f"  ✓ {path.name} → {cat}")
+        method_stats[data["cat_method"]] += 1
+        marker = {"href": "✓", "text": "~", "filename": "?", "fallback": "!"}[data["cat_method"]]
+        print(f"  {marker} {path.name:<35} → {cat:<22} ({data['cat_method']})")
 
-    # Construire les blocs HTML par catégorie
     cat_blocks = []
     total = 0
     for cat_id, label, color in CATEGORY_ORDER:
@@ -298,6 +408,12 @@ def main():
     html = render("\n".join(cat_blocks), total)
     INDEX_PATH.write_text(html, encoding="utf-8")
     print(f"\n✅ index.html régénéré — {total} fiches.")
+    print(f"   Détection : href={method_stats['href']} · text={method_stats['text']} · "
+          f"filename={method_stats['filename']} · fallback={method_stats['fallback']}")
+    if method_stats["fallback"] > 0:
+        print(f"   ⚠ {method_stats['fallback']} fiche(s) en fallback 'outilsDFIR' — "
+              f"vérifier les breadcrumbs.")
+
 
 if __name__ == "__main__":
     main()
