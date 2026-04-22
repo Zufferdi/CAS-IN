@@ -78,6 +78,7 @@ INTRA_CATEGORY_ORDER = {
         "ntfs.html",
         "ext.html",
         "hfs.html",
+        "apfs.html",
     ],
     "artefactswindows": [
         "windows_forensique.html",
@@ -141,6 +142,7 @@ ICON_OVERRIDES = {
     "ntfs.html":                  "🗄",
     "ext.html":                   "🐧",
     "hfs.html":                   "🍎",
+    "apfs.html":                  "🍏",
     "windows.html":               "🖥",
     "volatilite.html":            "🧪",
     "macos-linux.html":           "💻",
@@ -210,6 +212,7 @@ TAG_OVERRIDES = {
     "ntfs.html":                  "NTFS",
     "ext.html":                   "Linux",
     "hfs.html":                   "Apple",
+    "apfs.html":                  "APFS · Snapshots",
     "windows_forensique.html":    "Méthodologie",
     "windows.html":               "Artefacts",
     "registre_windows.html":      "Ruches",
