@@ -19,13 +19,40 @@ const STATE = {
     droitpenal:0, glossaire:0, examen:0
   },
   hintUsed: false,
+  // Gamification étendue
+  streak:     parseInt(localStorage.getItem('tp_streak')     || '0', 10),
+  bestStreak: parseInt(localStorage.getItem('tp_bestStreak') || '0', 10),
 };
 
 function saveState() {
   localStorage.setItem('tp_solved', JSON.stringify(STATE.solved));
+  localStorage.setItem('tp_streak', String(STATE.streak));
+  localStorage.setItem('tp_bestStreak', String(STATE.bestStreak));
 }
 function getSolved(cat) { return STATE.solved[cat] || 0; }
-function incSolved(cat) { STATE.solved[cat] = (STATE.solved[cat]||0)+1; saveState(); updateProgress(); }
+function getTotalSolved() { return Object.values(STATE.solved).reduce((a,b)=>a+(b||0),0); }
+function incSolved(cat) {
+  STATE.solved[cat] = (STATE.solved[cat]||0)+1;
+  STATE.streak++;
+  if (STATE.streak > STATE.bestStreak) STATE.bestStreak = STATE.streak;
+  saveState();
+  updateProgress();
+}
+function breakStreak() {
+  if (STATE.streak > 0) {
+    STATE.streak = 0;
+    saveState();
+    updateProgress();
+  }
+}
+
+// ── Affichage du seuil de maîtrise (badge bronze/argent/or par catégorie)
+function masteryBadge(n) {
+  if (n >= 50) return '🥇';
+  if (n >= 25) return '🥈';
+  if (n >= 10) return '🥉';
+  return '';
+}
 
 // ═══════════════════════════════════════════════════
 // UTILITAIRES
@@ -35,6 +62,45 @@ function pad(n, w, z='0') { return String(n).padStart(w, z); }
 function dec2hex(n, bytes=1) { return n.toString(16).toUpperCase().padStart(bytes*2,'0').match(/.{2}/g).join(' '); }
 function hex2bytes(hexStr) { return hexStr.trim().split(/\s+/).map(h => parseInt(h,16)); }
 function bytesToBits(bytes) { return bytes.map(b => pad(b.toString(2),8)).join(' '); }
+
+// ── Fix #1, #2 : Helpers d'échappement ────────────────────────
+// Pour injecter du texte libre dans un attribut HTML entre doubles quotes.
+function escAttr(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+// Pour injecter du texte dans un attribut data-* ET pouvoir le relire sans surprise.
+// On stocke en base64 des données JSON — aucun problème de quotes/doubles quotes/accolades/accents.
+function encData(obj) {
+  try {
+    const json = JSON.stringify(obj);
+    const bytes = new TextEncoder().encode(json);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  } catch (_) { return ''; }
+}
+function decData(s) {
+  try {
+    const binary = atob(s);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch (_) { return null; }
+}
+// Normalisation des réponses textuelles (accents insensibles, casse ignorée, espaces ignorés,
+// zéros de padding tolérés dans les nombres : "04" ≡ "4")
+function normAns(s) {
+  return String(s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // enlève diacritiques
+    .replace(/\s+/g,'')                                  // compresse espaces
+    .toUpperCase()
+    .replace(/^0X/, '')
+    .replace(/\b0+(\d)/g, '$1');                         // "04" → "4"
+}
 
 function renderHexBytes(bytes, classes=[]) {
   return bytes.map((b,i) => {
@@ -63,10 +129,32 @@ function switchCat(cat, btn) {
 function updateProgress() {
   const cat = STATE.cat;
   const solved = getSolved(cat);
-  document.getElementById('tp-progress-text').textContent =
-    `Catégorie : ${cat} · Résolus dans cette session`;
-  document.getElementById('tp-score-badge').textContent =
-    `${solved} résolus ✅`;
+  const total  = getTotalSolved();
+  const medal  = masteryBadge(solved);
+  const pt = document.getElementById('tp-progress-text');
+  if (pt) pt.innerHTML =
+    `Catégorie : <strong>${cat}</strong> · Total global : <strong>${total}</strong>` +
+    (STATE.streak > 0 ? ` · 🔥 Série en cours : <strong>${STATE.streak}</strong>` : '') +
+    (STATE.bestStreak > 0 ? ` · ⭐ Meilleur : ${STATE.bestStreak}` : '');
+  const badge = document.getElementById('tp-score-badge');
+  if (badge) badge.innerHTML = `${medal} ${solved} résolus ✅`;
+
+  // Mettre à jour les onglets avec un petit compteur
+  document.querySelectorAll('.tp-tab').forEach(t => {
+    const c = t.dataset.cat;
+    if (!c) return;
+    const n = getSolved(c);
+    // Supprimer ancien compteur s'il existe
+    const old = t.querySelector('.tab-count');
+    if (old) old.remove();
+    if (n > 0) {
+      const span = document.createElement('span');
+      span.className = 'tab-count';
+      span.textContent = n;
+      span.style.cssText = 'margin-left:.35rem;padding:.05rem .4rem;border-radius:999px;background:rgba(48,232,138,.15);color:var(--green);font-size:.65rem;font-weight:700';
+      t.appendChild(span);
+    }
+  });
 }
 
 function newExercise() {
@@ -340,8 +428,8 @@ function genEndian() {
 function checkEndianChoice(btn, isCorrect, expectedVal, displayBytes, orderedBytes) {
   document.querySelectorAll('#endian-choices .tp-choice').forEach(b => { b.disabled = true; });
   btn.classList.add(isCorrect ? 'correct' : 'wrong');
-  if (isCorrect) incSolved('endian');
-  else {
+  if (isCorrect) { if (!STATE.hintUsed) incSolved('endian'); }
+  else { breakStreak();
     document.querySelectorAll('#endian-choices .tp-choice').forEach(b => {
       if (b.dataset.correct === 'true') b.classList.add('correct');
       else if (b !== btn) b.classList.add('dim');
@@ -432,7 +520,7 @@ function genTimestamp() {
           if(ok){incSolved('timestamp');}
           document.getElementById('btn-next-ts').style.display='inline-block';
         })()">Valider ✓</button>
-        <button class="btn-next" id="btn-next-ts" onclick="newExercise()" style="display:none">Suivant →</button>
+        <button class="btn-next" id="btn-next-ts" onclick="newExercise()" style="display:none">Exercice suivant →</button>
       </div>
       <div class="ex-feedback" id="ex-feedback-ts" style="display:none"></div>
     `;
@@ -522,6 +610,34 @@ function genTimestamp() {
   return div;
 }
 
+// Fix : feedback visuel global quand un indice est utilisé
+function markHintUsed() {
+  if (STATE.hintUsed) return;  // déjà marqué, ne rien re-afficher
+  STATE.hintUsed = true;
+  // Petit toast discret pour informer
+  if (!document.getElementById('hint-toast')) {
+    const toast = document.createElement('div');
+    toast.id = 'hint-toast';
+    toast.textContent = '💡 Indice utilisé — cet exercice ne comptera pas pour le score';
+    toast.style.cssText = `
+      position:fixed; bottom:75px; left:50%; transform:translateX(-50%);
+      background:rgba(240,192,64,.15); border:1px solid rgba(240,192,64,.4);
+      color:var(--gold); padding:.4rem .9rem; border-radius:999px;
+      font-size:.72rem; z-index:9000; animation: fadeInOut 2.5s ease;
+      pointer-events:none;
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+  }
+}
+// CSS animation du toast (une seule fois)
+if (typeof document !== 'undefined' && !document.querySelector('#hint-toast-style')) {
+  const s = document.createElement('style');
+  s.id = 'hint-toast-style';
+  s.textContent = `@keyframes fadeInOut{0%{opacity:0;transform:translate(-50%,10px)}20%{opacity:1;transform:translate(-50%,0)}80%{opacity:1}100%{opacity:0}}`;
+  document.head.appendChild(s);
+}
+
 function showTSHint(y,mo,d,h,mi,s) {
   const timeWord = (h<<11)|(mi<<5)|Math.floor(s/2);
   const dateWord = ((y-1980)<<9)|(mo<<5)|d;
@@ -533,7 +649,7 @@ function showTSHint(y,mo,d,h,mi,s) {
     Time = 0x${pad(timeWord.toString(16).toUpperCase(),4)} → bits 15-11 = <strong>${h}h</strong> · bits 10-5 = <strong>${mi}min</strong> · bits 4-0 × 2 = <strong>${s}s</strong><br>
     Date = 0x${pad(dateWord.toString(16).toUpperCase(),4)} → bits 15-9 + 1980 = <strong>${y}</strong> · bits 8-5 = <strong>${mo}</strong> · bits 4-0 = <strong>${d}</strong>
   `;
-  STATE.hintUsed = true;
+  markHintUsed();
 }
 
 function checkTimestamp(ey, emo, ed, eh, emi, es) {
@@ -563,13 +679,15 @@ function checkTimestamp(ey, emo, ed, eh, emi, es) {
   } else {
     fb.className='ex-feedback wrong';
     fb.innerHTML=`✗ Incorrect. Tu as saisi : ${yr}-${pad(mo,2)}-${pad(dy,2)} ${pad(hr,2)}:${pad(mn,2)}:${pad(sc,2)}<br>Utilise "💡 Calculs" pour voir la décomposition bit par bit.`;
+    breakStreak();
   }
 }
 
 // ── 3. BITMAP exFAT / FAT ──────────────────────────
 function genBitmap() {
   const numClusters = [8, 16, 32, 64][rand(0,3)];
-  const occupiedCount = rand(3,10);
+  // Fix : borner occupiedCount à numClusters-1 pour éviter boucle infinie (bug original)
+  const occupiedCount = rand(3, Math.min(10, numClusters - 1));
   const occupied = new Set();
   while (occupied.size < occupiedCount) occupied.add(rand(0, numClusters-1));
   const occupiedArr = [...occupied].sort((a,b)=>a-b);
@@ -583,6 +701,7 @@ function genBitmap() {
     }
     bytes.push(byte);
   }
+  const expectedHex = bytes.map(b=>pad(b.toString(16).toUpperCase(),2)).join(' ');
 
   const div = document.createElement('div');
   div.className = 'ex-card';
@@ -594,38 +713,36 @@ function genBitmap() {
     </div>
     <div class="ex-scenario">
       Sur un volume exFAT, la bitmap d'allocation indique que les clusters <strong>${occupiedArr.join(', ')}</strong> sont occupés (les autres sont libres).<br>
-      Détermine la représentation hexadécimale des <strong>${Math.ceil(numClusters/8)} octets</strong> de bitmap.
+      Détermine la représentation hexadécimale des <strong>${Math.ceil(numClusters/8)} octets</strong> de bitmap.<br>
+      <em style="color:var(--dim);font-size:.75rem">→ Clique les clusters occupés dans la grille pour les activer, puis valide.</em>
     </div>
 
-    <div class="sec-title">Grille de clusters (clique pour basculer)</div>
+    <div class="sec-title">Grille de clusters (clique sur chaque cluster occupé)</div>
     <div class="bitmap-grid" id="bm-grid"></div>
-    <div style="display:flex;gap:1rem;margin:.5rem 0;font-size:.72rem;color:var(--dim)">
+    <div style="display:flex;gap:1rem;margin:.5rem 0;font-size:.72rem;color:var(--dim);flex-wrap:wrap">
       <span>🔴 = occupé (bit 1)</span>
       <span>⬛ = libre (bit 0)</span>
-      <span style="color:var(--dim)">Les bits sont ordonnés LSB en premier (cluster 0 = bit 0 de l'octet 0)</span>
+      <span style="color:var(--dim)">LSB first : cluster 0 = bit 0 de l'octet 0</span>
     </div>
 
     <div class="sec-title">Résultat hexadécimal calculé</div>
-    <div class="bm-hex-result" id="bm-hex-result">-- --</div>
+    <div class="bm-hex-result" id="bm-hex-result">—</div>
 
     <div class="ex-input-row">
-      <span class="ex-input-label">Vérifie :</span>
-      <input class="ex-input" id="ans-bitmap" placeholder="${bytes.map(b=>pad(b.toString(16).toUpperCase(),2)).join(' ')}" style="font-family:var(--mono);letter-spacing:.1em" autocomplete="off">
-      <button class="btn-validate" onclick="checkBitmap('${bytes.map(b=>pad(b.toString(16).toUpperCase(),2)).join(' ')}')">Valider ✓</button>
-      <button class="btn-next" id="btn-next-bm" onclick="newExercise()">Exercice suivant →</button>
+      <button class="btn-validate" onclick="checkBitmap('${expectedHex}')">Valider ✓</button>
+      <button class="btn-next" id="btn-next-bm" onclick="newExercise()" style="display:none">Exercice suivant →</button>
     </div>
     <div class="ex-feedback" id="ex-feedback-bm"></div>
   `;
 
-  // Build interactive grid after insertion
+  // Fix #5 : grille TOUTE VIDE, à l'utilisateur de cliquer
   setTimeout(() => {
     const grid = document.getElementById('bm-grid');
     if (!grid) return;
-    const cells = [];
     for (let i = 0; i < numClusters; i++) {
       const cell = document.createElement('div');
-      cell.className = 'bm-cell ' + (occupied.has(i) ? 'occupied' : 'free');
-      cell.innerHTML = `<span>${i}</span><span class="bm-label">${occupied.has(i)?'1':'0'}</span>`;
+      cell.className = 'bm-cell free';  // ← toutes libres au départ
+      cell.innerHTML = `<span>${i}</span><span class="bm-label">0</span>`;
       cell.onclick = () => {
         const isOcc = cell.classList.contains('occupied');
         cell.className = 'bm-cell ' + (isOcc ? 'free' : 'occupied');
@@ -633,9 +750,8 @@ function genBitmap() {
         updateBitmapResult();
       };
       grid.appendChild(cell);
-      cells.push(cell);
     }
-    updateBitmapResult();
+    updateBitmapResult();  // affiche "00 00..." au départ
   }, 50);
   return div;
 }
@@ -651,19 +767,16 @@ function updateBitmapResult() {
     bytes.push(pad(byte.toString(16).toUpperCase(),2));
   }
   const hexResult = document.getElementById('bm-hex-result');
-  if (hexResult) hexResult.textContent = bytes.join(' ');
-  const inp = document.getElementById('ans-bitmap');
-  if (inp) inp.value = bytes.join(' ');
+  if (hexResult) hexResult.textContent = bytes.join(' ') || '—';
 }
 
 function checkBitmap(expected) {
-  const inp = document.getElementById('ans-bitmap');
   const fb = document.getElementById('ex-feedback-bm');
-  const val = (inp.value||'').trim().toUpperCase().replace(/[^0-9A-F ]/g,'');
-  const norm = val.replace(/\s+/g,' ').trim();
+  const hexResult = document.getElementById('bm-hex-result');
+  const current = (hexResult?.textContent || '').trim().toUpperCase();
   const expNorm = expected.trim().toUpperCase();
 
-  if (norm === expNorm) {
+  if (current === expNorm) {
     document.querySelector('.btn-validate').disabled = true;
     document.getElementById('btn-next-bm').style.display = 'block';
     document.querySelector('.ex-card').className = 'ex-card solved';
@@ -672,8 +785,9 @@ function checkBitmap(expected) {
     fb.innerHTML=`✓ Correct ! <span style="font-family:var(--mono);color:var(--cyan)">${expected}</span> — Bitmap maîtrisée.`;
     if (!STATE.hintUsed) incSolved(STATE.cat);
   } else {
+    breakStreak();
     fb.className='ex-feedback wrong';
-    fb.innerHTML=`✗ Valeur obtenue : <span style="font-family:var(--mono)">${norm||'—'}</span><br>Attendu : <span style="font-family:var(--mono);color:var(--cyan)">${expNorm}</span><br>Rappel : bit 0 de l'octet 0 = cluster 0, bit 1 = cluster 1, etc. (LSB first).`;
+    fb.innerHTML=`✗ Valeur actuelle : <span style="font-family:var(--mono)">${current||'—'}</span><br>Attendu : <span style="font-family:var(--mono);color:var(--cyan)">${expNorm}</span><br>Rappel : bit 0 de l'octet 0 = cluster 0, bit 1 = cluster 1, etc. (LSB first). Clique chaque cluster occupé dans la grille.`;
   }
 }
 
@@ -764,6 +878,7 @@ function checkFAT(expected) {
   } else {
     fb.className='ex-feedback wrong';
     fb.innerHTML=`✗ Chaîne incorrecte. Tu as saisi : <span style="font-family:var(--mono)">${parsed.join(' → ') || '—'}</span><br>Suis chaque entrée FAT à partir du cluster de départ jusqu'au 0x0FFFFFFF.`;
+    breakStreak();
   }
 }
 
@@ -826,15 +941,23 @@ function checkMagic(chosen, correct, btn) {
     if (i === correct) { b.style.borderColor='var(--green)'; b.style.background='rgba(48,232,138,.1)'; }
     else if (i === chosen && chosen !== correct) { b.style.borderColor='var(--red)'; b.style.background='rgba(255,64,96,.08)'; }
   });
-  const note = _magicNotes[chosen] || '';
-  const fb = document.getElementById('ex-feedback-mg');
   const ok = chosen === correct;
+  // Fix #6 : toujours afficher la note du BON choix pour un contenu pédagogique utile
+  const noteCorrect = _magicNotes[correct] || '';
+  const noteChosen  = _magicNotes[chosen]  || '';
+  const fb = document.getElementById('ex-feedback-mg');
   fb.className = 'ex-feedback ' + (ok ? 'correct' : 'wrong');
-  fb.innerHTML = (ok ? '✓ Correct ! ' : '✗ Incorrect. ') + '<strong>Note forensique :</strong> ' + note;
+  fb.innerHTML = ok
+    ? '✓ Correct ! <strong>Note forensique :</strong> ' + noteCorrect
+    : '✗ Incorrect. <strong>La bonne réponse :</strong> ' + noteCorrect +
+      (noteChosen && noteChosen !== noteCorrect
+        ? `<div style="margin-top:.4rem;padding:.4rem .6rem;background:rgba(255,64,96,.05);border-radius:5px;font-size:.75rem;color:var(--dim)">Ton choix portait sur : ${noteChosen}</div>`
+        : '');
   document.querySelector('.ex-card').className = 'ex-card ' + (ok ? 'solved' : 'error');
   document.getElementById('ex-num-mg').className = 'ex-num ' + (ok ? 'solved' : 'error');
   document.getElementById('btn-next-mg').style.display = 'block';
   if (ok && !STATE.hintUsed) incSolved(STATE.cat);
+  else if (!ok) breakStreak();
 }
 
 // ═══════════════════════════════════════════════════
@@ -876,7 +999,7 @@ function genMismatch() {
       ${items.map((item, i) => `
         <div class="mm-row" id="mm-row-${i}" style="margin-bottom:.75rem;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;transition:.2s">
           <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.6rem;flex-wrap:wrap">
-            <span style="font-family:var(--mono);font-size:.85rem;font-weight:700;color:var(--text)">📄 ${item.fake}</span>
+            <span style="font-family:var(--mono);font-size:.85rem;font-weight:700;color:var(--text)">📄 ${escAttr(item.fake)}</span>
             <div class="hex-display" style="margin:0;padding:.3rem .6rem;flex:1;min-width:160px">
               ${item.bytes.split(' ').map(b => `<span class="hex-byte" style="font-size:.8rem;padding:.25rem .45rem">${b}</span>`).join('')}
             </div>
@@ -888,9 +1011,19 @@ function genMismatch() {
         </div>`).join('')}
     </div>
     <div style="margin-top:.75rem;display:flex;gap:.6rem">
-      <button class="btn-next" id="btn-next-mm" onclick="newExercise()" style="display:none">Nouvel exercice →</button>
+      <button class="btn-next" id="btn-next-mm" onclick="newExercise()" style="display:none">Exercice suivant →</button>
     </div>
   `;
+  // Fix #1 : event delegation plutôt qu'onclick inline (évite les bugs d'escape de quotes)
+  setTimeout(() => {
+    div.querySelectorAll('.mm-choice-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        const data = decData(b.dataset.meta);
+        if (!data) return;
+        checkMismatch(b, data.correct, data.sig_name, data.note);
+      });
+    });
+  }, 0);
   return div;
 }
 
@@ -899,26 +1032,31 @@ function buildMismatchChoices(item, idx, allItems) {
   const correct = item.real;
   const pool = MISMATCH_DB.map(d => d.real).filter(r => r !== correct);
   const shuffled = pool.sort(() => Math.random() - .5).slice(0, 3);
-  const options = [correct, ...shuffled].sort(() => Math.random() - .5);
+  const options = [...new Set([correct, ...shuffled])].slice(0, 4).sort(() => Math.random() - .5);
 
   return options.map((opt, i) => {
     const isCorrect = opt === correct;
-    return `<button class="mm-choice-btn" data-correct="${isCorrect}" data-row="${idx}"
-      onclick="checkMismatch(this, '${correct}', '${item.sig_name}', '${item.note.replace(/'/g, String.fromCharCode(39))}')"
+    // Fix #1 : stocker les données en base64 JSON dans data-meta (pas de problème de quotes)
+    const meta = encData({
+      correct: isCorrect,
+      sig_name: item.sig_name,
+      note: item.note,
+    });
+    return `<button class="mm-choice-btn" data-correct="${isCorrect}" data-row="${idx}" data-meta="${meta}"
       style="padding:.4rem .85rem;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,.03);
              color:var(--dim);font-size:.76rem;font-family:var(--mono);cursor:pointer;transition:.15s;white-space:nowrap">
-      .${opt.replace(/\//g,' / ')}
+      .${escAttr(opt.replace(/\//g,' / '))}
     </button>`;
   }).join('');
 }
 
-function checkMismatch(btn, correct, sigName, note) {
+function checkMismatch(btn, isCorrect, sigName, note) {
   const rowIdx = btn.dataset.row;
   const row = document.getElementById('mm-row-' + rowIdx);
   if (!row || row.dataset.answered) return;
   row.dataset.answered = '1';
 
-  const isOk = btn.dataset.correct === 'true';
+  const isOk = isCorrect === true || isCorrect === 'true';
   const allBtns = row.querySelectorAll('.mm-choice-btn');
 
   allBtns.forEach(b => {
@@ -939,19 +1077,27 @@ function checkMismatch(btn, correct, sigName, note) {
 
   const fb = document.getElementById('mm-fb-' + rowIdx);
   fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
-  fb.innerHTML = (isOk ? '✓ ' : '✗ ') +
-    '<strong>' + sigName + '</strong> — ' + note;
+  fb.innerHTML = (isOk ? '✓ ' : '✗ ') + '<strong>' + escAttr(sigName) + '</strong> — ' + escAttr(note);
+
+  if (!isOk) breakStreak();
 
   // Vérifier si tout est répondu
-  const rows = document.querySelectorAll('.mm-row[data-answered]');
+  const rowsAnswered = document.querySelectorAll('.mm-row[data-answered]');
   const total = document.querySelectorAll('.mm-row').length;
-  if (rows.length >= total) {
+  if (rowsAnswered.length >= total) {
     document.getElementById('btn-next-mm').style.display = 'block';
-    const correct_count = [...document.querySelectorAll('.mm-row')].filter(r => {
-      const chosen = r.querySelector('.mm-choice-btn[data-correct="false"][disabled][style*="var(--red)"]');
-      return !chosen;
-    }).length;
-    if (correct_count >= total) incSolved(STATE.cat);
+    // Compter précisément les rangées résolues correctement via dataset.answered et data-correct
+    let correctCount = 0;
+    document.querySelectorAll('.mm-row').forEach(r => {
+      // La bonne réponse est celle des boutons avec data-correct="true"
+      // qui a été effectivement cliquée → on reconstitue l'état
+      const clicked = r.querySelector('.mm-choice-btn[data-correct="true"]');
+      // On sait si la rangée a été résolue correctement si le bouton vert est bien celui
+      // qui est en vert ET qu'aucun bouton n'est marqué rouge
+      const red = r.querySelector('.mm-choice-btn[data-correct="false"][style*="--red"]');
+      if (!red) correctCount++;
+    });
+    if (correctCount >= total) incSolved(STATE.cat);
   }
 }
 
@@ -1087,7 +1233,7 @@ function buildRunListHex(fragments, allBytes) {
 }
 
 function showRunListHint(frags) {
-  STATE.hintUsed = true;
+  markHintUsed();
   frags.forEach((f, i) => {
     const fb = document.getElementById('rl-fb-' + i);
     if (fb) {
@@ -1149,6 +1295,7 @@ function checkRunList(expected, numFragments) {
       globalFb.className = 'ex-feedback wrong';
       globalFb.innerHTML = `✗ ${score}/${numFragments} fragments corrects. Utilise "💡 Décomposition" pour voir le calcul.`;
     }
+    breakStreak();
   }
 }
 
@@ -1253,29 +1400,38 @@ function showContextHint(cat) {
     panel.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <span style="font-size:.72rem;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em">💡 Aide contextuelle</span>
-        <button onclick="document.getElementById('ctx-hint-panel').remove()"
+        <button id="ctx-hint-close"
           style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;line-height:1;padding:0">✕</button>
       </div>
-      <div style="color:var(--text);margin-bottom:10px">${hints[_currentHintIdx]}</div>
+      <div id="ctx-hint-text" style="color:var(--text);margin-bottom:10px">${hints[_currentHintIdx]}</div>
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:.68rem;color:var(--dim)">${_currentHintIdx+1} / ${hints.length}</span>
+        <span id="ctx-hint-idx" style="font-size:.68rem;color:var(--dim)">${_currentHintIdx+1} / ${hints.length}</span>
         <div style="display:flex;gap:6px">
-          <button onclick="_currentHintIdx=Math.max(0,_currentHintIdx-1);document.getElementById('ctx-hint-panel')&&initHintRender()"
+          <button id="ctx-hint-prev"
             style="padding:3px 10px;border-radius:5px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--dim);cursor:pointer;font-size:.75rem;font-family:var(--mono)">←</button>
-          <button onclick="_currentHintIdx=Math.min(_currentHints.length-1,_currentHintIdx+1);document.getElementById('ctx-hint-panel')&&initHintRender()"
+          <button id="ctx-hint-next"
             style="padding:3px 10px;border-radius:5px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--dim);cursor:pointer;font-size:.75rem;font-family:var(--mono)">→</button>
         </div>
       </div>
     `;
+    // Fix : bind les handlers ici pour éviter les bugs de sélecteurs
+    panel.querySelector('#ctx-hint-close').onclick = () => panel.remove();
+    panel.querySelector('#ctx-hint-prev').onclick = () => {
+      _currentHintIdx = Math.max(0, _currentHintIdx - 1);
+      updateHintPanel();
+    };
+    panel.querySelector('#ctx-hint-next').onclick = () => {
+      _currentHintIdx = Math.min(_currentHints.length - 1, _currentHintIdx + 1);
+      updateHintPanel();
+    };
   }
-
-  window.initHintRender = function() {
+  function updateHintPanel() {
     const hints = _currentHints;
-    const textEl = document.querySelector('#ctx-hint-panel div:nth-child(2)');
-    const idxEl  = document.querySelector('#ctx-hint-panel .idx-label');
-    if (textEl) textEl.textContent = hints[_currentHintIdx];
-    if (idxEl)  idxEl.textContent  = `${_currentHintIdx+1} / ${hints.length}`;
-  };
+    const textEl = panel.querySelector('#ctx-hint-text');
+    const idxEl  = panel.querySelector('#ctx-hint-idx');
+    if (textEl) textEl.innerHTML = hints[_currentHintIdx];
+    if (idxEl)  idxEl.textContent = `${_currentHintIdx+1} / ${hints.length}`;
+  }
 
   render();
   document.body.appendChild(panel);
@@ -1350,7 +1506,7 @@ function genBases() {
 }
 
 function showBasesHint(hint) {
-  STATE.hintUsed = true;
+  markHintUsed();
   const fb = document.getElementById('ex-feedback-bs');
   if (!fb) return;
   fb.className = 'ex-feedback correct';
@@ -1376,6 +1532,7 @@ function checkBases(btn, expected, explain) {
     inp.className = 'ex-input wrong';
     fb.className = 'ex-feedback wrong';
     fb.innerHTML = `✗ "${val}" incorrect. Réponse attendue : <strong>${expected}</strong>. Utilise 💡 Méthode pour voir les étapes.`;
+    breakStreak();
     setTimeout(() => inp.className = 'ex-input', 700);
   }
 }
@@ -1488,6 +1645,7 @@ function checkEffacement(btn, isOk, explain, note) {
   document.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
   document.getElementById('btn-next-ef').style.display = 'block';
   if (isOk && !STATE.hintUsed) incSolved(STATE.cat);
+  else if (!isOk) breakStreak();
 }
 
 
@@ -2047,14 +2205,16 @@ function makeFAT16RootFullExercise() {
   let qText, answer, hints, explain;
 
   if (q === 0) {
+    // Fix #4 : la question demande maintenant la valeur hex du marqueur,
+    // ce qui est cohérent avec la réponse "0xE5"
     answer = '0xe5';
-    qText = `Dans le répertoire racine FAT16, qu'indique l'octet <strong>0xE5</strong> au premier octet d'une entrée SFN ?`;
+    qText = `Dans le répertoire racine FAT16, quel est le <strong>code hexadécimal</strong> qui marque une entrée SFN comme <em>supprimée</em> (l'entrée visible à l'offset 0x20 a justement ce marqueur) ?`;
     hints = [
-      `L'octet 0 d'une entrée SFN indique l'état de l'entrée.`,
-      `0x00 = fin du répertoire (aucune entrée valide après). 0xE5 = …`,
-      `0xE5 = entrée <strong>marquée comme supprimée</strong>. Les données peuvent encore être récupérées !`,
+      `L'octet 0 d'une entrée SFN indique son état. Regarde le 1er octet à l'offset 0x20.`,
+      `0x00 = fin du répertoire (aucune entrée valide après). Il existe un autre marqueur pour "supprimé".`,
+      `Le marqueur est <strong>0xE5</strong> — entrée marquée comme supprimée (les données peuvent encore être récupérées par carving).`,
     ];
-    explain = `0xE5 = entrée supprimée. Les clusters et la taille sont souvent encore présents → récupération possible par file carving.`;
+    explain = `<strong>0xE5</strong> = entrée supprimée. Les clusters et la taille sont souvent encore présents → récupération possible par file carving.`;
   } else {
     answer = String(rootCount);
     qText = `Un volume FAT16 a <strong>RootEntryCount = ${rootCount}</strong> (offset BPB 0x11). Combien d'entrées de fichiers/dossiers au maximum peut contenir ce répertoire racine ?`;
@@ -2790,7 +2950,7 @@ function genExamen() {
 
 function nextExamHint() {
   if (!_examHints.length) return;
-  STATE.hintUsed = true;
+  markHintUsed();
   const hdisplay = document.getElementById('exam-hint-display');
   const hbtn     = document.getElementById('exam-hint-btn');
   if (!hdisplay) return;
@@ -2809,8 +2969,9 @@ function checkExamen() {
   if (!_examData) return;
   const inp = document.getElementById('inp-exam');
   const fb  = document.getElementById('ex-feedback-ex');
-  const val = (inp.value||'').trim().replace(/\s/g,'').toUpperCase().replace(/^0X/,'');
-  const exp = _examData.answer.replace(/\s/g,'').toUpperCase().replace(/^0X/,'');
+  // Normalisation : insensible aux accents, à la casse, aux espaces, et au préfixe 0x
+  const val = normAns(inp.value);
+  const exp = normAns(_examData.answer);
   const ok  = val === exp;
 
   if (ok) {
@@ -2826,6 +2987,7 @@ function checkExamen() {
     inp.className = 'ex-input wrong';
     fb.className  = 'ex-feedback wrong';
     fb.innerHTML  = `✗ Réponse incorrecte. Utilise 💡 Indice pour progresser étape par étape.`;
+    breakStreak();
     setTimeout(() => inp.className='ex-input', 700);
   }
 }
@@ -2833,7 +2995,7 @@ function checkExamen() {
 
 
 function showExamHint(hint) {
-  STATE.hintUsed = true;
+  markHintUsed();
   const fb = document.getElementById('ex-feedback-ex');
   if (fb) { fb.className='ex-feedback correct'; fb.innerHTML=`💡 Indice : ${hint}`; }
 }
@@ -2973,7 +3135,7 @@ function genTimestomping() {
     </div>
     <div class="ex-feedback" id="ex-feedback-tss"></div>
     <div id="ts-indicator" style="display:none;margin-top:.5rem;font-size:.72rem;font-family:var(--mono);color:var(--dim)">${indicator}</div>
-    <button class="btn-next" id="btn-next-ts2" onclick="newExercise()" style="display:none;margin-top:.5rem">Nouvel exercice →</button>
+    <button class="btn-next" id="btn-next-ts2" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
   return div;
 }
@@ -2994,6 +3156,7 @@ function checkTimestomping(userSaysYes, isActuallyTimestomped, explanation, btn)
   document.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
   document.getElementById('btn-next-ts2').style.display = 'block';
   if (isOk && !STATE.hintUsed) incSolved(STATE.cat);
+  else if (!isOk) breakStreak();
 }
 
 
@@ -3038,6 +3201,7 @@ function genDroitPenal() {
 function checkDroitPenal(btn, isOk, explain, note) {
   const btns = document.querySelectorAll('#dp-choices .tp-choice');
   if (btns[0].disabled) return;
+  if (!isOk) breakStreak();
   btns.forEach(b => { b.disabled = true; b.style.cursor = 'default'; });
   btn.style.borderColor = isOk ? 'var(--green)' : 'var(--red)';
   btn.style.background  = isOk ? 'rgba(48,232,138,.1)' : 'rgba(255,64,96,.08)';
@@ -3106,7 +3270,7 @@ function genGlossaire() {
         </button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-gl"></div>
-    <button class="btn-next" id="btn-next-gl" onclick="newExercise()" style="display:none;margin-top:.5rem">Terme suivant →</button>
+    <button class="btn-next" id="btn-next-gl" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
   return div;
 }
@@ -3114,6 +3278,7 @@ function genGlossaire() {
 function checkGlossaire(btn, isOk, correct, note) {
   const btns = document.querySelectorAll('#gl-choices .tp-choice');
   if (btns[0].disabled) return;
+  if (!isOk) breakStreak();
   btns.forEach(b => {
     b.disabled = true; b.style.cursor = 'default';
     const bText = b.querySelector('span:last-child').textContent;
@@ -3149,36 +3314,50 @@ function genEmail() {
       <div class="ex-title">Email Forensics — Authentification SMTP</div>
       <span class="ex-badge medium">SPF · DKIM · DMARC</span>
     </div>
-    <div class="ex-scenario">${ex.scenario}</div>
+    <div class="ex-scenario">${ex.scenario.replace(/\n/g, '<br>')}</div>
     <div class="sec-title">Question</div>
     <div style="font-size:.85rem;color:var(--text);line-height:1.6;margin-bottom:.75rem">${ex.question}</div>
     <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="email-choices">
       ${shuffled.map((c, i) => `
-        <button class="tp-choice" onclick="checkEmail(this, ${i === correctIdx}, ${JSON.stringify(c.explain).replace(/'/g,"\'")} )">
+        <button class="tp-choice" data-correct="${i === correctIdx}" data-explain="${encData(c.explain)}">
           <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
-          <span>${c.text}</span>
+          <span>${escAttr(c.text)}</span>
         </button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-email"></div>
     <button class="btn-next" id="btn-next-email" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
+  // Fix #2 : event delegation (évite le bug JSON dans onclick="...")
+  setTimeout(() => {
+    div.querySelectorAll('#email-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isCorrect = b.dataset.correct === 'true';
+        const explain = decData(b.dataset.explain) || '';
+        checkEmail(b, isCorrect, explain);
+      });
+    });
+  }, 0);
   return div;
 }
 
 function checkEmail(btn, isCorrect, explain) {
   const choices = document.querySelectorAll('#email-choices .tp-choice');
+  if (!choices.length || choices[0].disabled) return;
   choices.forEach(b => { b.disabled = true; });
   btn.classList.add(isCorrect ? 'correct' : 'wrong');
   if (isCorrect) {
     choices.forEach(b => { if (b !== btn) b.classList.add('dim'); });
-    incSolved('email');
+    if (!STATE.hintUsed) incSolved('email');
   } else {
-    choices.forEach(b => { if (b.onclick && b.onclick.toString().includes(', true,')) b.classList.add('correct'); });
+    choices.forEach(b => {
+      if (b.dataset.correct === 'true') b.classList.add('correct');
+    });
+    breakStreak();
   }
   const fb = document.getElementById('ex-feedback-email');
   if (fb) {
     fb.className = 'ex-feedback ' + (isCorrect ? 'correct' : 'wrong');
-    fb.textContent = explain;
+    fb.innerHTML = (isCorrect ? '✓ ' : '✗ ') + escAttr(explain);
     fb.style.display = 'block';
   }
   const next = document.getElementById('btn-next-email');
@@ -3189,11 +3368,17 @@ function checkEmail(btn, isCorrect, explain) {
 // 15. INCIDENT RESPONSE
 // ═══════════════════════════════════════════════════
 let _irIdx = 0;
+let _irShuffled = null;
 function genIR() {
   if (typeof IR_EXERCISES === 'undefined' || !IR_EXERCISES.length) {
     return genFallback("Exercices IR non disponibles — vérifiez tp-data.js");
   }
-  const ex = IR_EXERCISES[_irIdx % IR_EXERCISES.length];
+  // Permutation persistante pour la session : parcours aléatoire sans répétition
+  if (!_irShuffled || _irIdx >= _irShuffled.length) {
+    _irShuffled = [...IR_EXERCISES.keys()].sort(() => Math.random() - .5);
+    _irIdx = 0;
+  }
+  const ex = IR_EXERCISES[_irShuffled[_irIdx]];
   _irIdx++;
   const shuffled = [...ex.choices].sort(() => Math.random() - .5);
   const correctIdx = shuffled.findIndex(c => c.correct);
@@ -3211,23 +3396,43 @@ function genIR() {
     <div style="font-size:.85rem;color:var(--text);line-height:1.6;margin-bottom:.75rem">${ex.question}</div>
     <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="ir-choices">
       ${shuffled.map((c, i) => `
-        <button class="tp-choice" onclick="checkIR(this, ${i === correctIdx}, ${JSON.stringify(c.explain).replace(/'/g,"\'")} )">
+        <button class="tp-choice" data-correct="${i === correctIdx}" data-explain="${encData(c.explain)}">
           <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
-          <span>${c.text}</span>
+          <span>${escAttr(c.text)}</span>
         </button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-ir"></div>
     <button class="btn-next" id="btn-next-ir" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
+  setTimeout(() => {
+    div.querySelectorAll('#ir-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isCorrect = b.dataset.correct === 'true';
+        const explain = decData(b.dataset.explain) || '';
+        checkIR(b, isCorrect, explain);
+      });
+    });
+  }, 0);
   return div;
 }
 
 function checkIR(btn, isCorrect, explain) {
-  document.querySelectorAll('#ir-choices .tp-choice').forEach(b => { b.disabled = true; });
+  const choices = document.querySelectorAll('#ir-choices .tp-choice');
+  if (!choices.length || choices[0].disabled) return;
+  choices.forEach(b => { b.disabled = true; });
   btn.classList.add(isCorrect ? 'correct' : 'wrong');
-  if (isCorrect) incSolved('ir');
+  if (!isCorrect) {
+    choices.forEach(b => { if (b.dataset.correct === 'true') b.classList.add('correct'); });
+    breakStreak();
+  } else if (!STATE.hintUsed) {
+    incSolved('ir');
+  }
   const fb = document.getElementById('ex-feedback-ir');
-  if (fb) { fb.className = 'ex-feedback ' + (isCorrect ? 'correct' : 'wrong'); fb.textContent = explain; fb.style.display = 'block'; }
+  if (fb) {
+    fb.className = 'ex-feedback ' + (isCorrect ? 'correct' : 'wrong');
+    fb.innerHTML = (isCorrect ? '✓ ' : '✗ ') + escAttr(explain);
+    fb.style.display = 'block';
+  }
   const next = document.getElementById('btn-next-ir');
   if (next) next.style.display = 'inline-block';
 }
@@ -3236,11 +3441,16 @@ function checkIR(btn, isCorrect, explain) {
 // 16. RÉSEAU & PCAP
 // ═══════════════════════════════════════════════════
 let _netIdx = 0;
+let _netShuffled = null;
 function genNetwork() {
   if (typeof NETWORK_EXERCISES === 'undefined' || !NETWORK_EXERCISES.length) {
     return genFallback("Exercices réseau non disponibles — vérifiez tp-data.js");
   }
-  const ex = NETWORK_EXERCISES[_netIdx % NETWORK_EXERCISES.length];
+  if (!_netShuffled || _netIdx >= _netShuffled.length) {
+    _netShuffled = [...NETWORK_EXERCISES.keys()].sort(() => Math.random() - .5);
+    _netIdx = 0;
+  }
+  const ex = NETWORK_EXERCISES[_netShuffled[_netIdx]];
   _netIdx++;
   const shuffled = [...ex.choices].sort(() => Math.random() - .5);
   const correctIdx = shuffled.findIndex(c => c.correct);
@@ -3258,23 +3468,43 @@ function genNetwork() {
     <div style="font-size:.85rem;color:var(--text);line-height:1.6;margin-bottom:.75rem">${ex.question}</div>
     <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="net-choices">
       ${shuffled.map((c, i) => `
-        <button class="tp-choice" onclick="checkNetwork(this, ${i === correctIdx}, ${JSON.stringify(c.explain).replace(/'/g,"\'")} )">
+        <button class="tp-choice" data-correct="${i === correctIdx}" data-explain="${encData(c.explain)}">
           <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
-          <span>${c.text}</span>
+          <span>${escAttr(c.text)}</span>
         </button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-net"></div>
     <button class="btn-next" id="btn-next-net" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
+  setTimeout(() => {
+    div.querySelectorAll('#net-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isCorrect = b.dataset.correct === 'true';
+        const explain = decData(b.dataset.explain) || '';
+        checkNetwork(b, isCorrect, explain);
+      });
+    });
+  }, 0);
   return div;
 }
 
 function checkNetwork(btn, isCorrect, explain) {
-  document.querySelectorAll('#net-choices .tp-choice').forEach(b => { b.disabled = true; });
+  const choices = document.querySelectorAll('#net-choices .tp-choice');
+  if (!choices.length || choices[0].disabled) return;
+  choices.forEach(b => { b.disabled = true; });
   btn.classList.add(isCorrect ? 'correct' : 'wrong');
-  if (isCorrect) incSolved('network');
+  if (!isCorrect) {
+    choices.forEach(b => { if (b.dataset.correct === 'true') b.classList.add('correct'); });
+    breakStreak();
+  } else if (!STATE.hintUsed) {
+    incSolved('network');
+  }
   const fb = document.getElementById('ex-feedback-net');
-  if (fb) { fb.className = 'ex-feedback ' + (isCorrect ? 'correct' : 'wrong'); fb.textContent = explain; fb.style.display = 'block'; }
+  if (fb) {
+    fb.className = 'ex-feedback ' + (isCorrect ? 'correct' : 'wrong');
+    fb.innerHTML = (isCorrect ? '✓ ' : '✗ ') + escAttr(explain);
+    fb.style.display = 'block';
+  }
   const next = document.getElementById('btn-next-net');
   if (next) next.style.display = 'inline-block';
 }
@@ -3453,7 +3683,8 @@ function genOffset() {
 function checkOffset(btn, isCorrect, steps, answer) {
   document.querySelectorAll('#offset-choices .tp-choice').forEach(b => { b.disabled = true; });
   btn.classList.add(isCorrect ? 'correct' : 'wrong');
-  if (isCorrect) incSolved('offset');
+  if (isCorrect) { if (!STATE.hintUsed) incSolved('offset'); }
+  else breakStreak();
   const fb = document.getElementById('ex-feedback-offset');
   if (fb) {
     fb.className = 'ex-feedback ' + (isCorrect ? 'correct' : 'wrong');
@@ -3602,7 +3833,7 @@ function genHexTable() {
       <input class="ex-input" id="inp-hextable" placeholder="ex: 0D" maxlength="4" style="width:90px;text-transform:uppercase" autocomplete="off">
       <button class="btn-hint" id="ht-hint-btn" onclick="showHexTableHint(${JSON.stringify(ex.hint1)},${JSON.stringify(ex.hint2)})">💡 Indice</button>
       <button class="btn-validate" onclick="checkHexTable(${JSON.stringify(ex.answer)},${JSON.stringify(ex.explain)},${ex.answer_val})">Valider ✓</button>
-      <button class="btn-next" id="btn-next-ht" onclick="newExercise()" style="display:none">Suivant →</button>
+      <button class="btn-next" id="btn-next-ht" onclick="newExercise()" style="display:none">Exercice suivant →</button>
     </div>
     <div class="hint-box" id="hint-ht" style="display:none"></div>
     <div class="ex-feedback" id="ex-feedback-ht" style="display:none"></div>
@@ -3631,9 +3862,11 @@ function checkHexTable(correctOff, explain, val) {
   const isOk = raw === correctOff.toUpperCase().padStart(2,'0');
   inp.className = 'ex-input ' + (isOk ? 'correct' : 'wrong');
   if (isOk) {
-    incSolved('hextable');
+    if (!STATE.hintUsed) incSolved('hextable');
     const off = parseInt(correctOff, 16);
     document.querySelectorAll(`[data-offset="${off}"]`).forEach(el => el.classList.add('highlight'));
+  } else {
+    breakStreak();
   }
   if (fb) {
     fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
@@ -3813,7 +4046,7 @@ function genFSIdentify() {
         onclick="checkFSIdentify(this,'${c}','${cfg.fs}',${JSON.stringify(ex.key)})">${c}</button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-fsid" style="display:none"></div>
-    <button class="btn-next" id="btn-next-fsid" onclick="newExercise()" style="display:none;margin-top:.5rem">Suivant →</button>
+    <button class="btn-next" id="btn-next-fsid" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
   return div;
 }
@@ -3822,11 +4055,14 @@ function checkFSIdentify(btn, chosen, correct, expl) {
   document.querySelectorAll('#fsid-choices .tp-choice').forEach(b=>{ b.disabled=true; });
   const ok = chosen===correct;
   btn.classList.add(ok ? 'correct' : 'wrong');
-  if (ok) incSolved('fsidentify');
-  else document.querySelectorAll('#fsid-choices .tp-choice').forEach(b=>{
-    if(b.dataset.correct==='true') b.classList.add('correct');
-    else if(b!==btn) b.classList.add('dim');
-  });
+  if (ok) { if (!STATE.hintUsed) incSolved('fsidentify'); }
+  else {
+    breakStreak();
+    document.querySelectorAll('#fsid-choices .tp-choice').forEach(b=>{
+      if(b.dataset.correct==='true') b.classList.add('correct');
+      else if(b!==btn) b.classList.add('dim');
+    });
+  }
   const fb=document.getElementById('ex-feedback-fsid');
   if(fb){fb.className='ex-feedback '+(ok?'correct':'wrong');fb.innerHTML=(ok?'✅ ':'❌ Réponse : <strong>'+correct+'</strong> — ')+expl;fb.style.display='block';}
   document.getElementById('btn-next-fsid').style.display='inline-block';
@@ -3884,7 +4120,7 @@ function genHashIdentify() {
         <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span><span>${c.text}</span></button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-hash" style="display:none"></div>
-    <button class="btn-next" id="btn-next-hash" onclick="newExercise()" style="display:none;margin-top:.5rem">Suivant →</button>
+    <button class="btn-next" id="btn-next-hash" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
   return div;
 }
@@ -3892,11 +4128,14 @@ function genHashIdentify() {
 function checkHashIdentify(btn, isOk, explain) {
   document.querySelectorAll('#hash-choices .tp-choice').forEach(b=>{ b.disabled=true; });
   btn.classList.add(isOk ? 'correct' : 'wrong');
-  if (isOk) incSolved('hash');
-  else document.querySelectorAll('#hash-choices .tp-choice').forEach(b=>{
-    if(b.dataset.correct==='true') b.classList.add('correct');
-    else if(b!==btn) b.classList.add('dim');
-  });
+  if (isOk) { if (!STATE.hintUsed) incSolved('hash'); }
+  else {
+    breakStreak();
+    document.querySelectorAll('#hash-choices .tp-choice').forEach(b=>{
+      if(b.dataset.correct==='true') b.classList.add('correct');
+      else if(b!==btn) b.classList.add('dim');
+    });
+  }
   const fb=document.getElementById('ex-feedback-hash');
   if(fb){fb.className='ex-feedback '+(isOk?'correct':'wrong');fb.textContent=explain;fb.style.display='block';}
   document.getElementById('btn-next-hash').style.display='inline-block';

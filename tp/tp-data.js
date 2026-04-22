@@ -615,6 +615,8 @@ const BASES_EXERCISES = [
       const val = Math.floor(Math.random() * 256);
       return {
         question: `Convertis <span class="hex">${val.toString(16).toUpperCase().padStart(2, '0')}</span> (hex) en décimal :`,
+        label: 'Décimal :',
+        placeholder: 'ex: 42',
         answer: String(val),
         hint: `Un octet hex = 2 caractères. Chaque chiffre hex vaut 0–15. Formule : ${val.toString(16).toUpperCase().padStart(2, '0')} = (premier × 16) + second.`,
         explain: `0x${val.toString(16).toUpperCase().padStart(2, '0')} = ${val} en décimal.`
@@ -626,6 +628,8 @@ const BASES_EXERCISES = [
       const val = Math.floor(Math.random() * 256);
       return {
         question: `Convertis <strong>${val}</strong> (décimal) en hexadécimal (2 chiffres, majuscules) :`,
+        label: 'Hex :',
+        placeholder: 'ex: 2A',
         answer: val.toString(16).toUpperCase().padStart(2, '0'),
         hint: `Divise par 16. Reste = chiffre des unités. Quotient = chiffre des dizaines (en hex).`,
         explain: `${val} en décimal = 0x${val.toString(16).toUpperCase().padStart(2, '0')} en hex.`
@@ -638,6 +642,8 @@ const BASES_EXERCISES = [
       const bin = val.toString(2).padStart(8, '0');
       return {
         question: `Convertis <span class="hex">${val.toString(16).toUpperCase().padStart(2, '0')}</span> (hex) en binaire (8 bits) :`,
+        label: 'Binaire :',
+        placeholder: 'ex: 00101010',
         answer: bin,
         hint: `Chaque chiffre hex = 4 bits. Exemple : 0xA = 1010, 0xF = 1111.`,
         explain: `0x${val.toString(16).toUpperCase().padStart(2, '0')} = ${bin} en binaire.`
@@ -652,6 +658,8 @@ const BASES_EXERCISES = [
       const hex = [...word].map(c => c.charCodeAt(0).toString(16).toUpperCase()).join(' ');
       return {
         question: `Décode cette séquence ASCII : <span class="hex">${hex}</span>`,
+        label: 'Texte :',
+        placeholder: 'ex: WORD',
         answer: word,
         hint: `Chaque octet hex représente un caractère ASCII. 'A'=0x41, 'a'=0x61. Table ASCII en mémoire.`,
         explain: `${hex} = "${word}" en ASCII.`
@@ -664,6 +672,8 @@ const BASES_EXERCISES = [
       const hex = [...word].map(c => c.charCodeAt(0).toString(16).toUpperCase()).join(' ');
       return {
         question: `Encode le mot "<strong>${word}</strong>" en hexadécimal (ASCII, séparé par des espaces, majuscules) :`,
+        label: 'Hex (avec espaces) :',
+        placeholder: 'ex: 41 42 43',
         answer: hex,
         hint: `'H'=0x48, 'e'=0x65. Additionne 0x20 pour minuscule → majuscule si besoin.`,
         explain: `"${word}" = ${hex} en ASCII hex.`
