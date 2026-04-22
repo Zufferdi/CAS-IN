@@ -1,36 +1,37 @@
 #!/usr/bin/env python3
 """
 build_index.py — Regénère fiches/index.html à partir des fichiers HTML du dossier fiches/.
+
 Appelé par la GitHub Action .github/workflows/sync-fiches-index.yml.
 
 Pour chaque fiche HTML (hors index.html) il extrait :
-  - <title>
-  - <meta name="description">
-  - Le premier .badge (emoji icône)
-  - Le premier .fiche-cat-title via le breadcrumb (catégorie)
-  - data-keywords depuis le breadcrumb <a> pointant vers index.html#cat-…
+- <title>
+- <meta name="description">
+- Le premier .badge (emoji icône)
+- Le premier .fiche-cat-title via le breadcrumb (catégorie)
+- data-keywords depuis le breadcrumb <a> pointant vers index.html#cat-…
 
 Les fiches sont regroupées par catégorie dans l'ordre défini par CATEGORY_ORDER.
 """
-
 import os, re, json
 from pathlib import Path
 from bs4 import BeautifulSoup
 
 # ── Répertoire des fiches ────────────────────────────────────────────
-FICHES_DIR = Path(__file__).resolve().parents[2] / "fiches"
-INDEX_PATH  = FICHES_DIR / "index.html"
+# Le script est à repo/scripts/build_index.py, fiches à repo/fiches/
+FICHES_DIR = Path(__file__).resolve().parents[1] / "fiches"
+INDEX_PATH = FICHES_DIR / "index.html"
 
 # ── Ordre et métadonnées des catégories ─────────────────────────────
 CATEGORY_ORDER = [
-    ("systèmesdefichiers",   "💾 Systèmes de Fichiers",    "var(--gold)"),
-    ("acquisitionméthodes",  "📥 Acquisition & Méthodes",  "var(--cyan)"),
-    ("artefactswindows",     "🪟 Artefacts Windows",        "var(--blue)"),
-    ("cryptologiesécurité",  "🔐 Cryptologie & Sécurité",  "var(--red)"),
-    ("réseauxinfrastructure","📡 Réseaux & Infrastructure", "var(--green)"),
-    ("systèmesspéciaux",     "📱 Systèmes Spéciaux",       "var(--orange)"),
-    ("droitsuisse",          "⚖️ Droit Suisse",             "var(--purple)"),
-    ("outilsDFIR",           "🛠 Outils DFIR",              "var(--muted)"),
+    ("systèmesdefichiers",   "💾 Systèmes de Fichiers",      "var(--gold)"),
+    ("acquisitionméthodes",  "📥 Acquisition & Méthodes",    "var(--cyan)"),
+    ("artefactswindows",     "🪟 Artefacts Windows",         "var(--blue)"),
+    ("cryptologiesécurité",  "🔐 Cryptologie & Sécurité",    "var(--red)"),
+    ("réseauxinfrastructure","📡 Réseaux & Infrastructure",  "var(--green)"),
+    ("systèmesspéciaux",     "📱 Systèmes Spéciaux",         "var(--orange)"),
+    ("droitsuisse",          "⚖️ Droit Suisse",              "var(--purple)"),
+    ("outilsDFIR",           "🛠 Outils DFIR",               "var(--muted)"),
 ]
 CAT_IDS = {c[0] for c in CATEGORY_ORDER}
 
@@ -57,7 +58,7 @@ def parse_fiche(path: Path) -> dict | None:
     icon = badge_tag.get_text().strip() if badge_tag else "📄"
 
     # Catégorie : lire le breadcrumb → lien vers index.html#cat-…
-    cat_id = "outilsDFIR"   # fallback
+    cat_id = "outilsDFIR"  # fallback
     for a in soup.find_all("a", href=True):
         href = a["href"]
         m = re.search(r"index\.html#cat-(.+)", href)
@@ -77,12 +78,12 @@ def parse_fiche(path: Path) -> dict | None:
         tag_text = tag_el.get_text().strip()
 
     return {
-        "file":    path.name,
-        "name":    name,
-        "desc":    desc,
-        "icon":    icon,
-        "cat_id":  cat_id,
-        "tag":     tag_text,
+        "file": path.name,
+        "name": name,
+        "desc": desc,
+        "icon": icon,
+        "cat_id": cat_id,
+        "tag": tag_text,
     }
 
 # ── Construction du HTML d'une carte ────────────────────────────────
@@ -122,18 +123,18 @@ def render(categories_html: str, total: int) -> str:
 <title>Fiches DFIR — CAS-IN Investigation Numérique</title>
 <link rel="stylesheet" href="../style/fiche_style.css">
 <style>
-  .page{{max-width:1100px;margin:0 auto;padding:2rem}}
-  .hub-hero{{text-align:center;padding:2.5rem 1rem 1.5rem;border-bottom:1px solid var(--border);margin-bottom:2rem}}
-  .hub-title{{font-family:var(--sans);font-size:clamp(1.6rem,4vw,2.4rem);font-weight:800;color:var(--text);margin-bottom:.5rem}}
-  .hub-sub{{font-size:.85rem;color:var(--muted);margin-bottom:1rem}}
-  .hub-stats{{display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;font-size:.75rem;color:var(--dim)}}
-  .search-wrap{{position:relative;max-width:500px;margin:0 auto 1.5rem}}
-  .search-input{{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.55rem 1rem .55rem 2.5rem;color:var(--text);font-family:var(--mono);font-size:.82rem;transition:.15s}}
-  .search-input:focus{{outline:none;border-color:var(--cyan);background:rgba(0,229,204,.02)}}
-  .search-icon{{position:absolute;left:.8rem;top:50%;transform:translateY(-50%);color:var(--dim)}}
-  .fiche-card{{cursor:pointer}}
-  .fiche-card.hidden{{display:none}}
-  @media(max-width:640px){{.hub-stats{{gap:.75rem}}}}
+.page{{max-width:1100px;margin:0 auto;padding:2rem}}
+.hub-hero{{text-align:center;padding:2.5rem 1rem 1.5rem;border-bottom:1px solid var(--border);margin-bottom:2rem}}
+.hub-title{{font-family:var(--sans);font-size:clamp(1.6rem,4vw,2.4rem);font-weight:800;color:var(--text);margin-bottom:.5rem}}
+.hub-sub{{font-size:.85rem;color:var(--muted);margin-bottom:1rem}}
+.hub-stats{{display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;font-size:.75rem;color:var(--dim)}}
+.search-wrap{{position:relative;max-width:500px;margin:0 auto 1.5rem}}
+.search-input{{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.55rem 1rem .55rem 2.5rem;color:var(--text);font-family:var(--mono);font-size:.82rem;transition:.15s}}
+.search-input:focus{{outline:none;border-color:var(--cyan);background:rgba(0,229,204,.02)}}
+.search-icon{{position:absolute;left:.8rem;top:50%;transform:translateY(-50%);color:var(--dim)}}
+.fiche-card{{cursor:pointer}}
+.fiche-card.hidden{{display:none}}
+@media(max-width:640px){{.hub-stats{{gap:.75rem}}}}
 </style>
 <style>
 .fiche-card{{position:relative}}
@@ -147,6 +148,7 @@ def render(categories_html: str, total: int) -> str:
 </style>
 </head>
 <body>
+
 <nav class="tn-nav">
   <a href="../index.html" class="tn-back">← Accueil</a>
   <span class="tn-title">FICHES DE RÉVISION</span>
@@ -154,6 +156,7 @@ def render(categories_html: str, total: int) -> str:
 </nav>
 
 <div class="page">
+
   <div class="hub-hero">
     <div class="hub-title">📂 Fiches DFIR</div>
     <div class="hub-sub"><span id="total-count">{total}</span> fiches de référence · Investigation numérique · Droit suisse · CAS-IN 2025–26</div>
@@ -187,7 +190,7 @@ function filterFiches() {{
   const q = document.getElementById('search').value.toLowerCase().trim();
   document.querySelectorAll('.fiche-card').forEach(card => {{
     const text = card.textContent.toLowerCase();
-    const kw   = (card.dataset.keywords || '').toLowerCase();
+    const kw = (card.dataset.keywords || '').toLowerCase();
     card.classList.toggle('hidden', q && !text.includes(q) && !kw.includes(q));
   }});
   document.querySelectorAll('.fiche-category').forEach(cat => {{
@@ -199,7 +202,7 @@ function filterFiches() {{
 (function updateCounts(){{
   const total = document.querySelectorAll('.fiche-card').length;
   document.getElementById('total-count').textContent = total;
-  document.getElementById('stat-total').textContent  = total;
+  document.getElementById('stat-total').textContent = total;
   document.querySelectorAll('.fiche-category').forEach(cat => {{
     const n = cat.querySelectorAll('.fiche-card').length;
     const el = cat.querySelector('.cat-count');
@@ -249,7 +252,7 @@ function filterFiches() {{
         }}
       }}
     }});
-    var total   = document.querySelectorAll('.fiche-card').length;
+    var total = document.querySelectorAll('.fiche-card').length;
     var counter = document.getElementById('read-counter');
     if (counter) counter.textContent = read.length + ' / ' + total + ' lues';
   }}
@@ -261,6 +264,7 @@ function filterFiches() {{
   setTimeout(applyDots, 100);
 }})();
 </script>
+
 </body>
 </html>"""
 
@@ -268,7 +272,6 @@ function filterFiches() {{
 def main():
     # Lire toutes les fiches sauf index.html
     fiches_by_cat: dict[str, list[dict]] = {c[0]: [] for c in CATEGORY_ORDER}
-
     for path in sorted(FICHES_DIR.glob("*.html")):
         if path.name == "index.html":
             continue
