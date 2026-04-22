@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShellBags — CAS-IN Forensique</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<!-- Métadonnées auto-index -->
+<meta name="cas-in-category" content="windows">
+<meta name="cas-in-icon" content="📁">
+<meta name="cas-in-short-title" content="ShellBags">
+<meta name="cas-in-desc" content="BagMRU · USRCLASS.DAT · Navigation GUI · Preuve USB · Dossiers supprimés">
+<meta name="cas-in-chapter" content="Ch. 17">
+<meta name="cas-in-is-new" content="true">
+</head>
+<body>
+
+<nav class="tn-nav">
+  <a class="tn-back" href="index.html">← Fiches</a>
+  <span class="tn-title">ShellBags</span>
+  <a class="tn-quiz" href="../quiz.html">💊 Quiz →</a>
+</nav>
+
+<div class="page">
+
+  <div class="header">
+    <span class="fs-badge">📁</span>
+    <div>
+      <h1 style="font-family:var(--sans);font-size:1.8rem;font-weight:800;letter-spacing:-.5px;margin-bottom:.35rem">
+        ShellBags Windows
+      </h1>
+      <div class="header-meta">
+        <span class="tag tag-cyan">Registre Windows</span>
+        <span class="tag tag-purple">USRCLASS.DAT · NTUSER.DAT</span>
+        <span class="tag tag-gold">Navigation GUI</span>
+        <span class="tag tag-red">Preuve USB</span>
+      </div>
+      <p class="meta" style="margin-top:.5rem;max-width:680px;line-height:1.5">
+        Les ShellBags mémorisent les <strong>préférences d'affichage</strong> de chaque dossier ouvert dans
+        l'Explorateur Windows. Leur valeur forensique vient de leur <span class="cyan">persistance</span> :
+        ils prouvent qu'un dossier a <strong>existé</strong> et a été <strong>visité</strong> — même s'il
+        a été supprimé, même sur une clé USB qui n'est plus là, même des années après.
+      </p>
+    </div>
+  </div>
+
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-windows">Artefacts Windows</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">ShellBags</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~10 min</span>
+  </div>
+
+  <div class="prereq-block">
+    <div class="prereq-row">
+      <span class="prereq-label">Prérequis</span>
+      <a class="prereq-pill" href="registre_windows.html">📖 Registre Windows</a>
+      <a class="prereq-pill" href="windows_forensique.html">📖 Windows Forensique</a>
+      <a class="prereq-pill" href="encodage.html">📖 Encodage &amp; Hex</a>
+    </div>
+    <div class="prereq-row">
+      <span class="prereq-label">Pratiquer</span>
+      <a class="tp-pill" href="../tp.html">🧪 Parsing ShellBags</a>
+      <a class="tp-pill" href="../tp.html">🧪 Traçage USB</a>
+    </div>
+    <div class="prereq-row">
+      <span class="prereq-label">Voir aussi</span>
+      <a class="related-pill" href="zimmerman.html">🔗 Suite Zimmerman</a>
+      <a class="related-pill" href="windows.html">🔗 Artefacts Windows</a>
+      <a class="related-pill" href="anti_forensique.html">🔗 Anti-forensique</a>
+    </div>
+  </div>
+
+  <div class="toc">
+    <div class="toc-title">Sommaire</div>
+    <ol>
+      <li><a href="#concept">Concept — qu'est-ce qu'un ShellBag ?</a></li>
+      <li><a href="#valeur">Pourquoi c'est une mine d'or</a></li>
+      <li><a href="#localisation">Architecture &amp; localisation</a></li>
+      <li><a href="#structure">Structure BagMRU vs Bags</a></li>
+      <li><a href="#analyse">Ce qu'on recherche — 3 questions</a></li>
+      <li><a href="#usb">Périphériques externes (USB)</a></li>
+      <li><a href="#archives">Archives ZIP &amp; RAR</a></li>
+      <li><a href="#timestamps">Horodatage — interprétation</a></li>
+      <li><a href="#outils">Les outils d'analyse</a></li>
+      <li><a href="#methodologie">Méthodologie</a></li>
+      <li><a href="#limites">Limites &amp; pièges</a></li>
+    </ol>
+  </div>
+
+  <!-- CONCEPT -->
+  <div class="section" id="concept">
+    <div class="section-title">① Concept — qu'est-ce qu'un ShellBag ?</div>
+
+    <div class="card card-cyan">
+      <div class="card-title">🪟 Définition</div>
+      <p>Les ShellBags sont un ensemble de clés de registre que Windows utilise pour
+      <strong>mémoriser les préférences d'affichage des dossiers</strong> dans l'Explorateur.</p>
+      <p style="margin-top:.4rem">Concrètement, quand vous :</p>
+      <ul>
+        <li>ouvrez un dossier,</li>
+        <li>redimensionnez sa fenêtre,</li>
+        <li>choisissez l'affichage <em>Détails</em> ou <em>Grandes icônes</em>,</li>
+        <li>triez par date ou par taille,</li>
+      </ul>
+      <p style="margin-top:.3rem">…Windows enregistre ces choix pour que, la prochaine fois, le dossier
+      soit <strong>exactement comme vous l'avez laissé</strong>.</p>
+    </div>
+  </div>
+
+  <!-- VALEUR -->
+  <div class="section" id="valeur">
+    <div class="section-title">② Pourquoi c'est une mine d'or en forensique</div>
+    <p class="meta" style="margin-bottom:.75rem">La valeur des ShellBags réside dans leur <span class="cyan">persistance</span>.</p>
+
+    <div class="card-grid">
+      <div class="card card-green">
+        <div class="card-title">👁 Mémoire visuelle</div>
+        <p>Ils tracent la <strong>navigation de l'utilisateur</strong> via l'Explorateur Windows (GUI).
+        Chaque dossier ouvert laisse une trace durable.</p>
+      </div>
+      <div class="card card-gold">
+        <div class="card-title">♾️ Survivance</div>
+        <p>Si un utilisateur crée <span class="hex">C:\Documents\Projet_Secret</span>, l'ouvre, puis
+        <strong class="red">le supprime</strong>, le ShellBag <strong>reste dans le registre</strong>.</p>
+      </div>
+      <div class="card card-red">
+        <div class="card-title">🔌 Preuve d'existence</div>
+        <p>Ils prouvent qu'un dossier a existé, <strong>même si le disque dur externe ou la clé USB n'est
+        plus connecté</strong> à l'ordinateur. Même si la clé a été détruite.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOCALISATION -->
+  <div class="section" id="localisation">
+    <div class="section-title">③ Architecture &amp; localisation</div>
+    <p class="meta" style="margin-bottom:.75rem">Les ShellBags ne se trouvent pas dans un fichier unique,
+    mais dans les ruches du registre utilisateur.</p>
+
+    <div class="card card-purple">
+      <div class="card-title">🗝 USRCLASS.DAT — le plus important (Windows 7/10/11)</div>
+      <p>Contient les ShellBags des <strong>dossiers locaux</strong>, des <strong>fichiers ZIP</strong>
+      et des <strong>dossiers partagés</strong>.</p>
+      <pre class="formula" style="line-height:1.4"><span class="dim">// Chemin fichier</span>
+C:\Users\<span class="cyan">%User%</span>\AppData\Local\Microsoft\Windows\UsrClass.dat
+
+<span class="dim">// Chemin registre</span>
+HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\<span class="gold">BagMRU</span></pre>
+    </div>
+
+    <div class="card card-blue" style="margin-top:.75rem">
+      <div class="card-title">🗝 NTUSER.DAT — legacy &amp; cas spécifiques</div>
+      <p>Contient les ShellBags des <strong>dossiers réseaux</strong> (UNC paths), du <strong>Bureau</strong>
+      et de certaines configurations système.</p>
+      <pre class="formula" style="line-height:1.4"><span class="dim">// Chemin fichier</span>
+C:\Users\<span class="cyan">%User%</span>\NTUSER.DAT
+
+<span class="dim">// Chemin registre</span>
+HKCU\Software\Microsoft\Windows\Shell\<span class="gold">BagMRU</span>
+HKCU\Software\Microsoft\Windows\<span class="gold">ShellNoRoam</span></pre>
+    </div>
+  </div>
+
+  <!-- STRUCTURE -->
+  <div class="section" id="structure">
+    <div class="section-title">④ Structure — BagMRU vs Bags</div>
+    <p class="meta" style="margin-bottom:.75rem">Deux sections qui fonctionnent en tandem.</p>
+
+    <div class="g2">
+      <div class="card card-cyan">
+        <div class="card-title">🗺 BagMRU — la Carte</div>
+        <p>Structure <strong>arborescente</strong> qui reproduit la hiérarchie des dossiers explorés.</p>
+        <ul>
+          <li>Système de numérotation : <span class="hex">0, 1, 2, 3…</span></li>
+          <li>Ordre de visite + noms des dossiers</li>
+          <li>Chaque nœud peut avoir des sous-nœuds</li>
+        </ul>
+      </div>
+      <div class="card card-gold">
+        <div class="card-title">⚙️ Bags — les Réglages</div>
+        <p>Contenu des préférences associées à chaque nœud BagMRU.</p>
+        <ul>
+          <li>Coordonnées de la fenêtre (position, taille)</li>
+          <li>Mode de tri (par date, nom, taille)</li>
+          <li>Type de vue (détails, icônes, liste…)</li>
+          <li>Chaque numéro BagMRU renvoie à une clé Bags</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="info" style="margin-top:.75rem">
+      🧩 <strong>Modèle mental :</strong> BagMRU = <em>quels dossiers</em> dans quel ordre.
+      Bags = <em>comment ils étaient affichés</em>.
+    </div>
+  </div>
+
+  <!-- ANALYSE -->
+  <div class="section" id="analyse">
+    <div class="section-title">⑤ Ce qu'on recherche — 3 questions</div>
+    <p class="meta" style="margin-bottom:.75rem">Quoi ? Quand ? Où ?</p>
+
+    <div class="card card-green">
+      <div class="card-title">🔍 Preuve d'accès et de connaissance</div>
+      <p>Si un ShellBag existe pour <span class="hex">D:\Recettes_Fraudes</span>, cela prouve non seulement
+      que le dossier <strong>a existé</strong>, mais que l'utilisateur a
+      <strong class="cyan">navigué dedans via l'Explorateur Windows</strong>.</p>
+      <p style="margin-top:.4rem"><strong class="green">Cela réfute l'argument :</strong>
+      <em>« Je ne savais pas que ce dossier était là, c'est un virus qui l'a créé »</em>.</p>
+      <p style="margin-top:.3rem">👉 Un virus n'utilise généralement <strong>pas</strong> l'interface
+      graphique — il ne crée donc <strong>pas</strong> de ShellBags. La présence d'un ShellBag implique
+      une <strong>action humaine consciente</strong>.</p>
+    </div>
+  </div>
+
+  <!-- USB -->
+  <div class="section" id="usb">
+    <div class="section-title">⑥ Périphériques externes (USB) — l'usage le plus puissant</div>
+
+    <div class="card card-red">
+      <div class="card-title">🔌 Reconstruire une clé USB absente</div>
+      <p>Lorsqu'une clé USB est insérée, Windows ne crée pas seulement des artefacts USB
+      (<span class="hex">setupapi</span>, <span class="hex">USBSTOR</span>) — il crée aussi des
+      <strong>ShellBags</strong> dès que l'utilisateur explore la clé.</p>
+      <p style="margin-top:.4rem">Vous pouvez voir l'<strong class="cyan">arborescence complète</strong>
+      d'une clé USB <strong>même si la clé est détruite</strong> :</p>
+      <pre class="formula" style="line-height:1.4">E:\
+├── Documents\
+│   ├── Confidentiel\       <span class="dim">← dossier visité</span>
+│   │   └── Projet_X\       <span class="dim">← sous-dossier visité</span>
+│   └── Factures\
+└── Photos\
+    └── Vacances\</pre>
+      <p style="margin-top:.4rem">Toute cette structure est reconstituable depuis le seul
+      <span class="hex">USRCLASS.DAT</span> du suspect.</p>
+    </div>
+  </div>
+
+  <!-- ARCHIVES -->
+  <div class="section" id="archives">
+    <div class="section-title">⑦ Archives ZIP &amp; RAR</div>
+
+    <div class="card card-orange">
+      <div class="card-title">📦 Windows traite les ZIP comme des dossiers</div>
+      <p>Si l'utilisateur double-clique sur un ZIP pour voir son contenu
+      <strong>sans le décompresser</strong>, un ShellBag est créé pour ce ZIP.</p>
+      <p style="margin-top:.3rem">Conséquence forensique : on peut prouver que l'utilisateur a
+      <strong>ouvert et exploré</strong> le contenu d'une archive, même s'il n'a jamais extrait
+      les fichiers.</p>
+    </div>
+  </div>
+
+  <!-- TIMESTAMPS -->
+  <div class="section" id="timestamps">
+    <div class="section-title">⑧ L'horodatage — attention à l'interprétation</div>
+
+    <div class="card card-gold">
+      <div class="card-title">⏱ Last Write Time — ce qu'il signifie vraiment</div>
+      <p>Le <strong>Last Write Time</strong> de la clé de registre BagMRU indique la
+      <strong class="cyan">dernière fois que l'utilisateur a interagi</strong> avec ce dossier :</p>
+      <ul>
+        <li>l'a ouvert,</li>
+        <li>l'a fermé,</li>
+        <li>ou a changé la vue.</li>
+      </ul>
+      <p style="margin-top:.4rem">👉 Permet de reconstituer une chronologie précise :
+      <em>« Le suspect a parcouru le dossier Photos le 12 janvier à 14h30 »</em>.</p>
+    </div>
+
+    <div class="alert" style="margin-top:.75rem">
+      ⚠️ <strong>Attention :</strong> le Last Write Time ne donne PAS toutes les visites — seulement
+      la dernière. Pour une chronologie complète, corréler avec les LNK files, Jump Lists et RecentDocs.
+    </div>
+  </div>
+
+  <!-- OUTILS -->
+  <div class="section" id="outils">
+    <div class="section-title">⑨ Les outils d'analyse</div>
+    <p class="meta" style="margin-bottom:.75rem">Ne jamais tenter regedit — les données sont en binaire hexadécimal illisible.</p>
+
+    <div class="card card-green">
+      <div class="card-title">🗝 ShellBags Explorer (Eric Zimmerman) — l'outil de référence</div>
+      <p><strong class="cyan">Gratuit</strong>, dédié, open source. Standard de l'industrie.</p>
+      <ul>
+        <li><strong>Fonctionnement :</strong> charger <span class="hex">USRCLASS.DAT</span> et/ou <span class="hex">NTUSER.DAT</span></li>
+        <li><strong>Affichage :</strong> reconstruit l'arborescence comme si vous étiez dans l'explorateur</li>
+        <li><strong>Colonnes clés :</strong> <em>Absolute Path</em> · <em>Last Write Time</em> · <em>Slot Key</em></li>
+      </ul>
+      <p style="margin-top:.3rem"><em>Voir aussi : <a href="zimmerman.html" style="color:var(--cyan)">Suite Zimmerman</a></em></p>
+    </div>
+
+    <div class="card card-cyan" style="margin-top:.75rem">
+      <div class="card-title">🔍 X-Ways Forensics</div>
+      <p>Trois approches possibles :</p>
+      <ul>
+        <li><strong>Viewer de registre interne</strong> — voit les clés brutes (difficile à interpréter)</li>
+        <li><strong>X-Tensions (plugins)</strong> — scripts qui parsent les ShellBags dans le rapport</li>
+        <li><strong class="green">Méthode recommandée :</strong> extraire <span class="hex">USRCLASS.DAT</span>
+        et <span class="hex">NTUSER.DAT</span> depuis X-Ways → ouvrir dans ShellBags Explorer</li>
+      </ul>
+    </div>
+
+    <div class="card card-purple" style="margin-top:.75rem">
+      <div class="card-title">🏢 AXIOM / EnCase</div>
+      <p>Suites commerciales avec parsers automatiques intégrés. Les ShellBags apparaissent dans la
+      catégorie <em>« Artefacts OS »</em> ou <em>« Navigation Dossiers »</em>.</p>
+    </div>
+  </div>
+
+  <!-- MÉTHODOLOGIE -->
+  <div class="section" id="methodologie">
+    <div class="section-title">⑩ Méthodologie d'analyse</div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num sn">1</div>
+        <div class="step-text"><strong>Extraction.</strong> Récupérer <span class="hex">NTUSER.DAT</span> et <span class="hex">USRCLASS.DAT</span> pour chaque utilisateur suspect (via X-Ways ou montage lecture seule).</div>
+      </div>
+      <div class="step">
+        <div class="step-num sn">2</div>
+        <div class="step-text"><strong>Parsing.</strong> Charger les fichiers dans <span class="cyan">ShellBags Explorer</span>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num sn">3</div>
+        <div class="step-text"><strong>Filtrage par type.</strong> Chercher les entrées vers lettres de lecteurs amovibles (<span class="hex">E:</span>, <span class="hex">F:</span>, <span class="hex">G:</span>) et les chemins UNC (<span class="hex">\\Serveur\Partage</span>).</div>
+      </div>
+      <div class="step">
+        <div class="step-num sn">4</div>
+        <div class="step-text"><strong>Recherche de mots-clés.</strong> Noms de dossiers suspects — « Factures », « Photos », « Hack », « Secret », etc.</div>
+      </div>
+      <div class="step">
+        <div class="step-num sn-g">5</div>
+        <div class="step-text"><strong>Analyse chronologique.</strong> Trier par <em>Last Write Time</em> pour voir ce que l'utilisateur faisait à l'heure de l'incident.</div>
+      </div>
+      <div class="step">
+        <div class="step-num sn-g">6</div>
+        <div class="step-text"><strong>Corrélation.</strong> Comparer avec les <strong>LNK files</strong>, <strong>Jump Lists</strong> et <strong>RecentDocs</strong> pour confirmer l'ouverture de fichiers spécifiques dans ces dossiers.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIMITES -->
+  <div class="section" id="limites">
+    <div class="section-title">⑪ Limites &amp; pièges</div>
+    <p class="meta" style="margin-bottom:.75rem">Crucial pour ne pas sur-interpréter en audience.</p>
+
+    <div class="alert">
+      🚨 <strong>Dossiers ≠ fichiers.</strong> Les ShellBags prouvent l'ouverture d'un <strong>dossier</strong>,
+      <strong class="red">pas</strong> l'ouverture des fichiers à l'intérieur. Pour prouver qu'un PDF a été lu,
+      il faut regarder les <strong>LNK files</strong>, <strong>Jump Lists</strong> ou <strong>RecentDocs</strong>.
+    </div>
+
+    <div class="tip">
+      ⚠️ <strong>Accès ligne de commande — angle mort.</strong> Si l'utilisateur copie des fichiers via
+      <span class="hex">cmd.exe</span> ou PowerShell (<span class="hex">copy c:\source d:\dest</span>),
+      <strong>aucun ShellBag n'est créé</strong>. Les ShellBags sont <strong class="cyan">exclusifs à
+      l'interface graphique Explorer</strong>.
+    </div>
+
+    <div class="info">
+      🧹 <strong>Nettoyage / anti-forensique.</strong> Des outils comme <em>CCleaner</em> ou <em>BleachBit</em>
+      peuvent effacer les clés MRU, supprimant les ShellBags. Une <strong class="red">absence totale</strong>
+      de ShellBags sur un vieux système est suspecte — ce vide est en soi un indicateur d'activité
+      anti-forensique.
+    </div>
+  </div>
+
+  <!-- EXAM -->
+  <div class="section" style="margin-top:2rem">
+    <div class="section-title">⚖️ Examen CAS-IN — à retenir</div>
+    <div class="card card-purple">
+      <p style="font-size:.78rem;line-height:1.75">
+        <strong class="cyan">ShellBags</strong> = clés registre mémorisant les préférences d'affichage des dossiers Explorer ·
+        Ruches : <strong class="red">USRCLASS.DAT</strong> (principal · Windows 7+) &amp; <strong class="red">NTUSER.DAT</strong> (réseaux, Bureau) ·
+        Emplacement USRCLASS : <span class="hex">C:\Users\%User%\AppData\Local\Microsoft\Windows\UsrClass.dat</span> ·
+        Clé registre : <span class="hex">HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\BagMRU</span> ·
+        Structure : <strong class="gold">BagMRU</strong> (carte hiérarchique) + <strong class="gold">Bags</strong> (réglages) ·
+        Valeur forensique : prouve qu'un dossier a <strong class="green">existé</strong> et a été <strong class="green">visité via GUI</strong> ·
+        Persistance : survit à la suppression du dossier · fonctionne même sur <strong class="red">clés USB absentes</strong> ·
+        Traite les <strong>ZIP comme des dossiers</strong> · <em>Last Write Time</em> = dernière interaction ·
+        Outil roi : <strong class="cyan">ShellBags Explorer</strong> (Zimmerman · gratuit) ·
+        <strong class="red">Limites :</strong> prouve l'ouverture du dossier, pas des fichiers dedans · aucune trace si cmd/PowerShell · effaçables par CCleaner/BleachBit (absence = suspecte).
+      </p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+    <span>Cours Investigation Numérique · ShellBags Explorer</span>
+  </div>
+
+</div>
+
+<button class="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Retour en haut">↑</button>
+<script>
+  const bt = document.querySelector('.back-top');
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 400) bt.classList.add('visible');
+    else bt.classList.remove('visible');
+  });
+</script>
+
+</body>
+</html>

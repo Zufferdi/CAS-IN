@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Windows Forensique — CAS-IN Forensique</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<!-- Métadonnées auto-index (lisibles par scripts/build_manifest.py) -->
+<meta name="cas-in-category" content="windows">
+<meta name="cas-in-icon" content="🪟">
+<meta name="cas-in-short-title" content="Windows Forensique">
+<meta name="cas-in-desc" content="Méthodologie · Artefacts · Registre · SID · Corrélation · Chronologie">
+<meta name="cas-in-chapter" content="Guide opérationnel">
+<meta name="cas-in-is-new" content="true">
+</head>
+<body>
+
+<nav class="tn-nav">
+  <a class="tn-back" href="index.html">← Fiches</a>
+  <span class="tn-title">Windows Forensique</span>
+  <a class="tn-quiz" href="../quiz.html">💊 Quiz →</a>
+</nav>
+
+<div class="page">
+
+  <div class="header">
+    <span class="fs-badge">🪟</span>
+    <div>
+      <h1 style="font-family:var(--sans);font-size:1.8rem;font-weight:800;letter-spacing:-.5px;margin-bottom:.35rem">
+        Windows Forensique — Guide opérationnel
+      </h1>
+      <div class="header-meta">
+        <span class="tag tag-cyan">Méthodologie</span>
+        <span class="tag tag-purple">16 principes</span>
+        <span class="tag tag-gold">Artefacts &amp; corrélation</span>
+        <span class="tag tag-green">Valeur judiciaire</span>
+      </div>
+      <p class="meta" style="margin-top:.5rem;max-width:680px;line-height:1.5">
+        L'analyste Windows n'est pas un simple technicien — c'est un
+        <span class="cyan">interprète de la mémoire du système</span>. La majorité des enquêtes numériques
+        impliquent Windows. Chaque interaction y laisse des traces persistantes, souvent invisibles pour
+        l'utilisateur mais exploitables par l'analyste. La difficulté n'est pas de trouver des données,
+        mais de les <strong>corréler</strong> en une chronologie défendable.
+      </p>
+    </div>
+  </div>
+
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-windows">Artefacts Windows</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Windows Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
+  </div>
+
+  <div class="prereq-block">
+    <div class="prereq-row">
+      <span class="prereq-label">Prérequis</span>
+      <a class="prereq-pill" href="acquisition.html">📖 Acquisition</a>
+      <a class="prereq-pill" href="methodologie.html">📖 Méthodologie DFIR</a>
+      <a class="prereq-pill" href="ntfs.html">📖 NTFS</a>
+    </div>
+    <div class="prereq-row">
+      <span class="prereq-label">Approfondir</span>
+      <a class="related-pill" href="windows.html">🔗 Artefacts Windows</a>
+      <a class="related-pill" href="registre_windows.html">🔗 Registre Windows</a>
+      <a class="related-pill" href="logs_windows.html">🔗 Logs Windows</a>
+      <a class="related-pill" href="shellbags.html">🔗 ShellBags</a>
+      <a class="related-pill" href="zimmerman.html">🔗 Suite Zimmerman</a>
+    </div>
+  </div>
+
+  <div class="toc">
+    <div class="toc-title">Sommaire</div>
+    <ol>
+      <li><a href="#principes">Principes fondamentaux</a></li>
+      <li><a href="#nature">Nature de la preuve Windows</a></li>
+      <li><a href="#familles">Les 5 familles d'artefacts</a></li>
+      <li><a href="#registre">Registre Windows — pilier de l'analyse</a></li>
+      <li><a href="#sid">SID — l'identification de l'utilisateur</a></li>
+      <li><a href="#execution">Prouver l'exécution d'un programme</a></li>
+      <li><a href="#fichiers">Fichiers consultés &amp; documents</a></li>
+      <li><a href="#corbeille">La Corbeille Windows</a></li>
+      <li><a href="#usb">Supports amovibles &amp; USB</a></li>
+      <li><a href="#caches">Caches visuels — miniatures</a></li>
+      <li><a href="#journaux">Journaux .evtx</a></li>
+      <li><a href="#persistance">Persistance &amp; compromission</a></li>
+      <li><a href="#shellbags">ShellBags — navigation utilisateur</a></li>
+      <li><a href="#methodologie">Méthodologie recommandée</a></li>
+      <li><a href="#justice">Ce que la justice attend</a></li>
+    </ol>
+  </div>
+
+  <!-- PRINCIPES -->
+  <div class="section" id="principes">
+    <div class="section-title">① Principes fondamentaux</div>
+
+    <div class="card card-red">
+      <div class="card-title">⚖️ Les 4 exigences non-négociables</div>
+      <ul>
+        <li><strong class="cyan">Copie forensique</strong> — jamais sur l'original</li>
+        <li><strong class="cyan">Traçabilité</strong> — chaîne de possession complète</li>
+        <li><strong class="cyan">Reproductibilité</strong> — un autre expert doit pouvoir refaire</li>
+        <li><strong class="cyan">Intelligibilité</strong> — compréhensible par un juge ou un avocat</li>
+      </ul>
+    </div>
+
+    <div class="alert" style="margin-top:.75rem">
+      🎯 <strong>Principe cardinal :</strong> un artefact Windows isolé n'est <strong>jamais</strong> une preuve.
+      <strong class="red">La preuve naît de la corrélation.</strong>
+    </div>
+  </div>
+
+  <!-- NATURE -->
+  <div class="section" id="nature">
+    <div class="section-title">② Nature de la preuve Windows</div>
+    <p class="meta" style="margin-bottom:.75rem">L'analyste doit raisonner en système, pas en élément isolé.</p>
+
+    <div class="card-grid">
+      <div class="card card-cyan">
+        <div class="card-title">🌐 Diffuse</div>
+        <p>Répartie entre fichiers, registre, journaux, caches, espace non alloué, slack space.</p>
+      </div>
+      <div class="card card-green">
+        <div class="card-title">♾️ Persistante</div>
+        <p>Certaines traces survivent aux suppressions — miniatures, entrées MFT, Shellbags.</p>
+      </div>
+      <div class="card card-gold">
+        <div class="card-title">🤖 Involontaire</div>
+        <p>Générée sans action consciente de l'utilisateur — le système enregistre par design.</p>
+      </div>
+      <div class="card card-red">
+        <div class="card-title">🔀 Parfois contradictoire</div>
+        <p>Plusieurs artefacts peuvent diverger — c'est souvent un indice de manipulation.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAMILLES -->
+  <div class="section" id="familles">
+    <div class="section-title">③ Les 5 grandes familles d'artefacts</div>
+
+    <table class="tbl">
+      <thead><tr><th>Famille</th><th>Contenu</th><th>Ce qu'on y lit</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong class="cyan">Système de fichiers</strong></td>
+          <td>Fichiers existants, supprimés, métadonnées ($MFT, timestamps)</td>
+          <td>Création · modification · suppression · timestomping</td>
+        </tr>
+        <tr>
+          <td><strong class="purple">Registres Windows</strong></td>
+          <td>Configuration, historique d'usage</td>
+          <td>Comptes · USB · programmes exécutés · préférences</td>
+        </tr>
+        <tr>
+          <td><strong class="gold">Journaux d'événements</strong></td>
+          <td>Connexions, erreurs, services (.evtx)</td>
+          <td>Login · démarrage · install service · compte créé</td>
+        </tr>
+        <tr>
+          <td><strong class="blue">Caches système</strong></td>
+          <td>Miniatures, préchargements (Prefetch, thumbcache)</td>
+          <td>Preuve d'exécution · images vues même supprimées</td>
+        </tr>
+        <tr>
+          <td><strong class="orange">Artefacts applicatifs</strong></td>
+          <td>Navigateurs, messagerie, logiciels tiers</td>
+          <td>Historique web · emails · documents récents</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info" style="margin-top:.75rem">
+      👉 <strong>Une analyse fiable exploite plusieurs familles simultanément.</strong> Un seul artefact
+      se conteste — quatre artefacts concordants forment une chronologie.
+    </div>
+  </div>
+
+  <!-- REGISTRE -->
+  <div class="section" id="registre">
+    <div class="section-title">④ Le Registre Windows — pilier de l'analyse</div>
+    <p class="meta" style="margin-bottom:.75rem">La mémoire interne du système.</p>
+
+    <div class="card card-purple">
+      <div class="card-title">🗝 Ce que contient le registre</div>
+      <ul>
+        <li>Les profils utilisateurs (SID, comptes, mots de passe hashés)</li>
+        <li>Les programmes exécutés (UserAssist, MUICache)</li>
+        <li>Les périphériques connectés (USBSTOR)</li>
+        <li>Les préférences (ShellBags, MRU)</li>
+        <li>Des traces indirectes d'activité partout</li>
+      </ul>
+      <p style="margin-top:.3rem">Le registre est organisé en <strong class="cyan">ruches (hives)</strong>,
+      stockées sous forme de fichiers <strong>physiques</strong> sur le disque.</p>
+    </div>
+
+    <div class="card card-cyan" style="margin-top:.75rem">
+      <div class="card-title">📂 Ruches essentielles à analyser</div>
+      <table class="tbl">
+        <thead><tr><th>Ruche</th><th>Contenu typique</th><th>Emplacement</th></tr></thead>
+        <tbody>
+          <tr><td><span class="hex">SYSTEM</span></td><td>Config matériel · services · USBSTOR</td><td class="mono"><small>%SystemRoot%\System32\config\</small></td></tr>
+          <tr><td><span class="hex">SOFTWARE</span></td><td>Programmes installés · démarrage</td><td class="mono"><small>%SystemRoot%\System32\config\</small></td></tr>
+          <tr><td><span class="hex">SAM</span></td><td>Comptes locaux · hashs NTLM</td><td class="mono"><small>%SystemRoot%\System32\config\</small></td></tr>
+          <tr><td><span class="hex">SECURITY</span></td><td>Politique de sécurité · audit</td><td class="mono"><small>%SystemRoot%\System32\config\</small></td></tr>
+          <tr><td><span class="hex">NTUSER.DAT</span></td><td>Profil utilisateur · UserAssist</td><td class="mono"><small>C:\Users\&lt;user&gt;\</small></td></tr>
+          <tr><td><span class="hex">USRCLASS.DAT</span></td><td>ShellBags · associations fichier</td><td class="mono"><small>AppData\Local\Microsoft\Windows\</small></td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:.4rem">👉 Ces fichiers existent physiquement et peuvent être <strong>analysés hors ligne</strong>
+      (pas besoin de système vivant).</p>
+    </div>
+  </div>
+
+  <!-- SID -->
+  <div class="section" id="sid">
+    <div class="section-title">⑤ SID — Identifier l'utilisateur</div>
+
+    <div class="card card-gold">
+      <div class="card-title">🆔 Security Identifier</div>
+      <p>Windows n'identifie <strong class="red">jamais</strong> un utilisateur par son nom, mais par un
+      <strong class="cyan">SID</strong> (Security Identifier) :</p>
+      <pre class="formula" style="line-height:1.4">S-1-5-21-<span class="gold">1234567890-987654321-111111111</span>-<span class="green">1001</span>
+          └─────── machine / domaine ────────┘ └ RID
+RID 500 = Administrator · 501 = Guest · 1000+ = utilisateurs</pre>
+      <p style="margin-top:.4rem">Le SID permet :</p>
+      <ul>
+        <li>d'attribuer une action à un <strong>utilisateur précis</strong></li>
+        <li>de relier fichiers, registre et corbeille entre eux</li>
+        <li>de <strong class="green">résister aux changements de nom</strong> ou à la suppression de compte</li>
+      </ul>
+      <p style="margin-top:.3rem">Un analyste forensique travaille <strong>toujours avec les SID</strong>,
+      jamais uniquement avec les noms affichés.</p>
+    </div>
+  </div>
+
+  <!-- EXECUTION -->
+  <div class="section" id="execution">
+    <div class="section-title">⑥ Prouver l'exécution d'un programme</div>
+
+    <div class="alert">
+      🚨 <strong>La présence d'un programme sur le disque ne prouve PAS son utilisation.</strong>
+      Il faut des artefacts d'exécution.
+    </div>
+
+    <div class="card-grid" style="margin-top:.75rem">
+      <div class="card card-green">
+        <div class="card-title">⚡ Prefetch</div>
+        <p>Prouve qu'un programme a été <strong>lancé</strong>. Donne une fréquence approximative
+        (jusqu'à 8 timestamps) et les DLL chargées. Emplacement :
+        <span class="hex">C:\Windows\Prefetch\</span>.</p>
+        <p style="margin-top:.3rem"><em>Outil : <a href="zimmerman.html" style="color:var(--cyan)">PECmd</a></em></p>
+      </div>
+      <div class="card card-cyan">
+        <div class="card-title">👤 UserAssist</div>
+        <p>Clé registre <span class="hex">NTUSER.DAT</span> qui enregistre les programmes lancés
+        <strong>depuis l'interface graphique</strong> (double-clic, menu Démarrer).
+        <strong class="green">Prouve l'usage par l'utilisateur</strong>, pas par le système.</p>
+        <p style="margin-top:.3rem"><em>Chemin : <span class="hex">NTUSER.DAT\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist</span></em></p>
+      </div>
+      <div class="card card-purple">
+        <div class="card-title">🧬 Amcache / ShimCache</div>
+        <p>Traces d'exécution et d'installation. <span class="hex">Amcache.hve</span> stocke le SHA-1
+        de chaque exécutable connu. ShimCache enregistre les programmes lancés pour compatibilité.</p>
+        <p style="margin-top:.3rem"><em>Outil : <a href="zimmerman.html" style="color:var(--cyan)">AmcacheParser</a></em></p>
+      </div>
+      <div class="card card-gold">
+        <div class="card-title">🎯 Utilité combinée</div>
+        <p>Ces artefacts sont <strong>centraux dans les enquêtes malware et intrusion</strong>.
+        Un échantillon malveillant laisse des traces croisées :
+        Prefetch → UserAssist → Amcache → $MFT = preuve robuste.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FICHIERS -->
+  <div class="section" id="fichiers">
+    <div class="section-title">⑦ Fichiers consultés &amp; documents manipulés</div>
+    <p class="meta" style="margin-bottom:.75rem">Windows conserve des traces d'accès, même après suppression.</p>
+
+    <div class="card-grid">
+      <div class="card card-cyan">
+        <div class="card-title">🔗 Fichiers raccourcis (.lnk)</div>
+        <p>Créés automatiquement à l'ouverture d'un fichier. Contiennent le chemin cible complet, le numéro
+        de série du volume source (clé USB), les MAC times. Localisation principale :
+        <span class="hex">%AppData%\Microsoft\Windows\Recent\</span>.</p>
+      </div>
+      <div class="card card-gold">
+        <div class="card-title">📝 Listes MRU</div>
+        <p><strong>Most Recently Used</strong> — clés registre qui mémorisent les derniers fichiers/dossiers
+        utilisés par chaque application (Office, Paint, Notepad, éditeur d'URL…).</p>
+      </div>
+      <div class="card card-purple">
+        <div class="card-title">📌 Jump Lists</div>
+        <p>Listes de fichiers récents par application, visibles en clic droit sur la barre des tâches.
+        Persistent au redémarrage. Chemin : <span class="hex">%AppData%\Microsoft\Windows\Recent\AutomaticDestinations\</span>.</p>
+      </div>
+    </div>
+
+    <div class="info" style="margin-top:.75rem">
+      🎯 <strong>Ensemble, ces artefacts démontrent :</strong>
+      ① l'ouverture d'un fichier · ② son emplacement d'origine · ③ un contexte d'usage (application, date, répétitions).
+    </div>
+  </div>
+
+  <!-- CORBEILLE -->
+  <div class="section" id="corbeille">
+    <div class="section-title">⑧ La Corbeille Windows</div>
+
+    <div class="card card-green">
+      <div class="card-title">♻️ Bien plus qu'un confort utilisateur</div>
+      <p>La corbeille Windows permet de déterminer :</p>
+      <ul>
+        <li>qu'un fichier <strong>a existé</strong></li>
+        <li>qu'il a été <strong>supprimé</strong></li>
+        <li><strong>par quel utilisateur</strong> (via le SID du sous-dossier)</li>
+        <li><strong>à quel moment</strong></li>
+      </ul>
+      <p style="margin-top:.4rem">Sur les versions modernes, chaque utilisateur a <strong>sa propre corbeille</strong>
+      identifiée par son SID :</p>
+      <pre class="formula" style="line-height:1.4">C:\$Recycle.Bin\S-1-5-21-...-1001\
+  ├── $I<span class="red">xxxxxx</span>.ext  ← métadonnées (chemin original, taille, date)
+  └── $R<span class="red">xxxxxx</span>.ext  ← contenu du fichier</pre>
+    </div>
+  </div>
+
+  <!-- USB -->
+  <div class="section" id="usb">
+    <div class="section-title">⑨ Supports amovibles &amp; périphériques USB</div>
+
+    <div class="card card-red">
+      <div class="card-title">🔌 Ce que Windows retient</div>
+      <p>Windows conserve des traces <strong>détaillées</strong> des périphériques connectés : clés USB,
+      disques externes, téléphones, cartes mémoire. Emplacements clés :</p>
+      <ul>
+        <li><span class="hex">SYSTEM\CurrentControlSet\Enum\USBSTOR</span> — numéro de série, VID/PID</li>
+        <li><span class="hex">SYSTEM\CurrentControlSet\Enum\USB</span> — énumération USB générale</li>
+        <li><span class="hex">setupapi.dev.log</span> — première connexion, datée</li>
+        <li><span class="hex">SOFTWARE\Microsoft\Windows Portable Devices\Devices</span> — label du volume</li>
+      </ul>
+    </div>
+
+    <div class="info" style="margin-top:.75rem">
+      🎯 <strong>Ces artefacts permettent de :</strong>
+      prouver l'utilisation d'un support externe · établir des liens entre machines (même numéro de série
+      sur plusieurs PC) · renforcer une chronologie d'<span class="red">exfiltration</span> ou d'<span class="orange">importation</span> de données.
+    </div>
+  </div>
+
+  <!-- CACHES -->
+  <div class="section" id="caches">
+    <div class="section-title">⑩ Images, vidéos &amp; caches visuels</div>
+
+    <div class="card card-orange">
+      <div class="card-title">🖼 Thumbcache — la miniature qui survit</div>
+      <p>Même après suppression du fichier, la <strong>miniature</strong> peut subsister :</p>
+      <ul>
+        <li><span class="hex">thumbcache_*.db</span> (Windows Vista+) — localisation :
+        <span class="hex">%LocalAppData%\Microsoft\Windows\Explorer\</span></li>
+        <li><span class="hex">thumbs.db</span> (Windows XP &amp; certaines versions) — caché dans chaque dossier visualisé</li>
+      </ul>
+      <p style="margin-top:.4rem">Une image supprimée peut rester <strong>visible sous forme de miniature</strong>,
+      parfois exploitable judiciairement (qualité réduite mais reconnaissable).</p>
+    </div>
+  </div>
+
+  <!-- JOURNAUX -->
+  <div class="section" id="journaux">
+    <div class="section-title">⑪ Journaux Windows (.evtx)</div>
+
+    <div class="card card-gold">
+      <div class="card-title">📋 Ce que les .evtx enregistrent</div>
+      <ul>
+        <li><strong>Connexions</strong> (Security.evtx — Event ID 4624/4625)</li>
+        <li><strong>Démarrages &amp; arrêts</strong> (System.evtx — 6005/6006/1074)</li>
+        <li><strong>Erreurs système</strong></li>
+        <li><strong>Activités de services</strong> (7045 = installation de service)</li>
+        <li><strong>Événements de sécurité</strong> (création de compte, changement de privilège)</li>
+      </ul>
+      <p style="margin-top:.4rem">Localisation : <span class="hex">C:\Windows\System32\winevt\Logs\</span>.
+      Permettent de reconstruire une <strong class="cyan">chronologie événementielle précise</strong>.</p>
+      <p style="margin-top:.3rem"><em>Outil dédié : <a href="zimmerman.html" style="color:var(--cyan)">EvtxECmd</a>
+      · voir aussi <a href="logs_windows.html" style="color:var(--cyan)">Logs Windows</a>.</em></p>
+    </div>
+  </div>
+
+  <!-- PERSISTANCE -->
+  <div class="section" id="persistance">
+    <div class="section-title">⑫ Persistance &amp; compromission</div>
+    <p class="meta" style="margin-bottom:.75rem">Les 5 zones à vérifier systématiquement pour toute enquête malware.</p>
+
+    <div class="card card-red">
+      <div class="card-title">🦠 Mécanismes de persistance couramment exploités</div>
+      <table class="tbl">
+        <thead><tr><th>Mécanisme</th><th>Emplacement</th><th>Détection</th></tr></thead>
+        <tbody>
+          <tr><td><strong class="cyan">Run Keys</strong></td><td><span class="hex">HKLM/HKCU\Software\Microsoft\Windows\CurrentVersion\Run</span></td><td>Exécution automatique au login</td></tr>
+          <tr><td><strong class="gold">Services</strong></td><td><span class="hex">SYSTEM\CurrentControlSet\Services</span></td><td>Event ID 7045 + analyse .evtx</td></tr>
+          <tr><td><strong class="purple">Scheduled Tasks</strong></td><td><span class="hex">C:\Windows\System32\Tasks\</span></td><td>XML avec auteur + exécutable</td></tr>
+          <tr><td><strong class="blue">Drivers</strong></td><td>Dossier <span class="hex">drivers\</span> · enum PnP</td><td>Signatures à vérifier</td></tr>
+          <tr><td><strong class="orange">WMI</strong></td><td><span class="hex">WMI Event Subscriptions</span></td><td>Persistance fileless · difficile</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SHELLBAGS -->
+  <div class="section" id="shellbags">
+    <div class="section-title">⑬ ShellBags — navigation utilisateur</div>
+
+    <div class="card card-cyan">
+      <div class="card-title">📁 Ce que prouvent les ShellBags</div>
+      <ul>
+        <li>quels dossiers ont été <strong>ouverts</strong> via l'explorateur Windows</li>
+        <li>même si ces dossiers <strong class="red">n'existent plus</strong></li>
+        <li>même sur des <strong class="gold">clés USB débranchées</strong></li>
+      </ul>
+      <p style="margin-top:.4rem">Ils permettent une <strong>reconstruction comportementale</strong> de l'utilisateur,
+      particulièrement utile en audience pour réfuter l'argument <em>« je ne savais pas que ce dossier existait »</em>.</p>
+      <p style="margin-top:.3rem">👉 Fiche dédiée : <a href="shellbags.html" style="color:var(--cyan)"><strong>ShellBags</strong></a></p>
+    </div>
+  </div>
+
+  <!-- MÉTHODOLOGIE -->
+  <div class="section" id="methodologie">
+    <div class="section-title">⑭ Méthodologie recommandée</div>
+
+    <div class="steps">
+      <div class="step"><div class="step-num sn">1</div><div class="step-text"><strong>Identifier les artefacts pertinents.</strong> Quelle hypothèse d'enquête ? Quels artefacts y répondent ?</div></div>
+      <div class="step"><div class="step-num sn">2</div><div class="step-text"><strong>Extraire sans modifier.</strong> Toujours sur copie forensique · write-blocker · hash MD5/SHA-256 avant/après.</div></div>
+      <div class="step"><div class="step-num sn">3</div><div class="step-text"><strong>Corréler entre sources.</strong> Registre + .evtx + $MFT + Prefetch = faisceau d'indices concordants.</div></div>
+      <div class="step"><div class="step-num sn-g">4</div><div class="step-text"><strong>Construire une chronologie.</strong> Timeline Explorer · log2timeline · Plaso · Timesketch.</div></div>
+      <div class="step"><div class="step-num sn">5</div><div class="step-text"><strong>Vérifier les incohérences.</strong> Timestomping sur $SI ? Journal effacé (Event 1102) ? Prefetch manquant ?</div></div>
+      <div class="step"><div class="step-num sn-g">6</div><div class="step-text"><strong>Documenter chaque étape.</strong> Commandes exactes · hashs · versions d'outils · captures d'écran.</div></div>
+    </div>
+  </div>
+
+  <!-- JUSTICE -->
+  <div class="section" id="justice">
+    <div class="section-title">⑮ Ce que la justice attend de l'analyste</div>
+
+    <div class="card card-purple">
+      <div class="card-title">⚖️ Les 4 questions du magistrat</div>
+      <ol style="padding-left:1.2rem">
+        <li><strong class="cyan">D'où vient l'information ?</strong> — source, emplacement, ruche, fichier</li>
+        <li><strong class="cyan">Comment a-t-elle été obtenue ?</strong> — outil, commande, date</li>
+        <li><strong class="cyan">Pourquoi est-elle fiable ?</strong> — hash, reproductibilité, doc technique</li>
+        <li><strong class="cyan">Comment s'insère-t-elle dans le dossier ?</strong> — corrélation, chronologie</li>
+      </ol>
+    </div>
+
+    <div class="alert" style="margin-top:.75rem">
+      🚨 <strong>Règle d'or :</strong> si l'analyse ne peut pas être expliquée simplement,
+      elle est <strong>juridiquement fragile</strong>. Le détail technique est un outil, pas une fin.
+    </div>
+  </div>
+
+  <!-- CONCLUSION -->
+  <div class="section">
+    <div class="section-title">⑯ Conclusion opérationnelle</div>
+
+    <div class="card card-cyan">
+      <p style="font-size:.85rem;line-height:1.75">
+        L'analyste forensique Windows n'est pas un simple technicien. Il est un
+        <strong class="cyan">interprète de la mémoire du système</strong>. Son rôle :
+        <strong class="green">préserver</strong> la preuve ·
+        <strong class="gold">reconstruire</strong> les faits ·
+        <strong class="purple">présenter</strong> une vérité technique claire, cohérente et défendable.
+      </p>
+      <p style="font-size:.85rem;line-height:1.75;margin-top:.5rem">
+        <em>La forensique Windows ne révèle pas des fichiers.</em>
+        <strong class="cyan">Elle révèle des comportements.</strong>
+      </p>
+    </div>
+  </div>
+
+  <!-- EXAM -->
+  <div class="section" style="margin-top:2rem">
+    <div class="section-title">⚖️ Examen CAS-IN — à retenir</div>
+    <div class="card card-purple">
+      <p style="font-size:.78rem;line-height:1.75">
+        <strong class="red">Un artefact isolé ≠ une preuve</strong> · la preuve naît de la <strong class="cyan">corrélation</strong> ·
+        toujours travailler sur <strong>copie forensique</strong> · 4 exigences : copie · traçabilité · reproductibilité · intelligibilité ·
+        5 familles d'artefacts : FS · Registre · Journaux · Caches · Applicatifs ·
+        6 ruches clés : <span class="hex">SYSTEM · SOFTWARE · SAM · SECURITY · NTUSER.DAT · USRCLASS.DAT</span> ·
+        Utilisateur identifié par <strong class="green">SID</strong> (pas le nom) · RID 500 = Admin · 1000+ = users ·
+        Prouver l'exécution : <strong class="cyan">Prefetch</strong> + <strong class="cyan">UserAssist</strong> + <strong class="cyan">Amcache/ShimCache</strong> ·
+        Fichiers consultés : LNK · MRU · Jump Lists · Corbeille par SID (<span class="hex">$I</span> metadata + <span class="hex">$R</span> contenu) ·
+        USB : <span class="hex">USBSTOR</span> · <span class="hex">setupapi.dev.log</span> · Thumbcache survit à la suppression ·
+        5 zones de persistance : Run Keys · Services · Scheduled Tasks · Drivers · WMI ·
+        ShellBags = navigation GUI · <strong class="red">si l'analyse ne s'explique pas simplement, elle est juridiquement fragile</strong>.
+      </p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+    <span>Guide opérationnel Windows Forensics</span>
+  </div>
+
+</div>
+
+<button class="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Retour en haut">↑</button>
+<script>
+  const bt = document.querySelector('.back-top');
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 400) bt.classList.add('visible');
+    else bt.classList.remove('visible');
+  });
+</script>
+
+</body>
+</html>
