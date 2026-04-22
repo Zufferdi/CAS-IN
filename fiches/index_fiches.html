@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fiches DFIR — CAS-IN Investigation Numérique</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+  /* ── Styles spécifiques à la page index ── */
+  .stats-bar {
+    display: flex; gap: 1.5rem; flex-wrap: wrap;
+    padding: 1rem 1.25rem; margin: 1rem 0 1.5rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .stat { display: flex; flex-direction: column; }
+  .stat-num {
+    font-family: var(--sans); font-size: 1.5rem; font-weight: 800;
+    color: var(--cyan); line-height: 1;
+  }
+  .stat-label {
+    font-size: .65rem; color: var(--dim); letter-spacing: .08em;
+    text-transform: uppercase; margin-top: .2rem;
+  }
+
+  .search-bar {
+    width: 100%; padding: .6rem .9rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text);
+    font-family: var(--mono); font-size: .85rem;
+    margin-bottom: 1.5rem; outline: none;
+    transition: border-color .15s;
+  }
+  .search-bar:focus { border-color: var(--cyan); }
+  .search-bar::placeholder { color: var(--dim); }
+
+  .cat-header {
+    display: flex; align-items: center; gap: .75rem;
+    margin: 1.5rem 0 .75rem; padding-bottom: .4rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .cat-header-icon { font-size: 1.4rem; }
+  .cat-header-title {
+    font-family: var(--sans); font-size: 1rem; font-weight: 700;
+    color: var(--text); letter-spacing: -.3px;
+  }
+  .cat-header-count {
+    font-family: var(--mono); font-size: .7rem; color: var(--dim);
+    padding: .15rem .5rem; border: 1px solid var(--border);
+    border-radius: 12px; background: var(--surface);
+  }
+
+  .fiche-badge-new {
+    display: inline-block; font-size: .6rem; font-weight: 700;
+    background: rgba(48,232,138,.15); border: 1px solid rgba(48,232,138,.4);
+    color: var(--green); padding: .05rem .4rem; border-radius: 4px;
+    letter-spacing: .05em; margin-left: .3rem;
+    text-transform: uppercase;
+  }
+
+  .empty-state {
+    text-align: center; padding: 3rem 1rem;
+    color: var(--dim); font-size: .85rem;
+  }
+
+  .loading {
+    text-align: center; padding: 3rem 1rem;
+    color: var(--dim); font-family: var(--mono);
+  }
+
+  @keyframes pulse-fade {
+    0%, 100% { opacity: .4; }
+    50% { opacity: 1; }
+  }
+  .loading span { animation: pulse-fade 1.4s infinite; }
+</style>
+</head>
+<body>
+
+<nav class="tn-nav">
+  <a class="tn-back" href="../index.html">← Accueil</a>
+  <span class="tn-title">Fiches de révision</span>
+  <a class="tn-quiz" href="../quiz.html">💊 Quiz →</a>
+</nav>
+
+<div class="page">
+
+  <div class="header">
+    <span class="fs-badge">📂</span>
+    <div>
+      <h1 style="font-family:var(--sans);font-size:1.7rem;font-weight:800;letter-spacing:-.5px;margin-bottom:.25rem">
+        Fiches DFIR
+      </h1>
+      <div class="header-meta" id="header-subtitle">
+        <span class="muted">Chargement…</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques (auto-générées depuis le manifest) -->
+  <div class="stats-bar" id="stats-bar">
+    <!-- rendu dynamiquement -->
+  </div>
+
+  <!-- Recherche -->
+  <input type="text" class="search-bar" id="search"
+         placeholder="🔍 Filtrer les fiches par nom, description ou mot-clé…">
+
+  <!-- Conteneur des catégories -->
+  <div id="categories-container">
+    <div class="loading"><span>Chargement du manifest…</span></div>
+  </div>
+
+  <!-- CTA -->
+  <div class="fiche-cta-section">
+    <div class="fiche-cta-text">Fiches consultées ? Passez à l'entraînement !</div>
+    <div class="fiche-cta-buttons">
+      <a class="fiche-cta-btn fiche-cta-red" href="../quiz.html">💊 Quiz</a>
+      <a class="fiche-cta-btn fiche-cta-orange" href="../tp.html">🧪 Travaux Pratiques</a>
+      <a class="fiche-cta-btn fiche-cta-dim" href="../scene.html">🎭 Scénarios DFIR</a>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+    <span id="footer-version">Généré depuis manifest.json</span>
+  </div>
+
+</div>
+
+<button class="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Retour en haut">↑</button>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   CAS-IN — Générateur d'index dynamique
+   Charge manifest.json, regroupe par catégorie, rend les cartes.
+   Ajoute une nouvelle fiche = ajouter une ligne au manifest.
+   ═══════════════════════════════════════════════════════════════ */
+
+const STATE = {
+  manifest: null,
+  fichesByCategory: new Map(),
+  searchTerm: ''
+};
+
+async function loadManifest() {
+  try {
+    const res = await fetch('manifest.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    STATE.manifest = await res.json();
+    buildIndex();
+  } catch (err) {
+    document.getElementById('categories-container').innerHTML =
+      `<div class="alert">❌ Impossible de charger manifest.json — ${err.message}</div>`;
+  }
+}
+
+function buildIndex() {
+  const { categories, fiches } = STATE.manifest;
+
+  // Regrouper fiches par catégorie (en préservant l'ordre du manifest)
+  STATE.fichesByCategory.clear();
+  for (const cat of categories) STATE.fichesByCategory.set(cat.id, []);
+  for (const fiche of fiches) {
+    if (STATE.fichesByCategory.has(fiche.category)) {
+      STATE.fichesByCategory.get(fiche.category).push(fiche);
+    } else {
+      // Catégorie inconnue — créer un bucket orphelin
+      if (!STATE.fichesByCategory.has('_unknown')) {
+        STATE.fichesByCategory.set('_unknown', []);
+      }
+      STATE.fichesByCategory.get('_unknown').push(fiche);
+    }
+  }
+
+  renderStats();
+  renderHeader();
+  renderCategories();
+  setupSearch();
+}
+
+function renderStats() {
+  const { fiches, categories } = STATE.manifest;
+  const newCount = fiches.filter(f => f.isNew).length;
+  const enrichedCount = fiches.filter(f => f.isEnriched).length;
+
+  const el = document.getElementById('stats-bar');
+  el.innerHTML = `
+    <div class="stat">
+      <span class="stat-num">${fiches.length}</span>
+      <span class="stat-label">fiches</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">${categories.length}</span>
+      <span class="stat-label">catégories</span>
+    </div>
+    ${newCount > 0 ? `
+      <div class="stat">
+        <span class="stat-num green">${newCount}</span>
+        <span class="stat-label">nouvelles</span>
+      </div>` : ''}
+    ${enrichedCount > 0 ? `
+      <div class="stat">
+        <span class="stat-num gold">${enrichedCount}</span>
+        <span class="stat-label">enrichies</span>
+      </div>` : ''}
+  `;
+}
+
+function renderHeader() {
+  const { fiches } = STATE.manifest;
+  document.getElementById('header-subtitle').innerHTML =
+    `<span class="muted">${fiches.length} fiches de référence · Investigation numérique · Droit suisse · CAS-IN 2025–26</span>`;
+
+  if (STATE.manifest.updatedAt) {
+    document.getElementById('footer-version').textContent =
+      `Mis à jour le ${STATE.manifest.updatedAt}`;
+  }
+}
+
+function renderCategories() {
+  const container = document.getElementById('categories-container');
+  const { categories } = STATE.manifest;
+  const term = STATE.searchTerm.toLowerCase().trim();
+
+  let html = '';
+  let anyVisible = false;
+
+  for (const cat of categories) {
+    const catFiches = STATE.fichesByCategory.get(cat.id) || [];
+
+    // Filtrer selon la recherche
+    const visible = term
+      ? catFiches.filter(f =>
+          f.title.toLowerCase().includes(term) ||
+          f.desc.toLowerCase().includes(term) ||
+          (f.meta || '').toLowerCase().includes(term) ||
+          f.file.toLowerCase().includes(term)
+        )
+      : catFiches;
+
+    if (visible.length === 0) continue;
+    anyVisible = true;
+
+    html += `
+      <div class="cat-header" id="cat-${cat.id}">
+        <span class="cat-header-icon">${cat.icon}</span>
+        <span class="cat-header-title">${cat.title}</span>
+        <span class="cat-header-count">${visible.length} fiche${visible.length > 1 ? 's' : ''}</span>
+      </div>
+      <div class="fiche-grid">
+        ${visible.map(renderFicheCard).join('')}
+      </div>
+    `;
+  }
+
+  // Catégorie orpheline (fiches sans catégorie reconnue)
+  const orphans = STATE.fichesByCategory.get('_unknown');
+  if (orphans && orphans.length > 0) {
+    const visible = term
+      ? orphans.filter(f =>
+          f.title.toLowerCase().includes(term) ||
+          f.desc.toLowerCase().includes(term))
+      : orphans;
+    if (visible.length > 0) {
+      anyVisible = true;
+      html += `
+        <div class="cat-header">
+          <span class="cat-header-icon">❓</span>
+          <span class="cat-header-title">Non catégorisées</span>
+          <span class="cat-header-count">${visible.length}</span>
+        </div>
+        <div class="fiche-grid">
+          ${visible.map(renderFicheCard).join('')}
+        </div>
+      `;
+    }
+  }
+
+  if (!anyVisible) {
+    html = `<div class="empty-state">Aucune fiche ne correspond à « ${escapeHtml(term)} »</div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function renderFicheCard(fiche) {
+  const newBadge  = fiche.isNew       ? '<span class="fiche-badge-new">nouveau</span>' : '';
+  const enrBadge  = fiche.isEnriched  ? '<span class="fiche-badge-new" style="background:rgba(240,192,64,.15);border-color:rgba(240,192,64,.4);color:var(--gold)">enrichi</span>' : '';
+  return `
+    <a class="fiche-card" href="${escapeAttr(fiche.file)}">
+      <div class="fiche-icon">${fiche.icon || '📄'}</div>
+      <div class="fiche-name">${escapeHtml(fiche.title)}${newBadge}${enrBadge}</div>
+      <div class="fiche-desc">${escapeHtml(fiche.desc)}</div>
+      ${fiche.meta ? `<span class="fiche-tag">${escapeHtml(fiche.meta)}</span>` : ''}
+    </a>
+  `;
+}
+
+function setupSearch() {
+  const input = document.getElementById('search');
+  let timer = null;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      STATE.searchTerm = input.value;
+      renderCategories();
+    }, 120);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function escapeAttr(s) {
+  return String(s ?? '').replace(/"/g, '&quot;');
+}
+
+// Bouton retour en haut
+const bt = document.querySelector('.back-top');
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 400) bt.classList.add('visible');
+  else bt.classList.remove('visible');
+});
+
+// Lancement
+loadManifest();
+</script>
+
+</body>
+</html>
