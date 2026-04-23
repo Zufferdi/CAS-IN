@@ -1,6 +1,6 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v13 : fix opérateur (!url.origin → url.origin !==), scene.css retiré (CSS inline), URL scheme guard
-const CACHE_VERSION = 'cas-in-v15';
+// v16 : ajout des 5 modules cas-in-*.js + counts.json + data-count runtime
+const CACHE_VERSION = 'cas-in-v16';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -9,13 +9,24 @@ const STATIC_ASSETS = [
   './scene.html',
   './manifest.json',
   './questions.json',
+  './counts.json',
+  // Styles
+  './style.css',
   './style/style.css',
   './style/tp.css',
   './style/scene.css',
   './style/fiche.css',
   './style/fiche_style.css',
+  // Modules partagés CAS-IN (v2.0)
+  './cas-in-pwa.js',
+  './cas-in-gamify.js',
+  './cas-in-search.js',
+  './cas-in-fiche.js',
+  './cas-in-counts.js',
+  // TP
   './tp/tp-data.js',
   './tp/tp-engine.js',
+  // Fiches
   './fiches/acquisition.html',
   './fiches/anti_forensique.html',
   './fiches/autopsy.html',
@@ -62,7 +73,7 @@ const STATIC_ASSETS = [
 
 // Installation : mise en cache des assets statiques
 self.addEventListener('install', event => {
-  console.log('[SW] Install v' + CACHE_VERSION);
+  console.log('[SW] Install ' + CACHE_VERSION);
   event.waitUntil(
     caches.open(CACHE_VERSION).then(cache => {
       return cache.addAll(STATIC_ASSETS).catch(err => {
@@ -75,7 +86,7 @@ self.addEventListener('install', event => {
 
 // Activation : nettoyage des anciens caches
 self.addEventListener('activate', event => {
-  console.log('[SW] Activate v' + CACHE_VERSION);
+  console.log('[SW] Activate ' + CACHE_VERSION);
   event.waitUntil(
     caches.keys().then(keys => {
       return Promise.all(
@@ -96,7 +107,7 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(event.request.url);
 
-  // Ignorer les requêtes non-GET et hors origine — OPERATEUR CORRIGÉ (était: !url.origin ===)
+  // Ignorer les requêtes non-GET et hors origine
   if (event.request.method !== 'GET') return;
   if (url.origin !== self.location.origin) return;
 
@@ -105,6 +116,7 @@ self.addEventListener('fetch', event => {
 
   if (isHTML || isJSON) {
     // Network First : toujours essayer le réseau en premier
+    // Important pour counts.json (mis à jour par la CI) et les HTML patchés
     event.respondWith(
       fetch(event.request).then(response => {
         if (response.ok) {
