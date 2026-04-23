@@ -7,7 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#080c14">
-<title>CAS-IN · Scénarios DFIR</title>
+<title>
+<link rel="stylesheet" href="style/casin-shared.css">
+<script src="js/casin-shared.js" defer></script>CAS-IN · Scénarios DFIR</title>
 
 <!-- Premium typography: display serif + grotesk body + technical mono -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2126,6 +2128,10 @@ function addXP(amount) {
   const prev = getXP();
   const next = Math.max(0, prev + amount);
   lsSet('cas_xp', next);
+  // Chantier D : propage à l'XP cross-module
+  if (amount > 0 && window.CASIN) {
+    window.CASIN.xp.add(amount, 'scene');
+  }
   return { prev, next, gradeUp: getGrade(prev).index !== getGrade(next).index };
 }
 
@@ -3108,6 +3114,9 @@ function showReport() {
     lsSet('scene_results', saved);
   }
 
+  // Chantier E : enregistre 1 scène complétée vers le défi quotidien
+  try { if (window.CasIn) window.CasIn.recordDailyProgress('scene', 1); } catch(e){}
+
   // Record daily activity
   const activity = lsGet('cas_activity', []);
   const today = new Date().toISOString().slice(0, 10);
@@ -3681,7 +3690,70 @@ function launchNextScene() {
 window.addEventListener('DOMContentLoaded', () => {
   initLobby();
 });
+
+// Chantier I : raccourcis clavier Scène
+document.addEventListener('keydown', (e) => {
+  if (e.target.matches('input, textarea, [contenteditable]')) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+  // 1-6 : choisir une option
+  if (/^[1-6]$/.test(e.key)) {
+    const choices = document.querySelectorAll('.sc-choice-btn:not(:disabled)');
+    const idx = parseInt(e.key) - 1;
+    if (choices[idx]) {
+      e.preventDefault();
+      choices[idx].click();
+    }
+    return;
+  }
+
+  const k = e.key.toLowerCase();
+  // N ou Entrée ou Espace : étape suivante
+  if (k === 'n' || (k === 'enter' && document.querySelector('.sc-next-btn'))) {
+    const next = document.querySelector('.sc-next-btn');
+    if (next) {
+      e.preventDefault();
+      next.click();
+    }
+    return;
+  }
+  // B ou Échap : retour au lobby
+  if (k === 'b' || k === 'escape') {
+    const back = document.querySelector('.sc-back-btn, .back-btn, .back-briefing-btn');
+    if (back) {
+      e.preventDefault();
+      back.click();
+    }
+    return;
+  }
+  // ? affiche l'aide
+  if (k === '?' || k === '/') {
+    e.preventDefault();
+    _sceneShowKbHelp();
+  }
+});
+
+function _sceneShowKbHelp() {
+  let toast = document.getElementById('_scene-kb-help');
+  if (toast) { toast.remove(); return; }
+  toast = document.createElement('div');
+  toast.id = '_scene-kb-help';
+  toast.setAttribute('role', 'status');
+  toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(13,17,23,.97);border:1px solid var(--cyan,#00e5cc);color:var(--text,#e6edf3);padding:14px 20px;border-radius:10px;font-family:var(--mono,monospace);font-size:13px;line-height:1.7;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,.6);backdrop-filter:blur(8px)';
+  toast.innerHTML = '<strong style="color:var(--cyan,#00e5cc)">⌨️ Raccourcis</strong><br>' +
+    '<kbd>1</kbd>–<kbd>6</kbd> Choisir une option<br>' +
+    '<kbd>N</kbd> ou <kbd>Entrée</kbd> Étape suivante<br>' +
+    '<kbd>B</kbd> ou <kbd>Échap</kbd> Retour<br>' +
+    '<kbd>?</kbd> Afficher/cacher cette aide';
+  toast.onclick = () => toast.remove();
+  document.body.appendChild(toast);
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 6000);
+}
 </script>
 </main>
+<script src="cas-in-gamify.js" defer></script>
+<script src="cas-in-search.js" defer></script>
+<script src="cas-in-counts.js" defer></script>
+<script src="cas-in-pwa.js" defer></script>
 </body>
 </html>
