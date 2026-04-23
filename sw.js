@@ -1,6 +1,6 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v13 : fix opérateur (!url.origin → url.origin !==), scene.css retiré (CSS inline), URL scheme guard
-const CACHE_VERSION = 'cas-in-v15';
+// v16 : ajout style/landing.css + js/landing.js + counts.json (Étape 2)
+const CACHE_VERSION = 'cas-in-v16';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -9,13 +9,20 @@ const STATIC_ASSETS = [
   './scene.html',
   './manifest.json',
   './questions.json',
+  './counts.json',
+  // Styles
+  './style/landing.css',
   './style/style.css',
   './style/tp.css',
   './style/scene.css',
   './style/fiche.css',
   './style/fiche_style.css',
+  // Scripts
+  './js/landing.js',
+  // TP
   './tp/tp-data.js',
   './tp/tp-engine.js',
+  // Fiches
   './fiches/acquisition.html',
   './fiches/anti_forensique.html',
   './fiches/autopsy.html',
@@ -62,7 +69,7 @@ const STATIC_ASSETS = [
 
 // Installation : mise en cache des assets statiques
 self.addEventListener('install', event => {
-  console.log('[SW] Install v' + CACHE_VERSION);
+  console.log('[SW] Install ' + CACHE_VERSION);
   event.waitUntil(
     caches.open(CACHE_VERSION).then(cache => {
       return cache.addAll(STATIC_ASSETS).catch(err => {
@@ -75,7 +82,7 @@ self.addEventListener('install', event => {
 
 // Activation : nettoyage des anciens caches
 self.addEventListener('activate', event => {
-  console.log('[SW] Activate v' + CACHE_VERSION);
+  console.log('[SW] Activate ' + CACHE_VERSION);
   event.waitUntil(
     caches.keys().then(keys => {
       return Promise.all(
@@ -91,12 +98,10 @@ self.addEventListener('activate', event => {
 
 // Fetch : Network First pour HTML/JSON, Cache First pour CSS/JS
 self.addEventListener('fetch', event => {
-  // Ignorer tout ce qui n'est pas http(s) — bloque chrome-extension://
   if (!event.request.url.startsWith('http')) return;
 
   const url = new URL(event.request.url);
 
-  // Ignorer les requêtes non-GET et hors origine — OPERATEUR CORRIGÉ (était: !url.origin ===)
   if (event.request.method !== 'GET') return;
   if (url.origin !== self.location.origin) return;
 
