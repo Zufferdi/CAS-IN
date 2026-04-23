@@ -1,6 +1,6 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v16 : ajout style/landing.css + js/landing.js + counts.json (Étape 2)
-const CACHE_VERSION = 'cas-in-v16';
+// v17 : ajout js/cas-in-counts.js (Étape 4)
+const CACHE_VERSION = 'cas-in-v17';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -19,6 +19,7 @@ const STATIC_ASSETS = [
   './style/fiche_style.css',
   // Scripts
   './js/landing.js',
+  './js/cas-in-counts.js',
   // TP
   './tp/tp-data.js',
   './tp/tp-engine.js',
