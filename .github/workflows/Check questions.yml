@@ -24,13 +24,18 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # nécessaire pour committer counts.json
+      contents: write
+    # Empêche deux runs du même workflow sur la même branche en parallèle
+    # Les runs en attente sont annulés quand un nouveau arrive
+    concurrency:
+      group: counts-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0  # fetch tout l'historique pour pull/rebase
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -62,22 +67,37 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
-      - name: Generate counts.json
-        run: |
-          python3 scripts/generate_counts.py --pretty
-
-      - name: Commit counts.json if changed
+      # IMPORTANT : on pull AVANT de générer counts.json, pas après
+      # pour que le script travaille sur la dernière version du repo
+      - name: Pull latest changes before generating counts
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
+          git pull --rebase origin ${{ github.ref_name }}
+
+      - name: Generate counts.json
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          python3 scripts/generate_counts.py --pretty
+
+      - name: Commit counts.json if changed (with retry on conflict)
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
           if ! git diff --quiet counts.json; then
             git add counts.json
             git commit -m "chore: auto-update counts.json"
-            # Pull rebase avant push pour éviter les conflits avec les autres workflows
-            git pull --rebase origin ${{ github.ref_name }}
-            git push
-            echo "✓ counts.json mis à jour"
+            # Retry logic : si le push fail, on pull/rebase et on retente
+            for i in 1 2 3; do
+              if git push; then
+                echo "✓ counts.json pushed successfully on attempt $i"
+                exit 0
+              fi
+              echo "Push attempt $i failed, pulling latest..."
+              git pull --rebase origin ${{ github.ref_name }}
+            done
+            echo "❌ Failed to push after 3 attempts"
+            exit 1
           else
             echo "→ counts.json inchangé, rien à committer"
           fi
