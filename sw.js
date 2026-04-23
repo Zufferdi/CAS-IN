@@ -1,6 +1,6 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v18 : rollback des paths pour compat v2.2 (fichiers à la racine)
-const CACHE_VERSION = 'cas-in-v18';
+// v13 : fix opérateur (!url.origin → url.origin !==), scene.css retiré (CSS inline), URL scheme guard
+const CACHE_VERSION = 'cas-in-v15';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -9,24 +9,13 @@ const STATIC_ASSETS = [
   './scene.html',
   './manifest.json',
   './questions.json',
-  './counts.json',
-  // Styles — chemins originaux (racine + style/)
-  './style.css',
   './style/style.css',
   './style/tp.css',
   './style/scene.css',
   './style/fiche.css',
   './style/fiche_style.css',
-  // Modules partagés CAS-IN — à la racine
-  './cas-in-pwa.js',
-  './cas-in-gamify.js',
-  './cas-in-search.js',
-  './cas-in-fiche.js',
-  './cas-in-counts.js',
-  // TP
   './tp/tp-data.js',
   './tp/tp-engine.js',
-  // Fiches
   './fiches/acquisition.html',
   './fiches/anti_forensique.html',
   './fiches/autopsy.html',
@@ -71,8 +60,9 @@ const STATIC_ASSETS = [
   './fiches/sqlite_forensique.html'
 ];
 
+// Installation : mise en cache des assets statiques
 self.addEventListener('install', event => {
-  console.log('[SW] Install ' + CACHE_VERSION);
+  console.log('[SW] Install v' + CACHE_VERSION);
   event.waitUntil(
     caches.open(CACHE_VERSION).then(cache => {
       return cache.addAll(STATIC_ASSETS).catch(err => {
@@ -83,8 +73,9 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
+// Activation : nettoyage des anciens caches
 self.addEventListener('activate', event => {
-  console.log('[SW] Activate ' + CACHE_VERSION);
+  console.log('[SW] Activate v' + CACHE_VERSION);
   event.waitUntil(
     caches.keys().then(keys => {
       return Promise.all(
@@ -98,11 +89,14 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
+// Fetch : Network First pour HTML/JSON, Cache First pour CSS/JS
 self.addEventListener('fetch', event => {
+  // Ignorer tout ce qui n'est pas http(s) — bloque chrome-extension://
   if (!event.request.url.startsWith('http')) return;
 
   const url = new URL(event.request.url);
 
+  // Ignorer les requêtes non-GET et hors origine — OPERATEUR CORRIGÉ (était: !url.origin ===)
   if (event.request.method !== 'GET') return;
   if (url.origin !== self.location.origin) return;
 
@@ -110,6 +104,7 @@ self.addEventListener('fetch', event => {
   const isJSON = url.pathname.endsWith('.json');
 
   if (isHTML || isJSON) {
+    // Network First : toujours essayer le réseau en premier
     event.respondWith(
       fetch(event.request).then(response => {
         if (response.ok) {
@@ -120,6 +115,7 @@ self.addEventListener('fetch', event => {
       }).catch(() => caches.match(event.request))
     );
   } else {
+    // Cache First : CSS, JS, images
     event.respondWith(
       caches.match(event.request).then(cached => {
         return cached || fetch(event.request).then(response => {
