@@ -30,6 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # fetch tout l'historique pour pull/rebase
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -66,13 +67,15 @@ jobs:
           python3 scripts/generate_counts.py --pretty
 
       - name: Commit counts.json if changed
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           if ! git diff --quiet counts.json; then
             git add counts.json
-            git commit -m "chore: auto-update counts.json [skip ci]"
+            git commit -m "chore: auto-update counts.json"
+            # Pull rebase avant push pour éviter les conflits avec les autres workflows
+            git pull --rebase origin ${{ github.ref_name }}
             git push
             echo "✓ counts.json mis à jour"
           else
