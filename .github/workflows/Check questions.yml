@@ -1,0 +1,80 @@
+name: Check questions.json
+
+on:
+  push:
+    paths:
+      - 'questions.json'
+      - 'questions.js'
+      - 'scripts/check_questions.py'
+      - 'scripts/generate_counts.py'
+      - 'fiches/index.html'
+      - 'scene.html'
+      - 'scenes.js'
+      - 'tp.html'
+      - '.github/workflows/check-questions.yml'
+  pull_request:
+    paths:
+      - 'questions.json'
+      - 'questions.js'
+      - 'scripts/check_questions.py'
+      - 'scripts/generate_counts.py'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # nécessaire pour committer counts.json
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run quality checks
+        run: |
+          if [ -f questions.json ]; then
+            python3 scripts/check_questions.py questions.json
+          else
+            python3 scripts/check_questions.py questions.js
+          fi
+
+      - name: Generate cleaned version
+        if: success()
+        run: |
+          if [ -f questions.json ]; then
+            python3 scripts/check_questions.py questions.json --fix --out questions.cleaned.json
+          fi
+        continue-on-error: true
+
+      - name: Upload cleaned artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: questions-cleaned
+          path: questions.cleaned.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Generate counts.json
+        run: |
+          python3 scripts/generate_counts.py --pretty
+
+      - name: Commit counts.json if changed
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          if ! git diff --quiet counts.json; then
+            git add counts.json
+            git commit -m "chore: auto-update counts.json [skip ci]"
+            git push
+            echo "✓ counts.json mis à jour"
+          else
+            echo "→ counts.json inchangé, rien à committer"
+          fi
