@@ -1,6 +1,6 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v17 : refactoring v2.3 — js/ et style/ organisés, landing extraite
-const CACHE_VERSION = 'cas-in-v17';
+// v18 : rollback des paths pour compat v2.2 (fichiers à la racine)
+const CACHE_VERSION = 'cas-in-v18';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -10,20 +10,19 @@ const STATIC_ASSETS = [
   './manifest.json',
   './questions.json',
   './counts.json',
-  // Styles
-  './style/landing.css',
-  './style/quiz.css',
+  // Styles — chemins originaux (racine + style/)
+  './style.css',
+  './style/style.css',
   './style/tp.css',
   './style/scene.css',
   './style/fiche.css',
-  './style/fiche-hub.css',
-  // Modules partagés CAS-IN
-  './js/cas-in-pwa.js',
-  './js/cas-in-gamify.js',
-  './js/cas-in-search.js',
-  './js/cas-in-fiche.js',
-  './js/cas-in-counts.js',
-  './js/landing.js',
+  './style/fiche_style.css',
+  // Modules partagés CAS-IN — à la racine
+  './cas-in-pwa.js',
+  './cas-in-gamify.js',
+  './cas-in-search.js',
+  './cas-in-fiche.js',
+  './cas-in-counts.js',
   // TP
   './tp/tp-data.js',
   './tp/tp-engine.js',
@@ -72,7 +71,6 @@ const STATIC_ASSETS = [
   './fiches/sqlite_forensique.html'
 ];
 
-// Installation : mise en cache des assets statiques
 self.addEventListener('install', event => {
   console.log('[SW] Install ' + CACHE_VERSION);
   event.waitUntil(
@@ -85,7 +83,6 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// Activation : nettoyage des anciens caches
 self.addEventListener('activate', event => {
   console.log('[SW] Activate ' + CACHE_VERSION);
   event.waitUntil(
@@ -101,14 +98,11 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch : Network First pour HTML/JSON, Cache First pour CSS/JS
 self.addEventListener('fetch', event => {
-  // Ignorer tout ce qui n'est pas http(s) — bloque chrome-extension://
   if (!event.request.url.startsWith('http')) return;
 
   const url = new URL(event.request.url);
 
-  // Ignorer les requêtes non-GET et hors origine
   if (event.request.method !== 'GET') return;
   if (url.origin !== self.location.origin) return;
 
@@ -116,8 +110,6 @@ self.addEventListener('fetch', event => {
   const isJSON = url.pathname.endsWith('.json');
 
   if (isHTML || isJSON) {
-    // Network First : toujours essayer le réseau en premier
-    // Important pour counts.json (mis à jour par la CI) et les HTML patchés
     event.respondWith(
       fetch(event.request).then(response => {
         if (response.ok) {
@@ -128,7 +120,6 @@ self.addEventListener('fetch', event => {
       }).catch(() => caches.match(event.request))
     );
   } else {
-    // Cache First : CSS, JS, images
     event.respondWith(
       caches.match(event.request).then(cached => {
         return cached || fetch(event.request).then(response => {
