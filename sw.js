@@ -1,6 +1,6 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v16 : ajout des 5 modules cas-in-*.js + counts.json + data-count runtime
-const CACHE_VERSION = 'cas-in-v16';
+// v17 : refactoring v2.3 — js/ et style/ organisés, landing extraite
+const CACHE_VERSION = 'cas-in-v17';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -11,18 +11,19 @@ const STATIC_ASSETS = [
   './questions.json',
   './counts.json',
   // Styles
-  './style.css',
-  './style/style.css',
+  './style/landing.css',
+  './style/quiz.css',
   './style/tp.css',
   './style/scene.css',
   './style/fiche.css',
-  './style/fiche_style.css',
-  // Modules partagés CAS-IN (v2.0)
-  './cas-in-pwa.js',
-  './cas-in-gamify.js',
-  './cas-in-search.js',
-  './cas-in-fiche.js',
-  './cas-in-counts.js',
+  './style/fiche-hub.css',
+  // Modules partagés CAS-IN
+  './js/cas-in-pwa.js',
+  './js/cas-in-gamify.js',
+  './js/cas-in-search.js',
+  './js/cas-in-fiche.js',
+  './js/cas-in-counts.js',
+  './js/landing.js',
   // TP
   './tp/tp-data.js',
   './tp/tp-engine.js',
