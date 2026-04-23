@@ -6,10 +6,12 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Quiz CAS-IN · Investigation Numérique</title>
+    <title>
+<link rel="stylesheet" href="style/casin-shared.css">
+<script src="js/casin-shared.js" defer></script>Quiz CAS-IN · Investigation Numérique</title>
     <meta name="description" content="Quiz interactif de forensique numérique — OSINT, cryptologie, systèmes de fichiers, droit. Préparez le CAS-IN.">
   <meta property="og:title" content="Quiz CAS-IN · Investigation Numérique">
-  <meta property="og:description" content="1439 questions · 36 chapitres · Gamification forensique — NTFS, FAT, Cryptologie, Droit suisse, OSINT">
+  <meta property="og:description" content="1439 questions · 36 chapitres · Gamification forensique — NTFS, FAT, Cryptologie, Droit suisse, OSINT" data-count-fmt="{questions} questions · 36 chapitres · Gamification forensique — NTFS, FAT, Cryptologie, Droit suisse, OSINT">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://zufferdi.github.io/CAS-IN/quiz.html">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
@@ -1449,6 +1451,10 @@
         const prev = getRank(S.xp);
         S.xp += pts;
         lsSet('xp', S.xp);
+        // Chantier D : propage à l'XP cross-module + daily
+        if (window.CASIN) {
+          window.CASIN.xp.add(pts, 'quiz');
+        }
         const curr = getRank(S.xp);
         updateXpBar();
         updateRankFlavor();
@@ -1853,6 +1859,8 @@
         playSound(ok);
         savePersist();
         saveSession();      // Patch 3 : auto-save à chaque réponse
+        // Chantier E : enregistre 1 question complétée vers le défi quotidien
+        try { if (window.CasIn) window.CasIn.recordDailyProgress('quiz', 1); } catch(e){}
         checkAchievements();
         checkMilestone();
         maybeTriggerMidSession();
@@ -3502,22 +3510,7 @@
         });
       }
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js').then(reg => {
-            reg.addEventListener('updatefound', () => {
-              const nw = reg.installing;
-              nw.addEventListener('statechange', () => {
-                if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-                  showToast('streak-toast', '🔄 Mise à jour disponible — rechargez pour l\'appliquer', 4000);
-                }
-              });
-            });
-          }).catch(() => {});
-        });
-        const _offlineBanner = () => showToast('streak-toast', '📡 Mode hors-ligne actif — questions en cache', 3000);
-        const _onlineBanner = () => showToast('streak-toast', '🌐 Connexion rétablie', 2000);
-        window.addEventListener('offline', _offlineBanner);
-        window.addEventListener('online', _onlineBanner);
+        // Chantier G : registration gérée par cas-in-pwa.js (partagé)
       }
       const GLOSSARY = {
         'MFT': {
@@ -6850,5 +6843,9 @@ async function shareBilanCard() {
   </div>
 </div>
 
+<script src="cas-in-gamify.js" defer></script>
+<script src="cas-in-search.js" defer></script>
+<script src="cas-in-counts.js" defer></script>
+<script src="cas-in-pwa.js" defer></script>
 </body>
 </html>
