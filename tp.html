@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>TP Forensique — CAS-IN</title>
 <link rel="stylesheet" href="style/tp.css">
+<link rel="stylesheet" href="style/casin-shared.css">
+<script src="js/casin-shared.js" defer></script>
 <style>
 /* Chantier 2 : styles navbar unifiée (inline pour ne pas toucher tp.css) */
 .tn-modules { display:flex; gap:4px; margin-left:auto; flex-wrap:wrap }
@@ -86,6 +88,9 @@
 <div class="tp-progress" id="tp-progress">
   <span id="tp-progress-text" aria-live="polite" aria-atomic="true">Sélectionne une catégorie pour commencer</span>
   <span class="tp-score-badge" id="tp-score-badge" aria-live="polite">0 résolus</span>
+  <!-- Chantier F : indicateurs XP + streak -->
+  <span class="tp-streak-badge" id="tp-streak-badge" aria-live="polite" title="Série de bonnes réponses consécutives">🔥 <span id="tp-streak-val">0</span></span>
+  <span class="tp-xp-badge" id="tp-xp-badge" aria-live="polite" title="Points d'expérience cumulés">⚡ <span id="tp-xp-val">0</span> XP</span>
   <button class="btn-new-ex" onclick="newExercise()" aria-label="Générer un nouvel exercice">↻ Nouvel exercice</button>
   <button class="btn-reset-tp" onclick="resetTP()" title="Remettre tous les scores à zéro">⟳ Reset</button>
 </div>
@@ -102,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => { newExercise(); });
 
 function resetTP() {
   if (!confirm('Remettre tous les scores TP à zéro ? (scores, série en cours, meilleure série — tout est effacé)')) return;
-  ['tp_solved','tp_streak','tp_bestStreak'].forEach(k => localStorage.removeItem(k));
+  ['tp_solved','tp_streak','tp_bestStreak','tp_xp'].forEach(k => localStorage.removeItem(k));
   STATE.solved = {};
   STATE.streak = 0;
   STATE.bestStreak = 0;
@@ -110,7 +115,159 @@ function resetTP() {
   updateProgress();
   newExercise();
 }
+
+// Chantier I : raccourcis clavier TP
+document.addEventListener('keydown', (e) => {
+  // Ne pas capter si on tape dans un input/textarea
+  if (e.target.matches('input, textarea, [contenteditable]')) return;
+  // Ne pas capter avec Ctrl/Cmd/Alt pressé
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+  const key = e.key.toLowerCase();
+
+  // N = nouvel exercice
+  if (key === 'n') {
+    e.preventDefault();
+    newExercise();
+    return;
+  }
+  // R = reset (avec confirmation)
+  if (key === 'r' && e.shiftKey) {  // Shift+R pour éviter les conflits
+    e.preventDefault();
+    resetTP();
+    return;
+  }
+  // ? ou / = aide raccourcis
+  if (key === '?' || (key === '/' && !e.shiftKey)) {
+    e.preventDefault();
+    _tpShowKbHelp();
+    return;
+  }
+  // Chiffres 1-9 = changement de catégorie dans l'onglet actif
+  if (/^[1-9]$/.test(e.key)) {
+    const tabs = document.querySelectorAll('.tp-tab');
+    const idx = parseInt(e.key) - 1;
+    if (tabs[idx]) {
+      e.preventDefault();
+      tabs[idx].click();
+    }
+  }
+});
+
+function _tpShowKbHelp() {
+  // Toast simple si pas déjà existant
+  let toast = document.getElementById('_tp-kb-help');
+  if (toast) { toast.remove(); return; }
+  toast = document.createElement('div');
+  toast.id = '_tp-kb-help';
+  toast.setAttribute('role', 'status');
+  toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(13,17,23,.97);border:1px solid var(--cyan,#00e5cc);color:var(--text,#e6edf3);padding:14px 20px;border-radius:10px;font-family:var(--mono,monospace);font-size:13px;line-height:1.7;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,.6);backdrop-filter:blur(8px)';
+  toast.innerHTML = '<strong style="color:var(--cyan,#00e5cc)">⌨️ Raccourcis</strong><br>' +
+    '<kbd>N</kbd> Nouvel exercice<br>' +
+    '<kbd>1</kbd>–<kbd>9</kbd> Changer de catégorie<br>' +
+    '<kbd>Shift+R</kbd> Reset<br>' +
+    '<kbd>?</kbd> Afficher/cacher cette aide';
+  toast.onclick = () => toast.remove();
+  document.body.appendChild(toast);
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 6000);
+}
+
+// ═════ Chantier F : gamification TP ═════
+const TP_XP = { easy: 2, medium: 4, hard: 6, default: 3 };
+
+function getTPXP() { try { return parseInt(localStorage.getItem('tp_xp') || '0', 10); } catch { return 0; } }
+function setTPXP(v) { try { localStorage.setItem('tp_xp', String(v)); } catch {} }
+
+function renderTPXP() {
+  const xp = getTPXP();
+  const streak = (typeof STATE !== 'undefined' && STATE.streak) || 0;
+  const xpEl = document.getElementById('tp-xp-val');
+  const stEl = document.getElementById('tp-streak-val');
+  if (xpEl) xpEl.textContent = xp;
+  if (stEl) stEl.textContent = streak;
+  const sb = document.getElementById('tp-streak-badge');
+  if (sb) sb.classList.toggle('active', streak >= 3);
+}
+
+function hookSolvedSetter() {
+  if (typeof STATE === 'undefined' || !STATE) { setTimeout(hookSolvedSetter, 100); return; }
+  let lastCount = Object.values(STATE.solved || {}).reduce((a,b) => a + (b||0), 0);
+
+  setInterval(() => {
+    if (!STATE || !STATE.solved) return;
+    const now = Object.values(STATE.solved).reduce((a,b) => a + (b||0), 0);
+    if (now > lastCount) {
+      const gained = now - lastCount;
+      lastCount = now;
+      const diff = (STATE.current && STATE.current.diff) || 'default';
+      const pts = TP_XP[diff] || TP_XP.default;
+      const newXp = getTPXP() + pts * gained;
+      setTPXP(newXp);
+      // Chantier D+E : propagation au système unifié
+      if (window.CasIn) {
+        const before = window.CasIn.getRank();
+        const r = window.CasIn.addXP(pts * gained, 'tp');
+        for (let i = 0; i < gained; i++) window.CasIn.recordDailyProgress('tp', 1);
+        if (r.levelUp) _tpShowRankUp(r.newRank);
+      }
+      const badge = document.getElementById('tp-xp-badge');
+      if (badge) { badge.classList.remove('bump'); void badge.offsetWidth; badge.classList.add('bump'); }
+    }
+    renderTPXP();
+  }, 500);
+}
+
+function _tpShowRankUp(rank) {
+  const t = document.createElement('div');
+  t.className = 'tp-rankup-toast';
+  t.textContent = rank.emoji + ' Nouveau rang : ' + rank.name + ' !';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderTPXP();
+  hookSolvedSetter();
+});
 </script>
+
+<style>
+/* Chantier F : styles badges gamification TP */
+.tp-streak-badge, .tp-xp-badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .25rem .7rem; border-radius: 20px;
+  font-size: .72rem; font-weight: 700; font-family: var(--mono);
+  border: 1px solid var(--border); background: var(--surface2);
+  transition: all .18s;
+}
+.tp-streak-badge { color: var(--gold); border-color: rgba(240,192,64,.25) }
+.tp-xp-badge     { color: var(--cyan); border-color: rgba(0,229,204,.25) }
+.tp-streak-badge.active { border-color: var(--gold); background: rgba(240,192,64,.12); animation: streakGlow 1.5s ease-in-out infinite }
+.tp-xp-badge.bump { transform: scale(1.15); border-color: var(--cyan); background: rgba(0,229,204,.12) }
+@keyframes streakGlow {
+  0%,100% { box-shadow: 0 0 0 0 rgba(240,192,64,0); }
+  50%     { box-shadow: 0 0 0 4px rgba(240,192,64,.15); }
+}
+.tp-rankup-toast {
+  position: fixed; top: 1.5rem; left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, rgba(0,229,204,.15), rgba(240,192,64,.1));
+  border: 1px solid var(--cyan); border-radius: 12px;
+  padding: 1rem 1.6rem; font-family: var(--sans); font-weight: 700;
+  color: var(--cyan); z-index: 9999;
+  box-shadow: 0 8px 32px rgba(0,229,204,.3);
+  animation: rankToast 3s ease forwards;
+}
+@keyframes rankToast {
+  0% { opacity: 0; transform: translate(-50%, -16px); }
+  15%,85% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -16px); }
+}
+</style>
 </main>
+<script src="cas-in-gamify.js" defer></script>
+<script src="cas-in-search.js" defer></script>
+<script src="cas-in-counts.js" defer></script>
+<script src="cas-in-pwa.js" defer></script>
 </body>
 </html>
