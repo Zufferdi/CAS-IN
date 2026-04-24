@@ -122,6 +122,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .res-secondary{background:var(--surface);color:var(--muted);border-color:var(--border)}
 .res-secondary:hover{color:var(--text);border-color:var(--muted)}
 
+
+/* ── Wrong review ──────────────────────────────────────────── */
+.wr-item{background:var(--surface);border:1px solid rgba(255,64,96,.2);border-radius:10px;padding:1rem;margin-bottom:.65rem}
+.wr-q{font-size:.82rem;font-weight:600;color:var(--text);margin-bottom:.6rem;line-height:1.4}
+.wr-ans{font-size:.75rem;font-family:var(--mono);padding:.3rem .6rem;border-radius:5px;margin-bottom:.25rem;display:flex;align-items:center;gap:.5rem}
+.wr-ans.wrong{background:rgba(255,64,96,.06);border:1px solid rgba(255,64,96,.2);color:var(--red)}
+.wr-ans.correct{background:rgba(48,232,138,.06);border:1px solid rgba(48,232,138,.2);color:var(--green)}
+.wr-expl{font-size:.72rem;color:var(--muted);margin-top:.5rem;padding:.5rem .65rem;background:rgba(0,229,204,.04);border-radius:5px;border-left:2px solid var(--cyan);line-height:1.5}
+
 /* ── Error screen ──────────────────────────────────────────── */
 .err-wrap{max-width:500px;margin:0 auto;padding:3rem 1.5rem;text-align:center}
 .err-wrap h2{font-size:1.2rem;font-weight:700;margin-bottom:.5rem}
@@ -189,7 +198,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="exam-prog-track"><div class="exam-prog-fill" id="prog-fill" style="width:0%"></div></div>
     </div>
     <div class="exam-qnum" id="qnum">0/0</div>
-    <button class="exam-pause" onclick="togglePause()">⏸ Pause</button>
+    <button class="exam-pause" onclick="togglePause()" title="Esc">⏸ Pause</button>
   </div>
   <div class="exam-body">
     <div id="mod-badge" class="mod-badge"></div>
@@ -232,8 +241,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="res-stat"><div class="rs-val" id="rs-skipped">—</div><div class="rs-lbl">Passées</div></div>
       <div class="res-stat"><div class="rs-val" id="rs-time">—</div><div class="rs-lbl">Temps utilisé</div></div>
     </div>
-    <div class="res-radar"><h3>Radar par module</h3><canvas id="radar-canvas" width="680" height="340"></canvas></div>
+    <div class="res-radar"><h3>Radar par module</h3><canvas id="radar-canvas" style="width:100%;max-width:680px;height:auto;display:block;margin:0 auto"></canvas></div>
     <div class="res-modules"><h3>Score par module</h3><div id="mod-results"></div></div>
+    <!-- Questions incorrectes -->
+    <div id="wrong-review" style="margin-bottom:2rem;display:none">
+      <h3 style="font-size:.82rem;font-weight:600;color:var(--muted);margin-bottom:.75rem;font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em">Questions incorrectes</h3>
+      <div id="wrong-list"></div>
+    </div>
     <div class="res-actions">
       <button class="res-btn res-primary" onclick="restartExam()">↺ Nouvel examen</button>
       <a class="res-btn res-secondary" href="fiches/index.html">📚 Réviser les fiches</a>
@@ -252,6 +266,37 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 </div>
 
 <script>
+
+// ── Raccourcis clavier ────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  // Pendant l'examen
+  if (document.getElementById('s-exam').classList.contains('on')) {
+    // 1-5 : sélectionner une réponse
+    if (e.key >= '1' && e.key <= '5') {
+      const idx = parseInt(e.key) - 1;
+      const btns = document.querySelectorAll('.ans-btn:not(:disabled)');
+      if (btns[idx]) btns[idx].click();
+    }
+    // Espace/Entrée : suivant ou passer
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      const nextBtn = document.getElementById('next-btn');
+      const skipBtn = document.getElementById('skip-btn');
+      if (nextBtn.style.display !== 'none') nextBtn.click();
+      else skipBtn.click();
+    }
+    // Escape : pause
+    if (e.key === 'Escape') { e.preventDefault(); togglePause(); }
+    // F : flag
+    if (e.key === 'f' || e.key === 'F') toggleFlag();
+  }
+  // Pendant la pause
+  if (document.getElementById('pause-overlay').classList.contains('on')) {
+    if (e.key === 'Escape') togglePause();
+  }
+});
+
 // ── Module map ───────────────────────────────────────────────
 const MOD_MAP = {
   '01':['legal','droit','loi','cpp','lscpt','nlpd','eimp','tor','darkweb','preuve'],
@@ -342,17 +387,26 @@ async function startExam() {
     if (pool.length < 5) pool = allQ; // fallback
   }
 
-  // Proportional sampling by module
+  // Sampling proportionnel par module + complétion jusqu'à cfg.nq
   const modGroups = {};
   pool.forEach(q => { const m = q.module||'??'; if(!modGroups[m]) modGroups[m]=[]; modGroups[m].push(q); });
   const mods = Object.keys(modGroups);
   const perMod = Math.max(1, Math.floor(cfg.nq / mods.length));
   examQ = [];
   mods.forEach(m => {
-    const arr = modGroups[m].sort(() => Math.random()-.5);
+    const arr = [...modGroups[m]].sort(() => Math.random()-.5);
     examQ.push(...arr.slice(0, perMod));
   });
-  examQ = examQ.sort(() => Math.random()-.5).slice(0, cfg.nq);
+  // Fisher-Yates shuffle
+  for (let i=examQ.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[examQ[i],examQ[j]]=[examQ[j],examQ[i]];}
+  examQ = examQ.slice(0, cfg.nq);
+  // Compléter jusqu'à cfg.nq si déficit
+  if (examQ.length < cfg.nq) {
+    const used = new Set(examQ);
+    const extra = pool.filter(q=>!used.has(q)).sort(()=>Math.random()-.5);
+    examQ.push(...extra.slice(0, cfg.nq - examQ.length));
+    for (let i=examQ.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[examQ[i],examQ[j]]=[examQ[j],examQ[i]];}
+  }
 
   answered = new Array(examQ.length).fill(null);
   flagged.clear();
@@ -463,6 +517,7 @@ function finishExam() {
   const wrong = answered.filter((a,i) => a !== null && a !== -1 && a !== examQ[i].correct).length;
   const skipped = answered.filter(a => a === null || a === -1).length;
   const total = examQ.length;
+  if (!total) { showScreen('s-cfg'); return; } // guard division par zéro
   const pct = Math.round(correct/total*100);
 
   document.getElementById('res-score').textContent = pct+'%';
@@ -508,17 +563,42 @@ function finishExam() {
     localStorage.setItem('casIn_examHistory', JSON.stringify(history.slice(0,20)));
   } catch(e){}
 
+  // Afficher les questions incorrectes
+  const wrongList = document.getElementById('wrong-list');
+  const wrongReview = document.getElementById('wrong-review');
+  const wrongs = examQ.map((q,i)=>({q,i,a:answered[i]}))
+    .filter(({q,i,a})=> a !== null && a !== -1 && a !== q.correct);
+  if (wrongs.length > 0) {
+    wrongList.innerHTML = wrongs.slice(0,10).map(({q,a}) => `
+      <div class="wr-item">
+        <div class="wr-q">${q.question}</div>
+        <div class="wr-ans wrong">✗ Votre réponse : ${q.answers[a]||'—'}</div>
+        <div class="wr-ans correct">✓ Bonne réponse : ${q.answers[q.correct]||'—'}</div>
+        ${q.explanation?`<div class="wr-expl">💡 ${q.explanation}</div>`:''}
+      </div>`).join('');
+    wrongReview.style.display = 'block';
+    if (wrongs.length > 10) wrongList.innerHTML += `<div style="font-size:.72rem;color:var(--dim);text-align:center;padding:.5rem">… et ${wrongs.length-10} autres questions incorrectes</div>`;
+  } else {
+    wrongReview.style.display = 'none';
+  }
   showScreen('s-res');
 }
 
 function drawRadar(modStats) {
   const canvas = document.getElementById('radar-canvas');
+  // Canvas responsive
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W = Math.round((rect.width || 680) * dpr);
+  const H = Math.round((rect.width || 680) * 0.5 * dpr);
+  canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  const cx = W/2, cy = H/2, r = Math.min(W,H)*0.35;
-  ctx.clearRect(0,0,W,H);
+  ctx.scale(dpr, dpr);
+  const cW = W/dpr, cH = H/dpr;
+  const cx = cW/2, cy = cH/2, r = Math.min(cW, cH)*0.35;
+  ctx.clearRect(0,0,cW,cH);
 
-  const entries = Object.entries(modStats);
+  const entries = Object.entries(modStats).sort((a,b)=>a[0].localeCompare(b[0]));
   const n = entries.length;
   if (n < 3) return;
 
@@ -562,7 +642,8 @@ function drawRadar(modStats) {
     const x=cx+Math.cos(angles[i])*r*f, y=cy+Math.sin(angles[i])*r*f;
     ctx.beginPath();
     ctx.arc(x,y,5,0,Math.PI*2);
-    ctx.fillStyle='#00e5cc';
+    const pctPt = s.t > 0 ? s.c/s.t : 0;
+    ctx.fillStyle = pctPt >= .75 ? '#30e88a' : pctPt >= .5 ? '#f0c040' : '#ff4060';
     ctx.fill();
 
     const lx=cx+Math.cos(angles[i])*(r+22), ly=cy+Math.sin(angles[i])*(r+22);
