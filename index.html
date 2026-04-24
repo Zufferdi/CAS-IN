@@ -84,6 +84,7 @@
   </div>
 
   <button id="zen-btn" onclick="toggleZen()" title="Masquer la pluie">◐ ZEN</button>
+  <button id="gear-btn" onclick="toggleDrawer()" title="Profil &amp; Réglages">⚙ PROFIL</button>
 
   <div id="pwa-banner">
     📱 Installer CAS-IN sur votre écran d'accueil
@@ -101,6 +102,246 @@
 <script src="js/cas-in-pwa.js" defer></script>
 <script src="js/cas-in-search.js" defer></script>
 <script src="js/landing.js" defer></script>
+
+
+<div id="drawer-overlay" onclick="closeDrawer()"></div>
+<div id="drawer-panel">
+  <div class="dr-head">
+    <span>⚙ PROFIL &amp; RÉGLAGES</span>
+    <button class="dr-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="dr-body">
+
+    <div class="dr-rank">
+      <div class="dr-rank-emoji" id="dr-emoji">🔰</div>
+      <div class="dr-rank-name" id="dr-rname">Stagiaire</div>
+      <div class="dr-rank-xp" id="dr-xp">0 XP</div>
+      <div class="dr-xp-track"><div class="dr-xp-fill" id="dr-xp-fill" style="width:0%"></div></div>
+      <div class="dr-xp-next" id="dr-xp-next">→ Prochain rang : 500 XP</div>
+    </div>
+
+    <div class="dr-stats">
+      <div class="dr-stat"><span class="dr-sv" id="dr-sq">0</span><span class="dr-sl">Questions</span></div>
+      <div class="dr-stat"><span class="dr-sv" id="dr-sf">0</span><span class="dr-sl">Fiches lues</span></div>
+      <div class="dr-stat"><span class="dr-sv" id="dr-se">0</span><span class="dr-sl">Examens</span></div>
+      <div class="dr-stat"><span class="dr-sv" id="dr-ss">0</span><span class="dr-sl">🔥 Série</span></div>
+    </div>
+
+    <div class="dr-sttl">PERFORMANCE PAR MODULE</div>
+    <canvas id="dr-radar" width="296" height="186"></canvas>
+
+    <div class="dr-sttl">FICHES LUES PAR MODULE</div>
+    <div id="dr-modbars"></div>
+
+    <div class="dr-sttl">DERNIERS EXAMENS BLANCS <a href="tp.html#exam" class="dr-link">→ En faire un</a></div>
+    <div id="dr-exams"></div>
+
+    <div class="dr-sttl">RÉGLAGES</div>
+    <button class="dr-reset" onclick="drReset()">↺ Réinitialiser toute la progression</button>
+
+  </div>
+</div>
+
+<style>
+/* ── Gear button — même style que zen-btn ─────────────────── */
+#gear-btn{
+  background:none;border:1px solid rgba(0,255,65,.15);border-radius:20px;
+  color:rgba(0,255,65,.35);font-family:'Share Tech Mono',monospace;
+  font-size:.56rem;letter-spacing:.1em;padding:.22rem .65rem;
+  cursor:pointer;transition:.2s;margin-top:-.15rem;margin-left:.4rem;
+}
+#gear-btn:hover,#gear-btn.open{
+  color:rgba(0,255,65,.9);border-color:rgba(0,255,65,.5);
+  background:rgba(0,255,65,.06);
+}
+
+/* ── Overlay ──────────────────────────────────────────────── */
+#drawer-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;
+  opacity:0;pointer-events:none;transition:opacity .25s;
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+}
+#drawer-overlay.open{opacity:1;pointer-events:all}
+
+/* ── Drawer panel — Matrix theme ──────────────────────────── */
+#drawer-panel{
+  position:fixed;top:0;right:0;bottom:0;width:320px;max-width:95vw;
+  background:#000;border-left:1px solid rgba(0,255,65,.18);z-index:301;
+  transform:translateX(105%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;overflow:hidden;
+  font-family:'Share Tech Mono',monospace;
+}
+#drawer-panel.open{transform:translateX(0)}
+
+.dr-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.7rem 1rem;
+  border-bottom:1px solid rgba(0,255,65,.12);
+  background:rgba(0,20,0,.6);flex-shrink:0;
+  font-size:.62rem;letter-spacing:.1em;color:rgba(0,255,65,.7);
+}
+.dr-close{
+  background:none;border:1px solid rgba(0,255,65,.2);color:rgba(0,255,65,.4);
+  width:22px;height:22px;border-radius:4px;cursor:pointer;
+  font-size:.7rem;font-family:inherit;transition:.15s;
+  display:flex;align-items:center;justify-content:center;
+}
+.dr-close:hover{border-color:rgba(255,64,60,.6);color:rgba(255,64,60,.8)}
+
+.dr-body{
+  flex:1;overflow-y:auto;padding:.85rem .9rem;
+  display:flex;flex-direction:column;gap:.75rem;
+  background:rgba(0,8,0,.85);
+}
+.dr-body::-webkit-scrollbar{width:3px}
+.dr-body::-webkit-scrollbar-track{background:transparent}
+.dr-body::-webkit-scrollbar-thumb{background:rgba(0,255,65,.2);border-radius:3px}
+
+/* Rank */
+.dr-rank{
+  border:1px solid rgba(0,255,65,.12);border-radius:8px;
+  padding:.85rem;text-align:center;background:rgba(0,20,0,.5);
+}
+.dr-rank-emoji{font-size:1.8rem;margin-bottom:.25rem}
+.dr-rank-name{font-family:'Syne',monospace;font-weight:800;font-size:.95rem;color:#00ff41;margin-bottom:.1rem}
+.dr-rank-xp{font-size:.65rem;color:rgba(0,255,65,.6);margin-bottom:.45rem}
+.dr-xp-track{height:3px;background:rgba(0,255,65,.1);border-radius:3px;overflow:hidden;margin-bottom:.25rem}
+.dr-xp-fill{height:100%;background:#00ff41;border-radius:3px;box-shadow:0 0 6px rgba(0,255,65,.6);transition:width .5s}
+.dr-xp-next{font-size:.55rem;color:rgba(0,255,65,.35)}
+
+/* Stats */
+.dr-stats{display:grid;grid-template-columns:1fr 1fr;gap:.4rem}
+.dr-stat{
+  border:1px solid rgba(0,255,65,.1);border-radius:6px;
+  padding:.55rem .65rem;text-align:center;background:rgba(0,15,0,.5);
+}
+.dr-sv{display:block;font-family:'Syne',monospace;font-size:1.2rem;font-weight:800;color:#00ff41;line-height:1;text-shadow:0 0 8px rgba(0,255,65,.5)}
+.dr-sl{display:block;font-size:.52rem;color:rgba(0,255,65,.4);margin-top:.18rem;text-transform:uppercase;letter-spacing:.05em}
+
+/* Section titles */
+.dr-sttl{
+  font-size:.52rem;color:rgba(0,255,65,.35);letter-spacing:.1em;
+  text-transform:uppercase;padding-bottom:.3rem;
+  border-bottom:1px solid rgba(0,255,65,.08);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.dr-link{color:rgba(0,255,65,.6);text-decoration:none;font-size:.5rem}
+.dr-link:hover{color:#00ff41}
+
+/* Radar */
+#dr-radar{width:100%;display:block;opacity:.9}
+
+/* Module bars */
+.dr-mb{display:flex;align-items:center;gap:.45rem;margin-bottom:.3rem}
+.dr-mb-n{font-size:.6rem;color:rgba(0,255,65,.55);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dr-mb-t{width:60px;height:3px;background:rgba(0,255,65,.1);border-radius:3px;overflow:hidden;flex-shrink:0}
+.dr-mb-f{height:100%;border-radius:3px}
+.dr-mb-p{font-size:.55rem;width:26px;text-align:right;flex-shrink:0}
+
+/* Exam history */
+.dr-eh{display:flex;align-items:center;gap:.45rem;padding:.3rem 0;border-bottom:1px solid rgba(0,255,65,.06)}
+.dr-eh:last-child{border-bottom:none}
+.dr-eh-d{font-size:.55rem;color:rgba(0,255,65,.35);width:70px;flex-shrink:0}
+.dr-eh-s{font-size:.7rem;font-weight:700;width:35px;flex-shrink:0}
+.dr-eh-b{flex:1;height:3px;background:rgba(0,255,65,.1);border-radius:3px;overflow:hidden}
+.dr-eh-f{height:100%;border-radius:3px}
+
+/* Reset */
+.dr-reset{
+  width:100%;background:rgba(255,0,0,.05);
+  border:1px solid rgba(255,64,60,.2);color:rgba(255,64,60,.6);
+  font-family:'Share Tech Mono',monospace;font-size:.6rem;letter-spacing:.06em;
+  padding:.45rem;border-radius:6px;cursor:pointer;transition:.15s;text-transform:uppercase;
+}
+.dr-reset:hover{background:rgba(255,0,0,.1);border-color:rgba(255,64,60,.45);color:rgba(255,64,60,.9)}
+</style>
+
+<script>
+(function(){
+const RANKS=[[0,'🔰','Stagiaire'],[500,'🕵','Enquêteur'],[1500,'🔬','Analyste'],[3000,'💼','Expert'],[6000,'⚖️','Légiste'],[10000,'🏛','Inspecteur Principal']];
+const MOD_L={'01':'⚖️ Légal','02':'📥 Méthodo','03':'💾 Fichiers','04':'🪟 Windows','05':'💻 Systèmes','06':'📡 Réseaux','07':'🔐 Crypto','08':'🛠 Outils'};
+const MOD_F={'01':['droit','suisse','preuve','eimp_entraide','tor_darkweb','lscpt','nldp'],'02':['methodologie','premier_intervenant','acquisition','ram_forensique','formats','mac_times','timeline','rapport_forensique','incident_response'],'03':['comparaison_fs','fat16','fat12','exfat','ntfs','ext','hfs','apfs','refs','f2fs'],'04':['windows_forensique','windows','registre_windows','logs_windows','shellbags','volatilite','active_directory','usb_forensique','wsl_forensique'],'05':['macos-linux','mobile','cloud_forensique','disques','encodage','iot_forensique','vm_forensique','vehicules_forensique'],'06':['reseau','wireshark_pcap','email_forensique','messagerie_im','dns_forensique','siem_logs'],'07':['crypto','pki_certificats','cassage_mdp','chiffrement_volumes','anti_forensique','malware_forensique','ransomware_forensique','cryptomonnaies','hash','steganographie'],'08':['outils','autopsy','zimmerman','browser_forensique','osint','sqlite_forensique','kape_velociraptor']};
+
+const G='rgba(0,255,65,',G2='rgba(0,200,50,';
+function gl(k,d){try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}}
+function getRank(xp){let r=RANKS[0];for(const[x,e,n]of RANKS)if(xp>=x)r=[x,e,n];return r;}
+function getNext(xp){return RANKS.find(([x])=>x>xp)||[xp+1000,'',''];}
+
+function drLoad(){
+  const q=gl('casIn_stats',{xp:0,total:0,streak:0});
+  const f=gl('casIn_readFiches_v4',[]);
+  const e=gl('casIn_examHistory',[]);
+  const xp=q.xp||0;
+  const[,re,rn]=getRank(xp);
+  const[nx]=getNext(xp);
+  const prev=RANKS.filter(([x])=>x<=xp).pop()?.[0]||0;
+  const pct=Math.min(100,nx>prev?Math.round((xp-prev)/(nx-prev)*100):100);
+
+  document.getElementById('dr-emoji').textContent=re;
+  document.getElementById('dr-rname').textContent=rn;
+  document.getElementById('dr-xp').textContent=xp.toLocaleString()+' XP';
+  document.getElementById('dr-xp-fill').style.width=pct+'%';
+  document.getElementById('dr-xp-next').textContent='→ Prochain rang : '+nx.toLocaleString()+' XP';
+  document.getElementById('dr-sq').textContent=(q.total||0).toLocaleString();
+  document.getElementById('dr-sf').textContent=f.length;
+  document.getElementById('dr-se').textContent=e.length;
+  document.getElementById('dr-ss').textContent=q.streak||0;
+
+  // Module bars
+  const rs=new Set(f.map(h=>h.replace('.html','')));
+  document.getElementById('dr-modbars').innerHTML=Object.entries(MOD_F).map(([m,arr])=>{
+    const r=arr.filter(x=>rs.has(x)).length,p=Math.round(r/arr.length*100);
+    const c=p>=80?'#00ff41':p>=50?'#ffbd2e':'rgba(0,255,65,.45)';
+    return`<div class="dr-mb"><div class="dr-mb-n">${MOD_L[m]}</div><div class="dr-mb-t"><div class="dr-mb-f" style="width:${p}%;background:${c}"></div></div><div class="dr-mb-p" style="color:${c}">${p}%</div></div>`;
+  }).join('');
+
+  // Exams
+  const exEl=document.getElementById('dr-exams');
+  if(!e.length){exEl.innerHTML='<span style="font-size:.6rem;color:rgba(0,255,65,.3)">Aucun examen encore → <a href="tp.html#exam" style="color:rgba(0,255,65,.7)">En faire un</a></span>';}
+  else{exEl.innerHTML=e.slice(0,5).map(ex=>{
+    const d=new Date(ex.date).toLocaleDateString('fr',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const c=ex.score>=75?'#00ff41':ex.score>=60?'#ffbd2e':'#ff4040';
+    return`<div class="dr-eh"><div class="dr-eh-d">${d}</div><div class="dr-eh-s" style="color:${c}">${ex.score}%</div><div class="dr-eh-b"><div class="dr-eh-f" style="width:${ex.score}%;background:${c}"></div></div></div>`;
+  }).join('');}
+
+  drRadar(e);
+}
+
+function drRadar(exams){
+  const cv=document.getElementById('dr-radar'),ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height,cx=W/2,cy=H/2,r=Math.min(W,H)*.34;
+  ctx.clearRect(0,0,W,H);
+  const ms={};
+  exams.forEach(ex=>{if(!ex.modStats)return;Object.entries(ex.modStats).forEach(([m,s])=>{if(!ms[m])ms[m]={c:0,t:0};ms[m].c+=s.c;ms[m].t+=s.t;});});
+  const ks=Object.keys(MOD_L),n=ks.length;
+  const entries=ks.map(m=>[m,ms[m]?Math.round(ms[m].c/ms[m].t*100):0]);
+  const angles=entries.map((_,i)=>-Math.PI/2+(i/n)*Math.PI*2);
+  [.25,.5,.75,1].forEach(f=>{ctx.beginPath();angles.forEach((a,i)=>{const x=cx+Math.cos(a)*r*f,y=cy+Math.sin(a)*r*f;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.closePath();ctx.strokeStyle='rgba(0,255,65,.08)';ctx.lineWidth=.7;ctx.stroke();});
+  angles.forEach(a=>{ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.strokeStyle='rgba(0,255,65,.06)';ctx.lineWidth=.7;ctx.stroke();});
+  if(!exams.length){ctx.fillStyle='rgba(0,255,65,.3)';ctx.font='9px Share Tech Mono';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('Faites un examen blanc',cx,cy-6);ctx.fillText('pour voir le radar',cx,cy+6);return;}
+  ctx.beginPath();entries.forEach(([m,p],i)=>{const f=p/100,x=cx+Math.cos(angles[i])*r*f,y=cy+Math.sin(angles[i])*r*f;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+  ctx.closePath();ctx.fillStyle='rgba(0,255,65,.1)';ctx.fill();ctx.strokeStyle='#00ff41';ctx.lineWidth=1.2;ctx.stroke();
+  entries.forEach(([m,p],i)=>{const f=p/100,x=cx+Math.cos(angles[i])*r*f,y=cy+Math.sin(angles[i])*r*f;ctx.beginPath();ctx.arc(x,y,2.5,0,Math.PI*2);ctx.fillStyle=p>=75?'#00ff41':p>=50?'#ffbd2e':'#ff4040';ctx.fill();const lx=cx+Math.cos(angles[i])*(r+14),ly=cy+Math.sin(angles[i])*(r+14);ctx.fillStyle='rgba(0,255,65,.5)';ctx.font='8px Share Tech Mono';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText((MOD_L[m]||m).slice(2).trim().slice(0,9),lx,ly);});
+}
+
+window.toggleDrawer=function(){
+  const open=document.getElementById('drawer-panel').classList.toggle('open');
+  document.getElementById('drawer-overlay').classList.toggle('open',open);
+  document.getElementById('gear-btn').classList.toggle('open',open);
+  if(open)drLoad();
+};
+window.closeDrawer=function(){
+  ['drawer-panel','drawer-overlay'].forEach(id=>document.getElementById(id).classList.remove('open'));
+  document.getElementById('gear-btn').classList.remove('open');
+};
+window.drReset=function(){
+  if(!confirm('Réinitialiser TOUTE la progression ?'))return;
+  ['casIn_stats','casIn_readFiches_v4','casIn_examHistory','casIn_scenes_done','tp_solved','tp_streak'].forEach(k=>localStorage.removeItem(k));
+  drLoad();
+};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer();});
+})();
+</script>
 
 </body>
 </html>
