@@ -1,105 +1,191 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>F2FS — Flash-Friendly File System — CAS-IN Forensique</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>F2FS — CAS-IN Forensique</title>
 <link rel="stylesheet" href="../style/fiche_style.css">
 </head>
 <body>
-<a class="skip-link" href="#main-content">Aller au contenu</a>
-<div class="topbar">
-  <a href="index.html">← Fiches</a>
-  <span class="mod-label">Systèmes de Fichiers</span>
-  <a href="../quiz.html">💊 Quiz →</a>
-</div>
-<nav class="breadcrumb">
-  <a href="../index.html">🏠 Accueil</a><span class="sep">›</span>
-  <a href="index.html">Fiches</a><span class="sep">›</span>
-  <a href="index.html#cat-systèmesdefichiers">Systèmes de Fichiers</a><span class="sep">›</span>
-  <span>F2FS</span>
-  <span class="reading-time">⏱ ~3 min</span>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">SYSTÈMES DE FICHIERS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
-<main id="main-content">
-<div class="fiche-hero">
-  <div class="fiche-icon">⚡</div>
-  <div class="fiche-tags"><span class="tag ">F2FS</span><span class="tag green">Android</span><span class="tag yellow">SSD</span><span class="tag ">Samsung</span></div>
-  <h1>F2FS — Flash-Friendly File System</h1>
-  <p class="subtitle">Android natif · Samsung · SSD modernes · Différences forensiques vs EXT4</p>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesdefichiers">Systèmes de Fichiers</a><span class="bc-sep">›</span>
+    <span class="bc-current">F2FS</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~3 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">⚡</span>
+    <span class="tag tag-green" style="margin-left:.5rem">F2FS</span>
+    <span class="tag tag-green" style="margin-left:.3rem">Android</span>
+    <span class="tag tag-gold" style="margin-left:.3rem">SSD</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Samsung</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">F2FS — Flash-Friendly File System</h1>
+    <div class="meta">Android natif · Samsung Galaxy · SSD modernes · Log-structured · Timestamps nanoseconde</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="mobile.html" class="prereq-pill">📖 Mobile Forensics</a><a href="ext.html" class="prereq-pill">📖 EXT2/3/4</a><a href="encodage.html" class="prereq-pill">📖 Encodage</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html" class="tp-pill">🧪 ✨ Magic Bytes</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="mobile.html" class="related-pill">🔗 Mobile Forensics</a><a href="ext.html" class="related-pill">🔗 EXT2/3/4</a><a href="comparaison_fs.html" class="related-pill">🔗 Comparaison FS</a></div>
+  </div>
 </div>
 
-<div class="anecdote">
-  <blockquote>"F2FS was created by Samsung in 2012 specifically for NAND flash storage. It's now the default filesystem on many Android devices — including every Samsung Galaxy since 2018."</blockquote>
-  <cite>— Linux Kernel Documentation · F2FS Design</cite>
-  <div class="fact"><strong>💡 Prévalence forensique :</strong> De nombreux téléphones Android modernes (Samsung Galaxy, certains Xiaomi, Motorola) utilisent F2FS comme FS interne. Un enquêteur mobile qui ne connaît pas F2FS peut passer à côté d'artefacts importants ou mal interpréter des timestamps.</div>
+<div class="page-wrap">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 Pourquoi F2FS est incontournable en forensique mobile</div>
+  F2FS a été créé par Samsung en 2012 spécifiquement pour le stockage NAND flash. C'est aujourd'hui le filesystem par défaut de nombreux appareils Android — dont <strong>tous les Samsung Galaxy depuis 2018</strong>. Un enquêteur mobile qui ne connaît pas F2FS passe à côté d'artefacts importants ou mal interprète des timestamps.
 </div>
 
-<div class="card">
-<h2>📊 F2FS vs EXT4 — Comparaison forensique</h2>
-<div class="table-wrap"><table>
-<tr><th>Aspect</th><th>EXT4</th><th>F2FS</th></tr>
-<tr><td>Conçu pour</td><td>Disques rotatifs HDD</td><td class="cell-blue">Stockage flash NAND</td></tr>
-<tr><td>Inodes</td><td>Table d'inodes fixe</td><td class="cell-yellow">Node Address Table (NAT) dynamique</td></tr>
-<tr><td>Journalisation</td><td>Journal classique</td><td class="cell-yellow">Log-structured (LSM) — copie-sur-écriture</td></tr>
-<tr><td>Timestamps</td><td>32-bit Unix epoch</td><td class="cell-green">Nanosecondes (même précision qu'APFS)</td></tr>
-<tr><td>Récupération fichiers supprimés</td><td>Possible (inodes)</td><td class="cell-red">Très difficile — LFS détruit les pistes</td></tr>
-<tr><td>Support outils forensiques</td><td>Excellent</td><td class="cell-red">Très limité</td></tr>
-<tr><td>Wear leveling</td><td>Non natif</td><td class="cell-green">Optimisé pour NAND (répartit les écritures)</td></tr>
-</table></div>
+<div class="sec-title">📊 F2FS vs EXT4 — Comparaison forensique</div>
+<div class="sec-sub">Comprendre ces différences est critique pour le choix d'outils et la planification d'une extraction Android.</div>
+
+<table>
+  <thead>
+    <tr><th>Aspect</th><th>EXT4</th><th>F2FS</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Conçu pour</td><td>Disques rotatifs HDD</td><td style="color:var(--blue);font-weight:600">Stockage flash NAND</td></tr>
+    <tr><td>Inodes</td><td>Table d'inodes fixe</td><td style="color:var(--gold);font-weight:600">Node Address Table (NAT) dynamique</td></tr>
+    <tr><td>Journalisation</td><td>Journal classique</td><td style="color:var(--gold);font-weight:600">Log-structured (LFS) — copie-sur-écriture</td></tr>
+    <tr><td>Timestamps</td><td>32-bit Unix epoch</td><td style="color:var(--green);font-weight:600">Nanosecondes (précision APFS)</td></tr>
+    <tr><td>Récupération fichiers supprimés</td><td>Possible (inodes)</td><td style="color:var(--red);font-weight:600">Très difficile — LFS détruit les pistes</td></tr>
+    <tr><td>Support outils forensiques</td><td>Excellent</td><td style="color:var(--red);font-weight:600">Très limité</td></tr>
+    <tr><td>Wear leveling</td><td>Non natif</td><td style="color:var(--green);font-weight:600">Optimisé NAND (répartit les écritures)</td></tr>
+    <tr><td>Magic number</td><td><code>0xEF53</code> (offset 1080)</td><td style="color:var(--cyan);font-weight:600"><code>0xF2F52010</code> (offset 1024)</td></tr>
+  </tbody>
+</table>
+
+<div class="sec-title">🏗 Architecture F2FS — Zones du volume</div>
+<div class="sec-sub">Contrairement à EXT4, F2FS organise le disque en segments et écrit toujours en positions libres (Log-Structured File System).</div>
+
+<div class="g2">
+  <div class="card card-cyan">
+    <div class="ct">📦 Zones du volume F2FS</div>
+    <ul>
+      <li><strong>Superblock</strong> : métadonnées du FS — 2 copies pour redondance</li>
+      <li><strong>Checkpoint</strong> : état cohérent du système — 2 copies alternées</li>
+      <li><strong>Segment Info Table (SIT)</strong> : état de chaque segment</li>
+      <li><strong>Node Address Table (NAT)</strong> : localisation des blocs de nœuds</li>
+      <li><strong>SSA (Segment Summary Area)</strong> : résumé des segments actifs</li>
+      <li><strong>Main Area</strong> : données et nœuds entrelacés</li>
+    </ul>
+  </div>
+  <div class="card card-green">
+    <div class="ct">⚡ Caractéristiques clés</div>
+    <ul>
+      <li><strong>Log-Structured</strong> : nouvelles données toujours écrites en position libre</li>
+      <li><strong>Checkpoint</strong> toutes les 30 s — état cohérent récupérable</li>
+      <li><strong>Inline data</strong> : petits fichiers stockés dans le nœud même</li>
+      <li><strong>Pas d'allocation fixe</strong> comme EXT4 → récupération difficile</li>
+      <li><strong>Garbage Collection</strong> : compacte les segments partiellement valides</li>
+    </ul>
+  </div>
 </div>
 
-<div class="card">
-<h2>🏗️ Architecture F2FS</h2>
-<div class="grid-2">
-<div class="grid-card"><h4>Zones du volume</h4><ul>
-<li><strong>Superblock :</strong> Métadonnées du FS (2 copies pour redondance)</li>
-<li><strong>Checkpoint :</strong> État cohérent du système (2 copies alternées)</li>
-<li><strong>Segment Info Table (SIT) :</strong> État de chaque segment</li>
-<li><strong>Node Address Table (NAT) :</strong> Localisation des blocs de noeuds</li>
-<li><strong>SSA (Segment Summary Area) :</strong> Résumé des segments actifs</li>
-<li><strong>Main Area :</strong> Données et noeuds entrelacés</li>
-</ul></div>
-<div class="grid-card"><h4>Caractéristiques clés</h4><ul>
-<li>Log-Structured : nouvelles données toujours écrites en position libre</li>
-<li>Checkpoint toutes les 30s — état cohérent récupérable</li>
-<li>Inline data : petits fichiers stockés dans le noeud même</li>
-<li>Pas d'allocation fixe comme EXT4 → recovery difficile</li>
-</ul></div>
-</div>
+<div class="sec-title">📱 F2FS sur Android — Implications forensiques</div>
+
+<div class="alert">
+  <strong>⚠ Récupération de données supprimées :</strong> sur F2FS, les données supprimées sont rapidement réutilisées par la Garbage Collection ou chiffrées par FBE. La probabilité de récupérer des fichiers supprimés est <strong>significativement plus faible</strong> que sur EXT4.
 </div>
 
-<div class="card">
-<h2>📱 F2FS sur Android — Implications forensiques</h2>
-<div class="callout warn"><span class="callout-icon">⚠️</span>
-<div class="callout-body"><strong>Récupération de données supprimées :</strong> Sur F2FS, les données supprimées sont rapidement réutilisées ou chiffrées par FBE. La probabilité de récupérer des fichiers supprimés est significativement plus faible que sur EXT4.</div></div>
-<ul>
-<li><strong>Samsung Galaxy S8+ / Note / A-series :</strong> F2FS sur la partition /data (userdata)</li>
-<li><strong>Full Disk Encryption (FDE) / File-Based Encryption (FBE) :</strong> Toujours combiné avec F2FS → données chiffrées même avec accès physique</li>
-<li><strong>UFED / Cellebrite :</strong> Support F2FS documenté — extraction logique préférable</li>
-<li><strong>Timestamps :</strong> Précision nanoseconde — fiable pour corrélation temporelle</li>
-<li><strong>Outils :</strong> <code>f2fs-tools</code> sur Linux — <code>dump.f2fs</code> pour analyse de structure</li>
-</ul>
-<div class="callout info"><span class="callout-icon">ℹ️</span>
-<div class="callout-body"><strong>Identifier F2FS :</strong> Magic number = <code>0xF2F52010</code> au début du superblock. Visible dans un éditeur hex à l'offset 1024 du volume.</div></div>
+<div class="memo-list">
+  <ul>
+    <li><strong>Samsung Galaxy S8+ / Note / A-series / S-series récents</strong> : F2FS sur la partition <code>/data</code> (userdata)</li>
+    <li><strong>Full Disk Encryption (FDE) / File-Based Encryption (FBE)</strong> : toujours combiné avec F2FS → données chiffrées même avec accès physique</li>
+    <li><strong>UFED / Cellebrite</strong> : support F2FS documenté — extraction logique préférable</li>
+    <li><strong>Timestamps</strong> : précision nanoseconde — fiable pour corrélation temporelle</li>
+    <li><strong>Outils</strong> : <code>f2fs-tools</code> sur Linux — <code>dump.f2fs</code> pour analyse de structure</li>
+    <li><strong>Xiaomi, Motorola</strong> : certains modèles utilisent aussi F2FS (vérifier par device)</li>
+  </ul>
 </div>
 
-<div class="card">
-<h2>🔍 Analyse pratique</h2>
-<ul>
-<li><strong>Extraction :</strong> Préférer l'extraction logique (UFED) ou le backup ADB plutôt que le chip-off si possible</li>
-<li><strong>Linux mount :</strong> <code>mount -t f2fs /dev/sda /mnt</code> (noyau Linux 3.8+)</li>
-<li><strong>Fsck :</strong> <code>fsck.f2fs /dev/sda</code> — vérification d'intégrité avant montage</li>
-<li><strong>Dump structure :</strong> <code>dump.f2fs -d 1 /dev/sda</code></li>
-<li>Sur Android rooted : accès via ADB shell + <code>dd</code> de la partition /data</li>
-</ul>
+<div class="info">
+  <strong>🔍 Identifier F2FS :</strong> Magic number = <code>0xF2F52010</code> au début du superblock. Visible dans un éditeur hex à l'<strong>offset 1024</strong> du volume.
 </div>
 
-<div class="link-bar"><div class="link-group"><span class="link-group-label">Prérequis&nbsp;:</span><a href="mobile.html">📖 Mobile Forensics</a><a href="ext.html">📖 EXT2/3/4</a><a href="encodage.html">📖 Encodage</a></div><div class="link-group"><span class="link-group-label">Pratiquer&nbsp;:</span><a href="../tp.html">🧪 🧪 ✨ Magic Bytes</a></div><div class="link-group"><span class="link-group-label">Voir aussi&nbsp;:</span><a href="mobile.html">🔗 Mobile Forensics</a><a href="ext.html">🔗 EXT2/3/4</a><a href="comparaison_fs.html">🔗 Comparaison FS</a></div></div>
-<div class="exam-tip"><strong>⚖️ Examen CAS-IN&nbsp;:</strong> F2FS = Flash-Friendly File System · Android natif (Samsung Galaxy, etc.) · Magic bytes = 0xF2F52010 au superblock (offset 1024) · Log-structured = récupération fichiers supprimés très difficile · Timestamps en nanosecondes (haute précision) · Toujours combiné avec FBE sur Android moderne · Outils = f2fs-tools (Linux), dump.f2fs · UFED supporte F2FS</div>
-<footer>
+<div class="sec-title">🔍 Analyse pratique</div>
+
+<div class="steps">
+  <div class="step">
+    <div class="sn">1</div>
+    <div class="st"><strong>Extraction</strong> : préférer l'extraction logique (UFED) ou le backup ADB plutôt que le chip-off quand possible. Le chip-off donne du F2FS brut souvent chiffré.</div>
+  </div>
+  <div class="step">
+    <div class="sn">2</div>
+    <div class="st"><strong>Montage Linux</strong> : <code>mount -t f2fs /dev/sda /mnt</code> — nécessite un noyau Linux 3.8+ (dispos depuis 2013).</div>
+  </div>
+  <div class="step">
+    <div class="sn">3</div>
+    <div class="st"><strong>Vérification intégrité</strong> : <code>fsck.f2fs /dev/sda</code> avant montage read-only.</div>
+  </div>
+  <div class="step">
+    <div class="sn">4</div>
+    <div class="st"><strong>Dump structure</strong> : <code>dump.f2fs -d 1 /dev/sda</code> — révèle superblock, NAT, SIT, checkpoints.</div>
+  </div>
+  <div class="step">
+    <div class="sn">5</div>
+    <div class="st"><strong>Android rooté</strong> : accès via ADB shell + <code>dd</code> de la partition <code>/data</code>.</div>
+  </div>
+</div>
+
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — F2FS</div>
+  <p><strong>Nom complet</strong> : Flash-Friendly File System · Samsung · 2012</p>
+  <p><strong>Android natif</strong> : Samsung Galaxy depuis 2018 (S8+, Note, A-series, S-series)</p>
+  <p><strong>Magic bytes</strong> : <code>0xF2F52010</code> au superblock — offset <strong>1024</strong></p>
+  <p><strong>Log-Structured</strong> : CoW natif → <strong>récupération fichiers supprimés très difficile</strong></p>
+  <p><strong>Timestamps</strong> : nanosecondes (haute précision, équivalent APFS)</p>
+  <p><strong>Toujours combiné</strong> avec FBE sur Android moderne</p>
+  <p><strong>Outils</strong> : <code>f2fs-tools</code> (Linux), <code>dump.f2fs</code> · UFED supporte F2FS</p>
+  <p><strong>Partition Android</strong> : <code>/data</code> (userdata) formatée en F2FS</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Pourquoi la récupération de fichiers supprimés sur F2FS est-elle considérablement plus difficile que sur EXT4 ?<small>F2FS forensique · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">F2FS est <strong>log-structured</strong> : toute modification crée un nouveau bloc en zone libre, et l'ancien bloc est marqué invalide mais <strong>réécrit rapidement par la Garbage Collection</strong> pour libérer des segments entiers. De plus, il n'existe pas de table d'inodes fixe (comme EXT4) — les inodes sont dans la NAT qui suit les écritures. Résultat : les pistes sont rapidement effacées, contrairement à EXT4 où les inodes restent souvent en place avec les pointeurs de blocs. Combiné à FBE (chiffrement par fichier), la récupération devient quasiment impossible sans les clés.</div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un enquêteur saisit un Samsung Galaxy S22. Où se trouve le filesystem F2FS et comment l'identifier ?<small>Android F2FS · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Le F2FS est sur la partition <code>/data</code> (userdata) — la partition qui contient tous les fichiers utilisateur, apps et données applicatives. L'identifier : chercher le magic number <code>0xF2F52010</code> à l'<strong>offset 1024</strong> du volume (avec un éditeur hex ou <code>xxd -s 1024 -l 4</code>). L'autre partition <code>/system</code> est généralement en EXT4 ou EROFS (read-only).</div>
+</div>
+
+<div class="footer">
   <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
-  <span>Linux Kernel F2FS Documentation · Samsung Open Source · f2fs-tools</span>
-</footer>
-</main>
-<button id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
-<script>const b=document.getElementById('scroll-top');window.addEventListener('scroll',()=>b.classList.toggle('visible',window.scrollY>300));</script>
-</body></html>
+  <span>Linux Kernel F2FS Docs · Samsung Open Source · f2fs-tools</span>
+</div>
+
+</div><!-- /page-wrap -->
+
+<script>
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+  document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+      ans.classList.toggle('visible');
+      btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+    });
+  });
+})();
+</script>
+</body>
+</html>
