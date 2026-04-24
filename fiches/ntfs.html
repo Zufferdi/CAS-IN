@@ -5,6 +5,253 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>NTFS — CAS-IN Forensique</title>
 <link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+/* ── GLOBALS ── */
+#scroll-progress{position:fixed;top:0;left:0;z-index:300;height:2px;width:0;background:linear-gradient(90deg,var(--blue),var(--cyan));pointer-events:none}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--border);overflow-x:auto;scrollbar-width:none;background:rgba(13,17,23,.98);position:sticky;top:52px;z-index:90;padding:0 1rem}
+.tabs::-webkit-scrollbar{display:none!important}
+.tab{font-family:var(--mono);font-size:.72rem;padding:.62rem 1.1rem;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--dim);cursor:pointer;transition:color .15s,border-color .15s;margin-bottom:-2px;white-space:nowrap}
+.tab:hover{color:var(--muted)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:700}
+.tab-page{display:none!important;padding:2rem 2rem 3rem;max-width:980px;margin:0 auto;animation:fadeIn .22s ease}
+.tab-page.active{display:block!important}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.page-wrap{max-width:980px;margin:0 auto;padding:1.5rem 2rem .5rem}
+
+/* ── SEC TITLES ── */
+.sec-title{font-family:var(--sans);font-size:.68rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin:1.5rem 0 .75rem;display:flex;align-items:center;gap:.6rem;padding-left:.6rem;border-left:2px solid var(--blue)}
+.sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+.sec-sub{font-size:.74rem;color:var(--dim);margin-bottom:.85rem;line-height:1.55;border-left:2px solid var(--border);padding-left:.75rem;font-style:italic}
+
+/* ═══ TAB 1 — ARCHITECTURE ═════════════════════ */
+
+/* Disk → $Boot → $MFT → Data Area — inspiré du schéma */
+.arch-viz{margin:.75rem 0 1.25rem}
+.arch-disk{background:linear-gradient(135deg,rgba(88,166,255,.1),rgba(88,166,255,.04));border:2px solid rgba(88,166,255,.3);border-radius:14px;padding:1.1rem 1rem .85rem;position:relative}
+.arch-disk-label{font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);text-align:center;margin-bottom:.85rem;opacity:.8}
+.arch-row{display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;margin-bottom:.6rem}
+.arch-zone{flex:1;min-width:110px;padding:.65rem .6rem;border-radius:10px;border:1px solid;text-align:center;cursor:pointer;transition:transform .15s,box-shadow .15s,filter .15s;user-select:none}
+.arch-zone:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,.35);filter:brightness(1.25)}
+.arch-zone.sel{transform:translateY(-3px);filter:brightness(1.4);outline:2px solid white}
+.arch-zone-icon{font-size:1.3rem;display:block!important;margin-bottom:.25rem}
+.arch-zone-name{font-family:var(--mono);font-size:.72rem;font-weight:700;margin-bottom:.18rem}
+.arch-zone-sub{font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3}
+.az-boot  {background:rgba(240,192,64,.1);border-color:rgba(240,192,64,.4);color:var(--gold)}
+.az-mft   {background:rgba(0,229,204,.12);border-color:rgba(0,229,204,.45);color:var(--cyan)}
+.az-mftm  {background:rgba(0,229,204,.06);border-color:rgba(0,229,204,.25);color:var(--cyan)}
+.az-data  {background:rgba(48,232,138,.1);border-color:rgba(48,232,138,.35);color:var(--green);flex:3}
+.az-concept{background:rgba(188,140,255,.08);border-color:rgba(188,140,255,.3);color:var(--purple)}
+
+/* Detail panel */
+.arch-detail{background:var(--surface);border:1px solid rgba(88,166,255,.2);border-radius:10px;padding:1.1rem 1.25rem;min-height:100px;font-size:.79rem;line-height:1.75;color:var(--muted);transition:all .2s;margin:.5rem 0 1rem}
+.arch-detail.live{border-color:rgba(88,166,255,.45);box-shadow:0 4px 20px rgba(88,166,255,.07)}
+.dp-title{font-family:var(--sans);font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.dp-body strong{color:var(--text)}.dp-body code{color:var(--cyan);font-family:var(--mono);font-size:.77rem;background:rgba(0,229,204,.07);border:1px solid rgba(0,229,204,.15);border-radius:3px;padding:.01rem .3rem}
+
+/* Concept "tout est fichier" card */
+.concept-card{background:linear-gradient(135deg,rgba(188,140,255,.12),rgba(188,140,255,.04));border:1px solid rgba(188,140,255,.3);border-left:4px solid var(--purple);border-radius:0 10px 10px 0;padding:1rem 1.2rem;margin:.75rem 0;font-size:.8rem;line-height:1.7;color:var(--text)}
+.concept-title{font-family:var(--sans);font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--purple);margin-bottom:.5rem}
+
+/* Métafichiers grid — inspiré du tableau du schéma */
+.meta-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.55rem;margin:.75rem 0}
+.meta-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.75rem .9rem;cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s;user-select:none;border-left:3px solid}
+.meta-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.meta-card.sel{border-color:var(--cyan)!important;box-shadow:0 0 0 1px var(--cyan),0 4px 14px rgba(0,229,204,.15)}
+.meta-num{font-family:var(--mono);font-size:.62rem;opacity:.7;margin-bottom:.15rem}
+.meta-name{font-family:var(--mono);font-size:.8rem;font-weight:700;margin-bottom:.2rem}
+.meta-desc{font-size:.71rem;color:var(--muted);line-height:1.4}
+.mc-0{border-left-color:var(--cyan)}.mc-1{border-left-color:rgba(0,229,204,.5)}.mc-2{border-left-color:var(--blue)}.mc-3{border-left-color:var(--dim)}.mc-5{border-left-color:var(--green)}.mc-6{border-left-color:var(--gold)}.mc-7{border-left-color:var(--orange)}.mc-usn{border-left-color:var(--red)}
+.meta-detail{background:var(--surface);border:1px solid rgba(0,229,204,.2);border-radius:10px;padding:1rem 1.2rem;margin:.5rem 0 1rem;font-size:.79rem;line-height:1.75;color:var(--muted);min-height:80px;transition:all .2s;display:none!important}
+.meta-detail.live{display:block!important;border-color:rgba(0,229,204,.4);box-shadow:0 4px 16px rgba(0,229,204,.07)}
+
+/* Layout bar */
+.layout-bar{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0;box-shadow:0 3px 14px rgba(0,0,0,.25)}
+.lb-seg{padding:.8rem .6rem;text-align:center;border-right:1px solid var(--border);transition:filter .18s,transform .15s;cursor:default;font-size:.7rem;font-weight:600}
+.lb-seg:last-child{border-right:none}
+.lb-seg:hover{filter:brightness(1.2)}
+.lb-seg span{display:block!important;font-family:var(--mono);font-size:.55rem;opacity:.65;margin-top:.2rem}
+.lb-boot{background:rgba(240,192,64,.12);color:var(--gold);flex:0 0 90px}
+.lb-mft{background:rgba(0,229,204,.12);color:var(--cyan);flex:1}
+.lb-mftm{background:rgba(0,229,204,.06);color:var(--cyan);flex:0 0 90px}
+.lb-data{background:rgba(48,232,138,.1);color:var(--green);flex:3}
+
+/* ═══ TAB 2 — MFT ENTRY ════════════════════════ */
+
+/* 1KB tuple structure — inspiré "Structure du Tuple" image */
+.tuple-viz{margin:1rem 0 .5rem}
+.tuple-bar{display:flex;height:64px;border-radius:10px;overflow:hidden;border:1px solid var(--border);box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.tuple-seg{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;cursor:pointer;border-right:1px solid rgba(0,0,0,.3);transition:filter .2s,transform .15s;position:relative;user-select:none}
+.tuple-seg:last-child{border-right:none}
+.tuple-seg:hover{filter:brightness(1.3);transform:scaleY(1.1);z-index:2}
+.tuple-seg.sel{filter:brightness(1.45);transform:scaleY(1.15);z-index:3;outline:2px solid white}
+.ts-lbl{font-family:var(--sans);font-size:.65rem;font-weight:700;text-align:center;padding:0 .3rem;line-height:1.2}
+.ts-sub{font-family:var(--mono);font-size:.52rem;opacity:.7}
+.ts-header{background:linear-gradient(135deg,rgba(240,192,64,.35),rgba(240,192,64,.2));color:var(--gold);flex:0 0 120px}
+.ts-std{background:linear-gradient(135deg,rgba(88,166,255,.35),rgba(88,166,255,.2));color:var(--blue);flex:1}
+.ts-fn{background:linear-gradient(135deg,rgba(48,232,138,.35),rgba(48,232,138,.2));color:var(--green);flex:1}
+.ts-data{background:linear-gradient(135deg,rgba(255,64,96,.35),rgba(255,64,96,.2));color:var(--red);flex:2}
+.ts-extra{background:linear-gradient(135deg,rgba(106,128,168,.25),rgba(106,128,168,.1));color:var(--dim);flex:1}
+.tuple-detail{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.3rem;min-height:110px;font-size:.79rem;line-height:1.75;color:var(--muted);transition:all .2s;margin:.75rem 0}
+.tuple-detail.live{border-color:rgba(0,229,204,.4);box-shadow:0 4px 20px rgba(0,229,204,.07)}
+
+/* Attribute types table */
+.attr-table{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:.76rem;margin:.75rem 0}
+.attr-table th{background:var(--surface2);padding:.5rem .85rem;text-align:left;border-bottom:1px solid var(--border);font-size:.61rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+.attr-table td{padding:.5rem .85rem;border-bottom:1px solid rgba(48,54,61,.4);vertical-align:top;line-height:1.5;transition:background .1s}
+.attr-table tr:last-child td{border-bottom:none}
+.attr-table tr:hover td{background:rgba(88,166,255,.04)!important}
+.at-type{font-family:var(--mono);font-weight:700;color:var(--blue);white-space:nowrap}
+.at-name{font-weight:600;color:var(--text);white-space:nowrap}
+.at-forens{font-size:.7rem;color:var(--muted)}
+.warning-badge{display:inline-block;background:rgba(255,64,96,.12);color:var(--red);border:1px solid rgba(255,64,96,.3);border-radius:4px;font-size:.6rem;padding:.05rem .35rem;font-family:var(--mono)}
+.ok-badge{display:inline-block;background:rgba(48,232,138,.1);color:var(--green);border:1px solid rgba(48,232,138,.25);border-radius:4px;font-size:.6rem;padding:.05rem .35rem;font-family:var(--mono)}
+
+/* Resident vs Non-resident */
+.res-viz{display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0}
+.res-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem}
+.res-card h4{font-family:var(--sans);font-size:.67rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem;padding-bottom:.3rem;border-bottom:1px solid var(--border)}
+.rc-res{border-left:3px solid var(--green)}.rc-res h4{color:var(--green)}
+.rc-nonres{border-left:3px solid var(--orange)}.rc-nonres h4{color:var(--orange)}
+.res-list li{font-size:.74rem;color:var(--muted);line-height:1.55;padding-left:.65rem;position:relative;list-style:none;margin-bottom:.25rem}
+.res-list li::before{content:'›';position:absolute;left:0;color:var(--gold);font-weight:700}
+.res-list li strong{color:var(--text)}.res-list li code{color:var(--cyan);font-family:var(--mono);font-size:.72rem}
+
+/* ═══ TAB 3 — RUN LIST ═════════════════════════ */
+.rl-decoder{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:.75rem 0}
+.rl-header{background:var(--surface2);padding:.6rem 1.1rem;font-family:var(--mono);font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border)}
+.rl-body{padding:1rem 1.1rem}
+.rl-input-row{display:flex;gap:.5rem;align-items:center;margin-bottom:.85rem;flex-wrap:wrap}
+.rl-input{font-family:var(--mono);font-size:.8rem;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.45rem .75rem;color:var(--text);flex:1;min-width:200px;letter-spacing:.05em}
+.rl-input:focus{outline:none;border-color:rgba(0,229,204,.4)}
+.rl-btn{font-family:var(--mono);font-size:.72rem;padding:.4rem 1rem;border:1px solid rgba(0,229,204,.4);background:rgba(0,229,204,.08);color:var(--cyan);border-radius:6px;cursor:pointer;transition:background .15s;white-space:nowrap}
+.rl-btn:hover{background:rgba(0,229,204,.2)}
+.rl-result{min-height:100px;font-size:.79rem;line-height:1.7}
+.rl-run{display:flex;align-items:flex-start;gap:.75rem;padding:.7rem .9rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:.5rem;transition:border-color .2s}
+.rl-run:hover{border-color:rgba(0,229,204,.3)}
+.rl-run-num{width:28px;height:28px;border-radius:50%;background:rgba(0,229,204,.12);border:1px solid rgba(0,229,204,.35);color:var(--cyan);font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rl-run-body{flex:1;font-family:var(--mono)}
+.rl-run-hex{font-size:.7rem;color:var(--gold);margin-bottom:.2rem}
+.rl-run-detail{font-size:.75rem;color:var(--muted)}
+.rl-run-detail strong{color:var(--text)}
+.rl-error{color:var(--red);font-size:.78rem;padding:.5rem .75rem;background:rgba(255,64,96,.06);border:1px solid rgba(255,64,96,.2);border-radius:6px}
+
+/* Run list examples */
+.rl-examples{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.75rem}
+.rl-ex{font-family:var(--mono);font-size:.65rem;padding:.22rem .65rem;border:1px solid rgba(240,192,64,.3);border-radius:4px;background:rgba(240,192,64,.06);color:var(--gold);cursor:pointer;transition:background .15s}
+.rl-ex:hover{background:rgba(240,192,64,.18)}
+
+/* Visual run blocks */
+.rl-vis{display:flex;gap:.3rem;flex-wrap:wrap;margin:.65rem 0}
+.rl-block{padding:.35rem .65rem;border-radius:6px;font-family:var(--mono);font-size:.65rem;font-weight:700;border:1px solid}
+.rl-header-byte{background:rgba(240,192,64,.15);border-color:rgba(240,192,64,.4);color:var(--gold)}
+.rl-length-byte{background:rgba(48,232,138,.15);border-color:rgba(48,232,138,.4);color:var(--green)}
+.rl-offset-byte{background:rgba(88,166,255,.15);border-color:rgba(88,166,255,.4);color:var(--blue)}
+.rl-end-byte{background:rgba(255,64,96,.15);border-color:rgba(255,64,96,.4);color:var(--red)}
+
+/* $Bitmap visualizer */
+.bitmap-container{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.85rem;margin:.75rem 0}
+.bitmap-grid{display:grid!important;grid-template-columns:repeat(16,1fr);gap:2px;margin:.5rem 0}
+.bitmap-cell{height:24px;border-radius:3px;border:1px solid;cursor:pointer;transition:filter .15s,transform .1s;position:relative}
+.bitmap-cell:hover{filter:brightness(1.3);transform:scale(1.08)}
+.bc-free{background:rgba(106,128,168,.1);border-color:rgba(106,128,168,.3)}
+.bc-used{background:rgba(0,229,204,.25);border-color:rgba(0,229,204,.5)}
+.bc-highlight{background:rgba(240,192,64,.4)!important;border-color:var(--gold)!important;box-shadow:0 0 6px rgba(240,192,64,.4)}
+.bitmap-info{font-family:var(--mono);font-size:.68rem;color:var(--muted);margin-top:.4rem}
+
+/* ═══ TAB 4 — TIMESTAMPS ════════════════════════ */
+.ts-compare{display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0}
+.ts-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem}
+.ts-box-title{font-family:var(--sans);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem;padding-bottom:.35rem;border-bottom:1px solid var(--border)}
+.ts-ntfs{border-left:3px solid var(--blue)}.ts-ntfs .ts-box-title{color:var(--blue)}
+.ts-unix{border-left:3px solid var(--green)}.ts-unix .ts-box-title{color:var(--green)}
+.ts-content{font-size:.75rem;color:var(--muted);line-height:1.65}
+.ts-content strong{color:var(--text)}.ts-content code{color:var(--cyan);font-family:var(--mono);font-size:.73rem}
+
+/* MACB timelines */
+.macb-row{display:grid!important;grid-template-columns:70px 1fr 1fr 50px;gap:0;border-bottom:1px solid var(--border);font-size:.73rem;transition:background .1s}
+.macb-row:last-child{border-bottom:none}.macb-row:hover{background:rgba(88,166,255,.03)}
+.macb-time{font-family:var(--mono);font-size:.68rem;color:var(--dim);padding:.4rem .75rem;border-right:1px solid var(--border);display:flex;align-items:center}
+.macb-attr{padding:.4rem .75rem;border-right:1px solid var(--border);display:flex;align-items:center;font-weight:600}
+.macb-val{padding:.4rem .75rem;border-right:1px solid var(--border);font-family:var(--mono);font-size:.7rem;display:flex;align-items:center;color:var(--muted)}
+.macb-src{padding:.4rem .6rem;font-size:.65rem;display:flex;align-items:center;font-family:var(--mono)}
+.macb-si{color:var(--red)}.macb-fn{color:var(--green)}
+
+/* Timestomping diagram */
+.ts-stomp-viz{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0}
+.tss-row{display:grid!important;grid-template-columns:130px 1fr 1fr;border-bottom:1px solid var(--border);transition:background .1s}
+.tss-row:last-child{border-bottom:none}
+.tss-row:hover{background:rgba(255,64,96,.02)}
+.tss-attr{font-family:var(--mono);font-size:.7rem;font-weight:700;padding:.5rem .85rem;background:rgba(22,27,34,.5);border-right:1px solid var(--border);display:flex;align-items:center;color:var(--muted)}
+.tss-normal{padding:.5rem .85rem;border-right:1px solid var(--border);font-family:var(--mono);font-size:.69rem;display:flex;align-items:center;color:var(--green)}
+.tss-stomped{padding:.5rem .85rem;font-family:var(--mono);font-size:.69rem;display:flex;align-items:center;color:var(--red)}
+
+/* Timestamp converter */
+.ts-converter{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0}
+.tc-header{background:var(--surface2);padding:.55rem 1rem;font-family:var(--mono);font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border)}
+.tc-body{padding:.85rem 1rem;display:grid!important;grid-template-columns:1fr 1fr;gap:.75rem}
+.tc-label{font-family:var(--sans);font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem}
+.tc-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.45rem .7rem;font-family:var(--mono);font-size:.72rem;color:var(--text);box-sizing:border-box}
+.tc-input:focus{outline:none;border-color:rgba(0,229,204,.4)}
+.tc-output{font-family:var(--mono);font-size:.72rem;color:var(--cyan);background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.2);border-radius:6px;padding:.45rem .7rem;min-height:36px}
+
+/* ═══ TAB 5 — OUTILS ════════════════════════════ */
+.tool-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.65rem;margin:.75rem 0}
+.tool-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;transition:transform .15s,box-shadow .15s}
+.tool-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.tool-name{font-family:var(--mono);font-size:.8rem;font-weight:700;margin-bottom:.25rem}
+.tool-by{font-size:.62rem;color:var(--dim);margin-bottom:.4rem;font-family:var(--sans)}
+.tool-desc{font-size:.74rem;color:var(--muted);line-height:1.5}
+.tool-tag{display:inline-block;font-family:var(--mono);font-size:.58rem;padding:.07rem .35rem;border-radius:3px;margin-top:.3rem;margin-right:.2rem}
+.tt-free{background:rgba(48,232,138,.1);color:var(--green);border:1px solid rgba(48,232,138,.25)}
+.tt-com{background:rgba(255,64,96,.08);color:var(--red);border:1px solid rgba(255,64,96,.2)}
+.tt-cmd{background:rgba(88,166,255,.1);color:var(--blue);border:1px solid rgba(88,166,255,.2)}
+
+/* CLI blocks */
+.cli{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-family:var(--mono);font-size:.72rem;line-height:1.85;margin:.5rem 0;overflow-x:auto}
+.cli .c{color:var(--dim)}.cli .v{color:var(--cyan);font-weight:600}.cli .a{color:var(--green)}.cli .k{color:var(--gold)}
+
+/* ═══ COMMON ════════════════════════════════════ */
+.key-fact{background:linear-gradient(135deg,rgba(88,166,255,.09),rgba(0,229,204,.04));border:1px solid rgba(88,166,255,.2);border-radius:10px;padding:.95rem 1.15rem;margin:.75rem 0;position:relative;overflow:hidden;font-size:.79rem;line-height:1.7;color:var(--text)}
+.key-fact::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.key-fact-label{font-family:var(--sans);font-size:.6rem;font-weight:700;letter-spacing:.12em;color:var(--blue);text-transform:uppercase;margin-bottom:.4rem}
+.key-fact ul{padding-left:1rem;margin:.3rem 0 0}
+.key-fact li{margin-bottom:.2rem}
+.exam-tip{background:linear-gradient(135deg,rgba(240,192,64,.09),rgba(240,192,64,.03));border:1px solid rgba(240,192,64,.35);border-left:4px solid var(--gold);border-radius:0 10px 10px 0;padding:1.1rem 1.3rem;margin:1.5rem 0;font-size:.79rem;line-height:1.82;color:var(--text)}
+.exam-tip-title{font-family:var(--sans);font-size:.62rem;font-weight:700;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;margin-bottom:.65rem}
+.exam-tip p{margin-top:.3rem}.exam-tip code{color:var(--cyan);font-family:var(--mono);font-size:.76rem}
+.quiz-wrap{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.85rem 0;transition:box-shadow .2s}
+.quiz-wrap:hover{box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.quiz-q{padding:.9rem 1.1rem;background:var(--surface);font-size:.82rem;font-weight:600;color:var(--text);line-height:1.5}
+.quiz-q small{display:block!important;font-weight:400;color:var(--muted);font-size:.72rem;margin-top:.2rem}
+.quiz-actions{padding:.6rem 1.1rem;background:var(--surface2);border-top:1px solid var(--border);display:flex;gap:.5rem}
+.quiz-reveal-btn{font-family:var(--mono);font-size:.7rem;padding:.32rem .85rem;border:1px solid rgba(0,229,204,.35);background:rgba(0,229,204,.07);color:var(--cyan);border-radius:20px;cursor:pointer;transition:background .15s}
+.quiz-reveal-btn:hover{background:rgba(0,229,204,.18)}
+.quiz-answer{display:none!important;padding:.85rem 1.1rem;background:rgba(0,229,204,.04);font-size:.79rem;color:var(--text);line-height:1.65;border-top:1px solid rgba(0,229,204,.15)}
+.quiz-answer.visible{display:block!important;animation:slideUp .2s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.alert{background:rgba(255,64,96,.07);border:1px solid rgba(255,64,96,.3);border-left:3px solid var(--red);border-radius:0 8px 8px 0;padding:.75rem 1rem;font-size:.79rem;color:var(--text);line-height:1.65;margin:.75rem 0}
+.hex,.h{display:inline-block;background:var(--surface2);border:1px solid var(--border);padding:.04rem .45rem;border-radius:4px;font-size:.78em;font-weight:700;font-family:var(--mono)}
+.h-cyan{color:var(--cyan)}.h-gold{color:var(--gold)}.h-blue{color:var(--blue)}.h-green{color:var(--green)}.h-red{color:var(--red)}.h-orange{color:var(--orange)}
+.g2{display:grid!important;grid-template-columns:1fr 1fr;gap:.75rem}
+.memo-grid{display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0}
+.memo-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem .95rem}
+.memo-card:hover{border-color:rgba(88,166,255,.3);box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.memo-card h4{font-family:var(--sans);font-size:.67rem;font-weight:700;letter-spacing:.06em;color:var(--blue);text-transform:uppercase;margin-bottom:.5rem;padding-bottom:.3rem;border-bottom:1px solid var(--border)}
+.memo-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.3rem}
+.memo-list li{font-size:.75rem;color:var(--muted);padding-left:.75rem;position:relative;line-height:1.5}
+.memo-list li::before{content:'›';position:absolute;left:0;color:var(--blue);font-weight:700}
+.memo-list li strong{color:var(--text)}.memo-list li code{color:var(--cyan);font-family:var(--mono);font-size:.72rem}
+@media(max-width:640px){
+  .tab-page{padding:1.1rem 1rem 2rem}
+  .ts-compare,.res-viz,.g2,.memo-grid{grid-template-columns:1fr}
+  .tc-body{grid-template-columns:1fr}
+  .tss-row{grid-template-columns:100px 1fr}
+  .tss-stomped{display:none!important}
+  .bitmap-grid{grid-template-columns:repeat(8,1fr)}
+}
+</style>
 </head>
 <body>
 <div id="scroll-progress"></div>
@@ -65,50 +312,50 @@
 <div class="sec-sub">Cliquez sur chaque zone pour afficher ses détails. Contrairement à FAT, il n'y a pas de partition technique fixe — tout coexiste dans la Data Area.</div>
 
 <div class="arch-viz">
-  <div class="arch-disk">
-    <div class="arch-disk-label">💿 Disque physique / Partition NTFS</div>
-    <div class="arch-row">
-      <div class="arch-zone az-boot" onclick="showArch('boot')">
-        <span class="arch-zone-icon">🟡</span>
-        <div class="arch-zone-name">$Boot</div>
-        <div class="arch-zone-sub">VBR · Secteur 0<br>Cluster 0</div>
+  <div style="background:rgba(88,166,255,.04);border:2px solid rgba(88,166,255,.25);border-radius:12px;padding:1rem;margin-bottom:.5rem">
+    <div style="font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);text-align:center;margin-bottom:.75rem;opacity:.8">💿 Disque physique / Partition NTFS</div>
+    <div style="display:flex!important;gap:.4rem;flex-wrap:wrap;justify-content:center;margin-bottom:.6rem">
+      <div style="flex:1;min-width:110px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(240,192,64,.4);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(240,192,64,.1);color:var(--gold)" onclick="showArch('boot')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">🟡</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">$Boot</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">VBR · Secteur 0<br>Cluster 0</div>
       </div>
-      <div class="arch-zone az-mft" id="az-mft" onclick="showArch('mft')">
-        <span class="arch-zone-icon">🗂</span>
-        <div class="arch-zone-name">$MFT</div>
-        <div class="arch-zone-sub">Master File Table<br>~12.5% du volume</div>
+      <div style="flex:1;min-width:110px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(0,229,204,.45);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(0,229,204,.12);color:var(--cyan)" id="az-mft" onclick="showArch('mft')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">🗂</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">$MFT</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">Master File Table<br>~12.5% du volume</div>
       </div>
-      <div class="arch-zone az-mftm" onclick="showArch('mftm')">
-        <span class="arch-zone-icon">🪞</span>
-        <div class="arch-zone-name">$MFTMirr</div>
-        <div class="arch-zone-sub">Miroir partiel<br>4 premières entrées</div>
+      <div style="flex:1;min-width:110px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(0,229,204,.25);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(0,229,204,.06);color:var(--cyan)" onclick="showArch('mftm')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">🪞</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">$MFTMirr</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">Miroir partiel<br>4 premières entrées</div>
       </div>
-      <div class="arch-zone az-data" onclick="showArch('data')">
-        <span class="arch-zone-icon">📦</span>
-        <div class="arch-zone-name">Data Area</div>
-        <div class="arch-zone-sub">Fichiers utilisateur + tous les métafichiers système<br>($Bitmap, $LogFile, $UsnJrnl…)</div>
+      <div style="flex:3;min-width:110px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(48,232,138,.35);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(48,232,138,.1);color:var(--green)" onclick="showArch('data')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">📦</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">Data Area</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">Fichiers utilisateur + tous les métafichiers système<br>($Bitmap, $LogFile, $UsnJrnl…)</div>
       </div>
     </div>
-    <div class="arch-row" style="margin-bottom:0">
-      <div class="arch-zone az-concept" onclick="showArch('bitmap')">
-        <span class="arch-zone-icon">🔲</span>
-        <div class="arch-zone-name">$Bitmap</div>
-        <div class="arch-zone-sub">1 bit / cluster<br>Gestion espace</div>
+    <div style="display:flex!important;gap:.4rem;flex-wrap:wrap;justify-content:center;margin-bottom:0">
+      <div style="flex:1;min-width:110px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(188,140,255,.3);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(188,140,255,.08);color:var(--purple)" onclick="showArch('bitmap')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">🔲</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">$Bitmap</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">1 bit / cluster<br>Gestion espace</div>
       </div>
-      <div class="arch-zone az-concept" onclick="showArch('log')">
-        <span class="arch-zone-icon">📋</span>
-        <div class="arch-zone-name">$LogFile</div>
-        <div class="arch-zone-sub">Journal transactions<br>Récupération crash</div>
+      <div style="flex:1;min-width:110px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(188,140,255,.3);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(188,140,255,.08);color:var(--purple)" onclick="showArch('log')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">📋</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">$LogFile</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">Journal transactions<br>Récupération crash</div>
       </div>
-      <div class="arch-zone az-concept" onclick="showArch('usn')">
-        <span class="arch-zone-icon">📜</span>
-        <div class="arch-zone-name">$UsnJrnl</div>
-        <div class="arch-zone-sub">Journal USN<br>Historique long terme</div>
+      <div style="flex:1;min-width:110px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(188,140,255,.3);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(188,140,255,.08);color:var(--purple)" onclick="showArch('usn')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">📜</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">$UsnJrnl</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">Journal USN<br>Historique long terme</div>
       </div>
-      <div class="arch-zone az-concept" onclick="showArch('btree')">
-        <span class="arch-zone-icon">🌳</span>
-        <div class="arch-zone-name">$INDEX (B-Tree)</div>
-        <div class="arch-zone-sub">Répertoires<br>Arbre B+ équilibré</div>
+      <div style="flex:1;min-width:110px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(188,140,255,.3);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(188,140,255,.08);color:var(--purple)" onclick="showArch('btree')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">🌳</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">$INDEX (B-Tree)</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">Répertoires<br>Arbre B+ équilibré</div>
       </div>
     </div>
   </div>
@@ -120,18 +367,18 @@
 
 <!-- Layout bar simple — vue linéaire -->
 <div class="sec-title">Vue linéaire — Structure on-disk</div>
-<div class="layout-bar">
-  <div class="lb-seg lb-boot">$Boot<span>Cluster 0 · VBR</span></div>
-  <div class="lb-seg lb-mft">$MFT — Master File Table<span>~12.5% · 1 entrée de 1 Ko par fichier</span></div>
-  <div class="lb-seg lb-mftm">$MFTMirr<span>Backup 4 premières</span></div>
-  <div class="lb-seg lb-data">Data Area — tous les fichiers + tous les métafichiers<span>La $MFT réserve des clusters ici au fur et à mesure</span></div>
+<div style="display:flex!important;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0;box-shadow:0 3px 14px rgba(0,0,0,.25)">
+  <div style="flex:0 0 90px;padding:.8rem .6rem;text-align:center;border-right:1px solid var(--border);background:rgba(240,192,64,.12);color:var(--gold);font-size:.7rem;font-weight:600">$Boot<span>Cluster 0 · VBR</span></div>
+  <div style="flex:1;padding:.8rem .6rem;text-align:center;border-right:1px solid var(--border);background:rgba(0,229,204,.12);color:var(--cyan);font-size:.7rem;font-weight:600">$MFT — Master File Table<span>~12.5% · 1 entrée de 1 Ko par fichier</span></div>
+  <div style="flex:0 0 90px;padding:.8rem .6rem;text-align:center;border-right:1px solid var(--border);background:rgba(0,229,204,.06);color:var(--cyan);font-size:.7rem;font-weight:600">$MFTMirr<span>Backup 4 premières</span></div>
+  <div style="flex:3;padding:.8rem .6rem;text-align:center;background:rgba(48,232,138,.1);color:var(--green);font-size:.7rem;font-weight:600">Data Area — tous les fichiers + tous les métafichiers<span>La $MFT réserve des clusters ici au fur et à mesure</span></div>
 </div>
 
 <!-- Métafichiers système — inspiré du tableau du schéma -->
 <div class="sec-title">Méta-fichiers système essentiels</div>
 <div class="sec-sub">Cliquez sur un métafichier pour afficher sa valeur forensique. Tous sont des fichiers ordinaires gérés par la $MFT elle-même.</div>
 
-<div class="meta-grid">
+<div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.55rem;margin:.75rem 0">
   <div class="meta-card mc-0" onclick="showMeta('mft0')">
     <div class="meta-num">Entrée #0</div>
     <div class="meta-name">$MFT</div>
@@ -304,8 +551,8 @@
 
 <!-- Résident vs Non-résident -->
 <div class="sec-title">Résident vs Non-résident</div>
-<div class="res-viz">
-  <div class="res-card rc-res">
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div class="card card-green">
     <h4>✅ Attribut Résident</h4>
     <ul class="res-list">
       <li>Données stockées <strong>directement dans l'entrée MFT</strong></li>
@@ -315,7 +562,7 @@
       <li><strong>Forensique</strong> : données récupérables même si les clusters sont "libres" car elles sont dans la MFT elle-même</li>
     </ul>
   </div>
-  <div class="res-card rc-nonres">
+  <div class="card card-orange">
     <h4>📦 Attribut Non-résident</h4>
     <ul class="res-list">
       <li>Données dans la <strong>Data Area</strong> — MFT contient une Run List</li>
@@ -363,7 +610,7 @@
 <div class="sec-title">Structure du header byte</div>
 <div class="key-fact">
   <div class="key-fact-label">Décodage du header byte (1 octet)</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.5rem;font-size:.78rem">
+  <div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.5rem;font-size:.78rem">
     <div>
       <div style="font-family:var(--mono);font-size:.75rem;margin-bottom:.3rem">
         <span style="background:rgba(48,232,138,.2);padding:.1rem .35rem;border-radius:3px;color:var(--green)">Nibble haut (bits 4–7)</span>
@@ -397,13 +644,13 @@
 <div class="sec-title">$Bitmap — Visualiseur d'allocation clusters</div>
 <div class="sec-sub">Le $Bitmap (entrée MFT #6) contient 1 bit par cluster. Bit 0 = libre, Bit 1 = occupé. Cliquez sur un cluster pour basculer son état. Octet = cluster ÷ 8 · Bit = cluster mod 8.</div>
 
-<div class="bitmap-container">
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.85rem;margin:.75rem 0">
   <div style="font-family:var(--mono);font-size:.6rem;color:var(--dim);margin-bottom:.4rem;display:flex;gap:1rem">
     <span>🟢 Clusters 0–127 · 8 clusters par ligne · 16 colonnes</span>
     <button onclick="resetBitmap()" style="font-family:var(--mono);font-size:.62rem;border:1px solid var(--border);background:var(--surface2);color:var(--muted);border-radius:4px;padding:.1rem .5rem;cursor:pointer">Reset</button>
     <button onclick="randomBitmap()" style="font-family:var(--mono);font-size:.62rem;border:1px solid rgba(0,229,204,.3);background:rgba(0,229,204,.07);color:var(--cyan);border-radius:4px;padding:.1rem .5rem;cursor:pointer">Aléatoire</button>
   </div>
-  <div class="bitmap-grid" id="bitmap-grid"></div>
+  <div id="bitmap-grid-dup" style="display:grid!important;grid-template-columns:repeat(16,1fr);gap:2px;margin:.5rem 0" id="bitmap-grid-dup"></div>
   <div class="bitmap-info" id="bitmap-info">Cliquez sur un cluster pour voir ses coordonnées dans le $Bitmap</div>
   <div style="display:flex;gap:1rem;margin-top:.4rem;font-size:.66rem;color:var(--dim)">
     <span style="display:flex;align-items:center;gap:.35rem"><span style="width:14px;height:14px;background:rgba(0,229,204,.25);border:1px solid rgba(0,229,204,.5);border-radius:2px;display:inline-block"></span>Occupé (bit=1)</span>
@@ -441,10 +688,10 @@
 
 <div class="sec-title">Timestamps NTFS — Epoch 1601 · 100 nanosecondes</div>
 
-<div class="ts-compare">
-  <div class="ts-box ts-ntfs">
-    <div class="ts-box-title">🔵 NTFS — Epoch 1er janvier 1601</div>
-    <div class="ts-content">
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div class="card card-blue">
+    <div class="ct">🔵 NTFS — Epoch 1er janvier 1601</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
       <strong>Résolution :</strong> 100 nanosecondes (le plus précis)<br>
       <strong>Stockage :</strong> 8 octets (QWORD), Little Endian<br>
       <strong>Epoch :</strong> 1er janvier 1601 00:00:00 UTC<br>
@@ -453,9 +700,9 @@
       <strong>$FILE_NAME</strong> (0x30) — protégé kernel
     </div>
   </div>
-  <div class="ts-box ts-unix">
-    <div class="ts-box-title">🟢 Unix — Epoch 1er janvier 1970</div>
-    <div class="ts-content">
+  <div class="card card-green">
+    <div class="ct">🟢 Unix — Epoch 1er janvier 1970</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
       <strong>Résolution :</strong> 1 seconde classique (ms/ns selon impl.)<br>
       <strong>Stockage :</strong> 4 octets (DWORD) Unix classique<br>
       <strong>Epoch :</strong> 1er janvier 1970 00:00:00 UTC<br>
@@ -484,7 +731,7 @@
 <!-- Les 4 timestamps MACB -->
 <div class="sec-title">Les 4 timestamps MACB</div>
 <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0">
-  <div style="background:var(--surface2);padding:.5rem .85rem;font-family:var(--mono);font-size:.61rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border);display:grid;grid-template-columns:70px 200px 1fr 90px">
+  <div style="background:var(--surface2);padding:.5rem .85rem;font-family:var(--mono);font-size:.61rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border);display:grid!important;grid-template-columns:70px 200px 1fr 90px">
     <span>LETTRE</span><span>NOM</span><span>DESCRIPTION</span><span>SOURCE</span>
   </div>
   <div class="macb-row">
@@ -521,28 +768,28 @@
 </div>
 
 <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0">
-  <div style="background:var(--surface2);padding:.45rem .85rem;font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border);display:grid;grid-template-columns:130px 1fr 1fr">
+  <div style="background:var(--surface2);padding:.45rem .85rem;font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border);display:grid!important;grid-template-columns:130px 1fr 1fr">
     <span>ATTRIBUT</span><span style="color:var(--green)">✓ Cas normal</span><span style="color:var(--red)">⚠ Après timestomping</span>
   </div>
-  <div class="tss-row">
-    <div class="tss-attr">$SI.Created</div>
-    <div class="tss-normal">2024-03-15 09:22:11</div>
-    <div class="tss-stomped">2020-01-01 00:00:00 ← faux !</div>
+  <div style="display:grid!important;grid-template-columns:130px 1fr 1fr;border-bottom:1px solid var(--border)">
+    <div style="font-family:var(--mono);font-size:.7rem;font-weight:700;padding:.5rem .85rem;background:rgba(22,27,34,.5);border-right:1px solid var(--border);display:flex!important;align-items:center;color:var(--muted)">$SI.Created</div>
+    <div style="padding:.5rem .85rem;border-right:1px solid var(--border);font-family:var(--mono);font-size:.69rem;display:flex!important;align-items:center;color:var(--green)">2024-03-15 09:22:11</div>
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.69rem;display:flex!important;align-items:center;color:var(--red)">2020-01-01 00:00:00 ← faux !</div>
   </div>
-  <div class="tss-row">
-    <div class="tss-attr">$SI.Modified</div>
-    <div class="tss-normal">2024-03-15 14:45:33</div>
-    <div class="tss-stomped">2020-01-01 00:00:00 ← faux !</div>
+  <div style="display:grid!important;grid-template-columns:130px 1fr 1fr;border-bottom:1px solid var(--border)">
+    <div style="font-family:var(--mono);font-size:.7rem;font-weight:700;padding:.5rem .85rem;background:rgba(22,27,34,.5);border-right:1px solid var(--border);display:flex!important;align-items:center;color:var(--muted)">$SI.Modified</div>
+    <div style="padding:.5rem .85rem;border-right:1px solid var(--border);font-family:var(--mono);font-size:.69rem;display:flex!important;align-items:center;color:var(--green)">2024-03-15 14:45:33</div>
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.69rem;display:flex!important;align-items:center;color:var(--red)">2020-01-01 00:00:00 ← faux !</div>
   </div>
-  <div class="tss-row">
-    <div class="tss-attr">$FN.Created</div>
-    <div class="tss-normal">2024-03-15 09:22:11</div>
-    <div class="tss-stomped" style="color:var(--green)">2024-03-15 09:22:11 ← vrai ✓</div>
+  <div style="display:grid!important;grid-template-columns:130px 1fr 1fr;border-bottom:1px solid var(--border)">
+    <div style="font-family:var(--mono);font-size:.7rem;font-weight:700;padding:.5rem .85rem;background:rgba(22,27,34,.5);border-right:1px solid var(--border);display:flex!important;align-items:center;color:var(--muted)">$FN.Created</div>
+    <div style="padding:.5rem .85rem;border-right:1px solid var(--border);font-family:var(--mono);font-size:.69rem;display:flex!important;align-items:center;color:var(--green)">2024-03-15 09:22:11</div>
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.69rem;display:flex!important;align-items:center;color:var(--red)" style="color:var(--green)">2024-03-15 09:22:11 ← vrai ✓</div>
   </div>
-  <div class="tss-row">
-    <div class="tss-attr">$FN.Modified</div>
-    <div class="tss-normal">2024-03-15 09:22:11</div>
-    <div class="tss-stomped" style="color:var(--green)">2024-03-15 09:22:11 ← vrai ✓</div>
+  <div style="display:grid!important;grid-template-columns:130px 1fr 1fr;border-bottom:1px solid var(--border)">
+    <div style="font-family:var(--mono);font-size:.7rem;font-weight:700;padding:.5rem .85rem;background:rgba(22,27,34,.5);border-right:1px solid var(--border);display:flex!important;align-items:center;color:var(--muted)">$FN.Modified</div>
+    <div style="padding:.5rem .85rem;border-right:1px solid var(--border);font-family:var(--mono);font-size:.69rem;display:flex!important;align-items:center;color:var(--green)">2024-03-15 09:22:11</div>
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.69rem;display:flex!important;align-items:center;color:var(--red)" style="color:var(--green)">2024-03-15 09:22:11 ← vrai ✓</div>
   </div>
 </div>
 <div style="font-size:.73rem;color:var(--muted);margin-top:.4rem">Outils de détection : <code>MFTECmd.exe -f $MFT --csv</code> → comparer colonnes $SI et $FN · <code>icat</code> (TSK) · X-Ways affiche les deux sources côte à côte.</div>
@@ -880,15 +1127,19 @@ function renderBitmap(){
   if(!grid) return;
   var html='';
   for(var i=0;i<BITMAP_SIZE;i++){
-    html+='<div class="bitmap-cell '+(bitmapState[i]?'bc-used':'bc-free')+'" onclick="toggleCluster('+i+')" title="Cluster '+i+'"></div>';
+    var s=bitmapState[i]?'background:rgba(0,229,204,.25);border-color:rgba(0,229,204,.5)':'background:rgba(106,128,168,.1);border-color:rgba(106,128,168,.3)';
+    html+='<div style="height:24px;border-radius:3px;border:1px solid;cursor:pointer;transition:filter .15s;'+s+'" onclick="toggleCluster('+i+')" title="Cluster '+i+'"></div>';
   }
   grid.innerHTML=html;
 }
 
 function toggleCluster(n){
   bitmapState[n]^=1;
-  var cells=document.querySelectorAll('.bitmap-cell');
-  cells[n].className='bitmap-cell '+(bitmapState[n]?'bc-used':'bc-free');
+  var cells=document.querySelectorAll('#bitmap-grid > div');
+  if(cells[n]){
+    var s=bitmapState[n]?'background:rgba(0,229,204,.25);border-color:rgba(0,229,204,.5)':'background:rgba(106,128,168,.1);border-color:rgba(106,128,168,.3)';
+    cells[n].style.cssText='height:24px;border-radius:3px;border:1px solid;cursor:pointer;transition:filter .15s;'+s;
+  }
   var info=document.getElementById('bitmap-info');
   info.textContent='Cluster '+n+' → Byte '+(Math.floor(n/8))+', Bit '+(n%8)+' → '+
     (bitmapState[n]?'OCCUPÉ (bit=1)':'LIBRE (bit=0)')+
