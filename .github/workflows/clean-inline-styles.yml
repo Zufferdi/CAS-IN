@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,30 +17,23 @@ jobs:
           ref: refactor-v2.3-from-main
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Appliquer le nettoyage (hors index.html)
+      - name: Nettoyage (hors index.html)
         run: |
           python3 - << 'PYEOF'
           import re, os, glob
-
           STYLE_RE = re.compile(r'\n?\s*<style[^>]*>.*?</style>', re.DOTALL | re.IGNORECASE)
-          # Exclure index.html qui a ses propres styles légitimes
           files = [f for f in sorted(glob.glob('fiches/*.html')) if not f.endswith('index.html')]
-          changed, unchanged = 0, 0
-
+          changed = 0
           for path in files:
-              with open(path, 'r', encoding='utf-8') as f:
-                  original = f.read()
-              cleaned = STYLE_RE.sub('', original)
-              if cleaned == original:
-                  unchanged += 1
-                  print(f"  —  {os.path.basename(path)}")
+              with open(path,'r',encoding='utf-8') as f: orig=f.read()
+              cleaned=STYLE_RE.sub('',orig)
+              if cleaned!=orig:
+                  changed+=1
+                  print(f"  ✓ {os.path.basename(path)}")
+                  with open(path,'w',encoding='utf-8') as f: f.write(cleaned)
               else:
-                  changed += 1
-                  print(f"  ✓  {os.path.basename(path)}")
-                  with open(path, 'w', encoding='utf-8') as f:
-                      f.write(cleaned)
-
-          print(f"\nModifiés: {changed}  |  Inchangés: {unchanged}")
+                  print(f"  — {os.path.basename(path)}")
+          print(f"\nModifiés: {changed}")
           PYEOF
 
       - name: Commit et push
