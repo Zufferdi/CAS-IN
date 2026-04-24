@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ReFS — Resilient File System — CAS-IN Forensique</title>
+<link rel="stylesheet" href="fiche.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">Aller au contenu</a>
+<div class="topbar">
+  <a href="index.html">← Fiches</a>
+  <span class="mod-label">Systèmes de Fichiers</span>
+  <a href="../quiz.html">💊 Quiz →</a>
+</div>
+<nav class="breadcrumb">
+  <a href="../index.html">🏠 Accueil</a><span class="sep">›</span>
+  <a href="index.html">Fiches</a><span class="sep">›</span>
+  <a href="index.html#cat-systèmesdefichiers">Systèmes de Fichiers</a><span class="sep">›</span>
+  <span>ReFS</span>
+  <span class="reading-time">⏱ ~3 min</span>
+</nav>
+<main id="main-content">
+<div class="fiche-hero">
+  <div class="fiche-icon">🗄️</div>
+  <div class="fiche-tags"><span class="tag ">ReFS</span><span class="tag green">Windows Server</span><span class="tag yellow">Storage Spaces</span><span class="tag ">DFIR</span></div>
+  <h1>ReFS — Resilient File System</h1>
+  <p class="subtitle">Windows Server 2012+ · Storage Spaces · Intégrité · Différences forensiques vs NTFS</p>
+</div>
+
+<div class="anecdote">
+  <blockquote>"ReFS was designed for large-scale storage infrastructure. Forensically, its lack of $MFT, different allocation tables, and sparse support by tools means investigators often miss critical artefacts."</blockquote>
+  <cite>— DFIR.training · ReFS Forensics 2023</cite>
+  <div class="fact"><strong>💡 Quand le rencontrer :</strong> ReFS apparaît sur les serveurs Windows (Server 2012+), les espaces de stockage (Storage Spaces), les sauvegardes Windows Server Backup, et les volumes utilisés par Hyper-V pour stocker des VMs (recommandé par Microsoft).</div>
+</div>
+
+<div class="card">
+<h2>📊 ReFS vs NTFS — Comparaison forensique</h2>
+<div class="table-wrap"><table>
+<tr><th>Aspect</th><th>NTFS</th><th>ReFS</th></tr>
+<tr><td>Métadonnées</td><td>$MFT (Master File Table)</td><td class="cell-yellow">Pas de $MFT — table d'objets différente</td></tr>
+<tr><td>Journalisation</td><td>$LogFile + $UsnJrnl</td><td class="cell-yellow">Journal d'objets différent — $UsnJrnl présent</td></tr>
+<tr><td>Intégrité</td><td>Non native</td><td class="cell-green">Checksums intégrés par bloc (B+ Tree)</td></tr>
+<tr><td>Récupération fichiers supprimés</td><td>Possible (entrées MFT)</td><td class="cell-red">Très difficile — pas d'entrées résiduelles</td></tr>
+<tr><td>Alternate Data Streams</td><td>Oui</td><td class="cell-red">Non supporté</td></tr>
+<tr><td>8.3 noms courts</td><td>Oui</td><td class="cell-red">Non</td></tr>
+<tr><td>Compression</td><td>Oui (LZNT1)</td><td class="cell-red">Non supporté</td></tr>
+<tr><td>Chiffrement EFS</td><td>Oui</td><td class="cell-red">Non supporté</td></tr>
+<tr><td>Timestamps</td><td>$STANDARD_INFORMATION</td><td class="cell-yellow">Différente structure — moins d'attributs</td></tr>
+<tr><td>Support outils forensiques</td><td>Excellent</td><td class="cell-red">Partiel — X-Ways, Autopsy (limité)</td></tr>
+</table></div>
+</div>
+
+<div class="card">
+<h2>🏗️ Structure interne ReFS</h2>
+<div class="grid-2">
+<div class="grid-card"><h4>Composants clés</h4><ul>
+<li><strong>Object Table :</strong> Équivalent de la MFT NTFS (structure B+ Tree)</li>
+<li><strong>Schema Table :</strong> Types d'objets et attributs</li>
+<li><strong>Object ID Table :</strong> Association ID → fichier</li>
+<li><strong>Checksum :</strong> Chaque bloc de données a un checksum (SHA-256)</li>
+<li><strong>Superblock :</strong> À l'offset 0 du volume</li>
+</ul></div>
+<div class="grid-card"><h4>Particularités forensiques</h4><ul>
+<li>Pas de récupération native de fichiers supprimés</li>
+<li>Les entrées de répertoire sont effacées immédiatement</li>
+<li>Journalisation différente → moins d'artefacts résiduels</li>
+<li>Volume Shadow Copy fonctionne sur ReFS (Windows Server)</li>
+<li>$UsnJrnl présent et analysable</li>
+</ul></div>
+</div>
+</div>
+
+<div class="card">
+<h2>🔧 Outils supportant ReFS</h2>
+<div class="callout warn"><span class="callout-icon">⚠️</span>
+<div class="callout-body"><strong>Support limité :</strong> La majorité des outils forensiques grand public ont un support partiel ou inexistant de ReFS. Vérifier la version de l'outil et les release notes avant d'investir du temps.</div></div>
+<div class="table-wrap"><table>
+<tr><th>Outil</th><th>Support ReFS</th><th>Notes</th></tr>
+<tr><td>X-Ways Forensics</td><td class="cell-green">Partiel</td><td>Lecture OK, récupération limitée</td></tr>
+<tr><td>Autopsy / TSK</td><td class="cell-yellow">Expérimental</td><td>Modules communauté</td></tr>
+<tr><td>FTK Imager</td><td class="cell-green">Montage OK</td><td>Lecture de la structure</td></tr>
+<tr><td>MFTECmd (Zimmerman)</td><td class="cell-red">NTFS uniquement</td><td>Ne s'applique pas à ReFS</td></tr>
+<tr><td>Windows natif</td><td class="cell-green">Complet</td><td>Monter le volume et utiliser PowerShell</td></tr>
+</table></div>
+<div class="callout tip"><span class="callout-icon">💡</span>
+<div class="callout-body"><strong>Approche pragmatique :</strong> Monter le volume ReFS sur Windows Server et utiliser <code>robocopy</code> ou PowerShell pour l'extraction des fichiers accessibles. Pour les fichiers supprimés : Volume Shadow Copy ou sauvegardes.</div></div>
+</div>
+
+<div class="card">
+<h2>🔄 Volume Shadow Copy sur ReFS</h2>
+<ul>
+<li><strong>VSS fonctionne sur ReFS</strong> — Les snapshots VSS sont une source forensique précieuse</li>
+<li>Commande : <code>vssadmin list shadows /for=X:</code></li>
+<li>Montage : <code>mklink /D C:\shadow \?\GLOBALROOT\Device\HarddiskVolumeShadowCopyX\</code></li>
+<li>Alternative : <strong>ShadowExplorer</strong> (GUI) pour accéder aux snapshots VSS</li>
+<li>Hyper-V crée des snapshots VSS automatiquement lors des sauvegardes</li>
+</ul>
+</div>
+
+<div class="link-bar"><div class="link-group"><span class="link-group-label">Prérequis&nbsp;:</span><a href="ntfs.html">📖 NTFS</a><a href="comparaison_fs.html">📖 Comparaison FS</a></div><div class="link-group"><span class="link-group-label">Pratiquer&nbsp;:</span><a href="../tp.html?cat=offset">🧪 🧪 📐 Calcul d'offset</a></div><div class="link-group"><span class="link-group-label">Voir aussi&nbsp;:</span><a href="ntfs.html">🔗 NTFS</a><a href="vm_forensique.html">🔗 VM Forensique</a><a href="windows_forensique.html">🔗 Windows Forensique</a></div></div>
+<div class="exam-tip"><strong>⚖️ Examen CAS-IN&nbsp;:</strong> ReFS = Resilient File System — Windows Server 2012+ · Pas de $MFT (contrairement à NTFS) · Récupération fichiers supprimés = très difficile · Pas d'ADS, pas de compression EFS · $UsnJrnl présent · Volume Shadow Copy fonctionne sur ReFS · Outils forensiques = support partiel (X-Ways, Autopsy) · Checksums SHA-256 intégrés par bloc</div>
+<footer>
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Microsoft ReFS Documentation · DFIR.training · SANS FOR508</span>
+</footer>
+</main>
+<button id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script>const b=document.getElementById('scroll-top');window.addEventListener('scroll',()=>b.classList.toggle('visible',window.scrollY>300));</script>
+</body></html>

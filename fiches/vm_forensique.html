@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Virtualisation & VM Forensique — CAS-IN Forensique</title>
+<link rel="stylesheet" href="fiche.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">Aller au contenu</a>
+<div class="topbar">
+  <a href="index.html">← Fiches</a>
+  <span class="mod-label">Autres Systèmes</span>
+  <a href="../quiz.html">💊 Quiz →</a>
+</div>
+<nav class="breadcrumb">
+  <a href="../index.html">🏠 Accueil</a><span class="sep">›</span>
+  <a href="index.html">Fiches</a><span class="sep">›</span>
+  <a href="index.html#cat-autressystemes">Autres Systèmes</a><span class="sep">›</span>
+  <span>VM Forensique</span>
+  <span class="reading-time">⏱ ~5 min</span>
+</nav>
+<main id="main-content">
+<div class="fiche-hero">
+  <div class="fiche-icon">🖥️</div>
+  <div class="fiche-tags"><span class="tag ">VMware</span><span class="tag green">Hyper-V</span><span class="tag yellow">VirtualBox</span><span class="tag ">DFIR</span></div>
+  <h1>Virtualisation & VM Forensique</h1>
+  <p class="subtitle">VMware VMDK · Hyper-V VHD/VHDX · Snapshots · Forensique sans démarrage</p>
+</div>
+
+<div class="anecdote">
+  <blockquote>"Virtual machines are forensic gold mines — they carry snapshots frozen in time, disk images trivially mountable, and often contain the attacker's own toolset untouched."</blockquote>
+  <cite>— SANS FOR508 Advanced Incident Response</cite>
+  <div class="fact"><strong>💡 Réalité IR suisse :</strong> La majorité des serveurs d'entreprise suisses fonctionnent sur VMware vSphere ou Hyper-V. Un ransomware ou une intrusion dans un ESXi peut affecter des dizaines de VMs simultanément. Savoir acquérir et analyser des VMs est aujourd'hui incontournable.</div>
+</div>
+
+<div class="card">
+<h2>📁 Formats de disques virtuels</h2>
+<div class="table-wrap"><table>
+<tr><th>Hyperviseur</th><th>Format disque</th><th>Extension</th><th>Outil d'analyse</th></tr>
+<tr><td><strong>VMware ESXi / Workstation</strong></td><td>VMDK (Virtual Machine Disk)</td><td>.vmdk</td><td class="cell-blue">FTK Imager, X-Ways, Autopsy</td></tr>
+<tr><td><strong>Microsoft Hyper-V</strong></td><td>VHD / VHDX</td><td>.vhd .vhdx</td><td class="cell-blue">FTK Imager, Windows natif</td></tr>
+<tr><td><strong>VirtualBox</strong></td><td>VDI (Virtual Disk Image)</td><td>.vdi</td><td class="cell-yellow">VBoxManage, conversion nécessaire</td></tr>
+<tr><td><strong>QEMU / KVM</strong></td><td>QCOW2</td><td>.qcow2</td><td class="cell-yellow">qemu-img convert → raw</td></tr>
+<tr><td><strong>Parallels (macOS)</strong></td><td>HDD / PVMX</td><td>.hdd</td><td class="cell-red">Support limité outils forensiques</td></tr>
+</table></div>
+</div>
+
+<div class="card">
+<h2>📸 Snapshots — Artefact forensique clé</h2>
+<div class="callout tip"><span class="callout-icon">💡</span>
+<div class="callout-body"><strong>Un snapshot est un arrêt sur image à un instant T.</strong> Forensiquement, il peut capturer l'état exact au moment d'une attaque — avant que les logs ne soient effacés, avant le chiffrement d'un ransomware. <em>Ne jamais supprimer un snapshot sans l'analyser.</em></div></div>
+<div class="grid-2">
+<div class="grid-card"><h4>VMware — Fichiers snapshot</h4><ul>
+<li><code>.vmdk</code> — disque de snapshot (delta)</li>
+<li><code>.vmsn</code> — état mémoire RAM au moment du snapshot</li>
+<li><code>.vmsd</code> — métadonnées des snapshots</li>
+<li><code>.vmem</code> — fichier mémoire paginée</li>
+<li>Chaîne de snapshots : s'emboîtent chronologiquement</li>
+</ul></div>
+<div class="grid-card"><h4>Hyper-V — Fichiers snapshot</h4><ul>
+<li><code>.avhd / .avhdx</code> — delta disk du checkpoint</li>
+<li><code>.vmrs</code> — état RAM du checkpoint</li>
+<li>Dossier <code>Snapshots\</code> — métadonnées XML</li>
+<li>Commande : <code>Get-VMSnapshot -VMName "nom"</code></li>
+</ul></div>
+</div>
+</div>
+
+<div class="card">
+<h2>🔍 Acquisition sans démarrage — Méthode standard</h2>
+<div class="steps">
+<div class="step"><div class="step-num">1</div><div class="step-body">
+<div class="step-title">Copier les fichiers de la VM (offline)</div>
+<div class="step-desc">Sur l'hôte hyperviseur, accéder aux fichiers VMDK/VHD directement. Calculer le hash avant et après copie. Ne jamais travailler sur les fichiers originaux.</div>
+<div class="step-cmd">sha256sum vm-disk.vmdk → copie → sha256sum identique</div>
+</div></div>
+<div class="step"><div class="step-num">2</div><div class="step-body">
+<div class="step-title">Convertir au format RAW si nécessaire</div>
+<div class="step-desc">Certains outils forensiques travaillent mieux avec le format RAW. Conversion sans perte : <code>qemu-img</code> ou <code>VBoxManage</code>.</div>
+<div class="step-cmd">qemu-img convert -f vmdk -O raw vm.vmdk vm.raw</div>
+</div></div>
+<div class="step"><div class="step-num">3</div><div class="step-body">
+<div class="step-title">Monter et analyser avec FTK Imager / Autopsy</div>
+<div class="step-desc">FTK Imager peut ouvrir directement les VMDK et VHD. Autopsy les supporte via TSK. X-Ways les monte comme des disques physiques.</div>
+</div></div>
+<div class="step"><div class="step-num">4</div><div class="step-body">
+<div class="step-title">Analyse du fichier mémoire (si snapshot avec RAM)</div>
+<div class="step-desc">Les fichiers <code>.vmem</code> (VMware) ou <code>.vmrs</code> (Hyper-V) contiennent la RAM au moment du snapshot — analysables avec <strong>Volatility 3</strong>.</div>
+<div class="step-cmd">vol.py -f vm.vmem windows.pslist</div>
+</div></div>
+</div>
+</div>
+
+<div class="card">
+<h2>⚡ ESXi — Forensique sur hyperviseur compromis</h2>
+<div class="callout danger"><span class="callout-icon">🔴</span>
+<div class="callout-body"><strong>Ransomware ciblant ESXi :</strong> Depuis 2022, les ransomwares ESXiArgs, Royal, et BlackBasta ciblent spécifiquement VMware ESXi pour chiffrer toutes les VMs en une seule opération. Reconnaître cet attaque pattern est crucial.</div></div>
+<ul>
+<li><strong>Logs ESXi :</strong> <code>/var/log/vmkernel.log</code>, <code>/var/log/hostd.log</code>, <code>/var/log/vpxa.log</code></li>
+<li><strong>Fichiers chiffrés :</strong> Extension .args, .locked — les VMDK sont chiffrés mais les VMX restent lisibles</li>
+<li><strong>Authentification :</strong> <code>/etc/passwd</code>, <code>/etc/shadow</code> ESXi — comptes créés par l'attaquant</li>
+<li><strong>ESXCLI :</strong> <code>esxcli vm process list</code> — VMs en cours d'exécution</li>
+<li>Artefact clé : <code>vpxuser</code> — compte de gestion vCenter → première cible des attaquants</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>🏢 Hyper-V — Investigation Windows Server</h2>
+<div class="callout info"><span class="callout-icon">ℹ️</span>
+<div class="callout-body">Hyper-V étant intégré à Windows Server, les <strong>Event Logs Windows</strong> de l'hôte contiennent les événements Hyper-V : démarrages/arrêts de VMs, migrations, snapshots créés/supprimés.</div></div>
+<ul>
+<li><strong>Event IDs Hyper-V :</strong> 18590 (VM started), 18592 (VM stopped), 13000 (snapshot created)</li>
+<li>Chemin : <code>Microsoft-Windows-Hyper-V-Worker/Operational</code></li>
+<li><strong>Dossier VMs :</strong> <code>C:\ProgramData\Microsoft\Windows\Hyper-V\</code></li>
+<li><strong>PowerShell forensique :</strong> <code>Get-VM | Get-VMSnapshot</code></li>
+</ul>
+</div>
+
+<div class="link-bar"><div class="link-group"><span class="link-group-label">Prérequis&nbsp;:</span><a href="acquisition.html">📖 Acquisition</a><a href="ram_forensique.html">📖 RAM Forensique</a><a href="ntfs.html">📖 NTFS</a></div><div class="link-group"><span class="link-group-label">Pratiquer&nbsp;:</span><a href="../tp.html?cat=ir">🧪 🧪 🚨 Incident Response</a></div><div class="link-group"><span class="link-group-label">Voir aussi&nbsp;:</span><a href="malware_forensique.html">🔗 Malware Forensics</a><a href="incident_response.html">🔗 Incident Response</a><a href="volatilite.html">🔗 Volatility</a></div></div>
+<div class="exam-tip"><strong>⚖️ Examen CAS-IN&nbsp;:</strong> VMDK (VMware), VHD/VHDX (Hyper-V), VDI (VirtualBox) = formats de disques virtuels · Snapshot = état figé à un instant T — analyser AVANT de supprimer · .vmem / .vmrs = RAM du snapshot → Volatility 3 · ESXi compromis → logs dans /var/log/ · qemu-img convert pour passer en RAW · ESXiArgs / BlackBasta = ransomware ESXi depuis 2022</div>
+<footer>
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>SANS FOR508 · VMware Documentation · Microsoft Hyper-V Forensics</span>
+</footer>
+</main>
+<button id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script>const b=document.getElementById('scroll-top');window.addEventListener('scroll',()=>b.classList.toggle('visible',window.scrollY>300));</script>
+</body></html>

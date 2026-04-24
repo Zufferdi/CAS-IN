@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DNS Forensique — CAS-IN Forensique</title>
+<link rel="stylesheet" href="fiche.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">Aller au contenu</a>
+<div class="topbar">
+  <a href="index.html">← Fiches</a>
+  <span class="mod-label">Réseaux & Communications</span>
+  <a href="../quiz.html">💊 Quiz →</a>
+</div>
+<nav class="breadcrumb">
+  <a href="../index.html">🏠 Accueil</a><span class="sep">›</span>
+  <a href="index.html">Fiches</a><span class="sep">›</span>
+  <a href="index.html#cat-reseaux">Réseaux</a><span class="sep">›</span>
+  <span>DNS Forensique</span>
+  <span class="reading-time">⏱ ~4 min</span>
+</nav>
+<main id="main-content">
+<div class="fiche-hero">
+  <div class="fiche-icon">🌐</div>
+  <div class="fiche-tags"><span class="tag ">DNS</span><span class="tag red">Exfiltration</span><span class="tag red">C2</span><span class="tag green">Passive DNS</span></div>
+  <h1>DNS Forensique</h1>
+  <p class="subtitle">Logs DNS · Exfiltration DNS · Beaconing · Passive DNS · Zeek</p>
+</div>
+
+<div class="anecdote">
+  <blockquote>"DNS is the most important protocol you'll ever overlook. Every attack leaves DNS breadcrumbs — if you know where to look."</blockquote>
+  <cite>— SANS SEC503 · Network Forensics</cite>
+  <div class="fact"><strong>💡 Pourquoi le DNS est sous-exploité :</strong> La plupart des enquêtes se concentrent sur HTTP/HTTPS. Pourtant, le DNS est souvent le <em>seul</em> protocole non filtré en sortie d'un réseau — raison pour laquelle les attaquants l'utilisent pour l'exfiltration de données et le command-and-control (C2).</div>
+</div>
+
+<div class="card">
+<h2>📋 Sources de logs DNS</h2>
+<div class="table-wrap"><table>
+<tr><th>Source</th><th>Localisation</th><th>Contenu</th><th>Rétention typique</th></tr>
+<tr><td><strong>Résolveur DNS local</strong></td><td>Serveur interne / pfSense / Pi-hole</td><td>Toutes les requêtes du réseau interne</td><td class="cell-green">Configurable</td></tr>
+<tr><td><strong>Windows DNS Server</strong></td><td><code>Event Viewer → DNS Server</code></td><td>Requêtes reçues, réponses, erreurs</td><td class="cell-yellow">Selon politique</td></tr>
+<tr><td><strong>Routeur / Firewall</strong></td><td>Syslog / interface web</td><td>Requêtes et réponses visibles en clair</td><td class="cell-yellow">7–90 jours</td></tr>
+<tr><td><strong>Zeek (Bro)</strong></td><td><code>dns.log</code></td><td>Requêtes/réponses DNS structurées en JSON</td><td class="cell-green">Selon stockage</td></tr>
+<tr><td><strong>Cloud (Azure DNS, AWS Route53)</strong></td><td>Portail cloud</td><td>Logs DNS des zones hébergées</td><td class="cell-blue">Variable</td></tr>
+<tr><td><strong>Passive DNS (externe)</strong></td><td>VirusTotal, DNSDB, RiskIQ</td><td>Résolutions historiques mondiales</td><td class="cell-blue">Années</td></tr>
+</table></div>
+</div>
+
+<div class="card">
+<h2>🔴 DNS Exfiltration</h2>
+<div class="callout danger"><span class="callout-icon">🚨</span>
+<div class="callout-body"><strong>Technique :</strong> Les données sont encodées en Base64 dans des sous-domaines DNS. L'attaquant contrôle le serveur DNS autoritaire pour les recevoir. Passe souvent inaperçu car le DNS est rarement bloqué en sortie.</div></div>
+<div class="grid-2">
+<div class="grid-card"><h4>Indicateurs d'exfiltration DNS</h4><ul>
+<li>Sous-domaines anormalement longs (> 30 chars)</li>
+<li>Caractères Base64 dans les sous-domaines (A-Z, 0-9, +/=)</li>
+<li>Volume élevé de requêtes vers un seul domaine</li>
+<li>Type de requête inhabituel : TXT, NULL, CNAME</li>
+<li>Intervalles réguliers (beaconing)</li>
+</ul></div>
+<div class="grid-card"><h4>Exemple concret</h4><ul>
+<li><code>aGVsbG8=.attacker.com</code> → "hello" en Base64</li>
+<li><code>dGhpc2lzc2VjcmV0.attacker.com</code> → données exfiltrées</li>
+<li>Outils offensifs : iodine, dns2tcp, DNScat</li>
+<li>Détection : analyser la longueur moyenne des sous-domaines</li>
+</ul></div>
+</div>
+<pre>
+# Zeek : détecter les sous-domaines longs
+cat dns.log | zeek-cut query | awk '{n=split($0,a,"."); if(length(a[1])>30) print}' | sort | uniq -c | sort -rn
+</pre>
+</div>
+
+<div class="card">
+<h2>🔄 DNS Beaconing — Indicateur C2</h2>
+<p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Le beaconing C2 via DNS est caractérisé par des requêtes périodiques régulières vers un même domaine :</p>
+<div class="table-wrap"><table>
+<tr><th>Indicateur</th><th>Normal</th><th>Beaconing C2</th></tr>
+<tr><td>Intervalle</td><td>Aléatoire, selon usage</td><td class="cell-red">Régulier (30s, 60s, 5min…)</td></tr>
+<tr><td>Domaine</td><td>Divers, connus</td><td class="cell-red">DGA ou domaine unique inconnu</td></tr>
+<tr><td>Réponse</td><td>IP stable (CDN)</td><td class="cell-red">NXDOMAIN alternant / IP dynamique</td></tr>
+<tr><td>Volume</td><td>Quelques requêtes</td><td class="cell-red">Centaines/heure</td></tr>
+<tr><td>TTL</td><td>300–86400s</td><td class="cell-yellow">TTL très bas (< 30s)</td></tr>
+</table></div>
+<pre>
+# Détecter beaconing avec Zeek + tshark
+tshark -r capture.pcap -T fields -e dns.qry.name -Y "dns" | sort | uniq -c | sort -rn | head -20
+</pre>
+</div>
+
+<div class="card">
+<h2>🔍 Passive DNS — Investigation rétrospective</h2>
+<div class="callout tip"><span class="callout-icon">💡</span>
+<div class="callout-body"><strong>Passive DNS :</strong> Bases de données mondiales qui enregistrent les résolutions DNS au fil du temps. Permettent de savoir quelle IP un domaine résolvait il y a 2 ans, ou quels autres domaines ont pointé vers la même IP.</div></div>
+<div class="grid-2">
+<div class="grid-card"><h4>Services Passive DNS</h4><ul>
+<li><strong>VirusTotal</strong> — Relations et résolutions historiques</li>
+<li><strong>DNSDB (Farsight)</strong> — Base la plus complète (payante)</li>
+<li><strong>RiskIQ / Microsoft Defender</strong></li>
+<li><strong>SecurityTrails</strong></li>
+<li><strong>Shodan</strong> — DNS inversé par IP</li>
+</ul></div>
+<div class="grid-card"><h4>Cas d'usage forensique</h4><ul>
+<li>Retrouver l'IP hébergeant un C2 qui a changé de DNS</li>
+<li>Identifier d'autres domaines malveillants sur la même IP</li>
+<li>Reconstruire l'infrastructure d'un attaquant</li>
+<li>Confirmer la date de première utilisation d'un domaine</li>
+</ul></div>
+</div>
+</div>
+
+<div class="card">
+<h2>🛠️ Outils DNS forensiques</h2>
+<ul>
+<li><strong>Zeek (Bro) :</strong> Analyse PCAP → dns.log structuré en TSV/JSON. Référence en IR réseau.</li>
+<li><strong>tshark :</strong> <code>tshark -r cap.pcap -T fields -e dns.qry.name -Y dns</code></li>
+<li><strong>DNStwist :</strong> Détection de typosquatting — variantes orthographiques d'un domaine</li>
+<li><strong>Malicious Domain Checker :</strong> APIs VirusTotal, URLhaus, PhishTank</li>
+<li><strong>MassDNS :</strong> Résolution en masse pour les investigations OSINT</li>
+<li><strong>Dig / nslookup :</strong> Requêtes manuelles avec options (type, serveur spécifique)</li>
+</ul>
+<pre>
+# Extraire tous les domaines distincts d'un PCAP
+tshark -r file.pcap -T fields -e dns.qry.name -Y "dns.flags.response == 0" | sort -u
+</pre>
+</div>
+
+<div class="link-bar"><div class="link-group"><span class="link-group-label">Prérequis&nbsp;:</span><a href="reseau.html">📖 Réseaux & Infrastructure</a><a href="wireshark_pcap.html">📖 Wireshark & PCAP</a></div><div class="link-group"><span class="link-group-label">Pratiquer&nbsp;:</span><a href="../tp.html">🧪 🧪 📡 Réseau & PCAP</a></div><div class="link-group"><span class="link-group-label">Voir aussi&nbsp;:</span><a href="wireshark_pcap.html">🔗 Wireshark & PCAP</a><a href="malware_forensique.html">🔗 Malware Forensics</a><a href="osint.html">🔗 OSINT</a></div></div>
+<div class="exam-tip"><strong>⚖️ Examen CAS-IN&nbsp;:</strong> DNS = souvent le seul protocole non filtré en sortie · Exfiltration DNS = données encodées Base64 dans sous-domaines · Sous-domaines > 30 chars = indicateur · Beaconing = requêtes périodiques régulières vers domaine C2 · TTL très bas (< 30s) = indicateur C2 · Passive DNS = résolutions historiques (VirusTotal, DNSDB) · Zeek dns.log = source principale d'analyse</div>
+<footer>
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>SANS SEC503 · Zeek Documentation · DNSDB Farsight</span>
+</footer>
+</main>
+<button id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script>const b=document.getElementById('scroll-top');window.addEventListener('scroll',()=>b.classList.toggle('visible',window.scrollY>300));</script>
+</body></html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SIEM & Log Management — CAS-IN Forensique</title>
+<link rel="stylesheet" href="fiche.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">Aller au contenu</a>
+<div class="topbar">
+  <a href="index.html">← Fiches</a>
+  <span class="mod-label">Réseaux & Communications</span>
+  <a href="../quiz.html">💊 Quiz →</a>
+</div>
+<nav class="breadcrumb">
+  <a href="../index.html">🏠 Accueil</a><span class="sep">›</span>
+  <a href="index.html">Fiches</a><span class="sep">›</span>
+  <a href="index.html#cat-reseaux">Réseaux</a><span class="sep">›</span>
+  <span>SIEM & Logs</span>
+  <span class="reading-time">⏱ ~5 min</span>
+</nav>
+<main id="main-content">
+<div class="fiche-hero">
+  <div class="fiche-icon">📊</div>
+  <div class="fiche-tags"><span class="tag ">SIEM</span><span class="tag green">Splunk</span><span class="tag yellow">Elastic</span><span class="tag ">Sigma</span></div>
+  <h1>SIEM & Log Management</h1>
+  <p class="subtitle">Splunk · Elastic / ELK · Sigma Rules · Graylog · Investigation SIEM</p>
+</div>
+
+<div class="anecdote">
+  <blockquote>"A SIEM without proper tuning is a very expensive noisy box. A SIEM with good Sigma rules and correlation is the difference between detecting an attack in 6 minutes vs 6 months."</blockquote>
+  <cite>— SANS SEC555 · SIEM with Tactical Analytics</cite>
+  <div class="fact"><strong>💡 Contexte IR :</strong> Lors d'un incident, le SIEM est souvent la première source consultée — et parfois la seule, si les logs locaux ont été effacés par l'attaquant. Savoir interroger un SIEM efficacement est une compétence forensique fondamentale en contexte entreprise.</div>
+</div>
+
+<div class="card">
+<h2>🏗️ Architecture SIEM</h2>
+<div class="grid-2">
+<div class="grid-card"><h4>Composants</h4><ul>
+<li><strong>Collecteurs / Agents :</strong> Récupèrent les logs (Winlogbeat, Sysmon, rsyslog)</li>
+<li><strong>Parsers / Normalisateurs :</strong> Transforment les logs en format commun (CEF, ECS)</li>
+<li><strong>Indexeur :</strong> Stocke et indexe pour la recherche (Elasticsearch, Splunk indexer)</li>
+<li><strong>Moteur de corrélation :</strong> Applique les règles de détection</li>
+<li><strong>Interface de visualisation :</strong> Dashboards, alertes, timeline</li>
+</ul></div>
+<div class="grid-card"><h4>Sources de logs typiques</h4><ul>
+<li>Windows Event Logs (Security, System, Sysmon)</li>
+<li>Firewall / IPS (Palo Alto, Fortinet, pfSense)</li>
+<li>Active Directory / Azure AD</li>
+<li>Proxy / Web (Squid, BlueCoat, Zscaler)</li>
+<li>VPN (Cisco, Pulse, OpenVPN)</li>
+<li>Email (Exchange, O365, Proofpoint)</li>
+<li>DNS (Windows DNS, Bind, pfSense)</li>
+<li>Applications (IIS, Apache, nginx)</li>
+</ul></div>
+</div>
+</div>
+
+<div class="card">
+<h2>🔵 Splunk — Investigation forensique</h2>
+<div class="callout info"><span class="callout-icon">ℹ️</span>
+<div class="callout-body">Splunk utilise le <strong>SPL (Search Processing Language)</strong> — une syntaxe puissante pour interroger, filtrer, agréger et visualiser des millions d'événements.</div></div>
+<pre>
+-- Rechercher tous les echecs d'authentification sur 24h
+index=windows EventCode=4625 | stats count by src_ip, user | sort -count
+
+-- Timeline des connexions d'un IP suspect
+index=* src_ip="10.0.0.42" | timechart span=1h count by EventCode
+
+-- Détecter des connexions hors horaires de bureau
+index=windows EventCode=4624 LogonType=2
+| eval hour=strftime(_time,"%H") | where hour<7 OR hour>20
+| table _time, user, src_ip, host
+</pre>
+</div>
+
+<div class="card">
+<h2>🟡 Elastic / ELK Stack</h2>
+<div class="grid-2">
+<div class="grid-card"><h4>Composants ELK</h4><ul>
+<li><strong>Elasticsearch :</strong> Moteur de recherche et d'indexation</li>
+<li><strong>Logstash :</strong> Pipeline d'ingestion et transformation</li>
+<li><strong>Kibana :</strong> Visualisation, dashboards, Discover</li>
+<li><strong>Beats :</strong> Agents légers (Winlogbeat, Filebeat, Packetbeat)</li>
+<li><strong>ECS :</strong> Elastic Common Schema — normalisation des champs</li>
+</ul></div>
+<div class="grid-card"><h4>KQL — Kibana Query Language</h4><ul>
+<li><code>winlog.event_id:4624 AND NOT user.name:SYSTEM</code></li>
+<li><code>event.code:4688 AND process.name:powershell.exe</code></li>
+<li><code>network.direction:outbound AND destination.port:443</code></li>
+<li><code>source.ip:192.168.0.0/16 AND event.action:failed*</code></li>
+</ul></div>
+</div>
+</div>
+
+<div class="card">
+<h2>🛡️ Sigma Rules — Langage universel de détection</h2>
+<div class="callout tip"><span class="callout-icon">💡</span>
+<div class="callout-body"><strong>Sigma</strong> est un format YAML générique pour les règles de détection. Une règle Sigma peut être convertie vers Splunk SPL, Elastic KQL, Azure Sentinel KQL, etc. — c'est le "YARA des logs".</div></div>
+<pre>
+# Exemple règle Sigma : détection Mimikatz via Sysmon
+title: Mimikatz Detection via ProcessAccess
+status: stable
+logsource:
+  product: windows
+  service: sysmon
+detection:
+  selection:
+    EventID: 10
+    TargetImage|endswith: '\lsass.exe'
+  condition: selection
+falsepositives:
+  - Antivirus scans
+level: high
+tags:
+  - attack.credential_access
+  - attack.t1003.001
+</pre>
+<ul>
+<li>Outils de conversion : <strong>sigmac</strong>, <strong>pySigma</strong></li>
+<li>Repo communautaire : github.com/SigmaHQ/sigma</li>
+<li>Intégration : Chainsaw, Hayabusa (sur EVTX), Elastic SIEM, Splunk ES</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>🔍 Approche forensique dans un SIEM</h2>
+<div class="steps">
+<div class="step"><div class="step-num">1</div><div class="step-body">
+<div class="step-title">Définir la fenêtre temporelle</div>
+<div class="step-desc">Partir de l'incident confirmé (alerte initiale) et élargir. Les attaquants sont souvent présents des semaines avant la détection (dwell time moyen = 9 jours selon Mandiant 2023).</div>
+</div></div>
+<div class="step"><div class="step-num">2</div><div class="step-body">
+<div class="step-title">Identifier les IOC et pivoter</div>
+<div class="step-desc">IP suspecte → chercher tous ses accès. Hash malware → chercher toutes les exécutions. User compromis → chercher tous ses accès sur la période.</div>
+</div></div>
+<div class="step"><div class="step-num">3</div><div class="step-body">
+<div class="step-title">Reconstruire la timeline</div>
+<div class="step-desc">Corréler les logs de sources différentes (VPN login → AD → serveur interne) pour reconstituer le chemin de l'attaquant. Timesketch pour la visualisation.</div>
+</div></div>
+<div class="step"><div class="step-num">4</div><div class="step-body">
+<div class="step-title">Vérifier les trous dans les logs</div>
+<div class="step-desc">Des périodes sans logs = indicateur potentiel de manipulation. Comparer avec la rétention configurée. Vérifier si les agents de collecte ont été arrêtés.</div>
+</div></div>
+</div>
+</div>
+
+<div class="card">
+<h2>📋 Rétention des logs — Standards</h2>
+<div class="table-wrap"><table>
+<tr><th>Type de log</th><th>Rétention recommandée</th><th>Exigence légale suisse</th></tr>
+<tr><td>Logs de sécurité Windows</td><td>1 an (chaud) + 3 ans (archive)</td><td>Pas de minimum légal — bonne pratique</td></tr>
+<tr><td>Logs firewall / IPS</td><td>6 mois minimum</td><td>—</td></tr>
+<tr><td>Logs de connexion VPN</td><td>12 mois</td><td>—</td></tr>
+<tr><td>Logs emails</td><td>12 mois</td><td>Code des obligations (CO)</td></tr>
+<tr><td>Logs accès données personnelles</td><td>1 an (nLPD art. 8)</td><td class="cell-yellow">Recommandé par PFPDT</td></tr>
+<tr><td>Données de raccordement télécom</td><td>6 mois</td><td class="cell-red">Obligatoire (LSCPT)</td></tr>
+</table></div>
+</div>
+
+<div class="link-bar"><div class="link-group"><span class="link-group-label">Prérequis&nbsp;:</span><a href="reseau.html">📖 Réseaux & Infrastructure</a><a href="logs_windows.html">📖 Logs Windows</a><a href="incident_response.html">📖 Incident Response</a></div><div class="link-group"><span class="link-group-label">Pratiquer&nbsp;:</span><a href="../tp.html?cat=ir">🧪 🧪 🚨 Incident Response</a></div><div class="link-group"><span class="link-group-label">Voir aussi&nbsp;:</span><a href="logs_windows.html">🔗 Logs Windows</a><a href="incident_response.html">🔗 Incident Response</a><a href="wireshark_pcap.html">🔗 Wireshark</a></div></div>
+<div class="exam-tip"><strong>⚖️ Examen CAS-IN&nbsp;:</strong> SIEM = collecte centralisée de logs + corrélation · Splunk = SPL (Search Processing Language) · Elastic/ELK = Elasticsearch + Logstash + Kibana · Sigma = règles de détection YAML converties vers SPL/KQL · KQL = Kibana Query Language · Rétention données raccordement = 6 mois obligatoire (LSCPT) · Dwell time moyen attaquant = ~9 jours avant détection · Trous dans les logs = indicateur de manipulation</div>
+<footer>
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>SANS SEC555 · SigmaHQ/sigma · Elastic ECS Documentation · Splunk SPL Reference</span>
+</footer>
+</main>
+<button id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script>const b=document.getElementById('scroll-top');window.addEventListener('scroll',()=>b.classList.toggle('visible',window.scrollY>300));</script>
+</body></html>
