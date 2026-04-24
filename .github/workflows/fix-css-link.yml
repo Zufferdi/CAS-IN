@@ -1,12 +1,9 @@
 name: Vérifier et corriger lien CSS dans toutes les fiches
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - refactor-v2.3-from-main
-    paths:
-      - 'fiches/**'
 
 jobs:
   fix-css:
@@ -28,16 +25,10 @@ jobs:
 
           CORRECT = '<link rel="stylesheet" href="../style/fiche_style.css">'
 
-          # Patterns à détecter (variantes incorrectes)
-          WRONG_PATTERNS = [
-              r'<link[^>]+href="fiche_style\.css"[^>]*>',
-              r'<link[^>]+href="\.\/fiche_style\.css"[^>]*>',
-              r'<link[^>]+href="style/fiche_style\.css"[^>]*>',
-              r'<link[^>]+href="fiche-hub\.css"[^>]*>',
-              r'<link[^>]+href="fiche\.css"[^>]*>',
-              r'<link[^>]+href="[^"]*fiche_style\.css"[^>]*>',
-          ]
-          COMBINED = re.compile('|'.join(WRONG_PATTERNS), re.IGNORECASE)
+          WRONG = re.compile(
+            r'<link[^>]+href="(?!\.\.\/style\/fiche_style\.css)[^"]*(?:fiche_style|fiche-hub|fiche)\.css"[^>]*>',
+            re.IGNORECASE
+          )
 
           files = sorted(glob.glob('fiches/*.html'))
           ok, fixed, added = 0, 0, 0
@@ -48,30 +39,26 @@ jobs:
                   html = f.read()
 
               has_correct = CORRECT in html
-              has_wrong   = bool(COMBINED.search(html))
+              has_wrong   = bool(WRONG.search(html))
 
               if has_correct and not has_wrong:
-                  print(f"  ✅  {name}")
+                  print(f"  OK  {name}")
                   ok += 1
                   continue
 
-              # Remplacer les mauvais liens par le bon
               if has_wrong:
-                  html = COMBINED.sub(CORRECT, html, count=1)
-                  # Supprimer les doublons eventuels
-                  html = html.replace(CORRECT + '\n' + CORRECT, CORRECT)
+                  html = WRONG.sub(CORRECT, html, count=1)
                   fixed += 1
-                  print(f"  🔧  {name}  (lien corrigé)")
+                  print(f"  FIX {name}")
               elif not has_correct:
-                  # Aucun lien CSS → injecter après <head>
                   html = html.replace('<head>', '<head>\n' + CORRECT, 1)
                   added += 1
-                  print(f"  ➕  {name}  (lien ajouté)")
+                  print(f"  ADD {name}")
 
               with open(path, 'w', encoding='utf-8') as f:
                   f.write(html)
 
-          print(f"\n✅ OK: {ok}  |  🔧 Corrigés: {fixed}  |  ➕ Ajoutés: {added}")
+          print(f"\nOK:{ok}  Fixes:{fixed}  Ajouts:{added}")
           PYEOF
 
       - name: Commit et push
@@ -79,6 +66,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add fiches/
-          git diff --cached --quiet && echo "Rien à committer" && exit 0
-          git commit -m "fix: lien CSS unifié ../style/fiche_style.css dans toutes les fiches"
+          git diff --cached --quiet && echo "Rien a committer" && exit 0
+          git commit -m "fix: lien CSS unifie dans toutes les fiches"
           git push
