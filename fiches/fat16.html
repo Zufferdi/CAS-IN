@@ -1,168 +1,403 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<link rel="stylesheet" href="../style/fiche_style.css">
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>FAT12 / FAT16 / FAT32 — CAS-IN Forensique</title>
+<meta name="description" content="Boot Record · Tables d'allocation · Entrées SFN · Chaîne de clusters · Récupération forensique">
+<meta name="theme-color" content="#0d1117">
+<link rel="stylesheet" href="../style/fiche_style.css">
+
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   FAT16 — styles spécifiques uniquement
+   Toutes les règles utilisent les variables de fiche_style.css
+   (--bg, --surface, --surface2, --border, --text, --muted, --dim,
+    --cyan, --gold, --red, --green, --blue, --orange, --purple,
+    --mono, --sans) et sont préfixées .fat-* pour éviter tout conflit.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Variantes FAT (alias de cohérence) ─────────────────────────── */
+:root{
+  --fat12: var(--gold);
+  --fat16: var(--blue);
+  --fat32: var(--green);
+}
+
+/* ── Scroll progress ────────────────────────────────────────────── */
+#scroll-progress{position:fixed;top:0;left:0;z-index:300;height:2px;width:0;background:linear-gradient(90deg,var(--blue),var(--cyan));pointer-events:none}
+
+/* ── Page wrap (cohérent avec NTFS) ─────────────────────────────── */
+.page-wrap{max-width:980px;margin:0 auto;padding:1.5rem 2rem .5rem}
+
+/* ── Section titles (identiques à NTFS) ─────────────────────────── */
+.sec-title{font-family:var(--sans);font-size:.78rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:1.75rem 0 .75rem;display:flex;align-items:center;gap:.6rem;padding-left:.6rem;border-left:2px solid var(--blue)}
+.sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+.sec-sub{font-size:.78rem;color:var(--dim);margin:.2rem 0 1rem;line-height:1.55;font-style:italic}
+
+/* ── Sous-titre interne de section ──────────────────────────────── */
+.fat-subheading{font-family:var(--sans);font-size:.95rem;font-weight:700;color:var(--text);margin:1.5rem 0 .6rem}
+
+/* ── Table of contents — préfixé pour ne pas écraser .toc commun ── */
+.fat-toc{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;padding:.85rem 1.1rem;margin:1rem 0 1.25rem;display:flex;gap:1.25rem;flex-wrap:wrap;align-items:center;font-size:.8rem}
+.fat-toc a{color:var(--muted);display:inline-flex;align-items:center;gap:.3rem;text-decoration:none;transition:color .12s}
+.fat-toc a:hover{color:var(--cyan)}
+
+/* ── Petit badge FAT (≠ .badge du CSS commun qui est un gros titre) */
+.fat-badge{display:inline-block;padding:.15rem .5rem;border-radius:12px;font-size:.7rem;font-weight:700;border:1px solid}
+.fat-badge-12{background:rgba(240,192,64,.15);color:var(--fat12);border-color:rgba(240,192,64,.3)}
+.fat-badge-16{background:rgba(88,166,255,.15);color:var(--fat16);border-color:rgba(88,166,255,.3)}
+.fat-badge-32{background:rgba(48,232,138,.15);color:var(--fat32);border-color:rgba(48,232,138,.3)}
+
+/* ══════════════════════════════════════════════
+   SECTION 1 — ANATOMIE PARTITION
+   ══════════════════════════════════════════════ */
+.fat-partition-filter{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap}
+.fat-filter-btn{background:var(--surface2);border:2px solid var(--border);border-radius:6px;padding:.3rem .9rem;cursor:pointer;font-size:.78rem;color:var(--muted);font-family:var(--mono);transition:all .15s}
+.fat-filter-btn:hover{filter:brightness(1.2)}
+.fat-filter-btn.fat-active-12{border-color:var(--fat12);color:var(--fat12);background:rgba(240,192,64,.1)}
+.fat-filter-btn.fat-active-16{border-color:var(--fat16);color:var(--fat16);background:rgba(88,166,255,.1)}
+.fat-filter-btn.fat-active-32{border-color:var(--fat32);color:var(--fat32);background:rgba(48,232,138,.1)}
+
+.fat-partition-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.25rem}
+.fat-partition-bar{display:flex;border-radius:8px;overflow:hidden;margin:.5rem 0 .7rem;height:72px;gap:3px}
+.fat-pbar-zone{display:flex;flex-direction:column;justify-content:center;align-items:center;cursor:pointer;transition:filter .15s,transform .15s;user-select:none;min-width:0;padding:0 .5rem;text-align:center;position:relative}
+.fat-pbar-zone:hover{filter:brightness(1.18);transform:scaleY(1.05)}
+.fat-pbar-zone.active{outline:3px solid white;z-index:2;transform:scaleY(1.08)}
+.fat-pbar-zone .zone-num{font-family:var(--mono);font-size:.72rem;font-weight:700;opacity:.85}
+.fat-pbar-zone .zone-name{font-family:var(--sans);font-size:.74rem;font-weight:700;white-space:nowrap;margin-top:.1rem}
+.fat-pbar-zone .zone-sub{font-family:var(--mono);font-size:.58rem;opacity:.75;white-space:nowrap;line-height:1.25}
+.fat-pbar-br{flex:.8;background:#e06c1a;color:white;border-radius:4px 0 0 4px}
+.fat-pbar-fat1{flex:2;background:#1f6feb;color:white}
+.fat-pbar-fat2{flex:2;background:#1558c0;color:white}
+.fat-pbar-root{flex:1.5;background:#6e40c9;color:white}
+.fat-pbar-data{flex:6;background:#2ea043;color:white;border-radius:0 4px 4px 0}
+.fat-pbar-root.hidden{display:none}
+.fat-zone-label-bar{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.65rem;color:var(--dim);margin-bottom:.5rem}
+
+.fat-zone-detail{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;margin-top:.5rem;min-height:80px;transition:all .2s}
+.fat-zone-detail h4{font-family:var(--sans);font-size:1rem;margin:0 0 .4rem;color:var(--text)}
+.fat-zone-detail ul{padding-left:1.2rem;font-size:.82rem;color:var(--muted);line-height:1.55;margin:0}
+.fat-zone-detail ul li{margin:.2rem 0}
+.fat-zone-detail code{color:var(--cyan);font-family:var(--mono);font-size:.78rem;background:rgba(0,229,204,.07);border:1px solid rgba(0,229,204,.15);border-radius:3px;padding:.01rem .3rem}
+
+/* ── Comparaison FAT16 vs FAT32 ──────────────────────────────────── */
+.fat-compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:.75rem 0}
+@media(max-width:650px){.fat-compare-grid{grid-template-columns:1fr}}
+.fat-card{border-radius:10px;padding:1.15rem 1.25rem}
+.fat-card-16{background:rgba(88,166,255,.07);border:1.5px solid rgba(88,166,255,.3)}
+.fat-card-32{background:rgba(48,232,138,.07);border:1.5px solid rgba(48,232,138,.3)}
+.fat-card h4{font-family:var(--sans);font-size:1rem;margin-bottom:.65rem;color:var(--text)}
+.fat-card h4 span{font-family:var(--mono);font-size:.72rem;opacity:.7;font-weight:400}
+.fat-card ul{list-style:none;font-size:.8rem;padding:0;margin:0}
+.fat-card ul li{padding:.3rem 0;border-bottom:1px solid var(--border);color:var(--muted);line-height:1.5}
+.fat-card ul li:last-child{border:none}
+.fat-card ul li strong{color:var(--text)}
+
+/* ── BPB Table ──────────────────────────────────────────────────── */
+.fat-bpb-table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:.5rem}
+.fat-bpb-table th{background:var(--surface2);padding:.5rem .8rem;text-align:left;color:var(--muted);font-family:var(--mono);font-weight:700;font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;border-bottom:2px solid var(--border)}
+.fat-bpb-table td{padding:.5rem .8rem;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text)}
+.fat-bpb-table tr:hover td{background:var(--surface2)}
+.fat-bpb-table .offset{font-family:var(--mono);color:var(--cyan);font-size:.78rem}
+.fat-bpb-table .field{font-weight:700}
+.fat-bpb-table .note{color:var(--muted);font-size:.75rem}
+
+/* ── Bloc formules ──────────────────────────────────────────────── */
+.fat-formula{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;padding:.9rem 1.1rem;font-family:var(--mono);font-size:.78rem;line-height:1.9;overflow-x:auto;white-space:pre;color:var(--text);margin:.5rem 0}
+.fat-formula .comment{color:var(--dim)}
+.fat-formula .var{color:var(--gold)}
+.fat-formula .op{color:var(--blue)}
+
+/* ══════════════════════════════════════════════
+   SECTION 2 — ENTRÉE SFN
+   ══════════════════════════════════════════════ */
+.fat-sfn-wrap{margin:.75rem 0 1rem}
+.fat-sfn-hint{font-family:var(--mono);font-size:.65rem;color:var(--dim);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+.fat-sfn-bar{display:flex;border-radius:6px 6px 0 0;overflow:hidden;height:58px;gap:2px}
+.fat-sfn-field{display:flex;flex-direction:column;justify-content:center;align-items:center;cursor:pointer;transition:filter .15s,transform .12s;font-size:.7rem;text-align:center;padding:0 4px;min-width:0;user-select:none;position:relative}
+.fat-sfn-field:hover{filter:brightness(1.2);transform:scaleY(1.06)}
+.fat-sfn-field.active{outline:2px solid white;z-index:2;transform:scaleY(1.1);filter:brightness(1.3)}
+.fat-sfn-field .f-name{font-family:var(--mono);font-weight:700;white-space:nowrap;font-size:.68rem}
+.fat-sfn-field .f-size{opacity:.75;font-size:.6rem}
+.fat-sfn-field .f-off{font-family:var(--mono);font-size:.56rem;opacity:.65}
+.fat-sfn-f-nom{flex:8;background:#1f6feb;color:white;border-radius:4px 0 0 0}
+.fat-sfn-f-ext{flex:3;background:#0d419d;color:white}
+.fat-sfn-f-attr{flex:1.5;background:#6e40c9;color:white}
+.fat-sfn-f-rsvd{flex:2;background:#444;color:#aaa}
+.fat-sfn-f-ctime{flex:2.5;background:#c9780c;color:white}
+.fat-sfn-f-adate{flex:2;background:#a05f09;color:white}
+.fat-sfn-f-cluh{flex:2;background:#2ea043;color:white}
+.fat-sfn-f-mtime{flex:2.5;background:#c9780c;color:white}
+.fat-sfn-f-clul{flex:2;background:#26803a;color:white}
+.fat-sfn-f-size{flex:4;background:#b62324;color:white;border-radius:0 4px 0 0}
+
+.fat-sfn-legend{display:flex;flex-wrap:wrap;gap:.6rem;margin:.5rem 0;font-size:.72rem}
+.fat-sfn-legend-item{display:flex;align-items:center;gap:.3rem;color:var(--muted)}
+.fat-sfn-dot{width:12px;height:12px;border-radius:2px}
+
+.fat-sfn-detail{background:var(--surface2);border:1px solid var(--border);border-radius:0 0 8px 8px;padding:1rem 1.2rem;min-height:90px;font-size:.82rem;line-height:1.65}
+.fat-sfn-detail h4{font-family:var(--sans);font-size:.95rem;margin:0 0 .4rem;color:var(--text)}
+.fat-sfn-detail p{color:var(--muted);margin:.2rem 0;font-size:.8rem}
+.fat-sfn-detail code{color:var(--cyan);font-family:var(--mono);font-size:.76rem;background:rgba(0,229,204,.07);border:1px solid rgba(0,229,204,.15);border-radius:3px;padding:.01rem .3rem}
+
+/* ══════════════════════════════════════════════
+   SECTION 3 — TIMESTAMP DECODER
+   ══════════════════════════════════════════════ */
+.fat-ts-decoder{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:.5rem 0}
+@media(max-width:650px){.fat-ts-decoder{grid-template-columns:1fr}}
+.fat-ts-panel{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem}
+.fat-ts-panel h4{font-family:var(--sans);color:var(--gold);margin-bottom:.65rem;font-size:.88rem}
+.fat-ts-label{font-size:.68rem;color:var(--muted);margin-bottom:.2rem}
+.fat-ts-bits{display:flex;gap:2px;flex-wrap:wrap}
+.fat-ts-bit{width:22px;height:28px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);border-radius:3px;font-family:var(--mono);font-size:.7rem;cursor:pointer;transition:all .12s;user-select:none;color:var(--text)}
+.fat-ts-bit:hover{border-color:var(--blue)}
+.fat-ts-bit.on{background:var(--blue);color:white;border-color:var(--blue)}
+.fat-ts-result{background:var(--surface);border-radius:4px;padding:.5rem;font-family:var(--mono);font-size:.8rem;color:var(--gold);margin-top:.5rem;border:1px solid var(--border)}
+
+/* ══════════════════════════════════════════════
+   SECTION 4 — ATTRIBUTS
+   ══════════════════════════════════════════════ */
+.fat-attr-grid{display:flex;gap:.5rem;flex-wrap:wrap;margin:.8rem 0}
+.fat-attr-bit{display:flex;flex-direction:column;align-items:center;gap:.2rem;background:var(--surface2);border:1.5px solid var(--border);border-radius:6px;padding:.5rem .7rem;cursor:pointer;transition:all .15s;min-width:52px;user-select:none}
+.fat-attr-bit:hover{border-color:var(--blue)}
+.fat-attr-bit.on{border-color:var(--orange);background:rgba(240,136,62,.12)}
+.fat-attr-bit .bit-letter{font-family:var(--sans);font-size:1.1rem;font-weight:700;color:var(--muted)}
+.fat-attr-bit.on .bit-letter{color:var(--orange)}
+.fat-attr-bit .bit-name{font-family:var(--mono);font-size:.6rem;color:var(--dim)}
+.fat-attr-result{font-family:var(--mono);color:var(--cyan);font-size:.85rem;margin-top:.5rem}
+.fat-attr-result code{color:var(--cyan);background:rgba(0,229,204,.07);border:1px solid rgba(0,229,204,.15);border-radius:3px;padding:.01rem .3rem;font-size:.78rem}
+
+/* ══════════════════════════════════════════════
+   SECTION 5 — CHAÎNE CLUSTERS / FAT TABLE
+   ══════════════════════════════════════════════ */
+.fat-legend{display:flex;gap:.9rem;flex-wrap:wrap;margin:.5rem 0;font-size:.74rem}
+.fat-legend-item{display:flex;align-items:center;gap:.3rem;color:var(--muted)}
+.fat-legend-dot{width:14px;height:14px;border-radius:3px;border:1px solid rgba(255,255,255,.1)}
+
+.fat-table-wrap{overflow-x:auto}
+.fat-table{display:flex;gap:3px;padding:.5rem;min-width:max-content;background:var(--surface2);border:1px solid var(--border);border-radius:8px}
+.fat-cell{display:flex;flex-direction:column;align-items:center;border-radius:4px;padding:.5rem .4rem;min-width:58px;cursor:pointer;transition:all .15s;border:2px solid transparent}
+.fat-cell:hover{transform:scaleY(1.05);filter:brightness(1.18)}
+.fat-cell.active{border-color:white;transform:scaleY(1.1)}
+.fat-cell .cnum{font-family:var(--mono);font-size:.65rem;opacity:.75}
+.fat-cell .cval{font-family:var(--mono);font-size:.72rem;font-weight:700}
+.fat-cell .ctype{font-family:var(--mono);font-size:.6rem;margin-top:.1rem}
+.fat-c-reserved{background:#444;color:#bbb}
+.fat-c-used-a{background:rgba(88,166,255,.3);border-color:rgba(88,166,255,.5)!important;color:white}
+.fat-c-used-b{background:rgba(48,232,138,.3);border-color:rgba(48,232,138,.5)!important;color:white}
+.fat-c-eof-a{background:rgba(88,166,255,.55);border-color:rgba(88,166,255,.7)!important;color:white}
+.fat-c-eof-b{background:rgba(48,232,138,.55);border-color:rgba(48,232,138,.7)!important;color:white}
+.fat-c-free{background:rgba(48,232,138,.1);border-color:rgba(48,232,138,.2)!important;color:var(--green)}
+.fat-c-bad{background:rgba(255,64,96,.3);border-color:rgba(255,64,96,.5)!important;color:white}
+
+.fat-chain-detail{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;margin-top:.5rem;font-size:.82rem;min-height:52px;color:var(--muted);line-height:1.55}
+.fat-chain-detail code{color:var(--cyan);font-family:var(--mono);font-size:.78rem;background:rgba(0,229,204,.07);border:1px solid rgba(0,229,204,.15);border-radius:3px;padding:.01rem .3rem}
+
+/* ── FAT values table ──────────────────────────────────────────── */
+.fat-val-table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:.5rem}
+.fat-val-table th{background:var(--surface2);padding:.5rem .7rem;text-align:left;color:var(--muted);font-family:var(--mono);font-weight:700;font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;border-bottom:2px solid var(--border)}
+.fat-val-table td{padding:.5rem .7rem;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--text)}
+.fat-val-table tr:hover td{background:var(--surface2)}
+.fat-val-table .meaning{font-family:var(--sans);font-weight:600}
+.fat-val-table .forensic{font-family:var(--mono);color:var(--muted);font-size:.74rem}
+
+/* ── FAT12 encoding note ────────────────────────────────────────── */
+.fat12-encode{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--fat12);border-radius:0 8px 8px 0;padding:.9rem 1.1rem;font-size:.82rem;color:var(--text);line-height:1.6}
+.fat12-encode p{color:var(--muted);margin:.3rem 0}
+.fat12-encode code{color:var(--cyan);font-family:var(--mono);font-size:.78rem;background:rgba(0,229,204,.07);border:1px solid rgba(0,229,204,.15);border-radius:3px;padding:.01rem .3rem}
+
+/* ══════════════════════════════════════════════
+   SECTION 6 — COMPARAISON FAT12/16/32
+   ══════════════════════════════════════════════ */
+.fat-cmp-wrap{overflow-x:auto}
+.fat-cmp-table{width:100%;border-collapse:collapse;font-size:.78rem;min-width:560px}
+.fat-cmp-table th{padding:.55rem .75rem;text-align:left;border-bottom:2px solid var(--border);font-family:var(--mono);font-weight:700;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase}
+.fat-cmp-table th.c-fat12{color:var(--fat12)}
+.fat-cmp-table th.c-fat16{color:var(--fat16)}
+.fat-cmp-table th.c-fat32{color:var(--fat32)}
+.fat-cmp-table td{padding:.45rem .75rem;border-bottom:1px solid var(--border);color:var(--muted)}
+.fat-cmp-table td:first-child{font-family:var(--sans);font-weight:600;color:var(--text);font-size:.78rem}
+.fat-cmp-table tr:hover td{background:var(--surface2)}
+.fat-cmp-table .mono{font-family:var(--mono)}
+
+/* ── Capacity bars ─────────────────────────────────────────────── */
+.fat-cap-bars{display:flex;flex-direction:column;gap:.6rem;margin:.75rem 0}
+.fat-cap-row{display:flex;align-items:center;gap:.8rem}
+.fat-cap-label{font-family:var(--sans);font-size:.82rem;width:64px;text-align:right;font-weight:700}
+.fat-cap-wrap{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:4px;height:26px;overflow:hidden}
+.fat-cap-fill{height:100%;border-radius:3px;display:flex;align-items:center;padding-left:.55rem;font-family:var(--mono);font-size:.72rem;font-weight:700;color:white;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.fat-cap-val{font-family:var(--mono);font-size:.78rem;color:var(--muted);min-width:62px}
+
+/* ══════════════════════════════════════════════
+   SECTION 8 — FLASHCARDS
+   ══════════════════════════════════════════════ */
+.fat-flashcards{display:flex;flex-direction:column;gap:.55rem;margin:.5rem 0}
+.fat-flashcard{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:border-color .15s}
+.fat-flashcard:hover{border-color:rgba(0,229,204,.35)}
+.fat-fc-q{padding:.75rem 1rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:.82rem;gap:.5rem;user-select:none}
+.fat-fc-q:hover{background:var(--surface2)}
+.fat-fc-q .fat-fc-text{flex:1;color:var(--text)}
+.fat-fc-q .fat-fc-meta{font-family:var(--mono);font-size:.64rem;color:var(--dim);white-space:nowrap}
+.fat-fc-q .fat-fc-arrow{color:var(--muted);transition:transform .2s}
+.fat-fc-q.open .fat-fc-arrow{transform:rotate(90deg)}
+.fat-fc-a{display:none;padding:.8rem 1rem;background:var(--surface2);border-top:1px solid var(--border);font-size:.8rem;color:var(--muted);line-height:1.65}
+.fat-fc-a.open{display:block;animation:fadeIn .2s ease}
+.fat-fc-a strong{color:var(--text)}
+.fat-fc-a code{color:var(--cyan);font-family:var(--mono);font-size:.76rem;background:rgba(0,229,204,.07);border:1px solid rgba(0,229,204,.15);border-radius:3px;padding:.01rem .3rem}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* ══════════════════════════════════════════════
+   Responsive
+   ══════════════════════════════════════════════ */
+@media(max-width:700px){
+  .page-wrap{padding:1.1rem 1rem}
+  .fat-sfn-bar{height:46px}
+  .fat-sfn-field .f-name{font-size:.58rem}
+  .fat-sfn-field .f-size,.fat-sfn-field .f-off{display:none}
+  .fat-sfn-f-rsvd,.fat-sfn-f-adate{display:none}
+  .fat-partition-bar{height:58px}
+  .fat-partition-bar .zone-sub{display:none}
+}
+</style>
 </head>
 <body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
 
-<!-- ─── BACK TO TOP ─────────────────────── -->
-<button class="back-top" id="backTop" title="Retour en haut" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
-
-<!-- ─── TOP NAV ─────────────────────────── -->
-<nav class="top-bar">
-  <div class="page-wrap top-bar-inner">
-    <div class="nav-links">
-      <a href="../fiches/index.html">← Fiches</a>
-      <span style="color:var(--muted)">SYSTÈMES DE FICHIERS</span>
-    </div>
-    <div class="nav-links">
-      <a href="../quiz.html">💊 Quiz →</a>
-    </div>
-  </div>
+<nav class="tn-nav" aria-label="Navigation fiche">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">SYSTÈMES DE FICHIERS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
 
 <div class="page-wrap">
-
-<!-- ─── BREADCRUMB ───────────────────────── -->
-<div style="margin:0.8rem 0;font-size:0.82rem;color:var(--muted)">
-  <a href="../index.html">🏠 Accueil</a>
-  <span style="margin:0 0.3rem">›</span>
-  <a href="../fiches/index.html">Fiches</a>
-  <span style="margin:0 0.3rem">›</span>
-  <a href="../fiches/index.html#cat-systèmesdefichiers">Systèmes de Fichiers</a>
-  <span style="margin:0 0.3rem">›</span>
-  <span>FAT12 / FAT16 / FAT32</span>
-  <span style="float:right">⏱ ~8 min</span>
-</div>
-
-<!-- ─── HERO ─────────────────────────────── -->
-<header class="hero">
-  <div class="hero-badge">💾 Systèmes de fichiers FAT</div>
-  <h1>FAT12 / FAT16 / FAT32</h1>
-  <p class="hero-subtitle">Boot Record · Tables d'allocation · Entrées SFN · Chaîne de clusters · Récupération forensique</p>
-  <div class="links-row">
-    <div><strong>Prérequis :</strong>
-      <a href="encodage.html">📖 Encodage</a>
-      <a href="disques.html">📖 Disques</a>
-      <a href="fat12.html">📖 FAT12</a>
-    </div>
-    <div><strong>Pratiquer :</strong>
-      <a href="../tp.html?cat=fat">🧪 ⛓ Chaîne FAT</a>
-      <a href="../tp.html?cat=effacement">🧪 🗑 Effacement FAT</a>
-      <a href="../tp.html?cat=timestamp">🧪 ⏱ Timestamps FAT</a>
-    </div>
-    <div><strong>Voir aussi :</strong>
-      <a href="exfat.html">🔗 exFAT</a>
-      <a href="../tools.html">🔧 Calculateurs</a>
-    </div>
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesdefichiers">Systèmes de fichiers</a><span class="bc-sep">›</span>
+    <span class="bc-current">FAT12 / FAT16 / FAT32</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~8 min</span>
   </div>
-</header>
 
-<!-- ─── TOC ──────────────────────────────── -->
-<nav class="toc">
-  <a href="#anatomie">🗂 Anatomie</a>
-  <a href="#sfn">📋 Entrée SFN — 32 octets</a>
-  <a href="#timestamps">⏱ Timestamps</a>
-  <a href="#clusters">🔗 Chaîne clusters</a>
-  <a href="#comparaison">⚖️ FAT12 vs 16 vs 32</a>
-  <a href="#identification">🔍 Identification</a>
-  <a href="#examtip">🎓 Exam Tip</a>
-</nav>
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div>
+      <span style="font-size:2.2rem">💾</span>
+      <span class="tag tag-gold" style="margin-left:.5rem">FAT12</span>
+      <span class="tag tag-blue" style="margin-left:.3rem">FAT16</span>
+      <span class="tag tag-green" style="margin-left:.3rem">FAT32</span>
+      <span class="tag tag-cyan" style="margin-left:.3rem">Filesystem</span>
+    </div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">FAT12 / FAT16 / FAT32</h1>
+    <div class="meta">Boot Record · Tables d'allocation · Entrées SFN · Chaîne de clusters · Récupération forensique</div>
+  </div>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- SECTION 1 : ANATOMIE                                    -->
-<!-- ═══════════════════════════════════════════════════════ -->
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="encodage.html" class="prereq-pill">📖 Encodage</a><a href="disques.html" class="prereq-pill">📖 Disques</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=fat" class="tp-pill">🧪 ⛓ Chaîne FAT</a><a href="../tp.html?cat=effacement" class="tp-pill">🧪 🗑 Effacement FAT</a><a href="../tp.html?cat=timestamp" class="tp-pill">🧪 ⏱ Timestamps FAT</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="exfat.html" class="related-pill">🔗 exFAT</a><a href="../tools.html" class="related-pill">🔧 Calculateurs</a></div>
+  </div>
+
+  <!-- Table of contents -->
+  <nav class="fat-toc" aria-label="Sommaire de la fiche">
+    <a href="#anatomie">🗂 Anatomie</a>
+    <a href="#sfn">📋 Entrée SFN</a>
+    <a href="#timestamps">⏱ Timestamps</a>
+    <a href="#attributs">🏷 Attributs</a>
+    <a href="#clusters">🔗 Chaîne clusters</a>
+    <a href="#comparaison">⚖️ FAT12 vs 16 vs 32</a>
+    <a href="#identification">🔍 Identification</a>
+    <a href="#examtip">🎓 Exam Tip</a>
+  </nav>
+
+<!-- ══════════════════════════════════════════════════════
+     SECTION 1 — ANATOMIE
+     ══════════════════════════════════════════════════════ -->
 <section id="anatomie">
-  <h2>🗂 Anatomie de la partition FAT</h2>
-  <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">Cliquez sur chaque zone pour afficher ses détails forensiques. Les zones s'enchaînent séquentiellement depuis l'offset 0.</p>
+  <div class="sec-title">🗂 Anatomie de la partition FAT</div>
+  <div class="sec-sub">Cliquez sur chaque zone pour afficher ses détails forensiques. Les zones s'enchaînent séquentiellement depuis l'offset 0.</div>
 
-  <div class="partition-diagram-wrap">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.8rem">
-      <strong style="font-size:0.9rem">Afficher pour :</strong>
-      <div class="partition-filter">
-        <button class="filter-btn" id="btn-fat12" onclick="setFat('fat12')">FAT12</button>
-        <button class="filter-btn active-fat16" id="btn-fat16" onclick="setFat('fat16')">FAT16</button>
-        <button class="filter-btn" id="btn-fat32" onclick="setFat('fat32')">FAT32</button>
+  <div class="fat-partition-wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:.8rem">
+      <strong style="font-family:var(--sans);font-size:.85rem">Afficher pour :</strong>
+      <div class="fat-partition-filter">
+        <button class="fat-filter-btn" id="btn-fat12" onclick="setFat('fat12')">FAT12</button>
+        <button class="fat-filter-btn fat-active-16" id="btn-fat16" onclick="setFat('fat16')">FAT16</button>
+        <button class="fat-filter-btn" id="btn-fat32" onclick="setFat('fat32')">FAT32</button>
       </div>
     </div>
 
-    <!-- Barre de partition -->
-    <div class="partition-bar" id="partitionBar">
-      <div class="pbar-zone pbar-br" onclick="showZone('br')" id="z-br">
+    <div class="fat-partition-bar" id="partitionBar">
+      <div class="fat-pbar-zone fat-pbar-br" onclick="showZone('br')" id="z-br">
         <span class="zone-num">①</span>
         <span class="zone-name">Boot Record</span>
         <span class="zone-sub">BPB + boot</span>
         <span class="zone-sub">0x55 AA</span>
       </div>
-      <div class="pbar-zone pbar-fat1" onclick="showZone('fat1')" id="z-fat1">
+      <div class="fat-pbar-zone fat-pbar-fat1" onclick="showZone('fat1')" id="z-fat1">
         <span class="zone-num">②</span>
         <span class="zone-name">FAT 1</span>
         <span class="zone-sub">Table principale</span>
       </div>
-      <div class="pbar-zone pbar-fat2" onclick="showZone('fat2')" id="z-fat2">
+      <div class="fat-pbar-zone fat-pbar-fat2" onclick="showZone('fat2')" id="z-fat2">
         <span class="zone-num">③</span>
         <span class="zone-name">FAT 2</span>
         <span class="zone-sub">Copie sauvegarde</span>
       </div>
-      <div class="pbar-zone pbar-root" id="z-root" onclick="showZone('root')">
+      <div class="fat-pbar-zone fat-pbar-root" id="z-root" onclick="showZone('root')">
         <span class="zone-num">④</span>
         <span class="zone-name">Root Dir</span>
         <span class="zone-sub" id="root-sub">512 entrées max</span>
       </div>
-      <div class="pbar-zone pbar-data" onclick="showZone('data')" id="z-data">
+      <div class="fat-pbar-zone fat-pbar-data" onclick="showZone('data')" id="z-data">
         <span class="zone-num">⑤</span>
         <span class="zone-name">Zone Données</span>
         <span class="zone-sub">Fichiers · Cluster 2+</span>
       </div>
     </div>
-    <div class="zone-label-bar">
+    <div class="fat-zone-label-bar">
       <span>← Offset 0</span>
       <span>Fin du volume →</span>
     </div>
 
-    <div class="zone-detail" id="zoneDetail">
-      <p style="color:var(--muted);font-size:0.88rem">ℹ️ Sélectionnez une zone ci-dessus pour afficher ses détails forensiques</p>
+    <div class="fat-zone-detail" id="zoneDetail">
+      <p style="color:var(--muted);font-size:.82rem;margin:0">ℹ️ Sélectionnez une zone ci-dessus pour afficher ses détails forensiques</p>
     </div>
   </div>
 
   <!-- FAT16 vs FAT32 differences -->
-  <div style="margin-top:1.5rem">
-    <h3>FAT16 vs FAT32 — Différences clés de structure</h3>
-    <div class="fat-compare-grid">
-      <div class="fat-card fat-card-16">
-        <h3>🔵 FAT16 <span>(1984)</span></h3>
-        <ul>
-          <li><strong>Root Directory fixe</strong> — zone dédiée entre FAT2 et données (512 entrées × 32o = 16 Ko)</li>
-          <li><strong>Entrées 16 bits</strong> — 0x0000 → 0xFFFF</li>
-          <li><strong>Secteurs réservés = 1</strong> (juste le Boot Sector)</li>
-          <li><strong>FS Type</strong> à l'offset <code>0x36</code> — <code>"FAT16 "</code></li>
-          <li><strong>Volume max : 4 Go</strong></li>
-          <li><strong>Cluster : 16 bits</strong> seulement (offset <code>0x1A</code>)</li>
-          <li><strong>Root Entry Count</strong> = 512 (offset <code>0x11</code>)</li>
-        </ul>
-      </div>
-      <div class="fat-card fat-card-32">
-        <h3>🟢 FAT32 <span>(1996)</span></h3>
-        <ul>
-          <li><strong>Root Dir dynamique</strong> — stocké en zone données comme répertoire normal (cluster 2 par défaut)</li>
-          <li><strong>Entrées 32 bits</strong> (28 utiles : 0x0FFFFFFF = EOF)</li>
-          <li><strong>Secteurs réservés = 32</strong> typique (FS Info sector inclus)</li>
-          <li><strong>FS Type</strong> à l'offset <code>0x52</code> — <code>"FAT32 "</code></li>
-          <li><strong>Volume max : 8 To</strong></li>
-          <li><strong>Cluster : 32 bits</strong> (offset <code>0x1A</code> + <code>0x14</code> hauts)</li>
-          <li><strong>Root Entry Count</strong> = 0 (racine dynamique)</li>
-        </ul>
-      </div>
+  <div class="sec-title" style="margin-top:1.75rem">FAT16 vs FAT32 — Différences clés</div>
+  <div class="fat-compare-grid">
+    <div class="fat-card fat-card-16">
+      <h4>🔵 FAT16 <span>(1984)</span></h4>
+      <ul>
+        <li><strong>Root Directory fixe</strong> — zone dédiée entre FAT2 et données (512 × 32 o = 16 Ko)</li>
+        <li><strong>Entrées 16 bits</strong> — 0x0000 → 0xFFFF</li>
+        <li><strong>Secteurs réservés = 1</strong> (juste le Boot Sector)</li>
+        <li><strong>FS Type</strong> à l'offset <code>0x36</code> — <code>"FAT16 "</code></li>
+        <li><strong>Volume max : 4 Go</strong></li>
+        <li><strong>Cluster : 16 bits</strong> seulement (offset <code>0x1A</code>)</li>
+        <li><strong>Root Entry Count</strong> = 512 (offset <code>0x11</code>)</li>
+      </ul>
+    </div>
+    <div class="fat-card fat-card-32">
+      <h4>🟢 FAT32 <span>(1996)</span></h4>
+      <ul>
+        <li><strong>Root Dir dynamique</strong> — stocké en zone données comme répertoire normal (cluster 2 par défaut)</li>
+        <li><strong>Entrées 32 bits</strong> (28 utiles : 0x0FFFFFFF = EOF)</li>
+        <li><strong>Secteurs réservés = 32</strong> typique (FS Info sector inclus)</li>
+        <li><strong>FS Type</strong> à l'offset <code>0x52</code> — <code>"FAT32 "</code></li>
+        <li><strong>Volume max : 8 To</strong></li>
+        <li><strong>Cluster : 32 bits</strong> (offset <code>0x1A</code> + <code>0x14</code> hauts)</li>
+        <li><strong>Root Entry Count</strong> = 0 (racine dynamique)</li>
+      </ul>
     </div>
   </div>
 
   <!-- BPB Table -->
-  <div style="margin-top:1.5rem">
-    <h3>BIOS Parameter Block — Offsets forensiques</h3>
-    <table class="bpb-table">
+  <div class="sec-title" style="margin-top:1.75rem">BIOS Parameter Block — Offsets forensiques</div>
+  <div class="fat-table-wrap">
+    <table class="fat-bpb-table">
       <thead>
         <tr><th>Offset</th><th>Champ</th><th>Valeurs clés</th><th>Forensique</th></tr>
       </thead>
@@ -173,180 +408,177 @@
         <tr><td class="offset">0x10</td><td class="field">Number of FATs</td><td>Toujours <strong>2</strong></td><td class="note">comparer FAT1 vs FAT2 !</td></tr>
         <tr><td class="offset">0x11</td><td class="field">Root Entry Count</td><td>FAT16 = <strong>512</strong> · FAT32 = <strong>0</strong></td><td class="note">identifiant clé FAT16 vs FAT32</td></tr>
         <tr><td class="offset">0x13/0x20</td><td class="field">Total Sectors</td><td>16 bits (FAT16) / 32 bits (FAT32)</td><td class="note">taille totale du volume</td></tr>
-        <tr><td class="offset">0x36 / 0x52</td><td class="field">File System Type</td><td><code>"FAT16 "</code> à 0x36 · <code>"FAT32 "</code> à 0x52</td><td class="note">string ASCII — pas toujours fiable seul</td></tr>
+        <tr><td class="offset">0x36 / 0x52</td><td class="field">File System Type</td><td><code>"FAT16 "</code> à 0x36 · <code>"FAT32 "</code> à 0x52</td><td class="note">string ASCII — pas toujours fiable seule</td></tr>
         <tr><td class="offset">0x1FE</td><td class="field">Boot Signature</td><td><code>55 AA</code></td><td class="note">secteur de boot valide — universel</td></tr>
       </tbody>
     </table>
   </div>
 
   <!-- Formules -->
-  <div style="margin-top:1.5rem">
-    <h3>Formules de calcul</h3>
-    <div class="formula-block">
-<span class="var">TailleCluster</span>  = BytesPerSector × SectorsPerCluster  <span class="comment">// ex : 512 × 8 = 4 096 octets</span>
+  <div class="sec-title" style="margin-top:1.75rem">Formules de calcul</div>
+  <div class="fat-formula"><span class="var">TailleCluster</span>  = BytesPerSector × SectorsPerCluster  <span class="comment">// ex : 512 × 8 = 4 096 octets</span>
 <span class="var">DébutFAT1</span>     = ReservedSectors × BytesPerSector
 <span class="var">DébutRootDir</span>  = DébutFAT1 + (NumberOfFATs × FATsize) × BytesPerSector  <span class="comment">// FAT16 seulement</span>
 <span class="var">DébutDonnées</span>  = DébutRootDir + (RootEntryCount × 32)  <span class="comment">// +0 sur FAT32</span>
 <span class="var">OffsetClusterN</span> = DébutDonnées + (N <span class="op">−</span> 2) × TailleCluster  <span class="comment">// clusters commencent à 2</span>
-<span class="var">SlackSpace</span>    = TailleCluster <span class="op">−</span> (TailleFichier <span class="op">mod</span> TailleCluster)  <span class="comment">// données résiduelles !</span>
-    </div>
-  </div>
+<span class="var">SlackSpace</span>    = TailleCluster <span class="op">−</span> (TailleFichier <span class="op">mod</span> TailleCluster)  <span class="comment">// données résiduelles !</span></div>
 
-  <!-- Forensic tips -->
-  <div class="tips-grid" style="margin-top:1rem">
-    <div class="tip warn">
-      <strong>🔍 Indices Boot Sector :</strong> Signature <code>55 AA</code> à l'offset 510 = boot valide · OEM ID <code>"MSDOS5.0"</code> ou <code>"MSWIN4.1"</code> → Windows natif · Number of FATs = <strong>2 toujours</strong> — divergence = corruption
-    </div>
-    <div class="tip">
-      <strong>⚡ Identifier la variante :</strong> Calculer nb clusters = (TailleVolume − SecteursDonnées) / SectorsPerCluster · <strong>&lt; 4 087</strong> → FAT12 · <strong>&lt; 65 527</strong> → FAT16 · plus → FAT32 · Root Entry Count &gt; 0 → FAT12 ou FAT16
-    </div>
+  <!-- Forensic tips (using shared .alert / .tip) -->
+  <div class="alert" style="margin-top:1rem">
+    <strong>🔍 Indices Boot Sector :</strong> Signature <code>55 AA</code> à l'offset 510 = boot valide · OEM ID <code>"MSDOS5.0"</code> ou <code>"MSWIN4.1"</code> → Windows natif · Number of FATs = <strong>2 toujours</strong> — divergence = corruption.
+  </div>
+  <div class="tip">
+    <strong>⚡ Identifier la variante :</strong> Calculer nb clusters = (TailleVolume − SecteursDonnées) / SectorsPerCluster · <strong>&lt; 4 087</strong> → FAT12 · <strong>&lt; 65 527</strong> → FAT16 · plus → FAT32 · Root Entry Count &gt; 0 → FAT12 ou FAT16.
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- SECTION 2 : ENTRÉE SFN                                  -->
-<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════════
+     SECTION 2 — ENTRÉE SFN
+     ══════════════════════════════════════════════════════ -->
 <section id="sfn">
-  <h2>📋 Structure de l'Entrée de Répertoire — SFN</h2>
-  <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">Chaque fichier = exactement <strong>32 octets</strong> dans le répertoire. Cliquez sur un champ coloré pour voir ses détails forensiques.</p>
+  <div class="sec-title">📋 Structure de l'entrée de répertoire — SFN</div>
+  <div class="sec-sub">Chaque fichier = exactement <strong>32 octets</strong> dans le répertoire. Cliquez sur un champ coloré pour voir ses détails forensiques.</div>
 
-  <div class="sfn-diagram">
-    <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.4rem;font-weight:600">32 OCTETS PAR ENTRÉE · CLIQUER SUR UN CHAMP POUR LES DÉTAILS</div>
-    <div class="sfn-bar" id="sfnBar">
-      <div class="sfn-field sfn-f-nom"  onclick="showSFN('nom')"   id="sf-nom">
-        <span class="f-name">NOM</span><span class="f-size">8 octets</span><span class="f-off">0x00</span>
+  <div class="fat-sfn-wrap">
+    <div class="fat-sfn-hint">32 octets par entrée · cliquer sur un champ pour les détails</div>
+    <div class="fat-sfn-bar" id="sfnBar">
+      <div class="fat-sfn-field fat-sfn-f-nom"  onclick="showSFN('nom')"   id="sf-nom">
+        <span class="f-name">NOM</span><span class="f-size">8 o</span><span class="f-off">0x00</span>
       </div>
-      <div class="sfn-field sfn-f-ext"  onclick="showSFN('ext')"   id="sf-ext">
-        <span class="f-name">EXT</span><span class="f-size">3o</span><span class="f-off">0x08</span>
+      <div class="fat-sfn-field fat-sfn-f-ext"  onclick="showSFN('ext')"   id="sf-ext">
+        <span class="f-name">EXT</span><span class="f-size">3 o</span><span class="f-off">0x08</span>
       </div>
-      <div class="sfn-field sfn-f-attr" onclick="showSFN('attr')"  id="sf-attr">
-        <span class="f-name">ATTR</span><span class="f-size">1o</span><span class="f-off">0x0B</span>
+      <div class="fat-sfn-field fat-sfn-f-attr" onclick="showSFN('attr')"  id="sf-attr">
+        <span class="f-name">ATTR</span><span class="f-size">1 o</span><span class="f-off">0x0B</span>
       </div>
-      <div class="sfn-field sfn-f-rsvd" onclick="showSFN('rsvd')"  id="sf-rsvd">
-        <span class="f-name">RSVD</span><span class="f-size">2o</span><span class="f-off">0x0C</span>
+      <div class="fat-sfn-field fat-sfn-f-rsvd" onclick="showSFN('rsvd')"  id="sf-rsvd">
+        <span class="f-name">RSVD</span><span class="f-size">2 o</span><span class="f-off">0x0C</span>
       </div>
-      <div class="sfn-field sfn-f-ctime" onclick="showSFN('ctime')" id="sf-ctime">
-        <span class="f-name">CTIME</span><span class="f-size">4o</span><span class="f-off">0x0E</span>
+      <div class="fat-sfn-field fat-sfn-f-ctime" onclick="showSFN('ctime')" id="sf-ctime">
+        <span class="f-name">CTIME</span><span class="f-size">4 o</span><span class="f-off">0x0E</span>
       </div>
-      <div class="sfn-field sfn-f-adate" onclick="showSFN('adate')" id="sf-adate">
-        <span class="f-name">ADATE</span><span class="f-size">2o</span><span class="f-off">0x12</span>
+      <div class="fat-sfn-field fat-sfn-f-adate" onclick="showSFN('adate')" id="sf-adate">
+        <span class="f-name">ADATE</span><span class="f-size">2 o</span><span class="f-off">0x12</span>
       </div>
-      <div class="sfn-field sfn-f-cluh" onclick="showSFN('cluh')"  id="sf-cluh">
-        <span class="f-name">CLU↑</span><span class="f-size">2o</span><span class="f-off">0x14</span>
+      <div class="fat-sfn-field fat-sfn-f-cluh" onclick="showSFN('cluh')"  id="sf-cluh">
+        <span class="f-name">CLU↑</span><span class="f-size">2 o</span><span class="f-off">0x14</span>
       </div>
-      <div class="sfn-field sfn-f-mtime" onclick="showSFN('mtime')" id="sf-mtime">
-        <span class="f-name">MTIME</span><span class="f-size">4o</span><span class="f-off">0x16</span>
+      <div class="fat-sfn-field fat-sfn-f-mtime" onclick="showSFN('mtime')" id="sf-mtime">
+        <span class="f-name">MTIME</span><span class="f-size">4 o</span><span class="f-off">0x16</span>
       </div>
-      <div class="sfn-field sfn-f-clul" onclick="showSFN('clul')"  id="sf-clul">
-        <span class="f-name">CLU↓</span><span class="f-size">2o</span><span class="f-off">0x1A</span>
+      <div class="fat-sfn-field fat-sfn-f-clul" onclick="showSFN('clul')"  id="sf-clul">
+        <span class="f-name">CLU↓</span><span class="f-size">2 o</span><span class="f-off">0x1A</span>
       </div>
-      <div class="sfn-field sfn-f-size" onclick="showSFN('fsize')" id="sf-fsize">
-        <span class="f-name">TAILLE</span><span class="f-size">4o</span><span class="f-off">0x1C</span>
+      <div class="fat-sfn-field fat-sfn-f-size" onclick="showSFN('fsize')" id="sf-fsize">
+        <span class="f-name">TAILLE</span><span class="f-size">4 o</span><span class="f-off">0x1C</span>
       </div>
     </div>
 
-    <div class="sfn-legend">
-      <div class="sfn-legend-item"><div class="sfn-dot" style="background:#1f6feb"></div>Nom/ext</div>
-      <div class="sfn-legend-item"><div class="sfn-dot" style="background:#6e40c9"></div>Attributs</div>
-      <div class="sfn-legend-item"><div class="sfn-dot" style="background:#c9780c"></div>Timestamps</div>
-      <div class="sfn-legend-item"><div class="sfn-dot" style="background:#2ea043"></div>Cluster de départ</div>
-      <div class="sfn-legend-item"><div class="sfn-dot" style="background:#b62324"></div>Taille fichier</div>
+    <div class="fat-sfn-legend">
+      <div class="fat-sfn-legend-item"><div class="fat-sfn-dot" style="background:#1f6feb"></div>Nom / ext</div>
+      <div class="fat-sfn-legend-item"><div class="fat-sfn-dot" style="background:#6e40c9"></div>Attributs</div>
+      <div class="fat-sfn-legend-item"><div class="fat-sfn-dot" style="background:#c9780c"></div>Timestamps</div>
+      <div class="fat-sfn-legend-item"><div class="fat-sfn-dot" style="background:#2ea043"></div>Cluster de départ</div>
+      <div class="fat-sfn-legend-item"><div class="fat-sfn-dot" style="background:#b62324"></div>Taille fichier</div>
     </div>
 
-    <div class="sfn-detail" id="sfnDetail">
-      <p style="color:var(--muted)">📋 Cliquez sur un champ coloré ci-dessus pour afficher ses détails forensiques</p>
+    <div class="fat-sfn-detail" id="sfnDetail">
+      <p style="color:var(--muted);margin:0">📋 Cliquez sur un champ coloré ci-dessus pour afficher ses détails forensiques</p>
     </div>
   </div>
 
-  <!-- Deleted file note -->
-  <div class="danger-box" style="margin-top:1rem">
+  <div class="alert" style="margin-top:1rem">
     🔴 <strong>Fichier supprimé :</strong> 1er octet du nom = <code>0xE5</code>. Les clusters sont libérés dans la FAT, mais les <strong>données restent sur le disque</strong> jusqu'à réécritures. La taille (<code>0x1C</code>) et le cluster de départ (<code>0x1A</code>) sont souvent encore lisibles → récupération directe possible.
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- SECTION 3 : TIMESTAMPS                                  -->
-<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════════
+     SECTION 3 — TIMESTAMPS
+     ══════════════════════════════════════════════════════ -->
 <section id="timestamps">
-  <h2>⏱ Décodeur Timestamps FAT — Structure en bits</h2>
-  <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">Les timestamps FAT sont encodés en 16 bits avec un format propriétaire. Cliquez sur les bits pour encoder/décoder. Précision : <strong>2 secondes</strong>.</p>
+  <div class="sec-title">⏱ Décodeur Timestamps FAT — Structure en bits</div>
+  <div class="sec-sub">Les timestamps FAT sont encodés en 16 bits avec un format propriétaire. Cliquez sur les bits pour encoder/décoder. Précision : <strong>2 secondes</strong>.</div>
 
-  <div class="ts-decoder">
+  <div class="fat-ts-decoder">
     <!-- DATE -->
-    <div class="ts-panel">
+    <div class="fat-ts-panel">
       <h4>📅 DATE — 16 bits Little Endian</h4>
-      <div id="dateBits" style="display:flex;flex-direction:column;gap:0.4rem">
+      <div style="display:flex;flex-direction:column;gap:.5rem">
         <div>
-          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem">Année (7 bits) +1980 · plage 1980–2107</div>
-          <div class="ts-bits" id="date-yr"></div>
+          <div class="fat-ts-label">Année (7 bits) +1980 · plage 1980–2107</div>
+          <div class="fat-ts-bits" id="date-yr"></div>
         </div>
         <div>
-          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem">Mois (4 bits) 1–12</div>
-          <div class="ts-bits" id="date-mo"></div>
+          <div class="fat-ts-label">Mois (4 bits) 1–12</div>
+          <div class="fat-ts-bits" id="date-mo"></div>
         </div>
         <div>
-          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem">Jour (5 bits) 1–31</div>
-          <div class="ts-bits" id="date-dy"></div>
+          <div class="fat-ts-label">Jour (5 bits) 1–31</div>
+          <div class="fat-ts-bits" id="date-dy"></div>
         </div>
       </div>
-      <div class="ts-result" id="dateResult">Date : — — —</div>
+      <div class="fat-ts-result" id="dateResult">Date : — — —</div>
     </div>
-    <!-- TIME -->
-    <div class="ts-panel">
+    <!-- HEURE -->
+    <div class="fat-ts-panel">
       <h4>⏱ HEURE — 16 bits Little Endian</h4>
-      <div style="display:flex;flex-direction:column;gap:0.4rem">
+      <div style="display:flex;flex-direction:column;gap:.5rem">
         <div>
-          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem">Heures (5 bits) 0–23</div>
-          <div class="ts-bits" id="time-hr"></div>
+          <div class="fat-ts-label">Heures (5 bits) 0–23</div>
+          <div class="fat-ts-bits" id="time-hr"></div>
         </div>
         <div>
-          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem">Minutes (6 bits) 0–59</div>
-          <div class="ts-bits" id="time-mn"></div>
+          <div class="fat-ts-label">Minutes (6 bits) 0–59</div>
+          <div class="fat-ts-bits" id="time-mn"></div>
         </div>
         <div>
-          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem">Sec/2 (5 bits) ×2 → 0–58s pair</div>
-          <div class="ts-bits" id="time-sc"></div>
+          <div class="fat-ts-label">Sec/2 (5 bits) ×2 → 0–58 s pair</div>
+          <div class="fat-ts-bits" id="time-sc"></div>
         </div>
       </div>
-      <div class="ts-result" id="timeResult">Heure : — — —</div>
+      <div class="fat-ts-result" id="timeResult">Heure : — — —</div>
     </div>
   </div>
-  <div class="warn-box" style="margin-top:0.7rem">
-    ⚠ Précision FAT = <strong>2 secondes</strong> · Les secondes impaires sont impossibles · NTFS = 100 ns · exFAT = 10 ms
+
+  <div class="alert" style="margin-top:.75rem">
+    ⚠ Précision FAT = <strong>2 secondes</strong> · Les secondes impaires sont impossibles · NTFS = 100 ns · exFAT = 10 ms.
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- SECTION : ATTRIBUTS                                     -->
-<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════════
+     SECTION 4 — ATTRIBUTS
+     ══════════════════════════════════════════════════════ -->
 <section id="attributs">
-  <h2>🏷 Attributs — Offset 0x0B</h2>
-  <div class="attr-grid" id="attrGrid">
-    <div class="attr-bit" onclick="toggleAttr(this,0x01)"><span class="bit-letter">R</span><span class="bit-name">Read‑Only</span></div>
-    <div class="attr-bit" onclick="toggleAttr(this,0x02)"><span class="bit-letter">H</span><span class="bit-name">Hidden</span></div>
-    <div class="attr-bit" onclick="toggleAttr(this,0x04)"><span class="bit-letter">S</span><span class="bit-name">System</span></div>
-    <div class="attr-bit" onclick="toggleAttr(this,0x08)"><span class="bit-letter">V</span><span class="bit-name">Volume</span></div>
-    <div class="attr-bit" onclick="toggleAttr(this,0x10)"><span class="bit-letter">D</span><span class="bit-name">Directory</span></div>
-    <div class="attr-bit" onclick="toggleAttr(this,0x20)"><span class="bit-letter">A</span><span class="bit-name">Archive</span></div>
+  <div class="sec-title">🏷 Attributs — Offset 0x0B</div>
+  <div class="sec-sub">Cliquez sur chaque bit pour composer la valeur hexadécimale du champ d'attributs.</div>
+
+  <div class="fat-attr-grid" id="attrGrid">
+    <div class="fat-attr-bit" onclick="toggleAttr(this,0x01)"><span class="bit-letter">R</span><span class="bit-name">Read‑Only</span></div>
+    <div class="fat-attr-bit" onclick="toggleAttr(this,0x02)"><span class="bit-letter">H</span><span class="bit-name">Hidden</span></div>
+    <div class="fat-attr-bit" onclick="toggleAttr(this,0x04)"><span class="bit-letter">S</span><span class="bit-name">System</span></div>
+    <div class="fat-attr-bit" onclick="toggleAttr(this,0x08)"><span class="bit-letter">V</span><span class="bit-name">Volume</span></div>
+    <div class="fat-attr-bit" onclick="toggleAttr(this,0x10)"><span class="bit-letter">D</span><span class="bit-name">Directory</span></div>
+    <div class="fat-attr-bit" onclick="toggleAttr(this,0x20)"><span class="bit-letter">A</span><span class="bit-name">Archive</span></div>
   </div>
-  <div class="attr-result" id="attrResult">Valeur hex : <code>0x00</code></div>
-  <div class="lfn-note" style="margin-top:0.5rem">
-    → <strong>0x0F</strong> = R+H+S+V = <strong>entrée LFN</strong> (nom long fichier). Cette combinaison est intentionnellement invalide pour un vrai fichier — les anciens systèmes FAT l'ignorent automatiquement.
+  <div class="fat-attr-result" id="attrResult">Valeur hex : <code>0x00</code></div>
+
+  <div class="info" style="margin-top:.75rem">
+    → <strong>0x0F</strong> = R+H+S+V = <strong>entrée LFN</strong> (nom long). Cette combinaison est intentionnellement invalide pour un vrai fichier — les anciens systèmes FAT l'ignorent automatiquement.
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- SECTION 4 : CHAÎNE CLUSTERS                             -->
-<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════════
+     SECTION 5 — CHAÎNE CLUSTERS
+     ══════════════════════════════════════════════════════ -->
 <section id="clusters">
-  <h2>🔗 Mécanisme de chaînage des clusters</h2>
-  <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem">La FAT est un tableau indexé par numéro de cluster. Chaque case contient soit le cluster suivant, soit un marqueur spécial. Cliquez sur un cluster coloré pour voir sa chaîne.</p>
+  <div class="sec-title">🔗 Mécanisme de chaînage des clusters</div>
+  <div class="sec-sub">La FAT est un tableau indexé par numéro de cluster. Chaque case contient soit le cluster suivant, soit un marqueur spécial. Cliquez sur un cluster coloré pour voir sa chaîne.</div>
 
   <div class="fat-legend">
-    <div class="fat-legend-item"><div class="fat-legend-dot" style="background:rgba(74,158,255,0.4)"></div>Fichier A</div>
-    <div class="fat-legend-item"><div class="fat-legend-dot" style="background:rgba(63,185,80,0.4)"></div>Fichier B</div>
-    <div class="fat-legend-item"><div class="fat-legend-dot" style="background:rgba(63,185,80,0.15)"></div>Libre</div>
-    <div class="fat-legend-item"><div class="fat-legend-dot" style="background:rgba(248,81,73,0.4)"></div>Bad cluster</div>
+    <div class="fat-legend-item"><div class="fat-legend-dot" style="background:rgba(88,166,255,.4)"></div>Fichier A</div>
+    <div class="fat-legend-item"><div class="fat-legend-dot" style="background:rgba(48,232,138,.4)"></div>Fichier B</div>
+    <div class="fat-legend-item"><div class="fat-legend-dot" style="background:rgba(48,232,138,.15)"></div>Libre</div>
+    <div class="fat-legend-item"><div class="fat-legend-dot" style="background:rgba(255,64,96,.4)"></div>Bad cluster</div>
     <div class="fat-legend-item"><div class="fat-legend-dot" style="background:#444"></div>Réservé</div>
   </div>
 
@@ -354,59 +586,54 @@
     <div class="fat-table" id="fatTable"></div>
   </div>
 
-  <div class="chain-detail" id="chainDetail">
+  <div class="fat-chain-detail" id="chainDetail">
     Fichier A (clusters 2→3→4) · Fichier B (clusters 5→7)<br>
-    <span style="font-size:0.82rem">Cliquez sur un cluster coloré pour surligner sa chaîne.</span>
+    <span style="font-size:.78rem">Cliquez sur un cluster coloré pour surligner sa chaîne.</span>
   </div>
 
-  <div style="margin-top:1.5rem">
-    <h3>Valeurs FAT — Signification des entrées</h3>
-    <div class="fat-table-wrap">
-      <table class="fat-val-table">
-        <thead>
-          <tr><th>FAT12</th><th>FAT16</th><th>FAT32</th><th>Signification</th><th>Forensique</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>0x000</td><td>0x0000</td><td>0x00000000</td><td class="meaning">Cluster <strong>libre</strong></td><td class="forensic">Données potentiellement récupérables</td></tr>
-          <tr><td>0x002–0xFF6</td><td>0x0002–0xFFEF</td><td>0x00000002–0x0FFFFFEF</td><td class="meaning">→ Cluster suivant</td><td class="forensic">Chaîne en cours</td></tr>
-          <tr><td>0xFF7</td><td>0xFFF7</td><td>0x0FFFFFF7</td><td class="meaning" style="color:var(--danger)">Bad cluster</td><td class="forensic">Secteur défectueux — jamais alloué</td></tr>
-          <tr><td>0xFF8–0xFFF</td><td>0xFFF8–0xFFFF</td><td>0x0FFFFFF8–0x0FFFFFFF</td><td class="meaning" style="color:var(--accent2)">EOF — fin de fichier</td><td class="forensic">Dernier cluster du fichier</td></tr>
-        </tbody>
-      </table>
-    </div>
+  <!-- FAT values -->
+  <div class="sec-title" style="margin-top:1.75rem">Valeurs FAT — Signification des entrées</div>
+  <div class="fat-table-wrap">
+    <table class="fat-val-table">
+      <thead>
+        <tr><th>FAT12</th><th>FAT16</th><th>FAT32</th><th>Signification</th><th>Forensique</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>0x000</td><td>0x0000</td><td>0x00000000</td><td class="meaning">Cluster <strong>libre</strong></td><td class="forensic">Données potentiellement récupérables</td></tr>
+        <tr><td>0x002–0xFF6</td><td>0x0002–0xFFEF</td><td>0x00000002–0x0FFFFFEF</td><td class="meaning">→ Cluster suivant</td><td class="forensic">Chaîne en cours</td></tr>
+        <tr><td>0xFF7</td><td>0xFFF7</td><td>0x0FFFFFF7</td><td class="meaning" style="color:var(--red)">Bad cluster</td><td class="forensic">Secteur défectueux — jamais alloué</td></tr>
+        <tr><td>0xFF8–0xFFF</td><td>0xFFF8–0xFFFF</td><td>0x0FFFFFF8–0x0FFFFFFF</td><td class="meaning" style="color:var(--green)">EOF — fin de fichier</td><td class="forensic">Dernier cluster du fichier</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <!-- FAT12 Encoding -->
-  <div style="margin-top:1rem">
-    <h3>FAT12 — Encodage en 12 bits</h3>
-    <div class="fat12-encode">
-      <p>FAT12 utilise des <strong>entrées de 12 bits</strong> — deux entrées partagent parfois un même octet. Pour lire l'entrée N :</p>
-      <div class="formula-block" style="margin:0.7rem 0">
-Offset (octets) = N × 3 / 2
-Si N est <strong>pair</strong>  : <span class="var">valeur</span> = (octet1 | (octet2 &lt;&lt; 8)) <span class="op">&amp;</span> 0x0FFF
-Si N est <strong>impair</strong>: <span class="var">valeur</span> = (octet1 | (octet2 &lt;&lt; 8)) <span class="op">&gt;&gt;</span> 4
+  <div class="sec-title" style="margin-top:1.75rem">FAT12 — Encodage en 12 bits</div>
+  <div class="fat12-encode">
+    <p>FAT12 utilise des <strong>entrées de 12 bits</strong> — deux entrées partagent parfois un même octet. Pour lire l'entrée N :</p>
+    <div class="fat-formula" style="margin:.7rem 0">Offset (octets) = N × 3 / 2
+Si N est <span class="var">pair</span>   : valeur = (octet1 | (octet2 <span class="op">&lt;&lt;</span> 8)) <span class="op">&amp;</span> 0x0FFF
+Si N est <span class="var">impair</span> : valeur = (octet1 | (octet2 <span class="op">&lt;&lt;</span> 8)) <span class="op">&gt;&gt;</span> 4
 
 <span class="comment">Exemple : octets 0xAB 0xCD 0xEF</span>
-Cluster 0 (pair)  = 0xDAB  <span class="comment">// bits 0–11</span>
-Cluster 1 (impair) = 0xEFC <span class="comment">// bits 12–23 &gt;&gt; 4</span>
-      </div>
-    </div>
+Cluster 0 (pair)   = 0xDAB  <span class="comment">// bits 0–11</span>
+Cluster 1 (impair) = 0xEFC  <span class="comment">// bits 12–23 &gt;&gt; 4</span></div>
   </div>
 
-  <!-- Cluster slack -->
-  <div class="card-grid card-grid-2" style="margin-top:1rem">
-    <div class="card">
-      <h4>🗂 Cluster Slack</h4>
-      <ul style="padding-left:1.2rem;font-size:0.88rem;color:var(--muted)">
-        <li>Un fichier d'1 octet occupe <strong>1 cluster entier</strong> (ex : 4096 octets)</li>
+  <!-- Slack & fragmentation -->
+  <div class="g2" style="margin-top:1.25rem">
+    <div class="card card-cyan">
+      <div class="ct">🗂 Cluster Slack</div>
+      <ul>
+        <li>Un fichier d'1 octet occupe <strong>1 cluster entier</strong> (ex : 4 096 o)</li>
         <li>Slack = espace gaspillé entre fin fichier et fin cluster</li>
         <li>Le slack contient des <strong>données résiduelles</strong> d'anciens fichiers</li>
         <li>Formule : <code>TailleCluster − (TailleFichier mod TailleCluster)</code></li>
       </ul>
     </div>
-    <div class="card">
-      <h4>🔗 Fragmentation &amp; Récupération</h4>
-      <ul style="padding-left:1.2rem;font-size:0.88rem;color:var(--muted)">
+    <div class="card card-green">
+      <div class="ct">🔗 Fragmentation &amp; Récupération</div>
+      <ul>
         <li>Fichier fragmenté = clusters éparpillés, tous chaînés dans la FAT</li>
         <li>Suppression = clusters marqués libres, 1er octet = <code>0xE5</code></li>
         <li>Récupération : cluster de départ encore dans l'entrée SFN</li>
@@ -416,20 +643,20 @@ Cluster 1 (impair) = 0xEFC <span class="comment">// bits 12–23 &gt;&gt; 4</spa
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- SECTION 5 : COMPARAISON FAT12/16/32                     -->
-<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════════
+     SECTION 6 — COMPARAISON FAT12/16/32
+     ══════════════════════════════════════════════════════ -->
 <section id="comparaison">
-  <h2>⚖️ FAT12 vs FAT16 vs FAT32 — Comparaison complète</h2>
+  <div class="sec-title">⚖️ FAT12 vs FAT16 vs FAT32 — Comparaison complète</div>
 
-  <div class="cmp-wrap">
-    <table class="cmp-table">
+  <div class="fat-cmp-wrap">
+    <table class="fat-cmp-table">
       <thead>
         <tr>
           <th>Critère</th>
-          <th class="fat12">💛 FAT12 (1977)</th>
-          <th class="fat16">🔵 FAT16 (1984)</th>
-          <th class="fat32">🟢 FAT32 (1996)</th>
+          <th class="c-fat12">💛 FAT12 (1977)</th>
+          <th class="c-fat16">🔵 FAT16 (1984)</th>
+          <th class="c-fat32">🟢 FAT32 (1996)</th>
         </tr>
       </thead>
       <tbody>
@@ -441,7 +668,7 @@ Cluster 1 (impair) = 0xEFC <span class="comment">// bits 12–23 &gt;&gt; 4</spa
         <tr><td>Cluster max</td><td>4 Ko</td><td>64 Ko</td><td>32 Ko</td></tr>
         <tr><td>Encodage FAT</td><td>12 bits ½ octet</td><td>2 octets entiers</td><td>4 octets (28 bits)</td></tr>
         <tr><td>FS Type offset</td><td class="mono">0x36</td><td class="mono">0x36</td><td class="mono">0x52</td></tr>
-        <tr><td>Usage typique</td><td>Disquettes · SD &lt;32Mo</td><td>USB · XP · DOS</td><td>USB · SD · Windows</td></tr>
+        <tr><td>Usage typique</td><td>Disquettes · SD &lt; 32 Mo</td><td>USB · XP · DOS</td><td>USB · SD · Windows</td></tr>
         <tr><td>EOF marker</td><td class="mono">0xFF8–0xFFF</td><td class="mono">0xFFF8–0xFFFF</td><td class="mono">0x0FFFFFF8–0x0FFFFFFF</td></tr>
         <tr><td>Bad cluster</td><td class="mono">0xFF7</td><td class="mono">0xFFF7</td><td class="mono">0x0FFFFFF7</td></tr>
       </tbody>
@@ -449,68 +676,65 @@ Cluster 1 (impair) = 0xEFC <span class="comment">// bits 12–23 &gt;&gt; 4</spa
   </div>
 
   <!-- Capacity bars -->
-  <div style="margin-top:1.5rem">
-    <h3>Capacités comparées — Volume max</h3>
-    <div class="cap-bars">
-      <div class="cap-row">
-        <span class="cap-label" style="color:var(--fat12)">FAT12</span>
-        <div class="cap-bar-wrap"><div class="cap-bar" style="width:0.01%;background:var(--fat12)">32 Mo</div></div>
-        <span class="cap-val">32 Mo</span>
-      </div>
-      <div class="cap-row">
-        <span class="cap-label" style="color:var(--fat16)">FAT16</span>
-        <div class="cap-bar-wrap"><div class="cap-bar" style="width:3%;background:var(--fat16)">4 Go</div></div>
-        <span class="cap-val">4 Go</span>
-      </div>
-      <div class="cap-row">
-        <span class="cap-label" style="color:var(--fat32)">FAT32</span>
-        <div class="cap-bar-wrap"><div class="cap-bar" style="width:6%;background:var(--fat32)">8 To</div></div>
-        <span class="cap-val">8 To</span>
-      </div>
-      <div class="cap-row">
-        <span class="cap-label" style="color:var(--purple)">exFAT</span>
-        <div class="cap-bar-wrap"><div class="cap-bar" style="width:100%;background:var(--purple)">128 Po</div></div>
-        <span class="cap-val">128 Po</span>
-      </div>
+  <div class="sec-title" style="margin-top:1.75rem">Capacités comparées — Volume max</div>
+  <div class="fat-cap-bars">
+    <div class="fat-cap-row">
+      <span class="fat-cap-label" style="color:var(--fat12)">FAT12</span>
+      <div class="fat-cap-wrap"><div class="fat-cap-fill" style="width:.01%;background:var(--fat12)">32 Mo</div></div>
+      <span class="fat-cap-val">32 Mo</span>
+    </div>
+    <div class="fat-cap-row">
+      <span class="fat-cap-label" style="color:var(--fat16)">FAT16</span>
+      <div class="fat-cap-wrap"><div class="fat-cap-fill" style="width:3%;background:var(--fat16)">4 Go</div></div>
+      <span class="fat-cap-val">4 Go</span>
+    </div>
+    <div class="fat-cap-row">
+      <span class="fat-cap-label" style="color:var(--fat32)">FAT32</span>
+      <div class="fat-cap-wrap"><div class="fat-cap-fill" style="width:6%;background:var(--fat32)">8 To</div></div>
+      <span class="fat-cap-val">8 To</span>
+    </div>
+    <div class="fat-cap-row">
+      <span class="fat-cap-label" style="color:var(--purple)">exFAT</span>
+      <div class="fat-cap-wrap"><div class="fat-cap-fill" style="width:100%;background:var(--purple)">128 Po</div></div>
+      <span class="fat-cap-val">128 Po</span>
     </div>
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- SECTION 6 : IDENTIFICATION                              -->
-<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════════
+     SECTION 7 — IDENTIFICATION
+     ══════════════════════════════════════════════════════ -->
 <section id="identification">
-  <h2>🔍 Identifier la variante FAT — 5 étapes</h2>
+  <div class="sec-title">🔍 Identifier la variante FAT — 5 étapes</div>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
-      <div class="step-body">Lire <strong>Root Entry Count</strong> à l'offset <code>0x11</code>. Si = 0 → <strong style="color:var(--fat32)">FAT32</strong>. Si &gt; 0 → FAT12 ou FAT16.</div>
+      <div class="step-text">Lire <strong>Root Entry Count</strong> à l'offset <code>0x11</code>. Si = 0 → <strong style="color:var(--fat32)">FAT32</strong>. Si &gt; 0 → FAT12 ou FAT16.</div>
     </div>
     <div class="step">
       <div class="step-num">2</div>
-      <div class="step-body">Calculer le nombre de clusters de données. <strong>&lt; 4 087</strong> → <span style="color:var(--fat12)">FAT12</span>. <strong>&lt; 65 527</strong> → <span style="color:var(--fat16)">FAT16</span>. Sinon → <span style="color:var(--fat32)">FAT32</span>.</div>
+      <div class="step-text">Calculer le nombre de clusters de données. <strong>&lt; 4 087</strong> → <span style="color:var(--fat12)">FAT12</span>. <strong>&lt; 65 527</strong> → <span style="color:var(--fat16)">FAT16</span>. Sinon → <span style="color:var(--fat32)">FAT32</span>.</div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
-      <div class="step-body">Lire la chaîne ASCII à l'offset <code>0x36</code> (FAT12/16) ou <code>0x52</code> (FAT32). <strong>Attention : cette valeur n'est pas toujours fiable seule !</strong></div>
+      <div class="step-text">Lire la chaîne ASCII à l'offset <code>0x36</code> (FAT12/16) ou <code>0x52</code> (FAT32). <strong>Attention : cette valeur n'est pas toujours fiable seule !</strong></div>
     </div>
     <div class="step">
       <div class="step-num">4</div>
-      <div class="step-body">FAT32 : vérifier <strong>Reserved Sectors</strong> (0x0E) = 32 typique. FAT16 = 1. Et Boot Signature = <code>0x55 0xAA</code> à l'offset 510.</div>
+      <div class="step-text">FAT32 : vérifier <strong>Reserved Sectors</strong> (<code>0x0E</code>) = 32 typique. FAT16 = 1. Et Boot Signature = <code>0x55 0xAA</code> à l'offset 510.</div>
     </div>
     <div class="step">
       <div class="step-num">5</div>
-      <div class="step-body">FAT32 : cluster de départ d'un fichier = <strong>32 bits</strong> = (clus_hi <code>0x14</code> &lt;&lt; 16) | clus_lo <code>0x1A</code>. FAT16 : uniquement <code>0x1A</code> (16 bits, <code>0x14</code> = 0).</div>
+      <div class="step-text">FAT32 : cluster de départ d'un fichier = <strong>32 bits</strong> = (clus_hi <code>0x14</code> &lt;&lt; 16) | clus_lo <code>0x1A</code>. FAT16 : uniquement <code>0x1A</code> (16 bits, <code>0x14</code> = 0).</div>
     </div>
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- SECTION 7 : EXAM TIP                                    -->
-<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════════
+     SECTION 8 — EXAM TIP
+     ══════════════════════════════════════════════════════ -->
 <section id="examtip">
   <div class="exam-tip">
-    <h3>🎓 Exam Tip — FAT12 / FAT16 / FAT32</h3>
     <ul>
       <li><strong><code>0xE5</code></strong> = fichier supprimé · <strong><code>0x00</code></strong> = fin du répertoire · données restent jusqu'à réallocation</li>
       <li><strong>Cluster départ SFN FAT32</strong> : <code>0x1A–0x1B</code> (16 bits bas) + <code>0x14–0x15</code> (16 bits hauts)</li>
@@ -522,69 +746,76 @@ Cluster 1 (impair) = 0xEFC <span class="comment">// bits 12–23 &gt;&gt; 4</spa
   </div>
 </section>
 
-<!-- ─── FLASHCARDS ────────────────────────────── -->
+<!-- ══════════════════════════════════════════════════════
+     SECTION 9 — FLASHCARDS
+     ══════════════════════════════════════════════════════ -->
 <section>
-  <h2>💬 Flashcards</h2>
-  <div class="flashcards">
-    <div class="flashcard">
-      <div class="fc-question" onclick="toggleFC(this)">
-        <span class="fc-q">Pourquoi l'attribut d'une entrée LFN vaut 0x0F ?</span>
-        <span class="fc-meta">FAT Attributs · Niveau : moyen</span>
-        <span class="fc-arrow">›</span>
+  <div class="sec-title">💬 Flashcards</div>
+  <div class="fat-flashcards">
+    <div class="fat-flashcard">
+      <div class="fat-fc-q" onclick="toggleFC(this)">
+        <span class="fat-fc-text">Pourquoi l'attribut d'une entrée LFN vaut 0x0F ?</span>
+        <span class="fat-fc-meta">FAT Attributs · moyen</span>
+        <span class="fat-fc-arrow">›</span>
       </div>
-      <div class="fc-answer">
+      <div class="fat-fc-a">
         <code>0x0F</code> = R(<code>0x01</code>) + H(<code>0x02</code>) + S(<code>0x04</code>) + V(<code>0x08</code>). Cette combinaison est <strong>intentionnellement invalide</strong> pour un vrai fichier — les anciens systèmes FAT qui ne connaissent pas LFN l'ignorent automatiquement. Les entrées LFN précèdent l'entrée SFN correspondante dans le répertoire.
       </div>
     </div>
-    <div class="flashcard">
-      <div class="fc-question" onclick="toggleFC(this)">
-        <span class="fc-q">Comment localiser physiquement les données d'un fichier supprimé en FAT16 dont l'entrée SFN montre cluster départ = 0x0008 ?</span>
-        <span class="fc-meta">FAT16 forensique · Niveau : moyen</span>
-        <span class="fc-arrow">›</span>
+    <div class="fat-flashcard">
+      <div class="fat-fc-q" onclick="toggleFC(this)">
+        <span class="fat-fc-text">Comment localiser physiquement les données d'un fichier supprimé en FAT16 dont l'entrée SFN montre cluster départ = 0x0008 ?</span>
+        <span class="fat-fc-meta">FAT16 forensique · moyen</span>
+        <span class="fat-fc-arrow">›</span>
       </div>
-      <div class="fc-answer">
+      <div class="fat-fc-a">
         Le cluster de départ 8 est encore lisible à l'offset <code>0x1A–0x1B</code> même après suppression (le premier octet du nom = <code>0xE5</code>, mais le reste est intact). Offset physique = <strong>dataAreaStart + (8 − 2) × SectorsPerCluster × BytesPerSector</strong>. Les données restent intactes jusqu'à réallocation → carving direct possible depuis ce cluster.
       </div>
     </div>
-    <div class="flashcard">
-      <div class="fc-question" onclick="toggleFC(this)">
-        <span class="fc-q">Root Entry Count = 0 dans le BPB. Qu'est-ce que cela indique et où se trouve alors le répertoire racine ?</span>
-        <span class="fc-meta">FAT32 vs FAT16 · Niveau : facile</span>
-        <span class="fc-arrow">›</span>
+    <div class="fat-flashcard">
+      <div class="fat-fc-q" onclick="toggleFC(this)">
+        <span class="fat-fc-text">Root Entry Count = 0 dans le BPB. Qu'est-ce que cela indique et où se trouve alors le répertoire racine ?</span>
+        <span class="fat-fc-meta">FAT32 vs FAT16 · facile</span>
+        <span class="fat-fc-arrow">›</span>
       </div>
-      <div class="fc-answer">
+      <div class="fat-fc-a">
         Root Entry Count = 0 → <strong>FAT32</strong>. Le répertoire racine n'a plus de zone fixe — il est stocké dans la zone de données comme un répertoire ordinaire, généralement au <strong>cluster 2</strong> (spécifié dans le champ RootCluster du BPB étendu FAT32 à l'offset <code>0x2C</code>). Il peut donc grandir dynamiquement sans limite fixe de 512 entrées.
       </div>
     </div>
-    <div class="flashcard">
-      <div class="fc-question" onclick="toggleFC(this)">
-        <span class="fc-q">Un timestamp FAT indique 18:45:33. Est-ce possible ?</span>
-        <span class="fc-meta">Timestamps · Niveau : facile</span>
-        <span class="fc-arrow">›</span>
+    <div class="fat-flashcard">
+      <div class="fat-fc-q" onclick="toggleFC(this)">
+        <span class="fat-fc-text">Un timestamp FAT indique 18:45:33. Est-ce possible ?</span>
+        <span class="fat-fc-meta">Timestamps · facile</span>
+        <span class="fat-fc-arrow">›</span>
       </div>
-      <div class="fc-answer">
-        <strong>Non</strong> — les secondes FAT sont stockées divisées par 2 (5 bits = 0–31 × 2 = 0–62s). Les secondes impaires sont impossibles. 18:45:33 ne peut pas exister — un outil malveillant ou une corruption aurait pu créer ce timestamp. En investigation, un timestamp avec secondes impaires est un indicateur forensique.
+      <div class="fat-fc-a">
+        <strong>Non</strong> — les secondes FAT sont stockées divisées par 2 (5 bits = 0–31 × 2 = 0–62 s). Les secondes impaires sont impossibles. 18:45:33 ne peut pas exister — un outil malveillant ou une corruption aurait pu créer ce timestamp. En investigation, un timestamp avec secondes impaires est un indicateur forensique.
       </div>
     </div>
   </div>
 </section>
 
-<!-- ─── FOOTER ────────────────────────────────── -->
-<footer>
-  <p>CAS-IN Investigation Numérique · Forensique Suisse</p>
-  <p style="margin-top:0.3rem"><a href="#">Manuel Ch. 5–8</a> · <a href="#">Microsoft FAT Spec</a> · <a href="#">SANS FOR508</a></p>
-</footer>
+<!-- ══════════════════════════════════════════════════════
+     FOOTER
+     ══════════════════════════════════════════════════════ -->
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Manuel Ch. 5–8 · Microsoft FAT Spec · SANS FOR508</span>
+</div>
 
 </div><!-- /page-wrap -->
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- JAVASCRIPT                                              -->
-<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════════
+     JAVASCRIPT
+     ══════════════════════════════════════════════════════ -->
 <script>
-/* ─── BACK TO TOP ─────────────────────── */
-window.addEventListener('scroll', () => {
-  document.getElementById('backTop').classList.toggle('visible', window.scrollY > 300);
-});
+// ── Scroll progress + Back-top (identique à NTFS) ──
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+})();
 
 /* ─── PARTITION ANATOMY ───────────────── */
 let currentFat = 'fat16';
@@ -650,7 +881,9 @@ const zoneData = {
 function setFat(fat) {
   currentFat = fat;
   ['fat12','fat16','fat32'].forEach(f => {
-    document.getElementById('btn-'+f).className = 'filter-btn' + (f===fat ? ' active-'+f : '');
+    const el = document.getElementById('btn-'+f);
+    if(!el) return;
+    el.className = 'fat-filter-btn' + (f === fat ? ' fat-active-' + f.replace('fat','') : '');
   });
   const rootZone = document.getElementById('z-root');
   if (fat === 'fat32') {
@@ -665,8 +898,7 @@ function setFat(fat) {
 function showZone(zone) {
   const d = zoneData[zone];
   if (!d) return;
-  // clear active
-  document.querySelectorAll('.pbar-zone').forEach(z => z.classList.remove('active'));
+  document.querySelectorAll('.fat-pbar-zone').forEach(z => z.classList.remove('active'));
   document.getElementById('z-'+zone).classList.add('active');
   document.getElementById('zoneDetail').innerHTML = `
     <h4 style="color:${d.color}">${d.title}</h4>
@@ -773,7 +1005,7 @@ const sfnData = {
 function showSFN(field) {
   const d = sfnData[field];
   if (!d) return;
-  document.querySelectorAll('.sfn-field').forEach(f => f.classList.remove('active'));
+  document.querySelectorAll('.fat-sfn-field').forEach(f => f.classList.remove('active'));
   document.getElementById('sf-'+field)?.classList.add('active');
   document.getElementById('sfnDetail').innerHTML = `
     <h4>${d.title}</h4>
@@ -787,7 +1019,7 @@ function makeBits(containerId, count, onUpdate) {
   if (!c) return;
   for (let i = 0; i < count; i++) {
     const b = document.createElement('div');
-    b.className = 'ts-bit';
+    b.className = 'fat-ts-bit';
     b.textContent = '0';
     b.dataset.bit = count - 1 - i;
     b.onclick = function() {
@@ -800,7 +1032,7 @@ function makeBits(containerId, count, onUpdate) {
 }
 
 function readBits(containerId) {
-  const bits = document.getElementById(containerId)?.querySelectorAll('.ts-bit') || [];
+  const bits = document.getElementById(containerId)?.querySelectorAll('.fat-ts-bit') || [];
   let val = 0;
   bits.forEach(b => {
     if (b.classList.contains('on')) val |= (1 << parseInt(b.dataset.bit));
@@ -850,21 +1082,20 @@ function toggleAttr(el, mask) {
 
 /* ─── FAT TABLE / CLUSTER CHAIN ──────── */
 const fatEntries = [
-  { type: 'reserved', val: 'RSVD', cls: 'fc-reserved' },
-  { type: 'reserved', val: 'RSVD', cls: 'fc-reserved' },
-  { type: 'used-a',   val: '0x003', cls: 'fc-used-a', chain: 'A', next: 3 },
-  { type: 'used-a',   val: '0x004', cls: 'fc-used-a', chain: 'A', next: 4 },
-  { type: 'eof-a',    val: '0xFFFF', cls: 'fc-eof-a', chain: 'A' },
-  { type: 'used-b',   val: '0x007', cls: 'fc-used-b', chain: 'B', next: 7 },
-  { type: 'free',     val: '0x0000', cls: 'fc-free' },
-  { type: 'eof-b',    val: '0xFFFF', cls: 'fc-eof-b', chain: 'B' },
-  { type: 'bad',      val: '0xFFF7', cls: 'fc-bad' },
+  { type: 'reserved', val: 'RSVD',  cls: 'fat-c-reserved' },
+  { type: 'reserved', val: 'RSVD',  cls: 'fat-c-reserved' },
+  { type: 'used-a',   val: '0x003', cls: 'fat-c-used-a', chain: 'A', next: 3 },
+  { type: 'used-a',   val: '0x004', cls: 'fat-c-used-a', chain: 'A', next: 4 },
+  { type: 'eof-a',    val: '0xFFFF',cls: 'fat-c-eof-a',  chain: 'A' },
+  { type: 'used-b',   val: '0x007', cls: 'fat-c-used-b', chain: 'B', next: 7 },
+  { type: 'free',     val: '0x0000',cls: 'fat-c-free' },
+  { type: 'eof-b',    val: '0xFFFF',cls: 'fat-c-eof-b',  chain: 'B' },
+  { type: 'bad',      val: '0xFFF7',cls: 'fat-c-bad' }
 ];
-
-const chainLabels = { 'A': 'clusters 2→3→4', 'B': 'clusters 5→7' };
 
 function buildFAT() {
   const t = document.getElementById('fatTable');
+  if(!t) return;
   fatEntries.forEach((e, i) => {
     const d = document.createElement('div');
     d.className = 'fat-cell ' + e.cls;
@@ -872,7 +1103,7 @@ function buildFAT() {
     d.innerHTML = `<span class="cnum">Cluster ${i}</span><span class="cval">${e.val}</span><span class="ctype">${
       e.type === 'reserved' ? 'Réservé' :
       e.type.includes('used') ? 'Fichier '+e.chain+' →' :
-      e.type.includes('eof') ? 'EOF ('+e.chain+')' :
+      e.type.includes('eof')  ? 'EOF ('+e.chain+')' :
       e.type === 'free' ? 'LIBRE' : 'BAD'
     }</span>`;
     d.onclick = () => selectCluster(i, e);
@@ -884,18 +1115,17 @@ function selectCluster(idx, e) {
   document.querySelectorAll('.fat-cell').forEach(c => c.classList.remove('active'));
   const detail = document.getElementById('chainDetail');
   if (e.type === 'reserved') {
-    detail.innerHTML = `<strong>Cluster ${idx} — Réservé</strong><br><span style="color:var(--muted);font-size:0.85rem">Clusters 0 et 1 toujours réservés dans la FAT. Jamais alloués pour des données.</span>`;
+    detail.innerHTML = `<strong>Cluster ${idx} — Réservé</strong><br><span style="font-size:.78rem">Clusters 0 et 1 toujours réservés dans la FAT. Jamais alloués pour des données.</span>`;
   } else if (e.type === 'free') {
-    detail.innerHTML = `<strong>Cluster ${idx} — LIBRE (0x0000)</strong><br><span style="color:var(--accent2);font-size:0.85rem">Données potentiellement récupérables si un fichier occupait ce cluster avant suppression.</span>`;
+    detail.innerHTML = `<strong>Cluster ${idx} — LIBRE (0x0000)</strong><br><span style="color:var(--green);font-size:.78rem">Données potentiellement récupérables si un fichier occupait ce cluster avant suppression.</span>`;
   } else if (e.type === 'bad') {
-    detail.innerHTML = `<strong>Cluster ${idx} — BAD CLUSTER (0xFFF7)</strong><br><span style="color:var(--danger);font-size:0.85rem">Secteur défectueux marqué. Jamais alloué pour des données. Indicateur de problème matériel.</span>`;
+    detail.innerHTML = `<strong>Cluster ${idx} — BAD CLUSTER (0xFFF7)</strong><br><span style="color:var(--red);font-size:.78rem">Secteur défectueux marqué. Jamais alloué pour des données. Indicateur de problème matériel.</span>`;
   } else if (e.chain) {
-    // Highlight chain
     const chain = e.chain;
     let chainClusters = [];
     fatEntries.forEach((f,i2) => { if (f.chain === chain) chainClusters.push(i2); });
     chainClusters.forEach(ci => document.getElementById('fc-'+ci)?.classList.add('active'));
-    detail.innerHTML = `<strong>Fichier ${chain} — Chaîne : ${chainClusters.join(' → ')}</strong><br><span style="color:var(--muted);font-size:0.85rem">Cluster ${idx} : ${e.type.includes('eof') ? 'dernier cluster (EOF)' : 'pointe vers cluster ' + e.next}. La FAT relie tous les clusters pour reconstruire le fichier.</span>`;
+    detail.innerHTML = `<strong>Fichier ${chain} — Chaîne : ${chainClusters.join(' → ')}</strong><br><span style="font-size:.78rem">Cluster ${idx} : ${e.type.includes('eof') ? 'dernier cluster (EOF)' : 'pointe vers cluster ' + e.next}. La FAT relie tous les clusters pour reconstruire le fichier.</span>`;
     return;
   }
   document.getElementById('fc-'+idx)?.classList.add('active');
@@ -907,9 +1137,8 @@ buildFAT();
 function toggleFC(el) {
   el.classList.toggle('open');
   const ans = el.nextElementSibling;
-  ans.classList.toggle('open');
+  if(ans) ans.classList.toggle('open');
 }
 </script>
-
 </body>
 </html>
