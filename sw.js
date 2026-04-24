@@ -1,6 +1,6 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v18 : ajout js/cas-in-pwa.js + js/cas-in-search.js (Étape 5)
-const CACHE_VERSION = 'cas-in-v18';
+// v19 : ajout scenes.js (scénarios DFIR) + stratégie network-first dédiée
+const CACHE_VERSION = 'cas-in-v19';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const STATIC_ASSETS = [
   './tp.html',
   './scene.html',
   './manifest.json',
+  './pwa.manifest.json',
   './questions.json',
   './counts.json',
   // Styles
@@ -22,6 +23,8 @@ const STATIC_ASSETS = [
   './js/cas-in-counts.js',
   './js/cas-in-pwa.js',
   './js/cas-in-search.js',
+  // Scénarios DFIR (ajout v19)
+  './scenes.js',
   // TP
   './tp/tp-data.js',
   './tp/tp-engine.js',
@@ -99,20 +102,23 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch : Network First pour HTML/JSON, Cache First pour CSS/JS
+// Fetch : stratégie mixte selon le type de ressource
 self.addEventListener('fetch', event => {
   if (!event.request.url.startsWith('http')) return;
+  if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
 
-  if (event.request.method !== 'GET') return;
+  // Ignorer les requêtes cross-origin (fonts Google, CDN externes)
   if (url.origin !== self.location.origin) return;
 
   const isHTML = event.request.headers.get('accept')?.includes('text/html');
   const isJSON = url.pathname.endsWith('.json');
+  // scenes.js : network-first car mis à jour fréquemment (47 scénarios, ~937KB)
+  const isScenes = url.pathname.endsWith('scenes.js');
 
-  if (isHTML || isJSON) {
-    // Network First : toujours essayer le réseau en premier
+  if (isHTML || isJSON || isScenes) {
+    // Network First : toujours essayer le réseau en premier, fallback cache
     event.respondWith(
       fetch(event.request).then(response => {
         if (response.ok) {
@@ -123,7 +129,7 @@ self.addEventListener('fetch', event => {
       }).catch(() => caches.match(event.request))
     );
   } else {
-    // Cache First : CSS, JS, images
+    // Cache First : CSS, JS (sauf scenes.js), images
     event.respondWith(
       caches.match(event.request).then(cached => {
         return cached || fetch(event.request).then(response => {
