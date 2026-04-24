@@ -8724,6 +8724,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
       return { icon: "📚", title: "Formation malware requise", sub: "Art. 143+143bis CP + LBA Art. 9 + GovCERT procédures" };
     },
   },
+  /* ══════════════════════════════════════════════════════════
      PROTECTION DES MINEURS EN LIGNE — SCÉNARIOS INVESTIGATION
      Note pédagogique : Ces scénarios traitent exclusivement de
      la PROCÉDURE D'INVESTIGATION et du CADRE LÉGAL suisse.
@@ -9096,6 +9097,9 @@ Artefacts récupérés sur 4 postes victimes :<br>
       if (pct >= 65) return { icon: "🛡️", title: "Enquêteur Cyber Spécialisé", sub: "Bonne maîtrise des opérations Europol et du cadre Art. 286 CPP" };
       if (pct >= 45) return { icon: "🌐", title: "Analyste DFIR Cyber", sub: "Approfondissez Art. 286/293 CPP et ATF 143 IV 270 sur preuves étrangères" };
       return { icon: "📚", title: "Formation enquêtes couvertes requise", sub: "Art. 286 CPP + protection enquêteurs + admissibilité preuves étrangères" };
+    },
+  },
+
   /* ══════════════════════════════════════════════════════════
      4 NOUVEAUX SCÉNARIOS — THÈMES MANQUANTS
   ══════════════════════════════════════════════════════════ */
