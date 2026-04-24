@@ -5,6 +5,97 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>exFAT — CAS-IN Forensique</title>
 <link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+/* ── CSS minimal : UNIQUEMENT pour composants absents de fiche_style.css ── */
+
+/* Entry Set Bar (3 segments cliquables — adapté de l'image) */
+.exf-bar{display:flex;height:56px;border-radius:10px;overflow:hidden;border:1px solid var(--border);box-shadow:0 4px 16px rgba(0,0,0,.3);margin:.75rem 0;cursor:pointer}
+.exf-seg{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;border-right:1px solid rgba(0,0,0,.25);transition:filter .2s,transform .15s;user-select:none;padding:0 .4rem;text-align:center}
+.exf-seg:last-child{border-right:none}
+.exf-seg:hover{filter:brightness(1.3);transform:scaleY(1.1);z-index:2}
+.exf-seg.active{filter:brightness(1.45);transform:scaleY(1.15);z-index:3;outline:2px solid white}
+.exf-lbl{font-family:var(--sans);font-size:.62rem;font-weight:700;line-height:1.2;padding:0 .15rem}
+.exf-sub{font-family:var(--mono);font-size:.5rem;opacity:.7}
+.es-primary{background:linear-gradient(135deg,rgba(255,64,96,.35),rgba(255,64,96,.2));color:var(--red);flex:3}
+.es-stream{background:linear-gradient(135deg,rgba(188,140,255,.35),rgba(188,140,255,.2));color:var(--purple);flex:3}
+.es-name{background:linear-gradient(135deg,rgba(48,232,138,.35),rgba(48,232,138,.2));color:var(--green);flex:3}
+.es-name2{background:linear-gradient(135deg,rgba(48,232,138,.2),rgba(48,232,138,.1));color:var(--green);flex:2}
+
+/* Boot Zone viz (inspiré image) */
+.exf-boot{display:flex;border:2px solid rgba(88,166,255,.3);border-radius:12px;overflow:hidden;margin:.75rem 0;background:rgba(88,166,255,.04)}
+.exf-zone{flex:1;border-right:1px solid rgba(88,166,255,.2);padding:.75rem .6rem;text-align:center;cursor:pointer;transition:filter .2s,transform .15s;user-select:none}
+.exf-zone:last-child{border-right:none}
+.exf-zone:hover{filter:brightness(1.3);transform:scaleY(1.06)}
+.exf-zone.active{filter:brightness(1.4);outline:2px solid white;z-index:2}
+.exf-zone-off{font-family:var(--mono);font-size:.52rem;color:var(--dim);margin-bottom:.2rem}
+.exf-zone-name{font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.15rem}
+.exf-zone-sub{font-family:var(--mono);font-size:.55rem;opacity:.7;line-height:1.3}
+.ezb{background:rgba(255,64,96,.1);color:var(--red)}.ezf{background:rgba(240,192,64,.1);color:var(--gold)}.ezd{background:rgba(48,232,138,.1);color:var(--green)}
+
+/* Bitmap grid */
+.exf-bmap{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;margin:.5rem 0}
+.exf-bc{height:22px;border-radius:3px;border:1px solid;cursor:pointer;transition:filter .15s,transform .1s;position:relative}
+.exf-bc:hover{filter:brightness(1.3);transform:scale(1.08)}
+.exf-bc-free{background:rgba(106,128,168,.1);border-color:rgba(106,128,168,.3)}
+.exf-bc-used{background:rgba(0,229,204,.25);border-color:rgba(0,229,204,.5)}
+.exf-bc-hl{background:rgba(240,192,64,.4)!important;border-color:var(--gold)!important;box-shadow:0 0 6px rgba(240,192,64,.4)}
+
+/* Size bars (comparaison capacités) */
+.exf-bars{margin:.75rem 0}
+.exf-bar-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem}
+.exf-bar-lbl{font-family:var(--mono);font-size:.68rem;min-width:70px;text-align:right}
+.exf-bar-track{flex:1;height:24px;background:var(--surface2);border-radius:5px;overflow:hidden;border:1px solid var(--border)}
+.exf-bar-fill{height:100%;border-radius:5px;display:flex;align-items:center;justify-content:flex-end;padding-right:.4rem;font-family:var(--mono);font-size:.62rem;font-weight:700;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.exf-bar-val{font-family:var(--mono);font-size:.68rem;min-width:65px}
+
+/* Calc box */
+.exf-calc{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0}
+.exf-calc-hdr{background:var(--surface2);padding:.55rem 1rem;font-family:var(--mono);font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border)}
+.exf-calc-body{padding:.85rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.exf-inp-lbl{font-family:var(--sans);font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.25rem}
+.exf-inp{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.4rem .65rem;font-family:var(--mono);font-size:.72rem;color:var(--text);box-sizing:border-box}
+.exf-inp:focus{outline:none;border-color:rgba(0,229,204,.45)}
+.exf-out{font-family:var(--mono);font-size:.72rem;color:var(--cyan);background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.2);border-radius:6px;padding:.4rem .65rem;min-height:34px;display:flex;align-items:center}
+.exf-btn{font-family:var(--mono);font-size:.72rem;padding:.38rem .9rem;border:1px solid rgba(0,229,204,.4);background:rgba(0,229,204,.08);color:var(--cyan);border-radius:6px;cursor:pointer;transition:background .15s;white-space:nowrap;grid-column:span 2}
+.exf-btn:hover{background:rgba(0,229,204,.2)}
+
+/* Detail panel générique */
+.exf-panel{background:var(--surface);border:1px solid rgba(88,166,255,.2);border-radius:10px;padding:1rem 1.2rem;min-height:90px;font-size:.79rem;line-height:1.75;color:var(--muted);transition:all .2s;margin:.5rem 0 1.25rem}
+.exf-panel.live{border-color:rgba(88,166,255,.45);box-shadow:0 4px 18px rgba(88,166,255,.07)}
+.exf-panel strong{color:var(--text)}
+.exf-panel code{color:var(--cyan);font-family:var(--mono);font-size:.76rem;background:rgba(0,229,204,.07);border:1px solid rgba(0,229,204,.15);border-radius:3px;padding:.01rem .28rem}
+
+/* Timestamp dials (10ms vs 2s) */
+.exf-ts-compare{display:flex;gap:.75rem;margin:.75rem 0;flex-wrap:wrap}
+.exf-ts-dial{flex:1;min-width:140px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center}
+.exf-ts-num{font-family:var(--sans);font-size:2.2rem;font-weight:800;letter-spacing:-1px;line-height:1}
+.exf-ts-unit{font-family:var(--mono);font-size:.7rem;margin-top:.15rem;opacity:.7}
+.exf-ts-label{font-family:var(--sans);font-size:.65rem;font-weight:700;margin-top:.5rem;text-transform:uppercase;letter-spacing:.06em}
+
+/* ── Onglets isolés (.exf-tabs / .exf-tab-btn / .exf-tab-panel) ──
+   Noms préfixés pour éviter la double définition .tabs/.tab-btn/.tab-panel
+   présente dans fiche_style.css (v6 lignes 585-593 et v7 lignes 1241-1265).
+   Le système d'onglets d'exFAT est ainsi complètement autonome. */
+.exf-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);overflow-x:auto;scrollbar-width:none;background:rgba(13,17,23,.98);backdrop-filter:blur(8px);position:sticky;top:52px;z-index:90;padding:0 1rem;margin-bottom:0}
+.exf-tabs::-webkit-scrollbar{display:none}
+.exf-tab-btn{font-family:var(--mono);font-size:.72rem;padding:.62rem 1.1rem;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--dim);cursor:pointer;transition:color .15s,border-color .15s;margin-bottom:-2px;white-space:nowrap}
+.exf-tab-btn:hover{color:var(--muted);background:rgba(255,255,255,.03)}
+.exf-tab-btn.active{color:var(--cyan);border-bottom-color:var(--cyan);font-weight:700;background:transparent}
+.exf-tab-panel{display:none;padding:1.75rem 0 2.5rem;animation:xFadeIn .22s ease}
+.exf-tab-panel.active{display:block}
+@keyframes xFadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* Responsive */
+@media(max-width:640px){
+  .exf-bar{height:auto;flex-wrap:wrap}
+  .exf-seg{min-width:48%;border-bottom:1px solid rgba(0,0,0,.25);padding:.5rem}
+  .exf-boot{flex-wrap:wrap}
+  .exf-zone{min-width:45%}
+  .exf-calc-body{grid-template-columns:1fr}
+  .exf-btn{grid-column:span 1}
+  .exf-bmap{grid-template-columns:repeat(8,1fr)}
+}
+</style>
 </head>
 <body>
 <div id="scroll-progress"></div>
@@ -45,12 +136,12 @@
 
 <!-- ── TABS ── -->
 <div class="page" style="padding-top:0;padding-bottom:0">
-<div class="tabs" id="exf-tabs">
-  <button class="tab-btn active" onclick="showTab('arch',this)">🏗 Architecture</button>
-  <button class="tab-btn" onclick="showTab('entries',this)">📋 Entrées répertoire</button>
-  <button class="tab-btn" onclick="showTab('bitmap',this)">🗺 Bitmap &amp; Offsets</button>
-  <button class="tab-btn" onclick="showTab('compare',this)">⚖️ exFAT vs FAT32</button>
-  <button class="tab-btn" onclick="showTab('tools',this)">🔧 X-Ways &amp; Outils</button>
+<div class="exf-tabs" id="exf-tabs">
+  <button class="exf-tab-btn active" onclick="showTab('arch',this)">🏗 Architecture</button>
+  <button class="exf-tab-btn" onclick="showTab('entries',this)">📋 Entrées répertoire</button>
+  <button class="exf-tab-btn" onclick="showTab('bitmap',this)">🗺 Bitmap &amp; Offsets</button>
+  <button class="exf-tab-btn" onclick="showTab('compare',this)">⚖️ exFAT vs FAT32</button>
+  <button class="exf-tab-btn" onclick="showTab('tools',this)">🔧 X-Ways &amp; Outils</button>
 </div>
 </div>
 
@@ -58,7 +149,7 @@
      TAB 1 — ARCHITECTURE
 ══════════════════════════════════════════ -->
 <div class="page" style="padding-top:.5rem">
-<div class="tab-panel active" id="tab-arch">
+<div class="exf-tab-panel active" id="tab-arch">
 
 <!-- Info card -->
 <div class="info">
@@ -152,7 +243,7 @@
 <!-- ══════════════════════════════════════
      TAB 2 — ENTRÉES RÉPERTOIRE
 ══════════════════════════════════════════ -->
-<div class="tab-panel" id="tab-entries">
+<div class="exf-tab-panel" id="tab-entries">
 
 <div class="sec-title">Structure des entrées — Directory Entry Set</div>
 <p style="font-size:.79rem;color:var(--muted);margin-bottom:.85rem;line-height:1.6">Un fichier exFAT occupe <strong style="color:var(--text)">3 à 19 entrées de 32 octets chacune</strong>, toujours contiguës. Chaque entrée a un type (EntryType). Cliquez sur un segment.</p>
@@ -252,7 +343,7 @@
 <!-- ══════════════════════════════════════
      TAB 3 — BITMAP & OFFSETS
 ══════════════════════════════════════════ -->
-<div class="tab-panel" id="tab-bitmap">
+<div class="exf-tab-panel" id="tab-bitmap">
 
 <div class="sec-title">$Bitmap — Visualiseur interactif</div>
 <p style="font-size:.79rem;color:var(--muted);margin-bottom:.75rem;line-height:1.6">1 bit par cluster · Index 0 = cluster 2 · Bit 1 = occupé · Bit 0 = libre · <strong style="color:var(--text)">Cliquez pour basculer</strong></p>
@@ -333,7 +424,7 @@
 <!-- ══════════════════════════════════════
      TAB 4 — COMPARAISON
 ══════════════════════════════════════════ -->
-<div class="tab-panel" id="tab-compare">
+<div class="exf-tab-panel" id="tab-compare">
 
 <div class="sec-title">Capacités comparées — exFAT vs FAT32</div>
 <p style="font-size:.79rem;color:var(--muted);margin-bottom:.75rem">Adapté du schéma : les barres s'animent à l'ouverture de l'onglet.</p>
@@ -440,7 +531,7 @@
 <!-- ══════════════════════════════════════
      TAB 5 — X-WAYS & OUTILS
 ══════════════════════════════════════════ -->
-<div class="tab-panel" id="tab-tools">
+<div class="exf-tab-panel" id="tab-tools">
 
 <div class="sec-title">Procédure X-Ways — Localiser un fichier exFAT</div>
 
@@ -558,8 +649,8 @@
 
 // ── Tabs ────────────────────────────────────────────────────
 function showTab(id,btn){
-  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});
-  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.exf-tab-panel').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.exf-tab-btn').forEach(function(b){b.classList.remove('active');});
   var el=document.getElementById('tab-'+id);
   if(el) el.classList.add('active');
   if(btn) btn.classList.add('active');
