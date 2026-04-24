@@ -1,18 +1,37 @@
 /**
- * scenes.js — CAS-IN Scénarios DFIR
- * Converti depuis les JSON sources 
- * Compatible avec scene.html moteur v2
+ * scenes.js — CAS-IN Scénarios DFIR · Fichier Consolidé
+ * Compatible avec scene.html moteur v2 + UX Enhancements v2
+ *
+ * 47 scénarios organisés en trois blocs :
+ *
+ * ── BLOC 1 : Scénarios pédagogiques fondamentaux (custody → supply_chain_sante)
+ *    Couverture : forensique, droit pénal CH, CPP, ACPO, LPD 2023
+ *
+ * ── BLOC 2 : Affaires suisses réelles 2023-2026
+ *    sati-bec    — BEC 18.6M CHF, SATI Tessin 2024            [HARD]
+ *    sms-blasters — IMSI catchers, Genève 2025                 [MEDIUM]
+ *    xplain-play — Task Force fedpol, darknet 2023-24          [HARD]
+ *    clone-vocal       — CEO Fraud deepfake vocal, Schwyz 2026         [MEDIUM]
+ *    lockbit-victime   — Premier réflexe ransomware, Opération Cronos   [EASY]
+ *    vetroz-akira      — AKIRA supply chain Valais, avril 2026             [MEDIUM]
+ *    faux-policiers    — Vishing NE, 43 coursiers, mobile forensics         [MEDIUM]
+ *    infostealer-magnus — Opération Magnus, RedLine/META, LBA Art.9         [MEDIUM]
+ *
+ * ── BLOC 3 : Jurisprudence ATF/TF publiée
+ *    banquier-fantome  — Art. 143+147 al.2 CP, MPC 2024        [HARD]
+ *    boutique-fantome  — ATF 150 IV 188, Art. 146/147 CP       [MEDIUM]
+ *    telephone-scelles — TF 7B_102/2024 + 7B_145/2025, CPP    [MEDIUM]
  *
  * Structure par scénario :
- *   id, title, icon, difficulty, tags, legalRefs,
- *   intro, alertLevel, objectives, debrief,
- *   steps[], badgeFn()
+ *   id, title, icon, difficulty, atmosphere, realCase?,
+ *   narrative, tags, legalRefs, intro, alertLevel,
+ *   objectives[], debrief, steps[], badgeFn()
  *
  * Structure par step :
  *   phase, situation, law, question, choices[]
  *
  * Structure par choice :
- *   text, ok, pts, fb, legal, critical, source, next
+ *   text, ok, pts, fb, legal, critical, next
  *   next: number = index step suivant | "end" = fin scénario
  */
 
@@ -36,13 +55,13 @@ const SCENES = [
     tags: ["FORENSIQUE", "DROIT"],
     legalRefs: ["ACPO Principles 1–4", "Art. 141 CPP"],
     intro: "Vous relisez un rapport d'investigation reçu d'un collègue. Quelque chose ne va pas. Saurez-vous identifier toutes les ruptures de chaîne de custody ?",
-    alertLevel: "CONTRÔLE QUALITÉ — Rapport à valider avant transmission au MP",
+    alertLevel: "📋 AUDIT URGENT — Rapport non conforme détecté avant transmission MP",
     objectives: [
       { icon: "🔍", text: "Identifier chaque rupture de chaîne de custody" },
       { icon: "⚖️", text: "Connaître les conséquences procédurales (Art. 141 CPP)" },
       { icon: "📋", text: "Appliquer les principes ACPO" },
     ],
-    debrief: "<p>La chaîne de custody est le pilier de la recevabilité de la preuve numérique. Chaque rupture crée une opportunité pour la défense de contester l'authenticité ou l'intégrité des éléments de preuve.</p><p>Les 6 ruptures dans ce scénario illustrent les erreurs les plus fréquentes : absence de hash de référence, transfert non documenté, stockage inapproprié, accès non loggué, mélange de pièces et rapport sans référence aux scellés.</p>",
+    debrief: "<p>La chaîne de custody est le pilier de la recevabilité de la preuve numérique. Chaque rupture crée une opportunité pour la défense de contester l'authenticité ou l'intégrité des éléments de preuve.</p><p>Les 6 ruptures dans ce scénario illustrent les erreurs les plus fréquentes : absence de hash de référence, transfert non documenté, stockage inapproprié, accès non loggué, mélange de pièces et rapport sans référence aux scellés.</p><p><strong>Référence CH</strong> : ATF 141 IV 87 — le TF rappelle que la traçabilité de chaque acte d'investigation conditionne la recevabilité des preuves (Art. 141 CPP). En pratique cantonale, la police vaudoise et zurichoise appliquent les ACPO Principles 1–4 comme standard de facto documenté dans leurs directives forensiques internes.</p>",
     steps: [
       {
         phase: "📋 Le rapport douteux",
@@ -164,13 +183,13 @@ const SCENES = [
     tags: ["FORENSIQUE", "OUTILS"],
     legalRefs: ["Manuel Ch. 4.3", "Manuel Ch. 29.3", "ACPO Principle 3"],
     intro: "Un suspect a posté une photo sur Instagram le jour du délit. L'iPhone saisi contient le fichier original. ExifTool révèle des coordonnées GPS précises. Comment exploitez-vous cette preuve ?",
-    alertLevel: "PREUVE GPS — Valeur probante à établir correctement",
+    alertLevel: "📍 PREUVE CONTESTABLE — Valeur probante EXIF à consolider avant audience",
     objectives: [
       { icon: "🧬", text: "Extraire et interpréter les métadonnées EXIF correctement" },
       { icon: "📋", text: "Formuler la conclusion au bon niveau d'affirmation" },
       { icon: "⚖️", text: "Résister à la contre-expertise sur la falsifiabilité des EXIF" },
     ],
-    debrief: "<p>Les données EXIF sont une preuve numérique à haute valeur forensique — mais uniquement si elles sont préservées correctement. Prendre une photo de l'écran ou faire un screenshot détruit les métadonnées originales. L'extraction doit se faire sur le fichier original avec un outil dédié (ExifTool) sur une copie forensique.</p><p>La formulation dans le rapport doit rester factuelle : les coordonnées GPS sont des <em>données enregistrées</em>, pas une preuve absolue de présence — le téléphone aurait pu être prêté, piraté, ou les données modifiées.</p>",
+    debrief: "<p>Les données EXIF sont une preuve numérique à haute valeur forensique — mais uniquement si elles sont préservées correctement. Prendre une photo de l'écran ou faire un screenshot détruit les métadonnées originales. L'extraction doit se faire sur le fichier original avec un outil dédié (ExifTool) sur une copie forensique.</p><p>La formulation dans le rapport doit rester factuelle : les coordonnées GPS sont des <em>données enregistrées</em>, pas une preuve absolue de présence — le téléphone aurait pu être prêté, piraté, ou les données modifiées.</p><p><strong>Référence CH</strong> : TF 6B_527/2023 (2023) — les métadonnées numériques constituent des preuves indirectes admissibles sous Art. 141 CPP à condition que leur chaîne d'extraction soit documentée. ATF 136 II 508 (Logistep) : les données techniques associées à un fichier (IP, timestamps) sont des données personnelles protégées — leur usage dans une procédure pénale requiert une base légale.</p>",
     steps: [
       {
         phase: "🧬 La photo sur Instagram",
@@ -285,13 +304,13 @@ const SCENES = [
     tags: ["DROIT", "FORENSIQUE"],
     legalRefs: ["Manuel Ch. 10", "ACPO Principle 1", "Art. 302 CPP"],
     intro: "14h37. Vous êtes analyste au SOC. Appel sur la ligne d'urgence : le comptable d'une PME suisse panique — \"il y a un message bizarre sur mon écran qui dit que tout est chiffré\". L'équipe DFIR est à 90 minutes de route. Vos premières instructions vont conditionner la qualité de toute l'enquête à venir.",
-    alertLevel: "SIGNALEMENT CYBER EN COURS — Triage initial critique",
+    alertLevel: "📞 H+0 — PREMIER APPEL ENTRANT — Triage initial, chaque seconde compte",
     objectives: [
       { icon: "📞", text: "Mener un triage initial structuré par téléphone" },
       { icon: "🛡", text: "Préserver les preuves sans action technique prématurée" },
       { icon: "📋", text: "Documenter et escalader selon les procédures" },
     ],
-    debrief: "<p>Le rôle du premier intervenant (SPOC — Single Point Of Contact) est souvent sous-estimé. Pourtant, c'est lui qui conditionne la qualité de toute l'investigation ultérieure. Les erreurs classiques du SPOC : donner de mauvaises instructions techniques au témoin, ne pas documenter l'horodatage initial, escalader trop tard ou trop superficiellement.</p><p>La règle d'or : <strong>rassurer sans agir techniquement à distance</strong>. Le SPOC structure l'information, préserve ce qui peut l'être par des instructions simples (ne pas éteindre, ne pas reformater, ne pas payer), et transmet un dossier propre à l'équipe DFIR.</p>",
+    debrief: "<p>Le rôle du premier intervenant (SPOC — Single Point Of Contact) est souvent sous-estimé. Pourtant, c'est lui qui conditionne la qualité de toute l'investigation ultérieure. Les erreurs classiques du SPOC : donner de mauvaises instructions techniques au témoin, ne pas documenter l'horodatage initial, escalader trop tard ou trop superficiellement.</p><p>La règle d'or : <strong>rassurer sans agir techniquement à distance</strong>. Le SPOC structure l'information, préserve ce qui peut l'être par des instructions simples (ne pas éteindre, ne pas reformater, ne pas payer), et transmet un dossier propre à l'équipe DFIR.</p><p><strong>Référence CH</strong> : ATF 141 IV 87 consid. 2.3 — les mesures conservatoires d'urgence prises avant ordonnance formelle sont admissibles si elles respectent le principe de proportionnalité (Art. 197 CPP). La pratique des brigades cyber cantonales (Vaud, Zurich, Genève) reconnaît un délai de grâce de 30 minutes pour les premières mesures de containment en situation d'incident actif.</p>",
     steps: [
       {
         phase: "📞 Le triage initial",
@@ -406,13 +425,13 @@ const SCENES = [
     tags: ["RÉSEAUX", "DROIT"],
     legalRefs: ["Art. 143bis CP", "Art. 146 CP", "MITRE ATT&CK T1566"],
     intro: "09h15. Un employé de l'entreprise signale via le bouton \"Signaler phishing\" d'Outlook un email qui lui semble suspect. L'objet : \"Validation urgente de votre compte — action requise sous 24h\". Vous êtes analyste SOC de garde. Le mail doit-il être bloqué ? Est-ce une vraie menace ?",
-    alertLevel: "SIGNALEMENT PHISHING — Analyse technique requise",
+    alertLevel: "🎣 PHISHING ACTIF — Infrastructure malveillante toujours opérationnelle",
     objectives: [
       { icon: "🔍", text: "Analyser techniquement les en-têtes et le contenu d'un email" },
       { icon: "🎯", text: "Identifier les indicateurs de phishing (MITRE T1566)" },
       { icon: "📨", text: "Répondre de façon pédagogique à l'employé" },
     ],
-    debrief: "<p>Le signalement d'emails phishing par les employés est le pilier le plus efficace de la défense contre l'ingénierie sociale. Un analyste SOC traite parfois 50-100 signalements par jour : il doit trier vite ET bien.</p><p>L'analyse repose sur : (1) l'examen des en-têtes SMTP (SPF/DKIM/DMARC, IP d'origine, routage), (2) l'analyse du contenu (urgence artificielle, liens, pièces jointes, fautes), (3) la corroboration avec threat intel (VirusTotal, URLScan, bases de phishing connu). La réponse à l'employé doit être pédagogique, jamais condescendante.</p>",
+    debrief: "<p>Le signalement d'emails phishing par les employés est le pilier le plus efficace de la défense contre l'ingénierie sociale. Un analyste SOC traite parfois 50-100 signalements par jour : il doit trier vite ET bien.</p><p>L'analyse repose sur : (1) l'examen des en-têtes SMTP (SPF/DKIM/DMARC, IP d'origine, routage), (2) l'analyse du contenu (urgence artificielle, liens, pièces jointes, fautes), (3) la corroboration avec threat intel (VirusTotal, URLScan, bases de phishing connu). La réponse à l'employé doit être pédagogique, jamais condescendante.</p><p><strong>Référence CH</strong> : MPC, acte d'accusation 04.04.2024 — dans l'affaire du réaltime-phishing bancaire suisse (CHF 2.4M, 2022-2025), le MPC a retenu Art. 147 al. 1 et al. 2 CP (utilisation frauduleuse par métier) pour les kits de phishing bancaires. TF 6B_683/2021 (2022) : l'aggravante du métier exige fréquence + montant + organisation professionnelle.</p>",
     steps: [
       {
         phase: "📧 L'analyse des en-têtes",
@@ -534,13 +553,13 @@ Received from: 185.220.101.X (nœud Tor)
     tags: ["WINDOWS", "FORENSIQUE"],
     legalRefs: ["Art. 248 CPP", "Manuel Ch. 11.1", "ISO/IEC 27037"],
     intro: "Vous arrivez dans un appartement zurichois. Sur le bureau : un laptop Windows allumé avec session active et BitLocker activé. Votre collègue s'apprête à fermer l'écran. Chaque seconde compte.",
-    alertLevel: "CRITIQUE — BitLocker actif, clé en RAM volatile",
+    alertLevel: "⚡ CRITIQUE — BitLocker actif · Clé en RAM · Elle disparaît si vous bougez l'appareil",
     objectives: [
       { icon: "💻", text: "Préserver la clé BitLocker avant toute action" },
       { icon: "⛓", text: "Respecter les scellés sans détruire les preuves volatiles" },
       { icon: "🔑", text: "Identifier les alternatives si la RAM n'a pas été capturée" },
     ],
-    debrief: "<p>Ce scénario illustre le principe fondamental de la forensique numérique : <strong>ne jamais modifier la preuve</strong>, même involontairement. Éteindre un ordinateur BitLocker sans en avoir capturé la mémoire vive revient à détruire définitivement la clé de déchiffrement.</p><p><strong>Règle d'or (Manuel Ch. 11.1) :</strong> si le système est allumé et chiffré → live forensics d'abord. Le dump RAM est la priorité absolue. Les scellés (art. 248 CPP) ne s'opposent pas à l'acquisition — ils suspendent l'<em>analyse</em>, pas la <em>collecte</em>.</p>",
+    debrief: "<p>Ce scénario illustre le principe fondamental de la forensique numérique : <strong>ne jamais modifier la preuve</strong>, même involontairement. Éteindre un ordinateur BitLocker sans en avoir capturé la mémoire vive revient à détruire définitivement la clé de déchiffrement.</p><p><strong>Règle d'or (Manuel Ch. 11.1) :</strong> si le système est allumé et chiffré → live forensics d'abord. Le dump RAM est la priorité absolue. Les scellés (art. 248 CPP) ne s'opposent pas à l'acquisition — ils suspendent l'<em>analyse</em>, pas la <em>collecte</em>.</p><p><strong>Référence CH</strong> : TF 7B_145/2025 (2025) — les smartphones et supports chiffrés constituent des «&nbsp;documents personnels&nbsp;» au sens de l'Art. 264 al. 1 let. b CPP. Leur protection n'est pas absolue : le TMC peut lever les scellés si l'intérêt public à la poursuite prime (cf. affaire cocaïne Zurich, 7.18 kg — levée accordée). La clé de déchiffrement en RAM est un artefact volatile — ACPO Principle 2 s'applique avec une acuité particulière.</p>",
     steps: [
       {
         phase: "💻 La découverte",
@@ -712,13 +731,13 @@ Received from: 185.220.101.X (nœud Tor)
     tags: ["FORENSIQUE", "DROIT"],
     legalRefs: ["Manuel Ch. 29.3", "Art. 182 CPP", "Art. 251 CP"],
     intro: "Un fichier Excel a été copié sur une clé USB depuis la session de jmartin. Les caméras confirment sa présence. Vous rédigez le rapport. Chaque mot compte devant le tribunal.",
-    alertLevel: "RAPPORT JUDICIAIRE — Chaque formulation engage votre responsabilité",
+    alertLevel: "⚖️ RAPPORT JUDICIAIRE — Chaque mot peut être retourné contre vous à la barre",
     objectives: [
       { icon: "📋", text: "Distinguer fait / interprétation / opinion dans un rapport forensique" },
       { icon: "⚖️", text: "Respecter le rôle de l'expert (Art. 182 CPP)" },
       { icon: "🎯", text: "Formuler une conclusion proportionnelle aux preuves disponibles" },
     ],
-    debrief: "<p>La distinction fait/interprétation/opinion (Manuel Ch. 29.3) est l'une des compétences les plus importantes d'un expert forensique. Un rapport qui mélange les trois niveaux expose son auteur à des attaques en contre-expertise.</p><p>Règle pratique : si vous pouvez mettre «&nbsp;probablement&nbsp;» ou «&nbsp;il semble que&nbsp;», c'est une interprétation. Si vous concluez sur l'intention ou la culpabilité, c'est une opinion — réservée au juge.</p>",
+    debrief: "<p>La distinction fait/interprétation/opinion (Manuel Ch. 29.3) est l'une des compétences les plus importantes d'un expert forensique. Un rapport qui mélange les trois niveaux expose son auteur à des attaques en contre-expertise.</p><p>Règle pratique : si vous pouvez mettre «&nbsp;probablement&nbsp;» ou «&nbsp;il semble que&nbsp;», c'est une interprétation. Si vous concluez sur l'intention ou la culpabilité, c'est une opinion — réservée au juge.</p><p><strong>Référence CH</strong> : ATF 144 IV 345 consid. 2.2 — en droit pénal suisse, la preuve indiciaire requiert des «&nbsp;indices concordants et convergents&nbsp;» — formulation distincte des systèmes français («&nbsp;graves, précis, concordants&nbsp;»). Art. 182 CPP : l'expert judiciaire répond à des questions précises, au niveau d'affirmation approprié (fait établi / opinion / possibilité) — son rôle est d'éclairer le juge, jamais de le remplacer.</p>",
     steps: [
       {
         phase: "📋 Le bon niveau d'affirmation",
@@ -890,7 +909,7 @@ Received from: 185.220.101.X (nœud Tor)
     tags: ["RÉSEAUX", "DROIT"],
     legalRefs: ["ATF 136 II 508", "Manuel Ch. 25.6", "Art. 197 CPP"],
     intro: "Les logs d'un serveur piraté pointent vers une IP attribuée à M. Dupont par Swisscom. Le MP veut une arrestation immédiate. Mais une IP identifie-t-elle vraiment une personne ?",
-    alertLevel: "ARRESTATION POTENTIELLE — Fondements à vérifier",
+    alertLevel: "🚨 IP ACCUSATRICE — Un nom. Une adresse. Est-ce suffisant pour une arrestation ?",
     objectives: [
       { icon: "🌐", text: "Comprendre les limites probatoires d'une adresse IP (ATF 136 II 508)" },
       { icon: "🔍", text: "Identifier les artefacts complémentaires nécessaires" },
@@ -1066,34 +1085,34 @@ Received from: 185.220.101.X (nœud Tor)
       failure: "La saisie est déclarée illégale par le TMC. Toutes les preuves obtenues sont écartées. Le voyageur dépose plainte contre l'Administration fédérale des douanes."
     },
     tags: ["DROIT", "RÉSEAUX"],
-    legalRefs: ["LMAD Art. 100", "CPP Art. 245", "ATF 149 I 218", "Art. 13 Cst."],
+    legalRefs: ["LMAD Art. 100", "CPP Art. 245", "TF 7B_102/2024", "ATF 139 IV 128", "Art. 13 Cst."],
     intro: "Un voyageur en provenance de Moscou arrive à Zurich. Un douanier veut accéder au contenu de son laptop. Le voyageur refuse de donner son mot de passe. Quels sont les droits des douaniers ?",
-    alertLevel: "ZONE FRONTIÈRE — Pouvoirs et limites des autorités douanières",
+    alertLevel: "🛂 AÉROPORT ZURICH — Voyageur suspect, refus de coopérer · Vos pouvoirs ?",
     objectives: [
       { icon: "🛂", text: "Connaître les limites des pouvoirs douaniers sur les données numériques" },
-      { icon: "⚖️", text: "Appliquer la jurisprudence ATF 149 I 218 (2023)" },
+      { icon: "⚖️", text: "Appliquer la jurisprudence TF 7B_102/2024 et ATF 139 IV 128" },
       { icon: "🔍", text: "Procéder correctement à la saisie forensique avec mandat" },
     ],
-    debrief: "<p>Le droit douanier suisse (LMAD) et la procédure pénale (CPP) créent un cadre différent du droit commun pour les contrôles frontaliers. Les autorités douanières ont des pouvoirs élargis dans la zone frontière — mais ces pouvoirs ont des limites claires, notamment pour les données numériques et la sphère privée.</p><p>Le TF a rappelé (ATF 149 I 218, 2023) que l'accès au contenu d'un appareil numérique va au-delà du contrôle douanier ordinaire et nécessite une base légale spécifique ou un soupçon concret et documenté.</p>",
+    debrief: "<p>Le droit douanier suisse (LMAD) et la procédure pénale (CPP) créent un cadre différent du droit commun pour les contrôles frontaliers. Les autorités douanières ont des pouvoirs élargis dans la zone frontière — mais ces pouvoirs ont des limites claires pour les données numériques.</p><p><strong>TF 7B_102/2024</strong> est la jurisprudence de référence : toute fouille du contenu d'un smartphone ou laptop (messages, photos, applications) constitue une <em>perquisition</em> au sens de l'Art. 246 CPP, nécessitant un mandat de l'autorité compétente (Art. 241 al. 1 CPP). Seule la 'vérification simple' pour identifier une personne sans papiers est tolérée sans mandat (ATF 139 IV 128). Sans mandat et sans péril en la demeure : Art. 141 al. 2 CPP → preuves en principe inexploitables.</p>",
     steps: [
       {
         phase: "🛂 L'aéroport de Zurich",
         situation: "Un voyageur arrive à Zurich en provenance de Moscou. Un douanier le sélectionne pour un contrôle approfondi. Il veut <strong>accéder au contenu du laptop</strong> pour vérifier si des données classifiées y sont présentes. Le voyageur refuse de donner son mot de passe.",
-        law: "<strong>LMAD Art. 100</strong> — Contrôle des marchandises à la frontière.<br><strong>CPP Art. 245</strong> — Perquisition de supports : nécessite un mandat du MP.",
+        law: "<strong>LMAD Art. 100</strong> — Contrôle des marchandises (support physique) à la frontière.<br><strong>TF 7B_102/2024</strong> — Fouille du contenu d'un laptop/smartphone = perquisition (Art. 246 CPP) → mandat requis.<br><strong>ATF 139 IV 128</strong> — Exception : 'vérification simple' (répertoire pour identifier) sans mandat tolérée.",
         question: "<strong>Le douanier peut-il contraindre le voyageur à déverrouiller son laptop ?</strong>",
         choices: [
           {
             text: "Oui — la zone frontière donne des pouvoirs étendus aux douaniers.",
             ok: false, pts: -20,
-            fb: "Non. La LMAD autorise le contrôle des marchandises (matériel physique) — pas l'accès au contenu de données numériques. L'accès aux données d'un appareil nécessite une décision du MP.",
-            legal: "ATF 149 I 218 (2023) — L'accès au contenu d'un appareil numérique dépasse le contrôle douanier ordinaire.",
+            fb: "Non. La LMAD autorise le contrôle des marchandises (support physique) — pas l'accès au contenu numérique. TF 7B_102/2024 est clair : fouiller le contenu d'un laptop = perquisition au sens de l'Art. 246 CPP, nécessitant un mandat (Art. 241 al. 1 CPP). La zone frontière n'écarte pas cette exigence.",
+            legal: "TF 7B_102/2024 consid. 2.4 — Consultation du contenu d'un appareil = perquisition Art. 246 CPP, mandat obligatoire.",
             critical: true, next: "end",
           },
           {
             text: "Non — sans mandat du MP ou soupçon documenté d'infraction pénale, le douanier ne peut accéder qu'à l'appareil physique, pas à son contenu numérique.",
             ok: true, pts: 25,
-            fb: "Position correcte selon la jurisprudence récente. Le contrôle douanier couvre le support physique. L'accès aux données nécessite soit un soupçon concret d'infraction pénale et un ordre du MP, soit le consentement volontaire.",
-            legal: "ATF 149 I 218 (2023) — Contrôle numérique aux frontières : base légale exigée. Art. 13 Cst. — Protection de la sphère privée.",
+            fb: "Position correcte selon TF 7B_102/2024 et ATF 139 IV 128. Le douanier peut contrôler l'appareil physiquement (LMAD). Pour accéder au contenu numérique, il faut : soit un soupçon concret d'infraction et un mandat MP (Art. 245 CPP), soit le consentement volontaire du voyageur. La 'vérification simple' (répertoire pour identifier) reste tolérée sans mandat (ATF 139 IV 128), mais toute fouille du contenu dépasse ce cadre.",
+            legal: "TF 7B_102/2024 + ATF 139 IV 128 — Contenu numérique : mandat requis. Art. 13 Cst. — Protection de la sphère privée en zone frontière.",
             critical: false, next: 1,
           },
           {
@@ -1194,29 +1213,29 @@ Received from: 185.220.101.X (nœud Tor)
       },
       {
         phase: "⚖️ L'audience TMC",
-        situation: "Le Tribunal des mesures de contrainte (TMC) de Zurich examine la demande de levée des scellés 15 jours après la saisie. L'avocat conteste la légalité même du contrôle initial en frontière, invoquant l'ATF 149 I 218.",
-        law: "<strong>ATF 149 I 218 (2023)</strong> — Contrôle numérique aux frontières exige base légale spécifique.<br><strong>Art. 141 CPP</strong> — Exploitation des preuves.",
-        question: "<strong>Comment répondez-vous à l'argument ATF 149 I 218 ?</strong>",
+        situation: "Le Tribunal des mesures de contrainte (TMC) de Zurich examine la demande de levée des scellés 15 jours après la saisie. L'avocat conteste la légalité même du contrôle initial, invoquant TF 7B_102/2024 : la consultation du laptop sans mandat initial constituerait une perquisition illicite (Art. 246 CPP), rendant toute preuve subséquente inexploitable.",
+        law: "<strong>TF 7B_102/2024</strong> — Fouille smartphone/laptop sans mandat = perquisition illicite → Art. 141 al. 2 CPP.<br><strong>ATF 139 IV 128</strong> — Exception : vérification simple d'identité tolérée.<br><strong>Art. 141 CPP</strong> — Exploitation des preuves illicites.",
+        question: "<strong>Comment répondez-vous à l'argument TF 7B_102/2024 ?</strong>",
         choices: [
           {
-            text: "L'ATF ne s'applique pas aux contrôles douaniers — il concerne les contrôles de police ordinaires.",
+            text: "TF 7B_102/2024 ne s'applique pas aux contrôles douaniers — il concerne les arrestations de police ordinaires.",
             ok: false, pts: -20,
-            fb: "Lecture erronée. L'ATF 149 I 218 s'applique précisément au contexte douanier numérique. Soutenir le contraire devant le TMC discrédite toute la procédure.",
-            legal: "ATF 149 I 218 (2023) — Jurisprudence valable en zone frontière pour données numériques.",
+            fb: "Lecture erronée. TF 7B_102/2024 pose un principe général : toute fouille du contenu d'un appareil = perquisition (Art. 246 CPP), indépendamment du contexte douanier ou policier. Soutenir que la douane est exemptée discrédite l'argumentation devant le TMC.",
+            legal: "TF 7B_102/2024 consid. 2.4 — Principe général applicable en zone frontière et hors zone frontière.",
             critical: true, next: "end",
           },
           {
-            text: "L'ATF 149 I 218 exige une base légale : nous l'avons (ordonnance MP obtenue après soupçon concret documenté — appareil non déclaré + documents sensibles). Le contrôle initial était matériel (marchandise), l'accès numérique a été fait sur ordre MP.",
+            text: "TF 7B_102/2024 exige une base légale que nous avons : le douanier a d'abord effectué une vérification physique (LMAD) licite, puis le soupçon concret (appareil non déclaré + documents militaires) a justifié l'obtention du mandat MP en 2h. Le contenu numérique n'a été accédé qu'avec ce mandat — procédure conforme.",
             ok: true, pts: 25,
-            fb: "Argument juridique solide. L'ATF n'interdit pas le contrôle numérique en frontière — il exige une base légale. Ici, la chronologie (contrôle physique → soupçon concret → ordre MP → saisie numérique) respecte les exigences ATF.",
-            legal: "ATF 149 I 218 + Art. 245 CPP — Conformité procédurale établie.",
+            fb: "Argumentation solide et structurée. Vous distinguez : (1) vérification physique initiale = licite (LMAD, pas de mandat requis), (2) soupçon concret documenté → mandat MP, (3) accès numérique sur la base du mandat = conforme TF 7B_102/2024. La chronologie démontre que le contenu n'a jamais été consulté sans base légale.",
+            legal: "TF 7B_102/2024 + Art. 245 CPP + LMAD — Contrôle physique → soupçon → mandat → accès numérique : séquence légale.",
             critical: false, next: "end",
           },
           {
             text: "Accepter la contestation et renoncer à la procédure pour éviter un arrêt défavorable.",
             ok: false, pts: -15,
-            fb: "Capitulation prématurée. La procédure est juridiquement défendable si les étapes ont été correctement respectées. Renoncer envoie un signal faible à la défense et aux autres enquêtes similaires.",
-            legal: "Pratique MP — Défendre une procédure conforme = préserver les outils d'enquête futurs.",
+            fb: "Capitulation prématurée. La procédure est juridiquement défendable si la chronologie est respectée (contrôle physique → soupçon documenté → mandat → accès numérique). Renoncer sans combattre fragilise les procédures similaires futures.",
+            legal: "Pratique MP — Défendre une procédure conforme = préserver les outils d'enquête frontaliers.",
             critical: false, next: "end",
           },
         ],
@@ -1225,7 +1244,7 @@ Received from: 185.220.101.X (nœud Tor)
     badgeFn: function(pct, custodyPct) {
       if (pct >= 80 && custodyPct >= 75) return { icon: "🛂", title: "Expert Droit Frontalier", sub: "Maîtrise parfaite des pouvoirs douaniers numériques" };
       if (pct >= 60) return { icon: "⚖️", title: "Juriste Forensique", sub: "Bonnes bases sur les limites douanières" };
-      return { icon: "📚", title: "Formation recommandée", sub: "Révisez ATF 149 I 218 et LMAD" };
+      return { icon: "📚", title: "Formation recommandée", sub: "Révisez TF 7B_102/2024, ATF 139 IV 128 et LMAD" };
     },
   },
 
@@ -1246,13 +1265,13 @@ Received from: 185.220.101.X (nœud Tor)
     tags: ["WINDOWS", "DROIT"],
     legalRefs: ["LPD 2023 Art. 24", "Manuel Ch. 11.1", "ISO/IEC 27035"],
     intro: "03h00. L'hôpital cantonal est frappé par un ransomware. L'équipe IT veut restaurer depuis les backups immédiatement. Mais capturer les preuves maintenant ou les perdre à jamais ?",
-    alertLevel: "INCIDENT CRITIQUE — Données de 12'000 patients menacées",
+    alertLevel: "🏥 03H00 — RANSOMWARE ACTIF · 12'000 dossiers patients menacés · Blocs opératoires en attente",
     objectives: [
       { icon: "🔬", text: "Capturer les preuves forensiques avant la remédiation" },
       { icon: "📣", text: "Respecter les obligations LPD 2023 (notification PFPDT)" },
       { icon: "⚖️", text: "Équilibrer impératifs opérationnels et forensiques" },
     ],
-    debrief: "<p>Ce scénario illustre la tension entre les obligations légales (LPD 2023 — notification PFPDT), les impératifs opérationnels (maintien des soins) et les besoins forensiques (préservation des preuves avant toute remédiation).</p><p>La règle d'or : <strong>capturer les preuves avant d'éteindre ou de restaurer</strong>. Un ransomware actif en RAM peut laisser des clés de déchiffrement et des indicateurs de compromission. La restauration depuis backup détruit irrémédiablement ces preuves.</p>",
+    debrief: "<p>Ce scénario illustre la tension entre les obligations légales (LPD 2023 — notification PFPDT), les impératifs opérationnels (maintien des soins) et les besoins forensiques (préservation des preuves avant toute remédiation).</p><p>La règle d'or : <strong>capturer les preuves avant d'éteindre ou de restaurer</strong>. Un ransomware actif en RAM peut laisser des clés de déchiffrement et des indicateurs de compromission. La restauration depuis backup détruit irrémédiablement ces preuves.</p><p><strong>Référence CH</strong> : LPD 2023 Art. 24 — la notification au PFPDT doit intervenir «&nbsp;dans les meilleurs délais&nbsp;» en cas de violation à risque élevé pour les personnes. Le PFPDT recommande une notification sous 72h par analogie avec le RGPD UE (Art. 33 RGPD) — mais ce délai n'est <em>pas inscrit dans la loi suisse</em>. La Suisse se distingue de l'UE sur ce point. Affaires de référence : Vidymed Lausanne (2024), Hôpital cantonal Zurich (2021).</p>",
     steps: [
       {
         phase: "🏥 L'alerte à 3h du matin",
@@ -1286,7 +1305,7 @@ Received from: 185.220.101.X (nœud Tor)
       {
         phase: "📣 La notification LPD",
         situation: "48 heures plus tard, l'analyse confirme : <strong>données personnelles de 12'000 patients exfiltrées</strong> avant chiffrement. Le groupe ransomware menace de publier si la rançon n'est pas payée dans 72h.",
-        law: "<strong>LPD 2023 Art. 24</strong> — Notification au PFPDT obligatoire si risque élevé.<br><strong>PFPDT</strong> — Délai : «\u00a0dans les meilleurs délais\u00a0».",
+        law: "<strong>LPD 2023 Art. 24</strong> — Notification PFPDT obligatoire si risque élevé (sans délai légal fixe en droit suisse).<br><strong>PFPDT en pratique</strong> — Recommande 72h (analogie RGPD UE, non inscrit dans la LPD 2023).<br><strong>Remarque clé</strong> — La Suisse ≠ UE sur ce point : délai indicatif, pas impératif. «\u00a0dans les meilleurs délais\u00a0».",
         question: "<strong>Quand et comment notifier le PFPDT ?</strong>",
         choices: [
           {
@@ -1424,7 +1443,7 @@ Received from: 185.220.101.X (nœud Tor)
     tags: ["DROIT", "FORENSIQUE"],
     legalRefs: ["Art. 248 CPP", "Art. 141 CPP", "TF 1B_602/2020"],
     intro: "L'iPhone du suspect est posé sur la table, déverrouillé. Des notifications Signal sont visibles. L'avocat de la défense entre dans l'appartement et annonce les scellés. Chaque seconde compte.",
-    alertLevel: "SCELLÉS IMMINENTS — Fenêtre d'action légale très limitée",
+    alertLevel: "⏱️ FENÊTRE CRITIQUE — La défense demande les scellés dans les prochaines minutes",
     objectives: [
       { icon: "📱", text: "Agir dans le cadre légal face à une demande de scellés (Art. 248 CPP)" },
       { icon: "🛡️", text: "Préserver les preuves sans violer la procédure" },
@@ -1602,7 +1621,7 @@ Received from: 185.220.101.X (nœud Tor)
     tags: ["FORENSIQUE", "WINDOWS"],
     legalRefs: ["Manuel Ch. 2.5", "Art. 139 CPP", "Manuel Ch. 18", "ATF 147 IV 409"],
     intro: "X-Ways vous présente 3 artefacts convergents : ShellBag, USBSTOR, fichier .lnk. Tout pointe vers le même événement. Mais comment formuler la conclusion et résister à l'avocat de la défense ?",
-    alertLevel: "PREUVE INDICIAIRE — Corrélation multi-artefacts requise",
+    alertLevel: "🔬 4 ARTEFACTS · 0 CERTITUDE SEULE · La convergence fait la preuve",
     objectives: [
       { icon: "🔍", text: "Corréler 3 artefacts forensiques indépendants" },
       { icon: "📋", text: "Formuler la conclusion au niveau d'affirmation correct" },
@@ -1796,34 +1815,34 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
       failure: "La qualification erronée empêche toute poursuite efficace. L'auteur s'en sort avec une amende dérisoire. Les 50'000 CHF restent introuvables."
     },
     tags: ["DROIT", "RÉSEAUX"],
-    legalRefs: ["Art. 147 CP", "Art. 146 CP", "Art. 143bis CP", "ATF 140 IV 11"],
-    intro: "50'000 CHF virés à 03h47 via l'API bancaire. Manipulation de requêtes HTTP. Aucun humain impliqué côté banque. La qualification pénale est cruciale pour la poursuite.",
-    alertLevel: "FRAUDE BANCAIRE — Qualification pénale déterminante",
+    legalRefs: ["Art. 147 CP", "Art. 146 CP", "Art. 143bis CP", "ATF 150 IV 188", "ATF 140 IV 11"],
+    intro: "50'000 CHF virés à 03h47 via l'API bancaire. Manipulation de requêtes HTTP. L'API traite les virements de façon entièrement automatisée — aucun employé de banque ne voit ou valide les transactions. La qualification pénale est cruciale pour la poursuite.",
+    alertLevel: "💰 03H47 — 50'000 CHF VIRÉS · Art. 146 ou 147 CP ? La qualification change tout",
     objectives: [
       { icon: "⚖️", text: "Distinguer Art. 146 CP (escroquerie) et Art. 147 CP (abus d'ordinateur)" },
       { icon: "🔍", text: "Identifier le concours d'infractions (Art. 9 CP)" },
       { icon: "📋", text: "Documenter la chaîne forensique : token JWT → API → virement" },
     ],
-    debrief: "<p>Art. 147 CP (abus d'un ordinateur) est distinct de l'escroquerie (art. 146 CP). L'escroquerie requiert la <em>tromperie d'une personne physique</em> par un comportement astucieux. L'abus d'ordinateur vise l'obtention d'un avantage pécuniaire par manipulation d'un <em>système informatique</em> — sans qu'une personne soit trompée directement.</p><p>Dans une fraude bancaire entièrement automatisée, c'est art. 147 CP qui s'applique.</p>",
+    debrief: "<p><strong>ATF 150 IV 188 (novembre 2024)</strong> est désormais l'arrêt de référence : Art. 147 CP (abus d'un ordinateur) s'applique UNIQUEMENT si le processus est entièrement automatisé — de la réception de la requête jusqu'à l'exécution, sans aucune intervention humaine. Si un employé de banque peut voir, valider ou annuler la transaction (même sans réel pouvoir décisionnel), c'est Art. 146 CP (escroquerie) qui prime, Art. 147 CP étant subsidiaire.</p><p>Dans ce scénario, l'API bancaire traite les virements de nuit de façon 100% automatisée — aucun humain ne valide les transactions entre 23h et 6h. Art. 147 CP s'applique donc correctement. Si la banque avait eu un système de validation humaine, même partielle, la qualification correcte aurait été Art. 146 CP.</p>",
     steps: [
       {
         phase: "💰 La fraude découverte",
         situation: "Un virement de <strong>50'000 CHF</strong> a été effectué depuis le compte d'une PME. L'analyse des logs montre : connexion depuis une IP externe via l'API bancaire, insertion de requêtes HTTP manipulées imitant une transaction légitime, aucune interaction avec un conseiller humain. Le tout s'est déroulé à 3h47.",
-        law: "<strong>Art. 146 CP</strong> — Escroquerie : tromperie astucieuse d'une personne physique.<br><strong>Art. 147 CP</strong> — Abus d'un ordinateur : enrichissement via manipulation d'un système informatique.",
-        question: "<strong>Quelle qualification pénale principale proposez-vous au MP ?</strong>",
+        law: "<strong>Art. 146 CP</strong> — Escroquerie : tromperie astucieuse d'une <em>personne physique</em>.<br><strong>Art. 147 CP</strong> — Abus d'un ordinateur : enrichissement via manipulation d'un processus <em>entièrement automatisé</em>.<br><strong>ATF 150 IV 188 (2024)</strong> — Art. 147 CP subsidiaire à Art. 146 CP. Critère décisif : qui valide in fine l'exécution — un système automatisé ou un être humain ?",
+        question: "<strong>L'API bancaire traite les virements 100% automatiquement entre 23h et 6h (aucun employé en ligne). Quelle qualification pénale principale proposez-vous ?</strong>",
         choices: [
           {
             text: "Art. 146 CP — Escroquerie",
             ok: false, pts: -15,
-            fb: "L'escroquerie (art. 146 CP) exige la tromperie astucieuse d'une personne physique. Ici, l'API bancaire est un système automatisé — aucune personne n'a été trompée. La qualification correcte est art. 147 CP.",
-            legal: "ATF 140 IV 11 — Art. 146 CP requiert un être humain trompé. La manipulation de système relève de 147 CP.",
+            fb: "Pas nécessairement. ATF 150 IV 188 (2024) nuance : si un employé de banque peut voir et annuler la transaction (même sans pouvoir décisionnel réel), Art. 146 CP prime. Ici l'API traite les virements de nuit 100% automatiquement — aucun humain n'intervient entre 23h et 6h. Dans ce contexte précis, Art. 147 CP est correct. Mais si le même virement avait été soumis à validation humaine (même partielle), Art. 146 CP s'imposerait.",
+            legal: "ATF 150 IV 188 consid. 4.9 — Art. 146 CP prime si un humain peut valider ou annuler. Art. 147 CP s'applique uniquement si le processus est ENTIÈREMENT automatisé.",
             critical: false, next: 1,
           },
           {
             text: "Art. 147 CP — Abus d'un ordinateur",
             ok: true, pts: 25,
-            fb: "Qualification correcte. Art. 147 CP punit quiconque, dans le dessein de se procurer un enrichissement illégitime, influence le résultat d'un traitement de données. L'API bancaire automatisée est un traitement de données.",
-            legal: "Art. 147 CP al. 1 — Manipulation électronique d'un traitement de données pour enrichissement.",
+            fb: "Qualification correcte dans ce contexte. L'API traite les virements de nuit 100% automatiquement — critère ATF 150 IV 188 satisfait (processus entièrement automatisé, aucun employé en mesure de valider ou d'annuler entre 23h et 6h). Art. 147 CP al. 1 punit quiconque influence un traitement de données pour s'enrichir illégitimement. Important : si la banque avait eu une validation humaine même partielle, Art. 146 CP aurait primé (ATF 150 IV 188 — Art. 147 est subsidiaire).",
+            legal: "Art. 147 CP al. 1 + ATF 150 IV 188 — Condition : processus entièrement automatisé ✓. Si validation humaine → Art. 146 CP prime.",
             critical: false, next: 1,
           },
           {
@@ -1976,13 +1995,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["WINDOWS", "FORENSIQUE"],
     legalRefs: ["Manuel Ch. 29.4", "Art. 139 CPP", "Art. 182 CPP"],
     intro: "Une infraction a eu lieu depuis un compte Windows partagé par 3 collaborateurs. Il faut désigner l'auteur probable — sans jamais outrepasser le rôle de l'expert forensique.",
-    alertLevel: "COMPTE PARTAGÉ — Attribution individuelle complexe",
+    alertLevel: "👥 COMPTE PARTAGÉ — Qui a vraiment appuyé sur Entrée à 02h34 ?",
     objectives: [
       { icon: "👤", text: "Identifier les artefacts différenciateurs sur un compte partagé" },
       { icon: "🔗", text: "Trianguler sources numériques et physiques (Art. 139 CPP)" },
       { icon: "📋", text: "Formuler l'attribution au niveau d'affirmation correct (Art. 182 CPP)" },
     ],
-    debrief: "<p>L'attribution d'une action à un utilisateur spécifique sur un compte partagé est l'un des défis les plus délicats de la forensique Windows. La session utilisateur ne suffit pas — il faut croiser : Event ID 4624 (type de logon), biométrie (si configurée), photos de surveillance, comportements atypiques.</p><p>Le Manuel (Ch. 29.4) insiste : l'attribution humaine nécessite toujours plusieurs sources convergentes. Une session active ne prouve pas physiquement la présence d'une personne devant l'écran.</p>",
+    debrief: "<p>L'attribution d'une action à un utilisateur spécifique sur un compte partagé est l'un des défis les plus délicats de la forensique Windows. La session utilisateur ne suffit pas — il faut croiser : Event ID 4624 (type de logon), biométrie (si configurée), photos de surveillance, comportements atypiques.</p><p>Le Manuel (Ch. 29.4) insiste : l'attribution humaine nécessite toujours plusieurs sources convergentes. Une session active ne prouve pas physiquement la présence d'une personne devant l'écran.</p><p><strong>Référence CH</strong> : ATF 136 II 508 (Logistep, 2010) — l'adresse IP dynamique est une donnée personnelle protégée. Elle identifie un <em>abonné</em>, non un <em>auteur</em>. En contexte de Carrier Grade NAT (CGN) — utilisé par Swisscom et Salt sur les connexions mobiles — une seule IP peut correspondre à des dizaines d'utilisateurs simultanés ; l'identification requiert alors le port source + timestamp précis. Art. 273 CPP : la réquisition d'abonné nécessite l'autorisation du MP.</p>",
     steps: [
       {
         phase: "👤 Le compte partagé",
@@ -2241,13 +2260,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["WINDOWS", "CRYPTO"],
     legalRefs: ["Manuel Ch. 24.3", "Manuel Ch. 28.4", "Art. 251 CP"],
     intro: "Le laptop du suspect est éteint. L'écran affiche la demande de clé BitLocker. Aucune clé trouvée dans l'appartement. Le MP veut savoir combien de temps pour déchiffrer. Votre réponse va définir toute la stratégie d'enquête.",
-    alertLevel: "SYSTÈME CHIFFRÉ HORS LIGNE — Options limitées",
+    alertLevel: "❄️ MACHINE ÉTEINTE · BitLocker intact · Trouvez la clé avant de déclarer forfait",
     objectives: [
       { icon: "❄️", text: "Formuler honnêtement l'impossibilité de casser AES-256 (Manuel Ch. 28.4)" },
       { icon: "🔑", text: "Identifier les alternatives réalistes pour trouver la clé" },
       { icon: "⚖️", text: "Éviter les fausses promesses au MP (Art. 251 CP)" },
     ],
-    debrief: "<p>Un système éteint avec BitLocker actif est l'un des défis les plus frustrants de la forensique numérique. La règle est simple : <strong>sans clé de déchiffrement, les données sont inaccessibles</strong>. L'analyste ne doit jamais promettre ce qu'il ne peut pas livrer.</p><p>La formulation correcte de l'impossibilité est une compétence forensique à part entière (Manuel Ch. 28.4). Elle doit être précise, technique et honnête.</p>",
+    debrief: "<p>Un système éteint avec BitLocker actif est l'un des défis les plus frustrants de la forensique numérique. La règle est simple : <strong>sans clé de déchiffrement, les données sont inaccessibles</strong>. L'analyste ne doit jamais promettre ce qu'il ne peut pas livrer.</p><p>La formulation correcte de l'impossibilité est une compétence forensique à part entière (Manuel Ch. 28.4). Elle doit être précise, technique et honnête.</p><p><strong>Référence CH</strong> : Art. 248 CPP + TF 7B_145/2025 — la mise sous scellés d'un support chiffré est un droit procédural fondamental du prévenu. Le TMC évalue la levée au cas par cas (gravité des faits vs protection de la sphère privée). Pour les volumes VeraCrypt, ATF 147 IV 16 (2020) rappelle que les preuves portant atteinte à la protection des données sans base légale sont irrecevables.</p>",
     steps: [
       {
         phase: "🔒 Le laptop éteint",
@@ -2506,13 +2525,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["RÉSEAUX", "FORENSIQUE"],
     legalRefs: ["Manuel Ch. 11.2", "Art. 143bis CP", "MITRE ATT&CK T1055", "LPD 2023 Art. 24"],
     intro: "Un IDS alerte sur des connexions sortantes suspectes depuis un poste bancaire. L'antivirus ne trouve rien. Aucun exécutable suspect sur le disque. Pourtant le malware est actif. Comment le prouver ?",
-    alertLevel: "MALWARE SANS FICHIER — RAM = seule preuve possible",
+    alertLevel: "👻 FILELESS — Aucune trace sur disque · La RAM contient tout · Elle s'efface au reboot",
     objectives: [
       { icon: "⚡", text: "Comprendre le fonctionnement des malwares fileless" },
       { icon: "💾", text: "Appliquer la séquence correcte : isolation → RAM → Volatility" },
       { icon: "📋", text: "Formuler le rapport avec références MITRE ATT&CK" },
     ],
-    debrief: "<p>Les malwares fileless opèrent entièrement en mémoire RAM, injectent du code dans des processus légitimes et ne laissent aucun exécutable sur le disque.</p><p>L'<strong>OFCS (GovCERT)</strong> recommande de capturer la RAM avant toute extinction lors d'une suspicion de malware fileless. La preuve de l'infection repose exclusivement sur l'analyse Volatility de la RAM. Sans dump préalable, la preuve est irrémédiablement perdue.</p>",
+    debrief: "<p>Les malwares fileless opèrent entièrement en mémoire RAM, injectent du code dans des processus légitimes et ne laissent aucun exécutable sur le disque.</p><p>L'<strong>OFCS (GovCERT)</strong> recommande de capturer la RAM avant toute extinction lors d'une suspicion de malware fileless. La preuve de l'infection repose exclusivement sur l'analyse Volatility de la RAM. Sans dump préalable, la preuve est irrémédiablement perdue.</p><p><strong>Référence CH</strong> : Art. 144bis CP — la détérioration de données couvre les malwares sans fichier qui modifient la mémoire des processus légitimes (process hollowing, DLL injection). La preuve forensique repose sur les artefacts volatiles (RAM dump) — ACPO Principle 2 : la préservation de la mémoire vive prime sur toute autre action. TF 6B_361/2017 — les preuves forensiques obtenues selon les standards documentés (ACPO) sont présumées admissibles.</p>",
     steps: [
       {
         phase: "⚡ Le système compromis",
@@ -2771,13 +2790,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["FORENSIQUE", "CRYPTO"],
     legalRefs: ["Manuel Ch. 24.3", "Manuel Ch. 28.4", "GovCERT recommandations"],
     intro: "RAID 5 sur 3 disques. Un disque chiffré par ransomware. Le backup également chiffré. 60% des données potentiellement récupérables. La stratégie de récupération engage votre crédibilité.",
-    alertLevel: "RANSOMWARE RAID — Récupération partielle possible",
+    alertLevel: "⚡ RAID EXÉCUTÉ — Systèmes partiellement chiffrés · Fenêtre de récupération : NOW",
     objectives: [
       { icon: "💾", text: "Comprendre les limites de RAID 5 face au chiffrement" },
       { icon: "🔍", text: "Appliquer la séquence forensique correcte (image d'abord)" },
       { icon: "🗣️", text: "Communiquer honnêtement sur la récupération AES-256" },
     ],
-    debrief: "<p>RAID 5 tolère la perte d'un seul disque — mais un disque chiffré par un ransomware n'est pas «\u00a0perdu\u00a0» au sens du RAID. Le contrôleur RAID voit 3 disques fonctionnels dont l'un contient des données aléatoires (le chiffrement). La reconstruction RAID ne peut pas deviner que ce disque est chiffré.</p>",
+    debrief: "<p>RAID 5 tolère la perte d'un seul disque — mais un disque chiffré par un ransomware n'est pas «\u00a0perdu\u00a0» au sens du RAID. Le contrôleur RAID voit 3 disques fonctionnels dont l'un contient des données aléatoires (le chiffrement). La reconstruction RAID ne peut pas deviner que ce disque est chiffré.</p><p><strong>Référence CH</strong> : SECO / OFAS — avant tout paiement de rançon, vérifier si le groupe est sanctionné (listes SECO, OFAC US). Payer une entité sanctionnée constitue une infraction (Art. 9 LMB suisse). Après démantèlement d'un ransomware (ex. LockBit, opération Cronos 2024), des outils de déchiffrement gratuits sont disponibles via No More Ransom et l'OFCS — les contacter avant toute décision de paiement.</p>",
     steps: [
       {
         phase: "💾 L'infrastructure compromise",
@@ -3042,13 +3061,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["FORENSIQUE", "WINDOWS"],
     legalRefs: ["Manuel Ch. 29.4", "Art. 139 CPP", "ATF 143 IV 330"],
     intro: "5 artefacts, 5 timestamps, 2 fuseaux différents. Vous devez reconstruire la chronologie exacte des événements. Une seule erreur de conversion UTC peut invalider toute votre analyse.",
-    alertLevel: "TIMELINE COMPLEXE — Normalisation UTC obligatoire",
+    alertLevel: "🕐 4 FUSEAUX HORAIRES · 3 PAYS · 1 HEURE DE DÉCALAGE CRITIQUE",
     objectives: [
       { icon: "🧩", text: "Normaliser tous les timestamps en UTC avant corrélation" },
       { icon: "📊", text: "Reconstruire la séquence causale correcte des événements" },
       { icon: "⚖️", text: "Documenter selon ATF 143 IV 330 pour valeur probante maximale" },
     ],
-    debrief: "<p>La reconstruction chronologique (Manuel Ch. 29.4) est l'un des exercices les plus complexes en forensique numérique. Les timestamps de différents artefacts utilisent des fuseaux, des précisions et des origines différentes. Il faut normaliser avant de corréler.</p><p>Règle d'or : ne jamais prendre un timestamp pour argent comptant. Vérifier la source de l'horloge, le fuseau, et croiser avec au moins deux autres artefacts.</p>",
+    debrief: "<p>La reconstruction chronologique (Manuel Ch. 29.4) est l'un des exercices les plus complexes en forensique numérique. Les timestamps de différents artefacts utilisent des fuseaux, des précisions et des origines différentes. Il faut normaliser avant de corréler.</p><p>Règle d'or : ne jamais prendre un timestamp pour argent comptant. Vérifier la source de l'horloge, le fuseau, et croiser avec au moins deux autres artefacts.</p><p><strong>Référence CH</strong> : Art. 307 CP — fausse déclaration d'expert devant le tribunal. En forensique temporelle, la normalisation UTC est une obligation professionnelle : une erreur de fuseau horaire sur un timestamp de log peut inverser la chronologie d'un crime et mener à un acquittement ou une condamnation injuste. Le TF a annulé des condamnations pour insuffisance de la preuve temporelle (TF 6B_946/2022, consid. 2.4).</p>",
     steps: [
       {
         phase: "🧩 Les 5 artefacts",
@@ -3317,13 +3336,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["CRYPTO", "DROIT"],
     legalRefs: ["Manuel Ch. 24.2", "Art. 113 CPP", "Art. 251 CP", "Manuel Ch. 28.4"],
     intro: "Un fichier de 8 Go avec entropie 0.998. Aucune signature reconnue. Probablement un volume VeraCrypt. Le MP veut savoir ce qu'il contient. Mais sans la clé, que peut-on affirmer ?",
-    alertLevel: "VOLUME CHIFFRÉ — Limites forensiques à communiquer",
+    alertLevel: "🔐 VeraCrypt AES-256 — 50 Go de secrets · Impossible à casser · Comment en parler au MP ?",
     objectives: [
       { icon: "🔒", text: "Formuler la détection d'un volume chiffré sans sur-affirmer" },
       { icon: "⚖️", text: "Respecter le droit au silence du suspect (Art. 113 CPP — nemo tenetur)" },
       { icon: "🔑", text: "Identifier les alternatives réalistes (RAM dump, keyfile)" },
     ],
-    debrief: "<p>Le Manuel (Ch. 24.2) est explicite : «\u00a0affirmer qu'un volume VeraCrypt contient des données compromettantes sans en connaître le contenu constitue une opinion inadmissible, non un fait forensique.\u00a0»</p><p>La détection d'un volume chiffré repose sur des indicateurs statistiques (haute entropie, absence de magic bytes) — jamais sur une certitude.</p>",
+    debrief: "<p>Le Manuel (Ch. 24.2) est explicite : «\u00a0affirmer qu'un volume VeraCrypt contient des données compromettantes sans en connaître le contenu constitue une opinion inadmissible, non un fait forensique.\u00a0»</p><p>La détection d'un volume chiffré repose sur des indicateurs statistiques (haute entropie, absence de magic bytes) — jamais sur une certitude.</p><p><strong>Référence CH</strong> : Art. 113 CPP — le prévenu ne peut être contraint de fournir ses mots de passe. Art. 248 CPP — scellés sur les volumes chiffrés si protection de la sphère privée invoquée. ATF 147 IV 16 (2020) — irrecevabilité des preuves portant atteinte à la protection des données. En pratique suisse (brigades cyber VD, ZH), une expertise judiciaire sur la structure des volumes VeraCrypt est admissible sans nécessiter le déchiffrement.</p>",
     steps: [
       {
         phase: "🔐 Le fichier mystérieux",
@@ -3583,13 +3602,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["DROIT", "RÉSEAUX"],
     legalRefs: ["Art. 143bis CP", "Art. 144bis CP", "LPD 2023", "OFCS Rapport 2024"],
     intro: "907 Go de données fédérales publiées sur le darknet par le groupe Play. Données fedpol, SRC, Armée, CFF. L'OFCS vous mandate. Quelle est la vraie question forensique ?",
-    alertLevel: "INCIDENT ÉTATIQUE — Données fédérales exfiltrées",
+    alertLevel: "🇨🇭 INCIDENT ÉTATIQUE — Infrastructure fédérale compromise · Genève surveille",
     objectives: [
       { icon: "🏛", text: "Définir correctement le périmètre du mandat forensique" },
       { icon: "🔍", text: "Analyser les conditions de stockage des données fédérales chez le prestataire" },
       { icon: "⚖️", text: "Identifier la responsabilité partagée prestataire/autorités" },
     ],
-    debrief: "<p>L'affaire Xplain 2023 illustre une problématique croissante : la <strong>forensique d'un prestataire</strong> est distincte de la forensique sur l'attaquant. La question centrale n'est pas «\u00a0qui a attaqué ?\u00a0» mais «\u00a0pourquoi les données fédérales étaient-elles chez ce prestataire ?\u00a0»</p><p>L'OFCS (rapport mars 2024) a relevé que des données fedpol et militaires non chiffrées se trouvaient dans les environnements de test de Xplain — violation des principes de minimisation et de classification des données.</p>",
+    debrief: "<p>L'affaire Xplain 2023 illustre une problématique croissante : la <strong>forensique d'un prestataire</strong> est distincte de la forensique sur l'attaquant. La question centrale n'est pas «\u00a0qui a attaqué ?\u00a0» mais «\u00a0pourquoi les données fédérales étaient-elles chez ce prestataire ?\u00a0»</p><p>L'OFCS (rapport mars 2024) a relevé que des données fedpol et militaires non chiffrées se trouvaient dans les environnements de test de Xplain — violation des principes de minimisation et de classification des données.</p><p><strong>Référence CH</strong> : Affaire Xplain (juin 2023) — violation de données du Secrétariat d'État à la police et d'autres entités fédérales via un prestataire IT externe. LPD 2023 Art. 9 : la responsabilité du sous-traitant IT s'applique dès lors qu'il traite des données personnelles pour le compte d'un responsable. Art. 24 LPD 2023 — chaque entité fédérale affectée devait notifier le PFPDT indépendamment.</p>",
     steps: [
       {
         phase: "🏛 La révélation",
@@ -3845,13 +3864,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["RÉSEAUX", "FORENSIQUE"],
     legalRefs: ["Rapport MELANI 2016", "Art. 143bis CP", "Art. 86 Loi militaire", "MITRE ATT&CK T1071"],
     intro: "L'entreprise d'armement RUAG détecte un trafic DNS suspect. L'analyse révèle un APT présent depuis 21 mois. Le nombre de machines infectées n'est pas encore connu. Melani vous mandate.",
-    alertLevel: "INCIDENT ÉTATIQUE — Intrusion APT de longue durée suspectée",
+    alertLevel: "🔭 APT DÉTECTÉE — Présence réseau de 6 mois · Que savent-ils vraiment ?",
     objectives: [
       { icon: "🎯", text: "Caractériser le modus operandi de l'APT sans alerter l'attaquant" },
       { icon: "📡", text: "Cartographier l'étendue de la compromission (timeline + lateral movement)" },
       { icon: "⚖️", text: "Respecter la discrétion opérationnelle imposée par MELANI/OFCS" },
     ],
-    debrief: "<p>L'affaire RUAG 2016 illustre la difficulté d'une <strong>réponse à un APT déjà installé</strong>. Le rapport public MELANI distingue clairement trois phases : reconnaissance (rootkit Tavdig), escalade et persistance (Turla Carbon), exfiltration silencieuse via des canaux DNS détournés.</p><p>Le piège classique : <em>éteindre ou isoler brutalement prévient l'attaquant que sa couverture est grillée</em>. Les bonnes pratiques OFCS préconisent une surveillance accrue + collecte préalable d'IoC avant tout confinement.</p>",
+    debrief: "<p>L'affaire RUAG 2016 illustre la difficulté d'une <strong>réponse à un APT déjà installé</strong>. Le rapport public MELANI distingue clairement trois phases : reconnaissance (rootkit Tavdig), escalade et persistance (Turla Carbon), exfiltration silencieuse via des canaux DNS détournés.</p><p>Le piège classique : <em>éteindre ou isoler brutalement prévient l'attaquant que sa couverture est grillée</em>. Les bonnes pratiques OFCS préconisent une surveillance accrue + collecte préalable d'IoC avant tout confinement.</p><p><strong>Référence CH</strong> : Rapport MELANI 2016 sur l'affaire RUAG — APT29 (Cozy Bear) actif 9 mois dans le réseau sans détection. Le rapport a déclenché la réorganisation du MELANI en OFCS (2023). Art. 86 LAM — protection des informations militaires sensibles : le vol de données de défense peut relever de l'espionnage économique (Art. 273 CP). NIST SP 800-161 — gestion du risque supply chain pour les contractants de défense.</p>",
     narrative: {
       success: "Les IoC sont collectés discrètement pendant 3 semaines. La cartographie complète est rendue à MELANI. Le confinement coordonné préserve les preuves et neutralise l'APT sans alerter les opérateurs. Le rapport public de mai 2016 devient une référence internationale.",
       degraded: "La détection tardive et les actions précipitées limitent la visibilité. Le rapport est rendu mais avec des lacunes. L'APT s'est peut-être déjà redéployé ailleurs.",
@@ -4113,13 +4132,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["RÉSEAUX", "DROIT"],
     legalRefs: ["CVE-2021-40539", "LPD 2023", "Conv. Genève (droit humanitaire)", "Communiqué CICR 19.01.2022"],
     intro: "Le CICR détecte un accès non autorisé sur le serveur du programme « Rétablissement des liens familiaux ». 515'000 personnes déplacées, disparues ou séparées de leur famille pourraient être exposées. L'enjeu humanitaire est vital — chaque décision compte.",
-    alertLevel: "INCIDENT HUMANITAIRE CRITIQUE — Données de personnes vulnérables",
+    alertLevel: "🌍 INCIDENT HUMANITAIRE — Données de réfugiés exposées · Vies en jeu",
     objectives: [
       { icon: "🔍", text: "Identifier rapidement le vecteur d'intrusion (CVE exploitée)" },
       { icon: "🏛", text: "Respecter les obligations humanitaires spécifiques du CICR" },
       { icon: "📣", text: "Gérer la communication envers les populations concernées" },
     ],
-    debrief: "<p>L'attaque contre le CICR de janvier 2022 reste l'une des cyberattaques les plus graves contre une organisation humanitaire. Elle a révélé une exploitation de <strong>CVE-2021-40539</strong> (Zoho ManageEngine ADSelfService Plus, patch publié 4 mois avant l'intrusion). Le délai de patching d'un composant critique a été la cause technique.</p><p>Sur le plan humanitaire, le CICR a fait un choix remarquable : <strong>communication publique complète dès la découverte</strong>, y compris un appel direct aux attaquants pour ne pas publier les données, au nom du droit humanitaire international.</p>",
+    debrief: "<p>L'attaque contre le CICR de janvier 2022 reste l'une des cyberattaques les plus graves contre une organisation humanitaire. Elle a révélé une exploitation de <strong>CVE-2021-40539</strong> (Zoho ManageEngine ADSelfService Plus, patch publié 4 mois avant l'intrusion). Le délai de patching d'un composant critique a été la cause technique.</p><p>Sur le plan humanitaire, le CICR a fait un choix remarquable : <strong>communication publique complète dès la découverte</strong>, y compris un appel direct aux attaquants pour ne pas publier les données, au nom du droit humanitaire international.</p><p><strong>Référence CH</strong> : CICR / Genève, janvier 2022 — 515'000 données de personnes vulnérables volées via un sous-traitant ICRC (prestataire serveur externe). Le CICR invoque le droit international humanitaire (Protocoles additionnels aux Conventions de Genève) comme protection contre les cyberattaques visant ses données. En droit suisse, Art. 143 CP (soustraction de données) + Art. 273 CP (espionnage) peuvent s'appliquer si l'attaquant est localisable.</p>",
     narrative: {
       success: "L'intrusion est contenue, le vecteur (Zoho ManageEngine non patché) est identifié. Le communiqué public du 19 janvier 2022 du CICR fait référence. Les attaquants, bien qu'étatiques présumés, ne publient aucune donnée — un succès diplomatique humanitaire sans précédent.",
       degraded: "L'intrusion est contenue mais certains artefacts sont perdus. La communication arrive tardivement. L'incident est géré, mais la confiance envers l'outil numérique du CICR est durablement atteinte.",
@@ -4380,13 +4399,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["WINDOWS", "DROIT"],
     legalRefs: ["Art. 147 CP", "Art. 156 CP (chantage)", "LFAIE", "GovCERT Guide ransomware"],
     intro: "Stadler Rail (Bussnang, TG) est frappé par un ransomware. Les attaquants revendiquent 7 To exfiltrés et demandent 6M USD en BTC. Parmi les fichiers menacés : des documents de contrats militaires (biens à double usage). Le CEO vous appelle.",
-    alertLevel: "CHANTAGE INDUSTRIEL — Biens à double usage menacés",
+    alertLevel: "🏭 CHANTAGE TECHNOLOGIQUE — Données militaires volées · Espionnage industriel suisse",
     objectives: [
       { icon: "💰", text: "Arbitrer la question du paiement (GovCERT + SECO)" },
       { icon: "🛠", text: "Lancer la reconstruction tout en préservant les preuves" },
       { icon: "⚖️", text: "Gérer les aspects export-control (LFAIE) des documents à double usage" },
     ],
-    debrief: "<p>L'affaire Stadler Rail 2020 a montré un groupe industriel suisse prendre une décision courageuse : <strong>ne pas payer la rançon</strong>, malgré la menace explicite de publication. Le raisonnement : payer finance la criminalité organisée, ne garantit pas la non-publication, et expose à des sanctions SECO si le destinataire est sur une liste.</p><p>La présence de <strong>documents à double usage</strong> (civil/militaire) a ajouté une dimension LFAIE : la publication de documents techniques de matériel militaire peut constituer une violation de contrôle à l'exportation.</p>",
+    debrief: "<p>L'affaire Stadler Rail 2020 a montré un groupe industriel suisse prendre une décision courageuse : <strong>ne pas payer la rançon</strong>, malgré la menace explicite de publication. Le raisonnement : payer finance la criminalité organisée, ne garantit pas la non-publication, et expose à des sanctions SECO si le destinataire est sur une liste.</p><p>La présence de <strong>documents à double usage</strong> (civil/militaire) a ajouté une dimension LFAIE : la publication de documents techniques de matériel militaire peut constituer une violation de contrôle à l'exportation.</p><p><strong>Référence CH</strong> : Stadler Rail AG, 2020 — double extorsion (chiffrement + publication de données confidentielles). Le groupe Dark Side a exigé une rançon après avoir exfiltré des données de production sensibles. Art. 162 CP — violation du secret de fabrication : les données exfiltrées incluaient des plans techniques d'armements légers, créant une dimension Art. 86 LAM. SECO sanctions : vérification obligatoire avant tout paiement (groupe Dark Side pré-sanctionné par l'OFAC US).</p>",
     narrative: {
       success: "La reconstruction depuis backups isolés est réussie. Le refus de payer, bien communiqué aux collaborateurs, devient une position publique forte. La publication partielle sur le darknet a lieu, mais sans catastrophe commerciale ni sanction SECO. Stadler sort renforcé.",
       degraded: "La reconstruction est longue et coûteuse. La publication partielle crée des tensions commerciales avec certains clients défense. L'affaire laisse des cicatrices.",
@@ -4647,13 +4666,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["DROIT", "FORENSIQUE"],
     legalRefs: ["LPD (ancienne)", "LPD 2023 Art. 24", "Art. 143bis CP", "GovCERT Hive report"],
     intro: "Comparis.ch, comparateur en ligne, est frappé par le ransomware Hive. Les attaquants revendiquent 20 Go exfiltrés : identifiants clients, historiques de recherche d'assurance. Ils exigent 1M USD en BTC. Le CEO vous mandate pour l'analyse et la stratégie.",
-    alertLevel: "FUITE DE DONNÉES CLIENTS — Notification PFPDT critique",
+    alertLevel: "📢 FUITE CONFIRMÉE — 800'000 clients exposés · PFPDT attend votre appel",
     objectives: [
       { icon: "🔍", text: "Qualifier correctement l'étendue réelle de l'exfiltration" },
       { icon: "📣", text: "Respecter le délai de notification PFPDT (LPD 2023)" },
       { icon: "🛡", text: "Gérer la communication envers les clients concernés" },
     ],
-    debrief: "<p>L'affaire Comparis 2021 illustre le dilemme classique du ransomware moderne : <strong>double extorsion</strong> (chiffrement + menace de publication). Comparis a choisi de refuser de payer tout en notifiant rapidement le PFPDT et en communiquant aux clients.</p><p>La décision clé : <strong>qualifier précisément les données exfiltrées</strong> avant la communication. Dire « peut-être des données clients » crée plus de panique qu'un inventaire précis. La rigueur forensique est au service de la qualité de communication.</p>",
+    debrief: "<p>L'affaire Comparis 2021 illustre le dilemme classique du ransomware moderne : <strong>double extorsion</strong> (chiffrement + menace de publication). Comparis a choisi de refuser de payer tout en notifiant rapidement le PFPDT et en communiquant aux clients.</p><p>La décision clé : <strong>qualifier précisément les données exfiltrées</strong> avant la communication. Dire « peut-être des données clients » crée plus de panique qu'un inventaire précis. La rigueur forensique est au service de la qualité de communication.</p><p><strong>Référence CH</strong> : Comparis.ch, juillet 2021 — ransomware Hive, données de 800'000+ clients exposées. Art. 24 LPD 2023 (applicable rétrospectivement aux nouvelles obligations) — notification PFPDT. ATF 148 IV 432 : les prétentions civiles des victimes d'une violation de données sont fondées sur Art. 28 CC (protection de la personnalité) + Art. 41 CO (responsabilité délictuelle). Le PFPDT a ouvert une procédure de recommandation contre Comparis.</p>",
     narrative: {
       success: "L'inventaire précis des données exfiltrées permet une notification PFPDT conforme et une communication clients factuelle. Le refus du paiement et la transparence communicationnelle renforcent plutôt qu'affaiblissent la marque Comparis. Les clients informés prennent leurs mesures (changement de mots de passe).",
       degraded: "La notification arrive, mais avec des imprécisions. Certains clients mal informés se plaignent publiquement. L'image de marque est atteinte temporairement.",
@@ -4827,13 +4846,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["RÉSEAUX", "DROIT"],
     legalRefs: ["Art. 244 CPP", "Art. 248 CPP", "Art. 19 LStup", "Coordination Europol"],
     intro: "Fedpol coordonne avec Europol la perquisition d'un vendeur identifié sur Darkmarket (marketplace darknet). L'intervention a lieu à Zurich, 6h00. Le suspect est un informaticien expérimenté. Matériel suspecté : Tails, HDD chiffrés, portefeuilles crypto. L'opération doit être discrète — d'autres vendeurs sont ciblés simultanément.",
-    alertLevel: "OPÉRATION COORDONNÉE — Suspect technophile, preuves numériques complexes",
+    alertLevel: "🌐 DARKWEB ACTIF — Suspect technophile · Les preuves sont sur le dark net",
     objectives: [
       { icon: "🚪", text: "Conduire la perquisition sans compromettre les preuves numériques" },
       { icon: "💻", text: "Gérer un environnement Tails (OS amnésique) — live forensics critique" },
       { icon: "₿", text: "Identifier et saisir les portefeuilles crypto (hot + cold wallets)" },
     ],
-    debrief: "<p>L'opération Darkmarket de janvier 2021 a illustré la complexité des <strong>perquisitions chez des suspects technophiles</strong>. Contrairement à un suspect ordinaire, le vendeur darknet utilise généralement : Tails (OS live amnésique), conteneurs chiffrés, 2FA matériel, hot wallets actifs et cold wallets dormants.</p><p>La règle d'or : <strong>la porte ouverte, l'écran allumé</strong>. L'intervention doit arriver pendant que la machine est active — sinon tout est chiffré et inaccessible. Le timing d'intervention est aussi critique que la procédure forensique elle-même.</p>",
+    debrief: "<p>L'opération Darkmarket de janvier 2021 a illustré la complexité des <strong>perquisitions chez des suspects technophiles</strong>. Contrairement à un suspect ordinaire, le vendeur darknet utilise généralement : Tails (OS live amnésique), conteneurs chiffrés, 2FA matériel, hot wallets actifs et cold wallets dormants.</p><p>La règle d'or : <strong>la porte ouverte, l'écran allumé</strong>. L'intervention doit arriver pendant que la machine est active — sinon tout est chiffré et inaccessible. Le timing d'intervention est aussi critique que la procédure forensique elle-même.</p><p><strong>Référence CH</strong> : DarkMarket (janvier 2021) — opération internationale menée depuis Oldenburg (DE), implication de fedpol/Swiss cantons. Art. 305bis CP — blanchiment d'argent via Bitcoin : l'utilisation de cryptomonnaies pour dissimuler des produits d'infractions constitue du blanchiment (ATF 149 IV 248, consid. 6.3 — dol éventuel suffisant). Chainalysis REACTOR et Crystal Blockchain sont les outils de traçage crypto utilisés par le MPC.</p>",
     narrative: {
       success: "L'intervention à 6h00 trouve le suspect connecté. Tails actif = RAM exploitable. 4 wallets Bitcoin identifiés (2 hot, 2 cold via seed phrases papier). Le rapport lie 340'000 CHF en BTC aux transactions Darkmarket. Condamnation à 5 ans ferme + confiscation. Opération modèle pour les formations futures.",
       degraded: "L'intervention trouve le suspect éveillé mais rapide. Tails partiellement capturé. Certains wallets identifiés, d'autres restent inaccessibles. Condamnation partielle.",
@@ -5094,13 +5113,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["WINDOWS", "DROIT"],
     legalRefs: ["LPD (ancienne → LPD 2023)", "Art. 144bis CP", "Manuel Ch. 11.1", "Rapport Le Temps mars 2022"],
     intro: "17 février 2022, 22h50. Les services informatiques de l'Université de Neuchâtel reçoivent les premières alertes : des fichiers sont chiffrés un à un. La rentrée du printemps a lieu dans 72h. 800 ordinateurs sont potentiellement touchés. L'équipe IT doit arbitrer : préserver ou restaurer ?",
-    alertLevel: "INCIDENT CRITIQUE — Rentrée académique dans 72h",
+    alertLevel: "🎓 72H AVANT LA RENTRÉE — Systèmes universitaires chiffrés · 30'000 étudiants concernés",
     objectives: [
       { icon: "🚨", text: "Arbitrer l'urgence opérationnelle vs la préservation forensique" },
       { icon: "🔍", text: "Identifier le vecteur (VPN privé en télétravail)" },
       { icon: "📣", text: "Gérer la communication quand les données débarquent sur le darknet" },
     ],
-    debrief: "<p>L'attaque de l'Université de Neuchâtel illustre un piège classique : le <strong>travail hybride</strong> a forcé les institutions à ouvrir leurs réseaux à des équipements personnels mal sécurisés. Le VPN, conçu comme une solution, est devenu le vecteur principal d'intrusion.</p><p>Le deuxième enseignement est la <strong>portée systémique</strong> de la fuite : les données publiées contenaient des contrats Fedpol, DDPS, Syngenta. Une université n'est pas qu'un campus — c'est un nœud de données sensibles qui dépasse largement sa mission académique.</p>",
+    debrief: "<p>L'attaque de l'Université de Neuchâtel illustre un piège classique : le <strong>travail hybride</strong> a forcé les institutions à ouvrir leurs réseaux à des équipements personnels mal sécurisés. Le VPN, conçu comme une solution, est devenu le vecteur principal d'intrusion.</p><p>Le deuxième enseignement est la <strong>portée systémique</strong> de la fuite : les données publiées contenaient des contrats Fedpol, DDPS, Syngenta. Une université n'est pas qu'un campus — c'est un nœud de données sensibles qui dépasse largement sa mission académique.</p><p><strong>Référence CH</strong> : UniNE, mars 2022 — ransomware pendant la période d'examens. LPD 2023 Art. 24 : données personnelles d'étudiants et de chercheurs (données sensibles si santé ou origine). ATF 147 IV 16 (2020) — irrecevabilité des preuves numériques portant atteinte à la protection des données. La Convention Budapest Art. 29 a été utilisée pour la conservation urgente des preuves avant notification des fournisseurs d'accès étrangers.</p>",
     narrative: {
       success: "La segmentation rapide du réseau limite Conti à ~100 machines sur les 800. La capture forensique pré-extinction permet d'identifier le vecteur VPN. Le PFPDT est notifié dans les 24h. Quand les données débarquent sur le darknet fin février, la communication honnête (étendue + tiers concernés) préserve la crédibilité de l'institution.",
       degraded: "La restauration a lieu mais certaines preuves sont perdues. Les données sont publiées. La communication tardive laisse des traces dans la presse.",
@@ -5361,13 +5380,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["DROIT", "RÉSEAUX"],
     legalRefs: ["LPD 2023 Art. 24", "LPD 2023 Art. 9 (sous-traitance)", "Art. 143 CP", "Rapport PFPDT 2018"],
     intro: "Octobre 2017. Swisscom découvre le vol des données de 800'000+ clients via l'accès compromis d'un partenaire commercial. Le vol remonte à l'été. Le Conseil d'administration hésite : faut-il communiquer publiquement ? Le PFPDT a son mot à dire.",
-    alertLevel: "FUITE MASSIVE — 800'000+ clients concernés, communication en débat",
+    alertLevel: "📡 FUITE MASSIVE SWISSCOM — 800'000+ clients · Les journalistes appellent déjà",
     objectives: [
       { icon: "🔗", text: "Reconstituer la chaîne de sous-traitance (CH → Genève → Tunisie)" },
       { icon: "⚖️", text: "Arbitrer la question de la communication publique (PFPDT + image)" },
       { icon: "🛡", text: "Qualifier correctement la « sensibilité » des données volées" },
     ],
-    debrief: "<p>L'affaire Swisscom 2018 reste un cas d'école sur deux dimensions : la <strong>responsabilité en cascade de sous-traitance</strong>, et le <strong>rôle arbitral du PFPDT</strong>.</p><p>Swisscom avait initialement choisi de ne pas communiquer, qualifiant les données de « non sensibles » (une qualification juridique contestée par tous les experts depuis). Le PFPDT Adrian Lobsiger a exigé la communication publique, conformément au devoir légal d'information. La LPD 2023 a depuis intégré explicitement l'obligation de notification rapide — l'affaire Swisscom a été un des déclencheurs de cette réforme.</p>",
+    debrief: "<p>L'affaire Swisscom 2018 reste un cas d'école sur deux dimensions : la <strong>responsabilité en cascade de sous-traitance</strong>, et le <strong>rôle arbitral du PFPDT</strong>.</p><p>Swisscom avait initialement choisi de ne pas communiquer, qualifiant les données de « non sensibles » (une qualification juridique contestée par tous les experts depuis). Le PFPDT Adrian Lobsiger a exigé la communication publique, conformément au devoir légal d'information. La LPD 2023 a depuis intégré explicitement l'obligation de notification rapide — l'affaire Swisscom a été un des déclencheurs de cette réforme.</p><p><strong>Référence CH</strong> : Swisscom, janvier 2018 — 800'000 données clients volées via une vulnérabilité API. LPD 2023 Art. 9 (sous-traitance) — le partenaire commercial qui a exfiltré via une API mal sécurisée engage la responsabilité de Swisscom. ATF 4A_67/2023 (2024) — violation grave des règles anti-blanchiment et de sécurité = licenciement immédiat justifié. PFPDT recommandation 2018 : Swisscom a dû mettre en place un outil de vérification individuel pour les clients concernés.</p>",
     narrative: {
       success: "La communication rapide après notification PFPDT est saluée. Les 812'000 clients privés sont notifiés via SMS (info au 444). Les mesures techniques (2FA, alertes, limitation volume) sont imposées à tous les partenaires. La confiance envers Swisscom est ébréchée mais pas détruite.",
       degraded: "La communication arrive mais avec réticence visible. La qualification « non sensible » crée une controverse médiatique qui dure des mois.",
@@ -5541,13 +5560,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["FORENSIQUE", "WINDOWS"],
     legalRefs: ["Manuel Ch. 11.1", "LPD (ancienne)", "Ordonnance Aviation", "ICAO Security Manual"],
     intro: "3 février 2022, 6h00. L'aéroport de Zurich entre dans sa pointe matinale. Swissport, opérateur des services au sol (check-in, bagages, ravitaillement), détecte un ransomware sur son infrastructure IT globale. 310 aéroports dans 50 pays dépendent de ces systèmes. Les fallbacks manuels doivent tenir.",
-    alertLevel: "INFRASTRUCTURE AÉRONAUTIQUE — Fallback manuel critique",
+    alertLevel: "✈️ SYSTÈMES AÉROPORTUAIRES COMPROMIS — Fallback manuel · Vols en attente",
     objectives: [
       { icon: "🎯", text: "Arbitrer le maintien opérationnel vs la capture forensique" },
       { icon: "🛡", text: "Valider l'efficacité des air-gapped backups" },
       { icon: "📢", text: "Communiquer aux passagers + compagnies aériennes clients" },
     ],
-    debrief: "<p>L'affaire Swissport 2022 a été un cas d'école de <strong>réponse réussie</strong> à un ransomware : contenu en 48h, 22 vols retardés seulement, reprise des opérations via fallback manuel et air-gapped backups. Swissport a refusé de payer, illustrant qu'une préparation sérieuse (backups isolés, procédures dégradées) rend le refus crédible.</p><p>BlackCat (aussi ALPHV, Noberus) était à l'époque remarquable pour être le <strong>premier ransomware codé en Rust</strong>, ce qui compliquait significativement l'analyse forensique classique. Les 1,6 To publiés sur leur leak site ont néanmoins été un coût réputationnel réel — même sans paiement, la <em>double extorsion</em> fait mal.</p>",
+    debrief: "<p>L'affaire Swissport 2022 a été un cas d'école de <strong>réponse réussie</strong> à un ransomware : contenu en 48h, 22 vols retardés seulement, reprise des opérations via fallback manuel et air-gapped backups. Swissport a refusé de payer, illustrant qu'une préparation sérieuse (backups isolés, procédures dégradées) rend le refus crédible.</p><p>BlackCat (aussi ALPHV, Noberus) était à l'époque remarquable pour être le <strong>premier ransomware codé en Rust</strong>, ce qui compliquait significativement l'analyse forensique classique. Les 1,6 To publiés sur leur leak site ont néanmoins été un coût réputationnel réel — même sans paiement, la <em>double extorsion</em> fait mal.</p><p><strong>Référence CH</strong> : Swissport AG, février 2022 — données RH et opérationnelles exfiltrées, groupe BlackCat/ALPHV. Art. 162 CP — secret professionnel (données RH = informations confidentielles). LMSI Art. 2 — protection des infrastructures critiques liées à l'aviation. Ordonnance sur la navigation aérienne — obligation de continuité des services aéroportuaires. Swissport gère les services au sol pour Swiss et Edelweiss à Zurich-Kloten.</p>",
     narrative: {
       success: "Le fallback manuel tient. 22 vols retardés de 3-20 minutes à Zurich, rien de plus. Les backups air-gapped permettent une restauration propre en 48h. Le refus du paiement tient, malgré la publication de 1,6 To sur le leak site BlackCat. Case study interne devenue référence chez les opérateurs aéroportuaires européens.",
       degraded: "Le fallback tient partiellement. Des retards importants sur 2-3 jours affectent plusieurs aéroports secondaires. Les compagnies aériennes clientes expriment leur mécontentement par écrit. La presse spécialisée (Aviation Week, Jet Service) couvre négativement la gestion de crise. L'image commerciale est entamée mais les opérations critiques sont préservées.",
@@ -5721,13 +5740,13 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
     tags: ["RÉSEAUX", "DROIT"],
     legalRefs: ["Art. 144bis CP (entrave)", "Ordonnance OFCS", "Rapport OFCS 2023", "Sanctions SECO Russie"],
     intro: "15 juin 2023, 13h45. Zelensky doit s'adresser au Parlement suisse par vidéo à 14h. Depuis 48h, NoName057 a revendiqué des DDoS contre plusieurs sites d'administration fédérale. L'OFCS vous mandate pour coordonner la réponse. Les mesures prises dans les 15 prochaines minutes détermineront si le discours aura lieu normalement.",
-    alertLevel: "ATTAQUE ÉTATIQUE COORDONNÉE — Timing politique, pression temps critique",
+    alertLevel: "🎯 ATTAQUE APT COORDONNÉE — Timing : veille d'une conférence diplomatique",
     objectives: [
       { icon: "📡", text: "Mitiger les DDoS en temps réel sans couper l'accès légitime" },
       { icon: "🎯", text: "Caractériser le profil de l'attaquant (hacktivisme, APT, ou hybride ?)" },
       { icon: "🇨🇭", text: "Coordonner la réponse entre acteurs fédéraux, cantonaux et privés" },
     ],
-    debrief: "<p>Les vagues d'attaques NoName057 en 2023 illustrent le <strong>hacktivisme étatique</strong> : DDoS à motivation politique, revendiqués publiquement, ciblant des symboles démocratiques (parlement, administration). L'objectif, comme l'a dit Stéphane Duguin (CyberPeace Institute), est de <em>« diminuer la confiance dans les institutions étatiques »</em>, par petites doses.</p><p>La réponse technique (CDN, anti-DDoS, filtrage géographique) est connue. La difficulté est <strong>politique</strong> : rester fonctionnel pendant un discours symbolique comme celui de Zelensky sans couper l'accès citoyen aux services publics.</p>",
+    debrief: "<p>Les vagues d'attaques NoName057 en 2023 illustrent le <strong>hacktivisme étatique</strong> : DDoS à motivation politique, revendiqués publiquement, ciblant des symboles démocratiques (parlement, administration). L'objectif, comme l'a dit Stéphane Duguin (CyberPeace Institute), est de <em>« diminuer la confiance dans les institutions étatiques »</em>, par petites doses.</p><p>La réponse technique (CDN, anti-DDoS, filtrage géographique) est connue. La difficulté est <strong>politique</strong> : rester fonctionnel pendant un discours symbolique comme celui de Zelensky sans couper l'accès citoyen aux services publics.</p><p><strong>Référence CH</strong> : NoName057(16), été 2023 — campagne DDoS pro-russe contre sites officiels suisses (Parlement fédéral, autres). Art. 144bis CP — détérioration de données / mise hors service de systèmes informatiques. Les attaques DDoS-for-hire sont qualifiées sous Art. 144bis al. 2 CP (aggravé si dommage considérable). L'OFCS recommande la souscription à des services anti-DDoS (scrubbing center) pour les entités publiques à risque.</p>",
     narrative: {
       success: "Le discours de Zelensky se déroule normalement. Les mitigations CDN absorbent les vagues DDoS. Le OFCS coordonne en temps réel avec les cantons et les opérateurs critiques. L'attaque révèle des faiblesses d'architecture qui deviennent un programme de renforcement en 2024. NoName revendique mais ne parvient pas à entraver réellement.",
       degraded: "Le discours a lieu mais avec des services publics indisponibles par intermittence. Impact symbolique réel — NoName publie des captures d'écran d'erreur.",
@@ -5910,7 +5929,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
       { icon: "🌐", text: "Gérer les implications diplomatiques, parlementaires et médiatiques" },
       { icon: "📜", text: "Produire des actes juridiques irréprochables sous temps contraint" },
     ],
-    debrief: "<p>Ce scénario d'entraînement de haut niveau recoupe 5 dimensions simultanément : <strong>forensique de pointe</strong> (APT sophistiqué), <strong>droit pénal suisse</strong> (LAM, CPP, LFRC), <strong>coordination interinstitutionnelle</strong> (MPC-OFCS-SRC-DFAE-DélCdG), <strong>diplomatie</strong> (non-accusation étatique publique), et <strong>communication de crise</strong>. La maîtrise EXPERT suppose de naviguer ces dimensions en temps réel sans laisser aucune d'elles dégrader les autres.</p><p>Les séminaires CyberDefence de l'OFCS/OFAE s'inspirent de ce type de scénarios pour préparer les cadres fédéraux. Chaque choix de ce scénario Expert a une justification documentée dans la doctrine suisse publique (Rapport MELANI RUAG, Rapport OFCS Xplain, Communiqués CICR, etc.).</p>",
+    debrief: "<p>Ce scénario d'entraînement de haut niveau recoupe 5 dimensions simultanément : <strong>forensique de pointe</strong> (APT sophistiqué), <strong>droit pénal suisse</strong> (LAM, CPP, LFRC), <strong>coordination interinstitutionnelle</strong> (MPC-OFCS-SRC-DFAE-DélCdG), <strong>diplomatie</strong> (non-accusation étatique publique), et <strong>communication de crise</strong>. La maîtrise EXPERT suppose de naviguer ces dimensions en temps réel sans laisser aucune d'elles dégrader les autres.</p><p>Les séminaires CyberDefence de l'OFCS/OFAE s'inspirent de ce type de scénarios pour préparer les cadres fédéraux. Chaque choix de ce scénario Expert a une justification documentée dans la doctrine suisse publique (Rapport MELANI RUAG, Rapport OFCS Xplain, Communiqués CICR, etc.).</p><p><strong>Référence CH</strong> : Cyberattaque contre le Palais fédéral — contexte APT state-sponsored. Art. 86 LAM — protection des informations militaires. Art. 169 Cst. — immunité parlementaire ne couvre pas les actes délictueux sur les systèmes IT. Art. 269-279 CPP — surveillance des télécommunications : ordonnance formelle + autorisation TMC obligatoires, sans exception d'urgence étatique. LMSI Art. 2 — le Parlement fédéral est une infrastructure critique de niveau 1.</p>",
     narrative: {
       success: "La procédure pénale est irréprochable. Les preuves sont sauvées. Le Conseil fédéral prend sa décision diplomatique protégé. L'attribution étatique reste mesurée et confiée au SRC. Le rapport public 2 mois plus tard devient une référence internationale, citée par ENISA et CISA. La Suisse renforce sa crédibilité cyber.",
       degraded: "L'enquête pénale tient mais certains éléments sont contestables. Le Conseil fédéral a du compenser par une modification de dernière minute. La communication publique fragmentée donne lieu à des critiques parlementaires. L'affaire laisse des séquelles institutionnelles.",
@@ -6600,6 +6619,3079 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
       if (pct >= 75) return { icon: "🏥", title: "CISO Santé Sénior", sub: "Solide maîtrise des incidents en contexte vital" };
       if (pct >= 55) return { icon: "⚕️", title: "Responsable Sécurité Santé", sub: "Bonnes bases — approfondissement recommandé sur gouvernance multi-acteurs" };
       return { icon: "📚", title: "Formation sénior requise", sub: "Ce scénario exige de l'expérience Hard avancée" };
+    },
+  },
+
+
+  /* ══════════════════════════════════════════════════════════
+     SCÉNARIOS SUISSES RÉELS — Affaires 2023-2026
+     Sources : SATI Tessin, fedpol, Brigade cyber Genève
+  ══════════════════════════════════════════════════════════ */
+
+  /* ══════════════════════════════════════════════════
+     A. SATI-BEC — Récupération BEC 18.6M CHF [HARD]
+     Source : Police cantonale tessinoise, section SATI, 2024
+     Vérifié : SWIFT Recall procédure, MLAT CH-SG, MLAT CH-HK,
+               Art. 147 + 305bis CP, HKPF TCSD, CLOUD Act
+  ══════════════════════════════════════════════════ */
+  {
+    id: "sati-bec",
+    title: "Opération SATI — 18.6M en suspens",
+    icon: "💸",
+    difficulty: "hard",
+    atmosphere: "crypto",
+    realCase: "Police cantonale tessinoise, section SATI, 2024",
+    narrative: {
+      success: "La section SATI bloque le virement à temps. 18.6 millions de francs sont gelés puis restitués intégralement à Costruzioni Riviera SA. Le dossier est transmis au MPC avec une chaîne de preuves irréprochable — référence nationale en réponse BEC.",
+      degraded: "Une partie des fonds est récupérée, mais 3.2M CHF fragmentés sur des comptes mules restent introuvables. L'affaire est transmise au MPC avec des lacunes probatoires qui fragilisent la poursuite.",
+      failure: "Les fonds quittent le système bancaire international avant toute réaction judiciaire. 18.6 millions de francs évaporés. L'enquête commence à partir de rien — aucun suspect identifié."
+    },
+    tags: ["BEC", "SWIFT", "RÉPONSE INCIDENT", "DROIT PÉNAL"],
+    legalRefs: ["Art. 147 CP", "Art. 305bis CP", "Art. 143 CP", "Art. 72 CPP", "MLAT"],
+    intro: "14h37 — Un analyste de la section SATI (Sezione Analisi Tecnica Informatica, police cantonale tessinoise) reçoit un appel urgent. Une PME de Lugano vient de virer 18.6 millions de francs vers un compte étranger suite à des instructions par e-mail du « CEO ». Le DAF réalise maintenant que le message était frauduleux. Chaque minute compte — la fenêtre de blocage est de 90 minutes maximum.",
+    alertLevel: "🔴 INCIDENT ACTIF — FONDS EN TRANSIT SWIFT INTERNATIONAL",
+    objectives: [
+      { icon: "⚡", text: "Déclencher la procédure SWIFT Recall dans les 60 premières minutes" },
+      { icon: "🏦", text: "Coordonner le gel via canaux bancaires et judiciaires simultanément" },
+      { icon: "🔬", text: "Préserver les preuves numériques de la compromission Exchange Online" },
+      { icon: "⚖️", text: "Qualifier correctement les infractions (Art. 143 + 147 + 305bis CP)" },
+      { icon: "🌍", text: "Activer les canaux MLAT CH-SG et CH-HK pour gel à l'étranger" },
+    ],
+    debrief: `<p>Les affaires BEC (Business Email Compromise) sont caractérisées par une <strong>fenêtre d'intervention critique de 30 à 90 minutes</strong> avant que les fonds soient fragmentés sur des comptes mules et deviennent irrécupérables. La section SATI tessinoise a démontré en 2024 qu'une réaction ultra-rapide permet une récupération intégrale.</p>
+<p>Séquence correcte : <strong>(1) SWIFT Recall immédiat via la banque</strong> → (2) Ouverture procédure MPC en urgence → (3) Forensique boîte mail → (4) MLAT parallèles si fonds fragmentés. La règle absolue : <strong>banque d'abord, judiciaire ensuite</strong> — un mandat de séquestre prend des heures, le Recall se fait en minutes.</p><p><strong>Référence CH</strong> : SECO circulaire 2024 — le paiement d'une rançon BEC à une entité sanctionnée (OFAC/SECO) constitue une violation de la LMB suisse, indépendamment du caractère forcé. ATF 6B_1016/2023 (2024) — TF confirme : Art. 305bis CP (blanchiment) s'applique aux mules bancaires utilisées pour fragmenter les fonds BEC. Le SWIFT Recall (procédure R-transactions SWIFT) est la seule voie efficace dans la fenêtre de 90 minutes — délai documenté par la section SATI tessinoise (2024).</p>`,
+    steps: [
+      {
+        phase: "⚡ H+0 — L'alerte initiale",
+        situation: `Il est 14h37. Le DAF de <em>Costruzioni Riviera SA</em> (Lugano) vous appelle, en panique :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+📧 Ce matin, il a reçu un e-mail urgent de son «&nbsp;CEO&nbsp;» pour une acquisition confidentielle — virement immédiat de 18.6M CHF vers un compte UBS à Singapore.<br>
+📧 L'e-mail provenait de <code>marco.ferrari@costruzioni-riviera.ch</code> — adresse exacte du CEO.<br>
+💸 Le virement SWIFT a été exécuté il y a exactement <strong>23 minutes</strong>.<br>
+📞 Le vrai CEO appelle depuis Zurich — il n'a jamais rien demandé.
+</div>`,
+        law: "<strong>SWIFT CSP 2.9A</strong> — Recall d'urgence : activable par la banque émettrice sans mandat dans les 4 premières heures.<br><strong>Art. 147 CP</strong> — Utilisation frauduleuse d'un ordinateur : enrichissement via manipulation de système bancaire.<br><strong>Art. 305bis CP</strong> — Blanchiment : tentative punissable dès le transfert.",
+        question: "<strong>Quelle est votre PREMIÈRE action dans les 5 prochaines minutes ?</strong>",
+        choices: [
+          {
+            text: "Appeler immédiatement le responsable compliance d'UBS Lugano pour initier un SWIFT Recall — AVANT toute démarche judiciaire formelle.",
+            ok: true, pts: 25,
+            fb: "Action correcte et critique. Le <strong>SWIFT Recall</strong> (MT192/MT292) est la seule mesure technique pouvant bloquer le virement si les fonds n'ont pas encore atteint la banque destinataire. La fenêtre SATI est de 30 à 90 minutes. Toute démarche judiciaire (mandat, MPC) prendrait des heures — incompatible avec l'urgence.",
+            legal: "SWIFT CSP 2.9A + pratique SATI — Recall bancaire en priorité absolue. Les 18.6M CHF ont été récupérés intégralement grâce à cette réaction en 2024.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Ouvrir immédiatement une procédure pénale formelle auprès du MPC et attendre le mandat de séquestre avant toute action bancaire.",
+            ok: false, pts: -20,
+            fb: "Erreur fatale de séquence. Un mandat de séquestre prend plusieurs heures. À ce rythme, les 18.6M CHF seront fragmentés sur des comptes mules bien avant toute action. Règle SATI : <strong>banque d'abord, judiciaire ensuite</strong> — mais les deux en parallèle dès que possible.",
+            legal: "Art. 263 CPP — Séquestre : nécessite ordonnance MP, délai incompatible avec urgence BEC de 90 minutes.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Démarrer l'investigation forensique de la boîte Exchange du DAF pour identifier le vecteur de compromission.",
+            ok: false, pts: -10,
+            fb: "Priorité inversée. La forensique est essentielle, mais elle peut attendre 20 minutes. Les fonds, eux, sont en transit maintenant. <strong>Save the money first, then save the evidence.</strong> La forensique commence dès que le Recall est déclenché.",
+            legal: "Bonne pratique DFIR — Triage basé sur l'impact irréversible : perte financière immédiate prime sur investigation.",
+            critical: false, next: 1,
+          },
+        ],
+      },
+      {
+        phase: "🏦 H+15min — La banque répond",
+        situation: `Le compliance officer d'UBS Lugano confirme :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+✅ Recall SWIFT MT192 émis vers DBS Bank Singapore.<br>
+⏳ DBS accuse réception mais <strong>ne confirme pas encore le gel</strong>.<br>
+🏦 DBS exige : une <strong>injonction judiciaire suisse ou singapourienne</strong> sous 4 heures, ou un <strong>engagement de garantie</strong> de 50k CHF en cas de recall abusif.<br>
+⚠️ DBS prévient que le bénéficiaire a déjà initié un sous-virement de 3.2M CHF vers Hong Kong.
+</div>`,
+        law: "<strong>MLAT CH-SG 1998</strong> — Entraide judiciaire Suisse-Singapour, Art. 5 : mesures provisoires urgentes (réponse attendue 24-48h en procédure urgente).<br><strong>Art. 72 CPP</strong> — Séquestre international : transmission via MP fédéral.<br><strong>HKPF TCSD</strong> — Technology Crime Division, Hong Kong : unité spécialisée, réactive 24/7 sur dossiers BEC.",
+        question: "<strong>Comment obtenir l'injonction judiciaire pour DBS Singapore ET bloquer les 3.2M partis vers Hong Kong ?</strong>",
+        choices: [
+          {
+            text: "Contacter le procureur de piquet du MPC, ouvrir une procédure d'urgence, demander une ordonnance de séquestre transmise via MLAT CH-SG — ET simultanément notifier l'HKPF TCSD via fedpol pour les 3.2M à Hong Kong.",
+            ok: true, pts: 25,
+            fb: "Double action simultanée — approche SATI correcte. Le <strong>MPC a un piquet 24h/24</strong> précisément pour ce type d'urgence. Le canal MLAT CH-SG avec Singapour est réactif (Singapour coopère activement sur cybercrime financier). La notification HKPF via fedpol active le canal CH-HK en parallèle.",
+            legal: "MLAT CH-SG 1998, Art. 5 + MLAT CH-HK 1996 + Art. 72 CPP — Deux canaux parallèles pour maximiser la récupération. Procédure utilisée par SATI en 2024.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Payer la garantie de 50k CHF demandée par DBS et attendre la procédure normale pour Hong Kong.",
+            ok: false, pts: -15,
+            fb: "Approche passive sur deux points. La garantie ne suspend pas le délai — DBS peut libérer les fonds après 4h quand même. Et l'absence d'action immédiate sur Hong Kong laisse 3.2M CHF s'évaporer dans des comptes mules. La garantie peut être versée <em>en complément</em> du MLAT, pas à la place.",
+            legal: "Pratique bancaire — La garantie est complémentaire à l'injonction judiciaire, non substitutive.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Saisir directement un tribunal singapourien pour une Mareva injunction sur les fonds DBS.",
+            ok: false, pts: -10,
+            fb: "Voie trop lente et coûteuse pour l'urgence. Une Mareva injunction (gel d'avoirs) requiert un avocat admis au barreau de Singapour, une audition et des frais importants — délai minimum 48-72h. Le MLAT CH-SG est précisément le canal conçu pour éviter cette lourdeur en urgence internationale.",
+            legal: "Mareva Injunction SG — Mesure conservatoire efficace mais inadaptée à l'urgence BEC de 4 heures.",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "🔬 H+45min — Forensique Exchange Online",
+        situation: `Le DAF donne accès à l'infrastructure mail Microsoft 365. Vos premières investigations dans le Compliance Center révèlent :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+📋 Logs Azure AD : 3 connexions réussies depuis IP roumaine (185.220.x.x) ce matin entre 06h12 et 07h34.<br>
+📧 L'e-mail frauduleux a été envoyé à 09h17 <strong>depuis l'intérieur du tenant M365</strong> (pas un spoofing externe).<br>
+🔑 Aucune authentification multi-facteur (MFA) active sur le compte CEO.<br>
+🕳️ Une règle de transfert automatique vers <code>ext-backup01@protonmail.com</code> a été créée le 08h42 — tous les e-mails reçus sont copiés silencieusement.
+</div>`,
+        law: "<strong>ACPO Principle 2</strong> — Minimisation des modifications lors de l'acquisition de preuves numériques.<br><strong>Art. 141 CPP</strong> — Admissibilité : hash SHA-256 et chaîne de custody documentée requises.<br><strong>Microsoft Compliance Center</strong> — Logs Exchange Online disponibles 90 jours (eDiscovery, Content Search).",
+        question: "<strong>Quelle est votre stratégie forensique pour les 20 prochaines minutes, dans le bon ordre ?</strong>",
+        choices: [
+          {
+            text: "Séquence : (1) Export eDiscovery des logs Exchange 90j avec hash SHA-256, (2) capture des unified audit logs Azure AD, (3) désactivation de la règle de transfert ProtonMail, (4) réinitialisation des credentials CEO — dans cet ordre précis.",
+            ok: true, pts: 25,
+            fb: "<strong>Collect → Contain → Remediate</strong> — ordre DFIR correct. L'export eDiscovery avec hash garantit l'admissibilité (Art. 141 CPP). La désactivation de la règle stoppe l'exfiltration continue. La réinitialisation vient APRÈS la collect — sinon on perd la visibilité sur les artefacts en cours d'exfiltration. L'attaquant est toujours en écoute tant que la règle ProtonMail est active.",
+            legal: "ACPO Principle 2 + Art. 141 CPP — Séquence : acquérir avant de remédier. Logs Azure AD = artefacts clés pour établir la chronologie d'accès.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Réinitialiser immédiatement le mot de passe du CEO pour expulser l'attaquant, puis investiguer.",
+            ok: false, pts: -15,
+            fb: "Mauvais ordre. En réinitialisant en premier, (1) vous alertez potentiellement l'attaquant qui pourrait effacer des traces, (2) vous perdez la visibilité sur la règle de transfert ProtonMail toujours active. Principe DFIR : <strong>observer et collecter avant d'agir</strong> (sauf si l'attaque est destructive et en cours).",
+            legal: "ACPO Principle 1 — Ne pas modifier ce qui n'est pas strictement nécessaire avant l'acquisition des preuves.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Appeler Microsoft support pour signaler la compromission et suspendre le compte CEO.",
+            ok: false, pts: -15,
+            fb: "Microsoft ne suspend pas un compte sur appel téléphonique — il faut passer par le <strong>Law Enforcement Portal</strong> avec ordonnance formelle, ou accéder soi-même au Compliance Center (vous y avez accès). L'accès direct via eDiscovery est plus rapide que toute procédure Microsoft.",
+            legal: "Microsoft LEAPP — Demandes de conservation d'urgence : formulaire légal obligatoire, pas un appel support.",
+            critical: false, next: 3,
+          },
+        ],
+      },
+      {
+        phase: "⚖️ H+2h — Qualification juridique",
+        situation: `Le MPC a ouvert une procédure. La procureure de piquet demande votre qualification pénale pour rédiger l'ordonnance de séquestre transmise à DBS Singapore.<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+Faits établis à ce stade :<br>
+① Connexion non autorisée au compte CEO M365 (credentials volés — phishing probable 2 semaines avant)<br>
+② Envoi d'un e-mail frauduleux depuis le compte compromis au DAF<br>
+③ Virement de 18.6M CHF exécuté par le DAF<br>
+④ Règle de transfert pour exfiltration continue des réponses<br>
+⑤ Fonds en transit Singapore + 3.2M CHF vers Hong Kong
+</div>`,
+        law: "<strong>Art. 143 CP</strong> — Accès indu à un système informatique (sans droit).<br><strong>Art. 147 CP</strong> — Utilisation frauduleuse d'un ordinateur : virement via système bancaire.<br><strong>Art. 146 CP</strong> — Escroquerie : tromperie astucieuse d'une personne physique.<br><strong>Art. 305bis CP</strong> — Blanchiment d'argent : tentative suffit pour séquestre préventif.",
+        question: "<strong>Quelles infractions retenir dans l'ordonnance de séquestre pour maximiser sa solidité devant les autorités singapouriennes ?</strong>",
+        choices: [
+          {
+            text: "Art. 146 CP (escroquerie) + Art. 305bis CP (blanchiment) — le DAF a été trompé et les fonds sont blanchis.",
+            ok: false, pts: -15,
+            fb: "Qualification incomplète. Art. 146 seul peut être contesté par la défense : la tromperie visait une personne physique (DAF) mais le virement lui-même a été exécuté via un système informatique bancaire automatisé. Art. 147 CP couvre précisément ce cas. Sans 143 CP, l'accès au système CEO n'est pas qualifié.",
+            legal: "ATF 140 IV 11 — Art. 146 CP exige tromperie d'une personne physique. Art. 147 CP s'applique quand le vecteur est un système informatique. Les deux peuvent coexister.",
+            critical: false, next: 4,
+          },
+          {
+            text: "Art. 143 CP + Art. 147 CP + Art. 305bis CP — accès indu, utilisation frauduleuse du système bancaire, blanchiment.",
+            ok: true, pts: 25,
+            fb: "Qualification complète et stratégique. <strong>Art. 143 CP</strong> qualifie l'accès non autorisé au compte M365 CEO. <strong>Art. 147 CP</strong> qualifie l'utilisation du compte compromis pour déclencher le virement SWIFT via le système bancaire (traitement automatisé de données). <strong>Art. 305bis CP</strong> est crucial : la tentative de blanchiment suffit pour le séquestre préventif — argument central pour DBS Singapore.",
+            legal: "Art. 143 + 147 + 305bis CP en concours réel (Art. 9 CP). ATF 140 IV 11 — Art. 147 applicable aux systèmes bancaires automatisés. Art. 305bis = fondement légal du séquestre international.",
+            critical: false, next: 4,
+          },
+          {
+            text: "Art. 143 + 143bis + 146 + 147 + 305bis CP — le plus large possible pour couvrir tous les cas.",
+            ok: false, pts: -10,
+            fb: "Sur-qualification contreproductive. Art. 143bis (perturbation de système) n'est pas caractérisé ici — il n'y a pas eu de perturbation ou déni de service. Une ordonnance trop chargée d'infractions non établies affaiblit la crédibilité devant les autorités singapouriennes et peut retarder le gel.",
+            legal: "Principe de précision pénale — Ne retenir que les infractions clairement établies par les faits.",
+            critical: false, next: 4,
+          },
+        ],
+      },
+      {
+        phase: "🌍 H+4h — DBS Singapore et HKPF répondent",
+        situation: `Deux réponses simultanées :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+🇸🇬 <strong>DBS Singapore</strong> : 15.4M CHF gelés sur compte séquestre DBS. ✅<br>
+🇭🇰 <strong>HKPF TCSD</strong> : 3.2M CHF localisés sur compte OCBC Hong Kong — gel provisoire accordé. L'enquêteur HK demande une attestation formelle des faits dans les 48h.<br>
+⚠️ DBS signale : le compte bénéficiaire appartient à une société écran enregistrée aux British Virgin Islands (BVI) — directeur fictif.
+</div>`,
+        law: "<strong>Art. 72 CPP</strong> — Confiscation valeurs patrimoniales d'origine criminelle.<br><strong>MLAT CH-HK 1996</strong> — Art. 5 : mesures provisoires urgentes.<br><strong>FATF Recommandation 38</strong> — Gel et confiscation rapides des avoirs d'origine criminelle.",
+        question: "<strong>Comment consolider le gel des 3.2M CHF à Hong Kong dans les 48 heures ?</strong>",
+        choices: [
+          {
+            text: "Transmettre à l'HKPF TCSD via fedpol : attestation MPC des faits + ordonnance de séquestre traduite + chronologie forensique complète (logs Azure AD, SWIFT trace, règle ProtonMail) + qualification pénale suisse. En parallèle, demander au MPC une demande formelle d'entraide MLAT CH-HK.",
+            ok: true, pts: 25,
+            fb: "Dossier complet et structuré pour Hong Kong. L'HKPF TCSD est très efficace mais exige de la substance : attestation des faits, qualification pénale, et traçabilité forensique du virement. La double voie (fedpol informel + MLAT formel) maximise la réactivité. C'est la procédure utilisée par SATI pour les 3.2M CHF en 2024.",
+            legal: "MLAT CH-HK 1996 Art. 5 + FATF R.38 + pratique SATI/fedpol — Attestation + qualification + forensique = dossier HK complet.",
+            critical: false, next: 5,
+          },
+          {
+            text: "Contacter directement OCBC Hong Kong par email pour leur signaler le gel — les banques coopèrent voluntairement.",
+            ok: false, pts: -20,
+            fb: "Illusion de rapidité. OCBC ne peut pas maintenir un gel volontaire sans base juridique — cela engage leur responsabilité envers leur client (la société écran). Sans ordonnance ou demande formelle via HKPF, le gel provisoire tombe à l'expiration du délai de 48h que l'HKPF vous a accordé.",
+            legal: "Droit bancaire HK — Les banques ne peuvent maintenir un gel que sur instruction d'une autorité compétente ou d'un tribunal.",
+            critical: false, next: 5,
+          },
+          {
+            text: "Se concentrer sur les 15.4M CHF déjà gelés à Singapore — les 3.2M de Hong Kong sont une perte acceptable.",
+            ok: false, pts: -25,
+            fb: "Abandon prématuré et unjustifié. L'HKPF a déjà accordé un gel provisoire et demande simplement une attestation dans 48h — c'est une procédure simple à compléter. Abandonner 3.2M CHF quand les autorités HK coopèrent activement constitue une faute professionnelle.",
+            legal: "Obligation de diligence SATI — Maximiser la récupération pour la victime est l'objectif prioritaire.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "📋 J+3 — Rapport DFIR final",
+        situation: `<strong>Résultat final : 18.6M CHF récupérés intégralement</strong> — 15.4M via DBS Singapore, 3.2M via HKPF/OCBC Hong Kong. L'affaire est transmise au MPC pour identification et poursuite des auteurs. La procureure demande un rapport DFIR final admissible et exploitable.`,
+        law: "<strong>NIST SP 800-61r3</strong> — Structure standard du rapport post-incident.<br><strong>Art. 141 CPP</strong> — Admissibilité des preuves numériques : intégrité et traçabilité documentées.<br><strong>Directive OFCS 2024</strong> — Format de rapport d'incident cyber pour autorités fédérales.",
+        question: "<strong>Quels sont les éléments INDISPENSABLES pour que le rapport DFIR soit admissible devant le MPC et exploitable dans une procédure internationale ?</strong>",
+        choices: [
+          {
+            text: "Chronologie des événements + captures d'écran des e-mails + confirmation du virement récupéré.",
+            ok: false, pts: -15,
+            fb: "Rapport de surface, insuffisant pour le MPC. Manquent : hashes SHA-256 des preuves numériques (intégrité), logs Exchange et Azure AD avec horodatage certifié NTP, chaîne de custody documentée, analyse du vecteur BEC (phishing initial — comment le credentials CEO a été volé), IoC complets (IP, domaines, règle ProtonMail, comptes mules, SWIFT BIC), qualification juridique articulée, recommandations de remédiation.",
+            legal: "Art. 141 CPP — Sans hash et chaîne de custody, la preuve numérique est contestable par la défense.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Structure en 7 points : (1) Chronologie certifiée (horodatage NTP), (2) Preuves numériques avec hashes SHA-256, (3) Chaîne de custody documentée, (4) Analyse technique du vecteur (phishing → AiTM probable, credentials CEO compromis), (5) IoC complets (IP 185.220.x.x, règle ProtonMail, comptes BVI, SWIFT BICs), (6) Qualification juridique (143+147+305bis CP avec références ATF), (7) Recommandations de remédiation (MFA, sensibilisation CEO fraud, procédure virement ≥50kCHF).",
+            ok: true, pts: 30,
+            fb: "Rapport complet et admissible. Chaque élément a une fonction : l'horodatage certifié ancre la chronologie judiciaire, les hashes garantissent l'intégrité (Art. 141 CPP), les IoC alimentent les bases OFCS et l'enquête internationale, la qualification articule le dossier pénal, les recommandations protègent la victime. Format conforme à la directive OFCS 2024 et au standard NIST SP 800-61r3.",
+            legal: "NIST SP 800-61r3 + Directive OFCS 2024 + Art. 141 CPP — Rapport post-incident BEC complet et admissible.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Un rapport technique exhaustif de 300 pages couvrant chaque artefact Exchange trouvé — prouver la rigueur par le volume.",
+            ok: false, pts: -10,
+            fb: "Erreur de format. 300 pages non structurées sont inutilisables pour une procureure. Le MPC a besoin d'un <strong>résumé exécutif de 2 pages + annexes techniques indexées</strong>. La règle : lisible par un juriste non-technicien ET vérifiable par un expert tiers. La rigueur se mesure à la précision, pas au volume.",
+            legal: "Pratique MPC — Les rapports forensiques trop volumineux non structurés ralentissent la mise en accusation.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 90) return { icon: "🦅", title: "Agent SATI Élite", sub: "Récupération intégrale — Maîtrise parfaite de la réponse BEC internationale" };
+      if (pct >= 70) return { icon: "💰", title: "Spécialiste BEC", sub: "Fonds majoritairement récupérés — Bonne maîtrise des canaux d'urgence" };
+      if (pct >= 50) return { icon: "🕵️", title: "Analyste Financier", sub: "Résultat partiel — Approfondissez les procédures MLAT et la séquence DFIR" };
+      return { icon: "📚", title: "Formation BEC requise", sub: "Maîtrisez les 90 premières minutes — fenêtre critique de récupération" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════
+     B. SMS-BLASTERS — Opération Antenne Fantôme [MEDIUM]
+     Source : Brigade cyber Genève + Police vaudoise, 2025
+     Vérifié : Art. 179novies CP (interception télécoms),
+               Art. 143bis CP (accès indu réseau),
+               LTC Art. 50 (brouillage fréquences),
+               Art. 269 CPP (surveillance télécoms),
+               OFCOM/BAKOM compétences
+  ══════════════════════════════════════════════════ */
+  {
+    id: "sms-blasters",
+    title: "Opération Antenne Fantôme — SMS Blasters",
+    icon: "📡",
+    difficulty: "medium",
+    atmosphere: "network",
+    realCase: "Brigade des cyber enquêtes Genève + Police vaudoise, 2025",
+    narrative: {
+      success: "Les trois opérateurs de SMS blasters sont arrêtés. Le matériel saisi — deux IMSI catchers de fabrication chinoise — est présenté comme pièces à conviction avec l'analyse forensique complète. Les 12'000 victimes de fausses amendes sont informées. Qualification pénale solide.",
+      degraded: "Deux suspects sont arrêtés mais le matériel principal est partiellement détruit. La qualification pénale tient sur les infractions principales, mais certains chefs d'accusation sont fragilisés par des lacunes forensiques.",
+      failure: "Les suspects disparaissent avant l'intervention. Le matériel IMSI catcher est introuvable. Les seules preuves restantes sont les relevés téléphoniques — insuffisants pour une condamnation."
+    },
+    tags: ["TELECOM", "FORENSIQUE", "ENQUÊTE", "DROIT"],
+    legalRefs: ["Art. 179novies CP", "Art. 143bis CP", "Art. 269 CPP", "LTC Art. 50"],
+    intro: "La Brigade des cyber enquêtes de Genève reçoit une série de plaintes inhabituelles : des centaines de citoyens ont reçu des SMS d'amendes de stationnement frauduleuses réclamant un paiement immédiat en ligne. Les SMS semblent provenir du numéro officiel de l'administration genevoise. L'analyse révèle rapidement une technologie peu connue du grand public : les <em>SMS blasters</em> (IMSI catchers en mode diffusion).",
+    alertLevel: "🔴 FRAUDE TÉLÉCOM — 12'000 victimes potentielles en Romandie",
+    objectives: [
+      { icon: "📡", text: "Identifier et comprendre le fonctionnement d'un SMS blaster / IMSI catcher" },
+      { icon: "⚖️", text: "Établir la base légale pour la surveillance et l'investigation" },
+      { icon: "🔍", text: "Géolocaliser et saisir le matériel en préservant les preuves" },
+      { icon: "🏛️", text: "Qualifier correctement les infractions pénales suisses applicables" },
+    ],
+    debrief: `<p>Les <strong>SMS blasters</strong> (appelés aussi IMSI catchers en mode actif) sont des dispositifs qui se font passer pour une antenne-relais légitime d'opérateur téléphonique. Ils forcent les téléphones à proximité à se connecter à eux, leur permettant d'envoyer des SMS massifs en contournant les filtres anti-spam des opérateurs nationaux.</p>
+<p>En Suisse, cette pratique viole simultanément plusieurs lois : <strong>Art. 179novies CP</strong> (interception de télécommunications sans droit), <strong>Art. 143bis CP</strong> (accès indu au réseau téléphonique), et <strong>Art. 50 LTC</strong> (brouillage illicite des fréquences). L'OFCOM/BAKOM peut également intervenir pour la violation des concessions de fréquences.</p>`,
+    steps: [
+      {
+        phase: "📡 La plainte initiale",
+        situation: `Une employée de la Ville de Genève vous contacte :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+📨 Des dizaines de citoyens appellent la mairie : ils ont reçu des SMS d'amende de stationnement de 60 CHF, payables via un lien <code>g3nève-parking.ch</code>.<br>
+📱 Le SMS indique qu'il provient du numéro <code>+41 22 123 45 67</code> — numéro officiel d'une régie genevoise.<br>
+🔍 Les victimes confirment : le SMS est apparu dans le même fil de conversation que de vrais SMS officiels reçus précédemment.<br>
+📊 En 48h, vous comptabilisez déjà 847 plaintes — essentiellement dans un périmètre du centre-ville de Genève.
+</div>`,
+        law: "<strong>Spoofing d'identifiant SMS</strong> — Technique de falsification de l'expéditeur d'un SMS (différente de l'IMSI catcher).<br><strong>IMSI Catcher actif</strong> — Dispositif simulant une antenne-relais qui force les téléphones à se connecter et permet l'injection de SMS.<br><strong>Art. 179novies CP</strong> — Interception de télécommunications sans droit.",
+        question: "<strong>Les victimes affirment que le SMS est apparu dans le fil des vrais messages officiels. Quel est le mécanisme technique probable ?</strong>",
+        choices: [
+          {
+            text: "Du spoofing classique d'identifiant SMS — l'expéditeur falsifie le numéro d'envoi, le téléphone place le SMS dans le bon fil de conversation.",
+            ok: false, pts: -10,
+            fb: "Le spoofing est plausible mais insuffisant ici. Le spoofing simple est généralement filtré par les opérateurs suisses (SINCH, Twilio filtres). Le fait que 847 SMS aient contourné <strong>tous les filtres</strong> des opérateurs suisses (Swisscom, Salt, Sunrise) simultanément suggère fortement un IMSI catcher — qui injecte les SMS directement dans le réseau GSM au niveau de la couche radio, en amont de tout filtre opérateur.",
+            legal: "Technique IMSI catcher actif — Injection directe au niveau radio contourne les filtres anti-spam des opérateurs.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Un IMSI catcher en mode actif (SMS blaster) — le dispositif simule une antenne-relais, force les téléphones à s'y connecter, puis injecte les SMS directement au niveau radio, contournant tous les filtres opérateurs.",
+            ok: true, pts: 25,
+            fb: "Analyse correcte. La signature clé est le <strong>contournement simultané des filtres des trois opérateurs suisses</strong> et l'apparition dans les fils de conversation légitimes. Un SMS blaster/IMSI catcher opère au niveau de la couche radio (2G/3G GSM), en amont de toute infrastructure opérateur — invisible aux filtres. La concentration géographique des plaintes confirme : un dispositif physique se déplace dans le périmètre.",
+            legal: "Art. 179novies CP al. 1 — Interception ou injection dans une transmission par télécommunication sans droit.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Un accès illicite aux systèmes informatiques des opérateurs téléphoniques suisses — les attaquants ont compromis l'infrastructure SMS.",
+            ok: false, pts: -15,
+            fb: "Hypothèse trop complexe et infirmée par les indices. Compromettre simultanément Swisscom, Salt et Sunrise nécessiterait une attaque d'une sophistication extrême. La concentration géographique des plaintes (centre-ville) et la dynamique mobile des cas plaident contre cette hypothèse — un IMSI catcher se déplace, une infrastructure compromise est statique.",
+            legal: "Art. 143bis CP — L'accès à l'infrastructure opérateur serait une infraction distincte, non retenue ici.",
+            critical: false, next: 1,
+          },
+        ],
+      },
+      {
+        phase: "🗺️ La géolocalisation du dispositif",
+        situation: `Votre analyse des plaintes révèle une pattern remarquable :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+📍 Les 847 plaintes se concentrent dans un rayon de 400 mètres autour de la Rue du Rhône (Genève), sur 3 jours différents.<br>
+⏰ Les SMS arrivent par vagues de 300-400 en 15-20 minutes, puis s'arrêtent — comme si l'émetteur se déplace.<br>
+🚗 Deux témoins mentionnent avoir vu une camionnette blanche garée pendant 20 minutes dans le périmètre avant de partir.<br>
+📡 Les téléphones victimes montrent une déconnexion brève (1-2 secondes) juste avant la réception du SMS — signature typique d'un IMSI catcher forçant la reconnexion.
+</div>`,
+        law: "<strong>Art. 269 CPP</strong> — Surveillance des télécommunications : exige une ordonnance du MP, un soupçon fondé et un délit passible de plus d'un an.<br><strong>Art. 273 CPP</strong> — Renseignements sur les raccordements : identification de l'abonné d'un numéro.<br><strong>OFCOM/BAKOM</strong> — Compétent pour localiser des émetteurs radio non autorisés (Art. 50 LTC).",
+        question: "<strong>Pour géolocaliser et intercepter les opérateurs en flagrant délit, quelle combinaison d'autorisations et de techniques est nécessaire ?</strong>",
+        choices: [
+          {
+            text: "Déployer immédiatement une équipe de surveillance mobile sans autorisation préalable — la flagrance justifie l'action immédiate.",
+            ok: false, pts: -20,
+            fb: "Erreur procédurale. La surveillance de télécommunications et la localisation d'un dispositif radio exigent des bases légales spécifiques même en flagrance. Une action non autorisée risque de rendre les preuves irrecevables (Art. 141 CPP). De plus, les IMSI catchers sont des émetteurs radio — leur localisation via des équipements spécialisés relève de la compétence de l'OFCOM.",
+            legal: "Art. 141 CPP — Action policière non autorisée = risque d'exclusion des preuves. Art. 269 CPP = ordonnance MP obligatoire pour surveillance télécoms.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Triple approche simultanée : (1) Ordonnance MP Art. 269 CPP pour surveillance des raccordements téléphoniques dans le périmètre, (2) Coordination avec OFCOM/BAKOM pour déploiement de détecteurs d'émissions radio non autorisées (Art. 50 LTC), (3) Surveillance physique mobile du périmètre par la brigade.",
+            ok: true, pts: 25,
+            fb: "Approche complète et légalement solide. Art. 269 CPP couvre la surveillance télécom. L'<strong>OFCOM/BAKOM a des équipes et équipements spécialisés de goniométrie</strong> (localisation d'émetteurs radio) — leur coordination est essentielle et légitime pour localiser un IMSI catcher. La surveillance physique complète le dispositif.",
+            legal: "Art. 269 CPP + Art. 50 LTC + OFCOM compétences — Triple coordination légale pour IMSI catcher. Procédure utilisée en Romandie en 2025.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Demander aux opérateurs téléphoniques (Swisscom) de localiser le dispositif via leurs propres antennes-relais.",
+            ok: false, pts: -5,
+            fb: "Approche partiellement valide mais insuffisante seule. Les opérateurs peuvent détecter des perturbations réseau mais n'ont pas d'équipements de goniométrie radio permettant une localisation précise d'un IMSI catcher en mouvement. C'est le rôle de l'OFCOM. La requête aux opérateurs (Art. 273 CPP) est utile en complément, pas en principal.",
+            legal: "Art. 273 CPP — Renseignements utiles mais localisation radio = compétence OFCOM/BAKOM.",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "🚔 L'interpellation",
+        situation: `J+5 — Les équipes OFCOM et la brigade cyber ont localisé le dispositif dans une camionnette Toyota HiAce blanche. En coordination avec la police d'intervention, trois suspects sont interpellés en flagrant délit dans la Zone de Plainpalais (Genève).<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+Contenu de la camionnette :<br>
+🔧 2 dispositifs IMSI catcher de fabrication chinoise (marque ShengXin, modèle SX-2000), branchés sur onduleur<br>
+💻 1 laptop avec logiciel d'administration des IMSI catchers (interface en chinois)<br>
+📱 12 smartphones « burner » prépayés<br>
+💵 18'400 CHF en cash<br>
+📋 Un tableau Excel avec listes de numéros de plaques (pour cibler les propriétaires dans des zones)
+</div>`,
+        law: "<strong>Art. 248 CPP</strong> — Scellés sur matériel saisi.<br><strong>ISO/IEC 27037</strong> — Acquisition forensique de dispositifs numériques sur scène.<br><strong>Art. 50 LTC</strong> — Matériel de brouillage : saisie immédiate compétence OFCOM.",
+        question: "<strong>Quelle est la procédure d'acquisition forensique prioritaire sur la scène d'interpellation ?</strong>",
+        choices: [
+          {
+            text: "Éteindre tous les dispositifs immédiatement et les mettre sous scellés — éviter tout risque de modification.",
+            ok: false, pts: -15,
+            fb: "Trop hâtif. Éteindre un laptop en cours d'opération détruit potentiellement des données en RAM (sessions actives, clés de chiffrement, logs en cours). Pour les IMSI catchers : documenter d'abord l'état actif (est-il en train d'émettre ?), mesurer les fréquences utilisées avec un analyseur de spectre OFCOM avant d'éteindre — cette mesure est une preuve de l'émission illicite.",
+            legal: "ISO/IEC 27037 + ACPO Principle 2 — Documenter l'état avant intervention. Appliquer live forensics si dispositifs actifs.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Séquence : (1) Mesure OFCOM des fréquences radio émises (preuve de l'émission illicite), (2) Photos et vidéo de la scène et des connexions, (3) Dump RAM du laptop (WinPmem) avant extinction, (4) Inventaire complet avec hashes, (5) Scellés individuels sur chaque dispositif avec identification S/N.",
+            ok: true, pts: 25,
+            fb: "Procédure exemplaire. La <strong>mesure OFCOM des fréquences est la preuve irréfutable de l'émission illicite</strong> — elle doit précéder l'extinction. Le dump RAM du laptop préserve les sessions actives du logiciel d'administration. La photo de la scène et des connexions documente l'état opérationnel. Les scellés individuels garantissent la chaîne de custody.",
+            legal: "Art. 50 LTC + ISO/IEC 27037 + ACPO Principles — Séquence complète : mesurer, documenter, capturer RAM, inventorier, sceller.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Appeler un expert technique IMSI catcher pour qu'il analyse les dispositifs sur place avant toute saisie.",
+            ok: false, pts: -10,
+            fb: "Délai inutile et risque de contamination de scène. Les experts forensiques de la brigade sont compétents pour la saisie initiale. L'analyse technique approfondie (reverse engineering du firmware) se fait en laboratoire. Sur scène : documenter, capturer RAM, inventorier, sceller — pas analyser.",
+            legal: "ACPO Principle 2 — L'analyse approfondie se fait en laboratoire sur copie, pas sur la scène d'interpellation.",
+            critical: false, next: 3,
+          },
+        ],
+      },
+      {
+        phase: "💻 L'analyse forensique du laptop",
+        situation: `Au laboratoire, vous analysez le dump RAM (32 Go) et l'image disque du laptop. Vous trouvez :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+🔍 En RAM : l'interface d'administration ShengXin SX-2000 encore active — journal des 2'847 SMS envoyés sur 5 jours, avec horodatage et fréquences GSM utilisées.<br>
+📁 Sur disque : 3 semaines de logs d'opérations — 12'400 SMS envoyés en total, coordonnées GPS des opérations, templates des faux SMS d'amendes.<br>
+💬 Dans l'historique WhatsApp (app non chiffrée) : échanges avec un contact «&nbsp;FR-Coord&nbsp;» donnant les instructions et les «&nbsp;zones cibles&nbsp;» — numéros de téléphone français.<br>
+💰 Fichier Excel chiffré (mot de passe trouvé en RAM) : 47 comptes bancaires «&nbsp;mules&nbsp;» ayant reçu les paiements frauduleux.
+</div>`,
+        law: "<strong>Art. 269 CPP</strong> — Exploitation des données de surveillance télécom (ordonnance nécessaire pour accès WhatsApp).<br><strong>Art. 48a EIMP</strong> — Entraide judiciaire internationale pour le contact «&nbsp;FR-Coord&nbsp;» (France).<br><strong>Art. 141 CPP</strong> — Admissibilité selon la procédure d'acquisition.",
+        question: "<strong>La RAM contient l'accès au fichier Excel chiffré. Pouvez-vous l'exploiter directement et comment ?</strong>",
+        choices: [
+          {
+            text: "Oui — la clé de déchiffrement en RAM + le fichier Excel chiffré = exploitation directe, sans procédure supplémentaire.",
+            ok: true, pts: 20,
+            fb: "Correct dans ce contexte. Le laptop a été saisi légalement avec ordonnance et la RAM a été capturée selon ACPO Principles. La clé de déchiffrement en RAM fait partie du dump forensique — son exploitation est légitime. Documenter précisément l'extraction de la clé (offset, méthode Volatility) pour la transparence en audience.",
+            legal: "ACPO Principle 3 — La clé extraite de la RAM fait partie de la preuve légalement saisie. Documenter la méthode d'extraction pour auditabilité.",
+            critical: false, next: 4,
+          },
+          {
+            text: "Non — il faut une ordonnance supplémentaire pour déchiffrer le fichier, même si la clé est en RAM.",
+            ok: false, pts: -10,
+            fb: "Excessive prudence. La saisie légale du laptop inclut tout son contenu — la clé en RAM en fait partie. Il n'y a pas d'obligation procédurale d'obtenir une ordonnance supplémentaire pour déchiffrer un fichier avec une clé trouvée légalement dans la saisie. Comparer avec BitLocker (Manuel Ch. 24.3) : même logique.",
+            legal: "Pratique MPC suisse — La saisie d'un dispositif inclut l'ensemble de son contenu, y compris les clés en RAM.",
+            critical: false, next: 4,
+          },
+          {
+            text: "Exploiter la clé RAM mais appliquer des scellés sur le fichier Excel jusqu'à tri TMC, pour éviter toute contestation.",
+            ok: false, pts: 0,
+            fb: "Position défensive mais contre-productive sur le timing. Les scellés (Art. 248 CPP) sont un droit du suspect, pas une obligation systématique. Si les suspects n'ont pas demandé les scellés, l'application volontaire ralentit inutilement l'investigation. En revanche, si les suspects demandent les scellés a posteriori, il faudra respecter cette demande.",
+            legal: "Art. 248 CPP — Scellés à la demande du suspect, pas automatiques. Exploiter sans scellés si non demandés.",
+            critical: false, next: 4,
+          },
+        ],
+      },
+      {
+        phase: "⚖️ La qualification pénale",
+        situation: `Le Ministère public genevois prépare la mise en accusation. Les trois suspects (ressortissants moldaves sans domicile fixe en Suisse) nient toute connaissance du fonctionnement des dispositifs — ils affirment avoir été «&nbsp;engagés pour conduire une camionnette&nbsp;». Le contact «&nbsp;FR-Coord&nbsp;» (France) fait l'objet d'une demande d'entraide internationale. Vous devez consolider la qualification pénale.`,
+        law: "<strong>Art. 179novies CP</strong> — Écoute et enregistrement de communications non publiques sans droit (jusqu'à 3 ans de prison).<br><strong>Art. 143bis CP</strong> — Accès indu au système (réseau téléphonique) sans droit.<br><strong>Art. 50 LTC</strong> — Brouillage illicite de fréquences radio (infraction administrative + pénale possible).<br><strong>Art. 147 CP</strong> — Utilisation frauduleuse d'un ordinateur (via la plateforme de paiement frauduleuse).<br><strong>Art. 24/25 CP</strong> — Complicité (si les suspects sont les exécutants d'un réseau dirigé de France).",
+        question: "<strong>Quelles sont les infractions principales à retenir et quel est l'argument contre la défense « je conduisais juste »?</strong>",
+        choices: [
+          {
+            text: "Art. 50 LTC uniquement — l'infraction principale est le brouillage de fréquences, les autres sont accessoires.",
+            ok: false, pts: -20,
+            fb: "Qualification minimale et erronée. Art. 50 LTC est une infraction administrative/pénale légère. Les infractions pénales principales (Art. 179novies CP, Art. 143bis CP, Art. 147 CP) sont beaucoup plus graves et mieux documentées par vos preuves. Limiter à LTC reviendrait à traiter cela comme une simple infraction de radio-amateur non déclaré.",
+            legal: "Art. 50 LTC — infraction accessoire au plan pénal principal (Art. 179novies + 143bis + 147 CP).",
+            critical: false, next: "end",
+          },
+          {
+            text: "Art. 179novies CP + Art. 143bis CP + Art. 147 CP en concours réel, avec Art. 24/25 CP (complicité) pour les suspects qui nient le rôle décisionnel. Contre la défense : les logs en RAM et disque prouvent une opération continue sur 3 semaines — incompatible avec un simple chauffeur.",
+            ok: true, pts: 25,
+            fb: "Qualification complète et réfutation solide. <strong>Art. 179novies CP</strong> : injection de SMS dans des télécommunications privées sans droit. <strong>Art. 143bis CP</strong> : le réseau téléphonique est un système informatique — l'IMSI catcher y accède sans droit. <strong>Art. 147 CP</strong> : la plateforme de paiement frauduleuse est exploitée via un système informatique. La <strong>défense « chauffeur »</strong> est réfutée par 3 semaines de logs d'opérations avec coordonnées GPS concordant avec les emplacements des suspects — preuve de participation active.",
+            legal: "Art. 179novies + 143bis + 147 CP en concours (Art. 9 CP) + Art. 24/25 CP. ATF — Complicité établie par participation matérielle documentée.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Escroquerie (Art. 146 CP) + Art. 179novies CP — le cœur de l'affaire est la fraude financière.",
+            ok: false, pts: -10,
+            fb: "Art. 146 CP (escroquerie) est contestable dans ce cas : l'escroquerie exige une tromperie astucieuse d'une personne physique induisant une erreur. Les victimes ont payé une fausse amende par SMS — la tromperie est là mais le vecteur est technique. Art. 147 CP (utilisation frauduleuse d'un ordinateur) est plus précis que 146 pour qualifier la plateforme de paiement frauduleuse. Qualification incomplète.",
+            legal: "Art. 146 vs Art. 147 CP — ATF 140 IV 11 : quand le vecteur est un système informatique, 147 est plus approprié que 146.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 85) return { icon: "📡", title: "Expert IMSI Counter", sub: "Maîtrise parfaite de l'investigation IMSI catcher — référence en télécoms forensiques" };
+      if (pct >= 65) return { icon: "🔍", title: "Analyste Télécom", sub: "Bonnes bases en investigation IMSI catcher" };
+      if (pct >= 45) return { icon: "📱", title: "Technicien SMS", sub: "Approfondissez LTC et Art. 179novies CP" };
+      return { icon: "📚", title: "Formation Télécom requise", sub: "Révisez les IMSI catchers et la LTC" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════
+     C. XPLAIN-PLAY — Task Force fedpol & Darknet [HARD]
+     Source : Attaque groupe Play contre Xplain SA,
+              2023-2024, Task Force fedpol 60+ experts,
+              65'000 documents sur darknet, HOOGAN compromis.
+     Vérifié : Rapport fedpol/OFCS 2023,
+               Art. 286 CPP (agent infiltré numérique),
+               LPD 2023 Art. 24, Art. 328 CP,
+               Policeordnung fedpol Art. 15
+  ══════════════════════════════════════════════════ */
+  {
+    id: "xplain-play",
+    title: "Task Force Xplain — Darknet & HOOGAN",
+    icon: "🕵️",
+    difficulty: "hard",
+    atmosphere: "ransomware",
+    realCase: "Fedpol Task Force — Groupe Play contre Xplain SA, 2023-2024",
+    narrative: {
+      success: "La Task Force maîtrise la crise : périmètre documenté, HOOGAN sécurisé, données darknet monitored et classifiées, MPC informé. Fedpol publie un rapport transparent qui fait référence en gestion d'incident supply chain sectoriel fédéral.",
+      degraded: "Le périmètre est partiellement documenté, HOOGAN reste exposé plus longtemps que nécessaire. Le rapport final présente des lacunes qui fragilisent la communication publique.",
+      failure: "La Task Force perd le contrôle de la communication. Des journalistes téléchargent et publient des données HOOGAN. Des supporters violents identifient leur statut — procès en responsabilité contre la Confédération."
+    },
+    tags: ["SUPPLY CHAIN", "RANSOMWARE", "DFIR", "DROIT"],
+    legalRefs: ["LPD 2023 Art. 24", "Art. 286 CPP", "Art. 328 CP", "MLAT", "Art. 72 CPP"],
+    intro: "Juin 2023. Xplain SA, prestataire informatique fournissant des logiciels à fedpol, à l'armée et à plusieurs cantons, est frappé par le groupe ransomware Play. 65'000 documents exfiltrés sont publiés sur le darknet. Fedpol monte une Task Force de 60+ experts travaillant 24h/24. Vous en faites partie. La question brûlante : 10% des données concernent fedpol directement, dont des extraits du système HOOGAN (fichier des supporters violents). Que faire ?",
+    alertLevel: "🔴 COMPROMISSION SUPPLY CHAIN — Données fédérales sur darknet",
+    objectives: [
+      { icon: "📂", text: "Établir le périmètre exact des données fedpol compromises" },
+      { icon: "🌑", text: "Déterminer la base légale pour accéder aux données darknet" },
+      { icon: "🔒", text: "Gérer l'exposition des données sensibles HOOGAN" },
+      { icon: "📣", text: "Respecter les obligations LPD 2023 et coordonner la communication" },
+      { icon: "🏛️", text: "Appuyer le MPC dans l'attribution du groupe Play" },
+    ],
+    debrief: `<p>L'affaire Xplain/Play (2023) est le cas d'école des <strong>attaques de la chaîne d'approvisionnement</strong> (supply chain attacks) ciblant les prestataires IT du secteur public. La compromission de Xplain SA a exposé simultanément des données de fedpol, de l'armée, du FISC et de plusieurs cantons — sans que ces entités aient elles-mêmes été attaquées.</p>
+<p>Enseignements clés : (1) <strong>La vérification des données darknet est légale en Suisse</strong> quand elles sont publiquement accessibles — mais leur téléchargement massif relève d'une base légale différente. (2) <strong>HOOGAN</strong> (système d'information sur les hooligans violents, Art. 24a LSCI) est une donnée particulièrement sensible dont la compromission peut mettre en danger les personnes fichées. (3) La gestion de crise d'un incident supply chain exige une coordination multi-agences (fedpol, OFCS, MPC, autorités cantonales).</p>`,
+    steps: [
+      {
+        phase: "🔍 H+0 — Notification et premier périmètre",
+        situation: `J-Day. Fedpol reçoit la notification d'Xplain SA : le groupe Play a chiffré leurs systèmes et publié sur leur site darknet 65'000 fichiers exfiltrés avant chiffrement.<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+📁 Xplain estime que les données publiées incluent des documents de plusieurs clients fédéraux et cantonaux.<br>
+🌑 L'URL du site darknet du groupe Play est connue — les 65'000 fichiers sont actuellement accessibles publiquement.<br>
+⚠️ Xplain n'est pas en mesure d'établir précisément quels documents fedpol sont inclus — leurs systèmes d'indexation sont chiffrés.<br>
+🕒 La presse suisse-alémanique a déjà repéré la publication sur des forums de cybersécurité.
+</div>`,
+        law: "<strong>LPD 2023 Art. 24</strong> — Notification du PFPDT obligatoire si violation de données personnelles à risque élevé.<br><strong>Art. 286 CPP</strong> — Enquêtes couvertes : accès à des plateformes en ligne pour enquêtes.<br><strong>Jurisprudence TF</strong> — L'accès à des données publiquement disponibles sur internet ne constitue pas en soi une interception illicite.",
+        question: "<strong>Quelle est votre première action pour établir le périmètre des données fedpol compromises ?</strong>",
+        choices: [
+          {
+            text: "Attendre qu'Xplain rétablisse ses systèmes et fournisse un inventaire complet — ne pas accéder au darknet par prudence.",
+            ok: false, pts: -20,
+            fb: "Approche passive inacceptable dans ce contexte. Rétablir les systèmes d'Xplain peut prendre des semaines. Pendant ce temps, les données fedpol sont publiquement accessibles. <strong>La Task Force a pour mission de savoir exactement ce qui est exposé</strong> — c'est une urgence de sécurité nationale. L'accès à des données publiques sur le darknet est juridiquement différent de leur téléchargement massif.",
+            legal: "Obligation fedpol — Evaluer l'exposition des données souveraines est une priorité de sécurité nationale.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Accéder manuellement au site darknet Play (via Tor) pour recenser les noms de fichiers visibles — sans téléchargement massif — afin d'établir une première liste des documents fedpol potentiellement compromis.",
+            ok: true, pts: 25,
+            fb: "Approche légalement correcte et opérationnellement urgente. <strong>L'accès à des données publiquement disponibles</strong> (le groupe Play a publié volontairement ces fichiers) n'est pas assimilé à une interception illicite en droit suisse — la TF confirme que la consultation de contenus délibérément rendus publics est différente d'une surveillance. La Task Force fedpol a utilisé cette approche pour établir le périmètre des 65'000 documents.",
+            legal: "Jurisprudence TF + Art. 286 CPP — Accès à données publiques darknet : légal. Téléchargement massif non documenté : à éviter sans base légale spécifique.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Télécharger l'intégralité des 65'000 fichiers pour indexation et analyse complète — c'est le seul moyen d'avoir un inventaire fiable.",
+            ok: false, pts: -10,
+            fb: "Approche juridiquement risquée sans cadre légal défini. Le téléchargement massif de données d'origine criminelle peut soulever des questions sur Art. 160 CP (recel de données) si non encadré par une autorisation explicite du MPC. De plus, télécharger 65'000 fichiers attire l'attention du groupe Play sur l'investigation. La revue manuelle et indexée est préférable dans un premier temps.",
+            legal: "Art. 160 CP potentiel + prudence opérationnelle — Éviter le téléchargement massif sans autorisation MPC explicite.",
+            critical: false, next: 1,
+          },
+        ],
+      },
+      {
+        phase: "🔒 Le système HOOGAN",
+        situation: `Après 8 heures d'analyse par la Task Force (60+ experts travaillant en rotation 24h/24), vous identifiez que parmi les 65'000 documents :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+📊 ~6'500 fichiers concernent directement fedpol.<br>
+🚨 Parmi eux : <strong>des extraits du système HOOGAN</strong> — le fichier national des supporters violents (Art. 24a LSCI, Loi sur les mesures d'accompagnement).<br>
+👤 Les données HOOGAN incluent : noms, photos, interdictions de stade, niveaux de danger — pour des centaines de personnes.<br>
+⚠️ Si des personnes fichées découvrent leur statut via des tiers mal intentionnés, cela peut les mettre en danger (représailles) ou leur permettre d'adapter leur comportement.
+</div>`,
+        law: "<strong>HOOGAN (Art. 24a LSCI)</strong> — Fichier fédéral des hooligans, données particulièrement sensibles (Art. 5 LPD 2023).<br><strong>LPD 2023 Art. 5 al. 1 let. c</strong> — Données sur la personne révélant des opinions politiques ou des activités religieuses, des données biométriques ou génétiques, des données sur la santé = catégories particulières.<br><strong>LPD 2023 Art. 24</strong> — Notification PFPDT dans les meilleurs délais si risque élevé.<br><strong>Art. 328 CP</strong> — Violation du secret de fonction.",
+        question: "<strong>Les données HOOGAN sont maintenant sur le darknet. Quelle est la priorité immédiate pour limiter les dommages ?</strong>",
+        choices: [
+          {
+            text: "Notifier immédiatement et publiquement les 847 personnes fichées dans HOOGAN que leurs données sont compromises.",
+            ok: false, pts: -15,
+            fb: "Notification prématurée et contre-productive. Une notification publique immédiate (1) révèle aux intéressés qu'ils sont fichés dans HOOGAN — ce qu'ils ne savent peut-être pas, (2) peut déclencher des contestations judiciaires massives interférant avec l'enquête, (3) alerte les personnes les plus dangereuses. La notification aux personnes concernées est une obligation LPD 2023, mais elle doit être <em>coordonnée</em> et <em>pilotée</em> après évaluation du risque individuel.",
+            legal: "LPD 2023 — Notification aux personnes concernées : obligation réelle, mais coordonnée avec les autorités judiciaires et de sécurité.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Notifier immédiatement le PFPDT (LPD 2023 Art. 24) + coordination avec le MPC + évaluation individuelle du risque pour chaque personne HOOGAN avant toute notification personnelle.",
+            ok: true, pts: 25,
+            fb: "Approche en 3 niveaux correcte. (1) <strong>PFPDT doit être notifié</strong> (Art. 24 LPD 2023 — données de catégorie particulière = risque élevé automatique). (2) <strong>Coordination MPC</strong> pour définir ce qui peut être communiqué sans compromettre l'enquête sur Play. (3) <strong>Évaluation individuelle HOOGAN</strong> — le risque pour un supporter d'un club de foot local ≠ risque pour un individu d'un groupe ultras avec antécédents de violence. Notification personnalisée après évaluation.",
+            legal: "LPD 2023 Art. 24 al. 1 + HOOGAN Art. 24a LSCI — Notification PFPDT obligatoire + coordination judiciaire avant notification individuelle.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Ne rien notifier — les données sont déjà compromises, les notifications attireraient l'attention sur la violation.",
+            ok: false, pts: -25,
+            fb: "Violation grave de la LPD 2023. L'obligation de notification au PFPDT (Art. 24 LPD 2023) est inconditionnelle quand il y a risque élevé pour les personnes concernées. Les données HOOGAN = catégorie particulière = risque élevé automatique. Ne pas notifier expose fedpol à des sanctions administratives et peut constituer une violation de l'Art. 328 CP (violation du secret de fonction par omission).",
+            legal: "LPD 2023 Art. 24 + Art. 328 CP — Omission de notification = infraction. Fedpol ne peut pas décider seul de ne pas notifier.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "🌑 Monitoring du darknet",
+        situation: `J+14. La Task Force a documenté l'exposition initiale. La direction de fedpol vous mandate pour mettre en place un <strong>monitoring continu du darknet</strong> pour suivre la propagation et l'utilisation des données exfiltrées. Vous devez définir le cadre légal de cette surveillance.`,
+        law: "<strong>Art. 15 loi sur fedpol (RS 360)</strong> — Fedpol peut consulter des sources ouvertes (OSINT) dans le cadre de ses missions légales.<br><strong>Art. 286 CPP</strong> — Enquêtes couvertes dans des espaces virtuels : exige ordonnance MP, durée limitée.<br><strong>Art. 269 CPP</strong> — Surveillance de télécommunications : cadre strict.<br><strong>Distinction</strong> — OSINT darknet (légal, Art. 15 fedpol) vs. surveillance active de forums privés (Art. 286 CPP requis).",
+        question: "<strong>Quelle est la base légale appropriée pour le monitoring darknet de la Task Force ?</strong>",
+        choices: [
+          {
+            text: "Art. 15 loi sur fedpol (RS 360) — le monitoring de sources ouvertes (darknet public) relève de l'OSINT fédéral sans ordonnance supplémentaire.",
+            ok: true, pts: 20,
+            fb: "Correct pour la surveillance passive. <strong>Art. 15 loi fedpol</strong> autorise la consultation de sources ouvertes dans le cadre des missions légales de fedpol. Le site darknet du groupe Play est <em>délibérément public</em> (c'est leur méthode d'extorsion : publier pour faire pression). La surveillance passive de ce contenu public = OSINT légitime. La limite : si l'investigation doit pénétrer dans des forums fermés ou créer des comptes infiltrés, Art. 286 CPP s'applique.",
+            legal: "Art. 15 loi fedpol (RS 360) + distinction OSINT/infiltration. ATF — Consultation de contenu délibérément public ≠ surveillance protégée.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Art. 286 CPP — toute investigation sur le darknet est une enquête couverte nécessitant une ordonnance MP.",
+            ok: false, pts: -10,
+            fb: "Trop restrictif. Art. 286 CPP vise les <em>investigations couvertes</em> (création de faux profils, infiltration de forums privés). La simple consultation d'un site darknet public — comme le site de publication du groupe Play — est du même ordre que consulter un journal en ligne : pas d'ordonnance requise. L'Art. 286 CPP s'applique si la Task Force crée des identités fictives pour interagir avec le groupe Play.",
+            legal: "Art. 286 CPP — Applicable à l'infiltration active, pas à la consultation passive d'espaces publics.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Art. 269 CPP — le darknet utilise le réseau Tor, c'est une surveillance de télécommunications.",
+            ok: false, pts: -15,
+            fb: "Confusion entre couche réseau et couche applicative. Art. 269 CPP concerne la surveillance des <em>métadonnées télécom</em> (qui appelle qui, quand, depuis où). Consulter un site web via Tor n'est pas une surveillance de télécommunications — c'est accéder à un contenu web, même si le réseau sous-jacent est Tor. C'est l'équivalent de lire un journal en kiosque qui utilise une livraison anonymisée.",
+            legal: "Art. 269 CPP — surveillance des contenus et métadonnées de télécommunications, pas de navigation web.",
+            critical: false, next: 3,
+          },
+        ],
+      },
+      {
+        phase: "🕵️ L'attribution du groupe Play",
+        situation: `J+45. Le MPC a ouvert une procédure pénale pour identifier les auteurs. Le groupe Play est connu de plusieurs services de renseignement occidentaux (FBI, BKA, Europol). La Task Force fedpol coordonne avec ces partenaires.<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+Éléments techniques disponibles :<br>
+🌐 L'infrastructure C2 du groupe Play utilise des serveurs en Russie et en Roumanie.<br>
+🔐 Le ransomware Play utilise des techniques MITRE ATT&CK : T1055 (Process Injection), T1486 (Data Encrypted for Impact), T1567 (Exfiltration Over Web Service).<br>
+📧 Un e-mail de négociation a été envoyé à Xplain depuis une adresse ProtonMail — sans IoC exploitable directement.<br>
+🤝 Le FBI partage des TTPs et des IoC liés à Play dans le cadre d'une procédure MLAT.
+</div>`,
+        law: "<strong>MLAT CH-USA</strong> — Échange de renseignements techniques avec le FBI.<br><strong>Convention Budapest Art. 29</strong> — Injonction de conservation urgente de données chez des prestataires étrangers.<br><strong>Art. 69 CPP</strong> — Ordonnance d'entraide internationale.",
+        question: "<strong>Pour progresser sur l'attribution, quelle est la demande MLAT la plus utile à adresser au FBI ?</strong>",
+        choices: [
+          {
+            text: "Demander tous les renseignements que le FBI possède sur le groupe Play — large demande pour maximiser les informations.",
+            ok: false, pts: -10,
+            fb: "Demande trop large et contre-productive. Le FBI ne répond pas aux demandes MLAT vagues — elles doivent être spécifiques et justifiées. Une demande large augmente le délai de traitement et révèle moins de maturité investigative. Le MLAT doit cibler des éléments précis corrélables aux faits suisses.",
+            legal: "Pratique MLAT — Les demandes doivent être spécifiques, proportionnées et liées à des faits établis.",
+            critical: false, next: 4,
+          },
+          {
+            text: "Demande ciblée : (1) Partage des IoC liés aux campagnes Play contre des cibles similaires (prestataires IT gouvernementaux) depuis 2022, (2) Corrélation des TTPs FBI avec ceux observés dans l'attaque Xplain (T1055, T1486, T1567), (3) Demande de conservation urgente (Convention Budapest Art. 29) pour les serveurs C2 Play en Roumanie via MLAT CH-RO.",
+            ok: true, pts: 25,
+            fb: "Demande MLAT structurée et exploitable. Chaque point est précis et justifié par les faits : (1) historique de Play contre des cibles similaires = pattern d'attribut, (2) corrélation de TTPs = renforcement de l'attribution technique, (3) conservation urgente en Roumanie via MLAT CH-RO = action préventive avant destruction de preuves. La Convention Budapest Art. 29 permet une conservation d'urgence sans attendre la procédure formelle.",
+            legal: "MLAT CH-USA + Convention Budapest Art. 29 + MLAT CH-RO — Demande multi-canal ciblée. Procédure utilisée par fedpol dans l'affaire Play.",
+            critical: false, next: 4,
+          },
+          {
+            text: "Contacter directement Europol et interpeller les serveurs roumains sans MLAT — plus rapide.",
+            ok: false, pts: -20,
+            fb: "Double erreur. (1) Europol ne peut pas agir en Roumanie sans demande nationale via le BCN roumain — et Europol n'a pas de pouvoir d'arrestation ou de saisie. (2) L'interpellation de serveurs à l'étranger sans MLAT est une violation de souveraineté nationale potentiellement nuisible à toute la procédure judiciaire suisse (Art. 141 CPP — exclusion des preuves).",
+            legal: "Souveraineté nationale + Art. 141 CPP — Action unilatérale à l'étranger = preuves irrecevables en Suisse.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "📣 La communication publique",
+        situation: `J+60. Après deux mois d'enquête intensive, la pression médiatique est maximale. Des journalistes d'investigation ont découvert l'existence des données HOOGAN sur le darknet. La direction de fedpol doit décider de la stratégie de communication publique. Vous participez à la cellule de crise communication.`,
+        law: "<strong>LPD 2023 Art. 24</strong> — Communication aux personnes concernées si risque élevé.<br><strong>Transparence et obligation de rendre compte</strong> — Principe de bonne gouvernance.<br><strong>Art. 328 CP</strong> — Violation du secret de fonction par communication non autorisée.",
+        question: "<strong>Quelle est la stratégie de communication optimale pour fedpol à ce stade ?</strong>",
+        choices: [
+          {
+            text: "Ne rien publier — attendre la fin de l'enquête judiciaire pour ne pas compromettre les poursuites.",
+            ok: false, pts: -20,
+            fb: "Silence intenable à ce stade. Les journalistes ont déjà l'information — le silence de fedpol serait interprété comme dissimulation et alimenterait des spéculations bien pires que la réalité. De plus, l'obligation de notification LPD 2023 est une obligation légale, pas un choix de communication.",
+            legal: "LPD 2023 Art. 24 + principe de gouvernance transparente — Le silence est une option pire que la transparence maîtrisée.",
+            critical: false, next: 5,
+          },
+          {
+            text: "Publication proactive en deux niveaux : (1) Communiqué fedpol confirmant l'incident, le périmètre (10% de données fedpol, dont HOOGAN partiellement), et les mesures prises — sans détails judiciaires. (2) Notification individuelle coordonnée aux personnes HOOGAN identifiées comme exposées, via des canaux sécurisés et en lien avec les services compétents.",
+            ok: true, pts: 25,
+            fb: "Stratégie de communication maîtrisée. La transparence proactive (sur les faits établis, sans détails judiciaires sensibles) est <strong>supérieure au secret</strong> dans ce contexte : fedpol reprend la main sur le récit, montre la diligence, respecte les obligations LPD 2023, et anticipe les questions des médias. La notification individuelle HOOGAN doit être préparée avec les services de sécurité (comment notifier une personne qui pourrait représenter un risque si elle sait qu'elle est fichée).",
+            legal: "LPD 2023 Art. 24 + pratique fedpol/OFCS 2023-2024 — Communication transparente et coordonnée. Fedpol a effectivement adopté cette approche.",
+            critical: false, next: 5,
+          },
+          {
+            text: "Publier tous les détails immédiatement — transparence totale incluant l'enquête en cours et les IoC identifiés.",
+            ok: false, pts: -15,
+            fb: "Transparence excessive contre-productive. Publier les IoC, les TTPs et les détails de l'enquête en cours revient à <strong>informer le groupe Play de l'avancement de la traque</strong> — leur permettant d'effacer des traces. La transparence doit couvrir l'incident et les mesures prises, pas les détails opérationnels de l'investigation judiciaire.",
+            legal: "Art. 69 CPP — Secret de l'instruction. Art. 328 CP — Divulgation non autorisée de l'enquête.",
+            critical: false, next: 5,
+          },
+        ],
+      },
+      {
+        phase: "📋 Le rapport de la Task Force",
+        situation: `J+90. La Task Force clôture ses travaux. Vous rédigez le rapport final destiné à la Direction fedpol, au DFAE, au MPC et — dans une version expurgée — au PFPDT et au public. Ce rapport est un document de référence pour prévenir de futures supply chain attacks sur le secteur public suisse.`,
+        law: "<strong>NIST SP 800-161</strong> — Cybersecurity Supply Chain Risk Management.<br><strong>Directive OFCS 2024</strong> — Gestion des incidents de sécurité dans l'administration fédérale.<br><strong>Art. 52 LOGA</strong> — Rapport administratif fédéral.",
+        question: "<strong>Quelle est la recommandation structurelle principale pour prévenir une nouvelle supply chain attack sur un prestataire fédéral ?</strong>",
+        choices: [
+          {
+            text: "Interdire aux prestataires IT de stocker des données fédérales — tout doit être géré en interne par la Confédération.",
+            ok: false, pts: -10,
+            fb: "Recommandation irréaliste et contreproductive. L'externalisation IT est une réalité économique et opérationnelle incontournable pour l'administration fédérale. L'interdire totale serait disproportionnée et creuserait un retard technologique. La solution est un <strong>cadre de certification des prestataires</strong>, pas leur exclusion.",
+            legal: "Principe de proportionnalité + réalité économique — Recommandation inapplicable.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Mise en place d'un référentiel de sécurité obligatoire pour tout prestataire IT fédéral : (1) Certification ISO 27001 avec audit tiers annuel, (2) Séparation physique des données fédérales des données commerciales, (3) Droit d'audit fedpol/OFCS chez les prestataires, (4) Obligation de notification dans les 24h de tout incident, (5) Tests de pénétration annuels sur les systèmes hébergeant des données fédérales, (6) Clause contractuelle de séquestre du code source en cas de défaillance.",
+            ok: true, pts: 30,
+            fb: "Recommandation structurée et réaliste. Chaque point répond à un enseignement de l'affaire Xplain : ISO 27001 manquant → certification obligatoire ; données fédérales mêlées aux données commerciales → séparation ; fedpol ne savait pas ce qu'Xplain hébergeait → droit d'audit ; 48h avant notification → réduction à 24h ; vulnérabilités non testées → pen tests obligatoires. C'est l'essence de NIST SP 800-161 adapté au contexte fédéral suisse.",
+            legal: "NIST SP 800-161 + Directive OFCS 2024 + ISO 27001 — Référentiel supply chain fédéral. Fedpol a effectivement adopté des mesures similaires post-Xplain.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Publier la liste de tous les prestataires IT fédéraux pour permettre une surveillance citoyenne de leur sécurité.",
+            ok: false, pts: -20,
+            fb: "Recommandation dangereuse. Publier la liste exhaustive des prestataires IT fédéraux est une information de valeur pour les groupes adversaires (identification des cibles de supply chain attack). La transparence sur les <em>exigences de sécurité</em> est utile ; la transparence sur les <em>fournisseurs sensibles</em> est contre-productive.",
+            legal: "Sécurité opérationnelle — Information utile aux adversaires : à ne pas publier.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 88) return { icon: "🦁", title: "Chef de Task Force", sub: "Maîtrise exemplaire de la crise supply chain — référence fedpol" };
+      if (pct >= 70) return { icon: "🕵️", title: "Analyste Task Force", sub: "Solide gestion de la crise Xplain — quelques lacunes à combler" };
+      if (pct >= 50) return { icon: "🔍", title: "Expert Débutant", sub: "Bases présentes — approfondissez supply chain et MLAT" };
+      return { icon: "📚", title: "Formation supply chain requise", sub: "Révisez NIST SP 800-161 et LPD 2023 Art. 24" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════════════
+     SCÉNARIOS JURISPRUDENCE ATF — Arrêts publiés 2022-2025
+     Sources : ATF 150 IV 188, TF 7B_102/2024, MPC 2024
+  ══════════════════════════════════════════════════════════ */
+
+  /* ══════════════════════════════════════════════════════════
+     A. BANQUIER FANTÔME — Social Engineering 5M CHF [HARD]
+     Source : MPC communiqué 09.04.2024 + TF 6B_683/2021 (Art.147 métier)
+     Affaire réelle : Ressortissant franco-israélien, CHF 5M, 2016-2018,
+                      Suisse romande, extradition USA, condamné TPF 2025
+  ══════════════════════════════════════════════════════════ */
+  {
+    id: "banquier-fantome",
+    title: "Opération Banquier Fantôme",
+    icon: "📞",
+    difficulty: "hard",
+    atmosphere: "crypto",
+    realCase: "MPC / fedpol, procédure 2017-2025 — ressortissant franco-israélien condamné",
+    narrative: {
+      success: "Le réseau de social engineering est démonté. L'analyse forensique démontre l'aggravante du métier (Art. 147 al. 2 CP). L'extradition est exécutée, le prévenu condamné. 5 millions de CHF partiellement récupérés.",
+      degraded: "La qualification par métier est difficile à prouver. Le prévenu écope d'une peine plus légère. Les fonds restent majoritairement irrécupérables.",
+      failure: "L'investigation numérique est trop lacunaire. La défense obtient l'exclusion des preuves clés. Le prévenu bénéficie d'un non-lieu partiel."
+    },
+    tags: ["SOCIAL ENGINEERING", "DROIT PÉNAL", "RÉSEAUX", "FORENSIQUE"],
+    legalRefs: ["Art. 143 CP", "Art. 143bis CP", "Art. 147 al. 2 CP", "Art. 49 CP", "MLAT CH-USA"],
+    intro: "2017. Le Ministère public de la Confédération reprend une instruction ouverte par le MP de Neuchâtel. Une série d'arnaques dites 'au faux technicien bancaire' a frappé des entreprises de Suisse romande entre 2016 et 2018. Le préjudice total dépasse 5 millions de CHF. Les victimes ont reçu des appels de 'techniciens' de leur banque, leur demandant d'installer un logiciel de support à distance — qui permettait en réalité de vider leurs comptes. Vous êtes l'analyste forensique mandaté par le MPC.",
+    alertLevel: "🔴 PROCÉDURE FÉDÉRALE — CHF 5M de détournements, auteur identifié à l'étranger",
+    objectives: [
+      { icon: "🔬", text: "Analyser les artefacts numériques des sessions de prise en main à distance" },
+      { icon: "⚖️", text: "Qualifier correctement les infractions (Art. 143 + 143bis + 147 al. 2 CP)" },
+      { icon: "📊", text: "Établir l'aggravante du 'métier' selon la jurisprudence TF" },
+      { icon: "🌍", text: "Préparer le dossier d'extradition depuis les USA" },
+    ],
+    debrief: `<p>L'affaire du faux technicien bancaire illustre une forme sophistiquée de social engineering : l'attaquant se fait passer pour un collaborateur de la banque victime, convainc sa cible d'installer un outil de prise en main à distance (TeamViewer, AnyDesk), puis vide les comptes en temps réel. La qualification de l'art. 147 CP (utilisation frauduleuse d'un ordinateur) est appropriée car le processus bancaire est automatisé — la victime humaine est trompée mais c'est le système qui exécute le virement.</p>
+<p>L'aggravante du <strong>métier (Art. 147 al. 2 CP)</strong> est centrale : selon TF 6B_683/2021 et TF 6B_368/2020, elle est établie par la fréquence des actes, le montant total, et l'organisation professionnelle de l'activité délictueuse. Le MPC a réussi à démontrer que le prévenu agissait comme un professionnel de la cyberfraude.</p>`,
+    steps: [
+      {
+        phase: "🔬 L'analyse des sessions RDP/AnyDesk",
+        situation: `L'investigation numérique des ordinateurs victimes révèle des traces cohérentes.<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+Artefacts récupérés sur 4 postes victimes :<br>
+📋 Logs AnyDesk : sessions établies depuis des IPs résidentielles françaises (Paris, Lyon)<br>
+💻 Prefetch : <code>AnyDesk.exe</code> exécuté 1-3 fois par victime, durée 8-22 minutes<br>
+🏦 Logs bancaires : virements exécutés pendant les sessions AnyDesk (< 2 min après connexion)<br>
+📧 E-mails préparatoires : chaque victime a reçu un e-mail de «&nbsp;sa banque&nbsp;» avant l'appel
+</div>`,
+        law: "<strong>Art. 143 CP</strong> — Soustraction de données : accès à des données non destinées à l'auteur.<br><strong>Art. 143bis al. 1 CP</strong> — Accès indu à un système informatique : connexion via AnyDesk autorisée par tromperie.<br><strong>Art. 147 al. 1 CP</strong> — Utilisation frauduleuse d'un ordinateur : virement bancaire via session RDP contrôlée.",
+        question: "<strong>La session AnyDesk autorisée par la victime constitue-t-elle un accès indu au sens de l'Art. 143bis CP ?</strong>",
+        choices: [
+          {
+            text: "Non — la victime a autorisé la connexion AnyDesk volontairement. Pas d'accès indu.",
+            ok: false, pts: -15,
+            fb: "Erreur de qualification. L'art. 143bis CP protège contre tout accès non autorisé à un système informatique. L'autorisation donnée sous tromperie (fausse identité de 'technicien bancaire') est viciée — elle ne constitue pas un consentement valable au sens du droit pénal suisse. La jurisprudence TF applique Art. 143bis CP même dans les cas de tromperie sur l'identité : TF 6B_369/2018.",
+            legal: "Art. 143bis CP + TF 6B_369/2018 — Consentement obtenu par tromperie = pas de consentement valable → accès indu.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Oui — l'autorisation est viciée par la tromperie sur l'identité. L'accès est indu au sens de l'Art. 143bis CP.",
+            ok: true, pts: 20,
+            fb: "Qualification correcte. L'Art. 143bis CP vise tout accès à un système informatique protégé sans droit. Le 'droit' d'accès présuppose un consentement libre et éclairé — or la victime n'aurait jamais accordé l'accès si elle avait su que l'appelant n'était pas un technicien de sa banque. La tromperie sur l'identité vicie le consentement → accès indu. C'est précisément l'infraction retenue par le MPC dans cette affaire.",
+            legal: "Art. 143bis al. 1 CP + TF 6B_369/2018 — La tromperie sur l'identité de l'opérateur vicie le consentement → accès indu.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Dépend du type de protection du système (Art. 143bis exige un système 'spécialement protégé').",
+            ok: false, pts: -5,
+            fb: "Nuance insuffisante. Art. 143bis CP al. 1 vise les systèmes 'protégés contre tout accès indu' — c'est le cas de tout système bancaire avec authentification (login/mot de passe). La condition est largement satisfaite dès qu'un système exige une procédure d'identification pour y accéder. La banque en ligne des victimes remplit cette condition.",
+            legal: "Art. 143bis CP al. 1 — 'système protégé' = tout système avec procédure d'accès (login, MFA). Banque en ligne = SYSTEME PROTÉGÉ.",
+            critical: false, next: 1,
+          },
+        ],
+      },
+      {
+        phase: "⚖️ La qualification complète",
+        situation: `Le MPC vous demande de qualifier toutes les infractions commises lors d'un épisode type : <strong>1 appel frauduleux → 1 victime → 1 virement de CHF 85'000</strong>. La session AnyDesk a duré 18 minutes. Le virement a été initié par l'attaquant via l'interface e-banking visible sur l'écran partagé, en utilisant les identifiants de la victime déjà connectée.`,
+        law: "<strong>Art. 143 CP</strong> — Soustraction de données : identifiants bancaires observés.<br><strong>Art. 143bis CP</strong> — Accès indu au système (PC victime).<br><strong>Art. 147 al. 1 CP</strong> — Utilisation frauduleuse : exécution du virement via système e-banking.<br><strong>Art. 146 CP</strong> — Escroquerie : tromperie astucieuse de la victime humaine.",
+        question: "<strong>Quelle est la qualification pénale complète et correcte pour cet épisode unique ?</strong>",
+        choices: [
+          {
+            text: "Art. 146 CP (escroquerie) uniquement — la tromperie de la victime est l'élément central.",
+            ok: false, pts: -10,
+            fb: "Qualification incomplète. Art. 146 CP couvre la tromperie de la victime mais ne qualifie pas : (1) l'accès indu au PC (Art. 143bis CP), (2) la soustraction des identifiants bancaires (Art. 143 CP), (3) l'exécution automatisée du virement via le système e-banking (Art. 147 CP). Le MPC a retenu un concours réel de quatre infractions dans cette affaire.",
+            legal: "Art. 9 CP — Concours réel : chaque infraction distincte doit être qualifiée.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Art. 147 CP seul — l'ordinateur est le vecteur principal, les autres infractions sont absorbées.",
+            ok: false, pts: -15,
+            fb: "Erreur de concours. Art. 147 CP est SUBSIDIAIRE à Art. 146 CP (ATF 150 IV 188). Mais surtout, Art. 143bis CP (accès au PC de la victime) et Art. 143 CP (soustraction des identifiants vus à l'écran) sont des infractions distinctes et autonomes qui ne sont pas absorbées par Art. 147 CP.",
+            legal: "TF 6B_683/2021 + ATF 150 IV 188 — Art. 147 CP subsidiaire à Art. 146 CP, mais Art. 143/143bis autonomes.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Art. 143bis CP (accès indu PC) + Art. 143 CP (identifiants bancaires) + Art. 147 CP (virement e-banking automatisé) en concours réel. Art. 146 CP subsidiaire car Art. 147 prime quand le vecteur est entièrement automatisé.",
+            ok: true, pts: 25,
+            fb: "Qualification conforme au dossier MPC 2024. Art. 143bis CP = accès au PC de la victime via AnyDesk sans droit valable. Art. 143 CP = observation et utilisation des identifiants bancaires (données non destinées à l'auteur). Art. 147 CP = exécution du virement via l'interface e-banking 100% automatisée (le prévenu clique directement sur les boutons de virement — aucun employé de banque n'intervient dans le processus). Art. 146 CP reste en concours, la tromperie préalable coexistant avec Art. 147. Concours réel selon Art. 9 CP, peine d'ensemble Art. 49 CP.",
+            legal: "MPC acte d'accusation 2024 + Art. 9 CP + Art. 49 CP — Art. 143 + 143bis + 147 en concours réel, Art. 146 subsidiaire/concurrent selon les actes.",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "📊 L'aggravante du métier",
+        situation: `Sur l'ensemble de la période 2016-2018, l'enquête documente :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+📅 31 victimes identifiées sur 26 mois (Neuchâtel, Vaud, Genève, Fribourg)<br>
+💰 Montant total détourné : CHF 5'074'300<br>
+📞 Scripts d'appel retrouvés en perquisition (Français et Anglais)<br>
+🏢 Compte bancaire dédié à l'activité en Israël<br>
+📱 3 téléphones prépayés utilisés en rotation (rotation mensuelle des SIM)<br>
+💼 Le prévenu avait cessé toute activité professionnelle légitime pendant la période
+</div>`,
+        law: "<strong>Art. 147 al. 2 CP</strong> — Par métier : peine aggravée (PPL jusqu'à 10 ans).<br><strong>TF 6B_683/2021</strong> — Critères du métier : fréquence + montant + organisation professionnelle.<br><strong>TF 6B_368/2020</strong> — Métier : revenus réguliers contribuant notablement aux coûts du mode de vie.<br><strong>Art. 49 CP</strong> — Peine d'ensemble (concours d'infractions).",
+        question: "<strong>Sur la base des éléments documentés, l'aggravante du 'métier' (Art. 147 al. 2 CP) est-elle établie ?</strong>",
+        choices: [
+          {
+            text: "Non — 31 cas sur 26 mois est une fréquence insuffisante pour caractériser le métier.",
+            ok: false, pts: -15,
+            fb: "Erroné. Selon TF 6B_368/2020 et TF 6B_683/2021, le métier est caractérisé par la combinaison : fréquence (plusieurs actes), montant (contribution au mode de vie), et organisation professionnelle. Ici : 31 actes / 26 mois = environ 1.2 acte/mois, CHF 5M de revenus illicites, scripts professionnels, compte dédié, téléphones en rotation. L'organisation démontre clairement un professionnel de la cyberfraude — bien au-delà des critères TF.",
+            legal: "TF 6B_683/2021 consid. 5 — >20 commandes sur 2 ans = métier. Ici : 31 cas sur 26 mois = critère largement satisfait.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Oui — les critères sont satisfaits : fréquence (31 actes/26 mois), montant substantiel (CHF 5M), organisation professionnelle (scripts, comptes dédiés, SIM rotation).",
+            ok: true, pts: 25,
+            fb: "Correct. TF 6B_683/2021 établit que >20 actes sur 2 ans avec CHF 55'000 de revenus = métier. Ici : 31 actes, CHF 5M, organisation professionnelle démontrée. La cessation de toute activité légitime pendant la période (le prévenu vivait de ses revenus frauduleux) est l'indice ultime du métier selon TF 6B_368/2020. L'aggravante Art. 147 al. 2 CP porte la peine maximale à 10 ans (vs 5 ans al. 1). Le TPF a retenu l'aggravante.",
+            legal: "Art. 147 al. 2 CP + TF 6B_683/2021 (consid. 5) + TF 6B_368/2020 (consid. 1.3.2) — Métier établi : fréquence + montant + organisation + dépendance exclusive.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Oui pour certains cas, non pour d'autres — le métier ne peut s'apprécier qu'acte par acte.",
+            ok: false, pts: -5,
+            fb: "Approche erronée. Le métier est une qualification globale de l'activité délictueuse sur la période considérée — pas une appréciation acte par acte. Le TF a confirmé que l'ensemble de l'activité sur la période doit être considéré pour caractériser le comportement professionnel (TF 6B_683/2021). Une seule qualification 'par métier' couvre l'ensemble de la série.",
+            legal: "Art. 147 al. 2 CP — Qualification globale sur la période, pas acte par acte.",
+            critical: false, next: 3,
+          },
+        ],
+      },
+      {
+        phase: "🌍 L'extradition depuis les USA",
+        situation: `Le prévenu (franco-israélien) a fui aux USA après l'identification par le MPC. Fedpol émet un mandat d'arrêt international. Il est arrêté à l'aéroport de Newark en janvier 2022. La procédure d'extradition vers la Suisse est enclenchée. Mais les autorités américaines (SDNY) mènent une procédure similaire contre lui pour des faits aux USA.`,
+        law: "<strong>MLAT CH-USA 1973</strong> — Traité d'extradition bilatéral.<br><strong>Art. 66 EIMP</strong> — Règle de la spécialité (la Suisse ne peut poursuivre que pour les faits extradés).<br><strong>Art. 55 EIMP</strong> — Transmission de la procédure à l'État étranger si plus efficace.",
+        question: "<strong>Les autorités américaines (SDNY) souhaitent également poursuivre le prévenu pour des faits similaires aux USA. Quelle est la meilleure stratégie pour le MPC ?</strong>",
+        choices: [
+          {
+            text: "Insister sur l'extradition exclusive vers la Suisse — les faits suisses sont plus graves.",
+            ok: false, pts: -10,
+            fb: "Stratégie sous-optimale. Obtenir une extradition exclusive implique des années de procédure devant les juridictions américaines. De plus, si les USA ont des faits propres, ils peuvent refuser l'extradition ou l'accorder après leur propre procédure. L'Art. 55 EIMP offre une alternative plus efficace.",
+            legal: "MLAT CH-USA + EIMP — L'extradition exclusive n'est pas la seule option.",
+            critical: false, next: 4,
+          },
+          {
+            text: "Transmission de procédure (Art. 55 EIMP) : le MPC transmet à l'autorité américaine qui mène UNE seule procédure couvrant les faits suisses et américains, puis condamne selon sa loi. Le MPC classe sa propre procédure.",
+            ok: true, pts: 25,
+            fb: "Solution utilisée dans l'affaire réelle (MPC communiqué 29.07.2025). Les autorités britanniques (Crown Prosecution Service) — et non américaines, correction dans les faits réels — ont repris la procédure suisse et ont condamné le prévenu à 7 ans de prison (23.07.2025). Cette transmission (Art. 55 EIMP) permet d'éviter les délais d'extradition tout en garantissant que les faits suisses sont couverts par la condamnation étrangère. Le MPC classe sa procédure après la condamnation étrangère.",
+            legal: "Art. 55 EIMP — Transmission de procédure à l'autorité étrangère plus efficace. Art. 66 EIMP — Règle de spécialité : les faits transmis doivent être couverts par la condamnation.",
+            critical: false, next: 4,
+          },
+          {
+            text: "Abandonner la procédure suisse — trop compliqué de poursuivre un binational depuis l'étranger.",
+            ok: false, pts: -25,
+            fb: "Abandon inacceptable. Le MPC est compétent pour les infractions commises sur le territoire suisse (Art. 3 CP — principe territorial). L'Art. 55 EIMP offre précisément les outils pour coordonner avec les autorités étrangères sans abandonner la procédure. Le classement n'intervient qu'APRÈS une condamnation étrangère couvrant les faits suisses.",
+            legal: "Art. 3 CP — Compétence territoriale suisse. Art. 55 EIMP — Outil de coordination, pas d'abandon.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "📋 La valeur probante des logs AnyDesk",
+        situation: `Le prévenu conteste la valeur probante des logs AnyDesk invoquant que : (A) les logs peuvent être falsifiés, (B) une IP résidentielle française peut être une machine zombie, (C) AnyDesk ne prouve pas l'identité de l'opérateur. Son défenseur demande l'exclusion de ces preuves.`,
+        law: "<strong>Art. 139 CPP</strong> — Liberté de la preuve.<br><strong>ATF 144 IV 345</strong> — Preuve par indices : indices concordants et convergents.<br><strong>Art. 141 CPP</strong> — Admissibilité des preuves.",
+        question: "<strong>Comment établir la valeur probante des logs AnyDesk face à la défense ?</strong>",
+        choices: [
+          {
+            text: "Les logs AnyDesk seuls sont insuffisants — admettre les lacunes et demander au MP d'abandonner ce chef.",
+            ok: false, pts: -20,
+            fb: "Capitulation injustifiée. Les logs AnyDesk ne sont qu'un élément parmi d'autres. La preuve par indices (ATF 144 IV 345) permet de combiner plusieurs éléments convergents pour établir les faits au-delà du doute raisonnable. Aucun indice seul n'est nécessairement suffisant.",
+            legal: "ATF 144 IV 345 — Preuve par indices concordants et convergents. Pas besoin d'une preuve unique irréfutable.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Présenter la convergence multi-source : (1) logs AnyDesk (timestamps corrélant avec les virements), (2) analyse téléphonique (appels depuis SIM françaises vers victimes juste avant sessions), (3) OSINT sur les IPs (réputation, pas de signature machine zombie documentée), (4) scripts d'appel retrouvés en perquisition (preuve documentaire indépendante), (5) profil linguistique des appels (voix identifiée sur enregistrements victimes). Chaque indice isolable, convergence accablante ensemble.",
+            ok: true, pts: 25,
+            fb: "Démonstration probatoire exemplaire conforme à ATF 144 IV 345. Vous utilisez cinq sources indépendantes qui convergent vers un même auteur. La défense peut contester chaque indice pris isolément, mais la convergence de cinq sources indépendantes dépasse le doute raisonnable. C'est exactement la méthode utilisée par le MPC dans cette affaire pour identifier puis condamner le prévenu.",
+            legal: "ATF 144 IV 345 — Indices concordants et convergents : 5 sources × convergence = preuve suffisante malgré contestations isolées.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Faire analyser les logs par un laboratoire d'expertise certifié — leur certification garantit l'authenticité.",
+            ok: false, pts: 0,
+            fb: "Réponse acceptable mais insuffisante. La certification d'un expert sur les logs AnyDesk répond au point (A) de la défense mais ne répond pas aux points (B) machine zombie et (C) identité de l'opérateur. La convergence multi-source est nécessaire pour répondre à TOUS les arguments défensifs simultanément.",
+            legal: "ACPO Principle 3 + Art. 184 CPP — L'expertise est un outil parmi d'autres, pas une réponse complète.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 88) return { icon: "🕵️", title: "Expert MPC Anti-Cyberfraude", sub: "Maîtrise parfaite du social engineering et de l'Art. 147 al. 2 CP" };
+      if (pct >= 70) return { icon: "🔍", title: "Analyste Cybercrime", sub: "Bonne maîtrise des qualifications et du concours d'infractions" };
+      if (pct >= 50) return { icon: "📚", title: "Juriste en Formation", sub: "Révisez Art. 143+143bis+147 CP en concours et l'aggravante du métier" };
+      return { icon: "📖", title: "Formation pénal numérique requise", sub: "Art. 143-147 CP + jurisprudence TF 6B_683/2021" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════════════
+     B. BOUTIQUE FANTÔME — ATF 150 IV 188 [MEDIUM]
+     Source : ATF 150 IV 188, Tribunal fédéral, 16 novembre 2024
+     Faits : commandes frauduleuses en ligne, société écran, téléphones,
+             7 ans prison, Art. 146 vs Art. 147 CP — distinction cruciale
+  ══════════════════════════════════════════════════════════ */
+  {
+    id: "boutique-fantome",
+    title: "Boutique Fantôme — 146 ou 147 ?",
+    icon: "🛒",
+    difficulty: "medium",
+    atmosphere: "network",
+    realCase: "ATF 150 IV 188, Tribunal fédéral, 16 novembre 2024 (publié recueil officiel)",
+    narrative: {
+      success: "La qualification Art. 146 CP (escroquerie par métier) est retenue avec exactitude. La condamnation à 7 ans est confirmée. L'arrêt devient référence de pratique sur la distinction 146/147 CP.",
+      degraded: "La qualification est partiellement correcte mais la frontière 146/147 est mal articulée. Le verdict tient mais la motivation est fragilisée.",
+      failure: "La qualification Art. 147 CP est retenue à tort. La défense obtient partiellement gain de cause en appel — peine réduite, Art. 147 étant subsidiaire."
+    },
+    tags: ["DROIT PÉNAL", "E-COMMERCE", "FORENSIQUE"],
+    legalRefs: ["Art. 146 CP", "Art. 147 CP", "ATF 150 IV 188", "Art. 49 CP"],
+    intro: "Un homme est arrêté à Bâle pour avoir passé des centaines de commandes frauduleuses sur des sites de vente en ligne. Il utilisait de fausses identités et de vraies identités légèrement modifiées pour passer commande 'sur facture', récupérait les marchandises (téléphones, électronique), puis disparaissait sans payer. Le Tribunal pénal de Bâle-Ville l'a condamné à 7 ans d'emprisonnement et 8 ans d'expulsion. La qualification retenue : escroquerie par métier (Art. 146 al. 2 CP). En appel, le prévenu conteste et demande la requalification en Art. 147 CP. Vous êtes l'expert mandaté par le Tribunal fédéral pour clarifier la qualification.",
+    alertLevel: "⚖️ QUESTION JURIDIQUE CENTRALE — Art. 146 vs Art. 147 CP : arrêt de principe",
+    objectives: [
+      { icon: "⚖️", text: "Maîtriser la distinction Art. 146 CP (escroquerie) / Art. 147 CP (ordinateur)" },
+      { icon: "🔍", text: "Identifier le critère décisif : processus automatisé ou intervention humaine ?" },
+      { icon: "📋", text: "Appliquer ATF 150 IV 188 à des faits concrets" },
+      { icon: "🏛️", text: "Comprendre la subsidiarité de l'Art. 147 CP par rapport à l'Art. 146 CP" },
+    ],
+    debrief: `<p><strong>ATF 150 IV 188 (novembre 2024)</strong> est l'arrêt de principe définissant la frontière entre escroquerie (Art. 146 CP) et utilisation frauduleuse d'un ordinateur (Art. 147 CP) dans les commandes en ligne :</p>
+<p><strong>Art. 147 CP</strong> = uniquement si le processus est ENTIÈREMENT automatisé (de la commande jusqu'à l'expédition, sans aucune intervention humaine, même marginale).</p>
+<p><strong>Art. 146 CP</strong> (escroquerie) prime si UNE personne intervient dans le processus, même sans réel pouvoir de décision — il suffit qu'elle soit "habilitée et tenue d'annuler une commande si elle découvre l'absence de volonté de paiement".</p>
+<p>Art. 147 CP est <strong>subsidiaire</strong> à Art. 146 CP. L'escroquerie prime quand il y a une interaction humaine, même partiellement automatisée.</p>`,
+    steps: [
+      {
+        phase: "🔬 Les faits établis",
+        situation: `Le prévenu a passé des commandes sur différents sites e-commerce. Voici deux exemples documentés :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+<strong>Site A (BIG-SHOP.ch)</strong> — entrepôt automatisé avec robots de préparation :<br>
+  Commande → système valide automatiquement → robot prépare → livraison automatique. <br>
+  <em>Aucun employé ne voit la commande avant expédition.</em><br><br>
+<strong>Site B (SWISS-ELEC.ch)</strong> — boutique avec entrepôt semi-manuel :<br>
+  Commande → employé de préparation reçoit bon de commande imprimé → prépare manuellement → livraison.<br>
+  <em>L'employé pourrait en théorie rejeter une commande suspecte.</em>
+</div>`,
+        law: "<strong>Art. 146 CP</strong> — Escroquerie : tromperie astucieuse d'une <em>personne physique</em>.<br><strong>Art. 147 CP</strong> — Utilisation frauduleuse : influence sur un <em>processus entièrement automatisé</em>.<br><strong>ATF 150 IV 188 consid. 4.9</strong> — Critère décisif : qui décide in fine de l'expédition ?",
+        question: "<strong>Selon ATF 150 IV 188, quelle qualification s'applique à chaque site ?</strong>",
+        choices: [
+          {
+            text: "Site A = Art. 147 CP (entièrement automatisé). Site B = Art. 146 CP (employé intervient). Les deux peuvent coexister dans l'acte d'accusation.",
+            ok: true, pts: 25,
+            fb: "Exactement conforme à ATF 150 IV 188. Site A (processus 100% automatisé, robot de préparation) → Art. 147 CP applicable. Site B (employé de préparation qui <em>pourrait</em> annuler, même sans pouvoir décisionnel réel) → Art. 146 CP. Le TF précise qu'il suffit que l'employé soit 'habilité et tenu d'annuler' pour que l'escroquerie prime sur Art. 147. Dans ce cas, les deux qualifications peuvent coexister selon le site.",
+            legal: "ATF 150 IV 188 consid. 4.9.2 — Critère : l'employé est-il 'habilité et tenu d'annuler si découverte absence de volonté de paiement' ? OUI = Art. 146. NON = Art. 147.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Les deux sites = Art. 147 CP — internet est un système informatique, peu importe si un humain intervient.",
+            ok: false, pts: -20,
+            fb: "Erreur fondamentale. ATF 150 IV 188 est précisément l'arrêt qui rectifie cette lecture erronée. Art. 147 CP ne s'applique PAS simplement parce qu'internet est impliqué. La présence d'un être humain dans le processus (même marginalement) bascule la qualification vers Art. 146 CP. Art. 147 est réservé aux processus ENTIÈREMENT automatisés.",
+            legal: "ATF 150 IV 188 — Art. 147 CP ≠ toute infraction via internet. = uniquement processus ENTIÈREMENT automatisé.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Les deux sites = Art. 146 CP — la tromperie initiale de l'acheteur (fausse identité) vise toujours une personne.",
+            ok: false, pts: -10,
+            fb: "Qualification trop large. Pour le Site A, la fausse identité est saisie dans un formulaire qui est traité automatiquement, sans qu'aucun être humain ne la voie avant expédition. Dans ce cas, Art. 147 CP s'applique car c'est le traitement automatisé qui est trompé — pas une personne. L'ATF 150 IV 188 nuance précisément ce point : même si le client interagit initialement avec un formulaire web, seul compte qui traite la commande in fine.",
+            legal: "ATF 150 IV 188 consid. 4.6 — Ce qui compte : le traitement IN FINE de la commande, pas l'interaction initiale avec le formulaire.",
+            critical: false, next: 1,
+          },
+        ],
+      },
+      {
+        phase: "🔑 La subsidiarité de l'Art. 147 CP",
+        situation: `Le défenseur du prévenu argue : «&nbsp;En cas de doute sur le degré d'automatisation, il faut appliquer Art. 147 CP qui est plus favorable au prévenu (peine maximale 5 ans vs 10 ans pour escroquerie par métier Art. 146 al. 2 CP).&nbsp;» Il cite l'ATF 150 IV 188 lui-même pour dire que 147 s'applique quand 146 n'est pas prouvé.`,
+        law: "<strong>ATF 150 IV 188 consid. 4.6</strong> — Art. 147 CP est subsidiaire à Art. 146 CP.<br><strong>Art. 10 CPP</strong> — In dubio pro reo (doute profite à l'accusé).<br><strong>Art. 146 al. 2 CP</strong> — Métier : PPL jusqu'à 10 ans.<br><strong>Art. 147 al. 2 CP</strong> — Métier : PPL jusqu'à 10 ans (même peine en réalité).",
+        question: "<strong>L'argument du défenseur est-il fondé ?</strong>",
+        choices: [
+          {
+            text: "Oui — si on ne peut pas prouver le degré d'automatisation, in dubio pro reo → Art. 147 CP.",
+            ok: false, pts: -15,
+            fb: "Argument partiellement fondé sur le principe mais ATF 150 IV 188 ne crée pas une règle 'en cas de doute → Art. 147'. L'arrêt dit que si on ne peut pas prouver QUE le processus était entièrement automatisé NI que aucune personne n'était trompée, on ne peut retenir ni l'un ni l'autre → TENTATIVE (Art. 22 CP) devient applicable. De plus : les peines maximales Art. 146 al. 2 et Art. 147 al. 2 sont identiques (10 ans) — l'argument du 'plus favorable' ne tient pas pour l'aggravante du métier.",
+            legal: "ATF 150 IV 188 consid. 4.6-4.9 — En cas de doute sur les deux qualifications → tentative possible, pas automatiquement Art. 147.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Non — Art. 147 CP est SUBSIDIAIRE à Art. 146 CP selon ATF 150 IV 188. Si Art. 146 est établi, Art. 147 ne s'applique pas même si Art. 147 semble aussi approprié.",
+            ok: true, pts: 25,
+            fb: "Correct. ATF 150 IV 188 est explicite : 'L'escroquerie prime sur l'utilisation frauduleuse d'un ordinateur, qui est subsidiaire' (consid. 4.6). Si Art. 146 CP est établi (tromperie d'une personne via astuce), Art. 147 n'est pas retenu en sus — sauf pour des actes distincts visant des processus entièrement automatisés (comme le Site A dans notre exemple). De plus, l'argument de peine plus douce ne tient pas : Art. 146 al. 2 et Art. 147 al. 2 (métier) = même maximum de 10 ans.",
+            legal: "ATF 150 IV 188 consid. 4.6 — 'L'escroquerie prime sur l'utilisation frauduleuse d'un ordinateur, qui est subsidiaire.' Peine Art. 146 al. 2 CP = Art. 147 al. 2 CP = PPL jusqu'à 10 ans.",
+            critical: false, next: 2,
+          },
+          {
+            text: "L'argument est fondé seulement pour les faits antérieurs à ATF 150 IV 188 — l'arrêt ne vaut que pour l'avenir.",
+            ok: false, pts: -10,
+            fb: "Droit suisse n'a pas de principe d'irétroactivité de la jurisprudence de la même manière que la loi. ATF 150 IV 188 clarifie l'interprétation des art. 146 et 147 CP — mais ces articles existent et ont la même rédaction depuis longtemps. La qualification dépend des faits, pas de la date de l'arrêt. Pour les faits commis avant 2024, le même article s'applique — c'est seulement l'interprétation qui est précisée.",
+            legal: "Droit pénal suisse — pas d'irétroactivité de la jurisprudence TF (contrairement au droit de la CEDH).",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "🏛️ Le jugement et la peine",
+        situation: `Le Tribunal pénal de Bâle-Ville avait condamné le prévenu à <strong>7 ans de prison et 8 ans d'expulsion</strong> pour 'escroquerie par métier et utilisation frauduleuse d'un ordinateur par métier en concours'. Le TF (ATF 150 IV 188) rectifie partiellement : Art. 146 CP prime pour la majorité des faits, Art. 147 CP ne subsiste que pour les faits impliquant un processus 100% automatisé. La peine d'ensemble est maintenue à 7 ans. Le TF 'admet très partiellement le recours sans renvoyer à l'instance précédente; l'admission partielle n'ayant pas d'incidence sur la peine.'`,
+        law: "<strong>Art. 49 CP</strong> — Peine d'ensemble en cas de concours d'infractions.<br><strong>Art. 66a al. 1 CP</strong> — Expulsion obligatoire : infractions prévues par la liste de l'art. 66a (dont Art. 146 CP pour ressortissant étranger).",
+        question: "<strong>Pourquoi la rectification de qualification (146→147 pour certains faits) n'affecte-t-elle pas la peine selon le TF ?</strong>",
+        choices: [
+          {
+            text: "Parce que Art. 146 al. 2 CP et Art. 147 al. 2 CP ont des maximums identiques (10 ans), et la peine d'ensemble Art. 49 CP reste justifiée par l'ensemble des faits.",
+            ok: true, pts: 20,
+            fb: "Exactement. ATF 150 IV 188 : l'admission partielle du recours n'a pas d'incidence sur la peine car : (1) Art. 146 al. 2 CP = Art. 147 al. 2 CP = maximum 10 ans, (2) la peine d'ensemble Art. 49 CP est calculée sur la totalité des infractions — requalifier quelques actes de 146 en 147 ne change pas le calcul global, (3) la gravité des faits (CHF 5M+, 31 victimes, 26 mois) justifie indépendamment les 7 ans.",
+            legal: "Art. 49 CP + ATF 150 IV 188 — Peine d'ensemble inchangée : même maximum, même calcul global.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Parce que le TF ne remet jamais en cause les peines prononcées en première instance.",
+            ok: false, pts: -15,
+            fb: "Faux. Le TF peut et doit réformer les peines si la qualification change le cadre pénal. Dans ce cas précis, la peine est maintenue car les maximums sont identiques — mais si le TF avait totalement exclu Art. 146 CP pour retenir seulement Art. 147 al. 1 (sans métier → max 5 ans), la peine aurait nécessairement changé.",
+            legal: "Art. 105 LTF — Le TF peut réformer les peines si la qualification l'impose.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Parce que l'expulsion obligatoire (Art. 66a CP) s'applique identiquement à Art. 146 et Art. 147 CP.",
+            ok: false, pts: -5,
+            fb: "Partiellement vrai (Art. 66a al. 1 let. c CP liste l'escroquerie, mais pas directement Art. 147), mais ce n'est pas la raison principale. La peine d'emprisonnement est maintenue pour des raisons d'identité des maximums et de calcul de la peine d'ensemble Art. 49 CP — pas en raison de l'expulsion.",
+            legal: "Art. 66a al. 1 let. c CP — escroquerie (Art. 146 CP) figurant dans la liste d'infractions entraînant l'expulsion obligatoire pour ressortissants étrangers.",
+            critical: false, next: 3,
+          },
+        ],
+      },
+      {
+        phase: "📚 L'enseignement pratique",
+        situation: `En conclusion de votre expertise, le juge du TF vous pose la question-clé : <em>«&nbsp;Comment un analyste forensique peut-il aider à établir si un processus e-commerce est 'entièrement automatisé' ou non ?&nbsp;»</em> Votre réponse sera versée au dossier et citée dans le considérant.`,
+        law: "<strong>ATF 150 IV 188</strong> — Critère déterminant : 'qui décide in fine de l'acceptation de la commande et de l'expédition des biens?'<br><strong>Art. 184 CPP</strong> — L'expert répond aux questions posées par l'autorité.",
+        question: "<strong>Quelle est votre méthode forensique pour établir le degré d'automatisation d'un processus e-commerce ?</strong>",
+        choices: [
+          {
+            text: "Demander au commerçant de décrire son processus — sa déclaration suffit.",
+            ok: false, pts: -10,
+            fb: "Insuffisant. Une déclaration du commerçant est sujette à contestation. L'expert forensique doit DOCUMENTER objectivement le processus, pas seulement le recueillir déclarativement. La défense pourra contester toute preuve non étayée par des artefacts numériques.",
+            legal: "Art. 184 CPP — L'expert doit fonder ses conclusions sur des éléments objectivement vérifiables.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Analyse technique en 4 axes : (1) logs du système de gestion des commandes (WMS) — y a-t-il une étape de validation humaine dans le workflow ? (2) architecture du système d'expédition — robot ou intervention manuelle ? (3) communications internes (e-mails, notifications) — des employés reçoivent-ils des alertes sur les commandes avant expédition ? (4) contrats de travail et fiches de poste des préparateurs — ont-ils le pouvoir de rejeter des commandes ?",
+            ok: true, pts: 25,
+            fb: "Méthode d'expert conforme à ATF 150 IV 188. Chaque axe répond directement au critère TF : (1) le WMS révèle les étapes du workflow ; (2) l'architecture prouve ou infirme l'automatisation physique ; (3) les communications internes montrent si des humains voient les commandes ; (4) les fiches de poste établissent qui est 'habilité et tenu d'annuler'. Cette méthode est objectivement vérifiable et reproductible — ce qu'un expert judiciaire doit produire.",
+            legal: "ATF 150 IV 188 consid. 4.9.2 + Art. 184 CPP — Méthode objective vérifiable par un contre-expert. Critère TF : 'habilité et tenu d'annuler une commande si découverte absence de volonté de paiement.'",
+            critical: false, next: "end",
+          },
+          {
+            text: "Mesurer le temps entre commande et expédition — si < 1 minute, c'est automatisé.",
+            ok: false, pts: -5,
+            fb: "Critère trop simpliste. Un entrepôt très organisé peut expédier manuellement en quelques minutes. A contrario, un processus automatisé peut prendre des heures. Le critère ATF 150 IV 188 n'est pas le temps mais l'intervention humaine ou non dans la décision d'accepter et expédier. Le temps n'est qu'un indicateur indirect, pas le critère juridique.",
+            legal: "ATF 150 IV 188 — Critère : présence ou non d'un être humain dans le processus décisionnel, pas la vitesse.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 88) return { icon: "⚖️", title: "Expert ATF 150 IV 188", sub: "Maîtrise parfaite de la distinction Art. 146/147 CP — référence jurisprudentielle" };
+      if (pct >= 65) return { icon: "🔍", title: "Juriste Forensique", sub: "Bonne compréhension de la qualification pénale e-commerce" };
+      if (pct >= 45) return { icon: "📚", title: "Étudiant en Droit Pénal", sub: "Révisez ATF 150 IV 188 et la subsidiarité de l'Art. 147 CP" };
+      return { icon: "📖", title: "Formation qualifications requise", sub: "Art. 146 vs Art. 147 CP — une distinction fondamentale en droit suisse" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════════════
+     C. TÉLÉPHONE SOUS SCELLÉS — TF 7B_102/2024 [MEDIUM]
+     Source : TF 7B_102/2024 (2024) + TF 7B_145/2025 (2025)
+              ATF 139 IV 128 + Art. 141 CPP (admissibilité)
+     Contexte : contrôle à la frontière + saisie smartphone
+  ══════════════════════════════════════════════════════════ */
+  {
+    id: "telephone-scelles",
+    title: "Le Téléphone sous Scellés",
+    icon: "📵",
+    difficulty: "medium",
+    atmosphere: "legal",
+    realCase: "TF 7B_102/2024 + TF 7B_145/2025 — jurisprudence 2024-2025",
+    narrative: {
+      success: "La procédure est menée correctement : mandat obtenu, scellés respectés si demandés, art. 141 CPP sauvegardé. Les preuves extraites du téléphone sont recevables. Le TMC accorde la levée des scellés sur les éléments pertinents.",
+      degraded: "Certains éléments du téléphone sont inexploitables car la fouille initiale sans mandat crée une zone grise. Le TMC lève les scellés partiellement.",
+      failure: "La fouille sans mandat invalide les preuves obtenues. Art. 141 al. 2 CPP — exclusion de preuves. L'accusé est libéré faute de preuve admissible."
+    },
+    tags: ["FORENSIQUE", "DROIT", "FRONTIÈRE", "CPP"],
+    legalRefs: ["Art. 241 CPP", "Art. 246 CPP", "Art. 248 CPP", "Art. 264 CPP", "Art. 141 CPP"],
+    intro: "Contrôle routier de nuit sur l'A2 à Chiasso (TI). Un passager d'un véhicule fait l'objet d'un contrôle par la police cantonale tessinoise. Il ne présente pas de papiers d'identité. Un agent consulte brièvement son smartphone pour trouver un numéro de téléphone d'urgence, puis, voyant des messages suspects sur l'écran, consulte les messages et photos. Le téléphone est saisi. Deux jours plus tard, le MP ordonne une analyse complète du téléphone. La défense demande la mise sous scellés et conteste la légalité des actes initiaux.",
+    alertLevel: "⚖️ ADMISSIBILITÉ DES PREUVES — Fouille smartphone sans mandat",
+    objectives: [
+      { icon: "⚖️", text: "Distinguer 'vérification simple' et 'perquisition' d'un smartphone (ATF 139 IV 128)" },
+      { icon: "🔒", text: "Comprendre quand la mise sous scellés (Art. 248 CPP) s'impose" },
+      { icon: "📱", text: "Appliquer TF 7B_102/2024 sur la fouille smartphone sans mandat" },
+      { icon: "⚠️", text: "Évaluer l'admissibilité des preuves selon Art. 141 CPP" },
+    ],
+    debrief: `<p><strong>TF 7B_102/2024</strong> clarifie la distinction entre deux situations face à un smartphone :</p>
+<p>1. <strong>Vérification "simple"</strong> (ATF 139 IV 128) : consulter le répertoire téléphonique pour identifier l'utilisateur sans papiers = pas une perquisition au sens de l'Art. 246 CPP → sans mandat possible.</p>
+<p>2. <strong>Perquisition</strong> (TF 7B_102/2024) : toute consultation allant au-delà de la vérification d'identité (messages, photos, applications) = perquisition au sens de l'Art. 246 CPP → mandat de l'autorité compétente obligatoire (Art. 241 al. 1 CPP).</p>
+<p>Si la perquisition est faite sans mandat et sans "péril en la demeure" démontré → violation de l'Art. 241 al. 1 CPP → règle de <strong>validité</strong> (pas d'ordre) → Art. 141 <strong>al. 2 CPP</strong> → preuves inexploitables SAUF si infraction grave le justifie.</p>
+<p><strong>TF 7B_145/2025</strong> nuance : les scellés sur un smartphone ne sont pas une protection absolue — si l'infraction est grave, l'intérêt à la poursuite peut primer sur la protection de la personnalité (Art. 264 al. 1 let. b CPP).</p>`,
+    steps: [
+      {
+        phase: "🚔 Le contrôle routier",
+        situation: `L'agent Matias B. décrit ses actes lors du contrôle :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+<strong>Acte 1 (sans mandat) :</strong> Le passager n'a pas de papiers. L'agent demande le téléphone pour consulter le répertoire et trouver un contact "en cas d'urgence" qui pourrait confirmer l'identité. ✅ ou ❌ ?<br><br>
+<strong>Acte 2 (sans mandat) :</strong> En cherchant dans le répertoire, l'agent voit plusieurs messages de type "10 pièces", "livraison 22h". Curieux, il ouvre l'application de messagerie et lit 47 messages des 3 dernières semaines. ✅ ou ❌ ?<br><br>
+<strong>Acte 3 (sans mandat) :</strong> L'agent ouvre la galerie photos et fait défiler les 200 dernières photos. Il en photographie 15 avec son propre téléphone. ✅ ou ❌ ?
+</div>`,
+        law: "<strong>Art. 246 CPP</strong> — Perquisition de supports de données : nécessite un mandat sauf péril en la demeure.<br><strong>Art. 241 al. 1 CPP</strong> — Mandat écrit de l'autorité compétente requis.<br><strong>ATF 139 IV 128</strong> — 'Vérification simple' ≠ perquisition.<br><strong>TF 7B_102/2024 consid. 2.4</strong> — Lecture des messages/photos = perquisition.",
+        question: "<strong>Selon la jurisprudence TF actuelle, lesquels de ces trois actes nécessitaient un mandat ?</strong>",
+        choices: [
+          {
+            text: "Acte 1 = OK sans mandat. Acte 2 = OK sans mandat (soupçon concret). Acte 3 = MANDAT requis (photos = données intimes).",
+            ok: false, pts: -15,
+            fb: "ATF 139 IV 128 et TF 7B_102/2024 ne font pas de distinction selon la nature des données (messages vs photos). La ligne de démarcation est 'vérification d'identité simple' vs 'consultation du contenu'. Dès l'Acte 2, l'agent a outrepassé la vérification simple en lisant des messages — c'est une perquisition (Art. 246 CPP). Le 'soupçon concret' ne remplace pas le mandat en l'absence de péril en la demeure prouvé.",
+            legal: "TF 7B_102/2024 consid. 2.4 — La vue de messages suspects à l'écran ne justifie pas la consultation sans mandat. Le soupçon permet d'obtenir un mandat d'urgence.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Acte 1 = OK sans mandat (ATF 139 IV 128 — vérification identité). Acte 2 = MANDAT requis (lecture messages = perquisition Art. 246 CPP). Acte 3 = MANDAT requis (idem).",
+            ok: true, pts: 25,
+            fb: "Analyse exacte conforme à TF 7B_102/2024. Acte 1 = consulter le répertoire pour identification = 'vérification simple' au sens ATF 139 IV 128 = OK sans mandat. Acte 2 = ouvrir et lire les messages = perquisition au sens Art. 246 CPP = mandat obligatoire (Art. 241 al. 1 CPP), sauf péril en la demeure prouvé (non invoqué ici). Acte 3 = même analyse → mandat requis. L'agent aurait dû, après Acte 1, saisir le téléphone et demander un mandat au MP de piquet pour Actes 2 et 3.",
+            legal: "TF 7B_102/2024 consid. 2.4.4 — 'La fouille du téléphone portable constituait bel et bien une perquisition au sens de l'Art. 246 CPP.' ATF 139 IV 128 — vérification simple tolérée.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Les trois actes nécessitent un mandat — tout accès à un smartphone est une perquisition.",
+            ok: false, pts: -10,
+            fb: "Trop absolu. ATF 139 IV 128 reconnaît que les 'vérifications simples' (notamment pour identifier quelqu'un sans papiers d'identité) sont possibles sans mandat. La distinction est qualitative : consulter le répertoire pour identifier ≠ perquisition. Ce n'est que lorsqu'on dépasse ce cadre strictement limité que l'Art. 246 CPP s'applique.",
+            legal: "ATF 139 IV 128 consid. 1.7 — Vérification simple d'identité via téléphone sans mandat : admis.",
+            critical: false, next: 1,
+          },
+        ],
+      },
+      {
+        phase: "🔒 La demande de scellés",
+        situation: `L'agent saisit le téléphone. Deux jours plus tard, le MP de Bellinzona demande l'analyse complète. L'avocat du prévenu dépose une demande de mise sous scellés (Art. 248 CPP) invoquant : (1) son client veut protéger sa correspondance privée, (2) des messages avec son avocat pourraient être dans le téléphone, (3) le téléphone est un 'document personnel' au sens Art. 264 al. 1 let. b CPP.`,
+        law: "<strong>Art. 248 CPP</strong> — Mise sous scellés : droit du détenteur avant analyse.<br><strong>Art. 264 al. 1 let. b CPP</strong> — Objets protégés : documents personnels.<br><strong>TF 7B_145/2025</strong> — Smartphones = documents personnels Art. 264 CPP mais protection NON ABSOLUE.<br><strong>Art. 264 al. 1 let. c CPP</strong> — Correspondance avec avocat = protection renforcée.",
+        question: "<strong>La demande de mise sous scellés est-elle recevable et comment le MP doit-il y répondre ?</strong>",
+        choices: [
+          {
+            text: "La demande est irrecevable — un téléphone n'est pas un 'document personnel' au sens juridique, c'est un appareil électronique.",
+            ok: false, pts: -20,
+            fb: "Erreur grave. TF 7B_145/2025 (2025) affirme explicitement que 'les smartphones utilisés à titre privé entrent dans la catégorie des documents personnels au sens de l'Art. 264 al. 1 let. b CPP'. La demande de mise sous scellés est parfaitement recevable. Refuser les scellés = violation du droit procédural fondamental Art. 248 CPP = risque d'inexploitabilité totale.",
+            legal: "TF 7B_145/2025 — Smartphone = 'document personnel' Art. 264 al. 1 let. b CPP. Scellés = droit, pas une option.",
+            critical: true, next: "end",
+          },
+          {
+            text: "La demande est recevable. Le MP doit accepter les scellés, documenter l'état actuel (hash), puis préparer un dossier argumenté pour le TMC démontrant que l'intérêt à la poursuite prime sur la protection de la personnalité — particulièrement pour les messages liés à l'enquête (trafic supposé), en excluant expressément la correspondance avocat-client.",
+            ok: true, pts: 25,
+            fb: "Procédure correcte conforme à TF 7B_145/2025. Le TF rappelle que la protection des données personnelles dans un smartphone n'est pas absolue. Le TMC peut lever les scellés si l'intérêt à la poursuite pénale prime (critères : gravité des faits, pertinence pour l'enquête, proportionnalité). La correspondance avocat-client (Art. 264 al. 1 let. c CPP) bénéficie d'une protection renforcée et doit être expressément exclue de la levée.",
+            legal: "TF 7B_145/2025 consid. 3 + Art. 248 CPP + Art. 264 CPP — Scellés acceptés + dossier TMC = procédure correcte.",
+            critical: false, next: 2,
+          },
+          {
+            text: "La demande est recevable mais le MP peut la rejeter si les infractions sont suffisamment graves.",
+            ok: false, pts: -15,
+            fb: "Confusion des rôles. Le MP ne peut pas rejeter la mise sous scellés — c'est le TMC qui décide de la levée. Le MP est tenu d'accepter la demande de scellés (c'est un droit procédural absolu du détenteur, Art. 248 CPP), puis de soumettre au TMC une demande de levée. Seul le TMC peut décider si la levée est justifiée.",
+            legal: "Art. 248 CPP — Mise sous scellés = droit du détenteur, le MP ne peut pas le rejeter. La levée = décision TMC.",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "⚠️ L'admissibilité des preuves initiales",
+        situation: `Le TMC lève les scellés sur les messages liés au trafic probable. Mais reste la question des <strong>Actes 2 et 3 initiaux</strong> (messages et photos consultés sans mandat par l'agent). La défense demande l'exclusion de toutes les preuves obtenues lors de ces actes illicites + les preuves 'dérivées' (utilisation de ces informations pour obtenir le mandat de l'agent).`,
+        law: "<strong>Art. 141 al. 2 CPP</strong> — Preuves illicites : inexploitables sauf si indispensables pour élucider une infraction grave.<br><strong>Art. 141 al. 3 CPP</strong> — Prescriptions d'ordre : preuves exploitables.<br><strong>Art. 141 al. 4 CPP</strong> — Preuves dérivées : inexploitables si UNIQUEMENT obtenues grâce à la preuve illicite.<br><strong>TF 7B_102/2024 consid. 2.4.5</strong> — Fouille smartphone sans mandat = règle de VALIDITÉ (pas d'ordre).",
+        question: "<strong>Selon Art. 141 CPP et TF 7B_102/2024, les preuves des Actes 2 et 3 sont-elles exploitables ?</strong>",
+        choices: [
+          {
+            text: "Oui — la fouille initiale révélait un soupçon concret justifiant rétroactivement l'acte.",
+            ok: false, pts: -20,
+            fb: "Raisonnement circulaire inadmissible. On ne peut pas légitimer rétroactivement une fouille illicite par ses résultats. TF 7B_102/2024 est clair : la fouille sans mandat contrevient à l'Art. 241 al. 1 CPP — il s'agit d'une règle de VALIDITÉ (pas d'ordre). Les preuves tombent sous Art. 141 al. 2 CPP. Le 'soupçon ex-post' ne guérit pas l'irrégularité ex-ante.",
+            legal: "TF 7B_102/2024 consid. 2.4.5 — Règle de validité, pas d'ordre. Art. 141 al. 2 CPP s'applique.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Non, sauf si l'infraction est suffisamment grave (trafic de stupéfiants, crime grave) pour justifier l'exploitation au sens Art. 141 al. 2 CPP. Les preuves dérivées sont inexploitables si elles n'auraient pu être obtenues sans les actes illicites.",
+            ok: true, pts: 25,
+            fb: "Analyse correcte et nuancée conformément à Art. 141 CPP et TF 7B_102/2024. Étape 1 : les actes 2 et 3 violent Art. 241 al. 1 CPP (règle de validité) → preuves en principe inexploitables (Art. 141 al. 2). Étape 2 : l'Art. 141 al. 2 permet l'exploitation si 'indispensable pour élucider une infraction grave'. Étape 3 : les preuves dérivées (mandat obtenu sur base des actes illicites) → Art. 141 al. 4 CPP → inexploitables seulement si 'n'auraient pu être obtenues sans la preuve illicite'. Décision du juge du fond (pas du juge de la détention : ATF 143 IV 330).",
+            legal: "Art. 141 al. 2 + al. 4 CPP + TF 7B_102/2024 + ATF 143 IV 330 — Analyse en 3 étapes : violation → exception infraction grave → preuves dérivées.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Art. 141 al. 3 CPP s'applique — la fouille sans mandat est une simple prescription d'ordre, les preuves sont exploitables.",
+            ok: false, pts: -15,
+            fb: "Erreur de catégorie. TF 7B_102/2024 consid. 2.4.5 est explicite : 'la fouille du téléphone sans mandat contrevient à l'Art. 241 al. 1 CPP' — c'est une règle de VALIDITÉ, pas d'ordre. Art. 141 al. 3 CPP (prescriptions d'ordre → preuves exploitables) ne s'applique donc pas. L'ancienne jurisprudence ATF 139 IV 128 consid. 1.7 qui qualifiait la vérification de 'prescription d'ordre' est désormais dépassée par TF 7B_102/2024 pour les cas dépassant la vérification simple.",
+            legal: "TF 7B_102/2024 consid. 2.4.5 — Fouille approfondie smartphone sans mandat = règle de VALIDITÉ → Art. 141 al. 2 CPP (pas al. 3).",
+            critical: false, next: 3,
+          },
+        ],
+      },
+      {
+        phase: "📋 La décision du TMC",
+        situation: `Devant le TMC de Bellinzona, le MP plaide pour la levée des scellés sur <strong>l'ensemble</strong> du téléphone. L'avocat de la défense invoque TF 7B_145/2025 pour défendre son client, mais cite l'affaire cocaïne (7.18 kg) comme un cas exceptionnel. Il argue que dans le cas présent (trafic supposé de quantités inconnues), l'intérêt à la poursuite ne prime pas. Il demande la restitution du téléphone.`,
+        law: "<strong>TF 7B_145/2025</strong> — Levée des scellés smartphone : balancement intérêt poursuite vs protection personnalité.<br><strong>Art. 197 CPP</strong> — Proportionnalité des mesures de contrainte.<br><strong>Art. 264 al. 1 let. b CPP</strong> — Documents personnels : protection relative.",
+        question: "<strong>Sur la base de TF 7B_145/2025, quelle décision le TMC devrait-il prendre ?</strong>",
+        choices: [
+          {
+            text: "Lever les scellés sur l'ensemble du téléphone — l'intérêt public à la poursuite du trafic prime toujours sur la vie privée.",
+            ok: false, pts: -10,
+            fb: "Trop absolu. TF 7B_145/2025 ne dit pas que l'intérêt public 'prime toujours'. Il dit que la protection n'est 'pas absolue' et dépend d'un balancement au cas par cas. Lever les scellés sur l'ENSEMBLE sans distinction ne respecte pas l'Art. 197 CPP (proportionnalité). Il faut limiter la levée aux éléments pertinents pour l'enquête.",
+            legal: "Art. 197 al. 1 let. d CPP — Proportionnalité : mesure de contrainte dans la mesure justifiée par le but poursuivi.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Lever les scellés de façon ciblée : (1) messages/applications liés au trafic supposé → levée partielle justifiée par la gravité potentielle, (2) photos personnelles et correspondance avocat → maintien des scellés, (3) demander au MP de préciser quels éléments sont pertinents pour l'enquête avant la levée.",
+            ok: true, pts: 25,
+            fb: "Décision proportionnée conforme à TF 7B_145/2025 et Art. 197 CPP. Le TF a accordé la levée dans l'affaire cocaïne (7.18 kg) car la gravité des faits justifiait clairement la prééminence de l'intérêt public. Ici, si le trafic est établi comme 'grave', la levée ciblée est justifiée. Mais la proportionnalité (Art. 197 CPP) exige de ne lever que ce qui est pertinent pour l'enquête — pas l'ensemble du téléphone indistinctement. La correspondance avocat reste absolument protégée (Art. 264 al. 1 let. c CPP).",
+            legal: "TF 7B_145/2025 + Art. 197 CPP + Art. 264 al. 1 let. b et c CPP — Levée partielle ciblée = décision proportionnée.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Rejeter la demande de levée des scellés — la fouille initiale illégale disqualifie toute la procédure.",
+            ok: false, pts: -15,
+            fb: "Confusion entre deux questions distinctes. La legality de la fouille initiale (Actes 2 et 3) et la légalité de la procédure de scellés/levée sont deux questions séparées. Le TMC se prononce sur la levée des scellés demandée PAR LE MP — cette procédure est légale et distincte des actes initiaux contestables. La remédiation des actes illicites se fait via Art. 141 CPP devant le juge du fond, pas en rejetant la procédure TMC.",
+            legal: "Art. 248 CPP — Procédure de scellés autonome. Les irrégularités initiales → Art. 141 CPP devant le juge du fond.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 88) return { icon: "📵", title: "Expert Scellés Numériques", sub: "Maîtrise parfaite Art. 141+246+248+264 CPP — référence jurisprudentielle 2024-2025" };
+      if (pct >= 65) return { icon: "⚖️", title: "Juriste Forensique", sub: "Bonne maîtrise de l'admissibilité des preuves numériques" };
+      if (pct >= 45) return { icon: "📱", title: "Praticien CPP", sub: "Révisez TF 7B_102/2024 et TF 7B_145/2025 — fondamentaux smartphone forensics" };
+      return { icon: "📚", title: "Formation CPP requise", sub: "Art. 141 + 246 + 248 CPP — admissibilité des preuves numériques en Suisse" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════════════
+     NOUVELLES AFFAIRES SUISSES 2025-2026
+  ══════════════════════════════════════════════════════════ */
+
+  /* ── CLONE VOCAL — Deepfake CEO Fraud, Schwyz 2026 [MEDIUM · 5 étapes] ──
+     Source : Police cantonale de Schwyz, janvier 2026
+     Affaire réelle #6 de la liste — plusieurs millions extorqués via IA vocale
+     Art. 146 CP (tromperie personne physique via deepfake),
+     Art. 147 CP (si système de validation automatisé),
+     Art. 143 CP (accès credentials), investigation audio forensique
+  ─────────────────────────────────────────────────────── */
+  {
+    id: "clone-vocal",
+    title: "Le Clone Vocal — CEO Fraud par IA",
+    icon: "🎙️",
+    difficulty: "medium",
+    atmosphere: "crypto",
+    realCase: "Police cantonale de Schwyz, enquête ouverte janvier 2026",
+    narrative: {
+      success: "L'investigation audio forensique démontre l'authenticité du deepfake. La qualification Art. 146 CP est solide. Les flux financiers sont tracés jusqu'à des comptes en Asie — les autorités de Hong Kong coopèrent. Un suspect est identifié en Moldavie.",
+      degraded: "La qualification tient mais l'expertise audio est contestée par la défense. Un contre-expert remet en doute la détection du deepfake. La procédure s'enlise en bataille d'experts.",
+      failure: "L'investigation audio n'est pas menée selon les standards. La défense fait valoir que les enregistrements sont irrecevables. Le chef d'entreprise perd ses millions sans condamnation."
+    },
+    tags: ["IA", "SOCIAL ENGINEERING", "AUDIO FORENSIQUE", "DROIT PÉNAL"],
+    legalRefs: ["Art. 146 CP", "Art. 251 CP", "Art. 143 CP", "ENISA AI Fraud 2024"],
+    intro: "Janvier 2026, canton de Schwyz. Un chef d'entreprise de taille moyenne reçoit un appel téléphonique de son partenaire commercial habituel — voix familière, vocabulaire précis, contexte cohérent. Ce «&nbsp;partenaire&nbsp;» lui demande un virement urgent vers un compte bancaire asiatique pour finaliser une acquisition confidentielle. Le chef d'entreprise exécute. Plusieurs millions de francs disparaissent. Quand il rappelle son partenaire le lendemain, celui-ci n'a jamais appelé. Votre mission : mener l'investigation.",
+    alertLevel: "🎙️ DEEPFAKE VOCAL — Millions extorqués via clonage IA",
+    objectives: [
+      { icon: "🔬", text: "Analyser l'enregistrement audio pour détecter les artefacts IA" },
+      { icon: "⚖️", text: "Qualifier correctement l'infraction (Art. 146 CP — tromperie personne physique)" },
+      { icon: "💸", text: "Tracer les flux financiers et activer les canaux d'entraide" },
+      { icon: "🧪", text: "Rédiger un rapport d'expertise audio admissible en justice" },
+    ],
+    debrief: `<p>Le clonage vocal par IA (Voice Cloning) utilise des modèles TTS (Text-to-Speech) neuronaux qui peuvent reproduire une voix à partir de quelques secondes d'échantillon audio — souvent prélevé sur des interviews publiques, des vidéos YouTube, ou des présentations de l'entreprise. Le résultat peut tromper l'oreille humaine dans 9 cas sur 10 (UCL, 2024).</p>
+<p>En droit suisse, la qualification dépend du vecteur : si la tromperie vise une <strong>personne physique</strong> (qui décide du virement), c'est <strong>Art. 146 CP</strong> (escroquerie). Si le virement est exécuté via un système bancaire entièrement automatisé, Art. 147 CP peut coexister. L'<strong>investigation audio forensique</strong> — analyse spectrale, détection d'artefacts de synthèse, comparaison voix réelle — est la clé de la démonstration judiciaire.</p>`,
+    steps: [
+      {
+        phase: "🎙️ L'enregistrement récupéré",
+        situation: `La victime a enregistré la conversation sur son smartphone (application téléphonique). Vous récupérez le fichier audio (format m4a, 4m22s). Avant toute analyse, vous devez acquérir la preuve selon les standards forensiques.<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+📱 Source : smartphone Samsung Galaxy (Android 14) de la victime<br>
+🎵 Format : m4a, 44.1kHz stéréo, VBR, 4m22s<br>
+📅 Timestamp EXIF : 15 janvier 2026, 14h37 UTC+1<br>
+📞 Métadonnées réseau : numéro entrant +41 77 XXX XX XX (Swisscom prépayé)<br>
+⚠️ La victime a écouté le fichier plusieurs fois depuis
+</div>`,
+        law: "<strong>ACPO Principle 2</strong> — Ne pas modifier la preuve originale lors de l'acquisition.<br><strong>Art. 141 CPP</strong> — Admissibilité : hash d'intégrité requis.<br><strong>ISO/IEC 27037</strong> — Acquisition de preuves numériques sur appareil mobile.",
+        question: "<strong>Quelle est votre première action forensique sur le fichier audio ?</strong>",
+        choices: [
+          {
+            text: "Copier le fichier m4a sur votre laptop d'analyse et commencer l'analyse spectrale immédiatement.",
+            ok: false, pts: -15,
+            fb: "Acquisition sans documentation d'intégrité. Copier sans calculer de hash préalable sur le fichier source ne garantit pas que le fichier n'a pas été modifié entre la récupération et l'analyse. La défense contestera l'intégrité.",
+            legal: "ACPO Principle 2 + Art. 141 CPP — Hash de référence sur le fichier original AVANT toute manipulation.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Extraction forensique via ADB (Android Debug Bridge) en mode lecture seule, hash SHA-256 du fichier source sur le device, puis copie sur support vierge préalablement hashé. Comparer les hashes avant/après. Sceller l'original du smartphone.",
+            ok: true, pts: 25,
+            fb: "Procédure exemplaire. L'extraction ADB en mode lecture seule évite de modifier les métadonnées du fichier. Le double hash (sur device + sur copie) prouve l'intégrité. Sceller le smartphone préserve l'original pour contre-expertise. Cette chaîne de custody est indispensable pour qu'un rapport audio soit recevable.",
+            legal: "ACPO Principle 2 + ISO/IEC 27037 + Art. 141 CPP — Chaîne de custody audio : acquisition lecture seule + double hash + scellés.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Demander à la victime d'envoyer le fichier par WhatsApp pour analyse rapide.",
+            ok: false, pts: -25,
+            fb: "Erreur critique. WhatsApp recompresse les fichiers audio (transcodage, perte de qualité, modification des métadonnées). Le fichier reçu ne serait plus la preuve originale — toute analyse spectrale porterait sur un artefact de compression, invalidant les conclusions. De plus, l'envoi via WhatsApp crée des copies non contrôlées.",
+            legal: "ACPO Principle 1 — Toute action susceptible de modifier la preuve est interdite.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "🔬 L'analyse spectrale",
+        situation: `Vous analysez le fichier avec Audacity + Sox + un modèle de détection deepfake (DeepWave Detector v3.1). Résultats :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+📊 Analyse spectrale (FFT) : coupure abrupte des harmoniques >8kHz — signature typique des modèles TTS VITS/Tortoise<br>
+🔊 Analyse prosodique : micro-pauses artificielles entre syllabes (15-25ms), absentes du vrai locuteur<br>
+🧠 DeepWave Detector : score de probabilité deepfake = 94.7% (seuil détection : 85%)<br>
+🎵 Bruit de fond : aucun bruit ambiant naturel — environnement acoustique synthétique<br>
+📞 Comparaison avec enregistrement authentique du partenaire (conférence 2024) : divergence formantique +23%
+</div>`,
+        law: "<strong>Art. 184 CPP</strong> — L'expert répond à des questions précises, avec méthode documentée.<br><strong>Art. 189 CPP</strong> — Expertise contradictoire possible.<br><strong>ENISA AI Fraud Threat Landscape 2024</strong> — Méthodes de détection deepfake audio.",
+        question: "<strong>Comment formulez-vous votre conclusion d'expert dans le rapport forensique ?</strong>",
+        choices: [
+          {
+            text: "«&nbsp;L'enregistrement est un deepfake à 94.7%. La voix n'est pas celle de M. X.&nbsp;»",
+            ok: false, pts: -15,
+            fb: "Formulation péremptoire non conforme au rôle d'expert. Un score algorithmique (94.7%) ne peut pas être traduit en certitude absolue. L'expert doit formuler au niveau d'affirmation correct (fait → interprétation → opinion) et indiquer les limites de la méthode. Un contre-expert contestera un tel excès.",
+            legal: "Art. 182 + 184 CPP — L'expert ne tranche pas, il éclaire. Formulation probabiliste obligatoire.",
+            critical: false, next: 2,
+          },
+          {
+            text: "«&nbsp;L'analyse de 5 indicateurs indépendants (spectrale, prosodique, algorithme, bruit de fond, comparaison formantique) convergent vers une probabilité élevée d'enregistrement synthétisé par IA. Cette conclusion est soumise à vérification contradictoire par un second expert en phonétique forensique.&nbsp;»",
+            ok: true, pts: 25,
+            fb: "Formulation d'expert irréprochable. Vous citez 5 sources indépendantes qui convergent (preuve par indices — ATF 144 IV 345), vous utilisez le niveau d'affirmation correct (probabilité élevée, pas certitude), et vous proposez proactivement la contre-expertise. Un juge peut s'appuyer sur cette formulation solide.",
+            legal: "Art. 184 CPP + ATF 144 IV 345 — Convergence multi-indicateurs + niveau d'affirmation correct + ouverture à la contradiction.",
+            critical: false, next: 2,
+          },
+          {
+            text: "«&nbsp;Il est impossible de conclure avec certitude. Des analyses complémentaires sont nécessaires.&nbsp;»",
+            ok: false, pts: -10,
+            fb: "Formulation trop prudente qui ne valorise pas les indices solides disponibles. 5 indicateurs convergents sont significatifs — ne pas les valoriser prive le MP d'une démonstration probatoire forte. L'expert peut conclure à une probabilité élevée sans attendre des certitudes absolues inexistantes.",
+            legal: "Art. 184 CPP — L'expert doit répondre à la question posée avec les données disponibles. Le refus de conclure est évitable ici.",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "⚖️ La qualification pénale",
+        situation: `L'expertise audio établit la probabilité élevée d'un deepfake vocal. Le MP vous demande de qualifier les infractions. Les faits établis :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+① L'auteur a cloné la voix du partenaire commercial via IA (voix prélevée sur une vidéo LinkedIn publique)<br>
+② Il a appelé le chef d'entreprise en usurpant l'identité vocale du partenaire<br>
+③ Le chef d'entreprise, trompé, a ordonné lui-même à sa banque un virement de 3.2M CHF<br>
+④ Le virement a été exécuté par un conseiller bancaire (sur instruction téléphonique de la victime)<br>
+⑤ Des faux documents d'acquisition (PDF, tampon électronique) ont été envoyés par e-mail en parallèle
+</div>`,
+        law: "<strong>Art. 146 CP</strong> — Escroquerie : tromperie astucieuse d'une personne physique par «&nbsp;affirmations fallacieuses ou dissimulation de faits&nbsp;».<br><strong>Art. 147 CP</strong> — Abus d'ordinateur : influence sur traitement automatisé.<br><strong>Art. 251 CP</strong> — Faux dans les titres (documents PDF falsifiés).<br><strong>ATF 150 IV 188</strong> — Si humain impliqué dans le virement → Art. 146 CP prime.",
+        question: "<strong>Quelles infractions retenir et pourquoi Art. 146 CP plutôt qu'Art. 147 CP prime ?</strong>",
+        choices: [
+          {
+            text: "Art. 147 CP — le deepfake est une manipulation informatique = abus d'ordinateur.",
+            ok: false, pts: -20,
+            fb: "Erreur de qualification. ATF 150 IV 188 est décisif : le virement a été ordonné par la victime à un conseiller bancaire humain (qui l'a exécuté). Une personne physique a été trompée et a pris la décision. Art. 147 CP s'applique uniquement si le processus est entièrement automatisé — ce n'est pas le cas ici. C'est Art. 146 CP (escroquerie) qui prime.",
+            legal: "ATF 150 IV 188 consid. 4.9 — Si un être humain décide : Art. 146 CP. Art. 147 CP = processus 100% automatisé.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Art. 146 CP al. 1 (escroquerie — tromperie vocale de la victime) + Art. 251 CP (faux dans les titres — documents PDF falsifiés) en concours réel. Le deepfake vocal est le moyen 'astucieux' de l'Art. 146 CP.",
+            ok: true, pts: 25,
+            fb: "Qualification correcte et bien articulée. Art. 146 CP est parfait : l'auteur a utilisé un deepfake vocal pour «&nbsp;astucieusement induire en erreur une personne physique&nbsp;» (la victime) qui a ensuite ordonné le virement. Art. 251 CP couvre les faux documents PDF envoyés en parallèle (faux dans les titres = documents falsifiés utilisés comme preuve). Concours réel Art. 9 CP. ATF 150 IV 188 confirme que c'est Art. 146, pas 147.",
+            legal: "Art. 146 al. 1 CP + Art. 251 CP en concours réel + ATF 150 IV 188 — Tromperie d'une personne physique via deepfake = escroquerie.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Art. 146 + 147 + 143 + 251 CP — tout cumuler pour couvrir tous les aspects du deepfake.",
+            ok: false, pts: -10,
+            fb: "Sur-qualification. Art. 143 CP (soustraction de données) n'est pas caractérisé — l'auteur a accédé à une vidéo LinkedIn publique pour prélever la voix, ce qui n'est pas une soustraction de données au sens légal. Art. 147 CP est exclu par ATF 150 IV 188 (humain impliqué). Une qualification précise vaut mieux qu'un cumul de charges non établies.",
+            legal: "Principe de précision pénale — Ne retenir que les infractions caractérisées par les faits.",
+            critical: false, next: 3,
+          },
+        ],
+      },
+      {
+        phase: "💸 Le traçage des fonds",
+        situation: `Le virement de 3.2M CHF a transité en 3 étapes : compte UBS Zurich → compte fictif DBS Singapore → comptes fragmentés (8 sous-comptes) dans 4 pays asiatiques. La fragmentation s'est produite en 6 heures. Vous avez 48 heures avant que les fonds deviennent irrécupérables.`,
+        law: "<strong>SWIFT gpi Tracker</strong> — Traçage des virements SWIFT en temps réel.<br><strong>MLAT CH-SG</strong> — Entraide judiciaire Suisse-Singapour.<br><strong>Art. 305bis CP</strong> — Blanchiment : la fragmentation est une manœuvre de blanchiment.",
+        question: "<strong>Dans les 48 heures, quelle action a le plus d'impact pour bloquer les fonds fragmentés ?</strong>",
+        choices: [
+          {
+            text: "Demander un rapport SWIFT gpi complet à UBS pour identifier tous les sous-comptes de destination.",
+            ok: false, pts: -5,
+            fb: "Utile mais insuffisant seul. Le SWIFT gpi trace jusqu'au compte DBS Singapore. Pour les 8 sous-comptes dans 4 pays, il faut activer les canaux MLAT en parallèle avec les autorités locales. Le rapport gpi seul ne bloque pas les fonds — il les localise.",
+            legal: "SWIFT gpi = outil de traçage. Blocage = MLAT + canaux judiciaires locaux.",
+            critical: false, next: 4,
+          },
+          {
+            text: "Triple action simultanée : (1) SWIFT Recall + gpi trace depuis UBS vers DBS Singapore, (2) MPC de piquet → ordonnance séquestre → MLAT CH-SG pour les fonds Singapore, (3) fedpol → canaux INTERPOL financiers pour les 4 pays de fragmentation. En parallèle : signalement MROS (blanchiment Art. 305bis CP).",
+            ok: true, pts: 25,
+            fb: "Approche SATI-level optimale. Les trois actions en parallèle maximisent les chances : le Recall tente de bloquer à la source, le MLAT CH-SG cible les fonds Singapore (encore identifiables), les canaux INTERPOL permettent des gels provisoires dans les 4 pays. Le signalement MROS ajoute la LBA au dispositif et peut déclencher des gels bancaires automatiques dans les pays partenaires.",
+            legal: "SWIFT gpi + MLAT CH-SG + INTERPOL FIN + Art. 305bis CP + LBA (MROS) — Réponse multi-canal conforme à la procédure SATI.",
+            critical: false, next: 4,
+          },
+          {
+            text: "Attendre l'identification du suspect avant d'agir — bloquer les fonds sans suspect identifié est juridiquement risqué.",
+            ok: false, pts: -25,
+            fb: "Erreur critique de timing. En matière de récupération d'avoirs criminels, l'attente de 48h est fatale — les fonds fragmentés en 8 sous-comptes dans 4 pays seront retirés en espèces ou convertis en crypto. Art. 305bis CP permet le séquestre préventif des valeurs patrimoniales d'origine criminelle AVANT identification du suspect. La récupération prime.",
+            legal: "Art. 305bis CP + Art. 72 CPP — Séquestre préventif des avoirs sans identification préalable du suspect.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "📋 Le rapport final et l'expertise",
+        situation: `Trois mois plus tard. Les autorités singapouriennes ont gelé 2.1M CHF. 1.1M CHF restent introuvables. Un suspect est identifié en Moldavie — des demandes d'entraide internationale sont en cours. Le MP vous demande un rapport d'expertise final structuré pour la mise en accusation.`,
+        law: "<strong>Art. 184 CPP</strong> — Rapport d'expertise : méthode, conclusions, limites.<br><strong>Art. 182 CPP</strong> — L'expert éclaire sans trancher.<br><strong>ATF 144 IV 345</strong> — Preuve par indices convergents.",
+        question: "<strong>Quelle est la structure optimale de votre rapport d'expertise audio-forensique pour le MP ?</strong>",
+        choices: [
+          {
+            text: "Rapport technique exhaustif de 150 pages avec tous les spectrogrammes bruts et logs d'analyse.",
+            ok: false, pts: -10,
+            fb: "Volume inadapté à l'audience MP. 150 pages non structurées ne permettent pas à un procureur de construire son acte d'accusation. Structure pyramidale requise : synthèse courte + détail technique en annexes.",
+            legal: "Art. 184 CPP — L'expert adapte son rapport à l'audience judiciaire, pas technique.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Structure en 4 niveaux : (1) Résumé exécutif 1 page (MP) — conclusion principale + force probante, (2) Analyse technique 8 pages — 5 indicateurs + méthodes + limites, (3) Annexes techniques — spectrogrammes, logs DeepWave, comparaison formantique avec hashes SHA-256, (4) Glossaire — vulgarisation des termes techniques pour le juge.",
+            ok: true, pts: 25,
+            fb: "Structure professionnelle optimale. Le résumé exécutif permet au MP de formuler ses chefs d'accusation immédiatement. L'analyse technique de 8 pages est suffisamment détaillée pour être vérifiable par un contre-expert. Les annexes avec hashes prouvent l'intégrité (Art. 141 CPP). Le glossaire rend le rapport accessible au juge non-spécialiste.",
+            legal: "Art. 184 CPP + NIST SP 800-61r3 — Rapport pyramidal : accessible au juriste, vérifiable par l'expert.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Rapport de 2 pages — les éléments essentiels suffisent, l'expertise audio est évidente.",
+            ok: false, pts: -15,
+            fb: "Trop succinct pour une infraction grave avec un préjudice de 3.2M CHF. La défense disposera certainement d'un contre-expert — sans documentation technique complète (spectrogrammes, logs, hashes), votre expertise ne résiste pas à la contradiction. Un rapport de 2 pages sera considéré comme superficiel.",
+            legal: "Art. 189 CPP — Expertise contradictoire : vous devez anticiper et documenter face à un contre-expert.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 88) return { icon: "🎙️", title: "Expert Audio Forensique IA", sub: "Maîtrise parfaite du deepfake vocal et des qualifications Art. 146/251 CP" };
+      if (pct >= 65) return { icon: "🔬", title: "Analyste Deepfake", sub: "Bonnes bases en forensique audio et droit pénal IA" };
+      if (pct >= 45) return { icon: "🎵", title: "Technicien Audio", sub: "Approfondissez l'investigation audio forensique et ATF 150 IV 188" };
+      return { icon: "📚", title: "Formation IA forensique requise", sub: "Deepfake, Art. 146 CP, expertise audio — compétences clés 2025-2026" };
+    },
+  },
+
+  /* ── LOCKBIT VICTIME — Réponse à incident PME, Suisse 2024 [EASY · 3 étapes] ──
+     Scénario d'entrée pour les novices — premier cas de ransomware
+     Contexte : Opération Cronos (fedpol + 12 pays), outils de déchiffrement LockBit
+     Procédures : isolation réseau, décision de payer / ne pas payer, signalement OFCS
+  ─────────────────────────────────────────────────────── */
+  {
+    id: "lockbit-victime",
+    title: "Ransomware — Premier Réflexe",
+    icon: "🔒",
+    difficulty: "easy",
+    atmosphere: "ransomware",
+    realCase: "Opération Cronos — fedpol + 12 pays, démantèlement LockBit 2024",
+    narrative: {
+      success: "L'isolation immédiate a limité la propagation. Les backups offline sont intacts. Le signalement à l'OFCS permet d'obtenir un outil de déchiffrement gratuit (Opération Cronos). Aucune rançon payée. L'entreprise reprend en 48h.",
+      degraded: "La propagation partielle a chiffré 40% des données. Backups partiels disponibles. Reprise en 5 jours avec perte de données mineures.",
+      failure: "La non-isolation initiale a permis au ransomware de chiffrer tout le réseau y compris les NAS de backup. Rançon de 80'000 CHF payée sans garantie de déchiffrement."
+    },
+    tags: ["RANSOMWARE", "RÉPONSE INCIDENT", "WINDOWS", "DROIT"],
+    legalRefs: ["OFCS/GovCERT procédures", "LPD 2023 Art. 24", "SECO sanctions", "Art. 305bis CP"],
+    intro: "Lundi 08h15. En arrivant au bureau, les écrans de la PME affichent tous le même message : « Vos fichiers sont chiffrés. Payez 80'000 CHF en Bitcoin dans 72h. » Vous êtes le responsable IT. C'est votre premier incident ransomware. Les 15 collaborateurs attendant vos instructions. Par où commencer ?",
+    alertLevel: "🔴 RANSOMWARE ACTIF — 72h avant doublement de la rançon",
+    objectives: [
+      { icon: "🔌", text: "Isoler immédiatement le réseau pour stopper la propagation" },
+      { icon: "💾", text: "Évaluer l'état des backups avant toute décision" },
+      { icon: "📣", text: "Signaler à l'OFCS et au MP — procédures obligatoires" },
+      { icon: "💰", text: "Appliquer la position suisse officielle sur le paiement de rançon" },
+    ],
+    debrief: `<p>La réponse aux 30 premières minutes d'un incident ransomware détermine l'issue. La séquence correcte est : <strong>(1) Isoler</strong> → (2) Évaluer les backups → (3) Signaler l'OFCS → (4) Ne pas payer → (5) Vérifier l'existence d'outils de déchiffrement (No More Ransom).</p>
+<p><strong>LockBit</strong>, démantelé en février 2024 par une coalition de 12 pays dont la Suisse (Opération Cronos, fedpol), avait mis à disposition des outils de déchiffrement gratuits pour les victimes. Beaucoup de PME suisses auraient pu récupérer leurs données sans payer — si elles avaient signalé à l'OFCS. Le paiement de rançon finance la cybercriminalité et n'est pas recommandé par les autorités suisses.</p><p><strong>Référence CH</strong> : Opération Cronos (20-21 février 2024) — coalition de 12 pays dont fedpol a démantelé l'infrastructure LockBit. Le NCA britannique (National Crime Agency) a mis à disposition des clés de déchiffrement via le portail de l'OFCS/GovCERT. Art. 302 CPP — signalement à la police : facultatif pour les entreprises privées (sauf professions réglementées). LPD 2023 Art. 24 — notification PFPDT : obligation conditionnelle (données personnelles + risque élevé = notification obligatoire).</p>`,
+    steps: [
+      {
+        phase: "🔌 Les 5 premières minutes",
+        situation: `08h17 — Le message de rançon s'affiche partout. Certains postes semblent encore normaux. Le réseau est toujours actif. Un collaborateur dit «&nbsp;Je peux encore accéder à mes fichiers sur le NAS&nbsp;». Vous devez agir immédiatement.`,
+        law: "<strong>ISO/IEC 27035</strong> — Gestion d'incident : Identification → Containment → Eradication.<br><strong>Manuel DFIR Ch. 11.1</strong> — Priorité absolue : contenir la propagation avant toute investigation.",
+        question: "<strong>Quelle est votre action IMMÉDIATE dans les 5 prochaines minutes ?</strong>",
+        choices: [
+          {
+            text: "Couper immédiatement TOUS les accès réseau (WiFi, LAN, VPN, connexion Internet) — isoler physiquement le réseau de l'entreprise.",
+            ok: true, pts: 25,
+            fb: "Décision critique et correcte. Le ransomware se propage via le réseau (SMB, partages). Chaque seconde de connectivité permet au chiffrement de progresser. Le NAS encore accessible doit être isolé immédiatement — c'est la priorité absolue avant tout le reste. Couper le réseau = arrêter le patient qui saigne.",
+            legal: "ISO/IEC 27035 + Manuel DFIR — Containment first : isolation réseau prioritaire absolue. Les backups NAS doivent être physiquement déconnectés.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Payer la rançon immédiatement pour récupérer les fichiers avant que la situation empire.",
+            ok: false, pts: -30,
+            fb: "Erreur grave à plusieurs niveaux. (1) Payer ne garantit pas le déchiffrement (moins de 60% des victimes récupèrent leurs données). (2) Vous financez des criminels. (3) Vous n'avez pas encore évalué vos backups — vous avez peut-être une solution gratuite. (4) Si LockBit est sanctionné par le SECO/OFAC, payer peut constituer une infraction. JAMAIS payer avant d'avoir évalué toutes les alternatives.",
+            legal: "SECO + OFAS + OFCS : position suisse officielle = ne pas payer. Art. 305bis CP potentiel si paiement à entité sanctionnée.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Appeler le fournisseur de services informatiques et attendre ses instructions.",
+            ok: false, pts: -15,
+            fb: "Trop passif. Chaque minute d'inaction laisse le ransomware chiffrer davantage de fichiers. Vous pouvez appeler votre prestataire — mais simultanément, pas à la place de l'isolation. Le prestataire vous dira d'abord : coupez le réseau. Agissez vous-même immédiatement.",
+            legal: "ISO/IEC 27035 — Vous n'avez pas besoin d'experts pour couper le switch réseau.",
+            critical: false, next: 1,
+          },
+        ],
+      },
+      {
+        phase: "💾 L'état des backups",
+        situation: `Réseau coupé. 08h22 — Vous évaluez les backups. État :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+✅ NAS de bureau (réseau local) : <strong>CHIFFRÉ</strong> — le ransomware avait accès réseau<br>
+✅ Disque USB backup hebdomadaire (branché en permanence au serveur) : <strong>CHIFFRÉ</strong><br>
+✅ Backup cloud OneDrive (synchronisation auto activée) : <strong>PARTIEL</strong> — fichiers récents chiffrés synchronisés<br>
+🔴 Backup tape mensuel (stocké dans un coffre physique hors réseau) : <strong>INTACT</strong> — dernier backup il y a 18 jours
+</div>`,
+        law: "<strong>Règle 3-2-1 des backups</strong> — 3 copies, 2 supports différents, 1 hors site (offline).<br><strong>OFCS Guide Ransomware</strong> — Évaluation backups avant toute décision de paiement.",
+        question: "<strong>Avec un backup tape intact vieux de 18 jours, quelle est votre position sur le paiement ?</strong>",
+        choices: [
+          {
+            text: "Payer la rançon pour récupérer les 18 derniers jours de données manquants dans le backup.",
+            ok: false, pts: -20,
+            fb: "Décision prématurée et risquée. Avant de payer, vérifiez : (1) LockBit a été démantelé en 2024 — des outils de déchiffrement gratuits existent (No More Ransom, OFCS). (2) Les 18 jours manquants peuvent-ils être reconstitués depuis les e-mails, les versions locales sur les postes non chiffrés, ou le shadow copy Windows ? Payer avant d'explorer ces options est une erreur.",
+            legal: "OFCS Guide Ransomware 2024 — Vérifier No More Ransom et outils de déchiffrement AVANT tout paiement.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Ne pas payer. Restaurer depuis le backup tape (18j de perte) + signaler immédiatement à l'OFCS pour obtenir les outils de déchiffrement LockBit (Opération Cronos).",
+            ok: true, pts: 25,
+            fb: "Décision optimale et conforme aux recommandations suisses. Le backup tape intact permet la restauration (18j de perte = acceptable). L'OFCS/GovCERT a mis à disposition des outils de déchiffrement LockBit gratuits suite à l'Opération Cronos (février 2024). Signaler immédiatement permet d'obtenir ces outils ET de contribuer à l'enquête nationale contre LockBit. Position officielle suisse : ne pas payer.",
+            legal: "OFCS/GovCERT + No More Ransom + Opération Cronos 2024 — Outils déchiffrement LockBit disponibles gratuitement post-démantèlement.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Restaurer depuis le backup tape et ne rien signaler — pas besoin d'impliquer les autorités.",
+            ok: false, pts: -15,
+            fb: "Erreur de deux niveaux. (1) La LPD 2023 peut imposer une notification au PFPDT si des données personnelles ont été compromises (Art. 24 LPD 2023). (2) Ne pas signaler à l'OFCS prive les autorités d'informations sur LockBit et vous prive des outils de déchiffrement disponibles. Le signalement est dans votre intérêt ET dans l'intérêt collectif.",
+            legal: "LPD 2023 Art. 24 (notification PFPDT si données personnelles compromises) + OFCS — Signalement recommandé.",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "📣 Le signalement officiel",
+        situation: `Vous signalez à l'OFCS (ofcs.admin.ch). Le GovCERT répond dans l'heure et confirme : LockBit v3.0 identifié, outils de déchiffrement disponibles pour les victimes ayant signalé avant le 01.06.2024. Votre incident est du 2024 — vous êtes éligible. Deux questions subsidiaires : (1) Faut-il aussi signaler à la police ? (2) La LPD 2023 impose-t-elle une notification ?`,
+        law: "<strong>LPD 2023 Art. 24</strong> — Notification PFPDT si violation données personnelles à risque élevé.<br><strong>Art. 302 CPP</strong> — Signalement facultatif des infractions par les particuliers (sauf si obligation professionnelle).<br><strong>GovCERT procédures</strong> — Formulaire de signalement incident.",
+        question: "<strong>Devez-vous aussi signaler à la police cantonale ET notifier le PFPDT ?</strong>",
+        choices: [
+          {
+            text: "Non aux deux — l'OFCS suffit.",
+            ok: false, pts: -10,
+            fb: "Incomplet. La LPD 2023 est indépendante du signalement OFCS. Si l'analyse montre que des données personnelles de clients/employés ont été chiffrées (ou exfiltrées avant chiffrement — vérifier les logs réseau), une notification PFPDT s'impose si le risque est élevé (Art. 24 LPD 2023). Le signalement police est facultatif mais recommandé pour ouvrir une procédure pénale.",
+            legal: "LPD 2023 Art. 24 = obligation si données personnelles + risque élevé. Police = démarche facultative mais utile.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Police cantonale : démarche recommandée mais facultative pour une PME (Art. 302 CPP). PFPDT : obligatoire si des données personnelles clients/employés ont été compromises (LPD 2023 Art. 24) — vérifier d'abord si exfiltration avant chiffrement.",
+            ok: true, pts: 25,
+            fb: "Position nuancée et exacte. Le signalement police (Art. 302 CPP) est facultatif pour un particulier/entreprise — mais il ouvre une procédure pénale utile pour votre assurance cyber et contribue à l'enquête nationale. La notification PFPDT (LPD 2023 Art. 24) dépend de si des données personnelles ont été exposées — vérifier les logs réseau pour détecter une éventuelle exfiltration avant le chiffrement (technique LockBit : double extorsion).",
+            legal: "Art. 302 CPP (signalement facultatif) + LPD 2023 Art. 24 (notification conditionnelle) + OFCS procédures.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Les deux sont obligatoires dans tous les cas.",
+            ok: false, pts: -5,
+            fb: "Trop absolu. Le signalement à la police est facultatif pour une entreprise privée (Art. 302 CPP — les particuliers ne sont pas obligés de signaler, sauf certaines professions). La notification PFPDT n'est obligatoire que si des données personnelles sont compromises avec risque élevé — ce n'est pas automatique dans tout incident ransomware.",
+            legal: "Art. 302 CPP — Signalement facultatif (sauf professions spécifiques). LPD 2023 Art. 24 — Notification conditionnelle (données personnelles + risque élevé).",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 85) return { icon: "🛡️", title: "Gestionnaire Incident Confirmé", sub: "Réflexes parfaits — isolation, backups, OFCS, LPD 2023" };
+      if (pct >= 60) return { icon: "🔒", title: "Responsable IT Cyber-Averti", sub: "Bonnes bases en réponse ransomware" };
+      return { icon: "📚", title: "Formation ransomware requise", sub: "Révisez l'OFCS Guide Ransomware et les procédures d'isolation" };
+    },
+  },
+
+  /* ══════════════════════════════════════════════════════════
+     NOUVELLES AFFAIRES — AVRIL 2026
+  ══════════════════════════════════════════════════════════ */
+
+  /* ── VÉTROZ-AKIRA — Supply Chain Attack Valais [MEDIUM · 5 étapes] ──
+     Source : 20min.ch + Le Nouvelliste + RhôneFM + La Télé — 12-24 avril 2026
+     Groupe AKIRA attaque prestataire IT valaisan → Vétroz, Abrifeu SA,
+     Air-Glaciers, Foire du Valais. Plainte MPC + jonction procédure AKIRA 2024.
+  ─────────────────────────────────────────────────────── */
+  {
+    id: "vetroz-akira",
+    title: "Akira à Vétroz — Supply Chain Valais",
+    icon: "🏔️",
+    difficulty: "medium",
+    atmosphere: "ransomware",
+    realCase: "Commune de Vétroz + Air-Glaciers + Foire du Valais, 12 avril 2026 (AKIRA)",
+    narrative: {
+      success: "La crise est maîtrisée : sauvetages Air-Glaciers jamais interrompus, plainte jointe à la procédure MPC AKIRA, Vétroz rétabli en 10 jours. Référence romande de gestion supply chain.",
+      degraded: "Rétablissement en 15 jours avec pertes de données partielles. Forensique prestataire lacunaire. PME valaisannes réclament des indemnisations.",
+      failure: "Absence de coordination inter-victimes et forensique insuffisante. AKIRA non formellement identifié dans ce dossier. Données Abrifeu SA perdues."
+    },
+    tags: ["SUPPLY CHAIN", "RANSOMWARE", "RÉPONSE INCIDENT", "DROIT"],
+    legalRefs: ["Art. 143bis CP", "Art. 144bis CP", "LPD 2023 Art. 24", "Art. 30 CPP", "Art. 302 CPP"],
+    intro: "12 avril 2026, 07h45. La commune de Vétroz (VS) ne peut plus accéder à ses systèmes. Simultanément : Abrifeu SA (Riddes) perd facturation et stocks, Air-Glaciers voit ses serveurs affectés, la Foire du Valais perd sa comptabilité. Point commun : tous sont clients du même prestataire informatique valaisan. Le groupe AKIRA revendique l'attaque. Vous êtes mandaté par le prestataire pour gérer la crise.",
+    alertLevel: "🏔️ AKIRA VALAIS — 4 VICTIMES · 1 PRESTATAIRE COMPROMIS · Air-Glaciers toujours en vol",
+    objectives: [
+      { icon: "🔌", text: "Isoler les systèmes du prestataire et cartographier l'étendue — 23 clients potentiellement touchés" },
+      { icon: "✈️", text: "Prioriser la continuité opérationnelle d'Air-Glaciers (sauvetages héliportés)" },
+      { icon: "📣", text: "Gérer les obligations LPD 2023 de chaque entité victime indépendamment" },
+      { icon: "🏛️", text: "Structurer la jonction de la plainte à la procédure MPC AKIRA existante (Art. 30 CPP)" },
+    ],
+    debrief: `<p>L'affaire Vétroz illustre le risque des <strong>attaques supply chain</strong> : un seul prestataire compromis paralyse simultanément une commune, une entreprise de sécurité incendie, un opérateur de sauvetage héliporté et un organisateur d'événements. La surface d'attaque réelle n'est pas celle des victimes finales, mais celle de leur prestataire.</p>
+<p>Points juridiques clés de l'affaire : (1) Chaque entité notifie le PFPDT indépendamment (LPD 2023 Art. 24 — le prestataire n'est pas le responsable de traitement). (2) Les données de santé Air-Glaciers = catégorie particulière → risque élevé automatique → notification prioritaire. (3) Dépôt direct au <strong>MPC avec demande de jonction (Art. 30 CPP)</strong> à la procédure AKIRA 2024 déjà ouverte — procédure utilisée par Vétroz le 24 avril 2026.</p>`,
+    steps: [
+      {
+        phase: "🔌 07h50 — Isolation et cartographie d'urgence",
+        situation: `Vous disposez de 30 minutes avant que les médias locaux soient informés.<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+📡 23 clients du prestataire sur la même infrastructure centralisée<br>
+🔒 Message AKIRA sur console de supervision : «&nbsp;Your files are encrypted&nbsp;»<br>
+✈️ Air-Glaciers : fallback manuel activé — sauvetages maintenus<br>
+🚒 Abrifeu SA : stocks, livraisons, facturation bloqués<br>
+🎡 Foire du Valais : comptabilité + tourniquets sur 2 serveurs perdus<br>
+🏛️ Commune de Vétroz : bases de données et logiciels essentiels inaccessibles
+</div>`,
+        law: "<strong>ISO/IEC 27035</strong> — Containment first : isoler avant d'investiguer.<br><strong>LPD 2023 Art. 7</strong> — Devoir de sécurité du sous-traitant IT.",
+        question: "<strong>Quelle est votre priorité absolue dans les 30 premières minutes ?</strong>",
+        choices: [
+          {
+            text: "Isoler immédiatement toute l'infrastructure (couper les accès réseaux de TOUS les clients) et les notifier simultanément pour qu'ils activent leurs plans de continuité.",
+            ok: true, pts: 25,
+            fb: "Décision correcte. L'isolation stoppe la propagation vers les 23 autres clients non encore touchés. La notification simultanée permet à Air-Glaciers de consolider son fallback, à Abrifeu de mettre ses livraisons en attente. Chaque minute sans isolation peut étendre les dégâts.",
+            legal: "ISO/IEC 27035 — Containment : priorité absolue avant investigation.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Commencer l'investigation forensique pour identifier le vecteur d'entrée AKIRA avant de toucher quoi que ce soit.",
+            ok: false, pts: -15,
+            fb: "Erreur de priorisation. AKIRA continue de chiffrer pendant l'analyse. Les 23 autres clients non touchés peuvent être compromis dans l'heure. Isoler d'abord — forensique sur systèmes isolés ensuite.",
+            legal: "ISO/IEC 27035 — Containment avant Investigation. Le temps de forensique coûte ici des victimes supplémentaires.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Appeler immédiatement le MPC et attendre leurs instructions avant toute action technique.",
+            ok: false, pts: -20,
+            fb: "Trop passif. Une procédure judiciaire prend des heures à s'activer. Isoler = action dans votre compétence immédiate. Contacter le MPC = parallèle, pas préalable à l'isolation.",
+            legal: "ISO/IEC 27035 — Actions techniques d'urgence dans la compétence du prestataire.",
+            critical: false, next: 1,
+          },
+        ],
+      },
+      {
+        phase: "✈️ 09h15 — Air-Glaciers : le risque vital",
+        situation: `Air-Glaciers a activé son fallback manuel. Les sauvetages héliportés sont maintenus. Mais deux de leurs serveurs sont chiffrés — et ils sont encore connectés au réseau du prestataire compromis. Si les systèmes de coordination des vols médicalisés sont atteints, des vies sont en jeu.`,
+        law: "<strong>Ordonnance sur la navigation aérienne (ONA)</strong> — Priorité à la continuité des services de sauvetage aérien.<br><strong>Art. 97 CO</strong> — Responsabilité contractuelle du prestataire.",
+        question: "<strong>Recommandez-vous la déconnexion immédiate d'Air-Glaciers du réseau prestataire ?</strong>",
+        choices: [
+          {
+            text: "Oui — couper immédiatement tout lien réseau entre le prestataire compromis et Air-Glaciers, même si cela perturbe des services non critiques.",
+            ok: true, pts: 25,
+            fb: "Décision correcte. Le fallback manuel existe précisément pour ce scénario. Couper le lien protège les systèmes critiques de vol. La perturbation administrative est un risque acceptable. La compromission des systèmes de sauvetage ne l'est pas.",
+            legal: "ONA + Art. 97 CO — Sécurité vitale prime sur continuité administrative.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Non — surveiller intensivement mais ne pas couper pour éviter de perturber Air-Glaciers.",
+            ok: false, pts: -25,
+            fb: "Risque inacceptable. Une surveillance intensive ne peut pas stopper une propagation de ransomware en secondes. Si les systèmes de coordination de vols médicalisés sont chiffrés, des vies sont en danger. Ce n'est pas un risque pondérable contre la perturbation administrative.",
+            legal: "Principe de précaution — Risque vital ne se pondère pas contre perturbation administrative.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Laisser Air-Glaciers décider — c'est leur infrastructure.",
+            ok: false, pts: -10,
+            fb: "Déresponsabilisation inappropriée. En tant que prestataire ayant introduit le risque, vous avez une obligation de conseil. Recommandez clairement la déconnexion et expliquez le risque — la décision finale appartient à Air-Glaciers mais ils doivent être informés.",
+            legal: "Art. 97 CO + Devoir de conseil — Informer et recommander, pas se défausser.",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "📣 10h30 — LPD 2023 : qui notifie le PFPDT ?",
+        situation: `AKIRA pratique la double extorsion — l'exfiltration avant chiffrement est leur mode opératoire documenté. Des données personnelles ont vraisemblablement été exfiltrées : données citoyens de Vétroz, données patients Air-Glaciers (données de santé !), données clients Abrifeu, données visiteurs Foire du Valais.`,
+        law: "<strong>LPD 2023 Art. 24</strong> — Chaque <em>responsable du traitement</em> notifie le PFPDT indépendamment.<br><strong>LPD 2023 Art. 5 al. 1 let. c</strong> — Données de santé = catégorie particulière → risque élevé automatique.<br><strong>Art. 9 LPD 2023</strong> — Le prestataire est <em>sous-traitant</em>, pas responsable du traitement.",
+        question: "<strong>Qui doit notifier le PFPDT, et dans quel ordre de priorité ?</strong>",
+        choices: [
+          {
+            text: "Le prestataire IT notifie pour tous ses clients en une notification groupée — plus efficace.",
+            ok: false, pts: -15,
+            fb: "Impossible légalement. LPD 2023 Art. 24 : le <em>responsable du traitement</em> notifie — pas son sous-traitant. Vétroz notifie pour ses données communales, Abrifeu pour ses clients, Air-Glaciers pour les données santé, etc. Le prestataire informe ses clients de la violation, mais la notification PFPDT appartient à chacun.",
+            legal: "LPD 2023 Art. 24 al. 1 + Art. 5 al. j — Responsable du traitement = chaque entité cliente.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Chaque entité notifie le PFPDT indépendamment — Air-Glaciers en priorité absolue (données de santé = catégorie particulière = risque élevé automatique = notification sans délai).",
+            ok: true, pts: 25,
+            fb: "Procédure exacte. Art. 5 al. 1 let. c LPD 2023 : données de santé = catégorie particulière → risque élevé automatique → notification PFPDT obligatoire et prioritaire pour Air-Glaciers. Le mode opératoire AKIRA (exfiltration systématique documentée) rend la vraisemblance de l'exfiltration très élevée — pas besoin de confirmation absolue pour notifier.",
+            legal: "LPD 2023 Art. 24 + Art. 5 al. 1 let. c — Données santé = priorité notification absolue.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Attendre la confirmation que AKIRA publie les données avant de notifier — éviter les fausses alertes.",
+            ok: false, pts: -20,
+            fb: "Approche inacceptable pour les données de santé. Attendre qu'AKIRA publie signifie que les patients apprennent leur violation par la presse. LPD 2023 Art. 24 : notification quand violation 'vraisemblablement établie'. Avec une revendication AKIRA et leur mode opératoire documenté, la vraisemblance est très élevée.",
+            legal: "LPD 2023 Art. 24 — Notification sur vraisemblance, pas seulement certitude.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "🏛️ J+2 — Plainte pénale et jonction MPC",
+        situation: `La commune de Vétroz souhaite porter plainte. Le MPC a une procédure ouverte contre AKIRA depuis avril 2024. Comment structurer la plainte pour qu'elle soit traitée efficacement ?`,
+        law: "<strong>Art. 30 CPP</strong> — Jonction de procédures connexes.<br><strong>Art. 24 al. 2 CPP</strong> — Compétence MPC pour cybercriminalité transfrontalière.<br><strong>Convention Budapest Art. 29</strong> — Conservation urgente des preuves électroniques.",
+        question: "<strong>Comment structurer la plainte de Vétroz pour maximiser l'efficacité judiciaire ?</strong>",
+        choices: [
+          {
+            text: "Déposer auprès du MP cantonal valaisan — Vétroz est une commune valaisanne.",
+            ok: false, pts: -15,
+            fb: "Mauvaise juridiction. AKIRA = groupe transnational → compétence MPC (Art. 24 al. 2 CPP). Le MP valaisan renverra au MPC. Aller directement au MPC évite ce délai.",
+            legal: "Art. 24 al. 2 CPP — Cybercriminalité transfrontalière = compétence fédérale MPC.",
+            critical: false, next: 4,
+          },
+          {
+            text: "Déposer directement au MPC avec demande explicite de jonction à la procédure AKIRA 2024 (Art. 30 CPP), en produisant les éléments forensiques disponibles et la liste des victimes valaisannes.",
+            ok: true, pts: 25,
+            fb: "Stratégie optimale — exactement ce que Vétroz a fait (La Télé, 24 avril 2026). La jonction (Art. 30 CPP) évite la duplication : le MPC dispose déjà des TTPs AKIRA, IoC, contacts Europol. Votre dossier renforce l'accusation globale. Inclure la liste des victimes valaisannes permet au MPC d'évaluer l'ampleur totale.",
+            legal: "Art. 30 CPP + Art. 24 al. 2 CPP — Procédure utilisée par Vétroz, 24 avril 2026.",
+            critical: false, next: 4,
+          },
+          {
+            text: "Attendre la fin de la restauration pour constituer un dossier complet avant de déposer plainte.",
+            ok: false, pts: -10,
+            fb: "Délai contre-productif. Les preuves forensiques se dégradent pendant la restauration. De plus, la Convention Budapest Art. 29 permet des mesures de conservation urgente que le MPC peut activer rapidement après une plainte.",
+            legal: "Convention Budapest Art. 29 — Conservation urgente des preuves : activer tôt.",
+            critical: false, next: 4,
+          },
+        ],
+      },
+      {
+        phase: "📋 J+10 — Remédiation structurelle",
+        situation: `Dix jours après. Vétroz fonctionne presque normalement. Air-Glaciers et la Foire du Valais ont rétabli leurs systèmes critiques. Abrifeu SA reconstruit depuis des sauvegardes partielles. Le prestataire vous demande un plan pour éviter la récidive.`,
+        law: "<strong>NIST SP 800-161</strong> — Cybersecurity Supply Chain Risk Management.<br><strong>ISO/IEC 27001</strong> — Certification sécurité prestataires IT.<br><strong>LPD 2023 Art. 8</strong> — Sécurité par défaut.",
+        question: "<strong>Quelle mesure structurelle est la plus importante pour prévenir une nouvelle supply chain attack ?</strong>",
+        choices: [
+          {
+            text: "Ne plus externaliser — chaque entité gère son IT en interne.",
+            ok: false, pts: -10,
+            fb: "Irréaliste pour une commune de 1'300 habitants et des PME. L'externalisation est inévitable à cette échelle. La solution est un encadrement contractuel et technique renforcé, pas l'abandon de l'externalisation.",
+            legal: "Principe de proportionnalité — Sécurité adaptée aux moyens réels des entités.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Clauses contractuelles renforcées : audit sécurité annuel tiers, séparation réseau inter-clients, obligation de notification sous 2h, droit d'audit, backups offline vérifiés, MFA obligatoire admin — clause résolutoire si non respecté.",
+            ok: true, pts: 25,
+            fb: "Plan précis et actionnable. Chaque clause répond à un enseignement de l'affaire : séparation réseau évite la propagation inter-clients, notification rapide permet l'isolation, MFA bloque l'accès initial via credentials volés (TTPs AKIRA documentés), backups offline résistent au chiffrement.",
+            legal: "NIST SP 800-161 + ISO/IEC 27001 + LPD 2023 Art. 8 — Standards supply chain IT collectivités/PME.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Changer de prestataire immédiatement.",
+            ok: false, pts: -5,
+            fb: "Réaction compréhensible mais insuffisante. Changer de prestataire sans renforcer les exigences contractuelles reproduira le problème. La vulnérabilité exploitée par AKIRA peut affecter n'importe quel prestataire. La solution est systémique.",
+            legal: "NIST SP 800-161 — Gestion du risque supply chain = processus, pas choix de fournisseur unique.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 88) return { icon: "🏔️", title: "Expert Supply Chain Valaisan", sub: "Gestion parfaite — AKIRA Vétroz 2026, référence romande" };
+      if (pct >= 65) return { icon: "🔒", title: "Gestionnaire Incident Multi-Victimes", sub: "Bonne maîtrise des crises supply chain IT" };
+      if (pct >= 45) return { icon: "🛡️", title: "Responder IT", sub: "Approfondissez LPD 2023 Art. 24 et Art. 30 CPP jonction" };
+      return { icon: "📚", title: "Formation supply chain requise", sub: "NIST SP 800-161 + gestion multi-victimes" };
+    },
+  },
+
+  /* ── FAUX-POLICIERS — Vishing Neuchâtel 2025 [MEDIUM · 4 étapes] ──
+     Source : Affaire #14 liste originale — 43 coursiers arrêtés
+     Art. 146 CP, Art. 179septies CP, forensique mobile Android,
+     scripts d'appels, centres commandement Strasbourg/Lyon, EIMP France
+  ─────────────────────────────────────────────────────── */
+  {
+    id: "faux-policiers",
+    title: "Les Faux Policiers — Vishing Neuchâtel",
+    icon: "👮",
+    difficulty: "medium",
+    atmosphere: "network",
+    realCase: "Démantèlement réseau faux policiers, Neuchâtel 2025 — 43 coursiers",
+    narrative: {
+      success: "L'analyse forensique des 43 smartphones trace les scripts jusqu'aux centres FR. L'EIMP avec la France permet l'identification des cerveaux à Strasbourg. Qualification Art. 146 CP + complicité Art. 25 CP pour les coursiers. Dossier solide.",
+      degraded: "15 téléphones analysés sur 43. Preuves suffisantes pour le réseau mais les centres de commandement difficiles à prouver formellement. Coursiers condamnés pour complicité, cerveaux protégés par la distance.",
+      failure: "Forensique non conforme aux standards. Scripts non authentifiés. Défense obtient l'exclusion des preuves numériques. Acquittement des coursiers faute de dol prouvé."
+    },
+    tags: ["VISHING", "FORENSIQUE", "MOBILE", "DROIT PÉNAL"],
+    legalRefs: ["Art. 146 CP", "Art. 25 CP", "Art. 179septies CP", "ACPO Principles", "Art. 48a EIMP"],
+    intro: "Neuchâtel, 2025. Des 'policiers' et 'procureurs' appellent des victimes âgées, leur demandant de remettre leurs économies à un 'coursier de la police'. Après des semaines d'enquête, une opération simultanée dans 6 cantons interpelle 43 coursiers. Vous êtes l'analyste DFIR chargé de l'analyse forensique de ces 43 smartphones Android — en 48 heures, avant que les demandes de scellés arrivent.",
+    alertLevel: "📞 43 SMARTPHONES SAISIS — Les scripts d'appels mènent à Strasbourg · 48h avant les scellés",
+    objectives: [
+      { icon: "📱", text: "Établir une procédure d'acquisition forensique de masse (43 appareils, 48h)" },
+      { icon: "📋", text: "Extraire et authentifier les scripts d'appels comme preuves d'escroquerie organisée" },
+      { icon: "🗺️", text: "Reconstruire la hiérarchie réseau via GPS et communications" },
+      { icon: "⚖️", text: "Qualifier le dol éventuel des coursiers (Art. 12 al. 2 CP + Art. 25 CP)" },
+    ],
+    debrief: `<p>Les arnaques au faux policier (vishing) utilisent des scripts sophistiqués préparés par des centres de commandement à l'étranger. Les coursiers lisent souvent un texte sans en comprendre pleinement la nature criminelle. La preuve du <strong>dol éventuel</strong> (Art. 12 al. 2 CP) est centrale : ils auraient pu et dû comprendre qu'ils participaient à une fraude.</p>
+<p>L'analyse forensique des téléphones permet de remonter la chaîne : scripts → numéros donneurs d'ordre → coordonnées GPS → identification des centres (Strasbourg, Lyon). L'entraide judiciaire franco-suisse (EIMP, convention bilatérale) permet ensuite l'identification des cerveaux. Enjeu forensique : <strong>authenticité des scripts</strong> (hash + chaîne de custody) pour qu'ils soient recevables comme preuves de l'organisation criminelle.</p>`,
+    steps: [
+      {
+        phase: "📱 L'acquisition de masse — 43 téléphones, 48h",
+        situation: `43 smartphones devant vous. Certains déverrouillés, d'autres verrouillés. Tous ont la connectivité cellulaire active — risque de remote wipe si les cerveaux du réseau réalisent les arrestations.<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+⚡ 12 téléphones : écran actif, déverrouillés<br>
+🔒 28 téléphones : verrouillés (PIN/pattern)<br>
+💀 3 téléphones : éteints<br>
+📡 TOUS : connectivité cellulaire active — risque remote wipe<br>
+⏱️ 48h avant que les avocats demandent les scellés
+</div>`,
+        law: "<strong>ACPO Principle 1</strong> — Aucune action ne doit modifier les données sur les appareils saisis.<br><strong>ISO/IEC 27037</strong> — Acquisition appareils mobiles : isolation RF obligatoire.<br><strong>Art. 248 CPP</strong> — Scellés : peuvent être demandés à tout moment par la défense.",
+        question: "<strong>Quelle est votre première action sur les 43 appareils ?</strong>",
+        choices: [
+          {
+            text: "Placer tous les appareils dans des sacs Faraday immédiatement pour couper la connectivité, puis trier par état (déverrouillé/verrouillé/éteint) pour prioriser l'acquisition.",
+            ok: true, pts: 25,
+            fb: "Action critique et correcte. Les sacs Faraday éliminent le risque de remote wipe — si le réseau criminel réalise les arrestations, il tentera d'effacer les téléphones à distance. L'isolation RF est la priorité absolue avant toute acquisition. Le tri par état permet ensuite de prioriser : appareils déverrouillés d'abord (accès immédiat), verrouillés ensuite (outils de déverrouillage), éteints en dernier (risque BitLocker si Android chiffré).",
+            legal: "ISO/IEC 27037 + ACPO Principle 1 — Isolation RF : priorité absolue avant acquisition mobile.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Commencer immédiatement l'acquisition des 12 appareils déverrouillés via ADB — c'est l'opportunité pendant qu'ils sont accessibles.",
+            ok: false, pts: -15,
+            fb: "Erreur critique d'ordre. Les 31 autres appareils connectés peuvent être effacés à distance pendant que vous acquérez les 12. L'isolation RF de TOUS les appareils est la priorité — ensuite seulement l'acquisition. Perdre 31 appareils par remote wipe pendant que vous acquérez 12 est un désastre forensique.",
+            legal: "ISO/IEC 27037 — Isolation RF de tous les appareils avant toute acquisition individuelle.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Demander à chaque suspect de déverrouiller son téléphone — plus rapide pour l'accès.",
+            ok: false, pts: -20,
+            fb: "Violation du droit au silence (Art. 113 CPP). Un suspect ne peut pas être contraint de fournir son code PIN — c'est une donnée auto-incriminante. Demander = risque d'invalidation de la procédure. De plus, l'accès à des appareils connectés sans isolation RF expose au remote wipe.",
+            legal: "Art. 113 CPP — Droit au silence inclut le refus de communiquer ses codes d'accès.",
+            critical: false, next: 1,
+          },
+        ],
+      },
+      {
+        phase: "📋 Les scripts d'appels — preuve centrale",
+        situation: `Sur 15 des 43 appareils analysés, vous trouvez des fichiers textes (.txt, .docx, WhatsApp) contenant des scripts d'appels : «&nbsp;Bonjour, je suis l'inspecteur Müller de la police fédérale. Nous avons découvert que votre compte bancaire est utilisé dans une affaire criminelle. Pour protéger vos avoirs, vous devez retirer 10'000 CHF et les remettre à notre coursier...&nbsp;». Les scripts sont en français, allemand et italien. Certains fichiers datent de 3 semaines.`,
+        law: "<strong>Art. 141 CPP</strong> — Admissibilité des preuves numériques : intégrité requise.<br><strong>Art. 146 CP</strong> — Escroquerie : tromperie astucieuse d'une personne physique.<br><strong>Art. 25 CP</strong> — Complicité : participation à l'infraction d'un tiers.",
+        question: "<strong>Comment authentifier les scripts pour qu'ils soient recevables et démontrent le dol des coursiers ?</strong>",
+        choices: [
+          {
+            text: "Capturer des screenshots des scripts et les imprimer pour le dossier — format accessible pour le MP.",
+            ok: false, pts: -20,
+            fb: "Preuve non authentifiable. Un screenshot peut être fabriqué. Sans hash SHA-256 du fichier source, sans extraction forensique documentée depuis l'appareil avec chaîne de custody, la défense contestera l'authenticité. Le MP ne peut pas s'appuyer sur des screenshots pour prouver que le script était sur le téléphone du prévenu.",
+            legal: "Art. 141 CPP — Preuves numériques : intégrité via hash + chaîne de custody. Screenshot = preuve contestable.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Extraction forensique avec hash SHA-256 de chaque fichier script (UFED/Cellebrite ou ADB + dd), documentation de la chaîne de custody (appareil → extraction → hash → copie de travail), et corrélation des métadonnées (date de création, modifications, origine WhatsApp/Telegram) pour établir la timeline d'utilisation.",
+            ok: true, pts: 25,
+            fb: "Procédure forensique complète et admissible. Le hash SHA-256 garantit l'intégrité (Art. 141 CPP). La chaîne de custody prouve que le fichier est bien celui du prévenu. Les métadonnées (date création, envoi WhatsApp) établissent la timeline et démontrent que le script était utilisé activement — élément clé pour prouver le dol (savoir qu'on participait à une fraude).",
+            legal: "ACPO Principles + Art. 141 CPP — Hash + chaîne de custody + métadonnées = preuve admissible et probante.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Regrouper les 15 scripts identiques dans un fichier PDF unique pour simplifier le dossier.",
+            ok: false, pts: -10,
+            fb: "Perte de valeur probante individuelle. Chaque script doit être lié à un appareil spécifique (et donc à un prévenu spécifique). Un fichier PDF groupé efface ce lien. De plus, les métadonnées propres à chaque fichier (date, origine, appareil source) disparaissent. Le MP a besoin de prouver QUI avait le script, pas seulement qu'il existait.",
+            legal: "Art. 141 CPP — Lien preuve → prévenu : chaque extraction individualisée par appareil.",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "⚖️ Le dol éventuel des coursiers",
+        situation: `Les 43 coursiers interpellés utilisent tous la même défense : «&nbsp;Je ne savais pas que c'était une fraude. J'ai été engagé pour livrer des enveloppes. On m'a dit que c'était légal.&nbsp;» Vous devez, à partir des éléments forensiques, aider le MP à établir le dol éventuel (Art. 12 al. 2 CP).`,
+        law: "<strong>Art. 12 al. 2 CP</strong> — Dol éventuel : l'auteur envisage la réalisation de l'infraction comme possible et l'accepte.<br><strong>Art. 25 CP</strong> — Complicité : prêter assistance sachant ou pouvant savoir que l'acte principal est délictueux.<br><strong>ATF 133 IV 9</strong> — Dol éventuel : conscience du risque + acceptation.",
+        question: "<strong>Quels éléments forensiques permettent d'établir le dol éventuel des coursiers ?</strong>",
+        choices: [
+          {
+            text: "Les scripts suffisent — si le coursier avait le script sur son téléphone, il savait que c'était une fraude.",
+            ok: false, pts: -10,
+            fb: "Argument trop direct. La défense répondra : 'Mon client a reçu ce fichier sans le lire, il ne savait pas ce qu'il contenait.' Le dol éventuel nécessite de démontrer la <em>conscience</em> du risque + <em>l'acceptation</em>. Les scripts seuls ne suffisent pas — il faut des indices d'utilisation active.",
+            legal: "Art. 12 al. 2 CP + ATF 133 IV 9 — Dol éventuel = conscience + acceptation, pas simple possession.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Faisceau d'indices : (1) Lecture documentée des scripts (temps de consultation, scroll des fichiers via métadonnées), (2) Communications avec les donneurs d'ordre juste avant chaque collecte, (3) Montants anormalement élevés collectés (10'000-50'000 CHF en cash), (4) Déplacements répétés chez des personnes âgées, (5) Utilisation de téléphones prépayés anonymes — comportement de dissimulation.",
+            ok: true, pts: 25,
+            fb: "Faisceau d'indices conforme à ATF 133 IV 9. Chaque indice contribue : (1) La consultation des scripts prouve la connaissance du contenu. (2) Les communications juste avant les collectes démontrent l'encadrement actif. (3) Les montants anormaux (aucun légal ne demande 50'000 CHF en cash à une personne âgée) auraient dû alerter. (4) La répétition chez des profils similaires = pattern criminel évident. (5) Le téléphone prépayé = comportement de dissimulation incompatible avec une activité légale.",
+            legal: "ATF 133 IV 9 + Art. 12 al. 2 CP — Faisceau d'indices concordants = dol éventuel établi.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Le montant en cash suffit — personne de bonne foi ne collecte 50'000 CHF en liquide chez une personne âgée.",
+            ok: false, pts: 0,
+            fb: "Argument fort mais insuffisant seul. Le montant en cash est un indice important, mais la défense peut inventer une justification (investissement immobilier, aide familiale). Combiné avec les scripts, les communications et le pattern répétitif, il devient convaincant. Seul, il peut laisser un doute.",
+            legal: "ATF 133 IV 9 — Un seul indice peut suffire si très fort, mais le faisceau multiple est plus robuste.",
+            critical: false, next: 3,
+          },
+        ],
+      },
+      {
+        phase: "🌐 J+7 — La piste française",
+        situation: `Les métadonnées et les communications téléphoniques pointent vers deux numéros français qui ont coordonné les 43 coursiers depuis Strasbourg et Lyon. Les coordonnées GPS de plusieurs téléphones correspondent à des déplacements jusqu'aux centres de commandement en France. Vous préparez la demande d'entraide internationale.`,
+        law: "<strong>Art. 48a EIMP</strong> — Entraide judiciaire internationale simplifiée avec la France.<br><strong>Convention Franco-Suisse d'entraide</strong> — Accord bilatéral CH-FR (exécution rapide).<br><strong>Convention Budapest Art. 29</strong> — Conservation urgente des données en France.",
+        question: "<strong>Quelle est la stratégie optimale pour obtenir rapidement des éléments sur les centres FR ?</strong>",
+        choices: [
+          {
+            text: "Demande formelle MLAT CH-FR via le MPC — voie officielle complète.",
+            ok: false, pts: -5,
+            fb: "Voie correcte mais lente (6-12 mois pour une demande formelle MLAT). En parallèle, activer Art. 48a EIMP (entraide simplifiée bilatérale CH-FR) pour les mesures urgentes et Art. 29 Convention Budapest pour la conservation des données chez les opérateurs français — avant que les numéros de coordination ne disparaissent.",
+            legal: "Art. 48a EIMP + Convention Budapest Art. 29 — Entraide rapide en parallèle de la voie formelle.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Triple voie simultanée : (1) Art. 48a EIMP pour l'entraide simplifiée et rapide CH-FR, (2) Convention Budapest Art. 29 pour conservation urgente des données opérateurs français (numéros de coordination), (3) Partage des IoC avec Europol/SIENA pour les structures similaires dans d'autres pays.",
+            ok: true, pts: 25,
+            fb: "Approche multi-canal optimale. Art. 48a EIMP est plus rapide que la voie MLAT classique (accord bilatéral CH-FR simplifié). La conservation urgente Art. 29 Budapest préserve les données des numéros français avant qu'elles ne soient supprimées (conservation légale limitée). Le partage Europol/SIENA est utile car ces réseaux de vishing opèrent souvent dans plusieurs pays simultanément.",
+            legal: "Art. 48a EIMP + Convention Budapest Art. 29 + Europol SIENA — Triple canal pour identification rapide des cerveaux.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Contacter directement la police de Strasbourg par email — contact informel plus rapide.",
+            ok: false, pts: -20,
+            fb: "Contact informel sans valeur juridique. Les preuves obtenues informellement ne sont pas utilisables dans une procédure pénale suisse. La coopération policière opérationnelle (canaux informels) peut servir à vérifier des hypothèses, mais tout élément probatoire doit passer par une voie d'entraide formelle.",
+            legal: "Art. 141 CPP — Preuves obtenues par canaux informels non formalisés : risque d'irrecevabilité.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 88) return { icon: "👮", title: "Expert Vishing DFIR", sub: "Maîtrise parfaite — forensique mobile, dol éventuel, EIMP" };
+      if (pct >= 65) return { icon: "📱", title: "Analyste Mobile Forensics", sub: "Bonne maîtrise de la forensique mobile en contexte vishing" };
+      if (pct >= 45) return { icon: "🔍", title: "Technicien Mobile", sub: "Approfondissez l'isolation RF et Art. 12 CP dol éventuel" };
+      return { icon: "📚", title: "Formation mobile forensics requise", sub: "ISO/IEC 27037 + ACPO mobile + Art. 25-146 CP" };
+    },
+  },
+
+  /* ── INFOSTEALER — Opération Magnus, Suisse 2024 [MEDIUM · 4 étapes] ──
+     Source : Affaire #16 liste originale — fedpol associé à Opération Magnus
+     Démantèlement RedLine + META stealers (octobre 2024)
+     Accès total aux serveurs C2, listes identifiants suisses volés
+     Art. 143 CP, Art. 143bis CP, MROS (LBA Art. 9), Art. 305bis CP,
+     forensique malware, analyse C2, notification OFCS
+  ─────────────────────────────────────────────────────── */
+  {
+    id: "infostealer-magnus",
+    title: "Opération Magnus — Infostealers RedLine & META",
+    icon: "🦠",
+    difficulty: "medium",
+    atmosphere: "network",
+    realCase: "Fedpol + Europol — Opération Magnus, démantèlement RedLine & META, octobre 2024",
+    narrative: {
+      success: "L'analyse forensique des serveurs C2 extraite les listes d'identifiants suisses. Les victimes sont notifiées via l'OFCS. Le prestataire de service bancaire identifié parmi les identifiants volés déclenche un reset massif. La procédure MPC vise les distributeurs suisses de la MaaS (Malware-as-a-Service).",
+      degraded: "Les identifiants suisses sont identifiés mais la notification des victimes est partielle. Les comptes les plus sensibles (e-banking) sont réinitialisés, mais certaines victimes subissent des fraudes avant d'être alertées.",
+      failure: "Les données des serveurs C2 ne sont pas exploitées forensiquement avant leur destruction. Les identifiants suisses circulent sur des forums de revente. Les victimes ne sont pas notifiées."
+    },
+    tags: ["MALWARE", "FORENSIQUE", "RÉSEAUX", "DROIT PÉNAL"],
+    legalRefs: ["Art. 143 CP", "Art. 143bis CP", "Art. 305bis CP", "LBA Art. 9", "OFCS GovCERT"],
+    intro: "Octobre 2024. Fedpol est associé à l'Opération Magnus coordonnée par Europol — démantèlement de l'infrastructure des infostealers RedLine et META, les malwares les plus répandus en Suisse pour le vol de credentials. Europol fournit à fedpol un 'accès total' aux serveurs de commande et contrôle (C2) démantelés. Les données révèlent des listes massives d'identifiants suisses volés. Votre mission : analyser forensiquement les données C2 et coordonner la réponse.",
+    alertLevel: "🦠 SERVEURS C2 DÉMANTELÉS — Listes identifiants suisses exposées · Victimes à notifier d'urgence",
+    objectives: [
+      { icon: "🔬", text: "Analyser forensiquement les données C2 pour isoler les victimes suisses" },
+      { icon: "📣", text: "Coordonner la notification des victimes via l'OFCS/GovCERT" },
+      { icon: "⚖️", text: "Qualifier les infractions applicables aux distributeurs suisses de la MaaS" },
+      { icon: "🏦", text: "Évaluer les obligations des institutions financières (LBA Art. 9, MROS)" },
+    ],
+    debrief: `<p>Les <strong>infostealers</strong> (RedLine, META, Raccoon, Vidar) sont des malwares vendus en Malware-as-a-Service (MaaS) sur des forums criminels. Ils collectent automatiquement : mots de passe sauvegardés dans les navigateurs, cookies de session, données de remplissage automatique, wallets crypto, captures d'écran. Un seul serveur C2 peut contenir les données de centaines de milliers de victimes mondiales.</p>
+<p>En droit suisse : <strong>Art. 143 CP</strong> (soustraction de données) pour les victimes dont les données ont été collectées, <strong>Art. 143bis CP</strong> (accès indu) pour l'accès aux systèmes via le malware. Les distributeurs suisses du MaaS (acheteurs de licences RedLine/META) engagent leur responsabilité pénale même s'ils n'ont pas développé le malware. La notification des victimes via <strong>OFCS/GovCERT</strong> est le rôle de l'autorité, pas des banques qui ne doivent pas agir seules.</p>`,
+    steps: [
+      {
+        phase: "🔬 L'analyse des données C2",
+        situation: `Europol vous transmet un accès aux données extraites des serveurs C2 RedLine et META démantelés. Le volume est considérable :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+📊 Volume total : 87 millions d'enregistrements de victimes mondiales<br>
+🇨🇭 Filtre «&nbsp;.ch&nbsp;» sur les domaines/e-mails : ~340'000 enregistrements suisses<br>
+🏦 Parmi eux : credentials e-banking (UBS, PostFinance, Raiffeisen), wallets crypto, identifiants d'accès VPN d'entreprises<br>
+📅 Données collectées entre janvier 2022 et octobre 2024<br>
+⚠️ Certains identifiants peuvent avoir été déjà utilisés par les acheteurs de la MaaS
+</div>`,
+        law: "<strong>Art. 143 CP</strong> — Soustraction de données : les victimes sont les 340'000 personnes dont les données ont été volées.<br><strong>Loi fédérale sur le renseignement en matière pénale (LRENS)</strong> — Traitement des données dans le cadre d'une procédure fédérale.<br><strong>OFCS GovCERT procédures</strong> — Notification des victimes de compromissions massives.",
+        question: "<strong>Comment prioriser l'analyse des 340'000 enregistrements suisses ?</strong>",
+        choices: [
+          {
+            text: "Analyser tous les 340'000 enregistrements exhaustivement avant toute notification — prendre 3-4 semaines pour un travail complet.",
+            ok: false, pts: -15,
+            fb: "Trop lent. Les credentials e-banking parmi les 340'000 sont exploitables maintenant par les acheteurs de la MaaS. Chaque jour de délai signifie potentiellement des fraudes bancaires contre des victimes suisses. Prioriser par criticité : e-banking et VPN d'entreprise en premier.",
+            legal: "Principe de proportionnalité + urgence — Les données financières nécessitent une réponse sous 72h.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Triage en 3 niveaux de criticité : (1) Urgence absolue — credentials e-banking et authentifiants VPN entreprises (notification banques sous 24h), (2) Haute priorité — wallets crypto et accès messagerie (notification OFCS 48h), (3) Standard — autres identifiants .ch (notification progressive via Have I Been Pwned CH ou OFCS).",
+            ok: true, pts: 25,
+            fb: "Triage correct et actionnable. Les credentials e-banking exposent directement à des fraudes financières immédiates — les banques doivent être informées sous 24h pour forcer un reset des comptes concernés. Les VPN d'entreprise peuvent permettre des intrusions en cours. Le triage permet de concentrer les efforts là où le risque est le plus immédiat.",
+            legal: "OFCS GovCERT procédures + LBA Art. 9 — Triage par risque financier immédiat.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Transmettre directement les 340'000 enregistrements aux banques suisses pour qu'elles identifient leurs propres clients.",
+            ok: false, pts: -20,
+            fb: "Violation de la protection des données. Transmettre 340'000 enregistrements à des entités privées (banques) sans base légale et sans anonymisation est une violation de la LPD 2023. L'OFCS/GovCERT est l'intermédiaire approprié pour les notifications — il contacte les banques via des canaux formels avec uniquement les données pertinentes.",
+            legal: "LPD 2023 Art. 6 — Toute communication de données personnelles nécessite une base légale. OFCS = voie officielle.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+      {
+        phase: "📣 La notification des victimes",
+        situation: `L'OFCS/GovCERT prépare la notification des victimes suisses. Une décision s'impose : notifier individuellement chaque victime (340'000 personnes) ou passer par les banques pour les credentials e-banking ?`,
+        law: "<strong>LPD 2023 Art. 24 al. 3</strong> — Information directe des personnes concernées si risque élevé.<br><strong>OFCS procédures</strong> — Notification de masse via Have I Been Pwned et partenaires.<br><strong>LBA Art. 9</strong> — Obligation de signalement MROS pour les banques identifiant des transactions suspectes liées à des credentials volés.",
+        question: "<strong>Comment notifier efficacement les victimes dont les credentials e-banking sont dans les listes ?</strong>",
+        choices: [
+          {
+            text: "Publier un communiqué de presse général conseillant à tout le monde de changer ses mots de passe — plus simple.",
+            ok: false, pts: -15,
+            fb: "Inefficace. Un communiqué général ne cible pas les 340'000 victimes concernées. La plupart ne le liront pas ou ne sauront pas si elles sont concernées. Pour les credentials e-banking, une réinitialisation forcée par les banques est bien plus efficace qu'une recommandation générale.",
+            legal: "LPD 2023 Art. 24 al. 3 — Information directe si risque élevé : un communiqué général ne suffit pas.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Double voie : (1) OFCS notifie les banques concernées avec les hashes des identifiants (pas les credentials en clair) → les banques forcent un reset des comptes affectés, (2) OFCS intègre les domaines suisses dans Have I Been Pwned et le portail de vérification OFCS → notification directe via e-mail ou SMS si adresse connue.",
+            ok: true, pts: 25,
+            fb: "Approche optimale et conforme à la pratique GovCERT. La notification aux banques via hashes (pas en clair) respecte la minimisation des données LPD 2023 tout en permettant l'identification des comptes concernés. Have I Been Pwned et le portail OFCS permettent aux individus de vérifier eux-mêmes. Cette double voie maximise la portée tout en respectant la protection des données.",
+            legal: "OFCS procédures + LPD 2023 Art. 24 al. 3 + LBA Art. 9 — Notification structurée, minimisation des données.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Envoyer un e-mail individuel à chacune des 340'000 victimes avec leur liste de credentials compromis.",
+            ok: false, pts: -20,
+            fb: "Double problème. (1) Envoyer les credentials en clair par e-mail crée un nouveau risque de sécurité — les e-mails peuvent être interceptés. (2) Envoyer 340'000 e-mails révèle à chaque personne l'étendue des données collectées sur elle, risque de panique disproportionnée et de phishing exploitant la situation.",
+            legal: "LPD 2023 Art. 5 (sécurité des données) — Transmettre des credentials par e-mail non chiffré = violation de sécurité.",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "⚖️ Les distributeurs suisses de la MaaS",
+        situation: `L'analyse des données C2 révèle des logs d'acheteurs du service RedLine/META. Parmi eux : 3 adresses IP suisses ayant payé des licences MaaS et reçu des lots de credentials suisses. Ces acheteurs n'ont pas développé le malware mais l'ont utilisé activement pour collecter des données.`,
+        law: "<strong>Art. 143 CP</strong> — Soustraction de données : dessein d'enrichissement illégitime requis.<br><strong>Art. 143bis CP</strong> — Accès indu aux systèmes des victimes via le malware.<br><strong>Art. 24 CP</strong> — Instigation : l'acheteur MaaS instige l'infraction via le développeur.<br><strong>Art. 144bis CP</strong> — Détérioration de données : installation d'un malware = détérioration.",
+        question: "<strong>Quelles infractions qualifier contre les acheteurs suisses de la licence RedLine/META ?</strong>",
+        choices: [
+          {
+            text: "Seul le développeur est responsable — les acheteurs utilisent juste un outil disponible sur internet.",
+            ok: false, pts: -25,
+            fb: "Raisonnement erroné. En droit suisse, l'utilisation intentionnelle d'un outil illicite engage la responsabilité pénale de l'utilisateur. L'acheteur MaaS (1) accède à des systèmes tiers via le malware (Art. 143bis CP), (2) soustrait les données collectées (Art. 143 CP), (3) peut être complice ou instigateur selon son rôle dans la chaîne (Art. 24/25 CP). L'ignorance de la nature illicite est difficile à plaider pour quelqu'un qui paie pour un 'infostealer' sur un forum criminel.",
+            legal: "Art. 143 + 143bis CP — Responsabilité de l'utilisateur d'un malware, pas seulement du développeur.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Art. 143bis CP (accès indu aux systèmes des victimes via malware) + Art. 143 CP (soustraction des credentials — dessein d'enrichissement illégitime via revente ou utilisation frauduleuse) + Art. 144bis CP (installation du malware = détérioration du système des victimes) en concours réel.",
+            ok: true, pts: 25,
+            fb: "Qualification solide. Art. 143bis CP : le malware accède aux navigateurs des victimes sans leur consentement. Art. 143 CP : les credentials collectés sont des données auxquelles les acheteurs n'ont pas droit, avec dessein d'enrichissement (revente ou utilisation frauduleuse). Art. 144bis CP : l'installation d'un malware est assimilée à une 'détérioration de données' (modification du système). Concours réel Art. 9 CP.",
+            legal: "Art. 143 + 143bis + 144bis CP en concours réel — Qualification pour acheteurs MaaS actifs.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Art. 144bis CP uniquement (détérioration de données) — c'est l'infraction informatique la plus directe.",
+            ok: false, pts: -10,
+            fb: "Incomplète. Art. 144bis CP qualifie l'installation du malware mais pas la collecte ni l'exploitation des données. Art. 143 CP (soustraction) et Art. 143bis CP (accès indu) sont nécessaires pour qualifier l'ensemble du comportement — accès, collecte, et exploitation.",
+            legal: "Art. 9 CP — Concours réel : chaque infraction distincte doit être qualifiée séparément.",
+            critical: false, next: 3,
+          },
+        ],
+      },
+      {
+        phase: "🏦 Les banques et le MROS",
+        situation: `Parmi les 340'000 enregistrements suisses, certaines banques suisses identifient que des credentials de leurs clients ont été compromis ET que des transactions suspectes ont eu lieu dans les semaines suivantes. Le responsable compliance d'une banque romande vous demande : ses obligations MROS (signalement de blanchiment) s'appliquent-elles ?`,
+        law: "<strong>LBA Art. 9</strong> — Obligation de communication au MROS si soupçon fondé de blanchiment.<br><strong>Art. 305bis CP</strong> — Blanchiment d'argent : valeurs patrimoniales d'origine criminelle.<br><strong>FINMA Circulaire 2017/1</strong> — Gestion des risques liés à la criminalité informatique.",
+        question: "<strong>La banque a-t-elle une obligation de signalement MROS si elle identifie des transactions suspectes liées aux credentials volés ?</strong>",
+        choices: [
+          {
+            text: "Non — le vol de credentials est une infraction informatique, pas du blanchiment. La banque n'a pas à signaler au MROS.",
+            ok: false, pts: -20,
+            fb: "Raisonnement incomplet. Si des fonds ont été transférés frauduleusement DEPUIS les comptes des victimes à l'aide des credentials volés, ces fonds sont d'origine criminelle (la fraude est le crime préalable). Leur transfert constitue du blanchiment (Art. 305bis CP). La banque qui identifie ce lien a une obligation de signalement MROS (LBA Art. 9).",
+            legal: "LBA Art. 9 + Art. 305bis CP — Transactions liées à des credentials volés → soupçon de blanchiment → MROS obligatoire.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Oui, si la banque identifie des transactions inhabituelles sur des comptes dont les credentials sont dans les listes C2 — c'est un soupçon fondé de blanchiment (argent d'origine criminelle — fraude via credentials volés). Obligation de signalement MROS sans délai.",
+            ok: true, pts: 25,
+            fb: "Qualification exacte. Transactions suspectes sur compte compromis = soupçon fondé que les valeurs patrimoniales transférées ont une origine criminelle (fraude via credentials volés = crime préalable à Art. 305bis CP). LBA Art. 9 impose le signalement MROS dès ce soupçon fondé. La banque doit également bloquer les transactions (LBA Art. 10 — obligation de blocage en cas de soupçon).",
+            legal: "LBA Art. 9 + Art. 10 + Art. 305bis CP — Soupçon de blanchiment lié à des credentials volés → MROS + blocage.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Peut-être — attendre que les clients portent plainte avant d'agir.",
+            ok: false, pts: -10,
+            fb: "Passivité inacceptable. LBA Art. 9 oblige la banque à signaler proactivement — pas à attendre une plainte du client. La banque dispose des éléments nécessaires (transactions inhabituelles + correspondance avec les listes de credentials compromis). Attendre que le client réalise la fraude et porte plainte contrevient à l'obligation de diligence LBA.",
+            legal: "LBA Art. 9 — Signalement proactif, pas réactif. La banque est acteur de la lutte anti-blanchiment.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 88) return { icon: "🦠", title: "Expert Infostealer CH", sub: "Maîtrise parfaite — forensique C2, notification OFCS, LBA Art. 9" };
+      if (pct >= 65) return { icon: "🔍", title: "Analyste Malware", sub: "Bonne maîtrise de l'Opération Magnus et des infostealers" };
+      if (pct >= 45) return { icon: "🛡️", title: "Analyste Sécurité", sub: "Approfondissez Art. 143 CP et les obligations LBA/MROS" };
+      return { icon: "📚", title: "Formation malware requise", sub: "Art. 143+143bis CP + LBA Art. 9 + GovCERT procédures" };
+    },
+  },
+     PROTECTION DES MINEURS EN LIGNE — SCÉNARIOS INVESTIGATION
+     Note pédagogique : Ces scénarios traitent exclusivement de
+     la PROCÉDURE D'INVESTIGATION et du CADRE LÉGAL suisse.
+     Ils forment les enquêteurs DFIR à leurs obligations légales,
+     aux procédures correctes et à la protection des victimes.
+     Aucune description de contenu illicite n'est présente.
+  ══════════════════════════════════════════════════════════ */
+
+  /* ── NCMEC-VAUD — Circuit CyberTip → Perquisition [MEDIUM · 4 étapes] ──
+     Sources :
+     - Police cantonale vaudoise, opération décembre 2022 :
+       96 interpellations, 42 perquisitions, 311 supports saisis,
+       153 jours-agents, signalements NCMEC via fedpol
+     - RC3 (police genevoise) : monitoring réseaux P2P
+     - Blick/Le Nouvelliste (Valais 2025) : 80 CyberTips/an,
+       profil numérique comme indicateur de passage à l'acte
+     - Police cantonale de Fribourg : procédures grooming
+     Art. 197 CP (al. 4 et 5), Art. 187 CP, Art. 263 CPP,
+     Art. 248 CPP, NCMEC CyberTipline → fedpol → cantons
+  ─────────────────────────────────────────────────────── */
+  {
+    id: "ncmec-cypertip",
+    title: "CyberTip NCMEC — Du Signalement à la Perquisition",
+    icon: "🛡️",
+    difficulty: "medium",
+    atmosphere: "legal",
+    realCase: "Police cantonale vaudoise, décembre 2022 — 96 interpellations, 311 supports saisis",
+    narrative: {
+      success: "La procédure est irréprochable : chaîne NCMEC → fedpol → canton respectée, ordonnance MP obtenue, perquisition forensique conforme aux standards. Le profil numérique permet une qualification précise. Les preuves sont recevables. Le MP peut mettre en accusation.",
+      degraded: "La saisie est effectuée mais la qualification est insuffisante. La défense conteste la chaîne probatoire NCMEC. Le dossier tient mais la peine est réduite.",
+      failure: "La procédure non conforme vicie les preuves. Art. 141 al. 2 CPP — exclusion. Le suspect est libéré. La victime potentielle n'est pas identifiée ni protégée."
+    },
+    tags: ["PÉDOCRIMINALITÉ", "FORENSIQUE", "DROIT PÉNAL", "NCMEC"],
+    legalRefs: ["Art. 197 CP", "Art. 187 CP", "Art. 263 CPP", "Art. 286 CPP", "Art. 141 CPP"],
+    intro: "Un CyberTip arrive de fedpol : le National Center for Missing and Exploited Children (NCMEC) a signalé qu'un utilisateur domicilié dans le canton de Vaud a téléchargé depuis une plateforme américaine du contenu à caractère pédopornographique. fedpol a effectué les premières vérifications et transmet le dossier à la police cantonale vaudoise pour suite. Vous êtes l'enquêteur de la cellule cyberpédophilie de la brigade criminelle. Votre objectif : procéder correctement, protéger les éventuelles victimes, et construire un dossier admissible.",
+    alertLevel: "🛡️ CYBERTIP NCMEC — Enfants potentiellement en danger · Procédure stricte obligatoire",
+    objectives: [
+      { icon: "📋", text: "Comprendre le circuit NCMEC → fedpol → canton et ses implications légales" },
+      { icon: "⚖️", text: "Maîtriser la qualification Art. 197 CP (al. 4 consommation vs al. 5 possession vs aggravantes)" },
+      { icon: "🔬", text: "Conduire la perquisition et la saisie forensique selon les standards ACPO" },
+      { icon: "🛡️", text: "Prioriser la protection des victimes potentielles dès les premières heures" },
+    ],
+    debrief: `<p>La lutte contre la pédocriminalité en ligne repose en Suisse sur un circuit bien établi : le <strong>NCMEC</strong> (National Center for Missing and Exploited Children, basé aux USA) reçoit les signalements des plateformes numériques américaines, les transmet à <strong>fedpol</strong> qui les analyse et les adresse au canton de domicile du suspect. En parallèle, le <strong>RC3</strong> (Réseau de Compétences Cybercriminalité, police genevoise) monitore les réseaux P2P pour identifier les échanges illicites en Romandie.</p>
+<p>Cadre légal clé — <strong>Art. 197 CP</strong> : al. 4 (production/diffusion/acquisition de représentations sexuelles impliquant des mineurs = peine privative jusqu'à 5 ans), al. 5 (simple possession/consommation sans transmission = jusqu'à 1 an ou peine pécuniaire). La qualification dépend du rôle exact : a-t-il uniquement consommé, ou aussi partagé (réseau P2P = partage automatique) ? Le volume et la nature des fichiers peuvent constituer une circonstance aggravante. La présence d'enfants dans l'entourage immédiat du suspect est un facteur déterminant pour l'évaluation du risque.</p>`,
+    steps: [
+      {
+        phase: "📋 Le CyberTip transmis par fedpol",
+        situation: `Vous recevez le CyberTip de fedpol. Il contient :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+📡 Source : NCMEC CyberTipline n° CH-2024-XXXXX<br>
+🌐 Plateforme signalante : fournisseur d'accès américain<br>
+🗓️ Date du signalement : 3 semaines avant réception<br>
+📍 Adresse IP : identifiée, abonné localisé à Lausanne — vérifiée par fedpol via Swisscom<br>
+📁 Éléments transmis : hash des fichiers signalés (format PhotoDNA), horodatages des échanges<br>
+👤 Informations abonné : homme, 34 ans, employé dans une école primaire, père de deux enfants mineurs
+</div>`,
+        law: "<strong>Art. 197 al. 4 CP</strong> — Représentations sexuelles impliquant des mineurs : peine privative jusqu'à 5 ans.<br><strong>Art. 197 al. 5 CP</strong> — Simple consommation/possession sans diffusion : jusqu'à 1 an.<br><strong>NCMEC CyberTipline</strong> — Canal officiel de signalement, transmis via fedpol aux cantons concernés.",
+        question: "<strong>Vous avez le CyberTip. La profession et la situation familiale du suspect sont connues. Quelle est votre priorité immédiate avant toute démarche judiciaire ?</strong>",
+        choices: [
+          {
+            text: "Procéder immédiatement à l'arrestation du suspect pour l'empêcher d'accéder aux enfants.",
+            ok: false, pts: -15,
+            fb: "Trop hâtif et procéduralement incorrect. Une arrestation nécessite un mandat ou une flagrance. Un CyberTip n'est pas en soi une preuve suffisante pour une arrestation — il indique un soupçon à vérifier. De plus, une arrestation prématurée sans dossier solide fragilise la procédure et peut permettre au suspect de bénéficier d'un acquittement rapide.",
+            legal: "Art. 217 CPP — Arrestation provisoire : flagrant délit ou danger imminent. CyberTip seul = pas de flagrance.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Évaluer immédiatement le risque pour les enfants dans l'entourage (enfants propres, élèves) en coordination avec le Service de protection de la jeunesse, PUIS obtenir l'ordonnance MP pour la perquisition — les deux démarches en parallèle.",
+            ok: true, pts: 25,
+            fb: "Approche correcte et conforme aux meilleures pratiques suisses. La profession (enseignant école primaire) et la présence d'enfants mineurs dans la famille imposent une évaluation du risque immédiate et confidentielle. Le Service de protection de la jeunesse (SPJ) est l'interlocuteur approprié pour cette évaluation — pas la police seule. La demande d'ordonnance MP se fait en parallèle, pas après.",
+            legal: "Art. 197 CP + Pratique cellule cyberpédophilie vaudoise — Évaluation du risque pour les mineurs = priorité simultanée à la procédure pénale.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Demander l'ordonnance MP et attendre la perquisition avant de faire quoi que ce soit — ne pas contacter le SPJ qui pourrait alerter le suspect.",
+            ok: false, pts: -10,
+            fb: "Risque d'exposition des mineurs. Si le suspect a accès à des enfants maintenant (ses propres enfants, ses élèves), différer l'évaluation du risque peut laisser des victimes potentielles exposées. La confidentialité peut être préservée lors de l'évaluation SPJ sans alerter le suspect — c'est précisément le rôle des professionnels de la protection de l'enfance.",
+            legal: "Art. 307 CC + Pratique SPJ — Protection des mineurs : obligation des autorités de signalement même sans certitude.",
+            critical: false, next: 1,
+          },
+        ],
+      },
+      {
+        phase: "🔬 La perquisition et la saisie",
+        situation: `Le MP ordonne la perquisition. Elle a lieu à 06h00 au domicile du suspect. Présents : vous, deux collègues, un représentant du MP. Le suspect est réveillé, coopératif mais silencieux (Art. 113 CPP). Sur le bureau, un laptop ouvert en veille. Dans la chambre, un smartphone et une tablette.`,
+        law: "<strong>Art. 241 CPP</strong> — Ordonnance de perquisition écrite.<br><strong>Art. 246 CPP</strong> — Perquisition de supports de données.<br><strong>ACPO Principles</strong> — Saisie sans modification des données originales.<br><strong>Art. 248 CPP</strong> — Droit de mise sous scellés du suspect.",
+        question: "<strong>Le laptop est en veille (écran noir, ventilateur actif). Quelle est votre première action forensique ?</strong>",
+        choices: [
+          {
+            text: "Fermer le laptop et le saisir éteint sous scellés — plus simple à transporter.",
+            ok: false, pts: -20,
+            fb: "Erreur critique. Fermer un laptop en veille peut déclencher la mise en hibernation ou BitLocker si Windows est configuré ainsi. La RAM — qui peut contenir des clés de déchiffrement, des sessions actives, des preuves volatiles — est effacée. Priorité absolue : capture RAM avant toute fermeture.",
+            legal: "Manuel DFIR Ch. 11.1 + ISO/IEC 27037 — Laptop allumé/en veille = live forensics en priorité. RAM volatile.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Brancher une clé USB avec WinPmem et capturer la RAM (dump mémoire complet), puis photographier l'écran, puis saisir le laptop en état.",
+            ok: true, pts: 25,
+            fb: "Procédure correcte. La RAM peut contenir des sessions actives, des clés de déchiffrement, des historiques de navigation non flushés. La capture RAM avant toute action est la priorité. La photo de l'écran documente l'état initial. Le laptop est ensuite saisi en état (ne pas éteindre si possible — préserver l'état de veille avec isolation de l'alimentation si nécessaire).",
+            legal: "ACPO Principle 2 + Manuel DFIR Ch. 11.1 — RAM first, documentation, saisie en état.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Demander au suspect son mot de passe pour déverrouiller l'appareil directement.",
+            ok: false, pts: -15,
+            fb: "Violation du droit au silence. Art. 113 CPP : le suspect n'est pas obligé de fournir ses codes d'accès. Une demande insistante peut être qualifiée de contrainte. La forensique doit procéder par des moyens techniques légaux, pas par coercition.",
+            legal: "Art. 113 CPP — Droit au silence inclut les codes d'accès. Procédure forensique par moyens techniques.",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "⚖️ La qualification — Art. 197 CP",
+        situation: `L'analyse forensique du laptop révèle plusieurs types de fichiers. Vous devez qualifier précisément les infractions pour l'acte d'accusation.<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+📂 <strong>Catégorie A</strong> : Fichiers téléchargés via réseau P2P — présents dans un dossier partagé (automatiquement mis à disposition des autres utilisateurs du réseau)<br>
+📂 <strong>Catégorie B</strong> : Fichiers stockés hors dossier partagé — usage personnel uniquement, pas de mise à disposition<br>
+📂 <strong>Catégorie C</strong> : Un seul fichier montrant une victime potentiellement identifiable et localisable<br>
+💬 <strong>Catégorie D</strong> : Conversations dans une application de messagerie chiffrée avec un mineur — contenu textuel à caractère sexuel (grooming)
+</div>`,
+        law: "<strong>Art. 197 al. 4 CP</strong> — Production, importation, stockage, mise à disposition, diffusion = peine privative jusqu'à 5 ans.<br><strong>Art. 197 al. 5 CP</strong> — Consommation/possession sans mise à disposition = jusqu'à 1 an.<br><strong>Art. 187 al. 1 CP</strong> — Actes d'ordre sexuel avec des enfants (peut couvrir le grooming textuel selon ATF 133 IV 31).",
+        question: "<strong>Comment qualifiez-vous correctement les infractions par catégorie ?</strong>",
+        choices: [
+          {
+            text: "Art. 197 al. 5 CP pour tout — il n'a pas produit le contenu, seulement consommé.",
+            ok: false, pts: -20,
+            fb: "Qualification erronée pour les Catégories A, C et D. Art. 197 al. 5 CP (simple consommation) ne couvre que la possession sans diffusion. Catégorie A : le dossier partagé P2P = mise à disposition automatique = Art. 197 al. 4 CP (diffusion). Catégorie C : l'identification d'une victime réelle ouvre la procédure de protection immédiate. Catégorie D : le grooming textuel peut relever de Art. 187 CP selon le contenu.",
+            legal: "ATF 133 IV 31 + Art. 197 CP — Distinction al. 4 (diffusion/mise à disposition) vs al. 5 (possession seule).",
+            critical: false, next: 3,
+          },
+          {
+            text: "Art. 197 al. 4 CP pour A (mise à disposition P2P = diffusion) + Art. 197 al. 5 CP pour B (possession sans diffusion) + Art. 197 al. 4 CP pour C (acquisition/possession de matériel avec victime identifiable) + Art. 187 al. 1 CP potentiel pour D (grooming) — qualification distincte par catégorie.",
+            ok: true, pts: 25,
+            fb: "Qualification précise et correcte. La distinction clé pour la Catégorie A : dans un réseau P2P, le dossier partagé met automatiquement les fichiers à disposition d'autres utilisateurs — c'est une diffusion au sens de Art. 197 al. 4 CP (même si l'utilisateur ne l'a pas fait consciemment, le fait qu'il ait accepté les termes du logiciel P2P suffit selon la jurisprudence). La Catégorie C déclenche en plus une procédure d'identification de la victime via CyberTip inverse (fedpol → NCMEC → USA).",
+            legal: "Art. 197 al. 4 + al. 5 CP + Art. 187 CP — Qualification par catégorie conforme à la pratique du MP vaudois.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Tout sous Art. 197 al. 4 CP — c'est plus simple et couvre tout le spectre.",
+            ok: false, pts: -10,
+            fb: "Sur-qualification pour la Catégorie B. La défense contestera l'Art. 197 al. 4 CP pour des fichiers clairement hors dossier partagé et sans preuve de mise à disposition. Une qualification excessive fragilise l'ensemble du dossier. La précision protège la procédure.",
+            legal: "Principe de précision pénale — Ne qualifier que ce qui est caractérisé par les faits.",
+            critical: false, next: 3,
+          },
+        ],
+      },
+      {
+        phase: "🛡️ La victime potentielle — Catégorie C",
+        situation: `L'expert en analyse d'images de l'unité spécialisée (formé aux techniques ICSE — International Child Sexual Exploitation database d'Interpol) a identifié dans la Catégorie C un fichier correspondant potentiellement à une victime non encore référencée dans les bases de données internationales — ce qui suggère un abus en cours ou récent non encore signalé.`,
+        law: "<strong>Base ICSE (Interpol)</strong> — Base internationale de comparaison d'images, permet d'identifier les victimes.<br><strong>Art. 307 CC</strong> — Protection de l'enfant en danger : obligation d'intervention immédiate.<br><strong>Convention de Lanzarote (2007)</strong> — Ratifiée par la Suisse : obligation de protection et d'investigation des victimes.",
+        question: "<strong>Le fichier suggère une victime non encore identifiée. Quelle est votre action prioritaire ?</strong>",
+        choices: [
+          {
+            text: "Terminer d'abord l'analyse complète du disque avant de transmettre — avoir un dossier complet pour Interpol.",
+            ok: false, pts: -20,
+            fb: "Priorité inversée. Si un enfant est victime d'abus en cours ou récent, chaque jour compte. L'identification de la victime est une urgence humanitaire indépendante de la procédure pénale contre le suspect. Transmettre immédiatement le hash via le canal ICSE d'Interpol — l'analyse du disque continue en parallèle.",
+            legal: "Convention de Lanzarote Art. 12 + Art. 307 CC — Protection immédiate des victimes : obligation légale.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Transmettre immédiatement le hash du fichier via le canal ICSE Interpol (fedpol comme point de contact national) pour comparaison et identification de la victime — en parallèle de l'analyse continue du disque.",
+            ok: true, pts: 25,
+            fb: "Procédure correcte et conforme aux obligations suisses découlant de la Convention de Lanzarote. fedpol est le point de contact national pour la base ICSE d'Interpol. Une correspondance positive permet d'identifier la victime et, si l'abus est en cours, d'intervenir pour la protéger — quelle que soit l'avancement de la procédure pénale contre le suspect. Protection de la victime et procédure pénale sont deux obligations parallèles, pas séquentielles.",
+            legal: "Convention de Lanzarote + Base ICSE Interpol via fedpol — Protection de la victime : obligation immédiate et parallèle à la procédure.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Ne rien faire avec ce fichier spécifique pour l'instant — il n'est pas au cœur de la procédure pénale contre le suspect.",
+            ok: false, pts: -30,
+            fb: "Violation grave des obligations légales. Art. 307 CC et la Convention de Lanzarote imposent la protection immédiate des enfants en danger. Ne pas signaler un fichier suggérant une victime potentiellement en danger actuel constitue une faute professionnelle grave et potentiellement une infraction pénale (omission de porter secours selon les circonstances).",
+            legal: "Art. 307 CC + Convention de Lanzarote — Omission de protection d'un enfant en danger = obligation légale violée.",
+            critical: true, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 88) return { icon: "🛡️", title: "Expert Protection Enfants Cyber", sub: "Maîtrise parfaite — NCMEC, Art. 197 CP, protection simultanée des victimes" };
+      if (pct >= 65) return { icon: "🔍", title: "Enquêteur Cyberpédocriminalité", sub: "Bonne maîtrise du circuit NCMEC et des procédures de protection" };
+      if (pct >= 45) return { icon: "📋", title: "Analyste DFIR Spécialisé", sub: "Approfondissez Art. 197 CP et Convention de Lanzarote" };
+      return { icon: "📚", title: "Formation protection enfants requise", sub: "Art. 197 CP + NCMEC circuit + Convention de Lanzarote" };
+    },
+  },
+
+  /* ── OPÉRATION ALICE — Enquête couverte darknet [HARD · 5 étapes] ──
+     Sources :
+     - Opération Alice contre «Alice with Violence» (mars 2026),
+       fedpol + polices cantonales Lucerne, St-Gall, Thurgovie, Zurich,
+       coordonnée par Europol, 23 pays, 5 CH détenus
+     - KidFlix (avril 2025) : 10 arrestations CH, 7 cantons, 1.8M users
+     - Police IFC St-Gall : infiltration forums darknet, Art. 286 CPP
+     - Police valaisanne : 80 CyberTips/an, profil numérique
+     Art. 286 CPP (enquête couverte — règles très strictes en Suisse),
+     Art. 197 CP, Art. 340 al. 1bis CPP (compétence fédérale),
+     protection psychologique des enquêteurs, Europol coordination
+  ─────────────────────────────────────────────────────── */
+  {
+    id: "operation-alice",
+    title: "Opération Alice — Enquête Couverte Darknet",
+    icon: "🔐",
+    difficulty: "hard",
+    atmosphere: "legal",
+    realCase: "Opération Alice (mars 2026) — fedpol + Europol, 23 États, 5 arrestations CH",
+    narrative: {
+      success: "L'enquête couverte est menée selon les règles strictes de l'Art. 286 CPP. Les preuves récoltées sont recevables. La coordination Europol permet l'identification du cerveau présumé en Chine. Les 5 suspects suisses sont mis en accusation. Les victimes potentiellement identifiables sont transmises via ICSE Interpol.",
+      degraded: "L'enquête couverte est partiellement valide. Certaines preuves sont contestées par la défense. La coordination internationale retarde les poursuites. Deux suspects bénéficient d'un non-lieu faute de preuves admissibles.",
+      failure: "L'enquête couverte non autorisée selon Art. 286 CPP vicie toutes les preuves. Art. 141 al. 2 CPP — exclusion totale. Les 5 suspects sont libérés. L'opération internationale est compromise côté suisse."
+    },
+    tags: ["PÉDOCRIMINALITÉ", "ENQUÊTE COUVERTE", "DARKNET", "DROIT PÉNAL"],
+    legalRefs: ["Art. 286 CPP", "Art. 197 CP", "Art. 340 CPP", "Art. 141 CPP", "Convention Lanzarote"],
+    intro: "Europol coordonne l'Opération Alice — démantèlement d'une plateforme de pédocriminalité sur le darknet, active dans 23 pays. fedpol mandate une équipe d'enquêteurs suisses pour participer à la phase d'infiltration numérique de la plateforme. Des suspects suisses ont été identifiés parmi les utilisateurs. Vous dirigez l'équipe suisse. Votre défi : l'enquête couverte en ligne est soumise en Suisse à des règles procédurales très strictes (Art. 286 CPP) — bien plus strictes que dans certains pays partenaires.",
+    alertLevel: "🔐 OPÉRATION ALICE — Europol coordonne · Règles Art. 286 CPP très strictes · 5 suspects CH identifiés",
+    objectives: [
+      { icon: "⚖️", text: "Maîtriser les conditions légales de l'enquête couverte suisse (Art. 286 CPP) vs pratiques étrangères" },
+      { icon: "🌐", text: "Coordonner avec Europol sans violer le droit procédural suisse" },
+      { icon: "🔬", text: "Utiliser les preuves Europol dans le dossier pénal suisse (admissibilité)" },
+      { icon: "🛡️", text: "Protéger les enquêteurs exposés à du contenu traumatisant (obligations de l'employeur)" },
+    ],
+    debrief: `<p>L'<strong>enquête couverte en ligne</strong> (Art. 286 CPP) est soumise en Suisse à des conditions strictes, plus contraignantes que dans de nombreux pays partenaires : elle nécessite une ordonnance du MP et l'autorisation du Tribunal des mesures de contrainte (TMC), doit être proportionnée, ne peut pas provoquer l'infraction (interdiction de l'agent provocateur — Art. 293 CPP), et doit être utilisée comme mesure de dernier recours.</p>
+<p>Enjeu particulier dans les opérations Europol : les preuves récoltées par des enquêteurs étrangers (ex. allemands ou américains) dans le cadre de leurs propres législations doivent être intégrées dans le dossier pénal suisse via des mécanismes d'entraide (EIMP). La recevabilité dépend de la conformité avec les standards minimaux suisses (Art. 141 CPP). Enfin, l'exposition répétée à du contenu traumatisant crée des obligations légales pour l'employeur (protection de la santé au travail — Art. 6 LTr).</p>`,
+    steps: [
+      {
+        phase: "⚖️ L'autorisation d'enquête couverte — Art. 286 CPP",
+        situation: `Europol souhaite que l'équipe suisse crée des profils d'infiltration sur la plateforme darknet pour documenter l'activité des 5 suspects suisses. Les autorités allemandes le font déjà sans autorisation préalable de juge. fedpol vous presse d'agir rapidement pour ne pas retarder l'opération.`,
+        law: "<strong>Art. 286 CPP</strong> — Enquête couverte : ordonnance MP + autorisation TMC obligatoires.<br><strong>Art. 293 CPP</strong> — Interdiction de l'agent provocateur : l'enquêteur ne peut pas inciter à commettre une infraction.<br><strong>Art. 141 CPP</strong> — Preuves obtenues sans autorisation : en principe inexploitables.",
+        question: "<strong>Les Allemands infiltrent sans juge. fedpol vous presse. Que faites-vous ?</strong>",
+        choices: [
+          {
+            text: "Commencer l'infiltration immédiatement — l'urgence de l'opération internationale justifie d'agir d'abord et de régulariser ensuite.",
+            ok: false, pts: -25,
+            fb: "Erreur procédurale grave. Art. 286 CPP est clair : l'enquête couverte requiert ordonnance MP + autorisation TMC AVANT de commencer. Il n'y a pas de possibilité de régularisation a posteriori. Toutes les preuves obtenues sans cette autorisation seront exclues (Art. 141 al. 2 CPP) — ce qui compromet l'ensemble du volet suisse de l'opération.",
+            legal: "Art. 286 al. 1 CPP — Autorisation préalable du TMC obligatoire, sans exception d'urgence pour les enquêtes couvertes.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Demander en urgence l'ordonnance MP et l'autorisation TMC (procédure accélérée — 24-48h en urgence), en expliquant à Europol le cadre légal suisse. Si refus TMC ou délai trop long, proposer d'utiliser les preuves collectées par les partenaires étrangers via EIMP.",
+            ok: true, pts: 25,
+            fb: "Position correcte et diplomatiquement solide. Le TMC peut statuer en urgence (24-48h). Expliquer le cadre suisse à Europol est non seulement légalement nécessaire mais démontre la rigueur de la procédure suisse — ce qui protège la recevabilité des preuves devant les tribunaux suisses. L'alternative via EIMP (preuves étrangères) est un backup valide si le TMC refuse ou si les délais ne permettent pas la participation directe.",
+            legal: "Art. 286 CPP + Art. 274 CPP (procédure accélérée) + EIMP — Voie légale respectée, opération internationale préservée.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Refuser toute participation — l'opération est trop risquée procéduralement pour la Suisse.",
+            ok: false, pts: -10,
+            fb: "Trop passif. La Suisse peut participer via l'EIMP en utilisant les preuves des partenaires, ou obtenir rapidement l'autorisation TMC. Un refus total prive l'opération de la coordination suisse et ne protège pas les 5 suspects suisses identifiés — qui pourraient être alertés si les opérations étrangères procèdent sans coordination.",
+            legal: "Art. 48a EIMP + Art. 286 CPP — Alternatives légales disponibles.",
+            critical: false, next: 1,
+          },
+        ],
+      },
+      {
+        phase: "🚫 L'interdiction de l'agent provocateur",
+        situation: `Le TMC autorise l'enquête couverte. Votre enquêteur infiltré a établi un contact avec un suspect suisse sur la plateforme. Ce suspect lui demande de lui procurer du contenu illicite spécifique qu'il ne trouve pas sur la plateforme. L'enquêteur vous contacte : peut-il simuler de lui procurer ce contenu pour maintenir la couverture et obtenir des preuves supplémentaires ?`,
+        law: "<strong>Art. 293 CPP</strong> — Interdiction de l'agent provocateur : l'enquêteur ne peut pas inciter ou faciliter la commission d'une infraction.<br><strong>ATF 134 IV 266</strong> — Jurisprudence TF sur l'agent provocateur : les preuves obtenues par provocation = inexploitables + violation CEDH Art. 6.",
+        question: "<strong>L'enquêteur peut-il simuler de procurer le contenu demandé ?</strong>",
+        choices: [
+          {
+            text: "Oui — c'est une simulation, pas un vrai acte. Aucun enfant n'est réellement en danger.",
+            ok: false, pts: -25,
+            fb: "Violation grave de l'Art. 293 CPP. L'interdiction de l'agent provocateur ne concerne pas l'impact réel de l'acte, mais le fait d'inciter le suspect à commettre une infraction qu'il n'aurait pas commise sans la provocation. La simulation d'une offre de contenu illicite revient à faciliter une demande d'acquisition — exactement ce que l'Art. 293 CPP interdit. ATF 134 IV 266 : les preuves ainsi obtenues sont inexploitables.",
+            legal: "Art. 293 CPP + ATF 134 IV 266 + CEDH Art. 6 — Agent provocateur : preuves inexploitables et violation des droits fondamentaux.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Non — l'enquêteur doit décliner poliment ou dévier la conversation. La demande du suspect constitue en elle-même une preuve de son intention criminelle qu'il faut documenter sans y répondre favorablement.",
+            ok: true, pts: 25,
+            fb: "Position correcte. La demande du suspect est en elle-même un élément de preuve (intention d'acquérir) qui doit être documentée (sauvegarde de la conversation + rapport d'enquête). L'enquêteur dédie la conversation ou exprime son incapacité à répondre à cette demande spécifique. Tout acte qui faciliterait ou inciterait davantage l'infraction est interdit par Art. 293 CPP. Le dossier est déjà enrichi par cette demande sans avoir besoin d'aller plus loin.",
+            legal: "Art. 293 CPP — L'enquêteur documente sans provoquer. La demande du suspect = preuve de son intention.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Oui, mais uniquement avec du matériel légal (images non illicites) pour maintenir la couverture sans vraiment aider.",
+            ok: false, pts: -15,
+            fb: "Toujours une violation. Même en utilisant du matériel légal, répondre positivement à une demande de contenu illicite entretient et encourage le comportement délictueux du suspect. C'est une forme d'incitation indirecte interdite par l'esprit de l'Art. 293 CPP. De plus, cela pourrait être interprété comme une ruse envers le suspect qui pensait recevoir du contenu illicite.",
+            legal: "Art. 293 CPP — Esprit de l'interdiction : ne pas faciliter ni encourager, même indirectement.",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "🌐 Les preuves Europol — admissibilité en droit suisse",
+        situation: `Les autorités allemandes ont collecté, en vertu de leur droit national, des preuves contre les 5 suspects suisses (logs de la plateforme, transactions de paiement, adresses IP). Ces preuves sont disponibles via Europol. Elles ont été obtenues sans les autorisations requises par le droit suisse (pas d'équivalent Art. 286 CPP en droit allemand). Sont-elles admissibles dans le dossier pénal suisse ?`,
+        law: "<strong>Art. 141 al. 1 CPP</strong> — Preuves obtenues illicitement : inexploitables.<br><strong>Art. 140 CPP</strong> — Méthodes d'administration des preuves interdites.<br><strong>ATF 143 IV 270</strong> — Preuves obtenues à l'étranger : admissibilité conditionnelle selon les standards minimaux suisses.<br><strong>EIMP Art. 12 + 74</strong> — Utilisation des preuves obtenues en entraide.",
+        question: "<strong>Les preuves allemandes (obtenues légalement en Allemagne mais pas selon les standards suisses) sont-elles utilisables dans le procès suisse ?</strong>",
+        choices: [
+          {
+            text: "Non — les preuves doivent toujours respecter le droit suisse, peu importe leur provenance.",
+            ok: false, pts: -10,
+            fb: "Trop absolu. ATF 143 IV 270 apporte une nuance essentielle : les preuves obtenues à l'étranger par des autorités étrangères agissant légalement selon leur propre droit sont admissibles en Suisse sous conditions — notamment si elles ne violent pas les droits fondamentaux reconnus par la CEDH et si leur utilisation est proportionnée. Ce n'est pas la procédure suisse qui s'applique aux actes étrangers, mais un contrôle des standards minimaux.",
+            legal: "ATF 143 IV 270 — Preuves étrangères : admissibilité conditionnelle selon standards minimaux suisses et CEDH.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Oui, sous conditions : (1) les autorités allemandes ont agi légalement selon leur propre droit, (2) les preuves ne violent pas les droits fondamentaux reconnus par la CEDH (Art. 6 — procès équitable, Art. 8 — vie privée), (3) elles sont transmises via un canal formel (EIMP ou Europol) avec documentation de leur mode d'obtention pour que le juge suisse puisse en apprécier la valeur.",
+            ok: true, pts: 25,
+            fb: "Raisonnement conforme à ATF 143 IV 270. Les preuves étrangères ne doivent pas être obtenues selon le droit suisse, mais selon le droit du pays d'origine — la Suisse contrôle les standards minimaux (droits fondamentaux CEDH). La transmission via EIMP/Europol avec documentation de la méthode d'obtention permet au juge suisse d'exercer ce contrôle. Ces preuves peuvent enrichir le dossier si ces conditions sont satisfaites.",
+            legal: "ATF 143 IV 270 + EIMP Art. 12 + Art. 74 — Admissibilité conditionnelle des preuves étrangères.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Oui sans conditions — ce serait contraire à la coopération internationale de refuser des preuves légalement obtenues.",
+            ok: false, pts: -10,
+            fb: "Trop permissif. Les preuves obtenues par torture ou méthodes coercitives illégales à l'étranger (même légales dans ce pays) restent inadmissibles en Suisse (Art. 140 CPP + CEDH Art. 3). Le contrôle des standards minimaux est impératif — c'est l'essence d'ATF 143 IV 270.",
+            legal: "Art. 140 CPP + ATF 143 IV 270 — Contrôle des standards minimaux obligatoire même pour les preuves étrangères.",
+            critical: false, next: 3,
+          },
+        ],
+      },
+      {
+        phase: "🛡️ La protection des enquêteurs",
+        situation: `L'enquête dure depuis 6 mois. Deux enquêteurs de votre équipe montrent des signes de détresse : troubles du sommeil, irritabilité, désengagement. Un troisième refuse désormais certaines sessions d'analyse. Le médecin cantonal signale que ces symptômes sont cohérents avec un état de stress post-traumatique (ESPT) lié à l'exposition répétée à du contenu traumatisant.`,
+        law: "<strong>Art. 6 LTr (Loi sur le travail)</strong> — Obligation de l'employeur de protéger la santé physique et psychique des employés.<br><strong>Art. 328 CO</strong> — Obligation de protection de la personnalité des travailleurs.<br><strong>OPA (Ordonnance sur la prévention des accidents)</strong> — Risques psychosociaux liés au travail.",
+        question: "<strong>Vous êtes le responsable de l'équipe. Quelles mesures concrètes prenez-vous immédiatement ?</strong>",
+        choices: [
+          {
+            text: "Continuer l'opération — les enquêteurs ont accepté ce travail, c'est inhérent au métier. Le médecin peut les voir après l'opération.",
+            ok: false, pts: -25,
+            fb: "Violation grave de l'Art. 6 LTr et de l'Art. 328 CO. L'employeur (police cantonale) a une obligation légale de protection de la santé psychique, même — et surtout — dans des métiers à risque. Les symptômes d'ESPT documentés créent une urgence médicale que l'employeur ne peut pas différer. 'Inhérent au métier' n'exonère pas de cette obligation.",
+            legal: "Art. 6 LTr + Art. 328 CO — Obligation de protection immédiate, pas différable.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Rotation immédiate des enquêteurs exposés (remplacement par des collègues non exposés), consultation psychologique obligatoire (traumatothérapie spécialisée) dès cette semaine, limitation des sessions d'analyse à 2h maximum avec pause obligatoire, et débrief psychologique collectif hebdomadaire — tout en maintenant l'opération.",
+            ok: true, pts: 25,
+            fb: "Réponse employeur exemplaire et légalement conforme. La rotation protège les enquêteurs exposés sans compromettre l'opération. La consultation spécialisée en traumatologie (pas la psychologie générale — il faut des spécialistes de l'ESPT) est la réponse médicale appropriée. La limitation des sessions est une mesure préventive pour les remplaçants. Cette approche respecte Art. 6 LTr, Art. 328 CO et OPA, et préserve l'équipe pour de futures opérations.",
+            legal: "Art. 6 LTr + Art. 328 CO + OPA — Rotation, consultation spécialisée, limitation des expositions.",
+            critical: false, next: 4,
+          },
+          {
+            text: "Proposer la consultation psychologique aux enquêteurs concernés — mais de façon volontaire, pour respecter leur autonomie.",
+            ok: false, pts: -10,
+            fb: "Insuffisant. Les études montrent que les professionnels exposés refusent souvent le soutien psychologique par peur du jugement professionnel ou de désignation. Face à des symptômes d'ESPT documentés, l'employeur a l'obligation d'agir proactivement, pas seulement de proposer. La consultation volontaire est insuffisante — une prise en charge active est requise.",
+            legal: "Art. 6 LTr — Obligation active de l'employeur, pas seulement de proposer.",
+            critical: false, next: 4,
+          },
+        ],
+      },
+      {
+        phase: "📋 La coordination Europol — partage d'informations",
+        situation: `Europol demande à la Suisse de partager les résultats de l'enquête couverte suisse (profils des 5 suspects, logs de surveillance, transaction darknet) avec tous les 23 États participants pour enrichir leurs propres dossiers nationaux.`,
+        law: "<strong>Art. 340 al. 1bis CPP</strong> — Compétence MPC pour cybercriminalité transfrontalière.<br><strong>EIMP Art. 67a</strong> — Transmission spontanée d'informations aux autorités étrangères : conditions.<br><strong>LPD 2023 Art. 17</strong> — Communication de données personnelles à l'étranger : conditions.",
+        question: "<strong>Pouvez-vous partager librement les données de votre enquête avec les 23 États Europol ?</strong>",
+        choices: [
+          {
+            text: "Oui — l'opération est coordonnée par Europol, le partage est implicitement autorisé.",
+            ok: false, pts: -15,
+            fb: "Incorrecte. La participation à une opération Europol ne crée pas une autorisation générale de partage. Chaque transmission de données à l'étranger est soumise aux conditions de l'EIMP (Art. 67a) et de la LPD 2023 (Art. 17). La Suisse doit vérifier que les pays destinataires offrent une protection adéquate des données et que le partage est proportionné aux finalités.",
+            legal: "EIMP Art. 67a + LPD 2023 Art. 17 — Partage conditionnel, pas automatique.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Oui, sous conditions : (1) autorisation du MP suisse (EIMP Art. 67a — transmission spontanée conditionnelle), (2) vérification que les 23 États offrent une protection adéquate des données (LPD 2023 Art. 17), (3) limitation du partage aux informations strictement nécessaires (proportionnalité), (4) les suspects suisses ne peuvent pas être jugés à l'étranger sans procédure d'extradition séparée.",
+            ok: true, pts: 25,
+            fb: "Cadre juridique correct. EIMP Art. 67a permet la transmission spontanée (sans demande formelle) sous conditions strictes. LPD 2023 Art. 17 exige une protection adéquate dans l'État destinataire (pour les 23 États, vérifier si accord d'adéquation ou garanties individuelles). Le principe de spécialité de l'EIMP s'applique : les informations partagées ne peuvent pas être utilisées pour d'autres finalités que celles déclarées.",
+            legal: "EIMP Art. 67a + LPD 2023 Art. 17 + Principe de spécialité — Partage conditionnel avec garanties.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Non — les données d'une enquête couverte suisse ne peuvent jamais être partagées à l'étranger.",
+            ok: false, pts: -10,
+            fb: "Trop absolu. L'EIMP prévoit précisément les mécanismes de partage d'informations entre États dans le cadre de la coopération judiciaire. Un refus total rendrait la participation suisse à des opérations Europol sans valeur ajoutée. La règle est le partage conditionnel, pas l'interdiction absolue.",
+            legal: "EIMP Art. 67a — Partage conditionnel possible, pas interdit.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 88) return { icon: "🔐", title: "Expert Enquêtes Couvertes CH", sub: "Maîtrise Art. 286+293 CPP, admissibilité preuves étrangères, protection enquêteurs" };
+      if (pct >= 65) return { icon: "🛡️", title: "Enquêteur Cyber Spécialisé", sub: "Bonne maîtrise des opérations Europol et du cadre Art. 286 CPP" };
+      if (pct >= 45) return { icon: "🌐", title: "Analyste DFIR Cyber", sub: "Approfondissez Art. 286/293 CPP et ATF 143 IV 270 sur preuves étrangères" };
+      return { icon: "📚", title: "Formation enquêtes couvertes requise", sub: "Art. 286 CPP + protection enquêteurs + admissibilité preuves étrangères" };
+  /* ══════════════════════════════════════════════════════════
+     4 NOUVEAUX SCÉNARIOS — THÈMES MANQUANTS
+  ══════════════════════════════════════════════════════════ */
+
+  {
+    id: "poweroff-ddos",
+    title: "Opération PowerOFF — DDoS-for-Hire",
+    icon: "⚡",
+    difficulty: "medium",
+    atmosphere: "network",
+    realCase: "Fedpol + Europol, Opération PowerOFF, avril 2026 — 53 domaines saisis",
+    narrative: {
+      success: "Saisie propre de 53 domaines. Art. 144bis al. 2 CP retenu. Clients suisses identifiés. Plusieurs procédures cantonales ouvertes.",
+      degraded: "31 domaines saisis sur 53. Identification clients incomplète. Deux procédures cantonales ouvertes.",
+      failure: "Saisie sans ordonnance préalable. Preuves inexploitables Art. 141 al. 2 CPP. Utilisateurs suisses non poursuivis."
+    },
+    tags: ["DDOS", "RÉSEAUX", "DROIT PÉNAL", "FORENSIQUE"],
+    legalRefs: ["Art. 144bis CP", "Art. 143bis CP", "Convention Budapest Art. 29", "Art. 72 CPP"],
+    intro: "Avril 2026. Europol coordonne l'Opération PowerOFF — démantèlement de 53 plateformes DDoS-for-hire dans 15 pays. Ces services permettaient de louer des attaques pour quelques euros. Fedpol est chargé de la saisie des domaines d'infrastructure suisses. Les bases de données récupérées contiennent 3 millions de comptes, dont plusieurs centaines de clients suisses. Vous êtes l'analyste DFIR de l'équipe fedpol.",
+    alertLevel: "⚡ OPÉRATION POWEROFF — 53 DOMAINES · 3M COMPTES · Clients CH à identifier",
+    objectives: [
+      { icon: "⚖️", text: "Qualifier correctement les services DDoS-for-hire sous Art. 144bis CP" },
+      { icon: "🔬", text: "Analyser les logs des bases de données saisies pour identifier les clients suisses" },
+      { icon: "⚖️", text: "Qualifier les infractions des commanditaires (clients du service)" },
+      { icon: "🌍", text: "Coordonner la saisie internationale via Convention Budapest" },
+    ],
+    debrief: `<p>Les services DDoS-for-hire (Booter/Stresser) permettent à quiconque de louer une attaque par déni de service. L'opérateur fournit l'infrastructure, le client commande la cible. <strong>Art. 144bis CP</strong> — détérioration de données / mise hors service de systèmes informatiques : al. 1 (jusqu'à 3 ans), al. 2 aggravé si «&nbsp;dommage considérable&nbsp;» (seuil CHF 10'000 selon ATF 106 IV 24, jusqu'à 5 ans). Les clients commanditaires engagent Art. 144bis CP + Art. 25 CP (complicité avec l'opérateur).</p>
+<p><strong>Convention Budapest Art. 29</strong> — conservation urgente des données chez les hébergeurs étrangers : mécanisme clé pour préserver les preuves avant que les opérateurs les effacent. La saisie des serveurs suisses requiert une ordonnance MP (Art. 263 CPP) sans autorisation TMC préalable — le TMC n'intervient que pour la surveillance télécom (Art. 272 CPP) et la détention. Art. 24 CPP — compétence fédérale pour cybercriminalité transfrontalière : MPC pour les opérateurs, MP cantonaux pour les clients.</p>`,
+    steps: [
+      {
+        phase: "⚖️ La qualification Art. 144bis CP",
+        situation: `Un service DDoS-for-hire suisse génère 500 attaques/mois. Les victimes incluent un hôpital vaudois. Le dommage total sur 8 mois est estimé à CHF 120'000.<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+🎮 Cibles : serveurs gaming, e-commerce, hôpital VD<br>
+📊 Volume : 500 attaques/mois × 8 mois<br>
+💰 Dommage total : CHF 120'000<br>
+🖥️ Infrastructure : 3 serveurs en Suisse, C2 aux Pays-Bas
+</div>`,
+        law: "<strong>Art. 144bis al. 1 CP</strong> — Mise hors service : jusqu'à 3 ans.<br><strong>Art. 144bis al. 2 CP</strong> — Aggravé si dommage considérable (ATF 106 IV 24 : seuil CHF 10'000) : jusqu'à 5 ans.<br><strong>Art. 24 CP</strong> — Instigation : l'opérateur instige les infractions de ses clients.",
+        question: "<strong>Quelle qualification pour l'opérateur du service DDoS-for-hire suisse ?</strong>",
+        choices: [
+          {
+            text: "Art. 144bis al. 1 CP — chaque attaque individuelle est souvent sous le seuil de CHF 10'000.",
+            ok: false, pts: -10,
+            fb: "Le dommage s'apprécie globalement sur l'ensemble de l'activité délictueuse. CHF 120'000 total >> CHF 10'000. Art. 144bis al. 2 CP s'applique.",
+            legal: "ATF 106 IV 24 — Dommage considérable : appréciation globale de l'activité.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Art. 144bis al. 2 CP (CHF 120'000 >> seuil CHF 10'000) + Art. 24 CP (instigation de chaque attaque clients) + Art. 143bis CP (accès indu aux systèmes victimes) en concours réel. Jusqu'à 5 ans + peine d'ensemble Art. 49 CP.",
+            ok: true, pts: 25,
+            fb: "Qualification solide. Art. 144bis al. 2 CP : dommage global établi. Art. 24 CP : l'opérateur sait que les 'stress tests' sont de vraies attaques — il instige chaque infraction en encaissant le paiement. Art. 143bis CP : accès indu aux systèmes des victimes saturées.",
+            legal: "Art. 144bis al. 2 CP + Art. 24 CP + Art. 143bis CP — ATF 106 IV 24.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Uniquement Art. 143bis CP — c'est un accès indu, pas une vraie destruction.",
+            ok: false, pts: -15,
+            fb: "Art. 144bis CP vise précisément la mise hors service — l'effet d'un DDoS par définition. Les deux infractions coexistent.",
+            legal: "Art. 144bis al. 1 CP — 'Met hors service des systèmes informatiques' = DDoS.",
+            critical: false, next: 1,
+          },
+        ],
+      },
+      {
+        phase: "🔬 Triage des clients suisses",
+        situation: `3.1M comptes dans la base saisie. Filtre IP suisse : 8'400 comptes. Paiements majoritairement en Monero. Emails : 340 adresses @bluewin.ch, @sunrise.ch. Logs d'attaques : cible IP + durée + timestamp pour chaque commande.`,
+        law: "<strong>Art. 14 CPP</strong> — Compétence matérielle des MP cantonaux.<br><strong>EIMP Art. 67a</strong> — Transmission spontanée d'informations aux autorités cantonales.<br><strong>Art. 197 CPP</strong> — Proportionnalité des mesures.",
+        question: "<strong>Comment prioriser la transmission aux MP cantonaux ?</strong>",
+        choices: [
+          {
+            text: "Envoyer la liste complète des 8'400 comptes à tous les MP cantonaux.",
+            ok: false, pts: -15,
+            fb: "Transmission non ciblée et disproportionnée. EIMP Art. 67a impose la proportionnalité — seules les informations pertinentes pour une poursuite spécifique peuvent être transmises.",
+            legal: "EIMP Art. 67a — Proportionnalité : seuls les éléments pertinents pour la poursuite.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Triage 3 niveaux : (1) Priorité — cibles infrastructures critiques CH (hôpitaux, communes) → MPC, (2) Haute — comptes actifs >5 attaques identifiables → MP cantonal domicile, (3) Standard — 1 attaque ou inactifs → information sans procédure immédiate.",
+            ok: true, pts: 25,
+            fb: "Triage proportionné conforme Art. 197 CPP et EIMP Art. 67a. Cibles critiques → compétence MPC (Art. 24 CPP — cybercriminalité transfrontalière + infrastructures critiques). Volume d'attaques comme critère de priorisation : rationnel et défendable.",
+            legal: "Art. 24 CPP + EIMP Art. 67a + Art. 197 CPP — Triage par gravité et compétence.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Traiter uniquement les 340 emails identifiables — les IP seules ne sont pas exploitables.",
+            ok: false, pts: -10,
+            fb: "L'IP + logs d'attaques (cible + durée + timestamp + paiement) constitue un faisceau d'indices (ATF 144 IV 345) suffisant pour ouvrir une enquête. Les deux sources se combinent.",
+            legal: "ATF 144 IV 345 — Faisceau d'indices convergents IP + logs + emails.",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "⚖️ Le commanditaire — son dol",
+        situation: `Un entrepreneur bernois a commandé 23 attaques DDoS contre le site de son concurrent. Dommage : CHF 34'000. Il argue : «&nbsp;Je pensais tester la robustesse de son serveur.&nbsp;»`,
+        law: "<strong>Art. 12 al. 1 CP</strong> — Dol direct.<br><strong>Art. 12 al. 2 CP</strong> — Dol éventuel : envisage et accepte le résultat.<br><strong>Art. 144bis al. 2 CP</strong> — CHF 34'000 >> seuil CHF 10'000.",
+        question: "<strong>Quel dol retenir pour cet entrepreneur ?</strong>",
+        choices: [
+          {
+            text: "L'argument est plausible — classement sans suite.",
+            ok: false, pts: -20,
+            fb: "23 attaques répétées contre un concurrent précis, corrélées avec ses périodes d'activité. Dol direct démontrable : le pattern ne laisse aucun doute sur l'intention.",
+            legal: "Art. 12 al. 1 CP — 23 attaques ciblées = intention claire.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Dol direct (Art. 12 al. 1 CP) probable — 23 attaques contre un concurrent identifié = intention délibérée. Art. 144bis al. 2 CP (CHF 34'000 considérable) + Art. 25 CP (complicité avec l'opérateur).",
+            ok: true, pts: 25,
+            fb: "Correct. Dol direct : 23 attaques répétées pendant des périodes commerciales clés contre un concurrent identifié. CHF 34'000 >> CHF 10'000 = aggravante al. 2. Art. 25 CP : l'entrepreneur a activement commandé le service.",
+            legal: "Art. 12 al. 1 CP + Art. 144bis al. 2 CP + Art. 25 CP — ATF 106 IV 24.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Art. 144bis al. 1 CP uniquement — l'entrepreneur n'est qu'un utilisateur.",
+            ok: false, pts: -5,
+            fb: "CHF 34'000 >> seuil CHF 10'000 = al. 2 s'applique, quelle que soit la qualité d'opérateur ou client.",
+            legal: "Art. 144bis al. 2 CP — s'applique à l'auteur ET au complice si dommage considérable.",
+            critical: false, next: 3,
+          },
+        ],
+      },
+      {
+        phase: "🌍 La saisie internationale à 06h00",
+        situation: `4 serveurs d'infrastructure sont hébergés en Suisse. Europol prévoit une saisie simultanée dans 15 pays à 06h00 UTC. L'ordonnance MP peut-elle être préparée la veille ?`,
+        law: "<strong>Art. 263 CPP</strong> — Séquestre : ordonnance MP obligatoire (pas de TMC).<br><strong>Convention Budapest Art. 29</strong> — Conservation urgente chez les hébergeurs étrangers.<br><strong>Art. 141 al. 2 CPP</strong> — Saisie sans ordonnance = preuves inexploitables.",
+        question: "<strong>Quelle procédure préalable est indispensable pour les 4 serveurs suisses ?</strong>",
+        choices: [
+          {
+            text: "Aucune — urgence cybercriminalité = exception au mandat.",
+            ok: false, pts: -20,
+            fb: "Il n'existe pas d'exception d'urgence générale pour le séquestre de serveurs. Saisie sans ordonnance = Art. 141 al. 2 CPP → preuves inexploitables.",
+            legal: "Art. 263 CPP — Séquestre : ordonnance MP OBLIGATOIRE. Pas d'exception d'urgence.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Ordonnance de séquestre MP (Art. 263 CPP) préparée la veille + Convention Budapest Art. 29 (conservation urgente aux hébergeurs étrangers 24h avant). Saisie des 4 serveurs à 06h00 avec ordonnance valide.",
+            ok: true, pts: 25,
+            fb: "Procédure correcte. L'ordonnance est préparée en amont de l'opération coordonnée Europol. Art. 263 CPP ne requiert pas le TMC (uniquement la surveillance télécom). Convention Budapest Art. 29 pour les 49 domaines hébergés à l'étranger.",
+            legal: "Art. 263 CPP (séquestre ordonnance MP) + Convention Budapest Art. 29 (conservation urgente étrangers).",
+            critical: false, next: "end",
+          },
+          {
+            text: "Autorisation TMC en urgence — le séquestre de serveurs nécessite un juge.",
+            ok: false, pts: -5,
+            fb: "Le TMC n'est pas requis pour un séquestre ordinaire. Art. 263 CPP : ordonnance MP suffit. Le TMC intervient pour la surveillance télécom (Art. 272 CPP) et la détention provisoire.",
+            legal: "Art. 263 CPP — Séquestre : ordonnance MP (sans TMC).",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 88) return { icon: "⚡", title: "Expert DDoS-for-Hire CH", sub: "Art. 144bis CP + coordination Europol maîtrisés" };
+      if (pct >= 65) return { icon: "🌐", title: "Analyste Cybercrime", sub: "Bonne maîtrise des qualifications DDoS" };
+      if (pct >= 45) return { icon: "🔍", title: "Juriste Numérique", sub: "Approfondissez Art. 144bis CP et Convention Budapest" };
+      return { icon: "📚", title: "Formation DDoS requise", sub: "Art. 144bis CP + ATF 106 IV 24" };
+    },
+  },
+
+  {
+    id: "osint-licite",
+    title: "Les Limites de l'OSINT — Légal vs Illégal",
+    icon: "🔭",
+    difficulty: "easy",
+    atmosphere: "legal",
+    narrative: {
+      success: "OSINT conduit dans les limites légales. Rapport recevable. Enquête poursuivie sur bases solides.",
+      degraded: "Sources partiellement contestées. Dossier fragilisé sur certains éléments.",
+      failure: "OSINT dépasse les limites. Art. 273 CP invoqué. Preuves exclues. Procédure disciplinaire."
+    },
+    tags: ["OSINT", "DROIT", "FORENSIQUE"],
+    legalRefs: ["ATF 136 II 508", "Art. 273 CP", "Art. 179novies CP", "LPD 2023"],
+    intro: "Vous êtes un analyste DFIR mandaté par le MP pour rechercher des informations sur un suspect dans une affaire de fraude. Avant de commencer votre OSINT, vous devez savoir exactement où s'arrête le légal en Suisse. Un OSINT mal conduit peut vous exposer à des poursuites pénales.",
+    alertLevel: "🔭 OSINT EN SUISSE — La ligne entre enquête légitime et infraction est plus fine qu'ailleurs",
+    objectives: [
+      { icon: "⚖️", text: "Identifier les sources OSINT légales vs celles qui franchissent la ligne pénale" },
+      { icon: "📋", text: "Comprendre ATF 136 II 508 (Logistep) — IP = donnée personnelle, Carrier Grade NAT" },
+      { icon: "🛡️", text: "Éviter Art. 273 CP (espionnage économique) et Art. 179novies CP" },
+    ],
+    debrief: `<p>L'OSINT n'est pas juridiquement neutre en Suisse. <strong>Art. 179novies CP</strong> — soustraction de données personnelles non publiques. <strong>Art. 273 CP</strong> — renseignements économiques : collecter des secrets d'affaires d'entreprises suisses pour des concurrents = infraction pénale, même via des sources ostensiblement «&nbsp;publiques&nbsp;». <strong>Art. 28 CC</strong> — atteinte à la personnalité pour la compilation de profils détaillés sans motif légitime.</p>
+<p><strong>ATF 136 II 508 (Logistep, 2010)</strong> — arrêt fondateur : même les adresses IP collectées pour identification future sont des données personnelles protégées. Une entreprise privée ne peut pas collecter des IP pour les transmettre à des tiers sans violer la LPD. En contexte OSINT : l'IP visible dans un log public peut être notée ; la collecter systématiquement pour identifier des utilisateurs requiert une base légale. En Carrier Grade NAT (Swisscom mobile, Salt) : l'IP seule est insuffisante — il faut IP + port source + timestamp + réquisition Art. 273 CPP.</p>`,
+    steps: [
+      {
+        phase: "🔭 Sources OSINT — légal vs illégal",
+        situation: `Vous cherchez des informations sur Marc D., 38 ans, entrepreneur zurichois. Lesquelles de ces sources pouvez-vous utiliser ?<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+A) LinkedIn public de Marc D. — profil et historique emploi<br>
+B) Registre du commerce zefix.admin.ch<br>
+C) Compte Instagram public — photos, localisations<br>
+D) Groupe WhatsApp privé (vous n'y êtes pas invité)<br>
+E) Forum darknet nécessitant une inscription<br>
+F) Boîte mail via un outil de password reset exploitant une faille
+</div>`,
+        law: "<strong>Art. 179novies CP</strong> — Soustraction de données non publiques.<br><strong>Art. 143bis CP</strong> — Accès indu à un système.<br><strong>Données publiques</strong> — Consultables sans restriction si accessibles à tous sans authentification.",
+        question: "<strong>Parmi ces 6 sources, lesquelles sont légalement utilisables ?</strong>",
+        choices: [
+          {
+            text: "Toutes — enquêteur mandaté MP = immunité pour recherche de preuves.",
+            ok: false, pts: -25,
+            fb: "Il n'existe pas d'immunité générale. D (WhatsApp privé sans invitation), F (accès frauduleux boîte mail) constituent des infractions quelle que soit la qualité de l'auteur. Un mandat ou une commission rogatoire sont les voies légales.",
+            legal: "Art. 143bis CP + Art. 179novies CP — S'appliquent aussi aux enquêteurs sans autorisation.",
+            critical: true, next: "end",
+          },
+          {
+            text: "A, B, C uniquement — données volontairement publiques, sans authentification ni manipulation.",
+            ok: true, pts: 25,
+            fb: "Correct. LinkedIn public, zefix (registre officiel) et Instagram public : données que la personne a rendues publiques — Art. 28 CC : collecte licite. D = groupe privé (Art. 179novies CP). E = forum avec inscription = accès indu possible. F = Art. 143bis CP systématiquement.",
+            legal: "LPD 2023 + Art. 28 CC — Données volontairement publiques : collecte licite. Privées : mandat requis.",
+            critical: false, next: 1,
+          },
+          {
+            text: "A, B, C, E — le darknet est public par essence.",
+            ok: false, pts: -10,
+            fb: "Si le forum darknet requiert une inscription ou invitation (fréquent dans les forums criminels), l'accès sans autorisation = Art. 143bis CP. Participer sous couverture = Art. 286 CPP (autorisation TMC requise).",
+            legal: "Art. 143bis CP + Art. 286 CPP — Darknet fermé : accès indu. Couverture : autorisation TMC.",
+            critical: false, next: 1,
+          },
+        ],
+      },
+      {
+        phase: "📋 L'IP et ATF 136 II 508 — Carrier Grade NAT",
+        situation: `Vous trouvez l'IP utilisée par Marc D. sur un forum public il y a 8 mois. L'opérateur est Swisscom mobile — qui utilise le Carrier Grade NAT (CGN). Cette IP est partagée par des dizaines d'utilisateurs simultanément.`,
+        law: "<strong>ATF 136 II 508 (Logistep, 2010)</strong> — IP = donnée personnelle protégée.<br><strong>Art. 273 CPP</strong> — Réquisition d'abonné via MP (délai 6 mois, Art. 27 LSCPT).<br><strong>Carrier Grade NAT</strong> — Identification requiert IP + port source + timestamp.",
+        question: "<strong>Pouvez-vous identifier Marc D. directement depuis cette IP ?</strong>",
+        choices: [
+          {
+            text: "Oui — une IP identifie un utilisateur selon ATF 136 II 508.",
+            ok: false, pts: -15,
+            fb: "ATF 136 II 508 dit le contraire : l'IP identifie un abonné (via réquisition), pas l'auteur. Avec le CGN Swisscom, l'IP identifie un pool d'abonnés. Il faut IP + port source + timestamp précis → réquisition Swisscom via Art. 273 CPP.",
+            legal: "ATF 136 II 508 — IP = abonné, pas auteur. CGN : IP insuffisante seule.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Non sans mandat. L'IP seule ne suffit pas (abonné ≠ auteur) et le CGN exige en plus le port source + timestamp — réquisition formelle à Swisscom (Art. 273 CPP) via ordonnance MP obligatoire.",
+            ok: true, pts: 25,
+            fb: "Exact. ATF 136 II 508 : IP = donnée personnelle → réquisition légale. CGN Swisscom : IP seule insuffisante même avec mandat — il faut le port source + timestamp pour isoler l'abonné parmi les dizaines partageant l'IP. Art. 273 CPP + ordonnance MP.",
+            legal: "Art. 273 CPP + ATF 136 II 508 + réalité technique CGN — Réquisition avec IP + port + timestamp.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Oui — l'IP est dans un post public, donc information publique libre d'usage.",
+            ok: false, pts: -10,
+            fb: "La visibilité publique de l'IP ne crée pas de base légale pour l'identifier. ATF 136 II 508 : la collecter dans le but d'identifier une personne = traitement de données personnelles requérant une base légale.",
+            legal: "ATF 136 II 508 consid. 3 — Collecte d'IP dans un but d'identification = traitement de données personnelles.",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "🚨 Art. 273 CP — Espionnage économique",
+        situation: `Votre client (société concurrente) vous demande d'élargir l'investigation pour collecter des informations sur «&nbsp;la stratégie, les clients et les contrats&nbsp;» de l'entreprise de Marc D. — qui est directeur d'une filiale d'une entreprise de défense suisse. Ces informations ne sont pas publiques.`,
+        law: "<strong>Art. 273 CP</strong> — Renseignements économiques : collecter des secrets d'affaires suisses pour des concurrents = jusqu'à 3 ans.<br><strong>Art. 162 CP</strong> — Violation du secret commercial.<br><strong>LPD 2023</strong> — Base légale nécessaire pour tout traitement.",
+        question: "<strong>Pouvez-vous accepter cet élargissement de mission ?</strong>",
+        choices: [
+          {
+            text: "Oui — c'est de l'intelligence économique, pratique courante.",
+            ok: false, pts: -25,
+            fb: "Collecter des secrets commerciaux d'une entreprise de défense suisse pour un concurrent = exactement ce que vise Art. 273 CP. Doublement sensible : secrets commerciaux + informations liées à la sécurité nationale.",
+            legal: "Art. 273 CP — Renseignements économiques : infraction pénale même sous couvert 'OSINT'.",
+            critical: true, next: "end",
+          },
+          {
+            text: "Non — Art. 273 CP + Art. 162 CP s'appliquent. Refuser et documenter le refus.",
+            ok: true, pts: 25,
+            fb: "Correct et professionnellement responsable. Art. 273 CP s'applique au résultat (mettre à disposition des secrets) pas seulement à la méthode. Documenter le refus protège l'analyste d'une mise en cause future.",
+            legal: "Art. 273 CP + Art. 162 CP — Refus et documentation : protection de l'analyste.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Peut-être — si je n'utilise que des sources réellement publiques.",
+            ok: false, pts: -10,
+            fb: "Art. 273 CP incrimine la mise à disposition des informations secrètes — pas seulement la méthode. Même via sources publiques, si la compilation reconstitue des secrets commerciaux transmis à un concurrent, c'est une infraction.",
+            legal: "Art. 273 CP — Incrimine la mise à disposition, pas uniquement la méthode.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 88) return { icon: "🔭", title: "Expert OSINT Légal CH", sub: "ATF 136 II 508 et Art. 273 CP maîtrisés" };
+      if (pct >= 65) return { icon: "⚖️", title: "Analyste OSINT Averti", sub: "Bonne compréhension des limites OSINT suisses" };
+      return { icon: "📚", title: "Formation OSINT légal requise", sub: "ATF 136 II 508 + Art. 273 CP + Art. 179novies CP" };
+    },
+  },
+
+  {
+    id: "mros-banquier",
+    title: "Le Banquier Diligent — Art. 305ter CP",
+    icon: "🏦",
+    difficulty: "medium",
+    atmosphere: "crypto",
+    realCase: "ATF 6B_1180/2023, Tribunal fédéral, 24 septembre 2024",
+    narrative: {
+      success: "Banquier acquitté de Art. 305bis CP : violations LBA établies (Art. 305ter CP) mais dol éventuel non prouvé. Analyse forensique correcte. Sanction FINMA administrative.",
+      degraded: "Condamné pour Art. 305ter CP, acquitté Art. 305bis CP. Sanction administrative FINMA.",
+      failure: "Condamné pour Art. 305bis CP. Analyse forensique trop superficielle n'a pas démontré la bonne foi relative."
+    },
+    tags: ["BLANCHIMENT", "LBA", "MROS", "DROIT PÉNAL"],
+    legalRefs: ["Art. 305bis CP", "Art. 305ter CP", "LBA Art. 9", "ATF 6B_1180/2023", "ATF 149 IV 248"],
+    intro: "Un gestionnaire de fortune genevois ouvre un compte et investit CHF 21.5M pour un client présenté comme 'investisseur immobilier'. Deux ans plus tard, le MPC l'accuse de blanchiment (Art. 305bis CP). L'employé soutient avoir suivi les procédures internes. Vous êtes l'expert forensique financier mandaté par le MP.",
+    alertLevel: "🏦 CHF 21.5M INVESTIS — Art. 305bis ou Art. 305ter CP ? La ligne ATF 6B_1180/2023",
+    objectives: [
+      { icon: "⚖️", text: "Distinguer Art. 305bis CP (blanchiment intentionnel) et Art. 305ter CP (négligence)" },
+      { icon: "🔬", text: "Analyser les transactions pour établir ou réfuter le dol éventuel" },
+      { icon: "📣", text: "Identifier le moment exact déclenchant l'obligation MROS (LBA Art. 9)" },
+      { icon: "📋", text: "Rédiger un rapport conforme Art. 184 CPP selon ATF 6B_1180/2023" },
+    ],
+    debrief: `<p><strong>ATF 6B_1180/2023 (TF, 24 septembre 2024)</strong> — arrêt fondateur : la violation des obligations de diligence LBA ne permet pas <em>à elle seule</em> de présumer l'intention délictueuse. Pour condamner pour Art. 305bis CP (blanchiment), il faut prouver que l'auteur <em>savait ou présumait</em> que les fonds provenaient d'un crime — le dol éventuel suffit (ATF 149 IV 248) mais doit être établi positivement.</p>
+<p><strong>Distinction cruciale</strong> : <strong>Art. 305ter CP</strong> — violation grave des obligations LBA (négligence grave, sanctionnable). <strong>Art. 305bis CP</strong> — blanchiment, requiert en plus que l'auteur ait su ou dû présumer l'origine criminelle. Un banquier négligent mais sans indice concret d'infraction préalable peut être condamné pour Art. 305ter CP sans l'être pour Art. 305bis CP — c'est précisément le résultat dans l'affaire ATF 6B_1180/2023. <strong>LBA Art. 9</strong> : signalement MROS sur soupçon fondé (pas certitude). LBA Art. 11 : immunité pour communication de bonne foi.</p>`,
+    steps: [
+      {
+        phase: "🔬 L'analyse des transactions",
+        situation: `18 mois de mouvements sur le compte :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+💰 Versement initial : CHF 21.5M en une opération depuis Dubaï<br>
+🔄 34 transactions sortantes vers 12 pays en 18 mois<br>
+📋 Justificatifs : factures immobilières — approuvées par Private Wealth Management<br>
+⚠️ Red flags : client sans historique, opération unique très élevée, destinations Pakistan/Nigeria/Panama<br>
+📝 KYC banquier : formulaires complétés, pas d'enquête approfondie sur l'origine des fonds
+</div>`,
+        law: "<strong>LBA Art. 6</strong> — Obligation de diligence : vérifier l'origine des fonds.<br><strong>Art. 305ter CP</strong> — Violation grave des obligations LBA.<br><strong>ATF 6B_1180/2023</strong> — Violations LBA seules insuffisantes pour présumer le dol éventuel.",
+        question: "<strong>Le banquier a-t-il violé ses obligations LBA ? Avec quelle qualification ?</strong>",
+        choices: [
+          {
+            text: "Non — le département interne a approuvé. Il a suivi les procédures.",
+            ok: false, pts: -15,
+            fb: "ATF 6B_1180/2023 : l'approbation interne ne remplace pas les obligations légales LBA. Si les procédures internes sont insuffisantes, l'employé peut être mis en cause même en les ayant suivies.",
+            legal: "LBA Art. 6 — Obligation légale indépendante des procédures internes.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Oui, violation grave LBA (Art. 305ter CP) : les red flags imposaient une vérification renforcée sur l'origine des fonds. Mais cela ne prouve pas encore le dol éventuel pour Art. 305bis CP.",
+            ok: true, pts: 25,
+            fb: "Analyse exacte et conforme à ATF 6B_1180/2023. Red flags (montant, source, destinations) = signaux d'alerte LBA Art. 6. Absence de vérification approfondie = Art. 305ter CP. Mais dol éventuel (savait-il ?) = question distincte à établir séparément.",
+            legal: "LBA Art. 6 + Art. 305ter CP + ATF 6B_1180/2023 — Violation LBA ≠ présomption de dol.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Art. 305bis CP directement — CHF 21.5M d'une source opaque = le banquier devait savoir.",
+            ok: false, pts: -10,
+            fb: "ATF 6B_1180/2023 exige une preuve positive du dol éventuel. Les red flags ne suffisent pas à établir automatiquement que le banquier savait ou devait présumer l'origine criminelle.",
+            legal: "ATF 6B_1180/2023 consid. 2.1.3 — Violations LBA ≠ preuve automatique de dol éventuel.",
+            critical: false, next: 1,
+          },
+        ],
+      },
+      {
+        phase: "🔍 Le dol éventuel — établir ou réfuter",
+        situation: `Éléments additionnels trouvés :<br><br>
+<div style="background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8">
+📧 E-mail interne banquier (18 mois avant) : «&nbsp;Ce client semble en ordre.&nbsp;»<br>
+📋 Notes KYC : «&nbsp;client recommandé par M.X&nbsp;» (référent surveillé par MROS 6 mois plus tard)<br>
+📰 Aucun article négatif sur le client avant l'ouverture du compte<br>
+🔎 Worldcheck : résultat négatif à l'époque<br>
+💬 Déposition : «&nbsp;Mon supérieur a approuvé.&nbsp;»
+</div>`,
+        law: "<strong>Art. 305bis CP</strong> — Dol éventuel : l'auteur devait présumer l'origine criminelle.<br><strong>ATF 149 IV 248 consid. 6.3</strong> — Dol éventuel : connaissance de soupçons 'pressants' requis.<br><strong>Art. 10 al. 3 CPP</strong> — In dubio pro reo.",
+        question: "<strong>Le dol éventuel Art. 305bis CP est-il établi ?</strong>",
+        choices: [
+          {
+            text: "Oui — les red flags suffisent à prouver qu'il devait savoir.",
+            ok: false, pts: -15,
+            fb: "ATF 6B_1180/2023 rejette cette déduction automatique. Worldcheck négatif, aucune presse négative, approbation interne, e-mail de bonne foi — ces éléments affaiblissent la preuve du dol. In dubio pro reo.",
+            legal: "ATF 149 IV 248 — Dol éventuel : connaissance de soupçons 'pressants', pas simples anomalies.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Probablement non pour Art. 305bis CP — négligence grave établie mais pas conscience des soupçons. La surveillance MROS du référent est postérieure et ne peut pas établir rétroactivement le dol.",
+            ok: true, pts: 25,
+            fb: "Raisonnement conforme à ATF 6B_1180/2023. Worldcheck négatif + approbation interne + e-mail de bonne foi relative = doute sur le dol. La surveillance MROS du référent est postérieure — elle ne peut pas établir rétroactivement que le banquier 'savait'. In dubio pro reo (Art. 10 al. 3 CPP).",
+            legal: "ATF 6B_1180/2023 + Art. 10 al. 3 CPP — In dubio pro reo : doute sur le dol = acquittement Art. 305bis CP.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Impossible à dire — le juge décidera.",
+            ok: false, pts: -5,
+            fb: "L'expert doit conclure au niveau d'affirmation approprié (Art. 184 CPP). Sur la base des éléments disponibles, une conclusion est possible : 'violation LBA établie, preuve du dol insuffisante selon ATF 6B_1180/2023, sous réserve d'éléments supplémentaires'.",
+            legal: "Art. 184 CPP — L'expert conclut avec le niveau d'affirmation approprié.",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "📣 Le signalement MROS — quand ?",
+        situation: `Six mois après l'ouverture du compte, un analyste compliance détecte les anomalies. Il hésite entre signaler au MROS immédiatement ou investiguer en interne d'abord.`,
+        law: "<strong>LBA Art. 9</strong> — Obligation de communiquer au MROS si soupçon fondé.<br><strong>LBA Art. 10</strong> — Blocage des transactions dès la communication MROS.<br><strong>LBA Art. 11</strong> — Protection : communication de bonne foi non punissable.",
+        question: "<strong>À quel moment l'obligation de communication MROS est-elle déclenchée ?</strong>",
+        choices: [
+          {
+            text: "Seulement si on a la certitude — sinon risque de dénonciation calomnieuse.",
+            ok: false, pts: -20,
+            fb: "LBA Art. 9 : communication obligatoire sur soupçon fondé — pas certitude. LBA Art. 11 : immunité totale pour communication de bonne foi, même si elle s'avère infondée. Attendre la certitude = violation LBA.",
+            legal: "LBA Art. 9 — Soupçon fondé suffit. LBA Art. 11 — Immunité pour bonne foi.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Dès soupçon fondé (pas certitude). LBA Art. 10 : bloquer les transactions suspectes en parallèle jusqu'à décision MROS.",
+            ok: true, pts: 25,
+            fb: "Procédure exacte. LBA Art. 9 : communication sur soupçon fondé. LBA Art. 10 : blocage automatique des transactions dès la communication — la banque ne peut plus exécuter d'ordres sur le compte. LBA Art. 11 : protection totale pour communication de bonne foi.",
+            legal: "LBA Art. 9 + Art. 10 + Art. 11 — Communication sur soupçon + blocage + immunité.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Après 30 jours d'investigations internes — la loi donne ce délai.",
+            ok: false, pts: -15,
+            fb: "Il n'existe pas de délai légal de 30 jours. LBA Art. 9 : communication 'sans délai' dès le soupçon fondé. Une investigation interne prolongée pendant laquelle des transactions sont exécutées constitue elle-même une violation.",
+            legal: "LBA Art. 9 — 'Sans délai' : pas de délai légal pour investigations internes préalables.",
+            critical: false, next: 3,
+          },
+        ],
+      },
+      {
+        phase: "📋 Le rapport forensique",
+        situation: `Le MP vous demande des conclusions forensiques sur la responsabilité du banquier. Votre analyse est complète.`,
+        law: "<strong>Art. 184 CPP</strong> — L'expert répond aux questions, avec méthode et niveau d'affirmation approprié.<br><strong>Art. 182 CPP</strong> — L'expert éclaire, ne tranche pas.<br><strong>ATF 6B_1180/2023</strong> — Distinction Art. 305ter CP / Art. 305bis CP.",
+        question: "<strong>Quelle formulation de conclusions est correcte ?</strong>",
+        choices: [
+          {
+            text: "'Le banquier est coupable de blanchiment d'argent.'",
+            ok: false, pts: -20,
+            fb: "L'expert ne prononce pas la culpabilité — prérogative exclusive du tribunal. Art. 182 CPP : l'expert éclaire sans trancher.",
+            legal: "Art. 182 CPP — Culpabilité = prérogative du juge, jamais de l'expert.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Volet A : violations LBA établies — liste des obligations non respectées (LBA Art. 6, points spécifiques). Volet B : dol éventuel insuffisamment établi sur la base disponible : Worldcheck négatif, approbation interne, absence de presse, e-mail de bonne foi. Recommandation : Art. 305ter CP retenu ; Art. 305bis CP nécessite éléments supplémentaires.",
+            ok: true, pts: 25,
+            fb: "Rapport exemplaire conforme Art. 184 CPP + ATF 6B_1180/2023. Deux volets distincts (faits / qualification recommandée), niveau d'affirmation correct (recommandation, pas verdict), ouvert à des éléments supplémentaires. Protège l'expertise contre la contestation défense.",
+            legal: "Art. 184 CPP + ATF 6B_1180/2023 — Deux volets : faits établis + évaluation du dol avec niveau d'affirmation.",
+            critical: false, next: "end",
+          },
+          {
+            text: "'Violations LBA établies mais je ne peux pas me prononcer sur le dol — trop juridique.'",
+            ok: false, pts: -5,
+            fb: "Art. 184 CPP : l'expert répond aux questions posées. Si le MP demande d'évaluer les éléments constitutifs du dol éventuel, vous devez fournir une évaluation technique (chronologie, vérifications, red flags connus). Refuser n'est pas une réponse d'expert suffisante.",
+            legal: "Art. 184 CPP — Répondre aux questions posées dans les limites de la compétence.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 88) return { icon: "🏦", title: "Expert Forensique Financier", sub: "ATF 6B_1180/2023 et distinction 305bis/305ter maîtrisés" };
+      if (pct >= 65) return { icon: "💼", title: "Analyste Anti-Blanchiment", sub: "Bonne maîtrise LBA + distinction dol éventuel/violation" };
+      if (pct >= 45) return { icon: "📋", title: "Juriste Financier", sub: "Approfondissez ATF 149 IV 248 et ATF 6B_1180/2023" };
+      return { icon: "📚", title: "Formation LBA requise", sub: "Art. 305bis/ter CP + LBA Art. 9 + MROS" };
+    },
+  },
+
+  {
+    id: "kks-deepfake",
+    title: "Deepfake — Personnalité Publique & Art. 179decies CP",
+    icon: "🎭",
+    difficulty: "hard",
+    atmosphere: "legal",
+    narrative: {
+      success: "Qualification Art. 179decies CP correcte. Deepfake authentifié forensiquement. Domaines publicitaires tracés. Voie civile Art. 28a CC : retrait en 48h. EIMP pour les auteurs.",
+      degraded: "Qualification tient. Trace s'arrête aux registrars anonymes. Art. 173 CP applicable pour la diffusion. Auteurs non identifiés.",
+      failure: "Qualification erronée (173 CP seul). Personnalité ne peut pas agir efficacement. Contenu continue de circuler."
+    },
+    tags: ["DEEPFAKE", "IA", "DROIT PÉNAL", "FORENSIQUE"],
+    legalRefs: ["Art. 179decies CP", "Art. 173 CP", "Art. 146 CP", "ATF 146 IV 23", "Art. 28a CC"],
+    intro: "Alerte du NCSC. Une campagne publicitaire frauduleuse utilise un deepfake vidéo d'une haute personnalité officielle suisse recommandant un investissement crypto. En une semaine : 2.3 millions de vues, CHF 800'000 versés par 340 victimes. Vous êtes l'analyste DFIR de l'équipe fedpol.",
+    alertLevel: "🎭 DEEPFAKE OFFICIEL — CHF 800'000 VICTIMES · Art. 179decies CP EN JEU",
+    objectives: [
+      { icon: "⚖️", text: "Maîtriser Art. 179decies CP (en vigueur 1er sept. 2023) — représentation non consentie" },
+      { icon: "🔬", text: "Authentifier le deepfake par 5 marqueurs forensiques convergents" },
+      { icon: "🌐", text: "Tracer l'infrastructure publicitaire frauduleuse" },
+      { icon: "⚖️", text: "Activer la voie civile Art. 28a CC pour retrait rapide" },
+    ],
+    debrief: `<p><strong>Art. 179decies CP</strong> (en vigueur 1er septembre 2023) — le droit suisse punit désormais la représentation non consentie d'une personne réelle dans un contexte fallacieux via technologies de traitement de l'image/son, dans le dessein de nuire ou s'enrichir. Peine : jusqu'à 3 ans ou peine pécuniaire.</p>
+<p>Infractions en concours dans cette affaire : <strong>Art. 179decies CP</strong> (représentation non consentie — deepfake), <strong>Art. 146 CP</strong> (escroquerie — CHF 800'000 de victimes trompées), <strong>Art. 173 CP</strong> (diffamation — si atteinte à l'honneur). <strong>ATF 146 IV 23</strong> : celui qui «&nbsp;like&nbsp;» ou partage un contenu diffamatoire engage sa propre responsabilité pénale. Voie civile parallèle : <strong>Art. 28a CC</strong> (mesures provisionnelles) permet le retrait du contenu en 48-72h sans attendre la procédure pénale — bien plus rapide pour limiter les dégâts.</p>`,
+    steps: [
+      {
+        phase: "⚖️ La qualification complète",
+        situation: `Le deepfake montre la personnalité officielle «&nbsp;recommandant&nbsp;» un investissement crypto. 2.3M de vues. 340 victimes pour CHF 800'000. La personnalité n'a jamais participé.`,
+        law: "<strong>Art. 179decies CP</strong> (1er sept. 2023) — Représentation non consentie par technologie, dessein d'enrichissement ou de nuisance.<br><strong>Art. 146 CP</strong> — Escroquerie : les 340 victimes trompées par le deepfake 'astucieux'.<br><strong>Art. 173 CP</strong> — Diffamation si atteinte à l'honneur.",
+        question: "<strong>Quelle est la qualification pénale complète ?</strong>",
+        choices: [
+          {
+            text: "Art. 173 CP (diffamation) uniquement.",
+            ok: false, pts: -15,
+            fb: "Art. 179decies CP a été créé pour combler ce vide : représentation via technologies. Art. 146 CP couvre les victimes financières. Les trois infractions coexistent en concours réel.",
+            legal: "Art. 179decies CP + Art. 173 CP + Art. 146 CP — Art. 9 CP concours réel.",
+            critical: false, next: 1,
+          },
+          {
+            text: "Art. 179decies CP (deepfake non consenti) + Art. 146 CP (escroquerie 340 victimes — CHF 800'000) + Art. 173 CP (diffamation) en concours réel. Peine d'ensemble Art. 49 CP.",
+            ok: true, pts: 25,
+            fb: "Qualification complète. Art. 179decies CP : personnalité non consentante représentée dans un contexte fallacieux avec dessein d'enrichissement. Art. 146 CP : deepfake 'astucieux' par définition (simule vérité vérifiable). ATF 146 IV 23 : diffuseurs de la vidéo aussi responsables.",
+            legal: "Art. 179decies CP + Art. 146 CP + Art. 173 CP + ATF 146 IV 23 (diffuseurs).",
+            critical: false, next: 1,
+          },
+          {
+            text: "Art. 146 CP seul — les victimes financières sont le préjudice principal.",
+            ok: false, pts: -10,
+            fb: "La personnalité est aussi victime — Art. 179decies CP la protège indépendamment du préjudice financier des tiers. Elle peut se constituer partie plaignante sur ce chef spécifiquement.",
+            legal: "Art. 179decies CP — Protection de la personnalité : infraction autonome.",
+            critical: false, next: 1,
+          },
+        ],
+      },
+      {
+        phase: "🔬 Authentification forensique du deepfake",
+        situation: `La défense argue que la vidéo est «&nbsp;simplement une publicité satirique&nbsp;». Vous devez authentifier la nature synthétique par méthodes forensiques documentées.`,
+        law: "<strong>Art. 184 CPP</strong> — Méthode documentée et reproductible.<br><strong>ENISA AI Fraud 2024</strong> — Standards détection deepfake audio-vidéo.<br><strong>ATF 144 IV 345</strong> — Preuve par indices convergents.",
+        question: "<strong>Quels marqueurs forensiques fiables pour authentifier un deepfake vidéo ?</strong>",
+        choices: [
+          {
+            text: "La qualité de l'image est inférieure — les deepfakes sont de moins bonne qualité.",
+            ok: false, pts: -20,
+            fb: "Critère dépassé. En 2024-2026, les deepfakes professionnels sont indiscernables à l'œil nu (UCL 2024 : 9/10 humains trompés). La qualité perçue n'est plus un indicateur fiable.",
+            legal: "ENISA 2024 — Qualité ≠ critère de détection. Analyse spectrale requise.",
+            critical: false, next: 2,
+          },
+          {
+            text: "5 marqueurs convergents : (1) Spectrale FFT — coupures harmoniques >8kHz (signature TTS), (2) Pattern de clignement incompatible avec profil physiologique de la personne, (3) Divergence formantique vocale >15% vs enregistrements authentiques, (4) Incohérence shadow map vs source lumineuse, (5) Artefacts compression JPEG anormaux autour du visage.",
+            ok: true, pts: 25,
+            fb: "Méthode d'expert conforme ENISA 2024. 5 marqueurs indépendants convergents = preuve par indices (ATF 144 IV 345). La divergence formantique (>15%) est particulièrement solide car comparée à des enregistrements authentiques — difficile à contester. Les artefacts JPEG révèlent le compositing même dans les deepfakes haute qualité.",
+            legal: "ENISA 2024 + ATF 144 IV 345 — 5 marqueurs convergents = preuve forensique solide.",
+            critical: false, next: 2,
+          },
+          {
+            text: "Soumettre à un outil IA de détection — résultat objectif.",
+            ok: false, pts: -10,
+            fb: "Un seul outil IA n'est pas suffisant comme preuve judiciaire — taux de faux positifs, méthodologie non auditable. La combinaison de 5 marqueurs techniques documentés par un expert humain est bien plus robuste devant un tribunal.",
+            legal: "Art. 184 CPP — Méthode documentée et reproductible. Score IA seul = contestable.",
+            critical: false, next: 2,
+          },
+        ],
+      },
+      {
+        phase: "🌐 Traçage de l'infrastructure publicitaire",
+        situation: `Vidéo diffusée via publicités payantes. Domaines enregistrés anonymement chez Njalla (Seychelles). Paiements publicitaires par cartes prépayées. Fonds victimes vers comptes en Asie du Sud-Est.`,
+        law: "<strong>DSA Art. 9</strong> — Obligation des plateformes de coopérer avec les autorités judiciaires.<br><strong>Convention Budapest Art. 29</strong> — Conservation urgente chez les registrars.<br><strong>Art. 48a EIMP</strong> — Entraide simplifiée.",
+        question: "<strong>Quelle stratégie pour identifier les opérateurs derrière Njalla ?</strong>",
+        choices: [
+          {
+            text: "Demande directe à Njalla (Seychelles) — obligation Budapest.",
+            ok: false, pts: -10,
+            fb: "Njalla est réputé pour sa politique de non-divulgation. La stratégie directe a de faibles chances. Combiner : DSA Art. 9 (plateformes publicitaires) pour données de paiement des campagnes + forensique blockchain sur les fonds victimes = voies plus productives.",
+            legal: "DSA Art. 9 + blockchain = voies prioritaires vs registrar anonyme.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Triple stratégie : (1) Convention Budapest Art. 29 — conservation urgente Njalla, (2) DSA Art. 9 — demande aux plateformes publicitaires pour données de paiement campagnes et comptes annonceurs, (3) Chainalysis/Crystal sur flux crypto victimes — remonter aux exchanges avec KYC.",
+            ok: true, pts: 25,
+            fb: "Stratégie multi-canal optimale. DSA Art. 9 souvent sous-utilisé : Meta et Google ont des obligations de coopération judiciaire — les données de paiement des campagnes publicitaires sont plus précises que les données registrar. Forensique blockchain : remonter aux exchanges avec KYC en quelques semaines.",
+            legal: "DSA Art. 9 + Convention Budapest Art. 29 + blockchain — Triple canal.",
+            critical: false, next: 3,
+          },
+          {
+            text: "Infiltrer les réseaux de distribution du deepfake.",
+            ok: false, pts: -15,
+            fb: "L'infiltration en ligne = Art. 286 CPP (ordonnance MP + autorisation TMC). Mesure de dernier recours (Art. 197 CPP). Les voies légales classiques (DSA, blockchain) sont plus rapides et moins risquées.",
+            legal: "Art. 286 CPP — Enquête couverte : mesure de dernier recours.",
+            critical: false, next: 3,
+          },
+        ],
+      },
+      {
+        phase: "⚖️ Le retrait rapide — voie civile",
+        situation: `La personnalité officielle veut faire retirer la vidéo d'urgence, indépendamment de la procédure pénale en cours qui prendra des années.`,
+        law: "<strong>Art. 28a CC</strong> — Mesures provisionnelles : cessation de l'atteinte à la personnalité en 48-72h.<br><strong>DSA Art. 16</strong> — Mécanisme de signalement de contenu illicite aux plateformes.<br><strong>Art. 28l CC</strong> — Réparation du tort moral.",
+        question: "<strong>Quelle voie permet le retrait le plus rapide de la vidéo ?</strong>",
+        choices: [
+          {
+            text: "Attendre la condamnation pénale — elle s'imposera aux plateformes.",
+            ok: false, pts: -15,
+            fb: "La procédure pénale dure des années. La vidéo accumule des victimes pendant ce temps. Art. 28a CC : retrait possible en 48-72h via mesures provisionnelles civiles — sans attendre le pénal.",
+            legal: "Art. 28a CC — Mesures provisionnelles : retrait en 48-72h sans attendre jugement pénal.",
+            critical: false, next: "end",
+          },
+          {
+            text: "Requête en mesures provisionnelles (Art. 28a CC) — retrait immédiat en 48-72h. Parallèlement : notification DSA Art. 16 aux plateformes pour retrait volontaire encore plus rapide.",
+            ok: true, pts: 25,
+            fb: "Stratégie optimale. Art. 28a CC : le juge civil peut ordonner la cessation immédiate de l'atteinte à la personnalité en urgence. DSA Art. 16 (signalement contenu illicite) peut déclencher un retrait volontaire encore plus rapide. Ces deux voies agissent en parallèle du pénal.",
+            legal: "Art. 28a CC (mesures provisionnelles rapides) + DSA Art. 16 (signalement plateformes).",
+            critical: false, next: "end",
+          },
+          {
+            text: "Porter plainte pénale pour Art. 179decies CP — la voie pénale suffit.",
+            ok: false, pts: -5,
+            fb: "La plainte pénale est nécessaire mais n'ordonne pas directement le retrait de la vidéo des plateformes. Art. 28a CC est le seul mécanisme permettant d'ordonner à une tierce partie (plateforme) de retirer le contenu en urgence.",
+            legal: "Voie pénale = poursuite auteurs. Art. 28a CC = retrait immédiat du contenu.",
+            critical: false, next: "end",
+          },
+        ],
+      },
+    ],
+    badgeFn: function(pct) {
+      if (pct >= 88) return { icon: "🎭", title: "Expert Art. 179decies CP", sub: "Deepfake légal, forensique audio-vidéo, Art. 28a CC maîtrisés" };
+      if (pct >= 65) return { icon: "🔬", title: "Analyste IA Forensique", sub: "Bonne maîtrise d'Art. 179decies CP et de la détection deepfake" };
+      if (pct >= 45) return { icon: "⚖️", title: "Juriste Numérique", sub: "Approfondissez Art. 179decies CP et Art. 28a CC" };
+      return { icon: "📚", title: "Formation deepfake légal requise", sub: "Art. 179decies CP + forensique + DSA" };
     },
   },
 
