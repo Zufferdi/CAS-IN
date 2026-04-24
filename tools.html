@@ -90,7 +90,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
   <button class="tnav-btn" onclick="showTool('rl',this)">🗄 Run List NTFS</button>
   <button class="tnav-btn" onclick="showTool('fat',this)">💾 Offset FAT</button>
   <button class="tnav-btn" onclick="showTool('ntfs',this)">📁 Offset NTFS</button>
-  <button class="tnav-btn" onclick="showTool('hex',this)">🔢 Hex ↔ ASCII</button>
+  <button class="tnav-btn" id="tab-hex" onclick="showTool('hex',this)">🔢 Hex ↔ ASCII</button>
+  <button class="tnav-btn" onclick="showTool('enc',this)">🔐 Encodages</button>
 </div>
 
 <!-- ══ TIMESTAMPS ══ -->
@@ -118,7 +119,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <span class="quick-tag" onclick="setTS('unix','1700000000')">Unix maintenant</span>
       <span class="quick-tag" onclick="setTS('filetime','01DA2B3C4D5E6F78')">FILETIME exemple</span>
       <span class="quick-tag" onclick="setTS('fat-date','5465')">FAT Date exemple</span>
-      <span class="quick-tag" onclick="setTS('unix',''+Math.floor(Date.now()/1000))">Unix → maintenant</span>
+      <span class="quick-tag" onclick="setTS('unix', String(Math.floor(Date.now()/1000)))">Unix → maintenant</span>
     </div>
     <button class="calc-btn" onclick="calcTS()">⟹ Convertir</button>
     <div id="ts-result" class="result-box empty"></div>
@@ -262,9 +263,98 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
   </div>
 </div>
 
+
+<!-- ══ ENCODAGES ══ -->
+<div id="tool-enc" class="tool-panel">
+
+  <!-- ROT13 -->
+  <div class="tc">
+    <h3>🔑 ROT13 / ROT-N — Décodeur UserAssist</h3>
+    <p class="tc-desc">ROT13 est l'encodage de toutes les clés <strong>UserAssist</strong> dans <code style="font-family:var(--mono);color:var(--cyan)">NTUSER.DAT\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist\{GUID}\Count</code>. Chaque programme lancé via GUI est stocké sous forme ROT13.</p>
+    <div class="row2" style="margin-bottom:.75rem">
+      <div class="field">
+        <label>Texte à coder / décoder</label>
+        <input id="rot-in" type="text" placeholder="HFRE{FrffvbaFgber\Jvaqbjf\Eha" oninput="calcROT()">
+      </div>
+      <div class="field">
+        <label>Décalage N (ROT13 = 13)</label>
+        <input id="rot-n" type="number" value="13" min="1" max="25" oninput="calcROT()">
+      </div>
+    </div>
+    <div class="tag-row">
+      <span class="quick-tag" onclick="document.getElementById('rot-in').value='HFRE{FrffvbaFgber\\Jvaqbjf\\Eha';calcROT()">UserAssist Run</span>
+      <span class="quick-tag" onclick="document.getElementById('rot-in').value='P:\\Jvaqbjf\\Flfgrz32\\pnyphyngbe.rkr';calcROT()">Calculatrice encodée</span>
+      <span class="quick-tag" onclick="document.getElementById('rot-in').value='CAS-IN Forensique';calcROT()">Encoder un texte</span>
+    </div>
+    <div id="rot-result" class="result-box empty"></div>
+    <div style="margin-top:.6rem;font-size:.68rem;color:var(--muted);background:var(--surface2);border-radius:6px;padding:.5rem .75rem;border-left:3px solid var(--cyan)">
+      💡 <strong>Workflow :</strong> RegRipper / Registry Explorer → UserAssist → copier la valeur encodée → coller ici → lire le chemin décodé
+    </div>
+  </div>
+
+  <!-- Base64 -->
+  <div class="tc">
+    <h3>📦 Base64 Encode / Decode</h3>
+    <p class="tc-desc">Utilisé dans les pièces jointes email (MIME), l'exfiltration DNS (sous-domaines encodés), les payloads PowerShell obfusqués (<code style="font-family:var(--mono);color:var(--cyan)">-EncodedCommand</code>) et les métadonnées.</p>
+    <div class="field" style="margin-bottom:.5rem">
+      <label>Texte UTF-8 ou octets hex (séparés par espaces)</label>
+      <input id="b64-in" type="text" placeholder="Texte à encoder, ou dGhpcyBpcyBhIHRlc3Q= à décoder…">
+    </div>
+    <div style="display:flex;gap:1rem;margin-bottom:.75rem">
+      <label style="display:flex;align-items:center;gap:.35rem;font-family:var(--mono);font-size:.68rem;color:var(--muted);cursor:pointer"><input type="radio" name="b64m" value="text" checked> Texte UTF-8</label>
+      <label style="display:flex;align-items:center;gap:.35rem;font-family:var(--mono);font-size:.68rem;color:var(--muted);cursor:pointer"><input type="radio" name="b64m" value="hex"> Octets hex</label>
+    </div>
+    <div class="tag-row">
+      <span class="quick-tag" onclick="document.getElementById('b64-in').value='dGhpcyBpcyBhIHRlc3Q=';document.querySelector('[name=b64m][value=text]').checked=true;calcB64()">Décoder exemple</span>
+      <span class="quick-tag" onclick="document.getElementById('b64-in').value='CAS-IN Forensique 2025';document.querySelector('[name=b64m][value=text]').checked=true;calcB64()">Encoder texte</span>
+      <span class="quick-tag" onclick="document.getElementById('b64-in').value='FF D8 FF E0 00 10 4A 46';document.querySelector('[name=b64m][value=hex]').checked=true;calcB64()">Encoder JPEG header</span>
+    </div>
+    <button class="calc-btn" onclick="calcB64()">⟹ Encoder / Décoder</button>
+    <div id="b64-result" class="result-box empty"></div>
+  </div>
+
+  <!-- Hash -->
+  <div class="tc">
+    <h3>🔐 Calculateur de Hash</h3>
+    <p class="tc-desc">Calcule SHA-256, SHA-1 et MD5 d'un texte ou de bytes hex. Utile pour vérifier l'intégrité, comprendre l'effet avalanche (changer 1 caractère change ~50% des bits du hash), ou générer des valeurs de référence.</p>
+    <div class="field" style="margin-bottom:.5rem">
+      <label>Valeur à hasher</label>
+      <input id="hash-in" type="text" placeholder="Texte ou octets hex séparés par espaces…">
+    </div>
+    <div style="display:flex;gap:1rem;margin-bottom:.75rem">
+      <label style="display:flex;align-items:center;gap:.35rem;font-family:var(--mono);font-size:.68rem;color:var(--muted);cursor:pointer"><input type="radio" name="hashm" value="text" checked> Texte UTF-8</label>
+      <label style="display:flex;align-items:center;gap:.35rem;font-family:var(--mono);font-size:.68rem;color:var(--muted);cursor:pointer"><input type="radio" name="hashm" value="hex"> Octets hex</label>
+    </div>
+    <div class="tag-row">
+      <span class="quick-tag" onclick="document.getElementById('hash-in').value='CAS-IN';document.querySelector('[name=hashm][value=text]').checked=true">Exemple texte</span>
+      <span class="quick-tag" onclick="document.getElementById('hash-in').value='CAS-IN ';document.querySelector('[name=hashm][value=text]').checked=true">+ espace (avalanche)</span>
+      <span class="quick-tag" onclick="document.getElementById('hash-in').value='46 49 4C 45';document.querySelector('[name=hashm][value=hex]').checked=true">Hash "FILE" (NTFS sig)</span>
+    </div>
+    <button class="calc-btn" onclick="calcHash()">⟹ Calculer les hashes</button>
+    <div id="hash-result" class="result-box empty"></div>
+    <div style="margin-top:.6rem;font-size:.68rem;color:var(--muted);background:var(--surface2);border-radius:6px;padding:.5rem .75rem;border-left:3px solid var(--gold)">
+      ⚠ <strong>MD5 et SHA-1 sont cryptographiquement cassés</strong> — ne pas utiliser pour la sécurité. En forensique, ils restent valides pour la chaîne de custody historique et la correspondance NSRL.
+    </div>
+  </div>
+
+</div>
 </div><!-- /.page -->
 
 <script>
+
+// ── Raccourci Entrée pour calculer ───────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (e.target.tagName === 'BUTTON') return;
+  const panel = document.querySelector('.tool-panel.on');
+  if (!panel) return;
+  const map = {
+    'tool-ts': calcTS, 'tool-rl': calcRL,
+    'tool-fat': calcFAT, 'tool-ntfs': calcNTFS
+  };
+  if (map[panel.id]) { e.preventDefault(); map[panel.id](); }
+});
+
 // ── Tool nav ─────────────────────────────────────────────────
 function showTool(id, btn) {
   document.querySelectorAll('.tool-panel').forEach(p=>p.classList.remove('on'));
@@ -310,6 +400,7 @@ function calcTS() {
       const t = parseInt(val,16);
       const h=(t>>11)&0x1F, mn=(t>>5)&0x3F, s=(t&0x1F)*2;
       const now=new Date(); now.setHours(h,mn,s,0); unixMs=now.getTime();
+      // FAT Time seul → avertissement injecté après le résultat
     } else if (fmt==='apfs') {
       const ns = BigInt(val);
       const APFS_EPOCH = BigInt(978307200)*1000000000n;
@@ -332,7 +423,8 @@ function calcTS() {
   const fatDate = ((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
   const fatTime = (d.getHours()<<11)|(d.getMinutes()<<5)|Math.floor(d.getSeconds()/2);
 
-  showResult('ts-result',
+  const extraWarn = fmt==='fat-time' ? '<div class="alert-box" style="margin-bottom:.6rem">⚠ FAT Time seul — la date affichée utilise <strong>aujourd'hui</strong> comme référence. Pour un timestamp complet, combiner FAT Date + FAT Time.</div>' : '';
+  showResult('ts-result', extraWarn +
     row('Date lisible (UTC)', d.toISOString(), 'highlight') +
     row('Unix (secondes)', unix) +
     row('FILETIME Windows (hex)', '0x'+ft.toString(16).toUpperCase().padStart(16,'0')) +
@@ -340,7 +432,7 @@ function calcTS() {
     row('FAT Time (hex)', '0x'+fatTime.toString(16).toUpperCase().padStart(4,'0')) +
     row('APFS (nanosecondes)', apfs.toString()) +
     row('Chrome/WebKit (µs)', chrome.toString()) +
-    row('HFS+ offset depuis 1904', (unix+2082844800)+' s')
+    row('HFS+ (secondes depuis 1904-01-01)', (unix + 2082844800).toLocaleString() + ' s — Epoch Mac classique')
   );
 }
 
@@ -365,14 +457,21 @@ function calcRL() {
     let offset=0n;
     for(let j=offSize-1;j>=0;j--) offset=(offset<<8n)|BigInt(bytes[i+j]);
     i+=offSize;
-    // Sign-extend
-    const signBit = 1n<<(BigInt(offSize)*8n-1n);
-    if (offset & signBit) offset = offset - (1n<<(BigInt(offSize)*8n));
-    const lcn = prevLCN + offset;
-    prevLCN = lcn;
+    // Sign-extend — offSize=0 = sparse/virtuel (pas de LCN physique)
+    let lcn;
+    if (offSize === 0) {
+      lcn = null; // cluster virtuel non alloué
+    } else {
+      const signBit = 1n<<(BigInt(offSize)*8n-1n);
+      if (offset & signBit) offset = offset - (1n<<(BigInt(offSize)*8n));
+      lcn = prevLCN + offset;
+      prevLCN = lcn;
+    }
     html += step(
       `Run ${++runNum} — header 0x${header.toString(16).toUpperCase().padStart(2,'0')}`,
-      `Longueur : ${length} clusters (${(length*BigInt(bpc)).toLocaleString()} octets) · LCN : ${lcn} · Octets offset 0x${(lcn*BigInt(bpc)).toString(16).toUpperCase()}`
+      lcn === null
+        ? `Longueur : ${length} clusters · LCN : SPARSE — cluster virtuel (pas de stockage physique)`
+        : `Longueur : ${length} clusters (${(length*BigInt(bpc)).toLocaleString()} octets) · LCN : ${lcn} · Offset : 0x${(lcn*BigInt(bpc)).toString(16).toUpperCase()}`
     );
   }
   showResult('rl-result', html);
@@ -402,6 +501,10 @@ function calcFAT() {
   const spf=+document.getElementById('fat-spf').value||128;
   const rec=+document.getElementById('fat-rec').value||0;
   const cl=+document.getElementById('fat-cl').value||2;
+  if (cl < 2) {
+    showResult('fat-result','<div class="alert-box">⚠ Cluster invalide — les clusters 0 et 1 sont réservés. Le premier cluster de données est le cluster 2.</div>');
+    return;
+  }
   const bpc=bps*spc;
   const rootSectors=Math.ceil((rec*32)/bps);
   const dataStart=(res+nf*spf+rootSectors)*bps;
@@ -489,7 +592,7 @@ function cvFrom(src) {
   } catch(e){}
   cvLock=false;
 }
-function cvSet(src,val){document.getElementById('cv-'+src.replace('hex','hex')).value=val;cvFrom(src==='hex'?'hex':'asc');}
+function cvSet(src,val){document.getElementById('cv-hex').value=val;cvFrom('hex');}
 function cpField(id){navigator.clipboard&&navigator.clipboard.writeText(document.getElementById(id).value).then(()=>{});}
 
 // ASCII table
@@ -506,13 +609,122 @@ function cpField(id){navigator.clipboard&&navigator.clipboard.writeText(document
       if(code<0x20||code>0x7E){h+='<td style="color:var(--border)">·</td>';continue;}
       const ch=String.fromCharCode(code);
       const hx=code.toString(16).toUpperCase().padStart(2,'0');
-      h+=`<td title="0x${hx} / ${code}" onclick="cvSet('hex','${hx}');showTool('hex',document.querySelectorAll('.tnav-btn')[4])" data-hex="${hx}">${ch==' '?'SP':ch}</td>`;
+      h+=`<td title="0x${hx} / ${code}" onclick="cvSet('hex','${hx}');showTool('hex',document.getElementById('tab-hex'))" data-hex="${hx}">${ch==' '?'SP':ch}</td>`;
     }
     h+='</tr>';
   }
   h+='</table>';
   t.innerHTML=h;
 })();
+
+// ── ROT-N ────────────────────────────────────────────────────
+function calcROT() {
+  const txt = document.getElementById('rot-in').value;
+  const n = ((parseInt(document.getElementById('rot-n').value) || 13) % 26 + 26) % 26;
+  if (!txt.trim()) { document.getElementById('rot-result').classList.add('empty'); return; }
+  const applyRot = (s, shift) => s.replace(/[a-zA-Z]/g, c => {
+    const base = c <= 'Z' ? 65 : 97;
+    return String.fromCharCode((c.charCodeAt(0) - base + shift) % 26 + base);
+  });
+  const encoded = applyRot(txt, n);
+  const decoded = applyRot(txt, 26 - n);
+  showResult('rot-result',
+    row('Décodé (ROT-'+(26-n)+')', decoded, 'highlight') +
+    row('Encodé (ROT-'+n+')', encoded, 'ok') +
+    row('Original', txt)
+  );
+}
+
+// ── Base64 ───────────────────────────────────────────────────
+function calcB64() {
+  const val = document.getElementById('b64-in').value.trim();
+  const mode = document.querySelector('[name=b64m]:checked')?.value || 'text';
+  if (!val) { document.getElementById('b64-result').classList.add('empty'); return; }
+  try {
+    // Encode
+    let bytes;
+    if (mode === 'hex') {
+      bytes = val.split(/\s+/).filter(Boolean).map(h => parseInt(h, 16));
+    } else {
+      bytes = Array.from(new TextEncoder().encode(val));
+    }
+    const b64encoded = btoa(String.fromCharCode(...bytes));
+
+    // Decode attempt (suppose l'entrée est du Base64)
+    let decodedText = '', decodedHex = '';
+    try {
+      const raw = atob(val.replace(/\s/g, ''));
+      decodedText = [...raw].map(c => c.charCodeAt(0) >= 0x20 && c.charCodeAt(0) <= 0x7E ? c : '.').join('');
+      decodedHex = [...raw].map(c => c.charCodeAt(0).toString(16).padStart(2,'0').toUpperCase()).join(' ');
+    } catch(e) {}
+
+    showResult('b64-result',
+      row('Base64 encodé', b64encoded, 'highlight') +
+      (decodedText ? row('Décodé (texte)', decodedText, 'ok') : '') +
+      (decodedHex  ? row('Décodé (hex)',   decodedHex) : '') +
+      row('Longueur', bytes.length + ' octets → ' + b64encoded.length + ' chars Base64')
+    );
+  } catch(e) {
+    showResult('b64-result', '<div class="alert-box">Erreur : ' + e.message + '</div>');
+  }
+}
+
+// ── Hash (Web Crypto API + MD5 JS) ───────────────────────────
+async function calcHash() {
+  const val = document.getElementById('hash-in').value.trim();
+  const mode = document.querySelector('[name=hashm]:checked')?.value || 'text';
+  if (!val) return;
+  let buf;
+  if (mode === 'hex') {
+    buf = new Uint8Array(val.split(/\s+/).filter(Boolean).map(h => parseInt(h,16)));
+  } else {
+    buf = new TextEncoder().encode(val);
+  }
+  const toHex = b => Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');
+  const [h256, h1] = await Promise.all([
+    crypto.subtle.digest('SHA-256', buf),
+    crypto.subtle.digest('SHA-1', buf)
+  ]);
+  const md5res = computeMD5(buf);
+  showResult('hash-result',
+    row('SHA-256', toHex(h256), 'highlight') +
+    row('SHA-1',   toHex(h1),  'warn') +
+    row('MD5',     md5res,     'warn') +
+    row('Taille input', buf.byteLength + ' octets · ' + (buf.byteLength*8) + ' bits')
+  );
+}
+
+function computeMD5(buffer) {
+  const bytes = Array.from(buffer);
+  const len = bytes.length;
+  bytes.push(0x80);
+  while (bytes.length % 64 !== 56) bytes.push(0);
+  const lo = (len * 8) & 0xFFFFFFFF, hi = Math.floor(len / 0x20000000);
+  bytes.push(lo&0xFF,(lo>>8)&0xFF,(lo>>16)&0xFF,(lo>>24)&0xFF,hi&0xFF,(hi>>8)&0xFF,(hi>>16)&0xFF,(hi>>24)&0xFF);
+  function add(a,b){return(a+b)&0xFFFFFFFF}
+  function rol(x,n){return(x<<n)|(x>>>(32-n))}
+  function cmn(q,a,b,x,s,t){return add(rol(add(add(a,q),add(x,t)),s),b)}
+  function ff(a,b,c,d,x,s,t){return cmn((b&c)|(~b&d),a,b,x,s,t)}
+  function gg(a,b,c,d,x,s,t){return cmn((b&d)|(c&~d),a,b,x,s,t)}
+  function hh(a,b,c,d,x,s,t){return cmn(b^c^d,a,b,x,s,t)}
+  function ii(a,b,c,d,x,s,t){return cmn(c^(b|~d),a,b,x,s,t)}
+  let [a,b,c,d]=[0x67452301,0xEFCDAB89,0x98BADCFE,0x10325476];
+  const T=[0,0xd76aa478,0xe8c7b756,0x242070db,0xc1bdceee,0xf57c0faf,0x4787c62a,0xa8304613,0xfd469501,0x698098d8,0x8b44f7af,0xffff5bb1,0x895cd7be,0x6b901122,0xfd987193,0xa679438e,0x49b40821,0xf61e2562,0xc040b340,0x265e5a51,0xe9b6c7aa,0xd62f105d,0x02441453,0xd8a1e681,0xe7d3fbc8,0x21e1cde6,0xc33707d6,0xf4d50d87,0x455a14ed,0xa9e3e905,0xfcefa3f8,0x676f02d9,0x8d2a4c8a,0xfffa3942,0x8771f681,0x6d9d6122,0xfde5380c,0xa4beea44,0x4bdecfa9,0xf6bb4b60,0xbebfbc70,0x289b7ec6,0xeaa127fa,0xd4ef3085,0x04881d05,0xd9d4d039,0xe6db99e5,0x1fa27cf8,0xc4ac5665,0xf4292244,0x432aff97,0xab9423a7,0xfc93a039,0x655b59c3,0x8f0ccc92,0xffeff47d,0x85845dd1,0x6fa87e4f,0xfe2ce6e0,0xa3014314,0x4e0811a1,0xf7537e82,0xbd3af235,0x2ad7d2bb,0xeb86d391];
+  for (let i=0;i<bytes.length;i+=64){
+    const M=[];for(let j=0;j<16;j++)M[j]=bytes[i+j*4]|(bytes[i+j*4+1]<<8)|(bytes[i+j*4+2]<<16)|(bytes[i+j*4+3]<<24);
+    let [A,B,C,D]=[a,b,c,d];
+    A=ff(A,B,C,D,M[0],7,T[1]);D=ff(D,A,B,C,M[1],12,T[2]);C=ff(C,D,A,B,M[2],17,T[3]);B=ff(B,C,D,A,M[3],22,T[4]);A=ff(A,B,C,D,M[4],7,T[5]);D=ff(D,A,B,C,M[5],12,T[6]);C=ff(C,D,A,B,M[6],17,T[7]);B=ff(B,C,D,A,M[7],22,T[8]);A=ff(A,B,C,D,M[8],7,T[9]);D=ff(D,A,B,C,M[9],12,T[10]);C=ff(C,D,A,B,M[10],17,T[11]);B=ff(B,C,D,A,M[11],22,T[12]);A=ff(A,B,C,D,M[12],7,T[13]);D=ff(D,A,B,C,M[13],12,T[14]);C=ff(C,D,A,B,M[14],17,T[15]);B=ff(B,C,D,A,M[15],22,T[16]);
+    A=gg(A,B,C,D,M[1],5,T[17]);D=gg(D,A,B,C,M[6],9,T[18]);C=gg(C,D,A,B,M[11],14,T[19]);B=gg(B,C,D,A,M[0],20,T[20]);A=gg(A,B,C,D,M[5],5,T[21]);D=gg(D,A,B,C,M[10],9,T[22]);C=gg(C,D,A,B,M[15],14,T[23]);B=gg(B,C,D,A,M[4],20,T[24]);A=gg(A,B,C,D,M[9],5,T[25]);D=gg(D,A,B,C,M[14],9,T[26]);C=gg(C,D,A,B,M[3],14,T[27]);B=gg(B,C,D,A,M[8],20,T[28]);A=gg(A,B,C,D,M[13],5,T[29]);D=gg(D,A,B,C,M[2],9,T[30]);C=gg(C,D,A,B,M[7],14,T[31]);B=gg(B,C,D,A,M[12],20,T[32]);
+    A=hh(A,B,C,D,M[5],4,T[33]);D=hh(D,A,B,C,M[8],11,T[34]);C=hh(C,D,A,B,M[11],16,T[35]);B=hh(B,C,D,A,M[14],23,T[36]);A=hh(A,B,C,D,M[1],4,T[37]);D=hh(D,A,B,C,M[4],11,T[38]);C=hh(C,D,A,B,M[7],16,T[39]);B=hh(B,C,D,A,M[10],23,T[40]);A=hh(A,B,C,D,M[13],4,T[41]);D=hh(D,A,B,C,M[0],11,T[42]);C=hh(C,D,A,B,M[3],16,T[43]);B=hh(B,C,D,A,M[6],23,T[44]);A=hh(A,B,C,D,M[9],4,T[45]);D=hh(D,A,B,C,M[12],11,T[46]);C=hh(C,D,A,B,M[15],16,T[47]);B=hh(B,C,D,A,M[2],23,T[48]);
+    A=ii(A,B,C,D,M[0],6,T[49]);D=ii(D,A,B,C,M[7],10,T[50]);C=ii(C,D,A,B,M[14],15,T[51]);B=ii(B,C,D,A,M[5],21,T[52]);A=ii(A,B,C,D,M[12],6,T[53]);D=ii(D,A,B,C,M[3],10,T[54]);C=ii(C,D,A,B,M[10],15,T[55]);B=ii(B,C,D,A,M[1],21,T[56]);A=ii(A,B,C,D,M[8],6,T[57]);D=ii(D,A,B,C,M[15],10,T[58]);C=ii(C,D,A,B,M[6],15,T[59]);B=ii(B,C,D,A,M[13],21,T[60]);A=ii(A,B,C,D,M[4],6,T[61]);D=ii(D,A,B,C,M[11],10,T[62]);C=ii(C,D,A,B,M[2],15,T[63]);B=ii(B,C,D,A,M[9],21,T[64]);
+    a=add(a,A);b=add(b,B);c=add(c,C);d=add(d,D);
+  }
+  // Sortie little-endian correcte : extraire les 4 octets dans l'ordre LE
+  return [a,b,c,d].map(n => [
+    (n>>>0)&0xFF, (n>>>8)&0xFF, (n>>>16)&0xFF, (n>>>24)&0xFF
+  ].map(b=>b.toString(16).padStart(2,'0')).join('')).join('');
+}
+
 </script>
 </body>
 </html>
