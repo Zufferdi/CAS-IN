@@ -4,8 +4,70 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ReFS — Resilient File System — CAS-IN Forensique</title>
 <link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+#scroll-progress{position:fixed;top:0;left:0;z-index:300;height:2px;width:0;background:linear-gradient(90deg,var(--gold),var(--cyan));pointer-events:none}
+.header{flex-direction:column;align-items:flex-start;gap:.6rem;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border);position:relative}
+.header::before{content:'';position:absolute;left:-2rem;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--gold),transparent)}
+.header h1{font-family:var(--sans);font-size:1.9rem;font-weight:800;letter-spacing:-.5px}
+.sec-title,.section-title{font-family:var(--sans);font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;display:flex;align-items:center;gap:.6rem;padding-left:.6rem;border-left:2px solid var(--gold)}
+.sec-title::after,.section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+th{background:var(--surface2);color:var(--muted);font-size:.63rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.6rem 1rem;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+td{padding:.55rem 1rem;border-bottom:1px solid rgba(48,54,61,.5);vertical-align:middle}
+tr:last-child td{border-bottom:none} tr:nth-child(even) td{background:rgba(22,27,34,.5)} tr.hi td{background:rgba(240,192,64,.05)!important;font-weight:600} tr:hover td{background:rgba(240,192,64,.03)!important}
+.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin:.75rem 0}
+.card,.card-blue,.card-green,.card-red,.card-orange,.card-purple,.card-cyan{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem;transition:transform .18s,box-shadow .18s}
+.card:hover,.card-blue:hover,.card-green:hover,.card-red:hover,.card-orange:hover,.card-purple:hover,.card-cyan:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.card.blue,.card-blue{border-left:3px solid var(--blue);background:rgba(88,166,255,.04)}.card.green,.card-green{border-left:3px solid var(--green);background:rgba(48,232,138,.04)}.card.red,.card-red{border-left:3px solid var(--red);background:rgba(255,64,96,.04)}.card.orange,.card-orange{border-left:3px solid var(--orange);background:rgba(240,136,62,.04)}.card.purple,.card-purple{border-left:3px solid var(--purple);background:rgba(188,140,255,.04)}.card.cyan,.card-cyan{border-left:3px solid var(--cyan);background:rgba(0,229,204,.04)}
+.card-title,.ct{font-family:var(--sans);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem}
+.card-blue .card-title,.card-blue .ct{color:var(--blue)}.card-green .card-title,.card-green .ct{color:var(--green)}.card-red .card-title,.card-red .ct{color:var(--red)}.card-orange .card-title,.card-orange .ct{color:var(--orange)}.card-purple .card-title,.card-purple .ct{color:var(--purple)}.card-cyan .card-title,.card-cyan .ct{color:var(--cyan)}
+.key-fact{background:linear-gradient(135deg,rgba(240,192,64,.08),rgba(0,229,204,.04));border:1px solid rgba(240,192,64,.2);border-radius:10px;padding:1rem 1.2rem;margin:.85rem 0;position:relative;overflow:hidden}
+.key-fact::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),var(--cyan))}
+.key-fact-label{font-family:var(--sans);font-size:.6rem;font-weight:700;letter-spacing:.12em;color:var(--gold);text-transform:uppercase;margin-bottom:.4rem}
+.key-fact p,.key-fact li{font-size:.8rem;color:var(--text);line-height:1.65}.key-fact ul{padding-left:1rem;margin-top:.3rem}
+.exam-tip,.exam-box{background:linear-gradient(135deg,rgba(240,192,64,.08),rgba(240,192,64,.03));border:1px solid rgba(240,192,64,.35);border-left:4px solid var(--gold);border-radius:0 10px 10px 0;padding:1.1rem 1.3rem;margin:1.5rem 0;font-size:.79rem;line-height:1.8;color:var(--text)}
+.exam-tip-title,.exam-title{font-family:var(--sans);font-size:.62rem;font-weight:700;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;margin-bottom:.65rem}
+.exam-tip p,.exam-box p{margin-top:.3rem}.exam-tip code{color:var(--cyan);font-family:var(--mono);font-size:.76rem}
+.quiz-wrap{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.85rem 0;transition:box-shadow .2s}.quiz-wrap:hover{box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.quiz-q{padding:.9rem 1.1rem;background:var(--surface);font-size:.82rem;font-weight:600;color:var(--text);line-height:1.5}
+.quiz-q small{display:block;font-weight:400;color:var(--muted);font-size:.72rem;margin-top:.2rem}
+.quiz-actions{padding:.6rem 1.1rem;background:var(--surface2);border-top:1px solid var(--border);display:flex;gap:.5rem}
+.quiz-reveal-btn{font-family:var(--mono);font-size:.7rem;padding:.32rem .85rem;border:1px solid rgba(0,229,204,.35);background:rgba(0,229,204,.07);color:var(--cyan);border-radius:20px;cursor:pointer;transition:background .15s}.quiz-reveal-btn:hover{background:rgba(0,229,204,.18)}
+.quiz-answer{display:none;padding:.85rem 1.1rem;background:rgba(0,229,204,.04);font-size:.79rem;color:var(--text);line-height:1.65;border-top:1px solid rgba(0,229,204,.15)}.quiz-answer.visible{display:block;animation:slideUp .2s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.layout,.zones{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:box-shadow .2s}.layout:hover,.zones:hover{box-shadow:0 4px 20px rgba(0,0,0,.25)}
+.lb,.zone,.layout-block{flex:1;padding:.75rem .6rem;text-align:center;font-size:.72rem;font-weight:600;border-right:1px solid var(--border);transition:filter .15s,transform .15s;cursor:default}.lb:last-child,.zone:last-child,.layout-block:last-child{border-right:none}.lb:hover,.zone:hover,.layout-block:hover{filter:brightness(1.3);transform:scaleY(1.04)}
+.lb span,.zl,.layout-label{display:block;font-size:.58rem;opacity:.65;margin-top:.25rem}
+.lb-boot{background:rgba(255,64,96,.08);color:var(--red)}.lb-fat{background:rgba(240,192,64,.08);color:var(--gold)}.lb-root,.lb-bootcp{background:rgba(0,229,204,.08);color:var(--cyan)}.lb-data{background:rgba(48,232,138,.08);color:var(--green)}
+.z-blue{background:rgba(88,166,255,.08);color:var(--blue)}.z-purple{background:rgba(188,140,255,.08);color:var(--purple)}.z-orange{background:rgba(240,136,62,.08);color:var(--orange)}.z-green{background:rgba(48,232,138,.08);color:var(--green)}.z-gray{background:rgba(106,128,168,.06);color:var(--dim)}
+.hex,.h{display:inline-block;background:var(--surface2);border:1px solid var(--border);padding:.04rem .5rem;border-radius:5px;font-size:.78em;font-weight:700;font-family:var(--mono);cursor:pointer;transition:filter .15s}.hex:hover,.h:hover{filter:brightness(1.4)}
+.hex-blue,.h-blue{color:var(--blue)}.hex-green,.h-green{color:var(--green)}.hex-purple,.h-purple{color:var(--purple)}.h-cyan,.hex-cyan{color:var(--cyan)}.h-gold,.hex-gold{color:var(--gold)}.h-red,.hex-red{color:var(--red)}.h-orange{color:var(--orange)}
+.compare-table,.offset-table{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:.78rem}
+.fat32{color:var(--green);font-weight:700}.exfat{color:var(--orange);font-weight:700}.v-fat32{color:var(--muted);text-align:center}.v-exfat{color:var(--cyan);font-weight:700;text-align:center}
+.formula-box{background:linear-gradient(135deg,rgba(0,229,204,.06),rgba(0,229,204,.02));border:1px solid rgba(0,229,204,.25);border-radius:8px;padding:.75rem 1.1rem;font-family:var(--mono);font-size:.78rem;color:var(--text);margin:.75rem 0;line-height:1.8}
+.formula-box .f,.formula .f{color:var(--gold);font-weight:700;margin-right:.5rem}
+.entry-seq{display:flex;gap:.35rem;flex-wrap:wrap;margin:.75rem 0}
+.entry-block{padding:.5rem .8rem;border-radius:8px;border:2px solid;font-size:.72rem;font-weight:700;font-family:var(--mono);text-align:center;transition:transform .15s;cursor:default;flex:1;min-width:100px}.entry-block:hover{transform:translateY(-2px)}
+.eb-primary{background:rgba(255,64,96,.1);border-color:rgba(255,64,96,.4);color:var(--red)}.eb-stream{background:rgba(188,140,255,.1);border-color:rgba(188,140,255,.4);color:var(--purple)}.eb-name,.eb-name2{background:rgba(48,232,138,.1);border-color:rgba(48,232,138,.4);color:var(--green)}
+.entry-label{display:block;font-size:.6rem;color:var(--dim);font-weight:400;margin-top:.2rem;font-family:var(--sans)}
+.warning-box{background:rgba(255,64,96,.07);border:1px solid rgba(255,64,96,.3);border-left:4px solid var(--red);border-radius:0 10px 10px 0;padding:.9rem 1.1rem;font-size:.8rem;color:var(--text);line-height:1.65;margin:.85rem 0}
+.vol-viz{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0;transition:box-shadow .2s}.vol-viz:hover{box-shadow:0 4px 20px rgba(0,0,0,.25)}
+.vol-seg{flex:1;padding:.75rem .5rem;text-align:center;border-right:1px solid var(--border);transition:filter .2s,transform .15s;cursor:default}.vol-seg:last-child{border-right:none}.vol-seg:hover{filter:brightness(1.3);transform:scaleY(1.04)}
+.vol-lbl{font-family:var(--mono);font-size:.52rem;color:var(--dim);margin-bottom:.2rem}.vol-name{font-size:.72rem;font-weight:700;margin-bottom:.15rem}.vol-desc{font-family:var(--mono);font-size:.58rem;color:var(--dim);line-height:1.3}
+.vol-seg.boot{background:rgba(255,64,96,.08);color:var(--red)}.vol-seg.vh{background:rgba(240,192,64,.08);color:var(--gold)}.vol-seg.cat{background:rgba(0,229,204,.08);color:var(--cyan)}.vol-seg.ext{background:rgba(88,166,255,.08);color:var(--blue)}.vol-seg.data{background:rgba(48,232,138,.08);color:var(--green)}.vol-seg.avh{background:rgba(106,128,168,.06);color:var(--dim)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}.sec-sub{font-size:.75rem;color:var(--dim);margin-bottom:.75rem;font-style:italic;line-height:1.5}
+.epoch-viz{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0}
+.epoch-line{display:flex;align-items:center;border-bottom:1px solid var(--border);transition:background .1s}.epoch-line:last-child{border-bottom:none}.epoch-line:hover{background:rgba(240,192,64,.04)}
+.epoch-date{font-family:var(--mono);font-size:.72rem;font-weight:700;color:var(--gold);padding:.5rem .85rem;min-width:160px;border-right:1px solid var(--border);background:rgba(240,192,64,.04)}
+.epoch-label{font-size:.75rem;color:var(--text);padding:.5rem .85rem;flex:1;border-right:1px solid var(--border)}.epoch-val{font-family:var(--mono);font-size:.7rem;color:var(--cyan);padding:.5rem .85rem;white-space:nowrap}
+.fiche-tag{display:inline-block;font-family:var(--mono);font-size:.65rem;padding:.2rem .55rem;border-radius:20px;background:rgba(0,229,204,.08);border:1px solid rgba(0,229,204,.25);color:var(--cyan);margin:.5rem 0}
+.f{color:var(--gold);font-weight:700;font-family:var(--mono);margin-right:.4rem}
+.step-num.blue{background:rgba(88,166,255,.15);border:1px solid rgba(88,166,255,.4);color:var(--blue)}
+@media(max-width:640px){.card-grid,.grid-2,.g2,.g3{grid-template-columns:1fr}.vol-viz,.layout,.zones{flex-wrap:wrap}}
+</style>
 </head>
 <body>
+<div id="scroll-progress"></div>
 <nav class="tn-nav">
   <a href="index.html" class="tn-back">← Fiches</a>
   <span class="tn-title">Systèmes de Fichiers</span>
@@ -88,7 +150,25 @@
 </div></div>
 
 
-<div class="tip">⚖️ <strong>Examen CAS-IN :</strong> ReFS = Resilient File System — Windows Server 2012+ · Pas de $MFT (≠ NTFS) · Récupération fichiers supprimés = très difficile (entrées effacées immédiatement) · Pas d'ADS, pas de compression EFS · $UsnJrnl présent mais structure différente · Volume Shadow Copy fonctionne sur ReFS → source forensique principale · Checksums SHA-256 intégrés par bloc</div>
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — ReFS</div>
+  <p><strong>ReFS</strong> = Resilient File System · Windows Server 2012+ · Storage Spaces · Hyper-V VMs</p>
+  <p><strong>Pas de $MFT</strong> : Object Table B+ Tree → MFTECmd inutilisable sur ReFS</p>
+  <p><strong>Suppression</strong> : entrées effacées immédiatement → récupération quasi impossible</p>
+  <p><strong>Absent</strong> : ADS · Compression EFS · Noms 8.3 · Récupération native</p>
+  <p><strong>Source principale</strong> : Volume Shadow Copy (VSS) — <code>vssadmin list shadows /for=X:</code></p>
+  <p><strong>Checksums SHA-256</strong> intégrés par bloc de données · $UsnJrnl présent (structure différente)</p>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Pourquoi ReFS rend-il la récupération de fichiers supprimés quasi impossible ?<small>ReFS forensique · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">ReFS efface les entrées de répertoire <strong>immédiatement</strong>. Pas de $MFT avec entrées orphelines (NTFS), pas de marquage 0xE5 (FAT). L'Object Table B+ Tree est mise à jour en place. Source principale : <strong>Volume Shadow Copy</strong>.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Quelles 3 fonctionnalités NTFS sont absentes de ReFS ?<small>ReFS vs NTFS · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">ReFS ne supporte pas : <strong>ADS</strong> (Alternate Data Streams) · <strong>Compression EFS</strong> · <strong>Noms 8.3 courts</strong>. En contrepartie : checksums SHA-256 par bloc, conçu pour Storage Spaces.</div>
+</div>
 
 <div class="footer">
   <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
@@ -96,9 +176,17 @@
 </div>
 </div>
 
-<button class="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 <script>
-const b=document.querySelector('.back-top');
-window.addEventListener('scroll',()=>b.classList.toggle('visible',window.scrollY>300));
+
+</script>
+<script>
+(function(){
+  var bar=document.getElementById("scroll-progress");
+  if(bar) window.addEventListener("scroll",function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+"%";},{passive:true});
+  var bt=document.getElementById("back-top")||document.querySelector(".back-top");
+  if(bt){if(!bt.id)bt.id="back-top";window.addEventListener("scroll",function(){bt.classList.toggle("visible",window.scrollY>300);},{passive:true});}
+  document.querySelectorAll(".quiz-reveal-btn").forEach(function(btn){btn.addEventListener("click",function(){var ans=btn.closest(".quiz-wrap").querySelector(".quiz-answer");ans.classList.toggle("visible");btn.textContent=ans.classList.contains("visible")?"Masquer ↑":"Révéler →";});});
+})();
 </script>
 </body></html>
