@@ -1,0 +1,56 @@
+name: Audit fichiers inutiles
+
+on:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor-v2.3-from-main
+
+      - name: Audit
+        run: |
+          python3 - << 'PYEOF'
+          import os, re, glob
+
+          print("=== CSS orphelins dans /style/ ===")
+          css_files = glob.glob('style/*.css')
+          for css in css_files:
+              name = os.path.basename(css)
+              refs = []
+              for html in glob.glob('**/*.html', recursive=True):
+                  content = open(html).read()
+                  if name in content:
+                      refs.append(html)
+              if not refs:
+                  print(f"  ORPHELIN : {css} — aucune page ne l'utilise")
+              else:
+                  print(f"  OK       : {css} — utilisé par {len(refs)} page(s)")
+
+          print("\n=== Fichiers HTML avec <style> inline dans /fiches/ ===")
+          for html in sorted(glob.glob('fiches/*.html')):
+              content = open(html).read()
+              if '<style>' in content or '<style ' in content:
+                  count = content.count('<style')
+                  print(f"  INLINE   : {html} — {count} bloc(s) <style>")
+
+          print("\n=== Fichiers racine suspects ===")
+          root_files = [f for f in os.listdir('.') if os.path.isfile(f)]
+          known = {'index.html','quiz.html','tp.html','scene.html','exam.html','tools.html',
+                   'manifest.json','counts.json','questions.json','CHANGELOG.md','README.md',
+                   '.gitignore','.editorconfig','pwa.manifest.json'}
+          for f in sorted(root_files):
+              if f not in known and not f.startswith('.'):
+                  print(f"  SUSPECT  : {f}")
+
+          print("\n=== JS non référencés ===")
+          js_files = glob.glob('js/*.js')
+          for js in js_files:
+              name = os.path.basename(js)
+              refs = [h for h in glob.glob('**/*.html', recursive=True) if name in open(h).read()]
+              if not refs:
+                  print(f"  ORPHELIN : {js}")
+          PYEOF
