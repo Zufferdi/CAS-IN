@@ -36,7 +36,8 @@
  */
 
 // eslint-disable-next-line no-unused-vars
-const SCENES = [
+// eslint-disable-next-line no-var
+var SCENES = [
 
   /* ══════════════════════════════════════════════════
      1. CUSTODY — Audit Chaîne de Possession  [EASY]
