@@ -8,27 +8,263 @@
 <meta name="theme-color" content="#0d1117">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
 <link rel="stylesheet" href="../style/fiche_style.css">
 
-<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
-<script>
-(function(){
-  var btn=document.getElementById('back-top');
-  if(btn) window.addEventListener('scroll',function(){
-    btn.classList.toggle('visible',window.scrollY>300);
-  });
-})();
-</script>
+<style>
+/* ── Corrections & ajouts spécifiques EXT — sans conflits ────────
+   Toutes ces règles sont additives ou plus spécifiques
+   que celles de fiche_style.css.
+   ─────────────────────────────────────────────────────────────── */
+
+/* FIX : .hi n'existe pas dans le CSS partagé */
+.tbl .hi, table .hi {
+  background: rgba(48,232,138,.07);
+  color: var(--green);
+  font-weight: 600;
+}
+
+/* FIX : exam-tip — le CSS ajoute déjà "🎓 EXAM TIP" via ::before.
+         On supprime donc exam-tip-title du HTML.
+         Ce rule masque l'éventuel titre en double si présent. */
+.exam-tip .exam-tip-title { display: none; }
+
+/* ── Schémas interactifs ────────────────────────────────────────── */
+.diagram-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.2rem;
+  margin: .75rem 0;
+}
+.diagram-title {
+  font-family: var(--sans);
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: .9rem;
+}
+
+/* ── Barre de groupes de blocs (partition EXT) ─────────────────── */
+.ext-bar {
+  display: flex;
+  border-radius: 6px;
+  overflow: hidden;
+  height: 60px;
+  gap: 2px;
+  margin-bottom: .5rem;
+}
+.ext-zone {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: filter .15s, transform .12s;
+  font-size: .65rem;
+  text-align: center;
+  padding: 0 .3rem;
+  min-width: 0;
+}
+.ext-zone:hover { filter: brightness(1.25); transform: scaleY(1.05); }
+.ext-zone.active { outline: 2px solid white; z-index: 2; }
+.ext-zone .zn { font-weight: 700; white-space: nowrap; }
+.ext-zone .zs { opacity: .7; font-size: .58rem; margin-top: .1rem; white-space: nowrap; }
+.ez-sb   { flex: .8;  background: rgba(240,192,64,.25);  color: var(--gold);   border-radius: 4px 0 0 4px; }
+.ez-gdt  { flex: .7;  background: rgba(88,166,255,.2);  color: var(--blue); }
+.ez-bbm  { flex: .6;  background: rgba(188,140,255,.2);  color: var(--purple); }
+.ez-ibm  { flex: .6;  background: rgba(188,140,255,.15); color: var(--purple); }
+.ez-it   { flex: 1.5; background: rgba(48,232,138,.2);   color: var(--green); }
+.ez-data { flex: 5;   background: rgba(0,229,204,.12);   color: var(--cyan);  border-radius: 0 4px 4px 0; }
+.ext-zone-label { display: flex; justify-content: space-between; font-size: .6rem; color: var(--dim); margin-top: .3rem; }
+
+.zone-info {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .8rem 1rem;
+  min-height: 70px;
+  font-size: .79rem;
+  margin-top: .5rem;
+}
+.zone-info h4 { font-family: var(--sans); font-size: .8rem; margin-bottom: .35rem; }
+.zone-info ul { padding-left: 1.1rem; font-size: .77rem; color: var(--muted); line-height: 1.7; }
+.zone-info code { font-family: var(--mono); font-size: .78em; background: rgba(0,229,204,.08); padding: 0 .3rem; border-radius: 3px; }
+
+/* ── Inode structure diagram ────────────────────────────────────── */
+.inode-diagram {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.inode-box {
+  background: var(--surface2);
+  border: 1px solid rgba(48,232,138,.3);
+  border-radius: 8px;
+  overflow: hidden;
+  min-width: 160px;
+  flex: 1;
+}
+.inode-box-title {
+  background: rgba(48,232,138,.1);
+  border-bottom: 1px solid rgba(48,232,138,.2);
+  padding: .4rem .7rem;
+  font-family: var(--sans);
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+.inode-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .35rem .7rem;
+  border-bottom: 1px solid var(--border);
+  font-size: .76rem;
+  cursor: pointer;
+  transition: background .12s;
+}
+.inode-row:last-child { border-bottom: none; }
+.inode-row:hover { background: rgba(48,232,138,.05); }
+.inode-icon { font-size: .9rem; width: 20px; text-align: center; flex-shrink: 0; }
+.inode-label { color: var(--text); font-weight: 600; font-size: .75rem; }
+.inode-sub { color: var(--dim); font-size: .68rem; display: block; font-family: var(--mono); }
+
+/* ── Extent tree diagram ────────────────────────────────────────── */
+.extent-tree {
+  position: relative;
+  padding: 1rem .5rem;
+}
+.et-level {
+  display: flex;
+  justify-content: center;
+  gap: .5rem;
+  margin-bottom: .3rem;
+  position: relative;
+}
+.et-node {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: .3rem .6rem;
+  font-size: .68rem;
+  font-family: var(--mono);
+  text-align: center;
+  position: relative;
+  min-width: 70px;
+  transition: border-color .15s;
+}
+.et-node:hover { border-color: var(--cyan); }
+.et-node.et-root  { border-color: rgba(240,192,64,.6); background: rgba(240,192,64,.08); color: var(--gold); }
+.et-node.et-idx   { border-color: rgba(88,166,255,.4); background: rgba(88,166,255,.06); color: var(--blue); }
+.et-node.et-leaf  { border-color: rgba(48,232,138,.4); background: rgba(48,232,138,.06); color: var(--green); }
+.et-node.et-block { border-color: rgba(0,229,204,.3); background: rgba(0,229,204,.05); color: var(--cyan); }
+.et-label {
+  text-align: center;
+  font-size: .6rem;
+  color: var(--dim);
+  margin-bottom: .5rem;
+  font-family: var(--sans);
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.et-connector { text-align: center; color: var(--border); font-size: .75rem; margin: .1rem 0; }
+
+/* ── EXT2 vs EXT4 allocation visual ──────────────────────────── */
+.alloc-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 600px) { .alloc-compare { grid-template-columns: 1fr; } }
+.alloc-panel {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.alloc-header {
+  padding: .5rem .9rem;
+  font-family: var(--sans);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.alloc-header.ext2 { background: rgba(88,166,255,.1); color: var(--blue); border-bottom: 1px solid rgba(88,166,255,.2); }
+.alloc-header.ext4 { background: rgba(48,232,138,.1); color: var(--green); border-bottom: 1px solid rgba(48,232,138,.2); }
+.alloc-body { padding: .7rem .9rem; font-size: .76rem; color: var(--muted); line-height: 1.65; }
+.alloc-body code { font-family: var(--mono); font-size: .8em; }
+.block-chain {
+  display: flex;
+  align-items: center;
+  gap: .2rem;
+  margin: .5rem 0;
+  flex-wrap: wrap;
+}
+.blk {
+  width: 24px; height: 18px;
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .55rem; font-weight: 700; font-family: var(--mono);
+}
+.blk-used  { background: rgba(88,166,255,.35); color: var(--blue); border: 1px solid rgba(88,166,255,.5); }
+.blk-used2 { background: rgba(48,232,138,.35); color: var(--green); border: 1px solid rgba(48,232,138,.5); }
+.blk-free  { background: rgba(255,255,255,.05); color: var(--dim); border: 1px solid var(--border); }
+.blk-ptr   { background: rgba(240,192,64,.2); color: var(--gold); border: 1px solid rgba(240,192,64,.4); font-size: .5rem; }
+.blk-arrow { color: var(--dim); font-size: .75rem; }
+.extent-bar {
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding: 0 .5rem;
+  font-size: .65rem;
+  font-weight: 700;
+  margin: .5rem 0;
+  color: white;
+}
+
+/* ── Groupe de blocs disk visual (SVG inline) ──────────────────── */
+.disk-groups-wrap {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.disk-svg-wrap { flex: 0 0 180px; }
+
+/* ── Formule inline dans le card ────────────────────────────────── */
+.inline-formula {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--cyan);
+  border-radius: 0 6px 6px 0;
+  padding: .4rem .7rem;
+  font-family: var(--mono);
+  font-size: .76rem;
+  color: var(--cyan);
+  margin: .4rem 0;
+  overflow-x: auto;
+}
+
+/* ── Steps numérotés (fix EXT) ──────────────────────────────────── */
+.step .sn { flex-shrink: 0; margin-top: .05rem; }
+</style>
 </head>
 <body>
 <div id="scroll-progress"></div>
-<a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:0;z-index:999;padding:.5rem 1rem;background:var(--cyan);color:var(--bg);font-size:.8rem;border-radius:0 0 4px 0;text-decoration:none">Aller au contenu</a>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+
 <nav class="tn-nav" aria-label="Navigation fiche">
   <a href="index.html" class="tn-back">← Fiches</a>
   <span class="tn-title">EXT2/3/4</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
+
 <div class="page" style="padding-top:.5rem;padding-bottom:0">
   <div class="breadcrumb">
     <a href="../index.html">🏠 Accueil</a>
@@ -37,25 +273,34 @@
     <span class="bc-sep">›</span>
     <a href="index.html#cat-systèmesdefichiers">Systèmes de fichiers</a>
     <span class="bc-sep">›</span>
-    <span class="bc-current">Ext</span>
-    <span class="read-time-badge">⏱ ~5 min</span>
+    <span class="bc-current">EXT2/3/4</span>
+    <span class="read-time-badge">⏱ ~6 min</span>
   </div>
 </div>
+
 <main id="main-content">
-<div style="margin:1.25rem 0;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+<div class="page" style="padding-top:.5rem">
+
+<!-- Citation -->
+<div style="margin:.5rem 0 1rem;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
   <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Citation</span><br>
   <em style="color:var(--text)">"The Linux kernel's journaling layer was designed for reliability, not anonymity. What it recovers for the system administrator, it preserves for the forensic examiner."</em><br>
   <span style="font-size:.72rem;margin-top:.3rem;display:block">— Theodore Ts'o, annonce d'ext3, <em>Linux Kernel Mailing List</em>, 2001</span>
 </div>
-<div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(240,192,64,.05);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
-  <span style="color:var(--gold);font-weight:700">🤓 Fun fact :</span> Theodore Ts'o, créateur d'EXT3/4, est aujourd'hui ingénieur chez Google. L'inode 2 (répertoire racine /) est une constante universelle depuis EXT1 en 1992 — si jamais vous devez vous en souvenir en plein stress d'examen.
+
+<div style="margin:0 0 1rem;padding:.7rem 1rem;background:rgba(240,192,64,.05);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
+  <span style="color:var(--gold);font-weight:700">🤓 Fun fact :</span> Theodore Ts'o, créateur d'EXT3/4, est aujourd'hui ingénieur chez Google. L'inode 2 (répertoire racine /) est une constante universelle depuis EXT1 en 1992.
 </div>
-</div>
-<div class="page">
+
+<!-- Header -->
 <div class="header">
-  <div class="badge" style="color:#var(--green)">EXT</div>
+  <div class="badge" style="color:var(--green)">EXT</div>
   <div>
-    <div style="margin-bottom:.25rem"><span class="tag tag-green">Forensique</span> <span class="tag tag-green">Linux</span> <span class="tag tag-green">Filesystem</span></div>
+    <div style="margin-bottom:.25rem">
+      <span class="tag tag-green">Forensique</span>
+      <span class="tag tag-green">Linux</span>
+      <span class="tag tag-green">Filesystem</span>
+    </div>
     <div class="meta">Linux Extended File System · Groupes de blocs · Inodes · Journalisation · Récupération</div>
   </div>
 </div>
@@ -65,146 +310,497 @@
   <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=offset" class="tp-pill">🧪 📐 Calcul d'offset</a><a href="../tp.html?cat=hextable" class="tp-pill">🧪 🗺 Table Hex</a></div>
   <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="comparaison_fs.html" class="related-pill">🔗 Comparaison FS</a><a href="../tools.html" class="related-pill">🔧 Calculateurs forensiques</a></div>
 </div>
-<div class="alert">⚠ EXT4 efface les pointeurs de blocs à la suppression (<em>block pointer zeroing</em>). La récupération passe par le journal ou le carving sur l'espace non alloué — contrairement à EXT2 qui laissait les pointeurs intacts.</div>
+
+<div class="alert">EXT4 efface les pointeurs de blocs à la suppression (<em>block pointer zeroing</em>). La récupération passe par le journal ou le carving sur l'espace non alloué — contrairement à EXT2 qui laissait les pointeurs intacts.</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 1 — STRUCTURE VOLUME + SCHÉMA GROUPE DE BLOCS
+     ═══════════════════════════════════════════════════════════════ -->
 <div class="sec" id="structure-dun-volume-ext">
-<div class="sec-title">Structure d'un volume EXT</div>
-<div class="zones" style="margin-bottom:.75rem">
-  <div class="zone z-orange">Superbloc<span class="zl">offset 1024, 1024 octets</span></div>
-  <div class="zone z-blue">GDT<span class="zl">Group Descriptor Table</span></div>
-  <div class="zone z-purple">Bitmap blocs<span class="zl">1 bit/bloc</span></div>
-  <div class="zone z-purple">Bitmap inodes<span class="zl">1 bit/inode</span></div>
-  <div class="zone z-green">Table inodes<span class="zl">128 o/inode (EXT2/3)</span></div>
-  <div class="zone z-blue" style="flex:2">Données<span class="zl">Blocs de données</span></div>
-</div>
-<div class="g2">
-  <div class="card card-orange">
-    <div class="ct">Superbloc</div>
-    <ul>
-      <li>Toujours à l'offset <strong>1024</strong> octets du début du volume</li>
-      <li>Contient : inode_count, block_count, s_inodes_per_group, s_blocks_per_group</li>
-      <li>Magic number : <span class="h h-orange">0xEF53</span> (LE : 53 EF)</li>
-      <li>Copies de secours dans certains groupes (sparse_super)</li>
-      <li>s_last_mounted, s_mkfs_time, s_uuid → forensique</li>
-    </ul>
+  <div class="sec-title">Structure d'un volume EXT</div>
+
+  <!-- Barre interactive du groupe de blocs -->
+  <div class="diagram-wrap">
+    <div class="diagram-title">Organisation d'un groupe de blocs — cliquer sur une zone</div>
+
+    <div class="disk-groups-wrap">
+      <!-- SVG disque avec groupes concentriques -->
+      <div class="disk-svg-wrap">
+        <svg viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:180px">
+          <!-- Groupes de blocs concentriques -->
+          <circle cx="90" cy="90" r="85" fill="rgba(0,229,204,.04)" stroke="rgba(0,229,204,.15)" stroke-width="1"/>
+          <circle cx="90" cy="90" r="70" fill="rgba(0,229,204,.06)" stroke="rgba(0,229,204,.2)" stroke-width="1.5"/>
+          <circle cx="90" cy="90" r="55" fill="rgba(48,232,138,.06)" stroke="rgba(48,232,138,.2)" stroke-width="1.5"/>
+          <circle cx="90" cy="90" r="40" fill="rgba(88,166,255,.07)" stroke="rgba(88,166,255,.2)" stroke-width="1.5"/>
+          <circle cx="90" cy="90" r="26" fill="rgba(240,192,64,.1)" stroke="rgba(240,192,64,.3)" stroke-width="1.5"/>
+          <!-- Zone "Données" -->
+          <text x="90" y="20" text-anchor="middle" fill="rgba(0,229,204,.7)" font-size="7" font-family="monospace">Groupe 3</text>
+          <text x="90" y="34" text-anchor="middle" fill="rgba(0,229,204,.7)" font-size="7" font-family="monospace">Groupe 2</text>
+          <text x="90" y="47" text-anchor="middle" fill="rgba(48,232,138,.9)" font-size="7" font-family="monospace">Groupe 1</text>
+          <text x="90" y="61" text-anchor="middle" fill="rgba(88,166,255,.9)" font-size="7" font-family="monospace">Groupe 0</text>
+          <!-- Centre = superbloc -->
+          <text x="90" y="86" text-anchor="middle" fill="rgba(240,192,64,1)" font-size="8" font-family="sans-serif" font-weight="700">SB</text>
+          <text x="90" y="97" text-anchor="middle" fill="rgba(240,192,64,.8)" font-size="6.5" font-family="monospace">offset 1024</text>
+          <!-- Labels droite -->
+          <line x1="113" y1="78" x2="145" y2="60" stroke="rgba(240,192,64,.4)" stroke-width=".8"/>
+          <text x="147" y="60" fill="rgba(240,192,64,.9)" font-size="6.5" font-family="monospace">Superbloc</text>
+          <line x1="120" y1="75" x2="148" y2="76" stroke="rgba(188,140,255,.4)" stroke-width=".8"/>
+          <text x="150" y="79" fill="rgba(188,140,255,.8)" font-size="6.5" font-family="monospace">Bitmaps</text>
+          <line x1="125" y1="85" x2="148" y2="95" stroke="rgba(48,232,138,.4)" stroke-width=".8"/>
+          <text x="150" y="98" fill="rgba(48,232,138,.8)" font-size="6.5" font-family="monospace">Inodes</text>
+          <line x1="145" y1="105" x2="150" y2="118" stroke="rgba(0,229,204,.4)" stroke-width=".8"/>
+          <text x="152" y="121" fill="rgba(0,229,204,.8)" font-size="6.5" font-family="monospace">Données</text>
+          <!-- Label centre bas -->
+          <text x="90" y="165" text-anchor="middle" fill="var(--dim)" font-size="7" font-family="sans-serif">Disque physique</text>
+        </svg>
+      </div>
+
+      <!-- Barre de groupe de blocs interactive -->
+      <div style="flex:1;min-width:200px">
+        <div class="ext-bar">
+          <div class="ext-zone ez-sb"  onclick="showExtZone('sb')"   id="ez-sb">
+            <span class="zn">SB</span><span class="zs">Superbloc</span>
+          </div>
+          <div class="ext-zone ez-gdt" onclick="showExtZone('gdt')"  id="ez-gdt">
+            <span class="zn">GDT</span><span class="zs">Descripteurs</span>
+          </div>
+          <div class="ext-zone ez-bbm" onclick="showExtZone('bbm')"  id="ez-bbm">
+            <span class="zn">BB</span><span class="zs">Bitmap blocs</span>
+          </div>
+          <div class="ext-zone ez-ibm" onclick="showExtZone('ibm')"  id="ez-ibm">
+            <span class="zn">IB</span><span class="zs">Bitmap inodes</span>
+          </div>
+          <div class="ext-zone ez-it"  onclick="showExtZone('it')"   id="ez-it">
+            <span class="zn">Table inodes</span><span class="zs">128o / inode</span>
+          </div>
+          <div class="ext-zone ez-data" onclick="showExtZone('data')" id="ez-data">
+            <span class="zn">Blocs de Données</span><span class="zs">Fichiers · Répertoires</span>
+          </div>
+        </div>
+        <div class="ext-zone-label">
+          <span>← Début du groupe</span>
+          <span>Fin du groupe →</span>
+        </div>
+        <div class="zone-info" id="extZoneInfo">
+          <p style="color:var(--dim);font-size:.78rem">ℹ️ Cliquez sur une zone pour afficher ses détails forensiques.</p>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="card card-blue">
-    <div class="ct">Groupes de blocs</div>
-    <ul>
-      <li>Volume divisé en groupes de blocs de taille fixe</li>
-      <li>Chaque groupe contient : superbloc (copie), GDT, bitmap blocs, bitmap inodes, table inodes, blocs données</li>
-      <li>Taille typique : 32768 blocs × 4 Ko = 128 Mo par groupe</li>
-      <li>Formule groupe d'un inode : <strong>(inode−1) ÷ s_inodes_per_group</strong></li>
-    </ul>
+
+  <div class="g2">
+    <div class="card card-orange">
+      <div class="ct">Superbloc</div>
+      <ul>
+        <li>Toujours à l'offset <strong>1024</strong> octets du début du volume</li>
+        <li>Contient : <code>inode_count</code>, <code>block_count</code>, <code>s_inodes_per_group</code>, <code>s_blocks_per_group</code></li>
+        <li>Magic number : <span class="h h-gold">0xEF53</span> (LE : <code>53 EF</code>)</li>
+        <li>Copies de secours dans certains groupes (<code>sparse_super</code>)</li>
+        <li><code>s_last_mounted</code>, <code>s_mkfs_time</code>, <code>s_uuid</code> → forensique</li>
+      </ul>
+    </div>
+    <div class="card card-blue">
+      <div class="ct">Groupes de blocs</div>
+      <ul>
+        <li>Volume divisé en groupes de blocs de taille fixe</li>
+        <li>Chaque groupe : superbloc (copie), GDT, bitmap blocs/inodes, table inodes, données</li>
+        <li>Taille typique : 32 768 blocs × 4 Ko = <strong>128 Mo / groupe</strong></li>
+        <li>Formule groupe d'un inode :</li>
+      </ul>
+      <div class="inline-formula">(inode − 1) ÷ s_inodes_per_group</div>
+    </div>
   </div>
-</div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 2 — L'INODE + SCHÉMA STRUCTURE
+     ═══════════════════════════════════════════════════════════════ -->
 <div class="sec" id="linode-cur-du-systeme-ext">
-<div class="sec-title">L'inode — Cœur du système EXT</div>
-<div class="g3">
-  <div class="card card-green">
-    <div class="ct">Inodes réservés</div>
-    <ul>
-      <li>Inode <strong>0</strong> : n'existe pas</li>
-      <li>Inode <strong>1</strong> : liste blocs défectueux</li>
-      <li>Inode <strong>2</strong> : répertoire racine /</li>
-      <li>Inode <strong>7</strong> : quota</li>
-      <li>Inode <strong>8</strong> : journal EXT3/4</li>
-      <li>Inodes normaux : ≥ 11</li>
-    </ul>
+  <div class="sec-title">L'inode — Cœur du système EXT</div>
+
+  <!-- Schéma inode -->
+  <div class="diagram-wrap">
+    <div class="diagram-title">Structure de l'inode &amp; Arbre d'Extents EXT4</div>
+    <div class="inode-diagram">
+
+      <!-- Inode fields -->
+      <div class="inode-box">
+        <div class="inode-box-title">Inode (128–256 octets)</div>
+        <div class="inode-row">
+          <span class="inode-icon">🔐</span>
+          <div><span class="inode-label">Permissions</span><span class="inode-sub">i_mode (16 bits) · rw-r--r--</span></div>
+        </div>
+        <div class="inode-row">
+          <span class="inode-icon">👤</span>
+          <div><span class="inode-label">UID / GID</span><span class="inode-sub">Propriétaire · Groupe</span></div>
+        </div>
+        <div class="inode-row">
+          <span class="inode-icon">📏</span>
+          <div><span class="inode-label">Taille</span><span class="inode-sub">i_size · 32 bits (EXT4 = 64 bits)</span></div>
+        </div>
+        <div class="inode-row">
+          <span class="inode-icon">🕐</span>
+          <div><span class="inode-label">Timestamps</span><span class="inode-sub">atime · mtime · ctime · crtime</span></div>
+        </div>
+        <div class="inode-row">
+          <span class="inode-icon">🔗</span>
+          <div><span class="inode-label">i_links_count</span><span class="inode-sub">Nombre de hardlinks</span></div>
+        </div>
+        <div class="inode-row" style="background:rgba(48,232,138,.04)">
+          <span class="inode-icon">📍</span>
+          <div><span class="inode-label" style="color:var(--green)">Pointeurs / Extents</span><span class="inode-sub">60 octets · i_block[15]</span></div>
+        </div>
+      </div>
+
+      <!-- Extent tree -->
+      <div style="flex:1.6;min-width:200px">
+        <div class="et-label">Hiérarchie de l'Arbre d'Extents (EXT4)</div>
+
+        <div class="extent-tree">
+          <div class="et-level">
+            <div class="et-node et-root">En-tête<br><small style="font-size:.58rem">Magic 0xF30A</small></div>
+          </div>
+          <div class="et-connector">│</div>
+          <div class="et-connector">├──────────────────────┤</div>
+          <div class="et-level">
+            <div class="et-node et-idx">Nœud Index</div>
+            <div class="et-node et-idx">Nœud Index</div>
+            <div class="et-node et-idx">Nœud Index</div>
+          </div>
+          <div class="et-connector">│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│</div>
+          <div class="et-level">
+            <div class="et-node et-leaf">Feuille</div>
+            <div class="et-node et-leaf">Feuille</div>
+            <div class="et-node et-leaf">Feuille</div>
+            <div class="et-node et-leaf">Feuille</div>
+          </div>
+          <div class="et-connector">↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓</div>
+          <div class="et-level" style="flex-wrap:wrap">
+            <div class="et-node et-block">Blocs 0–15</div>
+            <div class="et-node et-block">Blocs 16–31</div>
+            <div class="et-node et-block">Blocs 32–47</div>
+            <div class="et-node et-block">…</div>
+          </div>
+        </div>
+
+        <div style="margin-top:.5rem;font-size:.73rem;color:var(--muted);line-height:1.6">
+          <strong style="color:var(--gold)">Extent = {début, taille}</strong> — une plage contiguë de blocs<br>
+          <span class="h h-gold">Début</span> adresse bloc physique initial ·
+          <span class="h h-green">Taille</span> nb de blocs contigus<br>
+          Max 4 extents dans l'inode directement → arbre sinon
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="card card-blue">
-    <div class="ct">Contenu d'un inode</div>
-    <ul>
-      <li>Mode (type + permissions Unix)</li>
-      <li>UID/GID propriétaire</li>
-      <li>Taille du fichier</li>
-      <li>Timestamps : atime, mtime, ctime</li>
-      <li>i_links_count (hardlinks)</li>
-      <li>Pointeurs de blocs ou extents</li>
-    </ul>
+
+  <div class="g3">
+    <div class="card card-green">
+      <div class="ct">Inodes réservés</div>
+      <ul>
+        <li>Inode <strong>0</strong> : n'existe pas</li>
+        <li>Inode <strong>1</strong> : blocs défectueux</li>
+        <li>Inode <strong>2</strong> : répertoire racine <code>/</code> ⭐</li>
+        <li>Inode <strong>7</strong> : quota</li>
+        <li>Inode <strong>8</strong> : journal EXT3/4</li>
+        <li>Inodes normaux : <strong>≥ 11</strong></li>
+      </ul>
+    </div>
+    <div class="card card-blue">
+      <div class="ct">Contenu d'un inode</div>
+      <ul>
+        <li>Mode (type + permissions Unix)</li>
+        <li>UID/GID propriétaire</li>
+        <li>Taille du fichier (<code>i_size</code>)</li>
+        <li>Timestamps : atime, mtime, ctime, crtime</li>
+        <li><code>i_links_count</code> (hardlinks)</li>
+        <li>Pointeurs de blocs ou extents (<code>i_block</code>)</li>
+      </ul>
+    </div>
+    <div class="card card-purple">
+      <div class="ct">Permissions Unix</div>
+      <ul>
+        <li><span class="h h-purple">0644</span> : rw-r--r-- (standard fichier)</li>
+        <li><span class="h h-purple">0755</span> : rwxr-xr-x (standard dossier)</li>
+        <li><span class="h h-purple">0777</span> : rwxrwxrwx (⚠ risque sécurité)</li>
+        <li><span class="h h-purple">0000</span> : aucune permission</li>
+        <li><strong>Sticky</strong> <code>1xxx</code>, <strong>SGID</strong> <code>2xxx</code>, <strong>SUID</strong> <code>4xxx</code></li>
+      </ul>
+    </div>
   </div>
-  <div class="card card-purple">
-    <div class="ct">Permissions Unix</div>
-    <ul>
-      <li><span class="h h-purple">0644</span> : rw-r--r-- (standard fichier)</li>
-      <li><span class="h h-purple">0755</span> : rwxr-xr-x (standard dossier)</li>
-      <li><span class="h h-purple">0777</span> : rwxrwxrwx (⚠ risque sécu)</li>
-      <li><span class="h h-purple">0000</span> : aucune permission</li>
-    </ul>
-  </div>
-</div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 3 — ÉVOLUTION EXT2/3/4
+     ═══════════════════════════════════════════════════════════════ -->
 <div class="sec" id="evolution-ext2-ext3-ext4">
-<div class="sec-title">Évolution EXT2 → EXT3 → EXT4</div>
-<table class="tbl">
-<thead><tr><th>Fonctionnalité</th><th>EXT2 (1993)</th><th>EXT3 (2001)</th><th>EXT4 (2008)</th></tr></thead>
-<tbody>
-<tr><td>Journalisation</td><td>Non</td><td class="hi">✅ Write-Ahead Log</td><td class="hi">✅ amélioré</td></tr>
-<tr><td>Répertoires</td><td>Liste chaînée</td><td>HTree (Hash B-Tree)</td><td class="hi">HTree étendu</td></tr>
-<tr><td>Pointeurs blocs</td><td>Directs/indirects</td><td>Idem</td><td class="hi"><strong>Extents</strong> (plages)</td></tr>
-<tr><td>Suppression</td><td>Pointeurs conservés</td><td class="hi">Pointeurs effacés</td><td class="hi">Block pointer zeroing</td></tr>
-<tr><td>Récupération</td><td>✅ Facile</td><td>⚠ Difficile</td><td>❌ Très difficile</td></tr>
-<tr><td>Taille max volume</td><td>16 TB</td><td>16 TB</td><td class="hi">1 EB</td></tr>
-<tr><td>Taille max fichier</td><td>2 TB</td><td>2 TB</td><td class="hi">16 TB</td></tr>
-</tbody>
-</table>
+  <div class="sec-title">Évolution EXT2 → EXT3 → EXT4</div>
+
+  <!-- Schéma comparatif allocation blocs EXT2 vs EXT4 -->
+  <div class="diagram-wrap">
+    <div class="diagram-title">EXT2/3 (blocs individuels) vs EXT4 (extents) — Allocation d'un fichier</div>
+    <div class="alloc-compare">
+      <div class="alloc-panel">
+        <div class="alloc-header ext2">EXT2 / EXT3 — Blocs individuels (Directs/Indirects)</div>
+        <div class="alloc-body">
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem">Fichier 8 blocs — chaque bloc pointé séparément :</div>
+          <div class="block-chain">
+            <div class="blk blk-ptr">inode</div>
+            <div class="blk-arrow">→</div>
+            <div class="blk blk-used">2</div>
+            <div class="blk blk-used">5</div>
+            <div class="blk blk-used">9</div>
+            <div class="blk blk-used">10</div>
+            <div class="blk blk-used">11</div>
+            <div class="blk blk-used">23</div>
+            <div class="blk blk-used">24</div>
+            <div class="blk blk-used">37</div>
+          </div>
+          <div style="font-size:.72rem;color:var(--muted)">
+            → 15 pointeurs directs dans l'inode (12 directs + 3 indirects)<br>
+            → Fragmentation possible — blocs éparpillés<br>
+            → <strong style="color:var(--blue)">Suppression EXT2 :</strong> pointeurs conservés dans l'inode → récupération directe via <code>icat</code>
+          </div>
+        </div>
+      </div>
+      <div class="alloc-panel">
+        <div class="alloc-header ext4">EXT4 — Extents (plages contiguës)</div>
+        <div class="alloc-body">
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem">Fichier 8 blocs — 2 extents contiguës :</div>
+          <div style="margin:.4rem 0">
+            <div style="font-size:.68rem;color:var(--dim);margin-bottom:.2rem">Extent 1 : blocs 2–5</div>
+            <div class="extent-bar" style="background:rgba(48,232,138,.3);border:1px solid rgba(48,232,138,.5);width:60%;color:var(--green)">Début:2 · Taille:4 blocs</div>
+            <div style="font-size:.68rem;color:var(--dim);margin:.3rem 0 .2rem">Extent 2 : blocs 23–26</div>
+            <div class="extent-bar" style="background:rgba(48,232,138,.2);border:1px solid rgba(48,232,138,.4);width:50%;color:var(--green)">Début:23 · Taille:4 blocs</div>
+          </div>
+          <div style="font-size:.72rem;color:var(--muted)">
+            → Max 4 extents dans l'inode (arbre si plus)<br>
+            → Moins de fragmentation, E/S plus rapides<br>
+            → <strong style="color:var(--red)">Suppression EXT4 :</strong> pointeurs mis à 0 (<em>zeroing</em>) → récupération via journal (<code>ext4magic</code>)
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Fonctionnalité</th>
+        <th style="color:var(--blue)">EXT2 (1993)</th>
+        <th style="color:var(--cyan)">EXT3 (2001)</th>
+        <th style="color:var(--green)">EXT4 (2008)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Journalisation</td><td>Non</td><td class="hi">✅ Write-Ahead Log</td><td class="hi">✅ amélioré</td></tr>
+      <tr><td>Répertoires</td><td>Liste chaînée</td><td class="hi">HTree (Hash B-Tree)</td><td class="hi">HTree étendu</td></tr>
+      <tr><td>Pointeurs blocs</td><td>Directs/indirects</td><td>Idem</td><td class="hi"><strong>Extents</strong> (plages)</td></tr>
+      <tr><td>Suppression</td><td style="color:var(--green)">Pointeurs conservés</td><td style="color:var(--red)">Pointeurs effacés</td><td style="color:var(--red)">Block pointer zeroing</td></tr>
+      <tr><td>Récupération</td><td style="color:var(--green)">✅ Facile</td><td style="color:var(--gold)">⚠ Difficile</td><td style="color:var(--red)">❌ Très difficile</td></tr>
+      <tr><td>Taille max volume</td><td>16 TB</td><td>16 TB</td><td class="hi">1 EB</td></tr>
+      <tr><td>Taille max fichier</td><td>2 TB</td><td>2 TB</td><td class="hi">16 TB</td></tr>
+      <tr><td>Taille max inode</td><td>128 octets</td><td>128 octets</td><td class="hi">256 octets</td></tr>
+      <tr><td>Timestamps</td><td>Seconde</td><td>Seconde</td><td class="hi">Nanoseconde + crtime</td></tr>
+    </tbody>
+  </table>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 4 — SUPPRESSION ET RÉCUPÉRATION
+     ═══════════════════════════════════════════════════════════════ -->
 <div class="sec" id="suppression-et-recuperation-forensique">
-<div class="sec-title">Suppression et récupération forensique</div>
-<div class="steps">
-  <div class="step"><div class="sn sn-r">1</div><div class="st">L'entrée de répertoire est <strong>invalidée</strong> (rec_len étendu pour "sauter" l'entrée). Le nom reste lisible dans les répertoires EXT2.</div></div>
-  <div class="step"><div class="sn sn-r">2</div><div class="st"><strong>i_links_count</strong> passe à 0. Sur EXT3/4 : les pointeurs de blocs dans l'inode sont <strong>effacés</strong>. Sur EXT2 : pointeurs conservés → récupération directe possible.</div></div>
-  <div class="step"><div class="sn sn-r">3</div><div class="st">Les bits dans les bitmaps blocs et inodes sont remis à 0 (libres). Les données restent sur le disque jusqu'à réécriture.</div></div>
-</div>
-<div class="formula">
-  <div><span class="f">Formule groupe</span> = (inode − 1) ÷ s_inodes_per_group (division entière)</div>
-  <div><span class="f">Index dans groupe</span> = (inode − 1) mod s_inodes_per_group</div>
-  <div><span class="f">Offset inode</span> = Début_table_inodes + index × taille_inode</div>
-</div>
+  <div class="sec-title">Suppression et récupération forensique</div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="sn sn-r">1</div>
+      <div class="st">L'entrée de répertoire est <strong>invalidée</strong> (<code>rec_len</code> étendu pour "sauter" l'entrée). Le nom reste lisible dans les répertoires EXT2 — extraction avec <code>fls -r</code>.</div>
+    </div>
+    <div class="step">
+      <div class="sn sn-r">2</div>
+      <div class="st"><strong><code>i_links_count</code></strong> passe à 0. Sur <strong>EXT3/4 :</strong> les pointeurs de blocs dans l'inode sont <strong>effacés</strong>. Sur <strong>EXT2 :</strong> pointeurs conservés → récupération directe possible avec <code>icat</code>.</div>
+    </div>
+    <div class="step">
+      <div class="sn sn-r">3</div>
+      <div class="st">Les bits dans les <strong>bitmaps blocs et inodes</strong> sont remis à 0 (libres). Les données restent sur le disque jusqu'à réécriture — carving possible avec PhotoRec ou Scalpel.</div>
+    </div>
+    <div class="step">
+      <div class="sn sn-g">4</div>
+      <div class="st"><strong>EXT4 :</strong> Consulter le journal (<code>ext4magic -R</code> ou <code>debugfs</code>). La journalisation en mode <code>data=journal</code> offre les meilleures chances — <code>data=writeback</code> le moins.</div>
+    </div>
+  </div>
+
+  <div class="formula">
+    <span style="color:var(--dim)">// Formules d'offset inode :</span><br>
+    Groupe&nbsp;&nbsp;&nbsp;&nbsp; = (inode − 1) ÷ s_inodes_per_group <span style="color:var(--dim)">// division entière</span><br>
+    Index&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = (inode − 1) mod s_inodes_per_group<br>
+    Offset inode = Début_table_inodes + index × taille_inode
+  </div>
+
+  <!-- Exemple pratique -->
+  <div class="diagram-wrap" style="margin-top:.75rem">
+    <div class="diagram-title">Exemple — Inode 150, 128 inodes/groupe, inode size = 256 octets</div>
+    <div class="formula" style="margin:0">
+      Groupe&nbsp; = (150 − 1) ÷ 128 = <strong style="color:var(--green)">1</strong><br>
+      Index&nbsp;&nbsp; = 149 mod 128 = <strong style="color:var(--green)">21</strong><br>
+      Offset&nbsp; = début_table_groupe_1 + 21 × 256
+    </div>
+  </div>
 </div>
 
-<div class="tip">💡 <strong>Récupération EXT4</strong> : Utiliser le journal (contient les anciens pointeurs), le carving sur l'espace non alloué (PhotoRec, Scalpel), ou l'outil ext4magic. La journalisation EXT4 en <em>writeback</em> protège moins les données qu'en <em>data=ordered</em> ou <em>data=journal</em>.</div>
+<!-- Tip -->
+<div class="tip">Récupération EXT4 : Utiliser le journal (<code>ext4magic</code>), le carving sur l'espace non alloué (PhotoRec, Scalpel), ou analyser le journal avec <code>debugfs</code>. La journalisation EXT4 en <em>data=writeback</em> protège moins les données qu'en <em>data=ordered</em> ou <em>data=journal</em>.</div>
 
-
+<!-- ═══════════════════════════════════════════════════════════════
+     EXAM TIP — Note : le CSS ajoute "🎓 EXAM TIP" via ::before
+     Ne PAS répéter le titre ici
+     ═══════════════════════════════════════════════════════════════ -->
 <div class="exam-tip">
-  <div class="exam-tip-title">🎓 Exam Tip — EXT2/3/4</div>
   <p><strong>Superbloc</strong> : offset <code>1024</code> octets · Magic <code>0xEF53</code> (LE : <code>53 EF</code>)</p>
-  <p><strong>Inode 2</strong> = racine / · Inode 8 = journal EXT3/4 · Inodes normaux ≥ 11</p>
+  <p><strong>Inode 2</strong> = racine <code>/</code> · Inode 8 = journal EXT3/4 · Inodes normaux ≥ 11</p>
   <p><strong>EXT4 block pointer zeroing</strong> : pointeurs effacés → récupération via journal (<code>ext4magic</code>)</p>
-  <p><strong>EXT2</strong> : pointeurs conservés → récupération directe avec <code>icat</code></p>
+  <p><strong>EXT2</strong> : pointeurs conservés → récupération directe avec <code>icat inode_num</code></p>
   <p><strong>Formule groupe</strong> : (inode − 1) ÷ s_inodes_per_group · Index = (inode − 1) mod s_inodes_per_group</p>
-  <p><strong>Permissions Unix</strong> : <code>0644</code> = rw-r--r-- · <code>0755</code> = rwxr-xr-x</p>
+  <p><strong>Permissions Unix</strong> : <code>0644</code> = rw-r--r-- · <code>0755</code> = rwxr-xr-x · <code>0777</code> ⚠</p>
+  <p><strong>Journalisation</strong> : data=journal > data=ordered > data=writeback (fiabilité forensique)</p>
 </div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FLASHCARDS
+     ═══════════════════════════════════════════════════════════════ -->
 <div class="quiz-wrap">
   <div class="quiz-q">Pourquoi EXT4 rend la récupération plus difficile qu'EXT2 ?<small>EXT forensique · Niveau : moyen</small></div>
   <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
-  <div class="quiz-answer"><strong>Block pointer zeroing</strong> : à la suppression, les pointeurs de blocs dans l'inode sont mis à 0. Sur EXT2 ils restaient → localisation directe avec <code>icat</code>. Sur EXT4 : passer par le journal (<code>ext4magic</code>) ou file carving.</div>
+  <div class="quiz-answer"><strong>Block pointer zeroing</strong> : à la suppression, les pointeurs de blocs dans l'inode sont mis à 0. Sur EXT2 ils restaient → localisation directe avec <code>icat</code>. Sur EXT4 : passer par le journal (<code>ext4magic</code>) ou file carving sur l'espace libre.</div>
 </div>
+
 <div class="quiz-wrap">
   <div class="quiz-q">Inode 150, 128 inodes/groupe. Quel groupe ? Quel index ?<small>EXT calcul · Niveau : facile</small></div>
   <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
-  <div class="quiz-answer">Groupe = (150 − 1) ÷ 128 = <strong>1</strong> · Index = 149 mod 128 = <strong>21</strong></div>
+  <div class="quiz-answer">Groupe = (150 − 1) ÷ 128 = <strong>1</strong> · Index = 149 mod 128 = <strong>21</strong> · Offset = début_table_inodes_groupe_1 + 21 × taille_inode</div>
 </div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un inode a i_links_count = 0. Que peut-on en déduire ?<small>EXT Inodes · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>Le fichier est supprimé</strong> — aucun hardlink ne pointe vers cet inode. Les données restent sur disque jusqu'à réallocation. Sur EXT2 : les pointeurs de blocs sont encore dans l'inode → récupération directe. Sur EXT3/4 : pointeurs effacés. Indice forensique : inode dans bitmap = libre mais données potentiellement récupérables.</div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Quel est le magic number du superbloc EXT et à quel offset le trouver ?<small>EXT Superbloc · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Magic number : <strong>0xEF53</strong> (en Little Endian : <code>53 EF</code>). Il se trouve à l'offset <strong>1024 + 56 = 1080</strong> octets du début du volume (le superbloc commence à 1024, le magic est au champ offset 0x38 dans la structure superbloc). Vérifier ce magic est la première étape pour identifier un volume EXT.</div>
+</div>
+
 <div class="footer">
   <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
   <span>The Linux Documentation Project · Ch. 13 Manuel</span>
 </div>
-</div>
-</div>
+
+</div><!-- /page -->
 </main>
 
 <script>
 (function(){
-  var bar=document.getElementById("scroll-progress");
-  if(bar) window.addEventListener("scroll",function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+"%";},{passive:true});
-  var bt=document.getElementById("back-top")||document.querySelector(".back-top");
-  if(bt){if(!bt.id)bt.id="back-top";window.addEventListener("scroll",function(){bt.classList.toggle("visible",window.scrollY>300);},{passive:true});}
-  document.querySelectorAll(".quiz-reveal-btn").forEach(function(btn){btn.addEventListener("click",function(){var ans=btn.closest(".quiz-wrap").querySelector(".quiz-answer");ans.classList.toggle("visible");btn.textContent=ans.classList.contains("visible")?"Masquer ↑":"Révéler →";});});
-})();
-</script>
+  /* ── Barre de progression ─────────────── */
+  var bar = document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll', function(){
+    var d = document.documentElement;
+    bar.style.width = Math.min(100, (d.scrollTop / (d.scrollHeight - d.clientHeight)) * 100) + '%';
+  }, {passive:true});
 
+  /* ── Bouton retour haut ───────────────── */
+  var bt = document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll', function(){
+    bt.classList.toggle('visible', window.scrollY > 300);
+  }, {passive:true});
+
+  /* ── Quiz reveal ──────────────────────── */
+  document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var ans = btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+      ans.classList.toggle('visible');
+      btn.textContent = ans.classList.contains('visible') ? 'Masquer ↑' : 'Révéler →';
+    });
+  });
+})();
+
+/* ── Barre de groupes de blocs interactive ── */
+var extZoneData = {
+  sb: {
+    title: 'Superbloc (SB)',
+    color: 'var(--gold)',
+    items: [
+      'Offset fixe : <code>1024</code> octets depuis le début du volume (partout, pas seulement groupe 0)',
+      'Magic number : <code>0xEF53</code> (octets <code>53 EF</code> en LE) — identifiant universel EXT',
+      'Champs clés : <code>s_inodes_count</code>, <code>s_blocks_count</code>, <code>s_inodes_per_group</code>, <code>s_blocks_per_group</code>',
+      '<strong>Forensique :</strong> <code>s_last_mounted</code> (chemin du dernier montage), <code>s_mkfs_time</code> (date de formatage), <code>s_uuid</code> (identifiant unique volume)',
+      'Copies de secours dans les groupes 1, 3, 5, 7... (<code>sparse_super</code>)'
+    ]
+  },
+  gdt: {
+    title: 'Group Descriptor Table (GDT)',
+    color: 'var(--blue)',
+    items: [
+      'Table des descripteurs de groupes — un descripteur par groupe de blocs',
+      'Chaque descripteur : adresse bitmap blocs, adresse bitmap inodes, adresse table inodes, compteurs libres',
+      'Taille : 32 octets/groupe (EXT2/3) ou 64 octets/groupe (EXT4 avec 64bit)',
+      '<strong>Forensique :</strong> Comparer les compteurs libres avec les bitmaps pour détecter des incohérences'
+    ]
+  },
+  bbm: {
+    title: 'Bitmap des blocs',
+    color: 'var(--purple)',
+    items: [
+      '1 bit par bloc de données du groupe — 0 = libre, 1 = alloué',
+      'Taille : 1 bloc (typiquement 4 Ko = 32 768 bits = 32 768 blocs représentés)',
+      '<strong>Forensique :</strong> Bloc marqué libre mais avec données = données supprimées récupérables',
+      'Divergence entre bitmap et GDT → corruption ou manipulation'
+    ]
+  },
+  ibm: {
+    title: 'Bitmap des inodes',
+    color: 'var(--purple)',
+    items: [
+      '1 bit par inode du groupe — 0 = libre, 1 = alloué',
+      'Taille : 1 bloc (s_inodes_per_group bits significatifs)',
+      '<strong>Forensique :</strong> Inode marqué libre mais avec <code>i_links_count = 0</code> → fichier supprimé, données potentiellement présentes',
+      'Analyser avec <code>ils -f ext4 image.raw</code> (TSK)'
+    ]
+  },
+  it: {
+    title: 'Table des inodes',
+    color: 'var(--green)',
+    items: [
+      'Tableau séquentiel de toutes les structures inode du groupe',
+      'Taille inode : 128 octets (EXT2/3) ou 256 octets (EXT4)',
+      'Taille totale : <code>s_inodes_per_group × taille_inode</code> octets',
+      '<strong>Forensique :</strong> Même après suppression, les champs non effacés restent lisibles — timestamps, taille, ancien inode propriétaire',
+      'EXT4 : champ <code>crtime</code> (creation time) — non présent en EXT2/3 !'
+    ]
+  },
+  data: {
+    title: 'Blocs de données',
+    color: 'var(--cyan)',
+    items: [
+      'Contient les données réelles des fichiers et le contenu des répertoires',
+      'Accès via les pointeurs de blocs (EXT2/3) ou extents (EXT4)',
+      'Répertoires = liste d\'entrées <code>dir_entry_2</code> : inode + rec_len + name_len + file_type + nom',
+      '<strong>Forensique :</strong> Données supprimées restent jusqu\'à réallocation — carving avec PhotoRec/Scalpel',
+      'Journalisation EXT3/4 : anciennes versions de blocs dans le journal → <code>ext4magic</code>'
+    ]
+  }
+};
+
+function showExtZone(zone) {
+  var d = extZoneData[zone];
+  if(!d) return;
+  document.querySelectorAll('.ext-zone').forEach(function(z){ z.classList.remove('active'); });
+  document.getElementById('ez-' + zone)?.classList.add('active');
+  document.getElementById('extZoneInfo').innerHTML =
+    '<h4 style="color:' + d.color + '">' + d.title + '</h4>' +
+    '<ul>' + d.items.map(function(i){ return '<li>' + i + '</li>'; }).join('') + '</ul>';
+}
+</script>
 </body>
 </html>
