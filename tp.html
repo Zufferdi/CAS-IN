@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="style/tp.css">
 <script src="js/cas-in-counts.js" defer></script>
 <script src="js/cas-in-pwa.js" defer></script>
+<script src="js/cas-in-search.js" defer></script>
 <style>
 /* ── Overrides layout pour sidebar ──────────────────────────── */
 .tp-hero    { display: none !important; }
@@ -270,16 +271,6 @@ body        { overflow: hidden; height: 100vh; }
 }
 
 
-/* Mini progress bar per group */
-.sb-grp-prog {
-  height: 2px; background: var(--border);
-  margin: 0 .85rem;
-  border-radius: 2px; overflow: hidden;
-}
-.sb-grp-fill {
-  height: 100%; border-radius: 2px;
-  transition: width .4s ease;
-}
 
 /* ── Catégorie: couleurs accent par groupe ───────────────────── */
 .group-fs   .sb-cat.active { background: rgba(240,192,64,.1); color: var(--gold); }
@@ -338,7 +329,6 @@ body        { overflow: hidden; height: 100vh; }
           <div class="sb-grp-prog"><div class="sb-grp-track"><div class="sb-grp-fill" id="gp-fs" style="width:0%;background:var(--gold)"></div></div><span class="sb-grp-label" id="gl-fs">0%</span></div>
           <span class="sb-arrow">›</span>
         </div>
-        <div class="sb-grp-prog"><div class="sb-grp-fill" id="gp-grp-fs" style="width:0%;background:var(--gold)"></div></div>
         <div class="sb-group-body">
           <button class="sb-cat active" data-cat="endian"      onclick="go('endian',this)">      <span class="sb-cat-icon">🔄</span><span class="sb-cat-name">Endianness</span>          <span class="sb-badge sb-badge-none" id="bd-endian">—</span></button>
           <button class="sb-cat"        data-cat="timestamp"   onclick="go('timestamp',this)">   <span class="sb-cat-icon">⏱</span><span class="sb-cat-name">Timestamps FAT</span>        <span class="sb-badge sb-badge-none" id="bd-timestamp">—</span></button>
@@ -361,7 +351,6 @@ body        { overflow: hidden; height: 100vh; }
           <div class="sb-grp-prog"><div class="sb-grp-track"><div class="sb-grp-fill" id="gp-calc" style="width:0%;background:var(--blue)"></div></div><span class="sb-grp-label" id="gl-calc">0%</span></div>
           <span class="sb-arrow">›</span>
         </div>
-        <div class="sb-grp-prog"><div class="sb-grp-fill" id="gp-grp-calc" style="width:0%;background:var(--blue)"></div></div>
         <div class="sb-group-body">
           <button class="sb-cat" data-cat="hextable"   onclick="go('hextable',this)">  <span class="sb-cat-icon">🗺</span><span class="sb-cat-name">Table Hex</span>             <span class="sb-badge sb-badge-none" id="bd-hextable">—</span></button>
           <button class="sb-cat" data-cat="fsidentify" onclick="go('fsidentify',this)"><span class="sb-cat-icon">🔍</span><span class="sb-cat-name">Identifier le FS</span>      <span class="sb-badge sb-badge-none" id="bd-fsidentify">—</span></button>
@@ -380,7 +369,6 @@ body        { overflow: hidden; height: 100vh; }
           <div class="sb-grp-prog"><div class="sb-grp-track"><div class="sb-grp-fill" id="gp-inv" style="width:0%;background:var(--purple)"></div></div><span class="sb-grp-label" id="gl-inv">0%</span></div>
           <span class="sb-arrow">›</span>
         </div>
-        <div class="sb-grp-prog"><div class="sb-grp-fill" id="gp-grp-inv" style="width:0%;background:var(--purple)"></div></div>
         <div class="sb-group-body">
           <button class="sb-cat" data-cat="email"      onclick="go('email',this)">     <span class="sb-cat-icon">✉️</span><span class="sb-cat-name">Email Forensics</span>       <span class="sb-badge sb-badge-none" id="bd-email">—</span></button>
           <button class="sb-cat" data-cat="network"    onclick="go('network',this)">   <span class="sb-cat-icon">📡</span><span class="sb-cat-name">Réseau &amp; PCAP</span>     <span class="sb-badge sb-badge-none" id="bd-network">—</span></button>
@@ -514,7 +502,6 @@ function go(cat, btn) {
   // Update context header
   const m = CAT_META[cat] || {icon:'📋', name:cat, sub:''};
   document.getElementById('ctx-icon').textContent = m.icon;
-  document.getElementById('tp-ctx').style.setProperty('--ctx-color', cat === 'examen' ? 'var(--red)' : 'var(--cyan)');
   document.getElementById('ctx-name').textContent = m.name;
   document.getElementById('ctx-sub').textContent = m.sub;
   // Show exercise area
@@ -564,29 +551,30 @@ function toggleGrp(id) {
 }
 
 function updateGroupProgress() {
-  // Mini progress bar per group header
+  // Mise à jour barres de progression dans les headers des groupes
   const groups = {
-    'grp-fs':   ['endian','timestamp','bitmap','fat','magic','mismatch','runlist','effacement','timestomping'],
-    'grp-calc': ['hextable','fsidentify','offset','bases','hash'],
-    'grp-inv':  ['email','network','ir','droitpenal','glossaire','examen'],
+    fs:   ['endian','timestamp','bitmap','fat','magic','mismatch','runlist','effacement','timestomping'],
+    calc: ['hextable','fsidentify','offset','bases','hash'],
+    inv:  ['email','network','ir','droitpenal','glossaire','examen'],
   };
   try {
     const solved = JSON.parse(localStorage.getItem('tp_solved')||'{}');
-    Object.entries(groups).forEach(([grpId, cats]) => {
+    Object.entries(groups).forEach(([grp, cats]) => {
       const total = cats.reduce((a,c) => a + (CAT_MAX[c]||5), 0);
       const done  = cats.reduce((a,c) => a + Math.min(solved[c]||0, CAT_MAX[c]||5), 0);
-      const pct   = Math.round(done/total*100);
-      const el = document.getElementById('gp-' + grpId);
-      if (el) {
-        el.style.width = pct + '%';
-        el.parentElement.title = done + '/' + total + ' exercices — ' + pct + '%';
-      }
-      const cnt = document.getElementById('gc-' + grpId.replace('grp-',''));
+      const pct   = Math.round(done / total * 100);
+      // Barre dans le header
+      const fill = document.getElementById('gp-' + grp);
+      const lbl  = document.getElementById('gl-' + grp);
+      if (fill) fill.style.width = pct + '%';
+      if (lbl)  lbl.textContent  = pct + '%';
+      // Compteur dans le header (badge)
+      const cnt = document.getElementById('gc-' + grp);
       if (cnt && pct > 0) {
-        cnt.textContent = pct + '%';
-        cnt.style.color = pct === 100 ? 'var(--green)' : 'var(--gold)';
+        cnt.textContent      = pct + '%';
+        cnt.style.color       = pct === 100 ? 'var(--green)' : 'var(--gold)';
         cnt.style.borderColor = pct === 100 ? 'rgba(48,232,138,.4)' : 'rgba(240,192,64,.3)';
-        cnt.style.background = pct === 100 ? 'rgba(48,232,138,.1)' : 'rgba(240,192,64,.08)';
+        cnt.style.background  = pct === 100 ? 'rgba(48,232,138,.1)' : 'rgba(240,192,64,.08)';
       }
     });
   } catch(e) {}
@@ -646,10 +634,6 @@ function showToast(icon, title, sub) {
   t.classList.add('show');
   toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
 }
-
-// Patch newExercise to update badges after each exercise
-const _origNewEx = typeof newExercise !== 'undefined' ? newExercise : null;
-// We override after engine loads — see DOMContentLoaded below
 
 // ── Reset ──────────────────────────────────────────────────────
 function doReset() {
