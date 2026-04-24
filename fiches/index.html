@@ -4,6 +4,243 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fiches DFIR — CAS-IN Investigation Numérique</title>
 <link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+/* ─── Reset & Base ──────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+
+/* ─── Module accent colors ──────────────────────────────────── */
+:root{
+  --m1:#00e5cc;--m2:#4f8ef7;--m3:#f0c040;--m4:#30e88a;
+  --m5:#a78bfa;--m6:#ff4060;--m7:#fb923c;--m8:#8b949e;
+}
+
+/* ─── Hero ──────────────────────────────────────────────────── */
+.hero{
+  position:relative;padding:3rem 1.5rem 2rem;text-align:center;
+  border-bottom:1px solid var(--border);overflow:hidden;
+}
+.hero-bg{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%,rgba(0,229,204,.12),transparent),
+    radial-gradient(ellipse 40% 40% at 80% 100%,rgba(79,142,247,.08),transparent);
+  pointer-events:none;
+}
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:.4rem;
+  font-family:var(--mono);font-size:.68rem;color:var(--cyan);
+  background:rgba(0,229,204,.08);border:1px solid rgba(0,229,204,.2);
+  padding:.25rem .75rem;border-radius:20px;margin-bottom:1rem;
+}
+.hero h1{font-size:2.2rem;font-weight:800;letter-spacing:-.5px;margin-bottom:.4rem;line-height:1.1}
+.hero h1 span{
+  background:linear-gradient(135deg,var(--cyan) 0%,#4f8ef7 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero-sub{font-size:.82rem;color:var(--muted);margin-bottom:2rem}
+
+/* Stats row */
+.stats{display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap;margin-bottom:1.5rem}
+.stat-box{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:.75rem 1.3rem;min-width:90px;text-align:center;position:relative;overflow:hidden;
+  transition:.2s;
+}
+.stat-box::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(0,229,204,.05),transparent);
+  opacity:0;transition:opacity .2s;
+}
+.stat-box:hover::before{opacity:1}
+.stat-val{display:block;font-size:1.8rem;font-weight:800;color:var(--cyan);font-family:var(--sans);line-height:1}
+.stat-lbl{display:block;font-size:.62rem;color:var(--dim);font-family:var(--mono);margin-top:.25rem;text-transform:uppercase;letter-spacing:.05em}
+
+/* Progress */
+.prog-wrap{max-width:380px;margin:0 auto 1rem}
+.prog-track{height:6px;background:var(--border);border-radius:6px;overflow:hidden;margin-bottom:.5rem}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--cyan),#4f8ef7);border-radius:6px;transition:width .6s cubic-bezier(.4,0,.2,1);width:0%}
+.prog-label{font-size:.68rem;color:var(--dim);font-family:var(--mono);text-align:center}
+.reset-link{font-size:.62rem;color:var(--dim);font-family:var(--mono);background:none;border:none;cursor:pointer;text-decoration:underline;margin-top:.5rem;display:block;text-align:center;transition:.15s}
+.reset-link:hover{color:var(--red)}
+
+/* ─── Search bar ────────────────────────────────────────────── */
+.searchbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(13,17,23,.95);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  padding:.7rem 1.2rem;
+}
+.search-inner{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:.6rem}
+.search-field{
+  flex:1;display:flex;align-items:center;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:.5rem .9rem;gap:.6rem;transition:.2s;
+}
+.search-field:focus-within{border-color:var(--cyan);background:rgba(0,229,204,.04);box-shadow:0 0 0 3px rgba(0,229,204,.08)}
+.search-icon{font-size:.9rem;flex-shrink:0;color:var(--dim)}
+.search-input{
+  border:none;background:transparent;color:var(--text);font-family:var(--mono);
+  font-size:.78rem;flex:1;outline:none;
+}
+.search-input::placeholder{color:var(--dim)}
+.search-clr{
+  background:none;border:none;color:var(--dim);cursor:pointer;
+  font-size:.7rem;font-family:var(--mono);padding:0 .2rem;
+  display:none;transition:.15s;
+}
+.search-clr:hover{color:var(--red)}
+.search-clr.on{display:block}
+.search-hits{font-size:.68rem;color:var(--dim);font-family:var(--mono);white-space:nowrap;flex-shrink:0}
+
+/* ─── Module nav pills ──────────────────────────────────────── */
+.mod-nav{
+  display:flex;gap:.4rem;flex-wrap:wrap;padding:.8rem 1.2rem;
+  border-bottom:1px solid var(--border);justify-content:center;
+  background:var(--surface2);
+}
+.mpill{
+  font-family:var(--mono);font-size:.65rem;padding:.3rem .75rem;
+  border:1px solid var(--border);border-radius:20px;background:var(--surface);
+  color:var(--muted);cursor:pointer;text-decoration:none;transition:.18s;white-space:nowrap;
+}
+.mpill:hover{transform:translateY(-1px)}
+.mpill.on,.mpill:hover{background:var(--c,var(--cyan));color:#000;border-color:var(--c,var(--cyan));font-weight:600}
+
+/* ─── Module sections ───────────────────────────────────────── */
+.modules{padding:1.5rem 1.2rem 2rem;max-width:1400px;margin:0 auto}
+.module{margin-bottom:3rem}
+
+/* Module header */
+.mhd{
+  display:flex;align-items:center;gap:.6rem;
+  padding:.7rem 1rem;border-radius:10px;margin-bottom:1rem;
+  background:rgba(255,255,255,.025);
+  border-left:4px solid var(--mc,var(--cyan));
+  border:1px solid rgba(255,255,255,.04);
+  border-left:4px solid var(--mc,var(--cyan));
+}
+.mnum{
+  font-family:var(--mono);font-size:.6rem;font-weight:700;
+  background:var(--mc,var(--cyan));color:#000;
+  padding:.2rem .5rem;border-radius:5px;flex-shrink:0;
+}
+.mtitle{font-family:var(--sans);font-size:.95rem;font-weight:700;flex:1}
+.mnew{
+  font-size:.58rem;font-family:var(--mono);font-weight:700;
+  color:var(--green);background:rgba(48,232,138,.1);
+  border:1px solid rgba(48,232,138,.25);padding:.12rem .4rem;border-radius:4px;
+}
+.mprog{font-size:.65rem;color:var(--dim);font-family:var(--mono);white-space:nowrap}
+.mcount{
+  font-size:.62rem;color:var(--dim);font-family:var(--mono);
+  background:var(--surface2);padding:.15rem .45rem;border-radius:4px;
+  border:1px solid var(--border);
+}
+
+/* ─── Fiche cards ───────────────────────────────────────────── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.9rem}
+
+.card{
+  display:block;text-decoration:none;color:var(--text);
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:1.1rem;position:relative;overflow:hidden;
+  transition:transform .2s cubic-bezier(.2,.8,.2,1),border-color .2s,box-shadow .2s;
+}
+.card::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.03),transparent);
+  opacity:0;transition:opacity .2s;border-radius:12px;
+}
+.card:hover{
+  transform:translateY(-3px);
+  border-color:var(--mc,var(--cyan));
+  box-shadow:0 8px 32px rgba(0,0,0,.35),0 0 0 1px var(--mc,var(--cyan)) inset;
+}
+.card:hover::after{opacity:1}
+.card.read .card-check{display:flex}
+.card.hidden{display:none}
+
+/* Card icon disc */
+.card-icon-wrap{
+  width:2.4rem;height:2.4rem;border-radius:9px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;margin-bottom:.7rem;flex-shrink:0;
+}
+.card-name{font-size:.82rem;font-weight:700;margin-bottom:.3rem;line-height:1.3;font-family:var(--sans)}
+.card-desc{
+  font-size:.68rem;color:var(--muted);line-height:1.55;margin-bottom:.55rem;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.card-tags{display:flex;flex-wrap:wrap;gap:.25rem}
+.ctag{
+  font-size:.58rem;font-family:var(--mono);
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  color:var(--dim);padding:.08rem .38rem;border-radius:4px;
+}
+
+/* Badge NEW / DÉPLACÉ */
+.bnew,.bmov{
+  position:absolute;top:.6rem;right:.6rem;
+  font-size:.55rem;font-family:var(--mono);font-weight:700;
+  padding:.12rem .42rem;border-radius:4px;z-index:2;
+}
+.bnew{background:rgba(48,232,138,.13);color:var(--green);border:1px solid rgba(48,232,138,.3)}
+.bmov{background:rgba(240,192,64,.1);color:var(--gold);border:1px solid rgba(240,192,64,.25)}
+
+/* Read checkmark */
+.card-check{
+  position:absolute;top:.6rem;right:.6rem;
+  width:1.2rem;height:1.2rem;border-radius:50%;
+  background:rgba(48,232,138,.15);border:1px solid rgba(48,232,138,.4);
+  align-items:center;justify-content:center;display:none;
+  font-size:.65rem;color:var(--green);z-index:2;
+}
+.card.read .bnew,.card.read .bmov{display:none}
+.card.read{border-color:rgba(48,232,138,.4)}
+
+/* ─── No results ────────────────────────────────────────────── */
+.nores{
+  display:none;text-align:center;padding:4rem 1rem;
+  font-family:var(--mono);font-size:.82rem;color:var(--dim);
+}
+.nores.on{display:block}
+.nores-emoji{font-size:2.5rem;margin-bottom:.75rem;display:block}
+
+/* ─── CTA ───────────────────────────────────────────────────── */
+.cta{
+  text-align:center;padding:2.5rem 1.2rem 3rem;
+  border-top:1px solid var(--border);margin-top:1rem;
+  background:radial-gradient(ellipse 60% 40% at 50% 100%,rgba(0,229,204,.05),transparent);
+}
+.cta-title{font-size:1rem;font-weight:700;margin-bottom:.4rem;font-family:var(--sans)}
+.cta-sub{font-size:.78rem;color:var(--muted);margin-bottom:1.5rem}
+.cta-row{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap}
+.cta-btn{
+  display:inline-flex;align-items:center;gap:.5rem;
+  padding:.65rem 1.4rem;border-radius:10px;font-size:.8rem;font-weight:700;
+  text-decoration:none;transition:.18s;font-family:var(--sans);
+  border:1px solid transparent;letter-spacing:.01em;
+}
+.cta-btn:hover{transform:translateY(-2px)}
+.cta-red{background:rgba(255,64,96,.15);color:#ff7090;border-color:rgba(255,64,96,.35)}
+.cta-red:hover{background:rgba(255,64,96,.25);box-shadow:0 4px 16px rgba(255,64,96,.2)}
+.cta-gold{background:rgba(240,192,64,.1);color:var(--gold);border-color:rgba(240,192,64,.3)}
+.cta-gold:hover{background:rgba(240,192,64,.2);box-shadow:0 4px 16px rgba(240,192,64,.15)}
+.cta-dim{background:var(--surface);color:var(--muted);border-color:var(--border)}
+.cta-dim:hover{color:var(--text);border-color:var(--muted)}
+
+/* ─── Responsive ────────────────────────────────────────────── */
+@media(max-width:640px){
+  .grid{grid-template-columns:1fr 1fr}
+  .hero h1{font-size:1.6rem}
+  .stats{gap:.5rem}
+  .stat-val{font-size:1.4rem}
+  .modules{padding:1rem .75rem}
+}
+@media(max-width:400px){.grid{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 <nav class="tn-nav">
@@ -12,254 +249,306 @@
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
 
-<!-- HERO -->
+<!-- ═══ HERO ═══════════════════════════════════════════════════ -->
 <div class="hero">
-  <h1>📂 Fiches DFIR</h1>
-  <p>Investigation numérique · Forensique suisse · CAS-IN 2025–2026</p>
-  <div class="stats-row">
-    <div class="stat"><span class="stat-val" id="s-total">67</span><span class="stat-lbl">fiches</span></div>
-    <div class="stat"><span class="stat-val">8</span><span class="stat-lbl">modules</span></div>
-    <div class="stat"><span class="stat-val" id="s-read">0</span><span class="stat-lbl">lues</span></div>
-    <div class="stat"><span class="stat-val" id="s-pct">0%</span><span class="stat-lbl">complété</span></div>
+  <div class="hero-bg"></div>
+  <div class="hero-eyebrow">🇨🇭 CAS-IN · Investigation Numérique · 2025–2026</div>
+  <h1>Fiches <span>DFIR</span></h1>
+  <p class="hero-sub">67 fiches · 8 modules · Forensique suisse · Préparation examen</p>
+  <div class="stats">
+    <div class="stat-box"><span class="stat-val" id="s-total">67</span><span class="stat-lbl">Fiches</span></div>
+    <div class="stat-box"><span class="stat-val">8</span><span class="stat-lbl">Modules</span></div>
+    <div class="stat-box"><span class="stat-val" id="s-read">0</span><span class="stat-lbl">Lues</span></div>
+    <div class="stat-box"><span class="stat-val" id="s-pct">0%</span><span class="stat-lbl">Complété</span></div>
   </div>
-  <div class="progress-global">
-    <div class="progress-track"><div class="progress-bar" id="prog-bar"></div></div>
-    <div class="progress-txt" id="prog-txt">Cliquez sur une fiche pour la marquer comme lue</div>
+  <div class="prog-wrap">
+    <div class="prog-track"><div class="prog-fill" id="prog"></div></div>
+    <p class="prog-label" id="prog-lbl">Cliquez sur une fiche pour la marquer lue — cliquez à nouveau pour démarquer</p>
+    <button class="reset-link" onclick="doReset()">↺ Réinitialiser la progression</button>
   </div>
-  <button class="reset-btn" onclick="resetRead()">↺ Réinitialiser la progression</button>
 </div>
 
-<!-- SEARCH -->
-<div class="search-wrap">
+<!-- ═══ SEARCH ══════════════════════════════════════════════════ -->
+<div class="searchbar">
   <div class="search-inner">
-    <span class="search-icon">🔍</span>
-    <input id="search" class="search-input" type="search" placeholder="Rechercher une fiche… (ex: SHA-256, timestomping, LSCPT)" autocomplete="off" spellcheck="false">
-    <button class="search-clear" id="search-clear" onclick="clearSearch()">✕ effacer</button>
-    <span class="search-count" id="search-count"></span>
+    <div class="search-field">
+      <span class="search-icon">🔍</span>
+      <input id="sq" class="search-input" type="search" placeholder="Rechercher : SHA-256, LSCPT, timestomping, Volatility, NTFS…" autocomplete="off" spellcheck="false">
+      <button id="sq-clr" class="search-clr" onclick="clearSQ()">✕</button>
+    </div>
+    <span id="sq-cnt" class="search-hits"></span>
   </div>
 </div>
 
-<!-- MODULE NAV -->
+<!-- ═══ MODULE NAV ══════════════════════════════════════════════ -->
 <nav class="mod-nav">
-  <a class="mod-pill active" href="#top" onclick="filterMod(null,this)">Tous</a>
-  <a class="mod-pill" href="#cat-cadrelegal" onclick="filterMod('cat-cadrelegal',this)">01 ⚖️ Légal</a>
-  <a class="mod-pill" href="#cat-methodologie" onclick="filterMod('cat-methodologie',this)">02 📥 Méthodo</a>
-  <a class="mod-pill" href="#cat-systèmesdefichiers" onclick="filterMod('cat-systèmesdefichiers',this)">03 💾 FS</a>
-  <a class="mod-pill" href="#cat-artefactswindows" onclick="filterMod('cat-artefactswindows',this)">04 🪟 Windows</a>
-  <a class="mod-pill" href="#cat-autressystemes" onclick="filterMod('cat-autressystemes',this)">05 💻 Systèmes</a>
-  <a class="mod-pill" href="#cat-reseaux" onclick="filterMod('cat-reseaux',this)">06 📡 Réseaux</a>
-  <a class="mod-pill" href="#cat-cryptologiesécurité" onclick="filterMod('cat-cryptologiesécurité',this)">07 🔐 Crypto</a>
-  <a class="mod-pill" href="#cat-outilsdfir" onclick="filterMod('cat-outilsdfir',this)">08 🛠 Outils</a>
+  <a class="mpill on" style="--c:#00e5cc" href="#" onclick="showMod(null,this);return false">Tous</a>
+  <a class="mpill" style="--c:var(--m1)" href="#m1" onclick="showMod('m1',this);return false">01 ⚖️ Légal</a>
+  <a class="mpill" style="--c:var(--m2)" href="#m2" onclick="showMod('m2',this);return false">02 📥 Méthodo</a>
+  <a class="mpill" style="--c:var(--m3)" href="#m3" onclick="showMod('m3',this);return false">03 💾 Fichiers</a>
+  <a class="mpill" style="--c:var(--m4)" href="#m4" onclick="showMod('m4',this);return false">04 🪟 Windows</a>
+  <a class="mpill" style="--c:var(--m5)" href="#m5" onclick="showMod('m5',this);return false">05 💻 Systèmes</a>
+  <a class="mpill" style="--c:var(--m6)" href="#m6" onclick="showMod('m6',this);return false">06 📡 Réseaux</a>
+  <a class="mpill" style="--c:var(--m7)" href="#m7" onclick="showMod('m7',this);return false">07 🔐 Crypto</a>
+  <a class="mpill" style="--c:var(--m8)" href="#m8" onclick="showMod('m8',this);return false">08 🛠 Outils</a>
 </nav>
 
-<div class="modules" id="top">
+<div class="modules">
 
-<!-- ══════ 01 ══════ -->
-<div class="module" id="cat-cadrelegal" style="--m-color:var(--m1)">
-<div class="mod-header"><span class="mod-num">01</span><span class="mod-title">⚖️ Cadre Légal · Droit Suisse</span><span class="mod-badge-new">+2 NEW</span><span class="mod-progress" id="mp-1"></span><span class="mod-count">7 fiches</span></div>
-<div class="fiche-grid">
-<a class="fiche-card" href="droit.html"><div class="fiche-icon">⚖️</div><div class="fiche-name">Droit pénal suisse</div><div class="fiche-desc">CPP · Perquisition · Séquestre · Scellés art. 248 · Nemo tenetur · Expertise judiciaire</div><div class="fiche-tags"><span class="fiche-tag">CPP</span><span class="fiche-tag">RS 312.0</span></div></a>
-<a class="fiche-card" href="suisse.html"><div class="fiche-icon">🇨🇭</div><div class="fiche-name">Droit Suisse DFIR</div><div class="fiche-desc">Art. 143/143bis/144bis CP · Art. 248/269 CPP · LPD · Affaire Xplain · GPS Soleure</div><div class="fiche-tags"><span class="fiche-tag">Suisse</span><span class="fiche-tag">CP</span></div></a>
-<a class="fiche-card" href="preuve.html"><div class="fiche-icon">📜</div><div class="fiche-name">Preuve Numérique</div><div class="fiche-desc">Recevabilité · Chaîne de custody · ISO/IEC 27037 · Art. 141 CPP · ACPO</div><div class="fiche-tags"><span class="fiche-tag">DFIR</span><span class="fiche-tag">Légalité</span></div></a>
-<a class="fiche-card" href="eimp_entraide.html"><div class="fiche-icon">🌍</div><div class="fiche-name">EIMP & Entraide Internationale</div><div class="fiche-desc">MLAT · Convention Budapest · CLOUD Act · Quick freeze 96h</div><div class="fiche-tags"><span class="fiche-tag">MLAT</span><span class="fiche-tag">Budapest</span></div></a>
-<a class="fiche-card" href="tor_darkweb.html"><div class="fiche-icon">🧅</div><div class="fiche-name">Tor & Dark Web</div><div class="fiche-desc">Forensique Tor Browser · Onion Services · Attribution · LSCPT · Droit suisse</div><div class="fiche-tags"><span class="fiche-tag">Tor</span><span class="fiche-tag">Anonymat</span></div></a>
-<a class="fiche-card" href="lscpt.html"><div class="fiche-icon">📡</div><div class="fiche-name">LSCPT — Surveillance Télécom</div><div class="fiche-desc">RS 780.1 · SCPT guichet unique · Catalogue art. 269 · GovWare · 6 mois rétention</div><div class="fiche-tags"><span class="fiche-tag">LSCPT</span><span class="fiche-tag">SCPT</span></div><span class="badge-new">NEW</span></a>
-<a class="fiche-card" href="nldp.html"><div class="fiche-icon">🛡️</div><div class="fiche-name">nLPD — Protection des données</div><div class="fiche-desc">RS 235.1 · PFPDT · 72h notification · Données biométriques · vs RGPD</div><div class="fiche-tags"><span class="fiche-tag">nLPD</span><span class="fiche-tag">PFPDT</span></div><span class="badge-new">NEW</span></a>
+<!-- ══ MODULE 01 ══════════════════════════════════════════════ -->
+<div class="module" id="m1">
+<div class="mhd" style="--mc:var(--m1)">
+  <span class="mnum" style="background:var(--m1)">01</span>
+  <span class="mtitle">⚖️ Cadre Légal · Droit Suisse</span>
+  <span class="mnew">+2 NEW</span>
+  <span class="mprog" id="mp1"></span>
+  <span class="mcount">7 fiches</span>
+</div>
+<div class="grid">
+<a class="card" href="droit.html" style="--mc:var(--m1)"><div class="card-check">✓</div><div class="card-icon-wrap">⚖️</div><div class="card-name">Droit pénal suisse</div><div class="card-desc">CPP · Perquisition · Séquestre · Scellés art. 248 · Nemo tenetur · Expertise judiciaire</div><div class="card-tags"><span class="ctag">CPP</span><span class="ctag">RS 312.0</span></div></a>
+<a class="card" href="suisse.html" style="--mc:var(--m1)"><div class="card-check">✓</div><div class="card-icon-wrap">🇨🇭</div><div class="card-name">Droit Suisse DFIR</div><div class="card-desc">Art. 143/143bis CP · Art. 248/269 CPP · LPD · Affaire Xplain · GPS Soleure</div><div class="card-tags"><span class="ctag">Suisse</span><span class="ctag">CP</span></div></a>
+<a class="card" href="preuve.html" style="--mc:var(--m1)"><div class="card-check">✓</div><div class="card-icon-wrap">📜</div><div class="card-name">Preuve Numérique</div><div class="card-desc">Recevabilité · Chaîne de custody · ISO/IEC 27037 · Art. 141 CPP · ACPO</div><div class="card-tags"><span class="ctag">DFIR</span><span class="ctag">Légalité</span></div></a>
+<a class="card" href="eimp_entraide.html" style="--mc:var(--m1)"><div class="card-check">✓</div><div class="card-icon-wrap">🌍</div><div class="card-name">EIMP & Entraide Internationale</div><div class="card-desc">MLAT · Convention Budapest STE 185 · CLOUD Act · Quick freeze 96h</div><div class="card-tags"><span class="ctag">MLAT</span><span class="ctag">Budapest</span></div></a>
+<a class="card" href="tor_darkweb.html" style="--mc:var(--m1)"><div class="card-check">✓</div><div class="card-icon-wrap">🧅</div><div class="card-name">Tor & Dark Web</div><div class="card-desc">Forensique Tor Browser · Onion Services · Attribution · LSCPT · Droit suisse</div><div class="card-tags"><span class="ctag">Tor</span><span class="ctag">Anonymat</span></div></a>
+<a class="card" href="lscpt.html" style="--mc:var(--m1)"><div class="card-check">✓</div><div class="bnew">NEW</div><div class="card-icon-wrap">📡</div><div class="card-name">LSCPT — Surveillance Télécom</div><div class="card-desc">RS 780.1 · SCPT guichet unique · Catalogue art. 269 · GovWare · 6 mois rétention</div><div class="card-tags"><span class="ctag">LSCPT</span><span class="ctag">SCPT</span></div></a>
+<a class="card" href="nldp.html" style="--mc:var(--m1)"><div class="card-check">✓</div><div class="bnew">NEW</div><div class="card-icon-wrap">🛡️</div><div class="card-name">nLPD — Protection des données</div><div class="card-desc">RS 235.1 · PFPDT · 72h notification · Données biométriques · vs RGPD</div><div class="card-tags"><span class="ctag">nLPD</span><span class="ctag">PFPDT</span></div></a>
 </div></div>
 
-<!-- ══════ 02 ══════ -->
-<div class="module" id="cat-methodologie" style="--m-color:var(--m2)">
-<div class="mod-header"><span class="mod-num">02</span><span class="mod-title">📥 Méthodologie & Acquisition</span><span class="mod-progress" id="mp-2"></span><span class="mod-count">9 fiches</span></div>
-<div class="fiche-grid">
-<a class="fiche-card" href="methodologie.html"><div class="fiche-icon">📐</div><div class="fiche-name">Méthodologie & Rapport</div><div class="fiche-desc">ISO 27037 · 5 phases · Fait / Interprétation / Opinion · Rapport d'expertise</div><div class="fiche-tags"><span class="fiche-tag">ISO 27037</span></div></a>
-<a class="fiche-card" href="premier_intervenant.html"><div class="fiche-icon">🚔</div><div class="fiche-name">Premier Intervenant Numérique</div><div class="fiche-desc">Sécurisation scène · Cage Faraday · Saisie · Transport · Cas particuliers</div><div class="fiche-tags"><span class="fiche-tag">Guide terrain</span></div></a>
-<a class="fiche-card" href="acquisition.html"><div class="fiche-icon">📥</div><div class="fiche-name">Acquisition & Préservation</div><div class="fiche-desc">Write blocker matériel · Image vs Clone · E01/AFF/DD · Slicing FAT32 · RFC 3227</div><div class="fiche-tags"><span class="fiche-tag">E01</span><span class="fiche-tag">Interactif</span></div></a>
-<a class="fiche-card" href="ram_forensique.html"><div class="fiche-icon">🧠</div><div class="fiche-name">RAM Forensique</div><div class="fiche-desc">WinPmem · DumpIt · Clés de chiffrement · Processus actifs · Malwares fileless</div><div class="fiche-tags"><span class="fiche-tag">Volatile</span><span class="fiche-tag">RAM</span></div></a>
-<a class="fiche-card" href="formats.html"><div class="fiche-icon">🔮</div><div class="fiche-name">Formats & Magic Bytes</div><div class="fiche-desc">Signatures de fichiers · Magic Bytes · File Carving · Header/Footer</div><div class="fiche-tags"><span class="fiche-tag">File Carving</span></div></a>
-<a class="fiche-card" href="mac_times.html"><div class="fiche-icon">⏱</div><div class="fiche-name">MAC Times & Artefacts Temporels</div><div class="fiche-desc">MACB · FILETIME Windows · Epoch Unix/Chrome · Timestomping · Détection</div><div class="fiche-tags"><span class="fiche-tag">Timestamps</span></div></a>
-<a class="fiche-card" href="timeline.html"><div class="fiche-icon">🗓</div><div class="fiche-name">Timeline Forensique</div><div class="fiche-desc">log2timeline · Plaso · Timesketch · Supertimeline · Reconstruction chronologique</div><div class="fiche-tags"><span class="fiche-tag">log2timeline</span></div></a>
-<a class="fiche-card" href="rapport_forensique.html"><div class="fiche-icon">📄</div><div class="fiche-name">Rapport Forensique</div><div class="fiche-desc">5 questions du magistrat · Sections · Art. 182–184 CPP · Chaîne de possession</div><div class="fiche-tags"><span class="fiche-tag">Rapport</span><span class="fiche-tag">CPP</span></div></a>
-<a class="fiche-card" href="incident_response.html"><div class="fiche-icon">🚨</div><div class="fiche-name">Incident Response</div><div class="fiche-desc">6 phases NIST SP 800-61 · Triage · Confinement · nLPD 72h · Checklist</div><div class="fiche-tags"><span class="fiche-tag">IR Playbook</span></div></a>
+<!-- ══ MODULE 02 ══════════════════════════════════════════════ -->
+<div class="module" id="m2">
+<div class="mhd" style="--mc:var(--m2)">
+  <span class="mnum" style="background:var(--m2)">02</span>
+  <span class="mtitle">📥 Méthodologie & Acquisition</span>
+  <span class="mprog" id="mp2"></span>
+  <span class="mcount">9 fiches</span>
+</div>
+<div class="grid">
+<a class="card" href="methodologie.html" style="--mc:var(--m2)"><div class="card-check">✓</div><div class="card-icon-wrap">📐</div><div class="card-name">Méthodologie & Rapport</div><div class="card-desc">ISO 27037 · 5 phases · Fait / Interprétation / Opinion · Rapport d'expertise</div><div class="card-tags"><span class="ctag">ISO 27037</span></div></a>
+<a class="card" href="premier_intervenant.html" style="--mc:var(--m2)"><div class="card-check">✓</div><div class="card-icon-wrap">🚔</div><div class="card-name">Premier Intervenant</div><div class="card-desc">Sécurisation scène · Cage Faraday · Saisie · Transport · Cas particuliers</div><div class="card-tags"><span class="ctag">Guide terrain</span></div></a>
+<a class="card" href="acquisition.html" style="--mc:var(--m2)"><div class="card-check">✓</div><div class="card-icon-wrap">📥</div><div class="card-name">Acquisition & Préservation</div><div class="card-desc">Write blocker matériel · Image vs Clone · E01/AFF/DD · RFC 3227 volatilité</div><div class="card-tags"><span class="ctag">E01</span><span class="ctag">Interactif</span></div></a>
+<a class="card" href="ram_forensique.html" style="--mc:var(--m2)"><div class="card-check">✓</div><div class="card-icon-wrap">🧠</div><div class="card-name">RAM Forensique</div><div class="card-desc">WinPmem · DumpIt · Clés de chiffrement en RAM · Processus actifs · Fileless</div><div class="card-tags"><span class="ctag">Volatile</span><span class="ctag">RAM</span></div></a>
+<a class="card" href="formats.html" style="--mc:var(--m2)"><div class="card-check">✓</div><div class="card-icon-wrap">🔮</div><div class="card-name">Formats & Magic Bytes</div><div class="card-desc">Signatures de fichiers · Magic Bytes · File Carving · Header/Footer</div><div class="card-tags"><span class="ctag">File Carving</span></div></a>
+<a class="card" href="mac_times.html" style="--mc:var(--m2)"><div class="card-check">✓</div><div class="card-icon-wrap">⏱</div><div class="card-name">MAC Times & Timestamps</div><div class="card-desc">MACB · FILETIME Windows · Epoch Unix/Chrome · Timestomping · Détection</div><div class="card-tags"><span class="ctag">Timestamps</span></div></a>
+<a class="card" href="timeline.html" style="--mc:var(--m2)"><div class="card-check">✓</div><div class="card-icon-wrap">🗓</div><div class="card-name">Timeline Forensique</div><div class="card-desc">log2timeline · Plaso · Timesketch · Supertimeline · Reconstruction chronologique</div><div class="card-tags"><span class="ctag">log2timeline</span></div></a>
+<a class="card" href="rapport_forensique.html" style="--mc:var(--m2)"><div class="card-check">✓</div><div class="card-icon-wrap">📄</div><div class="card-name">Rapport Forensique</div><div class="card-desc">5 questions du magistrat · Sections · Art. 182–184 CPP · Chaîne de possession</div><div class="card-tags"><span class="ctag">Rapport</span><span class="ctag">CPP</span></div></a>
+<a class="card" href="incident_response.html" style="--mc:var(--m2)"><div class="card-check">✓</div><div class="card-icon-wrap">🚨</div><div class="card-name">Incident Response</div><div class="card-desc">6 phases NIST SP 800-61 · Triage · Confinement · nLPD 72h notification</div><div class="card-tags"><span class="ctag">IR Playbook</span></div></a>
 </div></div>
 
-<!-- ══════ 03 ══════ -->
-<div class="module" id="cat-systèmesdefichiers" style="--m-color:var(--m3)">
-<div class="mod-header"><span class="mod-num">03</span><span class="mod-title">💾 Systèmes de Fichiers</span><span class="mod-badge-new">+2 NEW</span><span class="mod-progress" id="mp-3"></span><span class="mod-count">10 fiches</span></div>
-<div class="fiche-grid">
-<a class="fiche-card" href="comparaison_fs.html"><div class="fiche-icon">📊</div><div class="fiche-name">Comparaison Systèmes de Fichiers</div><div class="fiche-desc">FAT12/16/32 · exFAT · NTFS · EXT4 · HFS+ · APFS · ReFS · F2FS</div><div class="fiche-tags"><span class="fiche-tag">Tableau</span></div></a>
-<a class="fiche-card" href="fat16.html"><div class="fiche-icon">💾</div><div class="fiche-name">FAT12 / FAT16 / FAT32</div><div class="fiche-desc">Anatomie FAT · BPB · Entrée SFN 32 octets · Chaînage clusters · Slack space</div><div class="fiche-tags"><span class="fiche-tag">FAT</span><span class="fiche-tag">Interactif</span></div></a>
-<a class="fiche-card" href="fat12.html"><div class="fiche-icon">📀</div><div class="fiche-name">FAT12 — Encodage 12 bits</div><div class="fiche-desc">Entrées 12 bits · Nibble pair/impair · Secteur de boot · Root Directory fixe 224</div><div class="fiche-tags"><span class="fiche-tag">Calcul</span><span class="fiche-tag">Legacy</span></div></a>
-<a class="fiche-card" href="exfat.html"><div class="fiche-icon">🗂</div><div class="fiche-name">exFAT</div><div class="fiche-desc">Structure boot · Cluster chain · Artefacts forensiques · Bitmap allocation</div><div class="fiche-tags"><span class="fiche-tag">Forensique</span></div></a>
-<a class="fiche-card" href="ntfs.html"><div class="fiche-icon">🗄</div><div class="fiche-name">NTFS</div><div class="fiche-desc">$MFT · Run list · $UsnJrnl · ADS · Timestomping $SI vs $FN · B-Trees</div><div class="fiche-tags"><span class="fiche-tag">DFIR</span><span class="fiche-tag">Windows</span></div></a>
-<a class="fiche-card" href="ext.html"><div class="fiche-icon">🐧</div><div class="fiche-name">EXT2 / EXT3 / EXT4</div><div class="fiche-desc">Groupes de blocs · Inodes · Journalisation · Récupération · Inode 2 = racine</div><div class="fiche-tags"><span class="fiche-tag">Linux</span></div></a>
-<a class="fiche-card" href="hfs.html"><div class="fiche-icon">🍎</div><div class="fiche-name">HFS+</div><div class="fiche-desc">Big Endian · B-Trees · CNID · Catalog File · Epoch 1904 · Resource Forks</div><div class="fiche-tags"><span class="fiche-tag">Apple Legacy</span></div></a>
-<a class="fiche-card" href="apfs.html"><div class="fiche-icon">🍏</div><div class="fiche-name">APFS</div><div class="fiche-desc">Container · Volumes · Snapshots · Clones · Sealed System Volume · FBE · Epoch 2001</div><div class="fiche-tags"><span class="fiche-tag">Snapshots</span><span class="fiche-tag">iOS</span></div></a>
-<a class="fiche-card" href="refs.html"><div class="fiche-icon">🗄️</div><div class="fiche-name">ReFS — Resilient File System</div><div class="fiche-desc">Windows Server · Pas de $MFT · Checksums SHA-256 · Récupération difficile · VSS</div><div class="fiche-tags"><span class="fiche-tag">Server</span></div><span class="badge-new">NEW</span></a>
-<a class="fiche-card" href="f2fs.html"><div class="fiche-icon">⚡</div><div class="fiche-name">F2FS — Flash-Friendly FS</div><div class="fiche-desc">Android natif · Samsung · Log-structured · Magic 0xF2F52010 · Nano-timestamps</div><div class="fiche-tags"><span class="fiche-tag">Android</span><span class="fiche-tag">NAND</span></div><span class="badge-new">NEW</span></a>
+<!-- ══ MODULE 03 ══════════════════════════════════════════════ -->
+<div class="module" id="m3">
+<div class="mhd" style="--mc:var(--m3)">
+  <span class="mnum" style="background:var(--m3);color:#000">03</span>
+  <span class="mtitle">💾 Systèmes de Fichiers</span>
+  <span class="mnew">+2 NEW</span>
+  <span class="mprog" id="mp3"></span>
+  <span class="mcount">10 fiches</span>
+</div>
+<div class="grid">
+<a class="card" href="comparaison_fs.html" style="--mc:var(--m3)"><div class="card-check">✓</div><div class="card-icon-wrap">📊</div><div class="card-name">Comparaison Systèmes de Fichiers</div><div class="card-desc">FAT12/16/32 · exFAT · NTFS · EXT4 · HFS+ · APFS · ReFS · F2FS</div><div class="card-tags"><span class="ctag">Tableau</span></div></a>
+<a class="card" href="fat16.html" style="--mc:var(--m3)"><div class="card-check">✓</div><div class="card-icon-wrap">💾</div><div class="card-name">FAT12 / FAT16 / FAT32</div><div class="card-desc">BPB · Entrée SFN 32 octets · Chaînage clusters · Slack space · Interactif</div><div class="card-tags"><span class="ctag">FAT</span><span class="ctag">Interactif</span></div></a>
+<a class="card" href="fat12.html" style="--mc:var(--m3)"><div class="card-check">✓</div><div class="card-icon-wrap">📀</div><div class="card-name">FAT12 — Encodage 12 bits</div><div class="card-desc">Entrées 12 bits · Nibble pair/impair · Root Directory fixe 224 entrées</div><div class="card-tags"><span class="ctag">Calcul</span><span class="ctag">Legacy</span></div></a>
+<a class="card" href="exfat.html" style="--mc:var(--m3)"><div class="card-check">✓</div><div class="card-icon-wrap">🗂</div><div class="card-name">exFAT</div><div class="card-desc">Structure boot · Cluster chain · Artefacts forensiques · Bitmap allocation</div><div class="card-tags"><span class="ctag">Forensique</span></div></a>
+<a class="card" href="ntfs.html" style="--mc:var(--m3)"><div class="card-check">✓</div><div class="card-icon-wrap">🗄</div><div class="card-name">NTFS</div><div class="card-desc">$MFT · Run list · $UsnJrnl · ADS · Timestomping $SI vs $FN · B-Trees</div><div class="card-tags"><span class="ctag">DFIR</span><span class="ctag">Windows</span></div></a>
+<a class="card" href="ext.html" style="--mc:var(--m3)"><div class="card-check">✓</div><div class="card-icon-wrap">🐧</div><div class="card-name">EXT2 / EXT3 / EXT4</div><div class="card-desc">Groupes de blocs · Inodes · Journalisation · Récupération · Inode 2 = racine</div><div class="card-tags"><span class="ctag">Linux</span></div></a>
+<a class="card" href="hfs.html" style="--mc:var(--m3)"><div class="card-check">✓</div><div class="card-icon-wrap">🍎</div><div class="card-name">HFS+</div><div class="card-desc">Big Endian · B-Trees · CNID · Catalog File · Epoch 1904 · Resource Forks</div><div class="card-tags"><span class="ctag">Apple Legacy</span></div></a>
+<a class="card" href="apfs.html" style="--mc:var(--m3)"><div class="card-check">✓</div><div class="card-icon-wrap">🍏</div><div class="card-name">APFS</div><div class="card-desc">Container · Volumes · Snapshots · Clones · Sealed System Volume · Epoch 2001</div><div class="card-tags"><span class="ctag">Snapshots</span><span class="ctag">iOS</span></div></a>
+<a class="card" href="refs.html" style="--mc:var(--m3)"><div class="card-check">✓</div><div class="bnew">NEW</div><div class="card-icon-wrap">🗄️</div><div class="card-name">ReFS — Resilient File System</div><div class="card-desc">Windows Server · Pas de $MFT · Checksums SHA-256 · Récupération difficile</div><div class="card-tags"><span class="ctag">Server</span></div></a>
+<a class="card" href="f2fs.html" style="--mc:var(--m3)"><div class="card-check">✓</div><div class="bnew">NEW</div><div class="card-icon-wrap">⚡</div><div class="card-name">F2FS — Flash-Friendly FS</div><div class="card-desc">Android natif · Samsung · Magic 0xF2F52010 · Nano-timestamps</div><div class="card-tags"><span class="ctag">Android</span><span class="ctag">NAND</span></div></a>
 </div></div>
 
-<!-- ══════ 04 ══════ -->
-<div class="module" id="cat-artefactswindows" style="--m-color:var(--m4)">
-<div class="mod-header"><span class="mod-num">04</span><span class="mod-title">🪟 Artefacts Windows</span><span class="mod-badge-new">+1 NEW</span><span class="mod-progress" id="mp-4"></span><span class="mod-count">9 fiches</span></div>
-<div class="fiche-grid">
-<a class="fiche-card" href="windows_forensique.html"><div class="fiche-icon">🪟</div><div class="fiche-name">Windows Forensique</div><div class="fiche-desc">16 principes · Méthodologie · Corrélation artefacts · Chronologie · SID</div><div class="fiche-tags"><span class="fiche-tag">Méthodologie</span></div></a>
-<a class="fiche-card" href="windows.html"><div class="fiche-icon">🖥</div><div class="fiche-name">Artefacts Windows — Référence</div><div class="fiche-desc">Prefetch · UserAssist ROT13 · ShellBags · Thumbcache · Corbeille $I/$R · USB</div><div class="fiche-tags"><span class="fiche-tag">Cheat Sheet</span></div></a>
-<a class="fiche-card" href="registre_windows.html"><div class="fiche-icon">🗝</div><div class="fiche-name">Registre Windows</div><div class="fiche-desc">SAM · SYSTEM · SOFTWARE · NTUSER.DAT · USRCLASS.DAT · Persistance · RegRipper</div><div class="fiche-tags"><span class="fiche-tag">Ruches</span></div></a>
-<a class="fiche-card" href="logs_windows.html"><div class="fiche-icon">📋</div><div class="fiche-name">Logs Windows (Event IDs)</div><div class="fiche-desc">4624/4625/4688/7045 · Security / System · EVTX · Chainsaw · Hayabusa</div><div class="fiche-tags"><span class="fiche-tag">Event Logs</span></div></a>
-<a class="fiche-card" href="shellbags.html"><div class="fiche-icon">📁</div><div class="fiche-name">ShellBags</div><div class="fiche-desc">BagMRU · USRCLASS.DAT · Navigation GUI · Preuve USB · Dossiers supprimés</div><div class="fiche-tags"><span class="fiche-tag">Registre</span></div></a>
-<a class="fiche-card" href="volatilite.html"><div class="fiche-icon">🧪</div><div class="fiche-name">Volatility & RAM</div><div class="fiche-desc">Volatility 3 · pslist · netscan · cmdline · hashdump · Forensique mémoire</div><div class="fiche-tags"><span class="fiche-tag">Mémoire</span></div></a>
-<a class="fiche-card" href="active_directory.html"><div class="fiche-icon">🏢</div><div class="fiche-name">Active Directory Forensique</div><div class="fiche-desc">NTDS.dit · Kerberos · Golden Ticket · Pass-the-Hash · DCSync</div><div class="fiche-tags"><span class="fiche-tag">AD</span><span class="fiche-tag">Kerberos</span></div></a>
-<a class="fiche-card" href="usb_forensique.html"><div class="fiche-icon">🔌</div><div class="fiche-name">USB Forensique</div><div class="fiche-desc">USBSTOR · VID/PID · MountPoints2 · setupapi.dev.log · Timeline connexion</div><div class="fiche-tags"><span class="fiche-tag">USBSTOR</span></div></a>
-<a class="fiche-card" href="wsl_forensique.html"><div class="fiche-icon">🐧</div><div class="fiche-name">WSL Forensique</div><div class="fiche-desc">ext4.vhdx · %LocalAppData%\Packages · HKCU\Lxss · Event 4688 wsl.exe</div><div class="fiche-tags"><span class="fiche-tag">WSL</span><span class="fiche-tag">Linux</span></div><span class="badge-new">NEW</span></a>
+<!-- ══ MODULE 04 ══════════════════════════════════════════════ -->
+<div class="module" id="m4">
+<div class="mhd" style="--mc:var(--m4)">
+  <span class="mnum" style="background:var(--m4);color:#000">04</span>
+  <span class="mtitle">🪟 Artefacts Windows</span>
+  <span class="mnew">+1 NEW</span>
+  <span class="mprog" id="mp4"></span>
+  <span class="mcount">9 fiches</span>
+</div>
+<div class="grid">
+<a class="card" href="windows_forensique.html" style="--mc:var(--m4)"><div class="card-check">✓</div><div class="card-icon-wrap">🪟</div><div class="card-name">Windows Forensique</div><div class="card-desc">16 principes · Méthodologie · Corrélation artefacts · Chronologie · SID</div><div class="card-tags"><span class="ctag">Méthodologie</span></div></a>
+<a class="card" href="windows.html" style="--mc:var(--m4)"><div class="card-check">✓</div><div class="card-icon-wrap">🖥</div><div class="card-name">Artefacts Windows — Référence</div><div class="card-desc">Prefetch · UserAssist ROT13 · ShellBags · Thumbcache · Corbeille $I/$R</div><div class="card-tags"><span class="ctag">Cheat Sheet</span></div></a>
+<a class="card" href="registre_windows.html" style="--mc:var(--m4)"><div class="card-check">✓</div><div class="card-icon-wrap">🗝</div><div class="card-name">Registre Windows</div><div class="card-desc">SAM · SYSTEM · SOFTWARE · NTUSER.DAT · USRCLASS.DAT · RegRipper</div><div class="card-tags"><span class="ctag">Ruches</span></div></a>
+<a class="card" href="logs_windows.html" style="--mc:var(--m4)"><div class="card-check">✓</div><div class="card-icon-wrap">📋</div><div class="card-name">Logs Windows (Event IDs)</div><div class="card-desc">4624/4625/4688/7045 · Security / System · EVTX · Chainsaw · Hayabusa</div><div class="card-tags"><span class="ctag">Event Logs</span></div></a>
+<a class="card" href="shellbags.html" style="--mc:var(--m4)"><div class="card-check">✓</div><div class="card-icon-wrap">📁</div><div class="card-name">ShellBags</div><div class="card-desc">BagMRU · USRCLASS.DAT · Navigation GUI · Preuve USB · Dossiers supprimés</div><div class="card-tags"><span class="ctag">Registre</span></div></a>
+<a class="card" href="volatilite.html" style="--mc:var(--m4)"><div class="card-check">✓</div><div class="card-icon-wrap">🧪</div><div class="card-name">Volatility & RAM</div><div class="card-desc">Volatility 3 · pslist · netscan · cmdline · hashdump · Forensique mémoire</div><div class="card-tags"><span class="ctag">Mémoire</span></div></a>
+<a class="card" href="active_directory.html" style="--mc:var(--m4)"><div class="card-check">✓</div><div class="card-icon-wrap">🏢</div><div class="card-name">Active Directory Forensique</div><div class="card-desc">NTDS.dit · Kerberos · Golden Ticket · Pass-the-Hash · DCSync</div><div class="card-tags"><span class="ctag">AD</span><span class="ctag">Kerberos</span></div></a>
+<a class="card" href="usb_forensique.html" style="--mc:var(--m4)"><div class="card-check">✓</div><div class="card-icon-wrap">🔌</div><div class="card-name">USB Forensique</div><div class="card-desc">USBSTOR · VID/PID · MountPoints2 · setupapi.dev.log · Timeline connexion</div><div class="card-tags"><span class="ctag">USBSTOR</span></div></a>
+<a class="card" href="wsl_forensique.html" style="--mc:var(--m4)"><div class="card-check">✓</div><div class="bnew">NEW</div><div class="card-icon-wrap">🐧</div><div class="card-name">WSL Forensique</div><div class="card-desc">ext4.vhdx · %LocalAppData%\Packages · HKCU\Lxss · Event 4688 wsl.exe</div><div class="card-tags"><span class="ctag">WSL</span><span class="ctag">Linux</span></div></a>
 </div></div>
 
-<!-- ══════ 05 ══════ -->
-<div class="module" id="cat-autressystemes" style="--m-color:var(--m5)">
-<div class="mod-header"><span class="mod-num">05</span><span class="mod-title">💻 Autres Systèmes & Prérequis</span><span class="mod-badge-new">+3 NEW</span><span class="mod-progress" id="mp-5"></span><span class="mod-count">8 fiches</span></div>
-<div class="fiche-grid">
-<a class="fiche-card" href="macos-linux.html"><div class="fiche-icon">🍎🐧</div><div class="fiche-name">macOS & Linux Forensique</div><div class="fiche-desc">QuarantineEventsV2 · FSEvents · LaunchDaemons · Crontabs · /proc/ · authorized_keys</div><div class="fiche-tags"><span class="fiche-tag">macOS</span><span class="fiche-tag">Linux</span></div></a>
-<a class="fiche-card" href="mobile.html"><div class="fiche-icon">📱</div><div class="fiche-name">Mobile Forensics</div><div class="fiche-desc">Niveaux d'extraction · iOS/Android · UFED · ADB · FBE · Chiffrement</div><div class="fiche-tags"><span class="fiche-tag">iOS</span><span class="fiche-tag">Android</span></div></a>
-<a class="fiche-card" href="cloud_forensique.html"><div class="fiche-icon">☁️</div><div class="fiche-name">Cloud Forensics</div><div class="fiche-desc">MLAT · Microsoft 365 · Google Workspace · AWS · Azure · Preservation</div><div class="fiche-tags"><span class="fiche-tag">M365</span><span class="fiche-tag">AWS</span></div></a>
-<a class="fiche-card" href="disques.html"><div class="fiche-icon">💽</div><div class="fiche-name">Technologie Disques</div><div class="fiche-desc">HDD/SSD · Endianness · Secteurs · Partitions · MBR · GPT · Prérequis</div><div class="fiche-tags"><span class="fiche-tag">Prérequis</span></div></a>
-<a class="fiche-card" href="encodage.html"><div class="fiche-icon">🔢</div><div class="fiche-name">Encodage Bas Niveau</div><div class="fiche-desc">Binaire · Hexadécimal · ASCII · UTF-8 · Big/Little Endian · Prérequis TP</div><div class="fiche-tags"><span class="fiche-tag">Bas niveau</span></div></a>
-<a class="fiche-card" href="iot_forensique.html"><div class="fiche-icon">📟</div><div class="fiche-name">IoT Forensique</div><div class="fiche-desc">Assistants vocaux · Smartwatches · Caméras · Routeurs · Domotique · Cloud</div><div class="fiche-tags"><span class="fiche-tag">IoT</span><span class="fiche-tag">Smart Home</span></div><span class="badge-new">NEW</span></a>
-<a class="fiche-card" href="vm_forensique.html"><div class="fiche-icon">🖥️</div><div class="fiche-name">Virtualisation & VM Forensique</div><div class="fiche-desc">VMware VMDK · Hyper-V VHD/VHDX · Snapshots · .vmem → Volatility · ESXiArgs</div><div class="fiche-tags"><span class="fiche-tag">VMware</span><span class="fiche-tag">Hyper-V</span></div><span class="badge-new">NEW</span></a>
-<a class="fiche-card" href="vehicules_forensique.html"><div class="fiche-icon">🚗</div><div class="fiche-name">Véhicules Connectés</div><div class="fiche-desc">EDR Bosch CDR · 5s avant collision · GPS Tesla · Infotainment Bluetooth</div><div class="fiche-tags"><span class="fiche-tag">EDR</span><span class="fiche-tag">Tesla</span></div><span class="badge-new">NEW</span></a>
+<!-- ══ MODULE 05 ══════════════════════════════════════════════ -->
+<div class="module" id="m5">
+<div class="mhd" style="--mc:var(--m5)">
+  <span class="mnum" style="background:var(--m5);color:#000">05</span>
+  <span class="mtitle">💻 Autres Systèmes & Prérequis</span>
+  <span class="mnew">+3 NEW</span>
+  <span class="mprog" id="mp5"></span>
+  <span class="mcount">8 fiches</span>
+</div>
+<div class="grid">
+<a class="card" href="macos-linux.html" style="--mc:var(--m5)"><div class="card-check">✓</div><div class="card-icon-wrap">🍎</div><div class="card-name">macOS & Linux Forensique</div><div class="card-desc">QuarantineEventsV2 · FSEvents · LaunchDaemons · /proc/ · authorized_keys</div><div class="card-tags"><span class="ctag">macOS</span><span class="ctag">Linux</span></div></a>
+<a class="card" href="mobile.html" style="--mc:var(--m5)"><div class="card-check">✓</div><div class="card-icon-wrap">📱</div><div class="card-name">Mobile Forensics</div><div class="card-desc">Niveaux d'extraction · iOS/Android · UFED · ADB · FBE · Chiffrement</div><div class="card-tags"><span class="ctag">iOS</span><span class="ctag">Android</span></div></a>
+<a class="card" href="cloud_forensique.html" style="--mc:var(--m5)"><div class="card-check">✓</div><div class="card-icon-wrap">☁️</div><div class="card-name">Cloud Forensics</div><div class="card-desc">MLAT · Microsoft 365 · Google Workspace · AWS · Azure · Preservation</div><div class="card-tags"><span class="ctag">M365</span><span class="ctag">AWS</span></div></a>
+<a class="card" href="disques.html" style="--mc:var(--m5)"><div class="card-check">✓</div><div class="card-icon-wrap">💽</div><div class="card-name">Technologie Disques</div><div class="card-desc">HDD/SSD · Endianness · Secteurs · Partitions · MBR · GPT · Prérequis</div><div class="card-tags"><span class="ctag">Prérequis</span></div></a>
+<a class="card" href="encodage.html" style="--mc:var(--m5)"><div class="card-check">✓</div><div class="card-icon-wrap">🔢</div><div class="card-name">Encodage Bas Niveau</div><div class="card-desc">Binaire · Hexadécimal · ASCII · UTF-8 · Big/Little Endian · Prérequis TP</div><div class="card-tags"><span class="ctag">Bas niveau</span></div></a>
+<a class="card" href="iot_forensique.html" style="--mc:var(--m5)"><div class="card-check">✓</div><div class="bnew">NEW</div><div class="card-icon-wrap">📟</div><div class="card-name">IoT Forensique</div><div class="card-desc">Assistants vocaux · Smartwatches · Caméras · Routeurs · Domotique · Cloud</div><div class="card-tags"><span class="ctag">IoT</span><span class="ctag">Smart Home</span></div></a>
+<a class="card" href="vm_forensique.html" style="--mc:var(--m5)"><div class="card-check">✓</div><div class="bnew">NEW</div><div class="card-icon-wrap">🖥️</div><div class="card-name">Virtualisation & VM Forensique</div><div class="card-desc">VMware VMDK · Hyper-V VHD/VHDX · Snapshots · .vmem → Volatility</div><div class="card-tags"><span class="ctag">VMware</span><span class="ctag">Hyper-V</span></div></a>
+<a class="card" href="vehicules_forensique.html" style="--mc:var(--m5)"><div class="card-check">✓</div><div class="bnew">NEW</div><div class="card-icon-wrap">🚗</div><div class="card-name">Véhicules Connectés</div><div class="card-desc">EDR Bosch CDR · 5s avant collision · GPS Tesla · Infotainment Bluetooth</div><div class="card-tags"><span class="ctag">EDR</span><span class="ctag">Tesla</span></div></a>
 </div></div>
 
-<!-- ══════ 06 ══════ -->
-<div class="module" id="cat-reseaux" style="--m-color:var(--m6)">
-<div class="mod-header"><span class="mod-num">06</span><span class="mod-title">📡 Réseaux & Communications</span><span class="mod-badge-new">+2 NEW</span><span class="mod-progress" id="mp-6"></span><span class="mod-count">6 fiches</span></div>
-<div class="fiche-grid">
-<a class="fiche-card" href="reseau.html"><div class="fiche-icon">🌐</div><div class="fiche-name">Réseaux & Infrastructure</div><div class="fiche-desc">TCP/IP · Modèle OSI · Protocoles · Fondamentaux réseau forensique</div><div class="fiche-tags"><span class="fiche-tag">TCP/IP</span></div></a>
-<a class="fiche-card" href="wireshark_pcap.html"><div class="fiche-icon">🦈</div><div class="fiche-name">Wireshark & PCAP</div><div class="fiche-desc">Filtres BPF · tcpdump · tshark · Beaconing · Extraction de fichiers réseau</div><div class="fiche-tags"><span class="fiche-tag">Wireshark</span></div></a>
-<a class="fiche-card" href="email_forensique.html"><div class="fiche-icon">✉️</div><div class="fiche-name">Email Forensics</div><div class="fiche-desc">En-têtes SMTP · SPF · DKIM · DMARC · Attribution · Phishing</div><div class="fiche-tags"><span class="fiche-tag">SMTP</span></div></a>
-<a class="fiche-card" href="messagerie_im.html"><div class="fiche-icon">💬</div><div class="fiche-name">Messagerie Instantanée</div><div class="fiche-desc">WhatsApp · Signal · Telegram · SQLite chiffrées · E2EE · LSCPT</div><div class="fiche-tags"><span class="fiche-tag">IM</span><span class="fiche-tag">E2EE</span></div></a>
-<a class="fiche-card" href="dns_forensique.html"><div class="fiche-icon">🌐</div><div class="fiche-name">DNS Forensique</div><div class="fiche-desc">Exfiltration Base64 sous-domaines · Beaconing C2 · Passive DNS · Zeek dns.log</div><div class="fiche-tags"><span class="fiche-tag">DNS</span><span class="fiche-tag">C2</span></div><span class="badge-new">NEW</span></a>
-<a class="fiche-card" href="siem_logs.html"><div class="fiche-icon">📊</div><div class="fiche-name">SIEM & Log Management</div><div class="fiche-desc">Splunk SPL · Elastic KQL · Sigma Rules YAML · Rétention · Threat Hunting</div><div class="fiche-tags"><span class="fiche-tag">Splunk</span><span class="fiche-tag">Sigma</span></div><span class="badge-new">NEW</span></a>
+<!-- ══ MODULE 06 ══════════════════════════════════════════════ -->
+<div class="module" id="m6">
+<div class="mhd" style="--mc:var(--m6)">
+  <span class="mnum" style="background:var(--m6)">06</span>
+  <span class="mtitle">📡 Réseaux & Communications</span>
+  <span class="mnew">+2 NEW</span>
+  <span class="mprog" id="mp6"></span>
+  <span class="mcount">6 fiches</span>
+</div>
+<div class="grid">
+<a class="card" href="reseau.html" style="--mc:var(--m6)"><div class="card-check">✓</div><div class="card-icon-wrap">🌐</div><div class="card-name">Réseaux & Infrastructure</div><div class="card-desc">TCP/IP · Modèle OSI · Protocoles · Fondamentaux réseau forensique</div><div class="card-tags"><span class="ctag">TCP/IP</span></div></a>
+<a class="card" href="wireshark_pcap.html" style="--mc:var(--m6)"><div class="card-check">✓</div><div class="card-icon-wrap">🦈</div><div class="card-name">Wireshark & PCAP</div><div class="card-desc">Filtres BPF · tcpdump · tshark · Beaconing · Extraction de fichiers réseau</div><div class="card-tags"><span class="ctag">Wireshark</span></div></a>
+<a class="card" href="email_forensique.html" style="--mc:var(--m6)"><div class="card-check">✓</div><div class="card-icon-wrap">✉️</div><div class="card-name">Email Forensics</div><div class="card-desc">En-têtes SMTP · SPF · DKIM · DMARC · Attribution · Phishing</div><div class="card-tags"><span class="ctag">SMTP</span></div></a>
+<a class="card" href="messagerie_im.html" style="--mc:var(--m6)"><div class="card-check">✓</div><div class="card-icon-wrap">💬</div><div class="card-name">Messagerie Instantanée</div><div class="card-desc">WhatsApp · Signal · Telegram · SQLite chiffrées · E2EE · LSCPT</div><div class="card-tags"><span class="ctag">IM</span><span class="ctag">E2EE</span></div></a>
+<a class="card" href="dns_forensique.html" style="--mc:var(--m6)"><div class="card-check">✓</div><div class="bnew">NEW</div><div class="card-icon-wrap">🌐</div><div class="card-name">DNS Forensique</div><div class="card-desc">Exfiltration Base64 sous-domaines · Beaconing C2 · Passive DNS · Zeek</div><div class="card-tags"><span class="ctag">DNS</span><span class="ctag">C2</span></div></a>
+<a class="card" href="siem_logs.html" style="--mc:var(--m6)"><div class="card-check">✓</div><div class="bnew">NEW</div><div class="card-icon-wrap">📊</div><div class="card-name">SIEM & Log Management</div><div class="card-desc">Splunk SPL · Elastic KQL · Sigma Rules YAML · Rétention · Threat Hunting</div><div class="card-tags"><span class="ctag">Splunk</span><span class="ctag">Sigma</span></div></a>
 </div></div>
 
-<!-- ══════ 07 ══════ -->
-<div class="module" id="cat-cryptologiesécurité" style="--m-color:var(--m7)">
-<div class="mod-header"><span class="mod-num">07</span><span class="mod-title">🔐 Cryptologie & Sécurité</span><span class="mod-badge-new">+1 NEW</span><span class="mod-progress" id="mp-7"></span><span class="mod-count">10 fiches</span></div>
-<div class="fiche-grid">
-<a class="fiche-card" href="crypto.html"><div class="fiche-icon">🔐</div><div class="fiche-name">Cryptologie</div><div class="fiche-desc">Symétrique / Asymétrique · AES · RSA · Entropie Shannon · Calculateur RSA</div><div class="fiche-tags"><span class="fiche-tag">Fondamentaux</span><span class="fiche-tag">Interactif</span></div></a>
-<a class="fiche-card" href="pki_certificats.html"><div class="fiche-icon">🔏</div><div class="fiche-name">PKI & Certificats</div><div class="fiche-desc">X.509 · TLS 1.3 · PFS · Certificate Pinning · Frida bypass · CRL/OCSP · S/MIME</div><div class="fiche-tags"><span class="fiche-tag">PKI</span><span class="fiche-tag">X.509</span></div></a>
-<a class="fiche-card" href="cassage_mdp.html"><div class="fiche-icon">🔓</div><div class="fiche-name">Cassage de Mots de Passe</div><div class="fiche-desc">Passware · Hashcat · Nemo tenetur art. 113 CPP · Légalité suisse</div><div class="fiche-tags"><span class="fiche-tag">Passware</span></div></a>
-<a class="fiche-card" href="chiffrement_volumes.html"><div class="fiche-icon">🛡</div><div class="fiche-name">Chiffrement de Volumes</div><div class="fiche-desc">BitLocker · FileVault · LUKS · VeraCrypt déni plausible · TPM · Recovery keys</div><div class="fiche-tags"><span class="fiche-tag">BitLocker</span><span class="fiche-tag">LUKS</span></div></a>
-<a class="fiche-card" href="anti_forensique.html"><div class="fiche-icon">🕵</div><div class="fiche-name">Anti-Forensique</div><div class="fiche-desc">Timestomping · Wiping · Stéganographie · Chiffrement · Contre-mesures</div><div class="fiche-tags"><span class="fiche-tag">Évasion</span></div></a>
-<a class="fiche-card" href="malware_forensique.html"><div class="fiche-icon">🦠</div><div class="fiche-name">Malware Forensics</div><div class="fiche-desc">IOC · YARA · Analyse PE · Sandbox · MITRE ATT&amp;CK · Fileless · Persistence</div><div class="fiche-tags"><span class="fiche-tag">IOC</span><span class="fiche-tag">YARA</span></div></a>
-<a class="fiche-card" href="ransomware_forensique.html"><div class="fiche-icon">🔒</div><div class="fiche-name">Ransomware Forensique</div><div class="fiche-desc">Identification souche · No More Ransom · Négociation · Post-chiffrement</div><div class="fiche-tags"><span class="fiche-tag">Ransomware</span></div></a>
-<a class="fiche-card" href="cryptomonnaies.html"><div class="fiche-icon">₿</div><div class="fiche-name">Cryptomonnaies & Blockchain</div><div class="fiche-desc">Bitcoin · Ethereum · On-chain · Mixers · Chainalysis · FINMA / LBA suisse</div><div class="fiche-tags"><span class="fiche-tag">Bitcoin</span><span class="fiche-tag">Blockchain</span></div></a>
-<a class="fiche-card" href="hash.html"><div class="fiche-icon">#️⃣</div><div class="fiche-name">Hachage & Intégrité</div><div class="fiche-desc">MD5 · SHA-1 · SHA-256 · SSDEEP · Chaîne de possession numérique</div><div class="fiche-tags"><span class="fiche-tag">Intégrité</span></div></a>
-<a class="fiche-card" href="steganographie.html"><div class="fiche-icon">🖼️</div><div class="fiche-name">Stéganographie Forensique</div><div class="fiche-desc">LSB PNG/BMP · DCT JPEG · zsteg · stegdetect · binwalk · ELA FotoForensics</div><div class="fiche-tags"><span class="fiche-tag">Dissimulation</span></div><span class="badge-new">NEW</span></a>
+<!-- ══ MODULE 07 ══════════════════════════════════════════════ -->
+<div class="module" id="m7">
+<div class="mhd" style="--mc:var(--m7)">
+  <span class="mnum" style="background:var(--m7);color:#000">07</span>
+  <span class="mtitle">🔐 Cryptologie & Sécurité</span>
+  <span class="mnew">+1 NEW</span>
+  <span class="mprog" id="mp7"></span>
+  <span class="mcount">10 fiches</span>
+</div>
+<div class="grid">
+<a class="card" href="crypto.html" style="--mc:var(--m7)"><div class="card-check">✓</div><div class="card-icon-wrap">🔐</div><div class="card-name">Cryptologie</div><div class="card-desc">Symétrique/Asymétrique · AES · RSA · Entropie Shannon · Calculateur RSA interactif</div><div class="card-tags"><span class="ctag">Fondamentaux</span><span class="ctag">Interactif</span></div></a>
+<a class="card" href="pki_certificats.html" style="--mc:var(--m7)"><div class="card-check">✓</div><div class="card-icon-wrap">🔏</div><div class="card-name">PKI & Certificats</div><div class="card-desc">X.509 · TLS 1.3 · PFS · Certificate Pinning · Frida bypass · CRL/OCSP</div><div class="card-tags"><span class="ctag">PKI</span><span class="ctag">X.509</span></div></a>
+<a class="card" href="cassage_mdp.html" style="--mc:var(--m7)"><div class="card-check">✓</div><div class="card-icon-wrap">🔓</div><div class="card-name">Cassage de Mots de Passe</div><div class="card-desc">Passware · Hashcat · Nemo tenetur art. 113 CPP · Légalité suisse</div><div class="card-tags"><span class="ctag">Passware</span></div></a>
+<a class="card" href="chiffrement_volumes.html" style="--mc:var(--m7)"><div class="card-check">✓</div><div class="card-icon-wrap">🛡</div><div class="card-name">Chiffrement de Volumes</div><div class="card-desc">BitLocker · FileVault · LUKS · VeraCrypt déni plausible · TPM</div><div class="card-tags"><span class="ctag">BitLocker</span><span class="ctag">LUKS</span></div></a>
+<a class="card" href="anti_forensique.html" style="--mc:var(--m7)"><div class="card-check">✓</div><div class="card-icon-wrap">🕵</div><div class="card-name">Anti-Forensique</div><div class="card-desc">Timestomping · Wiping · Stéganographie · Chiffrement · Contre-mesures</div><div class="card-tags"><span class="ctag">Évasion</span></div></a>
+<a class="card" href="malware_forensique.html" style="--mc:var(--m7)"><div class="card-check">✓</div><div class="card-icon-wrap">🦠</div><div class="card-name">Malware Forensics</div><div class="card-desc">IOC · YARA · Analyse PE · Sandbox · MITRE ATT&amp;CK · Fileless</div><div class="card-tags"><span class="ctag">IOC</span><span class="ctag">YARA</span></div></a>
+<a class="card" href="ransomware_forensique.html" style="--mc:var(--m7)"><div class="card-check">✓</div><div class="card-icon-wrap">🔒</div><div class="card-name">Ransomware Forensique</div><div class="card-desc">Identification souche · No More Ransom · Négociation · Post-chiffrement</div><div class="card-tags"><span class="ctag">Ransomware</span></div></a>
+<a class="card" href="cryptomonnaies.html" style="--mc:var(--m7)"><div class="card-check">✓</div><div class="card-icon-wrap">₿</div><div class="card-name">Cryptomonnaies & Blockchain</div><div class="card-desc">Bitcoin · Ethereum · On-chain · Mixers · Chainalysis · FINMA suisse</div><div class="card-tags"><span class="ctag">Bitcoin</span><span class="ctag">Blockchain</span></div></a>
+<a class="card" href="hash.html" style="--mc:var(--m7)"><div class="card-check">✓</div><div class="card-icon-wrap">#️⃣</div><div class="card-name">Hachage & Intégrité</div><div class="card-desc">MD5 · SHA-1 · SHA-256 · SSDEEP · Chaîne de possession numérique</div><div class="card-tags"><span class="ctag">Intégrité</span></div></a>
+<a class="card" href="steganographie.html" style="--mc:var(--m7)"><div class="card-check">✓</div><div class="bnew">NEW</div><div class="card-icon-wrap">🖼️</div><div class="card-name">Stéganographie Forensique</div><div class="card-desc">LSB PNG/BMP · DCT JPEG · zsteg · stegdetect · binwalk · ELA</div><div class="card-tags"><span class="ctag">Dissimulation</span></div></a>
 </div></div>
 
-<!-- ══════ 08 ══════ -->
-<div class="module" id="cat-outilsdfir" style="--m-color:var(--m8)">
-<div class="mod-header"><span class="mod-num">08</span><span class="mod-title">🛠 Outils DFIR</span><span class="mod-badge-new">+2 NEW</span><span class="mod-progress" id="mp-8"></span><span class="mod-count">7 fiches</span></div>
-<div class="fiche-grid">
-<a class="fiche-card" href="outils.html"><div class="fiche-icon">🔍</div><div class="fiche-name">X-Ways & WinHex</div><div class="fiche-desc">Standard judiciaire suisse · Éditeur hexadécimal · Analyse forensique professionnelle</div><div class="fiche-tags"><span class="fiche-tag">Standard CH</span></div></a>
-<a class="fiche-card" href="autopsy.html"><div class="fiche-icon">🔬</div><div class="fiche-name">Autopsy & The Sleuth Kit</div><div class="fiche-desc">Open source · Analyse multi-FS · Modules d'ingest · Timeline · TSK</div><div class="fiche-tags"><span class="fiche-tag">Open Source</span></div></a>
-<a class="fiche-card" href="zimmerman.html"><div class="fiche-icon">🛠</div><div class="fiche-name">Suite Zimmerman</div><div class="fiche-desc">PECmd · LECmd · MFTECmd · EvtxECmd · ShellBags Explorer · AmcacheParser</div><div class="fiche-tags"><span class="fiche-tag">Gratuit</span><span class="fiche-tag">Windows</span></div></a>
-<a class="fiche-card" href="browser_forensique.html"><div class="fiche-icon">🧭</div><div class="fiche-name">Browser Forensics</div><div class="fiche-desc">Historique · Cookies · Downloads · Cache · Sessions Chrome/Firefox/Edge</div><div class="fiche-tags"><span class="fiche-tag">Chrome</span><span class="fiche-tag">Firefox</span></div></a>
-<a class="fiche-card" href="osint.html"><div class="fiche-icon">👁</div><div class="fiche-name">OSINT & Métadonnées</div><div class="fiche-desc">Cycle renseignement · EXIF GPS · Maltego · Dorks · Zefix.ch · Sources suisses</div><div class="fiche-tags"><span class="fiche-tag">OSINT</span><span class="fiche-tag">EXIF</span></div></a>
-<a class="fiche-card" href="sqlite_forensique.html"><div class="fiche-icon">🗃</div><div class="fiche-name">SQLite Forensique</div><div class="fiche-desc">Bases SQLite · Apps mobiles · Navigateurs · WAL · Journal · Données supprimées</div><div class="fiche-tags"><span class="fiche-tag">SQLite</span><span class="fiche-tag">Mobile</span></div><span class="badge-move">DÉPLACÉ</span></a>
-<a class="fiche-card" href="kape_velociraptor.html"><div class="fiche-icon">🎯</div><div class="fiche-name">KAPE & Velociraptor</div><div class="fiche-desc">Targets + Modules · !BasicCollection &lt; 5 min · VQL · Triage à grande échelle</div><div class="fiche-tags"><span class="fiche-tag">Triage</span><span class="fiche-tag">Gratuit</span></div><span class="badge-new">NEW</span></a>
+<!-- ══ MODULE 08 ══════════════════════════════════════════════ -->
+<div class="module" id="m8">
+<div class="mhd" style="--mc:var(--m8)">
+  <span class="mnum" style="background:var(--m8);color:#000">08</span>
+  <span class="mtitle">🛠 Outils DFIR</span>
+  <span class="mnew">+2 NEW</span>
+  <span class="mprog" id="mp8"></span>
+  <span class="mcount">7 fiches</span>
+</div>
+<div class="grid">
+<a class="card" href="outils.html" style="--mc:var(--m8)"><div class="card-check">✓</div><div class="card-icon-wrap">🔍</div><div class="card-name">X-Ways & WinHex</div><div class="card-desc">Standard judiciaire suisse · Éditeur hexadécimal · Analyse professionnelle</div><div class="card-tags"><span class="ctag">Standard CH</span></div></a>
+<a class="card" href="autopsy.html" style="--mc:var(--m8)"><div class="card-check">✓</div><div class="card-icon-wrap">🔬</div><div class="card-name">Autopsy & The Sleuth Kit</div><div class="card-desc">Open source · Analyse multi-FS · Modules d'ingest · Timeline · TSK</div><div class="card-tags"><span class="ctag">Open Source</span></div></a>
+<a class="card" href="zimmerman.html" style="--mc:var(--m8)"><div class="card-check">✓</div><div class="card-icon-wrap">🛠</div><div class="card-name">Suite Zimmerman</div><div class="card-desc">PECmd · LECmd · MFTECmd · EvtxECmd · ShellBags Explorer · AmcacheParser</div><div class="card-tags"><span class="ctag">Gratuit</span><span class="ctag">Windows</span></div></a>
+<a class="card" href="browser_forensique.html" style="--mc:var(--m8)"><div class="card-check">✓</div><div class="card-icon-wrap">🧭</div><div class="card-name">Browser Forensics</div><div class="card-desc">Historique · Cookies · Downloads · Cache · Sessions Chrome/Firefox/Edge</div><div class="card-tags"><span class="ctag">Chrome</span><span class="ctag">Firefox</span></div></a>
+<a class="card" href="osint.html" style="--mc:var(--m8)"><div class="card-check">✓</div><div class="card-icon-wrap">👁</div><div class="card-name">OSINT & Métadonnées</div><div class="card-desc">Cycle renseignement · EXIF GPS · Maltego · Dorks · Zefix.ch · Sources suisses</div><div class="card-tags"><span class="ctag">OSINT</span><span class="ctag">EXIF</span></div></a>
+<a class="card" href="sqlite_forensique.html" style="--mc:var(--m8)"><div class="card-check">✓</div><div class="bmov">DÉPLACÉ</div><div class="card-icon-wrap">🗃</div><div class="card-name">SQLite Forensique</div><div class="card-desc">Bases SQLite · Apps mobiles · Navigateurs · WAL · Journal · Données supprimées</div><div class="card-tags"><span class="ctag">SQLite</span><span class="ctag">Mobile</span></div></a>
+<a class="card" href="kape_velociraptor.html" style="--mc:var(--m8)"><div class="card-check">✓</div><div class="bnew">NEW</div><div class="card-icon-wrap">🎯</div><div class="card-name">KAPE & Velociraptor</div><div class="card-desc">Targets + Modules · !BasicCollection &lt; 5 min · VQL · Triage à grande échelle</div><div class="card-tags"><span class="ctag">Triage</span><span class="ctag">Gratuit</span></div></a>
 </div></div>
 
 </div><!-- /.modules -->
 
-<div class="no-results" id="no-results">Aucune fiche ne correspond à votre recherche.<br><small>Essayez : SHA-256, timestomping, LSCPT, Volatility, NTFS…</small></div>
+<!-- No results -->
+<div id="nores" class="nores">
+  <span class="nores-emoji">🔍</span>
+  Aucune fiche ne correspond à cette recherche.<br>
+  <small style="color:var(--dim)">Essayez : SHA-256 · timestomping · LSCPT · Volatility · NTFS…</small>
+</div>
 
 <!-- CTA -->
 <div class="cta">
-  <p>Fiches consultées ? Passez à l'entraînement actif.</p>
-  <div class="cta-btns">
-    <a href="../quiz.html" class="cta-btn cta-quiz">💊 Quiz — Questions CAS-IN</a>
-    <a href="../tp.html" class="cta-btn cta-tp">🧪 Travaux Pratiques</a>
-    <a href="../scene.html" class="cta-btn cta-scene">🎭 Scénarios DFIR</a>
+  <div class="cta-title">Fiches vues ?</div>
+  <p class="cta-sub">Passez à l'entraînement actif — quiz, TP et scénarios réels.</p>
+  <div class="cta-row">
+    <a href="../quiz.html" class="cta-btn cta-red">💊 Quiz CAS-IN</a>
+    <a href="../tp.html" class="cta-btn cta-gold">🧪 Travaux Pratiques</a>
+    <a href="../scene.html" class="cta-btn cta-dim">🎭 Scénarios DFIR</a>
   </div>
 </div>
 
 <script>
-const SK='casIn_readFiches_v4';
-const cards=[...document.querySelectorAll('.fiche-card')];
+const SK='casIn_v4';
+const cards=[...document.querySelectorAll('.card')];
 const total=cards.length;
 
-// Read / Write localStorage
-function getRead(){try{return new Set(JSON.parse(localStorage.getItem(SK)||'[]'))}catch{return new Set()}}
-function saveRead(s){try{localStorage.setItem(SK,JSON.stringify([...s]))}catch{}}
-function resetRead(){if(confirm('Réinitialiser toute la progression ?')){saveRead(new Set());updateUI()}}
+function gr(){try{return new Set(JSON.parse(localStorage.getItem(SK)||'[]'))}catch{return new Set()}}
+function sr(s){try{localStorage.setItem(SK,JSON.stringify([...s]))}catch{}}
+function doReset(){if(confirm('Réinitialiser la progression ?')){sr(new Set());ui()}}
 
-// Update all UI
-function updateUI(){
-  const r=getRead();
+function ui(){
+  const r=gr();
   cards.forEach(c=>c.classList.toggle('read',r.has(c.getAttribute('href'))));
   const n=r.size;
+  const pct=total?Math.round(n/total*100):0;
   document.getElementById('s-read').textContent=n;
   document.getElementById('s-total').textContent=total;
-  const pct=total>0?Math.round(n/total*100):0;
   document.getElementById('s-pct').textContent=pct+'%';
-  document.getElementById('prog-bar').style.width=pct+'%';
-  document.getElementById('prog-txt').textContent=n===0?'Cliquez sur une fiche pour la marquer comme lue':n+' / '+total+' fiches lues ('+pct+'%)';
-  // Per module progress
-  document.querySelectorAll('.module').forEach((mod,i)=>{
-    const mc=[...mod.querySelectorAll('.fiche-card')];
+  document.getElementById('prog').style.width=pct+'%';
+  document.getElementById('prog-lbl').textContent=
+    n===0?'Cliquez sur une fiche pour la marquer lue':n+' / '+total+' fiches lues — '+pct+'% complété';
+  // Per module
+  document.querySelectorAll('.module').forEach((m,i)=>{
+    const mc=[...m.querySelectorAll('.card')];
     const mr=mc.filter(c=>r.has(c.getAttribute('href'))).length;
-    const el=document.getElementById('mp-'+(i+1));
-    if(el)el.textContent=mr+'/'+mc.length;
+    const el=document.getElementById('mp'+(i+1));
+    if(el)el.textContent=mr+'/'+mc.length+' lues';
   });
 }
 
-// Mark as read on click
 cards.forEach(c=>{
-  c.addEventListener('click',()=>{
-    const r=getRead();
-    const h=c.getAttribute('href');
-    r.has(h)?r.delete(h):r.add(h);
-    saveRead(r);updateUI();
+  c.addEventListener('click',e=>{
+    const r=gr();const h=c.getAttribute('href');
+    if(r.has(h)){r.delete(h)}else{r.add(h)}
+    sr(r);ui();
   });
 });
 
 // Search
-const inp=document.getElementById('search');
-const clr=document.getElementById('search-clear');
-const cnt=document.getElementById('search-count');
-const nor=document.getElementById('no-results');
+const sq=document.getElementById('sq');
+const sqClr=document.getElementById('sq-clr');
+const sqCnt=document.getElementById('sq-cnt');
+const nores=document.getElementById('nores');
 
-function doSearch(){
-  const q=inp.value.trim().toLowerCase();
-  clr.classList.toggle('visible',q.length>0);
-  let vis=0;
+function search(){
+  const q=sq.value.trim().toLowerCase();
+  sqClr.classList.toggle('on',q.length>0);
+  let v=0;
   cards.forEach(c=>{
-    const text=(c.textContent||'').toLowerCase();
-    const show=!q||text.includes(q);
-    c.classList.toggle('hidden',!show);
-    if(show)vis++;
+    const ok=!q||c.textContent.toLowerCase().includes(q);
+    c.classList.toggle('hidden',!ok);
+    if(ok)v++;
   });
-  // Show/hide modules
   document.querySelectorAll('.module').forEach(m=>{
-    const hasVis=[...m.querySelectorAll('.fiche-card')].some(c=>!c.classList.contains('hidden'));
-    m.style.display=hasVis||!q?'':'none';
+    const any=[...m.querySelectorAll('.card')].some(c=>!c.classList.contains('hidden'));
+    m.style.display=(any||!q)?'':'none';
   });
-  cnt.textContent=q?vis+' résultat'+(vis!==1?'s':''):'';
-  nor.classList.toggle('visible',vis===0&&q.length>0);
+  sqCnt.textContent=q?v+' résultat'+(v!==1?'s':''):'';
+  nores.classList.toggle('on',v===0&&q.length>0);
 }
-function clearSearch(){inp.value='';inp.focus();doSearch();}
-inp.addEventListener('input',doSearch);
-inp.addEventListener('keydown',e=>{if(e.key==='Escape')clearSearch();});
+function clearSQ(){sq.value='';sq.focus();search()}
+sq.addEventListener('input',search);
+sq.addEventListener('keydown',e=>{if(e.key==='Escape')clearSQ()});
 
-// Module filter pills
-function filterMod(id,btn){
-  document.querySelectorAll('.mod-pill').forEach(p=>p.classList.remove('active'));
-  btn.classList.add('active');
+// Module filter
+function showMod(id,pill){
+  document.querySelectorAll('.mpill').forEach(p=>p.classList.remove('on'));
+  pill.classList.add('on');
   document.querySelectorAll('.module').forEach(m=>{
-    m.style.display=!id||m.id===id?'':'none';
+    m.style.display=(!id||m.id===id)?'':'none';
   });
 }
 
-updateUI();
+ui();
 </script>
 </body>
 </html>
