@@ -2,299 +2,1177 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>NTFS — CAS-IN Forensique</title>
 <link rel="stylesheet" href="../style/fiche_style.css">
-<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
-<script>
-(function(){
-  var btn=document.getElementById('back-top');
-  if(btn) window.addEventListener('scroll',function(){
-    btn.classList.toggle('visible',window.scrollY>300);
-  });
-})();
-</script>
+<style>
+/* ── GLOBALS ── */
+#scroll-progress{position:fixed;top:0;left:0;z-index:300;height:2px;width:0;background:linear-gradient(90deg,var(--blue),var(--cyan));pointer-events:none}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--border);overflow-x:auto;scrollbar-width:none;background:rgba(13,17,23,.98);position:sticky;top:52px;z-index:90;padding:0 1rem}
+.tabs::-webkit-scrollbar{display:none}
+.tab{font-family:var(--mono);font-size:.72rem;padding:.62rem 1.1rem;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--dim);cursor:pointer;transition:color .15s,border-color .15s;margin-bottom:-2px;white-space:nowrap}
+.tab:hover{color:var(--muted)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:700}
+.tab-page{display:none;padding:2rem 2rem 3rem;max-width:980px;margin:0 auto;animation:fadeIn .22s ease}
+.tab-page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.page-wrap{max-width:980px;margin:0 auto;padding:1.5rem 2rem .5rem}
+
+/* ── SEC TITLES ── */
+.sec-title{font-family:var(--sans);font-size:.68rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin:1.5rem 0 .75rem;display:flex;align-items:center;gap:.6rem;padding-left:.6rem;border-left:2px solid var(--blue)}
+.sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+.sec-sub{font-size:.74rem;color:var(--dim);margin-bottom:.85rem;line-height:1.55;border-left:2px solid var(--border);padding-left:.75rem;font-style:italic}
+
+/* ═══ TAB 1 — ARCHITECTURE ═════════════════════ */
+
+/* Disk → $Boot → $MFT → Data Area — inspiré du schéma */
+.arch-viz{margin:.75rem 0 1.25rem}
+.arch-disk{background:linear-gradient(135deg,rgba(88,166,255,.1),rgba(88,166,255,.04));border:2px solid rgba(88,166,255,.3);border-radius:14px;padding:1.1rem 1rem .85rem;position:relative}
+.arch-disk-label{font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);text-align:center;margin-bottom:.85rem;opacity:.8}
+.arch-row{display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;margin-bottom:.6rem}
+.arch-zone{flex:1;min-width:110px;padding:.65rem .6rem;border-radius:10px;border:1px solid;text-align:center;cursor:pointer;transition:transform .15s,box-shadow .15s,filter .15s;user-select:none}
+.arch-zone:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,.35);filter:brightness(1.25)}
+.arch-zone.sel{transform:translateY(-3px);filter:brightness(1.4);outline:2px solid white}
+.arch-zone-icon{font-size:1.3rem;display:block;margin-bottom:.25rem}
+.arch-zone-name{font-family:var(--mono);font-size:.72rem;font-weight:700;margin-bottom:.18rem}
+.arch-zone-sub{font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3}
+.az-boot  {background:rgba(240,192,64,.1);border-color:rgba(240,192,64,.4);color:var(--gold)}
+.az-mft   {background:rgba(0,229,204,.12);border-color:rgba(0,229,204,.45);color:var(--cyan)}
+.az-mftm  {background:rgba(0,229,204,.06);border-color:rgba(0,229,204,.25);color:var(--cyan)}
+.az-data  {background:rgba(48,232,138,.1);border-color:rgba(48,232,138,.35);color:var(--green);flex:3}
+.az-concept{background:rgba(188,140,255,.08);border-color:rgba(188,140,255,.3);color:var(--purple)}
+
+/* Detail panel */
+.arch-detail{background:var(--surface);border:1px solid rgba(88,166,255,.2);border-radius:10px;padding:1.1rem 1.25rem;min-height:100px;font-size:.79rem;line-height:1.75;color:var(--muted);transition:all .2s;margin:.5rem 0 1rem}
+.arch-detail.live{border-color:rgba(88,166,255,.45);box-shadow:0 4px 20px rgba(88,166,255,.07)}
+.dp-title{font-family:var(--sans);font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.dp-body strong{color:var(--text)}.dp-body code{color:var(--cyan);font-family:var(--mono);font-size:.77rem;background:rgba(0,229,204,.07);border:1px solid rgba(0,229,204,.15);border-radius:3px;padding:.01rem .3rem}
+
+/* Concept "tout est fichier" card */
+.concept-card{background:linear-gradient(135deg,rgba(188,140,255,.12),rgba(188,140,255,.04));border:1px solid rgba(188,140,255,.3);border-left:4px solid var(--purple);border-radius:0 10px 10px 0;padding:1rem 1.2rem;margin:.75rem 0;font-size:.8rem;line-height:1.7;color:var(--text)}
+.concept-title{font-family:var(--sans);font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--purple);margin-bottom:.5rem}
+
+/* Métafichiers grid — inspiré du tableau du schéma */
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.55rem;margin:.75rem 0}
+.meta-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.75rem .9rem;cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s;user-select:none;border-left:3px solid}
+.meta-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.meta-card.sel{border-color:var(--cyan)!important;box-shadow:0 0 0 1px var(--cyan),0 4px 14px rgba(0,229,204,.15)}
+.meta-num{font-family:var(--mono);font-size:.62rem;opacity:.7;margin-bottom:.15rem}
+.meta-name{font-family:var(--mono);font-size:.8rem;font-weight:700;margin-bottom:.2rem}
+.meta-desc{font-size:.71rem;color:var(--muted);line-height:1.4}
+.mc-0{border-left-color:var(--cyan)}.mc-1{border-left-color:rgba(0,229,204,.5)}.mc-2{border-left-color:var(--blue)}.mc-3{border-left-color:var(--dim)}.mc-5{border-left-color:var(--green)}.mc-6{border-left-color:var(--gold)}.mc-7{border-left-color:var(--orange)}.mc-usn{border-left-color:var(--red)}
+.meta-detail{background:var(--surface);border:1px solid rgba(0,229,204,.2);border-radius:10px;padding:1rem 1.2rem;margin:.5rem 0 1rem;font-size:.79rem;line-height:1.75;color:var(--muted);min-height:80px;transition:all .2s;display:none}
+.meta-detail.live{display:block;border-color:rgba(0,229,204,.4);box-shadow:0 4px 16px rgba(0,229,204,.07)}
+
+/* Layout bar */
+.layout-bar{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0;box-shadow:0 3px 14px rgba(0,0,0,.25)}
+.lb-seg{padding:.8rem .6rem;text-align:center;border-right:1px solid var(--border);transition:filter .18s,transform .15s;cursor:default;font-size:.7rem;font-weight:600}
+.lb-seg:last-child{border-right:none}
+.lb-seg:hover{filter:brightness(1.2)}
+.lb-seg span{display:block;font-family:var(--mono);font-size:.55rem;opacity:.65;margin-top:.2rem}
+.lb-boot{background:rgba(240,192,64,.12);color:var(--gold);flex:0 0 90px}
+.lb-mft{background:rgba(0,229,204,.12);color:var(--cyan);flex:1}
+.lb-mftm{background:rgba(0,229,204,.06);color:var(--cyan);flex:0 0 90px}
+.lb-data{background:rgba(48,232,138,.1);color:var(--green);flex:3}
+
+/* ═══ TAB 2 — MFT ENTRY ════════════════════════ */
+
+/* 1KB tuple structure — inspiré "Structure du Tuple" image */
+.tuple-viz{margin:1rem 0 .5rem}
+.tuple-bar{display:flex;height:64px;border-radius:10px;overflow:hidden;border:1px solid var(--border);box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.tuple-seg{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;cursor:pointer;border-right:1px solid rgba(0,0,0,.3);transition:filter .2s,transform .15s;position:relative;user-select:none}
+.tuple-seg:last-child{border-right:none}
+.tuple-seg:hover{filter:brightness(1.3);transform:scaleY(1.1);z-index:2}
+.tuple-seg.sel{filter:brightness(1.45);transform:scaleY(1.15);z-index:3;outline:2px solid white}
+.ts-lbl{font-family:var(--sans);font-size:.65rem;font-weight:700;text-align:center;padding:0 .3rem;line-height:1.2}
+.ts-sub{font-family:var(--mono);font-size:.52rem;opacity:.7}
+.ts-header{background:linear-gradient(135deg,rgba(240,192,64,.35),rgba(240,192,64,.2));color:var(--gold);flex:0 0 120px}
+.ts-std{background:linear-gradient(135deg,rgba(88,166,255,.35),rgba(88,166,255,.2));color:var(--blue);flex:1}
+.ts-fn{background:linear-gradient(135deg,rgba(48,232,138,.35),rgba(48,232,138,.2));color:var(--green);flex:1}
+.ts-data{background:linear-gradient(135deg,rgba(255,64,96,.35),rgba(255,64,96,.2));color:var(--red);flex:2}
+.ts-extra{background:linear-gradient(135deg,rgba(106,128,168,.25),rgba(106,128,168,.1));color:var(--dim);flex:1}
+.tuple-detail{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.3rem;min-height:110px;font-size:.79rem;line-height:1.75;color:var(--muted);transition:all .2s;margin:.75rem 0}
+.tuple-detail.live{border-color:rgba(0,229,204,.4);box-shadow:0 4px 20px rgba(0,229,204,.07)}
+
+/* Attribute types table */
+.attr-table{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:.76rem;margin:.75rem 0}
+.attr-table th{background:var(--surface2);padding:.5rem .85rem;text-align:left;border-bottom:1px solid var(--border);font-size:.61rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+.attr-table td{padding:.5rem .85rem;border-bottom:1px solid rgba(48,54,61,.4);vertical-align:top;line-height:1.5;transition:background .1s}
+.attr-table tr:last-child td{border-bottom:none}
+.attr-table tr:hover td{background:rgba(88,166,255,.04)!important}
+.at-type{font-family:var(--mono);font-weight:700;color:var(--blue);white-space:nowrap}
+.at-name{font-weight:600;color:var(--text);white-space:nowrap}
+.at-forens{font-size:.7rem;color:var(--muted)}
+.warning-badge{display:inline-block;background:rgba(255,64,96,.12);color:var(--red);border:1px solid rgba(255,64,96,.3);border-radius:4px;font-size:.6rem;padding:.05rem .35rem;font-family:var(--mono)}
+.ok-badge{display:inline-block;background:rgba(48,232,138,.1);color:var(--green);border:1px solid rgba(48,232,138,.25);border-radius:4px;font-size:.6rem;padding:.05rem .35rem;font-family:var(--mono)}
+
+/* Resident vs Non-resident */
+.res-viz{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0}
+.res-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem}
+.res-card h4{font-family:var(--sans);font-size:.67rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem;padding-bottom:.3rem;border-bottom:1px solid var(--border)}
+.rc-res{border-left:3px solid var(--green)}.rc-res h4{color:var(--green)}
+.rc-nonres{border-left:3px solid var(--orange)}.rc-nonres h4{color:var(--orange)}
+.res-list li{font-size:.74rem;color:var(--muted);line-height:1.55;padding-left:.65rem;position:relative;list-style:none;margin-bottom:.25rem}
+.res-list li::before{content:'›';position:absolute;left:0;color:var(--gold);font-weight:700}
+.res-list li strong{color:var(--text)}.res-list li code{color:var(--cyan);font-family:var(--mono);font-size:.72rem}
+
+/* ═══ TAB 3 — RUN LIST ═════════════════════════ */
+.rl-decoder{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:.75rem 0}
+.rl-header{background:var(--surface2);padding:.6rem 1.1rem;font-family:var(--mono);font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border)}
+.rl-body{padding:1rem 1.1rem}
+.rl-input-row{display:flex;gap:.5rem;align-items:center;margin-bottom:.85rem;flex-wrap:wrap}
+.rl-input{font-family:var(--mono);font-size:.8rem;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.45rem .75rem;color:var(--text);flex:1;min-width:200px;letter-spacing:.05em}
+.rl-input:focus{outline:none;border-color:rgba(0,229,204,.4)}
+.rl-btn{font-family:var(--mono);font-size:.72rem;padding:.4rem 1rem;border:1px solid rgba(0,229,204,.4);background:rgba(0,229,204,.08);color:var(--cyan);border-radius:6px;cursor:pointer;transition:background .15s;white-space:nowrap}
+.rl-btn:hover{background:rgba(0,229,204,.2)}
+.rl-result{min-height:100px;font-size:.79rem;line-height:1.7}
+.rl-run{display:flex;align-items:flex-start;gap:.75rem;padding:.7rem .9rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:.5rem;transition:border-color .2s}
+.rl-run:hover{border-color:rgba(0,229,204,.3)}
+.rl-run-num{width:28px;height:28px;border-radius:50%;background:rgba(0,229,204,.12);border:1px solid rgba(0,229,204,.35);color:var(--cyan);font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rl-run-body{flex:1;font-family:var(--mono)}
+.rl-run-hex{font-size:.7rem;color:var(--gold);margin-bottom:.2rem}
+.rl-run-detail{font-size:.75rem;color:var(--muted)}
+.rl-run-detail strong{color:var(--text)}
+.rl-error{color:var(--red);font-size:.78rem;padding:.5rem .75rem;background:rgba(255,64,96,.06);border:1px solid rgba(255,64,96,.2);border-radius:6px}
+
+/* Run list examples */
+.rl-examples{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.75rem}
+.rl-ex{font-family:var(--mono);font-size:.65rem;padding:.22rem .65rem;border:1px solid rgba(240,192,64,.3);border-radius:4px;background:rgba(240,192,64,.06);color:var(--gold);cursor:pointer;transition:background .15s}
+.rl-ex:hover{background:rgba(240,192,64,.18)}
+
+/* Visual run blocks */
+.rl-vis{display:flex;gap:.3rem;flex-wrap:wrap;margin:.65rem 0}
+.rl-block{padding:.35rem .65rem;border-radius:6px;font-family:var(--mono);font-size:.65rem;font-weight:700;border:1px solid}
+.rl-header-byte{background:rgba(240,192,64,.15);border-color:rgba(240,192,64,.4);color:var(--gold)}
+.rl-length-byte{background:rgba(48,232,138,.15);border-color:rgba(48,232,138,.4);color:var(--green)}
+.rl-offset-byte{background:rgba(88,166,255,.15);border-color:rgba(88,166,255,.4);color:var(--blue)}
+.rl-end-byte{background:rgba(255,64,96,.15);border-color:rgba(255,64,96,.4);color:var(--red)}
+
+/* $Bitmap visualizer */
+.bitmap-container{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.85rem;margin:.75rem 0}
+.bitmap-grid{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;margin:.5rem 0}
+.bitmap-cell{height:24px;border-radius:3px;border:1px solid;cursor:pointer;transition:filter .15s,transform .1s;position:relative}
+.bitmap-cell:hover{filter:brightness(1.3);transform:scale(1.08)}
+.bc-free{background:rgba(106,128,168,.1);border-color:rgba(106,128,168,.3)}
+.bc-used{background:rgba(0,229,204,.25);border-color:rgba(0,229,204,.5)}
+.bc-highlight{background:rgba(240,192,64,.4)!important;border-color:var(--gold)!important;box-shadow:0 0 6px rgba(240,192,64,.4)}
+.bitmap-info{font-family:var(--mono);font-size:.68rem;color:var(--muted);margin-top:.4rem}
+
+/* ═══ TAB 4 — TIMESTAMPS ════════════════════════ */
+.ts-compare{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0}
+.ts-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem}
+.ts-box-title{font-family:var(--sans);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem;padding-bottom:.35rem;border-bottom:1px solid var(--border)}
+.ts-ntfs{border-left:3px solid var(--blue)}.ts-ntfs .ts-box-title{color:var(--blue)}
+.ts-unix{border-left:3px solid var(--green)}.ts-unix .ts-box-title{color:var(--green)}
+.ts-content{font-size:.75rem;color:var(--muted);line-height:1.65}
+.ts-content strong{color:var(--text)}.ts-content code{color:var(--cyan);font-family:var(--mono);font-size:.73rem}
+
+/* MACB timelines */
+.macb-row{display:grid;grid-template-columns:70px 1fr 1fr 50px;gap:0;border-bottom:1px solid var(--border);font-size:.73rem;transition:background .1s}
+.macb-row:last-child{border-bottom:none}.macb-row:hover{background:rgba(88,166,255,.03)}
+.macb-time{font-family:var(--mono);font-size:.68rem;color:var(--dim);padding:.4rem .75rem;border-right:1px solid var(--border);display:flex;align-items:center}
+.macb-attr{padding:.4rem .75rem;border-right:1px solid var(--border);display:flex;align-items:center;font-weight:600}
+.macb-val{padding:.4rem .75rem;border-right:1px solid var(--border);font-family:var(--mono);font-size:.7rem;display:flex;align-items:center;color:var(--muted)}
+.macb-src{padding:.4rem .6rem;font-size:.65rem;display:flex;align-items:center;font-family:var(--mono)}
+.macb-si{color:var(--red)}.macb-fn{color:var(--green)}
+
+/* Timestomping diagram */
+.ts-stomp-viz{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0}
+.tss-row{display:grid;grid-template-columns:130px 1fr 1fr;border-bottom:1px solid var(--border);transition:background .1s}
+.tss-row:last-child{border-bottom:none}
+.tss-row:hover{background:rgba(255,64,96,.02)}
+.tss-attr{font-family:var(--mono);font-size:.7rem;font-weight:700;padding:.5rem .85rem;background:rgba(22,27,34,.5);border-right:1px solid var(--border);display:flex;align-items:center;color:var(--muted)}
+.tss-normal{padding:.5rem .85rem;border-right:1px solid var(--border);font-family:var(--mono);font-size:.69rem;display:flex;align-items:center;color:var(--green)}
+.tss-stomped{padding:.5rem .85rem;font-family:var(--mono);font-size:.69rem;display:flex;align-items:center;color:var(--red)}
+
+/* Timestamp converter */
+.ts-converter{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0}
+.tc-header{background:var(--surface2);padding:.55rem 1rem;font-family:var(--mono);font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border)}
+.tc-body{padding:.85rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.tc-label{font-family:var(--sans);font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem}
+.tc-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.45rem .7rem;font-family:var(--mono);font-size:.72rem;color:var(--text);box-sizing:border-box}
+.tc-input:focus{outline:none;border-color:rgba(0,229,204,.4)}
+.tc-output{font-family:var(--mono);font-size:.72rem;color:var(--cyan);background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.2);border-radius:6px;padding:.45rem .7rem;min-height:36px}
+
+/* ═══ TAB 5 — OUTILS ════════════════════════════ */
+.tool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.65rem;margin:.75rem 0}
+.tool-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;transition:transform .15s,box-shadow .15s}
+.tool-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.tool-name{font-family:var(--mono);font-size:.8rem;font-weight:700;margin-bottom:.25rem}
+.tool-by{font-size:.62rem;color:var(--dim);margin-bottom:.4rem;font-family:var(--sans)}
+.tool-desc{font-size:.74rem;color:var(--muted);line-height:1.5}
+.tool-tag{display:inline-block;font-family:var(--mono);font-size:.58rem;padding:.07rem .35rem;border-radius:3px;margin-top:.3rem;margin-right:.2rem}
+.tt-free{background:rgba(48,232,138,.1);color:var(--green);border:1px solid rgba(48,232,138,.25)}
+.tt-com{background:rgba(255,64,96,.08);color:var(--red);border:1px solid rgba(255,64,96,.2)}
+.tt-cmd{background:rgba(88,166,255,.1);color:var(--blue);border:1px solid rgba(88,166,255,.2)}
+
+/* CLI blocks */
+.cli{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-family:var(--mono);font-size:.72rem;line-height:1.85;margin:.5rem 0;overflow-x:auto}
+.cli .c{color:var(--dim)}.cli .v{color:var(--cyan);font-weight:600}.cli .a{color:var(--green)}.cli .k{color:var(--gold)}
+
+/* ═══ COMMON ════════════════════════════════════ */
+.key-fact{background:linear-gradient(135deg,rgba(88,166,255,.09),rgba(0,229,204,.04));border:1px solid rgba(88,166,255,.2);border-radius:10px;padding:.95rem 1.15rem;margin:.75rem 0;position:relative;overflow:hidden;font-size:.79rem;line-height:1.7;color:var(--text)}
+.key-fact::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.key-fact-label{font-family:var(--sans);font-size:.6rem;font-weight:700;letter-spacing:.12em;color:var(--blue);text-transform:uppercase;margin-bottom:.4rem}
+.key-fact ul{padding-left:1rem;margin:.3rem 0 0}
+.key-fact li{margin-bottom:.2rem}
+.exam-tip{background:linear-gradient(135deg,rgba(240,192,64,.09),rgba(240,192,64,.03));border:1px solid rgba(240,192,64,.35);border-left:4px solid var(--gold);border-radius:0 10px 10px 0;padding:1.1rem 1.3rem;margin:1.5rem 0;font-size:.79rem;line-height:1.82;color:var(--text)}
+.exam-tip-title{font-family:var(--sans);font-size:.62rem;font-weight:700;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;margin-bottom:.65rem}
+.exam-tip p{margin-top:.3rem}.exam-tip code{color:var(--cyan);font-family:var(--mono);font-size:.76rem}
+.quiz-wrap{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.85rem 0;transition:box-shadow .2s}
+.quiz-wrap:hover{box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.quiz-q{padding:.9rem 1.1rem;background:var(--surface);font-size:.82rem;font-weight:600;color:var(--text);line-height:1.5}
+.quiz-q small{display:block;font-weight:400;color:var(--muted);font-size:.72rem;margin-top:.2rem}
+.quiz-actions{padding:.6rem 1.1rem;background:var(--surface2);border-top:1px solid var(--border);display:flex;gap:.5rem}
+.quiz-reveal-btn{font-family:var(--mono);font-size:.7rem;padding:.32rem .85rem;border:1px solid rgba(0,229,204,.35);background:rgba(0,229,204,.07);color:var(--cyan);border-radius:20px;cursor:pointer;transition:background .15s}
+.quiz-reveal-btn:hover{background:rgba(0,229,204,.18)}
+.quiz-answer{display:none;padding:.85rem 1.1rem;background:rgba(0,229,204,.04);font-size:.79rem;color:var(--text);line-height:1.65;border-top:1px solid rgba(0,229,204,.15)}
+.quiz-answer.visible{display:block;animation:slideUp .2s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.alert{background:rgba(255,64,96,.07);border:1px solid rgba(255,64,96,.3);border-left:3px solid var(--red);border-radius:0 8px 8px 0;padding:.75rem 1rem;font-size:.79rem;color:var(--text);line-height:1.65;margin:.75rem 0}
+.hex,.h{display:inline-block;background:var(--surface2);border:1px solid var(--border);padding:.04rem .45rem;border-radius:4px;font-size:.78em;font-weight:700;font-family:var(--mono)}
+.h-cyan{color:var(--cyan)}.h-gold{color:var(--gold)}.h-blue{color:var(--blue)}.h-green{color:var(--green)}.h-red{color:var(--red)}.h-orange{color:var(--orange)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.memo-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0}
+.memo-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem .95rem}
+.memo-card:hover{border-color:rgba(88,166,255,.3);box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.memo-card h4{font-family:var(--sans);font-size:.67rem;font-weight:700;letter-spacing:.06em;color:var(--blue);text-transform:uppercase;margin-bottom:.5rem;padding-bottom:.3rem;border-bottom:1px solid var(--border)}
+.memo-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.3rem}
+.memo-list li{font-size:.75rem;color:var(--muted);padding-left:.75rem;position:relative;line-height:1.5}
+.memo-list li::before{content:'›';position:absolute;left:0;color:var(--blue);font-weight:700}
+.memo-list li strong{color:var(--text)}.memo-list li code{color:var(--cyan);font-family:var(--mono);font-size:.72rem}
+@media(max-width:640px){
+  .tab-page{padding:1.1rem 1rem 2rem}
+  .ts-compare,.res-viz,.g2,.memo-grid{grid-template-columns:1fr}
+  .tc-body{grid-template-columns:1fr}
+  .tss-row{grid-template-columns:100px 1fr}
+  .tss-stomped{display:none}
+  .bitmap-grid{grid-template-columns:repeat(8,1fr)}
+}
+</style>
 </head>
 <body>
 <div id="scroll-progress"></div>
-<div class="page">
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
 <nav class="tn-nav">
   <a href="index.html" class="tn-back">← Fiches</a>
-  <span class="tn-title">NTFS</span>
+  <span class="tn-title">SYSTÈMES DE FICHIERS</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
-<div class="page" style="padding-top:.5rem;padding-bottom:0">
+
+<div class="page-wrap">
   <div class="breadcrumb">
-    <a href="../index.html">🏠 Accueil</a>
-    <span class="bc-sep">›</span>
-    <a href="index.html">Fiches</a>
-    <span class="bc-sep">›</span>
-    <a href="index.html#cat-systèmesdefichiers">Systèmes de fichiers</a>
-    <span class="bc-sep">›</span>
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesdefichiers">Systèmes de Fichiers</a><span class="bc-sep">›</span>
     <span class="bc-current">NTFS</span>
-    <span class="read-time-badge">⏱ ~14 min</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~10 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🗄</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">Filesystem</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Windows</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">NTFS — New Technology File System</h1>
+    <div class="meta">Tout est fichier · $MFT · Run List · ADS · Timestamps 100 ns · Windows NT 3.1 → 11</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="encodage.html" class="prereq-pill">📖 Encodage</a><a href="disques.html" class="prereq-pill">📖 Disques</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=runlist" class="tp-pill">🧪 🧩 Run List NTFS</a><a href="../tp.html?cat=timestomping" class="tp-pill">🧪 🕰 Timestomping</a><a href="../tp.html?cat=offset" class="tp-pill">🧪 📐 Calcul d'offset</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="windows.html" class="related-pill">🔗 Artefacts Windows</a><a href="mac_times.html" class="related-pill">🔗 MAC Times</a><a href="../tools.html" class="related-pill">🔧 Calculateur Run List</a></div>
   </div>
 </div>
 
-
-  <div class="header">
-    <div>
-      <span style="font-family:var(--sans);font-size:2.4rem;font-weight:800;color:var(--gold)">🗄</span>
-      <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
-      <span class="tag tag-cyan" style="margin-left:.3rem">Filesystem</span>
-    </div>
-    <h1>NTFS — New Technology File System</h1>
-    <div>
-<div class="meta" style="margin-top:.2rem">New Technology File System · Tout est fichier · Windows standard depuis 1993</div>
-    </div>
-  </div>
-
-<div class="prereq-block">
-  <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="encodage.html" class="prereq-pill">📖 Encodage</a><a href="disques.html" class="prereq-pill">📖 Disques</a></div>
-  <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=runlist" class="tp-pill">🧪 🧩 Run List NTFS</a><a href="../tp.html?cat=timestomping" class="tp-pill">🧪 🕰 Timestomping</a><a href="../tp.html?cat=offset" class="tp-pill">🧪 📐 Calcul d'offset</a></div>
-  <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="windows.html" class="related-pill">🔗 Artefacts Windows</a><a href="mac_times.html" class="related-pill">🔗 MAC Times</a><a href="../tools.html" class="related-pill">🔧 Calculateur Run List</a></div>
+<!-- TABS -->
+<div class="tabs" id="ntfs-tabs">
+  <button class="tab active" onclick="showTab('arch',this)">🏗 Architecture</button>
+  <button class="tab" onclick="showTab('mft',this)">📁 Entrée MFT</button>
+  <button class="tab" onclick="showTab('runlist',this)">🧩 Run List</button>
+  <button class="tab" onclick="showTab('ts',this)">⏱ Timestamps</button>
+  <button class="tab" onclick="showTab('tools',this)">🔧 Outils</button>
 </div>
 
+<!-- ══════════════════════════════════════════════
+     TAB 1 — ARCHITECTURE
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-arch">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 Principe "Tout est Fichier" — NTFS</div>
+  Contrairement à FAT, <strong>NTFS n'a pas de zone technique fixe</strong>. La $MFT, le $Bitmap, le $LogFile, le $Boot — tout est stocké comme des fichiers ordinaires dans la Data Area et référencé par la $MFT elle-même. La $MFT se référence même elle-même (entrée 0).
+</div>
+
+<!-- Disk Architecture — inspiré du schéma NotebookLM -->
+<div class="sec-title">Cartographie du disque NTFS</div>
+<div class="sec-sub">Cliquez sur chaque zone pour afficher ses détails. Contrairement à FAT, il n'y a pas de partition technique fixe — tout coexiste dans la Data Area.</div>
+
+<div class="arch-viz">
+  <div class="arch-disk">
+    <div class="arch-disk-label">💿 Disque physique / Partition NTFS</div>
+    <div class="arch-row">
+      <div class="arch-zone az-boot" onclick="showArch('boot')">
+        <span class="arch-zone-icon">🟡</span>
+        <div class="arch-zone-name">$Boot</div>
+        <div class="arch-zone-sub">VBR · Secteur 0<br>Cluster 0</div>
+      </div>
+      <div class="arch-zone az-mft" id="az-mft" onclick="showArch('mft')">
+        <span class="arch-zone-icon">🗂</span>
+        <div class="arch-zone-name">$MFT</div>
+        <div class="arch-zone-sub">Master File Table<br>~12.5% du volume</div>
+      </div>
+      <div class="arch-zone az-mftm" onclick="showArch('mftm')">
+        <span class="arch-zone-icon">🪞</span>
+        <div class="arch-zone-name">$MFTMirr</div>
+        <div class="arch-zone-sub">Miroir partiel<br>4 premières entrées</div>
+      </div>
+      <div class="arch-zone az-data" onclick="showArch('data')">
+        <span class="arch-zone-icon">📦</span>
+        <div class="arch-zone-name">Data Area</div>
+        <div class="arch-zone-sub">Fichiers utilisateur + tous les métafichiers système<br>($Bitmap, $LogFile, $UsnJrnl…)</div>
+      </div>
+    </div>
+    <div class="arch-row" style="margin-bottom:0">
+      <div class="arch-zone az-concept" onclick="showArch('bitmap')">
+        <span class="arch-zone-icon">🔲</span>
+        <div class="arch-zone-name">$Bitmap</div>
+        <div class="arch-zone-sub">1 bit / cluster<br>Gestion espace</div>
+      </div>
+      <div class="arch-zone az-concept" onclick="showArch('log')">
+        <span class="arch-zone-icon">📋</span>
+        <div class="arch-zone-name">$LogFile</div>
+        <div class="arch-zone-sub">Journal transactions<br>Récupération crash</div>
+      </div>
+      <div class="arch-zone az-concept" onclick="showArch('usn')">
+        <span class="arch-zone-icon">📜</span>
+        <div class="arch-zone-name">$UsnJrnl</div>
+        <div class="arch-zone-sub">Journal USN<br>Historique long terme</div>
+      </div>
+      <div class="arch-zone az-concept" onclick="showArch('btree')">
+        <span class="arch-zone-icon">🌳</span>
+        <div class="arch-zone-name">$INDEX (B-Tree)</div>
+        <div class="arch-zone-sub">Répertoires<br>Arbre B+ équilibré</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="arch-detail" id="arch-detail">
+  <div style="color:var(--dim);font-size:.78rem">ℹ️ Sélectionnez une zone ci-dessus pour afficher ses détails forensiques</div>
+</div>
+
+<!-- Layout bar simple — vue linéaire -->
+<div class="sec-title">Vue linéaire — Structure on-disk</div>
+<div class="layout-bar">
+  <div class="lb-seg lb-boot">$Boot<span>Cluster 0 · VBR</span></div>
+  <div class="lb-seg lb-mft">$MFT — Master File Table<span>~12.5% · 1 entrée de 1 Ko par fichier</span></div>
+  <div class="lb-seg lb-mftm">$MFTMirr<span>Backup 4 premières</span></div>
+  <div class="lb-seg lb-data">Data Area — tous les fichiers + tous les métafichiers<span>La $MFT réserve des clusters ici au fur et à mesure</span></div>
+</div>
+
+<!-- Métafichiers système — inspiré du tableau du schéma -->
+<div class="sec-title">Méta-fichiers système essentiels</div>
+<div class="sec-sub">Cliquez sur un métafichier pour afficher sa valeur forensique. Tous sont des fichiers ordinaires gérés par la $MFT elle-même.</div>
+
+<div class="meta-grid">
+  <div class="meta-card mc-0" onclick="showMeta('mft0')">
+    <div class="meta-num">Entrée #0</div>
+    <div class="meta-name">$MFT</div>
+    <div class="meta-desc">La table maîtresse elle-même. Auto-référence.</div>
+  </div>
+  <div class="meta-card mc-1" onclick="showMeta('mftm')">
+    <div class="meta-num">Entrée #1</div>
+    <div class="meta-name">$MFTMirr</div>
+    <div class="meta-desc">Miroir des 4 premières entrées MFT.</div>
+  </div>
+  <div class="meta-card mc-2" onclick="showMeta('log')">
+    <div class="meta-num">Entrée #2</div>
+    <div class="meta-name">$LogFile</div>
+    <div class="meta-desc">Journal des transactions (write-ahead log).</div>
+  </div>
+  <div class="meta-card mc-3" onclick="showMeta('vol')">
+    <div class="meta-num">Entrée #3</div>
+    <div class="meta-name">$Volume</div>
+    <div class="meta-desc">Nom du volume, version NTFS, flags.</div>
+  </div>
+  <div class="meta-card mc-5" onclick="showMeta('root')">
+    <div class="meta-num">Entrée #5</div>
+    <div class="meta-name">. (Root)</div>
+    <div class="meta-desc">Répertoire racine — B-Tree principal.</div>
+  </div>
+  <div class="meta-card mc-6" onclick="showMeta('bitmap')">
+    <div class="meta-num">Entrée #6</div>
+    <div class="meta-name">$Bitmap</div>
+    <div class="meta-desc">Table d'allocation — 1 bit par cluster.</div>
+  </div>
+  <div class="meta-card mc-7" onclick="showMeta('boot')">
+    <div class="meta-num">Entrée #7</div>
+    <div class="meta-name">$Boot</div>
+    <div class="meta-desc">VBR — paramètres de boot, géométrie.</div>
+  </div>
+  <div class="meta-card mc-usn" onclick="showMeta('usn')">
+    <div class="meta-num">$Extend\</div>
+    <div class="meta-name">$UsnJrnl</div>
+    <div class="meta-desc">Journal USN — historique long terme des modifications.</div>
+  </div>
+</div>
+<div class="meta-detail" id="meta-detail"></div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>🔍 Signatures NTFS essentielles</h4>
+    <ul class="memo-list">
+      <li>VBR (offset 0) : <code>EB 52 90</code> (JMP) + <strong>"NTFS    "</strong> à l'offset 3</li>
+      <li>Entrée MFT : <code>46 49 4C 45</code> = <strong>"FILE"</strong> aux 4 premiers octets</li>
+      <li>Chaque entrée = <strong>1 024 octets</strong> (1 Ko)</li>
+      <li>Boot signature : <code>55 AA</code> à l'offset 510</li>
+      <li>MFT Zone : ~12.5% réservé pour la croissance de la $MFT</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>⚡ Formules de calcul NTFS</h4>
+    <ul class="memo-list">
+      <li><strong>Taille cluster</strong> = BytesPerSector × SectorsPerCluster</li>
+      <li><strong>Offset $MFT</strong> = MFTCluster × TailleCluster (BPB offset 0x30)</li>
+      <li><strong>Offset cluster N</strong> = N × TailleCluster</li>
+      <li><strong>Byte $Bitmap</strong> = cluster ÷ 8 · <strong>Bit</strong> = cluster mod 8</li>
+      <li>Ex. cluster 42 : byte 5 (42÷8), bit 2 (42%8)</li>
+    </ul>
+  </div>
+</div>
+</div><!-- /tab-arch -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — MFT ENTRY
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-mft">
+
+<div class="sec-title">Structure de l'entrée MFT — 1 Ko (1 024 octets)</div>
+<div class="sec-sub">Chaque fichier ou dossier = 1 entrée de 1 024 octets. Cliquez sur une zone pour afficher son contenu forensique. L'entête fait 42 octets, suivie des attributs typés.</div>
+
+<!-- Tuple bar — inspiré "Structure du Tuple" du schéma -->
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem 1rem .85rem;margin:.75rem 0;box-shadow:0 4px 20px rgba(0,0,0,.25)">
+  <div style="font-family:var(--mono);font-size:.58rem;color:var(--dim);text-align:center;margin-bottom:.65rem;letter-spacing:.05em">ENTRÉE MFT — 1 024 OCTETS · CLIQUER SUR UN SEGMENT POUR LES DÉTAILS</div>
+  <div class="tuple-bar">
+    <div class="tuple-seg ts-header" onclick="showTuple('header')">
+      <div class="ts-lbl">EN-TÊTE</div>
+      <div class="ts-sub">42 octets · "FILE"</div>
+    </div>
+    <div class="tuple-seg ts-std" onclick="showTuple('si')">
+      <div class="ts-lbl">$STANDARD_INFO</div>
+      <div class="ts-sub">0x10 · Timestamps + Flags</div>
+    </div>
+    <div class="tuple-seg ts-fn" onclick="showTuple('fn')">
+      <div class="ts-lbl">$FILE_NAME</div>
+      <div class="ts-sub">0x30 · Nom + dates</div>
+    </div>
+    <div class="tuple-seg ts-data" onclick="showTuple('data')">
+      <div class="ts-lbl">$DATA</div>
+      <div class="ts-sub">0x80 · Contenu ou Run List</div>
+    </div>
+    <div class="tuple-seg ts-extra" onclick="showTuple('extra')">
+      <div class="ts-lbl">Autres</div>
+      <div class="ts-sub">$BITMAP · $INDEX…</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem;font-size:.62rem;color:var(--dim);font-family:var(--mono)">
+    <span style="display:flex;align-items:center;gap:.25rem"><span style="width:9px;height:9px;background:rgba(240,192,64,.5);border-radius:2px;display:inline-block"></span>En-tête (42o)</span>
+    <span style="display:flex;align-items:center;gap:.25rem"><span style="width:9px;height:9px;background:rgba(88,166,255,.5);border-radius:2px;display:inline-block"></span>$SI — timestamps modifiables</span>
+    <span style="display:flex;align-items:center;gap:.25rem"><span style="width:9px;height:9px;background:rgba(48,232,138,.5);border-radius:2px;display:inline-block"></span>$FN — timestamps protégés kernel</span>
+    <span style="display:flex;align-items:center;gap:.25rem"><span style="width:9px;height:9px;background:rgba(255,64,96,.5);border-radius:2px;display:inline-block"></span>$DATA — contenu</span>
+    <span style="display:flex;align-items:center;gap:.25rem"><span style="width:9px;height:9px;background:rgba(106,128,168,.4);border-radius:2px;display:inline-block"></span>Attributs supplémentaires</span>
+  </div>
+</div>
+<div class="tuple-detail" id="tuple-detail">
+  <div style="color:var(--dim);font-size:.78rem">📁 Cliquez sur un segment pour afficher son contenu</div>
+</div>
+
+<!-- Attributs NTFS — table complète -->
+<div class="sec-title">Types d'attributs NTFS</div>
+<div style="overflow-x:auto">
+<table class="attr-table">
+  <thead><tr><th>Type</th><th>Nom</th><th>Contenu</th><th>Forensique</th></tr></thead>
+  <tbody>
+    <tr>
+      <td class="at-type">0x10</td>
+      <td class="at-name">$STANDARD_INFORMATION</td>
+      <td>Dates MACB (100 ns), flags (caché/sys/archive), droits de base</td>
+      <td><span class="warning-badge">⚠ Timestomping</span> Modifiable par les applis via SetFileTime()</td>
+    </tr>
+    <tr>
+      <td class="at-type">0x20</td>
+      <td class="at-name">$ATTRIBUTE_LIST</td>
+      <td>Pointe vers d'autres entrées MFT quand les attributs débordent</td>
+      <td class="at-forens">Présent si fichier avec très nombreux attributs ou hard links</td>
+    </tr>
+    <tr>
+      <td class="at-type">0x30</td>
+      <td class="at-name">$FILE_NAME</td>
+      <td>Nom long + nom 8.3 court, dates MACB, référence parent</td>
+      <td><span class="ok-badge">✓ Fiable</span> Mis à jour par kernel uniquement — résistant au timestomping</td>
+    </tr>
+    <tr>
+      <td class="at-type">0x40</td>
+      <td class="at-name">$OBJECT_ID</td>
+      <td>GUID unique du fichier — persistant même après déplacement</td>
+      <td class="at-forens">Utile pour lier un fichier à ses raccourcis (.lnk)</td>
+    </tr>
+    <tr>
+      <td class="at-type">0x50</td>
+      <td class="at-name">$SECURITY_DESCRIPTOR</td>
+      <td>ACL, SID propriétaire, droits NTFS complets</td>
+      <td class="at-forens">Identifier le créateur par SID → lier à un compte</td>
+    </tr>
+    <tr>
+      <td class="at-type">0x80</td>
+      <td class="at-name">$DATA</td>
+      <td>Contenu du fichier (résident &lt;700o) ou Run List (non-résident)</td>
+      <td>Plusieurs $DATA nommés = <strong>ADS</strong> : <code>fichier.txt:caché.exe</code></td>
+    </tr>
+    <tr>
+      <td class="at-type">0x90/0xA0</td>
+      <td class="at-name">$INDEX_ROOT / $INDEX_ALLOCATION</td>
+      <td>Arbre B+ d'index — contenu des répertoires</td>
+      <td class="at-forens">Entrées supprimées peuvent subsister dans les nœuds du B-Tree</td>
+    </tr>
+    <tr>
+      <td class="at-type">0xB0</td>
+      <td class="at-name">$BITMAP</td>
+      <td>Allocation des runs de l'attribut (≠ $Bitmap fichier #6)</td>
+      <td class="at-forens">Utilisé par la MFT pour suivre ses propres entrées</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- Résident vs Non-résident -->
+<div class="sec-title">Résident vs Non-résident</div>
+<div class="res-viz">
+  <div class="res-card rc-res">
+    <h4>✅ Attribut Résident</h4>
+    <ul class="res-list">
+      <li>Données stockées <strong>directement dans l'entrée MFT</strong></li>
+      <li>Seuil : &lt; ~700 octets (variable selon config)</li>
+      <li>Un fichier vide = seulement les attributs $SI et $FN</li>
+      <li>Petit fichier texte = $DATA résident dans le tuple</li>
+      <li><strong>Forensique</strong> : données récupérables même si les clusters sont "libres" car elles sont dans la MFT elle-même</li>
+    </ul>
+  </div>
+  <div class="res-card rc-nonres">
+    <h4>📦 Attribut Non-résident</h4>
+    <ul class="res-list">
+      <li>Données dans la <strong>Data Area</strong> — MFT contient une Run List</li>
+      <li>Run List = liste de runs (LCN + longueur en clusters)</li>
+      <li>Header byte : nibble haut = octets offset · nibble bas = octets longueur</li>
+      <li>Offsets <strong>relatifs au run précédent</strong> (signés) — sauf le premier</li>
+      <li><strong>Forensique</strong> : reconstruire la Run List pour localiser les données physiquement</li>
+    </ul>
+  </div>
+</div>
+
+<div class="alert">
+  🔴 <strong>ADS (Alternate Data Streams) :</strong> un fichier NTFS peut avoir plusieurs attributs <code>$DATA</code> nommés. Syntaxe : <code>fichier.txt:stream_caché</code>. L'Explorateur Windows et la taille visible ignorent les ADS. Détecter : <code>dir /r</code> ou <code>streams.exe</code> (Sysinternals). X-Ways les affiche nativement.
+</div>
+</div><!-- /tab-mft -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — RUN LIST
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-runlist">
+
+<div class="sec-title">Run List NTFS — Décodeur interactif</div>
+<div class="sec-sub">La Run List encode l'emplacement physique des données d'un fichier. Entrez des octets hex (ex : <code>21 1C 7A 0A 11 08 FE 61 00</code>) pour décoder les runs automatiquement.</div>
+
+<div class="rl-decoder">
+  <div class="rl-header">🧩 Décodeur Run List</div>
+  <div class="rl-body">
+    <div style="font-size:.72rem;color:var(--dim);margin-bottom:.55rem">Exemples rapides :</div>
+    <div class="rl-examples">
+      <div class="rl-ex" onclick="setRL('21 1C 7A 0A 00')">21 1C 7A 0A 00</div>
+      <div class="rl-ex" onclick="setRL('21 1C 7A 0A 11 08 FE 61 00')">21 1C 7A 0A 11 08 FE 61 00</div>
+      <div class="rl-ex" onclick="setRL('31 2A 01 00 00 21 08 B0 02 00')">Run List complexe</div>
+      <div class="rl-ex" onclick="setRL('22 64 00 00 00 01 00 11 28 8A 00 00')">2 runs + fragments</div>
+    </div>
+    <div class="rl-input-row">
+      <input class="rl-input" id="rl-input" type="text" placeholder="Ex : 21 1C 7A 0A 11 08 FE 61 00" value="21 1C 7A 0A 11 08 FE 61 00">
+      <button class="rl-btn" onclick="decodeRL()">Décoder →</button>
+      <button class="rl-btn" onclick="clearRL()" style="border-color:rgba(255,64,96,.35);background:rgba(255,64,96,.07);color:var(--red)">Effacer</button>
+    </div>
+    <div class="rl-result" id="rl-result"></div>
+  </div>
+</div>
+
+<!-- Run list expliqué visuellement -->
+<div class="sec-title">Structure du header byte</div>
 <div class="key-fact">
-  <div class="key-fact-label">Principe "Tout est fichier" — NTFS</div>
-  <p>Contrairement à FAT, NTFS n'a pas de zone technique fixe. <strong>La MFT, la bitmap, le journal USN</strong> sont tous des fichiers ordinaires stockés dans la Data Area et référencés par la MFT elle-même.</p>
-  <ul>
-    <li>Signature entrée MFT : <span class="h h-cyan">46 49 4C 45</span> = "FILE" aux 4 premiers octets</li>
-    <li>Chaque fichier/dossier = 1 entrée MFT de <strong>1 024 octets</strong></li>
-    <li>Données &lt; ~700 octets = <strong>résidentes</strong> (dans le tuple MFT lui-même)</li>
-  </ul>
+  <div class="key-fact-label">Décodage du header byte (1 octet)</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.5rem;font-size:.78rem">
+    <div>
+      <div style="font-family:var(--mono);font-size:.75rem;margin-bottom:.3rem">
+        <span style="background:rgba(48,232,138,.2);padding:.1rem .35rem;border-radius:3px;color:var(--green)">Nibble haut (bits 4–7)</span>
+      </div>
+      Nombre d'octets pour l'<strong>offset LCN</strong> relatif<br>
+      <span style="color:var(--dim);font-size:.7rem">Ex: 2 → offset sur 2 octets Little Endian signé</span>
+    </div>
+    <div>
+      <div style="font-family:var(--mono);font-size:.75rem;margin-bottom:.3rem">
+        <span style="background:rgba(240,192,64,.2);padding:.1rem .35rem;border-radius:3px;color:var(--gold)">Nibble bas (bits 0–3)</span>
+      </div>
+      Nombre d'octets pour la <strong>longueur</strong> du run<br>
+      <span style="color:var(--dim);font-size:.7rem">Ex: 1 → longueur sur 1 octet</span>
+    </div>
+  </div>
 </div>
 
-  <!-- STRUCTURE ON-DISK -->
-  <div class="section">
-    <div class="section-title">Structure on-disk — « Tout est fichier »</div>
-    <div class="layout">
-      <div class="lb" style="background:#1a2030;color:var(--blue)">$Boot<span>VBR secteur 0</span></div>
-      <div class="lb" style="background:#1f2d1f;color:var(--green)">$MFT<span>~4/5e du disque</span></div>
-      <div class="lb" style="background:#2a1f1a;color:var(--orange)">$MFTMirr<span>miroir partiel</span></div>
-      <div class="lb" style="background:#1a2030;flex:3;color:var(--blue)">Data Area<span>Tous les fichiers + métafichiers</span></div>
-    </div>
-    <p style="font-size:.75rem;color:var(--muted);margin-top:.5rem">Contrairement à FAT, il n'y a pas de zone technique fixe (boot record, FAT1/2, root dir) — tout est dans la Data Area sous forme de fichiers accessibles par les mêmes mécanismes.</p>
-  </div>
+<div style="overflow-x:auto;margin:.75rem 0">
+<table>
+  <thead><tr><th>Header nibble</th><th>Signification</th><th>Valeur</th></tr></thead>
+  <tbody>
+    <tr><td><span class="h h-gold">Nibble bas 0–3</span></td><td>Octets pour la longueur du run</td><td><code>0x1</code> → 1 octet · <code>0x2</code> → 2 octets</td></tr>
+    <tr><td><span class="h h-green">Nibble haut 4–7</span></td><td>Octets pour l'offset LCN</td><td><code>0x20</code> → 2 octets · <code>0x30</code> → 3 octets</td></tr>
+    <tr><td><span class="h h-red">0x00</span></td><td>Fin de la Run List</td><td>Toujours présent en dernier — obligatoire</td></tr>
+    <tr><td><span class="h h-cyan">Offset signé</span></td><td>Relatif au run précédent (sauf 1er)</td><td>Bit de signe : si MSB = 1 → négatif (inverser + 1)</td></tr>
+  </tbody>
+</table>
+</div>
 
-  <!-- MFT -->
-  <div class="section">
-    <div class="section-title">Master File Table ($MFT) — Le cœur de NTFS</div>
-    <div class="card-grid">
-      <div class="card blue">
-        <div class="card-title">Structure</div>
-        <p>Chaque fichier/dossier = <strong>1 entrée de 1 KB</strong> (tuple). Entête de 42 bytes + séquence d'attributs. La MFT elle-même est un fichier (<code>$MFT</code>, entrée 0).<br><br>
-        Si un fichier est petit (< 1 KB), ses données sont stockées <strong>directement dans le tuple</strong> (attribut résident).</p>
-      </div>
-      <div class="card orange">
-        <div class="card-title">Métafichiers système</div>
-        <p>
-          <code>$MFT</code> (0) — La table elle-même<br>
-          <code>$MFTMirr</code> (1) — Miroir des 4 premières entrées<br>
-          <code>$LogFile</code> (2) — Journal des transactions<br>
-          <code>$Volume</code> (3) — Nom et version du volume<br>
-          <code>.</code> (5) — Répertoire racine<br>
-          <code>$Bitmap</code> (6) — Table d'allocation clusters<br>
-          <code>$Boot</code> (7) — Secteur de démarrage<br>
-          <code>$UsnJrnl</code> — Journal USN (long terme)
-        </p>
-      </div>
-    </div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:.6rem">
-      <table>
-        <thead><tr><th>Entrée MFT</th><th>Métafichier</th><th>Rôle forensique</th></tr></thead>
-        <tbody>
-          <tr><td><span class="hex">0</span></td><td><code>$MFT</code></td><td>Table complète — 1 entrée par fichier/dossier</td></tr>
-          <tr><td><span class="hex">1</span></td><td><code>$MFTMirr</code></td><td>Miroir des 4 premières entrées — récupération si corruption</td></tr>
-          <tr><td><span class="hex">2</span></td><td><code>$LogFile</code></td><td>Journal transactions — historique récent des opérations</td></tr>
-          <tr><td><span class="hex">8</span></td><td><code>$BadClus</code></td><td>Liste des clusters défectueux</td></tr>
-          <tr><td><span class="hex">$UsnJrnl</span></td><td><code>$UsnJrnl</code></td><td>Journal USN — création/suppression/renommage avec timestamps</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+<!-- $Bitmap visualizer — inspiré du schéma -->
+<div class="sec-title">$Bitmap — Visualiseur d'allocation clusters</div>
+<div class="sec-sub">Le $Bitmap (entrée MFT #6) contient 1 bit par cluster. Bit 0 = libre, Bit 1 = occupé. Cliquez sur un cluster pour basculer son état. Octet = cluster ÷ 8 · Bit = cluster mod 8.</div>
 
-  <!-- ATTRIBUTS -->
-  <div class="section">
-    <div class="section-title">Attributs NTFS — Résident vs Non-résident</div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:.6rem">
-      <table>
-        <thead><tr><th>Type hex</th><th>Nom</th><th>Contenu</th><th>Note forensique</th></tr></thead>
-        <tbody>
-          <tr><td><span class="hex">0x10</span></td><td><strong>$STANDARD_INFORMATION</strong></td><td>Dates MAC times, flags (caché/système), droits basiques</td><td style="color:var(--red)">⚠️ Modifiable par les applis — cible du timestomping</td></tr>
-          <tr><td><span class="hex">0x30</span></td><td><strong>$FILE_NAME</strong></td><td>Nom long + court (8.3), dates. Peut en avoir 2 (LFN + SFN)</td><td style="color:var(--green)">✓ Mis à jour par le noyau uniquement — difficile à falsifier</td></tr>
-          <tr><td><span class="hex">0x80</span></td><td><strong>$DATA</strong></td><td>Contenu réel du fichier (résident si < 1 KB, sinon run list)</td><td>Plusieurs flux $DATA possibles → ADS</td></tr>
-          <tr><td><span class="hex">0x20</span></td><td><strong>$ATTRIBUTE_LIST</strong></td><td>Liste d'attributs supplémentaires si tuple saturé</td><td>Rare mais complexe à analyser</td></tr>
-          <tr><td><span class="hex">0x90</span></td><td><strong>$INDEX_ROOT</strong></td><td>Racine d'un index (B-tree) — pour les répertoires</td><td>Stocke les entrées de répertoire</td></tr>
-          <tr><td><span class="hex">0xB0</span></td><td><strong>$BITMAP</strong></td><td>Bitmap d'allocation (MFT ou répertoire)</td><td>≠ fichier <code>$Bitmap</code> (entrée 6)</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="card-grid">
-      <div class="card green">
-        <div class="card-title">Attribut résident</div>
-        <p>Données < 1 KB → stockées <strong>directement dans le tuple MFT</strong>. L'attribut $DATA contient le contenu du fichier. Accès immédiat sans aller chercher des clusters sur le disque.<br><br>
-        Repérable dans X-Ways : flag <code>R</code> (Resident) allumé.</p>
-      </div>
-      <div class="card orange">
-        <div class="card-title">Attribut non-résident</div>
-        <p>Données > 1 KB → stockées <strong>dans des clusters</strong> pointés par une <strong>run list</strong> dans l'attribut. Le tuple MFT ne contient que la run list, pas les données elles-mêmes.<br><br>
-        Le $DATA est presque toujours non-résident pour les fichiers utilisateur.</p>
-      </div>
+<div class="bitmap-container">
+  <div style="font-family:var(--mono);font-size:.6rem;color:var(--dim);margin-bottom:.4rem;display:flex;gap:1rem">
+    <span>🟢 Clusters 0–127 · 8 clusters par ligne · 16 colonnes</span>
+    <button onclick="resetBitmap()" style="font-family:var(--mono);font-size:.62rem;border:1px solid var(--border);background:var(--surface2);color:var(--muted);border-radius:4px;padding:.1rem .5rem;cursor:pointer">Reset</button>
+    <button onclick="randomBitmap()" style="font-family:var(--mono);font-size:.62rem;border:1px solid rgba(0,229,204,.3);background:rgba(0,229,204,.07);color:var(--cyan);border-radius:4px;padding:.1rem .5rem;cursor:pointer">Aléatoire</button>
+  </div>
+  <div class="bitmap-grid" id="bitmap-grid"></div>
+  <div class="bitmap-info" id="bitmap-info">Cliquez sur un cluster pour voir ses coordonnées dans le $Bitmap</div>
+  <div style="display:flex;gap:1rem;margin-top:.4rem;font-size:.66rem;color:var(--dim)">
+    <span style="display:flex;align-items:center;gap:.35rem"><span style="width:14px;height:14px;background:rgba(0,229,204,.25);border:1px solid rgba(0,229,204,.5);border-radius:2px;display:inline-block"></span>Occupé (bit=1)</span>
+    <span style="display:flex;align-items:center;gap:.35rem"><span style="width:14px;height:14px;background:rgba(106,128,168,.1);border:1px solid rgba(106,128,168,.3);border-radius:2px;display:inline-block"></span>Libre (bit=0)</span>
+  </div>
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>🗂 Localiser un run dans le $Bitmap</h4>
+    <ul class="memo-list">
+      <li><strong>Byte</strong> = cluster ÷ 8 (division entière)</li>
+      <li><strong>Bit</strong> = cluster mod 8 (bit 0 = poids faible)</li>
+      <li>Ex. cluster 42 : byte 5, bit 2 → octet <code>0x04</code> = cluster 42 seul occupé</li>
+      <li>Cluster libre mais avec données = espace <strong>récupérable !</strong></li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>🔗 Reconstruire un fichier depuis la Run List</h4>
+    <ul class="memo-list">
+      <li>1. Lire l'entrée MFT → attribut <code>$DATA</code> non-résident</li>
+      <li>2. Décoder la Run List : liste de (LCN, longueur) pairs</li>
+      <li>3. Offset physique = LCN × TailleCluster</li>
+      <li>4. Lire N × TailleCluster octets à cet offset</li>
+      <li>5. Répéter pour chaque run → concaténer les fragments</li>
+    </ul>
+  </div>
+</div>
+</div><!-- /tab-runlist -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — TIMESTAMPS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-ts">
+
+<div class="sec-title">Timestamps NTFS — Epoch 1601 · 100 nanosecondes</div>
+
+<div class="ts-compare">
+  <div class="ts-box ts-ntfs">
+    <div class="ts-box-title">🔵 NTFS — Epoch 1er janvier 1601</div>
+    <div class="ts-content">
+      <strong>Résolution :</strong> 100 nanosecondes (le plus précis)<br>
+      <strong>Stockage :</strong> 8 octets (QWORD), Little Endian<br>
+      <strong>Epoch :</strong> 1er janvier 1601 00:00:00 UTC<br>
+      <strong>Conversion :</strong> <code>unix_ts = (ntfs_ts / 10_000_000) − 11644473600</code><br><br>
+      <strong>$STANDARD_INFORMATION</strong> (0x10) — modifiable<br>
+      <strong>$FILE_NAME</strong> (0x30) — protégé kernel
     </div>
   </div>
-
-  <!-- RUN LIST DÉCODAGE -->
-  <div class="section">
-    <div class="section-title">Run List — Décodage nibble par nibble</div>
-    <div class="rl-demo">
-      <div style="font-size:.72rem;color:var(--blue);font-weight:700;margin-bottom:.6rem">Exemple : <code>21 1C 7A 0A 00</code> — tiré de l'image 173088.jpg</div>
-      <div class="rl-bytes">
-        <div class="rl-byte rl-header">21<span>header</span></div>
-        <div class="rl-byte rl-len">1C<span>longueur</span></div>
-        <div class="rl-byte rl-off">7A<span>offset lo</span></div>
-        <div class="rl-byte rl-off">0A<span>offset hi</span></div>
-        <div class="rl-byte rl-end">00<span>fin liste</span></div>
-      </div>
-      <div class="rl-step warn">
-        <strong style="color:#f0c040">① Octet header <span class="hex">21</span></strong> — Nibble droit = <strong>1</strong> → lire 1 byte pour la longueur · Nibble gauche = <strong>2</strong> → lire 2 bytes pour l'offset LCN
-      </div>
-      <div class="rl-step good">
-        <strong style="color:var(--green)">② Longueur <span class="hex">1C</span></strong> → 1×16 + 12 = <strong>28 clusters</strong>
-      </div>
-      <div class="rl-step info">
-        <strong style="color:var(--blue)">③ Offset LCN <span class="hex">7A 0A</span></strong> → Little Endian → inverser → <span class="hex">0A 7A</span> = 10×256 + 7×16 + 10 = <strong>LCN 2682</strong>
-      </div>
-      <div class="rl-step good">
-        <strong style="color:var(--green)">④ Résultat</strong> → <strong>28 clusters consécutifs débutant au cluster 2682</strong>. Fin de liste : <span class="hex">00</span>
-      </div>
-    </div>
-
-    <div style="margin-top:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
-      <table>
-        <thead><tr><th>Header nibble</th><th>Signification</th><th>Exemple</th></tr></thead>
-        <tbody>
-          <tr><td>Nibble droit (bits 0–3)</td><td>Nombre de bytes pour la longueur du run</td><td><span class="hex">x1</span> → 1 byte · <span class="hex">x2</span> → 2 bytes</td></tr>
-          <tr><td>Nibble gauche (bits 4–7)</td><td>Nombre de bytes pour l'offset LCN</td><td><span class="hex">2x</span> → 2 bytes · <span class="hex">3x</span> → 3 bytes</td></tr>
-          <tr><td><span class="hex">00</span></td><td>Fin de la run list</td><td>Toujours présent en dernier byte</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div style="margin-top:.6rem;background:rgba(255,64,96,.06);border:1px solid rgba(255,64,96,.2);border-radius:8px;padding:.75rem 1rem;font-size:.78rem">
-      <strong style="color:var(--red)">Offsets négatifs (nombres signés)</strong> — L'offset de chaque run est <strong>relatif au run précédent</strong> (sauf le premier qui est absolu). Un bit de signe à 1 indique un déplacement vers l'arrière.<br><br>
-      Exemple : <span class="hex">FE 61</span> = <code>1111 1110 0110 0001</code> → signe = 1 → inverser + 1 → <strong>-415</strong>. Ce run commence 415 clusters <em>avant</em> le run précédent.
+  <div class="ts-box ts-unix">
+    <div class="ts-box-title">🟢 Unix — Epoch 1er janvier 1970</div>
+    <div class="ts-content">
+      <strong>Résolution :</strong> 1 seconde classique (ms/ns selon impl.)<br>
+      <strong>Stockage :</strong> 4 octets (DWORD) Unix classique<br>
+      <strong>Epoch :</strong> 1er janvier 1970 00:00:00 UTC<br>
+      <strong>Différence :</strong> 11 644 473 600 secondes vs NTFS<br><br>
+      FAT : 2 secondes · exFAT : 10 ms · APFS : 1 ns<br>
+      Outil : <code>DCode</code>, <code>X-Ways Data Interpreter</code>
     </div>
   </div>
+</div>
 
-  <!-- TIMESTAMPS -->
-  <div class="section">
-    <div class="section-title">Timestamps NTFS — 1601 vs 1970</div>
-    <div class="ts-compare">
-      <div class="ts-box" style="border-color:rgba(88,166,255,.3)">
-        <div class="ts-title" style="color:var(--blue)">NTFS — Depuis le 1er janvier 1601</div>
-        <div class="ts-content">
-          Résolution : <strong>100 nanosecondes</strong><br>
-          Stockage : 8 bytes (QWORD) — Little Endian<br>
-          Introduit en 1601 : début du calendrier grégorien<br><br>
-          <span class="hex">$STANDARD_INFORMATION</span> — modifiable<br>
-          <span class="hex">$FILE_NAME</span> — protégé par le noyau
-        </div>
-      </div>
-      <div class="ts-box" style="border-color:rgba(63,185,80,.3)">
-        <div class="ts-title" style="color:var(--green)">UNIX — Depuis le 1er janvier 1970</div>
-        <div class="ts-content">
-          Résolution : <strong>1 seconde</strong> (ou ms selon impl.)<br>
-          Stockage : 4 bytes (DWORD) pour Unix classique<br>
-          EXT, HFS+, macOS utilisent cette époque<br><br>
-          Outil de conversion : DC3dd, DCode, X-Ways Data Interpreter
-        </div>
-      </div>
+<!-- Convertisseur timestamp -->
+<div class="ts-converter">
+  <div class="tc-header">🕐 Convertisseur Timestamp — NTFS ↔ Unix ↔ Date lisible</div>
+  <div class="tc-body">
+    <div>
+      <div class="tc-label">Timestamp NTFS (hex 8 octets LE)</div>
+      <input class="tc-input" id="tc-ntfs" type="text" placeholder="Ex : 80 46 F0 E9 8E 50 D9 01" oninput="convertTS('ntfs')">
     </div>
-    <div class="ts-alert">
-      <strong style="color:var(--red)">Timestomping (anti-forensique)</strong> — Technique qui modifie <code>$STANDARD_INFORMATION</code> (facilement modifiable par les applications) sans toucher <code>$FILE_NAME</code> (protégé par le noyau). Indicateur : <code>$SI.Created</code> <strong>postérieur</strong> à <code>$FN.Created</code> → physiquement impossible → manipulation détectée.
+    <div>
+      <div class="tc-label">Date lisible →</div>
+      <div class="tc-output" id="tc-out"></div>
     </div>
   </div>
+</div>
 
-  <!-- B-TREES & RÉPERTOIRES -->
-  <div class="section">
-    <div class="section-title">B-Trees — Index et répertoires NTFS</div>
-    <div class="card-grid">
-      <div class="card purple">
-        <div class="card-title">Pourquoi des B-Trees ?</div>
-        <p>Un arbre binaire de 100 éléments a une hauteur de 7 (car 2⁷ = 128). Les B-Trees NTFS utilisent des <strong>nœuds larges</strong> (65 à 128 clés par nœud) → hauteur très faible → accès rapide même pour des millions de fichiers.<br><br>
-        Les B-Trees sont en RAM pendant l'exécution, accès disque seulement pour les feuilles.</p>
-      </div>
-      <div class="card blue">
-        <div class="card-title">Application forensique</div>
-        <p>Chaque répertoire NTFS est un <strong>B-Tree d'entrées $INDEX</strong>. Les nœuds sont stockés dans des attributs <span class="hex">$INDEX_ROOT</span> et <span class="hex">$INDEX_ALLOCATION</span>.<br><br>
-        Après suppression, les entrées restent parfois dans les nœuds B-Tree jusqu'à réorganisation — source de données récupérables.</p>
-      </div>
-    </div>
+<!-- Les 4 timestamps MACB -->
+<div class="sec-title">Les 4 timestamps MACB</div>
+<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0">
+  <div style="background:var(--surface2);padding:.5rem .85rem;font-family:var(--mono);font-size:.61rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border);display:grid;grid-template-columns:70px 200px 1fr 90px">
+    <span>LETTRE</span><span>NOM</span><span>DESCRIPTION</span><span>SOURCE</span>
   </div>
-
-  <!-- ADS -->
-  <div class="section">
-    <div class="section-title">Alternate Data Streams (ADS) & $Bitmap</div>
-    <div class="card-grid">
-      <div class="card orange">
-        <div class="card-title">Alternate Data Streams</div>
-        <p>Un fichier NTFS peut avoir <strong>plusieurs flux $DATA nommés</strong>.<br>
-        Syntaxe : <code>fichier.txt:caché.exe</code><br><br>
-        L'Explorateur Windows affiche uniquement le flux principal. La taille visible ne reflète pas les ADS cachés. Outil : <code>streams.exe</code> (Sysinternals), X-Ways les détecte nativement.</p>
-      </div>
-      <div class="card green">
-        <div class="card-title">$Bitmap — Table d'allocation</div>
-        <p>Le fichier <code>$Bitmap</code> (entrée 6 MFT) contient <strong>1 bit par cluster</strong> : 0 = libre, 1 = occupé.<br><br>
-        1 byte gère 8 clusters. Pour savoir si le cluster 42 est libre : byte 5 (42÷8), bit 2 (42%8).<br><br>
-        ≠ attribut <span class="hex">$BITMAP</span> utilisé par la MFT elle-même pour ses propres entrées.</p>
-      </div>
-    </div>
+  <div class="macb-row">
+    <div class="macb-time" style="color:var(--green);font-weight:700">M</div>
+    <div class="macb-attr">Modified (mtime)</div>
+    <div class="macb-val">Dernière modification du <em>contenu</em></div>
+    <div class="macb-src macb-si">$SI + $FN</div>
   </div>
-
-  <!-- JOURNAL USN -->
-  <div class="section">
-    <div class="section-title">Journal USN ($UsnJrnl) — Historique long terme</div>
-    <div class="card-grid">
-      <div class="card blue">
-        <div class="card-title">Ce qu'il enregistre</div>
-        <p>Toutes les modifications de fichiers : <strong>création, suppression, renommage, modification</strong>, avec horodatage précis. Taille configurable (par défaut ~32 Mo). Rétention : heures à semaines selon l'activité.</p>
-      </div>
-      <div class="card red">
-        <div class="card-title">Valeur forensique</div>
-        <p>Même si le fichier supprimé est irrecupérable (clusters réalloués), le journal USN peut prouver qu'il <strong>a existé et quand il a disparu</strong>. Outil : <code>MFTECmd.exe</code> (Zimmerman) avec l'option <code>--csv</code>.</p>
-      </div>
-    </div>
+  <div class="macb-row">
+    <div class="macb-time" style="color:var(--blue);font-weight:700">A</div>
+    <div class="macb-attr">Accessed (atime)</div>
+    <div class="macb-val">Dernier accès en lecture (souvent désactivé Win10)</div>
+    <div class="macb-src macb-si">$SI + $FN</div>
   </div>
+  <div class="macb-row">
+    <div class="macb-time" style="color:var(--gold);font-weight:700">C</div>
+    <div class="macb-attr">Changed (ctime)</div>
+    <div class="macb-val">Modification des <em>métadonnées</em> (permissions, taille…)</div>
+    <div class="macb-src macb-si">$SI seul</div>
+  </div>
+  <div class="macb-row">
+    <div class="macb-time" style="color:var(--cyan);font-weight:700">B</div>
+    <div class="macb-attr">Born (btime / crtime)</div>
+    <div class="macb-val">Création du fichier (Birth time)</div>
+    <div class="macb-src macb-fn" style="color:var(--green)">$FN → $SI</div>
+  </div>
+</div>
 
-  
+<!-- Timestomping diagram -->
+<div class="sec-title">⚠️ Timestomping — Détection anti-forensique</div>
+<div class="alert">
+  🎯 <strong>Timestomping</strong> : technique qui modifie <code>$STANDARD_INFORMATION</code> (facilement modifiable par toute application via <code>SetFileTime()</code>) <strong>sans toucher</strong> <code>$FILE_NAME</code> (mis à jour uniquement par le kernel NTFS).<br>
+  Signal d'alarme : <code>$SI.Created</code> <strong>antérieur</strong> à <code>$FN.Created</code> → physiquement impossible → manipulation confirmée.
+</div>
+
+<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0">
+  <div style="background:var(--surface2);padding:.45rem .85rem;font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border);display:grid;grid-template-columns:130px 1fr 1fr">
+    <span>ATTRIBUT</span><span style="color:var(--green)">✓ Cas normal</span><span style="color:var(--red)">⚠ Après timestomping</span>
+  </div>
+  <div class="tss-row">
+    <div class="tss-attr">$SI.Created</div>
+    <div class="tss-normal">2024-03-15 09:22:11</div>
+    <div class="tss-stomped">2020-01-01 00:00:00 ← faux !</div>
+  </div>
+  <div class="tss-row">
+    <div class="tss-attr">$SI.Modified</div>
+    <div class="tss-normal">2024-03-15 14:45:33</div>
+    <div class="tss-stomped">2020-01-01 00:00:00 ← faux !</div>
+  </div>
+  <div class="tss-row">
+    <div class="tss-attr">$FN.Created</div>
+    <div class="tss-normal">2024-03-15 09:22:11</div>
+    <div class="tss-stomped" style="color:var(--green)">2024-03-15 09:22:11 ← vrai ✓</div>
+  </div>
+  <div class="tss-row">
+    <div class="tss-attr">$FN.Modified</div>
+    <div class="tss-normal">2024-03-15 09:22:11</div>
+    <div class="tss-stomped" style="color:var(--green)">2024-03-15 09:22:11 ← vrai ✓</div>
+  </div>
+</div>
+<div style="font-size:.73rem;color:var(--muted);margin-top:.4rem">Outils de détection : <code>MFTECmd.exe -f $MFT --csv</code> → comparer colonnes $SI et $FN · <code>icat</code> (TSK) · X-Ways affiche les deux sources côte à côte.</div>
+
 <div class="exam-tip">
-  <div class="exam-tip-title">🎓 Exam Tip — NTFS</div>
-  <p><strong>Signature MFT</strong> : <code>46 49 4C 45</code> ("FILE") · entrée = 1 024 octets · entrée 0 = $MFT elle-même</p>
-  <p><strong>Run list</strong> : header byte = nibble haut (octets offset) + nibble bas (octets longueur) · <code>0x00</code> = fin · offsets = relatifs au run précédent (signés LE)</p>
-  <p><strong>Timestomping</strong> : $SI modifiable par les apps → $SI.Created peut être antérieur à $FN.Created · si $SI &lt; $FN → manipulation détectée · $FN protégé kernel</p>
-  <p><strong>ADS</strong> : syntaxe <code>fichier.txt:flux</code> · invisible dans Explorer · taille affichée ≠ taille réelle · détecter : <code>dir /r</code> ou X-Ways</p>
-  <p><strong>$UsnJrnl</strong> : journal long terme avec timestamps · prouve existence d'un fichier supprimé · <code>MFTECmd.exe --csv</code></p>
-  <p><strong>$Bitmap</strong> : 1 bit/cluster · byte 5, bit 2 = cluster 42 (42÷8=5, 42%8=2)</p>
+  <div class="exam-tip-title">🎓 Exam Tip — NTFS Timestamps</div>
+  <p><strong>Epoch NTFS</strong> : 1er janvier 1601 · 100 ns · 8 octets (QWORD) Little Endian</p>
+  <p><strong>$SI</strong> (0x10) : modifiable par les applications — cible du timestomping</p>
+  <p><strong>$FN</strong> (0x30) : mis à jour par le kernel uniquement — preuve fiable</p>
+  <p><strong>Détection timestomping</strong> : <code>$SI.Created &lt; $FN.Created</code> → impossible → manipulation</p>
+  <p><strong>MACB</strong> : Modified · Accessed · Changed · Born (création = Birth time)</p>
 </div>
 
 <div class="quiz-wrap">
-  <div class="quiz-q">Décoder la run list <span class="h h-gold">21</span> <span class="h h-cyan">1C</span> <span class="h h-blue">7A 0A</span> <span class="h h-red">00</span><small>Run List NTFS · Niveau : moyen</small></div>
+  <div class="quiz-q">$SI.Created = 2023-01-01, $FN.Created = 2024-06-15. Que conclure ? Quelle est la date réelle ?<small>Timestomping · Niveau : facile</small></div>
   <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
-  <div class="quiz-answer">Header <code>0x21</code> → nibble haut=2 (2 octets offset), nibble bas=1 (1 octet longueur)<br>Longueur : <code>0x1C</code> = 28 clusters<br>Offset LCN : <code>7A 0A</code> LE → <code>0x0A7A</code> = 2682 (absolu car 1er run)<br>→ <strong>28 clusters consécutifs débutant au LCN 2682</strong> · Fin : <code>0x00</code></div>
+  <div class="quiz-answer"><strong>Timestomping confirmé</strong> : un fichier ne peut pas avoir été créé (<code>$SI</code>) avant d'exister dans <code>$FILE_NAME</code>. La date réelle est <strong>2024-06-15</strong> (source <code>$FN</code>, protégée par le kernel). Confirmer avec <code>$UsnJrnl</code>.</div>
 </div>
-<div class="quiz-wrap">
-  <div class="quiz-q">Fichier NTFS : $SI.Created = 2023-11-01, $FN.Created = 2024-03-15. Que conclure et quelle est la preuve fiable ?<small>Timestomping · Niveau : facile</small></div>
-  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
-  <div class="quiz-answer"><strong>Timestomping confirmé</strong> : un fichier ne peut pas être créé avant d'exister dans $FILE_NAME. La référence fiable est <strong>$FN.Created = 2024-03-15</strong> (protégé par le kernel Windows). $SI a été modifié via <code>SetFileTime()</code> ou <code>timestomp.exe</code>. Confirmer avec $UsnJrnl.</div>
-</div>
+</div><!-- /tab-ts -->
 
-<div class="footer">
-    <span>CAS-IN · 2025–2026</span>
-    <span>NTFS — Master File Table & Run List</span>
-    <span>Manuel</span>
+<!-- ══════════════════════════════════════════════
+     TAB 5 — OUTILS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tools">
+
+<div class="sec-title">Outils d'analyse NTFS</div>
+
+<div class="tool-grid">
+  <div class="tool-card" style="border-left:3px solid var(--cyan)">
+    <div class="tool-name">MFTECmd.exe</div>
+    <div class="tool-by">Eric Zimmerman (EZTools)</div>
+    <div class="tool-desc">Parser $MFT complet — exporte CSV avec timestamps $SI et $FN, détection timestomping automatique, support $MFTMirr.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI</span></div>
   </div>
-
+  <div class="tool-card" style="border-left:3px solid var(--blue)">
+    <div class="tool-name">X-Ways Forensics</div>
+    <div class="tool-by">X-Ways AG</div>
+    <div class="tool-desc">Analyse NTFS complète : $MFT, Run List, ADS, timestamps $SI/$FN côte à côte, détection corruption. Référence forensique.</div>
+    <div><span class="tool-tag tt-com">Commercial</span></div>
+  </div>
+  <div class="tool-card" style="border-left:3px solid var(--green)">
+    <div class="tool-name">Autopsy / TSK</div>
+    <div class="tool-by">Brian Carrier / Basis Tech</div>
+    <div class="tool-desc"><code>istat</code> (info inode/entrée MFT), <code>icat</code> (extraire contenu), <code>fls</code> (lister fichiers + supprimés).</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI + GUI</span></div>
+  </div>
+  <div class="tool-card" style="border-left:3px solid var(--gold)">
+    <div class="tool-name">MFT Explorer</div>
+    <div class="tool-by">Eric Zimmerman (EZTools)</div>
+    <div class="tool-desc">GUI pour naviguer dans la $MFT hors ligne. Visualise les attributs, les timestamps, les ADS, les hard links.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span></div>
+  </div>
+  <div class="tool-card" style="border-left:3px solid var(--orange)">
+    <div class="tool-name">streams.exe</div>
+    <div class="tool-by">Sysinternals (Microsoft)</div>
+    <div class="tool-desc">Lister et extraire les ADS. Simple et fiable pour auditer les Alternate Data Streams sur un volume Windows en ligne.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI</span></div>
+  </div>
+  <div class="tool-card" style="border-left:3px solid var(--purple)">
+    <div class="tool-name">$UsnJrnl Parser</div>
+    <div class="tool-by">MFTECmd / Velociraptor</div>
+    <div class="tool-desc">Extraire et parser le journal USN ($J). Révèle l'historique complet des opérations : création, suppression, renommage avec timestamps précis.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI</span></div>
+  </div>
 </div>
+
+<div class="sec-title">Commandes essentielles</div>
+<div class="cli">
+<span class="c"># MFTECmd — Parser complet de la $MFT</span><br>
+<span class="v">MFTECmd.exe</span> <span class="a">-f C:\$MFT --csv C:\output --csvf mft_results.csv</span><br><br>
+<span class="c"># MFTECmd — Parser le $UsnJrnl (journal USN)</span><br>
+<span class="v">MFTECmd.exe</span> <span class="a">-f C:\$Extend\$UsnJrnl:$J --csv C:\output</span><br><br>
+<span class="c"># Sleuth Kit — Infos sur une entrée MFT</span><br>
+<span class="v">istat</span> <span class="a">-f ntfs image.dd 42</span> <span class="c"># entrée MFT #42</span><br><br>
+<span class="c"># Sleuth Kit — Extraire contenu d'un fichier supprimé</span><br>
+<span class="v">icat</span> <span class="a">-f ntfs image.dd 42 > recovered_file.bin</span><br><br>
+<span class="c"># Sleuth Kit — Lister tous les fichiers (+ supprimés)</span><br>
+<span class="v">fls</span> <span class="a">-r -p -f ntfs image.dd</span><br><br>
+<span class="c"># Windows — Détecter les ADS</span><br>
+<span class="v">dir</span> <span class="a">/r C:\Users\victim\Documents\</span> <span class="c"># montre les :flux</span><br>
+<span class="v">streams.exe</span> <span class="a">-s C:\suspect\</span><br><br>
+<span class="c"># Windows — Lire un ADS caché</span><br>
+<span class="v">more</span> <span class="a">&lt; "fichier.txt:caché"</span>
+</div>
+
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — NTFS complet</div>
+  <p><strong>Signature MFT</strong> : <code>46 49 4C 45</code> ("FILE") · entrée = 1 024 octets · entrée #0 = $MFT elle-même</p>
+  <p><strong>Run List</strong> : header byte = nibble haut (octets offset) + nibble bas (octets longueur) · <code>0x00</code> = fin · offsets signés relatifs au run précédent</p>
+  <p><strong>Timestomping</strong> : $SI modifiable → $SI.Created peut être antérieur à $FN.Created · si $SI &lt; $FN → manipulation · $FN protégé kernel</p>
+  <p><strong>ADS</strong> : <code>fichier.txt:flux</code> · invisible dans Explorer · taille visible ≠ réelle · détecter : <code>dir /r</code> ou streams.exe</p>
+  <p><strong>$UsnJrnl</strong> : journal long terme · prouve existence d'un fichier supprimé · <code>MFTECmd.exe</code></p>
+  <p><strong>$Bitmap</strong> : 1 bit/cluster · byte = cluster÷8 · bit = cluster mod 8 · ex: cluster 42 → byte 5, bit 2</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Décoder la Run List : <span class="h h-gold">21</span> <span class="h h-green">1C</span> <span class="h h-blue">7A 0A</span> <span class="h h-gold">11</span> <span class="h h-green">08</span> <span class="h h-blue">FE 61</span> <span class="h h-red">00</span><small>Run List NTFS · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>Run 1</strong> : Header <code>0x21</code> → 2 octets offset, 1 octet longueur<br>
+    Longueur : <code>0x1C</code> = 28 clusters · Offset LCN : <code>7A 0A</code> LE = <code>0x0A7A</code> = <strong>2682</strong> (absolu, 1er run)<br>
+    → <strong>28 clusters débutant au LCN 2682</strong><br><br>
+    <strong>Run 2</strong> : Header <code>0x11</code> → 1 octet offset, 1 octet longueur<br>
+    Longueur : <code>0x08</code> = 8 clusters · Offset : <code>0xFE</code> = signé négatif = −2 (relatif au run précédent)<br>
+    → LCN absolu = 2682 − 2 = <strong>2680</strong> · <strong>8 clusters débutant au LCN 2680</strong><br><br>
+    Fin : <code>0x00</code>
+  </div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Quel cluster 42 correspond à quel byte et quel bit dans le $Bitmap ? Quelle valeur d'octet si seul le cluster 42 est occupé ?<small>$Bitmap NTFS · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Byte = 42 ÷ 8 = <strong>5</strong> · Bit = 42 mod 8 = <strong>2</strong> (bit de poids 2²)<br>Si seul le cluster 42 est occupé : bit 2 = 1 → octet = <code>0b00000100</code> = <strong>0x04</strong><br>Pour vérifier : dans le fichier $Bitmap, lire l'octet à l'offset 5 et isoler le bit 2.</div>
+</div>
+</div><!-- /tab-tools -->
+
+<div style="max-width:980px;margin:0 auto;padding:0 2rem 2rem">
+  <div class="footer">
+    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+    <span>NTFS Documentation · SANS FOR500/508 · Sleuth Kit · EZTools</span>
+  </div>
+</div>
+
+<script>
+// ── Scroll + Back-top ──
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+})();
+
+// ── Quiz reveal ──
+document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+    ans.classList.toggle('visible');
+    btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+  });
+});
+
+// ── Tab switching ──
+function showTab(id, btn){
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('#ntfs-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  var el=document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+  window.scrollTo({top:Math.max(0,document.getElementById('ntfs-tabs').offsetTop-60),behavior:'smooth'});
+}
+
+// ── Architecture details ──
+var archDetails={
+  boot:{icon:'🟡',title:'$Boot — VBR (Volume Boot Record)',body:`Le secteur 0 de la partition NTFS. Contient les paramètres BPB (Bytes Per Sector, Sectors Per Cluster…) et l'offset de la $MFT dans le champ <code>MFTCluster</code> (offset 0x30).<br><br>
+    <strong>Signatures</strong> : <code>EB 52 90</code> (JMP) + "NTFS    " à l'offset 3 · <code>55 AA</code> à l'offset 510.<br>
+    <strong>Forensique</strong> : l'offset de la $MFT = <code>MFTCluster × BytesPerSector × SectorsPerCluster</code>. C'est le premier élément à lire pour localiser la table.`},
+  mft:{icon:'🗂',title:'$MFT — Master File Table',body:`Le cœur de NTFS. Chaque fichier ou dossier = <strong>1 entrée de 1 024 octets</strong> (tuple). La $MFT elle-même est l'entrée #0.<br><br>
+    <strong>Signature entrée</strong> : <code>46 49 4C 45</code> = "FILE" · Entête 42 octets + séquence d'attributs typés.<br>
+    <strong>Résilience</strong> : Windows réserve ~12.5% du volume pour la croissance de la $MFT (la "MFT Zone"). Si elle se fragmente, analyser la Run List du $MFT lui-même.<br>
+    <strong>Forensique</strong> : même après suppression d'un fichier, l'entrée MFT reste (marquée non-allouée) jusqu'à réutilisation — source de données récupérables.`},
+  mftm:{icon:'🪞',title:'$MFTMirr — Miroir partiel de la $MFT',body:`Copie des <strong>4 premières entrées MFT</strong> ($MFT, $MFTMirr, $LogFile, $Volume) stockée au milieu du volume.<br><br>
+    <strong>Rôle</strong> : récupération si la $MFT principale est corrompue. Windows vérifie la cohérence au démarrage (chkdsk).<br>
+    <strong>Forensique</strong> : divergence $MFT vs $MFTMirr = corruption ou manipulation. Analyser les deux pour détecter des altérations.`},
+  data:{icon:'📦',title:'Data Area — Zone de données',body:`Contient <strong>tous les fichiers utilisateur</strong> ET tous les métafichiers système ($Bitmap, $LogFile, $UsnJrnl, répertoires…). Il n'y a pas de zone technique séparée comme en FAT.<br><br>
+    <strong>Clusters libres</strong> : 0 dans le $Bitmap mais peuvent contenir des données résiduelles → carving possible.<br>
+    <strong>File Slack</strong> : espace entre la fin du fichier et la fin du dernier cluster → données résiduelles exploitables.`},
+  bitmap:{icon:'🔲',title:'$Bitmap — Table d\'allocation clusters',body:`Fichier système ($MFT entrée #6) contenant <strong>1 bit par cluster</strong> : 0 = libre, 1 = occupé.<br><br>
+    <strong>Calcul</strong> : cluster N → byte N÷8, bit N mod 8 (bit 0 = poids faible).<br>
+    <strong>Forensique</strong> : cluster "libre" dans le $Bitmap mais contenant des données = espace récupérable. Scanner avec Autopsy ou X-Ways → "unallocated space". Ne pas confondre avec l'attribut $BITMAP (0xB0) de la MFT elle-même.`},
+  log:{icon:'📋',title:'$LogFile — Journal des transactions',body:`Journal de <strong>write-ahead logging</strong> : avant toute modification NTFS, l'opération est d'abord journalisée ici. Taille fixe (~4 Mo par défaut).<br><br>
+    <strong>Rôle</strong> : récupération automatique après crash (chkdsk replay).<br>
+    <strong>Forensique</strong> : contient l'historique récent des opérations sur les métadonnées. Outil : <code>LogFileParser</code>. Différent de $UsnJrnl qui est plus long terme.`},
+  usn:{icon:'📜',title:'$UsnJrnl — Journal USN long terme',body:`Journal <strong>Update Sequence Number</strong> — enregistre toutes les modifications de fichiers avec horodatage précis. Taille configurable (~32 Mo). Rétention : heures à semaines.<br><br>
+    <strong>Ce qu'il enregistre</strong> : création, suppression, renommage, modification, changement de droits — avec timestamp et nom du fichier.<br>
+    <strong>Forensique</strong> : même si le fichier est irrécupérable, le journal prouve qu'il <em>a existé</em> et quand il a disparu. Outil : <code>MFTECmd.exe -f $UsnJrnl:$J --csv</code>.`},
+  btree:{icon:'🌳',title:'$INDEX — Répertoires B-Tree',body:`Chaque répertoire NTFS est un <strong>arbre B+ d'entrées $INDEX</strong>. Les nœuds sont stockés dans les attributs <code>$INDEX_ROOT</code> (petit répertoire, résident) et <code>$INDEX_ALLOCATION</code> (grand répertoire, non-résident).<br><br>
+    <strong>Avantage</strong> : hauteur &lt; 3–4 même pour des millions de fichiers → accès O(log n).<br>
+    <strong>Forensique</strong> : après suppression d'un fichier, son entrée peut rester dans les nœuds du B-Tree jusqu'à réorganisation de l'arbre — source de données récupérables sans toucher aux clusters.`}
+};
+
+function showArch(key){
+  var d=archDetails[key]; if(!d) return;
+  document.querySelectorAll('.arch-zone').forEach(function(z){z.classList.remove('sel');});
+  var el=document.getElementById('az-'+key);
+  if(el) el.classList.add('sel');
+  var p=document.getElementById('arch-detail');
+  p.className='arch-detail live';
+  p.innerHTML='<div class="dp-title"><span>'+d.icon+'</span><span>'+d.title+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── Metafiles details ──
+var metaDetails={
+  mft0:{icon:'🗂',name:'$MFT — Entrée #0',body:`La $MFT se référence elle-même. C'est l'auto-référence fondamentale de NTFS.<br><br><strong>Contient</strong> : la Run List de la $MFT (où ses clusters sont alloués), sa taille. Si fragmentée → analyser sa Run List depuis le $Boot (MFTCluster).<br><strong>Outil</strong> : <code>MFTECmd.exe -f $MFT --csv</code>`},
+  mftm:{icon:'🪞',name:'$MFTMirr — Entrée #1',body:`Copie des 4 premières entrées MFT stockée au milieu du volume. Utilisée par chkdsk pour la récupération.<br><br><strong>Forensique</strong> : comparer $MFT vs $MFTMirr → divergence = corruption ou manipulation ciblée des métadonnées système.`},
+  log:{icon:'📋',name:'$LogFile — Entrée #2',body:`Journal transactionnel (write-ahead log). Taille fixe, circulaire. Rejoué automatiquement après crash.<br><br><strong>Forensique</strong> : historique récent des opérations sur les métadonnées NTFS. Parser : <code>LogFileParser</code> (GitHub). Complémentaire à $UsnJrnl.`},
+  vol:{icon:'💿',name:'$Volume — Entrée #3',body:`Stocke le nom du volume (label), la version NTFS (ex: 3.1 pour Windows 10), les flags du volume (dirty bit = pas démonté proprement).<br><br><strong>Forensique</strong> : <strong>dirty bit</strong> activé = volume non démonté proprement → crash, arrachage USB, démarrage forcé. Indice contextuel.`},
+  root:{icon:'📂',name:'. (Répertoire racine) — Entrée #5',body:`La racine du B-Tree de répertoires. Entrée #5 (les entrées 0–3 sont des métafichiers, 4 est réservée).<br><br><strong>Attributs</strong> : $INDEX_ROOT + $INDEX_ALLOCATION (B-Tree des entrées du dossier racine).<br><strong>Forensique</strong> : les entrées de fichiers supprimés peuvent rester dans les nœuds du B-Tree.`},
+  bitmap:{icon:'🔲',name:'$Bitmap — Entrée #6',body:`1 bit par cluster du volume. Bit 0 = libre, bit 1 = occupé. Fichier de taille = TotalClusters ÷ 8 octets.<br><br><strong>Forensique</strong> : scanner les clusters libres pour du file carving. Cluster "libre" peut contenir des résidus. Formule : cluster N → byte N÷8, bit N%8.`},
+  boot:{icon:'🟡',name:'$Boot — Entrée #7',body:`Alias du secteur de boot (VBR). Contient les paramètres BPB et l'offset de la $MFT.<br><br><strong>Double accès</strong> : accessible via l'entrée MFT #7 ET directement au cluster 0. Cohérence à vérifier entre les deux.`},
+  usn:{icon:'📜',name:'$UsnJrnl — $Extend\\$UsnJrnl',body:`Journal USN long terme. Enregistre toutes les modifications avec timestamp précis, nom, chemin, opération (CREATE/DELETE/RENAME…).<br><br><strong>Valeur forensique majeure</strong> : prouve qu'un fichier a existé même si irrécupérable. Outil : <code>MFTECmd.exe -f "\\$Extend\\$UsnJrnl:$J" --csv output</code>`}
+};
+
+function showMeta(key){
+  var d=metaDetails[key]; if(!d) return;
+  document.querySelectorAll('.meta-card').forEach(function(c){c.classList.remove('sel');});
+  var p=document.getElementById('meta-detail');
+  p.className='meta-detail live';
+  p.innerHTML='<div class="dp-title"><span>'+d.icon+'</span><span>'+d.name+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── Tuple details ──
+var tupleDetails={
+  header:{icon:'💛',title:'En-tête MFT — 42 octets',body:`<strong>Signature</strong> : <code>46 49 4C 45</code> = "FILE" (octets 0–3). Si absent → entrée non allouée ou corrompue.<br><br>
+    <strong>Champs clés</strong> :<br>
+    · Offset 0x04 : Update Sequence Array (fixup)<br>
+    · Offset 0x08 : $LogFile sequence number (LSN)<br>
+    · Offset 0x10 : Flags (0x01=utilisé, 0x02=répertoire)<br>
+    · Offset 0x14 : Taille réelle de l'entrée<br>
+    · Offset 0x18 : Taille allouée (toujours 1024)<br>
+    · Offset 0x20 : Référence de l'entrée base (hard links)<br>
+    · Offset 0x28 : Offset du premier attribut<br><br>
+    <strong>Forensique</strong> : bit 0 du champ Flags = entrée allouée. Si = 0, l'entrée est supprimée mais potentiellement encore lisible.`},
+  si:{icon:'🔵',title:'$STANDARD_INFORMATION (0x10) — Timestamps modifiables',body:`Présent dans <strong>toutes</strong> les entrées MFT. Contient les 4 timestamps MACB avec une précision de <strong>100 nanosecondes</strong>.<br><br>
+    <strong>Timestamps</strong> : Créé · Modifié · Modifié MFT (ctime) · Accédé (parfois désactivé)<br>
+    <strong>Flags</strong> : lecture seule, caché, système, archive, chiffré (EFS), compressé<br>
+    <strong>Owner ID</strong> : lié à la $Quota pour le suivi par utilisateur<br><br>
+    <strong>⚠ CIBLE DU TIMESTOMPING</strong> : modifiable par toute application via <code>SetFileTime()</code>. Toujours croiser avec <code>$FILE_NAME</code> pour validation.`},
+  fn:{icon:'🟢',title:'$FILE_NAME (0x30) — Timestamps protégés',body:`Contient le nom du fichier (long + 8.3) ET des timestamps MACB indépendants.<br><br>
+    <strong>Protégé par le kernel</strong> : mis à jour uniquement lors d'opérations NTFS de bas niveau (création, déplacement, renommage). Les applications ne peuvent pas le modifier directement.<br><br>
+    <strong>Hard links</strong> : un fichier avec plusieurs hard links a plusieurs attributs $FILE_NAME (un par répertoire parent).<br><br>
+    <strong>Forensique</strong> : si $FN.Created &lt; $SI.Created → timestomping confirmé sur $SI. La vérité est dans $FN.`},
+  data:{icon:'🔴',title:'$DATA (0x80) — Contenu du fichier',body:`Attribut principal contenant les données du fichier.<br><br>
+    <strong>Résident</strong> (données &lt; ~700o) : données directement dans l'entrée MFT → récupérables même si clusters "libres".<br>
+    <strong>Non-résident</strong> : Run List encodée dans l'attribut → localise les clusters dans la Data Area.<br><br>
+    <strong>ADS (Alternate Data Streams)</strong> : plusieurs attributs $DATA nommés dans la même entrée.<br>
+    Syntaxe : <code>fichier.txt:stream_caché</code><br>
+    Invisible dans l'Explorateur Windows. Détecter : <code>dir /r</code>, <code>streams.exe</code>, X-Ways.`},
+  extra:{icon:'⚫',title:'Autres attributs',body:`<strong>$ATTRIBUTE_LIST (0x20)</strong> : pointe vers d'autres entrées MFT quand les attributs débordent du 1 Ko. Présent pour les fichiers très fragmentés ou avec de nombreux hard links.<br><br>
+    <strong>$OBJECT_ID (0x40)</strong> : GUID unique persistant même après déplacement. Lié aux fichiers .lnk (raccourcis).<br><br>
+    <strong>$INDEX_ROOT / $INDEX_ALLOCATION (0x90/0xA0)</strong> : structure B-Tree pour les répertoires. Les entrées supprimées peuvent rester dans les nœuds jusqu'à réorganisation.`}
+};
+
+function showTuple(key){
+  var d=tupleDetails[key]; if(!d) return;
+  document.querySelectorAll('.tuple-seg').forEach(function(s){s.classList.remove('sel');});
+  var mapCls={header:'ts-header',si:'ts-std',fn:'ts-fn',data:'ts-data',extra:'ts-extra'};
+  var seg=document.querySelector('.'+mapCls[key]);
+  if(seg) seg.classList.add('sel');
+  var p=document.getElementById('tuple-detail');
+  p.className='tuple-detail live';
+  p.innerHTML='<div class="dp-title"><span>'+d.icon+'</span><span>'+d.title+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── Run List decoder ──
+function setRL(val){document.getElementById('rl-input').value=val;decodeRL();}
+function clearRL(){document.getElementById('rl-input').value='';document.getElementById('rl-result').innerHTML='';}
+
+function decodeRL(){
+  var input=document.getElementById('rl-input').value.trim();
+  var result=document.getElementById('rl-result');
+  if(!input){result.innerHTML='';return;}
+  var bytes=input.split(/[\s,]+/).filter(Boolean).map(function(h){return parseInt(h,16);});
+  if(bytes.some(isNaN)){result.innerHTML='<div class="rl-error">⚠ Octets hexadécimaux invalides. Entrez des paires hex séparées par des espaces (ex : 21 1C 7A 0A 00)</div>';return;}
+
+  var html='<div style="margin-bottom:.6rem"><div class="rl-vis">';
+  bytes.forEach(function(b){html+='<div class="rl-block" style="background:rgba(88,166,255,.1);border-color:rgba(88,166,255,.35);color:var(--blue)">'+b.toString(16).toUpperCase().padStart(2,'0')+'</div>';});
+  html+='</div></div>';
+
+  var runs=[];var pos=0;var prevLCN=0;var runNum=0;var ok=true;
+  while(pos<bytes.length){
+    var hdr=bytes[pos++];
+    if(hdr===0){html+='<div class="rl-run"><div class="rl-run-num" style="background:rgba(255,64,96,.12);border-color:rgba(255,64,96,.35);color:var(--red)">✓</div><div class="rl-run-body"><div class="rl-run-hex" style="color:var(--red)">00</div><div class="rl-run-detail"><strong>Fin de la Run List</strong></div></div></div>';break;}
+    var nLen=hdr&0x0F;var nOff=(hdr>>4)&0x0F;
+    if(nLen===0){html+='<div class="rl-error">⚠ Longueur 0 invalide au header <code>'+hdr.toString(16).toUpperCase()+'</code></div>';ok=false;break;}
+    if(pos+nLen+nOff>bytes.length){html+='<div class="rl-error">⚠ Run List tronquée — manque d\'octets pour le run '+(runNum+1)+'</div>';ok=false;break;}
+
+    // Length
+    var len=0;for(var i=0;i<nLen;i++) len|=(bytes[pos+i]<<(8*i));pos+=nLen;
+    // Offset
+    var off=0;
+    if(nOff>0){
+      for(var j=0;j<nOff;j++) off|=(bytes[pos+j]<<(8*j));pos+=nOff;
+      // Sign extension
+      var signBit=1<<(nOff*8-1);if(off&signBit) off=off-(signBit<<1);
+      prevLCN+=off;
+    }
+    runNum++;
+
+    // Visual bytes
+    var hexParts='<span class="rl-block rl-header-byte">'+hdr.toString(16).toUpperCase().padStart(2,'0')+'</span>';
+    var rawLen=[];for(var r=0;r<nLen;r++) rawLen.push(bytes[pos-nLen-nOff+r].toString(16).toUpperCase().padStart(2,'0'));
+    hexParts+='<span class="rl-block rl-length-byte">'+rawLen.join(' ')+'</span>';
+    if(nOff>0){var rawOff=[];for(var s=0;s<nOff;s++) rawOff.push(bytes[pos-nOff+s].toString(16).toUpperCase().padStart(2,'0'));hexParts+='<span class="rl-block rl-offset-byte">'+rawOff.join(' ')+'</span>';}
+
+    html+='<div class="rl-run"><div class="rl-run-num">'+runNum+'</div><div class="rl-run-body">';
+    html+='<div class="rl-run-hex"><div class="rl-vis" style="margin:0 0 .3rem">'+hexParts+'</div></div>';
+    html+='<div class="rl-run-detail">';
+    html+='<span style="color:var(--gold)">Header</span> <code>'+hdr.toString(16).toUpperCase().padStart(2,'0')+'</code> → '+nLen+' octet(s) longueur, '+nOff+' octet(s) offset<br>';
+    html+='<strong>Longueur</strong> : <span style="color:var(--green)">'+len+' clusters</span>';
+    if(nOff>0){
+      html+=' &nbsp;·&nbsp; <strong>Offset relatif</strong> : <span style="color:var(--blue)">'+(off>=0?'+':'')+off+'</span> &nbsp;·&nbsp; <strong>LCN absolu</strong> : <span style="color:var(--cyan)">'+prevLCN+'</span>';
+    }
+    html+='</div></div></div>';
+    runs.push({n:runNum,len:len,lcn:prevLCN,off:off});
+  }
+
+  if(runs.length>0 && ok){
+    html+='<div style="margin-top:.75rem;padding:.65rem .85rem;background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.2);border-radius:8px;font-size:.75rem;color:var(--muted)">';
+    html+='<strong style="color:var(--cyan)">Résumé :</strong> '+runs.length+' run(s) · ';
+    var total=runs.reduce(function(a,r){return a+r.len;},0);
+    html+=total+' clusters au total<br>';
+    runs.forEach(function(r){
+      html+='· Run '+r.n+' : <strong>'+r.len+' clusters</strong> @ LCN <strong>'+r.lcn+'</strong>';
+      if(r.n>1) html+=' (offset relatif '+(r.off>=0?'+':'')+r.off+')';
+      html+='<br>';
+    });
+    html+='</div>';
+  }
+  result.innerHTML=html;
+}
+
+// ── $Bitmap visualizer ──
+var bitmapState=[];
+var BITMAP_SIZE=128;
+
+function initBitmap(random){
+  bitmapState=[];
+  for(var i=0;i<BITMAP_SIZE;i++){
+    bitmapState.push(random?(Math.random()>0.45?1:0):(i<20?1:0));
+  }
+  renderBitmap();
+}
+
+function renderBitmap(){
+  var grid=document.getElementById('bitmap-grid');
+  if(!grid) return;
+  var html='';
+  for(var i=0;i<BITMAP_SIZE;i++){
+    html+='<div class="bitmap-cell '+(bitmapState[i]?'bc-used':'bc-free')+'" onclick="toggleCluster('+i+')" title="Cluster '+i+'"></div>';
+  }
+  grid.innerHTML=html;
+}
+
+function toggleCluster(n){
+  bitmapState[n]^=1;
+  var cells=document.querySelectorAll('.bitmap-cell');
+  cells[n].className='bitmap-cell '+(bitmapState[n]?'bc-used':'bc-free');
+  var info=document.getElementById('bitmap-info');
+  info.textContent='Cluster '+n+' → Byte '+(Math.floor(n/8))+', Bit '+(n%8)+' → '+
+    (bitmapState[n]?'OCCUPÉ (bit=1)':'LIBRE (bit=0)')+
+    ' | Valeur octet : 0x'+
+    (bitmapState.slice(Math.floor(n/8)*8,(Math.floor(n/8)+1)*8).reduce(function(a,b,i){return a|(b<<i);},0)).toString(16).toUpperCase().padStart(2,'0');
+}
+
+function resetBitmap(){initBitmap(false);}
+function randomBitmap(){initBitmap(true);}
+
+// ── Timestamp converter ──
+function convertTS(src){
+  var input=document.getElementById('tc-ntfs').value.trim();
+  var out=document.getElementById('tc-out');
+  if(!input){out.textContent='';return;}
+  try{
+    var bytes=input.split(/[\s,]+/).filter(Boolean).map(function(h){return parseInt(h,16);});
+    if(bytes.length===8 && !bytes.some(isNaN)){
+      // NTFS timestamp to JS Date
+      var lo=bytes[0]|(bytes[1]<<8)|(bytes[2]<<16)|(bytes[3]<<24);
+      var hi=bytes[4]|(bytes[5]<<8)|(bytes[6]<<16)|(bytes[7]<<24);
+      if(lo<0) lo+=4294967296;if(hi<0) hi+=4294967296;
+      var ntfsMs=(hi*4294967296+lo)/10000;
+      var unixMs=ntfsMs-11644473600000;
+      var d=new Date(unixMs);
+      if(!isNaN(d.getTime())){
+        out.textContent=d.toISOString().replace('T',' ').replace('Z',' UTC');
+        return;
+      }
+    }
+    out.textContent='Format invalide — entrez 8 octets hex LE (ex : 80 46 F0 E9 8E 50 D9 01)';
+  }catch(e){out.textContent='Erreur de conversion';}
+}
+
+// ── Init ──
+initBitmap(false);
+decodeRL();
+</script>
 </body>
 </html>
