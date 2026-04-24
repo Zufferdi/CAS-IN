@@ -20,8 +20,121 @@
 })();
 </script>
 
+
+<style>
+/* ── Scroll progress ── */
+#scroll-progress{position:fixed;top:0;left:0;z-index:300;height:2px;width:0;background:linear-gradient(90deg,var(--purple),var(--blue));pointer-events:none;transition:width .1s linear}
+
+/* ── Circuit Tor ── */
+.onion-path{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:.75rem 0;margin-bottom:1rem;scrollbar-width:none}
+.onion-path::-webkit-scrollbar{display:none}
+.onion-node{
+  display:flex;flex-direction:column;align-items:center;gap:.3rem;
+  padding:.75rem .6rem;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;min-width:110px;flex-shrink:0;
+  transition:transform .2s,box-shadow .2s,border-color .2s;cursor:default;
+  position:relative;
+}
+.onion-node:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.onion-node.client  {border-color:rgba(0,229,204,.4);background:rgba(0,229,204,.05)}
+.onion-node.client:hover{box-shadow:0 8px 24px rgba(0,229,204,.15)}
+.onion-node.guard   {border-color:rgba(48,232,138,.4);background:rgba(48,232,138,.05)}
+.onion-node.guard:hover{box-shadow:0 8px 24px rgba(48,232,138,.15)}
+.onion-node.middle  {border-color:rgba(240,192,64,.4);background:rgba(240,192,64,.05)}
+.onion-node.middle:hover{box-shadow:0 8px 24px rgba(240,192,64,.12)}
+.onion-node.exit    {border-color:rgba(255,64,96,.4);background:rgba(255,64,96,.05)}
+.onion-node.exit:hover{box-shadow:0 8px 24px rgba(255,64,96,.15)}
+.onion-node.server  {border-color:rgba(139,148,158,.3);background:rgba(139,148,158,.04)}
+
+.on-label{font-family:var(--sans);font-size:.72rem;font-weight:700;text-align:center}
+.on-enc{font-family:var(--mono);font-size:.6rem;color:var(--muted);text-align:center;line-height:1.4;margin-top:.15rem;max-width:100px}
+.on-badge{
+  position:absolute;top:-8px;left:50%;transform:translateX(-50%);
+  font-family:var(--mono);font-size:.52rem;font-weight:700;
+  padding:.1rem .4rem;border-radius:20px;border:1px solid;white-space:nowrap;
+}
+.on-badge.sees-ip{color:var(--red);border-color:rgba(255,64,96,.4);background:rgba(255,64,96,.1)}
+.on-badge.blind  {color:var(--green);border-color:rgba(48,232,138,.3);background:rgba(48,232,138,.07)}
+.on-badge.exit-badge{color:var(--gold);border-color:rgba(240,192,64,.3);background:rgba(240,192,64,.07)}
+
+.on-arrow{
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);color:var(--dim);font-size:.9rem;
+  padding:0 .15rem;flex-shrink:0;align-self:center;padding-top:.5rem;
+  flex-direction:column;gap:.1rem;
+}
+.on-arrow-enc{font-size:.52rem;color:var(--purple);font-family:var(--mono);white-space:nowrap}
+
+/* ── Chiffrement couches visualisation ── */
+.onion-layers{display:flex;justify-content:center;margin:.75rem 0;gap:0}
+.onion-layer{
+  padding:.5rem 1.2rem;border-radius:50px;text-align:center;
+  font-size:.62rem;font-family:var(--mono);font-weight:600;
+  border:1px solid;transition:filter .15s;cursor:default;
+}
+.onion-layer:nth-child(1){border-color:rgba(0,229,204,.4);color:var(--cyan);background:rgba(0,229,204,.08);padding:.5rem 2rem}
+.onion-layer:nth-child(2){border-color:rgba(240,192,64,.4);color:var(--gold);background:rgba(240,192,64,.08);padding:.5rem 1.6rem;margin:4px 0;border-radius:40px}
+.onion-layer:nth-child(3){border-color:rgba(48,232,138,.4);color:var(--green);background:rgba(48,232,138,.08);padding:.5rem 1.2rem;margin:8px 0;border-radius:30px}
+.onion-layer:hover{filter:brightness(1.3)}
+
+/* ── Collapsibles ── */
+.collapsible{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:.75rem}
+.collapsible-header{display:flex;align-items:center;gap:.6rem;padding:.8rem 1.1rem;cursor:pointer;background:var(--surface);transition:background .15s;user-select:none;font-size:.82rem;font-weight:600;color:var(--text)}
+.collapsible-header:hover{background:var(--surface2)}
+.ch-icon{font-size:1rem;flex-shrink:0}
+.ch-label{flex:1}
+.ch-arrow{font-size:.7rem;color:var(--dim);transition:transform .25s;font-family:var(--mono)}
+.collapsible.open .ch-arrow{transform:rotate(90deg)}
+.collapsible-body{max-height:0;overflow:hidden;transition:max-height .35s cubic-bezier(.4,0,.2,1);background:var(--surface2);border-top:0 solid var(--border)}
+.collapsible.open .collapsible-body{max-height:3000px;border-top-width:1px}
+.collapsible-body-inner{padding:1rem 1.15rem}
+
+/* ── Exam tip ── */
+.exam-tip{background:linear-gradient(135deg,rgba(240,192,64,.08),rgba(240,192,64,.03));border:1px solid rgba(240,192,64,.35);border-left:4px solid var(--gold);border-radius:0 10px 10px 0;padding:1rem 1.2rem;margin:1rem 0;font-size:.79rem;line-height:1.75;color:var(--text)}
+.exam-tip::before{content:'🎓 EXAM TIP — Tor & Dark Web';display:block;font-family:var(--sans);font-size:.62rem;font-weight:700;letter-spacing:.1em;color:var(--gold);margin-bottom:.6rem}
+.exam-tip ul{padding-left:1.1rem;margin-top:.3rem}
+.exam-tip li{margin-bottom:.2rem}
+
+/* ── Quiz ── */
+.quiz-wrap{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.85rem 0;transition:box-shadow .2s}
+.quiz-wrap:hover{box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.quiz-q{padding:.9rem 1.1rem;background:var(--surface);font-size:.82rem;font-weight:600;color:var(--text);line-height:1.5}
+.quiz-q small{display:block;font-weight:400;color:var(--muted);font-size:.72rem;margin-top:.2rem}
+.quiz-actions{padding:.6rem 1.1rem;background:var(--surface2);border-top:1px solid var(--border);display:flex;gap:.5rem;align-items:center}
+.quiz-reveal-btn{font-family:var(--mono);font-size:.7rem;padding:.32rem .85rem;border:1px solid rgba(0,229,204,.35);background:rgba(0,229,204,.07);color:var(--cyan);border-radius:20px;cursor:pointer;transition:background .15s}
+.quiz-reveal-btn:hover{background:rgba(0,229,204,.18)}
+.quiz-answer{display:none;padding:.85rem 1.1rem;background:rgba(0,229,204,.04);font-size:.79rem;color:var(--text);line-height:1.65;border-top:1px solid rgba(0,229,204,.15)}
+.quiz-answer.visible{display:block}
+
+/* ── Key fact ── */
+.key-fact{background:linear-gradient(135deg,rgba(188,140,255,.08),rgba(79,142,247,.04));border:1px solid rgba(188,140,255,.2);border-radius:10px;padding:1rem 1.2rem;margin:.85rem 0;position:relative;overflow:hidden}
+.key-fact::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--purple),var(--blue))}
+.key-fact-label{font-family:var(--sans);font-size:.6rem;font-weight:700;letter-spacing:.12em;color:var(--purple);text-transform:uppercase;margin-bottom:.4rem}
+.key-fact p,.key-fact li{font-size:.8rem;color:var(--text);line-height:1.65}
+.key-fact ul{padding-left:1rem;margin-top:.3rem}
+
+/* ── Header amélioré ── */
+.header{flex-direction:column;align-items:flex-start;gap:.6rem;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
+.header h1{font-family:var(--sans);font-size:1.9rem;font-weight:800;letter-spacing:-.5px;color:var(--text)}
+
+/* ── Section titles ── */
+.sec-title{padding-left:.6rem;border-left:2px solid var(--purple)}
+
+/* ── Sec spacing ── */
+.sec{margin-bottom:2rem}
+
+/* ── Table styling ── */
+table{width:100%;border-collapse:collapse;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+th{background:var(--surface2);color:var(--muted);font-size:.63rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.6rem 1rem;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+td{padding:.55rem 1rem;border-bottom:1px solid rgba(48,54,61,.5);font-size:.78rem;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:rgba(22,27,34,.5)}
+tr:hover td{background:rgba(188,140,255,.04)!important}
+</style>
+
 </head>
 <body>
+<div id="scroll-progress"></div>
 <a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:0;z-index:999;padding:.5rem 1rem;background:var(--cyan);color:var(--bg);font-size:.8rem;border-radius:0 0 4px 0;text-decoration:none">Aller au contenu</a>
 <nav class="tn-nav" aria-label="Navigation fiche">
   <a href="index.html" class="tn-back">← Fiches</a>
@@ -43,45 +156,65 @@
 <main id="main-content">
 <div class="page">
 <div class="header">
-  <div class="badge" style="color:var(--purple)">🧅</div>
   <div>
-    <div><span class="tag tag-purple">Tor Browser</span><span class="tag tag-blue">Onion Services</span><span class="tag tag-red">Attribution</span><span class="tag tag-cyan">Droit suisse</span></div>
-    <div class="meta" style="margin-top:.4rem">Architecture Tor · Artefacts Tor Browser · Attribution · LSCPT · Techniques d'investigation</div>
+    <span style="font-size:2.6rem;font-weight:800;font-family:var(--sans);color:var(--purple)">🧅</span>
+    <span class="tag tag-purple" style="margin-left:.5rem">Tor Browser</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Onion Services</span>
+    <span class="tag tag-red" style="margin-left:.3rem">Attribution</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">Droit suisse</span>
   </div>
+  <h1>Tor &amp; Dark Web</h1>
+  <div class="meta">Architecture Tor · Artefacts Tor Browser · Attribution · LSCPT · Techniques d'investigation</div>
 </div>
 
 <div class="sec" id="architecture-tor-fonctionnement"><div class="sec-title">Architecture Tor — Fonctionnement</div>
 <div class="onion-path">
-  <div class="onion-node">
+  <div class="onion-node client">
     <div class="on-label" style="color:var(--cyan)">Client</div>
-    <div style="font-size:1.5rem">💻</div>
-    <div class="on-enc">Connaît la destination</div>
+    <div style="font-size:1.6rem;margin:.2rem 0">💻</div>
+    <div class="on-enc">Connaît la destination · Chiffre avec 3 clés</div>
   </div>
-  <div class="on-arrow">→</div>
-  <div class="onion-node">
+  <div class="on-arrow">
+    <span style="color:var(--purple)">→</span>
+    <span class="on-arrow-enc">🔒🔒🔒</span>
+  </div>
+  <div class="onion-node guard">
+    <div class="on-badge sees-ip">⚠ voit l'IP</div>
     <div class="on-label" style="color:var(--green)">Guard Node</div>
-    <div style="font-size:1.5rem">🔒</div>
-    <div class="on-enc">Voit l'IP client. Ne voit pas la destination.</div>
+    <div style="font-size:1.6rem;margin:.2rem 0">🛡</div>
+    <div class="on-enc">IP client visible · Destination inconnue</div>
   </div>
-  <div class="on-arrow">→</div>
-  <div class="onion-node">
+  <div class="on-arrow">
+    <span style="color:var(--purple)">→</span>
+    <span class="on-arrow-enc">🔒🔒</span>
+  </div>
+  <div class="onion-node middle">
+    <div class="on-badge blind">✓ aveugle</div>
     <div class="on-label" style="color:var(--gold)">Middle Node</div>
-    <div style="font-size:1.5rem">🔒</div>
-    <div class="on-enc">Ne voit ni source ni destination</div>
+    <div style="font-size:1.6rem;margin:.2rem 0">🔒</div>
+    <div class="on-enc">Ni source · Ni destination</div>
   </div>
-  <div class="on-arrow">→</div>
-  <div class="onion-node">
+  <div class="on-arrow">
+    <span style="color:var(--gold)">→</span>
+    <span class="on-arrow-enc">🔒</span>
+  </div>
+  <div class="onion-node exit">
+    <div class="on-badge exit-badge">⚠ voit dest.</div>
     <div class="on-label" style="color:var(--red)">Exit Node</div>
-    <div style="font-size:1.5rem">🔓</div>
-    <div class="on-enc">Voit la destination. Ne voit pas le client.</div>
+    <div style="font-size:1.6rem;margin:.2rem 0">🔓</div>
+    <div class="on-enc">Destination visible · IP client inconnue</div>
   </div>
-  <div class="on-arrow">→</div>
-  <div class="onion-node">
+  <div class="on-arrow">
+    <span style="color:var(--muted)">→</span>
+    <span class="on-arrow-enc">clair</span>
+  </div>
+  <div class="onion-node server">
     <div class="on-label" style="color:var(--muted)">Serveur</div>
-    <div style="font-size:1.5rem">🌐</div>
+    <div style="font-size:1.6rem;margin:.2rem 0">🌐</div>
     <div class="on-enc">Ne voit que l'IP du nœud de sortie</div>
   </div>
 </div>
+<p style="font-size:.7rem;color:var(--dim);text-align:center;margin-bottom:.75rem;font-family:var(--mono)">Circuit = 3 relais minimum · Renouvelé toutes les 10 minutes · Cliquer sur un nœud pour le détail</p>
 <div class="g2">
 <div class="card card-purple"><div class="ct">Chiffrement en couches (oignon)</div>
 <p>Le client chiffre le message avec 3 clés successives (Exit → Middle → Guard). Chaque relais ne décrypte qu'une couche et ne connaît que ses voisins immédiats dans la chaîne.</p>
@@ -93,9 +226,29 @@
 <li>JavaScript activé = fuites d'IP potentielles (exploits navigateur)</li>
 <li>Habitudes comportementales (timing, contenu) = fingerprinting</li>
 </ul></div>
-</div></div>
+</div>
 
-<div class="sec" id="artefacts-tor-browser-investigation-forensique"><div class="sec-title">Artefacts Tor Browser — Investigation forensique</div>
+<div class="key-fact">
+  <div class="key-fact-label">Chiffrement en couches — principe</div>
+  <div class="onion-layers">
+    <div class="onion-layer">🔵 Couche Guard — clé 1 (externe)</div>
+    <div class="onion-layer">🟡 Couche Middle — clé 2</div>
+    <div class="onion-layer">🔴 Couche Exit — clé 3 (interne)</div>
+  </div>
+  <p style="font-size:.75rem;color:var(--muted);text-align:center;margin-top:.3rem">Le client empile les 3 chiffrements · Chaque relais ne décrypte qu'une couche · Personne ne voit la chaîne complète</p>
+</div>
+</div>
+
+<div class="sec" id="artefacts-tor-browser-investigation-forensique">
+<div class="sec-title">Artefacts Tor Browser — Investigation forensique</div><div class="collapsible open">
+  <div class="collapsible-header" onclick="this.closest('.collapsible').classList.toggle('open')">
+    <span class="ch-icon">🔍</span>
+    <span class="ch-label">Investigation forensique</span>
+    <span class="ch-arrow">›</span>
+  </div>
+  <div class="collapsible-body">
+    <div class="collapsible-body-inner">
+
 <div class="g2">
 <div class="card card-blue"><div class="ct">Localisation Tor Browser</div>
 <p>Tor Browser est portable — pas d'installation standard. Peut être sur n'importe quel chemin, clé USB ou dossier.</p>
@@ -128,6 +281,9 @@
 <br><p><code style="color:var(--cyan)" class="copy-code">cached-microdescs</code> : liste des relais Tor connus. La présence de ce fichier confirme l'utilisation de Tor.</p></div>
 </div></div>
 
+    </div>
+  </div>
+</div>
 <div class="sec" id="services-onion-hidden-services"><div class="sec-title">Services .onion (Hidden Services)</div>
 <div class="g2">
 <div class="card card-purple"><div class="ct">Qu'est-ce qu'un service .onion ?</div>
@@ -150,7 +306,14 @@
 <li><strong>HUMINT / infiltration</strong> : achats sur les marketplaces, communication avec le suspect</li>
 <li><strong>OPSEC failure</strong> : erreur humaine (même email, même alias qu'en clearnet)</li>
 <li><strong>Exploit navigateur</strong> : faille Tor Browser → reveal IP réelle (utilisé par le FBI)</li>
-<li><strong>Métadonnées de fichiers</strong> : E<div class="prereq-block">
+<li><strong>Métadonnées de fichiers</strong> : EXIF GPS dans photo partagée sur forum onion</li>
+</ul>
+</div><!-- end card attribution -->
+</div><!-- end g2 attribution -->
+</div><!-- end collapsible body inner -->
+</div></div><!-- end collapsible body + collapsible -->
+
+<div class="prereq-block">
 <div class="prereq-row">
   <span class="prereq-label">Prérequis :</span><a href="reseau.html" class="prereq-pill">📖 Réseaux</a><a href="osint.html" class="prereq-pill">📖 OSINT</a>
 </div><div class="prereq-row">
@@ -158,7 +321,20 @@
 </div><div class="prereq-row">
   <span class="prereq-label">Voir aussi :</span><a href="osint.html" class="related-pill">🔗 OSINT</a><a href="reseau.html" class="related-pill">🔗 Réseaux</a>
 </div></div>
-XIF GPS dans photo partagée sur forum onion</li>
+<div class="sec" id="attribution-techniques-legales"><div class="sec-title">Attribution — Techniques légales</div>
+<div class="g2">
+<div class="card card-green"><div class="ct">Méthodes d'attribution documentées</div><ul>
+<li><strong>Nœud de garde</strong> : si l'État contrôle le nœud de garde d'un suspect, il voit l'IP réelle</li>
+<li><strong>Corrélation temporelle</strong> : observer le pattern de connexion côté client + serveur</li>
+<li><strong>HUMINT / infiltration</strong> : achats sur les marketplaces, communication avec le suspect</li>
+<li><strong>OPSEC failure</strong> : erreur humaine (même email, même alias qu'en clearnet)</li>
+<li><strong>Exploit navigateur</strong> : faille Tor Browser → reveal IP réelle (utilisé par le FBI)</li>
+<li><strong>Métadonnées de fichiers</strong> : EXIF GPS dans photo partagée sur forum onion</li>
+</ul></div>
+<div class="card card-cyan"><div class="ct">Cas Silk Road — Ross Ulbricht, 2013</div>
+<p>Identifié via un post public datant d'avant SR utilisant son vrai email pour recruter. Arrestation physique dans une bibliothèque SF quand son ordinateur était <strong>déverrouillé</strong>.</p>
+<br><p>Leçon : <strong>l'OPSEC humain est le maillon faible</strong>, pas Tor lui-même. Un seul écart (même pseudo, même email, même écriture) peut tout faire tomber.</p>
+</div></div>
 </ul></div>
 <div class="card card-cyan"><div class="ct">Cas Silk Road (Ross Ulbricht, 2013)</div>
 <p>Identifié via un post public datant d'avant SR utilisant son vrai email pour recruter. Arrestation physique dans une bibliothèque SF quand son ordinateur était <strong>déverrouillé</strong>.</p>
@@ -183,7 +359,35 @@ XIF GPS dans photo partagée sur forum onion</li>
 <div class="info" style="margin-top:.75rem">🇨🇭 <strong>Coopération internationale :</strong> Les takedowns de marketplaces onion (Hydra, AlphaBay, DarkMarket) ont tous impliqué une coopération entre le FBI, Europol, la BKA (Allemagne) et d'autres services. La Suisse participe via le MLAT et les accords bilatéraux.</div>
 </div></div>
 
-<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Tor = 3 relais (Guard → Middle → Exit) · Guard voit l'IP client · Exit voit la destination · .onion v3 = 56 caractères + Ed25519 · Artefacts Tor Browser : Prefetch tor.exe + AmCache + UserAssist (ROT13) + sessionstore.jsonlz4 si live · LSCPT : ISP conserve métadonnées 6 mois · ISP voit connexion au réseau Tor (pas la destination) · Silk Road : identifié par OPSEC failure (email), pas par cassage de Tor.</div>
+<div class="exam-tip">
+  <ul>
+    <li><strong>Circuit Tor</strong> : Guard → Middle → Exit · <strong>Guard voit l'IP client</strong> · <strong>Exit voit la destination</strong> · aucun nœud ne voit les deux</li>
+    <li><strong>Adresse .onion v3</strong> : 56 caractères + clé Ed25519 · v2 (16 chars) obsolète depuis 2021</li>
+    <li><strong>Artefacts Tor Browser</strong> : <code>Prefetch tor.exe</code> · AmCache · UserAssist ROT13 · <code>sessionstore.jsonlz4</code> si live · <code>cached-microdescs</code> = preuve d'utilisation</li>
+    <li><strong>LSCPT RS 780.1</strong> : ISP conserve métadonnées de connexion <strong>6 mois</strong> · ISP voit la connexion au réseau Tor (pas la destination)</li>
+    <li><strong>Bridges Tor</strong> : relais non listés → l'ISP voit une IP inconnue (pas clairement identifiable comme Tor)</li>
+    <li><strong>Silk Road</strong> : identifié par OPSEC failure (email réel), pas par cassage de Tor · Arrestation = PC déverrouillé saisi</li>
+  </ul>
+</div>
+
+<div class="sec">
+<div class="sec-title">Questions d'entraînement</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Quel nœud Tor voit l'adresse IP réelle du client ?<small>Architecture Tor · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn" onclick="this.closest('.quiz-wrap').querySelector('.quiz-answer').classList.toggle('visible');this.textContent=this.textContent.includes('Révéler')?'Masquer ↑':'Révéler →'">Révéler →</button></div>
+  <div class="quiz-answer">Le <strong>Guard Node</strong> (nœud de garde, premier relais). Il voit l'IP du client mais ne connaît pas la destination finale.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Quels artefacts Windows confirment l'exécution de Tor Browser même après suppression ?<small>Artefacts · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn" onclick="this.closest('.quiz-wrap').querySelector('.quiz-answer').classList.toggle('visible');this.textContent=this.textContent.includes('Révéler')?'Masquer ↑':'Révéler →'">Révéler →</button></div>
+  <div class="quiz-answer"><strong>Prefetch</strong> (<code>TOR.EXE-XXXXXX.pf</code>) · <strong>AmCache/ShimCache</strong> · <strong>UserAssist</strong> dans le registre (encodé ROT13) · <strong>$UsnJrnl</strong> · fichier <code>tor.exe</code> dans LNK si raccourci créé</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Combien de temps les ISP suisses conservent-ils les métadonnées de connexion selon la LSCPT ?<small>Droit suisse · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn" onclick="this.closest('.quiz-wrap').querySelector('.quiz-answer').classList.toggle('visible');this.textContent=this.textContent.includes('Révéler')?'Masquer ↑':'Révéler →'">Révéler →</button></div>
+  <div class="quiz-answer"><strong>6 mois</strong> (LSCPT art. 26, RS 780.1). Ces métadonnées confirment la connexion au réseau Tor mais pas la destination.</div>
+</div>
+</div>
 <div class="footer">
   <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
   <span>LSCPT RS 780.1 · Tor Project Documentation</span>
@@ -247,6 +451,27 @@ XIF GPS dans photo partagée sur forum onion</li>
 
   document.addEventListener('DOMContentLoaded', addCopyButtons);
   if(document.readyState !== 'loading') addCopyButtons();
+
+  // Scroll progress
+  const bar = document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll', ()=>{
+    const d=document.documentElement;
+    bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';
+  },{passive:true});
+
+  // Collapsibles
+  document.querySelectorAll('.collapsible-header').forEach(h=>{
+    h.addEventListener('click',()=>h.closest('.collapsible').classList.toggle('open'));
+  });
+
+  // Quiz reveal
+  document.querySelectorAll('.quiz-reveal-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+      ans.classList.toggle('visible');
+      btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+    });
+  });
 })();
 </script>
 
