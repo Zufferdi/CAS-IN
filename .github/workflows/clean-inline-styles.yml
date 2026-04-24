@@ -25,14 +25,12 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Copier le script dans le repo
+      - name: Appliquer le nettoyage
         run: |
-          cat > clean_inline_styles.py << 'PYEOF'
-          import re, os, glob, sys, shutil
+          python3 - << 'PYEOF'
+          import re, os, glob
 
-          DRY_RUN = '--dry-run' in sys.argv
           STYLE_RE = re.compile(r'\n?\s*<style[^>]*>.*?</style>', re.DOTALL | re.IGNORECASE)
-
           files = sorted(glob.glob('fiches/*.html'))
           changed, unchanged = 0, 0
 
@@ -48,29 +46,13 @@ jobs:
                   diff = len(original) - len(cleaned)
                   changed += 1
                   print(f"  ✓  {os.path.basename(path)}  ({blocks} bloc(s), -{diff} octets)")
-                  if not DRY_RUN:
-                      with open(path, 'w', encoding='utf-8') as f:
-                          f.write(cleaned)
+                  with open(path, 'w', encoding='utf-8') as f:
+                      f.write(cleaned)
 
-          print(f"\n{'[DRY RUN] ' if DRY_RUN else ''}Modifiés: {changed}  |  Inchangés: {unchanged}")
+          print(f"\nModifiés: {changed}  |  Inchangés: {unchanged}")
           PYEOF
 
-      - name: Dry run (preview)
-        if: ${{ inputs.dry_run == 'true' }}
-        run: python3 clean_inline_styles.py --dry-run
-
-      - name: Appliquer le nettoyage
-        if: ${{ inputs.dry_run == 'false' }}
-        run: python3 clean_inline_styles.py
-
-      - name: Nettoyer les fichiers temporaires
-        if: ${{ inputs.dry_run == 'false' }}
-        run: |
-          find fiches/ -name '*.bak' -delete
-          rm -f clean_inline_styles.py
-
       - name: Commit et push
-        if: ${{ inputs.dry_run == 'false' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
