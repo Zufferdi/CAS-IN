@@ -22,6 +22,7 @@
 
 </head>
 <body>
+<div id="scroll-progress"></div>
 <a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:0;z-index:999;padding:.5rem 1rem;background:var(--cyan);color:var(--bg);font-size:.8rem;border-radius:0 0 4px 0;text-decoration:none">Aller au contenu</a>
 <nav class="tn-nav" aria-label="Navigation fiche">
   <a href="index.html" class="tn-back">← Fiches</a>
@@ -51,10 +52,130 @@
 </div>
 
 <div class="tabs">
-  <button class="tb on" onclick="T('capture')">📥 Capture & Filtres</button>
+  <button class="tb on" onclick="T('capture')">📥 Capture &amp; Filtres</button>
   <button class="tb" onclick="T('analyse')">🔍 Analyse forensique</button>
   <button class="tb" onclick="T('beaconing')">🕐 Beaconing C2</button>
   <button class="tb" onclick="T('tshark')">⚡ tshark CLI</button>
+</div>
+
+<div class="concept-card">
+  <div class="concept-title">📡 Wireshark — Le microscope réseau de référence</div>
+  <strong>Wireshark</strong> (anciennement Ethereal, par Gerald Combs · 1998) est <strong>l'analyseur de paquets de référence mondiale</strong> — utilisé par les ingénieurs réseau, pentesteurs, équipes SOC, et enquêteurs forensiques. Il décode <strong>plus de 3000 protocoles</strong> : Ethernet, IP, TCP, UDP, HTTP/HTTPS, DNS, DHCP, SMB, RDP, Kerberos, et bien d'autres. Le format <strong>PCAP</strong> (Packet Capture, format <code>libpcap</code>) est le standard universel pour stocker des captures réseau — un fichier PCAP contient <strong>chaque octet</strong> qui a transité sur l'interface, avec timestamps précis. Forensiquement, un PCAP est <strong>la preuve réseau ultime</strong> : indéniable, complet, rejouable. Wireshark est l'outil graphique ; <strong>tshark</strong> et <strong>tcpdump</strong> sont les versions CLI pour scripts et captures à distance. <strong>NetworkMiner</strong> (Netresec, Suède) extrait automatiquement fichiers, sessions, hosts depuis un PCAP — outil incontournable pour le triage rapide. <strong>Limite</strong> : avec le HTTPS généralisé (~95% du trafic web aujourd'hui), Wireshark voit les <em>métadonnées</em> (qui parle à qui, quand, combien) mais pas le contenu — sauf si on dispose des clés TLS (SSLKEYLOGFILE) ou d'un MITM autorisé.
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA SVG — ANATOMIE D'UN PCAP & WORKFLOW WIRESHARK
+     ════════════════════════════════════════════════════════════ -->
+<div class="schema">
+  <div class="schema-title">📡 Workflow Wireshark — De la capture à l'IOC</div>
+  <div class="schema-sub">CAPTURE · FILTRES · STATS · EXTRACTION · CORRÉLATION SIEM</div>
+  <svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Workflow Wireshark">
+    <defs>
+      <marker id="arr-ws" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="#00E5CC"/>
+      </marker>
+    </defs>
+
+    <!-- Header -->
+    <rect x="20" y="15" width="680" height="36" rx="6" fill="rgba(13,17,23,.5)" stroke="rgba(0,229,204,.4)" stroke-width="1.2"/>
+    <text x="360" y="33" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#00E5CC">📡 WIRESHARK · Gerald Combs · 1998 · 3000+ protocoles décodés · format PCAP universel</text>
+    <text x="360" y="46" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">⚠️ HTTPS ~95% du trafic web : métadonnées visibles · contenu chiffré (sauf clés TLS dispo)</text>
+
+    <!-- Étape 1 : Capture sur l'interface -->
+    <rect x="20" y="75" width="135" height="80" rx="8" fill="rgba(48,232,138,.1)" stroke="#30E88A" stroke-width="1.5"/>
+    <text x="87" y="98" text-anchor="middle" font-size="24">🔌</text>
+    <text x="87" y="120" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="800" fill="#30E88A">1. Capture</text>
+    <text x="87" y="135" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">tcpdump · tshark</text>
+    <text x="87" y="146" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">SPAN port · TAP</text>
+
+    <line x1="157" y1="115" x2="190" y2="115" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-ws)"/>
+
+    <!-- Étape 2 : Fichier PCAP -->
+    <rect x="190" y="75" width="135" height="80" rx="8" fill="rgba(88,166,255,.1)" stroke="#58A6FF" stroke-width="1.5"/>
+    <text x="257" y="98" text-anchor="middle" font-size="24">💾</text>
+    <text x="257" y="120" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="800" fill="#58A6FF">2. Fichier PCAP</text>
+    <text x="257" y="135" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">.pcap · .pcapng</text>
+    <text x="257" y="146" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">global header + frames</text>
+
+    <line x1="327" y1="115" x2="360" y2="115" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-ws)"/>
+
+    <!-- Étape 3 : Filtres BPF / Display -->
+    <rect x="360" y="75" width="155" height="80" rx="8" fill="rgba(240,192,64,.1)" stroke="#F0C040" stroke-width="1.5"/>
+    <text x="437" y="98" text-anchor="middle" font-size="24">🎯</text>
+    <text x="437" y="120" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="800" fill="#F0C040">3. Filtres</text>
+    <text x="437" y="135" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">BPF (capture) · Display</text>
+    <text x="437" y="146" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">tcp.port==443 · ip.addr==X</text>
+
+    <line x1="517" y1="115" x2="550" y2="115" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-ws)"/>
+
+    <!-- Étape 4 : Analyse / Stats / Extraction -->
+    <rect x="550" y="75" width="150" height="80" rx="8" fill="rgba(188,140,255,.1)" stroke="#BC8CFF" stroke-width="1.5"/>
+    <text x="625" y="98" text-anchor="middle" font-size="24">🔬</text>
+    <text x="625" y="120" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="800" fill="#BC8CFF">4. Analyse</text>
+    <text x="625" y="135" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">stats · conversations</text>
+    <text x="625" y="146" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">extraction · I/O graphs</text>
+
+    <!-- Bandeau extraction & types d'IOC -->
+    <text x="360" y="180" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8" letter-spacing="1">↓  IOC RÉSEAU EXTRAITS  ↓</text>
+    <line x1="40" y1="188" x2="680" y2="188" stroke="rgba(168,181,200,.3)" stroke-width=".5"/>
+
+    <!-- 4 types d'IOC -->
+    <rect x="20" y="200" width="160" height="65" rx="6" fill="rgba(255,64,96,.06)" stroke="rgba(255,64,96,.4)" stroke-width="1"/>
+    <text x="100" y="218" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="700" fill="#FF4060">🌐 IPs / Domaines</text>
+    <text x="100" y="233" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">ip.addr · dns.qry.name</text>
+    <text x="100" y="245" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">tls.handshake.extensions</text>
+    <text x="100" y="257" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">→ VirusTotal · TI</text>
+
+    <rect x="190" y="200" width="160" height="65" rx="6" fill="rgba(48,232,138,.06)" stroke="rgba(48,232,138,.4)" stroke-width="1"/>
+    <text x="270" y="218" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="700" fill="#30E88A">📁 Fichiers</text>
+    <text x="270" y="233" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">File &gt; Export Objects</text>
+    <text x="270" y="245" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">HTTP · SMB · FTP</text>
+    <text x="270" y="257" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">→ analyse malware</text>
+
+    <rect x="360" y="200" width="160" height="65" rx="6" fill="rgba(240,192,64,.06)" stroke="rgba(240,192,64,.4)" stroke-width="1"/>
+    <text x="440" y="218" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="700" fill="#F0C040">🔑 Credentials</text>
+    <text x="440" y="233" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">HTTP Basic · FTP · POP3</text>
+    <text x="440" y="245" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">NTLMv1/v2 · Kerberos</text>
+    <text x="440" y="257" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">→ pillage compte</text>
+
+    <rect x="530" y="200" width="170" height="65" rx="6" fill="rgba(188,140,255,.06)" stroke="rgba(188,140,255,.4)" stroke-width="1"/>
+    <text x="615" y="218" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="700" fill="#BC8CFF">🕐 Patterns C2</text>
+    <text x="615" y="233" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">beaconing périodique</text>
+    <text x="615" y="245" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">jitter · DNS tunneling</text>
+    <text x="615" y="257" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">→ malware actif</text>
+
+    <!-- Bandeau outils complémentaires -->
+    <text x="360" y="290" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8" letter-spacing="1">↓  OUTILS PCAP COMPLÉMENTAIRES  ↓</text>
+    <line x1="40" y1="298" x2="680" y2="298" stroke="rgba(168,181,200,.3)" stroke-width=".5"/>
+
+    <rect x="20" y="310" width="160" height="55" rx="5" fill="rgba(0,229,204,.06)" stroke="rgba(0,229,204,.4)" stroke-width="1"/>
+    <text x="100" y="327" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#00E5CC">🐧 tcpdump</text>
+    <text x="100" y="341" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">CLI BSD/Linux · capture</text>
+    <text x="100" y="354" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">léger · scripts · cron</text>
+
+    <rect x="190" y="310" width="160" height="55" rx="5" fill="rgba(48,232,138,.06)" stroke="rgba(48,232,138,.4)" stroke-width="1"/>
+    <text x="270" y="327" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#30E88A">⚡ tshark</text>
+    <text x="270" y="341" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">Wireshark CLI</text>
+    <text x="270" y="354" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">stats automatiques</text>
+
+    <rect x="360" y="310" width="160" height="55" rx="5" fill="rgba(240,192,64,.06)" stroke="rgba(240,192,64,.4)" stroke-width="1"/>
+    <text x="440" y="327" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#F0C040">🕵 NetworkMiner</text>
+    <text x="440" y="341" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">Netresec · GUI</text>
+    <text x="440" y="354" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">extraction auto · OS fingerprint</text>
+
+    <rect x="530" y="310" width="170" height="55" rx="5" fill="rgba(188,140,255,.06)" stroke="rgba(188,140,255,.4)" stroke-width="1"/>
+    <text x="615" y="327" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#BC8CFF">🔬 Brim / Zui</text>
+    <text x="615" y="341" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">Zeek logs sur PCAP</text>
+    <text x="615" y="354" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">requêtable · grands volumes</text>
+  </svg>
+  <div class="schema-legend">
+    <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>Capture (tcpdump/SPAN)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#58A6FF"></span>Format PCAP/PCAPng</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>Filtres BPF/Display · Credentials</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#BC8CFF"></span>Analyse Wireshark · C2/Beaconing</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>IPs / Domaines / IOC</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#00E5CC"></span>Outils complémentaires</span>
+  </div>
 </div>
 
 <!-- CAPTURE & FILTRES -->
@@ -238,7 +359,57 @@ phs</span><br><br>
 </div></div>
 </div>
 
-<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Filtres Wireshark : ip.addr= · tcp.port= · http.request.method= · dns.qry.name= · Beaconing = intervalles réguliers vers IP externe · DGA = NXDOMAIN en masse · DNS Tunneling = subdomaines longs (> 60 car.) · Statistics → Conversations = volumes par paire IP · Follow TCP Stream = reconstruire une session · tshark -Y = filtre display · PCAP en CHaine de custody : SHA-256 immédiat · tcpdump -i eth0 -w capture.pcap</div>
+<!-- QUIZ -->
+<div class="sec">
+<div class="sec-title">🧠 Testez-vous</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Vous capturez du trafic HTTPS dans Wireshark. Pouvez-vous lire le contenu des pages web ?<small>HTTPS · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>Non par défaut</strong>, sauf cas spéciaux. HTTPS = TLS sur HTTP : tout le contenu (URLs précises après le hostname, headers, body, cookies) est <strong>chiffré bout-à-bout</strong>. Wireshark voit uniquement : (1) IP source/destination, (2) port destination (443), (3) le <strong>SNI</strong> (Server Name Indication) dans le ClientHello TLS — révèle le hostname (<code>www.example.ch</code>) mais pas le path, (4) volumes de données, (5) timing. <strong>Pour déchiffrer</strong>, trois options : (a) <strong>SSLKEYLOGFILE</strong> = variable d'env qui force Chrome/Firefox à logger les clés de session — Wireshark peut alors les utiliser pour déchiffrer (Edit → Preferences → Protocols → TLS → (Pre)-Master-Secret log filename), (b) <strong>RSA private key</strong> du serveur — fonctionne uniquement pour les vieilles suites RSA (PFS = Perfect Forward Secrecy le rend obsolète), (c) <strong>MITM avec proxy</strong> (Burp, mitmproxy) avec certificat installé — légal seulement si autorisé. <strong>Encrypted SNI (ECH)</strong> et <strong>DNS over HTTPS (DoH)</strong> rendent l'analyse encore plus difficile dans le futur.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Vous voyez 1 paquet toutes les 60 secondes vers <code>185.234.X.X</code>, sur le port 443, taille très constante (~120 octets). Conclusion ?<small>Beaconing · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>Beaconing C2 fortement suspect.</strong> Signaux : (1) <strong>périodicité fixe</strong> = 60 sec ± epsilon (un humain ne génère jamais ce pattern), (2) <strong>même IP de destination</strong> à chaque fois (vrai service web aurait du load balancing), (3) <strong>taille constante</strong> = check-in vers C2 (« je suis vivant, des ordres ? »), (4) <strong>port 443</strong> = se cache dans le trafic légitime, (5) IP <code>185.234.X.X</code> dans plage VPS (Bulgarie/Roumanie typique). Procédure : (a) lookup IP sur <strong>VirusTotal</strong> + <strong>AbuseIPDB</strong> + <strong>ThreatFox</strong>, (b) extraire le SNI du TLS ClientHello (<code>tls.handshake.extensions_server_name</code>), (c) chercher l'IP dans Censys / Shodan, (d) corréler avec les EDR sur le poste source pour identifier le process. Variantes : <strong>jitter</strong> = beaconing avec ±20% de variation aléatoire pour échapper à la détection (Cobalt Strike par défaut). Outils auto : <strong>RITA</strong> (Real Intelligence Threat Analytics) calcule le score de beaconing automatiquement sur des PCAPs / Zeek logs.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Quelle est la différence entre filtre <strong>BPF</strong> (capture) et filtre <strong>Display</strong> dans Wireshark ?<small>Filtres · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>BPF (Berkeley Packet Filter)</strong> = filtre de <strong>capture</strong>, syntaxe libpcap. Appliqué <strong>au moment de la capture</strong> par le kernel — les paquets non-matching sont <strong>ignorés et perdus à jamais</strong>. Syntaxe : <code>host 10.0.0.42 and port 443</code>. Utilisation : tcpdump, dumpcap, capture Wireshark sur interface live. <strong>Filtre Display</strong> = filtre d'<strong>affichage</strong>, syntaxe Wireshark. Appliqué <strong>après la capture</strong> sur les paquets déjà chargés en mémoire — change uniquement la vue, ne supprime rien. Syntaxe différente : <code>ip.addr == 10.0.0.42 and tcp.port == 443</code>. <strong>Best practice forensique</strong> : (1) capturer <strong>SANS filtre BPF</strong> ou avec un filtre très large (<code>not multicast and not broadcast</code>) pour ne perdre aucune preuve, (2) utiliser des <strong>filtres Display</strong> pour explorer le PCAP, (3) si le volume est trop gros, <strong>découper</strong> avec <code>editcap</code> ou <code>tcpdump -r in.pcap -w out.pcap [BPF]</code>. <strong>Pièges</strong> : la syntaxe BPF utilise <code>port</code>, la syntaxe Display utilise <code>tcp.port</code>. <code>and</code> en BPF, <code>and</code> aussi en Display mais préfixe différent.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Vous saisissez un PCAP comme preuve. Que faire pour préserver son intégrité judiciaire ?<small>Chaîne de custody · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>SHA-256 immédiat</strong> et chaîne de custody documentée. Procédure : (1) <strong>Hash SHA-256</strong> du fichier PCAP dès l'arrivée au labo : <code>sha256sum capture.pcap > capture.pcap.sha256</code>, (2) <strong>Documentation</strong> : qui a capturé, où, quand, sur quelle interface, avec quel outil et version, durée de capture, filtre BPF utilisé, (3) <strong>Travail sur copie</strong> : <code>cp capture.pcap analysis-copy.pcap</code>, jamais sur l'original, (4) <strong>Stockage</strong> : original sur support write-blocked + copie de travail séparée, (5) <strong>Chaîne d'analyse</strong> : chaque outil exécuté, chaque export documenté avec horodatage. <strong>Pièges</strong> : (a) Wireshark peut <em>modifier</em> un PCAP si on clique sur <em>File → Save As</em> avec des modifications (jamais le faire sur l'original), (b) format <code>.pcapng</code> moderne contient des <em>options</em> qui peuvent diverger entre versions de Wireshark — préférer <code>.pcap</code> classique pour stockage long terme (<code>editcap -F libpcap</code>). <strong>Article CPP applicable</strong> : 192 (administration des preuves) + 379 (recevabilité) + ATF sur l'identité PCAP/preuve.</div>
+</div>
+</div>
+
+<!-- EXAM TIP -->
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — Wireshark &amp; PCAP</div>
+  <p><strong>Wireshark</strong> = analyseur graphique · <strong>tshark</strong> = CLI · <strong>tcpdump</strong> = capture Unix légère</p>
+  <p><strong>Format PCAP</strong> = libpcap · <code>.pcap</code> classique · <code>.pcapng</code> moderne (options + nanoseconds)</p>
+  <p><strong>Filtres BPF (capture)</strong> : appliqués au kernel · <code>host X and port Y</code> · paquets non-matching <strong>perdus</strong></p>
+  <p><strong>Filtres Display</strong> : appliqués après capture · <code>ip.addr == X and tcp.port == Y</code> · vue uniquement</p>
+  <p><strong>Filtres Display essentiels</strong> :</p>
+  <p>&nbsp;&nbsp;• <code>ip.addr == 10.0.0.42</code></p>
+  <p>&nbsp;&nbsp;• <code>tcp.port == 443</code> · <code>udp.port == 53</code></p>
+  <p>&nbsp;&nbsp;• <code>http.request.method == "POST"</code></p>
+  <p>&nbsp;&nbsp;• <code>dns.qry.name contains "evil"</code></p>
+  <p>&nbsp;&nbsp;• <code>tls.handshake.extensions_server_name</code> (SNI)</p>
+  <p><strong>HTTPS</strong> : voir SNI + IPs + volume · <strong>contenu chiffré</strong> sauf SSLKEYLOGFILE / RSA key (legacy)</p>
+  <p><strong>Stats Wireshark</strong> : Statistics → Conversations · Endpoints · I/O Graphs · Protocol Hierarchy</p>
+  <p><strong>Extraction</strong> : File → Export Objects → HTTP / SMB / IMF / DICOM</p>
+  <p><strong>Beaconing C2</strong> : intervalles réguliers (60s · 5min) · taille constante · port 443 (cache)</p>
+  <p><strong>Jitter</strong> : beaconing avec variation ±20% (Cobalt Strike par défaut)</p>
+  <p><strong>DGA</strong> : Domain Generation Algorithm · NXDOMAIN en masse · domaines aléatoires</p>
+  <p><strong>DNS Tunneling</strong> : sous-domaines &gt; 60 car. · entropie élevée · volumes anormaux</p>
+  <p><strong>Outils complémentaires</strong> : NetworkMiner · Brim/Zui · RITA · Zeek</p>
+  <p><strong>Chaîne de custody</strong> : SHA-256 immédiat · doc complète · jamais modifier original</p>
+  <p><strong>Cadre légal CH</strong> : LSCPT pour interception · ATF 136 II 508 (IP ≠ auteur)</p>
+</div>
+
+<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Filtres Wireshark : ip.addr= · tcp.port= · http.request.method= · dns.qry.name= · Beaconing = intervalles réguliers vers IP externe · DGA = NXDOMAIN en masse · DNS Tunneling = subdomaines longs (&gt; 60 car.) · Statistics → Conversations = volumes par paire IP · Follow TCP Stream = reconstruire une session · tshark -Y = filtre display · PCAP en CHaine de custody : SHA-256 immédiat · tcpdump -i eth0 -w capture.pcap</div>
 <div class="footer">
   <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
   <span>Ch. 25 Manuel · Wireshark User Guide</span>
@@ -246,6 +417,15 @@ phs</span><br><br>
 </div>
 <script>
 function T(id){document.querySelectorAll('.tp').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));document.getElementById('t-'+id).classList.add('on');event.target.classList.add('on');}
+var bar=document.getElementById('scroll-progress');
+if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+    ans.classList.toggle('visible');
+    btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+  });
+});
 </script>
 </main>
 
