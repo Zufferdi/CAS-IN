@@ -8,6 +8,8 @@
 <meta name="description" content="Méthodologie · Artefacts · Registre · SID · Corrélation · Chronologie">
 </head>
 <body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 
 <nav class="tn-nav">
   <a class="tn-back" href="index.html">← Fiches</a>
@@ -66,6 +68,104 @@
       <a class="related-pill" href="zimmerman.html">🔗 Suite Zimmerman</a>
     </div>
   </div>
+
+  <div class="concept-card">
+    <div class="concept-title">🪟 Windows Forensique — Reconstruire le comportement, pas chercher des fichiers</div>
+    Windows est l'OS le plus analysé en forensique numérique : <strong>plus de 70% des postes professionnels et &gt; 80% des systèmes attaqués</strong>. Sa <em>complexité interne</em> en fait un environnement riche en artefacts — Microsoft documente publiquement très peu d'entre eux, mais les chercheurs DFIR ont depuis 20 ans cartographié des <strong>centaines de sources</strong> qui enregistrent silencieusement l'activité utilisateur. <strong>Principe fondateur</strong> de SANS FOR500 : <em>« Windows Forensics is not about finding files, it's about reconstructing behaviour. »</em> L'OS enregistre passivement et automatiquement <strong>tout</strong> : (1) Les <strong>programmes lancés</strong> (Prefetch, Amcache, ShimCache, BAM, UserAssist, Jump Lists, Recent), (2) Les <strong>dossiers visités</strong> (ShellBags, MRU), (3) Les <strong>fichiers ouverts</strong> (LNK, RecentDocs, OpenSavePidlMRU), (4) Les <strong>USB branchées</strong> (USBSTOR, MountPoints2, setupapi), (5) Les <strong>connexions réseau</strong> (NetworkList, Event Logs), (6) Les <strong>authentifications</strong> (Security.evtx, Kerberos), (7) La <strong>persistance malware</strong> (Run keys, Services, Tasks, WMI). Chaque source a sa <strong>spécificité</strong> et ses <strong>limites</strong> — un bon analyste forensique <em>croise</em> toujours 3-5 sources pour valider une conclusion. Avec un <strong>identifiant utilisateur (SID)</strong> en colonne vertébrale (chaque utilisateur Windows a un SID unique global), l'analyste peut <strong>attribuer chaque action à un acteur précis</strong>. Le défi n'est plus la rareté des données, mais leur <strong>volume</strong> : un poste Windows actif génère des <em>millions</em> d'événements — d'où l'importance des outils de timeline (Plaso/log2timeline, EZ Tools, Hayabusa, Chainsaw) qui agrègent et corrèlent automatiquement.
+  </div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA SVG — MÉTHODOLOGIE WINDOWS FORENSIQUE
+     ════════════════════════════════════════════════════════════ -->
+<div class="schema">
+  <div class="schema-title">🪟 Méthodologie Windows Forensique — 5 familles d'artefacts</div>
+  <div class="schema-sub">EXÉCUTION · NAVIGATION · FICHIERS · USB/RÉSEAU · PERSISTANCE</div>
+  <svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Méthodologie Windows">
+    <defs>
+      <marker id="arr-wfo" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="#00E5CC"/>
+      </marker>
+    </defs>
+
+    <!-- Header -->
+    <rect x="20" y="15" width="680" height="36" rx="6" fill="rgba(13,17,23,.5)" stroke="rgba(0,229,204,.4)" stroke-width="1.2"/>
+    <text x="360" y="33" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#00E5CC">🪟 Reconstruction du comportement — pas chercher des fichiers · SID = colonne vertébrale</text>
+    <text x="360" y="46" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">Windows enregistre silencieusement TOUT · 5 familles · cross-référencer 3-5 sources pour valider</text>
+
+    <!-- 5 familles -->
+    <!-- ① EXÉCUTION -->
+    <rect x="20" y="65" width="220" height="105" rx="8" fill="rgba(255,64,96,.07)" stroke="#FF4060" stroke-width="1.5"/>
+    <text x="130" y="84" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#FF4060">① PREUVES D'EXÉCUTION</text>
+    <text x="35" y="100" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#FF4060">Prefetch</tspan> (.pf) → 8 dates execution</text>
+    <text x="35" y="112" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#FF4060">Amcache.hve</tspan> → SHA-1 + dates</text>
+    <text x="35" y="124" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#FF4060">ShimCache</tspan> → présence (pas exéc)</text>
+    <text x="35" y="136" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#FF4060">UserAssist</tspan> → GUI (ROT13)</text>
+    <text x="35" y="148" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#FF4060">BAM/DAM</tspan> → Win10+ par SID</text>
+    <text x="35" y="160" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#FF4060">Sysmon EID 1</tspan> · <tspan fill="#FF4060">EID 4688</tspan></text>
+
+    <!-- ② NAVIGATION -->
+    <rect x="250" y="65" width="220" height="105" rx="8" fill="rgba(188,140,255,.07)" stroke="#BC8CFF" stroke-width="1.5"/>
+    <text x="360" y="84" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#BC8CFF">② NAVIGATION GUI</text>
+    <text x="265" y="100" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#BC8CFF">ShellBags</tspan> → dossiers visités GUI</text>
+    <text x="265" y="112" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#BC8CFF">MRU</tspan> par appli</text>
+    <text x="265" y="124" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#BC8CFF">TypedURLs</tspan> → URLs tapées</text>
+    <text x="265" y="136" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#BC8CFF">Activities Cache</tspan> → Win10 1803+</text>
+    <text x="265" y="148" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#BC8CFF">RecentApps</tspan></text>
+    <text x="265" y="160" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">→ ShellBags = preuve LA + forte</text>
+
+    <!-- ③ FICHIERS -->
+    <rect x="480" y="65" width="220" height="105" rx="8" fill="rgba(88,166,255,.07)" stroke="#58A6FF" stroke-width="1.5"/>
+    <text x="590" y="84" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#58A6FF">③ FICHIERS CONSULTÉS</text>
+    <text x="495" y="100" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#58A6FF">.lnk Recent</tspan> + Volume S/N</text>
+    <text x="495" y="112" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#58A6FF">Jump Lists</tspan> par appli</text>
+    <text x="495" y="124" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#58A6FF">Thumbcache</tspan> → miniatures</text>
+    <text x="495" y="136" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#58A6FF">RecentDocs</tspan> par extension</text>
+    <text x="495" y="148" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#58A6FF">$Recycle.Bin\&lt;SID&gt;</tspan></text>
+    <text x="495" y="160" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">→ $I survit au vidage corbeille</text>
+
+    <!-- ④ USB / RÉSEAU -->
+    <rect x="20" y="180" width="335" height="105" rx="8" fill="rgba(48,232,138,.07)" stroke="#30E88A" stroke-width="1.5"/>
+    <text x="187" y="199" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#30E88A">④ USB &amp; RÉSEAU</text>
+    <text x="35" y="215" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#30E88A">USBSTOR</tspan> (SYSTEM) → modèle + S/N + dates</text>
+    <text x="35" y="227" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#30E88A">setupapi.dev.log</tspan> → 1re connexion immuable</text>
+    <text x="35" y="239" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#30E88A">MountPoints2</tspan> (NTUSER) → QUI a connecté</text>
+    <text x="35" y="251" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#30E88A">NetworkList</tspan> → SSIDs · 1re/dernière connexion</text>
+    <text x="35" y="263" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#30E88A">Event 4624 type 3/10</tspan> → SMB · RDP</text>
+    <text x="35" y="275" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">→ corrélation 5 sources = preuve juridique solide</text>
+
+    <!-- ⑤ PERSISTANCE -->
+    <rect x="365" y="180" width="335" height="105" rx="8" fill="rgba(240,192,64,.07)" stroke="#F0C040" stroke-width="1.5"/>
+    <text x="532" y="199" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#F0C040">⑤ PERSISTANCE MALWARE</text>
+    <text x="380" y="215" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#F0C040">Run / RunOnce</tspan> (HKLM + HKCU)</text>
+    <text x="380" y="227" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#F0C040">Services</tspan> → EID 7045 / 4697</text>
+    <text x="380" y="239" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#F0C040">Tasks</tspan> → C:\Windows\System32\Tasks\</text>
+    <text x="380" y="251" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#F0C040">AppInit_DLLs</tspan> · <tspan fill="#F0C040">IFEO Hijack</tspan></text>
+    <text x="380" y="263" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">• <tspan fill="#F0C040">WMI Subscriptions</tspan> → fileless</text>
+    <text x="380" y="275" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">→ 8+ vecteurs · scanner avec autoruns.exe</text>
+
+    <!-- Bandeau bas - SID + outils -->
+    <text x="360" y="305" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8" letter-spacing="1">↓  COLONNE VERTÉBRALE = SID + OUTILS  ↓</text>
+    <line x1="40" y1="313" x2="680" y2="313" stroke="rgba(168,181,200,.3)" stroke-width=".5"/>
+
+    <rect x="20" y="325" width="335" height="50" rx="6" fill="rgba(0,229,204,.08)" stroke="#00E5CC" stroke-width="1.2"/>
+    <text x="187" y="342" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#00E5CC">👤 SID = identifiant utilisateur unique</text>
+    <text x="187" y="356" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">S-1-5-21-&lt;domain&gt;-&lt;user RID&gt;</text>
+    <text x="187" y="367" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">attribue chaque artefact à un acteur précis</text>
+
+    <rect x="365" y="325" width="335" height="50" rx="6" fill="rgba(255,64,96,.08)" stroke="#FF4060" stroke-width="1.2"/>
+    <text x="532" y="342" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#FF4060">🛠 Outils incontournables</text>
+    <text x="532" y="356" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">Eric Zimmerman Suite · Plaso · Hayabusa · Chainsaw</text>
+    <text x="532" y="367" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">Velociraptor · KAPE · Autopsy · X-Ways</text>
+  </svg>
+  <div class="schema-legend">
+    <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>① Exécution</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#BC8CFF"></span>② Navigation GUI</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#58A6FF"></span>③ Fichiers consultés</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>④ USB / Réseau</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>⑤ Persistance</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#00E5CC"></span>SID + Outils</span>
+  </div>
+</div>
 
   <div class="toc">
     <div class="toc-title">Sommaire</div>
@@ -559,6 +659,71 @@ SYSTEM\CurrentControlSet\Services\dam\State\UserSettings\&lt;SID&gt;\</pre>
     </div>
   </div>
 
+  <!-- QUIZ -->
+  <div class="section" style="margin-top:2rem">
+    <div class="section-title">🧠 Testez-vous</div>
+    <div class="quiz-wrap">
+      <div class="quiz-q">Vous trouvez Prefetch + Amcache + UserAssist + ShimCache mentionnant le même malware. Tous diffèrent dans les dates. Que faire ?<small>Cross-référence · Niveau : moyen</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer">Chaque source enregistre un <strong>aspect différent</strong> de la vie du fichier — il est <strong>normal</strong> qu'elles diffèrent. Comprendre chacune : <strong>(1) Prefetch</strong> = jusqu'à 8 dernières exécutions effectives + compteur. Date la plus précise pour <em>« quand le programme a effectivement tourné »</em>. <strong>(2) Amcache</strong> = SHA-1 du fichier + chemin + dernière exécution + date d'installation. Idéal pour <em>identification</em> et <em>présence</em>. <strong>(3) UserAssist</strong> = uniquement si lancé via GUI (double-clic, menu Démarrer) — pas par script ou cmd. Encodé ROT13. <strong>(4) ShimCache (AppCompatCache)</strong> = preuve de <em>présence</em> sur le système, pas forcément exécution. Mis à jour au shutdown. <strong>Réconcilier les dates</strong> : (a) Si Prefetch montre une exécution mais UserAssist non → exécuté via cmd/script, pas via GUI (suspect ou normal selon contexte). (b) Si ShimCache montre la présence mais pas Prefetch → fichier présent mais jamais exécuté (ou Prefetch désactivé sur serveur, ou nettoyé). (c) Amcache antérieur à Prefetch → installation puis première exécution. (d) Différentes versions du fichier → comparer SHA-1 d'Amcache. <strong>Best practice timeline</strong> : utiliser <strong>Plaso/log2timeline</strong> pour fusionner toutes les sources dans une timeline unique, puis filtrer sur le fichier suspect. <strong>Ne jamais conclure sur une seule source</strong> — la cross-référence renforce l'admissibilité juridique.</div>
+    </div>
+    <div class="quiz-wrap">
+      <div class="quiz-q">L'OS Windows utilise des SID. Pourquoi est-ce critique en forensique et quelle est la structure ?<small>Identification · Niveau : moyen</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer">Le <strong>SID</strong> (Security Identifier) est l'identifiant <em>unique global</em> de chaque utilisateur, groupe ou compte service Windows. <strong>Critique parce que</strong> Windows référence partout le SID, <em>pas le nom utilisateur</em>. Renommer un compte ne change pas le SID. <strong>Structure</strong> : <code>S-1-&lt;Authority&gt;-&lt;SubAuthority1&gt;-...-&lt;RID&gt;</code>. Exemple : <code>S-1-5-21-1234567890-987654321-1122334455-1001</code>. Décomposition : <strong>S</strong> = Security identifier, <strong>1</strong> = revision, <strong>5</strong> = NT Authority, <strong>21</strong> = identifier authority, suivi de 3 nombres = identifiant <em>unique de la machine ou du domaine</em>, et terminé par le <strong>RID</strong> (Relative Identifier) qui identifie le compte spécifique. <strong>RID importants à connaître</strong> : <code>500</code> = Administrator local (toujours), <code>501</code> = Guest, <code>1000-1001+</code> = utilisateurs créés (le 1er user créé après installation = 1001, jamais 1000 — Microsoft saute 1000), <code>512</code> = Domain Admins, <code>513</code> = Domain Users, <code>519</code> = Enterprise Admins. <strong>Application forensique</strong> : (a) <strong>$Recycle.Bin\&lt;SID&gt;\</strong> identifie qui a supprimé le fichier — chaque user a son sous-dossier dans la corbeille avec son SID. (b) <strong>NTUSER.DAT</strong> du profil utilisateur référencé par SID. (c) <strong>BAM/DAM</strong> = activité par SID. (d) <strong>Event Logs</strong> stockent le SID du compte concerné. <strong>Récupérer le mapping SID → nom</strong> : examiner <code>SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList</code> → liste tous les SID avec ProfileImagePath (chemin profil utilisateur, contient le nom). Outils : <code>wmic useraccount get name,sid</code> en live, ou RegRipper plugin <code>profilelist</code>. <strong>NB</strong> : un SID supprimé peut subsister dans certains artefacts (orphan SID) — utile pour reconstruire des comptes effacés.</div>
+    </div>
+    <div class="quiz-wrap">
+      <div class="quiz-q">Le suspect a fait un <code>cipher /w:</code> sur le disque. Que pouvez-vous encore récupérer ?<small>Anti-forensique · Niveau : difficile</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer"><code>cipher /w:&lt;volume&gt;</code> est l'outil natif Windows qui <strong>écrit des zéros + uns + données aléatoires sur l'espace libre</strong> (3 passes), rendant les fichiers supprimés non récupérables. <strong>Mais</strong> ce n'est pas une perte totale — beaucoup d'artefacts <em>persistent</em> car ils sont dans des fichiers <em>actifs</em> du système, pas dans l'espace libre. <strong>Restent intacts</strong> : <strong>(1) Tout le registre Windows</strong> — SAM, SYSTEM, SOFTWARE, NTUSER.DAT — donc USBSTOR, ShellBags, UserAssist, MRU, Run keys, etc. (2) <strong>Event Logs EVTX</strong> — Security, System, Application + canaux Sysmon/PowerShell. (3) <strong>Prefetch files (.pf)</strong> dans <code>C:\Windows\Prefetch\</code>. (4) <strong>Amcache.hve</strong> + <strong>ShimCache</strong>. (5) <strong>Fichiers .lnk</strong> dans Recent. (6) <strong>Jump Lists</strong>. (7) <strong>Thumbcache</strong> — miniatures persistent. (8) <strong>$LogFile, $UsnJrnl NTFS</strong> — historique des opérations fichier. (9) <strong>Volume Shadow Copies</strong> — snapshots automatiques. (10) <strong>Hibernation file</strong> <code>hiberfil.sys</code> — peut contenir l'état RAM lors de la dernière mise en veille. (11) <strong>Pagefile.sys</strong> — peut contenir des fragments de fichiers déjà overwritten. (12) <strong>RAM</strong> si machine encore allumée. <strong>Indicateurs anti-forensiques</strong> à documenter : (a) <strong>Prefetch de cipher.exe</strong> — preuve d'usage de l'outil, (b) <strong>Event 4688</strong> avec ligne de commande <code>cipher /w:</code>, (c) <strong>Timeline</strong> : si grand vide d'activité fichier puis reprise → probable wipe entre les deux. <strong>Conclusion juridique</strong> : l'usage de <code>cipher /w:</code> peut être interprété comme <strong>destruction intentionnelle de preuves</strong> (art. 305 CP suisse, entrave à l'action pénale). Documenter méticuleusement.</div>
+    </div>
+  </div>
+
+  <!-- EXAM TIP -->
+  <div class="exam-tip">
+    <div class="exam-tip-title">🎓 Exam Tip — Windows Forensique (Guide opérationnel)</div>
+    <p><strong>Principe</strong> : reconstituer le <em>comportement</em>, pas chercher des fichiers</p>
+    <p><strong>Source d'attribution unique</strong> : SID (S-1-5-21-...-RID)</p>
+    <p>&nbsp;&nbsp;• RID 500 = Admin · RID 1001+ = users (jamais 1000) · RID 512 = Domain Admins</p>
+    <p><strong>━━ ① PREUVES D'EXÉCUTION ━━</strong></p>
+    <p>• <strong>Prefetch</strong> (.pf) → 8 dernières exécutions + compteur (désactivé sur serveurs)</p>
+    <p>• <strong>Amcache.hve</strong> → SHA-1 + chemin + dates installation/exécution</p>
+    <p>• <strong>ShimCache (AppCompatCache)</strong> → présence (pas forcément exécution)</p>
+    <p>• <strong>UserAssist</strong> → GUI uniquement, encodé ROT13</p>
+    <p>• <strong>BAM/DAM</strong> → Windows 10+ par SID, timestamps précis</p>
+    <p>• <strong>Sysmon EID 1 / Security EID 4688</strong> → process creation</p>
+    <p><strong>━━ ② NAVIGATION GUI ━━</strong></p>
+    <p>• <strong>ShellBags</strong> → dossiers visités via Explorer (USRCLASS.DAT + NTUSER.DAT)</p>
+    <p>• <strong>MRU</strong> par appli · <strong>TypedURLs</strong> · <strong>RecentApps</strong></p>
+    <p>• <strong>ActivitiesCache.db</strong> → Windows Timeline 7–30 jours (Win10 1803+)</p>
+    <p><strong>━━ ③ FICHIERS CONSULTÉS ━━</strong></p>
+    <p>• <strong>.lnk Recent</strong> (avec Volume S/N de l'origine)</p>
+    <p>• <strong>Jump Lists</strong> par application</p>
+    <p>• <strong>Thumbcache</strong> → miniatures persistent même après suppression du fichier</p>
+    <p>• <strong>RecentDocs</strong> par extension</p>
+    <p>• <strong>$Recycle.Bin\&lt;SID&gt;\</strong> → $I (métadonnées) + $R (contenu) · $I survit au vidage</p>
+    <p><strong>━━ ④ USB / RÉSEAU ━━</strong></p>
+    <p>• <strong>USBSTOR</strong> (SYSTEM) + <strong>setupapi.dev.log</strong> + <strong>MountPoints2</strong> (NTUSER)</p>
+    <p>• <strong>NetworkList</strong> → SSIDs · 1re/dernière connexion</p>
+    <p>• <strong>Event 4624</strong> type 3 (réseau) / 10 (RDP)</p>
+    <p><strong>━━ ⑤ PERSISTANCE MALWARE (8 zones) ━━</strong></p>
+    <p>1. Run / RunOnce (HKLM + HKCU)</p>
+    <p>2. Services (EID 7045 / 4697)</p>
+    <p>3. Scheduled Tasks (XML dans System32\Tasks\)</p>
+    <p>4. Startup Folder</p>
+    <p>5. AppInit_DLLs (DLL injection user32)</p>
+    <p>6. IFEO Hijacking (clé Debugger)</p>
+    <p>7. WMI Subscriptions (fileless)</p>
+    <p>8. Drivers (services kernel)</p>
+    <p><strong>━━ TIMEZONE ━━</strong></p>
+    <p>🚨 Windows stocke en UTC (NTFS) mais affiche en local · TOUJOURS qualifier</p>
+    <p>Source : <code>SYSTEM\CurrentControlSet\Control\TimeZoneInformation</code></p>
+    <p><strong>━━ OUTILS ━━</strong></p>
+    <p>Eric Zimmerman Suite (PECmd, AmcacheParser, RECmd, SBECmd, MFTECmd, EvtxECmd) · Plaso/log2timeline · Hayabusa · Chainsaw · Velociraptor · KAPE · Autopsy</p>
+    <p><strong>━━ MÉTHODE ━━</strong></p>
+    <p>Cross-référencer 3-5 sources pour chaque conclusion · si l'analyse ne s'explique pas simplement, elle est juridiquement fragile</p>
+  </div>
+
   <div class="footer">
     <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
     <span>Guide opérationnel Windows Forensics</span>
@@ -568,11 +733,13 @@ SYSTEM\CurrentControlSet\Services\dam\State\UserSettings\&lt;SID&gt;\</pre>
 
 <button class="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Retour en haut">↑</button>
 <script>
-  const bt = document.querySelector('.back-top');
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 400) bt.classList.add('visible');
-    else bt.classList.remove('visible');
-  });
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top')||document.querySelector('.back-top');
+  if(bt){if(!bt.id)bt.id='back-top';window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});}
+  document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){btn.addEventListener('click',function(){var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');ans.classList.toggle('visible');btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';});});
+})();
 </script>
 
 </body>
