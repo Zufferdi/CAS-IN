@@ -22,6 +22,7 @@
 
 </head>
 <body>
+<div id="scroll-progress"></div>
 <a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:0;z-index:999;padding:.5rem 1rem;background:var(--cyan);color:var(--bg);font-size:.8rem;border-radius:0 0 4px 0;text-decoration:none">Aller au contenu</a>
 <nav class="tn-nav" aria-label="Navigation fiche">
   <a href="index.html" class="tn-back">← Fiches</a>
@@ -54,7 +55,136 @@
   <button class="tb on" onclick="T('acq')">📥 Acquisition</button>
   <button class="tb" onclick="T('plugins')">🔌 Plugins clés</button>
   <button class="tb" onclick="T('malware')">🦠 Détection malware</button>
-  <button class="tb" onclick="T('crypto')">🔑 Clés & Chiffrement</button>
+  <button class="tb" onclick="T('crypto')">🔑 Clés &amp; Chiffrement</button>
+</div>
+
+<div class="concept-card">
+  <div class="concept-title">🧠 Volatility — Le microscope mémoire de la DFIR</div>
+  La <strong>RAM</strong> (Random Access Memory) contient en permanence l'<strong>état vivant</strong> de la machine : tous les processus en cours d'exécution, les fenêtres ouvertes, les connexions réseau actives, les fichiers en cours d'édition, les mots de passe saisis récemment, et — point crucial — les <strong>clés de chiffrement déchiffrées</strong> (BitLocker FVEK, VeraCrypt master keys, TLS session keys). Tout cela <strong>disparaît instantanément à la coupure d'alimentation</strong>. C'est pourquoi la <strong>norme ISO/IEC 27037</strong> stipule que la RAM doit être capturée <strong>avant toute autre action</strong> sur un système actif. <strong>Volatility</strong> (Aaron Walters, 2007) est le framework open source de référence mondiale pour analyser ces dumps RAM. Volatility 2 (Python 2) est obsolète depuis 2020 ; <strong>Volatility 3</strong> (Python 3, sortie 2020) est l'actuel standard. Le framework est composé d'un <strong>noyau d'analyse</strong> + des dizaines de <strong>plugins</strong> spécialisés. Workflow type : (1) <strong>Acquisition</strong> RAM avec WinPMem/Magnet/avml/LiME, (2) <strong>Identification du profil OS</strong> avec <code>windows.info</code> ou <code>linux.banner</code>, (3) <strong>Triage</strong> avec <code>pslist</code>, <code>pstree</code>, <code>netscan</code>, (4) <strong>Approfondissement</strong> avec <code>malfind</code>, <code>cmdline</code>, <code>dlllist</code>, <code>handles</code>, (5) <strong>Extraction</strong> de fichiers, executables, ou clés crypto. Volatility est <strong>indispensable</strong> pour : détection de <em>process hollowing</em>, <em>process injection</em>, <em>rootkits</em>, exfiltration de credentials (Mimikatz en RAM), récupération de fichiers en cache, et extraction de clés de chiffrement de volumes montés.
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA SVG — WORKFLOW VOLATILITY
+     ════════════════════════════════════════════════════════════ -->
+<div class="schema">
+  <div class="schema-title">🧠 Workflow Volatility 3 — De l'acquisition à la preuve</div>
+  <div class="schema-sub">CAPTURE · IDENTIFICATION OS · TRIAGE PROCESSUS · DETECTION INJECTION · EXTRACTION ARTEFACTS</div>
+  <svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Workflow Volatility">
+    <defs>
+      <marker id="arr-vol" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="#00E5CC"/>
+      </marker>
+    </defs>
+
+    <!-- Header -->
+    <rect x="20" y="15" width="680" height="36" rx="6" fill="rgba(13,17,23,.5)" stroke="rgba(0,229,204,.4)" stroke-width="1.2"/>
+    <text x="360" y="33" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#00E5CC">🧠 ISO/IEC 27037 — RAM avant tout sur système actif · ordre de volatilité</text>
+    <text x="360" y="46" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">Volatility 3 (2020+) Python 3 · vol.py -f dump.raw windows.&lt;plugin&gt; · symboles auto-détectés</text>
+
+    <!-- Étape 1 : Acquisition -->
+    <rect x="20" y="65" width="125" height="60" rx="6" fill="rgba(48,232,138,.1)" stroke="#30E88A" stroke-width="1.5"/>
+    <text x="82" y="83" text-anchor="middle" font-size="20">💾</text>
+    <text x="82" y="100" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="800" fill="#30E88A">1. Acquisition</text>
+    <text x="82" y="113" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">WinPMem · LiME</text>
+    <line x1="145" y1="95" x2="170" y2="95" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-vol)"/>
+
+    <!-- Étape 2 : OS info -->
+    <rect x="170" y="65" width="125" height="60" rx="6" fill="rgba(88,166,255,.1)" stroke="#58A6FF" stroke-width="1.5"/>
+    <text x="232" y="83" text-anchor="middle" font-size="20">🔍</text>
+    <text x="232" y="100" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="800" fill="#58A6FF">2. OS Info</text>
+    <text x="232" y="113" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">windows.info</text>
+    <line x1="295" y1="95" x2="320" y2="95" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-vol)"/>
+
+    <!-- Étape 3 : Triage processus -->
+    <rect x="320" y="65" width="125" height="60" rx="6" fill="rgba(240,192,64,.1)" stroke="#F0C040" stroke-width="1.5"/>
+    <text x="382" y="83" text-anchor="middle" font-size="20">📋</text>
+    <text x="382" y="100" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="800" fill="#F0C040">3. Triage</text>
+    <text x="382" y="113" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">pslist · pstree</text>
+    <line x1="445" y1="95" x2="470" y2="95" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-vol)"/>
+
+    <!-- Étape 4 : Détection -->
+    <rect x="470" y="65" width="125" height="60" rx="6" fill="rgba(255,64,96,.1)" stroke="#FF4060" stroke-width="1.5"/>
+    <text x="532" y="83" text-anchor="middle" font-size="20">🦠</text>
+    <text x="532" y="100" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="800" fill="#FF4060">4. Détection</text>
+    <text x="532" y="113" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">malfind · psscan</text>
+    <line x1="595" y1="95" x2="620" y2="95" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-vol)"/>
+
+    <!-- Étape 5 : Extraction -->
+    <rect x="620" y="65" width="80" height="60" rx="6" fill="rgba(188,140,255,.15)" stroke="#BC8CFF" stroke-width="2"/>
+    <text x="660" y="83" text-anchor="middle" font-size="20">📤</text>
+    <text x="660" y="100" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="800" fill="#BC8CFF">5. Extract</text>
+    <text x="660" y="113" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">dumpfiles</text>
+
+    <!-- Bandeau plugins -->
+    <text x="360" y="155" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8" letter-spacing="1">↓  PLUGINS VOLATILITY ESSENTIELS  ↓</text>
+    <line x1="40" y1="163" x2="680" y2="163" stroke="rgba(168,181,200,.3)" stroke-width=".5"/>
+
+    <!-- Plugins par catégorie -->
+    <rect x="20" y="175" width="160" height="80" rx="5" fill="rgba(88,166,255,.06)" stroke="rgba(88,166,255,.4)" stroke-width="1"/>
+    <text x="100" y="193" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#58A6FF">📋 Processus</text>
+    <text x="35" y="208" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">pslist · pstree</text>
+    <text x="35" y="220" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">psscan (rootkits)</text>
+    <text x="35" y="232" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">cmdline · dlllist</text>
+    <text x="35" y="244" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">handles · privs</text>
+
+    <rect x="190" y="175" width="160" height="80" rx="5" fill="rgba(48,232,138,.06)" stroke="rgba(48,232,138,.4)" stroke-width="1"/>
+    <text x="270" y="193" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#30E88A">🌐 Réseau</text>
+    <text x="205" y="208" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">netscan · netstat</text>
+    <text x="205" y="220" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">connections</text>
+    <text x="205" y="232" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">→ détecter C2</text>
+    <text x="205" y="244" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">→ ports d'écoute</text>
+
+    <rect x="360" y="175" width="160" height="80" rx="5" fill="rgba(255,64,96,.06)" stroke="rgba(255,64,96,.4)" stroke-width="1"/>
+    <text x="440" y="193" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#FF4060">🦠 Détection</text>
+    <text x="375" y="208" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">malfind (injection)</text>
+    <text x="375" y="220" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">hollowfind</text>
+    <text x="375" y="232" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">ldrmodules</text>
+    <text x="375" y="244" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">yarascan</text>
+
+    <rect x="530" y="175" width="170" height="80" rx="5" fill="rgba(240,192,64,.06)" stroke="rgba(240,192,64,.4)" stroke-width="1"/>
+    <text x="615" y="193" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#F0C040">🔑 Crypto / Creds</text>
+    <text x="545" y="208" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">hashdump (NTLM)</text>
+    <text x="545" y="220" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">lsadump · cachedump</text>
+    <text x="545" y="232" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">truecryptmaster</text>
+    <text x="545" y="244" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">bitlocker (FVEK)</text>
+
+    <!-- Bandeau bas - artefacts trouvables -->
+    <text x="360" y="285" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8" letter-spacing="1">↓  ARTEFACTS UNIQUEMENT EN RAM (perdus si extinction)  ↓</text>
+    <line x1="40" y1="293" x2="680" y2="293" stroke="rgba(168,181,200,.3)" stroke-width=".5"/>
+
+    <rect x="20" y="305" width="155" height="55" rx="5" fill="rgba(255,64,96,.08)" stroke="#FF4060" stroke-width="1.2"/>
+    <text x="97" y="322" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#FF4060">🔓 Mots de passe</text>
+    <text x="97" y="336" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">en clair en RAM</text>
+    <text x="97" y="348" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">(applis non sécurisées)</text>
+
+    <rect x="185" y="305" width="155" height="55" rx="5" fill="rgba(240,192,64,.08)" stroke="#F0C040" stroke-width="1.2"/>
+    <text x="262" y="322" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#F0C040">🔑 BitLocker FVEK</text>
+    <text x="262" y="336" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">si volume monté</text>
+    <text x="262" y="348" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">→ déchiffre disque</text>
+
+    <rect x="350" y="305" width="155" height="55" rx="5" fill="rgba(48,232,138,.08)" stroke="#30E88A" stroke-width="1.2"/>
+    <text x="427" y="322" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#30E88A">🌐 Connexions C2</text>
+    <text x="427" y="336" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">netscan révèle IP</text>
+    <text x="427" y="348" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">+ process associé</text>
+
+    <rect x="515" y="305" width="185" height="55" rx="5" fill="rgba(188,140,255,.08)" stroke="#BC8CFF" stroke-width="1.2"/>
+    <text x="607" y="322" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#BC8CFF">🦠 Code injecté</text>
+    <text x="607" y="336" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">malfind dump</text>
+    <text x="607" y="348" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">PE en RAM seule</text>
+  </svg>
+  <div class="schema-legend">
+    <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>Acquisition</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#58A6FF"></span>OS info / Processus</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>Triage · Crypto</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>Détection malware</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#BC8CFF"></span>Extraction artefacts</span>
+  </div>
+</div>
+
+<div class="prereq-block">
+  <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="ram_forensique.html" class="prereq-pill">📖 RAM Forensique</a><a href="acquisition.html" class="prereq-pill">📖 Acquisition</a><a href="windows.html" class="prereq-pill">📖 Windows</a></div>
+  <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=ir" class="tp-pill">🧪 🚨 Incident Response</a></div>
+  <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="ram_forensique.html" class="related-pill">🔗 RAM Forensique</a><a href="malware_forensique.html" class="related-pill">🔗 Malware</a><a href="active_directory.html" class="related-pill">🔗 Active Directory</a></div>
 </div>
 
 <div class="tp on" id="t-acq">
@@ -190,11 +320,76 @@ Mimikatz : <code style="color:var(--cyan)" class="copy-code">sekurlsa::logonpass
 </div></div>
 </div>
 
-<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Volatility 3 = <code class="copy-code">python3 vol.py -f ram.raw windows.[plugin]</code> · pslist vs psscan → rootkit · malfind → code injecté · netscan → connexions C2 · hashdump → NTLM → Hashcat -m 1000 · BitLocker FVEK extractible si volume monté lors de la capture RAM.</div>
+<!-- QUIZ -->
+<div class="sec" style="margin-top:2rem">
+<div class="sec-title">🧠 Testez-vous</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Pourquoi <code>pslist</code> et <code>psscan</code> peuvent-ils donner des résultats différents ?<small>Volatility · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>Différence clé pour détecter les rootkits</strong>. <code>pslist</code> parcourt la <strong>liste chaînée doublement liée des processus</strong> (PsActiveProcessHead) gérée par le noyau Windows — c'est ce que voit <code>tasklist</code> ou Process Explorer. Un rootkit moderne peut <strong>déchaîner</strong> son processus de cette liste (« <em>Direct Kernel Object Manipulation</em> », DKOM) pour devenir invisible aux outils standards. <code>psscan</code> en revanche fait un <strong>scan brut de la RAM</strong> à la recherche des structures <code>EPROCESS</code> par signature, indépendamment de leur enchaînement dans la liste. <strong>Si pslist montre 50 process et psscan en montre 52</strong> → 2 process cachés volontairement = très fort indicateur de rootkit. Workflow : (1) <code>vol.py -f ram.raw windows.pslist</code>, (2) <code>vol.py -f ram.raw windows.psscan</code>, (3) <code>diff</code> les deux sorties (filtrage Python ou comparaison manuelle). Les process apparaissant uniquement dans psscan sont à investiguer en priorité avec <code>malfind</code>, <code>cmdline</code>, et <code>dumpfiles</code>. <strong>Limite</strong> : psscan peut aussi détecter des process déjà terminés (structures EPROCESS pas encore réécrites en RAM) — distinction via le champ <code>Exit Time</code>.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Vous trouvez via <code>malfind</code> un process avec une région VAD <code>RWX</code> (Read+Write+Execute). Que signifie cela ?<small>Détection injection · Niveau : difficile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>Très fort indicateur d'injection de code</strong>. En conditions normales, les pages mémoire d'un process ont des permissions <strong>séparées</strong> : <code>R</code> (lecture seule pour const/données read-only), <code>RW</code> (lecture+écriture pour heap/stack/data), <code>RX</code> (lecture+exécution pour code/.text). <strong>Une page <code>RWX</code> est anormale</strong> : elle permet à la fois d'écrire et d'exécuter, ce qui est la signature de : (1) <strong>Code shellcode injecté</strong> via VirtualAllocEx + WriteProcessMemory + CreateRemoteThread, (2) <strong>Process Hollowing</strong> — process légitime vidé puis rempli de code malveillant, (3) <strong>JIT compilers légitimes</strong> (false positive : Java, .NET, V8 dans Chrome) — à exclure par contexte, (4) <strong>Packers / unpackers</strong> qui décompressent du code en RAM. <strong>Workflow d'analyse</strong> : (a) <code>vol.py windows.malfind --pid &lt;PID&gt;</code> dump le contenu de la région suspecte, (b) Examiner les premiers octets : <code>4D 5A</code> = signature MZ d'un PE Windows = code injecté, (c) Examiner le PEB et la VAD pour voir d'où vient l'injection, (d) <code>vol.py windows.cmdline --pid &lt;PID&gt;</code> pour le contexte du process, (e) Sauvegarder le code injecté en .bin et l'analyser avec radare2/Ghidra/IDA. <strong>Détection complémentaire</strong> : <code>vol.py windows.ldrmodules</code> compare les listes de DLL chargées via 3 sources différentes — un mismatch = injection.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Une machine BitLocker est saisie en cours de fonctionnement. Comment exploiter la situation forensiquement ?<small>BitLocker / RAM · Niveau : difficile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>Acquisition RAM IMMÉDIATE</strong> est la priorité absolue — c'est la seule chance de récupérer la <strong>FVEK</strong> (Full Volume Encryption Key) de BitLocker. Procédure : <strong>(1) Ne JAMAIS éteindre la machine</strong> — coupure d'alimentation = perte totale de la RAM = clé perdue à jamais. <strong>(2) Ne pas verrouiller la session</strong> non plus (peut déclencher BitLocker re-locking sur certaines configs). <strong>(3) Brancher au chargeur</strong> si laptop. <strong>(4) Acquisition RAM</strong> avec <code>WinPMem</code> sur clé USB write-blocked : <code>winpmem.exe -o ram.raw</code>. <strong>(5) Hash SHA-256</strong> immédiatement après. <strong>(6) Acquisition disque chiffré</strong> séparément (via write-blocker physique). <strong>(7) Analyse de la RAM</strong> avec Volatility : <code>vol.py -f ram.raw windows.bitlocker</code> (plugin tiers Volatility 3) extrait les FVEK, ou avec outils alternatifs comme <strong>Elcomsoft Forensic Disk Decryptor</strong>. <strong>(8) Déchiffrement du disque</strong> offline avec la FVEK extraite. <strong>Pourquoi cela fonctionne</strong> : BitLocker maintient la FVEK déchiffrée en RAM tant que le volume est monté pour pouvoir lire/écrire les secteurs en temps réel. Une fois trouvée, on peut déchiffrer toute l'image disque. <strong>Limite</strong> : si l'utilisateur a verrouillé la session avec BitLocker en mode "lock on suspend", la FVEK peut être effacée de la RAM. Si le volume est démonté pendant la session, idem. <strong>Cadre légal CH</strong> : art. 248 CPP autorise l'acquisition RAM si décision motivée — documenter scrupuleusement.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Quelle est la différence entre <code>hashdump</code> et <code>lsadump</code> dans Volatility ?<small>Credentials · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Tous deux extraient des credentials de la RAM, mais à des emplacements différents : <strong><code>hashdump</code></strong> extrait les <strong>hashes NTLM des comptes locaux</strong> depuis la base SAM (équivalent du <code>secretsdump SAM</code> mais en RAM). Sortie : <code>user:RID:LM_hash:NT_hash:::</code>. À cracker avec <code>hashcat -m 1000</code>. Couvre les comptes <em>locaux uniquement</em>, pas les comptes de domaine. <strong><code>lsadump</code></strong> extrait les <strong>secrets LSA</strong> (Local Security Authority) — c'est-à-dire les credentials cachées par Windows pour les services autonomes : (1) Mots de passe des comptes service (configurés en plain text dans <code>HKLM\SECURITY\Policy\Secrets</code> et déchiffrés en RAM), (2) Cached domain credentials (les 10 derniers logons de domaine), (3) <strong>DPAPI master keys</strong> (qui chiffrent les passwords sauvegardés des navigateurs, etc.). Plugin associé : <strong><code>cachedump</code></strong> spécifique pour les credentials de domaine cachées (format MS-CACHE, à cracker avec <code>hashcat -m 2100</code> ou <code>-m 1100</code>). <strong>Workflow forensique typique</strong> : (1) <code>hashdump</code> pour comptes locaux, (2) <code>lsadump</code> pour service accounts + secrets, (3) <code>cachedump</code> pour cached domain logons, (4) <strong>Mimikatz en RAM</strong> (via <code>vol.py windows.mimikatz</code> en module communautaire) peut extraire bien plus, y compris des MDP en clair si WDigest était activé. <strong>NB</strong> : tous ces extractions nécessitent le profil OS correctement détecté (Windows 7 vs Win10 : différentes structures).</div>
+</div>
+</div>
+
+<!-- EXAM TIP -->
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — Volatility 3 &amp; Forensique RAM</div>
+  <p><strong>Volatility 3</strong> (2020+) Python 3 · framework open source référence</p>
+  <p><strong>Syntaxe</strong> : <code>vol.py -f dump.raw windows.&lt;plugin&gt;</code></p>
+  <p><strong>Symboles</strong> : auto-détectés (vs Volatility 2 qui demandait un profil)</p>
+  <p><strong>━━ ACQUISITION ━━</strong></p>
+  <p>• <strong>Windows</strong> : WinPMem (recommandé) · Magnet RAM Capture · FTK Imager</p>
+  <p>• <strong>Linux</strong> : avml (Microsoft) · LiME (kernel module)</p>
+  <p>• <strong>macOS</strong> : OSXPMem (limité) · Volexity Surge Collect</p>
+  <p>• Toujours hash SHA-256 immédiatement après · ISO/IEC 27037 = RAM avant tout</p>
+  <p><strong>━━ PLUGINS PROCESSUS ━━</strong></p>
+  <p>• <code>windows.info</code> = profil OS (toujours en premier)</p>
+  <p>• <code>windows.pslist</code> = liste chaînée des process</p>
+  <p>• <code>windows.psscan</code> = scan brut de la RAM (détecte process cachés)</p>
+  <p>• <code>windows.pstree</code> = arborescence parent-enfant</p>
+  <p>• <code>windows.cmdline</code> = lignes de commande (révèle PowerShell encodé)</p>
+  <p>• <code>windows.dlllist</code> = DLL chargées par chaque process</p>
+  <p>• <code>windows.handles</code> = handles ouverts (fichiers, mutex, registry)</p>
+  <p><strong>━━ PLUGINS RÉSEAU ━━</strong></p>
+  <p>• <code>windows.netscan</code> = connexions réseau actives + processus</p>
+  <p>• <code>windows.netstat</code> = équivalent netstat en RAM</p>
+  <p><strong>━━ PLUGINS DÉTECTION MALWARE ━━</strong></p>
+  <p>• <code>windows.malfind</code> = pages RWX, code injecté</p>
+  <p>• <code>windows.hollowfind</code> = process hollowing</p>
+  <p>• <code>windows.ldrmodules</code> = mismatch entre listes DLL = injection</p>
+  <p>• <code>windows.yarascan</code> = scan signatures YARA dans la RAM</p>
+  <p>• <code>diff pslist psscan</code> = process cachés (rootkit)</p>
+  <p><strong>━━ PLUGINS CREDENTIALS ━━</strong></p>
+  <p>• <code>windows.hashdump</code> = NTLM hashes locaux (SAM en RAM)</p>
+  <p>• <code>windows.lsadump</code> = secrets LSA (service accounts MDP)</p>
+  <p>• <code>windows.cachedump</code> = cached domain logons</p>
+  <p>• <code>vol.py windows.mimikatz</code> = MDP en clair si WDigest actif</p>
+  <p><strong>━━ CRYPTO ━━</strong></p>
+  <p>• <strong>BitLocker FVEK</strong> extractible <em>uniquement</em> si volume monté lors de la capture</p>
+  <p>• Permet de déchiffrer le disque offline ensuite</p>
+  <p>• Idem pour VeraCrypt, TrueCrypt, FileVault</p>
+  <p><strong>━━ SUISSE ━━</strong></p>
+  <p>Art. 246-248 CPP : acquisition RAM = mesure de contrainte motivée</p>
+</div>
+
+<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Volatility 3 = <code>python3 vol.py -f ram.raw windows.[plugin]</code> · pslist vs psscan → rootkit · malfind → code injecté (page RWX) · netscan → connexions C2 + process · hashdump → NTLM → Hashcat -m 1000 · BitLocker FVEK extractible si volume monté lors de la capture RAM · ISO 27037 RAM avant tout · art. 248 CPP = mesure de contrainte motivée.</div>
 <div class="footer">
   <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
   <span>Ch. 15 Manuel · Volatility 3 Documentation · ISO/IEC 27037</span>
-</div>
 </div>
 </div>
 <script>
