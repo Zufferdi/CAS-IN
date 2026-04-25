@@ -23,6 +23,115 @@
 <div class="prereq-row"><span class="prereq-label">Approfondir</span><a href="windows_forensique.html" class="related-pill">🔗 Windows Forensique (guide)</a><a href="registre_windows.html" class="related-pill">🔗 Registre Windows</a><a href="logs_windows.html" class="related-pill">🔗 Logs Windows</a><a href="shellbags.html" class="related-pill">🔗 ShellBags</a></div>
 </div>
 
+<div class="concept-card">
+  <div class="concept-title">🖥 Artefacts Windows — Cheat Sheet de référence</div>
+  Cette fiche est la <strong>carte routière</strong> des artefacts Windows — le tableau synthétique à garder sous la main lors d'une analyse forensique. Windows enregistre <strong>silencieusement et automatiquement</strong> des dizaines d'artefacts qui révèlent le comportement de l'utilisateur, et ce sans qu'il en ait conscience. <strong>Les 5 grandes catégories</strong> à connaître par cœur : <strong>(1) Preuves d'exécution</strong> — Prefetch (.pf), Amcache.hve (avec hash SHA-1), ShimCache (présence), UserAssist (GUI seulement, encodé ROT13), BAM/DAM (Win10+, par SID), ActivitiesCache.db (Windows Timeline 7-30j). <strong>(2) Fichiers consultés</strong> — fichiers .lnk Recent (avec Volume Serial Number), Jump Lists (par application), Thumbcache (miniatures qui persistent après suppression du fichier !), MRU. <strong>(3) Corbeille</strong> — <code>C:\$Recycle.Bin\&lt;SID&gt;\</code> avec deux fichiers par item : <strong>$I*</strong> (métadonnées : nom original, chemin, taille, date de suppression — survit même au vidage de la corbeille) + <strong>$R*</strong> (contenu réel). <strong>(4) USB</strong> — chaîne de 5 sources convergentes pour identifier qui a connecté quoi quand : USBSTOR + setupapi.dev.log + MountPoints2 + ShellBags + .lnk. <strong>(5) Persistance malware</strong> — 8 zones critiques : Run keys (HKLM+HKCU), RunOnce, Services (EID 7045), Scheduled Tasks, Startup folder, AppInit_DLLs, IFEO Hijacking, WMI Subscriptions. <strong>Le piège classique</strong> à toujours documenter : <strong>Timezone</strong>. Windows stocke en UTC dans NTFS mais affiche en heure locale → tout timestamp doit être <em>qualifié</em> dans le rapport. La source : <code>HKLM\SYSTEM\CurrentControlSet\Control\TimeZoneInformation</code>.
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA SVG — CHEAT SHEET ARTEFACTS WINDOWS
+     ════════════════════════════════════════════════════════════ -->
+<div class="schema">
+  <div class="schema-title">🖥 Artefacts Windows — Cartographie des sources forensiques</div>
+  <div class="schema-sub">EXÉCUTION · FICHIERS · USB · PERSISTANCE · TIMEZONE — référence rapide DFIR</div>
+  <svg viewBox="0 0 720 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cheat Sheet Windows">
+    <defs>
+      <marker id="arr-win" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="#00E5CC"/>
+      </marker>
+    </defs>
+
+    <!-- Header -->
+    <rect x="20" y="15" width="680" height="36" rx="6" fill="rgba(13,17,23,.5)" stroke="rgba(0,229,204,.4)" stroke-width="1.2"/>
+    <text x="360" y="33" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#00E5CC">🖥 ARTEFACTS WINDOWS — Caisse noire automatique de l'OS · 5 catégories essentielles</text>
+    <text x="360" y="46" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">Chaque artefact a son rôle · cross-référencer 3-5 sources pour valider · SID = colonne vertébrale</text>
+
+    <!-- ① EXECUTION (gauche haut) -->
+    <rect x="20" y="65" width="220" height="135" rx="8" fill="rgba(255,64,96,.07)" stroke="#FF4060" stroke-width="1.5"/>
+    <text x="130" y="85" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#FF4060">① EXÉCUTION</text>
+    <text x="35" y="103" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">▸ Prefetch (.pf)</text>
+    <text x="40" y="114" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">8 dernières exec · désactivé serveurs</text>
+    <text x="35" y="127" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">▸ Amcache.hve</text>
+    <text x="40" y="138" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">SHA-1 + chemin + dates</text>
+    <text x="35" y="151" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">▸ UserAssist (ROT13!)</text>
+    <text x="40" y="162" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">GUI seulement · NTUSER.DAT</text>
+    <text x="35" y="175" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">▸ BAM/DAM</text>
+    <text x="40" y="186" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">Win10+ · par SID · timestamps</text>
+    <text x="35" y="196" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#6A80A8">+ ShimCache · ActivitiesCache.db</text>
+
+    <!-- ② FICHIERS (centre haut) -->
+    <rect x="250" y="65" width="220" height="135" rx="8" fill="rgba(88,166,255,.07)" stroke="#58A6FF" stroke-width="1.5"/>
+    <text x="360" y="85" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#58A6FF">② FICHIERS</text>
+    <text x="265" y="103" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#58A6FF">▸ .lnk Recent</text>
+    <text x="270" y="114" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">+ Volume Serial Number ⭐</text>
+    <text x="265" y="127" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#58A6FF">▸ Jump Lists</text>
+    <text x="270" y="138" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">par application · pinned</text>
+    <text x="265" y="151" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#58A6FF">▸ Thumbcache</text>
+    <text x="270" y="162" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">⭐ persistent après delete!</text>
+    <text x="265" y="175" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#58A6FF">▸ Corbeille \$I+\$R</text>
+    <text x="270" y="186" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">$I survit au vidage · par SID</text>
+    <text x="265" y="196" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#6A80A8">+ MRU · RecentDocs</text>
+
+    <!-- ③ USB (droite haut) -->
+    <rect x="480" y="65" width="220" height="135" rx="8" fill="rgba(48,232,138,.07)" stroke="#30E88A" stroke-width="1.5"/>
+    <text x="590" y="85" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#30E88A">③ USB (5 sources)</text>
+    <text x="495" y="103" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A">▸ USBSTOR (SYSTEM)</text>
+    <text x="500" y="114" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">modèle + S/N + dates</text>
+    <text x="495" y="127" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A">▸ setupapi.dev.log</text>
+    <text x="500" y="138" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">timestamp 1re connexion immutable</text>
+    <text x="495" y="151" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A">▸ MountPoints2 ⭐</text>
+    <text x="500" y="162" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">par user (SID) = QUI</text>
+    <text x="495" y="175" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A">▸ ShellBags</text>
+    <text x="500" y="186" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">dossiers parcourus sur la clé</text>
+    <text x="495" y="196" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#6A80A8">+ .lnk Volume S/N</text>
+
+    <!-- ④ PERSISTANCE (gauche bas) -->
+    <rect x="20" y="215" width="335" height="125" rx="8" fill="rgba(240,192,64,.07)" stroke="#F0C040" stroke-width="1.5"/>
+    <text x="187" y="234" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#F0C040">④ PERSISTANCE MALWARE — 8 zones</text>
+    <text x="35" y="251" font-family="JetBrains Mono,monospace" font-size="7" fill="#F0C040">1. Run/RunOnce</text>
+    <text x="180" y="251" font-family="JetBrains Mono,monospace" font-size="7" fill="#F0C040">2. Services</text>
+    <text x="35" y="263" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">HKLM+HKCU\...\Run</text>
+    <text x="180" y="263" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">EID 7045 · 4697</text>
+    <text x="35" y="276" font-family="JetBrains Mono,monospace" font-size="7" fill="#F0C040">3. Tasks (XML)</text>
+    <text x="180" y="276" font-family="JetBrains Mono,monospace" font-size="7" fill="#F0C040">4. Startup Folder</text>
+    <text x="35" y="288" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">System32\Tasks\</text>
+    <text x="180" y="288" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">.lnk au logon</text>
+    <text x="35" y="301" font-family="JetBrains Mono,monospace" font-size="7" fill="#F0C040">5. AppInit_DLLs</text>
+    <text x="180" y="301" font-family="JetBrains Mono,monospace" font-size="7" fill="#F0C040">6. IFEO Hijack</text>
+    <text x="35" y="313" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">DLL injection</text>
+    <text x="180" y="313" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">clé Debugger</text>
+    <text x="35" y="326" font-family="JetBrains Mono,monospace" font-size="7" fill="#F0C040">7. WMI Sub.</text>
+    <text x="180" y="326" font-family="JetBrains Mono,monospace" font-size="7" fill="#F0C040">8. Drivers</text>
+    <text x="35" y="338" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">fileless persist</text>
+    <text x="180" y="338" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">services kernel</text>
+
+    <!-- ⑤ TIMEZONE / SID (droite bas) -->
+    <rect x="365" y="215" width="335" height="125" rx="8" fill="rgba(188,140,255,.07)" stroke="#BC8CFF" stroke-width="1.5"/>
+    <text x="532" y="234" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#BC8CFF">⑤ PIÈGES À L'EXAMEN</text>
+
+    <rect x="375" y="245" width="315" height="40" rx="5" fill="rgba(255,64,96,.08)" stroke="#FF4060" stroke-width="1"/>
+    <text x="385" y="260" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#FF4060">🚨 TIMEZONE</text>
+    <text x="385" y="273" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">NTFS stocke UTC · Windows affiche local</text>
+    <text x="385" y="282" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">Source: HKLM\SYSTEM\...\TimeZoneInformation</text>
+
+    <rect x="375" y="290" width="315" height="40" rx="5" fill="rgba(0,229,204,.08)" stroke="#00E5CC" stroke-width="1"/>
+    <text x="385" y="305" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#00E5CC">👤 SID = identifiant unique</text>
+    <text x="385" y="318" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">RID 500 = Admin · 1001+ = users (jamais 1000)</text>
+    <text x="385" y="327" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">$Recycle.Bin\&lt;SID&gt;\ identifie qui a supprimé</text>
+
+    <!-- Bandeau bas alerte -->
+    <rect x="20" y="355" width="680" height="22" rx="4" fill="rgba(48,232,138,.08)" stroke="rgba(48,232,138,.4)" stroke-width="1"/>
+    <text x="360" y="370" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#30E88A">✓ Outils incontournables : Eric Zimmerman Suite (PECmd · AmcacheParser · RECmd · SBECmd · MFTECmd · EvtxECmd) · Plaso · KAPE</text>
+  </svg>
+  <div class="schema-legend">
+    <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>① Exécution</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#58A6FF"></span>② Fichiers</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>③ USB</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>④ Persistance</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#BC8CFF"></span>⑤ Pièges (Timezone, SID)</span>
+  </div>
+</div>
+
 <div class="sec"><div class="sec-title">Preuves d'exécution</div>
 <table><thead><tr><th>Artefact</th><th>Localisation</th><th>Contenu clé</th><th>Outil</th></tr></thead><tbody>
 <tr><td><strong>Prefetch</strong></td><td><code>C:\Windows\Prefetch\</code></td><td>Dates d'exécution (8 max), compteur, DLL. Survit à suppression. <span style="color:var(--red)">Désactivé sur serveurs.</span></td><td>PECmd.exe</td></tr>
