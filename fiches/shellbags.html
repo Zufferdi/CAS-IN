@@ -8,6 +8,8 @@
 <meta name="description" content="BagMRU · USRCLASS.DAT · Navigation GUI · Preuve USB · Dossiers supprimés">
 </head>
 <body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 
 <nav class="tn-nav">
   <a class="tn-back" href="index.html">← Fiches</a>
@@ -68,6 +70,126 @@
       <a class="related-pill" href="anti_forensique.html">🔗 Anti-forensique</a>
     </div>
   </div>
+
+  <div class="concept-card">
+    <div class="concept-title">📁 ShellBags — La mémoire indélébile de l'explorateur Windows</div>
+    Les <strong>ShellBags</strong> sont l'un des artefacts les plus puissants de la forensique Windows — et l'un des plus <strong>méconnus des suspects</strong>. Leur fonction officielle est <strong>banale</strong> : Windows mémorise pour chaque dossier que vous ouvrez dans l'Explorateur la <em>position de la fenêtre</em>, la <em>taille des colonnes</em>, le <em>mode d'affichage</em> (icônes, détails, miniatures), pour rétablir vos préférences à la prochaine visite. <strong>Effet de bord forensique</strong> : pour stocker ces préférences, Windows enregistre le <strong>chemin complet</strong> du dossier dans le registre — et ce chemin <strong>persiste indéfiniment</strong>, même si le dossier est ensuite <em>supprimé</em>, même si la <em>clé USB</em> qui le contenait est partie depuis 5 ans, même si le dossier était sur un <em>partage réseau</em> aujourd'hui démonté. Un ShellBag prouve <strong>trois choses simultanément</strong> : (1) le dossier a <em>existé</em>, (2) un utilisateur (identifié par SID) l'a <em>ouvert visuellement dans l'Explorateur</em> (donc accès intentionnel et conscient, pas juste un script qui passe), (3) <em>quand</em> approximativement il l'a fait. Ils sont stockés dans deux ruches utilisateur : <strong><code>USRCLASS.DAT</code></strong> (clé <code>Local Settings\Software\Microsoft\Windows\Shell\BagMRU</code>) — la principale, et <strong><code>NTUSER.DAT</code></strong> (clé <code>Software\Microsoft\Windows\Shell\BagMRU</code>) — secondaire. La structure est <strong>arborescente</strong> : la racine = Bureau, et chaque sous-clé = un sous-dossier visité, formant une cartographie complète des navigations. Outil incontournable : <strong>ShellBags Explorer</strong> (Eric Zimmerman). <strong>Anti-forensique</strong> : peu d'outils malveillants nettoient les ShellBags car peu d'attaquants savent qu'ils existent — ils sont donc <em>extrêmement fiables</em> en pratique.
+  </div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA SVG — STRUCTURE DES SHELLBAGS
+     ════════════════════════════════════════════════════════════ -->
+<div class="schema">
+  <div class="schema-title">📁 Structure ShellBags — Arborescence + ce qu'ils prouvent</div>
+  <div class="schema-sub">USRCLASS.DAT BagMRU · NTUSER.DAT · NavigationS GUI · DOSSIERS SUPPRIMÉS · CLÉS USB DISPARUES</div>
+  <svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Structure ShellBags">
+    <defs>
+      <marker id="arr-sb" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="#BC8CFF"/>
+      </marker>
+    </defs>
+
+    <!-- Header -->
+    <rect x="20" y="15" width="680" height="36" rx="6" fill="rgba(13,17,23,.5)" stroke="rgba(188,140,255,.4)" stroke-width="1.2"/>
+    <text x="360" y="33" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#BC8CFF">📁 SHELLBAGS — preuve d'accès GUI à un dossier · persistent même si dossier supprimé</text>
+    <text x="360" y="46" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">Stockés par utilisateur (SID) · arborescent · révèlent USB disparues + partages réseau démontés</text>
+
+    <!-- Colonne gauche : RUCHES -->
+    <rect x="20" y="65" width="225" height="180" rx="10" fill="rgba(0,229,204,.06)" stroke="#00E5CC" stroke-width="1.5"/>
+    <text x="132" y="85" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#00E5CC">🗝 RUCHES SOURCES</text>
+
+    <rect x="35" y="100" width="195" height="58" rx="6" fill="rgba(188,140,255,.1)" stroke="#BC8CFF" stroke-width="1.2"/>
+    <text x="132" y="118" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="700" fill="#BC8CFF">USRCLASS.DAT (principale)</text>
+    <text x="132" y="132" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">…\Microsoft\Windows\</text>
+    <text x="132" y="143" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">UsrClass.dat</text>
+    <text x="132" y="154" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#6A80A8">→ Shell\BagMRU + Bags</text>
+
+    <rect x="35" y="166" width="195" height="58" rx="6" fill="rgba(88,166,255,.1)" stroke="#58A6FF" stroke-width="1.2"/>
+    <text x="132" y="184" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="700" fill="#58A6FF">NTUSER.DAT (secondaire)</text>
+    <text x="132" y="198" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">C:\Users\&lt;user&gt;\</text>
+    <text x="132" y="209" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">NTUSER.DAT</text>
+    <text x="132" y="220" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#6A80A8">→ Software\Microsoft\Windows\Shell</text>
+
+    <text x="132" y="240" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060" font-weight="700">UN PAR UTILISATEUR (SID)</text>
+
+    <line x1="245" y1="155" x2="290" y2="155" stroke="#BC8CFF" stroke-width="1.5" marker-end="url(#arr-sb)"/>
+
+    <!-- Colonne centre : ARBRE -->
+    <rect x="290" y="65" width="220" height="180" rx="10" fill="rgba(240,192,64,.06)" stroke="#F0C040" stroke-width="1.5"/>
+    <text x="400" y="85" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#F0C040">🌳 ARBORESCENCE BagMRU</text>
+
+    <!-- Tree structure -->
+    <text x="305" y="105" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#F0C040">📂 Bureau (racine)</text>
+    <line x1="312" y1="110" x2="312" y2="125" stroke="#F0C040" stroke-width="1"/>
+    <text x="320" y="125" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">├─ 🖥 Mon PC</text>
+    <line x1="332" y1="130" x2="332" y2="145" stroke="rgba(168,181,200,.5)" stroke-width="1"/>
+    <text x="340" y="145" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">├─ C:\Users\Bob\</text>
+    <text x="345" y="158" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">│  └─ Documents\</text>
+    <text x="350" y="170" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">│     └─ Secret\ ⚠</text>
+    <text x="340" y="184" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">├─ E:\ (USB Kingston)</text>
+    <text x="350" y="196" font-family="JetBrains Mono,monospace" font-size="7" fill="#FF4060">│  └─ exfil\ ⚠⚠</text>
+    <text x="340" y="210" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">└─ \\srv01\partage</text>
+    <text x="350" y="222" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">   └─ confidentiel\</text>
+    <text x="400" y="238" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#30E88A" font-weight="700">→ chaque nœud = 1 visite GUI</text>
+
+    <line x1="510" y1="155" x2="555" y2="155" stroke="#BC8CFF" stroke-width="1.5" marker-end="url(#arr-sb)"/>
+
+    <!-- Colonne droite : Ce qu'ils prouvent -->
+    <rect x="555" y="65" width="145" height="180" rx="10" fill="rgba(48,232,138,.06)" stroke="#30E88A" stroke-width="1.5"/>
+    <text x="627" y="85" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#30E88A">⚖️ PROUVE</text>
+
+    <rect x="565" y="98" width="125" height="33" rx="4" fill="rgba(48,232,138,.08)" stroke="rgba(48,232,138,.4)"/>
+    <text x="627" y="112" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="#30E88A">① EXISTENCE</text>
+    <text x="627" y="123" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">le dossier a existé</text>
+
+    <rect x="565" y="135" width="125" height="33" rx="4" fill="rgba(240,192,64,.08)" stroke="rgba(240,192,64,.4)"/>
+    <text x="627" y="149" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="#F0C040">② ACCÈS GUI</text>
+    <text x="627" y="160" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">user a vu le dossier</text>
+
+    <rect x="565" y="172" width="125" height="33" rx="4" fill="rgba(255,64,96,.08)" stroke="rgba(255,64,96,.4)"/>
+    <text x="627" y="186" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="#FF4060">③ ATTRIBUTION</text>
+    <text x="627" y="197" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">QUI (SID utilisateur)</text>
+
+    <rect x="565" y="209" width="125" height="30" rx="4" fill="rgba(88,166,255,.08)" stroke="rgba(88,166,255,.4)"/>
+    <text x="627" y="222" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="#58A6FF">④ TIMING</text>
+    <text x="627" y="233" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">timestamp visite</text>
+
+    <!-- Bandeau bas -->
+    <text x="360" y="270" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8" letter-spacing="1">↓  CAS D'USAGE FORENSIQUE  ↓</text>
+    <line x1="40" y1="278" x2="680" y2="278" stroke="rgba(168,181,200,.3)" stroke-width=".5"/>
+
+    <rect x="20" y="290" width="160" height="55" rx="5" fill="rgba(255,64,96,.08)" stroke="#FF4060" stroke-width="1.2"/>
+    <text x="100" y="307" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#FF4060">🔌 USB disparues</text>
+    <text x="100" y="321" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">trace dossiers parcourus</text>
+    <text x="100" y="332" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">même clé jamais retrouvée</text>
+
+    <rect x="190" y="290" width="160" height="55" rx="5" fill="rgba(240,192,64,.08)" stroke="#F0C040" stroke-width="1.2"/>
+    <text x="270" y="307" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#F0C040">🗑 Dossiers supprimés</text>
+    <text x="270" y="321" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">noms persistent</text>
+    <text x="270" y="332" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">même après wiping</text>
+
+    <rect x="360" y="290" width="160" height="55" rx="5" fill="rgba(48,232,138,.08)" stroke="#30E88A" stroke-width="1.2"/>
+    <text x="440" y="307" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#30E88A">🌐 Partages réseau</text>
+    <text x="440" y="321" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">\\server\share visités</text>
+    <text x="440" y="332" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">même si plus accessibles</text>
+
+    <rect x="530" y="290" width="170" height="55" rx="5" fill="rgba(188,140,255,.08)" stroke="#BC8CFF" stroke-width="1.2"/>
+    <text x="615" y="307" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#BC8CFF">🛠 Outil principal</text>
+    <text x="615" y="321" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">ShellBags Explorer</text>
+    <text x="615" y="332" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">Eric Zimmerman</text>
+
+    <!-- Bandeau bas alerte -->
+    <rect x="20" y="355" width="680" height="20" rx="4" fill="rgba(48,232,138,.08)" stroke="rgba(48,232,138,.4)" stroke-width="1"/>
+    <text x="360" y="368" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#30E88A">✓ Très peu nettoyés par les outils anti-forensiques · extrêmement fiables en pratique</text>
+  </svg>
+  <div class="schema-legend">
+    <span class="lg-item"><span class="lg-dot" style="background:#BC8CFF"></span>USRCLASS.DAT (principal)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#58A6FF"></span>NTUSER.DAT (secondaire)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>BagMRU arborescent</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>Existence + Accès</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>Attribution (SID)</span>
+  </div>
+</div>
 
   <div class="toc">
     <div class="toc-title">Sommaire</div>
@@ -427,6 +549,66 @@ HKCU\Software\Microsoft\Windows\<span class="gold">ShellNoRoam</span></pre>
     </div>
   </div>
 
+  <!-- QUIZ -->
+  <div class="section" style="margin-top:2rem">
+    <div class="section-title">🧠 Testez-vous</div>
+    <div class="quiz-wrap">
+      <div class="quiz-q">Vous trouvez un ShellBag mentionnant <code>E:\exfil_secret\</code> mais aucune clé USB n'est branchée. Que pouvez-vous conclure ?<small>Interprétation · Niveau : moyen</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer">Plusieurs conclusions <strong>fortes</strong> peuvent être tirées : <strong>(1) Une clé USB a été branchée</strong> sur ce poste (à un moment donné, pas nécessairement présente actuellement), avec la lettre de lecteur E:. <strong>(2) L'utilisateur a ouvert ce dossier <code>exfil_secret</code> dans l'Explorateur Windows</strong> (interaction GUI, pas via script ou cmd). <strong>(3) Le dossier <code>exfil_secret</code> a réellement existé</strong> sur cette clé (les ShellBags sont créés uniquement quand le dossier est rendu par l'OS). <strong>(4) Le SID propriétaire de USRCLASS.DAT</strong> identifie l'utilisateur. <strong>Étapes complémentaires d'enquête</strong> : (a) Cross-check avec <strong>USBSTOR</strong> (registre SYSTEM) → identifier modèle + Serial de toutes les clés USB E: utilisées à cette époque, (b) <strong>MountedDevices</strong> + <strong>MountPoints2</strong> (NTUSER.DAT) → confirmer mappage E: ↔ clé spécifique + utilisateur, (c) <strong>setupapi.dev.log</strong> → timestamp 1re connexion, (d) Recherche de fichiers <strong>.lnk Recent</strong> avec Volume Serial Number correspondant → fichiers ouverts depuis cette clé, (e) Examiner <strong>Last Write Time</strong> du ShellBag pour dater la dernière interaction. <strong>Force juridique</strong> : ce schéma de preuve est extrêmement solide en Suisse. Même si le suspect efface la clé ou la cache, les ShellBags restent — et il est <em>extrêmement difficile pour la défense de contester</em> que le dossier a été ouvert intentionnellement, car les ShellBags ne sont créés <strong>que lors d'une navigation GUI consciente</strong>.</div>
+    </div>
+    <div class="quiz-wrap">
+      <div class="quiz-q">Quelle est la différence forensique <strong>cruciale</strong> entre <code>Last Write Time</code> de la clé et <code>First Interacted</code> / <code>Last Interacted</code> ?<small>Timestamps · Niveau : difficile</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer"><strong>Confusion classique aux conséquences sérieuses en audience.</strong> <strong>Last Write Time (LWT)</strong> de la clé registre = horodatage Windows standard du registre = quand la <em>clé elle-même</em> a été modifiée. <strong>Mais</strong> il peut être mis à jour pour des raisons indirectes (ré-organisation par Windows, changement de préférence d'affichage par exemple) qui ne correspondent <strong>pas forcément</strong> à une interaction GUI directe avec ce dossier précis. <strong>First Interacted</strong> (extrait par ShellBags Explorer) = première fois que l'utilisateur a réellement ouvert le dossier visuellement — <strong>figé</strong>, ne change plus jamais. <strong>Last Interacted</strong> = dernière interaction GUI avec ce dossier — évolue à chaque visite. <strong>Implication forensique</strong> : ne JAMAIS rapporter le LWT comme « dernière fois que l'utilisateur a ouvert le dossier » — c'est <em>incorrect</em>. Toujours utiliser First/Last Interacted extraits par <strong>ShellBags Explorer</strong> (Eric Zimmerman) qui parse correctement les structures internes. <strong>Source des First/Last Interacted</strong> : ils proviennent des slots binaires dans la valeur <code>NodeSlot</code> de chaque clé BagMRU, pas du LWT du registre. <strong>Conséquence pratique</strong> : un ShellBag peut avoir LWT = 2024-12-15 mais Last Interacted = 2023-03-08 si l'utilisateur n'a plus visité le dossier depuis mars 2023 mais que le système a touché la clé pour d'autres raisons. <strong>En audience</strong> : être très précis sur cette nuance — la défense peut détecter et exploiter cette confusion. <strong>Best practice</strong> : toujours documenter les <em>trois</em> timestamps (LWT, First, Last) et expliquer leur signification.</div>
+    </div>
+    <div class="quiz-wrap">
+      <div class="quiz-q">Le suspect a copié des données via PowerShell <code>Copy-Item</code>. Pourquoi les ShellBags ne révèlent rien ?<small>Limite · Niveau : facile</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer">Les ShellBags sont <strong>exclusivement créés par l'interface graphique Explorer</strong> (explorer.exe) lors d'une <em>navigation visuelle consciente</em> de l'utilisateur. <strong>Ils ne sont JAMAIS créés par</strong> : (1) Commandes shell (<code>cmd.exe</code>, <code>copy</code>, <code>xcopy</code>, <code>robocopy</code>), (2) PowerShell (<code>Copy-Item</code>, <code>Get-ChildItem</code>, <code>Move-Item</code>), (3) Scripts batch ou WSH, (4) APIs Windows directes (CreateFile, FindFirstFile dans des programmes), (5) Outils tiers comme TotalCommander, FreeCommander, etc. (utilisent leurs propres caches), (6) Accès SMB/réseau via <code>net use</code> sans navigation Explorer. <strong>Conséquence forensique</strong> : un attaquant techniquement averti peut exfiltrer massivement des données via PowerShell sans laisser <strong>aucune trace ShellBag</strong>. <strong>Sources alternatives à examiner</strong> : (a) <strong>Logs PowerShell EID 4104</strong> (ScriptBlock logging) — si activé, contient les commandes complètes y compris obfusquées, (b) <strong>Logs Sysmon Event 1</strong> (ProcessCreate) avec hash + ligne de commande, (c) <strong>Prefetch</strong> de <code>powershell.exe</code> + <code>cmd.exe</code> avec dates et compteurs, (d) <strong>Amcache</strong> pour exécutables lancés, (e) <strong>EID 4688</strong> (ProcessCreated, Security Log si audit activé) avec ligne de commande, (f) <strong>$LogFile NTFS</strong> ($MFT $LogFile) — peut révéler les opérations fichier en transaction, (g) <strong>USN Journal</strong> ($UsnJrnl) — chaque création/modification de fichier loggée. <strong>Conclusion</strong> : absence de ShellBags ≠ absence d'activité. Toujours croiser avec d'autres sources, surtout si le suspect a des compétences techniques.</div>
+    </div>
+  </div>
+
+  <!-- EXAM TIP -->
+  <div class="exam-tip">
+    <div class="exam-tip-title">🎓 Exam Tip — ShellBags</div>
+    <p><strong>ShellBags</strong> = mémoire des préférences d'affichage des dossiers Explorer Windows</p>
+    <p><strong>━━ EMPLACEMENT ━━</strong></p>
+    <p>• <strong>USRCLASS.DAT</strong> (principal, Windows 7+) :</p>
+    <p>&nbsp;&nbsp;<code>C:\Users\%User%\AppData\Local\Microsoft\Windows\UsrClass.dat</code></p>
+    <p>&nbsp;&nbsp;<code>HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\BagMRU</code></p>
+    <p>• <strong>NTUSER.DAT</strong> (secondaire, réseau + Bureau) :</p>
+    <p>&nbsp;&nbsp;<code>HKCU\Software\Microsoft\Windows\Shell\BagMRU</code></p>
+    <p><strong>━━ STRUCTURE ━━</strong></p>
+    <p>• <strong>BagMRU</strong> = carte hiérarchique des dossiers visités (arborescence)</p>
+    <p>• <strong>Bags</strong> = réglages d'affichage associés (taille colonnes, mode, etc.)</p>
+    <p>• Chaque nœud = 1 dossier visité dans l'Explorateur</p>
+    <p><strong>━━ CE QUI EST SOURCE D'ATTRIBUTION FORTE ━━</strong></p>
+    <p>① <strong>Existence</strong> : le dossier a réellement existé</p>
+    <p>② <strong>Accès GUI</strong> : l'utilisateur l'a ouvert dans Explorer (intentionnel)</p>
+    <p>③ <strong>Attribution</strong> : SID utilisateur (depuis ruche)</p>
+    <p>④ <strong>Timing</strong> : First Interacted + Last Interacted</p>
+    <p><strong>━━ TIMESTAMPS — ATTENTION ━━</strong></p>
+    <p>• <strong>Last Write Time (LWT)</strong> = horodatage clé registre (≠ interaction directe)</p>
+    <p>• <strong>First Interacted</strong> = 1re ouverture GUI (figé)</p>
+    <p>• <strong>Last Interacted</strong> = dernière ouverture GUI (évolue)</p>
+    <p>• <em>Toujours utiliser First/Last Interacted, pas LWT, pour les conclusions juridiques</em></p>
+    <p><strong>━━ CAS PARTICULIERS ━━</strong></p>
+    <p>• Traités comme dossiers : <strong>ZIP · RAR · CAB · ISO · FTP · UNC \\server\share</strong></p>
+    <p>• Survit à : suppression dossier · USB déconnectée · partage démonté</p>
+    <p><strong>━━ LIMITES ━━</strong></p>
+    <p>• Aucune trace si copy/move via cmd · PowerShell · scripts</p>
+    <p>• Prouve l'ouverture du <em>dossier</em>, pas des fichiers à l'intérieur</p>
+    <p>• Effaçables par CCleaner/BleachBit (absence = signal anti-forensique)</p>
+    <p><strong>━━ OUTILS ━━</strong></p>
+    <p>• <strong>ShellBags Explorer</strong> (GUI) — Eric Zimmerman ⭐</p>
+    <p>• <strong>sbecmd.exe</strong> (CLI) — même outil version commande</p>
+    <p>• <strong>RegRipper</strong> — plugin shellbags</p>
+    <p>• <strong>Registry Explorer</strong> — exploration manuelle</p>
+    <p><strong>━━ CROSS-REFERENCE USB ━━</strong></p>
+    <p>USBSTOR (S/N) + MountedDevices (lettre) + ShellBags (dossiers) + .lnk (fichiers)</p>
+  </div>
+
   <div class="footer">
     <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
     <span>Cours Investigation Numérique · ShellBags Explorer</span>
@@ -436,11 +618,13 @@ HKCU\Software\Microsoft\Windows\<span class="gold">ShellNoRoam</span></pre>
 
 <button class="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Retour en haut">↑</button>
 <script>
-  const bt = document.querySelector('.back-top');
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 400) bt.classList.add('visible');
-    else bt.classList.remove('visible');
-  });
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top')||document.querySelector('.back-top');
+  if(bt){if(!bt.id)bt.id='back-top';window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});}
+  document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){btn.addEventListener('click',function(){var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');ans.classList.toggle('visible');btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';});});
+})();
 </script>
 
 </body>
