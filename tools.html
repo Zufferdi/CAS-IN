@@ -92,6 +92,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
   <button type="button" class="tnav-btn" onclick="showTool('ntfs',this)">📁 Offset NTFS</button>
   <button type="button" class="tnav-btn" id="tab-hex" onclick="showTool('hex',this)">🔢 Hex ↔ ASCII</button>
   <button type="button" class="tnav-btn" onclick="showTool('enc',this)">🔐 Encodages</button>
+  <button type="button" class="tnav-btn" onclick="showTool('sfn',this)">📄 SFN FAT</button>
+  <button type="button" class="tnav-btn" onclick="showTool('magic',this)">✨ Magic Bytes</button>
+  <button type="button" class="tnav-btn" onclick="showTool('bitmap',this)">🗺 Bitmap</button>
+  <button type="button" class="tnav-btn" onclick="showTool('hashid',this)">🔑 Hash ID</button>
+  <button type="button" class="tnav-btn" onclick="showTool('cluster',this)">📐 Cluster</button>
+  <button type="button" class="tnav-btn" onclick="showTool('mft',this)">🧩 MFT</button>
 </div>
 
 <!-- ══ TIMESTAMPS ══ -->
@@ -340,6 +346,157 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 </div>
 </div><!-- /.page -->
 
+<!-- ══ SFN FAT — Décodeur entrée répertoire ══ -->
+<div id="tool-sfn" class="tool-panel">
+<div class="tc">
+  <h3>📄 Décodeur entrée SFN FAT (32 octets)</h3>
+  <p class="tc-desc">Colle les 32 octets d'une entrée de répertoire FAT (Short File Name) pour décoder automatiquement nom, extension, attributs, dates, cluster et taille.</p>
+  <div class="calc-row">
+    <label>32 octets hex (séparés par espaces ou non)</label>
+    <input type="text" id="sfn-in" placeholder="41 42 43 20 20 20 20 20 54 58 54 20 00 00 ..." style="font-family:var(--mono);width:100%">
+  </div>
+  <div style="display:flex;gap:.5rem;margin:.5rem 0 1rem">
+    <button type="button" class="btn-calc" onclick="decodeSFN()">Décoder →</button>
+    <button type="button" class="btn-sec" onclick="document.getElementById('sfn-in').value='';document.getElementById('sfn-result').style.display='none'">Effacer</button>
+  </div>
+  <div id="sfn-result" class="result-box" style="display:none"></div>
+  <div class="ref-box">
+    <strong>Structure SFN (32 octets) :</strong>
+    0x00–0x07 Nom (8 o, maj) · 0x08–0x0A Extension (3 o) · 0x0B Attributs · 0x0C–0x0D Réservé ·
+    0x0E–0x0F Heure création · 0x10–0x11 Date création · 0x12–0x13 Date accès ·
+    0x14–0x15 Cluster hi (FAT32) · 0x16–0x17 Heure modif · 0x18–0x19 Date modif ·
+    0x1A–0x1B Cluster lo · 0x1C–0x1F Taille (LE32)
+  </div>
+</div>
+</div>
+
+<!-- ══ MAGIC BYTES ══ -->
+<div id="tool-magic" class="tool-panel">
+<div class="tc">
+  <h3>✨ Identificateur Magic Bytes</h3>
+  <p class="tc-desc">Saisis les premiers octets d'un fichier (au moins 4) pour identifier son type réel, indépendamment de l'extension.</p>
+  <div class="calc-row">
+    <label>Premiers octets hex (ex: FF D8 FF E0)</label>
+    <input type="text" id="magic-in" placeholder="FF D8 FF E0" style="font-family:var(--mono);width:100%"
+      oninput="identifyMagic()">
+  </div>
+  <div id="magic-result" class="result-box" style="display:none"></div>
+  <div class="ref-box" style="margin-top:1rem">
+    <strong>Référence rapide :</strong>
+    <div id="magic-ref" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px;margin-top:.5rem;font-size:.72rem;font-family:var(--mono)"></div>
+  </div>
+</div>
+</div>
+
+<!-- ══ BITMAP ══ -->
+<div id="tool-bitmap" class="tool-panel">
+<div class="tc">
+  <h3>🗺 Décodeur Bitmap d'allocation</h3>
+  <p class="tc-desc">Colle les octets de la bitmap (exFAT/FAT) pour visualiser quels clusters sont libres (0) ou occupés (1). LSB first : bit 0 de l'octet 0 = cluster 2.</p>
+  <div class="calc-row" style="display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:end">
+    <div>
+      <label>Octets bitmap hex</label>
+      <input type="text" id="bm-in" placeholder="0F A2 FF 00 3C ..." style="font-family:var(--mono);width:100%" oninput="decodeBitmap()">
+    </div>
+    <div>
+      <label>Premier cluster</label>
+      <input type="number" id="bm-start" value="2" min="0" style="width:90px" oninput="decodeBitmap()">
+    </div>
+  </div>
+  <div id="bm-result" style="margin-top:.75rem"></div>
+</div>
+</div>
+
+<!-- ══ HASH ID ══ -->
+<div id="tool-hashid" class="tool-panel">
+<div class="tc">
+  <h3>🔑 Identificateur de Hash</h3>
+  <p class="tc-desc">Colle un hash pour l'identifier automatiquement par sa longueur. Affiche aussi son usage forensique recommandé.</p>
+  <div class="calc-row">
+    <label>Valeur de hash (hex)</label>
+    <input type="text" id="hashid-in" placeholder="Coller le hash ici…" style="font-family:var(--mono);width:100%" oninput="identifyHash()">
+  </div>
+  <div id="hashid-result" class="result-box" style="display:none"></div>
+  <div class="ref-box" style="margin-top:1rem">
+    <table style="width:100%;font-size:.75rem;border-collapse:collapse">
+      <thead><tr style="color:var(--dim);font-size:.68rem">
+        <th style="text-align:left;padding:.25rem .5rem">Algorithme</th>
+        <th style="text-align:left;padding:.25rem .5rem">Bits</th>
+        <th style="text-align:left;padding:.25rem .5rem">Chars hex</th>
+        <th style="text-align:left;padding:.25rem .5rem">Usage forensique</th>
+      </tr></thead>
+      <tbody id="hash-ref-table"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- ══ CLUSTER CALCULATOR ══ -->
+<div id="tool-cluster" class="tool-panel">
+<div class="tc">
+  <h3>📐 Calculateur de cluster</h3>
+  <p class="tc-desc">Taille cluster, nombre de clusters, offset d'un cluster donné — calculs fondamentaux pour FAT, NTFS, exFAT, EXT et HFS+.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.85rem;margin-bottom:.75rem">
+    <div class="calc-row">
+      <label>Bytes per Sector (BPS)</label>
+      <select id="cl-bps" onchange="calcCluster()">
+        <option value="512">512 (standard)</option>
+        <option value="1024">1024</option>
+        <option value="2048">2048</option>
+        <option value="4096">4096 (Advanced Format)</option>
+      </select>
+    </div>
+    <div class="calc-row">
+      <label>Sectors per Cluster (SPC)</label>
+      <select id="cl-spc" onchange="calcCluster()">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="4">4</option>
+        <option value="8" selected>8</option>
+        <option value="16">16</option>
+        <option value="32">32</option>
+        <option value="64">64</option>
+        <option value="128">128</option>
+      </select>
+    </div>
+    <div class="calc-row">
+      <label>Taille partition (Mo)</label>
+      <input type="number" id="cl-size" value="4096" min="1" onchange="calcCluster()" oninput="calcCluster()">
+    </div>
+    <div class="calc-row">
+      <label>Numéro de cluster cible</label>
+      <input type="number" id="cl-num" value="5" min="2" onchange="calcCluster()" oninput="calcCluster()">
+    </div>
+  </div>
+  <button type="button" class="btn-calc" onclick="calcCluster()">Calculer →</button>
+  <div id="cl-result" class="result-box" style="display:none;margin-top:.75rem"></div>
+</div>
+</div>
+
+<!-- ══ MFT DECODER ══ -->
+<div id="tool-mft" class="tool-panel">
+<div class="tc">
+  <h3>🧩 Décodeur Entrée MFT NTFS</h3>
+  <p class="tc-desc">Colle les premiers octets d'un enregistrement MFT (minimum 56 octets) pour vérifier la signature, lire les métadonnées et lister les types d'attributs.</p>
+  <div class="calc-row">
+    <label>Octets MFT hex (min. 56, séparés ou non)</label>
+    <textarea id="mft-in" rows="3" placeholder="46 49 4C 45 30 00 03 00 ..." style="font-family:var(--mono);font-size:.78rem;width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:.5rem;resize:vertical"></textarea>
+  </div>
+  <div style="display:flex;gap:.5rem;margin:.5rem 0 1rem">
+    <button type="button" class="btn-calc" onclick="decodeMFT()">Décoder →</button>
+    <button type="button" class="btn-sec" onclick="document.getElementById('mft-in').value='';document.getElementById('mft-result').style.display='none'">Effacer</button>
+  </div>
+  <div id="mft-result" class="result-box" style="display:none"></div>
+  <div class="ref-box">
+    <strong>Attributs NTFS courants :</strong>
+    0x10 $STANDARD_INFORMATION · 0x20 $ATTRIBUTE_LIST · 0x30 $FILE_NAME ·
+    0x40 $OBJECT_ID · 0x50 $SECURITY_DESCRIPTOR · 0x60 $VOLUME_NAME ·
+    0x70 $VOLUME_INFORMATION · 0x80 $DATA · 0x90 $INDEX_ROOT ·
+    0xA0 $INDEX_ALLOCATION · 0xB0 $BITMAP · 0xC0 $REPARSE_POINT · 0xFF EOF
+  </div>
+</div>
+</div>
+
 <script>
 
 // ── Raccourci Entrée pour calculer ───────────────────────────
@@ -423,7 +580,7 @@ function calcTS() {
   const fatDate = ((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
   const fatTime = (d.getHours()<<11)|(d.getMinutes()<<5)|Math.floor(d.getSeconds()/2);
 
-  const extraWarn = fmt==='fat-time' ? '<div class="alert-box" style="margin-bottom:.6rem">⚠ FAT Time seul — la date affichée utilise <strong>aujourd'hui</strong> comme référence. Pour un timestamp complet, combiner FAT Date + FAT Time.</div>' : '';
+  const extraWarn = fmt==='fat-time' ? `<div class="alert-box" style="margin-bottom:.6rem">⚠ FAT Time seul — la date affichée utilise <strong>aujourd'hui</strong> comme référence. Pour un timestamp complet, combiner FAT Date + FAT Time.</div>` : '';
   showResult('ts-result', extraWarn +
     row('Date lisible (UTC)', d.toISOString(), 'highlight') +
     row('Unix (secondes)', unix) +
@@ -723,6 +880,603 @@ function computeMD5(buffer) {
   return [a,b,c,d].map(n => [
     (n>>>0)&0xFF, (n>>>8)&0xFF, (n>>>16)&0xFF, (n>>>24)&0xFF
   ].map(b=>b.toString(16).padStart(2,'0')).join('')).join('');
+}
+
+
+
+<!-- ══ SFN FAT — Décodeur entrée répertoire ══ -->
+<div id="tool-sfn" class="tool-panel">
+<div class="tc">
+  <h3>📄 Décodeur entrée SFN FAT (32 octets)</h3>
+  <p class="tc-desc">Colle les 32 octets d'une entrée de répertoire FAT (Short File Name) pour décoder automatiquement nom, extension, attributs, dates, cluster et taille.</p>
+  <div class="calc-row">
+    <label>32 octets hex (séparés par espaces ou non)</label>
+    <input type="text" id="sfn-in" placeholder="41 42 43 20 20 20 20 20 54 58 54 20 00 00 ..." style="font-family:var(--mono);width:100%">
+  </div>
+  <div style="display:flex;gap:.5rem;margin:.5rem 0 1rem">
+    <button type="button" class="btn-calc" onclick="decodeSFN()">Décoder →</button>
+    <button type="button" class="btn-sec" onclick="document.getElementById('sfn-in').value='';document.getElementById('sfn-result').style.display='none'">Effacer</button>
+  </div>
+  <div id="sfn-result" class="result-box" style="display:none"></div>
+  <div class="ref-box">
+    <strong>Structure SFN (32 octets) :</strong>
+    0x00–0x07 Nom (8 o, maj) · 0x08–0x0A Extension (3 o) · 0x0B Attributs · 0x0C–0x0D Réservé ·
+    0x0E–0x0F Heure création · 0x10–0x11 Date création · 0x12–0x13 Date accès ·
+    0x14–0x15 Cluster hi (FAT32) · 0x16–0x17 Heure modif · 0x18–0x19 Date modif ·
+    0x1A–0x1B Cluster lo · 0x1C–0x1F Taille (LE32)
+  </div>
+</div>
+</div>
+
+<!-- ══ MAGIC BYTES ══ -->
+<div id="tool-magic" class="tool-panel">
+<div class="tc">
+  <h3>✨ Identificateur Magic Bytes</h3>
+  <p class="tc-desc">Saisis les premiers octets d'un fichier (au moins 4) pour identifier son type réel, indépendamment de l'extension.</p>
+  <div class="calc-row">
+    <label>Premiers octets hex (ex: FF D8 FF E0)</label>
+    <input type="text" id="magic-in" placeholder="FF D8 FF E0" style="font-family:var(--mono);width:100%"
+      oninput="identifyMagic()">
+  </div>
+  <div id="magic-result" class="result-box" style="display:none"></div>
+  <div class="ref-box" style="margin-top:1rem">
+    <strong>Référence rapide :</strong>
+    <div id="magic-ref" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px;margin-top:.5rem;font-size:.72rem;font-family:var(--mono)"></div>
+  </div>
+</div>
+</div>
+
+<!-- ══ BITMAP ══ -->
+<div id="tool-bitmap" class="tool-panel">
+<div class="tc">
+  <h3>🗺 Décodeur Bitmap d'allocation</h3>
+  <p class="tc-desc">Colle les octets de la bitmap (exFAT/FAT) pour visualiser quels clusters sont libres (0) ou occupés (1). LSB first : bit 0 de l'octet 0 = cluster 2.</p>
+  <div class="calc-row" style="display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:end">
+    <div>
+      <label>Octets bitmap hex</label>
+      <input type="text" id="bm-in" placeholder="0F A2 FF 00 3C ..." style="font-family:var(--mono);width:100%" oninput="decodeBitmap()">
+    </div>
+    <div>
+      <label>Premier cluster</label>
+      <input type="number" id="bm-start" value="2" min="0" style="width:90px" oninput="decodeBitmap()">
+    </div>
+  </div>
+  <div id="bm-result" style="margin-top:.75rem"></div>
+</div>
+</div>
+
+<!-- ══ HASH ID ══ -->
+<div id="tool-hashid" class="tool-panel">
+<div class="tc">
+  <h3>🔑 Identificateur de Hash</h3>
+  <p class="tc-desc">Colle un hash pour l'identifier automatiquement par sa longueur. Affiche aussi son usage forensique recommandé.</p>
+  <div class="calc-row">
+    <label>Valeur de hash (hex)</label>
+    <input type="text" id="hashid-in" placeholder="Coller le hash ici…" style="font-family:var(--mono);width:100%" oninput="identifyHash()">
+  </div>
+  <div id="hashid-result" class="result-box" style="display:none"></div>
+  <div class="ref-box" style="margin-top:1rem">
+    <table style="width:100%;font-size:.75rem;border-collapse:collapse">
+      <thead><tr style="color:var(--dim);font-size:.68rem">
+        <th style="text-align:left;padding:.25rem .5rem">Algorithme</th>
+        <th style="text-align:left;padding:.25rem .5rem">Bits</th>
+        <th style="text-align:left;padding:.25rem .5rem">Chars hex</th>
+        <th style="text-align:left;padding:.25rem .5rem">Usage forensique</th>
+      </tr></thead>
+      <tbody id="hash-ref-table"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- ══ CLUSTER CALCULATOR ══ -->
+<div id="tool-cluster" class="tool-panel">
+<div class="tc">
+  <h3>📐 Calculateur de cluster</h3>
+  <p class="tc-desc">Taille cluster, nombre de clusters, offset d'un cluster donné — calculs fondamentaux pour FAT, NTFS, exFAT, EXT et HFS+.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.85rem;margin-bottom:.75rem">
+    <div class="calc-row">
+      <label>Bytes per Sector (BPS)</label>
+      <select id="cl-bps" onchange="calcCluster()">
+        <option value="512">512 (standard)</option>
+        <option value="1024">1024</option>
+        <option value="2048">2048</option>
+        <option value="4096">4096 (Advanced Format)</option>
+      </select>
+    </div>
+    <div class="calc-row">
+      <label>Sectors per Cluster (SPC)</label>
+      <select id="cl-spc" onchange="calcCluster()">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="4">4</option>
+        <option value="8" selected>8</option>
+        <option value="16">16</option>
+        <option value="32">32</option>
+        <option value="64">64</option>
+        <option value="128">128</option>
+      </select>
+    </div>
+    <div class="calc-row">
+      <label>Taille partition (Mo)</label>
+      <input type="number" id="cl-size" value="4096" min="1" onchange="calcCluster()" oninput="calcCluster()">
+    </div>
+    <div class="calc-row">
+      <label>Numéro de cluster cible</label>
+      <input type="number" id="cl-num" value="5" min="2" onchange="calcCluster()" oninput="calcCluster()">
+    </div>
+  </div>
+  <button type="button" class="btn-calc" onclick="calcCluster()">Calculer →</button>
+  <div id="cl-result" class="result-box" style="display:none;margin-top:.75rem"></div>
+</div>
+</div>
+
+<!-- ══ MFT DECODER ══ -->
+<div id="tool-mft" class="tool-panel">
+<div class="tc">
+  <h3>🧩 Décodeur Entrée MFT NTFS</h3>
+  <p class="tc-desc">Colle les premiers octets d'un enregistrement MFT (minimum 56 octets) pour vérifier la signature, lire les métadonnées et lister les types d'attributs.</p>
+  <div class="calc-row">
+    <label>Octets MFT hex (min. 56, séparés ou non)</label>
+    <textarea id="mft-in" rows="3" placeholder="46 49 4C 45 30 00 03 00 ..." style="font-family:var(--mono);font-size:.78rem;width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:.5rem;resize:vertical"></textarea>
+  </div>
+  <div style="display:flex;gap:.5rem;margin:.5rem 0 1rem">
+    <button type="button" class="btn-calc" onclick="decodeMFT()">Décoder →</button>
+    <button type="button" class="btn-sec" onclick="document.getElementById('mft-in').value='';document.getElementById('mft-result').style.display='none'">Effacer</button>
+  </div>
+  <div id="mft-result" class="result-box" style="display:none"></div>
+  <div class="ref-box">
+    <strong>Attributs NTFS courants :</strong>
+    0x10 $STANDARD_INFORMATION · 0x20 $ATTRIBUTE_LIST · 0x30 $FILE_NAME ·
+    0x40 $OBJECT_ID · 0x50 $SECURITY_DESCRIPTOR · 0x60 $VOLUME_NAME ·
+    0x70 $VOLUME_INFORMATION · 0x80 $DATA · 0x90 $INDEX_ROOT ·
+    0xA0 $INDEX_ALLOCATION · 0xB0 $BITMAP · 0xC0 $REPARSE_POINT · 0xFF EOF
+  </div>
+</div>
+</div>
+
+
+
+// ════════════════════════════════════════════════════════════
+// SFN FAT DECODER
+// ════════════════════════════════════════════════════════════
+const FAT_ATTRS = {0x01:'Lecture seule',0x02:'Caché',0x04:'Système',0x08:'Label volume',
+  0x10:'Répertoire',0x20:'Archive',0x0F:'LFN (Long File Name)'};
+
+function parseFatDate(w) {
+  if (!w) return '—';
+  const day=(w&0x1F), mo=((w>>5)&0xF), yr=((w>>9)&0x7F)+1980;
+  return mo>=1&&mo<=12&&day>=1&&day<=31 ? `${yr}-${String(mo).padStart(2,'0')}-${String(day).padStart(2,'0')}` : '(invalide)';
+}
+function parseFatTime(w) {
+  if (!w) return '—';
+  const s=(w&0x1F)*2, mi=(w>>5)&0x3F, h=(w>>11)&0x1F;
+  return `${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function le16(b,off){return b[off]|(b[off+1]<<8);}
+function le32(b,off){return (b[off]|(b[off+1]<<8)|(b[off+2]<<16)|((b[off+3]>>>0)<<24))>>>0;}
+
+function decodeSFN() {
+  const raw = document.getElementById('sfn-in').value.trim().replace(/[^0-9a-fA-F]/g,' ').trim();
+  const hex = raw.split(/\s+/).filter(Boolean);
+  const res = document.getElementById('sfn-result');
+  if (hex.length < 32) {
+    res.innerHTML = '<div class="alert-box">⚠ Il faut exactement 32 octets ('+hex.length+' saisis)</div>';
+    res.style.display='block'; return;
+  }
+  const b = hex.slice(0,32).map(h=>parseInt(h,16));
+  const first = b[0];
+  let statusMsg = '';
+  if (first === 0x00) statusMsg = '<span style="color:var(--dim)">⬜ Fin de répertoire (aucune entrée valide après)</span>';
+  else if (first === 0xE5) statusMsg = '<span style="color:var(--red)">🗑 Fichier supprimé (0xE5 — données potentiellement récupérables)</span>';
+  else statusMsg = '<span style="color:var(--green)">✅ Entrée active</span>';
+
+  const nameBytes = b.slice(0,8).map(x => x===0xE5?0x05:x);
+  const extBytes  = b.slice(8,11);
+  const name = nameBytes.map(x=>x>=0x20&&x<0x7F?String.fromCharCode(x):'.').join('').trimEnd();
+  const ext  = extBytes.map(x=>x>=0x20&&x<0x7F?String.fromCharCode(x):'.').join('').trimEnd();
+  const fullName = ext ? name+'.'+ext : name;
+
+  const attr = b[0x0B];
+  const attrStr = attr===0x0F ? 'LFN' : Object.entries(FAT_ATTRS)
+    .filter(([k])=> (attr & parseInt(k)) && parseInt(k)!==0x0F)
+    .map(([,v])=>v).join(', ') || '(aucun)';
+
+  const timeCreate = parseFatTime(le16(b,0x0E));
+  const dateCreate = parseFatDate(le16(b,0x10));
+  const dateAccess = parseFatDate(le16(b,0x12));
+  const timeWrite  = parseFatTime(le16(b,0x16));
+  const dateWrite  = parseFatDate(le16(b,0x18));
+  const clusterHi  = le16(b,0x14);
+  const clusterLo  = le16(b,0x1A);
+  const cluster    = (clusterHi<<16)|clusterLo;
+  const size       = le32(b,0x1C);
+
+  const hexRow = (label,from,to,color='var(--cyan)') => {
+    const bytes = b.slice(from,to+1).map(x=>x.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+    return `<tr><td style="color:var(--dim);padding:.3rem .6rem;font-size:.7rem;white-space:nowrap">${label}</td>
+      <td style="font-family:var(--mono);font-size:.75rem;padding:.3rem .6rem;color:${color}">${bytes}</td></tr>`;
+  };
+
+  res.innerHTML = `
+    <div style="margin-bottom:.75rem">${statusMsg}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:.75rem">
+      <div>
+        ${row('Nom complet','<strong style="color:var(--text);font-size:.95rem">'+(first===0xE5?'?'+fullName.slice(1):fullName)+'</strong>')}
+        ${row('Attributs (0x'+attr.toString(16).toUpperCase().padStart(2,'0')+')',attrStr)}
+        ${row('Cluster départ','<strong style="color:var(--cyan)">'+cluster+'</strong> (0x'+cluster.toString(16).toUpperCase()+')')}
+        ${row('Taille','<strong style="color:var(--gold)">'+(size>=1048576?(size/1048576).toFixed(2)+' Mo':size>=1024?(size/1024).toFixed(1)+' Ko':size+' o')+'</strong> ('+size.toLocaleString('fr-CH')+' octets)')}
+      </div>
+      <div>
+        ${row('Créé',dateCreate+' '+timeCreate)}
+        ${row('Modifié',dateWrite+' '+timeWrite)}
+        ${row('Accédé',dateAccess)}
+        ${row('Cluster hi (FAT32)','0x'+clusterHi.toString(16).toUpperCase().padStart(4,'0'))}
+      </div>
+    </div>
+    <div style="font-size:.72rem;color:var(--dim);margin-bottom:.4rem">Carte des octets :</div>
+    <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:.72rem;width:100%">
+      <tbody>
+        ${hexRow('0x00–0x07 Nom',0,7)}
+        ${hexRow('0x08–0x0A Extension',8,10,'var(--purple)')}
+        ${hexRow('0x0B Attributs',11,11,'var(--gold)')}
+        ${hexRow('0x0E–0x0F Heure création',14,15,'var(--green)')}
+        ${hexRow('0x10–0x11 Date création',16,17,'var(--green)')}
+        ${hexRow('0x12–0x13 Date accès',18,19,'var(--muted)')}
+        ${hexRow('0x14–0x15 Cluster hi',20,21,'var(--orange)')}
+        ${hexRow('0x16–0x17 Heure modif',22,23,'var(--green)')}
+        ${hexRow('0x18–0x19 Date modif',24,25,'var(--green)')}
+        ${hexRow('0x1A–0x1B Cluster lo',26,27,'var(--cyan)')}
+        ${hexRow('0x1C–0x1F Taille (LE32)',28,31,'var(--gold)')}
+      </tbody>
+    </table></div>`;
+  res.style.display='block';
+}
+
+// ════════════════════════════════════════════════════════════
+// MAGIC BYTES IDENTIFIER
+// ════════════════════════════════════════════════════════════
+const MAGIC_DB = [
+  {sig:'FF D8 FF',ext:'jpg/jpeg',desc:'Image JPEG',note:'Standard photo — EXIF souvent présent'},
+  {sig:'89 50 4E 47 0D 0A 1A 0A',ext:'png',desc:'Image PNG',note:'Portable Network Graphics — sans perte'},
+  {sig:'47 49 46 38',ext:'gif',desc:'Image GIF',note:'GIF87a ou GIF89a'},
+  {sig:'25 50 44 46',ext:'pdf',desc:'Document PDF',note:'Portable Document Format — "%PDF"'},
+  {sig:'50 4B 03 04',ext:'zip/docx/xlsx/apk',desc:'Archive ZIP / Office 2007+',note:'"PK" = Phil Katz (PKZip)'},
+  {sig:'50 4B 05 06',ext:'zip (vide)',desc:'Archive ZIP vide',note:'End of Central Directory'},
+  {sig:'52 61 72 21 1A 07',ext:'rar',desc:'Archive RAR',note:'"Rar!" — RAR 5.x : signature différente'},
+  {sig:'1F 8B',ext:'gz/tar.gz',desc:'Archive GZip',note:'Compression Deflate'},
+  {sig:'42 5A 68',ext:'bz2',desc:'Archive BZip2',note:'"BZh" — compression Burrows-Wheeler'},
+  {sig:'4D 5A',ext:'exe/dll',desc:'Exécutable Windows PE',note:'"MZ" = Mark Zbikowski (DOS)'},
+  {sig:'7F 45 4C 46',ext:'elf',desc:'Exécutable Linux/Unix ELF',note:'"\x7FELF" — pas un PE Windows !'},
+  {sig:'4E 45 53 1A',ext:'nes',desc:'ROM NES',note:'"NES\x1A"'},
+  {sig:'CA FE BA BE',ext:'class',desc:'Bytecode Java .class',note:'"Café babe" — Gosling/Java'},
+  {sig:'FE ED FA CE',ext:'macho',desc:'Exécutable macOS Mach-O 32-bit',note:'Big-endian'},
+  {sig:'CE FA ED FE',ext:'macho',desc:'Exécutable macOS Mach-O 32-bit',note:'Little-endian'},
+  {sig:'CF FA ED FE',ext:'macho',desc:'Exécutable macOS Mach-O 64-bit',note:'Little-endian'},
+  {sig:'42 4D',ext:'bmp',desc:'Image Bitmap Windows',note:'"BM" — palette de couleurs'},
+  {sig:'49 49 2A 00',ext:'tiff',desc:'Image TIFF Little-Endian',note:'"II" = Intel (LE)'},
+  {sig:'4D 4D 00 2A',ext:'tiff',desc:'Image TIFF Big-Endian',note:'"MM" = Motorola (BE)'},
+  {sig:'00 00 01 00',ext:'ico',desc:'Icône Windows ICO',note:'Contient plusieurs tailles'},
+  {sig:'4F 67 67 53',ext:'ogg',desc:'Audio/Vidéo OGG',note:'"OggS" — conteneur libre'},
+  {sig:'66 74 79 70',ext:'mp4/m4v/mov',desc:'Vidéo MP4/MOV',note:'"ftyp" à offset 4'},
+  {sig:'49 44 33',ext:'mp3',desc:'Audio MP3 avec tag ID3',note:'"ID3" — métadonnées'},
+  {sig:'FF FB',ext:'mp3',desc:'Audio MP3 (sans ID3)',note:'Frame header MPEG'},
+  {sig:'52 49 46 46',ext:'wav/avi',desc:'Audio WAV ou Vidéo AVI',note:'"RIFF" — conteneur Microsoft'},
+  {sig:'38 42 50 53',ext:'psd',desc:'Document Photoshop',note:'"8BPS"'},
+  {sig:'D0 CF 11 E0',ext:'doc/xls/ppt',desc:'Document Office 97-2003',note:'Compound Document Format (OLE2)'},
+  {sig:'45 4C 46 20',ext:'img (exFAT)',desc:'Volume exFAT',note:'Signature de boot exFAT'},
+  {sig:'EB 52 90 4E 54 46 53',ext:'img (NTFS)',desc:'Volume NTFS',note:'OEM ID "NTFS    "'},
+  {sig:'EB 58 90 4D 53 57 49',ext:'img (FAT32)',desc:'Volume FAT32',note:'OEM "MSWIN4.1"'},
+  {sig:'EB 58 90 4D 53 44 4F',ext:'img (FAT16)',desc:'Volume FAT16/FAT12',note:'OEM "MSDOS5.0"'},
+  {sig:'48 2B 00 04',ext:'img (HFS+)',desc:'Volume HFS+',note:'"H+" signature Apple (BE)'},
+  {sig:'53 EF',ext:'img (EXT)',desc:'Volume EXT2/3/4',note:'Magic 0xEF53 à offset 0x38 du superbloc'},
+  {sig:'4C 4F 43 4B',ext:'evt',desc:'Journal événements Windows (legacy)',note:'"LOCK"'},
+  {sig:'45 6C 66 46 69 6C 65',ext:'evtx',desc:'Journal EVTX Windows Vista+',note:'"ElfFile"'},
+  {sig:'4D 44 4D 50',ext:'dmp',desc:'Memory Dump Windows (MDMP)',note:'"MDMP" = Minidump'},
+  {sig:'50 41 47 45',ext:'dmp',desc:'Memory Dump Windows (PAGE)',note:'"PAGE" = hiberfil.sys'},
+  {sig:'52 45 47 46',ext:'dat (registre)',desc:'Fichier de registre Windows',note:'"REGF" = Registry File'},
+  {sig:'4D 41 52 31',ext:'img',desc:'Image DD/RAW (aucune)',note:'Certains outils ajoutent ce header'},
+  {sig:'45 57 46',ext:'E01',desc:'Image forensique EWF/E01',note:'"EWF" — EnCase/FTK'},
+  {sig:'41 46 46',ext:'AFF',desc:'Image forensique AFF',note:'"AFF" — Advanced Forensic Format'},
+];
+
+function initMagicRef() {
+  const el = document.getElementById('magic-ref');
+  if (!el) return;
+  el.innerHTML = MAGIC_DB.slice(0,16).map(m =>
+    `<div style="padding:2px 4px;background:rgba(255,255,255,.03);border-radius:3px">
+       <span style="color:var(--cyan)">${m.sig.split(' ').slice(0,4).join(' ')}…</span>
+       <span style="color:var(--dim)"> → .${m.ext.split('/')[0]}</span>
+     </div>`
+  ).join('') + `<div style="color:var(--dim);padding:2px 4px">(+${MAGIC_DB.length-16} autres…)</div>`;
+}
+
+function identifyMagic() {
+  const raw = document.getElementById('magic-in').value.trim().toUpperCase().replace(/[^0-9A-F]/g,' ').trim();
+  const input = raw.replace(/\s+/g,' ');
+  const res = document.getElementById('magic-result');
+  if (input.replace(/\s/g,'').length < 4) { res.style.display='none'; return; }
+
+  const matches = MAGIC_DB.filter(m => {
+    const sig = m.sig.toUpperCase();
+    return input.startsWith(sig) || input.replace(/\s/g,'').startsWith(sig.replace(/\s/g,''));
+  }).sort((a,b) => b.sig.length - a.sig.length);
+
+  if (!matches.length) {
+    res.innerHTML = '<div style="color:var(--dim);font-size:.8rem">Aucune correspondance — essaie avec plus d'octets.</div>';
+  } else {
+    res.innerHTML = matches.map(m => `
+      <div style="display:flex;align-items:flex-start;gap:.75rem;padding:.6rem .75rem;background:var(--surface2);border-radius:7px;margin-bottom:.4rem;border-left:3px solid var(--cyan)">
+        <div>
+          <div style="font-weight:700;color:var(--text);font-size:.85rem">${m.desc}</div>
+          <div style="font-family:var(--mono);color:var(--cyan);font-size:.72rem">.${m.ext}</div>
+          <div style="color:var(--dim);font-size:.75rem;margin-top:.2rem">${m.note}</div>
+          <div style="font-family:var(--mono);color:var(--muted);font-size:.68rem;margin-top:.2rem">Signature : ${m.sig}</div>
+        </div>
+      </div>`).join('');
+  }
+  res.style.display='block';
+}
+
+document.addEventListener('DOMContentLoaded', initMagicRef);
+
+// ════════════════════════════════════════════════════════════
+// BITMAP DECODER
+// ════════════════════════════════════════════════════════════
+function decodeBitmap() {
+  const raw = document.getElementById('bm-in').value.trim();
+  const startCluster = parseInt(document.getElementById('bm-start').value)||2;
+  const res = document.getElementById('bm-result');
+  if (!raw) { res.innerHTML=''; return; }
+
+  const bytes = raw.replace(/[^0-9a-fA-F]/g,' ').trim().split(/\s+/).filter(Boolean).map(h=>parseInt(h,16));
+  if (!bytes.length || bytes.some(isNaN)) { res.innerHTML='<div class="alert-box">⚠ Octets invalides</div>'; return; }
+
+  const total = bytes.length * 8;
+  const occupied = [], free = [];
+  for (let i=0;i<bytes.length;i++) {
+    for (let b=0;b<8;b++) {
+      const clust = startCluster + i*8 + b;
+      if ((bytes[i]>>b)&1) occupied.push(clust);
+      else free.push(clust);
+    }
+  }
+
+  // Grille visuelle
+  let grid = '<div style="display:flex;flex-wrap:wrap;gap:2px;margin:.5rem 0;font-family:var(--mono);font-size:.6rem">';
+  for (let i=0;i<bytes.length;i++) {
+    for (let b=0;b<8;b++) {
+      const clust = startCluster + i*8 + b;
+      const occ = (bytes[i]>>b)&1;
+      grid += `<div title="Cluster ${clust} : ${occ?'occupé':'libre'}"
+        style="width:28px;height:24px;border-radius:3px;display:flex;align-items:center;justify-content:center;
+               background:${occ?'rgba(255,64,96,.2)':'rgba(48,232,138,.1)'};
+               border:1px solid ${occ?'rgba(255,64,96,.4)':'rgba(48,232,138,.25)'};
+               color:${occ?'var(--red)':'var(--green)'}">
+        ${clust}</div>`;
+    }
+  }
+  grid += '</div>';
+
+  // Plages libres contiguës (utile pour identifier espace libre)
+  let freeRanges='', cur=null, prev=null;
+  for (const c of free) {
+    if (prev===null||c!==prev+1) { if(cur!==null) freeRanges+=cur+(prev!==cur?'–'+prev:'')+', '; cur=c; }
+    prev=c;
+  }
+  if (cur!==null) freeRanges+=cur+(prev!==cur?'–'+prev:'');
+
+  res.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:.75rem;font-size:.8rem">
+      ${row('Clusters analysés',total)}
+      ${row('Occupés','<span style="color:var(--red)">'+occupied.length+'</span>')}
+      ${row('Libres','<span style="color:var(--green)">'+free.length+'</span>')}
+    </div>
+    ${grid}
+    <div style="font-size:.75rem;color:var(--dim);margin-top:.5rem">
+      <strong>Plages libres :</strong> ${freeRanges||'(aucune)'}
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// HASH IDENTIFIER
+// ════════════════════════════════════════════════════════════
+const HASH_INFO = [
+  {algo:'MD5',bits:128,chars:32,usage:'Hachage historique — collisions connues (2004). Encore utilisé pour compatibilité forensique, toujours en doublon avec SHA-256.',safe:false},
+  {algo:'SHA-1',bits:160,chars:40,usage:'Collisions SHAttered (2017). Déprécié pour les nouvelles acquisitions. Encore présent dans certains outils legacy.',safe:false},
+  {algo:'SHA-256',bits:256,chars:64,usage:'Standard actuel — requis par ISO/IEC 27037 et NIST SP 800-86. Aucune collision connue.',safe:true},
+  {algo:'SHA-512',bits:512,chars:128,usage:'Haute sécurité pour images critiques ou archivage long terme. Plus lent que SHA-256.',safe:true},
+  {algo:'SHA-384',bits:384,chars:96,usage:'Variante de SHA-512, utilisé dans certains systèmes embarqués.',safe:true},
+  {algo:'SHA-224',bits:224,chars:56,usage:'Variante de SHA-256 tronquée — rare en forensique.',safe:true},
+  {algo:'RIPEMD-160',bits:160,chars:40,usage:'Utilisé en cryptomonnaies (Bitcoin). Même longueur que SHA-1.',safe:true},
+  {algo:'CRC32',bits:32,chars:8,usage:'Somme de contrôle (non cryptographique). Présent dans ZIP, PNG, NTFS USN. Pas une preuve d'intégrité.',safe:false},
+  {algo:'SSDEEP',bits:null,chars:null,usage:'Hash flou (fuzzy hashing) — longueur variable, contient ":" et chiffres. Détection de similarité malware.',safe:null},
+  {algo:'TLSH',bits:null,chars:70,usage:'Hash flou alternatif — 70 chars hex, commence par "T1". Utilisé par KAPE/Velociraptor.',safe:null},
+];
+
+function initHashRefTable() {
+  const tb = document.getElementById('hash-ref-table');
+  if (!tb) return;
+  tb.innerHTML = HASH_INFO.filter(h=>h.chars).map(h=>`
+    <tr style="border-bottom:1px solid rgba(255,255,255,.04)">
+      <td style="padding:.3rem .5rem;font-family:var(--mono);font-weight:700;color:var(--text)">${h.algo}</td>
+      <td style="padding:.3rem .5rem;color:var(--dim)">${h.bits||'var.'}</td>
+      <td style="padding:.3rem .5rem;font-family:var(--mono);color:${h.safe===false?'var(--red)':h.safe?'var(--green)':'var(--gold)'}">${h.chars||'var.'}</td>
+      <td style="padding:.3rem .5rem;color:var(--dim);font-size:.7rem">${h.usage.split('.')[0]}</td>
+    </tr>`).join('');
+}
+
+function identifyHash() {
+  const val = document.getElementById('hashid-in').value.trim();
+  const res = document.getElementById('hashid-result');
+  if (val.length < 4) { res.style.display='none'; return; }
+
+  const isHex = /^[0-9a-fA-F]+$/.test(val);
+  const len = val.length;
+
+  const matches = HASH_INFO.filter(h => {
+    if (h.chars && h.chars === len) return true;
+    if (h.algo === 'SSDEEP' && val.includes(':')) return true;
+    if (h.algo === 'TLSH' && val.toUpperCase().startsWith('T1') && len === 70) return true;
+    return false;
+  });
+
+  if (!matches.length) {
+    res.innerHTML = `<div style="color:var(--dim)">Aucune correspondance pour ${len} caractères. ${isHex?'Format hex valide.':'⚠ Contient des caractères non-hex.'}</div>`;
+  } else {
+    res.innerHTML = matches.map(m=>`
+      <div style="padding:.75rem 1rem;background:var(--surface2);border-radius:8px;margin-bottom:.5rem;
+           border-left:3px solid ${m.safe===false?'var(--red)':m.safe?'var(--green)':'var(--gold)'}">
+        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.35rem">
+          <strong style="color:var(--text);font-size:.9rem">${m.algo}</strong>
+          <span style="font-family:var(--mono);font-size:.68rem;color:var(--dim)">${m.bits||'variable'} bits · ${m.chars||'variable'} chars</span>
+          ${m.safe===false?'<span style="font-size:.68rem;color:var(--red);background:rgba(255,64,96,.1);padding:.1rem .4rem;border-radius:3px">⚠ Déprécié</span>':
+            m.safe?'<span style="font-size:.68rem;color:var(--green);background:rgba(48,232,138,.1);padding:.1rem .4rem;border-radius:3px">✓ Recommandé</span>':''}
+        </div>
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.5">${m.usage}</div>
+      </div>`).join('');
+  }
+  res.style.display='block';
+}
+
+document.addEventListener('DOMContentLoaded', initHashRefTable);
+
+// ════════════════════════════════════════════════════════════
+// CLUSTER CALCULATOR
+// ════════════════════════════════════════════════════════════
+function calcCluster() {
+  const bps      = parseInt(document.getElementById('cl-bps').value)||512;
+  const spc      = parseInt(document.getElementById('cl-spc').value)||8;
+  const sizeMB   = parseFloat(document.getElementById('cl-size').value)||4096;
+  const clNum    = parseInt(document.getElementById('cl-num').value)||5;
+  const res      = document.getElementById('cl-result');
+
+  const cs       = bps * spc;
+  const sizeOct  = sizeMB * 1024 * 1024;
+  const nClusters= Math.floor(sizeOct / cs);
+
+  // FAT type heuristic
+  let fatType = 'FAT32';
+  if (nClusters < 4085) fatType='FAT12';
+  else if (nClusters < 65525) fatType='FAT16';
+
+  // Offset du cluster N (FAT32 : zone données commence après reserved+FATs)
+  // Approximation sans BPB complet — on donne la formule
+  const offsetClust = (clNum - 2) * cs; // relatif au début de la zone données
+
+  res.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-bottom:.75rem">
+      ${row('Taille cluster','<strong style="color:var(--cyan);font-size:1.1rem">'+cs.toLocaleString('fr-CH')+' o</strong>')}
+      ${row('Taille cluster (hex)','<span style="font-family:var(--mono);color:var(--gold)">0x'+cs.toString(16).toUpperCase()+'</span>')}
+      ${row('Nb clusters total','<span style="color:var(--green)">~'+nClusters.toLocaleString('fr-CH')+'</span>')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem">
+      ${row('Type FAT estimé','<strong>'+fatType+'</strong> (basé sur le nb de clusters)')}
+      ${row('Formule offset cluster N','(N − 2) × '+cs.toLocaleString()+' + début zone données')}
+      ${row('Offset cluster '+clNum+' (relatif)',clNum>=2?'<span style="font-family:var(--mono);color:var(--cyan)">0x'+offsetClust.toString(16).toUpperCase()+' ('+offsetClust.toLocaleString('fr-CH')+' o)</span>':'⚠ Cluster doit être ≥ 2')}
+      ${row('Taille de la partition','~'+sizeMB.toLocaleString('fr-CH')+' Mo = '+Math.round(sizeOct/1073741824*100)/100+' Go')}
+    </div>
+    <div style="margin-top:.75rem;padding:.6rem .85rem;background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.15);border-radius:7px;font-size:.75rem;color:var(--dim)">
+      💡 <strong style="color:var(--cyan)">Formule complète FAT32 :</strong>
+      Offset absolu = (RsvdSec + NumFATs × FATsize) × BPS + (cluster − 2) × ClusterSize
+    </div>`;
+  res.style.display='block';
+}
+
+document.addEventListener('DOMContentLoaded', calcCluster);
+
+// ════════════════════════════════════════════════════════════
+// MFT DECODER
+// ════════════════════════════════════════════════════════════
+const NTFS_ATTRS = {
+  0x10:'$STANDARD_INFORMATION',0x20:'$ATTRIBUTE_LIST',0x30:'$FILE_NAME',
+  0x40:'$OBJECT_ID',0x50:'$SECURITY_DESCRIPTOR',0x60:'$VOLUME_NAME',
+  0x70:'$VOLUME_INFORMATION',0x80:'$DATA',0x90:'$INDEX_ROOT',
+  0xA0:'$INDEX_ALLOCATION',0xB0:'$BITMAP',0xC0:'$REPARSE_POINT',
+  0xD0:'$EA_INFORMATION',0xE0:'$EA',0xF0:'$PROPERTY_SET',
+  0x100:'$LOGGED_UTILITY_STREAM'
+};
+const NTFS_FLAGS = {0x01:'En cours d'utilisation',0x02:'Répertoire',0x04:'Extension',0x08:'Vue spéciale'};
+
+function decodeMFT() {
+  const raw = document.getElementById('mft-in').value.trim();
+  const hex = raw.replace(/[^0-9a-fA-F]/g,' ').trim().split(/\s+/).filter(Boolean);
+  const res = document.getElementById('mft-result');
+
+  if (hex.length < 56) {
+    res.innerHTML = '<div class="alert-box">⚠ Minimum 56 octets requis ('+hex.length+' saisis). Un enregistrement MFT complet = 1024 o.</div>';
+    res.style.display='block'; return;
+  }
+
+  const b = hex.map(h=>parseInt(h,16));
+
+  // Signature
+  const sig = b.slice(0,4).map(x=>x>=0x20&&x<0x7F?String.fromCharCode(x):'·').join('');
+  const sigOk = sig === 'FILE';
+  const sigBad = sig === 'BAAD';
+
+  const logSeq   = le32(b,8)|(le32(b,12)*2**32);
+  const seqNum   = le16(b,16);
+  const linkCnt  = le16(b,18);
+  const attrOff  = le16(b,20);
+  const flags    = le16(b,22);
+  const usedSize = le32(b,24);
+  const allocSz  = le32(b,28);
+  const mftNum   = le32(b,44);
+
+  const flagStr = Object.entries(NTFS_FLAGS)
+    .filter(([k])=>flags&parseInt(k)).map(([,v])=>v).join(', ')||'(aucun)';
+
+  // Lister les attributs
+  const attrs = [];
+  if (sigOk && attrOff < b.length) {
+    let pos = attrOff;
+    while (pos + 4 <= b.length) {
+      const attrType = le32(b, pos);
+      if (attrType === 0xFFFFFFFF) break;
+      const attrLen = pos+4 < b.length ? le32(b, pos+4) : 0;
+      if (attrLen < 8 || attrLen > 4096) break;
+      const nonRes = b[pos+8]===1;
+      attrs.push({type:attrType, len:attrLen, nonRes,
+        name: NTFS_ATTRS[attrType] || ('0x'+attrType.toString(16).toUpperCase().padStart(2,'0'))});
+      pos += attrLen;
+      if (pos >= b.length) break;
+    }
+  }
+
+  res.innerHTML = `
+    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem">
+      <div style="padding:.35rem .85rem;border-radius:6px;font-family:var(--mono);font-weight:700;font-size:.9rem;
+           background:${sigOk?'rgba(48,232,138,.12)':sigBad?'rgba(255,64,96,.12)':'rgba(240,192,64,.1)'};
+           color:${sigOk?'var(--green)':sigBad?'var(--red)':'var(--gold)'};
+           border:1px solid ${sigOk?'rgba(48,232,138,.35)':sigBad?'rgba(255,64,96,.3)':'rgba(240,192,64,.3)'}">
+        "${sig}"
+      </div>
+      <span style="color:${sigOk?'var(--green)':sigBad?'var(--red)':'var(--dim)'}">
+        ${sigOk?'✅ Signature valide — enregistrement actif':sigBad?'❌ BAAD — fixup échoué (secteur défaillant ?)':'⚠ Signature inconnue'}
+      </span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.75rem">
+      ${row('Numéro MFT','<span style="font-family:var(--mono)">'+(mftNum||'—')+'</span>')}
+      ${row('Numéro de séquence',seqNum)}
+      ${row('Liens (hard links)',linkCnt)}
+      ${row('Flags (0x'+flags.toString(16).toUpperCase()+')',flagStr)}
+      ${row('Offset 1er attribut','0x'+attrOff.toString(16).toUpperCase())}
+      ${row('Taille utilisée / allouée',usedSize+' / '+allocSz+' o')}
+    </div>
+    ${attrs.length ? `
+      <div style="font-size:.72rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem">
+        Attributs détectés (${attrs.length})
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem">
+        ${attrs.map(a=>`
+          <div style="padding:.35rem .75rem;border-radius:6px;font-size:.75rem;font-family:var(--mono);
+               background:rgba(0,229,204,.07);border:1px solid rgba(0,229,204,.2);color:var(--cyan)">
+            ${a.name}
+            <span style="color:var(--dim);font-size:.65rem"> ${a.nonRes?'non-rés.':'résid.'} · ${a.len}o</span>
+          </div>`).join('')}
+      </div>` : '<div style="color:var(--dim);font-size:.8rem">Impossible de lister les attributs (données insuffisantes ou offset invalide)</div>'}`;
+  res.style.display='block';
 }
 
 </script>
