@@ -135,6 +135,27 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .err-wrap{max-width:500px;margin:0 auto;padding:3rem 1.5rem;text-align:center}
 .err-wrap h2{font-size:1.2rem;font-weight:700;margin-bottom:.5rem}
 .err-wrap p{font-size:.8rem;color:var(--muted);margin-bottom:1rem}
+
+/* ── Print rapport ───────────────────────────────────────────── */
+@media print {
+  .exam-header,.cfg-wrap,.res-actions,.tn-nav,.screen:not(#s-res){display:none!important}
+  #s-res{display:block!important}
+  body{background:#fff;color:#000}
+  .res-score{color:#000}
+  canvas#radar-canvas{max-width:400px}
+  .mr-fill{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+}
+
+/* ── Historique ─────────────────────────────────────────────── */
+.hist-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:1rem;cursor:pointer;transition:.15s}
+.hist-item:hover{border-color:var(--cyan)}
+.hist-score{font-size:1.4rem;font-weight:800;color:var(--cyan);min-width:52px;text-align:center}
+.hist-meta{flex:1;font-size:.75rem;color:var(--dim)}
+.hist-grade{font-family:var(--mono);font-size:.68rem;padding:.2rem .5rem;border-radius:4px}
+
+/* ── Mode révision ───────────────────────────────────────────── */
+.rev-header{position:sticky;top:0;z-index:50;background:rgba(13,17,23,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:.65rem 1.2rem;display:flex;align-items:center;gap:1rem}
+.rev-qnum{font-family:var(--mono);font-size:.72rem;color:var(--dim)}
 </style>
 </head>
 <body>
@@ -155,10 +176,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 
   <div class="cfg-card">
     <h3>⏱ Durée</h3>
-    <div class="cfg-options" id="dur-opts">
+    <div class="cfg-options" id="dur-opts" style="grid-template-columns:repeat(4,1fr)">
       <div class="cfg-opt on" data-dur="30"><div class="val">30</div><div class="lbl">min · Entraînement</div></div>
       <div class="cfg-opt" data-dur="60"><div class="val">60</div><div class="lbl">min · Mi-examen</div></div>
       <div class="cfg-opt" data-dur="120"><div class="val">120</div><div class="lbl">min · Examen réel</div></div>
+      <div class="cfg-opt" data-dur="custom" style="padding:.55rem .3rem">
+        <input type="number" id="dur-custom" min="5" max="300" value="45"
+          style="width:52px;background:transparent;border:none;color:var(--cyan);font-size:1.1rem;font-weight:800;font-family:var(--sans);text-align:center;outline:none"
+          onclick="event.stopPropagation()" oninput="cfg.dur=Math.max(5,+this.value||45)">
+        <div class="lbl">min · Perso</div>
+      </div>
     </div>
   </div>
 
@@ -186,7 +213,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
     </div>
   </div>
 
-  <button type="button" class="start-btn" id="start-btn" onclick="startExam()">▶ Démarrer l'examen blanc</button>
+  <div style="display:flex;gap:.6rem;margin-top:.5rem">
+    <button type="button" class="start-btn" id="start-btn" onclick="startExam()" style="flex:3">▶ Démarrer l'examen blanc</button>
+    <button type="button" class="start-btn" onclick="showHistory()" style="flex:1;background:var(--surface);color:var(--muted);border:1px solid var(--border)">📊 Historique</button>
+  </div>
 </div>
 </div>
 
@@ -250,7 +280,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
     </div>
     <div class="res-actions">
       <button type="button" class="res-btn res-primary" onclick="restartExam()">↺ Nouvel examen</button>
-      <a class="res-btn res-secondary" href="fiches/index.html">📚 Réviser les fiches</a>
+      <button type="button" class="res-btn res-secondary" onclick="startRevision()">📖 Revoir toutes les questions</button>
+      <button type="button" class="res-btn res-secondary" onclick="window.print()">🖨 Imprimer / PDF</button>
+      <button type="button" class="res-btn res-secondary" onclick="showHistory()">📊 Mes examens</button>
       <a class="res-btn res-secondary" href="quiz.html">💊 Quiz ciblé</a>
     </div>
   </div>
@@ -263,6 +295,37 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
     <p>Le fichier questions.json est inaccessible. Vérifiez votre connexion ou réessayez depuis la page d'accueil.</p>
     <a class="res-btn res-secondary" href="index.html">← Accueil</a>
   </div>
+</div>
+
+<!-- ═══ SCREEN 5 — HISTORIQUE ════════════════════════════════ -->
+<div id="s-hist" class="screen">
+  <nav class="tn-nav">
+    <button type="button" class="tn-back" onclick="showScreen('s-cfg')">← Retour</button>
+    <span class="tn-title">Mes examens</span>
+    <button type="button" class="tn-quiz" onclick="clearHistory()" style="color:var(--red);border-color:rgba(255,64,96,.3);background:rgba(255,64,96,.06)">🗑 Effacer</button>
+  </nav>
+  <div style="max-width:680px;margin:0 auto;padding:1.5rem 1.2rem">
+    <div id="hist-list"></div>
+    <div id="hist-empty" style="text-align:center;padding:3rem;color:var(--dim);font-size:.85rem;display:none">
+      Aucun examen enregistré. Lance ton premier examen blanc !
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 6 — RÉVISION ══════════════════════════════════ -->
+<div id="s-rev" class="screen">
+  <div class="rev-header">
+    <button type="button" class="exam-pause" onclick="showScreen('s-res')">← Résultats</button>
+    <div class="exam-prog-wrap">
+      <div class="exam-prog-track"><div class="exam-prog-fill" id="rev-prog" style="width:0%"></div></div>
+    </div>
+    <div class="rev-qnum" id="rev-qnum">0/0</div>
+    <div style="display:flex;gap:.4rem">
+      <button type="button" class="exam-pause" onclick="revNav(-1)">← Préc</button>
+      <button type="button" class="exam-pause" onclick="revNav(1)">Suiv →</button>
+    </div>
+  </div>
+  <div style="max-width:720px;margin:0 auto;padding:1.5rem 1.2rem" id="rev-body"></div>
 </div>
 
 <script>
@@ -370,15 +433,41 @@ async function startExam() {
     showScreen('s-err'); return;
   }
 
-  // Normalize questions
-  allQ = allQ.map(q => ({
-    question: q.question || q.q || q.text || '',
-    answers: q.answers || q.options || q.choices || [],
-    correct: typeof q.correct === 'number' ? q.correct : (q.correctIndex ?? 0),
-    explanation: q.explanation || q.explication || '',
-    category: q.category || q.module || q.cat || '',
-    module: q.module || guessModule(q)
-  })).filter(q => q.question && q.answers.length >= 2);
+  // Normalize questions — compatible questions.json (format CAS-IN v2)
+  // Format v2 : q.q, q.opts[], q.answers=[idx], q.expl_ok/ko, q.theme, q.diff
+  // Format legacy : q.question, q.answers[]=textes, q.correct=idx, q.explanation
+  allQ = allQ.map(q => {
+    // Détecter le format v2 CAS-IN : q.opts existe ET q.answers est un tableau d'indices
+    const isV2 = Array.isArray(q.opts) && q.opts.length >= 2
+                 && Array.isArray(q.answers) && typeof q.answers[0] === 'number';
+
+    const question  = q.question || q.q || q.text || '';
+    const answers   = isV2 ? q.opts : (q.answers || q.options || q.choices || []);
+    const correct   = isV2 ? q.answers[0]
+                           : (typeof q.correct === 'number' ? q.correct : (q.correctIndex ?? 0));
+    // Explication : quand bonne réponse → expl_ok, sinon expl_ko
+    const explanation = q.explanation || q.explication || q.expl_ok || '';
+
+    // Mapping thème CAS-IN → module exam (01-08)
+    const THEME_TO_MOD = {
+      'Droit':                '01',
+      'Acquisition et analyse':'02',
+      'FORENSIQUE':           '02',
+      'Système de fichiers':  '03',
+      'Spécificité des OS':   '04',
+      'Informatique de base': '05',
+      'RÉSEAUX':              '06',
+      'Cryptologie':          '07',
+      'OSINT':                '08',
+      'OUTILS':               '08',
+    };
+    const module = q.module || THEME_TO_MOD[q.theme] || guessModule(q);
+
+    return { question, answers, correct, explanation,
+             category: q.category || q.theme || q.module || '',
+             module,
+             diff: q.diff || 'medium' };
+  }).filter(q => q.question && q.answers.length >= 2);
 
   // Filter by selected modules
   let pool = allQ;
@@ -560,7 +649,7 @@ function finishExam() {
   try {
     const history = JSON.parse(localStorage.getItem('casIn_examHistory')||'[]');
     history.unshift({date:Date.now(),score:pct,correct,total,modStats,dur:timerElapsed});
-    try { localStorage.setItem('casIn_examHistory', JSON.stringify(history.slice(0,20)));
+    localStorage.setItem('casIn_examHistory', JSON.stringify(history.slice(0,20)));
   } catch(e){}
 
   // Afficher les questions incorrectes
@@ -665,6 +754,139 @@ function restartExam() {
   document.getElementById('start-btn').disabled=false;
   document.getElementById('start-btn').textContent='▶ Démarrer l\'examen blanc';
 }
+
+
+// ── Historique des examens ────────────────────────────────────
+function showHistory() {
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem('casIn_examHistory')||'[]'); } catch(_){}
+  const list = document.getElementById('hist-list');
+  const empty = document.getElementById('hist-empty');
+  if (!history.length) {
+    list.innerHTML=''; empty.style.display='block';
+  } else {
+    empty.style.display='none';
+    const gradeLabel = p => p>=75?{t:'Réussi',c:'var(--green)'}:p>=60?{t:'Moyen',c:'var(--gold)'}:{t:'Insuffisant',c:'var(--red)'};
+    list.innerHTML = history.map((h,i) => {
+      const d = new Date(h.date);
+      const dateStr = d.toLocaleDateString('fr-CH',{day:'2-digit',month:'2-digit',year:'numeric'});
+      const timeStr = d.toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'});
+      const dur = h.dur ? Math.floor(h.dur/60)+'m'+String(h.dur%60).padStart(2,'0') : '—';
+      const g = gradeLabel(h.score);
+      return `<div class="hist-item">
+        <div class="hist-score">${h.score}%</div>
+        <div class="hist-meta">
+          <div style="color:var(--text);font-size:.8rem;margin-bottom:.2rem">${dateStr} à ${timeStr} · ${dur} · ${h.correct}/${h.total} correctes</div>
+          <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+            ${Object.entries(h.modStats||{}).sort((a,b)=>a[0].localeCompare(b[0])).map(([m,s])=>{
+              const p=Math.round(s.c/s.t*100);
+              return `<span style="font-family:var(--mono);font-size:.65rem;padding:.1rem .4rem;border-radius:3px;
+                background:rgba(255,255,255,.04);color:var(--dim)">${MOD_LABELS[m]||m} ${p}%</span>`;
+            }).join('')}
+          </div>
+        </div>
+        <span class="hist-grade" style="background:rgba(0,0,0,.2);color:${g.c};border:1px solid ${g.c}40">${g.t}</span>
+      </div>`;
+    }).join('');
+  }
+  // Mini graphe progression
+  if (history.length >= 2) {
+    const scores = history.map(h=>h.score).reverse();
+    const trend = scores[scores.length-1] - scores[0];
+    const trendEl = document.createElement('div');
+    trendEl.style.cssText='text-align:center;font-size:.78rem;color:var(--dim);margin-bottom:1rem;padding:.5rem;background:var(--surface);border-radius:8px;border:1px solid var(--border)';
+    trendEl.innerHTML = `${history.length} examens · Moyenne : <strong style="color:var(--cyan)">${Math.round(scores.reduce((a,b)=>a+b,0)/scores.length)}%</strong> · Tendance : <strong style="color:${trend>=0?'var(--green)':'var(--red)'}">${trend>=0?'+':''}${Math.round(trend)}%</strong>`;
+    list.prepend(trendEl);
+  }
+  showScreen('s-hist');
+}
+
+function clearHistory() {
+  if (!confirm('Effacer tout l'historique des examens ?')) return;
+  try { localStorage.removeItem('casIn_examHistory'); } catch(_){}
+  showHistory();
+}
+
+// ── Mode révision ─────────────────────────────────────────────
+let revCur = 0;
+
+function startRevision() {
+  if (!examQ.length) return;
+  revCur = 0;
+  renderRevQ();
+  showScreen('s-rev');
+}
+
+function revNav(dir) {
+  revCur = Math.max(0, Math.min(examQ.length-1, revCur+dir));
+  renderRevQ();
+}
+
+function renderRevQ() {
+  const q = examQ[revCur];
+  const a = answered[revCur];
+  const isCorrect = a === q.correct;
+  const wasSkipped = a === null || a === -1;
+  document.getElementById('rev-qnum').textContent = (revCur+1)+'/'+examQ.length;
+  document.getElementById('rev-prog').style.width = ((revCur+1)/examQ.length*100)+'%';
+
+  const letters = ['A','B','C','D','E'];
+  const mod = q.module||'??';
+
+  document.getElementById('rev-body').innerHTML = `
+    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;flex-wrap:wrap">
+      <div class="mod-badge" style="background:${(MOD_COLORS[mod]||'#8b949e')}18;color:${MOD_COLORS[mod]||'#8b949e'};border:1px solid ${(MOD_COLORS[mod]||'#8b949e')}40;display:inline-flex;align-items:center;gap:.35rem;font-family:var(--mono);font-size:.62rem;padding:.2rem .6rem;border-radius:4px;font-weight:600">
+        ${MOD_LABELS[mod]||mod}
+      </div>
+      ${wasSkipped?'<span style="font-size:.72rem;color:var(--dim);font-family:var(--mono)">⏭ Passée</span>':
+        isCorrect?'<span style="font-size:.72rem;color:var(--green);font-family:var(--mono)">✓ Correcte</span>':
+        '<span style="font-size:.72rem;color:var(--red);font-family:var(--mono)">✗ Incorrecte</span>'}
+    </div>
+    <div class="question">${q.question}</div>
+    <div class="answers" style="margin-bottom:1rem">
+      ${q.answers.map((ans,i) => {
+        const isAns = i===a, isCorr = i===q.correct;
+        let cls='ans-btn';
+        if(isCorr) cls+=' correct';
+        else if(isAns&&!isCorr) cls+=' wrong';
+        return `<div class="${cls}" style="cursor:default">
+          <span class="ans-letter">${letters[i]}</span>
+          <span class="ans-text">${ans}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    ${q.explanation?`<div class="explanation on">💡 ${q.explanation}</div>`:''}
+    <div style="display:flex;justify-content:space-between;margin-top:1rem">
+      <button type="button" class="nav-btn skip-btn" onclick="revNav(-1)" ${revCur===0?'disabled':''}>← Précédente</button>
+      <span style="font-size:.72rem;color:var(--dim);align-self:center">${revCur+1} / ${examQ.length}</span>
+      <button type="button" class="nav-btn next-btn" onclick="revNav(1)" ${revCur===examQ.length-1?'disabled style="opacity:.4"':''}>Suivante →</button>
+    </div>`;
+}
+
+// ── Gestion du timer personnalisé ─────────────────────────────
+document.querySelectorAll('#dur-opts .cfg-opt').forEach(el => {
+  const orig = el.onclick;
+  el.onclick = () => {
+    document.querySelectorAll('#dur-opts .cfg-opt').forEach(e=>e.classList.remove('on'));
+    el.classList.add('on');
+    if (el.dataset.dur === 'custom') {
+      cfg.dur = Math.max(5, parseInt(document.getElementById('dur-custom').value)||45);
+    } else {
+      cfg.dur = +el.dataset.dur;
+    }
+  };
+});
+// Mise à jour en temps réel du champ custom
+document.addEventListener('DOMContentLoaded', () => {
+  const customInput = document.getElementById('dur-custom');
+  if (customInput) {
+    customInput.addEventListener('input', () => {
+      const val = Math.max(5, parseInt(customInput.value)||45);
+      cfg.dur = val;
+    });
+  }
+});
+
 </script>
 </body>
 </html>
