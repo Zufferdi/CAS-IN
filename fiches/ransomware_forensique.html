@@ -4,146 +4,235 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Ransomware Forensique — CAS-IN</title>
+<meta name="description" content="Kill Chain ransomware · IOCs · LPD 2023 · CPP · Forensique post-incident">
 <link rel="stylesheet" href="../style/fiche_style.css">
 </head>
 <body>
+<div id="scroll-progress"></div>
 <button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
 <nav class="tn-nav">
   <a href="index.html" class="tn-back">← Fiches</a>
-  <span class="tn-title">CRYPTOLOGIE & SÉCURITÉ</span>
+  <span class="tn-title">RANSOMWARE FORENSIQUE</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
 
-<div class="page" style="padding-top:.5rem;padding-bottom:0">
+<div class="page-wrap">
   <div class="breadcrumb">
-    <a href="../index.html">🏠 Accueil</a>
-    <span class="bc-sep">›</span>
-    <a href="index.html">Fiches</a>
-    <span class="bc-sep">›</span>
-    <span class="bc-current">Cryptologie & Sécurité</span>
-    <span class="bc-sep">›</span>
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-cryptologiesécurité">Cryptologie &amp; Sécurité</a><span class="bc-sep">›</span>
     <span class="bc-current">Ransomware Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~13 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🔒</span>
+    <span class="tag tag-red" style="margin-left:.5rem">Kill Chain</span>
+    <span class="tag tag-orange" style="margin-left:.3rem">IOCs</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">LPD 2023</span>
+    <span class="tag tag-purple" style="margin-left:.3rem">CPP art. 248</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Ransomware Forensique</h1>
+    <div class="meta">Kill Chain · Patient zéro · Dwell time · Double extorsion · Notification 72h LPD · Familles &amp; outils</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="malware_forensique.html" class="prereq-pill">📖 Malware Forensics</a><a href="incident_response.html" class="prereq-pill">📖 Incident Response</a><a href="droit.html" class="prereq-pill">📖 Droit CPP</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html" class="tp-pill">🧪 🚨 Incident Response</a><a href="../tp.html" class="tp-pill">🧪 ⚖️ Droit pénal</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="malware_forensique.html" class="related-pill">🔗 Malware Forensics</a><a href="suisse.html" class="related-pill">🔗 DFIR Suisse</a></div>
+  </div>
+
+  <div class="concept-card" style="margin-top:1rem">
+    <div class="concept-title">🔒 Le ransomware — La menace cybercriminelle n°1</div>
+    Le ransomware est devenu la menace cybercriminelle dominante depuis 2017. La forensique ransomware a un objectif triple : <strong>établir la kill chain complète</strong> (de l'accès initial au chiffrement), <strong>identifier le patient zéro</strong> (premier poste compromis), et <strong>dater le chiffrement et l'exfiltration</strong> — tout en préservant les preuves pour la LPD (notification 72h) et le dépôt de plainte. Les groupes modernes pratiquent la <strong>double extorsion</strong> : chiffrement + menace de publication des données.
   </div>
 </div>
 
-<div class="page">
-  <div class="header">
-    <div class="badge">🔒 Kill Chain · IOCs · LPD 2023</div>
-    <h1>Ransomware Forensique</h1>
-  </div>
+<div class="page-wrap" id="kill-chain">
+  <div class="sec-title">Kill Chain Ransomware — Les 7 étapes</div>
+  <div class="sec-sub">De l'accès initial à la négociation. Chaque étape laisse des traces forensiques spécifiques (IOCs).</div>
 
-  <div class="info">
-    ℹ️ Le ransomware est devenu la menace cybercriminelle n°1. La forensique ransomware doit établir la kill chain complète, identifier le patient zéro, dater le chiffrement et trouver les IOCs — le tout en préservant les preuves pour la LPD (notification 72h) et éventuellement le dépôt de plainte.
-  </div>
-
-  <div class="sec-title">Kill Chain Ransomware — 7 étapes</div>
   <div class="kill-chain">
-    <div class="kc-step"><div class="kc-num" style="color:var(--red)">1</div><div>
-      <div class="kc-title">Initial Access (accès initial)</div>
-      <div class="kc-desc">Phishing (pièce jointe .xlsx avec macro, lien malveillant), exploitation de VPN vulnérable (Fortinet, Pulse Secure), RDP exposé (brute force ou credential stuffing), supply chain.</div>
-      <div class="kc-ioc">IOCs : logs SMTP (pièce jointe), VPN logs (IP anormale), RDP EID 4625 en masse → EID 4624</div>
-    </div></div>
-    <div class="kc-step"><div class="kc-num" style="color:var(--orange)">2</div><div>
-      <div class="kc-title">Execution</div>
-      <div class="kc-desc">PowerShell encodé, WMI, scheduled tasks, DLL injection. Le payload est souvent téléchargé depuis un C2 en HTTPS.</div>
-      <div class="kc-ioc">IOCs : EID 4688 (PowerShell -enc), Sysmon EID 1 (process creation), connexions C2 en NetFlow</div>
-    </div></div>
-    <div class="kc-step"><div class="kc-num" style="color:var(--gold)">3</div><div>
-      <div class="kc-title">Discovery & Reconnaissance</div>
-      <div class="kc-desc">Enumération AD (BloodHound, net user, nltest), scan réseau interne (nmap), identification des sauvegardes.</div>
-      <div class="kc-ioc">IOCs : EID 4624/4625 massifs, requêtes LDAP en volume, net.exe commandes</div>
-    </div></div>
-    <div class="kc-step"><div class="kc-num" style="color:var(--green)">4</div><div>
-      <div class="kc-title">Lateral Movement</div>
-      <div class="kc-desc">PsExec, WMI Exec, RDP, SMB, Pass-the-Hash. L'attaquant se propage de machine en machine.</div>
-      <div class="kc-ioc">IOCs : EID 4648 + 4624 Type 3 depuis mêmes IP, ADMIN$ shares, EID 7045 (service installé)</div>
-    </div></div>
-    <div class="kc-step"><div class="kc-num" style="color:var(--purple)">5</div><div>
-      <div class="kc-title">Exfiltration (souvent)</div>
-      <div class="kc-desc">Double extorsion : les données sont exfiltrées AVANT chiffrement. Via Rclone, MEGASync, FTP, HTTPS vers C2.</div>
-      <div class="kc-ioc">IOCs : NetFlow sortant volumique, Rclone.exe dans MFT, DNS vers megaupload/anonfiles</div>
-    </div></div>
-    <div class="kc-step"><div class="kc-num" style="color:var(--red)">6</div><div>
-      <div class="kc-title">Impact — Chiffrement</div>
-      <div class="kc-desc">Suppression des VSS, chiffrement AES-256 + clé RSA. Note de rançon déposée dans chaque dossier. Parfois destruction des backups.</div>
-      <div class="kc-ioc">IOCs : vssadmin delete shadows, wbadmin delete catalog, timestamp MACE des fichiers chiffrés</div>
-    </div></div>
-    <div class="kc-step"><div class="kc-num" style="color:var(--dim)">7</div><div>
-      <div class="kc-title">C2 & Négociation</div>
-      <div class="kc-desc">Portail Tor pour paiement. Certains groupes publient les données sur un leak site si non-paiement (Cl0p, LockBit).</div>
-      <div class="kc-ioc">IOCs : adresse .onion dans la note de rançon, logs DNS vers Tor, wallet Bitcoin/Monero</div>
-    </div></div>
+    <div class="kc-step" style="border-left-color:var(--red)">
+      <div class="kc-num" style="color:var(--red)">1</div>
+      <div style="flex:1">
+        <div class="kc-title">Initial Access (accès initial)</div>
+        <div class="kc-desc">Phishing (pièce jointe .xlsx avec macro, lien malveillant), exploitation de VPN vulnérable (Fortinet, Pulse Secure), RDP exposé (brute force ou credential stuffing), supply chain.</div>
+        <div class="kc-ioc"><strong>IOCs :</strong> logs SMTP (pièce jointe), VPN logs (IP anormale), RDP EID 4625 en masse → EID 4624</div>
+      </div>
+    </div>
+    <div class="kc-step" style="border-left-color:var(--orange)">
+      <div class="kc-num" style="color:var(--orange)">2</div>
+      <div style="flex:1">
+        <div class="kc-title">Execution</div>
+        <div class="kc-desc">PowerShell encodé, WMI, scheduled tasks, DLL injection. Le payload est souvent téléchargé depuis un C2 en HTTPS.</div>
+        <div class="kc-ioc"><strong>IOCs :</strong> EID 4688 (PowerShell -enc), Sysmon EID 1 (process creation), connexions C2 en NetFlow</div>
+      </div>
+    </div>
+    <div class="kc-step" style="border-left-color:var(--gold)">
+      <div class="kc-num" style="color:var(--gold)">3</div>
+      <div style="flex:1">
+        <div class="kc-title">Discovery &amp; Reconnaissance</div>
+        <div class="kc-desc">Énumération AD (BloodHound, <code>net user</code>, nltest), scan réseau interne (nmap), identification des sauvegardes.</div>
+        <div class="kc-ioc"><strong>IOCs :</strong> EID 4624/4625 massifs, requêtes LDAP en volume, <code>net.exe</code> commandes</div>
+      </div>
+    </div>
+    <div class="kc-step" style="border-left-color:var(--green)">
+      <div class="kc-num" style="color:var(--green)">4</div>
+      <div style="flex:1">
+        <div class="kc-title">Lateral Movement</div>
+        <div class="kc-desc">PsExec, WMI Exec, RDP, SMB, Pass-the-Hash. L'attaquant se propage de machine en machine.</div>
+        <div class="kc-ioc"><strong>IOCs :</strong> EID 4648 + 4624 Type 3 depuis mêmes IP, ADMIN$ shares, EID 7045 (service installé)</div>
+      </div>
+    </div>
+    <div class="kc-step" style="border-left-color:var(--purple)">
+      <div class="kc-num" style="color:var(--purple)">5</div>
+      <div style="flex:1">
+        <div class="kc-title">Exfiltration (souvent)</div>
+        <div class="kc-desc">Double extorsion — les données sont exfiltrées <strong>AVANT</strong> chiffrement. Via Rclone, MEGASync, FTP, HTTPS vers C2.</div>
+        <div class="kc-ioc"><strong>IOCs :</strong> NetFlow sortant volumique, Rclone.exe dans MFT, DNS vers megaupload/anonfiles</div>
+      </div>
+    </div>
+    <div class="kc-step" style="border-left-color:var(--red)">
+      <div class="kc-num" style="color:var(--red)">6</div>
+      <div style="flex:1">
+        <div class="kc-title">Impact — Chiffrement</div>
+        <div class="kc-desc">Suppression des VSS, chiffrement AES-256 + clé RSA. Note de rançon déposée dans chaque dossier. Parfois destruction des backups.</div>
+        <div class="kc-ioc"><strong>IOCs :</strong> <code>vssadmin delete shadows</code>, <code>wbadmin delete catalog</code>, timestamp MACE des fichiers chiffrés</div>
+      </div>
+    </div>
+    <div class="kc-step" style="border-left-color:var(--dim)">
+      <div class="kc-num" style="color:var(--dim)">7</div>
+      <div style="flex:1">
+        <div class="kc-title">C2 &amp; Négociation</div>
+        <div class="kc-desc">Portail Tor pour paiement. Certains groupes publient les données sur un leak site si non-paiement (Cl0p, LockBit).</div>
+        <div class="kc-ioc"><strong>IOCs :</strong> adresse .onion dans la note de rançon, logs DNS vers Tor, wallet Bitcoin/Monero</div>
+      </div>
+    </div>
   </div>
+</div>
 
-  <div class="sec-title">Identification du ransomware</div>
-  <div class="card card-cyan" style="margin-bottom:1rem">
-    <div class="ct">🔍 Outils d'identification</div>
-    <p><strong>ID Ransomware</strong> (https://id-ransomware.malwarehunterteam.com) — upload la note de rançon ou un fichier chiffré → identification en secondes.<br>
-    <strong>No More Ransom</strong> (nomoreransom.org) — propose des déchiffreurs gratuits si la clé maître est connue (Europol + éditeurs AV).<br>
-    <strong>Extension du fichier chiffré</strong> : .lockbit, .ryuk, .conti, .dharma, .phobos — chaque famille a une signature reconnaissable.</p>
-  </div>
-
-  <div class="sec-title">Chronologie forensique post-incident</div>
-  <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1.25rem">
-    <table class="tbl">
-      <tr><th>Phase</th><th>Action</th><th>Source de preuve</th></tr>
-      <tr><td><strong>Patient zéro</strong></td><td>Quel poste a été infecté en premier ?</td><td>Logs SIEM, timestamps MFT, NetFlow</td></tr>
-      <tr><td><strong>Date d'infection</strong></td><td>Quand l'accès initial a eu lieu ?</td><td>VPN logs, SMTP, EID 4624 inhabituel</td></tr>
-      <tr><td><strong>Dwell time</strong></td><td>Combien de temps avant chiffrement ?</td><td>Souvent 2–4 semaines (discovery + latéral)</td></tr>
-      <tr><td><strong>Scope</strong></td><td>Quels systèmes sont chiffrés/exfiltrés ?</td><td>MFT ($MFT scan), inventaire extensions</td></tr>
-      <tr><td><strong>Exfiltration</strong></td><td>Quelles données ont été volées ?</td><td>NetFlow, proxy logs, DLP alerts</td></tr>
-    </table>
-  </div>
-
-  <div class="sec-title">Obligations légales — LPD 2023 & CPP</div>
-  <div class="card card-red" style="margin-bottom:1rem">
-    <div class="ct">⚠️ Notification obligatoire — 72 heures</div>
-    <p><strong>LPD art. 24</strong> : Si des données personnelles ont été exfiltrées (double extorsion), notification obligatoire au PFPDT dans les <strong>72 heures</strong> après la découverte de la violation. Notification aux personnes concernées si risque élevé.</p>
-    <p style="margin-top:.4rem"><strong>CPP art. 248</strong> : Ne pas payer la rançon sans consulter les autorités — le paiement peut financer des groupes sous sanctions OFAC (USA), ce qui est illégal même indirectement.</p>
-  </div>
-
-  <div class="sec-title">IOCs — Indicateurs de compromission</div>
-  <div class="ioc-list">
-# Commandes de destruction des sauvegardes (IOC critique)
+<div class="page-wrap">
+  <div class="schema">
+    <div class="schema-title">⚙️ IOCs critiques — Commandes de destruction des sauvegardes</div>
+    <div class="schema-sub">SI VOUS VOYEZ CES COMMANDES DANS LES LOGS → INCIDENT EN COURS</div>
+    <div class="ioc-list"># Suppression des Volume Shadow Copies
 vssadmin.exe Delete Shadows /all /quiet
 wmic shadowcopy delete
+
+# Désactivation du Recovery Environment
 bcdedit.exe /set {default} recoveryenabled No
+bcdedit.exe /set {default} bootstatuspolicy ignoreallfailures
+
+# Suppression du Backup Catalog
 wbadmin.exe delete catalog -quiet
+wbadmin.exe delete systemstatebackup
+
+# Arrêt du service de sauvegarde
 net stop "Windows Backup" /y
+net stop "Volume Shadow Copy" /y
+
+# Désactivation de la restauration système
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v DisableSR /t REG_DWORD /d 1 /f</div>
+  </div>
 </div>
 
+<div class="page-wrap">
+  <div class="sec-title">Identification du ransomware</div>
+
+  <div class="card card-cyan" style="margin-bottom:1rem">
+    <div class="ct">🔍 Outils d'identification</div>
+    <p><strong>ID Ransomware</strong> (id-ransomware.malwarehunterteam.com) — uploader la note de rançon ou un fichier chiffré → identification en secondes.</p>
+    <p><strong>No More Ransom</strong> (nomoreransom.org) — propose des déchiffreurs gratuits si la clé maître est connue (Europol + éditeurs AV).</p>
+    <p><strong>Extension du fichier chiffré</strong> — <code>.lockbit</code>, <code>.ryuk</code>, <code>.conti</code>, <code>.dharma</code>, <code>.phobos</code> — chaque famille a une signature reconnaissable.</p>
+  </div>
+</div>
+
+<div class="page-wrap">
+  <div class="sec-title">Chronologie forensique post-incident</div>
+  <div class="sec-sub">5 questions clés à répondre dans le rapport.</div>
+
+  <table>
+    <thead><tr><th>Phase</th><th>Action</th><th>Source de preuve</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Patient zéro</strong></td><td>Quel poste a été infecté en premier ?</td><td>Logs SIEM, timestamps MFT, NetFlow</td></tr>
+      <tr><td><strong>Date d'infection</strong></td><td>Quand l'accès initial a-t-il eu lieu ?</td><td>VPN logs, SMTP, EID 4624 inhabituel</td></tr>
+      <tr><td><strong>Dwell time</strong></td><td>Combien de temps avant chiffrement ?</td><td>Souvent 2–4 semaines (discovery + lateral)</td></tr>
+      <tr><td><strong>Scope</strong></td><td>Quels systèmes sont chiffrés/exfiltrés ?</td><td>MFT (<code>$MFT</code> scan), inventaire extensions</td></tr>
+      <tr><td><strong>Exfiltration</strong></td><td>Quelles données ont été volées ?</td><td>NetFlow, proxy logs, DLP alerts</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="page-wrap">
+  <div class="sec-title">Obligations légales — LPD 2023 &amp; CPP</div>
+
+  <div class="card card-red" style="margin-bottom:1rem">
+    <div class="ct">⚠️ Notification obligatoire — 72 heures</div>
+    <p><strong>LPD art. 24</strong> — Si des données personnelles ont été exfiltrées (double extorsion), notification obligatoire au PFPDT dans les <strong>72 heures</strong> après la découverte de la violation. Notification aux personnes concernées si risque élevé.</p>
+    <p style="margin-top:.4rem"><strong>CPP art. 248</strong> — Ne pas payer la rançon sans consulter les autorités. Le paiement peut financer des groupes sous sanctions OFAC (USA), ce qui est illégal même indirectement (effet extraterritorial).</p>
+  </div>
+</div>
+
+<div class="page-wrap">
   <div class="sec-title">Familles ransomware connues</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.5rem;margin-bottom:1.25rem">
-    <div class="card card-red"><div class="ct">LockBit 3.0</div><p>Groupe le plus actif 2022-2024. RaaS (Ransomware-as-a-Service). Extensions .lockbit. Double/triple extorsion.</p></div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.6rem;margin-bottom:1.25rem">
+    <div class="card card-red"><div class="ct">LockBit 3.0</div><p>Groupe le plus actif 2022–2024. RaaS (Ransomware-as-a-Service). Extensions <code>.lockbit</code>. Double/triple extorsion.</p></div>
     <div class="card card-orange"><div class="ct">ALPHV/BlackCat</div><p>Écrit en Rust. Multi-plateforme (Windows, Linux, VMware). Extensions variables. Fermé après FBI takedown 2024.</p></div>
-    <div class="card card-gold"><div class="ct">Cl0p</div><p>Spécialise dans les 0-days (MOVEit, GoAnywhere). Exfiltration massive sans toujours chiffrer.</p></div>
+    <div class="card card-gold"><div class="ct">Cl0p</div><p>Spécialisé dans les 0-days (MOVEit, GoAnywhere). Exfiltration massive sans toujours chiffrer.</p></div>
     <div class="card card-purple"><div class="ct">Akira</div><p>Actif depuis 2023. Cible les PME. Déchiffreur GPU trouvé par chercheurs (2024).</p></div>
     <div class="card card-blue"><div class="ct">Play</div><p>Impliqué dans l'affaire Xplain (Suisse 2023). Publie les données sur son leak site.</p></div>
     <div class="card card-green"><div class="ct">Royal/BlackSuit</div><p>Successeur de Conti. Cible les infrastructures critiques (hôpitaux, transports).</p></div>
   </div>
-
-
-<div class="prereq-block">
-<div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="malware_forensique.html" class="prereq-pill">📖 Malware Forensics</a><a href="incident_response.html" class="prereq-pill">📖 Incident Response</a><a href="droit.html" class="prereq-pill">📖 Droit CPP</a></div>
-<div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html" class="tp-pill">🧪 🚨 Incident Response</a><a href="../tp.html" class="tp-pill">🧪 ⚖️ Droit pénal</a></div>
-<div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="incident_response.html" class="related-pill">🔗 Incident Response</a><a href="malware_forensique.html" class="related-pill">🔗 Malware Forensics</a><a href="suisse.html" class="related-pill">🔗 DFIR Suisse</a></div>
 </div>
 
-  <div class="alert">
-    ⚖️ <strong>Examen CAS-IN</strong> — Cette fiche couvre des notions évaluées à l'examen.
-    Maîtrisez les procédures, les articles de loi et les outils cités.
+<div class="page-wrap">
+  <div class="quiz-wrap">
+    <div class="quiz-q">Une victime arrive avec un PC chiffré. Note de rançon en .txt avec <code>.lockbit</code> en extension. Quelles sont vos 3 priorités forensiques immédiates ?<small>Workflow incident · Niveau : moyen</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer"><strong>1. Préservation</strong> — Ne pas redémarrer ni connecter à Internet. Acquérir RAM (WinPMem) et image disque (FTK Imager) immédiatement. Hash MD5 + SHA-256 des images. <strong>2. Isolation</strong> — Déconnecter du réseau (pas éteindre — on perd la RAM). Vérifier d'autres systèmes infectés via SIEM/EDR. <strong>3. Identification</strong> — Soumettre la note + un fichier chiffré à id-ransomware.malwarehunterteam.com pour identifier la famille (LockBit confirmé ici par extension). Vérifier nomoreransom.org pour un déchiffreur. <strong>En parallèle :</strong> notification PFPDT sous 72h si données personnelles exfiltrées (LPD art. 24).</div>
+  </div>
+
+  <div class="quiz-wrap">
+    <div class="quiz-q">Vous trouvez <code>vssadmin delete shadows /all /quiet</code> dans les Event Logs à 14h32. Le chiffrement a commencé à 14h35. Que conclure ?<small>Kill chain · Niveau : facile</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer"><strong>L'attaquant a supprimé les Volume Shadow Copies juste avant le chiffrement</strong> pour empêcher la récupération via <code>System Restore</code> ou via les snapshots Windows. C'est l'<em>impact phase</em> (étape 6 de la kill chain). Implications : (1) impossible de récupérer les fichiers depuis VSS, (2) le timing prouve une action coordonnée (script automatisé), (3) chercher en amont les autres commandes destructives (<code>wbadmin delete catalog</code>, <code>bcdedit /set recoveryenabled No</code>). À documenter précisément pour le rapport — le timestamp UTC est crucial pour la timeline.</div>
+  </div>
+
+  <div class="exam-tip">
+    <div class="exam-tip-title">🎓 Exam Tip — Ransomware Forensique</div>
+    <p><strong>Kill chain 7 étapes</strong> : Initial Access → Execution → Discovery → Lateral → Exfiltration → Impact → C2</p>
+    <p><strong>IOCs critiques</strong> : <code>vssadmin delete shadows</code> · <code>wbadmin delete catalog</code> · <code>bcdedit recoveryenabled No</code></p>
+    <p><strong>LPD art. 24</strong> : notification au PFPDT sous <strong>72 heures</strong> si données personnelles exfiltrées</p>
+    <p><strong>CPP art. 248</strong> : ne pas payer sans consulter (sanctions OFAC)</p>
+    <p><strong>Identification</strong> : id-ransomware.malwarehunterteam.com · nomoreransom.org</p>
+    <p><strong>Dwell time</strong> typique : 2–4 semaines entre infection et chiffrement</p>
+    <p><strong>Double extorsion</strong> : exfiltration AVANT chiffrement → menace de publication</p>
+  </div>
+
+  <div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> 7 étapes kill chain · <code>vssadmin delete shadows</code> = IOC critique · LPD art. 24 = 72h · CPP art. 248 = paiement = sanctions · Familles : LockBit, ALPHV/BlackCat, Cl0p, Akira, Play (Xplain), Royal/BlackSuit · ID Ransomware + No More Ransom = outils d'identification · Dwell time 2–4 semaines.</div>
+
+  <div class="footer">
+    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+    <span>LPD 2023 · CPP art. 248 · ID Ransomware · No More Ransom</span>
   </div>
 </div>
 
-<div class="footer">CAS-IN · Forensique Numérique · Ransomware Forensique · 2025</div>
-
 <script>
 (function(){
-  var btn = document.getElementById('back-top');
-  if(btn) window.addEventListener('scroll', function(){
-    btn.classList.toggle('visible', window.scrollY > 300);
-  });
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
 })();
+document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+    ans.classList.toggle('visible');
+    btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+  });
+});
 </script>
 </body>
 </html>
