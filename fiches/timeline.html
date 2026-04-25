@@ -1,164 +1,311 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Timeline Forensique — CAS-IN Forensique</title>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Timeline Forensique — CAS-IN</title>
 <meta name="description" content="Timeline forensique · Reconstruction chronologique · log2timeline · Plaso · Timesketch · Supertimeline">
-<meta name="theme-color" content="#0d1117">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../style/fiche_style.css">
-
-<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
-<script>
-(function(){
-  var btn=document.getElementById('back-top');
-  if(btn) window.addEventListener('scroll',function(){
-    btn.classList.toggle('visible',window.scrollY>300);
-  });
-})();
-</script>
-
 </head>
 <body>
-<a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:0;z-index:999;padding:.5rem 1rem;background:var(--cyan);color:var(--bg);font-size:.8rem;border-radius:0 0 4px 0;text-decoration:none">Aller au contenu</a>
-<nav class="tn-nav" aria-label="Navigation fiche">
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
   <a href="index.html" class="tn-back">← Fiches</a>
   <span class="tn-title">TIMELINE FORENSIQUE</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
-<div class="page" style="padding-top:.5rem;padding-bottom:0">
+
+<div class="page-wrap">
   <div class="breadcrumb">
-    <a href="../index.html">🏠 Accueil</a>
-    <span class="bc-sep">›</span>
-    <a href="index.html">Fiches</a>
-    <span class="bc-sep">›</span>
-    <a href="index.html#cat-acquisitionméthodes">Acquisition & Méthodes</a>
-    <span class="bc-sep">›</span>
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-acquisitionméthodes">Méthodologie &amp; Acquisition</a><span class="bc-sep">›</span>
     <span class="bc-current">Timeline</span>
-    <span class="read-time-badge">⏱ ~5 min</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~7 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">⏱</span>
+    <span class="tag tag-orange" style="margin-left:.5rem">log2timeline</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">Plaso · Timesketch</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Supertimeline</span>
+    <span class="tag tag-red" style="margin-left:.3rem">Corrélation</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Timeline Forensique</h1>
+    <div class="meta">Reconstruction chronologique · Supertimeline · log2timeline → Plaso → Timesketch</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="ntfs.html" class="prereq-pill">📖 NTFS</a><a href="mac_times.html" class="prereq-pill">📖 MAC Times</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=timestomping" class="tp-pill">🧪 🕰 Timestomping</a><a href="../tp.html?cat=examen" class="tp-pill">🧪 📋 Examen</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="incident_response.html" class="related-pill">🔗 Incident Response</a><a href="acquisition.html" class="related-pill">🔗 Acquisition</a><a href="rapport_forensique.html" class="related-pill">🔗 Rapport</a></div>
+  </div>
+
+  <div class="concept-card" style="margin-top:1rem">
+    <div class="concept-title">⏱ La Supertimeline — Reconstituer minute par minute</div>
+    Une <strong>supertimeline</strong> regroupe <em>toutes les sources horodatées</em> d'un système ($MFT, Event Logs, Registre, Prefetch, navigateurs, logs applicatifs…) en un seul fichier trié chronologiquement. C'est l'<strong>épine dorsale</strong> de toute analyse d'incident : elle révèle l'enchaînement précis des événements (entrée → exécution → persistence → exfiltration). Outils standards : <code>log2timeline.py</code> pour l'extraction, <code>psort.py</code> pour le filtrage/tri, <strong>Timesketch</strong> pour l'analyse collaborative en équipe.
   </div>
 </div>
-<main id="main-content">
-<div class="page">
-<div class="header">
-  <div class="badge" style="color:var(--orange)">⏱</div>
-  <div>
-    <div><span class="tag tag-orange">log2timeline</span><span class="tag tag-cyan">Plaso · Timesketch</span><span class="tag tag-blue">Corrélation temporelle</span></div>
-    <div class="meta" style="margin-top:.4rem">Reconstruction chronologique des événements · Supertimeline · Analyse temporelle</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA SVG — PIPELINE PLASO (LOG2TIMELINE → TIMESKETCH)
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="schema">
+    <div class="schema-title">🔧 Pipeline supertimeline — De l'image disque à l'analyse</div>
+    <div class="schema-sub">3 OUTILS · 4 ÉTAPES · NORMALISATION UTC OBLIGATOIRE</div>
+    <svg viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pipeline timeline forensique">
+      <defs>
+        <marker id="arr-tl" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <polygon points="0 0, 10 3, 0 6" fill="#F0883E"/>
+        </marker>
+      </defs>
+
+      <!-- Étape 0 : Image disque -->
+      <rect x="20" y="40" width="120" height="55" rx="6" fill="rgba(88,166,255,.12)" stroke="#58A6FF" stroke-width="1.5"/>
+      <text x="80" y="60" text-anchor="middle" font-size="20">💾</text>
+      <text x="80" y="80" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="700" fill="#58A6FF">Image disque</text>
+      <text x="80" y="92" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">.E01 · .dd · /dev/sdb1</text>
+
+      <line x1="140" y1="68" x2="180" y2="68" stroke="#F0883E" stroke-width="1.5" marker-end="url(#arr-tl)"/>
+
+      <!-- Étape 1 : log2timeline -->
+      <rect x="180" y="40" width="170" height="55" rx="6" fill="rgba(240,136,62,.15)" stroke="#F0883E" stroke-width="1.8"/>
+      <text x="265" y="60" text-anchor="middle" font-size="20">⚙️</text>
+      <text x="265" y="80" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="800" fill="#F0883E">log2timeline.py</text>
+      <text x="265" y="92" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">extraction multi-sources</text>
+
+      <line x1="350" y1="68" x2="390" y2="68" stroke="#F0883E" stroke-width="1.5" marker-end="url(#arr-tl)"/>
+
+      <!-- Fichier .plaso -->
+      <rect x="390" y="40" width="120" height="55" rx="6" fill="rgba(240,192,64,.12)" stroke="#F0C040" stroke-width="1.5"/>
+      <text x="450" y="60" text-anchor="middle" font-size="20">📦</text>
+      <text x="450" y="80" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="700" fill="#F0C040">output.plaso</text>
+      <text x="450" y="92" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">SQLite intermédiaire</text>
+
+      <line x1="510" y1="68" x2="550" y2="68" stroke="#F0883E" stroke-width="1.5" marker-end="url(#arr-tl)"/>
+
+      <!-- psort -->
+      <rect x="550" y="40" width="150" height="55" rx="6" fill="rgba(48,232,138,.12)" stroke="#30E88A" stroke-width="1.5"/>
+      <text x="625" y="60" text-anchor="middle" font-size="20">🔍</text>
+      <text x="625" y="80" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="700" fill="#30E88A">psort.py</text>
+      <text x="625" y="92" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">filtrer · trier · exporter</text>
+
+      <!-- Sources collectées (en bas) -->
+      <text x="360" y="125" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="800" fill="#A8B5C8" letter-spacing=".5">↑ SOURCES HORODATÉES COLLECTÉES PAR log2timeline ↑</text>
+      <line x1="40" y1="133" x2="680" y2="133" stroke="rgba(168,181,200,.3)" stroke-width=".5"/>
+
+      <rect x="20" y="145" width="105" height="50" rx="5" fill="rgba(255,64,96,.06)" stroke="#FF4060" stroke-width="1"/>
+      <text x="72" y="163" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#FF4060">$MFT</text>
+      <text x="72" y="178" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">$STD_INFO</text>
+      <text x="72" y="188" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">$FILE_NAME</text>
+
+      <rect x="135" y="145" width="105" height="50" rx="5" fill="rgba(240,136,62,.06)" stroke="#F0883E" stroke-width="1"/>
+      <text x="187" y="163" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#F0883E">$UsnJrnl</text>
+      <text x="187" y="178" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">journal NTFS</text>
+      <text x="187" y="188" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">création/suppression</text>
+
+      <rect x="250" y="145" width="105" height="50" rx="5" fill="rgba(240,192,64,.06)" stroke="#F0C040" stroke-width="1"/>
+      <text x="302" y="163" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#F0C040">Event Logs</text>
+      <text x="302" y="178" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">Security · System</text>
+      <text x="302" y="188" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">PowerShell · Sysmon</text>
+
+      <rect x="365" y="145" width="105" height="50" rx="5" fill="rgba(48,232,138,.06)" stroke="#30E88A" stroke-width="1"/>
+      <text x="417" y="163" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#30E88A">Registre</text>
+      <text x="417" y="178" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">SAM · SYSTEM</text>
+      <text x="417" y="188" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">NTUSER · UsrClass</text>
+
+      <rect x="480" y="145" width="105" height="50" rx="5" fill="rgba(88,166,255,.06)" stroke="#58A6FF" stroke-width="1"/>
+      <text x="532" y="163" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#58A6FF">Artefacts</text>
+      <text x="532" y="178" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">Prefetch · ShimCache</text>
+      <text x="532" y="188" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">AmCache · LNK</text>
+
+      <rect x="595" y="145" width="105" height="50" rx="5" fill="rgba(188,140,255,.06)" stroke="#BC8CFF" stroke-width="1"/>
+      <text x="647" y="163" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#BC8CFF">Navigateurs</text>
+      <text x="647" y="178" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">Chrome · Firefox</text>
+      <text x="647" y="188" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">Edge · history.db</text>
+
+      <!-- Sortie CSV / Timesketch -->
+      <text x="360" y="225" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="800" fill="#A8B5C8" letter-spacing=".5">↓ SORTIES POUR ANALYSE ↓</text>
+      <line x1="40" y1="233" x2="680" y2="233" stroke="rgba(168,181,200,.3)" stroke-width=".5"/>
+
+      <rect x="40" y="245" width="200" height="55" rx="6" fill="rgba(48,232,138,.08)" stroke="#30E88A" stroke-width="1.2"/>
+      <text x="140" y="263" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="700" fill="#30E88A">📄 timeline.csv (L2T)</text>
+      <text x="140" y="278" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">format L2T_CSV · Excel · grep</text>
+      <text x="140" y="289" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">léger · facile à diffuser</text>
+
+      <rect x="260" y="245" width="200" height="55" rx="6" fill="rgba(0,229,204,.1)" stroke="#00E5CC" stroke-width="1.5"/>
+      <text x="360" y="263" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="800" fill="#00E5CC">🔬 Timesketch</text>
+      <text x="360" y="278" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">UI web collaborative</text>
+      <text x="360" y="289" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">tags · stories · sigma rules</text>
+
+      <rect x="480" y="245" width="200" height="55" rx="6" fill="rgba(255,64,96,.06)" stroke="rgba(255,64,96,.5)" stroke-width="1.2" stroke-dasharray="3 3"/>
+      <text x="580" y="263" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="700" fill="#FF4060">⚠️ Normalisation UTC</text>
+      <text x="580" y="278" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">SYSTEM\TimeZoneInformation</text>
+      <text x="580" y="289" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">avant toute corrélation</text>
+
+      <line x1="625" y1="95" x2="140" y2="245" stroke="#30E88A" stroke-width="1.2" stroke-dasharray="2 3" opacity=".5"/>
+      <line x1="625" y1="95" x2="360" y2="245" stroke="#00E5CC" stroke-width="1.2" stroke-dasharray="2 3" opacity=".5"/>
+    </svg>
+    <div class="schema-legend">
+      <span class="lg-item"><span class="lg-dot" style="background:#58A6FF"></span>Image disque (input)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#F0883E"></span>log2timeline (extraction)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>.plaso (intermédiaire)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>psort + CSV</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#00E5CC"></span>Timesketch (analyse)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>Normalisation timezone</span>
+    </div>
   </div>
 </div>
 
-<div class="sec" id="principe-de-la-supertimeline"><div class="sec-title">Principe de la supertimeline</div>
-<div class="g2">
-<div class="card card-orange"><div class="ct">Concept</div><p>Regrouper <strong>toutes les sources de temps</strong> (FS, logs, registre, navigateur, artefacts) dans un seul fichier CSV ou base de données, trié chronologiquement. Permet de reconstituer un incident minute par minute.</p></div>
-<div class="card card-cyan"><div class="ct">Sources intégrées</div><ul>
-<li>NTFS : $MFT, $LogFile, $UsnJrnl</li>
-<li>Registre Windows (SAM, SYSTEM, NTUSER)</li>
-<li>Event Logs (Security, System, Sysmon)</li>
-<li>Prefetch, ShimCache, AmCache</li>
-<li>Historique navigateur (Chrome, Firefox, Edge)</li>
-<li>Logs applicatifs, LNK files, Jump Lists</li>
-</ul></div>
-</div></div>
-
-<div class="sec" id="log2timeline-plaso"><div class="sec-title">log2timeline / Plaso</div>
-<div class="cli">
-<span class="c"># 1. Générer le fichier Plaso (.plaso) depuis une image disque</span><br>
-<span class="v">log2timeline.py</span> <span class="a">output.plaso /dev/sdb1</span><br><br>
-<span class="c"># 2. Filtrer et exporter en CSV (L2T format)</span><br>
-<span class="v">psort.py</span> <span class="a">-o l2tcsv output.plaso</span> <span class="a">-w timeline.csv</span><br><br>
-<span class="c"># 3. Filtrage par date</span><br>
-<span class="v">psort.py</span> <span class="a">-o l2tcsv output.plaso</span> <span class="a">"date > '2024-01-01 00:00:00' AND date < '2024-01-31 00:00:00'"</span><br><br>
-<span class="c"># 4. Importer dans Timesketch pour analyse collaborative</span><br>
-<span class="v">timesketch_importer.py</span> <span class="a">-u admin --host http://localhost timeline.csv</span>
-</div></div>
-
-<div class="sec" id="exemple-de-timeline-dincident"><div class="sec-title">Exemple de timeline d'incident</div>
-<div class="tl">
-<div class="tl-item"><d<div class="prereq-block">
-<div class="prereq-row">
-  <span class="prereq-label">Prérequis :</span><a href="windows.html" class="prereq-pill">📖 Artefacts Windows</a><a href="ntfs.html" class="prereq-pill">📖 NTFS</a>
-</div><div class="prereq-row">
-  <span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=timestomping" class="tp-pill" onclick="sessionStorage.setItem('tp_start_cat','timestomping')">🧪 🕰 Timestomping</a><a href="../tp.html?cat=examen" class="tp-pill" onclick="sessionStorage.setItem('tp_start_cat','examen')">🧪 📋 Série Examen</a>
-</div><div class="prereq-row">
-  <span class="prereq-label">Voir aussi :</span><a href="logs_windows.html" class="related-pill">🔗 Logs Windows</a><a href="macos-linux.html" class="related-pill">🔗 macOS/Linux</a>
-</div></div>
-iv class="tl-time">2024-03-15 08:42:11 UTC</div><div class="tl-title">Connexion RDP externe réussie</div><div class="tl-desc">Compte "admin" depuis IP 185.220.x.x (nœud Tor)</div><div class="tl-source">Source: Security.evtx [4624 Type 10]</div></div>
-<div class="tl-item" style="border-color:rgba(255,64,96,.3)"><div class="tl-time">2024-03-15 08:43:02 UTC</div><div class="tl-title">PowerShell avec encodage Base64 exécuté</div><div class="tl-desc">cmd.exe → powershell.exe -enc [payload]</div><div class="tl-source">Source: PowerShell/Operational.evtx [4104] + Sysmon [1]</div></div>
-<div class="tl-item" style="border-color:rgba(255,64,96,.3)"><div class="tl-time">2024-03-15 08:43:15 UTC</div><div class="tl-title">Nouveau service "svcscan32" créé</div><div class="tl-desc">Malware installé comme service de persistance</div><div class="tl-source">Source: System.evtx [7045] + Registre SYSTEM</div></div>
-<div class="tl-item" style="border-color:rgba(240,192,64,.3)"><div class="tl-time">2024-03-15 08:44:30 UTC</div><div class="tl-title">Fichiers chiffrés dans C:\Users\</div><div class="tl-desc">Extension .locked ajoutée à 847 fichiers</div><div class="tl-source">Source: $UsnJrnl NTFS + $MFT timestamps</div></div>
-<div class="tl-item" style="border-color:rgba(48,232,138,.3)"><div class="tl-time">2024-03-15 08:47:00 UTC</div><div class="tl-title">Connexion vers IP externe (C2)</div><div class="tl-desc">Exfiltration de données vers 194.165.x.x:443</div><div class="tl-source">Source: Sysmon [3] + Firewall logs</div></div>
-</div></div>
-
-<div class="sec" id="points-critiques"><div class="sec-title">Points critiques</div>
-<div class="g2">
-<div class="card card-red"><div class="ct">⚠️ Timezone — Piège fréquent</div><p>Les sources utilisent des timezones différentes (NTFS = UTC · Event Logs = UTC · HFS+ = locale · FAT = locale). <strong>Normaliser en UTC</strong> avant de construire la timeline. Vérifier SYSTEM\TimeZoneInformation.</p></div>
-<div class="card card-gold"><div class="ct">Timestomping</div><p>Un attaquant peut modifier les timestamps NTFS ($STANDARD_INFORMATION) avec des outils comme <code style="color:var(--cyan)" class="copy-code">timestomp</code>. Comparer $SI et $FILE_NAME — divergence = manipulation.</p></div>
-</div></div>
-
-<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> log2timeline → .plaso → psort → CSV · Sources : $MFT + Event Logs + Registre + Prefetch · Timezone : toujours normaliser en UTC · Timestomping : $SI ≠ $FN · Timesketch : outil collaboratif d'analyse de timeline · Corrélation temporelle = cœur de l'analyse forensique.</div>
-<div class="footer">
-  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
-  <span>Ch. 19 Manuel · Plaso Documentation · ISO/IEC 27037</span>
+<!-- COMMANDES PLASO -->
+<div class="page-wrap">
+  <div class="sec-title">🔧 Pipeline log2timeline / Plaso — Commandes</div>
+  <div class="cli">
+    <span class="comment"># 1. Générer le fichier Plaso (.plaso) depuis une image disque</span><br>
+    <span class="v">log2timeline.py</span> <span class="a">output.plaso</span> <span class="a">/dev/sdb1</span><br><br>
+    <span class="comment"># 2. Filtrer et exporter en CSV (format L2T)</span><br>
+    <span class="v">psort.py</span> <span class="flag">-o</span> <span class="val">l2tcsv</span> <span class="a">output.plaso</span> <span class="flag">-w</span> <span class="a">timeline.csv</span><br><br>
+    <span class="comment"># 3. Filtrage par fenêtre temporelle (UTC)</span><br>
+    <span class="v">psort.py</span> <span class="flag">-o</span> <span class="val">l2tcsv</span> <span class="a">output.plaso</span> <span class="a">"date &gt; '2024-03-15 08:00:00' AND date &lt; '2024-03-15 09:00:00'"</span><br><br>
+    <span class="comment"># 4. Importer dans Timesketch</span><br>
+    <span class="v">timesketch_importer.py</span> <span class="flag">-u</span> <span class="val">admin</span> <span class="flag">--host</span> <span class="val">http://localhost</span> <span class="a">timeline.csv</span>
+  </div>
 </div>
-</div></main>
+
+<!-- EXEMPLE DE TIMELINE D'INCIDENT -->
+<div class="page-wrap">
+  <div class="sec-title">📅 Exemple de timeline — Intrusion ransomware reconstituée</div>
+  <div class="sec-sub">Cas typique : RDP depuis Tor → PowerShell encodé → service de persistance → chiffrement → exfiltration C2.</div>
+  <div class="tl">
+    <div class="tl-item" style="border-color:rgba(88,166,255,.3)">
+      <div class="tl-time">2024-03-15 08:42:11 UTC</div>
+      <div class="tl-title">🔓 Connexion RDP externe réussie</div>
+      <div class="tl-desc">Compte « admin » depuis IP <code>185.220.x.x</code> (nœud de sortie Tor connu)</div>
+      <div class="tl-source">Source : Security.evtx [Event 4624 · LogonType 10]</div>
+    </div>
+    <div class="tl-item" style="border-color:rgba(255,64,96,.3)">
+      <div class="tl-time">2024-03-15 08:43:02 UTC</div>
+      <div class="tl-title">⚡ PowerShell avec encodage Base64 exécuté</div>
+      <div class="tl-desc"><code>cmd.exe → powershell.exe -enc [payload]</code></div>
+      <div class="tl-source">Source : PowerShell/Operational.evtx [4104] + Sysmon [Event 1]</div>
+    </div>
+    <div class="tl-item" style="border-color:rgba(255,64,96,.3)">
+      <div class="tl-time">2024-03-15 08:43:15 UTC</div>
+      <div class="tl-title">🔧 Nouveau service « svcscan32 » créé</div>
+      <div class="tl-desc">Malware installé comme service de persistance · démarrage automatique</div>
+      <div class="tl-source">Source : System.evtx [Event 7045] + Registre SYSTEM</div>
+    </div>
+    <div class="tl-item" style="border-color:rgba(240,192,64,.3)">
+      <div class="tl-time">2024-03-15 08:44:30 UTC</div>
+      <div class="tl-title">🔒 Chiffrement de fichiers C:\Users\</div>
+      <div class="tl-desc">Extension <code>.locked</code> ajoutée à 847 fichiers</div>
+      <div class="tl-source">Source : $UsnJrnl NTFS + $MFT timestamps ($STD_INFO)</div>
+    </div>
+    <div class="tl-item" style="border-color:rgba(48,232,138,.3)">
+      <div class="tl-time">2024-03-15 08:47:00 UTC</div>
+      <div class="tl-title">🌐 Connexion vers IP externe (C2)</div>
+      <div class="tl-desc">Exfiltration de données vers <code>194.165.x.x:443</code></div>
+      <div class="tl-source">Source : Sysmon [Event 3] + logs firewall</div>
+    </div>
+  </div>
+</div>
+
+<!-- POINTS CRITIQUES -->
+<div class="page-wrap">
+  <div class="sec-title">⚠️ Points critiques à surveiller</div>
+  <div class="g2">
+    <div class="card card-red">
+      <div class="ct">⏰ Timezone — Piège #1</div>
+      <p>Les sources utilisent des timezones <strong>différentes</strong> :</p>
+      <ul>
+        <li>NTFS · Event Logs · Sysmon → <strong>UTC</strong></li>
+        <li>HFS+ · APFS → locale (TZ système)</li>
+        <li>FAT12/16/32 → locale</li>
+        <li>SQLite (Chrome, Firefox) → mélange</li>
+      </ul>
+      <p>Toujours <strong>normaliser en UTC</strong> avant la corrélation. Vérifier <code>SYSTEM\CurrentControlSet\Control\TimeZoneInformation</code>.</p>
+    </div>
+    <div class="card card-gold">
+      <div class="ct">🕰 Timestomping — Piège #2</div>
+      <p>Un attaquant peut modifier les timestamps NTFS du <strong>$STANDARD_INFORMATION</strong> avec des outils comme <code>timestomp</code> ou <code>SetMACE</code>. Mais le <strong>$FILE_NAME</strong> reste intact car il n'est mis à jour que par le système (création/renommage).</p>
+      <p><strong>Détection :</strong> comparer <code>$SI</code> et <code>$FN</code> via <code>MFTECmd</code> ou <code>analyzeMFT</code>. Divergence = manipulation.</p>
+    </div>
+    <div class="card card-blue">
+      <div class="ct">📊 Pivots de corrélation</div>
+      <ul>
+        <li><strong>Process tree</strong> via Sysmon Event 1 — relier parent/enfant</li>
+        <li><strong>$UsnJrnl</strong> + <strong>$LogFile</strong> = couche basse NTFS, à 0,1 sec près</li>
+        <li><strong>Prefetch</strong> = timestamp de première et dernière exécution</li>
+        <li><strong>ShimCache / AmCache</strong> = applications listées même supprimées</li>
+      </ul>
+    </div>
+    <div class="card card-purple">
+      <div class="ct">🔬 Bonnes pratiques Timesketch</div>
+      <ul>
+        <li>Importer plusieurs sources dans une même <em>sketch</em></li>
+        <li>Utiliser les <strong>tags</strong> (<code>suspicious</code>, <code>persistence</code>, <code>c2</code>)</li>
+        <li><strong>Stories</strong> pour raconter l'enchaînement aux magistrats</li>
+        <li>Règles <strong>Sigma</strong> intégrées pour détection automatique</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div class="page-wrap">
+  <div class="sec-title">🧠 Testez-vous</div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Vous comparez via MFTECmd les timestamps $SI et $FN d'un fichier <code>malware.exe</code>. $SI = 2010-01-01 mais $FN = 2024-03-15. Que conclure ?<small>Timestomping · Niveau : moyen</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer"><strong>Timestomping confirmé.</strong> Le $STANDARD_INFORMATION ($SI) a été antidaté à 2010 par un outil type <code>timestomp</code>. Le $FILE_NAME ($FN) — <em>uniquement</em> mis à jour lors de la création / renommage / déplacement par le système — montre la véritable création <strong>2024-03-15</strong>. Action : (1) consigner les deux timestamps dans le rapport, (2) chercher l'outil de timestomping (souvent dans les recent files de l'attaquant), (3) corréler avec $UsnJrnl pour la création réelle, (4) ne jamais se fier au seul $SI dans une analyse.</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">log2timeline.py prend 12 heures sur une image de 500 GB. Comment optimiser ?<small>Performance · Niveau : facile</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer"><strong>Limiter les parsers.</strong> Par défaut, log2timeline lance <em>tous</em> les parsers. Stratégies : (1) <code>--parsers "winreg,evtx,mft,prefetch"</code> pour ne cibler que les sources Windows essentielles, (2) <code>--partitions 1,2</code> pour exclure des partitions inutiles (recovery), (3) <code>--vss-stores none</code> pour ignorer les Volume Shadow Copies (gain énorme), (4) workflow en deux temps : timeline rapide MFT-only d'abord pour cibler la fenêtre temporelle, puis pleine analyse sur cette fenêtre uniquement avec <code>psort.py "date &gt; X AND date &lt; Y"</code>.</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Une image NTFS dump à 09:30 (heure suisse, été). Vous voyez une création à 07:30:42 dans Plaso. Quelle est l'heure réelle locale ?<small>Timezone · Niveau : facile</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer"><strong>09:30:42 heure locale (CEST).</strong> Plaso affiche tout en <strong>UTC</strong> par défaut. En été suisse (CEST = UTC+2), l'heure locale = UTC + 2h. En hiver (CET = UTC+1), ce serait 08:30:42. Pour éviter les confusions, toujours mentionner <strong>l'offset</strong> dans le rapport : <code>2024-03-15 07:30:42 UTC = 09:30:42 CEST (Europe/Zurich)</code>. Vérifier la timezone du système source via <code>SYSTEM\CurrentControlSet\Control\TimeZoneInformation</code> dans le registre.</div>
+  </div>
+</div>
+
+<div class="page-wrap">
+  <div class="exam-tip">
+    <div class="exam-tip-title">🎓 Exam Tip — Timeline Forensique</div>
+    <p><strong>Pipeline</strong> : <code>log2timeline.py</code> → <code>.plaso</code> → <code>psort.py</code> → CSV / Timesketch</p>
+    <p><strong>Sources</strong> : $MFT · $UsnJrnl · $LogFile · Event Logs (Security/System/PowerShell/Sysmon) · Registre · Prefetch · ShimCache · AmCache · LNK · Jump Lists · navigateurs</p>
+    <p><strong>Format L2T_CSV</strong> : <code>date,time,timezone,MACB,source,sourcetype,type,user,host,short,desc,version,filename,inode,notes,format,extra</code></p>
+    <p><strong>Timezone</strong> : NTFS = UTC · HFS+/FAT = locale · TOUJOURS normaliser en UTC</p>
+    <p><strong>Timestomping</strong> : $SI ≠ $FN = manipulation · MFTECmd / analyzeMFT pour détecter</p>
+    <p><strong>Timesketch</strong> : analyse collaborative · stories · tags · règles Sigma</p>
+    <p><strong>Optim</strong> : <code>--parsers</code> ciblés · <code>--vss-stores none</code> · timeline rapide MFT-only en premier</p>
+  </div>
+
+  <div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> log2timeline → .plaso → psort → CSV/Timesketch · Sources : $MFT + Event Logs + Registre + Prefetch + navigateurs · Timezone : <strong>toujours UTC</strong> · Timestomping : $SI ≠ $FN · Timesketch = analyse collaborative · MFTECmd / analyzeMFT pour détection · Process tree via Sysmon Event 1.</div>
+
+  <div class="footer">
+    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+    <span>Manuel CAS-IN ch. 19 · Plaso Documentation · ISO/IEC 27037</span>
+  </div>
+</div>
 
 <script>
 (function(){
-  /* ── Bouton copier sur .cli et code standalone ── */
-  function addCopyButtons(){
-    /* .cli blocks */
-    document.querySelectorAll('.cli').forEach(function(el){
-      if(el.querySelector('.copy-btn')) return;
-      var btn = document.createElement('button');
-      btn.className = 'copy-btn';
-      btn.title = 'Copier';
-      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11V3a2 2 0 012-2h6"/></svg>';
-      btn.onclick = function(){
-        var text = el.innerText.replace(/^copier$/mi,'').trim();
-        navigator.clipboard.writeText(text).then(function(){
-          btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-          btn.style.color='var(--green)';
-          setTimeout(function(){ btn.innerHTML='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11V3a2 2 0 012-2h6"/></svg>'; btn.style.color=''; }, 1500);
-        });
-      };
-      el.style.position='relative';
-      el.appendChild(btn);
-    });
-    /* <code> standalone (inside .h class or filter-row or step-text) */
-    document.querySelectorAll('.copy-code').forEach(function(el){
-      if(el.dataset.copyInit) return;
-      el.dataset.copyInit = '1';
-      el.style.cursor = 'pointer';
-      el.title = 'Cliquer pour copier';
-      el.onclick = function(){
-        navigator.clipboard.writeText(el.innerText).then(function(){
-          var orig = el.style.background;
-          el.style.background = 'rgba(48,232,138,.2)';
-          setTimeout(function(){ el.style.background = orig; }, 800);
-        });
-      };
-    });
-  }
-
-  /* ── TOC smooth scroll ── */
-  document.querySelectorAll('.toc a[href^="#"]').forEach(function(a){
-    a.addEventListener('click', function(e){
-      e.preventDefault();
-      var id = a.getAttribute('href').slice(1);
-      var el = document.getElementById(id);
-      if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
-    });
-  });
-
-  /* ── Back-to-top ── */
-  var btn = document.getElementById('back-top');
-  if(btn) window.addEventListener('scroll', function(){
-    btn.classList.toggle('visible', window.scrollY > 300);
-  });
-
-  document.addEventListener('DOMContentLoaded', addCopyButtons);
-  if(document.readyState !== 'loading') addCopyButtons();
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
 })();
+document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+    ans.classList.toggle('visible');
+    btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+  });
+});
 </script>
-
-</body></html>
+</body>
+</html>
