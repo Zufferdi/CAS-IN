@@ -22,6 +22,7 @@
 
 </head>
 <body>
+<div id="scroll-progress"></div>
 <a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:0;z-index:999;padding:.5rem 1rem;background:var(--cyan);color:var(--bg);font-size:.8rem;border-radius:0 0 4px 0;text-decoration:none">Aller au contenu</a>
 <nav class="tn-nav" aria-label="Navigation fiche">
   <a href="index.html" class="tn-back">← Fiches</a>
@@ -53,8 +54,104 @@
 <div class="tabs">
   <button class="tb on" onclick="T('headers')">📨 En-têtes SMTP</button>
   <button class="tb" onclick="T('auth')">🔐 SPF / DKIM / DMARC</button>
-  <button class="tb" onclick="T('phishing')">🎣 Phishing & Attribution</button>
-  <button class="tb" onclick="T('outils')">🛠 Outils & Formats</button>
+  <button class="tb" onclick="T('phishing')">🎣 Phishing &amp; Attribution</button>
+  <button class="tb" onclick="T('outils')">🛠 Outils &amp; Formats</button>
+</div>
+
+<div class="concept-card">
+  <div class="concept-title">✉️ Email — Le protocole de 1971 toujours utilisé en 2026</div>
+  Le protocole <strong>SMTP</strong> (Simple Mail Transfer Protocol) date de <strong>1981</strong> (RFC 821, simplification du <em>Mailbox Protocol</em> de 1971). À l'origine, aucune authentification : n'importe qui pouvait envoyer un email avec n'importe quelle adresse <em>From:</em> — la confiance était implicite entre les sysadmins universitaires. Aujourd'hui, ce protocole transporte <strong>~333 milliards d'emails par jour</strong>, et le manque originel d'authentification est responsable de l'épidémie de <strong>phishing et spoofing</strong>. Trois mécanismes ajoutés <em>par-dessus</em> tentent de combler cette faille : <strong>SPF</strong> (Sender Policy Framework), <strong>DKIM</strong> (DomainKeys Identified Mail) et <strong>DMARC</strong> (Domain-based Message Authentication, Reporting &amp; Conformance). Pour le forensiste, l'email reste une <strong>mine d'or</strong> : les <strong>en-têtes complets</strong> (Received, Message-ID, Authentication-Results) tracent le chemin exact du message, depuis la machine d'origine jusqu'à la boîte de réception, avec timestamps, IPs et hostnames. Comprendre les en-têtes SMTP est <strong>la compétence forensique fondamentale</strong> dans toute affaire de phishing, fraude au président, BEC (Business Email Compromise) ou diffamation.
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA SVG — CHEMIN D'UN EMAIL SMTP
+     ════════════════════════════════════════════════════════════ -->
+<div class="schema">
+  <div class="schema-title">✉️ Cheminement d'un email SMTP — Lecture des en-têtes Received</div>
+  <div class="schema-sub">EXPÉDITEUR · MTA SOURCE · INTERNET · MTA DESTINATION · DESTINATAIRE</div>
+  <svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cheminement email SMTP">
+    <defs>
+      <marker id="arr-em" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="#00E5CC"/>
+      </marker>
+    </defs>
+
+    <!-- Header -->
+    <rect x="20" y="15" width="680" height="36" rx="6" fill="rgba(13,17,23,.5)" stroke="rgba(0,229,204,.4)" stroke-width="1.2"/>
+    <text x="360" y="33" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#00E5CC">📨 SMTP RFC 5321 · Headers Received empilés du bas vers le haut</text>
+    <text x="360" y="46" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">Le DERNIER Received (en haut) = MTA destinataire · Le PREMIER Received (en bas) = serveur source</text>
+
+    <!-- 5 étapes -->
+    <!-- 1. Expéditeur -->
+    <rect x="20" y="80" width="120" height="100" rx="8" fill="rgba(48,232,138,.1)" stroke="#30E88A" stroke-width="1.5"/>
+    <text x="80" y="105" text-anchor="middle" font-size="28">👤</text>
+    <text x="80" y="130" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#30E88A">1. Expéditeur</text>
+    <text x="80" y="145" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">alice@example.ch</text>
+    <text x="80" y="158" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">client mail Outlook,</text>
+    <text x="80" y="170" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">Thunderbird, Apple Mail</text>
+
+    <line x1="142" y1="130" x2="178" y2="130" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-em)"/>
+
+    <!-- 2. MTA source (SMTP submission) -->
+    <rect x="180" y="80" width="140" height="100" rx="8" fill="rgba(88,166,255,.1)" stroke="#58A6FF" stroke-width="1.5"/>
+    <text x="250" y="105" text-anchor="middle" font-size="28">📤</text>
+    <text x="250" y="130" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#58A6FF">2. MTA source</text>
+    <text x="250" y="145" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">smtp.example.ch</text>
+    <text x="250" y="158" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">port 587 (submission)</text>
+    <text x="250" y="170" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#F0C040">+ SPF / DKIM signe ici</text>
+
+    <line x1="322" y1="130" x2="358" y2="130" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-em)"/>
+
+    <!-- 3. Internet (relais) -->
+    <rect x="360" y="80" width="120" height="100" rx="8" fill="rgba(168,181,200,.06)" stroke="#A8B5C8" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <text x="420" y="105" text-anchor="middle" font-size="28">🌐</text>
+    <text x="420" y="130" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8">3. Internet</text>
+    <text x="420" y="145" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">DNS MX lookup</text>
+    <text x="420" y="158" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">port 25 (entre MTAs)</text>
+    <text x="420" y="170" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">TLS opportuniste</text>
+
+    <line x1="482" y1="130" x2="518" y2="130" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-em)"/>
+
+    <!-- 4. MTA destination -->
+    <rect x="520" y="80" width="140" height="100" rx="8" fill="rgba(240,192,64,.1)" stroke="#F0C040" stroke-width="1.5"/>
+    <text x="590" y="105" text-anchor="middle" font-size="28">📥</text>
+    <text x="590" y="130" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#F0C040">4. MTA destination</text>
+    <text x="590" y="145" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">mail.target.ch</text>
+    <text x="590" y="158" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">port 25 (receive)</text>
+    <text x="590" y="170" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#F0883E">vérifie SPF + DKIM + DMARC</text>
+
+    <!-- Flèche descendante vers destinataire -->
+    <line x1="590" y1="180" x2="590" y2="210" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-em)"/>
+
+    <!-- 5. Destinataire (boîte) -->
+    <rect x="520" y="215" width="140" height="55" rx="6" fill="rgba(188,140,255,.1)" stroke="#BC8CFF" stroke-width="1.5"/>
+    <text x="590" y="237" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#BC8CFF">5. 📥 Inbox Bob</text>
+    <text x="590" y="252" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">bob@target.ch</text>
+    <text x="590" y="264" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">IMAP port 993 / POP3 995</text>
+
+    <!-- Encadré HEADERS RECEIVED -->
+    <rect x="20" y="200" width="480" height="150" rx="6" fill="rgba(13,17,23,.5)" stroke="rgba(0,229,204,.4)" stroke-width="1.2"/>
+    <text x="260" y="220" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#00E5CC">📜 Headers Received empilés (lecture du BAS vers le HAUT)</text>
+
+    <text x="35" y="240" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#BC8CFF"><tspan font-weight="700">Received:</tspan> <tspan fill="#A8B5C8">from mail.target.ch by inbox.bob (IMAP)</tspan></text>
+    <text x="60" y="252" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">Mon, 25 Apr 2026 14:23:11 +0200</text>
+
+    <text x="35" y="270" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#F0C040"><tspan font-weight="700">Received:</tspan> <tspan fill="#A8B5C8">from smtp.example.ch (185.X.X.X) by mail.target.ch</tspan></text>
+    <text x="60" y="282" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">Mon, 25 Apr 2026 14:23:09 +0200</text>
+
+    <text x="35" y="300" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#58A6FF"><tspan font-weight="700">Received:</tspan> <tspan fill="#A8B5C8">from [192.168.1.42] (Outlook) by smtp.example.ch</tspan></text>
+    <text x="60" y="312" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">Mon, 25 Apr 2026 14:23:05 +0200</text>
+
+    <text x="35" y="333" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#FF4060"><tspan font-weight="700">↓ ATTAQUE :</tspan> <tspan fill="#A8B5C8">spoofeur insère un Received factice</tspan></text>
+    <text x="35" y="345" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">→ vrai chemin = uniquement le DERNIER ajouté par le MTA réel destinataire</text>
+  </svg>
+  <div class="schema-legend">
+    <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>Expéditeur (client)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#58A6FF"></span>MTA source (signe SPF/DKIM)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>MTA destination (vérifie auth)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#BC8CFF"></span>Inbox destinataire</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>Risque : Received factice</span>
+  </div>
 </div>
 
 <!-- EN-TÊTES SMTP -->
@@ -224,6 +321,54 @@ S -->
 </div></div>
 </div>
 
+<!-- QUIZ -->
+<div class="sec">
+<div class="sec-title">🧠 Testez-vous</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Vous recevez un email suspect "from CEO". L'en-tête <code>From:</code> dit <code>ceo@company.ch</code>. Comment vérifier rapidement s'il est légitime ?<small>Anti-phishing · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>Le <code>From:</code> est librement falsifiable</strong> — c'est inutile. Trois vérifications : (1) <strong>Authentication-Results</strong> ajouté par votre serveur de réception (= fiable car ajouté <em>après</em> réception, l'attaquant ne peut pas le falsifier). Cherchez : <code>spf=pass</code> + <code>dkim=pass</code> + <code>dmarc=pass</code>. Si <code>spf=fail</code> ou <code>dkim=fail</code> → spoofing très probable. (2) <strong>Return-Path</strong> (envelope sender) — souvent différent du <code>From:</code> dans le spoofing ("envelope from" vs "header from"). (3) <strong>Received: chain</strong> — lire du bas vers le haut, l'IP du premier MTA doit appartenir à <code>company.ch</code>. Faire un reverse DNS sur cette IP : <code>dig -x &lt;IP&gt;</code>. Si elle pointe vers Cloudfront, AWS, ou un domaine inconnu = suspect. <strong>Bonus</strong> : le BEC (Business Email Compromise) typique utilise un domaine sosie : <code>company-ch.net</code> au lieu de <code>company.ch</code>. Toujours zoomer sur l'orthographe exacte.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">SPF passe avec <code>spf=pass</code>, DKIM <code>dkim=fail</code>. Cela suffit-il à dire que l'email est légitime ?<small>SPF/DKIM · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>Non.</strong> SPF et DKIM contrôlent des choses différentes : <strong>SPF</strong> vérifie que l'IP émettrice est autorisée à envoyer pour le domaine du <code>Return-Path:</code> (envelope from). <strong>DKIM</strong> vérifie que le corps + en-têtes signés n'ont pas été modifiés depuis l'envoi (signature RSA du domaine). <strong>SPF=pass + DKIM=fail</strong> peut signifier : (1) email légitime relayé par un service intermédiaire qui a modifié le contenu (mailing list, forwarder, scanner antivirus) — <em>cas courant</em>, (2) tentative de spoofing intelligente où l'attaquant a réussi à passer SPF (via un sous-domaine compromis) mais ne peut pas signer DKIM. <strong>DMARC</strong> applique une politique combinée : "<em>pour qu'un email passe DMARC, il doit valider SOIT SPF SOIT DKIM, ET le domaine validé doit être ALIGNÉ avec le <code>From:</code></em>". L'<strong>alignement</strong> est crucial : <code>spf=pass</code> sur <code>bounce.mailchimp.com</code> ne protège pas contre un spoof de <code>boss@company.ch</code> dans le <code>From:</code>. Toujours regarder <code>dmarc=pass</code>, qui combine les deux + alignement.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Vous voulez extraire les emails d'un PST Outlook saisi. Quels outils ?<small>Formats forensiques · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Format <strong>PST</strong> = Personal Storage Table (Outlook), conteneur propriétaire Microsoft. Outils : (1) <strong>libpff</strong> (open source, CLI, librairie de référence pour parsing PST/OST) → produit des fichiers individuels EML lisibles, (2) <strong>readpst</strong> (Linux, basé sur libpff), (3) <strong>Autopsy</strong> avec le module Email Parser intégré, (4) <strong>Magnet AXIOM</strong> (commercial, GUI parfaite, parsing automatique des emails + pièces jointes + contacts + calendar), (5) <strong>X-Ways Forensics</strong> avec le module mail intégré, (6) <strong>Outlook</strong> lui-même (montage du PST + export en PST/EML/MSG). <strong>Best practice</strong> : (a) calculer SHA-256 du PST, (b) faire une copie de travail, (c) extraire avec libpff vers un dossier d'EML, (d) indexer ces EML avec un outil de keyword search (Recoll, dtSearch, Autopsy). Format <strong>OST</strong> (Offline Storage Table) = même structure mais cache local Outlook synchronisé avec Exchange — ne pas oublier sur les saisies de postes de travail.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Vous trouvez dans les logs Postfix : <code>connect from spam.example[185.X.X.X]</code> mais aucun <code>queue file</code> et aucun <code>delivered</code>. Le mail a-t-il été envoyé ?<small>Logs MTA · Niveau : difficile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>Probablement non, ou pas avec succès.</strong> Le cycle Postfix d'un email réussi est : <strong>connect</strong> → <strong>NOOP/EHLO</strong> → <strong>MAIL FROM</strong> → <strong>RCPT TO</strong> → <strong>DATA</strong> → <strong>queue file (ID)</strong> → <strong>delivered</strong> ou <strong>deferred</strong> ou <strong>bounce</strong>. Si on voit seulement <code>connect</code> sans queue file, plusieurs scénarios : (1) <strong>Connexion abandonnée</strong> — l'attaquant a été bloqué par les RBL (Real-time Blackhole List), (2) <strong>Rejet pré-DATA</strong> — Postfix a refusé MAIL FROM ou RCPT TO (utilisateur inexistant), (3) <strong>RBL/greylisting</strong> rejet temporaire, (4) <strong>Tentative de scan</strong> SMTP sans réel envoi (botnet test). <strong>À vérifier dans la même fenêtre temporelle</strong> : logs <code>postfix/smtpd</code> pour voir le motif de rejet (<code>NOQUEUE: reject:</code>), logs <code>postfix/anvil</code> pour les statistiques de connexion par client, logs <code>fail2ban</code> si mode actif. <strong>Important forensiquement</strong> : un <code>connect from</code> sans suite est une <strong>tentative</strong> et doit être consignée — c'est un IOC (Indicator of Compromise) si l'IP appartient à un botnet connu.</div>
+</div>
+</div>
+
+<!-- EXAM TIP -->
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — Email Forensics</div>
+  <p><strong>SMTP RFC 5321</strong> · ports 25 (entre MTAs) · 587 (submission TLS) · 465 (SMTPS legacy)</p>
+  <p><strong>Headers Received</strong> : se lisent du <strong>BAS vers le HAUT</strong> (le bas = source, le haut = destination)</p>
+  <p><strong>From:</strong> = <strong>LIBREMENT FALSIFIABLE</strong> · ne JAMAIS s'y fier seul</p>
+  <p><strong>Return-Path:</strong> = envelope sender, plus difficile à spoofer (utilisé par SPF)</p>
+  <p><strong>SPF</strong> (RFC 7208) : DNS TXT du domaine, autorise certaines IPs à envoyer · vérifie le Return-Path</p>
+  <p><strong>DKIM</strong> (RFC 6376) : signature RSA du corps + headers · clé publique dans DNS TXT (<code>selector._domainkey.domain</code>)</p>
+  <p><strong>DMARC</strong> (RFC 7489) : politique combinée SPF + DKIM + alignement avec From: · DNS TXT <code>_dmarc.domain</code></p>
+  <p><strong>Authentication-Results</strong> : ajouté par le serveur de réception · <strong>fiable</strong> (impossible à spoofer)</p>
+  <p><strong>X-Originating-IP</strong> : ajouté par Gmail/Outlook · IP réelle de l'expéditeur</p>
+  <p><strong>Message-ID</strong> : <code>&lt;unique@domain&gt;</code> · doit être unique &amp; provenir du domaine du MTA source</p>
+  <p><strong>Formats forensiques</strong> :</p>
+  <p>&nbsp;&nbsp;• <code>.eml</code> = 1 fichier = 1 email (RFC 822)</p>
+  <p>&nbsp;&nbsp;• <code>.msg</code> = format Outlook (1 email)</p>
+  <p>&nbsp;&nbsp;• <code>.pst</code> = conteneur Outlook (boîte complète)</p>
+  <p>&nbsp;&nbsp;• <code>.ost</code> = cache Outlook offline (même structure que PST)</p>
+  <p>&nbsp;&nbsp;• <code>.mbox</code> = format Unix/Thunderbird (concaténation d'emails)</p>
+  <p><strong>Outils</strong> : libpff (PST/OST) · readpst · olevba (macros) · Autopsy Email Parser · Magnet AXIOM</p>
+  <p><strong>Phishing</strong> : domaines sosies (typosquatting) · vérifier orthographe exacte · Authentication-Results</p>
+</div>
+
 <div class="alert">⚖️ <strong>Examen CAS-IN :</strong> Received: se lit du bas vers le haut · SPF = DNS TXT du domaine expéditeur · DKIM = signature RSA du corps + en-têtes · DMARC = politique sur SPF/DKIM fail · From: = falsifiable librement · X-Originating-IP = IP réelle (ajoutée par Gmail/Outlook) · Authentication-Results = ajouté par le serveur de réception (fiable) · PST = format Outlook · EML = un fichier = un email · olevba = analyser les macros.</div>
 <div class="footer">
   <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
@@ -232,6 +377,15 @@ S -->
 </div>
 <script>
 function T(id){document.querySelectorAll('.tp').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));document.getElementById('t-'+id).classList.add('on');event.target.classList.add('on');}
+var bar=document.getElementById('scroll-progress');
+if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+    ans.classList.toggle('visible');
+    btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+  });
+});
 </script>
 </main>
 
