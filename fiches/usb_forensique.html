@@ -8,6 +8,8 @@
 <link rel="stylesheet" href="../style/fiche_style.css">
 </head>
 <body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 
 <nav class="tn-nav">
   <a href="index.html" class="tn-back">← Fiches</a>
@@ -40,6 +42,94 @@
 </div>
 
 <div class="page">
+
+<div class="prereq-block" style="margin-bottom:1rem">
+  <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="windows.html" class="prereq-pill">📖 Windows</a><a href="registre_windows.html" class="prereq-pill">📖 Registre</a><a href="logs_windows.html" class="prereq-pill">📖 Logs Windows</a></div>
+  <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html" class="tp-pill">🧪 📋 Série Examen</a></div>
+  <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="windows.html" class="related-pill">🔗 Artefacts Windows</a><a href="shellbags.html" class="related-pill">🔗 ShellBags</a></div>
+</div>
+
+<div class="concept-card">
+  <div class="concept-title">🔌 USB Forensique — Tracer le passage d'une clé</div>
+  La question forensique fondamentale est : <strong>« Est-ce qu'une clé USB précise a été branchée sur cet ordinateur, par quel utilisateur, et quand ? »</strong>. Cette question est <strong>centrale</strong> dans les enquêtes pour <em>vol de données</em>, <em>fuite d'informations confidentielles</em>, <em>introduction de malware</em>, ou <em>BadUSB</em>. La réponse passe par la corrélation de plusieurs sources : <strong>(1) USBSTOR</strong> dans le registre SYSTEM (modèle, fabricant, <strong>numéro de série unique</strong>, dates de connexion), <strong>(2) <code>setupapi.dev.log</code></strong> (timestamp immuable de la première connexion), <strong>(3) MountPoints2</strong> dans NTUSER.DAT de chaque utilisateur (<em>quel utilisateur a connecté la clé</em>), <strong>(4) ShellBags</strong> (dossiers parcourus sur la clé), <strong>(5) Fichiers .lnk Recent</strong> (fichiers ouverts depuis la clé avec son Volume Serial Number). <strong>Identifiant unique</strong> : la combinaison <code>VID</code> (Vendor ID, fabricant) + <code>PID</code> (Product ID, modèle) + <code>Serial Number</code> identifie de manière <strong>unique</strong> une clé USB physique parmi des millions. Aucun deux exemplaires d'une clé n'ont le même Serial. <strong>Pour le forensiste</strong>, retrouver le même Serial sur deux machines = preuve quasi-irréfutable que la <em>même clé physique</em> a connecté les deux. Combinée à l'attribution utilisateur (SID), la chaîne devient juridiquement solide.
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA SVG — CHAÎNE DE CORRÉLATION USB
+     ════════════════════════════════════════════════════════════ -->
+<div class="schema">
+  <div class="schema-title">🔌 Chaîne de corrélation USB Windows — 5 sources convergentes</div>
+  <div class="schema-sub">USBSTOR + SETUPAPI + MOUNTPOINTS2 + SHELLBAGS + .LNK = ATTRIBUTION COMPLÈTE</div>
+  <svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Corrélation USB">
+    <defs>
+      <marker id="arr-usb" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="#00E5CC"/>
+      </marker>
+    </defs>
+
+    <!-- Header -->
+    <rect x="20" y="15" width="680" height="36" rx="6" fill="rgba(13,17,23,.5)" stroke="rgba(0,229,204,.4)" stroke-width="1.2"/>
+    <text x="360" y="33" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#00E5CC">🔌 IDENTIFIANT UNIQUE = VID + PID + Serial Number · combinaison globalement unique</text>
+    <text x="360" y="46" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">Aucune deux clés USB physiques n'ont le même Serial · même fabricant ↔ même modèle ↔ instance unique</text>
+
+    <!-- Clé USB centrale -->
+    <rect x="290" y="160" width="140" height="60" rx="8" fill="rgba(0,229,204,.15)" stroke="#00E5CC" stroke-width="2"/>
+    <text x="360" y="178" text-anchor="middle" font-size="22">🔌</text>
+    <text x="360" y="196" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="800" fill="#00E5CC">CLÉ USB</text>
+    <text x="360" y="210" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">VID:PID + Serial</text>
+
+    <!-- 5 sources autour -->
+    <!-- 1. USBSTOR (haut gauche) -->
+    <rect x="20" y="65" width="180" height="70" rx="7" fill="rgba(88,166,255,.1)" stroke="#58A6FF" stroke-width="1.5"/>
+    <text x="110" y="85" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#58A6FF">① USBSTOR</text>
+    <text x="110" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">SYSTEM\...\Enum\USBSTOR</text>
+    <text x="110" y="113" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">modèle · fabricant · S/N</text>
+    <text x="110" y="125" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">1re/dernière connexion</text>
+    <line x1="200" y1="135" x2="285" y2="180" stroke="rgba(88,166,255,.5)" stroke-width="1.5" marker-end="url(#arr-usb)"/>
+
+    <!-- 2. setupapi.dev.log (haut droite) -->
+    <rect x="520" y="65" width="180" height="70" rx="7" fill="rgba(48,232,138,.1)" stroke="#30E88A" stroke-width="1.5"/>
+    <text x="610" y="85" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#30E88A">② setupapi.dev.log</text>
+    <text x="610" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">C:\Windows\INF\</text>
+    <text x="610" y="113" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">timestamp 1re connexion</text>
+    <text x="610" y="125" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">immuable · forensiquement fort</text>
+    <line x1="520" y1="135" x2="435" y2="180" stroke="rgba(48,232,138,.5)" stroke-width="1.5" marker-end="url(#arr-usb)"/>
+
+    <!-- 3. MountPoints2 (gauche centre) -->
+    <rect x="20" y="200" width="180" height="70" rx="7" fill="rgba(240,192,64,.1)" stroke="#F0C040" stroke-width="1.5"/>
+    <text x="110" y="220" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#F0C040">③ MountPoints2</text>
+    <text x="110" y="235" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">HKCU\...\MountPoints2</text>
+    <text x="110" y="248" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">⭐ par utilisateur (SID)</text>
+    <text x="110" y="260" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">QUI a connecté la clé</text>
+    <line x1="200" y1="225" x2="285" y2="200" stroke="rgba(240,192,64,.5)" stroke-width="1.5" marker-end="url(#arr-usb)"/>
+
+    <!-- 4. ShellBags (droite centre) -->
+    <rect x="520" y="200" width="180" height="70" rx="7" fill="rgba(188,140,255,.1)" stroke="#BC8CFF" stroke-width="1.5"/>
+    <text x="610" y="220" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#BC8CFF">④ ShellBags</text>
+    <text x="610" y="235" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">USRCLASS.DAT</text>
+    <text x="610" y="248" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">dossiers parcourus</text>
+    <text x="610" y="260" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">sur la clé USB</text>
+    <line x1="520" y1="225" x2="435" y2="200" stroke="rgba(188,140,255,.5)" stroke-width="1.5" marker-end="url(#arr-usb)"/>
+
+    <!-- 5. Fichiers .lnk (bas) -->
+    <rect x="270" y="290" width="180" height="70" rx="7" fill="rgba(255,64,96,.1)" stroke="#FF4060" stroke-width="1.5"/>
+    <text x="360" y="310" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#FF4060">⑤ Fichiers .lnk Recent</text>
+    <text x="360" y="325" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">%APPDATA%\Microsoft\...\Recent</text>
+    <text x="360" y="338" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">fichiers ouverts depuis la clé</text>
+    <text x="360" y="350" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">+ Volume Serial Number</text>
+    <line x1="360" y1="290" x2="360" y2="225" stroke="rgba(255,64,96,.5)" stroke-width="1.5" marker-end="url(#arr-usb)"/>
+
+    <!-- Résultat -->
+    <rect x="200" y="240" width="320" height="40" rx="6" fill="rgba(48,232,138,.15)" stroke="#30E88A" stroke-width="1.5" opacity="0"/>
+  </svg>
+  <div class="schema-legend">
+    <span class="lg-item"><span class="lg-dot" style="background:#58A6FF"></span>① USBSTOR (registre SYSTEM)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>② setupapi.dev.log (1re fois)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>③ MountPoints2 (user/SID)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#BC8CFF"></span>④ ShellBags (navigation)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>⑤ .lnk (fichiers ouverts)</span>
+  </div>
+</div>
 
 <div class="sec-title">🎯 Question forensique typique</div>
 <div class="sec-sub">« Est-ce qu'<strong>une clé USB donnée</strong> a été branchée sur <strong>cet ordinateur</strong>, <strong>par quel utilisateur</strong>, et <strong>quand</strong> ? »</div>
@@ -268,9 +358,80 @@
   <a href="shellbags.html" style="color:var(--cyan);text-decoration:none">🗂 Shellbags</a>
 </div>
 
+<!-- QUIZ -->
+<div class="sec-title" style="margin-top:2rem">🧠 Testez-vous</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Vous trouvez la même clé USB (même Serial Number) connectée sur deux ordinateurs distincts. Que pouvez-vous conclure ?<small>Identification · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Le <strong>Serial Number</strong> dans USBSTOR est généré par le contrôleur de la clé et est <strong>globalement unique</strong> — aucun deux exemplaires d'un même modèle de clé n'ont le même Serial. Combinaison VID + PID + Serial = empreinte unique. Donc trouver le même VID:PID:Serial sur deux machines = preuve <strong>quasi-irréfutable</strong> que la <em>même clé physique</em> a été branchée sur les deux. <strong>Subtilités</strong> : (1) Certaines clés USB <em>contrefaites/cheap</em> (typiquement chinoises bas de gamme) reproduisent un Serial commun (« 0123456789ABCDEF » ou similaire) — vérifier si le pattern est suspicieusement générique. (2) Certains périphériques (notamment USB hubs et certains lecteurs SD) n'ont pas de vrai Serial — Windows en génère alors un <em>par instance</em> (commençant par <code>&amp;</code>) qui change à chaque port → <strong>moins fiable</strong> pour identification. (3) <strong>Cartes SD insérées dans lecteurs USB</strong> : c'est le lecteur USB qui a un Serial, pas la carte SD elle-même. <strong>Application juridique</strong> : ce résultat permet de prouver qu'un suspect a transporté physiquement la même clé entre deux machines — preuve clé pour vol de données ou exfiltration.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Une clé USB suspecte est branchée. Comment savoir <strong>quel utilisateur</strong> spécifique l'a connectée (et pas un autre du même PC) ?<small>Attribution · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">USBSTOR (ruche SYSTEM) montre que la clé a été branchée sur la machine, mais ne dit pas <em>qui</em> de session. L'attribution utilisateur passe par <strong>HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2</strong> dans la ruche <code>NTUSER.DAT</code> de chaque utilisateur. Cette clé contient une entrée pour chaque clé USB <em>que cet utilisateur a montée pendant sa session</em>. <strong>Procédure</strong> : (1) Identifier la clé suspecte dans USBSTOR (via VID:PID:Serial), récupérer son <code>ParentIdPrefix</code> ou GUID. (2) Pour chaque utilisateur du PC, ouvrir son <code>NTUSER.DAT</code> hors ligne (Registry Explorer / RegRipper). (3) Examiner <code>MountPoints2</code> : si la clé y figure → cet utilisateur a connecté la clé. (4) <strong>Cross-check</strong> : examiner aussi les <strong>fichiers .lnk Recent</strong> dans <code>C:\Users\&lt;user&gt;\AppData\Roaming\Microsoft\Windows\Recent\</code> — si des .lnk pointent vers la lettre de drive de la clé avec le bon Volume Serial → confirmation. (5) <strong>Cross-check 2</strong> : ShellBags dans <code>USRCLASS.DAT</code> de l'utilisateur — y trouver la navigation sur la clé. (6) <strong>Logs Windows EID 6416</strong> (PnP device installed) inclut le <strong>SID de l'utilisateur connecté au moment du branchement</strong>. La combinaison de ces sources = preuve juridique solide d'attribution.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Le suspect prétend qu'il n'a jamais branché la clé. Cependant USBSTOR la liste. Comment lever l'ambiguïté ?<small>Stratégie · Niveau : difficile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Plusieurs scénarios possibles, à investiguer méthodiquement : <strong>(1) Quelqu'un d'autre a branché la clé</strong> sur la machine — un collègue, un visiteur. À vérifier : (a) plusieurs utilisateurs ont-ils des comptes locaux ? (b) MountPoints2 du suspect contient-il la clé ? Si NON et qu'un autre user l'a → la clé a été branchée par cet autre. (c) EID 6416 (PnP device) avec quel SID utilisateur ? <strong>(2) La clé a été branchée mais à un moment où le suspect n'était pas physiquement présent</strong> (collègue dans son bureau, vol de session non verrouillée). À cross-check : pointage badge, vidéosurveillance bureau, EID 4624/4647 (logon/logoff sessions) au moment du branchement. <strong>(3) Le suspect dit la vérité, c'est une homonymie ou erreur</strong> — vérifier avec précision le VID:PID:Serial. <strong>(4) La clé a été virtuellement « branchée » sans présence physique</strong> — pas possible techniquement, sauf cas USB-over-IP ou rares attaques USB déportées. <strong>(5) Le suspect ment</strong> et toutes les preuves convergent. <strong>Procédure de levée d'ambiguïté</strong> : (a) Construire une <strong>timeline complète</strong> de la première et dernière connexion de la clé, (b) cross-check avec sessions actives (4624/4634/4647), (c) cross-check avec mouvements physiques du suspect (badging, témoins, vidéo), (d) <strong>chercher des artefacts d'usage</strong> sur la clé : les fichiers/dossiers du suspect y sont-ils ? Cela renforce ou affaiblit l'hypothèse, (e) interroger les autres utilisateurs avec accès au PC. <strong>Principe judiciaire</strong> : le simple fait que USBSTOR mentionne la clé ne prouve pas <em>qui</em> l'a branchée — il faut la chaîne complète d'attribution.</div>
+</div>
+
+<!-- EXAM TIP -->
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — USB Forensique</div>
+  <p><strong>Identifiant unique d'une clé USB</strong> : <code>VID:PID:SerialNumber</code></p>
+  <p>&nbsp;&nbsp;• <strong>VID</strong> = Vendor ID (4 hex digits, fabricant — Kingston, SanDisk...)</p>
+  <p>&nbsp;&nbsp;• <strong>PID</strong> = Product ID (4 hex digits, modèle)</p>
+  <p>&nbsp;&nbsp;• <strong>Serial</strong> = unique par exemplaire physique</p>
+  <p><strong>━━ 5 SOURCES DE CORRÉLATION ━━</strong></p>
+  <p><strong>① USBSTOR</strong> : <code>SYSTEM\CurrentControlSet\Enum\USBSTOR</code></p>
+  <p>&nbsp;&nbsp;→ Modèle, fabricant, Serial, dates 1re/dernière connexion</p>
+  <p><strong>② setupapi.dev.log</strong> : <code>C:\Windows\INF\setupapi.dev.log</code></p>
+  <p>&nbsp;&nbsp;→ Timestamp <strong>immuable</strong> de la 1re connexion (très fort juridiquement)</p>
+  <p><strong>③ MountPoints2</strong> : <code>HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2</code></p>
+  <p>&nbsp;&nbsp;→ ⭐ <strong>Par utilisateur (SID)</strong> = QUI a connecté la clé</p>
+  <p><strong>④ ShellBags</strong> : <code>USRCLASS.DAT</code></p>
+  <p>&nbsp;&nbsp;→ Dossiers parcourus sur la clé USB</p>
+  <p><strong>⑤ Fichiers .lnk Recent</strong> : <code>%APPDATA%\Microsoft\Windows\Recent\</code></p>
+  <p>&nbsp;&nbsp;→ Fichiers ouverts depuis la clé + Volume Serial Number</p>
+  <p><strong>━━ AUTRES SOURCES UTILES ━━</strong></p>
+  <p>• <strong>EID 6416</strong> (PnP device installed) : avec SID utilisateur</p>
+  <p>• <strong>EID 4624</strong> (logon) : qui était connecté au moment du branchement</p>
+  <p>• <strong>Amcache</strong> : programmes lancés depuis la clé (avec hash SHA-1)</p>
+  <p>• <strong>Prefetch</strong> : programmes exécutés depuis la clé</p>
+  <p><strong>━━ MULTI-OS ━━</strong></p>
+  <p>• <strong>macOS</strong> : <code>system.log</code> · <code>/var/log/install.log</code> · <code>IORegistry</code> · plist diskutil</p>
+  <p>• <strong>Linux</strong> : <code>journalctl -k</code> · <code>/var/log/syslog</code> · <code>dmesg</code> · <code>/sys/bus/usb/devices/</code></p>
+  <p><strong>━━ BAD USB ━━</strong></p>
+  <p>HID device (clavier émulé) qui injecte des commandes au branchement. Détection : EID 6416 pour HID device avec serial inhabituel + EID 4688 immédiat.</p>
+</div>
+
+<div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> USB unique = <strong>VID + PID + Serial</strong> · USBSTOR (registre SYSTEM) = modèle + dates · setupapi.dev.log = timestamp immuable 1re connexion · <strong>MountPoints2 (NTUSER.DAT)</strong> = QUI a connecté · ShellBags = dossiers parcourus · .lnk Recent = fichiers ouverts + Volume S/N · EID 6416 = PnP device installed avec SID · même Serial sur 2 machines = preuve quasi-irréfutable que la même clé physique a été utilisée.</div>
+
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>USB Forensics · SANS FOR500 · MITRE ATT&amp;CK T1052</span>
+</div>
+
 </div>
 
 <span class="fiche-tag">USBSTOR</span>
+
+<script>
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+})();
+document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+    ans.classList.toggle('visible');
+    btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+  });
+});
+</script>
 
 </body>
 </html>
