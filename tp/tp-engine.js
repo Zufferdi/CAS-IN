@@ -8,10 +8,20 @@
 // ═══════════════════════════════════════════════════
 // ÉTAT GLOBAL
 // ═══════════════════════════════════════════════════
+// Lecture sécurisée localStorage (Safari Private Browsing safe)
+function _lsGet(key, fallback) {
+  try { return localStorage.getItem(key); } catch(_) { return null; }
+}
+function _lsSet(key, val) {
+  try { localStorage.setItem(key, val); } catch(_) {}
+}
+function _lsDel(key) {
+  try { localStorage.removeItem(key); } catch(_) {}
+}
+
 const STATE = {
   cat: 'endian',
-  solved: JSON.parse(localStorage.getItem('tp_solved') || '{}'),
-  // { cat: count }
+  solved: (function(){ try { return JSON.parse(_lsGet('tp_solved') || '{}'); } catch(_){ return {}; } })(),
   total: {
     endian:0, timestamp:0, bitmap:0, fat:0, magic:0, mismatch:0,
     runlist:0, effacement:0, timestomping:0, hextable:0, fsidentify:0,
@@ -19,15 +29,18 @@ const STATE = {
     droitpenal:0, glossaire:0, examen:0
   },
   hintUsed: false,
-  // Gamification étendue
-  streak:     parseInt(localStorage.getItem('tp_streak')     || '0', 10),
-  bestStreak: parseInt(localStorage.getItem('tp_bestStreak') || '0', 10),
+  streak:     parseInt(_lsGet('tp_streak')     || '0', 10),
+  bestStreak: parseInt(_lsGet('tp_bestStreak') || '0', 10),
+  droitIdx:   parseInt(_lsGet('tp_droitIdx')   || '0', 10),
+  glossIdx:   parseInt(_lsGet('tp_glossIdx')   || '0', 10),
 };
 
 function saveState() {
-  localStorage.setItem('tp_solved', JSON.stringify(STATE.solved));
-  localStorage.setItem('tp_streak', String(STATE.streak));
-  localStorage.setItem('tp_bestStreak', String(STATE.bestStreak));
+  _lsSet('tp_solved', JSON.stringify(STATE.solved));
+  _lsSet('tp_streak', String(STATE.streak));
+  _lsSet('tp_bestStreak', String(STATE.bestStreak));
+  _lsSet('tp_droitIdx', String(STATE.droitIdx));
+  _lsSet('tp_glossIdx', String(STATE.glossIdx));
 }
 function getSolved(cat) { return STATE.solved[cat] || 0; }
 function getTotalSolved() { return Object.values(STATE.solved).reduce((a,b)=>a+(b||0),0); }
@@ -325,12 +338,12 @@ function genEndian() {
       </div>
       <div class="sec-title" style="margin-top:.75rem">Quelle est la valeur décimale ?</div>
       <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="endian-choices">
-        ${choices.map(c=>`<button class="tp-choice" style="flex:1;min-width:100px" data-correct="${c===val}"
+        ${choices.map(c=>`<button type="button" class="tp-choice" style="flex:1;min-width:100px" data-correct="${c===val}"
           onclick="checkEndianChoice(this,${c===val},${val},${JSON.stringify(displayBytes)},${JSON.stringify(revBytes)})">
           ${c.toLocaleString('fr-CH')}</button>`).join('')}
       </div>
       <div class="ex-feedback" id="ex-feedback"></div>
-      <button class="btn-next" id="btn-next" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+      <button type="button" class="btn-next" id="btn-next" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
     `;
     return div;
   }
@@ -367,13 +380,13 @@ function genEndian() {
       <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin:.75rem 0" id="endian-choices">
         ${shuffle(['Little Endian (x86, FAT, NTFS)', 'Big Endian (réseau, HFS+)', 'Middle Endian (PDP-11)', 'Aucun ordre défini']).map(c=>{
           const isCorrect = (isLE && c.startsWith('Little')) || (!isLE && c.startsWith('Big'));
-          return `<button class="tp-choice" style="flex:1;min-width:140px" data-correct="${isCorrect}"
+          return `<button type="button" class="tp-choice" style="flex:1;min-width:140px" data-correct="${isCorrect}"
             onclick="checkEndianChoice(this,${isCorrect},0,${JSON.stringify(displayBytes)},${JSON.stringify(isLE?leBytes:beBytes)})">
             ${c}</button>`;
         }).join('')}
       </div>
       <div class="ex-feedback" id="ex-feedback"></div>
-      <button class="btn-next" id="btn-next" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+      <button type="button" class="btn-next" id="btn-next" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
     `;
     return div;
   }
@@ -392,7 +405,6 @@ function genEndian() {
   const wrongBytes3 = [...correctBytes];
   wrongBytes3[0] = (wrongBytes3[0] + 1) & 0xFF;
 
-  function shuffle(arr) { return [...arr].sort(() => Math.random() - .5); }
   const options = shuffle([correctBytes, wrongBytes1, wrongBytes2, wrongBytes3]);
   const endianLabel = isLE ? 'Little Endian' : 'Big Endian';
 
@@ -413,14 +425,14 @@ function genEndian() {
     <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin:.75rem 0" id="endian-choices">
       ${options.map(opt => {
         const isCorrect = hexStr(opt) === hexStr(correctBytes);
-        return `<button class="tp-choice" style="flex:1;min-width:130px;font-family:var(--mono)"
+        return `<button type="button" class="tp-choice" style="flex:1;min-width:130px;font-family:var(--mono)"
           data-correct="${isCorrect}"
           onclick="checkEndianChoice(this,${isCorrect},0,${JSON.stringify(correctBytes)},${JSON.stringify(isLE ? [...correctBytes].reverse() : correctBytes)})">
           ${hexStr(opt)}</button>`;
       }).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback"></div>
-    <button class="btn-next" id="btn-next" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    <button type="button" class="btn-next" id="btn-next" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
   return div;
 }
@@ -428,7 +440,7 @@ function genEndian() {
 function checkEndianChoice(btn, isCorrect, expectedVal, displayBytes, orderedBytes) {
   document.querySelectorAll('#endian-choices .tp-choice').forEach(b => { b.disabled = true; });
   btn.classList.add(isCorrect ? 'correct' : 'wrong');
-  if (isCorrect) { if (!STATE.hintUsed) incSolved('endian'); }
+  if (isCorrect) { if (!STATE.hintUsed) incSolved(STATE.cat); }
   else { breakStreak();
     document.querySelectorAll('#endian-choices .tp-choice').forEach(b => {
       if (b.dataset.correct === 'true') b.classList.add('correct');
@@ -489,7 +501,7 @@ function genTimestamp() {
     div.className = 'ex-card';
     div.innerHTML = `
       <div class="ex-header">
-        <div class="ex-num" id="ex-num-ts">🕐</div>
+        <div class="ex-num" id="ex-num-ts-ntfs">🕐</div>
         <div class="ex-title">NTFS FILETIME — Epoch 1601</div>
         <span class="ex-badge hard">NTFS · $STANDARD_INFORMATION</span>
       </div>
@@ -508,19 +520,20 @@ function genTimestamp() {
       <div class="ex-input-row">
         <span class="ex-input-label">Année :</span>
         <input class="ex-input" id="ans-year" type="number" placeholder="${yr}" style="max-width:90px" min="1970" max="2100">
-        <button class="btn-hint" onclick="document.getElementById('ex-feedback-ts').innerHTML='💡 FILETIME en décimal ≈ ${filetime.toExponential(2)}. Diviser par 10 000 000 = secondes depuis 1601. Diviser par 31 557 600 = années depuis 1601. Ajouter 1601.';document.getElementById('ex-feedback-ts').style.display='block'">💡 Méthode</button>
-        <button class="btn-validate" onclick="(function(){
+        <button type="button" class="btn-hint" onclick="document.getElementById('ex-feedback-ts').innerHTML='💡 FILETIME en décimal ≈ ${filetime.toExponential(2)}. Diviser par 10 000 000 = secondes depuis 1601. Diviser par 31 557 600 = années depuis 1601. Ajouter 1601.';document.getElementById('ex-feedback-ts').style.display='block'">💡 Méthode</button>
+        <button type="button" class="btn-validate" onclick="(function(){
           const v=parseInt(document.getElementById('ans-year').value);
           const fb=document.getElementById('ex-feedback-ts');
           const ok=Math.abs(v-${yr})<=1;
           document.getElementById('ans-year').className='ex-input '+(ok?'correct':'wrong');
+          const fb=document.getElementById('ex-feedback-ts');
           fb.className='ex-feedback '+(ok?'correct':'wrong');
           fb.innerHTML=ok?'✅ Correct ! Année ≈ ${yr} — FILETIME = ${filetime.toExponential(3)} intervalles de 100ns depuis 1601.':'❌ Réponse attendue : <strong>${yr}</strong> (±1 an accepté). FILETIME ≈ ${filetime.toExponential(3)} → ÷10⁷ = secondes → ÷31 557 600 = années → +1601.';
           fb.style.display='block';
-          if(ok){incSolved('timestamp');}
-          document.getElementById('btn-next-ts').style.display='inline-block';
+          if(ok){incSolved(STATE.cat);}
+          document.getElementById('btn-next-ts-ntfs').style.display='inline-block';
         })()">Valider ✓</button>
-        <button class="btn-next" id="btn-next-ts" onclick="newExercise()" style="display:none">Exercice suivant →</button>
+        <button type="button" class="btn-next" id="btn-next-ts-ntfs" onclick="newExercise()" style="display:none">Exercice suivant →</button>
       </div>
       <div class="ex-feedback" id="ex-feedback-ts" style="display:none"></div>
     `;
@@ -601,9 +614,9 @@ function genTimestamp() {
       <input class="ex-input" id="ans-sec"   type="number" placeholder="SS"   style="max-width:75px" min="0" max="58">
     </div>
     <div class="ex-input-row" style="margin-top:.5rem">
-      <button class="btn-hint" onclick="showTSHint(${year},${month},${day},${hours},${mins},${secs})">💡 Calculs</button>
-      <button class="btn-validate" onclick="checkTimestamp(${year},${month},${day},${hours},${mins},${secs})">Valider ✓</button>
-      <button class="btn-next" id="btn-next-ts" onclick="newExercise()">Exercice suivant →</button>
+      <button type="button" class="btn-hint" onclick="showTSHint(${year},${month},${day},${hours},${mins},${secs})">💡 Calculs</button>
+      <button type="button" class="btn-validate" onclick="checkTimestamp(${year},${month},${day},${hours},${mins},${secs})">Valider ✓</button>
+      <button type="button" class="btn-next" id="btn-next-ts" onclick="newExercise()">Exercice suivant →</button>
     </div>
     <div class="ex-feedback" id="ex-feedback-ts"></div>
   `;
@@ -729,8 +742,8 @@ function genBitmap() {
     <div class="bm-hex-result" id="bm-hex-result">—</div>
 
     <div class="ex-input-row">
-      <button class="btn-validate" onclick="checkBitmap('${expectedHex}')">Valider ✓</button>
-      <button class="btn-next" id="btn-next-bm" onclick="newExercise()" style="display:none">Exercice suivant →</button>
+      <button type="button" class="btn-validate" onclick="checkBitmap('${expectedHex}')">Valider ✓</button>
+      <button type="button" class="btn-next" id="btn-next-bm" onclick="newExercise()" style="display:none">Exercice suivant →</button>
     </div>
     <div class="ex-feedback" id="ex-feedback-bm"></div>
   `;
@@ -847,8 +860,8 @@ function genFAT() {
       <input class="ex-input" id="ans-fat" placeholder="${chain[0]} → ${chain[1]} → … → EOC" style="min-width:200px" autocomplete="off">
     </div>
     <div class="ex-input-row" style="margin-top:.5rem">
-      <button class="btn-validate" onclick="checkFAT('${chain.join(',')}')">Valider ✓</button>
-      <button class="btn-next" id="btn-next-fat" onclick="newExercise()">Exercice suivant →</button>
+      <button type="button" class="btn-validate" onclick="checkFAT('${chain.join(',')}')">Valider ✓</button>
+      <button type="button" class="btn-next" id="btn-next-fat" onclick="newExercise()">Exercice suivant →</button>
     </div>
     <div class="ex-feedback" id="ex-feedback-fat"></div>
   `;
@@ -920,13 +933,13 @@ function genMagic() {
     <div class="sec-title">Quel est ce type de fichier ?</div>
     <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="magic-choices">
       ${options.map((o,i) => `
-        <button class="tp-choice" onclick="checkMagic(${i}, ${options.indexOf(entry)}, this)">
+        <button type="button" class="tp-choice" onclick="checkMagic(${i}, ${options.indexOf(entry)}, this)">
           <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
           <span><strong style="color:var(--cyan)">.${o.ext}</strong> — ${o.desc}</span>
         </button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-mg"></div>
-    <button class="btn-next" id="btn-next-mg" onclick="newExercise()" style="margin-top:.5rem">Exercice suivant →</button>
+    <button type="button" class="btn-next" id="btn-next-mg" onclick="newExercise()" style="margin-top:.5rem">Exercice suivant →</button>
   `;
   _magicNotes = options.map(o => o.note);
   return div;
@@ -1011,7 +1024,7 @@ function genMismatch() {
         </div>`).join('')}
     </div>
     <div style="margin-top:.75rem;display:flex;gap:.6rem">
-      <button class="btn-next" id="btn-next-mm" onclick="newExercise()" style="display:none">Exercice suivant →</button>
+      <button type="button" class="btn-next" id="btn-next-mm" onclick="newExercise()" style="display:none">Exercice suivant →</button>
     </div>
   `;
   // Fix #1 : event delegation plutôt qu'onclick inline (évite les bugs d'escape de quotes)
@@ -1057,6 +1070,7 @@ function checkMismatch(btn, isCorrect, sigName, note) {
   row.dataset.answered = '1';
 
   const isOk = isCorrect === true || isCorrect === 'true';
+  if (isOk) row.dataset.answeredOk = '1';
   const allBtns = row.querySelectorAll('.mm-choice-btn');
 
   allBtns.forEach(b => {
@@ -1089,13 +1103,7 @@ function checkMismatch(btn, isCorrect, sigName, note) {
     // Compter précisément les rangées résolues correctement via dataset.answered et data-correct
     let correctCount = 0;
     document.querySelectorAll('.mm-row').forEach(r => {
-      // La bonne réponse est celle des boutons avec data-correct="true"
-      // qui a été effectivement cliquée → on reconstitue l'état
-      const clicked = r.querySelector('.mm-choice-btn[data-correct="true"]');
-      // On sait si la rangée a été résolue correctement si le bouton vert est bien celui
-      // qui est en vert ET qu'aucun bouton n'est marqué rouge
-      const red = r.querySelector('.mm-choice-btn[data-correct="false"][style*="--red"]');
-      if (!red) correctCount++;
+      if (r.dataset.answeredOk === '1') correctCount++;
     });
     if (correctCount >= total) incSolved(STATE.cat);
   }
@@ -1187,9 +1195,9 @@ function genRunList() {
         </div>`).join('')}
     </div>
     <div class="ex-input-row" style="margin-top:.5rem">
-      <button class="btn-hint" onclick="showRunListHint(${JSON.stringify(encodedFragments.map(f=>({l:f.length,d:f.delta,lcn:f.lcn})))})">💡 Décomposition</button>
-      <button class="btn-validate" id="btn-rl-validate" onclick="checkRunList(${JSON.stringify(encodedFragments.map(f=>({l:f.length,lcn:f.lcn})))}, ${numFragments})">Valider ✓</button>
-      <button class="btn-next" id="btn-next-rl" onclick="newExercise()" style="display:none">Exercice suivant →</button>
+      <button type="button" class="btn-hint" onclick="showRunListHint(${JSON.stringify(encodedFragments.map(f=>({l:f.length,d:f.delta,lcn:f.lcn})))})">💡 Décomposition</button>
+      <button type="button" class="btn-validate" id="btn-rl-validate" onclick="checkRunList(${JSON.stringify(encodedFragments.map(f=>({l:f.length,lcn:f.lcn})))}, ${numFragments})">Valider ✓</button>
+      <button type="button" class="btn-next" id="btn-next-rl" onclick="newExercise()" style="display:none">Exercice suivant →</button>
     </div>
     <div class="ex-feedback" id="rl-feedback-global"></div>
   `;
@@ -1492,9 +1500,9 @@ function genBases() {
     <div class="ex-input-row">
       <span class="ex-input-label">${data.label}</span>
       <input class="ex-input" id="inp-bases" placeholder="${data.placeholder}" autocomplete="off" style="max-width:200px">
-      <button class="btn-hint" onclick="showBasesHint('${data.hint.replace(/'/g,"\\'")}')">💡 Méthode</button>
-      <button class="btn-validate" onclick="checkBases(this, '${data.answer.replace(/'/g,"\\'")}', '${data.explain.replace(/'/g,"\\'")}')">Valider ✓</button>
-      <button class="btn-next" id="btn-next-bs" onclick="newExercise()">Exercice suivant →</button>
+      <button type="button" class="btn-hint" onclick="showBasesHint('${data.hint.replace(/'/g,"\\'")}')">💡 Méthode</button>
+      <button type="button" class="btn-validate" onclick="checkBases(this, '${data.answer.replace(/'/g,"\\'")}', '${data.explain.replace(/'/g,"\\'")}')">Valider ✓</button>
+      <button type="button" class="btn-next" id="btn-next-bs" onclick="newExercise()">Exercice suivant →</button>
     </div>
     <div class="ex-feedback" id="ex-feedback-bs"></div>
   `;
@@ -1620,13 +1628,13 @@ function genEffacement() {
     <div class="ex-scenario">${q.q}</div>
     <div style="display:flex;flex-direction:column;gap:.4rem;margin:.75rem 0" id="ef-choices">
       ${opts.map((o,i) => `
-        <button class="tp-choice" onclick="checkEffacement(this, ${i===correctIdx}, '${q.explain.replace(/'/g,"\\'")}', '${q.note.replace(/'/g,"\\'")}')">
+        <button type="button" class="tp-choice" onclick="checkEffacement(this, ${i===correctIdx}, '${q.explain.replace(/'/g,"\\'")}', '${q.note.replace(/'/g,"\\'")}')">
           <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
           <span>${o.text}</span>
         </button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-ef"></div>
-    <button class="btn-next" id="btn-next-ef" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    <button type="button" class="btn-next" id="btn-next-ef" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
   return div;
 }
@@ -2656,7 +2664,7 @@ function makeFAT16LFNExercise() {
 
   // Question : reconstituer le long nom du fichier
   const answer = longName;
-  const qText = `Cette entrée de répertoire FAT contient un <strong>Long File Name (LFN)</strong> réparti sur <strong>${numEntries} entrée(s)</strong> de 32 octets, suivi d'une entrée SFN. Reconstitue le <strong>nom complet du fichier</strong> (y compris extension, respecte majuscules/minuscules et espaces).`;
+  const qText = `Cette entrée de répertoire FAT contient un <strong>Long File Name (LFN)</strong> réparti sur <strong>${numEntries} entrée(s)</strong> de 32 octets, suivi d'une entrée SFN. Reconstitue le <strong>nom complet du fichier</strong> (y compris extension — la casse et les espaces sont ignorés pour la validation).`;
   const hints = [
     `Les entrées LFN ont l'attribut <strong>0x0F</strong> à l'offset 0x0B (facile à repérer).`,
     `Chaque entrée LFN porte 13 caractères en UTF-16 LE aux offsets : 0x01–0x0A (5 chars) + 0x0E–0x19 (6 chars) + 0x1C–0x1F (2 chars).`,
@@ -2934,9 +2942,9 @@ function genExamen() {
     <div class="ex-input-row">
       <input class="ex-input" id="inp-exam" placeholder="Votre réponse" autocomplete="off"
              style="max-width:200px" type="text">
-      <button class="btn-hint" id="exam-hint-btn" onclick="nextExamHint()">💡 Indice (${_examHints.length})</button>
-      <button class="btn-validate" onclick="checkExamen()">Valider ✓</button>
-      <button class="btn-next" id="btn-next-ex" onclick="newExercise()" style="display:none">Exercice suivant →</button>
+      <button type="button" class="btn-hint" id="exam-hint-btn" onclick="nextExamHint()">💡 Indice (${_examHints.length})</button>
+      <button type="button" class="btn-validate" onclick="checkExamen()">Valider ✓</button>
+      <button type="button" class="btn-next" id="btn-next-ex" onclick="newExercise()" style="display:none">Exercice suivant →</button>
     </div>
     <div class="ex-feedback" id="ex-feedback-ex"></div>
     <div id="exam-hint-display" style="margin-top:.5rem;display:none;padding:.65rem .9rem;background:rgba(240,192,64,.06);border:1px solid rgba(240,192,64,.2);border-radius:7px;font-size:.8rem;color:var(--text);line-height:1.6"></div>
@@ -3080,10 +3088,12 @@ function genTimestomping() {
     indicator = "Cohérence $SI ↔ $FN · Chronologie normale";
   }
 
+  // Coloration : cas 1 = rouge sur "Créé" seulement ; cas 2 = rouge sur toutes les lignes SI
+  const siSuspect = isTimestomped && (caseType === 1 ? label.includes('Créé') : true);
   const renderRow = (label, SI, FN) => `
     <tr>
       <td style="padding:.4rem .6rem;color:var(--dim);font-family:var(--mono);font-size:.72rem;white-space:nowrap">${label}</td>
-      <td style="padding:.4rem .6rem;font-family:var(--mono);font-size:.75rem;color:${isTimestomped && label.includes('Créé') ? 'var(--red)' : 'var(--cyan)'}">${SI.str}</td>
+      <td style="padding:.4rem .6rem;font-family:var(--mono);font-size:.75rem;color:${isTimestomped && (caseType===1 ? label.includes('Créé') : true) ? 'var(--red)' : 'var(--cyan)'}">${SI.str}</td>
       <td style="padding:.4rem .6rem;font-family:var(--mono);font-size:.75rem;color:${isTimestomped && label.includes('Créé') ? 'var(--gold)' : 'var(--green)'}">${FN.str}</td>
     </tr>`;
 
@@ -3123,11 +3133,11 @@ function genTimestomping() {
 
     <div class="ex-input-row" style="flex-direction:column;align-items:flex-start;gap:.5rem">
       <div style="display:flex;gap:.5rem;flex-wrap:wrap" id="ts-choices">
-        <button class="tp-choice" onclick="checkTimestomping(true, ${isTimestomped}, '${explanation.replace(/'/g,"\\'").replace(/\n/g,' ')}', this)">
+        <button type="button" class="tp-choice" onclick="checkTimestomping(true, ${isTimestomped}, '${explanation.replace(/'/g,"\\'").replace(/\n/g,' ')}', this)">
           <span class="tp-choice-letter">A</span>
           <span>✅ Oui — des horodatages ont été manipulés</span>
         </button>
-        <button class="tp-choice" onclick="checkTimestomping(false, ${isTimestomped}, '${explanation.replace(/'/g,"\\'").replace(/\n/g,' ')}', this)">
+        <button type="button" class="tp-choice" onclick="checkTimestomping(false, ${isTimestomped}, '${explanation.replace(/'/g,"\\'").replace(/\n/g,' ')}', this)">
           <span class="tp-choice-letter">B</span>
           <span>❌ Non — chronologie normale, pas de timestomping</span>
         </button>
@@ -3135,7 +3145,7 @@ function genTimestomping() {
     </div>
     <div class="ex-feedback" id="ex-feedback-tss"></div>
     <div id="ts-indicator" style="display:none;margin-top:.5rem;font-size:.72rem;font-family:var(--mono);color:var(--dim)">${indicator}</div>
-    <button class="btn-next" id="btn-next-ts2" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    <button type="button" class="btn-next" id="btn-next-ts2" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
   return div;
 }
@@ -3165,11 +3175,10 @@ function checkTimestomping(userSaysYes, isActuallyTimestomped, explanation, btn)
 // ═══════════════════════════════════════════════════════════════
 
 // [DROIT_CASES chargé depuis tp-data.js]
-let _droitIdx = 0;
-
 function genDroitPenal() {
-  const case_ = DROIT_CASES[_droitIdx % DROIT_CASES.length];
-  _droitIdx++;
+  const case_ = DROIT_CASES[STATE.droitIdx % DROIT_CASES.length];
+  STATE.droitIdx++;
+  saveState();
 
   const opts = [...case_.choices].sort(() => Math.random() - .5);
   const correctOpt = opts.find(o => o.art === case_.correct || (case_.correct === 'both' && o.art === '143bis') || (case_.correct === '269' && o.art === '269'));
@@ -3187,13 +3196,13 @@ function genDroitPenal() {
     <div class="sec-title">Quel article s'applique principalement ?</div>
     <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="dp-choices">
       ${opts.map((o, i) => `
-        <button class="tp-choice" onclick="checkDroitPenal(this, ${i === correctIdx}, '${o.explain.replace(/'/g,"\\'")}', '${case_.note.replace(/'/g,"\\'")}')">
+        <button type="button" class="tp-choice" onclick="checkDroitPenal(this, ${i === correctIdx}, '${o.explain.replace(/'/g,"\\'")}', '${case_.note.replace(/'/g,"\\'")}')">
           <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
           <span>${o.label}</span>
         </button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-dp"></div>
-    <button class="btn-next" id="btn-next-dp" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    <button type="button" class="btn-next" id="btn-next-dp" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
   return div;
 }
@@ -3222,14 +3231,14 @@ function checkDroitPenal(btn, isOk, explain, note) {
 // ═══════════════════════════════════════════════════════════════
 
 // [GLOSSAIRE chargé depuis tp-data.js]
-let _glossIdx = 0;
 let _glossMode = 'fr_to_en'; // 'fr_to_en' or 'en_to_fr'
 let _glossSessionCorrect = 0;
 let _glossSessionTotal = 0;
 
 function genGlossaire() {
-  const term = GLOSSAIRE[_glossIdx % GLOSSAIRE.length];
-  _glossIdx++;
+  const term = GLOSSAIRE[STATE.glossIdx % GLOSSAIRE.length];
+  STATE.glossIdx++;
+  saveState();
   _glossSessionTotal++;
 
   // Alterner le mode
@@ -3264,13 +3273,13 @@ function genGlossaire() {
     <div class="sec-title">Quelle est la traduction correcte ?</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.75rem" id="gl-choices">
       ${options.map((o, i) => `
-        <button class="tp-choice" onclick="checkGlossaire(this, ${o.isCorrect}, '${correct.replace(/'/g,"\\'")}', '${term.note.replace(/'/g,"\\'")}')">
+        <button type="button" class="tp-choice" onclick="checkGlossaire(this, ${o.isCorrect}, '${correct.replace(/'/g,"\\'")}', '${term.note.replace(/'/g,"\\'")}')">
           <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
           <span style="font-size:.78rem">${o.text}</span>
         </button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-gl"></div>
-    <button class="btn-next" id="btn-next-gl" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    <button type="button" class="btn-next" id="btn-next-gl" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
   return div;
 }
@@ -3319,13 +3328,13 @@ function genEmail() {
     <div style="font-size:.85rem;color:var(--text);line-height:1.6;margin-bottom:.75rem">${ex.question}</div>
     <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="email-choices">
       ${shuffled.map((c, i) => `
-        <button class="tp-choice" data-correct="${i === correctIdx}" data-explain="${encData(c.explain)}">
+        <button type="button" class="tp-choice" data-correct="${i === correctIdx}" data-explain="${encData(c.explain)}">
           <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
           <span>${escAttr(c.text)}</span>
         </button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-email"></div>
-    <button class="btn-next" id="btn-next-email" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    <button type="button" class="btn-next" id="btn-next-email" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
   // Fix #2 : event delegation (évite le bug JSON dans onclick="...")
   setTimeout(() => {
@@ -3347,7 +3356,7 @@ function checkEmail(btn, isCorrect, explain) {
   btn.classList.add(isCorrect ? 'correct' : 'wrong');
   if (isCorrect) {
     choices.forEach(b => { if (b !== btn) b.classList.add('dim'); });
-    if (!STATE.hintUsed) incSolved('email');
+    if (!STATE.hintUsed) incSolved(STATE.cat);
   } else {
     choices.forEach(b => {
       if (b.dataset.correct === 'true') b.classList.add('correct');
@@ -3396,13 +3405,13 @@ function genIR() {
     <div style="font-size:.85rem;color:var(--text);line-height:1.6;margin-bottom:.75rem">${ex.question}</div>
     <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="ir-choices">
       ${shuffled.map((c, i) => `
-        <button class="tp-choice" data-correct="${i === correctIdx}" data-explain="${encData(c.explain)}">
+        <button type="button" class="tp-choice" data-correct="${i === correctIdx}" data-explain="${encData(c.explain)}">
           <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
           <span>${escAttr(c.text)}</span>
         </button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-ir"></div>
-    <button class="btn-next" id="btn-next-ir" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    <button type="button" class="btn-next" id="btn-next-ir" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
   setTimeout(() => {
     div.querySelectorAll('#ir-choices .tp-choice').forEach(b => {
@@ -3425,7 +3434,7 @@ function checkIR(btn, isCorrect, explain) {
     choices.forEach(b => { if (b.dataset.correct === 'true') b.classList.add('correct'); });
     breakStreak();
   } else if (!STATE.hintUsed) {
-    incSolved('ir');
+    incSolved(STATE.cat);
   }
   const fb = document.getElementById('ex-feedback-ir');
   if (fb) {
@@ -3468,13 +3477,13 @@ function genNetwork() {
     <div style="font-size:.85rem;color:var(--text);line-height:1.6;margin-bottom:.75rem">${ex.question}</div>
     <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="net-choices">
       ${shuffled.map((c, i) => `
-        <button class="tp-choice" data-correct="${i === correctIdx}" data-explain="${encData(c.explain)}">
+        <button type="button" class="tp-choice" data-correct="${i === correctIdx}" data-explain="${encData(c.explain)}">
           <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
           <span>${escAttr(c.text)}</span>
         </button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-net"></div>
-    <button class="btn-next" id="btn-next-net" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    <button type="button" class="btn-next" id="btn-next-net" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
   setTimeout(() => {
     div.querySelectorAll('#net-choices .tp-choice').forEach(b => {
@@ -3497,7 +3506,7 @@ function checkNetwork(btn, isCorrect, explain) {
     choices.forEach(b => { if (b.dataset.correct === 'true') b.classList.add('correct'); });
     breakStreak();
   } else if (!STATE.hintUsed) {
-    incSolved('network');
+    incSolved(STATE.cat);
   }
   const fb = document.getElementById('ex-feedback-net');
   if (fb) {
@@ -3648,9 +3657,10 @@ function genOffset() {
   // Distracteurs plausibles (jamais négatifs, jamais égaux à la bonne réponse)
   const rawDistractors = [
     answer + cs,
-    answer - cs,
-    Math.round(answer * 2),
+    answer + cs * 2,
+    Math.max(cs, Math.round(answer * 2)),
     answer + 512,
+    answer + cs * 3,
   ].filter(d => d !== answer && d > 0);
   const distractors = [...new Set(rawDistractors)].sort(() => Math.random() - .5).slice(0, 3);
   const choices = [answer, ...distractors].sort(() => Math.random() - .5);
@@ -3669,13 +3679,13 @@ function genOffset() {
     <div class="sec-title">Choisir l'offset correct</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.75rem" id="offset-choices">
       ${choices.map((c, i) => `
-        <button class="tp-choice" onclick="checkOffset(this, ${i === correctIdx}, ${JSON.stringify(data.steps)}, ${answer})">
+        <button type="button" class="tp-choice" onclick="checkOffset(this, ${i === correctIdx}, ${JSON.stringify(data.steps)}, ${answer})">
           <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
           <span>${c.toLocaleString('fr-CH')} ${data.unit}</span>
         </button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-offset"></div>
-    <button class="btn-next" id="btn-next-offset" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    <button type="button" class="btn-next" id="btn-next-offset" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
   return div;
 }
@@ -3683,7 +3693,7 @@ function genOffset() {
 function checkOffset(btn, isCorrect, steps, answer) {
   document.querySelectorAll('#offset-choices .tp-choice').forEach(b => { b.disabled = true; });
   btn.classList.add(isCorrect ? 'correct' : 'wrong');
-  if (isCorrect) { if (!STATE.hintUsed) incSolved('offset'); }
+  if (isCorrect) { if (!STATE.hintUsed) incSolved(STATE.cat); }
   else breakStreak();
   const fb = document.getElementById('ex-feedback-offset');
   if (fb) {
@@ -3831,9 +3841,9 @@ function genHexTable() {
     <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.5rem">
       <span style="font-size:.8rem;color:var(--muted)">0x</span>
       <input class="ex-input" id="inp-hextable" placeholder="ex: 0D" maxlength="4" style="width:90px;text-transform:uppercase" autocomplete="off">
-      <button class="btn-hint" id="ht-hint-btn" onclick="showHexTableHint(${JSON.stringify(ex.hint1)},${JSON.stringify(ex.hint2)})">💡 Indice</button>
-      <button class="btn-validate" onclick="checkHexTable(${JSON.stringify(ex.answer)},${JSON.stringify(ex.explain)},${ex.answer_val})">Valider ✓</button>
-      <button class="btn-next" id="btn-next-ht" onclick="newExercise()" style="display:none">Exercice suivant →</button>
+      <button type="button" class="btn-hint" id="ht-hint-btn" onclick="showHexTableHint(${JSON.stringify(ex.hint1)},${JSON.stringify(ex.hint2)})">💡 Indice</button>
+      <button type="button" class="btn-validate" onclick="checkHexTable(${JSON.stringify(ex.answer)},${JSON.stringify(ex.explain)},${ex.answer_val})">Valider ✓</button>
+      <button type="button" class="btn-next" id="btn-next-ht" onclick="newExercise()" style="display:none">Exercice suivant →</button>
     </div>
     <div class="hint-box" id="hint-ht" style="display:none"></div>
     <div class="ex-feedback" id="ex-feedback-ht" style="display:none"></div>
@@ -3862,7 +3872,7 @@ function checkHexTable(correctOff, explain, val) {
   const isOk = raw === correctOff.toUpperCase().padStart(2,'0');
   inp.className = 'ex-input ' + (isOk ? 'correct' : 'wrong');
   if (isOk) {
-    if (!STATE.hintUsed) incSolved('hextable');
+    if (!STATE.hintUsed) incSolved(STATE.cat);
     const off = parseInt(correctOff, 16);
     document.querySelectorAll(`[data-offset="${off}"]`).forEach(el => el.classList.add('highlight'));
   } else {
@@ -4042,11 +4052,11 @@ function genFSIdentify() {
     <div style="font-family:var(--mono);font-size:.72rem;line-height:1.9;overflow-x:auto;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;margin:.5rem 0">${rows}</div>
     <div class="sec-title" style="margin-top:.75rem">Système de fichiers</div>
     <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="fsid-choices">
-      ${choices.map(c => `<button class="tp-choice" style="flex:1;min-width:90px" data-correct="${c === cfg.fs}"
+      ${choices.map(c => `<button type="button" class="tp-choice" style="flex:1;min-width:90px" data-correct="${c === cfg.fs}"
         onclick="checkFSIdentify(this,'${c}','${cfg.fs}',${JSON.stringify(ex.key)})">${c}</button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-fsid" style="display:none"></div>
-    <button class="btn-next" id="btn-next-fsid" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    <button type="button" class="btn-next" id="btn-next-fsid" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
   return div;
 }
@@ -4055,7 +4065,7 @@ function checkFSIdentify(btn, chosen, correct, expl) {
   document.querySelectorAll('#fsid-choices .tp-choice').forEach(b=>{ b.disabled=true; });
   const ok = chosen===correct;
   btn.classList.add(ok ? 'correct' : 'wrong');
-  if (ok) { if (!STATE.hintUsed) incSolved('fsidentify'); }
+  if (ok) { if (!STATE.hintUsed) incSolved(STATE.cat); }
   else {
     breakStreak();
     document.querySelectorAll('#fsid-choices .tp-choice').forEach(b=>{
@@ -4116,11 +4126,11 @@ function genHashIdentify() {
     </div>
     <div class="ex-scenario">${scenario}</div>
     <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="hash-choices">
-      ${shuffled.map((c,i)=>`<button class="tp-choice" data-correct="${c.correct}" onclick="checkHashIdentify(this,${c.correct},${JSON.stringify(c.explain)})">
+      ${shuffled.map((c,i)=>`<button type="button" class="tp-choice" data-correct="${c.correct}" onclick="checkHashIdentify(this,${c.correct},${JSON.stringify(c.explain)})">
         <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span><span>${c.text}</span></button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-hash" style="display:none"></div>
-    <button class="btn-next" id="btn-next-hash" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    <button type="button" class="btn-next" id="btn-next-hash" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
   return div;
 }
@@ -4128,7 +4138,7 @@ function genHashIdentify() {
 function checkHashIdentify(btn, isOk, explain) {
   document.querySelectorAll('#hash-choices .tp-choice').forEach(b=>{ b.disabled=true; });
   btn.classList.add(isOk ? 'correct' : 'wrong');
-  if (isOk) { if (!STATE.hintUsed) incSolved('hash'); }
+  if (isOk) { if (!STATE.hintUsed) incSolved(STATE.cat); }
   else {
     breakStreak();
     document.querySelectorAll('#hash-choices .tp-choice').forEach(b=>{
