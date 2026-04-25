@@ -1,245 +1,395 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Technologie Disques — CAS-IN Forensique</title>
-<meta name="description" content="Technologie des disques et médias · Endianness · Secteurs · Partitions · Prérequis forensique">
-<meta name="theme-color" content="#0d1117">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Technologie Disques — CAS-IN</title>
+<meta name="description" content="Disques · MBR · GPT · CHS/LBA · Secteurs · Clusters · HPA · DCO · SSD · TRIM">
 <link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 
-<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
-<script>
-(function(){
-  var btn=document.getElementById('back-top');
-  if(btn) window.addEventListener('scroll',function(){
-    btn.classList.toggle('visible',window.scrollY>300);
-  });
-})();
-</script>
-
-</head><body><div class="page">
-<a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:0;z-index:999;padding:.5rem 1rem;background:var(--cyan);color:var(--bg);font-size:.8rem;border-radius:0 0 4px 0;text-decoration:none">Aller au contenu</a>
-<nav class="tn-nav" aria-label="Navigation fiche">
+<nav class="tn-nav">
   <a href="index.html" class="tn-back">← Fiches</a>
-  <span class="tn-title">DISQUES & MÉDIAS</span>
+  <span class="tn-title">SYSTÈMES SPÉCIAUX · DISQUES</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
-<div class="page" style="padding-top:.5rem;padding-bottom:0">
+
+<div class="page-wrap">
   <div class="breadcrumb">
-    <a href="../index.html">🏠 Accueil</a>
-    <span class="bc-sep">›</span>
-    <a href="index.html">Fiches</a>
-    <span class="bc-sep">›</span>
-    <a href="index.html#cat-systèmesspéciaux">Systèmes spéciaux</a>
-    <span class="bc-sep">›</span>
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesspéciaux">Systèmes spéciaux</a><span class="bc-sep">›</span>
     <span class="bc-current">Disques</span>
-    <span class="read-time-badge">⏱ ~10 min</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~10 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">💾</span>
+    <span class="tag tag-blue" style="margin-left:.5rem">MBR</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">GPT</span>
+    <span class="tag tag-gold" style="margin-left:.3rem">LBA</span>
+    <span class="tag tag-red" style="margin-left:.3rem">HPA / DCO</span>
+    <span class="tag tag-green" style="margin-left:.3rem">SSD · TRIM</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Technologie des Disques &amp; Médias</h1>
+    <div class="meta">MBR · GPT · CHS/LBA · Secteurs · Clusters · HPA / DCO · SSD vs HDD · TRIM</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="encodage.html" class="prereq-pill">📖 Encodage</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=endian" class="tp-pill">🧪 🔄 Endianness</a><a href="../tp.html?cat=fs" class="tp-pill">🧪 🔍 Identifier le FS</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="ntfs.html" class="related-pill">🔗 NTFS</a><a href="fat16.html" class="related-pill">🔗 FAT</a><a href="ext.html" class="related-pill">🔗 EXT4</a><a href="acquisition.html" class="related-pill">🔗 Acquisition</a></div>
+  </div>
+
+  <div class="concept-card" style="margin-top:1rem">
+    <div class="concept-title">💾 Disques — Le substrat physique de toute donnée</div>
+    Avant tout système de fichiers (NTFS, ext4, APFS), il y a la <strong>structure physique du disque</strong> : <strong>secteurs</strong> (plus petite unité physique, historiquement 512 octets, modernes 4096 = "Advanced Format"), <strong>partitions</strong> (zones logiques découpées par le <strong>schéma de partitionnement</strong> MBR ou GPT), et <strong>adressage</strong> (CHS hérité ou LBA moderne). Maîtriser cette couche est <strong>indispensable</strong> pour tout forensiste : un secteur mal compris = des offsets faussés ; un GPT non reconnu = des partitions invisibles ; une <strong>HPA/DCO</strong> ignorée = des données cachées non saisies. Deux problèmes contemporains majeurs : <strong>(1) SSD + TRIM</strong> — sur SSD, la commande TRIM efface <strong>physiquement</strong> les blocs marqués supprimés, fenêtre de récupération très courte (vs HDD où on peut récupérer des semaines après) ; <strong>(2) HPA / DCO</strong> — zones cachées en fin de disque où le firmware peut dissimuler des outils constructeur ou (volontairement) des données. <strong>Bonne pratique forensique</strong> : toujours vérifier la taille annoncée vs la taille maximale via <code>hdparm</code>, et documenter dans le rapport.
   </div>
 </div>
-<main id="main-content">
 
-<div class="header">
-  <div class="fs-badge" style="color:var(--blue)">Disques</div>
-  <div>
-    <div><span class="tag" style="background:rgba(88,166,255,.12);border:1px solid rgba(88,166,255,.3);color:var(--blue)">DFIR</span> <span class="tag" style="background:rgba(63,185,80,.12);border:1px solid rgba(63,185,80,.3);color:var(--green)">Hardware</span></div>
-    <div class="header-meta" style="margin-top:.3rem">MBR · GPT · CHS/LBA · Secteurs/Clusters · HPA/DCO · SSD/TRIM</div>
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA SVG — ANATOMIE D'UN DISQUE
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="schema">
+    <div class="schema-title">💾 Anatomie d'un disque — MBR vs GPT &amp; zones cachées</div>
+    <div class="schema-sub">SECTEUR 0 · PARTITIONS · HPA · DCO · ADRESSAGE LBA</div>
+    <svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Anatomie d'un disque">
+      <defs>
+        <marker id="arr-dk" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <polygon points="0 0, 10 3, 0 6" fill="#00E5CC"/>
+        </marker>
+      </defs>
+
+      <!-- Header -->
+      <rect x="20" y="15" width="680" height="36" rx="6" fill="rgba(13,17,23,.5)" stroke="rgba(0,229,204,.4)" stroke-width="1.2"/>
+      <text x="360" y="33" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#00E5CC">💾 LBA = Logical Block Addressing · numérotation séquentielle du secteur 0 à N</text>
+      <text x="360" y="46" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">Secteur = 512 octets (legacy) · 4096 octets (Advanced Format / 4Kn) — vérifier en forensique</text>
+
+      <!-- Colonne MBR (gauche) -->
+      <text x="180" y="70" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="800" fill="#58A6FF">📜 MBR — Master Boot Record</text>
+      <text x="180" y="83" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6A80A8">limite 2.2 To · 4 partitions primaires</text>
+
+      <!-- Disque MBR -->
+      <rect x="40" y="95" width="280" height="40" rx="3" fill="rgba(88,166,255,.15)" stroke="#58A6FF" stroke-width="1.5"/>
+      <text x="60" y="115" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#58A6FF">LBA 0</text>
+      <text x="60" y="127" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">MBR (512 oct.)</text>
+      <text x="180" y="120" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">code boot 440 + table 64 + 55AA</text>
+
+      <!-- Partitions MBR -->
+      <rect x="40" y="140" width="65" height="35" rx="3" fill="rgba(48,232,138,.1)" stroke="#30E88A" stroke-width="1"/>
+      <text x="72" y="156" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#30E88A">Part 1</text>
+      <text x="72" y="167" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">NTFS</text>
+
+      <rect x="110" y="140" width="65" height="35" rx="3" fill="rgba(240,192,64,.1)" stroke="#F0C040" stroke-width="1"/>
+      <text x="142" y="156" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#F0C040">Part 2</text>
+      <text x="142" y="167" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">FAT32</text>
+
+      <rect x="180" y="140" width="65" height="35" rx="3" fill="rgba(188,140,255,.1)" stroke="#BC8CFF" stroke-width="1"/>
+      <text x="212" y="156" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#BC8CFF">Part 3</text>
+      <text x="212" y="167" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">Linux</text>
+
+      <rect x="250" y="140" width="65" height="35" rx="3" fill="rgba(168,181,200,.08)" stroke="rgba(168,181,200,.4)" stroke-width="1" stroke-dasharray="2 2"/>
+      <text x="282" y="156" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">Part 4</text>
+      <text x="282" y="167" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">vide</text>
+
+      <!-- Légende MBR -->
+      <text x="180" y="195" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">Signature 55AA à offset 510-511 · little-endian</text>
+
+      <!-- Colonne GPT (droite) -->
+      <text x="540" y="70" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="800" fill="#00E5CC">📜 GPT — GUID Partition Table</text>
+      <text x="540" y="83" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6A80A8">limite 8 ZB · 128 partitions · UEFI</text>
+
+      <!-- Disque GPT -->
+      <rect x="400" y="95" width="280" height="40" rx="3" fill="rgba(0,229,204,.1)" stroke="#00E5CC" stroke-width="1.5"/>
+      <text x="420" y="115" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#00E5CC">LBA 0</text>
+      <text x="420" y="127" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">Protective MBR (0xEE)</text>
+      <text x="540" y="115" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">LBA 1 = GPT Header · LBA 2-33 = Table</text>
+      <text x="540" y="128" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">+ copie de sauvegarde en fin de disque</text>
+
+      <!-- Partitions GPT (plus de partitions) -->
+      <rect x="400" y="140" width="50" height="35" rx="3" fill="rgba(48,232,138,.1)" stroke="#30E88A" stroke-width="1"/>
+      <text x="425" y="156" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A">EFI</text>
+      <text x="425" y="167" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">FAT32</text>
+
+      <rect x="455" y="140" width="50" height="35" rx="3" fill="rgba(240,192,64,.1)" stroke="#F0C040" stroke-width="1"/>
+      <text x="480" y="156" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#F0C040">MSR</text>
+      <text x="480" y="167" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">Win res.</text>
+
+      <rect x="510" y="140" width="50" height="35" rx="3" fill="rgba(88,166,255,.1)" stroke="#58A6FF" stroke-width="1"/>
+      <text x="535" y="156" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#58A6FF">OS</text>
+      <text x="535" y="167" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">NTFS</text>
+
+      <rect x="565" y="140" width="50" height="35" rx="3" fill="rgba(188,140,255,.1)" stroke="#BC8CFF" stroke-width="1"/>
+      <text x="590" y="156" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#BC8CFF">Data</text>
+      <text x="590" y="167" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">NTFS</text>
+
+      <rect x="620" y="140" width="60" height="35" rx="3" fill="rgba(240,136,62,.1)" stroke="#F0883E" stroke-width="1"/>
+      <text x="650" y="156" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#F0883E">Recovery</text>
+      <text x="650" y="167" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">+ ⋯</text>
+
+      <text x="540" y="195" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">CRC32 + redondance primaire/secondaire = robuste</text>
+
+      <!-- Section milieu : zones cachées HPA/DCO -->
+      <text x="360" y="225" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8" letter-spacing="1">↓  ZONES CACHÉES — INVISIBLES PAR DÉFAUT  ↓</text>
+      <line x1="40" y1="232" x2="680" y2="232" stroke="rgba(168,181,200,.3)" stroke-width=".5"/>
+
+      <!-- Visualisation zones cachées sur barre disque -->
+      <text x="40" y="252" font-family="JetBrains Mono,monospace" font-size="9" fill="#A8B5C8">Disque physique :</text>
+      <rect x="40" y="258" width="500" height="32" rx="3" fill="rgba(48,232,138,.1)" stroke="#30E88A" stroke-width="1"/>
+      <text x="290" y="278" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#30E88A">ZONE NORMALE — visible OS &amp; outils standards (LBA 0 → LBA N)</text>
+
+      <rect x="540" y="258" width="80" height="32" rx="3" fill="rgba(240,192,64,.15)" stroke="#F0C040" stroke-width="1.5"/>
+      <text x="580" y="278" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" font-weight="700" fill="#F0C040">HPA</text>
+
+      <rect x="620" y="258" width="60" height="32" rx="3" fill="rgba(255,64,96,.15)" stroke="#FF4060" stroke-width="1.5"/>
+      <text x="650" y="278" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" font-weight="700" fill="#FF4060">DCO</text>
+
+      <text x="40" y="300" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">⬆ taille rapportée par OS · BIOS · CHKDSK</text>
+      <text x="540" y="300" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#F0C040">Host Protected · firmware</text>
+      <text x="620" y="300" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">Device Configuration</text>
+      <text x="540" y="312" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">recovery · cachable</text>
+      <text x="620" y="312" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">bridage taille</text>
+
+      <!-- Bandeau bas - commande -->
+      <rect x="20" y="328" width="680" height="44" rx="6" fill="rgba(0,229,204,.06)" stroke="rgba(0,229,204,.4)" stroke-width="1"/>
+      <text x="360" y="346" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="800" fill="#00E5CC">🔍 DÉTECTION HPA / DCO</text>
+      <text x="35" y="362" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8"><tspan fill="#F0C040">hdparm -N /dev/sdX</tspan> (HPA) · <tspan fill="#FF4060">hdparm --dco-identify /dev/sdX</tspan> (DCO) · comparer IDENTIFY DEVICE vs READ NATIVE MAX</text>
+    </svg>
+    <div class="schema-legend">
+      <span class="lg-item"><span class="lg-dot" style="background:#58A6FF"></span>MBR (legacy 2.2 To)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#00E5CC"></span>GPT (UEFI moderne)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>Zone normale visible</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>HPA (Host Protected Area)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>DCO (Device Config Overlay)</span>
+    </div>
   </div>
 </div>
 
-<div class="section">
-<div class="section-title">MBR — Master Boot Record (secteur 0)</div>
-<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:.5rem">
-<table><thead><tr><th>Offset</th><th>Taille</th><th>Contenu</th></tr></thead><tbody>
-<tr><td><span class="hex">0x000</span></td><td>440 bytes</td><td>Code de démarrage (Bootstrap) — charge le OS bootloader</td></tr>
-<tr><td><span class="hex">0x1B8</span></td><td>4 bytes</td><td>Signature disque (Windows Disk Signature)</td></tr>
-<tr><td><span class="hex">0x1BE</span></td><td>64 bytes</td><td>Table de partition — 4 × 16 bytes (4 partitions primaires max)</td></tr>
-<tr><td><span class="hex">0x1FE</span></td><td>2 bytes</td><td>Signature de boot : <span class="hex">55 AA</span> — valeur magic obligatoire</td></tr>
-</tbody></table></div>
-<div style="background:rgba(88,166,255,.05);border:1px solid rgba(88,166,255,.2);border-radius:8px;padding:.7rem 1rem;font-size:.78rem">
-<strong style="color:var(--blue)">Note Endianness :</strong> La valeur mathématique est 0xAA55 mais stockée en Little Endian → <span class="hex">55</span> puis <span class="hex">AA</span> sur le disque. Si le BIOS ne trouve pas 55AA aux offsets 510-511 → "No Bootable Device Found".
-</div></div>
+<!-- MBR -->
+<div class="page-wrap">
+  <div class="sec-title">📜 MBR — Master Boot Record (secteur 0)</div>
+  <div class="sec-sub">Premier secteur du disque · 512 octets · né en 1983 avec PC DOS 2.0.</div>
+  <table>
+    <thead><tr><th>Offset</th><th>Taille</th><th>Contenu</th></tr></thead>
+    <tbody>
+      <tr><td><code>0x000</code></td><td>440 octets</td><td>Code de démarrage (Bootstrap) — charge le bootloader OS</td></tr>
+      <tr><td><code>0x1B8</code></td><td>4 octets</td><td>Signature disque (Windows Disk Signature)</td></tr>
+      <tr><td><code>0x1BE</code></td><td>64 octets</td><td><strong>Table de partition</strong> — 4 × 16 octets (4 partitions primaires max)</td></tr>
+      <tr><td><code>0x1FE</code></td><td>2 octets</td><td>Signature de boot : <code>55 AA</code> — magic obligatoire</td></tr>
+    </tbody>
+  </table>
+  <div class="info" style="margin-top:.75rem">⚠️ <strong>Endianness</strong> : la valeur mathématique est <code>0xAA55</code> mais stockée en <strong>little-endian</strong> → <code>55</code> puis <code>AA</code> sur le disque. Si le BIOS ne trouve pas <code>55 AA</code> aux offsets 510-511 → "<em>No Bootable Device Found</em>". Pour vérifier : <code>xxd -s 510 -l 2 disk.img</code> doit afficher <code>55aa</code>.</div>
+</div>
 
-<div class="section">
-<div class="section-title">GPT — GUID Partition Table (au-delà de 2.2 To)</div>
-<div class="card-grid">
-<div class="card-blue">
-<div class="card-title">Structure GPT</div>
-<p>LBA 0 : Protective MBR (code <span class="hex">0xEE</span> — signale un disque GPT aux vieux systèmes)<br>
-LBA 1 : En-tête GPT primaire (CRC32 inclus)<br>
-LBA 2–33 : Table des partitions primaire (128 entrées × 128 bytes)<br>
-… (données)<br>
-LBA −34 à −2 : Table des partitions secondaire<br>
-LBA −1 : En-tête GPT secondaire (sauvegarde)<br><br>
-La redondance primaire/secondaire permet la récupération si un en-tête est corrompu.</p>
+<!-- GPT -->
+<div class="page-wrap">
+  <div class="sec-title">📜 GPT — GUID Partition Table</div>
+  <div class="sec-sub">Schéma moderne pour disques &gt; 2.2 To · obligatoire UEFI · jusqu'à 128 partitions.</div>
+  <div class="g2">
+    <div class="card card-blue">
+      <div class="ct">🧱 Structure GPT</div>
+      <ul>
+        <li>LBA 0 : <strong>Protective MBR</strong> (code <code>0xEE</code> — signale un disque GPT aux vieux systèmes)</li>
+        <li>LBA 1 : <strong>En-tête GPT primaire</strong> (CRC32 inclus)</li>
+        <li>LBA 2-33 : Table des partitions primaire (128 entrées × 128 octets)</li>
+        <li>… (zone données utilisateur) …</li>
+        <li>LBA -34 à -2 : Table des partitions <strong>secondaire</strong></li>
+        <li>LBA -1 : <strong>En-tête GPT secondaire</strong> (sauvegarde)</li>
+        <li>Redondance primaire/secondaire = récupération si un en-tête corrompu</li>
+      </ul>
+    </div>
+    <div class="card card-cyan">
+      <div class="ct">⚙️ Avantages vs MBR</div>
+      <ul>
+        <li><strong>MBR max</strong> : 2.2 To (adresses 32 bits)</li>
+        <li><strong>GPT max</strong> : 8 Zettaoctets (adresses 64 bits LBA)</li>
+        <li>MBR : 4 partitions primaires</li>
+        <li>GPT : jusqu'à <strong>128 partitions</strong></li>
+        <li>UEFI obligatoire pour démarrer sur GPT</li>
+        <li>Le "Protective MBR" au LBA 0 signale aux vieux systèmes de ne pas toucher au disque GPT</li>
+        <li>Identifiants <strong>GUID</strong> uniques pour chaque partition (vs IDs réutilisés MBR)</li>
+      </ul>
+    </div>
+  </div>
 </div>
-<div class="card-orange">
-<div class="card-title">Avantages vs MBR</div>
-<p>
-MBR max : <strong>2.2 To</strong> (adresses 32 bits)<br>
-GPT max : <strong>8 Zettaoctets</strong> (adresses 64 bits LBA)<br><br>
-MBR : 4 partitions primaires<br>
-GPT : jusqu'à <strong>128 partitions</strong><br><br>
-UEFI obligatoire pour démarrer sur GPT. Le "Protective MBR" au LBA 0 signale aux vieux systèmes de ne pas toucher au disque GPT.</p>
-</div>
-</div></div>
 
-<div class="section">
-<div class="section-title">Adressage — CHS vs LBA</div>
-<div class="card-grid">
-<div class="card-purple">
-<div class="card-title">CHS — Cylindre/Head/Secteur</div>
-<p>Adressage physique hérité : Cylindre (0–N), Tête (0–M), Secteur (1–S).<br><br>
-Limites : la densité de pistes varie entre intérieur et extérieur du disque. Le CHS ne reflète plus la géométrie réelle depuis les disques > 504 Mo.<br><br>
-CHS 0/0/1 = LBA 0 (premier secteur du disque).</p>
+<!-- ADRESSAGE -->
+<div class="page-wrap">
+  <div class="sec-title">🎯 Adressage — CHS vs LBA</div>
+  <div class="g2">
+    <div class="card card-purple">
+      <div class="ct">📐 CHS — Cylinder/Head/Sector</div>
+      <p>Adressage <strong>physique hérité</strong> : Cylindre (0-N), Tête (0-M), Secteur (1-S). Forme : C/H/S.</p>
+      <p style="margin-top:.5rem">Limites : la densité de pistes varie entre intérieur et extérieur du disque. Le CHS ne reflète plus la géométrie réelle depuis les disques &gt; 504 Mo.</p>
+      <p style="margin-top:.5rem"><code>CHS 0/0/1</code> = <code>LBA 0</code> = premier secteur du disque.</p>
+    </div>
+    <div class="card card-green">
+      <div class="ct">🔢 LBA — Logical Block Addressing</div>
+      <p>Numérotation <strong>séquentielle</strong> des secteurs de 0 à la fin du disque. Abstraction complète — le contrôleur du disque fait la traduction LBA → géométrie physique en interne.</p>
+      <p style="margin-top:.5rem">Les outils forensiques modernes travaillent <strong>directement en LBA</strong> — accès direct à n'importe quel secteur indépendamment des structures logiques (partitions, systèmes de fichiers).</p>
+      <p style="margin-top:.5rem">Format 28-bit : limite 137 Go · Format 48-bit (depuis 2002) : limite 144 Po.</p>
+    </div>
+  </div>
 </div>
-<div class="card-green">
-<div class="card-title">LBA — Logical Block Addressing</div>
-<p>Numérotation séquentielle des secteurs de 0 à la fin du disque. Abstraction complète — le contrôleur du disque fait la traduction LBA → CHS en arrière-plan.<br><br>
-Les outils forensiques modernes travaillent directement en LBA — accès direct à n'importe quel secteur indépendamment des structures logiques (partitions, systèmes de fichiers).</p>
-</div>
-</div></div>
 
-<div class="section">
-<div class="section-title">Secteurs et Clusters</div>
-<div class="card-grid">
-<div class="card-blue">
-<div class="card-title">Secteur — Plus petite unité physique</div>
-<p>Historiquement <strong>512 bytes</strong>. Disques modernes : 4096 bytes (Advanced Format / 4Kn).<br><br>
-Les outils forensiques lisent en secteurs — si un secteur n'est pas à 512 bytes, les calculs d'offset sont faussés.<br><br>
-Vérifier dans X-Ways : Options → Disque → Taille de secteur.</p>
+<!-- SECTEURS / CLUSTERS -->
+<div class="page-wrap">
+  <div class="sec-title">📐 Secteurs et Clusters</div>
+  <div class="g2">
+    <div class="card card-blue">
+      <div class="ct">🧱 Secteur — plus petite unité physique</div>
+      <p>Historiquement <strong>512 octets</strong>. Disques modernes (depuis ~2010) : <strong>4096 octets</strong> (Advanced Format / 4Kn).</p>
+      <p style="margin-top:.5rem">Les outils forensiques lisent en secteurs — si un secteur n'est pas à 512, les calculs d'offset sont faussés.</p>
+      <p style="margin-top:.5rem">Vérifier dans X-Ways : Options → Disque → Taille de secteur. Vérifier en CLI : <code>fdisk -l /dev/sdX</code>.</p>
+    </div>
+    <div class="card card-gold">
+      <div class="ct">🧱 Cluster — unité d'allocation</div>
+      <p>Groupe de secteurs consécutifs. Le système de fichiers alloue toujours des <strong>clusters entiers</strong> — c'est l'unité minimale d'allocation logique.</p>
+      <p style="margin-top:.5rem">FAT32 : taille variable (4 Ko à 32 Ko selon partition)</p>
+      <p style="margin-top:.5rem">NTFS : <strong>4096 octets</strong> par défaut (8 secteurs × 512)</p>
+      <p style="margin-top:.5rem"><strong>Slack space</strong> : si un fichier de 7 octets occupe un cluster de 4096, il y a <strong>4089 octets de slack space</strong> contenant potentiellement des données résiduelles d'un ancien fichier — <em>artefact forensique précieux</em>.</p>
+    </div>
+  </div>
 </div>
-<div class="card-orange">
-<div class="card-title">Cluster — Unité d'allocation</div>
-<p>Groupe de secteurs consécutifs. Le système de fichiers alloue toujours des clusters entiers.<br><br>
-FAT32 : taille variable selon la partition<br>
-NTFS : souvent 4096 bytes (8 secteurs × 512)<br><br>
-Si un fichier de 7 bytes occupe un cluster de 4096 bytes → <strong>4089 bytes de slack space</strong> contenant potentiellement des données résiduelles.</p>
-</div>
-</div></div>
 
-<div class="section">
-<div class="section-title">HPA et DCO — Zones cachées</div>
-<div class="card-grid">
-<div class="card-red">
-<div class="card-title">HPA — Host Protected Area</div>
-<p>Zone à la fin du disque, hors adressage LBA normal. Invisible pour l'OS et les outils standards.<br><br>
-Utilisée par les fabricants pour stocker les outils de restauration. Peut être utilisée pour cacher des données.<br><br>
-Détection : comparer la taille annoncée (IDENTIFY DEVICE) avec la taille maximale (READ NATIVE MAX ADDRESS).<br>
-Commande : <code class="copy-code">hdparm -N /dev/sdX</code></p>
+<!-- HPA / DCO -->
+<div class="page-wrap">
+  <div class="sec-title">🚨 HPA et DCO — Zones cachées</div>
+  <div class="alert" style="margin-bottom:.75rem">⚠️ <strong>Bonne pratique forensique</strong> : toujours vérifier l'existence de zones HPA et DCO <em>avant l'acquisition</em>. Si non vérifié, le mentionner explicitement dans le rapport. Ces zones peuvent contenir des données dissimulées intentionnellement.</div>
+  <div class="g2">
+    <div class="card card-red">
+      <div class="ct">🔴 HPA — Host Protected Area</div>
+      <p>Zone à la <strong>fin du disque</strong>, hors adressage LBA normal. Invisible pour l'OS et les outils standards.</p>
+      <p style="margin-top:.5rem">Utilisée par les fabricants pour stocker les outils de restauration. Peut être utilisée pour <strong>cacher des données</strong>.</p>
+      <p style="margin-top:.5rem"><strong>Détection</strong> : comparer la taille annoncée (IDENTIFY DEVICE) avec la taille maximale (READ NATIVE MAX ADDRESS).</p>
+      <p style="margin-top:.5rem">Commande : <code>hdparm -N /dev/sdX</code></p>
+      <p style="margin-top:.5rem">Si HPA présent : <code>HPA is enabled</code> + tailles différentes affichées.</p>
+    </div>
+    <div class="card card-purple">
+      <div class="ct">🟣 DCO — Device Configuration Overlay</div>
+      <p>Couche de configuration qui peut <strong>masquer des fonctionnalités</strong> ou <strong>réduire la taille visible</strong> du disque.</p>
+      <p style="margin-top:.5rem">Un fabricant peut "brider" un disque de 2 To pour le vendre comme 1 To via le DCO.</p>
+      <p style="margin-top:.5rem">Forensiquement : zone potentiellement <strong>encore plus cachée</strong> que HPA — toujours vérifier.</p>
+      <p style="margin-top:.5rem">Commande : <code>hdparm --dco-identify /dev/sdX</code></p>
+      <p style="margin-top:.5rem">Pour révéler complètement HPA + DCO et accéder à toute la NAND : <code>hdparm --dco-restore</code> (⚠️ irréversible, faire une image avant).</p>
+    </div>
+  </div>
 </div>
-<div class="card-purple">
-<div class="card-title">DCO — Device Configuration Overlay</div>
-<p>Couche de con<div class="prereq-block">
-<div class="prereq-row">
-  <span class="prereq-label">Prérequis :</span><a href="encodage.html" class="prereq-pill">📖 Encodage</a>
-</div><div class="prereq-row">
-  <span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=endian" class="tp-pill" onclick="sessionStorage.setItem('tp_start_cat','endian')">🧪 🔄 Endianness</a>
-</div><div class="prereq-row">
-  <span class="prereq-label">Voir aussi :</span><a href="fat16.html" class="related-pill">🔗 FAT16/32</a><a href="ntfs.html" class="related-pill">🔗 NTFS</a><a href="ext.html" class="related-pill">🔗 EXT4</a>
-</div></div>
-figuration qui peut masquer des fonctionnalités ou réduire la taille visible du disque.<br><br>
-Un fabricant peut "brider" un disque de 2 To pour le vendre comme 1 To via le DCO.<br><br>
-Forensiquement : toujours vérifier l'existence de zones HPA et DCO avant l'acquisition (mentionner dans le rapport si non vérifié).<br>
-Commande : <code class="copy-code">hdparm --dco-identify /dev/sdX</code></p>
+
+<!-- SSD vs HDD -->
+<div class="page-wrap">
+  <div class="sec-title">💿 SSD vs HDD — TRIM, le grand problème forensique</div>
+  <div class="g2">
+    <div class="card card-green">
+      <div class="ct">🟢 HDD — Récupération classique facile</div>
+      <p>Supprimer un fichier sur HDD ne supprime <strong>jamais</strong> les données physiquement. Le système de fichiers marque les clusters comme libres mais les octets <strong>restent intacts</strong>.</p>
+      <p style="margin-top:.5rem">Le <strong>carving</strong> (reconstruction par signature) peut retrouver des données <strong>longtemps après la suppression</strong> — tant que les clusters n'ont pas été réécrits par d'autres fichiers.</p>
+      <p style="margin-top:.5rem">Outils : <strong>foremost</strong>, <strong>scalpel</strong>, <strong>PhotoRec</strong>, <strong>Autopsy</strong>.</p>
+    </div>
+    <div class="card card-red">
+      <div class="ct">🔴 SSD — TRIM efface immédiatement</div>
+      <p><strong>TRIM</strong> est une instruction envoyée au contrôleur SSD lors d'une suppression : <em>« ces blocs ne contiennent plus rien d'utile, tu peux les effacer en arrière-plan ».</em></p>
+      <p style="margin-top:.5rem">Le contrôleur efface <strong>physiquement</strong> lors de ses cycles de maintenance (parfois quelques minutes seulement après TRIM).</p>
+      <p style="margin-top:.5rem"><strong>Conséquence forensique</strong> : la récupération après suppression sur SSD est <strong>très difficile</strong> et la fenêtre est très courte. Acquérir <strong>immédiatement</strong> avec write-blocker.</p>
+      <p style="margin-top:.5rem">Désactiver TRIM avant analyse : <code>fsutil behavior set DisableDeleteNotify 1</code> (Windows).</p>
+    </div>
+  </div>
 </div>
-</div></div>
 
-<div class="section">
-<div class="section-title">SSD et TRIM — Problème forensique</div>
-<div class="card-grid">
-<div class="card-green">
-<div class="card-title">HDD — Récupération classique</div>
-<p>Supprimer un fichier sur HDD ne supprime jamais les données physiquement. Le système de fichiers marque les clusters comme libres mais les octets restent.<br><br>
-Le carving peut retrouver des données même longtemps après la suppression — tant que les clusters n'ont pas été réécrits.</p>
+<!-- TYPES PARTITIONS MBR -->
+<div class="page-wrap">
+  <div class="sec-title">📋 Codes de types MBR — Aide-mémoire</div>
+  <table>
+    <thead><tr><th>Code</th><th>Type</th></tr></thead>
+    <tbody>
+      <tr><td><code>0x00</code></td><td>Entrée vide (pas de partition)</td></tr>
+      <tr><td><code>0x07</code></td><td>NTFS ou exFAT</td></tr>
+      <tr><td><code>0x0B</code></td><td>FAT32 (avec CHS)</td></tr>
+      <tr><td><code>0x0C</code></td><td>FAT32 (avec LBA) — le plus courant</td></tr>
+      <tr><td><code>0x82</code></td><td>Linux Swap</td></tr>
+      <tr><td><code>0x83</code></td><td>Linux (ext2/3/4)</td></tr>
+      <tr><td><code>0xA5</code></td><td>FreeBSD</td></tr>
+      <tr><td><code>0xA8</code></td><td>macOS / APFS</td></tr>
+      <tr><td><code>0xEE</code></td><td><strong>GPT Protective MBR</strong> — indique un disque GPT</td></tr>
+      <tr><td><code>0xEF</code></td><td>Partition système EFI (UEFI)</td></tr>
+    </tbody>
+  </table>
 </div>
-<div class="card-red">
-<div class="card-title">SSD — TRIM efface immédiatement</div>
-<p>TRIM est une instruction envoyée au contrôleur SSD lors d'une suppression : "ces blocs ne contiennent plus rien d'utile, tu peux les effacer."<br><br>
-Le contrôleur efface physiquement lors de ses cycles de maintenance.<br><br>
-<strong>Conséquence forensique :</strong> la récupération après suppression sur SSD est très difficile et la fenêtre est très courte. Acquérir immédiatement.</p>
+
+<!-- QUIZ -->
+<div class="page-wrap">
+  <div class="sec-title">🧠 Testez-vous</div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Vous saisissez un SSD chez un suspect. Pourquoi le brancher avec un write-blocker même si vous voulez juste « regarder » ?<small>SSD / TRIM · Niveau : facile</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer">Sur SSD, <strong>brancher = potentiellement détruire des preuves</strong>. Sans write-blocker : (1) Le système peut <strong>monter automatiquement</strong> les partitions et écrire des metadata (last access time, journal NTFS, etc.). (2) Si TRIM est activé sur l'OS hôte et que le SSD est reconnu comme connu, certains OS envoient des commandes <strong>UNMAP</strong> en pre-emptive cleanup. (3) Le contrôleur SSD peut <strong>garbage-collecter</strong> en arrière-plan dès qu'il a du courant. (4) <strong>Wear leveling</strong> peut déplacer les blocs pour équilibrer l'usure. <strong>Write-blocker hardware</strong> (Tableau, WiebeTech) intercepte toutes les commandes d'écriture. <strong>Best practice forensique</strong> : (a) Hash SHA-256 du SSD avant tout, (b) acquérir une image dd/E01 immédiatement avec write-blocker, (c) travailler uniquement sur la copie. <strong>Bonus</strong> : sur certains SSD modernes, même avec write-blocker, il existe une <strong>dérive du hash</strong> mineure due aux opérations internes du contrôleur (housekeeping) — bien documenter dans le rapport.</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Un disque de 4 To affiche seulement 2 To dans Windows et BIOS. Quelle hypothèse vérifier ?<small>HPA / DCO · Niveau : moyen</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer">Plusieurs hypothèses, dans l'ordre : <strong>(1) MBR au lieu de GPT</strong> — MBR limite à 2.2 To. Vérifier : <code>parted /dev/sdX print</code>. Si MBR sur disque &gt; 2 To, le reste est inaccessible — pas malveillant mais le disque a été mal initialisé. <strong>(2) HPA / DCO actif</strong> — quelqu'un (ou le firmware) a <em>brimé</em> la taille visible. Vérifier : <code>hdparm -N /dev/sdX</code> compare HPA enabled · <code>hdparm --dco-identify /dev/sdX</code> compare DCO. Si différence entre IDENTIFY DEVICE et READ NATIVE MAX → HPA. <strong>(3) Disque de 4 To bridé hardware</strong> — certains disques sont vendus avec firmware limitant la capacité. <strong>(4) RAID / LVM</strong> — le disque est en RAID 1 (miroir) avec un autre, taille effective = 50%. <strong>(5) Encrypted volume</strong> non monté affichant taille du conteneur. <strong>Procédure forensique</strong> : (a) Documenter ce qu'affichent <code>fdisk -l</code>, <code>hdparm -I</code>, BIOS, Windows, (b) si HPA/DCO, faire une image complète AVANT de modifier (<code>hdparm --dco-restore</code> est irréversible), (c) toujours mentionner dans le rapport si HPA/DCO non vérifié.</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Quel est le slack space dans un cluster NTFS ? Pourquoi est-il forensiquement intéressant ?<small>Slack space · Niveau : moyen</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer">NTFS alloue par <strong>cluster entier</strong> (typiquement 4096 octets). Un fichier de 100 octets occupe quand même 1 cluster complet. Les <strong>3996 octets restants</strong> = <strong>slack space</strong>. Deux types : <strong>(1) RAM Slack</strong> = espace entre la fin du fichier et la fin du dernier secteur — typiquement rempli avec ce qui était dans le buffer RAM au moment de l'écriture (peut contenir n'importe quoi : passwords en clair, tokens, contenu web). <strong>(2) Drive Slack</strong> = espace entre la fin du dernier secteur du fichier et la fin du cluster — contient le <strong>contenu de l'ancien fichier</strong> qui occupait ce cluster avant. <strong>Forensiquement</strong> : <strong>mine d'or</strong> ! Récupération de fragments de fichiers supprimés, de mots de passe, de logs, de configurations. <strong>Outils</strong> : Autopsy (slack space module), X-Ways (afficher slack), <code>icat</code> (TSK), <code>dd</code> sur les bons offsets. <strong>Limite</strong> : les SSD avec TRIM effacent souvent ces résidus (cycle GC). Sur HDD, les résidus persistent quasi-éternellement. <strong>Anti-forensique</strong> : effacement sécurisé (DOD 7-pass, BCWipe) écrase aussi le slack.</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Différence entre <strong>secteur</strong>, <strong>cluster</strong>, et <strong>bloc</strong> ?<small>Vocabulaire · Niveau : facile</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer"><strong>Secteur</strong> = plus petite unité d'<strong>écriture/lecture physique</strong> du disque. Décidé par le matériel (firmware contrôleur). Tailles : <strong>512 octets</strong> (legacy, 1979-2010) ou <strong>4096 octets</strong> (Advanced Format / 4Kn, depuis 2010+). Le secteur est <em>indivisible</em> du point de vue I/O. <strong>Cluster</strong> = unité d'<strong>allocation logique</strong> du système de fichiers. Toujours un multiple entier de secteurs (1, 2, 4, 8...). Décidé par le système de fichiers à la création. NTFS par défaut = 8 secteurs × 512 = <strong>4096 octets</strong>. FAT32 = variable selon taille partition (4 Ko à 32 Ko). C'est <em>l'unité minimale qu'un fichier peut occuper</em>. <strong>Bloc</strong> = terme générique, ambigu selon le contexte : (a) <strong>bloc Linux ext4</strong> = équivalent du cluster NTFS (1, 2 ou 4 Ko), (b) <strong>bloc système</strong> = parfois utilisé pour désigner un secteur de 512 octets (block device), (c) <strong>bloc SSD</strong> = unité d'effacement physique du contrôleur NAND (typiquement 256 KB à 4 MB), beaucoup plus grand qu'un cluster du FS — d'où la complexité du wear leveling. Forensiquement : <strong>secteur</strong> = niveau hardware (<code>dd bs=512</code>), <strong>cluster/bloc FS</strong> = niveau logique (carving).</div>
+  </div>
 </div>
-</div></div>
 
-<div class="section">
-<div class="section-title">Types de partitions — Codes MBR</div>
-<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
-<table><thead><tr><th>Code</th><th>Type</th></tr></thead><tbody>
-<tr><td><span class="hex">0x00</span></td><td>Entrée vide (pas de partition)</td></tr>
-<tr><td><span class="hex">0x07</span></td><td>NTFS ou exFAT</td></tr>
-<tr><td><span class="hex">0x0B</span></td><td>FAT32 (avec CHS)</td></tr>
-<tr><td><span class="hex">0x0C</span></td><td>FAT32 (avec LBA) — le plus courant</td></tr>
-<tr><td><span class="hex">0x82</span></td><td>Linux Swap</td></tr>
-<tr><td><span class="hex">0x83</span></td><td>Linux (ext2/3/4)</td></tr>
-<tr><td><span class="hex">0xEE</span></td><td>GPT Protective MBR — indique un disque GPT</td></tr>
-<tr><td><span class="hex">0xEF</span></td><td>Partition système EFI (UEFI)</td></tr>
-</tbody></table></div></div>
+<!-- EXAM TIP -->
+<div class="page-wrap">
+  <div class="exam-tip">
+    <div class="exam-tip-title">🎓 Exam Tip — Technologie des Disques</div>
+    <p><strong>MBR</strong> :</p>
+    <p>&nbsp;&nbsp;• 1er secteur du disque (LBA 0) · 512 octets</p>
+    <p>&nbsp;&nbsp;• Bootstrap 440 + Disk signature 4 + Partition Table 64 + 55AA</p>
+    <p>&nbsp;&nbsp;• Signature <code>55 AA</code> en little-endian aux offsets 510-511</p>
+    <p>&nbsp;&nbsp;• Limite 2.2 To · 4 partitions primaires</p>
+    <p><strong>GPT</strong> :</p>
+    <p>&nbsp;&nbsp;• LBA 0 = Protective MBR (0xEE) · LBA 1 = GPT Header · LBA 2-33 = Table</p>
+    <p>&nbsp;&nbsp;• Limite 8 ZB · 128 partitions · CRC32 · redondance fin de disque</p>
+    <p>&nbsp;&nbsp;• Nécessite UEFI pour booter</p>
+    <p><strong>Adressage</strong> : CHS (legacy C/H/S) vs LBA (séquentiel 0 → N)</p>
+    <p><strong>Secteur</strong> = 512 octets legacy ou 4096 octets Advanced Format (4Kn)</p>
+    <p><strong>Cluster</strong> = unité allocation FS · NTFS 4096 octets · multiple de secteur</p>
+    <p><strong>Slack space</strong> = espace inutilisé dans un cluster · contient résidus = mine forensique</p>
+    <p><strong>HPA</strong> (Host Protected Area) : zone cachée fin de disque · <code>hdparm -N</code></p>
+    <p><strong>DCO</strong> (Device Configuration Overlay) : peut masquer + brider · <code>hdparm --dco-identify</code></p>
+    <p><strong>HDD</strong> : suppression = clusters marqués libres, données restent → carving facile</p>
+    <p><strong>SSD + TRIM</strong> : effacement physique des blocs supprimés → fenêtre récupération courte</p>
+    <p><strong>Toujours utiliser un write-blocker</strong> avant connexion — y compris pour SSD</p>
+    <p><strong>Codes types MBR</strong> : 0x07 (NTFS), 0x0C (FAT32 LBA), 0x83 (Linux), 0xEE (GPT), 0xEF (EFI)</p>
+  </div>
 
+  <div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> MBR = offset 0, signature 55AA en little-endian aux offsets 510-511 · 4 partitions primaires max · GPT = GUID, 128 partitions max, redondance primaire/secondaire · LBA = adressage logique séquentiel · Secteur = 512 ou 4096 octets (AF) · Cluster NTFS = 4096 par défaut · Slack space contient des résidus = artefact forensique · HPA / DCO = zones cachées · hdparm -N et --dco-identify · TRIM sur SSD = risque d'effacement spontané, fenêtre courte.</div>
 
-<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> MBR = offset 0, signature 55AA offset 510 · GPT = GUID, 128 partitions max · LBA · Secteur = 512 o (ou 4096 AF) · TRIM sur SSD : risque d'effacement spontané.</div>
-
-<div class="footer">
-  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
-  <span>Manuel Ch. 5 · Technologie des disques</span>
+  <div class="footer">
+    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+    <span>Manuel Ch. 5 · Technologie des disques · ATA-8 spec</span>
+  </div>
 </div>
-</div></main>
 
 <script>
 (function(){
-  /* ── Bouton copier sur .cli et code standalone ── */
-  function addCopyButtons(){
-    /* .cli blocks */
-    document.querySelectorAll('.cli').forEach(function(el){
-      if(el.querySelector('.copy-btn')) return;
-      var btn = document.createElement('button');
-      btn.className = 'copy-btn';
-      btn.title = 'Copier';
-      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11V3a2 2 0 012-2h6"/></svg>';
-      btn.onclick = function(){
-        var text = el.innerText.replace(/^copier$/mi,'').trim();
-        navigator.clipboard.writeText(text).then(function(){
-          btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-          btn.style.color='var(--green)';
-          setTimeout(function(){ btn.innerHTML='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11V3a2 2 0 012-2h6"/></svg>'; btn.style.color=''; }, 1500);
-        });
-      };
-      el.style.position='relative';
-      el.appendChild(btn);
-    });
-    /* <code> standalone (inside .h class or filter-row or step-text) */
-    document.querySelectorAll('.copy-code').forEach(function(el){
-      if(el.dataset.copyInit) return;
-      el.dataset.copyInit = '1';
-      el.style.cursor = 'pointer';
-      el.title = 'Cliquer pour copier';
-      el.onclick = function(){
-        navigator.clipboard.writeText(el.innerText).then(function(){
-          var orig = el.style.background;
-          el.style.background = 'rgba(48,232,138,.2)';
-          setTimeout(function(){ el.style.background = orig; }, 800);
-        });
-      };
-    });
-  }
-
-  /* ── TOC smooth scroll ── */
-  document.querySelectorAll('.toc a[href^="#"]').forEach(function(a){
-    a.addEventListener('click', function(e){
-      e.preventDefault();
-      var id = a.getAttribute('href').slice(1);
-      var el = document.getElementById(id);
-      if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
-    });
-  });
-
-  /* ── Back-to-top ── */
-  var btn = document.getElementById('back-top');
-  if(btn) window.addEventListener('scroll', function(){
-    btn.classList.toggle('visible', window.scrollY > 300);
-  });
-
-  document.addEventListener('DOMContentLoaded', addCopyButtons);
-  if(document.readyState !== 'loading') addCopyButtons();
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
 })();
+document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+    ans.classList.toggle('visible');
+    btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+  });
+});
 </script>
-
-</body></html>
+</body>
+</html>
