@@ -1,107 +1,317 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WSL — Windows Subsystem for Linux — CAS-IN Forensique</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>WSL Forensique — CAS-IN</title>
+<meta name="description" content="WSL Forensique · Windows Subsystem for Linux · WSL1 vs WSL2 · ext4.vhdx · Détection · Event 4688">
 <link rel="stylesheet" href="../style/fiche_style.css">
 </head>
 <body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
 <nav class="tn-nav">
   <a href="index.html" class="tn-back">← Fiches</a>
-  <span class="tn-title">Artefacts Windows</span>
+  <span class="tn-title">ARTEFACTS WINDOWS · WSL</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
-<div class="page">
 
-<div class="breadcrumb">
-  <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
-  <a href="index.html">Fiches</a><span class="bc-sep">›</span>
-  <a href="index.html#cat-artefactswindows">Artefacts Windows</a><span class="bc-sep">›</span>
-  <span class="bc-current">WSL</span>
-  <span class="read-time-badge" style="margin-left:auto">⏱ ~3 min</span>
-</div>
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-artefactswindows">Artefacts Windows</a><span class="bc-sep">›</span>
+    <span class="bc-current">WSL</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~6 min</span>
+  </div>
 
-<div class="info" style="margin-bottom:1.5rem;border-left:3px solid var(--cyan);background:rgba(0,229,204,.04);border-radius:0 8px 8px 0;padding:.9rem 1.2rem">
-<p style="font-style:italic;color:var(--muted);font-size:.82rem">"WSL has become a common attack vector on Windows — it provides a full Linux environment that bypasses many AV solutions and leaves artefacts in unexpected places that analysts overlook."</p>
-<p style="font-size:.7rem;color:var(--dim);margin-top:.3rem">— SANS FOR508 · WSL as an attack vector, 2022</p>
-<p style="margin-top:.6rem;font-size:.78rem">💡 <strong>Double danger forensique :</strong> WSL peut être utilisé par des attaquants pour exécuter des outils Linux (nmap, wget, bash scripts) dans Windows, souvent sans que les solutions EDR Windows ne les détectent correctement.</p>
-</div>
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🐧</span>
+    <span class="tag tag-cyan" style="margin-left:.5rem">WSL</span>
+    <span class="tag tag-green" style="margin-left:.3rem">Windows</span>
+    <span class="tag tag-gold" style="margin-left:.3rem">Linux</span>
+    <span class="tag tag-red" style="margin-left:.3rem">EDR Bypass</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">DFIR</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">WSL Forensique — Windows Subsystem for Linux</h1>
+    <div class="meta">WSL1 vs WSL2 · ext4.vhdx · %LocalAppData%\Packages · Détection usage · Event 4688</div>
+  </div>
 
-<div class="header">
-  <div class="fs-badge">🐧</div>
-  <div>
-    <span class="tag tag-cyan">WSL</span><span class="tag tag-green">Windows</span><span class="tag tag-gold">Linux</span><span class="tag tag-cyan">DFIR</span>
-    <h1 style="font-family:var(--sans);font-size:1.6rem;font-weight:800;letter-spacing:-0.5px;margin:.3rem 0 .2rem">WSL Forensique — Windows Subsystem for Linux</h1>
-    <p class="meta">WSL1 vs WSL2 · ext4.vhdx · %LocalAppData%\Packages · Détection usage · Event 4688</p>
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="windows.html" class="prereq-pill">📖 Windows</a><a href="ext.html" class="prereq-pill">📖 EXT4</a><a href="vm_forensique.html" class="prereq-pill">📖 VM</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html" class="tp-pill">🧪 📋 Série Examen</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="windows_forensique.html" class="related-pill">🔗 Windows Forensique</a><a href="logs_windows.html" class="related-pill">🔗 Logs Windows</a><a href="vm_forensique.html" class="related-pill">🔗 VM</a></div>
+  </div>
+
+  <div class="concept-card" style="margin-top:1rem">
+    <div class="concept-title">🐧 WSL — Linux à l'intérieur de Windows · vecteur d'attaque émergent</div>
+    <strong>Windows Subsystem for Linux</strong> (WSL) permet d'exécuter un environnement Linux complet (Ubuntu, Debian, Kali...) <strong>nativement sur Windows 10/11</strong>, sans VM lourde ni dual-boot. Lancé en 2016 (WSL1), refondu en 2019 (WSL2 avec un vrai noyau Linux dans une VM Hyper-V légère), c'est aujourd'hui un outil <strong>standard pour développeurs</strong>, mais aussi un <strong>vecteur d'attaque privilégié</strong> par certains acteurs malveillants. Pourquoi ? <strong>(1) Bypass EDR partiel</strong> — les EDR Windows surveillent surtout les API Win32 ; les appels système Linux dans WSL passent <strong>sous le radar</strong> de nombreuses solutions, (2) <strong>Outils Linux puissants disponibles</strong> nativement (nmap, hydra, john, sqlmap, hashcat, etc.) sans installation suspecte côté Windows, (3) <strong>Environnement séparé</strong> avec ses propres logs, son propre filesystem (ext4), ses propres credentials. <strong>Pour le forensiste</strong>, deux complications : (a) les fichiers Linux ne sont <strong>pas dans le filesystem Windows classique</strong> — ils sont dans un fichier <code>ext4.vhdx</code> caché dans <code>%LocalAppData%\Packages\</code>, (b) il faut connaître <strong>les artefacts Linux</strong> (.bash_history, /var/log/, /tmp/) en plus des artefacts Windows. <strong>Bonne nouvelle</strong> : Windows laisse plein de traces de l'usage de WSL (Event Logs, Prefetch, Registre Lxss, Amcache).
   </div>
 </div>
 
-<div class="prereq-block"><div class="prereq-row"><span class="prereq-label">Prérequis</span><a href="windows.html" class="prereq-pill">📖 Artefacts Windows</a><a href="ext.html" class="prereq-pill">📖 EXT2/3/4</a></div><div class="prereq-row"><span class="prereq-label">Pratiquer</span><a href="../tp.html" class="tp-pill">🧪 📋 Série Examen</a></div><div class="prereq-row"><span class="prereq-label">Voir aussi</span><a href="windows_forensique.html" class="related-pill">🔗 Windows Forensique</a><a href="logs_windows.html" class="related-pill">🔗 Logs Windows</a><a href="vm_forensique.html" class="related-pill">🔗 VM Forensique</a></div></div>
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA SVG — WSL1 vs WSL2 ARCHITECTURE & ARTEFACTS
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="schema">
+    <div class="schema-title">🐧 WSL1 vs WSL2 — Architecture &amp; localisation des artefacts</div>
+    <div class="schema-sub">TRADUCTION SYSCALLS vs VM HYPER-V LÉGÈRE · ext4.vhdx · DÉTECTION D'USAGE</div>
+    <svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="WSL architecture">
+      <defs>
+        <marker id="arr-wsl" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <polygon points="0 0, 10 3, 0 6" fill="#00E5CC"/>
+        </marker>
+      </defs>
 
+      <!-- Header -->
+      <rect x="20" y="15" width="680" height="36" rx="6" fill="rgba(13,17,23,.5)" stroke="rgba(0,229,204,.4)" stroke-width="1.2"/>
+      <text x="360" y="33" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#00E5CC">🐧 WSL = Linux dans Windows · vecteur d'attaque qui contourne partiellement les EDR Windows</text>
+      <text x="360" y="46" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">Lancé 2016 (WSL1) · refondu 2019 (WSL2 avec vrai noyau Linux + Hyper-V léger)</text>
 
-<div class="sec"><div class="sec-title">WSL1 vs WSL2</div>
-<table><thead><tr><th>Aspect</th><th>WSL1</th><th>WSL2</th></tr></thead><tbody>
-<tr><td>Architecture</td><td>Traduction d'appels système Linux → Windows</td><td style="color:var(--cyan)">VM légère Hyper-V avec noyau Linux réel</td></tr>
-<tr><td>Stockage Linux</td><td>Répertoire Windows classique</td><td style="color:var(--gold)">Disque virtuel <strong>ext4.vhdx</strong></td></tr>
-<tr><td>Chemin fichiers</td><td><code>...\LocalState
-ootfs\</code></td><td><code>...\LocalState\ext4.vhdx</code></td></tr>
-<tr><td>Forensique</td><td style="color:var(--green)">Fichiers directement lisibles</td><td style="color:var(--red)">Nécessite de monter le VHDX ext4</td></tr>
-<tr><td>Interface réseau</td><td>Partage l'IP Windows</td><td style="color:var(--gold)">Interface réseau propre (IP distincte)</td></tr>
-</tbody></table>
+      <!-- Colonne WSL1 (gauche) -->
+      <rect x="20" y="65" width="335" height="170" rx="10" fill="rgba(48,232,138,.06)" stroke="#30E88A" stroke-width="2"/>
+      <text x="187" y="90" text-anchor="middle" font-family="Inter,sans-serif" font-size="14" font-weight="800" fill="#30E88A">🟢 WSL 1 (2016)</text>
+      <text x="187" y="105" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">traduction syscalls Linux → Windows</text>
+
+      <!-- Pile WSL1 -->
+      <rect x="40" y="120" width="295" height="22" rx="3" fill="rgba(168,181,200,.1)" stroke="rgba(168,181,200,.3)" stroke-width="1"/>
+      <text x="187" y="135" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">apps Linux (bash, nmap, ssh)</text>
+
+      <rect x="40" y="146" width="295" height="22" rx="3" fill="rgba(48,232,138,.15)" stroke="#30E88A" stroke-width="1"/>
+      <text x="187" y="161" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#30E88A">PicoProcess (LX subsystem)</text>
+
+      <rect x="40" y="172" width="295" height="22" rx="3" fill="rgba(88,166,255,.12)" stroke="#58A6FF" stroke-width="1"/>
+      <text x="187" y="187" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#58A6FF">Windows kernel (NT)</text>
+
+      <text x="40" y="215" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A">📂 Fichiers Linux : <tspan fill="#A8B5C8">rootfs/</tspan></text>
+      <text x="40" y="227" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">→ accessible directement depuis Windows · simple à analyser</text>
+
+      <!-- Colonne WSL2 (droite) -->
+      <rect x="365" y="65" width="335" height="170" rx="10" fill="rgba(0,229,204,.06)" stroke="#00E5CC" stroke-width="2"/>
+      <text x="532" y="90" text-anchor="middle" font-family="Inter,sans-serif" font-size="14" font-weight="800" fill="#00E5CC">🔵 WSL 2 (2019, défaut)</text>
+      <text x="532" y="105" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">vrai noyau Linux dans VM Hyper-V légère</text>
+
+      <!-- Pile WSL2 -->
+      <rect x="385" y="120" width="295" height="22" rx="3" fill="rgba(168,181,200,.1)" stroke="rgba(168,181,200,.3)" stroke-width="1"/>
+      <text x="532" y="135" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">apps Linux (bash, nmap, ssh)</text>
+
+      <rect x="385" y="146" width="295" height="22" rx="3" fill="rgba(0,229,204,.15)" stroke="#00E5CC" stroke-width="1"/>
+      <text x="532" y="161" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#00E5CC">VRAI noyau Linux (5.x)</text>
+
+      <rect x="385" y="172" width="295" height="22" rx="3" fill="rgba(255,64,96,.12)" stroke="#FF4060" stroke-width="1"/>
+      <text x="532" y="187" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#FF4060">VM Hyper-V légère</text>
+
+      <text x="385" y="215" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#00E5CC">📂 Fichiers Linux : <tspan fill="#A8B5C8">ext4.vhdx</tspan></text>
+      <text x="385" y="227" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">→ disque virtuel · qemu-img + mount sur Linux</text>
+
+      <!-- Bandeau bas - Détection -->
+      <text x="360" y="265" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8" letter-spacing="1">↓  TRACES D'USAGE WSL DANS WINDOWS  ↓</text>
+      <line x1="40" y1="273" x2="680" y2="273" stroke="rgba(168,181,200,.3)" stroke-width=".5"/>
+
+      <rect x="20" y="285" width="160" height="50" rx="5" fill="rgba(255,64,96,.08)" stroke="#FF4060" stroke-width="1.2"/>
+      <text x="100" y="303" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#FF4060">📋 Event Logs</text>
+      <text x="100" y="317" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">EID 4688 wsl.exe</text>
+      <text x="100" y="328" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">bash.exe · ubuntu.exe</text>
+
+      <rect x="190" y="285" width="160" height="50" rx="5" fill="rgba(240,192,64,.08)" stroke="#F0C040" stroke-width="1.2"/>
+      <text x="270" y="303" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#F0C040">⚡ Prefetch</text>
+      <text x="270" y="317" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">WSL.EXE-*.pf</text>
+      <text x="270" y="328" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">BASH.EXE-*.pf</text>
+
+      <rect x="360" y="285" width="160" height="50" rx="5" fill="rgba(88,166,255,.08)" stroke="#58A6FF" stroke-width="1.2"/>
+      <text x="440" y="303" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#58A6FF">🗝 Registre Lxss</text>
+      <text x="440" y="317" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">HKCU\...\Lxss\</text>
+      <text x="440" y="328" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">distros installées</text>
+
+      <rect x="530" y="285" width="170" height="50" rx="5" fill="rgba(188,140,255,.08)" stroke="#BC8CFF" stroke-width="1.2"/>
+      <text x="615" y="303" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#BC8CFF">📁 Amcache</text>
+      <text x="615" y="317" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">wsl.exe + distros</text>
+      <text x="615" y="328" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">SHA-1 + dates</text>
+
+      <!-- Bandeau bas - alerte -->
+      <rect x="20" y="345" width="680" height="22" rx="4" fill="rgba(255,64,96,.08)" stroke="rgba(255,64,96,.4)" stroke-width="1"/>
+      <text x="360" y="360" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#FF4060">⚠️ Dans WSL2 le filesystem Linux est dans ext4.vhdx — pas dans C:\ Windows · à monter séparément</text>
+    </svg>
+    <div class="schema-legend">
+      <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>WSL1 (rootfs accessible)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#00E5CC"></span>WSL2 (ext4.vhdx isolé)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>Event Logs Windows</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>Prefetch</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#58A6FF"></span>Registre Lxss</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#BC8CFF"></span>Amcache</span>
+    </div>
+  </div>
 </div>
 
-<div class="sec"><div class="sec-title">Localisation des artefacts WSL</div>
-<div class="g2">
-<div class="card card-cyan"><div class="ct">Système de fichiers Windows</div><ul>
-<li><strong>Ubuntu :</strong> <code>%LocalAppData%\Packages\CanonicalGroupLimited.Ubuntu...\LocalState\</code></li>
-<li><strong>Debian :</strong> <code>%LocalAppData%\Packages\TheDebianProject...\LocalState\</code></li>
-<li>WSL2 : fichier <strong>ext4.vhdx</strong> dans LocalState\</li>
-<li>WSL1 : dossier <strong>rootfs\</strong> avec arborescence Linux</li>
-</ul></div>
-<div class="card card-blue"><div class="ct">Registre Windows</div><ul>
-<li><code>HKCU\Software\Microsoft\Windows\CurrentVersion\Lxss\</code></li>
-<li>Une clé par distribution installée (GUID)</li>
-<li>DefaultDistribution = distribution par défaut</li>
-<li>BasePath = chemin vers les fichiers de la distro</li>
-</ul></div>
-</div></div>
-
-<div class="sec"><div class="sec-title">Détection de l'usage WSL</div>
-<div class="g2">
-<div class="card card-gold"><div class="ct">Windows Event Logs</div><ul>
-<li>Event ID <strong>4688</strong> : processus <code>wsl.exe</code> lancé</li>
-<li>Event ID <strong>4688</strong> : <code>bash.exe</code>, <code>ubuntu.exe</code>, <code>debian.exe</code></li>
-<li>Prefetch : <code>WSL.EXE-*.pf</code>, <code>BASH.EXE-*.pf</code></li>
-<li>Amcache : entrées pour wsl.exe et les distros</li>
-</ul></div>
-<div class="card card-red"><div class="ct">Contenu intéressant dans le VHD</div><ul>
-<li><code>/root/.bash_history</code> — commandes exécutées</li>
-<li><code>/home/user/.bash_history</code></li>
-<li><code>/var/log/</code> — logs Linux</li>
-<li><code>/tmp/</code>, <code>/root/</code> — fichiers temporaires</li>
-<li>Outils réseau : nmap, curl, wget traces</li>
-</ul></div>
-</div></div>
-
-<div class="sec"><div class="sec-title">Analyser le ext4.vhdx (WSL2)</div>
-<div class="steps">
-<div class="step"><div class="step-num sn">1</div><div class="step-text"><strong>Localiser le VHDX</strong> — chercher <code>ext4.vhdx</code> dans le profil utilisateur. Hash avant manipulation.</div></div>
-<div class="step"><div class="step-num sn">2</div><div class="step-text"><strong>Convertir en RAW</strong> — <code>qemu-img convert -f vhdx -O raw ext4.vhdx disk.raw</code></div></div>
-<div class="step"><div class="step-num sn">3</div><div class="step-text"><strong>Analyser sur Linux</strong> — <code>sudo mount -o ro,loop disk.raw /mnt/wsl</code> puis accéder à /root/, /home/, /var/log/.</div></div>
-</div></div>
-
-
-<div class="tip">⚖️ <strong>Examen CAS-IN :</strong> WSL = Windows Subsystem for Linux · WSL2 stocke Linux dans <strong>ext4.vhdx</strong> · Localisation : %LocalAppData%\Packages\[distro]\LocalState\ · Registre : HKCU\...\Lxss\ · Event ID <strong>4688</strong> avec wsl.exe / bash.exe = preuve d'usage · Historique bash dans le VHD : /root/.bash_history · Analyser avec qemu-img + mount Linux · WSL1 : fichiers directement lisibles dans rootfs\</div>
-
-<div class="footer">
-  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
-  <span>SANS FOR508 · Microsoft WSL Documentation · DFIR.science</span>
-</div>
+<!-- CITATION -->
+<div class="page-wrap">
+  <div class="info" style="border-left:3px solid var(--cyan);background:rgba(0,229,204,.04);border-radius:0 8px 8px 0;padding:.9rem 1.2rem;margin:1rem 0">
+    <p style="font-style:italic;color:var(--muted);font-size:.82rem">"WSL has become a common attack vector on Windows — it provides a full Linux environment that bypasses many AV solutions and leaves artefacts in unexpected places that analysts overlook."</p>
+    <p style="font-size:.7rem;color:var(--dim);margin-top:.3rem">— SANS FOR508 · WSL as an attack vector, 2022</p>
+    <p style="margin-top:.6rem;font-size:.78rem">💡 <strong>Double danger forensique :</strong> WSL peut être utilisé par des attaquants pour exécuter des outils Linux (nmap, wget, bash scripts) dans Windows, souvent sans que les solutions EDR Windows ne les détectent correctement.</p>
+  </div>
 </div>
 
-<button class="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<!-- WSL1 vs WSL2 -->
+<div class="page-wrap">
+  <div class="sec-title">📊 WSL1 vs WSL2 — Comparaison</div>
+  <table>
+    <thead><tr><th>Aspect</th><th>WSL1</th><th>WSL2</th></tr></thead>
+    <tbody>
+      <tr><td>Architecture</td><td>Traduction syscalls Linux → Windows (PicoProcess)</td><td style="color:var(--cyan)">VM légère Hyper-V avec <strong>vrai noyau Linux</strong></td></tr>
+      <tr><td>Stockage Linux</td><td>Répertoire Windows classique (<code>rootfs/</code>)</td><td style="color:var(--gold)">Disque virtuel <strong>ext4.vhdx</strong></td></tr>
+      <tr><td>Chemin fichiers</td><td><code>...\LocalState\rootfs\</code></td><td><code>...\LocalState\ext4.vhdx</code></td></tr>
+      <tr><td>Forensique</td><td style="color:var(--green)">Fichiers directement lisibles depuis Windows</td><td style="color:var(--red)">Nécessite de monter le VHDX ext4 sur Linux</td></tr>
+      <tr><td>Interface réseau</td><td>Partage l'IP Windows</td><td style="color:var(--gold)">Interface NAT propre (IP distincte 172.x.x.x)</td></tr>
+      <tr><td>Performance I/O</td><td>Lente sur fichiers Linux pure</td><td>Plus rapide sur ext4 · plus lent sur fichiers Windows partagés</td></tr>
+      <tr><td>Year</td><td>2016</td><td>2019 (défaut depuis Windows 11)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- LOCALISATION -->
+<div class="page-wrap">
+  <div class="sec-title">📂 Localisation des artefacts WSL</div>
+  <div class="g2">
+    <div class="card card-cyan">
+      <div class="ct">📁 Système de fichiers Windows</div>
+      <ul>
+        <li><strong>Ubuntu</strong> : <code>%LocalAppData%\Packages\CanonicalGroupLimited.Ubuntu*\LocalState\</code></li>
+        <li><strong>Debian</strong> : <code>%LocalAppData%\Packages\TheDebianProject.DebianGNULinux*\LocalState\</code></li>
+        <li><strong>Kali Linux</strong> : <code>%LocalAppData%\Packages\KaliLinux.*\LocalState\</code></li>
+        <li>WSL1 : dossier <strong><code>rootfs\</code></strong> avec arborescence Linux directement</li>
+        <li>WSL2 : fichier <strong><code>ext4.vhdx</code></strong> dans <code>LocalState\</code></li>
+        <li>Aussi distribué via store Microsoft → chemin Packages/ MS</li>
+      </ul>
+    </div>
+    <div class="card card-blue">
+      <div class="ct">🗝 Registre Windows</div>
+      <ul>
+        <li><code>HKCU\Software\Microsoft\Windows\CurrentVersion\Lxss\</code></li>
+        <li>Une clé <strong>par distribution installée</strong> (UUID GUID)</li>
+        <li><code>DefaultDistribution</code> = distribution par défaut</li>
+        <li><code>BasePath</code> = chemin vers les fichiers de la distro</li>
+        <li><code>DistributionName</code> = nom (Ubuntu, Debian, etc.)</li>
+        <li><code>Version</code> = 1 (WSL1) ou 2 (WSL2)</li>
+        <li><code>State</code> = 1 (active)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- DÉTECTION USAGE -->
+<div class="page-wrap">
+  <div class="sec-title">🔍 Détection de l'usage WSL</div>
+  <div class="g2">
+    <div class="card card-gold">
+      <div class="ct">📋 Windows Event Logs &amp; Prefetch</div>
+      <ul>
+        <li>Event ID <strong>4688</strong> : processus <code>wsl.exe</code> lancé</li>
+        <li>Event ID <strong>4688</strong> : <code>bash.exe</code>, <code>ubuntu.exe</code>, <code>debian.exe</code>, <code>kali.exe</code></li>
+        <li>Prefetch : <code>WSL.EXE-*.pf</code>, <code>BASH.EXE-*.pf</code> — preuve d'exécution + comptage</li>
+        <li>Sysmon Event 1 (si déployé) : encore plus détaillé avec hash + PPID</li>
+        <li>Amcache : entrées pour <code>wsl.exe</code> et binaires des distros</li>
+        <li>Microsoft-Windows-Hyper-V-Worker (WSL2) : démarrage de la VM légère</li>
+      </ul>
+    </div>
+    <div class="card card-red">
+      <div class="ct">🐧 Contenu intéressant dans le ext4.vhdx</div>
+      <ul>
+        <li><code>/root/.bash_history</code> — commandes root</li>
+        <li><code>/home/&lt;user&gt;/.bash_history</code> — commandes user</li>
+        <li><code>/home/&lt;user&gt;/.zsh_history</code> · <code>/root/.zsh_history</code></li>
+        <li><code>/var/log/</code> — logs Linux (auth.log, syslog)</li>
+        <li><code>/tmp/</code>, <code>/root/</code> — fichiers temporaires</li>
+        <li>Outils réseau : traces nmap, curl, wget, ssh, hydra</li>
+        <li><code>/etc/passwd</code> · <code>/etc/shadow</code> — comptes Linux</li>
+        <li><code>~/.ssh/</code> — clés SSH générées dans WSL</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- WORKFLOW VHDX -->
+<div class="page-wrap">
+  <div class="sec-title">🔧 Analyser le ext4.vhdx (WSL2) — Workflow</div>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Localiser le VHDX</strong> — chercher <code>ext4.vhdx</code> dans <code>%LocalAppData%\Packages\*\LocalState\</code> de chaque profil utilisateur. <strong>Hash SHA-256 avant manipulation</strong>. Documenter taille et timestamps.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Convertir en RAW</strong> pour usage avec outils forensiques classiques : <code>qemu-img convert -f vhdx -O raw ext4.vhdx disk.raw</code></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Analyser sur Linux</strong> en read-only : <code>sudo mount -o ro,loop disk.raw /mnt/wsl</code> puis explorer <code>/root/</code>, <code>/home/</code>, <code>/var/log/</code>. <strong>Best practice</strong> : mount via copie de travail, jamais l'original.</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-text"><strong>Carving sur l'image RAW</strong> — <code>foremost</code>, <code>scalpel</code>, <code>PhotoRec</code> peuvent extraire fichiers supprimés du ext4. <code>ext4magic</code> pour récupération via journal.</div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-text"><strong>Timeline cross-OS</strong> — combiner timestamps Linux (atime/mtime/ctime ext4) et Windows (Event Logs wsl.exe) pour reconstituer l'activité de l'attaquant à travers les deux mondes.</div></div>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div class="page-wrap">
+  <div class="sec-title">🧠 Testez-vous</div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Comment savoir rapidement si un suspect a utilisé WSL sur sa machine Windows ?<small>Détection · Niveau : facile</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer">Plusieurs vérifications rapides : <strong>(1) Registre</strong> — examiner <code>HKCU\Software\Microsoft\Windows\CurrentVersion\Lxss\</code> : si la clé existe, WSL est installé. Sous-clés GUID = distributions installées. <strong>(2) Filesystem</strong> — chercher <code>ext4.vhdx</code> : <code>dir /s /b %LocalAppData%\Packages\*ext4.vhdx</code>. La taille du fichier indique l'ampleur de l'usage. <strong>(3) Prefetch</strong> — présence de <code>WSL.EXE-*.pf</code>, <code>BASH.EXE-*.pf</code>, <code>UBUNTU.EXE-*.pf</code> dans <code>C:\Windows\Prefetch\</code> + leur dernière exécution. <strong>(4) Event Logs Security</strong> — chercher EID 4688 avec <code>NewProcessName</code> contenant <code>wsl.exe</code>, <code>bash.exe</code>, ou un binaire Linux. <strong>(5) Amcache</strong> — <code>%SystemRoot%\AppCompat\Programs\Amcache.hve</code> : recherche des entrées WSL avec dates et hash SHA-1. <strong>(6) Features Windows</strong> — <code>HKLM\System\CurrentControlSet\Services\LxssManager</code> : si actif = WSL activé. <strong>(7) Network</strong> — <code>ipconfig /all</code> peut révéler l'interface vEthernet (WSL) avec IP 172.x.x.x. <strong>Conclusion</strong> : la combinaison de ces sources donne une image complète de l'usage WSL.</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Vous trouvez un <code>ext4.vhdx</code> de 50 GB sur la machine d'un suspect. Que faire ?<small>Acquisition · Niveau : moyen</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer">Procédure forensique : <strong>(1) Documenter</strong> — chemin exact, taille, timestamps (création, modification, accès), hash SHA-256. Photographier l'arborescence complète <code>%LocalAppData%\Packages\</code>. <strong>(2) Copie write-blocked</strong> — copier le VHDX sur stockage forensique avec write-blocker, OU travailler depuis l'image disque complète Windows. <strong>NE JAMAIS</strong> modifier l'original. <strong>(3) Conversion en RAW</strong> sur station forensique Linux : <code>qemu-img convert -f vhdx -O raw ext4.vhdx wsl_disk.raw</code> · ou usage direct avec outils supportant VHDX (Autopsy/X-Ways). <strong>(4) Mount read-only</strong> : <code>sudo mount -o ro,loop wsl_disk.raw /mnt/wsl</code>. <strong>(5) Analyse standard Linux</strong> : <code>~/.bash_history</code>, <code>/var/log/auth.log</code>, <code>/etc/passwd</code>, <code>/etc/shadow</code>, <code>/tmp/</code>, <code>/root/</code>, <code>~/.ssh/known_hosts</code>, fichiers récents (<code>find / -mtime -7</code>). <strong>(6) Carving</strong> : <code>photorec</code> ou <code>foremost</code> pour fichiers supprimés. <code>ext4magic -j /mnt/wsl</code> peut extraire via le journal. <strong>(7) Cross-corrélation</strong> avec timeline Windows (EID 4688 wsl.exe) → reconstituer chronologie complète. <strong>(8) Outils spécifiques</strong> : <code>plaso/log2timeline</code> peut intégrer ext4 + EVTX dans une seule timeline.</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Pourquoi WSL est-il un vecteur d'attaque privilégié et comment s'en défendre ?<small>Sécurité · Niveau : difficile</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer"><strong>WSL = vecteur d'attaque émergent</strong> pour plusieurs raisons : (1) <strong>Bypass EDR partiel</strong> — beaucoup d'EDR Windows surveillent les API Win32 et le kernel NT, mais voient peu les syscalls Linux dans WSL2 (qui passent par le noyau Linux dans la VM Hyper-V). (2) <strong>Outils offensifs natifs</strong> — l'attaquant a accès direct à nmap, hydra, john, hashcat, sqlmap, mimipenguin, etc. sans installation détectable côté Windows. (3) <strong>Persistence furtive</strong> — backdoors dans <code>~/.bashrc</code>, cron WSL, services systemd dans la distro. (4) <strong>Pivot vers Windows</strong> — depuis WSL on peut accéder au filesystem Windows via <code>/mnt/c/</code> et y déposer des malwares. (5) <strong>Network spoofing</strong> — WSL2 a sa propre interface réseau, certains scanners NIDS le voient comme une machine séparée. <strong>Défense</strong> : (a) <strong>Désactiver WSL</strong> si non nécessaire — Group Policy <code>Computer Configuration\...\Windows Subsystem for Linux</code>. (b) <strong>Activer Sysmon</strong> avec règles spécifiques pour <code>wsl.exe</code>, <code>bash.exe</code>. (c) <strong>EDR avec support WSL</strong> — vérifier que la solution surveille bien WSL (Defender for Endpoint le fait depuis 2022). (d) <strong>Logging WSL</strong> : activer <code>auditd</code> dans la distro Linux WSL. (e) <strong>WDAC / AppLocker</strong> : bloquer <code>wsl.exe</code> pour les utilisateurs non-développeurs. (f) <strong>Network segmentation</strong> : vEthernet WSL doit être isolé. (g) <strong>Threat hunting</strong> proactif sur EID 4688 wsl.exe + exécution d'outils inhabituels.</div>
+  </div>
+</div>
+
+<!-- EXAM TIP -->
+<div class="page-wrap">
+  <div class="exam-tip">
+    <div class="exam-tip-title">🎓 Exam Tip — WSL Forensique</div>
+    <p><strong>WSL</strong> = Windows Subsystem for Linux · Linux dans Windows sans VM lourde</p>
+    <p><strong>WSL1 (2016)</strong> = traduction syscalls · fichiers dans <code>rootfs\</code> Windows directement lisibles</p>
+    <p><strong>WSL2 (2019, défaut)</strong> = vrai noyau Linux dans VM Hyper-V légère · fichiers dans <code>ext4.vhdx</code></p>
+    <p><strong>Localisation</strong> :</p>
+    <p>&nbsp;&nbsp;• Ubuntu : <code>%LocalAppData%\Packages\CanonicalGroupLimited.Ubuntu*\LocalState\</code></p>
+    <p>&nbsp;&nbsp;• Debian : <code>%LocalAppData%\Packages\TheDebianProject*\LocalState\</code></p>
+    <p>&nbsp;&nbsp;• Kali : <code>%LocalAppData%\Packages\KaliLinux*\LocalState\</code></p>
+    <p><strong>Registre</strong> : <code>HKCU\Software\Microsoft\Windows\CurrentVersion\Lxss\</code> — distros installées</p>
+    <p><strong>Détection d'usage</strong> :</p>
+    <p>&nbsp;&nbsp;• Event ID <strong>4688</strong> : <code>wsl.exe</code>, <code>bash.exe</code>, <code>ubuntu.exe</code>, etc.</p>
+    <p>&nbsp;&nbsp;• Prefetch : <code>WSL.EXE-*.pf</code>, <code>BASH.EXE-*.pf</code></p>
+    <p>&nbsp;&nbsp;• Amcache : entries WSL + hash SHA-1</p>
+    <p>&nbsp;&nbsp;• Sysmon Event 1 si déployé</p>
+    <p><strong>Contenu VHD à analyser</strong> :</p>
+    <p>&nbsp;&nbsp;• <code>/root/.bash_history</code> · <code>/home/user/.bash_history</code></p>
+    <p>&nbsp;&nbsp;• <code>/var/log/</code> (auth.log, syslog)</p>
+    <p>&nbsp;&nbsp;• <code>/tmp/</code>, <code>/root/</code>, <code>~/.ssh/</code></p>
+    <p><strong>Workflow analyse VHDX</strong> :</p>
+    <p>&nbsp;&nbsp;1. Hash + copie write-blocked</p>
+    <p>&nbsp;&nbsp;2. <code>qemu-img convert -f vhdx -O raw ext4.vhdx disk.raw</code></p>
+    <p>&nbsp;&nbsp;3. <code>sudo mount -o ro,loop disk.raw /mnt/wsl</code></p>
+    <p>&nbsp;&nbsp;4. Analyse standard Linux + carving</p>
+    <p><strong>Vecteur d'attaque</strong> : bypass EDR Windows partiel · outils Linux natifs · persistence furtive · pivot via /mnt/c/</p>
+  </div>
+
+  <div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> WSL = Windows Subsystem for Linux · WSL2 stocke Linux dans <strong>ext4.vhdx</strong> · Localisation : %LocalAppData%\Packages\[distro]\LocalState\ · Registre : HKCU\...\Lxss\ · Event ID <strong>4688</strong> avec wsl.exe / bash.exe = preuve d'usage · Historique bash dans le VHD : /root/.bash_history · Analyser avec qemu-img + mount Linux · WSL1 : fichiers directement lisibles dans rootfs\ · Vecteur d'attaque émergent (bypass EDR partiel).</div>
+
+  <div class="footer">
+    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+    <span>SANS FOR508 · Microsoft WSL Documentation · DFIR.science</span>
+  </div>
+</div>
+
 <script>
-const b=document.querySelector('.back-top');
-window.addEventListener('scroll',()=>b.classList.toggle('visible',window.scrollY>300));
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+})();
+document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+    ans.classList.toggle('visible');
+    btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+  });
+});
 </script>
-</body></html>
+</body>
+</html>
