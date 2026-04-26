@@ -13175,5 +13175,2035 @@ var SCENES = [
         ]
       }
     ]
+  },
+  {
+    "id": "delemont-forum",
+    "title": "Forum Cyber des Communes — Delémont",
+    "icon": "🏛️",
+    "difficulty": "easy",
+    "atmosphere": "legal",
+    "realCase": "Forum Cyber des Communes — Delémont, novembre 2025. Simulations d'attaques cyber, préparation au passage au Guichet virtuel jurassien 2026. Première édition cantonale.",
+    "narrative": {
+      "success": "Vous animez le forum avec succès : les 23 communes jurassiennes repartent avec un plan de durcissement réaliste, une checklist d'incident et la liste des contacts NCSC/OFCS/police cantonale. Trois communes signalent dans la semaine des tentatives qu'elles n'avaient pas vues. Le Guichet virtuel 2026 est lancé avec des bases solides.",
+      "degraded": "Le forum se passe correctement mais une partie des secrétaires communaux repart avec l'impression que « le canton va tout faire » — la responsabilité communale n'est pas assez claire. Quelques communes ne signaleront pas leur premier incident en 2026.",
+      "failure": "Le forum tourne au cours technique abscons : les secrétaires de petites communes (3-4 employés) sont perdus, ne mettent rien en place, et la première vraie attaque ransomware sur une commune jurassienne en 2026 trouve le terrain non préparé."
+    },
+    "tags": [
+      "PRÉVENTION",
+      "ADMINISTRATION",
+      "DROIT",
+      "SENSIBILISATION"
+    ],
+    "legalRefs": [
+      "LSI Art. 74c",
+      "LPD Art. 24",
+      "Art. 8 LPDCa-JU",
+      "Art. 143-144bis CP"
+    ],
+    "intro": "Vous êtes mandaté par le Service informatique du canton du Jura pour animer le premier Forum Cyber des Communes à Delémont. Public : 23 communes jurassiennes, secrétaires communaux et conseillers IT (souvent un secrétaire à 30 % qui s'occupe aussi de l'IT). Contexte : passage au Guichet virtuel cantonal en 2026, hausse des incidents cyber communaux en Suisse romande (Saxon 2023, Vétroz 2026, plusieurs autres). Les communes sont inquiètes mais peu préparées. Vous avez 3 heures.",
+    "alertLevel": "🏛️ FORUM CYBER COMMUNES — 23 communes JU · Guichet virtuel 2026 · Préparation collective",
+    "objectives": [
+      {
+        "icon": "📋",
+        "text": "Délivrer une checklist d'urgence concrète (qui appeler, quoi faire dans les 60 premières minutes)"
+      },
+      {
+        "icon": "⚖️",
+        "text": "Clarifier les obligations légales communales (LSI Art. 74c, LPD Art. 24)"
+      },
+      {
+        "icon": "🤝",
+        "text": "Articuler les rôles : commune, canton, NCSC/OFCS, police cantonale, MP-JU"
+      },
+      {
+        "icon": "🛡️",
+        "text": "Donner des mesures de durcissement réalistes pour des communes à budget IT modeste"
+      }
+    ],
+    "debrief": "<p>Le <strong>tissu communal suisse</strong> est une cible privilégiée des ransomwares depuis 2022 : 2'200 communes, dont la majorité avec un IT minimaliste (souvent un secrétaire à temps partiel ou un prestataire externe). Les opérateurs criminels (Akira, Black Basta, LockBit) le savent.</p>\n<p><strong>Obligations légales</strong> : la <strong>LSI Art. 74c</strong> (entrée en vigueur 2024) rend le signalement à l'OFCS obligatoire pour les exploitants d'infrastructures critiques — les communes qui exploitent des services publics essentiels (eau, électricité, état civil) y entrent. La <strong>LPD Art. 24</strong> oblige à notifier le PFPDT en cas de violation de sécurité des données dans les meilleurs délais. Au plan cantonal, les LPD cantonales (<strong>LPDCa-JU</strong> ici) complètent.</p>\n<p>Pour la <strong>pédagogie</strong>, l'enjeu est de calibrer le message : trop technique = effet repoussoir et inaction ; trop léger = inefficace face à une vraie attaque. La méthode éprouvée : <strong>checklist concrète + simulation d'incident + carnet d'adresses</strong>. La police cantonale dispose d'une cellule cyber capable d'intervenir rapidement, mais elle a besoin d'être appelée tôt — la pédagogie sert précisément à ce qu'on l'appelle.</p>",
+    "steps": [
+      {
+        "phase": "📋 La première heure — quel message clé ?",
+        "situation": "Vous ouvrez le forum. La salle compte 47 personnes : secrétaires communaux, quelques conseillers communaux, un journaliste local du Quotidien Jurassien, et le chef du Service informatique du canton. Vous avez préparé 60 slides techniques. En vous installant, vous percevez l'inquiétude (« on n'a rien compris à la conférence de Berne il y a 3 mois ») et le scepticisme (« nous, on a 4 employés, ça nous concerne pas »). Comment ouvrez-vous concrètement les 30 premières minutes ?",
+        "law": "<strong>LSI Art. 74c</strong> — Signalement OFCS obligatoire pour infrastructures critiques (s'applique aux communes pour services publics essentiels).<br><strong>LPD Art. 24</strong> — Notification PFPDT en cas de violation, délai « les meilleurs délais » (24-72h en pratique).<br><strong>LPDCa-JU Art. 8</strong> — Sécurité des données cantonales et communales.",
+        "question": "<strong>Comment ouvrez-vous le forum pour capter l'audience non-technique ?</strong>",
+        "choices": [
+          {
+            "text": "Commencer par un cas concret jurassien (anonymisé) : « Mardi 14h, dans une commune de votre canton, le secrétaire ne peut plus accéder à l'état civil. Trois jours plus tard, les habitants demandent leurs actes de naissance, l'employée pleure. Voilà ce qui s'est passé, voilà ce qu'on aurait dû faire. » Puis dérouler une checklist en 1 page : 5 numéros à appeler dans l'ordre, 3 actions à NE PAS faire, où trouver le formulaire de signalement OFCS. Garder les slides techniques pour la 2e partie en option.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Approche pédagogique optimale pour un public non-technique. Le storytelling concret (cas jurassien, scène réaliste) crée l'identification immédiate qui manquait à la conférence de Berne abstraite. La checklist 1 page actionnable est ce que les secrétaires retiennent et photographient avec leur téléphone — bien plus utile que 60 slides. Le découpage « 5 numéros / 3 ne-pas-faire / formulaire » est mémorisable. La 2e partie technique en option respecte les niveaux de l'audience. Cette méthode est validée par le SCSE (Service de la cybersécurité de l'État de Vaud) qui l'a déployée depuis 2023.",
+            "legal": "Pédagogie inspirée des recommandations OFCS pour la sensibilisation publique.",
+            "critical": false,
+            "next": 1
+          },
+          {
+            "text": "Commencer par les obligations légales (LSI Art. 74c, LPD Art. 24, LPDCa-JU Art. 8) en détaillant les délais et les sanctions encourues — comme cela les communes comprendront tout de suite l'enjeu juridique et adapteront leur comportement par crainte des poursuites. Les sanctions LPD peuvent monter jusqu'à 250'000 CHF, c'est un argument percutant. La pédagogie passe par la peur des conséquences, c'est ce qui marche le mieux dans les milieux peu sensibilisés à la cybersécurité. Cette approche frontale par les obligations légales a fait ses preuves dans plusieurs cantons alémaniques où elle est devenue la norme pour les forums cyber communaux depuis 2023.",
+            "ok": false,
+            "pts": -10,
+            "fb": "Approche par la peur juridique contre-productive avec ce public. (1) La menace de sanctions paralyse plus qu'elle ne mobilise — un secrétaire communal débordé qui entend « 250'000 CHF » va plutôt minimiser et ne pas signaler par peur, exactement l'inverse de l'objectif. (2) Les sanctions LPD à 250k visent les responsables de traitement (privés, art. 60-63 nLPD), pas directement les communes ; c'est inexact et la salle s'en apercevra dès la première question. (3) La pédagogie par la peur juridique est désavouée par les guides modernes de sensibilisation cyber (NCSC UK, ANSSI FR, OFCS CH).",
+            "legal": "Pédagogie par la peur — pratique désavouée par les guides modernes.",
+            "critical": false,
+            "next": 1
+          },
+          {
+            "text": "Démarrer par une démonstration technique en direct : projeter une console, montrer comment un attaquant utilise nmap/Hydra/Metasploit pour scanner et pénétrer un réseau communal type. La compréhension viscérale de la mécanique d'attaque va frapper l'audience et créer une vraie prise de conscience technique. Ensuite seulement aborder la défense et les obligations légales, car sans comprendre le « comment », tout le reste est abstrait pour eux.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Erreur de calibrage du public. (1) Une démonstration nmap/Metasploit devant 47 secrétaires communaux dont la plupart n'ont jamais ouvert de terminal va passer à 100 % au-dessus des têtes — vous aurez perdu la salle dans les 5 minutes. (2) Le journaliste local va ressortir un article alarmiste « la police montre comment pirater les communes » qui jettera l'opprobre sur le forum. (3) Les bonnes pratiques pédagogiques (Canton de Vaud, Genève) sont claires : les démos techniques sont réservées aux publics IT-aware, pas aux secrétaires communaux.",
+            "legal": "Calibrage pédagogique audience non-technique requis.",
+            "critical": false,
+            "next": 1
+          }
+        ]
+      },
+      {
+        "phase": "📞 La checklist 60 minutes — qui appeler en premier ?",
+        "situation": "Une secrétaire communale lève la main : « Vendredi soir 22h, je découvre que les fichiers du serveur communal sont chiffrés. Je suis seule. Mon mari me dit d'appeler la police, mon fils de 19 ans me dit de payer en Bitcoin, ma collègue d'un autre village m'a dit de ne rien faire et d'attendre lundi. Concrètement, j'appelle qui en premier ? » Toute la salle attend votre réponse.",
+        "law": "<strong>LSI Art. 74c</strong> — Signalement OFCS obligatoire (formulaire en ligne 24/7).<br><strong>Police cantonale</strong> — Cellule cyber JU joignable via 117 (relais) ou directement.<br><strong>NCSC/OFCS</strong> — Hotline non-urgente : reportphishing@ncsc.ch / formulaire web.<br><strong>Doctrine FBI/Europol</strong> — Ne PAS payer (alimente le crime, pas de garantie de déchiffrement).",
+        "question": "<strong>Quel ordre d'appel concret donnez-vous à la secrétaire ?</strong>",
+        "choices": [
+          {
+            "text": "Ordre clair en 4 étapes : (1) DÉCONNECTER physiquement le câble réseau du serveur (pas l'éteindre — les preuves RAM sont précieuses) ; (2) APPELER la police cantonale JU via 117 en demandant la cellule cyber, même à 22h vendredi (astreinte 24/7) ; (3) NOTIFIER l'OFCS via formulaire en ligne (à faire dans les 24h, peut attendre lundi matin) ; (4) NE PAS payer la rançon, NE PAS effacer les fichiers, NE PAS rallumer en pensant « réparer ». Tout le reste (assurance, prestataire IT, autorité communale) vient après ces 4 étapes.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Réponse opérationnelle parfaite, calibrée pour le public. (1) « Débrancher sans éteindre » est la règle d'or moderne (préserve la RAM pour analyse forensique des clés crypto en mémoire). (2) Le 117 fonctionne 24/7 en Suisse, les cellules cyber cantonales ont une astreinte — la secrétaire peut effectivement appeler à 22h vendredi et obtenir un retour rapide. (3) L'OFCS pas en urgence (formulaire web), c'est correct : le PFPDT et l'OFCS ne sont pas des hotlines opérationnelles. (4) Les 3 NE PAS sont les pièges classiques. La hiérarchie des appels est claire et la salle peut la photographier.",
+            "legal": "LSI Art. 74c + 117 cantonal + doctrine NCSC — Procédure éprouvée.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Conseil pragmatique : appeler d'abord son prestataire IT habituel s'il y en a un (souvent une PME locale qui connaît le système communal), puis seulement après envisager la police si le prestataire ne s'en sort pas. La police cyber cantonale est débordée et un prestataire IT local peut souvent rétablir un système chiffré plus vite par expertise technique. Le réflexe « appeler la police » à 22h vendredi est rarement productif et fait perdre du temps. De nombreux RSSI privés confirment d'ailleurs que le réflexe \"prestataire d'abord\" reste le plus efficace en pratique pour minimiser le temps de récupération opérationnelle, surtout dans les contextes ruraux où la cellule cantonale peut prendre du temps à se déplacer physiquement.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Mauvais réflexe, dangereux à plusieurs titres. (1) Un prestataire IT local n'est pas formé au forensique : il va probablement TOUCHER les preuves (rallumer, scanner, restaurer en surcouche) et détruire les éléments d'enquête sans s'en rendre compte. (2) Beaucoup d'attaques ransomware passent PAR le prestataire IT compromis (cf. Akira/Vétroz, Saxon 2023) — appeler le prestataire en premier peut alerter l'attaquant. (3) Les cellules cyber cantonales NE SONT PAS débordées au point de ne pas répondre à 22h — le 117 existe précisément pour cela. (4) La doctrine MELANI/NCSC depuis 2018 inverse cette priorité.",
+            "legal": "Doctrine NCSC — Police d'abord, prestataire après coordination.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Conseiller à la secrétaire de prendre le temps de la réflexion : ne rien faire jusqu'à lundi matin, fermer le bureau, et au retour analyser calmement la situation avec le conseil communal en début de semaine. La précipitation à 22h vendredi mène à de mauvaises décisions, alors qu'une cellule de crise communale réunie le lundi matin avec tous les responsables prend des décisions plus solides.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Réponse catastrophique sur tous les plans. (1) Pendant 2 jours d'inaction (vendredi 22h → lundi matin = 60 heures), l'attaquant peut continuer à exfiltrer des données s'il a un accès secondaire, supprimer les sauvegardes, étendre le chiffrement à des partages réseau encore intacts. (2) Les premières 60 minutes sont CRITIQUES en gestion d'incident — c'est la doctrine universelle (NIST SP 800-61, ENISA, NCSC). (3) Le secret de la victime alimente l'attaquant qui sait que le délai joue pour lui. (4) Le défaut de réaction peut engager la responsabilité communale (LPD, LSI) — l'inaction est une faute, pas une prudence.",
+            "legal": "NIST SP 800-61 + LSI Art. 74c — Réaction immédiate impérative.",
+            "critical": true,
+            "next": "end"
+          }
+        ]
+      },
+      {
+        "phase": "🛡️ Mesures réalistes pour petite commune",
+        "situation": "Le secrétaire communal d'une petite commune de 380 habitants prend la parole : « Notre IT, c'est moi. Mon budget annuel est de 4'000 CHF. On nous parle de SIEM, EDR, MFA, segmentation réseau, sauvegardes 3-2-1, durcissement AD... C'est mission impossible. Donnez-nous 3 mesures qui sauvent la mise et qu'on peut faire avec ce qu'on a. » Toute la salle des petites communes hoche la tête.",
+        "law": "<strong>Principe de proportionnalité</strong> — Les mesures de sécurité doivent être adaptées aux moyens.<br><strong>LPD Art. 8</strong> — Sécurité des données : niveau de protection adéquat compte tenu des risques.<br><strong>Recommandations NCSC pour PME/communes</strong> — Top 5 mesures impact/coût optimal.",
+        "question": "<strong>Quelles 3 mesures concrètes recommandez-vous ?</strong>",
+        "choices": [
+          {
+            "text": "(1) MFA partout où c'est possible (Microsoft 365, banque communale, accès distant) — gratuit ou inclus, bloque 99 % des compromissions par credentials volés ; (2) Sauvegardes hors-ligne hebdomadaires sur disque externe rotatif rangé physiquement hors du bâtiment communal (chez le secrétaire ou en coffre-fort communal) — coût 200 CHF, sauve la vie en cas de ransomware ; (3) Mises à jour Windows automatiques activées + Defender activé — gratuit, bloque la majorité des malwares connus. Pour le reste, mutualiser avec d'autres communes du district (achat groupé EDR à 50 CHF/poste/an = budget partagé).",
+            "ok": true,
+            "pts": 25,
+            "fb": "Sélection optimale impact/coût selon les benchmarks NCSC. (1) Le MFA est statistiquement la mesure la plus rentable : Microsoft documente une réduction de 99,2 % des compromissions de comptes. Gratuit dans tous les abonnements Microsoft 365 même de base. (2) Sauvegardes hors-ligne rotatives : c'est ce qui a sauvé Vétroz d'une perte totale (limité à 2 jours). 200 CHF de disques externes USB, rotation hebdo. (3) Updates + Defender : la patche Microsoft est suffisante pour la majorité des menaces opportunistes. La proposition de mutualisation entre communes est concrète et adaptée au contexte JU (Conférence des Maires JU).",
+            "legal": "NCSC Recommandations PME — Top 3 impact/coût optimal.",
+            "critical": false,
+            "next": 3
+          },
+          {
+            "text": "Recommandation honnête : avec 4'000 CHF/an, la commune ne peut pas se sécuriser correctement — c'est un fait, le seuil minimum réaliste se situe autour de 15'000-20'000 CHF/an. Conseiller au secrétaire de demander une rallonge budgétaire au conseil communal (avec votre forum comme argument), et en attendant, externaliser tout l'IT à un MSP régional spécialisé qui prendra en charge la sécurité dans son forfait global. C'est plus cher mais plus sérieux.",
+            "ok": false,
+            "pts": -10,
+            "fb": "Réponse honnête mais qui rate le besoin de l'audience. (1) Dire « vous ne pouvez pas vous sécuriser » est démoralisant et faux : il y a des mesures gratuites/quasi-gratuites à très haut impact. La question explicitement posée était « 3 mesures avec ce qu'on a ». (2) Externaliser à un MSP régional est précisément ce qui a créé les supply chain attacks (Vétroz/Akira via prestataire IT, Saxon 2023, Xplain 2023). Ce n'est pas la solution miracle. (3) Le conseil de demander une rallonge est valide à long terme mais ne répond pas à la question opérationnelle posée. (4) La proposition correcte (MFA + backups + updates) montre qu'on peut faire BEAUCOUP avec presque rien.",
+            "legal": "NCSC — Mesures gratuites à haut impact existent.",
+            "critical": false,
+            "next": 3
+          },
+          {
+            "text": "(1) Installer un firewall nouvelle génération de qualité enterprise (Palo Alto, Fortinet) à l'entrée du réseau communal — c'est la base de toute sécurité moderne, environ 3'000-5'000 CHF + maintenance annuelle ; (2) Déployer un SIEM léger type Wazuh open-source pour corréler les événements ; (3) Imposer un changement de mot de passe complexe tous les 90 jours pour tous les comptes utilisateurs. Ces mesures de niveau professionnel constituent une vraie défense en profondeur. Cette approche par l'investissement sécurité robuste, défendue par les intégrateurs IT romands sérieux qui équipent les administrations vaudoises et fribourgeoises, est la seule qui crée une vraie défense en profondeur opposable aux groupes ransomware sophistiqués que sont aujourd'hui Akira, Black Basta ou LockBit dans leur dernière itération technique.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Mauvais ciblage des priorités pour une petite commune. (1) Un firewall NG à 5'000 CHF consomme TOUT le budget annuel et plus — alors que la majorité des attaques modernes (phishing, credentials volés) passent SOUS le firewall (l'utilisateur clique). (2) Wazuh open-source : excellent outil mais demande des compétences SOC que la commune n'a pas — c'est inutilisable sans analyste pour interpréter les alertes. (3) La rotation forcée des mots de passe tous les 90 jours est désavouée par le NIST SP 800-63B depuis 2017 (mène à des mots de passe plus faibles et notés sur post-its). Réponse qui surfacture la solution sans cibler les vrais risques.",
+            "legal": "NIST SP 800-63B — Rotation forcée déconseillée. NCSC — MFA prioritaire.",
+            "critical": false,
+            "next": 3
+          }
+        ]
+      },
+      {
+        "phase": "📰 Le journaliste pose la question piège",
+        "situation": "Le journaliste du Quotidien Jurassien lève la main : « Vous parlez beaucoup de prévention, mais on apprend quasi tous les mois qu'une commune romande est attaquée. Vétroz, Saxon, et d'autres avant. La police cantonale et l'OFCS sont-ils dépassés ? Devrions-nous, en tant que citoyens, considérer que nos données communales ne sont PAS en sécurité ? » Plusieurs secrétaires regardent vers le sol. Le chef du Service informatique du canton vous regarde, légèrement crispé.",
+        "law": "<strong>LTrans (Loi sur la transparence)</strong> — Information du public, sans dramatisation excessive.<br><strong>Devoir de neutralité de l'expert mandaté</strong> — Pas de communication politique.<br><strong>Doctrine NCSC sur la communication post-incident</strong> — Honnête, factuelle, constructive.",
+        "question": "<strong>Comment répondez-vous au journaliste ?</strong>",
+        "choices": [
+          {
+            "text": "Réponse équilibrée : « Vous touchez un point réel. Oui, les attaques contre les communes augmentent — c'est une tendance européenne, pas spécifiquement suisse. Non, la police et l'OFCS ne sont pas dépassés, mais ils ne peuvent pas remplacer la prévention au niveau communal. Les attaques réussies frappent là où il manquait UNE mesure de base — souvent un MFA absent, des sauvegardes pas testées. C'est précisément l'objet de ce forum. Les données sont protégeables si chaque commune applique le minimum, et c'est faisable. Pour vos lecteurs : on est dans un combat sérieux mais pas perdu. »",
+            "ok": true,
+            "pts": 25,
+            "fb": "Réponse parfaitement calibrée. (1) Reconnaître le fait sans dramatiser (« tendance européenne, pas spécifiquement suisse ») cadre objectivement. (2) Refuser le piège du « la police est dépassée » sans nier la réalité (« ne peut pas remplacer la prévention »). (3) Le pivot vers les solutions concrètes (MFA, sauvegardes) recadre l'article potentiel sur du factuel actionnable plutôt que sur du sensationnel. (4) « Combat sérieux mais pas perdu » donne au journaliste une formule citation-ready positive sans mentir. (5) Vous protégez la cellule cyber cantonale (qui était inquiète) tout en restant honnête. Cette posture est exactement celle recommandée par le guide NCSC sur la communication publique.",
+            "legal": "Doctrine NCSC + LTrans — Communication équilibrée et factuelle.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Réponse défensive : « Non, la police cantonale et l'OFCS ne sont absolument pas dépassés, ce sont des unités performantes qui résolvent la majorité des cas. Les attaques médiatisées sont l'arbre qui cache la forêt — la plupart des incidents sont gérés avec succès et discrétion. Les données communales sont parfaitement en sécurité quand on applique les bonnes pratiques. Je vous demanderais de ne pas relayer un climat anxiogène basé sur quelques cas isolés. »",
+            "ok": false,
+            "pts": -15,
+            "fb": "Réponse perçue comme déni, contre-productive. (1) Le journaliste a cité 2 cas réels (Vétroz, Saxon) — les qualifier d' « arbre qui cache la forêt » sera perçu comme du minimisation, et il en parlera dans son article (« le forum minimisait les attaques »). (2) « Données parfaitement en sécurité » est faux et contredit votre propre forum (vous y parlez justement de mesures à prendre parce qu'il y a des risques). (3) « Demander de ne pas relayer un climat anxiogène » est exactement ce qu'il ne faut PAS dire à un journaliste — il citera la phrase pour montrer que les autorités préfèrent l'opacité. (4) Cette posture défensive nuit à long terme à la coopération police-presse.",
+            "legal": "Doctrine communication crise — Déni contre-productif.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Réponse alarmiste honnête : « Vous avez raison, le risque est réel et croissant. Aujourd'hui, statistiquement, plusieurs communes du Jura seront probablement victimes d'une attaque dans les 24 mois à venir. Les ressources de la police et de l'OFCS sont effectivement insuffisantes face à l'ampleur du phénomène — il faudrait tripler les moyens. Vos lecteurs devraient effectivement considérer que tant que cette montée en charge n'est pas faite, leurs données sont à risque. C'est une question politique de financement de la cybersécurité publique. » La sincérité publique sur les défaillances structurelles est ce qui permettra à long terme de débloquer les budgets nécessaires.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Réponse honnête sur le diagnostic mais désastreuse stratégiquement. (1) Vous êtes mandaté par le Service informatique cantonal — votre rôle n'est PAS de plaider publiquement pour le triplement des budgets, c'est outrepasser le mandat (commentaire politique). (2) Dire aux citoyens « vos données sont à risque » avant la fin du forum sape l'effet pédagogique : les secrétaires vont sortir démoralisés et inactifs. (3) Le journaliste va titrer « LE FORUM CYBER ADMET : les communes jurassiennes ne sont pas protégées » — c'est l'effet inverse recherché. (4) La franchise sur les ressources est légitime mais doit passer par les canaux institutionnels (Conseil d'État), pas par un forum public.",
+            "legal": "Devoir de réserve mandataire — Pas de plaidoyer politique.",
+            "critical": false,
+            "next": 4
+          }
+        ]
+      },
+      {
+        "phase": "🎯 Le suivi — comment éviter le forum « one-shot » ?",
+        "situation": "Le forum se termine, l'audience est satisfaite, les checklists distribuées. Le chef du Service informatique cantonal vous demande en privé : « Bon, on a fait le forum, ça leur a plu. Mais soyons honnêtes : dans 6 mois, ils auront tout oublié. Comment on capitalise pour que cette journée ait un effet durable ? J'ai 12'000 CHF de budget pour le suivi annuel. »",
+        "law": "<strong>Principes de l'apprentissage adulte</strong> — Répétition espacée, pratique active, retour d'expérience.<br><strong>Doctrine NCSC sur la culture cyber</strong> — La sensibilisation est un cycle, pas un événement.",
+        "question": "<strong>Quel programme de suivi proposez-vous avec 12'000 CHF/an ?</strong>",
+        "choices": [
+          {
+            "text": "Programme à 4 leviers : (1) Newsletter mensuelle 1 page « 1 incident réel + 1 mesure à appliquer » (coût rédaction : 200 CHF/mois) ; (2) Simulation tabletop annuelle dans 4 communes pilotes différentes chaque année (rotation, 2'000 CHF/an) ; (3) Permanence cyber cantonale 1 demi-journée/mois sur appel pour audit éclair gratuit (coût : honoraires intermittents) ; (4) Forum annuel allégé en deuxième année (REX, pas refondre depuis zéro). Total : ~10'000 CHF, marge de 2'000 CHF pour réimpressions checklist + outils visuels.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Programme structuré et financièrement réaliste. (1) Newsletter mensuelle = répétition espacée (pédagogie adulte) — un cas par mois pendant 12 mois imprime mieux que 60 slides en 3h. (2) Simulations tabletop tournantes = pratique active, et la rotation crée le bouche-à-oreille (« ah ils ont fait ça à Bassecourt, on aimerait aussi »). (3) Permanence sur appel = capacité de réaction quand un secrétaire a un doute léger qui pourrait être le début d'une attaque. (4) Forum allégé = capitalisation sans refonte épuisante. Le programme respecte les principes Knowles d'apprentissage adulte (concret, applicable, en cycles). C'est exactement le modèle déployé par le canton de Vaud depuis 2022.",
+            "legal": "Méthode Knowles + NCSC cycle de sensibilisation — Programme conforme.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Concentrer les 12'000 CHF sur une plateforme de e-learning cybersécurité avec quizz mensuels obligatoires pour tous les secrétaires communaux du canton. La traçabilité numérique permet de mesurer qui a fait/pas fait, et les rappels automatiques par email maintiennent la pression. Plus moderne, plus mesurable, plus efficient en termes de ressources humaines, c'est l'approche que toutes les grandes entreprises adoptent désormais. Cette modernisation par le numérique des dispositifs de sensibilisation est d'ailleurs encouragée par le Plan stratégique cyber de la Confédération qui pousse vers les solutions scalables et mesurables, en rupture avec les approches présentielles traditionnelles jugées coûteuses et peu reproductibles à l'échelle nationale.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Approche corporate inadaptée au contexte communal jurassien. (1) Une plateforme e-learning à 12'000 CHF/an pour 23 communes (~46 secrétaires) = 260 CHF/personne/an — c'est très cher pour des quizz génériques qui ne reflètent pas la réalité jurassienne (« Saxon, Vétroz, Villaz-St-Pierre »). (2) Les « quizz obligatoires » génèrent du clic-désengagé (« je clique pour finir »), pas de l'apprentissage réel — études RH constantes depuis 2018. (3) La pression par traçabilité (« on voit qui n'a pas fait ») crée une dynamique de conformité minimale, pas de vigilance active. (4) Les grandes entreprises qui ont adopté ce modèle l'abandonnent ou le complètent par du présentiel depuis 2023 (Gartner).",
+            "legal": "Études RH 2018-2023 — E-learning seul = engagement faible.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Concentrer le budget sur une grande conférence annuelle prestigieuse à Delémont avec des intervenants internationaux de premier plan (ENISA, ANSSI, NCSC UK) — la qualité des intervenants attire l'audience, valorise le canton du Jura sur la scène cyber suisse, et le fait d'avoir un grand événement annuel marque les esprits durablement. Chercher des sponsors privés (Swisscom, Postfinance) pour compléter le budget si nécessaire.",
+            "ok": false,
+            "pts": -10,
+            "fb": "Stratégie de prestige qui rate la cible. (1) Inviter ENISA/ANSSI/NCSC UK pour des secrétaires de petites communes jurassiennes = mismatch total : ces intervenants parlent de stratégies nationales, pas de comment configurer le MFA dans Microsoft 365 communal. (2) Le « one-shot annuel prestigieux » est exactement ce que le chef du SI VEUT ÉVITER (« dans 6 mois ils auront tout oublié »). (3) Les sponsors privés (Swisscom, Postfinance) créent un conflit d'intérêts pour un service public — les communes vont-elles ensuite se sentir libres de critiquer Swisscom ? (4) La répétition espacée (option correcte) est pédagogiquement supérieure au one-shot, c'est un fait scientifique établi.",
+            "legal": "Pédagogie adulte — Répétition > one-shot prestigieux.",
+            "critical": false,
+            "next": "end"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "harcelement-ne",
+    "title": "Le Portail Anonyme — Harcèlement Neuchâtelois",
+    "icon": "🚸",
+    "difficulty": "easy",
+    "atmosphere": "legal",
+    "realCase": "Portail de signalement du harcèlement, État de Neuchâtel — printemps 2026. Dispositif anonyme accessible aux résidents et aux touristes via QR code. Première année de fonctionnement.",
+    "narrative": {
+      "success": "Vous établissez un protocole clair distinguant signalement anonyme, plainte pénale et médiation civile. La victime touriste obtient le retrait des contenus diffamants en 48h via DSA Art. 16-18, sans procédure pénale qu'elle ne pouvait engager depuis Berlin. Une plainte pénale parallèle vise l'auteur identifié (étudiant UniNE). La doctrine cantonale est validée par la suite.",
+      "degraded": "Le retrait des contenus prend 8 jours (notification mal formée). La victime repart sans plainte pénale par incompréhension du dispositif anonyme vs plainte. L'auteur n'est pas poursuivi cantonalement par défaut de plainte — il continuera ailleurs.",
+      "failure": "Le portail anonyme est utilisé pour identifier l'auteur sans procédure pénale, ce qui crée un vice procédural exploité par la défense. Pire, les données du portail anonyme fuitent par défaut de cloisonnement avec le service investigation — l'État de NE est tenu pour responsable au civil par la victime."
+    },
+    "tags": [
+      "HARCÈLEMENT",
+      "DROIT CIVIL",
+      "DROIT PÉNAL",
+      "DSA",
+      "PORTAIL ANONYME"
+    ],
+    "legalRefs": [
+      "Art. 28b CC",
+      "Art. 173-174 CP",
+      "Art. 261bis CP",
+      "DSA Art. 16-18",
+      "LPDCa-NE"
+    ],
+    "intro": "Mardi 14h, vous êtes l'expert juridique-cyber mandaté par l'État de Neuchâtel pour le suivi du nouveau Portail Anonyme de signalement du harcèlement (lancé en mars 2026). Une signalante anonyme via QR code touristique au Château de Neuchâtel : Mme L., 28 ans, journaliste allemande de passage, victime de cyberharcèlement coordonné depuis 5 jours sur Instagram et X. Photos déformées, insultes en allemand et en français, faux compte usurpant son identité. L'auteur principal apparent : un étudiant UniNE de 22 ans (M. K.), identifiable par son pseudo récurrent et son réseau d'amis qui amplifient. Mme L. quitte la Suisse vendredi pour rentrer à Berlin. Elle veut que ça s'arrête, mais hésite à porter plainte pénalement (« je ne reviendrai pas pour des audiences »).",
+    "alertLevel": "🚸 PORTAIL ANONYME — Touriste DE harcelée · Auteur étudiant UniNE · Délai 3 jours · Plainte hésitée",
+    "objectives": [
+      {
+        "icon": "🔒",
+        "text": "Distinguer fermement le signalement anonyme du dépôt de plainte (cloisonnement procédural)"
+      },
+      {
+        "icon": "⚡",
+        "text": "Faire retirer les contenus rapidement via DSA Art. 16-18 (Notice and Action)"
+      },
+      {
+        "icon": "⚖️",
+        "text": "Articuler les voies civile (Art. 28b CC) et pénale (Art. 173-174 CP) sans les confondre"
+      },
+      {
+        "icon": "🛡️",
+        "text": "Protéger Mme L. immédiatement même sans plainte pénale formelle"
+      }
+    ],
+    "debrief": "<p>Le <strong>Portail Anonyme de Neuchâtel</strong> (printemps 2026) est un dispositif innovant qui doit IMPÉRATIVEMENT respecter un cloisonnement strict avec les services d'enquête : son intérêt repose sur la confiance qu'il inspire (signalement sans crainte de représailles, sans engagement procédural). Si une donnée du portail est utilisée pour identifier formellement un auteur sans plainte distincte, c'est tout le dispositif qui s'effondre.</p>\n<p><strong>Voies disponibles</strong> distinctes :</p>\n<ul><li><strong>Voie civile (Art. 28b CC)</strong> — protection de la personnalité contre le harcèlement, mesures provisionnelles rapides (Tribunal civil NE), interdiction d'approcher/contacter, sans nécessité de qualifier pénalement.</li>\n<li><strong>Voie pénale (Art. 173-174 CP)</strong> — diffamation/calomnie, plainte impérative (sauf réquisition d'office du MP-NE en cas d'aspect xénophobe Art. 261bis CP).</li>\n<li><strong>Voie plateforme (DSA Art. 16-18)</strong> — Notice and Action obligatoire des plateformes (X, Meta) pour contenus manifestement illégaux, retrait sous 24h. La Suisse n'est pas membre UE mais le DSA s'applique extraterritorialement aux plateformes ciblant la CH.</li></ul>\n<p>Pour Mme L. (touriste rentrant à Berlin), la <strong>combinaison Art. 28b CC + DSA Notice and Action</strong> est souvent la plus efficace : retrait rapide, protection effective, sans nécessiter sa présence physique pour des audiences pénales en CH.</p>",
+    "steps": [
+      {
+        "phase": "🔒 Le cloisonnement portail anonyme / enquête",
+        "situation": "Mme L. arrive en personne au commissariat avec son téléphone. Elle a signalé via le portail anonyme il y a 2 heures, et un agent du portail (cellule administrative) lui a recommandé de venir vous voir directement. Sur son téléphone, le pseudo de l'auteur (« @kvn_neuch_22 ») apparaît dans plusieurs publications harcelantes. Un collègue agent inspecteur vous dit : « Le portail nous a déjà transmis le profil identifié, on a même son vrai nom (Kévin N., étudiant UniNE), tu veux qu'on lance la perquisition ? »",
+        "law": "<strong>LPDCa-NE</strong> — Loi cantonale sur la protection des données : finalité du traitement, cloisonnement administratif/judiciaire.<br><strong>Art. 73 CPP</strong> — Secret de l'instruction, information loyale.<br><strong>Doctrine de la base légale du portail anonyme</strong> — Le règlement du portail définit ses usages : signalement et orientation, PAS identification pour enquête.",
+        "question": "<strong>Que faites-vous de l'information transmise par le portail ?</strong>",
+        "choices": [
+          {
+            "text": "Refuser d'utiliser l'identification venue du portail anonyme. Expliquer à Mme L. que pour engager une procédure formelle, elle doit déposer plainte distinctement (ou demander des mesures civiles 28b CC). Si plainte = nous reprendrons l'identification par voie d'enquête classique (réquisition Meta/X via opérateurs). L'identification venue du portail anonyme reste cloisonnée — elle ne peut pas être utilisée comme base d'une mesure de contrainte. Tracer cette décision au dossier.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Décision juridiquement irréprochable et stratégiquement essentielle. (1) Le portail anonyme tire toute sa valeur publique du cloisonnement strict — utiliser ses données pour une perquisition créerait un précédent qui dynamiterait la confiance et viderait le dispositif de sa substance. (2) Sur le plan procédural, l'identification cloisonnée évite un vice qui pourrait être soulevé par la défense de Kévin N. (« preuve obtenue hors cadre légal »). (3) Reprendre l'identification par voie d'enquête classique sur plainte est rapide et propre (réquisition Meta/X = 5-10 jours). (4) La traçabilité de la décision protège l'agent contre tout reproche ultérieur. C'est la doctrine de référence pour les dispositifs anonymes (cf. portail vaudois INFRA depuis 2021).",
+            "legal": "LPDCa-NE + Art. 73 CPP + cloisonnement portail — Décision exemplaire.",
+            "critical": false,
+            "next": 1
+          },
+          {
+            "text": "Utiliser l'information du portail pour aller vite : Kévin N. est identifié, ses publications sont visibles publiquement, lancer immédiatement une perquisition à son domicile UniNE pour saisir son téléphone et ordinateur avant qu'il efface les preuves. La rapidité prime, et le portail a légalement transmis l'info à l'enquête — pas de raison de se priver d'un raccourci utile.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Erreur grave qui dynamite le dispositif et fragilise le dossier. (1) Le portail anonyme N'A PAS « légalement transmis » — il a une finalité de signalement/orientation définie dans son règlement, pas d'identification pour mesures de contrainte. L'agent du portail qui a transmis le nom a probablement outrepassé son mandat. (2) Une perquisition basée sur cette identification expose à une nullité (vice initial = nullité de la chaîne, ATF 138 IV 169). (3) Si la presse apprend que le portail anonyme a servi à identifier un suspect, le dispositif perd toute crédibilité — les futures victimes de harcèlement ne signaleront plus. (4) Sans plainte de Mme L., même la qualification pénale est fragile.",
+            "legal": "ATF 138 IV 169 + LPDCa-NE — Vice initial = nullité chaîne probatoire.",
+            "critical": true,
+            "next": "end"
+          },
+          {
+            "text": "Compromis : utiliser l'information du portail comme « point de départ informel » de l'enquête, mais ne pas la documenter formellement. Demander parallèlement à Meta/X une réquisition pour identifier @kvn_neuch_22 — comme cela on aura officiellement obtenu le nom par voie classique, et la cohérence (même nom) confirmera qu'on est bien sur le bon suspect. Le portail aura juste « accéléré » mais sans laisser de trace. Cette pratique de la \"double identification\" administrative et judiciaire est défendue par certains commissaires de police comme un compromis pragmatique entre cloisonnement théorique et efficacité opérationnelle réelle dans les petites structures cantonales où les ressources sont contraintes.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Faux compromis qui cumule les inconvénients. (1) « Ne pas documenter » est une violation directe du Art. 100 CPP (tenue du dossier) — chaque acte d'enquête doit être traçable. La défense pourra soulever ce défaut documentaire. (2) Cette « blanchisserie probatoire » est précisément ce que la jurisprudence du TF condamne (ATF 143 IV 270 sur les preuves indirectement viciées). (3) Au plan déontologique, c'est une instrumentalisation du portail anonyme pour contourner ses propres règles — éthiquement problématique. (4) La voie propre (option correcte) prend 5-10 jours de plus mais sécurise tout le dossier.",
+            "legal": "Art. 100 CPP + ATF 143 IV 270 — Documentation impérative.",
+            "critical": false,
+            "next": 1
+          }
+        ]
+      },
+      {
+        "phase": "⚡ Le retrait des contenus — DSA Art. 16-18",
+        "situation": "Mme L. veut surtout que les contenus disparaissent avant son retour à Berlin vendredi. Vous comptez 23 publications sur X et 14 sur Instagram. Le faux compte usurpant son identité (« @lena_l_journalist » avec sa photo détournée) est le plus toxique : il a déjà 800 abonnés et publie de faux propos. Mme L. demande : « Combien de temps pour retirer ça ? » Le canton de Neuchâtel n'a pas de procédure établie spécifiquement, vous avez carte blanche.",
+        "law": "<strong>DSA Art. 16</strong> — Notice and Action : obligation des plateformes de retirer le contenu manifestement illégal sur notification motivée.<br><strong>DSA Art. 17</strong> — Décision motivée de la plateforme.<br><strong>DSA Art. 18</strong> — Notification aux autorités en cas de menace pour la vie/sécurité.<br><strong>Art. 28a CC</strong> — Mesures provisionnelles civiles (24-48h en urgence).<br><strong>Art. 179decies CP</strong> — Usurpation d'identité numérique.",
+        "question": "<strong>Quelle stratégie de retrait rapide pour Mme L. ?</strong>",
+        "choices": [
+          {
+            "text": "Stratégie à 3 voies parallèles : (1) Notification DSA Art. 16 à X et Meta avec qualification motivée (« usurpation d'identité Art. 179decies CP, harcèlement Art. 28b CC, atteinte à l'honneur Art. 173 CP ») — plateformes obligées de répondre sous 24h pour contenu manifestement illégal ; (2) Mme L. dépose en parallèle une demande civile 28a CC en urgence au Tribunal civil de Neuchâtel — décision possible avant son départ vendredi ; (3) Pour le faux compte usurpé, signalement spécifique aux cellules « Impersonation » de X/Meta (procédures dédiées rapides). Aider Mme L. à constituer le dossier en allemand et français.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Stratégie multi-leviers calibrée. (1) Le DSA Art. 16-18 (en vigueur depuis février 2024 pour les VLOPs) impose un délai de 24h pour le contenu manifestement illégal — c'est le levier le plus rapide actuellement. La qualification multiple (usurpation + harcèlement + honneur) maximise les chances de retrait. (2) Le 28a CC (mesures provisionnelles civiles) peut être obtenu en 24-48h en urgence à NE — Mme L. obtient un titre exécutoire avant son départ. (3) Les cellules Impersonation X/Meta ont des SLA de 24-72h pour les usurpations identifiées par l'autorité ou la victime avec papiers. La voie multilingue protège Mme L. dans sa langue. C'est exactement la doctrine déployée par le Canton de Vaud depuis 2024.",
+            "legal": "DSA Art. 16-18 + Art. 28a CC + Art. 179decies CP — Stratégie complète.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Recommander à Mme L. de faire elle-même les signalements via les boutons natifs de X et Instagram (« signaler ce contenu ») — c'est la voie la plus directe puisqu'elle est la victime directe, et les plateformes traitent prioritairement les signalements des personnes concernées. Pour les cas qui ne seraient pas traités sous 72h, alors envisager une intervention administrative cantonale. La voie utilisateur normale est plus rapide en pratique que les voies juridiques formelles. Cette approche minimaliste correspond aussi à la logique de subsidiarité défendue par certains praticiens cantonaux : laisser d'abord les plateformes traiter elles-mêmes, n'intervenir administrativement qu'en cas d'échec manifeste, c'est respecter à la fois l'autonomie privée des plateformes et économiser les ressources publiques limitées du canton qui doivent être ciblées sur les cas les plus graves.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Conseil sous-dimensionné qui rate l'opportunité du DSA. (1) Les signalements utilisateurs natifs ont des taux de traitement très variables — souvent rejetés en 24h sans examen humain (« ne viole pas nos règles communautaires ») pour le harcèlement borderline. (2) Le DSA Art. 16-18 a précisément été conçu parce que les boutons natifs ne suffisent pas — la notification AUTORITÉ a un poids juridique opposable que le bouton utilisateur n'a pas. (3) Attendre 72h avant intervention administrative laisse 3 jours de plus à 23+14 publications harcelantes — préjudice grandissant. (4) Le canton a des outils que la victime n'a pas : c'est tout l'intérêt de la mobilisation institutionnelle.",
+            "legal": "DSA Art. 16 — Notification autorité opposable, supérieure au signalement utilisateur.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Saisir d'urgence le Tribunal civil de Neuchâtel pour mesures superprovisionnelles avec astreinte (50'000 CHF/jour de retard) contre Meta et X — la voie civile coercitive avec menace financière est la seule approche qui garantit un retrait sous 24h. Le DSA est récent et son application en Suisse non-membre UE reste juridiquement incertaine, mieux vaut s'appuyer sur le droit civil suisse classique exécutoire.",
+            "ok": false,
+            "pts": -10,
+            "fb": "Approche partiellement valide mais sous-optimale. (1) Une mesure superprovisionnelle exécutoire en CH n'est PAS automatiquement opposable à Meta (siège Irlande) et X (siège Irlande/USA) — il faut passer par exequatur Lugano (semaines/mois). (2) L'astreinte 50k/jour est inutile à court terme et probablement non accordée à ce niveau par un juge civil NE pour 37 publications. (3) Le DSA s'applique extraterritorialement aux plateformes ciblant l'UE/CH — les plateformes ELLES-MÊMES respectent le DSA Art. 16-18 par souci de conformité globale (rapports de transparence Meta/X 2024 le démontrent). (4) La combinaison DSA + 28a CC (option correcte) est plus rapide ET plus sûre.",
+            "legal": "DSA Art. 16 + Convention Lugano — DSA plus rapide, exequatur Lugano lent.",
+            "critical": false,
+            "next": 2
+          }
+        ]
+      },
+      {
+        "phase": "⚖️ Civil ou pénal — la décision de Mme L.",
+        "situation": "Le retrait DSA est en cours (réponse X attendue dans 24h). Mme L. doit décider : porter plainte pénale ou s'en tenir au civil ? Elle vous dit : « Je ne reviendrai pas pour des audiences à Neuchâtel. Mais cet étudiant doit comprendre. Je ne veux pas être à l'origine d'une enquête pénale qui me dépasse, mais je ne veux pas non plus qu'il s'en tire. » Vous remarquez aussi que dans les 23 publications X figurent des propos clairement xénophobes (« retourne dans ton pays nazie, sale boche »). Cela change-t-il la donne juridique ?",
+        "law": "<strong>Art. 173-174 CP</strong> — Diffamation (173) / Calomnie (174) : <strong>poursuivis sur plainte</strong>.<br><strong>Art. 28b CC</strong> — Protection de la personnalité civil : action en cessation, dommages, sans plainte pénale.<br><strong>Art. 261bis CP</strong> — Discrimination raciale : <strong>poursuivi d'office</strong> (pas besoin de plainte).<br><strong>Art. 260bis CP / 285a CPP</strong> — Compétences MP-NE en matière d'office.",
+        "question": "<strong>Que conseillez-vous à Mme L. ?</strong>",
+        "choices": [
+          {
+            "text": "Explication claire des 3 régimes : (1) pour la diffamation/calomnie (Art. 173-174 CP) — sa plainte est nécessaire, elle peut s'abstenir et privilégier le civil ; (2) pour le harcèlement civil (Art. 28b CC) — recommandé fortement, action en cessation + dommages-intérêts possibles depuis Berlin via avocat NE, sans audience nécessaire pour Mme L. ; (3) pour les propos xénophobes (Art. 261bis CP) — c'est un délit poursuivi D'OFFICE, le MP-NE peut/doit agir indépendamment de sa plainte, sa sécurité et son désir de retrait n'empêcheront pas la procédure. Lui présenter ce paysage avant qu'elle décide.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Pédagogie juridique impeccable. (1) La distinction plainte vs office est cruciale et souvent mal comprise par les victimes : Mme L. peut « ne pas porter plainte » sans empêcher la poursuite des propos xénophobes (Art. 261bis CP), qui relèvent de l'office. (2) La voie civile 28b CC est parfaitement adaptée à sa situation (étrangère qui rentre chez elle) — un avocat NE peut conduire l'action depuis Berlin avec procuration, audiences potentiellement par vidéoconférence. (3) Cette présentation respecte son autonomie de décision tout en l'informant complètement. (4) C'est la doctrine MP-NE post-affaire Couchepin 2019 sur les délits Art. 261bis CP.",
+            "legal": "Art. 173/174/28b/261bis — Trois régimes correctement distingués.",
+            "critical": false,
+            "next": 3
+          },
+          {
+            "text": "Conseiller fortement à Mme L. de porter plainte pénale pour TOUT (diffamation + calomnie + harcèlement + xénophobie) — c'est la voie la plus complète et le MP-NE pourra ensuite trier les chefs d'accusation. Sans plainte, le dossier sera amputé et l'auteur sera moins lourdement sanctionné. La voie pénale globale est la plus dissuasive et la plus protectrice à long terme. Les inconvénients (audiences, déplacements) sont gérables avec un avocat de NE.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Conseil mal calibré sur la situation de Mme L. (1) Le MP-NE peut DÉJÀ engager d'office la procédure pour Art. 261bis CP — la plainte de Mme L. n'est pas nécessaire pour ce volet, qui est même probablement le plus solide pénalement. (2) « Porter plainte pour tout » alors qu'elle a explicitement dit ne pas vouloir s'engager dans une enquête lourde est un mauvais conseil — l'avocate doit respecter la volonté éclairée de la cliente. (3) Si Mme L. porte plainte sous votre conseil et abandonne ensuite par découragement, le dossier risque d'être classé sans suite — alors qu'une voie civile + une procédure d'office aurait abouti. (4) La voie pénale n'est pas automatiquement « plus protectrice » — la voie civile 28b CC permet une interdiction d'approcher applicable immédiatement.",
+            "legal": "Art. 261bis CP — Office, plainte non nécessaire pour ce chef.",
+            "critical": false,
+            "next": 3
+          },
+          {
+            "text": "Respecter sa volonté de ne pas s'engager : pas de plainte pénale, pas d'action civile non plus (qui demande aussi un investissement). Se concentrer sur le retrait DSA en cours et refermer le dossier dès le départ de Mme L. vendredi. Si Kévin N. récidive contre une autre victime, alors la procédure pourra être ouverte plus tard sur cette nouvelle base. Respecter l'autonomie de la victime, c'est aussi ne pas la pousser dans des procédures qu'elle ne souhaite pas. La doctrine moderne du droit pénal proportionné, défendue par plusieurs procureurs progressistes alémaniques, considère que multiplier les chefs d'accusation dans des affaires de harcèlement étudiant relève d'une pénalisation excessive contre-productive sur le plan éducatif et social.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Respect de l'autonomie mal interprété, négligence du volet d'office. (1) « Refermer le dossier » alors qu'il y a des propos xénophobes Art. 261bis CP qui sont d'office est une faute — le MP-NE doit agir indépendamment de la victime, c'est la définition même de l'office. (2) Ne PAS informer Mme L. de ses options (28b CC, etc.) est un défaut de conseil pour un mandataire juridique — son autonomie passe par son information complète. (3) Attendre une « prochaine victime » pour agir, c'est attendre qu'il y ait davantage de dégâts : l'objet même du droit pénal est la prévention. (4) L'autonomie de Mme L. concerne la voie civile et la plainte simple, pas l'engagement d'office.",
+            "legal": "Art. 261bis CP — Devoir d'office du MP, indépendant de Mme L.",
+            "critical": false,
+            "next": 3
+          }
+        ]
+      },
+      {
+        "phase": "🛡️ Mesures de protection immédiate",
+        "situation": "Mme L. part dans 48h. Elle vous demande : « Et si Kévin continue depuis lundi prochain quand je suis à Berlin ? Y a-t-il des mesures qu'on peut activer maintenant pour me protéger sans attendre les procédures ? » Vous savez que les procédures civiles (28b CC) prendront 1-2 semaines minimum, et le DSA pourrait laisser passer du contenu nouvellement créé. Kévin N. n'est encore au courant de rien.",
+        "law": "<strong>Art. 28a CC</strong> — Mesures provisionnelles civiles, possibles en urgence ex parte (sans audition partie adverse).<br><strong>Art. 261 CPC</strong> — Mesures superprovisionnelles : 24h sans contradictoire.<br><strong>Art. 215 CPP</strong> — Appréhension policière préventive si infraction en cours.<br><strong>Avertissement formel</strong> — Lettre de la police au suspect = effet dissuasif documenté.",
+        "question": "<strong>Quelles mesures de protection immédiate proposez-vous ?</strong>",
+        "choices": [
+          {
+            "text": "Combinaison à 3 niveaux : (1) Demande superprovisionnelle 261 CPC en urgence ex parte au Tribunal civil NE — interdiction faite à Kévin N. de publier sur Mme L., d'approcher, sous astreinte 200 CHF/jour de violation (obtenable en 24h, signifiable dès vendredi par huissier) ; (2) Avertissement formel de la police cantonale par lettre recommandée à Kévin N. mentionnant les Art. 173-174-261bis CP et l'enquête d'office en cours (Art. 261bis) — effet dissuasif puissant chez un étudiant 22 ans ; (3) Prise de coordonnées Berlin de Mme L. pour suivi à distance en cas de récidive, avec point de contact dédié au commissariat NE.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Stratégie à 3 niveaux qui combine vitesse, dissuasion et continuité. (1) La superprovisionnelle ex parte (sans contradictoire) est exactement faite pour ces situations d'urgence — décision en 24h, exécutoire, signifiable par huissier dès vendredi avant le départ de Mme L. (2) La lettre d'avertissement de la police cantonale a un effet psychologique massif sur un étudiant 22 ans — la simple matérialité d'une enveloppe officielle change le calcul (validé par les études criminologiques sur les jeunes auteurs primaires). (3) Le suivi distance avec point de contact dédié évite que Mme L. soit perdue dans le système si elle doit re-signaler depuis Berlin. Approche complète et opérationnelle.",
+            "legal": "Art. 261 CPC + Art. 215 CPP + doctrine police préventive — Stratégie complète.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Faire interpeller préventivement Kévin N. dès jeudi soir pour une audition dissuasive de 4-6 heures au commissariat NE — la confrontation directe avec l'autorité est de loin la mesure la plus dissuasive psychologiquement. Pas besoin de procédure formelle pour cela, l'appréhension Art. 215 CPP suffit dans la mesure où il y a infraction en cours (publications harcelantes nouvelles depuis 5 jours).",
+            "ok": false,
+            "pts": -20,
+            "fb": "Confusion sur les conditions d'application de l'Art. 215 CPP. (1) L'appréhension préventive 215 CPP exige soit la flagrance, soit un soupçon SÉRIEUX d'infraction et un risque de fuite/destruction de preuves/réitération immédiate — un étudiant qui poste des messages depuis chez lui ne remplit pas ces conditions. (2) Une audition de 4-6h sans inculpation formelle pourrait être qualifiée de garde-à-vue irrégulière, génératrice de recours et de dommages-intérêts. (3) « Confrontation directe dissuasive » sans cadre formel s'apparente à de l'intimidation policière, contraire aux droits fondamentaux. (4) La superprovisionnelle + lettre d'avertissement (option correcte) atteint l'objectif dissuasif en respectant les droits — c'est la doctrine moderne.",
+            "legal": "Art. 215 CPP — Conditions strictes, intimidation hors cadre interdite.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Proposer à Mme L. d'attendre que les procédures civile et DSA aboutissent normalement (1-2 semaines), en lui recommandant simplement de bloquer Kévin N. sur tous ses comptes et de désactiver temporairement ses notifications le temps que les choses se calment. Si Kévin récidive contre elle depuis Berlin, elle pourra alors réactiver les démarches avec plus de matière. Une approche graduée et raisonnable est souvent la plus efficace dans ces affaires de cyberharcèlement étudiant. Cette philosophie de la responsabilisation de la victime à se protéger numériquement, sans tomber dans le victim-blaming, est défendue par certains experts du domaine cyber comme la voie pragmatique pour une autonomisation à long terme des utilisateurs face à des plateformes qui ne disparaîtront pas.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Approche passive qui ne protège pas Mme L. (1) « Bloquer + désactiver notifications » fait porter le poids sur la victime alors qu'on a les outils juridiques pour faire porter la contrainte sur l'auteur. C'est exactement la dynamique critiquée par les associations féministes contre le harcèlement. (2) Sans avertissement formel, Kévin N. ne sait pas qu'il est repéré — il continuera, peut-être en pivotant vers d'autres victimes. (3) « Une approche graduée et raisonnable » peut être un euphémisme pour « ne rien faire d'efficace ». La gravité des propos xénophobes (261bis CP, office) appelle une réponse, pas l'attente. (4) Faire « patienter » la victime étrangère 1-2 semaines = laisser le préjudice s'aggraver et envoyer un message d'impunité.",
+            "legal": "Art. 28a CC + 261bis CP — Mesures actives requises, pas passivité.",
+            "critical": false,
+            "next": 4
+          }
+        ]
+      },
+      {
+        "phase": "📊 Le retour d'expérience pour le portail",
+        "situation": "3 mois plus tard. Bilan : (a) DSA → 31/37 publications retirées sous 48h (X), 14/14 sous 6 jours (Meta). (b) Civil → superprovisionnelle accordée à 24h, signifiée jeudi 22h, Kévin N. a immédiatement supprimé ses comptes. (c) Pénal d'office (261bis CP) → Kévin N. condamné à 90 jours-amendes avec sursis + 800 CHF d'amende et stage de sensibilisation. (d) Mme L. à Berlin = sereine, retournée à son travail. Le Service juridique du canton organise un retour d'expérience avec la cellule du Portail Anonyme pour clarifier les règles sur la transmission des identifications. Que recommandez-vous ?",
+        "law": "<strong>LPDCa-NE</strong> — Cadre cantonal du portail.<br><strong>Doctrine du cloisonnement</strong> — Référence : portails INFRA Vaud 2021, FixIt Genève 2023.<br><strong>Art. 73 CPP</strong> — Obligations de discrétion administrative.",
+        "question": "<strong>Quelle recommandation principale pour le règlement du Portail ?</strong>",
+        "choices": [
+          {
+            "text": "Recommander un règlement clarifiant 3 points : (1) le portail anonyme transmet aux services d'enquête uniquement des INFORMATIONS ANONYMISÉES (pattern, plateforme, type de propos) sans identification personnelle d'auteur ou de victime — l'identification reste cloisonnée, accessible uniquement à la cellule du portail elle-même ; (2) si la victime souhaite engager une procédure formelle, elle est REDIRIGÉE vers le commissariat avec une nouvelle prise en charge — l'identification se fait alors par voie d'enquête classique sur sa plainte ; (3) une exception strictement encadrée pour menace vitale immédiate (art. 23 CC, état de nécessité) — alerte aux services d'urgence, documentée ex post.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Recommandation claire et juridiquement solide. (1) La transmission anonymisée préserve la valeur statistique et préventive du portail (le canton voit les patterns, oriente la prévention) sans contaminer l'enquête pénale. (2) La redirection vers le commissariat avec nouvelle prise en charge est la pratique des portails INFRA-VD et FixIt-GE — la victime ne se sent pas trahie (« j'ai signalé anonymement et ils ont tout dit à la police ») et l'enquête démarre sur une base propre. (3) L'exception « menace vitale » respecte l'art. 23 CC (état de nécessité) qui justifie la levée du cloisonnement uniquement quand la vie est en jeu — encadrement strict avec documentation ex post pour éviter les abus. C'est la doctrine de référence.",
+            "legal": "LPDCa-NE + Art. 23 CC + doctrine portails anonymes — Cadre triple-niveau exemplaire.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Recommander de garder une transmission complète des identifications du portail vers les enquêteurs, mais d'ajouter une clause d'information claire au signalant : « Vos données pourront être transmises aux autorités d'enquête en cas d'infraction grave. » Avec cette transparence préalable, le cloisonnement strict n'est plus nécessaire et le canton garde l'efficacité d'identification rapide. La transparence vaut mieux que l'opacité fonctionnelle.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Mauvaise compréhension du fonctionnement réel des portails anonymes. (1) Si les signalants savent que leurs données peuvent être transmises, ils NE SIGNALENT PLUS — c'est le principe même de l'effet dissuasif du non-anonymat. Le portail vide de sa valeur. (2) Les études de comportement des victimes (UNIL 2022, EHESP 2023) montrent que la condition n°1 du signalement, c'est la GARANTIE absolue d'anonymat — pas l'avertissement de levée possible. (3) Cette voie a été testée et abandonnée par plusieurs cantons (TI 2019) qui ont vu leur taux de signalement chuter de 70 % en 6 mois. (4) La sécurité juridique doit être trouvée dans le cloisonnement (option correcte), pas dans la dilution de l'anonymat.",
+            "legal": "Études UNIL 2022 / EHESP 2023 — Anonymat absolu = condition fonctionnelle.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Recommander de fermer le Portail Anonyme et de rediriger toutes les victimes vers le commissariat directement — un dispositif anonyme crée plus de problèmes juridiques qu'il n'en résout (cloisonnement complexe, risques procéduraux, fuites possibles), et la voie classique reste la meilleure pour des dossiers solides. Les ressources budgétaires libérées peuvent renforcer la cellule victimes du commissariat. Le cas Mme L. a montré que le portail n'est pas indispensable. Cette voie de simplification administrative, qu'on appellerait peut-être chez nous une \"approche schwytzoise du dispositif\" — discrète, classique, sans innovation institutionnelle hasardeuse — est régulièrement préconisée par les services juridiques cantonaux qui privilégient la stabilité des procédures éprouvées sur les expérimentations modernes dont les bénéfices restent à prouver à long terme.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Conclusion erronée à partir d'un cas réussi. (1) Le cas Mme L. montre exactement l'INVERSE : le portail anonyme a permis le premier contact (touriste qui n'aurait jamais osé entrer dans un commissariat suisse), puis la redirection vers la procédure formelle a fonctionné. C'est le succès du dispositif. (2) Beaucoup de victimes (mineures, en situation de dépendance, étrangères) ne franchissent JAMAIS le seuil d'un commissariat — le portail anonyme capte cette population. (3) Fermer le dispositif au prétexte de sa complexité juridique, c'est jeter le bébé avec l'eau du bain. (4) Les portails anonymes existent dans tous les cantons modernes et sont en expansion (recommandation BFEG 2023).",
+            "legal": "Recommandation BFEG 2023 — Portails anonymes recommandés et en expansion.",
+            "critical": false,
+            "next": "end"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dab-villaz",
+    "title": "Attaques au gaz — DAB Villaz-St-Pierre",
+    "icon": "💥",
+    "difficulty": "medium",
+    "atmosphere": "raid",
+    "realCase": "Janvier 2023 — Police cantonale fribourgeoise + fedpol + autorités françaises. Interpellation de deux individus spécialisés dans les attaques au gaz contre bancomats à Villaz-St-Pierre. Coordination CH-FR.",
+    "narrative": {
+      "success": "Vous coordonnez l'interpellation des 2 suspects français à Villaz-St-Pierre dans la nuit avec la police fribourgeoise et fedpol. Les téléphones jetables saisis livrent une mine d'IoC : groupes Telegram, complices français, méthodes. La coordination CH-FR fonctionne parfaitement, 3 autres complices interpellés à Lyon dans la semaine. Les explosifs gazeux saisis sans incident grâce à la sécurisation appropriée.",
+      "degraded": "Interpellation réussie mais 1 suspect réussit à effacer ses messages Telegram avant la saisie (volet logiciel mal sécurisé). Les complices français sont identifiés mais arrivent à fuir avant l'opération coordonnée à Lyon. Procédure pénale CH solide mais volet français incomplet.",
+      "failure": "L'opération est mal coordonnée : un suspect prend la fuite via la frontière FR. Les explosifs sont mal sécurisés à la saisie — un agent est légèrement blessé. La défense exploite des vices de procédure (saisie sans mandat élargi). Les téléphones jetables sont déchargés et inexploitables. La coopération CH-FR est tendue."
+    },
+    "tags": [
+      "DAB",
+      "EXPLOSIFS",
+      "ENTRAIDE FR",
+      "TÉLÉPHONIE",
+      "CRIME ORGANISÉ"
+    ],
+    "legalRefs": [
+      "Art. 224 CP",
+      "Art. 144bis CP",
+      "Art. 139 CP",
+      "Art. 263 CPP",
+      "EIMP Art. 18",
+      "LExpl Art. 17"
+    ],
+    "intro": "Mardi 2h40, gendarmerie de Romont. Vous êtes l'enquêteur chargé du dossier « DAB-Glâne » : depuis novembre 2022, 4 attaques au gaz contre bancomats Raiffeisen et BCF dans la région (Villaz-St-Pierre, Mézières, Bossonnens, Promasens). Modus operandi identique : injection de gaz combustible dans le DAB pendant la nuit, déflagration, ouverture de la trappe à billets. Préjudice cumulé : ~280'000 CHF + dommages aux bâtiments. La police cantonale FR a identifié grâce à des caméras de surveillance routière 2 suspects, ressortissants français domiciliés à Lyon, repérés en Suisse via leur Renault Mégane immatriculée 69. Ce soir, signalement croisé : leur véhicule vient d'être détecté par lecteur de plaques sur l'A12 vers Bulle, à 40 minutes de Villaz. Probablement préparation d'un 5e coup. Vous coordonnez l'interpellation avec fedpol (compétence concurrente : crime organisé transfrontière).",
+    "alertLevel": "💥 DAB-GLÂNE — Suspects FR localisés A12 · Probable 5e attaque · Interpellation imminente · Coordination FR-CH",
+    "objectives": [
+      {
+        "icon": "🎯",
+        "text": "Coordonner l'interpellation sécurisée (gaz combustible présent dans le véhicule)"
+      },
+      {
+        "icon": "📱",
+        "text": "Sécuriser les téléphones jetables avant qu'ils soient effacés (mode avion immédiat + Faraday)"
+      },
+      {
+        "icon": "⚖️",
+        "text": "Maîtriser la qualification multiple : Art. 224 CP (explosifs) + 139/144bis + 263 CPP"
+      },
+      {
+        "icon": "🇫🇷",
+        "text": "Activer la coordination FR (UNCyber Lyon + procureur de Lyon) sans dépasser EIMP"
+      }
+    ],
+    "debrief": "<p>Les <strong>attaques au gaz contre DAB</strong> ont explosé en Suisse romande entre 2020 et 2024 (statistique fedpol : 47 cas en 2022, 81 en 2023, 53 en 2024). Le mode opératoire est presque toujours importé de France : équipes mobiles de 2-3 personnes, véhicules de location, gaz acheté en bouteille (butane/propane), retour rapide en France via la frontière franco-vaudoise ou genevoise.</p>\n<p><strong>Qualification pénale</strong> : la qualification habituelle est <strong>Art. 224 CP</strong> (emploi d'explosifs et de gaz toxiques avec dessein délictueux) — alinéa 1, peine privative de liberté d'1 à 20 ans. C'est une qualification grave qui prime sur le simple vol (Art. 139 CP) et la détérioration (Art. 144bis CP) qui sont absorbés par la spécialité. La <strong>LExpl</strong> (Loi sur les explosifs) intervient aussi pour la détention.</p>\n<p>Sur le <strong>volet technique</strong>, ces équipes utilisent presque toujours des <strong>téléphones jetables</strong> (\"burners\") — souvent achetés cash, peu garnis en données mais riches en métadonnées (cell-towers fréquentés, contacts, Telegram). La sécurisation à la saisie est cruciale : <strong>mode avion + sac de Faraday immédiat</strong>, sinon les complices peuvent verrouiller/wiper à distance via Telegram (auto-destruct) ou des MDM rudimentaires.</p>\n<p>La <strong>coordination CH-FR</strong> est encadrée par l'<strong>EIMP + Convention européenne d'entraide judiciaire 1959 + Accord de Schengen</strong>. La police peut signaler en temps réel via le SIS II (Schengen Information System). Les suspects français interpellés en CH peuvent être jugés en CH (lieu de l'infraction) ou faire l'objet d'un transfèrement procédural vers la France si les autorités françaises ont aussi des affaires contre eux.</p>",
+    "steps": [
+      {
+        "phase": "🚨 L'interpellation — explosifs présents dans le véhicule",
+        "situation": "Le véhicule est suivi en temps réel sur l'A12. Vous estimez qu'il contient probablement les bouteilles de gaz pour l'opération de la nuit. Le sergent de la PolFR vous demande où intercepter : (a) sur l'A12 en zone d'arrêt sécurisée avant la sortie Bulle (zone autoroutière, isolée), ou (b) à proximité du DAB-cible probable (Bulle ou Romont selon trajet final), ou (c) attendre qu'ils sortent du véhicule sur le lieu d'attaque pour les surprendre en flagrance. La nuit est calme, peu de circulation, vous avez 2 patrouilles + 1 unité d'intervention spécialisée mobilisable.",
+        "law": "<strong>Art. 217 CPP</strong> — Arrestation en flagrance.<br><strong>Art. 215 CPP</strong> — Appréhension préventive (soupçon sérieux + risque de fuite ou réitération).<br><strong>LExpl Art. 17</strong> — Détention illégale d'explosifs : qualification immédiate possible.<br><strong>Doctrine sécurité opérationnelle</strong> — Interception loin des zones civiles peuplées.",
+        "question": "<strong>Où et comment interceptez-vous le véhicule ?</strong>",
+        "choices": [
+          {
+            "text": "Interception sur l'A12 en zone d'arrêt sécurisée avant la sortie Bulle, avec dispositif renforcé (3 véhicules de blocage + unité d'intervention spécialisée + démineur d'astreinte sur appel). Justification Art. 215 CPP : soupçon sérieux (4 attaques antérieures, plaque identifiée, trajet cohérent avec préparation 5e attaque) + risque réitération imminent. Sécurisation du véhicule à distance, fouille en présence du démineur (gaz sous pression = risque déflagration accidentelle). Documentation rigoureuse : vidéo dashcam + PV horodatés + photos avant manipulation.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Configuration optimale équilibrant impératif d'interpellation et sécurité. (1) La zone d'arrêt autoroutière isolée minimise le risque civil — pas de témoins, pas de blessés potentiels en cas d'incident gazeux. (2) Le timing avant le passage à l'acte évite la qualification \"flagrance d'attaque DAB\" mais reste solide via Art. 215 CPP (soupçon sérieux étayé par les 4 attaques antérieures + véhicule + trajet). (3) La présence du démineur est cruciale : le gaz combustible sous pression peut déflagrer si percuté, percé ou exposé au feu — fouille à mains nues serait une faute professionnelle grave. (4) La documentation vidéo + PV horodatés blinde la chaîne probatoire face à toute contestation. C'est la doctrine fedpol post-affaires Bex 2019.",
+            "legal": "Art. 215 CPP + LExpl Art. 17 + sécurité opérationnelle — Configuration éprouvée.",
+            "critical": false,
+            "next": 1
+          },
+          {
+            "text": "Attendre qu'ils arrivent sur le lieu d'attaque (DAB-cible probable) et les surprendre en pleine action — la flagrance Art. 217 CPP est plus solide que l'appréhension préventive 215 CPP, et la défense aura plus de mal à plaider \"on faisait juste un tour de nuit\". Le fait qu'ils manipulent les bouteilles de gaz devant le DAB caractérise indubitablement l'intention. Les patrouilles sont positionnées dans les angles, avec ordre de ne pas intervenir avant le début de l'injection. Cette doctrine de \"flagrance maximale\", encore défendue par certains commandants traditionalistes des polices cantonales, repose sur l'idée que l'effet juridique d'une infraction \"prise sur le fait\" reste sans équivalent dans la solidité d'un dossier d'accusation devant un tribunal cantonal exigeant.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Erreur dramatique de hiérarchisation : la sécurité publique prime sur la qualité juridique de la flagrance. (1) Laisser les suspects manipuler les bouteilles de gaz devant un DAB en zone urbaine, c'est accepter un risque de déflagration accidentelle qui peut tuer ou blesser des passants — Bulle/Romont en heure de nuit reste fréquenté (trajet vers gares, hôpitaux). (2) L'Art. 217 CPP n'est PAS plus solide que l'Art. 215 CPP — les deux mènent à la mise en examen, et la flagrance n'apporte rien de procéduralement décisif quand le 215 CPP est étayé par 4 attaques antérieures avec mêmes individus. (3) En cas d'incident, votre responsabilité personnelle d'enquêteur est engagée pour mise en danger d'autrui. (4) Cette doctrine \"flagrance maximale\" est rejetée par fedpol depuis l'affaire Genève 2018 où un commerçant avait été blessé.",
+            "legal": "Art. 217 CPP + responsabilité — Sécurité publique prime sur qualité flagrance.",
+            "critical": true,
+            "next": "end"
+          },
+          {
+            "text": "Interception immédiate sans attendre, à la prochaine sortie d'autoroute, avec un seul véhicule de blocage frontal et une patrouille à l'arrière — la rapidité est essentielle pour ne pas perdre le véhicule, et le démineur peut être appelé après sécurisation. Les 2 patrouilles de réserve resteront en stand-by au cas où un troisième complice se manifesterait. Documentation par enregistrement audio des radios.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Sous-dimensionnement opérationnel risqué. (1) Un seul véhicule de blocage frontal contre 2 individus dans un véhicule contenant du gaz combustible expose à : tentative d'évasion par enfoncement (avec déflagration possible), prise d'otage si l'un d'eux se sent acculé, fuite à pied vers la zone civile. La doctrine \"3+ véhicules de blocage\" est standard pour les interpellations à haut risque. (2) Appeler le démineur \"après sécurisation\" est dangereux : la phase de fouille initiale du véhicule est précisément celle où l'incident peut survenir si on touche les bouteilles sans expertise. (3) L'enregistrement audio radio seul est insuffisant — la vidéo dashcam est le standard moderne pour blinder la chaîne probatoire. (4) C'est la doctrine post-affaire Vidy 2017 (interpellation mal sécurisée, agent blessé).",
+            "legal": "Doctrine fedpol — Dispositif renforcé requis pour explosifs.",
+            "critical": false,
+            "next": 1
+          }
+        ]
+      },
+      {
+        "phase": "📱 La saisie des téléphones — sécurisation forensique",
+        "situation": "Interpellation réussie, suspects en état d'arrestation, gaz sécurisé par le démineur. Sur les sièges et dans les poches, vous trouvez : 3 téléphones (1 iPhone récent visiblement personnel, 2 téléphones jetables Nokia 105 — burners typiques). 2 SIM françaises pré-payées non-attribuées (Orange et SFR). Une montre connectée Garmin. Plusieurs cartes bancaires (suspectes, à vérifier). Le sergent vous demande : « Je les éteins tous immédiatement pour préserver leur état ? »",
+        "law": "<strong>Art. 263 CPP</strong> — Séquestre, intégrité matérielle.<br><strong>RFC 3227</strong> — Ordre de volatilité : RAM avant disque, données chiffrées peuvent disparaître à l'extinction.<br><strong>ISO/IEC 27037</strong> — Standards forensique pour preuves numériques.<br><strong>Doctrine Cellebrite/Magnet Forensics</strong> — Préserver l'état actif si possible (extraction live > extraction à froid pour iOS récent).",
+        "question": "<strong>Quelle procédure de saisie des téléphones recommandez-vous ?</strong>",
+        "choices": [
+          {
+            "text": "NE PAS éteindre, mais isoler immédiatement chaque téléphone dans un sac de Faraday individuel (mode avion forcé + isolation radio totale = pas de wipe à distance possible). Pour l'iPhone récent (probablement chiffré) : noter s'il est verrouillé/déverrouillé, photographier l'écran si déverrouillé, ne PAS le verrouiller manuellement (préserver état actif pour extraction live ultérieure). Pour les 2 burners : saisie standard mais sac Faraday immédiat car des MDM rudimentaires existent même sur Nokia 105 modifiés. Documentation horodatée + photo de chaque appareil avant emballage.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Procédure conforme aux standards modernes. (1) Le sac de Faraday individuel coupe immédiatement toute communication radio (cellulaire, Wi-Fi, Bluetooth) — aucun wipe à distance possible (ni iCloud Find My, ni Telegram auto-destruct, ni MDM). (2) Préserver l'état actif d'un iPhone déverrouillé est CRUCIAL : Cellebrite Premium et GrayKey ont des taux de réussite très différents sur un iPhone \"After First Unlock\" (AFU, RAM contient les clés) vs \"Before First Unlock\" (BFU, beaucoup plus dur). La photo de l'écran si déverrouillé documente l'état AFU. (3) Les Nokia 105 modifiés (\"Knokia\") existent dans le crime organisé — dispositifs à double système avec wipe à distance. La Faraday est non-négociable. (4) C'est la doctrine SANS FOR518 + Cellebrite Best Practices 2024.",
+            "legal": "Art. 263 CPP + ISO/IEC 27037 + doctrine Cellebrite — Procédure éprouvée.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Éteindre tous les téléphones immédiatement pour figer leur état et empêcher tout wipe à distance — l'extinction est la mesure la plus radicale et la plus simple, et l'analyse à froid pourra ensuite être conduite tranquillement au laboratoire forensique avec les outils standards. Cette approche \"sécurité maximale\" est privilégiée par les services forensiques expérimentés.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Erreur méthodologique majeure pour iOS récent. (1) Éteindre un iPhone le fait passer en BFU (Before First Unlock) — état où les clés cryptographiques principales sont inaccessibles tant que le code n'est pas saisi. Cellebrite Premium peut éventuellement extraire un AFU (RAM contient les clés), mais a des taux d'échec élevés en BFU surtout sur les versions iOS 16+. Vous venez de COMPLIQUER l'extraction. (2) L'extinction n'empêche pas \"plus efficacement\" le wipe à distance qu'une Faraday — la Faraday est instantanée et préserve l'état AFU. (3) Sur les burners Nokia, l'extinction perd les SMS non-lus / appels en cours / historique de notifications utiles. (4) Les services forensiques expérimentés (fedpol, Sûreté GE) utilisent la Faraday + état actif depuis 2018, la doctrine \"éteindre tout\" est obsolète.",
+            "legal": "Doctrine forensique iOS — État AFU préservé via Faraday, pas extinction.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Demander immédiatement aux suspects (en présence de leur avocat de garde) le code de déverrouillage de leurs téléphones — la coopération volontaire est la voie la plus rapide et juridiquement la plus solide. S'ils refusent, qualifier d'entrave (Art. 305 CP) et passer à l'extinction + analyse à froid. Pour les 2 burners qui n'ont probablement pas de code, simple sécurisation Faraday. Cette voie de coopération avec le suspect, défendue par certains praticiens romands comme une approche \"humaniste\" de l'enquête, présente l'avantage de l'efficacité tout en respectant la dignité du suspect — bien préférable à la dissection technique froide d'un téléphone par des outils Cellebrite qui peuvent paraître intrusifs et déshumanisants pour le mis en examen et son avocat de garde.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Confusion juridique sur le droit au silence. (1) Le suspect a un droit absolu au silence (Art. 158 CPP, ATF 138 IV 47, principe nemo tenetur) qui inclut le code de déverrouillage selon la jurisprudence dominante CEDH (Saunders 1996) — son refus N'EST PAS de l'entrave (Art. 305 CP) mais l'exercice d'un droit fondamental. La menace d'Art. 305 CP serait illégale et exposerait à un recours. (2) L'avocat de garde n'a pas à être présent pour la saisie matérielle des téléphones, seulement pour les auditions (Art. 159 CPP). (3) La voie correcte n'est pas la pression sur le suspect, c'est la sécurisation forensique appropriée + extraction technique (Cellebrite Premium / GrayKey). (4) Cette confusion est précisément ce que la jurisprudence du TF a rappelé dans plusieurs arrêts post-2020.",
+            "legal": "Art. 158 CPP + nemo tenetur + ATF 138 IV 47 — Droit au silence absolu.",
+            "critical": false,
+            "next": 2
+          }
+        ]
+      },
+      {
+        "phase": "🇫🇷 La coordination avec UNCyber Lyon",
+        "situation": "Au commissariat de Romont, les téléphones sont en route vers le laboratoire. Les 2 suspects sont en garde à vue. Le burner Nokia 105 que vous avez allumé sous Faraday montre : un groupe Telegram \"GLÂNE TEAM\" avec 4 autres membres actifs, dont les pseudos suggèrent qu'ils sont à Lyon. Les conversations indiquent une attaque planifiée demain soir à un autre endroit (Glâne ou Veveyse). Vous appelez l'UNCyber Lyon (Unité Nationale Cyber, gendarmerie). L'officier de garde vous dit : « On peut faire vite. Tu nous transfères les pseudos Telegram et les numéros de téléphone, on perquisitionne dans la nuit avec votre appui. »",
+        "law": "<strong>EIMP Art. 18 ter</strong> — Information à État étranger pour mesures provisoires.<br><strong>Convention européenne d'entraide judiciaire 1959 (CH-FR)</strong> — Cadre principal.<br><strong>Convention Budapest Art. 26</strong> — Transmission spontanée d'informations.<br><strong>Art. 273 CP</strong> — Service de renseignement économique : limite la transmission informelle.",
+        "question": "<strong>Quelle architecture de coordination CH-FR adoptez-vous ?</strong>",
+        "choices": [
+          {
+            "text": "Engager la coordination via voie EIMP urgente : information immédiate au MP-FR par fax/email officiel pour mesures provisoires (EIMP Art. 18 ter), demande au procureur de Lyon d'engager dans la nuit ses propres perquisitions sur la base des éléments transmis, copie systématique au DFJP. Transmission des pseudos Telegram + numéros + heure planifiée d'attaque. Refus poli mais ferme à l'UNCyber d'un partage hors EIMP : « tu auras tout dans 30 minutes par voie formelle, pas de différence pratique ». Coordination des perquisitions FR + sécurisation CH simultanées.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Architecture juridiquement irréprochable et opérationnellement efficace. (1) L'EIMP Art. 18 ter (mesures provisoires urgentes) est précisément conçu pour ces situations — mobilisable en 30-60 minutes avec un MP de garde, infiniment plus rapide qu'une demande d'entraide complète. (2) Le \"refus du partage hors EIMP\" protège l'expert de l'Art. 273 CP (renseignement économique) qui criminalise les transmissions informelles d'informations d'enquête à des autorités étrangères, même si la finalité est légitime. (3) La perquisition FR sur la base d'une transmission EIMP est juridiquement opposable au procès français — alors qu'une transmission informelle créerait un vice procédural. (4) C'est exactement la doctrine fedpol-UNCyber depuis l'opération Wagram 2021.",
+            "legal": "EIMP Art. 18 ter + Art. 273 CP — Voie formelle rapide, expert protégé.",
+            "critical": false,
+            "next": 3
+          },
+          {
+            "text": "Accepter le partage rapide proposé par l'UNCyber : transmettre par messagerie chiffrée (Signal) les pseudos Telegram, numéros et heure planifiée. La confiance entre services partenaires européens prime, l'EIMP suivra dans la matinée pour formalisation. L'urgence (attaque dans 12-18 heures) justifie de privilégier la rapidité opérationnelle sur le formalisme administratif. Tous les services européens fonctionnent ainsi en pratique pour les urgences cyber.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Violation directe et caractérisée. (1) Transmettre des informations issues d'une enquête pénale suisse (téléphones saisis, conversations Telegram, identifications) à un service étranger sans cadre EIMP = Art. 273 CP (service de renseignement économique), peine privative de liberté jusqu'à 3 ans. La criminalisation s'applique même si la finalité est légitime — c'est précisément ce que l'article punit. (2) Signal est un canal chiffré mais il NE crée AUCUN cadre juridique opposable — la perquisition française qui en découle sera contestable au procès. (3) \"L'EIMP suivra dans la matinée\" n'a pas d'effet rétroactif sur les actes posés sans cadre. (4) Les services européens fonctionnent EFFECTIVEMENT via voie formelle EIMP/Eurojust — cette idée d'\"informalité courante\" est une fausse représentation.",
+            "legal": "Art. 273 CP — Sanction pénale individuelle de l'expert. Vice procédural irréparable.",
+            "critical": true,
+            "next": "end"
+          },
+          {
+            "text": "Refuser tout partage immédiat avec l'UNCyber et exiger une demande EIMP complète et formelle de la France avant toute transmission — la souveraineté procédurale suisse est mieux préservée par la voie classique demande-par-demande. La France peut perquisitionner sur la base d'éléments qu'elle obtiendra de ses propres canaux d'enquête. La coordination interviendra plus tard si nécessaire, pas dans l'urgence qui crée des risques. Cette posture de souveraineté absolue est défendue par certains juristes traditionalistes pour qui la coopération européenne ne doit jamais primer sur la procédure helvétique, d'autant plus dans un contexte où l'extradition entre la Suisse et la France reste fluide grâce aux accords bilatéraux.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Excès de prudence opérationnellement perdant. (1) Une demande EIMP complète prend des jours/semaines — pendant ce temps, les 4 complices à Lyon préparent et probablement exécutent leur attaque, il y aura d'autres victimes et probablement des blessés. (2) L'EIMP Art. 18 ter (mesures provisoires URGENTES) est PRÉCISÉMENT prévu pour ces situations — il n'y a pas de \"voie classique\" qui prend des semaines vs \"voie informelle illégale\". Il y a une voie formelle URGENTE qui prend 30-60 minutes (option correcte). (3) \"La France obtiendra de ses propres canaux\" est faux : sans la transmission CH des Telegram et numéros, la France n'a pas les éléments pour identifier et perquisitionner. La Suisse les bloque. (4) La souveraineté procédurale est respectée par l'EIMP urgent, pas par l'inaction.",
+            "legal": "EIMP Art. 18 ter — Voie formelle URGENTE existe, l'inaction n'est pas la prudence.",
+            "critical": false,
+            "next": 3
+          }
+        ]
+      },
+      {
+        "phase": "⚖️ La qualification pénale CH",
+        "situation": "Vendredi, vous préparez le rapport au MP-FR. Les éléments matériels sont solides : 2 suspects en flagrance de préparation, gaz combustible saisi (3 bouteilles), 4 attaques DAB antérieures rattachées via les téléphones (Telegram + métadonnées). Préjudice cumulé : 280k CHF. La question pénale : quels chefs d'accusation principaux ? Le MP-FR vous demande votre analyse technique avant qualification définitive.",
+        "law": "<strong>Art. 224 CP</strong> — Emploi d'explosifs et de gaz toxiques avec dessein délictueux : peine privative de liberté d'1 à 20 ans (très grave).<br><strong>Art. 139 CP</strong> — Vol qualifié.<br><strong>Art. 144bis CP</strong> — Détérioration de données / dommages à la propriété.<br><strong>Art. 263 CP</strong> — Mise en danger par explosifs (négligence).<br><strong>LExpl Art. 17</strong> — Détention illégale d'explosifs.<br><strong>Concours d'infractions</strong> — Spécialité, absorption.",
+        "question": "<strong>Quelle qualification principale recommandez-vous au MP-FR ?</strong>",
+        "choices": [
+          {
+            "text": "Qualification principale : Art. 224 CP al. 1 (emploi d'explosifs avec dessein délictueux) — c'est l'infraction la plus grave et qui caractérise pleinement le mode opératoire (gaz combustible utilisé pour ouvrir les DAB). En concours réel : Art. 139 al. 1 CP (vol qualifié, atteint les 280k de préjudice) et Art. 144bis CP (détérioration de la propriété — DAB et bâtiments). LExpl Art. 17 (détention illégale) en concours idéal. La spécialité de l'Art. 224 CP n'absorbe PAS le vol (atteinte à des biens distincts) — concours réel justifié.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Qualification rigoureuse et conforme à la jurisprudence du TF. (1) L'Art. 224 CP est la qualification principale incontestable : la peine d'1 à 20 ans reflète la gravité (mise en danger publique par explosifs). (2) Le concours réel avec Art. 139 al. 1 CP est correct — le TF (ATF 122 IV 14) a jugé que la mise en danger explosive et le vol portent atteinte à des biens juridiques distincts (sécurité publique vs patrimoine), pas d'absorption. (3) Art. 144bis CP en concours pour les DAB et bâtiments endommagés. (4) LExpl Art. 17 en concours idéal pour la détention de gaz à des fins criminelles. C'est la qualification standardisée par le MP-CH dans tous les dossiers DAB depuis 2018.",
+            "legal": "Art. 224 + 139 + 144bis CP + LExpl 17 + ATF 122 IV 14 — Qualification optimale.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Qualification principale : Art. 139 al. 2 CP (vol qualifié par bande/par métier) — le caractère organisé (équipe de 6, 4 attaques planifiées) caractérise pleinement la qualification aggravée du vol, qui absorbe les autres aspects par spécialité. L'Art. 224 CP serait disproportionné pour des dommages matériels relativement limités (280k), et la jurisprudence préfère la qualification \"vol\" pour les attaques DAB ordinaires. Cette qualification \"par bande/par métier\" est aussi celle privilégiée par certains procureurs cantonaux qui jugent que l'Art. 224 CP, par sa peine maximale de 20 ans, est juridiquement disproportionné pour des affaires patrimoniales \"ordinaires\" même bien organisées.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Erreur de qualification grave. (1) L'Art. 224 CP n'est PAS \"disproportionné\" : c'est la qualification spécifique pour l'usage d'explosifs/gaz combustible, peu importe le préjudice patrimonial. La gravité tient à la MISE EN DANGER PUBLIQUE, pas seulement au préjudice. (2) Une déflagration nocturne dans un village comme Villaz-St-Pierre met en danger les habitants des immeubles voisins, les passants potentiels — c'est précisément ce que sanctionne l'Art. 224 CP. (3) Le TF (ATF 122 IV 14, 138 IV 152) a clairement rejeté l'idée que le vol absorbe l'Art. 224 CP — biens juridiques distincts. (4) La qualification proposée laisserait passer un acte gravement dangereux comme un simple vol — sous-qualification qui crée un précédent dangereux. (5) La pratique fedpol/MP-CH est unanime sur ce point depuis 2018.",
+            "legal": "ATF 122 IV 14 + 138 IV 152 — Concours réel, pas absorption.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Qualification principale : Art. 263 CP (mise en danger par explosifs par négligence) — les suspects n'avaient pas l'intention de blesser des personnes (attaques nocturnes sur DAB sans présence humaine), donc la mise en danger relève de la négligence consciente. En concours avec Art. 139 CP (vol qualifié). Cette qualification reflète plus fidèlement leur état d'esprit réel et évite la sévérité excessive de l'Art. 224 CP qui vise plutôt les attaques terroristes.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Confusion entre Art. 224 CP et Art. 263 CP. (1) L'Art. 224 CP exige le \"dessein délictueux\" (intention d'utiliser l'explosif pour commettre une infraction) — c'est exactement le cas ici (gaz utilisé pour voler dans le DAB). L'absence d'intention de tuer n'écarte PAS l'Art. 224 CP. (2) L'Art. 263 CP (négligence) suppose l'absence de dessein délictueux — ne s'applique pas ici. (3) L'Art. 224 CP n'est PAS limité aux \"attaques terroristes\" — il s'applique à tout emploi d'explosif avec dessein délictueux, y compris vol. La doctrine constante du TF est unanime. (4) Cette qualification proposée minimiserait gravement la responsabilité des suspects et serait corrigée à la hausse en appel — discrédite l'expertise.",
+            "legal": "Art. 224 CP — Dessein délictueux suffit, pas besoin d'intention de tuer.",
+            "critical": false,
+            "next": 4
+          }
+        ]
+      },
+      {
+        "phase": "🔬 Le prélèvement ADN sur les bouteilles de gaz",
+        "situation": "Le démineur a sécurisé les 3 bouteilles de gaz saisies. La PolFR souhaite faire des prélèvements ADN pour identifier d'autres complices ayant manipulé le matériel (les 2 suspects portaient des gants à l'interpellation, mais peut-être pas pendant la préparation). Le laboratoire forensique vous demande la procédure : « Bouteilles sous pression, manipulation délicate, on les ouvre ou pas ? » Le MP-FR doit autoriser tout prélèvement.",
+        "law": "<strong>Art. 255 CPP</strong> — Prélèvement ADN sur traces, autorisation MP.<br><strong>LADN Art. 5</strong> — Conservation et traitement des profils ADN.<br><strong>ISO/IEC 17025</strong> — Standards laboratoire forensique.<br><strong>Doctrine ENFSI</strong> — Prélèvements sur supports à risque (explosifs, biologiques).",
+        "question": "<strong>Quelle procédure de prélèvement ADN recommandez-vous ?</strong>",
+        "choices": [
+          {
+            "text": "Procédure ENFSI standard pour supports à risque : (1) Vidanger d'abord les bouteilles sous contrôle démineur (zone explosifs sécurisée du laboratoire fedpol), pour annuler le risque de déflagration pendant manipulation ; (2) Une fois bouteilles vides, prélèvement ADN par écouvillonnage sur zones de manipulation prioritaires (valves, robinets, poignées) avec écouvillons humides + secs en double — permet PCR en cas de contamination d'un échantillon ; (3) Photographier chaque bouteille avant/pendant/après prélèvement avec règle métrique ; (4) Comparer avec la base CODIS suisse + demander à la France comparaison avec leur base via Prüm.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Procédure conforme aux standards ENFSI. (1) La vidange préalable est non-négociable : prélever sur une bouteille sous pression expose le technicien à un accident grave (rupture, déflagration en cas de surchauffe locale). C'est la doctrine post-affaire Genève 2014. (2) L'écouvillonnage humide+sec en double est la pratique éprouvée pour maximiser la récupération ADN sans contaminer (le sec récupère ce que l'humide a manqué + redondance pour PCR). (3) La documentation photographique avec règle métrique est exigée par les laboratoires accrédités ISO/IEC 17025. (4) La comparaison Prüm (échange de profils ADN entre États Schengen, accord 2008) permet d'identifier des complices déjà fichés en France — souvent payant pour les équipes mobiles franco-belges.",
+            "legal": "ENFSI + ISO/IEC 17025 + Prüm — Procédure forensique éprouvée.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Procédure rapide : prélever directement par écouvillonnage sur les bouteilles intactes sans vidange — manipuler avec gants et masque, en zone forensique standard, le risque est gérable pour des techniciens expérimentés. La vidange préalable allongerait la procédure de 2-3 jours alors que les complices français sont en cours d'identification. Pour la comparaison ADN : base CODIS suisse uniquement, l'échange Prüm avec la France est trop lourd administrativement pour une affaire à ce stade. Cette approche pragmatique de la \"forensique opérationnelle rapide\", défendue par les laboratoires privés sous pression de délais, est aussi cohérente avec le principe de subsidiarité qui voudrait que les coopérations européennes lourdes (Prüm) soient réservées aux affaires de plus haute gravité, pas aux DAB-bashing routiniers.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Sous-estimation des risques techniques et stratégiques. (1) Manipuler des bouteilles de gaz combustible sous pression en zone forensique standard sans vidange préalable est une faute de sécurité au travail (LTr Art. 6) — le technicien peut être blessé si la bouteille percute un mur, est exposée à la chaleur ou présente un défaut. La doctrine ENFSI/SUVA est claire. (2) \"2-3 jours de retard\" pour vidange est faux — un démineur d'astreinte peut vidanger 3 bouteilles en quelques heures dans une chambre adaptée. (3) Refuser l'échange Prüm est privatif — la France a une base CODIS bien plus large qui peut identifier les complices LYS-Lyon. La procédure Prüm est routinière depuis 2009. (4) Cette voie expose le canton à des plaintes employeur en cas d'incident.",
+            "legal": "LTr Art. 6 + ENFSI + Prüm — Sécurité travail + comparaison transfrontière.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Refuser tout prélèvement ADN sur les bouteilles — les 2 suspects sont déjà identifiés et pris en flagrance, le dossier pénal CH est déjà solide, et chercher d'autres complices via ADN crée un risque procédural si les profils trouvés correspondent à des innocents (techniciens du fournisseur de gaz, vendeurs, etc.) qui devront être écartés laborieusement. Concentrer les ressources forensiques sur les téléphones saisis qui sont plus probants.",
+            "ok": false,
+            "pts": -10,
+            "fb": "Renoncement injustifié à un levier d'enquête central. (1) Les 2 suspects sont identifiés mais c'est UNE équipe de 6 (selon Telegram \"GLÂNE TEAM\") — les 4 autres complices doivent être identifiés et l'ADN sur les bouteilles est un levier majeur, complémentaire au volet téléphonique. (2) L'argument des \"profils innocents\" (techniciens fournisseur) est valide mais géré standard : exclusion par comparaison avec employés du fournisseur, c'est routinier. Pas de raison de renoncer. (3) \"Concentrer sur téléphones\" pose en plus le problème : les téléphones donnent des pseudos, l'ADN donne des identités réelles via base CODIS. C'est complémentaire, pas exclusif. (4) Cette renonciation laisserait fuir des complices et serait probablement reprochée par le MP au procès.",
+            "legal": "Art. 255 CPP — Levier d'enquête, pas optionnel.",
+            "critical": false,
+            "next": "end"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rajeunissement-ia",
+    "title": "Rajeunissement IA — La Pédopornographie Virtuelle",
+    "icon": "🤖",
+    "difficulty": "medium",
+    "atmosphere": "legal",
+    "realCase": "Tribunal fédéral, novembre 2025 — arrêt confirmant l'illégalité du \"rajeunissement numérique\" d'adultes par IA dans des contenus pornographiques. Affaire d'un homme ayant publié sur Instagram une vidéo d'actrice adulte rajeunie en enfant prépubère.",
+    "narrative": {
+      "success": "Vous structurez l'expertise technique impeccablement : analyse forensique du contenu (détection IA, métadonnées EXIF, comparaison faciale source/transformée), rapport au MP-VS qualifiant Art. 197 al. 4-5 CP. La jurisprudence TF nov. 2025 est rappelée dans le rapport. Le suspect est condamné à 12 mois ferme + interdiction d'exercer. Les modèles IA utilisés sont identifiés et signalés à l'OFCS qui alerte les fournisseurs.",
+      "degraded": "Qualification correcte mais la chaîne de custody du contenu téléchargé via Instagram est partiellement contestée par la défense (capture d'écran sans hash certifié). Condamnation maintenue à 8 mois avec sursis partiel. Les modèles IA ne sont pas identifiés faute d'analyse approfondie.",
+      "failure": "L'analyse technique est superficielle (pas de détection IA, pas de comparaison forensique). La défense plaide que le contenu pourrait être réel ou non rajeuni — doute raisonnable. Acquittement partiel. La jurisprudence TF nov. 2025 n'est pas correctement invoquée. Mauvaise image pour la lutte cantonale contre la pédopornographie IA."
+    },
+    "tags": [
+      "IA",
+      "PÉDOCRIMINALITÉ",
+      "DROIT PÉNAL",
+      "FORENSIQUE",
+      "DEEPFAKE"
+    ],
+    "legalRefs": [
+      "Art. 197 al. 4-5 CP",
+      "ATF nov. 2025 (rajeunissement IA)",
+      "Art. 184 CPP",
+      "Art. 248 CPP",
+      "Convention Lanzarote"
+    ],
+    "intro": "Mardi 9h, Police cantonale du Valais, Sion. Un signalement NCMEC (CyberTipline US) parvient à fedpol qui le redirige vers le canton du Valais : un compte Instagram tenu par M. T. (38 ans, domicilié à Sierre, animateur de jeunesse dans une commune valaisanne) a publié 6 vidéos en 4 mois. Toutes montrent ce qui semble être des actes pornographiques avec des enfants prépubères. La cellule pédocriminalité fedpol vous transmet le dossier avec une note technique : « Suspicion forte de rajeunissement IA — le visage et le corps présentent des artefacts typiques des modèles GenAI 2024-2025 (face-swap + body morphing). Confirmation forensique nécessaire. » Le suspect est inscrit au registre des personnes travaillant avec des mineurs — l'urgence est multiple.",
+    "alertLevel": "🤖 NCMEC SIGNALEMENT — Animateur jeunesse · 6 vidéos suspectes · IA suspectée · Jurisprudence TF nov. 2025 applicable",
+    "objectives": [
+      {
+        "icon": "🔬",
+        "text": "Effectuer la détection technique IA (artefacts GAN, comparaison source-cible, métadonnées EXIF)"
+      },
+      {
+        "icon": "⚖️",
+        "text": "Maîtriser la jurisprudence TF nov. 2025 sur le rajeunissement numérique = pédopornographie virtuelle"
+      },
+      {
+        "icon": "🚨",
+        "text": "Activer les mesures de protection enfants (interdiction immédiate de contact dans cadre animation)"
+      },
+      {
+        "icon": "🛡️",
+        "text": "Sécuriser la chaîne de custody du contenu Instagram (NCMEC + capture forensique)"
+      }
+    ],
+    "debrief": "<p>L'<strong>arrêt du Tribunal fédéral de novembre 2025</strong> sur le rajeunissement IA constitue une étape majeure de la jurisprudence suisse en matière de pédopornographie virtuelle. Le TF a confirmé que <strong>l'Art. 197 al. 4 et 5 CP</strong> (pornographie illégale) <strong>s'applique aux contenus IA-générés</strong> représentant des mineurs, même si aucun enfant réel n'a été abusé pour créer le contenu. Trois raisons principales avancées par le TF :</p>\n<ol><li><strong>Difficulté de répression globale</strong> : la coexistence de contenus réels et virtuels complique l'identification des vraies victimes par les enquêteurs (qui ne peuvent plus présumer de la réalité de la victime à partir du contenu).</li>\n<li><strong>Effet sur la demande</strong> : les contenus virtuels alimentent et normalisent l'intérêt sexuel pour les enfants, sans réduire la demande de contenus réels.</li>\n<li><strong>Cohérence législative</strong> : l'Art. 197 al. 4 CP punit \"les objets ou représentations\" — le terme couvre les générations IA selon l'interprétation téléologique.</li></ol>\n<p>Sur le <strong>plan technique</strong>, la détection forensique de contenu IA-généré ou modifié repose sur plusieurs signaux convergents : <strong>artefacts spectraux GAN</strong> (fréquences caractéristiques absentes des images naturelles), <strong>incohérences anatomiques</strong> (proportions dents-yeux, oreilles-mâchoire, micro-asymétries faciales), <strong>artefacts de compression différentielle</strong> (zones traitées par IA ont une signature DCT différente), <strong>métadonnées EXIF</strong> appauvries ou contradictoires, et désormais des <strong>watermarks invisibles C2PA</strong> sur les modèles récents. La détection certaine reste difficile mais les indices convergents permettent une qualification probabiliste forensiquement défendable.</p>",
+    "steps": [
+      {
+        "phase": "🔬 La détection forensique IA — méthodologie",
+        "situation": "Vous récupérez les 6 vidéos via NCMEC (préservation faite par Meta sur signalement). Format MP4, résolutions 720p-1080p, durées 8-23 secondes. À l'œil nu, le rendu est troublant : les visages \"d'enfants\" semblent légèrement \"trop lisses\", les expressions un peu mécaniques. Pas de métadonnées EXIF significatives (probablement strippées par Instagram). Votre analyste forensique vous demande la méthodologie d'analyse. Vous savez que la défense au procès attaquera tout doute technique.",
+        "law": "<strong>Art. 184 CPP</strong> — Expertise : méthodologie reproductible.<br><strong>ISO/IEC 27037</strong> — Standards forensique numérique.<br><strong>State of the Art GenAI Detection 2025</strong> — Signaux convergents : artefacts spectraux, anatomie, compression différentielle.<br><strong>C2PA</strong> — Coalition for Content Provenance and Authenticity : watermarks invisibles dans modèles récents.",
+        "question": "<strong>Quelle méthodologie de détection IA documentez-vous ?</strong>",
+        "choices": [
+          {
+            "text": "Méthodologie multi-signaux convergents : (1) Analyse spectrale FFT pour détecter les signatures GAN (modèles 2024-2025 laissent des artefacts spécifiques entre 0,3 et 0,5 cycles/pixel) ; (2) Analyse anatomique frame-by-frame (proportions yeux-bouche-oreilles, micro-asymétries naturelles absentes en IA, cohérence dentition) ; (3) Analyse différentielle de compression DCT (zones IA ont signature distincte des zones réelles) ; (4) Recherche watermarks C2PA invisibles ; (5) Tentative de comparaison faciale avec actrices porno adultes (bases publiques) pour identifier la source rajeunie. Documentation de chaque méthode + taux de confiance + limites. La méthodologie multi-signaux est par ailleurs alignée avec le standard SWGDE (Scientific Working Group on Digital Evidence) qui exige la convergence d'au moins 3 méthodes indépendantes pour fonder une conclusion forensique sur du contenu IA-généré, et avec les recommandations 2025 du groupe FIRE (Forensic Image Recognition Evaluation) coordonné par INTERPOL et le NIST. Documentation des limitations de chaque signal, marges d'erreur estimées et hypothèses alternatives explicitement réfutées : c'est précisément ce qu'un tribunal cantonal valaisan attendra d'une expertise sérieuse face aux contre-experts privés de la défense.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Méthodologie conforme à l'état de l'art 2025. (1) L'analyse FFT/spectrale est la méthode la plus défendable scientifiquement (publications académiques 2023-2025) — les modèles GAN laissent des fréquences caractéristiques détectables. (2) L'analyse anatomique est essentielle : les modèles peinent encore avec les dents (souvent trop régulières), les micro-asymétries (visages humains naturellement asymétriques), et les proportions enfantines réelles. (3) La compression DCT différentielle révèle les zones retouchées. (4) Les watermarks C2PA sont obligatoires dans Stable Diffusion XL+ et beaucoup de modèles récents — leur présence est probable. (5) La comparaison faciale source-cible est la preuve la plus forte au procès — si on identifie l'actrice adulte source rajeunie, le doute s'effondre. Méthodologie multi-signaux = robuste face à toute défense.",
+            "legal": "Art. 184 CPP + state of the art GenAI 2025 — Méthodologie convergente et reproductible.",
+            "critical": false,
+            "next": 1
+          },
+          {
+            "text": "Utiliser un seul outil de détection IA reconnu (Reality Defender, Sensity AI ou équivalent commercial) qui fournit un score de probabilité IA — ces outils sont spécialement conçus pour cette tâche, validés par des labos académiques, et leur sortie standardisée est facile à présenter au tribunal. Joindre simplement le rapport de l'outil au dossier d'expertise. La méthodologie multi-signaux est lourde et risque de noyer le juge dans la technique alors qu'un score clair est plus efficace. Cette approche par l'outil unique reconnu, défendue par les laboratoires forensiques privés sous pression de productivité, présente l'avantage de la simplicité présentationnelle au tribunal — un score chiffré clair vaut mieux qu'une mosaïque méthodologique que le juge peut percevoir comme sur-ingénierie défensive coûteuse en temps d'instruction. Cette approche par outil unique est d'ailleurs encouragée par le NCSC britannique dans ses guides pratiques 2024 pour les enquêtes routinières où la rapidité de traitement prime sur la sophistication méthodologique. Plusieurs procureurs alémaniques apprécient cette approche \"score chiffré\" qui simplifie considérablement les présentations en audience devant des juges peu familiarisés avec la cryptographie ou les théories spectrales avancées des modèles génératifs récents.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Sous-dimensionnement méthodologique pour un dossier critique. (1) Les outils commerciaux de détection IA (Reality Defender, Sensity, Hive AI) ont des taux d'erreur documentés de 8-25 % selon les cas et les modèles — leur sortie unique n'est PAS suffisante pour fonder une condamnation seule. (2) La défense (qui aura accès à des contre-experts) attaquera le \"score unique\" en exhibant les limitations publiées de l'outil — l'expertise s'effondre sur un seul point faible. (3) La méthode des signaux convergents est précisément ce qui permet de surmonter les limitations individuelles de chaque méthode — c'est la rigueur forensique standard depuis l'ATF 137 IV 122 (2011) sur les expertises convergentes. (4) Au procès, le juge apprécie une méthodologie multi-vérifications, pas un \"score noir\" d'outil propriétaire opaque.",
+            "legal": "ATF 137 IV 122 — Expertises convergentes plus solides.",
+            "critical": false,
+            "next": 1
+          },
+          {
+            "text": "Effectuer une simple analyse visuelle qualifiée — un expert forensique expérimenté reconnaît les contenus IA \"à l'œil\" grâce aux artefacts caractéristiques (lissage anormal, mouvements oculaires mécaniques, incohérences de bordures). Documenter en captures d'écran annotées les 4-5 signes visuels les plus évidents par vidéo. C'est la méthode la plus accessible pour un tribunal et qui reflète l'expertise humaine éprouvée des analystes spécialisés.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Méthodologie subjective, fragile au procès. (1) L'analyse visuelle qualifiée seule N'EST PAS reproductible (Art. 184 CPP) : un autre expert pourrait voir d'autres signes ou ne pas voir les mêmes — la défense attaquera l'arbitraire. (2) Les modèles GenAI 2024-2025 (Sora 2, Veo 3, Stable Video Diffusion) produisent des contenus de plus en plus difficiles à distinguer à l'œil — l'expertise visuelle pure devient obsolète. (3) Sans analyse spectrale/DCT/anatomique, le rapport sera qualifié de \"impressionniste\" par la défense et probablement écarté par un tribunal sourcilleux sur la rigueur scientifique. (4) Cette méthodologie aurait été acceptable en 2018, plus en 2026.",
+            "legal": "Art. 184 CPP — Méthodologie reproductible requise.",
+            "critical": false,
+            "next": 1
+          }
+        ]
+      },
+      {
+        "phase": "⚖️ La qualification juridique — virtuel pénalisé ?",
+        "situation": "L'analyse forensique convergente conclut : 5 vidéos sont avec quasi-certitude (>92 %) du rajeunissement IA d'actrices pornographiques adultes (2 actrices identifiées via PimEyes + recherche manuelle), 1 vidéo est une génération IA pure non-source (modèle text-to-video). L'avocat du suspect, prévenant, vous a déjà transmis sa position : « Aucun enfant réel n'est victime, il n'y a pas de pédopornographie au sens de l'Art. 197 CP qui présuppose la représentation d'enfants réels. La défense plaidera l'absence d'élément matériel. » Quelle qualification soutenez-vous ?",
+        "law": "<strong>Art. 197 al. 4 CP</strong> — Pornographie illégale : objets ou représentations ayant pour objet des actes d'ordre sexuel avec des mineurs.<br><strong>Art. 197 al. 5 CP</strong> — Forme aggravée : actes d'ordre sexuel avec mineurs de moins de 16 ans.<br><strong>ATF nov. 2025 (rajeunissement IA)</strong> — Confirmation : pédopornographie virtuelle = pénalisable au même titre que la réelle.<br><strong>Convention de Lanzarote Art. 20</strong> — Pédopornographie inclut les images simulées.",
+        "question": "<strong>Comment réfutez-vous l'argument de la défense ?</strong>",
+        "choices": [
+          {
+            "text": "Réfutation en 3 points appuyée sur l'arrêt TF nov. 2025 : (1) Le TF a explicitement jugé que l'Art. 197 al. 4 CP (\"objets ou représentations\") couvre les générations IA — l'interprétation téléologique du terme \"représentations\" inclut désormais le contenu virtuel. (2) Trois raisons matérielles avancées par le TF : difficulté d'identification des vraies victimes, alimentation de la demande pédocriminelle, cohérence législative avec la Convention de Lanzarote (Art. 20). (3) Pour les 5 vidéos rajeunies = représentation d'actes pornographiques avec mineurs (apparence prépubère) ; pour la 6e (génération pure) = même qualification, le TF n'exige PAS qu'un enfant réel ait été abusé. Qualification : Art. 197 al. 4 CP + al. 5 CP (mineurs <16 ans apparents). Citer également l'arrêt en complétant : la théorie selon laquelle \"pas d'enfant réel = pas d'infraction\" a été explicitement examinée et rejetée par le TF, qui a notamment relevé que les contenus rajeunis utilisent des actrices adultes consentantes uniquement comme matière première mais que le produit final est une représentation de mineur destinée à une consommation pédocriminelle — c'est cette finalité qui caractérise l'infraction, indépendamment de la source. La défense ne pourra pas non plus s'abriter derrière l'argument du \"art créatif\" : le TF a précisé que la liberté d'expression Art. 16 Cst. ne couvre pas la production de pédopornographie virtuelle.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Qualification rigoureuse alignée sur la jurisprudence la plus récente. (1) Citer expressément l'arrêt TF nov. 2025 et son raisonnement téléologique anticipe et neutralise l'argument central de la défense. (2) Les 3 raisons matérielles avancées par le TF sont importantes à reproduire au procès — elles montrent que la jurisprudence n'est pas formelle mais substantielle (protection des enfants en général, pas seulement des victimes individuelles). (3) La qualification al. 5 CP (forme aggravée pour mineurs <16 ans) est correcte ici — l'apparence prépubère des sujets dans les vidéos rajeunies/générées correspond à des moins de 16 ans. (4) La référence à la Convention de Lanzarote (que la Suisse a ratifiée en 2014) ajoute une couche de cohérence avec le droit international. C'est la qualification qui prévaudra au procès.",
+            "legal": "Art. 197 al. 4-5 CP + ATF nov. 2025 + Convention Lanzarote — Qualification ferme.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Concéder partiellement l'argument de la défense : qualifier uniquement la 6e vidéo (génération IA pure d'enfants) au titre de l'Art. 197 al. 4 CP, mais reconnaître que les 5 vidéos rajeunies (qui partent d'actrices adultes consentantes) sont juridiquement plus complexes — l'argument \"pas d'enfant réel\" a une certaine assise et le TF n'a pas explicitement statué sur le rajeunissement IA spécifiquement. Pour ces 5 vidéos, qualifier subsidiairement Art. 197 al. 1 CP (pornographie) ou Art. 28 CC (atteinte à la personnalité des actrices source rajeunies). Cette posture nuancée, défendue par certains pénalistes valaisans réputés pour leur prudence doctrinale, reflète aussi la jurisprudence allemande récente du BGH qui a refusé d'étendre la pédopornographie aux contenus IA purs — il y a matière à débat juridique sérieux sur lequel le TF n'aurait pas le dernier mot avant un éventuel revirement. Cette approche graduée et prudente est défendue par certains praticiens du barreau valaisan qui considèrent que l'arrêt TF nov. 2025 est encore trop récent pour être appliqué sans nuance dans toutes les configurations factuelles, surtout dans des cas où le suspect peut argumenter de bonne foi que les actrices d'origine étaient consentantes adultes et que la transformation IA reste un acte créatif qui pourrait relever de l'expression artistique au sens de l'Art. 16 Cst. Cette nuance argumentative pourrait s'appuyer sur les premiers commentaires doctrinaux de l'arrêt parus dans la Revue pénale suisse fin 2025.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Concession juridiquement erronée et stratégiquement désastreuse. (1) L'arrêt TF nov. 2025 portait PRÉCISÉMENT sur le rajeunissement IA d'une actrice adulte — c'est exactement le cas de figure ici, le TF a tranché. La concession est une erreur factuelle sur la jurisprudence applicable. (2) Qualifier au titre de l'Art. 197 al. 1 CP (pornographie ordinaire) sous-évalue gravement la nature de l'infraction et minimise la responsabilité du suspect — le législateur a précisément créé l'al. 4-5 pour distinguer la pédopornographie. (3) L'Art. 28 CC (personnalité actrices) est une voie civile, pas pénale — confondre les voies montre une faiblesse juridique exploitable par la défense. (4) Cette concession en réplique au procès = défaite quasi-assurée sur les 5 vidéos principales.",
+            "legal": "ATF nov. 2025 — Cas RAJEUNISSEMENT explicitement tranché par TF.",
+            "critical": true,
+            "next": "end"
+          },
+          {
+            "text": "Soutenir une qualification globale Art. 197 al. 4 CP en s'appuyant sur la Convention de Lanzarote (Art. 20) qui pénalise déjà les images simulées de mineurs — c'est une norme internationale ratifiée par la Suisse en 2014, elle s'applique directement, indépendamment de l'arrêt TF nov. 2025 récent et qui pourrait être contesté en révision. Le droit international prime sur la jurisprudence cantonale.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Argumentation partiellement correcte mais procéduralement faible. (1) Citer EXCLUSIVEMENT la Convention de Lanzarote sans s'appuyer sur l'arrêt TF nov. 2025 est une faute stratégique : l'arrêt TF est l'autorité directement applicable en Suisse, le TF EST le juge de la convention. (2) Le TF n'est PAS \"jurisprudence cantonale\" — c'est l'autorité judiciaire suprême de la Confédération, sa jurisprudence n'est pas révisable comme une décision cantonale. (3) La Convention de Lanzarote N'EST PAS d'application directe (self-executing) en droit suisse pour la criminalisation — il faut une transposition législative, qui est précisément l'Art. 197 al. 4 CP. (4) Cette argumentation maladroite expose à un contre-feu défensif facile : \"vous citez le droit international au lieu de la jurisprudence directement applicable\".",
+            "legal": "Hiérarchie des normes — TF + Art. 197 CP > Convention non self-executing.",
+            "critical": false,
+            "next": 2
+          }
+        ]
+      },
+      {
+        "phase": "🚨 La protection immédiate des enfants",
+        "situation": "M. T. est animateur de jeunesse dans la commune de Sierre — il est en contact régulier avec une trentaine d'enfants de 8-14 ans, dans le cadre d'activités sportives hebdomadaires (mardi et jeudi soirs). L'enquête vient de commencer (perquisition prévue jeudi matin, 06:00). Aujourd'hui mardi, il a une activité ce soir 18h. La perquisition jeudi est calibrée pour ne pas alerter le suspect avant. Mais ce soir... que faites-vous ? L'inspecteur principal vous regarde : « On laisse passer ou on bouge maintenant ? »",
+        "law": "<strong>Art. 67 CP</strong> — Interdiction d'exercer une activité.<br><strong>Art. 67 al. 4 CP</strong> — Interdiction préventive d'activité avec mineurs (depuis nLPD 2023).<br><strong>LAVI</strong> — Protection victimes.<br><strong>Code de l'enfance</strong> — Intérêt supérieur de l'enfant (CDE Art. 3).<br><strong>Doctrine police préventive</strong> — Action immédiate quand danger pour mineurs.",
+        "question": "<strong>Que faites-vous pour la séance de ce soir 18h ?</strong>",
+        "choices": [
+          {
+            "text": "Action préventive immédiate : (1) Demander en urgence au MP-VS une ordonnance d'interdiction préventive d'activité avec mineurs (Art. 67 al. 4 CP, applicable dès suspicion fondée) — déposable et obtenable en 4-6h ; (2) Notifier le service de la jeunesse de la commune de Sierre et le directeur du centre d'animation pour qu'ils retirent M. T. de l'activité de ce soir, sous prétexte administratif (urgence familiale, justificatif fourni a posteriori) sans alerter sur l'enquête pénale en cours ; (3) Maintenir le calendrier de perquisition jeudi 06:00 — la mesure préventive de ce soir n'éveille pas les soupçons d'enquête pénale. Joindre à l'ordonnance d'interdiction préventive un avis du Service de la jeunesse cantonal et une note technique du laboratoire forensique : la convergence \"signalement NCMEC + animateur jeunesse + détection IA convergente >92%\" répond aux exigences de \"soupçon fondé\" de l'Art. 67 al. 4 CP. La doctrine fedpol pédocriminalité 2024 exige par ailleurs une notification au registre des personnes travaillant avec des mineurs dès la mise en examen formelle, ce qui automatisera la mise à jour cantonale et inter-cantonale du suivi.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Solution équilibrée qui protège les enfants ET préserve l'enquête. (1) L'Art. 67 al. 4 CP (introduit en 2023) permet précisément l'interdiction préventive — c'est la base légale exacte. Un MP de garde peut signer en quelques heures sur dossier solide (NCMEC + détection forensique IA convergente). (2) Le \"prétexte administratif\" via service jeunesse de la commune est une pratique éprouvée — le directeur du centre comprend (sans détails) qu'il y a un problème, retire M. T. ce soir-là sans le confronter, M. T. interprète comme un imprévu, ne se méfie pas. (3) Préserver le calendrier perquisition jeudi 06:00 maintient l'effet de surprise. C'est la doctrine fedpol pédocriminalité depuis l'opération Stream 2025.",
+            "legal": "Art. 67 al. 4 CP + doctrine fedpol pédo — Protection enfants + secret instruction.",
+            "critical": false,
+            "next": 3
+          },
+          {
+            "text": "Maintenir l'opération telle que prévue : la perquisition jeudi 06:00 doit absolument préserver l'effet de surprise, et toute action préventive ce soir risque d'alerter le suspect (le service jeunesse pourrait laisser fuiter, M. T. pourrait être méfiant, etc.). Une seule séance d'animation est statistiquement à faible risque de passage à l'acte direct (les contenus suggèrent une activité virtuelle, pas physique). Faire confiance à la procédure programmée et accepter ce risque mesuré. Cette doctrine de la rigueur procédurale absolue, qu'on appellerait peut-être chez nous une approche \"bâloise\" du dossier — patient, ferme sur le calendrier, sans précipitation —, est parfois préférée aux solutions de compromis pour préserver l'effet de surprise final. Cette doctrine de l'efficience procédurale, défendue par certains commandants de polices cantonales soucieux de préserver les ressources d'enquête, considère que les compromis pragmatiques sur le calendrier opérationnel sont parfois nécessaires pour maximiser le rendement des opérations programmées dans des dossiers à fort volume comme ceux de la pédocriminalité numérique contemporaine. Ces aménagements pragmatiques font partie de l'expérience opérationnelle des polices cantonales modernes.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Hiérarchisation morale et juridique inacceptable. (1) Le risque pour les enfants présents ce soir n'est PAS \"statistiquement faible\" : la trajectoire des auteurs de pédopornographie inclut souvent un passage à l'acte physique (études Hanson et al. 2002, Seto 2013), et l'animation jeunesse est précisément le type de contexte facilitateur. (2) L'intérêt supérieur de l'enfant (CDE Art. 3) prime ABSOLUMENT sur le confort procédural de l'enquête — c'est constitutionnel. (3) Si un enfant subit un préjudice ce mardi soir, votre responsabilité personnelle et institutionnelle est engagée pour défaut de protection (Art. 11 CP, omission). (4) L'option correcte montre qu'on PEUT protéger les enfants ET préserver l'enquête — il n'y a pas de dilemme réel.",
+            "legal": "CDE Art. 3 + Art. 11 CP — Responsabilité par omission engagée.",
+            "critical": true,
+            "next": "end"
+          },
+          {
+            "text": "Avancer la perquisition à mardi 17h00 (avant la séance de 18h) pour empêcher M. T. de s'y rendre — la perquisition a lieu dans la journée plutôt qu'à l'aube, on perd un peu en effet de surprise (M. T. n'est pas réveillé par l'opération) mais on neutralise le risque immédiat sur les enfants de manière définitive. C'est une adaptation pragmatique du calendrier qui priorise la protection.",
+            "ok": false,
+            "pts": -10,
+            "fb": "Approche bien intentionnée mais avec des inconvénients évitables. (1) Une perquisition mardi 17h00 a moins de chance de surprendre M. T. en flagrance (probablement absent, au travail) — on perd l'effet de saisie de matériel actif (téléphones allumés, ordinateurs en session). (2) Le voisinage en plein jour observe une perquisition de police = le \"secret de l'enquête\" Art. 73 CPP est compromis. (3) M. T. au travail ou ailleurs sera alerté par téléphone par un voisin avant son retour — il peut potentiellement détruire d'autres preuves cachées chez un tiers (cloud, location). (4) L'option correcte (interdiction préventive Art. 67 al. 4 + perquisition jeudi maintenue) atteint le même objectif protection sans ces inconvénients. C'est la doctrine moderne.",
+            "legal": "Art. 73 CPP — Secret instruction préservable autrement.",
+            "critical": false,
+            "next": 3
+          }
+        ]
+      },
+      {
+        "phase": "🛡️ La chaîne de custody du contenu Instagram",
+        "situation": "Pour le procès, vous devez sécuriser la chaîne de custody du contenu Instagram. NCMEC a transmis les vidéos via leur portail sécurisé (CyberTipline → fedpol → vous). Mais Meta n'a fourni que les fichiers MP4 + métadonnées EXIF strippées + horodatages serveur — pas l'historique complet du compte (qui aurait posté quoi, qui aurait visionné, comments). Pour le tribunal, vous voulez une chaîne sans faille. La défense attaquera : « Comment êtes-vous sûr que ces vidéos viennent du compte de mon client et qu'elles n'ont pas été manipulées en transit ? »",
+        "law": "<strong>Art. 192 CPP</strong> — Examen et conservation des objets.<br><strong>Art. 263 CPP</strong> — Séquestre.<br><strong>EIMP / DSA Art. 18</strong> — Coopération avec plateformes.<br><strong>Doctrine NCMEC CyberTipline</strong> — Standards de preuve : hash NCMEC, horodatages, certificats.",
+        "question": "<strong>Comment sécurisez-vous la chaîne de custody jusqu'au procès ?</strong>",
+        "choices": [
+          {
+            "text": "Architecture de chaîne probante : (1) Demande EIMP formelle à Meta Irlande pour fournir l'historique complet du compte (uploads avec timestamps, IP de connexion, devices ID, comments/likes) — délai 30-60 jours mais opposable au procès ; (2) Hashes SHA-256 et MD5 de chaque MP4 dès réception, journal de custody horodaté ; (3) Certification NCMEC de la transmission (le NCMEC fournit un certificat de chaîne de transmission à la demande, valable au procès suisse depuis ATF 145 IV 50) ; (4) Capture forensique web archive.org si le compte est encore en ligne, avec hashes ; (5) Préservation du compte Meta gelé via DSA Art. 18 (urgence enquête) pour empêcher suppression par M. T. Maintenir une copie maître offline air-gapped des MP4 originaux dès réception (disque dur dédié, hashes documentés, accès journalisé) : c'est la \"copie de référence\" forensique qui sera présentée si la défense conteste les fichiers de travail. Pour le compte Meta de M. T., demander à Meta Ireland un \"freeze and gather\" via DSA Art. 18 d'urgence — Meta a un point de contact dédié pour les autorités sur ce type de requête, délais 24-72h. Documentation systématique de chaque étape de la chaîne de custody dans un journal d'expertise horodaté et signé numériquement, conformément aux exigences du Tribunal cantonal valaisan post-affaire Sion 2022.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Architecture de preuve complète et défensible. (1) La demande EIMP à Meta Irlande est la voie formelle indispensable — l'historique complet permet d'établir l'attribution du compte à M. T. (IPs, devices) et la non-manipulation des contenus (uploads originaux). (2) Les hashes doubles (SHA-256 + MD5) protègent contre toute future contestation d'intégrité — pratique forensique standard. (3) Le certificat NCMEC est essentiel : depuis l'ATF 145 IV 50, ces certificats sont admis comme preuve officielle de la transmission, ce qui élimine le doute sur la chaîne CyberTipline → fedpol → MP-VS. (4) Le gel DSA Art. 18 protège contre la destruction des preuves côté Meta. (5) C'est la doctrine NCMEC-fedpol-MP éprouvée depuis 2023.",
+            "legal": "Art. 192-263 CPP + EIMP + DSA Art. 18 + ATF 145 IV 50 — Chaîne complète.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Approche légère : se contenter des MP4 transmis par NCMEC + capture d'écran du compte Instagram visible (avec date dans le browser) + déposition orale de l'agent NCMEC qui certifie la chaîne. Pas besoin d'une demande EIMP lourde à Meta qui prendrait 2 mois — le faisceau d'indices (NCMEC + capture écran + déposition + détection IA) est suffisant. La chaîne sera défendable au procès. La pratique constante des MP cantonaux moins exposés aux dossiers pédocriminels privilégie d'ailleurs cette voie de la simplicité probatoire pour ne pas surcharger l'instruction. Les ressources EIMP sont précieuses et doivent être réservées aux affaires véritablement transfrontalières où elles font la différence — un cas pédocriminel domestique avec NCMEC + détection IA + capture forensique web bien documentée constitue déjà un faisceau probatoire suffisant pour la plupart des tribunaux helvétiques attentifs au principe de proportionnalité enquête/preuves. Cette approche allégée correspond à la pratique de nombreux MP cantonaux qui évitent les demandes EIMP lourdes pour les dossiers où les éléments matériels disponibles paraissent déjà suffisants à fonder l'accusation. Les certifications NCMEC sont reconnues internationalement et leur validité au procès suisse découle de la jurisprudence constante depuis 2019, ce qui rend la voie EIMP \"belt and suspenders\" parfois superflue dans la pratique courante des dossiers pédocriminels alémaniques où la chaîne CyberTipline → fedpol est éprouvée.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Sous-dimensionnement procédural sur un dossier pédocriminel sensible. (1) Une capture d'écran sans hash certifié + horodatage browser = preuve faible, facilement contestable (\"vous avez modifié l'URL\"). (2) La déposition orale d'un agent NCMEC (basé aux USA) dans une procédure suisse est juridiquement complexe — l'EIMP est précisément le canal qui régularise. (3) Sans demande EIMP à Meta, vous n'avez PAS l'attribution du compte à M. T. (pas d'IP, pas de device ID) — la défense pourra plaider \"compte piraté, mon client n'a rien posté\". (4) Sur un dossier où M. T. risque 5+ ans + interdiction d'exercer + inscription au registre + retrait de l'autorité parentale potentielle, la rigueur probatoire EIMP est indispensable. C'est la doctrine MP-VS depuis 2022.",
+            "legal": "Doctrine MP-VS — Rigueur probatoire EIMP requise pour pédocriminalité.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Solliciter une perquisition technique chez Meta Suisse (bureau de Zurich) pour saisir les serveurs contenant l'historique du compte de M. T. — cette voie est plus rapide qu'une EIMP formelle (intervention directe en CH) et donne l'accès complet aux données. Meta a une présence légale en Suisse, donc compétence territoriale CH, pas besoin d'EIMP qui ralentit.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Erreur juridique fondamentale sur la juridiction des données. (1) Meta Suisse à Zurich est une entité commerciale (vente d'espaces publicitaires) — elle N'A PAS les serveurs de données utilisateurs, qui sont en Irlande (siège européen Meta) et aux USA. Une perquisition là-bas ne donnerait rien. (2) Les données utilisateurs Meta sont juridiquement sous compétence Meta Ireland Ltd. — l'accès passe par EIMP (CH-IE), pas par perquisition CH directe. (3) Tenter une perquisition à Zurich serait une intervention sans objet (zéro données pertinentes) qui briserait par ailleurs la relation fedpol-Meta établie depuis 2019 pour les dossiers pédocriminels. (4) La doctrine européenne post-Schrems II + DSA confirme : compétence du siège européen, EIMP/DSA pour l'accès. Cette confusion territoriale-juridique serait sanctionnée par le tribunal.",
+            "legal": "RGPD/DSA — Compétence Meta Ireland, pas CH. Perquisition CH = sans objet.",
+            "critical": false,
+            "next": 4
+          }
+        ]
+      },
+      {
+        "phase": "🌐 Le partage avec l'OFCS sur les modèles IA utilisés",
+        "situation": "L'analyse forensique a réussi à identifier le modèle IA probablement utilisé : un fork modifié de Stable Video Diffusion 1.1 avec un LoRA spécialisé \"face-aging-reverse\" hébergé sur un repository privé. Ce LoRA n'est pas dans les bases publiques modérées. L'OFCS (Office fédéral de la cybersécurité) vous demande si vous pouvez partager ces éléments techniques pour qu'il alerte les fournisseurs (Stability AI, Hugging Face) et fasse retirer le LoRA si possible. M. T. est mis en accusation et la procédure pénale suit son cours.",
+        "law": "<strong>Art. 73 CPP</strong> — Secret de l'instruction.<br><strong>LSI Art. 74c</strong> — Coopération fedpol-OFCS.<br><strong>LPD Art. 16-19</strong> — Communication transfrontière (OFCS national, pas étranger).<br><strong>Doctrine post-Stream/KidFlix</strong> — Partage IoC techniques avec acteurs privés sous conditions.",
+        "question": "<strong>Que partagez-vous avec l'OFCS et selon quel cadre ?</strong>",
+        "choices": [
+          {
+            "text": "Partage différencié à l'OFCS : (1) IoC techniques anonymisés (signature spectrale du LoRA, pattern d'artefacts, hash du modèle si disponible) — partage immédiat sans cadre EIMP car données techniques sans lien avec personne identifiable, pour que l'OFCS puisse alerter Stability AI / Hugging Face / Civitai ; (2) Pas de partage de l'identité de M. T., du dossier pénal, ni des contenus eux-mêmes (LPD + Art. 73 CPP) ; (3) Documenter le partage dans le dossier pénal pour traçabilité ; (4) Demander à l'OFCS un retour si le LoRA est identifié et retiré, pour intégrer cette information à l'enquête (autres utilisateurs potentiels du même LoRA = autres affaires en cours). La doctrine MELANI/OFCS post-rapport \"Generative AI Threats 2025\" recommande même un signalement proactif fedpol-OFCS sur les LoRA pédocriminels identifiés, à diffuser dans la communauté CSIRT mondiale via le canal STIX/TAXII : la signature spectrale et le hash de modèle deviennent ainsi des IoC opérationnels pour les autres pays partenaires (Allemagne, France, Royaume-Uni notamment) qui pourront détecter le même LoRA dans leurs propres dossiers en cours, multipliant l'effet préventif initial.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Architecture de partage conforme et utile. (1) Les IoC techniques anonymisés (signatures, patterns, hashes de modèles IA) ne sont PAS des données personnelles au sens LPD — partage routinier dans la communauté CTI cyber et OFCS. (2) Le cloisonnement strict avec le dossier pénal préserve Art. 73 CPP. (3) Le partage technique permet à l'OFCS de jouer son rôle préventif : alerter Stability AI/Hugging Face/Civitai pour le retrait du LoRA, ce qui empêche d'autres usages criminels. (4) La boucle de retour de l'OFCS est précieuse : si le LoRA est identifié sur un repository, ses utilisateurs peuvent être tracés (via accounts) — d'autres affaires similaires émergeront. C'est la doctrine fedpol-OFCS post-affaires Stream/KidFlix.",
+            "legal": "LSI Art. 74c + LPD + Art. 73 CPP — Cloisonnement préservé, action préventive activée.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Refuser tout partage avec l'OFCS tant que la procédure pénale n'est pas définitivement close — le secret de l'instruction (Art. 73 CPP) est absolu, et tout partage parallèle avec un acteur extérieur (même fédéral) crée un risque de fuite qui pourrait compromettre le procès. L'OFCS pourra agir après le jugement définitif de M. T., dans 18-24 mois probablement. Entre-temps, la lutte contre les LoRA criminels n'est pas du ressort de l'enquête pénale individuelle. Cette lecture maximaliste du secret de l'instruction est défendue par certains procureurs traditionalistes pour qui l'étanchéité totale du dossier prime sur toute considération préventive collective — la mission première du MP étant l'établissement des faits et non la régulation des écosystèmes IA, qui relève de l'OFCS et de la régulation européenne en cours. Cette interprétation maximaliste du secret de l'instruction est défendue par certains juges instructeurs traditionalistes qui considèrent qu'aucune fuite, même technique, ne doit pouvoir être imputée à l'enquête en cours, et que la mission préventive de l'OFCS doit s'organiser de façon strictement séquentielle après la clôture des procédures pénales individuelles, dans un calendrier qui peut effectivement s'étirer sur plusieurs années pour les dossiers complexes.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Lecture maximaliste de l'Art. 73 CPP qui rate l'enjeu sociétal. (1) L'Art. 73 CPP protège les éléments PERSONNELS de l'instruction (identité suspect, victimes, contenus précis) — pas les IoC techniques anonymisés qui n'identifient personne. La doctrine fedpol-OFCS établit cette distinction depuis 2018. (2) Attendre 18-24 mois la fin du procès pour signaler le LoRA criminel = laisser pendant 18-24 mois des dizaines/centaines d'autres utilisateurs potentiels créer du contenu pédopornographique IA. C'est une faute par omission au regard de la mission préventive de la police. (3) La LSI Art. 74c (entrée en vigueur 2024) prévoit explicitement la coopération fedpol-OFCS pour les IoC techniques en temps réel. (4) Cette posture serait jugée disproportionnée par le PFPDT et l'OFCS.",
+            "legal": "LSI Art. 74c + doctrine fedpol-OFCS — Coopération technique non bloquée par instruction.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Partage complet avec l'OFCS : transmettre tout le dossier technique (IoC, identité M. T., dossier pénal résumé, captures de contenus dépixellisés en partie) — la coopération inter-agences fédérale est efficace quand elle est totale, et l'OFCS dispose des compétences pour traiter ces informations en confidentialité. Une coopération à demi-mesure produit des résultats à demi-mesure. La transparence inter-fédérale est l'esprit de la LSI 2024.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Triple violation procédurale et déontologique. (1) Partager l'identité de M. T. avec l'OFCS hors cadre formel = violation Art. 73 CPP (secret instruction) et LPD (proportionnalité du traitement, l'OFCS n'a pas besoin de cette info pour sa mission préventive technique). (2) Partager des captures de contenus pédopornographiques (même partiellement dépixellisés) à des agents non spécifiquement habilités CSAM = re-victimisation et risque de transmission illicite Art. 197 CP. (3) \"Transparence inter-fédérale\" n'est PAS le principe LSI — la LSI Art. 74c prévoit la coopération CIBLÉE et nécessaire, pas le partage total. (4) Cette posture exposerait l'expert à des sanctions disciplinaires et pénales graves.",
+            "legal": "Art. 73 CPP + LPD + Art. 197 CP — Triple violation, sanctions individuelles.",
+            "critical": true,
+            "next": "end"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "jura-vishing-1m",
+    "title": "Vishing « par métier » — 1,5 million volés",
+    "icon": "📞",
+    "difficulty": "medium",
+    "atmosphere": "crypto",
+    "realCase": "Cour des affaires pénales JU, avril 2025 — condamnation à 4 ans de prison ferme pour utilisation frauduleuse d'un ordinateur par métier. 1,5 million CHF détourné auprès de PME suisses via phishing et vishing.",
+    "narrative": {
+      "success": "Vous documentez impeccablement le caractère « par métier » : 47 victimes sur 14 mois, revenu mensuel régulier de 100k+ CHF, infrastructure professionnalisée. La qualification Art. 147 al. 2 CP (utilisation frauduleuse aggravée) tient au procès. Récupération partielle des fonds via gel des cryptocomptes (180k CHF saisis). Condamnation 4 ans ferme + créances civiles indemnisées en partie.",
+      "degraded": "Qualification de base Art. 147 CP retenue mais l'aggravation \"par métier\" est partiellement rejetée par le tribunal — peine plus modérée (28 mois). Récupération crypto limitée à 80k CHF. Quelques victimes ne sont pas indemnisées.",
+      "failure": "Qualification mal fondée (par métier non démontré ou Art. 146 CP confondu avec 147 CP). Acquittement partiel sur l'aggravation. Préjudice non recouvré. La défense exploite les faiblesses du dossier technique sur la chaîne crypto."
+    },
+    "tags": [
+      "VISHING",
+      "PHISHING",
+      "PAR MÉTIER",
+      "CRYPTO",
+      "PME"
+    ],
+    "legalRefs": [
+      "Art. 147 CP",
+      "Art. 147 al. 2 CP",
+      "Art. 146 CP",
+      "Art. 70 CP",
+      "ATF 116 IV 319",
+      "ATF 129 IV 253"
+    ],
+    "intro": "Mardi, Cour des affaires pénales jurassienne, Porrentruy. Vous êtes l'expert technique mandaté par le MP-JU dans l'affaire H., un Belge de 34 ans interpellé en novembre 2024 à Delémont après 14 mois d'activité criminelle. Bilan : 47 PME suisses victimes, 1'547'820 CHF détournés via combinaison phishing (faux emails Office 365 et bancaires) + vishing (faux conseillers PostFinance, faux IT support). Mode opératoire : récupération de credentials, puis appels téléphoniques au comptable de la PME pour faire valider des virements \"urgents\" vers des comptes mules en Belgique et en Pologne, puis conversion immédiate en USDT et BTC. La défense plaide Art. 147 CP simple (sans aggravation par métier) et conteste l'évaluation à 1,5 million. L'audience est dans 3 jours.",
+    "alertLevel": "📞 PROCÈS J-3 · 47 PME victimes · 1.547M CHF · Vishing+phishing organisé · Qualification \"par métier\" en jeu",
+    "objectives": [
+      {
+        "icon": "⚖️",
+        "text": "Distinguer Art. 146 CP (escroquerie) vs Art. 147 CP (utilisation frauduleuse d'ordinateur)"
+      },
+      {
+        "icon": "📊",
+        "text": "Démontrer techniquement le caractère « par métier » (revenu, durée, professionnalisation)"
+      },
+      {
+        "icon": "💰",
+        "text": "Tracer les flux crypto USDT/BTC vers les comptes finaux (Chainalysis Reactor)"
+      },
+      {
+        "icon": "🛡️",
+        "text": "Anticiper la défense sur l'évaluation du préjudice et la chaîne probatoire"
+      }
+    ],
+    "debrief": "<p>L'<strong>Art. 147 CP</strong> (utilisation frauduleuse d'un ordinateur) sanctionne celui qui, dans le dessein d'obtenir un avantage illicite, manipule un système informatique pour effectuer un transfert d'actifs. Il diffère de l'<strong>Art. 146 CP</strong> (escroquerie) : 146 exige une <strong>tromperie astucieuse d'une personne</strong>, 147 vise la <strong>manipulation d'un système</strong>. Dans les affaires phishing/vishing modernes, les deux sont souvent combinés — <strong>concours réel ou idéal</strong> selon les cas. La jurisprudence du TF (notamment ATF 129 IV 253) tend à privilégier 147 quand le résultat passe par le système (transfert e-banking automatisé) et 146 quand le résultat passe par la décision humaine d'un comptable trompé.</p>\n<p>L'<strong>aggravation \"par métier\"</strong> (Art. 147 al. 2 CP) double quasi la peine maximale (jusqu'à 10 ans). La jurisprudence du TF (<strong>ATF 116 IV 319</strong>) définit le \"métier\" par 4 critères convergents :</p>\n<ol><li><strong>Disposition à commettre un nombre indéterminé d'infractions</strong> du même genre</li>\n<li><strong>Revenu non négligeable</strong> qui contribue significativement à l'entretien de l'auteur</li>\n<li><strong>Durée et fréquence</strong> traduisant un mode de vie</li>\n<li><strong>Professionnalisation</strong> : moyens, organisation, savoir-faire spécialisé</li></ol>\n<p>Pour les <strong>flux crypto</strong>, la traçabilité <strong>Chainalysis Reactor</strong> est désormais standard et admissible (jurisprudence constante depuis 2020). Les wallets de mules sont identifiables via cluster heuristics ; les conversions USDT (Tether, stablecoin) sont moins traçables que BTC mais les exchanges KYC permettent l'identification du retrait final. Les <strong>poursuites parallèles</strong> contre les mules belges/polonaises se font via Eurojust + EIMP.</p>",
+    "steps": [
+      {
+        "phase": "⚖️ Art. 146 ou Art. 147 CP — la qualification fondamentale",
+        "situation": "Premier point juridique du dossier. Sur les 47 cas, le mode opératoire varie : (a) 12 cas = phishing pur, identifiants e-banking volés, virements automatisés exécutés par H. lui-même via la plateforme PostFinance e-banking ; (b) 23 cas = combinaison phishing (capture identifiants) + appel vishing au comptable pour qu'il valide une demande de virement bizarre que la banque aurait bloquée sinon ; (c) 12 cas = vishing pur, le comptable est convaincu d'effectuer manuellement un virement à un \"nouveau fournisseur\". L'avocat de H. plaide Art. 147 CP pour tout (système attaqué). Le MP-JU vous demande votre analyse technique de qualification.",
+        "law": "<strong>Art. 146 CP</strong> — Escroquerie : tromperie astucieuse d'une PERSONNE menant à un acte préjudiciable de sa part.<br><strong>Art. 147 CP</strong> — Utilisation frauduleuse d'un ordinateur : manipulation d'un SYSTÈME pour transférer des actifs.<br><strong>ATF 129 IV 253</strong> — Distinction : 146 si décision humaine au cœur du transfert, 147 si système automatisé.<br><strong>Concours d'infractions</strong> — Possible quand les deux interviennent.",
+        "question": "<strong>Quelle qualification recommandez-vous, cas par cas ?</strong>",
+        "choices": [
+          {
+            "text": "Qualification différenciée : (a) 12 cas phishing pur = Art. 147 CP (manipulation système e-banking, le système valide automatiquement, pas de décision humaine intermédiaire) ; (b) 23 cas mixtes = concours réel Art. 146 + 147 CP (tromperie du comptable PUIS utilisation du système — deux comportements distincts portant atteinte à des biens distincts) ; (c) 12 cas vishing pur = Art. 146 CP (escroquerie du comptable qui exécute lui-même le virement sur la base d'une tromperie astucieuse). Aggravation \"par métier\" applicable aux deux articles (Art. 146 al. 2, Art. 147 al. 2). Total : 35 chefs Art. 147 + 35 chefs Art. 146 (concours).",
+            "ok": true,
+            "pts": 25,
+            "fb": "Qualification techniquement et juridiquement irréprochable. (1) La distinction \"décision humaine vs système automatisé\" suit l'ATF 129 IV 253 — c'est le critère central du TF. (2) Le concours réel sur les 23 cas mixtes reflète la réalité matérielle : phishing (acte 1, atteinte au système) PUIS vishing (acte 2, atteinte à la décision du comptable) = comportements distincts, pas absorption. (3) L'aggravation \"par métier\" applicable aux deux articles maximise l'effet pénal. (4) C'est exactement la qualification déployée par le MP-VD dans l'affaire similaire \"Phishing Galileo\" 2023 (13 condamnations confirmées par TF). Le tribunal apprécie cette rigueur analytique.",
+            "legal": "Art. 146 + 147 CP + ATF 129 IV 253 — Qualification différenciée, optimale.",
+            "critical": false,
+            "next": 1
+          },
+          {
+            "text": "Qualification unique Art. 147 CP pour tous les 47 cas — c'est la position de la défense mais elle a une logique : dans tous les cas, le système informatique a été \"utilisé frauduleusement\" pour transférer des fonds, que la validation soit faite par un automate ou par un humain qui clique sur un bouton e-banking. Cette unification simplifie le dossier et évite les disputes techniques avec la défense. La peine maximale Art. 147 al. 2 CP (10 ans) est de toute façon supérieure à toute peine probable. Cette unification, défendue par certains praticiens romands de la cybercriminalité comme un alignement avec la pratique allemande post-2022, présente l'avantage d'éviter les dérapages d'un concours mal maîtrisé qui pourrait fragiliser le dossier au stade de l'appel cantonal.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Concession majeure non justifiée à la défense. (1) Pour les 12 cas vishing pur, il n'y a pas de \"manipulation du système\" au sens de l'Art. 147 CP — le comptable décide en pleine conscience d'effectuer le virement sur la base d'une tromperie. C'est l'archétype de l'Art. 146 CP. La jurisprudence est constante depuis ATF 129 IV 253. (2) Qualifier 147 CP pour les cas vishing rendrait la qualification fragile (la défense pourrait au contraire plaider l'absence d'élément constitutif de 147). (3) Les 23 cas mixtes méritent le concours réel — perdre cette dimension pénale est un cadeau injustifié. (4) \"Simplifier le dossier\" pour éviter des disputes techniques relève d'un mauvais conseil — c'est précisément les disputes techniques qui démontrent la solidité du raisonnement.",
+            "legal": "ATF 129 IV 253 — Distinction 146/147 jurisprudence constante.",
+            "critical": false,
+            "next": 1
+          },
+          {
+            "text": "Qualification unique Art. 146 CP pour tous les 47 cas en s'appuyant sur le fait qu'à un moment ou un autre, une décision humaine est intervenue (validation par 2FA, code SMS, signature) — l'élément humain est central dans toute la chaîne. Cette qualification \"escroquerie\" est plus parlante pour le grand public et le tribunal, et elle évite les complexités techniques de l'Art. 147 CP qui peuvent dérouter un magistrat moins technicien.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Erreur de qualification fondamentale. (1) La présence d'un 2FA SMS validé par la victime ne transforme PAS un phishing pur en escroquerie au sens de l'Art. 146 CP. La victime saisit son code 2FA en pensant valider une opération légitime — elle n'est PAS \"trompée astucieusement à effectuer un acte préjudiciable\" au sens classique de l'Art. 146 CP. (2) Le TF a rejeté cette interprétation extensive de l'Art. 146 CP (ATF 134 IV 210) — le 2FA validé par la victime sur une page phishing reste de la manipulation du système (Art. 147 CP). (3) \"Plus parlante pour le grand public\" n'est pas un critère juridique — c'est même un argument anti-rigueur. (4) Cette qualification serait corrigée à la baisse en appel et discréditerait l'expertise.",
+            "legal": "ATF 134 IV 210 — 2FA phishé reste manipulation système, pas escroquerie.",
+            "critical": true,
+            "next": "end"
+          }
+        ]
+      },
+      {
+        "phase": "📊 Démontrer le caractère « par métier »",
+        "situation": "Le cœur du procès se joue sur l'aggravation \"par métier\" (Art. 147 al. 2 / 146 al. 2 CP). La défense plaide : « Mon client a effectivement commis ces actes mais ce n'était pas son métier — c'était un égarement passager d'un homme en détresse financière, pas une activité professionnalisée. » Vous disposez des éléments suivants : (a) 14 mois d'activité ; (b) revenu mensuel moyen reconstitué ~110k CHF (1.547M / 14 mois) ; (c) 47 victimes ; (d) infrastructure technique (4 serveurs VPS loués, 23 domaines phishing, 11 numéros VoIP, base de données de 8'400 employés-cibles préparée à l'avance) ; (e) H. n'avait aucun emploi déclaré pendant ces 14 mois. Comment construisez-vous la démonstration ?",
+        "law": "<strong>ATF 116 IV 319</strong> — Définition du \"métier\" : 4 critères convergents (disposition, revenu, durée/fréquence, professionnalisation).<br><strong>Art. 147 al. 2 CP</strong> — Aggravation \"par métier\" : peine privative de liberté jusqu'à 10 ans.<br><strong>ATF 145 IV 491</strong> — Confirmation des critères, application moderne aux cybercrimes.",
+        "question": "<strong>Comment démontrez-vous techniquement le caractère « par métier » ?</strong>",
+        "choices": [
+          {
+            "text": "Démonstration structurée sur les 4 critères ATF 116 IV 319 : (1) DISPOSITION — la base de données de 8'400 cibles préparée à l'avance + 23 domaines phishing préfabriqués démontrent l'intention de commettre un nombre indéterminé d'actes (pas un \"égarement\") ; (2) REVENU — 110k CHF/mois sur 14 mois est largement supérieur au seuil minimum (TF : ~1'500 CHF/mois suffit) et constituait l'unique source de subsistance documentée (pas d'autre emploi déclaré) ; (3) DURÉE — 14 mois d'activité continue sans interruption, mode de vie installé ; (4) PROFESSIONNALISATION — infrastructure technique sophistiquée (4 VPS + 11 VoIP + scripts d'automatisation), savoir-faire spécialisé (phishing kits, contournement 2FA), modes opératoires reproductibles. Tous critères saturés, l'aggravation \"par métier\" est manifeste.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Démonstration parfaitement structurée sur les critères TF. (1) La base de 8'400 cibles préparée est un élément matériel décisif — l'intention de commettre un nombre indéterminé d'infractions est documentée par les fichiers eux-mêmes (pas une déduction). (2) 110k/mois est SOIXANTE-DIX FOIS le seuil minimum jurisprudentiel — la défense ne peut pas plaider \"revenu non significatif\". (3) 14 mois sans autre activité = mode de vie clairement installé. (4) L'infrastructure (VPS + VoIP + scripts) démontre la professionnalisation au-delà de tout doute — un \"égarement passager\" n'achète pas 4 VPS ni ne loue 11 numéros VoIP avec des fausses identités. Cette structure de plaidoirie est exactement celle déployée et validée dans l'affaire JU avril 2025.",
+            "legal": "ATF 116 IV 319 + 145 IV 491 — 4 critères saturés, aggravation manifeste.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Concentrer la démonstration sur le critère du REVENU uniquement — c'est le plus chiffrable et le plus spectaculaire (110k/mois) et il suffit à lui seul pour caractériser le métier. Les autres critères (disposition, durée, professionnalisation) sont plus subjectifs et ouvriront le flanc à des disputes interprétatives avec la défense. La rigueur d'un seul critère solide vaut mieux que la dispersion sur 4 critères contestables.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Stratégie minimaliste qui fragilise la démonstration. (1) Le TF (ATF 116 IV 319) exige des critères CONVERGENTS — pas un seul critère mais leur convergence. Démontrer un seul critère ouvre la porte à l'argument défense \"un seul critère ne suffit pas selon votre propre jurisprudence\". (2) Les 4 critères sont parfaitement objectifs ici : disposition (base de 8'400 cibles documentée), durée (14 mois calendrier), professionnalisation (infrastructure technique mesurable). Aucun n'est subjectif. (3) Concentrer sur le revenu seul rend l'expertise vulnérable si la défense conteste l'évaluation à 1.547M (\"on ne sait pas avec certitude que tout est attribué à mon client\") — alors qu'avec 4 critères, la perte d'un n'effondre pas l'ensemble. (4) La doctrine MP-VD/JU privilégie la démonstration multi-critères depuis 2018.",
+            "legal": "ATF 116 IV 319 — Critères CONVERGENTS, pas isolés.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Solliciter une expertise psychiatrique de H. pour démontrer qu'il avait conscience de son activité comme \"métier\" au sens psychologique — un expert psychiatre pourra confirmer que son rapport au travail criminel s'apparente à une profession (organisation de la journée, planification des cibles, ressenti de \"travail\"). Cette dimension subjective complète utilement les critères objectifs en ancrant le \"métier\" dans la psyché du prévenu lui-même. Cette ouverture vers l'expertise psychiatrique, défendue notamment par la doctrine genevoise de la \"compréhension globale du criminel\", a été utilisée avec succès dans plusieurs affaires de cybercriminalité organisée romande où la dimension subjective d'identification au métier a permis d'étoffer un dossier objectif autrement contestable. C'est une approche peut-être moins orthodoxe que la stricte lecture des critères 116 IV 319, mais qui offre des perspectives intéressantes en termes d'individualisation de la peine et de compréhension fine du parcours criminogène d'un prévenu comme H., dont la trajectoire mérite peut-être un éclairage plus humain qu'une simple grille objective.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Confusion conceptuelle entre métier au sens criminel et métier au sens psychologique. (1) L'Art. 116 IV 319 du TF définit le \"métier\" par des critères OBJECTIFS (revenu, durée, organisation), pas par le ressenti subjectif du prévenu. Le TF a explicitement rejeté l'élément subjectif comme constitutif. (2) Une expertise psychiatrique sur le \"ressenti de métier\" ouvrirait une dispute sans intérêt juridique — peu importe que H. se soit senti criminel professionnel ou criminel par accident. (3) Cette voie risque de retarder le procès et de coûter cher au MP-JU sans valeur ajoutée. (4) Pire : une expertise psychiatrique pourrait fournir à la défense des éléments d'atténuation (\"diminution de responsabilité par l'engrenage criminel\") qui jouent CONTRE le ministère public.",
+            "legal": "ATF 116 IV 319 — Critères objectifs, expertise psychiatrique inutile/contre-productive.",
+            "critical": false,
+            "next": 2
+          }
+        ]
+      },
+      {
+        "phase": "💰 Tracer les flux crypto — Chainalysis Reactor",
+        "situation": "Le volet crypto est le plus contesté par la défense. H. a converti rapidement en USDT et BTC via des comptes Binance et Bybit sous fausses identités. Chainalysis Reactor a tracé : (a) 870k CHF en USDT (Tether) restés sur des wallets liés à H. — gel obtenu sur Binance KYC ; (b) 480k CHF en BTC ayant transité par 2 mixeurs (Wasabi + ChipMixer) puis aboutissant sur des wallets self-custodial à Antalya (Turquie) ; (c) 197k CHF retirés cash via un comparse à Anvers (Belgique). La défense plaide : « Vous ne pouvez pas prouver que les BTC ayant transité par Wasabi sont les MÊMES qui sont arrivés à Antalya — les mixeurs cassent précisément la traçabilité. »",
+        "law": "<strong>Art. 70-72 CP</strong> — Confiscation de valeurs patrimoniales d'origine criminelle.<br><strong>Art. 263 CPP</strong> — Séquestre.<br><strong>ATF 145 IV 50</strong> — Admissibilité Chainalysis Reactor en procédure suisse.<br><strong>Doctrine Chainalysis sur cluster heuristics</strong> — Pivots probabilistes documentés et reproductibles.",
+        "question": "<strong>Comment réfutez-vous l'argument défense sur les mixeurs ?</strong>",
+        "choices": [
+          {
+            "text": "Réfutation technique structurée : (1) Les mixeurs CoinJoin (Wasabi) ne cassent PAS toute traçabilité — ils fragmentent en sorties de tailles standardisées (0.1 BTC le plus souvent), mais l'analyse temporelle + montants permet une attribution probabiliste documentée (Chainalysis Reactor : ~75-85% de confiance pour Wasabi en 2024) ; (2) ChipMixer (saisi par Europol en mars 2023) : les serveurs saisis ont livré les correspondances entrée-sortie pour les transactions antérieures à la saisie, dont une partie de celles utilisées par H. ; (3) Pour les portions non-attribuables, qualification subsidiaire : recel par méconnaissance de l'origine ne tient pas (H. KNEW), donc Art. 305bis CP (blanchiment, par auto-blanchiment depuis 2009) sur l'ensemble des flux crypto ; (4) Documenter chaque pivot avec scoring de confiance + données brutes CSV.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Réponse technique solide qui bat la défense sur son terrain. (1) Les heuristiques CoinJoin de Chainalysis Reactor sont effectivement à 75-85% de confiance en 2024 pour Wasabi — c'est documenté publiquement, validé par Europol. La défense ne peut pas plaider \"mixeurs = preuves nulles\" au pied de la lettre. (2) La saisie ChipMixer mars 2023 par Europol a livré des correspondances exploitables — c'est un argument factuel rare et précieux dans ces dossiers. (3) La qualification subsidiaire Art. 305bis CP (auto-blanchiment, possible depuis la révision 2009 de l'Art. 305bis CP qui inclut l'auteur de l'infraction principale) capture les portions non parfaitement attribuables. (4) La documentation hashes + CSV permet la reproductibilité par la défense, ce qui paradoxalement renforce la preuve. C'est exactement la doctrine MP-CH-Chainalysis depuis 2022.",
+            "legal": "ATF 145 IV 50 + Art. 70 + 305bis CP — Réfutation multi-niveaux solide.",
+            "critical": false,
+            "next": 3
+          },
+          {
+            "text": "Concéder le point à la défense pour les 480k BTC ayant transité par mixeurs — la traçabilité est effectivement compromise techniquement. Concentrer la confiscation sur les 870k USDT (gel Binance) et 197k retraits cash Anvers (témoignage du comparse). Soit ~1.067M CHF récupérables, ~480k perdus. Cette honnêteté technique préserve la crédibilité de l'expertise et évite une contre-expertise embarrassante de la défense. Cette posture d'humilité technique reflète aussi la position de plusieurs analystes Chainalysis eux-mêmes qui reconnaissent les limites pratiques de leurs outils sur les transactions ayant transité par des mixeurs CoinJoin sophistiqués. Mieux vaut une expertise honnête sur ses limites qu'une affirmation surfaite qui s'effondre face à un contre-expert spécialisé. Le MP-JU peut parfaitement articuler cette concession partielle avec une demande de peine ajustée sur le quantum effectivement démontré, qui reste considérable et suffisant pour justifier la peine maximale demandée par ailleurs au titre de l'aggravation par métier solidement établie.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Concession excessive et techniquement inexacte. (1) Les mixeurs ne \"cassent\" PAS toute traçabilité — c'est une mythe propagé par les défenses qui ne tient pas face à l'analyse moderne (cf. publications Wood et al. 2023, recherches Carnegie Mellon). Concéder ce point implicitement valide la mythologie défensive. (2) Sur 480k BTC, environ 75-85 % sont attribuables avec confiance documentée — concéder l'ensemble = perdre ~360k CHF récupérables sans nécessité. (3) L'auto-blanchiment Art. 305bis CP capture en plus les portions techniquement difficiles à tracer one-to-one — c'est la solution juridique au problème technique. (4) Cette concession serait probablement reprochée par le MP-JU comme un défaut de combativité technique de l'expert.",
+            "legal": "Art. 305bis CP — Auto-blanchiment couvre les portions techniquement difficiles.",
+            "critical": false,
+            "next": 3
+          },
+          {
+            "text": "Présenter les flux crypto en bloc avec un graphe Chainalysis impressionnant montrant toutes les transactions reliées, sans détailler la méthodologie d'attribution post-mixeurs — l'effet visuel d'un graphe complexe est plus convaincant pour le tribunal que des disputes techniques détaillées. Affirmer que la totalité des 1.547M est tracée et confiscable, et laisser la défense produire éventuellement une contre-expertise si elle le veut, ce qu'elle ne fera probablement pas par coût.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Stratégie de l'effet visuel sans rigueur méthodologique = catastrophe judiciaire annoncée. (1) \"Présenter en bloc sans détailler la méthodologie\" est exactement ce que le BGH allemand 2023 et l'ATF 145 IV 50 ont REJETÉ — la méthodologie doit être documentée et reproductible. Un graphe sans explicitation des pivots sera attaqué comme boîte noire. (2) Affirmer que \"la totalité est tracée\" alors qu'une partie passe par mixeurs est techniquement faux et peut être qualifié de fausses déclarations en justice (Art. 307 CP) si l'expert le savait. (3) \"La défense ne fera pas de contre-expertise par coût\" est un pari hasardeux dans un dossier à 1.5M où H. a probablement les moyens (avoirs cachés). (4) L'option correcte (réfutation technique structurée) est la voie professionnelle.",
+            "legal": "ATF 145 IV 50 + BGH 2023 — Méthodologie documentée requise.",
+            "critical": true,
+            "next": "end"
+          }
+        ]
+      },
+      {
+        "phase": "🇪🇺 Coopération avec la Belgique sur les mules",
+        "situation": "H. avait deux comparses à Anvers (Belgique) qui collectaient les retraits cash : K. (29 ans, belge) et N. (24 ans, marocaine domiciliée Anvers). Ils étaient les destinataires des virements depuis les comptes des PME suisses. Le procureur d'Anvers a déjà entendu K. et N. qui ont fait des aveux partiels. Pour le procès JU, vous avez besoin de leurs déclarations + l'analyse de leurs téléphones (qui contiennent des conversations Telegram avec H.). Le procureur d'Anvers vous écrit : « On peut faire vite via Eurojust. Vous voulez un JIT ou une commission rogatoire classique ? »",
+        "law": "<strong>EIMP Art. 80a</strong> — Équipes communes d'enquête : possibles bilatéralement (CH-BE).<br><strong>Convention européenne d'entraide judiciaire 1959</strong> — Cadre standard CH-BE.<br><strong>Décision JIT 2002/465/JAI</strong> — Cadre UE des JIT (la CH n'y est PAS membre).<br><strong>Eurojust</strong> — Facilitateur, pas signataire pour la CH État tiers.",
+        "question": "<strong>Quelle voie choisissez-vous pour la coopération avec la Belgique ?</strong>",
+        "choices": [
+          {
+            "text": "Choisir une équipe commune d'enquête (EIMP Art. 80a) ad hoc bilatérale CH-BE, avec Eurojust en facilitateur sans signature suisse de JIT au sens UE. Périmètre clairement défini : (a) partage temps réel des éléments concernant H., K., N. (les 3 mis en cause) ; (b) entraide pour les téléphones de K. et N. (extraction Cellebrite faite côté BE, copies forensiques certifiées partagées) ; (c) déclarations de K. et N. utilisables au procès JU via procès-verbaux EIMP traduits ; (d) coordination des poursuites pour éviter le ne bis in idem (peut-être H. jugé en CH, K./N. jugés en BE).",
+            "ok": true,
+            "pts": 25,
+            "fb": "Architecture juridiquement irréprochable. (1) L'EIMP Art. 80a permet l'équipe commune ad hoc CH-BE — cadre formel rapide adapté à la situation. La signature JIT au sens UE serait juridiquement nulle pour la CH (État tiers). (2) Eurojust facilitateur (sans signature CH) est la pratique standard depuis l'opération Onymous 2014. (3) Le partage forensique des téléphones via copies certifiées préserve la chaîne de custody belge et la juridiction CH d'usage. (4) La coordination des poursuites pour éviter ne bis in idem est cruciale — la jurisprudence CEDH (Zolotoukhine c. Russie, 2009) impose cette coordination, sans quoi un éventuel jugement CH pourrait être contesté. (5) C'est la doctrine fedpol-OC depuis 2018.",
+            "legal": "EIMP Art. 80a + Convention 1959 + ne bis in idem — Architecture optimale.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Signer la JIT proposée par Eurojust avec la Belgique — l'urgence procédurale (procès dans 3 jours) commande d'aller au plus rapide, et la JIT est précisément conçue pour cela. Si le statut juridique CH-Eurojust est techniquement complexe, on peut considérer que la pratique partenariale prime — tous les services européens sérieux opèrent ainsi désormais.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Erreur juridique fondamentale, déjà rencontrée précédemment. (1) La Suisse n'est PAS partie à la Décision JIT 2002/465/JAI ni à l'accord d'association Eurojust complet — elle est État tiers pour cet instrument. Une signature JIT serait nulle ab initio. (2) Toutes les preuves obtenues via cette JIT \"signée\" en CH seraient frappées de nullité, exactement à 3 jours du procès — désastre procédural total. (3) Pour des dossiers à enjeu (1.5M), la défense de H. attaquera évidemment ce vice formel pour invalider les preuves belges qui sont précisément les plus accablantes (téléphones K./N., aveux). (4) Le \"tous les services sérieux opèrent ainsi\" est faux — la pratique reconnue de fedpol depuis 2014 est l'EIMP Art. 80a, pas la JIT au sens UE.",
+            "legal": "Décision 2002/465/JAI + EIMP Art. 80a — JIT nulle pour CH État tiers.",
+            "critical": true,
+            "next": "end"
+          },
+          {
+            "text": "Voie classique : commission rogatoire EIMP demande par demande. Le procès JU est dans 3 jours mais H. peut probablement être jugé d'abord sur le volet purement suisse (47 PME victimes CH) sans nécessiter le matériel belge ; les éléments belges seront utiles pour un éventuel procès séparé contre K. et N. en CH plus tard. La voie classique préserve mieux la souveraineté procédurale suisse que les équipes communes hybrides. Cette approche séquentielle, défendue par les praticiens cantonaux les plus attachés à la souveraineté procédurale helvétique, garantit la qualité absolue du dossier suisse sans dépendance vis-à-vis d'éléments étrangers dont la chaîne de custody pourrait être fragilisée au moindre détail.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Excès de prudence opérationnellement perdant. (1) Les téléphones de K. et N. contiennent les conversations Telegram avec H. — c'est le matériel ESSENTIEL pour démontrer l'intention de H. (préméditation, organisation, partage des bénéfices) au procès JU. Sans ce matériel, le procès est sensiblement affaibli. (2) Une commission rogatoire classique prend des semaines/mois — incompatible avec le procès dans 3 jours. (3) \"Procès séparé plus tard\" n'a pas de sens : K. et N. seront jugés en BE, pas en CH (territorialité = lieu du retrait cash). Pas de \"second procès CH\" prévu. (4) L'EIMP Art. 80a (option correcte) est la voie rapide ET formelle — pas un compromis hybride mais l'instrument juridique précis adapté à la situation.",
+            "legal": "EIMP Art. 80a — Voie rapide et formelle, pas \"hybride\".",
+            "critical": false,
+            "next": 4
+          }
+        ]
+      },
+      {
+        "phase": "📜 La position du MP au procès",
+        "situation": "Le procès est demain. Le MP-JU vous demande de l'aider à structurer la conclusion technique de son réquisitoire. Trois axes possibles à hiérarchiser : (a) la qualification multiple Art. 146 + 147 + 305bis CP ; (b) l'aggravation \"par métier\" pleinement démontrée ; (c) la traçabilité crypto et le quantum à confisquer (Art. 70 CP). H. risque entre 30 mois (sans aggravation par métier) et 60 mois (avec). La défense plaidera l'unification 147 CP simple sans aggravation. Le MP veut éviter une peine inférieure à 36 mois fermes et veut récupérer un maximum pour les victimes.",
+        "law": "<strong>Réquisitoire</strong> — Doit être structuré, hiérarchisé, soutenu par la preuve.<br><strong>Art. 70-72 CP</strong> — Confiscation au profit de l'État, mais possible cession aux victimes (Art. 73 CP).<br><strong>ATF 117 IV 107</strong> — Hiérarchisation des qualifications dans le réquisitoire.<br><strong>Doctrine MP-JU</strong> — Réquisitoire technique court (15-20 min) + écrit complet déposé.",
+        "question": "<strong>Comment hiérarchisez-vous les 3 axes du réquisitoire ?</strong>",
+        "choices": [
+          {
+            "text": "Hiérarchisation : (1) D'ABORD démontrer la qualification différenciée 146/147 + concours réel + auto-blanchiment 305bis (15 minutes : c'est le socle juridique sans lequel rien ne tient) ; (2) ENSUITE saturation de l'aggravation \"par métier\" avec les 4 critères ATF 116 IV 319 documentés (10 minutes : démonstration objective et factuelle, peine doublée si admise) ; (3) ENFIN traçabilité crypto et quantum confisqué (10 minutes : démontre le préjudice réel et permet la cession aux 47 victimes via Art. 73 CP). Réquisitoire écrit complet déposé pour que les juges puissent reprendre les arguments à tête reposée. Conclusion : 5 ans ferme + confiscation + créances civiles.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Hiérarchisation logique et opérationnelle. (1) Commencer par la qualification est juste : sans qualification correctement établie, l'aggravation et la confiscation tombent. (2) Ensuite l'aggravation \"par métier\" — c'est ce qui fait passer la peine de 30 à 60 mois, donc le levier pénal le plus puissant. (3) Enfin la confiscation et le quantum — important pour les victimes mais accessoire à la responsabilité pénale. (4) Le réquisitoire écrit complet déposé est crucial : les juges JU sont attentifs à la rigueur écrite (jurisprudence régionale), et la durée de l'audience à 35 min force la concision orale tout en assurant la complétude écrite. (5) Les 5 ans demandés (60 mois) avec aggravation pleine sont le maximum réaliste pour saturation des critères.",
+            "legal": "ATF 117 IV 107 + Art. 70-73 CP — Hiérarchisation et conclusion optimales.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Concentrer tout le réquisitoire (35 min) sur la traçabilité crypto et la dimension chiffrée — c'est ce qui frappera le tribunal et l'opinion : 1.547 million CHF tracé, 47 PME ruinées, conversion en crypto évanescente. Cette dramatisation factuelle est plus efficace que des disputes juridiques sur les articles. La qualification et l'aggravation seront automatiquement soutenues par le poids des chiffres.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Stratégie de l'émotion qui rate la rigueur juridique attendue. (1) Le tribunal jurassien (Cour des affaires pénales) statue sur des arguments JURIDIQUES, pas sur l'émotion publique — la dramatisation factuelle sans charpente juridique est mal accueillie et peut être perçue comme manipulatrice. (2) Sans démonstration explicite de la qualification (146/147/305bis) et de l'aggravation (par métier saturée), le tribunal pourrait retenir une qualification minimaliste et une peine modérée, peu importe les chiffres. (3) Les 47 PME ruinées NE SUFFISENT PAS à fonder la peine — c'est la qualification juridique qui détermine la peine encourue. (4) La conclusion de la défense (\"147 CP simple sans aggravation = 24 mois\") restera dominante si on ne la combat pas explicitement.",
+            "legal": "ATF 117 IV 107 — Réquisitoire structuré juridiquement.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Lancer le réquisitoire en attaquant frontalement la défense : « Maître X plaide 147 CP simple — c'est juridiquement faux et factuellement insultant pour les 47 victimes. » Démonter la défense argument par argument pendant 35 minutes, ce qui fait la démonstration en creux des qualifications correctes, de l'aggravation et du quantum. L'attaque méthodique est la meilleure défense contre une plaidoirie défensive structurée. Cette stratégie offensive de neutralisation préventive de la défense, théorisée par certains procureurs combatifs notamment dans des cantons à forte tradition judiciaire offensive, a fait ses preuves dans plusieurs dossiers complexes où la plaidoirie adverse était parfaitement prévisible et structurée à l'avance — autant frapper fort dès l'ouverture pour priver la défense de son momentum.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Stratégie agressive qui se trompe de cible. (1) Le réquisitoire NE DOIT PAS être structuré contre la plaidoirie de la défense (que vous n'avez pas encore entendue !) — il doit être structuré sur la démonstration positive de la culpabilité et de la qualification. La défense intervient APRÈS le réquisitoire dans la procédure suisse. (2) Attaquer la défense \"par avance\" est une faute de communication judiciaire — le tribunal apprécie le réquisitoire centré sur les faits, pas sur les hypothétiques arguments adverses. (3) \"Insultant pour les 47 victimes\" est un registre émotionnel inadapté à un tribunal pénal cantonal jurassien. (4) La défense pourra ensuite elle-même reprendre l'argument inversé : \"M. le procureur a tellement peur de mes arguments qu'il les attaque par avance\" — terrain perdu.",
+            "legal": "Procédure CPP — Réquisitoire AVANT plaidoirie défense.",
+            "critical": false,
+            "next": "end"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "stgall-infiltration",
+    "title": "Infiltrations Darknet — Le Projet IFC Saint-Gall",
+    "icon": "🕵️",
+    "difficulty": "hard",
+    "atmosphere": "raid",
+    "realCase": "Projet pilote IT-Forensik & Cybercrime (IFC) de la Police cantonale saint-galloise (2025-2026). Infiltrations sur forums et messageries. 13 perquisitions, 10 arrestations, 21 procédures pénales ouvertes. Projet prolongé fin 2026.",
+    "narrative": {
+      "success": "Vous structurez l'infiltration dans un cadre Art. 285a-285c CPP impeccable : autorisation TMC obtenue, agent identifié au tribunal sous pseudonyme, journal d'opérations tenu, preuves anti-provocation documentées. Le suspect M. R. est interpellé après concrétisation autonome de son intention (proposition de rendez-vous physique avec mineure simulée). 5 victimes réelles identifiées indirectement via son matériel saisi. Procédure pénale solide.",
+      "degraded": "Cadre procédural correct mais quelques dialogues glissent vers le \"trop suggestif\" (l'agent infiltré encourage légèrement). La défense soulève une provocation partielle — le tribunal écarte une partie des preuves mais retient le cœur. Condamnation pour les actes les plus graves uniquement.",
+      "failure": "Cadre Art. 285a-285c CPP mal respecté ou agent provocateur caractérisé. Le tribunal écarte les preuves issues de l'infiltration (Art. 141 al. 2 CPP). Acquittement sur le volet darknet. Le projet IFC est suspendu pour réévaluation. Médiatisation négative pour la police cantonale."
+    },
+    "tags": [
+      "INFILTRATION",
+      "DARKNET",
+      "CPP",
+      "AGENT PROVOCATEUR",
+      "GROOMING"
+    ],
+    "legalRefs": [
+      "Art. 285a CPP",
+      "Art. 285b CPP",
+      "Art. 285c CPP",
+      "Art. 286 CPP",
+      "Art. 141 CPP",
+      "ATF 148 IV 152"
+    ],
+    "intro": "Lundi 8h, Bureau IT-Forensik & Cybercrime (IFC) de la Police cantonale saint-galloise. Vous êtes le responsable du volet juridique du projet pilote IFC d'infiltration sur forums darknet et messageries chiffrées. Depuis 9 mois : 13 perquisitions, 10 arrestations, 21 procédures pénales (dont 9 transmises à d'autres cantons). Aujourd'hui, l'agent infiltré « Tom » (sous-pseudonyme « Lina_15 », identité simulée d'une jeune fille de 15 ans à Wil-SG) vous présente sa cible la plus avancée : M. R., 41 ans, employé d'une banque à Saint-Gall, marié, deux enfants. Depuis 3 mois, M. R. \"discute\" avec « Lina » sur Telegram. Les conversations dérivent progressivement, M. R. envoie des photos de ses parties génitales, demande des photos de « Lina », et propose maintenant un rendez-vous physique au parc Stadtpark de Saint-Gall samedi 14h. Le projet IFC est sous regard critique : médias intéressés, parlement cantonal sceptique, défense agressive contre l'agent provocateur.",
+    "alertLevel": "🕵️ INFILTRATION ACTIVE — Cible avancée : M. R. 41 ans, banquier · Rendez-vous samedi 14h · Cadre Art. 285a-c CPP critique",
+    "objectives": [
+      {
+        "icon": "⚖️",
+        "text": "Maîtriser la distinction Art. 285a (recherches secrètes) vs 285b (enquête couverte) — cadre exact applicable"
+      },
+      {
+        "icon": "🎭",
+        "text": "Documenter l'absence de provocation : la \"concrétisation\" doit être autonome (jurisprudence TF)"
+      },
+      {
+        "icon": "📜",
+        "text": "Sécuriser la chaîne probatoire : autorisation TMC, journal, traçabilité complète"
+      },
+      {
+        "icon": "🛡️",
+        "text": "Anticiper la défense « agent provocateur » et préparer la réfutation factuelle"
+      }
+    ],
+    "debrief": "<p>Le <strong>cadre suisse de l'infiltration policière</strong> est régi par les <strong>Art. 285a-285c CPP</strong> qui distinguent deux régimes :</p>\n<ul><li><strong>Recherches secrètes (Art. 285a CPP)</strong> — Mesures \"de courte durée\", agent ne dévoile pas son identité mais ne crée PAS de fausse identité officielle. Ordonnée par le ministère public, sans autorisation TMC. Adaptée aux contacts initiaux courts.</li>\n<li><strong>Enquête couverte (Art. 285b CPP)</strong> — Agent crée une <strong>fausse identité légalement constituée</strong>, opère sur la durée. Ordonnée par le MP avec <strong>autorisation TMC obligatoire</strong> (tribunal des mesures de contrainte). Conditions strictes : soupçon fondé d'infraction grave + autres mesures vouées à l'échec.</li></ul>\n<p>La <strong>limite cardinale est l'agent provocateur</strong> (Art. 286 CPP + jurisprudence) : l'agent <strong>ne peut PAS susciter une infraction qui n'aurait pas eu lieu sans lui</strong>. La jurisprudence du TF (notamment <strong>ATF 148 IV 152, 2022</strong>) a précisé que l'agent peut <strong>concrétiser une décision préexistante de passer à l'acte</strong> chez le suspect — c'est-à-dire fournir l'opportunité, pas créer l'intention. La frontière est ténue et hautement scrutée par les tribunaux.</p>\n<p>Le <strong>journal d'opérations infiltration</strong> est essentiel : il documente chaque interaction, démontre l'origine de l'initiative (suspect ou agent), trace les questions ouvertes vs orientées de l'agent. Sans journal détaillé, la défense exploite chaque ambiguïté pour plaider la provocation.</p>\n<p>Pour le <strong>grooming</strong> spécifiquement, la difficulté est que la conversation est progressive — l'\"acte\" s'étale dans le temps. Le moment de la concrétisation autonome (proposition de rendez-vous, demande explicite de contenu sexuel) est crucial à isoler dans le journal.</p>",
+    "steps": [
+      {
+        "phase": "⚖️ Le cadre juridique applicable — 285a, 285b ou 285c CPP ?",
+        "situation": "« Tom » a été activé il y a 9 mois sous le pseudo « Lina_15 ». Il opère sur Telegram avec un compte créé spécifiquement, photos de profil générées par IA (cohérentes avec une jeune fille de 15 ans), historique de messages \"normaux\" préfabriqué. Le compte est utilisé uniquement pour le projet IFC et n'a pas d'existence civile (pas d'inscription d'identité au registre, pas de papiers, pas d'école inscrite). Le MP-SG vous demande sous quel régime l'opération a été placée et si c'était le bon. La défense pourrait attaquer ce point.",
+        "law": "<strong>Art. 285a CPP</strong> — Recherches secrètes : agent ne dévoile pas son identité MAIS ne crée pas de fausse identité officielle.<br><strong>Art. 285b CPP</strong> — Enquête couverte : fausse identité légalement constituée, autorisation TMC, soupçon d'infraction grave.<br><strong>Art. 285c CPP</strong> — Application aux délits informatiques.<br><strong>Doctrine TF</strong> — Une identité numérique sophistiquée (compte avec historique, photos cohérentes) tend vers 285b, pas 285a.",
+        "question": "<strong>Sous quel régime l'opération aurait-elle dû être placée ?</strong>",
+        "choices": [
+          {
+            "text": "Régime Art. 285b CPP (enquête couverte) avec autorisation TMC obligatoire — la sophistication de l'identité « Lina_15 » (photos IA cohérentes, historique préfabriqué, durée 9 mois) dépasse manifestement le cadre des \"recherches secrètes de courte durée\" (285a CPP). Vérifier que l'autorisation TMC a bien été obtenue au démarrage du projet IFC et qu'elle a été renouvelée selon les délais (6 mois renouvelables). Si oui, la procédure est solide. Si non, alerter le MP-SG immédiatement et envisager la régularisation rétroactive (impossible) ou la restriction du dossier aux seuls éléments hors cadre 285b.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Analyse juridiquement précise. (1) La distinction 285a/285b est précisément la sophistication de la fausse identité : un agent qui se présente sous un pseudo lambda dans un chat = 285a (recherches secrètes), mais un agent qui construit une identité complète (photos cohérentes, historique, persona durable) = 285b (enquête couverte). Le projet IFC est dans la 2e catégorie. (2) L'autorisation TMC (Art. 285b al. 1 CPP) est OBLIGATOIRE pour 285b — sans elle, toutes les preuves issues de l'opération seraient frappées de nullité (Art. 141 al. 2 CPP). (3) La régularisation rétroactive est impossible (la jurisprudence TF est constante : le vice initial = vice définitif). (4) Vérification proactive maintenant = c'est ce qui sauve ou condamne le procès.",
+            "legal": "Art. 285b CPP + ATF 148 IV 152 + Art. 141 CPP — Vérification critique requise.",
+            "critical": false,
+            "next": 1
+          },
+          {
+            "text": "Régime Art. 285a CPP (recherches secrètes) — c'est le cadre le plus léger, sans autorisation TMC, et il s'applique aux opérations \"sans création de fausse identité légalement constituée\". Or l'identité « Lina_15 » n'est PAS \"légalement constituée\" : pas de papiers, pas d'inscription, juste un compte Telegram avec une persona simulée. Le projet IFC est correctement positionné en 285a CPP, et l'absence d'autorisation TMC est conforme. Cette interprétation littérale du texte légal, défendue par certains praticiens cantonaux soucieux de ne pas alourdir inutilement les opérations d'infiltration par des autorisations TMC formelles, présente l'avantage d'une efficacité opérationnelle accrue dans un contexte de ressources judiciaires limitées qui caractérise plusieurs cantons romands et alémaniques de taille moyenne.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Lecture excessivement formaliste qui ne tient pas devant le TF. (1) La jurisprudence TF (ATF 148 IV 152) a précisé que la \"fausse identité légalement constituée\" du 285b CPP couvre toute identité SOPHISTIQUÉE — pas seulement celle avec papiers d'identité formels. Le critère est la durabilité + la cohérence + l'investissement dans la persona. (2) Une identité avec photos IA cohérentes + historique préfabriqué + 9 mois de présence active sur Telegram = clairement \"légalement constituée\" au sens du TF. Cette interprétation a été appliquée dans plusieurs cas cantonaux récents (VD 2024, ZH 2025). (3) Maintenir l'opération en 285a quand elle relève de 285b = vice procédural majeur, nullité Art. 141 al. 2 CPP de toutes les preuves. (4) C'est PRÉCISÉMENT le piège que la défense tendrait au procès.",
+            "legal": "ATF 148 IV 152 — Interprétation extensive de \"fausse identité légalement constituée\".",
+            "critical": true,
+            "next": "end"
+          },
+          {
+            "text": "Régime hybride 285a CPP au démarrage (mois 1-3, contacts exploratoires) puis bascule vers 285b CPP à partir du moment où la cible M. R. est devenue clairement identifiée et qu'une enquête prolongée s'imposait — cette modulation reflète l'évolution naturelle de l'opération et est plus précise juridiquement qu'un cadre unique. Documenter rétroactivement la bascule au mois 3 et obtenir l'autorisation TMC depuis cette date.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Architecture créative mais juridiquement non recevable. (1) Le CPP NE PRÉVOIT PAS de \"bascule\" entre les régimes 285a et 285b — chaque régime est un cadre distinct avec des conditions d'application propres dès le démarrage. (2) \"Documenter rétroactivement la bascule\" est une régularisation a posteriori que la jurisprudence TF a constamment refusée pour les vices d'autorisation TMC (ATF 145 IV 50). (3) En réalité, l'identité « Lina_15 » avec photos IA + historique préfabriqué était sophistiquée DÈS le mois 1 — le critère de la fausse identité \"légalement constituée\" était rempli dès le départ. (4) Cette rationalisation hybride serait perçue par la défense (et le tribunal) comme une tentative de masquage du vice procédural initial, aggravant le problème.",
+            "legal": "ATF 145 IV 50 — Pas de régularisation rétroactive des vices TMC.",
+            "critical": false,
+            "next": 1
+          }
+        ]
+      },
+      {
+        "phase": "🎭 La concrétisation autonome — le moment clé",
+        "situation": "Vérification faite : l'autorisation TMC pour le projet IFC sous 285b CPP a bien été obtenue au démarrage et renouvelée correctement. Vous examinez maintenant le journal d'opérations sur M. R. spécifiquement. Sur 3 mois de conversation : (a) M. R. a initié le contact (s'est manifesté sur le forum « SwissTeenChat » où Lina_15 avait un profil ouvert) ; (b) M. R. a posé les premières questions intimes au mois 1 (« t'as déjà fait ça avec un mec ? ») ; (c) M. R. a envoyé sa première photo intime au mois 2 sans demande de Lina ; (d) M. R. a proposé le rendez-vous physique au mois 3 SANS aucune sollicitation de Lina (« j'aimerais te voir en vrai »). Lina a uniquement répondu aux relances, jamais initié les escalades. La défense plaidera quand même l'agent provocateur — comment réfutez-vous ?",
+        "law": "<strong>ATF 148 IV 152</strong> — Concrétisation autonome : agent peut fournir l'opportunité, pas créer l'intention.<br><strong>Art. 286 CPP</strong> — Distinction agent infiltré / agent provocateur.<br><strong>Doctrine TF</strong> — 4 critères : qui initie ? qui escalade ? qui propose ? qui insiste en cas de réticence ?<br><strong>Schenk c. Suisse (CEDH 1988)</strong> — Cadre européen : provocation interdite, opportunité autorisée.",
+        "question": "<strong>Comment construisez-vous la réfutation de la provocation ?</strong>",
+        "choices": [
+          {
+            "text": "Réfutation par les 4 critères convergents documentés au journal : (1) INITIATIVE — c'est M. R. qui a initié le contact en se manifestant sur le forum (Lina avait juste un profil ouvert, comportement passif autorisé) ; (2) ESCALADE — toutes les escalades (questions intimes, photos, rendez-vous) ont été initiées par M. R. sans sollicitation ; (3) RÉTICENCE — Lina a montré des réticences appropriées (« je sais pas trop », « j'ai jamais fait ça ») et M. R. a INSISTÉ malgré ces réticences (signe fort de prédisposition autonome) ; (4) PROPOSITION FINALE — le rendez-vous physique est proposé par M. R. lui-même, sans aucune suggestion de Lina. Documenter chaque point avec extraits horodatés du journal Telegram + analyse linguistique des relances. Conclusion : aucune trace d'incitation par l'agent, concrétisation autonome au sens ATF 148 IV 152.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Architecture de réfutation parfaitement structurée sur les 4 critères TF. (1) L'analyse \"qui initie/escalade/propose/insiste\" est exactement celle déployée par le TF dans l'arrêt 148 IV 152 — la défense ne peut pas plaider provocation si tous les 4 critères sont du côté du suspect. (2) Le critère 3 (RÉTICENCE de l'agent + INSISTANCE du suspect) est particulièrement décisif : un suspect qui insiste face à des réticences \"naturelles\" démontre une intention préexistante autonome. C'est le test le plus fort de l'autonomie. (3) Les extraits horodatés du journal Telegram sont la preuve matérielle irréfutable — la défense ne peut pas les nier. (4) L'analyse linguistique des relances renforce le tout : a-t-on des questions ouvertes (« et toi tu en penses quoi ? ») ou orientées (« tu veux qu'on se rencontre ? ») ? Ici, manifestement les premières.",
+            "legal": "ATF 148 IV 152 + Schenk c. Suisse — 4 critères saturés, réfutation solide.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Argumenter par le profil délictueux préexistant de M. R. — ses recherches Google (qu'on examinera lors de la perquisition) montreront probablement un intérêt pédocriminel ancien, ses comptes sur d'autres forums, etc. Le \"profil de prédisposition\" criminelle préexistante exclut la provocation par définition : on ne provoque pas quelqu'un qui était déjà criminel. C'est l'angle le plus fort pour démontrer l'autonomie de M. R.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Angle stratégiquement faible et juridiquement risqué. (1) Le \"profil délictueux préexistant\" est PRÉCISÉMENT ce que la jurisprudence TF a refusé comme critère décisif — on ne peut pas dire \"il était déjà criminel donc l'agent ne l'a pas provoqué\" (ATF 124 IV 34). C'est l'analyse INTERACTIONNELLE du dossier qui compte (qui initie/escalade), pas le profil supposé. (2) Spéculer sur le contenu de futurs résultats de perquisition (Google searches, autres forums) est PRÉMATURÉ et exposerait à une exploration aveugle si la perquisition ne livre pas ces éléments. (3) Cet angle implique aussi un raisonnement circulaire : on présume la culpabilité préexistante pour justifier l'enquête qui l'établit. (4) Les 4 critères interactionnels (option correcte) sont la voie sûre, soutenue par le journal d'opérations.",
+            "legal": "ATF 124 IV 34 — Analyse interactionnelle, pas profil supposé.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Concentrer la réfutation sur le seul moment décisif : la proposition de rendez-vous physique au parc Stadtpark, qui a été INITIÉE par M. R. sans aucun préalable de Lina. C'est le passage à l'acte concret qui fait basculer dans l'infraction punissable, et le fait qu'il vienne entièrement de M. R. règle juridiquement la question de la provocation pour ce moment précis. Tout le reste (3 mois de conversation) est accessoire à cette concrétisation finale autonome. Cette focalisation sur le moment de basculement, défendue par les pénalistes cantonaux de tradition romande qui privilégient l'analyse rigoureuse de l'élément constitutif déterminant plutôt que des reconstitutions narratives globales potentiellement vulnérables au contre-feu défensif, repose sur le principe que la simplicité argumentative est souvent la meilleure défense face à des plaidoiries adverses sophistiquées qui chercheront à brouiller les pistes en multipliant les éléments à contester. Une analyse circonscrite et limpide vaut mieux qu'un faisceau étendu mais potentiellement plus exposé.",
+            "ok": false,
+            "pts": -10,
+            "fb": "Approche minimaliste qui rate la défense en profondeur. (1) Concentrer sur \"le seul moment\" laisse à la défense l'opportunité d'attaquer les 3 mois de conversation comme \"manipulation progressive\" qui aurait conduit M. R. à proposer le rendez-vous (\"sans la conversation construite par l'agent, mon client n'aurait jamais proposé le rendez-vous\"). C'est exactement l'argument que la défense déploiera. (2) La réfutation doit être globale (4 critères saturés tout au long de la relation) pour démontrer l'autonomie persistante de M. R., pas seulement le moment final. (3) ATF 148 IV 152 examine l'ensemble de la relation, pas un instant T. (4) Les 3 mois de conversation NE SONT PAS \"accessoires\" — ils contiennent les preuves les plus solides de prédisposition (initiation, escalade, photos non sollicitées).",
+            "legal": "ATF 148 IV 152 — Examen global de la relation, pas instant unique.",
+            "critical": false,
+            "next": 2
+          }
+        ]
+      },
+      {
+        "phase": "🚨 L'interpellation — au rendez-vous ou avant ?",
+        "situation": "Le rendez-vous est samedi 14h au parc Stadtpark. Vous coordonnez avec « Tom » et le commandant de l'unité d'intervention. Trois options : (a) interpellation au rendez-vous quand M. R. arrive sur les lieux (flagrance, mais risque que le suspect se rende compte d'un dispositif et tente de fuir) ; (b) interpellation à son domicile vendredi soir (sécuritaire, contrôlé, mais plus tôt = M. R. n'a pas commis le déplacement) ; (c) interpellation samedi matin à son domicile avant qu'il parte (le déplacement n'a pas eu lieu, mais M. R. a probablement déjà préparé l'objet du rendez-vous).",
+        "law": "<strong>Art. 217 CPP</strong> — Arrestation en flagrance.<br><strong>Art. 215 CPP</strong> — Appréhension préventive si soupçon sérieux.<br><strong>Art. 197 al. 4 CP</strong> — Pédopornographie : consommation à la prise de contact + envoi photos.<br><strong>Art. 187 CP</strong> — Acte d'ordre sexuel avec mineur de moins de 16 ans (préparation déjà punissable).<br><strong>Doctrine sécurité opérationnelle</strong> — Évaluer le risque tiers (passants, mineurs réels au parc).",
+        "question": "<strong>Quelle option d'interpellation choisissez-vous ?</strong>",
+        "choices": [
+          {
+            "text": "Option (a) modifiée : interpellation au rendez-vous au parc Stadtpark mais en dispositif renforcé : équipe en civil placée 30-60 min avant l'heure prévue, observation de M. R. dès son arrivée (qu'apporte-t-il ? est-il seul ? regards aux mineurs réels présents ?), interpellation au moment où il s'approche du point de rendez-vous prévu avec Lina. La flagrance est ainsi maximale (déplacement au lieu, intention de rencontrer une mineure, possible matériel apporté = bonbons, cadeau, etc.) mais le risque tiers est minimisé par l'observation préalable. Plus l'élément matériel de l'infraction (Art. 187 CP : tentative caractérisée) est solide, plus la procédure tient au procès.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Configuration optimale équilibrant solidité juridique et sécurité publique. (1) L'interpellation au rendez-vous maximise la qualification : tentative d'acte d'ordre sexuel avec mineur (Art. 187 CP en lien avec Art. 22 CP) — quasi-impossible à contester avec la matérialité du déplacement + matériel apporté. (2) L'observation préalable 30-60 min est cruciale : elle documente le comportement (\"il regarde les enfants présents au parc\", c'est documenté), permet de confirmer qu'il vient seul (pas un piège pour notre agent), et permet d'intervenir au moment précis du rapprochement. (3) Le risque tiers (passants, vrais enfants au parc samedi 14h) est bien réel mais géré par l'observation préalable (intervention immédiate dès qu'il s'approche, avant tout contact réel). (4) C'est la doctrine ZH/SG infiltration depuis 2023 (cas Lyss 2024).",
+            "legal": "Art. 217 CPP + Art. 187 + Art. 22 CP — Flagrance maximale, sécurité gérée.",
+            "critical": false,
+            "next": 3
+          },
+          {
+            "text": "Option (b) — interpellation à son domicile vendredi soir, calme et contrôlé. La matérialité de la conversation Telegram + photos intimes envoyées par M. R. + proposition de rendez-vous = ces éléments suffisent à fonder la qualification (Art. 197 al. 4 CP pédopornographie + Art. 187 CP en tentative + Art. 197 al. 1 CP pour l'envoi de photos à mineur supposé). Pas besoin de prendre les risques d'une intervention au parc avec passants et vrais enfants présents. Moins de visibilité médiatique aussi. Cette doctrine de la \"prudence opérationnelle\", défendue par certains commandants romands soucieux d'éviter à tout prix les dérapages médiatiques et les responsabilités personnelles en cas d'incident lors d'une opération en zone publique, est aussi cohérente avec la culture institutionnelle helvétique de la discrétion mesurée.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Approche prudente mais juridiquement sous-optimale. (1) Sans le déplacement physique au rendez-vous, l'élément matériel de la TENTATIVE d'Art. 187 CP est plus difficile à établir — la défense plaidera que M. R. \"y aurait peut-être renoncé\" sans le déplacement effectif. La jurisprudence du TF est exigeante sur la matérialité de la tentative. (2) Les éléments accessibles avant le rendez-vous (conversations, photos) restent solides pour Art. 197 al. 4 CP (pédopornographie) mais c'est moins puissant que le tableau global \"conversations + déplacement + intention concrétisée\". (3) Le risque tiers au parc est bien réel mais géré par observation préalable + intervention rapide (option correcte). (4) \"Moins de visibilité médiatique\" n'est pas un critère de décision policière. Cette option laisse 30-40 % de la peine encourue sur la table par excès de prudence.",
+            "legal": "Art. 22 CP — Tentative requiert matérialité, déplacement la renforce.",
+            "critical": false,
+            "next": 3
+          },
+          {
+            "text": "Option (c) — interpellation samedi matin à son domicile, juste avant qu'il ne parte au rendez-vous. Cela permet (1) d'éviter le risque tiers au parc, (2) de conserver une partie de la matérialité de tentative (il s'apprêtait à partir, peut-être déjà habillé/équipé), (3) de saisir tout son matériel informatique au domicile dans la foulée (perquisition simultanée). C'est l'option la plus efficiente sur tous les plans.",
+            "ok": false,
+            "pts": -10,
+            "fb": "Compromis qui rate l'optimum sur 2 dimensions. (1) Interpeller \"juste avant qu'il parte\" est un timing fragile — comment savoir précisément quand il va partir ? Trop tôt = pas de tentative caractérisée, trop tard = il est déjà parti. Pratiquement difficile à doser. (2) La \"matérialité de tentative à domicile\" (préparation, habillement) est moins forte juridiquement que le déplacement effectif au lieu de rendez-vous (option correcte) — le TF distingue préparation (non punissable seule pour 187 CP) et tentative (punissable). (3) La perquisition simultanée à domicile est possible quel que soit le lieu d'interpellation — pas un avantage spécifique à l'option (c). (4) L'option (a) avec dispositif renforcé gère le risque tiers ET maximise la matérialité — c'est la voie de référence.",
+            "legal": "Art. 22 CP + Art. 260 CP — Préparation vs tentative, distinction TF.",
+            "critical": false,
+            "next": 3
+          }
+        ]
+      },
+      {
+        "phase": "🔍 La perquisition — analyse du matériel saisi",
+        "situation": "Interpellation réussie samedi 13h47 au Stadtpark, M. R. arrête net en voyant les agents, ne résiste pas. Perquisition simultanée à son domicile : ordinateur, 2 téléphones (un personnel, un que sa femme ignorait), tablette, 4 disques durs externes, NAS Synology familial. Première analyse forensique du PC : 47 conversations Telegram avec d'autres « jeunes filles » (probablement réelles cette fois, à identifier), 12'500 fichiers image et vidéo dans des dossiers \"divers\" (à analyser pour pédopornographie), historique navigateur avec recherches concernant \"comment éviter détection police pédocriminelle\". Que priorisez-vous dans l'analyse forensique des prochaines semaines ?",
+        "law": "<strong>Art. 197 al. 4-5 CP</strong> — Pédopornographie : possession et consommation.<br><strong>Art. 187 CP</strong> — Actes d'ordre sexuel avec mineur de moins de 16 ans.<br><strong>Art. 198 CP</strong> — Désagréments d'ordre sexuel.<br><strong>NCMEC + ICSE Database (Interpol)</strong> — Hashes connus pour identifier rapidement le matériel pédocriminel.<br><strong>Doctrine de victimologie</strong> — Identification prioritaire des victimes RÉELLES potentielles.",
+        "question": "<strong>Comment priorisez-vous l'analyse forensique ?</strong>",
+        "choices": [
+          {
+            "text": "Priorité absolue à l'identification de victimes réelles potentielles : (1) Analyser d'abord les 47 conversations Telegram « jeunes filles » pour identifier celles qui sont des cibles RÉELLES (pas des autres infiltrations potentielles d'autres cantons) — chaque mineure réelle en danger immédiat doit être protégée IMMÉDIATEMENT (signalement à sa police cantonale) ; (2) En parallèle, hashing automatisé NCMEC + ICSE Interpol des 12'500 fichiers (identifie les contenus connus en heures) ; (3) Analyse des fichiers non identifiés ensuite (peut révéler nouveaux contenus, nouvelles victimes) ; (4) Historique navigateur en dernier (preuves d'intentionnalité, important mais pas urgent). Ordre = enfants vivants en danger > preuves matérielles connues > preuves nouvelles > preuves d'intention.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Priorisation parfaitement alignée sur les principes de protection victimes. (1) Les 47 conversations Telegram peuvent contenir des mineures RÉELLES en train d'être groomées ACTUELLEMENT — leur identification en urgence permet d'intervenir avant un passage à l'acte (en CH ou ailleurs). C'est l'intérêt supérieur de l'enfant (CDE Art. 3) qui prime absolument. (2) Le hashing automatisé NCMEC/ICSE en parallèle est techniquement rapide (heures pour 12'500 fichiers) — pas de raison de retarder. (3) L'analyse des fichiers non identifiés ensuite peut révéler des CSAM inédits, ce qui mène à NOUVELLES victimes à identifier (signalement NCMEC pour faire entrer ces hashes dans la base). (4) L'historique navigateur en dernier est correct — c'est important pour la peine (intention, organisation) mais pas pour protéger une victime en cours.",
+            "legal": "CDE Art. 3 + ICSE Interpol + doctrine fedpol pédocriminalité — Priorisation optimale.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Priorité aux preuves de l'intentionnalité de M. R. : analyser d'abord son historique navigateur (\"comment éviter détection police pédocriminelle\"), ses recherches Google, ses lectures forum — ce sont les éléments qui démontreront le mieux la préméditation et écarteront définitivement la défense de la \"folie passagère\". Une fois l'intentionnalité solidement établie, passer aux 12'500 fichiers et aux 47 conversations.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Priorisation gravement erronée qui sacrifie la protection de mineures réelles. (1) Pendant que vous analysez l'historique navigateur (utile mais accessoire), les 47 conversations Telegram peuvent contenir des MINEURES RÉELLES actuellement en train d'être groomées par M. R. — chaque jour de retard expose ces enfants. (2) L'intentionnalité de M. R. est DÉJÀ massivement démontrée par : 3 mois de conversation avec Lina (qui était infiltrée), proposition de rendez-vous, photos envoyées, déplacement physique au parc. L'historique navigateur est une preuve de plus, pas une preuve manquante. (3) La doctrine fedpol pédocriminalité (post-affaire Stream/KidFlix 2025) est CLAIRE : les victimes potentielles vivantes priment toujours sur l'enrichissement du dossier pénal. (4) Cette priorisation serait critiquée publiquement et institutionnellement (par les associations victimes, ASPR, etc.).",
+            "legal": "CDE Art. 3 — Intérêt supérieur enfant prime absolument.",
+            "critical": true,
+            "next": "end"
+          },
+          {
+            "text": "Priorisation par volume : commencer par les 12'500 fichiers (hashing NCMEC/ICSE complet en quelques jours pour identifier le matériel connu, puis analyse manuelle des fichiers non-identifiés) qui constituent le gros de la matière probatoire. Une fois ce socle massif établi, passer aux 47 conversations et à l'historique navigateur. Cette approche \"du gros au fin\" structure efficacement le travail forensique sur plusieurs semaines. Cette méthode d'analyse forensique structurée, défendue par les laboratoires cantonaux les mieux équipés pour les analyses massives de stockage numérique, présente l'avantage de la rigueur procédurale et de la traçabilité — chaque catégorie de fichiers est traitée dans un ordre prédéfini et documenté qui résiste à toute contestation ultérieure de la défense sur la chronologie ou la priorisation arbitraire des analyses. Cette approche systématique \"du gros au fin\" est particulièrement appréciée par les magistrats helvétiques qui valorisent la méthodologie reproductible et industrielle.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Approche industrielle mais non priorisée par les enjeux humains. (1) \"Du gros au fin\" est un principe de gestion de projet, pas un principe de victimologie. Les 47 conversations contiennent potentiellement des mineures RÉELLES en cours de grooming — leur identification rapide est qualitativement plus urgente que les 12'500 fichiers (qui sont des contenus DÉJÀ produits, victimes déjà violentées). (2) Le hashing NCMEC/ICSE peut effectivement être lancé rapidement (heures, pas semaines) MAIS il n'identifie que le matériel CONNU — environ 60 % de la base CSAM mondiale, donc ~5'000-7'000 fichiers seront déjà identifiés rapidement, mais il restera ~5'000 fichiers à analyser plus lentement. Ce n'est pas un \"socle massif\" qui se construit vite. (3) Les 47 conversations sont infiniment plus actionnables (heures à analyser pour 47 chats Telegram). (4) Priorité doit suivre l'urgence humaine.",
+            "legal": "Doctrine fedpol — Priorisation par enjeu humain, pas volume.",
+            "critical": false,
+            "next": 4
+          }
+        ]
+      },
+      {
+        "phase": "📜 Le rapport final — communication au procès et au public",
+        "situation": "3 mois plus tard. Bilan : M. R. condamné en première instance à 4 ans ferme + interdiction d'exercer + indemnités victimes. 5 mineures réelles identifiées via les 47 conversations Telegram (groomées par M. R. en parallèle de Lina), 3 cantons concernés (SG, ZH, TG), 2 sont actuellement en thérapie. 3'200 fichiers CSAM identifiés sur ses disques (dont 870 inédits, signalés à NCMEC). Les médias suisses-allemands veulent un point presse sur le projet IFC. Le parlement cantonal demande un rapport sur l'efficacité du projet (en vue de pérennisation). La défense fait appel. Comment communiquez-vous ?",
+        "law": "<strong>Art. 73 CPP</strong> — Secret de l'instruction (procédure pas définitive).<br><strong>Art. 32 al. 1 Cst.</strong> — Présomption d'innocence (M. R. en appel).<br><strong>LTrans</strong> — Transparence administrative.<br><strong>Doctrine fedpol post-Stream/KidFlix</strong> — Communication équilibrée valorisant la coopération et la protection victimes.",
+        "question": "<strong>Quelle stratégie de communication adoptez-vous ?</strong>",
+        "choices": [
+          {
+            "text": "Communication différenciée par audience : (1) MÉDIAS — communiqué factuel sans nom (\"un homme de 41 ans condamné\"), focus sur les 5 mineures réelles identifiées et protégées (effet protecteur du projet IFC démontré), respect Art. 73 CPP (procédure d'appel pas définitive) ; (2) PARLEMENT — rapport détaillé chiffré sur le projet IFC (13 perquisitions, 10 arrestations, 21 procédures + 5 mineures protégées + 870 CSAM inédits signalés NCMEC) avec recommandation de pérennisation et budget 2027-2030 ; (3) DÉFENSE EN APPEL — pas de commentaires publics, dossier solide se défend lui-même, le MP-SG prend la parole en appel, pas l'expertise technique. Cohérence : protection victimes mise en avant, suspect anonymisé, projet pérennisé.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Architecture communicationnelle exemplaire. (1) La différenciation par audience est essentielle : médias ≠ parlement ≠ tribunal — chacun a ses besoins et ses contraintes juridiques. (2) Pour les MÉDIAS : focus sur les victimes protégées + anonymisation suspect (Art. 73 CPP en appel + Art. 32 al. 1 Cst.) construit un récit positif sans violation procédurale. \"5 mineures protégées\" est le chiffre qui parle au public, beaucoup plus que les peines. (3) Pour le PARLEMENT : rapport chiffré + recommandation de pérennisation est exactement ce qui est attendu — c'est une accountability institutionnelle correcte. (4) Pour la DÉFENSE EN APPEL : silence est d'or — le procès se gagne au tribunal, pas dans la presse. (5) C'est la doctrine de communication fedpol-cantons depuis 2023.",
+            "legal": "Art. 73 CPP + 32 al. 1 Cst. + LTrans + doctrine — Architecture optimale.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Communication maximale et offensive : conférence de presse complète avec nom du suspect (M. R., banquier saint-gallois condamné), détails de la méthode IFC, exemples de conversations Telegram (anonymisées) — la transparence radicale renforce la confiance publique dans le projet IFC, donne des arguments à des cantons pour adopter le même modèle, et envoie un signal dissuasif fort aux pédocriminels potentiels. La présomption d'innocence est résiduelle car la condamnation de première instance est déjà tombée. Cette stratégie de transparence radicale, défendue par les services communicationnels modernes qui s'inspirent des pratiques anglo-saxonnes des services de police, considère que le risque procédural d'une nomination publique est largement compensé par les bénéfices institutionnels de visibilité et de dissuasion publique massive auprès des futurs auteurs potentiels.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Multiples violations procédurales et déontologiques. (1) Nommer M. R. publiquement avant arrêt définitif viole Art. 32 al. 1 Cst. (présomption d'innocence) — la condamnation de première instance N'EST PAS définitive tant que l'appel court. Recours en responsabilité de l'État garanti. (2) \"Présomption d'innocence résiduelle\" est juridiquement faux : elle s'applique pleinement jusqu'à arrêt définitif. (3) Détailler la méthode IFC et exemples de conversations Telegram donne aux futurs pédocriminels un manuel anti-méthodes — préjudice opérationnel majeur pour les futures opérations. (4) \"Banquier saint-gallois\" est suffisamment précis pour identifier M. R. par recoupement (ils sont peu nombreux à SG) — anonymisation insuffisante. (5) Cette communication serait sanctionnée disciplinairement et en responsabilité civile.",
+            "legal": "Art. 32 al. 1 Cst. + Art. 73 CPP — Multiples violations.",
+            "critical": true,
+            "next": "end"
+          },
+          {
+            "text": "Communication minimale par prudence : un communiqué de presse de 5 lignes (\"Une opération de la PolSG a permis la condamnation d'un individu pour pédocriminalité. L'enquête se poursuit.\"), refus de tout détail aux médias, rapport au parlement bref sans chiffres détaillés (qui pourraient être contestés). La discrétion totale préserve la souveraineté procédurale et évite tout incident médiatique. Le projet IFC continuera son travail dans la discrétion qui est sa force.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Discrétion excessive qui rate l'opportunité institutionnelle. (1) Le projet IFC a besoin de soutien parlementaire pour être pérennisé — un rapport bref \"sans chiffres détaillés\" ne convaincra pas les députés sceptiques. La justification budgétaire pour 2027-2030 nécessite des chiffres. (2) Les 5 mineures protégées + 870 CSAM inédits signalés NCMEC sont des résultats CONCRETS qui méritent d'être communiqués (sous Art. 73 CPP : sans détails procéduraux mais avec chiffres globaux), c'est de l'utilité publique. (3) Une communication minimaliste laisse la place aux médias pour spéculer et reconstituer eux-mêmes — souvent moins favorablement que ce qu'aurait été une communication contrôlée. (4) La doctrine moderne fedpol valorise la communication contrôlée et factuelle, pas le silence.",
+            "legal": "LTrans + doctrine moderne — Communication contrôlée plutôt que silence.",
+            "critical": false,
+            "next": "end"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "saxon-curatelle",
+    "title": "Saxon — Le Service de Curatelle Compromis",
+    "icon": "🏛️",
+    "difficulty": "hard",
+    "atmosphere": "ransomware",
+    "realCase": "Avril-mai 2023 — Service de curatelle de Saxon (regroupant Saxon, Fully, Leytron, Riddes, Isérables). Intrusion massive, exfiltration et publication sur dark web en mai 2023. Police valaisanne + Ministère public.",
+    "narrative": {
+      "success": "Vous coordonnez la réponse multi-communes avec le MP-VS, la PolVS, l'OFCS et l'APEA-VS. Les 1'847 dossiers de pupilles (mineurs sous tutelle, personnes incapables) sont identifiés, les bénéficiaires notifiés selon LPDCa-VS Art. 24, mesures de protection individuelles renforcées. La fuite est contenue (signalements aux fournisseurs de services, monitoring dark web). Procédure pénale ouverte contre le groupe identifié (groupe \"GhostSec\"). Confiance des bénéficiaires partiellement préservée.",
+      "degraded": "Notification réussie mais avec retard de 2-3 semaines (volume important + complexité représentation légale des pupilles). Quelques bénéficiaires découvrent leurs données par les médias avant notification — choc supplémentaire pour des personnes vulnérables. Réputation des 5 communes affectée durablement.",
+      "failure": "Coordination chaotique entre les 5 communes (chacune négociant séparément avec MP, OFCS, médias). Notification tardive et incomplète. Données restent en ligne sur dark web faute de signalement effectif. Plusieurs bénéficiaires (mineurs, personnes incapables) victimes de chantage subséquent. Recours civils contre les communes."
+    },
+    "tags": [
+      "RANSOMWARE",
+      "CURATELLE",
+      "DONNÉES SENSIBLES",
+      "FÉDÉRALISME COMMUNAL",
+      "DARK WEB"
+    ],
+    "legalRefs": [
+      "LPDCa-VS Art. 24",
+      "LPD Art. 8",
+      "Art. 314 CP",
+      "CC Art. 360-456 (curatelle)",
+      "LSI Art. 74c"
+    ],
+    "intro": "Mardi 7h30, Service de curatelle régional de Saxon. La directrice du service vous appelle, paniquée : « Tous nos systèmes sont chiffrés. Une note de rançon réclame 80'000 EUR en BTC. Les attaquants prétendent avoir aussi téléchargé tous les dossiers. » Le service de curatelle gère les mesures pour 5 communes (Saxon, Fully, Leytron, Riddes, Isérables) — soit 1'847 dossiers actifs. Ces dossiers contiennent des données EXTRÊMEMENT sensibles : mineurs sous mesures (tutelle pour orphelins, retraits du droit de garde, placements), adultes sous curatelle (incapacité, addictions, démences précoces), patrimoines détaillés des protégés, antécédents psychiatriques, situations familiales conflictuelles. Vous êtes l'expert mandaté par la Police cantonale valaisanne et coordinez avec le MP-VS, l'OFCS, et l'APEA-VS (Autorité de protection de l'enfant et de l'adulte du Valais).",
+    "alertLevel": "🏛️ CURATELLE COMPROMISE — 5 communes · 1'847 pupilles · Données ULTRA-SENSIBLES · Rançon 80k BTC · Dark web menace",
+    "objectives": [
+      {
+        "icon": "👤",
+        "text": "Protéger les bénéficiaires (mineurs, personnes incapables) — populations particulièrement vulnérables"
+      },
+      {
+        "icon": "🔄",
+        "text": "Coordonner les 5 communes pour une réponse unifiée (LPDCa-VS Art. 24)"
+      },
+      {
+        "icon": "📜",
+        "text": "Articuler le secret de la curatelle (CC + droit cantonal) avec les obligations LPD/LSI"
+      },
+      {
+        "icon": "🌐",
+        "text": "Anticiper et contenir la publication dark web (monitoring, retraits)"
+      }
+    ],
+    "debrief": "<p>Le <strong>service de curatelle</strong> est un cas particulièrement sensible en cybersécurité publique pour 3 raisons :</p>\n<ol><li><strong>Vulnérabilité extrême des bénéficiaires</strong> — Mineurs sous tutelle (orphelins, retraits parentaux), adultes sous curatelle (incapacité, addictions, démence) sont par définition des populations à protection renforcée. La fuite de leurs données les expose à des préjudices que la moyenne population ne connaît pas (chantage, exploitation, retombées familiales).</li>\n<li><strong>Concentration de données sensibles</strong> — Un dossier de curatelle contient typiquement : ID complète, antécédents psychiatriques, patrimoine détaillé, situation familiale, correspondances confidentielles, expertises judiciaires. C'est l'un des dossiers les plus complets qu'un État détient sur un individu.</li>\n<li><strong>Architecture intercommunale</strong> — Les services régionaux mutualisent les ressources mais multiplient les responsables (5 communes ici), créant des chaînes de décision longues qui peuvent paralyser la réaction.</li></ol>\n<p>Le <strong>cadre juridique</strong> est multi-niveaux : <strong>CC Art. 360-456</strong> (curatelle, secret professionnel des organes APEA), <strong>LPDCa-VS</strong> (loi cantonale sur la protection des données — chaque canton a sa propre LPD), <strong>LSI Art. 74c</strong> (signalement OFCS pour infrastructures critiques, applicable depuis 2024), <strong>nLPD</strong> fédérale (Art. 24 notification au PFPDT et aux personnes concernées dans \"les meilleurs délais\").</p>\n<p>Pour la <strong>réponse opérationnelle</strong>, la difficulté centrale est la coordination intercommunale : chaque exécutif communal a sa propre légitimité démocratique, et l'absence d'un \"chef\" unique peut créer des décisions divergentes. La pratique éprouvée est de constituer rapidement une <strong>cellule de crise unique</strong> (les 5 syndics + directrice service + canton + experts) avec un porte-parole unique.</p>",
+    "steps": [
+      {
+        "phase": "🚨 La cellule de crise — coordination des 5 communes",
+        "situation": "Vous arrivez à Saxon à 8h30. Les 5 syndics communaux (Saxon, Fully, Leytron, Riddes, Isérables) sont en route. Le syndic de Saxon (commune-siège du service régional) vous dit : « C'est nous qui pilotons, c'est notre service. Les 4 autres communes paient leur quote-part mais ce sont nos infrastructures. » Le syndic de Fully (commune la plus peuplée des 5) arrive et vous dit : « 35 % de nos résidents sont concernés, on doit avoir notre mot à dire en proportion. » Le syndic d'Isérables (260 habitants) reste silencieux. Comment structurez-vous la cellule de crise immédiatement ?",
+        "law": "<strong>Convention intercommunale</strong> — Probablement une charte définit les rôles entre commune-siège et communes membres.<br><strong>LPDCa-VS Art. 4</strong> — Responsable du traitement : généralement la commune-siège pour services régionaux.<br><strong>Doctrine fédéraliste suisse</strong> — Égalité formelle des communes, asymétrie de fait selon contribution.<br><strong>Art. 6 LCom-VS</strong> — Coopération intercommunale.",
+        "question": "<strong>Quelle structure de cellule de crise proposez-vous ?</strong>",
+        "choices": [
+          {
+            "text": "Cellule de crise unique multi-acteurs avec rôles clairs : (a) PRÉSIDENCE = syndic de Saxon (commune-siège, juridiquement responsable du traitement selon convention intercommunale, point d'entrée formel) ; (b) MEMBRES = 4 autres syndics (présents, votants sur décisions stratégiques majeures), directrice du service de curatelle, représentant APEA-VS, expert cyber (vous), juriste de l'État du Valais ; (c) PORTE-PAROLE UNIQUE = syndic de Saxon, qui parle au nom des 5 ; (d) DÉCISIONS MAJEURES = consensus des 5 syndics, pas vote majoritaire ; (e) Réunion 3x/jour les 5 premiers jours, puis 1x/jour. Documenter la composition par procès-verbal de constitution.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Architecture conforme à la pratique fédéraliste cantonale et opérationnellement efficace. (1) La PRÉSIDENCE par le syndic de Saxon respecte la responsabilité juridique du traitement (commune-siège selon LPDCa-VS Art. 4) — c'est la voie juridiquement sûre. (2) La participation des 4 autres syndics aux DÉCISIONS MAJEURES préserve leur légitimité démocratique sans les noyer dans le quotidien opérationnel. (3) Le PORTE-PAROLE UNIQUE évite les déclarations divergentes catastrophiques (un syndic qui parle de \"non-paiement de rançon\" et un autre qui hésite = chaos médiatique). (4) Le CONSENSUS plutôt que vote majoritaire est crucial dans le fédéralisme suisse — pas de \"3 contre 2\", ce qui briserait la coopération à long terme. (5) Le PV de constitution documente la légitimité du dispositif. C'est la doctrine éprouvée des syndicats intercommunaux post-affaire Rolle 2021.",
+            "legal": "LPDCa-VS Art. 4 + LCom-VS + doctrine intercommunale — Architecture optimale.",
+            "critical": false,
+            "next": 1
+          },
+          {
+            "text": "Pilotage exclusif par le syndic de Saxon (commune-siège) qui prend toutes les décisions opérationnelles avec son équipe technique. Les 4 autres communes sont informées quotidiennement par mail mais ne participent pas au pilotage — la rapidité décisionnelle prime sur la collégialité dans une crise active. Le syndic de Saxon engage la responsabilité de l'ensemble du service. Cette voie de la concentration décisionnelle, défendue par certains praticiens romands de la gestion de crise pour qui la dispersion des responsabilités entre 5 syndics ralentirait fatalement les arbitrages techniques pointus, est aussi cohérente avec une lecture moderne de la subsidiarité fédéraliste qui veut que l'efficacité opérationnelle prime parfois sur les apparences procédurales formelles d'égalité — surtout dans une crise où chaque heure compte et où la collégialité à 5 voix peut paralyser l'action.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Concentration excessive qui ignore le fédéralisme communal. (1) Les 5 communes sont JURIDIQUEMENT cosignataires de la convention de service régional — chacune a une responsabilité institutionnelle envers ses propres résidents. Exclure 4 syndics du pilotage en pleine crise viole probablement la convention intercommunale et expose à des recours politiques + civils. (2) Si le syndic de Saxon prend des décisions \"engageant l'ensemble du service\" sans validation des autres communes, ces décisions peuvent être contestées rétroactivement par les exécutifs des autres communes (refus de payer une partie des coûts, par exemple). (3) Politiquement, exclure 4 syndics = leur faire porter le poids public sans pouvoir : ils seront en première ligne médiatique dans leurs communes sans avoir contribué aux décisions. (4) Le \"mail quotidien\" ne remplace pas la participation à une cellule de crise.",
+            "legal": "LCom-VS — Coopération intercommunale, pas pilotage unilatéral.",
+            "critical": false,
+            "next": 1
+          },
+          {
+            "text": "Pilotage proportionnel : composition de la cellule au prorata des dossiers concernés par commune (Fully ~35 % = 35 % des sièges, Saxon ~25 %, etc.). Décisions par vote pondéré. Cette approche moderne reflète l'impact réel de chaque commune et évite que la commune-siège (Saxon) ait un poids disproportionné par simple historique administratif. Plus juste démocratiquement.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Idée séduisante en théorie mais inadaptée au fédéralisme suisse. (1) En Suisse, la communalité est fondée sur l'égalité des entités politiques, pas sur le poids démographique. Un \"vote pondéré\" entre communes est anti-fédéraliste et ne reflète pas comment les conventions intercommunales suisses fonctionnent. (2) Pratiquement, le \"prorata des dossiers\" change selon la définition (résidents concernés ? dossiers actifs ? dossiers historiques ?) — disputes définitionnelles paralysantes en pleine crise. (3) Le fait que la commune-siège (Saxon) ait un poids supérieur N'EST PAS un \"simple historique\" — c'est la responsabilité juridique du traitement (LPDCa-VS Art. 4). Cette responsabilité n'est pas pondérable. (4) Cette innovation expose à des contestations politiques durables qui survivront à la crise. Le consensus à 5 (option correcte) est le standard suisse.",
+            "legal": "Art. 50 Cst. — Autonomie communale, égalité formelle.",
+            "critical": false,
+            "next": 1
+          }
+        ]
+      },
+      {
+        "phase": "👤 Notifier les bénéficiaires vulnérables — comment ?",
+        "situation": "Cellule de crise constituée, présidée par le syndic de Saxon. Le volet le plus difficile : comment notifier les 1'847 bénéficiaires de leur fuite de données ? Profils : (a) ~480 mineurs sous tutelle (parents décédés, retraits, placements) — représentés légalement par leurs curateurs/tuteurs ; (b) ~620 adultes sous curatelle de portée variable (incapacité financière, démences précoces, tutelle complète) ; (c) ~340 adultes sous curatelle pour addictions ou troubles psy — capacité de discernement variable ; (d) ~407 cas mixtes/clos en 2024-2025 (à clarifier). Le PFPDT exige une notification \"dans les meilleurs délais\". Comment opérer ?",
+        "law": "<strong>nLPD Art. 24 al. 2</strong> — Notification aux personnes concernées si nécessaire à leur protection.<br><strong>LPDCa-VS Art. 24</strong> — Cadre cantonal équivalent.<br><strong>CC Art. 405-406</strong> — Représentation des personnes sous curatelle : par leur curateur/tuteur pour les actes incompatibles avec leur capacité.<br><strong>CC Art. 11</strong> — Capacité de discernement variable : à apprécier individuellement.<br><strong>Doctrine APEA</strong> — Notification doit respecter la protection de la personne, pas seulement le formalisme.",
+        "question": "<strong>Quelle stratégie de notification adoptez-vous ?</strong>",
+        "choices": [
+          {
+            "text": "Notification différenciée selon profils, coordonnée avec l'APEA-VS : (a) MINEURS — notification au curateur/tuteur légal (qui informe l'enfant selon âge et capacité) + à l'APEA pour réévaluation des mesures de protection si nécessaire ; (b) ADULTES PLEINE CAPACITÉ DISCERNEMENT — notification directe par lettre + numéro vert dédié, langage clair non-technique ; (c) ADULTES CAPACITÉ DIMINUÉE/INCAPABLES — notification au curateur ET à la personne (selon capacité jugée par curateur) + accompagnement social proposé (Pro Senectute, Pro Infirmis pour le suivi) ; (d) CAS MIXTES/CLOS — examen par juriste APEA puis traitement comme catégorie applicable. Délai cible : 7 jours après le démarrage. Cellule téléphonique dédiée 6 jours/7 pour les questions.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Architecture de notification exemplaire pour ce contexte. (1) La différenciation par profil est essentielle : on ne notifie pas un mineur de 9 ans comme un adulte capable. Le CC Art. 405-406 impose la voie du représentant légal pour les actes incompatibles avec la capacité, et la notification d'une fuite de données sensibles peut justifier l'accompagnement. (2) La coordination avec l'APEA-VS est centrale : ce sont eux qui connaissent les situations individuelles et peuvent juger qui peut être notifié directement, qui doit l'être via curateur. (3) Le numéro vert dédié + accompagnement social est crucial pour des bénéficiaires fragiles — recevoir une lettre froide annonçant une fuite peut déclencher des décompensations psychiques chez certains. (4) Le délai 7 jours est ambitieux mais réaliste avec 5 communes mobilisées. C'est la doctrine APEA-CH post-affaire Rolle 2021 (commune-pilote).",
+            "legal": "nLPD Art. 24 + CC Art. 405-406 + doctrine APEA — Notification protectrice et conforme.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Notification massive uniforme par lettre A standard à tous les 1'847 bénéficiaires (texte unique LPD-conforme), envoyée dans les 48h. La rapidité maximale prime sur la personnalisation : tout retard expose les bénéficiaires à découvrir leurs données dans les médias ou pire. Pour les personnes incapables, la lettre arrivera au domicile et sera traitée par leur entourage habituel comme tout courrier — pas besoin de coordination spécifique avec curateurs ou APEA, qui ralentirait le processus. Cette doctrine de l'urgence absolue, défendue par certains experts cyber qui considèrent que toute personnalisation de la notification est secondaire face à l'impératif chronologique imposé par la nLPD et la jurisprudence récente du PFPDT, valorise la rapidité d'exécution massive plutôt qu'une approche au cas par cas qui peut prendre des semaines pour 1'847 destinataires aux profils variés.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Réponse uniforme inadaptée au public concerné. (1) Une \"lettre A standard\" arrivant chez un mineur sous tutelle (orphelin de 9 ans placé en famille d'accueil) ou une personne en démence précoce annoncerait directement \"vos données psychiatriques sont sur le dark web\" — déclenchant potentiellement crises majeures sans accompagnement. C'est précisément la raison pour laquelle CC Art. 405-406 impose la voie du représentant légal. (2) \"Pas besoin de coordination avec curateurs\" est juridiquement faux : les curateurs SONT les représentants légaux, ils doivent recevoir la notification pour pouvoir l'évaluer et agir. (3) Une lettre uniforme non-personnalisée est aussi mal reçue : un retraité de 75 ans en début de démence ne comprendra pas le texte juridique LPD. (4) La rapidité (48h) prime moins que la sécurité psychique des bénéficiaires — option correcte (7 jours différencié).",
+            "legal": "CC Art. 405-406 + nLPD — Voie représentant légal obligatoire pour incapables.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Pas de notification individuelle directe — communiqué de presse public général annonçant la fuite + page web cantonale dédiée + numéro de hotline pour les bénéficiaires qui se reconnaissent. Cette approche \"opt-in\" respecte la dignité des bénéficiaires (qui n'ont pas tous envie de recevoir une lettre annonçant leur situation), évite les décompensations involontaires, et permet à chacun de gérer l'information à son rythme.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Violation directe de la nLPD et abandon de mission de protection. (1) La nLPD Art. 24 al. 2 EXIGE la notification individuelle aux personnes concernées quand c'est nécessaire à leur protection — la fuite de données curatelle relève précisément de cette nécessité (chantage potentiel, exploitation). Un communiqué de presse N'EST PAS une notification individuelle. (2) L'\"opt-in\" laisse les personnes les plus vulnérables (mineurs, démentes) ignorant qu'ils sont victimes — exactement les personnes que la curatelle est censée protéger. C'est une trahison de la mission. (3) Les attaquants peuvent contacter individuellement les bénéficiaires pour chantage avant qu'ils sachent qu'ils sont concernés — préjudice évitable par notification proactive. (4) Le PFPDT et la justice administrative cantonale sanctionneraient sévèrement cette approche.",
+            "legal": "nLPD Art. 24 al. 2 — Notification individuelle obligatoire si protection.",
+            "critical": true,
+            "next": "end"
+          }
+        ]
+      },
+      {
+        "phase": "💰 La rançon — payer ou pas ?",
+        "situation": "Jour 3. Les attaquants (« GhostSec ») renouvellent leur ultimatum : 80'000 EUR en BTC dans 48h, sinon publication intégrale des dossiers sur leur site dark web. Ils ont déjà publié un \"sample\" de 12 dossiers (avec données partiellement floutées) pour prouver leur sérieux. Le syndic de Fully demande : « 80k, ce n'est rien comparé au préjudice potentiel. Pourquoi on ne paie pas ? » Le syndic de Saxon hésite. La directrice du service est anéantie. L'OFCS et fedpol sont consultés. Quelle position défendez-vous ?",
+        "law": "<strong>Pas d'interdiction légale CH</strong> de payer une rançon (contrairement à certains États).<br><strong>Doctrine FBI/Europol/NCSC</strong> — NE PAS payer (alimente le crime, pas de garantie de déchiffrement, pas de garantie de non-publication).<br><strong>LBA Art. 9</strong> — Si paiement vers entité sanctionnée = signalement MROS obligatoire.<br><strong>Devoir fiduciaire des magistrats communaux</strong> — Bonne gestion des deniers publics.",
+        "question": "<strong>Quelle position défendez-vous devant la cellule de crise ?</strong>",
+        "choices": [
+          {
+            "text": "Position ferme contre le paiement, argumentée sur 4 points : (1) Aucune garantie : les attaquants n'ont aucune incitation à respecter leur engagement (pas de réputation à préserver, pas de relation continue) — payer 80k peut conduire à publication quand même + nouvelle demande ; (2) Effet pervers : le paiement par une commune valaisanne signale aux groupes criminels que les communes suisses paient, et invite de nouvelles attaques (sur Fully, Saxon, ou voisines) ; (3) Doctrine fedpol/OFCS/Europol unanime : NE PAS PAYER, et la position de la Confédération sera reprise dans toute communication ; (4) Devoir fiduciaire : les 80k de deniers publics seraient mieux investis dans le durcissement post-incident + accompagnement des bénéficiaires + restauration des systèmes. Concentrer les ressources sur la mitigation et la notification, pas sur la rançon.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Position juridiquement, opérationnellement et éthiquement solide. (1) Le risque de double-extorsion est documenté : selon Coveware (2024), 35% des victimes ayant payé subissent une seconde demande ou voient leurs données publiées quand même. Aucune garantie. (2) L'effet de signal sur le crime organisé est réel et mesurable — les groupes ransomware analysent quels secteurs/pays paient, et orientent leurs cibles. Une commune valaisanne payante = invitation aux suivantes. (3) La doctrine fedpol/OFCS/Europol/Interpol/NCSC est unanime depuis 2021 et n'a jamais varié. Communiquer hors de cette ligne expose les syndics à un désaveu institutionnel public. (4) Le devoir fiduciaire est juridiquement opposable : payer 80k sans garantie aurait pu constituer une mauvaise gestion (recours possibles citoyens). C'est exactement la position MP-VS post-Rolle 2021.",
+            "legal": "Doctrine fedpol/OFCS unanime + devoir fiduciaire — Position ferme.",
+            "critical": false,
+            "next": 3
+          },
+          {
+            "text": "Position favorable au paiement compte tenu de la gravité exceptionnelle (mineurs et personnes incapables sous tutelle, données ULTRA-sensibles) — l'éthique de protection des bénéficiaires les plus vulnérables peut justifier de s'écarter de la doctrine générale. 80'000 EUR pour préserver 1'847 personnes vulnérables, le calcul utilitariste est favorable. Coordonner discrètement le paiement via un courtier spécialisé (recovery services) qui gère ce type de transactions tout en limitant les risques.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Raisonnement utilitariste qui ignore les externalités structurelles. (1) Le calcul \"80k vs 1'847 victimes\" suppose que le paiement EMPÊCHE la publication — or il n'y a aucune garantie (option correcte point 1). Si publication malgré paiement, les 1'847 victimes sont exposées ET 80k de deniers publics sont perdus. (2) Le précédent ouvert pour les communes suisses augmente le risque pour des centaines d'autres collectivités à long terme — utilitarisme à l'envers. (3) \"Courtier spécialisé\" = ces sociétés (« recovery services ») sont parfois en collusion avec les attaquants ou en facilitent les paiements via blanchiment crypto — utilisation hautement problématique pour des deniers publics. (4) Le syndic de Saxon qui validerait ce paiement s'expose à un recours en responsabilité civile + sanctions politiques (révocation possible). (5) L'éthique de protection est mieux servie par l'accompagnement psychosocial des bénéficiaires + monitoring dark web (option correcte).",
+            "legal": "Devoir fiduciaire + doctrine fedpol — Position contraire = responsabilité.",
+            "critical": true,
+            "next": "end"
+          },
+          {
+            "text": "Position de négociation : ne pas payer les 80k mais ouvrir une négociation pour gagner du temps (4-7 jours supplémentaires) afin d'avancer la notification et la mitigation avant la publication. Cette tactique délaye la pression sans céder sur le principe. Si les attaquants refusent toute négociation, alors position ferme contre le paiement. Cette tactique de la temporisation négociée, défendue par certains praticiens des incidents cyber comme une voie médiane intelligente entre paiement immédiat et confrontation sèche, présente l'avantage de mettre l'attaquant dans une posture où il consent à dialoguer — ce qui peut révéler des informations sur son organisation, ses motivations, voire conduire à une désescalade volontaire de sa part s'il perçoit que la cible n'est pas vulnérable au chantage. C'est une posture inspirée des doctrines de négociation de crise des forces spéciales qui privilégient toujours le dialogue à la confrontation.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Tactique apparemment habile mais contre-productive en pratique. (1) Engager une négociation, même sans intention de payer, signale aux attaquants que la cible est prête à dialoguer — ils peuvent durcir leurs conditions, augmenter la rançon, partager l'info avec d'autres groupes. C'est un \"signal mou\" mal calibré. (2) La doctrine fedpol/OFCS recommande l'absence totale de communication directe avec les attaquants (pas même \"nous étudions votre demande\") — toute communication peut être instrumentalisée. (3) \"Gagner 4-7 jours\" : ces jours sont tout aussi disponibles SANS négociation — les attaquants annoncent un délai (48h ici) mais souvent publient plus tard de toute façon (pression progressive). (4) Si la négociation échoue, la cellule de crise apparaît hésitante publiquement (ce qui peut filtrer dans les médias). La position ferme initiale (option correcte) est plus claire institutionnellement.",
+            "legal": "Doctrine fedpol — Pas de communication avec attaquants.",
+            "critical": false,
+            "next": 3
+          }
+        ]
+      },
+      {
+        "phase": "🌐 Le monitoring dark web — anticiper la publication",
+        "situation": "Refus de paiement validé par la cellule de crise. Les attaquants annoncent la publication imminente sur leur site dark web (\"GhostSec Leaks\" sur Tor). L'OFCS propose son aide pour le monitoring, et fedpol a une cellule cyber spécialisée. Vous devez aussi anticiper les retraits éventuels (les sites dark web peuvent être signalés mais sont difficiles à faire fermer rapidement) et préparer la cellule de crise à la publication. Comment structurez-vous le monitoring + retraits ?",
+        "law": "<strong>LSI Art. 74c</strong> — Coopération avec OFCS pour cyberattaques.<br><strong>Convention de Budapest Art. 32</strong> — Coopération transfrontière sur cybercrime.<br><strong>Tor / Dark Web</strong> — Sites .onion difficiles à faire fermer (pas de DNS centralisé), mais pression possible sur les hébergeurs si identifiés.<br><strong>Doctrine NCMEC/IWF</strong> — Signalement et retrait des contenus illégaux dans le clear-net post-publication.",
+        "question": "<strong>Comment structurez-vous le monitoring + stratégie de retrait ?</strong>",
+        "choices": [
+          {
+            "text": "Architecture à 3 niveaux : (1) MONITORING TOR — déléguer à fedpol cellule cyber + OFCS qui ont accès à Tor monitoring + outils OSINT spécialisés (DarkOwl, Recorded Future). Surveillance H24 du site GhostSec Leaks pour détecter publication immédiatement ; (2) MONITORING CLEAR-NET — surveiller les forums Reddit, Telegram, X où les contenus dark web sont souvent re-publiés en quelques heures ; signalement automatisé via DSA Art. 16-18 dès détection ; (3) RÉPONSE RAPIDE — dès publication détectée : (a) alerter immédiatement les bénéficiaires concernés par lettre + email, (b) signaler au PFPDT, (c) DSA aux plateformes pour retrait des reposts, (d) coordonner avec presse pour traitement responsable (anonymisation, pas de pillage des contenus). Préparer les communiqués à l'avance.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Architecture complète et opérationnelle. (1) Le monitoring Tor doit être délégué aux spécialistes (fedpol cellule cyber + OFCS) — un service de curatelle ne peut pas faire ce monitoring lui-même, ni techniquement ni juridiquement (Tor exige outils spéciaux + cadre légal pour la consultation). C'est le cadre LSI Art. 74c qui prévoit cette coopération. (2) Le monitoring CLEAR-NET est crucial : 60-80% des contenus dark web fuient sur Telegram et Reddit dans les 12-48h. C'est là que les retraits DSA sont efficaces (les plateformes ont obligation Art. 16-18). (3) La RÉPONSE RAPIDE pré-préparée (communiqués à l'avance) est éprouvée — quand la publication arrive, on n'a pas le temps de rédiger, on déploie ce qui est prêt. (4) Le traitement avec la presse (anonymisation négociée) est essentiel pour éviter que les médias suisses pillent les données pour scoops.",
+            "legal": "LSI Art. 74c + DSA Art. 16-18 + nLPD Art. 24 — Architecture complète.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Mandater une société privée spécialisée en \"dark web monitoring\" (Have I Been Pwned, Constella Intelligence, IntSights ou équivalent) qui surveillera 24/7 et alertera la cellule de crise dès toute publication. Ces sociétés sont plus rapides et plus complètes que les services publics OFCS/fedpol, et peuvent même proposer des services de \"négociation discrète\" avec les attaquants. Coût ~30k CHF pour 6 mois. Cette voie de l'externalisation spécialisée, défendue par les services modernes qui s'inspirent des pratiques anglo-saxonnes du \"managed cyber response\", considère que les capacités privées dans le domaine du dark web monitoring sont aujourd'hui largement supérieures aux moyens publics qui peinent à recruter et retenir les profils techniques pointus. Investir 30k dans une société établie est rentable comparé aux délais et incertitudes des services publics traditionnels.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Mandater le privé sans coordination publique = dispersion. (1) Les services publics OFCS/fedpol ont des accès et capacités que les privés n'ont pas (coopération internationale via Convention de Budapest, accès aux bases de données policières) — ils sont COMPLÉMENTAIRES, pas inférieurs aux privés. La doctrine fedpol-OFCS est explicite. (2) Mandater 30k de deniers publics à un privé sans appel d'offres + sans coordination avec les services publics qui interviennent gratuitement (LSI Art. 74c) = mauvaise gestion potentielle. (3) Les sociétés \"négociation discrète avec attaquants\" sont précisément celles décriées plus haut — services à éviter pour des fonds publics. (4) Le monitoring privé peut COMPLÉTER le public (option correcte mentionne fedpol+OFCS, on peut ajouter privé en complément), mais pas s'y substituer.",
+            "legal": "LSI Art. 74c — Coopération publique prioritaire, privé en complément.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Adopter une posture passive : pas de monitoring proactif (qui légitime de fait l'activité criminelle), pas de signalements de retrait (qui exposent la cause). Attendre que les bénéficiaires signalent eux-mêmes s'ils découvrent leurs données quelque part. Cette discrétion préserve la dignité des bénéficiaires et évite d'attirer plus d'attention médiatique sur la fuite. La meilleure stratégie est parfois l'oubli administratif.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Abandon de la mission de protection. (1) Sans monitoring, vous n'apprendrez la publication qu'avec retard (médias, plaintes individuelles), perdant la fenêtre de réaction rapide qui permet le retrait DSA effectif (24-72h après publication). (2) \"Attendre que les bénéficiaires signalent\" suppose qu'ils naviguent eux-mêmes le dark web, ce qu'ils ne font évidemment pas — ils découvriront leurs données quand un attaquant les contactera pour chantage. C'est trop tard. (3) Le \"non-monitoring\" expose la cellule de crise à un reproche institutionnel : pas de retraits = pas de mitigation = responsabilité accrue. (4) La nLPD Art. 25 prévoit aussi une \"obligation de prendre les mesures appropriées\" — l'inaction caractérisée serait sanctionnée par le PFPDT. (5) \"L'oubli administratif\" est l'antithèse du devoir de protection des incapables qu'impose le CC.",
+            "legal": "nLPD Art. 25 + CC Art. 360+ — Devoir de protection actif, pas oubli.",
+            "critical": true,
+            "next": "end"
+          }
+        ]
+      },
+      {
+        "phase": "📊 Le rapport long terme et le retour d'expérience",
+        "situation": "6 mois plus tard. Bilan : (a) Notification réussie aux 1'847 bénéficiaires en 9 jours (différenciée APEA-VS) ; (b) Publication GhostSec Leaks effectuée jour 5 — fuite contenue par DSA dans 72h sur Telegram/Reddit + alerte aux bénéficiaires ; (c) 7 cas de chantage individuels signalés (sur 1'847) — tous protégés sans paiement ; (d) Aucun mineur sous tutelle en danger immédiat ; (e) MP-VS a ouvert procédure pénale ; pas d'identification définitive des auteurs (groupe russophone probable). Le syndic de Saxon vous demande un rapport pour : (1) la presse cantonale, (2) le Conseil d'État VS, (3) la pérennisation du service de curatelle. Quel angle privilégiez-vous ?",
+        "law": "<strong>LTrans + LPDCa-VS</strong> — Information du public et des autorités.<br><strong>Doctrine REX (retour d'expérience)</strong> — Apprentissage institutionnel.<br><strong>Art. 73 CPP</strong> — Procédure pénale en cours, secret partiel.",
+        "question": "<strong>Quel angle privilégiez-vous pour les 3 audiences ?</strong>",
+        "choices": [
+          {
+            "text": "Rapport différencié à 3 niveaux : (1) PRESSE CANTONALE — communiqué factuel sur l'incident (date, ampleur, bénéficiaires affectés) + bilan opérationnel (87 % des bénéficiaires notifiés sous 7 jours, 7 cas de chantage gérés, 0 paiement, 0 mineur en danger), évitant les détails techniques dont les médias ne savent que faire et anonymisation des bénéficiaires ; (2) CONSEIL D'ÉTAT VS — rapport détaillé avec recommandations législatives (renforcement LPDCa-VS pour services régionaux), budgétaires (centre de cybersécurité cantonal mutualisé pour les services régionaux communaux), procédurales (convention-type intercommunale améliorée) ; (3) PÉRENNISATION — proposition de mutualisation cantonale du SI des services de curatelle (économie d'échelle + sécurité accrue) avec phase transitoire 18 mois. Cohérence : transparence factuelle + leçons apprises + propositions concrètes.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Architecture de communication-rapport exemplaire. (1) Le triple niveau différencié sert chaque audience selon son besoin et ses prérogatives. (2) PRESSE — la formule \"factuelle + bilan chiffré + anonymisation\" est conforme à la doctrine LTrans + Art. 73 CPP. Les chiffres positifs (87% notifiés, 0 paiement, 0 mineur en danger) construisent un récit de gestion de crise réussie. (3) CONSEIL D'ÉTAT — recommandations législatives + budgétaires + procédurales = rapport actionnable politiquement. C'est exactement ce qui transforme une crise en réforme structurelle utile. (4) PÉRENNISATION — la mutualisation cantonale du SI services de curatelle est la bonne réponse stratégique post-incident : économies d'échelle + concentration de l'expertise sécurité. C'est la voie post-Rolle 2021 dans plusieurs cantons romands.",
+            "legal": "LTrans + LPDCa-VS + doctrine REX — Architecture optimale.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Rapport unique exhaustif distribué identiquement aux 3 audiences (presse, CE, parlement) — la transparence radicale et l'égalité d'information sont les principes démocratiques fondamentaux. Inclure tous les détails techniques (méthode des attaquants, vulnérabilités exploitées, négociations refusées, monitoring dark web) pour que chacun puisse comprendre la crise dans toute sa complexité. La presse appréciera la transparence, le CE et le parlement l'expertise. Cette doctrine de la transparence radicale et démocratique, défendue par les théoriciens modernes de la communication institutionnelle inspirée des standards scandinaves, repose sur le principe que la confiance publique se construit par l'égalité d'information et l'absence de hiérarchies cachées entre audiences privilégiées et grand public. Différencier les rapports selon les destinataires reviendrait à créer des cercles d'initiés versus une presse moins informée, ce qui contrevient aux principes de l'État de droit moderne et à la dignité égale des citoyens face à l'information publique.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Confusion des audiences = communication inefficace pour toutes. (1) La presse a besoin de FACTUEL CHIFFRÉ + RÉCIT — un rapport technique de 60 pages détaillant les vulnérabilités exploitées sera mal exploité (sensationnalisme sur \"les failles béantes du service de curatelle\") et donnera aux futurs attaquants un manuel anti-défenses. (2) Le Conseil d'État a besoin de RECOMMANDATIONS ACTIONNABLES, pas de récits événementiels — un rapport bien différencié est plus efficace politiquement. (3) Le parlement a besoin d'arguments BUDGÉTAIRES et LÉGISLATIFS — un rapport indifférencié noie ces arguments dans la masse. (4) \"Transparence radicale\" est souvent le déguisement d'un manque de discernement communicationnel — chaque audience mérite l'information adaptée à ses besoins. C'est la doctrine de communication institutionnelle moderne.",
+            "legal": "Doctrine LTrans — Transparence ≠ indifférenciation.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Reporter tout rapport public à la fin de la procédure pénale (potentiellement 18-24 mois) — l'Art. 73 CPP impose le secret de l'instruction et toute communication avant arrêt définitif risque de compromettre la procédure ou de violer la présomption d'innocence des auteurs. La presse, le CE et le parlement attendront que la justice ait fait son office. Cette discipline procédurale stricte est la meilleure défense de l'État de droit.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Lecture maximaliste de l'Art. 73 CPP qui sacrifie l'utilité publique. (1) L'Art. 73 CPP protège les ÉLÉMENTS PERSONNELS de l'instruction (identité prévenus, contenus précis, méthodes d'enquête) — pas les faits généraux d'un incident public connu (qui a été massivement médiatisé). Le rapport de gestion de crise N'EST PAS de l'instruction. (2) Reporter de 18-24 mois prive la cellule de crise de toute valorisation institutionnelle de son travail réussi (87% notifiés, 0 paiement) — la mémoire publique aura oublié et ne capitalisera pas les bonnes pratiques. (3) Sans rapport au CE et au parlement, il n'y aura PAS de réforme législative ni budgétaire post-incident — la prochaine commune attaquée subira le même chaos. (4) \"État de droit\" inclut aussi l'accountability institutionnelle, pas seulement la procédure pénale.",
+            "legal": "Art. 73 CPP — Limité à l'instruction, pas à toute communication post-incident.",
+            "critical": false,
+            "next": "end"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "eu-livestream-philippines",
+    "region": "EU",
+    "title": "Le Livestream Philippines — Viols à Distance Commandités",
+    "icon": "🇵🇭",
+    "difficulty": "expert",
+    "atmosphere": "raid",
+    "realCase": "Mars 2026 — Reportage RTS \"Mise au point\" + investigations policières. Réseau de \"viols à distance\" : clients suisses payent ~25 CHF pour visionner en direct des abus sexuels sur enfants aux Philippines. 7 cantons CH affectés (dont Genève, Vaud).",
+    "narrative": {
+      "success": "Vous coordonnez l'opération CH-PH-AU-DK-USA dans un cadre EIMP rigoureux. Les 23 clients suisses identifiés sont arrêtés simultanément (au moins 4 dans la fonction publique = LSI Art. 67 al. 4 CP activée). L'identification des victimes philippines est faite via le NCMEC + Project VIC, en coopération avec NBI Philippines et IJM. 7 enfants extraits sur place. Les flux financiers (Western Union, MoneyGram, crypto) sont entièrement reconstitués. Convention de Lanzarote pleinement appliquée. Précédent suisse fort.",
+      "degraded": "8 clients sur 23 sont identifiés, certains flux non reconstitués. La coordination avec NBI Philippines est laborieuse (corruption locale, asymétrie technique). 3 enfants extraits, d'autres restent à l'identification. Les saisies sur les opérateurs philippins sont fragmentaires.",
+      "failure": "L'opération est fragmentée : la Suisse arrête seule ses 23 clients sans coordination NBI Philippines effective, les opérateurs philippins poursuivent leurs activités avec d'autres clients européens. Aucun enfant extrait. La défense des clients suisses exploite le défaut de coordination internationale. Critique forte de la part des ONG (IJM, ECPAT)."
+    },
+    "tags": [
+      "LIVESTREAM",
+      "PÉDOCRIMINALITÉ",
+      "ENTRAIDE PH",
+      "CRYPTO",
+      "LANZAROTE"
+    ],
+    "legalRefs": [
+      "Art. 197 al. 4-5 CP",
+      "Art. 187 CP",
+      "Art. 195-196 CP",
+      "Convention Lanzarote",
+      "EIMP Art. 18",
+      "MLAT CH-PH 2018"
+    ],
+    "intro": "Mardi 7h. Vous êtes l'enquêteur principal mandaté par fedpol pour coordonner l'opération « Sampaguita » — démantèlement d'un réseau de livestream pédocriminel Philippines-Suisse. Origine du dossier : une enquête conjointe RTS « Mise au point » + investigations IJM (International Justice Mission) ont identifié 23 clients suisses ayant payé environ 25 CHF/séance pour visionner en direct des abus sexuels sur enfants aux Philippines. Les transactions s'étalent sur 14 mois, totalisent ~280k CHF (paiements via Western Union/MoneyGram pour 60%, crypto pour 40%). 7 cantons concernés : GE (8 clients), VD (5), ZH (3), BE (2), SG (2), TI (2), VS (1). Profils des clients : majoritairement hommes 35-65 ans, plusieurs dans la fonction publique (au moins 4 confirmés : un employé administratif communal vaudois, un enseignant primaire genevois, deux fonctionnaires fédéraux). Côté Philippines, les opérateurs identifiés sont à Cebu et Manila, NBI Philippines (National Bureau of Investigation) coopère via leur cellule Anti-Cybercrime. Les enfants identifiés (au moins 7) ont entre 4 et 12 ans. Vous avez 5 jours pour préparer l'opération coordonnée mondiale.",
+    "alertLevel": "🇵🇭 OPÉRATION SAMPAGUITA — 23 clients CH · 7 cantons · 4+ fonction publique · 7+ enfants PH identifiés · 5 jours",
+    "objectives": [
+      {
+        "icon": "👶",
+        "text": "Coordonner l'identification + extraction des enfants victimes via NBI Philippines + IJM"
+      },
+      {
+        "icon": "⚖️",
+        "text": "Maîtriser le triple cadre Art. 197 + 187 CP + Convention Lanzarote (juridiction extra-territoriale)"
+      },
+      {
+        "icon": "🌐",
+        "text": "Activer le MLAT CH-PH 2018 + EIMP avec coordination temporelle simultanée des arrestations"
+      },
+      {
+        "icon": "💰",
+        "text": "Reconstituer les flux Western Union / MoneyGram / crypto (280k CHF tracés)"
+      }
+    ],
+    "debrief": "<p>Le <strong>livestream pédocriminel Philippines-Europe</strong> est un phénomène documenté depuis 2014 (rapport Terre des Hommes \"Sweetie 2.0\") et explose depuis la pandémie COVID-19. Les Philippines sont devenues l'épicentre mondial : combinaison de pauvreté, anglais largement parlé, infrastructure internet décente, et exploitation par des familles mêmes des enfants. La police philippine (NBI + PNP-WCPC) a démantelé plusieurs réseaux mais le phénomène persiste à grande échelle.</p>\n<p><strong>Cadre juridique suisse</strong> : la juridiction extra-territoriale est essentielle. <strong>Art. 197 al. 4-5 CP</strong> punit la consommation/possession de pédopornographie en Suisse, sans nécessité de juridiction sur le lieu de production. Mais surtout, <strong>Art. 5 CP</strong> (compétence extraterritoriale) couvre les actes commis à l'étranger contre des mineurs <strong>par tout suisse résidant ou présent en Suisse</strong> — ce qui permet de poursuivre les clients suisses pour <strong>Art. 187 CP</strong> (actes d'ordre sexuel avec des enfants) à raison de leur commande/financement à distance. Cette qualification multiple (197 + 187 + 195-196 pour traite et encouragement à la prostitution) est la pratique MP-CH depuis 2018.</p>\n<p>La <strong>Convention de Lanzarote</strong> (Conseil de l'Europe, ratifiée par la Suisse en 2014) est le cadre international applicable : Art. 18-23 obligent les États parties à criminaliser les actes commis à distance, à coopérer pour l'identification des victimes, à protéger les enfants. Les Philippines NE sont PAS partie à Lanzarote (instrument du Conseil de l'Europe), mais le <strong>MLAT CH-PH 2018</strong> et la <strong>Convention de l'ONU contre la criminalité transnationale organisée (Palerme 2000)</strong> fournissent les bases.</p>\n<p>Pour l'<strong>identification des enfants victimes</strong>, le Project VIC (NCMEC) et la <strong>base de données INTERPOL ICSE</strong> (International Child Sexual Exploitation) sont les outils mondiaux. La coopération avec IJM est précieuse : ONG implantée localement aux Philippines, capacité opérationnelle pour les extractions physiques, doctrine éprouvée d'accompagnement post-extraction.</p>",
+    "steps": [
+      {
+        "phase": "🌐 La coordination avec les Philippines",
+        "situation": "Le directeur de la cellule fedpol pédocriminalité vous met en lien avec ses homologues philippins : Maria Santos (Director NBI Anti-Cybercrime à Manila) et Jay Cruz (chef de l'opérationnel à Cebu). Première vidéoconférence sécurisée. Maria propose : « On peut faire vite. Vous nous transmettez les 23 identités suisses + flux financiers + adresses IP des opérateurs philippins, on arrête tout le monde simultanément dans 72h. NBI a la capacité d'intervenir avec PNP-WCPC pour les enfants. » Jay ajoute : « Pas besoin de MLAT formel pour les opérations pédocriminelles, on fonctionne en coopération opérationnelle directe entre cellules spécialisées depuis l'opération Endeavour 2014. » Vous percevez l'enthousiasme mais aussi la sensibilité juridique.",
+        "law": "<strong>MLAT CH-PH 2018</strong> — Traité bilatéral d'entraide judiciaire en matière pénale.<br><strong>EIMP Art. 18</strong> — Mesures provisoires.<br><strong>Convention de Palerme (ONU)</strong> — Coopération criminalité transnationale organisée.<br><strong>Art. 271 CP / Art. 273 CP</strong> — Limites au partage informel de données d'enquête.",
+        "question": "<strong>Comment cadrez-vous la coopération avec NBI Philippines ?</strong>",
+        "choices": [
+          {
+            "text": "Cadrage formel via MLAT CH-PH 2018 + EIMP Art. 18 mesures provisoires : (1) Demande MLAT urgente déposée en 24h via le DFJP (cellule entraide internationale), avec qualification précise (Art. 197+187 CP) et énumération des éléments transmis ; (2) Pour les mesures urgentes (préparation des arrestations philippines simultanées), activation Art. 18 EIMP qui autorise transmission rapide d'éléments avant la formalisation complète, sous réserve confirmation MLAT à 30 jours ; (3) Refus poli de la \"coopération opérationnelle directe\" hors cadre — non par manque de confiance envers Maria/Jay, mais pour protéger l'admissibilité des preuves devant les tribunaux suisses ET philippins (la défense des opérateurs PH attaquera tout vice). Tracer toutes les communications avec horodatage.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Cadrage juridiquement irréprochable et stratégiquement solide. (1) Le MLAT CH-PH 2018 est l'instrument BILATÉRAL spécifique — il a été précisément conçu pour ces opérations conjointes et ses délais peuvent être très courts en mode urgence (24-72h pour les pédocriminelles). (2) L'EIMP Art. 18 (mesures provisoires) couvre la fenêtre temporelle entre la demande MLAT et sa formalisation — c'est l'outil exact pour cette situation. (3) Refuser la \"coopération directe hors cadre\" protège : (a) l'expert suisse contre l'Art. 273 CP, (b) l'admissibilité des preuves devant les tribunaux PH (qui exigent un cadre formel pour les preuves obtenues à l'étranger), (c) les futures coopérations CH-PH (un précédent informel cracherait sur le MLAT 2018 et le rendrait inopérant à terme). (4) C'est exactement la doctrine fedpol post-affaire Manila 2019.",
+            "legal": "MLAT CH-PH 2018 + EIMP Art. 18 + Art. 273 CP — Cadre formel rapide.",
+            "critical": false,
+            "next": 1
+          },
+          {
+            "text": "Accepter la coopération opérationnelle directe proposée par Maria et Jay : transmettre dans les heures qui viennent les 23 identités, flux financiers et IPs via canal chiffré sécurisé (Signal ou équivalent), procéder aux arrestations coordonnées dans 72h. La confiance entre cellules spécialisées prime, et le MLAT CH-PH 2018 servira de cadre rétroactif pour formaliser ce qui aura été fait. L'urgence vie des enfants justifie la rapidité, et NBI Philippines est un partenaire reconnu depuis 2014. Cette doctrine \"d'urgence opérationnelle prime sur formalisme\" est défendue par certains commandants de cellules cyber qui considèrent que les délais MLAT incompressibles tuent l'efficacité face à des criminels mobiles, et qu'une coopération directe entre professionnels reconnus mutuellement (NBI a participé à plusieurs opérations Endeavour réussies depuis 2014) crée une confiance opérationnelle qui justifie des arrangements pragmatiques. Les services européens partenaires fonctionnent souvent ainsi en pratique pour les pédocriminalités urgentes, et la Suisse aurait tort de s'enfermer dans un formalisme procédural qui freine les sauvetages d'enfants.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Triple risque, dont un majeur. (1) Transmettre 23 identités suisses + flux financiers (incluant données bancaires) à NBI Philippines hors MLAT = violation potentielle Art. 273 CP (transmission à État étranger sans cadre légal). Sanctions individuelles pour l'expert. (2) Aux Philippines, les opérateurs criminels ont parfois des réseaux dans les forces de l'ordre (corruption documentée jusqu'à des niveaux intermédiaires) — un partage informel hors MLAT n'a aucune traçabilité, augmente le risque de fuite vers les opérateurs (qui alerteraient et s'enfuiraient). (3) Au procès suisse des 23 clients, la défense plaidera que l'enquête est viciée par les transmissions informelles à un État tiers — l'admissibilité des preuves rapatriées (témoignages PH, identification enfants) sera compromise. (4) Le MLAT 2018 N'A PAS d'effet rétroactif pour régulariser des actes posés sans cadre.",
+            "legal": "Art. 273 CP + MLAT non-rétroactif — Sanctions individuelles + vice procédural.",
+            "critical": true,
+            "next": "end"
+          },
+          {
+            "text": "Refuser toute coopération avec NBI Philippines pour le moment et concentrer l'opération sur les 23 clients suisses : arrestations simultanées dans les 7 cantons, plaidoyer Art. 197+187 CP. La coopération avec les Philippines viendra dans un second temps une fois les preuves CH consolidées, dans un cadre MLAT propre sans pression temporelle. Les opérateurs philippins peuvent attendre, ils ne savent pas qu'on est sur leur trace.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Renoncement gravement préjudiciable aux enfants victimes. (1) Pendant que vous concentrez sur les 23 clients suisses, les opérateurs philippins continuent les abus sur 7+ enfants identifiés et probablement d'autres encore (les 23 clients ne sont pas leur seul \"marché\" — ils ont d'autres clients UE/USA/AU). Renoncer à la coopération = laisser les enfants en danger. (2) \"Les opérateurs ne savent pas qu'on est sur leur trace\" est une certitude infondée : si l'un des 23 clients suisses arrêté demande à passer un appel ou utilise son avocat pour transmettre l'info... les opérateurs philippins seront alertés rapidement. La coordination temporelle avec PH est PRÉCISÉMENT là pour éviter ça. (3) L'option correcte montre qu'on PEUT activer le MLAT CH-PH 2018 rapidement (24-72h) — il n'y a pas de dilemme entre rigueur procédurale et rapidité. (4) Cette posture serait critiquée par IJM, ECPAT et le Conseil de l'Europe.",
+            "legal": "Convention de Lanzarote Art. 23 — Obligation de protection effective des victimes.",
+            "critical": false,
+            "next": 1
+          }
+        ]
+      },
+      {
+        "phase": "👶 L'identification + extraction des enfants",
+        "situation": "Le MLAT est lancé, NBI coopère formellement. Question critique : l'identification des enfants victimes. Vous disposez de 187 vidéos saisies sur les paiements Western Union/MoneyGram avec timestamps précis. Les visages sont parfois visibles, parfois floutés par les opérateurs. Maria Santos vous demande : « Quels outils avez-vous pour l'identification ? On a déjà 7 enfants dont on connaît les visages, mais probablement plus dans vos archives. » L'enjeu est l'extraction physique des enfants par PNP-WCPC + IJM. IJM (International Justice Mission, ONG américaine présente à Cebu) propose son aide opérationnelle pour les opérations terrain. Comment articulez-vous cet axe ?",
+        "law": "<strong>NCMEC Project VIC</strong> — Base mondiale de hashes/empreintes faciales d'enfants victimes identifiés.<br><strong>INTERPOL ICSE</strong> — International Child Sexual Exploitation database.<br><strong>Convention Lanzarote Art. 30-37</strong> — Identification, protection, assistance victimes.<br><strong>EIMP Art. 80a</strong> — Équipes communes d'enquête (possible avec PH via accord ad hoc).",
+        "question": "<strong>Comment articulez-vous l'identification + extraction ?</strong>",
+        "choices": [
+          {
+            "text": "Architecture multi-niveaux : (1) Soumission des 187 vidéos au NCMEC Project VIC + INTERPOL ICSE pour matching avec enfants déjà identifiés mondialement (peut révéler que certains enfants étaient déjà dans des dossiers ouverts dans d'autres pays — synergie d'enquêtes) ; (2) Pour les nouveaux visages non-matchés : extraction faciale (Pimeyes-like outils forensiques d'État) + transmission ciblée à NBI/PNP-WCPC pour reconnaissance terrain (ils connaissent les communautés Cebu/Manila) ; (3) Coopération formelle avec IJM via convention spécifique (IJM est une ONG = pas EIMP applicable directement, mais accord ad hoc fedpol-IJM signé en 2021 cadre le partage) — IJM mobilise ses équipes locales pour confirmer identification + accompagnement extraction ; (4) Extraction physique par PNP-WCPC (pas IJM seul, qui n'a pas pouvoir de police), avec accompagnement IJM post-extraction pour soins/hébergement protecteur.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Architecture conforme aux standards internationaux. (1) Project VIC + ICSE sont les outils standards pour identification croisée — taux de matching documenté ~30-40% sur les nouveaux dossiers. (2) La distinction outils forensique/transmission ciblée est juste : on ne diffuse pas massivement les images (re-victimisation), on cible. (3) IJM est précisément l'ONG de référence aux Philippines : 60+ enquêteurs locaux, accord-cadre fedpol-IJM existant depuis 2021, doctrine éprouvée. Ils complètent efficacement NBI/PNP qui ont parfois des limites de ressources locales. (4) La distinction extraction (police PNP-WCPC) / accompagnement (IJM) respecte les compétences : seule la police a le pouvoir de contrainte, IJM apporte le soutien psycho-social post-extraction (hébergement protecteur \"safe house\", thérapie, scolarisation). C'est la doctrine \"5-step Aftercare\" d'IJM.",
+            "legal": "NCMEC + ICSE + EIMP Art. 80a + accord fedpol-IJM 2021 — Architecture éprouvée.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Confier intégralement l'opération d'extraction à IJM qui a la connaissance terrain et les contacts locaux : leur transmettre les 187 vidéos + identifiants + adresses IP des opérateurs, et laisser leur équipe philippine coordonner les extractions avec PNP-WCPC en mode quasi-autonome. L'État suisse intervient peu sur le terrain philippin, c'est plus efficace de déléguer à un partenaire ONG implanté localement qui sait quoi faire et avec qui.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Délégation excessive à une ONG, problématique sur plusieurs plans. (1) IJM est une ONG américaine — confier la gestion de données d'enquête sensibles (identification d'enfants victimes, identifiants opérateurs) à une entité non-étatique sans cadrage strict viole les principes LPD + EIMP. Le PFPDT le sanctionnerait. (2) IJM N'A PAS de pouvoir de police : elle peut accompagner, mais pas extraire physiquement les enfants ni arrêter les opérateurs. Confier la coordination à IJM pousse au-delà de ses prérogatives. (3) Risque de re-victimisation : transmettre 187 vidéos sensibles à une ONG (même fiable) augmente la surface de fuite. (4) La voie correcte (option 1) maintient l'État suisse + NBI/PNP comme pilotes et IJM en complément cadré.",
+            "legal": "LPD + EIMP + compétences police — Délégation hors cadre.",
+            "critical": true,
+            "next": "end"
+          },
+          {
+            "text": "Mener l'identification entièrement en interne fedpol via outils forensiques avancés (reconnaissance faciale custom + bases criminelles internes), sans recours au NCMEC Project VIC ni à INTERPOL ICSE — ces bases mutualisées présentent un risque de fuite (utilisateurs nombreux, tracking limité), mieux vaut garder le travail confidentiel jusqu'à identification certaine. Pour l'extraction, transmettre les coordonnées finales à NBI Philippines une fois les enfants formellement identifiés. Cette posture autonome est défendue par certains responsables fedpol attentifs à préserver la souveraineté technique suisse face à la dépendance croissante envers des plateformes américaines (NCMEC) et internationales (INTERPOL ICSE) dont les pratiques de gouvernance interne et la sécurité réelle restent partiellement opaques pour des observateurs externes même de haut niveau institutionnel. Le développement progressif d'outils forensiques fedpol internes, combiné à des bases criminelles cantonales et fédérales suisses bien tenues, peut paradoxalement offrir une qualité d'identification supérieure pour les enfants présents dans des dossiers ouverts en Suisse, sans le risque de mutualisation incontrôlée propre aux mégabases internationales.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Surinvestissement isolé, perte d'opportunités. (1) Le NCMEC Project VIC + INTERPOL ICSE sont les BASES MUTUALISÉES MONDIALES — ne pas les utiliser, c'est se priver de matchings potentiels qui peuvent identifier instantanément des enfants déjà connus dans d'autres dossiers. C'est précisément l'argument central de Project VIC : pas de duplication d'efforts. (2) \"Risque de fuite\" : le NCMEC + ICSE sont accédés sous protocoles stricts (logs, autorisations, classifications), beaucoup plus sécurisés qu'on ne pourrait l'imaginer — les fuites documentées sont rarissimes. (3) Outils forensiques fedpol seuls = compétences limitées par rapport à la masse mondiale Project VIC. (4) Cette posture isolationniste est explicitement déconseillée par INTERPOL et le NCMEC dans tous leurs guides.",
+            "legal": "NCMEC + ICSE — Bases mutualisées sécurisées et essentielles.",
+            "critical": false,
+            "next": 2
+          }
+        ]
+      },
+      {
+        "phase": "💰 Reconstituer les flux financiers",
+        "situation": "Pour les 23 clients suisses, la traçabilité financière est critique pour : (a) prouver les paiements (élément matériel infraction), (b) identifier d'autres clients via les opérateurs philippins, (c) confiscation. Les paiements se répartissent : 60% via Western Union / MoneyGram (KYC partiel obtenu), 40% via crypto (Bitcoin essentiellement, quelques Monero — opaque). Les flux finaux convergent vers 4 \"familles-opérateurs\" identifiées à Cebu (3) et Manila (1). Les clients suisses utilisent souvent des prête-noms (cousin, ami) pour les transferts pour brouiller les traces. Le procureur Schaller veut une analyse complète en 5 jours.",
+        "law": "<strong>Art. 305bis CP</strong> — Blanchiment d'argent.<br><strong>Art. 70-72 CP</strong> — Confiscation valeurs patrimoniales d'origine criminelle.<br><strong>LBA Art. 6-9</strong> — Obligations diligence intermédiaires financiers.<br><strong>FATF Travel Rule</strong> — Identification des bénéficiaires d'opérations crypto.<br><strong>Coopération MROS-AMLC</strong> (Anti-Money Laundering Council Philippines).",
+        "question": "<strong>Quelle stratégie d'analyse financière en 5 jours ?</strong>",
+        "choices": [
+          {
+            "text": "Architecture à 3 axes parallèles : (1) Western Union/MoneyGram — réquisitions Art. 263 CPP + LBA Art. 9 aux 2 opérateurs en Suisse pour obtenir KYC complet expéditeurs, bénéficiaires effectifs (incluant les prête-noms), métadonnées (IPs, devices), historique 24 mois ; (2) Crypto BTC — analyse Chainalysis Reactor sur les wallets identifiés, recherche peeling chains, identification points d'entrée (exchanges centralisés où les clients suisses ont acheté leurs BTC = identification possible via KYC exchange), pour Monero accepter les limites de traçabilité mais identifier les exchanges utilisés (XMR-acceptant) ; (3) MROS-AMLC Philippines via canal Egmont — partage en temps réel des informations financières, identification des familles-opérateurs (revenus mensuels, autres comptes, biens immobiliers), gel des avoirs PH. Coordination temporelle des actions financières avec opération police.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Stratégie financière multi-axes optimale. (1) Les réquisitions Western Union/MoneyGram sont essentielles : ces opérateurs MAINTIENNENT des KYC complets (réglementation FATF) y compris pour les bénéficiaires effectifs — la doctrine du \"prête-nom\" comme exonération est une illusion, l'ayant-droit économique réel est documentable. (2) Pour BTC, les exchanges centralisés (Coinbase, Binance, Bitstamp) où les clients suisses ont acheté leurs Bitcoin appliquent KYC Travel Rule — identification possible. Pour XMR (Monero), accepter limite mais identifier les exchanges XMR-acceptant donne des pistes. (3) Le canal Egmont MROS-AMLC est routinier et rapide pour la lutte anti-blanchiment — la coopération financière CH-PH passe par là, pas par MLAT lourd. (4) Synchronisation actions financières/police = effet de surprise maximal sur les opérateurs philippins.",
+            "legal": "Art. 263 CPP + LBA + Travel Rule + Egmont — Architecture financière complète.",
+            "critical": false,
+            "next": 3
+          },
+          {
+            "text": "Concentrer sur les flux Western Union/MoneyGram (60% des transactions, KYC partiel disponible) — c'est la voie la plus simple et la plus opposable au procès. Pour les 40% crypto, accepter qu'ils soient majoritairement non-traçables (effet de mode chez les criminels) et compenser par d'autres preuves. La traçabilité Chainalysis pour BTC est techniquement complexe et son admissibilité au procès suisse reste discutée par certains experts.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Renoncement injustifié sur 40% des fonds. (1) La traçabilité Chainalysis BTC est PARFAITEMENT admise par les tribunaux suisses depuis 2020 — l'argument \"admissibilité discutée\" est une fausse représentation. ATF 142 IV 23 et plusieurs jugements cantonaux de 2022-2024 ont admis la méthodologie Chainalysis comme expertise reproductible. (2) BTC est massivement traçable — c'est précisément la force du Bitcoin (blockchain publique). Les peeling chains et clusters heuristiques permettent de remonter à 70-80% des bénéficiaires KYC sur exchanges. (3) Renoncer à 40% des fonds = laisser passer ~110k CHF qui pourraient être confisqués pour les victimes. (4) Pour XMR (Monero) seulement, accepter les limites est correct — mais XMR ne représente probablement qu'une fraction des 40% crypto.",
+            "legal": "ATF 142 IV 23 + Chainalysis admis — Traçabilité BTC robuste.",
+            "critical": false,
+            "next": 3
+          },
+          {
+            "text": "Demander à AMLC Philippines d'envoyer en Suisse 2 enquêteurs financiers spécialisés pour faire l'analyse en commun avec MROS-CH — la coopération directe sur le terrain suisse permettra une vue intégrée des deux côtés des transactions. Pendant ce temps, partager toutes les données financières disponibles pour qu'ils puissent travailler dessus avec leurs outils habituels. La coopération opérationnelle directe est plus efficace que les canaux Egmont qui passent par des lettres formelles lentes. Cette approche \"intégration physique\" de la coopération financière est défendue par certains responsables MROS sensibles à l'argument que les contacts humains directs créent une coopération bien plus solide que les échanges électroniques formalisés via Egmont, surtout dans les dossiers complexes où les nuances analytiques et les pivots heuristiques pour les flux multi-pays demandent des discussions en temps réel impossibles à mener par messagerie sécurisée traditionnelle. La présence physique permet aussi un partage de doctrine et de méthodologie qui enrichit durablement les deux services partenaires bien au-delà du dossier en cours.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Confusion sur le fonctionnement de la coopération financière. (1) Faire venir des enquêteurs AMLC Philippines en CH pour travailler en commun n'est PAS le canal Egmont — Egmont, c'est précisément l'échange d'informations entre CRF (cellules de renseignement financier) sans déplacement physique, justement parce que c'est plus rapide. (2) Le canal Egmont N'EST PAS lent (\"lettres formelles\") — c'est un protocole d'échange électronique rapide, plusieurs heures à 48h pour les demandes urgentes. (3) Faire venir des enquêteurs AMLC en CH pour travailler sur des données suisses pose des problèmes juridiques (LPD : transfert de données sur ressortissants/résidents CH à un État tiers, même en sa présence). (4) L'analyse Chainalysis et les réquisitions Western Union restent dans le cadre suisse — pas besoin d'enquêteurs PH physiquement présents.",
+            "legal": "Egmont est le canal rapide standard — pas besoin de présence physique.",
+            "critical": false,
+            "next": 3
+          }
+        ]
+      },
+      {
+        "phase": "👮 Les 23 arrestations CH simultanées",
+        "situation": "Jour J-2. Les 23 clients suisses sont identifiés, leurs adresses connues. Répartition cantonale : GE 8, VD 5, ZH 3, BE 2, SG 2, TI 2, VS 1. Plusieurs sont des fonctionnaires (4 confirmés). L'opération doit être SIMULTANÉE à 06:00 dans 7 cantons + Philippines (arrestations opérateurs). Les MP cantonaux exigent chacun leur ordonnance de perquisition. Le MP genevois (M. Berthoud) vous appelle, inquiet : « 8 perquisitions à organiser en 48h, dont une chez un employé administratif communal. La coordination intercantonale en 48h, c'est court. Et qui prend le commandement opérationnel global ? » Plusieurs dispositifs (renforts, démineurs en cas de barricade, psychologues pour les enfants si présents au domicile, journalistes attendus) sont à coordonner.",
+        "law": "<strong>Art. 244-246 CPP</strong> — Perquisitions, autorisation MP.<br><strong>Art. 207 CPP</strong> — Coordination intercantonale.<br><strong>LSI Art. 67 al. 4 CP</strong> — Interdiction préventive d'activité (fonctionnaires, contact avec mineurs).<br><strong>Art. 73 CPP</strong> — Secret de l'instruction.<br><strong>Doctrine fedpol coordinations multi-cantons</strong> — Cellule d'engagement national pour opérations >5 cantons.",
+        "question": "<strong>Comment organisez-vous le commandement opérationnel global ?</strong>",
+        "choices": [
+          {
+            "text": "Activation de la cellule d'engagement national fedpol (CEN) pour le commandement opérationnel : (1) CEN coordonne H-hour (06:00 strict) dans les 7 cantons + signal go avec NBI Philippines — synchronisation à la minute ; (2) Chaque MP cantonal délivre son ordonnance de perquisition la veille selon ses compétences territoriales (Art. 244 CPP), sous secret strict (équipe restreinte) ; (3) Pré-mobilisation des ressources spécialisées par canton : démineurs (au cas où, profils certains de fonctionnaires armés), psychologues pour enfants potentiellement présents au domicile, expert forensique local pour saisie immédiate téléphones (Faraday) ; (4) Communication coordonnée fedpol J-jour 09:00 (après arrestations) — un seul porte-parole, message commun, respect Art. 73 CPP (pas de noms, pas de cantons précis avant procès) ; (5) Activation immédiate Art. 67 al. 4 CP pour les 4+ fonctionnaires.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Organisation conforme à la doctrine fedpol pour opérations multi-cantons. (1) La CEN (Cellule d'Engagement National) est l'instance de coordination opérationnelle pour opérations >5 cantons — c'est exactement le scénario ici. (2) Le respect des compétences territoriales cantonales (chaque MP délivre son ordonnance) est juridiquement requis (Art. 244 CPP). (3) La pré-mobilisation des ressources spécialisées (démineurs, psychologues, forensique) est essentielle : les fonctionnaires peuvent avoir des armes de service, les domiciles peuvent contenir des enfants (les leurs ou la famille), et les téléphones doivent être en Faraday immédiat. (4) La communication coordonnée avec un seul porte-parole protège l'enquête + Art. 73 CPP. (5) L'Art. 67 al. 4 CP (interdiction préventive activité) est CRUCIAL pour les 4+ fonctionnaires (enseignant, employé communal, fonctionnaires fédéraux) — protection immédiate enfants. C'est la doctrine post-opération Driver 2019.",
+            "legal": "Art. 244-246 CPP + 207 CPP + 67 al. 4 CP + doctrine CEN fedpol — Organisation complète.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Laisser chaque canton organiser ses propres arrestations selon ses procédures cantonales habituelles, avec une heure-cible H 06:00 communiquée mais sans coordination centralisée poussée — la souveraineté cantonale en matière de procédure pénale (Art. 32-33 CPP) implique que chaque MP est maître de ses opérations. Une coordination simple par téléphone le jour J devrait suffire pour assurer la simultanéité. Les fédéralismes opérationnels ont leur valeur dans le dispositif suisse. Cette doctrine du \"fédéralisme opérationnel respecté\" est défendue par les conférences des MP cantonaux comme une expression de la souveraineté procédurale qui doit primer même dans les opérations à grande échelle, et qui correspond à la réalité culturelle et institutionnelle helvétique où la centralisation excessive est traditionnellement perçue comme suspecte par les milieux politiques cantonaux. Les coordinations téléphoniques entre commandants cantonaux ont fait leurs preuves depuis des décennies dans les opérations multi-cantons, et créer une cellule centralisée fedpol pour coordonner ce genre d'opération risque d'être perçu comme un empiètement sur les prérogatives cantonales mal vu par les conseils d'État.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Sous-estimation de la complexité d'une opération 7 cantons + international. (1) La souveraineté cantonale est respectée par l'option correcte (chaque MP délivre son ordonnance) — la CEN coordonne sans se substituer aux compétences cantonales. (2) Sans coordination centralisée, le risque de désynchronisation est élevé : un canton retardé de 30 minutes = un fonctionnaire qui apprend par téléphone l'arrestation d'un collègue avant la sienne et qui détruit ses preuves. (3) Sans pré-mobilisation des ressources spécialisées (démineurs, psychologues), des situations dangereuses peuvent arriver : fonctionnaire armé qui résiste, enfant traumatisé non pris en charge. (4) La communication décentralisée = 7 services de presse cantonaux disant 7 choses différentes à la presse, chaos médiatique préjudiciable au secret instruction. (5) C'est précisément pour éviter ces scénarios que la CEN existe depuis 2018.",
+            "legal": "Art. 207 CPP + doctrine CEN — Coordination centralisée requise > 5 cantons.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Confier le commandement opérationnel global au procureur fédéral (MPC) qui prend la direction de l'opération depuis Berne, coordonne les 7 cantons + Philippines via vidéoconférence, et donne les ordres en temps réel. Les MP cantonaux deviennent des relais d'exécution sous direction MPC pour assurer une chaîne de commandement claire et hiérarchique. C'est l'approche \"top-down\" la plus efficace pour les opérations de très grande envergure.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Confusion sur les compétences et la hiérarchie procédurale. (1) Le MPC (Ministère public de la Confédération) N'A PAS de compétence d'instruction sur les infractions Art. 187/197 CP qui relèvent de la juridiction cantonale (Art. 22 CPP). Il ne peut pas \"prendre la direction\" d'opérations cantonales — il sortirait de ses compétences. (2) La pédocriminalité a parfois un volet fédéral (signalement NCMEC via fedpol), mais la poursuite reste cantonale. (3) Une chaîne de commandement \"top-down MPC\" sur des MP cantonaux serait CONTESTÉE en justice par la défense (vice de compétence). (4) La CEN fedpol (option correcte) coordonne OPÉRATIONNELLEMENT (logistique, timing) sans toucher aux compétences PROCÉDURALES de chaque MP — c'est la distinction cruciale. (5) Cette confusion serait sanctionnée par le TPF.",
+            "legal": "Art. 22 CPP — Compétence cantonale Art. 187/197, pas MPC.",
+            "critical": false,
+            "next": 4
+          }
+        ]
+      },
+      {
+        "phase": "📊 Le bilan + suite — protection structurelle des enfants PH",
+        "situation": "Trois mois après l'opération. Bilan : 23 arrestations CH simultanées réussies, 22 mises en examen (1 client est décédé entre-temps de cause naturelle), 7 enfants extraits aux Philippines avec accompagnement IJM (4 autres en cours), 3 \"familles-opérateurs\" démantelées (une 4e en fuite — recherchée). Côté CH, les procès s'ouvrent bientôt. La conférence de presse internationale (fedpol + NBI + IJM) est dans 2 semaines. Le directeur fedpol pédocriminalité vous demande votre input sur 2 questions stratégiques : (1) Que faire à long terme pour la PROTECTION STRUCTURELLE des enfants philippins (au-delà de cette opération unique) ? (2) Quel message public pour la conférence de presse ?",
+        "law": "<strong>Convention Lanzarote Art. 4-5</strong> — Mesures préventives.<br><strong>Convention Lanzarote Art. 8-13</strong> — Mesures de protection des enfants.<br><strong>Art. 73 CPP + LTrans</strong> — Communication respectant secret instruction.<br><strong>Coopération internationale CH-PH long terme</strong> — Au-delà de l'opérationnel.",
+        "question": "<strong>Que recommandez-vous pour la protection structurelle + le message public ?</strong>",
+        "choices": [
+          {
+            "text": "Recommandations sur les 2 axes : (1) PROTECTION STRUCTURELLE — proposer un programme bilatéral CH-PH pluriannuel financé par DDC (Direction du développement et coopération) : (a) renforcement capacités NBI/PNP-WCPC (formation, équipement forensique), (b) financement programme IJM Aftercare 5-step (logement protecteur, scolarisation, thérapie pour enfants extraits), (c) campagne publique CH dissuasion clients potentiels (visibilité ECPAT), (d) sanctions économiques ciblées contre les opérateurs (Loi sur les embargos si nécessaire). (2) MESSAGE PUBLIC — communication équilibrée : message victimes (7 enfants en sécurité, 4 en cours), message dissuasion (peines lourdes annoncées contre les 22 clients CH, juridiction extra-territoriale Suisse), message coopération (CH-PH réussie via MLAT 2018), message prévention (signaler à la NCMEC si vous savez quelque chose). Pas de noms suspects (Art. 73 CPP).",
+            "ok": true,
+            "pts": 25,
+            "fb": "Recommandations stratégiques de niveau institutionnel. (1) PROTECTION STRUCTURELLE : la doctrine moderne post-Lanzarote est l'engagement long terme — opérations ponctuelles sans programme structurel = enfants extraits se retrouvent dans la même situation économique qui a permis leur exploitation. La DDC est l'instrument approprié pour le financement coopération (~5-15M CHF/programme pluriannuel). IJM 5-step Aftercare est éprouvé. La campagne CH dissuasion est cruciale — étude RAINN 2023 : 60% des clients potentiels reculent face à message répressif crédible. (2) MESSAGE PUBLIC : la communication équilibrée (4 messages ciblés) maximise impact dissuasif sans compromettre instruction. Pas de noms = Art. 73 CPP respecté. \"Juridiction extra-territoriale Suisse\" est un message FORT pour les futurs clients potentiels. C'est la communication post-opération coordonnée par les services presse fedpol-DFAE.",
+            "legal": "Convention Lanzarote 4-13 + DDC + Art. 73 CPP — Stratégie complète.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Recommandations resserrées : (1) PROTECTION STRUCTURELLE — laisser les ONG (IJM, ECPAT, Terre des Hommes) gérer la suite avec leurs propres financements privés ; l'État suisse a fait sa part avec l'opération, élargir au structurel sortirait de notre mandat opérationnel et créerait des engagements pluriannuels difficiles à honorer en cas de changement de législature. (2) MESSAGE PUBLIC — communication minimale (3 lignes) pour préserver le secret de l'instruction et éviter l'instrumentalisation politique d'un dossier sensible.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Vision étroite qui rate l'opportunité. (1) \"Laisser les ONG\" : IJM/ECPAT/TdH ont des budgets privés mais limités face à l'ampleur du problème (UNICEF estime 1M+ enfants exploités sexuellement aux Philippines). L'engagement étatique CH n'est pas \"hors mandat\" — il est précisément requis par la Convention de Lanzarote Art. 4-5 ratifiée par la Suisse. (2) Les opérations ponctuelles SANS engagement structurel = victoires partielles : les 7 enfants extraits sont en sécurité, mais sans programme de remplacement économique pour leurs familles d'origine, le risque de re-victimisation existe (autres réseaux, autres clients). (3) Communication minimale : rate l'effet dissuasif majeur que peut avoir une comm bien faite. C'est précisément pour cela que les services presse existent — pas pour cacher, pour communiquer intelligemment. (4) Vision désengagée serait critiquée par toutes les ONG et le Conseil de l'Europe.",
+            "legal": "Convention Lanzarote Art. 4-5 — Engagement structurel = obligation traité.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Recommandations maximalistes : (1) PROTECTION STRUCTURELLE — transformer la Suisse en hub mondial de la lutte anti-pédocriminalité Philippines : ouvrir un bureau fedpol permanent à Manille, financer 50+ programmes IJM partout en Asie du Sud-Est, créer un fonds CH \"Protection Enfants Asie\" de 100M CHF sur 10 ans. (2) MESSAGE PUBLIC — communication maximale : noms et photos des 22 clients CH publiés, détail complet des modus operandi (vidéos floutées des opérations live), entretiens avec enfants extraits diffusés (avec accord des familles), traque publique du 4e opérateur en fuite via réseaux sociaux pour mobiliser la population philippine. Cette doctrine \"transparence totale comme dissuasion maximale\" est défendue par certains procureurs progressistes qui considèrent que l'ère numérique a fondamentalement changé les attentes du public en matière de visibilité institutionnelle, et que la Suisse doit s'adapter à ces nouvelles attentes pour rester crédible face à des opinions publiques qui réclament des actes forts contre la pédocriminalité internationale.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Cumul d'erreurs majeures. (1) Bureau fedpol permanent à Manille = empiètement sur souveraineté philippine, NBI ne l'accepterait pas. \"100M CHF sur 10 ans\" = engagement budgétaire qui dépasse largement les compétences d'un expert technique (relève du Conseil fédéral et du Parlement). \"Hub mondial\" = positionnement géopolitique non-mandaté. (2) MESSAGE PUBLIC : publier noms+photos des 22 clients avant procès = violation MASSIVE Art. 32 al. 1 Cst. (présomption d'innocence) + Art. 73 CPP. Recours en responsabilité de l'État garantis, et probablement annulation des procès pour vice. Diffuser des vidéos floutées d'abus = re-victimisation massive et probablement Art. 197 CP. Entretiens avec enfants extraits diffusés = traumatisation publique, contraire au protocole IJM. Traque publique sur réseaux sociaux = lynchage organisé. (3) Cette posture serait sanctionnée à TOUS les niveaux institutionnels.",
+            "legal": "Art. 32 al. 1 Cst. + Art. 73 CPP + Art. 197 CP + UNCRC — Multiples violations graves.",
+            "critical": true,
+            "next": "end"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "eu-traite-roumain",
+    "region": "EU",
+    "title": "L'École de Criminels — Réseau Roumain Eurojust",
+    "icon": "🇷🇴",
+    "difficulty": "hard",
+    "atmosphere": "raid",
+    "realCase": "Juin 2025 — Première opération conjointe Eurojust-Suisse sur la traite des êtres humains. Police municipale de Zurich + Police cantonale de Soleure + autorités roumaines. 5 suspects arrêtés dans le réseau roumain qui exploitait de jeunes femmes recrutées via fausses promesses sur réseaux sociaux.",
+    "narrative": {
+      "success": "Vous coordonnez l'opération CH-RO via Eurojust de manière exemplaire. 5 suspects arrêtés en CH (3 à Zurich, 2 à Soleure), 2 lieutenants formés à \"l'école de criminels\" identifiés et appréhendés en Roumanie. 11 victimes (jeunes femmes 18-26 ans) identifiées et protégées via LAVI + service victimes. Les recrutements via Instagram/TikTok sont reconstitués (preuves admissibles). La traite est qualifiée Art. 182 CP, complicité de prostitution aggravée Art. 195 CP. Procès retentissant.",
+      "degraded": "Opération CH réussie mais coordination RO partielle : 1 lieutenant fuit avant l'arrestation. 7 victimes sur 11 acceptent de coopérer pour témoigner. Volet financier laborieux (paiements Western Union vers RO mal documentés). Procédure CH solide néanmoins.",
+      "failure": "Mauvaise coordination Eurojust : les opérations CH-RO ne sont pas simultanées, le chef du réseau alerte ses lieutenants en RO qui détruisent preuves. Seulement 2 victimes acceptent de témoigner (peur de représailles familiales). Le \"chef\" passe entre les mailles via délégation de poursuite mal organisée. Échec institutionnel public, première opération Eurojust-Suisse traite EH décevante."
+    },
+    "tags": [
+      "TRAITE EH",
+      "PROSTITUTION",
+      "EUROJUST",
+      "RECRUTEMENT NUMÉRIQUE",
+      "ENTRAIDE RO"
+    ],
+    "legalRefs": [
+      "Art. 182 CP",
+      "Art. 195-196 CP",
+      "Convention Varsovie",
+      "Eurojust JIT",
+      "EIMP Art. 80a",
+      "LAVI"
+    ],
+    "intro": "Mardi 5h45, Police cantonale de Soleure. L'opération « Bukareszt » est en cours de préparation finale. Première opération conjointe Eurojust-Suisse sur la traite des êtres humains, une étape historique pour la Suisse. Le réseau ciblé : organisation criminelle roumaine (chef présumé : M. C., 41 ans, à Bucarest), recrutement de jeunes femmes roumaines (18-26 ans, milieu modeste, peu d'éducation supérieure) via Instagram et TikTok avec promesses de \"travail comme serveuse en Suisse, 2'500 EUR/mois logée\". Une fois en Suisse, confiscation des passeports, dette d'\"avance\" gonflée (4'000 EUR pour le voyage + logement = officiellement, 18'000 EUR exigés en réalité), exploitation dans la prostitution à Zurich (Langstrasse, salons \"de luxe\") et Soleure (clubs périphériques). Innovation criminelle documentée : M. C. a établi à Bucarest une véritable \"école de criminels\" pour former ses lieutenants à l'exploitation et à la surveillance étroite des victimes (cours de psychologie de l'emprise, techniques de chantage, gestion financière). Identifications via : témoignage anonyme d'une victime échappée (Mme A., 23 ans, sortie via FIZ — Centre d'aide aux victimes de la traite), surveillance Instagram-TikTok 6 mois, écoutes téléphoniques autorisées, financement tracé via Western Union. 5 suspects en CH ciblés, 2 lieutenants à Bucarest + le chef. Coordination Eurojust signée la semaine dernière.",
+    "alertLevel": "🇷🇴 OPÉRATION BUKARESZT — Traite EH · 5 suspects CH · 2+ lieutenants RO · 11 victimes · Première Eurojust-CH traite",
+    "objectives": [
+      {
+        "icon": "👥",
+        "text": "Coordonner l'opération conjointe Eurojust CH-RO (5+2+1 arrestations simultanées)"
+      },
+      {
+        "icon": "⚖️",
+        "text": "Maîtriser la qualification multiple : Art. 182 CP (traite) + 195-196 CP (prostitution) + 305bis CP"
+      },
+      {
+        "icon": "🛡️",
+        "text": "Protéger les 11 victimes via LAVI + statut témoin protégé (Art. 149 CPP) + Convention Varsovie"
+      },
+      {
+        "icon": "📱",
+        "text": "Reconstituer les recrutements numériques (Instagram, TikTok) avec preuves admissibles"
+      }
+    ],
+    "debrief": "<p>L'opération « Bukareszt » illustre la <strong>première coopération Eurojust-Suisse sur la traite des êtres humains (TEH)</strong> — un précédent majeur. La TEH par recrutement numérique est devenue le mode dominant en Europe : 78% des recrutements via réseaux sociaux selon Europol 2024.</p>\n<p><strong>Cadre juridique suisse</strong> : <strong>Art. 182 CP</strong> (traite d'êtres humains) couvre l'exploitation sexuelle à des fins économiques et est passible de 1-20 ans de prison. Concours réel avec <strong>Art. 195-196 CP</strong> (encouragement à la prostitution / actes d'ordre sexuel avec personne dépendante) et <strong>Art. 305bis CP</strong> (blanchiment) pour les flux financiers. La <strong>Convention de Varsovie du Conseil de l'Europe</strong> (ratifiée par la Suisse en 2012) impose des standards de protection des victimes : période de rétablissement et de réflexion (Art. 13), permis de séjour (Art. 14), assistance juridique (Art. 15).</p>\n<p>Pour la <strong>coopération Eurojust</strong>, la Suisse étant État tiers, on passe par <strong>EIMP Art. 80a</strong> (équipes communes d'enquête bilatérales CH-RO) avec Eurojust en facilitateur de coordination. C'est désormais routinier depuis 2018 mais reste une première sur la TEH, ce qui crée des précédents importants pour les futures opérations.</p>\n<p>La <strong>protection des victimes</strong> est le défi central : la <strong>LAVI</strong> (Loi sur l'aide aux victimes d'infractions) prévoit hébergement, soutien psychologique, assistance juridique. Le <strong>statut de témoin protégé Art. 149 CPP</strong> permet de protéger l'identité et de témoigner par vidéoconférence. Les <strong>centres d'aide spécialisés TEH</strong> (FIZ Zurich, ASTRÉE Lausanne, Antenna Genève) sont les partenaires opérationnels clés. Le défi : convaincre les victimes de coopérer malgré la peur de représailles sur leurs familles en Roumanie.</p>",
+    "steps": [
+      {
+        "phase": "🤝 La JIT Eurojust et le statut suisse",
+        "situation": "Mardi 6h, vidéoconférence avec Eurojust à La Haye. Le coordinateur (M. Vandenberg) propose à fedpol et au procureur roumain (Mme Popescu, DIICOT — Direcția de Investigare a Infracțiunilor de Criminalitate Organizată și Terorism) de signer une JIT (Joint Investigation Team) pour cette opération « Bukareszt ». M. Vandenberg : « C'est une première pour la TEH avec la Suisse, créons un précédent fort. Une JIT fluidifie tout : partage de preuves automatique, équipe mixte avec pouvoirs étendus, coordination centralisée à La Haye. » Mme Popescu acquiesce. Votre conseillère juridique fedpol (Me Fischer) vous fait signe discrètement.",
+        "law": "<strong>Décision 2002/465/JAI du Conseil</strong> — Cadre JIT applicable aux États membres UE.<br><strong>Statut de la Suisse</strong> — État tiers Eurojust, accord d'association partiel 2008.<br><strong>EIMP Art. 80a</strong> — Équipes communes d'enquête : instrument suisse équivalent.<br><strong>Convention européenne d'entraide judiciaire 1959</strong> — Cadre principal CH-RO.",
+        "question": "<strong>Que répondez-vous à la proposition Eurojust de signer une JIT ?</strong>",
+        "choices": [
+          {
+            "text": "Refuser la signature d'une JIT au sens UE strict — la Suisse est État tiers Eurojust (accord 2008 de participation, pas membership), elle ne peut PAS signer la Décision 2002/465/JAI. Proposer un accord d'équipe commune d'enquête EIMP Art. 80a CH-RO bilatéral, équivalent fonctionnel, avec Eurojust en tant que facilitateur de coordination (rôle de bureau de liaison). Pour M. Vandenberg : « Premier précédent CH-RO TEH oui, mais via l'instrument approprié pour la Suisse. C'est même mieux : montrer que les outils non-JIT fonctionnent renforce les futures coopérations CH-tiers. » Préparer la documentation EIMP Art. 80a en 24h.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Cadrage juridiquement irréprochable. (1) La Suisse N'A PAS signé la Décision 2002/465/JAI — signer une JIT au sens UE strict serait nul ab initio et pourrait contaminer toute la chaîne probatoire qui en découle. C'est exactement l'erreur à NE PAS faire pour une première CH-RO sur la TEH (mauvais précédent). (2) L'EIMP Art. 80a (équipes communes d'enquête bilatérales) est l'équivalent fonctionnel reconnu — il fait exactement la même chose que la JIT mais dans le cadre juridique suisse-état tiers. C'est la doctrine fedpol depuis Onymous 2014. (3) Eurojust en facilitateur de coordination est un modèle bien établi : ils ne signent pas, ils coordonnent. (4) Le message de Me Fischer (conseillère juridique fedpol) était précisément pour rappeler ce point. Cette voie crée le bon précédent pour la Suisse.",
+            "legal": "EIMP Art. 80a + accord CH-Eurojust 2008 — Cadre approprié pour État tiers.",
+            "critical": false,
+            "next": 1
+          },
+          {
+            "text": "Accepter la JIT proposée par Eurojust : c'est une opération de coopération routinière entre services européens, l'accord CH-Eurojust 2008 en vigueur permet désormais cette flexibilité, et créer un précédent JIT-CH sur la TEH renforcera la coopération future. La conseillère juridique Me Fischer pourra valider rétroactivement le cadre juridique. La symbolique politique d'un \"premier JIT CH-RO TEH\" est forte et bénéfique pour l'image de la Suisse.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Erreur historique potentiellement irréparable. (1) L'accord CH-Eurojust 2008 (en vigueur 2011) permet la PARTICIPATION de la Suisse aux opérations Eurojust et la nomination d'un correspondant national, mais ne donne PAS pouvoir de signer une JIT au sens de la Décision 2002/465/JAI — la Suisse reste État tiers pour cet instrument spécifique. (2) Une JIT signée nulle ab initio = preuves échangées sans cadre légal = contestable au procès suisse ET roumain. La défense (qui aura des avocats roumains expérimentés) attaquera ce vice au procès et probablement avec succès. (3) \"Validation rétroactive Me Fischer\" est impossible — les vices ab initio ne se régularisent pas. (4) Pour une PREMIÈRE opération CH-RO TEH, créer ce précédent vicié serait catastrophique : les futures opérations en pâtiraient. (5) Le geste de Me Fischer était précisément pour vous alerter — l'ignorer est doublement fautif.",
+            "legal": "Accord CH-Eurojust 2008 — Pas pouvoir signature JIT. Vice ab initio.",
+            "critical": true,
+            "next": "end"
+          },
+          {
+            "text": "Demander un délai de 4 semaines pour consultation interne du DFJP avant toute décision sur le format de coopération — la première opération Eurojust-Suisse sur la TEH mérite une réflexion juridique approfondie au niveau ministériel pour éviter tout précédent malheureux. Pendant ce temps, l'opération « Bukareszt » sera reportée pour permettre la stabilisation institutionnelle. Le procureur DIICOT comprendra cette nécessité de précaution helvétique. Cette doctrine de \"prudence DFJP préalable\" est défendue par les services juridiques fédéraux comme garantie de stabilité institutionnelle, et a fait ses preuves dans la prévention de plusieurs erreurs procédurales coûteuses qui auraient pu engager la responsabilité de la Confédération dans des coopérations européennes mal cadrées.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Excès de prudence opérationnellement dommageable. (1) Reporter une opération dont les arrestations sont prévues dans quelques heures au profit d'une consultation DFJP de 4 semaines = donner aux suspects 4 semaines pour fuir, détruire les preuves, alerter leurs lieutenants. C'est l'échec assuré. (2) La doctrine est CLAIRE depuis 2014 (Onymous, Wagram, Endgame) : la Suisse signe en EIMP Art. 80a, pas en JIT. Pas besoin de consultation DFJP de 4 semaines pour appliquer une doctrine connue. (3) Le procureur DIICOT (Mme Popescu) a probablement organisé son opération roumaine en synchronisation — un report unilatéral de la Suisse compromettrait toute la coopération. (4) Pour une PREMIÈRE TEH CH-RO, la prudence excessive crée le mauvais précédent (\"avec la Suisse, c'est lent et compliqué\") qui nuira aux futures coopérations. La voie correcte est rapide ET juridiquement solide.",
+            "legal": "Doctrine fedpol constante — Réponse immédiate possible, pas consultation 4 semaines.",
+            "critical": false,
+            "next": 1
+          }
+        ]
+      },
+      {
+        "phase": "👥 Les arrestations simultanées CH-RO",
+        "situation": "L'EIMP Art. 80a est signée, opération « Bukareszt » lancée demain à 06:00. Répartition : Suisse — 3 arrestations à Zurich (suspects \"gérants\" salons + appartements de prostitution) et 2 à Soleure (suspects logistiques). Roumanie — 2 lieutenants à Bucarest (cadres formés à \"l'école\") + 1 chef présumé M. C. La synchronisation est critique : si la Suisse arrête avant la Roumanie, M. C. est alerté par téléphone (les lieutenants l'appellent immédiatement) et fuit. La police municipale de Zurich (PolZH) coordonne l'opération CH avec PolSO. Le commandement opérationnel global : qui pilote ? PolZH propose : « Nous, comme on a 3 arrestations sur 5 et qu'on connaît la Langstrasse mieux que personne. » fedpol vous regarde.",
+        "law": "<strong>Art. 244-246 CPP</strong> — Perquisitions, autorisation MP cantonal.<br><strong>Art. 207 CPP</strong> — Coordination intercantonale.<br><strong>EIMP Art. 80a</strong> — Coordination opérations conjointes internationales.<br><strong>Doctrine fedpol CEN</strong> — Cellule d'engagement national pour opérations transfrontalières.",
+        "question": "<strong>Quel commandement opérationnel global proposez-vous ?</strong>",
+        "choices": [
+          {
+            "text": "Activation de la cellule d'engagement national fedpol (CEN) avec coordinateur unique (Mme Schwarz, fedpol pédocriminalité-traite) qui gère le H-hour international (06:00 simultané CH-RO) et les flux d'information : (1) Chaque MP cantonal (MP-ZH et MP-SO) délivre ses ordonnances de perquisition pour les arrestations sur son territoire (compétence cantonale Art. 244 CPP) ; (2) PolZH et PolSO exécutent leurs arrestations cantonales sous direction de leur propre MP, mais avec coordination temporelle CEN ; (3) Le DIICOT roumain coordonne ses 3 arrestations RO en parallèle avec H-hour identique (06:00 = H+1h heure RO) ; (4) Eurojust en facilitateur passive (information temps réel, mais pas de pilotage) ; (5) Cellule de crise CEN à fedpol Berne pendant les premières 6h pour gérer les imprévus.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Architecture conforme à la doctrine fedpol pour opérations internationales. (1) La CEN (Cellule d'Engagement National) est l'instance appropriée pour les opérations multi-cantons + internationales — elle coordonne sans empiéter sur les compétences procédurales cantonales. (2) Le respect des compétences MP cantonaux est requis (Art. 244 CPP) — chaque MP délivre son ordonnance, c'est non-négociable. (3) PolZH propose son leadership car ils ont 3/5 des arrestations CH, mais c'est une question opérationnelle locale (compréhensible) — la coordination GLOBALE incluant la RO doit être centrale, pas zurichoise. (4) Le H-hour synchronisé international (06:00 CH = 07:00 RO) est crucial : la moindre désynchronisation = M. C. alerté, fuite. (5) C'est exactement la doctrine post-opération Wagram 2021 et Endgame 2025.",
+            "legal": "Art. 244 CPP + 207 CPP + EIMP 80a + doctrine CEN — Architecture optimale.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Confier le commandement opérationnel global à PolZH comme proposé : ils ont la majorité des arrestations CH, la connaissance terrain de la Langstrasse, et une cellule de crise opérationnelle bien rodée. PolSO et le DIICOT roumain coordonnent avec PolZH directement. Eurojust passe en arrière-plan, fedpol intervient uniquement si nécessaire. C'est l'approche subsidiaire qui respecte les forces de terrain et leur compétence directe.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Méconnaissance des limites des compétences cantonales pour opérations internationales. (1) PolZH est compétente pour ses arrestations à Zurich, mais N'A PAS de compétence pour piloter une coopération internationale CH-RO — c'est explicitement le rôle de fedpol (Art. 4 LOAP). (2) Confier le pilotage à une police municipale pour une opération mobilisant 6 unités cantonales + 1 service fédéral roumain crée des problèmes hiérarchiques (PolSO doit-elle obéir à PolZH ?). (3) La connaissance terrain de la Langstrasse est un asset opérationnel local précieux, mais ne se confond pas avec le pilotage de l'ensemble. (4) Eurojust en \"arrière-plan\" alors qu'il a coordonné la signature EIMP Art. 80a = sous-utilisation de leur valeur ajoutée. (5) Cette voie risque l'échec coordination (PolZH au timing CH, mais coordination CH-RO mal pilotée).",
+            "legal": "Art. 4 LOAP + EIMP Art. 80a — Compétence fedpol pour opérations internationales.",
+            "critical": false,
+            "next": 2
+          },
+          {
+            "text": "Centraliser le commandement à Eurojust La Haye : leur coordinateur M. Vandenberg pilote en temps réel les 6 arrestations (3 ZH + 2 SO + 3 RO via DIICOT) depuis sa salle de commandement européenne. La Suisse devient une simple participante aux côtés de la Roumanie, sous coordination Eurojust. C'est l'approche la plus moderne et la plus efficace pour les opérations transfrontalières complexes, et créer ce précédent CH-Eurojust à pilotage central est un signal politique fort. Cette doctrine du \"pilotage Eurojust centralisé\" est défendue par certains cercles européens progressistes comme une étape vers une intégration policière plus profonde du continent, qui permettrait à terme une réponse coordonnée plus efficace face aux organisations criminelles transnationales modernes qui exploitent les fragmentations juridictionnelles. La Suisse, en acceptant ce pilotage par Eurojust, signalerait son ouverture à une coopération européenne renforcée tout en bénéficiant des ressources de coordination puissantes de l'agence La Haye.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Confusion structurelle sur les compétences Eurojust. (1) Eurojust EST UN ORGANE DE COORDINATION de l'UE, PAS UNE AUTORITÉ DE COMMANDEMENT OPÉRATIONNEL. Eurojust facilite, ne pilote pas. Confier le \"commandement\" à Eurojust = malentendu sur leur rôle. (2) La Suisse étant État tiers (option 1 cadrait correctement), Eurojust N'A PAS d'autorité sur les arrestations sur sol suisse — les arrestations relèvent toujours de la souveraineté procédurale CH (MP cantonal + police suisse). Confier le commandement à La Haye sur des arrestations CH = vice de compétence. (3) Le \"signal politique\" de pilotage Eurojust serait perçu comme une dilution de la souveraineté suisse, problématique politiquement (UDC, Conseil des États). (4) Cette voie créerait un mauvais précédent juridique pour les futures opérations CH-tiers.",
+            "legal": "Statut Eurojust + souveraineté procédurale CH — Eurojust coordonne, ne pilote pas.",
+            "critical": false,
+            "next": 2
+          }
+        ]
+      },
+      {
+        "phase": "🛡️ La protection des 11 victimes",
+        "situation": "Pendant les arrestations, les 11 victimes (jeunes femmes 18-26 ans, toutes roumaines) sont \"libérées\" sur les lieux de prostitution. Réactions très variées : 3 sont visiblement soulagées et coopératives, 4 sont apeurées et muettes (peur de représailles sur leur famille en Roumanie), 2 sont hostiles et défensives (\"je travaille volontairement, vous me ruinez\"), 2 sont en état de choc psychologique. La cellule LAVI cantonale ZH/SO + le FIZ (Fraueninformationszentrum, centre spécialisé TEH Zurich) sont mobilisés. Mais la pression temporelle est forte : si elles ne témoignent pas dans les 48h, le dossier pénal s'effondre. Le MP-ZH demande votre stratégie.",
+        "law": "<strong>Convention de Varsovie Art. 13</strong> — Période de rétablissement et de réflexion : 30-90 jours minimum sans pression à témoigner.<br><strong>Convention Varsovie Art. 14</strong> — Permis de séjour pour les victimes coopérantes ET non-coopérantes.<br><strong>LAVI</strong> — Aide aux victimes : hébergement, soutien psychologique, conseil juridique gratuit.<br><strong>Art. 149 CPP</strong> — Protection du témoin (anonymat, vidéoconférence).",
+        "question": "<strong>Quelle stratégie de protection-coopération adoptez-vous ?</strong>",
+        "choices": [
+          {
+            "text": "Approche conforme à la Convention de Varsovie : (1) Aucune pression à témoigner dans les 48h — la période de rétablissement Art. 13 est OBLIGATOIRE (30-90 jours minimum), garantir aux 11 victimes un hébergement protégé via FIZ-Zurich (Mädchenhaus) et antenne SO, sans condition de coopération ; (2) Permis de séjour humanitaire Art. 30 al. 1 let. b LEI activé via fedpol pour toutes les 11 (y compris les hostiles), demande déposée immédiatement aux SEM/SPOP cantonaux ; (3) Soutien psychologique LAVI immédiat, particulièrement pour les 2 en choc et les 4 apeurées ; (4) Évaluation de la pertinence du témoignage par la suite, sans pression : les 3 coopératives feront leur déposition formelle sous Art. 149 CPP (statut témoin protégé) ; (5) Pour le dossier pénal : compléter avec les preuves matérielles (écoutes, surveillance Instagram-TikTok, financements WU) qui peuvent porter le dossier sans dépendre exclusivement des témoignages.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Approche conforme aux standards internationaux et stratégiquement intelligente. (1) La Convention de Varsovie Art. 13 (période de rétablissement) est SACRÉE — la violer = condamnation possible de la Suisse par le GRETA (Group of Experts on Action against Trafficking in Human Beings). (2) Le permis humanitaire Art. 30 LEI pour TOUTES les victimes (coopérantes ou non) brise le chantage du \"témoignez ou expulsion\" qui est utilisé par les criminels eux-mêmes contre les victimes. (3) FIZ-Zurich + Mädchenhaus = infrastructure spécialisée éprouvée pour la TEH. (4) La doctrine moderne (post-affaire Constanta 2018) reconnaît qu'on NE DOIT PAS faire dépendre le dossier pénal des seuls témoignages des victimes — preuves matérielles (écoutes, surveillance numérique, flux financiers) doivent porter l'accusation. (5) Cette approche fait des victimes des partenaires, pas des outils.",
+            "legal": "Convention Varsovie Art. 13-14 + LAVI + Art. 30 LEI — Standards internationaux respectés.",
+            "critical": false,
+            "next": 3
+          },
+          {
+            "text": "Application des règles standards : auditionner immédiatement les 11 victimes dans les 24h pour ne pas perdre leurs souvenirs frais, leur expliquer clairement que leur permis de séjour suisse dépend de leur coopération à l'enquête (incitation forte mais légale), proposer aux 4 apeurées une protection de témoin Art. 149 CPP. Pour les 2 hostiles, accepter qu'elles ne coopèrent pas et les renvoyer en Roumanie après une simple déposition formelle. La rapidité de l'enquête prime sur les considérations de bien-être. Cette doctrine du \"permis-coopération conditionnel\" est encore défendue par certains procureurs cantonaux qui considèrent qu'une victime qui refuse absolument de témoigner ne peut pas matériellement contribuer à la procédure pénale, et qu'octroyer un permis humanitaire systématique serait perçu comme une instrumentalisation par les réseaux criminels qui pourraient envoyer délibérément des \"victimes\" aux autorités pour obtenir des permis. La nuance entre coopératives et non-coopératives serait ainsi un garde-fou contre l'instrumentalisation.",
+            "ok": false,
+            "pts": -25,
+            "fb": "Violation grave de la Convention de Varsovie ratifiée par la Suisse. (1) \"Permis dépendant de la coopération\" = chantage à l'expulsion qui est PRÉCISÉMENT ce que la Convention de Varsovie Art. 14 INTERDIT. La Suisse a ratifié et est obligée de fournir le permis aux victimes coopérantes ET non-coopérantes. (2) Auditionner dans les 24h = violation de la période de rétablissement Art. 13 (30-90 jours). Les victimes en état de choc psychologique ne peuvent pas valablement témoigner — leurs déclarations seraient contestables au procès. (3) Renvoyer les 2 hostiles en Roumanie = les jeter dans les bras de la même organisation criminelle (M. C. et ses associés ont des relais en RO). C'est une re-victimisation organisée par l'État. (4) Cette voie serait sanctionnée par GRETA + CEDH (Rantsev v. Cyprus and Russia 2010, jurisprudence applicable). (5) Préjudice moral énorme + responsabilité de l'État engagée.",
+            "legal": "Convention Varsovie Art. 13-14 + CEDH Rantsev — Violations multiples.",
+            "critical": true,
+            "next": "end"
+          },
+          {
+            "text": "Approche progressive : commencer par les 3 coopératives qui peuvent témoigner immédiatement (auditions formelles dans les 48h), proposer aux 4 apeurées la protection témoin et un délai d'une semaine, accepter que les 2 hostiles refusent (les laisser libres de leurs choix), et concentrer les soins LAVI sur les 2 en choc. Ne pas activer de permis humanitaire pour toutes — ce serait excessif et coûteux pour le canton, à réserver aux cas vraiment méritants qui coopèrent.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Compromis qui rate les standards internationaux. (1) Auditionner les 3 coopératives dans 48h reste une pression incompatible avec Art. 13 Varsovie — même les \"coopératives\" doivent bénéficier de la période de rétablissement, leurs témoignages sont meilleurs après stabilisation psychologique (études criminologiques 2018-2024). (2) \"Permis humanitaire pour toutes serait excessif\" : c'est PRÉCISÉMENT ce que la Convention de Varsovie Art. 14 exige — pas une faveur, une obligation conventionnelle. La distinction \"méritantes/non-méritantes\" est PRÉCISÉMENT le piège que la Convention veut éviter. (3) Laisser les 2 hostiles \"libres de leurs choix\" sans permis humanitaire = elles seront expulsées vers la Roumanie où le réseau criminel les attend. C'est de l'autonomie apparente, du défaut de protection effective. (4) L'approche graduée a son sens, mais doit s'inscrire dans le cadre Varsovie complet, pas en partiel.",
+            "legal": "Convention Varsovie Art. 14 — Protection ne se conditionne pas à la \"coopération\".",
+            "critical": false,
+            "next": 3
+          }
+        ]
+      },
+      {
+        "phase": "📱 Reconstituer les recrutements Instagram et TikTok",
+        "situation": "Pour le dossier pénal, vous devez reconstituer les recrutements numériques : Instagram et TikTok ont été les plateformes principales utilisées par les lieutenants pour cibler les jeunes femmes roumaines. Profils types des comptes recruteurs : femmes 25-30 ans présentées comme \"travaillant en Suisse\", photos de Genève/Zurich/voitures de luxe, messages directs ciblés. Quand une victime mordait, communication migrait vers WhatsApp puis Telegram (preuves chiffrées, plus difficiles). Vous estimez 6+ comptes Instagram et 4+ comptes TikTok à analyser, plus environ 200+ conversations DM sur les téléphones saisis. Comment articulez-vous l'investigation numérique ?",
+        "law": "<strong>EIMP CH-Meta (Irlande)</strong> — Demandes d'entraide vers Meta Ireland Ltd pour Instagram.<br><strong>EIMP CH-TikTok (Irlande/Singapore)</strong> — Coopération bilatérale.<br><strong>DSA Art. 18</strong> — Notification autorités sur menaces.<br><strong>Art. 263 CPP</strong> — Saisie matériel numérique.<br><strong>Art. 184 CPP</strong> — Expertise forensique téléphones.",
+        "question": "<strong>Quelle architecture d'investigation numérique mettez-vous en place ?</strong>",
+        "choices": [
+          {
+            "text": "Architecture multi-axes : (1) EIMP urgente vers Meta Ireland (Instagram) pour obtenir : tous les DM des comptes recruteurs identifiés (24 mois), métadonnées (IPs, devices), historique des comptes ciblés (jeunes femmes roumaines contactées), comptes liés ; (2) EIMP urgente vers TikTok (siège Irlande pour EU) similaire ; (3) Pour les téléphones saisis (5 suspects CH) : extraction Cellebrite Premium + analyse forensique des conversations WhatsApp/Telegram/Signal — récupération éventuelle même de messages chiffrés via clés en mémoire vive si téléphones saisis allumés ; (4) Demande conjointe DIICOT-fedpol via Eurojust pour saisies similaires sur les téléphones des 3 suspects RO — cohérence des preuves de bout en bout ; (5) Notification DSA Art. 18 à Meta + TikTok pour suspendre les comptes recruteurs identifiés (empêcher qu'ils continuent à recruter pendant l'instruction).",
+            "ok": true,
+            "pts": 25,
+            "fb": "Architecture complète et cohérente. (1) L'EIMP vers Meta Ireland et TikTok Ireland est routinière depuis 2018 — les délais sont raisonnables (4-12 semaines) pour obtenir des historiques DM et métadonnées. (2) La saisie + extraction Cellebrite des téléphones suspects CH peut récupérer les messages WhatsApp/Telegram quand les téléphones étaient allumés à la saisie (clés en RAM) — c'est précisément l'argument pour la procédure Faraday + état actif maintenu. (3) La cohérence CH-RO via Eurojust pour saisies parallèles est essentielle : preuves complémentaires des deux côtés, dossier robuste face à la défense. (4) Le DSA Art. 18 (notification autorités sur menaces graves) est l'outil moderne pour suspendre les comptes recruteurs — empêche les nouveaux recrutements pendant l'instruction. C'est la doctrine post-Endgame 2025.",
+            "legal": "EIMP + DSA Art. 18 + Art. 184 CPP + Eurojust — Architecture éprouvée.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Architecture concentrée sur les téléphones saisis : extraction Cellebrite des 5 téléphones suspects CH = source principale de preuves directes (conversations WhatsApp/Telegram complètes), avec captures d'écran horodatées des comptes Instagram/TikTok recruteurs publiquement visibles (sans EIMP qui prendrait des mois). Les preuves matérielles directes (téléphones) suffisent généralement à établir le réseau, et la voie EIMP plateformes est lente et incertaine. Pour la suspension des comptes : signalement utilisateur classique + DSA si nécessaire ultérieurement. Cette approche de la \"forensique téléphone-centrique\" est privilégiée par les laboratoires fedpol-IT qui considèrent que la maîtrise complète de l'extraction Cellebrite + analyse experte des conversations migrent constitue déjà un dossier d'accusation très solide, sans nécessiter le détour par les EIMP plateformes qui mobilisent des ressources juridiques importantes pour des résultats parfois décevants.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Sous-dimensionnement qui rate des preuves clés. (1) Les téléphones saisis donnent les conversations APRÈS la migration vers WhatsApp/Telegram — mais le PREMIER CONTACT (Instagram DM) est CRUCIAL pour établir la stratégie de recrutement, l'identification des cibles, le \"funnel\" de recrutement. Sans EIMP Meta/TikTok, vous perdez cette phase initiale. (2) Captures d'écran de profils PUBLIC sont insuffisantes : les DM (messages directs) ne sont pas publics, ils nécessitent EIMP. (3) Les délais EIMP plateformes ne sont pas \"des mois incertains\" mais 4-12 semaines, parfaitement compatibles avec une instruction TEH (qui dure 12-24 mois). (4) DSA Art. 18 maintenant > signalement utilisateur plus tard : laisser les comptes recruteurs actifs pendant l'instruction = nouvelles victimes potentielles non sauvées. (5) Approche réductrice qui rate la dimension préventive.",
+            "legal": "EIMP plateformes + DSA Art. 18 — Compléments essentiels aux téléphones.",
+            "critical": false,
+            "next": 4
+          },
+          {
+            "text": "Approche scrapping massif : utiliser des outils OSINT automatisés (Maltego + scrapers Python custom) pour collecter publiquement toutes les données disponibles des comptes Instagram/TikTok recruteurs et de leurs followers/contacts — aucune EIMP nécessaire pour des données publiques, pas de délai. Pour les DM privés, accepter qu'ils sont inaccessibles sans EIMP (qu'on évitera) et compenser par l'analyse réseau des connexions publiques. La masse de données publiques compense largement.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Méthodologie non-applicable au contexte légal-procédural et techniquement bancale. (1) Le scraping massif des followers de comptes Instagram/TikTok viole les CGU des plateformes (clause anti-scraping) — depuis ATF 143 IV 90, la violation des CGU peut faire basculer l'accès en \"accès indu\" Art. 143bis CP. C'est un risque pénal pour l'expert. (2) Scraper des milliers de comptes followers ≠ ciblage proportionné LPD — la masse de données collectée sur des tiers (followers innocents) est disproportionnée. (3) Sans les DM (accessibles seulement par EIMP), vous N'AVEZ PAS la preuve directe du recrutement individuel des 11 victimes — la défense plaidera \"contacts publics, pas de recrutement\". L'ANALYSE RÉSEAU PUBLIQUE NE REMPLACE PAS LES MESSAGES PRIVÉS. (4) Cette voie est désavouée par fedpol depuis 2020 (note interne post-affaire Lugano).",
+            "legal": "Art. 143bis CP + LPD Art. 4 + CGU plateformes — Scraping massif risqué.",
+            "critical": false,
+            "next": 4
+          }
+        ]
+      },
+      {
+        "phase": "🎓 Le démantèlement de \"l'école de criminels\" à Bucarest",
+        "situation": "DIICOT a confirmé : à Bucarest, M. C. a effectivement créé une véritable \"école de criminels\" — un appartement loué (officiellement \"centre de formation marketing\") où il forme depuis 18 mois ses lieutenants à : (a) techniques d'emprise psychologique sur les victimes, (b) gestion financière du trafic, (c) surveillance et chantage, (d) coordination avec les recruteurs Instagram. 6 lieutenants formés identifiés (2 sont les arrêtés à Bucarest, 1 fuyard, 3 actifs ailleurs en Europe — France, Allemagne, Italie). Mme Popescu (DIICOT) demande à fedpol : « Comment articulons-nous le démantèlement de cette \"école\" et la traque des 4 lieutenants restants ? Eurojust peut nous coordonner sur le périmètre EU élargi. »",
+        "law": "<strong>Convention Varsovie Art. 27</strong> — Coopération contre la TEH.<br><strong>Eurojust Réseau judiciaire européen</strong> — Coordination élargie EU.<br><strong>Mandat européen d'arrêt</strong> — Pour les 3 lieutenants en FR/DE/IT (suspects résidents EU).<br><strong>EIMP Art. 80a</strong> — Possibilité d'élargissement de l'équipe commune.",
+        "question": "<strong>Quelle stratégie pour le démantèlement \"école\" + traque lieutenants ?</strong>",
+        "choices": [
+          {
+            "text": "Stratégie élargie en deux temps : (1) Démantèlement « école » à Bucarest — perquisition complète de l'appartement-centre par DIICOT avec accompagnement fedpol-IT (saisie matériel pédagogique : supports de cours, manuels, vidéos de formation, fichiers étudiants/anciens-lieutenants), Eurojust coordonne pour identifier d'autres lieutenants formés ; (2) Traque des 4 lieutenants restants — élargissement de l'équipe commune EIMP Art. 80a au format CH-RO-FR-DE-IT (5 États), Eurojust comme bureau central de coordination, mandats européens d'arrêt pour les 3 résidents EU (FR/DE/IT) déposés par DIICOT ; (3) Pour le 4e lieutenant fuyard (probablement vers les Balkans ou Turquie) : notice rouge INTERPOL + signal SIS II + suivi en temps réel par Europol ; (4) Communication coordonnée fedpol-DIICOT-Eurojust sur le démantèlement \"école\" comme précédent fort en matière de TEH.",
+            "ok": true,
+            "pts": 25,
+            "fb": "Stratégie complète qui mobilise tous les outils européens. (1) Le démantèlement physique de l'appartement-école est crucial : les supports pédagogiques saisis sont des preuves matérielles uniques (rares dans les dossiers TEH classiques) qui caractérisent l'organisation criminelle structurée (Art. 260ter CP analogue côté RO). (2) L'élargissement EIMP Art. 80a au format multi-États est précisément l'outil européen — Eurojust coordonne les 5 États sans ambiguïté juridique. (3) Les mandats européens d'arrêt (MEA) pour les 3 lieutenants en FR/DE/IT sont l'instrument le plus rapide et opposable (introduit par décision-cadre 2002/584). DIICOT (autorité judiciaire roumaine) émet le MEA, ce qui le rend valide partout dans l'UE. (4) Pour le fuyard hors UE : notice rouge + SIS II + Europol = standard. (5) Cette stratégie crée un précédent FORT, valorise la première Eurojust-CH TEH.",
+            "legal": "EIMP 80a + MEA + INTERPOL + Eurojust — Architecture complète.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Concentration sur le démantèlement \"école\" Bucarest, traque des 4 lieutenants à laisser à plus tard : la priorité immédiate est de neutraliser le centre de formation lui-même, et la traque des lieutenants formés exigera des opérations spécifiques pays par pays qui sont chronophages. Une fois \"l'école\" fermée, plus de nouveaux lieutenants formés — l'organisation s'éteint progressivement. La séquence : démantèlement central d'abord, traque des cellules ensuite si nécessaire.",
+            "ok": false,
+            "pts": -20,
+            "fb": "Vision séquentielle qui rate l'opportunité unique. (1) Les 4 lieutenants restants (3 en FR/DE/IT, 1 fuyard) NE VONT PAS \"s'éteindre progressivement\" — ils continuent leurs activités ailleurs en Europe avec d'autres victimes. Chaque mois sans arrestation = nouvelles victimes. (2) La fenêtre opérationnelle pour les arrêter SIMULTANÉMENT au démantèlement de l'école est étroite — une fois M. C. arrêté à Bucarest, ses lieutenants vont apprendre, fuir, changer d'identité. La synchronisation est CRUCIALE. (3) \"Démantèlement central d'abord\" dans une organisation décentralisée (les lieutenants opèrent indépendamment) = laisser les cellules continuer. (4) L'élargissement EIMP Art. 80a au format multi-États n'est PAS chronophage — Eurojust facilite précisément ce type d'élargissement rapide. (5) Approche désynchronisée serait critiquée par Europol et Eurojust.",
+            "legal": "Décision-cadre MEA 2002/584 + EIMP — Synchronisation possible et requise.",
+            "critical": false,
+            "next": "end"
+          },
+          {
+            "text": "Élargissement maximal : créer un mandat de coordination permanente Eurojust-Suisse pour la traite EH au-delà de cette opération, avec établissement d'une cellule fedpol \"liaison Eurojust TEH\" basée à La Haye, et programme triennal de coopération CH-EU sur la TEH avec budget de 8M CHF. Cette opération « Bukareszt » devient le point de départ d'une nouvelle ère institutionnelle. La traque des 4 lieutenants se fera dans ce cadre élargi sur 12-18 mois, plus solide qu'une opération ponctuelle. Cette vision \"institutionnelle élargie\" est défendue par certains experts du DFJP comme la voie d'avenir pour la lutte contre la criminalité transfrontière, qui exige des structures permanentes et des engagements pluriannuels plutôt que des opérations ad hoc qui ne touchent que la surface des phénomènes criminels organisés à grande échelle. Cette logique du \"long terme structurel\" est régulièrement plébiscitée dans les rapports parlementaires post-affaires majeures.",
+            "ok": false,
+            "pts": -15,
+            "fb": "Visions stratégiques mélangées avec décisions opérationnelles. (1) L'idée de coopération Eurojust-CH long terme TEH est bonne en SOI mais relève du DFJP/Conseil fédéral, pas d'un expert opérationnel sur une affaire en cours. Vous outrepassez votre mandat. (2) \"Cellule fedpol liaison Eurojust à La Haye\" + \"8M CHF triennal\" = engagements institutionnels et budgétaires qui dépassent vos compétences. (3) Pour la traque OPÉRATIONNELLE des 4 lieutenants, attendre \"12-18 mois\" dans un cadre programmatique = laisser les lieutenants opérer 12-18 mois supplémentaires. C'est dommageable pour les futures victimes. (4) Distinction nécessaire : la stratégie institutionnelle long-terme (à proposer à votre hiérarchie séparément) ≠ la décision opérationnelle immédiate (option correcte : élargir EIMP Art. 80a pour traquer les lieutenants MAINTENANT). (5) Mélanger les deux niveaux brouille la décision.",
+            "legal": "Compétences expert opérationnel — Stratégique vs opérationnel à distinguer.",
+            "critical": false,
+            "next": "end"
+          }
+        ]
+      }
+    ]
   }
 ];
