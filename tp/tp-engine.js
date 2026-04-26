@@ -44,6 +44,39 @@ function saveState() {
 }
 function getSolved(cat) { return STATE.solved[cat] || 0; }
 function getTotalSolved() { return Object.values(STATE.solved).reduce((a,b)=>a+(b||0),0); }
+
+
+// ── Chrono Mode ───────────────────────────────────────────────
+let _chronoTimer = null, _chronoSec = 0, _chronoActive = false;
+
+function startChrono(seconds, onExpire) {
+  stopChrono();
+  _chronoSec = seconds;
+  _chronoActive = true;
+  updateChronoDisplay(_chronoSec);
+  _chronoTimer = setInterval(() => {
+    _chronoSec--;
+    updateChronoDisplay(_chronoSec);
+    if (_chronoSec <= 0) {
+      stopChrono();
+      onExpire();
+    }
+  }, 1000);
+}
+
+function stopChrono() {
+  if (_chronoTimer) { clearInterval(_chronoTimer); _chronoTimer = null; }
+  _chronoActive = false;
+}
+
+function updateChronoDisplay(sec) {
+  const el = document.getElementById('chrono-display');
+  if (!el) return;
+  el.textContent = sec + 's';
+  el.style.color = sec <= 5 ? 'var(--red)' : sec <= 10 ? 'var(--gold)' : 'var(--cyan)';
+  el.style.fontWeight = sec <= 5 ? '800' : '600';
+}
+
 function incSolved(cat) {
   STATE.solved[cat] = (STATE.solved[cat]||0)+1;
   STATE.streak++;
@@ -484,7 +517,7 @@ function checkEndianChoice(btn, isCorrect, expectedVal, displayBytes, orderedByt
 // ── 2. HORODATAGES MS-DOS ─────────────────────────
 function genTimestamp() {
   // Mode 0 = FAT timestamp (existant), Mode 1 = NTFS FILETIME
-  const tsMode = rand(0, 1);
+  const tsMode = rand(0, 3);
   if (tsMode === 1) {
     // NTFS FILETIME : intervalles de 100ns depuis 01/01/1601
     // Valeur type : ~133000000000000000 (env. 2023)
@@ -695,6 +728,124 @@ function checkTimestamp(ey, emo, ed, eh, emi, es) {
     breakStreak();
   }
 }
+
+
+  // ── Mode 2 : Unix Epoch → Date ──────────────────────────────
+  if (tsMode === 2) {
+    const yr = rand(2015, 2024), mo = rand(1,12), dy = rand(1,28);
+    const d = new Date(yr, mo-1, dy, rand(0,23), rand(0,59), rand(0,59));
+    const unix = Math.floor(d.getTime() / 1000);
+    const hexBytes = [
+      (unix>>>0)&0xFF, (unix>>8)&0xFF, (unix>>16)&0xFF, (unix>>24)&0xFF
+    ].map(x=>pad(x.toString(16).toUpperCase(),2));
+    const correct = `${yr}-${pad(mo,2)}-${pad(dy,2)}`;
+    const distractors = [
+      new Date((unix+86400)*1000).toISOString().slice(0,10),
+      new Date((unix-86400)*1000).toISOString().slice(0,10),
+      new Date((unix+3600)*1000).toISOString().slice(0,10),
+    ].filter(d=>d!==correct);
+    const choices = shuffle([correct,...distractors.slice(0,3)])
+      .map(c=>({text:c, correct:c===correct}));
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-ts">🕐</div>
+        <div class="ex-title">Unix Epoch — Timestamp 32-bit LE</div>
+      </div>
+      <p class="ex-desc">Convertis ce timestamp <strong>Unix Epoch</strong> (secondes depuis le 01/01/1970 UTC) en date lisible.</p>
+      <div class="ex-hex-display">${hexBytes.join(' ')}</div>
+      <div style="font-size:.75rem;color:var(--dim);margin:.4rem 0 .75rem">
+        Valeur LE = <code style="color:var(--cyan)">0x${unix.toString(16).toUpperCase().padStart(8,'0')}</code>
+        = <strong style="color:var(--gold)">${unix}</strong> secondes depuis le 01/01/1970
+      </div>
+      <div class="ex-feedback" id="ex-feedback-ts"></div>
+      <div class="tp-choices" id="ex-choices-ts">
+        ${choices.map((c,i)=>`<button type="button" class="tp-choice" onclick="(function(){
+          const fb=document.getElementById('ex-feedback-ts');
+          const btns=document.querySelectorAll('#ex-choices-ts .tp-choice');
+          btns.forEach(b=>b.disabled=true);
+          if(${JSON.stringify(c.correct)}){
+            this.className='tp-choice correct';
+            fb.className='ex-feedback correct';
+            fb.innerHTML='✓ Correct. Unix Epoch : 0 = 01/01/1970 00:00:00 UTC. Convertir : octets LE → valeur → date. En forensique : les timestamps Unix sont courants sur Linux, macOS, iOS et de nombreuses bases de données.';
+            if(!STATE.hintUsed) incSolved(STATE.cat);
+            updateStreak(true);
+          } else {
+            this.className='tp-choice wrong';
+            fb.className='ex-feedback wrong';
+            fb.innerHTML='✗ Incorrect. La date correcte est <strong>${correct}</strong>. Unix seconds = ${unix} = ${correct}.';
+            breakStreak();
+          }
+          document.getElementById('btn-next-ts').style.display='inline-block';
+        }).call(this)">${c.text}</button>`).join('')}
+      </div>
+      <button type="button" class="btn-next" id="btn-next-ts" style="display:none" onclick="newExercise()">Suivant →</button>
+    `;
+    return void document.getElementById('ex-container').replaceChildren(div);
+  }
+
+  // ── Mode 3 : APFS nanoseconds → timestamp ───────────────────
+  if (tsMode === 3) {
+    const yr = rand(2018, 2024), mo = rand(1,12), dy = rand(1,28);
+    const d = new Date(yr, mo-1, dy, rand(0,23), rand(0,59));
+    // APFS utilise nanosecondes depuis le 01/01/2001 00:00:00 UTC
+    const APFS_EPOCH_OFFSET = 978307200; // secondes entre 1970 et 2001
+    const unix = Math.floor(d.getTime()/1000);
+    const apfsNs = (unix - APFS_EPOCH_OFFSET) * 1000000000;
+    // Afficher en hexa 64-bit LE
+    const lo = apfsNs % 0x100000000, hi = Math.floor(apfsNs / 0x100000000);
+    const hexBytes = [
+      lo&0xFF,(lo>>8)&0xFF,(lo>>16)&0xFF,(lo>>24)&0xFF,
+      hi&0xFF,(hi>>8)&0xFF,(hi>>16)&0xFF,(hi>>24)&0xFF
+    ].map(x=>pad(x.toString(16).toUpperCase(),2));
+    const correct = `${yr}-${pad(mo,2)}-${pad(dy,2)}`;
+    const distractors = [
+      new Date((unix+86400)*1000).toISOString().slice(0,10),
+      new Date((unix-86400)*1000).toISOString().slice(0,10),
+      `${yr+1}-${pad(mo,2)}-${pad(dy,2)}`,
+    ].filter(d=>d!==correct);
+    const choices = shuffle([correct,...distractors.slice(0,3)])
+      .map(c=>({text:c, correct:c===correct}));
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-ts">🍎</div>
+        <div class="ex-title">APFS Timestamp — Nanosecondes depuis 2001</div>
+      </div>
+      <p class="ex-desc">Convertis ce timestamp <strong>APFS</strong> (nanosecondes depuis le 01/01/2001 00:00:00 UTC) en date lisible.</p>
+      <div class="ex-hex-display">${hexBytes.join(' ')}</div>
+      <div style="font-size:.75rem;color:var(--dim);margin:.4rem 0 .75rem">
+        Epoch APFS : <code style="color:var(--cyan)">01/01/2001</code> (≠ Unix 1970, ≠ NTFS 1601)<br>
+        Unité : <strong style="color:var(--gold)">nanosecondes</strong> × 10⁻⁹ = secondes
+      </div>
+      <div class="ex-feedback" id="ex-feedback-ts"></div>
+      <div class="tp-choices" id="ex-choices-ts">
+        ${choices.map((c,i)=>`<button type="button" class="tp-choice" onclick="(function(){
+          const fb=document.getElementById('ex-feedback-ts');
+          const btns=document.querySelectorAll('#ex-choices-ts .tp-choice');
+          btns.forEach(b=>b.disabled=true);
+          if(${JSON.stringify(c.correct)}){
+            this.className='tp-choice correct';
+            fb.className='ex-feedback correct';
+            fb.innerHTML='✓ Correct. Les 4 epochs à mémoriser : NTFS=1601, Unix=1970, APFS/CoreData=2001, FAT=1980. Convertir APFS : valeur ÷ 10⁹ + 978307200 (secondes entre 1970 et 2001) = timestamp Unix.';
+            if(!STATE.hintUsed) incSolved(STATE.cat);
+            updateStreak(true);
+          } else {
+            this.className='tp-choice wrong';
+            fb.className='ex-feedback wrong';
+            fb.innerHTML='✗ Incorrect. Date correcte : <strong>${correct}</strong>. APFS nanosecondes ÷ 10⁹ + 978307200 = Unix timestamp → date.';
+            breakStreak();
+          }
+          document.getElementById('btn-next-ts').style.display='inline-block';
+        }).call(this)">${c.text}</button>`).join('')}
+      </div>
+      <button type="button" class="btn-next" id="btn-next-ts" style="display:none" onclick="newExercise()">Suivant →</button>
+    `;
+    return void document.getElementById('ex-container').replaceChildren(div);
+  }
+
 
 // ── 3. BITMAP exFAT / FAT ──────────────────────────
 function genBitmap() {
@@ -3890,7 +4041,7 @@ function checkHexTable(correctOff, explain, val) {
 // 19. IDENTIFIER LE SYSTÈME DE FICHIERS
 // ═══════════════════════════════════════════════════
 function genFSIdentify() {
-  const ALL_FS = ['FAT12','FAT16','FAT32','NTFS','exFAT','EXT4','HFS+'];
+  const ALL_FS = ['FAT12','FAT16','FAT32','NTFS','exFAT','EXT4','HFS+','APFS'];
 
   const fsOptions = [
     {
@@ -4015,7 +4166,29 @@ function genFSIdentify() {
         // totalBlocks (Big Endian) à 0x18
         bytes[0x18]=0x00; bytes[0x19]=0x10; bytes[0x1A]=0x00; bytes[0x1B]=0x00;
         return { bytes, key: 'Signature 0x482B ("H+") en Big Endian à l\'offset 0 du Volume Header (= offset 1024 du volume). Tout HFS+ est Big Endian, contrairement aux FS Windows. Version=4.' };
+      },
+    {
+      fs: 'APFS',
+      context: 'Volume Apple File System — macOS 10.13+, iOS 10.3+',
+      build: () => {
+        const bytes = new Array(64).fill(0x00);
+        // APFS Container Superblock : magic 'NXSB' (4E 58 53 42) à offset 0x20
+        // (le header commence par le checksum Fletcher-64 sur 8 octets)
+        bytes[8]=0x4E; bytes[9]=0x58; bytes[10]=0x53; bytes[11]=0x42;
+        // Block size 4096 LE32 à offset 0x28
+        bytes[0x28]=0x00; bytes[0x29]=0x10; bytes[0x2A]=0x00; bytes[0x2B]=0x00;
+        // APFS magic alternatif visible en pratique (superblock APSB)
+        // Pour l'exercice : on simule les premiers octets reconnaissables
+        bytes[0]=0x4E; bytes[1]=0x58; bytes[2]=0x53; bytes[3]=0x42;
+        return {
+          bytes,
+          key: 'Magic "NXSB" (4E 58 53 42) = APFS Container Superblock. ' +
+               'Caractéristiques : Copy-on-Write, snapshots, chiffrement AES-XTS natif, ' +
+               'timestamps en nanosecondes depuis 01/01/2001, clones de fichiers O(1). ' +
+               'macOS 10.13+ / iOS 10.3+ / iPadOS / T2/M1.'
+        };
       }
+    }
     }
   ];
 
