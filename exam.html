@@ -382,6 +382,13 @@ const MOD_COLORS = {
 };
 
 // ── State ─────────────────────────────────────────────────────
+
+// ── Sanitisation XSS ─────────────────────────────────────────
+function escHtml(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 let allQ = [], examQ = [], cur = 0, answered = [], flagged = new Set();
 let timerSec = 0, timerElapsed = 0, timerInterval = null, paused = false;
 let cfg = { dur: 30, nq: 20, mods: ['all'] };
@@ -421,6 +428,12 @@ function guessModule(q) {
 
 // ── Start exam ────────────────────────────────────────────────
 async function startExam() {
+  // Lire le timer personnalisé si l'option "custom" est sélectionnée
+  const activeDur = document.querySelector('#dur-opts .cfg-opt.on');
+  if (activeDur && activeDur.dataset.dur === 'custom') {
+    const v = parseInt(document.getElementById('dur-custom')?.value || '45');
+    cfg.dur = Math.max(5, Math.min(300, v || 45));
+  }
   document.getElementById('start-btn').disabled = true;
   document.getElementById('start-btn').textContent = 'Chargement…';
   try {
@@ -660,8 +673,8 @@ function finishExam() {
   if (wrongs.length > 0) {
     wrongList.innerHTML = wrongs.slice(0,10).map(({q,a}) => `
       <div class="wr-item">
-        <div class="wr-q">${q.question}</div>
-        <div class="wr-ans wrong">✗ Votre réponse : ${q.answers[a]||'—'}</div>
+        <div class="wr-q">${escHtml(q.question)}</div>
+        <div class="wr-ans wrong">✗ Votre réponse : ${escHtml(q.answers[a]||'—'}</div>
         <div class="wr-ans correct">✓ Bonne réponse : ${q.answers[q.correct]||'—'}</div>
         ${q.explanation?`<div class="wr-expl">💡 ${q.explanation}</div>`:''}
       </div>`).join('');
@@ -670,7 +683,15 @@ function finishExam() {
   } else {
     wrongReview.style.display = 'none';
   }
-  showScreen('s-res');
+  // Sauvegarder dans l'historique
+  const _elapsed = timerElapsed || 0;
+  saveHistory(
+    Math.round(correct / examQ.length * 100),
+    correct, examQ.length,
+    _elapsed,
+    modStats
+  );
+    showScreen('s-res');
 }
 
 function drawRadar(modStats) {
@@ -756,6 +777,24 @@ function restartExam() {
 }
 
 
+
+// ── Sauvegarder un examen dans l'historique ───────────────────
+function saveHistory(score, correct, total, dur, modStats) {
+  const entry = {
+    date: new Date().toISOString(),
+    score, correct, total,
+    dur: dur,
+    modStats: modStats
+  };
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem('casIn_examHistory')||'[]'); } catch(_) {}
+  history.unshift(entry);
+  if (history.length > 50) history = history.slice(0, 50);
+  try { localStorage.setItem('casIn_examHistory', JSON.stringify(history)); } catch(e) {
+    try { localStorage.setItem('casIn_examHistory', JSON.stringify(history.slice(0,10))); } catch(_) {}
+  }
+}
+
 // ── Historique des examens ────────────────────────────────────
 function showHistory() {
   let history = [];
@@ -802,7 +841,7 @@ function showHistory() {
 }
 
 function clearHistory() {
-  if (!confirm('Effacer tout l'historique des examens ?')) return;
+  if (!confirm("Effacer tout l'historique des examens ?")) return;
   try { localStorage.removeItem('casIn_examHistory'); } catch(_){}
   showHistory();
 }
@@ -842,7 +881,7 @@ function renderRevQ() {
         isCorrect?'<span style="font-size:.72rem;color:var(--green);font-family:var(--mono)">✓ Correcte</span>':
         '<span style="font-size:.72rem;color:var(--red);font-family:var(--mono)">✗ Incorrecte</span>'}
     </div>
-    <div class="question">${q.question}</div>
+    <div class="question">${escHtml(q.question)}</div>
     <div class="answers" style="margin-bottom:1rem">
       ${q.answers.map((ans,i) => {
         const isAns = i===a, isCorr = i===q.correct;
