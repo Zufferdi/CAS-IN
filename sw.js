@@ -1,11 +1,13 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v19 : ajout scenes.js (scénarios DFIR) + stratégie network-first dédiée
-const CACHE_VERSION = 'cas-in-v19';
+// v20 : ajout exam.html, tools.html — enrichissement EMAIL/NETWORK exercises, APFS filesystem, modes timestamp Unix/APFS ajout scenes.js (scénarios DFIR) + stratégie network-first dédiée
+const CACHE_VERSION = 'cas-in-v20';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './quiz.html',
   './tp.html',
+  './exam.html',
+  './tools.html',
   './scene.html',
   './manifest.json',
   './pwa.manifest.json',
