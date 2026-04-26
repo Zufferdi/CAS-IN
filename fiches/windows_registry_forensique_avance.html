@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Windows Registry Forensique Avancé — CAS-IN DFIR</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">SYSTÈMES WINDOWS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmes">Systèmes Windows</a><span class="bc-sep">›</span>
+    <span class="bc-current">Windows Registry Forensique Avancé</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~16 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🗂️</span>
+    <span class="tag tag-blue" style="margin-left:.5rem">Windows</span>
+    <span class="tag tag-red" style="margin-left:.3rem">Persistence</span>
+    <span class="tag tag-orange" style="margin-left:.3rem">Timeline</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Windows Registry Forensique Avancé</h1>
+    <div class="meta">Hives · Persistence · User Activity · SSDT Hooks · Timestamps · Timeline Reconstruction</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="windows_basics.html" class="prereq-pill">📖 Windows Basics</a><a href="ntfs_forensique.html" class="prereq-pill">📖 NTFS Forensique</a><a href="malware_forensique.html" class="prereq-pill">📖 Malware Forensics</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="volatility_memory.html" class="related-pill">🔗 Volatility & Memory</a><a href="autorités_competences_ch.html" class="related-pill">🔗 Autorités CH</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="registry-tabs">
+  <button class="tab active" onclick="showTab('architecture',this)">🏗️ Architecture</button>
+  <button class="tab" onclick="showTab('persistence',this)">🚨 Persistence</button>
+  <button class="tab" onclick="showTab('activity',this)">👤 User Activity</button>
+  <button class="tab" onclick="showTab('rootkit',this)">💀 Rootkit Detection</button>
+  <button class="tab" onclick="showTab('timestamps',this)">📅 Timestamps</button>
+  <button class="tab" onclick="showTab('tools',this)">🔧 Tools & Extraction</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — ARCHITECTURE
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-architecture">
+
+<div class="concept-card">
+  <div class="concept-title">🏗️ Registry = Windows Configuration Database</div>
+  Hierarchical database storing system settings, user preferences, software config. Binary format organized as "hives" (files). Separate from filesystem.
+</div>
+
+<div class="sec-title">Registry Hives (Fichiers Physiques)</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Hive</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Localisation</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Forensique Critique</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>HKLM\System</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>C:\Windows\System32\config\SYSTEM</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 Services, drivers, hardware profiles</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>HKLM\Software</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>C:\Windows\System32\config\SOFTWARE</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 Installed apps, config</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>HKLM\Security</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>C:\Windows\System32\config\SECURITY</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🟠 Account policies, audit</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>HKCU\*</strong> (per-user)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>C:\Users\[user]\NTUSER.DAT</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 User preferences, MRU, timeline</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>HKU\Classes</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>C:\Users\[user]\AppData\Local\Microsoft\Windows\UsrClass.dat</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🟠 File associations, COM objects</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(0,229,204,.08);border-left:3px solid var(--cyan)">
+  <strong style="color:var(--cyan)">Key Registry Paths (Quick Reference)</strong><br>
+  <code style="display:block;margin:.75rem 0;padding:.5rem;background:rgba(13,17,23,.5);border-radius:4px;font-size:.8rem;font-family:var(--mono)">
+  # System Services (startup type = persistence)<br>
+  HKLM\System\CurrentControlSet\Services\*<br>
+  <br>
+  # Auto-start programs<br>
+  HKLM\Software\Microsoft\Windows\CurrentVersion\Run<br>
+  HKCU\Software\Microsoft\Windows\CurrentVersion\Run<br>
+  <br>
+  # User activity (MRU)<br>
+  HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\RecentDocs<br>
+  <br>
+  # USB devices (device tracking)<br>
+  HKLM\System\CurrentControlSet\Enum\USBSTOR<br>
+  </code>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — PERSISTENCE MECHANISMS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-persistence">
+
+<div class="concept-card">
+  <div class="concept-title">🚨 Persistence via Registry = Malware #1 Vector</div>
+  Malware modify registry to auto-execute on reboot. Multiple techniques: Run keys, Services, WMI, COM, Image File Execution Options, AppInit_DLLs.
+</div>
+
+<div class="sec-title">Persistence Techniques (MITRE ATT&CK)</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Technique</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Registry Path</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Detection</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Run Keys</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>...CurrentVersion\Run*</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 Most common (Emotet, Conti)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Services</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>...Services\[name]</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 Legitimate-looking service</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>WMI Event Subscriptions</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>...WMI\EventFilter</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🟠 Sophisticated (APT)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Image File Execution Options</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>...Image File Execution Options</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🟠 Hijack .exe behavior</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>AppInit_DLLs</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>...Windows NT\CurrentVersion</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 DLL injection (all processes)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>COM Autorun</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>...Software\Classes\CLSID</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🟠 Component Object Model</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red)">
+  <strong style="color:var(--red)">🔍 Detection Checklist</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li>Scan ALL Run key variants (Run, RunOnce, RunEx, RunServices)</li>
+    <li>Check Services with unusual startup type (auto-start)</li>
+    <li>Identify services created AFTER system initialization</li>
+    <li>Look for DLL names: random chars, temp folder, system folder spoofing</li>
+    <li>Cross-reference with known-bad hashes (VirusTotal)</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — USER ACTIVITY
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-activity">
+
+<div class="concept-card">
+  <div class="concept-title">👤 User Activity = Behavioral Timeline</div>
+  Registry tracks: files opened, apps run, devices connected, search history, typed URLs, autoplay settings. Complete user behavior footprint.
+</div>
+
+<div class="sec-title">Critical User Activity Keys</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0">
+
+  <div class="concept-card" style="background:rgba(0,229,204,.08)">
+    <strong style="color:var(--cyan)">RecentDocs & TypedPaths</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      <code>HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\RecentDocs</code><br>
+      → Files opened (last access time)<br>
+      → Folders navigated
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(0,229,204,.08)">
+    <strong style="color:var(--cyan)">Search History</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      <code>HKCU\Software\Microsoft\Windows Search\*</code><br>
+      → Searches performed<br>
+      → Query timestamps
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(88,166,255,.08)">
+    <strong style="color:var(--blue)">Typed URLs</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      <code>HKCU\Software\Microsoft\Internet Explorer\TypedURLs</code><br>
+      → URLs typed in address bar<br>
+      → IE/Edge only
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(48,232,138,.08)">
+    <strong style="color:var(--green)">USB Devices</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      <code>HKLM\System\...\Enum\USBSTOR</code><br>
+      → Connected USB history<br>
+      → Device serial numbers
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(240,192,64,.08)">
+    <strong style="color:var(--gold)">Network Shares</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      <code>HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2</code><br>
+      → Network shares accessed<br>
+      → UNC paths
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(188,140,255,.08)">
+    <strong style="color:var(--purple)">MRU (Most Recently Used)</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      <code>HKCU\Software\Microsoft\Office\*</code><br>
+      → Recent Office docs<br>
+      → Access order
+    </span>
+  </div>
+
+</div>
+
+<div class="sec-title">Activity Timeline Builder Interactive</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <label style="display:block;margin-bottom:.75rem;font-size:.9rem;font-weight:600">
+    Entrez registry entries (path : value):
+    <textarea id="registry-activity" placeholder="HKCU\RecentDocs\File1.txt : 2024-03-20T14:30:00&#10;HKCU\RecentDocs\malware.exe : 2024-03-20T14:35:00&#10;HKLM\USBSTOR\Device1 : 2024-03-20T15:00:00" style="width:100%;height:120px;margin-top:.35rem;padding:.6rem;background:rgba(13,17,23,.5);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem"></textarea>
+  </label>
+  <button onclick="buildActivityTimeline()" style="width:100%;padding:.6rem;background:var(--cyan);color:var(--bg);border:none;border-radius:4px;font-weight:600;cursor:pointer">Créer Timeline</button>
+  
+  <div id="activity-result" style="margin-top:1rem;padding:1rem;background:rgba(0,229,204,.1);border:1px solid rgba(0,229,204,.3);border-radius:6px;font-size:.85rem;min-height:100px">
+    <div style="color:var(--dim)">👆 Entrez activités pour voir chronologie</div>
+  </div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — ROOTKIT DETECTION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-rootkit">
+
+<div class="concept-card">
+  <div class="concept-title">💀 Rootkit Detection = Anomaly Hunting</div>
+  Rootkits hide via registry manipulation: hiding keys, hooking SSDT (System Service Dispatch Table), manipulating security descriptors. Detection = look for anomalies, missing standard keys, weird values.
+</div>
+
+<div class="sec-title">Rootkit Indicators</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Indicator</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Normal</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">🚨 Suspicious</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Hidden Keys</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">All services visible</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Key in file but not enumerable</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Missing Standard Keys</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">HKLM\Software\Microsoft present</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Critical software keys absent</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>SSDT Hooks</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">SSDT entries = kernel.exe</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">SSDT = third-party module</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Security Descriptors</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Proper ACLs (admin/system)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Wide-open or modified ACLs</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red)">
+  <strong style="color:var(--red)">Detection via Volatility</strong><br>
+  <code style="display:block;margin:.75rem 0;padding:.5rem;background:rgba(13,17,23,.5);border-radius:4px;font-size:.75rem;font-family:var(--mono)">
+  # Scan for hidden registry keys<br>
+  volatility3 -f memory.raw windows.registry.printkey<br>
+  <br>
+  # Check SSDT integrity<br>
+  volatility3 -f memory.raw windows.ssdt<br>
+  <br>
+  # Unusual API hooks<br>
+  volatility3 -f memory.raw windows.apihooks
+  </code>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — TIMESTAMPS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-timestamps">
+
+<div class="concept-card">
+  <div class="concept-title">📅 Registry Timestamps ≠ NTFS</div>
+  Registry has own timestamp mechanism: LastWrite times (100-nanosecond intervals, 64-bit). Different from file NTFS timestamps. Both needed for complete timeline.
+</div>
+
+<div class="sec-title">Timestamp Precision & Anomalies</div>
+
+<div style="margin:1.5rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <div style="color:var(--cyan);font-weight:600;margin-bottom:.75rem">Registry Timestamp Format</div>
+  <code style="display:block;font-family:var(--mono);font-size:.75rem;line-height:1.8;color:var(--text)">
+  LastWrite: 2024-03-20 14:32:15.123456 UTC<br>
+  (100-nanosecond precision)<br>
+  <br>
+  Stored as: 64-bit Windows FILETIME<br>
+  = 100-nanosecond intervals since 1601-01-01<br>
+  <br>
+  Forensic use:<br>
+  • Precise malware installation time<br>
+  • Persistence modification timestamp<br>
+  • When key last modified (not file)<br>
+  • Possible timestamp manipulation (clock rollback)
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red)">
+  <strong style="color:var(--red)">⚠️ Timestamp Anomalies = Forensic Indicators</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li><strong>Future timestamps</strong> = clock set wrong or tampering</li>
+    <li><strong>Identical timestamps</strong> = possible manipulation (too coincidental)</li>
+    <li><strong>Backward jumps</strong> = system clock rolled back (hide timeline)</li>
+    <li><strong>Huge gaps</strong> = system powered off or hibernation</li>
+  </ul>
+</div>
+
+<div class="sec-title">Timestamp Analyzer Interactive</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <label style="display:block;margin-bottom:.75rem;font-size:.9rem;font-weight:600">
+    Entrez timestamps registry (un par ligne):
+    <textarea id="registry-timestamps" placeholder="2024-03-20T14:30:00Z&#10;2024-03-20T14:31:00Z&#10;2024-03-20T14:32:00Z&#10;2024-03-20T13:45:00Z" style="width:100%;height:100px;margin-top:.35rem;padding:.6rem;background:rgba(13,17,23,.5);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem"></textarea>
+  </label>
+  <button onclick="analyzeTimestamps()" style="width:100%;padding:.6rem;background:var(--green);color:var(--bg);border:none;border-radius:4px;font-weight:600;cursor:pointer">Analyser Anomalies</button>
+  
+  <div id="timestamp-result" style="margin-top:1rem;padding:1rem;background:rgba(48,232,138,.1);border:1px solid rgba(48,232,138,.3);border-radius:6px;font-size:.85rem">
+    <div style="color:var(--dim)">👆 Entrez timestamps pour détecter anomalies</div>
+  </div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 6 — TOOLS & EXTRACTION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tools">
+
+<div class="sec-title">🔧 Registry Forensique Tools</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Outil</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Fonction</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Platform</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>RegRipper</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Parse hives + extract artifacts (Ruby)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Linux/Windows</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Registry Editor (regedit)</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Browse live registry (GUI)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Windows</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Offline Registry Editor</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Edit offline hives (from disk)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Windows</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Volatility</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Parse registry from memory dump</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Linux</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Python Registry</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Parse hives programmatically</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Cross-platform</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>PowerShell</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Query registry remotely (Get-Item)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Windows</td>
+  </tr>
+
+</table>
+
+<div class="sec-title">CLI Quick Commands</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem">
+  <code style="display:block;color:var(--cyan);margin-bottom:1rem">
+  # Dump registry with RegRipper<br>
+  $ rip.pl -r SYSTEM -p services<br>
+  $ rip.pl -r NTUSER.DAT -p typedpaths<br>
+  <br>
+  # Extract with PowerShell<br>
+  PS> Get-Item 'Registry::HKLM\Software\Microsoft\Windows\CurrentVersion\Run'<br>
+  <br>
+  # Parse offline hive (Python)<br>
+  $ python3 -c "from Registry import Registry; r = Registry.Registry('SYSTEM'); print(r.root.subkeys)"<br>
+  <br>
+  # Timeline all Run keys<br>
+  $ rip.pl -r SOFTWARE -p userassist | grep -i "run\|autorun"<br>
+  <br>
+  # Find persistence<br>
+  $ grep -r "CurrentVersion.*Run" /registry/path
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">✅ Workflow Complet Registry Forensique</strong><br>
+  <ol style="margin:.75rem 0 0 1.5rem;font-size:.9rem;line-height:1.8">
+    <li><strong>Locate hives</strong> → C:\Windows\System32\config\ (offline) ou live registry</li>
+    <li><strong>Extract with RegRipper</strong> → Dump all keys + timestamps</li>
+    <li><strong>Scan for persistence</strong> → Run*, Services, AppInit_DLLs</li>
+    <li><strong>Cross-check with VirusTotal</strong> → Hash executables referenced</li>
+    <li><strong>Timeline user activity</strong> → RecentDocs, USB, typed URLs</li>
+    <li><strong>Detect anomalies</strong> → Unusual timestamps, missing keys</li>
+    <li><strong>Volatility analysis</strong> → Memory-resident registry for hidden keys</li>
+    <li><strong>Rapport</strong> → Persistence mechanisms, timeline, indicators</li>
+  </ol>
+</div>
+
+</div>
+
+</div>
+
+<script>
+function showTab(tab, btn) {
+  var pages = document.querySelectorAll('.tab-page');
+  pages.forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function buildActivityTimeline() {
+  var input = document.getElementById('registry-activity').value;
+  var result = document.getElementById('activity-result');
+  
+  if (!input) {
+    result.innerHTML = '<div style="color:var(--dim)">Aucunes données</div>';
+    return;
+  }
+  
+  var lines = input.split('\n').filter(l => l.trim());
+  var events = [];
+  
+  lines.forEach(line => {
+    var parts = line.split(':');
+    if (parts.length >= 2) {
+      var path = parts[0].trim();
+      var time = parts[parts.length - 1].trim();
+      events.push({ path: path, time: time });
+    }
+  });
+  
+  events.sort((a, b) => new Date(a.time) - new Date(b.time));
+  
+  var html = '<div style="color:var(--cyan);font-weight:600">📊 Timeline</div>';
+  html += '<div style="font-size:.85rem;margin-top:.5rem">';
+  html += '<strong>Événements:</strong> ' + events.length + '<br><br>';
+  
+  events.forEach((e, idx) => {
+    html += (idx + 1) + '. <span style="color:var(--gold)">' + e.time + '</span> → ' + e.path.substring(0, 50) + '<br>';
+  });
+  
+  html += '<br><strong style="color:var(--green)">✅ Indicateurs:</strong><br>';
+  
+  var suspicious = false;
+  for (let i = 1; i < events.length; i++) {
+    var t1 = new Date(events[i-1].time);
+    var t2 = new Date(events[i].time);
+    var delta = (t2 - t1) / 1000;
+    
+    if (delta < 0) {
+      html += '• Timestamps backward (clock rollback?) 🚨<br>';
+      suspicious = true;
+    }
+    if (delta === 0) {
+      html += '• Identical timestamps (possible tampering) 🚨<br>';
+      suspicious = true;
+    }
+  }
+  
+  if (!suspicious) html += '• No anomalies detected<br>';
+  
+  html += '</div>';
+  result.innerHTML = html;
+}
+
+function analyzeTimestamps() {
+  var input = document.getElementById('registry-timestamps').value;
+  var result = document.getElementById('timestamp-result');
+  
+  if (!input) {
+    result.innerHTML = '<div style="color:var(--dim)">Aucunes données</div>';
+    return;
+  }
+  
+  var times = input.split('\n').filter(l => l.trim()).map(l => new Date(l.trim()));
+  times.sort((a, b) => a - b);
+  
+  var html = '<div style="color:var(--green);font-weight:600">🔍 Anomaly Analysis</div>';
+  html += '<div style="font-size:.85rem;margin-top:.5rem">';
+  html += '<strong>Total timestamps:</strong> ' + times.length + '<br><br>';
+  
+  var anomalies = [];
+  
+  for (let i = 1; i < times.length; i++) {
+    var delta = (times[i] - times[i-1]) / 1000;
+    if (delta < 0) anomalies.push('⚠️ Backward time jump');
+    if (delta === 0) anomalies.push('⚠️ Identical timestamps');
+    if (delta > 3600) anomalies.push('ℹ️ Large gap (' + delta + 's)');
+  }
+  
+  if (anomalies.length === 0) {
+    html += '<span style="color:var(--green)">✅ No anomalies detected</span>';
+  } else {
+    html += '<strong style="color:var(--orange)">Anomalies found:</strong><br>';
+    anomalies.forEach(a => html += '• ' + a + '<br>');
+  }
+  
+  html += '</div>';
+  result.innerHTML = html;
+}
+</script>
+
+</body>
+</html>
