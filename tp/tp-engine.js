@@ -654,82 +654,6 @@ function genTimestamp() {
     <div class="ex-feedback" id="ex-feedback-ts"></div>
   `;
   return div;
-}
-
-// Fix : feedback visuel global quand un indice est utilisé
-function markHintUsed() {
-  if (STATE.hintUsed) return;  // déjà marqué, ne rien re-afficher
-  STATE.hintUsed = true;
-  // Petit toast discret pour informer
-  if (!document.getElementById('hint-toast')) {
-    const toast = document.createElement('div');
-    toast.id = 'hint-toast';
-    toast.textContent = '💡 Indice utilisé — cet exercice ne comptera pas pour le score';
-    toast.style.cssText = `
-      position:fixed; bottom:75px; left:50%; transform:translateX(-50%);
-      background:rgba(240,192,64,.15); border:1px solid rgba(240,192,64,.4);
-      color:var(--gold); padding:.4rem .9rem; border-radius:999px;
-      font-size:.72rem; z-index:9000; animation: fadeInOut 2.5s ease;
-      pointer-events:none;
-    `;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2500);
-  }
-}
-// CSS animation du toast (une seule fois)
-if (typeof document !== 'undefined' && !document.querySelector('#hint-toast-style')) {
-  const s = document.createElement('style');
-  s.id = 'hint-toast-style';
-  s.textContent = `@keyframes fadeInOut{0%{opacity:0;transform:translate(-50%,10px)}20%{opacity:1;transform:translate(-50%,0)}80%{opacity:1}100%{opacity:0}}`;
-  document.head.appendChild(s);
-}
-
-function showTSHint(y,mo,d,h,mi,s) {
-  const timeWord = (h<<11)|(mi<<5)|Math.floor(s/2);
-  const dateWord = ((y-1980)<<9)|(mo<<5)|d;
-  const fb = document.getElementById('ex-feedback-ts');
-  fb.className = 'ex-feedback correct';
-  fb.style.display = 'block';
-  fb.innerHTML = `
-    <strong>Décomposition :</strong><br>
-    Time = 0x${pad(timeWord.toString(16).toUpperCase(),4)} → bits 15-11 = <strong>${h}h</strong> · bits 10-5 = <strong>${mi}min</strong> · bits 4-0 × 2 = <strong>${s}s</strong><br>
-    Date = 0x${pad(dateWord.toString(16).toUpperCase(),4)} → bits 15-9 + 1980 = <strong>${y}</strong> · bits 8-5 = <strong>${mo}</strong> · bits 4-0 = <strong>${d}</strong>
-  `;
-  markHintUsed();
-}
-
-function checkTimestamp(ey, emo, ed, eh, emi, es) {
-  const yr = parseInt(document.getElementById('ans-year').value);
-  const mo = parseInt(document.getElementById('ans-month').value);
-  const dy = parseInt(document.getElementById('ans-day').value);
-  const hr = parseInt(document.getElementById('ans-hour').value);
-  const mn = parseInt(document.getElementById('ans-min').value);
-  const sc = parseInt(document.getElementById('ans-sec').value);
-  const fb = document.getElementById('ex-feedback-ts');
-
-  if ([yr,mo,dy,hr,mn,sc].some(isNaN)) {
-    fb.className='ex-feedback wrong'; fb.innerHTML='✗ Remplis tous les champs.'; return;
-  }
-  // MS-DOS seconds are rounded to 2s precision
-  const secOk = Math.abs(sc - es) <= 2;
-  const ok = yr===ey && mo===emo && dy===ed && hr===eh && mn===emi && secOk;
-
-  if (ok) {
-    document.querySelector('.btn-validate').disabled = true;
-    document.getElementById('btn-next-ts').style.display = 'block';
-    document.querySelector('.ex-card').className = 'ex-card solved';
-    document.getElementById('ex-num-ts').className = 'ex-num solved';
-    fb.className='ex-feedback correct';
-    fb.innerHTML=`✓ Correct ! Date : <strong>${ey}-${pad(emo,2)}-${pad(ed,2)}</strong> à <strong>${pad(eh,2)}:${pad(emi,2)}:${pad(es,2)}</strong> — Maîtrise des horodatages FAT validée.`;
-    if (!STATE.hintUsed) incSolved(STATE.cat);
-  } else {
-    fb.className='ex-feedback wrong';
-    fb.innerHTML=`✗ Incorrect. Tu as saisi : ${yr}-${pad(mo,2)}-${pad(dy,2)} ${pad(hr,2)}:${pad(mn,2)}:${pad(sc,2)}<br>Utilise "💡 Calculs" pour voir la décomposition bit par bit.`;
-    breakStreak();
-  }
-}
-
-
   // ── Mode 2 : Unix Epoch → Date ──────────────────────────────
   if (tsMode === 2) {
     const yr = rand(2015, 2024), mo = rand(1,12), dy = rand(1,28);
@@ -845,6 +769,82 @@ function checkTimestamp(ey, emo, ed, eh, emi, es) {
     `;
     return void document.getElementById('ex-container').replaceChildren(div);
   }
+}
+
+// Fix : feedback visuel global quand un indice est utilisé
+function markHintUsed() {
+  if (STATE.hintUsed) return;  // déjà marqué, ne rien re-afficher
+  STATE.hintUsed = true;
+  // Petit toast discret pour informer
+  if (!document.getElementById('hint-toast')) {
+    const toast = document.createElement('div');
+    toast.id = 'hint-toast';
+    toast.textContent = '💡 Indice utilisé — cet exercice ne comptera pas pour le score';
+    toast.style.cssText = `
+      position:fixed; bottom:75px; left:50%; transform:translateX(-50%);
+      background:rgba(240,192,64,.15); border:1px solid rgba(240,192,64,.4);
+      color:var(--gold); padding:.4rem .9rem; border-radius:999px;
+      font-size:.72rem; z-index:9000; animation: fadeInOut 2.5s ease;
+      pointer-events:none;
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+  }
+}
+// CSS animation du toast (une seule fois)
+if (typeof document !== 'undefined' && !document.querySelector('#hint-toast-style')) {
+  const s = document.createElement('style');
+  s.id = 'hint-toast-style';
+  s.textContent = `@keyframes fadeInOut{0%{opacity:0;transform:translate(-50%,10px)}20%{opacity:1;transform:translate(-50%,0)}80%{opacity:1}100%{opacity:0}}`;
+  document.head.appendChild(s);
+}
+
+function showTSHint(y,mo,d,h,mi,s) {
+  const timeWord = (h<<11)|(mi<<5)|Math.floor(s/2);
+  const dateWord = ((y-1980)<<9)|(mo<<5)|d;
+  const fb = document.getElementById('ex-feedback-ts');
+  fb.className = 'ex-feedback correct';
+  fb.style.display = 'block';
+  fb.innerHTML = `
+    <strong>Décomposition :</strong><br>
+    Time = 0x${pad(timeWord.toString(16).toUpperCase(),4)} → bits 15-11 = <strong>${h}h</strong> · bits 10-5 = <strong>${mi}min</strong> · bits 4-0 × 2 = <strong>${s}s</strong><br>
+    Date = 0x${pad(dateWord.toString(16).toUpperCase(),4)} → bits 15-9 + 1980 = <strong>${y}</strong> · bits 8-5 = <strong>${mo}</strong> · bits 4-0 = <strong>${d}</strong>
+  `;
+  markHintUsed();
+}
+
+function checkTimestamp(ey, emo, ed, eh, emi, es) {
+  const yr = parseInt(document.getElementById('ans-year').value);
+  const mo = parseInt(document.getElementById('ans-month').value);
+  const dy = parseInt(document.getElementById('ans-day').value);
+  const hr = parseInt(document.getElementById('ans-hour').value);
+  const mn = parseInt(document.getElementById('ans-min').value);
+  const sc = parseInt(document.getElementById('ans-sec').value);
+  const fb = document.getElementById('ex-feedback-ts');
+
+  if ([yr,mo,dy,hr,mn,sc].some(isNaN)) {
+    fb.className='ex-feedback wrong'; fb.innerHTML='✗ Remplis tous les champs.'; return;
+  }
+  // MS-DOS seconds are rounded to 2s precision
+  const secOk = Math.abs(sc - es) <= 2;
+  const ok = yr===ey && mo===emo && dy===ed && hr===eh && mn===emi && secOk;
+
+  if (ok) {
+    document.querySelector('.btn-validate').disabled = true;
+    document.getElementById('btn-next-ts').style.display = 'block';
+    document.querySelector('.ex-card').className = 'ex-card solved';
+    document.getElementById('ex-num-ts').className = 'ex-num solved';
+    fb.className='ex-feedback correct';
+    fb.innerHTML=`✓ Correct ! Date : <strong>${ey}-${pad(emo,2)}-${pad(ed,2)}</strong> à <strong>${pad(eh,2)}:${pad(emi,2)}:${pad(es,2)}</strong> — Maîtrise des horodatages FAT validée.`;
+    if (!STATE.hintUsed) incSolved(STATE.cat);
+  } else {
+    fb.className='ex-feedback wrong';
+    fb.innerHTML=`✗ Incorrect. Tu as saisi : ${yr}-${pad(mo,2)}-${pad(dy,2)} ${pad(hr,2)}:${pad(mn,2)}:${pad(sc,2)}<br>Utilise "💡 Calculs" pour voir la décomposition bit par bit.`;
+    breakStreak();
+  }
+}
+
+
 
 
 // ── 3. BITMAP exFAT / FAT ──────────────────────────
@@ -4166,7 +4166,8 @@ function genFSIdentify() {
         // totalBlocks (Big Endian) à 0x18
         bytes[0x18]=0x00; bytes[0x19]=0x10; bytes[0x1A]=0x00; bytes[0x1B]=0x00;
         return { bytes, key: 'Signature 0x482B ("H+") en Big Endian à l\'offset 0 du Volume Header (= offset 1024 du volume). Tout HFS+ est Big Endian, contrairement aux FS Windows. Version=4.' };
-      },
+      }
+    },
     {
       fs: 'APFS',
       context: 'Volume Apple File System — macOS 10.13+, iOS 10.3+',
@@ -4188,7 +4189,6 @@ function genFSIdentify() {
                'macOS 10.13+ / iOS 10.3+ / iPadOS / T2/M1.'
         };
       }
-    }
     }
   ];
 
