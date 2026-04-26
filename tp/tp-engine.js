@@ -850,18 +850,22 @@ function checkTimestamp(ey, emo, ed, eh, emi, es) {
 // ── 3. BITMAP exFAT / FAT ──────────────────────────
 function genBitmap() {
   const numClusters = [8, 16, 32, 64][rand(0,3)];
-  // Fix : borner occupiedCount à numClusters-1 pour éviter boucle infinie (bug original)
+  // En exFAT, les clusters 0 et 1 sont réservés → la bitmap commence au cluster 2
+  // Bit 0 de l'octet 0 = cluster 2 (pas cluster 0 !)
+  const FIRST_CLUSTER = 2;
+  const lastCluster = FIRST_CLUSTER + numClusters - 1;
   const occupiedCount = rand(3, Math.min(10, numClusters - 1));
   const occupied = new Set();
-  while (occupied.size < occupiedCount) occupied.add(rand(0, numClusters-1));
+  while (occupied.size < occupiedCount) occupied.add(rand(FIRST_CLUSTER, lastCluster));
   const occupiedArr = [...occupied].sort((a,b)=>a-b);
 
-  // Compute expected hex bytes
+  // Compute expected hex bytes — cluster N → bit position = N - FIRST_CLUSTER
   const bytes = [];
   for (let i = 0; i < numClusters; i += 8) {
     let byte = 0;
     for (let b = 0; b < 8; b++) {
-      if (occupied.has(i + b)) byte |= (1 << b); // LSB first
+      const cluster = FIRST_CLUSTER + i + b;
+      if (occupied.has(cluster)) byte |= (1 << b); // LSB first
     }
     bytes.push(byte);
   }
@@ -886,7 +890,7 @@ function genBitmap() {
     <div style="display:flex;gap:1rem;margin:.5rem 0;font-size:.72rem;color:var(--dim);flex-wrap:wrap">
       <span>🔴 = occupé (bit 1)</span>
       <span>⬛ = libre (bit 0)</span>
-      <span style="color:var(--dim)">LSB first : cluster 0 = bit 0 de l'octet 0</span>
+      <span style="color:var(--dim)">LSB first : cluster 2 = bit 0 de l'octet 0 (clusters 0–1 réservés)</span>
     </div>
 
     <div class="sec-title">Résultat hexadécimal calculé</div>
@@ -904,9 +908,10 @@ function genBitmap() {
     const grid = document.getElementById('bm-grid');
     if (!grid) return;
     for (let i = 0; i < numClusters; i++) {
+      const clusterNum = FIRST_CLUSTER + i; // cluster 2, 3, 4...
       const cell = document.createElement('div');
-      cell.className = 'bm-cell free';  // ← toutes libres au départ
-      cell.innerHTML = `<span>${i}</span><span class="bm-label">0</span>`;
+      cell.className = 'bm-cell free';
+      cell.innerHTML = `<span>${clusterNum}</span><span class="bm-label">0</span>`;
       cell.onclick = () => {
         const isOcc = cell.classList.contains('occupied');
         cell.className = 'bm-cell ' + (isOcc ? 'free' : 'occupied');
@@ -951,7 +956,7 @@ function checkBitmap(expected) {
   } else {
     breakStreak();
     fb.className='ex-feedback wrong';
-    fb.innerHTML=`✗ Valeur actuelle : <span style="font-family:var(--mono)">${current||'—'}</span><br>Attendu : <span style="font-family:var(--mono);color:var(--cyan)">${expNorm}</span><br>Rappel : bit 0 de l'octet 0 = cluster 0, bit 1 = cluster 1, etc. (LSB first). Clique chaque cluster occupé dans la grille.`;
+    fb.innerHTML=`✗ Valeur actuelle : <span style="font-family:var(--mono)">${current||'—'}</span><br>Attendu : <span style="font-family:var(--mono);color:var(--cyan)">${expNorm}</span><br>Rappel : en exFAT, bit 0 de l'octet 0 = cluster 2, bit 1 = cluster 3, etc. (LSB first, clusters 0–1 réservés).`;
   }
 }
 
@@ -1478,8 +1483,8 @@ const HINT_LIBRARY = {
   ],
   bitmap: [
     "Dans une bitmap d'allocation, chaque bit représente un cluster : 0 = libre, 1 = occupé.",
-    "L'ordre est LSB first : le cluster 0 correspond au bit 0 de l'octet 0 (bit de poids faible).",
-    "Exemple : clusters 0, 1, 3 occupés → byte 0 = 00001011 = 0x0B (bit 0, bit 1, bit 3 à 1).",
+    "L'ordre est LSB first : en exFAT, le cluster 2 correspond au bit 0 de l'octet 0 (clusters 0 et 1 réservés).",
+    "Exemple : clusters 2, 3, 5 occupés → byte 0 = 0b00001011 = 0x0B (bit 0, bit 1, bit 3 à 1).",
   ],
   fat: [
     "Chaque entrée FAT16 est sur 2 octets (Little Endian). Lire : 0x07 0x00 → 0x0007 = cluster 7.",
