@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Documents Office Forensique — CAS-IN DFIR</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">AUTRES SYSTÈMES</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-autressystèmes">Autres Systèmes</a><span class="bc-sep">›</span>
+    <span class="bc-current">Documents Office Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~11 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">📄</span>
+    <span class="tag tag-cyan" style="margin-left:.5rem">Média</span>
+    <span class="tag tag-gold" style="margin-left:.3rem">Word/Excel</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Metadata</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Documents Office Forensique</h1>
+    <div class="meta">Word · Excel · PowerPoint · Tracked Changes · Auteur · Versions · Métadonnées cachées</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="formats.html" class="prereq-pill">📖 Formats & Magic Bytes</a><a href="metadata_avancees.html" class="prereq-pill">📖 Métadonnées Avancées</a><a href="encodage.html" class="prereq-pill">📖 Encodage</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="osint.html" class="related-pill">🔗 OSINT & Métadonnées</a><a href="anti_forensique.html" class="related-pill">🔗 Anti-Forensique</a><a href="hash.html" class="related-pill">🔗 Hachage</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="office-tabs">
+  <button class="tab active" onclick="showTab('format',this)">📦 Format Office (OOXML)</button>
+  <button class="tab" onclick="showTab('metadata',this)">📝 Métadonnées Core</button>
+  <button class="tab" onclick="showTab('word',this)">📋 Word Forensique</button>
+  <button class="tab" onclick="showTab('excel',this)">📊 Excel Forensique</button>
+  <button class="tab" onclick="showTab('tools',this)">🔧 Extracteurs & Analyzeurs</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — FORMAT OFFICE
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-format">
+
+<div class="concept-card">
+  <div class="concept-title">📦 Office Format = ZIP Archive (OOXML)</div>
+  Depuis Office 2007 (.docx, .xlsx, .pptx), les documents = <strong>archives ZIP contenant XML</strong> + éventuels binaires anciens.
+</div>
+
+<div class="sec-title">Structure Interne Document .docx</div>
+
+<div style="margin:1.5rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem;line-height:1.8">
+  <code>
+  Document.docx (ZIP archive)<br>
+  ├─ [Content_Types].xml          ← Types MIME<br>
+  ├─ _rels/.rels                  ← Relationships<br>
+  ├─ word/document.xml            ← <strong>Contenu principal</strong><br>
+  ├─ word/styles.xml              ← Styles<br>
+  ├─ word/theme/theme1.xml        ← Thème<br>
+  ├─ word/numbering.xml           ← Listes numérotées<br>
+  ├─ word/fontTable.xml           ← Polices<br>
+  ├─ word/settings.xml            ← Réglages (macro, tracked changes)<br>
+  ├─ word/webSettings.xml         ← Paramètres Web<br>
+  ├─ docProps/                    ← <strong>MÉTADONNÉES</strong><br>
+  │  ├─ core.xml                  ← Core properties (auteur, date)<br>
+  │  ├─ app.xml                   ← App properties (temps édition, nb pages)<br>
+  │  └─ custom.xml                ← Propriétés personnalisées<br>
+  └─ word/media/                  ← Images/OLE objects<br>
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(0,229,204,.08);border-left:3px solid var(--cyan)">
+  <strong style="color:var(--cyan)">🔓 Extraction Rapide</strong><br>
+  <code style="display:block;margin:.75rem 0;padding:.5rem;background:rgba(13,17,23,.5);border-radius:4px;font-size:.75rem;font-family:var(--mono)">
+  # Renommer .docx → .zip<br>
+  $ mv document.docx document.zip<br>
+  $ unzip -l document.zip<br>
+  <br>
+  # Extraire et explorer XML<br>
+  $ unzip document.zip<br>
+  $ cat docProps/core.xml | grep -i creator
+  </code>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — MÉTADONNÉES CORE
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-metadata">
+
+<div class="sec-title">📝 Propriétés Core (Métadonnées Standards)</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Propriété</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Élément XML</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Forensique</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--cyan)"><strong>Creator</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>&lt;creator&gt;</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">👤 <strong>Auteur d'ORIGINE</strong> (signature)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--cyan)"><strong>lastModifiedBy</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>&lt;lastModifiedBy&gt;</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">👤 Dernier éditeur (peut ≠ auteur)</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--cyan)"><strong>created</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>&lt;created&gt;</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">📅 Quand créé (timestamp)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--cyan)"><strong>modified</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>&lt;modified&gt;</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">📅 Dernière modification</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--cyan)"><strong>title</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>&lt;title&gt;</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">📌 Titre document (peut révéler intention)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--cyan)"><strong>subject</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>&lt;subject&gt;</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔍 Sujet/description</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--cyan)"><strong>keywords</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>&lt;keywords&gt;</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔑 Mots-clés (contexte)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--cyan)"><strong>comments</strong></td>
+    <td style="padding:.6rm;border:1px solid var(--border)"><code>&lt;comments&gt;</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">💬 Commentaires (résumé auteur)</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(240,192,64,.04);border-left:3px solid var(--gold);margin-top:1rem">
+  <strong style="color:var(--gold)">Exemple Extraction</strong><br>
+  <code style="display:block;margin:.75rem 0;padding:.5rem;background:rgba(13,17,23,.5);border-radius:4px;font-size:.75rem;font-family:var(--mono)">
+  &lt;?xml version="1.0" encoding="UTF-8"?&gt;<br>
+  &lt;cp:coreProperties ...&gt;<br>
+  &nbsp;&nbsp;&lt;dc:creator&gt;<strong>Jean Martin</strong>&lt;/dc:creator&gt;<br>
+  &nbsp;&nbsp;&lt;cp:lastModifiedBy&gt;<strong>Marie Dupont</strong>&lt;/cp:lastModifiedBy&gt;<br>
+  &nbsp;&nbsp;&lt;dcterms:created&gt;2024-03-15T10:30:00Z&lt;/dcterms:created&gt;<br>
+  &nbsp;&nbsp;&lt;dcterms:modified&gt;2024-03-20T14:45:30Z&lt;/dcterms:modified&gt;<br>
+  &nbsp;&nbsp;&lt;dc:title&gt;Secret Project Alpha&lt;/dc:title&gt;<br>
+  &lt;/cp:coreProperties&gt;
+  </code>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — WORD FORENSIQUE
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-word">
+
+<div class="concept-card">
+  <div class="concept-title">📋 Word : Tracked Changes & Versions</div>
+  <strong>Tracked Changes</strong> = "Suivi des modifications" = historique éditions = PREUVE DE RÉDACTION.
+</div>
+
+<div class="sec-title">Tracked Changes : Signature Auteur</div>
+
+<div class="concept-card" style="background:rgba(0,229,204,.08);border-left:3px solid var(--cyan)">
+  <strong style="color:var(--cyan)">Structure XML : Tracked Changes</strong><br>
+  <code style="display:block;margin:.75rem 0;padding:.5rem;background:rgba(13,17,23,.5);border-radius:4px;font-size:.75rem;font-family:var(--mono)">
+  &lt;w:ins w:id="0" w:author="<strong>Jean Martin</strong>" w:date="2024-03-15T10:30:00Z"&gt;<br>
+  &nbsp;&nbsp;&lt;w:r&gt;&lt;w:t&gt;<strong>"Cette phrase est confidentielle"</strong>&lt;/w:t&gt;&lt;/w:r&gt;<br>
+  &lt;/w:ins&gt;<br>
+  <br>
+  &lt;w:del w:id="1" w:author="<strong>Marie Dupont</strong>" w:date="2024-03-20T14:45:00Z"&gt;<br>
+  &nbsp;&nbsp;&lt;w:r&gt;&lt;w:t&gt;"Phrase supprimée"&lt;/w:t&gt;&lt;/w:r&gt;<br>
+  &lt;/w:del&gt;
+  </code>
+  <span style="font-size:.85rem;color:var(--dim);display:block;margin-top:.75rem">👤 Qui a écrit quoi + 📅 Quand + 🕐 Timestamps précis</span>
+</div>
+
+<div class="sec-title">Indicateurs Forensiques Word</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0">
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Rédacteur vs Éditeur</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      Creator ≠ lastModifiedBy<br>
+      = Document volé/modifier par tiers<br>
+      Tracked changes = preuve
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Versions Antérieures</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      Version History (Word backup)<br>
+      Peut montrer texte supprimé<br>
+      Timestamp précédent édition
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Comments</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      Commentaires auteur caché<br>
+      Souvent oubliés lors suppression<br>
+      Révèlent contexte/intention
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Hidden Text</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      Formatting hidden = pas affiché<br>
+      Mais présent en XML<br>
+      Format &lt;w:vanish/&gt;
+    </span>
+  </div>
+
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — EXCEL FORENSIQUE
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-excel">
+
+<div class="concept-card">
+  <div class="concept-title">📊 Excel : Formules Cachées & Feuilles Masquées</div>
+  Excel documents peuvent cacher : formules, feuilles, macros, données supprimées.
+</div>
+
+<div class="sec-title">Forensique Excel Critiques</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Élément</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Forensique</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Extraction</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--red)"><strong>Hidden Sheets</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Feuilles masquées = données cachées</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">workbook.xml.rels + sheets.xml (state="hidden")</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--red)"><strong>Formulas</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Formules calcul manipulées = fraude</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Voir XML: &lt;f&gt;=SUM(...)</f>&gt;</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--red)"><strong>Macros</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">VBA code = malware potentiel</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">xl/vbaProject.bin (binaire)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--red)"><strong>OLE Objects</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Objets incorporés = shellcode?</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">word/embeddings ou xl/media/</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">Workflow : Révéler Données Cachées</strong><br>
+  <ol style="margin:.75rem 0 0 1.5rem;font-size:.9rem">
+    <li>Extraire .xlsx comme ZIP</li>
+    <li>Chercher &lt;sheet ... state="hidden" /&gt; dans workbook.xml</li>
+    <li>Restaurer feuille : supprimer attribut "hidden"</li>
+    <li>Re-zipper et ouvrir → feuilles maintenant visibles</li>
+    <li>Documenter trouvailles (formules, données)</li>
+  </ol>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — OUTILS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tools">
+
+<div class="sec-title">🔧 Outils : Extraction Office Metadata</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Outil</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Usage</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">CLI/GUI</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--cyan)"><strong>ExifTool</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Extraction metadata (y compris Office)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--green)"><strong>LibreOffice</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Ouvrir + voir Properties (File → Properties)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">GUI</td>
+  </tr>
+
+  <tr style="background:rgba(48,232,138,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--blue)"><strong>7-Zip / WinRAR</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Extraire ZIP archive (docx/xlsx)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">GUI</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--orange)"><strong>Python zipfile</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Script extraction batch + parsing XML</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+  <tr style="background:rgba(240,192,64,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--gold)"><strong>Microsoft Word</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Voir Tracked Changes natif (Review tab)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">GUI</td>
+  </tr>
+
+</table>
+
+<div class="sec-title">CLI Quick Commands</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem">
+  <code style="display:block;color:var(--cyan);margin-bottom:1rem">
+  # Extract docx metadata<br>
+  $ exiftool document.docx<br>
+  <br>
+  # OR unzip manually<br>
+  $ unzip -q document.docx<br>
+  $ cat docProps/core.xml<br>
+  $ cat word/document.xml | grep -i "lastModifiedBy" | head -1<br>
+  <br>
+  # Extract Excel metadata<br>
+  $ unzip -q spreadsheet.xlsx<br>
+  $ cat workbook.xml | grep "sheet " | grep -i hidden<br>
+  <br>
+  # Search tracked changes<br>
+  $ grep -r "w:ins\|w:del" word/document.xml | head -20
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(188,140,255,.04);border-left:3px solid var(--purple)">
+  <strong style="color:var(--purple)">🧪 Workflow Complet Office</strong><br>
+  <ol style="margin:.75rem 0 0 1.5rem;font-size:.9rem;line-height:1.8">
+    <li><strong>exiftool document.docx</strong> → auteur, dates, subject</li>
+    <li><strong>unzip document.docx</strong> → extraire tout</li>
+    <li><strong>grep "w:ins\|w:del" word/document.xml</strong> → tracked changes</li>
+    <li><strong>Voir docProps/core.xml</strong> → creator vs lastModifiedBy</li>
+    <li><strong>Libreoffice document.docx</strong> → vérifier si hidden text/sheets</li>
+    <li><strong>Rapport</strong> : Auteur original, derniers éditeurs, timeline éditions, données cachées</li>
+  </ol>
+</div>
+
+</div>
+
+</div>
+
+<script>
+function showTab(tab, btn) {
+  var pages = document.querySelectorAll('.tab-page');
+  pages.forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+
+</body>
+</html>
