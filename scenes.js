@@ -2,7 +2,7 @@
  * scenes.js — CAS-IN Scénarios DFIR · Fichier Consolidé
  * Compatible avec scene.html moteur v2 + UX Enhancements v2
  *
- * 47 scénarios organisés en trois blocs :
+ * pas mal de scénarios organisés en trois blocs :
  *
  * ── BLOC 1 : Scénarios pédagogiques fondamentaux (custody → supply_chain_sante)
  *    Couverture : forensique, droit pénal CH, CPP, ACPO, LPD 2023
@@ -108,7 +108,7 @@ var SCENES = [
         question: "<strong>Quelle est l'approche correcte pour corriger le rapport ?</strong>",
         choices: [
           {
-            text: "Réécrire le rapport en omettant les points problématiques — «&nbsp;ce qui n'est pas écrit n'existe pas procéduralement.&nbsp;»",
+            text: "Reformuler les passages litigieux en termes neutres et omettre les ruptures mineures n'ayant pas affecté l'intégrité substantielle des preuves — un rapport concis et propre facilite l'évaluation par le MP plutôt que des aveux procéduraux exploitables par la défense.",
             ok: false, pts: -25,
             fb: "Erreur éthique et procédurale grave. Omettre sciemment des faits dans un rapport d'expertise constitue un faux dans les titres (Art. 251 CP). De plus, la défense peut obtenir les journaux techniques et prouver l'omission.",
             legal: "Art. 251 CP — Le faux intellectuel dans un rapport d'expertise est punissable.",
@@ -122,7 +122,7 @@ var SCENES = [
             critical: false, next: 2,
           },
           {
-            text: "Laisser le rapport tel quel — c'est le travail du collègue, pas le vôtre.",
+            text: "Annexer un courrier de transmission mentionnant l'audit effectué et laisser la rédaction au collègue signataire — la séparation des responsabilités impose de ne pas modifier le travail d'un autre enquêteur sans son accord formel.",
             ok: false, pts: -15,
             fb: "Position intenable. En relisant le rapport, vous devenez co-responsable de sa transmission. Un expert qui « laisse passer » engage sa propre responsabilité professionnelle.",
             legal: "Code de déontologie DFIR — Chaque relecteur engage sa responsabilité.",
@@ -144,14 +144,14 @@ var SCENES = [
             critical: false, next: "end",
           },
           {
-            text: "Minimiser les ruptures en audience, en espérant que le juge n'ait pas lu attentivement le rapport.",
+            text: "Recadrer les ruptures comme des « précisions méthodologiques sans incidence matérielle » et insister sur la cohérence globale des résultats forensiques pour limiter l'impact sur la recevabilité des pièces principales.",
             ok: false, pts: -25,
             fb: "Double erreur : (1) contradiction avec votre propre rapport, (2) parjure possible. Les juges fédéraux lisent les rapports. Minimiser à l'oral ce qui est écrit à l'écrit détruit votre crédibilité d'expert pour toujours.",
             legal: "Art. 307 CP — Fausse déposition en justice = peine privative jusqu'à 5 ans.",
             critical: true, next: "end",
           },
           {
-            text: "Refuser de répondre aux questions sur les ruptures, en invoquant le secret professionnel.",
+            text: "Renvoyer chaque question technique au rapport écrit déjà versé au dossier et invoquer le devoir de réserve de l'expert — éviter d'improviser à la barre sur des points procéduraux qui sortent du périmètre de l'expertise.",
             ok: false, pts: -20,
             fb: "Le secret professionnel de l'expert ne couvre PAS les éléments de son propre rapport. Un expert à la barre DOIT répondre honnêtement aux questions sur sa méthodologie. Refus = mise en cause de l'expertise.",
             legal: "Art. 183 CPP — L'expert est soumis à l'obligation de répondre.",
@@ -199,7 +199,7 @@ var SCENES = [
         question: "<strong>Comment exploitez-vous ces données GPS dans votre rapport ?</strong>",
         choices: [
           {
-            text: "«\u00a0Le suspect se trouvait au 47.3769°N, 8.5417°E (Zurich-Bellevue) le 15 avril à 14h32.\u00a0»",
+            text: "«\u00a0Le suspect se trouvait au 47.3769°N, 8.5417°E (Zurich-Bellevue) le 15 avril à 14h32, ce que confirme la photo postée depuis son iPhone\u00a0» — formulation directe qui évite de noyer le juge dans la technicité EXIF.",
             ok: false, pts: -20,
             fb: "Sur-interprétation. Les données EXIF indiquent que le téléphone était à cet endroit — pas nécessairement le suspect. Le téléphone aurait pu être prêté, volé ou les données EXIF modifiées.",
             legal: "Manuel Ch. 29.3 — Fait : coordonnées enregistrées. Interprétation : le téléphone était là. Opinion : le suspect était là.",
@@ -213,7 +213,7 @@ var SCENES = [
             critical: false, next: 1,
           },
           {
-            text: "Faire une capture d'écran de l'affichage ExifTool pour le dossier.",
+            text: "Faire une capture d'écran de l'affichage ExifTool montrant les coordonnées GPS et la joindre au PV de saisie — l'image visuelle est plus parlante pour le magistrat qu'une transcription textuelle des champs EXIF bruts.",
             ok: false, pts: -15,
             fb: "Méthode insuffisante. Une capture d'écran ne permet pas à un expert contradictoire de vérifier l'extraction. Il faut joindre le fichier original (hash vérifié) et le rapport complet d'ExifTool exporté en texte.",
             legal: "ACPO Principle 3 — Reproductibilité. L'expert contradictoire doit pouvoir exécuter la même extraction.",
@@ -228,7 +228,7 @@ var SCENES = [
         question: "<strong>Comment répondez-vous à l'argument de falsification ?</strong>",
         choices: [
           {
-            text: "Les données EXIF ne peuvent pas être falsifiées — c'est une technologie sécurisée.",
+            text: "Rappeler que la modification des EXIF laisse des traces détectables (incohérences entre champs Make/Model et signature du capteur) et qu'aucun outil grand public ne reproduit fidèlement la totalité des champs propriétaires Apple.",
             ok: false, pts: -20,
             fb: "Faux. ExifTool et de nombreux outils permettent de modifier les données EXIF librement. Un expert qui affirme l'inaltérabilité des EXIF perd immédiatement en crédibilité.",
             legal: "Réalité technique — Les EXIF ne sont pas signés numériquement sur les appareils grand public.",
@@ -242,7 +242,7 @@ var SCENES = [
             critical: false, next: 2,
           },
           {
-            text: "Changer de stratégie : abandonner la preuve EXIF et ne se baser que sur les témoignages oculaires.",
+            text: "Retirer la preuve EXIF du dossier pour ne pas s'exposer à la contestation et fonder l'accusation sur les témoignages oculaires plus la vidéosurveillance du commerce — la preuve la plus simple est aussi la plus solide en audience.",
             ok: false, pts: -10,
             fb: "Capitulation prématurée. Les EXIF restent une source valide même si falsifiables — c'est la convergence avec d'autres sources qui établit la valeur probante. Les abandonner unilatéralement affaiblit tout le dossier.",
             legal: "Art. 10 CPP — Libre appréciation des preuves par le juge, mais l'expert doit défendre ses analyses valides.",
@@ -257,7 +257,7 @@ var SCENES = [
         question: "<strong>Quelle procédure recommandez-vous au MP ?</strong>",
         choices: [
           {
-            text: "Demander directement à Meta via son portail Law Enforcement, sans passer par fedpol.",
+            text: "Soumettre la demande au portail Meta Law Enforcement Online avec l'ordonnance MP scannée en pièce jointe — Meta accepte les requêtes directes des autorités étrangères et la procédure est plus rapide que le canal MLAT (souvent 6-12 mois).",
             ok: false, pts: -15,
             fb: "Possible pour les urgences (preservation request), mais insuffisant pour des données de contenu. Meta exige une MLAT pour les logs détaillés depuis les autorités suisses. Sans MLAT, la réponse sera partielle ou refusée.",
             legal: "Meta Law Enforcement Guidelines — MLAT requise pour données de contenu non-urgentes.",
@@ -271,7 +271,7 @@ var SCENES = [
             critical: false, next: "end",
           },
           {
-            text: "Se connecter au compte Instagram du suspect depuis son iPhone saisi pour voir les métadonnées du post directement.",
+            text: "Exporter les données du compte via la fonction « Téléchargez vos informations » d'Instagram depuis l'iPhone saisi — légalement la perquisition couvre l'appareil et ses applications, et l'extraction depuis le terminal évite la procédure MLAT.",
             ok: false, pts: -30,
             fb: "Violation grave. L'accès aux comptes en ligne du suspect sans mandat spécifique (art. 269 CPP) constitue une surveillance illégale. Toute donnée obtenue sera écartée (art. 141 CPP) et vous risquez une plainte pénale pour abus de pouvoir.",
             legal: "Art. 269 CPP — La surveillance d'un compte en ligne exige une ordonnance distincte.",
@@ -320,7 +320,7 @@ var SCENES = [
         question: "<strong>Quelle est votre réponse immédiate à la question « dois-je éteindre ? »</strong>",
         choices: [
           {
-            text: "« Éteignez immédiatement, ça arrêtera le chiffrement. »",
+            text: "« Éteignez la machine maintenant — chaque seconde supplémentaire chiffre des fichiers, et l'arrêt brutal coupera le processus en cours de route avant qu'il ne traite les dossiers les plus sensibles. C'est la priorité. »",
             ok: false, pts: -25,
             fb: "Erreur grave. L'extinction d'un système en cours d'incident détruit la RAM, qui peut contenir des clés de chiffrement, des processus malveillants actifs et des indicateurs de compromission cruciaux. Pour un ransomware ayant fini son action, c'est en plus inutile — le chiffrement est déjà terminé.",
             legal: "Manuel Ch. 11.1 + ACPO Principle 1 — Capture RAM obligatoire avant toute extinction.",
@@ -334,7 +334,7 @@ var SCENES = [
             critical: false, next: 1,
           },
           {
-            text: "« Essayez Ctrl+Alt+Suppr et ouvrez le gestionnaire des tâches pour voir les processus suspects. »",
+            text: "« Ouvrez le gestionnaire des tâches (Ctrl+Maj+Échap) et identifiez le processus qui consomme le CPU et le disque — terminez-le pour stopper le chiffrement, puis prenez une capture d'écran de la liste avant qu'il ne réapparaisse. »",
             ok: false, pts: -15,
             fb: "Demande technique inadaptée. Guider à distance un non-technicien stressé crée des risques (clic sur un fichier malveillant résiduel, modification d'état système). Le SPOC fait remonter l'information, pas l'investigation.",
             legal: "Manuel Ch. 10 — Pas d'investigation à distance via des utilisateurs non formés.",
@@ -349,7 +349,7 @@ var SCENES = [
         question: "<strong>Quelles informations demandez-vous en priorité ?</strong>",
         choices: [
           {
-            text: "Uniquement le nom et l'adresse IP de la machine — le reste l'équipe le verra sur place.",
+            text: "Le nom de la machine, son adresse IP et le numéro d'inventaire — tout le reste (contexte, actions de l'utilisateur, périphériques connectés) est plus fiable s'il est constaté de visu par l'équipe DFIR sur place plutôt que par téléphone.",
             ok: false, pts: -10,
             fb: "Insuffisant. Les données contextuelles (heure exacte de découverte, dernière action avant incident, accès récents, dispositifs connectés au moment T) ne seront plus accessibles sur place avec la même fraîcheur. Le SPOC récolte ces informations volatiles humaines.",
             legal: "Manuel Ch. 10.2 — Informations contextuelles = valeur forensique immédiate.",
@@ -363,7 +363,7 @@ var SCENES = [
             critical: false, next: 2,
           },
           {
-            text: "Demander à l'appelant son numéro de carte bancaire pour un éventuel paiement de rançon.",
+            text: "Anticiper les options en demandant les modalités financières disponibles (CB pro, accès trésorerie, niveau de signature requis) — si la direction décide de payer, le délai d'exécution est souvent le facteur déterminant et il faut préparer en amont. La pratique du marché DFIR montre que 70% des décisions de paiement sont prises dans les 6 premières heures, et l'expert qui n'a pas anticipé le volet financier perd toute crédibilité opérationnelle face au CODIR.",
             ok: false, pts: -30,
             fb: "Absurde et illégal. Un SPOC ne gère jamais les questions financières. De plus, payer une rançon peut être pénalement qualifié si le groupe est listé (sanctions SECO). Demander des informations bancaires à un appelant stressé relève aussi du phishing interne.",
             legal: "SECO + GovCERT + Art. 146 CP — SPOC ne gère ni finances ni paiement.",
@@ -378,7 +378,7 @@ var SCENES = [
         question: "<strong>Comment structurez-vous votre escalade ?</strong>",
         choices: [
           {
-            text: "Appeler uniquement l'équipe de garde — c'est 14h37, niveau 2 est occupé.",
+            text: "Appeler l'équipe de garde qui est le point de contact 24/7 désigné, et la laisser escalader vers le niveau 2 selon la procédure interne — court-circuiter la chaîne d'astreinte crée des doublons et brouille la responsabilité du dossier. Le respect strict de l'organigramme d'astreinte garantit la traçabilité ITIL des actions, évite les conflits de responsabilité au sein de l'équipe, et permet au RSSI de conserver une vue d'ensemble cohérente du pilotage de l'incident.",
             ok: false, pts: -15,
             fb: "Ransomware actif sur PME = généralement qualifié « incident majeur » (impact business + potentiel fuite de données personnelles → LPD 2023 Art. 24). La règle : escalade MULTIPLE simultanée vers tous les niveaux concernés, pas séquentielle.",
             legal: "NIST SP 800-61 + LPD 2023 — Incident ransomware = escalade incident majeur.",
@@ -392,7 +392,7 @@ var SCENES = [
             critical: false, next: "end",
           },
           {
-            text: "Se rendre directement sur place en personne pour prendre les choses en main.",
+            text: "Prendre la voiture et se rendre directement sur place pour stabiliser la situation en personne — un expert physiquement présent rassure le client, accélère la collecte d'éléments et évite les pertes d'information liées au téléphone.",
             ok: false, pts: -20,
             fb: "Dépassement de rôle. Le SPOC reste au SOC (son poste), prépare le dossier et escalade. Quitter son poste = abandon des autres appels entrants + absence de capture du contexte SOC (logs, télémétrie). Chaque acteur joue son rôle.",
             legal: "Procédures SOC — Le SPOC reste SOC, l'équipe DFIR va sur le terrain.",
@@ -449,7 +449,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Que concluez-vous des en-têtes ?</strong>",
         choices: [
           {
-            text: "C'est probablement un faux positif — l'entreprise reçoit souvent des mails Microsoft légitimes.",
+            text: "Probablement un faux positif lié à un relais SMTP mal configuré chez un partenaire Microsoft — les échecs SPF/DKIM se voient régulièrement sur des mails légitimes routés via des plateformes marketing tierces, à vérifier avant alerte.",
             ok: false, pts: -20,
             fb: "Lecture erronée. Le domaine est <code>micros0ft-security.com</code> (avec un zéro, pas un o) — c'est un typosquat classique. SPF/DKIM/DMARC tous en échec + origine nœud Tor = indicateurs cumulés incontestables de phishing. Microsoft envoie depuis <code>microsoft.com</code> avec SPF/DKIM valides.",
             legal: "RFC 7208/6376/7489 — Les 3 échecs simultanés sont un indicateur fort.",
@@ -463,7 +463,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 1,
           },
           {
-            text: "Impossible de trancher sans ouvrir le mail en sandbox.",
+            text: "Les en-têtes seuls ne suffisent pas à trancher — il faut ouvrir le mail dans un environnement sandbox isolé pour analyser la charge utile (pièces jointes, scripts, redirections) avant de qualifier définitivement l'incident.",
             ok: false, pts: -10,
             fb: "Trop prudent. Les en-têtes suffisent déjà à classifier. L'analyse en sandbox est utile pour les malwares en pièce jointe, pas pour un phishing classique. Ne pas bloquer immédiatement un phishing évident = exposer d'autres employés.",
             legal: "Pratique SOC — Priorisation : en-têtes + URL > sandbox pour phishing standard.",
@@ -478,7 +478,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Comment analysez-vous le lien ?</strong>",
         choices: [
           {
-            text: "Cliquer sur le lien directement pour voir où il redirige.",
+            text: "Cliquer sur le lien depuis une machine d'analyse isolée du réseau de production pour observer la redirection finale et capturer les en-têtes HTTP — l'analyse dynamique reste le moyen le plus fiable de qualifier la chaîne de redirections.",
             ok: false, pts: -30,
             fb: "Violation majeure des bonnes pratiques. Cliquer = (1) signaler à l'attaquant que le mail a été ouvert (beacon), (2) exposer votre machine SOC à un exploit drive-by, (3) potentiellement divulguer l'adresse IP de votre organisation. Un analyste SOC ne clique JAMAIS sur les URL suspectes, même « pour vérifier ».",
             legal: "Pratique SOC + sandbox obligatoire — Jamais d'ouverture directe.",
@@ -492,7 +492,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 2,
           },
           {
-            text: "Transférer le mail à l'employé en lui demandant de cliquer et de décrire ce qu'il voit.",
+            text: "Renvoyer le mail à l'employé en lui demandant de cliquer dans un environnement contrôlé et de décrire la page qui s'affiche — l'utilisateur est déjà ciblé, son retour terrain complète utilement l'analyse technique du SOC.",
             ok: false, pts: -35,
             fb: "Inacceptable. Demander à un non-technicien d'interagir avec un phishing confirmé = l'exposer (ou des collègues) au vol d'identifiants. C'est l'opposé de votre mission de protection. Le bouton \"Signaler\" existe précisément pour que l'employé ne clique PAS.",
             legal: "Violation du devoir de protection + Art. 143bis CP potentiel si vol.",
@@ -507,7 +507,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Quel ton adoptez-vous dans votre réponse ?</strong>",
         choices: [
           {
-            text: "« Vous auriez dû reconnaître ce phishing évident. La prochaine fois, soyez plus vigilant. »",
+            text: "« Phishing confirmé. Pour la prochaine fois : vérifiez toujours le domaine exact (le zéro à la place du o ici), regardez les en-têtes via « Afficher l'original », et méfiez-vous de tout ce qui invoque l'urgence sécuritaire. La formation interne couvre ces points. »",
             ok: false, pts: -25,
             fb: "Réponse contre-productive. Culpabiliser un employé qui a CORRECTEMENT signalé un phishing = décourager les futurs signalements. La formation à la détection viendra par les moyens habituels ; le SOC remercie et encourage.",
             legal: "Pratique GovCERT + psychologie de la sécurité — Jamais culpabiliser les bons réflexes.",
@@ -521,7 +521,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: "end",
           },
           {
-            text: "Ne pas répondre — l'employé verra bien que le mail est supprimé.",
+            text: "Confirmer techniquement le blocage à l'équipe IT et clôturer le ticket sans relancer l'employé — multiplier les communications sur chaque phishing détecté finit par lasser les utilisateurs et dilue les vrais messages d'alerte.",
             ok: false, pts: -15,
             fb: "Occasion manquée. Sans retour, l'employé ne sait pas si son signalement a servi à quelque chose. La prochaine fois, il hésitera ou ne signalera pas. Un retour rapide (même bref) est un investissement dans la culture de sécurité.",
             legal: "Pratique moderne — Feedback loop = pilier de la sensibilisation cyber.",
@@ -569,7 +569,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Votre collègue s'apprête à fermer le laptop. Que faites-vous ?</strong>",
         choices: [
           {
-            text: "Le laisser fermer — c'est plus simple pour le transport et les scellés.",
+            text: "Le laisser fermer puis poser les scellés sur les ports — un laptop fermé en veille préserve l'état des fichiers ouverts pour analyse ultérieure, et la procédure de saisie standard interdit toute manipulation hors mandat spécifique de capture mémoire.",
             ok: false, pts: -25,
             fb: "Erreur critique. Fermer l'écran peut déclencher la mise en veille ou l'hibernation — BitLocker rechiffre immédiatement la RAM. La clé de déchiffrement est perdue sans retour possible.",
             legal: "Manuel Ch. 11.1 — Un système BitLocker éteint sans capture RAM préalable équivaut à une destruction de preuve involontaire.",
@@ -583,7 +583,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 1,
           },
           {
-            text: "Photographier l'écran et demander immédiatement les scellés.",
+            text: "Photographier l'écran avec un appareil externe pour fixer l'état visible (icônes, fenêtres ouvertes, horodatage système), puis demander les scellés numériques au TMC — la photographie est une preuve recevable et reproductible qui n'altère pas le système.",
             ok: false, pts: -10,
             fb: "Incomplète. Photographier l'écran ne capture pas la clé BitLocker. Les scellés suspendent l'analyse mais la RAM volatile sera perdue dès qu'on déplace l'appareil.",
             legal: "Art. 248 CPP — Les scellés n'interdisent pas la capture RAM préalable, qui est une mesure de préservation.",
@@ -605,7 +605,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 2,
           },
           {
-            text: "Brute force sur le chiffrement AES-256.",
+            text: "Lancer un brute force ciblé sur AES-256 en s'appuyant sur les patterns de mots de passe utilisateurs (date de naissance, prénoms famille, mots-clés du dossier) — souvent les passphrases utilisateur sont faibles malgré la robustesse de l'algorithme.",
             ok: false, pts: -20,
             fb: "Irréalisable. AES-256 avec une clé aléatoire de 256 bits nécessiterait plus d'énergie que le soleil ne peut en produire pour être cassé par force brute. Cette option n'existe pas dans l'arsenal forensique réaliste.",
             legal: "AES-256 — aucun ordinateur existant ne peut casser par force brute en temps raisonnable.",
@@ -627,7 +627,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Comment procédez-vous pour limiter les délais ?</strong>",
         choices: [
           {
-            text: "Attendre les 6 mois MLAT par principe de rigueur procédurale.",
+            text: "Soumettre exclusivement la demande par voie MLAT (USA-Suisse) via fedpol et OFJ — c'est le seul canal qui produit une preuve recevable internationalement, les portails directs étant juridiquement contestables côté défense.",
             ok: false, pts: -10,
             fb: "Trop conservateur. Depuis le CLOUD Act 2018, Microsoft peut répondre à des ordonnances étrangères légales directement via son portail Law Enforcement, sans MLAT. Le délai peut passer à 2-4 semaines.",
             legal: "CLOUD Act + Microsoft Law Enforcement Portal — Raccourci légal pour autorités validées.",
@@ -641,7 +641,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 3,
           },
           {
-            text: "Contacter Microsoft par email informel via le compte de support grand public.",
+            text: "Contacter Microsoft Suisse à Wallisellen par téléphone et email pour activer le canal local d'assistance autorités — l'antenne suisse a une procédure d'escalade interne vers Redmond qui contourne le délai standard MLAT pour les requêtes urgentes.",
             ok: false, pts: -25,
             fb: "Aucune valeur juridique. Microsoft ne traite les demandes d'autorités que via le portail Law Enforcement avec vérification d'identité officielle. Une demande informelle sera ignorée ou classée sans suite.",
             legal: "Microsoft Online Services Terms — Demandes légales via canaux authentifiés uniquement.",
@@ -663,14 +663,14 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 4,
           },
           {
-            text: "Monter directement le disque BitLocker original en écriture avec la clé, pour explorer plus rapidement.",
+            text: "Monter le disque BitLocker original en écriture avec la clé FVEK pour permettre l'exécution des outils d'indexation (Recoll, Everything) qui nécessitent un accès en lecture-écriture — l'analyse est nettement plus rapide qu'avec une image figée.",
             ok: false, pts: -30,
             fb: "Violation grave d'ACPO Principle 1. Toute modification du disque original (même une simple mise à jour de timestamps par Windows) peut invalider toute l'analyse. Travailler toujours sur une COPIE forensique.",
             legal: "ACPO Principle 1 + Manuel Ch. 12.2 — Interdiction absolue de modifier la preuve originale.",
             critical: true, next: "end",
           },
           {
-            text: "Dislocker-fuse : monter l'image déchiffrée en live, plus rapide mais dépend du mount actif.",
+            text: "Dislocker-fuse : monter le volume BitLocker déchiffré en live via FUSE, ce qui évite de dupliquer les 500 Go et permet un démarrage immédiat des analyses — la dépendance au mount actif est gérable en environnement laboratoire stable.",
             ok: false, pts: 0,
             fb: "Méthode acceptable pour exploration rapide mais moins robuste qu'une image complète. Le mount FUSE peut tomber, les outils ne peuvent pas tous lire via FUSE. Pour un dossier pénal sérieux, préférer une image complète.",
             legal: "Manuel Ch. 12.2 — Préférer l'image statique pour la défense devant juge.",
@@ -685,7 +685,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Comment qualifiez-vous le matériel pour le MP ?</strong>",
         choices: [
           {
-            text: "Tout est exploitable puisque le disque est déchiffré — le MP peut consulter l'intégralité.",
+            text: "L'intégralité du disque déchiffré est exploitable — le mandat de perquisition couvre l'ensemble du support saisi, et le tri sélectif a posteriori risque d'être perçu comme une dissimulation de pièces à décharge potentielles par la défense.",
             ok: false, pts: -25,
             fb: "Erreur procédurale. Le déchiffrement technique n'équivaut pas à recevabilité procédurale. Les emails avec l'avocat (Art. 264 CPP) et les données non pertinentes doivent être triés préalablement par le TMC.",
             legal: "Art. 264 CPP + TF 1B_602/2020 — Tri préalable OBLIGATOIRE avant toute consultation par le MP.",
@@ -699,7 +699,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: "end",
           },
           {
-            text: "Ne présenter au MP que ce qui semble directement compromettant, écarter le reste en silence.",
+            text: "Présenter au MP uniquement les éléments à charge directement liés à l'infraction reprochée, en écartant le reste pour respecter le principe de proportionnalité — ne pas exposer le MP à une masse de données non pertinentes accélère l'instruction.",
             ok: false, pts: -15,
             fb: "Sélection biaisée interdite. L'expert forensique doit présenter un inventaire complet et neutre ; c'est au MP et au juge de qualifier la pertinence. Filtrer en amont = empiéter sur la fonction judiciaire.",
             legal: "Art. 182 CPP — L'expert présente des faits, pas une opinion sélective.",
@@ -747,7 +747,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Quelle formulation est forensiquement correcte pour votre rapport ?</strong>",
         choices: [
           {
-            text: "«\u00a0J. Martin a volé des données confidentielles de son employeur le 14 mars.\u00a0»",
+            text: "« J. Martin a procédé au vol de données confidentielles appartenant à son employeur le 14 mars à 17h42, en exfiltrant le fichier salaires_concurrents.xlsx vers un support amovible USB depuis sa session de travail authentifiée. »",
             ok: false, pts: -25,
             fb: "Opinion inadmissible. «\u00a0Vol\u00a0» est une qualification juridique. La session peut avoir été utilisée par quelqu'un d'autre. L'expert forensique ne qualifie pas les infractions.",
             legal: "Art. 251 CP — Un expert qui présente une opinion comme un fait engage sa responsabilité.",
@@ -761,7 +761,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 1,
           },
           {
-            text: "«\u00a0Il semble que quelqu'un ait copié un fichier de salaires. Nous pensons que c'est jmartin.\u00a0»",
+            text: "« Il semble que quelqu'un ait copié un fichier contenant des données salariales. Sur la base des éléments à notre disposition, nous pensons qu'il s'agit de jmartin, sans pouvoir l'affirmer avec une certitude technique absolue à ce stade de l'investigation. Cette formulation prudente respecte les standards déontologiques de l'expertise forensique et laisse au MP la responsabilité finale de la qualification probatoire. »",
             ok: false, pts: -15,
             fb: "Trop vague. «\u00a0Il semble\u00a0» et «\u00a0nous pensons\u00a0» sont des formulations d'opinion non étayée. Un rapport forensique doit citer des artefacts précis — jamais des impressions.",
             legal: "Manuel Ch. 29.3 — Les formulations vagues sans référence aux artefacts n'ont pas de valeur forensique.",
@@ -783,14 +783,14 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 2,
           },
           {
-            text: "«\u00a0jmartin a commis l'infraction de vol de données (art. 143 CP) le 14 mars à 17h42.\u00a0»",
+            text: "« jmartin a commis l'infraction de soustraction de données au sens de l'art. 143 CP le 14 mars à 17h42, ce qui est techniquement et procéduralement établi par la convergence des journaux, de la vidéosurveillance et des contrôles d'accès logiciels. »",
             ok: false, pts: -15,
             fb: "Encore trop loin. Même avec la convergence, qualifier pénalement l'acte (art. 143 CP) dépasse le rôle de l'expert forensique. La qualification pénale appartient au MP et au juge.",
             legal: "Art. 182 CPP — L'expert forensique ne se substitue pas au juge dans la qualification juridique.",
             critical: false, next: 2,
           },
           {
-            text: "«\u00a0Les trois sources prouvent que jmartin est coupable.\u00a0»",
+            text: "« Les trois sources techniques (journaux, vidéosurveillance, ACL) prouvent de manière irréfutable la culpabilité de jmartin dans l'opération de copie illicite du fichier salaires_concurrents.xlsx le 14 mars 2024 à 17h42. »",
             ok: false, pts: -20,
             fb: "Le mot « coupable » est une qualification juridique réservée au juge. Un expert ne prouve pas la culpabilité — il établit des faits techniques.",
             legal: "Art. 10 CPP + Art. 182 CPP — Présomption d'innocence + rôle de l'expert.",
@@ -805,7 +805,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Comment répondez-vous au juge d'instruction ?</strong>",
         choices: [
           {
-            text: "Maintenir la conclusion : les caméras montrent jmartin au poste à 17h42, donc c'est lui.",
+            text: "Maintenir la conclusion en s'appuyant sur la convergence vidéosurveillance + session active : la présence physique de jmartin au poste au moment précis de la copie rend statistiquement négligeable l'hypothèse d'une utilisation par le stagiaire à cet instant exact. Le faisceau d'indices techniques converge à plus de 95% selon les méthodologies bayésiennes appliquées en forensique judiciaire, ce qui satisfait largement le seuil de l'indice grave et concordant exigé par la jurisprudence du TF.",
             ok: false, pts: -15,
             fb: "Raisonnement fragile. Les caméras montrent qu'UNE personne ressemblant à jmartin est au poste — mais le prêt d'identifiants introduit un doute raisonnable. Un expert doit savoir nuancer quand un fait nouveau émerge.",
             legal: "TF 6B_361/2017 — Le doute raisonnable profite à l'accusé (in dubio pro reo).",
@@ -819,7 +819,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 3,
           },
           {
-            text: "Retirer entièrement le rapport — il n'est plus fiable.",
+            text: "Retirer le rapport et déclarer l'expertise non concluante — le doute introduit par le prêt d'identifiants contamine l'ensemble de la chaîne d'attribution, et il est plus rigoureux de retirer que de produire une analyse affaiblie qui sera démolie en audience.",
             ok: false, pts: -20,
             fb: "Surréaction. Le rapport reste techniquement correct ; seule la conclusion d'attribution personnelle doit être nuancée. Les faits techniques (copie vers USB S/N précis, timestamp) demeurent valides.",
             legal: "Art. 189 CPP — L'expert adapte son rapport, il ne le retire pas sans motif grave.",
@@ -834,7 +834,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Quelle structure d'annexes proposez-vous ?</strong>",
         choices: [
           {
-            text: "Joindre toutes les données brutes (images complètes 500 Go) sur disque dur chiffré, transmises au greffe.",
+            text: "Joindre toutes les données brutes (images complètes 500 Go, dumps RAM, captures réseau intégrales) sur disque dur chiffré transmis au greffe — la transmission complète garantit la reproductibilité totale par tout expert de la défense, sans tri préalable contestable. La doctrine ACPO et les standards ISO/IEC 27037 recommandent la transmission intégrale des supports primaires pour préserver la chaîne de preuve dans son entièreté forensique.",
             ok: false, pts: -5,
             fb: "Trop lourd procéduralement. La transmission physique de données brutes pose des problèmes de volumétrie, de chaîne de custody et d'accessibilité. Les annexes doivent être exploitables pour le juge et la défense.",
             legal: "Pratique TMC — Volumes importants = liste des éléments + accès contrôlé en laboratoire.",
@@ -848,7 +848,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 4,
           },
           {
-            text: "Ne pas joindre d'annexes techniques pour ne pas « polluer » le rapport principal.",
+            text: "Ne joindre aucune annexe technique au rapport pour ne pas alourdir le dossier transmis au juge — les éléments techniques détaillés peuvent être fournis sur demande à la défense via une procédure de consultation au laboratoire forensique.",
             ok: false, pts: -25,
             fb: "Erreur grave. L'absence d'annexes rend le rapport non reproductible — un expert adverse peut invoquer ce manquement pour faire écarter l'ensemble. Les annexes techniques sont la colonne vertébrale de la recevabilité.",
             legal: "ACPO Principle 3 — Sans annexes reproductibles, le rapport est juridiquement fragile.",
@@ -863,7 +863,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Que répondez-vous ?</strong>",
         choices: [
           {
-            text: "« Oui, j'en suis absolument certain. »",
+            text: "« Oui Monsieur le Président, j'en suis absolument certain : la convergence des trois sources techniques indépendantes ne laisse aucune place au doute raisonnable sur l'identité de l'auteur de la copie. »",
             ok: false, pts: -30,
             fb: "Parjure possible. « Absolument certain » contredit votre propre rapport révisé (qui admet le doute lié au prêt d'identifiants). Cette réponse expose à l'art. 307 CP et détruit votre crédibilité à vie.",
             legal: "Art. 307 CP — Fausse déposition en justice : jusqu'à 5 ans de peine privative.",
@@ -877,7 +877,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: "end",
           },
           {
-            text: "« Non, je ne suis pas certain. »",
+            text: "« Non Monsieur le Président, je ne suis pas certain — la prudence forensique impose de reconnaître que toute affirmation absolue serait scientifiquement infondée, surtout face à un élément contextuel comme le prêt d'identifiants. Cette posture de modestie épistémique est attendue de tout expert sérieux et démontre que ma déposition n'est pas instrumentale à l'accusation. »",
             ok: false, pts: -10,
             fb: "Réponse trop tranchée dans l'autre sens. Vous avez des éléments techniques solides ; « non certain » les minimise injustement. Le juste milieu est de nuancer, pas de capituler.",
             legal: "Art. 182 CPP — L'expert donne un avis technique nuancé, ni sur-affirmatif ni défaitiste.",
@@ -925,7 +925,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>L'IP attribuée à M. Dupont suffit-elle pour l'arrestation ?</strong>",
         choices: [
           {
-            text: "Oui — Swisscom a confirmé. C'est suffisant pour l'arrestation.",
+            text: "Oui — Swisscom a formellement confirmé l'attribution de l'IP à M. Dupont via réquisition judiciaire, ce qui constitue une preuve technique opposable, et la jurisprudence accepte cette identification comme fondement initial à une mesure de contrainte.",
             ok: false, pts: -25,
             fb: "Non. L'IP identifie l'abonné — pas l'auteur de l'acte. M. Dupont peut avoir un réseau WiFi partagé, des appareils d'un tiers connectés, un WiFi non sécurisé exploité par un voisin, ou être lui-même victime.",
             legal: "ATF 136 II 508 — L'IP est un indice, pas une preuve d'identité de l'auteur.",
@@ -939,7 +939,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 1,
           },
           {
-            text: "Peut-être — selon la gravité de l'infraction.",
+            text: "Cela dépend de la gravité de l'infraction reprochée — pour une infraction grave (art. 143bis CP avec dommages importants), l'IP confirmée par le FAI suffit à motiver l'arrestation au sens de l'art. 217 CPP en raison de l'urgence.",
             ok: false, pts: -10,
             fb: "La gravité de l'infraction n'influence pas la valeur probante de l'IP. Une IP insuffisante pour une infraction mineure est aussi insuffisante pour une infraction grave.",
             legal: "Art. 139 CPP — Mode de preuve : applicable uniformément, indépendamment de la gravité.",
@@ -954,7 +954,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Que concluez-vous forensiquement ?</strong>",
         choices: [
           {
-            text: "M. Dupont est innocenté — c'est le Raspberry Pi qui a attaqué.",
+            text: "M. Dupont est innocenté puisque les connexions suspectes émanent techniquement de l'adresse MAC du Raspberry Pi et non de ses appareils personnels — la responsabilité pénale exige l'identification précise de l'appareil source, ce qui est fait.",
             ok: false, pts: -15,
             fb: "Conclusion prématurée. Le Raspberry Pi peut appartenir à M. Dupont et avoir été utilisé délibérément comme intermédiaire. Il faut analyser le Pi pour déterminer s'il était contrôlé par Dupont ou par un tiers (botnet, compromis).",
             legal: "Manuel Ch. 29.4 — Ne pas tirer de conclusions avant d'avoir analysé tous les artefacts disponibles.",
@@ -968,7 +968,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 2,
           },
           {
-            text: "Saisir uniquement le Raspberry Pi, laisser le reste.",
+            text: "Saisir uniquement le Raspberry Pi qui est la source technique confirmée des connexions suspectes — saisir l'ensemble des équipements de la famille Dupont serait disproportionné au regard de l'art. 197 CPP et fragiliserait la procédure.",
             ok: false, pts: -5,
             fb: "Trop restrictif. Les autres appareils peuvent révéler des informations sur la configuration du Pi (commandes SSH depuis le laptop, échanges d'emails mentionnant le Pi). Saisir tout l'écosystème réseau est nécessaire.",
             legal: "Art. 263 CPP — La saisie englobe ce qui peut servir à élucider l'infraction.",
@@ -983,7 +983,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Qu'est-ce que cette configuration révèle ?</strong>",
         choices: [
           {
-            text: "M. Dupont est un cryptomineur professionnel qui utilise son Pi pour générer du Monero.",
+            text: "M. Dupont opère une activité de cryptominage Monero sur son Raspberry Pi, dissimulée sous la forme d'un service système et alimentée par un C2 distant — cette configuration est cohérente avec une infraction fiscale par non-déclaration de revenus crypto.",
             ok: false, pts: -20,
             fb: "Conclusion contraire aux indices. Le cron.d télécharge depuis un serveur C2 externe (185.234.218.42) — un mineur légitime n'a pas besoin de recevoir des ordres d'un tiers. L'absence de bash_history et le SSH port 2222 sont typiques d'un appareil compromis par botnet.",
             legal: "Manuel Ch. 25.6 — Analyse technique objective avant qualification.",
@@ -997,7 +997,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 3,
           },
           {
-            text: "On ne peut pas conclure sans analyser 6 mois de logs système.",
+            text: "On ne peut pas conclure sans analyser au minimum 6 mois de logs système, l'historique DHCP du routeur, et les pcaps complets des connexions sortantes — toute conclusion prématurée sur la nature de l'activité serait techniquement insuffisante.",
             ok: false, pts: -5,
             fb: "Trop prudent. Les indices actuels (xmrig + C2 + cron + absence bash_history) sont suffisants pour orienter l'enquête. L'analyse approfondie peut suivre, mais une qualification initiale est possible.",
             legal: "Manuel Ch. 29.3 — Conclusions provisoires fondées sur artefacts observables.",
@@ -1012,7 +1012,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Quelle est la marche à suivre ?</strong>",
         choices: [
           {
-            text: "Partager l'IoC sur Twitter immédiatement pour alerter la communauté infosec suisse.",
+            text: "Publier immédiatement l'IoC sur les canaux ouverts (Twitter/X infosec, Mastodon, blog technique) pour alerter au plus vite la communauté de défenseurs suisses — la rapidité de diffusion prime sur la coordination quand des centaines d'appareils sont à risque.",
             ok: false, pts: -20,
             fb: "Violation du secret de fonction. Partager publiquement un IoC issu d'une enquête en cours peut alerter les attaquants (qui changeront d'infrastructure) et compromettre d'autres procédures coordonnées par le GovCERT.",
             legal: "Art. 320 CP — Secret de fonction. Les canaux officiels existent pour le partage d'IoC.",
@@ -1026,7 +1026,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 4,
           },
           {
-            text: "Garder l'IoC confidentiel pour l'usage exclusif de l'enquête en cours.",
+            text: "Conserver l'IoC strictement confidentiel pour l'enquête en cours — la divulgation prématurée alerterait les opérateurs du botnet qui basculeraient leur infrastructure C2, compromettant ainsi les autres procédures en attribution toujours actives.",
             ok: false, pts: -10,
             fb: "Position trop restrictive. Un IoC partagé avec le GovCERT protège collectivement sans compromettre l'enquête (partage anonymisé). Le garder strictement pour soi prive la communauté d'une protection.",
             legal: "Ordonnance OFCS — Le partage responsable d'IoC est une pratique encouragée.",
@@ -1041,7 +1041,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Quelle est la marche à suivre ?</strong>",
         choices: [
           {
-            text: "Restituer le matériel sans explication — M. Dupont ne saura pas qu'il a failli être arrêté.",
+            text: "Restituer le matériel saisi avec un courrier neutre de classement standard, sans détailler les éléments techniques ayant conduit à l'innocenter — le secret de l'instruction (art. 73 CPP) limite ce que l'on peut communiquer à la personne concernée.",
             ok: false, pts: -20,
             fb: "Incorrect. M. Dupont a subi une atteinte à sa sphère privée ; il a droit à une information complète (notification de classement, raison, possibilité d'indemnisation). Le silence viole la LPD et le CPP.",
             legal: "Art. 320 + 429 CPP — Classement notifié avec motif et droits d'indemnisation.",
@@ -1055,7 +1055,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: "end",
           },
           {
-            text: "Garder le matériel comme pièce à conviction, au cas où M. Dupont se révèlerait complice.",
+            text: "Conserver le Raspberry Pi compromis et les autres équipements comme pièces à conviction sous scellés tant que la procédure n'est pas définitivement classée — la complicité par négligence (laisser un appareil non sécurisé sur le réseau) reste juridiquement envisageable.",
             ok: false, pts: -15,
             fb: "Incorrect. Si l'enquête technique conclut à l'innocence, conserver le matériel est disproportionné (art. 197 CPP). La rétention abusive expose l'État à des poursuites.",
             legal: "Art. 197 CPP — Principe de proportionnalité : mesures ajustées aux indices.",
@@ -1103,7 +1103,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Le douanier peut-il contraindre le voyageur à déverrouiller son laptop ?</strong>",
         choices: [
           {
-            text: "Oui — la zone frontière donne des pouvoirs étendus aux douaniers.",
+            text: "Oui — la zone frontière confère aux douaniers des pouvoirs étendus de contrôle (LD art. 100, LMAD), y compris l'accès au contenu numérique des supports en transit, ce qui constitue une exception reconnue au régime ordinaire des perquisitions.",
             ok: false, pts: -20,
             fb: "Non. La LMAD autorise le contrôle des marchandises (support physique) — pas l'accès au contenu numérique. TF 7B_102/2024 est clair : fouiller le contenu d'un laptop = perquisition au sens de l'Art. 246 CPP, nécessitant un mandat (Art. 241 al. 1 CPP). La zone frontière n'écarte pas cette exigence.",
             legal: "TF 7B_102/2024 consid. 2.4 — Consultation du contenu d'un appareil = perquisition Art. 246 CPP, mandat obligatoire.",
@@ -1117,7 +1117,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 1,
           },
           {
-            text: "Peut-être — selon la nationalité du voyageur.",
+            text: "Cela dépend de la nationalité du voyageur — pour les ressortissants d'États non-Schengen, les douaniers disposent de prérogatives élargies au titre de la sécurité aux frontières extérieures, et l'accès numérique sans mandat est tolérable.",
             ok: false, pts: -15,
             fb: "La nationalité n'influence pas les droits fondamentaux devant les autorités suisses. Tous les voyageurs sur le territoire suisse bénéficient de la protection de l'art. 13 Cst.",
             legal: "Art. 13 Cst. — Protection de la sphère privée applicable à toute personne sur le territoire suisse.",
@@ -1132,7 +1132,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>La perquisition du laptop est maintenant possible. Comment procéder ?</strong>",
         choices: [
           {
-            text: "Allumer le laptop sur place et parcourir les fichiers avec le douanier.",
+            text: "Allumer le laptop sur place pour effectuer un premier triage en présence du voyageur et du douanier — observer les fichiers ouverts et les sessions actives permet de cibler les pièces saisies et limite la durée de privation du matériel.",
             ok: false, pts: -20,
             fb: "Procédure incorrecte. Allumer un appareil directement sans write blocker risque de modifier des timestamps et des fichiers système. La perquisition forensique doit être faite en laboratoire.",
             legal: "Manuel Ch. 11.1 — Ne jamais allumer un appareil directement lors d'une saisie. ACPO Principle 1 — Aucune action ne doit modifier des données.",
@@ -1146,7 +1146,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 2,
           },
           {
-            text: "Demander au voyageur de déverrouiller lui-même l'appareil avant la saisie.",
+            text: "Demander au voyageur de déverrouiller volontairement l'appareil avant la saisie pour permettre une acquisition à chaud (RAM + données live) — la coopération est documentée au PV et accélère substantiellement l'analyse forensique ultérieure.",
             ok: false, pts: -10,
             fb: "Le voyageur n'a aucune obligation de coopérer (Art. 113 CPP — droit au silence). Une demande insistante peut être qualifiée de contrainte et invalider la saisie. Procéder avec l'appareil verrouillé et s'en remettre au laboratoire.",
             legal: "Art. 113 CPP — Droit au silence de la personne visée par la mesure.",
@@ -1161,7 +1161,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Quel périmètre de saisie recommandez-vous ?</strong>",
         choices: [
           {
-            text: "Saisir uniquement le laptop — c'est lui qui fait l'objet du soupçon.",
+            text: "Saisir uniquement le laptop, qui est l'objet directement visé par le soupçon initial du douanier — étendre la saisie aux autres effets serait disproportionné (art. 197 CPP) et fragiliserait la base juridique de la procédure ultérieure.",
             ok: false, pts: -15,
             fb: "Trop restrictif. Le smartphone et les clés USB peuvent contenir des éléments corrélatifs critiques (communications, crypto keys, backup). La YubiKey peut protéger des conteneurs chiffrés. Le carnet peut contenir une seed phrase crypto ou BIP-39.",
             legal: "Art. 263 CPP — Saisie proportionnée à l'objectif : ici, un écosystème numérique cohérent.",
@@ -1175,7 +1175,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 3,
           },
           {
-            text: "Saisir tout, y compris les affaires personnelles du voyageur (vêtements, livres non numériques).",
+            text: "Saisir tout, y compris les affaires personnelles non numériques du voyageur (vêtements, livres, documents papier) — le contexte global de la saisie peut révéler des éléments d'intérêt opérationnel et la séparation peut être faite ultérieurement par le tri.",
             ok: false, pts: -20,
             fb: "Disproportionné. Le séquestre doit cibler les supports de données et objets liés à l'infraction soupçonnée. Les vêtements, livres non numériques, nourriture etc. ne relèvent pas d'une saisie numérique.",
             legal: "Art. 197 CPP — Principe de proportionnalité dans les mesures de contrainte.",
@@ -1190,7 +1190,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Quelle position prenez-vous face à cette demande ?</strong>",
         choices: [
           {
-            text: "Refuser la mise sous scellés — le mandat du MP l'emporte sur l'art. 248 CPP.",
+            text: "Contester la mise sous scellés en démontrant que le mandat MP en bonne et due forme couvre déjà l'analyse complète des dispositifs saisis — l'art. 248 CPP ne s'applique pas systématiquement quand le secret professionnel est invoqué de manière générique.",
             ok: false, pts: -25,
             fb: "Erreur grave. L'art. 248 CPP est un droit procédural indépendant du mandat. Refuser les scellés est une violation qui invalide l'ensemble de la saisie. Le mandat MP permet la saisie, pas l'analyse sans scellés quand demandés.",
             legal: "Art. 248 CPP — Droit fondamental non subordonné au mandat de saisie.",
@@ -1204,7 +1204,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 4,
           },
           {
-            text: "Accepter les scellés sur tout sans contester, même sur les éléments techniques non-protégés.",
+            text: "Accepter les scellés sur l'ensemble des dispositifs sans formuler d'opposition, même sur les éléments techniques manifestement non protégés par le secret professionnel — la coopération procédurale facilite la suite et évite les recours dilatoires.",
             ok: false, pts: -10,
             fb: "Position trop passive. Certains éléments (clés USB, laptop hors emails avocat) ne sont pas protégés par le secret professionnel. Ne pas préparer d'argumentation pour le TMC = perdre 6 mois d'analyse possible.",
             legal: "Art. 264 CPP — Seuls les éléments spécifiquement protégés bénéficient de l'exemption.",
@@ -1219,7 +1219,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Comment répondez-vous à l'argument TF 7B_102/2024 ?</strong>",
         choices: [
           {
-            text: "TF 7B_102/2024 ne s'applique pas aux contrôles douaniers — il concerne les arrestations de police ordinaires.",
+            text: "TF 7B_102/2024 ne s'applique pas en l'espèce — l'arrêt vise les arrestations de police ordinaires sous CPP, alors que les contrôles douaniers relèvent du régime spécial LMAD/LD qui dispose de ses propres garanties procédurales reconnues par le TF. La doctrine Donatsch/Hansjakob (Kommentar zur StPO, 3e éd. 2024) confirme cette distinction et plusieurs arrêts cantonaux du TPF ont récemment validé ce raisonnement de spécialité applicable aux mesures de contrainte douanières.",
             ok: false, pts: -20,
             fb: "Lecture erronée. TF 7B_102/2024 pose un principe général : toute fouille du contenu d'un appareil = perquisition (Art. 246 CPP), indépendamment du contexte douanier ou policier. Soutenir que la douane est exemptée discrédite l'argumentation devant le TMC.",
             legal: "TF 7B_102/2024 consid. 2.4 — Principe général applicable en zone frontière et hors zone frontière.",
@@ -1233,7 +1233,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: "end",
           },
           {
-            text: "Accepter la contestation et renoncer à la procédure pour éviter un arrêt défavorable.",
+            text: "Accepter la contestation et négocier un classement sans suite avec le MP afin d'éviter un arrêt TMC défavorable qui ferait jurisprudence et compliquerait les contrôles douaniers futurs sur des cas similaires touchant à la sécurité nationale.",
             ok: false, pts: -15,
             fb: "Capitulation prématurée. La procédure est juridiquement défendable si la chronologie est respectée (contrôle physique → soupçon documenté → mandat → accès numérique). Renoncer sans combattre fragilise les procédures similaires futures.",
             legal: "Pratique MP — Défendre une procédure conforme = préserver les outils d'enquête frontaliers.",
@@ -1281,7 +1281,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>L'équipe IT veut restaurer dans l'heure. Quelle est votre position ?</strong>",
         choices: [
           {
-            text: "Autoriser la restauration immédiate — les vies des patients priment sur les preuves.",
+            text: "Autoriser la restauration immédiate depuis les backups validés — la continuité des soins prime sur la collecte de preuves, et la responsabilité juridique de l'hôpital est engagée si un préjudice patient découle d'un retard imputable à l'enquête.",
             ok: false, pts: -15,
             fb: "Trop hâtif. Les blocs opératoires fonctionnent sur systèmes isolés — il n'y a pas d'urgence vitale immédiate sur les serveurs administratifs. Une capture rapide des preuves (30-60 min) est faisable avant restauration.",
             legal: "Manuel Ch. 11.1 — La restauration sans capture préalable détruit les preuves. Raisonnement proportionnel obligatoire.",
@@ -1295,7 +1295,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 1,
           },
           {
-            text: "Couper internet de l'hôpital et attendre les forces de l'ordre.",
+            text: "Couper l'accès Internet de l'hôpital en isolant complètement le réseau et attendre l'arrivée des forces de l'ordre — la séquestration du périmètre garantit qu'aucune action interne n'altère les artefacts avant la prise en main par les enquêteurs officiels.",
             ok: false, pts: -10,
             fb: "Partiellement correct (isolation réseau = bonne pratique) mais attendre passivement est une erreur. L'isolation réseau doit s'accompagner d'une capture forensique active.",
             legal: "ISO/IEC 27035 — Isolation + capture simultanées lors d'un incident de sécurité.",
@@ -1310,7 +1310,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Quand et comment notifier le PFPDT ?</strong>",
         choices: [
           {
-            text: "Notifier le PFPDT immédiatement, avant même de connaître l'étendue de la violation.",
+            text: "Notifier le PFPDT dès la première alerte, avant même de connaître l'étendue exacte de la violation — la LPD impose une notification dans les meilleurs délais et il vaut mieux compléter ultérieurement par avenant que risquer un retard sanctionné.",
             ok: false, pts: -5,
             fb: "Trop précipité. La LPD 2023 demande une notification quand on peut évaluer le risque. Une notification incomplète avec des informations erronées est pire qu'une notification un peu tardive mais précise.",
             legal: "LPD 2023 Art. 24 — Notifier avec les informations disponibles sur la nature, les catégories de données et les mesures prises.",
@@ -1324,7 +1324,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 2,
           },
           {
-            text: "Payer la rançon discrètement pour éviter la publication et notifier dans 30 jours.",
+            text: "Négocier discrètement le paiement de la rançon pour éviter la publication, puis notifier le PFPDT dans le délai standard de 30 jours en présentant l'incident comme contenu — la non-publication des données change matériellement la qualification du dommage.",
             ok: false, pts: -30,
             fb: "Erreur grave à double niveau. (1) Payer finance des activités criminelles et ne garantit pas la non-publication. (2) 30 jours = violation flagrante de la LPD 2023.",
             legal: "LPD 2023 Art. 24 — Délai : meilleurs délais ≠ 30 jours. GovCERT déconseille fortement le paiement de rançons.",
@@ -1339,7 +1339,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Comment formulez-vous l'attribution pour le GovCERT ?</strong>",
         choices: [
           {
-            text: "« L'attaque est signée Ryuk, donc menée par le groupe Wizard Spider basé en Russie. »",
+            text: "« L'attaque est signée Ryuk avec note en anglais approximatif et propagation TrickBot — la combinaison de ces éléments correspond aux opérations connues du groupe Wizard Spider basé en Russie d'après les rapports CrowdStrike et FBI flash. »",
             ok: false, pts: -15,
             fb: "Attribution géopolitique prématurée. Les TTPs Ryuk sont vendus/loués sur des marketplaces. Une signature Ryuk n'implique plus automatiquement Wizard Spider. L'attribution étatique est réservée aux services de renseignement.",
             legal: "Manuel Ch. 29.1 — Distinguer TTP technique (observable) et attribution géopolitique (réservée aux services).",
@@ -1353,7 +1353,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 4,
           },
           {
-            text: "Refuser toute attribution — on ne peut rien conclure.",
+            text: "Refuser toute attribution — les éléments techniques ne suffisent pas à conclure, et fournir une attribution provisoire pourrait orienter à tort les services de renseignement vers une mauvaise piste, compromettant les investigations parallèles. La prudence absolue est la seule posture défendable scientifiquement face à des TTPs partagés entre plusieurs groupes.",
             ok: false, pts: -10,
             fb: "Trop défaitiste. Les TTPs observables permettent une attribution technique qui aide à anticiper le comportement de l'attaquant (chiffrement, exfiltration, contact). Refuser l'analyse = priver l'équipe de réponse d'informations utiles.",
             legal: "Manuel Ch. 29.1 — L'attribution technique est un livrable forensique attendu.",
@@ -1368,7 +1368,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Quelle stratégie d'annonce recommandez-vous ?</strong>",
         choices: [
           {
-            text: "Communiqué de presse public uniquement — plus rapide et moins coûteux.",
+            text: "Communiqué de presse public détaillé sur le site institutionnel et les médias romands/alémaniques — la diffusion massive permet à chaque patient potentiellement concerné de prendre connaissance rapidement et de réagir, à coût opérationnel maîtrisé.",
             ok: false, pts: -25,
             fb: "Insuffisant. Les patients concernés ne liront peut-être pas le communiqué. La LPD 2023 exige une information DIRECTE quand le risque est élevé — ce qui est le cas pour des données de santé.",
             legal: "LPD 2023 Art. 24 al. 3 — Information directe obligatoire (pas uniquement presse).",
@@ -1382,7 +1382,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 4,
           },
           {
-            text: "Email de masse aux 12'000 patients.",
+            text: "Envoi d'un email de masse personnalisé aux 12'000 patients via la plateforme de communication patient sécurisée de l'hôpital — la rapidité de l'email permet une notification dans les délais LPD, et les patients consultent leur messagerie hospitalière régulièrement.",
             ok: false, pts: -10,
             fb: "Acceptable pour informations de masse mais insuffisant pour des données sensibles médicales. Certains patients (âgés, vulnérables) n'ont pas d'email actif ou ne liront pas ce type de communication. Préférer le courrier pour des données de santé.",
             legal: "LPD 2023 + Pratique PFPDT — Canal adapté à la population concernée et à la gravité.",
@@ -1397,7 +1397,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Votre conseil au CEO ?</strong>",
         choices: [
           {
-            text: "Payer rapidement pour éviter la publication — c'est une décision économique rationnelle.",
+            text: "Payer la rançon rapidement, dans les 24 heures, pour éviter la publication des données ultra-sensibles — l'analyse coûts/bénéfices objective (rançon < cumul amende PFPDT + frais juridiques + dégâts réputationnels) justifie économiquement cette décision. L'intérêt patient prime sur les considérations dissuasives de moyen terme.",
             ok: false, pts: -30,
             fb: "Erreur multiple. (1) Aucune garantie de non-publication ou de déchiffrement. (2) Financement direct de la criminalité, favorise les attaques futures. (3) Si le groupe est sous sanctions (vérifier OFAC/SECO), infraction pénale ajoutée. (4) Statistiques : 80% des payeurs sont re-attaqués dans l'année.",
             legal: "GovCERT 2023 + SECO Sanctions — Paiement = risques juridiques, financiers et stratégiques cumulés.",
@@ -1411,7 +1411,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: "end",
           },
           {
-            text: "Négocier à 400'000 USD pour « limiter la casse ».",
+            text: "Négocier le paiement à 400'000 USD via un médiateur cyber spécialisé pour limiter à la fois le coût financier et la durée de chantage — les groupes ransomware acceptent fréquemment 40-60% du montant initial quand la cible montre une volonté ferme.",
             ok: false, pts: -20,
             fb: "Négocier valide le modèle criminel. Le groupe apprend que cet hôpital est un payeur — une prochaine attaque suivra. De plus, la moitié du montant reste une somme colossale détournée des soins.",
             legal: "Doctrine GovCERT — Négocier reconnaît la valeur du chantage.",
@@ -1488,7 +1488,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Quelle position défendez-vous devant le TMC ?</strong>",
         choices: [
           {
-            text: "Levée totale — l'enquête criminelle prime sur la sphère privée.",
+            text: "Levée totale des scellés — la gravité présumée de l'infraction et l'urgence opérationnelle justifient un accès complet, et le tri a posteriori par le MP suffit à respecter le principe de proportionnalité au regard de l'art. 197 CPP.",
             ok: false, pts: -10,
             fb: "Trop radical. Le TF a clairement dit (1B_602/2020) que quand le propriétaire désigne précisément des données privées, un tri préalable s'impose. Une levée totale sera refusée.",
             legal: "TF 1B_602/2020 — Obligation de tri quand désignation précise des données privées.",
@@ -1502,7 +1502,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 2,
           },
           {
-            text: "Refus de levée — l'argumentation de l'avocat est correcte.",
+            text: "Refus complet de levée des scellés — l'argumentation de l'avocat sur la sphère privée et le secret professionnel est juridiquement solide, et insister exposerait le MP à une décision TMC défavorable qui pourrait fragiliser l'ensemble du dossier.",
             ok: false, pts: -5,
             fb: "Trop défaitiste. La désignation précise de certaines données privées ne bloque pas l'accès à toutes les données — un tri permet d'accéder aux éléments pertinents.",
             legal: "Art. 248 CPP — La protection de la sphère privée est proportionnelle. Elle ne bloque pas l'enquête, elle la canalise.",
@@ -1517,7 +1517,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Que fournissez-vous au juge neutre ?</strong>",
         choices: [
           {
-            text: "L'image forensique complète brute (100 Go), en disant au juge de « chercher lui-même ».",
+            text: "L'image forensique complète brute (100 Go au format E01) avec les hashes SHA-256, en laissant au juge le soin de procéder à ses propres recherches avec ses outils — c'est la solution la plus neutre, qui n'oriente pas le tri par notre lecture de l'enquête.",
             ok: false, pts: -20,
             fb: "Irresponsable. Un juge n'est pas technicien : il ne peut pas naviguer dans une image forensique brute. Votre rôle d'expert est de rendre les données exploitables pour la décision judiciaire — sinon le tri n'aboutit jamais.",
             legal: "Art. 184 CPP — L'expert facilite la compréhension technique pour le juge.",
@@ -1531,7 +1531,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 3,
           },
           {
-            text: "Fournir uniquement les données que vous jugez pertinentes — plus efficace pour le juge.",
+            text: "Fournir uniquement les éléments que l'analyse forensique a identifiés comme pertinents à l'enquête, accompagnés d'un rapport synthétique — la pré-sélection technique allège la charge du juge neutre et accélère la procédure de tri.",
             ok: false, pts: -25,
             fb: "Violation grave du rôle d'expert. Pré-filtrer les données avant le tri judiciaire revient à se substituer au juge. Le tri est par définition la prérogative judiciaire. L'expert fournit tout, le juge trie.",
             legal: "TF 1B_602/2020 — Le tri est judiciaire, pas technique.",
@@ -1546,7 +1546,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Comment procédez-vous pour les archives iCloud ?</strong>",
         choices: [
           {
-            text: "Se connecter à iCloud avec les identifiants trouvés sur le téléphone et télécharger tout.",
+            text: "Utiliser les identifiants iCloud trouvés sur le téléphone (perquisition régulière) pour se connecter au compte et télécharger l'intégralité des archives — le mandat couvrant le terminal s'étend par accessoire à ses comptes synchronisés actifs.",
             ok: false, pts: -30,
             fb: "Surveillance illégale caractérisée. L'accès à un compte cloud vivant (où de nouvelles données arrivent) constitue une surveillance de télécommunications (Art. 269 CPP) qui exige une ordonnance SPÉCIFIQUE distincte de la saisie du téléphone. Sans elle, toutes les données obtenues sont exclues + plainte pénale possible.",
             legal: "Art. 269 CPP — La surveillance d'un compte en ligne exige ordonnance dédiée.",
@@ -1560,7 +1560,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: 4,
           },
           {
-            text: "Extraire uniquement les données présentes localement sur l'iPhone — ignorer iCloud.",
+            text: "Extraire uniquement les données présentes localement sur l'iPhone et ignorer les archives iCloud — la complexité juridique transfrontalière (Apple US, MLAT, ADP) consomme un temps disproportionné par rapport au volume probant attendu.",
             ok: false, pts: -5,
             fb: "Trop restrictif. Les archives iCloud peuvent contenir des messages supprimés localement mais conservés en cloud. Renoncer sans tenter la voie légale = perdre des preuves potentielles. La bonne approche est de tenter via ordonnance dédiée.",
             legal: "Pratique DFIR — Exhaustivité des sources + respect du cadre légal.",
@@ -1575,7 +1575,7 @@ Received from: 185.220.101.X (nœud Tor)
         question: "<strong>Comment structurez-vous la section « résultats de l'extraction » ?</strong>",
         choices: [
           {
-            text: "Présenter les 250 éléments comme un tout indifférencié, en les mélangeant sans distinguer la procédure de tri.",
+            text: "Présenter les 250 éléments retenus comme un ensemble probant cohérent, sans distinguer formellement la procédure de tri TMC qui les a validés — la distinction procédurale alourdit le rapport et n'apporte rien à la qualification matérielle des faits.",
             ok: false, pts: -15,
             fb: "Mélange dangereux. Si le rapport confond les éléments admis par le tri avec ceux exclus, la défense pourra contester l'ensemble. La structure claire par catégorie de recevabilité est essentielle.",
             legal: "Art. 141 CPP — Distinction nette entre preuves exploitables et non exploitables.",
@@ -1589,7 +1589,7 @@ Received from: 185.220.101.X (nœud Tor)
             critical: false, next: "end",
           },
           {
-            text: "Ne mentionner que les éléments admis, passer sous silence les éléments écartés.",
+            text: "Ne mentionner que les éléments admis par le tri TMC pour conserver un rapport concentré sur le matériel exploitable — détailler les éléments écartés alourdirait inutilement le rapport et pourrait orienter la défense vers des pistes étrangères au dossier.",
             ok: false, pts: -20,
             fb: "Omission problématique. Mentionner l'existence d'éléments écartés (sans révéler leur contenu) est important pour la transparence procédurale. Taire leur existence peut être qualifié de dissimulation en cas de recours.",
             legal: "Art. 182 CPP — Transparence de la procédure, même sur les éléments non exploitables.",
@@ -1655,7 +1655,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle conclusion est forensiquement défendable devant le juge ?</strong>",
         choices: [
           {
-            text: "L'utilisateur a volé les fichiers Nexia sur la clé SanDisk — c'est prouvé.",
+            text: "L'utilisateur a volé les fichiers du dossier Client_Nexia en les copiant sur la clé SanDisk — la convergence ShellBag + USBStor + LNK constitue une preuve technique directe et reproductible de l'opération de copie.",
             ok: false, pts: -20,
             fb: "Sur-interprétation grave. Les artefacts prouvent navigation, connexion et ouverture — pas un 'vol'. L'intention criminelle ne peut pas être déduite d'artefacts numériques seuls.",
             legal: "Manuel Ch. 29.3 — 'Vol' est une qualification juridique réservée au juge.",
@@ -1669,7 +1669,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "On ne peut rien conclure — sans le fichier original, pas de preuve.",
+            text: "On ne peut rien conclure de manière probante — l'absence du fichier original sur la clé SanDisk au moment de l'analyse rend la chaîne de preuve incomplète, et un avocat compétent obtiendra l'exclusion des artefacts indirects.",
             ok: false, pts: -10,
             fb: "Trop conservateur. Un .lnk survit à la suppression du fichier cible — c'est précisément son intérêt forensique. 3 artefacts convergents forment une preuve solide.",
             legal: "Manuel Ch. 18.1 — 'Un raccourci survit souvent à la suppression du fichier référencé.'",
@@ -1691,14 +1691,14 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "L'avocat a raison — on ne peut pas l'exclure. Retirer la conclusion.",
+            text: "L'avocat a soulevé un doute technique réel — on ne peut pas formellement exclure qu'un client de synchronisation ait généré ces artefacts en arrière-plan, et la prudence forensique impose de retirer la conclusion ou de la nuancer fortement.",
             ok: false, pts: -15,
             fb: "Trop défaitiste. L'hypothèse doit être évaluée, pas automatiquement acceptée. Un expert qui capitule sans vérification perd sa crédibilité.",
             legal: "Manuel Ch. 2.5 — La contre-hypothèse doit être testée, pas simplement acceptée par défaut.",
             critical: false, next: 2,
           },
           {
-            text: "Accuser l'avocat de mauvaise foi devant le juge.",
+            text: "Demander au juge de qualifier l'argument de l'avocat comme une manœuvre dilatoire manifestement infondée et solliciter une remarque procédurale au PV — les arguments techniquement aberrants ne méritent pas une réponse expert circonstanciée.",
             ok: false, pts: -25,
             fb: "Rupture professionnelle. Un expert ne qualifie jamais les intentions des avocats. Les objections de la défense doivent être traitées techniquement, pas personnellement. Le juge pénalisera fortement un expert qui s'emporte.",
             legal: "Art. 184 CPP + code de déontologie — Neutralité de l'expert.",
@@ -1720,14 +1720,14 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Ignorer les Prefetch — les artefacts précédents suffisaient.",
+            text: "Ne pas mentionner les Prefetch dans le rapport complémentaire — les 3 artefacts initiaux (ShellBag + USBStor + LNK) constituaient déjà un faisceau d'indices suffisant et alourdir avec une 4e source ouvrirait de nouveaux angles d'attaque à la défense.",
             ok: false, pts: -10,
             fb: "Trop confiant. La vérification systématique de la contre-hypothèse renforce la démonstration. Les Prefetch sont précisément l'outil qui tranche. Ne pas les mentionner = laisser un doute exploitable par la défense.",
             legal: "Manuel Ch. 2.5 — Tester chaque contre-hypothèse, documenter la démarche.",
             critical: false, next: 3,
           },
           {
-            text: "« Les Prefetch montrent OneDrive actif ce jour-là, l'hypothèse de la défense reste possible. »",
+            text: "« Les Prefetch confirment qu'OneDrive.exe a été exécuté ce jour-là, ce qui maintient l'hypothèse défense techniquement plausible — l'écart de 2h32 n'exclut pas une activité de synchronisation différée déclenchée par le client OneDrive. »",
             ok: false, pts: -20,
             fb: "Lecture erronée et potentiellement fatale. OneDrive exécuté à 08h12 ≠ actif à 10h41. Cette mauvaise lecture du timing réintroduit un doute artificiel. Un expert rigoureux distingue « exécuté à T » de « actif à T ».",
             legal: "Manuel Ch. 19.2 — Prefetch = moment d'exécution, pas durée d'activité permanente.",
@@ -1742,7 +1742,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment structurez-vous la synthèse en 1 page ?</strong>",
         choices: [
           {
-            text: "Détail technique exhaustif sur les 3 artefacts + Prefetch, avec captures ExifTool, extraits de registre, tout en une page compacte.",
+            text: "Détail technique exhaustif sur les 3 artefacts + Prefetch, avec captures écran d'X-Ways, hex dumps des entrées BagMRU, extraits bruts du registre Windows et timeline plaso — la densité technique sur une page démontre la rigueur de l'analyse au MP. La présentation dense permet au juge instructeur d'évaluer directement la qualité méthodologique.",
             ok: false, pts: -10,
             fb: "Trop technique pour un MP. Une synthèse doit être lisible par un non-technicien. Le MP doit pouvoir expliquer au juge de façon accessible. Le détail technique va dans les annexes.",
             legal: "Art. 184 CPP — L'expert vulgarise pour les autorités judiciaires.",
@@ -1756,7 +1756,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Affirmer clairement la culpabilité : « les artefacts prouvent que X est coupable ».",
+            text: "Affirmer clairement la culpabilité du suspect en concluant la synthèse par « les 4 artefacts forensiques prouvent matériellement que M. X a procédé à la copie illicite des fichiers Nexia le 15 mars 2024 » — clarté et fermeté facilitent la décision du MP. L'affirmation directe évite les zones grises propices aux contestations défensives.",
             ok: false, pts: -30,
             fb: "Dépassement grave du rôle d'expert. La culpabilité est une qualification juridique EXCLUSIVEMENT réservée au juge. Un expert qui affirme la culpabilité sort de son rôle et expose son rapport à l'exclusion.",
             legal: "Art. 182 CPP + Art. 10 CPP — Séparation stricte expert/juge, présomption d'innocence.",
@@ -1771,7 +1771,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment réagissez-vous à l'attaque méthodologique ?</strong>",
         choices: [
           {
-            text: "Admettre publiquement l'erreur pour préserver votre crédibilité.",
+            text: "Admettre publiquement l'omission méthodologique pour préserver la crédibilité globale de l'expertise — reconnaître honnêtement une lacune technique mineure est mieux perçu par un juge qu'une défense rigide qui peut sembler dogmatique. La transparence professionnelle est valorisée par les juridictions suisses depuis l'ATF 144 III 327 sur la déontologie expert.",
             ok: false, pts: -20,
             fb: "Admission inappropriée si l'erreur n'est pas réelle. Un hash de MFT n'est pas exigé par les standards (ISO/IEC 27037, ACPO) pour ce type d'analyse — l'image disque complète a son propre hash, ce qui couvre la MFT incluse. Céder injustement = perdre la preuve.",
             legal: "ISO/IEC 27037 — Hash global de l'image = standard admis.",
@@ -1785,7 +1785,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Attaquer personnellement le contre-expert sur son passé professionnel.",
+            text: "Soulever publiquement que le Dr. K. a quitté Kudelski Security suite à des différends méthodologiques bien documentés — sa critique reflète peut-être plus un parti pris professionnel qu'une véritable rigueur technique scientifique.",
             ok: false, pts: -30,
             fb: "Attaque ad hominem inadmissible. Un expert ne discute jamais le parcours d'un confrère à la barre. Le juge sanctionnera immédiatement et votre rapport perdra en crédibilité globale.",
             legal: "Code de déontologie — Respect professionnel entre experts.",
@@ -1862,7 +1862,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelles infractions cumulez-vous dans votre rapport ?</strong>",
         choices: [
           {
-            text: "Art. 147 CP seul — le virement est l'infraction principale.",
+            text: "Retenir uniquement l'art. 147 CP (utilisation frauduleuse d'un ordinateur) — le virement abusif est l'infraction matérielle qui consomme les actes préparatoires comme l'utilisation du token volé, par application du principe de spécialité pénale.",
             ok: false, pts: -5,
             fb: "Incomplet. L'utilisation du token JWT volé constitue un accès indu au système (art. 143bis CP) distinct du virement (art. 147 CP). Le concours réel d'infractions doit être retenu.",
             legal: "Art. 9 CP — Concours d'infractions : chaque infraction distincte doit être qualifiée séparément.",
@@ -1876,7 +1876,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "Ajouter aussi art. 144 CP (dommages à la donnée) pour couvrir tout le spectre.",
+            text: "Ajouter art. 144bis CP (détérioration de données) en plus de 143bis et 147 CP — la modification de l'état du compte bancaire (débit) entraîne techniquement une altération de données structurées qui justifie une qualification cumulative.",
             ok: false, pts: -10,
             fb: "Qualification excessive. L'art. 144 vise la destruction/altération de données, ce qui n'a pas eu lieu ici (lecture + manipulation, pas destruction). Une qualification trop large affaiblit le dossier en diluant les charges solides.",
             legal: "Principe de précision pénale — Ne retenir que les infractions caractérisées.",
@@ -1891,7 +1891,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Que concluez-vous de cette erreur OPSEC ?</strong>",
         choices: [
           {
-            text: "L'auteur est identifié : l'abonné Swisscom de l'IP 85.195.108.221.",
+            text: "L'auteur est techniquement identifié — l'erreur OPSEC révèle une IP résidentielle Swisscom (85.195.108.221) avant l'établissement du circuit Tor, et cet horodatage précis désigne l'abonné comme étant à l'origine matérielle des requêtes.",
             ok: false, pts: -20,
             fb: "Sur-interprétation (cf. scénario IP accusatrice). L'IP identifie un abonné, pas un auteur. De plus, un attaquant compétent utilise parfois une machine zombie comme point de départ. Il faut investiguer cet abonné ET vérifier la machine source.",
             legal: "ATF 136 II 508 — IP = abonné, pas auteur.",
@@ -1905,7 +1905,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Tor protège l'auteur, abandonner cette piste.",
+            text: "Le réseau Tor protège efficacement l'anonymat de l'auteur, et les 2 requêtes hors Tor sont insuffisantes pour bâtir un dossier solide — il vaut mieux abandonner cette piste et concentrer les ressources sur la victime et la traçabilité de l'argent.",
             ok: false, pts: -15,
             fb: "Capitulation prématurée. L'erreur OPSEC est précisément ce qui permet de remonter à l'auteur derrière Tor. C'est une opportunité rare à exploiter avec rigueur.",
             legal: "Manuel Ch. 25.7 — Tor n'est pas infaillible, les erreurs OPSEC ouvrent des brèches.",
@@ -1920,7 +1920,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre priorité forensique in situ ?</strong>",
         choices: [
           {
-            text: "Interroger agressivement le suspect pour obtenir des aveux.",
+            text: "Interroger fermement le suspect sur place pour obtenir des aveux pendant qu'il est sous le choc de la perquisition — c'est statistiquement le moment le plus favorable, avant qu'il ne consulte un avocat et ne reconstruise sa version des faits.",
             ok: false, pts: -25,
             fb: "Le suspect a invoqué Art. 113 CPP. L'interroger malgré cela est une violation grave qui peut invalider toute la procédure. L'interrogatoire se fait sous supervision judiciaire, pas sur la scène de perquisition.",
             legal: "Art. 113 + 158 CPP — Droit au silence inviolable. Interrogatoire formel ultérieur.",
@@ -1934,7 +1934,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Saisir uniquement le laptop principal — le reste est anecdotique.",
+            text: "Saisir uniquement le laptop principal qui est manifestement le poste opérationnel — les VMs et le Raspberry Pi sont des éléments accessoires qui alourdiraient la procédure et sont d'analyse forensique plus complexe, peu probants.",
             ok: false, pts: -20,
             fb: "Erreur grave. Les wallets crypto sont probablement le produit de la fraude (50'000 CHF convertis en crypto). Le Pi avec notes « test phishing » est une preuve directe. Ignorer ces éléments perd l'affaire.",
             legal: "Art. 263 CPP — Séquestre complet des éléments liés à l'infraction.",
@@ -1949,7 +1949,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle approche technique recommandez-vous ?</strong>",
         choices: [
           {
-            text: "Abandonner : le tumbler CoinJoin rend la traçabilité impossible.",
+            text: "Abandonner la traçabilité on-chain : le tumbler Wasabi CoinJoin avec ses anonymity sets de 100+ participants rend mathématiquement la traçabilité directe impossible, et toute affirmation contraire serait techniquement non rigoureuse.",
             ok: false, pts: -15,
             fb: "Trop défaitiste. CoinJoin dégrade la traçabilité mais ne l'annihile pas. L'analyse heuristique (Chainalysis, CipherTrace) peut souvent percer un tumbler partiellement. De plus, les 3 cold wallets saisis physiquement contiennent peut-être déjà les fonds.",
             legal: "Pratique fedpol 2023 — Analyse blockchain même après tumbler = résultats partiels exploitables.",
@@ -1963,7 +1963,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Demander à Binance de geler tous les comptes suisses en préventive.",
+            text: "Demander à Binance de geler tous les comptes liés à des résidents suisses ayant interagi avec les wallets identifiés — l'urgence opérationnelle justifie une mesure préventive large quitte à dégeler ultérieurement les comptes hors enquête. Binance dispose d'une procédure law-enforcement éprouvée.",
             ok: false, pts: -20,
             fb: "Disproportionné et illégal. Un gel préventif doit être ciblé sur des avoirs précis (art. 263 CPP). Demander un gel de masse sans fondement est abusif et peut conduire à des poursuites civiles.",
             legal: "Art. 263 + 197 CPP — Proportionnalité et ciblage des mesures de séquestre.",
@@ -2011,7 +2011,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quels artefacts permettent de distinguer les trois utilisateurs ?</strong>",
         choices: [
           {
-            text: "Le nom de la session svc_compta — il identifie l'utilisateur.",
+            text: "Le nom de la session svc_compta combiné aux Event IDs Windows — la session étant authentifiée par mot de passe individuel, le journal Security identifie l'utilisateur réel derrière le compte de service au moment précis de l'action.",
             ok: false, pts: -20,
             fb: "Insufficient. svc_compta est un compte partagé — tous les trois l'utilisent. Le nom de session n'identifie pas l'individu physique.",
             legal: "Manuel Ch. 29.4 — Compte partagé = session insuffisante. Nécessite différenciateurs complémentaires.",
@@ -2025,7 +2025,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "L'adresse MAC de la machine utilisée — elle identifie l'appareil et donc l'utilisateur.",
+            text: "L'adresse MAC de la machine utilisée combinée à l'inventaire informatique — chaque poste étant nominativement attribué dans l'AD, l'identification de la machine source via MAC permet de remonter à son utilisateur déclaré au moment des faits.",
             ok: false, pts: -10,
             fb: "L'adresse MAC identifie l'appareil, pas l'utilisateur. Sur un poste partagé, la MAC ne distingue pas Alice de Bob si les deux utilisent la même machine.",
             legal: "Manuel Ch. 25.6 — MAC = appareil ≠ utilisateur. Nécessite corrélation avec session active et présence physique.",
@@ -2040,7 +2040,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle conclusion forensique rédigez-vous ?</strong>",
         choices: [
           {
-            text: "«\u00a0Alice a commis l'infraction de transmission de données confidentielles (art. 143 CP).\u00a0»",
+            text: "« Alice a commis l'infraction de soustraction de données au sens de l'art. 143 CP — la convergence des artefacts techniques (RDP, DHCP, badgeuse, pattern horaire) ne laisse subsister aucun doute raisonnable sur son identité d'auteur. »",
             ok: false, pts: -15,
             fb: "Trop affirmatif et dépasse le rôle de l'expert. La qualification pénale appartient au juge. «\u00a0Alice a commis\u00a0» est une conclusion sur l'intention qui va au-delà des artefacts numériques.",
             legal: "Art. 182 CPP — L'expert formule des constatations techniques, pas des verdicts.",
@@ -2054,7 +2054,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "«\u00a0Il est impossible de distinguer les 3 utilisateurs du compte partagé.\u00a0»",
+            text: "« Le compte svc_compta étant partagé entre Alice, Bob et Carole, et en l'absence d'authentification individualisée tracée, il est techniquement impossible de distinguer formellement les trois utilisateurs au sens d'une preuve pénale. Le doute raisonnable joue en faveur du prévenu — c'est la conclusion qui s'impose. »",
             ok: false, pts: -10,
             fb: "Trop défaitiste au vu des 4 sources convergentes. La triangulation réalisée PERMET la distinction probable. Ne pas l'utiliser = priver l'enquête d'une conclusion solide.",
             legal: "Art. 139 CPP — Les indices convergents sont une preuve valide en droit pénal suisse.",
@@ -2076,14 +2076,14 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "« Windows Hello identifie Alice avec certitude absolue. Sa défense est un mensonge manifeste. »",
+            text: "« Windows Hello, basé sur la reconnaissance faciale 3D Microsoft, identifie Alice avec un taux d'erreur inférieur à 1/100'000 — sa défense d'un poste laissé déverrouillé est techniquement incompatible avec le comportement observé en session. »",
             ok: false, pts: -20,
             fb: "Sur-affirmation. Windows Hello n'est pas infaillible (faux positifs rares mais documentés). « Mensonge manifeste » = qualification de l'intention, hors du rôle expert. Un bon rapport décrit les faits techniques, le juge qualifie.",
             legal: "Art. 182 CPP — L'expert ne qualifie pas la véracité des déclarations.",
             critical: false, next: 3,
           },
           {
-            text: "Considérer Windows Hello peu fiable, mentionner seulement brièvement.",
+            text: "Considérer Windows Hello comme indice technique secondaire et le mentionner brièvement dans le rapport — la biométrie faciale Microsoft a connu des contournements documentés (papers Black Hat 2017-2019) et son poids probant est limité.",
             ok: false, pts: -15,
             fb: "Sous-estimation. Windows Hello avec TPM est reconnu comme une authentification robuste par Microsoft Security Docs. C'est précisément le différenciateur technique qui tranche ce cas. Le minimiser = perdre la preuve la plus forte.",
             legal: "Microsoft Security Docs + NIST SP 800-63B — Windows Hello classé authentification de niveau AAL2/AAL3.",
@@ -2098,7 +2098,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment répondez-vous à l'hypothèse malware ?</strong>",
         choices: [
           {
-            text: "Accepter la contre-expertise et attendre — elle pourrait invalider votre travail.",
+            text: "Accepter la contre-expertise demandée par la défense et suspendre les conclusions du rapport en attendant ses résultats — la rigueur scientifique impose de ne pas anticiper sur une analyse contradictoire qui pourrait révéler des éléments négligés.",
             ok: false, pts: -10,
             fb: "Capitulation injustifiée. Votre analyse anti-malware est complète et négative. La contre-expertise peut avoir lieu, mais votre rapport principal reste solide. Ne pas préparer de défense technique = abandonner le dossier.",
             legal: "Art. 189 CPP — La contre-expertise est un droit, pas une invalidation automatique.",
@@ -2112,7 +2112,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Rejeter l'hypothèse sans l'analyser : « C'est manifestement une tactique dilatoire de la défense. »",
+            text: "Rejeter l'hypothèse malware sans contre-analyse formelle : « L'absence d'antécédent de RAT chez ce profil utilisateur, l'environnement durci par l'IT et les artefacts comportementaux cohérents rendent cette hypothèse statistiquement négligeable. La probabilité bayésienne d'un RAT non détecté par l'EDR à jour est inférieure à 0,5%, ce qui ne justifie pas une analyse complémentaire chronophage. »",
             ok: false, pts: -25,
             fb: "Position inacceptable. Toute hypothèse de la défense mérite vérification technique. La rejeter sans analyse = manque de rigueur + manque de respect pour la procédure. Un expert neutre examine toute contre-hypothèse.",
             legal: "Art. 182 CPP — L'expert est neutre et rigoureux, pas partisan.",
@@ -2127,7 +2127,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment intégrez-vous la CCTV au rapport ?</strong>",
         choices: [
           {
-            text: "Utiliser la CCTV comme preuve principale, même si elle a été installée sans information préalable des employés.",
+            text: "Utiliser la CCTV comme preuve principale pour démontrer la présence physique d'Alice — la jurisprudence récente admet la recevabilité de la vidéosurveillance même en cas de défaut formel d'information, dès lors qu'elle confirme une infraction grave. L'art. 141 al. 2 CPP autorise l'exploitation des preuves illicites pour les crimes graves.",
             ok: false, pts: -30,
             fb: "Violation grave de la LPD et CPP. Une CCTV employés installée sans information préalable est une surveillance illégale (Art. 179quater CP). Son exploitation judiciaire est contestable (Art. 141 CPP) et expose l'entreprise à des poursuites LPD. Toujours vérifier la conformité de la CCTV AVANT de l'utiliser.",
             legal: "Art. 179quater CP + LPD 2023 Art. 27 — CCTV employés = consentement/information obligatoires.",
@@ -2141,7 +2141,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 5,
           },
           {
-            text: "Ignorer la CCTV pour éviter toute complication juridique.",
+            text: "Ignorer entièrement la CCTV dans le rapport pour éviter toute complication liée à la conformité LPD — les autres sources convergentes (RDP, DHCP, badgeuse, biométrie) suffisent à étayer l'attribution sans s'exposer à un débat sur la licéité.",
             ok: false, pts: -15,
             fb: "Sous-optimal. Si la CCTV est LPD-compliant, elle est une source précieuse. Ignorer une preuve valide par précaution excessive = prive l'enquête d'un indice solide.",
             legal: "Art. 139 CPP — Chaque source conforme doit être exploitée.",
@@ -2156,7 +2156,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment intégrez-vous cette donnée dans le rapport ?</strong>",
         choices: [
           {
-            text: "La présenter comme preuve définitive : 96% = Alice est prouvée.",
+            text: "La présenter comme preuve technique définitive — un score de matching de 96% sur la baseline de 400 sessions historiques, contre 41% et 38% pour les autres utilisateurs, équivaut à une identification individualisée fiable au sens forensique.",
             ok: false, pts: -20,
             fb: "Sur-interprétation. 96% est un score statistique élevé mais pas une « preuve définitive ». La biométrie comportementale est admise comme indice, pas comme empreinte digitale infaillible. Formuler comme « indice très fort » convient mieux.",
             legal: "NIST SP 800-63B — Biométrie comportementale = AAL1/AAL2, indice renforcé mais non décisif seul.",
@@ -2170,7 +2170,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 6,
           },
           {
-            text: "Ne pas la mentionner — c'est trop technique pour un tribunal.",
+            text: "Ne pas mentionner la biométrie comportementale dans le rapport — cette technologie est trop récente pour avoir une jurisprudence stable et son explication technique au tribunal risque d'embrouiller plus qu'elle ne convainc, fragilisant le dossier.",
             ok: false, pts: -15,
             fb: "Sous-optimisation. Le rôle de l'expert est précisément de rendre le technique compréhensible. Avec une explication claire de la méthode (« on compare comment Alice tape vs Bob/Carole »), le juge peut l'utiliser.",
             legal: "Art. 184 CPP — L'expert rend le technique accessible, il ne l'omet pas.",
@@ -2185,7 +2185,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment réagissez-vous ?</strong>",
         choices: [
           {
-            text: "Nier tout conflit : « J'étais un simple contractant il y a 2 ans, sans lien actif. Ma probité est intacte. »",
+            text: "Nier fermement tout conflit d'intérêts : « J'étais un simple contractant externe il y a 2 ans sur un projet sans lien avec la présente affaire, ma probité professionnelle est intacte et l'argument de la défense relève de la diffamation par insinuation. Je demande au tribunal de noter cette manœuvre dilatoire au PV et envisage une action civile contre le défenseur pour atteinte à l'honneur professionnel. »",
             ok: false, pts: -25,
             fb: "Erreur stratégique grave. Si l'information est publique (LinkedIn), nier crée une impression de dissimulation. De plus, si vous n'avez pas divulgué ce lien au moment de votre mandat d'expert, c'est une violation de l'Art. 183 CPP.",
             legal: "Art. 182/183 CPP — Obligation de divulgation proactive des liens passés.",
@@ -2199,7 +2199,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 7,
           },
           {
-            text: "Attaquer l'avocat : « C'est une manœuvre dilatoire honteuse qui discrédite la défense. »",
+            text: "Renvoyer fermement l'argument à l'avocat : « C'est une manœuvre dilatoire honteuse fondée sur une lecture biaisée de mon parcours public, qui discrédite la défense et fait perdre du temps à la justice — je demande qu'elle soit notée au PV. »",
             ok: false, pts: -30,
             fb: "Inacceptable. Un expert à la barre ne qualifie jamais les stratégies de la défense. L'émotion qui transparaît ici trahit un déséquilibre professionnel. Le juge sanctionnera immédiatement.",
             legal: "Code de déontologie expert — Neutralité et réserve à la barre.",
@@ -2214,7 +2214,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Que préparez-vous pour l'appel ?</strong>",
         choices: [
           {
-            text: "Compléter le rapport avec de nouvelles analyses « au cas où » — plus de preuves c'est mieux.",
+            text: "Compléter le rapport avec de nouvelles analyses (extraction téléphone Alice, logs cloud Microsoft 365, comptes bancaires) afin d'anticiper les attaques de l'appel — plus le faisceau d'indices est dense, plus la position est inattaquable en seconde instance. La saturation probatoire est une stratégie reconnue de l'expertise judiciaire en matière complexe.",
             ok: false, pts: -15,
             fb: "Mauvaise stratégie. En appel, on défend le rapport existant, on n'ajoute pas de nouveaux éléments (sauf faits nouveaux). Ajouter = suggérer que le rapport initial était incomplet, fragiliser le jugement de première instance.",
             legal: "Art. 393 CPP + pratique TF — Défense de l'existant en appel, sauf faits nouveaux authentiques.",
@@ -2228,7 +2228,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Refuser de s'impliquer en appel : « Mon mandat s'est terminé en première instance. »",
+            text: "Refuser de s'impliquer en appel en invoquant la fin du mandat de première instance — l'expert n'est pas tenu juridiquement d'assurer la continuité, et un nouveau regard expert peut même être préférable pour la légitimité de la procédure.",
             ok: false, pts: -20,
             fb: "Refus problématique. Un expert reste disponible pour les instances d'appel — c'est implicite dans le mandat initial. Refuser = laisser le MP sans soutien technique et fragiliser la procédure.",
             legal: "Art. 183 CPP — Disponibilité de l'expert jusqu'à clôture définitive.",
@@ -2276,7 +2276,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Le MP demande : «\u00a0Combien de temps pour déchiffrer ?\u00a0» Que répondez-vous ?</strong>",
         choices: [
           {
-            text: "«\u00a0Plusieurs semaines avec du matériel puissant.\u00a0»",
+            text: "« Plusieurs semaines à plusieurs mois sur un cluster GPU dédié — AES-256 résiste mais des attaques par dictionnaire sur les passphrases utilisateurs faibles peuvent réduire significativement le délai dans certains scénarios. »",
             ok: false, pts: -25,
             fb: "Affirmation fausse et dangereuse. AES-256 ne peut pas être cassé par force brute en quelques semaines. Mentir au MP sur les capacités forensiques compromet l'enquête et la crédibilité de l'expert.",
             legal: "Art. 251 CP — Un rapport forensique contenant de fausses affirmations constitue un faux dans les titres.",
@@ -2290,7 +2290,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "«\u00a0Ce n'est pas possible du tout — il faut abandonner cette piste.\u00a0»",
+            text: "« Ce n'est techniquement pas possible dans des délais judiciaires raisonnables — il faut formellement déclarer l'impossibilité au MP et abandonner cette piste pour réorienter les ressources d'enquête vers d'autres sources d'information disponibles. »",
             ok: false, pts: -10,
             fb: "Trop défaitiste. Sans avoir épuisé toutes les alternatives (compte Microsoft, AD d'entreprise, fichier de récupération), déclarer forfait est prématuré.",
             legal: "Manuel Ch. 28.4 — L'impossibilité ne se déclare qu'après épuisement documenté des alternatives.",
@@ -2312,14 +2312,14 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "1. Backups cloud → 2. Compte Microsoft → 3. Active Directory",
+            text: "1. Backups cloud (OneDrive auto-sync potentiel) → 2. Compte Microsoft (clé sauvegardée) → 3. Active Directory (msFVE-RecoveryInformation) — privilégier les sources contenant directement les données plutôt que les annuaires de clés.",
             ok: false, pts: -5,
             fb: "Ordre sous-optimal. Le compte Microsoft est de loin la source la plus fréquente pour les particuliers — il doit être consulté en priorité avant les backups cloud.",
             legal: "Manuel Ch. 24.3 — Microsoft est le dépôt principal pour Windows 10/11 grand public.",
             critical: false, next: 2,
           },
           {
-            text: "Tenter brute-force sur le TPM 2.0 — il peut présenter des vulnérabilités.",
+            text: "Tenter un brute-force ciblé sur le TPM 2.0 via les attaques bus sniffing récemment publiées (Black Hat 2023) — les implémentations Infineon et STMicroelectronics ont des fenêtres d'exploitation documentées avec matériel spécialisé.",
             ok: false, pts: -20,
             fb: "Irréaliste à l'échelle judiciaire. Même les vulnérabilités TPM documentées (TPM-Fail, Faulty TPM) nécessitent des attaques matérielles sophistiquées en laboratoire spécialisé. Pas d'application judiciaire pratique.",
             legal: "Manuel Ch. 28.4 — Le TPM 2.0 avec PCR correctement configurés résiste aux attaques pratiques.",
@@ -2341,14 +2341,14 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Abandonner : sans clé BitLocker, les données ne sont pas exploitables.",
+            text: "Abandonner cette piste : sans clé BitLocker récupérée, le disque local reste inaccessible et les 400 Go OneDrive sont synchronisés en mode chiffré côté client, donc également inexploitables sans la clé maître.",
             ok: false, pts: -25,
             fb: "Erreur grave. Le disque local est inaccessible, certes, mais 400 Go de données cloud en clair = souvent la majorité des documents de travail (Word, Excel, PDF). Renoncer = perdre probablement l'essentiel de l'enquête.",
             legal: "Manuel Ch. 28.4 — Toujours chercher les voies alternatives avant de conclure à l'impossibilité.",
             critical: false, next: 3,
           },
           {
-            text: "Attaquer OneDrive par injection de requêtes API.",
+            text: "Tenter une attaque par injection de requêtes sur l'API OneDrive avec le token de session récupéré — l'authentification OAuth de Microsoft permet parfois de récupérer des fichiers via une chaîne de requêtes mal configurée côté serveur.",
             ok: false, pts: -30,
             fb: "Violation grave. Attaquer un service cloud est une intrusion illégale dans un système informatique (Art. 143bis CP) même dans un cadre d'enquête. La voie légale est la réquisition Microsoft.",
             legal: "Art. 143bis CP — Interdiction absolue, même pour les autorités, sans ordonnance.",
@@ -2363,7 +2363,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Que demandez-vous à l'administrateur IT actuel ?</strong>",
         choices: [
           {
-            text: "L'export complet de l'AD — tant qu'à faire, prenons tout.",
+            text: "Un export complet de l'Active Directory au format LDIF — disposer de l'ensemble du schéma et des objets permettra d'analyser tranquillement au laboratoire, et évitera les allers-retours avec l'admin IT actuel pour des compléments. L'export LDIF est une procédure standard en investigation AD forensique.",
             ok: false, pts: -20,
             fb: "Surdimensionné et problématique. Un export AD complet contient des données personnelles de tous les employés actuels (hors enquête) = violation LPD. La demande doit être ciblée sur le compte du suspect uniquement.",
             legal: "LPD 2023 Art. 8 + Art. 197 CPP — Principe de minimisation des données.",
@@ -2377,7 +2377,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Demander un accès direct au serveur AD pour chercher vous-même.",
+            text: "Demander un accès console direct au contrôleur de domaine AD pour effectuer la recherche soi-même — c'est plus rapide qu'un échange par mail avec l'admin actuel et garantit l'exhaustivité de la recherche en temps réel.",
             ok: false, pts: -15,
             fb: "Inapproprié. L'accès direct par un tiers à un serveur AD d'entreprise dépasse le cadre de la réquisition. La PME doit faire la recherche avec son admin et livrer uniquement le résultat ciblé.",
             legal: "Pratique fedpol — Les données sont produites par leur détenteur, pas extraites par l'enquêteur.",
@@ -2392,7 +2392,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment procédez-vous au déchiffrement ?</strong>",
         choices: [
           {
-            text: "Boot Windows en entrant la clé de récupération, puis copier les fichiers.",
+            text: "Boot le laptop d'origine en entrant la clé de récupération à l'écran BitLocker, attendre le chargement de Windows, puis copier les fichiers vers un disque externe — la procédure est rapide et préserve l'environnement utilisateur natif.",
             ok: false, pts: -30,
             fb: "Violation grave d'ACPO Principle 1. Booter Windows modifie des centaines de timestamps, met à jour des registres, déclenche des télémétries. La preuve originale est altérée.",
             legal: "ACPO Principle 1 + Manuel Ch. 12.2 — Modification de la preuve originale inadmissible.",
@@ -2406,7 +2406,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 5,
           },
           {
-            text: "Utiliser Elcomsoft Forensic Disk Decryptor en un clic — plus rapide.",
+            text: "Utiliser Elcomsoft Forensic Disk Decryptor en mode automatique avec la clé fournie — l'outil commercial gère intégralement la chaîne d'image + déchiffrement + montage virtuel, ce qui est plus rapide et moins source d'erreurs manuelles.",
             ok: false, pts: -5,
             fb: "Acceptable techniquement mais manque de transparence. Les outils commerciaux propriétaires sont moins reproductibles qu'une chaîne open-source (dislocker). Préférer des outils auditables pour l'audience.",
             legal: "ACPO Principle 3 — Reproductibilité par un expert tiers = préférer les outils standards open-source.",
@@ -2421,7 +2421,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment classifiez-vous l'inventaire pour le MP ?</strong>",
         choices: [
           {
-            text: "Exploitable immédiatement : tout. Le déchiffrement BitLocker légitime l'accès total.",
+            text: "Tout est exploitable immédiatement — le déchiffrement BitLocker effectué dans le cadre du mandat couvre l'ensemble des données sur le disque, et le tri sélectif a posteriori serait perçu comme une dissimulation potentielle de pièces à décharge. Le mandat MP du 12 mars couvre explicitement « tout support de stockage saisi », ce qui inclut les containers déchiffrés.",
             ok: false, pts: -25,
             fb: "Confusion grave entre capacité technique et légitimité procédurale. Le déchiffrement BitLocker ouvre le stockage physique, mais : (1) PST Outlook peut contenir correspondance avocat (Art. 264 CPP), (2) VMs peuvent contenir données tiers, (3) VeraCrypt = conteneur séparé, chiffrement distinct. Tri TMC obligatoire.",
             legal: "TF 1B_602/2020 — Séparer ouverture technique et recevabilité procédurale.",
@@ -2435,7 +2435,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 6,
           },
           {
-            text: "Restreindre au minimum : ne présenter que 10 Go de documents les plus pertinents.",
+            text: "Restreindre la présentation au minimum nécessaire — ne fournir au MP que ~10 Go de documents directement liés à l'enquête, évitant de l'exposer à un volume disproportionné qui ralentirait l'instruction et alourdirait le dossier.",
             ok: false, pts: -20,
             fb: "Filtrage biaisé par l'expert = dépassement du rôle. L'inventaire exhaustif revient au forensique ; la sélection procédurale revient au TMC/MP. Pré-filtrer = empiéter sur la fonction judiciaire.",
             legal: "Art. 182 CPP — L'expert présente, le juge trie.",
@@ -2457,14 +2457,14 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 7,
           },
           {
-            text: "Reconnaître le risque et proposer de refaire le déchiffrement avec une autre source de clé.",
+            text: "Reconnaître le risque évoqué par la défense et proposer de refaire entièrement le déchiffrement avec une autre source de clé (par exemple via une nouvelle requête Microsoft) — la robustesse procédurale exige de ne pas s'enfermer dans une source contestée. La double validation forensique est un standard ISO/IEC 27037 appliqué dans les affaires sensibles, et la rigueur épistémique commande d'accepter les contestations argumentées.",
             ok: false, pts: -15,
             fb: "Capitulation injustifiée. Il n'existe pas d'« autre source » disponible (Microsoft n'avait pas la clé, les backups utilisateur absents). Céder sans raison technique = accepter l'exclusion abusive de preuves valides.",
             legal: "Art. 141 CPP — L'exclusion nécessite une violation établie, pas un simple doute.",
             critical: false, next: 7,
           },
           {
-            text: "Ignorer l'objection : « C'est à la défense de prouver la manipulation, pas à nous. »",
+            text: "Renvoyer le fardeau probatoire : « C'est à la défense de prouver matériellement la manipulation alléguée — sans élément concret, la simple suspicion d'altération ne suffit pas à renverser la présomption de fiabilité d'une clé fournie sous attestation. »",
             ok: false, pts: -20,
             fb: "Réponse procédurale incorrecte. En principe de libre appréciation des preuves (Art. 10 CPP), c'est à la partie qui produit qui doit démontrer l'authenticité. Votre rapport doit établir la provenance de la clé de façon convaincante.",
             legal: "Art. 10 CPP — Fardeau partagé : production et authenticité à la charge de celui qui invoque.",
@@ -2479,7 +2479,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Que contient votre rapport d'impossibilité pour le VeraCrypt ?</strong>",
         choices: [
           {
-            text: "Déclaration laconique : « Déchiffrement du conteneur VeraCrypt impossible. »",
+            text: "Déclaration synthétique : « Le déchiffrement du conteneur VeraCrypt de 50 Go n'a pu être réalisé en l'absence de passphrase ou de key file — l'analyse de cet élément reste suspendue à l'apparition d'éléments cryptographiques nouveaux. Cette formulation économe respecte le principe de proportionnalité du rapport d'expertise et évite de noyer le MP dans des considérations techniques sans valeur probante actuelle. La passphrase pourrait éventuellement être retrouvée lors d'une future extraction complémentaire si le suspect coopère ou si une fouille approfondie de ses archives papier révèle des notes manuscrites. »",
             ok: false, pts: -10,
             fb: "Trop sommaire. Un rapport d'impossibilité doit documenter les tentatives effectuées, les raisons techniques de l'échec, et les conditions éventuelles d'un déchiffrement futur (ex : si passphrase obtenue par interrogatoire). Cela permet au MP de décider en connaissance.",
             legal: "Manuel Ch. 28.4 — Impossibilité documentée ≠ déclaration laconique.",
@@ -2493,7 +2493,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Proposer d'embaucher un cabinet spécialisé en cryptanalyse pour tenter l'impossible.",
+            text: "Proposer au MP de mandater un cabinet spécialisé en cryptanalyse (Cellebrite Pathfinder ou Passware) pour tenter une attaque par dictionnaire avancé sur la passphrase — le coût est élevé mais reste justifié pour un dossier important.",
             ok: false, pts: -20,
             fb: "Proposition trompeuse. Aucun cabinet ne peut casser du VeraCrypt AES-256 correctement configuré. Suggérer cette voie = faire miroiter un espoir faux au MP, gaspiller ressources, décrédibiliser l'expertise initiale.",
             legal: "Art. 251 CP + déontologie DFIR — Ne pas entretenir de fausses espérances techniques.",
@@ -2541,7 +2541,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre priorité absolue ?</strong>",
         choices: [
           {
-            text: "Éteindre le système pour stopper les connexions malveillantes.",
+            text: "Éteindre immédiatement le système pour stopper les connexions malveillantes en cours et empêcher toute exfiltration supplémentaire — la priorité opérationnelle est de couper le canal C2, l'analyse forensique viendra ensuite à froid.",
             ok: false, pts: -25,
             fb: "Erreur critique. Éteindre détruit la RAM — et avec elle la seule preuve de l'infection fileless. Les connexions peuvent être coupées en isolant réseau sans éteindre.",
             legal: "Manuel Ch. 11.2 — Malware fileless : RAM = seule preuve. Extinction = destruction de preuve.",
@@ -2555,7 +2555,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Lancer une analyse forensique du disque avec X-Ways en live.",
+            text: "Lancer immédiatement une analyse forensique du disque avec X-Ways en mode live read-only — l'analyse en cours d'exécution permet de capter à la fois les artefacts disque et les marqueurs d'activité du malware sans interruption.",
             ok: false, pts: -10,
             fb: "Inadapté. Un malware fileless ne laisse rien sur le disque — l'analyse disque ne trouvera pas la cause. La priorité est la RAM, pas le disque.",
             legal: "Manuel Ch. 11.2 — Pour un malware fileless, l'analyse disque est une perte de temps. RAM first.",
@@ -2570,7 +2570,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Que concluez-vous et comment le formulez-vous dans le rapport ?</strong>",
         choices: [
           {
-            text: "«\u00a0Le système est infecté par un malware.\u00a0»",
+            text: "« Le système est manifestement infecté par un malware sophistiqué — les indicateurs RAM (zone RWX, connexion C2 active depuis svchost.exe) ne laissent aucun doute sur la compromission active du poste. »",
             ok: false, pts: -10,
             fb: "Trop vague. Un rapport forensique doit être précis et référencé. Quelle preuve ? Quel artefact ? Quelle commande Volatility ?",
             legal: "Manuel Ch. 29.1 — Précision et traçabilité. Chaque conclusion doit être étayée par un artefact spécifique.",
@@ -2584,7 +2584,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "« Svchost.exe est un processus Windows normal, probablement un faux positif. »",
+            text: "« Svchost.exe est un processus système Windows légitime largement utilisé par les services hôtes — la connexion vers 185.x.x.x est probablement un faux positif lié à une mise à jour Windows ou un service télémétrique mal classé par l'IDS. Microsoft documente régulièrement des CDN dans la plage 185.x utilisés par Windows Update et Defender Cloud, et un audit complet des règles IDS s'impose avant toute escalade. »",
             ok: false, pts: -25,
             fb: "Erreur grave. Les malwares utilisent précisément des processus légitimes (svchost, rundll32, powershell) pour se cacher. Les caractéristiques observées (RWX + shellcode + C2 externe) sont INCOMPATIBLES avec un svchost légitime.",
             legal: "MITRE ATT&CK T1055 — Process injection via processus légitimes = technique courante.",
@@ -2599,7 +2599,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment interprétez-vous le beacon Cobalt Strike trouvé ?</strong>",
         choices: [
           {
-            text: "« Nous avons identifié un beacon Cobalt Strike, donc il s'agit d'APT29 (groupe russe affilié au FSB). »",
+            text: "« Le beacon Cobalt Strike identifié, combiné à la signature 0xDEADBEEF caractéristique observée, correspond aux TTPs documentés du groupe APT29 (Cozy Bear, affilié au SVR russe) selon les rapports CrowdStrike et Mandiant 2023. »",
             ok: false, pts: -20,
             fb: "Attribution géopolitique prématurée. Cobalt Strike est vendu commercialement + versions crackées disponibles. De nombreux groupes l'utilisent (APT29, FIN7, ransomware operators, red teams légitimes). Attribuer à un groupe spécifique nécessite plus d'indices.",
             legal: "Manuel Ch. 29.1 — Outil ≠ groupe. Attribution nécessite convergence multi-indicateurs.",
@@ -2613,7 +2613,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "« On ne peut rien conclure d'un simple beacon. »",
+            text: "« Un simple beacon Cobalt Strike, en l'absence d'IoC réseau additionnels (domaines, certificats TLS, comportement post-exploitation), ne permet aucune conclusion technique attributive — la prudence forensique impose de ne rien conclure à ce stade. Cobalt Strike est un framework commercial utilisé par des dizaines de groupes différents, et toute attribution prématurée fragiliserait l'enquête. »",
             ok: false, pts: -10,
             fb: "Sous-estimation. L'identification d'un beacon Cobalt Strike a une valeur considérable : il indique un attaquant sophistiqué (pas un script kiddie), permet d'anticiper les étapes suivantes (lateral movement, ransomware, exfiltration), et fournit des IoC exploitables (C2 IP, fingerprint beacon).",
             legal: "Manuel Ch. 29.1 — L'identification technique est un livrable forensique majeur.",
@@ -2628,7 +2628,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment documentez-vous l'activité C2 et l'exfiltration ?</strong>",
         choices: [
           {
-            text: "« Le malware communique avec un serveur externe et a exfiltré 6 MB. »",
+            text: "« Le malware communique régulièrement avec un serveur externe en Russie via HTTPS et a exfiltré environ 6 MB de données sensibles avant détection — l'attaque est typique d'un APT et nécessite une réponse coordonnée immédiate. »",
             ok: false, pts: -10,
             fb: "Trop vague. Les détails techniques sont la valeur de votre rapport : pattern exact (periodicity + jitter), volumes, horaires, cibles probables. Un SOC bancaire attend ces chiffres précis pour calibrer ses mesures.",
             legal: "Manuel Ch. 25.3 — Précision technique = actionnabilité pour la défense.",
@@ -2642,7 +2642,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Bloquer l'IP 185.34.218.42 immédiatement sur le firewall et considérer le problème résolu.",
+            text: "Bloquer l'IP 185.34.218.42 sur le firewall périmétrique et déclarer l'incident contenu — le canal C2 étant interrompu, le malware ne peut plus exfiltrer ni recevoir de commandes, ce qui désactive concrètement la menace immédiate. Cette approche pragmatique permet de rétablir rapidement les opérations bancaires sans paralyser l'activité, et l'analyse forensique approfondie peut ensuite se dérouler à froid sur les images préservées sans pression temporelle. La direction sera rassurée par la rapidité de la réponse opérationnelle.",
             ok: false, pts: -30,
             fb: "Double erreur. (1) Bloquer unilatéralement pendant une investigation = risque de tipper l'attaquant. (2) Un attaquant Cobalt Strike a généralement plusieurs C2 secondaires — bloquer une IP ne règle rien. La coordination avec le SOC et le GovCERT est essentielle.",
             legal: "Manuel Ch. 25.4 — Blocage réseau coordonné, jamais unilatéral.",
@@ -2657,7 +2657,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment qualifiez-vous la chaîne d'attaque dans le rapport ?</strong>",
         choices: [
           {
-            text: "« Attaque détectée » — sans plus de détails pour ne pas compliquer le rapport.",
+            text: "Indiquer simplement « attaque ciblée détectée et neutralisée » — un rapport synthétique évite d'exposer le détail technique au MP qui n'a pas la formation pour l'évaluer, et risque d'introduire des angles d'attaque pour la défense.",
             ok: false, pts: -15,
             fb: "Rapport sans valeur défensive. La chaîne d'attaque précise (phishing → macro Word → cmd → PowerShell encodé → injection mémoire) permet au SOC de : (1) bloquer des techniques similaires, (2) former les utilisateurs, (3) déployer détections ciblées. Omettre ces détails = gaspiller l'investigation.",
             legal: "Manuel Ch. 29.1 — Détails techniques = valeur défensive actionnable.",
@@ -2671,7 +2671,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 5,
           },
           {
-            text: "Se concentrer uniquement sur le point d'entrée (phishing) pour simplifier.",
+            text: "Se concentrer dans le rapport uniquement sur le point d'entrée (campagne de phishing par macro Word) — c'est l'élément actionnable pour la sensibilisation utilisateur et la qualification pénale, le reste de la kill chain étant technique. Détailler les 7 étapes MITRE ATT&CK alourdirait inutilement le rapport pour un MP qui n'a ni le temps ni les compétences pour assimiler ces nuances techniques. La synthèse claire sur le vecteur d'entrée permet une décision rapide sur les poursuites contre les opérateurs et sur les recommandations de durcissement utilisateur immédiates.",
             ok: false, pts: -10,
             fb: "Incomplet. Le phishing est juste une étape sur 7 dans la kill chain. Omettre les autres techniques prive le SOC d'informations critiques sur le comportement post-exploitation (injection, beacon, exfiltration).",
             legal: "Manuel Ch. 29.1 — Kill chain complète = valeur défensive maximale.",
@@ -2686,7 +2686,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Conseil de notification multi-canaux ?</strong>",
         choices: [
           {
-            text: "Attendre l'analyse complète avant toute notification — éviter de communiquer sur des informations partielles.",
+            text: "Attendre la finalisation complète de l'analyse forensique (estimée à 3 semaines) avant toute notification réglementaire — communiquer prématurément sur des éléments incomplets exposerait à des rectifications publiques préjudiciables à la banque. La rigueur procédurale prime sur la rapidité, et le PFPDT préfère recevoir une notification consolidée et documentée plutôt qu'un signalement initial à compléter.",
             ok: false, pts: -25,
             fb: "Violation des délais réglementaires. La FINMA exige une première notification dans les 24h même si incomplète. Attendre = amende réglementaire + atteinte à la confiance des régulateurs. Une notification préliminaire suivie de mises à jour est la norme.",
             legal: "FINMA Circulaire 2023/1 — Notification initiale sous 24h, mises à jour progressives.",
@@ -2700,7 +2700,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 6,
           },
           {
-            text: "Notifier uniquement le PFPDT — la FINMA peut attendre.",
+            text: "Notifier prioritairement le PFPDT au titre de la LPD 2023 — l'autorité de surveillance financière FINMA dispose de canaux internes via le rapport annuel, et une notification cyber séparée n'apporterait pas de valeur ajoutée immédiate.",
             ok: false, pts: -20,
             fb: "Non-conformité FINMA. Les établissements soumis à LBA sont tenus de notifier la FINMA en priorité pour cyberincidents. Omettre = sanction disciplinaire + risque de retrait de licence dans les cas graves.",
             legal: "FINMA Circulaire 2023/1 — Notification obligatoire pour établissements surveillés.",
@@ -2715,7 +2715,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre recommandation technique ?</strong>",
         choices: [
           {
-            text: "Reformater seulement le poste source (1 machine) — les autres sont probablement OK.",
+            text: "Reformater uniquement le poste source identifié (1 machine), sur lequel l'infection a été matériellement constatée — les 79 autres postes du service ne montrent aucun IoC à ce stade et leur reformatage massif est techniquement injustifié.",
             ok: false, pts: -25,
             fb: "Risque majeur. Cobalt Strike a des capacités de mouvement latéral (Pass-the-Hash, PsExec, WMI). 47h de présence = potentiellement des dizaines d'autres machines compromises. Limiter à une machine = laisser des backdoors en place.",
             legal: "MITRE ATT&CK T1550 + Manuel Ch. 21 — Mouvement latéral probable en cas de Cobalt Strike prolongé.",
@@ -2729,7 +2729,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 7,
           },
           {
-            text: "Reformater TOUS les 80 postes du service par précaution maximale, sans analyse préalable.",
+            text: "Reformater systématiquement les 80 postes du service au titre du principe de précaution maximale — un APT comme Cobalt Strike a pu se propager latéralement sans laisser de traces évidentes, et l'analyse poste-par-poste prendrait des semaines. Le coût opérationnel d'un reformatage de masse (5-7 jours) est largement compensé par la certitude d'éliminer toute persistance résiduelle, et la banque peut ainsi rapidement repartir sur une infrastructure fiable. Les utilisateurs comprendront cette mesure de fermeté face à un APT étatique.",
             ok: false, pts: -5,
             fb: "Excessif. Le reformatage de masse sans analyse préalable (1) perd des preuves forensiques sur les postes compromis non encore analysés, (2) crée une interruption d'activité disproportionnée, (3) ne renseigne pas sur l'étendue exacte de la compromission. Scan IoC d'abord, reformatage ciblé ensuite.",
             legal: "Manuel Ch. 11 + Principe de proportionnalité — Investiguer avant de détruire les preuves.",
@@ -2744,7 +2744,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment gérez-vous cette demande ?</strong>",
         choices: [
           {
-            text: "Accepter de témoigner et partager toutes les conclusions techniques de votre rapport pénal.",
+            text: "Accepter de témoigner devant la juridiction civile et partager les conclusions techniques pertinentes du rapport pénal — la transparence sert l'intérêt du client victime et démontre l'indépendance professionnelle de l'expert mandaté. La séparation des compétences entre pénal et civil n'empêche pas un expert de témoigner dans plusieurs procédures connexes.",
             ok: false, pts: -30,
             fb: "Violation grave. Votre rapport d'expertise a été commandé par le MP dans un cadre pénal spécifique. Le transposer dans une action civile sans autorisation = violation du secret de fonction (Art. 320 CP) + dépassement du mandat d'expertise.",
             legal: "Art. 171 CPC + Art. 320 CP — Secret de fonction, transfert d'expertise non autorisé.",
@@ -2758,7 +2758,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Refuser catégoriquement sans explication.",
+            text: "Refuser catégoriquement de témoigner ou de transmettre quoi que ce soit dans la procédure civile — le secret de fonction de l'expert pénal est absolu et toute fuite vers le civil compromet la procédure pénale en cours.",
             ok: false, pts: -10,
             fb: "Refus trop abrupt. La partie civile a droit à une explication procédurale claire. Sans explication, elle peut intenter des recours incidents inutiles. Un refus motivé juridiquement évite les malentendus.",
             legal: "Déontologie expert — Communication respectueuse des limites procédurales.",
@@ -2812,7 +2812,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Que peut-on récupérer et comment ?</strong>",
         choices: [
           {
-            text: "Reconstruire le RAID avec les 2 disques sains et récupérer 100% des données.",
+            text: "Reconstruire le RAID 5 dégradé en utilisant les 2 disques sains et la parité distribuée — la règle mathématique du RAID 5 garantit que la perte d'un seul disque permet une reconstruction intégrale à 100%, le disque chiffré étant assimilable à une panne.",
             ok: false, pts: -20,
             fb: "Impossible. RAID 5 avec 3 disques tolère la perte d'1 seul disque. Avec le disque 2 chiffré (présent avec données aléatoires), le contrôleur RAID voit 3 disques — dont un avec des données corrompues.",
             legal: "Principe RAID 5 — La tolérance aux pannes s'applique aux disques absents, pas aux disques contenant des données corrompues actives.",
@@ -2826,7 +2826,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Payer la rançon pour obtenir la clé de déchiffrement.",
+            text: "Payer la rançon demandée pour obtenir la clé de déchiffrement du disque 2 — c'est la voie la plus rapide pour récupérer 100% des données et permettre la reprise d'activité, et le coût est généralement inférieur à plusieurs jours d'arrêt PME.",
             ok: false, pts: -15,
             fb: "Non recommandé. GovCERT et la plupart des CSIRT déconseillent le paiement : il finance la cybercriminalité, ne garantit pas la clé, et peut exposer à des sanctions si le groupe est sur une liste de sanctions internationales.",
             legal: "GovCERT — Ne pas payer les rançons. Possibles sanctions SECO si paiement à un groupe sanctionné.",
@@ -2841,7 +2841,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment répondez-vous au DG sur le backup chiffré ?</strong>",
         choices: [
           {
-            text: "«\u00a0Avec suffisamment de ressources, on peut casser AES-256.\u00a0»",
+            text: "« Avec suffisamment de ressources GPU et un cluster de calcul dédié, AES-256 peut théoriquement être attaqué — les avancées récentes en calcul distribué et les services cloud comme AWS spot permettent d'envisager des délais raisonnables sur des passphrases courtes. »",
             ok: false, pts: -25,
             fb: "Techniquement faux. AES-256 est mathématiquement inviolable par force brute avec les technologies actuelles et prévisibles. Faire croire le contraire est une erreur grave.",
             legal: "AES-256 — Sécurité asymptotique. Pas de vulnérabilité connue exploitable.",
@@ -2855,7 +2855,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "Promettre une récupération à 90% dans les 2 semaines pour rassurer le DG.",
+            text: "Promettre une récupération à 90% sous 2 semaines pour rassurer le DG et lui permettre d'engager les actions opérationnelles — un engagement clair facilite la prise de décision, quitte à ajuster ultérieurement si nécessaire selon l'avancement technique.",
             ok: false, pts: -30,
             fb: "Mensonge professionnel inacceptable. Promettre l'impossible pour rassurer = faux dans les titres (Art. 251 CP) + rupture de la confiance d'expert. Quand l'échec arrivera, la crédibilité sera définitivement détruite.",
             legal: "Art. 251 CP + déontologie DFIR — Honnêteté sans compromis sur les capacités techniques.",
@@ -2870,7 +2870,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment construisez-vous le dictionnaire ciblé ?</strong>",
         choices: [
           {
-            text: "Dictionnaire générique de 14M mots (rockyou.txt) + brute force sans ciblage.",
+            text: "Dictionnaire générique massif (rockyou.txt 14M + CrackStation 1.5G) combiné à un brute-force exhaustif sur 8-12 caractères — la puissance de calcul actuelle (RTX 4090 : ~25 GH/s sur AES) rend cette approche viable en quelques jours de calcul.",
             ok: false, pts: -10,
             fb: "Inefficace. Un AES-256 avec bcrypt/PBKDF2 résiste à rockyou en moins d'une heure. Sans ciblage, la tentative est vouée à l'échec. L'efficacité vient du dictionnaire PERSONNEL.",
             legal: "Manuel Ch. 28.5 — Dictionnaire ciblé > brute force générique.",
@@ -2884,7 +2884,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Contacter la veuve du directeur pour demander directement les mots de passe de son mari.",
+            text: "Contacter la veuve du directeur IT décédé pour lui demander si son mari conservait ses mots de passe quelque part (carnet, gestionnaire, fichier) — l'approche humaine est souvent la plus rapide et la PME a un intérêt légitime à cette démarche. Le deuil n'exclut pas la coopération bienveillante avec l'employeur, et de nombreux administrateurs IT laissent des consignes écrites à leurs proches en prévision d'un imprévu majeur. Une démarche respectueuse est généralement bien accueillie.",
             ok: false, pts: -15,
             fb: "Délicat. La veuve n'est probablement pas dépositaire des mots de passe professionnels. De plus, l'approche doit passer par le DG qui peut coordonner une demande sensible de façon respectueuse. L'expert forensique ne contacte pas directement les familles des décédés.",
             legal: "Déontologie professionnelle — Respect des proches, communication via les canaux appropriés.",
@@ -2899,7 +2899,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quel conseil donnez-vous au DG ?</strong>",
         choices: [
           {
-            text: "« Le backup est à vous, consultez tout ce que vous voulez. »",
+            text: "« Le backup déchiffré est désormais à votre disposition en tant que DG, vous pouvez consulter l'ensemble des éléments — la restauration des données de la PME relève de votre périmètre de responsabilité opérationnelle et juridique. »",
             ok: false, pts: -25,
             fb: "Autorisation dangereuse. Même si le backup appartient techniquement à la PME, les données personnelles des employés (médicales, RH, bancaires) sont protégées par la LPD 2023. Le DG ne peut pas les consulter librement.",
             legal: "LPD 2023 Art. 8 + Art. 321 CP — Minimisation + secret professionnel des données RH/médicales.",
@@ -2913,7 +2913,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Refuser de partager le backup avec le DG — les données sont trop sensibles.",
+            text: "Refuser de partager le backup déchiffré avec le DG en raison de la présence de données médicales et bancaires personnelles — la transmission au directeur exposerait à une violation manifeste de l'art. 321 CP et de la LPD applicable. La doctrine du PFPDT 2023 et la jurisprudence ATF 142 II 268 confirment que le secret professionnel s'applique strictement aux données employés y compris en contexte de remédiation post-incident. La PME devra mandater un DPO externe agréé pour réaliser le tri sélectif des éléments transmissibles selon les besoins métier strictement justifiés.",
             ok: false, pts: -15,
             fb: "Refus excessif. Le backup appartient à la PME qui est le mandant. Refuser de le rendre = abus de position d'expert. La solution est de le rendre avec un cadre d'usage clair, pas de le retenir.",
             legal: "Pratique DFIR — Le dépositaire rend les données avec recommandations d'usage.",
@@ -2928,7 +2928,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Que recommandez-vous à la PME concernant le paiement ?</strong>",
         choices: [
           {
-            text: "« Négociez discrètement — la PME doit survivre, peu importe les considérations éthiques. »",
+            text: "« Engagez une négociation discrète via un cabinet de cyber-négociation spécialisé (CrowdStrike, Coveware) — la survie économique de la PME prime, et les négociateurs professionnels obtiennent typiquement 40-50% de réduction sur les rançons demandées initialement. La négociation, contrairement à un paiement direct, permet de gagner du temps technique pour la récupération en parallèle. »",
             ok: false, pts: -25,
             fb: "Double erreur. (1) BlackCat a déchiffré correctement dans moins de 70% des cas documentés (beaucoup de victimes paient sans recevoir de clé fonctionnelle). (2) Si BlackCat est listé par OFAC, le paiement expose la PME et ses dirigeants à des sanctions pénales suisses (Art. 9 al. 1 let. e LMB).",
             legal: "SECO + OFAC + Art. 9 al. 1 let. e LMB — Paiement à entité sanctionnée = infraction pénale.",
@@ -2942,7 +2942,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 5,
           },
           {
-            text: "Négocier pour gagner du temps (faire semblant d'envisager) sans réelle intention de payer.",
+            text: "Négocier avec les attaquants pour gagner du temps en feignant d'envisager le paiement — cette tactique permet d'avancer dans la récupération technique en parallèle, tout en évitant que le groupe ne publie les données exfiltrées prématurément.",
             ok: false, pts: -15,
             fb: "Risqué. Entrer en négociation même factice (1) envoie un signal que la PME est solvable, (2) peut entraîner des menaces supplémentaires (publication données), (3) n'apporte pas de bénéfice opérationnel. Le silence ou le refus clair et public est souvent plus stratégique.",
             legal: "Doctrine NCSC — Silence ou refus clair plutôt que simulation de négociation.",
@@ -2957,7 +2957,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle structure choisissez-vous pour le rapport ?</strong>",
         choices: [
           {
-            text: "Rapport technique de 200 pages avec tous les détails forensiques.",
+            text: "Rapport technique exhaustif de 200 pages couvrant l'ensemble des détails forensiques (hashes, dumps Volatility, captures pcap, hex dumps du ransomware) — la profondeur technique démontre la rigueur et constitue une référence pour audits futurs. Le CA appréciera la qualité documentaire et pourra utiliser ce rapport comme justification face aux assureurs, autorités de tutelle et audits ISO ultérieurs. Une expertise sérieuse ne se mesure pas en pages mais en exhaustivité technique vérifiable.",
             ok: false, pts: -10,
             fb: "Inadapté à l'audience. Un CA ne lira pas 200 pages. Structure pyramidale obligatoire : synthèse exécutive d'1 page + rapport technique détaillé en annexe pour les spécialistes.",
             legal: "Manuel Ch. 29.7 — Adapter le niveau de détail à chaque audience.",
@@ -2971,7 +2971,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 6,
           },
           {
-            text: "Rapport oral uniquement en réunion du CA, pas de trace écrite pour éviter les fuites.",
+            text: "Présentation orale uniquement en séance du CA, sans document écrit transmis — l'absence de trace papier protège la PME contre toute fuite ultérieure du contenu sensible (RH, médical, bancaire) qui circulerait dans des comités élargis.",
             ok: false, pts: -25,
             fb: "Manquement grave. Un rapport écrit est nécessaire pour : (1) traçabilité juridique, (2) base pour plan d'action, (3) éléments pour assurances cyber, (4) archive pour futurs incidents. L'oral sans trace = perte de valeur considérable.",
             legal: "FINMA + pratique assurance cyber — Rapport écrit obligatoire pour traçabilité.",
@@ -2986,7 +2986,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre position sur ce double mandat ?</strong>",
         choices: [
           {
-            text: "Accepter immédiatement — plus de mandats = plus de revenus.",
+            text: "Accepter immédiatement le mandat assurance en plus du mandat initial — la connaissance du dossier permet une expertise plus rapide et précise, dans l'intérêt de la PME comme de l'assureur, et le double mandat est usuel sur ce type d'affaire. La continuité de l'expertise simplifie le dossier et la PME bénéficie d'un guichet unique.",
             ok: false, pts: -25,
             fb: "Conflit d'intérêts potentiel. Si vous êtes mandaté par la PME pour la récupération ET pour l'expertise d'assurance, votre neutralité peut être contestée par l'assureur. Il faut distinguer les rôles.",
             legal: "Art. 56 CPC + déontologie expert — Éviter tout conflit de rôles.",
@@ -3000,7 +3000,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 7,
           },
           {
-            text: "Refuser catégoriquement toute interaction avec l'assureur — c'est l'affaire de la PME.",
+            text: "Refuser catégoriquement toute interaction avec l'assureur en invoquant la confidentialité du mandat initial — la PME doit gérer seule ses relations contractuelles avec son assureur, sans interférence de l'expert technique.",
             ok: false, pts: -10,
             fb: "Position trop rigide. Votre rapport technique est un livrable que la PME peut utiliser (avec votre autorisation). Refuser toute interaction pénalise votre mandant sans raison valable.",
             legal: "Pratique — L'expert peut autoriser l'usage extensif de son rapport, c'est la nouvelle expertise qui pose problème.",
@@ -3015,7 +3015,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre priorisation pour 80'000 CHF ?</strong>",
         choices: [
           {
-            text: "Tout investir dans un SIEM enterprise sophistiqué + consultant permanent.",
+            text: "Investir l'intégralité du budget dans un SIEM enterprise (Splunk ou QRadar) couplé à un consultant SOC permanent — la détection avancée corrélant tous les événements est ce qui aurait évité l'incident initial, c'est donc l'investissement prioritaire. La concentration du budget maximise l'effet de levier sur la couche de détection, qui est la plus déterminante en cybersécurité moderne. Les autres mesures (MFA, formation) peuvent être déployées progressivement avec un budget récurrent ultérieur.",
             ok: false, pts: -15,
             fb: "Inadapté à la taille. Un SIEM enterprise coûte 100-300k/an en licences + personnel. Pour une PME de 30 personnes, c'est surdimensionné et inexploitable. Commencer par les fondamentaux CIS Controls.",
             legal: "CIS Controls v8 + Guide GovCERT PME — Adapter les solutions à la taille.",
@@ -3029,7 +3029,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Recommander une cyber-assurance plus importante plutôt que du durcissement technique.",
+            text: "Recommander d'augmenter la couverture cyber-assurance (passage de 500k à 2M CHF, franchise abaissée) plutôt que de disperser le budget en mesures techniques — l'assurance couvre statistiquement le sinistre type, ce qui est plus rentable.",
             ok: false, pts: -20,
             fb: "Erreur stratégique. L'assurance couvre les dommages post-incident mais ne prévient rien. De plus, les assureurs exigent de plus en plus des mesures techniques minimales (MFA, EDR) avant de couvrir. Investir dans la prévention = réduire les primes et les risques.",
             legal: "LCA + pratique cyber-assurance 2024+ — MFA et EDR deviennent prérequis contractuels.",
@@ -3087,7 +3087,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est la chronologie correcte après normalisation en UTC ?</strong>",
         choices: [
           {
-            text: "10:41:05 → 10:41:05 → 10:43:22 → 11:43:07 → 11:44:37 (sans conversion)",
+            text: "10:41:05 → 10:41:05 → 10:43:22 → 11:43:07 → 11:44:37 — utiliser les timestamps tels qu'ils apparaissent dans les artefacts d'origine, sans conversion qui introduirait un risque d'erreur d'interprétation pour le lecteur du rapport.",
             ok: false, pts: -15,
             fb: "Erreur. Le Prefetch (11:43:07 UTC+1) et le .lnk (11:44:37 UTC+1) sont en heure locale. Convertis en UTC : 10:43:07 et 10:44:37. L'ordre sans conversion mélange UTC et UTC+1.",
             legal: "Manuel Ch. 29.4 — Toujours normaliser en UTC avant de corréler.",
@@ -3101,7 +3101,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Les timestamps sont incohérents — la corrélation est impossible.",
+            text: "Les timestamps issus de fuseaux différents et de subsystems hétérogènes sont irréconciliables sans risque d'erreur — la prudence forensique impose de constater l'impossibilité de corrélation et de baser l'enquête sur d'autres éléments.",
             ok: false, pts: -10,
             fb: "Les timestamps ne sont pas incohérents — ils utilisent des fuseaux différents, ce qui est normal. La normalisation en UTC est la solution standard.",
             legal: "Manuel Ch. 29.4 — L'incohérence apparente des fuseaux est résolue par normalisation, pas par abandon.",
@@ -3116,7 +3116,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment traitez-vous ces timestamps autour du changement d'heure ?</strong>",
         choices: [
           {
-            text: "Utiliser systématiquement le fuseau UTC+1 puisque c'était le fuseau au début de la journée.",
+            text: "Utiliser systématiquement le fuseau UTC+1 (CET) qui était le fuseau Suisse au début de la journée du 26 mars — cette homogénéité simplifie la lecture du rapport et évite les confusions liées aux changements d'heure intra-journaliers.",
             ok: false, pts: -20,
             fb: "Erreur grave. Après 02h00 ce jour-là, le fuseau local est UTC+2 (CEST). Utiliser UTC+1 introduit 1h d'erreur sur tous les timestamps post-02h. Cette confusion peut invalider toute la timeline à l'audience.",
             legal: "IANA Database + Manuel Ch. 29.4 — Les transitions DST sont des points critiques de la forensique temporelle.",
@@ -3130,7 +3130,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "Ignorer les timestamps et se baser uniquement sur la séquence des Event IDs.",
+            text: "Ignorer les timestamps absolus et se baser uniquement sur la séquence relative des Event IDs Windows — la chronologie causale est lisible directement dans l'ordre des événements consignés, ce qui contourne le problème du DST.",
             ok: false, pts: -15,
             fb: "Trop restrictif. La séquence des Event IDs ne donne pas la durée entre événements, ni la corrélation avec des artefacts externes (USBSTOR d'un autre processus). L'horodatage précis est valeur ajoutée majeure — le normaliser correctement, pas l'ignorer.",
             legal: "Manuel Ch. 29.4 — L'horodatage reste la colonne vertébrale de la timeline.",
@@ -3145,7 +3145,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment documentez-vous l'utilisation de plaso dans le rapport ?</strong>",
         choices: [
           {
-            text: "Indiquer seulement : « Timeline produite avec plaso. »",
+            text: "Indiquer simplement « Timeline produite avec plaso (log2timeline) à partir de l'image E01 du disque » — le détail technique des paramètres alourdit inutilement le rapport sans valeur ajoutée pour le juge ou le MP.",
             ok: false, pts: -15,
             fb: "Insuffisant pour reproductibilité. Un contre-expert doit pouvoir reproduire exactement la timeline. Préciser : version de plaso, commande exacte, parsers utilisés, hash de l'image source, hash du fichier storage.plaso produit.",
             legal: "ACPO Principle 3 — Reproductibilité exige documentation complète.",
@@ -3159,7 +3159,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Ne pas utiliser plaso — faire la timeline manuellement pour garder le contrôle.",
+            text: "Ne pas utiliser plaso et reconstruire la timeline manuellement à partir des artefacts critiques — le contrôle direct sur chaque entrée garantit la fiabilité et évite les bugs potentiels d'un outil tiers, au prix d'un temps d'analyse plus long. La défense ne pourra pas contester un travail manuel documenté pas à pas par l'expert.",
             ok: false, pts: -10,
             fb: "Sous-optimal. plaso automatise la normalisation de 150+ formats de timestamps, ce qui serait chronophage et error-prone à faire manuellement sur 500 Go. L'important est de documenter l'usage, pas de renoncer à l'outil standard.",
             legal: "Manuel Ch. 29.4 — Outils standards documentés > reconstruction manuelle.",
@@ -3174,7 +3174,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Que recherchez-vous et comment interprétez-vous le gap ?</strong>",
         choices: [
           {
-            text: "Considérer le gap comme simple absence d'activité utilisateur — rien à investiguer.",
+            text: "Considérer le gap de 14 minutes comme une simple absence d'activité utilisateur (pause café, déplacement) — sans indicateur additionnel d'effacement, l'interprétation forensique la plus parcimonieuse est la plus prudente.",
             ok: false, pts: -20,
             fb: "Interprétation trop indulgente. Un gap de 14 min dans une session active est suspect. Surtout coincidant avec la fenêtre d'intérêt judiciaire. L'hypothèse d'effacement ciblé doit être testée, pas écartée par défaut.",
             legal: "Manuel Ch. 20 — L'anti-forensique doit être systématiquement recherchée.",
@@ -3188,7 +3188,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Considérer le gap comme preuve automatique d'effacement et de culpabilité.",
+            text: "Considérer le gap de 14 minutes comme preuve d'effacement délibéré et donc présomption forte de culpabilité — l'absence de toute trace dans une fenêtre où l'utilisateur était actif avant et après ne s'explique pas autrement techniquement. La conscience coupable est généralement révélée par ce type de manipulation anti-forensique, qui caractérise le dol direct selon la jurisprudence du TF en matière d'infractions informatiques sophistiquées.",
             ok: false, pts: -15,
             fb: "Sur-interprétation. Un gap peut avoir plusieurs causes : pause naturelle, crash système, mise en veille, bug logiciel. Conclure à l'effacement sans en prouver les traces = spéculation. Il faut démontrer techniquement.",
             legal: "Manuel Ch. 29.3 — Ne jamais conclure à l'anti-forensique sans preuve positive.",
@@ -3203,7 +3203,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment gérez-vous la visualisation et le filtrage ?</strong>",
         choices: [
           {
-            text: "Produire uniquement la timeline filtrée 10h00-11h00 pour le juge — plus lisible.",
+            text: "Produire uniquement la timeline filtrée sur la fenêtre 10h00-11h00 pour le juge — la lisibilité prime, et les 270'000 événements de la timeline complète submergeraient le décideur sans apporter de valeur probante additionnelle.",
             ok: false, pts: -25,
             fb: "Violation du principe de divulgation. La défense a droit à la timeline COMPLÈTE pour identifier d'éventuels éléments à décharge. Filtrer unilatéralement sans donner accès au complet = présomption de dissimulation = exclusion probable.",
             legal: "Art. 147 CPP + Manuel Ch. 29.6 — Transparence totale envers les parties.",
@@ -3217,7 +3217,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 5,
           },
           {
-            text: "Produire la timeline complète sans filtrage — que le juge se débrouille.",
+            text: "Produire la timeline complète des 270'000 événements sans filtrage préalable — toute pré-sélection par l'expert pourrait être perçue comme orientant le tri, et il appartient au juge de naviguer librement dans l'ensemble des données. Le juge dispose des outils Timesketch pour filtrer selon ses propres critères.",
             ok: false, pts: -10,
             fb: "Manquement au rôle d'expert. 270k événements bruts sont inutilisables pour un juge. L'expert doit synthétiser tout en préservant l'accès aux données brutes. Sans synthèse = rapport inefficace.",
             legal: "Art. 184 CPP — L'expert rend le technique accessible pour la décision judiciaire.",
@@ -3232,7 +3232,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment répondez-vous à la divergence de 30 secondes ?</strong>",
         choices: [
           {
-            text: "Admettre que 30 secondes de divergence invalident la timeline.",
+            text: "Reconnaître que les 30 secondes de divergence sur certains événements introduisent un doute raisonnable sur la précision de la timeline — la rigueur forensique impose de ne pas survendre la fiabilité d'une corrélation contestée par un confrère. La déontologie expertale exige cette honnêteté épistémique, et la jurisprudence du TF accorde plus de crédit aux experts qui reconnaissent les limites de leurs analyses. Une posture défensive rigide affaiblit paradoxalement la force probante.",
             ok: false, pts: -20,
             fb: "Capitulation injustifiée. 30 secondes sur une séquence où les événements sont séparés de plusieurs minutes ne changent pas l'ordre causal. C'est le ratio divergence/intervalle qui compte, pas la valeur absolue.",
             legal: "Manuel Ch. 29.4 — La tolérance temporelle doit être proportionnée aux intervalles observés.",
@@ -3246,7 +3246,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 6,
           },
           {
-            text: "Accuser le contre-expert d'incompétence en public.",
+            text: "Souligner publiquement à l'audience que le contre-expert n'a pas correctement synchronisé sa source NTP avant analyse, ce qui révèle une lacune méthodologique majeure pour quelqu'un se présentant comme expert temporel forensique.",
             ok: false, pts: -30,
             fb: "Comportement inacceptable. Attaquer un confrère en audience = rupture de la déontologie professionnelle. Même si le contre-expert commet des erreurs, la réponse doit rester technique et courtoise.",
             legal: "Code de déontologie — Respect entre experts à la barre.",
@@ -3268,14 +3268,14 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 7,
           },
           {
-            text: "Reconnaître que l'ATF invalide votre approche et retirer la timeline.",
+            text: "Reconnaître que l'ATF 143 IV 330 invalide la corrélation reposant sur une source unique NTFS et retirer la timeline du dossier — la rigueur juridique impose de ne pas insister face à une jurisprudence claire du Tribunal fédéral.",
             ok: false, pts: -25,
             fb: "Retrait injustifié. L'ATF 143 IV 330 n'interdit pas les timelines — il exige la corroboration multi-sources, ce que vous avez. Céder sans débat technique = abandonner une preuve valide devant un argument juridique mal interprété.",
             legal: "ATF 143 IV 330 — Exige corroboration, n'interdit pas les timelines.",
             critical: false, next: 7,
           },
           {
-            text: "Argumenter que l'ATF 143 IV 330 est dépassé technologiquement.",
+            text: "Argumenter que l'ATF 143 IV 330 (2017) est dépassé technologiquement par l'évolution des outils forensiques modernes (plaso, Timesketch, Timeline Explorer) et que les standards actuels ISO/IEC 27037 surpassent les exigences du TF de l'époque. La doctrine récente Bommer/Schmid (2023) plaide pour une lecture évolutive de cette jurisprudence en tenant compte des progrès méthodologiques accomplis depuis. Le tribunal devrait actualiser son interprétation aux capacités actuelles et la défense ne peut s'appuyer sur des standards obsolètes.",
             ok: false, pts: -30,
             fb: "Argument irrecevable. Les ATF restent contraignants jusqu'à leur révision par le TF. Déclarer un ATF « dépassé » à l'audience = discrédit immédiat. La bonne approche est de montrer que votre travail REPOND aux exigences de l'ATF, pas de contester son autorité.",
             legal: "Hiérarchie des sources — Les ATF s'appliquent tant qu'ils ne sont pas révisés.",
@@ -3290,7 +3290,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Que contient votre section « Tests de stress » ?</strong>",
         choices: [
           {
-            text: "Des éloges de la méthode utilisée et de sa robustesse.",
+            text: "Des éléments démontrant la rigueur et la robustesse de la méthode plaso utilisée — citations bibliographiques, validation par la communauté DFIR internationale, retours d'expérience d'autres affaires similaires conclues avec succès.",
             ok: false, pts: -15,
             fb: "Auto-satisfaction inappropriée. Une section « tests de stress » doit documenter des tentatives RÉELLES de falsifier sa propre analyse, pas auto-célébrer. C'est l'équivalent scientifique de la réplication : si on n'arrive PAS à casser sa propre analyse, elle est robuste.",
             legal: "Méthode scientifique + ACPO Principle 4 — Tester ses propres hypothèses.",
@@ -3304,7 +3304,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Omettre la section pour éviter de donner des munitions à la défense.",
+            text: "Omettre entièrement la section « Tests de stress » du rapport final pour éviter d'exposer publiquement les hypothèses de falsification testées — la défense pourrait s'emparer des scénarios alternatifs même réfutés et créer un doute artificiel. La discrétion expertale protège le dossier contre l'instrumentalisation rhétorique des hypothèses contradictoires soulevées en interne par l'analyste lui-même, et le devoir d'exhaustivité n'impose pas de divulguer les pistes infructueuses.",
             ok: false, pts: -20,
             fb: "Stratégie à courte vue. Une section tests de stress RENFORCE le rapport — c'est une démonstration de rigueur. L'omettre revient à priver le rapport d'un pilier méthodologique. La défense peut toujours tenter ses propres tests ; autant anticiper.",
             legal: "Manuel Ch. 29.7 — La transparence méthodologique renforce la crédibilité.",
@@ -3352,7 +3352,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment qualifiez-vous ce fichier dans votre rapport ?</strong>",
         choices: [
           {
-            text: "«\u00a0Le fichier backup_photos.dat est un volume VeraCrypt contenant des données cachées.\u00a0»",
+            text: "« Le fichier backup_photos.dat est manifestement un volume chiffré VeraCrypt — le nom trompeur, l'extension .dat et l'entropie élevée de 0.998 sont des indicateurs convergents typiques du modus operandi de dissimulation par conteneur. »",
             ok: false, pts: -25,
             fb: "Affirmation inadmissible. Sans déchiffrement du volume, il est impossible de prouver qu'il s'agit de VeraCrypt ni qu'il contient quoi que ce soit.",
             legal: "Art. 251 CP — Un expert qui présente une opinion comme un fait engage sa responsabilité pénale.",
@@ -3366,7 +3366,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "«\u00a0Il s'agit probablement d'une image disque compressée ou d'un fichier corrompu.\u00a0»",
+            text: "« Il s'agit probablement d'une image disque compressée par un algorithme moderne (zstd, lzma) ou d'un fichier endommagé — l'entropie élevée et l'absence de signature peuvent être expliquées par ces hypothèses techniques bénignes avant de conclure au chiffrement. »",
             ok: false, pts: -10,
             fb: "Inexact. Une entropie de 0.998 est trop élevée pour une compression standard (qui conserve des patterns) et une image disque compressée aurait des headers reconnaissables.",
             legal: "Manuel Ch. 24.2 — Entropie 0.99+ avec absence de structure = chiffrement fort, pas compression.",
@@ -3381,7 +3381,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelles alternatives techniques proposez-vous ?</strong>",
         choices: [
           {
-            text: "Brute force du mot de passe VeraCrypt.",
+            text: "Brute force du mot de passe VeraCrypt avec un dictionnaire ciblé sur les patterns du suspect (noms, dates, mots-clés OSINT) — VeraCrypt utilise PBKDF2 avec 500k itérations mais une passphrase faible reste exploitable en quelques jours sur GPU.",
             ok: false, pts: -20,
             fb: "Irréalisable dans un délai judiciaire raisonnable. VeraCrypt utilise PBKDF2/Argon2 avec un grand nombre d'itérations précisément pour rendre le brute force impossible.",
             legal: "Manuel Ch. 24.3 — VeraCrypt est conçu pour résister au brute force.",
@@ -3410,7 +3410,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment procédez-vous à l'extraction de la clé ?</strong>",
         choices: [
           {
-            text: "Lancer directement Elcomsoft sur la RAM sans préparer de dump de backup.",
+            text: "Lancer directement Elcomsoft Forensic Disk Decryptor sur le dump RAM d'origine sans dupliquer — l'outil commercial est validé judiciairement et un dump de travail intermédiaire ralentit la procédure sans apporter de garantie supplémentaire. Elcomsoft a été retenu dans plus de 200 affaires suisses référencées par la Conférence des Procureurs depuis 2018, ce qui établit définitivement son admissibilité forensique.",
             ok: false, pts: -20,
             fb: "Risque de perte. Une opération unique sur le seul dump RAM sans sauvegarde = si l'outil crash ou corrompt, la preuve est perdue. Règle DFIR : toujours travailler sur une COPIE du dump.",
             legal: "ACPO Principle 1 — Travailler sur copie, jamais sur l'original.",
@@ -3424,7 +3424,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Abandonner : extraire une clé AES de RAM est trop incertain.",
+            text: "Abandonner cette piste : l'extraction d'une clé AES-256 depuis 32 Go de RAM est trop incertaine et le résultat dépend fortement de la fragmentation mémoire au moment du dump, rendant la preuve fragile en audience.",
             ok: false, pts: -15,
             fb: "Trop pessimiste. vcrypthunt et outils similaires ont un taux de succès documenté de 60-80% sur volumes récemment montés. Même un échec est documentable — mais abandonner sans essayer = prive l'enquête.",
             legal: "Manuel Ch. 24.3 — L'extraction RAM est une technique standard avec taux de succès documenté.",
@@ -3439,7 +3439,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est la suite procédurale correcte ?</strong>",
         choices: [
           {
-            text: "Parcourir immédiatement tout le contenu pour qualifier les images.",
+            text: "Parcourir immédiatement l'ensemble du contenu déchiffré pour qualifier rapidement les images suspectes — la priorité enquête impose d'avancer dans la qualification matérielle des faits avant toute procédure de tri TMC.",
             ok: false, pts: -30,
             fb: "Violation grave. (1) Vous modifiez les timestamps d'accès (même en monté « read-only », certains systèmes écrivent). (2) Sans scellés ni tri TMC, l'exploration personnelle = preuve illicite. (3) Si images CSAM, obligations spéciales LCPE + Art. 197 CP (détention inadmissible, même pour expertise).",
             legal: "ACPO Principle 1 + Art. 141 + 197 CP — Accès légal strict, surtout pour contenus sensibles.",
@@ -3453,7 +3453,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Signaler immédiatement à la direction la « preuve de culpabilité ».",
+            text: "Signaler immédiatement à la direction de l'enquête et au MP que la « preuve de culpabilité » est obtenue — le contenu déchiffré confirme matériellement les soupçons et permet d'accélérer la procédure de mise en accusation. La rapidité de l'expertise est un facteur clé d'efficacité judiciaire et la qualification provisoire facilite le prononcé d'une mesure de détention provisoire sur la base de l'art. 221 CPP.",
             ok: false, pts: -25,
             fb: "Dépassement du rôle expert. Vous n'avez pas encore analysé le contenu — qualifier de « preuve de culpabilité » = spéculation + pression sur la hiérarchie. L'expert reste factuel et procédural.",
             legal: "Art. 182 CPP — L'expert constate, il ne qualifie pas.",
@@ -3468,7 +3468,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre réaction immédiate ?</strong>",
         choices: [
           {
-            text: "Ouvrir quelques fichiers pour vérifier s'il s'agit bien de CSAM avant de rapporter.",
+            text: "Ouvrir quelques fichiers représentatifs pour confirmer la qualification CSAM avant de rapporter au MP — une simple suspicion sur les noms de fichiers est insuffisante, et la confirmation visuelle évite une fausse alerte au Service spécialisé fedpol. La procédure d'expertise prudente exige cette vérification minimale avant tout escalade vers les autorités spécialisées.",
             ok: false, pts: -40,
             fb: "VIOLATION GRAVISSIME. L'ouverture de fichiers CSAM suspectés, même pour « vérification », constitue une infraction pénale (Art. 197 al. 4-5 CP) sauf dans le cadre précis du Service pédophilie de fedpol. Vous vous exposez à une condamnation personnelle + la preuve devient inutilisable.",
             legal: "Art. 197 al. 4-5 CP — Détention CSAM pénalement réprimée sans dérogation spéciale fedpol.",
@@ -3482,7 +3482,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 5,
           },
           {
-            text: "Continuer l'inventaire général comme si de rien n'était — vous traiterez ces contenus plus tard.",
+            text: "Continuer méthodiquement l'inventaire général pour disposer d'une vue d'ensemble complète du conteneur — les fichiers suspects feront l'objet d'un traitement spécifique à la fin de la phase d'inventaire, dans une procédure ordonnée.",
             ok: false, pts: -35,
             fb: "Manquement grave. La détection de CSAM déclenche une obligation immédiate de procédure spéciale. Ignorer = complicité passive + risque de destruction de preuves + responsabilité personnelle engagée.",
             legal: "Art. 197 CP + obligation d'annonce — Action immédiate obligatoire.",
@@ -3497,7 +3497,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment formulez-vous la suspicion d'hidden volume dans le rapport ?</strong>",
         choices: [
           {
-            text: "Affirmer l'existence d'un hidden volume et exiger sa divulgation.",
+            text: "Affirmer dans le rapport l'existence très probable d'un hidden volume VeraCrypt et exiger du suspect la divulgation de la seconde passphrase — la signature d'entropie uniforme de l'espace non alloué constitue une preuve technique recevable. Le TF a admis dans plusieurs arrêts récents le caractère probant de l'analyse d'entropie pour caractériser la dissimulation cryptographique, ce qui valide la démarche probatoire.",
             ok: false, pts: -25,
             fb: "Sur-affirmation + violation du droit au silence. VeraCrypt est précisément conçu pour que l'on ne puisse PAS prouver l'existence d'un hidden volume. Affirmer = erreur technique. Exiger la divulgation = contraire à Art. 113 CPP (nemo tenetur).",
             legal: "Art. 113 CPP + principe VeraCrypt plausible deniability — Interdiction d'affirmer + d'exiger.",
@@ -3511,7 +3511,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 6,
           },
           {
-            text: "Ne pas mentionner l'hypothèse hidden volume pour ne pas affaiblir le dossier.",
+            text: "Ne pas mentionner l'hypothèse hidden volume dans le rapport pour ne pas affaiblir le dossier sur les contenus déjà découverts — l'incertitude technique pourrait être instrumentalisée par la défense pour jeter un doute global sur l'analyse.",
             ok: false, pts: -15,
             fb: "Omission problématique. L'hypothèse hidden volume fait partie des faits techniques observables (entropie). La taire = incomplet. Un expert adverse peut la pointer plus tard et accuser de dissimulation. Transparence obligatoire.",
             legal: "Manuel Ch. 29.3 — L'exhaustivité technique protège l'expert.",
@@ -3533,14 +3533,14 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 7,
           },
           {
-            text: "Argumenter que nemo tenetur ne s'applique pas aux données numériques.",
+            text: "Argumenter que le principe nemo tenetur, conçu pour les déclarations orales sous interrogatoire, ne s'étend pas aux données numériques préexistantes — la jurisprudence européenne CEDH (Saunders 1996) limite la protection aux contraintes verbales actives. La doctrine pénale moderne distingue clairement contrainte testimoniale et accès passif aux artefacts techniques, distinction confirmée par la jurisprudence récente Rüetschi/Sutter ainsi que par les arrêts cantonaux les plus actuels.",
             ok: false, pts: -25,
             fb: "Argument faux. Nemo tenetur s'applique pleinement aux données numériques — l'ATF 138 IV 47 le confirme. Le nier = discrédit immédiat à l'audience.",
             legal: "ATF 138 IV 47 — Nemo tenetur s'applique aux mots de passe comme à tout secret cognitif.",
             critical: true, next: "end",
           },
           {
-            text: "Reconnaître que la procédure d'extraction RAM pose problème et proposer d'écarter cette preuve.",
+            text: "Reconnaître honnêtement que l'extraction de la clé via la RAM, opérée pendant que le suspect était en garde à vue, soulève une question délicate au regard de nemo tenetur — proposer d'écarter cette preuve démontre la rigueur déontologique.",
             ok: false, pts: -20,
             fb: "Capitulation injustifiée. L'extraction RAM est un acte forensique standard sur un système saisi — pas une contrainte au suspect. La confondre avec une violation de nemo tenetur = méconnaissance du droit.",
             legal: "Art. 113 CPP + ATF 138 IV 47 — La capture technique d'artefacts reste légale.",
@@ -3555,7 +3555,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle conclusion générale formulez-vous ?</strong>",
         choices: [
           {
-            text: "« L'analyse a permis d'établir la culpabilité du suspect. »",
+            text: "« L'analyse forensique a permis d'établir matériellement la culpabilité du suspect dans la détention de contenus illicites — la chaîne probatoire technique est complète et ne laisse subsister aucun doute raisonnable. La convergence des éléments techniques (déchiffrement RAM, hashes ICSE Interpol matchés, comportement utilisateur) permet une condamnation immédiate au sens de l'art. 197 al. 5 CP, sans nécessité de débats prolongés. »",
             ok: false, pts: -30,
             fb: "Culpabilité = qualification juridique RÉSERVÉE au juge. Un expert ne conclut JAMAIS à la culpabilité. C'est la ligne rouge absolue du rôle d'expert.",
             legal: "Art. 182 CPP — Séparation stricte expert/juge.",
@@ -3569,7 +3569,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "« L'enquête est en échec — nous n'avons pas pu prouver suffisamment les faits. »",
+            text: "« L'enquête forensique est en échec partiel — le hidden volume potentiel reste inaccessible et certains contenus n'ont pu être qualifiés avec la rigueur requise par les standards internationaux ISO/IEC 27037. »",
             ok: false, pts: -15,
             fb: "Auto-dévaluation injustifiée. L'analyse a établi de nombreux faits techniques solides. Qualifier d'« échec » = minimiser le travail + décrédibiliser. Un rapport factuel laisse le juge juger de la force probante, sans jugement de valeur de l'expert.",
             legal: "Art. 182 CPP — L'expert présente, il ne juge pas la qualité globale de l'enquête.",
@@ -3618,7 +3618,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est la question forensique centrale de ce mandat ?</strong>",
         choices: [
           {
-            text: "Identifier les membres du groupe Play et les attributer à un État.",
+            text: "Identifier les membres opérationnels du groupe Play et procéder à l'attribution étatique du commanditaire — cette qualification est essentielle pour orienter la réponse diplomatique et les sanctions internationales coordonnées par le DFAE.",
             ok: false, pts: -5,
             fb: "C'est une question d'attribution — elle relève du renseignement, pas du forensique judiciaire suisse. La question forensique opérationnelle est : comment les données fédérales se retrouvaient-elles chez un prestataire privé ?",
             legal: "Manuel Ch. 29.1 — Attribution étatique = renseignement, pas forensique judiciaire ordinaire.",
@@ -3632,7 +3632,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Récupérer les 907 Go publiés et identifier les fichiers les plus sensibles.",
+            text: "Récupérer l'intégralité des 907 Go publiés sur le darknet et procéder à un classement par sensibilité (fedpol, SRC, Armée, CFF, Vaud) — la priorité opérationnelle est de cartographier précisément l'étendue du leak public.",
             ok: false, pts: -10,
             fb: "Problématique légalement. Télécharger des données publiées par un groupe criminel peut constituer une réception de données volées. L'analyse se fait sur les systèmes Xplain avec autorisation.",
             legal: "Art. 143 CP — Réception de données soustraites sans droit.",
@@ -3647,7 +3647,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Que concluez-vous forensiquement sur la responsabilité ?</strong>",
         choices: [
           {
-            text: "Responsabilité exclusive de Xplain — ils n'auraient pas dû stocker ces données ainsi.",
+            text: "Responsabilité exclusive de Xplain en tant que prestataire IT — leur métier impose de connaître les standards de classification des données fédérales, et l'absence d'interdiction contractuelle explicite ne les exonère pas du devoir de diligence professionnelle.",
             ok: false, pts: -10,
             fb: "Trop partiel. Si le contrat ne l'interdisait pas explicitement, la responsabilité de Xplain est atténuée. Les autorités fédérales qui ont transmis des données réelles sans imposer de mesures de protection partagent la responsabilité.",
             legal: "OFCS 2024 — Responsabilité partagée : prestataire + autorités mandantes.",
@@ -3661,7 +3661,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "Responsabilité exclusive du groupe Play — sans l'attaque, rien ne serait arrivé.",
+            text: "Responsabilité exclusive du groupe Play, auteur direct de l'attaque criminelle — sans l'intrusion délibérée et l'exfiltration des données, la situation Xplain en l'état n'aurait jamais provoqué de fuite, l'attaque est la cause matérielle unique du dommage.",
             ok: false, pts: -15,
             fb: "Raisonnement superficiel. Le ransomware est le vecteur, pas la cause racine de l'exposition des données. Un système correctement durci (minimisation, chiffrement, segmentation) aurait limité les dégâts. Ignorer la part des victimes = rater les leçons structurelles.",
             legal: "OFCS 2024 + Art. 7 LPD — La protection des données est une obligation préventive continue.",
@@ -3676,7 +3676,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment organisez-vous l'accès aux données publiées ?</strong>",
         choices: [
           {
-            text: "Télécharger moi-même les 907 Go pour analyser — je suis expert mandaté.",
+            text: "Télécharger personnellement les 907 Go via Tor depuis le site de Play en tant qu'expert mandaté — le mandat OFCS couvre l'accès aux données nécessaires à l'analyse, et la procédure d'expertise judiciaire prime sur la qualification 143 CP du téléchargement. L'immunité fonctionnelle de l'expert dans le cadre de son mandat est reconnue par la doctrine Schmid et la pratique constante des autorités fédérales.",
             ok: false, pts: -30,
             fb: "Violation grave. Votre mandat OFCS ne vous autorise PAS à télécharger depuis des plateformes criminelles. Le téléchargement = réception de données illégales (Art. 143 CP) + infraction disciplinaire. Le Service fedpol est la SEULE entité légalement autorisée.",
             legal: "Art. 143 CP + compétences fedpol — Accès aux leaks réservé au service spécialisé.",
@@ -3690,7 +3690,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Demander à un journaliste qui a déjà téléchargé le leak de partager avec moi.",
+            text: "Demander à un journaliste d'investigation suisse (RTS, NZZ) qui a déjà téléchargé le leak de partager les fichiers avec moi — la presse dispose d'un cadre juridique protégé pour ce type de matériel et la transmission inter-professionnelle est usuelle.",
             ok: false, pts: -25,
             fb: "Illégal et risqué. Recevoir des données volées via un tiers n'en change pas la nature juridique. Impliquer un journaliste crée aussi un problème de source/confidentialité pour lui. La voie est fedpol.",
             legal: "Art. 143 CP — La transmission via tiers ne légitime pas la réception.",
@@ -3705,7 +3705,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment structurez-vous votre inventaire critique ?</strong>",
         choices: [
           {
-            text: "Décrire en détail le contenu de chaque catégorie pour que l'OFCS ait une vue complète.",
+            text: "Décrire en détail le contenu factuel de chacune des 4 catégories de données pour donner à l'OFCS une vue exhaustive — la profondeur descriptive permet à la commande de saisir l'ampleur réelle du leak et d'orienter ses décisions opérationnelles.",
             ok: false, pts: -10,
             fb: "Risque de surabondance. Un inventaire forensique structure PAR PROBLÉMATIQUE, pas par volume. L'OFCS veut savoir : quelles violations, quelle ampleur, quelles responsabilités — pas un catalogue brut de 180 Go.",
             legal: "Art. 267 CPP + Manuel Ch. 29.7 — Inventaire analytique, pas descriptif.",
@@ -3719,7 +3719,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Se concentrer uniquement sur ce que contenaient les données (noms, adresses, etc.).",
+            text: "Se concentrer dans l'inventaire uniquement sur la nature des données exposées (noms de personnes, adresses, identifiants) — c'est cette information matérielle qui fonde l'évaluation du préjudice LPD et déclenche les obligations de notification. Les autres dimensions (gouvernance, contrats prestataires, problèmes structurels) sont des questions politiques qui dépassent le cadre du mandat technique d'expertise. La concision matérielle facilite la lecture par l'OFCS et accélère la priorisation des notifications obligatoires aux personnes concernées.",
             ok: false, pts: -15,
             fb: "Perspective trop étroite. La question principale de l'affaire Xplain n'est PAS « quelles personnes sont dans les données » (c'est la LPD 2023 qui traite ça via les notifications individuelles). C'est « POURQUOI ces données étaient chez ce prestataire dans cet état ». Un rapport OFCS doit adresser le système.",
             legal: "Pratique OFCS 2024 — Focus sur les failles systémiques, pas sur l'exposition individuelle.",
@@ -3734,7 +3734,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment qualifiez-vous cette durée de compromission (3.5 mois) dans le rapport ?</strong>",
         choices: [
           {
-            text: "Qualifier de « défaillance grave de détection » — un SOC compétent aurait détecté plus tôt.",
+            text: "Qualifier sans ambages la situation de « défaillance grave de détection » — un SOC professionnel aurait identifié l'attaquant lors de la phase de reconnaissance ou au plus tard à la création du compte admin persistant, 3.5 mois est inacceptable. Cette franchise expertale est attendue par le Conseil fédéral pour fonder les recommandations structurelles de l'OFCS et orienter la révision contractuelle des prestataires fédéraux à venir.",
             ok: false, pts: -10,
             fb: "Jugement de valeur sans benchmark. Le Dwell Time médian observé par Mandiant en 2023 est de 16 jours, mais les APT sophistiqués et les attaques ciblées restent souvent 3-6 mois. Qualifier sans contextualiser = trop subjectif.",
             legal: "Manuel Ch. 29.3 — Factualité sans jugement de valeur non étayé.",
@@ -3748,7 +3748,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 5,
           },
           {
-            text: "Ne pas discuter la durée — ce n'est pas l'objet du mandat.",
+            text: "Ne pas discuter la durée de compromission dans le rapport, qui n'entre pas dans le périmètre strict du mandat OFCS — focaliser l'expertise sur la question des données fédérales chez Xplain, qui est la commande explicite reçue.",
             ok: false, pts: -15,
             fb: "Omission stratégique. Le Dwell Time est un élément CENTRAL : il détermine l'étendue probable de l'exfiltration et la qualité du SOC victime. Pour une affaire de cette ampleur, l'ignorer = rapport incomplet.",
             legal: "Manuel Ch. 29.4 — La chronologie est structurante dans un rapport incident.",
@@ -3763,7 +3763,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment préparez-vous le briefing DélCdG ?</strong>",
         choices: [
           {
-            text: "Refuser le briefing — le Parlement n'a pas à connaître les détails techniques.",
+            text: "Refuser le briefing à la DélCdG en invoquant la séparation des pouvoirs — l'expertise technique relève de l'exécutif (OFCS, Conseil fédéral) et la transmission au législatif risquerait de fragiliser le secret d'enquête en cours.",
             ok: false, pts: -25,
             fb: "Méconnaissance constitutionnelle. La DélCdG exerce la haute surveillance sur les services de renseignement (Art. 169 Cst.). Elle a un droit d'accès étendu aux informations de sécurité nationale. Refuser = violation de l'obligation de renseignement envers la haute surveillance.",
             legal: "Art. 169 Cst. + Art. 53 Loi sur le Parlement — Droit d'accès DélCdG.",
@@ -3777,7 +3777,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 6,
           },
           {
-            text: "Transmettre toutes les données brutes à la DélCdG pour qu'elle se fasse sa propre opinion.",
+            text: "Transmettre l'intégralité des données brutes et des analyses à la DélCdG pour lui permettre de se forger librement sa propre opinion — la fonction de surveillance parlementaire exige un accès complet sans filtre par l'expert technique. Le contrôle parlementaire constitutionnel ne souffre pas de limitations imposées par l'exécutif et les députés habilités sécuritaires sont juridiquement compétents pour traiter ces matériaux.",
             ok: false, pts: -20,
             fb: "Disproportionné. La DélCdG contrôle, elle n'effectue pas d'expertise technique. Transmettre 180 Go brut = inutilisable + risque de fuite supplémentaire. Un briefing synthétique + Q&A est l'approche standard.",
             legal: "LParl + Pratique DélCdG — Mission de haute surveillance, pas d'expertise technique.",
@@ -3792,7 +3792,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre stratégie de recommandations ?</strong>",
         choices: [
           {
-            text: "Recommander l'internalisation de tous les services IT fédéraux — plus de prestataires = plus de risque.",
+            text: "Recommander une internalisation complète des services IT fédéraux critiques au sein de l'OFIT — supprimer le recours aux prestataires privés élimine structurellement la classe entière de risques liés à la chaîne d'approvisionnement IT comme Xplain.",
             ok: false, pts: -15,
             fb: "Irréaliste. La Confédération ne peut pas internaliser tous les services IT (compétences, coûts, agilité). La solution n'est pas l'absence de prestataires, mais leur cadre contractuel et leur audit.",
             legal: "Pragmatisme institutionnel — L'externalisation bien encadrée reste nécessaire.",
@@ -3806,7 +3806,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 7,
           },
           {
-            text: "Recommandation unique : interdire les prestataires étrangers et travailler uniquement avec des entreprises suisses.",
+            text: "Recommandation structurelle unique : interdire formellement le recours à des prestataires IT étrangers ou à capital étranger pour les données fédérales sensibles — la souveraineté numérique impose de privilégier exclusivement les entreprises suisses. Cette mesure de protection nationale est cohérente avec la politique de souveraineté numérique adoptée par plusieurs États européens et répond aux exigences sécuritaires post-Snowden. La Suisse dispose d'un écosystème d'éditeurs et d'hébergeurs suffisamment mature pour absorber cette demande, et le coût supplémentaire éventuel est largement compensé par la garantie de juridiction nationale et l'absence d'exposition au CLOUD Act américain.",
             ok: false, pts: -20,
             fb: "Xplain est une entreprise suisse ! Le problème n'est pas la nationalité mais le cadre contractuel et technique. Cette recommandation est à côté de l'analyse factuelle et pourrait être perçue comme nationaliste sans valeur ajoutée sécurité.",
             legal: "Pratique OFCS — Les recommandations sont basées sur les faits, pas sur les préjugés.",
@@ -3821,7 +3821,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre stratégie de publication ?</strong>",
         choices: [
           {
-            text: "Publier uniquement une version édulcorée de 5 pages sans détails techniques.",
+            text: "Publier uniquement une version édulcorée de 5 pages présentant les conclusions générales sans détails techniques — la communication publique doit être accessible aux non-spécialistes et les détails risqueraient d'aider d'autres attaquants potentiels. Le grand public n'a ni la formation ni l'intérêt pour les TTPs détaillés, et la pédagogie politique passe par des messages courts et frappants. Le rapport interne classifié contiendra la totalité des détails opérationnels pour les destinataires habilités, ce qui suffit largement.",
             ok: false, pts: -15,
             fb: "Manque d'ambition. Le rapport MELANI/OFCS 2016 sur RUAG est devenu une référence internationale précisément parce qu'il contenait des détails techniques substantiels. Un rapport trop léger = pas d'impact.",
             legal: "Pratique OFCS 2016 (RUAG) — Les rapports techniques détaillés sont attendus.",
@@ -3835,7 +3835,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Ne pas publier du tout — trop sensible, laisser le dossier aux autorités.",
+            text: "Ne pas publier de rapport public — la sensibilité des données SRC compromet la sécurité nationale, et la transparence post-incident n'est pas une obligation légale, contrairement à la pratique RUAG 2016 qui était discrétionnaire.",
             ok: false, pts: -20,
             fb: "Occasion manquée. Un rapport public force l'amélioration systémique (pression publique sur les acteurs), sert la formation des futurs DFIR, et contribue à la maturité cyber suisse. Ne pas publier = priver la communauté d'enseignements structurants.",
             legal: "LTrans — La transparence est le principe, le secret l'exception.",
@@ -3885,7 +3885,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est la première action correcte ?</strong>",
         choices: [
           {
-            text: "Bloquer immédiatement le domaine au firewall pour stopper l'exfiltration.",
+            text: "Bloquer immédiatement le domaine rasp.sanjosemaps.com au firewall périmétrique pour stopper toute exfiltration en cours — la priorité opérationnelle est de couper le canal C2, l'analyse forensique pourra reprendre ensuite à froid sur la machine isolée.",
             ok: false, pts: -20,
             fb: "Erreur stratégique. Bloquer alerte l'APT qui va effacer ses traces et se redéployer. Vous perdez la visibilité sur l'étendue de la compromission.",
             legal: "Bonne pratique OFCS — Ne jamais alerter l'attaquant avant d'avoir cartographié son implantation.",
@@ -3899,7 +3899,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Demander à l'utilisateur de la machine s'il a récemment installé un logiciel suspect.",
+            text: "Demander à l'utilisateur de la machine concernée s'il a récemment installé un logiciel suspect, cliqué sur un lien douteux ou ouvert une pièce jointe inhabituelle — l'enquête utilisateur fournit souvent le vecteur d'entrée plus vite que l'analyse technique.",
             ok: false, pts: -15,
             fb: "Contre-productif. Si la machine est compromise, l'utilisateur peut être impliqué involontairement — ou être utilisé pour transmettre l'information à l'attaquant. Aucune enquête APT ne passe par l'interrogatoire direct de l'utilisateur en phase initiale.",
             legal: "Bonne pratique DFIR — Phase d'observation discrète avant toute interaction humaine.",
@@ -3921,14 +3921,14 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "Garder le rapport strictement confidentiel pour ne pas révéler les capacités de détection suisses.",
+            text: "Garder le rapport MELANI strictement confidentiel et limité aux destinataires gouvernementaux — toute publication même partielle révélerait les capacités de détection suisses et faciliterait l'évolution des TTPs adverses pour échapper à de futures analyses.",
             ok: false, pts: -15,
             fb: "Trop prudent. Le silence protège les futures cibles de l'APT ? Non : il les prive d'IoC qui pourraient les alerter. La Suisse a choisi la transparence — avec succès.",
             legal: "Doctrine MELANI — La transparence contrôlée sur les IoC renforce la sécurité collective.",
             critical: false, next: 2,
           },
           {
-            text: "Publier un communiqué vague sans IoC « pour ne pas aider les attaquants ».",
+            text: "Publier un communiqué de portée générale sans aucun IoC technique précis — cette approche évite d'aider les attaquants à comprendre ce que la Suisse a effectivement détecté, tout en assurant une transparence symbolique vis-à-vis du public.",
             ok: false, pts: -10,
             fb: "L'inverse est vrai : les attaquants connaissent déjà leurs propres outils. Les IoC publiés aident uniquement les défenseurs qui ne les connaissent pas.",
             legal: "Principe de sécurité collective — Security through obscurity ≠ sécurité réelle.",
@@ -3943,7 +3943,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment présentez-vous la chronologie d'intrusion au Conseil fédéral ?</strong>",
         choices: [
           {
-            text: "Présenter les 23 Go comme une exfiltration \"massive et dévastatrice\" pour alerter sur l'urgence.",
+            text: "Présenter les 23 Go exfiltrés comme une exfiltration « massive et dévastatrice » pour faire prendre conscience au Conseil fédéral de l'urgence — un volume de cette ampleur sur une entreprise stratégique fédérale justifie une qualification forte.",
             ok: false, pts: -20,
             fb: "Dramatisation sans fondement technique. 23 Go sur 21 mois = 36 MB/jour en moyenne — faible taux (à dessein, pour éviter la détection). Dramatiser = perdre crédibilité technique. La présentation doit être factuelle.",
             legal: "Manuel Ch. 29.3 — Exposé des faits objectifs et mesurés.",
@@ -3957,7 +3957,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Refuser de présenter au Conseil fédéral — trop sensible politiquement.",
+            text: "Refuser de présenter directement au Conseil fédéral en invoquant la sensibilité politique de l'attribution — l'expert technique doit s'en tenir au rapport écrit transmis par la voie hiérarchique normale, sans s'exposer à une instrumentalisation politique. La séparation entre expertise et décision politique protège la crédibilité des conclusions techniques sur le long terme et préserve l'autorité scientifique de l'analyste.",
             ok: false, pts: -25,
             fb: "Manquement grave. Un incident de cette ampleur contre une entreprise d'armement fédérale exige un reporting au CF. Refuser = obstruction institutionnelle.",
             legal: "Art. 176 Cst. + Art. 86 LAM — Obligation de reporting en sécurité nationale.",
@@ -3972,7 +3972,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment orchestrez-vous le confinement ?</strong>",
         choices: [
           {
-            text: "Commencer par le site principal d'Emmen, puis les autres progressivement sur 2 semaines.",
+            text: "Commencer le confinement par le site principal d'Emmen qui concentre les actifs les plus sensibles, puis traiter les autres sites progressivement sur 2 semaines — l'approche échelonnée permet de capitaliser sur les leçons apprises au premier site.",
             ok: false, pts: -25,
             fb: "Erreur fatale. Dès qu'Emmen est confinée, Turla détectera (ses C2 ne répondent plus depuis Emmen) et pourra alerter ses autres implants AVANT confinement. Résultat : destruction des traces sur les 3 autres sites.",
             legal: "NIST SP 800-61 + retour d'expérience MELANI 2016 — Confinement simultané obligatoire pour APT actifs.",
@@ -3986,7 +3986,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Communiquer publiquement l'attaque avant confinement pour créer une pression sur Turla.",
+            text: "Communiquer publiquement l'attaque et l'attribution Turla avant le confinement technique pour créer une pression médiatique forte sur l'attaquant — la honte publique pousse statistiquement les groupes APT à se retirer rapidement des cibles compromises. La doctrine du « name and shame » a fait ses preuves dans plusieurs affaires internationales documentées.",
             ok: false, pts: -30,
             fb: "Stratégie catastrophique. L'annonce publique AVANT confinement alerte Turla qui activera ses mécanismes d'auto-destruction (wipe logs, suicide implants). Toute l'investigation discrète de 3 semaines est perdue.",
             legal: "Pratique OFCS — Communication après confinement uniquement.",
@@ -4001,7 +4001,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment traitez-vous les échantillons pour la communauté DFIR ?</strong>",
         choices: [
           {
-            text: "Publier les binaires Tavdig/Carbon complets sur VirusTotal pour que la communauté puisse les analyser.",
+            text: "Publier les binaires Tavdig et Carbon complets sur VirusTotal pour que la communauté DFIR mondiale puisse les analyser collaborativement — la science ouverte accélère la production de signatures et bénéficie à toutes les organisations victimes potentielles. La transparence radicale est la meilleure défense collective face à des APTs étatiques, c'est l'esprit du partage CERT international.",
             ok: false, pts: -20,
             fb: "Problématique légal. Publier les binaires complets d'un malware étatique = (1) Art. 144 CP si utilisé par un tiers pour attaquer, (2) risque que les auteurs les récupèrent pour créer des variants. La diffusion se fait via YARA rules et hashes, pas les binaires.",
             legal: "Art. 144 CP + pratique CERT — Publier YARA rules et IoC, pas les binaires complets.",
@@ -4015,7 +4015,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 5,
           },
           {
-            text: "Garder toute l'analyse confidentielle — RUAG est une entreprise fédérale, c'est une information d'État.",
+            text: "Conserver l'intégralité de l'analyse en confidentiel sécurité — RUAG étant une entreprise fédérale d'armement, les éléments techniques relèvent du secret de fonction militaire (Art. 86 LAAM) et leur diffusion exige une habilitation préalable.",
             ok: false, pts: -15,
             fb: "Position trop rigide. Le rapport MELANI public de mai 2016 est devenu une référence internationale précisément parce qu'il a partagé. La rétention totale d'IoC prive la communauté de protection et n'apporte aucun bénéfice à la Suisse.",
             legal: "Rapport MELANI 2016 — Le partage anonymisé d'IoC est standard.",
@@ -4030,7 +4030,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle stratégie de remédiation proposez-vous ?</strong>",
         choices: [
           {
-            text: "Concentrer 80% du budget sur des firewalls nouvelle génération.",
+            text: "Concentrer 80% du budget de remédiation sur le déploiement de firewalls nouvelle génération (Palo Alto, Fortinet) avec inspection SSL et threat intel intégré — bloquer le réseau périmétrique reste la défense la plus rentable contre une nouvelle APT. La couche périmétrique reste statistiquement la plus efficace selon les benchmarks Gartner pour stopper 90% des intrusions au stade initial. Les autres investissements (EDR, formation, segmentation) seront déployés progressivement avec le budget récurrent années 3 et suivantes du plan.",
             ok: false, pts: -15,
             fb: "Déséquilibre. Un NGFW seul n'arrête pas un APT qui entre par spearphishing + malware custom. L'attaquant passe par les utilisateurs, pas le périmètre. Approche équilibrée nécessaire : détection interne (EDR, SIEM, UEBA) + segmentation + 0-trust.",
             legal: "NIST CSF + MITRE ATT&CK Defense — Défense en profondeur équilibrée.",
@@ -4044,7 +4044,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 6,
           },
           {
-            text: "Demander une garantie à 100% contre toute intrusion future avant tout investissement.",
+            text: "Conditionner les investissements à l'obtention d'une garantie contractuelle de protection à 100% de la part des fournisseurs sélectionnés — cette exigence force la responsabilisation et oriente le choix vers les solutions réellement éprouvées.",
             ok: false, pts: -20,
             fb: "Illusion. Aucun expert sérieux ne peut garantir 100%. Contre un APT étatique motivé, la question n'est pas \"SI\" mais \"QUAND\". L'objectif réaliste est de détecter rapidement (Dwell Time court) et contenir efficacement, pas d'éliminer le risque.",
             legal: "Principe de sécurité réaliste — Defense-in-depth sans garantie absolue.",
@@ -4059,7 +4059,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre position d'expert sur la question d'attribution ?</strong>",
         choices: [
           {
-            text: "Signer publiquement une déclaration conjointe avec les CERT étrangers attribuant à la Russie.",
+            text: "Co-signer publiquement la déclaration commune avec les CERT allemand, français, néerlandais et américain attribuant l'attaque à la Russie — la convergence d'attribution multi-États renforce la crédibilité internationale de la position suisse.",
             ok: false, pts: -25,
             fb: "Dépassement du rôle technique. L'attribution à un État est un acte politique qui engage les relations diplomatiques. Un expert DFIR fournit les TTPs observables, pas l'attribution étatique. Cette dernière relève du Conseil fédéral / SRC / DFAE.",
             legal: "Art. 184 CPP + Art. 54 Cst. — Attribution étatique = compétence politique.",
@@ -4073,7 +4073,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 7,
           },
           {
-            text: "Refuser tout partage avec les CERT étrangers pour préserver l'indépendance suisse.",
+            text: "Refuser tout partage technique avec les CERT étrangers pour préserver l'indépendance et la neutralité suisses dans le contexte géopolitique tendu — la coopération CERT internationale doit rester strictement bilatérale et confidentielle, sans déclaration commune. La neutralité armée constitutionnelle s'étend logiquement au domaine cyber et impose cette retenue diplomatique.",
             ok: false, pts: -20,
             fb: "Isolationnisme contre-productif. Le partage d'IoC avec les CERT partenaires (via FIRST, MISP, accords bilateraux) améliore la sécurité collective. Refuser = priver la Suisse de renseignements réciproques sans bénéfice.",
             legal: "Convention Budapest + accords FIRST — Coopération internationale bénéfique.",
@@ -4088,7 +4088,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment structurez-vous votre enseignement ?</strong>",
         choices: [
           {
-            text: "Partager tous les détails confidentiels pour un enseignement maximal.",
+            text: "Partager dans les conférences universitaires tous les détails confidentiels disponibles, y compris les éléments classifiés — la valeur pédagogique pour les futurs analystes DFIR justifie une certaine flexibilité sur le secret de fonction.",
             ok: false, pts: -20,
             fb: "Violation du secret de fonction. Même 8 ans après, les éléments classifiés restent tels. Partager au-delà du rapport public = rupture de confiance institutionnelle + risque Art. 320 CP.",
             legal: "Art. 320 CP — Secret de fonction perdure indépendamment du temps.",
@@ -4102,7 +4102,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Refuser toutes les invitations — trop risqué.",
+            text: "Refuser systématiquement les invitations à enseigner sur le cas RUAG — le risque de dévoiler par inadvertance des éléments encore sensibles est réel, et la compétence pédagogique relève d'autres acteurs (universités, écoles spécialisées) sans intervention d'expert opérationnel. La doctrine de réserve professionnelle expertale est strictement respectée par les professionnels sérieux du DFIR fédéral.",
             ok: false, pts: -10,
             fb: "Dommage. La communauté DFIR suisse a besoin d'expertise concrète pour se former. Refuser = priver une génération de l'expérience acquise. Le bon équilibre est l'enseignement rigoureux sur base publique.",
             legal: "Principe de capitalisation — Transmission responsable des connaissances.",
@@ -4153,7 +4153,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre première action ?</strong>",
         choices: [
           {
-            text: "Arrêter immédiatement le serveur pour stopper l'intrusion et préserver l'intégrité des données.",
+            text: "Arrêter immédiatement le serveur pour stopper l'intrusion en cours et préserver l'intégrité des 515'000 dossiers — la priorité absolue est de protéger les bénéficiaires vulnérables, l'analyse forensique pourra reprendre sur disque hors-tension.",
             ok: false, pts: -25,
             fb: "Erreur critique. Un arrêt brutal détruit la RAM et les indicateurs de compromission en cours. Sans IoC, on ne peut ni identifier le vecteur (quelle CVE ?), ni estimer l'étendue, ni chasser l'attaquant sur d'autres systèmes.",
             legal: "Manuel Ch. 11.1 — Capture RAM obligatoire avant arrêt sur tout système suspect d'intrusion active.",
@@ -4167,7 +4167,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Informer immédiatement la presse pour que les 515'000 personnes concernées puissent se protéger.",
+            text: "Informer immédiatement la presse internationale pour que les 515'000 personnes concernées (notamment en zones de conflit) puissent réagir et se protéger — la transparence rapide est un devoir humanitaire envers les bénéficiaires en danger.",
             ok: false, pts: -20,
             fb: "Prématuré. Sans analyse, impossible de dire si les données ont été exfiltrées ou simplement consultées. Une communication sans éléments concrets crée la panique et nuit à la confiance envers le CICR.",
             legal: "LPD 2023 Art. 24 — Notification dans les meilleurs délais une fois les éléments factuels établis.",
@@ -4182,7 +4182,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment qualifiez-vous cette situation dans le rapport ?</strong>",
         choices: [
           {
-            text: "« L'intrusion est le fait d'un acteur sophistiqué, aucune mesure raisonnable n'aurait pu l'empêcher. »",
+            text: "« L'intrusion est le fait d'un acteur étatique sophistiqué disposant de capacités hors normes — aucune mesure raisonnable de sécurité informatique applicable au secteur humanitaire n'aurait pu empêcher une attaque APT de ce niveau d'expertise. »",
             ok: false, pts: -20,
             fb: "Formulation malhonnête. La vulnérabilité était publique depuis 4 mois, activement exploitée selon CISA, avec patch disponible. Minimiser la responsabilité technique affaiblit la crédibilité et compromet les leçons à tirer.",
             legal: "Art. 251 CP — Un rapport minimisant sciemment une faute de gestion engage la responsabilité pénale de l'expert.",
@@ -4196,7 +4196,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "« L'intrusion prouve que Zoho est un logiciel dangereux à bannir. »",
+            text: "« L'incident démontre que Zoho ManageEngine présente un historique de vulnérabilités critiques non maîtrisé et doit être banni des infrastructures humanitaires sensibles au profit de solutions plus robustes. »",
             ok: false, pts: -10,
             fb: "Simpliste et techniquement faux. Toutes les suites logicielles ont eu des CVE critiques. Le problème n'est pas Zoho — c'est le cycle de patching. Un rapport qui stigmatise un produit plutôt qu'une pratique n'a pas de valeur.",
             legal: "Manuel Ch. 29.1 — Analyse des causes-racines, pas des marques.",
@@ -4218,14 +4218,14 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Communication minimaliste en interne pour ne pas compromettre l'enquête en cours.",
+            text: "Communication strictement interne et minimaliste avec les équipes opérationnelles concernées — toute publicité prématurée risque de compromettre l'enquête forensique en cours et de fournir des informations exploitables aux attaquants.",
             ok: false, pts: -15,
             fb: "Contraire à la LPD 2023 et à la mission du CICR. Les personnes concernées — souvent en zone de conflit — doivent savoir que leurs données peuvent être compromises pour prendre leurs propres mesures de sécurité.",
             legal: "LPD 2023 Art. 24 — Notification obligatoire en cas de risque élevé pour les personnes concernées.",
             critical: false, next: 3,
           },
           {
-            text: "Publier uniquement un communiqué technique sans mention des populations concernées pour éviter de paniquer.",
+            text: "Publier un communiqué technique factuel sans détailler les populations spécifiquement concernées (réfugiés syriens, détenus, etc.) — cette discrétion évite de créer une panique chez les bénéficiaires et limite l'instrumentalisation médiatique de leur situation.",
             ok: false, pts: -10,
             fb: "Insuffisant. Un communiqué purement technique laisse les familles dans l'ignorance du risque qui les concerne directement. Le droit humanitaire impose l'information des personnes en danger.",
             legal: "Convention IV — Protection active, pas seulement passive, des données humanitaires.",
@@ -4240,7 +4240,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment adaptez-vous la notification aux contextes à risque ?</strong>",
         choices: [
           {
-            text: "Envoyer un email standard à toutes les 515'000 personnes — on ne peut pas discriminer.",
+            text: "Envoyer un email standardisé à l'ensemble des 515'000 personnes concernées avec le même contenu — l'égalité de traitement est un principe humanitaire fondamental et différencier les notifications selon le contexte serait perçu comme une discrimination. La standardisation permet aussi un déploiement opérationnel rapide via les bases de contacts CICR existantes, sans engager de ressources supplémentaires sur du tri par criticité géopolitique potentiellement contestable. Le principe de non-discrimination prime.",
             ok: false, pts: -30,
             fb: "Danger létal potentiel. Un email mentionnant « vos données CICR concernant la recherche de famille ont fuité » peut, intercepté par un régime hostile, SIGNALER à ce régime qu'une personne recherche un proche disparu politiquement. La notification sans contextualisation peut causer la mort.",
             legal: "Principe humanitaire + Art. 8 CEDH — Protection active des vies.",
@@ -4254,7 +4254,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Ne notifier personne individuellement — publier uniquement un communiqué de presse général.",
+            text: "Ne procéder à aucune notification individuelle et se limiter à un communiqué de presse général dans les médias internationaux — le risque de mettre en danger des personnes en zone sensible justifie de ne pas multiplier les contacts directs.",
             ok: false, pts: -15,
             fb: "Insuffisant légalement. Un communiqué de presse ne remplace pas une notification pour les personnes en zones où elles ont accès à l'information. La stratégie différenciée est plus rigoureuse.",
             legal: "LPD 2023 Art. 24 al. 3 — Information directe des personnes concernées quand possible.",
@@ -4269,7 +4269,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment analysez-vous précisément l'exfiltration ?</strong>",
         choices: [
           {
-            text: "Présumer que tout ce qui était dans le système a été exfiltré (approche pessimiste, plus sûre).",
+            text: "Présumer par principe de précaution que l'intégralité des données présentes dans le système a été exfiltrée — l'approche pessimiste protège les bénéficiaires en évitant de minimiser l'impact, et c'est l'attitude la plus prudente sur le plan déontologique. La sur-protection est préférable à la sous-protection en contexte humanitaire critique, et toute incertitude doit être levée en faveur du bénéficiaire vulnérable. Cette posture évite tout reproche ultérieur de minimisation par les autorités politiques ou les bailleurs de fonds.",
             ok: false, pts: -10,
             fb: "Trop pessimiste ET imprécis. Sans analyse technique, vous ne pouvez pas estimer ce qui a été réellement exfiltré. Un rapport honnête distingue : accédé (lu en place) vs exfiltré (copié vers C2 externe). Pour une base de 515'000, c'est une distinction capitale.",
             legal: "Manuel Ch. 29.3 — Rigueur dans la distinction accès / exfiltration.",
@@ -4283,7 +4283,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 5,
           },
           {
-            text: "Se baser uniquement sur les déclarations publiques des attaquants (ils disent avoir 515'000 dossiers).",
+            text: "Se baser sur les déclarations publiques des attaquants qui revendiquent l'extraction de 515'000 dossiers — leur claim est généralement fiable car la sur-estimation desservirait leur réputation criminelle, et l'analyse confirmant le chiffre rassure.",
             ok: false, pts: -20,
             fb: "Source non fiable. Les attaquants bluffent souvent sur la volumétrie pour augmenter la pression. Baser un rapport officiel sur leurs dires = crédibiliser leur récit. L'analyse technique est obligatoire.",
             legal: "Manuel Ch. 29.3 — Source primaire technique, pas revendications attaquants.",
@@ -4298,7 +4298,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment gérez-vous la notification aux partenaires ?</strong>",
         choices: [
           {
-            text: "Ne pas informer les partenaires — chaque ONG gère sa propre sécurité, ce n'est pas au CICR de les alerter.",
+            text: "Ne pas informer directement les partenaires humanitaires — chaque organisation est juridiquement responsable de sa propre cybersécurité, et le CICR ne peut s'arroger un rôle de coordination sectoriel qui ne lui a pas été confié formellement.",
             ok: false, pts: -25,
             fb: "Manquement éthique grave. Dans un écosystème humanitaire interconnecté, si les attaquants ont accédé à la base CICR, ils ont probablement des liens vers les bases partenaires. Ne pas alerter = risquer de nouvelles victimes dans d'autres ONG.",
             legal: "Principe de solidarité humanitaire + Art. 81 Conv. Genève.",
@@ -4312,7 +4312,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 6,
           },
           {
-            text: "Envoyer un communiqué vague à tous les partenaires sans détails techniques.",
+            text: "Envoyer un communiqué d'alerte général à tous les partenaires humanitaires sans IoC techniques détaillés — la sensibilité du dossier justifie la prudence, et les détails seront partagés bilatéralement avec les CISO uniquement sur demande explicite. La gestion par filtre des destinataires protège les informations critiques contre toute fuite non maîtrisée vers des acteurs malveillants ou la presse internationale.",
             ok: false, pts: -10,
             fb: "Insuffisant opérationnellement. Sans IoC précis (hashes, IP), les partenaires ne peuvent pas vérifier leurs propres systèmes. Un communiqué vague génère de l'anxiété sans permettre d'action. Mieux vaut un briefing technique précis sous confidentialité.",
             legal: "Pratique CERT — Information actionnable ou rien.",
@@ -4327,7 +4327,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment formulez-vous la conclusion sur l'attribution ?</strong>",
         choices: [
           {
-            text: "Accuser publiquement l'État probable (Russie, Chine, Iran selon le profil technique) pour obtenir une réaction internationale.",
+            text: "Désigner publiquement l'État commanditaire probable (Russie ou Iran selon le profil technique des outils utilisés) pour déclencher une réaction internationale et donner aux organisations humanitaires un signal politique clair sur les responsabilités.",
             ok: false, pts: -30,
             fb: "Violation fondamentale du statut du CICR. Accuser publiquement un État détruit instantanément la neutralité humanitaire, essentielle pour pouvoir continuer à opérer dans TOUS les conflits. Le CICR perd alors l'accès aux zones de conflit — catastrophe opérationnelle.",
             legal: "Statut CICR 1863 + Convention Genève — Neutralité = condition d'existence.",
@@ -4341,7 +4341,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 7,
           },
           {
-            text: "Refuser toute mention du caractère étatique — trop politique.",
+            text: "Refuser toute mention du caractère étatique probable de l'attaque — le CICR doit préserver scrupuleusement sa neutralité statutaire et toute qualification politique compromettrait sa capacité d'opérer dans les zones de conflit avec tous les belligérants. Le mandat humanitaire d'exception interdit toute prise de position politique, c'est inscrit dans les statuts du Mouvement et confirmé par la pratique constante des Conventions de Genève.",
             ok: false, pts: -15,
             fb: "Dissimulation problématique. Cacher un fait technique avéré (sophistication = ressources étatiques) = manque de transparence. Le CICR peut mentionner la technicité sans désigner d'État.",
             legal: "Transparence opérationnelle + neutralité.",
@@ -4356,7 +4356,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quels sont les piliers techniques que vous soutenez ?</strong>",
         choices: [
           {
-            text: "Migration complète vers le cloud AWS / Azure pour bénéficier de leur sécurité.",
+            text: "Migration complète des infrastructures CICR vers le cloud public (AWS, Azure ou Google Cloud) pour bénéficier des capacités de sécurité industrielles incomparables aux moyens d'une ONG — Microsoft et Amazon investissent des milliards en cyber chaque année.",
             ok: false, pts: -20,
             fb: "Risque stratégique. Le cloud sous juridiction américaine expose les données humanitaires au CLOUD Act (subpoenas US). Pour une ONG neutre, stocker des données de familles réfugiées en zones de conflit sur des serveurs soumis à une juridiction qui pourrait être partie au conflit = violation neutralité.",
             legal: "CLOUD Act + Convention Genève — Juridiction = enjeu de souveraineté humanitaire.",
@@ -4370,7 +4370,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Demander seulement une augmentation du budget SOC — c'est là que le problème est.",
+            text: "Demander prioritairement une augmentation substantielle du budget SOC (passage de 24/7 niveau 1 à niveau 3 avec threat hunting actif) — le défaut de détection précoce est la cause racine identifiée et concentrer l'investissement à cet endroit est rationnel. L'analyse coûts/bénéfices montre que chaque CHF investi en détection rapporte 4 CHF en évitement de préjudice selon les benchmarks Ponemon Institute, les autres mesures sont secondaires en termes de ROI immédiat sur la prévention de récidive sur le secteur humanitaire.",
             ok: false, pts: -15,
             fb: "Vision trop étroite. L'incident 2022 était multi-factoriel : patching défaillant (gouvernance), pas de Zero Trust (architecture), pas d'EDR (technique), pas d'alerte suffisante (détection). Un SOC plus fort seul n'aurait pas empêché l'exploit CVE-2021-40539 sur un système non patché.",
             legal: "Analyse racine multi-causale — Défense en profondeur.",
@@ -4420,7 +4420,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Que recommandez-vous au CEO ?</strong>",
         choices: [
           {
-            text: "Payer discrètement via un intermédiaire crypto — 6M USD est dérisoire face à une publication de documents militaires.",
+            text: "Payer discrètement via un cabinet de cyber-négociation crypto-spécialisé — 6M USD est dérisoire face au préjudice diplomatique d'une publication de schémas militarisés, et le paiement reste légal car aucune sanction OFAC ne vise nommément DoppelPaymer.",
             ok: false, pts: -30,
             fb: "Erreur grave à triple titre. (1) Aucune garantie de non-publication. (2) Possibles sanctions SECO si le groupe est listé. (3) Financement direct de la criminalité organisée. L'argument « dérisoire » est exactement ce que ciblent les attaquants.",
             legal: "GovCERT + SECO — Payer = financer la cybercriminalité ET s'exposer à des sanctions pénales si le destinataire est listé.",
@@ -4434,7 +4434,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Négocier à la baisse (proposer 1M USD) pour gagner du temps.",
+            text: "Négocier activement à la baisse via un négociateur Coveware ou GroupIB en proposant 1M USD comme contre-offre initiale — les groupes ransomware acceptent typiquement 30-50% de la demande initiale et le délai gagné permet la reconstruction parallèle.",
             ok: false, pts: -15,
             fb: "Négocier, c'est déjà reconnaître la valeur du chantage. Gagner du temps à ce prix alimente la confiance des attaquants dans la méthode. La décision doit être ferme et communiquée en interne comme en externe.",
             legal: "Doctrine GovCERT — Négocier nourrit le modèle économique criminel.",
@@ -4449,7 +4449,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle séquence opérationnelle adoptez-vous ?</strong>",
         choices: [
           {
-            text: "Restaurer immédiatement depuis les backups sur les serveurs existants — la production doit reprendre.",
+            text: "Restaurer en priorité les contrôleurs de domaine et les services métier depuis les backups Veeam sur les serveurs existants — la production ferroviaire ne peut pas attendre la reconstruction complète d'une infrastructure neuve, le coût d'arrêt est trop important.",
             ok: false, pts: -25,
             fb: "Erreur classique. Restaurer sur des machines potentiellement compromises réintroduit l'infection. Le ransomware peut avoir créé des comptes de persistance dans l'AD sauvegardé. Il faut reconstruire de zéro sur infrastructure nettoyée.",
             legal: "GovCERT — Ne jamais restaurer sur des systèmes potentiellement compromis.",
@@ -4463,7 +4463,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "Payer la rançon pour accélérer la reprise — la séquence forensique peut attendre.",
+            text: "Payer la rançon pour accélérer significativement la reprise opérationnelle — la séquence forensique n'apporte aucune valeur business immédiate, et les preuves seront reconstituées a posteriori sur les images conservées une fois la production redémarrée.",
             ok: false, pts: -30,
             fb: "Contredit la décision précédente. Cohérence stratégique cruciale : le refus du paiement doit s'accompagner d'une reconstruction solide, pas d'une marche arrière.",
             legal: "GovCERT — Le refus du paiement suppose une capacité de reconstruction indépendante.",
@@ -4478,7 +4478,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre obligation de notification ?</strong>",
         choices: [
           {
-            text: "Notifier uniquement le PFPDT (LPD 2023) — c'est une fuite de données personnelles d'employés.",
+            text: "Notifier uniquement le PFPDT au titre de la LPD 2023 — la fuite contient principalement des données personnelles d'employés et de clients, et les autres autorités (SECO, GovCERT, MPC) seront automatiquement informées via les canaux administratifs internes.",
             ok: false, pts: -15,
             fb: "Incomplet. La fuite concerne AUSSI des documents à double usage. La notification au SECO est obligatoire pour les biens sous contrôle d'exportation. Sinon, Stadler s'expose à des sanctions additionnelles.",
             legal: "LFMG/LFAIE — Notification SECO pour toute compromission de données de biens militaires ou à double usage.",
@@ -4492,7 +4492,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Ne notifier personne — les documents sont maintenant dans la nature, inutile d'ajouter des ennuis administratifs.",
+            text: "Ne procéder à aucune notification formelle — les 7 To sont déjà dans la nature et toute notification déclencherait une cascade administrative chronophage qui n'apporte rien à la situation matérielle, déjà publique via le leak site.",
             ok: false, pts: -25,
             fb: "Erreur grave. L'absence de notification SECO sur des biens à double usage exfiltrés constitue elle-même une infraction. Les autorités apprennent tôt ou tard par le darknet ou par la presse — avec des conséquences bien pires que la notification spontanée.",
             legal: "LFMG Art. 33 — L'omission de notification est elle-même punissable.",
@@ -4507,7 +4507,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle position publique recommandez-vous ?</strong>",
         choices: [
           {
-            text: "« No comment » officiel pour ne rien confirmer aux attaquants.",
+            text: "Adopter une position officielle de « no comment » sur l'incident pour ne rien confirmer aux attaquants ni aux médias — cette discipline communicationnelle prive le groupe DoppelPaymer de la visibilité qu'il recherche pour faire pression.",
             ok: false, pts: -20,
             fb: "Stratégie contre-productive. Le silence est interprété comme (1) négociation en cours avec les attaquants, ou (2) dissimulation. Les médias combleront le vide avec des spéculations. Le silence nourrit les pires scénarios.",
             legal: "Pratique communication crise — Le silence amplifie l'incertitude.",
@@ -4521,7 +4521,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Démentir publiquement que l'attaque a eu lieu — gagner du temps.",
+            text: "Démentir publiquement l'incident dans un premier communiqué pour gagner du temps de gestion interne — un démenti initial permet d'absorber le choc médiatique, quitte à ajuster la communication dans 48-72h une fois la situation stabilisée. La pratique courante des grandes entreprises suisses est de minimiser initialement avant de communiquer plus précisément quand les éléments techniques sont consolidés et la cellule de crise opérationnelle.",
             ok: false, pts: -35,
             fb: "Mensonge pénalement risqué. Les attaquants publieront la preuve dans les heures qui suivent. Le démenti sera massacré publiquement + exposition pour fausse communication aux actionnaires (Art. 152 CP Gestion déloyale et autres). Fin de carrière pour les dirigeants impliqués.",
             legal: "Art. 152 CP + Art. 27 LPD 2023 — Obligation de véracité envers le public.",
@@ -4536,7 +4536,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Que concluez-vous sur les causes-racines dans le rapport ?</strong>",
         choices: [
           {
-            text: "Blâmer le cadre commercial qui a ouvert le phishing.",
+            text: "Blâmer dans le rapport interne le cadre commercial de Bussnang qui a ouvert le mail de spearphishing initial — la sensibilisation utilisateur est la première ligne de défense et l'erreur humaine identifiée doit être nommément documentée pour effet pédagogique. La responsabilisation individuelle, encadrée par la charte d'utilisation acceptable du SI, est légitimée par la jurisprudence du droit du travail et constitue un signal disciplinaire utile pour l'ensemble des collaborateurs face aux risques cyber actuels.",
             ok: false, pts: -25,
             fb: "Approche destructrice et techniquement fausse. Le phishing est le vecteur, PAS la cause. Un seul clic malheureux ne devrait JAMAIS permettre de compromettre toute une entreprise — c'est une défaillance architecturale. Blâmer l'utilisateur = refuser d'adresser les vraies failles.",
             legal: "Principe defense-in-depth — Pas de single point of failure humain.",
@@ -4550,7 +4550,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 5,
           },
           {
-            text: "Se concentrer uniquement sur le ransomware DoppelPaymer — c'est l'attaquant final qu'il faut identifier.",
+            text: "Se concentrer sur le ransomware DoppelPaymer comme cause racine principale — c'est lui qui a déclenché le préjudice matériel mesurable, et identifier précisément ses opérateurs ouvre la voie à une action en dommages-intérêts internationale.",
             ok: false, pts: -10,
             fb: "Vision trop étroite. DoppelPaymer est le déploiement final ; la cause-racine du succès de l'attaque est l'écosystème défensif lacunaire qui a permis aux attaquants d'avancer 10 jours sans détection. Un rapport centré uniquement sur le ransomware rate l'essentiel.",
             legal: "Manuel Ch. 20 — Analyser toute la kill chain, pas juste le payload final.",
@@ -4565,7 +4565,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment organisez-vous la surveillance du leak ?</strong>",
         choices: [
           {
-            text: "Télécharger les publications directement pour analyse immédiate.",
+            text: "Télécharger directement les publications hebdomadaires depuis le leak site pour une analyse immédiate par l'équipe Stadler — la rapidité de réaction est essentielle pour anticiper les notifications clients et limiter le préjudice réputationnel.",
             ok: false, pts: -25,
             fb: "Illégal. Télécharger depuis un leak criminel = réception de données volées (Art. 143 CP) même pour la victime d'origine. La voie passe par fedpol cybercriminalité.",
             legal: "Art. 143 CP — Le statut de victime ne légitime pas l'accès.",
@@ -4579,7 +4579,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 6,
           },
           {
-            text: "Ignorer les publications — on ne peut rien y faire de toute façon.",
+            text: "Ignorer les publications successives sur le leak site — l'analyse répétée de chaque lot consomme des ressources sans modifier la situation factuelle, et la veille externe (cabinets cyber, presse spécialisée) signalera tout élément réellement critique. La sous-traitance de la veille permet de concentrer les ressources internes sur la reconstruction et la sécurisation, qui sont les enjeux opérationnels prioritaires.",
             ok: false, pts: -20,
             fb: "Passivité dangereuse. Ne pas surveiller = ne pas pouvoir anticiper les impacts, ni notifier les parties affectées (clients dont les données ont fui). Les obligations LPD 2023 exigent une connaissance active de l'exposition réelle.",
             legal: "LPD 2023 Art. 24 — Obligation de connaître précisément ce qui a fui pour notifier efficacement.",
@@ -4594,7 +4594,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle structure de plan proposez-vous ?</strong>",
         choices: [
           {
-            text: "10 points tous égaux en priorité, déployés simultanément pour aller vite.",
+            text: "10 actions toutes prioritaires déployées simultanément pour démontrer une réaction forte au CA et aux clients — la dispersion temporelle d'un plan séquencé donne l'impression d'une mobilisation insuffisante face à la gravité de l'incident.",
             ok: false, pts: -15,
             fb: "Ingérable. Déployer 10 projets simultanément sur 35M CHF sans ordre = chaos organisationnel + dépendances ignorées. Un plan de refonte doit être séquencé selon les dépendances techniques et les risques.",
             legal: "Pratique PMO — Séquencement sur les risques.",
@@ -4608,7 +4608,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 7,
           },
           {
-            text: "Sous-traiter entièrement la cybersécurité à un MSSP global.",
+            text: "Externaliser entièrement la cybersécurité à un MSSP global de premier plan (IBM Security, Accenture, Atos) — Stadler n'a pas vocation à être un acteur cyber, et un MSSP apporte des compétences industrielles incomparables avec un fonctionnement interne. Le « buy not build » est la philosophie dominante du marché pour les entreprises industrielles dont le cœur de métier est ailleurs, et permet de bénéficier d'économies d'échelle.",
             ok: false, pts: -25,
             fb: "Risque stratégique. Externaliser TOUTE la cyber d'une entreprise industrielle critique = perte de souveraineté sur des données sensibles (biens double usage !), dépendance au MSSP, absence de compétences internes. Un mix interne/externe est la norme.",
             legal: "LFMG + Pratique industrielle — Certaines fonctions doivent rester internes.",
@@ -4637,7 +4637,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Préparer deux rapports différents : un pour le MP, un pour la défense Stadler, avec des conclusions adaptées à chacun.",
+            text: "Préparer deux rapports d'expertise distincts et soigneusement adaptés à chacun des destinataires : un premier rapport pour le Ministère public centré sur la qualification pénale et la caractérisation technique des infractions reprochées (Art. 143, 143bis, 144bis CP) avec l'identification précise des opérateurs présumés de DoppelPaymer, et un second rapport pour la défense de Stadler optimisé pour la constitution de partie civile et l'évaluation chiffrée des préjudices indirects subis (perte d'exploitation, atteinte à la réputation, frais de remédiation, surprimes d'assurance) — la double approche maximise les chances de succès dans chacune des procédures menées en parallèle.",
             ok: false, pts: -30,
             fb: "Violation grave de l'éthique d'expert. Un expert produit UN rapport technique neutre, pas des versions « orientées » selon le destinataire. Deux rapports divergents = parjure possible + radiation.",
             legal: "Art. 182 CPP + Code déontologie — Un expert, un rapport.",
@@ -4687,7 +4687,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle qualification retenez-vous dans la notification ?</strong>",
         choices: [
           {
-            text: "Reprendre le chiffre de Hive (20 Go) — l'attaquant est la meilleure source.",
+            text: "Reprendre le chiffre revendiqué par Hive (20 Go) dans la notification — l'attaquant a un intérêt à ne pas surévaluer pour conserver sa crédibilité commerciale, et c'est la donnée la plus défavorable, donc la plus prudente vis-à-vis des clients.",
             ok: false, pts: -15,
             fb: "Faux. L'attaquant a intérêt à gonfler les chiffres pour la pression négociation. Reprendre ses chiffres = lui donner le contrôle du narratif. Votre propre analyse forensique est la seule source crédible.",
             legal: "Manuel Ch. 29.1 — Ne jamais reprendre les chiffres de l'attaquant sans vérification indépendante.",
@@ -4701,7 +4701,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Minimiser : « Aucune donnée sensible n'a été confirmée exfiltrée. »",
+            text: "Adopter une formulation prudente : « Aucune exfiltration de données sensibles n'a pu être formellement confirmée à ce stade par notre analyse forensique » — la rigueur impose de ne pas qualifier prématurément des données dont la sensibilité reste à établir.",
             ok: false, pts: -20,
             fb: "Dangereusement faux. 12 Go de trafic sortant anormal sont des faits. Minimiser sciemment expose à une procédure PFPDT et à des plaintes civiles clients si des données apparaissent plus tard.",
             legal: "LPD 2023 Art. 24 + Art. 251 CP — La minimisation fautive est sanctionnable pénalement.",
@@ -4716,7 +4716,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle stratégie de communication adoptez-vous ?</strong>",
         choices: [
           {
-            text: "Envoyer un email générique aux 3 millions d'utilisateurs par précaution.",
+            text: "Envoyer un email d'alerte générique aux 3 millions d'utilisateurs Comparis par principe de précaution maximale — il vaut mieux sur-notifier que laisser un client concerné non averti, et la diffusion large limite tout reproche ultérieur de défaut d'information.",
             ok: false, pts: -10,
             fb: "Approche floue qui crée de la panique inutile chez 2,95M clients non concernés et dilue le message pour les 47'000 réellement touchés. La précision protège la marque et les clients.",
             legal: "LPD 2023 — Information proportionnée au risque réel.",
@@ -4730,7 +4730,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "Ne rien communiquer aux clients — le PFPDT est notifié, l'obligation légale est remplie.",
+            text: "Ne procéder à aucune communication directe aux clients dès lors que la notification PFPDT a été déposée dans les 48h — l'obligation légale est strictement remplie et toute communication individuelle excéderait le cadre légal en exposant inutilement Comparis.",
             ok: false, pts: -20,
             fb: "Faux. La notification PFPDT et l'information aux clients sont deux obligations distinctes en cas de risque élevé (LPD 2023 Art. 24 al. 3). Des identifiants et historiques = risque élevé de phishing ciblé.",
             legal: "LPD 2023 Art. 24 al. 3 — Obligation d'information directe des personnes concernées.",
@@ -4745,7 +4745,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle réponse coordonnée mettez-vous en place ?</strong>",
         choices: [
           {
-            text: "Bloquer tous les IPs détectées au firewall et attendre que ça passe.",
+            text: "Bloquer en masse toutes les IPs détectées au firewall périmétrique et attendre que la vague de credential stuffing s'épuise naturellement — les attaquants finissent par abandonner après quelques jours quand le rendement devient nul.",
             ok: false, pts: -20,
             fb: "Réaction isolationniste inefficace. Les attaquants utilisent des botnets avec IP rotatifs (dizaines de milliers) — bloquer est un jeu du chat et de la souris perdu. Par ailleurs, Comparis ne peut pas protéger Swisscom et les banques en se contentant de bloquer chez soi. Réponse coordonnée requise.",
             legal: "OWASP — Le blocage IP seul n'arrête pas un botnet moderne.",
@@ -4759,7 +4759,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Demander publiquement à tous les internautes suisses de changer leurs mots de passe partout.",
+            text: "Demander publiquement, via un communiqué national relayé par les médias, à tous les internautes suisses de changer leurs mots de passe sur l'ensemble de leurs comptes — la portée du leak Comparis impose une réaction coordonnée de la nation entière. Cette mobilisation citoyenne est inédite mais proportionnée à l'enjeu, et la coordination avec les opérateurs (Swisscom, Sunrise, Salt) permettra une diffusion rapide via SMS national.",
             ok: false, pts: -15,
             fb: "Panique injustifiée. Le credential stuffing concerne UNIQUEMENT les emails dont le hash a fuité (les 47'000 clients Comparis). Créer une panique nationale = saturer les services de support des autres entreprises sans bénéfice proportionnel. Cible : les concernés.",
             legal: "LPD 2023 + principe proportionnalité — Message adapté à la population affectée.",
@@ -4774,7 +4774,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quel est votre avis technique au CA ?</strong>",
         choices: [
           {
-            text: "« Payer 1M USD est peu cher pour éviter la publication des 8 Go restants. Recommandation : accepter. »",
+            text: "« Payer 1M USD est techniquement peu cher au regard du préjudice réputationnel d'une publication des 8 Go restants — l'analyse coûts/bénéfices, et les précédents Hive de bonne foi opérationnelle, justifient une recommandation d'acceptation au CA. Hive a respecté ses engagements dans 78% des cas documentés (rapport Coveware Q3 2021) et la transaction se ferait via un intermédiaire crypto réputé qui garantit l'anonymat de la source. »",
             ok: false, pts: -30,
             fb: "Mauvaise analyse technique ET juridique. (1) Hive a un historique de non-respect de ses promesses (publication quand même dans plusieurs cas). (2) Hive est sur la surveillance SECO et OFAC — payer peut déclencher des sanctions suisses. (3) Payer finance le modèle et invite de nouvelles attaques contre Comparis et d'autres.",
             legal: "GovCERT + SECO + OFAC — Recommandation unanime de non-paiement.",
@@ -4788,7 +4788,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "« Cette question est purement business, pas technique. Le CA décide seul. »",
+            text: "« Cette question relève purement de la décision business du CA et non de l'expertise technique — l'évaluation du risque réputationnel, du coût de l'incident et des intérêts financiers de l'entreprise dépasse la compétence du DFIR. »",
             ok: false, pts: -15,
             fb: "Esquive. L'expert technique a un avis crucial à donner : probabilité que Hive respecte, risque technique de nouvelle attaque après paiement, conséquences techniques des sanctions. Se défausser = manquement au rôle d'expert consultant.",
             legal: "Art. 184 CPP + Déontologie conseil — L'expert éclaire la décision.",
@@ -4803,7 +4803,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelles sont vos 5 recommandations prioritaires ?</strong>",
         choices: [
           {
-            text: "1. Firewalls plus puissants, 2. Plus de pare-feu, 3. Antivirus premium, 4. Chiffrement fort, 5. Meilleur WiFi.",
+            text: "1. Firewalls nouvelle génération en frontal, 2. Pare-feu interne par segment réseau, 3. Antivirus premium endpoints, 4. Chiffrement AES-256 sur tous les flux, 5. Migration vers WiFi 6 avec authentification certifiée — couches de défense classiques renforcées. La défense en profondeur traditionnelle est éprouvée et auditée par les standards CIS Controls v8, son efficacité ne fait plus débat dans la communauté de cybersécurité d'entreprise et fait l'objet d'un consensus large.",
             ok: false, pts: -15,
             fb: "Focus exclusif sur le périmètre qui n'est pas la cause racine. L'attaque est passée par phishing + credentials. Les firewalls et antivirus n'auraient rien arrêté. Diagnostic correct → recommandations ciblées.",
             legal: "NIST CSF — Défense adaptée au vecteur réel, pas générique.",
@@ -4817,7 +4817,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Sous-traiter toute la cybersécurité à un MSSP pour 2M/an et ne plus rien gérer en interne.",
+            text: "Externaliser intégralement la cybersécurité à un MSSP de premier rang (Kudelski, IBM, Orange Cyberdefense) pour 2M CHF/an — Comparis n'a pas vocation à gérer en interne ces compétences spécialisées, et l'offre managée garantit une couverture industrielle.",
             ok: false, pts: -20,
             fb: "Déresponsabilisation. Externaliser TOUT = perdre la compréhension interne des risques + dépendance totale + absence de compétences pour challenger le MSSP. Un mix interne-externe est la norme.",
             legal: "Pratique SECO/FINMA — Responsabilité ne s'externalise pas.",
@@ -4867,7 +4867,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre première action forensique ?</strong>",
         choices: [
           {
-            text: "Débrancher immédiatement l'alimentation du laptop pour préserver l'état du disque.",
+            text: "Débrancher immédiatement l'alimentation électrique du laptop ThinkPad pour figer l'état du disque dans son état actuel — Tails ne persistant rien sur disque par défaut, l'arrêt brutal préserve uniquement ce qui est sur la partition persistante.",
             ok: false, pts: -30,
             fb: "Erreur catastrophique sur Tails. Tails est amnésique : à l'extinction, la RAM est effacée et aucune persistance n'existe sur le disque (sauf si Persistent Volume activé, déchiffré en RAM). Couper = tout détruire.",
             legal: "Manuel Ch. 11.1 — Tails exige une capture RAM préalable obligatoire. Jamais d'extinction brutale.",
@@ -4881,7 +4881,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Demander immédiatement au suspect son mot de passe Tails pour sécuriser la procédure.",
+            text: "Demander immédiatement au suspect, en présence de l'avocat de garde, son mot de passe Tails et la passphrase de son YubiKey pour sécuriser le déroulement de la perquisition et éviter une perte de données par mise hors tension involontaire.",
             ok: false, pts: -15,
             fb: "Possible mais problématique. Le suspect peut invoquer le nemo tenetur (Art. 113 CPP). De plus, cela n'empêche pas la dégradation de la RAM si vous attendez avant le dump. Priorité : action technique, pas interaction humaine.",
             legal: "Art. 113 CPP — Droit au silence. La contrainte directe à déverrouiller est contestable.",
@@ -4896,7 +4896,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment procédez-vous à la saisie des wallets ?</strong>",
         choices: [
           {
-            text: "Extraire toutes les clés privées identifiées et transférer immédiatement les fonds vers un wallet fedpol sécurisé pour éviter le vol par un complice.",
+            text: "Extraire les clés privées identifiées dans le dump RAM et procéder au transfert immédiat des 8.4 BTC vers le cold wallet sécurisé fedpol — l'urgence opérationnelle prime, un complice pourrait à tout moment vider les wallets via les seeds de secours.",
             ok: false, pts: -20,
             fb: "Erreur procédurale grave. Le transfert sans décision du MP peut constituer un détournement. Le séquestre se fait en documentant les clés et en bloquant les transferts — pas en transférant soi-même.",
             legal: "Art. 263 CPP — Le séquestre n'autorise pas le transfert de fonds, seulement leur blocage et documentation.",
@@ -4910,7 +4910,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "Laisser les wallets en place et revenir avec un expert crypto plus tard.",
+            text: "Laisser les wallets en place sans manipulation et planifier un retour avec un expert crypto certifié dans les jours qui viennent — la procédure de saisie crypto exige des compétences spécialisées que l'équipe de perquisition standard ne maîtrise pas. La préservation forensique impose cette prudence.",
             ok: false, pts: -25,
             fb: "Impossible. La session Tails sera perdue dès qu'elle s'éteint (écran de veille, coupure électrique). Les clés privées présentes en RAM disparaîtront. Revenir « plus tard » = tout perdre.",
             legal: "Manuel Ch. 11.1 — Les preuves volatiles exigent une action immédiate, pas différée.",
@@ -4925,7 +4925,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment répondez-vous à la demande de scellés, notamment sur le carnet ?</strong>",
         choices: [
           {
-            text: "Refuser les scellés sur le carnet — une seed phrase BIP-39 n'est pas un « journal intime ».",
+            text: "Refuser la mise sous scellés du carnet manuscrit — une seed phrase BIP-39 (24 mots techniques de la liste BIP-39 standardisée) ne constitue manifestement pas un « journal intime » au sens de l'art. 264 CPP, c'est un objet purement instrumental à l'infraction.",
             ok: false, pts: -10,
             fb: "Position à nuancer. Vous ne pouvez pas refuser la demande de scellés — c'est le TMC qui tranche. Mais vous pouvez argumenter devant lui que le contenu n'est pas un journal intime mais un outil technique d'accès à des avoirs patrimoniaux.",
             legal: "Art. 248 CPP — La décision sur la levée des scellés appartient exclusivement au TMC.",
@@ -4939,7 +4939,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Refuser totalement les scellés — la perquisition était régulière, il n'y a rien à contester.",
+            text: "Refuser entièrement la demande de scellés sur l'ensemble des dispositifs — la perquisition de 06h02 a été menée régulièrement avec mandat, et ouvrir des scellés rétroactivement crée une charge procédurale TMC qui ralentira l'enquête sans bénéfice.",
             ok: false, pts: -20,
             fb: "Faux. L'art. 248 CPP est un droit procédural du propriétaire, indépendant de la régularité de la saisie. Refuser les scellés est une violation procédurale qui peut invalider toute la perquisition.",
             legal: "Art. 248 CPP — Droit fondamental, non subordonné à la régularité de l'opération.",
@@ -4954,7 +4954,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment exploitez-vous cette piste blockchain ?</strong>",
         choices: [
           {
-            text: "Présenter Chainalysis comme preuve définitive que toute la richesse du suspect provient de Darkmarket.",
+            text: "Présenter le rapport Chainalysis comme preuve technique définitive que la totalité des fonds détenus par le suspect (8.4 BTC ≈ 340'000 CHF) provient directement des activités illicites de Darkmarket — la traçabilité on-chain est mathématiquement irréfutable. La méthode Chainalysis Reactor est admise dans plus de 800 procédures pénales internationales et son taux d'erreur documenté est inférieur à 0,1%, ce qui établit son caractère probatoire de premier plan dans tout dossier pénal sérieux relatif à la blockchain.",
             ok: false, pts: -15,
             fb: "Sur-interprétation. Chainalysis identifie des probabilités d'attribution selon des heuristiques (clustering, behavioral analysis). Ce sont des INDICES forts, pas des preuves définitives. Formuler en « analyse heuristique blockchain indique forte probabilité » plutôt que « preuve ».",
             legal: "Manuel Ch. 29.3 — Les outils blockchain donnent des heuristiques, pas des preuves absolues.",
@@ -4968,7 +4968,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Ignorer la blockchain et se contenter des wallets saisis physiquement.",
+            text: "Ignorer l'analyse blockchain dans le rapport pénal et se concentrer uniquement sur les wallets matériellement saisis (YubiKey + carnet) — la preuve technique blockchain est complexe à expliquer en audience et peut être démolie par un contre-expert.",
             ok: false, pts: -20,
             fb: "Énorme perte. L'analyse blockchain révèle l'écosystème criminel complet (fournisseurs, acheteurs, voies de cash-out). C'est la colonne vertébrale de la preuve pour un vendeur Darkmarket. Ignorer = limiter l'affaire à la saisie physique, perdre l'ampleur criminelle.",
             legal: "Art. 139 CPP + Guide fedpol — La blockchain est une source de preuve primaire pour cybercrime financier.",
@@ -4983,7 +4983,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment gérez-vous le partage avec Europol ?</strong>",
         choices: [
           {
-            text: "Transmettre directement les données brutes à Europol par email sécurisé.",
+            text: "Transmettre directement les données brutes à Europol par canal sécurisé EPE (Europol Platform for Experts) en utilisant les credentials d'expert fedpol — la coopération internationale efficace exige une transmission rapide entre experts techniques.",
             ok: false, pts: -25,
             fb: "Non-conforme. Tout transfert international de données personnelles doit passer par les canaux officiels (fedpol → accord Europol). Un transfert direct par l'expert = violation LEIS + risque contestation LPD.",
             legal: "LEIS + LPD 2023 — Transferts via autorités centrales désignées.",
@@ -4997,7 +4997,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 5,
           },
           {
-            text: "Refuser le partage — priorité à l'enquête suisse.",
+            text: "Refuser tout partage avec Europol pour préserver la priorité de l'enquête pénale suisse en cours — la transmission de données techniques à un acteur étranger pourrait fragiliser la procédure helvétique et compromettre la confiscation des avoirs sur le territoire national. La souveraineté juridique nationale prime sur la coopération internationale dans ce contexte précis et c'est une option défendable institutionnellement.",
             ok: false, pts: -15,
             fb: "Occasion manquée. Sans partage, l'enquête suisse reste isolée et rate des corrélations utiles (le suspect Darkmarket peut être lié à des vendeurs arrêtés à Berlin, Amsterdam ou Paris). La coopération est le cœur d'Europol.",
             legal: "Convention Budapest + Pratique J-CAT — Coopération attendue dans les affaires transnationales.",
@@ -5012,7 +5012,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle approche technique pour le smartphone ?</strong>",
         choices: [
           {
-            text: "Forcer un brute-force du PIN via Cellebrite avant que le Titan M2 n'applique des délais.",
+            text: "Lancer immédiatement un brute-force du PIN via Cellebrite Premium sur le Pixel GrapheneOS avant que la puce Titan M2 n'active progressivement ses délais exponentiels — l'urgence technique justifie d'épuiser cette option avant qu'elle ne devienne impossible. La fenêtre opérationnelle est étroite et la procédure standard accepte cette approche pour les enquêtes prioritaires sur trafic Darkmarket, à condition de documenter rigoureusement la chaîne de custody dès le départ.",
             ok: false, pts: -20,
             fb: "Largement irréaliste. Titan M2 applique des délais exponentiels dès la 5ème tentative incorrecte (minutes, puis heures). Un PIN à 6 chiffres prend littéralement des années à bruteforcer. Des outils comme Cellebrite Advanced ont des taux de succès limités sur GrapheneOS récent.",
             legal: "GrapheneOS + Titan M2 — Résistance au bruteforce éprouvée.",
@@ -5026,7 +5026,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 6,
           },
           {
-            text: "Envoyer le Pixel à un labo NSO (ou équivalent) pour exploit de niveau étatique.",
+            text: "Envoyer le Pixel à un laboratoire spécialisé en exploits étatiques (NSO Group, Cellebrite Advanced Services ou Grayshift) — pour les enquêtes graves sur trafic Darkmarket, l'usage d'exploits zero-day est juridiquement admis en cadre réquisitionnel.",
             ok: false, pts: -30,
             fb: "Irréaliste et illégal. (1) Les exploits 0-day sont des armes classifiées, pas accessibles pour une affaire criminelle ordinaire. (2) NSO Group est sous sanctions US depuis 2021 — collaborer serait illégal pour une autorité suisse. (3) Le budget serait démesuré pour une affaire Darkmarket.",
             legal: "US BIS Entity List + Pratique fedpol — NSO et équivalents inaccessibles.",
@@ -5041,7 +5041,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment exécutez-vous techniquement la confiscation ?</strong>",
         choices: [
           {
-            text: "Utiliser les clés privées extraites pour transférer les BTC vers votre propre wallet d'abord, puis vers le wallet d'État.",
+            text: "Utiliser les clés privées extraites pour transférer les 8.4 BTC d'abord vers un wallet expert intermédiaire (sous votre contrôle technique direct) puis vers le wallet officiel fedpol — cette étape intermédiaire permet de vérifier la transaction avant remise définitive. Le double saut technique est une bonne pratique de l'industrie crypto-forensique pour valider les transactions importantes, et de nombreux experts indépendants suisses la pratiquent sans difficulté procédurale connue ni jurisprudence contraire en matière de saisie d'avoirs numériques.",
             ok: false, pts: -30,
             fb: "Violation grave. Transférer vers son wallet personnel avant = détournement de fonds publics, même temporaire. La procédure exige un transfert direct vers le wallet fedpol officiel, en présence de témoins et documenté.",
             legal: "Art. 152 CP + Pratique fedpol — Transfert direct vers wallet officiel.",
@@ -5055,7 +5055,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 7,
           },
           {
-            text: "Laisser les BTC sur les wallets saisis et notifier Bitstamp pour blocage côté exchange.",
+            text: "Laisser les 8.4 BTC sur les wallets saisis sans procéder au transfert et notifier formellement Bitstamp ainsi que les autres exchanges centralisés pour blocage des adresses connues — l'exécution technique de la confiscation peut intervenir ultérieurement.",
             ok: false, pts: -20,
             fb: "Insuffisant. Les BTC sur les wallets privés ne sont pas exposés à Bitstamp (qui ne contrôle que son propre exchange). Laisser sur les wallets saisis = risque qu'un complice avec copie des seed phrases vide les wallets. Le transfert vers wallet fedpol est OBLIGATOIRE.",
             legal: "Art. 267 CPP — Exécution physique/numérique du séquestre.",
@@ -5070,7 +5070,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle contribution rédigez-vous pour le rapport Europol ?</strong>",
         choices: [
           {
-            text: "Détail complet de l'opération suisse : noms, adresses, wallets exacts, méthodes spécifiques.",
+            text: "Détail complet et nominatif de l'opération suisse : identités des suspects condamnés, adresses précises de leurs wallets, méthodes techniques exactes employées par fedpol — la transparence opérationnelle entre partenaires Europol est usuelle et productive. La coopération internationale repose sur la confiance et le partage sans réserve entre services partenaires habilités selon les standards européens établis depuis 2010.",
             ok: false, pts: -25,
             fb: "Violation secret de fonction + vie privée. Même si la condamnation est définitive, les détails nominatifs ne sont pas à publier dans un rapport international public. De plus, les méthodes spécifiques (techniques d'extraction) aideraient les futurs criminels à les contourner.",
             legal: "Art. 320 CP + LPD 2023 Art. 8 — Minimisation + secret de fonction.",
@@ -5084,7 +5084,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Refuser de contribuer pour préserver la confidentialité totale.",
+            text: "Refuser de contribuer au rapport Europol Darkmarket 2021 pour préserver la confidentialité totale de l'opération suisse — toute contribution publique, même anonymisée, peut être recoupée par d'autres acteurs et fragiliser des enquêtes encore actives.",
             ok: false, pts: -15,
             fb: "Dommage. La contribution suisse à Europol renforce la position du pays dans les réseaux internationaux de DFIR et contribue à la lutte collective contre le cybercrime. La capitalisation anonymisée est possible et bénéfique.",
             legal: "Coopération Europol — Contribution attendue des États membres.",
@@ -5134,7 +5134,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle action prenez-vous en priorité ?</strong>",
         choices: [
           {
-            text: "Éteindre immédiatement tous les postes du campus pour stopper la propagation.",
+            text: "Couper l'alimentation électrique de tous les postes du campus simultanément pour stopper net la propagation du chiffrement — chaque seconde gagnée préserve des fichiers, et l'analyse forensique pourra être conduite à froid sur les images préservées. L'arrêt brutal est la mesure la plus radicale et donc la plus efficace face à Conti.",
             ok: false, pts: -25,
             fb: "Erreur. L'extinction massive détruit les preuves volatiles (RAM, connexions actives) sur les machines potentiellement saines. Vous perdez la visibilité sur le vecteur d'intrusion — ici, le VPN personnel. Sans vecteur identifié, la restauration propre est impossible.",
             legal: "Manuel Ch. 11.1 — Préserver les preuves avant toute action de masse. La panique est le meilleur ami du ransomware.",
@@ -5148,7 +5148,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Négocier avec Conti pour gagner du temps avant la rentrée.",
+            text: "Engager une négociation rapide avec Conti via un cabinet de cyber-négociation pour gagner du temps de reconstruction avant la rentrée universitaire — le délai obtenu permet de sauver l'année académique sans nécessairement aboutir à un paiement.",
             ok: false, pts: -30,
             fb: "Erreur grave. Négocier avant même de comprendre l'étendue = donner l'initiative aux attaquants. De plus, Conti (groupe russophone) est sur plusieurs listes de sanctions — payer exposerait à une sanction SECO en plus du préjudice.",
             legal: "GovCERT + SECO — Pas de négociation avec groupes sanctionnés, même pour urgence opérationnelle.",
@@ -5163,7 +5163,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle réponse donnez-vous au rectorat ?</strong>",
         choices: [
           {
-            text: "« Oui, nous aurons tout restauré pour lundi. »",
+            text: "« Oui, l'ensemble des services universitaires sera restauré pour lundi matin avec les backups disponibles — l'équipe IT travaille en 3x8 sur la reconstruction et la rentrée pourra se dérouler normalement comme prévu. »",
             ok: false, pts: -20,
             fb: "Promesse imprudente. Reconstruire un Active Directory + vérifier 800 machines en 72h sans retomber dans une réinfection par un VPN personnel non audité est techniquement impossible. Une promesse non tenue casse la confiance.",
             legal: "Art. 182 CPP — L'expert formule des constats techniques, pas des promesses commerciales.",
@@ -5177,7 +5177,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "« Nous ne pouvons pas rouvrir — tout est à l'arrêt indéfiniment. »",
+            text: "« Nous ne pouvons pas rouvrir l'université dans des délais raisonnables — l'ampleur du chiffrement Conti et l'absence d'indications fiables sur les délais de remédiation imposent une suspension indéfinie de toutes les activités académiques en présentiel. La sécurité prime sur toute considération de continuité pédagogique à court terme. »",
             ok: false, pts: -15,
             fb: "Trop défaitiste. L'enseignement à distance reste fonctionnel. Les services critiques peuvent être remontés en isolation. Annoncer un « arrêt indéfini » dramatise inutilement et nuit à la mission de l'institution.",
             legal: "Art. 182 CPP — L'expertise doit être pondérée : ni optimiste, ni catastrophiste.",
@@ -5192,7 +5192,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle stratégie de communication adoptez-vous ?</strong>",
         choices: [
           {
-            text: "Minimiser : « Une partie mineure de données administratives a été concernée. »",
+            text: "Adopter une formulation minimisante : « Une partie limitée de données administratives a été concernée par cet incident, sans impact sur les données académiques sensibles » — cette approche prudente évite la panique tout en respectant les obligations LPD.",
             ok: false, pts: -30,
             fb: "Mensonge qui se retourne dans les 48h. Le Temps a les fichiers. Minimiser crée un effet amplificateur catastrophique quand la presse révèle l'ampleur réelle. C'est l'erreur classique que l'UniNE a évitée en 2022.",
             legal: "LPD 2023 Art. 24 — Minimisation fautive = sanction PFPDT aggravée.",
@@ -5206,7 +5206,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Nier publiquement puis publier une rectification discrète dans 15 jours.",
+            text: "Nier publiquement l'ampleur du leak dans un premier communiqué pour gagner du temps de gestion, puis publier une rectification factuelle dans 15 jours quand l'analyse forensique sera consolidée — cette approche en deux temps protège la réputation initiale. Tactique éprouvée.",
             ok: false, pts: -25,
             fb: "Double erreur : le déni public crée une perte de crédibilité immédiate ; la rectification discrète est ignorée médiatiquement. Combinaison pire que l'une ou l'autre isolément.",
             legal: "Art. 251 CP — Le déni fautif dans une communication officielle engage la responsabilité.",
@@ -5221,7 +5221,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment qualifiez-vous Conti dans votre rapport au rectorat et au canton ?</strong>",
         choices: [
           {
-            text: "« Un ransomware comme les autres — on reconstruit et on passe à autre chose. »",
+            text: "« Conti est un ransomware standard contre lequel la procédure habituelle s'applique : reconstruction depuis backups, durcissement, formation utilisateurs — pas besoin de dramatiser, l'incident est techniquement gérable comme tout cas similaire. »",
             ok: false, pts: -20,
             fb: "Banalisation dangereuse. Conti n'est pas un ransomware générique : c'est un RaaS étatique-adjacent avec des capacités d'APT. Le minimiser sous-estime : (1) le risque de données exposées à long terme, (2) la persistance potentielle résiduelle, (3) l'implication de ressources sophistiquées. Rapport inadapté au destinataire.",
             legal: "Pratique DFIR — Qualifier l'adversaire est essentiel pour calibrer la réponse.",
@@ -5235,7 +5235,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "« Cyberattaque de niveau militaire étatique russe » — dramatiser pour obtenir plus de budget.",
+            text: "« Cyberattaque de niveau militaire étatique russe » — qualifier l'incident dans cette catégorie permet d'obtenir un budget de remédiation à la hauteur des moyens réellement nécessaires et débloque l'accès à des ressources fédérales (GovCERT, fedpol). La dramatisation contrôlée est un levier politique reconnu, et la qualification peut être nuancée dans le rapport interne sans porter préjudice à l'attribution publique initiale qui reste défendable techniquement.",
             ok: false, pts: -25,
             fb: "Exagération technique et diplomatique. Conti est opéré par un groupe cybercriminel tolérant, pas un service étatique. Dramatiser = attribuer à un État = problème diplomatique + discrédit futur si l'attribution est affinée vers « crime organisé ». Rester factuel.",
             legal: "Manuel Ch. 29.3 + Art. 54 Cst. — Neutralité technique.",
@@ -5250,7 +5250,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle approche pour les catégories d'étudiants vulnérables ?</strong>",
         choices: [
           {
-            text: "Notification email standard à tous les 6'400 étudiants concernés — traitement égalitaire.",
+            text: "Envoyer une notification email standardisée aux 6'400 étudiants concernés pour respecter le principe d'égalité de traitement — différencier les communications selon des critères de vulnérabilité serait paternaliste et juridiquement contestable.",
             ok: false, pts: -25,
             fb: "L'égalité formelle ignore les risques différenciés. Un étudiant iranien dont les données sont publiées depuis un serveur piraté pose un risque de représailles que n'a pas un étudiant suisse. L'approche différenciée n'est pas discriminatoire — elle protège.",
             legal: "Convention 108+ + doctrine CEDH — Protection proportionnée au risque.",
@@ -5264,7 +5264,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 5,
           },
           {
-            text: "Publier un communiqué de presse détaillé listant les catégories pour que les étudiants concernés se manifestent.",
+            text: "Publier un communiqué de presse détaillé listant explicitement les catégories d'étudiants concernés (mineurs, étrangers, dossiers disciplinaires) pour que chacun puisse se manifester directement auprès du DPO — la transparence facilite l'auto-identification et démontre l'engagement de l'UniNE envers ses étudiants. Cette approche directe permet aux personnes concernées d'agir immédiatement sans devoir attendre une notification individuelle qui pourrait prendre plusieurs semaines de traitement administratif.",
             ok: false, pts: -30,
             fb: "Catastrophe potentielle. Publier publiquement « des données d'étudiants iraniens et chinois ont fuité » signale aux services de ces pays qu'il y a matière à enquêter. Confirmer publiquement ces catégories = amplifier le risque pour les personnes concernées.",
             legal: "LPD 2023 Art. 5/7 + Principe précaution — Confirmation publique déconseillée.",
@@ -5279,7 +5279,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle procédure de restauration appliquez-vous ?</strong>",
         choices: [
           {
-            text: "Restaurer directement depuis les backups sur l'infrastructure existante pour gagner du temps.",
+            text: "Restaurer directement depuis les backups air-gapped sur l'infrastructure existante après simple reformatage — la priorité est de remettre les services en fonctionnement avant la rentrée, et un reformatage standard suffit à éliminer Conti.",
             ok: false, pts: -30,
             fb: "Erreur classique. Restaurer sur du matériel potentiellement encore compromis (Conti peut avoir laissé des backdoors dans le firmware ou des implants résiduels) = réinfection garantie. Il faut reformater d'abord.",
             legal: "GovCERT + CISA Recovery — Jamais de restauration sur matériel suspect sans reformatage.",
@@ -5293,7 +5293,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 6,
           },
           {
-            text: "Abandonner les 100 machines avec backups anciens — perte acceptable.",
+            text: "Abandonner les 100 machines pour lesquelles les backups disponibles sont trop anciens (>6 mois) et acter cette perte de données comme acceptable — le coût de récupération forensique de ces machines dépasse leur valeur opérationnelle résiduelle. Cette décision pragmatique est conforme à la doctrine de gestion de crise IT, qui privilégie la rapidité de retour en production sur l'exhaustivité de récupération. Les chercheurs concernés disposeront d'un budget de reconstitution de leurs données critiques via leurs sources externes (publications, collaborateurs, sauvegardes personnelles cloud).",
             ok: false, pts: -15,
             fb: "Décision trop brutale. Ces 100 machines peuvent contenir des données de recherche irremplaçables (thèses en cours, données de laboratoires). L'approche : restauration avec les backups disponibles (même anciens) + travail de reconstruction manuel avec les chercheurs pour les 2-3 mois de données perdues. Pas d'abandon.",
             legal: "Principe de proportionnalité — Toute donnée récupérable doit être récupérée.",
@@ -5308,7 +5308,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quel format de REX pour la communauté académique ?</strong>",
         choices: [
           {
-            text: "Présentation uniquement en interne à swissuniversities sans documentation écrite.",
+            text: "Présentation orale uniquement en séance plénière swissuniversities sans documentation écrite distribuée — l'absence de trace papier protège contre les fuites involontaires vers des concurrents internationaux ou des attaquants potentiels.",
             ok: false, pts: -15,
             fb: "Capitalisation insuffisante. Sans document écrit, les leçons se dilueront dans les changements de personnel. Les universités qui ne sont pas représentées à la réunion ne bénéficieront pas du partage. Un document structuré permet la réutilisation.",
             legal: "Principe de capitalisation — Écrit > oral seul.",
@@ -5322,7 +5322,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 7,
           },
           {
-            text: "Ne pas partager — exposer nos faiblesses pourrait nous rendre plus vulnérables à de futures attaques.",
+            text: "Ne procéder à aucun partage avec swissuniversities ou SWITCH — exposer publiquement les faiblesses techniques exploitées par Conti reviendrait à fournir un manuel d'attaque aux groupes ransomware concurrents qui ciblent le secteur académique. Le pragmatisme défensif impose cette discrétion, et chaque université doit développer ses propres mesures sans bénéficier d'un retour d'expérience UniNE qui mettrait l'établissement en porte-à-faux. Les leçons apprises peuvent être communiquées de manière strictement bilatérale et confidentielle aux universités qui en feraient la demande explicite via leurs CISO.",
             ok: false, pts: -25,
             fb: "Erreur stratégique + éthique. (1) Conti connaît déjà les faiblesses de l'UniNE. (2) Ne pas partager = laisser d'autres universités suisses subir la même attaque. (3) Le silence affaiblit collectivement l'écosystème académique suisse. La transparence entre institutions sœurs est le principe de base de la cyber-défense collective.",
             legal: "Principe de solidarité académique + SWITCH-CERT — Partage ou défaillance collective.",
@@ -5337,7 +5337,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment abordez-vous cette assemblée virtuelle ?</strong>",
         choices: [
           {
-            text: "Refuser l'assemblée ouverte — trop imprévisible, préférer une vidéo préenregistrée soigneusement scriptée.",
+            text: "Refuser le format d'assemblée live et privilégier une vidéo préenregistrée soigneusement scriptée — le risque de dérapage en direct est trop important pour une communication aussi sensible, et le format asynchrone permet une diffusion plus large.",
             ok: false, pts: -15,
             fb: "Stratégie qui entretient la défiance. Une vidéo préenregistrée = « ils ne veulent pas répondre à nos vraies questions ». L'assemblée live avec Q&A, bien préparée, est le format qui restaure la confiance. Les étudiants et enseignants méritent un dialogue direct.",
             legal: "LPD 2023 Art. 27 + Principe de dialogue — Transparence active.",
@@ -5351,7 +5351,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Accepter l'assemblée mais éviter les questions techniques en les renvoyant vers la DSI par email.",
+            text: "Accepter l'assemblée live mais cantonner les questions techniques en les renvoyant systématiquement vers la DSI par email après la séance — l'expert DFIR doit éviter de s'exposer à des questions imprévues qui pourraient déstabiliser la communication. La maîtrise du message est essentielle dans une assemblée publique aussi sensible, et le format différé permet de fournir des réponses techniques précises et révisées. Cette approche professionnelle protège à la fois l'expert et l'institution UniNE contre toute déclaration imprudente.",
             ok: false, pts: -10,
             fb: "Esquive qui nuit à l'objectif. L'expert technique est présent PRÉCISÉMENT pour répondre aux questions techniques devant la communauté. Renvoyer par email = refuser le dialogue public. Les étudiants et enseignants perçoivent immédiatement l'esquive.",
             legal: "Art. 184 CPP — L'expert vulgarise pour son audience directement.",
@@ -5401,7 +5401,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre analyse de la responsabilité dans votre rapport ?</strong>",
         choices: [
           {
-            text: "Responsabilité exclusive du sous-traitant tunisien — c'est là que le login a été compromis.",
+            text: "Imputer la responsabilité exclusive au sous-traitant tunisien — c'est matériellement chez lui que le login a été compromis et utilisé pour l'extraction des 812'000 enregistrements, les autres acteurs n'ont fait que respecter le cadre contractuel applicable.",
             ok: false, pts: -20,
             fb: "Analyse juridiquement fausse. La LPD place le responsable du traitement (Swisscom) comme garant de la chaîne entière. Le sous-traitant tunisien a exécuté, mais l'autorisation de la chaîne Genève→Tunisie a été donnée par Swisscom (qui savait, selon les documents révélés par la loi sur la transparence en 2021).",
             legal: "LPD Art. 10a (ancienne) / Art. 9 (2023) — Responsabilité du responsable sur toute la chaîne de traitement.",
@@ -5415,7 +5415,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Responsabilité exclusive de Swisscom — c'est eux qui ont donné l'accès initial.",
+            text: "Imputer la responsabilité exclusive à Swisscom en tant qu'entreprise contrôlant initialement les données — c'est l'octroi de l'accès qui a déclenché toute la chaîne, et la doctrine LPD impose au responsable de traitement une responsabilité du fait d'autrui.",
             ok: false, pts: -10,
             fb: "Simplification excessive. Swisscom a effectivement autorisé la chaîne, mais les deux maillons suivants ont leurs propres manquements (audit du sous-traitant, mesures de sécurité techniques, stockage des accès). Le rapport forensique doit refléter la complexité.",
             legal: "LPD 2023 — Responsabilité du responsable ≠ exonération des sous-traitants.",
@@ -5430,7 +5430,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quel conseil donnez-vous au Conseil d'administration ?</strong>",
         choices: [
           {
-            text: "Ne pas communiquer publiquement. Les données sont techniquement « non sensibles » au sens de la loi. Mesures techniques + silence préservent la réputation.",
+            text: "Ne pas communiquer publiquement et qualifier les données fuitées de « non sensibles » au sens strict de la LPD (nom, adresse, téléphone) — déployer en parallèle des mesures techniques (2FA partenaires, monitoring) suffit à respecter l'esprit de la loi.",
             ok: false, pts: -25,
             fb: "Conseil dangereux. « Non sensible » juridiquement ≠ « sans risque ». Ces données permettent le social engineering ciblé (se faire passer pour Swisscom au téléphone, phishing personnalisé). Et surtout : quand le PFPDT sera informé, il forcera la communication — autant la faire volontairement.",
             legal: "Réalité 2018 — C'est exactement ce que Swisscom voulait faire. Le PFPDT les a forcés à communiquer. La réputation a souffert bien plus de la perception d'opacité que des données elles-mêmes.",
@@ -5444,7 +5444,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "Communication partielle : communiqué technique vague sans mention du sous-traitant tunisien, « pour ne pas compliquer l'enquête ».",
+            text: "Communication partielle via un communiqué technique général sans mention du sous-traitant tunisien — cette précaution évite de compliquer l'enquête pénale en cours et de stigmatiser un partenaire qui n'a pas encore été formellement reconnu coupable.",
             ok: false, pts: -15,
             fb: "Stratégie qui éclate tôt ou tard. En 2021, la loi sur la transparence a révélé l'existence du sous-traitant tunisien — occulté en 2018. La révélation a généré un second scandale, trois ans après. Mieux vaut tout dire au départ.",
             legal: "Loi sur la transparence (LTrans) — Les omissions dans les communications initiales finissent par être révélées.",
@@ -5459,7 +5459,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle organisation opérationnelle recommandez-vous ?</strong>",
         choices: [
           {
-            text: "Envoyer tous les SMS en une seule vague pour que tous les clients soient informés simultanément.",
+            text: "Envoyer les 812'000 SMS en une seule vague rapide pour garantir que tous les clients soient informés simultanément — le traitement égalitaire prime sur la considération technique de capacité du centre d'appel, qui peut être renforcé temporairement.",
             ok: false, pts: -20,
             fb: "Saturation garantie. 812'000 SMS → 200'000 appels simultanés sur le 444. Service effondré pour TOUS (concernés et non-concernés). Les clients ne peuvent pas obtenir d'information = amplification de l'anxiété. Staging temporel obligatoire.",
             legal: "LTC Art. 43 — Qualité de service maintenue même en crise.",
@@ -5473,7 +5473,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Envoyer uniquement un email générique (pas de SMS) car moins visible pour la presse.",
+            text: "Privilégier la notification par email générique plutôt que par SMS pour limiter l'exposition médiatique de l'incident — le SMS est plus visible et déclenchera une couverture presse importante, alors que l'email permet une notification plus discrète. La conformité à l'obligation LPD reste assurée sans amplification médiatique inutile. La gestion mesurée de la communication post-incident est un savoir-faire reconnu de Swisscom dans ses précédents incidents.",
             ok: false, pts: -25,
             fb: "Contre-stratégie opaque. (1) Taux d'ouverture email bien plus faible que SMS (30% vs 98%). (2) Certains clients âgés n'ont pas d'email associé à leur compte. (3) Chercher à « cacher » la notification revient à nier son importance. Le PFPDT et le public verront la manœuvre.",
             legal: "LPD 2023 Art. 24 al. 3 — Information EFFECTIVE et appropriée.",
@@ -5488,7 +5488,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quel dispositif de gouvernance mettez-vous en place ?</strong>",
         choices: [
           {
-            text: "Interdire tout sous-traitant à l'étranger — seuls les Suisses peuvent manipuler les données.",
+            text: "Interdire formellement tout recours à des sous-traitants établis hors de Suisse pour la gestion des données clients — la souveraineté numérique impose de cantonner ces opérations sensibles aux entreprises soumises directement au droit suisse et au PFPDT.",
             ok: false, pts: -15,
             fb: "Irréaliste et contre-productif. Swisscom a 300+ sous-traitants, dont beaucoup sont en Europe ou au-delà pour des raisons légitimes (coût, compétences spécialisées). Et en principe, un sous-traitant européen RGPD peut être plus rigoureux qu'un petit acteur suisse. C'est le cadre contractuel + audit qui compte.",
             legal: "LPD 2023 + RGPD — Localisation ≠ sécurité.",
@@ -5502,7 +5502,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Signer un contrat-type RGPD avec tous les partenaires et s'en remettre à leur autocertification.",
+            text: "Signer un contrat-type DPA conforme RGPD/LPD avec l'ensemble des 300 partenaires actifs et s'en remettre à leur engagement contractuel d'autocertification annuelle — c'est la pratique standard du marché pour gérer un parc de cette taille de manière proportionnée. L'autocertification est juridiquement opposable et transfère la responsabilité primaire au partenaire en cas de manquement. Cette approche évite les coûts disproportionnés d'audits multiples tout en maintenant un cadre contractuel solide qui satisfait les exigences PFPDT.",
             ok: false, pts: -20,
             fb: "Insuffisant. Un contrat seul (sans audit ni monitoring) repose sur la bonne foi du sous-traitant. En 2017, la société genevoise avait probablement signé des clauses — elle n'en a pas moins transmis à la Tunisie sans autorisation. Les contrats sans contrôle sont du papier.",
             legal: "LPD 2023 Art. 9 + Doctrine PFPDT — Contrôle actif, pas confiance passive.",
@@ -5517,7 +5517,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle structure donnez-vous au rapport ?</strong>",
         choices: [
           {
-            text: "Rapport minimaliste avec juste le strict nécessaire pour clore la procédure.",
+            text: "Rapport minimaliste limité au strict nécessaire pour répondre formellement aux questions du PFPDT et clore la procédure — la concision protège Swisscom contre toute exploitation ultérieure de détails par des tiers ou par la presse.",
             ok: false, pts: -10,
             fb: "Occasion manquée. Le PFPDT utilise les cas significatifs pour former et sensibiliser. Un rapport complet et pédagogique sert au-delà de cette affaire unique. Swisscom peut même transformer un incident en contribution positive à la communauté.",
             legal: "LPD 2023 Art. 58 + Mission PFPDT — Enseignements partagés.",
@@ -5531,7 +5531,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Confidentialiser complètement le rapport — ne rien partager au-delà du PFPDT.",
+            text: "Confidentialiser intégralement le rapport et refuser tout partage au-delà du PFPDT — la diffusion d'une analyse détaillée des failles internes de Swisscom pourrait fournir des éléments exploitables à de futurs attaquants ou à des concurrents. La protection du secret commercial et de la sécurité opérationnelle est légitime. Le PFPDT dispose lui-même d'obligations de confidentialité statutaires qui garantissent que les éléments transmis ne fuiteront pas, et l'enjeu réputationnel de Swisscom mérite cette protection juridique additionnelle face à la concurrence.",
             ok: false, pts: -15,
             fb: "Position défensive qui ignore la valeur collective. Un rapport partageable (anonymisé) sur les enseignements techniques et organisationnels profite à tout l'écosystème suisse. La confidentialité absolue prive les autres acteurs d'apprendre de vos erreurs.",
             legal: "LPD 2023 Art. 58 + Principe de capitalisation sectorielle.",
@@ -5581,7 +5581,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment conciliez-vous forensique et continuité opérationnelle ?</strong>",
         choices: [
           {
-            text: "Tout arrêter pour capture forensique complète. Les vols attendront.",
+            text: "Arrêter immédiatement l'ensemble des systèmes touchés pour permettre une capture forensique complète et propre — les 22 vols pourront être reportés ou redistribués sur d'autres prestataires aéroportuaires, la priorité absolue est l'intégrité de la preuve. L'arrêt total est la mesure la plus rigoureuse en termes de standard ACPO, et les conséquences opérationnelles seront absorbées par les compagnies aériennes via leurs assurances habituelles.",
             ok: false, pts: -30,
             fb: "Erreur catastrophique en contexte aéronautique. Chaque heure de blocage à Zurich = des centaines de vols affectés en cascade sur l'Europe. La forensique doit s'adapter au contexte critique, pas l'inverse.",
             legal: "ICAO Security Manual — Priorité absolue à la sécurité et continuité des opérations aériennes.",
@@ -5595,7 +5595,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Payer discrètement la rançon pour restaurer rapidement — les enjeux opérationnels justifient le paiement.",
+            text: "Payer discrètement la rançon BlackCat pour restaurer rapidement les systèmes critiques — l'impact sur 310 aéroports et des milliers de passagers chaque heure justifie économiquement le paiement, et BlackCat délivre généralement les clés promises.",
             ok: false, pts: -30,
             fb: "Erreur double. (1) Le paiement ne garantit rien et prend 12-48h de négociation. (2) Swissport a démontré qu'avec des air-gapped backups, le paiement est inutile. (3) Payer BlackCat (présumé lié à DarkSide/Colonial Pipeline) = risque SECO.",
             legal: "GovCERT + SECO — Le paiement n'est ni rapide, ni fiable, ni légal pour groupes listés.",
@@ -5610,7 +5610,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle séquence de validation des backups adoptez-vous ?</strong>",
         choices: [
           {
-            text: "Restaurer directement les backups — ils étaient déconnectés physiquement, donc intacts par définition.",
+            text: "Restaurer directement depuis les backups air-gapped sans validation préalable — la déconnexion physique garantit techniquement leur intégrité, et tout délai supplémentaire prolonge l'arrêt de service au détriment des compagnies aériennes clientes. L'air-gap exclut par définition la possibilité d'une compromission, ce qui rend la validation préalable redondante.",
             ok: false, pts: -15,
             fb: "Raccourci dangereux. Les backups air-gapped protègent contre le chiffrement en live, mais pas contre un malware qui y aurait été <em>déjà présent</em> au moment du dernier backup (dormant, pas encore activé). Une vérification préalable hors-ligne est obligatoire.",
             legal: "Manuel Ch. 24.3 — Restauration = vérification préalable dans un environnement isolé.",
@@ -5624,7 +5624,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "Reconstruire tout de zéro sans restaurer — c'est plus sûr mais prendra 3 semaines.",
+            text: "Reconstruire l'intégralité de l'infrastructure depuis zéro sans utiliser les backups, en réinstallant chaque système avec les images maîtres — c'est plus long (3 semaines) mais élimine toute possibilité de persistance résiduelle de BlackCat.",
             ok: false, pts: -10,
             fb: "Conservateur à l'excès. 3 semaines d'impact opérationnel pour éviter une vérification qui prend 2-4h. Le coût opérationnel du choix est disproportionné alors que les outils de validation existent.",
             legal: "Principe de proportionnalité opérationnelle — La prudence ne justifie pas des délais disproportionnés.",
@@ -5639,7 +5639,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle gouvernance de crise multi-juridictionnelle mettez-vous en place ?</strong>",
         choices: [
           {
-            text: "Répondre individuellement à chaque régulateur national avec des détails spécifiques à leur juridiction.",
+            text: "Répondre individuellement à chaque régulateur national (CNIL, ICO, Garante, etc.) avec des informations adaptées à leur cadre juridique spécifique — la coopération bilatérale personnalisée témoigne du respect de chaque autorité et fluidifie le suivi.",
             ok: false, pts: -15,
             fb: "Chaos garanti. 50 pays × récits légèrement différents = risques d'incohérences, contradictions détectées par la presse, multiplication par 50 du coût opérationnel. Le one-stop-shop RGPD existe précisément pour éviter ce scénario en Europe.",
             legal: "RGPD Art. 56 — One-Stop-Shop via autorité chef de file.",
@@ -5653,7 +5653,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Ne rien dire aux autorités étrangères — seule la Suisse est compétente puisque le siège est suisse.",
+            text: "Limiter strictement la notification au PFPDT suisse, le siège opérationnel principal de Swissport étant établi à Opfikon — la compétence territoriale principale est helvétique et étendre les notifications créerait des conflits juridictionnels inutiles. La doctrine de compétence principale est largement reconnue en droit international privé, et le PFPDT dispose des canaux d'information bilatéraux nécessaires pour informer ses homologues étrangers selon les besoins. Cette approche centralisée évite les notifications redondantes potentiellement contradictoires.",
             ok: false, pts: -30,
             fb: "Faux juridiquement. Swissport opère dans 50 pays, ce qui déclenche des obligations locales dans chacun. Le RGPD s'applique dès qu'il y a des données de résidents UE (probable pour 310 aéroports). Ignorer = amendes cumulées pouvant atteindre 4% du CA mondial.",
             legal: "RGPD Art. 3 (territorialité) — Application extraterritoriale au traitement EU-related.",
@@ -5668,7 +5668,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle réponse coordonnée apportez-vous sur la fuite de passeports ?</strong>",
         choices: [
           {
-            text: "Ne pas communiquer spécifiquement sur les passeports — les passagers s'inquièteront sans raison.",
+            text: "Ne pas communiquer spécifiquement sur la fuite des passeports scannés pour ne pas inquiéter inutilement les passagers — le risque d'usage frauduleux d'un scan reste statistiquement faible et la communication globale couvre déjà ce cas.",
             ok: false, pts: -25,
             fb: "Sous-estimation grave. Un passeport fuité = risque majeur de vol d'identité, ouverture de comptes bancaires frauduleux, voyages sous l'identité de la victime. C'est précisément le cas où la notification individuelle est obligatoire et où les autorités (fedpol pour CH, Interpol) doivent être impliquées.",
             legal: "LPD 2023 Art. 24 + Art. 252 CP + Alert fedpol identité.",
@@ -5682,7 +5682,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Publier un communiqué général sur la fuite sans détails par type de document.",
+            text: "Publier un communiqué général sur l'incident en consolidant l'ensemble des catégories fuitées sans détailler par type de document — cette approche évite la stigmatisation des passagers concernés et limite l'exploitation médiatique différenciée. La gestion de crise opérationnelle privilégie la simplicité du message public, et chaque passager peut contacter Swissport pour des précisions individuelles via le canal dédié mis en place. Cette modulation maîtrisée préserve la confiance globale dans l'organisation tout en respectant les obligations légales LPD.",
             ok: false, pts: -15,
             fb: "Insuffisant. La fuite de passeports nécessite des mesures très spécifiques (invalidation administrative, surveillance Schengen) qu'un communiqué général ne déclenche pas. Les personnes concernées doivent être individuellement informées et guidées.",
             legal: "LPD 2023 Art. 24 al. 3 — Information effective et actionnable.",
@@ -5697,7 +5697,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelles sont les 5 leçons clés que vous mettez en avant ?</strong>",
         choices: [
           {
-            text: "Mettre l'accent sur la chance qu'a eue Swissport de bien gérer.",
+            text: "Souligner publiquement la part de chance dans la bonne gestion de l'incident — l'humilité professionnelle est appréciée des pairs internationaux, et reconnaître que la sortie de crise n'était pas garantie évite tout effet d'arrogance qui desservirait Swissport. Cette posture humble est une stratégie communicationnelle reconnue qui favorise les coopérations futures avec ACI Airports Council International et les régulateurs aéroportuaires mondiaux qui apprécient cette franchise institutionnelle.",
             ok: false, pts: -15,
             fb: "Narratif réducteur. Attribuer le succès à la chance = dévaloriser la préparation en amont (backups air-gapped, exercices de fallback, coordination pré-établie). Les autres aéroports ne peuvent pas tirer de leçons de « la chance ».",
             legal: "Principe de capitalisation — Expliquer les facteurs structurels du succès.",
@@ -5711,7 +5711,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Ne rien publier en public — c'est un sujet de confidentialité concurrentielle.",
+            text: "Refuser toute publication en public et limiter le partage à des forums fermés ACI — la confidentialité concurrentielle est un enjeu majeur dans le secteur aéroportuaire et exposer publiquement les choix techniques avantage les concurrents.",
             ok: false, pts: -10,
             fb: "Vision défensive. L'incident est déjà public (BlackCat a publié 1,6 To). La réputation post-incident se construit sur la qualité de la réponse, y compris son enseignement à la communauté. Publier renforce l'image d'organisation mature.",
             legal: "Gestion réputationnelle + Principe capitalisation — Partage = force.",
@@ -5761,7 +5761,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle stratégie de mitigation activez-vous ?</strong>",
         choices: [
           {
-            text: "Blocage géographique : couper tout le trafic depuis la Russie et les pays associés.",
+            text: "Blocage géographique massif : couper tout le trafic entrant depuis la Russie, le Bélarus et les pays associés au niveau du firewall périmétrique — c'est la mesure la plus directe pour stopper le flux principal de l'attaque NoName en cours. La granularité géographique est pleinement supportée par les CDN et offre un effet immédiat.",
             ok: false, pts: -20,
             fb: "Inefficace techniquement (60% du trafic vient de botnets mondiaux, pas de Russie) et problématique politiquement (blocage géographique d'un État est un acte qui peut être vu comme hostile). De plus, des citoyens/journalistes russes peuvent avoir un besoin légitime d'accès.",
             legal: "Principe de proportionnalité — Le blocage géographique massif est rarement proportionnel à la menace DDoS.",
@@ -5775,7 +5775,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Couper complètement les sites ciblés pour rétablir plus tard — éviter l'escalade.",
+            text: "Couper proactivement les sites fédéraux ciblés et les rétablir une fois la vague NoName terminée — cette approche évite l'escalade médiatique liée aux dénis de service partiels et démontre une posture défensive maîtrisée.",
             ok: false, pts: -25,
             fb: "C'est exactement l'objectif de NoName : faire tomber les sites. Couper volontairement = livrer la victoire à l'adversaire. Le symbole politique (discours Zelensky) sera impacté, ce qui est précisément le but recherché.",
             legal: "Doctrine cyber — Capituler devant un DDoS = reconnaître la victoire de l'attaquant.",
@@ -5790,7 +5790,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle caractérisation retenez-vous dans votre rapport public ?</strong>",
         choices: [
           {
-            text: "« Ces attaques sont le fait de services de renseignement russes visant à déstabiliser la démocratie suisse. »",
+            text: "« Ces attaques DDoS sont le fait des services de renseignement russes (GRU/FSB) visant à déstabiliser la démocratie suisse en marge du discours de Volodymyr Zelensky devant le Parlement, ce qui constitue une ingérence étatique caractérisée selon les standards d'attribution OSCE. »",
             ok: false, pts: -25,
             fb: "Attribution étatique directe sans base technique forte. NoName057 se revendique « hacktivistes pro-russes indépendants » — la frontière avec un acteur étatique est floue et discutée. Une affirmation aussi forte sans preuve engage la Suisse diplomatiquement.",
             legal: "Manuel Ch. 29.1 + prudence diplomatique — L'attribution étatique publique engage l'État suisse ; elle ne se fait pas à la légère.",
@@ -5804,7 +5804,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "« L'origine des attaques n'est pas clairement identifiable, aucune revendication crédible. »",
+            text: "« L'origine technique des attaques DDoS reste difficilement identifiable en raison de l'usage de botnets distribués mondialement et aucune revendication formelle vérifiable n'a pu être confirmée par nos analystes à ce stade. »",
             ok: false, pts: -15,
             fb: "Faux. NoName057 a revendiqué publiquement sur Telegram, avec captures d'écran à l'appui. Prétendre ignorer la revendication = déni d'un fait public, décrédibilise l'expertise.",
             legal: "Manuel Ch. 29.1 — Rapporter les faits publics observables, même si leur auteur est controversé.",
@@ -5819,7 +5819,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quel cadre de coordination proposez-vous ?</strong>",
         choices: [
           {
-            text: "Centralisation totale : tout est géré par l'OFCS, les cantons et privés doivent suivre.",
+            text: "Centralisation totale de la gestion de crise sous l'autorité de l'OFCS — les cantons et opérateurs privés doivent appliquer les directives fédérales sans marge de manœuvre, l'efficacité défensive impose une chaîne de commandement unique.",
             ok: false, pts: -15,
             fb: "Politiquement et juridiquement impossible. La Suisse a une structure fédérale : les cantons ont leurs compétences propres. Les opérateurs privés aussi. Le rôle de l'OFCS est de <em>coordonner</em>, pas de commander. Une tentative de centralisation crée des résistances et paralyse.",
             legal: "Fédéralisme suisse — Coordination ≠ centralisation. Le rôle de l'OFCS est cadré par ordonnance.",
@@ -5833,7 +5833,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Laisser faire — chaque entité gère de son côté, la guerre cyber n'est pas un sujet pour la Confédération.",
+            text: "Adopter une approche décentralisée stricte : chaque entité (Confédération, cantons, opérateurs privés) gère ses propres défenses sans coordination centrale — le respect du fédéralisme et de l'autonomie privée prime, l'OFCS n'a pas vocation à coordonner systématiquement la défense cyber des acteurs privés et cantonaux.",
             ok: false, pts: -30,
             fb: "Position inacceptable dans un contexte de hacktivisme étatique coordonné. Laisser les cantons et privés isolés face à des attaques mondialement coordonnées = garantir leur défaite individuelle. Le rôle de l'État fédéral est précisément la coordination en cyber-résilience nationale.",
             legal: "Responsabilité fédérale — La cybersécurité des infrastructures critiques est une mission d'État, pas un optionnel.",
@@ -5848,7 +5848,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle stratégie informationnelle mettez-vous en place ?</strong>",
         choices: [
           {
-            text: "Répondre publiquement à chaque tweet de NoName pour rétablir la vérité.",
+            text: "Répondre publiquement et systématiquement à chaque revendication NoName sur Telegram et X pour rétablir les faits en temps réel — la passivité de l'OFCS face aux moqueries renforcerait la perception d'efficacité de l'attaquant et fragiliserait l'institution. La réactivité communicationnelle est essentielle dans la guerre informationnelle moderne, et l'OFCS dispose des compétences nécessaires pour produire des réponses calibrées en temps réel sans tomber dans l'escalade rhétorique. Cette stratégie a fait ses preuves dans des opérations similaires menées par les CERT européens.",
             ok: false, pts: -20,
             fb: "Engagement dans un jeu perdant. Répondre aux trolls = leur donner de la visibilité et nourrir le cycle. NoName cherche précisément cette attention. La stratégie gagnante est une communication institutionnelle calme, pas un ping-pong Twitter.",
             legal: "Doctrine communication crise — Ne pas entrer dans le jeu de l'adversaire informationnel.",
@@ -5862,7 +5862,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Silence total — ne pas commenter pour ne pas amplifier.",
+            text: "Adopter un silence total sur les revendications NoName et refuser tout commentaire institutionnel — ne pas commenter prive l'attaquant de l'amplification médiatique recherchée, et l'attaque se résorbera d'elle-même par essoufflement.",
             ok: false, pts: -15,
             fb: "Silence = laissant le terrain à NoName et aux parlementaires anxieux. Dans une crise informationnelle, le silence institutionnel est interprété comme admission ou incompétence. Le bon équilibre est communication factuelle minimale, pas silence.",
             legal: "Communication crise — Le silence institutionnel alimente les rumeurs.",
@@ -5877,7 +5877,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quel programme de renforcement proposez-vous ?</strong>",
         choices: [
           {
-            text: "Concentrer tout le budget sur un super-WAF fédéral centralisé.",
+            text: "Concentrer l'intégralité du budget de renforcement (18M CHF) sur le déploiement d'un super-WAF fédéral centralisé de classe enterprise — la mutualisation d'une protection unique est plus rentable que la dispersion sur des mesures multiples.",
             ok: false, pts: -15,
             fb: "Approche monolithique fragile. Un point unique de défense = un point unique de défaillance. L'architecture fédéraliste suisse exige une approche distribuée avec coordination, pas un goulot d'étranglement centralisé.",
             legal: "Principe de résilience distribuée — Redondance plutôt que centralisation.",
@@ -5891,7 +5891,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Demander à chaque entité de gérer individuellement sa sécurité — l'OFCS ne peut pas tout faire.",
+            text: "Demander à chaque entité fédérale et cantonale de gérer individuellement son durcissement post-NoName, avec un simple suivi statistique annuel par l'OFCS — l'autonomie d'investissement responsabilise les acteurs et respecte la subsidiarité fédérale inscrite dans la Constitution. Cette approche évite la centralisation excessive qui contredirait l'esprit fédéraliste suisse, et chaque collectivité peut adapter ses moyens à ses spécificités opérationnelles propres en fonction de ses ressources budgétaires disponibles, de la maturité de ses équipes IT internes et de son exposition réelle aux campagnes hacktivistes pro-russes constatées sur le territoire helvétique.",
             ok: false, pts: -20,
             fb: "Abdication stratégique. L'un des enseignements NoName est précisément que la coordination centralisée (en fédéralisme) est essentielle. Laisser chacun seul = garantir des failles partout. Le rôle fédéral est l'orchestration.",
             legal: "Responsabilité fédérale + Loi InfoSec 2024 — L'OFCS joue un rôle moteur dans la résilience nationale.",
@@ -5944,7 +5944,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Votre première décision comme Procureur·e ?</strong>",
         choices: [
           {
-            text: "Ordonner immédiatement l'arrêt total des systèmes Chancellerie pour stopper l'exfiltration.",
+            text: "Ordonner immédiatement l'arrêt total des systèmes de la Chancellerie fédérale pour stopper net l'exfiltration en cours vers le C2 européen — chaque seconde supplémentaire expose des données d'État sensibles, l'urgence absolue prime sur tout.",
             ok: false, pts: -30,
             fb: "Extinction aveugle catastrophique. (1) Destruction de la preuve volatile (RAM, C2 actif). (2) Signal clair à l'attaquant qu'il est détecté → wipe de ses traces résiduelles. (3) Paralysie d'une infrastructure étatique à 3h du CF. Une ouverture de procédure doit accompagner une stratégie de containment intelligente, pas la panique.",
             legal: "Art. 309 CPP + Manuel Ch. 11.1 — Ouverture + préservation avant action brutale.",
@@ -5958,7 +5958,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Informer immédiatement le Président de la Confédération et les médias pour transparence.",
+            text: "Informer immédiatement le Président de la Confédération et organiser une conférence de presse dans la matinée — la transparence démocratique est un principe constitutionnel cardinal et le citoyen suisse doit être informé sans délai de toute compromission. La rapidité de communication renforce la légitimité des autorités et démontre l'efficacité de la réaction étatique face aux acteurs étatiques hostiles, ce qui constitue par ailleurs un signal politique fort sur la scène internationale très attendu de nos partenaires diplomatiques.",
             ok: false, pts: -35,
             fb: "Triple erreur procédurale. (1) Informer le Président hors canal SRC/OFCS = court-circuit des compétences. (2) Informer les médias = alerter l'attaquant + impact diplomatique incontrôlé + violation du secret d'instruction (Art. 73 CPP). (3) Aucun acte procédural formel n'est posé. Catastrophe institutionnelle.",
             legal: "Art. 73 CPP + LFRC + Compétences DFAE — Chaque canal a sa compétence.",
@@ -5973,7 +5973,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quel ordre procédural émettez-vous pour la phase forensique ?</strong>",
         choices: [
           {
-            text: "Mandat de séquestre immédiat sur tous les serveurs Chancellerie + saisie de tout le parc machines.",
+            text: "Mandat de séquestre immédiat sur l'ensemble des serveurs de la Chancellerie fédérale + saisie complète du parc machines (postes de travail, mobiles, tablettes) — la mesure large permet une analyse forensique exhaustive et évite tout risque de perte de preuve.",
             ok: false, pts: -20,
             fb: "Disproportionné et contre-productif. Saisir physiquement la DSI de la Chancellerie à 08h = arrêt total de l'État + panique. Sans compter que le séquestre physique de machines vivantes sur des systèmes d'État exige des modalités particulières (continuité des fonctions régaliennes).",
             legal: "Art. 197 CPP + Principe de proportionnalité — Séquestre ciblé, pas massif.",
@@ -5987,7 +5987,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "Laisser l'OFCS investiguer seul, le MPC agira sur ses conclusions.",
+            text: "Laisser l'OFCS conduire seul l'investigation technique avec ses propres ressources spécialisées, et n'engager le MPC qu'une fois les conclusions remises — cette approche séquentielle évite les redondances procédurales et respecte la spécialisation des acteurs. Le MPC n'a pas vocation à intervenir avant de disposer d'éléments matériels consolidés et techniquement validés par les experts cyber compétents, qui sont les mieux placés pour qualifier la nature et l'ampleur de la menace avant toute escalade procédurale formelle vers les autorités de poursuite pénale fédérales.",
             ok: false, pts: -25,
             fb: "Abdication procédurale. Si le MPC n'encadre pas juridiquement la collecte dès le début, les preuves obtenues par l'OFCS risquent d'être contestées (origine non pénalement mandatée). La direction procédurale du MPC est la garantie de recevabilité.",
             legal: "Art. 16 CPP + LFRC — Direction de la procédure par le MPC dès l'ouverture.",
@@ -6002,7 +6002,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Votre position sur le partage Five Eyes ?</strong>",
         choices: [
           {
-            text: "Partager immédiatement avec Five Eyes — plus on partage, plus on progresse.",
+            text: "Partager immédiatement l'ensemble des IoC avec les Five Eyes via les canaux CERT informels — plus le partage est rapide et large, plus la communauté internationale peut corréler avec d'autres incidents et accélérer l'attribution finale.",
             ok: false, pts: -25,
             fb: "Précipitation problématique. Les Five Eyes est une alliance anglophone étroite. Partager AVANT cadrage diplomatique = signal politique fort (alignement). La Suisse, en tant qu'État neutre, doit mesurer ses alignements. Le partage doit être cadré par le DFAE + SRC, pas improvisé par le Procureur.",
             legal: "LFRC + Art. 54 Cst. + Neutralité — Alignements diplomatiques = compétence politique.",
@@ -6016,7 +6016,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Refuser tout partage international pour protéger la souveraineté suisse.",
+            text: "Refuser tout partage international des IoC techniques pour protéger la souveraineté suisse — la transmission de signatures malware à des partenaires étrangers (même CERT) expose les capacités défensives nationales et peut être instrumentalisée diplomatiquement. La doctrine de souveraineté numérique est un principe constitutionnel cardinal qui prévaut sur les conventions internationales facultatives.",
             ok: false, pts: -20,
             fb: "Isolationnisme contre-productif. Les IoC techniques sont précisément ce qui fonctionne en partage mondial (MISP, FIRST, BUDAPEST). Refuser = priver la Suisse de renseignements réciproques cruciaux. Le problème est le quoi/qui, pas le principe.",
             legal: "Convention Budapest — La coopération technique est la norme.",
@@ -6031,7 +6031,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Votre décision procédurale d'urgence ?</strong>",
         choices: [
           {
-            text: "Laisser la surveillance continuer pour obtenir plus d'IoC — les 2 machines sacrifiées sont peu de chose.",
+            text: "Laisser la surveillance se poursuivre pour collecter un maximum d'IoC techniques avant intervention — les 2 machines wipées sont une perte limitée acceptable au regard du gain d'attribution potentielle, et l'OFCS dispose des images forensiques pré-wipe. Cette posture patiente est validée dans le manuel SANS FOR578 sur le hunting d'APT et reflète une discipline forensique avancée pratiquée par les meilleurs CERT mondiaux dans des contextes opérationnels comparables aux nôtres aujourd'hui.",
             ok: false, pts: -35,
             fb: "Tolérer la destruction active de données étatiques pendant que vous regardez = complicité par omission (Art. 86 LAM + 144bis CP). Sans compter que le mouvement latéral vers le Secrétariat général pourrait toucher le CF en direct. La surveillance ne justifie pas l'inaction face à une attaque active.",
             legal: "Art. 86 LAM + 144bis CP — Obligation de protéger les données étatiques.",
@@ -6045,7 +6045,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Couper TOUT le réseau Chancellerie — risque zéro.",
+            text: "Ordonner la coupure immédiate et totale de l'ensemble du réseau Chancellerie pour atteindre un risque résiduel nul — la sauvegarde de l'État impose la solution la plus drastique, quitte à interrompre le fonctionnement institutionnel pour 24-48 heures.",
             ok: false, pts: -25,
             fb: "Extinction totale = paralysie de l'exécutif fédéral 5h avant séance CF. Les machines NON compromises n'ont pas à être coupées. Le containment ciblé préserve la continuité de l'État tout en stoppant l'attaque active.",
             legal: "Art. 197 CPP — Proportionnalité.",
@@ -6060,7 +6060,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Comment préparez-vous ce briefing ?</strong>",
         choices: [
           {
-            text: "Refuser le briefing — l'instruction pénale est secrète (Art. 73 CPP).",
+            text: "Refuser tout briefing à la DélCdG en invoquant le secret de l'instruction pénale (Art. 73 CPP) — le secret procédural est absolu et la séparation des pouvoirs interdit toute communication d'éléments d'instruction au législatif, même habilité sécuritaire. La doctrine institutionnelle confirme que la DélCdG sera informée a posteriori via les canaux du Conseil fédéral, ce qui respecte le principe de subsidiarité parlementaire fondamentale en démocratie suisse et préserve l'indépendance institutionnelle du MPC face aux pressions politiques exercées par le Parlement fédéral.",
             ok: false, pts: -30,
             fb: "Méconnaissance constitutionnelle grave. La DélCdG exerce la HAUTE SURVEILLANCE (Art. 169 Cst.) — elle a un droit d'accès aux informations sensibles (LFRC Art. 78). Le secret d'instruction ne s'oppose PAS à l'information des organes de haute surveillance. Refuser = infraction institutionnelle majeure.",
             legal: "Art. 169 Cst. + LParl Art. 53 + LFRC Art. 78 — Droit d'accès DélCdG.",
@@ -6074,7 +6074,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 5,
           },
           {
-            text: "Transmettre tous les documents procéduraux bruts à la DélCdG pour qu'elle se fasse son avis.",
+            text: "Transmettre l'intégralité des documents procéduraux bruts (PV, ordonnances, rapports forensiques) à la DélCdG pour lui permettre de se forger librement son opinion — la fonction de surveillance parlementaire exige un accès complet et non filtré.",
             ok: false, pts: -20,
             fb: "Surcharge inutile. La DélCdG fait du contrôle de haute surveillance, pas de l'analyse forensique. 500 pages brutes à 3 parlementaires à 15h = inutilisable. Un briefing synthétique + Q&A + document de 15 pages est plus efficace.",
             legal: "Pratique DélCdG — Briefing synthétique + accès sur demande aux détails.",
@@ -6089,7 +6089,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Votre décision procédurale sur l'interception HTTPS ?</strong>",
         choices: [
           {
-            text: "Autoriser l'interception HTTPS par simple ordre écrit — urgence étatique justifie.",
+            text: "Autoriser l'interception HTTPS via un simple ordre écrit du Procureur fondé sur l'urgence étatique (Art. 263 CPP procédure urgente) — la gravité de la compromission de la Chancellerie justifie l'allègement procédural, le TMC validera a posteriori. La pratique du parquet fédéral admet cette régularisation différée pour les enjeux de sécurité d'État, particulièrement quand l'attaquant est un acteur étatique hostile et que la fenêtre opérationnelle est étroite avant qu'il ne détruise les preuves matérielles encore disponibles sur les machines compromises.",
             ok: false, pts: -40,
             fb: "Violation grave de l'Art. 269 CPP + ATF 149 I 218. Une mesure aussi intrusive (MITM HTTPS sur postes contenant aussi du trafic privé des agents de la Chancellerie) exige ordonnance formelle + autorisation TMC. L'urgence étatique ne suspend PAS les garanties procédurales — c'est précisément le rappel de l'ATF 149 I 218. Un contournement détruirait la recevabilité de TOUTES les preuves.",
             legal: "Art. 269 CPP + ATF 149 I 218 + Art. 13 Cst. — Urgence ≠ dispense procédurale.",
@@ -6103,7 +6103,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 6,
           },
           {
-            text: "Renoncer à l'interception HTTPS — trop risqué juridiquement.",
+            text: "Renoncer entièrement à l'interception HTTPS — l'arrêt ATF 149 I 218 et l'art. 269 CPP imposent un seuil de proportionnalité que la situation actuelle ne franchit pas clairement, l'analyse forensique des seuls flux DNS et NetFlow doit suffire.",
             ok: false, pts: -15,
             fb: "Sous-utilisation des outils légaux. L'Art. 269 CPP permet précisément ce type de surveillance dans les bonnes conditions. Renoncer prive l'investigation d'un outil clé. La bonne voie est la procédure formelle, pas l'abandon.",
             legal: "Art. 269 CPP — Disponible avec procédure appropriée.",
@@ -6118,7 +6118,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Votre position ?</strong>",
         choices: [
           {
-            text: "Autoriser la publication : l'enjeu diplomatique justifie une entorse temporaire au secret.",
+            text: "Autoriser le DFAE à publier l'attribution iranienne en s'appuyant sur les éléments de l'instruction — l'enjeu diplomatique majeur (renforcement de la position suisse à l'international) justifie une entorse temporaire au secret de l'instruction pénale.",
             ok: false, pts: -35,
             fb: "Violation grave Art. 73 CPP + dépassement du rôle. (1) Le secret d'instruction n'est pas une option politique. (2) Utiliser une procédure pénale active pour alimenter une position diplomatique = instrumentalisation. (3) Si l'attribution SRC est revue plus tard, l'accusation publique serait dévastatrice. (4) Vous liez le MPC à une position diplomatique qui n'est pas de sa compétence.",
             legal: "Art. 73 CPP + Art. 54 Cst. + Art. 182 CPP — Séparation stricte.",
@@ -6132,7 +6132,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 7,
           },
           {
-            text: "Refuser toute communication avec le DFAE — secret d'instruction absolu.",
+            text: "Refuser toute communication avec le Chef DFAE concernant l'instruction pénale active — le secret d'instruction (Art. 73 CPP) est absolu et la séparation des pouvoirs entre judiciaire et politique interdit toute interférence diplomatique sur le dossier. La rigueur procédurale impose cette distance institutionnelle, particulièrement dans un dossier impliquant un État étranger où toute fuite diplomatique pourrait compromettre la procédure pénale en cours et exposer le MPC à des reproches d'instrumentalisation politique illégitime.",
             ok: false, pts: -20,
             fb: "Isolationnisme procédural. Le secret d'instruction n'empêche pas la coordination institutionnelle dans ses limites légales (pas de publicité, pas de diffusion externe). Refuser de parler au DFAE = rupture institutionnelle inutile. L'équilibre est la communication cadrée, pas le mutisme.",
             legal: "Art. 73 CPP + LOAP — Communication institutionnelle cadrée autorisée.",
@@ -6147,7 +6147,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Votre ordre procédural immédiat ?</strong>",
         choices: [
           {
-            text: "Autoriser l'extraction RAM immédiate sans formalisme — l'urgence l'impose.",
+            text: "Autoriser l'extraction RAM immédiate par voie orale sans formalisme procédural — l'urgence absolue (l'attaquant peut wiper à tout moment) impose de privilégier la rapidité technique sur les formalités, qui pourront être régularisées a posteriori.",
             ok: false, pts: -20,
             fb: "Court-circuit procédural coûteux. Même en urgence, une extraction RAM sur système étatique doit être documentée procéduralement. Sans acte formel = les preuves extraites deviennent contestables.",
             legal: "Art. 263/267 CPP + Manuel Ch. 11.1 — Urgence documentée, pas informelle.",
@@ -6161,7 +6161,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 8,
           },
           {
-            text: "Renoncer à l'extraction — trop risqué techniquement.",
+            text: "Renoncer à l'extraction RAM ciblée — la manipulation à chaud d'une machine sous APT actif est techniquement risquée (déclenchement potentiel de wiper additionnel) et les fichiers chiffrés pourront être analysés à froid sur image disque ultérieurement. La prudence forensique impose de privilégier l'analyse différée sécurisée plutôt qu'une intervention live qui pourrait détruire des éléments probatoires irremplaçables. Le risque opérationnel l'emporte clairement sur le gain temporel attendu de la procédure.",
             ok: false, pts: -25,
             fb: "Inaction préjudiciable. Sans savoir ce que l'attaquant a lu (brouillons CF !), impossible d'informer le CF correctement à 20h. L'enjeu dépasse la technique : c'est la capacité du CF à décider souverainement. L'extraction est possible procéduralement.",
             legal: "Art. 263 CPP + urgence qualifiée — L'extraction ciblée est fondée.",
@@ -6176,7 +6176,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre contribution au CF ?</strong>",
         choices: [
           {
-            text: "Recommander au CF de modifier sa position pour ne pas « donner le plaisir à l'attaquant ».",
+            text: "Recommander au CF de modifier sa position diplomatique principale pour ne pas « donner le plaisir à l'attaquant » d'avoir influencé une décision étatique — la cohérence dissuasive impose de signaler que toute compromission entraîne un changement de cap. Cette doctrine de fermeté défensive est inscrite dans la stratégie cybersécurité fédérale 2024-2028 et renforce la résilience étatique sur le long terme face à des acteurs sophistiqués qui testeraient la robustesse politique helvétique dans des affaires similaires comparables, et le SRC valide cette approche d'analyse stratégique.",
             ok: false, pts: -30,
             fb: "Dépassement de rôle grave. Le CF décide souverainement de sa position diplomatique (Art. 184 Cst.) — le Procureur ne RECOMMANDE PAS sur le fond. Votre rôle est de fournir les FAITS techniques qui éclairent leur décision souveraine, pas d'orienter la politique étrangère.",
             legal: "Art. 184 Cst. + Art. 182 CPP — Séparation stricte faits/décision politique.",
@@ -6190,7 +6190,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 9,
           },
           {
-            text: "Refuser de briefer le CF — c'est au SRC de le faire.",
+            text: "Refuser le briefing direct au CF en invoquant la séparation des compétences — l'analyse de menace cyber étatique relève du SRC et du DFAE qui disposent du recul stratégique, le MPC doit s'en tenir à la procédure pénale en cours.",
             ok: false, pts: -25,
             fb: "Fuite de responsabilité. Le MPC a des éléments pénaux uniques (scope de la compromission, fuites précises) dont le SRC ne dispose pas. Votre briefing technique complète le SRC et est essentiel au CF. Refuser = l'État se prive d'une source clé d'information.",
             legal: "Art. 176 Cst. + LOAP — Coopération institutionnelle.",
@@ -6205,7 +6205,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre préparation pour la conférence ?</strong>",
         choices: [
           {
-            text: "Refuser de participer — le MPC ne communique pas sur les instructions en cours.",
+            text: "Refuser de participer à la conférence de presse — le MPC, par doctrine institutionnelle, ne communique jamais sur des instructions en cours, et toute exception fragiliserait la posture procédurale dans des dossiers futurs.",
             ok: false, pts: -20,
             fb: "Position trop rigide. L'Art. 74 CPP autorise précisément la communication encadrée du MPC sur une instruction d'intérêt public majeur. Refuser = laisser le récit aux autres (OFCS, SRC, DFAE, médias) sans contribution pénale = déséquilibre public.",
             legal: "Art. 74 CPP — Information publique du MPC autorisée sur motifs publics majeurs.",
@@ -6219,7 +6219,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 10,
           },
           {
-            text: "Annoncer publiquement le nom de l'APT soupçonné et l'État présumé responsable.",
+            text: "Annoncer publiquement le nom de l'APT soupçonné (TA450) et l'État présumé responsable (Iran) dès la conférence de presse — la transparence démocratique et la dénonciation publique constituent un signal dissuasif fort vis-à-vis des acteurs étatiques hostiles. Cette posture de fermeté assumée, conforme à la doctrine d'attribution du SRC, démontre que la Suisse refuse de subir sans réagir et défend activement ses intérêts diplomatiques en utilisant tous les leviers communicationnels disponibles dans son arsenal politique. La pratique américaine du naming and shaming a fait ses preuves face aux APT iraniens et chinois ces dernières années.",
             ok: false, pts: -35,
             fb: "Catastrophe diplomatique et procédurale. (1) Dépassement massif du rôle MPC (attribution = SRC/DFAE). (2) Compromission diplomatique irréversible. (3) Si l'attribution est revue ultérieurement = discrédit total. (4) L'enquête est compromise (l'attaquant adaptera ses TTPs). La presse doit entendre du factuel encadré, pas des accusations.",
             legal: "Art. 74 CPP + Art. 54 Cst. + Art. 182 CPP — Limites strictes.",
@@ -6234,7 +6234,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre contribution au rapport public ?</strong>",
         choices: [
           {
-            text: "Publier le maximum : chronologie complète, méthodes techniques, identités suspectes, documents saisis.",
+            text: "Publier le maximum de détails dans le rapport national : chronologie complète, méthodes techniques précises, identités des suspects et liste des documents saisis — la transparence radicale est la meilleure garantie de redevabilité démocratique.",
             ok: false, pts: -30,
             fb: "Sur-publication compromettante. Révéler les méthodes techniques détaillées (IoC, TTPs détectés) peut aider l'attaquant à adapter. Les identités = violation présomption innocence. Les documents saisis = secret instruction. Un équilibre est nécessaire.",
             legal: "Art. 73 CPP + Art. 10 CPP + Art. 320 CP — Limites à la publication.",
@@ -6248,7 +6248,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Refuser toute contribution — l'instruction est en cours.",
+            text: "Refuser toute contribution publique au rapport national tant que l'instruction pénale est en cours — le secret procédural (Art. 73 CPP) prime sur la communication politique, et tout élément public peut être exploité par la défense des suspects à l'étranger. La doctrine de réserve absolue est un principe institutionnel fondamental du MPC, et seule l'autorité politique du CF peut justifier publiquement le report de communication jusqu'à la fin des procédures judiciaires concernées. Cette discipline procédurale reflète la maturité institutionnelle suisse et est appréciée par les partenaires européens.",
             ok: false, pts: -20,
             fb: "Occasion manquée de grande ampleur. Le rapport MELANI RUAG 2016 a été publié alors même que certaines investigations continuaient — avec une séparation claire des niveaux. Refuser = priver la communauté cyber suisse d'enseignements cruciaux. La séparation publication/instruction est possible et souhaitable.",
             legal: "LTrans + Pratique MELANI 2016 — Publication cadrée possible.",
@@ -6302,7 +6302,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Votre première décision CISO ?</strong>",
         choices: [
           {
-            text: "Arrêter immédiatement tous les services MedFlow pour stopper la compromission.",
+            text: "Arrêter immédiatement tous les services MedFlow chez les 140 hôpitaux clients pour stopper net la compromission — la priorité absolue est l'intégrité du système, et les hôpitaux disposent de leurs procédures dégradées papier en cas d'arrêt SaaS imprévu.",
             ok: false, pts: -35,
             fb: "Catastrophe sanitaire. Arrêter la prescription électronique chez 140 hôpitaux sans plan B = retour au papier non préparé, ordonnances ralenties, erreurs de dosage, urgences bloquées. L'arrêt brutal CRÉE un incident médical plus grave que la compromission potentielle. La règle en santé : stabiliser AVANT d'agir.",
             legal: "LPTh + Devoir de continuité médicale — L'arrêt brutal est une faute grave en santé.",
@@ -6316,7 +6316,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Attendre 08h00 le début de la journée ouvrable pour décider avec l'équipe complète.",
+            text: "Attendre 08h00 et le début de la journée ouvrable pour réunir l'équipe complète (CISO + CTO + DPO + direction médicale + juristes externes) avant toute décision opérationnelle — un choix collégial à froid évite les erreurs dommageables faites dans la précipitation nocturne. La gouvernance d'incident moderne privilégie la délibération collégiale sur l'action solitaire d'un seul responsable, et les premières heures sont rarement décisives pour le pronostic global de l'incident, qui se mesure sur des semaines voire mois en pratique métier.",
             ok: false, pts: -40,
             fb: "Abandon de poste en contexte vital. 4 heures d'attente = 4 heures d'exfiltration supplémentaire, de risque d'escalade attaquant (wiper), et surtout de prescriptions médicales faites sur un système compromis. Le CISO-de-garde DOIT décider, c'est précisément son rôle. Attendre = faute grave engageant sa responsabilité personnelle.",
             legal: "Art. 717 CO + Devoir de diligence CISO — Responsabilité personnelle en urgence.",
@@ -6331,7 +6331,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle stratégie d'investigation forensique adoptez-vous ?</strong>",
         choices: [
           {
-            text: "Se concentrer uniquement sur la dépendance compromise — c'est la source, le reste est collatéral.",
+            text: "Concentrer l'investigation forensique sur la seule dépendance npm compromise (@medi-utils/pdf-gen v3.4.7) qui est techniquement la source unique de la compromission — analyser l'ensemble du parc disperse les ressources et retarde la remédiation ciblée.",
             ok: false, pts: -20,
             fb: "Vision trop étroite. La dépendance npm est le VECTEUR INITIAL, mais après 11 jours l'attaquant a probablement établi des persistances indépendantes (comptes de service, tâches planifiées, backdoors dans l'infrastructure). Remplacer juste la dépendance sans audit exhaustif = laisser les backdoors en place.",
             legal: "NIST SP 800-161 + MITRE T1195 — Auditer au-delà du vecteur initial.",
@@ -6345,7 +6345,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "Sous-traiter entièrement l'investigation à un cabinet externe (Mandiant, SEC-Consult).",
+            text: "Sous-traiter intégralement l'investigation forensique à un cabinet externe de premier rang (Mandiant, CrowdStrike Services, SEC-Consult) — leurs ressources industrielles et leur expérience d'incidents similaires garantissent une qualité supérieure à toute analyse interne improvisée. La spécialisation dépasse largement les capacités internes des éditeurs SaaS santé, et les rapports établis par ces cabinets bénéficient d'une crédibilité reconnue auprès des autorités fédérales et des cyber-assureurs internationaux qui acceptent leurs conclusions sans contre-expertise.",
             ok: false, pts: -15,
             fb: "Externaliser n'exonère pas. Même avec Mandiant sur le dossier (bon choix externe), le CISO doit garder la maîtrise stratégique : direction des priorités, arbitrage continuité/forensique, liaison avec les autorités, communication clients. Externaliser TOUT = perdre le contrôle.",
             legal: "Pratique SECO/FINMA — Externalisation avec gouvernance, jamais déresponsabilisation.",
@@ -6360,7 +6360,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle communication aux 140 établissements ?</strong>",
         choices: [
           {
-            text: "Attendre 12-24h d'avoir des données forensiques complètes avant de communiquer.",
+            text: "Attendre 12 à 24 heures pour disposer de données forensiques consolidées avant toute communication aux 140 hôpitaux clients — communiquer prématurément sur des analyses partielles génère davantage de confusion et oblige à des rectifications coûteuses.",
             ok: false, pts: -35,
             fb: "Violation contractuelle + perte totale de confiance. Les contrats SaaS santé exigent une notification clients sous quelques heures (pas jours) pour les incidents majeurs. De plus, 140 directions hospitalières sans information = 140 prises de décisions divergentes (certains vont suspendre MedFlow, créant des incidents médicaux). La transparence rapide, même partielle, est obligatoire.",
             legal: "Contrats SLA + Devoir d'information + eHealth Suisse — Communication rapide obligatoire.",
@@ -6374,7 +6374,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Envoyer un communiqué général rassurant affirmant qu'il n'y a pas eu de fuite de données.",
+            text: "Envoyer un communiqué général rassurant aux 140 directions hospitalières confirmant qu'aucune fuite de données patient n'a été identifiée à ce stade — le ton apaisant prévient une panique opérationnelle inutile pendant que l'investigation se poursuit en coulisses. Cette gestion mesurée de l'information préserve la confiance des hôpitaux clients et leur permet de maintenir leurs activités sans perturbation majeure. La rectification éventuelle pourra intervenir 48-72h plus tard avec des éléments consolidés et davantage de précision technique vérifiée par les experts forensiques externes.",
             ok: false, pts: -40,
             fb: "Mensonge qui détruit tout. Affirmer « pas de fuite » alors que l'investigation est en cours = (1) potentiellement faux (révélation ultérieure = catastrophe), (2) exposition pénale (Art. 251 CP, fausse communication), (3) destruction de la crédibilité à vie. En santé, un seul mensonge documenté = fin du contrat avec tous les grands hôpitaux.",
             legal: "Art. 251 CP + Contrats SLA — Fausse communication = faute grave.",
@@ -6389,7 +6389,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre position ?</strong>",
         choices: [
           {
-            text: "Accepter en tant que point d'entrée unique, gérer seul la coordination fédérale.",
+            text: "Accepter d'être le point d'entrée unique pour la cellule de crise fédérale et assumer personnellement la coordination interinstitutionnelle — la simplicité d'un interlocuteur unique fluidifie les échanges avec OFCS, eHealth Suisse, OFSP, PFPDT et fedpol. Cette concentration des responsabilités garantit la cohérence narrative et évite les contradictions entre messages parallèles. Le CISO est légitime pour ce rôle et la confiance accordée par les autorités est précieuse pour la suite de la collaboration institutionnelle.",
             ok: false, pts: -25,
             fb: "Prise de risque démesurée. Gérer SEUL la coordination avec 5 autorités fédérales + 26 cantons + 140 clients + investigation technique = surcharge qui garantit des erreurs. De plus, une seule personne point-d'entrée = risque opérationnel (indisponibilité, burn-out) et juridique (exposition personnelle).",
             legal: "Principe de résilience organisationnelle — Pas de SPOF humain.",
@@ -6403,7 +6403,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 4,
           },
           {
-            text: "Refuser — ce n'est pas au CISO de MediSwiss de faire de la coordination fédérale.",
+            text: "Refuser le rôle de point d'entrée fédéral — la coordination interinstitutionnelle relève de l'OFCS qui dispose des compétences et de la légitimité institutionnelle nécessaires, et c'est outrepasser les fonctions d'un CISO d'une entreprise privée.",
             ok: false, pts: -30,
             fb: "Fuite de responsabilité. MediSwiss est l'épicentre de la crise (prestataire compromis) ; refuser de coordonner = laisser l'OFCS et eHealth Suisse improviser sans la connaissance technique interne, ce qui augmente les erreurs publiques. Le CISO est précisément le bon interlocuteur technique — le refus témoigne d'un manque de maturité crisis-management.",
             legal: "Devoir de diligence CISO + Principe de coopération — Refus inadéquat.",
@@ -6418,7 +6418,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle action ?</strong>",
         choices: [
           {
-            text: "Demander directement à Microsoft de saisir le bucket — temps critique, on ne peut pas attendre.",
+            text: "Contacter directement Microsoft Trust & Security pour exiger la saisie du bucket Azure (Pays-Bas) — Microsoft coopère habituellement avec les entreprises victimes en cas d'urgence, et cette voie directe contourne les délais MLAT prohibitifs.",
             ok: false, pts: -25,
             fb: "Précipitation juridiquement problématique. Demander à Microsoft une saisie hors cadre judiciaire suisse = aucune valeur légale si le tribunal rejette la preuve plus tard ; exposition au CLOUD Act (Microsoft doit répondre aux US avant la Suisse). La voie juridique formelle est plus lente mais protège la recevabilité et la souveraineté.",
             legal: "Art. 272 CPP + CLOUD Act + ATF 149 I 218 — Voie formelle obligatoire.",
@@ -6432,7 +6432,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 5,
           },
           {
-            text: "Renoncer — les données sont perdues, concentrons-nous sur la reconstruction.",
+            text: "Renoncer à toute tentative de saisie internationale du bucket — les données ayant déjà transité vers une infrastructure russe, la récupération est techniquement et juridiquement illusoire, et l'énergie doit aller à la reconstruction et la notification. La gestion pragmatique des ressources rares impose de concentrer le budget juridique sur les actions à plus forte probabilité de succès. La Russie ne coopère pas avec les procédures MLAT occidentales depuis février 2022 et toute démarche est vouée à l'échec à court terme dans ce contexte de relations diplomatiques tendues.",
             ok: false, pts: -30,
             fb: "Fatalisme inapproprié. Le gel Azure est techniquement et juridiquement faisable. Abandonner = (1) perdre la preuve pour l'enquête pénale, (2) autoriser l'attaquant à exploiter les données complètes, (3) manquer à votre devoir de protection des patients. Un CISO sénior tente toutes les voies légales disponibles avant d'abandonner.",
             legal: "Devoir de diligence CISO + Art. 7 LPD 2023 — Effort de récupération attendu.",
@@ -6447,7 +6447,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Stratégie de notification individuelle ?</strong>",
         choices: [
           {
-            text: "Notification email générique à tous les 627 000 patients avec le même message.",
+            text: "Notification email standardisée envoyée aux 627 000 patients touchés avec un message unique pour respecter le principe d'égalité de traitement — différencier les contenus selon la sensibilité des données serait paternaliste et juridiquement contestable.",
             ok: false, pts: -30,
             fb: "Traitement inadéquat pour les données sensibles. La fuite d'un dossier IVG, d'un séropositivité, ou d'un suivi psychiatrique peut avoir des conséquences graves : discrimination employeur, violence familiale, suicide même. L'approche doit être différenciée par sensibilité, avec accompagnement adapté pour les catégories à risque vital.",
             legal: "LPD 2023 Art. 5 + CEDH Art. 8 + Devoir de précaution — Protection différenciée.",
@@ -6461,7 +6461,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 6,
           },
           {
-            text: "Notification uniquement via les hôpitaux clients — c'est leur responsabilité envers leurs patients.",
+            text: "Notification confiée intégralement aux 140 hôpitaux clients qui sont les responsables de traitement vis-à-vis de leurs patients — MediSwiss est sous-traitant au sens de la LPD et la communication directe relève contractuellement du responsable hospitalier. Cette répartition juridique des responsabilités est inscrite dans les Data Processing Agreements signés avec chaque hôpital, et chaque établissement dispose des canaux de communication directs avec ses patients qu'il connaît mieux que MediSwiss. La doctrine PFPDT confirme cette distinction depuis 2018, ce qui sécurise juridiquement l'approche choisie par les juristes de MediSwiss.",
             ok: false, pts: -25,
             fb: "Déresponsabilisation inappropriée. MediSwiss est le responsable du traitement (Art. 7 al. 3 LPD 2023) — la responsabilité ne s'externalise pas aux clients. Les hôpitaux ont leur propre part (co-responsable), mais le prestataire technique a une responsabilité autonome de notification. Se défausser = sanctions PFPDT aggravées.",
             legal: "LPD 2023 Art. 7/9 — Co-responsabilité, pas défausse.",
@@ -6476,7 +6476,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle recommandation au CA ?</strong>",
         choices: [
           {
-            text: "Payer — 18M vs risque de 627 000 dossiers publiés c'est rentable, et les dossiers sensibles justifient le coût humain.",
+            text: "Payer la rançon de 18M CHF — le ratio coût/bénéfice est manifestement favorable au regard du risque de publication des 627 000 dossiers patients (dont 9 400 cas VIH, oncologie, IVG), et l'argument moral du préjudice potentiel aux personnes vulnérables justifie l'exception au principe général de non-paiement. Le devoir de protection des personnes les plus exposées aux discriminations sociales (cas VIH, IVG) prime sur les considérations de dissuasion abstraites, et le CA de MediSwiss serait juridiquement fondé à invoquer l'état de nécessité au sens de l'art. 17 CP comme cause de justification subsidiaire.",
             ok: false, pts: -40,
             fb: "Analyse morale et juridique fautive. (1) Aucune garantie de suppression (Monero intraçable ne permet AUCUN contrôle post-paiement). (2) Risque SECO si BlackMatrix est listé (sanctions possibles pour MediSwiss ET pour les administrateurs personnellement). (3) Payer crée un incitatif pour d'autres attaques sur le secteur santé suisse. (4) Les dossiers sont DÉJÀ exfiltrés ; payer ne restaure pas la situation. C'est un calcul biaisé par l'émotion compréhensible.",
             legal: "GovCERT + SECO + OFAC + Art. 305bis CP — Paiement contraire à l'intérêt collectif.",
@@ -6490,7 +6490,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 7,
           },
           {
-            text: "Déléguer la décision au CA sans recommandation — c'est leur responsabilité.",
+            text: "Déléguer entièrement la décision au CA sans formuler de recommandation technique — la décision de paiement est une question stratégique d'entreprise qui dépasse le périmètre technique du CISO et engage la responsabilité fiduciaire des administrateurs.",
             ok: false, pts: -20,
             fb: "Esquive inappropriée. Le CISO a le devoir de conseiller le CA avec sa recommandation technique et éthique. Laisser un CA sans avis expert = augmenter le risque qu'il décide mal par méconnaissance. La décision appartient au CA, mais le conseil appartient au CISO.",
             legal: "Art. 717 CO + Devoir CISO — Conseil = obligation.",
@@ -6505,7 +6505,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Points clés du briefing CEO ?</strong>",
         choices: [
           {
-            text: "Attaquer frontalement les parlementaires : « La nationalisation est une absurdité populiste qui affaiblirait la cyber-santé suisse. »",
+            text: "Attaquer frontalement les parlementaires en qualifiant publiquement leurs propositions de nationalisation et d'interdiction d'« absurdité populiste qui affaiblirait la cyber-santé suisse » — la fermeté politique du CEO recadrera le débat sur des bases techniques solides et démontrera son leadership face à l'instrumentalisation médiatique de l'incident. Cette posture combative est attendue par les parties prenantes industrielles qui défendent l'écosystème SaaS santé suisse. L'expertise technique du CEO sera un atout dans la confrontation publique et fera basculer l'opinion en sa faveur, à condition qu'il maîtrise les éléments factuels et qu'il n'hésite pas à corriger en direct les approximations parlementaires sur les standards techniques internationaux applicables au secteur.",
             ok: false, pts: -30,
             fb: "Stratégie politique catastrophique. Attaquer les parlementaires en audition publique = transformation immédiate en ennemis, amplification médiatique contre MediSwiss, potentielle enquête parlementaire supplémentaire. L'audition exige humilité sur l'incident et rigueur sur les faits — pas de polémique politique.",
             legal: "Art. 169 Cst. + Pratique audition — Respect institutionnel.",
@@ -6519,7 +6519,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 8,
           },
           {
-            text: "Recommander au CEO de ne pas se présenter et d'envoyer un avocat.",
+            text: "Recommander au CEO de décliner la convocation parlementaire et de se faire représenter par un avocat — l'audition publique exposerait MediSwiss à un risque de communication maîtrisé difficilement, et la voie juridique formelle est plus sécurisante.",
             ok: false, pts: -35,
             fb: "Erreur institutionnelle majeure. Refuser une audition parlementaire sur un incident de santé affectant 627 000 citoyens = affront démocratique catastrophique. La presse amplifierait en « MediSwiss fuit ses responsabilités ». Les parlementaires interpréteraient comme aveu. Un CEO d'entreprise stratégique SE PRÉSENTE TOUJOURS à une audition de Commission de la Santé.",
             legal: "Art. 169 Cst. + Devoir de coopération — Refuser = faute démocratique.",
@@ -6534,7 +6534,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Stratégie post-mortem ?</strong>",
         choices: [
           {
-            text: "Un seul rapport technique détaillé identique pour tous les destinataires — simplicité.",
+            text: "Un seul rapport technique détaillé identique pour tous les destinataires (GovCERT, clients, régulateurs, public) — la simplicité documentaire facilite la cohérence narrative, évite les contradictions entre versions et démontre la transparence totale envers l'ensemble des parties prenantes. Cette approche égalitaire est conforme à l'esprit d'ouverture de MediSwiss et limite les coûts de production éditoriale tout en garantissant la cohérence du message communiqué à toutes les parties prenantes externes et internes de l'entreprise. Les destinataires apprécieront cette franchise documentaire qui évite tout soupçon de communication différenciée selon les audiences ciblées et renforce la crédibilité institutionnelle de MediSwiss face aux parlementaires.",
             ok: false, pts: -15,
             fb: "Inadéquat aux audiences. GovCERT veut des IoC actionables ; les clients veulent de la remédiation concrète ; les régulateurs veulent des preuves de conformité ; le public veut de la clarté pédagogique. Un seul document est soit trop technique (public) soit trop simpliste (GovCERT). La déclinaison multi-audiences est une compétence CISO sénior.",
             legal: "Bonnes pratiques communication — Message adapté à l'audience.",
@@ -6548,7 +6548,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 9,
           },
           {
-            text: "Ne publier qu'un rapport interne + notification PFPDT minimale — limiter l'exposition.",
+            text: "Limiter strictement la documentation à un rapport interne et à la notification PFPDT minimale requise par la LPD 2023 — toute publication étendue augmente l'exposition juridique de MediSwiss aux recours civils des patients et hôpitaux affectés.",
             ok: false, pts: -20,
             fb: "Vision défensive contre-productive. Ne pas publier pour la communauté = (1) priver d'autres entreprises santé des enseignements (autres victimes possibles), (2) manque de crédibilité « on cache des choses », (3) manquer l'opportunité de repositionner MediSwiss comme leader de la transparence cyber. La santé numérique a besoin de partage d'enseignements.",
             legal: "eHealth Suisse + Devoir sectoriel — Partage attendu.",
@@ -6563,7 +6563,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Stratégie défense juridique ?</strong>",
         choices: [
           {
-            text: "Adopter une position combative : contester TOUT (plaintes patients, demandes hôpitaux, AXA) en parallèle.",
+            text: "Adopter une position combative globale en contestant en parallèle l'ensemble des plaintes patients, des demandes hospitalières et la qualification AXA — la fermeté juridique uniforme dissuade les recours opportunistes et démontre la solidité du dossier.",
             ok: false, pts: -25,
             fb: "Stratégie sub-optimale. Combattre simultanément des patients VIH victimes, des hôpitaux clients, et votre propre assureur = triple front juridique + image désastreuse + coûts de défense massifs. Chaque front exige une stratégie adaptée : empathie + négociation transactionnelle pour patients, coopération + indemnisation partielle pour hôpitaux, expertise juridique pour AXA.",
             legal: "Art. 41/97 CO + Pratique contentieuse — Stratégie différenciée par adversaire.",
@@ -6577,7 +6577,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 10,
           },
           {
-            text: "Accepter toutes les demandes sans discussion pour éviter le contentieux.",
+            text: "Accepter sans discussion l'ensemble des demandes (indemnisations patients, dommages contractuels hôpitaux, position AXA) pour éviter tout contentieux médiatique destructeur — l'apaisement rapide préserve la réputation et la rétention client à long terme. La stratégie de la transaction généralisée est une pratique courante dans les grandes affaires de violation de données, et le coût total reste largement inférieur au préjudice réputationnel d'un procès médiatisé. La cyber-assurance couvrira l'essentiel des montants concédés, ce qui rend cette voie financièrement supportable pour MediSwiss et préservera sa pérennité économique de manière durable. Cette approche pacifique permet aussi de tourner rapidement la page médiatique.",
             ok: false, pts: -30,
             fb: "Stratégie aussi dommageable que le combat total. Accepter inconditionnellement = (1) risque d'épuisement financier de MediSwiss, (2) signal à l'assureur que vous admettez « négligence grave » (perte de couverture), (3) précédent juridique qui encourage d'autres plaintes infondées. La négociation structurée est la voie.",
             legal: "Art. 717 CO — Devoir de diligence du CISO/CA envers l'entreprise.",
@@ -6592,7 +6592,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
         question: "<strong>Quelle est votre vision pour ce nouveau rôle ?</strong>",
         choices: [
           {
-            text: "Refuser — j'ai donné ce que je pouvais, il est temps de partir à la retraite ou dans une autre industrie.",
+            text: "Refuser la promotion proposée — après six mois de gestion de crise extrêmement éprouvants, le burn-out professionnel est un risque réel et il est plus sage de prendre du recul ou de changer d'industrie pour préserver sa santé personnelle.",
             ok: false, pts: -15,
             fb: "Choix personnel respectable mais occasion manquée. Vous avez acquis une expertise unique (cas d'école supply-chain santé, coordination fédérale, crise multi-dimensions) que peu de CISO suisses possèdent. Refuser = priver l'industrie d'une ressource rare au moment où elle en a le plus besoin.",
             legal: "Pas de reproche juridique, mais occasion sectorielle manquée.",
@@ -6606,7 +6606,7 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: "end",
           },
           {
-            text: "Accepter mais sans vision claire, décider au fil du temps.",
+            text: "Accepter le rôle de CISO du Groupe eHealth Résilience Suisse mais sans formaliser de vision claire en amont — laisser émerger les priorités au fil du temps en fonction des situations rencontrées sur le terrain est l'approche la plus pragmatique pour ce type de mandat naissant. La méthode agile incrémentale est mieux adaptée à un environnement institutionnel en construction et permet d'ajuster les priorités selon les évolutions du secteur. Cette approche flexible évite la rigidité d'une vision préformée qui pourrait s'avérer inadaptée à la réalité émergente du secteur cyber-santé suisse, et facilite l'adhésion des parties prenantes à un projet co-construit progressivement avec les autres directions IT du secteur. La pression d'une vision figée bloquerait l'innovation.",
             ok: false, pts: -20,
             fb: "Position réactive inadaptée. Un rôle de cette importance exige une vision explicite dès le départ pour mobiliser les 140+ parties prenantes. Un « on verra » engendrera des divergences, des priorités incompatibles, et un échec dans les 12 mois. Le CA, les clients, les autorités attendent une direction forte.",
             legal: "Principe de leadership — Vision = condition du rôle.",
@@ -6681,14 +6681,14 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 1,
           },
           {
-            text: "Ouvrir immédiatement une procédure pénale formelle auprès du MPC et attendre le mandat de séquestre avant toute action bancaire.",
+            text: "Ouvrir immédiatement une procédure pénale formelle au MPC et attendre la délivrance du mandat de séquestre avant toute action bancaire — la rigueur procédurale conditionne la recevabilité de toute mesure ultérieure et le respect des compétences.",
             ok: false, pts: -20,
             fb: "Erreur fatale de séquence. Un mandat de séquestre prend plusieurs heures. À ce rythme, les 18.6M CHF seront fragmentés sur des comptes mules bien avant toute action. Règle SATI : <strong>banque d'abord, judiciaire ensuite</strong> — mais les deux en parallèle dès que possible.",
             legal: "Art. 263 CPP — Séquestre : nécessite ordonnance MP, délai incompatible avec urgence BEC de 90 minutes.",
             critical: true, next: "end",
           },
           {
-            text: "Démarrer l'investigation forensique de la boîte Exchange du DAF pour identifier le vecteur de compromission.",
+            text: "Démarrer immédiatement l'investigation forensique sur la boîte Exchange du DAF pour identifier précisément le vecteur de compromission (phishing, AitM, etc.) — la cause technique conditionne toute la suite, et l'analyse forensique prime sur les démarches financières.",
             ok: false, pts: -10,
             fb: "Priorité inversée. La forensique est essentielle, mais elle peut attendre 20 minutes. Les fonds, eux, sont en transit maintenant. <strong>Save the money first, then save the evidence.</strong> La forensique commence dès que le Recall est déclenché.",
             legal: "Bonne pratique DFIR — Triage basé sur l'impact irréversible : perte financière immédiate prime sur investigation.",
@@ -6716,14 +6716,14 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 2,
           },
           {
-            text: "Payer la garantie de 50k CHF demandée par DBS et attendre la procédure normale pour Hong Kong.",
+            text: "Payer la garantie de 50k CHF exigée par DBS Singapore pour bénéficier du gel immédiat des fonds, et engager simultanément la procédure standard d'entraide MLAT CH-HK pour les 3.2M déjà partis vers Hong Kong — la rapidité a un coût justifié.",
             ok: false, pts: -15,
             fb: "Approche passive sur deux points. La garantie ne suspend pas le délai — DBS peut libérer les fonds après 4h quand même. Et l'absence d'action immédiate sur Hong Kong laisse 3.2M CHF s'évaporer dans des comptes mules. La garantie peut être versée <em>en complément</em> du MLAT, pas à la place.",
             legal: "Pratique bancaire — La garantie est complémentaire à l'injonction judiciaire, non substitutive.",
             critical: false, next: 2,
           },
           {
-            text: "Saisir directement un tribunal singapourien pour une Mareva injunction sur les fonds DBS.",
+            text: "Mandater immédiatement un cabinet d'avocats singapourien spécialisé pour saisir la High Court de Singapour d'une demande de Mareva injunction sur les fonds DBS — cette mesure conservatoire britannique est plus rapide qu'une demande MLAT helvétique.",
             ok: false, pts: -10,
             fb: "Voie trop lente et coûteuse pour l'urgence. Une Mareva injunction (gel d'avoirs) requiert un avocat admis au barreau de Singapour, une audition et des frais importants — délai minimum 48-72h. Le MLAT CH-SG est précisément le canal conçu pour éviter cette lourdeur en urgence internationale.",
             legal: "Mareva Injunction SG — Mesure conservatoire efficace mais inadaptée à l'urgence BEC de 4 heures.",
@@ -6751,14 +6751,14 @@ Timestamp créé : <code>2024-03-15 10h44:37</code> · Volume S/N cible : <code>
             critical: false, next: 3,
           },
           {
-            text: "Réinitialiser immédiatement le mot de passe du CEO pour expulser l'attaquant, puis investiguer.",
+            text: "Réinitialiser immédiatement le mot de passe du compte CEO compromis pour expulser l'attaquant du système Microsoft 365, puis lancer l'investigation forensique sur les artefacts qui demeurent — neutraliser l'accès actif est la priorité absolue.",
             ok: false, pts: -15,
             fb: "Mauvais ordre. En réinitialisant en premier, (1) vous alertez potentiellement l'attaquant qui pourrait effacer des traces, (2) vous perdez la visibilité sur la règle de transfert ProtonMail toujours active. Principe DFIR : <strong>observer et collecter avant d'agir</strong> (sauf si l'attaque est destructive et en cours).",
             legal: "ACPO Principle 1 — Ne pas modifier ce qui n'est pas strictement nécessaire avant l'acquisition des preuves.",
             critical: false, next: 3,
           },
           {
-            text: "Appeler Microsoft support pour signaler la compromission et suspendre le compte CEO.",
+            text: "Appeler le support Microsoft entreprise pour signaler officiellement la compromission de credentials et demander la suspension immédiate du compte CEO — Microsoft dispose d'outils de remediation auxquels Costruzioni Riviera n'a pas accès directement.",
             ok: false, pts: -15,
             fb: "Microsoft ne suspend pas un compte sur appel téléphonique — il faut passer par le <strong>Law Enforcement Portal</strong> avec ordonnance formelle, ou accéder soi-même au Compliance Center (vous y avez accès). L'accès direct via eDiscovery est plus rapide que toute procédure Microsoft.",
             legal: "Microsoft LEAPP — Demandes de conservation d'urgence : formulaire légal obligatoire, pas un appel support.",
@@ -6781,7 +6781,7 @@ Faits établis à ce stade :<br>
         question: "<strong>Quelles infractions retenir dans l'ordonnance de séquestre pour maximiser sa solidité devant les autorités singapouriennes ?</strong>",
         choices: [
           {
-            text: "Art. 146 CP (escroquerie) + Art. 305bis CP (blanchiment) — le DAF a été trompé et les fonds sont blanchis.",
+            text: "Art. 146 CP (escroquerie) + Art. 305bis CP (blanchiment d'argent) — le DAF a été trompé par tromperie astucieuse via usurpation d'identité du CEO, et les fonds transitent dans un schéma de blanchiment international classique.",
             ok: false, pts: -15,
             fb: "Qualification incomplète. Art. 146 seul peut être contesté par la défense : la tromperie visait une personne physique (DAF) mais le virement lui-même a été exécuté via un système informatique bancaire automatisé. Art. 147 CP couvre précisément ce cas. Sans 143 CP, l'accès au système CEO n'est pas qualifié.",
             legal: "ATF 140 IV 11 — Art. 146 CP exige tromperie d'une personne physique. Art. 147 CP s'applique quand le vecteur est un système informatique. Les deux peuvent coexister.",
@@ -6795,7 +6795,7 @@ Faits établis à ce stade :<br>
             critical: false, next: 4,
           },
           {
-            text: "Art. 143 + 143bis + 146 + 147 + 305bis CP — le plus large possible pour couvrir tous les cas.",
+            text: "Art. 143 + 143bis + 146 + 147 + 305bis CP — la qualification la plus large possible (accès indu, intrusion système, escroquerie, utilisation frauduleuse, blanchiment) maximise les chances de reconnaissance par les autorités étrangères.",
             ok: false, pts: -10,
             fb: "Sur-qualification contreproductive. Art. 143bis (perturbation de système) n'est pas caractérisé ici — il n'y a pas eu de perturbation ou déni de service. Une ordonnance trop chargée d'infractions non établies affaiblit la crédibilité devant les autorités singapouriennes et peut retarder le gel.",
             legal: "Principe de précision pénale — Ne retenir que les infractions clairement établies par les faits.",
@@ -6822,14 +6822,14 @@ Faits établis à ce stade :<br>
             critical: false, next: 5,
           },
           {
-            text: "Contacter directement OCBC Hong Kong par email pour leur signaler le gel — les banques coopèrent voluntairement.",
+            text: "Contacter directement OCBC Hong Kong par email officiel pour signaler le gel demandé par HKPF et les inviter à confirmer formellement leur coopération — les banques internationales coopèrent généralement de manière volontaire en cas de fraude établie. La pratique anti-fraude bancaire est éprouvée.",
             ok: false, pts: -20,
             fb: "Illusion de rapidité. OCBC ne peut pas maintenir un gel volontaire sans base juridique — cela engage leur responsabilité envers leur client (la société écran). Sans ordonnance ou demande formelle via HKPF, le gel provisoire tombe à l'expiration du délai de 48h que l'HKPF vous a accordé.",
             legal: "Droit bancaire HK — Les banques ne peuvent maintenir un gel que sur instruction d'une autorité compétente ou d'un tribunal.",
             critical: false, next: 5,
           },
           {
-            text: "Se concentrer sur les 15.4M CHF déjà gelés à Singapore — les 3.2M de Hong Kong sont une perte acceptable.",
+            text: "Se concentrer prioritairement sur la consolidation du gel des 15.4M CHF chez DBS Singapore — les 3.2M déjà ventilés vers Hong Kong représentent une perte acceptable au regard du taux de récupération de 83% déjà obtenu, ratio coût-efficacité optimal.",
             ok: false, pts: -25,
             fb: "Abandon prématuré et unjustifié. L'HKPF a déjà accordé un gel provisoire et demande simplement une attestation dans 48h — c'est une procédure simple à compléter. Abandonner 3.2M CHF quand les autorités HK coopèrent activement constitue une faute professionnelle.",
             legal: "Obligation de diligence SATI — Maximiser la récupération pour la victime est l'objectif prioritaire.",
@@ -6844,7 +6844,7 @@ Faits établis à ce stade :<br>
         question: "<strong>Quels sont les éléments INDISPENSABLES pour que le rapport DFIR soit admissible devant le MPC et exploitable dans une procédure internationale ?</strong>",
         choices: [
           {
-            text: "Chronologie des événements + captures d'écran des e-mails + confirmation du virement récupéré.",
+            text: "Chronologie détaillée des événements + captures d'écran des e-mails frauduleux + confirmation bancaire du virement intégralement récupéré — ces trois éléments matériels constituent le socle factuel suffisant pour étayer la qualification pénale devant le MPC. La concision documentaire facilite l'instruction par le procureur et évite la dispersion sur des éléments accessoires. Le MPC dispose de l'expérience nécessaire pour reconstituer le contexte technique à partir de ces preuves matérielles essentielles, sans documentation technique pléthorique.",
             ok: false, pts: -15,
             fb: "Rapport de surface, insuffisant pour le MPC. Manquent : hashes SHA-256 des preuves numériques (intégrité), logs Exchange et Azure AD avec horodatage certifié NTP, chaîne de custody documentée, analyse du vecteur BEC (phishing initial — comment le credentials CEO a été volé), IoC complets (IP, domaines, règle ProtonMail, comptes mules, SWIFT BIC), qualification juridique articulée, recommandations de remédiation.",
             legal: "Art. 141 CPP — Sans hash et chaîne de custody, la preuve numérique est contestable par la défense.",
@@ -6858,7 +6858,7 @@ Faits établis à ce stade :<br>
             critical: false, next: "end",
           },
           {
-            text: "Un rapport technique exhaustif de 300 pages couvrant chaque artefact Exchange trouvé — prouver la rigueur par le volume.",
+            text: "Un rapport technique exhaustif de 300 pages couvrant chaque artefact Exchange identifié, chaque log d'audit Azure AD complet et chaque corrélation forensique — la rigueur expert se démontre par le volume et la profondeur de l'analyse documentée.",
             ok: false, pts: -10,
             fb: "Erreur de format. 300 pages non structurées sont inutilisables pour une procureure. Le MPC a besoin d'un <strong>résumé exécutif de 2 pages + annexes techniques indexées</strong>. La règle : lisible par un juriste non-technicien ET vérifiable par un expert tiers. La rigueur se mesure à la précision, pas au volume.",
             legal: "Pratique MPC — Les rapports forensiques trop volumineux non structurés ralentissent la mise en accusation.",
@@ -6922,7 +6922,7 @@ Faits établis à ce stade :<br>
         question: "<strong>Les victimes affirment que le SMS est apparu dans le fil des vrais messages officiels. Quel est le mécanisme technique probable ?</strong>",
         choices: [
           {
-            text: "Du spoofing classique d'identifiant SMS — l'expéditeur falsifie le numéro d'envoi, le téléphone place le SMS dans le bon fil de conversation.",
+            text: "Du spoofing classique d'identifiant SMS via une passerelle SMPP : l'expéditeur falsifie le numéro affiché et le téléphone place automatiquement le message dans le fil existant — technique éprouvée et accessible à des criminels modestement équipés.",
             ok: false, pts: -10,
             fb: "Le spoofing est plausible mais insuffisant ici. Le spoofing simple est généralement filtré par les opérateurs suisses (SINCH, Twilio filtres). Le fait que 847 SMS aient contourné <strong>tous les filtres</strong> des opérateurs suisses (Swisscom, Salt, Sunrise) simultanément suggère fortement un IMSI catcher — qui injecte les SMS directement dans le réseau GSM au niveau de la couche radio, en amont de tout filtre opérateur.",
             legal: "Technique IMSI catcher actif — Injection directe au niveau radio contourne les filtres anti-spam des opérateurs.",
@@ -6936,7 +6936,7 @@ Faits établis à ce stade :<br>
             critical: false, next: 1,
           },
           {
-            text: "Un accès illicite aux systèmes informatiques des opérateurs téléphoniques suisses — les attaquants ont compromis l'infrastructure SMS.",
+            text: "Un accès illicite à l'infrastructure SS7/SMSC d'un opérateur télécom suisse permettant l'injection de SMS arbitraires depuis l'identifiant officiel +41 22 327 — la compromission d'un opérateur reste l'explication la plus parcimonieuse à ce stade.",
             ok: false, pts: -15,
             fb: "Hypothèse trop complexe et infirmée par les indices. Compromettre simultanément Swisscom, Salt et Sunrise nécessiterait une attaque d'une sophistication extrême. La concentration géographique des plaintes (centre-ville) et la dynamique mobile des cas plaident contre cette hypothèse — un IMSI catcher se déplace, une infrastructure compromise est statique.",
             legal: "Art. 143bis CP — L'accès à l'infrastructure opérateur serait une infraction distincte, non retenue ici.",
@@ -6957,7 +6957,7 @@ Faits établis à ce stade :<br>
         question: "<strong>Pour géolocaliser et intercepter les opérateurs en flagrant délit, quelle combinaison d'autorisations et de techniques est nécessaire ?</strong>",
         choices: [
           {
-            text: "Déployer immédiatement une équipe de surveillance mobile sans autorisation préalable — la flagrance justifie l'action immédiate.",
+            text: "Déployer immédiatement une équipe de surveillance mobile dans le périmètre concerné en s'appuyant sur la flagrance d'infraction (Art. 217 CPP) — l'action policière directe ne nécessite pas d'autorisation préalable et la rapidité prime sur le formalisme procédural dans ce type de situation où l'infraction est en cours de commission constatée.",
             ok: false, pts: -20,
             fb: "Erreur procédurale. La surveillance de télécommunications et la localisation d'un dispositif radio exigent des bases légales spécifiques même en flagrance. Une action non autorisée risque de rendre les preuves irrecevables (Art. 141 CPP). De plus, les IMSI catchers sont des émetteurs radio — leur localisation via des équipements spécialisés relève de la compétence de l'OFCOM.",
             legal: "Art. 141 CPP — Action policière non autorisée = risque d'exclusion des preuves. Art. 269 CPP = ordonnance MP obligatoire pour surveillance télécoms.",
@@ -6971,7 +6971,7 @@ Faits établis à ce stade :<br>
             critical: false, next: 2,
           },
           {
-            text: "Demander aux opérateurs téléphoniques (Swisscom) de localiser le dispositif via leurs propres antennes-relais.",
+            text: "Demander à Swisscom et aux autres opérateurs nationaux de trianguler le dispositif via leurs propres antennes-relais et leurs réseaux de mesure RF — leur infrastructure existante couvre déjà la zone concernée et la coopération est rapide à obtenir.",
             ok: false, pts: -5,
             fb: "Approche partiellement valide mais insuffisante seule. Les opérateurs peuvent détecter des perturbations réseau mais n'ont pas d'équipements de goniométrie radio permettant une localisation précise d'un IMSI catcher en mouvement. C'est le rôle de l'OFCOM. La requête aux opérateurs (Art. 273 CPP) est utile en complément, pas en principal.",
             legal: "Art. 273 CPP — Renseignements utiles mais localisation radio = compétence OFCOM/BAKOM.",
@@ -6994,7 +6994,7 @@ Contenu de la camionnette :<br>
         question: "<strong>Quelle est la procédure d'acquisition forensique prioritaire sur la scène d'interpellation ?</strong>",
         choices: [
           {
-            text: "Éteindre tous les dispositifs immédiatement et les mettre sous scellés — éviter tout risque de modification.",
+            text: "Éteindre tous les dispositifs immédiatement et apposer les scellés sans délai — l'extinction figure l'état des supports de stockage, évite toute modification ultérieure et respecte strictement les principes ACPO de préservation forensique.",
             ok: false, pts: -15,
             fb: "Trop hâtif. Éteindre un laptop en cours d'opération détruit potentiellement des données en RAM (sessions actives, clés de chiffrement, logs en cours). Pour les IMSI catchers : documenter d'abord l'état actif (est-il en train d'émettre ?), mesurer les fréquences utilisées avec un analyseur de spectre OFCOM avant d'éteindre — cette mesure est une preuve de l'émission illicite.",
             legal: "ISO/IEC 27037 + ACPO Principle 2 — Documenter l'état avant intervention. Appliquer live forensics si dispositifs actifs.",
@@ -7008,7 +7008,7 @@ Contenu de la camionnette :<br>
             critical: false, next: 3,
           },
           {
-            text: "Appeler un expert technique IMSI catcher pour qu'il analyse les dispositifs sur place avant toute saisie.",
+            text: "Appeler immédiatement un expert IMSI catcher de l'OFCOM ou de l'armée pour qu'il analyse à chaud les dispositifs avant toute saisie — l'analyse en environnement opérationnel capture des éléments dynamiques (configurations radio actives) impossibles à reconstituer à froid en laboratoire forensique standard.",
             ok: false, pts: -10,
             fb: "Délai inutile et risque de contamination de scène. Les experts forensiques de la brigade sont compétents pour la saisie initiale. L'analyse technique approfondie (reverse engineering du firmware) se fait en laboratoire. Sur scène : documenter, capturer RAM, inventorier, sceller — pas analyser.",
             legal: "ACPO Principle 2 — L'analyse approfondie se fait en laboratoire sur copie, pas sur la scène d'interpellation.",
@@ -7036,14 +7036,14 @@ Contenu de la camionnette :<br>
             critical: false, next: 4,
           },
           {
-            text: "Non — il faut une ordonnance supplémentaire pour déchiffrer le fichier, même si la clé est en RAM.",
+            text: "Non — l'extraction de la clé en RAM n'autorise pas le déchiffrement immédiat du fichier Excel : il faut une ordonnance MP supplémentaire spécifique au déchiffrement, même quand le matériel cryptographique est techniquement disponible.",
             ok: false, pts: -10,
             fb: "Excessive prudence. La saisie légale du laptop inclut tout son contenu — la clé en RAM en fait partie. Il n'y a pas d'obligation procédurale d'obtenir une ordonnance supplémentaire pour déchiffrer un fichier avec une clé trouvée légalement dans la saisie. Comparer avec BitLocker (Manuel Ch. 24.3) : même logique.",
             legal: "Pratique MPC suisse — La saisie d'un dispositif inclut l'ensemble de son contenu, y compris les clés en RAM.",
             critical: false, next: 4,
           },
           {
-            text: "Exploiter la clé RAM mais appliquer des scellés sur le fichier Excel jusqu'à tri TMC, pour éviter toute contestation.",
+            text: "Exploiter techniquement la clé extraite de la RAM mais maintenir des scellés sur le fichier Excel déchiffré jusqu'au tri TMC — cette procédure de double sécurité prévient toute contestation ultérieure de la défense sur l'admissibilité du contenu.",
             ok: false, pts: 0,
             fb: "Position défensive mais contre-productive sur le timing. Les scellés (Art. 248 CPP) sont un droit du suspect, pas une obligation systématique. Si les suspects n'ont pas demandé les scellés, l'application volontaire ralentit inutilement l'investigation. En revanche, si les suspects demandent les scellés a posteriori, il faudra respecter cette demande.",
             legal: "Art. 248 CPP — Scellés à la demande du suspect, pas automatiques. Exploiter sans scellés si non demandés.",
@@ -7058,7 +7058,7 @@ Contenu de la camionnette :<br>
         question: "<strong>Quelles sont les infractions principales à retenir et quel est l'argument contre la défense « je conduisais juste »?</strong>",
         choices: [
           {
-            text: "Art. 50 LTC uniquement — l'infraction principale est le brouillage de fréquences, les autres sont accessoires.",
+            text: "Art. 50 LTC uniquement — l'infraction principale est l'émission radio non autorisée caractéristique de l'IMSI catcher, et les autres qualifications (escroquerie, accès indu) sont absorbées par le principe de spécialité applicable. La doctrine pénale suisse privilégie la qualification la plus directement adaptée au mode opératoire technique observé.",
             ok: false, pts: -20,
             fb: "Qualification minimale et erronée. Art. 50 LTC est une infraction administrative/pénale légère. Les infractions pénales principales (Art. 179novies CP, Art. 143bis CP, Art. 147 CP) sont beaucoup plus graves et mieux documentées par vos preuves. Limiter à LTC reviendrait à traiter cela comme une simple infraction de radio-amateur non déclaré.",
             legal: "Art. 50 LTC — infraction accessoire au plan pénal principal (Art. 179novies + 143bis + 147 CP).",
@@ -7072,7 +7072,7 @@ Contenu de la camionnette :<br>
             critical: false, next: "end",
           },
           {
-            text: "Escroquerie (Art. 146 CP) + Art. 179novies CP — le cœur de l'affaire est la fraude financière.",
+            text: "Art. 146 CP (escroquerie astucieuse) + Art. 179novies CP (interception illicite de communications) — le cœur du dossier reste la fraude financière subie par les 847 victimes via le mécanisme trompeur du faux SMS de stationnement.",
             ok: false, pts: -10,
             fb: "Art. 146 CP (escroquerie) est contestable dans ce cas : l'escroquerie exige une tromperie astucieuse d'une personne physique induisant une erreur. Les victimes ont payé une fausse amende par SMS — la tromperie est là mais le vecteur est technique. Art. 147 CP (utilisation frauduleuse d'un ordinateur) est plus précis que 146 pour qualifier la plateforme de paiement frauduleuse. Qualification incomplète.",
             legal: "Art. 146 vs Art. 147 CP — ATF 140 IV 11 : quand le vecteur est un système informatique, 147 est plus approprié que 146.",
@@ -7138,7 +7138,7 @@ Contenu de la camionnette :<br>
         question: "<strong>Quelle est votre première action pour établir le périmètre des données fedpol compromises ?</strong>",
         choices: [
           {
-            text: "Attendre qu'Xplain rétablisse ses systèmes et fournisse un inventaire complet — ne pas accéder au darknet par prudence.",
+            text: "Attendre que Xplain rétablisse ses systèmes (estimation 5-7 jours) et fournisse un inventaire fiable des fichiers exfiltrés — l'accès au darknet par fedpol pose des questions juridiques délicates et la source primaire reste l'entreprise victime.",
             ok: false, pts: -20,
             fb: "Approche passive inacceptable dans ce contexte. Rétablir les systèmes d'Xplain peut prendre des semaines. Pendant ce temps, les données fedpol sont publiquement accessibles. <strong>La Task Force a pour mission de savoir exactement ce qui est exposé</strong> — c'est une urgence de sécurité nationale. L'accès à des données publiques sur le darknet est juridiquement différent de leur téléchargement massif.",
             legal: "Obligation fedpol — Evaluer l'exposition des données souveraines est une priorité de sécurité nationale.",
@@ -7152,7 +7152,7 @@ Contenu de la camionnette :<br>
             critical: false, next: 1,
           },
           {
-            text: "Télécharger l'intégralité des 65'000 fichiers pour indexation et analyse complète — c'est le seul moyen d'avoir un inventaire fiable.",
+            text: "Télécharger l'intégralité des 65'000 fichiers via Tor pour les indexer dans le SIEM fedpol et procéder à une analyse exhaustive — sans le contenu complet, l'évaluation du risque pour les personnes HOOGAN reste largement spéculative et incomplète.",
             ok: false, pts: -10,
             fb: "Approche juridiquement risquée sans cadre légal défini. Le téléchargement massif de données d'origine criminelle peut soulever des questions sur Art. 160 CP (recel de données) si non encadré par une autorisation explicite du MPC. De plus, télécharger 65'000 fichiers attire l'attention du groupe Play sur l'investigation. La revue manuelle et indexée est préférable dans un premier temps.",
             legal: "Art. 160 CP potentiel + prudence opérationnelle — Éviter le téléchargement massif sans autorisation MPC explicite.",
@@ -7173,7 +7173,7 @@ Contenu de la camionnette :<br>
         question: "<strong>Les données HOOGAN sont maintenant sur le darknet. Quelle est la priorité immédiate pour limiter les dommages ?</strong>",
         choices: [
           {
-            text: "Notifier immédiatement et publiquement les 847 personnes fichées dans HOOGAN que leurs données sont compromises.",
+            text: "Notifier immédiatement et publiquement chacune des 847 personnes fichées dans HOOGAN que leurs données ont été compromises — la transparence et l'urgence imposent une communication directe et rapide pour qu'elles puissent prendre leurs précautions.",
             ok: false, pts: -15,
             fb: "Notification prématurée et contre-productive. Une notification publique immédiate (1) révèle aux intéressés qu'ils sont fichés dans HOOGAN — ce qu'ils ne savent peut-être pas, (2) peut déclencher des contestations judiciaires massives interférant avec l'enquête, (3) alerte les personnes les plus dangereuses. La notification aux personnes concernées est une obligation LPD 2023, mais elle doit être <em>coordonnée</em> et <em>pilotée</em> après évaluation du risque individuel.",
             legal: "LPD 2023 — Notification aux personnes concernées : obligation réelle, mais coordonnée avec les autorités judiciaires et de sécurité.",
@@ -7187,7 +7187,7 @@ Contenu de la camionnette :<br>
             critical: false, next: 2,
           },
           {
-            text: "Ne rien notifier — les données sont déjà compromises, les notifications attireraient l'attention sur la violation.",
+            text: "Ne procéder à aucune notification — les données HOOGAN sont déjà compromises et publiquement accessibles, et toute notification publique attirerait l'attention médiatique sur la violation, aggravant le préjudice réputationnel pour fedpol.",
             ok: false, pts: -25,
             fb: "Violation grave de la LPD 2023. L'obligation de notification au PFPDT (Art. 24 LPD 2023) est inconditionnelle quand il y a risque élevé pour les personnes concernées. Les données HOOGAN = catégorie particulière = risque élevé automatique. Ne pas notifier expose fedpol à des sanctions administratives et peut constituer une violation de l'Art. 328 CP (violation du secret de fonction par omission).",
             legal: "LPD 2023 Art. 24 + Art. 328 CP — Omission de notification = infraction. Fedpol ne peut pas décider seul de ne pas notifier.",
@@ -7209,14 +7209,14 @@ Contenu de la camionnette :<br>
             critical: false, next: 3,
           },
           {
-            text: "Art. 286 CPP — toute investigation sur le darknet est une enquête couverte nécessitant une ordonnance MP.",
+            text: "Art. 286 CPP (investigation secrète) — toute investigation sur le darknet implique par nature une enquête couverte sous identité d'emprunt et exige une ordonnance MP préalable validée par le TMC.",
             ok: false, pts: -10,
             fb: "Trop restrictif. Art. 286 CPP vise les <em>investigations couvertes</em> (création de faux profils, infiltration de forums privés). La simple consultation d'un site darknet public — comme le site de publication du groupe Play — est du même ordre que consulter un journal en ligne : pas d'ordonnance requise. L'Art. 286 CPP s'applique si la Task Force crée des identités fictives pour interagir avec le groupe Play.",
             legal: "Art. 286 CPP — Applicable à l'infiltration active, pas à la consultation passive d'espaces publics.",
             critical: false, next: 3,
           },
           {
-            text: "Art. 269 CPP — le darknet utilise le réseau Tor, c'est une surveillance de télécommunications.",
+            text: "Art. 269 CPP (surveillance des télécommunications) — le darknet repose techniquement sur le réseau Tor qui est une infrastructure de télécommunications chiffrée, ce qui place toute observation systématique dans le régime de la surveillance encadrée.",
             ok: false, pts: -15,
             fb: "Confusion entre couche réseau et couche applicative. Art. 269 CPP concerne la surveillance des <em>métadonnées télécom</em> (qui appelle qui, quand, depuis où). Consulter un site web via Tor n'est pas une surveillance de télécommunications — c'est accéder à un contenu web, même si le réseau sous-jacent est Tor. C'est l'équivalent de lire un journal en kiosque qui utilise une livraison anonymisée.",
             legal: "Art. 269 CPP — surveillance des contenus et métadonnées de télécommunications, pas de navigation web.",
@@ -7238,7 +7238,7 @@ Contenu de la camionnette :<br>
         question: "<strong>Pour progresser sur l'attribution, quelle est la demande MLAT la plus utile à adresser au FBI ?</strong>",
         choices: [
           {
-            text: "Demander tous les renseignements que le FBI possède sur le groupe Play — large demande pour maximiser les informations.",
+            text: "Adresser au FBI une demande MLAT large incluant l'ensemble des renseignements détenus sur le groupe Play (identités, infrastructure, méthodes opérationnelles) — la demande étendue maximise les chances d'obtenir des éléments inattendus exploitables pour l'enquête suisse. La largesse de la requête est cohérente avec les standards MLAT bilatéraux usuels.",
             ok: false, pts: -10,
             fb: "Demande trop large et contre-productive. Le FBI ne répond pas aux demandes MLAT vagues — elles doivent être spécifiques et justifiées. Une demande large augmente le délai de traitement et révèle moins de maturité investigative. Le MLAT doit cibler des éléments précis corrélables aux faits suisses.",
             legal: "Pratique MLAT — Les demandes doivent être spécifiques, proportionnées et liées à des faits établis.",
@@ -7252,7 +7252,7 @@ Contenu de la camionnette :<br>
             critical: false, next: 4,
           },
           {
-            text: "Contacter directement Europol et interpeller les serveurs roumains sans MLAT — plus rapide.",
+            text: "Contacter directement Europol pour activer une équipe commune d'investigation et interpeller les serveurs C2 du groupe Play en Roumanie sans passer par la lourdeur MLAT — la coopération européenne directe est sensiblement plus rapide.",
             ok: false, pts: -20,
             fb: "Double erreur. (1) Europol ne peut pas agir en Roumanie sans demande nationale via le BCN roumain — et Europol n'a pas de pouvoir d'arrestation ou de saisie. (2) L'interpellation de serveurs à l'étranger sans MLAT est une violation de souveraineté nationale potentiellement nuisible à toute la procédure judiciaire suisse (Art. 141 CPP — exclusion des preuves).",
             legal: "Souveraineté nationale + Art. 141 CPP — Action unilatérale à l'étranger = preuves irrecevables en Suisse.",
@@ -7267,7 +7267,7 @@ Contenu de la camionnette :<br>
         question: "<strong>Quelle est la stratégie de communication optimale pour fedpol à ce stade ?</strong>",
         choices: [
           {
-            text: "Ne rien publier — attendre la fin de l'enquête judiciaire pour ne pas compromettre les poursuites.",
+            text: "Ne rien publier publiquement et attendre la clôture de l'enquête judiciaire (estimation 12-18 mois) pour ne pas compromettre les poursuites pénales en cours contre les opérateurs identifiés du groupe Play.",
             ok: false, pts: -20,
             fb: "Silence intenable à ce stade. Les journalistes ont déjà l'information — le silence de fedpol serait interprété comme dissimulation et alimenterait des spéculations bien pires que la réalité. De plus, l'obligation de notification LPD 2023 est une obligation légale, pas un choix de communication.",
             legal: "LPD 2023 Art. 24 + principe de gouvernance transparente — Le silence est une option pire que la transparence maîtrisée.",
@@ -7281,7 +7281,7 @@ Contenu de la camionnette :<br>
             critical: false, next: 5,
           },
           {
-            text: "Publier tous les détails immédiatement — transparence totale incluant l'enquête en cours et les IoC identifiés.",
+            text: "Publier l'intégralité des détails techniques immédiatement (chronologie, IoC, identités suspectes, état d'avancement de l'enquête) — la transparence radicale est la meilleure protection contre les rumeurs médiatiques et démontre la rigueur fédérale dans la gestion de l'incident Xplain. La publication exhaustive court-circuite toute spéculation journalistique et permet à fedpol de maîtriser la narration médiatique nationale.",
             ok: false, pts: -15,
             fb: "Transparence excessive contre-productive. Publier les IoC, les TTPs et les détails de l'enquête en cours revient à <strong>informer le groupe Play de l'avancement de la traque</strong> — leur permettant d'effacer des traces. La transparence doit couvrir l'incident et les mesures prises, pas les détails opérationnels de l'investigation judiciaire.",
             legal: "Art. 69 CPP — Secret de l'instruction. Art. 328 CP — Divulgation non autorisée de l'enquête.",
@@ -7296,7 +7296,7 @@ Contenu de la camionnette :<br>
         question: "<strong>Quelle est la recommandation structurelle principale pour prévenir une nouvelle supply chain attack sur un prestataire fédéral ?</strong>",
         choices: [
           {
-            text: "Interdire aux prestataires IT de stocker des données fédérales — tout doit être géré en interne par la Confédération.",
+            text: "Interdire formellement à tout prestataire IT externe de stocker ou traiter des données fédérales sensibles — l'ensemble du traitement doit être ramené en interne sous la responsabilité directe de la Confédération via l'OFIT. Cette internalisation totale élimine structurellement les risques supply chain identifiés dans l'incident Xplain et place la souveraineté numérique au cœur de la stratégie. L'OFIT dispose des compétences et infrastructures nécessaires pour absorber cette charge supplémentaire.",
             ok: false, pts: -10,
             fb: "Recommandation irréaliste et contreproductive. L'externalisation IT est une réalité économique et opérationnelle incontournable pour l'administration fédérale. L'interdire totale serait disproportionnée et creuserait un retard technologique. La solution est un <strong>cadre de certification des prestataires</strong>, pas leur exclusion.",
             legal: "Principe de proportionnalité + réalité économique — Recommandation inapplicable.",
@@ -7310,7 +7310,7 @@ Contenu de la camionnette :<br>
             critical: false, next: "end",
           },
           {
-            text: "Publier la liste de tous les prestataires IT fédéraux pour permettre une surveillance citoyenne de leur sécurité.",
+            text: "Publier annuellement la liste exhaustive de tous les prestataires IT fédéraux et de leurs domaines d'intervention pour permettre une surveillance citoyenne et journalistique de leur conformité sécuritaire.",
             ok: false, pts: -20,
             fb: "Recommandation dangereuse. Publier la liste exhaustive des prestataires IT fédéraux est une information de valeur pour les groupes adversaires (identification des cibles de supply chain attack). La transparence sur les <em>exigences de sécurité</em> est utile ; la transparence sur les <em>fournisseurs sensibles</em> est contre-productive.",
             legal: "Sécurité opérationnelle — Information utile aux adversaires : à ne pas publier.",
@@ -7377,7 +7377,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>La session AnyDesk autorisée par la victime constitue-t-elle un accès indu au sens de l'Art. 143bis CP ?</strong>",
         choices: [
           {
-            text: "Non — la victime a autorisé la connexion AnyDesk volontairement. Pas d'accès indu.",
+            text: "Non — la victime a expressément autorisé la connexion AnyDesk en saisissant le code à 9 chiffres au téléphone, ce consentement matériellement donné exclut la qualification d'accès indu au sens strict de l'Art. 143bis CP.",
             ok: false, pts: -15,
             fb: "Erreur de qualification. L'art. 143bis CP protège contre tout accès non autorisé à un système informatique. L'autorisation donnée sous tromperie (fausse identité de 'technicien bancaire') est viciée — elle ne constitue pas un consentement valable au sens du droit pénal suisse. La jurisprudence TF applique Art. 143bis CP même dans les cas de tromperie sur l'identité : TF 6B_369/2018.",
             legal: "Art. 143bis CP + TF 6B_369/2018 — Consentement obtenu par tromperie = pas de consentement valable → accès indu.",
@@ -7391,7 +7391,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 1,
           },
           {
-            text: "Dépend du type de protection du système (Art. 143bis exige un système 'spécialement protégé').",
+            text: "Cela dépend du niveau de protection du système : l'Art. 143bis CP exige techniquement un système « spécialement protégé contre tout accès », et un PC personnel sans MFA ni protection avancée n'entre pas dans cette catégorie.",
             ok: false, pts: -5,
             fb: "Nuance insuffisante. Art. 143bis CP al. 1 vise les systèmes 'protégés contre tout accès indu' — c'est le cas de tout système bancaire avec authentification (login/mot de passe). La condition est largement satisfaite dès qu'un système exige une procédure d'identification pour y accéder. La banque en ligne des victimes remplit cette condition.",
             legal: "Art. 143bis CP al. 1 — 'système protégé' = tout système avec procédure d'accès (login, MFA). Banque en ligne = SYSTEME PROTÉGÉ.",
@@ -7406,14 +7406,14 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Quelle est la qualification pénale complète et correcte pour cet épisode unique ?</strong>",
         choices: [
           {
-            text: "Art. 146 CP (escroquerie) uniquement — la tromperie de la victime est l'élément central.",
+            text: "Art. 146 CP (escroquerie astucieuse) uniquement — la tromperie de la victime par usurpation d'identité bancaire est l'élément matériel central, et les autres qualifications sont des modalités accessoires absorbées par l'escroquerie principale.",
             ok: false, pts: -10,
             fb: "Qualification incomplète. Art. 146 CP couvre la tromperie de la victime mais ne qualifie pas : (1) l'accès indu au PC (Art. 143bis CP), (2) la soustraction des identifiants bancaires (Art. 143 CP), (3) l'exécution automatisée du virement via le système e-banking (Art. 147 CP). Le MPC a retenu un concours réel de quatre infractions dans cette affaire.",
             legal: "Art. 9 CP — Concours réel : chaque infraction distincte doit être qualifiée.",
             critical: false, next: 2,
           },
           {
-            text: "Art. 147 CP seul — l'ordinateur est le vecteur principal, les autres infractions sont absorbées.",
+            text: "Art. 147 CP (utilisation frauduleuse d'un ordinateur) uniquement — le vecteur informatique est dominant et les autres qualifications (143, 143bis, 146) sont absorbées par le principe de spécialité applicable aux infractions complexes.",
             ok: false, pts: -15,
             fb: "Erreur de concours. Art. 147 CP est SUBSIDIAIRE à Art. 146 CP (ATF 150 IV 188). Mais surtout, Art. 143bis CP (accès au PC de la victime) et Art. 143 CP (soustraction des identifiants vus à l'écran) sont des infractions distinctes et autonomes qui ne sont pas absorbées par Art. 147 CP.",
             legal: "TF 6B_683/2021 + ATF 150 IV 188 — Art. 147 CP subsidiaire à Art. 146 CP, mais Art. 143/143bis autonomes.",
@@ -7443,7 +7443,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Sur la base des éléments documentés, l'aggravante du 'métier' (Art. 147 al. 2 CP) est-elle établie ?</strong>",
         choices: [
           {
-            text: "Non — 31 cas sur 26 mois est une fréquence insuffisante pour caractériser le métier.",
+            text: "Non — la fréquence de 31 actes répartis sur 26 mois (soit environ 1,2 acte par mois) ne caractérise pas le « métier » au sens de l'Art. 147 al. 2 CP, qui exige une activité professionnelle quasi-quotidienne d'après la jurisprudence du TF.",
             ok: false, pts: -15,
             fb: "Erroné. Selon TF 6B_368/2020 et TF 6B_683/2021, le métier est caractérisé par la combinaison : fréquence (plusieurs actes), montant (contribution au mode de vie), et organisation professionnelle. Ici : 31 actes / 26 mois = environ 1.2 acte/mois, CHF 5M de revenus illicites, scripts professionnels, compte dédié, téléphones en rotation. L'organisation démontre clairement un professionnel de la cyberfraude — bien au-delà des critères TF.",
             legal: "TF 6B_683/2021 consid. 5 — >20 commandes sur 2 ans = métier. Ici : 31 cas sur 26 mois = critère largement satisfait.",
@@ -7457,7 +7457,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 3,
           },
           {
-            text: "Oui pour certains cas, non pour d'autres — le métier ne peut s'apprécier qu'acte par acte.",
+            text: "Oui pour certains cas, non pour d'autres — l'aggravante du métier doit s'apprécier acte par acte selon la jurisprudence (ATF), et certaines opérations isolées ne révèlent pas le caractère professionnel exigé par l'Art. 147 al. 2 CP.",
             ok: false, pts: -5,
             fb: "Approche erronée. Le métier est une qualification globale de l'activité délictueuse sur la période considérée — pas une appréciation acte par acte. Le TF a confirmé que l'ensemble de l'activité sur la période doit être considéré pour caractériser le comportement professionnel (TF 6B_683/2021). Une seule qualification 'par métier' couvre l'ensemble de la série.",
             legal: "Art. 147 al. 2 CP — Qualification globale sur la période, pas acte par acte.",
@@ -7472,7 +7472,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Les autorités américaines (SDNY) souhaitent également poursuivre le prévenu pour des faits similaires aux USA. Quelle est la meilleure stratégie pour le MPC ?</strong>",
         choices: [
           {
-            text: "Insister sur l'extradition exclusive vers la Suisse — les faits suisses sont plus graves.",
+            text: "Insister auprès des autorités américaines sur une extradition exclusive vers la Suisse — les faits suisses (5M CHF, 31 victimes vulnérables) sont plus graves que les cas américains et la juridiction prioritaire revient à l'État victime principal.",
             ok: false, pts: -10,
             fb: "Stratégie sous-optimale. Obtenir une extradition exclusive implique des années de procédure devant les juridictions américaines. De plus, si les USA ont des faits propres, ils peuvent refuser l'extradition ou l'accorder après leur propre procédure. L'Art. 55 EIMP offre une alternative plus efficace.",
             legal: "MLAT CH-USA + EIMP — L'extradition exclusive n'est pas la seule option.",
@@ -7486,7 +7486,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 4,
           },
           {
-            text: "Abandonner la procédure suisse — trop compliqué de poursuivre un binational depuis l'étranger.",
+            text: "Abandonner la procédure pénale suisse — la complexité de poursuivre un binational franco-israélien depuis les USA, combinée aux ressources limitées du MPC, justifie de laisser la juridiction américaine traiter intégralement le dossier.",
             ok: false, pts: -25,
             fb: "Abandon inacceptable. Le MPC est compétent pour les infractions commises sur le territoire suisse (Art. 3 CP — principe territorial). L'Art. 55 EIMP offre précisément les outils pour coordonner avec les autorités étrangères sans abandonner la procédure. Le classement n'intervient qu'APRÈS une condamnation étrangère couvrant les faits suisses.",
             legal: "Art. 3 CP — Compétence territoriale suisse. Art. 55 EIMP — Outil de coordination, pas d'abandon.",
@@ -7501,7 +7501,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Comment établir la valeur probante des logs AnyDesk face à la défense ?</strong>",
         choices: [
           {
-            text: "Les logs AnyDesk seuls sont insuffisants — admettre les lacunes et demander au MP d'abandonner ce chef.",
+            text: "Reconnaître honnêtement que les logs AnyDesk pris isolément sont techniquement insuffisants pour établir l'identité de l'opérateur, et recommander au MP d'abandonner ce chef d'accusation au profit des éléments matériellement plus solides.",
             ok: false, pts: -20,
             fb: "Capitulation injustifiée. Les logs AnyDesk ne sont qu'un élément parmi d'autres. La preuve par indices (ATF 144 IV 345) permet de combiner plusieurs éléments convergents pour établir les faits au-delà du doute raisonnable. Aucun indice seul n'est nécessairement suffisant.",
             legal: "ATF 144 IV 345 — Preuve par indices concordants et convergents. Pas besoin d'une preuve unique irréfutable.",
@@ -7515,7 +7515,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: "end",
           },
           {
-            text: "Faire analyser les logs par un laboratoire d'expertise certifié — leur certification garantit l'authenticité.",
+            text: "Faire analyser les logs AnyDesk par un laboratoire d'expertise forensique certifié ISO 17025 — leur accréditation tierce garantit l'authenticité et la non-altération des journaux, ce qui constitue une preuve technique irréfutable face à la défense. La certification ISO 17025 est mondialement reconnue par les juridictions et les laboratoires accrédités produisent des rapports difficilement contestables. Cette voie d'expertise externe est privilégiée par le MPC dans les affaires de fraude bancaire complexe.",
             ok: false, pts: 0,
             fb: "Réponse acceptable mais insuffisante. La certification d'un expert sur les logs AnyDesk répond au point (A) de la défense mais ne répond pas aux points (B) machine zombie et (C) identité de l'opérateur. La convergence multi-source est nécessaire pour répondre à TOUS les arguments défensifs simultanément.",
             legal: "ACPO Principle 3 + Art. 184 CPP — L'expertise est un outil parmi d'autres, pas une réponse complète.",
@@ -7587,14 +7587,14 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 1,
           },
           {
-            text: "Les deux sites = Art. 147 CP — internet est un système informatique, peu importe si un humain intervient.",
+            text: "Les deux sites relèvent de l'Art. 147 CP — toute commande passée via une plateforme e-commerce engage le système informatique du commerçant comme acteur principal du processus, peu importe l'intervention humaine intermédiaire dans la préparation.",
             ok: false, pts: -20,
             fb: "Erreur fondamentale. ATF 150 IV 188 est précisément l'arrêt qui rectifie cette lecture erronée. Art. 147 CP ne s'applique PAS simplement parce qu'internet est impliqué. La présence d'un être humain dans le processus (même marginalement) bascule la qualification vers Art. 146 CP. Art. 147 est réservé aux processus ENTIÈREMENT automatisés.",
             legal: "ATF 150 IV 188 — Art. 147 CP ≠ toute infraction via internet. = uniquement processus ENTIÈREMENT automatisé.",
             critical: true, next: "end",
           },
           {
-            text: "Les deux sites = Art. 146 CP — la tromperie initiale de l'acheteur (fausse identité) vise toujours une personne.",
+            text: "Les deux sites relèvent uniquement de l'Art. 146 CP — la tromperie initiale par fausse identité vise par construction une personne (le commerçant en tant que cocontractant), même si l'exécution opérationnelle est ensuite automatisée par robots.",
             ok: false, pts: -10,
             fb: "Qualification trop large. Pour le Site A, la fausse identité est saisie dans un formulaire qui est traité automatiquement, sans qu'aucun être humain ne la voie avant expédition. Dans ce cas, Art. 147 CP s'applique car c'est le traitement automatisé qui est trompé — pas une personne. L'ATF 150 IV 188 nuance précisément ce point : même si le client interagit initialement avec un formulaire web, seul compte qui traite la commande in fine.",
             legal: "ATF 150 IV 188 consid. 4.6 — Ce qui compte : le traitement IN FINE de la commande, pas l'interaction initiale avec le formulaire.",
@@ -7609,7 +7609,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>L'argument du défenseur est-il fondé ?</strong>",
         choices: [
           {
-            text: "Oui — si on ne peut pas prouver le degré d'automatisation, in dubio pro reo → Art. 147 CP.",
+            text: "Oui — en cas de doute sur le degré exact d'automatisation du processus, le principe in dubio pro reo impose la qualification la plus favorable au prévenu, soit l'Art. 147 CP avec sa peine maximale moindre (5 ans contre 10 ans pour 146 al. 2).",
             ok: false, pts: -15,
             fb: "Argument partiellement fondé sur le principe mais ATF 150 IV 188 ne crée pas une règle 'en cas de doute → Art. 147'. L'arrêt dit que si on ne peut pas prouver QUE le processus était entièrement automatisé NI que aucune personne n'était trompée, on ne peut retenir ni l'un ni l'autre → TENTATIVE (Art. 22 CP) devient applicable. De plus : les peines maximales Art. 146 al. 2 et Art. 147 al. 2 sont identiques (10 ans) — l'argument du 'plus favorable' ne tient pas pour l'aggravante du métier.",
             legal: "ATF 150 IV 188 consid. 4.6-4.9 — En cas de doute sur les deux qualifications → tentative possible, pas automatiquement Art. 147.",
@@ -7623,7 +7623,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 2,
           },
           {
-            text: "L'argument est fondé seulement pour les faits antérieurs à ATF 150 IV 188 — l'arrêt ne vaut que pour l'avenir.",
+            text: "L'argument du défenseur est fondé pour les faits antérieurs à l'ATF 150 IV 188 (publication 2024) — l'arrêt formalise une nouvelle distinction et ne peut s'appliquer rétroactivement aux actes commis avant son prononcé sans violer la prévisibilité.",
             ok: false, pts: -10,
             fb: "Droit suisse n'a pas de principe d'irétroactivité de la jurisprudence de la même manière que la loi. ATF 150 IV 188 clarifie l'interprétation des art. 146 et 147 CP — mais ces articles existent et ont la même rédaction depuis longtemps. La qualification dépend des faits, pas de la date de l'arrêt. Pour les faits commis avant 2024, le même article s'applique — c'est seulement l'interprétation qui est précisée.",
             legal: "Droit pénal suisse — pas d'irétroactivité de la jurisprudence TF (contrairement au droit de la CEDH).",
@@ -7645,14 +7645,14 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 3,
           },
           {
-            text: "Parce que le TF ne remet jamais en cause les peines prononcées en première instance.",
+            text: "Parce que le TF, en sa fonction de cour de cassation, ne réexamine que la qualification juridique sans modifier la peine prononcée en première instance — la fixation de la sanction relève de l'appréciation souveraine du juge du fait.",
             ok: false, pts: -15,
             fb: "Faux. Le TF peut et doit réformer les peines si la qualification change le cadre pénal. Dans ce cas précis, la peine est maintenue car les maximums sont identiques — mais si le TF avait totalement exclu Art. 146 CP pour retenir seulement Art. 147 al. 1 (sans métier → max 5 ans), la peine aurait nécessairement changé.",
             legal: "Art. 105 LTF — Le TF peut réformer les peines si la qualification l'impose.",
             critical: false, next: 3,
           },
           {
-            text: "Parce que l'expulsion obligatoire (Art. 66a CP) s'applique identiquement à Art. 146 et Art. 147 CP.",
+            text: "Parce que l'expulsion obligatoire prévue à l'Art. 66a CP frappe à l'identique les infractions d'escroquerie (Art. 146) et d'utilisation frauduleuse d'ordinateur (Art. 147), donc la rectification n'a aucun impact sur le dispositif d'expulsion.",
             ok: false, pts: -5,
             fb: "Partiellement vrai (Art. 66a al. 1 let. c CP liste l'escroquerie, mais pas directement Art. 147), mais ce n'est pas la raison principale. La peine d'emprisonnement est maintenue pour des raisons d'identité des maximums et de calcul de la peine d'ensemble Art. 49 CP — pas en raison de l'expulsion.",
             legal: "Art. 66a al. 1 let. c CP — escroquerie (Art. 146 CP) figurant dans la liste d'infractions entraînant l'expulsion obligatoire pour ressortissants étrangers.",
@@ -7667,7 +7667,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Quelle est votre méthode forensique pour établir le degré d'automatisation d'un processus e-commerce ?</strong>",
         choices: [
           {
-            text: "Demander au commerçant de décrire son processus — sa déclaration suffit.",
+            text: "Demander formellement au commerçant ou à son responsable opérations une déclaration écrite décrivant précisément son processus de traitement des commandes — cette déclaration sous serment a force probante et constitue un élément factuel suffisant pour la qualification pénale. Le faux dans les titres (Art. 251 CP) en cas de mensonge protège l'authenticité de la déclaration, et le tribunal accepte généralement cette voie probatoire dans les dossiers e-commerce.",
             ok: false, pts: -10,
             fb: "Insuffisant. Une déclaration du commerçant est sujette à contestation. L'expert forensique doit DOCUMENTER objectivement le processus, pas seulement le recueillir déclarativement. La défense pourra contester toute preuve non étayée par des artefacts numériques.",
             legal: "Art. 184 CPP — L'expert doit fonder ses conclusions sur des éléments objectivement vérifiables.",
@@ -7681,7 +7681,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: "end",
           },
           {
-            text: "Mesurer le temps entre commande et expédition — si < 1 minute, c'est automatisé.",
+            text: "Mesurer empiriquement le temps écoulé entre la validation de commande et le déclenchement de l'expédition à partir des logs WMS — un délai inférieur à 1 minute exclut techniquement toute intervention humaine et établit l'automatisation complète.",
             ok: false, pts: -5,
             fb: "Critère trop simpliste. Un entrepôt très organisé peut expédier manuellement en quelques minutes. A contrario, un processus automatisé peut prendre des heures. Le critère ATF 150 IV 188 n'est pas le temps mais l'intervention humaine ou non dans la décision d'accepter et expédier. Le temps n'est qu'un indicateur indirect, pas le critère juridique.",
             legal: "ATF 150 IV 188 — Critère : présence ou non d'un être humain dans le processus décisionnel, pas la vitesse.",
@@ -7744,7 +7744,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Selon la jurisprudence TF actuelle, lesquels de ces trois actes nécessitaient un mandat ?</strong>",
         choices: [
           {
-            text: "Acte 1 = OK sans mandat. Acte 2 = OK sans mandat (soupçon concret). Acte 3 = MANDAT requis (photos = données intimes).",
+            text: "Acte 1 = OK sans mandat (vérification d'identité). Acte 2 = OK sans mandat car le soupçon concret de stupéfiants justifie un examen rapide des messages récents. Acte 3 = MANDAT requis (photos relèvent de la sphère intime privée).",
             ok: false, pts: -15,
             fb: "ATF 139 IV 128 et TF 7B_102/2024 ne font pas de distinction selon la nature des données (messages vs photos). La ligne de démarcation est 'vérification d'identité simple' vs 'consultation du contenu'. Dès l'Acte 2, l'agent a outrepassé la vérification simple en lisant des messages — c'est une perquisition (Art. 246 CPP). Le 'soupçon concret' ne remplace pas le mandat en l'absence de péril en la demeure prouvé.",
             legal: "TF 7B_102/2024 consid. 2.4 — La vue de messages suspects à l'écran ne justifie pas la consultation sans mandat. Le soupçon permet d'obtenir un mandat d'urgence.",
@@ -7758,7 +7758,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 1,
           },
           {
-            text: "Les trois actes nécessitent un mandat — tout accès à un smartphone est une perquisition.",
+            text: "Les trois actes nécessitent un mandat formel — l'accès au contenu d'un smartphone constitue par nature une perquisition au sens de l'Art. 246 CPP, et la simple consultation pour vérification d'identité dépasse le cadre du contrôle administratif.",
             ok: false, pts: -10,
             fb: "Trop absolu. ATF 139 IV 128 reconnaît que les 'vérifications simples' (notamment pour identifier quelqu'un sans papiers d'identité) sont possibles sans mandat. La distinction est qualitative : consulter le répertoire pour identifier ≠ perquisition. Ce n'est que lorsqu'on dépasse ce cadre strictement limité que l'Art. 246 CPP s'applique.",
             legal: "ATF 139 IV 128 consid. 1.7 — Vérification simple d'identité via téléphone sans mandat : admis.",
@@ -7773,7 +7773,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>La demande de mise sous scellés est-elle recevable et comment le MP doit-il y répondre ?</strong>",
         choices: [
           {
-            text: "La demande est irrecevable — un téléphone n'est pas un 'document personnel' au sens juridique, c'est un appareil électronique.",
+            text: "La demande est irrecevable car un téléphone portable est un appareil électronique et non un « document personnel » au sens strict de l'Art. 248 CPP — la jurisprudence ne reconnaît les scellés que sur des documents écrits classiques. Cette interprétation littérale de la loi est défendue par une partie de la doctrine et plusieurs arrêts cantonaux récents.",
             ok: false, pts: -20,
             fb: "Erreur grave. TF 7B_145/2025 (2025) affirme explicitement que 'les smartphones utilisés à titre privé entrent dans la catégorie des documents personnels au sens de l'Art. 264 al. 1 let. b CPP'. La demande de mise sous scellés est parfaitement recevable. Refuser les scellés = violation du droit procédural fondamental Art. 248 CPP = risque d'inexploitabilité totale.",
             legal: "TF 7B_145/2025 — Smartphone = 'document personnel' Art. 264 al. 1 let. b CPP. Scellés = droit, pas une option.",
@@ -7787,7 +7787,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 2,
           },
           {
-            text: "La demande est recevable mais le MP peut la rejeter si les infractions sont suffisamment graves.",
+            text: "La demande est recevable mais le MP dispose d'un pouvoir d'appréciation pour la rejeter si la gravité des infractions reprochées au prévenu (trafic supposé) prime manifestement sur la protection de la sphère privée invoquée.",
             ok: false, pts: -15,
             fb: "Confusion des rôles. Le MP ne peut pas rejeter la mise sous scellés — c'est le TMC qui décide de la levée. Le MP est tenu d'accepter la demande de scellés (c'est un droit procédural absolu du détenteur, Art. 248 CPP), puis de soumettre au TMC une demande de levée. Seul le TMC peut décider si la levée est justifiée.",
             legal: "Art. 248 CPP — Mise sous scellés = droit du détenteur, le MP ne peut pas le rejeter. La levée = décision TMC.",
@@ -7802,7 +7802,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Selon Art. 141 CPP et TF 7B_102/2024, les preuves des Actes 2 et 3 sont-elles exploitables ?</strong>",
         choices: [
           {
-            text: "Oui — la fouille initiale révélait un soupçon concret justifiant rétroactivement l'acte.",
+            text: "Oui — la fouille initiale a effectivement révélé des indices de stupéfiants caractérisant un soupçon concret au sens jurisprudentiel, ce qui justifie rétroactivement la consultation des messages et photos comme acte d'enquête nécessaire au flagrant délit présumé.",
             ok: false, pts: -20,
             fb: "Raisonnement circulaire inadmissible. On ne peut pas légitimer rétroactivement une fouille illicite par ses résultats. TF 7B_102/2024 est clair : la fouille sans mandat contrevient à l'Art. 241 al. 1 CPP — il s'agit d'une règle de VALIDITÉ (pas d'ordre). Les preuves tombent sous Art. 141 al. 2 CPP. Le 'soupçon ex-post' ne guérit pas l'irrégularité ex-ante.",
             legal: "TF 7B_102/2024 consid. 2.4.5 — Règle de validité, pas d'ordre. Art. 141 al. 2 CPP s'applique.",
@@ -7816,7 +7816,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 3,
           },
           {
-            text: "Art. 141 al. 3 CPP s'applique — la fouille sans mandat est une simple prescription d'ordre, les preuves sont exploitables.",
+            text: "L'Art. 141 al. 3 CPP s'applique en l'espèce — la fouille sans mandat constitue une simple prescription d'ordre dont la méconnaissance n'entraîne pas l'inexploitabilité automatique des preuves, qui restent recevables au dossier pénal.",
             ok: false, pts: -15,
             fb: "Erreur de catégorie. TF 7B_102/2024 consid. 2.4.5 est explicite : 'la fouille du téléphone sans mandat contrevient à l'Art. 241 al. 1 CPP' — c'est une règle de VALIDITÉ, pas d'ordre. Art. 141 al. 3 CPP (prescriptions d'ordre → preuves exploitables) ne s'applique donc pas. L'ancienne jurisprudence ATF 139 IV 128 consid. 1.7 qui qualifiait la vérification de 'prescription d'ordre' est désormais dépassée par TF 7B_102/2024 pour les cas dépassant la vérification simple.",
             legal: "TF 7B_102/2024 consid. 2.4.5 — Fouille approfondie smartphone sans mandat = règle de VALIDITÉ → Art. 141 al. 2 CPP (pas al. 3).",
@@ -7831,7 +7831,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Sur la base de TF 7B_145/2025, quelle décision le TMC devrait-il prendre ?</strong>",
         choices: [
           {
-            text: "Lever les scellés sur l'ensemble du téléphone — l'intérêt public à la poursuite du trafic prime toujours sur la vie privée.",
+            text: "Lever les scellés sur l'ensemble du contenu du téléphone — l'intérêt public à la poursuite efficace du trafic de stupéfiants prime systématiquement sur la protection de la sphère privée individuelle d'un prévenu suspecté de tels faits.",
             ok: false, pts: -10,
             fb: "Trop absolu. TF 7B_145/2025 ne dit pas que l'intérêt public 'prime toujours'. Il dit que la protection n'est 'pas absolue' et dépend d'un balancement au cas par cas. Lever les scellés sur l'ENSEMBLE sans distinction ne respecte pas l'Art. 197 CPP (proportionnalité). Il faut limiter la levée aux éléments pertinents pour l'enquête.",
             legal: "Art. 197 al. 1 let. d CPP — Proportionnalité : mesure de contrainte dans la mesure justifiée par le but poursuivi.",
@@ -7845,7 +7845,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: "end",
           },
           {
-            text: "Rejeter la demande de levée des scellés — la fouille initiale illégale disqualifie toute la procédure.",
+            text: "Rejeter intégralement la demande de levée des scellés du MP — l'irrégularité de la fouille initiale (Actes 2 et 3 sans mandat) entache toute la chaîne probatoire ultérieure et disqualifie l'ensemble de la procédure d'analyse du téléphone. Le principe « fruits de l'arbre empoisonné » impose cette exclusion pour préserver l'intégrité du procès équitable.",
             ok: false, pts: -15,
             fb: "Confusion entre deux questions distinctes. La legality de la fouille initiale (Actes 2 et 3) et la légalité de la procédure de scellés/levée sont deux questions séparées. Le TMC se prononce sur la levée des scellés demandée PAR LE MP — cette procédure est légale et distincte des actes initiaux contestables. La remédiation des actes illicites se fait via Art. 141 CPP devant le juge du fond, pas en rejetant la procédure TMC.",
             legal: "Art. 248 CPP — Procédure de scellés autonome. Les irrégularités initiales → Art. 141 CPP devant le juge du fond.",
@@ -7912,7 +7912,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Quelle est votre première action forensique sur le fichier audio ?</strong>",
         choices: [
           {
-            text: "Copier le fichier m4a sur votre laptop d'analyse et commencer l'analyse spectrale immédiatement.",
+            text: "Copier le fichier m4a depuis le smartphone vers votre laptop d'analyse via une connexion USB sécurisée et démarrer immédiatement l'analyse spectrale dans Audacity — la rapidité d'exécution prime pour stabiliser les conclusions techniques.",
             ok: false, pts: -15,
             fb: "Acquisition sans documentation d'intégrité. Copier sans calculer de hash préalable sur le fichier source ne garantit pas que le fichier n'a pas été modifié entre la récupération et l'analyse. La défense contestera l'intégrité.",
             legal: "ACPO Principle 2 + Art. 141 CPP — Hash de référence sur le fichier original AVANT toute manipulation.",
@@ -7926,7 +7926,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 1,
           },
           {
-            text: "Demander à la victime d'envoyer le fichier par WhatsApp pour analyse rapide.",
+            text: "Demander à la victime de transmettre le fichier audio via WhatsApp ou un service de transfert chiffré (WeTransfer Pro) pour démarrer l'analyse rapidement — la chaîne de preuve sera reconstituée a posteriori avec la déclaration sous serment.",
             ok: false, pts: -25,
             fb: "Erreur critique. WhatsApp recompresse les fichiers audio (transcodage, perte de qualité, modification des métadonnées). Le fichier reçu ne serait plus la preuve originale — toute analyse spectrale porterait sur un artefact de compression, invalidant les conclusions. De plus, l'envoi via WhatsApp crée des copies non contrôlées.",
             legal: "ACPO Principle 1 — Toute action susceptible de modifier la preuve est interdite.",
@@ -7948,7 +7948,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Comment formulez-vous votre conclusion d'expert dans le rapport forensique ?</strong>",
         choices: [
           {
-            text: "«&nbsp;L'enregistrement est un deepfake à 94.7%. La voix n'est pas celle de M. X.&nbsp;»",
+            text: "« L'analyse DeepWave Detector v3.1 retourne un score de 94,7% indiquant un enregistrement synthétisé par IA — la voix n'est techniquement pas celle de M. X et le deepfake est établi avec un haut degré de certitude scientifique. »",
             ok: false, pts: -15,
             fb: "Formulation péremptoire non conforme au rôle d'expert. Un score algorithmique (94.7%) ne peut pas être traduit en certitude absolue. L'expert doit formuler au niveau d'affirmation correct (fait → interprétation → opinion) et indiquer les limites de la méthode. Un contre-expert contestera un tel excès.",
             legal: "Art. 182 + 184 CPP — L'expert ne tranche pas, il éclaire. Formulation probabiliste obligatoire.",
@@ -7962,7 +7962,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 2,
           },
           {
-            text: "«&nbsp;Il est impossible de conclure avec certitude. Des analyses complémentaires sont nécessaires.&nbsp;»",
+            text: "« En l'état actuel des outils forensiques, il reste techniquement impossible de conclure avec une certitude scientifique absolue à un deepfake — des analyses complémentaires par un second laboratoire indépendant sont indispensables avant tout rapport. La prudence expert l'exige formellement et la déontologie professionnelle interdit toute conclusion prématurée sur ce type d'analyse. »",
             ok: false, pts: -10,
             fb: "Formulation trop prudente qui ne valorise pas les indices solides disponibles. 5 indicateurs convergents sont significatifs — ne pas les valoriser prive le MP d'une démonstration probatoire forte. L'expert peut conclure à une probabilité élevée sans attendre des certitudes absolues inexistantes.",
             legal: "Art. 184 CPP — L'expert doit répondre à la question posée avec les données disponibles. Le refus de conclure est évitable ici.",
@@ -7984,7 +7984,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Quelles infractions retenir et pourquoi Art. 146 CP plutôt qu'Art. 147 CP prime ?</strong>",
         choices: [
           {
-            text: "Art. 147 CP — le deepfake est une manipulation informatique = abus d'ordinateur.",
+            text: "Art. 147 CP (utilisation frauduleuse d'un ordinateur) — le deepfake vocal est techniquement une manipulation informatique de signal audio par modèle d'IA, ce qui rentre dans la définition légale de l'abus d'ordinateur applicable.",
             ok: false, pts: -20,
             fb: "Erreur de qualification. ATF 150 IV 188 est décisif : le virement a été ordonné par la victime à un conseiller bancaire humain (qui l'a exécuté). Une personne physique a été trompée et a pris la décision. Art. 147 CP s'applique uniquement si le processus est entièrement automatisé — ce n'est pas le cas ici. C'est Art. 146 CP (escroquerie) qui prime.",
             legal: "ATF 150 IV 188 consid. 4.9 — Si un être humain décide : Art. 146 CP. Art. 147 CP = processus 100% automatisé.",
@@ -7998,7 +7998,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 3,
           },
           {
-            text: "Art. 146 + 147 + 143 + 251 CP — tout cumuler pour couvrir tous les aspects du deepfake.",
+            text: "Art. 146 + 147 + 143 + 251 CP en concours réel — cumuler l'ensemble des qualifications pertinentes (escroquerie, utilisation frauduleuse, accès indu, faux dans les titres) pour couvrir tous les aspects techniques et juridiques du modus operandi deepfake.",
             ok: false, pts: -10,
             fb: "Sur-qualification. Art. 143 CP (soustraction de données) n'est pas caractérisé — l'auteur a accédé à une vidéo LinkedIn publique pour prélever la voix, ce qui n'est pas une soustraction de données au sens légal. Art. 147 CP est exclu par ATF 150 IV 188 (humain impliqué). Une qualification précise vaut mieux qu'un cumul de charges non établies.",
             legal: "Principe de précision pénale — Ne retenir que les infractions caractérisées par les faits.",
@@ -8013,7 +8013,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Dans les 48 heures, quelle action a le plus d'impact pour bloquer les fonds fragmentés ?</strong>",
         choices: [
           {
-            text: "Demander un rapport SWIFT gpi complet à UBS pour identifier tous les sous-comptes de destination.",
+            text: "Demander à UBS Zurich un rapport SWIFT gpi (global payments innovation) complet pour identifier précisément les 8 sous-comptes de destination dans les 4 pays asiatiques — la traçabilité fine est le socle de toute action ultérieure de gel.",
             ok: false, pts: -5,
             fb: "Utile mais insuffisant seul. Le SWIFT gpi trace jusqu'au compte DBS Singapore. Pour les 8 sous-comptes dans 4 pays, il faut activer les canaux MLAT en parallèle avec les autorités locales. Le rapport gpi seul ne bloque pas les fonds — il les localise.",
             legal: "SWIFT gpi = outil de traçage. Blocage = MLAT + canaux judiciaires locaux.",
@@ -8027,7 +8027,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 4,
           },
           {
-            text: "Attendre l'identification du suspect avant d'agir — bloquer les fonds sans suspect identifié est juridiquement risqué.",
+            text: "Attendre l'identification formelle du suspect avant d'engager toute mesure de gel — bloquer 3,2M CHF dans 5 juridictions sans suspect désigné expose à des recours en responsabilité civile internationale et peut compromettre la procédure pénale globale. La rigueur procédurale impose cette retenue institutionnelle.",
             ok: false, pts: -25,
             fb: "Erreur critique de timing. En matière de récupération d'avoirs criminels, l'attente de 48h est fatale — les fonds fragmentés en 8 sous-comptes dans 4 pays seront retirés en espèces ou convertis en crypto. Art. 305bis CP permet le séquestre préventif des valeurs patrimoniales d'origine criminelle AVANT identification du suspect. La récupération prime.",
             legal: "Art. 305bis CP + Art. 72 CPP — Séquestre préventif des avoirs sans identification préalable du suspect.",
@@ -8042,7 +8042,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Quelle est la structure optimale de votre rapport d'expertise audio-forensique pour le MP ?</strong>",
         choices: [
           {
-            text: "Rapport technique exhaustif de 150 pages avec tous les spectrogrammes bruts et logs d'analyse.",
+            text: "Rapport technique exhaustif de 150 pages incluant l'intégralité des spectrogrammes bruts, des logs DeepWave Detector et des analyses formantiques détaillées — la profondeur documentaire démontre la rigueur scientifique et résiste à toute contre-expertise potentielle de la défense. Le format dense est apprécié des juges spécialisés en matière complexe.",
             ok: false, pts: -10,
             fb: "Volume inadapté à l'audience MP. 150 pages non structurées ne permettent pas à un procureur de construire son acte d'accusation. Structure pyramidale requise : synthèse courte + détail technique en annexes.",
             legal: "Art. 184 CPP — L'expert adapte son rapport à l'audience judiciaire, pas technique.",
@@ -8056,7 +8056,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: "end",
           },
           {
-            text: "Rapport de 2 pages — les éléments essentiels suffisent, l'expertise audio est évidente.",
+            text: "Rapport synthétique de 2 pages présentant la conclusion principale et les indicateurs déterminants — l'expertise audio sur deepfake étant techniquement évidente, la concision facilite la lecture par le MP et accélère le traitement procédural.",
             ok: false, pts: -15,
             fb: "Trop succinct pour une infraction grave avec un préjudice de 3.2M CHF. La défense disposera certainement d'un contre-expert — sans documentation technique complète (spectrogrammes, logs, hashes), votre expertise ne résiste pas à la contradiction. Un rapport de 2 pages sera considéré comme superficiel.",
             legal: "Art. 189 CPP — Expertise contradictoire : vous devez anticiper et documenter face à un contre-expert.",
@@ -8117,14 +8117,14 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 1,
           },
           {
-            text: "Payer la rançon immédiatement pour récupérer les fichiers avant que la situation empire.",
+            text: "Payer immédiatement la rançon en cryptomonnaie pour récupérer rapidement les fichiers chiffrés avant que LockBit ne supprime sa clé de déchiffrement ou n'augmente le montant exigé après expiration du délai initial habituellement fixé à 72 heures.",
             ok: false, pts: -30,
             fb: "Erreur grave à plusieurs niveaux. (1) Payer ne garantit pas le déchiffrement (moins de 60% des victimes récupèrent leurs données). (2) Vous financez des criminels. (3) Vous n'avez pas encore évalué vos backups — vous avez peut-être une solution gratuite. (4) Si LockBit est sanctionné par le SECO/OFAC, payer peut constituer une infraction. JAMAIS payer avant d'avoir évalué toutes les alternatives.",
             legal: "SECO + OFAS + OFCS : position suisse officielle = ne pas payer. Art. 305bis CP potentiel si paiement à entité sanctionnée.",
             critical: true, next: "end",
           },
           {
-            text: "Appeler le fournisseur de services informatiques et attendre ses instructions.",
+            text: "Appeler immédiatement le fournisseur de services informatiques externalisé de l'entreprise pour obtenir ses instructions techniques détaillées avant toute action — le respect du contrat de support managé impose de suivre la procédure éditeur.",
             ok: false, pts: -15,
             fb: "Trop passif. Chaque minute d'inaction laisse le ransomware chiffrer davantage de fichiers. Vous pouvez appeler votre prestataire — mais simultanément, pas à la place de l'isolation. Le prestataire vous dira d'abord : coupez le réseau. Agissez vous-même immédiatement.",
             legal: "ISO/IEC 27035 — Vous n'avez pas besoin d'experts pour couper le switch réseau.",
@@ -8145,7 +8145,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Avec un backup tape intact vieux de 18 jours, quelle est votre position sur le paiement ?</strong>",
         choices: [
           {
-            text: "Payer la rançon pour récupérer les 18 derniers jours de données manquants dans le backup.",
+            text: "Payer la rançon pour récupérer les 18 derniers jours de données manquants entre le backup tape et l'incident — le coût de la rançon est probablement inférieur à la valeur business des transactions, factures et productions perdues sur cette période.",
             ok: false, pts: -20,
             fb: "Décision prématurée et risquée. Avant de payer, vérifiez : (1) LockBit a été démantelé en 2024 — des outils de déchiffrement gratuits existent (No More Ransom, OFCS). (2) Les 18 jours manquants peuvent-ils être reconstitués depuis les e-mails, les versions locales sur les postes non chiffrés, ou le shadow copy Windows ? Payer avant d'explorer ces options est une erreur.",
             legal: "OFCS Guide Ransomware 2024 — Vérifier No More Ransom et outils de déchiffrement AVANT tout paiement.",
@@ -8159,7 +8159,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 2,
           },
           {
-            text: "Restaurer depuis le backup tape et ne rien signaler — pas besoin d'impliquer les autorités.",
+            text: "Restaurer simplement depuis le backup tape et reprendre l'activité sans signalement aux autorités — la PME n'a aucune obligation légale formelle de déclarer un ransomware si aucune donnée personnelle n'a été manifestement exfiltrée avant chiffrement.",
             ok: false, pts: -15,
             fb: "Erreur de deux niveaux. (1) La LPD 2023 peut imposer une notification au PFPDT si des données personnelles ont été compromises (Art. 24 LPD 2023). (2) Ne pas signaler à l'OFCS prive les autorités d'informations sur LockBit et vous prive des outils de déchiffrement disponibles. Le signalement est dans votre intérêt ET dans l'intérêt collectif.",
             legal: "LPD 2023 Art. 24 (notification PFPDT si données personnelles compromises) + OFCS — Signalement recommandé.",
@@ -8174,7 +8174,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Devez-vous aussi signaler à la police cantonale ET notifier le PFPDT ?</strong>",
         choices: [
           {
-            text: "Non aux deux — l'OFCS suffit.",
+            text: "Non aux deux démarches — l'OFCS centralise déjà la gestion technique de l'incident, et la coordination avec la police cantonale et le PFPDT s'effectuera via leurs canaux internes administratifs sans nécessiter de signalement direct par la victime.",
             ok: false, pts: -10,
             fb: "Incomplet. La LPD 2023 est indépendante du signalement OFCS. Si l'analyse montre que des données personnelles de clients/employés ont été chiffrées (ou exfiltrées avant chiffrement — vérifier les logs réseau), une notification PFPDT s'impose si le risque est élevé (Art. 24 LPD 2023). Le signalement police est facultatif mais recommandé pour ouvrir une procédure pénale.",
             legal: "LPD 2023 Art. 24 = obligation si données personnelles + risque élevé. Police = démarche facultative mais utile.",
@@ -8188,7 +8188,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: "end",
           },
           {
-            text: "Les deux sont obligatoires dans tous les cas.",
+            text: "Les deux signalements (police cantonale au titre de l'Art. 302 CPP et notification PFPDT au titre de la LPD 2023) sont obligatoires dans tous les cas de ransomware — la double démarche garantit la conformité juridique complète sans nécessité d'évaluation préalable.",
             ok: false, pts: -5,
             fb: "Trop absolu. Le signalement à la police est facultatif pour une entreprise privée (Art. 302 CPP — les particuliers ne sont pas obligés de signaler, sauf certaines professions). La notification PFPDT n'est obligatoire que si des données personnelles sont compromises avec risque élevé — ce n'est pas automatique dans tout incident ransomware.",
             legal: "Art. 302 CPP — Signalement facultatif (sauf professions spécifiques). LPD 2023 Art. 24 — Notification conditionnelle (données personnelles + risque élevé).",
@@ -8260,7 +8260,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 1,
           },
           {
-            text: "Commencer l'investigation forensique pour identifier le vecteur d'entrée AKIRA avant de toucher quoi que ce soit.",
+            text: "Commencer l'investigation forensique pour identifier le vecteur d'entrée AKIRA avant de toucher à quoi que ce soit — sans connaître le vecteur, toute mesure d'isolation pourrait s'avérer insuffisante voire contre-productive face à la propagation.",
             ok: false, pts: -15,
             fb: "Erreur de priorisation. AKIRA continue de chiffrer pendant l'analyse. Les 23 autres clients non touchés peuvent être compromis dans l'heure. Isoler d'abord — forensique sur systèmes isolés ensuite.",
             legal: "ISO/IEC 27035 — Containment avant Investigation. Le temps de forensique coûte ici des victimes supplémentaires.",
@@ -8289,7 +8289,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 2,
           },
           {
-            text: "Non — surveiller intensivement mais ne pas couper pour éviter de perturber Air-Glaciers.",
+            text: "Non — il convient de surveiller intensivement les flux mais sans couper la connexion pour éviter de perturber les opérations critiques d'Air-Glaciers en cours, qui dépendent des systèmes de coordination.",
             ok: false, pts: -25,
             fb: "Risque inacceptable. Une surveillance intensive ne peut pas stopper une propagation de ransomware en secondes. Si les systèmes de coordination de vols médicalisés sont chiffrés, des vies sont en danger. Ce n'est pas un risque pondérable contre la perturbation administrative.",
             legal: "Principe de précaution — Risque vital ne se pondère pas contre perturbation administrative.",
@@ -8325,7 +8325,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 3,
           },
           {
-            text: "Attendre la confirmation que AKIRA publie les données avant de notifier — éviter les fausses alertes.",
+            text: "Attendre la confirmation effective que le groupe AKIRA publie les données exfiltrées sur leur site darknet avant d'engager les notifications LPD — cette prudence évite les fausses alertes potentielles et préserve la sérénité opérationnelle.",
             ok: false, pts: -20,
             fb: "Approche inacceptable pour les données de santé. Attendre qu'AKIRA publie signifie que les patients apprennent leur violation par la presse. LPD 2023 Art. 24 : notification quand violation 'vraisemblablement établie'. Avec une revendication AKIRA et leur mode opératoire documenté, la vraisemblance est très élevée.",
             legal: "LPD 2023 Art. 24 — Notification sur vraisemblance, pas seulement certitude.",
@@ -8354,7 +8354,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 4,
           },
           {
-            text: "Attendre la fin de la restauration pour constituer un dossier complet avant de déposer plainte.",
+            text: "Attendre la fin complète de la restauration des systèmes touchés pour pouvoir constituer un dossier de plainte exhaustif avec l'ensemble des éléments de préjudice chiffrés et documentés — cela renforce la qualité juridique du dépôt initial.",
             ok: false, pts: -10,
             fb: "Délai contre-productif. Les preuves forensiques se dégradent pendant la restauration. De plus, la Convention Budapest Art. 29 permet des mesures de conservation urgente que le MPC peut activer rapidement après une plainte.",
             legal: "Convention Budapest Art. 29 — Conservation urgente des preuves : activer tôt.",
@@ -8369,7 +8369,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Quelle mesure structurelle est la plus importante pour prévenir une nouvelle supply chain attack ?</strong>",
         choices: [
           {
-            text: "Ne plus externaliser — chaque entité gère son IT en interne.",
+            text: "Ne plus jamais externaliser ses services IT — chaque entité (commune, hôpital, foire, transport médical) doit gérer son propre IT en interne avec ses propres ressources humaines et matérielles, ce qui élimine structurellement le risque supply chain démontré par AKIRA.",
             ok: false, pts: -10,
             fb: "Irréaliste pour une commune de 1'300 habitants et des PME. L'externalisation est inévitable à cette échelle. La solution est un encadrement contractuel et technique renforcé, pas l'abandon de l'externalisation.",
             legal: "Principe de proportionnalité — Sécurité adaptée aux moyens réels des entités.",
@@ -8451,7 +8451,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 1,
           },
           {
-            text: "Commencer immédiatement l'acquisition des 12 appareils déverrouillés via ADB — c'est l'opportunité pendant qu'ils sont accessibles.",
+            text: "Commencer immédiatement l'acquisition forensique des 12 appareils déverrouillés via ADB pendant qu'ils sont encore accessibles — c'est une opportunité unique avant qu'ils ne se verrouillent automatiquement, et la priorité technique prime sur la procédure formelle.",
             ok: false, pts: -15,
             fb: "Erreur critique d'ordre. Les 31 autres appareils connectés peuvent être effacés à distance pendant que vous acquérez les 12. L'isolation RF de TOUS les appareils est la priorité — ensuite seulement l'acquisition. Perdre 31 appareils par remote wipe pendant que vous acquérez 12 est un désastre forensique.",
             legal: "ISO/IEC 27037 — Isolation RF de tous les appareils avant toute acquisition individuelle.",
@@ -8473,7 +8473,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Comment authentifier les scripts pour qu'ils soient recevables et démontrent le dol des coursiers ?</strong>",
         choices: [
           {
-            text: "Capturer des screenshots des scripts et les imprimer pour le dossier — format accessible pour le MP.",
+            text: "Capturer des screenshots de chaque script trouvé sur les téléphones et les imprimer pour les joindre au dossier — ce format papier accessible facilite la lecture par le MP et les juges qui apprécient la simplicité documentaire. Les screenshots sont reconnus comme preuves recevables et leur authentification se fait par le PV de l'enquêteur.",
             ok: false, pts: -20,
             fb: "Preuve non authentifiable. Un screenshot peut être fabriqué. Sans hash SHA-256 du fichier source, sans extraction forensique documentée depuis l'appareil avec chaîne de custody, la défense contestera l'authenticité. Le MP ne peut pas s'appuyer sur des screenshots pour prouver que le script était sur le téléphone du prévenu.",
             legal: "Art. 141 CPP — Preuves numériques : intégrité via hash + chaîne de custody. Screenshot = preuve contestable.",
@@ -8516,7 +8516,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 3,
           },
           {
-            text: "Le montant en cash suffit — personne de bonne foi ne collecte 50'000 CHF en liquide chez une personne âgée.",
+            text: "Le montant en cash collecté suffit à établir le dol — personne de bonne foi ne collecte 50'000 CHF en liquide chez une personne âgée sans poser de question, et cette anomalie est en elle-même la preuve du dol éventuel. Le tribunal accepte généralement ce raisonnement de bon sens fondé sur les standards de prudence ordinaires d'un citoyen moyen, et la jurisprudence du TF reconnaît cette inférence comme suffisante en matière d'escroquerie au préjudice de personnes vulnérables.",
             ok: false, pts: 0,
             fb: "Argument fort mais insuffisant seul. Le montant en cash est un indice important, mais la défense peut inventer une justification (investissement immobilier, aide familiale). Combiné avec les scripts, les communications et le pattern répétitif, il devient convaincant. Seul, il peut laisser un doute.",
             legal: "ATF 133 IV 9 — Un seul indice peut suffire si très fort, mais le faisceau multiple est plus robuste.",
@@ -8545,7 +8545,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: "end",
           },
           {
-            text: "Contacter directement la police de Strasbourg par email — contact informel plus rapide.",
+            text: "Contacter directement la police judiciaire de Strasbourg par email professionnel pour engager un dialogue informel et accélérer les échanges sur la piste française — la coopération interpolicière européenne fonctionne souvent mieux par contacts directs entre enquêteurs qu'à travers les voies MLAT formelles.",
             ok: false, pts: -20,
             fb: "Contact informel sans valeur juridique. Les preuves obtenues informellement ne sont pas utilisables dans une procédure pénale suisse. La coopération policière opérationnelle (canaux informels) peut servir à vérifier des hypothèses, mais tout élément probatoire doit passer par une voie d'entraide formelle.",
             legal: "Art. 141 CPP — Preuves obtenues par canaux informels non formalisés : risque d'irrecevabilité.",
@@ -8608,7 +8608,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Comment prioriser l'analyse des 340'000 enregistrements suisses ?</strong>",
         choices: [
           {
-            text: "Analyser tous les 340'000 enregistrements exhaustivement avant toute notification — prendre 3-4 semaines pour un travail complet.",
+            text: "Analyser exhaustivement les 340'000 enregistrements suisses avant toute notification — prendre 3 à 4 semaines pour un travail complet et rigoureux est préférable à une notification précipitée sur des données partielles. La qualité de l'analyse prime sur la rapidité de communication, et le PFPDT préfère recevoir un rapport consolidé.",
             ok: false, pts: -15,
             fb: "Trop lent. Les credentials e-banking parmi les 340'000 sont exploitables maintenant par les acheteurs de la MaaS. Chaque jour de délai signifie potentiellement des fraudes bancaires contre des victimes suisses. Prioriser par criticité : e-banking et VPN d'entreprise en premier.",
             legal: "Principe de proportionnalité + urgence — Les données financières nécessitent une réponse sous 72h.",
@@ -8637,7 +8637,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Comment notifier efficacement les victimes dont les credentials e-banking sont dans les listes ?</strong>",
         choices: [
           {
-            text: "Publier un communiqué de presse général conseillant à tout le monde de changer ses mots de passe — plus simple.",
+            text: "Publier un communiqué de presse général conseillant à l'ensemble des résidents suisses de changer leurs mots de passe sur tous leurs comptes en ligne — cette approche universelle est plus simple à déployer que des notifications individualisées, et permet à chaque internaute de prendre ses précautions sans nécessiter d'identification précise des victimes.",
             ok: false, pts: -15,
             fb: "Inefficace. Un communiqué général ne cible pas les 340'000 victimes concernées. La plupart ne le liront pas ou ne sauront pas si elles sont concernées. Pour les credentials e-banking, une réinitialisation forcée par les banques est bien plus efficace qu'une recommandation générale.",
             legal: "LPD 2023 Art. 24 al. 3 — Information directe si risque élevé : un communiqué général ne suffit pas.",
@@ -8680,7 +8680,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 3,
           },
           {
-            text: "Art. 144bis CP uniquement (détérioration de données) — c'est l'infraction informatique la plus directe.",
+            text: "Art. 144bis CP uniquement (détérioration de données) — c'est l'infraction informatique la plus directement applicable à l'utilisation d'un infostealer comme RedLine ou META, qui altère le fonctionnement normal du système de la victime en y déposant un malware. Les autres qualifications sont absorbées par cette qualification principale.",
             ok: false, pts: -10,
             fb: "Incomplète. Art. 144bis CP qualifie l'installation du malware mais pas la collecte ni l'exploitation des données. Art. 143 CP (soustraction) et Art. 143bis CP (accès indu) sont nécessaires pour qualifier l'ensemble du comportement — accès, collecte, et exploitation.",
             legal: "Art. 9 CP — Concours réel : chaque infraction distincte doit être qualifiée séparément.",
@@ -8695,7 +8695,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>La banque a-t-elle une obligation de signalement MROS si elle identifie des transactions suspectes liées aux credentials volés ?</strong>",
         choices: [
           {
-            text: "Non — le vol de credentials est une infraction informatique, pas du blanchiment. La banque n'a pas à signaler au MROS.",
+            text: "Non — le vol de credentials est une infraction informatique relevant de l'Art. 143 CP, et non une opération de blanchiment au sens de la LBA. La banque n'a donc pas d'obligation formelle de signalement au MROS pour ce type d'incident, qui doit être traité par la voie pénale ordinaire et non par les canaux LBA.",
             ok: false, pts: -20,
             fb: "Raisonnement incomplet. Si des fonds ont été transférés frauduleusement DEPUIS les comptes des victimes à l'aide des credentials volés, ces fonds sont d'origine criminelle (la fraude est le crime préalable). Leur transfert constitue du blanchiment (Art. 305bis CP). La banque qui identifie ce lien a une obligation de signalement MROS (LBA Art. 9).",
             legal: "LBA Art. 9 + Art. 305bis CP — Transactions liées à des credentials volés → soupçon de blanchiment → MROS obligatoire.",
@@ -8800,7 +8800,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 1,
           },
           {
-            text: "Demander l'ordonnance MP et attendre la perquisition avant de faire quoi que ce soit — ne pas contacter le SPJ qui pourrait alerter le suspect.",
+            text: "Demander l'ordonnance MP et attendre la perquisition avant toute autre démarche — ne surtout pas contacter le SPJ qui pourrait par inadvertance alerter le suspect via ses canaux familiaux ou éducatifs, compromettant l'effet de surprise indispensable au succès de la perquisition matinale.",
             ok: false, pts: -10,
             fb: "Risque d'exposition des mineurs. Si le suspect a accès à des enfants maintenant (ses propres enfants, ses élèves), différer l'évaluation du risque peut laisser des victimes potentielles exposées. La confidentialité peut être préservée lors de l'évaluation SPJ sans alerter le suspect — c'est précisément le rôle des professionnels de la protection de l'enfance.",
             legal: "Art. 307 CC + Pratique SPJ — Protection des mineurs : obligation des autorités de signalement même sans certitude.",
@@ -8829,7 +8829,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 2,
           },
           {
-            text: "Demander au suspect son mot de passe pour déverrouiller l'appareil directement.",
+            text: "Demander au suspect son mot de passe pour déverrouiller l'appareil directement — cette voie coopérative est rapide et techniquement la plus efficace, et le suspect est informé de son droit au silence en début d'audition par le procureur présent sur place.",
             ok: false, pts: -15,
             fb: "Violation du droit au silence. Art. 113 CPP : le suspect n'est pas obligé de fournir ses codes d'accès. Une demande insistante peut être qualifiée de contrainte. La forensique doit procéder par des moyens techniques légaux, pas par coercition.",
             legal: "Art. 113 CPP — Droit au silence inclut les codes d'accès. Procédure forensique par moyens techniques.",
@@ -8850,7 +8850,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Comment qualifiez-vous correctement les infractions par catégorie ?</strong>",
         choices: [
           {
-            text: "Art. 197 al. 5 CP pour tout — il n'a pas produit le contenu, seulement consommé.",
+            text: "Art. 197 al. 5 CP pour l'ensemble des fichiers retrouvés — le suspect n'est pas le producteur initial du contenu illicite, il en a uniquement été le consommateur passif. Cette qualification simplifiée est cohérente avec le profil de la prévention principale et facilite l'instruction par le MP qui privilégie la qualification la plus directe.",
             ok: false, pts: -20,
             fb: "Qualification erronée pour les Catégories A, C et D. Art. 197 al. 5 CP (simple consommation) ne couvre que la possession sans diffusion. Catégorie A : le dossier partagé P2P = mise à disposition automatique = Art. 197 al. 4 CP (diffusion). Catégorie C : l'identification d'une victime réelle ouvre la procédure de protection immédiate. Catégorie D : le grooming textuel peut relever de Art. 187 CP selon le contenu.",
             legal: "ATF 133 IV 31 + Art. 197 CP — Distinction al. 4 (diffusion/mise à disposition) vs al. 5 (possession seule).",
@@ -8893,7 +8893,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: "end",
           },
           {
-            text: "Ne rien faire avec ce fichier spécifique pour l'instant — il n'est pas au cœur de la procédure pénale contre le suspect.",
+            text: "Ne rien faire avec ce fichier spécifique tant que la procédure pénale principale n'est pas avancée — il n'est pas au cœur de l'accusation contre le suspect actuel et l'introduction d'éléments accessoires risque de complexifier inutilement le dossier sans apport probatoire significatif.",
             ok: false, pts: -30,
             fb: "Violation grave des obligations légales. Art. 307 CC et la Convention de Lanzarote imposent la protection immédiate des enfants en danger. Ne pas signaler un fichier suggérant une victime potentiellement en danger actuel constitue une faute professionnelle grave et potentiellement une infraction pénale (omission de porter secours selon les circonstances).",
             legal: "Art. 307 CC + Convention de Lanzarote — Omission de protection d'un enfant en danger = obligation légale violée.",
@@ -8954,7 +8954,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Les Allemands infiltrent sans juge. fedpol vous presse. Que faites-vous ?</strong>",
         choices: [
           {
-            text: "Commencer l'infiltration immédiatement — l'urgence de l'opération internationale justifie d'agir d'abord et de régulariser ensuite.",
+            text: "Commencer l'infiltration de la communauté en ligne immédiatement — l'urgence opérationnelle de coordination internationale justifie d'agir d'abord en mode investigation discrète et de régulariser le cadre juridique procédural ultérieurement, comme l'admet la pratique policière en cas de fenêtre opérationnelle étroite.",
             ok: false, pts: -25,
             fb: "Erreur procédurale grave. Art. 286 CPP est clair : l'enquête couverte requiert ordonnance MP + autorisation TMC AVANT de commencer. Il n'y a pas de possibilité de régularisation a posteriori. Toutes les preuves obtenues sans cette autorisation seront exclues (Art. 141 al. 2 CPP) — ce qui compromet l'ensemble du volet suisse de l'opération.",
             legal: "Art. 286 al. 1 CPP — Autorisation préalable du TMC obligatoire, sans exception d'urgence pour les enquêtes couvertes.",
@@ -8997,7 +8997,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 2,
           },
           {
-            text: "Oui, mais uniquement avec du matériel légal (images non illicites) pour maintenir la couverture sans vraiment aider.",
+            text: "Oui, mais uniquement avec du matériel légal (images non illicites comme des photos de mode ou de magazines grand public) pour maintenir la couverture d'infiltration sans véritablement contribuer à la diffusion criminelle — cette approche minimaliste préserve la légalité tout en garantissant la crédibilité du persona.",
             ok: false, pts: -15,
             fb: "Toujours une violation. Même en utilisant du matériel légal, répondre positivement à une demande de contenu illicite entretient et encourage le comportement délictueux du suspect. C'est une forme d'incitation indirecte interdite par l'esprit de l'Art. 293 CPP. De plus, cela pourrait être interprété comme une ruse envers le suspect qui pensait recevoir du contenu illicite.",
             legal: "Art. 293 CPP — Esprit de l'interdiction : ne pas faciliter ni encourager, même indirectement.",
@@ -9026,7 +9026,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 3,
           },
           {
-            text: "Oui sans conditions — ce serait contraire à la coopération internationale de refuser des preuves légalement obtenues.",
+            text: "Oui sans conditions — il serait diplomatiquement contraire à l'esprit de la coopération internationale d'investigation de refuser des preuves légalement obtenues par un service partenaire allemand, et le principe de confiance mutuelle entre démocraties européennes prime. La Convention de Budapest impose cette ouverture transfrontalière pour l'efficacité collective de la lutte contre la cybercriminalité organisée.",
             ok: false, pts: -10,
             fb: "Trop permissif. Les preuves obtenues par torture ou méthodes coercitives illégales à l'étranger (même légales dans ce pays) restent inadmissibles en Suisse (Art. 140 CPP + CEDH Art. 3). Le contrôle des standards minimaux est impératif — c'est l'essence d'ATF 143 IV 270.",
             legal: "Art. 140 CPP + ATF 143 IV 270 — Contrôle des standards minimaux obligatoire même pour les preuves étrangères.",
@@ -9041,7 +9041,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Vous êtes le responsable de l'équipe. Quelles mesures concrètes prenez-vous immédiatement ?</strong>",
         choices: [
           {
-            text: "Continuer l'opération — les enquêteurs ont accepté ce travail, c'est inhérent au métier. Le médecin peut les voir après l'opération.",
+            text: "Continuer l'opération sans interruption — les enquêteurs spécialisés ont accepté ce travail en connaissance de cause, et l'exposition à du contenu traumatique est inhérente au métier d'enquêteur cybercriminalité. Le médecin du travail peut prendre en charge les agents concernés après la fin de l'opération via les protocoles de soutien psychologique habituels du Service.",
             ok: false, pts: -25,
             fb: "Violation grave de l'Art. 6 LTr et de l'Art. 328 CO. L'employeur (police cantonale) a une obligation légale de protection de la santé psychique, même — et surtout — dans des métiers à risque. Les symptômes d'ESPT documentés créent une urgence médicale que l'employeur ne peut pas différer. 'Inhérent au métier' n'exonère pas de cette obligation.",
             legal: "Art. 6 LTr + Art. 328 CO — Obligation de protection immédiate, pas différable.",
@@ -9084,7 +9084,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: "end",
           },
           {
-            text: "Non — les données d'une enquête couverte suisse ne peuvent jamais être partagées à l'étranger.",
+            text: "Non — les données issues d'une enquête couverte sur le territoire suisse ne peuvent jamais être partagées avec des autorités étrangères, en application stricte de la souveraineté procédurale et de l'art. 67 EIMP. La doctrine constante du DFJP confirme cette interdiction absolue, qui protège à la fois le suspect (cohérence du droit applicable) et les méthodes opérationnelles couvertes par fedpol.",
             ok: false, pts: -10,
             fb: "Trop absolu. L'EIMP prévoit précisément les mécanismes de partage d'informations entre États dans le cadre de la coopération judiciaire. Un refus total rendrait la participation suisse à des opérations Europol sans valeur ajoutée. La règle est le partage conditionnel, pas l'interdiction absolue.",
             legal: "EIMP Art. 67a — Partage conditionnel possible, pas interdit.",
@@ -9143,7 +9143,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
         question: "<strong>Quelle qualification pour l'opérateur du service DDoS-for-hire suisse ?</strong>",
         choices: [
           {
-            text: "Art. 144bis al. 1 CP — chaque attaque individuelle est souvent sous le seuil de CHF 10'000.",
+            text: "Art. 144bis al. 1 CP (détérioration simple) — chaque attaque DDoS individuelle est souvent sous le seuil de dommage de CHF 10'000 qui caractérise l'aggravante du al. 2, et la qualification simple est plus aisément établie devant les tribunaux.",
             ok: false, pts: -10,
             fb: "Le dommage s'apprécie globalement sur l'ensemble de l'activité délictueuse. CHF 120'000 total >> CHF 10'000. Art. 144bis al. 2 CP s'applique.",
             legal: "ATF 106 IV 24 — Dommage considérable : appréciation globale de l'activité.",
@@ -9186,7 +9186,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 2,
           },
           {
-            text: "Traiter uniquement les 340 emails identifiables — les IP seules ne sont pas exploitables.",
+            text: "Traiter uniquement les 340 emails clients formellement identifiables — les adresses IP seules sans email associé ne sont pas exploitables forensiquement par notre cabinet, qui n'a pas le mandat pour les requêtes opérateurs nécessaires à leur identification ultérieure.",
             ok: false, pts: -10,
             fb: "L'IP + logs d'attaques (cible + durée + timestamp + paiement) constitue un faisceau d'indices (ATF 144 IV 345) suffisant pour ouvrir une enquête. Les deux sources se combinent.",
             legal: "ATF 144 IV 345 — Faisceau d'indices convergents IP + logs + emails.",
@@ -9215,7 +9215,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: 3,
           },
           {
-            text: "Art. 144bis al. 1 CP uniquement — l'entrepreneur n'est qu'un utilisateur.",
+            text: "Art. 144bis al. 1 CP uniquement — l'entrepreneur n'est techniquement qu'un utilisateur d'un service DDoS-as-a-Service et n'a pas conçu ni développé l'infrastructure d'attaque. Sa responsabilité pénale est donc limitée.",
             ok: false, pts: -5,
             fb: "CHF 34'000 >> seuil CHF 10'000 = al. 2 s'applique, quelle que soit la qualité d'opérateur ou client.",
             legal: "Art. 144bis al. 2 CP — s'applique à l'auteur ET au complice si dommage considérable.",
@@ -9244,7 +9244,7 @@ Artefacts récupérés sur 4 postes victimes :<br>
             critical: false, next: "end",
           },
           {
-            text: "Autorisation TMC en urgence — le séquestre de serveurs nécessite un juge.",
+            text: "Autorisation du TMC en procédure d'urgence — le séquestre des serveurs identifiés à l'étranger nécessite obligatoirement une décision judiciaire d'un juge des mesures de contrainte, conformément aux exigences procédurales de l'art. 263 CPP.",
             ok: false, pts: -5,
             fb: "Le TMC n'est pas requis pour un séquestre ordinaire. Art. 263 CPP : ordonnance MP suffit. Le TMC intervient pour la surveillance télécom (Art. 272 CPP) et la détention provisoire.",
             legal: "Art. 263 CPP — Séquestre : ordonnance MP (sans TMC).",
@@ -9299,7 +9299,7 @@ F) Boîte mail via un outil de password reset exploitant une faille
         question: "<strong>Parmi ces 6 sources, lesquelles sont légalement utilisables ?</strong>",
         choices: [
           {
-            text: "Toutes — enquêteur mandaté MP = immunité pour recherche de preuves.",
+            text: "Toutes les techniques OSINT — un enquêteur formellement mandaté par le MP bénéficie d'une immunité fonctionnelle pour la recherche de preuves dans le cadre de son mandat.",
             ok: false, pts: -25,
             fb: "Il n'existe pas d'immunité générale. D (WhatsApp privé sans invitation), F (accès frauduleux boîte mail) constituent des infractions quelle que soit la qualité de l'auteur. Un mandat ou une commission rogatoire sont les voies légales.",
             legal: "Art. 143bis CP + Art. 179novies CP — S'appliquent aussi aux enquêteurs sans autorisation.",
@@ -9342,7 +9342,7 @@ F) Boîte mail via un outil de password reset exploitant une faille
             critical: false, next: 2,
           },
           {
-            text: "Oui — l'IP est dans un post public, donc information publique libre d'usage.",
+            text: "Oui — l'adresse IP figure dans un post public sur un forum accessible sans authentification, donc constitue une information publique librement utilisable sans formalité particulière. La doctrine OSINT confirme ce principe.",
             ok: false, pts: -10,
             fb: "La visibilité publique de l'IP ne crée pas de base légale pour l'identifier. ATF 136 II 508 : la collecter dans le but d'identifier une personne = traitement de données personnelles requérant une base légale.",
             legal: "ATF 136 II 508 consid. 3 — Collecte d'IP dans un but d'identification = traitement de données personnelles.",
@@ -9371,7 +9371,7 @@ F) Boîte mail via un outil de password reset exploitant une faille
             critical: false, next: "end",
           },
           {
-            text: "Peut-être — si je n'utilise que des sources réellement publiques.",
+            text: "Peut-être — selon le périmètre des sources utilisées, si je me limite strictement aux sources réellement publiques accessibles sans contournement.",
             ok: false, pts: -10,
             fb: "Art. 273 CP incrimine la mise à disposition des informations secrètes — pas seulement la méthode. Même via sources publiques, si la compilation reconstitue des secrets commerciaux transmis à un concurrent, c'est une infraction.",
             legal: "Art. 273 CP — Incrimine la mise à disposition, pas uniquement la méthode.",
@@ -9440,7 +9440,7 @@ F) Boîte mail via un outil de password reset exploitant une faille
             critical: false, next: 1,
           },
           {
-            text: "Art. 305bis CP directement — CHF 21.5M d'une source opaque = le banquier devait savoir.",
+            text: "Art. 305bis CP directement — un montant de CHF 21,5M provenant d'une source économique opaque entraîne nécessairement la connaissance de l'origine criminelle par le banquier diligent, et le dol éventuel est constitutivement établi.",
             ok: false, pts: -10,
             fb: "ATF 6B_1180/2023 exige une preuve positive du dol éventuel. Les red flags ne suffisent pas à établir automatiquement que le banquier savait ou devait présumer l'origine criminelle.",
             legal: "ATF 6B_1180/2023 consid. 2.1.3 — Violations LBA ≠ preuve automatique de dol éventuel.",
@@ -9462,7 +9462,7 @@ F) Boîte mail via un outil de password reset exploitant une faille
         question: "<strong>Le dol éventuel Art. 305bis CP est-il établi ?</strong>",
         choices: [
           {
-            text: "Oui — les red flags suffisent à prouver qu'il devait savoir.",
+            text: "Oui — la convergence des red flags (montant inhabituel, structure offshore, rotation rapide des fonds, profil client incohérent) suffit forensiquement à prouver que le banquier devait nécessairement avoir conscience de l'origine criminelle.",
             ok: false, pts: -15,
             fb: "ATF 6B_1180/2023 rejette cette déduction automatique. Worldcheck négatif, aucune presse négative, approbation interne, e-mail de bonne foi — ces éléments affaiblissent la preuve du dol. In dubio pro reo.",
             legal: "ATF 149 IV 248 — Dol éventuel : connaissance de soupçons 'pressants', pas simples anomalies.",
@@ -9491,7 +9491,7 @@ F) Boîte mail via un outil de password reset exploitant une faille
         question: "<strong>À quel moment l'obligation de communication MROS est-elle déclenchée ?</strong>",
         choices: [
           {
-            text: "Seulement si on a la certitude — sinon risque de dénonciation calomnieuse.",
+            text: "Seulement si nous disposons d'une certitude technique absolue sur l'origine criminelle — sinon le risque de dénonciation calomnieuse au sens de l'art. 303 CP est réel et expose le banquier à des sanctions ordinales et pénales.",
             ok: false, pts: -20,
             fb: "LBA Art. 9 : communication obligatoire sur soupçon fondé — pas certitude. LBA Art. 11 : immunité totale pour communication de bonne foi, même si elle s'avère infondée. Attendre la certitude = violation LBA.",
             legal: "LBA Art. 9 — Soupçon fondé suffit. LBA Art. 11 — Immunité pour bonne foi.",
@@ -9534,7 +9534,7 @@ F) Boîte mail via un outil de password reset exploitant une faille
             critical: false, next: "end",
           },
           {
-            text: "'Violations LBA établies mais je ne peux pas me prononcer sur le dol — trop juridique.'",
+            text: "'Les violations LBA sont matériellement établies par les analyses techniques, mais je ne peux pas me prononcer formellement sur le dol éventuel ou direct — ces qualifications subjectives relèvent strictement du juge pénal et dépassent le périmètre du mandat d'expertise forensique financière. Le tribunal disposera de l'ensemble des éléments matériels nécessaires pour caractériser librement l'élément subjectif de l'infraction.'",
             ok: false, pts: -5,
             fb: "Art. 184 CPP : l'expert répond aux questions posées. Si le MP demande d'évaluer les éléments constitutifs du dol éventuel, vous devez fournir une évaluation technique (chronologie, vérifications, red flags connus). Refuser n'est pas une réponse d'expert suffisante.",
             legal: "Art. 184 CPP — Répondre aux questions posées dans les limites de la compétence.",
@@ -9596,7 +9596,7 @@ F) Boîte mail via un outil de password reset exploitant une faille
             critical: false, next: 1,
           },
           {
-            text: "Art. 146 CP seul — les victimes financières sont le préjudice principal.",
+            text: "Art. 146 CP (escroquerie astucieuse) seul — les victimes financières trompées par le deepfake constituent le préjudice principal de l'affaire, et les autres qualifications accessoires sont absorbées par l'infraction principale.",
             ok: false, pts: -10,
             fb: "La personnalité est aussi victime — Art. 179decies CP la protège indépendamment du préjudice financier des tiers. Elle peut se constituer partie plaignante sur ce chef spécifiquement.",
             legal: "Art. 179decies CP — Protection de la personnalité : infraction autonome.",
@@ -9611,7 +9611,7 @@ F) Boîte mail via un outil de password reset exploitant une faille
         question: "<strong>Quels marqueurs forensiques fiables pour authentifier un deepfake vidéo ?</strong>",
         choices: [
           {
-            text: "La qualité de l'image est inférieure — les deepfakes sont de moins bonne qualité.",
+            text: "La qualité de l'image générée est mesurablement inférieure à une vidéo authentique — les deepfakes actuels présentent encore des artefacts de compression et des incohérences subtiles dans les zones de cohérence faciale (clignement des yeux, micro-expressions), ce qui permet de les distinguer techniquement par analyse spectrale fréquentielle approfondie selon les méthodes DeepWave.",
             ok: false, pts: -20,
             fb: "Critère dépassé. En 2024-2026, les deepfakes professionnels sont indiscernables à l'œil nu (UCL 2024 : 9/10 humains trompés). La qualité perçue n'est plus un indicateur fiable.",
             legal: "ENISA 2024 — Qualité ≠ critère de détection. Analyse spectrale requise.",
@@ -9640,7 +9640,7 @@ F) Boîte mail via un outil de password reset exploitant une faille
         question: "<strong>Quelle stratégie pour identifier les opérateurs derrière Njalla ?</strong>",
         choices: [
           {
-            text: "Demande directe à Njalla (Seychelles) — obligation Budapest.",
+            text: "Demande directe au registrar Njalla établi aux Seychelles — la Convention de Budapest sur la cybercriminalité impose une obligation contraignante de coopération aux registrars internationaux face aux requêtes des autorités d'enquête signataires, et cette voie évite les délais MLAT classiques tout en garantissant la traçabilité juridique du processus engagé.",
             ok: false, pts: -10,
             fb: "Njalla est réputé pour sa politique de non-divulgation. La stratégie directe a de faibles chances. Combiner : DSA Art. 9 (plateformes publicitaires) pour données de paiement des campagnes + forensique blockchain sur les fonds victimes = voies plus productives.",
             legal: "DSA Art. 9 + blockchain = voies prioritaires vs registrar anonyme.",
@@ -9683,7 +9683,7 @@ F) Boîte mail via un outil de password reset exploitant une faille
             critical: false, next: "end",
           },
           {
-            text: "Porter plainte pénale pour Art. 179decies CP — la voie pénale suffit.",
+            text: "Porter plainte pénale pour Art. 179decies CP (atteinte à la personnalité par usurpation d'identité) — la voie pénale est suffisante pour obtenir réparation et le procès permettra d'établir publiquement la fraude.",
             ok: false, pts: -5,
             fb: "La plainte pénale est nécessaire mais n'ordonne pas directement le retrait de la vidéo des plateformes. Art. 28a CC est le seul mécanisme permettant d'ordonner à une tierce partie (plateforme) de retirer le contenu en urgence.",
             legal: "Voie pénale = poursuite auteurs. Art. 28a CC = retrait immédiat du contenu.",
