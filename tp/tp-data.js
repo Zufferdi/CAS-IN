@@ -448,6 +448,151 @@ const EMAIL_EXERCISES = [
         explain: "Rien dans p=none ne garantit l'authenticité." },
     ]
   },
+
+{
+    scenario: "En-têtes email suspect NCSC :\nReturn-Path: <bounce@mailer.xyz>\nDKIM-Signature: d=mailer.xyz\nDMARC: FAIL — domaine From (banque-ch.com) ≠ domaine DKIM (mailer.xyz)",
+    question: "L'email passe SPF mais échoue DMARC. Pourquoi DMARC est-il l'indicateur le plus fiable ?",
+    choices: [
+      { text: "DMARC exige l'alignement : domaine From doit correspondre au domaine SPF ou DKIM", correct: true,
+        explain: "SPF vérifie que le serveur est autorisé pour son domaine — pas pour le From affiché. DMARC ajoute l'alignement des domaines, ce qui détecte le spoofing." },
+      { text: "SPF PASS signifie que l'email est légitime", correct: false,
+        explain: "SPF PASS = le serveur est autorisé pour mailer.xyz, pas pour banque-ch.com." },
+      { text: "DMARC est plus récent donc plus précis", correct: false,
+        explain: "La modernité n'est pas l'argument. DMARC ajoute l'alignement des domaines." },
+      { text: "Le DKIM signe le contenu — si DMARC échoue, le contenu a été altéré", correct: false,
+        explain: "L'échec DMARC vient de l'alignement des domaines, pas d'une altération de contenu." }
+    ],
+    hint: "DMARC p=reject = politique la plus stricte. Vérifier avec: dig TXT _dmarc.domaine.ch",
+    refs: ["RFC 7489 — DMARC", "RFC 7208 — SPF"]
+  },
+{
+    scenario: "En-têtes Received (lire de bas en haut) :\nReceived: from smtp.attacker.ru (45.33.32.156) by relay.net\nReceived: from relay.net (203.0.113.45) by mail.victim.ch\nReceived: from mail.victim.ch (192.168.1.10) by mx.victim.ch",
+    question: "Quelle est la véritable IP d'origine de l'email ?",
+    choices: [
+      { text: "45.33.32.156 — premier Received en bas = origine réelle", correct: true,
+        explain: "La chaîne Received se lit de bas en haut : le Received le plus bas = le plus ancien = l'origine réelle." },
+      { text: "203.0.113.45 — premier relais reconnu", correct: false,
+        explain: "relay.net est un intermédiaire. Lire la chaîne de bas en haut pour trouver l'origine." },
+      { text: "192.168.1.10 — serveur interne du destinataire", correct: false,
+        explain: "192.168.1.10 est le serveur interne — le dernier maillon, pas l'origine." },
+      { text: "L'IP d'origine ne peut pas être déterminée — les relais mentent", correct: false,
+        explain: "Le Received ajouté par notre propre serveur est fiable car il provient de notre infrastructure." }
+    ],
+    hint: "Received s'empile : lire de bas en haut = remonter dans le temps vers l'origine.",
+    refs: ["RFC 5321 — SMTP", "NIST SP 800-86"]
+  },
+{
+    scenario: "Message-ID suspect : <20240315.A1B2@smtp.gov-ch-secure.net>\nAnalyse DNS : smtp.gov-ch-secure.net → NXDOMAIN.",
+    question: "Que révèle un Message-ID avec un domaine NXDOMAIN ?",
+    choices: [
+      { text: "Email probablement forgé — un serveur légitime utilise son propre FQDN dans le Message-ID", correct: true,
+        explain: "NXDOMAIN dans le Message-ID = forte indication de forgerie. Vérifier avec dig/nslookup." },
+      { text: "Le domaine a été supprimé après l'envoi — l'email est authentique", correct: false,
+        explain: "Possible mais rare. Combiné à d'autres indicateurs, la forgerie est bien plus probable." },
+      { text: "Le Message-ID n'est pas un indicateur forensique fiable", correct: false,
+        explain: "Le Message-ID peut être vérifié par DNS. Un domaine NXDOMAIN est un signal d'alerte." },
+      { text: "Les serveurs gouvernementaux utilisent des domaines internes non résolubles", correct: false,
+        explain: "Les domaines internes ne sont pas utilisés dans des emails sortants." }
+    ],
+    hint: "dig A smtp.gov-ch-secure.net → NXDOMAIN = domaine n'existe pas.",
+    refs: ["RFC 5322 — Internet Message Format"]
+  },
+{
+    scenario: "Email analysé par le SCOCI :\nX-Originating-IP: 185.220.101.34\nX-Mailer: Microsoft Outlook 16.0\nShodan : 185.220.101.34 = nœud de sortie Tor.",
+    question: "Quelle conclusion forensique tirer ?",
+    choices: [
+      { text: "Tor utilisé pour masquer l'IP réelle — X-Mailer est librement éditable et peut être forgé", correct: true,
+        explain: "Nœuds Tor listés sur dan.me.uk/torlist. X-Mailer est optionnel et éditable. Tor + X-Mailer forgé = technique classique d'anonymisation." },
+      { text: "L'expéditeur utilise Outlook derrière un VPN d'entreprise", correct: false,
+        explain: "185.220.101.34 est documenté comme nœud Tor, pas VPN." },
+      { text: "X-Originating-IP est toujours fiable — injecté par le serveur de réception", correct: false,
+        explain: "X-Originating-IP peut être forgé si l'expéditeur contrôle le serveur émetteur." },
+      { text: "Tor garantit l'anonymat complet — l'enquête s'arrête ici", correct: false,
+        explain: "Tor masque l'IP mais timing attacks, métadonnées et erreurs OpSec permettent souvent de progresser." }
+    ],
+    hint: "Croiser X-Originating-IP avec dan.me.uk/torlist et Shodan.",
+    refs: ["SANS FOR578", "dan.me.uk/torlist"]
+  },
+{
+    scenario: "Incident PME genevoise — PJ 'Facture.docx' avec magic bytes D0 CF 11 E0 (OLE2 = .doc avec macros). L'antivirus ne détecte rien.",
+    question: "Pourquoi renommer un .doc en .docx est-il une technique d'évasion antivirus ?",
+    choices: [
+      { text: ".docx est un ZIP — les parseurs basés sur l'extension peuvent mal analyser un OLE2 renommé", correct: true,
+        explain: "Extension ≠ format réel. Analyser les magic bytes : D0 CF 11 E0 = OLE2. Utiliser oletools (olevba, mraptor) pour extraire les macros VBA." },
+      { text: ".docx est sûr par définition pour tous les antivirus", correct: false,
+        explain: "Les .docx modernes peuvent contenir des macros. L'extension ne détermine pas la sécurité." },
+      { text: "L'antivirus a un bug — il faut le mettre à jour", correct: false,
+        explain: "Le problème est la technique d'évasion par incohérence extension/magic bytes." },
+      { text: "D0 CF 11 E0 est le magic bytes d'un PDF chiffré", correct: false,
+        explain: "D0 CF 11 E0 = OLE2 Compound Document. PDF commence par 25 50 44 46." }
+    ],
+    hint: "file Facture.docx → Microsoft Compound Document. olevba Facture.docx → extraire les macros.",
+    refs: ["Philippe Lagadec — oletools", "MITRE ATT&CK T1566.001"]
+  },
+{
+    scenario: "CFO Zug Holdings reçoit un email de 'ceo@zugholdings-corp.com' (domaine cousin, légitime = zugholdings.com) demandant un virement urgent CHF 340'000.",
+    question: "Quelle technique d'attaque est utilisée ?",
+    choices: [
+      { text: "Business Email Compromise (BEC) via lookalike domain — vérifier le domaine exact dans les en-têtes", correct: true,
+        explain: "BEC = usurpation via domaine cousin. Réflexe : afficher les en-têtes complets, vérifier le vrai domaine After @, ne jamais se fier au nom affiché." },
+      { text: "Spear phishing — bloquer le domaine zugholdings-corp.com suffit", correct: false,
+        explain: "Bloquer est réactif. La vraie réponse inclut l'analyse des en-têtes et la vérification du virement par téléphone." },
+      { text: "Compromission du compte CEO — changer immédiatement le mot de passe", correct: false,
+        explain: "Le compte CEO zugholdings.com n'est pas compromis — c'est un domaine cousin distinct." },
+      { text: "Man-in-the-middle sur le serveur de messagerie", correct: false,
+        explain: "Pas de MITM — l'attaquant contrôle son propre domaine cousin." }
+    ],
+    hint: "Toujours vérifier le domaine APRÈS le @ dans le From — pas le nom d'affichage.",
+    refs: ["FBI IC3 — BEC Report", "MITRE ATT&CK T1586.002"]
+  },
+{
+    scenario: "Email phishing fonctionnaires fédéraux :\nLien affiché : https://admin.ch.secure-login.net/portal\nHTML : <a href='https://secure-login.net/redir?next=admin.ch'>Connexion</a>",
+    question: "Quel est le vrai domaine de destination ?",
+    choices: [
+      { text: "secure-login.net — le texte affiché diffère de l'href réel", correct: true,
+        explain: "Dans un lien HTML, seul l'href détermine la destination. admin.ch ici est soit le texte visible, soit un sous-domaine de secure-login.net." },
+      { text: "admin.ch — c'est ce que l'utilisateur voit", correct: false,
+        explain: "L'affichage est trompeur. Le navigateur suit l'href." },
+      { text: "admin.ch.secure-login.net — le domaine complet", correct: false,
+        explain: "Domaine = dernier composant avant le premier / : secure-login.net. admin.ch n'est qu'un sous-domaine." },
+      { text: "Les deux pointent vers admin.ch", correct: false,
+        explain: "L'URL affichée ≠ URL de destination dans un lien HTML." }
+    ],
+    hint: "Règle : domaine = tout ce qui suit le dernier . avant le premier / (ex: admin.ch.evil.net → evil.net).",
+    refs: ["NCSC CH — Phishing awareness", "RFC 3986"]
+  },
+{
+    scenario: "SIEM Swisscom — alerte : 47 emails envoyés vers gmail.com en 8 min, PJ 24 Mo chacune, objets 'backup_01'...'backup_47'.",
+    question: "Quel incident probable et première action ?",
+    choices: [
+      { text: "Exfiltration de données — isoler le poste, révoquer les tokens email, analyser les PJ", correct: true,
+        explain: "47 × 24 Mo ≈ 1.1 Go en 8 min. Pattern backup_XX = technique d'exfiltration classique. Isoler d'abord pour stopper, puis analyser." },
+      { text: "Sauvegarde légitime oubliée de configurer", correct: false,
+        explain: "Un backup légitime n'utilise pas le client email. 1 Go vers Gmail inconnu = suspect." },
+      { text: "Spam bot — compte compromis", correct: false,
+        explain: "Les spam bots envoient vers des milliers de destinataires, pas une seule adresse, sans PJ lourdes." },
+      { text: "Faux positif — les SIEM génèrent souvent des alertes erronées", correct: false,
+        explain: "Volume + fréquence + destination externe + objets séquentiels = valeur prédictive très forte." }
+    ],
+    hint: "47 × 24 Mo ≈ 1.1 Go en 8 min. Exfiltration jusqu'à preuve du contraire.",
+    refs: ["MITRE ATT&CK T1048", "SANS FOR508"]
+  },
+{
+    scenario: "PJ 'rapport.pdf' avec Content-Transfer-Encoding: base64.\nPremiers octets décodés : 3C 3F 78 6D 6C (= '<?xml').\nExtension .pdf mais magic bytes = XML.",
+    question: "Quel est le vrai format et quel outil utiliser ?",
+    choices: [
+      { text: "Document XML ou Office Open XML renommé en .pdf — utiliser file() ou ExifTool", correct: true,
+        explain: "3C 3F 78 6D 6C = '<?xml'. Commandes : file rapport.pdf, exiftool rapport.pdf. Toujours analyser les magic bytes." },
+      { text: "PDF corrompu — le header manque", correct: false,
+        explain: "PDF commence par 25 50 44 46 ('%PDF'). 3C 3F 78 6D 6C = XML." },
+      { text: "Base64 mal décodé — relancer avec un autre algorithme", correct: false,
+        explain: "Le décodage standard est correct. 3C 3F 78 6D 6C = '<?xml' est valide." },
+      { text: "Script JavaScript encodé", correct: false,
+        explain: "<?xml est la déclaration XML standard, pas du JS masqué." }
+    ],
+    hint: "Analyser les magic bytes, jamais l'extension. base64 → décoder → premiers octets → identifier.",
+    refs: ["RFC 2045 — MIME", "Phil Harvey — ExifTool"]
+  }
 ];
 
 
@@ -594,6 +739,183 @@ const NETWORK_EXERCISES = [
         explain: "Au contraire, c'est un indicateur de premier plan." },
     ]
   },
+
+{
+    scenario: "Wireshark — réseau PME bernoise :\nARP Reply non sollicité : '192.168.1.1 est à AA:BB:CC:DD:EE:FF' × 200 en 10s.\nLa vraie MAC de la gateway est 11:22:33:44:55:66.",
+    question: "Quel type d'attaque est en cours ?",
+    choices: [
+      { text: "ARP Poisoning — la table ARP des victimes associe la gateway à la MAC de l'attaquant → MITM", correct: true,
+        explain: "Gratuitous ARP répétés = empoisonnement du cache ARP. Tout le trafic vers la gateway passe par l'attaquant. Filtre : arp.duplicate-address-detected." },
+      { text: "MAC flooding pour saturer le switch", correct: false,
+        explain: "MAC flooding envoie des milliers de MACs DIFFÉRENTES. Ici même MAC répétée = ARP poisoning." },
+      { text: "Scan réseau agressif", correct: false,
+        explain: "Un scan réseau utilise des ARP Requests, pas des Replies non sollicités." },
+      { text: "Défaillance réseau — la gateway broadcaste son ARP", correct: false,
+        explain: "Une gateway légitime n'envoie pas 200 Gratuitous ARPs en 10s." }
+    ],
+    hint: "Filtre Wireshark: arp.opcode == 2 && arp.src.hw_mac != [MAC_légitime_gateway].",
+    refs: ["RFC 826 — ARP", "MITRE ATT&CK T1557.002"]
+  },
+{
+    scenario: "Logs réseau hôpital genevois :\n14:32:01 SMB WKS-014→SRV-DC01\n14:32:04 Service install 'WindowsUpdate' depuis WKS-014\n14:32:08 SMB SRV-DC01→SRV-BACKUP\nEvent 7045 sur DC01 et BACKUP.",
+    question: "Quel pattern d'attaque ces logs décrivent-ils ?",
+    choices: [
+      { text: "Lateral movement via PsExec — installation de service via SMB pour se propager", correct: true,
+        explain: "WKS-014 → SRV-DC01 via SMB + service suspect + rebond = propagation latérale. Event 7045 (nouveau service) confirme. Pattern pré-ransomware." },
+      { text: "Mise à jour Windows légitime", correct: false,
+        explain: "Windows Update n'installe pas de service 'WindowsUpdate' via SMB depuis un poste utilisateur." },
+      { text: "Sauvegarde réseau automatique", correct: false,
+        explain: "Les sauvegardes ne créent pas de nouveaux services sur les serveurs cibles." },
+      { text: "Scan de vulnérabilités IT — à ignorer", correct: false,
+        explain: "Un scan de vuln n'installe pas de services. IR immédiate requise." }
+    ],
+    hint: "Event 7045 + SMB + nom de service générique = mouvement latéral. Chercher PSEXESVC, svchost32, etc.",
+    refs: ["MITRE ATT&CK T1021.002", "SANS FOR508"]
+  },
+{
+    scenario: "Traffic HTTPS réseau cantonal :\n- Beacon régulier toutes les 60s vers 185.220.101.45:443\n- Certificat TLS auto-signé CN='Major League Baseball'\n- User-Agent fixe depuis 48h",
+    question: "Quels indicateurs confirment un C2 Cobalt Strike ?",
+    choices: [
+      { text: "Beacon régulier + certificat incohérent + User-Agent statique = signature Cobalt Strike par défaut", correct: true,
+        explain: "Profil CS par défaut : beacon 60s, CN farfelu, User-Agent fixe. JA3 hash peut confirmer le framework sans déchiffrer." },
+      { text: "Connexion HTTPS normale — port 443", correct: false,
+        explain: "Le certificat est auto-signé avec CN incohérent. Un service légitime n'utilise pas 'Major League Baseball' comme CN." },
+      { text: "Scan de port automatique", correct: false,
+        explain: "Un scan nmap ne génère pas de sessions HTTPS persistantes toutes les 60s." },
+      { text: "CDN avec certificat wildcard", correct: false,
+        explain: "Un CDN légitime a un certificat émis par une CA reconnue." }
+    ],
+    hint: "JA3 = hash MD5 des paramètres du Client Hello TLS. Comparer avec ja3er.com pour identifier Cobalt Strike.",
+    refs: ["MITRE ATT&CK T1071.001", "Cobalt Strike Malleable C2 Profiles"]
+  },
+{
+    scenario: "Log DNS EPF suisse :\n1000+ requêtes A vers sous-domaines de data-out.xyz en 5 min.\nSous-domaines décodés en Base64 = texte lisible.",
+    question: "En quoi cette technique diffère-t-elle du DNS tunneling classique ?",
+    choices: [
+      { text: "Exfiltration via requêtes A (pas TXT) — payload dans le sous-domaine encodé ; bloquer par entropie des sous-domaines", correct: true,
+        explain: "DNScat2 utilise TXT/MX/CNAME. Cette variante utilise les requêtes A — plus discrètes car très fréquentes. Détection : entropie de Shannon > 3.5 bits/char. Mitigation : RPZ." },
+      { text: "DNS tunneling classique — bloquer le port 53", correct: false,
+        explain: "Bloquer le port 53 casserait toute la résolution DNS." },
+      { text: "Trafic normal — sous-domaines longs courants pour les CDN", correct: false,
+        explain: "Les CDN n'utilisent pas de sous-domaines encodés Base64 avec texte lisible." },
+      { text: "Requête DNS mal formée — le resolver rejette", correct: false,
+        explain: "Les requêtes A avec sous-domaines longs sont syntaxiquement valides." }
+    ],
+    hint: "Entropie Shannon > 3.5 bits/char = probable Base64. 1000+ vers même domaine racine = exfiltration.",
+    refs: ["MITRE ATT&CK T1048.003", "Cisco Umbrella DNS Security"]
+  },
+{
+    scenario: "PCAP réseau hospitalier vaudois :\nSRC 10.0.0.50 → DST 10.0.1.0/24, ports 1-65535\nTCP SYN uniquement, aucun ACK sur ports fermés.\n254 hôtes scannés en 45 secondes.",
+    question: "Quel type de scan est utilisé ?",
+    choices: [
+      { text: "TCP SYN scan (half-open) — discret, pas de terminaison, phase de reconnaissance active", correct: true,
+        explain: "SYN scan (nmap -sS) : SYN → SYN-ACK (ouvert) ou RST (fermé). Jamais le handshake complet. 254 hôtes × 65535 ports en 45s = scan massif pré-attaque." },
+      { text: "TCP Connect scan — complète le handshake", correct: false,
+        explain: "Connect scan génère SYN→SYN-ACK→ACK→RST. Ici aucun ACK = half-open." },
+      { text: "UDP scan", correct: false,
+        explain: "UDP scan n'utilise pas SYN (TCP)." },
+      { text: "Scan Nessus autorisé", correct: false,
+        explain: "Un scan planifié est documenté. 65535 ports en 45s = agressif non autorisé." }
+    ],
+    hint: "Filtre Wireshark: tcp.flags.syn==1 && tcp.flags.ack==0. Compter les SYN sans RST correspondant.",
+    refs: ["Gordon Lyon — nmap", "MITRE ATT&CK T1046"]
+  },
+{
+    scenario: "PCAP BCI Berne :\nConnexion HTTPS vers 185.199.109.1:443 toutes les 300s exactement.\nDurée : 2-3s. Taille : 1.2-1.8 KB. Activité 24h/24, 7j/7.",
+    question: "Que révèle ce pattern et comment confirmer sans déchiffrer TLS ?",
+    choices: [
+      { text: "Malware beacon — intervalle régulier, petite taille, 24/7 = C2 automatisé ; confirmer via JA3 et threat intel", correct: true,
+        explain: "Beacon C2 : intervalle régulier (300s), échanges courts (check-in), actif hors heures ouvrées. JA3 fingerprinting identifie le framework C2 sans déchiffrer." },
+      { text: "Outil de monitoring légitime", correct: false,
+        explain: "Un agent légitime est documenté dans l'inventaire IT. Activité nocturne non documentée = suspect." },
+      { text: "Mise à jour Windows automatique", correct: false,
+        explain: "Windows Update ne génère pas de sessions HTTPS régulières vers des IPs fixes toutes les 300s." },
+      { text: "Il faut déchiffrer le TLS pour conclure", correct: false,
+        explain: "JA3, timing et IP reputation permettent de conclure sans déchiffrement." }
+    ],
+    hint: "JA3 hash du Client Hello TLS → comparer avec ja3er.com ou abuse.ch/ja3db.",
+    refs: ["MITRE ATT&CK T1071.001", "John Althouse — JA3 TLS Fingerprinting"]
+  },
+{
+    scenario: "Log pare-feu PME Lugano :\n847 tentatives RDP (port 3389) depuis 185.220.101.0/24 en 33s.\nEvent 4625 × 847, puis Event 4624 type 3 à 22:14:45.",
+    question: "Quel est l'ordre chronologique et quelle preuve est critique ?",
+    choices: [
+      { text: "Brute force (847 échecs) → succès (4624) → compromission. La corrélation 4625→4624 est la preuve clé", correct: true,
+        explain: "847 Event 4625 (échecs) + 4624 type 3 (connexion réseau réussie) = brute force réussie. Préserver les logs Windows Event et pare-feu comme preuves primaires." },
+      { text: "Scan de ports (4625) puis connexion légitime (4624) — non liés", correct: false,
+        explain: "847 échecs sur le même port en 33s = brute force, pas un scan." },
+      { text: "Faux positif — IPs Tor connues", correct: false,
+        explain: "185.220.101.0/24 = nœuds Tor utilisés précisément pour ce type d'attaque. Le 4624 confirme la compromission." },
+      { text: "Bloquer l'IP suffit", correct: false,
+        explain: "La compromission a déjà eu lieu (4624). Isoler, changer les credentials, analyser." }
+    ],
+    hint: "4625 (échec) → 4624 (succès) sur le même compte = brute force réussie.",
+    refs: ["Microsoft — Windows Security Events", "SANS FOR508"]
+  },
+{
+    scenario: "PCAP pentest autorisé EPFL :\nPOST /admin/login HTTP/1.1\nusername=admin&password=Summer2024!",
+    question: "Quelle vulnérabilité révèle cette capture ?",
+    choices: [
+      { text: "Credentials en clair via HTTP — mitigation : HTTPS + HSTS", correct: true,
+        explain: "username=admin&password=Summer2024! visible en clair = lisible par tout intercepteur. Mitigation : TLS 1.2+, HSTS, cookie Secure." },
+      { text: "Injection SQL", correct: false,
+        explain: "Aucun payload SQL visible. La vulnérabilité est le cleartext HTTP." },
+      { text: "CSRF — token absent", correct: false,
+        explain: "La vulnérabilité principale est le cleartext. Corriger d'abord HTTPS." },
+      { text: "Mot de passe trop faible — le changer suffit", correct: false,
+        explain: "Un password fort en HTTP reste visible en clair sur le réseau." }
+    ],
+    hint: "Filtre Wireshark: http.request.method == 'POST' && http contains 'password'.",
+    refs: ["OWASP — TLS Cheat Sheet", "RFC 6797 — HSTS"]
+  },
+{
+    scenario: "Log Zeek réseau cantonal suisse :\nid.orig=10.0.0.5 id.resp=203.0.113.100 port=4444\nproto=tcp service=- duration=3600 bytes=245KB→1.2MB conn_state=SF",
+    question: "Que révèle ce log Zeek ?",
+    choices: [
+      { text: "Session TCP longue port 4444, plus de données entrantes = probable reverse shell Meterpreter", correct: true,
+        explain: "Port 4444 = Metasploit Meterpreter par défaut. 1h de session = shell actif. service='-' = protocole non reconnu. 1.2MB entrant > 245KB sortant = commandes entrent, résultats sortent." },
+      { text: "Transfert de fichier légitime", correct: false,
+        explain: "1.2MB en 1h sur port 4444 non reconnu = très suspect." },
+      { text: "Session VPN sur port non standard", correct: false,
+        explain: "Les VPN d'entreprise ont des protocoles définis. TCP sur 4444 sans protocole reconnu = anormal." },
+      { text: "service='-' signifie connexion refusée", correct: false,
+        explain: "service='-' = DPI n'a pas reconnu le protocole. conn_state=SF confirme une session complète." }
+    ],
+    hint: "Port 4444 = Meterpreter. Plus de bytes entrants sur longue session = C2.",
+    refs: ["Zeek Documentation", "MITRE ATT&CK T1059"]
+  },
+{
+    scenario: "Audit banque cantonale — Client Hello TLS 1.0, Cipher Suite: TLS_RSA_WITH_RC4_128_SHA.\nServeur accepte TLS 1.0 + RC4. Système legacy de paiements.",
+    question: "Quels sont les risques forensiques et réglementaires ?",
+    choices: [
+      { text: "TLS 1.0 + RC4 obsolètes — non conforme PCI-DSS 4.0 et FINMA ; données déchiffrables a posteriori", correct: true,
+        explain: "RC4 cassé (RFC 7465). TLS 1.0 vulnérable à BEAST/POODLE. PCI-DSS 4.0 exige TLS 1.2 minimum. FINMA circulaire 2023/1 impose TLS 1.2+." },
+      { text: "TLS 1.0 sûr pour les systèmes internes", correct: false,
+        explain: "Un système de paiement est dans le périmètre PCI-DSS quel que soit son emplacement." },
+      { text: "RC4 sûr avec clé de 128 bits", correct: false,
+        explain: "RC4 a des biais dans son keystream. Attaques statistiques possibles quelle que soit la taille de clé." },
+      { text: "Wireshark ne peut pas lire le TLS", correct: false,
+        explain: "RC4 peut être attaqué statistiquement. Le risque d'exposition existe." }
+    ],
+    hint: "Filtrer: ssl.handshake.type == 1 pour Client Hello. Vérifier version TLS et cipher suites.",
+    refs: ["RFC 7465 — Prohibiting RC4", "PCI DSS 4.0", "FINMA Circulaire 2023/1"]
+  },
+{
+    scenario: "Investigation tribunal zurichois — PCAP HTTP contient téléchargement d'un fichier malveillant (stream TCP avec réponse HTTP complète).",
+    question: "Comment extraire le fichier du PCAP de manière forensiquement documentée ?",
+    choices: [
+      { text: "Wireshark : File > Export Objects > HTTP, puis SHA-256 du fichier extrait pour vérification", correct: true,
+        explain: "Export Objects reconstruit le fichier depuis les segments TCP. Pour la chaîne de preuve : noter la version Wireshark, documenter le filtre, calculer SHA-256. Méthode reproductible." },
+      { text: "Copier le payload hex manuellement", correct: false,
+        explain: "La copie manuelle est sujette aux erreurs et non reproductible. Export Objects est la méthode standard." },
+      { text: "Utiliser strings sur le PCAP", correct: false,
+        explain: "strings extrait du texte ASCII mais pas des binaires. Non adapté." },
+      { text: "Demander le fichier directement au serveur source", correct: false,
+        explain: "Le fichier source peut avoir changé. Le PCAP est la preuve directe de ce qui a été téléchargé." }
+    ],
+    hint: "Wireshark > File > Export Objects > HTTP. Puis : sha256sum fichier_extrait. Documenter dans le rapport.",
+    refs: ["Wireshark — Export Objects", "ISO/IEC 27037:2012"]
+  }
 ];
 
 
