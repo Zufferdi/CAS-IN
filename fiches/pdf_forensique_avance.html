@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PDF Forensique Avancé — CAS-IN DFIR</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">AUTRES SYSTÈMES</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-autressystèmes">Autres Systèmes</a><span class="bc-sep">›</span>
+    <span class="bc-current">PDF Forensique Avancé</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~15 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">📄</span>
+    <span class="tag tag-cyan" style="margin-left:.5rem">Documents</span>
+    <span class="tag tag-gold" style="margin-left:.3rem">ISO 32000</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Metadata</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">PDF Forensique Avancé</h1>
+    <div class="meta">ISO 32000 · Metadata extraction · Hidden objects · Incremental updates · Auteur tracking · Authentification</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="formats.html" class="prereq-pill">📖 Formats & Magic Bytes</a><a href="metadata_avancees.html" class="prereq-pill">📖 Métadonnées Avancées</a><a href="encodage.html" class="prereq-pill">📖 Encodage</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="documents_office_forensique.html" class="related-pill">🔗 Documents Office</a><a href="hash.html" class="related-pill">🔗 Hachage</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="pdf-tabs">
+  <button class="tab active" onclick="showTab('structure',this)">🏗️ Structure PDF</button>
+  <button class="tab" onclick="showTab('metadata',this)">📝 Metadata Core</button>
+  <button class="tab" onclick="showTab('objects',this)">📦 Objects Cachés</button>
+  <button class="tab" onclick="showTab('updates',this)">🔄 Incremental Updates</button>
+  <button class="tab" onclick="showTab('tools',this)">🔧 Extracteurs & Tools</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — STRUCTURE PDF
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-structure">
+
+<div class="concept-card">
+  <div class="concept-title">🏗️ PDF Format = Container Structuré (ISO 32000)</div>
+  PDF = composition de objects (text, images, streams). Structure = File header → Objects → xref table → trailer. Chaque élément géolocalisable forensiquement.
+</div>
+
+<div class="sec-title">Anatomy: File Structure</div>
+
+<div style="margin:1.5rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem;line-height:1.9;color:var(--text)">
+  <code>
+  <strong style="color:var(--cyan)">PDF File Structure (Hex View)</strong><br>
+  <br>
+  Offset 0x000 | <span style="background:rgba(255,100,0,.3)">%PDF-1.7</span>  ← <strong>File Header (magic bytes)</strong><br>
+  <span style="color:var(--dim)"># Comments, metadata, version</span><br>
+  <br>
+  Offset 0x100 | <span style="background:rgba(0,200,100,.3)">1 0 obj</span>  ← <strong>Object 1 (catalog)</strong><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;stream<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;endstream<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;endobj<br>
+  <br>
+  Offset 0x500 | <span style="background:rgba(0,150,200,.3)">2 0 obj</span>  ← <strong>Object 2 (pages)</strong><br>
+  <br>
+  Offset 0xXXX | <span style="background:rgba(200,0,150,.3)">xref</span>  ← <strong>Cross-reference table</strong><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0 15<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0000000000 65535 f<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0000000256 00000 n<br>
+  <br>
+  Offset 0xYYY | <span style="background:rgba(255,200,0,.3)">trailer</span>  ← <strong>Trailer (metadata de fichier)</strong><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;startxref<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;5678<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%%EOF  ← File terminator<br>
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(0,229,204,.08);border-left:3px solid var(--cyan)">
+  <strong style="color:var(--cyan)">Key Forensic Elements</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem;line-height:1.8">
+    <li><strong>xref offset</strong> = Pointer à cross-reference table (où est le catalog)</li>
+    <li><strong>Object IDs</strong> = Références internes (object 1 peut pointer object 5)</li>
+    <li><strong>Streams</strong> = Compressed binary data (images, fonts)</li>
+    <li><strong>Incremental updates</strong> = Versions antérieures du fichier (recovery possible)</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — METADATA CORE
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-metadata">
+
+<div class="concept-card">
+  <div class="concept-title">📝 PDF Metadata = Document Properties</div>
+  Métadonnées stockées dans objet special "/Info" ou dans streams. Révèlent : auteur, dates de création/modification, application, titre, etc.
+</div>
+
+<div class="sec-title">Propriétés Standard PDF</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Propriété</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Type</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Forensique</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>/Title</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">String</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">👤 Intention du document (confidentiel?)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>/Author</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">String</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">👤 <span style="color:var(--green)">✅ SIGNATURE</span> (qui a écrit?)</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>/Subject</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">String</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">📌 Contexte (résumé document)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>/Keywords</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">String</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔑 Tags (révèle contexte)</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>/CreationDate</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Date (D:YYYYMMDDhhmmss)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">📅 Quand créé</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>/ModDate</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Date</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">📅 Dernière modification (important!)</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>/Producer</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">String</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🛠️ Quel logiciel (Adobe, LibreOffice?)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>/Creator</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">String</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🛠️ Outil d'origine (Word, Excel?)</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red);margin-top:1rem">
+  <strong style="color:var(--red)">⚠️ Métadonnées Modifiables!</strong><br>
+  Tout peut être édité (Author, dates, titre). Incohérence forensique = suspect.<br>
+  <span style="font-size:.9rem;margin-top:.75rem;display:block">
+    Exemple : Document dit "créé 2024-01-01" mais modification log dit "2024-03-20" = edited tardivement (coverup?)
+  </span>
+</div>
+
+<div class="sec-title">Extraction Metadata Interactive</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <label style="display:block;margin-bottom:.75rem;font-size:.9rem;font-weight:600">
+    Collez métadonnées PDF (voir dans Propriétés):
+    <textarea id="pdf-meta" placeholder="Title: Secret Report&#10;Author: John Doe&#10;CreationDate: D:20240115120000&#10;ModDate: D:20240320150000" style="width:100%;height:100px;margin-top:.35rem;padding:.6rem;background:rgba(13,17,23,.5);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem"></textarea>
+  </label>
+  <button onclick="analyzePDFMetadata()" style="width:100%;padding:.6rem;background:var(--cyan);color:var(--bg);border:none;border-radius:4px;font-weight:600;cursor:pointer">Analyser</button>
+  
+  <div id="pdf-result" style="margin-top:1rem;padding:1rem;background:rgba(0,229,204,.1);border:1px solid rgba(0,229,204,.3);border-radius:6px;font-size:.85rem">
+    <div style="color:var(--dim)">👆 Collez metadata pour voir chronologie</div>
+  </div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — HIDDEN OBJECTS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-objects">
+
+<div class="concept-card">
+  <div class="concept-title">📦 Hidden Objects = Embedded Data</div>
+  PDFs peuvent contenir objects cachés : fichiers attachés, images, OLE objects, annotations, streams comprimés.
+</div>
+
+<div class="sec-title">Types Objects Cachés</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0">
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Embedded Files</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      EXE, DLL, macros<br>
+      /EmbeddedFile stream<br>
+      Often malware vector<br>
+      Recovery: Extract + scan
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Annotations</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      Comments, highlights<br>
+      /Annots array<br>
+      Author metadata<br>
+      Can reveal reviewer names
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 JavaScript</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      /AA (Auto-action)<br>
+      Runs on open<br>
+      Malware delivery<br>
+      Highly suspicious
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 OLE Objects</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      Embedded Office docs<br>
+      /ObjStm streams<br>
+      Macro-enabled sheets<br>
+      Recovery: Extract as .ole
+    </span>
+  </div>
+
+</div>
+
+<div class="concept-card" style="background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);margin-top:1rem">
+  <strong style="color:var(--cyan)">🔍 Detection Objects Cachés</strong><br>
+  <code style="display:block;margin:.75rem 0;padding:.5rem;background:rgba(13,17,23,.5);border-radius:4px;font-size:.75rem;font-family:var(--mono)">
+  # Chercher streams non-standard<br>
+  /EmbeddedFile, /ObjStm, /AA, /OpenAction<br>
+  <br>
+  # Tools: pdfminer, mutool, strings<br>
+  $ strings file.pdf | grep -i "objstm\|embed\|javascript"
+  </code>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — INCREMENTAL UPDATES
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-updates">
+
+<div class="concept-card">
+  <div class="concept-title">🔄 Incremental Updates = Versions Antérieures</div>
+  PDFs peuvent être "updated" sans rewriting complet. Chaque update = nouveau xref table + trailer. Anciens objects = <strong>récupérables!</strong>
+</div>
+
+<div class="sec-title">Mechanism: Update Process</div>
+
+<div style="margin:1.5rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <div style="color:var(--cyan);font-weight:600;margin-bottom:.75rem">Scenario : Document Modifié</div>
+  <code style="display:block;font-family:var(--mono);font-size:.8rem;line-height:1.8;color:var(--text)">
+  Version 1 (Original)<br>
+  ├─ xref (points to objects)<br>
+  └─ trailer (version 1)<br>
+  <br>
+  [Éditeur ouvre + modifie + sauvegarde]<br>
+  <br>
+  Version 2 (Updated)<br>
+  ├─ [OLD xref + trailer from V1]<br>
+  ├─ [NEW objects added]<br>
+  ├─ xref (NEW, points to V1 + new)<br>
+  └─ trailer (version 2, links to V1)<br>
+  <br>
+  <span style="color:var(--dim)">→ Forensique: Extraire V1 objects = voir ce que changé!</span>
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">✅ Recovery Versions Antérieures</strong><br>
+  <ol style="margin:.75rem 0 0 1.5rem;font-size:.9rem;line-height:1.8">
+    <li>Identifier tous xref offsets (rechercher "xref" dans fichier)</li>
+    <li>Extraire chaque trailer (liens entre versions)</li>
+    <li>Reconstruire object trees pour CHAQUE version</li>
+    <li>Dump text content de chaque version</li>
+    <li>Timeline éditions (qui, quand, quoi changé)</li>
+  </ol>
+</div>
+
+<div class="sec-title">Extraction Timeline Interactive</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <label style="display:block;margin-bottom:.75rem;font-size:.9rem;font-weight:600">
+    Offsets xref (chercher "xref" dans hex dump):
+    <textarea id="pdf-xref" placeholder="0&#10;256&#10;1024&#10;5678" style="width:100%;height:100px;margin-top:.35rem;padding:.6rem;background:rgba(13,17,23,.5);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem"></textarea>
+  </label>
+  <button onclick="analyzePDFVersions()" style="width:100%;padding:.6rem;background:var(--green);color:var(--bg);border:none;border-radius:4px;font-weight:600;cursor:pointer">Analyser Versions</button>
+  
+  <div id="versions-result" style="margin-top:1rem;padding:1rem;background:rgba(48,232,138,.1);border:1px solid rgba(48,232,138,.3);border-radius:6px;font-size:.85rem">
+    <div style="color:var(--dim)">👆 Entrez offsets xref pour voir timeline</div>
+  </div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — TOOLS & EXTRACTION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tools">
+
+<div class="sec-title">🔧 Tools PDF Forensique</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Outil</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Fonction</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">CLI/GUI</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>pdfminer</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Extract text, metadata, objects</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>mutool</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Inspect, extract, modify PDFs</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>pdfinfo</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Extract metadata (author, dates)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>ExifTool</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Metadata extraction</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>qpdf</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Inspect structure, linearize, decrypt</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>PDFtk</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Burst (separate pages), stamp, fill</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+</table>
+
+<div class="sec-title">CLI Quick Commands</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem">
+  <code style="display:block;color:var(--cyan);margin-bottom:1rem">
+  # Extract metadata<br>
+  $ pdfinfo document.pdf<br>
+  $ exiftool document.pdf<br>
+  <br>
+  # Extract text<br>
+  $ pdftotext document.pdf - | less<br>
+  $ pdfminer.six document.pdf<br>
+  <br>
+  # Inspect structure<br>
+  $ mutool info document.pdf<br>
+  $ qpdf --qdf document.pdf document-out.pdf<br>
+  <br>
+  # Find xref tables (incremental updates)<br>
+  $ strings document.pdf | grep "^xref"<br>
+  $ hexdump -C document.pdf | grep -B2 -A2 "78 72 65 66"  # xref in hex<br>
+  <br>
+  # Extract embedded files<br>
+  $ mutool extract document.pdf  # extracts all resources<br>
+  <br>
+  # Search for suspicious strings<br>
+  $ strings document.pdf | grep -i "javascript\|openaction\|embed"
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">✅ Workflow Complet PDF Forensique</strong><br>
+  <ol style="margin:.75rem 0 0 1.5rem;font-size:.9rem;line-height:1.8">
+    <li><strong>pdfinfo</strong> → Extraire metadata (Author, Dates, Producer)</li>
+    <li><strong>strings/mutool info</strong> → Chercher objects cachés (EmbeddedFile, JavaScript)</li>
+    <li><strong>mutool extract</strong> → Extraire embedded files + images</li>
+    <li><strong>grep "^xref"</strong> → Identifier incremental updates</li>
+    <li><strong>qpdf --qdf</strong> → Linearize et faire readable pour inspect</li>
+    <li><strong>pdftotext</strong> → Extraire texte de TOUTES versions</li>
+    <li><strong>Rapport</strong> : Auteur, dates, embedded files, version timeline</li>
+  </ol>
+</div>
+
+</div>
+
+</div>
+
+<script>
+function showTab(tab, btn) {
+  var pages = document.querySelectorAll('.tab-page');
+  pages.forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function analyzePDFMetadata() {
+  var input = document.getElementById('pdf-meta').value;
+  var result = document.getElementById('pdf-result');
+  
+  if (!input) {
+    result.innerHTML = '<div style="color:var(--dim)">Aucunes données</div>';
+    return;
+  }
+  
+  var lines = input.split('\n');
+  var createdDate = null, modDate = null;
+  var metadata = {};
+  
+  lines.forEach(line => {
+    var parts = line.split(':');
+    if (parts[0]) {
+      var key = parts[0].trim();
+      var value = parts.slice(1).join(':').trim();
+      metadata[key] = value;
+    }
+  });
+  
+  var html = '<div style="color:var(--cyan);font-weight:600">📊 Analyse Timeline</div>';
+  html += '<div style="font-size:.85rem;margin-top:.5rem">';
+  
+  if (metadata['CreationDate']) html += '<strong>Créé :</strong> ' + metadata['CreationDate'] + '<br>';
+  if (metadata['ModDate']) html += '<strong>Modifié :</strong> ' + metadata['ModDate'] + '<br>';
+  if (metadata['Author']) html += '<strong style="color:var(--green)">👤 Auteur :</strong> ' + metadata['Author'] + '<br>';
+  if (metadata['Creator']) html += '<strong>Logiciel :</strong> ' + metadata['Creator'] + '<br>';
+  
+  html += '<br><strong style="color:var(--orange)">⚠️ Indicateurs :</strong><br>';
+  if (metadata['CreationDate'] && metadata['ModDate']) {
+    html += '• Document modifié après création<br>';
+  }
+  if (metadata['Author'] !== metadata['Creator']) {
+    html += '• Auteur ≠ Logiciel d\'origine<br>';
+  }
+  
+  html += '</div>';
+  result.innerHTML = html;
+}
+
+function analyzePDFVersions() {
+  var input = document.getElementById('pdf-xref').value;
+  var result = document.getElementById('versions-result');
+  
+  if (!input) {
+    result.innerHTML = '<div style="color:var(--dim)">Aucunes données</div>';
+    return;
+  }
+  
+  var offsets = input.trim().split('\n').filter(l => l.trim());
+  var html = '<div style="color:var(--green);font-weight:600">🔄 Timeline Versions</div>';
+  html += '<div style="font-size:.85rem;margin-top:.5rem">';
+  html += '<strong>Nombre versions:</strong> ' + offsets.length + '<br>';
+  
+  offsets.forEach((offset, idx) => {
+    html += 'Version ' + (idx + 1) + ': xref @ offset ' + offset + '<br>';
+  });
+  
+  html += '<br><strong style="color:var(--cyan)">💡 Implications :</strong><br>';
+  if (offsets.length > 1) {
+    html += '• Document modifié ' + (offsets.length - 1) + ' fois<br>';
+    html += '• Versions antérieures = récupérables<br>';
+    html += '• Possible tampering (vérifier signatures)<br>';
+  }
+  
+  html += '</div>';
+  result.innerHTML = html;
+}
+</script>
+
+</body>
+</html>
