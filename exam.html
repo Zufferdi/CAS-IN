@@ -390,6 +390,7 @@ function escHtml(s){
 }
 
 let allQ = [], examQ = [], cur = 0, answered = [], flagged = new Set();
+let examFinished = false;
 let timerSec = 0, timerElapsed = 0, timerInterval = null, paused = false;
 let cfg = { dur: 30, nq: 20, mods: ['all'] };
 
@@ -614,6 +615,8 @@ function nextQ(skip) {
 
 // ── Finish ────────────────────────────────────────────────────
 function finishExam() {
+  if (examFinished) return;
+  examFinished = true;
   clearInterval(timerInterval);
   const correct = answered.filter((a,i) => a === examQ[i].correct).length;
   const wrong = answered.filter((a,i) => a !== null && a !== -1 && a !== examQ[i].correct).length;
@@ -656,7 +659,7 @@ function finishExam() {
   });
 
   // Radar chart
-  drawRadar(modStats);
+  drawRadarResponsive(modStats);
 
   // Save to localStorage for dashboard
   try {
@@ -674,7 +677,7 @@ function finishExam() {
     wrongList.innerHTML = wrongs.slice(0,10).map(({q,a}) => `
       <div class="wr-item">
         <div class="wr-q">${escHtml(q.question)}</div>
-        <div class="wr-ans wrong">✗ Votre réponse : ${escHtml(q.answers[a]||'—'}</div>
+        <div class="wr-ans wrong">✗ Votre réponse : ${escHtml(q.answers[a]||'—')}</div>
         <div class="wr-ans correct">✓ Bonne réponse : ${q.answers[q.correct]||'—'}</div>
         ${q.explanation?`<div class="wr-expl">💡 ${q.explanation}</div>`:''}
       </div>`).join('');
@@ -763,6 +766,19 @@ function drawRadar(modStats) {
     ctx.textBaseline='middle';
     ctx.fillText((MOD_LABELS[m]||m).replace(/^[0-9]+\s*[^\s]*\s*/,'').slice(0,14), lx, ly);
   });
+}
+
+let _radarStats = null;
+function drawRadarResponsive(modStats) {
+  _radarStats = modStats;
+  drawRadar(modStats);
+  if (!window._radarObs && window.ResizeObserver) {
+    const canvas = document.getElementById('radar-canvas');
+    if (canvas) {
+      window._radarObs = new ResizeObserver(() => { if (_radarStats) drawRadar(_radarStats); });
+      window._radarObs.observe(canvas.parentElement || canvas);
+    }
+  }
 }
 
 function showScreen(id) {
