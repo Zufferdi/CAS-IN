@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>USB & Removable Media Forensique — CAS-IN DFIR</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">DEVICES & EXFILTRATION</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-devices">Devices & Exfiltration</a><span class="bc-sep">›</span>
+    <span class="bc-current">USB & Removable Media Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">💾</span>
+    <span class="tag tag-blue" style="margin-left:.5rem">Hardware</span>
+    <span class="tag tag-red" style="margin-left:.3rem">Exfiltration</span>
+    <span class="tag tag-orange" style="margin-left:.3rem">Timeline</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">USB & Removable Media Forensique</h1>
+    <div class="meta">USB Architecture · Device Tracking · USBSTOR Registry · Timestamps · Device ID · Connection Timeline</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="windows_registry.html" class="prereq-pill">📖 Windows Registry</a><a href="ntfs_forensique.html" class="prereq-pill">📖 NTFS Forensique</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="exfiltration_data.html" class="related-pill">🔗 Exfiltration & Data Theft</a><a href="autorités_competences_ch.html" class="related-pill">🔗 Autorités CH</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="usb-tabs">
+  <button class="tab active" onclick="showTab('architecture',this)">🏗️ USB Architecture</button>
+  <button class="tab" onclick="showTab('artifacts',this)">📝 Windows USB Artifacts</button>
+  <button class="tab" onclick="showTab('timeline',this)">📅 Timeline & Connection</button>
+  <button class="tab" onclick="showTab('identification',this)">🆔 Device Identification</button>
+  <button class="tab" onclick="showTab('tools',this)">🔧 Tools & Extraction</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — ARCHITECTURE
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-architecture">
+
+<div class="concept-card">
+  <div class="concept-title">🏗️ USB = Universal Serial Bus Protocol</div>
+  Standard for connecting peripherals. From forensic perspective: device tracking, exfiltration detection, data recovery. Windows logs all USB connections in registry.
+</div>
+
+<div class="sec-title">USB Protocol Layers</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Layer</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Fonction</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Forensique</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Physical</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">USB connectors, wiring, power</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Device identification (connector type)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Protocol</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Handshake, data transfer, power mgmt</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">PCAP analysis (if captured)</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Device Class</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Mass storage, HID, CDC (what type?)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Classify device (thumb drive, keyboard, etc.)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Filesystem</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">FAT32, exFAT, NTFS (what data?)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">File recovery, timestamps</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(0,229,204,.08);border-left:3px solid var(--cyan)">
+  <strong style="color:var(--cyan)">Common USB Device Classes</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li><strong>Mass Storage (0x08):</strong> USB stick, external drive, SD card reader</li>
+    <li><strong>HID (0x03):</strong> Keyboard, mouse, joystick</li>
+    <li><strong>Printer (0x07):</strong> Printer, scanner</li>
+    <li><strong>Communications (0x02):</strong> Modem, phone, Ethernet adapter</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — WINDOWS USB ARTIFACTS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-artifacts">
+
+<div class="concept-card">
+  <div class="concept-title">📝 Windows USBSTOR Registry = Device History</div>
+  Every USB device connected = logged in USBSTOR. Contains: device ID, vendor, model, serial number, connection timestamps.
+</div>
+
+<div class="sec-title">USBSTOR Registry Path & Keys</div>
+
+<div style="margin:1.5rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem;line-height:1.9;color:var(--text)">
+  <code>
+  <strong style="color:var(--cyan)">HKLM\System\CurrentControlSet\Enum\USBSTOR</strong><br>
+  <br>
+  Example subkey:<br>
+  Disk&Ven_Kingston&Prod_DataTraveler_3.0&Rev_1.10\<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;E6B4C3D2F5A1B0C9<br>
+  <br>
+  Inside:<br>
+  ├─ FriendlyName: "Kingston DataTraveler 3.0"<br>
+  ├─ Manufacturer: "Kingston"<br>
+  ├─ Model: "DataTraveler 3.0"<br>
+  ├─ Serial Number: "E6B4C3D2F5A1B0C9"<br>
+  └─ LastWrite timestamp: 2024-03-20 14:32:15<br>
+  <br>
+  <span style="color:var(--orange)">⚠️ LastWrite = when device FIRST connected</span>
+  </code>
+</div>
+
+<div class="sec-title">Additional USB Artifact Locations</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Registry Path</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Information</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>...Enum\USB</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">USB device descriptors (VID, PID)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>...MountedDevices</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Drive letters assigned to USB devices</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>...Explorer\MountPoints2</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">USB connections (per user)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>...Class\{36fc9e60...}</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">USB mass storage class descriptor</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red)">
+  <strong style="color:var(--red)">🚨 ForensicValue: USBSTOR</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li><strong>First connection time</strong> → When device first plugged</li>
+    <li><strong>Serial number</strong> → Uniquely identify device</li>
+    <li><strong>Vendor/Model</strong> → Trace ownership (registered owner?)</li>
+    <li><strong>Multiple connections</strong> → Device used repeatedly</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — TIMELINE & CONNECTION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-timeline">
+
+<div class="concept-card">
+  <div class="concept-title">📅 USB Connection Timeline = Exfiltration Proof</div>
+  Combining USBSTOR timestamps + filesystem access times = complete USB usage timeline. Proves device connection, data transfer, disconnection.
+</div>
+
+<div class="sec-title">Timeline Reconstruction Process</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-size:.9rem;line-height:1.8">
+  <div style="color:var(--cyan);font-weight:600;margin-bottom:.75rem">Step-by-step:</div>
+  <ol style="margin:0 0 0 1.5rem">
+    <li><strong>USBSTOR LastWrite</strong> → Device first connected (exact time)</li>
+    <li><strong>MountedDevices</strong> → What drive letter assigned</li>
+    <li><strong>File modification times</strong> → When files copied to USB</li>
+    <li><strong>Recycle Bin</strong> → Files deleted from USB?</li>
+    <li><strong>Event Log</strong> → Device safely removed (if logged)</li>
+    <li><strong>USB descriptor fields</strong> → ParentIdPrefix (disconnection indicator)</li>
+  </ol>
+</div>
+
+<div class="sec-title">Timeline Builder Interactive</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <label style="display:block;margin-bottom:.75rem;font-size:.9rem;font-weight:600">
+    Entrez événements USB (timestamp:event):
+    <textarea id="usb-timeline" placeholder="2024-03-20T14:30:00Z:Device connected (USBSTOR LastWrite)&#10;2024-03-20T14:31:00Z:Drive mounted as E:&#10;2024-03-20T14:35:00Z:File copied (MFT timestamp)&#10;2024-03-20T15:00:00Z:Device safely removed" style="width:100%;height:120px;margin-top:.35rem;padding:.6rem;background:rgba(13,17,23,.5);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem"></textarea>
+  </label>
+  <button onclick="buildUSBTimeline()" style="width:100%;padding:.6rem;background:var(--cyan);color:var(--bg);border:none;border-radius:4px;font-weight:600;cursor:pointer">Créer Timeline USB</button>
+  
+  <div id="usb-timeline-result" style="margin-top:1rem;padding:1rem;background:rgba(0,229,204,.1);border:1px solid rgba(0,229,204,.3);border-radius:6px;font-size:.85rem;min-height:100px">
+    <div style="color:var(--dim)">👆 Entrez événements pour voir chronologie</div>
+  </div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — DEVICE IDENTIFICATION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-identification">
+
+<div class="concept-card">
+  <div class="concept-title">🆔 Device ID = Unique Identification</div>
+  Every USB device has unique identifiers: VID (Vendor ID), PID (Product ID), serial number. Used to identify device across connections, track ownership.
+</div>
+
+<div class="sec-title">VID/PID Structure & Lookup</div>
+
+<div style="margin:1.5rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <div style="color:var(--cyan);font-weight:600;margin-bottom:.75rem">Example Device ID:</div>
+  <code style="display:block;font-family:var(--mono);font-size:.8rem;line-height:1.8;color:var(--text)">
+  VID_0951&PID_1666<br>
+  ├─ VID_0951 = Kingston Technology Corporation<br>
+  ├─ PID_1666 = DataTraveler 3.0 (Kingston product code)<br>
+  <br>
+  Serial: E6B4C3D2F5A1B0C9<br>
+  ↓<br>
+  This identifies EXACTLY which Kingston stick<br>
+  (if serial recovered, can trace owner/retailer)
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">VID/PID Lookup Resources</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li><strong>usb.org</strong> → Official VID database (if public)</li>
+    <li><strong>Linux USB IDs</strong> → usb-ids.grepcode.com (crowd-sourced)</li>
+    <li><strong>Registry keys</strong> → Device names sometimes stored locally</li>
+    <li><strong>DeviceManager</strong> → Windows Device Manager shows name</li>
+  </ul>
+</div>
+
+<div class="sec-title">Serial Number Forensics</div>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red)">
+  <strong style="color:var(--red)">🔍 Serial Number = Ownership Trace</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li>Unique per device (manufacturer assigns)</li>
+    <li>Traceable through retailer (e.g., Amazon receipt)</li>
+    <li>Possible identify actual owner (if serial registered)</li>
+    <li>Valuable for attribution (this device = that person)</li>
+  </ul>
+</div>
+
+<div class="sec-title">Device ID Analyzer Interactive</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <label style="display:block;margin-bottom:.75rem;font-size:.9rem;font-weight:600">
+    Entrez Device ID (VID & PID):
+    <input id="device-id" type="text" placeholder="VID_0951&PID_1666" style="width:100%;padding:.6rem;margin-top:.35rem;background:rgba(13,17,23,.5);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.85rem">
+  </label>
+  <button onclick="analyzeDeviceID()" style="width:100%;padding:.6rem;background:var(--green);color:var(--bg);border:none;border-radius:4px;font-weight:600;cursor:pointer">Identifier</button>
+  
+  <div id="device-result" style="margin-top:1rem;padding:1rem;background:rgba(48,232,138,.1);border:1px solid rgba(48,232,138,.3);border-radius:6px;font-size:.85rem">
+    <div style="color:var(--dim)">👆 Entrez VID & PID pour identification</div>
+  </div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — TOOLS & EXTRACTION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tools">
+
+<div class="sec-title">🔧 USB Forensique Tools</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Outil</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Fonction</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Platform</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>usbdeview</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">List USB devices + USBSTOR dump (GUI)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Windows</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Registry Editor</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Manual USBSTOR browse</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Windows</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>RegRipper</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">USB artifact extraction (Ruby plugin)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Cross-platform</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>lsusb (Linux)</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">List USB devices + VID/PID</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Linux</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Volatility</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Extract USB from memory dumps</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Cross-platform</td>
+  </tr>
+
+</table>
+
+<div class="sec-title">CLI Quick Commands</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem">
+  <code style="display:block;color:var(--cyan);margin-bottom:1rem">
+  # Export USBSTOR from offline registry<br>
+  $ rip.pl -r SYSTEM -p usbdevices<br>
+  <br>
+  # List connected USB devices (Linux)<br>
+  $ lsusb -v<br>
+  <br>
+  # Extract USB artifacts from memory dump<br>
+  $ volatility3 -f memory.raw windows.registry.printkey --key "Enum\\USBSTOR"<br>
+  <br>
+  # Parse USBSTOR timestamps (Windows)<br>
+  $ reg query "HKLM\System\CurrentControlSet\Enum\USBSTOR" /s<br>
+  <br>
+  # Timeline USB connections<br>
+  $ rip.pl -r SYSTEM -p usbdevices | grep -i "timestamp\|serial"
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">✅ Workflow Complet USB Forensique</strong><br>
+  <ol style="margin:.75rem 0 0 1.5rem;font-size:.9rem;line-height:1.8">
+    <li>Extract USBSTOR from offline registry (RegRipper or regedit)</li>
+    <li>Parse device IDs (VID, PID, serial numbers)</li>
+    <li>Lookup vendors (usb-ids, manufacturer)</li>
+    <li>Collect timestamps (USBSTOR LastWrite = first connection)</li>
+    <li>Check MountedDevices (drive letter assigned)</li>
+    <li>Correlate with filesystem timestamps (files copied when?)</li>
+    <li>Check Event Log (device safely removed entry?)</li>
+    <li>Timeline: connection → data transfer → disconnection</li>
+    <li>Rapport: device identification, timeline, exfiltration proof</li>
+  </ol>
+</div>
+
+</div>
+
+</div>
+
+<script>
+function showTab(tab, btn) {
+  var pages = document.querySelectorAll('.tab-page');
+  pages.forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function buildUSBTimeline() {
+  var input = document.getElementById('usb-timeline').value;
+  var result = document.getElementById('usb-timeline-result');
+  
+  if (!input) {
+    result.innerHTML = '<div style="color:var(--dim)">Aucunes données</div>';
+    return;
+  }
+  
+  var lines = input.split('\n').filter(l => l.trim());
+  var events = [];
+  
+  lines.forEach(line => {
+    var parts = line.split(':');
+    if (parts.length >= 2) {
+      var time = parts[0].trim();
+      var event = parts.slice(1).join(':').trim();
+      events.push({ time: time, event: event });
+    }
+  });
+  
+  events.sort((a, b) => new Date(a.time) - new Date(b.time));
+  
+  var html = '<div style="color:var(--cyan);font-weight:600">📊 USB Connection Timeline</div>';
+  html += '<div style="font-size:.85rem;margin-top:.5rem">';
+  html += '<strong>Events:</strong> ' + events.length + '<br><br>';
+  
+  var firstTime = events.length > 0 ? new Date(events[0].time) : null;
+  var lastTime = events.length > 0 ? new Date(events[events.length - 1].time) : null;
+  
+  if (firstTime && lastTime) {
+    var duration = (lastTime - firstTime) / 1000 / 60;
+    html += '<strong>Total duration:</strong> ' + Math.round(duration) + ' minutes<br>';
+  }
+  
+  html += '<br><strong>Chronologie:</strong><br>';
+  events.forEach((e, idx) => {
+    html += (idx + 1) + '. <span style="color:var(--gold)">' + e.time + '</span><br>';
+    html += '&nbsp;&nbsp;&nbsp;&nbsp;' + e.event + '<br>';
+  });
+  
+  html += '<br><strong style="color:var(--green)">✅ Evidence:</strong><br>';
+  html += '• Device connected at: ' + (firstTime ? firstTime.toLocaleString() : 'N/A') + '<br>';
+  html += '• Session duration: ' + Math.round(duration) + ' minutes<br>';
+  html += '• Evidence of data transfer: ' + (events.length > 1 ? 'YES' : 'Unknown') + '<br>';
+  
+  html += '</div>';
+  result.innerHTML = html;
+}
+
+function analyzeDeviceID() {
+  var input = document.getElementById('device-id').value;
+  var result = document.getElementById('device-result');
+  
+  if (!input) {
+    result.innerHTML = '<div style="color:var(--dim)">Entrez VID & PID</div>';
+    return;
+  }
+  
+  var vidMatch = input.match(/VID_([0-9A-Fa-f]+)/);
+  var pidMatch = input.match(/PID_([0-9A-Fa-f]+)/);
+  
+  var html = '<div style="color:var(--green);font-weight:600">🆔 Device Analysis</div>';
+  html += '<div style="font-size:.85rem;margin-top:.5rem">';
+  
+  if (vidMatch) {
+    var vid = vidMatch[1].toUpperCase();
+    html += '<strong>Vendor ID (VID):</strong> ' + vid + '<br>';
+    
+    var vendors = {
+      '0951': 'Kingston Technology Corporation',
+      '13FE': 'Kingston Technology Corporation',
+      '08EC': 'M-Systems',
+      '0204': 'Chipsbank Electronics',
+      '1005': 'Apacer Technology'
+    };
+    
+    if (vendors[vid]) {
+      html += '<span style="color:var(--cyan)">→ Manufacturer: ' + vendors[vid] + '</span><br>';
+    }
+  }
+  
+  if (pidMatch) {
+    var pid = pidMatch[1].toUpperCase();
+    html += '<strong>Product ID (PID):</strong> ' + pid + '<br>';
+    html += '<span style="color:var(--cyan)">→ Device type/model</span><br>';
+  }
+  
+  html += '<br><strong style="color:var(--orange)">⚠️ Forensic Value:</strong><br>';
+  html += '• Uniquely identifies device<br>';
+  html += '• Can trace manufacturer/retailer<br>';
+  html += '• Serial number + VID/PID = exact device owner<br>';
+  
+  html += '</div>';
+  result.innerHTML = html;
+}
+</script>
+
+</body>
+</html>

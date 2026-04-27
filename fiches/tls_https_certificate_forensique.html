@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>TLS/HTTPS Certificate Forensique — CAS-IN DFIR</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">INFRASTRUCTURE & TRACKING</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-infrastructure">Infrastructure & Tracking</a><span class="bc-sep">›</span>
+    <span class="bc-current">TLS/HTTPS Certificate Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~13 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🔐</span>
+    <span class="tag tag-cyan" style="margin-left:.5rem">Certificates</span>
+    <span class="tag tag-gold" style="margin-left:.3rem">X.509</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Infrastructure</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">TLS/HTTPS Certificate Forensique</h1>
+    <div class="meta">X.509 · Certificate Transparency · CT Logs · Domain History · WHOIS · Actor Attribution · Typosquatting</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="reseaux_basics.html" class="prereq-pill">📖 Réseaux Basics</a><a href="dns_forensique.html" class="prereq-pill">📖 DNS Forensique</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="ioc_threat_intel.html" class="related-pill">🔗 IOC & Threat Intel</a><a href="phishing_detection.html" class="related-pill">🔗 Phishing Detection</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="tls-tabs">
+  <button class="tab active" onclick="showTab('anatomy',this)">🔧 Certificate Anatomy</button>
+  <button class="tab" onclick="showTab('ct',this)">📊 Certificate Transparency</button>
+  <button class="tab" onclick="showTab('domain',this)">🌐 Domain History</button>
+  <button class="tab" onclick="showTab('indicators',this)">🚨 Suspicious Indicators</button>
+  <button class="tab" onclick="showTab('tools',this)">🔧 Tools & Validators</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — CERTIFICATE ANATOMY
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-anatomy">
+
+<div class="concept-card">
+  <div class="concept-title">🔧 X.509 Certificate = Digital Identity</div>
+  Certificates bind domain names to public keys. Issued by Certificate Authorities (CAs). Signed digitally. Publicly logged in Certificate Transparency (CT) logs since 2018 (required by Chrome/Firefox).
+</div>
+
+<div class="sec-title">X.509 Certificate Structure (RFC 5280)</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Field</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Content</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Forensique</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Subject (CN)</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Common Name = domain</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 What domain is cert for?</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Subject Alt Names (SAN)</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Alternative names (*.example.com)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Wildcard = hides subdomains</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Issuer</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Certificate Authority (CA)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Which CA issued? (trust chain)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Valid From / To</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Validity period</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">When cert issued/expires</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Serial Number</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Unique ID from CA</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Uniquely identify cert</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Signature</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Digital signature (CA's private key)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Proves CA authorized</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(0,229,204,.08);border-left:3px solid var(--cyan)">
+  <strong style="color:var(--cyan)">Certificate Extraction</strong><br>
+  <code style="display:block;margin:.75rem 0;padding:.5rem;background:rgba(13,17,23,.5);border-radius:4px;font-size:.75rem;font-family:var(--mono)">
+  # Extract from website<br>
+  $ openssl s_client -connect example.com:443 -showcerts<br>
+  <br>
+  # Extract from file<br>
+  $ openssl x509 -in cert.pem -text -noout<br>
+  <br>
+  # Check validity<br>
+  $ openssl x509 -in cert.pem -noout -dates
+  </code>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — CERTIFICATE TRANSPARENCY
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-ct">
+
+<div class="concept-card">
+  <div class="concept-title">📊 Certificate Transparency (RFC 6962)</div>
+  All public CAs must log issued certificates to public CT logs. Chrome/Firefox require CT logs for trust. Enables tracking certificate issuance history.
+</div>
+
+<div class="sec-title">CT Logs & Forensic Value</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <div style="color:var(--cyan);font-weight:600;margin-bottom:.75rem">How CT Works:</div>
+  <ol style="font-size:.9rem;line-height:1.8;margin:0 0 0 1.5rem">
+    <li>CA issues certificate for domain</li>
+    <li>CA must submit to CT logs (publicly)</li>
+    <li>CT log returns "SCT" (Signed Certificate Timestamp)</li>
+    <li>Certificate becomes searchable in CT log</li>
+    <li>Anyone can query CT log (crt.sh) to find certificates</li>
+  </ol>
+</div>
+
+<div class="concept-card" style="background:rgba(0,229,204,.04);border-left:3px solid var(--cyan)">
+  <strong style="color:var(--cyan)">Forensic Goldmine: crt.sh</strong><br>
+  Website: <strong>crt.sh</strong> → Search any domain<br>
+  Returns: ALL certificates ever issued for that domain<br>
+  <br>
+  Example query: crt.sh/?q=example.com<br>
+  → Shows every cert, issue date, expiry, issuer, SANs<br>
+  <br>
+  <span style="font-size:.9rem;color:var(--green)">✅ Perfect for:</span>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li>Infrastructure timeline (when cert obtained)</li>
+    <li>Domain ownership changes (different CAs = different operators?)</li>
+    <li>Phishing domain tracking (typosquatting domains)</li>
+    <li>C2 infrastructure (multiple domains, same cert)</li>
+  </ul>
+</div>
+
+<div class="sec-title">CT Log Query Interactive</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <label style="display:block;margin-bottom:.75rem;font-size:.9rem;font-weight:600">
+    Entrez domaine pour CT search:
+    <input id="domain-ct" type="text" placeholder="example.com" style="width:100%;padding:.6rem;margin-top:.35rem;background:rgba(13,17,23,.5);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.85rem">
+  </label>
+  <button onclick="queryCT()" style="width:100%;padding:.6rem;background:var(--cyan);color:var(--bg);border:none;border-radius:4px;font-weight:600;cursor:pointer">Query crt.sh</button>
+  
+  <div id="ct-result" style="margin-top:1rem;padding:1rem;background:rgba(0,229,204,.1);border:1px solid rgba(0,229,204,.3);border-radius:6px;font-size:.85rem">
+    <div style="color:var(--dim)">👆 Entrez domaine pour voir historique certificats</div>
+  </div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — DOMAIN HISTORY
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-domain">
+
+<div class="concept-card">
+  <div class="concept-title">🌐 Domain History = Ownership & Operator Timeline</div>
+  Combining CT logs + WHOIS = complete domain history. Reveals when domain registered, who owns it, when certificates obtained.
+</div>
+
+<div class="sec-title">Domain Forensics Workflow</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Step</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Tool</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Information</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)">1. WHOIS lookup</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">whois.com or CLI</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Registrant name, address, email</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)">2. Registration date</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">WHOIS field</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">When domain first registered</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)">3. CT logs (crt.sh)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">crt.sh or API</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">When first cert issued (often right after registration)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)">4. Cert timeline</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">crt.sh results</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">How many certs, renewal frequency</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)">5. IP history</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">DNS history, passive DNS</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Where domain resolves (infrastructure)</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red)">
+  <strong style="color:var(--red)">🚨 Suspicious Patterns</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li><strong>Recently registered</strong> (< 1 week) = likely phishing</li>
+    <li><strong>Registrant email = temp/throwaway</strong> = suspicious</li>
+    <li><strong>Multiple domains, same registrant</strong> = infrastructure</li>
+    <li><strong>Wildcard cert</strong> = tries to hide subdomains</li>
+    <li><strong>Typosquatting variants</strong> (exxample.com for example.com)</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — SUSPICIOUS INDICATORS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-indicators">
+
+<div class="concept-card">
+  <div class="concept-title">🚨 Certificate Red Flags = Phishing & C2</div>
+  Legitimate businesses use established CAs + long-term certs. Attackers often use free CAs + short-lived certs + bulk registrations.
+</div>
+
+<div class="sec-title">Phishing Indicators</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0">
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Free CA (Let's Encrypt)</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      Not inherently bad, but:<br>
+      • Easy to obtain (automated)<br>
+      • No vetting (instant issuance)<br>
+      • Phishers use frequently<br>
+      • Check age: < 1 week = suspicious
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Typosquatting Domains</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      google.com vs<br>
+      • gooogle.com (extra o)<br>
+      • goo9le.com (9 instead of g)<br>
+      • Check CT logs for variants
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Wildcard Certificates</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      CN: *.example.com<br>
+      • Hides subdomains<br>
+      • Can serve malware on<br>
+      • any.malicious.com<br>
+      • Legitimate use exists, but suspicious with new domain
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Bulk Registrations</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      Multiple domains registered:<br>
+      • Same registrant<br>
+      • Similar names (campaign)<br>
+      • Quick succession<br>
+      • Often phishing/spam network
+    </span>
+  </div>
+
+</table>
+
+<div class="sec-title">C2 Certificate Patterns</div>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">C2 Infrastructure Tracking</strong><br>
+  Attackers often reuse certificates across multiple C2 domains:<br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li>Search CT logs for uncommon issuer + time period</li>
+    <li>Find all certs from that issuer in same window</li>
+    <li>Cluster by certificate serial (often copied)</li>
+    <li>Results = probable C2 network infrastructure</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — TOOLS & VALIDATORS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tools">
+
+<div class="sec-title">🔧 Certificate Forensique Tools</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Outil</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Fonction</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Access</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>crt.sh</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CT log search (all certificates)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Web</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>openssl</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Extract + inspect certificates</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>whois</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Domain registration lookup</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI / Web</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>SSL Labs</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Deep certificate analysis</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Web</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>shodan</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Search certificates by issuer/serial</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Web / API</td>
+  </tr>
+
+</table>
+
+<div class="sec-title">CLI Quick Commands</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem">
+  <code style="display:block;color:var(--cyan);margin-bottom:1rem">
+  # Extract certificate from website<br>
+  $ openssl s_client -connect example.com:443 -showcerts 2>/dev/null | openssl x509 -text<br>
+  <br>
+  # Check certificate validity<br>
+  $ openssl x509 -in cert.pem -noout -dates<br>
+  <br>
+  # Get certificate info<br>
+  $ openssl x509 -in cert.pem -noout -subject -issuer -serial<br>
+  <br>
+  # WHOIS lookup<br>
+  $ whois example.com<br>
+  <br>
+  # CT log search (command line)<br>
+  $ curl "https://crt.sh/?q=%.example.com&output=json"<br>
+  <br>
+  # Find subdomains from CT logs<br>
+  $ curl "https://crt.sh/?q=example.com&output=json" | jq '.[].name_value'
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">✅ Workflow Complet Certificate Forensique</strong><br>
+  <ol style="margin:.75rem 0 0 1.5rem;font-size:.9rem;line-height:1.8">
+    <li>Extract certificate from target website (openssl)</li>
+    <li>Parse certificate fields (subject, issuer, dates, SANs)</li>
+    <li>Search CT logs (crt.sh) for domain + variants</li>
+    <li>Timeline all certificates (when issued/expired)</li>
+    <li>WHOIS lookup (domain registration, registrant)</li>
+    <li>Check for typosquatting variants (CT search)</li>
+    <li>Cluster infrastructure (same issuer/serial across domains)</li>
+    <li>Check certificate reputation (SSL Labs, threat intel)</li>
+    <li>Report: Timeline, ownership, suspicious patterns</li>
+  </ol>
+</div>
+
+</div>
+
+</div>
+
+<script>
+function showTab(tab, btn) {
+  var pages = document.querySelectorAll('.tab-page');
+  pages.forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function queryCT() {
+  var domain = document.getElementById('domain-ct').value;
+  var result = document.getElementById('ct-result');
+  
+  if (!domain) {
+    result.innerHTML = '<div style="color:var(--dim)">Entrez domaine</div>';
+    return;
+  }
+  
+  // Simulated CT results
+  var html = '<div style="color:var(--cyan);font-weight:600">📊 CT Log Search Results</div>';
+  html += '<div style="font-size:.85rem;margin-top:.5rem">';
+  html += '<strong>Domain:</strong> ' + domain + '<br>';
+  html += '<strong>CT Search URL:</strong> <code style="background:rgba(13,17,23,.5);padding:2px 4px;border-radius:2px">https://crt.sh/?q=%.' + domain + '</code><br><br>';
+  
+  html += '<strong>Simulated Results (actual results from crt.sh):</strong><br>';
+  html += '• 2024-03-20: *.example.com (Let\'s Encrypt) - WILDCARD<br>';
+  html += '• 2024-03-15: www.example.com (DigiCert)<br>';
+  html += '• 2024-03-01: mail.example.com (Let\'s Encrypt)<br>';
+  html += '• 2024-02-28: example.com (Let\'s Encrypt)<br><br>';
+  
+  html += '<strong style="color:var(--orange)">⚠️ Observations:</strong><br>';
+  html += '• Multiple CAs used (Let\'s Encrypt + DigiCert)<br>';
+  html += '• Wildcard certificate present<br>';
+  html += '• Frequent renewals (every 2-3 weeks)<br>';
+  html += '• Recent issuance (all within last month)<br><br>';
+  
+  html += '<strong style="color:var(--green)">💡 Recommendations:</strong><br>';
+  html += '• Check domain WHOIS (registrant verification)<br>';
+  html += '• Investigate IP history (where does it resolve?)<br>';
+  html += '• Search threat intel (known phishing/C2?)<br>';
+  
+  html += '</div>';
+  result.innerHTML = html;
+}
+</script>
+
+</body>
+</html>
