@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Volatility & Memory Forensics — CAS-IN DFIR</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">MEMORY & VOLATILE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-memory">Memory & Volatile</a><span class="bc-sep">›</span>
+    <span class="bc-current">Volatility & Memory Forensics</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~15 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">💾</span>
+    <span class="tag tag-red" style="margin-left:.5rem">Memory</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">Volatile</span>
+    <span class="tag tag-orange" style="margin-left:.3rem">Live Artifacts</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Volatility & Memory Forensics</h1>
+    <div class="meta">Memory Dump Acquisition · Volatility Framework · Process Analysis · DLL Injection · Rootkit Detection · Code Injection</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="windows_registry.html" class="prereq-pill">📖 Windows Registry</a><a href="malware_forensique.html" class="prereq-pill">📖 Malware Forensics</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="reverse_engineering.html" class="related-pill">🔗 Reverse Engineering</a><a href="rootkit_detection.html" class="related-pill">🔗 Rootkit Detection</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="memory-tabs">
+  <button class="tab active" onclick="showTab('acquisition',this)">📥 Memory Dump Acquisition</button>
+  <button class="tab" onclick="showTab('volatility',this)">🔧 Volatility Framework</button>
+  <button class="tab" onclick="showTab('process',this)">📋 Process & DLL Analysis</button>
+  <button class="tab" onclick="showTab('injection',this)">💉 Code Injection Detection</button>
+  <button class="tab" onclick="showTab('tools',this)">🔧 Tools & Extraction</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — ACQUISITION
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-acquisition">
+
+<div class="concept-card">
+  <div class="concept-title">📥 Memory Dump = Snapshot RAM (Volatile)</div>
+  RAM contains ephemeral data: running processes, open connections, injected code, encryption keys. Dumps before shutdown = capture live artifacts (malware processes, network state).
+</div>
+
+<div class="sec-title">Memory Dump Types & Methods</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Method</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Tool</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Forensique</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Live Dump</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">FTK Imager, DumpIt, Volatility</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 Best (captures NOW state)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Hibernation File</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">hiberfil.sys (Windows)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Memory state at sleep time</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Pagefile/Swap</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">pagefile.sys, swapfile.sys</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Partial memory (disk), slower to recover</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Crash Dump</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">MINIDUMP, COMPLETE_DUMP</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Partial dump after BSOD</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(0,229,204,.08);border-left:3px solid var(--cyan)">
+  <strong style="color:var(--cyan)">Live Dump Procedure</strong><br>
+  <ol style="margin:.5rem 0 0 1.5rem;font-size:.9rem;line-height:1.8">
+    <li>Plug USB with forensic tools (read-only write blocker)</li>
+    <li>Run FTK Imager or Volatility (minimal footprint)</li>
+    <li>Dump entire RAM to USB/NAS (can take 30-60 min for 128GB)</li>
+    <li>Verify hash (integrity)</li>
+    <li>Never shutdown system until dump complete!</li>
+  </ol>
+</div>
+
+<div class="sec-title">Memory Dump File Formats</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Format</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Extension</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Tools</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Raw Binary</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">.raw, .mem, .bin</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Volatility, FTK</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Windows Dump</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">.dmp</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Volatility (needs profile)</td>
+  </tr>
+
+</table>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — VOLATILITY FRAMEWORK
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-volatility">
+
+<div class="concept-card">
+  <div class="concept-title">🔧 Volatility = Memory Analysis Framework</div>
+  Open-source framework for memory dump analysis. Supports Windows, Linux, macOS. Modular plugins for process listing, network connections, rootkit detection.
+</div>
+
+<div class="sec-title">Volatility3 Architecture</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <div style="color:var(--cyan);font-weight:600;margin-bottom:.75rem">Installation & Basic Usage:</div>
+  <code style="display:block;font-family:var(--mono);font-size:.8rem;line-height:1.8">
+  # Install Volatility3<br>
+  $ pip install volatility3<br>
+  <br>
+  # Basic command<br>
+  $ volatility3 -f memory.raw windows.pslist<br>
+  <br>
+  # Syntax<br>
+  volatility3 -f [DUMP] [OS].([PLUGIN])<br>
+  <br>
+  Windows plugins: windows.pslist, windows.netscan, windows.ssdt<br>
+  Linux plugins: linux.pslist, linux.netstat<br>
+  </code>
+</div>
+
+<div class="sec-title">Critical Volatility Plugins</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Plugin</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Fonction</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Forensique</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>pslist</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">List running processes</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 Find malware processes</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>psscan</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Scan for hidden processes</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 Find rootkit processes</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>netscan</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Network connections (TCP/UDP)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 C2 beaconing, backdoors</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>dlllist</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">DLLs loaded in process</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Find injected DLLs</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>ssdt</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">System Service Dispatch Table</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Detect kernel hooks</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>apihooks</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">API hooks (user + kernel)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Rootkit API interception</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red)">
+  <strong style="color:var(--red)">🚨 Volatility Output Analysis</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li>Suspicious process names (cmd.exe, powershell under svchost = unusual)</li>
+    <li>Unexpected parent-child relationships (explorer.exe → rundll32 = injected?)</li>
+    <li>Unknown DLLs (loaded from temp folder = malware)</li>
+    <li>Network connections to C2 IPs (known malicious, non-standard ports)</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — PROCESS & DLL ANALYSIS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-process">
+
+<div class="concept-card">
+  <div class="concept-title">📋 Process Tree = Execution Hierarchy</div>
+  Each process has parent (who launched it). Trees reveal anomalies: cmd.exe under svchost = injected, powershell under explorer = unusual.
+</div>
+
+<div class="sec-title">Suspicious Process Patterns</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0">
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Unusual Parents</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      • svchost.exe → cmd.exe<br>
+      • System (PID 4) → powershell<br>
+      • lsass.exe → rundll32<br>
+      = MALWARE INJECTION
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Wrong Locations</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      • explorer.exe from temp/<br>
+      • svchost from C:\Users\<br>
+      • cmd.exe from AppData\<br>
+      = EXECUTABLE SPOOFING
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Hidden Processes</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      pslist ≠ psscan<br>
+      (pslist uses kernel, psscan carves memory)<br>
+      = ROOTKIT HIDING
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Injected DLLs</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      DLL from unexpected path<br>
+      Random-named DLLs<br>
+      DLL with no file on disk<br>
+      = CODE INJECTION
+    </span>
+  </div>
+
+</div>
+
+<div class="sec-title">Process Timeline Interactive</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <label style="display:block;margin-bottom:.75rem;font-size:.9rem;font-weight:600">
+    Entrez processes (PID:Name:Parent):
+    <textarea id="process-list" placeholder="4:System:0&#10;620:svchost.exe:4&#10;1024:cmd.exe:620&#10;1025:powershell.exe:1024" style="width:100%;height:100px;margin-top:.35rem;padding:.6rem;background:rgba(13,17,23,.5);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem"></textarea>
+  </label>
+  <button onclick="analyzeProcessTree()" style="width:100%;padding:.6rem;background:var(--cyan);color:var(--bg);border:none;border-radius:4px;font-weight:600;cursor:pointer">Analyser Tree</button>
+  
+  <div id="process-result" style="margin-top:1rem;padding:1rem;background:rgba(0,229,204,.1);border:1px solid rgba(0,229,204,.3);border-radius:6px;font-size:.85rem;min-height:100px">
+    <div style="color:var(--dim)">👆 Entrez processes pour voir tree</div>
+  </div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — CODE INJECTION DETECTION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-injection">
+
+<div class="concept-card">
+  <div class="concept-title">💉 Code Injection = Malware Stealth Technique</div>
+  Instead of running own process, malware injects code into legitimate process. Hides from task manager. Memory analysis reveals injection.
+</div>
+
+<div class="sec-title">Common Injection Methods</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Technique</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Mechanism</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Detection</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>DLL Injection</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">LoadLibrary call → inject DLL</td>
+    <td style="padding:.6rm;border:1px solid var(--border)">Unexpected DLLs in dlllist</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Process Hollowing</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Hollow process, replace code</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Mismatch disk exe vs memory</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Shellcode Injection</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">WriteProcessMemory → shellcode</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">PAGE_EXECUTE_READWRITE regions</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>AppInit_DLLs</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Registry hook → load on startup</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Check registry + DLL verification</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red)">
+  <strong style="color:var(--red)">🔍 Detection Indicators</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li><strong>Executable memory without backing file</strong> (PAGE_EXECUTE_READWRITE with no .exe)</li>
+    <li><strong>Inconsistent IAT (Import Address Table)</strong> (hooks/tampering)</li>
+    <li><strong>Unusual section permissions</strong> (.text section writable = suspicious)</li>
+    <li><strong>DLL from temp/AppData</strong> (not system32)</li>
+    <li><strong>Memory pages with no matching file on disk</strong></li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — TOOLS & EXTRACTION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tools">
+
+<div class="sec-title">🔧 Memory Forensique Tools</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Outil</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Fonction</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Type</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Volatility3</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Memory analysis framework (most plugins)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>FTK Imager</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Live memory dump acquisition</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">GUI</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Velociraptor</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Endpoint agent + memory collection</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Agent-based</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>WinDbg</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Windows debugger (memory inspection)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI/GUI</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>strings</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Extract ASCII/Unicode strings from memory</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+</table>
+
+<div class="sec-title">CLI Quick Commands</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem">
+  <code style="display:block;color:var(--cyan);margin-bottom:1rem">
+  # List processes<br>
+  $ volatility3 -f memory.raw windows.pslist<br>
+  <br>
+  # Scan for hidden processes<br>
+  $ volatility3 -f memory.raw windows.psscan<br>
+  <br>
+  # Network connections<br>
+  $ volatility3 -f memory.raw windows.netscan<br>
+  <br>
+  # DLLs for specific process<br>
+  $ volatility3 -f memory.raw windows.dlllist -pid 1024<br>
+  <br>
+  # Check SSDT hooks<br>
+  $ volatility3 -f memory.raw windows.ssdt<br>
+  <br>
+  # Dump process executable<br>
+  $ volatility3 -f memory.raw windows.psxview<br>
+  <br>
+  # Extract strings<br>
+  $ strings memory.raw | grep "malware\|C2"
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">✅ Workflow Complet Memory Forensique</strong><br>
+  <ol style="margin:.75rem 0 0 1.5rem;font-size:.9rem;line-height:1.8">
+    <li>Dump RAM (FTK Imager or Volatility live)</li>
+    <li>List processes (pslist + psscan comparison)</li>
+    <li>Analyze network connections (netscan → C2?)</li>
+    <li>Inspect DLLs (find injected)</li>
+    <li>Check for code injection (PAGE_EXECUTE regions)</li>
+    <li>Scan SSDT/API hooks (rootkit detection)</li>
+    <li>Extract suspicious executables (for analysis)</li>
+    <li>Timeline: when processes started (process create time)</li>
+    <li>Rapport: malware processes, C2 IPs, injection techniques</li>
+  </ol>
+</div>
+
+</div>
+
+</div>
+
+<script>
+function showTab(tab, btn) {
+  var pages = document.querySelectorAll('.tab-page');
+  pages.forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function analyzeProcessTree() {
+  var input = document.getElementById('process-list').value;
+  var result = document.getElementById('process-result');
+  
+  if (!input) {
+    result.innerHTML = '<div style="color:var(--dim)">Aucunes données</div>';
+    return;
+  }
+  
+  var lines = input.split('\n').filter(l => l.trim());
+  var procs = {};
+  var suspicious = [];
+  
+  lines.forEach(line => {
+    var parts = line.split(':');
+    if (parts.length >= 3) {
+      var pid = parts[0].trim();
+      var name = parts[1].trim();
+      var ppid = parts[2].trim();
+      procs[pid] = { name: name, ppid: ppid };
+      
+      // Check suspicions
+      if ((name === 'cmd.exe' || name === 'powershell.exe') && (ppid === '620' || ppid === '1024')) {
+        suspicious.push(name + ' under svchost/system');
+      }
+    }
+  });
+  
+  var html = '<div style="color:var(--cyan);font-weight:600">📊 Process Tree Analysis</div>';
+  html += '<div style="font-size:.85rem;margin-top:.5rem">';
+  html += '<strong>Total processes:</strong> ' + Object.keys(procs).length + '<br><br>';
+  
+  html += '<strong>Process Tree:</strong><br>';
+  Object.entries(procs).forEach(([pid, proc]) => {
+    var indent = proc.ppid === '0' ? '└─ ' : '   └─ ';
+    html += indent + proc.name + ' (PID ' + pid + ', Parent: ' + proc.ppid + ')<br>';
+  });
+  
+  if (suspicious.length > 0) {
+    html += '<br><strong style="color:var(--red)">🚨 SUSPICIOUS PATTERNS:</strong><br>';
+    suspicious.forEach(s => html += '• ' + s + '<br>');
+  } else {
+    html += '<br><span style="color:var(--green)">✅ No obvious injections detected</span><br>';
+  }
+  
+  html += '</div>';
+  result.innerHTML = html;
+}
+</script>
+
+</body>
+</html>
