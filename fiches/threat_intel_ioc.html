@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Threat Intelligence &amp; IOC — CAS-IN DFIR</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">DÉTECTION & THREAT HUNTING</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-détection">Détection &amp; Threat Hunting</a><span class="bc-sep">›</span>
+    <span class="bc-current">Threat Intelligence &amp; IOC</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🛰</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">CTI</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">MISP</span>
+    <span class="tag tag-purple" style="margin-left:.3rem">STIX/TAXII</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Threat Intelligence &amp; IOC Sharing</h1>
+    <div class="meta">CTI · IOC · MISP · OpenCTI · STIX 2.1 · TAXII 2.1 · TLP · Pyramid of Pain · Diamond Model</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="malware_forensique.html" class="prereq-pill">📖 Malware Forensics</a><a href="incident_response.html" class="prereq-pill">📖 Incident Response</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=hunt" class="tp-pill">🧪 🔍 Threat Hunting</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="mitre_attack.html" class="related-pill">🔗 MITRE ATT&amp;CK</a><a href="yara.html" class="related-pill">🔗 YARA</a><a href="sysmon.html" class="related-pill">🔗 Sysmon</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="ti-tabs">
+  <button class="tab active" onclick="showTab('intro',this)">📚 Concepts CTI</button>
+  <button class="tab" onclick="showTab('iocs',this)">🎯 Types d'IOC</button>
+  <button class="tab" onclick="showTab('std',this)">📋 STIX &amp; TAXII</button>
+  <button class="tab" onclick="showTab('plat',this)">🏛 Plateformes (MISP/OpenCTI)</button>
+  <button class="tab" onclick="showTab('use',this)">🔧 Cas d'usage DFIR</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — CONCEPTS CTI
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-intro">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 Cyber Threat Intelligence (CTI) — qu'est-ce que c'est ?</div>
+  La <strong>Threat Intelligence</strong> est la <strong>connaissance contextualisée et actionnable</strong> sur les menaces qui visent une organisation : qui attaque, comment, avec quels outils, depuis quand, vers quelles cibles. La CTI ne se limite pas à une liste d'IOC — elle inclut les <strong>TTPs des adversaires</strong>, leur <strong>infrastructure</strong>, leurs <strong>motivations</strong>, leurs <strong>cibles habituelles</strong>. Le but : <strong>passer d'une posture réactive (« qu'est-ce qui s'est passé ? ») à une posture proactive (« qu'est-ce qui va m'arriver et comment l'empêcher ? »).</strong>
+</div>
+
+<div class="sec-title">Les 4 niveaux de Threat Intelligence</div>
+
+<div class="arch-viz">
+  <div style="background:rgba(88,166,255,.04);border:2px solid rgba(88,166,255,.25);border-radius:12px;padding:1rem">
+    <div style="font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);text-align:center;margin-bottom:.75rem;opacity:.8">📊 Pyramide CTI · du tactique au stratégique</div>
+    <div style="display:flex;flex-direction:column;gap:.5rem;font-family:var(--mono);font-size:.78rem">
+      <div style="padding:.7rem 1rem;background:rgba(48,232,138,.08);border-left:4px solid var(--green);border-radius:0 6px 6px 0;cursor:pointer" onclick="showCti('tac')">
+        <strong style="color:var(--green);font-size:.85rem">🎯 TACTIQUE</strong> — IOCs · machines · jours<br>
+        <span style="color:var(--dim);font-family:var(--sans);font-size:.78rem">IPs, hashes, domaines · alimente directement EDR/SIEM/IDS · périssable (jours)</span>
+      </div>
+      <div style="text-align:center;color:var(--dim)">↑</div>
+      <div style="padding:.7rem 1rem;background:rgba(0,229,204,.08);border-left:4px solid var(--cyan);border-radius:0 6px 6px 0;cursor:pointer" onclick="showCti('op')">
+        <strong style="color:var(--cyan);font-size:.85rem">⚔️ OPÉRATIONNELLE</strong> — TTPs · campagnes · semaines<br>
+        <span style="color:var(--dim);font-family:var(--sans);font-size:.78rem">Mode opératoire des groupes · ATT&amp;CK · alimente Threat Hunting · semaines/mois</span>
+      </div>
+      <div style="text-align:center;color:var(--dim)">↑</div>
+      <div style="padding:.7rem 1rem;background:rgba(240,192,64,.08);border-left:4px solid var(--gold);border-radius:0 6px 6px 0;cursor:pointer" onclick="showCti('strat')">
+        <strong style="color:var(--gold);font-size:.85rem">🏛 STRATÉGIQUE</strong> — Risques · sectoriel · mois/années<br>
+        <span style="color:var(--dim);font-family:var(--sans);font-size:.78rem">Quels acteurs ciblent mon secteur ? Quelles motivations ? · pour COMEX/RSSI</span>
+      </div>
+      <div style="text-align:center;color:var(--dim)">↑</div>
+      <div style="padding:.7rem 1rem;background:rgba(188,140,255,.08);border-left:4px solid var(--purple);border-radius:0 6px 6px 0;cursor:pointer" onclick="showCti('tech')">
+        <strong style="color:var(--purple);font-size:.85rem">🔬 TECHNIQUE</strong> — Outils &amp; capacités · années<br>
+        <span style="color:var(--dim);font-family:var(--sans);font-size:.78rem">Reverse de malware · 0-day · capacités cyber d'un État · pour chercheurs CTI</span>
+      </div>
+    </div>
+  </div>
+  <div id="ti-detail" style="margin-top:.5rem;padding:.85rem 1rem;background:rgba(13,17,23,.4);border:1px solid var(--border);border-radius:8px;font-size:.82rem;color:var(--muted);min-height:60px">
+    ℹ️ Cliquez sur un niveau pour afficher des détails et exemples.
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Le Diamond Model (Caltagirone, Pendergast, Betz, 2013)</div>
+
+<div class="concept-card">
+  <p>Le <strong>Diamond Model of Intrusion Analysis</strong> est un modèle d'analyse fondateur de la CTI. Il pose qu'<strong>une intrusion peut être décrite par 4 sommets</strong> qu'on cherche à pivoter pour enrichir l'analyse :</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.5rem;margin-top:.75rem">
+    <div style="padding:.75rem;background:rgba(255,64,96,.06);border:1px solid rgba(255,64,96,.3);border-radius:8px">
+      <div style="font-weight:700;color:var(--red);font-size:.9rem">👤 ADVERSAIRE</div>
+      <div style="font-size:.78rem;line-height:1.4;color:var(--muted)">Qui attaque ?<br>Group APT, criminel, hacktiviste<br><em>Ex : APT29 / Cozy Bear</em></div>
+    </div>
+    <div style="padding:.75rem;background:rgba(240,192,64,.06);border:1px solid rgba(240,192,64,.3);border-radius:8px">
+      <div style="font-weight:700;color:var(--gold);font-size:.9rem">🛠 CAPACITÉ</div>
+      <div style="font-size:.78rem;line-height:1.4;color:var(--muted)">Avec quoi ?<br>Malware, exploits, TTPs<br><em>Ex : SUNBURST, WellMess</em></div>
+    </div>
+    <div style="padding:.75rem;background:rgba(0,229,204,.06);border:1px solid rgba(0,229,204,.3);border-radius:8px">
+      <div style="font-weight:700;color:var(--cyan);font-size:.9rem">🌐 INFRASTRUCTURE</div>
+      <div style="font-size:.78rem;line-height:1.4;color:var(--muted)">Depuis où ?<br>C2, domaines, IPs, certs<br><em>Ex : avsvmcloud.com</em></div>
+    </div>
+    <div style="padding:.75rem;background:rgba(48,232,138,.06);border:1px solid rgba(48,232,138,.3);border-radius:8px">
+      <div style="font-weight:700;color:var(--green);font-size:.9rem">🎯 VICTIME</div>
+      <div style="font-size:.78rem;line-height:1.4;color:var(--muted)">Vers qui ?<br>Secteur, organisation, géo<br><em>Ex : agences fédérales US</em></div>
+    </div>
+  </div>
+  <p style="margin-top:.75rem;font-size:.85rem"><strong>Méthode du pivot</strong> : connaissant un IOC (ex. domaine C2), on pivote vers les autres sommets — qui possède ce domaine ? quel malware s'y connecte ? qui d'autre a été ciblé ?</p>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Le Cycle CTI (Intelligence Cycle)</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.83rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Phase</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Activité</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Outils</th>
+  </tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>1. Direction</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Définir les questions auxquelles répondre (PIR — Priority Intelligence Requirements)</td><td style="padding:.5rem;border:1px solid var(--border)">Briefings COMEX</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>2. Collection</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Récolter données brutes (OSINT, dark web, feeds, EDR, partage ISAC)</td><td style="padding:.5rem;border:1px solid var(--border)">Feeds TAXII, OSINT scrapers, honeypots</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>3. Processing</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Normaliser, dédupliquer, enrichir, structurer en STIX</td><td style="padding:.5rem;border:1px solid var(--border)">MISP, OpenCTI</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>4. Analysis</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Mettre en contexte, attribuer, évaluer la confiance</td><td style="padding:.5rem;border:1px solid var(--border)">Analyste CTI + Diamond Model + ATT&amp;CK</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>5. Dissemination</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Diffuser à la bonne audience (TLP) au bon format (rapport, IOC, alerte SIEM)</td><td style="padding:.5rem;border:1px solid var(--border)">TAXII feeds, rapports PDF, dashboards</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>6. Feedback</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Évaluer ce qui a été utile, ajuster les PIR</td><td style="padding:.5rem;border:1px solid var(--border)">Métriques détection · post-mortem</td></tr>
+</table>
+
+<div class="sec-title" style="margin-top:1.5rem">Traffic Light Protocol (TLP 2.0 — août 2022)</div>
+
+<div class="memo-grid">
+  <div class="memo-card" style="border-color:rgba(255,64,96,.4);background:rgba(255,64,96,.03)">
+    <div class="memo-card-title" style="color:var(--red)">🔴 TLP:RED</div>
+    <p style="font-size:.83rem;line-height:1.5">Strictement personnel, ne <strong>jamais partager</strong> hors de la réunion / mail privé. Concerne typiquement des opérations actives, attribution sensible, vulnérabilités non patchées.</p>
+  </div>
+  <div class="memo-card" style="border-color:rgba(240,192,64,.4);background:rgba(240,192,64,.03)">
+    <div class="memo-card-title" style="color:var(--gold)">🟡 TLP:AMBER</div>
+    <p style="font-size:.83rem;line-height:1.5">À diffuser <strong>uniquement à son organisation et clients/partenaires</strong> qui ont besoin d'agir. Variante <strong>TLP:AMBER+STRICT</strong> = uniquement à son organisation.</p>
+  </div>
+  <div class="memo-card" style="border-color:rgba(48,232,138,.4);background:rgba(48,232,138,.03)">
+    <div class="memo-card-title" style="color:var(--green)">🟢 TLP:GREEN</div>
+    <p style="font-size:.83rem;line-height:1.5">Partage dans <strong>la communauté</strong> (ISAC, partenaires connus). Pas de canaux publics, pas de réseaux sociaux.</p>
+  </div>
+  <div class="memo-card" style="border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.02)">
+    <div class="memo-card-title" style="color:var(--text)">⚪ TLP:CLEAR</div>
+    <p style="font-size:.83rem;line-height:1.5">Diffusion <strong>publique illimitée</strong>. Anciennement TLP:WHITE (renommé en 2022 pour des raisons d'inclusivité).</p>
+  </div>
+</div>
+
+</div><!-- /tab-intro -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — TYPES D'IOC
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-iocs">
+
+<div class="concept-card">
+  <div class="concept-title">🎯 Indicators of Compromise (IOC) — la matière première</div>
+  Un <strong>IOC</strong> est une <em>preuve observable</em> qu'un système a été compromis. Les IOCs s'organisent par <strong>nature technique</strong> (fichier, réseau, comportement) et par <strong>position dans la Pyramid of Pain</strong> (du trivial-à-changer au difficile-à-changer pour l'attaquant). À distinguer des <strong>IOA (Indicators of Attack)</strong> qui décrivent <em>l'intention</em>, pas la trace.
+</div>
+
+<div class="sec-title">Catalogue des types d'IOC</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.83rem">
+  <thead>
+  <tr style="background:rgba(106,128,168,.1)">
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Catégorie</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Type</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Exemple</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Pyramid of Pain</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr style="background:rgba(48,232,138,.04)"><td style="padding:.5rem;border:1px solid var(--border)" rowspan="4"><strong>📁 Fichier</strong></td><td style="padding:.5rem;border:1px solid var(--border)">MD5</td><td style="padding:.5rem;border:1px solid var(--border)"><code>5d41402abc4b2a76b9719d911017c592</code></td><td style="padding:.5rem;border:1px solid var(--border)">🟢 Trivial</td></tr>
+  <tr style="background:rgba(48,232,138,.04)"><td style="padding:.5rem;border:1px solid var(--border)">SHA-256</td><td style="padding:.5rem;border:1px solid var(--border)"><code>e3b0c44298fc1c149afbf4c8996fb924…</code></td><td style="padding:.5rem;border:1px solid var(--border)">🟢 Trivial</td></tr>
+  <tr style="background:rgba(48,232,138,.04)"><td style="padding:.5rem;border:1px solid var(--border)">IMPHASH (PE)</td><td style="padding:.5rem;border:1px solid var(--border)"><code>49f7d9a1c0a2c0a9b6b8…</code> · hash des imports</td><td style="padding:.5rem;border:1px solid var(--border)">🟡 Simple</td></tr>
+  <tr style="background:rgba(48,232,138,.04)"><td style="padding:.5rem;border:1px solid var(--border)">SSDEEP / TLSH</td><td style="padding:.5rem;border:1px solid var(--border)">Fuzzy hash · résiste aux modifs mineures</td><td style="padding:.5rem;border:1px solid var(--border)">🟡 Simple</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)" rowspan="6"><strong>🌐 Réseau</strong></td><td style="padding:.5rem;border:1px solid var(--border)">IPv4 / IPv6</td><td style="padding:.5rem;border:1px solid var(--border)"><code>185.45.193.42</code></td><td style="padding:.5rem;border:1px solid var(--border)">🟢 Easy</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)">Domaine</td><td style="padding:.5rem;border:1px solid var(--border)"><code>evil-update.cdn.com</code></td><td style="padding:.5rem;border:1px solid var(--border)">🟡 Simple</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)">URL</td><td style="padding:.5rem;border:1px solid var(--border)"><code>https://x.com/api/v1/cmd?id=…</code></td><td style="padding:.5rem;border:1px solid var(--border)">🟡 Simple</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)">User-Agent</td><td style="padding:.5rem;border:1px solid var(--border)"><code>Mozilla/4.0 (compatible; MSIE 6.0…)</code> hardcodé</td><td style="padding:.5rem;border:1px solid var(--border)">🟠 Annoying</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)">JA3 / JA4 (TLS)</td><td style="padding:.5rem;border:1px solid var(--border)"><code>e7d705a3286e19ea42f587b344ee6865</code> · empreinte ClientHello TLS</td><td style="padding:.5rem;border:1px solid var(--border)">🟠 Annoying</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)">Cert TLS (SHA-1)</td><td style="padding:.5rem;border:1px solid var(--border)"><code>3F:8E:0A:71…</code> · cert auto-signé Cobalt Strike</td><td style="padding:.5rem;border:1px solid var(--border)">🟠 Annoying</td></tr>
+  <tr style="background:rgba(255,64,96,.04)"><td style="padding:.5rem;border:1px solid var(--border)" rowspan="4"><strong>💻 Host</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Chemin fichier</td><td style="padding:.5rem;border:1px solid var(--border)"><code>C:\Users\Public\Music\update.exe</code></td><td style="padding:.5rem;border:1px solid var(--border)">🟠 Annoying</td></tr>
+  <tr style="background:rgba(255,64,96,.04)"><td style="padding:.5rem;border:1px solid var(--border)">Clé registre</td><td style="padding:.5rem;border:1px solid var(--border)"><code>HKCU\…\Run\WinUpdater</code></td><td style="padding:.5rem;border:1px solid var(--border)">🟠 Annoying</td></tr>
+  <tr style="background:rgba(255,64,96,.04)"><td style="padding:.5rem;border:1px solid var(--border)">Mutex</td><td style="padding:.5rem;border:1px solid var(--border)"><code>Global\__bekjr384__</code> · WannaCry kill switch</td><td style="padding:.5rem;border:1px solid var(--border)">🟠 Annoying</td></tr>
+  <tr style="background:rgba(255,64,96,.04)"><td style="padding:.5rem;border:1px solid var(--border)">Pipe nommé</td><td style="padding:.5rem;border:1px solid var(--border)"><code>\\.\pipe\msagent_c8</code> · Cobalt Strike SMB beacon</td><td style="padding:.5rem;border:1px solid var(--border)">🟠 Annoying</td></tr>
+  <tr style="background:rgba(255,64,96,.04)"><td style="padding:.5rem;border:1px solid var(--border)" rowspan="3"><strong>🎭 Comportemental (TTPs)</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Tools</td><td style="padding:.5rem;border:1px solid var(--border)">Mimikatz, Cobalt Strike, BloodHound</td><td style="padding:.5rem;border:1px solid var(--border)">🔴 Challenging</td></tr>
+  <tr style="background:rgba(255,64,96,.04)"><td style="padding:.5rem;border:1px solid var(--border)">TTPs (ATT&amp;CK)</td><td style="padding:.5rem;border:1px solid var(--border)">T1003.001 LSASS · T1059.001 PowerShell · T1486 Encrypted Impact</td><td style="padding:.5rem;border:1px solid var(--border)">🔴 Tough</td></tr>
+  <tr style="background:rgba(255,64,96,.04)"><td style="padding:.5rem;border:1px solid var(--border)">Patterns (YARA / Sigma)</td><td style="padding:.5rem;border:1px solid var(--border)">Strings dans binaire · règle log SIEM</td><td style="padding:.5rem;border:1px solid var(--border)">🔴 Challenging à Tough</td></tr>
+  </tbody>
+</table>
+
+<div class="alert" style="background:rgba(0,229,204,.06);border-color:rgba(0,229,204,.4);margin:1rem 0">
+  💡 <strong>IOC ≠ IOA :</strong> un IOC (Indicator of Compromise) prouve qu'<em>une compromission a eu lieu</em> (post-fait). Un IOA (Indicator of Attack) montre <em>qu'une attaque est en cours</em> (en temps réel) — par exemple, un comportement <strong>« processus PowerShell télécharge depuis Internet puis chiffre des fichiers »</strong> est un IOA, pas un IOC. Les IOA sont au sommet de la Pyramid of Pain et au cœur de la détection moderne (EDR/XDR).
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Sources d'IOC — où trouver de l'intelligence</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🆓 Feeds gratuits / OSINT</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li><strong>AlienVault OTX</strong> (TAXII) — pulses communautaires</li>
+      <li><strong>Abuse.ch</strong> — URLhaus, MalwareBazaar, ThreatFox, Feodo Tracker</li>
+      <li><strong>CIRCL</strong> (Lux) — feeds MISP communautaires</li>
+      <li><strong>Hail a TAXII</strong> — répertoire public TAXII</li>
+      <li><strong>CISA AIS</strong> — partage CTI États-Unis</li>
+      <li><strong>VirusTotal</strong> — collaborative AV (compte gratuit limité)</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🇨🇭 Sources suisses</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li><strong>OFCS / NCSC.ch</strong> — alertes officielles, indicateurs Suisse</li>
+      <li><strong>govCERT.ch</strong> — CERT national</li>
+      <li><strong>Switch-CERT</strong> — pour le secteur académique</li>
+      <li><strong>FIRST.org</strong> — communauté CERT internationale</li>
+      <li><strong>MISP-CIRCL</strong> — feeds Luxembourg fortement utilisés en CH</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">💼 Vendors commerciaux</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li><strong>Mandiant Advantage</strong> (Google) — APT tracking</li>
+      <li><strong>Recorded Future</strong> — graphe relationnel</li>
+      <li><strong>CrowdStrike Falcon Intel</strong> — adversaire-centric</li>
+      <li><strong>Anomali ThreatStream</strong> — TIP intégré</li>
+      <li><strong>Group-IB · Kaspersky · Trend Micro</strong></li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🤝 Communautés / ISAC</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li><strong>FS-ISAC</strong> — secteur financier</li>
+      <li><strong>H-ISAC</strong> — santé</li>
+      <li><strong>EE-ISAC</strong> — énergie Europe</li>
+      <li><strong>FIRST</strong> SIG threat intel</li>
+      <li>Trust groups privés (TLP:AMBER+STRICT)</li>
+    </ul>
+  </div>
+</div>
+
+</div><!-- /tab-iocs -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — STIX & TAXII
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-std">
+
+<div class="concept-card">
+  <div class="concept-title">📋 STIX &amp; TAXII — la lingua franca du partage CTI</div>
+  Pour partager de l'intelligence entre <strong>vendors différents, plateformes différentes, organisations différentes</strong>, il faut un <strong>format standard</strong>. C'est le rôle de <strong>STIX</strong> (le « quoi » — la structure des données) et de <strong>TAXII</strong> (le « comment » — le transport sur HTTPS). Tous deux sont des standards <strong>OASIS</strong> (Organization for the Advancement of Structured Information Standards), version actuelle 2.1 (2021).
+</div>
+
+<div class="sec-title">STIX 2.1 — Structured Threat Information eXpression</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">📦 SDO — STIX Domain Objects (18 types)</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li><code>indicator</code> — pattern observable + contexte</li>
+      <li><code>malware</code> — famille de malware</li>
+      <li><code>threat-actor</code> — entité humaine attaquante</li>
+      <li><code>intrusion-set</code> — campagne sur la durée</li>
+      <li><code>campaign</code> — opération précise dans le temps</li>
+      <li><code>attack-pattern</code> — TTP (mappe ATT&amp;CK)</li>
+      <li><code>tool</code> — outil légitime utilisé malicieusement</li>
+      <li><code>vulnerability</code> — CVE</li>
+      <li><code>identity</code> — organisation, personne, secteur</li>
+      <li><code>course-of-action</code> — mitigation</li>
+      <li><code>report</code> — rapport d'analyse</li>
+      <li><code>note</code>, <code>opinion</code> — analyste-generated (STIX 2.1)</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔗 SRO — STIX Relationship Objects</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li><code>relationship</code> — lien typé entre 2 SDO<br>
+        Ex : <code>threat-actor uses malware</code><br>
+        <code>indicator indicates malware</code></li>
+      <li><code>sighting</code> — observation d'un SDO à un endroit/moment</li>
+      <li>Crée un <strong>graphe orienté</strong> de threat intelligence</li>
+      <li>Verbes typés : <code>uses, indicates, mitigates, attributed-to, targets, communicates-with…</code></li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Exemple : un Indicator STIX 2.1 complet</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.74rem;line-height:1.55;color:var(--text);white-space:pre-wrap;margin:0">{
+  "type": "<strong style="color:var(--cyan)">indicator</strong>",
+  "spec_version": "2.1",
+  "id": "indicator--<strong>d81f86b9-975b-4c0b-875e-810c5ad45a4f</strong>",
+  "created": "2026-04-27T08:14:00.000Z",
+  "modified": "2026-04-27T08:14:00.000Z",
+  "name": "Malicious Cobalt Strike C2 - aprilcam[.]net",
+  "description": "Beacon C2 observé dans incident IR-2026-042",
+  "indicator_types": ["<strong style="color:var(--gold)">malicious-activity</strong>"],
+  "pattern": "[<strong style="color:var(--cyan)">domain-name:value = 'aprilcam.net'</strong>]",
+  "pattern_type": "stix",
+  "pattern_version": "2.1",
+  "valid_from": "2026-04-27T00:00:00Z",
+  "valid_until": "2026-07-27T00:00:00Z",          <span style="color:var(--dim)"># expiration</span>
+  "kill_chain_phases": [
+    {
+      "kill_chain_name": "mitre-attack",
+      "phase_name": "<strong style="color:var(--gold)">command-and-control</strong>"
+    }
+  ],
+  "labels": ["<strong style="color:var(--red)">malicious-activity</strong>"],
+  "object_marking_refs": [
+    "<strong style="color:var(--gold)">marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da</strong>"   <span style="color:var(--dim)"># TLP:AMBER</span>
+  ],
+  "external_references": [
+    {
+      "source_name": "internal-incident",
+      "external_id": "IR-2026-042"
+    }
+  ]
+}</pre>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">TAXII 2.1 — Trusted Automated Exchange of Intelligence Information</div>
+
+<div class="concept-card">
+  <p>TAXII est une <strong>API REST sur HTTPS</strong> qui définit comment <em>transporter</em> des bundles STIX entre serveurs et clients. C'est le standard de <strong>livraison</strong>, pas de format. Il supporte trois modèles d'échange :</p>
+  <ul style="margin:.4rem 0 0 1.5rem;font-size:.85rem;line-height:1.6">
+    <li><strong>Hub-and-spoke</strong> — un serveur central distribue à des clients (ex. CISA AIS)</li>
+    <li><strong>Source-subscriber</strong> — un producteur publie, des consommateurs s'abonnent (modèle classique des feeds vendors)</li>
+    <li><strong>Peer-to-peer</strong> — partages bilatéraux (TLP:AMBER+STRICT)</li>
+  </ul>
+</div>
+
+<div class="memo-grid" style="margin-top:1rem">
+  <div class="memo-card">
+    <div class="memo-card-title">🔌 Endpoints TAXII 2.1 standards</div>
+    <pre style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap"># Découverte
+GET /taxii2/                 → API roots disponibles
+
+# API root
+GET /taxii2/api1/            → infos serveur
+
+# Collections
+GET /taxii2/api1/collections/
+                  → liste des feeds
+
+# Objets d'une collection
+GET /taxii2/api1/collections/{id}/objects/
+                  → bundle STIX
+
+# Manifeste (méta)
+GET /taxii2/api1/collections/{id}/manifest/</pre>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⚠️ Différences TAXII 2.0 → 2.1</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li>DNS SRV record : <code>_taxii</code> → <code>_taxii2</code></li>
+      <li>URL discovery : <code>/taxii/</code> → <code>/taxii2/</code></li>
+      <li>Manifest Resource = <strong>chaque version d'un objet</strong> (pas juste l'objet)</li>
+      <li>Support obligatoire de STIX 2.1</li>
+      <li>Authentification HTTPS + Basic/Token</li>
+      <li>Headers <code>Accept: application/taxii+json;version=2.1</code></li>
+    </ul>
+  </div>
+</div>
+
+<div class="alert" style="margin:1rem 0">
+  ⭐ <strong>STIX et TAXII sont indépendants :</strong> on peut transporter du STIX via FTP, email, S3, sneakernet — TAXII n'est pas obligatoire. Inversement, TAXII peut transporter <em>n'importe quel format</em> (CSV, JSON custom). Mais la combinaison STIX 2.1 + TAXII 2.1 est <strong>le standard de facto</strong> en 2026.
+</div>
+
+</div><!-- /tab-std -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — PLATEFORMES (MISP / OpenCTI)
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-plat">
+
+<div class="concept-card">
+  <div class="concept-title">🏛 Threat Intelligence Platforms (TIP) — orchestrer la CTI</div>
+  Une <strong>TIP</strong> est l'outil qui <em>collecte, normalise, enrichit, corrèle, partage</em> la CTI. Elle constitue le « cerveau » d'un programme CTI. Deux outils <strong>open source</strong> dominent l'écosystème en 2026 : <strong>MISP</strong> (Belge à l'origine, hébergé par CIRCL Luxembourg) et <strong>OpenCTI</strong> (français, développé par Filigran avec ANSSI / CERT-EU). Tous deux sont gratuits et auto-hébergeables.
+</div>
+
+<div class="sec-title">MISP — Malware Information Sharing Platform</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🐃 MISP en bref</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li>Lancé en 2011 (Christophe Vandeplas, NATO NCIRC)</li>
+      <li>Maintenu par <strong>CIRCL</strong> (CERT Luxembourg)</li>
+      <li>Stack : PHP / MySQL / Redis</li>
+      <li>Format natif : MISP JSON (compatible STIX via <code>misp-stix</code>)</li>
+      <li>Centré sur le <strong>partage rapide d'IOC</strong> (events + attributes + objects)</li>
+      <li>Modèle riche : <strong>Galaxies</strong> (clusters thématiques), <strong>Taxonomies</strong> (tagging), <strong>Warning Lists</strong></li>
+      <li><strong>Synchronisation entre serveurs MISP</strong> (push/pull) — réseau communautaire</li>
+      <li>Version actuelle : MISP 2.5 (2025) avec API plus rapide, indexation améliorée</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📤 Exports natifs MISP</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li><strong>STIX 1.x / 2.0 / 2.1</strong></li>
+      <li><strong>OpenIOC</strong></li>
+      <li><strong>Snort/Suricata</strong> rules</li>
+      <li><strong>Bro/Zeek</strong> intelligence framework</li>
+      <li><strong>YARA</strong> rules</li>
+      <li><strong>Sigma</strong> rules</li>
+      <li>CSV, JSON, XML, RPZ (DNS), text, hosts, RPZ…</li>
+      <li>Exports automatisés avec ACL par tag/TLP</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">OpenCTI — Open Cyber Threat Intelligence</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🌍 OpenCTI en bref</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li>Lancé en 2019 par <strong>Filigran</strong> (FR)</li>
+      <li>Partenaires : <strong>ANSSI · CERT-EU · Luatix</strong></li>
+      <li>Stack : Node.js / GraphQL / ElasticSearch / Redis / RabbitMQ / MinIO</li>
+      <li>Format natif : <strong>STIX 2.1</strong> (pas de format propriétaire)</li>
+      <li>Modèle de données : <strong>graphe nœuds + arêtes</strong> (Diamond Model étendu)</li>
+      <li>Centré sur la <strong>contextualisation riche</strong> des TTPs et la visualisation graphique</li>
+      <li>Architecture <strong>connectors</strong> (Python) — vaste catalogue (MISP, MITRE, AlienVault, VirusTotal, Shodan…)</li>
+      <li>Intégration ATT&amp;CK améliorée en 2025 (timelines campagnes, profils acteurs)</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔄 Connectors OpenCTI (5 types)</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li><strong>External Import</strong> — pulls feeds externes (MISP, MITRE, AlienVault OTX)</li>
+      <li><strong>Internal Enrichment</strong> — enrichit observables (VirusTotal, Shodan, MaxMind)</li>
+      <li><strong>Internal Import File</strong> — parse fichiers (PDF reports → STIX)</li>
+      <li><strong>Internal Export File</strong> — STIX bundle, CSV, PDF</li>
+      <li><strong>Stream</strong> — temps réel vers SIEM/EDR/XSOAR</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">MISP vs. OpenCTI — quand choisir lequel ?</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.83rem">
+  <thead>
+  <tr style="background:rgba(106,128,168,.1)">
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Critère</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">MISP</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">OpenCTI</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Force principale</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Partage rapide d'IOC entre orgs</td><td style="padding:.5rem;border:1px solid var(--border)">Contextualisation riche, visualisation graphe</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Taxonomie/Modèle</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Galaxies + Taxonomies (custom tags)</td><td style="padding:.5rem;border:1px solid var(--border)">STIX 2.1 strict + Diamond Model</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Architecture</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Plus simple (Redis + MySQL)</td><td style="padding:.5rem;border:1px solid var(--border)">Plus complexe (5+ services)</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Cas d'usage typique</strong></td><td style="padding:.5rem;border:1px solid var(--border)">ISAC, CERT, partage opérationnel rapide</td><td style="padding:.5rem;border:1px solid var(--border)">Programme CTI mature avec analystes dédiés</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Communauté</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Plus large historiquement (gov, ISAC)</td><td style="padding:.5rem;border:1px solid var(--border)">Croissance rapide depuis 2022</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Visualisation</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Graphes, charts, maps mature</td><td style="padding:.5rem;border:1px solid var(--border)">Graphe natif Node/Edge moins développé visuellement</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Time-to-value</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Rapide — déployer + feeds → opérationnel</td><td style="padding:.5rem;border:1px solid var(--border)">Plus lent — nécessite tuning et expertise</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)"><strong>Interop STIX</strong></td><td style="padding:.5rem;border:1px solid var(--border)">Via <code>misp-stix</code> (bidirectionnel)</td><td style="padding:.5rem;border:1px solid var(--border)">Natif (le format interne EST STIX 2.1)</td></tr>
+  </tbody>
+</table>
+
+<div class="alert" style="background:rgba(0,229,204,.06);border-color:rgba(0,229,204,.4);margin:1rem 0">
+  💡 <strong>Bonne pratique :</strong> beaucoup d'organisations matures déploient <strong>les deux</strong> — MISP comme « hub d'IOC opérationnels » avec partage ISAC, OpenCTI comme « cerveau analytique » avec modélisation TTPs et campagnes. Connecteurs natifs entre les deux. Le choix dépend du volume d'analystes CTI et du besoin en richesse contextuelle.
+</div>
+
+</div><!-- /tab-plat -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — CAS D'USAGE DFIR
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-use">
+
+<div class="concept-card">
+  <div class="concept-title">🔧 La CTI dans le quotidien du DFIR</div>
+  La CTI n'est pas un sujet réservé aux gros SOC. Elle entre dans <strong>chaque investigation</strong> dès lors qu'on cherche à savoir : « Cet IOC est-il connu ? À qui est-il attribué ? Y a-t-il d'autres incidents similaires ? Quels TTPs additionnels chercher ? »
+</div>
+
+<div class="sec-title">Workflow type d'enrichissement IOC</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.76rem;line-height:1.65;color:var(--text);white-space:pre-wrap;margin:0">  1. Récupération de l'IOC                         <strong style="color:var(--cyan)">→ ex : SHA-256 = e3b0c44...</strong>
+              ↓
+  2. Recherche dans MISP/OpenCTI local             <strong style="color:var(--cyan)">→ déjà connu en interne ?</strong>
+              ↓                                       (si oui → pivots immédiats)
+  3. Enrichissement automatique :
+     • VirusTotal (multi-AV + comments)            <strong style="color:var(--gold)">→ AV verdict + sandbox</strong>
+     • Hybrid Analysis / Triage / ANY.RUN          <strong style="color:var(--gold)">→ comportement dynamique</strong>
+     • MalwareBazaar                               <strong style="color:var(--gold)">→ samples, YARA matches</strong>
+     • Shodan (si IP/domaine)                      <strong style="color:var(--gold)">→ services exposés, banners</strong>
+     • urlscan.io (si URL)                         <strong style="color:var(--gold)">→ comportement web</strong>
+              ↓
+  4. Pivot via Diamond Model :
+     • Quels autres samples avec même IMPHASH ?
+     • Quels autres domaines pointent même IP ?
+     • Quel cert TLS associé ? (Censys, crt.sh)
+     • Quel ASN / hébergeur ? (RIPE, ARIN)
+              ↓
+  5. Attribution :
+     • Quel groupe utilise ces TTPs ?              <strong style="color:var(--red)">→ ATT&amp;CK Groups</strong>
+     • Cohérent avec quelle campagne ?
+     • Cohérent avec quel rapport vendor ?
+              ↓
+  6. Action :
+     • Bloquer dans EDR / proxy / FW
+     • Hunt rétrospectif sur 30/90/365j
+     • Partager avec ISAC (TLP:AMBER)
+     • Documenter dans MISP/OpenCTI</pre>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Cas d'usage 1 — IR : un binaire suspect trouvé sur un poste</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">📥 Step 1 — Hash &amp; check local TIP</div>
+    <pre style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap"># Calculer hashes
+sha256sum suspicious.exe
+file suspicious.exe        # type, archi
+imphash via pefile.py
+
+# Chercher dans MISP local
+curl -H "Authorization: $MISP_KEY" \
+  "https://misp.local/attributes/restSearch" \
+  -d '{"value":"e3b0c44..."}'</pre>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🌐 Step 2 — Enrichissement externe</div>
+    <pre style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap"># VirusTotal
+curl --header "x-apikey: $VT_KEY" \
+  "https://www.virustotal.com/api/v3/files/$HASH"
+
+# MalwareBazaar (Abuse.ch)
+curl -F "query=get_info" -F "hash=$HASH" \
+  https://mb-api.abuse.ch/api/v1/
+
+# Hybrid Analysis (sandbox)
+# → tags malware family + TTPs</pre>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔬 Step 3 — Pivot</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li>IMPHASH identique → autres samples du même packer/loader</li>
+      <li>SSDEEP &gt; 80% → variante de la même famille</li>
+      <li>Domaines C2 contactés → bloquer + hunt</li>
+      <li>Certificat de signature → autres binaires signés (souvent volés)</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📝 Step 4 — Documentation</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li>Créer event MISP avec tous les IOC + TTPs</li>
+      <li>Tag : campagne, malware family, TLP, kill-chain phase</li>
+      <li>Lier à ATT&amp;CK techniques observées</li>
+      <li>Décider de partage : ISAC ? TLP:AMBER ?</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Cas d'usage 2 — Rétrospective : un IOC arrive d'un partenaire</div>
+
+<div class="alert" style="margin:1rem 0">
+  <strong>Scénario :</strong> CISA publie un rapport sur APT29 avec 50 IOC (hashes, domaines, IPs). Comment vérifier rapidement si vous avez été touché ?
+  <ol style="margin:.4rem 0 0 1.5rem;font-size:.85rem">
+    <li><strong>Ingest automatique</strong> via TAXII feed → MISP/OpenCTI → SIEM</li>
+    <li><strong>Recherche rétrospective</strong> sur les logs (Splunk/Sentinel) sur les 365 derniers jours</li>
+    <li><strong>EDR sweep</strong> via Velociraptor / Falcon Insight pour les hashes sur tous les endpoints</li>
+    <li><strong>DNS resolver logs</strong> : a-t-on résolu un des domaines ?</li>
+    <li><strong>Proxy / firewall logs</strong> : a-t-on contacté une des IPs ?</li>
+    <li><strong>VirusTotal Retrohunt</strong> (compte payant) avec règles YARA des TTPs</li>
+    <li>Si match → ouvrir un incident ; si rien → archiver mais garder en watch</li>
+  </ol>
+  Cette opération doit prendre <strong>moins de 4 heures</strong> si le pipeline CTI → SIEM est bien automatisé.
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Cas d'usage 3 — Programme CTI dans une organisation suisse</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.83rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <th style="padding:.45rem;border:1px solid var(--border);text-align:left">Composant</th>
+    <th style="padding:.45rem;border:1px solid var(--border);text-align:left">Détails (CH 2026)</th>
+  </tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><strong>Plateforme TIP</strong></td><td style="padding:.45rem;border:1px solid var(--border)">MISP on-premise (data residency CH) · option : OpenCTI en complément</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><strong>Feeds critiques</strong></td><td style="padding:.45rem;border:1px solid var(--border)"><strong>OFCS / NCSC.ch</strong> · CIRCL Luxembourg · CISA AIS · Abuse.ch · 1 vendor commercial</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><strong>ISAC</strong></td><td style="padding:.45rem;border:1px solid var(--border)">Selon secteur : Swiss Re / FINMA pour finance, eHealth Suisse, Switch pour acad.</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><strong>Partage juridique</strong></td><td style="padding:.45rem;border:1px solid var(--border)">⚠️ <strong>nLPD</strong> applicable au partage de données : pas de PII sans base légale · TLP strict · accord de partage écrit avec ISAC</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><strong>Notification incident</strong></td><td style="padding:.45rem;border:1px solid var(--border)">Si infrastructure critique (LSI), <strong>obligation de notifier l'OFCS</strong> dans les meilleurs délais</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><strong>Métrique</strong></td><td style="padding:.45rem;border:1px solid var(--border)">Time-to-detect, Time-to-respond, IOC matches, % couverture ATT&amp;CK ciblée</td></tr>
+</table>
+
+<div class="alert" style="background:rgba(255,64,96,.05);border-color:rgba(255,64,96,.3);margin:1rem 0">
+  ⚠️ <strong>Attention juridique CH :</strong> partager un IOC contenant une IP utilisée par un employé identifiable peut tomber sous la <strong>nLPD</strong> (Loi suisse sur la protection des données, en vigueur 1.9.2023). Toujours <strong>anonymiser</strong> les indicateurs internes avant partage externe, et documenter la base légale du partage (consentement, intérêt prépondérant, obligation légale). En cas de doute → DPO + juriste.
+</div>
+
+</div><!-- /tab-use -->
+
+
+<!-- ══════════════════════════════════════════════
+     QUIZ + EXAM TIP
+══════════════════════════════════════════════ -->
+<div class="page-wrap">
+
+<div class="exam-tip" style="margin-top:1.25rem">
+  <div class="exam-tip-title">🎓 Exam Tip — Threat Intelligence &amp; IOC</div>
+  <p><strong>4 niveaux CTI</strong> : Tactique (IOC, jours) · Opérationnelle (TTPs, semaines) · Stratégique (risques, mois) · Technique (capacités, années)</p>
+  <p><strong>Diamond Model</strong> : 4 sommets — Adversaire · Capacité · Infrastructure · Victime — pivot pour enrichir</p>
+  <p><strong>Cycle CTI</strong> : Direction → Collection → Processing → Analysis → Dissemination → Feedback</p>
+  <p><strong>TLP 2.0</strong> (août 2022) : RED · AMBER (+ STRICT) · GREEN · CLEAR (anciennement WHITE)</p>
+  <p><strong>IOC vs IOA</strong> : IOC = preuve compromission (post) · IOA = signaux d'attaque en cours (réel)</p>
+  <p><strong>Types IOC</strong> : Fichier (MD5/SHA-256/IMPHASH/SSDEEP) · Réseau (IP/domain/URL/JA3-JA4) · Host (path/registry/mutex/pipe) · Behavior (TTPs ATT&amp;CK)</p>
+  <p><strong>STIX 2.1</strong> = format · 18 SDO (indicator/malware/threat-actor/campaign/attack-pattern…) + SRO (relationship, sighting)</p>
+  <p><strong>TAXII 2.1</strong> = transport · API REST HTTPS · 3 modèles : hub-and-spoke / source-subscriber / peer-to-peer</p>
+  <p><strong>MISP</strong> = TIP · CIRCL Luxembourg · partage rapide IOC · Galaxies + Taxonomies · format JSON natif (export STIX)</p>
+  <p><strong>OpenCTI</strong> = TIP · Filigran/ANSSI/CERT-EU · contextualisation TTPs · STIX 2.1 natif · graphe de connaissances</p>
+  <p><strong>Suisse 2026</strong> : OFCS/NCSC.ch · govCERT.ch · attention nLPD pour partage</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Vous recevez d'un partenaire un fichier STIX 2.1 contenant un objet <code>indicator</code> avec le pattern <code>[domain-name:value = 'evil.com']</code>. Que devez-vous vérifier <strong>avant</strong> d'alimenter votre SIEM avec cet IOC ?</div>
+  <div class="quiz-meta">CTI · Niveau : moyen</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    Trois vérifications minimum avant de bloquer aveuglément :<br>
+    <strong>1. La validité temporelle</strong> : champs <code>valid_from</code> et <code>valid_until</code>. Un domaine C2 burnable peut être réassigné à un usage légitime après 30 jours. Bloquer un IOC expiré = faux positifs garantis.<br>
+    <strong>2. Le marquage TLP</strong> : <code>object_marking_refs</code> pointant vers un <code>marking-definition</code>. Si TLP:RED → <strong>ne pas l'ingérer en production sans validation manuelle</strong>. TLP:AMBER+STRICT → ne pas le partager en interne au-delà des SOC dédiés.<br>
+    <strong>3. La confiance / source</strong> : qui est l'auteur (<code>created_by_ref</code>) ? Quel <code>confidence</code> (0-100) ? Quelle <code>kill_chain_phase</code> ? Un domaine en phase « reconnaissance » sera traité différemment d'un domaine en phase « command-and-control ».<br>
+    <strong>Bonus</strong> : vérifier que le domaine n'est pas dans une <strong>warning list</strong> (ex. CDN légitime — <code>cloudfront.net</code>, <code>akamaiedge.net</code>) — bloquer un CDN c'est casser la moitié d'Internet. MISP/OpenCTI ont des warning lists intégrées qui filtrent automatiquement les IOC évidemment faux positifs avant ingestion SIEM.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un client suisse vous demande s'il peut partager un IOC contenant une IP source d'attaque (qui appartient à un compte compromis légitime) avec son ISAC sectoriel. Que lui répondez-vous ?</div>
+  <div class="quiz-meta">CTI &amp; nLPD · Niveau : difficile</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    Réponse nuancée — <strong>oui mais avec précautions juridiques</strong> :<br>
+    <strong>1. nLPD applicable</strong> : une adresse IP est considérée par le PFPDT (Préposé fédéral à la protection des données) comme une <strong>donnée personnelle</strong> dès qu'elle peut, même indirectement, être rattachée à une personne identifiable. Partager une IP attribuée à un compte client = traitement de donnée personnelle.<br>
+    <strong>2. Base légale</strong> : selon nLPD art. 31, le partage doit avoir une base — soit consentement (compliqué ici car c'est un compte compromis), soit <strong>intérêt prépondérant</strong> (sécurité du SI vs. protection des données du tiers victime du compromise). En pratique, on documente l'intérêt prépondérant.<br>
+    <strong>3. TLP approprié</strong> : <strong>TLP:AMBER</strong> minimum (limité aux participants ISAC), pas TLP:CLEAR. <strong>Pseudonymiser</strong> autant que possible : partager les TTPs et le pattern (« compromise par credential stuffing depuis ASN AS-XXXXX, vague 27 avril 2026 ») au lieu de l'IP exacte si le contexte le permet.<br>
+    <strong>4. Accord de partage</strong> : vérifier que l'organisation a signé une <em>Information Sharing Agreement</em> avec l'ISAC qui couvre ce type de données.<br>
+    <strong>5. Notification</strong> : si l'incident touche une infrastructure critique (LSI/LICOI), notification à l'<strong>OFCS / NCSC</strong> obligatoire dans les meilleurs délais — c'est cette voie officielle qui est <em>la plus sûre juridiquement</em> pour partager.<br>
+    Recommandation pratique : passer par MISP avec tags TLP:AMBER + workflow de revue avant publication, et impliquer le DPO du client en amont.
+  </div>
+</div>
+
+<div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> CTI = 4 niveaux (Tactique/Opérationnel/Stratégique/Technique) · Diamond Model (Adversaire/Capacité/Infrastructure/Victime) · Cycle CTI 6 phases · TLP 2.0 (RED/AMBER+STRICT/AMBER/GREEN/CLEAR) · IOC vs IOA · Pyramid of Pain (hash trivial → TTP tough) · STIX 2.1 = format (18 SDO, SRO) · TAXII 2.1 = transport REST HTTPS · MISP (CIRCL, partage rapide) vs OpenCTI (Filigran, graphe contextuel) · CH : OFCS/NCSC + nLPD attention partage IP.</div>
+
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>OASIS STIX 2.1 / TAXII 2.1 · MISP-Project · OpenCTI Filigran · CIRCL Luxembourg · OFCS / NCSC.ch</span>
+</div>
+
+</div><!-- /page-wrap -->
+
+
+<script>
+// ── Scroll + Back-top ──
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+})();
+
+// ── Quiz reveal ──
+document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+    ans.classList.toggle('visible');
+    btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+  });
+});
+
+// ── Tab switching ──
+function showTab(id, btn){
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('#ti-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  var el=document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+  window.scrollTo({top:Math.max(0,document.getElementById('ti-tabs').offsetTop-60),behavior:'smooth'});
+}
+
+// ── CTI levels details ──
+var ctiDetails={
+  tac:{icon:'🎯',title:'CTI TACTIQUE — IOCs immédiats',body:`Niveau le plus opérationnel. <strong>Audience</strong> : SOC L1, SIEM, EDR, IDS. <strong>Format</strong> : listes d'IOC (hashes, IPs, domaines, URLs). <strong>Périssabilité</strong> : haute — un IOC C2 vit en moyenne quelques jours.<br><br>
+    <strong>Exemple concret</strong> : « Domain <code>aprilcam.net</code> = C2 Cobalt Strike, observé dans incident IR-2026-042, valid_until 90j ».<br>
+    <strong>Action</strong> : ingéré direct dans SIEM/EDR/proxy → bloque ou alerte automatiquement.<br>
+    <strong>Risque</strong> : sans contexte, génère des faux positifs en cascade. Toujours coupler avec valid_until + sources warning lists.`},
+  op:{icon:'⚔️',title:'CTI OPÉRATIONNELLE — TTPs &amp; campagnes',body:`<strong>Audience</strong> : Threat Hunters, IR Team, SOC L2/L3. <strong>Format</strong> : rapport décrivant les TTPs (mappés ATT&amp;CK), les outils, les patterns d'attaque.<br><br>
+    <strong>Exemple concret</strong> : « FIN12 utilise actuellement IcedID (initial access) → Cobalt Strike (C2) → Mimikatz (creds) → Impacket (lateral) → Conti ransomware (impact). Phase d'incubation typique : 4 jours. »<br>
+    <strong>Action</strong> : créer des hunts proactifs, écrire des règles Sigma/YARA basées sur les comportements.<br>
+    <strong>Périssabilité</strong> : moyenne (semaines à mois).`},
+  strat:{icon:'🏛',title:'CTI STRATÉGIQUE — risques sectoriels',body:`<strong>Audience</strong> : RSSI, COMEX, Conseil d'administration, gouvernance. <strong>Format</strong> : rapport synthétique non-technique sur l'évolution du paysage de menace.<br><br>
+    <strong>Exemple concret</strong> : « Le secteur bancaire suisse est ciblé prioritairement par des groupes ransomware basés en Europe de l'Est (LockBit affiliates, BlackCat). Augmentation de 35% des tentatives en Q1 2026. Recommandation : doubler le budget IR. »<br>
+    <strong>Action</strong> : décisions budgétaires, priorisation des investissements, choix de couverture cyber.<br>
+    <strong>Périssabilité</strong> : faible (mois à années).`},
+  tech:{icon:'🔬',title:'CTI TECHNIQUE — capacités &amp; outillage',body:`<strong>Audience</strong> : chercheurs CTI, reverse engineers, malware analysts. <strong>Format</strong> : analyses approfondies de malware, exploits 0-day, infrastructures complètes d'acteurs.<br><br>
+    <strong>Exemple concret</strong> : « Reverse de la backdoor SUNBURST (SolarWinds) : utilise DGA basé sur SHA-256 du hostname, communique en JSON sur HTTPS, vérifie 6 conditions d'environnement avant activation, supporte 14 commandes. »<br>
+    <strong>Action</strong> : signatures précises (YARA, hash, IMPHASH), comprendre les capacités d'un acteur sur le long terme.<br>
+    <strong>Périssabilité</strong> : très faible (années) — un outil d'État reste utilisable longtemps.`}
+};
+
+function showCti(key){
+  var det=ctiDetails[key];
+  var box=document.getElementById('ti-detail');
+  if(!det||!box) return;
+  box.innerHTML='<div style="font-family:var(--sans);font-weight:700;font-size:.95rem;margin-bottom:.45rem;color:var(--cyan)">'+det.icon+' '+det.title+'</div><div style="line-height:1.6">'+det.body+'</div>';
+}
+</script>
+</body>
+</html>
