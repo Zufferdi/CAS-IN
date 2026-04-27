@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>YARA — CAS-IN DFIR</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">DÉTECTION & THREAT HUNTING</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-détection">Détection &amp; Threat Hunting</a><span class="bc-sep">›</span>
+    <span class="bc-current">YARA</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🐍</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">Pattern Matching</span>
+    <span class="tag tag-purple" style="margin-left:.3rem">Malware</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">VirusTotal</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">YARA — Le couteau suisse du malware analyst</h1>
+    <div class="meta">Règles · meta · strings · condition · modules pe/elf/hash/math · Victor Alvarez (VirusTotal) · v4.5</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="malware_forensique.html" class="prereq-pill">📖 Malware Forensics</a><a href="formats.html" class="prereq-pill">📖 Magic Bytes</a><a href="hash.html" class="prereq-pill">📖 Hash</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=magicbytes" class="tp-pill">🧪 ✨ Magic Bytes</a><a href="../tp.html?cat=mismatch" class="tp-pill">🧪 🎭 Mismatch</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="reverse_engineering_101.html" class="related-pill">🔗 Reverse Engineering</a><a href="threat_intel_ioc.html" class="related-pill">🔗 Threat Intel &amp; IOC</a><a href="mitre_attack.html" class="related-pill">🔗 MITRE ATT&amp;CK</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="yr-tabs">
+  <button class="tab active" onclick="showTab('arch',this)">🏗 Anatomie d'une règle</button>
+  <button class="tab" onclick="showTab('strings',this)">🔤 Strings (texte/hex/regex)</button>
+  <button class="tab" onclick="showTab('cond',this)">🧠 Conditions</button>
+  <button class="tab" onclick="showTab('mod',this)">📦 Modules</button>
+  <button class="tab" onclick="showTab('use',this)">🔧 Usage &amp; pipelines</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — ANATOMIE D'UNE RÈGLE
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-arch">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 YARA — créer des « signatures comportementales » de malware</div>
+  <strong>YARA</strong> (créé par <strong>Victor Alvarez</strong> chez <strong>VirusTotal</strong>) est un outil de <em>pattern matching</em> open-source qui permet de décrire — dans un langage déclaratif simple — des <strong>signatures de malwares</strong> ou de familles de fichiers. Au-delà des hashes (qui changent au moindre bit modifié), YARA capture des <strong>caractéristiques durables</strong> : strings caractéristiques, structure d'imports PE, séquences hex, entropie, organisation des sections… Une règle YARA bien écrite détecte une famille entière, y compris ses variantes futures. C'est <strong>le standard du malware analyst</strong> depuis 2013, intégré à VirusTotal, ClamAV, Volatility, EDR commerciaux, et pratiquement tout outil DFIR.
+</div>
+
+<div class="sec-title">Structure d'une règle YARA — les 4 composants</div>
+
+<div class="arch-viz">
+  <div style="background:rgba(88,166,255,.04);border:2px solid rgba(88,166,255,.25);border-radius:12px;padding:1rem;margin-bottom:.5rem">
+    <div style="font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);text-align:center;margin-bottom:.75rem;opacity:.8">📜 rule NAME : tags { meta · strings · condition }</div>
+    <div style="display:flex!important;flex-direction:column;gap:.5rem">
+      <div style="padding:.65rem 1rem;background:rgba(106,128,168,.1);border-left:4px solid var(--muted);border-radius:0 8px 8px 0;cursor:pointer" onclick="showYr('header')">
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+          <span style="background:rgba(106,128,168,.2);padding:.18rem .4rem;border-radius:4px;font-family:var(--mono);font-size:.7rem;font-weight:700">HEADER</span>
+          <code style="font-family:var(--mono);font-size:.78rem;color:var(--text)">rule MAL_RANSOM_LockBit_v3 : ransomware lockbit</code>
+        </div>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:.2rem">Nom unique de la règle + tags optionnels (filtrage)</div>
+      </div>
+      <div style="padding:.65rem 1rem;background:rgba(240,192,64,.08);border-left:4px solid var(--gold);border-radius:0 8px 8px 0;cursor:pointer" onclick="showYr('meta')">
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+          <span style="background:rgba(240,192,64,.2);color:var(--gold);padding:.18rem .4rem;border-radius:4px;font-family:var(--mono);font-size:.7rem;font-weight:700">META</span>
+          <code style="font-family:var(--mono);font-size:.78rem;color:var(--text)">author, description, hash, date, reference, score</code>
+        </div>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:.2rem">Documentation de la règle — non utilisable dans condition</div>
+      </div>
+      <div style="padding:.65rem 1rem;background:rgba(0,229,204,.08);border-left:4px solid var(--cyan);border-radius:0 8px 8px 0;cursor:pointer" onclick="showYr('strings')">
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+          <span style="background:rgba(0,229,204,.2);color:var(--cyan);padding:.18rem .4rem;border-radius:4px;font-family:var(--mono);font-size:.7rem;font-weight:700">STRINGS</span>
+          <code style="font-family:var(--mono);font-size:.78rem;color:var(--text)">$a = "..." · $b = { 6A 40 68 } · $r = /reg.*ex/</code>
+        </div>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:.2rem">Patterns à chercher : texte, hex, regex (optionnel)</div>
+      </div>
+      <div style="padding:.65rem 1rem;background:rgba(255,64,96,.08);border-left:4px solid var(--red);border-radius:0 8px 8px 0;cursor:pointer" onclick="showYr('cond')">
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+          <span style="background:rgba(255,64,96,.2);color:var(--red);padding:.18rem .4rem;border-radius:4px;font-family:var(--mono);font-size:.7rem;font-weight:700">CONDITION</span>
+          <code style="font-family:var(--mono);font-size:.78rem;color:var(--text)">all of ($a, $b) and filesize &lt; 1MB and pe.is_pe</code>
+        </div>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:.2rem"><strong>Mandatory</strong> — expression booléenne qui décide du match</div>
+      </div>
+    </div>
+  </div>
+  <div id="yr-detail" style="margin-top:.5rem;padding:.85rem 1rem;background:rgba(13,17,23,.4);border:1px solid var(--border);border-radius:8px;font-size:.82rem;color:var(--muted);min-height:60px">
+    ℹ️ Cliquez sur un composant ci-dessus pour ses détails.
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Exemple complet — règle de référence</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.74rem;line-height:1.55;color:var(--text);white-space:pre-wrap;margin:0">import "pe"
+import "hash"
+
+<span style="color:var(--gold)">rule MAL_RANSOM_LockBit_v3_Generic : ransomware lockbit critical</span> {
+    meta:
+        description = "Detects LockBit 3.0 / Black ransomware variants"
+        author      = "DFIR Lab"
+        date        = "2026-04-15"
+        version     = "1.0"
+        reference   = "https://example.org/lockbit-analysis"
+        score       = 90
+        hash1       = "1f3e87c4...c2b9"  // SHA-256 sample 1
+        hash2       = "a8f2b1d9...4e51"  // SHA-256 sample 2
+        attack      = "T1486"             // MITRE ATT&amp;CK ID
+
+    strings:
+        // ── Strings textuelles caractéristiques ──
+        $s1 = "LockBit 3.0" ascii wide
+        $s2 = "All your important files have been encrypted" ascii
+        $s3 = "Restore-My-Files.txt" nocase
+
+        // ── Hex pattern : début de l'algo de chiffrement ──
+        $hex1 = { 48 8B ?? 48 89 ?? E8 [4-8] 33 C0 }
+
+        // ── Regex : domaines C2 .onion typiques ──
+        $r1 = /[a-z2-7]{56}\.onion/ ascii
+
+        // ── Anti-FP : éviter les faux positifs sur strings communes ──
+        $fp1 = "Microsoft Visual Studio"
+
+    condition:
+        // En-tête PE valide
+        uint16(0) == 0x5A4D                  // "MZ"
+        and pe.is_pe
+        and pe.machine == pe.MACHINE_AMD64
+        // Au moins 2 strings caractéristiques sur 3
+        and 2 of ($s*)
+        // ET le pattern hex
+        and $hex1
+        // ET au moins une URL .onion
+        and $r1
+        // ET pas de match sur les FP
+        and not $fp1
+        // Limite de taille
+        and filesize &lt; 5MB
+}</pre>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Convention de nommage (Florian Roth · Neo23x0)</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">📛 Format recommandé</div>
+    <div style="font-family:var(--mono);font-size:.78rem;color:var(--text);background:rgba(13,17,23,.5);padding:.55rem;border-radius:4px;margin:.3rem 0;line-height:1.5">
+<strong style="color:var(--cyan)">CATEGORY_FAMILY_VARIANT_DATE</strong><br><br>
+Exemples :<br>
+• APT_MAL_CozyBear_ELF_Loader_Apr18<br>
+• MAL_RANSOM_LockBit_v3_Apr26<br>
+• HKTL_Mimikatz_Generic<br>
+• SUSP_Anomaly_LNK_Huge_Apr22<br>
+• MAL_CRIME_RANSOM_PS1_Loader_May23
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🏷 Catégories standard</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.83rem;line-height:1.55">
+      <li><strong>APT</strong> = nation-state actor (APT29, Lazarus…)</li>
+      <li><strong>MAL</strong> = malware générique commercial</li>
+      <li><strong>HKTL</strong> = hack tool (Mimikatz, Cobalt Strike)</li>
+      <li><strong>SUSP</strong> = anomalie suspecte (sans malice prouvée)</li>
+      <li><strong>EXPL</strong> = exploit / vulnérabilité</li>
+      <li><strong>WEBSHELL</strong> = scripts web malicieux</li>
+      <li><strong>FILE</strong> / <strong>FORMAT</strong> = signatures de format générique</li>
+    </ul>
+  </div>
+</div>
+
+</div><!-- /tab-arch -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — STRINGS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-strings">
+
+<div class="concept-card">
+  <div class="concept-title">🔤 Trois types de strings : texte, hex, regex</div>
+  Toute règle YARA repose sur la <strong>déclaration de patterns</strong> (strings) puis leur évaluation dans la condition. Trois syntaxes, chacune avec ses modificateurs.
+</div>
+
+<div class="sec-title">① Text strings — <code>"…"</code></div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.74rem;line-height:1.6;color:var(--text);white-space:pre-wrap;margin:0">strings:
+    $s1 = "This program cannot be run in DOS mode"
+    $s2 = "cmd.exe" <strong style="color:var(--cyan)">nocase</strong>           <span style="color:var(--dim)"># cmd.exe = CMD.EXE = Cmd.Exe</span>
+    $s3 = "/etc/passwd" <strong style="color:var(--cyan)">ascii</strong>         <span style="color:var(--dim)"># 1 octet par char (par défaut)</span>
+    $s4 = "Microsoft" <strong style="color:var(--cyan)">wide</strong>            <span style="color:var(--dim)"># UTF-16 LE (2 octets) — typique PE</span>
+    $s5 = "rundll32" <strong style="color:var(--cyan)">ascii wide</strong>       <span style="color:var(--dim)"># match les deux encodages</span>
+    $s6 = "DEBUG" <strong style="color:var(--cyan)">fullword</strong>            <span style="color:var(--dim)"># pas dans "DEBUGGER" ni "DEBUGED"</span>
+    $s7 = "secret" <strong style="color:var(--cyan)">xor(0-255)</strong>          <span style="color:var(--dim)"># cherche "secret" XORé toute clé</span>
+    $s8 = "data" <strong style="color:var(--cyan)">base64</strong>               <span style="color:var(--dim)"># cherche "ZGF0YQ==" et variantes</span>
+    $s9 = "/* private */" <strong style="color:var(--cyan)">private</strong>      <span style="color:var(--dim)"># utilisable mais pas dans output</span></pre>
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">Modificateurs disponibles</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.83rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Modificateur</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Effet</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Cas d'usage</th>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>nocase</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Insensible à la casse</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Noms de DLL, paths, API</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>ascii</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">1 octet par char (défaut)</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">À combiner explicitement avec <code>wide</code></td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>wide</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">UTF-16 LE (2 octets/char)</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Strings dans PE Windows, registre, COM</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>fullword</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Mot entier (délimité par non-alphanumériques)</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Réduit FP — éviter sous-chaînes accidentelles</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>xor(min-max)</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Cherche string XORée avec toute clé 1 octet</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Strings obfusquées par malware (config XOR)</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>base64</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Match les 3 variantes Base64 d'alignement</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">PowerShell encoded commands, payloads</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>base64wide</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Base64 + UTF-16</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Combo PowerShell <code>-EncodedCommand</code></td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>private</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">String non affichée dans le rapport</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Anti-FP, ne révèle pas la signature</td>
+  </tr>
+</table>
+
+<div class="sec-title" style="margin-top:1.5rem">② Hex strings — <code>{ … }</code></div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.74rem;line-height:1.6;color:var(--text);white-space:pre-wrap;margin:0">strings:
+    $h1 = { 4D 5A 90 00 03 00 00 00 }            <span style="color:var(--dim)"># PE header (MZ)</span>
+    $h2 = { 6A 40 68 00 30 00 00 6A 14 8D 91 }   <span style="color:var(--dim)"># Pattern code</span>
+
+    <span style="color:var(--gold)"># Wildcards : ? = nibble (4 bits) any</span>
+    $h3 = { 48 8B ?? 48 89 ?? }                  <span style="color:var(--dim)"># 2e/4e octet libre</span>
+    $h4 = { 48 8B ?A 48 89 ?5 }                  <span style="color:var(--dim)"># nibble haut libre</span>
+
+    <span style="color:var(--gold)"># Jumps : [n] = exactement n octets · [n-m] = n à m octets</span>
+    $h5 = { E8 [4] 33 C0 }                       <span style="color:var(--dim)"># call + 4 octets + xor eax,eax</span>
+    $h6 = { E8 [4-8] 33 C0 }                     <span style="color:var(--dim)"># 4 à 8 octets entre</span>
+    $h7 = { E8 [-] 33 C0 }                       <span style="color:var(--dim)"># sans limite (attention perf!)</span>
+
+    <span style="color:var(--gold)"># Alternation : ( ... | ... ) = OU logique</span>
+    $h8 = { 48 ( 8B | 89 ) C0 }                  <span style="color:var(--dim)"># mov eax OU mov [eax]</span></pre>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">③ Regex — <code>/…/</code></div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.74rem;line-height:1.6;color:var(--text);white-space:pre-wrap;margin:0">strings:
+    $r1 = /[a-z2-7]{56}\.onion/ ascii    <span style="color:var(--dim)"># onion v3 (56 chars base32)</span>
+    $r2 = /\b(?:\d{1,3}\.){3}\d{1,3}\b/  <span style="color:var(--dim)"># IPv4 (approx)</span>
+    $r3 = /md5: [a-f0-9]{32}/i           <span style="color:var(--dim)"># /i = nocase équivalent</span>
+
+    <span style="color:var(--gold)"># Métacaractères supportés :</span>
+    <span style="color:var(--gold)"># . \w \s \d ^ $ * + ? {n,m} | () [...] \b</span>
+    <span style="color:var(--gold)"># NON supportés : capture groups, backreferences,</span>
+    <span style="color:var(--gold)"># POSIX classes ([[:alpha:]])</span></pre>
+</div>
+
+<div class="alert" style="background:rgba(240,192,64,.06);border-color:rgba(240,192,64,.4);margin:1rem 0">
+  ⚠️ <strong>Attention performance :</strong> les regex et hex avec jumps illimités <code>[-]</code> sont <strong>très coûteux</strong>. Sur des téraoctets de stockage, une mauvaise règle peut bloquer un scanner pendant des heures. Bonnes pratiques : (1) toujours ancrer avec un préfixe litéral, (2) limiter la longueur des jumps, (3) tester avec <code>yara --print-stats</code> ou <code>yarac</code> pour compiler.
+</div>
+
+</div><!-- /tab-strings -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — CONDITIONS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-cond">
+
+<div class="concept-card">
+  <div class="concept-title">🧠 La <strong>condition</strong> — l'âme logique de la règle</div>
+  La section <code>condition</code> est <strong>obligatoire</strong>. C'est une expression booléenne qui combine les strings (référencées par <code>$nom</code>), des fonctions sur le fichier (<code>filesize</code>, <code>uint16</code>…), et des opérateurs logiques. La règle match si la condition est vraie.
+</div>
+
+<div class="sec-title">Opérateurs disponibles</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🔢 Booléens &amp; comparaison</div>
+    <pre style="font-family:var(--mono);font-size:.72rem;line-height:1.55;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap">and · or · not
+== · != · &lt; · &lt;= · &gt; · &gt;=
++ · - · * · \ · %
+&amp; · | · ^ · &lt;&lt; · &gt;&gt; · ~  (bitwise)
+contains · matches · startswith
+endswith · icontains · istartswith</pre>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔍 Fonctions sur le fichier</div>
+    <pre style="font-family:var(--mono);font-size:.72rem;line-height:1.55;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap"><strong>filesize</strong>          <span style="color:var(--dim)"># taille en octets</span>
+<strong>entrypoint</strong>         <span style="color:var(--dim)"># offset entry PE/ELF</span>
+<strong>uint8(offset)</strong>     <span style="color:var(--dim)"># octet à offset</span>
+<strong>uint16(offset)</strong>    <span style="color:var(--dim)"># word LE</span>
+<strong>uint16be(offset)</strong>  <span style="color:var(--dim)"># word BE</span>
+<strong>uint32(offset)</strong>    <span style="color:var(--dim)"># dword LE</span>
+<strong>int32(...)</strong>        <span style="color:var(--dim)"># signé</span></pre>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🎯 Quantifieurs sur strings</div>
+    <pre style="font-family:var(--mono);font-size:.72rem;line-height:1.55;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap"><strong>$a</strong>                 <span style="color:var(--dim)"># présent au moins 1 fois</span>
+<strong>#a</strong>                 <span style="color:var(--dim)"># nb d'occurrences</span>
+<strong>@a[N]</strong>              <span style="color:var(--dim)"># offset Nème occurrence</span>
+<strong>!a[N]</strong>              <span style="color:var(--dim)"># longueur match</span>
+<strong>any of ($a, $b, $c)</strong>
+<strong>all of ($s*)</strong>       <span style="color:var(--dim)"># tous ceux préfixés $s</strong>
+<strong>2 of ($a, $b, $c, $d)</strong>
+<strong>none of them</strong></pre>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔁 Boucles for</div>
+    <pre style="font-family:var(--mono);font-size:.72rem;line-height:1.55;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap"><strong>for any i in (1..#a)</strong> :
+    ( @a[i] &gt; 0x1000 )
+<strong>for all section in pe.sections</strong> :
+    ( section.name == ".text" )
+<strong>for any s in ("h1", "h2")</strong> :
+    ( pe.imphash() == s )</pre>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Patterns de conditions courants</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.74rem;line-height:1.6;color:var(--text);white-space:pre-wrap;margin:0"><span style="color:var(--gold)">// ── Filtrage par taille ──</span>
+condition:
+    filesize &lt; 1MB and any of ($s*)
+
+<span style="color:var(--gold)">// ── Match à l'entry point (typique packer) ──</span>
+condition:
+    $upx_marker at entrypoint
+
+<span style="color:var(--gold)">// ── Validation magic bytes en hex ──</span>
+condition:
+    uint16(0) == 0x5A4D       <span style="color:var(--dim)"># MZ (PE Windows)</span>
+    or uint32(0) == 0x464C457F <span style="color:var(--dim)"># ELF Linux</span>
+
+<span style="color:var(--gold)">// ── Score de confiance par accumulation ──</span>
+condition:
+    (#a + #b + #c) &gt; 5
+    and 2 of ($strong*)
+
+<span style="color:var(--gold)">// ── Anti-FP avec rules privées ──</span>
+private rule IsPE { condition: uint16(0) == 0x5A4D }
+private rule IsPDF { condition: uint32(0) == 0x46445025 }
+
+rule MAL_GenericMacroDoc {
+    condition: not IsPE and not IsPDF and ...
+}
+
+<span style="color:var(--gold)">// ── Combinaison avec module pe ──</span>
+condition:
+    pe.is_pe
+    and pe.imports("kernel32.dll", "VirtualAlloc")
+    and pe.imports("kernel32.dll", "CreateRemoteThread")
+    and pe.number_of_sections &lt; 4
+    and 2 of ($s*)</pre>
+</div>
+
+</div><!-- /tab-cond -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — MODULES
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-mod">
+
+<div class="concept-card">
+  <div class="concept-title">📦 Modules — étendre YARA au-delà du pattern matching</div>
+  Les <strong>modules</strong> ajoutent des capacités d'inspection fine selon le format de fichier ou le besoin. Ils s'importent via <code>import "nom"</code> en début de fichier YARA. La distribution officielle (≥ v4.5) contient : <strong>pe</strong>, <strong>elf</strong>, <strong>cuckoo</strong>, <strong>magic</strong>, <strong>hash</strong>, <strong>math</strong>, <strong>dotnet</strong>, <strong>time</strong>, <strong>console</strong>, <strong>string</strong>.
+</div>
+
+<div class="sec-title">Module <code>pe</code> — Portable Executable Windows</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.74rem;line-height:1.6;color:var(--text);white-space:pre-wrap;margin:0"><strong style="color:var(--cyan)">import "pe"</strong>
+
+condition:
+    <strong>pe.is_pe</strong>                                   <span style="color:var(--dim)"># validation MZ + PE\0\0</span>
+    and <strong>pe.machine</strong> == pe.MACHINE_AMD64          <span style="color:var(--dim)"># 64-bit</span>
+    and <strong>pe.number_of_sections</strong> &lt; 4              <span style="color:var(--dim)"># packing suspect</span>
+    and <strong>pe.imphash()</strong> == "8a705c3e7c4..."        <span style="color:var(--dim)"># import hash</span>
+    and <strong>pe.imports</strong>("kernel32.dll", "VirtualAlloc")
+    and <strong>pe.imports</strong>("user32.dll", /^Get.*Window/) <span style="color:var(--dim)"># regex sur API</span>
+    and <strong>pe.exports</strong>("DllRegisterServer")
+    and <strong>pe.entry_point</strong> &gt; 0x10000                <span style="color:var(--dim)"># EP haut = packer</span>
+    and <strong>pe.timestamp</strong> &gt; 1577836800               <span style="color:var(--dim)"># &gt; 2020-01-01</span>
+    and <strong>pe.number_of_signatures</strong> == 0            <span style="color:var(--dim)"># non signé</span>
+    and <strong>pe.rich_signature.toolid</strong>(0x60, 0x77)    <span style="color:var(--dim)"># Rich header</span>
+
+<span style="color:var(--gold)"># Itérer sur les sections</span>
+    and for any sect in pe.sections : (
+        sect.name == ".text"
+        and sect.entropy &gt; 7.5             <span style="color:var(--dim)"># section chiffrée/packée</span>
+    )</pre>
+</div>
+
+<div class="memo-grid" style="margin-top:1rem">
+  <div class="memo-card">
+    <div class="memo-card-title">🐧 Module <code>elf</code></div>
+    <div style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0">elf.type == elf.ET_EXEC<br>
+elf.machine == elf.EM_X86_64<br>
+elf.number_of_sections<br>
+elf.dynamic_section_entries<br>
+elf.symtab_entries</div>
+    <div style="font-size:.78rem;margin-top:.3rem">Symétrique au module pe pour binaires Linux/Unix.</div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">#️⃣ Module <code>hash</code></div>
+    <div style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0">hash.md5(0, filesize) == "abc..."<br>
+hash.sha1(0, filesize)<br>
+hash.sha256(offset, length)<br>
+hash.crc32(0, filesize)</div>
+    <div style="font-size:.78rem;margin-top:.3rem">Match par hash exact ou hash de zone — utile pour fragments connus.</div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📐 Module <code>math</code></div>
+    <div style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0">math.entropy(0, filesize) &gt; 7.5<br>
+math.mean(0, filesize)<br>
+math.deviation(0, filesize, m)<br>
+math.in_range(x, min, max)</div>
+    <div style="font-size:.78rem;margin-top:.3rem">Entropie = détection packing/chiffrement. Seuil 7.5 = chiffré, 6-7 = code, &lt; 5 = texte.</div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🍳 Module <code>cuckoo</code></div>
+    <div style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0">cuckoo.network.host(/evil\.com/)<br>
+cuckoo.registry.key_access(...)<br>
+cuckoo.filesystem.file_access(...)<br>
+cuckoo.sync.mutex(...)</div>
+    <div style="font-size:.78rem;margin-top:.3rem">Pour règles basées sur les rapports Cuckoo Sandbox — IOC dynamiques.</div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔷 Module <code>dotnet</code></div>
+    <div style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0">dotnet.is_dotnet<br>
+dotnet.guids[0]<br>
+dotnet.streams<br>
+dotnet.assembly_refs</div>
+    <div style="font-size:.78rem;margin-top:.3rem">Pour binaires .NET (CLR) — typeof Mythic/Cobalt Strike .NET stagers.</div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🕒 Module <code>time</code></div>
+    <div style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0">time.now() &gt; 1577836800<br>
+time.now() &lt; pe.timestamp + 86400</div>
+    <div style="font-size:.78rem;margin-top:.3rem">Conditions temporelles — utile pour règles « campagne active »</div>
+  </div>
+</div>
+
+<div class="alert" style="background:rgba(0,229,204,.06);border-color:rgba(0,229,204,.4);margin:1rem 0">
+  ⭐ <strong>imphash : un IOC plus robuste que le hash de fichier.</strong> <code>pe.imphash()</code> calcule un MD5 sur la liste ordonnée des imports (<code>kernel32.VirtualAlloc</code>, <code>user32.MessageBoxA</code>…). Deux variantes du même malware compilées avec le même code source ont souvent <strong>le même imphash</strong>, même si leurs hashes complets diffèrent (timestamp PE, optimisations compilateur). Excellent pivot CTI.
+</div>
+
+</div><!-- /tab-mod -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — USAGE & PIPELINES
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-use">
+
+<div class="concept-card">
+  <div class="concept-title">🔧 Utiliser YARA — du CLI au pipeline industriel</div>
+  YARA tourne sous Linux, macOS, Windows. Binaires : <code>yara</code> (scan), <code>yarac</code> (compilateur). Disponible aussi via <strong>yara-python</strong> (bindings Python) — utilisé par la majorité des outils DFIR.
+</div>
+
+<div class="sec-title">Commandes essentielles</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.74rem;line-height:1.55;color:var(--text);white-space:pre-wrap;margin:0"><span style="color:var(--gold)"># Scan d'un fichier ──</span>
+$ yara rules.yar suspicious.exe
+
+<span style="color:var(--gold)"># Scan récursif d'un répertoire (DFIR triage) ──</span>
+$ yara -r rules.yar /mnt/forensic_image/
+
+<span style="color:var(--gold)"># Print les strings matchées (-s) + offsets ──</span>
+$ yara -s rules.yar suspicious.exe
+
+<span style="color:var(--gold)"># Multi-règles combinées ──</span>
+$ yara -r combined.yar /target          <span style="color:var(--dim)"># 1 fichier groupant plusieurs rules</span>
+
+<span style="color:var(--gold)"># Filtrer par tag (ex. uniquement règles tagguées 'critical') ──</span>
+$ yara -t critical rules.yar /target
+
+<span style="color:var(--gold)"># Compiler en binaire (perf, anti-réécriture) ──</span>
+$ yarac rules.yar rules.yarc
+$ yara -C rules.yarc /target            <span style="color:var(--dim)"># load compilé (-C)</span>
+
+<span style="color:var(--gold)"># Scan d'un processus en mémoire (par PID) ──</span>
+$ yara rules.yar 4328                   <span style="color:var(--dim)"># scan process 4328 RAM</span>
+
+<span style="color:var(--gold)"># Définir une variable externe ──</span>
+$ yara -d filename=evil.exe rules.yar /target
+
+<span style="color:var(--gold)"># Stats &amp; performance ──</span>
+$ yara --print-stats rules.yar /target  <span style="color:var(--dim)"># temps par règle</span></pre>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Intégrations DFIR</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🌐 VirusTotal Hunting</div>
+    <div style="font-size:.83rem;line-height:1.55">
+      <strong>VT Intelligence (commercial)</strong> permet d'uploader des règles YARA qui tournent <em>sur les centaines de millions d'échantillons VT en continu</em>. Notification email quand une nouvelle soumission match. Outil n°1 pour le tracking de campagne malware au niveau mondial. Écrit par Victor Alvarez (créateur de YARA) → support natif.
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🐍 Volatility 3</div>
+    <div style="font-size:.83rem;line-height:1.55">
+      Plugin <code>yarascan</code> applique des règles YARA sur les régions mémoire d'un dump RAM :
+      <code style="display:block;background:rgba(13,17,23,.5);padding:.4rem;border-radius:4px;margin-top:.3rem;font-size:.72rem">vol -f mem.raw windows.yarascan --yara-file rules.yar</code>
+      Idéal pour détecter shellcodes injectés, beacon Cobalt Strike résidant en RAM uniquement.
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔍 KAPE / Velociraptor</div>
+    <div style="font-size:.83rem;line-height:1.55">
+      KAPE intègre YARA via le module <code>!Yara</code>. Velociraptor a une artifact <code>Generic.Detection.Yara.Process</code> et <code>Generic.Detection.Yara.Glob</code> pour scan de masse en endpoint. Permet de déployer une chasse YARA sur un parc entier en quelques minutes.
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🐧 ClamAV / EDR</div>
+    <div style="font-size:.83rem;line-height:1.55">
+      <strong>ClamAV</strong> (open-source AV) charge nativement les règles YARA dans son moteur. La plupart des EDR commerciaux (CrowdStrike, SentinelOne, MDE) acceptent des règles YARA custom — souvent dans une « custom IOC » section. Vérifier la version YARA supportée.
+    </div>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Repos publics de règles</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.83rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Repo</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Source</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Spécialité</th>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>signature-base</strong> (Neo23x0)</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Florian Roth · github.com/Neo23x0/signature-base</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Référence — APT, ransomware, hack tools — utilisé par THOR/LOKI</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>YARA-Rules</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">github.com/Yara-Rules/rules</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Communautaire — large mais qualité variable</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>InQuest YARA</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">github.com/InQuest/yara-rules</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Documents Office malicieux, pieces jointes</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>ESET Research</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">github.com/eset/malware-ioc</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">APT (Turla, Sandworm, Lazarus, etc.) avec rapports détaillés</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>Elastic detection-rules</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">github.com/elastic/protections-artifacts</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Ensemble couplé YARA + Sigma + KQL</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>YARAify</strong> (abuse.ch)</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">yaraify.abuse.ch</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Plateforme de partage de règles + scanner public gratuit</td>
+  </tr>
+</table>
+
+<div class="alert" style="margin:1rem 0">
+  ⚠️ <strong>Curation requise.</strong> Les règles publiques sont de qualité <em>très variable</em>. Avant de déployer en production : (1) tester sur un corpus de fichiers <em>légitimes</em> connus (FP rate), (2) tester sur le malware ciblé, (3) profiler la performance, (4) versionner en Git interne. Les règles d'<strong>abuse.ch / Florian Roth / ESET</strong> sont les plus fiables. Méfiance avec des règles vieilles de plus d'un an non maintenues.
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">YARA-X — la nouvelle génération</div>
+
+<div class="concept-card">
+  <strong>YARA-X</strong> (<a href="https://virustotal.github.io/yara-x/" target="_blank">virustotal.github.io/yara-x/</a>) est une réécriture en Rust par Victor Alvarez, lancée en 2024. Compatible avec les règles YARA 4.x, mais avec :
+  <ul style="margin:.4rem 0 0 1.3rem;font-size:.85rem;line-height:1.6">
+    <li><strong>Performance améliorée</strong> (compilateur plus efficace, exécution parallèle)</li>
+    <li><strong>Sécurité mémoire native</strong> (Rust)</li>
+    <li><strong>Meilleurs messages d'erreur</strong> à la compilation</li>
+    <li><strong>Modules étendus</strong> (LNK, macho, plus complets)</li>
+  </ul>
+  YARA classique reste la référence en 2026, mais YARA-X est <strong>l'avenir</strong> — l'écosystème migrera progressivement. Compatible drop-in pour la plupart des règles.
+</div>
+
+</div><!-- /tab-use -->
+
+
+<!-- ══════════════════════════════════════════════
+     QUIZ + EXAM TIP
+══════════════════════════════════════════════ -->
+<div class="page-wrap">
+
+<div class="exam-tip" style="margin-top:1.25rem">
+  <div class="exam-tip-title">🎓 Exam Tip — YARA</div>
+  <p><strong>Origine</strong> : Victor Alvarez · VirusTotal · open-source</p>
+  <p><strong>Usage primaire</strong> : signatures de malware (familles, pas hashes)</p>
+  <p><strong>Structure</strong> : <code>rule NOM : tags { meta · strings · condition }</code> — <strong>condition obligatoire</strong></p>
+  <p><strong>3 types de strings</strong> : texte <code>"…"</code> · hex <code>{ … }</code> · regex <code>/…/</code></p>
+  <p><strong>Modificateurs essentiels</strong> : <code>nocase</code> · <code>wide</code> · <code>ascii</code> · <code>fullword</code> · <code>xor</code> · <code>base64</code> · <code>private</code></p>
+  <p><strong>Hex syntax</strong> : <code>?</code> = nibble libre · <code>[n]</code> = n octets · <code>[n-m]</code> = range · <code>(A | B)</code> = OU</p>
+  <p><strong>Quantifieurs</strong> : <code>any of</code> · <code>all of ($s*)</code> · <code>2 of ($a, $b, $c)</code> · <code>#a</code> = compte · <code>@a[n]</code> = offset</p>
+  <p><strong>Modules importants</strong> : <code>pe</code> (Windows EXE/DLL) · <code>elf</code> (Linux) · <code>hash</code> · <code>math</code> (entropie!) · <code>dotnet</code> · <code>cuckoo</code></p>
+  <p><strong>Imphash</strong> : MD5 des imports PE — IOC robuste contre recompilation</p>
+  <p><strong>Convention nommage</strong> (Florian Roth) : <code>CATEGORY_FAMILY_VARIANT_DATE</code> (ex. APT_MAL_CozyBear_ELF_Loader_Apr18)</p>
+  <p><strong>Compilation</strong> : <code>yarac rules.yar rules.yarc</code> puis <code>yara -C rules.yarc</code></p>
+  <p><strong>Outils intégrant YARA</strong> : VirusTotal Hunting · Volatility (yarascan) · KAPE · Velociraptor · ClamAV · EDRs commerciaux</p>
+  <p><strong>Repos de référence</strong> : Neo23x0/signature-base (Florian Roth) · ESET malware-ioc · abuse.ch YARAify</p>
+  <p><strong>Évolution 2024+</strong> : YARA-X (Rust, plus rapide, drop-in compatible)</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Vous écrivez une règle YARA pour un malware Windows qui contient la string « LockBit 3.0 ». Pour la rendre robuste face aux variantes, quels modificateurs et quelle condition utiliseriez-vous ?</div>
+  <div class="quiz-meta">YARA · Niveau : moyen</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <strong>Modificateurs minimum :</strong>
+    <pre style="font-family:var(--mono);font-size:.73rem;background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0">$s_lockbit = "LockBit 3.0" ascii wide nocase</pre>
+    <ul>
+      <li><code>ascii</code> : pour matcher dans les strings 8-bit (typique sections .data, .rsrc)</li>
+      <li><code>wide</code> : pour matcher en UTF-16 LE (typique strings de PE Windows compilés)</li>
+      <li><code>nocase</code> : variantes en majuscules/minuscules (LOCKBIT, lockbit…)</li>
+    </ul>
+    <strong>Condition robuste</strong> (anti-FP, contextualisée) :
+    <pre style="font-family:var(--mono);font-size:.73rem;background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0">condition:
+    uint16(0) == 0x5A4D                  // PE valide
+    and pe.is_pe
+    and filesize &lt; 5MB                   // ransom typique petit
+    and 2 of ($s_lockbit, $s_ransom_note, $s_extension)
+    and not pe.imphash() == "&lt;benign_known_hash&gt;"</pre>
+    Pourquoi : (1) le marqueur PE évite de matcher des fichiers texte (rapports, logs), (2) la taille filtre les binaires légitimes plus gros, (3) <strong>2 of</strong> exige plusieurs indicateurs concordants — détecter LockBit 3.0 sur la base d'une seule string serait FP-prone (la presse cite cette string partout), (4) anti-FP avec imphash connu de fichiers benins. Bonus : on pourrait ajouter <code>pe.timestamp &gt; 1672531200</code> (post-2023, date de release LockBit 3.0).
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Quelle est la différence entre le hash <code>SHA-256</code> d'un fichier et le <code>pe.imphash()</code> en termes de pivot CTI ?</div>
+  <div class="quiz-meta">YARA · Niveau : moyen</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    Le <strong>SHA-256</strong> couvre <em>tout</em> le contenu binaire — un seul bit modifié change radicalement le hash (effet avalanche). Bonne propriété pour l'<strong>intégrité</strong>, mauvaise propriété pour la <strong>détection de famille</strong> : recompiler le même code source change le timestamp PE → SHA-256 différent. Repacker avec UPX/Themida → SHA-256 différent. Le SHA-256 est donc un IOC <em>« atomic »</em> dans la pyramide de Bianco — facile à éviter pour l'attaquant (changer 1 octet suffit).
+    <br><br>
+    L'<strong>imphash</strong> est un <strong>MD5 calculé sur la liste ordonnée des imports PE</strong> (DLL + nom de fonction, dans l'ordre exact où ils sont déclarés dans la table d'import). Il capture le <strong>comportement appellatif</strong> du binaire : « ce malware appelle <code>kernel32.VirtualAlloc</code> puis <code>kernel32.WriteProcessMemory</code> puis <code>kernel32.CreateRemoteThread</code> puis... ». Deux variantes du même code source compilées avec le même compilateur partagent généralement le même imphash, même si leurs SHA-256 diffèrent. C'est un IOC <em>« tools »</em> dans la pyramide — beaucoup plus coûteux à modifier (il faut changer la structure du programme).
+    <br><br>
+    Mantra CTI : <strong>SHA-256 pour la confirmation, imphash pour le pivot</strong>. Un nouveau échantillon trouvé via VirusTotal Hunting avec le même imphash qu'un APT connu = match très robuste, même si le hash global est inédit. <em>Caveat</em> : les binaires .NET et les compilateurs Go produisent des imphashes peu discriminants (toujours les mêmes imports génériques) — pour eux, on utilise plutôt <code>typelib</code> (.NET) ou de l'analyse de strings.
+  </div>
+</div>
+
+<div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> YARA = pattern matching open-source par Victor Alvarez (VirusTotal) · structure rule {meta + strings + condition} · 3 types de strings (texte / hex / regex) · modificateurs <code>nocase</code>/<code>wide</code>/<code>ascii</code>/<code>fullword</code>/<code>xor</code>/<code>base64</code> · hex wildcards <code>?</code> et jumps <code>[n-m]</code> · quantifieurs <code>any of</code>/<code>all of ($s*)</code>/<code>2 of</code> · modules pe/elf/hash/math/dotnet/cuckoo · imphash &gt; SHA-256 pour le pivot CTI · convention CATEGORY_FAMILY_VARIANT_DATE (Neo23x0) · compilation yarac · intégré à VirusTotal Hunting, Volatility, KAPE, Velociraptor, ClamAV, EDR · YARA-X = futur (Rust).</div>
+
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>YARA documentation (yara.readthedocs.io) · Florian Roth signature-base · VirusTotal · YARA-X</span>
+</div>
+
+</div><!-- /page-wrap -->
+
+
+<script>
+// ── Scroll + Back-top ──
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+})();
+
+// ── Quiz reveal ──
+document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+    ans.classList.toggle('visible');
+    btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+  });
+});
+
+// ── Tab switching ──
+function showTab(id, btn){
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('#yr-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  var el=document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+  window.scrollTo({top:Math.max(0,document.getElementById('yr-tabs').offsetTop-60),behavior:'smooth'});
+}
+
+// ── YARA structure details ──
+var yrDetails={
+  header:{icon:'📛',title:'Header — rule NOM : tags',body:`Le <strong>nom</strong> doit être unique dans l'ensemble de règles chargées. Convention recommandée par Florian Roth (Neo23x0) : <code>CATEGORY_FAMILY_VARIANT_DATE</code>.<br><br>
+    Les <strong>tags</strong> (optionnels) servent à filtrer au scan : <code>yara -t critical rules.yar</code> ne charge que les règles tagguées <code>critical</code>. Tags typiques : la famille (<code>lockbit</code>, <code>cobaltstrike</code>), la sévérité (<code>critical</code>, <code>info</code>), le type (<code>ransomware</code>, <code>infostealer</code>, <code>apt</code>).<br><br>
+    Plusieurs tags sont séparés par des espaces.`},
+  meta:{icon:'📝',title:'Meta — documentation de la règle',body:`Section optionnelle mais <strong>fortement recommandée</strong>. Identifiants/valeurs documentent la règle. Valeurs : strings, integers, booleans (<code>true</code>/<code>false</code>).<br><br>
+    Champs standards : <code>description</code>, <code>author</code>, <code>date</code>, <code>version</code>, <code>reference</code> (URL), <code>hash</code> (SHA-256 du sample), <code>score</code> (0-100), <code>attack</code> (ID MITRE).<br><br>
+    <strong>Important :</strong> les valeurs meta <em>ne sont pas accessibles dans la section condition</em>. Leur seul rôle est documentaire — visible dans les outputs de scan et dans les rapports.`},
+  strings:{icon:'🔤',title:'Strings — patterns à chercher',body:`Section où l'on déclare les patterns. Chaque string commence par <code>$</code> + identifiant. Trois types : texte (<code>"..."</code>), hex (<code>{ ... }</code>), regex (<code>/.../</code>).<br><br>
+    Modificateurs (texte) : <code>nocase</code>, <code>ascii</code>, <code>wide</code>, <code>fullword</code>, <code>xor</code>, <code>base64</code>, <code>private</code>.<br>
+    Hex syntax : <code>?</code> = nibble libre, <code>[n]</code> = n octets, <code>[n-m]</code> = range, <code>(A|B)</code> = alternation.<br><br>
+    <strong>Section optionnelle</strong> — une règle peut n'avoir que des conditions sur les modules (ex. <code>pe.imphash() == "..."</code>).`},
+  cond:{icon:'⚖️',title:'Condition — la logique de match',body:`Section <strong>obligatoire</strong>. Expression booléenne qui décide du match.<br><br>
+    Peut référencer : strings (<code>$a</code>, <code>#a</code> = count, <code>@a[i]</code> = offset, <code>!a</code> = length), <code>filesize</code>, <code>entrypoint</code>, fonctions <code>uint8/16/32(offset)</code>, et tous les éléments des modules importés.<br><br>
+    Opérateurs : <code>and · or · not</code>, comparaisons <code>== != &lt; &gt;</code>, arithmétiques <code>+ - * \\</code>, bitwise <code>&amp; | ^ &lt;&lt; &gt;&gt;</code>, contains/startswith/endswith/matches.<br><br>
+    Quantifieurs : <code>any of (...)</code>, <code>all of ($s*)</code>, <code>N of (...)</code>, <code>none of them</code>.<br><br>
+    Boucles : <code>for any/all i in (range) : ( expr )</code>.`}
+};
+
+function showYr(key){
+  var det=yrDetails[key];
+  var box=document.getElementById('yr-detail');
+  if(!det||!box) return;
+  box.innerHTML='<div style="font-family:var(--sans);font-weight:700;font-size:.95rem;margin-bottom:.45rem;color:var(--cyan)">'+det.icon+' '+det.title+'</div><div style="line-height:1.6">'+det.body+'</div>';
+}
+</script>
+</body>
+</html>

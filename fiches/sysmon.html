@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Sysmon — CAS-IN DFIR</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">DÉTECTION & THREAT HUNTING</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-détection">Détection &amp; Threat Hunting</a><span class="bc-sep">›</span>
+    <span class="bc-current">Sysmon</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~13 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">👁</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">Sysinternals</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Windows</span>
+    <span class="tag tag-purple" style="margin-left:.3rem">EDR-like</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Sysmon — System Monitor</h1>
+    <div class="meta">EID 1/3/7/10/11/13/22 · Process GUID · SwiftOnSecurity · Olaf Hartong sysmon-modular · Driver kernel · ATT&amp;CK</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="logs_windows.html" class="prereq-pill">📖 Logs Windows</a><a href="windows.html" class="prereq-pill">📖 Artefacts Windows</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=ir" class="tp-pill">🧪 🚨 Incident Response</a><a href="../tp.html?cat=hunt" class="tp-pill">🧪 🔍 Threat Hunting</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="powershell_forensique.html" class="related-pill">🔗 PowerShell Forensique</a><a href="siem_logs.html" class="related-pill">🔗 SIEM &amp; Logs</a><a href="malware_forensique.html" class="related-pill">🔗 Malware Forensics</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="sm-tabs">
+  <button class="tab active" onclick="showTab('arch',this)">🏗 Architecture</button>
+  <button class="tab" onclick="showTab('eids',this)">🎯 Event IDs essentiels</button>
+  <button class="tab" onclick="showTab('config',this)">⚙️ Configuration XML</button>
+  <button class="tab" onclick="showTab('hunt',this)">🔍 Threat Hunting</button>
+  <button class="tab" onclick="showTab('tools',this)">🔧 Outils &amp; Tampering</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — ARCHITECTURE
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-arch">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 Sysmon — l'EDR gratuit de Microsoft</div>
+  <strong>Sysmon</strong> (System Monitor) est un outil <strong>Sysinternals gratuit</strong> de Mark Russinovich, distribué par Microsoft. Installé comme service Windows + driver kernel, il <strong>enrichit les Event Logs natifs</strong> avec des événements riches : hash SHA-256 de chaque processus créé, GUID unique de processus, lignée parent complète, connexions réseau avec destination, modifications de registre, créations de fichiers, injection de code, requêtes DNS… Là où Security <code>EID 4688</code> donne juste « <code>powershell.exe</code> a démarré », Sysmon EID 1 donne <em>quelle ligne de commande, quel hash, quel parent, quel utilisateur, quel ProcessGuid pour corréler tout le reste</em>. C'est <strong>le pilier du Threat Hunting Windows moderne</strong>, déployé par défaut chez la plupart des SOC matures.
+</div>
+
+<div class="sec-title">Architecture — pile et flux d'événements</div>
+<div class="sec-sub">Sysmon hook le kernel via un driver, observe les API Windows, applique le filtrage XML, écrit dans le canal EVTX dédié.</div>
+
+<div class="arch-viz">
+  <div style="background:rgba(88,166,255,.04);border:2px solid rgba(88,166,255,.25);border-radius:12px;padding:1rem;margin-bottom:.5rem">
+    <div style="font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);text-align:center;margin-bottom:.75rem;opacity:.8">⚙️ Sysmon Pipeline · Kernel → Filtrage XML → EVTX → SIEM</div>
+    <div style="display:flex!important;gap:.4rem;flex-wrap:wrap;justify-content:center;margin-bottom:.6rem">
+      <div style="flex:1;min-width:130px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(255,64,96,.4);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(255,64,96,.08);color:var(--red)" onclick="showSm('drv')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">⚡</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">Driver kernel</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">SysmonDrv.sys<br>callbacks PsSet*</div>
+      </div>
+      <div style="flex:1;min-width:130px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(240,192,64,.4);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(240,192,64,.1);color:var(--gold)" onclick="showSm('svc')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">🔧</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">Service Sysmon</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">Sysmon64.exe<br>userland filtering</div>
+      </div>
+      <div style="flex:1;min-width:130px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(0,229,204,.45);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(0,229,204,.12);color:var(--cyan)" id="sm-az-cfg" onclick="showSm('cfg')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">📄</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">Config XML</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">include / exclude<br>par EID + champ</div>
+      </div>
+      <div style="flex:1;min-width:130px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(48,232,138,.35);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(48,232,138,.1);color:var(--green)" onclick="showSm('evtx')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">📋</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">EVTX dédié</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">Sysmon/Operational<br>WEF → SIEM</div>
+      </div>
+    </div>
+    <div style="font-family:var(--mono);font-size:.62rem;color:var(--dim);text-align:center;line-height:1.5;margin-top:.5rem">
+      Canal EVTX : <code>Microsoft-Windows-Sysmon/Operational</code> · Fichier : <code>%SystemRoot%\System32\winevt\Logs\Microsoft-Windows-Sysmon%4Operational.evtx</code><br>
+      Téléchargement : <code>sysinternals.com/sysmon</code> · Versions actuelles ≥ v15 (2024-2026)
+    </div>
+  </div>
+  <div id="sm-detail" style="margin-top:.5rem;padding:.85rem 1rem;background:rgba(13,17,23,.4);border:1px solid var(--border);border-radius:8px;font-size:.82rem;color:var(--muted);min-height:60px">
+    ℹ️ Sélectionnez un composant ci-dessus pour afficher ses détails.
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Installation rapide</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">📥 Installation manuelle</div>
+    <pre style="font-family:var(--mono);font-size:.74rem;line-height:1.55;color:var(--text);background:rgba(13,17,23,.5);padding:.55rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap"># 1. Télécharger Sysmon
+# https://learn.microsoft.com/sysinternals/downloads/sysmon
+
+# 2. Télécharger une config (SwiftOnSecurity)
+curl -O https://raw.githubusercontent.com/
+  SwiftOnSecurity/sysmon-config/master/
+  sysmonconfig-export.xml
+
+# 3. Installer (admin)
+sysmon64.exe -accepteula -i sysmonconfig-export.xml
+
+# 4. Mettre à jour la config sans réinstaller
+sysmon64.exe -c sysmonconfig-export.xml
+
+# 5. Vérifier
+sysmon64.exe -c        # afficher la config active
+Get-Service Sysmon64   # service tournant</pre>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🏢 Déploiement de masse</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.83rem;line-height:1.6">
+      <li><strong>GPO startup script</strong> avec <code>sysmon64.exe -accepteula -i \\\\share\\config.xml</code> conditionné sur l'absence du service</li>
+      <li><strong>SCCM / Intune / Tanium</strong> : task séquence + détection par version Sysmon</li>
+      <li><strong>WEF</strong> (Windows Event Forwarding) pour centraliser les logs vers un Event Collector → SIEM</li>
+      <li>Permissions WEF : <code>wevtutil sl Microsoft-Windows-Sysmon/Operational /ca:O:BAG:SYD:(A;;0xf0005;;;SY)(A;;0x5;;;BA)(A;;0x1;;;S-1-5-32-573)</code></li>
+      <li><strong>Mise à jour</strong> : nouvelle version → <code>-u</code> puis réinstall ; nouvelle config → <code>-c</code></li>
+    </ul>
+  </div>
+</div>
+
+<div class="alert" style="background:rgba(0,229,204,.06);border-color:rgba(0,229,204,.4);margin:1rem 0">
+  💡 <strong>Sysmon ≠ EDR commercial</strong> mais c'est le plus proche substitut gratuit. Ce qu'il <em>n'a pas</em> : pas de blocage actif (uniquement détection), pas de console centrale (il faut SIEM/WEF), pas de threat intel intégrée. Ce qu'il offre : visibilité endpoint au niveau d'un EDR de gamme moyenne, à coût zéro, totalement scriptable, avec une community config (SwiftOnSecurity, sysmon-modular) maintenue.
+</div>
+
+</div><!-- /tab-arch -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — EVENT IDs ESSENTIELS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-eids">
+
+<div class="concept-card">
+  <div class="concept-title">🎯 Les 27 Event IDs Sysmon — focus sur les 8 critiques</div>
+  Sysmon génère <strong>27 types d'événements</strong> (EID 1 à 27 dans les versions récentes). Tous ne se valent pas en valeur DFIR. Les <strong>8 essentiels à mémoriser</strong> : 1, 3, 7, 8, 10, 11, 13, 22 — couvrant les phases <em>Execution</em>, <em>C2</em>, <em>Code Injection</em>, <em>Persistence</em>, <em>Defense Evasion</em> de MITRE ATT&amp;CK.
+</div>
+
+<div class="sec-title">Tableau des Event IDs critiques</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.82rem">
+  <thead>
+  <tr style="background:rgba(106,128,168,.1)">
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">EID</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Nom</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Champs clés</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">ATT&amp;CK / Use Case</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr style="background:rgba(0,229,204,.06)">
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong style="color:var(--cyan)">1</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>Process Create</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>Image</code>, <code>CommandLine</code>, <code>Hashes</code> (SHA1/MD5/SHA256/IMPHASH), <code>ParentImage</code>, <code>ParentCommandLine</code>, <code>ProcessGuid</code>, <code>User</code>, <code>IntegrityLevel</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🔴 <strong>Execution (TA0002)</strong> — pilier de toute investigation. Hash → VirusTotal · CommandLine → détection LOLBin · ProcessGuid → corrélation tous les EID Sysmon</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>2</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">File creation time changed</td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>TargetFilename</code>, <code>CreationUtcTime</code>, <code>PreviousCreationUtcTime</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🟠 <strong>Defense Evasion T1070.006</strong> — détection <strong>timestomping</strong></td>
+  </tr>
+  <tr style="background:rgba(0,229,204,.06)">
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong style="color:var(--cyan)">3</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>Network Connection</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>Image</code>, <code>SourceIp/Port</code>, <code>DestinationIp/Port</code>, <code>DestinationHostname</code>, <code>Protocol</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🔴 <strong>C2 (TA0011)</strong> — connexions sortantes par processus → détecter beaconing, exfiltration. Verbeux : filtrer en config</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>5</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Process terminated</td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>Image</code>, <code>ProcessGuid</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">⏱ Calculer la durée d'un processus (Δ entre EID 1 et 5)</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>6</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Driver loaded</td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>ImageLoaded</code>, <code>Hashes</code>, <code>Signed</code>, <code>SignatureStatus</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🔴 <strong>Bring Your Own Vulnerable Driver (BYOVD)</strong> — T1068</td>
+  </tr>
+  <tr style="background:rgba(0,229,204,.06)">
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong style="color:var(--cyan)">7</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>Image loaded (DLL)</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>Image</code>, <code>ImageLoaded</code>, <code>Hashes</code>, <code>Signed</code>, <code>OriginalFileName</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🔴 <strong>DLL hijacking, side-loading T1574</strong> — désactivé par défaut (très verbeux), à activer ciblé</td>
+  </tr>
+  <tr style="background:rgba(0,229,204,.06)">
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong style="color:var(--cyan)">8</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>CreateRemoteThread</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>SourceImage</code>, <code>TargetImage</code>, <code>StartAddress</code>, <code>StartFunction</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🔴 <strong>Code Injection T1055</strong> — Cobalt Strike, Mimikatz inject LSASS</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>9</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">RawAccessRead</td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>Image</code>, <code>Device</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🟠 lecture brute disque (\\.\C:) — extraction NTDS.dit, raw NTFS</td>
+  </tr>
+  <tr style="background:rgba(0,229,204,.06)">
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong style="color:var(--cyan)">10</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>ProcessAccess</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>SourceImage</code>, <code>TargetImage</code>, <code>GrantedAccess</code>, <code>CallTrace</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🔴 <strong>Credential dumping T1003.001</strong> — accès <code>lsass.exe</code> avec <code>0x1010</code>/<code>0x1410</code> = Mimikatz</td>
+  </tr>
+  <tr style="background:rgba(0,229,204,.06)">
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong style="color:var(--cyan)">11</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>FileCreate</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>Image</code>, <code>TargetFilename</code>, <code>CreationUtcTime</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🔴 <strong>Persistence (Startup), Drop, Ransomware</strong> — masse de <code>FileCreate</code> par 1 process = chiffrement</td>
+  </tr>
+  <tr style="background:rgba(0,229,204,.06)">
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong style="color:var(--cyan)">13</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>RegistryValueSet</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>Image</code>, <code>TargetObject</code>, <code>Details</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🔴 <strong>Persistence T1547.001</strong> — Run keys, AutoLogon, IFEO</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>15</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">FileCreateStreamHash</td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>TargetFilename</code>, <code>Hash</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🟠 <strong>Mark-of-the-Web</strong> (Zone.Identifier) — fichier téléchargé Internet</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>17/18</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">PipeEvent</td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>PipeName</code>, <code>Image</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🔴 Cobalt Strike SMB beacon · pipes nommés inhabituels</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>19/20/21</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">WMI Event</td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>Operation</code>, <code>EventNamespace</code>, <code>Name</code>, <code>Query</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🔴 <strong>WMI persistence T1546.003</strong> · APT classique</td>
+  </tr>
+  <tr style="background:rgba(0,229,204,.06)">
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong style="color:var(--cyan)">22</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>DnsQuery</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>QueryName</code>, <code>QueryStatus</code>, <code>QueryResults</code>, <code>Image</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🔴 <strong>C2 + DNS tunneling</strong> — corréler DGA, beacons. ⚠️ très verbeux</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>25</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">ProcessTampering</td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>Type</code>: « Image is replaced », « Process Hollowing »</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🔴 <strong>Process Hollowing T1055.012</strong> — disponible v13+</td>
+  </tr>
+  </tbody>
+</table>
+
+<div class="sec-title" style="margin-top:1.5rem">Anatomie d'un Sysmon EID 1</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.74rem;line-height:1.6;color:var(--text);white-space:pre-wrap;margin:0">&lt;Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event"&gt;
+  &lt;System&gt;
+    &lt;Provider Name="Microsoft-Windows-Sysmon"
+              Guid="{5770385f-c22a-43e0-bf4c-06f5698ffbd9}"/&gt;
+    &lt;EventID&gt;<strong style="color:var(--cyan)">1</strong>&lt;/EventID&gt;
+    &lt;TimeCreated SystemTime="2026-04-27T08:14:23.891Z"/&gt;
+    &lt;Channel&gt;Microsoft-Windows-Sysmon/Operational&lt;/Channel&gt;
+    &lt;Computer&gt;WS-FINANCE-04&lt;/Computer&gt;
+  &lt;/System&gt;
+  &lt;EventData&gt;
+    &lt;Data Name="<strong>RuleName</strong>"&gt;technique_id=T1059.001,technique_name=PowerShell&lt;/Data&gt;
+    &lt;Data Name="UtcTime"&gt;2026-04-27 08:14:23.891&lt;/Data&gt;
+    &lt;Data Name="<strong style="color:var(--cyan)">ProcessGuid</strong>"&gt;{4f8a72d1-0eb2-6620-4001-000000000c00}&lt;/Data&gt;
+    &lt;Data Name="ProcessId"&gt;4328&lt;/Data&gt;
+    &lt;Data Name="<strong>Image</strong>"&gt;C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe&lt;/Data&gt;
+    &lt;Data Name="<strong>OriginalFileName</strong>"&gt;PowerShell.EXE&lt;/Data&gt;
+    &lt;Data Name="<strong style="color:var(--cyan)">CommandLine</strong>"&gt;powershell.exe -nop -w hidden -enc SQBFAFg…&lt;/Data&gt;
+    &lt;Data Name="CurrentDirectory"&gt;C:\Users\jdupont\&lt;/Data&gt;
+    &lt;Data Name="User"&gt;CONTOSO\jdupont&lt;/Data&gt;
+    &lt;Data Name="LogonGuid"&gt;{4f8a72d1-0e95-6620-…}&lt;/Data&gt;
+    &lt;Data Name="LogonId"&gt;0x1f3a4&lt;/Data&gt;
+    &lt;Data Name="TerminalSessionId"&gt;1&lt;/Data&gt;
+    &lt;Data Name="IntegrityLevel"&gt;<strong style="color:var(--gold)">Medium</strong>&lt;/Data&gt;
+    &lt;Data Name="<strong style="color:var(--cyan)">Hashes</strong>"&gt;SHA1=…,MD5=…,<strong>SHA256=908B64B1971A979C7E3E8CE4621945CBA84854CB98D76367B791A6E22B5F6D53</strong>,IMPHASH=…&lt;/Data&gt;
+    &lt;Data Name="<strong>ParentProcessGuid</strong>"&gt;{4f8a72d1-0c3a-6620-…}&lt;/Data&gt;
+    &lt;Data Name="ParentImage"&gt;C:\Program Files\Microsoft Office\…\WINWORD.EXE&lt;/Data&gt;
+    &lt;Data Name="<strong style="color:var(--red)">ParentCommandLine</strong>"&gt;"WINWORD.EXE" /n "facture.docm"&lt;/Data&gt;
+    &lt;Data Name="ParentUser"&gt;CONTOSO\jdupont&lt;/Data&gt;
+  &lt;/EventData&gt;
+&lt;/Event&gt;</pre>
+</div>
+
+<div class="alert" style="margin:1rem 0">
+  🚨 <strong>Lecture forensique de cet event :</strong> WINWORD.EXE → powershell.exe encodé. C'est la chaîne <em>« Office macro → PowerShell loader »</em> classique des phishings (Emotet, Qakbot, IcedID, document attack 2024-2026). <code>IntegrityLevel=Medium</code> + <code>ParentImage=WINWORD</code> + <code>CommandLine</code> avec <code>-Enc</code> = <strong>3 IOC suffisants pour escalader en P1</strong>. Le <code>ProcessGuid</code> permet ensuite de retrouver TOUS les EID 3 (réseau), 11 (fichiers créés), 13 (registre), 22 (DNS) liés à ce process.
+</div>
+
+</div><!-- /tab-eids -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — CONFIGURATION XML
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-config">
+
+<div class="concept-card">
+  <div class="concept-title">⚙️ Le fichier de config — l'âme de Sysmon</div>
+  Sysmon sans config est <strong>quasiment inutile</strong> (verbeux, sans filtrage). Toute la valeur vient du <strong>fichier XML</strong> qui définit pour chaque EID une chaîne de règles <code>include</code> / <code>exclude</code> avec des conditions sur les champs (<code>contains</code>, <code>begin with</code>, <code>end with</code>, <code>is</code>, <code>image</code>, etc.). <strong>Deux configurations communautaires</strong> dominent l'écosystème depuis 2017.
+</div>
+
+<div class="sec-title">Les deux configs de référence</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🐦 SwiftOnSecurity / sysmon-config</div>
+    <div style="font-size:.83rem;line-height:1.55">
+      <p><a href="https://github.com/SwiftOnSecurity/sysmon-config" target="_blank">github.com/SwiftOnSecurity/sysmon-config</a></p>
+      <p>✅ <strong>Une grosse config monolithique</strong>, abondamment commentée (4000+ lignes). Maintenue par @SwiftOnSecurity (figure historique de l'OSINT cyber).</p>
+      <p>✅ Approche <em>« exclude-list »</em> : on logue beaucoup, on exclut le bruit légitime (Chrome update, OneDrive sync, Windows Update…).</p>
+      <p>✅ Excellente entrée pour un déploiement rapide « ça marche tout de suite ».</p>
+      <p>⚠️ Difficile à personnaliser (énorme fichier unique).</p>
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🧩 Olaf Hartong / sysmon-modular</div>
+    <div style="font-size:.83rem;line-height:1.55">
+      <p><a href="https://github.com/olafhartong/sysmon-modular" target="_blank">github.com/olafhartong/sysmon-modular</a></p>
+      <p>✅ <strong>Configuration modulaire</strong> : un fichier XML par technique ATT&amp;CK / par EID / par direction (include/exclude), assemblés via PowerShell <code>Merge-AllSysmonXml</code>.</p>
+      <p>✅ Chaque règle est <strong>mappée sur un identifiant ATT&amp;CK</strong> (T1059.001, T1003.001…) — visible dans <code>RuleName</code> de l'event.</p>
+      <p>✅ Maintenable en CI/CD, fork facile par environnement.</p>
+      <p>⚠️ Plus exigeant — pour équipes SOC matures qui veulent un vrai pipeline de détection.</p>
+    </div>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Squelette d'une config XML</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.74rem;line-height:1.55;color:var(--text);white-space:pre-wrap;margin:0">&lt;Sysmon schemaversion="<strong style="color:var(--cyan)">4.90</strong>"&gt;
+  &lt;HashAlgorithms&gt;<strong>SHA256</strong>,IMPHASH&lt;/HashAlgorithms&gt;
+  &lt;CheckRevocation/&gt;
+  &lt;DnsLookup&gt;false&lt;/DnsLookup&gt;        <span style="color:var(--dim)"># désactiver lookup DNS sur IP</span>
+
+  &lt;EventFiltering&gt;
+
+    <span style="color:var(--gold)">&lt;!-- ════════ EID 1 : Process Create ════════ --&gt;</span>
+    &lt;RuleGroup name="" groupRelation="or"&gt;
+      &lt;ProcessCreate onmatch="<strong>exclude</strong>"&gt;     <span style="color:var(--dim)"># whitelist du bruit légitime</span>
+        &lt;Image condition="is"&gt;C:\Windows\System32\svchost.exe&lt;/Image&gt;
+        &lt;ParentImage condition="is"&gt;C:\Program Files\Google\Update\GoogleUpdate.exe&lt;/ParentImage&gt;
+      &lt;/ProcessCreate&gt;
+    &lt;/RuleGroup&gt;
+
+    <span style="color:var(--gold)">&lt;!-- ════════ EID 3 : Network Connection ════════ --&gt;</span>
+    &lt;RuleGroup name="" groupRelation="or"&gt;
+      &lt;NetworkConnect onmatch="<strong>include</strong>"&gt;    <span style="color:var(--dim)"># on logue UNIQUEMENT ce qui matche</span>
+        &lt;DestinationPort condition="is"&gt;4444&lt;/DestinationPort&gt;       <span style="color:var(--dim)"># Metasploit default</span>
+        &lt;DestinationPort condition="is"&gt;1080&lt;/DestinationPort&gt;       <span style="color:var(--dim)"># SOCKS proxy</span>
+        &lt;Image condition="end with"&gt;\powershell.exe&lt;/Image&gt;
+        &lt;Image condition="end with"&gt;\cscript.exe&lt;/Image&gt;
+        &lt;Image condition="end with"&gt;\wscript.exe&lt;/Image&gt;
+      &lt;/NetworkConnect&gt;
+    &lt;/RuleGroup&gt;
+
+    <span style="color:var(--gold)">&lt;!-- ════════ EID 10 : ProcessAccess (LSASS) ════════ --&gt;</span>
+    &lt;RuleGroup name="<strong style="color:var(--red)">technique_id=T1003.001,technique_name=LSASS Memory</strong>" groupRelation="or"&gt;
+      &lt;ProcessAccess onmatch="include"&gt;
+        &lt;TargetImage condition="end with"&gt;\lsass.exe&lt;/TargetImage&gt;
+        &lt;GrantedAccess condition="is"&gt;<strong>0x1010</strong>&lt;/GrantedAccess&gt;     <span style="color:var(--dim)"># Mimikatz</span>
+        &lt;GrantedAccess condition="is"&gt;<strong>0x1410</strong>&lt;/GrantedAccess&gt;
+        &lt;GrantedAccess condition="is"&gt;<strong>0x1438</strong>&lt;/GrantedAccess&gt;
+      &lt;/ProcessAccess&gt;
+    &lt;/RuleGroup&gt;
+
+  &lt;/EventFiltering&gt;
+&lt;/Sysmon&gt;</pre>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Conditions disponibles</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.83rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <th style="padding:.45rem;border:1px solid var(--border);text-align:left">Condition</th>
+    <th style="padding:.45rem;border:1px solid var(--border);text-align:left">Description</th>
+    <th style="padding:.45rem;border:1px solid var(--border);text-align:left">Ex.</th>
+  </tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><code>is</code></td><td style="padding:.45rem;border:1px solid var(--border)">égalité exacte (insensible à la casse)</td><td style="padding:.45rem;border:1px solid var(--border)"><code>powershell.exe</code></td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><code>is not</code></td><td style="padding:.45rem;border:1px solid var(--border)">différent</td><td style="padding:.45rem;border:1px solid var(--border)">—</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><code>contains</code></td><td style="padding:.45rem;border:1px solid var(--border)">sous-chaîne</td><td style="padding:.45rem;border:1px solid var(--border)"><code>amsiInitFailed</code></td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><code>contains any</code></td><td style="padding:.45rem;border:1px solid var(--border)">au moins une parmi liste séparée par <code>;</code></td><td style="padding:.45rem;border:1px solid var(--border)">v13+</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><code>begin with</code></td><td style="padding:.45rem;border:1px solid var(--border)">commence par</td><td style="padding:.45rem;border:1px solid var(--border)"><code>C:\Users\</code></td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><code>end with</code></td><td style="padding:.45rem;border:1px solid var(--border)">finit par</td><td style="padding:.45rem;border:1px solid var(--border)"><code>\lsass.exe</code></td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><code>image</code></td><td style="padding:.45rem;border:1px solid var(--border)">match du nom seul OU du chemin complet</td><td style="padding:.45rem;border:1px solid var(--border)"><code>cmd.exe</code></td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><code>excludes</code></td><td style="padding:.45rem;border:1px solid var(--border)">ne contient pas</td><td style="padding:.45rem;border:1px solid var(--border)">v13+</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><code>more than / less than</code></td><td style="padding:.45rem;border:1px solid var(--border)">comparaison numérique</td><td style="padding:.45rem;border:1px solid var(--border)"><code>more than 1024</code></td></tr>
+</table>
+
+<div class="alert" style="background:rgba(255,64,96,.05);border-color:rgba(255,64,96,.3);margin:1rem 0">
+  ⚠️ <strong>Limites importantes :</strong> Sysmon <strong>ne supporte ni les wildcards (<code>*</code>) ni les regex</strong> dans les conditions. Tout est string-match littéral. Pour les motifs complexes, il faut décomposer en plusieurs règles. La logique <code>onmatch="include"</code> + <code>groupRelation="or"</code> = OU logique entre toutes les conditions du groupe.
+</div>
+
+</div><!-- /tab-config -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — THREAT HUNTING
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-hunt">
+
+<div class="concept-card">
+  <div class="concept-title">🔍 Threat Hunting avec Sysmon — patterns gagnants</div>
+  Quelques chasses qui paient à coup sûr en environnement réel. À adapter selon votre baseline (IT internal, dev, etc.) — l'art du hunt est de connaître son <em>normal</em> pour repérer l'<em>anormal</em>.
+</div>
+
+<div class="sec-title">Top 10 des hunts Sysmon</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">① Office → child process</div>
+    <div style="font-size:.82rem;margin-top:.3rem">
+      <strong>EID 1</strong> avec <code>ParentImage</code> = WINWORD/EXCEL/POWERPNT/OUTLOOK et <code>Image</code> ≠ {WINWORD, OUTLOOK protected view…}.
+      <br><strong>Détecte :</strong> macros malveillantes, exploits document.
+      <br><strong>ATT&amp;CK :</strong> T1566.001 + T1204.002
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">② LSASS access avec GrantedAccess suspect</div>
+    <div style="font-size:.82rem;margin-top:.3rem">
+      <strong>EID 10</strong> avec <code>TargetImage=lsass.exe</code> et <code>GrantedAccess</code> ∈ {<code>0x1010</code>, <code>0x1410</code>, <code>0x1438</code>, <code>0x143A</code>, <code>0x1FFFFF</code>}.
+      <br><strong>Détecte :</strong> Mimikatz, ProcDump, comsvcs.dll, MiniDumpWriteDump.
+      <br><strong>ATT&amp;CK :</strong> T1003.001
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">③ Run keys écrites par non-installer</div>
+    <div style="font-size:.82rem;margin-top:.3rem">
+      <strong>EID 13</strong> avec <code>TargetObject</code> contenant <code>\CurrentVersion\Run</code> et <code>Image</code> ≠ msiexec/Setup/installeurs connus.
+      <br><strong>Détecte :</strong> persistance utilisateur naïve.
+      <br><strong>ATT&amp;CK :</strong> T1547.001
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">④ DNS queries vers domaines DGA</div>
+    <div style="font-size:.82rem;margin-top:.3rem">
+      <strong>EID 22</strong> avec <code>QueryName</code> matchant entropie élevée + TLD .top/.xyz/.icu, ou <code>QueryStatus=0x9003</code> (NXDOMAIN) en rafale.
+      <br><strong>Détecte :</strong> C2 fallback DGA.
+      <br><strong>ATT&amp;CK :</strong> T1071.004 + T1568.002
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⑤ Pipe SMB Cobalt Strike</div>
+    <div style="font-size:.82rem;margin-top:.3rem">
+      <strong>EID 17/18</strong> avec <code>PipeName</code> matchant <code>\\msagent_*</code>, <code>\\postex_*</code>, <code>\\status_*</code>, <code>\\MSSE-*</code> (patterns Cobalt Strike beacon par défaut).
+      <br><strong>ATT&amp;CK :</strong> T1071.001
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⑥ Burst de FileCreate (ransomware)</div>
+    <div style="font-size:.82rem;margin-top:.3rem">
+      <strong>EID 11</strong> &gt; 100 par seconde par même <code>ProcessGuid</code>, ou extensions cibles : <code>.locked</code>, <code>.encrypted</code>, <code>.locky</code>, <code>.<random8></code>.
+      <br><strong>ATT&amp;CK :</strong> T1486
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⑦ Vulnerable Driver loaded</div>
+    <div style="font-size:.82rem;margin-top:.3rem">
+      <strong>EID 6</strong> avec <code>ImageLoaded</code> dans la liste BYOVD (loldrivers.io) : <code>RTCore64.sys</code>, <code>gdrv.sys</code>, <code>iqvw64.sys</code>…
+      <br><strong>ATT&amp;CK :</strong> T1068
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⑧ DLL load depuis user folder</div>
+    <div style="font-size:.82rem;margin-top:.3rem">
+      <strong>EID 7</strong> avec <code>ImageLoaded</code> commençant par <code>C:\Users\</code> ou <code>C:\Temp\</code> ou <code>C:\ProgramData\</code> + signed=false.
+      <br><strong>ATT&amp;CK :</strong> T1574 (DLL hijacking, side-loading)
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⑨ WMI subscription persistence</div>
+    <div style="font-size:.82rem;margin-top:.3rem">
+      <strong>EID 19/20/21</strong> — toute occurrence est suspecte hors scénarios légitimes documentés (SCCM, GPO).
+      <br><strong>ATT&amp;CK :</strong> T1546.003
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⑩ Process Hollowing détecté</div>
+    <div style="font-size:.82rem;margin-top:.3rem">
+      <strong>EID 25</strong> (v13+) — Sysmon détecte directement le hollowing : <code>Type="Image is replaced"</code>.
+      <br><strong>ATT&amp;CK :</strong> T1055.012
+    </div>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Le ProcessGuid — colonne vertébrale de l'investigation</div>
+
+<div class="alert" style="background:rgba(0,229,204,.06);border-color:rgba(0,229,204,.4);margin:1rem 0">
+  ⭐ Le <code>ProcessGuid</code> est <strong>le champ Sysmon le plus puissant</strong>. C'est un GUID unique mondial créé pour chaque processus, présent dans <strong>tous</strong> les events Sysmon liés (1, 3, 7, 8, 10, 11, 13, 17, 18, 22…). Une seule requête <code>WHERE ProcessGuid = '{4f8a72d1-...}'</code> reconstruit instantanément <strong>tout ce qu'un processus a fait</strong> : ses fichiers créés, ses connexions, ses modifs registre, ses DNS — sans dépendre des PID (qui sont réutilisés). C'est l'équivalent du <code>ProcessGuid</code> qu'on retrouve aussi dans <code>ParentProcessGuid</code> → reconstruction de l'arbre généalogique complet.
+</div>
+
+</div><!-- /tab-hunt -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — OUTILS & TAMPERING
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tools">
+
+<div class="concept-card">
+  <div class="concept-title">🔧 Outils d'analyse Sysmon</div>
+  Sysmon génère un canal EVTX comme les autres. Tous les outils Windows EVTX fonctionnent — mais certains sont spécialisés Sysmon avec des templates pré-définis.
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">⚡ EvtxECmd (Eric Zimmerman)</div>
+    <pre style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap"># Maps Sysmon dans EvtxECmd\Maps
+EvtxECmd.exe -f Sysmon.evtx `
+  --csv C:\out --csvf sysmon.csv
+
+# Champs ProcessGuid, CommandLine,
+# ParentImage, Hashes parsés en colonnes
+# → ouverture Excel / Timeline Explorer</pre>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🐦 Hayabusa (Yamato Security)</div>
+    <pre style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap"># Sigma engine + 3000+ rules
+hayabusa.exe csv-timeline `
+  -d C:\Logs\evtx -o timeline.csv
+
+# Détecte ATT&CK techniques sur EVTX
+# offline (DFIR sur image)</pre>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🌳 SysmonView (Nasreddine Bencherchali)</div>
+    <pre style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap"># GUI native Microsoft (CodePlex archive)
+SysmonView.exe Sysmon.evtx
+
+# Vue arborescente parent → enfants
+# Filtres par EID, Process, User
+# Idéal pour formation</pre>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📊 Splunk / Elastic / Sentinel</div>
+    <pre style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap"># Splunk Sysmon TA + dashboards
+sourcetype=XmlWinEventLog:Microsoft-Windows-
+Sysmon/Operational EventID=1
+ParentImage=*WINWORD*
+
+# Sentinel KQL
+SecurityEvent | where EventID == 1
+  | where ParentImage endswith "WINWORD.EXE"</pre>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Sysmon Tampering — comment l'attaquant attaque Sysmon</div>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red)">
+  <strong style="color:var(--red)">🚨 Sysmon est une cible de choix.</strong> Si l'attaquant le neutralise, l'EDR-like devient aveugle. Plusieurs techniques connues — chacune avec sa contre-mesure.
+</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.83rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <th style="padding:.45rem;border:1px solid var(--border);text-align:left">Technique</th>
+    <th style="padding:.45rem;border:1px solid var(--border);text-align:left">Mécanisme</th>
+    <th style="padding:.45rem;border:1px solid var(--border);text-align:left">Contre-mesure</th>
+  </tr>
+  <tr>
+    <td style="padding:.45rem;border:1px solid var(--border)"><strong>Stop service</strong></td>
+    <td style="padding:.45rem;border:1px solid var(--border)"><code>net stop Sysmon64</code> avec privilège SYSTEM</td>
+    <td style="padding:.45rem;border:1px solid var(--border)">EID 4672 + EID 5 Sysmon → alerter sur arrêt service · forwarding WEF immédiat</td>
+  </tr>
+  <tr>
+    <td style="padding:.45rem;border:1px solid var(--border)"><strong>Unload driver</strong></td>
+    <td style="padding:.45rem;border:1px solid var(--border)"><code>fltmc unload SysmonDrv</code></td>
+    <td style="padding:.45rem;border:1px solid var(--border)">Sysmon EID 6 sur lui-même · alerter sur driver unload</td>
+  </tr>
+  <tr>
+    <td style="padding:.45rem;border:1px solid var(--border)"><strong>Rename binary</strong></td>
+    <td style="padding:.45rem;border:1px solid var(--border)">Installer Sysmon avec un nom non-standard (<code>-i custom.xml -name MyMonitor</code>) → l'attaquant ne sait plus quoi tuer</td>
+    <td style="padding:.45rem;border:1px solid var(--border)">✅ Bonne pratique défensive — masque la présence de Sysmon</td>
+  </tr>
+  <tr>
+    <td style="padding:.45rem;border:1px solid var(--border)"><strong>Config swap</strong></td>
+    <td style="padding:.45rem;border:1px solid var(--border)">Remplacer la config par une qui ne logue rien : <code>sysmon -c minimal.xml</code></td>
+    <td style="padding:.45rem;border:1px solid var(--border)">EID 16 (config change) — alerter, comparer hash de config</td>
+  </tr>
+  <tr>
+    <td style="padding:.45rem;border:1px solid var(--border)"><strong>Phantom DLL hijacking</strong></td>
+    <td style="padding:.45rem;border:1px solid var(--border)">Injecter une DLL dans le processus Sysmon pour bypasser le filtrage</td>
+    <td style="padding:.45rem;border:1px solid var(--border)">WDAC + Code Integrity · monitoring intégrité du binaire</td>
+  </tr>
+  <tr>
+    <td style="padding:.45rem;border:1px solid var(--border)"><strong>EDR-Sandblast / similar</strong></td>
+    <td style="padding:.45rem;border:1px solid var(--border)">Patch des callbacks kernel (PsSetCreateProcessNotifyRoutineEx)</td>
+    <td style="padding:.45rem;border:1px solid var(--border)">Difficile — nécessite kernel-level monitoring · Defender for Endpoint, ELAM</td>
+  </tr>
+</table>
+
+<div class="alert" style="margin:1rem 0">
+  ⭐ <strong>Bonnes pratiques Sysmon en 2026 :</strong> (1) <strong>Forwarding WEF</strong> obligatoire vers un Event Collector externe — pas de log uniquement local, (2) <strong>renommer le service</strong> à l'install (<code>-name X</code>), (3) monitorer <strong>EID 16 Sysmon</strong> (config changes) et <strong>EID 4 Sysmon</strong> (state changes), (4) protéger le binaire sysmon par <strong>WDAC</strong>, (5) <strong>versionner la config</strong> en Git avec CI qui valide le XML avant déploiement.
+</div>
+
+</div><!-- /tab-tools -->
+
+
+<!-- ══════════════════════════════════════════════
+     QUIZ + EXAM TIP
+══════════════════════════════════════════════ -->
+<div class="page-wrap">
+
+<div class="exam-tip" style="margin-top:1.25rem">
+  <div class="exam-tip-title">🎓 Exam Tip — Sysmon</div>
+  <p><strong>Outil</strong> : Sysinternals (Microsoft) · gratuit · driver kernel + service userland</p>
+  <p><strong>Canal EVTX</strong> : <code>Microsoft-Windows-Sysmon/Operational</code></p>
+  <p><strong>Les 8 EID critiques</strong> : 1 (Process Create) · 3 (Network) · 7 (Image Loaded) · 8 (CreateRemoteThread) · 10 (ProcessAccess LSASS) · 11 (FileCreate) · 13 (RegistryValueSet) · 22 (DnsQuery)</p>
+  <p><strong>Champs phares EID 1</strong> : <code>ProcessGuid</code> (corrélation), <code>Hashes</code> (SHA256+IMPHASH), <code>CommandLine</code>, <code>ParentImage</code>, <code>ParentCommandLine</code></p>
+  <p><strong>Configs communautaires</strong> : SwiftOnSecurity (monolithique) · Olaf Hartong sysmon-modular (modulaire ATT&amp;CK)</p>
+  <p><strong>Conditions XML</strong> : <code>is</code>, <code>contains</code>, <code>begin with</code>, <code>end with</code>, <code>image</code> · <strong>pas de regex / wildcards</strong></p>
+  <p><strong>Onmatch</strong> : <code>include</code> (whitelist · on logue ce qui matche) · <code>exclude</code> (blacklist · on filtre le bruit)</p>
+  <p><strong>Hunt n°1</strong> : Office → child PowerShell/cmd/wscript = phishing macro</p>
+  <p><strong>Hunt LSASS</strong> : EID 10 GrantedAccess <code>0x1010 / 0x1410</code> = Mimikatz</p>
+  <p><strong>Tampering</strong> : forwarding WEF + renommage service + WDAC = défense en profondeur</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Vous voyez un Sysmon EID 10 avec <code>SourceImage=mimikatz.exe</code>, <code>TargetImage=lsass.exe</code>, <code>GrantedAccess=0x1010</code>. À quoi correspond ce <code>0x1010</code> et que signifie-t-il forensiquement ?</div>
+  <div class="quiz-meta">Sysmon · Niveau : moyen</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <code>0x1010</code> est un masque d'accès Windows = <code>PROCESS_VM_READ (0x0010) | PROCESS_QUERY_LIMITED_INFORMATION (0x1000)</code>. C'est <strong>le combo précis demandé par Mimikatz</strong> pour lire la mémoire de LSASS et en extraire les credentials (NTLM hashes, tickets Kerberos en cache, mots de passe en clair via WDigest si activé). Forensiquement, <code>EID 10 + TargetImage=lsass.exe + GrantedAccess ∈ {0x1010, 0x1410, 0x1438, 0x143A, 0x1FFFFF}</code> est <strong>la signature canonique du credential dumping (MITRE T1003.001)</strong>. Variantes : <code>procdump.exe -ma lsass.exe</code> demandera <code>0x1FFFFF</code> (PROCESS_ALL_ACCESS) — encore plus visible. Action SOC : isolation immédiate du host + capture RAM + révoquer tous les tickets Kerberos du domaine (<code>Reset-ADAccountPassword</code> sur krbtgt deux fois).
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Pourquoi le <code>ProcessGuid</code> est-il préféré au <code>ProcessId</code> (PID) pour les corrélations forensiques ?</div>
+  <div class="quiz-meta">Sysmon · Niveau : facile</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    Les <strong>PIDs sont réutilisés</strong> par Windows. Sur un système qui tourne depuis longtemps, le PID 4328 a pu être <code>powershell.exe</code> à 09:00 puis <code>chrome.exe</code> à 14:00 puis <code>cmd.exe</code> à 18:00. Toute requête <code>WHERE ProcessId=4328</code> mélange ces trois processus distincts. Le <code>ProcessGuid</code> est un <strong>GUID unique mondial</strong> créé par Sysmon à la naissance de chaque processus, jamais réutilisé. Il est présent dans tous les events Sysmon liés au même processus (EID 1, 3, 7, 8, 10, 11, 13, 17, 22…) <strong>et</strong> dans les events des processus enfants via <code>ParentProcessGuid</code>. Une seule requête <code>WHERE ProcessGuid='{4f8a72d1-…}'</code> reconstruit toute l'activité du processus + son arbre généalogique en remontant les GUIDs parent. C'est la pierre angulaire du Threat Hunting Sysmon.
+  </div>
+</div>
+
+<div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> Sysmon = Sysinternals gratuit · canal <code>Microsoft-Windows-Sysmon/Operational</code> · 8 EID critiques (1/3/7/8/10/11/13/22) · ProcessGuid = corrélation universelle · Configs SwiftOnSecurity (monolithique) ou olafhartong/sysmon-modular (modulaire ATT&amp;CK) · Conditions XML <code>is</code>/<code>contains</code>/<code>begin with</code>/<code>end with</code>, <strong>pas de regex</strong> · Office → child = phishing macro · LSASS access 0x1010 = Mimikatz (T1003.001) · Tampering : protégé par WEF + WDAC + renommage service.</div>
+
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Microsoft Sysinternals · SwiftOnSecurity · Olaf Hartong sysmon-modular · TrustedSec SysmonCommunityGuide</span>
+</div>
+
+</div><!-- /page-wrap -->
+
+
+<script>
+// ── Scroll + Back-top ──
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+})();
+
+// ── Quiz reveal ──
+document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+    ans.classList.toggle('visible');
+    btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+  });
+});
+
+// ── Tab switching ──
+function showTab(id, btn){
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('#sm-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  var el=document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+  window.scrollTo({top:Math.max(0,document.getElementById('sm-tabs').offsetTop-60),behavior:'smooth'});
+}
+
+// ── Sysmon details ──
+var smDetails={
+  drv:{icon:'⚡',title:'SysmonDrv.sys — driver kernel',body:`Driver signé Microsoft chargé en kernel-mode, qui s'enregistre auprès des <strong>callbacks Windows</strong> :<br>
+    • <code>PsSetCreateProcessNotifyRoutineEx</code> (création de processus)<br>
+    • <code>PsSetLoadImageNotifyRoutine</code> (chargement DLL/driver)<br>
+    • <code>ObRegisterCallbacks</code> (process/thread access)<br>
+    • <code>CmRegisterCallback</code> (registre)<br>
+    Les callbacks sont appelés <strong>synchronement par le kernel</strong> à chaque opération système → visibilité totale, performance acceptable. Le driver remonte les events vers le service userland via une queue partagée.`},
+  svc:{icon:'🔧',title:'Sysmon64.exe — service userland',body:`Service Windows qui :<br>
+    • lit la queue depuis le driver<br>
+    • applique le <strong>filtrage XML</strong> (include/exclude par event type)<br>
+    • calcule les <strong>hashes</strong> SHA1/MD5/SHA256/IMPHASH des images chargées<br>
+    • génère le <strong>ProcessGuid</strong> (GUID unique global)<br>
+    • écrit les events dans <code>EventLog</code> (canal Sysmon/Operational)<br>
+    Bonne pratique : renommer à l'install via <code>-name MyMonitor</code> pour échapper aux scripts d'attaque qui cherchent <code>Sysmon64</code>.`},
+  cfg:{icon:'📄',title:'Configuration XML — l\'âme de Sysmon',body:`Sysmon sans config = mode <strong>full verbose</strong> (utilisable mais inutilisablement bruyant en production). La config XML définit :<br>
+    • la <strong>schemaversion</strong> (compatible avec ta version Sysmon)<br>
+    • les <strong>HashAlgorithms</strong> à calculer<br>
+    • pour chaque EID, des <code>RuleGroup</code> avec <code>onmatch="include|exclude"</code><br>
+    • à l'intérieur, conditions sur les champs : <code>is</code>, <code>contains</code>, <code>begin with</code>, <code>end with</code>…<br>
+    Mises à jour à chaud : <code>sysmon -c new-config.xml</code> sans redémarrer le service.<br>
+    <strong>Versionner la config en Git</strong> est une bonne pratique CI/CD.`},
+  evtx:{icon:'📋',title:'Microsoft-Windows-Sysmon/Operational — canal EVTX',body:`Canal d'événements dédié, séparé de <code>Security</code> et <code>System</code>. Avantages :<br>
+    • non confondu avec les events natifs (taxonomie claire)<br>
+    • politique de rétention indépendante (par défaut 64 Mo, à augmenter en prod)<br>
+    • forwarding WEF possible vers Event Collector centralisé<br>
+    Fichier sur disque : <code>%SystemRoot%\\System32\\winevt\\Logs\\Microsoft-Windows-Sysmon%4Operational.evtx</code><br>
+    Permissions WEF : <code>wevtutil sl Microsoft-Windows-Sysmon/Operational /ca:O:BAG:SYD:(A;;0xf0005;;;SY)(A;;0x5;;;BA)(A;;0x1;;;S-1-5-32-573)</code>`}
+};
+
+function showSm(key){
+  var det=smDetails[key];
+  var box=document.getElementById('sm-detail');
+  if(!det||!box) return;
+  box.innerHTML='<div style="font-family:var(--sans);font-weight:700;font-size:.95rem;margin-bottom:.45rem;color:var(--cyan)">'+det.icon+' '+det.title+'</div><div style="line-height:1.6">'+det.body+'</div>';
+}
+</script>
+</body>
+</html>
