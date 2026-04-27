@@ -559,7 +559,6 @@ function genTimestamp() {
           const fb=document.getElementById('ex-feedback-ts');
           const ok=Math.abs(v-${yr})<=1;
           document.getElementById('ans-year').className='ex-input '+(ok?'correct':'wrong');
-          const fb=document.getElementById('ex-feedback-ts');
           fb.className='ex-feedback '+(ok?'correct':'wrong');
           fb.innerHTML=ok?'✅ Correct ! Année ≈ ${yr} — FILETIME = ${filetime.toExponential(3)} intervalles de 100ns depuis 1601.':'❌ Réponse attendue : <strong>${yr}</strong> (±1 an accepté). FILETIME ≈ ${filetime.toExponential(3)} → ÷10⁷ = secondes → ÷31 557 600 = années → +1601.';
           fb.style.display='block';
@@ -1271,13 +1270,15 @@ function checkMismatch(btn, isCorrect, sigName, note) {
 
 function genRunList() {
   // Générer une Run List aléatoire avec 1 à 3 fragments
+  // ⚠️ NTFS : delta LCN est SIGNÉ (complément à 2). Pour rester pédago/lisible,
+  // on borne delta à [1, 100] → tient sur 1 octet sans collision avec le bit de signe.
   const numFragments = rand(1, 3);
   const fragments = [];
 
   let prevLCN = 0;
   for (let i = 0; i < numFragments; i++) {
-    const length  = rand(1, 40);      // clusters du fragment
-    const offset  = rand(1, 200);     // delta LCN
+    const length  = rand(1, 40);      // clusters du fragment (1..40 → 1 octet positif OK)
+    const offset  = rand(1, 100);     // delta LCN positif, ≤ 0x7F → 1 octet signé positif
     const lcn     = prevLCN + offset;
     prevLCN = lcn;
     fragments.push({ length, delta: offset, lcn });
@@ -1286,8 +1287,8 @@ function genRunList() {
   // Encoder chaque fragment en bytes Run List NTFS
   // Header byte : nibble haut = taille delta, nibble bas = taille longueur
   const encodedFragments = fragments.map(f => {
-    const lenBytes  = encodeVarInt(f.length);
-    const deltaBytes = encodeSignedVarInt(f.delta);
+    const lenBytes  = encodeNTFSPositive(f.length);
+    const deltaBytes = encodeNTFSSigned(f.delta);
     const headerByte = ((deltaBytes.length << 4) | lenBytes.length);
     return {
       ...f,
@@ -1351,8 +1352,8 @@ function genRunList() {
         </div>`).join('')}
     </div>
     <div class="ex-input-row" style="margin-top:.5rem">
-      <button type="button" class="btn-hint" onclick="showRunListHint(${JSON.stringify(encodedFragments.map(f=>({l:f.length,d:f.delta,lcn:f.lcn})))})">💡 Décomposition</button>
-      <button type="button" class="btn-validate" id="btn-rl-validate" onclick="checkRunList(${JSON.stringify(encodedFragments.map(f=>({l:f.length,lcn:f.lcn})))}, ${numFragments})">Valider ✓</button>
+      <button type="button" class="btn-hint" onclick="showRunListHint(${escAttr(JSON.stringify(encodedFragments.map(f=>({l:f.length,d:f.delta,lcn:f.lcn}))))})">💡 Décomposition</button>
+      <button type="button" class="btn-validate" id="btn-rl-validate" onclick="checkRunList(${escAttr(JSON.stringify(encodedFragments.map(f=>({l:f.length,lcn:f.lcn}))))}, ${numFragments})">Valider ✓</button>
       <button type="button" class="btn-next" id="btn-next-rl" onclick="newExercise()" style="display:none">Exercice suivant →</button>
     </div>
     <div class="ex-feedback" id="rl-feedback-global"></div>
@@ -1360,16 +1361,29 @@ function genRunList() {
   return div;
 }
 
-function encodeVarInt(val) {
-  if (val <= 0xFF)       return [val & 0xFF];
-  if (val <= 0xFFFF)     return [val & 0xFF, (val >> 8) & 0xFF];
-  if (val <= 0xFFFFFF)   return [val & 0xFF, (val >> 8) & 0xFF, (val >> 16) & 0xFF];
+// Encodage NTFS Run List — la longueur (run length) est interprétée comme entier
+// signé positif : le bit de poids fort de l'octet de poids fort DOIT être 0.
+// Donc 128..32767 nécessite 2 octets, etc.
+function encodeNTFSPositive(val) {
+  if (val < 0) val = 0;
+  if (val <= 0x7F)     return [val & 0xFF];
+  if (val <= 0x7FFF)   return [val & 0xFF, (val >> 8) & 0xFF];
+  if (val <= 0x7FFFFF) return [val & 0xFF, (val >> 8) & 0xFF, (val >> 16) & 0xFF];
   return [val & 0xFF, (val >> 8) & 0xFF, (val >> 16) & 0xFF, (val >> 24) & 0xFF];
 }
-function encodeSignedVarInt(val) {
-  // On génère des valeurs positives uniquement ici (exercice pédagogique)
-  return encodeVarInt(val);
+// Le delta LCN est signé (complément à 2). Pour des valeurs positives,
+// même règle que ci-dessus. Pour les négatives, on prend le minimum d'octets
+// dont le bit de poids fort = 1 (signe préservé).
+function encodeNTFSSigned(val) {
+  if (val >= 0) return encodeNTFSPositive(val);
+  if (val >= -0x80)     return [val & 0xFF];
+  if (val >= -0x8000)   return [val & 0xFF, (val >> 8) & 0xFF];
+  if (val >= -0x800000) return [val & 0xFF, (val >> 8) & 0xFF, (val >> 16) & 0xFF];
+  return [val & 0xFF, (val >> 8) & 0xFF, (val >> 16) & 0xFF, (val >> 24) & 0xFF];
 }
+// Conservé pour rétro-compatibilité — alias des fonctions correctes
+function encodeVarInt(val)        { return encodeNTFSPositive(val); }
+function encodeSignedVarInt(val)  { return encodeNTFSSigned(val); }
 
 function buildRunListHex(fragments, allBytes) {
   let byteIdx = 0;
@@ -1947,8 +1961,9 @@ function makeRunListExercise() {
     const len   = rand(1, 30);
     const delta = rand(1, 100);
     lcn += delta;
-    const lenOcts  = len  <= 0xFF ? 1 : 2;
-    const delOcts  = delta <= 0xFF ? 1 : 2;
+    // Encodage NTFS : bit haut de l'octet de poids fort = 0 (entier signé positif)
+    const lenOcts  = len   <= 0x7F ? 1 : 2;
+    const delOcts  = delta <= 0x7F ? 1 : 2;
     const header   = (delOcts << 4) | lenOcts;
     const lenBytes = lenOcts === 1 ? [len] : [len & 0xFF, (len >> 8) & 0xFF];
     const delBytes = delOcts === 1 ? [delta] : [delta & 0xFF, (delta >> 8) & 0xFF];
@@ -2124,8 +2139,12 @@ function makeSignedLEExercise() {
   const bits = [16,24,32][rand(0,2)];
   const nBytes = bits / 8;
   const isNeg  = Math.random() > 0.4;
-  const maxAbs = Math.min(Math.pow(2, bits-1)-1, 0xFFFFFF);
-  const absVal = rand(256, maxAbs);
+  // Borner à des magnitudes hand-calculables (≤ 99 999) tout en gardant la structure
+  // multi-octets LE visible : pour 24/32 bits, les octets de poids fort montrent 00 00
+  // (positif) ou FF FF (négatif) — c'est exactement ce qu'on rencontre dans la vraie vie
+  // forensique (timestamps petits, offsets, compteurs proches de zéro).
+  const maxAbs = bits === 16 ? 30000 : 99999;
+  const absVal = rand(100, maxAbs);
   const val    = isNeg ? -absVal : absVal;
   let raw = isNeg ? (Math.pow(2, bits) + val) : val;
   const leBytes = [];
@@ -2165,7 +2184,7 @@ function makeSignedLEExercise() {
 
 // ── Exercice Représentation binaire ──
 function makeBinaryExercise() {
-  const mode = rand(0,3);
+  const mode = rand(0,5);
   let qText, answer, hints, explain, display;
 
   if (mode === 0) {
@@ -2209,7 +2228,7 @@ function makeBinaryExercise() {
       `⌈log₂(${n})⌉ = <strong>${bits} bits</strong>`,
     ];
     explain = `2^${bits-1}=${Math.pow(2,bits-1)} < ${n} ≤ ${Math.pow(2,bits)}=2^${bits} → <strong>${bits} bits</strong> minimum.`;
-  } else {
+  } else if (mode === 3) {
     // BCD
     const digits = [rand(0,9), rand(0,9), rand(0,9)];
     const bcd = digits.map(d => d.toString(2).padStart(4,'0')).join(' ');
@@ -2223,6 +2242,59 @@ function makeBinaryExercise() {
       `→ <strong>${dec}</strong>`,
     ];
     explain = `${bcd} → chiffres ${digits.join(', ')} → <strong>${dec}</strong>`;
+  } else if (mode === 4) {
+    // Binaire signé (complément à 2) → décimal
+    const isNeg = Math.random() < 0.6;
+    const absVal = rand(1, 127);
+    const val = isNeg ? -absVal : absVal;
+    const unsigned = isNeg ? (256 + val) : val;
+    const bin = unsigned.toString(2).padStart(8,'0');
+    answer = String(val);
+    display = `<div class="bits-row" style="margin:.5rem 0">${bin.split('').map(b=>`<span class="bit bit-${b}">${b}</span>`).join('')}</div>`;
+    qText = `Quelle est la <strong>valeur décimale signée</strong> de ce nombre binaire 8 bits (complément à 2) ?`;
+    if (isNeg) {
+      const inverted = bin.split('').map(b => b === '0' ? '1' : '0').join('');
+      const invertedDec = parseInt(inverted, 2);
+      hints = [
+        `Le bit de poids fort (bit 7) indique le signe : 0 = positif, 1 = négatif.`,
+        `Bit 7 = <strong>${bin[0]}</strong> → nombre <strong>négatif</strong>. Méthode : inverser tous les bits, puis ajouter 1.`,
+        `Inverser ${bin} → <strong>${inverted}</strong> = ${invertedDec}. Ajouter 1 → ${invertedDec + 1}. Donc valeur = <strong>−${invertedDec + 1}</strong>.`,
+      ];
+      explain = `Bit 7=1 → négatif. Complément à 2 : ~${bin}=${inverted} (${invertedDec}), +1 = ${invertedDec+1} → <strong>${val}</strong>.`;
+    } else {
+      const decomp = bin.split('').map((b,i) => b==='1' ? Math.pow(2,7-i) : 0).filter(v=>v).join(' + ');
+      hints = [
+        `Bit de poids fort (bit 7) = <strong>0</strong> → nombre <strong>positif</strong>. Conversion directe binaire → décimal.`,
+        `${bin} = ${decomp} = <strong>${val}</strong>`,
+      ];
+      explain = `Bit 7=0 (positif) → ${decomp} = <strong>${val}</strong>.`;
+    }
+  } else {
+    // Décimal signé → binaire 8-bit (complément à 2)
+    const isNeg = Math.random() < 0.6;
+    const absVal = rand(1, 127);
+    const val = isNeg ? -absVal : absVal;
+    const unsigned = isNeg ? (256 + val) : val;
+    const bin = unsigned.toString(2).padStart(8,'0');
+    answer = bin;
+    display = `<span class="hex-byte" style="font-size:1.3rem;padding:.4rem .9rem;font-family:var(--mono);color:var(--cyan)">${val}</span>`;
+    qText = `Donne la <strong>représentation binaire sur 8 bits</strong> (complément à 2) de <strong>${val}</strong>.`;
+    if (isNeg) {
+      const posBin = absVal.toString(2).padStart(8,'0');
+      const inverted = posBin.split('').map(b => b === '0' ? '1' : '0').join('');
+      hints = [
+        `Pour un nombre négatif sur 8 bits : (1) coder l'absolu en binaire, (2) inverser tous les bits, (3) ajouter 1.`,
+        `|${val}| = ${absVal} → binaire = <strong>${posBin}</strong>.`,
+        `Inverser → ${inverted}. Ajouter 1 → <strong>${bin}</strong>.`,
+      ];
+      explain = `${val} en complément à 2 : |${val}|=${posBin} → ~${posBin}=${inverted} → +1 = <strong>${bin}</strong>.`;
+    } else {
+      hints = [
+        `Nombre positif → conversion directe en binaire. Le bit 7 doit rester à 0 (positif sur 8 bits, donc max +127).`,
+        `${val} = <strong>${bin}</strong>`,
+      ];
+      explain = `${val} positif → binaire direct = <strong>${bin}</strong>.`;
+    }
   }
 
   return {
@@ -2852,10 +2924,12 @@ function makeFAT16LFNExercise() {
 // On génère une Run List à 2-4 fragments et on demande la SOMME des length.
 function makeNTFSRunListTotalExercise() {
   const rand16 = (lo,hi) => Math.floor(Math.random()*(hi-lo+1))+lo;
+  // Encodage NTFS Run List : entier positif → bit haut de l'octet de poids fort = 0.
+  // Donc 128 nécessite 2 octets (80 00), pas 1 octet (80 = -128 signé).
   const encodeVar = (val) => {
-    if (val <= 0xFF)     return [val & 0xFF];
-    if (val <= 0xFFFF)   return [val & 0xFF, (val >> 8) & 0xFF];
-    if (val <= 0xFFFFFF) return [val & 0xFF, (val >> 8) & 0xFF, (val >> 16) & 0xFF];
+    if (val <= 0x7F)     return [val & 0xFF];
+    if (val <= 0x7FFF)   return [val & 0xFF, (val >> 8) & 0xFF];
+    if (val <= 0x7FFFFF) return [val & 0xFF, (val >> 8) & 0xFF, (val >> 16) & 0xFF];
     return [val & 0xFF, (val >> 8) & 0xFF, (val >> 16) & 0xFF, (val >> 24) & 0xFF];
   };
 
@@ -2865,7 +2939,7 @@ function makeNTFSRunListTotalExercise() {
   let prevLCN = 0;
   for (let i = 0; i < numFragments; i++) {
     const length = rand16(1, 50);
-    const delta  = rand16(1, 200);
+    const delta  = rand16(1, 100);   // ≤ 0x7F → 1 octet propre, LCN reste positif et lisible
     const lcn    = prevLCN + delta;
     prevLCN = lcn;
     fragments.push({ length, delta, lcn });
@@ -3046,6 +3120,240 @@ function makeExFATDirentExercise() {
   };
 }
 
+// ── EX-EXAM-9 : MBR — Lecture de la table de partitions ──
+// Le MBR contient à l'offset 0x1BE une table de 4 entrées de 16 octets chacune,
+// suivie de la signature 55 AA aux offsets 0x1FE-0x1FF. Chaque entrée :
+//   +0  : flag bootable (0x80 = active, 0x00 = inactive)
+//   +1-3: CHS début (3 octets, ignoré sur disques modernes)
+//   +4  : type de partition (0x07=NTFS/exFAT, 0x83=Linux, 0xEE=GPT prot., 0xEF=EFI…)
+//   +5-7: CHS fin
+//   +8-11 : LBA de départ (4 octets LE)
+//   +12-15: taille en secteurs (4 octets LE)
+function makeMBRPartitionExercise() {
+  const PART_TYPES = {
+    0x07: 'NTFS / exFAT',
+    0x0B: 'FAT32 (CHS)',
+    0x83: 'Linux',
+    0x82: 'Linux swap',
+    0xEE: 'GPT protective',
+    0xEF: 'EFI System Partition',
+  };
+  const typeKeys = Object.keys(PART_TYPES).map(Number);
+
+  // Génère 2-3 partitions actives + entrées vides pour atteindre 4
+  const numActive = rand(2, 3);
+  const partitions = [];
+  // Tirer des types distincts (1ère partition = système → souvent NTFS ou EFI)
+  const usedTypes = new Set();
+  let nextLBA = 2048;  // offset typique de la 1ère partition (1 MiB d'alignement)
+  for (let i = 0; i < numActive; i++) {
+    let type;
+    do { type = typeKeys[rand(0, typeKeys.length - 1)]; } while (usedTypes.has(type));
+    usedTypes.add(type);
+    const sizeSectors = rand(1000, 99000);   // taille petite et hand-calculable
+    const bootable = (i === 0) ? 0x80 : 0x00;
+    partitions.push({ bootable, type, startLBA: nextLBA, sizeSectors });
+    nextLBA += sizeSectors + rand(100, 500);  // gap aléatoire entre partitions
+  }
+  while (partitions.length < 4) {
+    partitions.push({ bootable: 0, type: 0, startLBA: 0, sizeSectors: 0 });
+  }
+
+  // On affiche depuis l'offset 0x1B0 (5 lignes de 16 octets jusqu'à 0x1FF)
+  // 0x1B0–0x1BD = padding/loader (rempli aléatoirement pour ressembler à un vrai MBR)
+  // 0x1BE–0x1FD = table de partitions (4 × 16 = 64 octets)
+  // 0x1FE–0x1FF = signature 55 AA
+  const slice = new Array(80).fill(0);
+  for (let i = 0; i < 0x0E; i++) slice[i] = rand(0, 255);  // remplissage padding
+  partitions.forEach((p, idx) => {
+    const base = 0x0E + idx * 16;     // 0x1BE - 0x1B0 = 0x0E
+    slice[base + 0] = p.bootable;
+    // CHS début : on met des octets plausibles (FE FF FF) pour les partitions actives,
+    // tout zéro pour les entrées vides. C'est conforme aux disques modernes (LBA prime).
+    if (p.type !== 0) {
+      slice[base + 1] = 0xFE; slice[base + 2] = 0xFF; slice[base + 3] = 0xFF;
+      slice[base + 5] = 0xFE; slice[base + 6] = 0xFF; slice[base + 7] = 0xFF;
+    }
+    slice[base + 4]  = p.type;
+    slice[base + 8]  = p.startLBA & 0xFF;
+    slice[base + 9]  = (p.startLBA >> 8) & 0xFF;
+    slice[base + 10] = (p.startLBA >> 16) & 0xFF;
+    slice[base + 11] = (p.startLBA >> 24) & 0xFF;
+    slice[base + 12] = p.sizeSectors & 0xFF;
+    slice[base + 13] = (p.sizeSectors >> 8) & 0xFF;
+    slice[base + 14] = (p.sizeSectors >> 16) & 0xFF;
+    slice[base + 15] = (p.sizeSectors >> 24) & 0xFF;
+  });
+  slice[78] = 0x55; slice[79] = 0xAA;  // signature MBR
+
+  const rows = [];
+  for (let i = 0; i < 80; i += 16) {
+    rows.push({
+      offset: (0x1B0 + i).toString(16).toUpperCase().padStart(8, '0'),
+      bytes: slice.slice(i, i + 16),
+    });
+  }
+
+  // Choisir une question : 0 = bootable, 1 = type, 2 = LBA
+  const q = rand(0, 2);
+  let qText, answer, hints, explain;
+
+  if (q === 0) {
+    // Quelle partition est bootable ?
+    const bootIdx = partitions.findIndex(p => p.bootable === 0x80);
+    answer = String(bootIdx + 1);
+    qText = `Quelle est la <strong>partition active (bootable)</strong> ? Donne son numéro de 1 à 4.`;
+    hints = [
+      `Le 1er octet de chaque entrée de partition est le flag bootable. <strong>0x80</strong> = active, <strong>0x00</strong> = inactive.`,
+      `Les 4 entrées commencent aux offsets <strong>0x1BE, 0x1CE, 0x1DE, 0x1EE</strong>. Lis le 1er octet de chacune.`,
+      `Partition <strong>${bootIdx + 1}</strong> a son flag à 0x80 → c'est elle qui est bootée par le BIOS Legacy.`,
+    ];
+    explain = `Flag bootable 0x80 trouvé à l'offset 0x${(0x1BE + bootIdx*16).toString(16).toUpperCase()} → <strong>partition ${bootIdx + 1}</strong>. Le BIOS Legacy charge le code à cet emplacement.`;
+  } else if (q === 1) {
+    // Quel type de partition ?
+    const partIdx = rand(0, numActive - 1);
+    const p = partitions[partIdx];
+    const typeHex = '0x' + p.type.toString(16).toUpperCase().padStart(2, '0');
+    answer = typeHex;     // user can type "07", "0x07", "7" → all normalize identiquement
+    qText = `Quel est le <strong>type de système de fichiers</strong> de la partition ${partIdx + 1} ? <em>(donne le code hex à un octet)</em>`;
+    hints = [
+      `Chaque entrée de partition (16 o) commence à 0x1BE. Le byte de type est à l'offset <strong>+4</strong> dans l'entrée.`,
+      `Partition ${partIdx + 1} → entrée à 0x${(0x1BE + partIdx*16).toString(16).toUpperCase()} → byte de type à 0x${(0x1BE + partIdx*16 + 4).toString(16).toUpperCase()}.`,
+      `Octet trouvé : <strong>${typeHex}</strong> → <strong>${PART_TYPES[p.type]}</strong>.`,
+    ];
+    explain = `Type ${typeHex} à l'offset 0x${(0x1BE + partIdx*16 + 4).toString(16).toUpperCase()} = <strong>${PART_TYPES[p.type]}</strong>. Codes courants : 0x07=NTFS/exFAT · 0x0B=FAT32 · 0x83=Linux · 0x82=swap · 0xEE=GPT protective · 0xEF=EFI.`;
+  } else {
+    // Starting LBA en décimal
+    const partIdx = rand(0, numActive - 1);
+    const p = partitions[partIdx];
+    answer = String(p.startLBA);
+    const lbaOff = 0x1BE + partIdx * 16 + 8;
+    const lbaBytes = [
+      p.startLBA & 0xFF,
+      (p.startLBA >> 8) & 0xFF,
+      (p.startLBA >> 16) & 0xFF,
+      (p.startLBA >> 24) & 0xFF
+    ].map(b => b.toString(16).toUpperCase().padStart(2, '0'));
+    qText = `Quel est le <strong>secteur de départ (Starting LBA)</strong> de la partition ${partIdx + 1} ? <em>(en décimal)</em>`;
+    hints = [
+      `Starting LBA est à l'offset <strong>+8</strong> de chaque entrée de partition (4 octets en Little Endian).`,
+      `Partition ${partIdx + 1} → entrée à 0x${(0x1BE + partIdx*16).toString(16).toUpperCase()} → LBA à 0x${lbaOff.toString(16).toUpperCase()}.`,
+      `Octets : <span style="color:var(--cyan);font-weight:700">${lbaBytes.join(' ')}</span> → inverse (LE) → 0x${[...lbaBytes].reverse().join('')} = <strong>${p.startLBA}</strong>.`,
+    ];
+    explain = `Starting LBA @ 0x${lbaOff.toString(16).toUpperCase()} = <code>${lbaBytes.join(' ')}</code> en LE = 0x${[...lbaBytes].reverse().join('')} = <strong>${p.startLBA}</strong> secteurs.`;
+  }
+
+  // Highlights pour visualiser la table
+  const highlights = [{ from: 78, to: 79, color: '--gold', label: 'Signature 55 AA' }];
+  partitions.forEach((p, idx) => {
+    if (p.type !== 0) {
+      const base = 0x0E + idx * 16;
+      const colors = ['--cyan', '--green', '--purple', '--orange'];
+      highlights.push({ from: base, to: base + 15, color: colors[idx], label: `Partition ${idx + 1}` });
+    }
+  });
+
+  return {
+    title: 'MBR — Table de Partitions',
+    category: 'Disque & Partitionnement',
+    difficulty: 'medium',
+    scenario: `Tu analyses le secteur de boot principal (MBR, secteur 0) d'un disque dur. Les 64 octets à partir de <strong>0x1BE</strong> contiennent la <strong>table de partitions</strong> (4 entrées × 16 octets), suivie de la signature <code>55 AA</code> aux offsets 0x1FE-0x1FF. Cet extrait montre les octets 0x1B0 à 0x1FF.`,
+    hexDump: renderHexDump(rows, highlights),
+    legend: `<div style="font-size:.7rem;color:var(--dim);margin-top:.25rem">Entrée de partition (16 o) : [Bootable 1o][CHS début 3o][Type 1o][CHS fin 3o][LBA début 4o LE][Taille 4o LE]<br>Types : 0x07=NTFS/exFAT · 0x0B/0x0C=FAT32 · 0x83=Linux · 0x82=swap · 0xEE=GPT protective · 0xEF=EFI</div>`,
+    question: qText,
+    answer,
+    hints,
+    explain,
+  };
+}
+
+// ── EX-EXAM-10 : GUID/UUID — Format d'affichage mixed-endian ──
+// Un GUID stocké sur disque (Object_ID NTFS, exFAT VolumeSerial, registre Windows…)
+// utilise un encodage mixte : les 3 premiers champs sont en Little Endian,
+// les 2 derniers (les 8 octets de fin) sont en Big Endian.
+//   bytes[0..3]   → champ 1 (LE → inversé pour l'affichage)
+//   bytes[4..5]   → champ 2 (LE)
+//   bytes[6..7]   → champ 3 (LE)
+//   bytes[8..9]   → champ 4 (BE, ordre conservé)
+//   bytes[10..15] → champ 5 (BE, ordre conservé)
+// Format affiché : XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+function makeGUIDExercise() {
+  // Génère 16 octets aléatoires
+  const bytes = [];
+  for (let i = 0; i < 16; i++) bytes.push(rand(0, 255));
+  const hex = b => b.toString(16).toUpperCase().padStart(2, '0');
+
+  // Reconstruction des 5 champs au format d'affichage
+  const f1 = hex(bytes[3]) + hex(bytes[2]) + hex(bytes[1]) + hex(bytes[0]);
+  const f2 = hex(bytes[5]) + hex(bytes[4]);
+  const f3 = hex(bytes[7]) + hex(bytes[6]);
+  const f4 = hex(bytes[8]) + hex(bytes[9]);
+  const f5 = bytes.slice(10).map(hex).join('');
+  const guid = `${f1}-${f2}-${f3}-${f4}-${f5}`;
+
+  // 2 lignes de 16 octets max
+  const rows = [
+    { offset: '00000000', bytes: bytes.slice(0, 16) },
+  ];
+
+  // Choisir une question : 0 = champ 1 seul, 1 = champ 4 seul, 2 = GUID complet
+  const q = rand(0, 2);
+  let qText, answer, hints, explain;
+
+  if (q === 0) {
+    // Champ 1 (LE inversé) — la difficulté principale du format mixed-endian
+    answer = f1;
+    qText = `Donne le <strong>premier champ</strong> du GUID au format d'affichage standard. <em>(8 chiffres hex)</em>`;
+    hints = [
+      `Format d'affichage GUID : <code>XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX</code> = 4-2-2-2-6 octets.`,
+      `Les <strong>3 premiers champs</strong> sont stockés en <strong>Little Endian</strong> (octets inversés à l'affichage). Les 2 derniers en Big Endian.`,
+      `Champ 1 = octets 0-3 inversés. Octets stockés : <span style="color:var(--cyan);font-weight:700">${hex(bytes[0])} ${hex(bytes[1])} ${hex(bytes[2])} ${hex(bytes[3])}</span> → inverse → <strong>${f1}</strong>`,
+    ];
+    explain = `Octets 0-3 = <code>${hex(bytes[0])} ${hex(bytes[1])} ${hex(bytes[2])} ${hex(bytes[3])}</code> (LE). À l'affichage : inverser → <strong>${f1}</strong>. C'est le piège classique du format GUID Microsoft : LE pour les 8 premiers octets, BE pour les 8 suivants.`;
+  } else if (q === 1) {
+    // Champ 4 (BE)
+    answer = f4;
+    qText = `Donne le <strong>4ème champ</strong> du GUID au format d'affichage. <em>(4 chiffres hex)</em>`;
+    hints = [
+      `Format GUID : <code>4-2-2-2-6</code> octets. Le 4ème champ = octets 8-9.`,
+      `<strong>Attention</strong> : les champs 4 et 5 sont stockés en <strong>Big Endian</strong> (ordre conservé), contrairement aux 3 premiers.`,
+      `Champ 4 = octets 8-9 dans l'ordre : <strong>${hex(bytes[8])}${hex(bytes[9])}</strong>`,
+    ];
+    explain = `Octets 8-9 = <code>${hex(bytes[8])} ${hex(bytes[9])}</code> (BE) → <strong>${f4}</strong>. Les 2 derniers champs du GUID sont en BE — c'est un héritage du format DCE/RPC.`;
+  } else {
+    // GUID complet
+    answer = guid;
+    qText = `Donne le <strong>GUID complet</strong> au format d'affichage standard <code>XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX</code>.`;
+    hints = [
+      `Format = 4-2-2-2-6 octets. <strong>Champs 1-3 en LE</strong> (octets inversés), <strong>champs 4-5 en BE</strong> (ordre conservé).`,
+      `Champ 1 (LE) = ${hex(bytes[3])}${hex(bytes[2])}${hex(bytes[1])}${hex(bytes[0])} = <strong>${f1}</strong>`,
+      `Champ 2 (LE) = ${hex(bytes[5])}${hex(bytes[4])} = <strong>${f2}</strong> · Champ 3 (LE) = ${hex(bytes[7])}${hex(bytes[6])} = <strong>${f3}</strong>`,
+      `Champ 4 (BE) = ${hex(bytes[8])}${hex(bytes[9])} = <strong>${f4}</strong> · Champ 5 (BE) = ${f5}`,
+      `GUID complet : <strong>${guid}</strong>`,
+    ];
+    explain = `${guid} — règle mixed-endian : 4-2-2 octets en LE (inversés à l'affichage) puis 2-6 octets en BE (ordre conservé). Cible forensique typique : NTFS Object_ID, registre HKLM\\…\\Cryptography\\MachineGuid, exFAT VolumeSerial.`;
+  }
+
+  return {
+    title: 'GUID/UUID — Format d\'affichage mixed-endian',
+    category: 'Représentation des données',
+    difficulty: 'hard',
+    scenario: `Un GUID/UUID 128-bit est stocké sur disque (Object_ID NTFS, exFAT VolumeSerial, valeur de registre Windows…). Le format d'affichage standard est <strong>${guid.replace(/[A-F0-9]/g,'X')}</strong> mais l'encodage stocké est <strong>mixed-endian</strong> : les 3 premiers champs sont en Little Endian, les 2 derniers en Big Endian.`,
+    hexDump: renderHexDump(rows, [
+      { from: 0,  to: 3,  color: '--cyan',   label: 'Champ 1 (LE → inverser)' },
+      { from: 4,  to: 5,  color: '--green',  label: 'Champ 2 (LE)' },
+      { from: 6,  to: 7,  color: '--purple', label: 'Champ 3 (LE)' },
+      { from: 8,  to: 9,  color: '--gold',   label: 'Champ 4 (BE)' },
+      { from: 10, to: 15, color: '--orange', label: 'Champ 5 (BE)' },
+    ]),
+    legend: `<div style="font-size:.7rem;color:var(--dim);margin-top:.25rem">⚠️ <strong>Mixed-endian</strong> : 4-2-2 LE puis 2-6 BE. Format affiché : <code>XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX</code></div>`,
+    question: qText,
+    answer,
+    hints,
+    explain,
+  };
+}
+
 // ── Registre des générateurs ──
 const EXAM_GENERATORS = [
   makeBootSectorExercise,
@@ -3061,6 +3369,8 @@ const EXAM_GENERATORS = [
   makeEXT3InodeExercise,
   makeExFATDirentExercise,           // ← NOUVEAU : FirstCluster exFAT (examen Q11)
   makeHFSPlusClusterExercise,
+  makeMBRPartitionExercise,          // ← NOUVEAU : table de partitions MBR
+  makeGUIDExercise,                  // ← NOUVEAU : GUID mixed-endian
 ];
 
 // État multi-indices
@@ -3835,7 +4145,7 @@ function genOffset() {
     <div class="sec-title">Choisir l'offset correct</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.75rem" id="offset-choices">
       ${choices.map((c, i) => `
-        <button type="button" class="tp-choice" onclick="checkOffset(this, ${i === correctIdx}, ${JSON.stringify(data.steps)}, ${answer})">
+        <button type="button" class="tp-choice" onclick="checkOffset(this, ${i === correctIdx}, ${escAttr(JSON.stringify(data.steps))}, ${answer})">
           <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
           <span>${c.toLocaleString('fr-CH')} ${data.unit}</span>
         </button>`).join('')}
@@ -3997,8 +4307,8 @@ function genHexTable() {
     <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.5rem">
       <span style="font-size:.8rem;color:var(--muted)">0x</span>
       <input class="ex-input" id="inp-hextable" placeholder="ex: 0D" maxlength="4" style="width:90px;text-transform:uppercase" autocomplete="off">
-      <button type="button" class="btn-hint" id="ht-hint-btn" onclick="showHexTableHint(${JSON.stringify(ex.hint1)},${JSON.stringify(ex.hint2)})">💡 Indice</button>
-      <button type="button" class="btn-validate" onclick="checkHexTable(${JSON.stringify(ex.answer)},${JSON.stringify(ex.explain)},${ex.answer_val})">Valider ✓</button>
+      <button type="button" class="btn-hint" id="ht-hint-btn" onclick="showHexTableHint(${escAttr(JSON.stringify(ex.hint1))},${escAttr(JSON.stringify(ex.hint2))})">💡 Indice</button>
+      <button type="button" class="btn-validate" onclick="checkHexTable(${escAttr(JSON.stringify(ex.answer))},${escAttr(JSON.stringify(ex.explain))},${ex.answer_val})">Valider ✓</button>
       <button type="button" class="btn-next" id="btn-next-ht" onclick="newExercise()" style="display:none">Exercice suivant →</button>
     </div>
     <div class="hint-box" id="hint-ht" style="display:none"></div>
@@ -4231,7 +4541,7 @@ function genFSIdentify() {
     <div class="sec-title" style="margin-top:.75rem">Système de fichiers</div>
     <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="fsid-choices">
       ${choices.map(c => `<button type="button" class="tp-choice" style="flex:1;min-width:90px" data-correct="${c === cfg.fs}"
-        onclick="checkFSIdentify(this,'${c}','${cfg.fs}',${JSON.stringify(ex.key)})">${c}</button>`).join('')}
+        onclick="checkFSIdentify(this,${escAttr(JSON.stringify(c))},${escAttr(JSON.stringify(cfg.fs))},${escAttr(JSON.stringify(ex.key))})">${c}</button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-fsid" style="display:none"></div>
     <button type="button" class="btn-next" id="btn-next-fsid" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
@@ -4304,7 +4614,7 @@ function genHashIdentify() {
     </div>
     <div class="ex-scenario">${scenario}</div>
     <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="hash-choices">
-      ${shuffled.map((c,i)=>`<button type="button" class="tp-choice" data-correct="${c.correct}" onclick="checkHashIdentify(this,${c.correct},${JSON.stringify(c.explain)})">
+      ${shuffled.map((c,i)=>`<button type="button" class="tp-choice" data-correct="${c.correct}" onclick="checkHashIdentify(this,${c.correct},${escAttr(JSON.stringify(c.explain))})">
         <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span><span>${c.text}</span></button>`).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback-hash" style="display:none"></div>
