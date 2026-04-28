@@ -1,7 +1,10 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v20 : ajout exam.html, tools.html — enrichissement EMAIL/NETWORK exercises, APFS filesystem, modes timestamp Unix/APFS ajout scenes.js (scénarios DFIR) + stratégie network-first dédiée
-const CACHE_VERSION = 'cas-in-v20';
+// v21 : alignement v2.4 (post-cleanup) — STATIC_ASSETS auto-régénéré
+//       depuis manifest.json + filesystem (90 fiches au lieu de 47)
+const CACHE_VERSION = 'cas-in-v21';
+
 const STATIC_ASSETS = [
+  // Pages racine
   './',
   './index.html',
   './quiz.html',
@@ -9,10 +12,13 @@ const STATIC_ASSETS = [
   './exam.html',
   './tools.html',
   './scene.html',
+
+  // Manifests & data
   './manifest.json',
   './pwa.manifest.json',
   './questions.json',
   './counts.json',
+
   // Styles
   './style/landing.css',
   './style/style.css',
@@ -20,68 +26,135 @@ const STATIC_ASSETS = [
   './style/scene.css',
   './style/fiche.css',
   './style/fiche_style.css',
-  // Scripts
+
+  // Scripts partagés
   './js/landing.js',
   './js/cas-in-counts.js',
   './js/cas-in-pwa.js',
   './js/cas-in-search.js',
-  // Scénarios DFIR (ajout v19)
+
+  // Scénarios DFIR (network-first car volumineux)
   './scenes.js',
+
   // TP
   './tp/tp-data.js',
   './tp/tp-engine.js',
-  // Fiches
+
+  // Fiches (90) — auto-listé depuis manifest.json
+  './fiches/index.html',
+  './fiches/fiche-hub.css',
   './fiches/acquisition.html',
+  './fiches/active_directory.html',
+  './fiches/algorithmes_forensique.html',
   './fiches/anti_forensique.html',
+  './fiches/apfs.html',
   './fiches/autopsy.html',
+  './fiches/autorites_competences_ch.html',
+  './fiches/browser_artifacts_deep_dive.html',
   './fiches/browser_forensique.html',
   './fiches/cassage_mdp.html',
+  './fiches/chiffrement_volumes.html',
   './fiches/cloud_forensique.html',
   './fiches/comparaison_fs.html',
   './fiches/crypto.html',
+  './fiches/cryptomonnaies.html',
   './fiches/disques.html',
+  './fiches/dns_forensique.html',
+  './fiches/dns_forensique_avance.html',
+  './fiches/documents_office_forensique.html',
   './fiches/droit.html',
+  './fiches/droit_europeen.html',
+  './fiches/eimp_entraide.html',
   './fiches/email_forensique.html',
+  './fiches/email_headers_smtp_forensique.html',
   './fiches/encodage.html',
   './fiches/exfat.html',
+  './fiches/expert_witness_ch.html',
   './fiches/ext.html',
+  './fiches/f2fs.html',
   './fiches/fat12.html',
   './fiches/fat16.html',
   './fiches/formats.html',
   './fiches/hash.html',
   './fiches/hfs.html',
   './fiches/incident_response.html',
-  './fiches/index.html',
+  './fiches/iot_forensique.html',
+  './fiches/kape_velociraptor.html',
+  './fiches/log_forensique_avance.html',
   './fiches/logs_windows.html',
+  './fiches/lscpt.html',
+  './fiches/mac_times.html',
   './fiches/macos-linux.html',
   './fiches/malware_forensique.html',
+  './fiches/mathematiques_forensique.html',
+  './fiches/messagerie_im.html',
+  './fiches/metadata_avancees.html',
   './fiches/methodologie.html',
+  './fiches/mitre_attack.html',
   './fiches/mobile.html',
+  './fiches/network_traffic_analysis_avance.html',
+  './fiches/nldp.html',
   './fiches/ntfs.html',
   './fiches/osint.html',
   './fiches/outils.html',
+  './fiches/pdf_forensique_avance.html',
+  './fiches/pki_certificats.html',
+  './fiches/powershell_forensique.html',
+  './fiches/premier_intervenant.html',
   './fiches/preuve.html',
+  './fiches/ram_forensique.html',
+  './fiches/ransomware_forensique.html',
   './fiches/rapport_forensique.html',
+  './fiches/refs.html',
   './fiches/registre_windows.html',
   './fiches/reseau.html',
+  './fiches/reverse_engineering_101.html',
+  './fiches/shellbags.html',
+  './fiches/siem_logs.html',
+  './fiches/sqlite_forensique.html',
+  './fiches/sqlite_forensique_avance.html',
+  './fiches/steganographie.html',
   './fiches/suisse.html',
+  './fiches/sysmon.html',
+  './fiches/threat_intel_ioc.html',
   './fiches/timeline.html',
+  './fiches/tls_https_certificate_forensique.html',
   './fiches/tor_darkweb.html',
+  './fiches/usb_forensique.html',
+  './fiches/usb_removable_media_forensique.html',
+  './fiches/vehicules_forensique.html',
+  './fiches/vm_forensique.html',
   './fiches/volatilite.html',
+  './fiches/volatility_memory_forensics.html',
   './fiches/windows.html',
+  './fiches/windows_forensique.html',
+  './fiches/windows_registry_forensique_avance.html',
   './fiches/wireshark_pcap.html',
-  './fiches/mac_times.html',
-  './fiches/pki_certificats.html',
-  './fiches/sqlite_forensique.html'
+  './fiches/wsl_forensique.html',
+  './fiches/yara.html',
+  './fiches/zimmerman.html',
 ];
+
+// Page hors-ligne dédiée (fallback si la ressource n'est jamais passée par le cache)
+const OFFLINE_FALLBACK = './offline.html';
 
 // Installation : mise en cache des assets statiques
 self.addEventListener('install', event => {
   console.log('[SW] Install ' + CACHE_VERSION);
   event.waitUntil(
     caches.open(CACHE_VERSION).then(cache => {
-      return cache.addAll(STATIC_ASSETS).catch(err => {
-        console.warn('[SW] Some assets failed to cache:', err);
+      // addAll() est atomique : si UNE ressource échoue, tout échoue.
+      // On utilise addAll pour les ressources critiques, et add() pour
+      // les fiches optionnelles afin que l'install ne saute pas si l'une
+      // d'entre elles 404 (cas réel quand on déploie en plusieurs vagues).
+      const critical = STATIC_ASSETS.filter(a => !a.startsWith('./fiches/') || a === './fiches/index.html');
+      const optional = STATIC_ASSETS.filter(a => a.startsWith('./fiches/') && a !== './fiches/index.html');
+
+      return cache.addAll(critical).then(() => {
+        // Best-effort sur les fiches : on ignore les échecs individuels
+        return Promise.allSettled(optional.map(url => cache.add(url)));
+      }).catch(err => {
+        console.warn('[SW] Critical asset failed:', err);
       });
     })
   );
@@ -104,6 +177,11 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
+// Listener pour SKIP_WAITING (forcé par cas-in-pwa.js après update)
+self.addEventListener('message', event => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+});
+
 // Fetch : stratégie mixte selon le type de ressource
 self.addEventListener('fetch', event => {
   if (!event.request.url.startsWith('http')) return;
@@ -116,7 +194,7 @@ self.addEventListener('fetch', event => {
 
   const isHTML = event.request.headers.get('accept')?.includes('text/html');
   const isJSON = url.pathname.endsWith('.json');
-  // scenes.js : network-first car mis à jour fréquemment (47 scénarios, ~937KB)
+  // scenes.js : network-first car mis à jour fréquemment (~1.6 Mo)
   const isScenes = url.pathname.endsWith('scenes.js');
 
   if (isHTML || isJSON || isScenes) {
@@ -128,7 +206,15 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_VERSION).then(cache => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => caches.match(event.request))
+      }).catch(() => {
+        // Tenter le cache, puis fallback offline pour les pages HTML
+        return caches.match(event.request).then(cached => {
+          if (cached) return cached;
+          if (isHTML) return caches.match(OFFLINE_FALLBACK);
+          return new Response(JSON.stringify({error:'offline'}),
+            {status:503, headers:{'Content-Type':'application/json'}});
+        });
+      })
     );
   } else {
     // Cache First : CSS, JS (sauf scenes.js), images
@@ -140,6 +226,9 @@ self.addEventListener('fetch', event => {
             caches.open(CACHE_VERSION).then(cache => cache.put(event.request, clone));
           }
           return response;
+        }).catch(() => {
+          // Pour les ressources non-HTML : retourner 503 plutôt que de planter
+          return new Response('', {status:503, statusText:'Offline'});
         });
       })
     );
