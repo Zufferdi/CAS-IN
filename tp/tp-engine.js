@@ -345,13 +345,18 @@ function genEndian() {
       </div>
       <div class="sec-title" style="margin-top:.75rem">Quelle est la valeur décimale ?</div>
       <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="endian-choices">
-        ${choices.map(c=>`<button class="tp-choice" style="flex:1;min-width:100px" data-correct="${c===val}"
-          onclick="checkEndianChoice(this,${c===val},${val},${JSON.stringify(displayBytes)},${JSON.stringify(revBytes)})">
+        ${choices.map(c=>`<button class="tp-choice" style="flex:1;min-width:100px" data-correct="${c===val}" data-choice="${c}">
           ${c.toLocaleString('fr-CH')}</button>`).join('')}
       </div>
       <div class="ex-feedback" id="ex-feedback"></div>
       <button class="btn-next" id="btn-next" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
     `;
+    div.querySelectorAll('#endian-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const c = parseInt(b.dataset.choice);
+        checkEndianChoice(b, c === val, val, displayBytes, revBytes);
+      });
+    });
     return div;
   }
 
@@ -387,14 +392,19 @@ function genEndian() {
       <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin:.75rem 0" id="endian-choices">
         ${shuffle(['Little Endian (x86, FAT, NTFS)', 'Big Endian (réseau, HFS+)', 'Middle Endian (PDP-11)', 'Aucun ordre défini']).map(c=>{
           const isCorrect = (isLE && c.startsWith('Little')) || (!isLE && c.startsWith('Big'));
-          return `<button class="tp-choice" style="flex:1;min-width:140px" data-correct="${isCorrect}"
-            onclick="checkEndianChoice(this,${isCorrect},0,${JSON.stringify(displayBytes)},${JSON.stringify(isLE?leBytes:beBytes)})">
+          return `<button class="tp-choice" style="flex:1;min-width:140px" data-correct="${isCorrect}" data-is-correct="${isCorrect}">
             ${c}</button>`;
         }).join('')}
       </div>
       <div class="ex-feedback" id="ex-feedback"></div>
       <button class="btn-next" id="btn-next" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
     `;
+    div.querySelectorAll('#endian-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isCorrect = b.dataset.isCorrect === 'true';
+        checkEndianChoice(b, isCorrect, 0, displayBytes, isLE ? leBytes : beBytes);
+      });
+    });
     return div;
   }
 
@@ -434,14 +444,19 @@ function genEndian() {
       ${options.map(opt => {
         const isCorrect = hexStr(opt) === hexStr(correctBytes);
         return `<button class="tp-choice" style="flex:1;min-width:130px;font-family:var(--mono)"
-          data-correct="${isCorrect}"
-          onclick="checkEndianChoice(this,${isCorrect},0,${JSON.stringify(correctBytes)},${JSON.stringify(isLE ? [...correctBytes].reverse() : correctBytes)})">
+          data-correct="${isCorrect}" data-is-correct="${isCorrect}">
           ${hexStr(opt)}</button>`;
       }).join('')}
     </div>
     <div class="ex-feedback" id="ex-feedback"></div>
     <button class="btn-next" id="btn-next" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
+  div.querySelectorAll('#endian-choices .tp-choice').forEach(b => {
+    b.addEventListener('click', () => {
+      const isCorrect = b.dataset.isCorrect === 'true';
+      checkEndianChoice(b, isCorrect, 0, correctBytes, isLE ? [...correctBytes].reverse() : correctBytes);
+    });
+  });
   return div;
 }
 
@@ -1219,12 +1234,17 @@ function genRunList() {
         </div>`).join('')}
     </div>
     <div class="ex-input-row" style="margin-top:.5rem">
-      <button class="btn-hint" onclick="showRunListHint(${JSON.stringify(encodedFragments.map(f=>({l:f.length,d:f.delta,lcn:f.lcn})))})">💡 Décomposition</button>
-      <button class="btn-validate" id="btn-rl-validate" onclick="checkRunList(${JSON.stringify(encodedFragments.map(f=>({l:f.length,lcn:f.lcn})))}, ${numFragments})">Valider ✓</button>
+      <button class="btn-hint" id="btn-rl-hint">💡 Décomposition</button>
+      <button class="btn-validate" id="btn-rl-validate">Valider ✓</button>
       <button class="btn-next" id="btn-next-rl" onclick="newExercise()" style="display:none">Exercice suivant →</button>
     </div>
     <div class="ex-feedback" id="rl-feedback-global"></div>
   `;
+  // Attacher les événements après injection HTML pour éviter les problèmes de JSON dans onclick inline
+  const hintData = encodedFragments.map(f => ({l:f.length, d:f.delta, lcn:f.lcn}));
+  const validateData = encodedFragments.map(f => ({l:f.length, lcn:f.lcn}));
+  div.querySelector('#btn-rl-hint').addEventListener('click', () => showRunListHint(hintData));
+  div.querySelector('#btn-rl-validate').addEventListener('click', () => checkRunList(validateData, numFragments));
   return div;
 }
 
@@ -1704,15 +1724,19 @@ function genBases() {
     <div class="ex-input-row">
       <span class="ex-input-label">${data.label}</span>
       <input class="ex-input" id="inp-bases" placeholder="${data.placeholder}" autocomplete="off" style="max-width:200px">
-      <button class="btn-hint" onclick="showBasesHint('${data.hint.replace(/'/g,"\\'")}')">💡 Méthode</button>
-      <button class="btn-validate" onclick="checkBases(this, '${data.answer.replace(/'/g,"\\'")}', '${data.explain.replace(/'/g,"\\'")}')">Valider ✓</button>
+      <button class="btn-hint" id="btn-hint-bs">💡 Méthode</button>
+      <button class="btn-validate" id="btn-validate-bs">Valider ✓</button>
       <button class="btn-next" id="btn-next-bs" onclick="newExercise()">Exercice suivant →</button>
     </div>
     <div class="ex-feedback" id="ex-feedback-bs"></div>
   `;
   setTimeout(() => {
     const inp = div.querySelector('#inp-bases');
-    if (inp) inp.addEventListener('keydown', e => { if(e.key==='Enter') div.querySelector('.btn-validate').click(); });
+    if (inp) inp.addEventListener('keydown', e => { if(e.key==='Enter') div.querySelector('#btn-validate-bs').click(); });
+    const hintBtn = div.querySelector('#btn-hint-bs');
+    if (hintBtn) hintBtn.addEventListener('click', () => showBasesHint(data.hint));
+    const validateBtn = div.querySelector('#btn-validate-bs');
+    if (validateBtn) validateBtn.addEventListener('click', () => checkBases(validateBtn, data.answer, data.explain));
   }, 50);
   return div;
 }
@@ -3433,11 +3457,11 @@ function genTimestomping() {
 
     <div class="ex-input-row" style="flex-direction:column;align-items:flex-start;gap:.5rem">
       <div style="display:flex;gap:.5rem;flex-wrap:wrap" id="ts-choices">
-        <button class="tp-choice" onclick="checkTimestomping(true, ${isTimestomped}, '${explanation.replace(/'/g,"\\'").replace(/\n/g,' ')}', this)">
+        <button class="tp-choice" id="ts-btn-yes">
           <span class="tp-choice-letter">A</span>
           <span>✅ Oui — des horodatages ont été manipulés</span>
         </button>
-        <button class="tp-choice" onclick="checkTimestomping(false, ${isTimestomped}, '${explanation.replace(/'/g,"\\'").replace(/\n/g,' ')}', this)">
+        <button class="tp-choice" id="ts-btn-no">
           <span class="tp-choice-letter">B</span>
           <span>❌ Non — chronologie normale, pas de timestomping</span>
         </button>
@@ -3447,6 +3471,12 @@ function genTimestomping() {
     <div id="ts-indicator" style="display:none;margin-top:.5rem;font-size:.72rem;font-family:var(--mono);color:var(--dim)">${indicator}</div>
     <button class="btn-next" id="btn-next-ts2" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
+  div.querySelector('#ts-btn-yes').addEventListener('click', function() {
+    checkTimestomping(true, isTimestomped, explanation, this);
+  });
+  div.querySelector('#ts-btn-no').addEventListener('click', function() {
+    checkTimestomping(false, isTimestomped, explanation, this);
+  });
   return div;
 }
 
@@ -3614,7 +3644,7 @@ function genGlossaire() {
     <div class="sec-title">Quelle est la traduction correcte ?</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.75rem" id="gl-choices">
       ${options.map((o, i) => `
-        <button class="tp-choice" onclick="checkGlossaire(this, ${o.isCorrect}, '${correct.replace(/'/g,"\\'")}', '${term.note.replace(/'/g,"\\'")}')">
+        <button class="tp-choice" data-is-correct="${o.isCorrect}">
           <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
           <span style="font-size:.78rem">${o.text}</span>
         </button>`).join('')}
@@ -3622,6 +3652,12 @@ function genGlossaire() {
     <div class="ex-feedback" id="ex-feedback-gl"></div>
     <button class="btn-next" id="btn-next-gl" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
+  div.querySelectorAll('#gl-choices .tp-choice').forEach(b => {
+    b.addEventListener('click', () => {
+      const isOk = b.dataset.isCorrect === 'true';
+      checkGlossaire(b, isOk, correct, term.note);
+    });
+  });
   return div;
 }
 
@@ -4034,7 +4070,7 @@ function genOffset() {
     <div class="sec-title">Choisir l'offset correct</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.75rem" id="offset-choices">
       ${choices.map((c, i) => `
-        <button class="tp-choice" onclick="checkOffset(this, ${i === correctIdx}, ${JSON.stringify(data.steps)}, ${answer})">
+        <button class="tp-choice" data-correct="${i === correctIdx}" data-idx="${i}">
           <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
           <span>${c.toLocaleString('fr-CH')} ${data.unit}</span>
         </button>`).join('')}
@@ -4042,6 +4078,12 @@ function genOffset() {
     <div class="ex-feedback" id="ex-feedback-offset"></div>
     <button class="btn-next" id="btn-next-offset" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
   `;
+  div.querySelectorAll('#offset-choices .tp-choice').forEach((b, i) => {
+    b.addEventListener('click', () => {
+      const isCorrect = b.dataset.correct === 'true';
+      checkOffset(b, isCorrect, data.steps, answer);
+    });
+  });
   return div;
 }
 
@@ -4192,8 +4234,8 @@ function genHexTable() {
     <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.5rem">
       <span style="font-size:.8rem;color:var(--muted)">0x</span>
       <input class="ex-input" id="inp-hextable" placeholder="ex: 0D" maxlength="4" style="width:90px;text-transform:uppercase" autocomplete="off">
-      <button class="btn-hint" id="ht-hint-btn" onclick="showHexTableHint(${JSON.stringify(ex.hint1)},${JSON.stringify(ex.hint2)})">💡 Indice</button>
-      <button class="btn-validate" onclick="checkHexTable(${JSON.stringify(ex.answer)},${JSON.stringify(ex.explain)},${ex.answer_val})">Valider ✓</button>
+      <button class="btn-hint" id="ht-hint-btn">💡 Indice</button>
+      <button class="btn-validate" id="ht-validate-btn">Valider ✓</button>
       <button class="btn-next" id="btn-next-ht" onclick="newExercise()" style="display:none">Exercice suivant →</button>
     </div>
     <div class="hint-box" id="hint-ht" style="display:none"></div>
@@ -4201,7 +4243,11 @@ function genHexTable() {
   `;
   setTimeout(() => {
     const inp = div.querySelector('#inp-hextable');
-    if (inp) inp.addEventListener('keydown', e => { if(e.key==='Enter') div.querySelector('.btn-validate').click(); });
+    if (inp) inp.addEventListener('keydown', e => { if(e.key==='Enter') div.querySelector('#ht-validate-btn').click(); });
+    const hintBtn = div.querySelector('#ht-hint-btn');
+    if (hintBtn) hintBtn.addEventListener('click', () => showHexTableHint(ex.hint1, ex.hint2));
+    const validateBtn = div.querySelector('#ht-validate-btn');
+    if (validateBtn) validateBtn.addEventListener('click', () => checkHexTable(ex.answer, ex.explain, ex.answer_val));
   }, 50);
   return div;
 }
