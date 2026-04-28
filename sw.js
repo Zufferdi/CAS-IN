@@ -1,4 +1,5 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v25 : ajout icônes PWA + offline.html + og-image.svg dans STATIC_ASSETS
 // v24 : split de scenes.js en scenes/index.json + scenes/{id}.json
 //       boot initial : 1.6 MB → 64 KB (-96 %)
 //       chaque scène mise en cache séparément à la 1re visite
@@ -6,7 +7,7 @@
 // v22 : extraction du JS inline de quiz.html → js/quiz-app.js (cache séparé)
 // v21 : alignement v2.4 (post-cleanup) — STATIC_ASSETS auto-régénéré
 //       depuis manifest.json + filesystem (90 fiches au lieu de 47)
-const CACHE_VERSION = 'cas-in-v24';
+const CACHE_VERSION = 'cas-in-v25';
 
 const STATIC_ASSETS = [
   // Pages racine
@@ -21,6 +22,11 @@ const STATIC_ASSETS = [
   // Manifests & data
   './manifest.json',
   './pwa.manifest.json',
+  './offline.html',
+  './og-image.svg',
+  './favicon.ico',
+  './icon-192.png',
+  './icon-512.png',
   './questions.json',
   './counts.json',
 
