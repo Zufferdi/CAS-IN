@@ -66,6 +66,19 @@
       </div>
     </div>
     <div id="gloss-popup"></div>
+    <!-- ====== PHASE 7 — SLOT NOTIFICATION UNIFIÉ ======
+         Un seul élément, file d'attente gérée par quiz-ui-patch.js.
+         Les anciens toasts (streak/combo/rankup/achievement) restent dans le DOM
+         pour compat JS, mais ils sont masqués par CSS et redirigés vers ce slot. -->
+    <div id="notify-stream" aria-live="polite" aria-atomic="true">
+      <div id="notify-card">
+        <span id="notify-icon"></span>
+        <div id="notify-body">
+          <div id="notify-title"></div>
+          <div id="notify-msg"></div>
+        </div>
+      </div>
+    </div>
     <div id="rankup-toast">
       <span class="ru-emoji" id="ru-emoji"></span>
       <div class="ru-label">Nouveau rang !</div>
@@ -142,11 +155,31 @@
   <div class="hdr-right">
     <button aria-label="Ouvrir les filtres" type="button" class="hdr-action hdr-action-primary" onclick="openSettings()" title="Filtres">⚙ Filtres</button>
     <div class="hdr-dropdown" id="enquete-dropdown">
-      <button aria-label="Choisir un mode" type="button" class="hdr-action hdr-action-enquete" onclick="toggleEnqueteMenu()" title="Modes spéciaux">🕵 Modes ▾</button>
-      <div class="hdr-dropdown-menu" id="enquete-menu">
-        <button type="button" onclick="openExam(); closeEnqueteMenu()" class="hdr-dropdown-item"><span>📝</span> Examen blanc</button>
-        <button type="button" onclick="openSceneMode(); closeEnqueteMenu()" class="hdr-dropdown-item"><span>🔍</span> Scène de crime</button>
-        <button type="button" onclick="openMission(); closeEnqueteMenu()" class="hdr-dropdown-item"><span>🎯</span> Mission 30Q</button>
+      <button aria-label="Choisir un mode" type="button" class="hdr-action hdr-action-enquete" onclick="toggleEnqueteMenu()" title="Modes spéciaux"><span class="hdr-action-text">🕵 Modes</span><span id="active-mode-pill" class="active-mode-pill" hidden></span><span class="hdr-action-caret">▾</span></button>
+      <div class="hdr-dropdown-menu hdr-dropdown-menu--wide" id="enquete-menu">
+        <!-- 📚 APPRENDRE — réviser à son rythme -->
+        <div class="hdr-dropdown-pillar">
+          <div class="hdr-dropdown-pillar-title">📚 Apprendre</div>
+          <button type="button" class="hdr-dropdown-item" onclick="setMode('normal'); closeEnqueteMenu()" data-mode-target="normal"><span>🎯</span> <span class="dd-item-text"><span class="dd-item-name">Libre</span><span class="dd-item-desc">Toutes questions, à ton rythme</span></span></button>
+          <button type="button" class="hdr-dropdown-item" onclick="setMode('smart'); closeEnqueteMenu()" data-mode-target="smart"><span>🧠</span> <span class="dd-item-text"><span class="dd-item-name">Smart</span><span class="dd-item-desc">Algorithme adaptatif</span></span></button>
+          <button type="button" class="hdr-dropdown-item" onclick="setMode('bookmarks'); closeEnqueteMenu()" data-mode-target="bookmarks"><span>⭐</span> <span class="dd-item-text"><span class="dd-item-name">Favoris</span><span class="dd-item-desc">Tes questions étoilées</span></span></button>
+          <button type="button" class="hdr-dropdown-item" onclick="setMode('errors'); closeEnqueteMenu()" data-mode-target="errors"><span>⚠</span> <span class="dd-item-text"><span class="dd-item-name">Erreurs</span><span class="dd-item-desc">Tes ratés à reprendre</span></span></button>
+          <button type="button" class="hdr-dropdown-item" onclick="activateSM2Mode(); closeEnqueteMenu()" data-mode-target="sm2"><span>🃏</span> <span class="dd-item-text"><span class="dd-item-name">SM-2</span><span class="dd-item-desc">Répétition espacée du jour</span></span></button>
+        </div>
+        <!-- 🎯 S'ENTRAÎNER — conditions semi-réelles -->
+        <div class="hdr-dropdown-pillar">
+          <div class="hdr-dropdown-pillar-title">🎯 S'entraîner</div>
+          <button type="button" class="hdr-dropdown-item" onclick="openExam(); closeEnqueteMenu()"><span>📝</span> <span class="dd-item-text"><span class="dd-item-name">Examen blanc</span><span class="dd-item-desc">10 à 50 questions chronométrées</span></span></button>
+          <button type="button" class="hdr-dropdown-item" onclick="openMission(); closeEnqueteMenu()"><span>🎯</span> <span class="dd-item-text"><span class="dd-item-name">Mission 30Q</span><span class="dd-item-desc">6 phases · note sur 6</span></span></button>
+          <button type="button" class="hdr-dropdown-item" onclick="openSceneMode(); closeEnqueteMenu()"><span>🔍</span> <span class="dd-item-text"><span class="dd-item-name">Scène de crime</span><span class="dd-item-desc">5 questions enchaînées</span></span></button>
+        </div>
+        <!-- ⚡ DÉFIER — flash, intense -->
+        <div class="hdr-dropdown-pillar">
+          <div class="hdr-dropdown-pillar-title">⚡ Défier</div>
+          <button type="button" class="hdr-dropdown-item" onclick="startDailyChallenge(); closeEnqueteMenu()" data-mode-target="daily"><span>⚡</span> <span class="dd-item-text"><span class="dd-item-name">Défi du jour</span><span class="dd-item-desc">10 questions, leaderboard</span></span></button>
+          <button type="button" class="hdr-dropdown-item" onclick="setMode('survival'); closeEnqueteMenu()" data-mode-target="survival"><span>💀</span> <span class="dd-item-text"><span class="dd-item-name">Survie</span><span class="dd-item-desc">3 vies, jusqu'au bout</span></span></button>
+          <button type="button" class="hdr-dropdown-item" onclick="triggerBoss(); closeEnqueteMenu()"><span>👹</span> <span class="dd-item-text"><span class="dd-item-name">Boss</span><span class="dd-item-desc">Question chronométrée éclair</span></span></button>
+        </div>
       </div>
     </div>
     <button aria-label="Ouvrir le bilan" type="button" class="hdr-action" onclick="openBilan()" title="Bilan">📊 Bilan</button>
@@ -212,6 +245,16 @@
         <p class="question-text" id="question-text"></p>
         <p class="multi-hint" id="multi-hint">☑ Plusieurs réponses correctes</p>
         <div id="choices"></div>
+        <!-- État vide : affiché quand le pool de questions est vide selon le mode actif -->
+        <div id="card-empty-state" class="card-empty-state" hidden>
+          <div class="card-empty-icon" id="card-empty-icon">🔍</div>
+          <div class="card-empty-title" id="card-empty-title">Aucune question disponible</div>
+          <div class="card-empty-desc" id="card-empty-desc">Élargis tes filtres pour reprendre l'enquête.</div>
+          <div class="card-empty-actions" id="card-empty-actions">
+            <button type="button" class="apply-btn apply-btn--small" onclick="openSettings()">⚙ Ouvrir les filtres</button>
+            <button type="button" class="apply-btn apply-btn--small apply-btn--secondary" onclick="setMode('normal')">🎯 Mode Libre</button>
+          </div>
+        </div>
         <div id="feedback"></div>
         <!-- Action-row simplifiée : 3 boutons (Valider/Suivante = state machine, Indice, Passer) -->
         <div class="action-row">
@@ -258,16 +301,6 @@
           <div id="timer-opts"></div>
         </div>
         <div class="fsec">
-          <h3>Mode</h3>
-          <button type="button" class="mode-btn" data-mode="normal" onclick="pickMode(this)">🎯 Normal</button>
-          <button type="button" class="mode-btn" data-mode="smart" onclick="pickMode(this)">🧠 Révision Intelligente</button>
-          <button type="button" class="mode-btn" data-mode="bookmarks" onclick="pickMode(this)">⭐ Favoris</button>
-          <button type="button" class="mode-btn" data-mode="errors" onclick="pickMode(this)">⚠ Erreurs</button>
-          <button type="button" class="mode-btn" data-mode="daily" onclick="pickMode(this)">⚡ Défi du Jour</button>
-          <button type="button" class="mode-btn" data-mode="survival" onclick="pickMode(this)">💀 Mode Survie</button>
-          <button type="button" class="mode-btn" data-mode="sm2" onclick="pickMode(this)">🃏 Révision SM-2</button>
-        </div>
-        <div class="fsec">
           <h3>Taille du texte</h3>
           <div id="font-size-ctrl">
             <button type="button" class="font-opt" data-font="compact" onclick="setFontSize('compact',this)">Aa Compact</button>
@@ -290,10 +323,10 @@
         <div id="exam-setup">
           <div class="fsec">
             <h3>Questions</h3>
-            <button type="button" class="chip active" data-n="10" onclick="pickExamN(this)">10</button>
-            <button type="button" class="chip ml6" data-n="20" onclick="pickExamN(this)">20</button>
-            <button type="button" class="chip ml6" data-n="30" onclick="pickExamN(this)">30</button>
-            <button type="button" class="chip ml6" data-n="50" onclick="pickExamN(this)">50</button>
+            <button type="button" class="chip active" data-n="10" onclick="pickExamN(this)" aria-label="Examen de 10 questions">10</button>
+            <button type="button" class="chip ml6" data-n="20" onclick="pickExamN(this)" aria-label="Examen de 20 questions">20</button>
+            <button type="button" class="chip ml6" data-n="30" onclick="pickExamN(this)" aria-label="Examen de 30 questions">30</button>
+            <button type="button" class="chip ml6" data-n="50" onclick="pickExamN(this)" aria-label="Examen de 50 questions">50</button>
           </div>
           <div class="fsec">
             <h3>Thèmes</h3>
