@@ -1,4 +1,6 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v28 : extraction JS inline de tools.html + exam.html → tools-app.js, exam-app.js
+// v27 : suppression scenes.js legacy (-1.6 MB), meta descriptions complètes
 // v26 : Phases A+B+D+E (challenge banner+, daily combo, 6 new badges, skill tree)
 // v25 : ajout icônes PWA + offline.html + og-image.svg dans STATIC_ASSETS
 // v24 : split de scenes.js en scenes/index.json + scenes/{id}.json
@@ -8,7 +10,7 @@
 // v22 : extraction du JS inline de quiz.html → js/quiz-app.js (cache séparé)
 // v21 : alignement v2.4 (post-cleanup) — STATIC_ASSETS auto-régénéré
 //       depuis manifest.json + filesystem (90 fiches au lieu de 47)
-const CACHE_VERSION = 'cas-in-v26';
+const CACHE_VERSION = 'cas-in-v28';
 
 const STATIC_ASSETS = [
   // Pages racine
@@ -46,12 +48,12 @@ const STATIC_ASSETS = [
   './js/quiz-app.js',
   './js/scene-app.js',
   './js/scene-ux-patch.js',
+  './js/tools-app.js',
+  './js/exam-app.js',
 
-  // Scénarios DFIR — index uniquement (network-first, ~64 KB)
-  // Les 64 fichiers scenes/{id}.json sont mis en cache à la 1re visite (cache-first).
-  // scenes.js (legacy) est conservé en fallback pour rétro-compatibilité.
+  // Scénarios DFIR (v3.0) — index + 64 fichiers individuels lazy-loadés
+  // L'index est en network-first, les scènes individuelles en cache-first.
   './scenes/index.json',
-  './scenes.js',
 
   // TP
   './tp/tp-data.js',
@@ -211,7 +213,6 @@ self.addEventListener('fetch', event => {
 
   const isHTML = event.request.headers.get('accept')?.includes('text/html');
   const isJSON = url.pathname.endsWith('.json');
-  const isScenesJS = url.pathname.endsWith('scenes.js'); // legacy, network-first
   const isSceneIndex = url.pathname.endsWith('/scenes/index.json');
   // Fichier de scène individuel : scenes/{id}.json (mais PAS index.json)
   const isSceneFile = /\/scenes\/[^/]+\.json$/.test(url.pathname) && !isSceneIndex;
@@ -237,8 +238,8 @@ self.addEventListener('fetch', event => {
   }
 
   // ─── Network-first pour HTML, autres JSON (questions, manifest, counts,
-  //     scenes/index.json), et scenes.js legacy
-  if (isHTML || isJSON || isScenesJS) {
+  //     scenes/index.json)
+  if (isHTML || isJSON) {
     event.respondWith(
       fetch(event.request).then(response => {
         if (response.ok) {
