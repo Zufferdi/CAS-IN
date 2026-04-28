@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Calculateurs Forensiques — CAS-IN</title>
+<meta name="description" content="Boîte à outils forensique : convertisseur hex/ASCII/Base64, calculateurs FAT/NTFS, decoders MFT, FILETIME, parsers de signatures de fichiers.">
+<link rel="stylesheet" href="style/fiche_style.css">
+<style>
+  :root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--dim:#6e7681;--cyan:#00e5cc;--gold:#f0c040;--red:#ff4060;--green:#30e88a;--orange:#fb923c;--blue:#4f8ef7;--purple:#a78bfa;--mono:"JetBrains Mono",monospace;--sans:"Syne",system-ui,sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+.page{max-width:860px;margin:0 auto;padding:1.5rem 1.2rem}
+.hero{text-align:center;padding:2rem 0 2rem;border-bottom:1px solid var(--border);margin-bottom:2rem;position:relative}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(0,229,204,.07),transparent);pointer-events:none}
+.hero-eye{display:inline-flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.65rem;color:var(--cyan);background:rgba(0,229,204,.08);border:1px solid rgba(0,229,204,.2);padding:.2rem .7rem;border-radius:20px;margin-bottom:.75rem}
+.hero h1{font-size:1.8rem;font-weight:800;margin-bottom:.4rem}
+.hero p{font-size:.8rem;color:var(--muted)}
+
+/* Tool tabs */
+.tool-nav{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:0}
+.tnav-btn{font-family:var(--mono);font-size:.72rem;padding:.4rem .9rem;border:1px solid var(--border);border-bottom:none;border-radius:6px 6px 0 0;background:var(--surface);color:var(--muted);cursor:pointer;margin-bottom:-1px;transition:.15s}
+.tnav-btn:hover,.tnav-btn.on{color:var(--cyan);border-color:var(--cyan);background:rgba(0,229,204,.07)}
+.tool-panel{display:none}
+.tool-panel.on{display:block}
+
+/* Tool cards */
+.tc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+.tc h3{font-size:.85rem;font-weight:700;color:var(--text);margin-bottom:.3rem;display:flex;align-items:center;gap:.5rem}
+.tc-desc{font-size:.72rem;color:var(--muted);margin-bottom:1rem;line-height:1.5}
+
+/* Inputs */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem}
+.field{display:flex;flex-direction:column;gap:.35rem}
+.field label{font-family:var(--mono);font-size:.65rem;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.field input,.field select{background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:.55rem .8rem;font-family:var(--mono);font-size:.78rem;outline:none;transition:.15s;width:100%}
+.field input:focus,.field select:focus{border-color:var(--cyan);background:rgba(0,229,204,.04)}
+.calc-btn{margin-top:.75rem;padding:.55rem 1.2rem;background:var(--cyan);color:#000;border:none;border-radius:7px;font-size:.78rem;font-weight:700;font-family:var(--mono);cursor:pointer;transition:.15s}
+.calc-btn:hover{filter:brightness(1.1)}
+.result-box{margin-top:.85rem;background:var(--surface2);border:1px solid rgba(0,229,204,.2);border-radius:8px;padding:.85rem 1rem}
+.result-box.empty{display:none}
+.rb-title{font-family:var(--mono);font-size:.65rem;color:var(--cyan);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.6rem}
+.rb-row{display:flex;justify-content:space-between;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--border)}
+.rb-row:last-child{border-bottom:none}
+.rb-lbl{font-size:.72rem;color:var(--muted)}
+.rb-val{font-family:var(--mono);font-size:.78rem;color:var(--text);font-weight:700;word-break:break-all;text-align:right}
+.rb-val.highlight{color:var(--cyan)}
+.rb-val.ok{color:var(--green)}
+.rb-val.bad{color:var(--red)}
+.rb-val.warn{color:var(--gold)}
+.step{background:var(--surface2);border-radius:7px;padding:.65rem .9rem;margin-bottom:.5rem;font-family:var(--mono);font-size:.75rem;color:var(--text);border-left:3px solid var(--cyan)}
+.step .step-lbl{font-size:.65rem;color:var(--dim);margin-bottom:.25rem}
+.step .step-val{color:var(--cyan);font-weight:700}
+.alert-box{background:rgba(255,64,96,.06);border:1px solid rgba(255,64,96,.25);border-radius:7px;padding:.65rem .9rem;font-size:.75rem;color:var(--red);margin-top:.5rem}
+.tag-row{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.5rem}
+.quick-tag{font-family:var(--mono);font-size:.65rem;padding:.2rem .55rem;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;transition:.15s;background:var(--surface)}
+.quick-tag:hover{border-color:var(--cyan);color:var(--cyan)}
+
+/* Hex table */
+.hex-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.7rem;margin-top:.5rem}
+.hex-table th{background:var(--surface2);padding:.4rem .5rem;text-align:center;color:var(--muted);border:1px solid var(--border)}
+.hex-table td{padding:.35rem .5rem;text-align:center;border:1px solid var(--border);cursor:pointer;transition:.15s;color:var(--text)}
+.hex-table td:hover{background:rgba(0,229,204,.1);color:var(--cyan)}
+.hex-table td.selected{background:rgba(0,229,204,.15);color:var(--cyan);font-weight:700}
+
+/* Live converter */
+.live-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;margin-top:.75rem}
+.lb-row{display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem}
+.lb-lbl{font-family:var(--mono);font-size:.65rem;color:var(--dim);width:80px;flex-shrink:0;text-transform:uppercase}
+.lb-inp{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:.4rem .7rem;font-family:var(--mono);font-size:.75rem;outline:none}
+.lb-inp:focus{border-color:var(--cyan)}
+.lb-copy{background:none;border:1px solid var(--border);color:var(--dim);border-radius:4px;padding:.2rem .5rem;cursor:pointer;font-family:var(--mono);font-size:.6rem;transition:.15s}
+.lb-copy:hover{border-color:var(--cyan);color:var(--cyan)}
+
+/* ── Focus visible ─────────────────────────────────── */
+.tnav-btn:focus-visible, button:focus-visible, input:focus-visible {
+  outline: 2px solid var(--cyan); outline-offset: 2px;
+}
+/* ── Responsive ─────────────────────────────────────── */
+@media (max-width: 700px) {
+  .tnav { flex-wrap: wrap; gap: .35rem; overflow-x: auto; }
+  .tnav-btn { font-size: .68rem; padding: .28rem .55rem; white-space: nowrap; }
+  .tool-wrap { padding: .85rem .75rem; }
+}
+</style>
+</head>
+<body>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Accueil</a>
+  <span class="tn-title">Calculateurs Forensiques</span>
+  <a href="fiches/index.html" class="tn-quiz">📚 Fiches →</a>
+</nav>
+<div class="page">
+<div class="hero">
+  <div class="hero-eye">🔧 Outils DFIR</div>
+  <h1>Calculateurs Forensiques</h1>
+  <p>Convertisseurs de timestamps · Décodeur Run List NTFS · Calculateur offset FAT/NTFS · Convertisseur Hex/ASCII</p>
+</div>
+
+<div class="tool-nav" role="tablist" aria-label="Outils forensiques">
+  <button type="button" class="tnav-btn on" role="tab" aria-selected="true" onclick="showTool('ts',this)">⏱ Timestamps</button>
+  <button type="button" class="tnav-btn" role="tab" aria-selected="false" onclick="showTool('rl',this)">🗄 Run List NTFS</button>
+  <button type="button" class="tnav-btn" role="tab" aria-selected="false" onclick="showTool('fat',this)">💾 Offset FAT</button>
+  <button type="button" class="tnav-btn" role="tab" aria-selected="false" onclick="showTool('ntfs',this)">📁 Offset NTFS</button>
+  <button type="button" class="tnav-btn" role="tab" aria-selected="false" id="tab-hex" onclick="showTool('hex',this)">🔢 Hex ↔ ASCII</button>
+  <button type="button" class="tnav-btn" role="tab" aria-selected="false" onclick="showTool('enc',this)">🔐 Encodages</button>
+  <button type="button" class="tnav-btn" role="tab" aria-selected="false" onclick="showTool('sfn',this)">📄 SFN FAT</button>
+  <button type="button" class="tnav-btn" role="tab" aria-selected="false" onclick="showTool('magic',this)">✨ Magic Bytes</button>
+  <button type="button" class="tnav-btn" role="tab" aria-selected="false" onclick="showTool('bitmap',this)">🗺 Bitmap</button>
+  <button type="button" class="tnav-btn" role="tab" aria-selected="false" onclick="showTool('hashid',this)">🔑 Hash ID</button>
+  <button type="button" class="tnav-btn" role="tab" aria-selected="false" onclick="showTool('cluster',this)">📐 Cluster</button>
+  <button type="button" class="tnav-btn" role="tab" aria-selected="false" onclick="showTool('mft',this)">🧩 MFT</button>
+</div>
+
+<!-- ══ TIMESTAMPS ══ -->
+<div id="tool-ts" class="tool-panel on">
+  <div class="tc">
+    <h3>⏱ Convertisseur de Timestamps</h3>
+    <p class="tc-desc">Convertit entre tous les formats forensiques : FILETIME Windows (100ns depuis 1601), Unix Epoch (s depuis 1970), FAT Date/Time, APFS (ns depuis 2001), Chrome/WebKit (µs depuis 1601).</p>
+    <div class="field" style="margin-bottom:.75rem">
+      <label>Format source</label>
+      <select id="ts-fmt">
+        <option value="unix">Unix Timestamp (secondes)</option>
+        <option value="filetime">FILETIME Windows (hex, 100ns depuis 1601)</option>
+        <option value="fat-date">FAT Date (hex 2 octets)</option>
+        <option value="fat-time">FAT Time (hex 2 octets)</option>
+        <option value="apfs">APFS Timestamp (ns depuis 2001-01-01)</option>
+        <option value="chrome">Chrome / WebKit (µs depuis 1601-01-01)</option>
+        <option value="human">Date lisible (YYYY-MM-DD HH:MM:SS)</option>
+      </select>
+    </div>
+    <div class="field" style="margin-bottom:.75rem">
+      <label>Valeur</label>
+      <input id="ts-val" type="text" placeholder="Ex: 1700000000 ou 01DA2B3C4D5E6F78">
+    </div>
+    <div class="tag-row">
+      <span class="quick-tag" onclick="setTS('unix','1700000000')">Unix maintenant</span>
+      <span class="quick-tag" onclick="setTS('filetime','01DA2B3C4D5E6F78')">FILETIME exemple</span>
+      <span class="quick-tag" onclick="setTS('fat-date','5465')">FAT Date exemple</span>
+      <span class="quick-tag" onclick="setTS('unix', String(Math.floor(Date.now()/1000)))">Unix → maintenant</span>
+    </div>
+    <button type="button" class="calc-btn" onclick="calcTS()">⟹ Convertir</button>
+    <div id="ts-result" class="result-box empty"></div>
+  </div>
+  <div class="tc">
+    <h3>📐 Référence — Époques forensiques</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+      <div class="step"><div class="step-lbl">NTFS / FILETIME</div><div class="step-val">1er janv. 1601 — 100ns</div></div>
+      <div class="step"><div class="step-lbl">Unix / POSIX</div><div class="step-val">1er janv. 1970 — secondes</div></div>
+      <div class="step"><div class="step-lbl">HFS+ / Mac OS</div><div class="step-val">1er janv. 1904 — secondes</div></div>
+      <div class="step"><div class="step-lbl">APFS</div><div class="step-val">1er janv. 2001 — nanosecondes</div></div>
+      <div class="step"><div class="step-lbl">FAT Date/Time</div><div class="step-val">1er janv. 1980 — 2s précision</div></div>
+      <div class="step"><div class="step-lbl">Chrome / WebKit</div><div class="step-val">1er janv. 1601 — microsecondes</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ RUN LIST ══ -->
+<div id="tool-rl" class="tool-panel">
+  <div class="tc">
+    <h3>🗄 Décodeur Run List NTFS</h3>
+    <p class="tc-desc">Décode une run list NTFS nibble par nibble. Format : séquence d'octets hex séparés par des espaces. Chaque run : octet header + longueur + offset LCN. Fin de liste : 00.</p>
+    <div class="field" style="margin-bottom:.75rem">
+      <label>Run list (octets hex)</label>
+      <input id="rl-val" type="text" placeholder="Ex: 31 05 00 01 00 21 08 20 00 00">
+    </div>
+    <div class="field" style="margin-bottom:.75rem">
+      <label>Bytes per Cluster (facultatif, pour calcul en octets)</label>
+      <input id="rl-bpc" type="number" value="4096" placeholder="4096">
+    </div>
+    <div class="tag-row">
+      <span class="quick-tag" onclick="document.getElementById('rl-val').value='31 05 00 01 00 21 08 20 00 00'">Exemple basique</span>
+      <span class="quick-tag" onclick="document.getElementById('rl-val').value='21 1C 7A 0A 00'">Exemple cours</span>
+      <span class="quick-tag" onclick="document.getElementById('rl-val').value='11 01 00 21 08 20 00 11 03 10 00'">Multi-runs</span>
+    </div>
+    <button type="button" class="calc-btn" onclick="calcRL()">⟹ Décoder</button>
+    <div id="rl-result" class="result-box empty"></div>
+  </div>
+  <div class="tc">
+    <h3>📐 Rappel — Structure Run List</h3>
+    <div class="step"><div class="step-lbl">Octet header (nibbles)</div><div class="step-val">Nibble haut = nb octets offset · Nibble bas = nb octets longueur</div></div>
+    <div class="step"><div class="step-lbl">Exemple : header 0x21</div><div class="step-val">0x2 → 2 octets d'offset · 0x1 → 1 octet de longueur</div></div>
+    <div class="step"><div class="step-lbl">Offset LCN</div><div class="step-val">Little-Endian · Relatif au run précédent (sauf 1er) · Signé</div></div>
+    <div class="step"><div class="step-lbl">Fin de liste</div><div class="step-val">Octet 0x00</div></div>
+  </div>
+</div>
+
+<!-- ══ FAT OFFSET ══ -->
+<div id="tool-fat" class="tool-panel">
+  <div class="tc">
+    <h3>💾 Calculateur Offset FAT</h3>
+    <p class="tc-desc">Calcule l'offset en octets d'un cluster FAT dans la zone de données. Formule : <code style="font-family:var(--mono);color:var(--cyan)">(cluster − 2) × bytes_per_cluster + data_area_start</code></p>
+    <div class="row2">
+      <div class="field"><label>Bytes per Sector</label><input id="fat-bps" type="number" value="512"></div>
+      <div class="field"><label>Sectors per Cluster</label><input id="fat-spc" type="number" value="8"></div>
+      <div class="field"><label>Reserved Sectors</label><input id="fat-res" type="number" value="32"></div>
+      <div class="field"><label>Number of FATs</label><input id="fat-nf" type="number" value="2"></div>
+      <div class="field"><label>Sectors per FAT</label><input id="fat-spf" type="number" value="128"></div>
+      <div class="field"><label>Root Entry Count (FAT16)</label><input id="fat-rec" type="number" value="0" placeholder="0 pour FAT32"></div>
+    </div>
+    <div class="field" style="margin-top:.75rem">
+      <label>Numéro de cluster à localiser</label>
+      <input id="fat-cl" type="number" value="10">
+    </div>
+    <div class="tag-row">
+      <span class="quick-tag" onclick="loadFATPreset('fat12')">Disquette 1.44 Mo (FAT12)</span>
+      <span class="quick-tag" onclick="loadFATPreset('fat16')">FAT16 typique</span>
+      <span class="quick-tag" onclick="loadFATPreset('fat32')">FAT32 typique</span>
+    </div>
+    <button type="button" class="calc-btn" onclick="calcFAT()">⟹ Calculer</button>
+    <div id="fat-result" class="result-box empty"></div>
+  </div>
+  <div class="tc">
+    <h3>💾 Calculateur Entrée FAT12 (12 bits)</h3>
+    <p class="tc-desc">Calcule la valeur d'une entrée FAT12 à partir de 3 octets bruts.</p>
+    <div class="row3">
+      <div class="field"><label>Octet 0 (hex)</label><input id="fat12-b0" type="text" value="F8" maxlength="2"></div>
+      <div class="field"><label>Octet 1 (hex)</label><input id="fat12-b1" type="text" value="FF" maxlength="2"></div>
+      <div class="field"><label>Octet 2 (hex)</label><input id="fat12-b2" type="text" value="FF" maxlength="2"></div>
+    </div>
+    <button type="button" class="calc-btn" onclick="calcFAT12()">⟹ Décoder entrées 0 et 1</button>
+    <div id="fat12-result" class="result-box empty"></div>
+  </div>
+</div>
+
+<!-- ══ NTFS OFFSET ══ -->
+<div id="tool-ntfs" class="tool-panel">
+  <div class="tc">
+    <h3>📁 Calculateur Offset NTFS / MFT</h3>
+    <p class="tc-desc">Calcule l'offset d'une entrée MFT ou d'un cluster NTFS dans l'image forensique.</p>
+    <div class="row2">
+      <div class="field"><label>Bytes per Sector</label><input id="ntfs-bps" type="number" value="512"></div>
+      <div class="field"><label>Sectors per Cluster</label><input id="ntfs-spc" type="number" value="8"></div>
+      <div class="field"><label>MFT Start Cluster (LCN)</label><input id="ntfs-mft" type="number" value="2" placeholder="Ex: 196689"></div>
+      <div class="field"><label>MFT Entry Size (bytes)</label><input id="ntfs-mes" type="number" value="1024"></div>
+    </div>
+    <div class="row2" style="margin-top:.5rem">
+      <div class="field"><label>→ Numéro d'entrée MFT</label><input id="ntfs-entry" type="number" value="0"></div>
+      <div class="field"><label>→ Numéro de cluster (LCN)</label><input id="ntfs-lcn" type="number" value="100"></div>
+    </div>
+    <button type="button" class="calc-btn" onclick="calcNTFS()">⟹ Calculer</button>
+    <div id="ntfs-result" class="result-box empty"></div>
+  </div>
+  <div class="tc">
+    <h3>📐 Métafichiers NTFS — Référence</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+      <div class="step"><div class="step-lbl">Entrée 0</div><div class="step-val">$MFT — Table principale</div></div>
+      <div class="step"><div class="step-lbl">Entrée 1</div><div class="step-val">$MFTMirr — Miroir</div></div>
+      <div class="step"><div class="step-lbl">Entrée 2</div><div class="step-val">$LogFile — Journal</div></div>
+      <div class="step"><div class="step-lbl">Entrée 5</div><div class="step-val">. — Répertoire racine</div></div>
+      <div class="step"><div class="step-lbl">Entrée 6</div><div class="step-val">$Bitmap — Allocation</div></div>
+      <div class="step"><div class="step-lbl">Signature</div><div class="step-val">FILE (46 49 4C 45)</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HEX ASCII ══ -->
+<div id="tool-hex" class="tool-panel">
+  <div class="tc">
+    <h3>🔢 Convertisseur Hex ↔ ASCII ↔ Décimal ↔ Binaire</h3>
+    <p class="tc-desc">Conversion en temps réel. Entrez dans n'importe quel champ.</p>
+    <div class="live-box">
+      <div class="lb-row"><span class="lb-lbl">Hex</span><input class="lb-inp" id="cv-hex" placeholder="FF A0 4D..." oninput="cvFrom('hex')"><button type="button" class="lb-copy" onclick="cpField('cv-hex')">Copier</button></div>
+      <div class="lb-row"><span class="lb-lbl">ASCII</span><input class="lb-inp" id="cv-asc" placeholder="texte..." oninput="cvFrom('asc')"><button type="button" class="lb-copy" onclick="cpField('cv-asc')">Copier</button></div>
+      <div class="lb-row"><span class="lb-lbl">Décimal</span><input class="lb-inp" id="cv-dec" placeholder="255 160 77..." oninput="cvFrom('dec')"><button type="button" class="lb-copy" onclick="cpField('cv-dec')">Copier</button></div>
+      <div class="lb-row"><span class="lb-lbl">Binaire</span><input class="lb-inp" id="cv-bin" placeholder="11111111..." oninput="cvFrom('bin')"><button type="button" class="lb-copy" onclick="cpField('cv-bin')">Copier</button></div>
+    </div>
+    <div class="tag-row">
+      <span class="quick-tag" onclick="cvSet('hex','46 49 4C 45')">NTFS $MFT sig</span>
+      <span class="quick-tag" onclick="cvSet('hex','55 AA')">Boot signature</span>
+      <span class="quick-tag" onclick="cvSet('hex','E5')">FAT supprimé 0xE5</span>
+      <span class="quick-tag" onclick="cvSet('hex','FF D8 FF')">JPEG magic</span>
+      <span class="quick-tag" onclick="cvSet('hex','89 50 4E 47')">PNG magic</span>
+      <span class="quick-tag" onclick="cvSet('hex','50 4B 03 04')">ZIP magic</span>
+    </div>
+  </div>
+  <div class="tc">
+    <h3>🗺 Table ASCII rapide (cliquer pour copier)</h3>
+    <p class="tc-desc">Caractères imprimables 0x20–0x7E. Cliquer = copier la valeur hex.</p>
+    <div id="ascii-table"></div>
+  </div>
+</div>
+
+
+<!-- ══ ENCODAGES ══ -->
+<div id="tool-enc" class="tool-panel">
+
+  <!-- ROT13 -->
+  <div class="tc">
+    <h3>🔑 ROT13 / ROT-N — Décodeur UserAssist</h3>
+    <p class="tc-desc">ROT13 est l'encodage de toutes les clés <strong>UserAssist</strong> dans <code style="font-family:var(--mono);color:var(--cyan)">NTUSER.DAT\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist\{GUID}\Count</code>. Chaque programme lancé via GUI est stocké sous forme ROT13.</p>
+    <div class="row2" style="margin-bottom:.75rem">
+      <div class="field">
+        <label>Texte à coder / décoder</label>
+        <input id="rot-in" type="text" placeholder="HFRE{FrffvbaFgber\Jvaqbjf\Eha" oninput="calcROT()">
+      </div>
+      <div class="field">
+        <label>Décalage N (ROT13 = 13)</label>
+        <input id="rot-n" type="number" value="13" min="1" max="25" oninput="calcROT()">
+      </div>
+    </div>
+    <div class="tag-row">
+      <span class="quick-tag" onclick="document.getElementById('rot-in').value='HFRE{FrffvbaFgber\\Jvaqbjf\\Eha';calcROT()">UserAssist Run</span>
+      <span class="quick-tag" onclick="document.getElementById('rot-in').value='P:\\Jvaqbjf\\Flfgrz32\\pnyphyngbe.rkr';calcROT()">Calculatrice encodée</span>
+      <span class="quick-tag" onclick="document.getElementById('rot-in').value='CAS-IN Forensique';calcROT()">Encoder un texte</span>
+    </div>
+    <div id="rot-result" class="result-box empty"></div>
+    <div style="margin-top:.6rem;font-size:.68rem;color:var(--muted);background:var(--surface2);border-radius:6px;padding:.5rem .75rem;border-left:3px solid var(--cyan)">
+      💡 <strong>Workflow :</strong> RegRipper / Registry Explorer → UserAssist → copier la valeur encodée → coller ici → lire le chemin décodé
+    </div>
+  </div>
+
+  <!-- Base64 -->
+  <div class="tc">
+    <h3>📦 Base64 Encode / Decode</h3>
+    <p class="tc-desc">Utilisé dans les pièces jointes email (MIME), l'exfiltration DNS (sous-domaines encodés), les payloads PowerShell obfusqués (<code style="font-family:var(--mono);color:var(--cyan)">-EncodedCommand</code>) et les métadonnées.</p>
+    <div class="field" style="margin-bottom:.5rem">
+      <label>Texte UTF-8 ou octets hex (séparés par espaces)</label>
+      <input id="b64-in" type="text" placeholder="Texte à encoder, ou dGhpcyBpcyBhIHRlc3Q= à décoder…">
+    </div>
+    <div style="display:flex;gap:1rem;margin-bottom:.75rem">
+      <label style="display:flex;align-items:center;gap:.35rem;font-family:var(--mono);font-size:.68rem;color:var(--muted);cursor:pointer"><input type="radio" name="b64m" value="text" checked> Texte UTF-8</label>
+      <label style="display:flex;align-items:center;gap:.35rem;font-family:var(--mono);font-size:.68rem;color:var(--muted);cursor:pointer"><input type="radio" name="b64m" value="hex"> Octets hex</label>
+    </div>
+    <div class="tag-row">
+      <span class="quick-tag" onclick="document.getElementById('b64-in').value='dGhpcyBpcyBhIHRlc3Q=';document.querySelector('[name=b64m][value=text]').checked=true;calcB64()">Décoder exemple</span>
+      <span class="quick-tag" onclick="document.getElementById('b64-in').value='CAS-IN Forensique 2025';document.querySelector('[name=b64m][value=text]').checked=true;calcB64()">Encoder texte</span>
+      <span class="quick-tag" onclick="document.getElementById('b64-in').value='FF D8 FF E0 00 10 4A 46';document.querySelector('[name=b64m][value=hex]').checked=true;calcB64()">Encoder JPEG header</span>
+    </div>
+    <button type="button" class="calc-btn" onclick="calcB64()">⟹ Encoder / Décoder</button>
+    <div id="b64-result" class="result-box empty"></div>
+  </div>
+
+  <!-- Hash -->
+  <div class="tc">
+    <h3>🔐 Calculateur de Hash</h3>
+    <p class="tc-desc">Calcule SHA-256, SHA-1 et MD5 d'un texte ou de bytes hex. Utile pour vérifier l'intégrité, comprendre l'effet avalanche (changer 1 caractère change ~50% des bits du hash), ou générer des valeurs de référence.</p>
+    <div class="field" style="margin-bottom:.5rem">
+      <label>Valeur à hasher</label>
+      <input id="hash-in" type="text" placeholder="Texte ou octets hex séparés par espaces…">
+    </div>
+    <div style="display:flex;gap:1rem;margin-bottom:.75rem">
+      <label style="display:flex;align-items:center;gap:.35rem;font-family:var(--mono);font-size:.68rem;color:var(--muted);cursor:pointer"><input type="radio" name="hashm" value="text" checked> Texte UTF-8</label>
+      <label style="display:flex;align-items:center;gap:.35rem;font-family:var(--mono);font-size:.68rem;color:var(--muted);cursor:pointer"><input type="radio" name="hashm" value="hex"> Octets hex</label>
+    </div>
+    <div class="tag-row">
+      <span class="quick-tag" onclick="document.getElementById('hash-in').value='CAS-IN';document.querySelector('[name=hashm][value=text]').checked=true">Exemple texte</span>
+      <span class="quick-tag" onclick="document.getElementById('hash-in').value='CAS-IN ';document.querySelector('[name=hashm][value=text]').checked=true">+ espace (avalanche)</span>
+      <span class="quick-tag" onclick="document.getElementById('hash-in').value='46 49 4C 45';document.querySelector('[name=hashm][value=hex]').checked=true">Hash "FILE" (NTFS sig)</span>
+    </div>
+    <button type="button" class="calc-btn" onclick="calcHash()">⟹ Calculer les hashes</button>
+    <div id="hash-result" class="result-box empty"></div>
+    <div style="margin-top:.6rem;font-size:.68rem;color:var(--muted);background:var(--surface2);border-radius:6px;padding:.5rem .75rem;border-left:3px solid var(--gold)">
+      ⚠ <strong>MD5 et SHA-1 sont cryptographiquement cassés</strong> — ne pas utiliser pour la sécurité. En forensique, ils restent valides pour la chaîne de custody historique et la correspondance NSRL.
+    </div>
+  </div>
+
+</div>
+</div><!-- /.page -->
+
+<!-- ══ SFN FAT — Décodeur entrée répertoire ══ -->
+<div id="tool-sfn" class="tool-panel">
+<div class="tc">
+  <h3>📄 Décodeur entrée SFN FAT (32 octets)</h3>
+  <p class="tc-desc">Colle les 32 octets d'une entrée de répertoire FAT (Short File Name) pour décoder automatiquement nom, extension, attributs, dates, cluster et taille.</p>
+  <div class="calc-row">
+    <label>32 octets hex (séparés par espaces ou non)</label>
+    <input type="text" id="sfn-in" oninput="saveLastVal('sfn-in')" placeholder="41 42 43 20 20 20 20 20 54 58 54 20 00 00 ..." style="font-family:var(--mono);width:100%">
+  </div>
+  <div style="display:flex;gap:.5rem;margin:.5rem 0 1rem">
+    <button type="button" class="btn-calc" onclick="decodeSFN()">Décoder →</button>
+    <button type="button" class="btn-sec" onclick="document.getElementById('sfn-in').value='';document.getElementById('sfn-result').style.display='none'">Effacer</button>
+  </div>
+  <div id="sfn-result" class="result-box" style="display:none"></div>
+  <div class="ref-box">
+    <strong>Structure SFN (32 octets) :</strong>
+    0x00–0x07 Nom (8 o, maj) · 0x08–0x0A Extension (3 o) · 0x0B Attributs · 0x0C–0x0D Réservé ·
+    0x0E–0x0F Heure création · 0x10–0x11 Date création · 0x12–0x13 Date accès ·
+    0x14–0x15 Cluster hi (FAT32) · 0x16–0x17 Heure modif · 0x18–0x19 Date modif ·
+    0x1A–0x1B Cluster lo · 0x1C–0x1F Taille (LE32)
+  </div>
+</div>
+</div>
+
+<!-- ══ MAGIC BYTES ══ -->
+<div id="tool-magic" class="tool-panel">
+<div class="tc">
+  <h3>✨ Identificateur Magic Bytes</h3>
+  <p class="tc-desc">Saisis les premiers octets d'un fichier (au moins 4) pour identifier son type réel, indépendamment de l'extension.</p>
+  <div class="calc-row">
+    <label>Premiers octets hex (ex: FF D8 FF E0)</label>
+    <input type="text" id="magic-in" oninput="saveLastVal('magic-in')" placeholder="FF D8 FF E0" style="font-family:var(--mono);width:100%"
+      oninput="identifyMagic()">
+  </div>
+  <div id="magic-result" class="result-box" style="display:none"></div>
+  <div class="ref-box" style="margin-top:1rem">
+    <strong>Référence rapide :</strong>
+    <div id="magic-ref" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px;margin-top:.5rem;font-size:.72rem;font-family:var(--mono)"></div>
+  </div>
+</div>
+</div>
+
+<!-- ══ BITMAP ══ -->
+<div id="tool-bitmap" class="tool-panel">
+<div class="tc">
+  <h3>🗺 Décodeur Bitmap d'allocation</h3>
+  <p class="tc-desc">Colle les octets de la bitmap (exFAT/FAT) pour visualiser quels clusters sont libres (0) ou occupés (1). LSB first : bit 0 de l'octet 0 = cluster 2.</p>
+  <div class="calc-row" style="display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:end">
+    <div>
+      <label>Octets bitmap hex</label>
+      <input type="text" id="bm-in" oninput="saveLastVal('bm-in')" placeholder="0F A2 FF 00 3C ..." style="font-family:var(--mono);width:100%" oninput="decodeBitmap()">
+    </div>
+    <div>
+      <label>Premier cluster</label>
+      <input type="number" id="bm-start" value="2" min="0" style="width:90px" oninput="decodeBitmap()">
+    </div>
+  </div>
+  <div id="bm-result" style="margin-top:.75rem"></div>
+</div>
+</div>
+
+<!-- ══ HASH ID ══ -->
+<div id="tool-hashid" class="tool-panel">
+<div class="tc">
+  <h3>🔑 Identificateur de Hash</h3>
+  <p class="tc-desc">Colle un hash pour l'identifier automatiquement par sa longueur. Affiche aussi son usage forensique recommandé.</p>
+  <div class="calc-row">
+    <label>Valeur de hash (hex)</label>
+    <input type="text" id="hashid-in" oninput="saveLastVal('hashid-in')" placeholder="Coller le hash ici…" style="font-family:var(--mono);width:100%" oninput="identifyHash()">
+  </div>
+  <div id="hashid-result" class="result-box" style="display:none"></div>
+  <div class="ref-box" style="margin-top:1rem">
+    <table style="width:100%;font-size:.75rem;border-collapse:collapse">
+      <thead><tr style="color:var(--dim);font-size:.68rem">
+        <th style="text-align:left;padding:.25rem .5rem">Algorithme</th>
+        <th style="text-align:left;padding:.25rem .5rem">Bits</th>
+        <th style="text-align:left;padding:.25rem .5rem">Chars hex</th>
+        <th style="text-align:left;padding:.25rem .5rem">Usage forensique</th>
+      </tr></thead>
+      <tbody id="hash-ref-table"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- ══ CLUSTER CALCULATOR ══ -->
+<div id="tool-cluster" class="tool-panel">
+<div class="tc">
+  <h3>📐 Calculateur de cluster</h3>
+  <p class="tc-desc">Taille cluster, nombre de clusters, offset d'un cluster donné — calculs fondamentaux pour FAT, NTFS, exFAT, EXT et HFS+.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.85rem;margin-bottom:.75rem">
+    <div class="calc-row">
+      <label>Bytes per Sector (BPS)</label>
+      <select id="cl-bps" onchange="calcCluster()">
+        <option value="512">512 (standard)</option>
+        <option value="1024">1024</option>
+        <option value="2048">2048</option>
+        <option value="4096">4096 (Advanced Format)</option>
+      </select>
+    </div>
+    <div class="calc-row">
+      <label>Sectors per Cluster (SPC)</label>
+      <select id="cl-spc" onchange="calcCluster()">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="4">4</option>
+        <option value="8" selected>8</option>
+        <option value="16">16</option>
+        <option value="32">32</option>
+        <option value="64">64</option>
+        <option value="128">128</option>
+      </select>
+    </div>
+    <div class="calc-row">
+      <label>Taille partition (Mo)</label>
+      <input type="number" id="cl-size" value="4096" min="1" onchange="calcCluster()" oninput="calcCluster()">
+    </div>
+    <div class="calc-row">
+      <label>Numéro de cluster cible</label>
+      <input type="number" id="cl-num" value="5" min="2" onchange="calcCluster()" oninput="calcCluster()">
+    </div>
+  </div>
+  <button type="button" class="btn-calc" onclick="calcCluster()">Calculer →</button>
+  <div id="cl-result" class="result-box" style="display:none;margin-top:.75rem"></div>
+</div>
+</div>
+
+<!-- ══ MFT DECODER ══ -->
+<div id="tool-mft" class="tool-panel">
+<div class="tc">
+  <h3>🧩 Décodeur Entrée MFT NTFS</h3>
+  <p class="tc-desc">Colle les premiers octets d'un enregistrement MFT (minimum 56 octets) pour vérifier la signature, lire les métadonnées et lister les types d'attributs.</p>
+  <div class="calc-row">
+    <label>Octets MFT hex (min. 56, séparés ou non)</label>
+    <textarea id="mft-in" oninput="saveLastVal('mft-in')" rows="3" placeholder="46 49 4C 45 30 00 03 00 ..." style="font-family:var(--mono);font-size:.78rem;width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:.5rem;resize:vertical"></textarea>
+  </div>
+  <div style="display:flex;gap:.5rem;margin:.5rem 0 1rem">
+    <button type="button" class="btn-calc" onclick="decodeMFT()">Décoder →</button>
+    <button type="button" class="btn-sec" onclick="document.getElementById('mft-in').value='';document.getElementById('mft-result').style.display='none'">Effacer</button>
+  </div>
+  <div id="mft-result" class="result-box" style="display:none"></div>
+  <div class="ref-box">
+    <strong>Attributs NTFS courants :</strong>
+    0x10 $STANDARD_INFORMATION · 0x20 $ATTRIBUTE_LIST · 0x30 $FILE_NAME ·
+    0x40 $OBJECT_ID · 0x50 $SECURITY_DESCRIPTOR · 0x60 $VOLUME_NAME ·
+    0x70 $VOLUME_INFORMATION · 0x80 $DATA · 0x90 $INDEX_ROOT ·
+    0xA0 $INDEX_ALLOCATION · 0xB0 $BITMAP · 0xC0 $REPARSE_POINT · 0xFF EOF
+  </div>
+</div>
+</div>
+
+<script src="js/tools-app.js" defer></script>
+</body>
+</html>
