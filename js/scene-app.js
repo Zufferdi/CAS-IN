@@ -1,19 +1,16 @@
 // ═══════════════════════════════════════════════════════════════
 // scene-app.js — Logique principale des scénarios DFIR
 //
-// Extrait de scene.html v2.4 → fichier séparé pour :
-//   • Cache navigateur séparé du HTML
-//   • Versioning indépendant via le Service Worker
-//   • Lisibilité (le HTML descend de 5006 → ~1750 lignes)
-//
-// Bit-pour-bit identique au bloc <script> original.
-// Toutes les fonctions exposées via onclick="..." dans le HTML
-// (advanceStep, selectChoice, launchScene, exportProfile, …)
-// restent globales (window.*).
+// v2.7 : SCENES split en scenes/index.json + scenes/{id}.json
+//   • Boot : fetch scenes/index.json (~64 KB) au lieu de scenes.js (~1.6 MB)
+//   • Lancement d'une scène : fetch scenes/{id}.json à la demande, mémoïsé
+//   • SCENES global toujours présent → contient l'index (méta), pas les steps
+//   • Compatibilité : si scenes.js est encore chargé en fallback, on l'utilise
 //
 // Sections :
 //   • Storage utils (lsGet, lsSet)
 //   • PRNG Mulberry32 (seedEncode/Decode pour défis quotidiens)
+//   • Boot : loadSceneIndex() + loadFullScene(id) avec cache LRU
 //   • Streak quotidien + bannière
 //   • Challenge hebdo + recommandations
 //   • Profile : XP, badges, ranking, export/import
@@ -21,6 +18,10 @@
 //   • Cinema mode / canton map / timeline popup
 //   • Lobby (sélection scène, filtre difficulté, modes)
 //   • Run scenario : advanceStep, selectChoice, abort, replay
+//
+// IMPORTANT : toutes les fonctions exposées via onclick="..." dans le HTML
+// (advanceStep, selectChoice, launchScene, exportProfile, …) restent
+// globales (window.*).
 // ═══════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════
@@ -28,6 +29,123 @@
 // ═══════════════════════════════════════════════════
 function lsGet(k, d) { try { const v = localStorage.getItem(k); return v !== null ? JSON.parse(v) : d; } catch { return d; } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+// ═══════════════════════════════════════════════════
+// LAZY-LOAD SCENES (v2.7)
+//
+// Architecture :
+//   - Boot : loadSceneIndex() fetch scenes/index.json (~64 KB)
+//             remplace SCENES par les méta légères (lobby + recherche)
+//   - Run  : loadFullScene(id) fetch scenes/{id}.json à la demande,
+//             mémoïsé en RAM (LRU 12 dernières), retourne la scène complète
+//             avec steps[], choices, debrief, narrative, alertLevel détaillé.
+//
+// Compatibilité : si scenes.js est encore chargé (legacy), SCENES contient
+// déjà les scènes complètes ⇒ on s'en sert directement (court-circuit).
+// ═══════════════════════════════════════════════════
+const SCENE_CACHE = new Map();           // id → scène complète (LRU)
+const SCENE_CACHE_MAX = 12;
+const SCENE_INDEX_URL = 'scenes/index.json';
+const SCENE_FILE_URL = (id) => 'scenes/' + encodeURIComponent(id) + '.json';
+
+let _sceneIndexLoaded = false;
+let _sceneIndexPromise = null;
+
+// Détecte si une "scène" en main est en fait juste une entrée d'index
+// (pas de steps[]) ⇒ il faut hydrater avant lancement.
+function isSceneFullyLoaded(scene) {
+  return !!(scene && Array.isArray(scene.steps) && scene.steps.length > 0
+            && scene.steps[0] && Array.isArray(scene.steps[0].choices));
+}
+
+// Charge l'index (idempotent, mémoïsé). Remplit SCENES si nécessaire.
+function loadSceneIndex() {
+  if (_sceneIndexLoaded) return Promise.resolve(SCENES);
+  if (_sceneIndexPromise) return _sceneIndexPromise;
+
+  // Si scenes.js (legacy) a déjà fourni des scènes complètes, on s'en sert.
+  if (Array.isArray(SCENES) && SCENES.length > 0 && isSceneFullyLoaded(SCENES[0])) {
+    // Pré-remplir le cache LRU avec les scènes déjà disponibles
+    SCENES.forEach(s => { if (s && s.id) SCENE_CACHE.set(s.id, s); });
+    _sceneIndexLoaded = true;
+    return Promise.resolve(SCENES);
+  }
+
+  _sceneIndexPromise = fetch(SCENE_INDEX_URL, { cache: 'no-cache' })
+    .then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status + ' on ' + SCENE_INDEX_URL);
+      return r.json();
+    })
+    .then(idx => {
+      if (!Array.isArray(idx)) throw new Error('Index format invalid (not an array)');
+      // Réassigner SCENES — préserve la sémantique globale du code existant
+      SCENES.length = 0;
+      Array.prototype.push.apply(SCENES, idx);
+      _sceneIndexLoaded = true;
+      console.log('[scenes] Index chargé : ' + idx.length + ' scènes');
+      return SCENES;
+    })
+    .catch(err => {
+      console.error('[scenes] Index échec :', err.message);
+      _sceneIndexPromise = null; // permettre un retry
+      throw err;
+    });
+
+  return _sceneIndexPromise;
+}
+
+// Charge une scène complète (mémoïsée). Si la scène en cache contient déjà
+// .steps[], on retourne directement.
+function loadFullScene(id) {
+  if (!id) return Promise.reject(new Error('loadFullScene: id manquant'));
+
+  // 1. Cache hit ?
+  const cached = SCENE_CACHE.get(id);
+  if (cached && isSceneFullyLoaded(cached)) {
+    // Refresh LRU position
+    SCENE_CACHE.delete(id);
+    SCENE_CACHE.set(id, cached);
+    return Promise.resolve(cached);
+  }
+
+  // 2. SCENES contient peut-être la scène complète (cas legacy scenes.js)
+  const fromGlobal = Array.isArray(SCENES)
+    ? SCENES.find(s => s && s.id === id)
+    : null;
+  if (fromGlobal && isSceneFullyLoaded(fromGlobal)) {
+    SCENE_CACHE.set(id, fromGlobal);
+    return Promise.resolve(fromGlobal);
+  }
+
+  // 3. Fetch
+  return fetch(SCENE_FILE_URL(id), { cache: 'default' })
+    .then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status + ' on ' + SCENE_FILE_URL(id));
+      return r.json();
+    })
+    .then(full => {
+      // Mettre en cache LRU avec éviction
+      if (SCENE_CACHE.size >= SCENE_CACHE_MAX) {
+        const oldest = SCENE_CACHE.keys().next().value;
+        SCENE_CACHE.delete(oldest);
+      }
+      SCENE_CACHE.set(id, full);
+      // Aussi : mettre à jour SCENES (qui contient l'entrée d'index) pour
+      // que les futurs SCENES.find(...) retournent la scène complète.
+      const idx = SCENES.findIndex(s => s && s.id === id);
+      if (idx !== -1) SCENES[idx] = full;
+      return full;
+    });
+}
+
+// Hydrate une scène (passée en valeur shallow ou full). Retourne toujours
+// une scène complète. Utilisée avant startScene().
+function hydrateScene(sceneOrShallow) {
+  if (!sceneOrShallow) return Promise.reject(new Error('hydrateScene: scène nulle'));
+  if (isSceneFullyLoaded(sceneOrShallow)) return Promise.resolve(sceneOrShallow);
+  return loadFullScene(sceneOrShallow.id);
+}
+
 
 // ═══════════════════════════════════════════════════
 // PRNG — Mulberry32 seeded random
@@ -224,7 +342,10 @@ function renderPathBanner() {
 function launchRecommendedScene() {
   if (!RECOMMENDED_SCENE_ID) return;
   const scene = SCENES.find(s => s.id === RECOMMENDED_SCENE_ID);
-  if (scene) startScene(scene);
+  if (scene) hydrateScene(scene).then(startScene).catch(err => {
+    console.error('[scenes] launchRecommendedScene failed:', err);
+    showToast('⚠ Scène introuvable : ' + RECOMMENDED_SCENE_ID);
+  });
 }
 
 // ═══════════════════════════════════════════════════
@@ -338,7 +459,12 @@ function launchRandomScene() {
   if (eligible.length === 0) return;
   const pick = eligible[Math.floor(Math.random() * eligible.length)];
   showToast('🎲 Scénario aléatoire : ' + pick.title);
-  setTimeout(() => startScene(pick), 400);
+  setTimeout(() => {
+    hydrateScene(pick).then(startScene).catch(err => {
+      console.error('[scenes] launchRandomScene failed:', err);
+      showToast('⚠ Scène introuvable');
+    });
+  }, 400);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1172,7 +1298,7 @@ function initLobby() {
         <div class="scene-desc">${scene.intro ? scene.intro.substring(0, 90) + '…' : ''}</div>
         <div class="scene-meta">
           <span class="diff-badge ${scene.difficulty}">${diffLabel}</span>
-          <span class="scene-steps-count">${scene.steps.length} décision${scene.steps.length > 1 ? 's' : ''}</span>
+          <span class="scene-steps-count">${(scene.stepCount || (scene.steps && scene.steps.length) || 0)} décision${((scene.stepCount || (scene.steps && scene.steps.length) || 0) > 1) ? 's' : ''}</span>
           ${(scene.tags || []).slice(0,2).map(t => `<span class="scene-steps-count" style="color:var(--cyan);border:1px solid var(--border);padding:1px 5px;border-radius:3px;font-size:10px">${t}</span>`).join('')}
         </div>
         ${lbHTML}
@@ -1181,7 +1307,12 @@ function initLobby() {
     `;
 
     if (!isLocked) {
-      card.addEventListener('click', () => startScene(scene));
+      card.addEventListener('click', () => {
+        hydrateScene(scene).then(startScene).catch(err => {
+          console.error('[scenes] card click failed:', err);
+          showToast('⚠ Scène introuvable');
+        });
+      });
     } else {
       const msg = isEU
         ? '🔒 Complétez d\'abord les 47 scénarios suisses pour débloquer le Mode Européen'
@@ -2354,11 +2485,16 @@ function launchFromSeed() {
   if (!scene) return;
 
   // Launch and inject seed
-  startScene(scene);
-  setTimeout(() => {
-    const inp = document.getElementById('seed-input-briefing');
-    if (inp) inp.value = seedCode;
-  }, 100);
+  hydrateScene(scene).then(full => {
+    startScene(full);
+    setTimeout(() => {
+      const inp = document.getElementById('seed-input-briefing');
+      if (inp) inp.value = seedCode;
+    }, 100);
+  }).catch(err => {
+    console.error('[scenes] launchFromSeed failed:', err);
+    showToast('⚠ Scène introuvable');
+  });
 }
 
 // ═══════════════════════════════════════════════════
@@ -2383,7 +2519,12 @@ function launchNextScene() {
     goLobby();
     return;
   }
-  startScene(nextScene);
+  // hydrate avant de démarrer (en cas où SCENES contient juste l'index)
+  hydrateScene(nextScene).then(startScene).catch(err => {
+    console.error('[scenes] launchNextScene failed:', err);
+    showToast('⚠ Scène introuvable');
+    goLobby();
+  });
 }
 
 
@@ -2442,7 +2583,10 @@ function initCantonMap() {
       const firstUndone = data.scenarios.find(s => !saved[s]);
       const targetId = firstUndone || data.scenarios[0];
       const scene = SCENES.find(x => x.id === targetId);
-      if (scene) startScene(scene);
+      if (scene) hydrateScene(scene).then(startScene).catch(err => {
+        console.error('[scenes] canton click failed:', err);
+        showToast('⚠ Scène introuvable');
+      });
     });
   });
 }
@@ -2547,15 +2691,22 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// ── Handle #random URL shortcut ──
-if (window.location.hash === '#random') {
-  window.addEventListener('DOMContentLoaded', () => {
-    setTimeout(launchRandomScene, 300);
-  });
-}
-
 window.addEventListener('DOMContentLoaded', () => {
-  initLobby();
   // Reset filter state on load
   ACTIVE_DIFF_FILTER = 'all';
+  // Charger l'index avant de rendre le lobby. Si scenes.js (legacy) est
+  // déjà chargé, loadSceneIndex() détecte SCENES rempli et résout direct.
+  loadSceneIndex().then(() => {
+    initLobby();
+  }).catch(err => {
+    console.error('[scenes] Boot index échec:', err);
+    // Fallback : tenter d'init quand même (peut-être que scenes.js est OK)
+    initLobby();
+    showToast('⚠ Index des scènes indisponible — mode dégradé');
+  });
+
+  // Si l'URL contient #random, lancer une scène aléatoire après l'index
+  if (window.location.hash === '#random') {
+    loadSceneIndex().then(() => setTimeout(launchRandomScene, 300));
+  }
 });
