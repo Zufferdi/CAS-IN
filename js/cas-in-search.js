@@ -106,27 +106,35 @@
         icon: c.icon
       }));
 
-      // 4. Scènes DFIR : depuis scenes.js (parse pour récupérer titres/tags)
+      // 4. Scènes DFIR : depuis scenes/index.json (v2.7 split)
+      // Fallback : scenes.js (legacy) si l'index n'est pas disponible
       try {
-        const resp = await fetch(base + 'scenes.js', { cache: 'force-cache' });
+        // Tentative 1 : index splitté (~64 KB, méta légères)
+        let scenes = null;
+        const resp = await fetch(base + 'scenes/index.json', { cache: 'force-cache' });
         if (resp.ok) {
-          const txt = await resp.text();
-          // Extraire le tableau SCENES = [...]
-          const m = txt.match(/var\s+SCENES\s*=\s*(\[[\s\S]*\])\s*;?\s*$/);
-          if (m) {
-            try {
-              const scenes = JSON.parse(m[1]);
-              result.scenes = scenes.map(s => ({
-                type: 'scène',
-                href: base + 'scene.html#' + (s.id || ''),
-                title: s.title || '(sans titre)',
-                desc: (s.intro || '').slice(0, 120) + ' · ' + (s.difficulty || ''),
-                keywords: ((s.title || '') + ' ' + (s.tags || []).join(' ') + ' ' +
-                          (s.intro || '') + ' ' + (s.atmosphere || '')).toLowerCase(),
-                icon: s.icon || '🔍'
-              }));
-            } catch { /* JSON parse failed */ }
+          scenes = await resp.json();
+        } else {
+          // Fallback legacy
+          const legacyResp = await fetch(base + 'scenes.js', { cache: 'force-cache' });
+          if (legacyResp.ok) {
+            const txt = await legacyResp.text();
+            const m = txt.match(/var\s+SCENES\s*=\s*(\[[\s\S]*\])\s*;?\s*$/);
+            if (m) {
+              try { scenes = JSON.parse(m[1]); } catch { /* parse failed */ }
+            }
           }
+        }
+        if (Array.isArray(scenes)) {
+          result.scenes = scenes.map(s => ({
+            type: 'scène',
+            href: base + 'scene.html#' + (s.id || ''),
+            title: s.title || '(sans titre)',
+            desc: (s.intro || '').slice(0, 120) + ' · ' + (s.difficulty || ''),
+            keywords: ((s.title || '') + ' ' + (s.tags || []).join(' ') + ' ' +
+                      (s.intro || '') + ' ' + (s.atmosphere || '')).toLowerCase(),
+            icon: s.icon || '🔍'
+          }));
         }
       } catch (e) { /* silencieux */ }
 
