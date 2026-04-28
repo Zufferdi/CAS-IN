@@ -1,13 +1,29 @@
 // ═══════════════════════════════════════════════════════════════
 // landing.js — CAS-IN Investigation Numérique
 // Script de la landing page (pluie Matrix, progression, zen, PWA, nav)
-// Extrait depuis l'inline en v2.3
+//
+// v2.4 : corrections audit
+//   - Suppression des hardcodes 1439/54 → utilise counts.json
+//   - Clé localStorage normalisée : casIn_readFiches_v4 (au lieu de cas_read_fiches)
+//   - Écoute l'event 'casin:counts' pour recalculer la barre quand counts charge
 // ═══════════════════════════════════════════════════════════════
 
 (function () {
   'use strict';
 
-  // ── Pluie Matrix ──
+  // ─── Compteurs (récupérés depuis counts.json via cas-in-counts.js) ───
+  // Valeurs par défaut (fallback si counts.json indisponible)
+  const COUNTS = { questions: 1630, fiches: 90, scenes: 64, tp_exercises: 25 };
+
+  // Mise à jour si l'event arrive (cas-in-counts.js le dispatch après fetch)
+  window.addEventListener('casin:counts', (e) => {
+    if (e.detail) {
+      Object.assign(COUNTS, e.detail);
+      refreshProgress(); // recalculer la barre avec les bons totaux
+    }
+  });
+
+  // ─── Pluie Matrix ──
   const canvas = document.getElementById('rain');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -31,6 +47,16 @@
   init();
   window.addEventListener('resize', init);
 
+  // Throttle quand l'onglet est inactif (économie batterie)
+  let _rafId = null;
+  let _lastDraw = 0;
+  function drawLoop(now) {
+    if (now - _lastDraw >= 50) {
+      draw();
+      _lastDraw = now;
+    }
+    _rafId = requestAnimationFrame(drawLoop);
+  }
   function draw() {
     if (!rainActive) {
       ctx.fillStyle = 'rgba(0,0,0,.12)';
@@ -48,7 +74,13 @@
       drops[i] += .55 + Math.random() * .45;
     });
   }
-  setInterval(draw, 50);
+  // Lancer la boucle via RAF (auto-pause quand onglet caché)
+  _rafId = requestAnimationFrame(drawLoop);
+
+  // Reduced motion : désactiver la pluie si l'utilisateur préfère
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    rainActive = false;
+  }
 
   // ── Typewriter (animation séquentielle des lignes du terminal) ──
   document.querySelectorAll('.line').forEach((l, i) =>
@@ -96,84 +128,113 @@
     }
   } catch (e) {}
 
-  // ── Progression & stats ──
-  try {
-    const s = localStorage.getItem('casIn_lastScore');
-    const r = localStorage.getItem('casIn_rank');
-    const today = new Date().toDateString();
-    const dayScore = localStorage.getItem('casIn_dayScore');
-    const dayDate = localStorage.getItem('casIn_dayDate');
-    const streak = parseInt(localStorage.getItem('casIn_streak') || '0');
-    const sesText = document.getElementById('session-text');
+  // ── Progression & stats (refactor : utilise COUNTS dynamique) ──
+  function safeJSON(key, def) {
+    try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(def)); }
+    catch { return def; }
+  }
+  function safeInt(key, def = 0) {
+    return parseInt(localStorage.getItem(key) || String(def)) || def;
+  }
 
-    if (sesText) {
-      if (dayScore && dayDate === today) {
-        sesText.textContent = 'Session du jour : ' + dayScore + ' pts' +
-          (r ? ' · ' + r : '') +
-          (streak > 1 ? ' · ' + streak + 'j 🔥' : '');
-      } else if (s && r) {
-        sesText.textContent = 'Dernière session : ' + s + ' pts · ' + r +
-          (streak > 1 ? ' · ' + streak + 'j 🔥' : '');
-      }
+  function getFichesRead() {
+    // Bug fix : utiliser la même clé que index.html (drawer)
+    // Avant : cas_read_fiches (incohérent)
+    // Après : casIn_readFiches_v4 (clé canonique)
+    const v4 = safeJSON('casIn_readFiches_v4', null);
+    if (Array.isArray(v4)) return v4.length;
+    // Fallback de migration : si l'ancienne clé existe, l'utiliser une fois
+    const old = safeJSON('cas_read_fiches', null);
+    if (Array.isArray(old)) {
+      try { localStorage.setItem('casIn_readFiches_v4', JSON.stringify(old)); } catch {}
+      return old.length;
     }
+    return 0;
+  }
 
-    const seen = parseInt(localStorage.getItem('casIn_questionsSeen') || '0');
-    const fichesRead = JSON.parse(localStorage.getItem('cas_read_fiches') || '[]').length;
-    const tpSolved = JSON.parse(localStorage.getItem('tp_solved') || '{}');
-    const tpTotal = Object.values(tpSolved).reduce((a, b) => a + (b || 0), 0);
+  function refreshProgress() {
+    try {
+      const today = new Date().toDateString();
+      const dayScore = localStorage.getItem('casIn_dayScore');
+      const dayDate = localStorage.getItem('casIn_dayDate');
+      const r = localStorage.getItem('casIn_rank');
+      const s = localStorage.getItem('casIn_lastScore');
+      const streak = safeInt('casIn_streak', 0);
+      const sesText = document.getElementById('session-text');
 
-    const parts = [];
-    if (seen > 0) parts.push(seen + '/1439 questions');
-    if (fichesRead > 0) parts.push(fichesRead + '/54 fiches');
-    if (tpTotal > 0) parts.push(tpTotal + ' TP résolus');
-    if (streak > 1) parts.push(streak + 'j 🔥');
+      if (sesText) {
+        if (dayScore && dayDate === today) {
+          sesText.textContent = 'Session du jour : ' + dayScore + ' pts' +
+            (r ? ' · ' + r : '') +
+            (streak > 1 ? ' · ' + streak + 'j 🔥' : '');
+        } else if (s && r) {
+          sesText.textContent = 'Dernière session : ' + s + ' pts · ' + r +
+            (streak > 1 ? ' · ' + streak + 'j 🔥' : '');
+        }
+      }
 
-    if (parts.length) {
+      const seen = safeInt('casIn_questionsSeen', 0);
+      const fichesRead = getFichesRead();
+      const tpSolved = safeJSON('tp_solved', {});
+      const tpTotal = Object.values(tpSolved).reduce((a, b) => a + (b || 0), 0);
+
+      const parts = [];
+      if (seen > 0) parts.push(seen + '/' + COUNTS.questions + ' questions');
+      if (fichesRead > 0) parts.push(fichesRead + '/' + COUNTS.fiches + ' fiches');
+      if (tpTotal > 0) parts.push(tpTotal + ' TP résolus');
+      if (streak > 1) parts.push(streak + 'j 🔥');
+
       const sb = document.getElementById('stats-bar');
       if (sb) {
-        sb.textContent = parts.join(' · ');
-        sb.style.display = 'block';
+        if (parts.length) {
+          sb.textContent = parts.join(' · ');
+          sb.style.display = 'block';
+        } else {
+          sb.style.display = 'none';
+        }
       }
-    }
 
-    if (seen > 0) {
-      const pb = document.getElementById('progress-bar');
-      const pl = document.getElementById('progress-label');
-      const pf = document.getElementById('progress-fill');
-      if (pb) pb.style.display = 'block';
-      if (pl) pl.textContent = seen + ' / 1439';
-      if (pf) {
-        setTimeout(() => {
-          pf.style.width = Math.min(100, seen / 1439 * 100) + '%';
-        }, 600);
+      if (seen > 0) {
+        const pb = document.getElementById('progress-bar');
+        const pl = document.getElementById('progress-label');
+        const pf = document.getElementById('progress-fill');
+        if (pb) pb.style.display = 'block';
+        if (pl) pl.textContent = seen + ' / ' + COUNTS.questions;
+        if (pf) {
+          // Petit délai pour permettre la transition CSS
+          setTimeout(() => {
+            pf.style.width = Math.min(100, seen / COUNTS.questions * 100) + '%';
+          }, 200);
+        }
       }
-    }
 
-    const lastSection = localStorage.getItem('casIn_lastSection');
-    const sectionMap = {
-      quiz: 'quiz.html',
-      fiches: 'fiches/index.html',
-      tp: 'tp.html',
-      scene: 'scene.html'
-    };
-    const sectionLabels = {
-      quiz: 'Quiz',
-      fiches: 'Fiches',
-      tp: 'TP',
-      scene: 'Scènes'
-    };
-    if (lastSection && sectionMap[lastSection]) {
-      const rb = document.getElementById('resume-btn');
-      const rw = document.getElementById('resume-wrap');
-      if (rb) {
-        rb.href = sectionMap[lastSection];
-        rb.textContent = '↩ Reprendre : ' + sectionLabels[lastSection];
+      const lastSection = localStorage.getItem('casIn_lastSection');
+      const sectionMap = {
+        quiz: 'quiz.html',
+        fiches: 'fiches/index.html',
+        tp: 'tp.html',
+        scene: 'scene.html'
+      };
+      const sectionLabels = {
+        quiz: 'Quiz',
+        fiches: 'Fiches',
+        tp: 'TP',
+        scene: 'Scènes'
+      };
+      if (lastSection && sectionMap[lastSection]) {
+        const rb = document.getElementById('resume-btn');
+        const rw = document.getElementById('resume-wrap');
+        if (rb) {
+          rb.href = sectionMap[lastSection];
+          rb.textContent = '↩ Reprendre : ' + sectionLabels[lastSection];
+        }
+        if (rw) rw.style.display = 'block';
       }
-      if (rw) rw.style.display = 'block';
+    } catch (e) {
+      console.warn('[landing] progression error', e);
     }
-  } catch (e) {
-    console.warn('[landing] progression error', e);
   }
+  refreshProgress();
 
   // ── PWA install prompt ──
   let _deferredPrompt = null;
