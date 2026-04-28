@@ -110,9 +110,10 @@
     <a href="fiches/index.html" class="hdr-navbtn" title="Fiches de révision" target="_blank" rel="noopener noreferrer">📄 Fiches</a>
   </div>
 
-  <!-- ZONE CENTRE : stats de session -->
+  <!-- ZONE CENTRE : jauge unifiée XP+rang+streak -->
   <div class="hdr-center">
-    <div id="xp-wrap" title="XP · Rang">
+    <div id="xp-wrap" class="xp-gauge" title="Progression : XP, rang et série quotidienne">
+      <!-- Anneau XP + emoji rang (compact) -->
       <div id="xp-ring-wrap">
         <svg id="xp-ring-svg" viewBox="0 0 36 36" width="28" height="28">
           <defs>
@@ -126,39 +127,39 @@
         </svg>
         <span id="rank-emoji-display">🔰</span>
       </div>
-      <span id="rank-badge">Stagiaire</span>
+      <!-- Bloc texte : rang + streak alignés -->
+      <div class="xp-gauge-text">
+        <span id="rank-badge">Stagiaire</span>
+        <span class="xp-gauge-streak" title="Série quotidienne">
+          <span id="streak-display">🔥 0</span>
+          <button aria-label="Utiliser un Streak Freeze" type="button" id="freeze-btn" onclick="useStreakFreeze()" title="Streak Freeze">🧊<span id="fz-badge">1</span></button>
+        </span>
+      </div>
     </div>
-    <div class="hdr-sep"></div>
-    <div class="hdr-stat" title="Série quotidienne">
-      <span id="streak-display">🔥 0</span>
-      <button aria-label="Utiliser un Streak Freeze" type="button" id="freeze-btn" onclick="useStreakFreeze()" title="Streak Freeze">🧊<span id="fz-badge">1</span></button>
-    </div>
-    <div class="hdr-sep"></div>
-    <span id="combo-display" class="hdr-stat">⚡ ×1</span>
-    <div id="lives-display" class="hdr-stat" title="Vies (Survie)"></div>
-    <div class="hdr-sep"></div>
-    <span id="score-display" class="hdr-stat hdr-score">0 pts</span>
   </div>
 
-  <!-- ZONE DROITE : actions -->
+  <!-- ZONE DROITE : actions principales + menu Plus -->
   <div class="hdr-right">
-    <button aria-label="Aide (raccourcis clavier)" type="button" class="hdr-action" onclick="openHelp()" title="Raccourcis clavier (?)">?</button>
-    <button aria-label="Activer/désactiver le son" type="button" id="sound-btn" class="hdr-action" onclick="toggleSound()" title="Son">🔊</button>
-    <div class="hdr-sep"></div>
     <button aria-label="Ouvrir les filtres" type="button" class="hdr-action hdr-action-primary" onclick="openSettings()" title="Filtres">⚙ Filtres</button>
     <div class="hdr-dropdown" id="enquete-dropdown">
-      <button aria-label="Modes d'enquête" type="button" class="hdr-action hdr-action-enquete" onclick="toggleEnqueteMenu()" title="Modes d'enquête">🕵 Enquête ▾</button>
+      <button aria-label="Choisir un mode" type="button" class="hdr-action hdr-action-enquete" onclick="toggleEnqueteMenu()" title="Modes spéciaux">🕵 Modes ▾</button>
       <div class="hdr-dropdown-menu" id="enquete-menu">
-        <button type="button" onclick="openExam(); closeEnqueteMenu()" class="hdr-dropdown-item"><span>📝</span> Examen</button>
+        <button type="button" onclick="openExam(); closeEnqueteMenu()" class="hdr-dropdown-item"><span>📝</span> Examen blanc</button>
         <button type="button" onclick="openSceneMode(); closeEnqueteMenu()" class="hdr-dropdown-item"><span>🔍</span> Scène de crime</button>
         <button type="button" onclick="openMission(); closeEnqueteMenu()" class="hdr-dropdown-item"><span>🎯</span> Mission 30Q</button>
       </div>
     </div>
-    <div class="hdr-sep"></div>
     <button aria-label="Ouvrir le bilan" type="button" class="hdr-action" onclick="openBilan()" title="Bilan">📊 Bilan</button>
     <button aria-label="Ouvrir les succès" type="button" class="hdr-action" onclick="openAchievements()" title="Succès">🏅 Succès</button>
-    <div class="hdr-sep"></div>
-    <button aria-label="Activer le mode focus" type="button" class="hdr-action hdr-action-focus" onclick="toggleFocusMode()" title="Mode Focus (F)">🎯</button>
+    <!-- Menu compact ⋯ : aide, son, focus -->
+    <div class="hdr-dropdown" id="more-dropdown">
+      <button aria-label="Plus d'options" type="button" class="hdr-action hdr-action-more" onclick="toggleMoreMenu()" title="Plus">⋯</button>
+      <div class="hdr-dropdown-menu" id="more-menu">
+        <button type="button" onclick="openHelp(); closeMoreMenu()" class="hdr-dropdown-item"><span>❓</span> Raccourcis (?)</button>
+        <button type="button" id="sound-btn" onclick="toggleSound()" class="hdr-dropdown-item"><span>🔊</span> <span id="sound-label">Son activé</span></button>
+        <button type="button" onclick="toggleFocusMode(); closeMoreMenu()" class="hdr-dropdown-item"><span>🎯</span> Mode Focus (F)</button>
+      </div>
+    </div>
   </div>
 
 </header>
@@ -198,6 +199,10 @@
           </span>
           <span class="combo-badge" id="combo-badge">⚡ COMBO</span>
           <span class="spacer"></span>
+          <!-- Stats contextuelles (sortent du header, gérées par JS existant) -->
+          <span id="combo-display" class="card-stat">⚡ ×1</span>
+          <span id="lives-display" class="card-stat" title="Vies (Survie)"></span>
+          <span id="score-display" class="card-stat card-stat--score">0 pts</span>
           <button aria-label="Marquer comme favori" type="button" id="bookmark-btn" onclick="toggleBookmark()" title="Favori">☆</button>
         </div>
         <div id="scene-banner">
@@ -208,13 +213,12 @@
         <p class="multi-hint" id="multi-hint">☑ Plusieurs réponses correctes</p>
         <div id="choices"></div>
         <div id="feedback"></div>
+        <!-- Action-row simplifiée : 3 boutons (Valider/Suivante = state machine, Indice, Passer) -->
         <div class="action-row">
           <button type="button" id="validate-btn" onclick="validate()" disabled>Valider</button>
-          <button type="button" id="hint-btn" onclick="useHint()" title="Indice — élimine une mauvaise réponse">💡 <span id="hint-count">3</span>
-          </button>
-          <button type="button" id="skip-btn" onclick="doSkip()" title="Passer">Passer ›</button>
-          <button type="button" id="expl-btn" onclick="openExplModal()">💡 Explication</button>
           <button type="button" id="next-btn" onclick="nextQuestion()">Suivante →</button>
+          <button type="button" id="hint-btn" onclick="useHint()" title="Indice — élimine une mauvaise réponse">💡 <span id="hint-count">3</span></button>
+          <button type="button" id="skip-btn" onclick="doSkip()" title="Passer">Passer ›</button>
         </div>
       </div>
     </div>
@@ -332,44 +336,59 @@
       <div class="panel">
         <button type="button" class="close-btn" onclick="closeOverlay('bilan-overlay')" aria-label="Fermer le bilan">✕</button>
         <h2>📊 Bilan</h2>
-        <div class="stat-grid" id="bilan-stats"></div>
-        <div class="diff-row" id="bilan-diffs"></div>
-        <h3 class="fsec-title">Radar des compétences</h3>
-        <div id="radar-wrap">
-          <canvas id="radar-canvas" width="320" height="320"></canvas>
+        <!-- État vide : affiché si S.total === 0 -->
+        <div id="bilan-empty" class="bilan-empty">
+          <div class="bilan-empty-icon">🔬</div>
+          <div class="bilan-empty-title">L'enquête commence ici</div>
+          <p class="bilan-empty-desc">Réponds à des questions pour révéler tes statistiques, débloquer tes premiers succès et faire grimper ton rang.</p>
+          <div class="bilan-empty-actions">
+            <button type="button" class="apply-btn" onclick="closeOverlay('bilan-overlay')">▶ Commencer une session</button>
+            <a href="fiches/index.html" class="apply-btn apply-btn--secondary" target="_blank" rel="noopener noreferrer">📚 Lire les fiches</a>
+          </div>
         </div>
-        <h3 class="fsec-title fsec-title--mt">🗺 Carte des territoires</h3>
-        <div id="territory-map"></div>
-        <h3 class="fsec-title fsec-title--mt-8">Par thème</h3>
-        <div id="theme-bars"></div>
-        <div id="chapter-bars-section">
-          <h3 class="fsec-title fsec-title--mt-tight">Par chapitre</h3>
-          <div id="chapter-bars"></div>
-        </div>
-        <h3 class="fsec-title fsec-title--mt-tight">Streak quotidien</h3>
-        <div class="streak-info" id="daily-streak-info"></div>
-        <div class="streak-calendar" id="streak-calendar"></div>
-        <h3 class="fsec-title fsec-title--mt-tight">Évolution</h3>
-        <canvas id="evo-canvas"></canvas>
-        <h3 class="fsec-title">Top questions ratées</h3>
-        <div id="flop-list"></div>
-        <h3 class="fsec-title">Historique des examens</h3>
-        <div id="exam-hist-list"></div>
-        <h3 class="fsec-title fsec-title--mt-tight">Meilleur score hebdo</h3>
-        <div id="weekly-lb"></div>
-        <!-- Section Partager intégrée -->
-        <div id="bilan-share-section">
-          <button type="button" onclick="toggleBilanShare()" id="bilan-share-toggle">
-            <span>📤</span> <span id="share-toggle-label">Générer ma carte de score</span>
-          </button>
-          <div id="bilan-share-content">
-            <div id="bilan-share-canvas-wrap">
-              <canvas id="bilan-share-canvas"></canvas>
-            </div>
-            <div class="share-actions">
-              <button type="button" class="apply-btn apply-btn--small" onclick="downloadBilanCard()">⬇️ Télécharger</button>
-              <button type="button" class="apply-btn apply-btn--small" onclick="copyBilanCard()">📋 Copier</button>
-              <button type="button" class="apply-btn apply-btn--small" onclick="shareBilanCard()">📤 Partager</button>
+        <!-- Bloc principal : caché si état vide -->
+        <div id="bilan-main">
+          <!-- Hero card : rang + précision en proéminence -->
+          <div id="bilan-hero" class="bilan-hero"></div>
+          <div class="stat-grid stat-grid--compact" id="bilan-stats"></div>
+          <div class="diff-row" id="bilan-diffs"></div>
+          <h3 class="fsec-title">Radar des compétences</h3>
+          <div id="radar-wrap">
+            <canvas id="radar-canvas" width="320" height="320"></canvas>
+          </div>
+          <h3 class="fsec-title fsec-title--mt">🗺 Carte des territoires</h3>
+          <div id="territory-map"></div>
+          <h3 class="fsec-title fsec-title--mt-8">Par thème</h3>
+          <div id="theme-bars"></div>
+          <div id="chapter-bars-section">
+            <h3 class="fsec-title fsec-title--mt-tight">Par chapitre</h3>
+            <div id="chapter-bars"></div>
+          </div>
+          <h3 class="fsec-title fsec-title--mt-tight">Streak quotidien</h3>
+          <div class="streak-info" id="daily-streak-info"></div>
+          <div class="streak-calendar" id="streak-calendar"></div>
+          <h3 class="fsec-title fsec-title--mt-tight">Évolution</h3>
+          <canvas id="evo-canvas"></canvas>
+          <h3 class="fsec-title">Top questions ratées</h3>
+          <div id="flop-list"></div>
+          <h3 class="fsec-title">Historique des examens</h3>
+          <div id="exam-hist-list"></div>
+          <h3 class="fsec-title fsec-title--mt-tight">Meilleur score hebdo</h3>
+          <div id="weekly-lb"></div>
+          <!-- Section Partager intégrée -->
+          <div id="bilan-share-section">
+            <button type="button" onclick="toggleBilanShare()" id="bilan-share-toggle">
+              <span>📤</span> <span id="share-toggle-label">Générer ma carte de score</span>
+            </button>
+            <div id="bilan-share-content">
+              <div id="bilan-share-canvas-wrap">
+                <canvas id="bilan-share-canvas"></canvas>
+              </div>
+              <div class="share-actions">
+                <button type="button" class="apply-btn apply-btn--small" onclick="downloadBilanCard()">⬇️ Télécharger</button>
+                <button type="button" class="apply-btn apply-btn--small" onclick="copyBilanCard()">📋 Copier</button>
+                <button type="button" class="apply-btn apply-btn--small" onclick="shareBilanCard()">📤 Partager</button>
+              </div>
             </div>
           </div>
         </div>
@@ -397,6 +416,7 @@
       </div>
     </div>
     <script src="js/quiz-app.js" defer></script>
+    <script src="js/quiz-ui-patch.js" defer></script>
     <!-- AVATAR SETUP -->
     <div class="overlay" tabindex="-1" id="avatar-overlay">
       <div class="panel">
@@ -560,17 +580,15 @@
 
 
 <!-- MISSION OVERLAY INTRO -->
-<div id="mission-overlay" class="mode-end-overlay">
-  <div class="mission-icon">🎯</div>
-  <div class="mission-title">MISSION COMPLÈTE</div>
-  <div class="mission-desc">
-    30 questions · 6 phases · De la perquisition au rapport judiciaire<br>
-    Un score global calcule votre <strong class="strong-gold">note sur 6</strong> — comme à l'examen réel.
-  </div>
-  <div id="mission-phases-preview"></div>
+<div id="mission-overlay" class="mode-end-overlay mission-overlay-v2">
+  <div class="mission-eyebrow">Mission tactique</div>
+  <div class="mission-title">Investigation complète</div>
+  <p id="mission-narrative" class="mission-narrative">Une cybercriminalité vient d'être signalée. De la perquisition au rapport judiciaire, vous menez l'enquête.</p>
+  <div id="mission-budget" class="mission-budget"></div>
+  <div id="mission-phases-preview" class="mission-timeline"></div>
   <div class="mode-end-actions">
     <button type="button" class="btn-mode-action btn-mode-action--ghost" onclick="closeMissionIntro()">Annuler</button>
-    <button type="button" class="btn-mode-action btn-mode-action--primary" onclick="startMission()">🚀 Lancer la mission</button>
+    <button type="button" class="btn-mode-action btn-mode-action--primary" onclick="startMission()">🚀 Démarrer l'enquête</button>
   </div>
 </div>
 
