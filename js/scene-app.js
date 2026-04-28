@@ -2668,11 +2668,11 @@ function launchNextScene() {
 const CANTON_DATA = {
   GE: { name: "Genève", scenarios: ["sms-blasters","darkmarket_2021"] },
   VD: { name: "Vaud", scenarios: ["ncmec-cypertip","lockbit-victime","comparis_2021","unine_2022"] },
-  VS: { name: "Valais", scenarios: ["vetroz-akira","sati-bec","rajeunissement-ia","saxon-curatelle"] },
+  VS: { name: "Valais", scenarios: ["vetroz-akira","sati-bec","rajeunissement-ia","saxon-curatelle","competence-mpc-vs","hydro-valais"] },
   FR: { name: "Fribourg", scenarios: ["dab-villaz"] },
   NE: { name: "Neuchâtel", scenarios: ["faux-policiers","harcelement-ne"] },
   JU: { name: "Jura", scenarios: ["delemont-forum","jura-vishing-1m"] },
-  BE: { name: "Berne", scenarios: ["ruag_2016","palais_federal"] },
+  BE: { name: "Berne", scenarios: ["ruag_2016","palais_federal","deepfake-electoral"] },
   ZH: { name: "Zurich", scenarios: ["attribution","bitlocker","bitlocker_froid"] },
   SZ: { name: "Schwyz", scenarios: ["clone-vocal"] },
   TI: { name: "Tessin", scenarios: ["sati-bec"] },
