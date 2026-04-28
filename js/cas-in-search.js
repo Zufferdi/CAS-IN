@@ -1,6 +1,11 @@
 // ═══════════════════════════════════════════════════════════════
 // cas-in-search.js — Recherche globale Ctrl+K / Cmd+K
-// Cherche dans : fiches, questions quiz, catégories TP, scènes
+// Cherche dans : fiches, questions quiz, catégories TP, scènes DFIR
+//
+// v2.4 : corrections audit
+//   - Indexe les 1750 questions (avant : slice(0, 1500))
+//   - Ajoute les 64 scènes DFIR (avant : non indexées)
+//   - Charge depuis manifest.json (source unique) plutôt que de parser HTML
 // ═══════════════════════════════════════════════════════════════
 (function () {
   'use strict';
@@ -9,6 +14,12 @@
   let indexed = null;
   let loadingPromise = null;
 
+  // Helpers
+  function basePath() {
+    const depth = (window.location.pathname.match(/\//g) || []).length - 1;
+    return depth > 1 ? '../'.repeat(depth - 1) : './';
+  }
+
   // ── Chargement de l'index ────────────────────────────────────
   async function loadIndex() {
     if (indexed) return indexed;
@@ -16,47 +27,66 @@
 
     loadingPromise = (async function () {
       const result = { fiches: [], questions: [], tp: [], scenes: [] };
+      const base = basePath();
 
-      // Fiches : parse l'index HTML
+      // 1. Fiches : depuis manifest.json (source unique)
       try {
-        const depth = (window.location.pathname.match(/\//g) || []).length - 1;
-        const basePath = depth > 1 ? '../'.repeat(depth - 1) : './';
-        const resp = await fetch(basePath + 'fiches/index.html', { cache: 'force-cache' });
+        const resp = await fetch(base + 'manifest.json', { cache: 'force-cache' });
         if (resp.ok) {
-          const html = await resp.text();
-          const cards = [...html.matchAll(/<a\s+href="([a-z0-9_-]+\.html)"\s+class="fiche-card"[^>]*(?:data-keywords="([^"]*)")?[^>]*>([\s\S]*?)<\/a>/gi)];
-          for (const m of cards) {
-            const href = m[1];
-            const keywords = m[2] || '';
-            const inner = m[3].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          const manifest = await resp.json();
+          const cats = Object.fromEntries((manifest.categories || []).map(c => [c.id, c]));
+          for (const f of (manifest.fiches || [])) {
+            const cat = cats[f.category] || {};
             result.fiches.push({
-              type: 'fiche', href: basePath + 'fiches/' + href,
-              title: inner.split(' ')[0] || href.replace(/\.html$/, ''),
-              desc: inner, keywords, icon: '📄'
+              type: 'fiche',
+              href: base + 'fiches/' + f.file,
+              title: f.title || f.file.replace(/\.html$/, ''),
+              desc: f.desc || '',
+              keywords: ((f.title || '') + ' ' + (f.desc || '') + ' ' + (cat.title || '')).toLowerCase(),
+              icon: f.icon || '📄'
             });
           }
         }
-      } catch (e) { /* silencieux */ }
+      } catch (e) {
+        // Fallback : parser fiches/index.html (compat avec ancienne version)
+        try {
+          const resp = await fetch(base + 'fiches/index.html', { cache: 'force-cache' });
+          if (resp.ok) {
+            const html = await resp.text();
+            const cards = [...html.matchAll(/<a\s+href="([a-z0-9_-]+\.html)"\s+class="fiche-card"[^>]*(?:data-keywords="([^"]*)")?[^>]*>([\s\S]*?)<\/a>/gi)];
+            for (const m of cards) {
+              const href = m[1];
+              const keywords = m[2] || '';
+              const inner = m[3].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+              result.fiches.push({
+                type: 'fiche', href: base + 'fiches/' + href,
+                title: inner.split(' ')[0] || href.replace(/\.html$/, ''),
+                desc: inner, keywords, icon: '📄'
+              });
+            }
+          }
+        } catch (e2) { /* silencieux */ }
+      }
 
-      // Questions : charge questions.json
+      // 2. Questions : charge questions.json (TOUTES, sans slice)
       try {
-        const depth = (window.location.pathname.match(/\//g) || []).length - 1;
-        const basePath = depth > 1 ? '../'.repeat(depth - 1) : './';
-        const resp = await fetch(basePath + 'questions.json', { cache: 'force-cache' });
+        const resp = await fetch(base + 'questions.json', { cache: 'force-cache' });
         if (resp.ok) {
           const data = await resp.json();
-          result.questions = data.slice(0, 1500).map((q, i) => ({
-            type: 'question', idx: i,
-            href: basePath + 'quiz.html#q' + i,
+          // Bug fix : indexer toutes les questions (pas slice(0, 1500))
+          result.questions = data.map((q, i) => ({
+            type: 'question',
+            idx: i,
+            href: base + 'quiz.html#q' + i,
             title: q.q ? q.q.slice(0, 80) : '(sans titre)',
             desc: (q.theme || '') + ' · ' + (q.chapter || '') + ' · ' + (q.diff || ''),
-            keywords: (q.theme + ' ' + q.chapter + ' ' + q.q).toLowerCase(),
-            icon: '💊'
+            keywords: ((q.theme || '') + ' ' + (q.chapter || '') + ' ' + (q.q || '')).toLowerCase(),
+            icon: q.theme_icon || '💊'
           }));
         }
       } catch (e) { /* silencieux */ }
 
-      // TP : on utilise le contenu de tp.html pour les catégories
+      // 3. TP : catégories statiques (cohérent avec tp.html)
       const tpCategories = [
         {cat:'endian',label:'Endianness',icon:'🔄'},{cat:'timestamp',label:'Timestamps FAT',icon:'⏱'},
         {cat:'bitmap',label:'Bitmap exFAT',icon:'🗺'},{cat:'fat',label:'Chaîne FAT',icon:'⛓'},
@@ -69,14 +99,36 @@
         {cat:'ir',label:'Incident Response',icon:'🚨'},{cat:'droitpenal',label:'Droit pénal',icon:'⚖️'},
         {cat:'glossaire',label:'Glossaire',icon:'🗂'},{cat:'examen',label:'Série Examen',icon:'📋'}
       ];
-      const depthBase = (window.location.pathname.match(/\//g) || []).length - 1;
-      const basePath = depthBase > 1 ? '../' : './';
       result.tp = tpCategories.map(c => ({
-        type: 'tp', href: basePath + 'tp.html#' + c.cat,
+        type: 'tp', href: base + 'tp.html#' + c.cat,
         title: c.label, desc: 'Travaux pratiques · ' + c.cat,
         keywords: (c.label + ' ' + c.cat).toLowerCase(),
         icon: c.icon
       }));
+
+      // 4. Scènes DFIR : depuis scenes.js (parse pour récupérer titres/tags)
+      try {
+        const resp = await fetch(base + 'scenes.js', { cache: 'force-cache' });
+        if (resp.ok) {
+          const txt = await resp.text();
+          // Extraire le tableau SCENES = [...]
+          const m = txt.match(/var\s+SCENES\s*=\s*(\[[\s\S]*\])\s*;?\s*$/);
+          if (m) {
+            try {
+              const scenes = JSON.parse(m[1]);
+              result.scenes = scenes.map(s => ({
+                type: 'scène',
+                href: base + 'scene.html#' + (s.id || ''),
+                title: s.title || '(sans titre)',
+                desc: (s.intro || '').slice(0, 120) + ' · ' + (s.difficulty || ''),
+                keywords: ((s.title || '') + ' ' + (s.tags || []).join(' ') + ' ' +
+                          (s.intro || '') + ' ' + (s.atmosphere || '')).toLowerCase(),
+                icon: s.icon || '🔍'
+              }));
+            } catch { /* JSON parse failed */ }
+          }
+        }
+      } catch (e) { /* silencieux */ }
 
       indexed = result;
       return result;
@@ -96,19 +148,20 @@
     if (title.includes(q)) score += 50;
     if (kw.includes(q)) score += 30;
     if (desc.includes(q)) score += 10;
-    // Bonus par type pour équilibrer
+    // Bonus par type pour équilibrer (les fiches sont les plus utiles)
     if (item.type === 'fiche') score += 5;
     if (item.type === 'tp') score += 3;
+    if (item.type === 'scène') score += 4;
     return score;
   }
 
   async function search(query) {
     const idx = await loadIndex();
-    const all = [...idx.fiches, ...idx.tp, ...idx.questions];
+    const all = [...idx.fiches, ...idx.tp, ...idx.scenes, ...idx.questions];
     const scored = all.map(item => ({ item, score: scoreItem(item, query) }))
       .filter(x => x.score > 0)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 20);
+      .slice(0, 30); // 30 résultats (avant : 20)
     return scored.map(x => x.item);
   }
 
@@ -155,6 +208,11 @@
 #cas-search-overlay .cs-item-title{color:#e6edf3;font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #cas-search-overlay .cs-item-desc{color:#8b949e;font-size:.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.15rem}
 #cas-search-overlay .cs-item-type{background:rgba(0,229,204,.1);border:1px solid rgba(0,229,204,.3);color:#00e5cc;font-size:.6rem;padding:.1rem .4rem;border-radius:3px;font-family:'JetBrains Mono',monospace;text-transform:uppercase}
+/* Type-specific colors */
+#cas-search-overlay .cs-item-type.t-fiche{background:rgba(64,140,255,.1);border-color:rgba(64,140,255,.3);color:#5fa8ff}
+#cas-search-overlay .cs-item-type.t-tp{background:rgba(48,232,138,.1);border-color:rgba(48,232,138,.3);color:#30e88a}
+#cas-search-overlay .cs-item-type.t-scène{background:rgba(255,160,96,.1);border-color:rgba(255,160,96,.3);color:#ffa060}
+#cas-search-overlay .cs-item-type.t-question{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:#a78bfa}
 #cas-search-overlay .cs-footer{display:flex;justify-content:space-between;padding:.5rem .8rem;border-top:1px solid #30363d;font-size:.65rem;color:#6e7681;gap:.5rem;flex-wrap:wrap}
 #cas-search-overlay .cs-footer kbd{font-size:.6rem}
 @keyframes csFadeIn{from{opacity:0}to{opacity:1}}
@@ -189,6 +247,8 @@
       return;
     }
     c.removeAttribute('data-empty');
+    // Type CSS class : t-fiche, t-tp, t-question, t-scène
+    const typeClass = t => 't-' + t.replace(/\s+/g, '-');
     c.innerHTML = items.map((it, i) => `
       <div class="cs-item${i===0?' active':''}" role="option" data-href="${it.href}" data-idx="${i}">
         <span class="cs-item-icon">${it.icon || '·'}</span>
@@ -196,7 +256,7 @@
           <div class="cs-item-title">${escapeHtml(it.title)}</div>
           <div class="cs-item-desc">${escapeHtml(it.desc)}</div>
         </div>
-        <span class="cs-item-type">${it.type}</span>
+        <span class="cs-item-type ${typeClass(it.type)}">${it.type}</span>
       </div>
     `).join('');
     [...c.querySelectorAll('.cs-item')].forEach(el => {
