@@ -1,28 +1,93 @@
-# CAS-IN — Travaux Pratiques Forensiques
+# CAS-IN — Investigation Numérique Forensique
 
 > *« Parce que lire un dump hex à la main, c'est le seul moment où on peut encore prétendre qu'on fait de l'informatique sérieuse. »*
 
 ## De quoi s'agit-il ?
 
-Un outil d'entraînement pour les étudiants du **CAS en Investigation Numérique** (et pour toute personne qui aime, d'une manière ou d'une autre, compter les octets un par un). Vingt catégories d'exercices couvrant :
+Un outil d'entraînement pour les étudiants du **CAS en Investigation Numérique** (et pour toute personne qui aime, d'une manière ou d'une autre, compter les octets un par un). Quatre piles indépendantes mais reliées :
 
-- **Systèmes de fichiers** — FAT12/16/32, exFAT, NTFS, EXT3/4, HFS+. Boot sectors, MFT, Run Lists, bitmaps d'allocation, timestamps MS-DOS, timestomping, effacement, LFN.
-- **Calculs & identification** — Endianness, tables hex, offsets, bases & encodages, magic bytes, hashes, mismatch d'extension.
-- **Investigation** — Email forensics (SPF/DKIM/DMARC), analyse PCAP, incident response, droit pénal suisse, glossaire bilingue FR/EN.
-- **Série Examen** — Questions inspirées des vrais examens CAS-IN, avec indices progressifs quand on pleure.
+| Section | Contenu |
+|---|---|
+| 💊 **Pilule bleue** — Fiches | 90 fiches de révision structurées par catégorie (FS, Windows, crypto, réseau, droit, plateformes, acquisition) |
+| 💊 **Pilule verte** — TP | 25 catégories d'exercices : FAT, NTFS, exFAT, EXT, HFS+, endianness, magic bytes, hashes, droit pénal, email, réseau, IR, etc. |
+| 💊 **Pilule orange** — Scènes | 64 scénarios DFIR immersifs avec choix multiples, conséquences procédurales, références légales (Art. 141 CPP, ACPO, NIST) |
+| 💊 **Pilule rouge** — Quiz | 1630 questions gamifiées (XP, rangs, streaks, défi quotidien, mode survie, SM2 spaced repetition) |
 
-Chaque exercice est **régénéré aléatoirement** à chaque passage — ce qui veut dire qu'on peut s'acharner sans retomber sur les mêmes octets, et que si on réussit c'est probablement qu'on a compris, pas qu'on a retenu la réponse.
+Chaque exercice TP est **régénéré aléatoirement** à chaque passage — ce qui veut dire qu'on peut s'acharner sans retomber sur les mêmes octets, et que si on réussit c'est probablement qu'on a compris, pas qu'on a retenu la réponse.
 
-## Pourquoi c'est gamifié
+## Architecture
 
-Parce que personne n'a envie de calculer le LCN de la \$MFT un vendredi soir sans une petite récompense. Le système garde en mémoire (via `localStorage`) :
+```
+CAS-IN/
+├── index.html              # Landing (Matrix rain, drawer profil, raccourcis B/V/O/R)
+├── quiz.html               # 1630 questions gamifiées
+├── tp.html                 # 25 catégories TP avec sidebar
+├── scene.html              # 64 scénarios DFIR
+├── tools.html              # Outils & cheatsheets
+├── exam.html               # Mode examen blanc
+├── offline.html            # Page fallback hors-ligne (PWA)
+│
+├── manifest.json           # Source de vérité : 90 fiches × 7 catégories
+├── counts.json             # Auto-généré : nombres affichés partout
+├── questions.json          # 1630 questions (1750 avant nettoyage P0)
+├── scenes.js               # 64 scénarios DFIR (~1.6 MB, network-first)
+│
+├── style/
+│   ├── landing.css         # Style landing
+│   ├── style.css           # Style commun (quiz)
+│   ├── tp.css              # Style TP
+│   ├── scene.css           # Style scène
+│   └── fiche_style.css     # Style fiches
+│
+├── js/
+│   ├── landing.js          # Pluie Matrix, progression, navigation
+│   ├── cas-in-counts.js    # Patche les <span data-count="..."> au runtime
+│   ├── cas-in-pwa.js       # Enregistre le SW + détection update
+│   └── cas-in-search.js    # Recherche globale Ctrl+K (fiches + questions + TP + scènes)
+│
+├── tp/
+│   ├── tp-data.js
+│   └── tp-engine.js        # Générateurs d'exercices aléatoires
+│
+├── fiches/                 # 90 fiches HTML
+├── scripts/                # Outils Python (CI)
+│   ├── check_questions.py  # QC questions.json (utilisé en GitHub Actions)
+│   ├── generate_counts.py  # Régénère counts.json
+│   └── build_index.py
+│
+└── sw.js                   # Service Worker (cache-first statiques, network-first HTML/JSON)
+```
 
-- Le **compteur par catégorie** avec médailles 🥉 (10), 🥈 (25), 🥇 (50).
-- La **série en cours** 🔥 — remise à zéro à chaque mauvaise réponse, comme dans la vraie vie.
-- Le **meilleur score** ⭐ — qui reste, comme les regrets.
-- Un **total global** cross-catégories pour mesurer l'ampleur du problème.
+## PWA
 
-Les indices `💡` sont disponibles partout mais **annulent le comptage** pour l'exercice en cours. Un toast discret te le rappelle au cas où tu oublierais.
+- **Service Worker v21** : Network-First pour HTML/JSON, Cache-First pour CSS/JS, fallback `offline.html`.
+- **Installable** sur iOS, Android, desktop. Bannière d'install proposée après 3 s.
+- **Fonctionne 100 % offline** une fois la première visite faite.
+
+## Gamification
+
+- **XP & rangs** : 🔰 Stagiaire → 🕵 Enquêteur → 🔬 Analyste → 💼 Expert → ⚖️ Légiste → 🏛 Inspecteur Principal
+- **Streak quotidien** 🔥 avec **Streak Freeze** 🧊 pour pardonner 1 jour
+- **Combo multiplier** ⚡ sur réponses consécutives correctes
+- **Défi du jour** ⚡ : 5 questions tirées au hasard, score sauvegardé
+- **Modes spéciaux** : Examen blanc · Survie (3 vies) · Mission 30Q · Spaced Repetition (SM2)
+- **Achievements** débloqués selon performance
+- **Radar de performance par module** dans le drawer profil
+
+Tous les scores sont stockés en `localStorage` côté client. **Aucune télémétrie.**
+
+## Raccourcis clavier
+
+Sur la landing :
+- `B` → Fiches (pilule bleue)
+- `V` → TP (pilule verte)
+- `O` → Scènes (pilule orange)
+- `R` → Quiz (pilule rouge)
+
+Partout :
+- `Ctrl/⌘+K` → Recherche globale (fiches + questions + TP + scènes)
+- `Esc` → Fermer modale/drawer
+- `?` (dans le quiz) → Liste des raccourcis
 
 ## Avertissement pédagogique
 
@@ -34,21 +99,24 @@ Certains éléments sont :
 - **Inspirés de situations réelles** rencontrées en formation, en enquête ou documentées publiquement (breach reports, jurisprudence, CTF, etc.) — mais **anonymisés et généralisés** pour ne cibler aucune personne, entreprise ou affaire identifiable.
 - **Tirés de la vie étudiante** — un peu de `rapport_final_vraiment_final_v3.pdf` par-ci, un `vacances été 2023.jpg` par-là. Toute ressemblance avec votre propre dossier `Bureau` est purement statistique.
 
-Les références au **Code pénal suisse** (Art. 143, 143bis, 144bis, 147, 156, 179quater, 197, 261bis, etc.) et à la **LPD révisée** sont exactes au moment de la rédaction, mais cet outil **ne remplace pas** une consultation juridique. Pour les vrais cas, on appelle un avocat, pas un navigateur.
-
-Les **techniques forensiques** décrites (carving, décodage de Run Lists, détection de timestomping, analyse SPF/DKIM, etc.) sont enseignées à titre défensif et éducatif. Utilisez-les sur vos propres données, sur des images de test, ou sur des systèmes pour lesquels vous avez une autorisation explicite. Sinon, relisez la section ci-dessus sur les Art. 143bis et suivants.
+Les références au **Code pénal suisse** (Art. 143, 143bis, 144bis, 147, 156, 179quater, 197, 261bis, etc.) et à la **LPD révisée** sont exactes au moment de la rédaction, mais cet outil **ne remplace pas** une consultation juridique.
 
 ## Utilisation
 
-Trois fichiers, zéro dépendance, zéro build :
+Aucun build, zéro dépendance npm. Cloner et servir :
 
-```
-tp.html
-tp/tp-data.js
-tp/tp-engine.js
+```bash
+git clone <repo>
+cd CAS-IN
+python3 -m http.server 8000   # ou tout autre serveur statique
 ```
 
-Ouvre `tp.html` dans un navigateur et on est parti. Les scores sont stockés localement, rien ne quitte ton ordinateur — pas de télémétrie, pas de cloud, pas de cookies marketing. Juste toi, ton cerveau, et des octets.
+Pour la CI :
+
+```bash
+python3 scripts/check_questions.py questions.json   # QC bloquant
+python3 scripts/generate_counts.py                  # Régénère counts.json
+```
 
 ## Contribuer / signaler un bug
 
