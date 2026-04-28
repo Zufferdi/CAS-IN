@@ -1,9 +1,12 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v24 : split de scenes.js en scenes/index.json + scenes/{id}.json
+//       boot initial : 1.6 MB → 64 KB (-96 %)
+//       chaque scène mise en cache séparément à la 1re visite
 // v23 : extraction du JS inline de scene.html → js/scene-app.js + scene-ux-patch.js
 // v22 : extraction du JS inline de quiz.html → js/quiz-app.js (cache séparé)
 // v21 : alignement v2.4 (post-cleanup) — STATIC_ASSETS auto-régénéré
 //       depuis manifest.json + filesystem (90 fiches au lieu de 47)
-const CACHE_VERSION = 'cas-in-v23';
+const CACHE_VERSION = 'cas-in-v24';
 
 const STATIC_ASSETS = [
   // Pages racine
@@ -39,7 +42,10 @@ const STATIC_ASSETS = [
   './js/scene-app.js',
   './js/scene-ux-patch.js',
 
-  // Scénarios DFIR (network-first car volumineux)
+  // Scénarios DFIR — index uniquement (network-first, ~64 KB)
+  // Les 64 fichiers scenes/{id}.json sont mis en cache à la 1re visite (cache-first).
+  // scenes.js (legacy) est conservé en fallback pour rétro-compatibilité.
+  './scenes/index.json',
   './scenes.js',
 
   // TP
@@ -200,11 +206,34 @@ self.addEventListener('fetch', event => {
 
   const isHTML = event.request.headers.get('accept')?.includes('text/html');
   const isJSON = url.pathname.endsWith('.json');
-  // scenes.js : network-first car mis à jour fréquemment (~1.6 Mo)
-  const isScenes = url.pathname.endsWith('scenes.js');
+  const isScenesJS = url.pathname.endsWith('scenes.js'); // legacy, network-first
+  const isSceneIndex = url.pathname.endsWith('/scenes/index.json');
+  // Fichier de scène individuel : scenes/{id}.json (mais PAS index.json)
+  const isSceneFile = /\/scenes\/[^/]+\.json$/.test(url.pathname) && !isSceneIndex;
 
-  if (isHTML || isJSON || isScenes) {
-    // Network First : toujours essayer le réseau en premier, fallback cache
+  // ─── Cache-first pour les scènes individuelles (changent rarement)
+  if (isSceneFile) {
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        return fetch(event.request).then(response => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_VERSION).then(cache => cache.put(event.request, clone));
+          }
+          return response;
+        }).catch(() =>
+          new Response(JSON.stringify({error:'offline', scene: url.pathname.split('/').pop().replace('.json','')}),
+            {status:503, headers:{'Content-Type':'application/json'}})
+        );
+      })
+    );
+    return;
+  }
+
+  // ─── Network-first pour HTML, autres JSON (questions, manifest, counts,
+  //     scenes/index.json), et scenes.js legacy
+  if (isHTML || isJSON || isScenesJS) {
     event.respondWith(
       fetch(event.request).then(response => {
         if (response.ok) {
@@ -213,7 +242,6 @@ self.addEventListener('fetch', event => {
         }
         return response;
       }).catch(() => {
-        // Tenter le cache, puis fallback offline pour les pages HTML
         return caches.match(event.request).then(cached => {
           if (cached) return cached;
           if (isHTML) return caches.match(OFFLINE_FALLBACK);
@@ -223,7 +251,7 @@ self.addEventListener('fetch', event => {
       })
     );
   } else {
-    // Cache First : CSS, JS (sauf scenes.js), images
+    // Cache First : CSS, JS, images
     event.respondWith(
       caches.match(event.request).then(cached => {
         return cached || fetch(event.request).then(response => {
