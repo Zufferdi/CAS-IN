@@ -1,7 +1,9 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v23 : extraction du JS inline de scene.html → js/scene-app.js + scene-ux-patch.js
+// v22 : extraction du JS inline de quiz.html → js/quiz-app.js (cache séparé)
 // v21 : alignement v2.4 (post-cleanup) — STATIC_ASSETS auto-régénéré
 //       depuis manifest.json + filesystem (90 fiches au lieu de 47)
-const CACHE_VERSION = 'cas-in-v21';
+const CACHE_VERSION = 'cas-in-v23';
 
 const STATIC_ASSETS = [
   // Pages racine
@@ -32,6 +34,10 @@ const STATIC_ASSETS = [
   './js/cas-in-counts.js',
   './js/cas-in-pwa.js',
   './js/cas-in-search.js',
+  './js/cas-in-export.js',
+  './js/quiz-app.js',
+  './js/scene-app.js',
+  './js/scene-ux-patch.js',
 
   // Scénarios DFIR (network-first car volumineux)
   './scenes.js',
