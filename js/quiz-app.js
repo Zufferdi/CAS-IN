@@ -1943,14 +1943,45 @@
         ALL_T.forEach(t => {
           const chs = (window.THEME_CHAPTERS || {})[t];
           if (!chs || !chs.length) return;
-          // Sous-titre thème avec tout ✓ / tout ✗ par groupe
+          // Sous-titre thème avec tout ✓ / tout ✗ par groupe (DOM API : pas de JSON.stringify dans onclick)
           const grpHdr = document.createElement('div');
-          grpHdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin:10px 0 4px';
-          grpHdr.innerHTML = `<span style="font-size:10px;color:${TC[t]||'var(--dim)'};text-transform:uppercase;font-weight:700;letter-spacing:.05em">${t}</span>
-            <span style="font-size:10px;display:flex;gap:6px">
-              <a href="#" style="color:var(--cyan);text-decoration:none" onclick="(function(){${JSON.stringify(chs)}.forEach(ch=>{S.activeC.add(ch);cc.querySelectorAll('[data-ch]').forEach(el=>{if(el.dataset.ch===ch)el.classList.add('active')})});return false})()" >tout ✓</a>
-              <a href="#" style="color:var(--dim);text-decoration:none" onclick="(function(){${JSON.stringify(chs)}.forEach(ch=>{S.activeC.delete(ch);cc.querySelectorAll('[data-ch]').forEach(el=>{if(el.dataset.ch===ch)el.classList.remove('active')})});return false})()">tout ✗</a>
-            </span>`;
+          grpHdr.className = 'chip-group-header';
+          const titleSpan = document.createElement('span');
+          titleSpan.className = 'chip-group-title';
+          titleSpan.style.color = TC[t] || 'var(--dim)';
+          titleSpan.textContent = t;
+          const actionsSpan = document.createElement('span');
+          actionsSpan.className = 'chip-group-actions';
+          const btnAll = document.createElement('button');
+          btnAll.type = 'button';
+          btnAll.className = 'link-cyan';
+          btnAll.textContent = 'tout ✓';
+          btnAll.onclick = (e) => {
+            e.preventDefault();
+            chs.forEach(ch => {
+              S.activeC.add(ch);
+              cc.querySelectorAll('[data-ch]').forEach(el => {
+                if (el.dataset.ch === ch) el.classList.add('active');
+              });
+            });
+          };
+          const btnNone = document.createElement('button');
+          btnNone.type = 'button';
+          btnNone.className = 'link-dim';
+          btnNone.textContent = 'tout ✗';
+          btnNone.onclick = (e) => {
+            e.preventDefault();
+            chs.forEach(ch => {
+              S.activeC.delete(ch);
+              cc.querySelectorAll('[data-ch]').forEach(el => {
+                if (el.dataset.ch === ch) el.classList.remove('active');
+              });
+            });
+          };
+          actionsSpan.appendChild(btnAll);
+          actionsSpan.appendChild(btnNone);
+          grpHdr.appendChild(titleSpan);
+          grpHdr.appendChild(actionsSpan);
           cc.appendChild(grpHdr);
           chs.forEach(ch => {
             const c = document.createElement('span');
@@ -2380,10 +2411,89 @@
       }
 
       function openBilan() {
+        // === ÉTAT VIDE / ACTIF — bascule selon le nombre de questions répondues ===
+        const isEmpty = !S.total;
+        const emptyEl = document.getElementById('bilan-empty');
+        const mainEl = document.getElementById('bilan-main');
+        if (emptyEl && mainEl) {
+          emptyEl.style.display = isEmpty ? 'block' : 'none';
+          mainEl.style.display  = isEmpty ? 'none'  : 'block';
+        }
+        if (isEmpty) {
+          // On affiche tout de même la modale (le HTML est ouvert ailleurs : event handler du bouton bilan)
+          return;
+        }
+
         const acc = S.total ? Math.round(S.correct / S.total * 100) : 0;
         const {
           rank
         } = getRank(S.xp);
+
+        // === HERO CARD — rang en proéminence avec jauge XP + précision ===
+        const heroEl = document.getElementById('bilan-hero');
+        if (heroEl) {
+          // Calcul progression vers prochain rang
+          const nextRank = (typeof RANKS !== 'undefined' && Array.isArray(RANKS))
+            ? RANKS.find(r => r.min > S.xp) : null;
+          const prevMin = (typeof RANKS !== 'undefined' && Array.isArray(RANKS))
+            ? (RANKS.filter(r => r.min <= S.xp).pop()?.min || 0) : 0;
+          const nextMin = nextRank ? nextRank.min : (S.xp + 500);
+          const xpInRank = S.xp - prevMin;
+          const xpToNext = nextMin - prevMin;
+          const xpPct = xpToNext > 0 ? Math.min(100, Math.round((xpInRank / xpToNext) * 100)) : 100;
+          const accColor = acc >= 75 ? 'var(--green)' : acc >= 60 ? 'var(--gold)' : 'var(--red)';
+
+          heroEl.innerHTML = '';
+          const frag = document.createDocumentFragment();
+          const left = document.createElement('div');
+          left.className = 'bilan-hero-left';
+          const emoji = document.createElement('div');
+          emoji.className = 'bilan-hero-emoji';
+          emoji.textContent = rank.emoji;
+          left.appendChild(emoji);
+
+          const mid = document.createElement('div');
+          mid.className = 'bilan-hero-mid';
+          const lbl = document.createElement('div');
+          lbl.className = 'bilan-hero-label';
+          lbl.textContent = 'Rang';
+          const name = document.createElement('div');
+          name.className = 'bilan-hero-name';
+          name.textContent = rank.name.replace(/^[^ ]+ /, '');
+          const track = document.createElement('div');
+          track.className = 'bilan-hero-track';
+          const fill = document.createElement('div');
+          fill.className = 'bilan-hero-fill';
+          fill.style.width = xpPct + '%';
+          track.appendChild(fill);
+          const sub = document.createElement('div');
+          sub.className = 'bilan-hero-sub';
+          sub.textContent = nextRank
+            ? `${S.xp.toLocaleString()} / ${nextMin.toLocaleString()} XP · 🔥 série max ${S.maxStreak||0}`
+            : `${S.xp.toLocaleString()} XP · Rang max · 🔥 série max ${S.maxStreak||0}`;
+          mid.appendChild(lbl);
+          mid.appendChild(name);
+          mid.appendChild(track);
+          mid.appendChild(sub);
+
+          const right = document.createElement('div');
+          right.className = 'bilan-hero-right';
+          const accVal = document.createElement('div');
+          accVal.className = 'bilan-hero-acc';
+          accVal.textContent = acc + '%';
+          accVal.style.color = accColor;
+          const accLbl = document.createElement('div');
+          accLbl.className = 'bilan-hero-acc-lbl';
+          accLbl.textContent = 'Précision';
+          right.appendChild(accVal);
+          right.appendChild(accLbl);
+
+          frag.appendChild(left);
+          frag.appendChild(mid);
+          frag.appendChild(right);
+          heroEl.appendChild(frag);
+        }
+
         document.getElementById('bilan-stats').innerHTML = `
 																							
 													
@@ -6272,14 +6382,82 @@ let missionState = {
 
 function openMission() {
   document.getElementById('mission-overlay').style.display = 'flex';
-  // Build preview
+
+  // En-tête narratif (réécrit dynamiquement à l'ouverture)
+  const narrativeEl = document.getElementById('mission-narrative');
+  if (narrativeEl) {
+    const beaten = missionState.beaten.size;
+    const totalPhases = MISSION_PHASES.length;
+    if (beaten === 0) {
+      narrativeEl.textContent = "Une cybercriminalité vient d'être signalée. De la perquisition au rapport judiciaire, vous menez l'enquête.";
+    } else if (beaten < totalPhases) {
+      narrativeEl.textContent = `Vous avez déjà résolu ${beaten} phase${beaten>1?'s':''}. Continuez l'enquête jusqu'au verdict final.`;
+    } else {
+      narrativeEl.textContent = "Vous avez déjà bouclé une mission complète. Replongez dans une nouvelle enquête pour battre votre record.";
+    }
+  }
+
+  // Récap budget : durée estimée, XP max, récompense
+  const totalQ = MISSION_PHASES.reduce((s,p) => s + p.questions_per_phase, 0);
+  const xpMax = totalQ * 10; // estimation : ~10 XP par bonne réponse
+  const minutes = Math.round(totalQ * 0.5);  // ~30s par question
+  const budgetEl = document.getElementById('mission-budget');
+  if (budgetEl) {
+    budgetEl.innerHTML = '';
+    const items = [
+      { icon: '⏱', text: '~' + minutes + ' min' },
+      { icon: '⚡', text: '+' + xpMax + ' XP max', color: 'var(--purple)' },
+      { icon: '🏅', text: 'Badge "Inspecteur"', color: 'var(--gold)' },
+    ];
+    items.forEach((it,i) => {
+      if (i > 0) {
+        const sep = document.createElement('span');
+        sep.className = 'mission-budget-sep';
+        sep.textContent = '·';
+        budgetEl.appendChild(sep);
+      }
+      const sp = document.createElement('span');
+      sp.className = 'mission-budget-item';
+      if (it.color) sp.style.color = it.color;
+      sp.textContent = it.icon + ' ' + it.text;
+      budgetEl.appendChild(sp);
+    });
+  }
+
+  // Timeline des phases (au lieu de la grille 3×2)
   const prev = document.getElementById('mission-phases-preview');
-  prev.innerHTML = MISSION_PHASES.map(p => `
-    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px;text-align:center">
-      <div style="font-size:22px">${p.icon}</div>
-      <div style="font-size:9px;font-weight:600;color:${p.color};margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Phase ${p.num}</div>
-      <div style="font-size:10px;color:var(--text);margin-top:2px;line-height:1.3">${p.title}</div>
-    </div>`).join('');
+  prev.innerHTML = '';
+  prev.className = 'mission-timeline';
+  MISSION_PHASES.forEach(p => {
+    const isBeaten = missionState.beaten.has(p.num);
+    const row = document.createElement('div');
+    row.className = 'mission-phase-row' + (isBeaten ? ' is-beaten' : '');
+    row.style.setProperty('--phase-color', p.color);
+
+    const icon = document.createElement('span');
+    icon.className = 'mission-phase-icon';
+    icon.textContent = p.icon;
+
+    const body = document.createElement('div');
+    body.className = 'mission-phase-body';
+    const lbl = document.createElement('div');
+    lbl.className = 'mission-phase-label';
+    lbl.textContent = `Phase ${p.num} · ${p.questions_per_phase} q`;
+    const ttl = document.createElement('div');
+    ttl.className = 'mission-phase-title';
+    ttl.textContent = p.title;
+    body.appendChild(lbl);
+    body.appendChild(ttl);
+
+    const status = document.createElement('span');
+    status.className = 'mission-phase-status';
+    status.textContent = isBeaten ? '✓' : '○';
+
+    row.appendChild(icon);
+    row.appendChild(body);
+    row.appendChild(status);
+    prev.appendChild(row);
+  });
 }
 
 function closeMissionIntro() {
