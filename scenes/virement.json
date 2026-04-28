@@ -1,0 +1,217 @@
+{
+  "id": "virement",
+  "title": "Le Virement Frauduleux",
+  "icon": "💰",
+  "difficulty": "medium",
+  "atmosphere": "network",
+  "narrative": {
+    "success": "Les qualifications 143bis + 147 en concours réel permettent une poursuite complète. L'auteur est identifié via la remontée des logs Tor (erreur OPSEC) puis arrêté à Lugano. Condamnation à 4 ans ferme.",
+    "degraded": "La qualification est partiellement correcte, la peine d'ensemble reste symbolique.",
+    "failure": "La qualification erronée empêche toute poursuite efficace. L'auteur s'en sort avec une amende dérisoire. Les 50'000 CHF restent introuvables."
+  },
+  "tags": [
+    "DROIT",
+    "RÉSEAUX"
+  ],
+  "legalRefs": [
+    "Art. 147 CP",
+    "Art. 146 CP",
+    "Art. 143bis CP",
+    "ATF 150 IV 188",
+    "ATF 140 IV 11"
+  ],
+  "intro": "50'000 CHF virés à 03h47 via l'API bancaire. Manipulation de requêtes HTTP. L'API traite les virements de façon entièrement automatisée — aucun employé de banque ne voit ou valide les transactions. La qualification pénale est cruciale pour la poursuite.",
+  "alertLevel": "💰 03H47 — 50'000 CHF VIRÉS · Art. 146 ou 147 CP ? La qualification change tout",
+  "objectives": [
+    {
+      "icon": "⚖️",
+      "text": "Distinguer Art. 146 CP (escroquerie) et Art. 147 CP (abus d'ordinateur)"
+    },
+    {
+      "icon": "🔍",
+      "text": "Identifier le concours d'infractions (Art. 9 CP)"
+    },
+    {
+      "icon": "📋",
+      "text": "Documenter la chaîne forensique : token JWT → API → virement"
+    }
+  ],
+  "debrief": "<p><strong>ATF 150 IV 188 (novembre 2024)</strong> est désormais l'arrêt de référence : Art. 147 CP (abus d'un ordinateur) s'applique UNIQUEMENT si le processus est entièrement automatisé — de la réception de la requête jusqu'à l'exécution, sans aucune intervention humaine. Si un employé de banque peut voir, valider ou annuler la transaction (même sans réel pouvoir décisionnel), c'est Art. 146 CP (escroquerie) qui prime, Art. 147 CP étant subsidiaire.</p><p>Dans ce scénario, l'API bancaire traite les virements de nuit de façon 100% automatisée — aucun humain ne valide les transactions entre 23h et 6h. Art. 147 CP s'applique donc correctement. Si la banque avait eu un système de validation humaine, même partielle, la qualification correcte aurait été Art. 146 CP.</p>",
+  "steps": [
+    {
+      "phase": "💰 La fraude découverte",
+      "situation": "Un virement de <strong>50'000 CHF</strong> a été effectué depuis le compte d'une PME. L'analyse des logs montre : connexion depuis une IP externe via l'API bancaire, insertion de requêtes HTTP manipulées imitant une transaction légitime, aucune interaction avec un conseiller humain. Le tout s'est déroulé à 3h47.",
+      "law": "<strong>Art. 146 CP</strong> — Escroquerie : tromperie astucieuse d'une <em>personne physique</em>.<br><strong>Art. 147 CP</strong> — Abus d'un ordinateur : enrichissement via manipulation d'un processus <em>entièrement automatisé</em>.<br><strong>ATF 150 IV 188 (2024)</strong> — Art. 147 CP subsidiaire à Art. 146 CP. Critère décisif : qui valide in fine l'exécution — un système automatisé ou un être humain ?",
+      "question": "<strong>L'API bancaire traite les virements 100% automatiquement entre 23h et 6h (aucun employé en ligne). Quelle qualification pénale principale proposez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Art. 146 CP — Escroquerie",
+          "ok": false,
+          "pts": -15,
+          "fb": "Pas nécessairement. ATF 150 IV 188 (2024) nuance : si un employé de banque peut voir et annuler la transaction (même sans pouvoir décisionnel réel), Art. 146 CP prime. Ici l'API traite les virements de nuit 100% automatiquement — aucun humain n'intervient entre 23h et 6h. Dans ce contexte précis, Art. 147 CP est correct. Mais si le même virement avait été soumis à validation humaine (même partielle), Art. 146 CP s'imposerait.",
+          "legal": "ATF 150 IV 188 consid. 4.9 — Art. 146 CP prime si un humain peut valider ou annuler. Art. 147 CP s'applique uniquement si le processus est ENTIÈREMENT automatisé.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Art. 147 CP — Abus d'un ordinateur",
+          "ok": true,
+          "pts": 25,
+          "fb": "Qualification correcte dans ce contexte. L'API traite les virements de nuit 100% automatiquement — critère ATF 150 IV 188 satisfait (processus entièrement automatisé, aucun employé en mesure de valider ou d'annuler entre 23h et 6h). Art. 147 CP al. 1 punit quiconque influence un traitement de données pour s'enrichir illégitimement. Important : si la banque avait eu une validation humaine même partielle, Art. 146 CP aurait primé (ATF 150 IV 188 — Art. 147 est subsidiaire).",
+          "legal": "Art. 147 CP al. 1 + ATF 150 IV 188 — Condition : processus entièrement automatisé ✓. Si validation humaine → Art. 146 CP prime.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Art. 143 CP — Soustraction de données",
+          "ok": false,
+          "pts": -10,
+          "fb": "Art. 143 CP vise la soustraction de données (les prendre sans autorisation). Ici, il n'y a pas de données soustraites mais un transfert d'argent obtenu par manipulation du système.",
+          "legal": "Art. 143 CP — Soustraction de données ≠ manipulation d'un système pour enrichissement financier.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔍 La trace forensique",
+      "situation": "Les logs de l'API bancaire montrent 847 requêtes en 4 minutes depuis l'IP 185.220.101.48 (nœud de sortie Tor). Le token JWT d'authentification utilisé était légitime — exfiltré 3 semaines plus tôt via phishing.",
+      "law": "<strong>Art. 143bis CP</strong> — Accès indu au système (via token volé).<br><strong>Art. 147 CP</strong> — Abus pour le virement frauduleux.",
+      "question": "<strong>Quelles infractions cumulez-vous dans votre rapport ?</strong>",
+      "choices": [
+        {
+          "text": "Retenir uniquement l'art. 147 CP (utilisation frauduleuse d'un ordinateur) — le virement abusif est l'infraction matérielle qui consomme les actes préparatoires comme l'utilisation du token volé, par application du principe de spécialité pénale.",
+          "ok": false,
+          "pts": -5,
+          "fb": "Incomplet. L'utilisation du token JWT volé constitue un accès indu au système (art. 143bis CP) distinct du virement (art. 147 CP). Le concours réel d'infractions doit être retenu.",
+          "legal": "Art. 9 CP — Concours d'infractions : chaque infraction distincte doit être qualifiée séparément.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Art. 143bis CP (accès indu via token volé) + Art. 147 CP (virement frauduleux) en concours réel.",
+          "ok": true,
+          "pts": 20,
+          "fb": "Correct. Deux infractions distinctes : (1) l'utilisation du JWT volé pour accéder au système sans droit (143bis), (2) l'exécution du virement frauduleux via manipulation de l'API (147).",
+          "legal": "Art. 143bis + 147 CP en concours réel. Peine d'ensemble selon art. 49 CP.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Ajouter art. 144bis CP (détérioration de données) en plus de 143bis et 147 CP — la modification de l'état du compte bancaire (débit) entraîne techniquement une altération de données structurées qui justifie une qualification cumulative.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Qualification excessive. L'art. 144 vise la destruction/altération de données, ce qui n'a pas eu lieu ici (lecture + manipulation, pas destruction). Une qualification trop large affaiblit le dossier en diluant les charges solides.",
+          "legal": "Principe de précision pénale — Ne retenir que les infractions caractérisées.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🧅 L'attribution via Tor",
+      "situation": "L'IP 185.220.101.48 est un nœud de sortie Tor — par définition, elle ne remonte pas à l'auteur. Cependant, le tracing serveur révèle une anomalie : 2 des 847 requêtes ont été envoyées AVANT que le flux Tor soit établi, depuis une IP résidentielle bernoise (<code>85.195.108.221</code>, Swisscom). Une erreur OPSEC classique.",
+      "law": "<strong>Tor Project Docs</strong> — Les premières requêtes peuvent fuiter si le client envoie avant établissement du circuit.<br><strong>Manuel Ch. 25.6</strong> — IP résidentielle = indice, pas preuve d'identité.",
+      "question": "<strong>Que concluez-vous de cette erreur OPSEC ?</strong>",
+      "choices": [
+        {
+          "text": "L'auteur est techniquement identifié — l'erreur OPSEC révèle une IP résidentielle Swisscom (85.195.108.221) avant l'établissement du circuit Tor, et cet horodatage précis désigne l'abonné comme étant à l'origine matérielle des requêtes.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Sur-interprétation (cf. scénario IP accusatrice). L'IP identifie un abonné, pas un auteur. De plus, un attaquant compétent utilise parfois une machine zombie comme point de départ. Il faut investiguer cet abonné ET vérifier la machine source.",
+          "legal": "ATF 136 II 508 — IP = abonné, pas auteur.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Indice fort à exploiter : réquisition Swisscom pour identifier l'abonné (Art. 273 CPP), puis perquisition pour analyser la machine source et confirmer/infirmer l'auteur. L'erreur OPSEC est précieuse mais pas déterminante seule.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Approche méthodique correcte. L'erreur OPSEC ouvre une piste, mais l'attribution complète nécessite : identification abonné → perquisition → analyse machine → corrélation avec autres artefacts (fichiers, logs, caméras). Enquête à continuer.",
+          "legal": "Art. 273 CPP + Manuel Ch. 25.6 — Chaîne d'investigation disciplinée.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Le réseau Tor protège efficacement l'anonymat de l'auteur, et les 2 requêtes hors Tor sont insuffisantes pour bâtir un dossier solide — il vaut mieux abandonner cette piste et concentrer les ressources sur la victime et la traçabilité de l'argent.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Capitulation prématurée. L'erreur OPSEC est précisément ce qui permet de remonter à l'auteur derrière Tor. C'est une opportunité rare à exploiter avec rigueur.",
+          "legal": "Manuel Ch. 25.7 — Tor n'est pas infaillible, les erreurs OPSEC ouvrent des brèches.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🏠 La perquisition à Berne",
+      "situation": "L'abonné Swisscom est identifié : un étudiant en informatique à l'EPFL, 24 ans. Perquisition à son appartement à Berne. Vous trouvez : laptop Arch Linux, 3 machines virtuelles Windows, une grande quantité de wallets crypto, un Raspberry Pi avec notes manuscrites <code>«&nbsp;test phishing&nbsp;»</code>. Le suspect invoque son droit au silence.",
+      "law": "<strong>Art. 113 CPP</strong> — Droit au silence.<br><strong>Art. 197 CPP</strong> — Proportionnalité des mesures.<br><strong>Art. 263 CPP</strong> — Séquestre.",
+      "question": "<strong>Quelle est votre priorité forensique in situ ?</strong>",
+      "choices": [
+        {
+          "text": "Interroger fermement le suspect sur place pour obtenir des aveux pendant qu'il est sous le choc de la perquisition — c'est statistiquement le moment le plus favorable, avant qu'il ne consulte un avocat et ne reconstruise sa version des faits.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Le suspect a invoqué Art. 113 CPP. L'interroger malgré cela est une violation grave qui peut invalider toute la procédure. L'interrogatoire se fait sous supervision judiciaire, pas sur la scène de perquisition.",
+          "legal": "Art. 113 + 158 CPP — Droit au silence inviolable. Interrogatoire formel ultérieur.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Dump RAM de tous les systèmes allumés (laptop + VMs + Pi), capture réseau locale, documentation photographique, puis saisie sous scellés de l'ensemble. Ne pas interroger le suspect.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Priorisation parfaite. En présence d'un technicien (Arch, VMs, crypto), les preuves volatiles sont critiques : wallets déchiffrés en RAM, VMs actives avec preuves du phishing. Le silence du suspect n'empêche pas la capture technique.",
+          "legal": "Manuel Ch. 11.1 + Art. 263 CPP — RAM first + saisie documentée.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Saisir uniquement le laptop principal qui est manifestement le poste opérationnel — les VMs et le Raspberry Pi sont des éléments accessoires qui alourdiraient la procédure et sont d'analyse forensique plus complexe, peu probants.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Erreur grave. Les wallets crypto sont probablement le produit de la fraude (50'000 CHF convertis en crypto). Le Pi avec notes « test phishing » est une preuve directe. Ignorer ces éléments perd l'affaire.",
+          "legal": "Art. 263 CPP — Séquestre complet des éléments liés à l'infraction.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "💸 Le suivi de l'argent",
+      "situation": "L'analyse révèle : les 50'000 CHF ont été convertis en Bitcoin via Binance, puis passés dans un tumbler (Wasabi Wallet CoinJoin) avant d'aboutir sur 3 cold wallets. Le MP vous demande comment procéder au « follow the money » pour confiscation (art. 70 CP).",
+      "law": "<strong>Art. 70 CP</strong> — Confiscation des valeurs patrimoniales illicites.<br><strong>Art. 305bis CP</strong> — Blanchiment d'argent (conversion en crypto = potentiellement aggravant).<br><strong>Chainalysis / CipherTrace</strong> — Outils d'analyse blockchain.",
+      "question": "<strong>Quelle approche technique recommandez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Abandonner la traçabilité on-chain : le tumbler Wasabi CoinJoin avec ses anonymity sets de 100+ participants rend mathématiquement la traçabilité directe impossible, et toute affirmation contraire serait techniquement non rigoureuse.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Trop défaitiste. CoinJoin dégrade la traçabilité mais ne l'annihile pas. L'analyse heuristique (Chainalysis, CipherTrace) peut souvent percer un tumbler partiellement. De plus, les 3 cold wallets saisis physiquement contiennent peut-être déjà les fonds.",
+          "legal": "Pratique fedpol 2023 — Analyse blockchain même après tumbler = résultats partiels exploitables.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "(1) Analyse heuristique blockchain (Chainalysis) pour tracer malgré le tumbler, (2) Saisie physique des 3 cold wallets identifiés (seed phrases écrites ?), (3) Coopération Binance pour le premier hop avant tumbler, (4) Qualification art. 305bis CP (blanchiment) en plus de 147 CP.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Approche complète et moderne. Combiner analyse technique blockchain + saisie physique + coopération exchange + qualification aggravée = maximisation des chances de récupération des fonds + peine d'ensemble aggravée.",
+          "legal": "Art. 70 + 305bis CP + Guide fedpol crypto — Approche multicanale optimale.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Demander à Binance de geler tous les comptes liés à des résidents suisses ayant interagi avec les wallets identifiés — l'urgence opérationnelle justifie une mesure préventive large quitte à dégeler ultérieurement les comptes hors enquête. Binance dispose d'une procédure law-enforcement éprouvée.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Disproportionné et illégal. Un gel préventif doit être ciblé sur des avoirs précis (art. 263 CPP). Demander un gel de masse sans fondement est abusif et peut conduire à des poursuites civiles.",
+          "legal": "Art. 263 + 197 CPP — Proportionnalité et ciblage des mesures de séquestre.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,442 @@
+{
+  "id": "supply_chain_sante",
+  "title": "Supply-Chain Santé",
+  "icon": "🏥",
+  "difficulty": "expert",
+  "atmosphere": "hospital",
+  "realCase": "Scénario fictif — synthèse d'éléments inspirés de Kaseya 2021, Change Healthcare 2024, et de risques réels identifiés par le eHealth Suisse. Simule la compromission d'un éditeur SaaS de santé utilisé par 140+ hôpitaux et cliniques suisses. Conçu pour l'entraînement sénior sur la gestion multi-acteurs en contexte vital.",
+  "tags": [
+    "FORENSIQUE",
+    "DROIT",
+    "RÉSEAUX",
+    "WINDOWS"
+  ],
+  "legalRefs": [
+    "LPD 2023 Art. 5",
+    "LPTh",
+    "Art. 321 CP",
+    "Ordonnance DEP",
+    "ISO/IEC 27036",
+    "NIST SP 800-161",
+    "eHealth Suisse",
+    "LAM",
+    "CLOUD Act"
+  ],
+  "intro": "Dimanche 04h12. Vous êtes CISO-de-garde de <strong>MediSwiss SA</strong>, éditeur SaaS genevois de <em>MedFlow</em>, solution de prescription électronique utilisée par 140 hôpitaux et cliniques en Suisse (2.1 millions de patients). Appel d'urgence : votre SOC détecte des connexions anormales vers plusieurs C2 depuis vos serveurs de production. Les hôpitaux clients signalent des lenteurs. Dans 2 heures, les équipes médicales du dimanche matin vont prescrire. Vos décisions vont engager des vies.",
+  "alertLevel": "🔴 COMPROMISSION SAAS SANTÉ — 140 hôpitaux impactés, risque vital",
+  "objectives": [
+    {
+      "icon": "⚡",
+      "text": "Gérer la tension continuité médicale vs sécurisation forensique"
+    },
+    {
+      "icon": "🏥",
+      "text": "Coordonner 140+ établissements clients avec urgences médicales actives"
+    },
+    {
+      "icon": "⚖️",
+      "text": "Respecter LPD 2023 + LPTh + Art. 321 CP (secret médical)"
+    },
+    {
+      "icon": "🔐",
+      "text": "Qualifier l'étendue technique d'une compromission multi-tenant"
+    },
+    {
+      "icon": "📜",
+      "text": "Gérer la communication DFF (subventions OFSP), eHealth Suisse, cantons"
+    }
+  ],
+  "debrief": "<p>Ce scénario illustre les <strong>attaques supply-chain sur SaaS santé</strong>, une menace croissante depuis Change Healthcare (USA, février 2024, 100M de patients). En Suisse, le Dossier Électronique du Patient (DEP) et les solutions SaaS de prescription concentrent un risque systémique. Une compromission d'un seul éditeur impacte 140 hôpitaux simultanément — c'est l'effet cascade.</p><p>Les 11 étapes mettent en tension cinq dimensions : <strong>médicale</strong> (vies en jeu → pas d'arrêt brutal sans plan de continuité), <strong>forensique</strong> (preuves multi-tenant complexes), <strong>juridique</strong> (LPD 2023 + LPTh + Art. 321 CP secret médical), <strong>coordination</strong> (140 clients + OFSP + eHealth Suisse + cantons), <strong>réputationnelle</strong> (la confiance en santé numérique).</p><p>La maîtrise Expert suppose de savoir équilibrer ces dimensions en temps réel, en protégeant d'abord les patients — puis les preuves, puis l'entreprise.</p>",
+  "narrative": {
+    "success": "La continuité médicale est maintenue grâce au mode dégradé coordonné. La compromission est contenue en 36h, le vecteur (dépendance npm compromise) est identifié et publié. Les 140 établissements clients sont rassurés par la transparence. Le rapport post-mortem devient un cas d'école pour eHealth Suisse. La confiance envers MediSwiss survit — renforcée, même, par la qualité de la gestion.",
+    "degraded": "La compromission est contenue mais avec des séquelles : 2 hôpitaux ont dû suspendre la prescription électronique sur 48h, créant des incidents médicaux mineurs. Certaines données patients ont été exfiltrées sans pouvoir être chiffrées rétrospectivement. L'affaire passe au PFPDT en procédure ouverte. MediSwiss survit mais avec des contrats clients affaiblis.",
+    "failure": "Cascade d'erreurs : arrêt brutal des services = chaos médical dans 140 établissements, incidents vitaux documentés, plaintes pénales par familles, intervention OFSP forcée, sanction PFPDT maximale, résiliation de contrats par les grands hôpitaux (HUG, CHUV, USZ). MediSwiss dépose le bilan en 18 mois. Cas d'école négatif pour toute la cyber-santé suisse."
+  },
+  "steps": [
+    {
+      "phase": "⚡ 04h12 — Le signal multi-tenant",
+      "situation": "Votre SOC détecte simultanément depuis 03h47 : (1) connexions sortantes inhabituelles depuis 23 de vos 47 serveurs de production vers 3 IP européennes (domaines suspects, enregistrés il y a 6 jours), (2) pics de latence sur l'API de prescription électronique chez 12 hôpitaux clients, (3) le worker de backup a tenté une restauration automatique à 03h58 (signal inhabituel). Les équipes médicales du dimanche arrivent à 06h30.",
+      "law": "<strong>LPD 2023 Art. 24</strong> — Notification PFPDT.<br><strong>LPTh</strong> — Loi sur les produits thérapeutiques.<br><strong>Manuel Ch. 11.1</strong> — Capture forensique préalable.",
+      "question": "<strong>Votre première décision CISO ?</strong>",
+      "choices": [
+        {
+          "text": "Arrêter immédiatement tous les services MedFlow chez les 140 hôpitaux clients pour stopper net la compromission — la priorité absolue est l'intégrité du système, et les hôpitaux disposent de leurs procédures dégradées papier en cas d'arrêt SaaS imprévu.",
+          "ok": false,
+          "pts": -35,
+          "fb": "Catastrophe sanitaire. Arrêter la prescription électronique chez 140 hôpitaux sans plan B = retour au papier non préparé, ordonnances ralenties, erreurs de dosage, urgences bloquées. L'arrêt brutal CRÉE un incident médical plus grave que la compromission potentielle. La règle en santé : stabiliser AVANT d'agir.",
+          "legal": "LPTh + Devoir de continuité médicale — L'arrêt brutal est une faute grave en santé.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Action coordonnée 04h15-05h30 : (1) Activer la cellule de crise (CISO + CTO + DPO + direction médicale externe) ; (2) Passer immédiatement les 140 clients en mode dégradé PRÉPARÉ (cache local + backup lecture seule, pas de nouvelle prescription sans validation humaine) ; (3) Capturer RAM + logs sur 5 serveurs représentatifs SANS les éteindre ; (4) Isoler progressivement les serveurs compromis au niveau réseau (VLAN quarantaine) ; (5) Alerter OFCS + PFPDT en pré-notification. Horizon : tenir jusqu'à 06h30 en mode sécurisé.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Décision CISO sénior exemplaire. Vous priorisez la continuité médicale (mode dégradé préparé) sans sacrifier la réponse cyber (capture forensique + isolation progressive). La cellule de crise active les bons acteurs immédiatement. La pré-notification OFCS/PFPDT respecte les obligations sans précipiter la communication publique. C'est la pratique ISO/IEC 27036 + NIST SP 800-161 appliquée à la santé.",
+          "legal": "LPD 2023 + LPTh + ISO/IEC 27036 + Manuel Ch. 11.1 — Réponse multi-dimensions maîtrisée.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Attendre 08h00 et le début de la journée ouvrable pour réunir l'équipe complète (CISO + CTO + DPO + direction médicale + juristes externes) avant toute décision opérationnelle — un choix collégial à froid évite les erreurs dommageables faites dans la précipitation nocturne. La gouvernance d'incident moderne privilégie la délibération collégiale sur l'action solitaire d'un seul responsable, et les premières heures sont rarement décisives pour le pronostic global de l'incident, qui se mesure sur des semaines voire mois en pratique métier.",
+          "ok": false,
+          "pts": -40,
+          "fb": "Abandon de poste en contexte vital. 4 heures d'attente = 4 heures d'exfiltration supplémentaire, de risque d'escalade attaquant (wiper), et surtout de prescriptions médicales faites sur un système compromis. Le CISO-de-garde DOIT décider, c'est précisément son rôle. Attendre = faute grave engageant sa responsabilité personnelle.",
+          "legal": "Art. 717 CO + Devoir de diligence CISO — Responsabilité personnelle en urgence.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "🔬 05h45 — La cartographie technique",
+      "situation": "La cellule de crise est en place. L'analyse forensique progresse : la souche identifiée est <strong>un implant chargé par une dépendance npm compromise</strong> (<code>@medi-utils/pdf-gen</code> v3.4.7, téléchargée il y a 11 jours dans votre pipeline CI/CD). L'implant scanne les BDD multi-tenants et exfiltre par chunks HTTPS les prescriptions + AVS des patients. L'analyse préliminaire estime 340 000 à 850 000 dossiers patients potentiellement touchés.",
+      "law": "<strong>NIST SP 800-161</strong> — Supply Chain Risk Management.<br><strong>MITRE ATT&CK T1195.002</strong> — Compromise Software Supply Chain.<br><strong>LPD 2023 Art. 5 al. 1 let. c</strong> — Données médicales = sensibles.",
+      "question": "<strong>Quelle stratégie d'investigation forensique adoptez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Concentrer l'investigation forensique sur la seule dépendance npm compromise (@medi-utils/pdf-gen v3.4.7) qui est techniquement la source unique de la compromission — analyser l'ensemble du parc disperse les ressources et retarde la remédiation ciblée.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Vision trop étroite. La dépendance npm est le VECTEUR INITIAL, mais après 11 jours l'attaquant a probablement établi des persistances indépendantes (comptes de service, tâches planifiées, backdoors dans l'infrastructure). Remplacer juste la dépendance sans audit exhaustif = laisser les backdoors en place.",
+          "legal": "NIST SP 800-161 + MITRE T1195 — Auditer au-delà du vecteur initial.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Cartographie systématique multi-niveaux : (A) Reverse de l'implant npm (YARA rules, IoC), (B) Audit forensique des 47 serveurs (hash comparison vs baseline, detection de persistance, WMI/scheduled tasks, comptes de service créés), (C) Analyse des logs de BDD multi-tenant (quels tenants ont été accédés/exfiltrés), (D) Reconstruction de la timeline d'intrusion sur 11 jours, (E) Identification précise des IoC à partager (hashes, IP C2, patterns), (F) Validation croisée avec GovCERT sur similarités d'attaques connues.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Plan d'investigation sénior complet. Chaque niveau a une finalité claire : reverse pour comprendre, audit infra pour le nettoyage, logs BDD pour la notification LPD précise, timeline pour la qualification pénale, IoC pour la communauté, validation externe pour l'attribution. C'est l'approche NIST SP 800-161 appliquée à un cas réel supply-chain.",
+          "legal": "NIST SP 800-161 + MITRE T1195 + Manuel Ch. 20 + Pratique GovCERT.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Sous-traiter intégralement l'investigation forensique à un cabinet externe de premier rang (Mandiant, CrowdStrike Services, SEC-Consult) — leurs ressources industrielles et leur expérience d'incidents similaires garantissent une qualité supérieure à toute analyse interne improvisée. La spécialisation dépasse largement les capacités internes des éditeurs SaaS santé, et les rapports établis par ces cabinets bénéficient d'une crédibilité reconnue auprès des autorités fédérales et des cyber-assureurs internationaux qui acceptent leurs conclusions sans contre-expertise.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Externaliser n'exonère pas. Même avec Mandiant sur le dossier (bon choix externe), le CISO doit garder la maîtrise stratégique : direction des priorités, arbitrage continuité/forensique, liaison avec les autorités, communication clients. Externaliser TOUT = perdre le contrôle.",
+          "legal": "Pratique SECO/FINMA — Externalisation avec gouvernance, jamais déresponsabilisation.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🏥 07h00 — Les 140 directions d'établissement",
+      "situation": "Le mode dégradé tient. Les directions des 140 hôpitaux clients commencent à appeler : HUG, CHUV, Inselspital Bern, USZ, Kantonsspital St-Gallen, plus de nombreuses cliniques privées. Leurs questions : « Nos patients sont-ils concernés ? », « Devons-nous suspendre le DEP ? », « Quelle est votre responsabilité ? », « Quelles données ont fuité ? ». Vous devez communiquer mais les données forensiques sont encore préliminaires.",
+      "law": "<strong>Art. 321 CP</strong> — Secret médical.<br><strong>Contrats SLA clients</strong> — Obligations contractuelles de notification.<br><strong>eHealth Suisse Code de bonnes pratiques</strong>.",
+      "question": "<strong>Quelle communication aux 140 établissements ?</strong>",
+      "choices": [
+        {
+          "text": "Attendre 12 à 24 heures pour disposer de données forensiques consolidées avant toute communication aux 140 hôpitaux clients — communiquer prématurément sur des analyses partielles génère davantage de confusion et oblige à des rectifications coûteuses.",
+          "ok": false,
+          "pts": -35,
+          "fb": "Violation contractuelle + perte totale de confiance. Les contrats SaaS santé exigent une notification clients sous quelques heures (pas jours) pour les incidents majeurs. De plus, 140 directions hospitalières sans information = 140 prises de décisions divergentes (certains vont suspendre MedFlow, créant des incidents médicaux). La transparence rapide, même partielle, est obligatoire.",
+          "legal": "Contrats SLA + Devoir d'information + eHealth Suisse — Communication rapide obligatoire.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Communiqué structuré 07h15 aux 140 clients : (1) Incident en cours, compromission confirmée d'une composante, investigation active ; (2) Mode dégradé MedFlow opérationnel, poursuite possible de l'activité médicale en suivant les instructions jointes ; (3) Analyse d'exposition en cours, aucun établissement confirmé comme ayant subi une fuite à ce stade, mise à jour prévue toutes les 2h ; (4) Hotline dédiée 24/7 pour les DSI hospitalières ; (5) Engagement de transparence totale au fur et à mesure de l'investigation. Signé CEO + CISO + Direction Médicale.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Communication de crise sénior exemplaire. Transparence sans précipitation, mode dégradé opérationnel rassurant, fréquence de mise à jour claire, hotline dédiée, signature de haut niveau. Les 140 DSI savent quoi faire, comment continuer leur activité, et quand attendre les prochaines informations. C'est la confiance reconstruite en temps réel.",
+          "legal": "eHealth Suisse + Contrats SLA + Bonnes pratiques crise — Communication maîtrisée.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Envoyer un communiqué général rassurant aux 140 directions hospitalières confirmant qu'aucune fuite de données patient n'a été identifiée à ce stade — le ton apaisant prévient une panique opérationnelle inutile pendant que l'investigation se poursuit en coulisses. Cette gestion mesurée de l'information préserve la confiance des hôpitaux clients et leur permet de maintenir leurs activités sans perturbation majeure. La rectification éventuelle pourra intervenir 48-72h plus tard avec des éléments consolidés et davantage de précision technique vérifiée par les experts forensiques externes.",
+          "ok": false,
+          "pts": -40,
+          "fb": "Mensonge qui détruit tout. Affirmer « pas de fuite » alors que l'investigation est en cours = (1) potentiellement faux (révélation ultérieure = catastrophe), (2) exposition pénale (Art. 251 CP, fausse communication), (3) destruction de la crédibilité à vie. En santé, un seul mensonge documenté = fin du contrat avec tous les grands hôpitaux.",
+          "legal": "Art. 251 CP + Contrats SLA — Fausse communication = faute grave.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "🏛️ 09h30 — La coordination fédérale",
+      "situation": "L'OFCS prend l'initiative d'activer une cellule de crise fédérale : eHealth Suisse (coordination DEP), OFSP (autorité santé), PFPDT (données), fedpol cybercriminalité, cantons concernés. Le chef OFCS vous propose de devenir le point d'entrée technique fédéral pour l'incident. C'est un honneur mais aussi un risque (engagement, exposition médiatique, sur-exposition juridique).",
+      "law": "<strong>Ordonnance OFCS</strong> — Coordination fédérale.<br><strong>LoiFédDEP</strong> — Dossier électronique patient.<br><strong>Art. 320 CP</strong> — Secret de fonction (conséquences implicites).",
+      "question": "<strong>Quelle est votre position ?</strong>",
+      "choices": [
+        {
+          "text": "Accepter d'être le point d'entrée unique pour la cellule de crise fédérale et assumer personnellement la coordination interinstitutionnelle — la simplicité d'un interlocuteur unique fluidifie les échanges avec OFCS, eHealth Suisse, OFSP, PFPDT et fedpol. Cette concentration des responsabilités garantit la cohérence narrative et évite les contradictions entre messages parallèles. Le CISO est légitime pour ce rôle et la confiance accordée par les autorités est précieuse pour la suite de la collaboration institutionnelle.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Prise de risque démesurée. Gérer SEUL la coordination avec 5 autorités fédérales + 26 cantons + 140 clients + investigation technique = surcharge qui garantit des erreurs. De plus, une seule personne point-d'entrée = risque opérationnel (indisponibilité, burn-out) et juridique (exposition personnelle).",
+          "legal": "Principe de résilience organisationnelle — Pas de SPOF humain.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Accepter le rôle avec cadrage : (1) Désigner une équipe de liaison (CISO + DPO + avocat externe + com) pour partager la charge ; (2) Protocole de communication défini (quelles infos circulent, à quelle fréquence, avec quels filtres LPD/Art. 321 CP) ; (3) Reporting quotidien documenté ; (4) Support juridique interne présent à chaque réunion interinstitutionnelle ; (5) Engagement sur délais réalistes (48h investigation, 96h premières conclusions) ; (6) Revue hebdomadaire avec le CA de MediSwiss pour la gouvernance.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Acceptation avec cadrage professionnel. Vous acceptez la responsabilité tout en la structurant pour qu'elle soit tenable. Chaque pilier (équipe, protocole, reporting, juridique, délais, gouvernance) a une finalité précise. C'est l'attitude attendue d'un CISO sénior face à une crise d'ampleur nationale.",
+          "legal": "Ordonnance OFCS + Pratique crise santé 2024 — Coordination cadrée.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Refuser le rôle de point d'entrée fédéral — la coordination interinstitutionnelle relève de l'OFCS qui dispose des compétences et de la légitimité institutionnelle nécessaires, et c'est outrepasser les fonctions d'un CISO d'une entreprise privée.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Fuite de responsabilité. MediSwiss est l'épicentre de la crise (prestataire compromis) ; refuser de coordonner = laisser l'OFCS et eHealth Suisse improviser sans la connaissance technique interne, ce qui augmente les erreurs publiques. Le CISO est précisément le bon interlocuteur technique — le refus témoigne d'un manque de maturité crisis-management.",
+          "legal": "Devoir de diligence CISO + Principe de coopération — Refus inadéquat.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "🔐 Lundi 06h00 — Le dilemme du déchiffrement forcé",
+      "situation": "24h après l'alerte. L'analyse identifie le point exact où l'implant a exfiltré les données : un chunk chiffré de 8.4 To compressé vers un bucket Azure (Pays-Bas) puis relayé vers une infrastructure russe. Problème : dans ces 8.4 To, vos propres clés de chiffrement LPD (stockées en RAM sur les serveurs, donc exfiltrées avec le reste) permettraient à l'attaquant de déchiffrer les données à froid. Vous pouvez tenter une opération de récupération Azure avant les 7 jours de rétention, mais cela exige une coopération avec Microsoft (CLOUD Act applicable).",
+      "law": "<strong>CLOUD Act (USA)</strong> — Juridiction étendue US sur Microsoft.<br><strong>Art. 272 CPP</strong> — Coopération internationale.<br><strong>LPD 2023 Art. 16</strong> — Transferts internationaux.",
+      "question": "<strong>Quelle action ?</strong>",
+      "choices": [
+        {
+          "text": "Contacter directement Microsoft Trust & Security pour exiger la saisie du bucket Azure (Pays-Bas) — Microsoft coopère habituellement avec les entreprises victimes en cas d'urgence, et cette voie directe contourne les délais MLAT prohibitifs.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Précipitation juridiquement problématique. Demander à Microsoft une saisie hors cadre judiciaire suisse = aucune valeur légale si le tribunal rejette la preuve plus tard ; exposition au CLOUD Act (Microsoft doit répondre aux US avant la Suisse). La voie juridique formelle est plus lente mais protège la recevabilité et la souveraineté.",
+          "legal": "Art. 272 CPP + CLOUD Act + ATF 149 I 218 — Voie formelle obligatoire.",
+          "critical": false,
+          "next": 5
+        },
+        {
+          "text": "Coordination juridique multi-niveaux : (1) Demande urgente au MP via fedpol cybercriminalité pour ordonnance de saisie internationale ; (2) Parallèlement, demande préliminaire à Microsoft Trust & Security via canaux officiels pour <em>preservation order</em> (gel des données pendant procédure) — usage légitime et fréquent ; (3) Coordination simultanée avec autorité néerlandaise (où est le bucket) via Eurojust ; (4) Documentation procédurale complète ; (5) Briefing PFPDT sur le risque d'accès tiers via CLOUD Act. Objectif : gel dans 24h, saisie formelle dans 72h.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Procédure juridique sénior. Vous distinguez <em>preservation</em> (gel immédiat) et <em>acquisition</em> (voie judiciaire formelle) — pratique standard en e-discovery transfrontalier. Le gel Microsoft est légitime, rapide, et compatible avec la souveraineté suisse. La saisie formelle suit la voie MP → Eurojust → autorité NL. Votre connaissance de ces mécanismes marque le niveau Expert.",
+          "legal": "Art. 272 CPP + Convention Budapest + Eurojust + pratique Microsoft Trust & Security.",
+          "critical": false,
+          "next": 5
+        },
+        {
+          "text": "Renoncer à toute tentative de saisie internationale du bucket — les données ayant déjà transité vers une infrastructure russe, la récupération est techniquement et juridiquement illusoire, et l'énergie doit aller à la reconstruction et la notification. La gestion pragmatique des ressources rares impose de concentrer le budget juridique sur les actions à plus forte probabilité de succès. La Russie ne coopère pas avec les procédures MLAT occidentales depuis février 2022 et toute démarche est vouée à l'échec à court terme dans ce contexte de relations diplomatiques tendues.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Fatalisme inapproprié. Le gel Azure est techniquement et juridiquement faisable. Abandonner = (1) perdre la preuve pour l'enquête pénale, (2) autoriser l'attaquant à exploiter les données complètes, (3) manquer à votre devoir de protection des patients. Un CISO sénior tente toutes les voies légales disponibles avant d'abandonner.",
+          "legal": "Devoir de diligence CISO + Art. 7 LPD 2023 — Effort de récupération attendu.",
+          "critical": false,
+          "next": 5
+        }
+      ]
+    },
+    {
+      "phase": "⚖️ Mardi — La qualification des dossiers exfiltrés",
+      "situation": "L'analyse des logs BDD multi-tenant progresse : <strong>627 412 dossiers patients confirmés</strong> touchés (sur 47 tenants hospitaliers exposés). Parmi eux : 12 400 dossiers VIH/hépatites, 89 000 dossiers oncologie, 340 000 prescriptions psychiatriques, 186 000 interruptions de grossesse. Les données les plus sensibles sont disproportionnellement représentées car concentrées sur les plus grands hôpitaux clients.",
+      "law": "<strong>LPD 2023 Art. 5 al. 1 let. c</strong> — Données de santé = sensibles.<br><strong>LPD 2023 Art. 7 al. 3</strong> — Responsable du traitement.<br><strong>Convention 108+ Conseil de l'Europe</strong>.<br><strong>CEDH Art. 8</strong>.",
+      "question": "<strong>Stratégie de notification individuelle ?</strong>",
+      "choices": [
+        {
+          "text": "Notification email standardisée envoyée aux 627 000 patients touchés avec un message unique pour respecter le principe d'égalité de traitement — différencier les contenus selon la sensibilité des données serait paternaliste et juridiquement contestable.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Traitement inadéquat pour les données sensibles. La fuite d'un dossier IVG, d'un séropositivité, ou d'un suivi psychiatrique peut avoir des conséquences graves : discrimination employeur, violence familiale, suicide même. L'approche doit être différenciée par sensibilité, avec accompagnement adapté pour les catégories à risque vital.",
+          "legal": "LPD 2023 Art. 5 + CEDH Art. 8 + Devoir de précaution — Protection différenciée.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Stratégie différenciée : (A) 540 000 patients avec données standard : notification email + FAQ + monitoring identité gratuit ; (B) 78 000 patients avec données sensibles courantes (prescriptions psychiatriques, oncologie) : notification personnalisée + accompagnement psychologique offert ; (C) 9 400 patients avec données à risque vital (VIH, IVG, hépatites) : contact individuel via médecin traitant, évaluation de risque (violence conjugale, discrimination), support spécialisé ; (D) Cellule d'écoute 24/7 ; (E) Coordination avec associations (Aide Suisse contre le Sida, ProFemmes, etc.) ; (F) Prise en charge 100% des frais de soutien.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Notification sénior-niveau. Vous distinguez les niveaux de risque et adaptez l'approche à chacun. Le contact via médecin traitant pour les données à risque vital est essentiel : il préserve la confidentialité et offre un soutien professionnel. La coordination avec les associations apporte une expertise spécifique. C'est le modèle qui émerge des grandes fuites médicales 2024 (Change Healthcare aux USA a adopté une approche similaire sous pression).",
+          "legal": "LPD 2023 Art. 5/7 + CEDH Art. 8 + Convention 108+ + pratique 2024 — Notification protective.",
+          "critical": false,
+          "next": 6
+        },
+        {
+          "text": "Notification confiée intégralement aux 140 hôpitaux clients qui sont les responsables de traitement vis-à-vis de leurs patients — MediSwiss est sous-traitant au sens de la LPD et la communication directe relève contractuellement du responsable hospitalier. Cette répartition juridique des responsabilités est inscrite dans les Data Processing Agreements signés avec chaque hôpital, et chaque établissement dispose des canaux de communication directs avec ses patients qu'il connaît mieux que MediSwiss. La doctrine PFPDT confirme cette distinction depuis 2018, ce qui sécurise juridiquement l'approche choisie par les juristes de MediSwiss.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Déresponsabilisation inappropriée. MediSwiss est le responsable du traitement (Art. 7 al. 3 LPD 2023) — la responsabilité ne s'externalise pas aux clients. Les hôpitaux ont leur propre part (co-responsable), mais le prestataire technique a une responsabilité autonome de notification. Se défausser = sanctions PFPDT aggravées.",
+          "legal": "LPD 2023 Art. 7/9 — Co-responsabilité, pas défausse.",
+          "critical": false,
+          "next": 6
+        }
+      ]
+    },
+    {
+      "phase": "💰 Mercredi — Le contact des attaquants",
+      "situation": "Mercredi 14h22. Un email chiffré arrive sur l'adresse publique du CEO : le groupe <em>BlackMatrix</em> (inconnu, mais TTPs proches de BlackCat/ALPHV) revendique l'exfiltration de 8.4 To et propose : soit paiement de 18M CHF en Monero (non traçable) sous 72h avec garantie de suppression ; soit publication progressive. Le CEO vous consulte en urgence. Le CA se réunit dans 2h.",
+      "law": "<strong>GovCERT 2024</strong> — Non-paiement officiel.<br><strong>SECO Sanctions</strong> — BlackMatrix potentiellement listé.<br><strong>OFAC Advisory 2021</strong>.<br><strong>Art. 305bis CP</strong> — Blanchiment.<br><strong>Responsabilité CA</strong>.",
+      "question": "<strong>Quelle recommandation au CA ?</strong>",
+      "choices": [
+        {
+          "text": "Payer la rançon de 18M CHF — le ratio coût/bénéfice est manifestement favorable au regard du risque de publication des 627 000 dossiers patients (dont 9 400 cas VIH, oncologie, IVG), et l'argument moral du préjudice potentiel aux personnes vulnérables justifie l'exception au principe général de non-paiement. Le devoir de protection des personnes les plus exposées aux discriminations sociales (cas VIH, IVG) prime sur les considérations de dissuasion abstraites, et le CA de MediSwiss serait juridiquement fondé à invoquer l'état de nécessité au sens de l'art. 17 CP comme cause de justification subsidiaire.",
+          "ok": false,
+          "pts": -40,
+          "fb": "Analyse morale et juridique fautive. (1) Aucune garantie de suppression (Monero intraçable ne permet AUCUN contrôle post-paiement). (2) Risque SECO si BlackMatrix est listé (sanctions possibles pour MediSwiss ET pour les administrateurs personnellement). (3) Payer crée un incitatif pour d'autres attaques sur le secteur santé suisse. (4) Les dossiers sont DÉJÀ exfiltrés ; payer ne restaure pas la situation. C'est un calcul biaisé par l'émotion compréhensible.",
+          "legal": "GovCERT + SECO + OFAC + Art. 305bis CP — Paiement contraire à l'intérêt collectif.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Recommandation structurée au CA : (1) Ne pas payer — arguments : zéro garantie, risque sanctions, alimentation du modèle criminel, pas de restauration effective ; (2) Investir l'équivalent (18M) dans : soutien patients affectés, durcissement sécuritaire MediSwiss, coopération fedpol internationale ; (3) Engagement transparence publique sur cette décision (valeur morale + effet dissuasif pour d'autres entreprises) ; (4) Documentation de la décision par le CA avec vote consigné (protection juridique des administrateurs) ; (5) Communication avec patients affectés les informant de la non-négociation.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Recommandation sénior éthique et stratégique. Vous présentez au CA une analyse complète, une alternative constructive (l'argent ailleurs), et vous protégez juridiquement les administrateurs (documentation du vote). La communication de la décision aux patients est psychologiquement importante — ils savent que leur vie privée n'a pas été « marchandée ». C'est exactement ce qu'a fait Change Healthcare en 2024 (malgré leur paiement réel ultérieur, contesté).",
+          "legal": "GovCERT + Art. 717 CO + Pratique éthique CA — Décision structurée.",
+          "critical": false,
+          "next": 7
+        },
+        {
+          "text": "Déléguer entièrement la décision au CA sans formuler de recommandation technique — la décision de paiement est une question stratégique d'entreprise qui dépasse le périmètre technique du CISO et engage la responsabilité fiduciaire des administrateurs.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Esquive inappropriée. Le CISO a le devoir de conseiller le CA avec sa recommandation technique et éthique. Laisser un CA sans avis expert = augmenter le risque qu'il décide mal par méconnaissance. La décision appartient au CA, mais le conseil appartient au CISO.",
+          "legal": "Art. 717 CO + Devoir CISO — Conseil = obligation.",
+          "critical": false,
+          "next": 7
+        }
+      ]
+    },
+    {
+      "phase": "🏛 Jeudi — La DélCdG santé et le Parlement",
+      "situation": "La Commission de la Santé du Conseil national demande une audition urgente. Des parlementaires réclament publiquement la nationalisation d'MediSwiss, des interdictions de prestataires SaaS étrangers, et des enquêtes au Conseil fédéral. Un parlementaire vaudois tweete : « Ces incidents ne peuvent plus se reproduire — il faut un monopole d'État sur la cyber-santé ». Le CEO est convoqué. Vous devez le briefer.",
+      "law": "<strong>Art. 169 Cst.</strong> — Haute surveillance.<br><strong>LParl Art. 137</strong> — Auditions.<br><strong>Art. 94 Cst.</strong> — Liberté économique.",
+      "question": "<strong>Points clés du briefing CEO ?</strong>",
+      "choices": [
+        {
+          "text": "Attaquer frontalement les parlementaires en qualifiant publiquement leurs propositions de nationalisation et d'interdiction d'« absurdité populiste qui affaiblirait la cyber-santé suisse » — la fermeté politique du CEO recadrera le débat sur des bases techniques solides et démontrera son leadership face à l'instrumentalisation médiatique de l'incident. Cette posture combative est attendue par les parties prenantes industrielles qui défendent l'écosystème SaaS santé suisse. L'expertise technique du CEO sera un atout dans la confrontation publique et fera basculer l'opinion en sa faveur, à condition qu'il maîtrise les éléments factuels et qu'il n'hésite pas à corriger en direct les approximations parlementaires sur les standards techniques internationaux applicables au secteur.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Stratégie politique catastrophique. Attaquer les parlementaires en audition publique = transformation immédiate en ennemis, amplification médiatique contre MediSwiss, potentielle enquête parlementaire supplémentaire. L'audition exige humilité sur l'incident et rigueur sur les faits — pas de polémique politique.",
+          "legal": "Art. 169 Cst. + Pratique audition — Respect institutionnel.",
+          "critical": false,
+          "next": 8
+        },
+        {
+          "text": "Briefing en 5 axes : (1) Humilité transparente sur l'incident (pas de minimisation, pas d'excuses faciles) ; (2) Faits techniques : c'est une attaque supply-chain sophistiquée, documentée MITRE T1195 — pas une négligence spécifique MediSwiss ; (3) Chiffres : investissement sécuritaire MediSwiss vs moyenne sectorielle, audits ISO, certifications, personnel dédié ; (4) Recommandations constructives : renforcement des obligations NIST SP 800-161 sur TOUS les SaaS santé suisses (pas spécifique MediSwiss), création d'un label eHealth Suisse Sécurisé, obligation d'audit annuel par Swissdigin (pas de politique anti-privé) ; (5) Engagement personnel du CEO à partager les enseignements pour élever tout le secteur.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Briefing stratégique sénior-niveau. Vous préparez le CEO à transformer une audition hostile en opportunité de contribution sectorielle. L'humilité ouvre l'oreille des parlementaires ; les faits techniques éduquent ; les chiffres légitiment ; les recommandations constructives montrent la vision ; l'engagement personnel rassure. C'est le type de brief qui sauve une entreprise — et potentiellement une industrie.",
+          "legal": "Art. 169 Cst. + LParl + Pratique institutionnelle — Audition préparée.",
+          "critical": false,
+          "next": 8
+        },
+        {
+          "text": "Recommander au CEO de décliner la convocation parlementaire et de se faire représenter par un avocat — l'audition publique exposerait MediSwiss à un risque de communication maîtrisé difficilement, et la voie juridique formelle est plus sécurisante.",
+          "ok": false,
+          "pts": -35,
+          "fb": "Erreur institutionnelle majeure. Refuser une audition parlementaire sur un incident de santé affectant 627 000 citoyens = affront démocratique catastrophique. La presse amplifierait en « MediSwiss fuit ses responsabilités ». Les parlementaires interpréteraient comme aveu. Un CEO d'entreprise stratégique SE PRÉSENTE TOUJOURS à une audition de Commission de la Santé.",
+          "legal": "Art. 169 Cst. + Devoir de coopération — Refuser = faute démocratique.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "🔬 Vendredi — Le post-mortem technique",
+      "situation": "Une semaine après. L'investigation a abouti. Vecteur confirmé : dépendance npm compromise via un token GitHub volé à un mainteneur. Persistance : 3 comptes de service créés + 2 tâches planifiées + 1 implant WMI. Les 140 clients sont progressivement remontés en mode sécurisé. Vous devez maintenant produire le post-mortem technique pour : (a) GovCERT (partage IoC communauté), (b) clients (détaillé avec remédiation), (c) régulateurs (LPD + LPTh), (d) public (version grand public).",
+      "law": "<strong>LPD 2023 Art. 49</strong> — Transparence PFPDT.<br><strong>eHealth Suisse</strong> — Code de bonnes pratiques.<br><strong>NIST SP 800-61 Rev. 3</strong> — Lessons learned.",
+      "question": "<strong>Stratégie post-mortem ?</strong>",
+      "choices": [
+        {
+          "text": "Un seul rapport technique détaillé identique pour tous les destinataires (GovCERT, clients, régulateurs, public) — la simplicité documentaire facilite la cohérence narrative, évite les contradictions entre versions et démontre la transparence totale envers l'ensemble des parties prenantes. Cette approche égalitaire est conforme à l'esprit d'ouverture de MediSwiss et limite les coûts de production éditoriale tout en garantissant la cohérence du message communiqué à toutes les parties prenantes externes et internes de l'entreprise. Les destinataires apprécieront cette franchise documentaire qui évite tout soupçon de communication différenciée selon les audiences ciblées et renforce la crédibilité institutionnelle de MediSwiss face aux parlementaires.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Inadéquat aux audiences. GovCERT veut des IoC actionables ; les clients veulent de la remédiation concrète ; les régulateurs veulent des preuves de conformité ; le public veut de la clarté pédagogique. Un seul document est soit trop technique (public) soit trop simpliste (GovCERT). La déclinaison multi-audiences est une compétence CISO sénior.",
+          "legal": "Bonnes pratiques communication — Message adapté à l'audience.",
+          "critical": false,
+          "next": 9
+        },
+        {
+          "text": "4 livrables adaptés : (A) <strong>GovCERT</strong> : IoC techniques (hashes SHA-256, IP, domaines, YARA rules), TTPs MITRE, stix/taxii bundle partageable avec la communauté internationale ; (B) <strong>Clients (140 DSI)</strong> : chronologie détaillée + vecteur + mesures applicables chez eux (audit npm dependencies, détection WMI implants, rotation tokens GitHub) ; (C) <strong>Régulateurs (PFPDT + OFSP)</strong> : conformité LPD 2023 point par point, preuves audits antérieurs, mesures correctives chiffrées, plan de rehaussement sécurité ; (D) <strong>Public</strong> : version pédagogique 3 pages expliquant ce qui s'est passé, ce que MediSwiss a fait, ce qui va changer — lisible par un non-technicien. Coordination simultanée des 4 publications.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Post-mortem sénior structuré et adapté. Chaque livrable a une finalité précise et un format optimisé pour son audience. La coordination simultanée évite les fuites ou divergences entre versions. C'est le modèle qu'a adopté GitHub après la crise Log4Shell — devenu une référence en post-mortem transparent.",
+          "legal": "LPD 2023 + eHealth + NIST + Pratique GitHub/Cloudflare — Communication multi-canal.",
+          "critical": false,
+          "next": 9
+        },
+        {
+          "text": "Limiter strictement la documentation à un rapport interne et à la notification PFPDT minimale requise par la LPD 2023 — toute publication étendue augmente l'exposition juridique de MediSwiss aux recours civils des patients et hôpitaux affectés.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Vision défensive contre-productive. Ne pas publier pour la communauté = (1) priver d'autres entreprises santé des enseignements (autres victimes possibles), (2) manque de crédibilité « on cache des choses », (3) manquer l'opportunité de repositionner MediSwiss comme leader de la transparence cyber. La santé numérique a besoin de partage d'enseignements.",
+          "legal": "eHealth Suisse + Devoir sectoriel — Partage attendu.",
+          "critical": false,
+          "next": 9
+        }
+      ]
+    },
+    {
+      "phase": "💼 J+30 — Les recours et assurances",
+      "situation": "Un mois après. Des plaintes civiles commencent à arriver : 3 patients VIH menacent d'une action collective (tort moral + dommage), 2 hôpitaux clients demandent des dommages contractuels, et votre cyber-assurance (AXA) conteste certains aspects du sinistre (clause exclusion « négligence grave »). Vous devez coordonner la défense juridique avec le conseiller général tout en maintenant la transparence.",
+      "law": "<strong>Art. 41 CO</strong> — Responsabilité civile.<br><strong>Art. 97 CO</strong> — Inexécution contractuelle.<br><strong>LPD 2023 Art. 49 al. 3</strong> — Accès aux données.<br><strong>Police cyber-assurance</strong>.",
+      "question": "<strong>Stratégie défense juridique ?</strong>",
+      "choices": [
+        {
+          "text": "Adopter une position combative globale en contestant en parallèle l'ensemble des plaintes patients, des demandes hospitalières et la qualification AXA — la fermeté juridique uniforme dissuade les recours opportunistes et démontre la solidité du dossier.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Stratégie sub-optimale. Combattre simultanément des patients VIH victimes, des hôpitaux clients, et votre propre assureur = triple front juridique + image désastreuse + coûts de défense massifs. Chaque front exige une stratégie adaptée : empathie + négociation transactionnelle pour patients, coopération + indemnisation partielle pour hôpitaux, expertise juridique pour AXA.",
+          "legal": "Art. 41/97 CO + Pratique contentieuse — Stratégie différenciée par adversaire.",
+          "critical": false,
+          "next": 10
+        },
+        {
+          "text": "Stratégie différenciée : (A) <strong>Patients VIH</strong> : proposition de médiation + fonds de solidarité patients (1M CHF) + accompagnement psychologique à vie + engagement de confidentialité réciproque — éviter un procès médiatique destructeur ; (B) <strong>Hôpitaux clients</strong> : négociation d'indemnisation contractuelle fondée sur les SLA + renforcement sécuritaire offert + conservation des contrats long-terme ; (C) <strong>AXA (cyber-assurance)</strong> : défense vigoureuse avec preuves d'audits antérieurs (ISO 27001 renouvelé 3 mois avant), diligence technique documentée, contestation de la qualification « négligence grave » ; (D) Coordination globale pour cohérence narrative.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Stratégie juridique sénior. Vous traitez chaque catégorie selon sa nature : humanité pour les victimes, commerce pour les clients, droit pour l'assureur. Le fonds de solidarité patients est une démarche humaniste mais aussi stratégique (évite l'action collective destructrice). L'indemnisation hôpitaux préserve la relation long-terme. La défense AXA préserve les ressources pour les mesures réparatrices. Maîtrise complète.",
+          "legal": "Art. 41/97 CO + LPD 2023 + Pratique contentieuse post-cyber 2024.",
+          "critical": false,
+          "next": 10
+        },
+        {
+          "text": "Accepter sans discussion l'ensemble des demandes (indemnisations patients, dommages contractuels hôpitaux, position AXA) pour éviter tout contentieux médiatique destructeur — l'apaisement rapide préserve la réputation et la rétention client à long terme. La stratégie de la transaction généralisée est une pratique courante dans les grandes affaires de violation de données, et le coût total reste largement inférieur au préjudice réputationnel d'un procès médiatisé. La cyber-assurance couvrira l'essentiel des montants concédés, ce qui rend cette voie financièrement supportable pour MediSwiss et préservera sa pérennité économique de manière durable. Cette approche pacifique permet aussi de tourner rapidement la page médiatique.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Stratégie aussi dommageable que le combat total. Accepter inconditionnellement = (1) risque d'épuisement financier de MediSwiss, (2) signal à l'assureur que vous admettez « négligence grave » (perte de couverture), (3) précédent juridique qui encourage d'autres plaintes infondées. La négociation structurée est la voie.",
+          "legal": "Art. 717 CO — Devoir de diligence du CISO/CA envers l'entreprise.",
+          "critical": false,
+          "next": 10
+        }
+      ]
+    },
+    {
+      "phase": "🔮 6 mois après — La transformation",
+      "situation": "Six mois après. MediSwiss a survécu. Les 140 clients sont restés (95% de rétention). Le CA vous propose une promotion : CISO du nouveau <em>Groupe eHealth Résilience Suisse</em>, une initiative inter-entreprises pour mutualiser la cybersécurité du secteur santé. Objectif : faire d'un incident un point de bascule positif pour toute l'industrie. Vous devez rédiger votre acceptation et votre vision.",
+      "law": "<strong>eHealth Suisse 2025</strong> — Orientation sécurité.<br><strong>Engagement sectoriel</strong>.<br><strong>Art. 10 Cst.</strong> — Vision citoyenne.",
+      "question": "<strong>Quelle est votre vision pour ce nouveau rôle ?</strong>",
+      "choices": [
+        {
+          "text": "Refuser la promotion proposée — après six mois de gestion de crise extrêmement éprouvants, le burn-out professionnel est un risque réel et il est plus sage de prendre du recul ou de changer d'industrie pour préserver sa santé personnelle.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Choix personnel respectable mais occasion manquée. Vous avez acquis une expertise unique (cas d'école supply-chain santé, coordination fédérale, crise multi-dimensions) que peu de CISO suisses possèdent. Refuser = priver l'industrie d'une ressource rare au moment où elle en a le plus besoin.",
+          "legal": "Pas de reproche juridique, mais occasion sectorielle manquée.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Vision en 6 piliers : (1) <strong>Standards communs</strong> — adoption collective NIST SP 800-161 pour tout prestataire SaaS santé, certification obligatoire ; (2) <strong>SOC mutualisé</strong> — SOC 24/7 partagé entre MediSwiss + autres éditeurs santé ; (3) <strong>Threat intel sectoriel</strong> — plateforme MISP dédiée santé-CH, partage IoC automatisé ; (4) <strong>Red team annuelle</strong> coordonnée sur tout l'écosystème ; (5) <strong>Formation continue</strong> — programme de 200 heures/an pour les équipes IT santé ; (6) <strong>Transparence publique annuelle</strong> — rapport d'état de la cyber-santé suisse, incidents anonymisés, enseignements. Objectif 3 ans : faire de la Suisse la référence européenne en cyber-santé.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Vision sénior transformationnelle. Chaque pilier répond à un enseignement de la crise : les standards évitent la répétition, le SOC mutualisé démocratise l'excellence, le threat intel décuple la détection, la red team éprouve, la formation élève, la transparence responsabilise. L'objectif Europe = ambition portée par l'expérience. Ce type de leadership transforme un incident en saut qualitatif sectoriel — c'est exactement ce que le secteur santé suisse a besoin post-2024.",
+          "legal": "eHealth Suisse 2025 + NIST SP 800-161 + Pratique Nordique (modèle Estonie).",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Accepter le rôle de CISO du Groupe eHealth Résilience Suisse mais sans formaliser de vision claire en amont — laisser émerger les priorités au fil du temps en fonction des situations rencontrées sur le terrain est l'approche la plus pragmatique pour ce type de mandat naissant. La méthode agile incrémentale est mieux adaptée à un environnement institutionnel en construction et permet d'ajuster les priorités selon les évolutions du secteur. Cette approche flexible évite la rigidité d'une vision préformée qui pourrait s'avérer inadaptée à la réalité émergente du secteur cyber-santé suisse, et facilite l'adhésion des parties prenantes à un projet co-construit progressivement avec les autres directions IT du secteur. La pression d'une vision figée bloquerait l'innovation.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Position réactive inadaptée. Un rôle de cette importance exige une vision explicite dès le départ pour mobiliser les 140+ parties prenantes. Un « on verra » engendrera des divergences, des priorités incompatibles, et un échec dans les 12 mois. Le CA, les clients, les autorités attendent une direction forte.",
+          "legal": "Principe de leadership — Vision = condition du rôle.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ]
+}

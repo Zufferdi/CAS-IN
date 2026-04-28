@@ -1,0 +1,321 @@
+{
+  "id": "veracrypt",
+  "title": "Le Volume VeraCrypt",
+  "icon": "🔒",
+  "difficulty": "hard",
+  "atmosphere": "crypto",
+  "narrative": {
+    "success": "Le rapport formulé correctement (entropie + absence de signature = probable conteneur chiffré) est accepté sans réserve. Le droit au silence du suspect est respecté. Le volume reste inaccessible, mais le rapport tient juridiquement.",
+    "degraded": "Le rapport est accepté avec réserves. Le contenu reste inaccessible — les 8 Go gardent leur secret.",
+    "failure": "Votre affirmation trop forte (« contient des données compromettantes ») est qualifiée de faux dans les titres (art. 251 CP). Plainte est déposée contre vous. Votre carrière d'expert s'arrête."
+  },
+  "tags": [
+    "CRYPTO",
+    "DROIT"
+  ],
+  "legalRefs": [
+    "Manuel Ch. 24.2",
+    "Art. 113 CPP",
+    "Art. 251 CP",
+    "Manuel Ch. 28.4"
+  ],
+  "intro": "Un fichier de 8 Go avec entropie 0.998. Aucune signature reconnue. Probablement un volume VeraCrypt. Le MP veut savoir ce qu'il contient. Mais sans la clé, que peut-on affirmer ?",
+  "alertLevel": "🔐 VeraCrypt AES-256 — 50 Go de secrets · Impossible à casser · Comment en parler au MP ?",
+  "objectives": [
+    {
+      "icon": "🔒",
+      "text": "Formuler la détection d'un volume chiffré sans sur-affirmer"
+    },
+    {
+      "icon": "⚖️",
+      "text": "Respecter le droit au silence du suspect (Art. 113 CPP — nemo tenetur)"
+    },
+    {
+      "icon": "🔑",
+      "text": "Identifier les alternatives réalistes (RAM dump, keyfile)"
+    }
+  ],
+  "debrief": "<p>Le Manuel (Ch. 24.2) est explicite : « affirmer qu'un volume VeraCrypt contient des données compromettantes sans en connaître le contenu constitue une opinion inadmissible, non un fait forensique. »</p><p>La détection d'un volume chiffré repose sur des indicateurs statistiques (haute entropie, absence de magic bytes) — jamais sur une certitude.</p><p><strong>Référence CH</strong> : Art. 113 CPP — le prévenu ne peut être contraint de fournir ses mots de passe. Art. 248 CPP — scellés sur les volumes chiffrés si protection de la sphère privée invoquée. ATF 147 IV 16 (2020) — irrecevabilité des preuves portant atteinte à la protection des données. En pratique suisse (brigades cyber VD, ZH), une expertise judiciaire sur la structure des volumes VeraCrypt est admissible sans nécessiter le déchiffrement.</p>",
+  "steps": [
+    {
+      "phase": "🔐 Le fichier mystérieux",
+      "situation": "Sur le disque analysé, X-Ways signale un fichier de 8 Go nommé <code>backup_photos.dat</code> avec une entropie de 0.998 (quasi-maximale). Aucune magic bytes reconnue. Le fichier n'a aucune structure interne identifiable.",
+      "law": "<strong>Manuel Ch. 24.2</strong> — Entropie maximale = probable chiffrement ou compression forte.<br><strong>Art. 113 CPP</strong> — Le suspect peut refuser de déchiffrer : nemo tenetur.",
+      "question": "<strong>Comment qualifiez-vous ce fichier dans votre rapport ?</strong>",
+      "choices": [
+        {
+          "text": "« Le fichier backup_photos.dat est manifestement un volume chiffré VeraCrypt — le nom trompeur, l'extension .dat et l'entropie élevée de 0.998 sont des indicateurs convergents typiques du modus operandi de dissimulation par conteneur. »",
+          "ok": false,
+          "pts": -25,
+          "fb": "Affirmation inadmissible. Sans déchiffrement du volume, il est impossible de prouver qu'il s'agit de VeraCrypt ni qu'il contient quoi que ce soit.",
+          "legal": "Art. 251 CP — Un expert qui présente une opinion comme un fait engage sa responsabilité pénale.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "« Le fichier backup_photos.dat présente une entropie de 0.998/1.000 et ne contient aucune signature de format reconnue, conditions caractéristiques d'un conteneur chiffré. Son contenu ne peut être examiné sans la clé de déchiffrement. »",
+          "ok": true,
+          "pts": 25,
+          "fb": "Formulation forensique correcte. Elle décrit les faits mesurables (entropie, absence de signature), leur interprétation probable (conteneur chiffré) et la limite claire de l'analyse.",
+          "legal": "Manuel Ch. 29.3 — Fait (entropie mesurée) → interprétation (probable chiffrement) → limite (sans clé, inaccessible).",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "« Il s'agit probablement d'une image disque compressée par un algorithme moderne (zstd, lzma) ou d'un fichier endommagé — l'entropie élevée et l'absence de signature peuvent être expliquées par ces hypothèses techniques bénignes avant de conclure au chiffrement. »",
+          "ok": false,
+          "pts": -10,
+          "fb": "Inexact. Une entropie de 0.998 est trop élevée pour une compression standard (qui conserve des patterns) et une image disque compressée aurait des headers reconnaissables.",
+          "legal": "Manuel Ch. 24.2 — Entropie 0.99+ avec absence de structure = chiffrement fort, pas compression.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔑 La demande de clé",
+      "situation": "Le MP veut contraindre le suspect à fournir le mot de passe VeraCrypt. Le suspect invoque le droit au silence (art. 113 CPP). Le MP vous demande s'il existe une alternative technique.",
+      "law": "<strong>Art. 113 CPP</strong> — Nemo tenetur : nul n'est tenu de s'auto-incriminer.<br><strong>Manuel Ch. 24.3</strong> — Alternatives : RAM dump, keyfile externe, historique de montage.",
+      "question": "<strong>Quelles alternatives techniques proposez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Brute force du mot de passe VeraCrypt avec un dictionnaire ciblé sur les patterns du suspect (noms, dates, mots-clés OSINT) — VeraCrypt utilise PBKDF2 avec 500k itérations mais une passphrase faible reste exploitable en quelques jours sur GPU.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Irréalisable dans un délai judiciaire raisonnable. VeraCrypt utilise PBKDF2/Argon2 avec un grand nombre d'itérations précisément pour rendre le brute force impossible.",
+          "legal": "Manuel Ch. 24.3 — VeraCrypt est conçu pour résister au brute force.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Analyser le dump RAM capturé lors du live forensics — le volume monté y laisse des traces de clé.",
+          "ok": true,
+          "pts": 20,
+          "fb": "Méthode valide si le dump a été fait pendant que le volume était monté. Volatility peut extraire les clés AES de la RAM.",
+          "legal": "Manuel Ch. 11.1 — La RAM d'un système avec VeraCrypt monté contient la clé de déchiffrement en clair.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Chercher un keyfile sur les autres supports saisis (USB, cloud, NAS).",
+          "ok": true,
+          "pts": 15,
+          "fb": "Approche valide. Un keyfile est un fichier binaire qui remplace ou complète le mot de passe. Si trouvé, il permet l'ouverture du volume.",
+          "legal": "Manuel Ch. 24.2 — Keyfile : alternative au mot de passe, chercher sur tous les supports saisis.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🧠 L'extraction Volatility",
+      "situation": "Heureusement, le live forensics a capturé 32 Go de RAM avant que le suspect n'éteigne son laptop. Vous lancez <code>vol.py -f memory.raw windows.registry.userassist</code> qui révèle une exécution récente de <code>VeraCrypt.exe</code>, puis <code>windows.memmap --pid=veracrypt.exe</code> + analyse du heap avec le plugin <code>vcrypthunt</code> (plugin custom).",
+      "law": "<strong>Volatility 3</strong> — Plugins <code>vcrypthunt</code>, <code>bitlockerhunt</code> pour clés en RAM.<br><strong>Elcomsoft Forensic Disk Decryptor</strong> — Alternative commerciale.<br><strong>Manuel Ch. 24.3</strong> — Workflow d'extraction de clé depuis RAM.",
+      "question": "<strong>Comment procédez-vous à l'extraction de la clé ?</strong>",
+      "choices": [
+        {
+          "text": "Lancer directement Elcomsoft Forensic Disk Decryptor sur le dump RAM d'origine sans dupliquer — l'outil commercial est validé judiciairement et un dump de travail intermédiaire ralentit la procédure sans apporter de garantie supplémentaire. Elcomsoft a été retenu dans plus de 200 affaires suisses référencées par la Conférence des Procureurs depuis 2018, ce qui établit définitivement son admissibilité forensique.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Risque de perte. Une opération unique sur le seul dump RAM sans sauvegarde = si l'outil crash ou corrompt, la preuve est perdue. Règle DFIR : toujours travailler sur une COPIE du dump.",
+          "legal": "ACPO Principle 1 — Travailler sur copie, jamais sur l'original.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "(1) Hash + copie du dump RAM, (2) Analyse sur copie : vcrypthunt plugin Volatility cherche les AES Key Schedule en mémoire (patterns caractéristiques de l'expansion de clé AES-256), (3) Si trouvée : extraction + test de montage du volume avec <code>veracrypt --mount-cryptsetup</code>, (4) Si échec : Elcomsoft en fallback commercial, (5) Documentation complète du protocole.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Workflow DFIR exemplaire. Backup + analyse sur copie + outils open-source en premier + commercial en fallback + documentation. Reproductible par un contre-expert. Conforme ACPO + Manuel Ch. 24.3.",
+          "legal": "ACPO Principle 1-3 + Manuel Ch. 24.3 — Workflow standard extraction clé RAM.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Abandonner cette piste : l'extraction d'une clé AES-256 depuis 32 Go de RAM est trop incertaine et le résultat dépend fortement de la fragmentation mémoire au moment du dump, rendant la preuve fragile en audience.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Trop pessimiste. vcrypthunt et outils similaires ont un taux de succès documenté de 60-80% sur volumes récemment montés. Même un échec est documentable — mais abandonner sans essayer = prive l'enquête.",
+          "legal": "Manuel Ch. 24.3 — L'extraction RAM est une technique standard avec taux de succès documenté.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🎯 La clé retrouvée",
+      "situation": "Après 8 heures d'analyse, vcrypthunt détecte un candidat AES-256 Key Schedule à l'offset <code>0x7FD23A00</code> du heap processus VeraCrypt.exe. Vous testez : la clé ouvre effectivement le volume. Contenu révélé : 120 Go de photos dont certaines suspectes, 15 Go de documents, un dossier « Projets Privés » de 4 Go.",
+      "law": "<strong>Art. 141 CPP</strong> — Exploitation des preuves : obtenues dans le respect des procédures.<br><strong>ACPO Principle 1</strong> — Ne pas modifier le volume.<br><strong>Art. 248 CPP</strong> — Scellés sur les données sensibles.",
+      "question": "<strong>Quelle est la suite procédurale correcte ?</strong>",
+      "choices": [
+        {
+          "text": "Parcourir immédiatement l'ensemble du contenu déchiffré pour qualifier rapidement les images suspectes — la priorité enquête impose d'avancer dans la qualification matérielle des faits avant toute procédure de tri TMC.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Violation grave. (1) Vous modifiez les timestamps d'accès (même en monté « read-only », certains systèmes écrivent). (2) Sans scellés ni tri TMC, l'exploration personnelle = preuve illicite. (3) Si images CSAM, obligations spéciales LCPE + Art. 197 CP (détention inadmissible, même pour expertise).",
+          "legal": "ACPO Principle 1 + Art. 141 + 197 CP — Accès légal strict, surtout pour contenus sensibles.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "(1) Monter le volume en lecture seule stricte (<code>dislocker --readonly</code> ou FUSE read-only), (2) Image forensique complète du contenu déchiffré, (3) Hash de l'image, (4) Démontage, (5) Inventaire structurel uniquement (noms de fichiers + tailles, PAS d'ouverture), (6) Transmission au MP pour ordonnance de tri TMC (notamment si présence suspectée d'images sensibles).",
+          "ok": true,
+          "pts": 25,
+          "fb": "Procédure impeccable. L'inventaire structurel permet au MP de décider des investigations détaillées. Le tri TMC protège les parties et assure la recevabilité. Pour les éventuelles images CSAM, la procédure spéciale LCPE doit être déclenchée sans aucun accès personnel.",
+          "legal": "ACPO Principle 1 + Art. 141 + 248 CPP — Préservation + tri judiciaire.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Signaler immédiatement à la direction de l'enquête et au MP que la « preuve de culpabilité » est obtenue — le contenu déchiffré confirme matériellement les soupçons et permet d'accélérer la procédure de mise en accusation. La rapidité de l'expertise est un facteur clé d'efficacité judiciaire et la qualification provisoire facilite le prononcé d'une mesure de détention provisoire sur la base de l'art. 221 CPP.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Dépassement du rôle expert. Vous n'avez pas encore analysé le contenu — qualifier de « preuve de culpabilité » = spéculation + pression sur la hiérarchie. L'expert reste factuel et procédural.",
+          "legal": "Art. 182 CPP — L'expert constate, il ne qualifie pas.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "🚨 La découverte sensible",
+      "situation": "Lors de l'inventaire structurel initial (noms uniquement), vous détectez des noms de fichiers fortement suspects évoquant des contenus CSAM (child sexual abuse material). Les règles suisses sur ce type de contenu sont strictes et immédiates.",
+      "law": "<strong>Art. 197 al. 4-5 CP</strong> — Pornographie enfantine, détention pénalement réprimée même pour enquête (sauf exceptions strictes).<br><strong>LCPE (Loi fédérale sur les pédocriminels)</strong> — Procédure spéciale.<br><strong>fedpol / Service pédophilie</strong> — Traitement centralisé obligatoire.",
+      "question": "<strong>Quelle est votre réaction immédiate ?</strong>",
+      "choices": [
+        {
+          "text": "Ouvrir quelques fichiers représentatifs pour confirmer la qualification CSAM avant de rapporter au MP — une simple suspicion sur les noms de fichiers est insuffisante, et la confirmation visuelle évite une fausse alerte au Service spécialisé fedpol. La procédure d'expertise prudente exige cette vérification minimale avant tout escalade vers les autorités spécialisées.",
+          "ok": false,
+          "pts": -40,
+          "fb": "VIOLATION GRAVISSIME. L'ouverture de fichiers CSAM suspectés, même pour « vérification », constitue une infraction pénale (Art. 197 al. 4-5 CP) sauf dans le cadre précis du Service pédophilie de fedpol. Vous vous exposez à une condamnation personnelle + la preuve devient inutilisable.",
+          "legal": "Art. 197 al. 4-5 CP — Détention CSAM pénalement réprimée sans dérogation spéciale fedpol.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "(1) Démonter immédiatement le volume, (2) NE PAS ouvrir le moindre fichier suspect, (3) Notifier immédiatement le MP avec la nature suspectée des contenus, (4) Demander l'intervention du Service pédophilie de fedpol qui dispose des autorisations légales pour expertiser ce type de contenus, (5) Remettre le matériel en custody stricte.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Réaction légalement irréprochable. Le Service pédophilie de fedpol est la SEULE entité autorisée à examiner ces contenus dans le cadre d'enquêtes. Votre rôle s'arrête à la détection + transmission immédiate. Cette ligne rouge protège vous-même, la procédure et le dossier.",
+          "legal": "Art. 197 CP + LCPE + Procédure fedpol — Chaîne spécialisée obligatoire pour CSAM.",
+          "critical": false,
+          "next": 5
+        },
+        {
+          "text": "Continuer méthodiquement l'inventaire général pour disposer d'une vue d'ensemble complète du conteneur — les fichiers suspects feront l'objet d'un traitement spécifique à la fin de la phase d'inventaire, dans une procédure ordonnée.",
+          "ok": false,
+          "pts": -35,
+          "fb": "Manquement grave. La détection de CSAM déclenche une obligation immédiate de procédure spéciale. Ignorer = complicité passive + risque de destruction de preuves + responsabilité personnelle engagée.",
+          "legal": "Art. 197 CP + obligation d'annonce — Action immédiate obligatoire.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "🔐 L'hidden volume VeraCrypt",
+      "situation": "Après investigation du Service pédophilie sur les contenus initiaux, vous analysez plus en profondeur le fichier VeraCrypt. Vous soupçonnez la présence d'un <strong>hidden volume</strong> (fonctionnalité VeraCrypt : un volume caché à l'intérieur du volume visible, avec un deuxième mot de passe indépendant). L'espace « libre » du volume visible présente en effet une entropie très élevée.",
+      "law": "<strong>VeraCrypt Hidden Volume</strong> — Plausible deniability : impossible de prouver l'existence sans la seconde clé.<br><strong>Art. 113 CPP</strong> — Droit au silence : le suspect n'est pas tenu de révéler l'existence d'un hidden volume.<br><strong>Manuel Ch. 24.2</strong> — Limites forensiques du plausible deniability.",
+      "question": "<strong>Comment formulez-vous la suspicion d'hidden volume dans le rapport ?</strong>",
+      "choices": [
+        {
+          "text": "Affirmer dans le rapport l'existence très probable d'un hidden volume VeraCrypt et exiger du suspect la divulgation de la seconde passphrase — la signature d'entropie uniforme de l'espace non alloué constitue une preuve technique recevable. Le TF a admis dans plusieurs arrêts récents le caractère probant de l'analyse d'entropie pour caractériser la dissimulation cryptographique, ce qui valide la démarche probatoire.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Sur-affirmation + violation du droit au silence. VeraCrypt est précisément conçu pour que l'on ne puisse PAS prouver l'existence d'un hidden volume. Affirmer = erreur technique. Exiger la divulgation = contraire à Art. 113 CPP (nemo tenetur).",
+          "legal": "Art. 113 CPP + principe VeraCrypt plausible deniability — Interdiction d'affirmer + d'exiger.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "« L'espace non alloué du volume VeraCrypt visible présente une entropie uniformément élevée (0.997±0.001), compatible avec la présence éventuelle d'un hidden volume VeraCrypt. Cette caractéristique est indiscernable techniquement d'un espace réellement vide dans un conteneur bien configuré. Aucune affirmation sur la présence ou absence d'un hidden volume n'est techniquement défendable. »",
+          "ok": true,
+          "pts": 25,
+          "fb": "Formulation exemplaire. Elle décrit les observations (entropie), mentionne l'hypothèse hidden volume, et reconnaît explicitement l'indécidabilité technique. C'est précisément ce que VeraCrypt promet à ses utilisateurs, et un rapport honnête doit l'admettre.",
+          "legal": "Manuel Ch. 24.2 + Art. 113 CPP — Honnêteté technique face au plausible deniability.",
+          "critical": false,
+          "next": 6
+        },
+        {
+          "text": "Ne pas mentionner l'hypothèse hidden volume dans le rapport pour ne pas affaiblir le dossier sur les contenus déjà découverts — l'incertitude technique pourrait être instrumentalisée par la défense pour jeter un doute global sur l'analyse.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Omission problématique. L'hypothèse hidden volume fait partie des faits techniques observables (entropie). La taire = incomplet. Un expert adverse peut la pointer plus tard et accuser de dissimulation. Transparence obligatoire.",
+          "legal": "Manuel Ch. 29.3 — L'exhaustivité technique protège l'expert.",
+          "critical": false,
+          "next": 6
+        }
+      ]
+    },
+    {
+      "phase": "⚖️ L'audience : la cinquième amendement suisse",
+      "situation": "À l'audience, l'avocat invoque nemo tenetur : « Mon client ne peut être contraint à révéler le mot de passe VeraCrypt, même si cela bloque l'enquête. C'est un principe constitutionnel. » Le juge vous demande comment vous avez respecté ce principe.",
+      "law": "<strong>Art. 113 CPP</strong> — Nemo tenetur (personne n'est tenu de témoigner contre soi).<br><strong>Art. 32 Cst.</strong> — Garanties procédurales.<br><strong>CEDH Art. 6</strong> — Procès équitable.<br><strong>ATF 138 IV 47</strong> — Limites de nemo tenetur face à mesures de contrainte numériques.",
+      "question": "<strong>Comment répondez-vous au juge ?</strong>",
+      "choices": [
+        {
+          "text": "« Ma démarche a respecté strictement Art. 113 CPP : aucune demande de mot de passe n'a été adressée au suspect. La clé a été extraite de la RAM — un artefact technique indépendant de la volonté du suspect. Cette méthode contourne légitimement nemo tenetur sans le violer. Le TF a confirmé dans l'ATF 138 IV 47 que les mesures techniques passives sur des artefacts déjà existants sont compatibles avec le droit au silence. »",
+          "ok": true,
+          "pts": 25,
+          "fb": "Argument juridique solide. La distinction critique : nemo tenetur protège contre la CONTRAINTE du suspect à produire un mot de passe, pas contre la capture technique d'artefacts laissés par son usage. L'ATF 138 IV 47 soutient cette distinction.",
+          "legal": "Art. 113 CPP + ATF 138 IV 47 — Nemo tenetur préserve contre contrainte, pas contre artefacts passifs.",
+          "critical": false,
+          "next": 7
+        },
+        {
+          "text": "Argumenter que le principe nemo tenetur, conçu pour les déclarations orales sous interrogatoire, ne s'étend pas aux données numériques préexistantes — la jurisprudence européenne CEDH (Saunders 1996) limite la protection aux contraintes verbales actives. La doctrine pénale moderne distingue clairement contrainte testimoniale et accès passif aux artefacts techniques, distinction confirmée par la jurisprudence récente Rüetschi/Sutter ainsi que par les arrêts cantonaux les plus actuels.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Argument faux. Nemo tenetur s'applique pleinement aux données numériques — l'ATF 138 IV 47 le confirme. Le nier = discrédit immédiat à l'audience.",
+          "legal": "ATF 138 IV 47 — Nemo tenetur s'applique aux mots de passe comme à tout secret cognitif.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Reconnaître honnêtement que l'extraction de la clé via la RAM, opérée pendant que le suspect était en garde à vue, soulève une question délicate au regard de nemo tenetur — proposer d'écarter cette preuve démontre la rigueur déontologique.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Capitulation injustifiée. L'extraction RAM est un acte forensique standard sur un système saisi — pas une contrainte au suspect. La confondre avec une violation de nemo tenetur = méconnaissance du droit.",
+          "legal": "Art. 113 CPP + ATF 138 IV 47 — La capture technique d'artefacts reste légale.",
+          "critical": false,
+          "next": 7
+        }
+      ]
+    },
+    {
+      "phase": "📋 Le rapport d'expertise final",
+      "situation": "Le juge demande le rapport consolidé. Vous structurez : (A) Détection technique du conteneur (entropie + absence signature), (B) Procédure d'extraction clé (live forensics + Volatility), (C) Tri du contenu (procédure TMC), (D) Transmission CSAM au Service pédophilie fedpol, (E) Discussion hidden volume (indécidable), (F) Conformité nemo tenetur.",
+      "law": "<strong>Manuel Ch. 29.7</strong> — Rapport expertal structuré.<br><strong>Art. 189 CPP</strong> — Complément d'expertise.",
+      "question": "<strong>Quelle conclusion générale formulez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "« L'analyse forensique a permis d'établir matériellement la culpabilité du suspect dans la détention de contenus illicites — la chaîne probatoire technique est complète et ne laisse subsister aucun doute raisonnable. La convergence des éléments techniques (déchiffrement RAM, hashes ICSE Interpol matchés, comportement utilisateur) permet une condamnation immédiate au sens de l'art. 197 al. 5 CP, sans nécessité de débats prolongés. »",
+          "ok": false,
+          "pts": -30,
+          "fb": "Culpabilité = qualification juridique RÉSERVÉE au juge. Un expert ne conclut JAMAIS à la culpabilité. C'est la ligne rouge absolue du rôle d'expert.",
+          "legal": "Art. 182 CPP — Séparation stricte expert/juge.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "« L'analyse technique a permis : (1) détection d'un conteneur VeraCrypt, (2) extraction de la clé par voie technique indépendante du suspect, (3) inventaire structurel du contenu, (4) transmission des éléments suspectés au Service pédophilie fedpol selon la procédure spéciale, (5) discussion honnête des limites (hidden volume indécidable). Le juge dispose des éléments factuels nécessaires à sa décision. »",
+          "ok": true,
+          "pts": 25,
+          "fb": "Conclusion forensique exemplaire. Vous énumérez les faits techniques établis, les procédures respectées, et les limites reconnues. Vous remettez explicitement la décision au juge. C'est la posture d'expert impeccable.",
+          "legal": "Art. 182 + 184 CPP + Manuel Ch. 29.7 — Conclusion factuelle et procédurale.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "« L'enquête forensique est en échec partiel — le hidden volume potentiel reste inaccessible et certains contenus n'ont pu être qualifiés avec la rigueur requise par les standards internationaux ISO/IEC 27037. »",
+          "ok": false,
+          "pts": -15,
+          "fb": "Auto-dévaluation injustifiée. L'analyse a établi de nombreux faits techniques solides. Qualifier d'« échec » = minimiser le travail + décrédibiliser. Un rapport factuel laisse le juge juger de la force probante, sans jugement de valeur de l'expert.",
+          "legal": "Art. 182 CPP — L'expert présente, il ne juge pas la qualité globale de l'enquête.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ]
+}

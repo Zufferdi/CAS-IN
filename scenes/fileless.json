@@ -1,0 +1,321 @@
+{
+  "id": "fileless",
+  "title": "Malware Fileless",
+  "icon": "⚡",
+  "difficulty": "hard",
+  "atmosphere": "network",
+  "narrative": {
+    "success": "La RAM est capturée à temps. Volatility identifie l'injection T1055 dans svchost.exe avec précision. La compromission est documentée, les IoC extraits, le CERT national alerté. L'intrusion est endiguée sur toute la flotte bancaire.",
+    "degraded": "La RAM est partielle, les IoC fragmentaires. L'attribution reste floue, mais le compromis sur cette machine est avéré.",
+    "failure": "Le système a été éteint trop vite « pour stopper l'attaque ». Le malware fileless disparaît avec la RAM. Aucune preuve technique exploitable. La banque ne saura jamais ce qui a été exfiltré."
+  },
+  "tags": [
+    "RÉSEAUX",
+    "FORENSIQUE"
+  ],
+  "legalRefs": [
+    "Manuel Ch. 11.2",
+    "Art. 143bis CP",
+    "MITRE ATT&CK T1055",
+    "LPD 2023 Art. 24"
+  ],
+  "intro": "Un IDS alerte sur des connexions sortantes suspectes depuis un poste bancaire. L'antivirus ne trouve rien. Aucun exécutable suspect sur le disque. Pourtant le malware est actif. Comment le prouver ?",
+  "alertLevel": "👻 FILELESS — Aucune trace sur disque · La RAM contient tout · Elle s'efface au reboot",
+  "objectives": [
+    {
+      "icon": "⚡",
+      "text": "Comprendre le fonctionnement des malwares fileless"
+    },
+    {
+      "icon": "💾",
+      "text": "Appliquer la séquence correcte : isolation → RAM → Volatility"
+    },
+    {
+      "icon": "📋",
+      "text": "Formuler le rapport avec références MITRE ATT&CK"
+    }
+  ],
+  "debrief": "<p>Les malwares fileless opèrent entièrement en mémoire RAM, injectent du code dans des processus légitimes et ne laissent aucun exécutable sur le disque.</p><p>L'<strong>OFCS (GovCERT)</strong> recommande de capturer la RAM avant toute extinction lors d'une suspicion de malware fileless. La preuve de l'infection repose exclusivement sur l'analyse Volatility de la RAM. Sans dump préalable, la preuve est irrémédiablement perdue.</p><p><strong>Référence CH</strong> : Art. 144bis CP — la détérioration de données couvre les malwares sans fichier qui modifient la mémoire des processus légitimes (process hollowing, DLL injection). La preuve forensique repose sur les artefacts volatiles (RAM dump) — ACPO Principle 2 : la préservation de la mémoire vive prime sur toute autre action. TF 6B_361/2017 — les preuves forensiques obtenues selon les standards documentés (ACPO) sont présumées admissibles.</p>",
+  "steps": [
+    {
+      "phase": "⚡ Le système compromis",
+      "situation": "Un IDS a déclenché une alerte sur le réseau d'une banque. Le système suspect est <strong>allumé et actif</strong>. L'analyse antivirus ne trouve rien. Aucun fichier exécutable suspect sur le disque. Pourtant, des connexions sortantes vers 185.x.x.x (IP malveillante connue) sont actives.",
+      "law": "<strong>Manuel Ch. 11.2</strong> — Malware fileless : RAM = seule preuve possible.<br><strong>Art. 143bis CP</strong> — Accès indu même si aucun fichier persistant sur le disque.<br><strong>GovCERT / OFCS</strong> — Recommandation : isolation réseau puis capture RAM avant extinction.",
+      "question": "<strong>Quelle est votre priorité absolue ?</strong>",
+      "choices": [
+        {
+          "text": "Éteindre immédiatement le système pour stopper les connexions malveillantes en cours et empêcher toute exfiltration supplémentaire — la priorité opérationnelle est de couper le canal C2, l'analyse forensique viendra ensuite à froid.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Erreur critique. Éteindre détruit la RAM — et avec elle la seule preuve de l'infection fileless. Les connexions peuvent être coupées en isolant réseau sans éteindre.",
+          "legal": "Manuel Ch. 11.2 — Malware fileless : RAM = seule preuve. Extinction = destruction de preuve.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Isoler le réseau (débrancher câble Ethernet, désactiver WiFi) puis capturer immédiatement la RAM avec WinPmem.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Procédure correcte. Isolation réseau = stoppe les connexions malveillantes sans éteindre. Capture RAM = préserve la preuve de l'infection. L'ordre est critique : d'abord isoler, ensuite capturer.",
+          "legal": "Manuel Ch. 11.2 — Malware fileless : séquence isolation réseau → capture RAM → analyse avec Volatility.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Lancer immédiatement une analyse forensique du disque avec X-Ways en mode live read-only — l'analyse en cours d'exécution permet de capter à la fois les artefacts disque et les marqueurs d'activité du malware sans interruption.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Inadapté. Un malware fileless ne laisse rien sur le disque — l'analyse disque ne trouvera pas la cause. La priorité est la RAM, pas le disque.",
+          "legal": "Manuel Ch. 11.2 — Pour un malware fileless, l'analyse disque est une perte de temps. RAM first.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔍 L'analyse Volatility",
+      "situation": "Vous avez capturé 16 Go de RAM. Volatility 3 montre : le processus <code>svchost.exe</code> (PID 1284) a des connexions actives vers 185.x.x.x:443. La commande <code>malfind</code> détecte une zone mémoire avec droits RWX (lecture-écriture-exécution) contenant du shellcode.",
+      "law": "<strong>Volatility 3 / malfind</strong> — Détecte zones mémoire RWX avec shellcode.<br><strong>MITRE ATT&CK T1055</strong> — Process Injection : technique référencée internationalement.",
+      "question": "<strong>Que concluez-vous et comment le formulez-vous dans le rapport ?</strong>",
+      "choices": [
+        {
+          "text": "« Le système est manifestement infecté par un malware sophistiqué — les indicateurs RAM (zone RWX, connexion C2 active depuis svchost.exe) ne laissent aucun doute sur la compromission active du poste. »",
+          "ok": false,
+          "pts": -10,
+          "fb": "Trop vague. Un rapport forensique doit être précis et référencé. Quelle preuve ? Quel artefact ? Quelle commande Volatility ?",
+          "legal": "Manuel Ch. 29.1 — Précision et traçabilité. Chaque conclusion doit être étayée par un artefact spécifique.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "« L'analyse RAM (Volatility 3, commande malfind) révèle que le processus svchost.exe (PID 1284) contient une zone mémoire à droits RWX avec du shellcode non signé. Ce processus maintient une connexion active vers 185.x.x.x:443 (voir netscan). Ces éléments sont caractéristiques d'une injection de code en mémoire (technique T1055 MITRE ATT&CK). »",
+          "ok": true,
+          "pts": 25,
+          "fb": "Formulation forensiquement correcte. Elle cite : l'outil (Volatility 3), la commande (malfind, netscan), les artefacts spécifiques (PID, droits RWX, shellcode, IP cible) et une référence de classification (MITRE T1055). Reproductible et vérifiable.",
+          "legal": "Manuel Ch. 29.1 — Précision + traçabilité + reproductibilité. MITRE ATT&CK comme référence standardisée.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "« Svchost.exe est un processus système Windows légitime largement utilisé par les services hôtes — la connexion vers 185.x.x.x est probablement un faux positif lié à une mise à jour Windows ou un service télémétrique mal classé par l'IDS. Microsoft documente régulièrement des CDN dans la plage 185.x utilisés par Windows Update et Defender Cloud, et un audit complet des règles IDS s'impose avant toute escalade. »",
+          "ok": false,
+          "pts": -25,
+          "fb": "Erreur grave. Les malwares utilisent précisément des processus légitimes (svchost, rundll32, powershell) pour se cacher. Les caractéristiques observées (RWX + shellcode + C2 externe) sont INCOMPATIBLES avec un svchost légitime.",
+          "legal": "MITRE ATT&CK T1055 — Process injection via processus légitimes = technique courante.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "🎯 L'extraction du shellcode",
+      "situation": "Vous dumpez la zone mémoire suspecte avec <code>vol.py windows.malfind.Malfind --dump</code>. Le shellcode extrait (~180 KB) est analysé avec Ghidra. Il révèle : décodage XOR avec clé <code>0xDEADBEEF</code>, chaîne C2 hardcoded <code>185.34.218.42:443</code>, fonctions d'exfiltration ciblant <code>%LOCALAPPDATA%\\Microsoft\\Outlook\\*.pst</code>, et une chaîne UTF-16 <code>« Cobalt Strike Beacon »</code>.",
+      "law": "<strong>Cobalt Strike</strong> — Framework offensif légitime (licence commerciale) détourné par cybercriminels.<br><strong>MITRE ATT&CK G0102</strong> — Groupes utilisant Cobalt Strike (APT29, FIN7, BlackCat, etc.).",
+      "question": "<strong>Comment interprétez-vous le beacon Cobalt Strike trouvé ?</strong>",
+      "choices": [
+        {
+          "text": "« Le beacon Cobalt Strike identifié, combiné à la signature 0xDEADBEEF caractéristique observée, correspond aux TTPs documentés du groupe APT29 (Cozy Bear, affilié au SVR russe) selon les rapports CrowdStrike et Mandiant 2023. »",
+          "ok": false,
+          "pts": -20,
+          "fb": "Attribution géopolitique prématurée. Cobalt Strike est vendu commercialement + versions crackées disponibles. De nombreux groupes l'utilisent (APT29, FIN7, ransomware operators, red teams légitimes). Attribuer à un groupe spécifique nécessite plus d'indices.",
+          "legal": "Manuel Ch. 29.1 — Outil ≠ groupe. Attribution nécessite convergence multi-indicateurs.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "« Le shellcode correspond à un beacon Cobalt Strike 4.x (observations : obfuscation XOR avec 0xDEADBEEF, C2 configuration). C'est un framework d'attaque utilisé par de multiples groupes. L'attribution à un acteur spécifique nécessitera des IoC supplémentaires (domaines enregistrés, modus operandi, TTPs complets). »",
+          "ok": true,
+          "pts": 25,
+          "fb": "Formulation correcte. Vous identifiez l'outil techniquement sans sur-attribuer. Vous ouvrez la voie à l'enrichissement d'indicateurs (domaines, TTPs) sans présumer d'un acteur. Le GovCERT appréciera cette rigueur.",
+          "legal": "Manuel Ch. 29.1 + MITRE ATT&CK — Identification technique vs attribution d'acteur.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "« Un simple beacon Cobalt Strike, en l'absence d'IoC réseau additionnels (domaines, certificats TLS, comportement post-exploitation), ne permet aucune conclusion technique attributive — la prudence forensique impose de ne rien conclure à ce stade. Cobalt Strike est un framework commercial utilisé par des dizaines de groupes différents, et toute attribution prématurée fragiliserait l'enquête. »",
+          "ok": false,
+          "pts": -10,
+          "fb": "Sous-estimation. L'identification d'un beacon Cobalt Strike a une valeur considérable : il indique un attaquant sophistiqué (pas un script kiddie), permet d'anticiper les étapes suivantes (lateral movement, ransomware, exfiltration), et fournit des IoC exploitables (C2 IP, fingerprint beacon).",
+          "legal": "Manuel Ch. 29.1 — L'identification technique est un livrable forensique majeur.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🌐 L'analyse des connexions réseau",
+      "situation": "Volatility 3 <code>netscan</code> révèle : connexion active TCP vers <code>185.34.218.42:443</code> depuis svchost.exe (PID 1284). L'analyse pcap (capture réseau 48h rétroactive via SIEM) montre un pattern de beaconing : requêtes HTTPS sortantes toutes les 60 secondes (jitter 10%), taille 2-4 KB, payload chiffré. Pic d'exfiltration à 03h47 (6 MB envoyés en 4 minutes).",
+      "law": "<strong>MITRE ATT&CK T1071</strong> — Application Layer Protocol (C2 via HTTPS).<br><strong>Manuel Ch. 25.3</strong> — Analyse de traffic C2.<br><strong>ExplosionMode Beacon</strong> — Caractéristiques typiques Cobalt Strike.",
+      "question": "<strong>Comment documentez-vous l'activité C2 et l'exfiltration ?</strong>",
+      "choices": [
+        {
+          "text": "« Le malware communique régulièrement avec un serveur externe en Russie via HTTPS et a exfiltré environ 6 MB de données sensibles avant détection — l'attaque est typique d'un APT et nécessite une réponse coordonnée immédiate. »",
+          "ok": false,
+          "pts": -10,
+          "fb": "Trop vague. Les détails techniques sont la valeur de votre rapport : pattern exact (periodicity + jitter), volumes, horaires, cibles probables. Un SOC bancaire attend ces chiffres précis pour calibrer ses mesures.",
+          "legal": "Manuel Ch. 25.3 — Précision technique = actionnabilité pour la défense.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "« Beaconing HTTPS sortant vers 185.34.218.42:443 (autonomous system AS-RU, fournisseur BulletProof), pattern 60s ±10% typique d'un heartbeat Cobalt Strike. Pic d'exfiltration identifié le [date] à 03h47:12 UTC+1 : 6.2 MB (via analyse pcap SIEM), probablement des .pst Outlook (cohérent avec l'analyse du shellcode). Durée de compromission estimée (première connexion C2) : 47 heures avant détection IDS. »",
+          "ok": true,
+          "pts": 25,
+          "fb": "Formulation exemplaire. Chaque fait est précis, horodaté, contextualisé (AS-RU BulletProof = indice supplémentaire). La durée de compromission permet au SOC de mesurer la fenêtre d'exposition. Le rapport est actionnable.",
+          "legal": "Manuel Ch. 25.3 + MITRE T1071 — Analyse C2 standard et détaillée.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Bloquer l'IP 185.34.218.42 sur le firewall périmétrique et déclarer l'incident contenu — le canal C2 étant interrompu, le malware ne peut plus exfiltrer ni recevoir de commandes, ce qui désactive concrètement la menace immédiate. Cette approche pragmatique permet de rétablir rapidement les opérations bancaires sans paralyser l'activité, et l'analyse forensique approfondie peut ensuite se dérouler à froid sur les images préservées sans pression temporelle. La direction sera rassurée par la rapidité de la réponse opérationnelle.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Double erreur. (1) Bloquer unilatéralement pendant une investigation = risque de tipper l'attaquant. (2) Un attaquant Cobalt Strike a généralement plusieurs C2 secondaires — bloquer une IP ne règle rien. La coordination avec le SOC et le GovCERT est essentielle.",
+          "legal": "Manuel Ch. 25.4 — Blocage réseau coordonné, jamais unilatéral.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "🔎 La recherche du point d'entrée",
+      "situation": "Vous remontez la chronologie via les logs SIEM : la première connexion C2 date de 47h avant la détection. L'Event ID 4688 (Process Creation) de cette période montre : <code>winword.exe</code> parent de <code>cmd.exe</code> parent de <code>powershell.exe -enc [base64 long]</code>. Le base64 décodé est un téléchargeur qui injecte le beacon en mémoire. L'email avec pièce jointe Word suspecte est retrouvé dans les logs Exchange.",
+      "law": "<strong>MITRE ATT&CK T1566.001</strong> — Spearphishing Attachment.<br><strong>T1059.001</strong> — PowerShell encoded commands.<br><strong>T1204.002</strong> — User Execution: Malicious File.",
+      "question": "<strong>Comment qualifiez-vous la chaîne d'attaque dans le rapport ?</strong>",
+      "choices": [
+        {
+          "text": "Indiquer simplement « attaque ciblée détectée et neutralisée » — un rapport synthétique évite d'exposer le détail technique au MP qui n'a pas la formation pour l'évaluer, et risque d'introduire des angles d'attaque pour la défense.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Rapport sans valeur défensive. La chaîne d'attaque précise (phishing → macro Word → cmd → PowerShell encodé → injection mémoire) permet au SOC de : (1) bloquer des techniques similaires, (2) former les utilisateurs, (3) déployer détections ciblées. Omettre ces détails = gaspiller l'investigation.",
+          "legal": "Manuel Ch. 29.1 — Détails techniques = valeur défensive actionnable.",
+          "critical": false,
+          "next": 5
+        },
+        {
+          "text": "Kill chain complète : (1) Phishing (T1566.001) — email reçu par [utilisateur] à [horaire], (2) Execution (T1204.002) — ouverture pièce jointe Word avec macro, (3) Defense Evasion + Execution (T1059.001) — cmd → PowerShell encodé en base64, (4) Privilege Escalation NON observée (déjà compte utilisateur suffisant), (5) Persistence (à vérifier — registry Run keys, scheduled tasks), (6) C2 (T1071.001) — beacon HTTPS vers 185.34.218.42, (7) Collection + Exfiltration (T1114 + T1041) — .pst Outlook.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Chaîne d'attaque MITRE ATT&CK exemplaire. Chaque étape documentée avec référence standardisée. Le SOC peut déployer des détections spécifiques à chaque technique. Le rapport devient un outil défensif de grande valeur.",
+          "legal": "MITRE ATT&CK + Manuel Ch. 29.1 — Kill chain structurée = standard international.",
+          "critical": false,
+          "next": 5
+        },
+        {
+          "text": "Se concentrer dans le rapport uniquement sur le point d'entrée (campagne de phishing par macro Word) — c'est l'élément actionnable pour la sensibilisation utilisateur et la qualification pénale, le reste de la kill chain étant technique. Détailler les 7 étapes MITRE ATT&CK alourdirait inutilement le rapport pour un MP qui n'a ni le temps ni les compétences pour assimiler ces nuances techniques. La synthèse claire sur le vecteur d'entrée permet une décision rapide sur les poursuites contre les opérateurs et sur les recommandations de durcissement utilisateur immédiates.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Incomplet. Le phishing est juste une étape sur 7 dans la kill chain. Omettre les autres techniques prive le SOC d'informations critiques sur le comportement post-exploitation (injection, beacon, exfiltration).",
+          "legal": "Manuel Ch. 29.1 — Kill chain complète = valeur défensive maximale.",
+          "critical": false,
+          "next": 5
+        }
+      ]
+    },
+    {
+      "phase": "🚨 La notification LPD et au GovCERT",
+      "situation": "L'analyse confirme : les .pst Outlook exfiltrés contenaient des correspondances client de la banque — données personnelles financières de ~2'400 clients suisses. Le DPO bancaire est contacté. La banque craint une notification LPD tardive. Votre rôle d'expert : conseiller sur la stratégie de notification.",
+      "law": "<strong>LPD 2023 Art. 24</strong> — Notification PFPDT « meilleurs délais » pour violations à risque élevé.<br><strong>FINMA Circulaire 2023/1</strong> — Notification cyberincidents dans les 24h.<br><strong>Art. 271 CP</strong> — Attention aux correspondances internationales (secret bancaire).",
+      "question": "<strong>Conseil de notification multi-canaux ?</strong>",
+      "choices": [
+        {
+          "text": "Attendre la finalisation complète de l'analyse forensique (estimée à 3 semaines) avant toute notification réglementaire — communiquer prématurément sur des éléments incomplets exposerait à des rectifications publiques préjudiciables à la banque. La rigueur procédurale prime sur la rapidité, et le PFPDT préfère recevoir une notification consolidée et documentée plutôt qu'un signalement initial à compléter.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Violation des délais réglementaires. La FINMA exige une première notification dans les 24h même si incomplète. Attendre = amende réglementaire + atteinte à la confiance des régulateurs. Une notification préliminaire suivie de mises à jour est la norme.",
+          "legal": "FINMA Circulaire 2023/1 — Notification initiale sous 24h, mises à jour progressives.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Stratégie coordonnée : (1) FINMA dans les 24h (cyberincident), (2) PFPDT « meilleurs délais » (LPD 2023 — données personnelles exfiltrées), (3) GovCERT/NCSC pour partage d'IoC, (4) Prévention clients : communication proactive à ~2'400 clients avec conseils de vigilance (phishing), (5) Rapport FINMA détaillé sous 30 jours.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Stratégie complète et conforme aux obligations multi-niveaux d'un établissement financier suisse. Chaque canal a son délai et son objectif. La communication proactive aux clients prévient les dommages secondaires et démontre la maturité de l'institution.",
+          "legal": "FINMA + LPD 2023 + Doctrine NCSC — Gestion coordonnée des notifications bancaires.",
+          "critical": false,
+          "next": 6
+        },
+        {
+          "text": "Notifier prioritairement le PFPDT au titre de la LPD 2023 — l'autorité de surveillance financière FINMA dispose de canaux internes via le rapport annuel, et une notification cyber séparée n'apporterait pas de valeur ajoutée immédiate.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Non-conformité FINMA. Les établissements soumis à LBA sont tenus de notifier la FINMA en priorité pour cyberincidents. Omettre = sanction disciplinaire + risque de retrait de licence dans les cas graves.",
+          "legal": "FINMA Circulaire 2023/1 — Notification obligatoire pour établissements surveillés.",
+          "critical": false,
+          "next": 6
+        }
+      ]
+    },
+    {
+      "phase": "🛠 La reconstruction et le durcissement",
+      "situation": "L'investigation terminée, la banque doit décider : reconstruire l'ensemble des postes suspects (~80 machines du service concerné) ou cibler uniquement les confirmées compromises ? Le CISO vous consulte sur la stratégie de remédiation.",
+      "law": "<strong>Manuel Ch. 21</strong> — Remédiation post-incident.<br><strong>NIST SP 800-61</strong> — Incident Response Lifecycle.<br><strong>Zero Trust</strong> — Principe : considérer comme compromis si doute.",
+      "question": "<strong>Quelle est votre recommandation technique ?</strong>",
+      "choices": [
+        {
+          "text": "Reformater uniquement le poste source identifié (1 machine), sur lequel l'infection a été matériellement constatée — les 79 autres postes du service ne montrent aucun IoC à ce stade et leur reformatage massif est techniquement injustifié.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Risque majeur. Cobalt Strike a des capacités de mouvement latéral (Pass-the-Hash, PsExec, WMI). 47h de présence = potentiellement des dizaines d'autres machines compromises. Limiter à une machine = laisser des backdoors en place.",
+          "legal": "MITRE ATT&CK T1550 + Manuel Ch. 21 — Mouvement latéral probable en cas de Cobalt Strike prolongé.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Scan ciblé : (1) Analyse Volatility de la RAM des 80 postes du service (recherche d'IoC Cobalt Strike : connexions 185.x, shellcode RWX, pattern beaconing), (2) Reformatage + réinstallation depuis master propre de tous les postes confirmés compromis + quelques autres par principe de précaution, (3) Rotation complète des credentials domain des utilisateurs impactés, (4) Déploiement EDR avec règles MITRE ATT&CK spécifiques à Cobalt Strike.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Remédiation complète et proportionnée. Scan IoC ciblé = identification précise, reformatage = élimination garantie, rotation credentials = invalidation des captures éventuelles, EDR + règles = prévention récidive. C'est le standard NIST SP 800-61.",
+          "legal": "NIST SP 800-61 + Manuel Ch. 21 — Remédiation par phases structurées.",
+          "critical": false,
+          "next": 7
+        },
+        {
+          "text": "Reformater systématiquement les 80 postes du service au titre du principe de précaution maximale — un APT comme Cobalt Strike a pu se propager latéralement sans laisser de traces évidentes, et l'analyse poste-par-poste prendrait des semaines. Le coût opérationnel d'un reformatage de masse (5-7 jours) est largement compensé par la certitude d'éliminer toute persistance résiduelle, et la banque peut ainsi rapidement repartir sur une infrastructure fiable. Les utilisateurs comprendront cette mesure de fermeté face à un APT étatique.",
+          "ok": false,
+          "pts": -5,
+          "fb": "Excessif. Le reformatage de masse sans analyse préalable (1) perd des preuves forensiques sur les postes compromis non encore analysés, (2) crée une interruption d'activité disproportionnée, (3) ne renseigne pas sur l'étendue exacte de la compromission. Scan IoC d'abord, reformatage ciblé ensuite.",
+          "legal": "Manuel Ch. 11 + Principe de proportionnalité — Investiguer avant de détruire les preuves.",
+          "critical": false,
+          "next": 7
+        }
+      ]
+    },
+    {
+      "phase": "🎙 L'audience civile",
+      "situation": "Un client bancaire particulièrement impacté (chef d'entreprise, 230 emails exfiltrés, victime ultérieure de whaling via des infos tirées des .pst) intente une action civile contre la banque pour manquement à la sécurité. Il vous demande (comme expert du MP) à être cité comme témoin dans son action civile.",
+      "law": "<strong>Art. 171 CPC</strong> — Secret de fonction dans un procès civil.<br><strong>Art. 320 CP</strong> — Violation du secret de fonction.<br><strong>Art. 42 al. 2 CO</strong> — Preuve du dommage.<br><strong>Mandat d'expertise</strong> — Limité à la procédure pénale.",
+      "question": "<strong>Comment gérez-vous cette demande ?</strong>",
+      "choices": [
+        {
+          "text": "Accepter de témoigner devant la juridiction civile et partager les conclusions techniques pertinentes du rapport pénal — la transparence sert l'intérêt du client victime et démontre l'indépendance professionnelle de l'expert mandaté. La séparation des compétences entre pénal et civil n'empêche pas un expert de témoigner dans plusieurs procédures connexes.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Violation grave. Votre rapport d'expertise a été commandé par le MP dans un cadre pénal spécifique. Le transposer dans une action civile sans autorisation = violation du secret de fonction (Art. 320 CP) + dépassement du mandat d'expertise.",
+          "legal": "Art. 171 CPC + Art. 320 CP — Secret de fonction, transfert d'expertise non autorisé.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "« Je ne peux témoigner que si : (1) le MP autorise la transmission de mes conclusions au civil, (2) un mandat d'expertise civile m'est délivré formellement (ou j'interviens comme témoin de faits factuels). Mon rapport pénal ne peut être produit en civil qu'après levée du secret de fonction par l'autorité compétente. »",
+          "ok": true,
+          "pts": 25,
+          "fb": "Position procédurale exemplaire. Vous distinguez clairement les cadres pénal et civil, respectez le secret de fonction, et offrez des voies légales pour votre intervention civile ultérieure. La partie civile peut alors introduire les demandes appropriées.",
+          "legal": "Art. 171 CPC + Art. 320 CP + pratique MP — Séparation stricte pénal/civil.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Refuser catégoriquement de témoigner ou de transmettre quoi que ce soit dans la procédure civile — le secret de fonction de l'expert pénal est absolu et toute fuite vers le civil compromet la procédure pénale en cours.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Refus trop abrupt. La partie civile a droit à une explication procédurale claire. Sans explication, elle peut intenter des recours incidents inutiles. Un refus motivé juridiquement évite les malentendus.",
+          "legal": "Déontologie expert — Communication respectueuse des limites procédurales.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ]
+}

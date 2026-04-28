@@ -1,0 +1,320 @@
+{
+  "id": "ransomware_raid",
+  "title": "Ransomware + RAID 5",
+  "icon": "💾",
+  "difficulty": "hard",
+  "atmosphere": "ransomware",
+  "narrative": {
+    "success": "60% des données sont récupérées depuis les disques 1 et 3. Le rapport honnête sur les 40% irrécupérables est accepté par le DG. La PME survit grâce aux imageries forensiques préalables et à la méthode rigoureuse.",
+    "degraded": "La récupération est partielle, la méthode fait débat en interne. La PME survit mais garde des séquelles.",
+    "failure": "La reconstruction RAID hâtive sur les 3 disques propage la corruption. La PME perd 100% de ses données — 18 ans de business effacés en une nuit. Faillite prononcée 6 mois plus tard."
+  },
+  "tags": [
+    "FORENSIQUE",
+    "CRYPTO"
+  ],
+  "legalRefs": [
+    "Manuel Ch. 24.3",
+    "Manuel Ch. 28.4",
+    "GovCERT recommandations"
+  ],
+  "intro": "RAID 5 sur 3 disques. Un disque chiffré par ransomware. Le backup également chiffré. 60% des données potentiellement récupérables. La stratégie de récupération engage votre crédibilité.",
+  "alertLevel": "⚡ RAID EXÉCUTÉ — Systèmes partiellement chiffrés · Fenêtre de récupération : NOW",
+  "objectives": [
+    {
+      "icon": "💾",
+      "text": "Comprendre les limites de RAID 5 face au chiffrement"
+    },
+    {
+      "icon": "🔍",
+      "text": "Appliquer la séquence forensique correcte (image d'abord)"
+    },
+    {
+      "icon": "🗣️",
+      "text": "Communiquer honnêtement sur la récupération AES-256"
+    }
+  ],
+  "debrief": "<p>RAID 5 tolère la perte d'un seul disque — mais un disque chiffré par un ransomware n'est pas « perdu » au sens du RAID. Le contrôleur RAID voit 3 disques fonctionnels dont l'un contient des données aléatoires (le chiffrement). La reconstruction RAID ne peut pas deviner que ce disque est chiffré.</p><p><strong>Référence CH</strong> : SECO / OFAS — avant tout paiement de rançon, vérifier si le groupe est sanctionné (listes SECO, OFAC US). Payer une entité sanctionnée constitue une infraction (Art. 9 LMB suisse). Après démantèlement d'un ransomware (ex. LockBit, opération Cronos 2024), des outils de déchiffrement gratuits sont disponibles via No More Ransom et l'OFCS — les contacter avant toute décision de paiement.</p>",
+  "steps": [
+    {
+      "phase": "💾 L'infrastructure compromise",
+      "situation": "Vous êtes appelé après une attaque ransomware sur un serveur de PME. Le serveur a un <strong>RAID 5 sur 3 disques de 4 To chacun</strong>.<br><br>\n<div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;margin-top:.5rem\">\n💽 Disque 1 : <span style=\"color:var(--green)\">INTACT</span> — données en clair<br>\n💽 Disque 2 : <span style=\"color:var(--red)\">CHIFFRÉ</span> — contenu aléatoire (ransomware)<br>\n💽 Disque 3 : <span style=\"color:var(--green)\">INTACT</span> — données en clair<br>\n☁️ Backup hebdomadaire : <span style=\"color:var(--gold)\">CHIFFRÉ</span> — mot de passe perdu\n</div>",
+      "law": "<strong>RAID 5</strong> — Tolérance : 1 disque. Reconstruction possible si 1 seul disque manquant.<br><strong>Manuel Ch. 24.3</strong> — Options de récupération RAID en contexte forensique.",
+      "question": "<strong>Que peut-on récupérer et comment ?</strong>",
+      "choices": [
+        {
+          "text": "Reconstruire le RAID 5 dégradé en utilisant les 2 disques sains et la parité distribuée — la règle mathématique du RAID 5 garantit que la perte d'un seul disque permet une reconstruction intégrale à 100%, le disque chiffré étant assimilable à une panne.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Impossible. RAID 5 avec 3 disques tolère la perte d'1 seul disque. Avec le disque 2 chiffré (présent avec données aléatoires), le contrôleur RAID voit 3 disques — dont un avec des données corrompues.",
+          "legal": "Principe RAID 5 — La tolérance aux pannes s'applique aux disques absents, pas aux disques contenant des données corrompues actives.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Imager les 2 disques sains, analyser les données accessibles (blocs des disques 1 et 3), puis tenter de reconstruire par parité pour les blocs endommagés.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Approche correcte. Les disques 1 et 3 contiennent des données en clair — imager et analyser d'abord. Ensuite, la reconstruction partielle par parité peut être tentée pour certains blocs.",
+          "legal": "Manuel Ch. 24.3 — Forensique RAID : imager chaque disque individuellement avant toute reconstruction. Travail sur les images, jamais sur les originaux.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Payer la rançon demandée pour obtenir la clé de déchiffrement du disque 2 — c'est la voie la plus rapide pour récupérer 100% des données et permettre la reprise d'activité, et le coût est généralement inférieur à plusieurs jours d'arrêt PME.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Non recommandé. GovCERT et la plupart des CSIRT déconseillent le paiement : il finance la cybercriminalité, ne garantit pas la clé, et peut exposer à des sanctions si le groupe est sur une liste de sanctions internationales.",
+          "legal": "GovCERT — Ne pas payer les rançons. Possibles sanctions SECO si paiement à un groupe sanctionné.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔍 Le backup chiffré",
+      "situation": "Vous avez récupéré 60% des données via les disques sains. Le backup chiffré (AES-256 avec mot de passe perdu) contient potentiellement le 40% restant. Le DG demande si vous pouvez le déchiffrer.",
+      "law": "<strong>AES-256</strong> — Inviolable par force brute.",
+      "question": "<strong>Comment répondez-vous au DG sur le backup chiffré ?</strong>",
+      "choices": [
+        {
+          "text": "« Avec suffisamment de ressources GPU et un cluster de calcul dédié, AES-256 peut théoriquement être attaqué — les avancées récentes en calcul distribué et les services cloud comme AWS spot permettent d'envisager des délais raisonnables sur des passphrases courtes. »",
+          "ok": false,
+          "pts": -25,
+          "fb": "Techniquement faux. AES-256 est mathématiquement inviolable par force brute avec les technologies actuelles et prévisibles. Faire croire le contraire est une erreur grave.",
+          "legal": "AES-256 — Sécurité asymptotique. Pas de vulnérabilité connue exploitable.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "« Sans le mot de passe, le backup AES-256 est inaccessible. Nous pouvons tenter une attaque par dictionnaire si vous connaissez des patterns du mot de passe. Sinon, ce 40% est perdu. »",
+          "ok": true,
+          "pts": 20,
+          "fb": "Réponse honnête et constructive. Elle exprime l'impossibilité technique, propose la seule alternative réaliste (dictionnaire ciblé si pattern connu) et donne une réponse claire.",
+          "legal": "Manuel Ch. 28.4 — Formuler l'impossibilité honnêtement tout en proposant les alternatives disponibles.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Promettre une récupération à 90% sous 2 semaines pour rassurer le DG et lui permettre d'engager les actions opérationnelles — un engagement clair facilite la prise de décision, quitte à ajuster ultérieurement si nécessaire selon l'avancement technique.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Mensonge professionnel inacceptable. Promettre l'impossible pour rassurer = faux dans les titres (Art. 251 CP) + rupture de la confiance d'expert. Quand l'échec arrivera, la crédibilité sera définitivement détruite.",
+          "legal": "Art. 251 CP + déontologie DFIR — Honnêteté sans compromis sur les capacités techniques.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "🧠 L'attaque dictionnaire intelligente",
+      "situation": "Le DG révèle que le mot de passe du backup a été créé par son directeur IT (décédé récemment). Vous avez accès au laptop de ce directeur. L'OSINT révèle : marié à Sophie, 2 enfants (Marc 12 ans, Julie 8 ans), fan de football (FC Bâle), chat nommé « Whisker ». Le laptop contient un fichier texte avec notes de mots de passe similaires.",
+      "law": "<strong>Manuel Ch. 28.5</strong> — Attaque par dictionnaire ciblé OSINT.<br><strong>Hashcat</strong> — Règles de mutation (apostrophe, capitalisation, nombres).",
+      "question": "<strong>Comment construisez-vous le dictionnaire ciblé ?</strong>",
+      "choices": [
+        {
+          "text": "Dictionnaire générique massif (rockyou.txt 14M + CrackStation 1.5G) combiné à un brute-force exhaustif sur 8-12 caractères — la puissance de calcul actuelle (RTX 4090 : ~25 GH/s sur AES) rend cette approche viable en quelques jours de calcul.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Inefficace. Un AES-256 avec bcrypt/PBKDF2 résiste à rockyou en moins d'une heure. Sans ciblage, la tentative est vouée à l'échec. L'efficacité vient du dictionnaire PERSONNEL.",
+          "legal": "Manuel Ch. 28.5 — Dictionnaire ciblé > brute force générique.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Dictionnaire personnalisé : (1) termes OSINT (Sophie, Marc, Julie, Whisker, FCBasel), (2) dates clés (mariage, naissances), (3) patterns observés dans les autres mots de passe du directeur (capitalisation, suffixes numériques, caractères spéciaux), (4) variations : CUPP (Common User Passwords Profiler), règles Hashcat (rules/best64.rule).",
+          "ok": true,
+          "pts": 25,
+          "fb": "Approche ciblée optimale. CUPP + règles Hashcat personnalisées = dictionnaire hautement probable. Si le directeur suivait ses patterns habituels, le mot de passe sera trouvé en quelques heures. Toujours essayer l'approche OSINT avant d'abandonner.",
+          "legal": "Manuel Ch. 28.5 — OSINT + Hashcat rules = approche DFIR standard.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Contacter la veuve du directeur IT décédé pour lui demander si son mari conservait ses mots de passe quelque part (carnet, gestionnaire, fichier) — l'approche humaine est souvent la plus rapide et la PME a un intérêt légitime à cette démarche. Le deuil n'exclut pas la coopération bienveillante avec l'employeur, et de nombreux administrateurs IT laissent des consignes écrites à leurs proches en prévision d'un imprévu majeur. Une démarche respectueuse est généralement bien accueillie.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Délicat. La veuve n'est probablement pas dépositaire des mots de passe professionnels. De plus, l'approche doit passer par le DG qui peut coordonner une demande sensible de façon respectueuse. L'expert forensique ne contacte pas directement les familles des décédés.",
+          "legal": "Déontologie professionnelle — Respect des proches, communication via les canaux appropriés.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🎉 Le mot de passe retrouvé",
+      "situation": "Après 14 heures de Hashcat avec dictionnaire personnalisé, le mot de passe est trouvé : <code>SophieMarcJulie2012!</code>. Le backup est déchiffré. Vous découvrez qu'il contient les 40% manquants, mais aussi des informations très sensibles : comptes bancaires personnels des employés, dossiers médicaux, discussions internes RH très confidentielles. Le DG vous demande ce qu'il peut consulter.",
+      "law": "<strong>Art. 248 CPP</strong> — Scellés (si demandés).<br><strong>LPD 2023 Art. 8 + Art. 27</strong> — Principe de minimisation, surveillance employés.<br><strong>Art. 321 CP</strong> — Secret professionnel (données médicales).",
+      "question": "<strong>Quel conseil donnez-vous au DG ?</strong>",
+      "choices": [
+        {
+          "text": "« Le backup déchiffré est désormais à votre disposition en tant que DG, vous pouvez consulter l'ensemble des éléments — la restauration des données de la PME relève de votre périmètre de responsabilité opérationnelle et juridique. »",
+          "ok": false,
+          "pts": -25,
+          "fb": "Autorisation dangereuse. Même si le backup appartient techniquement à la PME, les données personnelles des employés (médicales, RH, bancaires) sont protégées par la LPD 2023. Le DG ne peut pas les consulter librement.",
+          "legal": "LPD 2023 Art. 8 + Art. 321 CP — Minimisation + secret professionnel des données RH/médicales.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "« Restrictions : (1) Données business (documents projet, comptabilité) : accès DG légitime, (2) Données RH confidentielles : accès limité au DRH + DG dans le besoin strict, (3) Données médicales employés : interdites d'accès managérial (Art. 321 CP), à traiter par le médecin du travail uniquement, (4) Comptes bancaires personnels : suppression immédiate, aucun usage légitime. Plan de traitement documenté et notification interne LPD. »",
+          "ok": true,
+          "pts": 25,
+          "fb": "Conseil juridiquement solide et éthique. Vous distinguez les catégories de données, appliquez le principe de minimisation LPD 2023, et protégez la vie privée des employés. Le DG évite ainsi des violations LPD graves.",
+          "legal": "LPD 2023 + Art. 321 CP + Manuel Ch. 29.6 — Gestion par catégorie de sensibilité.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Refuser de partager le backup déchiffré avec le DG en raison de la présence de données médicales et bancaires personnelles — la transmission au directeur exposerait à une violation manifeste de l'art. 321 CP et de la LPD applicable. La doctrine du PFPDT 2023 et la jurisprudence ATF 142 II 268 confirment que le secret professionnel s'applique strictement aux données employés y compris en contexte de remédiation post-incident. La PME devra mandater un DPO externe agréé pour réaliser le tri sélectif des éléments transmissibles selon les besoins métier strictement justifiés.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Refus excessif. Le backup appartient à la PME qui est le mandant. Refuser de le rendre = abus de position d'expert. La solution est de le rendre avec un cadre d'usage clair, pas de le retenir.",
+          "legal": "Pratique DFIR — Le dépositaire rend les données avec recommandations d'usage.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "🔬 L'analyse du ransomware",
+      "situation": "Parallèlement à la récupération, vous analysez l'échantillon du ransomware (binaire présent sur le disque 2 avant qu'il ne s'auto-supprime). Ghidra révèle : empreinte BlackCat/ALPHV (ransomware RaaS), chiffrement ChaCha20-Poly1305 + AES-256 en couches, ID de victime unique, URL Tor du négociateur, note de rançon en JSON embarqué. La PME hésite à négocier.",
+      "law": "<strong>SECO Sanctions</strong> — BlackCat/ALPHV opère potentiellement sous sanctions.<br><strong>GovCERT/NCSC</strong> — Déconseille paiement.<br><strong>OFAC US</strong> — Certains affiliés sanctionnés.",
+      "question": "<strong>Que recommandez-vous à la PME concernant le paiement ?</strong>",
+      "choices": [
+        {
+          "text": "« Engagez une négociation discrète via un cabinet de cyber-négociation spécialisé (CrowdStrike, Coveware) — la survie économique de la PME prime, et les négociateurs professionnels obtiennent typiquement 40-50% de réduction sur les rançons demandées initialement. La négociation, contrairement à un paiement direct, permet de gagner du temps technique pour la récupération en parallèle. »",
+          "ok": false,
+          "pts": -25,
+          "fb": "Double erreur. (1) BlackCat a déchiffré correctement dans moins de 70% des cas documentés (beaucoup de victimes paient sans recevoir de clé fonctionnelle). (2) Si BlackCat est listé par OFAC, le paiement expose la PME et ses dirigeants à des sanctions pénales suisses (Art. 9 al. 1 let. e LMB).",
+          "legal": "SECO + OFAC + Art. 9 al. 1 let. e LMB — Paiement à entité sanctionnée = infraction pénale.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "« Ne pas payer. (1) Vérifier le statut de sanctions BlackCat via le portail SECO avant toute décision. (2) Les 60% récupérés + le backup déchiffré couvrent probablement l'essentiel. (3) Investir le budget rançon dans la reconstruction + durcissement (EDR, MFA, backups offline). (4) Notification obligatoire fedpol (cybercrime) pour contribuer à l'enquête nationale. »",
+          "ok": true,
+          "pts": 25,
+          "fb": "Recommandation conforme aux standards suisses. Vérification légale préalable + alternative constructive + contribution à l'enquête collective = comportement exemplaire d'une PME victime. Le GovCERT et fedpol saluent ce type de réaction.",
+          "legal": "SECO + GovCERT/NCSC + Art. 10a CP (cybercrime) — Standard suisse anti-ransomware.",
+          "critical": false,
+          "next": 5
+        },
+        {
+          "text": "Négocier avec les attaquants pour gagner du temps en feignant d'envisager le paiement — cette tactique permet d'avancer dans la récupération technique en parallèle, tout en évitant que le groupe ne publie les données exfiltrées prématurément.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Risqué. Entrer en négociation même factice (1) envoie un signal que la PME est solvable, (2) peut entraîner des menaces supplémentaires (publication données), (3) n'apporte pas de bénéfice opérationnel. Le silence ou le refus clair et public est souvent plus stratégique.",
+          "legal": "Doctrine NCSC — Silence ou refus clair plutôt que simulation de négociation.",
+          "critical": false,
+          "next": 5
+        }
+      ]
+    },
+    {
+      "phase": "📊 Le rapport de récupération",
+      "situation": "Vous devez produire un rapport formel pour le DG et le conseil d'administration. Vous devez documenter : ce qui a été récupéré, ce qui est perdu définitivement, les causes de l'incident, les recommandations pour éviter une récidive.",
+      "law": "<strong>Manuel Ch. 29.7</strong> — Structure d'un rapport forensique post-incident.<br><strong>NIST SP 800-61</strong> — Lessons Learned.<br><strong>FINMA Circulaire 2023/1</strong> — Rapport d'incident.",
+      "question": "<strong>Quelle structure choisissez-vous pour le rapport ?</strong>",
+      "choices": [
+        {
+          "text": "Rapport technique exhaustif de 200 pages couvrant l'ensemble des détails forensiques (hashes, dumps Volatility, captures pcap, hex dumps du ransomware) — la profondeur technique démontre la rigueur et constitue une référence pour audits futurs. Le CA appréciera la qualité documentaire et pourra utiliser ce rapport comme justification face aux assureurs, autorités de tutelle et audits ISO ultérieurs. Une expertise sérieuse ne se mesure pas en pages mais en exhaustivité technique vérifiable.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Inadapté à l'audience. Un CA ne lira pas 200 pages. Structure pyramidale obligatoire : synthèse exécutive d'1 page + rapport technique détaillé en annexe pour les spécialistes.",
+          "legal": "Manuel Ch. 29.7 — Adapter le niveau de détail à chaque audience.",
+          "critical": false,
+          "next": 6
+        },
+        {
+          "text": "Rapport pyramidal : (1) Synthèse exécutive 1 page (CA), (2) Résumé technique 5 pages (DG/CISO), (3) Rapport détaillé 80 pages + annexes techniques (équipe IT/audit). Chaque niveau couvre : timeline factuelle, récupération (60%+40% via dictionnaire = 98%, 2% perdus), causes racines (email phishing, pas de MFA admin, backup unique), 7 recommandations actionnables avec priorités + chiffrages.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Structure professionnelle optimale. Chaque audience reçoit le niveau d'information adapté. Les recommandations sont actionnables et chiffrées (facilite la décision CA). C'est le standard NIST SP 800-61 adapté au contexte suisse.",
+          "legal": "NIST SP 800-61 + Manuel Ch. 29.7 — Rapport incident standard.",
+          "critical": false,
+          "next": 6
+        },
+        {
+          "text": "Présentation orale uniquement en séance du CA, sans document écrit transmis — l'absence de trace papier protège la PME contre toute fuite ultérieure du contenu sensible (RH, médical, bancaire) qui circulerait dans des comités élargis.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Manquement grave. Un rapport écrit est nécessaire pour : (1) traçabilité juridique, (2) base pour plan d'action, (3) éléments pour assurances cyber, (4) archive pour futurs incidents. L'oral sans trace = perte de valeur considérable.",
+          "legal": "FINMA + pratique assurance cyber — Rapport écrit obligatoire pour traçabilité.",
+          "critical": false,
+          "next": 6
+        }
+      ]
+    },
+    {
+      "phase": "🏥 La question assurance cyber",
+      "situation": "La PME a une assurance cyber avec franchise de 50'000 CHF et couverture max 500'000 CHF. L'assureur demande un rapport d'expertise détaillé pour approuver l'indemnisation. Le DG vous demande si vous êtes disponible pour cette expertise supplémentaire.",
+      "law": "<strong>Art. 56 CPC</strong> — Indépendance de l'expert.<br><strong>Loi fédérale assurances (LCA)</strong> — Expertise contradictoire.<br><strong>Art. 168 CPC</strong> — Moyens de preuve.",
+      "question": "<strong>Quelle est votre position sur ce double mandat ?</strong>",
+      "choices": [
+        {
+          "text": "Accepter immédiatement le mandat assurance en plus du mandat initial — la connaissance du dossier permet une expertise plus rapide et précise, dans l'intérêt de la PME comme de l'assureur, et le double mandat est usuel sur ce type d'affaire. La continuité de l'expertise simplifie le dossier et la PME bénéficie d'un guichet unique.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Conflit d'intérêts potentiel. Si vous êtes mandaté par la PME pour la récupération ET pour l'expertise d'assurance, votre neutralité peut être contestée par l'assureur. Il faut distinguer les rôles.",
+          "legal": "Art. 56 CPC + déontologie expert — Éviter tout conflit de rôles.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "« Je peux fournir mon rapport technique existant à l'assureur (avec autorisation de la PME). Pour une expertise spécifique au sinistre (évaluation du dommage, recommandations post-sinistre), je recommande un expert indépendant mandaté conjointement par la PME et l'assureur. Cette séparation des rôles protège toutes les parties. »",
+          "ok": true,
+          "pts": 25,
+          "fb": "Position exemplaire. Vous distinguez rapport technique existant (transmissible) et expertise d'évaluation (qui doit être indépendante). C'est la meilleure protection de l'intégrité de vos analyses. Les assureurs préfèrent cette approche.",
+          "legal": "Art. 56 CPC + LCA + pratique assurance cyber — Séparation des mandats.",
+          "critical": false,
+          "next": 7
+        },
+        {
+          "text": "Refuser catégoriquement toute interaction avec l'assureur en invoquant la confidentialité du mandat initial — la PME doit gérer seule ses relations contractuelles avec son assureur, sans interférence de l'expert technique.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Position trop rigide. Votre rapport technique est un livrable que la PME peut utiliser (avec votre autorisation). Refuser toute interaction pénalise votre mandant sans raison valable.",
+          "legal": "Pratique — L'expert peut autoriser l'usage extensif de son rapport, c'est la nouvelle expertise qui pose problème.",
+          "critical": false,
+          "next": 7
+        }
+      ]
+    },
+    {
+      "phase": "🛠 Le plan de durcissement",
+      "situation": "La PME veut éviter une récidive. Le budget de durcissement est de 80'000 CHF. Vous devez recommander les 5 mesures les plus efficaces, priorisées par ratio impact/coût.",
+      "law": "<strong>NIST CSF</strong> — Identify, Protect, Detect, Respond, Recover.<br><strong>CIS Controls v8</strong> — Contrôles prioritaires.<br><strong>GovCERT Guide PME</strong> — Recommandations contextualisées.",
+      "question": "<strong>Quelle est votre priorisation pour 80'000 CHF ?</strong>",
+      "choices": [
+        {
+          "text": "Investir l'intégralité du budget dans un SIEM enterprise (Splunk ou QRadar) couplé à un consultant SOC permanent — la détection avancée corrélant tous les événements est ce qui aurait évité l'incident initial, c'est donc l'investissement prioritaire. La concentration du budget maximise l'effet de levier sur la couche de détection, qui est la plus déterminante en cybersécurité moderne. Les autres mesures (MFA, formation) peuvent être déployées progressivement avec un budget récurrent ultérieur.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Inadapté à la taille. Un SIEM enterprise coûte 100-300k/an en licences + personnel. Pour une PME de 30 personnes, c'est surdimensionné et inexploitable. Commencer par les fondamentaux CIS Controls.",
+          "legal": "CIS Controls v8 + Guide GovCERT PME — Adapter les solutions à la taille.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Priorisation par impact/coût : (1) MFA obligatoire partout (2k CHF, impact énorme), (2) Backups offline + immuables sur site séparé (15k), (3) EDR managé (type Microsoft Defender for Business, 8k/an), (4) Formation phishing réaliste + simulations (5k/an), (5) Segmentation réseau + VLAN (12k one-shot) + audit annuel (3k). Total ~45k implémentation + 11k/an récurrent. Budget restant = buffer sécurité.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Priorisation exemplaire. Chaque mesure cible un vecteur démontré (phishing → formation, credentials → MFA, ransomware → backups immuables + EDR, lateral movement → segmentation). Ratio impact/coût optimal pour une PME. Conforme aux guides GovCERT et CIS Controls.",
+          "legal": "CIS Controls v8 + NIST CSF + Guide GovCERT PME — Approche pragmatique PME.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Recommander d'augmenter la couverture cyber-assurance (passage de 500k à 2M CHF, franchise abaissée) plutôt que de disperser le budget en mesures techniques — l'assurance couvre statistiquement le sinistre type, ce qui est plus rentable.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Erreur stratégique. L'assurance couvre les dommages post-incident mais ne prévient rien. De plus, les assureurs exigent de plus en plus des mesures techniques minimales (MFA, EDR) avant de couvrir. Investir dans la prévention = réduire les primes et les risques.",
+          "legal": "LCA + pratique cyber-assurance 2024+ — MFA et EDR deviennent prérequis contractuels.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ]
+}

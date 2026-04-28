@@ -1,0 +1,217 @@
+{
+  "id": "swissport_2022",
+  "title": "BlackCat à l'Aéroport",
+  "icon": "✈️",
+  "difficulty": "medium",
+  "atmosphere": "ransomware",
+  "realCase": "Swissport, 3 février 2022 — Ransomware BlackCat/ALPHV (premier ransomware codé en Rust). Attaque contenue en 48h via infrastructures air-gapped et fallback manuel. 22 vols retardés à Zurich (3-20 min). 1,6 To revendiqués exfiltrés, publiés sur le leak site BlackCat (passeports, candidatures, documents internes).",
+  "tags": [
+    "FORENSIQUE",
+    "WINDOWS"
+  ],
+  "legalRefs": [
+    "Manuel Ch. 11.1",
+    "LPD (ancienne)",
+    "Ordonnance Aviation",
+    "ICAO Security Manual"
+  ],
+  "intro": "3 février 2022, 6h00. L'aéroport de Zurich entre dans sa pointe matinale. Swissport, opérateur des services au sol (check-in, bagages, ravitaillement), détecte un ransomware sur son infrastructure IT globale. 310 aéroports dans 50 pays dépendent de ces systèmes. Les fallbacks manuels doivent tenir.",
+  "alertLevel": "✈️ SYSTÈMES AÉROPORTUAIRES COMPROMIS — Fallback manuel · Vols en attente",
+  "objectives": [
+    {
+      "icon": "🎯",
+      "text": "Arbitrer le maintien opérationnel vs la capture forensique"
+    },
+    {
+      "icon": "🛡",
+      "text": "Valider l'efficacité des air-gapped backups"
+    },
+    {
+      "icon": "📢",
+      "text": "Communiquer aux passagers + compagnies aériennes clients"
+    }
+  ],
+  "debrief": "<p>L'affaire Swissport 2022 a été un cas d'école de <strong>réponse réussie</strong> à un ransomware : contenu en 48h, 22 vols retardés seulement, reprise des opérations via fallback manuel et air-gapped backups. Swissport a refusé de payer, illustrant qu'une préparation sérieuse (backups isolés, procédures dégradées) rend le refus crédible.</p><p>BlackCat (aussi ALPHV, Noberus) était à l'époque remarquable pour être le <strong>premier ransomware codé en Rust</strong>, ce qui compliquait significativement l'analyse forensique classique. Les 1,6 To publiés sur leur leak site ont néanmoins été un coût réputationnel réel — même sans paiement, la <em>double extorsion</em> fait mal.</p><p><strong>Référence CH</strong> : Swissport AG, février 2022 — données RH et opérationnelles exfiltrées, groupe BlackCat/ALPHV. Art. 162 CP — secret professionnel (données RH = informations confidentielles). LMSI Art. 2 — protection des infrastructures critiques liées à l'aviation. Ordonnance sur la navigation aérienne — obligation de continuité des services aéroportuaires. Swissport gère les services au sol pour Swiss et Edelweiss à Zurich-Kloten.</p>",
+  "narrative": {
+    "success": "Le fallback manuel tient. 22 vols retardés de 3-20 minutes à Zurich, rien de plus. Les backups air-gapped permettent une restauration propre en 48h. Le refus du paiement tient, malgré la publication de 1,6 To sur le leak site BlackCat. Case study interne devenue référence chez les opérateurs aéroportuaires européens.",
+    "degraded": "Le fallback tient partiellement. Des retards importants sur 2-3 jours affectent plusieurs aéroports secondaires. Les compagnies aériennes clientes expriment leur mécontentement par écrit. La presse spécialisée (Aviation Week, Jet Service) couvre négativement la gestion de crise. L'image commerciale est entamée mais les opérations critiques sont préservées.",
+    "failure": "Pas de fallback efficace. Chaos sur 72h aux 310 aéroports. Compagnies aériennes clients résilient leurs contrats. Le paiement finit par être fait en urgence — Swissport finit devant la SECO pour paiement à un groupe listé."
+  },
+  "steps": [
+    {
+      "phase": "✈️ L'alerte à 6h du matin",
+      "situation": "Le SOC détecte le chiffrement. Les systèmes de check-in, de planning et de gestion bagages sont touchés sur <strong>une partie de l'infrastructure mondiale</strong>. Les opérations physiques (tapis bagages, agents de piste) sont techniquement indépendantes. 22 vols décolleront dans les 90 minutes. Le directeur opérations veut activer immédiatement les procédures manuelles.",
+      "law": "<strong>Manuel Ch. 11.1</strong> — Capture forensique préalable obligatoire.<br><strong>ICAO Security</strong> — Continuité opérationnelle prioritaire pour sécurité aviation.",
+      "question": "<strong>Comment conciliez-vous forensique et continuité opérationnelle ?</strong>",
+      "choices": [
+        {
+          "text": "Arrêter immédiatement l'ensemble des systèmes touchés pour permettre une capture forensique complète et propre — les 22 vols pourront être reportés ou redistribués sur d'autres prestataires aéroportuaires, la priorité absolue est l'intégrité de la preuve. L'arrêt total est la mesure la plus rigoureuse en termes de standard ACPO, et les conséquences opérationnelles seront absorbées par les compagnies aériennes via leurs assurances habituelles.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Erreur catastrophique en contexte aéronautique. Chaque heure de blocage à Zurich = des centaines de vols affectés en cascade sur l'Europe. La forensique doit s'adapter au contexte critique, pas l'inverse.",
+          "legal": "ICAO Security Manual — Priorité absolue à la sécurité et continuité des opérations aériennes.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "(1) Activer immédiatement les fallback manuels (check-in papier, tableaux physiques). (2) Capturer en parallèle la RAM + images disque d'un échantillon représentatif (3-5 serveurs) pendant que les autres continuent de servir en mode dégradé. (3) Isoler progressivement les systèmes touchés pour restauration depuis backups air-gapped.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Approche correcte, exactement celle adoptée par Swissport en 2022. Continuité opérationnelle via fallback manuel + forensique ciblée sur échantillon + isolation progressive. 22 vols retardés de 3-20 min seulement au final.",
+          "legal": "Retour d'expérience Swissport 2022 — Fallback + échantillonnage forensique + isolation progressive = modèle pour opérations critiques.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Payer discrètement la rançon BlackCat pour restaurer rapidement les systèmes critiques — l'impact sur 310 aéroports et des milliers de passagers chaque heure justifie économiquement le paiement, et BlackCat délivre généralement les clés promises.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Erreur double. (1) Le paiement ne garantit rien et prend 12-48h de négociation. (2) Swissport a démontré qu'avec des air-gapped backups, le paiement est inutile. (3) Payer BlackCat (présumé lié à DarkSide/Colonial Pipeline) = risque SECO.",
+          "legal": "GovCERT + SECO — Le paiement n'est ni rapide, ni fiable, ni légal pour groupes listés.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "🛡 Les backups air-gapped",
+      "situation": "La capture forensique confirme : <strong>BlackCat/ALPHV</strong>, codé en Rust (premier ransomware dans ce langage — complexité forensique accrue). L'infection est propagée via Active Directory. L'équipe IT propose de restaurer depuis les backups air-gapped datant de 18h la veille. Le CISO hésite : est-on sûr que les backups ne sont pas compromis ?",
+      "law": "<strong>Manuel Ch. 24.3</strong> — Vérification backup avant restauration sur système potentiellement compromis.<br><strong>Principe air-gap</strong> — Isolation physique = protection contre propagation.",
+      "question": "<strong>Quelle séquence de validation des backups adoptez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Restaurer directement depuis les backups air-gapped sans validation préalable — la déconnexion physique garantit techniquement leur intégrité, et tout délai supplémentaire prolonge l'arrêt de service au détriment des compagnies aériennes clientes. L'air-gap exclut par définition la possibilité d'une compromission, ce qui rend la validation préalable redondante.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Raccourci dangereux. Les backups air-gapped protègent contre le chiffrement en live, mais pas contre un malware qui y aurait été <em>déjà présent</em> au moment du dernier backup (dormant, pas encore activé). Une vérification préalable hors-ligne est obligatoire.",
+          "legal": "Manuel Ch. 24.3 — Restauration = vérification préalable dans un environnement isolé.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "(1) Monter les backups sur un environnement isolé (sandbox air-gap). (2) Scanner avec indicateurs BlackCat (hashes, YARA rules disponibles). (3) Vérifier l'intégrité de l'AD backup (comptes suspects, persistance). (4) Si clean : restaurer sur infrastructure propre ; sinon : utiliser un backup antérieur.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Séquence correcte. Sandbox isolé = test sans risque. YARA rules BlackCat publiques depuis novembre 2021 = détection possible. Vérification AD = cruciale pour ransomware modernes. Si compromis : revenir à un backup antérieur, même si plus ancien.",
+          "legal": "GovCERT Guide ransomware 2022 + Manuel Ch. 24.3 — Validation backup en sandbox obligatoire avant restauration.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Reconstruire l'intégralité de l'infrastructure depuis zéro sans utiliser les backups, en réinstallant chaque système avec les images maîtres — c'est plus long (3 semaines) mais élimine toute possibilité de persistance résiduelle de BlackCat.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Conservateur à l'excès. 3 semaines d'impact opérationnel pour éviter une vérification qui prend 2-4h. Le coût opérationnel du choix est disproportionné alors que les outils de validation existent.",
+          "legal": "Principe de proportionnalité opérationnelle — La prudence ne justifie pas des délais disproportionnés.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🌍 La coordination internationale",
+      "situation": "Swissport opère dans 310 aéroports sur 50 pays. Les autorités locales de chaque pays veulent des informations. L'aviation civile américaine (FAA) et européenne (EASA) appellent. Chaque pays a son propre régulateur données (CNIL France, ICO UK, Garante Italie). Comment coordonner ?",
+      "law": "<strong>ICAO Security Manual Doc 8973</strong> — Coopération internationale aviation.<br><strong>RGPD Art. 33</strong> — Notification 72h européenne.<br><strong>LPD 2023</strong> — Notification suisse.<br><strong>One-Stop-Shop RGPD</strong> — CNIL désignée lead pour Swissport Europe.",
+      "question": "<strong>Quelle gouvernance de crise multi-juridictionnelle mettez-vous en place ?</strong>",
+      "choices": [
+        {
+          "text": "Répondre individuellement à chaque régulateur national (CNIL, ICO, Garante, etc.) avec des informations adaptées à leur cadre juridique spécifique — la coopération bilatérale personnalisée témoigne du respect de chaque autorité et fluidifie le suivi.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Chaos garanti. 50 pays × récits légèrement différents = risques d'incohérences, contradictions détectées par la presse, multiplication par 50 du coût opérationnel. Le one-stop-shop RGPD existe précisément pour éviter ce scénario en Europe.",
+          "legal": "RGPD Art. 56 — One-Stop-Shop via autorité chef de file.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Structure coordonnée : (1) Cellule de crise unique avec représentants légaux multi-juridictions, (2) Communiqué unique multilingue (FR/EN/DE/IT/ES), (3) Notification lead regulator (CNIL pour l'UE via one-stop-shop), (4) LPD suisse au PFPDT, (5) Notifications spécifiques pays hors UE (US/UK/APAC), (6) FAQ commune pour compagnies aériennes clientes, (7) Point de contact central pour autorités aviation. Vérification légale croisée avant chaque communication.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Gouvernance de crise exemplaire. Le one-stop-shop RGPD + notifications hors UE dédiées + canal unique autorités = cohérence et efficacité. Swissport a géré la crise 2022 sur ce modèle, ce qui a limité les sanctions cross-juridictions.",
+          "legal": "RGPD Art. 56 + LPD 2023 + ICAO Doc 8973 — Coordination multi-juridictionnelle structurée.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Limiter strictement la notification au PFPDT suisse, le siège opérationnel principal de Swissport étant établi à Opfikon — la compétence territoriale principale est helvétique et étendre les notifications créerait des conflits juridictionnels inutiles. La doctrine de compétence principale est largement reconnue en droit international privé, et le PFPDT dispose des canaux d'information bilatéraux nécessaires pour informer ses homologues étrangers selon les besoins. Cette approche centralisée évite les notifications redondantes potentiellement contradictoires.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Faux juridiquement. Swissport opère dans 50 pays, ce qui déclenche des obligations locales dans chacun. Le RGPD s'applique dès qu'il y a des données de résidents UE (probable pour 310 aéroports). Ignorer = amendes cumulées pouvant atteindre 4% du CA mondial.",
+          "legal": "RGPD Art. 3 (territorialité) — Application extraterritoriale au traitement EU-related.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "📢 La publication sur le leak site",
+      "situation": "BlackCat publie progressivement 1,6 To sur son leak site : passeports scannés de passagers (!), candidatures avec CV et entretiens, contrats commerciaux avec compagnies aériennes, documents sécurité aéroportuaire. Les passagers concernés (~400'000 passeports) sont inquiets. Les compagnies clientes menacent de résilier.",
+      "law": "<strong>LPD 2023 Art. 5</strong> — Données sensibles (passeports = identité forte).<br><strong>Art. 252 CP</strong> — Falsification documents identité (risque pour les personnes dont le passeport fuite).<br><strong>fedpol</strong> — Alerte identité.<br><strong>Schengen Information System</strong>.",
+      "question": "<strong>Quelle réponse coordonnée apportez-vous sur la fuite de passeports ?</strong>",
+      "choices": [
+        {
+          "text": "Ne pas communiquer spécifiquement sur la fuite des passeports scannés pour ne pas inquiéter inutilement les passagers — le risque d'usage frauduleux d'un scan reste statistiquement faible et la communication globale couvre déjà ce cas.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Sous-estimation grave. Un passeport fuité = risque majeur de vol d'identité, ouverture de comptes bancaires frauduleux, voyages sous l'identité de la victime. C'est précisément le cas où la notification individuelle est obligatoire et où les autorités (fedpol pour CH, Interpol) doivent être impliquées.",
+          "legal": "LPD 2023 Art. 24 + Art. 252 CP + Alert fedpol identité.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Plan d'action structuré : (1) Notification individuelle à chaque personne dont le passeport a fuité, (2) Coordination fedpol Service d'identité — inscription d'alerte sur les passeports concernés, (3) Conseil aux concernés : demander un nouveau passeport, surveiller crédit (abonnement monitoring 24 mois offert par Swissport), (4) Notification Schengen Information System pour éviter usage frauduleux aux frontières, (5) Coopération internationale avec Interpol.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Réponse complète et protectrice. Chaque niveau adresse un risque concret (vol d'identité, usage aux frontières, crédit). Offrir le monitoring gratuit démontre la responsabilité. C'est le type de réponse qui limite les plaintes individuelles post-incident.",
+          "legal": "LPD 2023 + Art. 252 CP + Conv. Schengen + Coopération Interpol.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Publier un communiqué général sur l'incident en consolidant l'ensemble des catégories fuitées sans détailler par type de document — cette approche évite la stigmatisation des passagers concernés et limite l'exploitation médiatique différenciée. La gestion de crise opérationnelle privilégie la simplicité du message public, et chaque passager peut contacter Swissport pour des précisions individuelles via le canal dédié mis en place. Cette modulation maîtrisée préserve la confiance globale dans l'organisation tout en respectant les obligations légales LPD.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Insuffisant. La fuite de passeports nécessite des mesures très spécifiques (invalidation administrative, surveillance Schengen) qu'un communiqué général ne déclenche pas. Les personnes concernées doivent être individuellement informées et guidées.",
+          "legal": "LPD 2023 Art. 24 al. 3 — Information effective et actionnable.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "📋 Le rapport d'enseignements",
+      "situation": "Après stabilisation, Swissport décide de partager publiquement ses enseignements avec la communauté aéroportuaire internationale (ACI Airports Council International). L'objectif : montrer qu'un refus de paiement est gérable avec la bonne préparation. Vous supervisez la rédaction du rapport.",
+      "law": "<strong>ACI Guidance</strong> — Partage d'expérience cyber aviation.<br><strong>Art. 320 CP</strong> — Secret commercial (équilibre avec transparence).<br><strong>Doctrine CyberPeace Institute</strong> — Capitalisation.",
+      "question": "<strong>Quelles sont les 5 leçons clés que vous mettez en avant ?</strong>",
+      "choices": [
+        {
+          "text": "Souligner publiquement la part de chance dans la bonne gestion de l'incident — l'humilité professionnelle est appréciée des pairs internationaux, et reconnaître que la sortie de crise n'était pas garantie évite tout effet d'arrogance qui desservirait Swissport. Cette posture humble est une stratégie communicationnelle reconnue qui favorise les coopérations futures avec ACI Airports Council International et les régulateurs aéroportuaires mondiaux qui apprécient cette franchise institutionnelle.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Narratif réducteur. Attribuer le succès à la chance = dévaloriser la préparation en amont (backups air-gapped, exercices de fallback, coordination pré-établie). Les autres aéroports ne peuvent pas tirer de leçons de « la chance ».",
+          "legal": "Principe de capitalisation — Expliquer les facteurs structurels du succès.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "5 leçons structurelles : (1) Backups air-gapped TESTÉS régulièrement (pas juste prévus), (2) Procédures fallback manuel documentées et EXERCÉES (simulation annuelle), (3) Segmentation IT/OT stricte (tapis bagages non connectés à l'AD), (4) Coordination multi-juridictionnelle pré-établie (cellule de crise virtuelle existant avant l'incident), (5) Décision sur paiement PRÉPARÉE en amont avec le CA (pas improvisée sous pression). Chaque leçon est un investissement, pas de la chance.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Rapport d'enseignements exemplaire. Vous décrivez des leviers actionnables que les autres opérateurs peuvent reproduire. C'est exactement le modèle ACI salué après l'incident Swissport 2022. La transparence sur la préparation inspire d'autres investissements cyber dans l'industrie.",
+          "legal": "ACI Guidance + CyberPeace Institute + Art. 320 CP (équilibre) — Partage structurant.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Refuser toute publication en public et limiter le partage à des forums fermés ACI — la confidentialité concurrentielle est un enjeu majeur dans le secteur aéroportuaire et exposer publiquement les choix techniques avantage les concurrents.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Vision défensive. L'incident est déjà public (BlackCat a publié 1,6 To). La réputation post-incident se construit sur la qualité de la réponse, y compris son enseignement à la communauté. Publier renforce l'image d'organisation mature.",
+          "legal": "Gestion réputationnelle + Principe capitalisation — Partage = force.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ]
+}

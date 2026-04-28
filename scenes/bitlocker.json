@@ -1,0 +1,215 @@
+{
+  "id": "bitlocker",
+  "title": "Le Dilemme de l'Intervenant",
+  "icon": "🔐",
+  "difficulty": "medium",
+  "atmosphere": "crypto",
+  "narrative": {
+    "success": "La clé FVEK est capturée à temps depuis la RAM. Volatility l'extrait avec précision, le disque est déchiffré en laboratoire. L'enquête avance — 750 Go de preuves accessibles.",
+    "degraded": "La capture RAM est partielle. Quelques indices exploitables, mais la clé complète manque. Il faudra explorer les canaux alternatifs (compte Microsoft, Active Directory).",
+    "failure": "Le laptop a été éteint avant la capture RAM. La clé BitLocker est perdue à jamais — AES-256 reste inviolable. Des téraoctets de preuves potentielles sont désormais inaccessibles."
+  },
+  "tags": [
+    "WINDOWS",
+    "FORENSIQUE"
+  ],
+  "legalRefs": [
+    "Art. 248 CPP",
+    "Manuel Ch. 11.1",
+    "ISO/IEC 27037"
+  ],
+  "intro": "Vous arrivez dans un appartement zurichois. Sur le bureau : un laptop Windows allumé avec session active et BitLocker activé. Votre collègue s'apprête à fermer l'écran. Chaque seconde compte.",
+  "alertLevel": "⚡ CRITIQUE — BitLocker actif · Clé en RAM · Elle disparaît si vous bougez l'appareil",
+  "objectives": [
+    {
+      "icon": "💻",
+      "text": "Préserver la clé BitLocker avant toute action"
+    },
+    {
+      "icon": "⛓",
+      "text": "Respecter les scellés sans détruire les preuves volatiles"
+    },
+    {
+      "icon": "🔑",
+      "text": "Identifier les alternatives si la RAM n'a pas été capturée"
+    }
+  ],
+  "debrief": "<p>Ce scénario illustre le principe fondamental de la forensique numérique : <strong>ne jamais modifier la preuve</strong>, même involontairement. Éteindre un ordinateur BitLocker sans en avoir capturé la mémoire vive revient à détruire définitivement la clé de déchiffrement.</p><p><strong>Règle d'or (Manuel Ch. 11.1) :</strong> si le système est allumé et chiffré → live forensics d'abord. Le dump RAM est la priorité absolue. Les scellés (art. 248 CPP) ne s'opposent pas à l'acquisition — ils suspendent l'<em>analyse</em>, pas la <em>collecte</em>.</p><p><strong>Référence CH</strong> : TF 7B_145/2025 (2025) — les smartphones et supports chiffrés constituent des «&nbsp;documents personnels&nbsp;» au sens de l'Art. 264 al. 1 let. b CPP. Leur protection n'est pas absolue : le TMC peut lever les scellés si l'intérêt public à la poursuite prime (cf. affaire cocaïne Zurich, 7.18 kg — levée accordée). La clé de déchiffrement en RAM est un artefact volatile — ACPO Principle 2 s'applique avec une acuité particulière.</p>",
+  "steps": [
+    {
+      "phase": "💻 La découverte",
+      "situation": "Vous arrivez dans un appartement zurichois. Sur le bureau : un laptop Windows allumé avec session active. Dans l'angle inférieur droit, une icône indique <strong>BitLocker activé</strong>. Votre collègue s'apprête à fermer l'écran. Le propriétaire vient d'être arrêté à l'extérieur.",
+      "law": "<strong>Art. 248 CPP</strong> — Les scellés suspendent l'analyse, pas l'acquisition.<br><strong>Manuel Ch. 11.1</strong> — Priorité : volatilité des données. La RAM contient la clé BitLocker.",
+      "question": "<strong>Votre collègue s'apprête à fermer le laptop. Que faites-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Le laisser fermer puis poser les scellés sur les ports — un laptop fermé en veille préserve l'état des fichiers ouverts pour analyse ultérieure, et la procédure de saisie standard interdit toute manipulation hors mandat spécifique de capture mémoire.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Erreur critique. Fermer l'écran peut déclencher la mise en veille ou l'hibernation — BitLocker rechiffre immédiatement la RAM. La clé de déchiffrement est perdue sans retour possible.",
+          "legal": "Manuel Ch. 11.1 — Un système BitLocker éteint sans capture RAM préalable équivaut à une destruction de preuve involontaire.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Brancher immédiatement un outil de dump RAM (WinPmem sur clé USB) avant tout déplacement.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Décision correcte. La RAM contient la clé de chiffrement BitLocker active. WinPmem capture la mémoire sans modifier le contenu du disque. C'est la priorité absolue en live forensics.",
+          "legal": "Manuel Ch. 11.1 + ISO/IEC 27037 — volatilité des données : RAM en premier, disque ensuite.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Photographier l'écran avec un appareil externe pour fixer l'état visible (icônes, fenêtres ouvertes, horodatage système), puis demander les scellés numériques au TMC — la photographie est une preuve recevable et reproductible qui n'altère pas le système.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Incomplète. Photographier l'écran ne capture pas la clé BitLocker. Les scellés suspendent l'analyse mais la RAM volatile sera perdue dès qu'on déplace l'appareil.",
+          "legal": "Art. 248 CPP — Les scellés n'interdisent pas la capture RAM préalable, qui est une mesure de préservation.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔑 La clé de récupération",
+      "situation": "Vous avez capturé la RAM (14 Go, 8 minutes). Volatility confirme : la clé BitLocker FVEK est présente à l'offset 0x7F3A2400. Mais votre supérieur vous demande maintenant de trouver une clé de récupération <em>sans</em> exploiter la RAM — pour des raisons procédurales.",
+      "law": "<strong>BitLocker Recovery Key</strong> peut être dans : compte Microsoft, Active Directory, fichier texte sauvegardé, clé USB de récupération.",
+      "question": "<strong>Où chercher la clé de récupération BitLocker sans exploiter la RAM ?</strong>",
+      "choices": [
+        {
+          "text": "Compte Microsoft associé à la session Windows — microsoft.com/devicemanagement",
+          "ok": true,
+          "pts": 20,
+          "fb": "Principal emplacement de sauvegarde pour les particuliers. Si le propriétaire utilise un compte Microsoft, la clé de récupération y est souvent stockée automatiquement. Nécessite une réquisition judiciaire à Microsoft.",
+          "legal": "Manuel Ch. 24.3 — Récupération clés BitLocker : compte MS > AD > fichier sauvegardé.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Lancer un brute force ciblé sur AES-256 en s'appuyant sur les patterns de mots de passe utilisateurs (date de naissance, prénoms famille, mots-clés du dossier) — souvent les passphrases utilisateur sont faibles malgré la robustesse de l'algorithme.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Irréalisable. AES-256 avec une clé aléatoire de 256 bits nécessiterait plus d'énergie que le soleil ne peut en produire pour être cassé par force brute. Cette option n'existe pas dans l'arsenal forensique réaliste.",
+          "legal": "AES-256 — aucun ordinateur existant ne peut casser par force brute en temps raisonnable.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Chercher un fichier .txt ou .pdf de sauvegarde sur les autres supports de l'appartement.",
+          "ok": true,
+          "pts": 15,
+          "fb": "Méthode valide. Beaucoup d'utilisateurs sauvegardent leur clé de récupération dans un fichier texte ou l'impriment. Vérifier aussi les clés USB, smartphones et le cloud.",
+          "legal": "Manuel Ch. 24.3 — La recherche physique de supports de sauvegarde est une étape légitime.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "📋 La réquisition Microsoft",
+      "situation": "Le compte Microsoft du suspect est identifié (compte@outlook.com). Vous préparez la réquisition à Microsoft Corporation (Redmond, USA) pour obtenir la clé de récupération BitLocker associée. Le Ministère public doit signer l'ordonnance — mais les délais MLAT USA-Suisse sont de 3 à 6 mois.",
+      "law": "<strong>MLAT CH-USA 1973</strong> — Traité d'entraide judiciaire, voie officielle.<br><strong>Art. 273 CPP</strong> — Surveillance télécommunications.<br><strong>US CLOUD Act 2018</strong> — Microsoft peut répondre directement à des demandes étrangères légales.",
+      "question": "<strong>Comment procédez-vous pour limiter les délais ?</strong>",
+      "choices": [
+        {
+          "text": "Soumettre exclusivement la demande par voie MLAT (USA-Suisse) via fedpol et OFJ — c'est le seul canal qui produit une preuve recevable internationalement, les portails directs étant juridiquement contestables côté défense.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Trop conservateur. Depuis le CLOUD Act 2018, Microsoft peut répondre à des ordonnances étrangères légales directement via son portail Law Enforcement, sans MLAT. Le délai peut passer à 2-4 semaines.",
+          "legal": "CLOUD Act + Microsoft Law Enforcement Portal — Raccourci légal pour autorités validées.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Soumettre en parallèle : ordonnance MP via le portail Law Enforcement Microsoft (réponse sous 2-4 semaines) et MLAT en backup (réponse sous 3-6 mois). La première qui aboutit est utilisée.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Stratégie optimale. Le portail direct couvre 90% des demandes en quelques semaines. Le MLAT reste en backup pour les cas où Microsoft demande validation étatique. Deux voies = sécurité procédurale.",
+          "legal": "Pratique fedpol + CLOUD Act — Approche double canal recommandée pour les données cloud.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Contacter Microsoft Suisse à Wallisellen par téléphone et email pour activer le canal local d'assistance autorités — l'antenne suisse a une procédure d'escalade interne vers Redmond qui contourne le délai standard MLAT pour les requêtes urgentes.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Aucune valeur juridique. Microsoft ne traite les demandes d'autorités que via le portail Law Enforcement avec vérification d'identité officielle. Une demande informelle sera ignorée ou classée sans suite.",
+          "legal": "Microsoft Online Services Terms — Demandes légales via canaux authentifiés uniquement.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🧪 Le déchiffrement en laboratoire",
+      "situation": "La clé FVEK est obtenue (via RAM + confirmée par Microsoft). Vous procédez au déchiffrement du disque en laboratoire. Votre technicien propose deux méthodes : (A) monter l'image en lecture seule via <code>dislocker-fuse</code>, ou (B) produire une image déchiffrée complète via <code>dislocker-file</code>.",
+      "law": "<strong>ACPO Principle 1</strong> — Aucune modification de la preuve originale.<br><strong>Manuel Ch. 12.2</strong> — Travail sur copie, toujours.",
+      "question": "<strong>Quelle méthode recommandez-vous pour l'analyse ?</strong>",
+      "choices": [
+        {
+          "text": "Dislocker-file : produire une image déchiffrée complète de 500 Go, puis analyser cette image avec les outils habituels (X-Ways, Autopsy).",
+          "ok": true,
+          "pts": 25,
+          "fb": "Correct. L'image déchiffrée complète permet des analyses forensiques lourdes sans dépendance au mount FUSE. Hash de vérification sur l'image déchiffrée avant/après analyse. Méthode reproductible par un expert tiers.",
+          "legal": "ACPO Principle 3 — Reproductibilité via image déchiffrée indépendante.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Monter le disque BitLocker original en écriture avec la clé FVEK pour permettre l'exécution des outils d'indexation (Recoll, Everything) qui nécessitent un accès en lecture-écriture — l'analyse est nettement plus rapide qu'avec une image figée.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Violation grave d'ACPO Principle 1. Toute modification du disque original (même une simple mise à jour de timestamps par Windows) peut invalider toute l'analyse. Travailler toujours sur une COPIE forensique.",
+          "legal": "ACPO Principle 1 + Manuel Ch. 12.2 — Interdiction absolue de modifier la preuve originale.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Dislocker-fuse : monter le volume BitLocker déchiffré en live via FUSE, ce qui évite de dupliquer les 500 Go et permet un démarrage immédiat des analyses — la dépendance au mount actif est gérable en environnement laboratoire stable.",
+          "ok": false,
+          "pts": 0,
+          "fb": "Méthode acceptable pour exploration rapide mais moins robuste qu'une image complète. Le mount FUSE peut tomber, les outils ne peuvent pas tous lire via FUSE. Pour un dossier pénal sérieux, préférer une image complète.",
+          "legal": "Manuel Ch. 12.2 — Préférer l'image statique pour la défense devant juge.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "⚖️ La présentation au MP",
+      "situation": "Le disque est déchiffré. Vous identifiez 12 Go de documents techniques confidentiels + 340 emails chiffrés avec OpenPGP. Le Ministère public veut savoir ce qui est exploitable en audience et ce qui nécessite une procédure supplémentaire.",
+      "law": "<strong>Art. 248 CPP</strong> — Scellés sur données personnelles.<br><strong>Art. 264 CPP</strong> — Objets non saisissables (correspondance avocat-client).<br><strong>TF 1B_602/2020</strong> — Tri préalable obligatoire.",
+      "question": "<strong>Comment qualifiez-vous le matériel pour le MP ?</strong>",
+      "choices": [
+        {
+          "text": "L'intégralité du disque déchiffré est exploitable — le mandat de perquisition couvre l'ensemble du support saisi, et le tri sélectif a posteriori risque d'être perçu comme une dissimulation de pièces à décharge potentielles par la défense.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Erreur procédurale. Le déchiffrement technique n'équivaut pas à recevabilité procédurale. Les emails avec l'avocat (Art. 264 CPP) et les données non pertinentes doivent être triés préalablement par le TMC.",
+          "legal": "Art. 264 CPP + TF 1B_602/2020 — Tri préalable OBLIGATOIRE avant toute consultation par le MP.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Distinguer : (1) documents techniques → exploitables après tri TMC, (2) emails OpenPGP → tri spécifique avant déchiffrement (correspondance avocat ?), (3) données non pertinentes → écartées dès le tri.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Position correcte. Le déchiffrement technique et la recevabilité juridique sont deux étapes distinctes. Un bon rapport distingue clairement ce qui est disponible techniquement de ce qui est consultable légalement après tri TMC.",
+          "legal": "Art. 248 + 264 CPP + TF 1B_602/2020 — Séparation nette entre capacité technique et légalité procédurale.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Présenter au MP uniquement les éléments à charge directement liés à l'infraction reprochée, en écartant le reste pour respecter le principe de proportionnalité — ne pas exposer le MP à une masse de données non pertinentes accélère l'instruction.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Sélection biaisée interdite. L'expert forensique doit présenter un inventaire complet et neutre ; c'est au MP et au juge de qualifier la pertinence. Filtrer en amont = empiéter sur la fonction judiciaire.",
+          "legal": "Art. 182 CPP — L'expert présente des faits, pas une opinion sélective.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ]
+}

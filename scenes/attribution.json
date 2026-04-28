@@ -1,0 +1,320 @@
+{
+  "id": "attribution",
+  "title": "Attribution Incertaine",
+  "icon": "👤",
+  "difficulty": "hard",
+  "atmosphere": "",
+  "narrative": {
+    "success": "L'attribution triangulée (RDP + DHCP + badgeuse + pattern horaire) est retenue par le juge. Alice est confondue par la convergence des 4 sources. Elle finit par reconnaître les faits et révèle avoir agi pour le compte du concurrent.",
+    "degraded": "L'attribution est acceptée avec réserves. Alice nie fermement, mais ne peut pas contester techniquement. L'affaire va en appel.",
+    "failure": "L'attribution repose sur trop peu de sources indépendantes. Le doute profite à Alice. Elle est acquittée — le vrai coupable, peut-être elle, peut-être un autre, reste impuni."
+  },
+  "tags": [
+    "WINDOWS",
+    "FORENSIQUE"
+  ],
+  "legalRefs": [
+    "Manuel Ch. 29.4",
+    "Art. 139 CPP",
+    "Art. 182 CPP"
+  ],
+  "intro": "Une infraction a eu lieu depuis un compte Windows partagé par 3 collaborateurs. Il faut désigner l'auteur probable — sans jamais outrepasser le rôle de l'expert forensique.",
+  "alertLevel": "👥 COMPTE PARTAGÉ — Qui a vraiment appuyé sur Entrée à 02h34 ?",
+  "objectives": [
+    {
+      "icon": "👤",
+      "text": "Identifier les artefacts différenciateurs sur un compte partagé"
+    },
+    {
+      "icon": "🔗",
+      "text": "Trianguler sources numériques et physiques (Art. 139 CPP)"
+    },
+    {
+      "icon": "📋",
+      "text": "Formuler l'attribution au niveau d'affirmation correct (Art. 182 CPP)"
+    }
+  ],
+  "debrief": "<p>L'attribution d'une action à un utilisateur spécifique sur un compte partagé est l'un des défis les plus délicats de la forensique Windows. La session utilisateur ne suffit pas — il faut croiser : Event ID 4624 (type de logon), biométrie (si configurée), photos de surveillance, comportements atypiques.</p><p>Le Manuel (Ch. 29.4) insiste : l'attribution humaine nécessite toujours plusieurs sources convergentes. Une session active ne prouve pas physiquement la présence d'une personne devant l'écran.</p><p><strong>Référence CH</strong> : ATF 136 II 508 (Logistep, 2010) — l'adresse IP dynamique est une donnée personnelle protégée. Elle identifie un <em>abonné</em>, non un <em>auteur</em>. En contexte de Carrier Grade NAT (CGN) — utilisé par Swisscom et Salt sur les connexions mobiles — une seule IP peut correspondre à des dizaines d'utilisateurs simultanés ; l'identification requiert alors le port source + timestamp précis. Art. 273 CPP : la réquisition d'abonné nécessite l'autorisation du MP.</p>",
+  "steps": [
+    {
+      "phase": "👤 Le compte partagé",
+      "situation": "Une infraction (envoi de données confidentielles à un concurrent) a eu lieu depuis le compte Windows <code>svc_compta</code>. Ce compte est utilisé par <strong>3 collaborateurs</strong> du service comptabilité : Alice, Bob et Carole. L'infraction a eu lieu le vendredi 14 mars à 23h47 — en dehors des heures de bureau.",
+      "law": "<strong>Event ID 4624</strong> — Type de logon (2=local, 3=réseau, 10=RDP, 7=déverrouillage).<br><strong>Manuel Ch. 29.4</strong> — Attribution humaine : croiser sources numériques et physiques.",
+      "question": "<strong>Quels artefacts permettent de distinguer les trois utilisateurs ?</strong>",
+      "choices": [
+        {
+          "text": "Le nom de la session svc_compta combiné aux Event IDs Windows — la session étant authentifiée par mot de passe individuel, le journal Security identifie l'utilisateur réel derrière le compte de service au moment précis de l'action.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Insufficient. svc_compta est un compte partagé — tous les trois l'utilisent. Le nom de session n'identifie pas l'individu physique.",
+          "legal": "Manuel Ch. 29.4 — Compte partagé = session insuffisante. Nécessite différenciateurs complémentaires.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Event ID 4624 (type de logon + poste source) + badges d'accès physique + caméras de surveillance + habitudes comportementales (heure, vitesse de frappe).",
+          "ok": true,
+          "pts": 25,
+          "fb": "Approche complète. L'Event ID 4624 donne le type de connexion (RDP = à distance). Les badges d'accès indiquent qui était physiquement dans le bâtiment. Les caméras confirment la présence. Les habitudes comportementales permettent d'identifier le profil.",
+          "legal": "Manuel Ch. 29.4 — Attribution triangulée : numérique + physique + comportemental.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "L'adresse MAC de la machine utilisée combinée à l'inventaire informatique — chaque poste étant nominativement attribué dans l'AD, l'identification de la machine source via MAC permet de remonter à son utilisateur déclaré au moment des faits.",
+          "ok": false,
+          "pts": -10,
+          "fb": "L'adresse MAC identifie l'appareil, pas l'utilisateur. Sur un poste partagé, la MAC ne distingue pas Alice de Bob si les deux utilisent la même machine.",
+          "legal": "Manuel Ch. 25.6 — MAC = appareil ≠ utilisateur. Nécessite corrélation avec session active et présence physique.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🎯 La convergence",
+      "situation": "L'analyse révèle : Event ID 4624 Type 10 (RDP) depuis 192.168.1.47 (poste d'Alice, identifié par DHCP lease). Badgeuse : seule Alice a badgé hors du bâtiment à 22h30 ce soir-là. Ses accès habituels sont toujours le soir entre 22h et minuit. Bob et Carole sont badgés sortis à 18h00.",
+      "law": "<strong>Art. 139 CPP</strong> — Preuve par indices convergents.",
+      "question": "<strong>Quelle conclusion forensique rédigez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "« Alice a commis l'infraction de soustraction de données au sens de l'art. 143 CP — la convergence des artefacts techniques (RDP, DHCP, badgeuse, pattern horaire) ne laisse subsister aucun doute raisonnable sur son identité d'auteur. »",
+          "ok": false,
+          "pts": -15,
+          "fb": "Trop affirmatif et dépasse le rôle de l'expert. La qualification pénale appartient au juge. « Alice a commis » est une conclusion sur l'intention qui va au-delà des artefacts numériques.",
+          "legal": "Art. 182 CPP — L'expert formule des constatations techniques, pas des verdicts.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "« La convergence de 4 sources indépendantes (RDP depuis le poste d'Alice, DHCP lease confirmé, badgeuse — seule personne présente physiquement, pattern horaire habituel d'Alice) désigne le compte d'Alice comme source la plus probable de l'action du 14 mars à 23h47. »",
+          "ok": true,
+          "pts": 20,
+          "fb": "Formulation correcte. Elle cite explicitement les 4 sources, utilise « probable » pour maintenir l'honnêteté intellectuelle, et identifie le compte (fait vérifiable) plutôt que la personne.",
+          "legal": "Manuel Ch. 29.3 + Art. 139 CPP — Preuve par indices convergents, formulée avec le niveau d'affirmation approprié.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "« Le compte svc_compta étant partagé entre Alice, Bob et Carole, et en l'absence d'authentification individualisée tracée, il est techniquement impossible de distinguer formellement les trois utilisateurs au sens d'une preuve pénale. Le doute raisonnable joue en faveur du prévenu — c'est la conclusion qui s'impose. »",
+          "ok": false,
+          "pts": -10,
+          "fb": "Trop défaitiste au vu des 4 sources convergentes. La triangulation réalisée PERMET la distinction probable. Ne pas l'utiliser = priver l'enquête d'une conclusion solide.",
+          "legal": "Art. 139 CPP — Les indices convergents sont une preuve valide en droit pénal suisse.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🛡 La défense biométrique",
+      "situation": "Alice, interrogée, affirme : « Quelqu'un a dû utiliser mon poste pendant que j'allais aux toilettes. Mon écran n'était peut-être pas verrouillé. » Vous cherchez des éléments de biométrie qui trancheraient. Windows Hello facial était configuré sur son poste. Les logs montrent : 4624 Type 7 (Unlock) à 22h03 avec biometric flag = true, puis activité continue jusqu'à 23h59.",
+      "law": "<strong>Windows Hello</strong> — Biométrie locale stockée dans le TPM.<br><strong>Event ID 4624 Type 7</strong> — Déverrouillage, avec LogonAuthenticationPackageName = NGC (biométrie).<br><strong>Manuel Ch. 29.4</strong> — Biométrie = preuve très forte d'identité physique.",
+      "question": "<strong>Comment interprétez-vous la preuve biométrique pour le rapport ?</strong>",
+      "choices": [
+        {
+          "text": "« Alice s'est authentifiée biométriquement à 22h03, puis l'activité a continué sans interruption jusqu'à l'infraction. Aucune nouvelle authentification n'est visible. »",
+          "ok": true,
+          "pts": 25,
+          "fb": "Formulation forensique optimale. Elle établit l'authentification biométrique d'Alice, décrit l'absence d'interruption, et permet au lecteur de conclure sur la présence continue. La défense « quelqu'un d'autre » est techniquement difficile à maintenir : il aurait fallu voler l'écran déverrouillé puis voler le visage d'Alice.",
+          "legal": "Art. 139 CPP + Manuel Ch. 29.4 — Biométrie = indice quasi-décisif sur la présence physique.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "« Windows Hello, basé sur la reconnaissance faciale 3D Microsoft, identifie Alice avec un taux d'erreur inférieur à 1/100'000 — sa défense d'un poste laissé déverrouillé est techniquement incompatible avec le comportement observé en session. »",
+          "ok": false,
+          "pts": -20,
+          "fb": "Sur-affirmation. Windows Hello n'est pas infaillible (faux positifs rares mais documentés). « Mensonge manifeste » = qualification de l'intention, hors du rôle expert. Un bon rapport décrit les faits techniques, le juge qualifie.",
+          "legal": "Art. 182 CPP — L'expert ne qualifie pas la véracité des déclarations.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Considérer Windows Hello comme indice technique secondaire et le mentionner brièvement dans le rapport — la biométrie faciale Microsoft a connu des contournements documentés (papers Black Hat 2017-2019) et son poids probant est limité.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Sous-estimation. Windows Hello avec TPM est reconnu comme une authentification robuste par Microsoft Security Docs. C'est précisément le différenciateur technique qui tranche ce cas. Le minimiser = perdre la preuve la plus forte.",
+          "legal": "Microsoft Security Docs + NIST SP 800-63B — Windows Hello classé authentification de niveau AAL2/AAL3.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🕹 L'argument du malware",
+      "situation": "L'avocat d'Alice fait valoir qu'un malware (RAT) aurait pu se connecter à distance et exécuter l'infraction. Il exige une contre-expertise pour vérifier. Votre analyse de la machine montre : aucun processus suspect actif à l'heure des faits, pas de fichier exécutable récent non signé, pas de connexion réseau sortante anormale, pas d'entrée de registre malveillante.",
+      "law": "<strong>MITRE ATT&CK T1021</strong> — Remote Services, techniques de contrôle à distance.<br><strong>Manuel Ch. 20</strong> — Analyse anti-malware en forensique.<br><strong>Art. 189 CPP</strong> — Contre-expertise.",
+      "question": "<strong>Comment répondez-vous à l'hypothèse malware ?</strong>",
+      "choices": [
+        {
+          "text": "Accepter la contre-expertise demandée par la défense et suspendre les conclusions du rapport en attendant ses résultats — la rigueur scientifique impose de ne pas anticiper sur une analyse contradictoire qui pourrait révéler des éléments négligés.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Capitulation injustifiée. Votre analyse anti-malware est complète et négative. La contre-expertise peut avoir lieu, mais votre rapport principal reste solide. Ne pas préparer de défense technique = abandonner le dossier.",
+          "legal": "Art. 189 CPP — La contre-expertise est un droit, pas une invalidation automatique.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Documenter précisément : scan YARA des exécutables, analyse Volatility de la RAM (processus, connexions, hooks), vérification de l'intégrité du kernel (Autoruns + Sigcheck), comparaison avec baseline Windows propre. Conclusion : aucun artefact de RAT détecté sur la machine. L'hypothèse malware n'est pas étayée par les faits observables.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Réponse d'expert solide. Vous listez les vérifications anti-malware réalisées et concluez de façon factuelle. Le contre-expert devra trouver ce qui a échappé à votre analyse — peu probable vu la rigueur décrite.",
+          "legal": "Manuel Ch. 20 + MITRE ATT&CK — Liste de vérifications anti-malware standard.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Rejeter l'hypothèse malware sans contre-analyse formelle : « L'absence d'antécédent de RAT chez ce profil utilisateur, l'environnement durci par l'IT et les artefacts comportementaux cohérents rendent cette hypothèse statistiquement négligeable. La probabilité bayésienne d'un RAT non détecté par l'EDR à jour est inférieure à 0,5%, ce qui ne justifie pas une analyse complémentaire chronophage. »",
+          "ok": false,
+          "pts": -25,
+          "fb": "Position inacceptable. Toute hypothèse de la défense mérite vérification technique. La rejeter sans analyse = manque de rigueur + manque de respect pour la procédure. Un expert neutre examine toute contre-hypothèse.",
+          "legal": "Art. 182 CPP — L'expert est neutre et rigoureux, pas partisan.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "🎥 La corroboration CCTV",
+      "situation": "La CCTV du bâtiment confirme : Alice est vue entrant dans le bureau à 22h01, sortant à 23h59. Aucune autre personne n'est vue entrer. Un plan lumineux indique qu'Alice a utilisé son téléphone pendant une pause à 23h12 (trahissant son visage devant la caméra). Cependant, la CCTV du couloir a une zone aveugle entre 22h40 et 22h55.",
+      "law": "<strong>Art. 179quater CP</strong> — Violation de la sphère privée par dispositifs de prise de vue (consent des employés obligatoire).<br><strong>LPD 2023 Art. 27</strong> — Surveillance des employés : proportionnalité et information.",
+      "question": "<strong>Comment intégrez-vous la CCTV au rapport ?</strong>",
+      "choices": [
+        {
+          "text": "Utiliser la CCTV comme preuve principale pour démontrer la présence physique d'Alice — la jurisprudence récente admet la recevabilité de la vidéosurveillance même en cas de défaut formel d'information, dès lors qu'elle confirme une infraction grave. L'art. 141 al. 2 CPP autorise l'exploitation des preuves illicites pour les crimes graves.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Violation grave de la LPD et CPP. Une CCTV employés installée sans information préalable est une surveillance illégale (Art. 179quater CP). Son exploitation judiciaire est contestable (Art. 141 CPP) et expose l'entreprise à des poursuites LPD. Toujours vérifier la conformité de la CCTV AVANT de l'utiliser.",
+          "legal": "Art. 179quater CP + LPD 2023 Art. 27 — CCTV employés = consentement/information obligatoires.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Intégrer la CCTV en précisant : conformité LPD vérifiée (panneaux d'information affichés, consentement signé), zone aveugle 22h40-22h55 mentionnée honnêtement, corroboration avec Windows Hello (pas d'autre entrée) + activité continue en session = Alice présente de façon prolongée.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Formulation exemplaire. Conformité LPD vérifiée, honnêteté sur la zone aveugle (un expert loyal mentionne les limites), et convergence avec les autres sources. La zone aveugle de 15 min ne suffit pas à expliquer une activité continue de 2h.",
+          "legal": "LPD 2023 Art. 27 + Art. 139 CPP — CCTV légale + transparence sur les limites.",
+          "critical": false,
+          "next": 5
+        },
+        {
+          "text": "Ignorer entièrement la CCTV dans le rapport pour éviter toute complication liée à la conformité LPD — les autres sources convergentes (RDP, DHCP, badgeuse, biométrie) suffisent à étayer l'attribution sans s'exposer à un débat sur la licéité.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Sous-optimal. Si la CCTV est LPD-compliant, elle est une source précieuse. Ignorer une preuve valide par précaution excessive = prive l'enquête d'un indice solide.",
+          "legal": "Art. 139 CPP — Chaque source conforme doit être exploitée.",
+          "critical": false,
+          "next": 5
+        }
+      ]
+    },
+    {
+      "phase": "⌨️ Les biométries comportementales",
+      "situation": "Votre analyse va plus loin : les logs de l'application CRM (utilisée par le service compta) incluent les KeystrokeTiming (intervalles entre touches) et MouseVelocity. Vous comparez avec les sessions antérieures d'Alice, Bob et Carole. Résultat : la session du 14 mars à 23h47 a un profil keystroke identique à 96% à celui d'Alice (baseline de 400 sessions historiques). Bob = 41%, Carole = 38%.",
+      "law": "<strong>Biométrie comportementale</strong> — Reconnaissance par dynamique de frappe (NIST SP 800-63B).<br><strong>ATF 147 IV 409</strong> — Indices précis et concordants.",
+      "question": "<strong>Comment intégrez-vous cette donnée dans le rapport ?</strong>",
+      "choices": [
+        {
+          "text": "La présenter comme preuve technique définitive — un score de matching de 96% sur la baseline de 400 sessions historiques, contre 41% et 38% pour les autres utilisateurs, équivaut à une identification individualisée fiable au sens forensique.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Sur-interprétation. 96% est un score statistique élevé mais pas une « preuve définitive ». La biométrie comportementale est admise comme indice, pas comme empreinte digitale infaillible. Formuler comme « indice très fort » convient mieux.",
+          "legal": "NIST SP 800-63B — Biométrie comportementale = AAL1/AAL2, indice renforcé mais non décisif seul.",
+          "critical": false,
+          "next": 6
+        },
+        {
+          "text": "La présenter comme indice supplémentaire convergent avec les 5 autres sources déjà établies, en précisant la méthodologie (baseline 400 sessions, score 96% vs 41%/38%) et les limites statistiques de l'approche.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Intégration exemplaire. La biométrie comportementale renforce la convergence déjà solide. La transparence sur la méthode et les limites = crédibilité d'expert. Avec 6 sources indépendantes, le doute raisonnable est presque épuisé.",
+          "legal": "Art. 139 CPP + NIST SP 800-63B — Biométrie comportementale comme indice renforcé.",
+          "critical": false,
+          "next": 6
+        },
+        {
+          "text": "Ne pas mentionner la biométrie comportementale dans le rapport — cette technologie est trop récente pour avoir une jurisprudence stable et son explication technique au tribunal risque d'embrouiller plus qu'elle ne convainc, fragilisant le dossier.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Sous-optimisation. Le rôle de l'expert est précisément de rendre le technique compréhensible. Avec une explication claire de la méthode (« on compare comment Alice tape vs Bob/Carole »), le juge peut l'utiliser.",
+          "legal": "Art. 184 CPP — L'expert rend le technique accessible, il ne l'omet pas.",
+          "critical": false,
+          "next": 6
+        }
+      ]
+    },
+    {
+      "phase": "🎙 L'audience pénale",
+      "situation": "Audience au Tribunal de district. Alice, désormais accompagnée d'un avocat sénior, tente une dernière ligne de défense : « L'expert a travaillé pour le concurrent il y a 2 ans — il a un conflit d'intérêts. » Cette information est publique (LinkedIn). Le juge vous demande une réponse immédiate.",
+      "law": "<strong>Art. 183 CPP</strong> — L'expert doit être indépendant et sans conflit d'intérêts.<br><strong>Art. 56 CPP</strong> — Récusation.<br><strong>Art. 182 CPP</strong> — Devoir de divulgation proactif.",
+      "question": "<strong>Comment réagissez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Nier fermement tout conflit d'intérêts : « J'étais un simple contractant externe il y a 2 ans sur un projet sans lien avec la présente affaire, ma probité professionnelle est intacte et l'argument de la défense relève de la diffamation par insinuation. Je demande au tribunal de noter cette manœuvre dilatoire au PV et envisage une action civile contre le défenseur pour atteinte à l'honneur professionnel. »",
+          "ok": false,
+          "pts": -25,
+          "fb": "Erreur stratégique grave. Si l'information est publique (LinkedIn), nier crée une impression de dissimulation. De plus, si vous n'avez pas divulgué ce lien au moment de votre mandat d'expert, c'est une violation de l'Art. 183 CPP.",
+          "legal": "Art. 182/183 CPP — Obligation de divulgation proactive des liens passés.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Reconnaître le fait, contextualiser : « J'ai travaillé 8 mois pour [concurrent] en 2022 comme contractant externe sur un projet sans lien avec la partie qui m'oppose aujourd'hui à Alice. Je l'ai déclaré dans ma lettre d'acceptation du mandat (pièce PV-12). Le MP en était informé. Si le tribunal estime que cela constitue un motif de récusation, je me retire immédiatement. »",
+          "ok": true,
+          "pts": 25,
+          "fb": "Réponse d'expert exemplaire. Vous reconnaissez le fait (honnêteté), vous contextualisez (nature limitée du lien), vous prouvez la divulgation préalable (pièce PV-12), et vous offrez la récusation spontanée. Le juge appréciera cette intégrité.",
+          "legal": "Art. 56/182/183 CPP — Transparence + offre de récusation volontaire = crédibilité maximale.",
+          "critical": false,
+          "next": 7
+        },
+        {
+          "text": "Renvoyer fermement l'argument à l'avocat : « C'est une manœuvre dilatoire honteuse fondée sur une lecture biaisée de mon parcours public, qui discrédite la défense et fait perdre du temps à la justice — je demande qu'elle soit notée au PV. »",
+          "ok": false,
+          "pts": -30,
+          "fb": "Inacceptable. Un expert à la barre ne qualifie jamais les stratégies de la défense. L'émotion qui transparaît ici trahit un déséquilibre professionnel. Le juge sanctionnera immédiatement.",
+          "legal": "Code de déontologie expert — Neutralité et réserve à la barre.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "⚖️ Le verdict",
+      "situation": "Le juge retient l'ensemble des 6 sources convergentes (RDP+DHCP / badgeuse / pattern horaire / Windows Hello / CCTV / biométrie comportementale). Il condamne Alice à 18 mois de peine privative avec sursis + 50'000 CHF de dommages-intérêts au profit de l'employeur. Alice fait appel. Le MP vous demande comment soutenir le jugement en appel.",
+      "law": "<strong>Art. 393 CPP</strong> — Recours.<br><strong>ATF 147 IV 409</strong> — Indices graves, précis, concordants.",
+      "question": "<strong>Que préparez-vous pour l'appel ?</strong>",
+      "choices": [
+        {
+          "text": "Compléter le rapport avec de nouvelles analyses (extraction téléphone Alice, logs cloud Microsoft 365, comptes bancaires) afin d'anticiper les attaques de l'appel — plus le faisceau d'indices est dense, plus la position est inattaquable en seconde instance. La saturation probatoire est une stratégie reconnue de l'expertise judiciaire en matière complexe.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Mauvaise stratégie. En appel, on défend le rapport existant, on n'ajoute pas de nouveaux éléments (sauf faits nouveaux). Ajouter = suggérer que le rapport initial était incomplet, fragiliser le jugement de première instance.",
+          "legal": "Art. 393 CPP + pratique TF — Défense de l'existant en appel, sauf faits nouveaux authentiques.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Préparer un mémoire de synthèse pour l'appel : (1) rappel des 6 sources convergentes et de leur indépendance, (2) jurisprudence ATF 147 IV 409 sur les indices concordants, (3) anticipation des arguments probables de la défense avec réponses techniques préparées, (4) disponibilité pour audition complémentaire si requise.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Stratégie optimale. Vous consolidez le rapport existant, armez le MP d'arguments jurisprudentiels, et anticipez la défense. C'est exactement ce qu'un MP attend d'un expert rigoureux en appel.",
+          "legal": "Art. 393 CPP + ATF 147 IV 409 — Défense articulée et anticipative.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Refuser de s'impliquer en appel en invoquant la fin du mandat de première instance — l'expert n'est pas tenu juridiquement d'assurer la continuité, et un nouveau regard expert peut même être préférable pour la légitimité de la procédure.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Refus problématique. Un expert reste disponible pour les instances d'appel — c'est implicite dans le mandat initial. Refuser = laisser le MP sans soutien technique et fragiliser la procédure.",
+          "legal": "Art. 183 CPP — Disponibilité de l'expert jusqu'à clôture définitive.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ]
+}
