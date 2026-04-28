@@ -1,0 +1,209 @@
+{
+  "id": "cloud-aws-s3-leak",
+  "title": "Cloud forensics — bucket S3 ouvert chez un sous-traitant fédéral",
+  "icon": "☁️",
+  "difficulty": "hard",
+  "atmosphere": "network",
+  "tags": ["CLOUD", "AWS", "S3", "FORENSIQUE", "LPD", "DROIT", "ENTRAIDE DE-CH", "JURIDICTION", "ADMINISTRATION FÉDÉRALE"],
+  "legalRefs": [
+    "LPD art. 22 — Données sensibles",
+    "LPD art. 35 — Notification PFPDT",
+    "LPD art. 16 — Communication transfrontière",
+    "LPD art. 9 — Sous-traitance et responsabilité",
+    "RGPD art. 33 — Notification 72h (juridiction allemande du datacenter)",
+    "EIMP art. 28-37 — Entraide pénale",
+    "Art. 144bis CP — Détérioration de données",
+    "Doctrine ATF 144 II 233 — Juridiction sur données dans le cloud"
+  ],
+  "narrative": {
+    "success": "Vous avez su naviguer entre les juridictions (Suisse pour le contrôleur LPD, Allemagne pour le datacenter, USA pour AWS Inc.) sans confusion. La voie AWS Trust & Safety + log preservation request a permis d'obtenir les CloudTrail logs en 5 jours, l'analyse a identifié 47 IPs source d'accès non autorisé (dont 3 hors UE/USA — possible APT), et la notification PFPDT a été conforme dans les 72h. Le sous-traitant a été audité et corrigé, l'administration fédérale a renforcé sa gouvernance cloud (chiffrement SSE-KMS, logging activé par défaut, revue trimestrielle des permissions). La presse a salué la rigueur, les 23'000 citoyens dont les données étaient exposées ont été informés selon LPD art. 19. Bonus : votre méthodologie cloud forensics devient référence pour le secteur public suisse.",
+    "degraded": "L'incident a été géré, mais avec des compromis. Soit la voie AWS a été abandonnée trop tôt au profit d'une demande EIMP allemande lourde, soit la notification PFPDT a été tardive, soit certaines données critiques ont été perdues (logs CloudTrail expirés au-delà des 90 jours par défaut). Les éléments principaux sont en main mais le dossier est partiellement reconstitué. Le sous-traitant survit mais avec un avertissement PFPDT, et la jurisprudence sur la juridiction cloud reste floue.",
+    "failure": "Vous avez tenté d'obtenir les logs AWS via voies informelles (un contact personnel chez AWS Suisse), ce qui a contaminé toute la chaîne probatoire. AWS a refusé de coopérer ultérieurement par voies formelles (« vous avez déjà demandé hors cadre »). La notification PFPDT a été retardée de 8 jours (au-delà des 72h), entraînant une amende de 250'000 CHF pour la Confédération. Le sous-traitant nie sa responsabilité. La presse révèle que des données médicales de hauts fonctionnaires (incluant le DG de l'OFAS) étaient dans le bucket — scandale politique majeur. La jurisprudence cloud forensics suisse est durablement marquée par votre dossier raté."
+  },
+  "intro": "Vendredi 16h. Vous êtes le RSSI de l'Office fédéral de la statistique (OFS). Votre lundi commence mal : un chercheur en cybersécurité externe (Cyberveille SA, Lausanne) vous a contacté en fin d'après-midi via le formulaire responsible disclosure : <em>« J'ai identifié un bucket Amazon S3 publiquement accessible appartenant à votre sous-traitant DataMine SA (mandaté pour traitement statistique de données fédérales). Le bucket s3://datamine-prod-stat-ch contient ~47 GB de données : extraits de fichiers de l'AVS, statistiques de santé, fichiers Excel avec NSS et noms complets. Tout est en clair, indexé par Google. »</em>. Vous vérifiez : effectivement, le bucket est ouvert (configuration ACL « public-read » par défaut, mauvaise pratique classique). Premières observations : (1) le bucket héberge des données de ~23'000 citoyens suisses, (2) le datacenter AWS hébergeant le bucket est à Frankfurt (région eu-central-1), donc en Allemagne, (3) AWS Inc. est de juridiction américaine, (4) DataMine SA est suisse, sous-traitante OFS — l'OFS est le contrôleur LPD, DataMine le sous-traitant. La complexité juridictionnelle est immédiate. Avant tout, comment <strong>investiguer</strong> qui a accédé au bucket pendant la période de fuite ?",
+  "alertLevel": "☁️ FUITE CLOUD — Bucket S3 ouvert · 47 GB données sensibles · Datacenter DE · LPD art. 35 délai 72h démarré · Investigation multi-juridictionnelle",
+  "objectives": [
+    "Maîtriser la chaîne probatoire en environnement cloud",
+    "Articuler LPD (Suisse) + RGPD (Allemagne datacenter) + droit US (AWS)",
+    "Choisir entre voie AWS Trust & Safety vs voie EIMP allemande",
+    "Préserver les CloudTrail logs avant expiration (90j par défaut)"
+  ],
+  "debrief": "<p><strong>Le scénario du bucket S3 ouvert chez un sous-traitant fédéral illustre la complexité native du cloud forensics : l'infrastructure n'est pas chez vous, les données sont éclatées géographiquement, et plusieurs juridictions se superposent sur un seul incident.</strong></p><p><strong>Les 4 dimensions juridictionnelles à articuler :</strong></p><ol><li><strong>Contrôleur LPD (OFS, Suisse)</strong> — Vous restez juridiquement responsable des données traitées par votre sous-traitant. La LPD art. 9 vous tient responsable du choix et de la supervision du sous-traitant. Délégation ≠ exonération.</li><li><strong>Sous-traitant LPD (DataMine SA, Suisse)</strong> — Responsable opérationnel direct. Doit notifier l'OFS dès la détection. Possible mise en cause pénale si négligence grave (art. 144bis CP par négligence).</li><li><strong>Hébergeur (AWS, Frankfurt — Allemagne)</strong> — Sous juridiction allemande pour le traitement physique des données. Le RGPD s'applique au datacenter. AWS a des obligations de coopération (Trust & Safety) sous certaines conditions.</li><li><strong>AWS Inc. (corporate, USA)</strong> — Sous juridiction américaine. Pour les demandes officielles (saisie de données AWS), il faut typiquement passer par le DOJ via MLAT — sauf à utiliser les canaux corporatifs (Trust & Safety, Legal Process Reporting).</li></ol><p><strong>Les 3 voies pour obtenir les CloudTrail logs :</strong></p><ul><li><strong>Voie 1 — Le sous-traitant DataMine</strong> : si DataMine a configuré CloudTrail (logs des accès AWS), les logs sont dans son tenant. Demande directe à DataMine, qui doit coopérer (clause contractuelle + LPD art. 9). C'est la voie la plus rapide (24-48h) si DataMine a activé CloudTrail. Souvent, hélas, ce n'est pas le cas.</li><li><strong>Voie 2 — AWS Trust & Safety (corporate, sans MLAT)</strong> : AWS publie une procédure pour les autorités/victimes : <em>Legal Process Reporting</em>. AWS coopère pour les <em>logs metadata</em> (accès, IPs, timestamps) en 5-10 jours sur demande motivée. Pas besoin de MLAT pour cela. Procédure légère, encadrée par les CGU AWS.</li><li><strong>Voie 3 — EIMP vers Allemagne (juridiction du datacenter)</strong> : pour des éléments plus invasifs (saisie de données, accès aux contenus chiffrés, gel d'instances), demande formelle MLAT BJ → BMJ allemand. Délai : 2-4 mois. Lourde mais probante.</li></ul><p>La <strong>voie 2 est presque toujours préférable</strong> en première intention, sauf cas exceptionnel (suspicion d'implication AWS lui-même, demande politique/sensible, etc.).</p><p><strong>Le piège des CloudTrail logs :</strong> par défaut, AWS conserve les CloudTrail logs <em>90 jours</em>. Au-delà, les logs sont supprimés <em>sauf</em> configuration explicite (S3 archive, Athena queries, etc.). Si l'incident date de plus de 90 jours et que CloudTrail n'a pas été configuré pour archive longue durée, les logs sont <em>perdus à jamais</em>. La <strong>preservation request</strong> à AWS doit être adressée dans les 24-48h après détection.</p><p><strong>L'enjeu LPD :</strong> notification au PFPDT dans les meilleurs délais (typiquement 72h, art. 35 LPD), avec qualification correcte du type de données (sensibles — art. 22 LPD pour santé/AVS). Sanctions PFPDT possibles : avertissement, amende administrative jusqu'à 250'000 CHF (depuis la révision LPD 2023). Pour la Confédération, c'est un dommage budgétaire et symbolique majeur.</p><p><strong>L'articulation RGPD :</strong> les données étant physiquement en Allemagne, le RGPD s'applique au datacenter. Mais l'OFS (Suisse) est le contrôleur — la décision PFPDT prime pour l'OFS. La cohabitation LPD/RGPD est généralement gérée par l'AEPD (Autorité européenne de protection des données) qui reconnaît la décision suisse comme équivalente sur la base de l'adéquation. Pas de double notification nécessaire <em>en pratique</em>.</p><p><strong>Référence praticienne :</strong> ATF 144 II 233 sur la juridiction des données dans le cloud (Arrêt UBS-Frances). Voir aussi le rapport NCSC 2025 sur la cybersécurité cloud de l'administration fédérale, et la documentation AWS Trust & Safety publique.</p>",
+  "steps": [
+    {
+      "phase": "⏱ Vendredi 17h00 — Les actions des 30 prochaines minutes",
+      "situation": "Vous avez 30 minutes avant la fermeture des bureaux pour le week-end. Le compteur LPD art. 35 démarre maintenant — 72h pour notifier le PFPDT. Vos enjeux : (1) <strong>Stopper la fuite</strong> : faire fermer le bucket public (DataMine doit changer les ACL), (2) <strong>Préserver les preuves</strong> : CloudTrail logs ne durent que 90j par défaut, (3) <strong>Évaluer l'ampleur</strong> : combien de citoyens, quelles données, quelle période d'exposition, (4) <strong>Mobiliser les acteurs</strong> : DataMine, AWS, NCSC, votre direction. La directrice OFS est en train de partir pour le week-end et veut une décision en 15 minutes : « Soit on appelle DataMine et le NCSC tout de suite, soit on attend lundi pour un dossier complet ».",
+      "law": "<strong>LPD art. 35</strong> : <em>« Le responsable du traitement annonce dans les meilleurs délais à l'autorité fédérale toute violation de la sécurité des données ayant entraîné une atteinte à la personnalité ou aux droits fondamentaux des personnes concernées. »</em>. <strong>Pratique PFPDT 2024</strong> : « meilleurs délais » = 72h en pratique. <strong>AWS CloudTrail</strong> : rétention par défaut 90 jours.",
+      "question": "<strong>Quelles actions menez-vous dans les 30 prochaines minutes ?</strong>",
+      "choices": [
+        {
+          "text": "Plan d'action en 4 points immédiats : (1) Appel téléphonique au DG DataMine — fermeture du bucket dans l'heure (changement ACL public-read → private), (2) Préservation request à AWS Trust & Safety (e-mail formel via Legal Process Reporting, demande de gel des CloudTrail logs sur le bucket pour 12 mois), (3) Briefing NCSC en parallèle (équipe cyber-incident peut aider sur l'analyse forensique), (4) Pré-notification orale au PFPDT (« incident en cours, notification formelle dans les 72h »). Reporter du chercheur Cyberveille (responsible disclosure) à conserver. Engagement à tenir la directrice informée le week-end.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Réflexe parfait. Vous (1) <strong>arrêtez l'hémorragie</strong> immédiatement (fermeture bucket = arrêt de l'exposition publique), (2) <strong>préservez les preuves</strong> avant le week-end : la preservation request AWS gèle les logs au-delà des 90 jours par défaut, sans cela vous risquez de tout perdre si l'incident date d'avant 3 mois, (3) <strong>activez le NCSC</strong> = ressources techniques + crédibilité institutionnelle, (4) <strong>pré-notification orale au PFPDT</strong> = signal de bonne foi et démarrage formel du compteur 72h sans la pression de finaliser le dossier en 30 minutes. Bonus : votre méthodologie est exemplaire — la directrice OFS partira sereine, le PFPDT notera votre proactivité (pèse positivement dans l'évaluation de la sanction éventuelle), et le chercheur responsable disclosure sera remercié officiellement (bonne pratique).",
+          "legal": "LPD art. 35 · Pratique PFPDT · AWS Trust & Safety",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Attendre lundi matin pour un dossier complet : ce week-end, vous analysez les pièces, et lundi 8h30 vous lancez la procédure complète avec tous les éléments. Plus rigoureux et structuré.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Catastrophe en cascade. (1) <strong>Le bucket reste ouvert tout le week-end</strong> : 60 heures supplémentaires d'exposition publique, possibles centaines d'accès supplémentaires non autorisés, vol massif de données. La fuite continue. (2) <strong>CloudTrail logs en risque</strong> : si l'incident date d'>87 jours, vous perdez les logs lundi (expiration 90j). Toute investigation devient impossible. (3) <strong>LPD art. 35</strong> : vous démarrez le compteur 72h trois jours plus tard, ce qui peut vous mettre en non-respect du délai « meilleurs délais ». Le PFPDT pourra qualifier votre attente de manquement. (4) <strong>Si la fuite est exploitée pendant le week-end</strong> et qu'on apprend lundi qu'un État étranger a téléchargé les données AVS, vous serez tenu responsable de l'inaction. (5) <strong>Image institutionnelle</strong> : « OFS attend le lundi matin pour gérer une fuite de données » est dévastateur médiatiquement. La rigueur n'est pas un alibi pour la lenteur.",
+          "legal": "LPD art. 35 · AWS CloudTrail · Devoir de fonction",
+          "critical": true,
+          "next": 1
+        },
+        {
+          "text": "Appeler immédiatement votre contact personnel chez AWS Suisse pour gérer ça « entre amis » : il peut probablement vous donner les logs en 24h, sans formalités.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Erreur méthodologique grave. (1) <strong>Voie informelle = contamination de la chaîne probatoire</strong> : tout élément obtenu hors cadre AWS Trust & Safety officiel sera contesté en cas de procédure pénale ultérieure. La défense (contre DataMine, ou contre l'auteur des accès non autorisés) plaidera l'irrecevabilité. (2) <strong>Risque pour le contact AWS</strong> : votre ami chez AWS, en transmettant des logs sans procédure formelle, viole les CGU AWS — il peut être licencié et poursuivi. Vous lui faites du tort. (3) <strong>Précédent dévastateur</strong> : si AWS Suisse découvre la voie informelle (et ils la découvriront, AWS audit régulièrement les accès aux logs internes), AWS refusera désormais toute coopération informelle <em>et</em> formelle avec l'OFS. Vous brûlez le canal. (4) <strong>Risque art. 271 CP</strong> : selon la qualification, obtenir des données via canal hors cadre peut entrer dans le périmètre des « actes pour un État étranger » (l'OFS = État suisse, AWS Suisse = entité commerciale, mais les données sont gérées physiquement en Allemagne — ambiguïté juridique). La voie formelle protège tout le monde.",
+          "legal": "Art. 271 CP · CGU AWS · Pratique forensique",
+          "critical": true,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔍 Lundi 9h30 — Premiers éléments CloudTrail et analyse",
+      "situation": "Le bucket a été fermé samedi à 18h47 par DataMine. AWS a confirmé la preservation request lundi 9h00. Premiers extraits CloudTrail (les 47 derniers jours, période où le bucket était public) : (a) 1'847 accès distincts depuis 423 IPs uniques. (b) Distribution géographique : 67% Suisse/UE (probablement crawlers légitimes, chercheurs, etc.), 28% USA (incluant le chercheur Cyberveille via VPN), <strong>5% (84 accès) depuis des IPs dans 6 pays différents : Russie, Iran, Corée du Nord, Chine, Vietnam, Pakistan</strong>. (c) Les 84 accès « suspects » téléchargent des fichiers complets, pas juste les listings — pattern d'exfiltration. (d) Volume téléchargé estimé : ~23 GB sur les 47 GB totaux. Le NCSC, qui a aidé à l'analyse, est inquiet : « 5% d'accès depuis des juridictions de menace = signature d'opération coordonnée, pas du crawling aléatoire ». Le tableau évolue : ce n'est plus juste une fuite accidentelle, c'est aussi possiblement une exploitation par des acteurs étatiques.",
+      "law": "<strong>Art. 273 CP</strong> : service de renseignements économiques pour État étranger. <strong>Art. 144bis CP</strong> : détérioration/accès illicite à données. <strong>Pratique MPC</strong> : 5% d'accès depuis juridictions de menace = base raisonnable pour ouverture art. 273 CP en parallèle de la procédure PFPDT.",
+      "question": "<strong>Quelle stratégie pour la dimension pénale ?</strong>",
+      "choices": [
+        {
+          "text": "Plainte pénale au MPC pour art. 273 CP + 144bis CP : (1) Joindre les CloudTrail logs filtrés sur les 84 accès suspects, (2) Demander au MPC d'instruire spécifiquement sur les accès depuis Russie/Iran/Corée du Nord (juridictions de plus grande préoccupation), (3) Maintenir en parallèle la procédure PFPDT (LPD art. 35) — les deux régimes coexistent (cf. scénario Xplain LMP). Compétence MPC art. 24 LOAP (cybercriminalité touchant infrastructures critiques fédérales).",
+          "ok": true,
+          "pts": 30,
+          "fb": "Stratégie juridique solide. (1) <strong>Art. 273 CP</strong> est applicable : 5% d'accès depuis juridictions de menace, pattern d'exfiltration coordonnée, données fédérales sensibles = base raisonnable pour soupçonner l'implication d'organismes étatiques étrangers. (2) <strong>Compétence MPC</strong> via art. 24 LOAP : un parquet cantonal n'aurait pas l'expertise transnationale. (3) <strong>Coexistence régimes</strong> : vous appliquez la leçon Xplain — la procédure PFPDT (administrative) et la procédure MPC (pénale) coexistent sans contamination. (4) <strong>CloudTrail logs comme pièces</strong> : la preservation request a permis de geler les logs, ils sont désormais utilisables comme preuves dans la procédure pénale. Bonus : la qualification art. 273 CP donne au MPC les outils EIMP pour aller chercher des éléments dans les juridictions de destination — investigation transnationale facilitée.",
+          "legal": "Art. 273 CP · Art. 144bis CP · Art. 24 LOAP",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Pas de plainte pénale immédiate. Concentrer les ressources sur le PFPDT (procédure administrative) et les mesures de remédiation (audit DataMine, renforcement contrôles). Le pénal viendra peut-être après.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Sous-réaction qui rate la dimension stratégique. (1) <strong>Sans plainte MPC = pas d'EIMP possible</strong> vers les pays d'origine des accès suspects. Vous abandonnez l'investigation transnationale, qui est la seule chance de remonter aux acteurs étatiques. (2) <strong>Effet de précédent</strong> : si chaque incident cloud cible des juridictions de menace, et qu'aucun n'aboutit à plainte pénale, les acteurs étatiques continueront à exploiter les buckets ouverts suisses sans aucun risque. (3) <strong>Pression CdF/Parlement</strong> : le Parlement (CdF) exigera des comptes — l'absence de plainte pénale sera mal vue politiquement, surtout si la presse révèle l'origine des accès. (4) <strong>Fenêtre temporelle</strong> : les CloudTrail logs ne dureront pas. Si on attend 6 mois pour décider de poursuivre, les preuves seront dégradées (rotation logs si pas de preservation, comptes AWS supprimés, IPs réattribuées).",
+          "legal": "EIMP · Art. 273 CP · Pratique MPC",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Plainte pénale MPC pour art. 273 CP, mais avec accusations explicites contre la Russie, l'Iran et la Corée du Nord nommément. Cela mettra la pression diplomatique.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Erreur dans la qualification publique. (1) <strong>Sans attribution forensique solide</strong>, vous ne pouvez accuser publiquement des États. 84 accès depuis des IPs dans ces pays ≠ « la Russie a attaqué la Suisse ». Les attaquants APT louent typiquement des infrastructures dans plusieurs juridictions, y compris depuis ces pays, pour brouiller les pistes. (2) <strong>Vous reproduisez les erreurs du scénario Bürgenstock</strong> : qualification prématurée, pression diplomatique infondée, possible riposte par les États accusés (rappel d'ambassadeur, contre-mesures économiques). (3) <strong>Le MPC refusera</strong> de qualifier publiquement avant attribution consolidée — c'est sa pratique constante. Si vous insistez, le MPC pourra déposer la plainte mais en restant prudent dans la qualification. Votre demande publique sera mal vue par le procureur. (4) <strong>L'art. 173 CP</strong> (atteinte à l'honneur des États étrangers) peut s'appliquer aux accusations publiques infondées.",
+          "legal": "Pratique MPC · Art. 173 CP · Doctrine attribution",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "📋 J+5 — La notification PFPDT et la coordination RGPD",
+      "situation": "Cinq jours après détection. Vous préparez la notification formelle au PFPDT (LPD art. 35). Question complexe : faut-il aussi notifier l'autorité allemande de protection des données (BfDI — Bundesbeauftragter für den Datenschutz), puisque les données étaient physiquement hébergées à Frankfurt ? Le RGPD art. 33 prévoit une notification à l'autorité de contrôle compétente dans les 72h. Mais quelle est l'autorité compétente quand le contrôleur est suisse (OFS), le sous-traitant suisse (DataMine), et l'hébergeur dans l'UE (AWS Frankfurt) ? Le PFPDT consulté répond : <em>« Le mécanisme de coopération PFPDT-BfDI couvre les cas transfrontaliers. Notifiez-nous, nous coordonnerons avec le BfDI. Pas de double notification requise dans ce schéma. »</em>",
+      "law": "<strong>LPD art. 35</strong> : notification PFPDT 72h. <strong>RGPD art. 33</strong> : notification autorité compétente UE. <strong>LPD art. 16</strong> : communication transfrontière de données. <strong>Mécanisme PFPDT-BfDI</strong> : coordination bilatérale fondée sur l'adéquation.",
+      "question": "<strong>Comment structurez-vous la notification PFPDT et la coordination ?</strong>",
+      "choices": [
+        {
+          "text": "Notification PFPDT exhaustive avec clause de coordination BfDI : (1) Notification écrite art. 35 LPD avec : périmètre exact (23'000 personnes, données AVS/santé), durée d'exposition (47j), 84 accès suspects identifiés, mesures correctives (bucket fermé, audit DataMine, plan de chiffrement SSE-KMS), plainte MPC en parallèle. (2) Demande explicite au PFPDT de coordonner avec le BfDI sur la dimension allemande (datacenter Frankfurt). (3) Plan de communication aux 23'000 personnes concernées (LPD art. 19) — délégué aux hôpitaux client si données médicales, ou direct par OFS si données AVS.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Notification exemplaire. Vous (1) <strong>fournissez tous les éléments matériels</strong> que le PFPDT attend : le périmètre, les vecteurs, les mesures correctives. La transparence rassure le PFPDT et signale la maturité institutionnelle. (2) <strong>Coordination PFPDT-BfDI explicitement demandée</strong> : pas de double notification redondante, mais reconnaissance que la dimension allemande existe. C'est exactement le mécanisme prévu par les accords bilatéraux. (3) <strong>Plan de communication aux personnes concernées</strong> : LPD art. 19 vous oblige à informer, mais la modalité (par hôpital client pour les données médicales, par courrier OFS pour les données AVS) est intelligente — elle répartit la charge et utilise les canaux existants. Bonus : votre notification est citée comme exemple dans le rapport PFPDT 2027 sur les bonnes pratiques de gestion d'incident cloud.",
+          "legal": "LPD art. 35 · LPD art. 19 · Mécanisme PFPDT-BfDI",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Double notification PFPDT + BfDI directement, en parallèle, pour ne rien rater. Plus c'est notifié, mieux c'est.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Approche redondante qui complique inutilement. (1) <strong>Le mécanisme PFPDT-BfDI</strong> existe précisément pour éviter les notifications redondantes. Le PFPDT sait coordonner avec le BfDI — l'OFS n'a pas besoin de le faire en parallèle. (2) <strong>Risque de divergence des versions</strong> : si vous notifiez PFPDT et BfDI séparément, les deux notifications peuvent contenir des nuances différentes (selon votre rédacteur, le moment, etc.) — divergences qui seront exploitées par DataMine ou par la défense lors d'éventuelles procédures ultérieures. (3) <strong>Charge administrative inutile</strong> : la notification BfDI exige sa propre formalisation (langue allemande, format spécifique, accompagnement). Toute cette charge est superflue si le PFPDT coordonne. (4) <strong>Mauvais signal</strong> : double notification suggère que vous ne faites pas confiance au mécanisme PFPDT-BfDI, ce qui peut être perçu comme une critique implicite des deux autorités. Mieux vaut respecter le mécanisme prévu.",
+          "legal": "Mécanisme PFPDT-BfDI · LPD art. 35",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Notification PFPDT minimaliste : « Incident détecté, mesures correctives en cours, rapport complet à venir ». Concentrer les ressources sur la remédiation technique d'abord.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Notification incomplète qui contrevient à la LPD art. 35. (1) <strong>« Dans les meilleurs délais » avec contenu défini</strong> : la LPD art. 35 al. 2 précise que la notification doit comprendre la nature de la violation, les catégories de personnes concernées, les conséquences probables, et les mesures prises. Une notification minimaliste ne respecte pas ce contenu obligatoire. (2) <strong>Le PFPDT relancera</strong> : avec une notification incomplète, le PFPDT exigera un complément en 5 jours, et tout sera décalé. Vous gagnez peu de temps en notifiant minimaliste. (3) <strong>Risque d'amende</strong> : le PFPDT peut sanctionner pour notification insuffisante (depuis la révision LPD 2023, amendes jusqu'à 250'000 CHF). (4) <strong>Image OFS</strong> : « OFS minimise dans sa notification » sera mal vu si la presse en a vent. Le PFPDT, irrité, communiquera lui-même les éléments. Mieux vaut notifier complet dès le début.",
+          "legal": "LPD art. 35 al. 2 · Pratique PFPDT",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🔬 J+30 — La responsabilité de DataMine et les mesures correctives",
+      "situation": "Un mois après. Vos analyses sont consolidées : (1) DataMine n'avait pas activé MFA sur le compte AWS root, (2) le bucket était public depuis sa création (configuration par défaut mal corrigée), (3) le sous-traitant n'avait pas configuré CloudTrail correctement (heureusement, AWS conserve un historique court par défaut), (4) la clause contractuelle de cybersécurité du contrat OFS-DataMine était vague (« mesures de sécurité raisonnables »). DataMine SA, mise en cause, propose un règlement amiable : ils paient 850'000 CHF de dommages-intérêts à l'OFS, l'OFS ne résilie pas le contrat (continue les services en attendant migration vers un autre sous-traitant en 6 mois), pas de plainte pénale contre DataMine pour art. 144bis par négligence. Le DG de l'OFS vous demande votre position : accepter le règlement amiable, ou pousser vers la résiliation et plainte pénale ?",
+      "law": "<strong>Art. 41 CO</strong> : responsabilité civile pour faute. <strong>Art. 144bis CP</strong> : peut être commis par négligence (dol éventuel suffit). <strong>LMP art. 31-32 + 45</strong> : résiliation contrat administratif et exclusion future. <strong>LRCF</strong> : responsabilité de la Confédération vis-à-vis des citoyens lésés.",
+      "question": "<strong>Quelle position adoptez-vous sur le règlement amiable ?</strong>",
+      "choices": [
+        {
+          "text": "Refus de l'amiable — procédure en 3 axes : (1) <strong>Civil</strong> : action contre DataMine pour 2,4 M CHF (estimation des dommages incluant indemnités possibles aux 23'000 citoyens, coûts internes OFS, atteinte image), pas 850K. (2) <strong>Pénal</strong> : plainte MPC pour art. 144bis CP par négligence (dol éventuel — DataMine savait ou devait savoir que l'absence de MFA root + bucket public = exposition certaine). (3) <strong>Administratif</strong> : résiliation contrat selon LMP art. 31, exclusion future LMP art. 45 (5 ans). Plan de transition de 4-6 mois vers nouveau sous-traitant. La gouvernance OFIT/OFS sera renforcée.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Position institutionnellement solide. Vous (1) <strong>refusez de bâcler la responsabilisation</strong> : 850K pour un incident affectant 23'000 citoyens et impliquant possiblement une exfiltration étatique = sous-évaluation manifeste. 2,4 M reflète mieux le coût réel. (2) <strong>Plainte pénale art. 144bis CP par négligence</strong> = signal fort au secteur des sous-traitants IT fédéraux : la négligence en matière de cybersécurité peut être pénale. Effet dissuasif majeur. (3) <strong>Résiliation + exclusion 5 ans (LMP art. 45)</strong> = sanction commerciale appropriée. DataMine ne pourra plus postuler à des marchés fédéraux pendant 5 ans. (4) <strong>Plan de transition</strong> = équilibre entre fermeté et continuité opérationnelle. Bonus : la triple action (civile + pénale + administrative) crée un précédent qui force l'ensemble du secteur à investir en cybersécurité.",
+          "legal": "Art. 41 CO · Art. 144bis CP · LMP art. 31, 45",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Accepter le règlement amiable : 850K c'est pas mal, et on garde DataMine pour la continuité des services. Pas besoin de procédure pénale qui prendra des années.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Approche court-termiste qui érode la gouvernance. (1) <strong>850K largement insuffisant</strong> : le coût réel de l'incident (notification 23'000 personnes, audit complet, remédiations techniques, atteinte image, possible action collective des citoyens) dépasse 2 millions. Sous-compenser, c'est faire payer la Confédération (et donc le contribuable) pour une faute privée. (2) <strong>Pas de plainte pénale</strong> = signal d'impunité au secteur. Tous les sous-traitants IT comprendront qu'ils peuvent négliger la cybersécurité tant qu'ils paient un règlement amiable modeste après. C'est exactement l'inverse de ce qu'il faut. (3) <strong>« Continuité des services »</strong> est un faux argument : on peut transiter en 4-6 mois vers un autre sous-traitant. La continuité avec DataMine compromise est un risque permanent (si un acteur APT a obtenu des accès via DataMine, ils peuvent revenir). (4) <strong>Image OFS</strong> : si la presse découvre le règlement amiable modeste sans plainte pénale, scandale politique majeur.",
+          "legal": "Art. 41 CO · LMP · Pratique gouvernance",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Pousser pour la peine maximale et faire un exemple : résiliation immédiate sans transition, plainte pénale aggravée art. 273 CP (espionnage économique pour État étranger — DataMine = complice par négligence), demande publique de poursuites contre les dirigeants.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Sur-réaction qui détruit la proportionnalité. (1) <strong>Résiliation immédiate sans transition</strong> = paralysie des services statistiques de l'OFS pendant des semaines, atteinte aux missions publiques. Vous reproduisez l'erreur que vous évitez dans Xplain LMP. (2) <strong>Art. 273 CP contre DataMine</strong> est juridiquement disproportionné : la « complicité par négligence » d'un acteur étatique étranger exige un dol direct sur le caractère étranger, ce qui n'est pas démontrable contre un sous-traitant qui a juste mal configuré son cloud. La plainte sera classée pour défaut d'éléments constitutifs. (3) <strong>« Poursuites publiques contre les dirigeants »</strong> est une demande qui n'appartient pas à l'OFS — c'est au MPC de décider. Sortir publiquement avec une telle demande est mal vu par le procureur fédéral et peut entrer en tension avec l'art. 73 CPP (confidentialité instruction). (4) <strong>Image OFS</strong> : « OFS demande la prison ferme à un sous-traitant sur incident cloud » est dévastateur en termes d'image — disproportion évidente.",
+          "legal": "LMP · Art. 273 CP · Art. 73 CPP",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "🛡 J+180 — La doctrine cloud forensics et la réforme",
+      "situation": "Six mois après. Le bilan : DataMine a accepté un règlement civil de 1,8 M CHF (au lieu de 2,4 demandés, mais bien au-dessus des 850K initiaux), plainte pénale art. 144bis CP en cours (instruction MPC), résiliation contractuelle effective avec plan de transition à 6 mois vers un nouveau sous-traitant. Le PFPDT a clos son enquête avec un avertissement (pas d'amende — bonne foi et notification dans les délais reconnues). La procédure pénale art. 273 CP sur les 84 accès suspects continue, EIMP en cours vers Allemagne et Singapour. La presse a salué la « gestion exemplaire » de l'OFS. Mais le sujet revient sur la table : faut-il une réforme structurelle de la gouvernance cloud pour l'administration fédérale ? Plusieurs options proposées par OFIT et NCSC.",
+      "law": "<strong>LMP art. 4-7</strong> : possibilité d'évolutions législatives. <strong>SNPC (Stratégie nationale cybersécurité)</strong> 2024-2028 : intégration cloud. <strong>Pratique CdF</strong> : recommandations parlementaires.",
+      "question": "<strong>Quelle réforme recommandez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Réforme en 4 axes : (1) <strong>Standard de chiffrement obligatoire</strong> : SSE-KMS pour tout bucket cloud contenant des données sensibles administration fédérale, clé contrôlée par la Confédération (pas par AWS). (2) <strong>CloudTrail/équivalent obligatoire</strong> avec rétention 12 mois minimum (vs 90j par défaut), inscription dans les CGU sous-traitance. (3) <strong>Audit cybersécurité annuel</strong> par tiers indépendant pour tous sous-traitants cloud fédéraux. (4) <strong>Cloud souverain</strong> : étudier la création/utilisation d'un cloud sous juridiction suisse (« Swisscloud Public ») pour les données les plus sensibles, en complément des hyperscalers étrangers.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Réforme structurelle exemplaire. (1) <strong>SSE-KMS avec clé suisse</strong> : même si l'infrastructure est chez AWS, la clé est chez vous — AWS ne peut pas déchiffrer sans votre coopération. C'est la garantie technique majeure de souveraineté des données. (2) <strong>CloudTrail 12 mois minimum</strong> : permet l'investigation forensique même pour des incidents découverts tardivement. La rétention courte par défaut a précisément été le problème dans votre incident. (3) <strong>Audit indépendant annuel</strong> : permet de détecter les mauvaises configurations avant qu'elles deviennent des incidents. (4) <strong>Cloud souverain (Swisscloud Public)</strong> : option stratégique pour les données les plus sensibles. La Suisse aurait dans 3-5 ans une infrastructure complète (analogue à GovCloud US, BundCloud DE) — option qui change la donne géopolitique. Bonus : votre proposition est intégrée dans la SNPC 2026 et inspire des réformes équivalentes aux Pays-Bas et en Autriche.",
+          "legal": "SNPC · Pratique souveraineté numérique",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Pas de réforme structurelle : améliorer les pratiques internes OFS et OFIT (audits plus rigoureux, formations cloud, checklists de configuration) sans toucher au cadre juridique. Approche pragmatique.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Approche minimaliste qui rate le tournant systémique. (1) <strong>Sans cadre obligatoire</strong>, les sous-traitants continueront à proposer le minimum syndical en cybersécurité (course aux prix bas), et certaines administrations (avec moins de moyens que l'OFS) seront tentées d'accepter. La résilience reste fragile. (2) <strong>Effet Xplain/DataMine</strong> : sans réforme, dans 12-18 mois, un autre sous-traitant aura le même incident sur un autre service fédéral. La leçon n'est pas tirée structurellement. (3) <strong>SSE-KMS</strong> = enjeu majeur de souveraineté que l'amélioration interne ne peut résoudre. Sans clé chez la Confédération, AWS (juridiction US, possible Cloud Act) peut accéder aux données. (4) <strong>La CdF demandera une réforme</strong> : si l'exécutif n'agit pas, le Parlement reprendra la main. Mieux vaut piloter la réforme que la subir.",
+          "legal": "SNPC · Pratique LMP",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Réforme radicale : interdiction de tout cloud étranger pour l'administration fédérale, retour à l'hébergement national (datacenters fédéraux uniquement).",
+          "ok": false,
+          "pts": -15,
+          "fb": "Sur-réaction comparable au scénario Xplain LMP. (1) <strong>Faisabilité opérationnelle nulle à court terme</strong> : la Confédération n'a pas la capacité datacenter pour héberger l'ensemble des services administratifs en interne. Migration totale = 5-10 ans, 10-20 milliards CHF, pertes de fonctionnalités cloud (élasticité, services managés). (2) <strong>Régression technologique</strong> : les services cloud (analytics, ML, scaling) ne sont pas reproductibles en datacenter classique. L'administration fédérale perdrait en capacité d'innovation. (3) <strong>Faux débat souveraineté</strong> : la souveraineté ne vient pas de la localisation physique mais du chiffrement et du contrôle des clés (option correcte). Une donnée bien chiffrée chez AWS Frankfurt avec clé Suisse est <em>plus souveraine</em> qu'une donnée en clair dans un datacenter fédéral mal sécurisé. (4) <strong>Politiquement infaisable</strong> : le coût et la régression seraient inacceptables pour le Parlement.",
+          "legal": "Faisabilité technique · Pratique souveraineté numérique",
+          "critical": false,
+          "next": -1
+        }
+      ]
+    }
+  ]
+}
