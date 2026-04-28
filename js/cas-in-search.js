@@ -106,35 +106,22 @@
         icon: c.icon
       }));
 
-      // 4. Scènes DFIR : depuis scenes/index.json (v2.7 split)
-      // Fallback : scenes.js (legacy) si l'index n'est pas disponible
+      // 4. Scènes DFIR : depuis scenes/index.json (v2.7 split, v3.0 uniquement)
       try {
-        // Tentative 1 : index splitté (~64 KB, méta légères)
-        let scenes = null;
         const resp = await fetch(base + 'scenes/index.json', { cache: 'force-cache' });
         if (resp.ok) {
-          scenes = await resp.json();
-        } else {
-          // Fallback legacy
-          const legacyResp = await fetch(base + 'scenes.js', { cache: 'force-cache' });
-          if (legacyResp.ok) {
-            const txt = await legacyResp.text();
-            const m = txt.match(/var\s+SCENES\s*=\s*(\[[\s\S]*\])\s*;?\s*$/);
-            if (m) {
-              try { scenes = JSON.parse(m[1]); } catch { /* parse failed */ }
-            }
+          const scenes = await resp.json();
+          if (Array.isArray(scenes)) {
+            result.scenes = scenes.map(s => ({
+              type: 'scène',
+              href: base + 'scene.html#' + (s.id || ''),
+              title: s.title || '(sans titre)',
+              desc: (s.intro || '').slice(0, 120) + ' · ' + (s.difficulty || ''),
+              keywords: ((s.title || '') + ' ' + (s.tags || []).join(' ') + ' ' +
+                        (s.intro || '') + ' ' + (s.atmosphere || '')).toLowerCase(),
+              icon: s.icon || '🔍'
+            }));
           }
-        }
-        if (Array.isArray(scenes)) {
-          result.scenes = scenes.map(s => ({
-            type: 'scène',
-            href: base + 'scene.html#' + (s.id || ''),
-            title: s.title || '(sans titre)',
-            desc: (s.intro || '').slice(0, 120) + ' · ' + (s.difficulty || ''),
-            keywords: ((s.title || '') + ' ' + (s.tags || []).join(' ') + ' ' +
-                      (s.intro || '') + ' ' + (s.atmosphere || '')).toLowerCase(),
-            icon: s.icon || '🔍'
-          }));
         }
       } catch (e) { /* silencieux */ }
 
