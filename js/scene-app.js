@@ -417,6 +417,29 @@ function renderChallengeBanner() {
   document.getElementById('challenge-progress-fill').style.width = pct + '%';
   document.getElementById('challenge-progress-text').textContent = state.runs.length + ' / ' + ch.target;
   document.getElementById('challenge-reward').textContent = '+' + ch.reward + ' XP';
+
+  // v2.8 : update tag + time remaining
+  const tagEl = document.getElementById('challenge-tag');
+  const timeEl = document.getElementById('challenge-time-left');
+  if (tagEl) tagEl.textContent = state.completed ? '✓ ACCOMPLI' : '⚡ DÉFI HEBDO';
+  if (timeEl) {
+    if (state.completed) {
+      timeEl.textContent = '✓ Récompense réclamée';
+    } else {
+      // Compute days remaining until end of ISO week (Sunday 23:59)
+      const now = new Date();
+      const day = now.getDay() === 0 ? 7 : now.getDay(); // Mon=1...Sun=7
+      const daysLeft = 8 - day;
+      const hoursLeft = 24 - now.getHours();
+      if (daysLeft <= 1) {
+        timeEl.textContent = `⏰ ${hoursLeft}h restantes`;
+        timeEl.style.color = 'var(--red)';
+      } else {
+        timeEl.textContent = `⏰ ${daysLeft} jour${daysLeft>1?'s':''} restant${daysLeft>1?'s':''}`;
+        timeEl.style.color = '';
+      }
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -899,6 +922,15 @@ const GLOBAL_BADGES = [
   { id: "eu_budapest_spec",  icon: "📜", title: "Spécialiste Budapest",   desc: "5 scénarios européens complétés",                    check: (s) => s.eu_completed >= 5 },
   { id: "eu_eurojust_vet",   icon: "⚖️", title: "Eurojust Veteran",       desc: "5 scénarios européens complétés ≥80%",                check: (s) => s.eu_won_80 >= 5 },
   { id: "eu_tour_europe",    icon: "🌍", title: "Tour d'Europe",         desc: "Tous les scénarios européens complétés",              check: (s) => s.eu_completed >= s.eu_total && s.eu_total > 0 },
+  // ═══════════════════════════════════════════════════
+  // BADGES v2.8 — défis comportementaux et exploration
+  // ═══════════════════════════════════════════════════
+  { id: "night_owl",     icon: "🦉", title: "Couche-tard",       desc: "5 scénarios complétés après 23h",                    check: (s) => s.night_owl_count >= 5 },
+  { id: "early_bird",    icon: "🌅", title: "Lève-tôt",          desc: "5 scénarios complétés avant 7h",                     check: (s) => s.early_bird_count >= 5 },
+  { id: "sniper",        icon: "🎯", title: "Sniper",            desc: "3 scénarios consécutifs sans hint, 1ʳᵉ réponse correcte partout", check: (s) => s.sniper_streak >= 3 },
+  { id: "tour_de_suisse", icon: "🌐", title: "Tour de Suisse",   desc: "Au moins 1 scénario par canton sur la carte",        check: (s) => s.cantons_visited >= s.cantons_total && s.cantons_total > 0 },
+  { id: "perseverant",   icon: "🔁", title: "Persévérant",       desc: "Score amélioré de ≥20 points sur 3 scénarios",        check: (s) => s.improvements_20 >= 3 },
+  { id: "unstoppable",   icon: "🔥", title: "Inarrêtable",       desc: "3 scénarios à ≥70% dans la même journée (×3 jours)",  check: (s) => s.combo_days >= 3 },
 ];
 
 function getStatsSnapshot() {
@@ -921,6 +953,13 @@ function getStatsSnapshot() {
     eu_won_80: 0,
     ch_total: chScenes.length,
     ch_completed: 0,
+    // v2.8 : nouvelles métriques pour les 5 nouveaux badges
+    night_owl_count: lsGet('cas_night_owl', 0),
+    early_bird_count: lsGet('cas_early_bird', 0),
+    sniper_streak: lsGet('cas_sniper_streak', 0),
+    improvements_20: lsGet('cas_improvements_20', 0),
+    cantons_visited: 0,  // computed below
+    combo_days: (lsGet('cas_combo_days', []) || []).length,
   };
   Object.entries(results).forEach(([id, r]) => {
     if (r.custodyPct >= 100) snap.full_custody++;
@@ -938,6 +977,20 @@ function getStatsSnapshot() {
       snap.ch_completed++;
     }
   });
+
+  // v2.8 : count distinct cantons visited (any scene completed)
+  if (typeof CANTON_DATA !== 'undefined') {
+    const completedIds = Object.keys(results);
+    let cantonsSeen = 0;
+    Object.values(CANTON_DATA).forEach(canton => {
+      if (canton.scenarios.some(sid => completedIds.includes(sid))) {
+        cantonsSeen++;
+      }
+    });
+    snap.cantons_visited = cantonsSeen;
+    snap.cantons_total = Object.keys(CANTON_DATA).length;
+  }
+
   return snap;
 }
 
@@ -1826,7 +1879,12 @@ function selectChoice(choiceIdx, btn) {
 
   G.score += pts;
   if (choice.ok) G.okCount++; else G.errCount++;
-  G.decisions[G.stepIdx] = { ok: choice.ok, pts, fb: choice.fb, legal: choice.legal, critical: choice.critical };
+  // v2.8 : firstChoiceOk = correct AND no hint used on this step (for Sniper badge)
+  const hintUsedThisStep = G.hintUsedForStep && G.hintUsedForStep[G.stepIdx] !== undefined;
+  G.decisions[G.stepIdx] = {
+    ok: choice.ok, pts, fb: choice.fb, legal: choice.legal, critical: choice.critical,
+    firstChoiceOk: choice.ok && !hintUsedThisStep
+  };
 
   if (choice.critical) {
     G.hadCriticalError = true;
@@ -1942,6 +2000,35 @@ function showReport() {
     lsSet('cas_procureur_wins', lsGet('cas_procureur_wins', 0) + 1);
   }
 
+  // ─── v2.8 : nouveau tracking pour 5 nouveaux badges ───
+  const nowDate = new Date();
+  const hour = nowDate.getHours();
+
+  // Night owl (23h-3h) and early bird (5h-7h) — only count if scenario passed
+  if (pct >= 60) {
+    if (hour >= 23 || hour < 3) {
+      lsSet('cas_night_owl', lsGet('cas_night_owl', 0) + 1);
+    }
+    if (hour >= 5 && hour < 7) {
+      lsSet('cas_early_bird', lsGet('cas_early_bird', 0) + 1);
+    }
+  }
+
+  // Sniper streak: scenario without any hint AND first choice correct on every step
+  const noHintsUsed = Object.keys(G.hintUsedForStep || {}).length === 0;
+  const allFirstChoiceOk = G.decisions && G.decisions.every(d => d.firstChoiceOk);
+  if (pct >= 70 && noHintsUsed && allFirstChoiceOk) {
+    lsSet('cas_sniper_streak', lsGet('cas_sniper_streak', 0) + 1);
+  } else {
+    lsSet('cas_sniper_streak', 0);
+  }
+
+  // Improvement tracker: did this run beat the previous score on the same scene?
+  const previousResult = (lsGet('scene_results', {}))[scene.id];
+  if (previousResult && pct >= previousResult.pct + 20) {
+    lsSet('cas_improvements_20', lsGet('cas_improvements_20', 0) + 1);
+  }
+
   // Save result (keep best pct)
   const saved = lsGet('scene_results', {});
   const prev = saved[scene.id];
@@ -1956,6 +2043,39 @@ function showReport() {
   if (!activity.includes(today)) {
     activity.push(today);
     lsSet('cas_activity', activity);
+  }
+
+  // ─── v2.8 : Daily combo system ───
+  // 3 scénarios à ≥70% le même jour → +50 XP bonus + badge "Inarrêtable"
+  let comboBonus = 0;
+  let comboTriggered = false;
+  if (pct >= 70) {
+    const comboState = lsGet('cas_daily_combo', { date: '', count: 0, triggered: false });
+    if (comboState.date !== today) {
+      // New day: reset
+      comboState.date = today;
+      comboState.count = 1;
+      comboState.triggered = false;
+    } else {
+      comboState.count++;
+    }
+    // Trigger combo at exactly 3 (first time of the day)
+    if (comboState.count === 3 && !comboState.triggered) {
+      comboBonus = 50;
+      comboTriggered = true;
+      comboState.triggered = true;
+      // Track for the "Inarrêtable" badge: count distinct days where combo was triggered
+      const comboDays = lsGet('cas_combo_days', []);
+      if (!comboDays.includes(today)) {
+        comboDays.push(today);
+        lsSet('cas_combo_days', comboDays);
+      }
+    }
+    lsSet('cas_daily_combo', comboState);
+  }
+  // Apply combo bonus to XP
+  if (comboBonus > 0) {
+    addXP(comboBonus);
   }
 
   // Add to leaderboard
@@ -2035,6 +2155,17 @@ function showReport() {
 
   // Streak bonus indicator
   const streakBonusHTML = sBonus > 1 ? `<span style="font-size:11px;color:var(--orange);margin-left:8px">🔥 ×${sBonus.toFixed(2)} streak</span>` : '';
+
+  // v2.8 : Combo bonus banner
+  const comboBonusHTML = comboTriggered ? `
+    <div style="margin:10px 0;padding:10px 14px;background:linear-gradient(135deg,rgba(255,140,66,0.18),rgba(240,192,64,0.08));border:1px solid var(--orange);border-radius:8px;display:flex;align-items:center;gap:10px;animation:comboBannerIn 0.6s cubic-bezier(.2,.8,.2,1)">
+      <span style="font-size:24px">🔥</span>
+      <div style="flex:1">
+        <div style="font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.5px">COMBO QUOTIDIEN ×3</div>
+        <div style="font-size:12px;color:var(--text);margin-top:2px">Trois scénarios à ≥70% en une journée — bonus <strong style="color:var(--yellow)">+50 XP</strong> appliqué</div>
+      </div>
+    </div>
+  ` : '';
 
   // New badges HTML
   const newBadgesHTML = newBadges.length > 0 ? `
@@ -2133,6 +2264,8 @@ function showReport() {
       ${streakBonusHTML}
       ${gradeUpHTML}
     </div>
+
+    ${comboBonusHTML}
 
     ${newBadgesHTML}
 
@@ -2595,6 +2728,169 @@ function toggleCantonMap() {
   const sec = document.getElementById('canton-map-section');
   const wasOpen = sec.classList.toggle('open');
   if (wasOpen) initCantonMap();
+}
+
+// ═══════════════════════════════════════════════════
+// SKILL TREE (v2.8) — vue alternative au lobby
+// Affiche les scénarios groupés par "branche de compétence"
+// avec les badges associés à chaque branche.
+// ═══════════════════════════════════════════════════
+const SKILL_BRANCHES = [
+  {
+    id: 'forensique', icon: '🔬', color: '#fb923c',
+    title: 'Forensique technique',
+    desc: 'Acquisition, hash, file system, journaux, timestomping',
+    matchTags: ['FORENSIQUE', 'WINDOWS'],
+    badges: ['forensic_pro', 'windows_guru', 'chain_master', 'perfectionist'],
+  },
+  {
+    id: 'crypto', icon: '🔐', color: '#f0c040',
+    title: 'Cryptographie & ransomwares',
+    desc: 'Chiffrement, BitLocker, ransomware, attaques sur clés',
+    matchTags: ['CRYPTO', 'RANSOMWARE'],
+    badges: ['crypto_sage', 'ransom_expert'],
+  },
+  {
+    id: 'droit', icon: '⚖️', color: '#ff8c42',
+    title: 'Droit pénal & procédure',
+    desc: 'CPP, perquisition, scellés, secret professionnel, séquestre',
+    matchTags: ['DROIT', 'CPP'],
+    badges: ['swiss_jurist', 'speed_demon', 'prosecutor', 'expert_clean'],
+  },
+  {
+    id: 'reseau', icon: '🌐', color: '#38bdf8',
+    title: 'Réseau & infrastructure',
+    desc: 'Pcaps, DNS, attribution, attaques DDoS, supply chain',
+    matchTags: ['RÉSEAUX', 'TELECOM'],
+    badges: ['network_ninja'],
+  },
+  {
+    id: 'international', icon: '🇪🇺', color: '#9b8cff',
+    title: 'Coopération internationale',
+    desc: 'EIMP, MLAT, Eurojust, JIT, entraide pénale',
+    matchTags: [],  // matched via region === 'EU'
+    matchRegion: 'EU',
+    badges: ['eu_first_mlat', 'eu_jit_master', 'eu_budapest_spec', 'eu_eurojust_vet', 'eu_tour_europe'],
+  },
+  {
+    id: 'comportement', icon: '🎯', color: '#c084fc',
+    title: 'Discipline & exploration',
+    desc: 'Régularité, sans-faute, exploration de tous les cantons',
+    matchTags: [],
+    matchAll: true,  // any scenario counts
+    badges: ['first_blood', 'rookie_5', 'veteran_10', 'completionist',
+             'ethics_warden', 'ethics_knight', 'ethics_legend',
+             'night_owl', 'early_bird', 'sniper', 'tour_de_suisse',
+             'perseverant', 'unstoppable', 'historian'],
+  },
+];
+
+function getBranchScenes(branch) {
+  if (branch.matchAll) return SCENES;
+  if (branch.matchRegion) {
+    return SCENES.filter(s => s.region === branch.matchRegion);
+  }
+  return SCENES.filter(s => (s.tags || []).some(t => branch.matchTags.includes(t)));
+}
+
+function renderSkillTree() {
+  const container = document.getElementById('skilltree-container');
+  if (!container) return;
+  const results = lsGet('scene_results', {});
+  const unlockedBadges = new Set(getUnlockedBadges());
+
+  // Subtitle: total badges
+  const totalBadges = GLOBAL_BADGES.length;
+  document.getElementById('skilltree-subtitle').textContent =
+    `${unlockedBadges.size} / ${totalBadges} distinctions débloquées`;
+
+  container.innerHTML = SKILL_BRANCHES.map(branch => {
+    const branchScenes = getBranchScenes(branch);
+    const completed = branchScenes.filter(s => results[s.id]).length;
+    const total = branchScenes.length;
+    const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    // Up to 6 scenes shown per branch (sorted: completed first, then unlocked, then locked)
+    const scenesSorted = [...branchScenes].sort((a, b) => {
+      const aDone = results[a.id] ? 1 : 0;
+      const bDone = results[b.id] ? 1 : 0;
+      if (aDone !== bDone) return bDone - aDone;
+      return (a.title || '').localeCompare(b.title || '');
+    }).slice(0, 12);
+
+    const nodesHTML = scenesSorted.map(scene => {
+      const result = results[scene.id];
+      const isDone = !!result;
+      const cls = isDone ? 'skill-node completed' : 'skill-node';
+      const meta = isDone
+        ? `${result.pct}% · ${({easy:'F',medium:'M',hard:'D',expert:'X'})[scene.difficulty]||'?'}`
+        : `${({easy:'Facile',medium:'Moyen',hard:'Difficile',expert:'Expert'})[scene.difficulty]||scene.difficulty}`;
+      return `
+        <div class="${cls}" onclick="launchSceneFromTree('${scene.id}')">
+          <span class="skill-node-icon">${scene.icon || '🎯'}</span>
+          <div class="skill-node-body">
+            <div class="skill-node-title" title="${(scene.title||'').replace(/"/g,'&quot;')}">${scene.title || scene.id}</div>
+            <div class="skill-node-meta">${meta}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const moreHTML = branchScenes.length > scenesSorted.length
+      ? `<div class="skill-node-meta" style="margin-top:8px;text-align:center">+ ${branchScenes.length - scenesSorted.length} autres scénarios</div>`
+      : '';
+
+    const badgesHTML = (branch.badges || []).map(bid => {
+      const b = GLOBAL_BADGES.find(x => x.id === bid);
+      if (!b) return '';
+      const unlocked = unlockedBadges.has(bid);
+      return `
+        <span class="skill-branch-badge ${unlocked ? 'unlocked' : ''}" title="${b.desc}">
+          <span class="skill-branch-badge-icon">${b.icon}</span>
+          <span>${b.title}${unlocked ? ' ✓' : ''}</span>
+        </span>
+      `;
+    }).join('');
+
+    return `
+      <div class="skill-branch" style="--branch-color:${branch.color}">
+        <div class="skill-branch-header">
+          <span class="skill-branch-icon">${branch.icon}</span>
+          <div class="skill-branch-info">
+            <h3 class="skill-branch-title">${branch.title}</h3>
+            <div class="skill-branch-desc">${branch.desc}</div>
+          </div>
+          <div class="skill-branch-progress">
+            <div class="skill-branch-bar"><div class="skill-branch-bar-fill" style="width:${pct}%"></div></div>
+            <div class="skill-branch-pct">${completed}/${total}</div>
+          </div>
+        </div>
+        <div class="skill-nodes">${nodesHTML}</div>
+        ${moreHTML}
+        ${badgesHTML ? `<div class="skill-branch-badges">${badgesHTML}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function openSkillTree() {
+  // S'assurer que SCENES (l'index) est chargé avant d'afficher
+  loadSceneIndex().then(() => {
+    renderSkillTree();
+    showScreen('skilltree');
+  }).catch(err => {
+    console.error('[skilltree] load failed:', err);
+    showToast('⚠ Impossible de charger l\'arbre');
+  });
+}
+
+function launchSceneFromTree(sceneId) {
+  const scene = SCENES.find(s => s.id === sceneId);
+  if (!scene) return;
+  hydrateScene(scene).then(startScene).catch(err => {
+    console.error('[skilltree] launch failed:', err);
+    showToast('⚠ Scène introuvable');
+  });
 }
 
 // ═══════════════════════════════════════════════════
