@@ -39390,5 +39390,1176 @@
       "Johnny Long — Google Hacking for Penetration Testers",
       "GHDB — exploit-db.com/google-hacking-database"
     ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "NTFS",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle est la valeur de la signature magique ('magic number') du Boot Sector NTFS, visible aux octets 3–10 ?",
+    "opts": [
+      "0x55AA — la signature universelle de tout secteur de démarrage valide",
+      "NTFS    — la chaîne ASCII 'NTFS' suivie de quatre espaces (0x4E544653 20202020)",
+      "MZ — la signature PE des exécutables Windows, réutilisée par NTFS",
+      "0xEF53 — la signature du superbloc EXT, reconnue aussi par NTFS par compatibilité POSIX suisse"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le Boot Sector NTFS commence aux octets 3–10 par la chaîne <strong>NTFS    </strong> (4 lettres + 4 espaces = 8 octets, <code>4E 54 46 53 20 20 20 20</code>). C'est le premier indicateur pour identifier un volume NTFS dans un éditeur hexadécimal.",
+    "expl_ko": "0x55AA est la signature de fin de secteur de démarrage (octets 510–511), pas l'OEM ID. MZ est pour les PE. 0xEF53 est EXT. La signature NTFS est bien la chaîne ASCII 'NTFS    '.",
+    "refs": [
+      "Microsoft — NTFS Technical Reference",
+      "Carrier B. — File System Forensic Analysis §11.2"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "NTFS",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce que le 'slack space de fichier' (file slack) dans NTFS, et pourquoi est-il forensiquement pertinent ?",
+    "opts": [
+      "L'espace entre deux partitions NTFS consécutives sur un disque GPT",
+      "L'espace non utilisé à la fin du dernier cluster alloué à un fichier, pouvant contenir des résidus de données",
+      "La zone réservée au fichier $MFT dans les 12,5 % du volume selon la spécification NTFS suisse (SNorm 7412)",
+      "Les octets de padding ajoutés par Windows Update pour aligner les attributs MFT sur 64 bits"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le <strong>file slack</strong> est l'espace entre la fin des données réelles d'un fichier et la fin du dernier cluster alloué. Cet espace peut contenir des fragments de données d'anciens fichiers — une source d'information forensique précieuse souvent ignorée.",
+    "expl_ko": "L'espace inter-partitions est différent. SNorm 7412 est fictive. Le padding MFT est un autre concept. Le file slack est spécifiquement la zone résiduelle à la fin du dernier cluster.",
+    "refs": [
+      "Carrier B. — File System Forensic Analysis §11",
+      "NIST SP 800-86 Appendix A"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "NTFS",
+    "diff": "easy",
+    "type": "single",
+    "q": "Que stocke le fichier système $Bitmap dans un volume NTFS ?",
+    "opts": [
+      "Les images miniatures (thumbnails) des fichiers multimédias du volume",
+      "Un bit par cluster indiquant si ce cluster est utilisé (1) ou libre (0)",
+      "La liste des fichiers supprimés encore récupérables, mise à jour par le service VSS de Microsoft",
+      "Les métadonnées de chiffrement BitLocker selon la directive EJPD pour les services fédéraux suisses"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>$Bitmap</strong> est un fichier système NTFS qui contient un bit pour chaque cluster du volume : <strong>1 = utilisé</strong>, <strong>0 = libre</strong>. En forensique, analyser $Bitmap permet de repérer les clusters libres susceptibles de contenir des données supprimées récupérables.",
+    "expl_ko": "Les thumbnails sont dans des bases SQLite séparées. Le VSS gère les shadow copies, pas $Bitmap. BitLocker a ses propres métadonnées. $Bitmap est uniquement une carte d'occupation des clusters.",
+    "refs": [
+      "Microsoft — NTFS Technical Reference",
+      "Carrier B. — File System Forensic Analysis §11.5"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "NTFS",
+    "diff": "easy",
+    "type": "multi",
+    "q": "Quels fichiers système NTFS (méta-fichiers) sont systématiquement présents à la racine d'un volume NTFS sain ? (plusieurs réponses correctes)",
+    "opts": [
+      "$MFT — la Master File Table",
+      "$LogFile — le journal de transactions NTFS",
+      "$SwapFile — le fichier d'échange Windows (pagefile)",
+      "$Bitmap — la carte d'occupation des clusters"
+    ],
+    "answers": [
+      0,
+      1,
+      3
+    ],
+    "expl_ok": "<strong>$MFT</strong>, <strong>$LogFile</strong> et <strong>$Bitmap</strong> sont des méta-fichiers NTFS fondamentaux. $SwapFile (ou pagefile.sys) est un fichier Windows ordinaire, pas un méta-fichier NTFS — il n'est présent que sur les volumes système et son nom exact est pagefile.sys.",
+    "expl_ko": "$SwapFile n'est pas un méta-fichier NTFS. Le fichier d'échange Windows s'appelle pagefile.sys et hiberfil.sys. Les méta-fichiers NTFS commencent tous par $ et sont créés au formatage.",
+    "refs": [
+      "Microsoft — NTFS Technical Reference §2",
+      "Carrier B. — File System Forensic Analysis §11.1"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "NTFS",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce que le 'timestomping' en contexte forensique NTFS ?",
+    "opts": [
+      "L'horodatage automatique des fichiers par le serveur NTP de la Confédération (ntp.metas.ch)",
+      "La manipulation intentionnelle des timestamps d'un fichier pour dissimuler ou induire en erreur sur la chronologie",
+      "Le processus de synchronisation des timestamps entre $STANDARD_INFORMATION et $FILE_NAME lors d'une copie",
+      "L'écrasement du journal $LogFile pour empêcher la reconstruction des transactions NTFS"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le <strong>timestomping</strong> consiste à modifier les timestamps d'un fichier (ex. avec des outils comme Metasploit ou TimeStomp) pour tromper les enquêteurs sur la chronologie réelle. Un indicateur : les timestamps de $STANDARD_INFORMATION diffèrent de ceux de $FILE_NAME, plus difficile à falsifier.",
+    "expl_ko": "ntp.metas.ch est bien le serveur NTP suisse (METAS), mais sans rapport avec le timestomping. La synchronisation $SI/$FN existe mais n'est pas du timestomping. L'écrasement du $LogFile est une autre technique d'anti-forensique.",
+    "refs": [
+      "Harlan Carvey — Windows Forensic Analysis §3",
+      "SANS FOR508 — Advanced Forensics"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "NTFS",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle est la taille standard d'une entrée de la MFT (Master File Table) dans NTFS ?",
+    "opts": [
+      "512 octets — même taille qu'un secteur disque classique",
+      "1 024 octets (1 Ko)",
+      "4 096 octets (4 Ko) — aligné sur la taille d'un cluster standard NTFS",
+      "256 octets — défini par la norme fédérale suisse sur les systèmes de fichiers (NFS-CH 2018)"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Chaque entrée de la <strong>MFT</strong> fait <strong>1 024 octets (1 Ko)</strong> par défaut. Ce champ est configurable au formatage (champ 'Clusters Per File Record Segment' du BPB), mais 1 Ko est la valeur standard dans la quasi-totalité des déploiements Windows.",
+    "expl_ko": "512 octets est la taille d'un secteur. 4 Ko est souvent la taille d'un cluster, pas d'une entrée MFT. NFS-CH 2018 est fictive. La valeur standard d'une entrée MFT est 1 Ko.",
+    "refs": [
+      "Microsoft — NTFS Technical Reference §3.1",
+      "Carrier B. — File System Forensic Analysis §11.3"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "🌐",
+    "chapter": "Formats de fichiers et Magic Bytes",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce qu'un 'magic number' (nombre magique / magic bytes) dans le contexte des fichiers ?",
+    "opts": [
+      "Le numéro de série unique gravé dans le firmware des disques durs, utilisé par le METAS pour la traçabilité",
+      "Une séquence d'octets spécifique au début d'un fichier permettant d'identifier son format indépendamment de l'extension",
+      "Le hash MD5 tronqué aux 4 premiers octets, utilisé comme identifiant rapide par les outils forensiques suisses",
+      "Le code ASCII du nom du format (ex. 'PDF' = 0x504446) défini par l'ISO 32000 pour la Confédération"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Un <strong>magic number</strong> est une signature binaire au début (parfois en fin) d'un fichier qui identifie son format réel, indépendamment de l'extension. Ex : PDF commence par <code>25 50 44 46</code> (%PDF), JPEG par <code>FF D8 FF</code>. Outil de référence : <code>file</code> sous Linux.",
+    "expl_ko": "Les magic bytes ne sont pas liés au firmware, au METAS, à un hash MD5 tronqué, ni à un code ASCII de nom de format. Ce sont des signatures binaires définies par les spécifications de chaque format.",
+    "refs": [
+      "Gary Kessler — File Signatures Table — https://www.garykessler.net/library/file_sigs.html",
+      "NIST SP 800-86 §4"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "🌐",
+    "chapter": "Formats de fichiers et Magic Bytes",
+    "diff": "easy",
+    "type": "single",
+    "q": "Un fichier commence par les octets <code>50 4B 03 04</code>. À quel format correspond cette signature ?",
+    "opts": [
+      "PDF (Portable Document Format)",
+      "ZIP (et dérivés : DOCX, XLSX, PPTX, JAR, APK)",
+      "EXE/PE (Portable Executable Windows)",
+      "RAR (Roshal ARchive, développé par Eugene Roshal à Genève en 1993)"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<code>50 4B 03 04</code> correspond à <strong>PK\\x03\\x04</strong> — la signature du format ZIP. Les fichiers Office 2007+ (DOCX, XLSX, PPTX), JAR Java et APK Android sont tous des archives ZIP et partagent cette même signature.",
+    "expl_ko": "PDF commence par <code>25 50 44 46</code> (%PDF). EXE/PE commence par <code>4D 5A</code> (MZ). RAR commence par <code>52 61 72 21</code> (Rar!). Eugene Roshal n'est pas à Genève.",
+    "refs": [
+      "Gary Kessler — File Signatures Table",
+      "ZIP File Format Specification — PKWARE"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "🌐",
+    "chapter": "Formats de fichiers et Magic Bytes",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle est la signature hexadécimale (magic bytes) d'un fichier exécutable Windows (PE / EXE / DLL) ?",
+    "opts": [
+      "FF D8 FF — signature JPEG",
+      "4D 5A — correspondant aux lettres ASCII 'MZ' (initiales de Mark Zbikowski, l'un des concepteurs du format)",
+      "7F 45 4C 46 — signature ELF des exécutables Linux",
+      "D0 CF 11 E0 — signature des anciens formats Office 97-2003 (.doc, .xls)"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Les fichiers PE Windows (EXE, DLL, SYS) commencent toujours par <strong>4D 5A</strong> (<code>MZ</code>), les initiales de Mark Zbikowski, ingénieur Microsoft qui a conçu le format DOS. C'est la signature la plus connue en forensique Windows.",
+    "expl_ko": "FF D8 FF est JPEG. 7F 45 4C 46 ('ELF') est pour les exécutables Linux. D0 CF 11 E0 est le format OLE2/Compound (Office 97-2003). La signature PE Windows est bien MZ = 4D 5A.",
+    "refs": [
+      "Gary Kessler — File Signatures Table",
+      "Microsoft PE/COFF Specification"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "🌐",
+    "chapter": "Formats de fichiers et Magic Bytes",
+    "diff": "easy",
+    "type": "multi",
+    "q": "Quels outils ou méthodes permettent d'identifier le format réel d'un fichier sans extension ? (plusieurs réponses correctes)",
+    "opts": [
+      "La commande Linux 'file <nom_fichier>' qui analyse les magic bytes",
+      "L'examen des premiers octets dans un éditeur hexadécimal (ex. HxD, WinHex)",
+      "Renommer le fichier avec l'extension .txt et l'ouvrir dans Notepad",
+      "Chercher la signature dans la base de données Gary Kessler File Signatures"
+    ],
+    "answers": [
+      0,
+      1,
+      3
+    ],
+    "expl_ok": "La commande <strong>file</strong>, l'<strong>éditeur hexadécimal</strong> et la <strong>base Gary Kessler</strong> sont les méthodes forensiques standard pour identifier un format par ses magic bytes. Renommer en .txt et ouvrir dans Notepad ne révèle pas le format binaire.",
+    "expl_ko": "Renommer en .txt et ouvrir dans Notepad ne permet pas d'identifier un format binaire — on verra du contenu illisible. Les trois autres méthodes sont correctes et complémentaires.",
+    "refs": [
+      "Gary Kessler — https://www.garykessler.net/library/file_sigs.html",
+      "NIST SP 800-86 §4.2"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "🌐",
+    "chapter": "Formats de fichiers et Magic Bytes",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce que le 'file carving' et sur quoi repose-t-il principalement ?",
+    "opts": [
+      "La découpe physique d'un disque dur pour accéder aux plateaux magnétiques en salle blanche",
+      "La reconstruction de fichiers dans l'espace non alloué en recherchant leurs signatures (header/footer) sans s'appuyer sur le système de fichiers",
+      "Le découpage d'une image forensique en segments de 2 Go pour contourner la limite FAT32, selon la procédure fedpol CAR-2022",
+      "L'extraction des partitions cachées d'un disque GPT selon l'art. 246 CPP"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le <strong>file carving</strong> consiste à balayer l'espace non alloué (ou une image brute) à la recherche de signatures de fichiers (header = début, footer = fin) pour reconstruire des fichiers même quand le système de fichiers est corrompu ou effacé. Outils : Scalpel, Foremost, PhotoRec.",
+    "expl_ko": "La découpe physique de disque est une opération de laboratoire différente. fedpol CAR-2022 est fictif. L'art. 246 CPP concerne la perquisition, pas le carving. Le carving est une technique logicielle d'analyse de données brutes.",
+    "refs": [
+      "Garfinkel S. — Carving Contiguous and Fragmented Files (2007)",
+      "Foremost / Scalpel documentation"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🌐",
+    "chapter": "Outils et automatisation OSINT",
+    "diff": "easy",
+    "type": "single",
+    "q": "À quoi sert la Wayback Machine (archive.org) dans une investigation OSINT ?",
+    "opts": [
+      "À accéder en temps réel au trafic réseau d'un site web cible via un miroir CDN suisse",
+      "À consulter des captures archivées de sites web à des dates passées, même si le site a été modifié ou supprimé",
+      "À télécharger automatiquement tous les fichiers d'un site web selon la directive PFPDT sur la conservation des preuves",
+      "À contourner le blocage géographique des sites réservés aux résidents suisses (géo-restriction .ch)"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "La <strong>Wayback Machine</strong> (https://web.archive.org) archive des milliards de pages web depuis 1996. En OSINT, elle permet de retrouver l'état antérieur d'un site : anciens contenus, structures, informations supprimées, versions de pages à une date précise.",
+    "expl_ko": "La Wayback Machine n'est pas un miroir CDN temps réel, ni un outil de téléchargement automatisé PFPDT, ni un contournement géographique. C'est un service d'archivage historique du web.",
+    "refs": [
+      "Internet Archive — https://web.archive.org",
+      "Michael Bazzell — OSINT Techniques §4"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🌐",
+    "chapter": "Outils et automatisation OSINT",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce que SpiderFoot et dans quel contexte est-il utilisé ?",
+    "opts": [
+      "Un logiciel de surveillance du dark web développé par le Centre national de cybersécurité (NCSC) pour les PME suisses",
+      "Un outil d'automatisation OSINT qui collecte et corrèle des données sur une cible depuis des dizaines de sources",
+      "Un module de Metasploit permettant de scanner les ports ouverts sur des serveurs suisses",
+      "Un framework de pentest certifié par l'OFCOM pour les tests d'intrusion autorisés en Suisse"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>SpiderFoot</strong> est un outil d'automatisation OSINT open source qui interroge automatiquement plus de 200 sources (WHOIS, DNS, réseaux sociaux, moteurs de recherche, Have I Been Pwned, Shodan, etc.) pour collecter et corréler des informations sur une cible (IP, domaine, e-mail, nom).",
+    "expl_ko": "SpiderFoot n'est pas du NCSC ni de l'OFCOM. Ce n'est pas un module Metasploit. C'est un outil OSINT open source autonome.",
+    "refs": [
+      "SpiderFoot — https://www.spiderfoot.net",
+      "OSINT Framework — Intelligence Gathering"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🌐",
+    "chapter": "Outils et automatisation OSINT",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce que WHOIS et quelle information forensique peut-on en tirer ?",
+    "opts": [
+      "Un protocole de messagerie sécurisée utilisé par les polices cantonales pour les échanges de preuves",
+      "Un service de requête permettant d'obtenir les informations d'enregistrement d'un nom de domaine (registrant, dates, serveurs de noms)",
+      "Un annuaire des adresses physiques des entreprises suisses maintenu par le registre du commerce cantonal",
+      "Le protocole d'authentification SSO de la Confédération suisse (eIAM) basé sur SAML 2.0"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>WHOIS</strong> permet d'interroger les bases de données des registrars pour obtenir les informations d'enregistrement d'un domaine : titulaire (souvent masqué par privacy protection), dates de création/expiration, serveurs de noms, bureaux d'enregistrement. Utile pour attribuer un domaine ou retracer son historique.",
+    "expl_ko": "WHOIS n'est pas un protocole de messagerie policière. Ce n'est pas l'annuaire du registre du commerce. eIAM est l'IAM fédéral, pas WHOIS. WHOIS est un protocole de requête d'enregistrement de domaines (RFC 3912).",
+    "refs": [
+      "RFC 3912 — WHOIS Protocol Specification",
+      "SWITCH — whois.nic.ch pour les domaines .ch"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🌐",
+    "chapter": "Outils et automatisation OSINT",
+    "diff": "easy",
+    "type": "multi",
+    "q": "Quels types d'informations peut-on trouver dans les résultats d'une recherche Shodan sur une adresse IP cible ? (plusieurs réponses correctes)",
+    "opts": [
+      "Les services et ports ouverts détectés (HTTP, FTP, SSH, RDP…)",
+      "La version du système d'exploitation et du logiciel serveur déduite des bannières",
+      "L'identité civile du propriétaire de l'adresse IP (nom, adresse postale)",
+      "Les certificats TLS/SSL exposés et leurs caractéristiques"
+    ],
+    "answers": [
+      0,
+      1,
+      3
+    ],
+    "expl_ok": "Shodan indexe les <strong>ports ouverts</strong>, les <strong>bannières de services</strong> (qui révèlent souvent les versions logicielles) et les <strong>certificats TLS</strong>. Il ne fournit pas l'identité civile du propriétaire — cela relève de requêtes légales auprès du fournisseur d'accès.",
+    "expl_ko": "L'identité civile (nom, adresse postale) n'est pas dans Shodan — c'est une donnée privée accessible uniquement via demande légale à l'opérateur. Les trois autres informations sont bien indexées par Shodan.",
+    "refs": [
+      "Shodan — https://www.shodan.io",
+      "OSINT Framework — Network Intelligence"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "theme_icon": "🔐",
+    "chapter": "Chiffrement asymétrique et RSA",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce que l'échange de clés Diffie-Hellman (DH) ?",
+    "opts": [
+      "Un protocole permettant à deux parties d'établir un secret partagé sur un canal non sécurisé, sans s'être préalablement échangé de secret",
+      "Un algorithme de chiffrement symétrique développé par Diffie et Hellman pour la Bundespolizei allemande en 1976",
+      "Le protocole d'authentification mutuelle utilisé par les VPN de l'administration fédérale suisse (FOITT)",
+      "Une méthode de signature numérique basée sur les courbes elliptiques, standardisée par l'OFCOM"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "<strong>Diffie-Hellman</strong> (1976) est un protocole d'<strong>échange de clés</strong> : deux parties échangent des valeurs publiques sur un canal non chiffré et dérivent indépendamment un secret commun qu'un observateur ne peut pas recalculer. DH n'est pas lui-même un chiffrement.",
+    "expl_ko": "DH n'est pas un algorithme de chiffrement symétrique, pas un protocole d'authentification FOITT, et pas une signature sur courbes elliptiques (c'est ECDSA). C'est un protocole d'échange de clés (RFC 2631).",
+    "refs": [
+      "Diffie W., Hellman M. — New Directions in Cryptography (1976)",
+      "RFC 2631 — Diffie-Hellman Key Agreement Method"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "theme_icon": "🔐",
+    "chapter": "Chiffrement asymétrique et RSA",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle est la différence entre ECC (Elliptic Curve Cryptography) et RSA en termes de longueur de clé ?",
+    "opts": [
+      "ECC nécessite des clés beaucoup plus longues que RSA pour un niveau de sécurité équivalent",
+      "ECC offre une sécurité équivalente à RSA avec des clés beaucoup plus courtes (ex. ECC-256 ≈ RSA-3072)",
+      "ECC et RSA utilisent exactement les mêmes longueurs de clé selon la norme ISO/IEC 18033 adoptée par la Confédération",
+      "ECC est limité à 128 bits par la loi fédérale sur la cryptographie (LCryp) pour les usages civils"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>ECC</strong> offre la même sécurité que RSA avec des clés bien plus courtes : une clé ECC-256 bits est approximativement équivalente à RSA-3072 bits. Cela rend ECC plus efficace pour les appareils à ressources limitées (IoT, smartphones, cartes à puce suisses).",
+    "expl_ko": "ECC n'a pas besoin de clés plus longues. L'ISO/IEC 18033 ne fixe pas de longueurs identiques. Il n'existe pas de 'LCryp' suisse limitant ECC à 128 bits. L'avantage d'ECC est précisément sa compacité.",
+    "refs": [
+      "NIST SP 800-186 — Recommendations for ECC",
+      "ENISA — Algorithms, Key Sizes and Parameters Report"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "theme_icon": "🔐",
+    "chapter": "Chiffrement asymétrique et RSA",
+    "diff": "easy",
+    "type": "single",
+    "q": "Avec quelle clé vérifie-t-on une signature numérique RSA ?",
+    "opts": [
+      "La clé privée du signataire — car seul lui peut vérifier ses propres signatures",
+      "La clé publique du signataire — librement accessible et utilisée par n'importe quel vérificateur",
+      "Une clé symétrique partagée entre signataire et vérificateur, échangée via Diffie-Hellman",
+      "La clé de l'autorité de certification SwissSign, mandatée par la Confédération pour toutes les vérifications"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Une signature RSA est créée avec la <strong>clé privée</strong> du signataire et vérifiée avec sa <strong>clé publique</strong>. N'importe qui possédant la clé publique (librement distribuée) peut vérifier l'authenticité de la signature sans avoir accès à la clé privée.",
+    "expl_ko": "La clé privée ne se partage jamais et n'est pas utilisée pour vérifier. Il n'y a pas de clé symétrique dans ce processus. SwissSign est un prestataire de certification, mais chaque signataire a sa propre clé.",
+    "refs": [
+      "RFC 8017 — PKCS #1: RSA Cryptography Specifications",
+      "ZertES — Loi fédérale sur la signature électronique"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "theme_icon": "🔐",
+    "chapter": "Chiffrement asymétrique et RSA",
+    "diff": "easy",
+    "type": "multi",
+    "q": "Quels cas d'usage correspondent à un chiffrement asymétrique en pratique ? (plusieurs réponses correctes)",
+    "opts": [
+      "Chiffrer une petite donnée (clé symétrique) pour la transmettre sécurisément au destinataire",
+      "Signer numériquement un document pour prouver son authenticité",
+      "Chiffrer de gros volumes de données (plusieurs Go) directement avec RSA",
+      "Établir un canal TLS lors de la connexion HTTPS à un site de la Confédération (admin.ch)"
+    ],
+    "answers": [
+      0,
+      1,
+      3
+    ],
+    "expl_ok": "L'asymétrique est utilisé pour <strong>chiffrer de petites données</strong> (clés symétriques), <strong>signer des documents</strong> et <strong>établir des sessions TLS</strong>. Chiffrer de gros volumes directement en RSA est impraticable (trop lent) — on utilise un chiffrement hybride (RSA + AES).",
+    "expl_ko": "Chiffrer plusieurs Go directement en RSA est impraticable : RSA est des milliers de fois plus lent qu'AES et ne peut chiffrer que de petits blocs. En pratique, on chiffre les données avec AES et on chiffre la clé AES avec RSA.",
+    "refs": [
+      "Schneier B. — Applied Cryptography §19",
+      "RFC 5246 — TLS 1.2 Handshake Protocol"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "FAT12 / FAT16 / FAT32",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce qu'un cluster dans les systèmes de fichiers FAT ?",
+    "opts": [
+      "Un groupe de secteurs consécutifs formant l'unité minimale d'allocation pour un fichier",
+      "Un ensemble de disques en RAID défini par le contrôleur SCSI des serveurs cantonaux suisses",
+      "La table d'index principale de FAT32, équivalent de la MFT dans NTFS",
+      "Un segment de 512 octets utilisé exclusivement par le Volume Boot Record"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Un <strong>cluster</strong> est un groupe de secteurs consécutifs constituant la plus petite unité d'allocation dans FAT. Un fichier occupe toujours un nombre entier de clusters — d'où l'existence du file slack. La taille d'un cluster (2, 4, 8… secteurs) est définie au formatage.",
+    "expl_ko": "Un cluster n'est pas lié au RAID ni aux serveurs cantonaux. Ce n'est pas la table FAT elle-même (qui est un fichier à part). Ce n'est pas limité à 512 octets. Un cluster = N secteurs consécutifs.",
+    "refs": [
+      "Microsoft — FAT32 File System Specification §3",
+      "Carrier B. — File System Forensic Analysis §10.2"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "FAT12 / FAT16 / FAT32",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle est la principale limitation de FAT32 qui justifie l'utilisation d'exFAT sur les grandes cartes mémoire ?",
+    "opts": [
+      "FAT32 ne supporte pas le chiffrement AES-256, requis par la norme OSCE pour les supports amovibles",
+      "FAT32 est limité à une taille maximale de fichier individuel de 4 Go (4 294 967 295 octets)",
+      "FAT32 ne peut pas être lu par macOS sans l'installation du pilote ExFAT Swiss Edition d'Apple Suisse",
+      "FAT32 est limité à 2 Go par partition selon la loi fédérale sur les supports de données (LFSD 2019)"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "La limite fondamentale de FAT32 est la <strong>taille maximale de fichier de 4 Go</strong> (2³² − 1 octets), due à l'utilisation d'un champ de taille sur 32 bits. Un fichier vidéo 4K ou une image forensique dépasse souvent cette limite, d'où exFAT (pas de limite pratique).",
+    "expl_ko": "FAT32 ne chiffre pas — pas de lien avec AES. macOS lit FAT32 nativement. LFSD 2019 est une loi fictive. La vraie limite est le fichier individuel de 4 Go, pas la taille de partition.",
+    "refs": [
+      "Microsoft — FAT32 File System Specification §6",
+      "Microsoft — exFAT File System Specification §1"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "FAT12 / FAT16 / FAT32",
+    "diff": "easy",
+    "type": "single",
+    "q": "Que représente la valeur 0xE5 dans le premier octet d'une entrée de répertoire FAT ?",
+    "opts": [
+      "Un fichier système protégé ne pouvant être supprimé, utilisé par Windows pour pagefile.sys",
+      "Un fichier ou dossier supprimé (l'entrée de répertoire est marquée comme libre mais les données restent)",
+      "Un fichier chiffré par BitLocker selon la politique de sécurité du canton de Vaud",
+      "Une entrée de répertoire vide réservée pour une utilisation future par le système de fichiers"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "La valeur <strong>0xE5</strong> dans le premier octet d'une entrée de répertoire FAT signifie que le fichier a été <strong>supprimé</strong>. Les données des clusters ne sont pas effacées immédiatement — seule cette marque signale la suppression. C'est pourquoi la récupération de fichiers FAT supprimés est souvent possible.",
+    "expl_ko": "0xE5 ne protège pas, ne chiffre pas et n'est pas une réservation. C'est la marque de suppression FAT — le fichier semble supprimé mais ses données physiques subsistent jusqu'à réutilisation des clusters.",
+    "refs": [
+      "Microsoft — FAT32 File System Specification §6.1",
+      "Carrier B. — File System Forensic Analysis §10.3"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "FAT12 / FAT16 / FAT32",
+    "diff": "easy",
+    "type": "multi",
+    "q": "Quelles structures constituent les composantes essentielles d'un volume FAT32 ? (plusieurs réponses correctes)",
+    "opts": [
+      "Le Volume Boot Record (VBR) contenant le BPB (BIOS Parameter Block)",
+      "La File Allocation Table (FAT), généralement présente en deux copies",
+      "La zone de données contenant les clusters des fichiers et répertoires",
+      "La Master File Table (MFT) stockant les attributs de chaque fichier"
+    ],
+    "answers": [
+      0,
+      1,
+      2
+    ],
+    "expl_ok": "Un volume FAT32 contient : le <strong>VBR/BPB</strong> (paramètres du volume), la <strong>FAT</strong> (en double pour la redondance) et la <strong>zone de données</strong> (clusters). La MFT est une structure NTFS, inexistante dans FAT.",
+    "expl_ko": "La MFT (Master File Table) appartient à NTFS, pas à FAT. FAT utilise sa propre table d'allocation (File Allocation Table) et non une MFT.",
+    "refs": [
+      "Microsoft — FAT32 File System Specification §3",
+      "Carrier B. — File System Forensic Analysis §10.1"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "theme_icon": "🔐",
+    "chapter": "Cassage et attaques",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce qu'une attaque de type 'credential stuffing' ?",
+    "opts": [
+      "Une attaque physique consistant à introduire un périphérique USB malveillant dans un poste suisse non surveillé",
+      "L'utilisation automatisée de listes de paires identifiant/mot de passe issues de fuites de données sur d'autres services",
+      "Une technique de phishing ciblée (spear phishing) documentée par le NCSC dans son rapport annuel 2023",
+      "Le bourrage de paquets réseau pour saturer un service d'authentification (DDoS applicatif)"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le <strong>credential stuffing</strong> consiste à réutiliser des identifiants/mots de passe volés sur un service (ex. fuite LinkedIn) pour tenter de se connecter à d'autres services, en exploitant la tendance à réutiliser les mêmes mots de passe. Automatisé à grande échelle avec des outils comme Sentry MBA ou OpenBullet.",
+    "expl_ko": "L'USB malveillant est une attaque physique distincte. Le spear phishing est ciblé et différent. Le DDoS applicatif est une attaque de disponibilité. Le credential stuffing exploite des identifiants déjà volés ailleurs.",
+    "refs": [
+      "OWASP — Credential Stuffing Prevention Cheat Sheet",
+      "NCSC Suisse — Rapport annuel 2023"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "theme_icon": "🔐",
+    "chapter": "Cassage et attaques",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce qu'une attaque par force brute 'offline' sur un hash de mot de passe ?",
+    "opts": [
+      "Une attaque menée sans connexion Internet, en utilisant le réseau local de la police cantonale",
+      "Le cassage d'un hash sans interagir avec le système cible, en testant des candidats localement contre le hash volé",
+      "Une attaque qui exploite la mise hors ligne planifiée d'un serveur pour injecter un faux hash dans la base SAM",
+      "Le décryptage d'un volume VeraCrypt par force brute pendant une saisie, selon la procédure EJPD-FOR-2021"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Une attaque <strong>offline</strong> se déroule entièrement en local : l'attaquant a récupéré le hash (ex. depuis /etc/shadow ou la base SAM) et teste des candidats sans jamais contacter le système cible. Avantages : pas de blocage de compte, vitesse maximale (milliards de tentatives/seconde avec GPU).",
+    "expl_ko": "'Offline' ne signifie pas sans Internet au sens réseau. Ce n'est pas une injection dans SAM. EJPD-FOR-2021 est fictif. L'attaque offline teste les candidats en local contre le hash capturé.",
+    "refs": [
+      "Hashcat documentation — https://hashcat.net",
+      "NIST SP 800-63B §5.1"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "theme_icon": "🔐",
+    "chapter": "Cassage et attaques",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel outil de cassage de mots de passe par GPU est le plus utilisé aujourd'hui dans la communauté forensique et pentest ?",
+    "opts": [
+      "John the Ripper uniquement — Hashcat est interdit en Suisse par la LCPen (art. 143bis CP)",
+      "Hashcat — avec support de centaines d'algorithmes et exploitation des GPU pour des vitesses massives",
+      "Ophcrack — développé à l'EPFL de Lausanne, spécialisé dans le cassage des hashes NTLM par rainbow tables",
+      "SAMInside — l'outil officiel de fedpol pour l'extraction et le cassage des bases SAM Windows"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Hashcat</strong> est l'outil de référence pour le cassage de mots de passe par GPU. Il supporte plus de 300 algorithmes (MD5, SHA, NTLM, bcrypt, etc.) et permet des attaques par dictionnaire, règles, masque et force brute à des vitesses de plusieurs milliards de tentatives par seconde.",
+    "expl_ko": "Hashcat n'est pas interdit en Suisse — l'art. 143bis CP concerne l'accès non autorisé à des systèmes. Ophcrack a bien été développé à l'EPFL mais se spécialise dans les rainbow tables LM/NTLM. SAMInside de fedpol est fictif.",
+    "refs": [
+      "Hashcat — https://hashcat.net",
+      "Oechslin P. (EPFL) — Ophcrack — Making a Faster Cryptanalytic Time-Memory Trade-Off"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "theme_icon": "🔐",
+    "chapter": "Cassage et attaques",
+    "diff": "easy",
+    "type": "multi",
+    "q": "Quelles caractéristiques rendent un mot de passe résistant aux attaques par force brute et par dictionnaire ? (plusieurs réponses correctes)",
+    "opts": [
+      "Une longueur suffisante (12+ caractères)",
+      "L'utilisation de caractères de plusieurs catégories (majuscules, minuscules, chiffres, symboles)",
+      "L'utilisation du prénom et de l'année de naissance de l'utilisateur pour s'en souvenir facilement",
+      "L'absence du mot de passe dans des listes de mots de passe courants ou fuites connues"
+    ],
+    "answers": [
+      0,
+      1,
+      3
+    ],
+    "expl_ok": "Un mot de passe résistant doit être <strong>long</strong> (12+ car.), <strong>complexe</strong> (mix de catégories) et <strong>absent des listes connues</strong>. Le prénom + année de naissance est prévisible et figurerait dans les premières tentatives d'une attaque ciblée.",
+    "expl_ko": "Prénom + année de naissance est une combinaison faible et souvent testée en priorité lors d'attaques ciblées (OSINT sur la cible). Les trois autres critères sont des facteurs de résistance reconnus (NIST SP 800-63B).",
+    "refs": [
+      "NIST SP 800-63B §5.1",
+      "NCSC Suisse — Recommandations mots de passe"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🍎",
+    "chapter": "Windows — Artefacts et exécution",
+    "diff": "easy",
+    "type": "single",
+    "q": "Que sont les ShellBags dans Windows et quelle information forensique fournissent-ils ?",
+    "opts": [
+      "Des paquets réseau encapsulés utilisés par le protocole SMB pour les partages de fichiers Windows",
+      "Des clés de registre qui enregistrent les préférences d'affichage des dossiers, révélant qu'un dossier a été parcouru même après suppression",
+      "Les certificats de confiance (trust bags) stockés dans le magasin de certificats Windows selon la politique EJPD-PKI-CH",
+      "Des fichiers temporaires créés lors de l'installation de mises à jour Windows via WSUS dans les domaines AD cantonaux"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Les <strong>ShellBags</strong> sont des clés de registre Windows (USRCLASS.DAT / NTUSER.DAT) qui mémorisent les paramètres d'affichage de chaque dossier consulté (taille, position, icônes). Forensiquement, ils prouvent qu'un dossier a été ouvert, même si le dossier ou le fichier est supprimé depuis.",
+    "expl_ko": "Les ShellBags n'ont rien à voir avec SMB, les certificats EJPD-PKI-CH (fictif) ou Windows Update/WSUS. Ce sont des artefacts de navigation de dossiers dans l'Explorateur Windows.",
+    "refs": [
+      "Harlan Carvey — Windows Forensic Analysis §5",
+      "Zimmerman E. — ShellBagsExplorer tool"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🍎",
+    "chapter": "Windows — Artefacts et exécution",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce que le fichier hiberfil.sys sous Windows et pourquoi est-il intéressant forensiquement ?",
+    "opts": [
+      "Un fichier journal des hibernations du BIOS UEFI, chiffré par le firmware selon le standard TCG Swiss Profile",
+      "L'image compressée de la RAM au moment de l'hibernation, contenant des données volatiles précieuses",
+      "Le fichier de configuration de l'économiseur d'écran Windows, modifiable via GPO dans les domaines suisses",
+      "Un fichier temporaire créé par Windows Defender lors des analyses antivirus planifiées"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>hiberfil.sys</strong> est créé lors de l'hibernation Windows : il contient une <strong>image compressée de la RAM</strong> au moment de la mise en veille prolongée. Pour un forensicien, c'est une mine d'or : clés de chiffrement, mots de passe, connexions actives, processus en cours — tout ce qui était en mémoire vive.",
+    "expl_ko": "TCG Swiss Profile est fictif. Ce n'est pas un fichier d'économiseur d'écran. Ce n'est pas lié à Windows Defender. hiberfil.sys est le contenu de la RAM sauvegardé lors de l'hibernation.",
+    "refs": [
+      "Ligh M. et al. — The Art of Memory Forensics §2",
+      "Harlan Carvey — Windows Forensic Analysis §4"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🍎",
+    "chapter": "Windows — Artefacts et exécution",
+    "diff": "easy",
+    "type": "single",
+    "q": "Où Windows stocke-t-il l'historique des commandes PowerShell de l'utilisateur par défaut ?",
+    "opts": [
+      "Dans le journal d'événements Windows, Event ID 4103 (PowerShell Pipeline Execution)",
+      "Dans %APPDATA%\\Microsoft\\Windows\\PowerShell\\PSReadLine\\ConsoleHost_history.txt",
+      "Dans la ruche de registre HKLM\\SOFTWARE\\Microsoft\\PowerShell\\History selon la directive SECO-PS-2022",
+      "Dans C:\\Windows\\System32\\winevt\\Logs\\PowerShell.evtx uniquement sur Windows Server"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Par défaut, PSReadLine enregistre l'historique des commandes PowerShell dans <strong>%APPDATA%\\Microsoft\\Windows\\PowerShell\\PSReadLine\\ConsoleHost_history.txt</strong>. Ce fichier texte clair est un artefact forensique précieux, souvent ignoré par les attaquants.",
+    "expl_ko": "L'Event ID 4103 existe mais nécessite une configuration de logging spécifique. La clé de registre SECO-PS-2022 est fictive. PowerShell.evtx existe sur toutes les versions de Windows, pas uniquement Server. Le fichier PSReadLine est la réponse standard.",
+    "refs": [
+      "Harlan Carvey — Windows Forensic Analysis §7",
+      "SANS — PowerShell Artifacts for Forensics"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🍎",
+    "chapter": "Windows — Artefacts et exécution",
+    "diff": "easy",
+    "type": "multi",
+    "q": "Quels artefacts Windows permettent de prouver qu'un programme a été exécuté sur le système ? (plusieurs réponses correctes)",
+    "opts": [
+      "Les fichiers Prefetch (C:\\Windows\\Prefetch\\*.pf)",
+      "Les entrées UserAssist dans la base de registre (HKCU\\…\\Explorer\\UserAssist)",
+      "Le fichier SYSTEM dans C:\\Windows\\System32\\config\\",
+      "Les AppCompatCache / ShimCache dans la ruche SYSTEM du registre"
+    ],
+    "answers": [
+      0,
+      1,
+      3
+    ],
+    "expl_ok": "<strong>Prefetch</strong> (exécutions récentes + compteur), <strong>UserAssist</strong> (programmes lancés via GUI) et <strong>AppCompatCache/ShimCache</strong> (liste des exécutables connus du système) prouvent tous qu'un programme a été exécuté. La ruche SYSTEM elle-même stocke des configurations système, pas directement les exécutions.",
+    "expl_ko": "La ruche SYSTEM contient de nombreuses informations système mais n'est pas elle-même un artefact d'exécution de programmes — c'est le ShimCache (stocké dans SYSTEM\\ControlSet\\Control\\Session Manager\\AppCompatCache) qui l'est.",
+    "refs": [
+      "Zimmerman E. — AppCompatCacheParser, PECmd, UserAssist",
+      "SANS FOR508 — Windows Artifact Analysis"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "Technologie des disques",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle est la différence entre un disque HDD (Hard Disk Drive) et un SSD (Solid State Drive) du point de vue de la récupération de données ?",
+    "opts": [
+      "Les HDD sont plus faciles à chiffrer que les SSD selon la norme FIPS 140-2 adoptée par le SECO",
+      "Sur SSD, la commande TRIM efface immédiatement les blocs libérés, rendant la récupération de fichiers supprimés beaucoup plus difficile qu'en HDD",
+      "Les SSD utilisent le système de fichiers exFAT par défaut, impossible à analyser sans pilote SwissSign",
+      "Il n'y a aucune différence forensique : les deux supports stockent les bits de façon identique"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Sur <strong>SSD</strong>, la commande <strong>TRIM</strong> notifie le contrôleur des blocs libérés pour qu'il les efface proactivement (wear leveling). Résultat : les données supprimées disparaissent souvent très rapidement, contrairement au HDD où les données restent jusqu'à réécriture. Le SSD est forensiquement beaucoup plus hostile.",
+    "expl_ko": "FIPS 140-2 concerne les modules cryptographiques. SwissSign ne fournit pas de pilote exFAT. HDD et SSD ont des comportements forensiques fondamentalement différents à cause de TRIM.",
+    "refs": [
+      "Gubanov Y. — Recovering Evidence from SSD Drives (2012)",
+      "SANS — SSD Forensics"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "Technologie des disques",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce qu'une table de partition GPT (GUID Partition Table) ?",
+    "opts": [
+      "Un format suisse de gestion des partitions défini par le METAS pour les disques > 2 To dans l'administration fédérale",
+      "Le successeur du MBR permettant des disques > 2 To et jusqu'à 128 partitions, utilisant des GUID pour identifier chaque partition",
+      "Une table de routage graphique utilisée par VMware pour les partitions de machines virtuelles cantonales",
+      "Le format de partition des clés USB certifiées FIDO2 délivrées par SwissID aux fonctionnaires fédéraux"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>GPT</strong> (GUID Partition Table) est le successeur du MBR. Il supprime la limite de 2 To (MBR utilise des adresses 32 bits), supporte jusqu'à 128 partitions par défaut, et identifie chaque partition par un GUID unique. GPT inclut aussi une table de sauvegarde en fin de disque.",
+    "expl_ko": "GPT n'est pas un format suisse METAS ni une table VMware ni un format SwissID. C'est une spécification UEFI internationale (UEFI Specification §5).",
+    "refs": [
+      "UEFI Specification §5 — GUID Partition Table",
+      "Carrier B. — File System Forensic Analysis §4"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "Technologie des disques",
+    "diff": "easy",
+    "type": "single",
+    "q": "Que contient le MBR (Master Boot Record) aux premiers 446 octets d'un disque ?",
+    "opts": [
+      "La table des 4 partitions primaires du disque",
+      "Le code bootstrap (bootloader) qui amorce le démarrage du système d'exploitation",
+      "La signature magique 0x55AA permettant d'identifier le secteur comme amorçable",
+      "L'UUID du volume, utilisé par Windows pour identifier le disque dans le registre"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le MBR se décompose ainsi : octets <strong>0–445</strong> = code bootstrap (446 octets), octets <strong>446–509</strong> = table des 4 partitions primaires (64 octets, 16 par partition), octets <strong>510–511</strong> = signature 0x55AA. Les 446 premiers octets contiennent donc le code d'amorçage.",
+    "expl_ko": "La table des partitions est aux octets 446–509 (pas aux 446 premiers). La signature 0x55AA est aux deux derniers octets. L'UUID du volume n'est pas dans le MBR. Les 446 premiers octets sont le code bootstrap.",
+    "refs": [
+      "Carrier B. — File System Forensic Analysis §4.1",
+      "Microsoft — Windows and GPT FAQ"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "Technologie des disques",
+    "diff": "easy",
+    "type": "multi",
+    "q": "Quelles zones d'un disque dur peuvent contenir des données cachées ou des artefacts forensiques invisibles depuis le système d'exploitation ? (plusieurs réponses correctes)",
+    "opts": [
+      "Le Host Protected Area (HPA) — zone réservée normalement masquée au système d'exploitation",
+      "Le Device Configuration Overlay (DCO) — zone de configuration du disque masquée par le firmware",
+      "L'espace non alloué entre les partitions (unpartitioned space)",
+      "Le secteur de démarrage EFI System Partition (ESP) visible dans l'Explorateur Windows"
+    ],
+    "answers": [
+      0,
+      1,
+      2
+    ],
+    "expl_ok": "Le <strong>HPA</strong>, le <strong>DCO</strong> et l'<strong>espace non alloué inter-partitions</strong> sont des zones cachées ou ignorées par l'OS standard, potentiellement utilisées pour dissimuler des données. L'ESP est une partition visible et montable par l'OS — pas une zone cachée.",
+    "expl_ko": "L'ESP (EFI System Partition) est une partition standard visible et accessible. HPA, DCO et l'espace non alloué sont des zones effectivement invisibles ou ignorées par l'OS sans outils spécialisés.",
+    "refs": [
+      "Carrier B. — File System Forensic Analysis §4",
+      "NIST SP 800-86 §B.2 — Hidden Areas"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "exFAT",
+    "diff": "easy",
+    "type": "single",
+    "q": "Pour quel type de support exFAT a-t-il été principalement conçu ?",
+    "opts": [
+      "Les disques durs internes des serveurs Windows Server dans les administrations cantonales suisses",
+      "Les cartes mémoire flash et clés USB nécessitant un format compatible Windows/macOS sans limite de taille de fichier à 4 Go",
+      "Les partitions système des Mac Apple Silicon, remplaçant APFS sur les modèles vendus en Suisse",
+      "Les disques en réseau (NAS) des PME suisses selon la recommandation SECO-NAS-2020"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>exFAT</strong> (Extended FAT) a été conçu par Microsoft pour les <strong>supports flash amovibles</strong> (cartes SD, cartes CompactFlash, clés USB). Il combine la compatibilité multiplateforme de FAT32 (Windows + macOS natif depuis 2019) sans la limite des 4 Go par fichier.",
+    "expl_ko": "exFAT n'est pas utilisé pour les serveurs Windows, les Mac Apple Silicon (qui utilisent APFS) ni les NAS SECO (fictif). C'est un format pensé pour les supports amovibles.",
+    "refs": [
+      "Microsoft — exFAT File System Specification",
+      "SD Association — SD Standard v6.0 (exFAT)"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "exFAT",
+    "diff": "easy",
+    "type": "single",
+    "q": "Comment exFAT gère-t-il les permissions de fichiers par rapport à NTFS ?",
+    "opts": [
+      "exFAT implémente un sous-ensemble des ACL NTFS, suffisant pour les supports amovibles en environnement AD",
+      "exFAT ne supporte pas les permissions ou ACL — tous les fichiers sont accessibles sans restriction de droits",
+      "exFAT utilise le modèle de permissions POSIX (rwxrwxrwx) défini par l'Open Group et adopté par la Confédération",
+      "exFAT délègue la gestion des droits au TPM du périphérique hôte selon la spécification TCG Mobile 2.0"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>exFAT ne supporte aucune permission, ACL ou contrôle d'accès</strong>. Comme FAT32, c'est un système de fichiers simple sans gestion des droits. Tout utilisateur qui monte le volume a accès à tous les fichiers. C'est une limite importante pour la sécurité mais un avantage pour la portabilité.",
+    "expl_ko": "exFAT n'a ni ACL NTFS ni permissions POSIX ni délégation TPM. C'est volontairement simple : pas de gestion des droits, pour maximiser la compatibilité multiplateforme.",
+    "refs": [
+      "Microsoft — exFAT File System Specification §6",
+      "Carrier B. — File System Forensic Analysis §12"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "exFAT",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle est la signature ASCII du Boot Sector exFAT, identifiable dans un éditeur hexadécimal ?",
+    "opts": [
+      "FAT32   — pour assurer la rétrocompatibilité avec les anciens systèmes",
+      "EXFAT   — la chaîne 'EXFAT   ' (5 lettres + 3 espaces) aux octets 3–10",
+      "MSDOS5.0 — la même signature OEM que FAT32 selon la spécification Microsoft",
+      "exFAT12  — indiquant la version du format selon la norme IEC 63286:2022"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le Boot Sector exFAT contient la chaîne <strong>EXFAT   </strong> (5 lettres majuscules + 3 espaces = 8 octets) aux octets 3–10, à l'emplacement de l'OEM Name. C'est le premier indicateur dans un éditeur hexadécimal pour distinguer exFAT de FAT32 ('MSDOS5.0') ou de NTFS ('NTFS    ').",
+    "expl_ko": "FAT32 utilise 'MSDOS5.0', pas 'FAT32'. 'MSDOS5.0' n'est pas la signature exFAT. 'exFAT12' est fictif. La signature d'exFAT est bien 'EXFAT   ' avec les espaces.",
+    "refs": [
+      "Microsoft — exFAT File System Specification §3.1",
+      "Carrier B. — File System Forensic Analysis §12.2"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "🌐",
+    "chapter": "Adressage IP",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle plage d'adresses IP est réservée pour les réseaux privés selon la RFC 1918 ?",
+    "opts": [
+      "10.0.0.0/8, 172.16.0.0/12 et 192.168.0.0/16",
+      "127.0.0.0/8, 169.254.0.0/16 et 224.0.0.0/4",
+      "193.5.0.0/16 et 195.141.0.0/16 — plages réservées à la Confédération suisse par RIPE NCC",
+      "198.51.100.0/24, 203.0.113.0/24 et 100.64.0.0/10 — réservées pour la documentation et les tests"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "La <strong>RFC 1918</strong> définit trois plages d'adresses privées non routables sur Internet : <strong>10.0.0.0/8</strong> (classe A), <strong>172.16.0.0/12</strong> (classe B) et <strong>192.168.0.0/16</strong> (classe C). Ces adresses sont utilisées dans les réseaux internes et nécessitent du NAT pour accéder à Internet.",
+    "expl_ko": "127.0.0.0/8 est le loopback. 169.254.0.0/16 est l'APIPA. 224.0.0.0/4 est le multicast. Les plages Confédération suisse ne sont pas réservées de la sorte. 198.51.100.0/24 etc. sont des plages de documentation (RFC 5737).",
+    "refs": [
+      "RFC 1918 — Address Allocation for Private Internets",
+      "RIPE NCC — IP Addressing"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "🌐",
+    "chapter": "Adressage IP",
+    "diff": "easy",
+    "type": "single",
+    "q": "Combien d'adresses hôtes utilisables contient un sous-réseau /24 (255.255.255.0) ?",
+    "opts": [
+      "256 adresses utilisables",
+      "254 adresses utilisables (256 − 2 : adresse réseau et adresse de broadcast)",
+      "255 adresses utilisables — la seule adresse non utilisable est le broadcast (.255)",
+      "252 adresses — les 4 premières sont réservées par Swisscom pour les réseaux résidentiels"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Un /24 contient 2⁸ = <strong>256 adresses</strong> au total. On soustrait l'adresse réseau (ex. .0) et l'adresse de broadcast (ex. .255), ce qui donne <strong>254 adresses hôtes utilisables</strong>. Cette règle s'applique à tous les sous-réseaux IPv4 (2ⁿ − 2).",
+    "expl_ko": "256 est le total, pas les adresses utilisables. 255 oublie l'adresse réseau. Swisscom ne réserve pas 4 adresses par /24 (la réservation de Swisscom est une pratique de leur réseau, pas une règle RFC).",
+    "refs": [
+      "RFC 950 — Internet Standard Subnetting Procedure",
+      "Tanenbaum A. — Computer Networks §5"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "🌐",
+    "chapter": "Adressage IP",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce qu'une adresse IP de loopback et à quoi sert-elle ?",
+    "opts": [
+      "Une adresse attribuée automatiquement quand aucun serveur DHCP n'est disponible (APIPA : 169.254.x.x)",
+      "L'adresse 127.0.0.1 (ou ::1 en IPv6) qui renvoie le trafic vers la machine locale elle-même, utilisée pour tester la pile réseau",
+      "L'adresse de passerelle par défaut d'un réseau local, typiquement .1 ou .254 selon la convention Swisscom Business",
+      "Une adresse MAC virtuelle générée par VMware pour les interfaces réseau des machines virtuelles cantonales"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "L'adresse <strong>127.0.0.1</strong> (IPv4) ou <strong>::1</strong> (IPv6) est l'adresse de <strong>loopback</strong>. Le trafic envoyé à cette adresse ne quitte jamais la machine — il est redirigé vers la pile réseau locale. Utilisée pour tester les services locaux (ex. <code>ping 127.0.0.1</code>).",
+    "expl_ko": "169.254.x.x est l'APIPA (pas de DHCP). L'adresse de passerelle est .1 ou .254 selon configuration, pas une règle RFC. L'adresse MAC VMware est une adresse de couche 2, pas IP.",
+    "refs": [
+      "RFC 5735 — Special Use IPv4 Addresses",
+      "RFC 5156 — Special-Use IPv6 Addresses"
+    ]
+  },
+  {
+    "theme": "Droit",
+    "theme_icon": "⚖️",
+    "chapter": "Droit pénal informatique",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel article du Code pénal suisse (CP) réprime l'accès indu à un système de traitement de données ?",
+    "opts": [
+      "Art. 139 CP — Vol",
+      "Art. 143bis CP — Accès indu à un système informatique",
+      "Art. 147 CP — Escroquerie par ordinateur",
+      "Art. 179novies CP — Obtention illicite de données personnelles"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "L'<strong>art. 143bis CP</strong> réprime le fait de s'introduire sans droit dans un système de traitement de données sécurisé. C'est la disposition de base du droit pénal informatique suisse, fondamentale pour les investigations de cybercriminalité.",
+    "expl_ko": "Art. 139 = vol de choses mobilières. Art. 147 = escroquerie par ordinateur (manipulation de données pour un avantage patrimonial). Art. 179novies = obtention illicite de données personnelles. L'accès indu à un système est l'art. 143bis.",
+    "refs": [
+      "CP art. 143bis — Accès indu à un système informatique",
+      "Dupuis M. et al. — Petit commentaire CP"
+    ]
+  },
+  {
+    "theme": "Droit",
+    "theme_icon": "⚖️",
+    "chapter": "Droit pénal informatique",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce que l'escroquerie par ordinateur selon l'art. 147 CP suisse ?",
+    "opts": [
+      "Le simple accès non autorisé à un système informatique d'entreprise",
+      "Le fait d'influer astucieusement sur un processus électronique de traitement de données pour obtenir un avantage patrimonial illicite",
+      "La publication de fausses informations sur Internet selon la loi sur les services de communication (LSC)",
+      "L'utilisation d'un logiciel sans licence valide dans une entreprise domiciliée en Suisse romande"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "L'<strong>art. 147 CP</strong> (escroquerie par ordinateur) sanctionne celui qui influence astucieusement un processus de traitement de données pour obtenir un enrichissement illégitime. Exemples : manipulation de virements bancaires automatisés, falsification de données comptables.",
+    "expl_ko": "L'accès non autorisé est l'art. 143bis. La LSC ne réprime pas spécifiquement les fausses informations. L'utilisation de logiciels sans licence relève du droit d'auteur (LDA), pas de l'art. 147.",
+    "refs": [
+      "CP art. 147 — Escroquerie par ordinateur",
+      "Niggli M.A. / Wiprächtiger H. — Basler Kommentar StGB"
+    ]
+  },
+  {
+    "theme": "Droit",
+    "theme_icon": "⚖️",
+    "chapter": "Droit pénal informatique",
+    "diff": "easy",
+    "type": "multi",
+    "q": "Quelles infractions du CP suisse sont directement liées à la cybercriminalité ? (plusieurs réponses correctes)",
+    "opts": [
+      "Art. 143 CP — Soustraction de données",
+      "Art. 143bis CP — Accès indu à un système informatique",
+      "Art. 144bis CP — Détérioration de données",
+      "Art. 139 CP — Vol (de choses mobilières physiques)"
+    ],
+    "answers": [
+      0,
+      1,
+      2
+    ],
+    "expl_ok": "<strong>Art. 143</strong> (soustraction de données), <strong>art. 143bis</strong> (accès indu) et <strong>art. 144bis</strong> (détérioration de données, dont les malwares) forment le noyau des infractions informatiques du CP suisse. L'art. 139 porte sur le vol d'objets physiques, pas de données.",
+    "expl_ko": "L'art. 139 (vol) concerne les choses mobilières physiques. Pour le vol de données numériques, c'est l'art. 143 (soustraction de données) qui s'applique — les données ne sont pas des 'choses' au sens de l'art. 139.",
+    "refs": [
+      "CP art. 143, 143bis, 144bis",
+      "SCOCI — Cybercriminalité en droit suisse"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🍎",
+    "chapter": "Linux — Artefacts et analyse",
+    "diff": "easy",
+    "type": "single",
+    "q": "Que contient le fichier /etc/shadow sous Linux et pourquoi est-il sensible ?",
+    "opts": [
+      "La liste des fichiers cachés (dotfiles) de tous les utilisateurs, protégée par le groupe shadow",
+      "Les mots de passe hashés de tous les comptes système, lisible uniquement par root",
+      "Le journal chiffré des connexions SSH selon la directive CIS Benchmark Swiss Edition v3.0",
+      "Les clés SSH publiques autorisées pour les connexions à distance, équivalent de authorized_keys"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>/etc/shadow</strong> contient les <strong>mots de passe hashés</strong> (avec sel) de tous les comptes, ainsi que les politiques de mot de passe (expiration, durée minimale). Il est lisible uniquement par root, contrairement à /etc/passwd. En forensique, il est la cible principale pour les attaques offline.",
+    "expl_ko": "Les fichiers cachés sont les dotfiles (pas liés à shadow). CIS Benchmark Swiss Edition n'existe pas en tant que directive définissant le contenu de /etc/shadow. Les clés SSH autorisées sont dans ~/.ssh/authorized_keys.",
+    "refs": [
+      "Linux man pages — shadow(5)",
+      "SANS — Linux Forensics Cheat Sheet"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🍎",
+    "chapter": "Linux — Artefacts et analyse",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce que le fichier /var/log/wtmp sous Linux ?",
+    "opts": [
+      "Le fichier de configuration du démon syslog, définissant les destinations des journaux système",
+      "Un fichier binaire enregistrant toutes les connexions et déconnexions d'utilisateurs sur le système",
+      "Le journal des erreurs du serveur web Apache, standardisé par W3C pour les serveurs suisses SWITCH",
+      "Un fichier temporaire créé lors du redémarrage, contenant le dernier message du kernel (dmesg)"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>/var/log/wtmp</strong> est un fichier binaire qui enregistre toutes les connexions et déconnexions d'utilisateurs (login/logout), les redémarrages système et les changements de runlevel. On le consulte avec la commande <code>last</code>. Très utile pour retracer l'activité des utilisateurs.",
+    "expl_ko": "La configuration syslog est dans /etc/rsyslog.conf. Apache écrit dans /var/log/apache2/. dmesg ne persiste pas dans wtmp. /var/log/wtmp est le journal binaire des connexions (commande: last).",
+    "refs": [
+      "Linux man pages — wtmp(5), last(1)",
+      "SANS — Linux Forensics Poster"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🍎",
+    "chapter": "Linux — Artefacts et analyse",
+    "diff": "easy",
+    "type": "multi",
+    "q": "Quels fichiers Linux sont pertinents pour retracer les connexions réseau et l'activité d'un utilisateur distant ? (plusieurs réponses correctes)",
+    "opts": [
+      "/var/log/auth.log — connexions SSH réussies et échouées",
+      "/var/log/wtmp — historique de toutes les connexions/déconnexions (commande: last)",
+      "/etc/crontab — tâches planifiées système (pas des connexions)",
+      "/home/user/.ssh/known_hosts — liste des serveurs connus de l'utilisateur"
+    ],
+    "answers": [
+      0,
+      1,
+      3
+    ],
+    "expl_ok": "<strong>auth.log</strong> (authentifications SSH), <strong>wtmp</strong> (sessions complètes) et <strong>known_hosts</strong> (révèle quels serveurs l'utilisateur a contacté via SSH) sont tous pertinents pour retracer l'activité réseau. /etc/crontab liste des tâches planifiées, pas des connexions.",
+    "expl_ko": "/etc/crontab définit des tâches planifiées (cron jobs) et non des connexions réseau. Les trois autres artefacts tracent directement l'activité de connexion.",
+    "refs": [
+      "SANS — Linux Forensics Cheat Sheet",
+      "Linux man pages — auth.log, wtmp, known_hosts"
+    ]
+  },
+  {
+    "theme": "Acquisition et analyse",
+    "theme_icon": "🔍",
+    "chapter": "Logiciels et outils forensiques",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce que FTK Imager et quelle est sa fonction principale ?",
+    "opts": [
+      "Un outil d'analyse comportementale des malwares développé par AccessData pour le FBI et fedpol",
+      "Un outil gratuit d'acquisition d'images forensiques (E01, DD, AFF) avec vérification par hash intégrée",
+      "Le module d'imagerie disque intégré à Windows Server 2022, activé par la licence FTK-CH de l'administration fédérale",
+      "Un framework de pentest basé sur Metasploit, adapté pour les investigations judiciaires en Suisse romande"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>FTK Imager</strong> (AccessData / Exterro) est un outil <strong>gratuit</strong> d'acquisition forensique permettant de créer des images disque (E01, DD, AFF, S01) avec calcul automatique des hashes MD5/SHA-1. Il peut aussi monter des images en lecture seule et prévisualiser des fichiers.",
+    "expl_ko": "FTK Imager n'est pas un outil d'analyse de malwares ni un module Windows Server. FTK-CH fédéral est fictif. Ce n'est pas du pentest. FTK Imager est un outil d'acquisition gratuit.",
+    "refs": [
+      "Exterro — FTK Imager documentation",
+      "NIST CFTT — Forensic Imaging Test Results"
+    ]
+  },
+  {
+    "theme": "Acquisition et analyse",
+    "theme_icon": "🔍",
+    "chapter": "Logiciels et outils forensiques",
+    "diff": "easy",
+    "type": "single",
+    "q": "À quoi sert l'outil Autopsy 'Keyword Search' module ?",
+    "opts": [
+      "À chercher des mots-clés dans les métadonnées EXIF des photos, selon la directive PFPDT sur les images numériques",
+      "À effectuer des recherches de mots-clés et expressions régulières dans le contenu des fichiers et de l'espace non alloué d'une image forensique",
+      "À interroger automatiquement le moteur de recherche Google avec des mots-clés trouvés dans l'image, en mode OSINT intégré",
+      "À indexer les mots-clés du rapport d'expertise pour le tribunal, selon le format SIFOR de fedpol"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le module <strong>Keyword Search</strong> d'Autopsy indexe et recherche des termes, expressions régulières ou hashes dans <strong>tout le contenu</strong> de l'image forensique : fichiers alloués, fichiers supprimés, espace non alloué, métadonnées. C'est l'un des modules les plus utilisés lors d'une investigation.",
+    "expl_ko": "Ce n'est pas limité aux EXIF. Il n'interroge pas Google (pas d'OSINT intégré). SIFOR de fedpol est fictif. Le Keyword Search d'Autopsy analyse le contenu local de l'image disque.",
+    "refs": [
+      "Autopsy Documentation — Keyword Search Module",
+      "Brian Carrier — The Sleuth Kit & Autopsy User Guide"
+    ]
+  },
+  {
+    "theme": "Acquisition et analyse",
+    "theme_icon": "🔍",
+    "chapter": "Logiciels et outils forensiques",
+    "diff": "easy",
+    "type": "multi",
+    "q": "Quelles fonctionnalités distinguent X-Ways Forensics des outils forensiques gratuits comme Autopsy ? (plusieurs réponses correctes)",
+    "opts": [
+      "Une interface plus légère et des performances supérieures sur de grands volumes de données",
+      "La possibilité d'éditer directement les données sur un support (avec write blocker désactivé) pour la correction d'erreurs",
+      "Un support étendu des formats de fichiers propriétaires et des systèmes de fichiers rares",
+      "Une certification gratuite reconnue par tous les tribunaux suisses, délivrée avec la licence X-Ways"
+    ],
+    "answers": [
+      0,
+      2
+    ],
+    "expl_ok": "<strong>X-Ways</strong> est réputé pour sa <strong>légèreté et ses performances</strong> (gère efficacement les grandes images) et son <strong>support étendu</strong> des formats rares. L'édition directe existe mais n'est pas une distinction positive forensique. La 'certification tribunaux suisses' est fictive.",
+    "expl_ko": "L'édition directe des données est une fonction qui existe dans X-Ways mais ce n'est pas un avantage forensique (on travaille toujours sur copie). La certification automatique 'tribunaux suisses' est fictive — la valeur probatoire dépend de la méthodologie, pas d'un label logiciel.",
+    "refs": [
+      "X-Ways Forensics — https://www.x-ways.net",
+      "SANS — Comparison of Forensic Tools"
+    ]
   }
 ]
