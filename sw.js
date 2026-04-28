@@ -28,8 +28,6 @@ const STATIC_ASSETS = [
   './style/landing.css',
   './style/style.css',
   './style/tp.css',
-  './style/scene.css',
-  './style/fiche.css',
   './style/fiche_style.css',
 
   // Scripts partagés
