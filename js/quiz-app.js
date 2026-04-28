@@ -47,9 +47,7 @@
         'Cryptologie': '#f0c040',
         'OSINT': '#ffd580',
         'Droit': '#ff8c42',
-        'OUTILS': '#c084fc',
-        'RÉSEAUX': '#38bdf8',
-        'FORENSIQUE': '#fb923c'
+        'Forensique': '#fb923c'
       };
       const RANKS = [{
         name: '🔰 Stagiaire',
@@ -6585,4 +6583,3 @@ async function shareBilanCard() {
     } catch(e) { downloadBilanCard(); }
   }, 300);
 }
-
