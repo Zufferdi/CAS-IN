@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Microsoft 365 Forensique — CAS-IN Forensique</title>
+<meta name="description" content="M365 forensique · Unified Audit Log · MailItemsAccessed · Purview eDiscovery · Azure Sign-ins · Exchange Online · Microsoft Graph · BEC investigation">
+<meta name="theme-color" content="#0d1117">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+
+<nav class="tn-nav" aria-label="Navigation fiche">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">M365 FORENSIQUE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-plateformescloud">Plateformes & Cloud</a><span class="bc-sep">›</span>
+    <span class="bc-current">Microsoft 365 Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~14 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div>
+      <span style="font-size:2.2rem">☁️</span>
+      <span class="tag tag-cyan" style="margin-left:.5rem">Cloud</span>
+      <span class="tag tag-orange" style="margin-left:.3rem">Microsoft</span>
+      <span class="tag tag-purple" style="margin-left:.3rem">Audit logs</span>
+      <span class="tag tag-gold" style="margin-left:.3rem">BEC investigation</span>
+    </div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">
+      Microsoft 365 Forensique — Du Unified Audit Log au compromis BEC
+    </h1>
+    <div class="meta" style="max-width:680px;line-height:1.5">
+      80% des entreprises suisses utilisent Microsoft 365. Quand un compromis arrive (BEC, exfiltration, prise de contrôle), la <span class="cyan">forensique cloud</span> remplace la forensique disque traditionnelle. Comprendre le <strong>Unified Audit Log</strong>, les sign-ins Azure AD, eDiscovery et MailItemsAccessed est devenu une compétence critique en DFIR moderne.
+    </div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row">
+      <span class="prereq-label">Prérequis :</span>
+      <a href="cloud_forensique.html" class="prereq-pill">📖 Cloud Forensics</a>
+      <a href="email_forensique.html" class="prereq-pill">📖 Email Forensics</a>
+      <a href="reseau.html" class="prereq-pill">📖 Réseau</a>
+      <a href="droit.html" class="prereq-pill">📖 Droit pénal CH</a>
+    </div>
+    <div class="prereq-row">
+      <span class="prereq-label">Voir aussi :</span>
+      <a href="ios_forensique.html" class="related-pill">🔗 iOS Forensique</a>
+      <a href="android_forensique.html" class="related-pill">🔗 Android Forensique</a>
+      <a href="email_headers_smtp_forensique.html" class="related-pill">🔗 Headers Email</a>
+      <a href="incident_response.html" class="related-pill">🔗 Incident Response</a>
+    </div>
+  </div>
+</div>
+
+<div class="page" style="max-width:960px;margin:0 auto;padding:2rem">
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 1 — VUE D'ENSEMBLE
+═════════════════════════════════════════════════════════ -->
+<div class="concept-card">
+  <div class="concept-title">🌐 Le paysage M365 — qu'est-ce qui produit des logs ?</div>
+  Microsoft 365 n'est pas un produit unique mais une <strong>fédération de services</strong>, chacun avec ses logs propres. La forensique consiste à <em>croiser</em> ces sources pour reconstruire un fil d'événements.
+</div>
+
+<div class="table-wrap" style="margin:1.5rem 0">
+<table>
+  <tr><th>Service</th><th>Logs principaux</th><th>Rétention défaut</th></tr>
+  <tr>
+    <td><strong>Azure AD / Entra ID</strong></td>
+    <td>Sign-in logs, Audit logs, Risk events, Provisioning logs</td>
+    <td>30 jours (free), 30j-2 ans (P1/P2)</td>
+  </tr>
+  <tr>
+    <td><strong>Exchange Online</strong></td>
+    <td>Message Trace, Mailbox Audit, Transport logs</td>
+    <td>10 jours (Trace), 90 jours (Audit défaut)</td>
+  </tr>
+  <tr>
+    <td><strong>SharePoint / OneDrive</strong></td>
+    <td>SharePoint Audit, OneDrive activity</td>
+    <td>180 jours (E3+), 1 an (E5)</td>
+  </tr>
+  <tr>
+    <td><strong>Teams</strong></td>
+    <td>Teams Admin Center logs, Call records</td>
+    <td>30 jours (admin events), variable (messages)</td>
+  </tr>
+  <tr>
+    <td><strong>Defender for Cloud Apps</strong></td>
+    <td>App connector logs, Anomaly detection</td>
+    <td>180 jours</td>
+  </tr>
+  <tr>
+    <td><strong>Microsoft Purview</strong></td>
+    <td>Compliance audit, eDiscovery, DLP</td>
+    <td>180 jours-10 ans (selon plan)</td>
+  </tr>
+  <tr>
+    <td><strong>Unified Audit Log</strong> ⭐</td>
+    <td>Agrégateur de TOUS les services ci-dessus</td>
+    <td>180 jours (E3), 1 an (E5), 10 ans (E5 add-on)</td>
+  </tr>
+</table>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 2 — UNIFIED AUDIT LOG
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">⭐ Unified Audit Log — la pierre angulaire</h2>
+
+<div class="concept-card" style="margin:1rem 0;background:rgba(240,192,64,.08);border-left:3px solid var(--gold)">
+  <div class="concept-title" style="color:var(--gold)">📋 Le Unified Audit Log (UAL)</div>
+  Le UAL est la source <strong>n°1</strong> en M365 forensics. Il agrège les événements d'Exchange, SharePoint, OneDrive, Teams, Azure AD, Power Platform, Defender, Purview, en un seul flux interrogeable.
+  <br><br>
+  <strong>Activation :</strong> obligatoire avant analyse ! Vérifier dans le portail Compliance / Purview ou via PowerShell :
+</div>
+
+<pre style="background:#0a0e14;padding:1rem;border-radius:6px;font-size:.78rem;overflow-x:auto">
+# Connexion à Exchange Online
+Connect-ExchangeOnline -UserPrincipalName admin@tenant.onmicrosoft.com
+
+# Vérifier si UAL est activé
+Get-AdminAuditLogConfig | Format-List UnifiedAuditLogIngestionEnabled
+
+# Si False, activer (rétroactivité = 0 ! les événements passés sont perdus)
+Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true
+
+# Recherche de base
+Search-UnifiedAuditLog `
+  -StartDate "2024-01-01 00:00" `
+  -EndDate "2024-01-31 23:59" `
+  -UserIds "victim@company.ch" `
+  -ResultSize 5000
+
+# Recherche par opération (BEC typique : règles de boîte)
+Search-UnifiedAuditLog -StartDate "2024-01-01" -EndDate "2024-02-01" `
+  -Operations "New-InboxRule","Set-InboxRule","UpdateInboxRules"
+
+# Export vers CSV pour analyse
+$results = Search-UnifiedAuditLog -StartDate "2024-01-01" -EndDate "2024-01-31" -ResultSize 5000
+$results | Export-Csv -Path "ual_export.csv" -NoTypeInformation -Encoding UTF8
+</pre>
+
+<div class="warn-block" style="background:rgba(255,64,96,.08);border-left:3px solid var(--red);padding:.8rem;margin:1rem 0;border-radius:6px">
+  <strong>⚠️ Pièges du UAL</strong> :
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li><strong>Rétroactivité zéro</strong> : si UAL désactivé au moment des faits, événements perdus à jamais.</li>
+    <li><strong>Latence d'ingestion</strong> : 30 minutes à 24 heures (rarement plus). Vérifier le timestamp <code>CreationDate</code>.</li>
+    <li><strong>5000 résultats max</strong> par requête : utiliser <code>-SessionCommand ReturnLargeSet</code> + <code>-SessionId</code> pour paginer.</li>
+    <li><strong>Format JSON imbriqué</strong> dans la colonne <code>AuditData</code> : parser avec <code>ConvertFrom-Json</code>.</li>
+    <li><strong>Rétention finie</strong> : 180 jours en E3, exporter rapidement après détection.</li>
+  </ul>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 3 — MAILITEMSACCESSED
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">📧 MailItemsAccessed — l'événement clé BEC</h2>
+
+<div class="concept-card" style="margin:1rem 0">
+  <div class="concept-title">🔍 Pourquoi MailItemsAccessed est crucial</div>
+  Lors d'un compromis de boîte mail (Business Email Compromise), la question n°1 est : <strong>"qu'est-ce que l'attaquant a lu ?"</strong>. Avant 2019, il était <em>quasi impossible</em> de répondre à cette question. Microsoft a introduit l'événement <code>MailItemsAccessed</code> pour résoudre ce problème.
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li>Disponible avec licence <strong>E5 ou Microsoft Defender for Office 365 P2</strong></li>
+    <li>Active <strong>Mailbox Auditing</strong> by default depuis janvier 2019</li>
+    <li>Enregistre <em>chaque accès</em> à un email — interface, MAPI, EWS, REST API, mobile</li>
+    <li>Capture le <strong>InternetMessageId</strong> = identifiant unique de l'email accédé</li>
+  </ul>
+</div>
+
+<pre style="background:#0a0e14;padding:1rem;border-radius:6px;font-size:.78rem;overflow-x:auto">
+# Vérifier que Mailbox Audit est activé pour le user
+Get-Mailbox -Identity victim@company.ch | Format-List Audit*
+
+# Activer si nécessaire
+Set-Mailbox -Identity victim@company.ch -AuditEnabled $true
+
+# Recherche des MailItemsAccessed sur une période
+Search-MailboxAuditLog -Identity victim@company.ch `
+  -StartDate "2024-01-15" -EndDate "2024-01-20" `
+  -Operations MailItemsAccessed -ResultSize 5000 -ShowDetails
+
+# Filtrer par type d'accès (Sync = Outlook desktop, Bind = un par un)
+Search-UnifiedAuditLog -StartDate "2024-01-15" -EndDate "2024-01-20" `
+  -UserIds victim@company.ch -Operations MailItemsAccessed |
+  Select CreationDate, UserIds, ClientIP, Operations, AuditData
+</pre>
+
+<div class="concept-card" style="margin:1rem 0;background:rgba(0,229,204,.05);border-left:3px solid var(--cyan)">
+  <strong>🎯 Lecture des résultats :</strong>
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li><code>OperationProperties.MailAccessType</code> = <strong>Bind</strong> (lecture individuelle, app type Outlook/OWA) ou <strong>Sync</strong> (synchronisation client mobile/desktop)</li>
+    <li><code>Folders</code> contient la liste des dossiers accédés avec <code>FolderItems[].InternetMessageId</code></li>
+    <li><code>ClientIPAddress</code> = IP de l'attaquant (souvent pivot vers VPN, Tor, ou hosting)</li>
+    <li><code>ClientInfoString</code> = User-agent, peut révéler l'outil (ex: "Client=REST;ApiVersion=Beta..." pour scripts MS Graph)</li>
+  </ul>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 4 — AZURE AD SIGN-INS
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">🔐 Azure AD Sign-in Logs — qui s'est connecté ?</h2>
+
+<div class="concept-card" style="margin:1rem 0">
+  <div class="concept-title">🚪 Les portes d'entrée tracées</div>
+  Toute authentification réussie ou échouée est journalisée dans Azure AD. Critique pour détecter :
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li>Compromis de credentials (login depuis nouveau pays/IP)</li>
+    <li>MFA bypass / fatigue MFA</li>
+    <li>Token theft / Pass-the-Cookie</li>
+    <li>Impersonation via tokens OAuth</li>
+  </ul>
+</div>
+
+<div class="table-wrap" style="margin:1rem 0">
+<table>
+  <tr><th>Type de log</th><th>Contenu</th><th>Cas d'usage</th></tr>
+  <tr>
+    <td><strong>Sign-in logs</strong></td>
+    <td>Authentifications interactives & non-interactives, MFA result, IP, location, device, app cible</td>
+    <td>Détection de compromis, forensique BEC</td>
+  </tr>
+  <tr>
+    <td><strong>Audit logs</strong></td>
+    <td>Modifications administrateur (création user, ajout d'app, changement de policy)</td>
+    <td>Détection de persistence, escalade de privilèges</td>
+  </tr>
+  <tr>
+    <td><strong>Risk events</strong></td>
+    <td>Détections heuristiques : impossible travel, anonymous IP, leaked credentials</td>
+    <td>Triggers de Conditional Access, scoring</td>
+  </tr>
+  <tr>
+    <td><strong>Provisioning logs</strong></td>
+    <td>Synchronisations vers/depuis SaaS tiers</td>
+    <td>Détection d'apps OAuth malicieuses</td>
+  </tr>
+</table>
+</div>
+
+<pre style="background:#0a0e14;padding:1rem;border-radius:6px;font-size:.78rem;overflow-x:auto">
+# Connexion via Microsoft Graph PowerShell
+Connect-MgGraph -Scopes "AuditLog.Read.All","Directory.Read.All"
+
+# Sign-ins dans une fenêtre temporelle
+Get-MgAuditLogSignIn -Filter "createdDateTime ge 2024-01-15T00:00:00Z and createdDateTime le 2024-01-20T23:59:59Z and userPrincipalName eq 'victim@company.ch'" `
+  -Top 1000
+
+# Sign-ins échoués (potentiel password spray)
+Get-MgAuditLogSignIn -Filter "status/errorCode ne 0" -Top 500 |
+  Group-Object {$_.IpAddress} | Sort Count -Descending | Select -First 20
+
+# Audit logs (changements admin)
+Get-MgAuditLogDirectoryAudit -Filter "activityDateTime ge 2024-01-15" -Top 100
+</pre>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 5 — eDISCOVERY / PURVIEW
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">🔎 Microsoft Purview eDiscovery — collecte légale</h2>
+
+<div class="concept-card" style="margin:1rem 0">
+  <div class="concept-title">⚖️ eDiscovery — la voie "officielle" de collecte</div>
+  Microsoft Purview eDiscovery (anciennement Office 365 Compliance Center) est l'outil <strong>légalement préservant</strong> pour collecter du contenu (mails, fichiers, Teams, SharePoint) à des fins judiciaires ou réglementaires.
+</div>
+
+<div class="table-wrap" style="margin:1rem 0">
+<table>
+  <tr><th>Tier</th><th>Capacités</th><th>Quand l'utiliser</th></tr>
+  <tr>
+    <td><strong>Content Search</strong></td>
+    <td>Recherche cross-services, export PST/CSV/JSON</td>
+    <td>Triage initial, recherche par mot-clé</td>
+  </tr>
+  <tr>
+    <td><strong>eDiscovery (Standard)</strong></td>
+    <td>Cas, custodians, holds (legal hold)</td>
+    <td>Inclus E3, suffisant pour la plupart des cas</td>
+  </tr>
+  <tr>
+    <td><strong>eDiscovery (Premium)</strong></td>
+    <td>Workflow complet : custodian notice, OCR, ML relevance, redactions, review sets</td>
+    <td>E5 add-on. Litiges complexes, GDPR DSAR à grande échelle</td>
+  </tr>
+</table>
+</div>
+
+<div class="concept-card" style="margin:1rem 0;background:rgba(48,232,138,.05);border-left:3px solid var(--green)">
+  <strong>✅ Avantages forensiques d'eDiscovery</strong> :
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li><strong>Preservation Hold</strong> : empêche la suppression du contenu pendant l'enquête (durci la chaîne de custody)</li>
+    <li><strong>Hash de l'export</strong> : SHA-256 fourni automatiquement par Microsoft</li>
+    <li><strong>Manifest XML</strong> : décrit chaque item collecté (date, source, custodian)</li>
+    <li><strong>Format PST</strong> directement importable dans Outlook ou un parser forensique</li>
+    <li><strong>Légalement reconnu</strong> par les juridictions US, EU, CH</li>
+  </ul>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 6 — ATTAQUES TYPIQUES
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">🚨 Attaques typiques M365 — playbook IR</h2>
+
+<div class="concept-card" style="margin:1rem 0">
+  <div class="concept-title">📧 Business Email Compromise (BEC)</div>
+  <strong>Scénario :</strong> phishing → vol de credentials → connexion attaquant → règle de redirection invisible → interception de facture → fraude au virement (souvent ~50-500k CHF en Suisse).
+  <br><br>
+  <strong>Indicateurs à chercher :</strong>
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li><code>New-InboxRule</code> ou <code>Set-InboxRule</code> avec critères (forward to external, delete, mark as read) — très suspect</li>
+    <li>Sign-ins depuis pays inhabituel sans MFA (souvent VPN résidentiel)</li>
+    <li><code>MailItemsAccessed</code> sur des mails contenant des mots clés (factures, IBAN, CHF)</li>
+    <li><code>UserLoggedIn</code> avec <code>ApplicationId</code> non standard (apps OAuth abusées)</li>
+    <li>Nouvelles authentifications MFA enregistrées (<code>UserRegisteredSecurityInfo</code>)</li>
+  </ul>
+</div>
+
+<div class="concept-card" style="margin:1rem 0">
+  <div class="concept-title">🎫 Token theft / Pass-the-Cookie</div>
+  L'attaquant vole un cookie de session (via stealer malware ou AitM proxy comme Evilginx) et bypasse la MFA. La session est valide jusqu'à expiration (typiquement 60-90 minutes pour les tokens d'accès, 90 jours pour les refresh tokens).
+  <br><br>
+  <strong>Détection :</strong>
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li>Sign-in logs : <code>AuthenticationProtocol = "OAuth2"</code> + <code>UserAgent</code> incohérent</li>
+    <li>Risk events : "Anomalous token", "Token issuer anomaly"</li>
+    <li>Multiple <code>ClientIP</code> pour la même session token (ID identique)</li>
+    <li>Vérifier <code>UniqueTokenIdentifier</code> dans les sign-ins</li>
+  </ul>
+</div>
+
+<div class="concept-card" style="margin:1rem 0">
+  <div class="concept-title">🔓 Apps OAuth malicieuses</div>
+  L'utilisateur clique sur un lien "Login with Microsoft" qui demande des permissions excessives à une app tierce. Une fois consentie, l'app a accès à son mail/files/Teams sans MFA.
+  <br><br>
+  <strong>Détection :</strong>
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li><code>Add-ServicePrincipal</code> dans Audit Logs</li>
+    <li><code>Add OAuth2PermissionGrant</code> avec scopes <code>Mail.Read</code>, <code>Files.Read.All</code>, <code>offline_access</code></li>
+    <li>Dans Microsoft Defender : Cloud App Discovery</li>
+    <li>Liste des apps : <code>Get-MgServicePrincipal -Filter "displayName eq 'app suspicious'"</code></li>
+  </ul>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 7 — MICROSOFT GRAPH API
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">🔌 Microsoft Graph API — collecte programmatique</h2>
+
+<div class="concept-card" style="margin:1rem 0">
+  <div class="concept-title">🔧 Quand UAL ne suffit plus</div>
+  Pour des cas complexes (volumes énormes, automation, intégration SIEM), Microsoft Graph permet l'accès programmatique à toutes les données.
+</div>
+
+<pre style="background:#0a0e14;padding:1rem;border-radius:6px;font-size:.78rem;overflow-x:auto">
+# Authentification app-only avec un certificat
+Connect-MgGraph -ClientId "<APP_ID>" `
+  -TenantId "<TENANT_ID>" `
+  -CertificateThumbprint "<THUMBPRINT>"
+
+# Lister les emails d'un user (nécessite Mail.Read)
+Get-MgUserMessage -UserId victim@company.ch -Top 100 |
+  Select Id, Subject, From, ReceivedDateTime, BodyPreview
+
+# Récupérer une boîte mail complète (export EML par item)
+$messages = Get-MgUserMessage -UserId victim@company.ch -All
+$messages | ForEach-Object {
+    Get-MgUserMessageContent -UserId victim@company.ch -MessageId $_.Id `
+      -OutFile "exports\$($_.Id).eml"
+}
+
+# Lister les apps OAuth consenties par les users
+Get-MgUserOauth2PermissionGrant -UserId victim@company.ch
+</pre>
+
+<div class="warn-block" style="background:rgba(0,229,204,.06);border-left:3px solid var(--cyan);padding:.8rem;margin:1rem 0;border-radius:6px">
+  <strong>🛡️ Permissions Graph à connaître</strong> : <code>AuditLog.Read.All</code>, <code>Mail.Read</code> ou <code>Mail.ReadBasic.All</code>, <code>Files.Read.All</code>, <code>Directory.Read.All</code>, <code>SecurityEvents.Read.All</code>. <strong>Toujours utiliser app-only</strong> avec accès limité (just-in-time si possible) et journaliser les requêtes.
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 8 — DEFENDER / SENTINEL
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">🛡️ Microsoft Defender XDR & Sentinel</h2>
+
+<div class="table-wrap" style="margin:1rem 0">
+<table>
+  <tr><th>Produit</th><th>Couvre</th><th>Logs disponibles</th></tr>
+  <tr>
+    <td><strong>Defender for Office 365</strong></td>
+    <td>Email (anti-phishing, anti-malware), liens cliqués</td>
+    <td>UrlClickEvents, EmailEvents, EmailAttachmentInfo</td>
+  </tr>
+  <tr>
+    <td><strong>Defender for Identity</strong></td>
+    <td>Active Directory (domain controllers on-prem)</td>
+    <td>IdentityLogonEvents, IdentityDirectoryEvents</td>
+  </tr>
+  <tr>
+    <td><strong>Defender for Endpoint</strong></td>
+    <td>Postes de travail Windows/Mac/Linux</td>
+    <td>DeviceProcessEvents, DeviceFileEvents, DeviceNetworkEvents</td>
+  </tr>
+  <tr>
+    <td><strong>Defender for Cloud Apps</strong></td>
+    <td>SaaS visibility, anomaly detection</td>
+    <td>CloudAppEvents</td>
+  </tr>
+  <tr>
+    <td><strong>Microsoft Sentinel</strong></td>
+    <td>SIEM unifiant tous les logs (M365 + on-prem + tiers)</td>
+    <td>Workspaces Log Analytics, queries KQL</td>
+  </tr>
+</table>
+</div>
+
+<div class="concept-card" style="margin:1rem 0">
+  <strong>🔍 Hunting via KQL</strong> : Defender XDR et Sentinel utilisent <strong>Kusto Query Language</strong>. Exemple de hunting BEC :
+</div>
+
+<pre style="background:#0a0e14;padding:1rem;border-radius:6px;font-size:.78rem;overflow-x:auto">
+// KQL : sign-ins depuis IP suspectes + création de règle inbox dans la même heure
+let suspiciousLogins = SigninLogs
+| where TimeGenerated > ago(7d)
+| where ResultType == 0  // succès
+| where IPAddress !startswith "192.168" and IPAddress !startswith "10."
+| project TimeGenerated, UserPrincipalName, IPAddress, City=Location;
+let inboxRules = CloudAppEvents
+| where TimeGenerated > ago(7d)
+| where ActionType in ("New-InboxRule","Set-InboxRule");
+suspiciousLogins
+| join kind=inner inboxRules on $left.UserPrincipalName == $right.AccountObjectId
+| where abs(datetime_diff('minute', TimeGenerated, TimeGenerated1)) < 60
+| project User=UserPrincipalName, LoginIP=IPAddress, City, RuleAction=ActionType, RuleTime=TimeGenerated1
+</pre>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 9 — LIMITATIONS & PIÈGES
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">⚠️ Limitations & pièges récurrents</h2>
+
+<div class="warn-block" style="background:rgba(255,64,96,.08);border-left:3px solid var(--red);padding:1rem;margin:1rem 0;border-radius:6px">
+  <strong>Les 7 pièges classiques en M365 forensics</strong> :
+  <ol style="margin:.5rem 0 0 1.5rem">
+    <li><strong>UAL non activé</strong> au moment du compromis → données perdues sans rétroactivité</li>
+    <li><strong>MailItemsAccessed</strong> nécessite licence E5 — si le client a E3, on ne saura pas ce que l'attaquant a lu</li>
+    <li><strong>Suppression rapide</strong> : un attaquant peut supprimer ses traces dans Inbox Rules avant ton arrivée. Vérifier l'historique des règles via UAL et non leur état actuel.</li>
+    <li><strong>Légère désync timestamps</strong> entre services (UAL vs Sign-in vs Mailbox Audit) — toujours noter la timezone (UTC) et arrondir à la minute</li>
+    <li><strong>5000 résultats max</strong> par requête UAL : utiliser pagination ou exporter au plus tôt</li>
+    <li><strong>SDK PowerShell Connect-IPPSSession</strong> est <em>en dépréciation</em> — utiliser <code>Connect-ExchangeOnline</code> pour la nouvelle Compliance Center</li>
+    <li><strong>Identités hybrides</strong> (AD on-prem + AAD) : événements peuvent venir de l'on-prem (DC) sans apparaître dans Sign-in logs cloud. Croiser avec Event Logs Windows.</li>
+  </ol>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 10 — CADRE LÉGAL SUISSE
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">⚖️ Cadre juridique suisse</h2>
+
+<div class="concept-card" style="margin:1rem 0">
+  <div class="concept-title">🇨🇭 Particularités M365 en Suisse</div>
+  Microsoft a ouvert depuis 2019 des datacenters en Suisse (Genève + Zurich). Les clients M365 peuvent demander que leurs données <strong>au repos</strong> soient stockées en CH. Cela ne dispense PAS de la réquisition via réseau Microsoft Corp.
+</div>
+
+<div class="table-wrap" style="margin:1rem 0">
+<table>
+  <tr><th>Article / Règle</th><th>Application M365</th></tr>
+  <tr>
+    <td><strong>Art. 263 CPP</strong></td>
+    <td>Séquestre logique des comptes M365 (via réquisition Microsoft Suisse)</td>
+  </tr>
+  <tr>
+    <td><strong>Art. 269 CPP</strong></td>
+    <td>Surveillance live = monitoring en temps réel des emails (très restreint)</td>
+  </tr>
+  <tr>
+    <td><strong>Art. 273 CPP</strong></td>
+    <td>Données accessoires de communication = sign-in logs, headers email métadonnées</td>
+  </tr>
+  <tr>
+    <td><strong>Art. 67 EIMP</strong></td>
+    <td>Si données chez Microsoft Corp (US), passer par MLAT US-CH</td>
+  </tr>
+  <tr>
+    <td><strong>Art. 22 LPD</strong></td>
+    <td>Données de santé, croyance, opinions politiques dans les mails = catégories sensibles</td>
+  </tr>
+  <tr>
+    <td><strong>nLPD art. 24</strong></td>
+    <td>Notification d'incident dans les 72h en cas de compromis (BEC = compromis)</td>
+  </tr>
+  <tr>
+    <td><strong>FINMA Circ. 2008/21</strong></td>
+    <td>Banques : reporting des cyberincidents M365 dans les 24h</td>
+  </tr>
+  <tr>
+    <td><strong>art. 248 CPP (scellés)</strong></td>
+    <td>Avocats, médecins, journalistes : leur boîte M365 peut être mise sous scellés</td>
+  </tr>
+</table>
+</div>
+
+<div class="concept-card" style="margin:1rem 0;background:rgba(255,159,64,.08);border-left:3px solid var(--orange)">
+  <strong>📌 Workflow Suisse typique en cas de BEC</strong> :
+  <ol style="margin:.5rem 0 0 1.5rem">
+    <li>Détection (souvent par la banque qui voit le virement)</li>
+    <li>Plainte pénale (art. 146 CP escroquerie + art. 143 CP soustraction de données)</li>
+    <li>Réquisition à l'entreprise (art. 265 CPP)</li>
+    <li>L'entreprise mandate un expert privé (Compass, Quovadis, etc.) qui collecte UAL/Sign-ins via comptes admin avec PowerShell ou eDiscovery</li>
+    <li>Hash + manifest + chaîne de custody</li>
+    <li>Si suspect identifié à l'étranger : EIMP via OFJ Berne</li>
+    <li>Procureur cantonal (Polcyber) coordonne</li>
+  </ol>
+</div>
+
+<div class="exam-tip" style="margin:1rem 0;background:rgba(0,229,204,.06);border-left:3px solid var(--cyan);padding:1rem;border-radius:6px">
+  <strong>⚖️ Examen CAS-IN — points clés M365</strong> :
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li>Unified Audit Log (UAL) = source n°1, à activer AVANT incident (rétroactivité = 0)</li>
+    <li>Rétention UAL : 180j (E3), 1 an (E5), 10 ans (E5 + Audit add-on)</li>
+    <li>MailItemsAccessed : seul moyen de savoir ce qu'a lu un attaquant — nécessite E5</li>
+    <li>Bind = lecture individuelle (OWA), Sync = synchro mobile/desktop</li>
+    <li>InboxRules suspectes = signature BEC classique</li>
+    <li>Sign-in Logs Azure AD = qui s'est connecté, depuis où, avec quelle MFA</li>
+    <li>Token theft via AitM (Evilginx) = bypass MFA, détectable via UniqueTokenIdentifier</li>
+    <li>eDiscovery = collecte légalement préservante (PST + manifest + hash)</li>
+    <li>Microsoft Graph = collecte programmatique (Mail.Read, Files.Read.All)</li>
+    <li>nLPD art. 24 = notification dans les 72h en cas de compromis</li>
+  </ul>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     LINKS
+═════════════════════════════════════════════════════════ -->
+<div class="link-bar" style="margin-top:2rem">
+  <div class="link-group">
+    <span class="link-group-label">Prérequis :</span>
+    <a href="cloud_forensique.html">📖 Cloud Forensics</a>
+    <a href="email_forensique.html">📖 Email Forensics</a>
+    <a href="incident_response.html">📖 Incident Response</a>
+  </div>
+  <div class="link-group">
+    <span class="link-group-label">Pratiquer :</span>
+    <a href="../tp.html">🧪 TP</a>
+    <a href="../scene.html">🚨 Scènes</a>
+  </div>
+  <div class="link-group">
+    <span class="link-group-label">Voir aussi :</span>
+    <a href="ios_forensique.html">🔗 iOS Forensique</a>
+    <a href="android_forensique.html">🔗 Android Forensique</a>
+    <a href="email_headers_smtp_forensique.html">🔗 Headers Email</a>
+    <a href="nlpd.html">🔗 nLPD</a>
+  </div>
+</div>
+
+<footer style="margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.75rem;color:var(--muted);text-align:center">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span><br>
+  <span>Sources : Microsoft Learn (Compliance + Defender) · CISA M365 Hunting Guide · Mandiant M-Trends · BlueVoyant DFIR Cloud · OFJ EIMP</span>
+</footer>
+
+</div>
+</body>
+</html>
