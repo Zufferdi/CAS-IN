@@ -4,7 +4,7 @@ generate_counts.py — CAS-IN
 Génère le fichier counts.json à partir de la vérité terrain du repo :
   - manifest.json       → nombre de fiches
   - questions.json      → nombre de questions
-  - scenes.js / scene.html → nombre de scènes
+  - scenes/index.json   → nombre de scènes (lazy-load v3.0+)
   - tp/tp-data.js       → nombre de catégories de TP
 
 Usage :
@@ -76,14 +76,36 @@ def count_fiches(root: Path) -> int:
 
 
 def count_scenes(root: Path) -> int:
-    """Compte les scènes dans scenes.js (export const SCENES = [...])."""
+    """Compte les scènes depuis scenes/index.json (source de vérité depuis le refactor v3.0).
+
+    Fallback ordonné :
+      1. scenes/index.json (méta lazy-load, refactor v3.0+)
+      2. listing scenes/*.json (au cas où l'index serait absent)
+      3. scenes.js legacy (export const SCENES = [...])
+    """
+    # 1. scenes/index.json (méthode actuelle)
+    idx_path = root / "scenes" / "index.json"
+    if idx_path.exists():
+        try:
+            data = json.loads(idx_path.read_text(encoding="utf-8"))
+            if isinstance(data, list):
+                return len(data)
+        except json.JSONDecodeError as e:
+            print(f"[warn] scenes/index.json invalide : {e}", file=sys.stderr)
+
+    # 2. Fallback : listing scenes/*.json
+    sdir = root / "scenes"
+    if sdir.exists():
+        files = [p for p in sdir.glob("*.json") if p.name != "index.json"]
+        if files:
+            return len(files)
+
+    # 3. Fallback legacy : scenes.js / scene.html
     for candidate in ("scenes.js", "scene.html"):
         path = root / candidate
         if not path.exists():
             continue
         content = path.read_text(encoding="utf-8", errors="ignore")
-        # Compter les entrées dans le tableau SCENES
-        # Chaque scène commence par { id:"..." ou { "id":"..."
         m = re.search(
             r'(?:const|var|let)\s+SCENES\s*=\s*\[(.*?)\];',
             content,
@@ -91,7 +113,6 @@ def count_scenes(root: Path) -> int:
         )
         if m:
             block = m.group(1)
-            # Compter les `id:` ou `"id":` au premier niveau
             return len(re.findall(r'(?:^|[\[,])\s*\{\s*["\']?id["\']?\s*:', block))
     return 0
 
