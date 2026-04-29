@@ -115,7 +115,12 @@
   // Exposé pour les boutons "Vue débutant" + drawer
   window.setLandingViewMode = function (mode) {
     if (!['matrix', 'dfir', 'auto'].includes(mode)) return;
-    ss('casIn_viewMode', mode);
+    // Préférer Profile (qui synchronise aussi la clé legacy)
+    if (window.Profile && typeof window.Profile.setViewMode === 'function') {
+      window.Profile.setViewMode(mode);
+    } else {
+      ss('casIn_viewMode', mode);
+    }
     const count = parseInt(gs('casIn_landingViews', '0'), 10) || 0;
     applyView(getEffectiveView(count));
   };
@@ -159,15 +164,42 @@
   }
 
   function populateDfirView() {
-    const stats   = gl('casIn_stats', { xp: 0, total: 0, correct: 0, streak: 0, maxStreak: 0 });
-    const fiches  = gl('casIn_readFiches_v4', []);
-    const tpSolved = gl('tp_solved', []);
-    const scenes  = gl('casIn_scenes_done', []);
-    const exams   = gl('casIn_examHistory', []);
-    const totalQ  = parseInt(document.querySelector('[data-count="questions"]')?.textContent || '1439', 10);
-    const totalF  = parseInt(document.querySelector('[data-count="fiches"]')?.textContent || '54', 10);
-    const totalT  = parseInt(document.querySelector('[data-count="tp_exercises"]')?.textContent || '20', 10);
-    const totalS  = parseInt(document.querySelector('[data-count="scenes"]')?.textContent || '18', 10);
+    // === F1 : source unique via Profile (avec fallback robuste) ===
+    let xp, totalAnswered, streak, maxStreak, agentName, fichesUniq, tpSolvedCount, scenesBeaten;
+    let useProfile = false;
+    if (window.Profile && typeof window.Profile.snapshot === 'function') {
+      const snap = window.Profile.snapshot();
+      xp = snap.xp;
+      totalAnswered = snap.stats.questions;
+      streak = snap.streak.current;
+      maxStreak = snap.streak.max;
+      agentName = snap.agent.name;
+      fichesUniq = snap.stats.fichesRead;
+      tpSolvedCount = snap.stats.tpSolved;
+      scenesBeaten = snap.stats.scenesBeaten;
+      useProfile = true;
+    } else {
+      // Fallback historique
+      xp = parseInt(gs('xp', '0'), 10) || 0;
+      const qs = gl('qs', {});
+      totalAnswered = Object.keys(qs).length;
+      streak = parseInt(gs('dayStreak', '0'), 10) || 0;
+      maxStreak = streak;
+      const pseudo = (gs('casIn_agentPseudo', '') || '').trim();
+      agentName = pseudo ? pseudo.toUpperCase() : 'AGENT';
+      const fiches = gl('casIn_readFiches_v4', []);
+      fichesUniq = new Set(fiches.map(h => String(h).replace('.html', ''))).size;
+      const tpMap = gl('tp_solved', {});
+      tpSolvedCount = Object.values(tpMap || {}).reduce((a, b) => a + (parseInt(b, 10) || 0), 0);
+      const sceneMap = gl('scene_results', {});
+      scenesBeaten = Object.values(sceneMap || {}).filter(v => v && (v.beaten || v.completed || v.win)).length;
+    }
+
+    const exams = gl('casIn_examHistory', []);
+    const totalQ = parseInt(document.querySelector('[data-count="questions"]')?.textContent || '1439', 10);
+    const totalF = parseInt(document.querySelector('[data-count="fiches"]')?.textContent || '54', 10);
+    const totalT = parseInt(document.querySelector('[data-count="tp_exercises"]')?.textContent || '20', 10);
+    const totalS = parseInt(document.querySelector('[data-count="scenes"]')?.textContent || '18', 10);
 
     // Header status bar
     const sessionN = parseInt(gs('casIn_landingViews', '1'), 10) || 1;
@@ -180,35 +212,29 @@
     if (lat) lat.textContent = String(8 + Math.floor(Math.random() * 18));
 
     // Carte agent
-    const xp = stats.xp || 0;
     const [, emoji, name, clearance] = getRank(xp);
-    const pseudo = (gs('casIn_agentPseudo', '') || '').trim();
-    const agentName = pseudo ? pseudo.toUpperCase() : 'AGENT';
     const elName = document.getElementById('dfir-agent-name');
     const elRank = document.getElementById('dfir-agent-rank');
     if (elName) elName.textContent = agentName;
     if (elRank) elRank.textContent = `${emoji} ${name} · clearance lvl ${clearance}`;
 
     // Série
-    const streak = stats.streak || 0;
-    const maxStreak = stats.maxStreak || 0;
     const elStreak = document.getElementById('dfir-streak-num');
     if (elStreak) elStreak.textContent = String(streak);
 
     // Dossier ouvert : visible seulement si une session quiz est en cours
     const resumeCard = document.getElementById('dfir-resume-card');
     if (resumeCard) {
-      const inProgress = (stats.total || 0) > 0 && (stats.total || 0) < totalQ;
+      const inProgress = totalAnswered > 0 && totalAnswered < totalQ;
       if (inProgress) {
         resumeCard.hidden = false;
         const elT = document.getElementById('dfir-resume-title');
         const elM = document.getElementById('dfir-resume-meta');
         const elF = document.getElementById('dfir-resume-fill');
-        if (elT) elT.textContent = `Quiz · question ${stats.total + 1} / ${totalQ}`;
+        if (elT) elT.textContent = `Quiz · question ${totalAnswered + 1} / ${totalQ}`;
         const meta = [];
         const lastVisit = parseInt(gs('casIn_lastQuizVisit', '0'), 10) || 0;
         if (lastVisit) meta.push('↻ ' + timeAgo(lastVisit));
-        if (stats.score) meta.push(`Score : ${fmtNumber(stats.score)}`);
         if (streak >= STREAK_RISK_DAYS && lastVisit) {
           const hoursSinceLast = (Date.now() - lastVisit) / 3_600_000;
           const hoursLeft = Math.max(0, 24 - hoursSinceLast);
@@ -217,14 +243,19 @@
           }
         }
         if (elM) elM.textContent = meta.join(' · ') || '—';
-        if (elF) elF.style.width = Math.round((stats.total / totalQ) * 100) + '%';
+        if (elF) elF.style.width = Math.round((totalAnswered / totalQ) * 100) + '%';
       } else {
         resumeCard.hidden = true;
       }
     }
 
     // Stats : XP / précision / prochain rang
-    const acc = stats.total ? Math.round((stats.correct / stats.total) * 100) : null;
+    // Précision : on lit casIn_stats si dispo (pour correct/total) sinon on agrège examHist
+    let acc = null;
+    if (exams.length) {
+      const sumScore = exams.reduce((a, ex) => a + (ex.score || 0), 0);
+      acc = Math.round(sumScore / exams.length);
+    }
     const [nextXp, , nextName] = getNextRank(xp);
     const xpToNext = Math.max(0, nextXp - xp);
 
@@ -239,19 +270,18 @@
       elAccV.textContent = acc !== null ? acc + '%' : '—';
       elAccV.style.color = acc === null ? '' : (acc >= 75 ? '#00ff41' : acc >= 60 ? '#ffbd2e' : '#ff4040');
     }
-    if (elAccS) elAccS.textContent = stats.total ? `sur ${fmtNumber(stats.total)} q` : 'pas encore d\'historique';
+    if (elAccS) elAccS.textContent = totalAnswered ? `sur ${fmtNumber(totalAnswered)} q` : 'pas encore d\'historique';
 
     const elNxV = document.getElementById('dfir-next-val');
     const elNxS = document.getElementById('dfir-next-sub');
     if (elNxV) elNxV.innerHTML = xpToNext ? `${fmtNumber(xpToNext)}<span style="font-size:.55rem;opacity:.5"> XP</span>` : 'MAX';
     if (elNxS) elNxS.textContent = nextName ? `→ ${nextName}` : 'rang max';
 
-    // Modules : compteurs + jauges + module actif
-    const fichesUniq = new Set(fiches.map(h => String(h).replace('.html', ''))).size;
+    // Modules : compteurs + jauges + module actif (variables fichesUniq/tpSolvedCount/scenesBeaten/totalAnswered déjà calculées en haut)
     setMod('fiches', fichesUniq, totalF);
-    setMod('tp', tpSolved.length || 0, totalT);
-    setMod('scene', scenes.length || 0, totalS);
-    setMod('quiz', stats.total || 0, totalQ);
+    setMod('tp', tpSolvedCount, totalT);
+    setMod('scene', scenesBeaten, totalS);
+    setMod('quiz', totalAnswered, totalQ);
 
     // Marquer le module actif (= dernier sur lequel on bossait)
     const lastSection = gs('casIn_lastSection', 'quiz');
@@ -275,10 +305,31 @@
   // Drawer (extrait de l'ancien IIFE inline)
   // ─────────────────────────────────────────────────────────
   function drLoad() {
-    const q = gl('casIn_stats', { xp: 0, total: 0, streak: 0 });
-    const f = gl('casIn_readFiches_v4', []);
-    const e = gl('casIn_examHistory', []);
-    const xp = q.xp || 0;
+    // === F1 : préférer Profile si chargé pour l'agrégation correcte ===
+    let xp, totalQ, streak, fLen, eLen;
+    let snapAch = null;
+    if (window.Profile && typeof window.Profile.snapshot === 'function') {
+      const snap = window.Profile.snapshot();
+      xp     = snap.xp;
+      totalQ = snap.stats.questions;
+      streak = snap.streak.current;
+      fLen   = snap.stats.fichesRead;
+      eLen   = snap.stats.examsPassed;
+    } else {
+      // Fallback historique (ne devrait plus arriver, mais robustesse)
+      const q = gl('casIn_stats', { xp: 0, total: 0, streak: 0 });
+      const f = gl('casIn_readFiches_v4', []);
+      const e = gl('casIn_examHistory', []);
+      xp     = q.xp || 0;
+      totalQ = q.total || 0;
+      streak = q.streak || 0;
+      fLen   = f.length;
+      eLen   = e.length;
+    }
+    // Lire les fiches et l'examHistory pour le radar et la liste détaillée
+    const fichesArr = gl('casIn_readFiches_v4', []);
+    const examArr = gl('casIn_examHistory', []);
+
     const [, re, rn] = getRank(xp);
     const [nx] = getNextRank(xp);
     const prev = RANKS.filter(([x]) => x <= xp).pop()?.[0] || 0;
@@ -290,13 +341,13 @@
     const fillEl = document.getElementById('dr-xp-fill');
     if (fillEl) fillEl.style.width = pct + '%';
     setText('dr-xp-next', '→ Prochain rang : ' + fmtNumber(nx) + ' XP');
-    setText('dr-sq', fmtNumber(q.total || 0));
-    setText('dr-sf', String(f.length));
-    setText('dr-se', String(e.length));
-    setText('dr-ss', String(q.streak || 0));
+    setText('dr-sq', fmtNumber(totalQ));
+    setText('dr-sf', String(fLen));
+    setText('dr-se', String(eLen));
+    setText('dr-ss', String(streak));
 
-    // Modules read par chapitre
-    const rs = new Set(f.map(h => String(h).replace('.html', '')));
+    // Modules read par chapitre (utilise fichesArr)
+    const rs = new Set(fichesArr.map(h => String(h).replace('.html', '')));
     const modBars = document.getElementById('dr-modbars');
     if (modBars) {
       modBars.innerHTML = '';
@@ -331,7 +382,7 @@
     const exEl = document.getElementById('dr-exams');
     if (exEl) {
       exEl.innerHTML = '';
-      if (!e.length) {
+      if (!examArr.length) {
         const span = document.createElement('span');
         span.style.cssText = 'font-size:.6rem;color:rgba(0,255,65,.3)';
         const a = document.createElement('a');
@@ -341,7 +392,7 @@
         span.append('Aucun examen encore · ', a);
         exEl.appendChild(span);
       } else {
-        e.slice(0, 5).forEach(ex => {
+        examArr.slice(0, 5).forEach(ex => {
           const d = new Date(ex.date).toLocaleDateString('fr', {
             day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
           });
@@ -370,7 +421,7 @@
       }
     }
 
-    drRadar(e);
+    drRadar(examArr);
     syncViewToggleButtons();
   }
 
@@ -487,11 +538,16 @@
 
   window.drReset = function () {
     if (!confirm('Réinitialiser TOUTE la progression ?')) return;
-    [
-      'casIn_stats', 'casIn_readFiches_v4', 'casIn_examHistory',
-      'casIn_scenes_done', 'tp_solved', 'tp_streak',
-      'casIn_landingViews', 'casIn_landingLastVisit', 'casIn_viewMode',
-    ].forEach(k => localStorage.removeItem(k));
+    if (window.Profile && typeof window.Profile.reset === 'function') {
+      window.Profile.reset();
+    } else {
+      // Fallback historique
+      [
+        'casIn_stats', 'casIn_readFiches_v4', 'casIn_examHistory',
+        'casIn_scenes_done', 'tp_solved', 'tp_streak',
+        'casIn_landingViews', 'casIn_landingLastVisit', 'casIn_viewMode',
+      ].forEach(k => localStorage.removeItem(k));
+    }
     drLoad();
     location.reload();
   };
