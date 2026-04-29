@@ -8,7 +8,7 @@ Un outil d'entraînement pour les étudiants du **CAS en Investigation Numériqu
 
 | Section | Contenu |
 |---|---|
-| 💊 **Pilule bleue** — Fiches | 92 fiches de révision structurées par catégorie (FS, Windows, crypto, réseau, droit, plateformes, acquisition) |
+| 💊 **Pilule bleue** — Fiches | 95 fiches de révision structurées par catégorie (FS, Windows, crypto, réseau, droit, plateformes, acquisition) |
 | 💊 **Pilule verte** — TP | 25 catégories d'exercices : FAT, NTFS, exFAT, EXT, HFS+, endianness, magic bytes, hashes, droit pénal, email, réseau, IR, etc. |
 | 💊 **Pilule orange** — Scènes | 90 scénarios DFIR immersifs avec choix multiples, conséquences procédurales, références légales (Art. 141 CPP, ACPO, NIST) |
 | 💊 **Pilule rouge** — Quiz | 1750 questions gamifiées (XP, rangs, streaks, défi quotidien, mode survie, SM2 spaced repetition) |
@@ -27,7 +27,7 @@ CAS-IN/
 ├── exam.html               # Mode examen blanc
 ├── offline.html            # Page fallback hors-ligne (PWA)
 │
-├── manifest.json           # Source de vérité : 92 fiches × 7 catégories
+├── manifest.json           # Source de vérité : 95 fiches × 7 catégories
 ├── pwa.manifest.json       # Manifest PWA (W3C)
 ├── counts.json             # Auto-généré : nombres affichés partout
 ├── questions.json          # 1750 questions
@@ -53,7 +53,7 @@ CAS-IN/
 │   ├── tp-data.js
 │   └── tp-engine.js        # Générateurs d'exercices aléatoires
 │
-├── fiches/                 # 92 fiches HTML
+├── fiches/                 # 95 fiches HTML
 ├── scripts/                # Outils Python (CI)
 │   ├── check_questions.py  # QC questions.json (utilisé en GitHub Actions)
 │   ├── generate_counts.py  # Régénère counts.json
@@ -64,7 +64,7 @@ CAS-IN/
 
 ## PWA
 
-- **Service Worker v29** : Network-First pour HTML/JSON, Cache-First pour CSS/JS, fallback `offline.html`.
+- **Service Worker v30** : Network-First pour HTML/JSON, Cache-First pour CSS/JS, fallback `offline.html`.
 - **Installable** sur iOS, Android, desktop. Bannière d'install proposée après 3 s.
 - **Fonctionne 100 % offline** une fois la première visite faite.
 
