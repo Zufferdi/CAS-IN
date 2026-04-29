@@ -294,9 +294,6 @@ body        { overflow: hidden; height: 100vh; }
 }
 .sb-group:not(.collapsed) .sb-group-name { color: var(--text); }
 </style>
-<link rel="stylesheet" href="style/profile-banner.css">
-<script src="js/cas-in-profile.js" defer></script>
-<script src="js/tp-profile-bridge.js" defer></script>
 </head>
 <body>
 
@@ -329,7 +326,7 @@ body        { overflow: hidden; height: 100vh; }
         <div class="sb-group-header" onclick="toggleGrp('grp-fs')">
           <span class="sb-group-icon">💾</span>
           <span class="sb-group-name">Systèmes de fichiers</span>
-          <span class="sb-group-count" id="gc-fs">9</span>
+          <span class="sb-group-count" id="gc-fs">13</span>
           <div class="sb-grp-prog"><div class="sb-grp-track"><div class="sb-grp-fill" id="gp-fs" style="width:0%;background:var(--gold)"></div></div><span class="sb-grp-label" id="gl-fs">0%</span></div>
           <span class="sb-arrow">›</span>
         </div>
@@ -343,6 +340,10 @@ body        { overflow: hidden; height: 100vh; }
           <button type="button" class="sb-cat"        data-cat="runlist"     onclick="go('runlist',this)">     <span class="sb-cat-icon">🧩</span><span class="sb-cat-name">Run List NTFS</span>         <span class="sb-badge sb-badge-none" id="bd-runlist">—</span></button>
           <button type="button" class="sb-cat"        data-cat="effacement"  onclick="go('effacement',this)">  <span class="sb-cat-icon">🗑</span><span class="sb-cat-name">Effacement FAT</span>        <span class="sb-badge sb-badge-none" id="bd-effacement">—</span></button>
           <button type="button" class="sb-cat"        data-cat="timestomping" onclick="go('timestomping',this)"><span class="sb-cat-icon">🕰</span><span class="sb-cat-name">Timestomping</span>          <span class="sb-badge sb-badge-none" id="bd-timestomping">—</span></button>
+          <button type="button" class="sb-cat"        data-cat="mbr"         onclick="go('mbr',this)">         <span class="sb-cat-icon">💽</span><span class="sb-cat-name">MBR / GPT</span>             <span class="sb-badge sb-badge-none" id="bd-mbr">—</span></button>
+          <button type="button" class="sb-cat"        data-cat="direntry"    onclick="go('direntry',this)">    <span class="sb-cat-icon">📁</span><span class="sb-cat-name">Directory Entry FAT</span>   <span class="sb-badge sb-badge-none" id="bd-direntry">—</span></button>
+          <button type="button" class="sb-cat"        data-cat="hexdump"     onclick="go('hexdump',this)">     <span class="sb-cat-icon">🔬</span><span class="sb-cat-name">Dump Hex en contexte</span>  <span class="sb-badge sb-badge-none" id="bd-hexdump">—</span></button>
+          <button type="button" class="sb-cat"        data-cat="slackspace"  onclick="go('slackspace',this)">  <span class="sb-cat-icon">🪣</span><span class="sb-cat-name">Slack Space</span>           <span class="sb-badge sb-badge-none" id="bd-slackspace">—</span></button>
         </div>
       </div>
 
@@ -457,7 +458,6 @@ body        { overflow: hidden; height: 100vh; }
 
 <script src="tp/tp-data.js"></script>
 <script src="tp/tp-engine.js"></script>
-<script src="js/profile-banner.js" defer></script>
 <script>
 // ── Catégorie metadata ────────────────────────────────────────
 const CAT_META = {
@@ -481,13 +481,18 @@ const CAT_META = {
   droitpenal:  {icon:'⚖️', name:'Droit pénal',          sub:'CPP suisse, LSCPT, nLPD — procédure et articles'},
   glossaire:   {icon:'🗂', name:'Glossaire',             sub:'Termes forensiques essentiels — définitions'},
   examen:      {icon:'📋', name:'Série Examen',          sub:'Questions typiques de l\'examen CAS-IN final'},
+  mbr:         {icon:'💽', name:'MBR / GPT',             sub:'Table de partitions — partition entry, type, offset absolu'},
+  direntry:    {icon:'📁', name:'Directory Entry FAT',   sub:'Entrée de répertoire 32 octets — nom, attributs, cluster, timestamps'},
+  hexdump:     {icon:'🔬', name:'Dump Hex en contexte',  sub:'Localiser + décoder un champ dans un secteur brut — 3 niveaux d\'indices'},
+  slackspace:  {icon:'🪣', name:'Slack Space',           sub:'File slack, RAM slack, calcul direct et inverse — FAT'},
 };
 
 const CAT_MAX = {
   endian:5, timestamp:5, bitmap:5, fat:5, magic:5, mismatch:5,
   runlist:5, effacement:5, timestomping:5,
   hextable:5, fsidentify:5, offset:5, bases:5, hash:5,
-  email:5, network:5, ir:5, droitpenal:5, glossaire:5, examen:10
+  email:5, network:5, ir:5, droitpenal:5, glossaire:5, examen:10,
+  mbr:5, direntry:5, hexdump:5, slackspace:5
 };
 
 let currentCat = 'endian';
@@ -500,7 +505,7 @@ function go(cat, btn) {
   document.querySelectorAll('.sb-cat').forEach(b => b.classList.remove('active','active-exam','active-tool'));
   if (btn) btn.classList.add(cat === 'examen' ? 'active-exam' : 'active');
   // Open the group containing this category
-  const catGroup = {'endian':'grp-fs','timestamp':'grp-fs','bitmap':'grp-fs','fat':'grp-fs','magic':'grp-fs','mismatch':'grp-fs','runlist':'grp-fs','effacement':'grp-fs','timestomping':'grp-fs','hextable':'grp-calc','fsidentify':'grp-calc','offset':'grp-calc','bases':'grp-calc','hash':'grp-calc','email':'grp-inv','network':'grp-inv','ir':'grp-inv','droitpenal':'grp-inv','glossaire':'grp-inv','examen':'grp-inv'};
+  const catGroup = {'endian':'grp-fs','timestamp':'grp-fs','bitmap':'grp-fs','fat':'grp-fs','magic':'grp-fs','mismatch':'grp-fs','runlist':'grp-fs','effacement':'grp-fs','timestomping':'grp-fs','mbr':'grp-fs','direntry':'grp-fs','hexdump':'grp-fs','slackspace':'grp-fs','hextable':'grp-calc','fsidentify':'grp-calc','offset':'grp-calc','bases':'grp-calc','hash':'grp-calc','email':'grp-inv','network':'grp-inv','ir':'grp-inv','droitpenal':'grp-inv','glossaire':'grp-inv','examen':'grp-inv'};
   if (catGroup[cat]) { document.querySelectorAll('.sb-group').forEach(g=>g.classList.add('collapsed')); document.getElementById(catGroup[cat]).classList.remove('collapsed'); }
   // Update mobile pills
   document.querySelectorAll('.mob-pill').forEach(p => p.classList.toggle('active', p.dataset.cat === cat));
@@ -558,7 +563,7 @@ function toggleGrp(id) {
 function updateGroupProgress() {
   // Mise à jour barres de progression dans les headers des groupes
   const groups = {
-    fs:   ['endian','timestamp','bitmap','fat','magic','mismatch','runlist','effacement','timestomping'],
+    fs:   ['endian','timestamp','bitmap','fat','magic','mismatch','runlist','effacement','timestomping','mbr','direntry','hexdump','slackspace'],
     calc: ['hextable','fsidentify','offset','bases','hash'],
     inv:  ['email','network','ir','droitpenal','glossaire','examen'],
   };
