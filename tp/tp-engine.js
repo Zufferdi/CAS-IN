@@ -5027,7 +5027,7 @@ function genHexDump() {
           `Mauvaise lecture. ${explainFull}`);
         div.querySelector('#btn-next-hd').style.display = 'inline-block';
         div.querySelector('#ex-num-hd').className = 'ex-num ' + (isOk ? 'solved' : 'error');
-        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+        div.className = 'ex-card ' + (isOk ? 'solved' : 'error');
       });
     });
   } else {
@@ -5045,7 +5045,7 @@ function genHexDump() {
         : `❌ Valeur attendue : <strong>"${answerDisplay}"</strong> — 4 lettres + 4 espaces. ${hints[1]}`;
       div.querySelector('#btn-next-hd').style.display = 'inline-block';
       div.querySelector('#ex-num-hd').className = 'ex-num ' + (isOk ? 'solved' : 'error');
-      div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      div.className = 'ex-card ' + (isOk ? 'solved' : 'error');
     };
     div.querySelector('#hd-val-btn').addEventListener('click', validate);
     div.querySelector('#hd-text-input').addEventListener('keydown', e => { if(e.key==='Enter') validate(); });
@@ -5062,7 +5062,7 @@ function genHexDump() {
 //   0 — Calculer le file slack (taille logique → espace résiduel dans le dernier cluster)
 //   1 — Calculer le RAM slack (dernier secteur partiellement rempli, zéros de padding)
 //   2 — Calculer la taille logique max d'un fichier sans slack (fichier "parfait")
-//   3 — Cas inverse : donner le slack → retrouver la taille du fichier
+//   3 — Cas inverse : donner le slack → retrouver la taille du fichier [TODO — non implémenté]
 //
 // Valeurs volontairement petites : BPS=512, SPC ≤ 8, taille fichier ≤ 32 Ko
 //
@@ -5205,7 +5205,7 @@ function genSlackSpace() {
               `Rappel : file_slack = taille_cluster − (taille_fichier mod taille_cluster) = ${cs} − ${residual} = ${fileSlack} o`);
         div.querySelector('#btn-next-ss').style.display = 'inline-block';
         div.querySelector('#ex-num-ss').className = 'ex-num ' + (isOk ? 'solved' : 'error');
-        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+        div.className = 'ex-card ' + (isOk ? 'solved' : 'error');
       });
     });
     return div;
@@ -5325,7 +5325,7 @@ function genSlackSpace() {
               `RAM slack = BPS − (taille_fichier mod BPS) = ${bps} − ${residualBytes} = ${ramSlack} o.`);
         div.querySelector('#btn-next-ss').style.display = 'inline-block';
         div.querySelector('#ex-num-ss').className = 'ex-num ' + (isOk ? 'solved' : 'error');
-        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+        div.className = 'ex-card ' + (isOk ? 'solved' : 'error');
       });
     });
     return div;
@@ -5420,7 +5420,7 @@ function genSlackSpace() {
           : formatChoiceFeedback(false, explain, `Taille max sans slack = N × CS = ${nClusters} × ${cs} = ${answer} o.`);
         div.querySelector('#btn-next-ss').style.display = 'inline-block';
         div.querySelector('#ex-num-ss').className = 'ex-num ' + (isOk ? 'solved' : 'error');
-        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+        div.className = 'ex-card ' + (isOk ? 'solved' : 'error');
       });
     });
     return div;
@@ -5525,7 +5525,7 @@ function genSlackSpace() {
               `Taille logique = total_alloué − file_slack = ${totalAlloc} − ${fileSlack} = ${fileSize} o.`);
         div.querySelector('#btn-next-ss').style.display = 'inline-block';
         div.querySelector('#ex-num-ss').className = 'ex-num ' + (isOk ? 'solved' : 'error');
-        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+        div.className = 'ex-card ' + (isOk ? 'solved' : 'error');
       });
     });
     return div;
@@ -5540,7 +5540,7 @@ function genSlackSpace() {
 //   0 — Lire un champ précis d'une partition entry MBR (LBA start, size, type)
 //   1 — Calculer l'offset absolu d'une partition (LBA start × 512)
 //   2 — Identifier le type de partition via le byte de type (0x07, 0x0B, 0x83…)
-//   3 — Détecter MBR vs GPT depuis le premier secteur
+//   3 — Détecter MBR vs GPT depuis le premier secteur [TODO — non implémenté]
 //
 function genMBR() {
   const subtype = rand(0, 3);
@@ -5717,7 +5717,7 @@ function genMBR() {
           `La valeur lue n'est pas correcte. ${explain}`);
         div.querySelector('#btn-next-mbr').style.display = 'inline-block';
         div.querySelector('#ex-num-mbr').className = 'ex-num ' + (isOk ? 'solved' : 'error');
-        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+        div.className = 'ex-card ' + (isOk ? 'solved' : 'error');
       });
     });
     return div;
@@ -5811,7 +5811,7 @@ function genMBR() {
           `Erreur de calcul. ${explain}`);
         div.querySelector('#btn-next-mbr').style.display = 'inline-block';
         div.querySelector('#ex-num-mbr').className = 'ex-num ' + (isOk ? 'solved' : 'error');
-        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+        div.className = 'ex-card ' + (isOk ? 'solved' : 'error');
       });
     });
     return div;
@@ -5877,7 +5877,7 @@ function genMBR() {
           `${note} — La bonne réponse est <strong>0x${typeObj.byte.toString(16).toUpperCase().padStart(2,'0')} (${typeObj.name})</strong>.`);
         div.querySelector('#btn-next-mbr').style.display = 'inline-block';
         div.querySelector('#ex-num-mbr').className = 'ex-num ' + (isOk ? 'solved' : 'error');
-        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+        div.className = 'ex-card ' + (isOk ? 'solved' : 'error');
       });
     });
     return div;
@@ -5988,7 +5988,7 @@ function genMBR() {
         fb.innerHTML = formatChoiceFeedback(isOk, correctExplain, wrongExplain);
         div.querySelector('#btn-next-mbr').style.display = 'inline-block';
         div.querySelector('#ex-num-mbr').className = 'ex-num ' + (isOk ? 'solved' : 'error');
-        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+        div.className = 'ex-card ' + (isOk ? 'solved' : 'error');
       });
     });
     return div;
@@ -6004,7 +6004,7 @@ function genMBR() {
 //   0 — Lire le nom SFN (8.3) et détecter l'état (actif / effacé / fin)
 //   1 — Lire les attributs (archive, répertoire, lecture seule, hidden, system)
 //   2 — Lire le premier cluster et la taille du fichier
-//   3 — Déduire la date/heure de modification depuis les champs bruts
+//   3 — Déduire la date/heure de modification depuis les champs bruts [TODO — non implémenté]
 //
 function genDirEntry() {
   const subtype = rand(0, 3);
@@ -6165,7 +6165,7 @@ function genDirEntry() {
           `${note} — Bonne réponse : <strong>${correctState.label}</strong>.`);
         div.querySelector('#btn-next-de').style.display = 'inline-block';
         div.querySelector('#ex-num-de').className = 'ex-num ' + (isOk ? 'solved' : 'error');
-        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+        div.className = 'ex-card ' + (isOk ? 'solved' : 'error');
       });
     });
     return div;
@@ -6269,7 +6269,7 @@ function genDirEntry() {
           `Calcul incorrect. ${explain}`);
         div.querySelector('#btn-next-de').style.display = 'inline-block';
         div.querySelector('#ex-num-de').className = 'ex-num ' + (isOk ? 'solved' : 'error');
-        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+        div.className = 'ex-card ' + (isOk ? 'solved' : 'error');
       });
     });
     return div;
@@ -6359,7 +6359,7 @@ function genDirEntry() {
         fb.innerHTML = formatChoiceFeedback(isOk, explain, `Mauvaise lecture. ${explain}`);
         div.querySelector('#btn-next-de').style.display = 'inline-block';
         div.querySelector('#ex-num-de').className = 'ex-num ' + (isOk ? 'solved' : 'error');
-        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+        div.className = 'ex-card ' + (isOk ? 'solved' : 'error');
       });
     });
     return div;
@@ -6450,7 +6450,7 @@ function genDirEntry() {
       if (isOk) {
         if (!STATE.hintUsed) incSolved('direntry');
         fb.innerHTML = `✅ Correct ! ${year}-${pad(month,2)}-${pad(day,2)} à ${pad(hour,2)}:${pad(min,2)}:${pad(sec,2)}`;
-        div.querySelector('.ex-card').className = 'ex-card solved';
+        div.className = 'ex-card solved';
         div.querySelector('#ex-num-de').className = 'ex-num solved';
       } else {
         breakStreak();
