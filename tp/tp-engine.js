@@ -16,7 +16,7 @@ const STATE = {
     endian:0, timestamp:0, bitmap:0, fat:0, magic:0, mismatch:0,
     runlist:0, effacement:0, timestomping:0, hextable:0, fsidentify:0,
     offset:0, bases:0, hash:0, email:0, network:0, ir:0,
-    droitpenal:0, glossaire:0, examen:0
+    droitpenal:0, glossaire:0, examen:0, mbr:0, direntry:0, hexdump:0, slackspace:0
   },
   hintUsed: false,
   // Gamification étendue
@@ -208,6 +208,10 @@ const GENERATORS = {
   droitpenal:  genDroitPenal,
   glossaire:   genGlossaire,
   examen:      genExamen,
+  mbr:         genMBR,
+  direntry:    genDirEntry,
+  hexdump:     genHexDump,
+  slackspace:  genSlackSpace,
 };
 
 // ── 1. ENDIANNESS ──────────────────────────────────
@@ -4593,4 +4597,1867 @@ function checkHashIdentify(btn, isOk, wrongExplain, correctExplain) {
     fb.style.display='block';
   }
   document.getElementById('btn-next-hash').style.display='inline-block';
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// 23. DUMP HEX EN CONTEXTE — localiser + décoder un champ dans un secteur brut
+// ═══════════════════════════════════════════════════════════════
+//
+// Principe : un vrai dump de 512 octets (secteur complet) est affiché.
+// L'analyste doit (1) trouver l'offset d'un champ donné, (2) lire ses octets,
+// (3) le décoder (LE, type, ASCII…).
+// Indices progressifs sur 3 niveaux :
+//   Niveau 1 — "Quel offset chercher ?"   (nom du champ + offset brut)
+//   Niveau 2 — "Quels octets ?"           (octets bruts mis en évidence)
+//   Niveau 3 — "Comment décoder ?"        (résultat intermédiaire + formule)
+//
+// Scénarios :
+//   0 — FAT32 BPB : BytesPerSector @ 0x0B
+//   1 — FAT32 BPB : SectorsPerCluster @ 0x0D
+//   2 — FAT32 BPB : ReservedSectors @ 0x0E
+//   3 — FAT32 BPB : NumFATs @ 0x10
+//   4 — NTFS Boot : OEM ID @ 0x03 (ASCII)
+//   5 — NTFS Boot : BytesPerSector @ 0x0B
+//   6 — MBR       : Partition type byte @ 0x1C2
+//   7 — MBR       : Boot signature @ 0x1FE
+//   8 — EXT4 Superbloc : Magic @ 0x438 (0xEF53)
+//   9 — FAT32 BPB : SectorsPerFAT @ 0x24 (extended BPB)
+//
+function genHexDump() {
+  const scenario = rand(0, 9);
+
+  const le16 = v => [v & 0xFF, (v>>8) & 0xFF];
+  const le32 = v => [v & 0xFF,(v>>8)&0xFF,(v>>16)&0xFF,(v>>24)&0xFF];
+
+  // ── Helpers hex ─────────────────────────────────────────────
+  function bytesToHexStr(arr) {
+    return arr.map(b => b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+  }
+  function leVal(arr, off, len) {
+    let v = 0;
+    for (let i = 0; i < len; i++) v |= (arr[off+i] << (8*i));
+    return v >>> 0;
+  }
+
+  // ── Constructeurs de secteurs ────────────────────────────────
+
+  function makeFAT32Sector() {
+    const bps  = [512, 1024, 2048][rand(0,2)];
+    const spc  = [2, 4, 8, 16][rand(0,3)];
+    const rsvd = [32, 64][rand(0,1)];
+    const nfats= 2;
+    const spf  = rand(16, 128);   // SectorsPerFAT32 (extended)
+    const b = new Array(512).fill(0);
+    // Jump + OEM
+    b[0]=0xEB; b[1]=0x58; b[2]=0x90;
+    'MSWIN4.1'.split('').forEach((c,i)=>b[3+i]=c.charCodeAt(0));
+    // BPB
+    le16(bps).forEach((x,i)=>b[0x0B+i]=x);
+    b[0x0D]=spc;
+    le16(rsvd).forEach((x,i)=>b[0x0E+i]=x);
+    b[0x10]=nfats;
+    b[0x11]=0; b[0x12]=0;  // RootEntryCount=0 (FAT32)
+    b[0x13]=0; b[0x14]=0;  // TotalSectors16=0
+    b[0x15]=0xF8;
+    b[0x16]=0; b[0x17]=0;  // FATSz16=0
+    // Extended BPB FAT32 — SectorsPerFAT32 @ 0x24
+    le32(spf).forEach((x,i)=>b[0x24+i]=x);
+    // Signature
+    b[510]=0x55; b[511]=0xAA;
+    return { b, bps, spc, rsvd, nfats, spf };
+  }
+
+  function makeNTFSSector() {
+    const bps = [512, 4096][rand(0,1)];
+    const spc = [4, 8][rand(0,1)];
+    const b = new Array(512).fill(0);
+    b[0]=0xEB; b[1]=0x52; b[2]=0x90;
+    'NTFS    '.split('').forEach((c,i)=>b[3+i]=c.charCodeAt(0));
+    le16(bps).forEach((x,i)=>b[0x0B+i]=x);
+    b[0x0D]=spc;
+    b[510]=0x55; b[511]=0xAA;
+    return { b, bps, spc };
+  }
+
+  function makeMBRSector() {
+    const TYPES = [
+      {byte:0x07, name:'NTFS / exFAT'},
+      {byte:0x0B, name:'FAT32 (CHS)'},
+      {byte:0x0C, name:'FAT32 (LBA)'},
+      {byte:0x83, name:'Linux ext4'},
+      {byte:0xEE, name:'GPT Protective'},
+    ];
+    const t = TYPES[rand(0,TYPES.length-1)];
+    const lbaStart = rand(1, 32) * 2048;
+    const b = new Array(512).fill(0);
+    // Entry 1 @ 0x1BE
+    b[0x1BE]=0x80;   // bootable
+    b[0x1BF]=0xFE; b[0x1C0]=0xFF; b[0x1C1]=0xFF; // CHS begin
+    b[0x1C2]=t.byte; // TYPE BYTE ← cible
+    b[0x1C3]=0xFE; b[0x1C4]=0xFF; b[0x1C5]=0xFF; // CHS end
+    le32(lbaStart).forEach((x,i)=>b[0x1C6+i]=x);  // LBA start
+    le32(65536).forEach((x,i)=>b[0x1CA+i]=x);     // size
+    // Signature
+    b[510]=0x55; b[511]=0xAA;
+    return { b, typeObj:t, lbaStart };
+  }
+
+  function makeEXT4Superbloc() {
+    // Superbloc EXT4 : commence à offset 1024 dans le volume
+    // On simule un secteur qui représente l'offset 0x400
+    const b = new Array(512).fill(0);
+    // Dans un superbloc, le magic 0xEF53 est à l'offset 0x38 DU superbloc
+    // = offset 0x438 du volume, soit 0x38 dans notre fenêtre (offset de base 0x400)
+    b[0x38]=0x53; b[0x39]=0xEF;  // magic LE
+    b[0x18]=0x02; b[0x19]=0x00; b[0x1A]=0x00; b[0x1B]=0x00; // log_block_size=2 → 4096
+    return { b };
+  }
+
+  // ── Scénario ─────────────────────────────────────────────────
+  let sector, title, baseOffset;
+  let qText, fieldName, fieldOffset, fieldLen, answerRaw, answerDisplay;
+  let hints = [];            // 3 entrées
+  let distFn;                // fonction qui génère 3 distracteurs
+  let isQCM = true;          // tous sauf ASCII (OEM ID) sont QCM
+  let highlightColor = '--cyan';
+
+  // FAT32 scenarios
+  if (scenario <= 3 || scenario === 9) {
+    const fat = makeFAT32Sector();
+    sector = fat.b;
+    title  = 'Secteur de boot FAT32 (512 octets)';
+    baseOffset = 0;
+
+    if (scenario === 0) {
+      fieldName   = 'BytesPerSector';
+      fieldOffset = 0x0B;
+      fieldLen    = 2;
+      answerRaw   = fat.bps;
+      answerDisplay = `${fat.bps}`;
+      highlightColor = '--cyan';
+      hints = [
+        `<strong>BytesPerSector</strong> se trouve à l'offset <code>0x0B</code> dans le BPB FAT, sur <strong>2 octets en Little Endian</strong>.`,
+        `Cherche l'offset <code>0x0B</code> dans le dump. Les 2 octets sont : <code style="color:var(--cyan)">${bytesToHexStr(sector.slice(0x0B,0x0D))}</code>`,
+        `Inverse l'ordre (Little Endian) : <code>${bytesToHexStr(sector.slice(0x0B,0x0D).reverse())}</code> → décimal = <strong>${fat.bps}</strong> octets/secteur`,
+      ];
+      distFn = () => [512,1024,2048,4096].filter(v=>v!==fat.bps).slice(0,3);
+
+    } else if (scenario === 1) {
+      fieldName   = 'SectorsPerCluster';
+      fieldOffset = 0x0D;
+      fieldLen    = 1;
+      answerRaw   = fat.spc;
+      answerDisplay = `${fat.spc}`;
+      highlightColor = '--green';
+      hints = [
+        `<strong>SectorsPerCluster</strong> est à l'offset <code>0x0D</code> — <strong>1 seul octet</strong>, pas de Little Endian à appliquer.`,
+        `L'offset <code>0x0D</code> vaut : <code style="color:var(--green)">${bytesToHexStr([sector[0x0D]])}</code>`,
+        `0x${sector[0x0D].toString(16).toUpperCase().padStart(2,'0')} en décimal = <strong>${fat.spc}</strong> secteur(s) par cluster`,
+      ];
+      distFn = () => [1,2,4,8,16,32].filter(v=>v!==fat.spc).slice(0,3);
+
+    } else if (scenario === 2) {
+      fieldName   = 'ReservedSectors';
+      fieldOffset = 0x0E;
+      fieldLen    = 2;
+      answerRaw   = fat.rsvd;
+      answerDisplay = `${fat.rsvd}`;
+      highlightColor = '--gold';
+      hints = [
+        `<strong>ReservedSectors</strong> (secteurs réservés avant la première FAT) est à l'offset <code>0x0E</code>, sur <strong>2 octets Little Endian</strong>.`,
+        `Offset <code>0x0E</code> : <code style="color:var(--gold)">${bytesToHexStr(sector.slice(0x0E,0x10))}</code> — inverse et convertis.`,
+        `LE → ${fat.rsvd} secteurs réservés. Pour FAT32 cette valeur est souvent 32 ou 64.`,
+      ];
+      distFn = () => [8,16,32,64,128].filter(v=>v!==fat.rsvd).slice(0,3);
+
+    } else if (scenario === 3) {
+      fieldName   = 'NumFATs';
+      fieldOffset = 0x10;
+      fieldLen    = 1;
+      answerRaw   = 2;
+      answerDisplay = '2';
+      highlightColor = '--purple';
+      hints = [
+        `<strong>NumFATs</strong> (nombre de copies de la FAT) est à l'offset <code>0x10</code> — <strong>1 octet</strong>.`,
+        `Offset <code>0x10</code> : <code style="color:var(--purple)">${bytesToHexStr([sector[0x10]])}</code>`,
+        `Presque toujours 2 — une copie principale + une copie de sauvegarde. Valeur ici = <strong>2</strong>.`,
+      ];
+      distFn = () => [1, 3, 4];
+
+    } else { // scenario === 9 — SectorsPerFAT32
+      fieldName   = 'SectorsPerFAT32';
+      fieldOffset = 0x24;
+      fieldLen    = 4;
+      answerRaw   = fat.spf;
+      answerDisplay = `${fat.spf}`;
+      highlightColor = '--orange';
+      hints = [
+        `En FAT32, la taille de la FAT est dans le BPB étendu à l'offset <code>0x24</code>, sur <strong>4 octets Little Endian</strong> (FATSz32).`,
+        `Offset <code>0x24</code> : <code style="color:var(--orange)">${bytesToHexStr(sector.slice(0x24,0x28))}</code> — inverse les 4 octets.`,
+        `LE → 0x${fat.spf.toString(16).toUpperCase()} = <strong>${fat.spf}</strong> secteurs par FAT.`,
+      ];
+      distFn = () => [fat.spf+8, fat.spf-8, fat.spf*2].filter(v=>v!==fat.spf&&v>0).slice(0,3);
+    }
+
+  } else if (scenario === 4 || scenario === 5) {
+    // NTFS scenarios
+    const ntfs = makeNTFSSector();
+    sector = ntfs.b;
+    title  = 'Secteur de boot NTFS (512 octets)';
+    baseOffset = 0;
+
+    if (scenario === 4) {
+      // OEM ID ASCII — saisie libre
+      fieldName   = 'OEM ID (ASCII)';
+      fieldOffset = 0x03;
+      fieldLen    = 8;
+      answerRaw   = 'NTFS    ';
+      answerDisplay = 'NTFS    ';
+      isQCM = false;
+      highlightColor = '--purple';
+      hints = [
+        `L'<strong>OEM ID</strong> est à l'offset <code>0x03</code> — <strong>8 octets ASCII</strong> (les espaces comptent !).`,
+        `Offset <code>0x03</code> sur 8 octets : <code style="color:var(--purple)">${bytesToHexStr(sector.slice(0x03,0x0B))}</code>`,
+        `Converti ASCII : <strong>NTFS    </strong> (4 lettres + 4 espaces). La présence de "NTFS    " à cet offset identifie formellement ce FS.`,
+      ];
+
+    } else { // scenario === 5 — BPS NTFS
+      fieldName   = 'BytesPerSector';
+      fieldOffset = 0x0B;
+      fieldLen    = 2;
+      answerRaw   = ntfs.bps;
+      answerDisplay = `${ntfs.bps}`;
+      highlightColor = '--cyan';
+      hints = [
+        `<strong>BytesPerSector</strong> est à <code>0x0B</code> dans le BPB NTFS, sur <strong>2 octets Little Endian</strong> — même position que FAT.`,
+        `Offset <code>0x0B</code> : <code style="color:var(--cyan)">${bytesToHexStr(sector.slice(0x0B,0x0D))}</code>`,
+        `LE → <strong>${ntfs.bps}</strong> octets/secteur. Valeurs typiques : 512 (disques classiques) ou 4096 (Advanced Format).`,
+      ];
+      distFn = () => [512,1024,2048,4096].filter(v=>v!==ntfs.bps).slice(0,3);
+    }
+
+  } else if (scenario === 6 || scenario === 7) {
+    // MBR scenarios
+    const mbr = makeMBRSector();
+    sector = mbr.b;
+
+    if (scenario === 6) {
+      title       = 'MBR — zone partitions (offset 0x1B0 → 0x1FF affiché)';
+      baseOffset  = 0x1B0;
+      fieldName   = 'Partition Type byte';
+      fieldOffset = 0x1C2;
+      fieldLen    = 1;
+      answerRaw   = mbr.typeObj.byte;
+      answerDisplay = `0x${mbr.typeObj.byte.toString(16).toUpperCase().padStart(2,'0')}`;
+      highlightColor = '--purple';
+      hints = [
+        `Le <strong>type byte</strong> de la première partition entry est à l'offset absolu <code>0x1C2</code> dans le MBR (entry 1 commence à <code>0x1BE</code>, le type est son 5ème octet → <code>0x1BE + 0x04 = 0x1C2</code>).`,
+        `Cherche la ligne <code>000001C0</code> dans le dump. Le type byte est à la colonne <code>02</code> de cette ligne.`,
+        `Valeur : <code style="color:var(--purple)">${bytesToHexStr([mbr.typeObj.byte])}</code> = <strong>${mbr.typeObj.name}</strong>.`,
+      ];
+      // QCM : les choix sont des bytes hexadécimaux
+      const ALL_TYPES = [0x07,0x0B,0x0C,0x83,0x82,0x05,0xEE,0xAB];
+      distFn = () => ALL_TYPES.filter(v=>v!==mbr.typeObj.byte).sort(()=>Math.random()-.5).slice(0,3);
+
+    } else { // scenario === 7 — signature boot
+      title       = 'MBR — secteur complet (512 octets)';
+      baseOffset  = 0;
+      fieldName   = 'Signature de boot';
+      fieldOffset = 0x1FE;
+      fieldLen    = 2;
+      answerRaw   = 0xAA55; // vu en BE sur le disque mais souvent dit "55 AA"
+      answerDisplay = '55 AA';
+      highlightColor = '--gold';
+      isQCM = true;
+      hints = [
+        `La <strong>signature de boot</strong> est toujours aux 2 derniers octets d'un secteur de boot (offset <code>0x1FE–0x1FF</code>).`,
+        `Cherche la toute dernière ligne du dump. Les 2 derniers octets sont : <code style="color:var(--gold)">${bytesToHexStr([sector[0x1FE],sector[0x1FF]])}</code>`,
+        `<strong>55 AA</strong> = signature valide pour MBR, VBR, GPT. Sans elle, le BIOS refuse de booter ce secteur.`,
+      ];
+      distFn = () => ['AA 55','00 00','FF FF'];
+    }
+
+  } else { // scenario === 8 — EXT4 magic
+    const ext4 = makeEXT4Superbloc();
+    sector = ext4.b;
+    title  = 'Superbloc EXT4 (offset 0x400 du volume — 512 octets affichés)';
+    baseOffset = 0x400;
+    fieldName   = 'Magic EXT2/3/4';
+    fieldOffset = 0x438;  // = baseOffset + 0x38
+    fieldLen    = 2;
+    answerRaw   = 0xEF53;
+    answerDisplay = 'EF 53';
+    highlightColor = '--green';
+    hints = [
+      `Le <strong>magic du superbloc EXT4</strong> est à l'offset absolu <code>0x438</code> dans le volume (superbloc à <code>0x400</code> + champ <code>s_magic</code> à <code>+0x38</code>), sur 2 octets Little Endian.`,
+      `Dans ce dump (base <code>0x400</code>), cherche la ligne <code>00000430</code>, colonne <code>08–09</code> : <code style="color:var(--green)">${bytesToHexStr([sector[0x38],sector[0x39]])}</code>`,
+      `LE → 0xEF53 — identifiant universel EXT2/3/4. La valeur brute est <strong>53 EF</strong> en mémoire (Little Endian).`,
+    ];
+    distFn = () => ['EF 53','53 EF','EF 00'].filter(v=>v!==answerDisplay).slice(0,3);
+  }
+
+  // ── Construire les lignes du dump ────────────────────────────
+  // On n'affiche pas les 512 octets entiers — on extrait une fenêtre pertinente
+  // centrée sur le champ cible (max 8 lignes × 16 octets = 128 octets)
+  const WIN = 128;   // octets à afficher
+  const relOff = fieldOffset - baseOffset;  // offset du champ dans sector[]
+  // Centrer la fenêtre sur le champ
+  let winStart = Math.max(0, relOff - 48);
+  winStart = winStart - (winStart % 16); // aligner sur 16
+  const winEnd = Math.min(sector.length, winStart + WIN);
+  const winBytes = sector.slice(winStart, winEnd);
+
+  const dumpRows = [];
+  for (let i = 0; i < winBytes.length; i += 16) {
+    dumpRows.push({
+      offset: (baseOffset + winStart + i).toString(16).toUpperCase().padStart(8,'0'),
+      bytes:  winBytes.slice(i, i+16),
+    });
+  }
+
+  // Highlight : offset absolu dans le buffer complet
+  const hlFrom = fieldOffset;
+  const hlTo   = fieldOffset + fieldLen - 1;
+
+  const dumpHTML = renderHexDump(dumpRows,
+    [{ from: hlFrom, to: hlTo, color: highlightColor, label: fieldName }],
+    { cols: 16, title }
+  );
+
+  // ── Choix QCM ───────────────────────────────────────────────
+  let choicesHTML = '';
+  if (isQCM) {
+    const dists = distFn();
+    const allChoices = [answerDisplay, ...dists].sort(()=>Math.random()-.5);
+    choicesHTML = `
+      <div class="sec-title">Valeur du champ</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="hd-choices">
+        ${allChoices.map(c => `<button class="tp-choice" style="flex:1;min-width:90px;font-family:var(--mono)"
+            data-correct="${String(c) === String(answerDisplay)}">
+            ${scenario === 7 || scenario === 6 || scenario === 8
+              ? c   // déjà formaté hex
+              : typeof c === 'number' ? c.toLocaleString('fr-CH') : c}
+          </button>`).join('')}
+      </div>`;
+  } else {
+    // Saisie libre pour OEM ID ASCII
+    choicesHTML = `
+      <div class="sec-title">Valeur ASCII du champ (8 caractères exacts)</div>
+      <div class="ex-input-row" style="gap:.5rem">
+        <input class="ex-input" id="hd-text-input" type="text" maxlength="8" placeholder="XXXXXXXX"
+          style="font-family:var(--mono);letter-spacing:.1em;width:160px;text-transform:uppercase">
+        <button class="btn-validate" id="hd-val-btn">Valider ✓</button>
+        <button class="btn-next" id="btn-next-hd" onclick="newExercise()" style="display:none">Exercice suivant →</button>
+      </div>`;
+  }
+
+  // ── Création du div ──────────────────────────────────────────
+  const div = document.createElement('div');
+  div.className = 'ex-card';
+  div.innerHTML = `
+    <div class="ex-header">
+      <div class="ex-num" id="ex-num-hd">🔬</div>
+      <div class="ex-title">Dump Hex en contexte — ${fieldName}</div>
+      <span class="ex-badge medium">Localiser · Lire · Décoder</span>
+    </div>
+    <div class="ex-scenario">
+      Tu as le dump brut d'un secteur ci-dessous.<br>
+      <strong>Lis la valeur du champ <span style="color:var(${highlightColor})">${fieldName}</span>
+      (mis en évidence) et décode-la.</strong>
+    </div>
+    ${dumpHTML}
+    <div style="background:rgba(0,0,0,.28);border:1px solid var(--border);border-radius:8px;padding:.55rem .9rem;margin-bottom:.75rem;font-size:.76rem">
+      <span style="color:var(--dim)">Champ cible : </span>
+      <strong style="color:var(${highlightColor})">${fieldName}</strong>
+      <span style="color:var(--dim)"> · offset absolu </span>
+      <code>0x${fieldOffset.toString(16).toUpperCase()}</code>
+      <span style="color:var(--dim)"> · ${fieldLen} octet${fieldLen>1?'s':''}</span>
+      ${fieldLen > 1 && scenario !== 4 && scenario !== 7 && scenario !== 6 && scenario !== 8
+        ? `<span style="color:var(--dim)"> · Little Endian</span>` : ''}
+    </div>
+    ${choicesHTML}
+    <div style="display:flex;gap:.5rem;margin-bottom:.4rem" id="hd-hint-row">
+      <button class="btn-hint" id="hd-hint-1">💡 Niveau 1 — Où chercher ?</button>
+      <button class="btn-hint" id="hd-hint-2" style="opacity:.5" disabled>💡 Niveau 2 — Quels octets ?</button>
+      <button class="btn-hint" id="hd-hint-3" style="opacity:.5" disabled>💡 Niveau 3 — Comment décoder ?</button>
+    </div>
+    <div class="ex-feedback" id="ex-feedback-hd" style="display:none"></div>
+    ${isQCM ? `<button class="btn-next" id="btn-next-hd" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>` : ''}
+  `;
+
+  // ── Logique indices progressifs ──────────────────────────────
+  function showHint(level, hintText) {
+    markHintUsed();
+    const fb = div.querySelector('#ex-feedback-hd');
+    fb.style.display = 'block';
+    fb.className = 'ex-feedback correct';
+    fb.innerHTML = `<div style="font-size:.78rem;color:var(--dim);margin-bottom:.2rem">Indice niveau ${level} / 3</div>${hintText}`;
+    // Déverrouiller le prochain niveau
+    if (level < 3) {
+      const next = div.querySelector(`#hd-hint-${level+1}`);
+      if (next) { next.disabled = false; next.style.opacity = '1'; }
+    }
+    // Styler le niveau actif
+    const cur = div.querySelector(`#hd-hint-${level}`);
+    if (cur) cur.style.opacity = '.4';
+  }
+
+  div.querySelector('#hd-hint-1').addEventListener('click', () => showHint(1, hints[0]));
+  div.querySelector('#hd-hint-2').addEventListener('click', () => showHint(2, hints[1]));
+  div.querySelector('#hd-hint-3').addEventListener('click', () => showHint(3, hints[2]));
+
+  // ── QCM handler ─────────────────────────────────────────────
+  if (isQCM) {
+    div.querySelectorAll('#hd-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        div.querySelectorAll('#hd-choices .tp-choice').forEach(x => {
+          x.disabled = true;
+          if (x.dataset.correct === 'true') x.classList.add('correct');
+          else if (x !== b) x.classList.add('dim');
+        });
+        if (!isOk) { b.classList.add('wrong'); breakStreak(); }
+        else if (!STATE.hintUsed) incSolved('hexdump');
+        const fb = div.querySelector('#ex-feedback-hd');
+        fb.style.display = 'block';
+        fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+        const explainFull = `${fieldName} @ 0x${fieldOffset.toString(16).toUpperCase()} = <strong style="color:var(${highlightColor})">${answerDisplay}</strong>. ${hints[2]}`;
+        fb.innerHTML = formatChoiceFeedback(isOk, explainFull,
+          `Mauvaise lecture. ${explainFull}`);
+        div.querySelector('#btn-next-hd').style.display = 'inline-block';
+        div.querySelector('#ex-num-hd').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      });
+    });
+  } else {
+    // Saisie libre OEM ID
+    const validate = () => {
+      const raw = div.querySelector('#hd-text-input').value.toUpperCase().padEnd(8,' ');
+      const isOk = raw === answerDisplay;
+      if (!isOk && !STATE.hintUsed) breakStreak();
+      if (isOk && !STATE.hintUsed) incSolved('hexdump');
+      const fb = div.querySelector('#ex-feedback-hd');
+      fb.style.display = 'block';
+      fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+      fb.innerHTML = isOk
+        ? `✅ Correct ! OEM ID = <strong style="color:var(--purple)">"${answerDisplay}"</strong>. ${hints[2]}`
+        : `❌ Valeur attendue : <strong>"${answerDisplay}"</strong> — 4 lettres + 4 espaces. ${hints[1]}`;
+      div.querySelector('#btn-next-hd').style.display = 'inline-block';
+      div.querySelector('#ex-num-hd').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+      div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+    };
+    div.querySelector('#hd-val-btn').addEventListener('click', validate);
+    div.querySelector('#hd-text-input').addEventListener('keydown', e => { if(e.key==='Enter') validate(); });
+  }
+
+  return div;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 24. SLACK SPACE — calcul d'espace résiduel dans un cluster
+// ═══════════════════════════════════════════════════════════════
+//
+// Sous-types :
+//   0 — Calculer le file slack (taille logique → espace résiduel dans le dernier cluster)
+//   1 — Calculer le RAM slack (dernier secteur partiellement rempli, zéros de padding)
+//   2 — Calculer la taille logique max d'un fichier sans slack (fichier "parfait")
+//   3 — Cas inverse : donner le slack → retrouver la taille du fichier
+//
+// Valeurs volontairement petites : BPS=512, SPC ≤ 8, taille fichier ≤ 32 Ko
+//
+function genSlackSpace() {
+  const subtype = rand(0, 3);
+
+  // Palette de configurations BPS × SPC réalistes et calculables mentalement
+  const CONFIGS = [
+    { bps: 512, spc: 1 },   // cluster = 512 o  (FAT12 disquette, petit)
+    { bps: 512, spc: 2 },   // cluster = 1024 o
+    { bps: 512, spc: 4 },   // cluster = 2048 o  (FAT16 typique)
+    { bps: 512, spc: 8 },   // cluster = 4096 o  (FAT32/NTFS courant)
+  ];
+  const cfg = CONFIGS[rand(0, CONFIGS.length - 1)];
+  const bps = cfg.bps;
+  const spc = cfg.spc;
+  const cs  = bps * spc;   // taille d'un cluster en octets
+
+  // ── Sous-type 0 : File Slack = cluster_slack ─────────────────
+  // Taille fichier quelconque → dernier cluster partiellement rempli
+  // On force le fichier à ne PAS être un multiple exact de cs pour avoir un slack ≠ 0
+  if (subtype === 0) {
+    // Nombre de clusters complets + octets résiduels
+    const fullClusters = rand(1, 6);
+    const residual     = rand(1, cs - 1);         // 1..cs-1 → slack ≠ 0
+    const fileSize     = fullClusters * cs + residual;
+    const fileSlack    = cs - residual;            // octets inutilisés dans le dernier cluster
+    const totalAlloc   = (fullClusters + 1) * cs;
+
+    const distractors = [
+      cs,           // confusion avec taille cluster
+      residual,     // confusion résiduel vs slack
+      bps - (residual % bps) === bps ? 1 : bps - (residual % bps),  // RAM slack
+      fileSize % cs // confusion
+    ].filter(v => v !== fileSlack && v > 0 && v < cs).slice(0, 3);
+    // Compléter si besoin
+    while (distractors.length < 3) distractors.push(distractors[0] + rand(1,4) * bps);
+    const choices = [fileSlack, ...distractors.slice(0,3)].sort(() => Math.random() - .5);
+
+    const lastSectorResidual = residual % bps;         // octets dans le dernier secteur
+    const ramSlack = lastSectorResidual === 0 ? 0 : bps - lastSectorResidual;
+
+    const hints = [
+      `Le <strong>file slack</strong> = espace non utilisé à la fin du dernier cluster alloué.<br>
+       Formule : <code>file_slack = taille_cluster − (taille_fichier mod taille_cluster)</code><br>
+       Si le fichier est un multiple exact → slack = 0. Sinon, un cluster entier est alloué pour les octets résiduels.`,
+
+      `Taille cluster = ${bps} × ${spc} = <strong>${cs} octets</strong>.<br>
+       Octets résiduels dans le dernier cluster = ${fileSize} mod ${cs} = <strong>${residual} o</strong>.<br>
+       File slack = ${cs} − ${residual} = <strong>? octets</strong>`,
+
+      `File slack = ${cs} − ${residual} = <strong>${fileSlack} octets</strong>.<br>
+       Ces ${fileSlack} octets sont alloués sur le disque mais non utilisés par le fichier.<br>
+       Ils peuvent contenir des données résiduelles d'un fichier précédent — zone forensiquement intéressante.`,
+    ];
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-ss">🪣</div>
+        <div class="ex-title">Slack Space — File Slack</div>
+        <span class="ex-badge medium">FAT · Cluster · Résiduel</span>
+      </div>
+      <div class="ex-scenario">
+        Un fichier de <strong>${fileSize.toLocaleString('fr-CH')} octets</strong> est stocké sur un volume FAT avec :<br>
+        <span style="font-family:var(--mono)">BytesPerSector = ${bps} · SectorsPerCluster = ${spc} · Taille cluster = <strong>${cs} o</strong></span><br><br>
+        <strong>Quel est le file slack de ce fichier ?</strong>
+        <span style="color:var(--dim);font-size:.77rem;display:block;margin-top:.3rem">(espace résiduel non utilisé à la fin du dernier cluster)</span>
+      </div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem;margin-bottom:.8rem">
+        <div style="font-size:.76rem;color:var(--dim);margin-bottom:.5rem">Visualisation de l'allocation :</div>
+        <div style="display:flex;gap:2px;flex-wrap:wrap;margin-bottom:.4rem">
+          ${Array.from({length: fullClusters}, (_,i) =>
+            `<div title="Cluster ${i+1} — plein" style="height:22px;flex:1;min-width:28px;background:var(--cyan);opacity:.7;border-radius:3px;font-size:.62rem;display:flex;align-items:center;justify-content:center;color:#000;font-weight:700">${cs}</div>`
+          ).join('')}
+          <div title="Dernier cluster — partiellement utilisé" style="height:22px;flex:1;min-width:80px;border-radius:3px;overflow:hidden;display:flex">
+            <div style="width:${Math.round(residual/cs*100)}%;background:var(--cyan);opacity:.7;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#000;font-weight:700">${residual}o</div>
+            <div style="flex:1;background:var(--red);opacity:.4;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:var(--red);font-weight:700">?</div>
+          </div>
+        </div>
+        <div style="font-size:.7rem;display:flex;gap:1rem">
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--cyan);opacity:.7;border-radius:2px;margin-right:3px"></span>Données fichier</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--red);opacity:.4;border-radius:2px;margin-right:3px"></span>File slack (à calculer)</span>
+        </div>
+      </div>
+      <div style="background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:8px;padding:.55rem .9rem;margin-bottom:.75rem;font-family:var(--mono);font-size:.76rem">
+        <div>Taille fichier   = <strong>${fileSize.toLocaleString('fr-CH')} o</strong></div>
+        <div>Clusters alloués = <strong>${fullClusters + 1}</strong> (${totalAlloc.toLocaleString('fr-CH')} o au total)</div>
+        <div>Taille cluster   = <strong>${cs} o</strong></div>
+      </div>
+      <div class="sec-title">File slack (octets)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="ss-choices">
+        ${choices.map(c => `<button class="tp-choice" style="flex:1;min-width:90px;font-family:var(--mono)"
+            data-correct="${c === fileSlack}">${c.toLocaleString('fr-CH')} o</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.4rem">
+        <button class="btn-hint" id="ss-h1">💡 Niveau 1 — Concept</button>
+        <button class="btn-hint" id="ss-h2" disabled style="opacity:.45">💡 Niveau 2 — Calcul intermédiaire</button>
+        <button class="btn-hint" id="ss-h3" disabled style="opacity:.45">💡 Niveau 3 — Résultat</button>
+      </div>
+      <div class="ex-feedback" id="ex-feedback-ss" style="display:none"></div>
+      <button class="btn-next" id="btn-next-ss" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+
+    function showSSHint(level, html) {
+      markHintUsed();
+      const fb = div.querySelector('#ex-feedback-ss');
+      fb.style.display = 'block'; fb.className = 'ex-feedback correct';
+      fb.innerHTML = `<div style="font-size:.7rem;color:var(--dim);margin-bottom:.25rem">Indice ${level}/3</div>${html}`;
+      const next = div.querySelector(`#ss-h${level+1}`);
+      if (next) { next.disabled = false; next.style.opacity = '1'; }
+      div.querySelector(`#ss-h${level}`).style.opacity = '.35';
+    }
+    div.querySelector('#ss-h1').addEventListener('click', () => showSSHint(1, hints[0]));
+    div.querySelector('#ss-h2').addEventListener('click', () => showSSHint(2, hints[1]));
+    div.querySelector('#ss-h3').addEventListener('click', () => showSSHint(3, hints[2]));
+
+    div.querySelectorAll('#ss-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        div.querySelectorAll('#ss-choices .tp-choice').forEach(x => {
+          x.disabled = true;
+          if (x.dataset.correct === 'true') x.classList.add('correct');
+          else if (x !== b) x.classList.add('dim');
+        });
+        if (!isOk) { b.classList.add('wrong'); breakStreak(); }
+        else if (!STATE.hintUsed) incSolved('slackspace');
+        const fb = div.querySelector('#ex-feedback-ss');
+        fb.style.display = 'block';
+        fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+        const explain = `File slack = ${cs} − (${fileSize} mod ${cs}) = ${cs} − ${residual} = <strong>${fileSlack} octets</strong>.
+          <div style="margin-top:.4rem;font-size:.76rem;color:var(--dim)">
+            Ces ${fileSlack} o sont alloués sur le disque mais vides — ils peuvent contenir des résidus du fichier précédent qui occupait ces clusters.<br>
+            RAM slack (dernier secteur) : ${ramSlack === 0 ? '0 o (secteur plein)' : `${ramSlack} o — remplis de zéros par l'OS.`}
+          </div>`;
+        fb.innerHTML = isOk
+          ? `✅ Correct ! ${explain}`
+          : formatChoiceFeedback(false, explain,
+              `Rappel : file_slack = taille_cluster − (taille_fichier mod taille_cluster) = ${cs} − ${residual} = ${fileSlack} o`);
+        div.querySelector('#btn-next-ss').style.display = 'inline-block';
+        div.querySelector('#ex-num-ss').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      });
+    });
+    return div;
+  }
+
+  // ── Sous-type 1 : RAM Slack ──────────────────────────────────
+  // Le dernier secteur utilisé du fichier n'est que partiellement rempli.
+  // L'OS (DOS/Win) complète le reste du secteur avec le contenu de la RAM (ou zéros sur NT).
+  if (subtype === 1) {
+    // Taille fichier : nombre entier de secteurs complets + octets résiduels dans le dernier secteur
+    const fullSectors  = rand(1, spc * 4);
+    const residualBytes= rand(1, bps - 1);       // jamais 0 → RAM slack ≠ 0
+    const fileSize     = fullSectors * bps + residualBytes;
+    const ramSlack     = bps - residualBytes;    // octets de padding dans le dernier secteur
+    // File slack = le reste du dernier cluster (secteurs non utilisés × bps)
+    const usedSectorsInLastCluster = (Math.ceil(fileSize / bps)) % spc || spc;
+    const fileSlack = (spc - usedSectorsInLastCluster) * bps;
+
+    const distractors = [
+      bps - residualBytes + bps,
+      residualBytes,
+      bps,
+    ].filter(v => v !== ramSlack && v > 0).slice(0, 3);
+    const choices = [ramSlack, ...distractors].sort(() => Math.random() - .5);
+
+    const hints = [
+      `Le <strong>RAM slack</strong> (aussi appelé "sector slack") est l'espace entre la fin logique du fichier et la fin du dernier <em>secteur</em> utilisé.<br>
+       Formule : <code>ram_slack = BPS − (taille_fichier mod BPS)</code><br>
+       Si taille_fichier mod BPS = 0 → pas de RAM slack. Sinon, l'OS remplit le reste du secteur (zéros sur Windows NT+).`,
+
+      `BPS = ${bps} octets.<br>
+       ${fileSize} mod ${bps} = <strong>${residualBytes} octets</strong> utilisés dans le dernier secteur.<br>
+       RAM slack = ${bps} − ${residualBytes} = <strong>? octets</strong>`,
+
+      `RAM slack = ${bps} − ${residualBytes} = <strong>${ramSlack} octets</strong>.<br>
+       File slack additionnel = ${fileSlack} o (secteurs entiers non utilisés dans le dernier cluster).<br>
+       Slack total = ${ramSlack} + ${fileSlack} = <strong>${ramSlack + fileSlack} o</strong>.`,
+    ];
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-ss">🪣</div>
+        <div class="ex-title">Slack Space — RAM Slack (Sector Slack)</div>
+        <span class="ex-badge hard">Secteur · Padding · Résidus RAM</span>
+      </div>
+      <div class="ex-scenario">
+        Un fichier de <strong>${fileSize.toLocaleString('fr-CH')} octets</strong> sur un volume :<br>
+        <span style="font-family:var(--mono)">BPS = ${bps} · SPC = ${spc} · Cluster = ${cs} o</span><br><br>
+        <strong>Quel est le RAM slack de ce fichier ?</strong>
+        <span style="color:var(--dim);font-size:.77rem;display:block;margin-top:.3rem">(octets de padding entre fin du fichier et fin du dernier secteur utilisé)</span>
+      </div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem;margin-bottom:.8rem">
+        <div style="font-size:.75rem;color:var(--dim);margin-bottom:.4rem">Dernier secteur du fichier :</div>
+        <div style="display:flex;height:20px;border-radius:4px;overflow:hidden;margin-bottom:.35rem">
+          <div style="width:${Math.round(residualBytes/bps*100)}%;background:var(--cyan);opacity:.75;display:flex;align-items:center;justify-content:center;font-size:.62rem;color:#000;font-weight:700">${residualBytes} o (fichier)</div>
+          <div style="flex:1;background:var(--gold);opacity:.5;display:flex;align-items:center;justify-content:center;font-size:.62rem;color:var(--gold);font-weight:700">RAM slack ?</div>
+        </div>
+        <div style="font-size:.7rem;display:flex;gap:1rem">
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--cyan);opacity:.75;border-radius:2px;margin-right:3px"></span>Données fichier</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--gold);opacity:.5;border-radius:2px;margin-right:3px"></span>RAM slack (zéros / résidus RAM)</span>
+        </div>
+      </div>
+      <div style="background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:8px;padding:.55rem .9rem;margin-bottom:.75rem;font-family:var(--mono);font-size:.76rem">
+        <div>Taille fichier       = <strong>${fileSize.toLocaleString('fr-CH')} o</strong></div>
+        <div>Bytes per sector     = <strong>${bps} o</strong></div>
+        <div>${fileSize} mod ${bps} = <strong>${residualBytes} o</strong> (dans le dernier secteur)</div>
+      </div>
+      <div class="sec-title">RAM slack (octets)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="ss-choices">
+        ${choices.map(c => `<button class="tp-choice" style="flex:1;min-width:90px;font-family:var(--mono)"
+            data-correct="${c === ramSlack}">${c.toLocaleString('fr-CH')} o</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.4rem">
+        <button class="btn-hint" id="ss-h1">💡 Niveau 1 — Concept</button>
+        <button class="btn-hint" id="ss-h2" disabled style="opacity:.45">💡 Niveau 2 — Calcul intermédiaire</button>
+        <button class="btn-hint" id="ss-h3" disabled style="opacity:.45">💡 Niveau 3 — Résultat + slack total</button>
+      </div>
+      <div class="ex-feedback" id="ex-feedback-ss" style="display:none"></div>
+      <button class="btn-next" id="btn-next-ss" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+
+    function showSSHint(level, html) {
+      markHintUsed();
+      const fb = div.querySelector('#ex-feedback-ss');
+      fb.style.display = 'block'; fb.className = 'ex-feedback correct';
+      fb.innerHTML = `<div style="font-size:.7rem;color:var(--dim);margin-bottom:.25rem">Indice ${level}/3</div>${html}`;
+      const next = div.querySelector(`#ss-h${level+1}`);
+      if (next) { next.disabled = false; next.style.opacity = '1'; }
+      div.querySelector(`#ss-h${level}`).style.opacity = '.35';
+    }
+    div.querySelector('#ss-h1').addEventListener('click', () => showSSHint(1, hints[0]));
+    div.querySelector('#ss-h2').addEventListener('click', () => showSSHint(2, hints[1]));
+    div.querySelector('#ss-h3').addEventListener('click', () => showSSHint(3, hints[2]));
+
+    div.querySelectorAll('#ss-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        div.querySelectorAll('#ss-choices .tp-choice').forEach(x => {
+          x.disabled = true;
+          if (x.dataset.correct === 'true') x.classList.add('correct');
+          else if (x !== b) x.classList.add('dim');
+        });
+        if (!isOk) { b.classList.add('wrong'); breakStreak(); }
+        else if (!STATE.hintUsed) incSolved('slackspace');
+        const fb = div.querySelector('#ex-feedback-ss');
+        fb.style.display = 'block';
+        fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+        const explain = `RAM slack = BPS − (${fileSize} mod ${bps}) = ${bps} − ${residualBytes} = <strong>${ramSlack} o</strong>.
+          <div style="margin-top:.35rem;font-size:.76rem;color:var(--dim)">
+            Ces ${ramSlack} o sont écrits par l'OS à la fin du dernier secteur (zéros sur Windows NT/XP+, contenu de la RAM sur DOS/Win9x).<br>
+            File slack en plus : ${fileSlack} o (secteurs du cluster non alloués au fichier). Slack total = ${ramSlack + fileSlack} o.
+          </div>`;
+        fb.innerHTML = isOk ? `✅ Correct ! ${explain}`
+          : formatChoiceFeedback(false, explain,
+              `RAM slack = BPS − (taille_fichier mod BPS) = ${bps} − ${residualBytes} = ${ramSlack} o.`);
+        div.querySelector('#btn-next-ss').style.display = 'inline-block';
+        div.querySelector('#ex-num-ss').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      });
+    });
+    return div;
+  }
+
+  // ── Sous-type 2 : taille max sans slack (fichier "parfait") ──
+  // Donner N clusters alloués → quelle est la taille logique max pour que le slack soit nul ?
+  if (subtype === 2) {
+    const nClusters = rand(2, 8);
+    const answer = nClusters * cs;   // taille = multiple exact → slack = 0
+
+    const distractors = [
+      answer - 1,
+      answer + 1,
+      answer - bps,
+      nClusters * bps,   // confusion SPC
+    ].filter(v => v !== answer && v > 0).slice(0, 3);
+    const choices = [answer, ...distractors].sort(() => Math.random() - .5);
+
+    const hints = [
+      `Le slack est <strong>nul</strong> quand la taille du fichier est un <strong>multiple exact de la taille du cluster</strong>.<br>
+       Formule : <code>taille_max_sans_slack = N_clusters × taille_cluster</code>`,
+
+      `${nClusters} clusters × ${cs} o/cluster = <strong>? octets</strong><br>
+       Si la taille est exactement ce multiple, le dernier cluster est utilisé à 100% → slack = 0.`,
+
+      `${nClusters} × ${cs} = <strong>${answer.toLocaleString('fr-CH')} octets</strong> — taille pour laquelle le slack est strictement nul.<br>
+       1 octet de plus → 1 nouveau cluster alloué → ${cs - 1} o de slack.`,
+    ];
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-ss">🪣</div>
+        <div class="ex-title">Slack Space — Taille sans slack</div>
+        <span class="ex-badge easy">Cluster · Multiple exact</span>
+      </div>
+      <div class="ex-scenario">
+        Un volume FAT avec : <span style="font-family:var(--mono)">BPS = ${bps} · SPC = ${spc} · Cluster = <strong>${cs} o</strong></span><br>
+        Un fichier occupe exactement <strong>${nClusters} clusters</strong>.<br><br>
+        <strong>Quelle est la taille logique maximale pour que le file slack soit nul ?</strong>
+      </div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 1rem;margin-bottom:.8rem;font-size:.76rem">
+        <div style="color:var(--dim);margin-bottom:.3rem">Condition de slack nul :</div>
+        <div style="font-family:var(--mono)">taille_fichier mod taille_cluster = 0</div>
+        <div style="color:var(--dim);margin-top:.2rem;font-size:.72rem">→ le fichier remplit exactement ses clusters, sans octet résiduel.</div>
+      </div>
+      <div class="sec-title">Taille logique (octets)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="ss-choices">
+        ${choices.map(c => `<button class="tp-choice" style="flex:1;min-width:100px;font-family:var(--mono)"
+            data-correct="${c === answer}">${c.toLocaleString('fr-CH')} o</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.4rem">
+        <button class="btn-hint" id="ss-h1">💡 Niveau 1 — Concept</button>
+        <button class="btn-hint" id="ss-h2" disabled style="opacity:.45">💡 Niveau 2 — Calcul</button>
+        <button class="btn-hint" id="ss-h3" disabled style="opacity:.45">💡 Niveau 3 — Résultat</button>
+      </div>
+      <div class="ex-feedback" id="ex-feedback-ss" style="display:none"></div>
+      <button class="btn-next" id="btn-next-ss" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+
+    function showSSHint(level, html) {
+      markHintUsed();
+      const fb = div.querySelector('#ex-feedback-ss');
+      fb.style.display = 'block'; fb.className = 'ex-feedback correct';
+      fb.innerHTML = `<div style="font-size:.7rem;color:var(--dim);margin-bottom:.25rem">Indice ${level}/3</div>${html}`;
+      const next = div.querySelector(`#ss-h${level+1}`);
+      if (next) { next.disabled = false; next.style.opacity = '1'; }
+      div.querySelector(`#ss-h${level}`).style.opacity = '.35';
+    }
+    div.querySelector('#ss-h1').addEventListener('click', () => showSSHint(1, hints[0]));
+    div.querySelector('#ss-h2').addEventListener('click', () => showSSHint(2, hints[1]));
+    div.querySelector('#ss-h3').addEventListener('click', () => showSSHint(3, hints[2]));
+
+    div.querySelectorAll('#ss-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        div.querySelectorAll('#ss-choices .tp-choice').forEach(x => {
+          x.disabled = true;
+          if (x.dataset.correct === 'true') x.classList.add('correct');
+          else if (x !== b) x.classList.add('dim');
+        });
+        if (!isOk) { b.classList.add('wrong'); breakStreak(); }
+        else if (!STATE.hintUsed) incSolved('slackspace');
+        const fb = div.querySelector('#ex-feedback-ss');
+        fb.style.display = 'block';
+        fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+        const explain = `${nClusters} clusters × ${cs} o = <strong>${answer.toLocaleString('fr-CH')} o</strong> → slack = 0.<br>
+          <span style="font-size:.75rem;color:var(--dim)">À ${answer + 1} o, un ${nClusters + 1}ème cluster serait alloué → file slack = ${cs - 1} o.</span>`;
+        fb.innerHTML = isOk ? `✅ Correct ! ${explain}`
+          : formatChoiceFeedback(false, explain, `Taille max sans slack = N × CS = ${nClusters} × ${cs} = ${answer} o.`);
+        div.querySelector('#btn-next-ss').style.display = 'inline-block';
+        div.querySelector('#ex-num-ss').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      });
+    });
+    return div;
+  }
+
+  // ── Sous-type 3 : cas inverse — slack donné → taille du fichier ─
+  // On donne le nombre de clusters, la taille cluster, et le file slack → retrouver la taille logique
+  {
+    const nClusters   = rand(2, 7);
+    const fileSlack   = rand(1, cs - 1);       // slack ≠ 0, < cs
+    const residual    = cs - fileSlack;        // octets utiles dans le dernier cluster
+    const fileSize    = (nClusters - 1) * cs + residual;
+    const totalAlloc  = nClusters * cs;
+
+    const distractors = [
+      totalAlloc,            // confusion avec espace alloué
+      fileSize + fileSlack,  // = totalAlloc, même confusion
+      (nClusters - 1) * cs, // oubli du dernier cluster partiel
+      fileSize + bps,        // erreur d'un secteur
+    ].filter(v => v !== fileSize && v > 0).slice(0, 3);
+    const choices = [fileSize, ...distractors].sort(() => Math.random() - .5);
+
+    const hints = [
+      `On te donne le <strong>file slack</strong> et le nombre de clusters. La taille logique du fichier est :<br>
+       <code>taille = (N_clusters − 1) × taille_cluster + (taille_cluster − file_slack)</code><br>
+       Autrement dit : tous les clusters sont pleins sauf le dernier, qui contient <code>CS − slack</code> octets utiles.`,
+
+      `${nClusters} clusters × ${cs} o = ${totalAlloc} o alloués au total.<br>
+       File slack = ${fileSlack} o → le dernier cluster contient ${cs} − ${fileSlack} = <strong>${residual} o</strong> de données réelles.<br>
+       Taille fichier = ${totalAlloc} − <strong>${fileSlack}</strong> = <strong>? o</strong>`,
+
+      `Taille fichier = ${totalAlloc} − ${fileSlack} = <strong>${fileSize.toLocaleString('fr-CH')} o</strong>.<br>
+       Vérification : ${fileSize} mod ${cs} = ${residual} → file slack = ${cs} − ${residual} = ${fileSlack} ✓`,
+    ];
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-ss">🪣</div>
+        <div class="ex-title">Slack Space — Retrouver la taille du fichier</div>
+        <span class="ex-badge hard">Inverse · Slack → Taille logique</span>
+      </div>
+      <div class="ex-scenario">
+        Lors de l'analyse d'un fichier supprimé, tu connais :<br>
+        <ul style="margin:.4rem 0 .4rem 1.2rem;font-size:.82rem;line-height:1.8">
+          <li>Clusters alloués : <strong>${nClusters}</strong></li>
+          <li>Taille cluster : <strong>${cs} o</strong> (BPS=${bps}, SPC=${spc})</li>
+          <li>File slack mesuré : <strong>${fileSlack} o</strong></li>
+        </ul>
+        <strong>Quelle était la taille logique du fichier ?</strong>
+      </div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 1rem;margin-bottom:.8rem;font-family:var(--mono);font-size:.76rem">
+        <div>Espace alloué total = ${nClusters} × ${cs} = <strong>${totalAlloc.toLocaleString('fr-CH')} o</strong></div>
+        <div>File slack mesuré  = <strong>${fileSlack} o</strong></div>
+        <div style="margin-top:.3rem;color:var(--dim);font-size:.72rem">Rappel : file_slack = taille_cluster − (taille_fichier mod taille_cluster)</div>
+      </div>
+      <div class="sec-title">Taille logique du fichier (octets)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="ss-choices">
+        ${choices.map(c => `<button class="tp-choice" style="flex:1;min-width:110px;font-family:var(--mono)"
+            data-correct="${c === fileSize}">${c.toLocaleString('fr-CH')} o</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.4rem">
+        <button class="btn-hint" id="ss-h1">💡 Niveau 1 — Formule inverse</button>
+        <button class="btn-hint" id="ss-h2" disabled style="opacity:.45">💡 Niveau 2 — Calcul intermédiaire</button>
+        <button class="btn-hint" id="ss-h3" disabled style="opacity:.45">💡 Niveau 3 — Résultat + vérif</button>
+      </div>
+      <div class="ex-feedback" id="ex-feedback-ss" style="display:none"></div>
+      <button class="btn-next" id="btn-next-ss" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+
+    function showSSHint(level, html) {
+      markHintUsed();
+      const fb = div.querySelector('#ex-feedback-ss');
+      fb.style.display = 'block'; fb.className = 'ex-feedback correct';
+      fb.innerHTML = `<div style="font-size:.7rem;color:var(--dim);margin-bottom:.25rem">Indice ${level}/3</div>${html}`;
+      const next = div.querySelector(`#ss-h${level+1}`);
+      if (next) { next.disabled = false; next.style.opacity = '1'; }
+      div.querySelector(`#ss-h${level}`).style.opacity = '.35';
+    }
+    div.querySelector('#ss-h1').addEventListener('click', () => showSSHint(1, hints[0]));
+    div.querySelector('#ss-h2').addEventListener('click', () => showSSHint(2, hints[1]));
+    div.querySelector('#ss-h3').addEventListener('click', () => showSSHint(3, hints[2]));
+
+    div.querySelectorAll('#ss-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        div.querySelectorAll('#ss-choices .tp-choice').forEach(x => {
+          x.disabled = true;
+          if (x.dataset.correct === 'true') x.classList.add('correct');
+          else if (x !== b) x.classList.add('dim');
+        });
+        if (!isOk) { b.classList.add('wrong'); breakStreak(); }
+        else if (!STATE.hintUsed) incSolved('slackspace');
+        const fb = div.querySelector('#ex-feedback-ss');
+        fb.style.display = 'block';
+        fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+        const explain = `Taille = espace alloué − slack = ${totalAlloc} − ${fileSlack} = <strong>${fileSize.toLocaleString('fr-CH')} o</strong>.<br>
+          <span style="font-size:.75rem;color:var(--dim)">Vérif : ${fileSize} mod ${cs} = ${residual} → slack = ${cs} − ${residual} = ${fileSlack} ✓</span>`;
+        fb.innerHTML = isOk ? `✅ Correct ! ${explain}`
+          : formatChoiceFeedback(false, explain,
+              `Taille logique = total_alloué − file_slack = ${totalAlloc} − ${fileSlack} = ${fileSize} o.`);
+        div.querySelector('#btn-next-ss').style.display = 'inline-block';
+        div.querySelector('#ex-num-ss').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      });
+    });
+    return div;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 21. MBR / GPT — PARSING DE TABLE DE PARTITIONS
+// ═══════════════════════════════════════════════════════════════
+//
+// Sous-types :
+//   0 — Lire un champ précis d'une partition entry MBR (LBA start, size, type)
+//   1 — Calculer l'offset absolu d'une partition (LBA start × 512)
+//   2 — Identifier le type de partition via le byte de type (0x07, 0x0B, 0x83…)
+//   3 — Détecter MBR vs GPT depuis le premier secteur
+//
+function genMBR() {
+  const subtype = rand(0, 3);
+
+  // ── Palette de types de partitions réalistes ────────────────
+  const PART_TYPES = [
+    { byte: 0x07, name: 'NTFS / exFAT',    note: '0x07 = NTFS (Windows) ou exFAT. Le plus courant sur les disques Windows modernes.' },
+    { byte: 0x0B, name: 'FAT32 (CHS)',      note: '0x0B = FAT32 adressé en CHS. 0x0C = FAT32 LBA — plus courant sur les supports récents.' },
+    { byte: 0x0C, name: 'FAT32 (LBA)',      note: '0x0C = FAT32 adressé en LBA. Identique à 0x0B côté structure, différent côté adressage.' },
+    { byte: 0x83, name: 'Linux (ext2/3/4)', note: '0x83 = partition Linux native (ext2, ext3, ext4). Identifiable par le superbloc à offset 1024.' },
+    { byte: 0x82, name: 'Linux swap',       note: '0x82 = espace de swap Linux. Pas de système de fichiers — zone de pagination RAM.' },
+    { byte: 0x05, name: 'Étendue (CHS)',    note: '0x05 = partition étendue — contient des partitions logiques. 0x0F = étendue LBA.' },
+    { byte: 0xEE, name: 'GPT protective',   note: '0xEE = Protective MBR — indique un disque GPT. Le vrai schéma de partitions est dans le GPT header à LBA 1.' },
+    { byte: 0xAB, name: 'macOS Boot',       note: '0xAB = macOS Recovery / boot. Visible sur les Macs avec EFI.' },
+  ];
+
+  // ── Utilitaires Little Endian ───────────────────────────────
+  const le32 = v => [v & 0xFF, (v>>8)&0xFF, (v>>16)&0xFF, (v>>24)&0xFF];
+  const readLE32 = (arr, off) => arr[off] | (arr[off+1]<<8) | (arr[off+2]<<16) | (arr[off+3]*16777216);
+
+  // ── Générateur de partition entry réaliste (16 octets) ──────
+  // On garde les valeurs petites pour que le calcul soit faisable mentalement.
+  // LBA start : multiple de 2048 (alignement 1 Mo classique), max ~256 Mo → max LBA ~524288
+  // Size      : entre 2048 et 65536 secteurs (1 Mo à 32 Mo)
+  function makePartEntry(typeObj, lbaStart, lbaSize) {
+    const b = new Array(16).fill(0);
+    b[0]  = 0x80;                      // Status : 0x80 = bootable, 0x00 = non-bootable
+    // CHS Begin (3 octets) — on met 0xFE 0xFF 0xFF pour indiquer "CHS non utilisable"
+    b[1]  = 0xFE; b[2] = 0xFF; b[3] = 0xFF;
+    b[4]  = typeObj.byte;              // Partition type
+    // CHS End
+    b[5]  = 0xFE; b[6] = 0xFF; b[7] = 0xFF;
+    // LBA Start (LE32)
+    le32(lbaStart).forEach((x,i) => b[8+i]  = x);
+    // LBA Size (LE32)
+    le32(lbaSize).forEach((x,i)  => b[12+i] = x);
+    return b;
+  }
+
+  // ── Sous-type 0 : lire un champ depuis la partition entry ───
+  if (subtype === 0) {
+    const typeObj  = PART_TYPES[rand(0, PART_TYPES.length - 1)];
+    const lbaStart = rand(1, 128) * 2048;          // 2048..262144
+    const lbaSize  = rand(1,  32) * 2048;          // 2048..65536
+    const entry    = makePartEntry(typeObj, lbaStart, lbaSize);
+
+    // On choisit quel champ on demande
+    const field = rand(0, 2);
+    let answer, qText, hlFrom, hlTo, hlColor, hlLabel, explain, hints;
+
+    if (field === 0) {
+      // LBA Start
+      answer   = lbaStart;
+      qText    = `Lis le champ <strong>LBA Start</strong> de cette partition entry.<br>
+                  <span style="color:var(--dim);font-size:.78rem">Offset dans l'entry : 0x08 sur 4 octets Little Endian</span>`;
+      hlFrom   = 8; hlTo = 11; hlColor = '--cyan'; hlLabel = 'LBA Start (LE32)';
+      explain  = `LBA Start @ offset 0x08 : ${entry.slice(8,12).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')} en LE → 0x${lbaStart.toString(16).toUpperCase()} = ${lbaStart.toLocaleString('fr-CH')} secteurs.`;
+      hints    = [
+        `LBA Start est à l'offset <strong>0x08</strong> dans l'entry, encodé sur <strong>4 octets Little Endian</strong>.`,
+        `Lis les 4 octets à partir de l'offset 0x08 : <code>${entry.slice(8,12).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</code>. Inverse l'ordre.`,
+        `Inversé : <code>${entry.slice(8,12).reverse().map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</code> → 0x${lbaStart.toString(16).toUpperCase()} = ${lbaStart} secteurs`,
+      ];
+    } else if (field === 1) {
+      // LBA Size
+      answer   = lbaSize;
+      qText    = `Lis le champ <strong>LBA Size</strong> (nombre de secteurs) de cette partition entry.<br>
+                  <span style="color:var(--dim);font-size:.78rem">Offset dans l'entry : 0x0C sur 4 octets Little Endian</span>`;
+      hlFrom   = 12; hlTo = 15; hlColor = '--gold'; hlLabel = 'LBA Size (LE32)';
+      explain  = `LBA Size @ offset 0x0C : ${entry.slice(12,16).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')} en LE → ${lbaSize.toLocaleString('fr-CH')} secteurs = ${Math.round(lbaSize*512/1024/1024)} Mo.`;
+      hints    = [
+        `LBA Size est à l'offset <strong>0x0C</strong> dans l'entry, encodé sur <strong>4 octets Little Endian</strong>.`,
+        `Lis les 4 octets : <code>${entry.slice(12,16).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</code>, inverse, convertis.`,
+        `→ 0x${lbaSize.toString(16).toUpperCase()} = ${lbaSize} secteurs ≈ ${Math.round(lbaSize*512/1024/1024)} Mo`,
+      ];
+    } else {
+      // Type byte
+      answer   = typeObj.byte;
+      qText    = `Lis le <strong>Type byte</strong> de cette partition entry.<br>
+                  <span style="color:var(--dim);font-size:.78rem">Offset dans l'entry : 0x04 sur 1 octet</span>`;
+      hlFrom   = 4; hlTo = 4; hlColor = '--purple'; hlLabel = 'Partition Type';
+      explain  = `Type @ offset 0x04 = 0x${typeObj.byte.toString(16).toUpperCase()} → ${typeObj.name}. ${typeObj.note}`;
+      hints    = [
+        `Le type byte est à l'offset <strong>0x04</strong> — un seul octet, pas besoin d'inverser.`,
+        `Offset 0x04 dans le dump : <code>${entry[4].toString(16).toUpperCase().padStart(2,'0')}</code>.`,
+        `0x${typeObj.byte.toString(16).toUpperCase()} = "${typeObj.name}".`,
+      ];
+    }
+
+    // Distracteurs pour QCM
+    const makeDist = (base) => {
+      const d = [];
+      if (field === 2) {
+        // Pour le type byte, prendre d'autres types
+        d.push(...PART_TYPES.filter(t => t.byte !== typeObj.byte).map(t => t.byte).sort(() => Math.random()-.5).slice(0,3));
+      } else {
+        d.push(answer + 2048, answer - 2048, answer * 2);
+      }
+      return d.filter(v => v !== answer && v > 0).slice(0,3);
+    };
+    const distractors = makeDist(answer);
+    const choices = [answer, ...distractors].sort(() => Math.random()-.5);
+
+    const dumpHTML = renderHexDump(
+      [{ offset: '00000000', bytes: entry }],
+      [
+        { from:0, to:0, color:'--dim', label:'Status (0x80=bootable)' },
+        { from:1, to:3, color:'--dim', label:'CHS Begin' },
+        { from:hlFrom, to:hlTo, color:hlColor, label:hlLabel },
+        { from:5, to:7, color:'--dim', label:'CHS End' },
+      ],
+      { cols: 16, title: 'Partition Entry MBR (16 octets)' }
+    );
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-mbr">💽</div>
+        <div class="ex-title">Lecture d'une Partition Entry MBR</div>
+        <span class="ex-badge medium">MBR · Little Endian</span>
+      </div>
+      <div class="ex-scenario">
+        Tu analyses la <strong>table de partitions MBR</strong> d'un disque suspect.<br>
+        Chaque partition entry fait <strong>16 octets</strong>, offset 0x1BE dans le MBR.<br>
+        ${qText}
+      </div>
+      <div class="sec-title">Partition Entry (16 octets)</div>
+      ${dumpHTML}
+      <div class="sec-title" style="margin-top:.6rem">Structure d'une Partition Entry</div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 1rem;margin-bottom:.75rem;font-family:var(--mono);font-size:.72rem;display:grid;grid-template-columns:auto auto 1fr;gap:.2rem .8rem">
+        <span style="color:var(--dim)">0x00</span><span style="color:var(--text)">1 o</span><span style="color:var(--muted)">Status (0x80=boot, 0x00=inactif)</span>
+        <span style="color:var(--dim)">0x01</span><span style="color:var(--text)">3 o</span><span style="color:var(--muted)">CHS Begin (souvent FE FF FF si LBA)</span>
+        <span style="color:var(--purple);font-weight:700">0x04</span><span style="color:var(--text)">1 o</span><span style="color:var(--purple)">Type byte (FS)</span>
+        <span style="color:var(--dim)">0x05</span><span style="color:var(--text)">3 o</span><span style="color:var(--muted)">CHS End (souvent FE FF FF si LBA)</span>
+        <span style="color:var(--cyan);font-weight:700">0x08</span><span style="color:var(--text)">4 o</span><span style="color:var(--cyan)">LBA Start (LE32)</span>
+        <span style="color:var(--gold);font-weight:700">0x0C</span><span style="color:var(--text)">4 o</span><span style="color:var(--gold)">LBA Size (LE32, nb secteurs)</span>
+      </div>
+      <div class="sec-title">Réponse</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="mbr-choices">
+        ${choices.map(c => `<button class="tp-choice" style="flex:1;min-width:100px;font-family:var(--mono)"
+            data-correct="${c === answer}" data-val="${c}">
+            ${field === 2 ? '0x' + c.toString(16).toUpperCase().padStart(2,'0') : c.toLocaleString('fr-CH')}
+          </button>`).join('')}
+      </div>
+      <div style="display:flex;gap:.5rem;margin-bottom:.5rem">
+        <button class="btn-hint" id="btn-mbr-hint">💡 Indice</button>
+      </div>
+      <div class="ex-feedback" id="ex-feedback-mbr" style="display:none"></div>
+      <button class="btn-next" id="btn-next-mbr" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+    let hintLevel = 0;
+    div.querySelector('#btn-mbr-hint').addEventListener('click', () => {
+      markHintUsed();
+      const fb = div.querySelector('#ex-feedback-mbr');
+      fb.style.display = 'block';
+      fb.className = 'ex-feedback correct';
+      fb.innerHTML = '💡 ' + hints[Math.min(hintLevel, hints.length-1)];
+      hintLevel++;
+    });
+    div.querySelectorAll('#mbr-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        document.querySelectorAll('#mbr-choices .tp-choice').forEach(x => {
+          x.disabled = true;
+          if (x.dataset.correct === 'true') x.classList.add('correct');
+          else if (x !== b) x.classList.add('dim');
+        });
+        if (!isOk) { b.classList.add('wrong'); breakStreak(); }
+        else if (!STATE.hintUsed) incSolved('mbr');
+        const fb = div.querySelector('#ex-feedback-mbr');
+        fb.style.display = 'block';
+        fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+        fb.innerHTML = formatChoiceFeedback(isOk, explain,
+          `La valeur lue n'est pas correcte. ${explain}`);
+        div.querySelector('#btn-next-mbr').style.display = 'inline-block';
+        div.querySelector('#ex-num-mbr').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      });
+    });
+    return div;
+  }
+
+  // ── Sous-type 1 : calculer l'offset absolu en octets ────────
+  if (subtype === 1) {
+    const typeObj  = PART_TYPES[rand(0, PART_TYPES.length - 1)];
+    const lbaStart = rand(1, 64) * 2048;    // 2048..131072 — volontairement petit
+    const lbaSize  = rand(1, 16) * 2048;
+    const bps      = 512;                   // toujours 512 pour simplifier
+    const entry    = makePartEntry(typeObj, lbaStart, lbaSize);
+    const answer   = lbaStart * bps;        // offset absolu en octets
+
+    const distractors = [
+      lbaSize * bps,                // confusion start/size
+      lbaStart * 4096,              // mauvais BPS
+      lbaStart + bps,               // addition au lieu de multiplication
+    ].filter(v => v !== answer && v > 0);
+    const choices = [answer, ...distractors].sort(() => Math.random()-.5);
+
+    const dumpHTML = renderHexDump(
+      [{ offset: '00000000', bytes: entry }],
+      [
+        { from:8, to:11, color:'--cyan', label:'LBA Start (LE32)' },
+        { from:12,to:15, color:'--dim',  label:'LBA Size' },
+      ],
+      { cols: 16, title: 'Partition Entry MBR (16 octets)' }
+    );
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-mbr">💽</div>
+        <div class="ex-title">MBR → Offset absolu de la partition</div>
+        <span class="ex-badge hard">LBA × BPS</span>
+      </div>
+      <div class="ex-scenario">
+        Tu as lu la partition entry ci-dessous. Le disque utilise des secteurs de
+        <strong>${bps} octets</strong>.<br>
+        À quel <strong>offset absolu</strong> (en octets) commence cette partition sur le disque ?
+      </div>
+      ${dumpHTML}
+      <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.15);border-radius:8px;padding:.6rem .9rem;margin-bottom:.75rem;font-size:.78rem">
+        <strong style="color:var(--cyan)">Formule :</strong>
+        <span style="font-family:var(--mono);color:var(--text)"> Offset = LBA_Start × Bytes_Per_Sector</span>
+        <div style="margin-top:.3rem;color:var(--dim);font-size:.72rem">LBA Start est à l'offset <strong>0x08</strong> de l'entry — 4 octets Little Endian.</div>
+      </div>
+      <div class="sec-title">Offset absolu (octets)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="mbr-choices">
+        ${choices.map(c => `<button class="tp-choice" style="flex:1;min-width:120px;font-family:var(--mono)"
+            data-correct="${c === answer}" data-val="${c}">
+            ${c.toLocaleString('fr-CH')} o
+          </button>`).join('')}
+      </div>
+      <div style="display:flex;gap:.5rem;margin-bottom:.5rem">
+        <button class="btn-hint" id="btn-mbr-hint">💡 Étapes</button>
+      </div>
+      <div class="ex-feedback" id="ex-feedback-mbr" style="display:none"></div>
+      <button class="btn-next" id="btn-next-mbr" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+    const stepsHtml = `
+      💡 Étapes :
+      <ol style="margin:.4rem 0 0 1.2rem;line-height:1.8;font-size:.78rem">
+        <li>Lire LBA Start à l'offset 0x08 : <code style="color:var(--cyan)">${entry.slice(8,12).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</code></li>
+        <li>Inverser (Little Endian) → <code>0x${lbaStart.toString(16).toUpperCase()}</code> = ${lbaStart.toLocaleString('fr-CH')} secteurs</li>
+        <li>Offset = ${lbaStart.toLocaleString('fr-CH')} × ${bps} = <strong>${answer.toLocaleString('fr-CH')} octets</strong></li>
+      </ol>`;
+    div.querySelector('#btn-mbr-hint').addEventListener('click', () => {
+      markHintUsed();
+      const fb = div.querySelector('#ex-feedback-mbr');
+      fb.style.display = 'block'; fb.className = 'ex-feedback correct';
+      fb.innerHTML = stepsHtml;
+    });
+    div.querySelectorAll('#mbr-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        document.querySelectorAll('#mbr-choices .tp-choice').forEach(x => {
+          x.disabled = true;
+          if (x.dataset.correct === 'true') x.classList.add('correct');
+          else if (x !== b) x.classList.add('dim');
+        });
+        if (!isOk) { b.classList.add('wrong'); breakStreak(); }
+        else if (!STATE.hintUsed) incSolved('mbr');
+        const fb = div.querySelector('#ex-feedback-mbr');
+        fb.style.display = 'block';
+        fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+        const explain = `LBA Start = ${lbaStart} secteurs × ${bps} o/secteur = <strong>${answer.toLocaleString('fr-CH')} octets</strong>.`;
+        fb.innerHTML = formatChoiceFeedback(isOk, explain,
+          `Erreur de calcul. ${explain}`);
+        div.querySelector('#btn-next-mbr').style.display = 'inline-block';
+        div.querySelector('#ex-num-mbr').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      });
+    });
+    return div;
+  }
+
+  // ── Sous-type 2 : identifier le type de partition ────────────
+  if (subtype === 2) {
+    const typeObj = PART_TYPES[rand(0, PART_TYPES.length - 1)];
+    const lbaStart = rand(1, 32) * 2048;
+    const lbaSize  = rand(1, 16) * 2048;
+    const entry    = makePartEntry(typeObj, lbaStart, lbaSize);
+
+    const others  = PART_TYPES.filter(t => t.byte !== typeObj.byte).sort(() => Math.random()-.5).slice(0,3);
+    const choices = [...others, typeObj].sort(() => Math.random()-.5);
+
+    const dumpHTML = renderHexDump(
+      [{ offset: '00000000', bytes: entry }],
+      [{ from:4, to:4, color:'--purple', label:'Type byte' }],
+      { cols: 16, title: 'Partition Entry MBR (16 octets)' }
+    );
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-mbr">💽</div>
+        <div class="ex-title">MBR — Identifier le type de partition</div>
+        <span class="ex-badge medium">Partition Type</span>
+      </div>
+      <div class="ex-scenario">
+        Tu examines une partition entry MBR. Le <strong>type byte</strong> (offset 0x04) est mis en évidence.<br>
+        Quel système de fichiers ou type de partition ce byte désigne-t-il ?
+      </div>
+      ${dumpHTML}
+      <div class="sec-title" style="margin-top:.6rem">Type de partition</div>
+      <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="mbr-choices">
+        ${choices.map(c => `
+          <button class="tp-choice" data-correct="${c.byte === typeObj.byte}" data-val="${c.byte}"
+              data-explain="${encData(c.note)}" style="text-align:left">
+            <span class="tp-choice-letter" style="font-family:var(--mono);min-width:52px">0x${c.byte.toString(16).toUpperCase().padStart(2,'0')}</span>
+            <span>${c.name}</span>
+          </button>`).join('')}
+      </div>
+      <div class="ex-feedback" id="ex-feedback-mbr" style="display:none"></div>
+      <button class="btn-next" id="btn-next-mbr" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+    div.querySelectorAll('#mbr-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        document.querySelectorAll('#mbr-choices .tp-choice').forEach(x => {
+          x.disabled = true;
+          if (x.dataset.correct === 'true') x.classList.add('correct');
+          else if (x !== b) x.classList.add('dim');
+        });
+        if (!isOk) { b.classList.add('wrong'); breakStreak(); }
+        else if (!STATE.hintUsed) incSolved('mbr');
+        const fb = div.querySelector('#ex-feedback-mbr');
+        fb.style.display = 'block';
+        fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+        const note = decData(b.dataset.explain) || typeObj.note;
+        fb.innerHTML = formatChoiceFeedback(isOk,
+          `0x${typeObj.byte.toString(16).toUpperCase().padStart(2,'0')} = <strong>${typeObj.name}</strong>. ${typeObj.note}`,
+          `${note} — La bonne réponse est <strong>0x${typeObj.byte.toString(16).toUpperCase().padStart(2,'0')} (${typeObj.name})</strong>.`);
+        div.querySelector('#btn-next-mbr').style.display = 'inline-block';
+        div.querySelector('#ex-num-mbr').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      });
+    });
+    return div;
+  }
+
+  // ── Sous-type 3 : MBR vs GPT ─────────────────────────────────
+  {
+    const isGPT = Math.random() < 0.5;
+    const SECTOR_SIZE = 512;
+
+    // MBR : 4 partitions normales, signature AA55 à l'offset 510
+    // GPT : protective MBR avec type 0xEE, reste à zéro, signature AA55
+    const sectorBytes = new Array(SECTOR_SIZE).fill(0);
+
+    // Signature boot à l'offset 510
+    sectorBytes[510] = 0x55; sectorBytes[511] = 0xAA;
+
+    let hint1Text, hint2Text, correctExplain, wrongExplain;
+
+    if (!isGPT) {
+      // MBR classique : 2 entrées réalistes à 0x1BE et 0x1CE
+      const e1 = makePartEntry(PART_TYPES[2], 2048, 32768);   // FAT32
+      const e2 = makePartEntry(PART_TYPES[0], 34816, 65536);  // NTFS
+      e1.forEach((b,i) => sectorBytes[0x1BE+i] = b);
+      e2.forEach((b,i) => sectorBytes[0x1CE+i] = b);
+      // Marquer les 2 autres entrées comme vides
+      hint1Text = 'L\'offset 0x1C2 contient le type byte de la première partition.';
+      hint2Text = `Type byte @ 0x1C2 = 0x0C (FAT32 LBA) — pas 0xEE. C'est un MBR classique, pas un GPT.`;
+      correctExplain = `MBR classique : première partition type 0x0C (FAT32), deuxième type 0x07 (NTFS). Aucune entrée 0xEE (GPT protective). Signature 0x55AA à l'offset 510.`;
+      wrongExplain   = `Ce secteur n'est pas un GPT. Le type 0xEE (protective MBR) est absent. Les deux partitions ont des types FAT32/NTFS normaux.`;
+    } else {
+      // GPT protective MBR : une seule entrée type 0xEE, le reste à zéro
+      const gptEntry = makePartEntry(PART_TYPES.find(t=>t.byte===0xEE), 1, 0xFFFFFFFF);
+      gptEntry.forEach((b,i) => sectorBytes[0x1BE+i] = b);
+      hint1Text = 'L\'offset 0x1C2 contient le type byte de la première partition.';
+      hint2Text = `Type byte @ 0x1C2 = 0xEE = "GPT Protective MBR". Le vrai schéma de partitions est dans l'en-tête GPT à LBA 1.`;
+      correctExplain = `Type 0xEE (GPT Protective MBR) à l'offset 0x1C2 — ce disque utilise GPT. Le schéma de partitions réel est dans le GPT Header à LBA 1 (offset 512). Les autres entries sont vides.`;
+      wrongExplain   = `Ce secteur IS un GPT : présence du type 0xEE (GPT Protective) à 0x1C2. Un MBR classique n'aurait jamais ce type ici.`;
+    }
+
+    // On affiche seulement les 64 derniers octets du secteur (0x1C0..0x1FF) — zone des partitions
+    const partZone = sectorBytes.slice(0x1B0, 0x200); // 80 octets : 16 bytes clé + 4 entries + signature
+    const dumpHTML = renderHexDump(
+      [{ offset: '000001B0', bytes: partZone }],
+      [
+        { from: 0x1BE, to: 0x1CD, color: '--cyan',   label: 'Partition Entry 1 (16 o)' },
+        { from: 0x1C2, to: 0x1C2, color: '--purple',  label: 'Type byte' },
+        { from: 0x1FE, to: 0x1FF, color: '--gold',   label: 'Signature 0x55AA' },
+      ],
+      { cols: 16, title: 'Zone de partitions MBR (offset 0x1B0 → 0x1FF)' }
+    );
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-mbr">💽</div>
+        <div class="ex-title">MBR ou GPT ?</div>
+        <span class="ex-badge medium">Type 0xEE · Protective MBR</span>
+      </div>
+      <div class="ex-scenario">
+        Tu examines la <strong>zone de partitions</strong> du premier secteur d'un disque inconnu.<br>
+        Ce secteur contient-il un <strong>MBR classique</strong> ou un <strong>Protective MBR (GPT)</strong> ?
+      </div>
+      ${dumpHTML}
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 1rem;margin-bottom:.75rem;font-size:.76rem;font-family:var(--mono)">
+        <div style="margin-bottom:.3rem;color:var(--dim)">Indices de diagnostic :</div>
+        <div>• Type byte <strong style="color:var(--purple)">0xEE</strong> à l'offset 0x1C2 = GPT Protective MBR → disque GPT</div>
+        <div>• Tout autre type (0x07, 0x0B, 0x0C, 0x83…) = partition réelle → MBR classique</div>
+        <div>• Signature <strong style="color:var(--gold)">55 AA</strong> @ offset 0x1FE présente dans les deux cas</div>
+      </div>
+      <div class="ex-input-row" style="gap:.5rem;flex-wrap:wrap" id="mbr-choices">
+        <button class="tp-choice" style="flex:1;min-width:180px" data-correct="${!isGPT}" data-val="mbr">
+          <span class="tp-choice-letter">A</span> MBR classique (partitions réelles)
+        </button>
+        <button class="tp-choice" style="flex:1;min-width:180px" data-correct="${isGPT}" data-val="gpt">
+          <span class="tp-choice-letter">B</span> Protective MBR → disque GPT
+        </button>
+      </div>
+      <div style="display:flex;gap:.5rem;margin:.5rem 0">
+        <button class="btn-hint" id="btn-mbr-hint">💡 Indice</button>
+      </div>
+      <div class="ex-feedback" id="ex-feedback-mbr" style="display:none"></div>
+      <button class="btn-next" id="btn-next-mbr" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+    let hintLevel = 0;
+    const hints = [hint1Text, hint2Text];
+    div.querySelector('#btn-mbr-hint').addEventListener('click', () => {
+      markHintUsed();
+      const fb = div.querySelector('#ex-feedback-mbr');
+      fb.style.display = 'block'; fb.className = 'ex-feedback correct';
+      fb.innerHTML = '💡 ' + hints[Math.min(hintLevel, hints.length-1)];
+      hintLevel++;
+    });
+    div.querySelectorAll('#mbr-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        document.querySelectorAll('#mbr-choices .tp-choice').forEach(x => {
+          x.disabled = true;
+          if (x.dataset.correct === 'true') x.classList.add('correct');
+          else if (x !== b) x.classList.add('dim');
+        });
+        if (!isOk) { b.classList.add('wrong'); breakStreak(); }
+        else if (!STATE.hintUsed) incSolved('mbr');
+        const fb = div.querySelector('#ex-feedback-mbr');
+        fb.style.display = 'block';
+        fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+        fb.innerHTML = formatChoiceFeedback(isOk, correctExplain, wrongExplain);
+        div.querySelector('#btn-next-mbr').style.display = 'inline-block';
+        div.querySelector('#ex-num-mbr').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      });
+    });
+    return div;
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// 22. DIRECTORY ENTRY FAT — LECTURE COMPLÈTE (32 OCTETS)
+// ═══════════════════════════════════════════════════════════════
+//
+// Sous-types :
+//   0 — Lire le nom SFN (8.3) et détecter l'état (actif / effacé / fin)
+//   1 — Lire les attributs (archive, répertoire, lecture seule, hidden, system)
+//   2 — Lire le premier cluster et la taille du fichier
+//   3 — Déduire la date/heure de modification depuis les champs bruts
+//
+function genDirEntry() {
+  const subtype = rand(0, 3);
+
+  // ── Attribut flags ──────────────────────────────────────────
+  const ATTR = {
+    READ_ONLY: 0x01,
+    HIDDEN:    0x02,
+    SYSTEM:    0x04,
+    VOLUME_ID: 0x08,
+    DIRECTORY: 0x10,
+    ARCHIVE:   0x20,
+    LFN:       0x0F, // combinaison spéciale LFN
+  };
+
+  // ── LE helpers ──────────────────────────────────────────────
+  const le16 = v => [v & 0xFF, (v>>8) & 0xFF];
+  const le32 = v => [v&0xFF,(v>>8)&0xFF,(v>>16)&0xFF,(v>>24)&0xFF];
+
+  // ── Constructeur d'une directory entry de 32 octets ─────────
+  // name8  : 8 chars (espaces = padding)
+  // ext3   : 3 chars (espaces = padding)
+  // attr   : byte d'attribut
+  // cluster: numéro de premier cluster (uint16, gardé petit)
+  // size   : taille en octets (uint32, gardée petite)
+  // year/month/day, hour/min/sec : date/heure de modification
+  function buildEntry({ name8, ext3, attr, cluster, size, year, month, day, hour, min, sec, status }) {
+    const b = new Array(32).fill(0);
+    // Nom 8.3
+    const fullName = (name8 + '        ').slice(0,8);
+    const fullExt  = (ext3  + '   ').slice(0,3);
+    fullName.split('').forEach((c,i) => b[i]   = c.charCodeAt(0));
+    fullExt.split('').forEach( (c,i) => b[8+i] = c.charCodeAt(0));
+    // Status du premier octet
+    if (status === 'deleted') b[0] = 0xE5;
+    else if (status === 'end') b[0] = 0x00;
+    // Attributs
+    b[11] = attr;
+    // Réservé (0x0C) — on y met NTRes = 0x00
+    b[12] = 0x00;
+    // CrtTimeTenth @ 0x0D (ignoré ici)
+    b[13] = 0x00;
+    // Heure de modification @ 0x16 (2 octets LE)
+    // Time : bits 15-11=h, 10-5=m, 4-0=s/2
+    const timeWord = (hour<<11)|(min<<5)|Math.floor(sec/2);
+    le16(timeWord).forEach((x,i) => b[0x16+i] = x);
+    // Date de modification @ 0x18 (2 octets LE)
+    // Date : bits 15-9=year-1980, 8-5=month, 4-0=day
+    const dateWord = ((year-1980)<<9)|(month<<5)|day;
+    le16(dateWord).forEach((x,i) => b[0x18+i] = x);
+    // First cluster (high word @ 0x14, low word @ 0x1A)
+    le16(cluster & 0xFFFF).forEach((x,i) => b[0x1A+i] = x);
+    le16((cluster>>16)&0xFFFF).forEach((x,i) => b[0x14+i] = x);
+    // File size @ 0x1C
+    le32(size).forEach((x,i) => b[0x1C+i] = x);
+    return b;
+  }
+
+  // ── Palette de noms de fichiers plausibles ───────────────────
+  const FILE_SCENARIOS = [
+    { name8:'RAPPORT ', ext3:'DOC', attr: ATTR.ARCHIVE,                  desc:'rapport.doc (fichier archive Word)' },
+    { name8:'CONFIG  ', ext3:'INI', attr: ATTR.ARCHIVE|ATTR.HIDDEN,       desc:'config.ini (archive + caché)' },
+    { name8:'SYSTEM  ', ext3:'   ', attr: ATTR.DIRECTORY,                 desc:'SYSTEM (répertoire)' },
+    { name8:'BOOT    ', ext3:'INI', attr: ATTR.ARCHIVE|ATTR.SYSTEM|ATTR.READ_ONLY, desc:'boot.ini (archive + système + read-only)' },
+    { name8:'IMAGE   ', ext3:'JPG', attr: ATTR.ARCHIVE,                   desc:'IMAGE.JPG (fichier archive)' },
+    { name8:'MALWARE ', ext3:'EXE', attr: ATTR.ARCHIVE|ATTR.HIDDEN|ATTR.SYSTEM, desc:'MALWARE.EXE (caché + système — suspect)' },
+    { name8:'LOG     ', ext3:'TXT', attr: ATTR.ARCHIVE|ATTR.READ_ONLY,    desc:'LOG.TXT (lecture seule)' },
+    { name8:'BACKUP  ', ext3:'ZIP', attr: ATTR.ARCHIVE,                   desc:'BACKUP.ZIP' },
+  ];
+
+  const scen     = FILE_SCENARIOS[rand(0, FILE_SCENARIOS.length-1)];
+  const cluster  = rand(2, 255);                 // petit pour calcul mental
+  const sizeMult = rand(1, 64);
+  const size     = sizeMult * 512;               // toujours multiple de 512 → lisible
+  const year     = rand(2018, 2024);
+  const month    = rand(1, 12);
+  const day      = rand(1, 28);
+  const hour     = rand(0, 23);
+  const min      = rand(0, 59);
+  const sec      = rand(0, 29) * 2;             // précision 2 secondes FAT
+
+  // ── Sous-type 0 : lire le nom SFN et l'état ─────────────────
+  if (subtype === 0) {
+    // 3 cas : actif, effacé (0xE5), fin de répertoire (0x00)
+    const entryState = ['active','deleted','end'][rand(0,2)];
+    const entry = buildEntry({ ...scen, cluster, size, year, month, day, hour, min, sec, status: entryState });
+
+    const stateLabels = {
+      active:  { label: 'Fichier actif',                    explain: `Le premier octet (0x${entry[0].toString(16).toUpperCase().padStart(2,'0')}) est un caractère ASCII valide — entrée active. Le nom complet est "${scen.name8.trim()}.${scen.ext3.trim()}".` },
+      deleted: { label: 'Fichier supprimé (0xE5)',          explain: `0xE5 = entrée supprimée en FAT. Le système a écrit 0xE5 à la place du premier caractère du nom. Les données sont potentiellement récupérables si le cluster n'a pas été réalloué.` },
+      end:     { label: 'Fin de répertoire (0x00)',         explain: `0x00 = marqueur de fin de répertoire. Toutes les entrées suivantes sont libres ou inexistantes. La lecture du répertoire s'arrête ici.` },
+    };
+
+    const choices = [
+      { val: 'active',  text: 'Fichier actif',             explain: stateLabels.active.explain  },
+      { val: 'deleted', text: 'Fichier supprimé (0xE5)',   explain: stateLabels.deleted.explain },
+      { val: 'end',     text: 'Fin de répertoire (0x00)',  explain: stateLabels.end.explain     },
+    ].sort(() => Math.random()-.5);
+
+    const correctState = stateLabels[entryState];
+
+    const dumpHTML = renderHexDump(
+      [{ offset: '00000000', bytes: entry }],
+      [
+        { from:0, to:0, color:'--purple', label:'Premier octet (status)' },
+        { from:1, to:7, color:'--cyan',   label:'Nom (7 octets restants)' },
+        { from:8,to:10, color:'--gold',   label:'Extension' },
+      ],
+      { cols: 16, title: 'Directory Entry FAT (32 octets)' }
+    );
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-de">📁</div>
+        <div class="ex-title">Directory Entry — État et nom SFN</div>
+        <span class="ex-badge medium">FAT · 8.3 · Status byte</span>
+      </div>
+      <div class="ex-scenario">
+        Tu analyses une entrée de répertoire FAT (32 octets).<br>
+        <strong>Quel est l'état de cette entrée ?</strong> Identifie le premier octet.
+      </div>
+      ${dumpHTML}
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 1rem;margin-bottom:.75rem;font-size:.76rem;font-family:var(--mono)">
+        <div style="color:var(--dim);margin-bottom:.3rem">Décodage du premier octet :</div>
+        <div>• <strong style="color:var(--green)">0x00</strong> = fin de répertoire (toutes les entrées suivantes sont libres)</div>
+        <div>• <strong style="color:var(--red)">0xE5</strong> = fichier supprimé (données potentiellement récupérables)</div>
+        <div>• <strong style="color:var(--cyan)">autre</strong> = premier caractère du nom en ASCII (entrée active)</div>
+      </div>
+      <div class="sec-title">État de l'entrée</div>
+      <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="de-choices">
+        ${choices.map(c => `
+          <button class="tp-choice" data-correct="${c.val === entryState}"
+              data-explain="${encData(c.explain)}" style="text-align:left">
+            <span class="tp-choice-letter">${c.val === 'active'?'A':c.val==='deleted'?'B':'C'}</span>
+            ${c.text}
+          </button>`).join('')}
+      </div>
+      <div class="ex-feedback" id="ex-feedback-de" style="display:none"></div>
+      <button class="btn-next" id="btn-next-de" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+    div.querySelectorAll('#de-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        document.querySelectorAll('#de-choices .tp-choice').forEach(x => {
+          x.disabled = true;
+          if (x.dataset.correct === 'true') x.classList.add('correct');
+          else if (x !== b) x.classList.add('dim');
+        });
+        if (!isOk) { b.classList.add('wrong'); breakStreak(); }
+        else if (!STATE.hintUsed) incSolved('direntry');
+        const note = decData(b.dataset.explain) || '';
+        const fb = div.querySelector('#ex-feedback-de');
+        fb.style.display = 'block';
+        fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+        fb.innerHTML = formatChoiceFeedback(isOk, correctState.explain,
+          `${note} — Bonne réponse : <strong>${correctState.label}</strong>.`);
+        div.querySelector('#btn-next-de').style.display = 'inline-block';
+        div.querySelector('#ex-num-de').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      });
+    });
+    return div;
+  }
+
+  // ── Sous-type 1 : lire les attributs ─────────────────────────
+  if (subtype === 1) {
+    const entry = buildEntry({ ...scen, cluster, size, year, month, day, hour, min, sec, status: 'active' });
+    const attr  = scen.attr;
+
+    const ATTR_FLAGS = [
+      { bit:0x01, name:'Read-Only',  abbr:'R', desc:'Fichier en lecture seule — modification bloquée par l\'OS.' },
+      { bit:0x02, name:'Hidden',     abbr:'H', desc:'Fichier caché — ne s\'affiche pas par défaut dans l\'explorateur.' },
+      { bit:0x04, name:'System',     abbr:'S', desc:'Fichier système — utilisé par l\'OS.' },
+      { bit:0x08, name:'Volume ID',  abbr:'V', desc:'Label de volume — un seul dans un répertoire.' },
+      { bit:0x10, name:'Directory',  abbr:'D', desc:'Répertoire — l\'entrée pointe vers un sous-répertoire.' },
+      { bit:0x20, name:'Archive',    abbr:'A', desc:'Archive — bit mis à 1 dès qu\'un fichier est créé ou modifié. Utile pour les backups.' },
+    ];
+
+    const activeFlags = ATTR_FLAGS.filter(f => (attr & f.bit) !== 0);
+    const correctNames = activeFlags.map(f => f.name).sort().join(', ');
+
+    const dumpHTML = renderHexDump(
+      [{ offset: '00000000', bytes: entry }],
+      [
+        { from:0, to:10, color:'--dim',    label:'Nom 8.3' },
+        { from:11,to:11, color:'--purple', label:'Attributs (1 octet)' },
+      ],
+      { cols: 16, title: 'Directory Entry FAT (32 octets)' }
+    );
+
+    // QCM : quels attributs sont positionnés ?
+    // On génère 3 alternatives fausses en combinant autrement les bits
+    function randomAttrCombo(exclude) {
+      let combo;
+      do {
+        const bits = ATTR_FLAGS.filter(f => f.bit !== 0x08 && f.bit !== 0x10 && f.bit !== 0x0F);
+        const chosen = bits.filter(() => Math.random() > .5);
+        combo = chosen.reduce((a,f) => a|f.bit, 0);
+      } while (combo === exclude || combo === 0);
+      return combo;
+    }
+    const distAttrs = [randomAttrCombo(attr), randomAttrCombo(attr), randomAttrCombo(attr)];
+    const allCombos = [attr, ...distAttrs].sort(() => Math.random()-.5);
+
+    function attrToString(a) {
+      return ATTR_FLAGS.filter(f => (a & f.bit) !== 0).map(f => f.name).join(' + ') || '(aucun)';
+    }
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-de">📁</div>
+        <div class="ex-title">Directory Entry — Attributs</div>
+        <span class="ex-badge medium">FAT · Attribute byte · offset 0x0B</span>
+      </div>
+      <div class="ex-scenario">
+        Tu analyses l'octet d'attributs (offset <strong>0x0B</strong>) d'une directory entry FAT.<br>
+        <strong>Quels attributs sont positionnés sur ce fichier ?</strong>
+      </div>
+      ${dumpHTML}
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 1rem;margin-bottom:.75rem;font-size:.76rem">
+        <div style="font-family:var(--mono);color:var(--dim);margin-bottom:.4rem">Octet @ 0x0B = <strong style="color:var(--purple)">0x${attr.toString(16).toUpperCase().padStart(2,'0')}</strong> = ${pad(attr.toString(2),8)}<sub>2</sub></div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap">
+          ${ATTR_FLAGS.map(f => {
+            const on = (attr & f.bit) !== 0;
+            return `<span style="font-family:var(--mono);font-size:.72rem;color:${on?'var(--cyan)':'var(--dim)'};font-weight:${on?700:400}">
+              bit ${f.bit.toString(16).toUpperCase()}=${on?'1':'0'} <span style="color:${on?'var(--text)':'var(--dim)'}">${f.abbr}</span>
+            </span>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="sec-title">Attributs actifs</div>
+      <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="de-choices">
+        ${allCombos.map((combo,i) => `
+          <button class="tp-choice" data-correct="${combo === attr}" style="text-align:left;font-family:var(--mono);font-size:.78rem">
+            <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span>
+            ${attrToString(combo)}
+          </button>`).join('')}
+      </div>
+      <div class="ex-feedback" id="ex-feedback-de" style="display:none"></div>
+      <button class="btn-next" id="btn-next-de" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+    div.querySelectorAll('#de-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        document.querySelectorAll('#de-choices .tp-choice').forEach(x => {
+          x.disabled = true;
+          if (x.dataset.correct === 'true') x.classList.add('correct');
+          else if (x !== b) x.classList.add('dim');
+        });
+        if (!isOk) { b.classList.add('wrong'); breakStreak(); }
+        else if (!STATE.hintUsed) incSolved('direntry');
+        const fb = div.querySelector('#ex-feedback-de');
+        fb.style.display = 'block';
+        fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+        const explain = `0x${attr.toString(16).toUpperCase().padStart(2,'0')} = ${pad(attr.toString(2),8)}₂. Attributs actifs : <strong>${correctNames || '(aucun)'}</strong>.<br>
+          ${activeFlags.map(f=>`<span style="margin-right:.6rem;color:var(--cyan)">${f.name} (bit 0x${f.bit.toString(16).toUpperCase()}) : ${f.desc}</span>`).join('<br>')}`;
+        fb.innerHTML = formatChoiceFeedback(isOk, explain,
+          `Calcul incorrect. ${explain}`);
+        div.querySelector('#btn-next-de').style.display = 'inline-block';
+        div.querySelector('#ex-num-de').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      });
+    });
+    return div;
+  }
+
+  // ── Sous-type 2 : premier cluster + taille ───────────────────
+  if (subtype === 2) {
+    const entry = buildEntry({ ...scen, cluster, size, year, month, day, hour, min, sec, status: 'active' });
+
+    // On demande soit le cluster, soit la taille
+    const askCluster = Math.random() < 0.5;
+    const answer = askCluster ? cluster : size;
+
+    const dumpHTML = renderHexDump(
+      [{ offset: '00000000', bytes: entry }],
+      [
+        { from:0x1A, to:0x1B, color: askCluster?'--cyan':'--dim', label:'First Cluster Low (LE16)' },
+        { from:0x1C, to:0x1F, color: askCluster?'--dim':'--gold', label:'File Size (LE32)' },
+      ],
+      { cols: 16, title: 'Directory Entry FAT (32 octets)' }
+    );
+
+    const makeDist = (base, step) =>
+      [base+step, base-step, base*2, base+1]
+        .filter(v => v !== base && v > 0).slice(0,3);
+
+    const distractors = askCluster ? makeDist(cluster, 1) : makeDist(size, 512);
+    const choices = [answer, ...distractors].sort(() => Math.random()-.5);
+
+    const explain = askCluster
+      ? `First Cluster Low @ 0x1A : ${entry.slice(0x1A,0x1C).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')} en LE = cluster <strong>${cluster}</strong>. C'est le point d'entrée dans la table FAT.`
+      : `File Size @ 0x1C : ${entry.slice(0x1C,0x20).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')} en LE = <strong>${size.toLocaleString('fr-CH')} octets</strong>.`;
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-de">📁</div>
+        <div class="ex-title">Directory Entry — ${askCluster ? 'Premier cluster' : 'Taille du fichier'}</div>
+        <span class="ex-badge medium">FAT · LE${askCluster?'16':'32'} · offset ${askCluster?'0x1A':'0x1C'}</span>
+      </div>
+      <div class="ex-scenario">
+        Tu analyses une directory entry FAT (${scen.desc}).<br>
+        <strong>${askCluster ? 'Quel est le numéro du premier cluster de ce fichier ?' : 'Quelle est la taille du fichier en octets ?'}</strong>
+      </div>
+      ${dumpHTML}
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 1rem;margin-bottom:.75rem;font-size:.76rem;font-family:var(--mono)">
+        ${askCluster
+          ? `<span style="color:var(--dim)">First Cluster Low @ </span><strong style="color:var(--cyan)">0x1A</strong><span style="color:var(--dim)"> — 2 octets Little Endian (pour FAT32, combiner avec First Cluster High @ 0x14)</span>`
+          : `<span style="color:var(--dim)">File Size @ </span><strong style="color:var(--gold)">0x1C</strong><span style="color:var(--dim)"> — 4 octets Little Endian · 0 pour les répertoires</span>`}
+      </div>
+      <div class="sec-title">Réponse</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="de-choices">
+        ${choices.map(c => `<button class="tp-choice" style="flex:1;min-width:100px;font-family:var(--mono)"
+            data-correct="${c === answer}">
+            ${c.toLocaleString('fr-CH')}${!askCluster?' o':''}
+          </button>`).join('')}
+      </div>
+      <div style="display:flex;gap:.5rem;margin:.3rem 0">
+        <button class="btn-hint" id="btn-de-hint">💡 Indice</button>
+      </div>
+      <div class="ex-feedback" id="ex-feedback-de" style="display:none"></div>
+      <button class="btn-next" id="btn-next-de" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+    const hintBytes = askCluster
+      ? entry.slice(0x1A,0x1C).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')
+      : entry.slice(0x1C,0x20).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+    div.querySelector('#btn-de-hint').addEventListener('click', () => {
+      markHintUsed();
+      const fb = div.querySelector('#ex-feedback-de');
+      fb.style.display = 'block'; fb.className = 'ex-feedback correct';
+      fb.innerHTML = `💡 Octets à l'offset ${askCluster?'0x1A':'0x1C'} : <code style="color:var(--cyan)">${hintBytes}</code> — inverse (LE) et convertis en décimal.`;
+    });
+    div.querySelectorAll('#de-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        document.querySelectorAll('#de-choices .tp-choice').forEach(x => {
+          x.disabled = true;
+          if (x.dataset.correct === 'true') x.classList.add('correct');
+          else if (x !== b) x.classList.add('dim');
+        });
+        if (!isOk) { b.classList.add('wrong'); breakStreak(); }
+        else if (!STATE.hintUsed) incSolved('direntry');
+        const fb = div.querySelector('#ex-feedback-de');
+        fb.style.display = 'block';
+        fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+        fb.innerHTML = formatChoiceFeedback(isOk, explain, `Mauvaise lecture. ${explain}`);
+        div.querySelector('#btn-next-de').style.display = 'inline-block';
+        div.querySelector('#ex-num-de').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      });
+    });
+    return div;
+  }
+
+  // ── Sous-type 3 : déduire date/heure de modification ─────────
+  {
+    const entry = buildEntry({ ...scen, cluster, size, year, month, day, hour, min, sec, status: 'active' });
+    const timeWord = (hour<<11)|(min<<5)|Math.floor(sec/2);
+    const dateWord = ((year-1980)<<9)|(month<<5)|day;
+    const timeLo = entry[0x16]; const timeHi = entry[0x17];
+    const dateLo = entry[0x18]; const dateHi = entry[0x19];
+
+    const dumpHTML = renderHexDump(
+      [{ offset: '00000000', bytes: entry }],
+      [
+        { from:0x16, to:0x17, color:'--cyan',   label:'Write Time (LE16)' },
+        { from:0x18, to:0x19, color:'--gold',   label:'Write Date (LE16)' },
+      ],
+      { cols: 16, title: 'Directory Entry FAT (32 octets)' }
+    );
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-de">📁</div>
+        <div class="ex-title">Directory Entry — Date et heure de modification</div>
+        <span class="ex-badge hard">FAT timestamps · bits</span>
+      </div>
+      <div class="ex-scenario">
+        Tu analyses les champs de date/heure d'une directory entry FAT.<br>
+        Offsets <strong>0x16–0x17</strong> (heure) et <strong>0x18–0x19</strong> (date), encodés en Little Endian.<br>
+        <strong>Reconstituez la date et l'heure de dernière modification.</strong>
+      </div>
+      ${dumpHTML}
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;margin-bottom:.75rem;font-family:var(--mono);font-size:.75rem">
+        <div style="color:var(--dim);margin-bottom:.35rem">Structure des champs (après inversion LE) :</div>
+        <div style="margin-bottom:.25rem">
+          <span style="color:var(--cyan)">Time</span> = 0x${pad(timeWord.toString(16).toUpperCase(),4)} →
+          <span style="color:var(--purple)">bits 15-11</span> = heures ·
+          <span style="color:var(--green)">bits 10-5</span> = minutes ·
+          <span style="color:var(--gold)">bits 4-0 × 2</span> = secondes
+        </div>
+        <div>
+          <span style="color:var(--gold)">Date</span> = 0x${pad(dateWord.toString(16).toUpperCase(),4)} →
+          <span style="color:var(--purple)">bits 15-9 + 1980</span> = année ·
+          <span style="color:var(--green)">bits 8-5</span> = mois ·
+          <span style="color:var(--gold)">bits 4-0</span> = jour
+        </div>
+      </div>
+      <div class="ex-input-row" style="flex-wrap:wrap;gap:.5rem">
+        <input class="ex-input" id="ans-y"  type="number" placeholder="Année" style="max-width:90px" min="1980" max="2107">
+        <span class="ex-input-label">-</span>
+        <input class="ex-input" id="ans-mo" type="number" placeholder="Mois"  style="max-width:75px" min="1" max="12">
+        <span class="ex-input-label">-</span>
+        <input class="ex-input" id="ans-d"  type="number" placeholder="Jour"  style="max-width:75px" min="1" max="31">
+        <span class="ex-input-label" style="margin:0 4px">à</span>
+        <input class="ex-input" id="ans-h"  type="number" placeholder="HH"   style="max-width:70px" min="0" max="23">
+        <span class="ex-input-label">:</span>
+        <input class="ex-input" id="ans-mi" type="number" placeholder="MM"   style="max-width:70px" min="0" max="59">
+        <span class="ex-input-label">:</span>
+        <input class="ex-input" id="ans-s"  type="number" placeholder="SS"   style="max-width:70px" min="0" max="58">
+      </div>
+      <div class="ex-input-row" style="margin-top:.5rem">
+        <button class="btn-hint" id="btn-de-hint">💡 Décomposition</button>
+        <button class="btn-validate" id="btn-de-val">Valider ✓</button>
+        <button class="btn-next" id="btn-next-de" onclick="newExercise()" style="display:none">Exercice suivant →</button>
+      </div>
+      <div class="ex-feedback" id="ex-feedback-de" style="display:none"></div>
+    `;
+    div.querySelector('#btn-de-hint').addEventListener('click', () => {
+      markHintUsed();
+      const fb = div.querySelector('#ex-feedback-de');
+      fb.style.display = 'block'; fb.className = 'ex-feedback correct';
+      fb.innerHTML = `💡 Time = 0x${pad(timeWord.toString(16).toUpperCase(),4)} → h=${hour}, m=${min}, s=${sec}<br>
+        Date = 0x${pad(dateWord.toString(16).toUpperCase(),4)} → année=${year}, mois=${month}, jour=${day}`;
+    });
+    div.querySelector('#btn-de-val').addEventListener('click', () => {
+      const getV = id => parseInt(div.querySelector('#'+id).value);
+      const vy=getV('ans-y'), vmo=getV('ans-mo'), vd=getV('ans-d');
+      const vh=getV('ans-h'), vmi=getV('ans-mi'), vs=getV('ans-s');
+      if ([vy,vmo,vd,vh,vmi,vs].some(isNaN)) return;
+      const isOk = vy===year && vmo===month && vd===day && vh===hour && vmi===min && Math.abs(vs-sec)<=2;
+      const fb = div.querySelector('#ex-feedback-de');
+      fb.style.display = 'block';
+      fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+      if (isOk) {
+        if (!STATE.hintUsed) incSolved('direntry');
+        fb.innerHTML = `✅ Correct ! ${year}-${pad(month,2)}-${pad(day,2)} à ${pad(hour,2)}:${pad(min,2)}:${pad(sec,2)}`;
+        div.querySelector('.ex-card').className = 'ex-card solved';
+        div.querySelector('#ex-num-de').className = 'ex-num solved';
+      } else {
+        breakStreak();
+        fb.innerHTML = `❌ Attendu : <strong>${year}-${pad(month,2)}-${pad(day,2)} ${pad(hour,2)}:${pad(min,2)}:${pad(sec,2)}</strong> — utilise 💡 pour la décomposition.`;
+      }
+      div.querySelector('#btn-next-de').style.display = 'inline-block';
+    });
+    return div;
+  }
 }
