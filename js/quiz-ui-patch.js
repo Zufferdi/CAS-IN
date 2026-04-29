@@ -631,3 +631,4 @@
   // D.7 — Avatar-chip : indication visuelle de cliquabilité
   //       (purement CSS, voir quiz.css — rien à faire ici)
   // ─────────────────────────────────────────────────────────
+

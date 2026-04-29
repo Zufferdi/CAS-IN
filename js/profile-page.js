@@ -1,15 +1,11 @@
 /* ============================================================
-   CAS-IN · profile-page.js
-   Logique de profile.html — peuple la page depuis Profile.snapshot()
-   et écoute l'événement 'profile-changed' pour rafraîchir.
+   CAS-IN · profile-page.js (v2 — F2)
+   Logique de profile.html : peuple depuis Profile.snapshot(),
+   gère la modale d'édition pseudo + sélection de track.
    ============================================================ */
 
 (function () {
   'use strict';
-
-  // ───────────────────────────────────────────────────────────
-  // Helpers
-  // ───────────────────────────────────────────────────────────
 
   function $(id) { return document.getElementById(id); }
   function fmtNumber(n) {
@@ -18,7 +14,7 @@
   function setText(id, txt) { const el = $(id); if (el) el.textContent = txt; }
 
   // ───────────────────────────────────────────────────────────
-  // Render
+  // Render principal
   // ───────────────────────────────────────────────────────────
 
   function render() {
@@ -28,9 +24,17 @@
     }
     const snap = window.Profile.snapshot();
 
-    // Header
+    // Header UTC
     const utc = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
     setText('profile-utc', utc);
+
+    // Si pas de track choisi : afficher le sélecteur en plein écran
+    if (!snap.agent.hasTrack) {
+      showTrackChooser();
+      return;
+    }
+
+    hideTrackChooser();
 
     // Hero
     setText('profile-rank-emoji', snap.rank.emoji);
@@ -38,35 +42,36 @@
     setText('profile-rank-name', snap.rank.name);
     setText('profile-clearance', `Clearance lvl ${snap.rank.clearance}`);
     setText('profile-rank-flavor', snap.rank.flavor || '—');
-    setText('profile-xp-big', fmtNumber(snap.xp));
 
+    // Track label dynamique dans le sub-header
+    setText('profile-dossier-label', getDossierLabel(snap.agent.track));
+
+    // XP
+    setText('profile-xp-big', fmtNumber(snap.xp));
     const fill = $('profile-xp-fill');
     if (fill) fill.style.width = snap.rank.pctToNext + '%';
     if (snap.rank.next) {
-      setText('profile-xp-next', `→ ${snap.rank.next.emoji} ${snap.rank.next.name} dans ${fmtNumber(snap.rank.xpToNext)} XP`);
+      setText('profile-xp-next',
+        `→ ${snap.rank.next.emoji} ${snap.rank.next.name} dans ${fmtNumber(snap.rank.xpToNext)} XP`);
     } else {
       setText('profile-xp-next', 'Rang maximum atteint 🏆');
     }
 
     // Stats
-    setText('profile-streak-val', String(snap.streak.current));
-    const streakUnit = $('profile-streak-val');
-    if (streakUnit) {
-      // Reconstruire avec l'unité
-      streakUnit.innerHTML = `${snap.streak.current}<span class="profile-stat-unit">j 🔥</span>`;
+    const streakEl = $('profile-streak-val');
+    if (streakEl) {
+      streakEl.innerHTML = `${snap.streak.current}<span class="profile-stat-unit">j 🔥</span>`;
     }
-    setText('profile-streak-sub', `série max : ${snap.streak.max} jour${snap.streak.max > 1 ? 's' : ''}`);
-
+    setText('profile-streak-sub',
+      `série max : ${snap.streak.max} jour${snap.streak.max > 1 ? 's' : ''}`);
     setText('profile-q-val', fmtNumber(snap.stats.questions));
     setText('profile-q-sub', snap.stats.questions ? '— sur le quiz' : 'Aucune réponse encore');
-
     setText('profile-f-val', String(snap.stats.fichesRead));
     setText('profile-f-sub', snap.stats.fichesRead ? '— mémorisées' : 'Aucune fiche lue');
-
     setText('profile-e-val', String(snap.stats.examsPassed));
     setText('profile-e-sub', snap.stats.examsPassed ? '— passés' : 'Aucun examen passé');
 
-    // Ventilation XP
+    // Ventilation
     const totalXp = Math.max(1, snap.xp);
     setText('profile-xp-quiz', `${fmtNumber(snap.xpBySource.quiz)} XP`);
     setText('profile-xp-scene', `${fmtNumber(snap.xpBySource.scene)} XP`);
@@ -74,22 +79,32 @@
     const sFill = $('profile-xp-scene-fill');
     if (qFill) qFill.style.width = Math.round((snap.xpBySource.quiz / totalXp) * 100) + '%';
     if (sFill) sFill.style.width = Math.round((snap.xpBySource.scene / totalXp) * 100) + '%';
-
     setText('profile-tp-count', `${snap.stats.tpSolved} résolu${snap.stats.tpSolved > 1 ? 's' : ''}`);
     setText('profile-fiches-count', `${snap.stats.fichesRead} lue${snap.stats.fichesRead > 1 ? 's' : ''}`);
 
-    // Hiérarchie des rangs
-    renderLadder(snap.rank.idx);
+    // Hiérarchie : ladder dynamique selon le track
+    renderLadder(snap.rank.idx, snap.agent.track);
 
     // Achievements
-    renderAchievements();
+    renderAchievements(snap.achievements);
   }
 
-  function renderLadder(currentIdx) {
+  function getDossierLabel(track) {
+    switch (track) {
+      case 'magistrate':  return 'DOSSIER MAGISTRAT';
+      case 'journalist':  return 'DOSSIER JOURNALISTE';
+      case 'hacker':      return 'DOSSIER HACKER';
+      case 'investigator':
+      default:            return 'DOSSIER ENQUÊTEUR';
+    }
+  }
+
+  function renderLadder(currentIdx, trackKey) {
     const ol = $('profile-ladder');
     if (!ol || !window.Profile) return;
     ol.innerHTML = '';
-    window.Profile.RANKS.forEach((rank, i) => {
+    const ladder = window.Profile.getTrackLadder(trackKey);
+    ladder.forEach((rank, i) => {
       const li = document.createElement('li');
       li.className = 'profile-ladder-item';
       if (i < currentIdx) li.classList.add('is-passed');
@@ -123,16 +138,10 @@
     });
   }
 
-  function renderAchievements() {
+  function renderAchievements(unlocked) {
     const wrap = $('profile-achievements');
     if (!wrap) return;
-    let unlocked = [];
-    try {
-      const raw = localStorage.getItem('achievements');
-      if (raw) unlocked = JSON.parse(raw) || [];
-      if (!Array.isArray(unlocked)) unlocked = [];
-    } catch { unlocked = []; }
-
+    unlocked = Array.isArray(unlocked) ? unlocked : [];
     setText('profile-ach-count', String(unlocked.length));
 
     if (!unlocked.length) {
@@ -140,8 +149,6 @@
       return;
     }
 
-    // Si quiz-app.js a une constante ACHIEVEMENTS exportée, on l'utilise
-    // pour récupérer le nom + description. Sinon affichage minimal.
     const allAch = (typeof window.ACHIEVEMENTS !== 'undefined' && Array.isArray(window.ACHIEVEMENTS))
       ? window.ACHIEVEMENTS : null;
 
@@ -194,13 +201,121 @@
   }
 
   // ───────────────────────────────────────────────────────────
-  // Actions : export / import / reset
+  // Sélecteur de track (overlay plein écran si pas de track choisi)
+  // ───────────────────────────────────────────────────────────
+
+  function showTrackChooser(isChange) {
+    const chooser = $('profile-track-chooser');
+    if (!chooser) return;
+    chooser.hidden = false;
+    chooser.dataset.mode = isChange ? 'change' : 'initial';
+    setText('profile-track-chooser-title',
+      isChange ? 'Changer de rôle' : 'Choisis ton rôle');
+    setText('profile-track-chooser-text',
+      isChange
+        ? 'Ton XP reste identique, seuls les noms des grades changent.'
+        : 'L\'XP est universelle. Seul l\'univers narratif change selon ton choix.');
+
+    renderTrackOptions();
+  }
+
+  function hideTrackChooser() {
+    const chooser = $('profile-track-chooser');
+    if (chooser) chooser.hidden = true;
+  }
+
+  function renderTrackOptions() {
+    const grid = $('profile-track-options');
+    if (!grid || !window.Profile) return;
+    const tracks = window.Profile.listTracks();
+    const current = window.Profile.getTrack();
+    grid.innerHTML = '';
+
+    const COLORS = {
+      investigator: { glow: 'rgba(56, 138, 221, .35)', border: 'rgba(56, 138, 221, .55)' },
+      magistrate:   { glow: 'rgba(239, 159, 39, .35)', border: 'rgba(239, 159, 39, .55)' },
+      journalist:   { glow: 'rgba(99, 153, 34, .35)', border: 'rgba(99, 153, 34, .55)' },
+      hacker:       { glow: 'rgba(226, 75, 74, .35)', border: 'rgba(226, 75, 74, .55)' },
+    };
+
+    tracks.forEach(t => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'profile-track-card';
+      if (t.key === current) card.classList.add('is-current');
+      card.style.setProperty('--card-glow', COLORS[t.key]?.glow || 'rgba(0, 255, 65, .3)');
+      card.style.setProperty('--card-border', COLORS[t.key]?.border || 'rgba(0, 255, 65, .5)');
+
+      const icon = document.createElement('div');
+      icon.className = 'profile-track-card__icon';
+      icon.textContent = t.icon;
+
+      const label = document.createElement('div');
+      label.className = 'profile-track-card__label';
+      label.textContent = t.label;
+
+      const ambiance = document.createElement('div');
+      ambiance.className = 'profile-track-card__ambiance';
+      ambiance.textContent = t.ambiance;
+
+      const hint = document.createElement('div');
+      hint.className = 'profile-track-card__hint';
+      hint.innerHTML = `Apothéose : <strong>${t.ultimateRank.emoji} ${escapeHtml(t.ultimateRank.name)}</strong>`;
+
+      const cur = document.createElement('div');
+      cur.className = 'profile-track-card__current';
+      cur.textContent = (t.key === current) ? '◉ Rôle actuel' : '○ Choisir';
+
+      card.appendChild(icon);
+      card.appendChild(label);
+      card.appendChild(ambiance);
+      card.appendChild(hint);
+      card.appendChild(cur);
+
+      card.addEventListener('click', () => onPickTrack(t.key));
+      grid.appendChild(card);
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function onPickTrack(trackKey) {
+    if (!window.Profile) return;
+    const chooser = $('profile-track-chooser');
+    const isChange = chooser && chooser.dataset.mode === 'change';
+    const current = window.Profile.getTrack();
+
+    if (isChange && current && current !== trackKey) {
+      // Confirmation requise pour changer
+      const ok = confirm(
+        'Changer de rôle pour ' + trackKey + ' ?\n\n' +
+        'Ton XP reste identique, mais tous tes grades vont changer pour le nouveau univers.\n\n' +
+        'Continuer ?'
+      );
+      if (!ok) return;
+    }
+
+    window.Profile.setTrack(trackKey);
+    hideTrackChooser();
+    render();
+  }
+
+  function openTrackChange() {
+    showTrackChooser(true);
+  }
+
+  // ───────────────────────────────────────────────────────────
+  // Actions
   // ───────────────────────────────────────────────────────────
 
   function bindActions() {
     const exp = $('profile-export');
     const imp = $('profile-import');
     const rst = $('profile-reset');
+    const chgTrack = $('profile-change-track');
 
     if (exp) exp.addEventListener('click', () => {
       if (window.CasInExport && window.CasInExport.exportProgress) {
@@ -209,7 +324,6 @@
         alert('Module export non chargé.');
       }
     });
-
     if (imp) imp.addEventListener('click', () => {
       if (window.CasInExport && window.CasInExport.openImportDialog) {
         window.CasInExport.openImportDialog();
@@ -217,13 +331,12 @@
         alert('Module import non chargé.');
       }
     });
-
     if (rst) rst.addEventListener('click', () => {
       if (!confirm('Réinitialiser TOUTE la progression ? Cette action est irréversible.')) return;
       window.Profile.reset();
-      // Force un reload pour que le quiz/scène repartent à zéro à la prochaine ouverture
       setTimeout(() => location.reload(), 100);
     });
+    if (chgTrack) chgTrack.addEventListener('click', openTrackChange);
   }
 
   function bindPseudo() {
@@ -244,7 +357,6 @@
       });
     }
 
-    // Esc global pour la modale
     document.addEventListener('keydown', e => {
       if (e.key !== 'Escape') return;
       const modal = $('profile-pseudo-modal');
@@ -258,8 +370,6 @@
 
   function boot() {
     if (!window.Profile) {
-      // Profile devrait être chargé via cas-in-profile.js avec defer
-      // S'il n'est pas là, on attend un peu et on retente
       setTimeout(boot, 50);
       return;
     }
