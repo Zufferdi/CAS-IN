@@ -1,0 +1,208 @@
+{
+  "id": "memory-forensics-volatility",
+  "title": "Memory forensics — le malware qui n'existait pas sur disque",
+  "icon": "🧠",
+  "difficulty": "hard",
+  "atmosphere": "ransomware",
+  "tags": ["MEMORY FORENSICS", "VOLATILITY", "MALWARE", "FORENSIQUE", "RAM", "FILELESS", "INCIDENT RESPONSE", "WINDOWS"],
+  "legalRefs": [
+    "Art. 144bis CP — Détérioration de données",
+    "Art. 143 CP — Soustraction de données",
+    "Art. 147 CP — Utilisation frauduleuse d'un ordinateur",
+    "Art. 197 CPP — Proportionnalité",
+    "ACPO Principles 1-4 — Volatilité des preuves numériques",
+    "ISO/IEC 27037 — Acquisition de preuves numériques",
+    "Doctrine SWGDE — Memory acquisition best practices"
+  ],
+  "narrative": {
+    "success": "Vous avez su identifier dès l'arrivée que l'analyse disque seule serait insuffisante. La capture mémoire à chaud (avant tout reboot) a permis d'extraire le malware injecté en RAM, ses connexions C2 actives, les credentials volés et les processus malveillants. Volatility et son plugin custom pour ce variant ont reconstitué la chaîne d'infection complète — initial access, lateral movement, persistence in-memory only. Le rapport forensique tient devant le TPF, le malware est attribué à un APT connu, l'enquête EIMP démarre. Bonus : votre méthodologie de capture RAM live devient cas d'école dans la formation police judiciaire.",
+    "degraded": "L'analyse a abouti, mais avec des pertes. Soit la capture mémoire a été dégradée (vous avez tardé, le système avait été partiellement arrêté), soit Volatility n'a pas pu reconstituer toute la chaîne (faute de profil adapté au build Windows précis). Les éléments principaux sont identifiés mais la défense exploitera les zones d'ombre — certains éléments seront écartés au procès.",
+    "failure": "Vous avez ordonné le reboot du serveur compromis avant la capture mémoire (réflexe IT classique : 'on redémarre pour sécuriser'). Toute la mémoire RAM est perdue à jamais. Le malware étant fileless (pas de trace disque), l'analyse forensique ne trouve rien — juste des logs partiels qui suggèrent une activité suspecte sans la prouver. Le procureur classe l'enquête pour défaut d'éléments. Le suspect (employé interne) est blanchi. 6 mois plus tard, le même malware réapparaît dans une autre filiale, exfiltrant 18 mois de données R&D. Coût estimé : 23 millions CHF de propriété intellectuelle perdue."
+  },
+  "intro": "Lundi 6h30, alerte CSIRT chez un industriel suisse (semi-conducteurs, 3'400 employés). L'EDR a détecté à 4h17 une activité anormale sur un serveur Windows Server 2022 du département R&D : connexions sortantes vers une IP non listée, processus PowerShell anormalement long (8h+), aucun fichier malveillant détecté sur disque. Le sysadmin local a vu l'alerte à 6h00, et son réflexe a été d'isoler le serveur du réseau (bon) puis de préparer un reboot pour 'sécuriser' (catastrophique). Vous arrivez sur place à 6h45. Le serveur tourne encore, isolé du réseau. Le sysadmin vous attend, doigt sur le bouton power : <em>« Je redémarre, là ? Le DG s'inquiète, on perd 47'000 CHF de l'heure. »</em>. Décision dans les 5 minutes : capture mémoire d'abord, ou reboot ?",
+  "alertLevel": "🧠 MALWARE FILELESS SUSPECTÉ — Aucune trace disque · RAM = seule source · Pression reboot · Volatilité maximale",
+  "objectives": [
+    "Comprendre la volatilité des preuves en RAM (ACPO Principles)",
+    "Maîtriser la capture mémoire forensique sur système live",
+    "Utiliser Volatility 3 pour analyser un dump mémoire",
+    "Documenter une chaîne probatoire RAM pour un dossier pénal"
+  ],
+  "debrief": "<p><strong>Le memory forensics est devenu en 5 ans la compétence centrale du DFIR moderne, à mesure que les attaquants migrent vers des techniques fileless (malware qui ne touche jamais le disque).</strong> Cette migration est une réponse aux EDR qui scannent les fichiers — si rien n'est écrit, rien n'est détecté par signature. Mais tout doit passer par la RAM pour s'exécuter — c'est notre fenêtre d'observation.</p><p><strong>Les 4 catégories d'éléments uniques en RAM :</strong></p><ol><li><strong>Processus actifs</strong> — y compris ceux camouflés (process hollowing, DLL injection, reflectively-loaded). Volatility plugins : pslist, pstree, malfind.</li><li><strong>Connexions réseau actives</strong> — les sockets C2, même si ouvertes par un thread injecté dans un processus légitime (svchost, explorer). Plugins : netscan, netstat.</li><li><strong>Credentials et secrets</strong> — passwords clairs en mémoire (Mimikatz extracts), tokens Kerberos, hashes NTLM, clés de chiffrement actives. Plugins : hashdump, mimikatz, dumpregistry.</li><li><strong>Code injecté/malveillant</strong> — shellcode, PowerShell encodé, modules Cobalt Strike beacon. Plugins : malfind, vadinfo, dumpfiles.</li></ol><p><strong>La règle fondamentale :</strong> la RAM est <em>volatile</em> — elle disparaît au moindre power cut, reboot, ou shutdown. ACPO Principle 2 (UK Best Practice) : <em>« In circumstances where a person finds it necessary to access original data, that person must be competent to do so and be able to give evidence explaining the relevance and the implications of their actions. »</em>. Concrètement : un reboot mal informé détruit irrémédiablement des preuves potentiellement décisives.</p><p><strong>Les 3 méthodes de capture mémoire :</strong></p><ul><li><strong>FTK Imager Lite</strong> — outil gratuit, écriture sur USB/réseau. Standard police.</li><li><strong>WinPmem / DumpIt</strong> — open source, plus léger, mode kernel.</li><li><strong>Acquisition matérielle (DMA)</strong> — via FireWire/Thunderbolt si disponibles, le plus propre mais rarement applicable en environnement entreprise.</li></ul><p>La capture doit être effectuée <strong>sur le système live</strong> (sans modification de l'état), avec calcul de hash (MD5+SHA-256 typiquement) immédiat sur le fichier image. La taille typique : 8-128 GB selon la RAM du système.</p><p><strong>L'analyse Volatility :</strong> Volatility 3 (Python) prend en entrée le dump RAM + le profil système (Windows version, build, architecture). Plus de 200 plugins disponibles. Pour un investigateur compétent, l'analyse d'un dump 16 GB prend 4-8h en moyenne pour reconstituer la chaîne d'infection.</p><p><strong>Le piège judiciaire :</strong> sans procès-verbal détaillé de la procédure de capture (heure exacte, commande, version de l'outil, taille du dump, hashs), le tribunal pourra écarter l'élément forensique pour défaut de chaîne probatoire. Le procès-verbal de capture mémoire doit être rédigé <em>pendant</em> la capture, pas après.</p><p><strong>Le défi du fileless :</strong> sans trace disque, le procureur doit construire son dossier sur des éléments mémoire et corrélations. Le standard de preuve « au-delà du doute raisonnable » exige un récit cohérent : timeline reconstituée, attribution étayée, élément concret de motif. Volatility seul ne suffit pas — il faut le combiner avec analyse logs, captures réseau (PCAP), threat intelligence (TTPs) pour faire un dossier solide.</p><p><strong>Référence :</strong> ATF 138 IV 169 sur la chaîne probatoire numérique. Voir aussi le SANS FOR532 (Memory Forensics) et la doctrine SWGDE 2023 sur Memory Acquisition.</p>",
+  "steps": [
+    {
+      "phase": "⏱ 6h50 — La décision impossible : capturer ou rebooter ?",
+      "situation": "Vous êtes face au sysadmin, le serveur tourne, isolé. Le DG vient d'appeler, exige le redémarrage <em>« dans 10 minutes maximum »</em>. Le serveur héberge 3 services R&D critiques : 47 chercheurs en attendent l'accès dans 1h30 pour la journée de travail. Vous savez que : (1) le malware semble fileless (rien sur disque), (2) la RAM contient probablement la seule preuve, (3) une capture RAM de 64 GB prendra ~25 minutes (USB 3.0). Si vous redémarrez maintenant, vous perdez tout. Si vous prenez 25 min, vous bloquez 47 chercheurs et un DG furieux.",
+      "law": "<strong>ACPO Principle 1</strong> : <em>« No action taken by law enforcement agencies should change data which may be relied upon in court. »</em>. <strong>ACPO Principle 4</strong> : la personne en charge est responsable de l'intégrité de la chaîne probatoire. <strong>Pratique CCDCOE</strong> : la capture RAM live précède toujours toute action sur le système suspect.",
+      "question": "<strong>Que décidez-vous dans les prochaines 60 secondes ?</strong>",
+      "choices": [
+        {
+          "text": "Imposer la capture mémoire avant tout : sortir une clé USB forensique préparée (FTK Imager Lite + medium NTFS sain), démarrer la capture immédiatement (estimée 25 min), parallèlement appeler le DG pour expliquer pourquoi le report de 30 min est nécessaire (preuves volatiles, cadre légal art. 197 CPP, risque pénal pour l'entreprise si destruction de preuves).",
+          "ok": true,
+          "pts": 30,
+          "fb": "Décision parfaite, à la fois technique et juridique. Vous (1) <strong>respectez ACPO Principles 1-4</strong> en préservant l'état du système avant toute modification, (2) <strong>appliquez la doctrine forensique standard</strong> : la RAM passe avant toute considération opérationnelle, (3) <strong>justifiez auprès du DG</strong> avec des arguments solides — la destruction de preuves potentiellement nécessaires à une procédure pénale peut être qualifiée d'entrave à l'action pénale (art. 305 CP) si l'entreprise est elle-même victime et qu'elle prive le procureur des éléments. Bonus : votre clé USB préparée à l'avance (kit forensique d'urgence) démontre une maturité opérationnelle qui rassure le DG. La capture aboutit à 7h17 avec hash SHA-256 calculé : la chaîne probatoire est blindée.",
+          "legal": "ACPO Principles 1-4 · Art. 305 CP · ISO 27037",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Accepter le reboot pour ne pas créer de tension avec le DG : 47 chercheurs ont besoin du serveur, l'enquête se fera sur les disques. Documenter l'incident comme « reboot d'urgence ».",
+          "ok": false,
+          "pts": -30,
+          "fb": "Catastrophe forensique irréversible. (1) <strong>Le malware est fileless</strong> (déjà signalé par l'EDR : aucun fichier suspect, juste un processus PowerShell anormal) — le reboot détruit la seule source de preuve. À 7h00, votre dossier est vide : pas de malware identifié, pas d'attribution possible, pas de poursuite pénale viable. (2) <strong>Vous violez ACPO Principle 1</strong> en modifiant l'état du système sans justification forensique, (3) <strong>Vous compromettez les futures investigations</strong> : les attaquants comprennent que cette entreprise reboote dès qu'elle détecte une intrusion → ils savent qu'ils ne sont pas obligés d'être furtifs, juste rapides. (4) <strong>Vous exposez l'entreprise à art. 305 CP</strong> par destruction de preuves dans un contexte d'enquête. La pression du DG ne justifie pas la destruction de preuves — votre rôle est précisément de tenir tête.",
+          "legal": "ACPO Principle 1 · Art. 305 CP · Devoir de diligence",
+          "critical": true,
+          "next": 1
+        },
+        {
+          "text": "Compromis : capturer seulement les processus actifs et la table des connexions réseau (rapide, ~5 min), puis rebooter. C'est mieux que rien.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Compromis qui rate l'essentiel. (1) <strong>Liste de processus seule = preuves très limitées</strong> : sans le code injecté, sans les credentials volés, sans le shellcode chiffré, le procureur ne peut établir ni l'identité du malware, ni son origine, ni l'étendue de la compromission. La liste de processus est utile mais loin de suffire. (2) <strong>Vous transmettez aux attaquants un signal</strong> : ils sauront que cette entreprise rebooote vite, donc qu'ils peuvent rester courts. Adaptation tactique. (3) <strong>Faux gain de temps</strong> : 5 vs 25 minutes, mais le coût d'une enquête ratée se chiffre en mois. (4) <strong>Manque de rigueur procédurale</strong> : un dump partiel mal documenté est juridiquement plus contestable qu'un dump complet. Mieux vaut prendre 25 min pour faire correctement que 5 min pour faire à moitié.",
+          "legal": "ACPO Principles · Pratique forensique",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔬 9h00 — L'analyse Volatility — premiers indices",
+      "situation": "La capture (64 GB) est faite, hash SHA-256 calculé, fichier sécurisé sur stockage forensique en lecture seule. Vous lancez Volatility 3 sur votre poste analyste. Premier plugin <code>windows.pslist</code> : tout semble normal — 247 processus, dont 14 svchost, 1 PowerShell ISE, le service Citrix attendu. Mais <code>windows.malfind</code> sort 3 alertes : (a) un thread injecté dans <code>explorer.exe</code> avec MZ-header en mémoire (signature PE classique mais aucun .exe sur disque), (b) un module DLL réfléchi dans <code>svchost.exe</code> non signé, (c) du shellcode encodé en base64 dans une zone exécutable de <code>powershell.exe</code>. <code>windows.netscan</code> : 4 connexions TCP sortantes vers une IP en Asie du Sud-Est, port 443. Que faites-vous ensuite ?",
+      "law": "<strong>Standard de preuve</strong> : pour qu'un élément forensique soit recevable au procès, il faut documenter (1) la commande exécutée, (2) la sortie, (3) l'interprétation, (4) la corrélation avec d'autres sources. <strong>Pratique</strong> : un dump Volatility utilisé seul (sans corrélation logs/réseau/threat intel) est juridiquement plus faible.",
+      "question": "<strong>Quelle est votre prochaine étape analytique ?</strong>",
+      "choices": [
+        {
+          "text": "Plan en 4 axes : (1) <code>windows.malfind --dump</code> sur les 3 alertes pour extraire le code injecté en fichier binaire, soumettre à VirusTotal/sandbox dynamique, (2) <code>windows.netscan</code> + extraction des sockets pour reconstituer les flux C2, (3) <code>windows.cmdline</code> + <code>windows.psscan</code> pour timeline complète de l'exécution PowerShell, (4) corrélation avec les logs Windows Defender/EDR de la nuit pour confirmer la timeline.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Approche méthodologique exemplaire. Vous (1) <strong>extrayez les artefacts pour analyse statique externe</strong> — VirusTotal et sandbox dynamique apportent l'attribution potentielle (signatures connues, TTPs MITRE ATT&CK), (2) <strong>reconstituez la dimension réseau</strong> qui révèle l'infrastructure C2 — base d'une demande EIMP future, (3) <strong>établissez la timeline d'exécution</strong> via les commandes PowerShell — élément critique pour démontrer le dol des attaquants, (4) <strong>corrélation multi-sources</strong> = solidification juridique de chaque point. Bonus : la combinaison Volatility + sandbox + logs constitue le triptyque que les tribunaux suisses reconnaissent comme suffisant pour une attribution forensique solide. Votre dossier sera difficile à attaquer en défense.",
+          "legal": "Standard de preuve · ATF 138 IV 169",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Plan minimaliste : extraire seulement le shellcode (le plus prometteur), l'analyser, conclure dès que possible. Pas besoin de creuser les autres alertes.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Approche fragmentaire qui rate la richesse de l'analyse. (1) <strong>Les 3 alertes sont probablement liées</strong> : un même attaquant utilise typiquement plusieurs techniques (process hollowing + DLL injection + shellcode) — analyser une seule, c'est rater 2/3 du tableau. (2) <strong>Sans les connexions C2</strong> : pas d'attribution infrastructure, pas de demande EIMP possible, l'enquête s'arrête. (3) <strong>Sans la timeline d'exécution</strong> : le procureur ne peut établir ni la durée de l'intrusion, ni les actions précises de l'attaquant, ni la chaîne lateral movement vers d'autres machines. Le dossier reste fragile. (4) <strong>« Conclure dès que possible »</strong> est l'antithèse de la méthode forensique : on conclut quand toutes les pièces sont rassemblées, pas avant. La précipitation forensique est la première cause de classement de dossier pénal.",
+          "legal": "Standard de preuve · Pratique forensique",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Lancer toutes les commandes Volatility disponibles (200+ plugins) en parallèle pour capturer le maximum de données — on triera après.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Approche brute force qui crée plus de bruit que de signal. (1) <strong>200 plugins = ~50 GB de logs et fichiers extraits</strong>, dont 90% sans pertinence pour ce dossier précis. Vous noyer dans la donnée vous fait perdre 2-3 jours d'analyse pour des résultats qu'une approche ciblée aurait livrés en 6h. (2) <strong>Risque de saturer le poste analyste</strong> : Volatility 3 sur dump 64 GB consomme beaucoup de RAM et CPU — lancer 200 plugins en parallèle peut crasher l'analyse, perdant des heures. (3) <strong>Documentation procédurale impossible</strong> : 200 commandes à documenter dans le procès-verbal forensique, c'est ingérable. La défense exploitera la lourdeur pour pointer des incohérences. (4) <strong>Méthode forensique = ciblage hypothèse-driven</strong> : on a 3 alertes spécifiques, on creuse celles-là méthodiquement, pas tout l'univers.",
+          "legal": "Pratique forensique",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "💉 12h00 — Le shellcode décodé révèle un Cobalt Strike",
+      "situation": "L'analyse statique du shellcode extrait a livré un résultat : c'est un beacon Cobalt Strike, version 4.7, identifiable par sa signature de configuration. Cobalt Strike est un outil commercial de pentest, mais dont les versions piratées sont massivement utilisées par les APT (notamment FIN7, APT41, et plusieurs groupes russes/chinois). La configuration extraite contient l'URL C2 (https://cdn-update[.]xyz, IP en Asie du Sud-Est), la signature Watermark (10000), et les profils de communication. Le watermark 10000 est particulier : il correspond à une version cracked spécifiquement attribuée par les chercheurs threat intel à un groupe APT lié à un service de renseignement étranger. Le directeur juridique vous demande : « Qualification pénale ? »",
+      "law": "<strong>Art. 273 CP</strong> : applicable si l'opération est pour un organisme étranger (étatique ici). <strong>Art. 162 CP</strong> : violation du secret de fabrication (recherche R&D semi-conducteurs = secret de haute valeur). <strong>Art. 144bis CP</strong> : détérioration de données. <strong>Cumul possible</strong> : concours réel d'infractions.",
+      "question": "<strong>Quelle qualification proposez-vous au juriste ?</strong>",
+      "choices": [
+        {
+          "text": "Qualification multiple en concours réel : (1) art. 273 CP (espionnage économique pour État étranger — APT identifié via watermark Cobalt Strike), (2) art. 162 CP (violation du secret de fabrication — R&D semi-conducteurs), (3) art. 144bis CP (détérioration de données — l'injection en mémoire altère les processus). Compétence MPC (art. 24 LOAP). Plainte à déposer immédiatement avec le rapport Volatility annexé.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Qualification juridique parfaite. Vous (1) <strong>basez la qualification art. 273 CP sur des éléments forensiques solides</strong> : le watermark Cobalt Strike + l'attribution APT publiée par les chercheurs threat intel = base raisonnable pour le dol direct sur le caractère étranger, (2) <strong>cumulez avec art. 162 CP</strong> : utile si l'attribution étatique est ultérieurement contestée (l'art. 162 reste sur le terrain industriel pur), (3) <strong>art. 144bis CP en troisième couche</strong> couvre l'altération technique, (4) <strong>compétence MPC</strong> via art. 24 LOAP est cruciale — un parquet cantonal n'a pas l'expertise transnationale pour ce type de dossier. Bonus : votre rapport Volatility annexé à la plainte donne au MPC un dossier prêt à instruire — gain de 2-3 mois sur le démarrage de l'enquête.",
+          "legal": "Art. 273 CP · Art. 162 CP · Art. 144bis CP · Art. 24 LOAP",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Qualification simple art. 144bis CP (détérioration de données) — l'attribution APT via watermark est trop technique pour tenir devant un tribunal, on reste sobre.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Sous-qualification stratégique qui rate l'enjeu. (1) <strong>Le watermark Cobalt Strike est probant</strong> : les chercheurs threat intel publient leurs analyses dans des revues scientifiques peer-reviewed, et le TPF reconnaît cette littérature comme source d'expertise valide. Présentée correctement (avec rapport d'expert externe si besoin), l'attribution tient. (2) <strong>Sans art. 273 CP, vous restez en compétence cantonale</strong> — perte d'expertise et de ressources. (3) <strong>Vous figez le récit médiatique</strong> sur la qualification ransomware/cybercrime alors que c'est de l'espionnage étatique — perte de l'effet d'alerte sectorielle pour les autres industriels suisses. (4) <strong>Précédent défavorable</strong> : si chaque attaque APT est sous-qualifiée, le droit suisse ne s'adapte jamais à la réalité géopolitique des cybermenaces.",
+          "legal": "Art. 273 CP · Art. 144bis CP",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Pas de plainte pénale tant que l'attribution n'est pas certaine à 100%. Lancer une enquête interne pour identifier qui est responsable, puis décider.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Procrastination juridique aux conséquences graves. (1) <strong>L'attribution à 100%</strong> est presque jamais atteinte en cyber — même dans les meilleurs cas (SolarWinds, Stuxnet), l'attribution étatique reste probabiliste. Attendre la certitude absolue, c'est ne jamais déposer plainte. (2) <strong>Pendant ce temps, les preuves volatiles s'effacent</strong> : l'attaquant adapte ses TTPs, l'infrastructure C2 disparaît, les comptes utilisés se ferment. Chaque jour de retard fait perdre des éléments. (3) <strong>L'enquête interne ne peut pas remplacer la procédure pénale</strong> : pas d'EIMP possible, pas de perquisition légale chez d'autres victimes du même APT, pas de moyens d'enquête international. (4) <strong>Risque pénal pour la direction</strong> : ne pas déposer plainte alors qu'on a des éléments solides peut être qualifié de complicité par négligence (art. 25 CP) si l'attaque continue contre d'autres victimes pendant qu'on attend.",
+          "legal": "Art. 273 CP · Art. 25 CP · Pratique MPC",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🌐 J+3 — La demande EIMP et la threat intel",
+      "situation": "Le MPC a ouvert l'instruction art. 273 CP. La plainte est déposée, le dossier Volatility annexé. Le procureur fédéral demande votre input sur la stratégie EIMP. L'IP C2 (cdn-update.xyz) résout vers un VPS en Singapour, mais l'analyse threat intel approfondie (vous avez contacté votre partenaire CIRCL pour corrélation) révèle que ce VPS est lui-même un proxy : le vrai C2 final est dans une infrastructure commune avec d'autres opérations APT documentées contre des cibles européennes (SAP, Bosch, BASF). Cobalt Strike utilise du HTTPS standard, donc le contenu est chiffré. Mais les métadonnées TLS (JA3 fingerprint) correspondent à une signature publiée par Mandiant pour APT41.",
+      "law": "<strong>EIMP art. 28-37</strong> : conditions de l'entraide pénale. <strong>Pratique BJ</strong> : Singapour comme premier maillon (juridiction coopérative), puis suivi des chaînes proxy. <strong>Standard threat intel</strong> : les fingerprints JA3 et les watermarks Cobalt Strike sont reconnus en peer-review comme indicateurs probants d'attribution.",
+      "question": "<strong>Quelle stratégie EIMP recommandez-vous au MPC ?</strong>",
+      "choices": [
+        {
+          "text": "Stratégie en 2 vagues : (1) <strong>Singapour first</strong> (juridiction coopérative, État de droit) pour saisir le VPS C2 visible et obtenir les logs serveur. (2) Avec les éléments saisis (IP réelles, comptes, logs accès), construire une seconde demande EIMP vers le pays hébergeant le C2 final. Coordonner avec EUROPOL et BfV (Allemagne, victimes voisines via Bosch/BASF) pour une opération multi-juridictionnelle simultanée — plus de chances de saisir avant fuite.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Stratégie tactique excellente. (1) <strong>Singapour first</strong> est le bon choix : coopération bilatérale solide CH-SG, délais d'exécution de 2-4 semaines, fiabilité des saisies, (2) <strong>Approche en cascade</strong> : les éléments de Singapour alimentent la phase 2, qui est ainsi mieux étayée et donc plus susceptible d'aboutir, (3) <strong>Coordination EUROPOL/BfV</strong> : les autres victimes (SAP, Bosch, BASF) sont des partenaires naturels — opération simultanée multiplie les chances et désorganise massivement l'opération APT, (4) <strong>Threat intel comme support</strong> : les fingerprints JA3 et l'attribution Mandiant constituent les éléments objectifs qui justifient l'urgence et le périmètre des saisies. Bonus : votre stratégie est citée dans le rapport NCSC 2026 sur les bonnes pratiques d'investigation transnationale APT.",
+          "legal": "EIMP art. 28-37 · Coopération CH-SG · EUROPOL",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Demande EIMP unique vers le pays hébergeant le C2 final (selon analyse threat intel) — le plus efficace de viser directement la cible.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Stratégie qui contourne l'étape de consolidation. (1) <strong>Sans saisie Singapour préalable</strong>, vous ne disposez que des inférences threat intel pour identifier le C2 final — base juridique fragile pour une demande EIMP. Le pays cible peut refuser pour défaut de précision. (2) <strong>Risque de fuite</strong> : selon le pays, la demande EIMP peut être communiquée à l'attaquant (corruption locale, complicité institutionnelle), qui déplacera son infrastructure. (3) <strong>Pas de coordination EUROPOL/BfV</strong> : vous ratez l'opération simultanée multi-juridictionnelle qui aurait pu démanteler le groupe APT. Chaque victime opère seule = chaque effort est dilué. La stratégie en cascade (option correcte) est plus lente sur le papier, mais plus efficace en résultat.",
+          "legal": "EIMP · Pratique BJ",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Pas d'EIMP. Privilégier l'action via les services de renseignement (SRC) qui ont leurs propres canaux informels. Plus rapide.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Erreur que vous connaissez maintenant : violation art. 271 CP (vous l'avez déjà rencontrée dans Bürgenstock). (1) <strong>LRens art. 5</strong> : séparation renseignement/procédure pénale — les éléments collectés par le SRC ne sont pas utilisables comme preuves. (2) <strong>Art. 271 CP</strong> : si la coopération informelle implique des actes sur le territoire d'un État étranger, c'est précisément ce que cet article interdit. (3) <strong>Aucun cadre légal</strong> pour les éléments obtenus — irrecevabilité art. 141 al. 2 CPP au procès. (4) <strong>Précédent dangereux</strong> : court-circuiter l'EIMP fragilise toute la coopération internationale suisse à long terme. La voie EIMP est lente mais c'est la seule voie légale.",
+          "legal": "LRens art. 5 · Art. 271 CP · Art. 141 al. 2 CPP",
+          "critical": true,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "📊 J+90 — Le rapport forensique pour le TPF",
+      "situation": "Trois mois après. La saisie à Singapour a permis de récupérer les logs serveur du proxy C2, démontrant des connexions depuis votre serveur compromis vers le C2 final. La demande EIMP simultanée (CH/DE/AT/BE coordonnée) a abouti à des saisies dans 3 pays. 5 personnes identifiées du groupe APT. Le procès devant le TPF approche. Vous devez rédiger le rapport forensique final qui sera la pièce centrale de l'accusation. La défense annonce qu'elle contestera la validité de la capture mémoire (« preuve volatile non reproductible ») et l'attribution APT (« interprétation subjective des chercheurs threat intel »). Comment structurer le rapport pour résister à ces attaques ?",
+      "law": "<strong>Standard de recevabilité TPF</strong> : (1) reproductibilité (un autre expert avec les mêmes données aboutit aux mêmes conclusions), (2) traçabilité (chaîne probatoire documentée bout-en-bout), (3) état de l'art (méthodes reconnues par la communauté scientifique). <strong>Art. 182 CPP</strong> : possibilité d'expertise contradictoire.",
+      "question": "<strong>Comment structurez-vous le rapport forensique ?</strong>",
+      "choices": [
+        {
+          "text": "Rapport en 5 sections : (1) <strong>Procès-verbal d'acquisition</strong> (heure/min/sec, outil, version, hash SHA-256, témoin), (2) <strong>Méthodologie d'analyse</strong> (commandes Volatility 3 exactes, version 2.5.2, plugins utilisés, références SANS FOR532), (3) <strong>Constatations</strong> (avec captures d'écran horodatées et extraits de logs), (4) <strong>Interprétation</strong> (corrélation multi-sources : Volatility + sandbox + threat intel + saisies EIMP), (5) <strong>Annexes reproductibles</strong> (commandes pour qu'un expert tiers refasse l'analyse). Joindre les 3 publications peer-reviewed sur Cobalt Strike watermarks.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Rapport forensique exemplaire qui résiste à toute contestation. (1) <strong>Procès-verbal d'acquisition</strong> = la défense ne peut contester la chaîne (heures précises, outil, hash), (2) <strong>Méthodologie reproductible</strong> = un expert tiers nommé par la défense (art. 182 CPP) refera les commandes Volatility et obtiendra les mêmes résultats — la preuve est <em>scientifiquement</em> valide, pas opinion, (3) <strong>Constatations factuelles</strong> avec preuves visuelles = pas de zone d'ombre interprétative, (4) <strong>Interprétation cross-validée</strong> par 4 sources (Volatility + sandbox + threat intel + EIMP) = solidité argumentative maximale, (5) <strong>Publications peer-reviewed</strong> annexées = l'attribution APT n'est pas votre opinion mais celle de la communauté scientifique. Bonus : la défense, après lecture, abandonne sa contestation de l'attribution et se replie sur des moyens procéduraux secondaires. Le TPF accepte le rapport intégralement.",
+          "legal": "Art. 182 CPP · Standard TPF · ISO 27037",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Rapport synthétique de 10 pages : conclusions principales, sans détailler la méthodologie (le tribunal n'est pas technique). Le rapport complet (200 pages) sera disponible en annexe.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Approche qui sous-estime les attentes du TPF. (1) <strong>Le TPF est composé de juges techniques</strong> (chambres économiques) qui apprécient la précision méthodologique — un rapport « simplifié » est interprété comme un manque de rigueur. (2) <strong>La défense exploitera l'écart</strong> entre rapport synthétique (10 pages) et rapport complet (200 pages) : « Pourquoi le procureur ne nous montre que 10 pages ? Que cache-t-il dans les 190 autres ? ». (3) <strong>Sans méthodologie détaillée dans le rapport principal</strong>, l'expert contradictoire de la défense (art. 182 CPP) aura plus de marge pour contester chaque étape. (4) <strong>Précédent défavorable</strong> : un rapport synthétique accepté ouvre la porte à des rapports forensiques bâclés dans les prochaines affaires. Le bon rapport est <em>complet et structuré</em>, pas « court pour ne pas ennuyer le juge ».",
+          "legal": "Standard TPF · Art. 182 CPP",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Rapport de 200 pages très technique avec tous les détails Volatility, captures d'écran brutes, logs sans interprétation. Laisser le tribunal et l'expert contradictoire faire leur travail.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Excès inverse : trop sans structure. (1) <strong>Un tribunal n'est pas un labo forensique</strong> : 200 pages de logs bruts sans guide narratif sont incompréhensibles. Le TPF appréciera la rigueur mais aussi la clarté pédagogique. (2) <strong>Risque d'enterrer les éléments importants</strong> sous un déluge de données — la défense pourra plaider que le rapport est inintelligible et donc juridiquement non probant. (3) <strong>Sans interprétation</strong>, le rapport ne fait pas son travail : il fournit des données, mais il n'<em>explique</em> pas pourquoi ces données prouvent l'infraction. C'est précisément le rôle du rapport. (4) <strong>L'expert contradictoire</strong> aura une marge énorme pour réinterpréter les données dans un sens favorable à la défense. La structure narrative + interprétation explicite (option correcte) est plus solide.",
+          "legal": "Standard TPF · Pratique forensique",
+          "critical": false,
+          "next": -1
+        }
+      ]
+    }
+  ]
+}
