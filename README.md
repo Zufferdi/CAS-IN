@@ -8,10 +8,10 @@ Un outil d'entraînement pour les étudiants du **CAS en Investigation Numériqu
 
 | Section | Contenu |
 |---|---|
-| 💊 **Pilule bleue** — Fiches | 90 fiches de révision structurées par catégorie (FS, Windows, crypto, réseau, droit, plateformes, acquisition) |
+| 💊 **Pilule bleue** — Fiches | 92 fiches de révision structurées par catégorie (FS, Windows, crypto, réseau, droit, plateformes, acquisition) |
 | 💊 **Pilule verte** — TP | 25 catégories d'exercices : FAT, NTFS, exFAT, EXT, HFS+, endianness, magic bytes, hashes, droit pénal, email, réseau, IR, etc. |
-| 💊 **Pilule orange** — Scènes | 64 scénarios DFIR immersifs avec choix multiples, conséquences procédurales, références légales (Art. 141 CPP, ACPO, NIST) |
-| 💊 **Pilule rouge** — Quiz | 1630 questions gamifiées (XP, rangs, streaks, défi quotidien, mode survie, SM2 spaced repetition) |
+| 💊 **Pilule orange** — Scènes | 90 scénarios DFIR immersifs avec choix multiples, conséquences procédurales, références légales (Art. 141 CPP, ACPO, NIST) |
+| 💊 **Pilule rouge** — Quiz | 1750 questions gamifiées (XP, rangs, streaks, défi quotidien, mode survie, SM2 spaced repetition) |
 
 Chaque exercice TP est **régénéré aléatoirement** à chaque passage — ce qui veut dire qu'on peut s'acharner sans retomber sur les mêmes octets, et que si on réussit c'est probablement qu'on a compris, pas qu'on a retenu la réponse.
 
@@ -22,15 +22,19 @@ CAS-IN/
 ├── index.html              # Landing (Matrix rain, drawer profil, raccourcis B/V/O/R)
 ├── quiz.html               # 1630 questions gamifiées
 ├── tp.html                 # 25 catégories TP avec sidebar
-├── scene.html              # 64 scénarios DFIR
+├── scene.html              # 90 scénarios DFIR
 ├── tools.html              # Outils & cheatsheets
 ├── exam.html               # Mode examen blanc
 ├── offline.html            # Page fallback hors-ligne (PWA)
 │
-├── manifest.json           # Source de vérité : 90 fiches × 7 catégories
+├── manifest.json           # Source de vérité : 92 fiches × 7 catégories
+├── pwa.manifest.json       # Manifest PWA (W3C)
 ├── counts.json             # Auto-généré : nombres affichés partout
-├── questions.json          # 1630 questions (1750 avant nettoyage P0)
-├── scenes.js               # 64 scénarios DFIR (~1.6 MB, network-first)
+├── questions.json          # 1750 questions
+│
+├── scenes/                 # 90 scènes DFIR (lazy-load v3.0)
+│   ├── index.json          # Méta-index (~64 KB)
+│   └── *.json              # Une scène par fichier (~30 KB chacune)
 │
 ├── style/
 │   ├── landing.css         # Style landing
@@ -49,7 +53,7 @@ CAS-IN/
 │   ├── tp-data.js
 │   └── tp-engine.js        # Générateurs d'exercices aléatoires
 │
-├── fiches/                 # 90 fiches HTML
+├── fiches/                 # 92 fiches HTML
 ├── scripts/                # Outils Python (CI)
 │   ├── check_questions.py  # QC questions.json (utilisé en GitHub Actions)
 │   ├── generate_counts.py  # Régénère counts.json
@@ -60,7 +64,7 @@ CAS-IN/
 
 ## PWA
 
-- **Service Worker v21** : Network-First pour HTML/JSON, Cache-First pour CSS/JS, fallback `offline.html`.
+- **Service Worker v29** : Network-First pour HTML/JSON, Cache-First pour CSS/JS, fallback `offline.html`.
 - **Installable** sur iOS, Android, desktop. Bannière d'install proposée après 3 s.
 - **Fonctionne 100 % offline** une fois la première visite faite.
 
@@ -88,6 +92,16 @@ Partout :
 - `Ctrl/⌘+K` → Recherche globale (fiches + questions + TP + scènes)
 - `Esc` → Fermer modale/drawer
 - `?` (dans le quiz) → Liste des raccourcis
+
+## Patches modulaires (lazy plugins)
+
+Le moteur de scène v2.x est étendu par des patches non-intrusifs, chacun désactivable en retirant sa balise `<script>` :
+
+- **Lobby v3** (`scene-lobby-v3.js`) — 13 parcours pédagogiques, bouton "Continuer" pour reprendre une scène en cours, tri configurable, filtres atmosphère, 8 nouveaux badges de découverte.
+- **Engine v4** (`scene-engine-v4.js`) — Briefing repensé (fiche d'identité + objectifs + pré-warning sensibles), récap exportable en Markdown, mode révision (rejouer en mode étude), glossaire de 127 articles de loi (couverture 92% du corpus).
+- **Profile v5** (`profile-track-v5.js`) — Sélecteur de rôle enrichi avec mini-timeline des 12 grades, mini-test d'orientation (4 questions), banner thématisé sur toutes les pages, célébration des promotions (toast + son + haptique).
+
+Architecture en couches : `scene-app.js` (noyau, intouché) → `scene-ux-patch.js` (v2) → `scene-lobby-v3.js` → `scene-engine-v4.js` → `profile-track-v5.js`.
 
 ## Avertissement pédagogique
 

@@ -1,4 +1,6 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v29 : ajout des 14 fichiers JS/CSS manquants (patches v3/v4/v5 + bridges
+//       profil + landing-3d + 2 fiches Linux/macOS forensique)
 // v28 : extraction JS inline de tools.html + exam.html → tools-app.js, exam-app.js
 // v27 : suppression scenes.js legacy (-1.6 MB), meta descriptions complètes
 // v26 : Phases A+B+D+E (challenge banner+, daily combo, 6 new badges, skill tree)
@@ -10,7 +12,7 @@
 // v22 : extraction du JS inline de quiz.html → js/quiz-app.js (cache séparé)
 // v21 : alignement v2.4 (post-cleanup) — STATIC_ASSETS auto-régénéré
 //       depuis manifest.json + filesystem (90 fiches au lieu de 47)
-const CACHE_VERSION = 'cas-in-v28';
+const CACHE_VERSION = 'cas-in-v29';
 
 const STATIC_ASSETS = [
   // Pages racine
@@ -38,20 +40,34 @@ const STATIC_ASSETS = [
   './style/style.css',
   './style/tp.css',
   './style/fiche_style.css',
+  './style/profile.css',
+  './style/profile-banner.css',
+  './style/quiz.css',
 
   // Scripts partagés
   './js/landing.js',
+  './js/landing-3d.js',
   './js/cas-in-counts.js',
   './js/cas-in-pwa.js',
   './js/cas-in-search.js',
   './js/cas-in-export.js',
+  './js/cas-in-profile.js',
   './js/quiz-app.js',
+  './js/quiz-ui-patch.js',
+  './js/quiz-profile-bridge.js',
   './js/scene-app.js',
   './js/scene-ux-patch.js',
+  './js/scene-profile-bridge.js',
+  './js/scene-lobby-v3.js',
+  './js/scene-engine-v4.js',
   './js/tools-app.js',
   './js/exam-app.js',
+  './js/tp-profile-bridge.js',
+  './js/profile-page.js',
+  './js/profile-banner.js',
+  './js/profile-track-v5.js',
 
-  // Scénarios DFIR (v3.0) — index + 64 fichiers individuels lazy-loadés
+  // Scénarios DFIR (v3.0) — index + 90 fichiers individuels lazy-loadés
   // L'index est en network-first, les scènes individuelles en cache-first.
   './scenes/index.json',
 
@@ -59,7 +75,7 @@ const STATIC_ASSETS = [
   './tp/tp-data.js',
   './tp/tp-engine.js',
 
-  // Fiches (90) — auto-listé depuis manifest.json
+  // Fiches (92) — auto-listé depuis manifest.json
   './fiches/index.html',
   './fiches/fiche-hub.css',
   './fiches/acquisition.html',
@@ -151,6 +167,8 @@ const STATIC_ASSETS = [
   './fiches/wireshark_pcap.html',
   './fiches/wsl_forensique.html',
   './fiches/yara.html',
+  './fiches/linux_forensique.html',
+  './fiches/macos_forensique.html',
   './fiches/zimmerman.html',
 ];
 
