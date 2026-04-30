@@ -1,4 +1,6 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v33 : palette score 5 paliers étendue au lobby (status badge, leaderboard
+//       pills, skill-tree nodes) — la couleur du % suit le palier, pas le rang
 // v32 : ajout 5 scènes (CyberStratVS valaisanne, LSI/LPD timing, référent
 //       milice, FluBot+BEC cascade, audit ISAE 3402) + palette score 5 paliers
 //       (rouge foncé / orange / vert clair / vert moyen / vert vif)
@@ -20,7 +22,7 @@
 // v22 : extraction du JS inline de quiz.html → js/quiz-app.js (cache séparé)
 // v21 : alignement v2.4 (post-cleanup) — STATIC_ASSETS auto-régénéré
 //       depuis manifest.json + filesystem (90 fiches au lieu de 47)
-const CACHE_VERSION = 'cas-in-v32';
+const CACHE_VERSION = 'cas-in-v33';
 
 const STATIC_ASSETS = [
   // Pages racine
