@@ -8,6 +8,21 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 
 Refactor structurel en 4 phases. Aucun changement fonctionnel pour l'utilisateur final hormis la correction de bugs UX listés en Phase 1. Ouverture d'`ARCHITECTURE.md` à la racine.
 
+### Phase 0 — Resync `fiches/index.html` (correctif)
+
+`fiches/index.html` était rédigé à la main et avait dérivé par rapport à `manifest.json` :
+- **73 fiches sur 95** avec une icône divergente (le HTML utilisait souvent 📄 alors que le manifest avait une icône thématique : 🌍, 🧅, 🤖, ☁️, 🪟, 🔐, etc.).
+- **27 fiches** avec `data-keywords=""` → invisibles à la recherche par mots-clés.
+- **27 fiches** avec `<div class="fiche-desc"></div>` vide.
+
+Nouveau script **`scripts/sync_fiches_index.py`** : utilise `manifest.json` comme source de vérité, applique les icônes correctes aux cards, reconstruit les descriptions et `data-keywords` manquants. Idempotent — peut être relancé après chaque ajout de fiche.
+
+3 icônes par défaut restantes dans `manifest.json` (`rapport_forensique`, `linux_forensique`, `macos_forensique`) thématisées en `📋`, `🐧`, `🍏`.
+
+État final : **95 cards, 0 keyword vide, 0 description vide, 0 icône générique**. La recherche globale Ctrl+K trouve maintenant chaque fiche par ses mots-clés.
+
+À ajouter au flow CI : exécuter `python3 scripts/sync_fiches_index.py` après toute édition de `manifest.json`, comme on le fait déjà pour `generate_counts.py`.
+
 ### Phase 1 — Bugs UX
 
 - **`quiz.html` · daily-banner persistant** : le bouton ✕ utilisait `style.display='none'` sans persistence → la bannière revenait à chaque rechargement. Désormais `dismissDailyBanner()` (dans `quiz-ui-patch.js` ligne 632+) écrit `dailyBannerDismissed = today ISO` en localStorage, et masque automatiquement au boot si déjà fermé aujourd'hui.
