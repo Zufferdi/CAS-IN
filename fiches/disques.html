@@ -249,7 +249,7 @@
       <p>Groupe de secteurs consécutifs. Le système de fichiers alloue toujours des <strong>clusters entiers</strong> — c'est l'unité minimale d'allocation logique.</p>
       <p style="margin-top:.5rem">FAT32 : taille variable (4 Ko à 32 Ko selon partition)</p>
       <p style="margin-top:.5rem">NTFS : <strong>4096 octets</strong> par défaut (8 secteurs × 512)</p>
-      <p style="margin-top:.5rem"><strong>Slack space</strong> : si un fichier de 7 octets occupe un cluster de 4096, il y a <strong>4089 octets de slack space</strong> contenant potentiellement des données résiduelles d'un ancien fichier — <em>artefact forensique précieux</em>.</p>
+      <p style="margin-top:.5rem"><strong>Slack space</strong> : si un fichier de 7 octets occupe un cluster de 4096, il y a <strong>4089 octets de slack space</strong>. Deux zones : le <strong>RAM Slack</strong> (fin du fichier → fin du dernier secteur, rempli de zéros sous Windows NT+) et le <strong>Drive Slack</strong> (secteurs entiers non utilisés jusqu'à la fin du cluster, contenant des résidus de l'ancien fichier) — <em>artefact forensique précieux</em>.</p>
     </div>
   </div>
 </div>
@@ -334,7 +334,10 @@
   <div class="quiz-wrap">
     <div class="quiz-q">Quel est le slack space dans un cluster NTFS ? Pourquoi est-il forensiquement intéressant ?<small>Slack space · Niveau : moyen</small></div>
     <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
-    <div class="quiz-answer">NTFS alloue par <strong>cluster entier</strong> (typiquement 4096 octets). Un fichier de 100 octets occupe quand même 1 cluster complet. Les <strong>3996 octets restants</strong> = <strong>slack space</strong>. Deux types : <strong>(1) RAM Slack</strong> = espace entre la fin du fichier et la fin du dernier secteur — typiquement rempli avec ce qui était dans le buffer RAM au moment de l'écriture (peut contenir n'importe quoi : passwords en clair, tokens, contenu web). <strong>(2) Drive Slack</strong> = espace entre la fin du dernier secteur du fichier et la fin du cluster — contient le <strong>contenu de l'ancien fichier</strong> qui occupait ce cluster avant. <strong>Forensiquement</strong> : <strong>mine d'or</strong> ! Récupération de fragments de fichiers supprimés, de mots de passe, de logs, de configurations. <strong>Outils</strong> : Autopsy (slack space module), X-Ways (afficher slack), <code>icat</code> (TSK), <code>dd</code> sur les bons offsets. <strong>Limite</strong> : les SSD avec TRIM effacent souvent ces résidus (cycle GC). Sur HDD, les résidus persistent quasi-éternellement. <strong>Anti-forensique</strong> : effacement sécurisé (DOD 7-pass, BCWipe) écrase aussi le slack.</div>
+    <div class="quiz-answer">NTFS alloue par <strong>cluster entier</strong> (typiquement 4096 octets). Un fichier de 100 octets occupe quand même 1 cluster complet. Les <strong>3996 octets restants</strong> = <strong>slack space</strong>. Trois types à distinguer :<br><br>
+      <strong>(1) RAM Slack</strong> (= Sector Slack) = espace entre la fin logique du fichier et la fin du dernier <em>secteur</em> utilisé. Sous <strong>Windows NT+</strong> (NT4, XP, 7, 10, 11), le kernel remplit cette zone avec des <strong>zéros</strong> — contrairement à DOS/Windows 9x qui y écrivait le contenu du buffer RAM. Sur un système NT moderne, le RAM Slack contient donc des zéros et n'est forensiquement intéressant que comme marqueur de taille de fichier.<br><br>
+      <strong>(2) Drive Slack</strong> = espace entre la fin du dernier secteur utilisé et la fin du dernier cluster alloué (secteurs entiers non utilisés). Cette zone n'est <strong>pas réinitialisée</strong> par l'OS lors de l'allocation — elle contient le <strong>contenu résiduel de l'ancien fichier</strong> qui occupait ces clusters. C'est ici que se trouvent les artefacts forensiques précieux : fragments de fichiers supprimés, anciens journaux, configurations.<br><br>
+      <strong>Forensiquement</strong> : le Drive Slack est la zone intéressante. <strong>Outils</strong> : Autopsy (slack space module), X-Ways (afficher slack), <code>icat</code> (TSK), <code>dd</code> sur les bons offsets. <strong>Limite</strong> : les SSD avec TRIM effacent souvent ces résidus. Sur HDD, les résidus persistent quasi-éternellement. <strong>Anti-forensique</strong> : effacement sécurisé (DOD 7-pass, BCWipe) écrase aussi le slack.</div>
   </div>
   <div class="quiz-wrap">
     <div class="quiz-q">Différence entre <strong>secteur</strong>, <strong>cluster</strong>, et <strong>bloc</strong> ?<small>Vocabulaire · Niveau : facile</small></div>
@@ -359,7 +362,7 @@
     <p><strong>Adressage</strong> : CHS (legacy C/H/S) vs LBA (séquentiel 0 → N)</p>
     <p><strong>Secteur</strong> = 512 octets legacy ou 4096 octets Advanced Format (4Kn)</p>
     <p><strong>Cluster</strong> = unité allocation FS · NTFS 4096 octets · multiple de secteur</p>
-    <p><strong>Slack space</strong> = espace inutilisé dans un cluster · contient résidus = mine forensique</p>
+    <p><strong>Slack space</strong> = espace inutilisé dans un cluster · <strong>Drive Slack</strong> (secteurs non utilisés) contient résidus d'anciens fichiers = mine forensique · <strong>RAM Slack</strong> (fin du dernier secteur) = zéros sous Windows NT+</p>
     <p><strong>HPA</strong> (Host Protected Area) : zone cachée fin de disque · <code>hdparm -N</code></p>
     <p><strong>DCO</strong> (Device Configuration Overlay) : peut masquer + brider · <code>hdparm --dco-identify</code></p>
     <p><strong>HDD</strong> : suppression = clusters marqués libres, données restent → carving facile</p>
@@ -368,7 +371,7 @@
     <p><strong>Codes types MBR</strong> : 0x07 (NTFS), 0x0C (FAT32 LBA), 0x83 (Linux), 0xEE (GPT), 0xEF (EFI)</p>
   </div>
 
-  <div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> MBR = offset 0, signature 55AA en little-endian aux offsets 510-511 · 4 partitions primaires max · GPT = GUID, 128 partitions max, redondance primaire/secondaire · LBA = adressage logique séquentiel · Secteur = 512 ou 4096 octets (AF) · Cluster NTFS = 4096 par défaut · Slack space contient des résidus = artefact forensique · HPA / DCO = zones cachées · hdparm -N et --dco-identify · TRIM sur SSD = risque d'effacement spontané, fenêtre courte.</div>
+  <div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> MBR = offset 0, signature 55AA en little-endian aux offsets 510-511 · 4 partitions primaires max · GPT = GUID, 128 partitions max, redondance primaire/secondaire · LBA = adressage logique séquentiel · Secteur = 512 ou 4096 octets (AF) · Cluster NTFS = 4096 par défaut · <strong>Drive Slack</strong> (secteurs non utilisés du dernier cluster) contient résidus d'anciens fichiers = artefact forensique · <strong>RAM Slack</strong> = fin du dernier secteur, rempli de zéros sous Windows NT+ (pas de contenu RAM) · HPA / DCO = zones cachées · hdparm -N et --dco-identify · TRIM sur SSD = risque d'effacement spontané, fenêtre courte.</div>
 
   <div class="footer">
     <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
