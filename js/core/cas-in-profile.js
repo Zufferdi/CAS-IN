@@ -10,21 +10,27 @@
   'use strict';
 
   const PROFILE_KEY = 'casIn_profile';
-  const PROFILE_VERSION = 3;
+  const PROFILE_VERSION = 4;
 
   // ───────────────────────────────────────────────────────────
   // Échelles XP : mêmes seuils pour les 4 tracks (XP universelle)
   // ───────────────────────────────────────────────────────────
 
-  // v3 (avril 2026) — Courbe lissée : progression plus régulière, cap à 17 950 XP.
-  // Sauts : 250, 300, 400, 600, 800, 1100, 1500, 2000, 2500, 3500, 5000.
-  // Migration douce depuis v2 : conversion proportionnelle, rang préservé.
-  const XP_THRESHOLDS = [0, 250, 550, 950, 1550, 2350, 3450, 4950, 6950, 9450, 12950, 17950];
+  // v4 (avril 2026) — Extension à 15 paliers : insertion de 3 rangs entre
+  // l'avant-dernier rang historique et la légende, pour offrir plus de
+  // progression au sommet sans frustrer les utilisateurs déjà au cap.
+  // Sauts : 250, 300, 400, 600, 800, 1100, 1500, 1900, 2400, 3000, 3700, 4500, 5500, 6700.
+  // Migration douce v3 → v4 : conversion proportionnelle, rang préservé.
+  // Le rang 11 v3 (Légende, cap 17 950) → rang 14 v4 (Légende, cap 32 650).
+  const XP_THRESHOLDS = [0, 250, 550, 950, 1550, 2350, 3450, 4950, 6850, 9250, 12250, 15950, 20450, 25950, 32650];
 
-  // v2 (legacy) — Conservé uniquement pour la migration v2 → v3.
+  // v3 (legacy) — Conservé uniquement pour la migration v3 → v4.
+  const XP_THRESHOLDS_V3 = [0, 250, 550, 950, 1550, 2350, 3450, 4950, 6950, 9450, 12950, 17950];
+
+  // v2 (legacy) — Conservé pour la migration v2 → v4 (chaîne complète).
   const XP_THRESHOLDS_V2 = [0, 250, 500, 1000, 1800, 2800, 4200, 6500, 10000, 15000, 25000, 40000];
 
-  const CLEARANCE_BY_RANK = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5];
+  const CLEARANCE_BY_RANK = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5, 5, 5, 5];
 
   // ───────────────────────────────────────────────────────────
   // Bonus XP par rôle : +20% sur les contenus du domaine de spécialité.
@@ -144,6 +150,9 @@
         { emoji: '🔍',   name: 'Sherlock Holmes',          flavor: 'Élémentaire, mon cher Watson.' },
         { emoji: '⚖️',   name: 'Maître Locard',            flavor: 'Père de la criminalistique. Échange Locard : maîtrisé.' },
         { emoji: '🎩',   name: 'Hercule Poirot',           flavor: 'Les petites cellules grises font leur travail.' },
+        { emoji: '🌧️',   name: 'Sarah Linden',             flavor: 'The Killing · l\'obsession qui ne lâche jamais.' },
+        { emoji: '❄️',   name: 'Saga Norén',               flavor: 'Bron/Broen · la précision méthodique scandinave.' },
+        { emoji: '🎯',   name: 'Eliot Ness',               flavor: 'The Untouchables · incorruptible jusqu\'au bout.' },
         { emoji: '👑',   name: 'Légende DFIR',             flavor: 'Ton expertise fait jurisprudence.' },
       ],
     },
@@ -170,6 +179,9 @@
         { emoji: '⚜️',   name: 'Juge Falcone',               flavor: 'On ne meurt pas pour les idées qui survivent.' },
         { emoji: '🏛️',   name: 'Juge Dredd',                 flavor: 'I am the law.' },
         { emoji: '⚖️',   name: 'Juge Marshall',              flavor: 'La justice n\'a de sens que si elle s\'applique à tous.' },
+        { emoji: '🔥',   name: 'Procureur Cassagne',         flavor: 'Engrenages · l\'instruction sans relâche.' },
+        { emoji: '🛡️',   name: 'Juge Renaud',                flavor: 'Le Juge · l\'incorruptible face aux pressions.' },
+        { emoji: '🌍',   name: 'Robert H. Jackson',          flavor: 'Nuremberg · la justice contre la barbarie.' },
         { emoji: '👑',   name: 'Magistrat suprême',          flavor: 'Au-dessus, il n\'y a plus que la loi elle-même.' },
       ],
     },
@@ -196,6 +208,9 @@
         { emoji: '🔦',   name: 'Bob Woodward',               flavor: 'Watergate. Suivez l\'argent.' },
         { emoji: '⚡',   name: 'Bernard Pivot',              flavor: 'Apostrophes. Le verbe comme arme.' },
         { emoji: '🌐',   name: 'Edward R. Murrow',           flavor: 'Good night, and good luck.' },
+        { emoji: '🏛️',   name: 'Carl Bernstein',             flavor: 'All The President\'s Men · le scoop qui fait tomber un président.' },
+        { emoji: '🦅',   name: 'Hunter S. Thompson',         flavor: 'Gonzo journalism · l\'écriture comme drogue dure.' },
+        { emoji: '🌍',   name: 'Albert Londres',             flavor: 'Inventeur du grand reportage. "Notre métier n\'est pas de faire plaisir."' },
         { emoji: '👑',   name: 'Plume légendaire',           flavor: 'Tes papiers font tomber des gouvernements.' },
       ],
     },
@@ -216,6 +231,9 @@
         { emoji: '🥷',   name: 'Kevin Mitnick',              flavor: 'Le condor. L\'art de la persuasion sociale.' },
         { emoji: '📜',   name: 'The Mentor',                 flavor: 'This is our world now... the world of the electron.' },
         { emoji: '🧬',   name: 'Alan Turing',                flavor: 'Père de l\'informatique. Bletchley Park 1943.' },
+        { emoji: '📚',   name: 'Aaron Swartz',               flavor: 'L\'idéaliste de l\'open access. Information wants to be free.' },
+        { emoji: '👻',   name: 'Phineas Fisher',             flavor: 'Le hacktiviste fantôme. Hacking team, hacked.' },
+        { emoji: '🌹',   name: 'Ada Lovelace',               flavor: '1843 — la première programmeuse de l\'histoire.' },
         { emoji: '👑',   name: 'Légende du dark net',        flavor: 'Tu es au-delà du réseau. Tu ES le réseau.' },
       ],
     },
@@ -327,16 +345,17 @@
 
     // Pas de profil → créer + migration legacy une seule fois.
     // Les compteurs legacy sont sur l'échelle v2, donc on rééchelonne v2→v3
-    // pour conserver le rang attendu par l'utilisateur.
+    // puis v3→v4 pour conserver le rang attendu par l'utilisateur.
     if (!p || typeof p !== 'object') {
       p = buildInitialProfile();
       migrateLegacyToProfile(p);
       migrateXpV2ToV3(p);
+      migrateXpV3ToV4(p);
       lsSet(PROFILE_KEY, p);
       return p;
     }
 
-    // Profil v=1 (F1) → upgrader vers v=3 sans perte (v=2 a été ré-échelonné)
+    // Profil v=1 (F1) → upgrader vers v=4 sans perte
     if (p.v === 1) {
       const fresh = buildInitialProfile();
       // Conserver pseudo et préférences
@@ -350,21 +369,31 @@
         fresh.migrated = true;
       }
       // L'XP reconstituée depuis les clés legacy est sur l'échelle v2.
-      // On la rééchelonne pour la cohérence avec les seuils v3.
+      // Chaîner v2→v3→v4.
       migrateXpV2ToV3(fresh);
+      migrateXpV3ToV4(fresh);
       lsSet(PROFILE_KEY, fresh);
       return fresh;
     }
 
-    // Profil v=2 (échelle XP exponentielle) → upgrader vers v=3 (lissée)
+    // Profil v=2 (échelle XP exponentielle) → upgrader vers v=4
     if (p.v === 2) {
       migrateXpV2ToV3(p);
-      p.v = 3;
+      migrateXpV3ToV4(p);
+      p.v = 4;
       lsSet(PROFILE_KEY, p);
       return p;
     }
 
-    // Profil v=3 OK
+    // Profil v=3 (12 paliers) → upgrader vers v=4 (15 paliers)
+    if (p.v === 3) {
+      migrateXpV3ToV4(p);
+      p.v = 4;
+      lsSet(PROFILE_KEY, p);
+      return p;
+    }
+
+    // Profil v=4 OK
     if (p.v === PROFILE_VERSION) return p;
 
     // Version inconnue plus récente → on ne touche pas
@@ -400,9 +429,9 @@
     const oldRange = oldNext - oldMin;
     const progress = oldRange > 0 ? (xpOld - oldMin) / oldRange : 0;
 
-    // Recalculer XP avec les nouveaux seuils, même rang + même progression
-    const newMin  = XP_THRESHOLDS[idx];
-    const newNext = idx + 1 < XP_THRESHOLDS.length ? XP_THRESHOLDS[idx + 1] : newMin;
+    // Recalculer XP avec les seuils V3, même rang + même progression
+    const newMin  = XP_THRESHOLDS_V3[idx];
+    const newNext = idx + 1 < XP_THRESHOLDS_V3.length ? XP_THRESHOLDS_V3[idx + 1] : newMin;
     const newRange = newNext - newMin;
     const xpNew = Math.round(newMin + progress * newRange);
 
@@ -413,6 +442,62 @@
       profile.xpBySource.quiz  = Math.round((profile.xpBySource.quiz  || 0) * ratio);
       profile.xpBySource.scene = Math.round((profile.xpBySource.scene || 0) * ratio);
       // Correction d'arrondi : recaler la somme exacte sur quiz pour cohérence
+      const sum = profile.xpBySource.quiz + profile.xpBySource.scene;
+      if (sum !== xpNew) {
+        profile.xpBySource.quiz += (xpNew - sum);
+      }
+    }
+    profile.xp = xpNew;
+  }
+
+  /**
+   * Migration v3 → v4 : passage de 12 à 15 paliers. Trois rangs ont été
+   * insérés entre Hercule Poirot (idx 10 v3, conservé en idx 10 v4) et
+   * Légende (idx 11 v3, devenue idx 14 v4). Pour les utilisateurs déjà
+   * au rang 11 (Légende v3), on les place à idx 14 (Légende v4) : ils
+   * ne sont JAMAIS rétrogradés. Pour les autres (idx 0..10), même rang
+   * + même progression sur la nouvelle échelle.
+   *
+   * Cas particuliers :
+   *   - 0 XP → 0 XP (rang 0)
+   *   - 17 950 XP (cap v3, rang 11 Légende) → 32 650 XP (cap v4, rang 14)
+   *   - 12 950 XP (rang 10 v3, début Poirot) → 12 250 XP (rang 10 v4, début Poirot)
+   *   - 25 000 XP (au-delà du cap v3) → cappé à 32 650 (cap v4)
+   */
+  function migrateXpV3ToV4(profile) {
+    const xpOld = profile.xp || 0;
+    if (xpOld <= 0) return;
+
+    // Identifier l'ancien rang v3 + progress dans le rang
+    let idx = 0;
+    for (let i = XP_THRESHOLDS_V3.length - 1; i >= 0; i--) {
+      if (xpOld >= XP_THRESHOLDS_V3[i]) { idx = i; break; }
+    }
+    const oldMin  = XP_THRESHOLDS_V3[idx];
+    const oldNext = idx + 1 < XP_THRESHOLDS_V3.length ? XP_THRESHOLDS_V3[idx + 1] : oldMin;
+    const oldRange = oldNext - oldMin;
+    const progress = oldRange > 0 ? (xpOld - oldMin) / oldRange : 0;
+
+    // Mapping idx v3 → idx v4 :
+    //   v3 rangs 0..10 (Stagiaire à Hercule Poirot) gardent leur idx
+    //   v3 rang 11 (Légende) saute à v4 idx 14 (Légende préservée)
+    //   Les rangs intermédiaires v4 [11..13] sont laissés vides à la migration
+    //   (les utilisateurs y arriveront en gagnant de l'XP normalement).
+    const newIdx = idx <= 10 ? idx : 14;
+
+    const newMin  = XP_THRESHOLDS[newIdx];
+    const newNext = newIdx + 1 < XP_THRESHOLDS.length ? XP_THRESHOLDS[newIdx + 1] : newMin;
+    const newRange = newNext - newMin;
+    // Si on est déjà au rang max, on cap à newMin (la barre est pleine)
+    const xpNew = newRange > 0
+      ? Math.round(newMin + progress * newRange)
+      : newMin;
+
+    // Appliquer le ratio aux compteurs xpBySource
+    const ratio = xpOld > 0 ? xpNew / xpOld : 1;
+    if (profile.xpBySource) {
+      profile.xpBySource.quiz  = Math.round((profile.xpBySource.quiz  || 0) * ratio);
+      profile.xpBySource.scene = Math.round((profile.xpBySource.scene || 0) * ratio);
       const sum = profile.xpBySource.quiz + profile.xpBySource.scene;
       if (sum !== xpNew) {
         profile.xpBySource.quiz += (xpNew - sum);
