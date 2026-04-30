@@ -1,30 +1,34 @@
 #!/usr/bin/env python3
 """
-build_index.py — Regénère fiches/index.html à partir des fichiers HTML du dossier fiches/.
+build_index.py — Regénère fiches/index.html à partir de manifest.json.
 
 Appelé par la GitHub Action .github/workflows/sync-fiches-index.yml.
 
-Détection de la catégorie d'une fiche en trois étapes en cascade :
-  1. Breadcrumb avec href pointant vers index.html#cat-<id>    ← propre
-  2. Breadcrumb en texte brut (ex. 'Artefacts Windows')         ← fallback 1
-  3. Mots-clés dans le nom de fichier                           ← fallback 2
-  4. Sinon : Outils DFIR                                        ← dernier recours
+v3 (manifest-first) :
+  - manifest.json EST la source de vérité pour icon/desc/title de chaque fiche.
+  - Le HTML de chaque fiche est seulement parsé pour deux choses :
+    1. Détection de catégorie (3 étapes : breadcrumb href → texte → filename)
+    2. Récupération du tag court affiché sur la card (.fiche-tag)
+  - ICON_OVERRIDES supprimé (manifest dicte l'icône).
+  - DESC_OVERRIDES gardé comme filet de sécurité ultime (rare).
+  - TAG_OVERRIDES gardé : c'est de la cosmétique d'index, légitime.
+  - Si une fiche existe sur disque mais n'est pas dans manifest, fallback
+    sur le scraping HTML d'origine (badge .badge / .fs-badge) et warning.
 
-Les fiches sont regroupées par catégorie dans l'ordre défini par CATEGORY_ORDER
-puis ordonnées au sein de chaque catégorie selon INTRA_CATEGORY_ORDER
-(progression pédagogique — les fiches non listées finissent en fin alphabétique).
-
-Deux dictionnaires d'overrides permettent de corriger icônes et descriptions
-sans éditer chaque fiche individuellement (utile quand une fiche a une
-icône texte "NTFS" au lieu d'un emoji, ou une meta description manquante).
+CSS / JS embarqués (dans render()) :
+  - clé localStorage `casIn_readFiches_v4` (alignée sur cas-in-profile.js)
+    avec migration silencieuse depuis l'ancienne clé `cas_read_fiches`.
+  - font-family emoji forcée sur .fiche-icon (rendu cross-platform).
 """
 import os, re, json
 from pathlib import Path
 from bs4 import BeautifulSoup
 
-# ── Répertoire des fiches ────────────────────────────────────────────
-FICHES_DIR = Path(__file__).resolve().parents[1] / "fiches"
-INDEX_PATH = FICHES_DIR / "index.html"
+# ── Répertoires ──────────────────────────────────────────────────────
+ROOT          = Path(__file__).resolve().parents[1]
+FICHES_DIR    = ROOT / "fiches"
+INDEX_PATH    = FICHES_DIR / "index.html"
+MANIFEST_PATH = ROOT / "manifest.json"
 
 # ── Ordre pédagogique des modules ───────────────────────────────────
 # Du plus fondamental (prérequis) au plus appliqué (outils).
@@ -122,44 +126,8 @@ INTRA_CATEGORY_ORDER = {
 }
 
 # ── Overrides d'icônes ───────────────────────────────────────────────
-# Utilisé quand le .badge d'une fiche contient un texte (ex. "NTFS") au
-# lieu d'un emoji. Permet d'uniformiser l'index sans éditer chaque fiche.
-# Si la fiche ajoute un emoji au début de son badge plus tard, l'override
-# peut être retiré et le script reprendra l'emoji de la fiche.
-ICON_OVERRIDES = {
-    "encodage.html":              "🔢",
-    "disques.html":               "💽",
-    "droit.html":                 "⚖️",
-    "preuve.html":                "📜",
-    "methodologie.html":          "📐",
-    "acquisition.html":           "📥",
-    "hash.html":                  "#️⃣",
-    "timeline.html":              "🗓",
-    "comparaison_fs.html":        "📊",
-    "fat16.html":                 "💾",
-    "fat12.html":                 "📀",
-    "exfat.html":                 "🗂",
-    "ntfs.html":                  "🗄",
-    "ext.html":                   "🐧",
-    "hfs.html":                   "🍎",
-    "apfs.html":                  "🍏",
-    "windows.html":               "🖥",
-    "volatilite.html":            "🧪",
-    "macos-linux.html":           "💻",
-    "reseau.html":                "🌐",
-    "wireshark_pcap.html":        "🦈",
-    "sqlite_forensique.html":     "🗃",
-    "crypto.html":                "🔐",
-    "outils.html":                "🔍",
-    "zimmerman.html":             "🛠",
-    "browser_forensique.html":    "🧭",
-    "osint.html":                 "👁",
-    # Nouvelles fiches
-    "messagerie_im.html":         "💬",
-    "cryptomonnaies.html":        "₿",
-    "chiffrement_volumes.html":   "🛡",
-    "usb_forensique.html":        "🔌",
-}
+# SUPPRIMÉ en v3 : manifest.json dicte les icônes. Si un override est
+# nécessaire, le mettre directement dans manifest.json.
 
 # ── Overrides de descriptions ────────────────────────────────────────
 # Utilisé quand une fiche n'a pas de <meta name="description">. Évite
@@ -333,7 +301,35 @@ def detect_category(soup: BeautifulSoup, filename: str) -> tuple[str, str]:
     return "outilsDFIR", "fallback"
 
 
-def parse_fiche(path: Path) -> dict | None:
+def load_manifest_index() -> dict:
+    """Charge manifest.json et retourne {filename: entry_dict}.
+
+    Source unique de vérité pour icon/desc/title. Si le manifest est absent
+    ou cassé, on log un warning et le script tombe en mode dégradé
+    (scraping HTML d'origine) — l'idée étant qu'il vaut mieux un index
+    moins joli qu'un index cassé.
+    """
+    if not MANIFEST_PATH.exists():
+        print(f"  ⚠ manifest.json absent ({MANIFEST_PATH}) — mode dégradé")
+        return {}
+    try:
+        data = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+        return {f["file"]: f for f in data.get("fiches", []) if f.get("file")}
+    except Exception as e:
+        print(f"  ⚠ manifest.json illisible : {e} — mode dégradé")
+        return {}
+
+
+def parse_fiche(path: Path, manifest_index: dict) -> dict | None:
+    """Récupère les infos d'affichage d'une fiche.
+
+    Source de vérité (priorité) :
+      icon  : manifest > badge HTML
+      desc  : manifest > meta description fiche > DESC_OVERRIDES (filet)
+      name  : manifest.title > <title> HTML
+      tag   : .fiche-tag HTML > TAG_OVERRIDES
+      cat   : detect_category() (toujours scrape HTML, plus robuste)
+    """
     try:
         soup = BeautifulSoup(path.read_text(encoding="utf-8"), "lxml")
     except Exception as e:
@@ -344,36 +340,45 @@ def parse_fiche(path: Path) -> dict | None:
     if not title_tag:
         return None
     full_title = title_tag.get_text()
-    name = full_title.split("—")[0].strip()
+    name_html = full_title.split("—")[0].strip()
 
-    desc_tag = soup.find("meta", attrs={"name": "description"})
-    desc = desc_tag["content"].strip() if desc_tag else ""
-
-    # Icône : .badge ou .fs-badge, mais extraire SEULEMENT le premier emoji
-    # (pour éviter que "🏢 Kerberos · Pass-the-Hash" devienne l'icône entière)
-    badge_tag = soup.find(class_="badge") or soup.find(class_="fs-badge")
-    icon = "📄"
-    if badge_tag:
-        raw = badge_tag.get_text().strip()
-        if raw:
-            first = raw.split()[0] if raw.split() else raw
-            icon = first
-
+    # Détection de catégorie (inchangée — scan HTML)
     cat_id, method = detect_category(soup, path.name)
 
+    # Tag : toujours du HTML (manifest n'a pas de champ "tag")
     tag_text = ""
-    tag_el = soup.find(class_="fiche-tag")
-    if not tag_el:
-        tag_el = soup.find(class_="tag")
+    tag_el = soup.find(class_="fiche-tag") or soup.find(class_="tag")
     if tag_el:
         tag_text = tag_el.get_text().strip()
 
-    # ── Overrides (icônes, descriptions, tags manquants ou incorrects) ──
-    if path.name in ICON_OVERRIDES:
-        icon = ICON_OVERRIDES[path.name]
-    if path.name in DESC_OVERRIDES and not desc:
+    # ── Icon / desc / name : priorité au manifest ──
+    manifest_entry = manifest_index.get(path.name)
+    source = "manifest"
+
+    if manifest_entry:
+        icon = manifest_entry.get("icon") or "📄"
+        desc = (manifest_entry.get("desc") or "").strip()
+        name = (manifest_entry.get("title") or name_html).strip()
+    else:
+        # Orphelin : fiche présente sur disque mais pas dans manifest.
+        # Fallback sur l'ancien comportement (scrape badge HTML).
+        source = "html-fallback"
+        print(f"  ⚠ orphan: {path.name} absent du manifest — scrape HTML")
+        badge_tag = soup.find(class_="badge") or soup.find(class_="fs-badge")
+        icon = "📄"
+        if badge_tag:
+            raw = badge_tag.get_text().strip()
+            if raw:
+                first = raw.split()[0] if raw.split() else raw
+                icon = first
+        desc_tag = soup.find("meta", attrs={"name": "description"})
+        desc = desc_tag["content"].strip() if desc_tag else ""
+        name = name_html
+
+    # Filets de sécurité ultimes (rare avec manifest à jour)
+    if not desc and path.name in DESC_OVERRIDES:
         desc = DESC_OVERRIDES[path.name]
-    if path.name in TAG_OVERRIDES and not tag_text:
+    if not tag_text and path.name in TAG_OVERRIDES:
         tag_text = TAG_OVERRIDES[path.name]
 
     return {
@@ -384,6 +389,7 @@ def parse_fiche(path: Path) -> dict | None:
         "cat_id": cat_id,
         "cat_method": method,
         "tag": tag_text,
+        "source": source,
     }
 
 
@@ -459,6 +465,12 @@ def render(categories_html: str, total: int, n_cats: int) -> str:
   line-height: 1;
   display: block;
   height: 1.9rem;
+  /* Force une police emoji couleur cross-platform — sinon certaines
+     séquences (drapeaux, ZWJ, variation selectors) tombent en glyphes
+     monochromes ou en lettres séparées sur Chrome desktop. */
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+               "Noto Color Emoji", "Twemoji Mozilla", "EmojiOne Color",
+               "Android Emoji", emoji, sans-serif;
 }}
 .fiche-card .fiche-name{{
   font-family: var(--sans);
@@ -606,11 +618,38 @@ function filterFiches() {{
 }})();
 
 (function(){{
-  var READ_KEY = 'cas_read_fiches';
-  var read = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
+  // v3 : clé alignée sur cas-in-profile.js. Migration auto silencieuse
+  // depuis l'ancienne clé cas_read_fiches (puis nettoyage).
+  var READ_KEY   = 'casIn_readFiches_v4';
+  var LEGACY_KEY = 'cas_read_fiches';
+
+  function loadAndMigrate() {{
+    var fresh  = [];
+    var legacy = [];
+    try {{ fresh  = JSON.parse(localStorage.getItem(READ_KEY)   || '[]') || []; }} catch (e) {{ fresh  = []; }}
+    try {{ legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || '[]') || []; }} catch (e) {{ legacy = []; }}
+    if (!Array.isArray(fresh))  fresh  = [];
+    if (!Array.isArray(legacy)) legacy = [];
+    var merged = fresh.slice();
+    legacy.forEach(function (f) {{
+      if (typeof f === 'string' && merged.indexOf(f) === -1) merged.push(f);
+    }});
+    if (merged.length !== fresh.length) {{
+      try {{ localStorage.setItem(READ_KEY, JSON.stringify(merged)); }} catch (e) {{}}
+    }}
+    if (legacy.length) {{
+      try {{ localStorage.removeItem(LEGACY_KEY); }} catch (e) {{}}
+    }}
+    return merged;
+  }}
+
+  var read = loadAndMigrate();
   function markRead(href) {{
     var fname = href.split('/').pop();
-    if (!read.includes(fname)) {{ read.push(fname); localStorage.setItem(READ_KEY, JSON.stringify(read)); }}
+    if (!read.includes(fname)) {{
+      read.push(fname);
+      try {{ localStorage.setItem(READ_KEY, JSON.stringify(read)); }} catch (e) {{}}
+    }}
   }}
   function applyDots() {{
     document.querySelectorAll('.fiche-card').forEach(function(card) {{
@@ -646,11 +685,17 @@ function filterFiches() {{
 def main():
     fiches_by_cat: dict[str, list[dict]] = {c[0]: [] for c in CATEGORY_ORDER}
     method_stats = {"href": 0, "text": 0, "filename": 0, "fallback": 0}
+    source_stats = {"manifest": 0, "html-fallback": 0}
+
+    # ── Source unique : manifest.json (chargé une fois en mémoire) ──
+    manifest_index = load_manifest_index()
+    if manifest_index:
+        print(f"  ℹ manifest.json : {len(manifest_index)} fiche(s) indexée(s)")
 
     for path in sorted(FICHES_DIR.glob("*.html")):
         if path.name == "index.html":
             continue
-        data = parse_fiche(path)
+        data = parse_fiche(path, manifest_index)
         if not data:
             print(f"  ⚠ skipped (no title): {path.name}")
             continue
@@ -659,8 +704,10 @@ def main():
             fiches_by_cat[cat] = []
         fiches_by_cat[cat].append(data)
         method_stats[data["cat_method"]] += 1
+        source_stats[data["source"]] += 1
         marker = {"href": "✓", "text": "~", "filename": "?", "fallback": "!"}[data["cat_method"]]
-        print(f"  {marker} {path.name:<35} → {cat:<25} ({data['cat_method']})")
+        src_marker = "M" if data["source"] == "manifest" else "h"
+        print(f"  {marker}{src_marker} {path.name:<35} → {cat:<25} ({data['cat_method']})")
 
     # Tri intra-catégorie selon la progression pédagogique
     for cat_id in fiches_by_cat:
@@ -681,8 +728,13 @@ def main():
     html = render("\n".join(cat_blocks), total, n_cats)
     INDEX_PATH.write_text(html, encoding="utf-8")
     print(f"\n✅ index.html régénéré — {total} fiches · {n_cats} modules.")
+    print(f"   Source : manifest={source_stats['manifest']} · "
+          f"html-fallback={source_stats['html-fallback']}")
     print(f"   Détection : href={method_stats['href']} · text={method_stats['text']} · "
           f"filename={method_stats['filename']} · fallback={method_stats['fallback']}")
+    if source_stats["html-fallback"] > 0:
+        print(f"   ⚠ {source_stats['html-fallback']} fiche(s) en fallback HTML — "
+              f"à ajouter dans manifest.json pour cohérence.")
     if method_stats["fallback"] > 0:
         print(f"   ⚠ {method_stats['fallback']} fiche(s) en fallback 'outilsDFIR' — "
               f"vérifier les breadcrumbs.")
