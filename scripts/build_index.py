@@ -270,6 +270,25 @@ def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip().lower())
 
 
+# ── Mapping catégorie manifest → catégorie build_index ──────────────
+# Le manifest a 7 catégories (systemes, acquisition, windows, crypto,
+# reseau, plateformes, droit), build_index en a 9 (avec fondamentaux et
+# outilsDFIR en plus, pour la progression pédagogique). Ce mapping est
+# utilisé en priorité 2 quand la détection HTML par href échoue.
+# Les cats "spéciales" (fondamentaux, outilsDFIR) ne sont pas mappées
+# ici : les fiches qui doivent y aller doivent avoir un breadcrumb HTML
+# qui pointe explicitement (priorité 1).
+MANIFEST_CAT_TO_BUILD = {
+    "systemes":    "systèmesdefichiers",
+    "acquisition": "acquisitionméthodes",
+    "windows":     "artefactswindows",
+    "crypto":      "cryptologiesécurité",
+    "reseau":      "réseauxinfrastructure",
+    "plateformes": "systèmesspéciaux",
+    "droit":       "droitsuisse",
+}
+
+
 def detect_category(soup: BeautifulSoup, filename: str) -> tuple[str, str]:
     """Détecte la catégorie en 3 étapes. Retourne (cat_id, méthode)."""
     # Méthode 1 : href du breadcrumb
@@ -342,8 +361,22 @@ def parse_fiche(path: Path, manifest_index: dict) -> dict | None:
     full_title = title_tag.get_text()
     name_html = full_title.split("—")[0].strip()
 
-    # Détection de catégorie (inchangée — scan HTML)
+    # Détection de catégorie en cascade :
+    #   1. detect_category() méthode "href" (breadcrumb HTML propre)
+    #   2. detect_category() méthode "text" (libellé breadcrumb reconnu)
+    #   3. manifest.category (si la fiche est dans le manifest)
+    #   4. detect_category() méthodes "filename" / "fallback"
     cat_id, method = detect_category(soup, path.name)
+    if method not in ("href", "text"):
+        # Les méthodes HTML primaires ont échoué : essayons le manifest
+        # avant de tomber sur les fallbacks moins fiables (filename keyword
+        # ou outilsDFIR par défaut).
+        manifest_entry_for_cat = manifest_index.get(path.name)
+        if manifest_entry_for_cat:
+            mfst_cat = manifest_entry_for_cat.get("category")
+            mapped = MANIFEST_CAT_TO_BUILD.get(mfst_cat)
+            if mapped:
+                cat_id, method = mapped, "manifest"
 
     # Tag : toujours du HTML (manifest n'a pas de champ "tag")
     tag_text = ""
@@ -684,7 +717,7 @@ function filterFiches() {{
 
 def main():
     fiches_by_cat: dict[str, list[dict]] = {c[0]: [] for c in CATEGORY_ORDER}
-    method_stats = {"href": 0, "text": 0, "filename": 0, "fallback": 0}
+    method_stats = {"href": 0, "text": 0, "filename": 0, "fallback": 0, "manifest": 0}
     source_stats = {"manifest": 0, "html-fallback": 0}
 
     # ── Source unique : manifest.json (chargé une fois en mémoire) ──
@@ -705,7 +738,7 @@ def main():
         fiches_by_cat[cat].append(data)
         method_stats[data["cat_method"]] += 1
         source_stats[data["source"]] += 1
-        marker = {"href": "✓", "text": "~", "filename": "?", "fallback": "!"}[data["cat_method"]]
+        marker = {"href": "✓", "text": "~", "filename": "?", "fallback": "!", "manifest": "M"}[data["cat_method"]]
         src_marker = "M" if data["source"] == "manifest" else "h"
         print(f"  {marker}{src_marker} {path.name:<35} → {cat:<25} ({data['cat_method']})")
 
@@ -730,8 +763,9 @@ def main():
     print(f"\n✅ index.html régénéré — {total} fiches · {n_cats} modules.")
     print(f"   Source : manifest={source_stats['manifest']} · "
           f"html-fallback={source_stats['html-fallback']}")
-    print(f"   Détection : href={method_stats['href']} · text={method_stats['text']} · "
-          f"filename={method_stats['filename']} · fallback={method_stats['fallback']}")
+    print(f"   Détection : href={method_stats['href']} · manifest={method_stats['manifest']} · "
+          f"text={method_stats['text']} · filename={method_stats['filename']} · "
+          f"fallback={method_stats['fallback']}")
     if source_stats["html-fallback"] > 0:
         print(f"   ⚠ {source_stats['html-fallback']} fiche(s) en fallback HTML — "
               f"à ajouter dans manifest.json pour cohérence.")
