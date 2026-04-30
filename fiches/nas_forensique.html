@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NAS Forensique — CAS-IN Forensique</title>
+<meta name="description" content="Synology · QNAP · TrueNAS · Btrfs · ZFS · Snapshots · DSM logs · Export-to-image · Perquisition NAS">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">NAS FORENSIQUE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-acquisitionméthodes">Méthodologie & Acquisition</a><span class="bc-sep">›</span>
+    <span class="bc-current">NAS Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🪣</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">Acquisition</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Stockage</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">NAS Forensique — Synology · QNAP · TrueNAS</h1>
+    <div class="meta">DSM · QTS · TrueNAS Core · Btrfs · ZFS · Snapshots · DSM logs · RAID · iSCSI · NFS/SMB</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="acquisition.html" class="prereq-pill">📖 Acquisition</a><a href="disques.html" class="prereq-pill">📖 Disques & RAID</a><a href="linux_forensique.html" class="prereq-pill">📖 Linux</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=fsidentify" class="tp-pill">🧪 🔍 Identifier le FS</a><a href="../tp.html?cat=hash" class="tp-pill">🧪 🔑 Hash & Intégrité</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="ext.html" class="related-pill">🔗 EXT2/3/4</a><a href="cloud_forensique.html" class="related-pill">🔗 Cloud</a><a href="premier_intervenant.html" class="related-pill">🔗 Premier Intervenant</a></div>
+  </div>
+
+  <div class="concept-card" style="margin-top:1rem">
+    <div class="concept-title">🪣 Le NAS — Cible privilégiée d'une perquisition SME</div>
+    En Suisse comme partout en Europe, les <strong>NAS Synology et QNAP</strong> dominent le marché PME : sauvegardes, archives mail, partages de fichiers, surveillance vidéo. Lors d'une perquisition, le NAS contient souvent <strong>plus de preuves que les postes de travail</strong> (snapshots historiques, logs centralisés, comptes utilisateurs). Mais : RAID, chiffrement, OS propriétaire et FS exotiques (Btrfs, ZFS) compliquent l'acquisition.
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="nas-tabs" style="margin:1rem 0 1.5rem">
+  <button class="tab active" onclick="showNasTab('archi',this)">🏗 Architecture</button>
+  <button class="tab" onclick="showNasTab('acq',this)">📥 Acquisition</button>
+  <button class="tab" onclick="showNasTab('snap',this)">📸 Snapshots</button>
+  <button class="tab" onclick="showNasTab('logs',this)">📋 Logs</button>
+  <button class="tab" onclick="showNasTab('legal',this)">⚖️ Légal CH</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — ARCHITECTURE
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-archi">
+
+<div class="page-wrap">
+<div class="sec-title">Constructeurs & systèmes d'exploitation</div>
+<div class="sec-sub">Le NAS est avant tout un Linux durci. Connaître l'OS = connaître les chemins.</div>
+
+<div class="g2">
+  <div class="card card-cyan">
+    <div class="ct">🏢 Synology — DSM (DiskStation Manager)</div>
+    <p>Linux 4.4 / 5.10 (BusyBox + outils GNU). FS par défaut <strong>Btrfs</strong> (DSM 7+) ou ext4 (modèles bas de gamme).</p>
+    <ul>
+      <li>Volumes : <code>/volume1/</code>, <code>/volume2/</code>…</li>
+      <li>Config : <code>/etc/synoinfo.conf</code></li>
+      <li>SSH (à activer) : <code>admin@nas:22</code></li>
+      <li>Outil exploration : <strong>Hyper Backup Explorer</strong> (Windows)</li>
+    </ul>
+  </div>
+  <div class="card card-orange">
+    <div class="ct">🏢 QNAP — QTS / QuTS Hero</div>
+    <p>QTS sur ext4, <strong>QuTS Hero sur ZFS</strong> (modèles enterprise). Linux durci avec interface Qfinder.</p>
+    <ul>
+      <li>Volumes : <code>/share/CACHEDEV1_DATA/</code></li>
+      <li>Config : <code>/etc/config/uLinux.conf</code></li>
+      <li>SSH : <code>admin@nas:22</code> (port 22 par défaut)</li>
+      <li>Snapshots ZFS ≠ Btrfs (lecture native via <code>zfs list</code>)</li>
+    </ul>
+  </div>
+  <div class="card card-purple">
+    <div class="ct">🆓 TrueNAS Core / Scale</div>
+    <p><strong>FreeBSD (Core) ou Debian (Scale)</strong> avec ZFS natif. Open source, populaire en SME tech.</p>
+    <ul>
+      <li>Pool ZFS : <code>tank</code> par convention</li>
+      <li>Datasets : <code>tank/share</code>, <code>tank/backup</code></li>
+      <li>Config : <code>/data/freenas-v1.db</code> (SQLite)</li>
+      <li>API REST documentée (Core 13+ / Scale)</li>
+    </ul>
+  </div>
+  <div class="card card-blue">
+    <div class="ct">📦 Autres : Asustor, Buffalo, Drobo, Netgear ReadyNAS</div>
+    <p>Ces marques utilisent généralement <strong>ext4 / XFS</strong> avec mdadm + LVM. Approche acquisition similaire à un Linux Server classique. Drobo : FS propriétaire <code>BeyondRAID</code>, acquisition disque-par-disque inutilisable hors enclosure.</p>
+  </div>
+</div>
+</div>
+
+<div class="page-wrap">
+<div class="sec-title">FS sous-jacents — Btrfs vs ZFS vs ext4</div>
+<div class="sec-sub">Le choix du FS conditionne toute la suite : outils, snapshots, intégrité, déduplication.</div>
+
+<div class="table-wrap">
+<table class="matrix">
+<thead><tr><th>Caractéristique</th><th>Btrfs (Synology)</th><th>ZFS (QNAP Hero / TrueNAS)</th><th>ext4 (entrée de gamme)</th></tr></thead>
+<tbody>
+<tr><td>Snapshots natifs</td><td>✅ COW · ~1ms</td><td>✅ COW · instantanés</td><td>❌ via LVM only</td></tr>
+<tr><td>Checksums intégrité</td><td>✅ CRC32C par bloc</td><td>✅ SHA256/Fletcher4</td><td>❌</td></tr>
+<tr><td>Déduplication</td><td>✅ offline + extent</td><td>✅ inline (RAM-greedy)</td><td>❌</td></tr>
+<tr><td>Compression</td><td>✅ zstd / lzo / zlib</td><td>✅ lz4 / gzip / zstd</td><td>❌</td></tr>
+<tr><td>RAID natif</td><td>✅ RAID-1/5/6 + DUP</td><td>✅ RAID-Z1/Z2/Z3</td><td>❌ (mdadm requis)</td></tr>
+<tr><td>Outil forensique Windows</td><td>WinBtrfs (lecture)</td><td>OpenZFS on Windows</td><td>ext2fsd / OSFMount</td></tr>
+<tr><td>Outil forensique Linux</td><td><code>btrfs-progs</code></td><td><code>zfsutils-linux</code></td><td><code>e2tools</code></td></tr>
+</tbody></table>
+</div>
+
+<div class="info" style="margin-top:.75rem">⚠️ <strong>Piège forensique :</strong> Btrfs et ZFS gardent les <strong>versions précédentes des fichiers</strong> dans les snapshots ET dans les blocs COW non encore réutilisés. Un fichier "supprimé" peut exister dans 5+ snapshots et dans la zone non réécrite. Approche carving classique inadaptée — utiliser les outils FS-specific.</div>
+</div>
+
+</div><!-- /tab-archi -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — ACQUISITION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-acq">
+
+<div class="page-wrap">
+<div class="sec-title">Stratégies d'acquisition NAS</div>
+<div class="sec-sub">Trois approches, à choisir selon le scénario, l'urgence et la légalité.</div>
+
+<div class="steps">
+<div class="step"><div class="step-num">1</div><div>
+  <div class="strat-title">Image disque-par-disque (ground truth)</div>
+  <div class="strat-desc">Démontage physique du NAS, écriture des disques un par un avec write-blocker. Préserve l'état exact mais : nécessite recompositer le RAID en post (mdadm/zpool import) et ne capture pas les VM si stoppées.</div>
+  <div class="strat-tool">FTK Imager Lite + write-blocker · 1× par disque</div>
+</div></div>
+
+<div class="step"><div class="step-num">2</div><div>
+  <div class="strat-title">Live acquisition via SSH</div>
+  <div class="strat-desc">NAS allumé, SSH activé. Acquisition à chaud des volumes via <code>dd</code> ou <code>dcfldd</code> sur partage NFS forensique. Capture les fichiers en cours d'usage MAIS modifie les ATIME et ne préserve pas les snapshots dormants.</div>
+  <div class="strat-tool">ssh root@nas dcfldd if=/dev/md3 hash=sha256</div>
+</div></div>
+
+<div class="step"><div class="step-num">3</div><div>
+  <div class="strat-title">Export logique (smb-snapshot)</div>
+  <div class="strat-desc">Acquisition sélective via <strong>SMB + Volume Shadow Copies</strong> (Synology) ou <strong>NFS export of snapshot</strong> (TrueNAS). Plus rapide pour gros volumes, mais documenter exhaustivement la chaîne.</div>
+  <div class="strat-tool">smbclient //nas/share@1234.snap1 -A creds.txt</div>
+</div></div>
+</div>
+</div>
+
+<div class="page-wrap">
+<div class="sec-title">Workflow Synology — Image Btrfs avec snapshots</div>
+
+<div class="cli">
+<span class="c"># 1. Identifier les volumes mdadm</span><br>
+<span class="v">ssh</span> <span class="a">admin@nas</span> <span class="a">"cat /proc/mdstat"</span><br>
+<span class="c"># Sortie : md2, md3, md4 = volumes RAID</span><br><br>
+
+<span class="c"># 2. Identifier le FS Btrfs</span><br>
+<span class="v">ssh</span> <span class="a">admin@nas</span> <span class="a">"sudo btrfs filesystem show"</span><br><br>
+
+<span class="c"># 3. Lister les snapshots existants</span><br>
+<span class="v">ssh</span> <span class="a">admin@nas</span> <span class="a">"sudo btrfs subvolume list -t /volume1"</span><br><br>
+
+<span class="c"># 4. Imager le bloc RAID complet (vers serveur forensique)</span><br>
+<span class="v">ssh</span> <span class="a">admin@nas</span> <span class="a">"sudo dd if=/dev/md3 bs=64M | gzip"</span> <span class="flag">|</span> <span class="v">ssh</span> <span class="a">forensic@srv "dd of=/cases/case-2026-04/nas.img.gz"</span><br><br>
+
+<span class="c"># 5. Hash distant pour intégrité</span><br>
+<span class="v">ssh</span> <span class="a">admin@nas</span> <span class="a">"sudo sha256sum /dev/md3"</span>
+</div>
+
+<div class="alert" style="margin-top:.5rem">⚠️ <strong>SHR (Synology Hybrid RAID)</strong> : RAID propriétaire qui combine RAID-1 + LVM + Btrfs. Reconstruction hors NAS difficile. Préférer l'acquisition <em>avec</em> le NAS branché en mode lecture seule, ou utiliser l'option DSM <strong>Migration Assistant</strong> pour cloner.</div>
+</div>
+
+<div class="page-wrap">
+<div class="sec-title">Workflow QNAP/TrueNAS — Image ZFS avec snapshots</div>
+
+<div class="cli">
+<span class="c"># 1. Lister les pools ZFS</span><br>
+<span class="v">ssh</span> <span class="a">admin@nas</span> <span class="a">"sudo zpool status"</span><br>
+<span class="v">ssh</span> <span class="a">admin@nas</span> <span class="a">"sudo zfs list"</span><br><br>
+
+<span class="c"># 2. Snapshot forensique (instantané, garanti cohérent)</span><br>
+<span class="v">ssh</span> <span class="a">admin@nas</span> <span class="a">"sudo zfs snapshot tank/share@forensic-2026-04-30"</span><br><br>
+
+<span class="c"># 3. Sender le snapshot vers serveur forensique (incrémental possible)</span><br>
+<span class="v">ssh</span> <span class="a">admin@nas</span> <span class="a">"sudo zfs send tank/share@forensic-2026-04-30"</span> <span class="flag">|</span> <span class="v">ssh</span> <span class="a">forensic@srv "sudo zfs receive tank/case-2026-04/nas-share"</span><br><br>
+
+<span class="c"># 4. Vérifier intégrité côté receiver (ZFS calcule auto les checksums)</span><br>
+<span class="v">ssh</span> <span class="a">forensic@srv</span> <span class="a">"sudo zpool scrub tank"</span>
+</div>
+
+<div class="info" style="margin-top:.5rem">💡 <strong>Avantage ZFS :</strong> Le mécanisme <code>zfs send</code> garantit l'intégrité bout-en-bout via les checksums natifs. Pas de hash externe nécessaire, mais documenter le UUID du dataset. C'est plus solide qu'un <code>dd</code> en cas de litige.</div>
+</div>
+
+</div><!-- /tab-acq -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — SNAPSHOTS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-snap">
+
+<div class="page-wrap">
+<div class="sec-title">Les snapshots — Trésor temporel pour l'enquêteur</div>
+<div class="sec-sub">Activés par défaut sur DSM 7 et TrueNAS, les snapshots offrent un historique complet. Combiné aux scripts horaires/quotidiens d'usine, ça donne souvent <strong>plusieurs mois</strong> de versions précédentes.</div>
+
+<div class="g2">
+<div class="card card-green">
+  <div class="ct">📸 Synology — Snapshot Replication</div>
+  <p>Politique d'usine : <strong>1× par heure pendant 24h, 1× par jour pendant 7j, 1× par semaine pendant 4 sem.</strong> Soit ~35 snapshots accessibles via DSM ou directement via <code>/volume1/.snapshot/</code>.</p>
+  <ul>
+    <li>Lister : <code>btrfs subvolume list -s /volume1</code></li>
+    <li>Monter : déjà accessible en lecture seule dans <code>/volume1/@sharesnap/</code></li>
+    <li>Outil DSM : <strong>Snapshot Replication</strong></li>
+  </ul>
+</div>
+<div class="card card-blue">
+  <div class="ct">📸 ZFS (QNAP Hero / TrueNAS) — zfs list -t snapshot</div>
+  <p>Snapshots créés par tâches périodiques (quotidienne, horaire). Visibles en <code>tank/share@autosnap_2026-04-29_03-00</code>.</p>
+  <ul>
+    <li>Lister tous : <code>zfs list -t snapshot -o name,creation,used</code></li>
+    <li>Monter en lecture : <code>zfs clone tank/share@snap mnt/snap</code></li>
+    <li>Diff entre 2 snapshots : <code>zfs diff snap1 snap2</code></li>
+  </ul>
+</div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Cas d'usage — Récupérer un fichier "supprimé"</div>
+<div class="cli">
+<span class="c"># Synology : un fichier effacé hier. On parcourt les snapshots du jour.</span><br>
+<span class="v">ls</span> <span class="a">/volume1/.snapshots/</span> <span class="flag">|</span> <span class="v">grep</span> <span class="a">2026-04-29</span><br>
+<span class="v">find</span> <span class="a">/volume1/.snapshots/2026-04-29-*/share/</span> <span class="flag">-name</span> <span class="a">"contrat-suspect.docx"</span><br><br>
+
+<span class="c"># ZFS : diff entre snapshot du jour et snapshot J-1</span><br>
+<span class="v">zfs diff</span> <span class="a">tank/share@autosnap_2026-04-29_03-00 tank/share@autosnap_2026-04-30_03-00</span><br>
+<span class="c"># Légende : - = supprimé, + = créé, M = modifié, R = renommé</span><br><br>
+
+<span class="c"># Récupérer une version antérieure depuis ZFS</span><br>
+<span class="v">cp</span> <span class="a">/tank/share/.zfs/snapshot/autosnap_2026-04-29_03-00/contrat-suspect.docx /case/recovered/</span>
+</div>
+</div>
+
+</div><!-- /tab-snap -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — LOGS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-logs">
+
+<div class="page-wrap">
+<div class="sec-title">Synology DSM Logs — Centre de Logs</div>
+<div class="sec-sub">Centralisés par DSM, exportables au format <code>.csv</code> ou <code>.log</code> rotatif. Contiennent connexions, transferts, erreurs, modifications.</div>
+
+<div class="table-wrap">
+<table class="matrix">
+<thead><tr><th>Type de log</th><th>Chemin</th><th>Contenu</th></tr></thead>
+<tbody>
+<tr><td>Connexions DSM</td><td><code>/var/log/synolog/synologm.log</code></td><td>Login Web/SSH/Quickconnect avec IP source, user-agent</td></tr>
+<tr><td>SMB / CIFS</td><td><code>/var/log/samba/log.smbd</code></td><td>Connexions SMB, partage accédé, fichiers ouverts</td></tr>
+<tr><td>FTP / SFTP</td><td><code>/var/log/synolog/synoftpd.log</code></td><td>Upload, download, IP, taille, user</td></tr>
+<tr><td>File transfert (FileStation)</td><td><code>/var/log/synolog/synowebservice.log</code></td><td>Actions sur fichiers via interface Web</td></tr>
+<tr><td>Cloud Sync</td><td><code>/var/log/synolog/synoclouddisk.log</code></td><td>Sync Drive, Cloud Station, OneDrive...</td></tr>
+<tr><td>Notifications email</td><td><code>/var/log/synolog/synomail.log</code></td><td>Évenements ayant généré une alerte mail</td></tr>
+<tr><td>Surveillance Station</td><td><code>/volume1/surveillance/@logs/</code></td><td>Caméras IP, motions, recordings</td></tr>
+</tbody></table>
+</div>
+
+<div class="info" style="margin-top:.5rem">💡 <strong>Astuce timeline :</strong> Le format DSM est CSV par défaut, importable directement dans Plaso/log2timeline ou Splunk. Joindre les logs Synology avec ceux des postes pour reconstituer "qui a déposé le fichier suspect, depuis où, et qui l'a retiré ensuite".</div>
+</div>
+
+<div class="page-wrap">
+<div class="sec-title">QNAP QTS — System Logs (Centre de notification)</div>
+<div class="cli">
+<span class="c"># Sur QNAP, exporter les logs via QuLog Center (UI) ou CLI :</span><br>
+<span class="v">cat</span> <span class="a">/etc/logs/conn.log</span><br>
+<span class="v">cat</span> <span class="a">/etc/logs/event.log</span><br>
+<span class="v">cat</span> <span class="a">/etc/logs/syslog</span><br><br>
+<span class="c"># Les logs détaillés SMB sont dans :</span><br>
+<span class="v">cat</span> <span class="a">/share/CACHEDEV1_DATA/.@qmariadb/qulog.db</span> <span class="c"># SQLite</span>
+</div>
+</div>
+
+<div class="page-wrap">
+<div class="sec-title">TrueNAS — Logs UNIX classiques</div>
+<div class="cli">
+<span class="c"># TrueNAS Core (FreeBSD) ou Scale (Debian) — logs syslog standards</span><br>
+<span class="v">tail</span> <span class="flag">-f</span> <span class="a">/var/log/messages</span><br>
+<span class="v">tail</span> <span class="flag">-f</span> <span class="a">/var/log/auth.log</span><br>
+<span class="v">tail</span> <span class="flag">-f</span> <span class="a">/var/log/samba4/log.smbd</span><br><br>
+<span class="c"># Configuration et historique d'admin (SQLite)</span><br>
+<span class="v">sqlite3</span> <span class="a">/data/freenas-v1.db ".tables"</span>
+</div>
+</div>
+
+</div><!-- /tab-logs -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — LÉGAL CH
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-legal">
+
+<div class="page-wrap">
+<div class="sec-title">Cadre légal CH — Perquisition et acquisition d'un NAS</div>
+<div class="sec-sub">Le NAS pose des questions juridiques spécifiques : multi-utilisateurs, données personnelles tierces, accès distant, chiffrement.</div>
+
+<div class="g2">
+<div class="card card-purple">
+  <div class="ct">⚖️ Art. 246 CPP — Perquisition</div>
+  <p>Le mandat de perquisition couvre les <strong>locaux et leurs installations informatiques</strong>. Un NAS branché et accessible <em>physiquement</em> est inclus. Cas litigieux : NAS chez un tiers (cloud Synology C2, partage OneDrive monté) → mandat additionnel ou commission rogatoire.</p>
+</div>
+<div class="card card-cyan">
+  <div class="ct">📜 Art. 248 CPP — Mise sous scellés</div>
+  <p>Le détenteur peut demander la mise sous scellés. Pour un NAS qui contient des <strong>données de tiers non visés</strong> (autres employés, clients), c'est fréquent. Tri par tribunal des mesures de contrainte avant exploitation.</p>
+</div>
+<div class="card card-orange">
+  <div class="ct">🇨🇭 LPD art. 24 — Données de tiers</div>
+  <p>Acquisition d'un NAS d'entreprise = capture de données personnelles de salariés et clients. Si exfiltration accidentelle (perte de support), notification PFPDT « <strong>dans les meilleurs délais</strong> ». Documenter la chaîne de custody resserrée.</p>
+</div>
+<div class="card card-red">
+  <div class="ct">🔐 Volume chiffré sur NAS</div>
+  <p>Synology Encrypted Shared Folder, QNAP Volume Encryption, ZFS native encryption. Sans MDP, image inutile. Le suspect peut invoquer <em>nemo tenetur</em> (art. 113 CPP) pour refuser. Chercher la clé en RAM si NAS encore actif (cas Synology : clé chargée tant que volume monté).</p>
+</div>
+</div>
+
+<div class="alert" style="margin-top:1rem">🇨🇭 <strong>Particularité suisse — DSM Hyper Backup :</strong> Synology stocke par défaut des <strong>backups versionnés sur 1 an</strong> chez les SME. Lors d'une perquisition, vérifier <code>/volume1/HyperBackupVault/</code>. Souvent contient des données antérieures à plusieurs mois, même si l'utilisateur a "tout effacé" — précieux pour reconstituer l'historique de la fraude.</div>
+</div>
+
+<div class="page-wrap">
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — NAS Forensique</div>
+  <p><strong>Synology DSM 7</strong> → Btrfs + snapshots horaires/quotidiens (~35 versions accessibles)</p>
+  <p><strong>QNAP QuTS Hero / TrueNAS</strong> → ZFS + <code>zfs send</code> garantit l'intégrité native</p>
+  <p><strong>SHR Synology</strong> → RAID propriétaire, ne pas démonter à l'aveugle, préférer Migration Assistant</p>
+  <p><strong>Drobo BeyondRAID</strong> → impossible de recomposer hors enclosure, image disque par disque inutile</p>
+  <p><strong>Snapshots sont la 1<sup>re</sup> source</strong> avant carving — un fichier "effacé" est presque toujours dans un snapshot</p>
+  <p><strong>Logs DSM/QTS centralisés</strong> → exportables CSV/SQLite pour timeline Plaso</p>
+  <p><strong>Mandat &amp; tiers</strong> → Art. 246–248 CPP couvre le NAS local. Données de tiers → scellés probables (art. 248)</p>
+</div>
+</div>
+
+<div class="page-wrap">
+<div class="quiz-wrap">
+  <div class="quiz-q">Lors d'une perquisition d'une PME, vous saisissez un Synology DS920+ allumé en mode RAID SHR (4 disques). Quelle est la priorité d'acquisition ?<small>Stratégie · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>Acquisition à chaud via SSH avant tout démontage.</strong> Le SHR Synology est un RAID propriétaire combinant RAID-1/5 + LVM + Btrfs : reconstituer hors NAS est très difficile. Ordre d'opérations : (1) noter l'état des LEDs et le câblage (photo), (2) activer SSH si pas déjà fait, (3) exporter les snapshots Btrfs via <code>btrfs send</code> ou imager <code>/dev/md3</code> en lecture seule via <code>dd</code> over SSH vers serveur forensique, (4) hash SHA-256 distant, (5) seulement <em>après</em>, débrancher pour acquisition disque-par-disque en backup. Si volume chiffré actif, NE PAS éteindre — la clé est en RAM.</div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Sur un NAS QNAP TS-h973AX (QuTS Hero, ZFS), vous devez prouver qu'un fichier <code>contrat.pdf</code> a été modifié il y a 3 jours. L'utilisateur prétend ne jamais l'avoir touché. Quelle commande utiliser ?<small>ZFS · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Lister les snapshots de la période : <code>zfs list -t snapshot tank/share | grep 2026-04-2</code>. Diff entre snapshot J-3 et J-2 : <code>zfs diff tank/share@autosnap_2026-04-27 tank/share@autosnap_2026-04-28</code>. Si le fichier apparaît avec un préfixe <code>M</code> (Modified) entre les deux dates, c'est la preuve. On peut ensuite extraire les deux versions via <code>cp /tank/share/.zfs/snapshot/autosnap_2026-04-27/contrat.pdf v1.pdf</code> et comparer hashes/contenus.</div>
+</div>
+
+<div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> Synology = Btrfs · QNAP Hero / TrueNAS = ZFS · SHR = RAID propriétaire (pas de démontage à l'aveugle) · Snapshots = trésor pour récupérer fichiers effacés · DSM logs centralisés exportables CSV → Plaso · NAS chez tiers → commission rogatoire · Volume chiffré actif → ne pas éteindre, capturer RAM · Hyper Backup Vault = jusqu'à 1 an d'historique en SME.</div>
+
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Art. 246–248 CPP · Btrfs / ZFS / DSM 7</span>
+</div>
+</div>
+
+</div><!-- /tab-legal -->
+
+<script>
+function showNasTab(name, btn){
+  document.querySelectorAll('#nas-tabs .tab').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  var p = document.getElementById('tab-'+name);
+  if(p) p.classList.add('active');
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+})();
+document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+    ans.classList.toggle('visible');
+    btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+  });
+});
+</script>
+</body>
+</html>

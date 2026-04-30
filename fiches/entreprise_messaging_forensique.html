@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Messageries d'entreprise — CAS-IN Forensique</title>
+<meta name="description" content="Slack · MS Teams · Discord · Caches · Archives M365 · E-Discovery · DLP · Compliance · Webhook forensics">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">MESSAGERIES D'ENTREPRISE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-réseauxinfrastructure">Réseaux &amp; Communications</a><span class="bc-sep">›</span>
+    <span class="bc-current">Messageries d'entreprise</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🤝</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">Communication</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">E-Discovery</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Messageries d'Entreprise — Slack · Teams · Discord</h1>
+    <div class="meta">Caches locaux · Archives M365 Compliance · Slack Discovery API · Webhook forensics · LevelDB · IndexedDB · Workspace exports</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="messagerie_im.html" class="prereq-pill">📖 Messagerie IM</a><a href="m365_forensique.html" class="prereq-pill">📖 Microsoft 365</a><a href="sqlite_forensique.html" class="prereq-pill">📖 SQLite</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=email" class="tp-pill">🧪 ✉️ Email Forensics</a><a href="../tp.html?cat=hash" class="tp-pill">🧪 🔑 Intégrité</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="cloud_forensique.html" class="related-pill">🔗 Cloud</a><a href="email_forensique.html" class="related-pill">🔗 Email</a><a href="osint.html" class="related-pill">🔗 OSINT</a></div>
+  </div>
+
+  <div class="concept-card" style="margin-top:1rem">
+    <div class="concept-title">🤝 Trois cibles très différentes</div>
+    Slack, MS Teams et Discord sont souvent regroupés mais ils ont <strong>trois architectures distinctes</strong>. Slack = SaaS pur (workspace cloud + cache local Electron). Teams = SaaS profondément intégré à M365 (archives Exchange, OneDrive, Compliance Center). Discord = SaaS gaming-né, peu d'outils enterprise officiels mais beaucoup d'usage en SME tech. Connaître ces différences = savoir où chercher.
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="msg-tabs" style="margin:1rem 0 1.5rem">
+  <button class="tab active" onclick="showMsgTab('slack',this)">💬 Slack</button>
+  <button class="tab" onclick="showMsgTab('teams',this)">🟣 Teams</button>
+  <button class="tab" onclick="showMsgTab('discord',this)">🎮 Discord</button>
+  <button class="tab" onclick="showMsgTab('legal',this)">⚖️ Légal CH</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — SLACK
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-slack">
+
+<div class="page-wrap">
+<div class="sec-title">Slack — Architecture & sources de preuve</div>
+<div class="sec-sub">Slack desktop est une app Electron (Chromium + Node.js) avec cache LevelDB local. Les données canoniques sont chez Slack mais les artefacts locaux sont riches.</div>
+
+<div class="g2">
+<div class="card card-cyan">
+  <div class="ct">📁 Cache desktop Slack — Windows</div>
+  <ul>
+    <li><code>%APPDATA%\Slack\</code> — racine</li>
+    <li><code>%APPDATA%\Slack\Cache\</code> — cache HTTP (images, files)</li>
+    <li><code>%APPDATA%\Slack\Local Storage\leveldb\</code> — état UI, drafts</li>
+    <li><code>%APPDATA%\Slack\storage\slack-downloads.json</code> — fichiers téléchargés</li>
+    <li><code>%APPDATA%\Slack\logs\</code> — connexions, erreurs (textuels)</li>
+  </ul>
+</div>
+<div class="card card-orange">
+  <div class="ct">📁 Cache desktop Slack — macOS</div>
+  <ul>
+    <li><code>~/Library/Application Support/Slack/</code></li>
+    <li><code>~/Library/Caches/com.tinyspeck.slackmacgap/</code></li>
+    <li><code>~/Library/Logs/Slack/</code></li>
+    <li>App sandboxée → SIP peut bloquer accès direct</li>
+    <li>Préférer image disque + extraction offline</li>
+  </ul>
+</div>
+</div>
+</div>
+
+<div class="page-wrap">
+<div class="sec-title">Slack Discovery API — Source canonique pour enquête</div>
+<div class="sec-sub">Pour les workspaces Enterprise Grid, Slack expose une API d'<strong>e-discovery</strong> qui donne accès à tous les messages, fichiers, channels (incluant DM et privés).</div>
+
+<div class="cli">
+<span class="c"># 1. Obtenir un token Discovery (admin Enterprise Grid uniquement)</span><br>
+<span class="v">curl</span> <span class="flag">-X POST</span> <span class="a">https://slack.com/api/discovery.enterprise.info</span> <span class="flag">-H</span> <span class="a">"Authorization: Bearer xoxp-..."</span><br><br>
+
+<span class="c"># 2. Lister tous les utilisateurs (incluant désactivés)</span><br>
+<span class="v">curl</span> <span class="a">"https://slack.com/api/discovery.users.list?token=xoxp-..."</span><br><br>
+
+<span class="c"># 3. Récupérer les messages d'un user (DM + channels publics + privés)</span><br>
+<span class="v">curl</span> <span class="a">"https://slack.com/api/discovery.user.conversations?user=U12345&amp;limit=200"</span><br><br>
+
+<span class="c"># 4. Export d'un canal complet avec historique</span><br>
+<span class="v">curl</span> <span class="a">"https://slack.com/api/discovery.conversations.history?channel=C67890&amp;oldest=1714521600"</span>
+</div>
+
+<div class="info" style="margin-top:.5rem">⚖️ <strong>Discovery API</strong> requiert un plan Enterprise Grid + autorisation explicite de l'org. Pour Pro / Business+ : se rabattre sur <strong>Standard Export</strong> (admin → "Tools &amp; settings" → "Workspace Export"), qui exclut les DM. Pour les DM sur ces plans, demande légale formelle à Slack via Trust &amp; Safety.</div>
+</div>
+
+<div class="page-wrap">
+<div class="sec-title">Reconstruction depuis le cache LevelDB local</div>
+
+<div class="cli">
+<span class="c"># Slack stocke des drafts, channel state et messages partiels en LevelDB</span><br>
+<span class="c"># Outils : leveldb-cli, ccl_chromium_indexeddb, srum-dump pour Chrome storage</span><br><br>
+
+<span class="v">pip install</span> <span class="a">plyvel ccl_chromium_indexeddb</span><br><br>
+<span class="v">python3</span><br>
+<span class="a">>>> import plyvel</span><br>
+<span class="a">>>> db = plyvel.DB('/path/to/Slack/Local Storage/leveldb', create_if_missing=False)</span><br>
+<span class="a">>>> for key, value in db: print(key, value[:200])</span><br><br>
+
+<span class="c"># Pour les messages dans IndexedDB (Slack récents) — utiliser ccl_chromium_indexeddb</span><br>
+<span class="v">python3</span> <span class="a">-m ccl_chromium_indexeddb /path/to/Slack/IndexedDB/</span>
+</div>
+
+<div class="info" style="margin-top:.5rem">⚠️ <strong>Limite</strong> : le cache local Slack n'est <strong>pas un historique complet</strong>. Slack desktop ne stocke localement que les conversations actives récentes pour l'expérience offline. Pour un historique complet, l'API Discovery ou Standard Export est obligatoire.</div>
+</div>
+</div><!-- /tab-slack -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — TEAMS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-teams">
+
+<div class="page-wrap">
+<div class="sec-title">MS Teams — La source de vérité est dans M365 Compliance</div>
+<div class="sec-sub">Teams stocke peu localement. Les conversations 1:1 et de groupe sont en réalité des <strong>emails cachés</strong> dans la boîte aux lettres Exchange Online de chaque participant. Tout passe par M365.</div>
+
+<div class="concept-card">
+  <div class="concept-title">🎯 Trois sources principales pour un enquêteur Teams</div>
+  <ul style="margin:0;padding-left:1.5rem">
+    <li><strong>Compliance Center (Microsoft Purview)</strong> — recherche de contenu sur tous les channels</li>
+    <li><strong>Exchange Online + Discovery Hold</strong> — chats 1:1 archivés comme emails dans dossier <code>TeamsMessagesData</code></li>
+    <li><strong>SharePoint / OneDrive</strong> — fichiers partagés en chat ou en channel</li>
+  </ul>
+</div>
+</div>
+
+<div class="page-wrap">
+<div class="sec-title">Microsoft Purview — Recherche de contenu Teams</div>
+<div class="cli">
+<span class="c"># 1. Connect-IPPSSession (PowerShell, requis : compliance admin)</span><br>
+<span class="v">Connect-IPPSSession</span> <span class="flag">-UserPrincipalName</span> <span class="a">admin@tenant.onmicrosoft.com</span><br><br>
+
+<span class="c"># 2. Créer une recherche sur l'utilisateur suspect</span><br>
+<span class="v">New-ComplianceSearch</span> <span class="flag">-Name</span> <span class="a">"Case-2026-04-Suspect"</span> <span class="flag">-ExchangeLocation</span> <span class="a">user@corp.ch</span> <span class="flag">-ContentMatchQuery</span> <span class="a">'kind:meetings OR kind:contacts OR kind:im'</span><br><br>
+
+<span class="c"># 3. Lancer + suivre le statut</span><br>
+<span class="v">Start-ComplianceSearch</span> <span class="flag">-Identity</span> <span class="a">"Case-2026-04-Suspect"</span><br>
+<span class="v">Get-ComplianceSearch</span> <span class="flag">-Identity</span> <span class="a">"Case-2026-04-Suspect"</span><br><br>
+
+<span class="c"># 4. Exporter les résultats (PST + métadonnées)</span><br>
+<span class="v">New-ComplianceSearchAction</span> <span class="flag">-SearchName</span> <span class="a">"Case-2026-04-Suspect"</span> <span class="flag">-Export</span><br><br>
+
+<span class="c"># 5. Télécharger via eDiscovery Export Tool (Edge / IE seulement)</span>
+</div>
+
+<div class="info" style="margin-top:.5rem">💡 <strong>Astuce Teams 1:1</strong> : Les chats privés sont archivés dans le dossier <code>TeamsMessagesData</code> de la boîte de chaque user. Recherche : <code>folderid:TeamsMessagesData</code> dans Compliance.</div>
+</div>
+
+<div class="page-wrap">
+<div class="sec-title">Cache desktop Teams — En complément</div>
+
+<div class="g2">
+<div class="card card-blue">
+  <div class="ct">📁 Teams Classic (Electron)</div>
+  <ul>
+    <li><code>%APPDATA%\Microsoft\Teams\</code></li>
+    <li><code>...\Cache\</code> — fichiers HTTP</li>
+    <li><code>...\IndexedDB\https_teams.microsoft.com_0.indexeddb.leveldb\</code></li>
+    <li><code>...\Logs\</code> — login, sync, erreurs</li>
+  </ul>
+</div>
+<div class="card card-purple">
+  <div class="ct">📁 Teams 2.0 (WebView2)</div>
+  <ul>
+    <li><code>%LOCALAPPDATA%\Packages\MSTeams_8wekyb3d8bbwe\</code></li>
+    <li><code>...\LocalCache\Microsoft\MSTeams\EBWebView\</code></li>
+    <li>Plus restreint que Teams Classic, app sandboxée</li>
+    <li>Outil : Magnet AXIOM, Cellebrite Inspector, KAPE module Teams</li>
+  </ul>
+</div>
+</div>
+</div>
+</div><!-- /tab-teams -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — DISCORD
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-discord">
+
+<div class="page-wrap">
+<div class="sec-title">Discord — Pas d'API entreprise officielle, beaucoup d'artefacts locaux</div>
+<div class="sec-sub">Discord ne propose pas de Discovery API officielle. L'enquête repose sur les artefacts client locaux + requêtes formelles à Discord pour les DM serveur-side.</div>
+
+<div class="g2">
+<div class="card card-cyan">
+  <div class="ct">📁 Cache Discord Desktop — Windows</div>
+  <ul>
+    <li><code>%APPDATA%\discord\</code> — racine</li>
+    <li><code>%APPDATA%\discord\Cache\</code> — fichiers HTTP, images, vidéos</li>
+    <li><code>%APPDATA%\discord\Local Storage\leveldb\</code> — état session, dernières conversations</li>
+    <li><code>%APPDATA%\discord\IndexedDB\https_discord.com_0.indexeddb.leveldb\</code> — messages cachés (limite ~50/canal)</li>
+  </ul>
+</div>
+<div class="card card-orange">
+  <div class="ct">🔍 Données extractibles localement</div>
+  <ul>
+    <li>Token utilisateur (en clair dans LevelDB) → re-authentification en lecture</li>
+    <li>Liste des serveurs (Discord guilds) avec IDs</li>
+    <li>Avatars, fichiers récemment ouverts (cache)</li>
+    <li>Notifications désactivées / activées (preuve d'activité)</li>
+  </ul>
+</div>
+</div>
+</div>
+
+<div class="page-wrap">
+<div class="sec-title">Workflow d'extraction Discord</div>
+
+<div class="cli">
+<span class="c"># Étape 1 — Image disque, puis extraction offline (jamais sur live)</span><br>
+<span class="v">cd</span> <span class="a">/case/extracted/AppData/Roaming/discord/Local\ Storage/leveldb/</span><br><br>
+
+<span class="c"># Étape 2 — Recherche du token utilisateur (commence par "mfa." pour MFA)</span><br>
+<span class="v">grep</span> <span class="flag">-Eor</span> <span class="a">'[\w-]{24}\.[\w-]{6}\.[\w-]{27}|mfa\.[\w-]{84}'</span> <span class="a">.</span><br><br>
+
+<span class="c"># Étape 3 — Exporter avec DiscordChatExporter (CLI, multiplateforme)</span><br>
+<span class="v">DiscordChatExporter.Cli.exe</span> <span class="a">export</span> <span class="flag">-t</span> <span class="a">"&lt;token&gt;"</span> <span class="flag">-c</span> <span class="a">&lt;channel_id&gt;</span> <span class="flag">-f</span> <span class="a">HtmlDark</span> <span class="flag">-o</span> <span class="a">/case/discord/</span><br><br>
+
+<span class="c"># Étape 4 — Vérifier l'intégrité (hash de l'export + de la base raw)</span><br>
+<span class="v">sha256sum</span> <span class="a">/case/discord/*.html /case/extracted/.../leveldb/*.ldb</span>
+</div>
+
+<div class="alert" style="margin-top:.5rem">⚖️ <strong>Précaution</strong> : utiliser le token pour <em>lire</em> les conversations en lieu et place du suspect a un statut juridique délicat (« perquisition électronique » sous mandat ? « interception »?). Préférer une réquisition formelle à Discord (legal@discord.com pour LE) qui fournit les logs côté serveur. Tor &amp; Dark Web - mêmes considérations.</div>
+</div>
+
+<div class="page-wrap">
+<div class="sec-title">Webhook & Bot — Souvent oubliés</div>
+<div class="sec-sub">Discord est largement utilisé pour exfiltrer via webhooks. Reconnaître le pattern.</div>
+
+<div class="cli">
+<span class="c"># Format d'un webhook Discord (à chercher dans le code malveillant ou le trafic)</span><br>
+<span class="a">https://discord.com/api/webhooks/</span><span class="val">{ID}</span><span class="a">/</span><span class="val">{TOKEN}</span><br><br>
+
+<span class="c"># Trafic réseau — Wireshark filter pour le détecter</span><br>
+<span class="v">tls.handshake.extensions_server_name == "discord.com"</span><br><br>
+
+<span class="c"># YARA rule pour détecter les webhooks dans des binaires/scripts</span><br>
+<span class="v">rule</span> <span class="a">Discord_Webhook_URL { strings: $w = /https:\/\/discord\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+/ condition: $w }</span>
+</div>
+</div>
+</div><!-- /tab-discord -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — LÉGAL CH
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-legal">
+
+<div class="page-wrap">
+<div class="sec-title">Cadre légal CH — Messageries d'entreprise</div>
+
+<div class="g2">
+<div class="card card-purple">
+  <div class="ct">⚖️ Surveillance de l'employé en Suisse</div>
+  <p>L'art. 26 OLT 3 et l'art. 328b CO encadrent la surveillance des communications professionnelles. <strong>Lecture systématique des messages d'un salarié = interdite</strong> sauf : règlement interne signé, motif justifié, principe de proportionnalité.</p>
+  <p>Pour une enquête pénale interne (suspicion fraude), <strong>aviser RH + juridique</strong> avant analyse, idéalement obtenir un mandat de l'autorité.</p>
+</div>
+<div class="card card-cyan">
+  <div class="ct">📜 Hébergement des données — Localité</div>
+  <p>Slack, Teams, Discord = serveurs aux US (avec régions UE). Réquisition au siège (Slack Technologies LLC, Microsoft Ireland, Discord Inc.) via :</p>
+  <ul>
+    <li>Demande directe legal@</li>
+    <li>MLAT (CLOUD Act US, e-Evidence UE)</li>
+    <li>Délai 1 semaine à 6 mois selon urgence</li>
+  </ul>
+</div>
+<div class="card card-orange">
+  <div class="ct">🔐 Chiffrement & déchiffrement</div>
+  <p>Slack et Teams = TLS-in-transit + AES-256 at-rest, mais <strong>les opérateurs ont les clés</strong> (vs Signal/WhatsApp E2EE). Une réquisition légale fournit les contenus en clair côté serveur.</p>
+  <p>Discord : pas d'E2EE par défaut — accès admin = accès lecture sur tous les serveurs gérés.</p>
+</div>
+<div class="card card-red">
+  <div class="ct">🇨🇭 nLPD — Données de tiers</div>
+  <p>Conversations d'un suspect contiennent des données personnelles de tiers (collègues, clients). Acquisition complète = capture de ces données. Documenter la <strong>nécessité et proportionnalité</strong> dans le rapport (LPD art. 6).</p>
+</div>
+</div>
+</div>
+
+<div class="page-wrap">
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — Messageries d'Entreprise</div>
+  <p><strong>Slack Enterprise Grid</strong> → Discovery API (endpoint <code>discovery.*</code>) donne accès complet aux DM</p>
+  <p><strong>Slack Pro/Business+</strong> → Standard Export hors DM, requête formelle nécessaire pour DM</p>
+  <p><strong>Teams chat 1:1</strong> → archivé dans Exchange Online dossier <code>TeamsMessagesData</code></p>
+  <p><strong>Teams &amp; Compliance Center</strong> → recherche unifiée Exchange + SharePoint + OneDrive + Teams via Purview</p>
+  <p><strong>Discord</strong> → pas d'API enterprise, token user dans LevelDB, DiscordChatExporter pour lire</p>
+  <p><strong>Webhook Discord</strong> → vecteur d'exfiltration courant, regex <code>discord.com/api/webhooks/</code></p>
+  <p><strong>Surveillance employé CH</strong> → règlement interne + proportionnalité (art. 328b CO, art. 26 OLT 3)</p>
+</div>
+</div>
+
+<div class="page-wrap">
+<div class="quiz-wrap">
+  <div class="quiz-q">Une PME suisse soupçonne un cadre d'avoir partagé des données confidentielles via MS Teams. Le tenant est en plan E5. Comment procéder pour récupérer 6 mois de chats privés sans alerter le suspect ?<small>Compliance · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Utiliser <strong>Microsoft Purview eDiscovery (Premium)</strong>. Étapes : (1) <code>Connect-IPPSSession</code> en compliance admin, (2) <code>New-ComplianceCase</code> pour ouvrir un cas avec hold (verrouille la mailbox du suspect → empêche purge), (3) <code>New-ComplianceSearch</code> ciblé sur la mailbox + <code>folderid:TeamsMessagesData</code>, (4) <code>Start-ComplianceSearch</code>, (5) <code>New-ComplianceSearchAction -Export</code> qui crée un PST téléchargeable. Le suspect ne reçoit aucune notification (l'audit log lui est inaccessible). En Suisse : aviser RH + juridique avant lancement, documenter la proportionnalité (art. 328b CO).</div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Lors de l'analyse forensique d'un poste suspecté d'exfiltration, vous trouvez dans <code>%APPDATA%\discord\Local Storage\leveldb\</code> une chaîne du type <code>discord.com/api/webhooks/123456/abcdef-XYZ</code>. Que faire ?<small>Webhook · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>Indicateur fort d'exfiltration via webhook</strong>. Discord webhook = endpoint d'écriture seule, souvent utilisé par malware/script pour envoyer des données vers un serveur Discord contrôlé par l'attaquant (anti-forensic, traffic légitime sortant). Étapes : (1) figer la preuve (hash du LevelDB), (2) NE PAS tester le webhook (réveille l'attaquant), (3) NE PAS envoyer de DELETE pour le « killer » sans accord juridique, (4) chercher dans <code>%TEMP%</code>, scripts PS et tâches planifiées la commande qui appelle l'URL, (5) requête formelle à Discord (legal@) avec l'ID du webhook pour identifier le serveur cible et son admin.</div>
+</div>
+
+<div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> Slack Enterprise = Discovery API (DM accessibles) · Slack Pro = Standard Export hors DM · Teams 1:1 = Exchange <code>TeamsMessagesData</code> via Purview · Discord = pas d'API enterprise + token dans LevelDB · Webhook Discord = exfiltration courante (URL en regex) · Surveillance employé CH (art. 328b CO + art. 26 OLT 3) = règlement + proportionnalité · MLAT pour réquisition cross-border (CLOUD Act, e-Evidence).</div>
+
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Art. 328b CO · Microsoft Purview · Slack Discovery API</span>
+</div>
+</div>
+
+</div><!-- /tab-legal -->
+
+<script>
+function showMsgTab(name, btn){
+  document.querySelectorAll('#msg-tabs .tab').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  var p = document.getElementById('tab-'+name);
+  if(p) p.classList.add('active');
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+})();
+document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+    ans.classList.toggle('visible');
+    btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+  });
+});
+</script>
+</body>
+</html>

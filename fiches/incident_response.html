@@ -215,6 +215,130 @@
 <div class="step"><div class="step-num">6</div><div><div class="strat-title">Notifier selon le niveau de sévérité</div><div class="strat-desc">Suivre la matrice de notification interne. Si données personnelles exposées → notification PFPDT « dans les meilleurs délais » (LPD art. 24). Si infrastructure critique → OFCS sous 24h (OCyS, depuis avril 2025). Documenter chaque notification avec horodatage.</div></div></div>
 </div></div>
 
+<div class="sec" id="playbooks-scenarios"><div class="sec-title">Playbooks par scénario — Les 3 cas critiques</div>
+<div class="sec-sub">Au-delà des phases NIST génériques, chaque scénario a sa séquence optimale. Voici les playbooks les plus fréquents en SME suisse.</div>
+
+<!-- ─── PLAYBOOK 1 : RANSOMWARE ─── -->
+<div class="card card-red" style="margin-bottom:1rem">
+  <div class="ct">🔒 Playbook Ransomware — H+0 à H+72</div>
+  <p><strong>Scénario type :</strong> rançonnage doublé (chiffrement + exfiltration vers leak site). Cas SME : LockBit, Cl0p, Black Basta. Première heure critique.</p>
+</div>
+
+<div class="steps">
+<div class="step"><div class="step-num">1</div><div>
+  <div class="strat-title">H+0 à H+30min — Ne pas redémarrer, ne pas payer (encore)</div>
+  <div class="strat-desc">RAM dump immédiat (clé de chiffrement parfois en mémoire pour LockBit). Capture trafic. Photos écrans avec note de rançon. Identifier la souche via <code>id-ransomware.malwarehunterteam.com</code>.</div>
+  <div class="strat-tool">winpmem ram.raw &amp;&amp; tcpdump -i any -w cap.pcap &amp;</div>
+</div></div>
+
+<div class="step"><div class="step-num">2</div><div>
+  <div class="strat-title">H+30min à H+2h — Confinement réseau</div>
+  <div class="strat-desc">Isoler les machines chiffrées du reste du réseau (VLAN quarantaine ou débranchement). NE PAS éteindre. Bloquer les domaines C2 connus de la souche au niveau firewall/DNS. Désactiver les comptes compromis (sans supprimer).</div>
+</div></div>
+
+<div class="step"><div class="step-num">3</div><div>
+  <div class="strat-title">H+2h à H+6h — Identifier patient zéro &amp; portée</div>
+  <div class="strat-desc">Logs AD pour comptes utilisés en latéralité (Event 4624 type 3, 4672, 4768). Reconstruire la timeline d'infection : phishing email, RDP exposé, exploit CVE. Vérifier les VSS sur tous les serveurs (souvent la première chose détruite par le ransomware).</div>
+  <div class="strat-tool">EvtxECmd + Timeline Explorer</div>
+</div></div>
+
+<div class="step"><div class="step-num">4</div><div>
+  <div class="strat-title">H+6h à H+24h — Évaluation exfiltration &amp; LPD</div>
+  <div class="strat-desc">Logs proxy/firewall : volume anormal sortant ? Vers quels domaines (mega.nz, anonfiles, cloud personnel) ? Si données personnelles exfiltrées → notification PFPDT « dans les meilleurs délais » (LPD art. 24). Si infra critique → OFCS sous 24h.</div>
+</div></div>
+
+<div class="step"><div class="step-num">5</div><div>
+  <div class="strat-title">H+24h à H+72h — Décision rançon &amp; restauration</div>
+  <div class="strat-desc">Décision concertée direction + juridique + assurance cyber. <strong>Payer = financer</strong> (sanctions OFAC potentielles, MROS si crypto suspect). Privilégier restauration backups offline. Vérifier identité &amp; intégrité backups avant restauration sur prod.</div>
+</div></div>
+
+<div class="step"><div class="step-num">6</div><div>
+  <div class="strat-title">Post-incident — IOC partage &amp; durcissement</div>
+  <div class="strat-desc">Partager IOC à fedpol CYCO et MELANI/OFCS, optionnellement à <em>No More Ransom</em>. Patch des vecteurs initial. Implémentation EDR si absent. Tests restauration mensuels désormais obligatoires.</div>
+</div></div>
+</div>
+
+<!-- ─── PLAYBOOK 2 : BEC (Business Email Compromise) ─── -->
+<div class="card card-orange" style="margin-bottom:1rem;margin-top:2rem">
+  <div class="ct">📧 Playbook BEC — Compromission email d'entreprise</div>
+  <p><strong>Scénario type :</strong> compte CFO ou direction compromis, redirection silencieuse de mails (règle Outlook), faux IBAN injecté dans facture sortante. Cas fréquent en SME suisse, perte moyenne 50-200k CHF.</p>
+</div>
+
+<div class="steps">
+<div class="step"><div class="step-num">1</div><div>
+  <div class="strat-title">H+0 — Confirmer la compromission</div>
+  <div class="strat-desc">Tenter login admin sur le compte (avec consentement direction). Vérifier les <strong>règles boîte de réception</strong> : forwarding externe, suppression auto contenant "facture/IBAN/RIB", déplacement vers RSS Feeds. Audit logs M365 / Exchange Online.</div>
+  <div class="strat-tool">Search-AdminAuditLog · Get-InboxRule -Mailbox user@corp.ch</div>
+</div></div>
+
+<div class="step"><div class="step-num">2</div><div>
+  <div class="strat-title">H+30min — Bloquer immédiatement</div>
+  <div class="strat-desc">Reset MDP forcé + révocation des sessions actives (<code>Revoke-AzureADUserAllRefreshToken</code>). Rotation MFA. Désactiver toutes les règles de boîte créées dans les 30 derniers jours. NE PAS supprimer le compte (perte des preuves).</div>
+</div></div>
+
+<div class="step"><div class="step-num">3</div><div>
+  <div class="strat-title">H+1h — Identifier la fenêtre de compromission</div>
+  <div class="strat-desc">Logs M365 Unified Audit (90j par défaut, 1 an avec E5) : <code>Search-UnifiedAuditLog -UserIds user@corp -StartDate -90</code>. Chercher login depuis IP inhabituelles, géoloc suspectes (TOR exits, VPN), MFA bypass via legacy auth. Vérifier app consents OAuth (apps malveillantes installées).</div>
+</div></div>
+
+<div class="step"><div class="step-num">4</div><div>
+  <div class="strat-title">H+2h à H+6h — Évaluation impact &amp; clients</div>
+  <div class="strat-desc">Identifier emails sortants modifiés (factures avec IBAN frauduleux). Contacter clients potentiellement victimes. Bloquer paiements pas encore exécutés (banque, stop-payment).</div>
+</div></div>
+
+<div class="step"><div class="step-num">5</div><div>
+  <div class="strat-title">H+6h à H+24h — Légal &amp; banque</div>
+  <div class="strat-desc">Plainte pénale art. 143 CP (soustraction données) + art. 146 CP (escroquerie) + art. 251 CP (faux titres). Délai de plainte = 3 mois (art. 31 CP). MROS si soupçon blanchiment. Coopération avec banque destinataire (souvent étranger : besoin entraide MLAT).</div>
+</div></div>
+
+<div class="step"><div class="step-num">6</div><div>
+  <div class="strat-title">Durcissement post-BEC</div>
+  <div class="strat-desc">MFA obligatoire (FIDO2 idéalement, pas SMS). Conditional Access bloquant legacy auth + geofencing. Microsoft Defender for Office 365 P2 (anti-phishing impersonation). Process double-validation pour changements IBAN clients (téléphone). Formation continue phishing.</div>
+</div></div>
+</div>
+
+<!-- ─── PLAYBOOK 3 : SUPPLY CHAIN ─── -->
+<div class="card card-purple" style="margin-bottom:1rem;margin-top:2rem">
+  <div class="ct">🔗 Playbook Supply Chain — Compromission via fournisseur</div>
+  <p><strong>Scénario type :</strong> backdoor injectée dans un logiciel légitime (SolarWinds 2020, 3CX 2023, XZ Utils 2024) ou compromission RMM (Kaseya 2021). Détection plus tardive que ransomware mais dégâts à mesure cumulative.</p>
+</div>
+
+<div class="steps">
+<div class="step"><div class="step-num">1</div><div>
+  <div class="strat-title">Détection — Souvent par CVE / advisory externe</div>
+  <div class="strat-desc">Veille sur sources : NCSC.ch, MITRE, <em>Threat Intel</em> feeds (MISP). Lorsqu'un advisory tombe (ex: "<em>3CX Desktop App contient un backdoor</em>"), inventaire immédiat de toutes les machines avec le logiciel concerné.</div>
+  <div class="strat-tool">Get-SCCMSoftware OR osquery: SELECT * FROM apps WHERE name LIKE '%3CX%'</div>
+</div></div>
+
+<div class="step"><div class="step-num">2</div><div>
+  <div class="strat-title">H+0 à H+4h — Isolement préventif</div>
+  <div class="strat-desc">Toutes les machines avec la version compromise sont mises en quarantaine réseau. Capture RAM + image disque sur un échantillon représentatif (poste utilisateur, serveur, prod). Bloquer les IOC de l'advisory au niveau firewall/EDR.</div>
+</div></div>
+
+<div class="step"><div class="step-num">3</div><div>
+  <div class="strat-title">H+4h à H+24h — Évaluation profondeur</div>
+  <div class="strat-desc">Sur l'échantillon : YARA rules de l'advisory, recherche des IOC (hashes, domaines, mutex, registry keys). Logs proxy : trafic vers C2 confirmé ? Logs EDR pour activités latérales depuis ces postes. Si le backdoor a été actif → traiter comme intrusion confirmée (basculement playbook ransomware ou BEC selon les TTP).</div>
+</div></div>
+
+<div class="step"><div class="step-num">4</div><div>
+  <div class="strat-title">H+24h à H+1 sem — Re-imaging vs patching</div>
+  <div class="strat-desc">Si backdoor actif détecté → <strong>re-imaging</strong> (la simple mise à jour ne suffit pas, persistance possible). Si pas d'activité C2 confirmée → patch + monitoring renforcé pendant 6 mois. Rotation des secrets (mots de passe, certificats, tokens API) qui ont pu transiter par les machines compromises.</div>
+</div></div>
+
+<div class="step"><div class="step-num">5</div><div>
+  <div class="strat-title">Notification &amp; transparence</div>
+  <div class="strat-desc">Notification clients/partenaires si données potentiellement exposées (LPD art. 24). OFCS pour infrastructures critiques. Coordination avec le fournisseur compromis (souvent la victime principale, mais a obligation de transparence). Communication publique calibrée (sous-évaluation = risque réputation, sur-réaction = panique).</div>
+</div></div>
+
+<div class="step"><div class="step-num">6</div><div>
+  <div class="strat-title">Durcissement long terme</div>
+  <div class="strat-desc">SBOM (Software Bill of Materials) tracking. Application allow-list (AppLocker, WDAC). Limitation des privilèges des logiciels (Constrained Language Mode pour PowerShell, sandboxing). Revue des fournisseurs critiques avec exigences sécurité.</div>
+</div></div>
+</div>
+
+<div class="info" style="margin-top:1rem">💡 <strong>Le triptyque suisse</strong> : Ransomware = perte d'opérabilité immédiate, BEC = perte financière directe, Supply Chain = perte de confiance + dette technique. Tous les trois ont un triggeur commun en CH : notification PFPDT « dans les meilleurs délais » (LPD art. 24) si données personnelles touchées, OFCS sous 24h pour infra critique (OCyS art. 74c LSI). Documenter les notifications avec horodatage UTC dans le rapport d'incident.</div>
+</div>
+
 <div class="alert">⚖️ <strong>Examen CAS-IN :</strong> 6 phases NIST SP 800-61 : Préparation → Identification → Confinement → Éradication → Récupération → Leçons apprises · LPD art. 24 : notification PFPDT « <strong>dans les meilleurs délais</strong> » (pas de délai 72h fixe — différence avec le RGPD) · Acquérir RAM AVANT isolation · Snapshot VM AVANT toute action · Délai plainte pénale art. 143 / 143bis CP = 3 mois depuis connaissance auteur (art. 31 CP) · Conserver les logs = obligation légale · OFCS = signalement obligatoire 24h pour infra critique (OCyS, depuis avril 2025), recommandé pour le reste du secteur privé.</div>
 <div class="footer">
   <span>CAS-IN Investigation Numérique · Forensique Suisse</span>

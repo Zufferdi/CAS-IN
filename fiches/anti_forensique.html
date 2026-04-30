@@ -143,6 +143,89 @@
 <div class="page-wrap">
   <div class="info">🇨🇭 <strong>Déni plausible (VeraCrypt) — droit suisse :</strong> Un suspect peut refuser de donner le mot de passe d'un volume caché en invoquant le <em>nemo tenetur</em> (art. 113 CPP). La preuve de l'existence d'un volume caché est forensiquement très difficile à établir <em>by design</em>.</div>
 
+<div class="page-wrap" id="edr-bypass">
+  <div class="sec-title">EDR / AV bypass — Techniques modernes (2024-2026)</div>
+  <div class="sec-sub">L'attaquant moderne ne se contente plus de timestomper : il neutralise activement la télémétrie EDR avant d'agir. Connaître ces techniques = savoir où chercher leurs traces.</div>
+
+  <div class="af-grid">
+    <div class="af-card">
+      <div class="af-name">🪝 EDR Unhooking</div>
+      <div class="af-how">Les EDR (CrowdStrike, SentinelOne, Defender) injectent des hooks dans <code>ntdll.dll</code> en userland pour intercepter les syscalls. L'attaquant restaure les bytes originaux depuis une copie fraîche (<code>D:\Windows\System32\ntdll.dll</code> ou téléchargée). Outils : <em>SharpUnhooker</em>, <em>RefleXXion</em>, <em>BananaPhone</em>.</div>
+      <div class="af-detect">Comparer les premiers bytes de chaque export <code>ntdll!Nt*</code> en mémoire vs disque. Détection : sondes EDR <strong>kernel-mode</strong> (ELAM), Sysmon Event 8 (CreateRemoteThread), ETW <code>Microsoft-Windows-Threat-Intelligence</code>.</div>
+    </div>
+
+    <div class="af-card">
+      <div class="af-name">📡 ETW Patching</div>
+      <div class="af-how">Event Tracing for Windows alimente la majorité de la télémétrie EDR. Patcher <code>EtwEventWrite</code> avec <code>ret 0x14</code> (Windows x64) ou <code>NtTraceEvent</code> désactive silencieusement la télémétrie de PowerShell, .NET, AMSI. Outils : <em>EtwTiSwallow</em>, <em>SilenceETW</em>.</div>
+      <div class="af-detect">Comparer les bytes initiaux de <code>EtwEventWrite</code> en mémoire vs binaire signé. Sysmon log 25 (process tampering). Activer ETW providers <strong>kernel-mode</strong> (<code>Microsoft-Windows-Kernel-Process</code>) que l'attaquant ne peut pas patcher en userland.</div>
+    </div>
+
+    <div class="af-card">
+      <div class="af-name">🛡 AMSI Bypass</div>
+      <div class="af-how">L'Antimalware Scan Interface scanne les scripts PowerShell/JS/VBA avant exécution. Bypass classique : patcher <code>AmsiScanBuffer</code> avec un saut vers <code>S_OK</code>. Variants 2024-2026 : memory patching via <em>FFI</em>, COM hijacking de l'IAmsiContext, AMSI provider remplacement via registre.</div>
+      <div class="af-detect">PowerShell Event 4104 capture le ScriptBlock <strong>avant</strong> le bypass — toujours vérifier ces logs. Defender ASR rule <em>Block Office applications from creating executable content</em>. Sysmon Event 7 (Image Loaded) sur <code>amsi.dll</code> dans des processus inattendus.</div>
+    </div>
+
+    <div class="af-card">
+      <div class="af-name">🔇 Direct/Indirect Syscalls</div>
+      <div class="af-how">Au lieu d'appeler <code>NtAllocateVirtualMemory</code> via <code>kernel32!VirtualAlloc</code> (hooké), l'attaquant fait directement <code>syscall</code> avec le bon Service Number (SSN). Variants : <em>HellsGate</em>, <em>HalosGate</em>, <em>TartarusGate</em> (résolution dynamique du SSN). Indirect syscalls = <code>jmp [ntdll!syscall_addr]</code> pour rester dans la stack <code>ntdll</code>.</div>
+      <div class="af-detect">Stack call analysis : un syscall normal vient toujours de <code>ntdll.dll</code>. Origine = autre module = direct syscall. Sysmon ne capture pas, mais EDR kernel-mode oui (<em>SspiCli</em>, <em>EDRSandblast</em>). Hardware breakpoints (Intel PT) en R&amp;D.</div>
+    </div>
+
+    <div class="af-card">
+      <div class="af-name">💉 Process Injection avancé</div>
+      <div class="af-how">Au-delà du DLL injection classique : <strong>Early Bird APC</strong> (avant ResumeThread), <strong>Process Doppelgänging</strong> (TxF), <strong>Process Herpaderping</strong> (modify-on-disk), <strong>Phantom DLL Hollowing</strong>. Beaucoup ne déclenchent <strong>aucun</strong> écrit disque, donc invisibles à la signature AV classique.</div>
+      <div class="af-detect">RAM forensics indispensable : Volatility plugins <code>malfind</code>, <code>hollowfind</code>, <code>ldrmodules</code>. Sysmon Event 10 (ProcessAccess) avec GrantedAccess 0x1F1FFF + filtrage parent légitime (<em>explorer.exe</em> qui injecte = anormal).</div>
+    </div>
+
+    <div class="af-card">
+      <div class="af-name">🎭 BYOVD — Bring Your Own Vulnerable Driver</div>
+      <div class="af-how">Charger un driver Windows <strong>signé légitimement</strong> mais vulnérable (ex. <em>kdmapper</em> + <em>iqvw64.sys</em>, <em>dbutil_2_3.sys</em>) pour obtenir un primitive d'écriture kernel. Désactive ensuite l'EDR via <code>EtwTi</code> kernel patching. Vu en 2023-2024 (BlackByte, AvosLocker).</div>
+      <div class="af-detect">Microsoft Vulnerable Driver Blocklist (depuis 2023, on by default sur Win11 + HVCI). Sysmon Event 6 (DriverLoaded) avec hash check vs liste connue. Liste publique sur <em>loldrivers.io</em>. Si HVCI/VBS désactivé sur le poste = signal d'alarme.</div>
+    </div>
+
+    <div class="af-card">
+      <div class="af-name">🌥 LOLBins & Cloud Living-off-the-Land</div>
+      <div class="af-how">2024+ : utiliser des services cloud légitimes (Cloudflare Workers, AWS Lambda, GitHub Pages, Azure Front Door) comme C2 et exfiltration. Trafic = TLS sortant vers IP réputées, indétectable par signature.</div>
+      <div class="af-detect">Analyse comportementale (UEBA) : volume sortant inhabituel vers Workers/Pages, patterns DNS suspects (<em>jitter beaconing</em>). Logs DNS du firewall + Cloudflare Logpush. Ne <strong>pas</strong> bloquer Cloudflare/AWS sans contexte (faux positifs massifs).</div>
+    </div>
+
+    <div class="af-card">
+      <div class="af-name">🧊 Hibernation et hibernation file abuse</div>
+      <div class="af-how">L'attaquant déclenche une hibernation Windows juste avant ses opérations. <code>hiberfil.sys</code> capture la RAM mais l'attaquant peut l'altérer en post-mortem (montage en lecture-écriture sous WinPE) pour effacer ses propres traces. Vu dans des cas APT 2024.</div>
+      <div class="af-detect">Comparer le hash du <code>hiberfil.sys</code> à différentes époques (VSS). Capture RAM en live <strong>avant</strong> redémarrage. Volatility 3 plugin <code>hibernation</code> identifie les manipulations dans la structure du fichier.</div>
+    </div>
+  </div>
+</div>
+
+<div class="page-wrap">
+  <div class="schema">
+    <div class="schema-title">🛡 Stack de détection EDR-bypass — Profondeur en couches</div>
+    <div class="schema-sub">L'attaquant peut désactiver une couche (userland), pas toutes — défense en profondeur</div>
+    <div class="schema-split">
+      <div class="schema-col">
+        <div class="schema-col-title green">✅ Couches résistantes</div>
+        <div class="sch-row"><span class="sch-icon">🔒</span><div><div class="sch-label">Hypervisor / VBS / HVCI</div><div style="font-family:var(--mono);font-size:.65rem;color:var(--dim)">isolation kernel — bloque BYOVD</div></div></div>
+        <div class="sch-row"><span class="sch-icon">🪝</span><div><div class="sch-label">EDR kernel callbacks</div><div style="font-family:var(--mono);font-size:.65rem;color:var(--dim)">ELAM, PsSetCreateProcessNotify</div></div></div>
+        <div class="sch-row"><span class="sch-icon">📡</span><div><div class="sch-label">ETW kernel-mode providers</div><div style="font-family:var(--mono);font-size:.65rem;color:var(--dim)">non patchables depuis userland</div></div></div>
+        <div class="sch-row"><span class="sch-icon">🌐</span><div><div class="sch-label">Network telemetry (NDR)</div><div style="font-family:var(--mono);font-size:.65rem;color:var(--dim)">hors host — non bypassable</div></div></div>
+      </div>
+      <div class="schema-col">
+        <div class="schema-col-title gold">⚠️ Couches faibles (à muscler)</div>
+        <div class="sch-row"><span class="sch-icon">📜</span><div><div class="sch-label">Userland API hooking</div><div style="font-family:var(--mono);font-size:.65rem;color:var(--dim)">unhookable trivialement</div></div></div>
+        <div class="sch-row"><span class="sch-icon">📜</span><div><div class="sch-label">PowerShell ScriptBlock alone</div><div style="font-family:var(--mono);font-size:.65rem;color:var(--dim)">AMSI patch désactive le scan</div></div></div>
+        <div class="sch-row"><span class="sch-icon">🔍</span><div><div class="sch-label">Signatures statiques AV</div><div style="font-family:var(--mono);font-size:.65rem;color:var(--dim)">aisément polymorphées</div></div></div>
+        <div class="sch-row"><span class="sch-icon">📦</span><div><div class="sch-label">EDR userland sans kernel</div><div style="font-family:var(--mono);font-size:.65rem;color:var(--dim)">syscalls directs contournent</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-wrap">
+  <div class="info">💡 <strong>Pour l'enquêteur :</strong> Quand vous tombez sur un poste où l'EDR semblait actif mais aucun alert n'a remonté, suspectez bypass. Sources résiduelles fiables : <strong>logs Sysmon</strong> (s'ils sont activés et exfiltrés vers SIEM externe), <strong>ETW kernel</strong> via <code>logman</code> ou outil <em>SilkETW</em>, <strong>artefacts disque</strong> classiques (Prefetch, Amcache, $UsnJrnl), <strong>RAM dump</strong> pour trouver les hooks restaurés ou syscalls inhabituels, <strong>logs réseau</strong> du proxy/firewall (côté attaquant peut désactiver l'agent local mais pas les flux sortants).</div>
+</div>
+
+<div class="page-wrap">
   <div class="exam-tip">
     <div class="exam-tip-title">🎓 Exam Tip — Anti-Forensique</div>
     <p><strong>Timestomping</strong> → divergence <code>$SI ≠ $FN</code> dans la MFT</p>
@@ -151,6 +234,10 @@
     <p><strong>Living off the Land</strong> → Event 4104 ScriptBlock PowerShell décodé</p>
     <p><strong>Volume Shadow Copies</strong> → versions antérieures même après effacement</p>
     <p><strong>Rootkit détecté</strong> → <code>pslist</code> ≠ <code>psscan</code> (Volatility)</p>
+    <p><strong>EDR Unhooking</strong> → bytes <code>ntdll!Nt*</code> patchés, comparer mémoire vs disque</p>
+    <p><strong>ETW Patching</strong> → ETW kernel-mode reste fiable, providers <em>Threat-Intelligence</em></p>
+    <p><strong>BYOVD</strong> → driver signé vulnérable, vérifier <em>loldrivers.io</em>, HVCI doit être activé</p>
+    <p><strong>Direct Syscalls</strong> → stack analysis, origine ≠ <code>ntdll.dll</code> = anomalie</p>
     <p><strong>Wiping SSD inefficace</strong> → TRIM efface les blocs en arrière-plan</p>
   </div>
 </div>
