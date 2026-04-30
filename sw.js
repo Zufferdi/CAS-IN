@@ -1,71 +1,17 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v39 : extension à 15 rangs par track (v3 12 paliers → v4 15 paliers).
-//       PROFILE_VERSION 3 → 4. Nouveaux rangs ajoutés à la fin de chaque
-//       ladder (les 12 originaux restent à leur idx, +3 nouveaux entre les
-//       anciens 11 et 14). Migration v3→v4 préserve le rang exact :
-//       idx 0..10 inchangés, idx 11 (Légende v3) → idx 14 (Légende v4),
-//       les rangs intermédiaires v4 [11,12,13] sont à gagner. Nouveaux
-//       seuils XP : [0, 250, 550, 950, 1550, 2350, 3450, 4950, 6850, 9250,
-//       12250, 15950, 20450, 25950, 32650] (cap 32650 vs 17950 v3).
-//       CLEARANCE_BY_RANK étendu à 15 entrées. computeRank, ladder,
-//       migration tous adaptés. Tests Node validés.
-// v38 : Stratégie 4 — couleur d'accent par rôle activée. Le scaffolding
-//       CSS [data-track="..."] existait depuis longtemps (variables
-//       --track-accent / --track-accent-glow / --track-accent-soft
-//       définies pour investigator=bleu, magistrate=or pâle,
-//       journalist=orange-rouge, hacker=vert phosphor) mais l'attribut
-//       data-track n'était JAMAIS posé sur <html>. cas-in-profile.js
-//       le pose maintenant à l'init et lors de chaque setTrack(),
-//       avec fallback sur DOMContentLoaded si <html> pas prêt.
-//       Application étendue à : barre XP profile, profile-banner (icon +
-//       rang), brand-link hover, encart spécialité (bordure, badge bonus,
-//       pastilles tags), pastille bonus rôle dans rapport scène,
-//       bordure cartes scène en cours, profile-hero-emoji glow.
-// v37 : Stratégie 1 — bonus XP thématique par rôle (+20%) RÉELLEMENT branché.
-//       Cleanup : 3 systèmes de bonus redondants ramenés à 1 seul (~150 lignes
-//       mortes supprimées dans cas-in-profile.js). Bridges quiz+scene
-//       transmettent les tags via window.__casInBonusTags. Fix double-comptage
-//       scene-app/bridge via flag __casInProfileApplied. Toast bonus rôle dans
-//       le rapport de fin de scène. Section « Spécialité » dans profile.html
-//       qui liste les tags +20% du rôle choisi.
-// v36 : 3 fixes — (a) scene.html grade-card branchée sur Profile.getRank
-//       au lieu du système GRADES legacy 100/200/.../1500 XP ;
-//       (b) fiches/index.html resync depuis manifest.json (77 icônes
-//       thématiques restaurées, 28 desc + keywords reconstruits) ;
-//       (c) cas-in-achievements.js extrait de quiz-app.js → metadata
-//       disponible sur profile.html (succès affichés avec emoji + nom + desc).
-// v35 : courbe XP lissée — seuils v3 [0, 250, 550, 950, 1550, 2350, 3450, 4950,
-//       6950, 9450, 12950, 17950] (cap 17950 vs 40000) avec migration v2→v3
-//       par conversion proportionnelle qui PRÉSERVE le rang exact de chaque user.
-// v34 : profile ladder repliable (n'affiche que rang courant par défaut)
-//       + bouton ← PRÉCÉDENT (history.back), fiche-icon font-fallback emoji,
-//       counts.json à jour (95 scènes, 1750 questions, 96 fiches), fallbacks
-//       HTML actualisés, suppression READMEs livrables temporaires
-// v33 : palette score 5 paliers étendue au lobby (status badge, leaderboard
-//       pills, skill-tree nodes) — la couleur du % suit le palier, pas le rang
-// v32 : ajout 5 scènes (CyberStratVS valaisanne, LSI/LPD timing, référent
-//       milice, FluBot+BEC cascade, audit ISAE 3402) + palette score 5 paliers
-//       (rouge foncé / orange / vert clair / vert moyen / vert vif)
-// v31 : v2.10 cleaning — extraction des <style> inline (scene/tp/tools/exam.html)
-//       vers fichiers CSS dédiés + suppression scores doublons quiz/scene
-//       (info canonique désormais unique dans profile-banner)
-// v30 : ajout 3 nouvelles fiches forensique mobile et cloud (iOS, Android, M365)
-//       + corrections metadata des 26 fiches "(à compléter)" du manifest
-// v29 : ajout des 14 fichiers JS/CSS manquants (patches v3/v4/v5 + bridges
-//       profil + landing-3d + 2 fiches Linux/macOS forensique)
-// v28 : extraction JS inline de tools.html + exam.html → tools-app.js, exam-app.js
-// v27 : suppression scenes.js legacy (-1.6 MB), meta descriptions complètes
-// v26 : Phases A+B+D+E (challenge banner+, daily combo, 6 new badges, skill tree)
-// v25 : ajout icônes PWA + offline.html + og-image.svg dans STATIC_ASSETS
-// v24 : split de scenes.js en scenes/index.json + scenes/{id}.json
-//       boot initial : 1.6 MB → 64 KB (-96 %)
-//       chaque scène mise en cache séparément à la 1re visite
-// v23 : extraction du JS inline de scene.html → js/scene-app.js + scene-ux-patch.js
-// v22 : extraction du JS inline de quiz.html → js/quiz-app.js (cache séparé)
-// v21 : alignement v2.4 (post-cleanup) — STATIC_ASSETS auto-régénéré
-//       depuis manifest.json + filesystem (90 fiches au lieu de 47)
-const CACHE_VERSION = 'cas-in-v39';
+// v40 : refonte stratégie — fiches précachées dynamiquement depuis manifest.json
+//       (au lieu d'une liste hardcodée de 90 entrées qu'on oubliait de
+//       maintenir). Stale-while-revalidate sur CSS/JS pour que les vieilles
+//       versions ne traînent pas après un déploiement. Channel postMessage
+//       'GET_VERSION' pour permettre au client d'afficher la version.
+//       Reste : skipWaiting + clients.claim, network-first pour HTML/JSON.
+// v39..v21 : voir CHANGELOG.md (historique nettoyé du SW pour rester lisible).
 
+const CACHE_VERSION = 'cas-in-v40';
+
+// ─── Ressources critiques (HTML/JSON/CSS/JS) ───
+// Liste maintenue à la main car peu volatile. Les FICHES sont lues
+// dynamiquement depuis manifest.json à l'install (voir precacheFichesFromManifest).
 const STATIC_ASSETS = [
   // Pages racine
   './',
@@ -75,6 +21,7 @@ const STATIC_ASSETS = [
   './exam.html',
   './tools.html',
   './scene.html',
+  './profile.html',
 
   // Manifests & data
   './manifest.json',
@@ -101,24 +48,23 @@ const STATIC_ASSETS = [
   './style/track-theme.css',
   './style/quiz.css',
 
-  // Scripts — réorganisation v2.10 en sous-dossiers (core/profile/pages/bridges)
-  // Voir ARCHITECTURE.md § « Couches & ordre de chargement ».
-  // core/ — librairies transversales (source de vérité, services partagés)
+  // Scripts core
   './js/core/cas-in-profile.js',
   './js/core/cas-in-achievements.js',
   './js/core/cas-in-counts.js',
   './js/core/cas-in-export.js',
   './js/core/cas-in-pwa.js',
   './js/core/cas-in-search.js',
-  // profile/ — composants de profil (banner transversal, page dédiée, track selector)
+  // Profile UI
   './js/profile/profile-banner.js',
   './js/profile/profile-page.js',
   './js/profile/profile-track-v5.js',
-  // bridges/ — interception localStorage des pages → routage vers Profile
+  './js/profile/profile-titles.js',
+  // Bridges
   './js/bridges/quiz-profile-bridge.js',
   './js/bridges/scene-profile-bridge.js',
   './js/bridges/tp-profile-bridge.js',
-  // pages/ — apps spécifiques par page
+  // Pages
   './js/pages/landing.js',
   './js/pages/landing-3d.js',
   './js/pages/quiz-app.js',
@@ -130,231 +76,191 @@ const STATIC_ASSETS = [
   './js/pages/tools-app.js',
   './js/pages/exam-app.js',
 
-  // Scénarios DFIR (v3.0) — index + 90 fichiers individuels lazy-loadés
-  // L'index est en network-first, les scènes individuelles en cache-first.
+  // Index des scènes (lazy-load des scènes individuelles via fetch + cache-first)
   './scenes/index.json',
 
   // TP
   './tp/tp-data.js',
   './tp/tp-engine.js',
 
-  // Fiches (95) — auto-listé depuis manifest.json
+  // Hub des fiches (les fiches elles-mêmes sont précachées dynamiquement)
   './fiches/index.html',
   './fiches/fiche-hub.css',
-  './fiches/acquisition.html',
-  './fiches/active_directory.html',
-  './fiches/algorithmes_forensique.html',
-  './fiches/anti_forensique.html',
-  './fiches/apfs.html',
-  './fiches/autopsy.html',
-  './fiches/autorites_competences_ch.html',
-  './fiches/browser_artifacts_deep_dive.html',
-  './fiches/browser_forensique.html',
-  './fiches/cassage_mdp.html',
-  './fiches/chiffrement_volumes.html',
-  './fiches/cloud_forensique.html',
-  './fiches/comparaison_fs.html',
-  './fiches/crypto.html',
-  './fiches/cryptomonnaies.html',
-  './fiches/disques.html',
-  './fiches/dns_forensique.html',
-  './fiches/dns_forensique_avance.html',
-  './fiches/documents_office_forensique.html',
-  './fiches/droit.html',
-  './fiches/droit_europeen.html',
-  './fiches/eimp_entraide.html',
-  './fiches/email_forensique.html',
-  './fiches/email_headers_smtp_forensique.html',
-  './fiches/encodage.html',
-  './fiches/exfat.html',
-  './fiches/expert_witness_ch.html',
-  './fiches/ext.html',
-  './fiches/f2fs.html',
-  './fiches/fat12.html',
-  './fiches/fat16.html',
-  './fiches/formats.html',
-  './fiches/hash.html',
-  './fiches/hfs.html',
-  './fiches/incident_response.html',
-  './fiches/iot_forensique.html',
-  './fiches/kape_velociraptor.html',
-  './fiches/log_forensique_avance.html',
-  './fiches/logs_windows.html',
-  './fiches/lscpt.html',
-  './fiches/mac_times.html',
-  './fiches/macos-linux.html',
-  './fiches/malware_forensique.html',
-  './fiches/mathematiques_forensique.html',
-  './fiches/messagerie_im.html',
-  './fiches/metadata_avancees.html',
-  './fiches/methodologie.html',
-  './fiches/mitre_attack.html',
-  './fiches/mobile.html',
-  './fiches/network_traffic_analysis_avance.html',
-  './fiches/nldp.html',
-  './fiches/ntfs.html',
-  './fiches/osint.html',
-  './fiches/outils.html',
-  './fiches/pdf_forensique_avance.html',
-  './fiches/pki_certificats.html',
-  './fiches/powershell_forensique.html',
-  './fiches/premier_intervenant.html',
-  './fiches/preuve.html',
-  './fiches/ram_forensique.html',
-  './fiches/ransomware_forensique.html',
-  './fiches/rapport_forensique.html',
-  './fiches/refs.html',
-  './fiches/registre_windows.html',
-  './fiches/reseau.html',
-  './fiches/reverse_engineering_101.html',
-  './fiches/shellbags.html',
-  './fiches/siem_logs.html',
-  './fiches/sqlite_forensique.html',
-  './fiches/sqlite_forensique_avance.html',
-  './fiches/steganographie.html',
-  './fiches/suisse.html',
-  './fiches/sysmon.html',
-  './fiches/threat_intel_ioc.html',
-  './fiches/timeline.html',
-  './fiches/tls_https_certificate_forensique.html',
-  './fiches/tor_darkweb.html',
-  './fiches/usb_forensique.html',
-  './fiches/usb_removable_media_forensique.html',
-  './fiches/vehicules_forensique.html',
-  './fiches/vm_forensique.html',
-  './fiches/volatilite.html',
-  './fiches/volatility_memory_forensics.html',
-  './fiches/windows.html',
-  './fiches/windows_forensique.html',
-  './fiches/windows_registry_forensique_avance.html',
-  './fiches/wireshark_pcap.html',
-  './fiches/wsl_forensique.html',
-  './fiches/yara.html',
-  './fiches/linux_forensique.html',
-  './fiches/macos_forensique.html',
-  './fiches/ios_forensique.html',
-  './fiches/android_forensique.html',
-  './fiches/m365_forensique.html',
-  './fiches/zimmerman.html',
 ];
 
-// Page hors-ligne dédiée (fallback si la ressource n'est jamais passée par le cache)
 const OFFLINE_FALLBACK = './offline.html';
 
-// Installation : mise en cache des assets statiques
+// ─── Précache dynamique des fiches via manifest.json ───
+// Avantage : plus de liste hardcodée à maintenir. Inconvénient : si manifest.json
+// est inaccessible à l'install, on n'a pas les fiches en cache (elles seront
+// mises en cache à la première visite via le fetch handler).
+async function precacheFichesFromManifest(cache) {
+  try {
+    const resp = await fetch('./manifest.json', { cache: 'no-store' });
+    if (!resp.ok) return;
+    const manifest = await resp.json();
+    const fiches = (manifest.fiches || [])
+      .map(f => f && f.file ? './fiches/' + f.file : null)
+      .filter(Boolean);
+    // Best-effort : on ignore les 404 individuelles
+    await Promise.allSettled(fiches.map(url => cache.add(url)));
+    console.log('[SW] Precached ' + fiches.length + ' fiches from manifest');
+  } catch (e) {
+    console.warn('[SW] Could not precache fiches from manifest:', e);
+  }
+}
+
+// ─── Install ───
 self.addEventListener('install', event => {
   console.log('[SW] Install ' + CACHE_VERSION);
   event.waitUntil(
-    caches.open(CACHE_VERSION).then(cache => {
-      // addAll() est atomique : si UNE ressource échoue, tout échoue.
-      // On utilise addAll pour les ressources critiques, et add() pour
-      // les fiches optionnelles afin que l'install ne saute pas si l'une
-      // d'entre elles 404 (cas réel quand on déploie en plusieurs vagues).
-      const critical = STATIC_ASSETS.filter(a => !a.startsWith('./fiches/') || a === './fiches/index.html');
-      const optional = STATIC_ASSETS.filter(a => a.startsWith('./fiches/') && a !== './fiches/index.html');
-
-      return cache.addAll(critical).then(() => {
-        // Best-effort sur les fiches : on ignore les échecs individuels
-        return Promise.allSettled(optional.map(url => cache.add(url)));
-      }).catch(err => {
-        console.warn('[SW] Critical asset failed:', err);
-      });
+    caches.open(CACHE_VERSION).then(async cache => {
+      // Critique d'abord (atomique) : si une de ces ressources échoue, l'install
+      // tombe en fallback per-asset add (au lieu de tout abandonner)
+      try {
+        await cache.addAll(STATIC_ASSETS);
+      } catch (err) {
+        console.warn('[SW] addAll failed, falling back to per-asset add:', err);
+        await Promise.allSettled(STATIC_ASSETS.map(url => cache.add(url)));
+      }
+      // Fiches : best-effort, ne bloque pas l'install
+      await precacheFichesFromManifest(cache);
     })
   );
   self.skipWaiting();
 });
 
-// Activation : nettoyage des anciens caches
+// ─── Activate : nettoyage des anciens caches ───
 self.addEventListener('activate', event => {
   console.log('[SW] Activate ' + CACHE_VERSION);
   event.waitUntil(
-    caches.keys().then(keys => {
-      return Promise.all(
+    caches.keys().then(keys =>
+      Promise.all(
         keys.filter(k => k !== CACHE_VERSION).map(k => {
           console.log('[SW] Deleting old cache:', k);
           return caches.delete(k);
         })
-      );
-    })
+      )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Listener pour SKIP_WAITING (forcé par cas-in-pwa.js après update)
+// ─── Messages depuis le client ───
 self.addEventListener('message', event => {
-  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
+  if (event.data === 'GET_VERSION') {
+    // Réponse sur le port du MessageChannel si fourni
+    if (event.ports && event.ports[0]) {
+      event.ports[0].postMessage({ version: CACHE_VERSION });
+    }
+    return;
+  }
 });
 
-// Fetch : stratégie mixte selon le type de ressource
+// ─── Fetch handler ───
 self.addEventListener('fetch', event => {
   if (!event.request.url.startsWith('http')) return;
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
-
-  // Ignorer les requêtes cross-origin (fonts Google, CDN externes)
-  if (url.origin !== self.location.origin) return;
+  if (url.origin !== self.location.origin) return; // ignorer cross-origin
 
   const isHTML = event.request.headers.get('accept')?.includes('text/html');
-  const isJSON = url.pathname.endsWith('.json');
-  const isSceneIndex = url.pathname.endsWith('/scenes/index.json');
-  // Fichier de scène individuel : scenes/{id}.json (mais PAS index.json)
-  const isSceneFile = /\/scenes\/[^/]+\.json$/.test(url.pathname) && !isSceneIndex;
+  const path = url.pathname;
+  const isJSON = path.endsWith('.json');
+  const isSceneIndex = path.endsWith('/scenes/index.json');
+  const isSceneFile = /\/scenes\/[^/]+\.json$/.test(path) && !isSceneIndex;
+  const isCSS = path.endsWith('.css');
+  const isJS = path.endsWith('.js');
 
-  // ─── Cache-first pour les scènes individuelles (changent rarement)
+  // ─── Cache-first pour les scènes individuelles (changent rarement) ───
   if (isSceneFile) {
-    event.respondWith(
-      caches.match(event.request).then(cached => {
-        if (cached) return cached;
-        return fetch(event.request).then(response => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_VERSION).then(cache => cache.put(event.request, clone));
-          }
-          return response;
-        }).catch(() =>
-          new Response(JSON.stringify({error:'offline', scene: url.pathname.split('/').pop().replace('.json','')}),
-            {status:503, headers:{'Content-Type':'application/json'}})
-        );
-      })
-    );
+    event.respondWith(cacheFirstWithNetworkFallback(event.request, url));
     return;
   }
 
-  // ─── Network-first pour HTML, autres JSON (questions, manifest, counts,
-  //     scenes/index.json)
-  if (isHTML || isJSON) {
-    event.respondWith(
-      fetch(event.request).then(response => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_VERSION).then(cache => cache.put(event.request, clone));
-        }
-        return response;
-      }).catch(() => {
-        return caches.match(event.request).then(cached => {
-          if (cached) return cached;
-          if (isHTML) return caches.match(OFFLINE_FALLBACK);
-          return new Response(JSON.stringify({error:'offline'}),
-            {status:503, headers:{'Content-Type':'application/json'}});
-        });
-      })
-    );
-  } else {
-    // Cache First : CSS, JS, images
-    event.respondWith(
-      caches.match(event.request).then(cached => {
-        return cached || fetch(event.request).then(response => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_VERSION).then(cache => cache.put(event.request, clone));
-          }
-          return response;
-        }).catch(() => {
-          // Pour les ressources non-HTML : retourner 503 plutôt que de planter
-          return new Response('', {status:503, statusText:'Offline'});
-        });
-      })
-    );
+  // ─── Stale-while-revalidate pour CSS et JS ───
+  // Sert le cache immédiatement (snappy) MAIS refetch en background pour
+  // que la prochaine visite ait la dernière version. Combiné au bump du
+  // CACHE_VERSION à chaque déploiement, ça réduit fortement le risque de
+  // rester coincé sur une vieille version JS/CSS.
+  if (isCSS || isJS) {
+    event.respondWith(staleWhileRevalidate(event.request));
+    return;
   }
+
+  // ─── Network-first pour HTML / autres JSON ───
+  if (isHTML || isJSON) {
+    event.respondWith(networkFirst(event.request, isHTML));
+    return;
+  }
+
+  // ─── Cache-first pour le reste (images, fonts, ...) ───
+  event.respondWith(cacheFirstWithNetworkFallback(event.request));
 });
+
+// ───────────────────────────────────────────────────────────
+// Stratégies (helpers)
+// ───────────────────────────────────────────────────────────
+
+function networkFirst(request, isHTML) {
+  return fetch(request).then(response => {
+    if (response.ok) {
+      const clone = response.clone();
+      caches.open(CACHE_VERSION).then(cache => cache.put(request, clone));
+    }
+    return response;
+  }).catch(() =>
+    caches.match(request).then(cached => {
+      if (cached) return cached;
+      if (isHTML) return caches.match(OFFLINE_FALLBACK);
+      return new Response(JSON.stringify({ error: 'offline' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    })
+  );
+}
+
+function cacheFirstWithNetworkFallback(request, url) {
+  return caches.match(request).then(cached => {
+    if (cached) return cached;
+    return fetch(request).then(response => {
+      if (response.ok) {
+        const clone = response.clone();
+        caches.open(CACHE_VERSION).then(cache => cache.put(request, clone));
+      }
+      return response;
+    }).catch(() => {
+      if (url) {
+        // Cas spécial scène : retourner un JSON parlant
+        return new Response(
+          JSON.stringify({
+            error: 'offline',
+            scene: url.pathname.split('/').pop().replace('.json', ''),
+          }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      return new Response('', { status: 503, statusText: 'Offline' });
+    });
+  });
+}
+
+function staleWhileRevalidate(request) {
+  return caches.open(CACHE_VERSION).then(cache =>
+    cache.match(request).then(cached => {
+      const networkFetch = fetch(request).then(response => {
+        if (response.ok) cache.put(request, response.clone());
+        return response;
+      }).catch(() => null);
+      // Si on a un cache, on le sert immédiatement et on laisse le fetch tourner
+      // en background pour rafraîchir le cache pour la prochaine visite.
+      // Si pas de cache, on attend le réseau.
+      return cached || networkFetch || new Response('', { status: 503 });
+    })
+  );
+}
