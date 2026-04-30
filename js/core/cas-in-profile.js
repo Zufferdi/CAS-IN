@@ -10,13 +10,20 @@
   'use strict';
 
   const PROFILE_KEY = 'casIn_profile';
-  const PROFILE_VERSION = 2;
+  const PROFILE_VERSION = 3;
 
   // ───────────────────────────────────────────────────────────
   // Échelles XP : mêmes seuils pour les 4 tracks (XP universelle)
   // ───────────────────────────────────────────────────────────
 
-  const XP_THRESHOLDS = [0, 250, 500, 1000, 1800, 2800, 4200, 6500, 10000, 15000, 25000, 40000];
+  // v3 (avril 2026) — Courbe lissée : progression plus régulière, cap à 17 950 XP.
+  // Sauts : 250, 300, 400, 600, 800, 1100, 1500, 2000, 2500, 3500, 5000.
+  // Migration douce depuis v2 : conversion proportionnelle, rang préservé.
+  const XP_THRESHOLDS = [0, 250, 550, 950, 1550, 2350, 3450, 4950, 6950, 9450, 12950, 17950];
+
+  // v2 (legacy) — Conservé uniquement pour la migration v2 → v3.
+  const XP_THRESHOLDS_V2 = [0, 250, 500, 1000, 1800, 2800, 4200, 6500, 10000, 15000, 25000, 40000];
+
   const CLEARANCE_BY_RANK = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5];
 
   // ───────────────────────────────────────────────────────────
@@ -198,15 +205,18 @@
   function ensureProfile() {
     let p = lsGet(PROFILE_KEY, null);
 
-    // Pas de profil → créer + migration legacy une seule fois
+    // Pas de profil → créer + migration legacy une seule fois.
+    // Les compteurs legacy sont sur l'échelle v2, donc on rééchelonne v2→v3
+    // pour conserver le rang attendu par l'utilisateur.
     if (!p || typeof p !== 'object') {
       p = buildInitialProfile();
       migrateLegacyToProfile(p);
+      migrateXpV2ToV3(p);
       lsSet(PROFILE_KEY, p);
       return p;
     }
 
-    // Profil v=1 (F1) → upgrader vers v=2 sans perte
+    // Profil v=1 (F1) → upgrader vers v=3 sans perte (v=2 a été ré-échelonné)
     if (p.v === 1) {
       const fresh = buildInitialProfile();
       // Conserver pseudo et préférences
@@ -219,15 +229,76 @@
       } else {
         fresh.migrated = true;
       }
+      // L'XP reconstituée depuis les clés legacy est sur l'échelle v2.
+      // On la rééchelonne pour la cohérence avec les seuils v3.
+      migrateXpV2ToV3(fresh);
       lsSet(PROFILE_KEY, fresh);
       return fresh;
     }
 
-    // Profil v=2 OK
+    // Profil v=2 (échelle XP exponentielle) → upgrader vers v=3 (lissée)
+    if (p.v === 2) {
+      migrateXpV2ToV3(p);
+      p.v = 3;
+      lsSet(PROFILE_KEY, p);
+      return p;
+    }
+
+    // Profil v=3 OK
     if (p.v === PROFILE_VERSION) return p;
 
     // Version inconnue plus récente → on ne touche pas
     return p;
+  }
+
+  /**
+   * Migration v2 → v3 : conversion proportionnelle de l'XP pour préserver
+   * EXACTEMENT le rang courant après changement de la courbe XP.
+   *
+   * Algorithme : on identifie le rang actuel et la progression au sein du
+   * rang (0–1) avec les anciens seuils, puis on calcule la nouvelle XP qui
+   * place le user au même rang avec la même progression sur la nouvelle
+   * échelle. L'XP par source (quiz/scene) est recalibrée par ratio pour
+   * préserver l'invariant `xp = xpQuiz + xpScene`.
+   *
+   * Exemples :
+   *   - 28 000 XP (rang 10, 20% du palier) → 13 950 XP (rang 10, 20%)
+   *   - 1 000 XP (rang 3, 0%) → 950 XP (rang 3, 0%)
+   *   - 40 000 XP (rang max) → 17 950 XP (rang max)
+   */
+  function migrateXpV2ToV3(profile) {
+    const xpOld = profile.xp || 0;
+    if (xpOld <= 0) return; // 0 XP : rien à migrer
+
+    // Identifier l'ancien rang + progress dans le rang
+    let idx = 0;
+    for (let i = XP_THRESHOLDS_V2.length - 1; i >= 0; i--) {
+      if (xpOld >= XP_THRESHOLDS_V2[i]) { idx = i; break; }
+    }
+    const oldMin  = XP_THRESHOLDS_V2[idx];
+    const oldNext = idx + 1 < XP_THRESHOLDS_V2.length ? XP_THRESHOLDS_V2[idx + 1] : oldMin;
+    const oldRange = oldNext - oldMin;
+    const progress = oldRange > 0 ? (xpOld - oldMin) / oldRange : 0;
+
+    // Recalculer XP avec les nouveaux seuils, même rang + même progression
+    const newMin  = XP_THRESHOLDS[idx];
+    const newNext = idx + 1 < XP_THRESHOLDS.length ? XP_THRESHOLDS[idx + 1] : newMin;
+    const newRange = newNext - newMin;
+    const xpNew = Math.round(newMin + progress * newRange);
+
+    // Appliquer le ratio aux compteurs xpBySource pour préserver
+    // l'invariant : xp = xpBySource.quiz + xpBySource.scene
+    const ratio = xpOld > 0 ? xpNew / xpOld : 1;
+    if (profile.xpBySource) {
+      profile.xpBySource.quiz  = Math.round((profile.xpBySource.quiz  || 0) * ratio);
+      profile.xpBySource.scene = Math.round((profile.xpBySource.scene || 0) * ratio);
+      // Correction d'arrondi : recaler la somme exacte sur quiz pour cohérence
+      const sum = profile.xpBySource.quiz + profile.xpBySource.scene;
+      if (sum !== xpNew) {
+        profile.xpBySource.quiz += (xpNew - sum);
+      }
+    }
+    profile.xp = xpNew;
   }
 
   /**
