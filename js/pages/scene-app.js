@@ -871,25 +871,45 @@ function getXP() {
   return lsGet('cas_xp', 0);
 }
 
-function addXP(amount) {
+function addXP(amount, tags) {
   const prev = getXP();
-  const next = Math.max(0, prev + amount);
+  // Préfère la voie directe Profile.addXp (qui applique le bonus thématique
+  // selon le rôle actif si tags fournis). Sinon fallback legacy via cas_xp.
+  let gained = amount;
+  let bonus = 0;
+  let multiplier = 1.0;
+  let profileApplied = false;
+  if (window.Profile && typeof window.Profile.addXp === 'function' && Array.isArray(tags)) {
+    const r = window.Profile.addXp(amount, 'scene', { tags });
+    if (r) {
+      gained = r.gained;
+      bonus = r.bonus || 0;
+      multiplier = r.multiplier || 1.0;
+      profileApplied = true;
+    }
+  }
+  const next = Math.max(0, prev + gained);
+
+  // Si Profile.addXp a déjà été appelé, le bridge va re-intercepter
+  // l'écriture de 'cas_xp' et ajouter encore le delta → double comptage.
+  // Pour l'éviter on positionne un flag que le bridge sait reconnaître.
+  if (profileApplied) {
+    try { window.__casInProfileApplied = true; } catch {}
+  }
   lsSet('cas_xp', next);
+  if (profileApplied) {
+    try { window.__casInProfileApplied = false; } catch {}
+  }
 
   // Rank-up via Profile (échelle v3 lissée). Fallback sur GRADES legacy
   // si Profile indisponible (cas hors-PWA).
   let gradeUp = false;
   let gradeUpName = '';
   if (window.Profile && typeof window.Profile.getRank === 'function') {
-    // Profile.getRank() lit p.xp en interne. On compare AVANT/APRÈS l'écriture
-    // d'XP (ici on n'a pas encore écrit dans Profile, donc on doit comparer
-    // via le diff cas_xp seul, en s'appuyant sur les seuils v3 indirectement).
-    // Astuce simple : recalculer le rang à partir des seuils Profile exposés.
     const ladder = window.Profile.getTrackLadder
       ? window.Profile.getTrackLadder()
       : null;
     if (ladder && ladder.length) {
-      // ladder est [{name, emoji, min, ...}, …] — on récupère idx pour prev et next
       const findIdx = xp => {
         let idx = 0;
         for (let i = ladder.length - 1; i >= 0; i--) {
@@ -909,7 +929,7 @@ function addXP(amount) {
     gradeUpName = getGrade(next).title;
   }
 
-  return { prev, next, gradeUp, gradeUpName };
+  return { prev, next, gradeUp, gradeUpName, base: amount, gained, bonus, multiplier };
 }
 
 function updateGradeDisplay() {
@@ -2065,8 +2085,9 @@ function showReport() {
   const baseXP = Math.round(pct * diffMult * modeMult * 0.8);
   const xpGained = Math.round(baseXP * sBonus);
 
-  // Save XP
-  const xpResult = addXP(xpGained);
+  // Save XP — passe les tags de la scène pour activer le bonus thématique
+  // (Profile.addXp applique +20% si un tag matche le rôle choisi)
+  const xpResult = addXP(xpGained, scene.tags || []);
 
   // No-critical-error streak
   if (!G.hadCriticalError) {
@@ -2346,7 +2367,8 @@ function showReport() {
 
     <div class="xp-gained">
       <span class="xp-gained-icon">✨</span>
-      <span class="xp-gained-text">+${xpGained} XP</span>
+      <span class="xp-gained-text">+${xpResult.gained != null ? xpResult.gained : xpGained} XP</span>
+      ${(xpResult.multiplier && xpResult.multiplier > 1) ? `<span class="xp-gained-role-bonus" title="Bonus de spécialité du rôle choisi">🎯 Bonus rôle ×${xpResult.multiplier.toFixed(2)} (+${xpResult.bonus || 0} XP)</span>` : ''}
       ${streakBonusHTML}
       ${gradeUpHTML}
     </div>

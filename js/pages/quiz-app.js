@@ -1354,15 +1354,18 @@
  };
  }
 
- function addXp(pts) {
- const prev = getRank(S.xp);
- S.xp += pts;
- lsSet('xp', S.xp);
- const curr = getRank(S.xp);
- updateXpBar();
- updateRankFlavor();
- if (curr.idx > prev.idx) {
- showRankUp(curr.rank);
+ function addXp(pts, contextTags) {
+   const prev = getRank(S.xp);
+   S.xp += pts;
+   // Publication des tags pour le bridge (lecture juste avant lsSet('xp'))
+   try { window.__casInBonusTags = Array.isArray(contextTags) ? contextTags.slice() : null; } catch {}
+   lsSet('xp', S.xp);
+   try { window.__casInBonusTags = null; } catch {}
+   const curr = getRank(S.xp);
+   updateXpBar();
+   updateRankFlavor();
+   if (curr.idx > prev.idx) {
+     showRankUp(curr.rank);
  checkMilestoneByRank(curr.idx);
  } else {
  // Toast when close to next rank
@@ -1636,7 +1639,7 @@
           S.streak++;
           S.maxStreak = Math.max(S.maxStreak, S.streak);
           S.maxCombo = Math.max(S.maxCombo, S.streak);
-          addXp(Math.max(1, Math.round(pts * hintPenalty)) + speedBonus);
+          addXp(Math.max(1, Math.round(pts * hintPenalty)) + speedBonus, q.theme ? [q.theme] : null);
           if (speedBonus) showToast('combo-toast', '⚡ Speed bonus +1 XP !', 1500);
           checkDorOffer();
           if (STREAK_MSGS[S.streak]) showToast('streak-toast', STREAK_MSGS[S.streak]);
