@@ -1,4 +1,11 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v35 : courbe XP lissée — seuils v3 [0, 250, 550, 950, 1550, 2350, 3450, 4950,
+//       6950, 9450, 12950, 17950] (cap 17950 vs 40000) avec migration v2→v3
+//       par conversion proportionnelle qui PRÉSERVE le rang exact de chaque user.
+// v34 : profile ladder repliable (n'affiche que rang courant par défaut)
+//       + bouton ← PRÉCÉDENT (history.back), fiche-icon font-fallback emoji,
+//       counts.json à jour (95 scènes, 1750 questions, 96 fiches), fallbacks
+//       HTML actualisés, suppression READMEs livrables temporaires
 // v33 : palette score 5 paliers étendue au lobby (status badge, leaderboard
 //       pills, skill-tree nodes) — la couleur du % suit le palier, pas le rang
 // v32 : ajout 5 scènes (CyberStratVS valaisanne, LSI/LPD timing, référent
@@ -22,7 +29,7 @@
 // v22 : extraction du JS inline de quiz.html → js/quiz-app.js (cache séparé)
 // v21 : alignement v2.4 (post-cleanup) — STATIC_ASSETS auto-régénéré
 //       depuis manifest.json + filesystem (90 fiches au lieu de 47)
-const CACHE_VERSION = 'cas-in-v33';
+const CACHE_VERSION = 'cas-in-v35';
 
 const STATIC_ASSETS = [
   // Pages racine
