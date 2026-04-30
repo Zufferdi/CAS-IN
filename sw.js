@@ -1,4 +1,7 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v32 : ajout 5 scènes (CyberStratVS valaisanne, LSI/LPD timing, référent
+//       milice, FluBot+BEC cascade, audit ISAE 3402) + palette score 5 paliers
+//       (rouge foncé / orange / vert clair / vert moyen / vert vif)
 // v31 : v2.10 cleaning — extraction des <style> inline (scene/tp/tools/exam.html)
 //       vers fichiers CSS dédiés + suppression scores doublons quiz/scene
 //       (info canonique désormais unique dans profile-banner)
@@ -17,7 +20,7 @@
 // v22 : extraction du JS inline de quiz.html → js/quiz-app.js (cache séparé)
 // v21 : alignement v2.4 (post-cleanup) — STATIC_ASSETS auto-régénéré
 //       depuis manifest.json + filesystem (90 fiches au lieu de 47)
-const CACHE_VERSION = 'cas-in-v31';
+const CACHE_VERSION = 'cas-in-v32';
 
 const STATIC_ASSETS = [
   // Pages racine
