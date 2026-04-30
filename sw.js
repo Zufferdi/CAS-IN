@@ -1,4 +1,11 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v37 : Stratégie 1 — bonus XP thématique par rôle (+20%) RÉELLEMENT branché.
+//       Cleanup : 3 systèmes de bonus redondants ramenés à 1 seul (~150 lignes
+//       mortes supprimées dans cas-in-profile.js). Bridges quiz+scene
+//       transmettent les tags via window.__casInBonusTags. Fix double-comptage
+//       scene-app/bridge via flag __casInProfileApplied. Toast bonus rôle dans
+//       le rapport de fin de scène. Section « Spécialité » dans profile.html
+//       qui liste les tags +20% du rôle choisi.
 // v36 : 3 fixes — (a) scene.html grade-card branchée sur Profile.getRank
 //       au lieu du système GRADES legacy 100/200/.../1500 XP ;
 //       (b) fiches/index.html resync depuis manifest.json (77 icônes
@@ -35,7 +42,7 @@
 // v22 : extraction du JS inline de quiz.html → js/quiz-app.js (cache séparé)
 // v21 : alignement v2.4 (post-cleanup) — STATIC_ASSETS auto-régénéré
 //       depuis manifest.json + filesystem (90 fiches au lieu de 47)
-const CACHE_VERSION = 'cas-in-v36';
+const CACHE_VERSION = 'cas-in-v37';
 
 const STATIC_ASSETS = [
   // Pages racine
