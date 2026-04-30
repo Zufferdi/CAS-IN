@@ -60,6 +60,9 @@
     // Track label dynamique dans le sub-header
     setText('profile-dossier-label', getDossierLabel(snap.agent.track));
 
+    // Titre équipé (sous le rang)
+    renderTitleLine(snap);
+
     // XP
     setText('profile-xp-big', fmtNumber(snap.xp));
     const fill = $('profile-xp-fill');
@@ -148,6 +151,139 @@
       case 'investigator':
       default:            return 'DOSSIER ENQUÊTEUR';
     }
+  }
+
+  // ───────────────────────────────────────────────────────────
+  // Titre équipé (rendu + modale)
+  // ───────────────────────────────────────────────────────────
+
+  function renderTitleLine(snap) {
+    const line = $('profile-title-line');
+    if (!line) return;
+    if (!window.ProfileTitles) {
+      line.hidden = true;
+      return;
+    }
+    const equipped = window.ProfileTitles.getEquipped(snap);
+    line.hidden = false;
+    if (equipped) {
+      line.innerHTML = `
+        <span class="profile-title-icon">★</span>
+        <span class="profile-title-label">${escapeHtml(equipped.label)}</span>
+        <span class="profile-title-flavor">${escapeHtml(equipped.desc)}</span>
+      `;
+    } else {
+      line.innerHTML = `
+        <span class="profile-title-icon profile-title-icon--dim">☆</span>
+        <span class="profile-title-empty">Aucun titre équipé</span>
+      `;
+    }
+  }
+
+  function openTitleModal() {
+    const modal = $('profile-title-modal');
+    if (!modal || !window.Profile || !window.ProfileTitles) return;
+    renderTitleModalGrid();
+    modal.hidden = false;
+  }
+
+  function closeTitleModal() {
+    const modal = $('profile-title-modal');
+    if (modal) modal.hidden = true;
+  }
+
+  function renderTitleModalGrid() {
+    const wrap = $('profile-title-grid');
+    if (!wrap || !window.Profile || !window.ProfileTitles) return;
+    const snap = window.Profile.snapshot();
+    const equippedId = snap.preferences && snap.preferences.equippedTitle;
+    const grouped = window.ProfileTitles.byCategory();
+    const cats = window.ProfileTitles.CATEGORIES;
+
+    wrap.innerHTML = '';
+
+    // Option "Aucun titre" en premier
+    const noneCard = document.createElement('button');
+    noneCard.type = 'button';
+    noneCard.className = 'profile-title-card profile-title-card--none';
+    if (!equippedId) noneCard.classList.add('is-equipped');
+    noneCard.innerHTML = `
+      <span class="profile-title-card-icon">☆</span>
+      <div class="profile-title-card-body">
+        <div class="profile-title-card-label">Aucun titre</div>
+        <div class="profile-title-card-desc">Profil sobre, sans tag.</div>
+      </div>
+      ${(!equippedId) ? '<span class="profile-title-card-badge">◉ Équipé</span>' : ''}
+    `;
+    noneCard.addEventListener('click', () => {
+      window.Profile.setEquippedTitle(null);
+      closeTitleModal();
+    });
+    wrap.appendChild(noneCard);
+
+    cats.forEach(cat => {
+      const items = grouped[cat] || [];
+      if (!items.length) return;
+      const unlockedItems = items.filter(t => {
+        try { return !!t.check(snap); } catch (_) { return false; }
+      });
+      const totalCount = items.length;
+
+      const header = document.createElement('div');
+      header.className = 'profile-title-cat-header';
+      header.innerHTML = `
+        <span class="profile-title-cat-name">${escapeHtml(cat)}</span>
+        <span class="profile-title-cat-count">${unlockedItems.length} / ${totalCount}</span>
+      `;
+      wrap.appendChild(header);
+
+      items.forEach(t => {
+        let unlocked = false;
+        try { unlocked = !!t.check(snap); } catch (_) {}
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'profile-title-card';
+        if (!unlocked) card.classList.add('is-locked');
+        if (equippedId === t.id) card.classList.add('is-equipped');
+
+        card.innerHTML = `
+          <span class="profile-title-card-icon">${unlocked ? '★' : '🔒'}</span>
+          <div class="profile-title-card-body">
+            <div class="profile-title-card-label">${escapeHtml(t.label)}</div>
+            <div class="profile-title-card-desc">${escapeHtml(t.desc)}</div>
+          </div>
+          ${equippedId === t.id ? '<span class="profile-title-card-badge">◉ Équipé</span>' : ''}
+        `;
+
+        if (unlocked) {
+          card.addEventListener('click', () => {
+            window.Profile.setEquippedTitle(t.id);
+            closeTitleModal();
+          });
+        } else {
+          card.disabled = true;
+          card.title = 'Titre verrouillé — débloque l\'achievement associé.';
+        }
+
+        wrap.appendChild(card);
+      });
+    });
+  }
+
+  function bindTitle() {
+    const btn = $('profile-edit-title');
+    const close = $('profile-title-close');
+    const backdrop = $('profile-title-backdrop');
+
+    if (btn) btn.addEventListener('click', openTitleModal);
+    if (close) close.addEventListener('click', closeTitleModal);
+    if (backdrop) backdrop.addEventListener('click', closeTitleModal);
+
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      const modal = $('profile-title-modal');
+      if (modal && !modal.hidden) closeTitleModal();
+    });
   }
 
   function renderLadder(currentIdx, trackKey) {
@@ -571,6 +707,7 @@
     render();
     bindActions();
     bindPseudo();
+    bindTitle();
     window.Profile.onChange(render);
   }
 

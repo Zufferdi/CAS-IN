@@ -1,7 +1,7 @@
 /* ============================================================
-   CAS-IN · profile-banner.js (F2)
+   CAS-IN · profile-banner.js (F2 + titres v3)
    Mini-bandeau de profil sur quiz.html / scene.html / tp.html.
-   Affiche : pseudo · grade · XP total · streak · delta de session.
+   Affiche : pseudo · titre (si équipé) · grade · XP total · streak · delta.
    Auto-refresh via Profile.onChange().
    ============================================================ */
 
@@ -61,19 +61,31 @@
       }
     })();
 
+    // Titre équipé : récupéré via ProfileTitles si dispo
+    let equippedTitle = null;
+    if (window.ProfileTitles && typeof window.ProfileTitles.getEquipped === 'function') {
+      equippedTitle = window.ProfileTitles.getEquipped(snap);
+    }
+
     _bannerEl.innerHTML = '';
     const inner = document.createElement('div');
     inner.className = 'profile-banner__inner';
 
-    // Bloc gauche : identité
+    // Bloc gauche : identité (pseudo + titre + rang)
     const left = document.createElement('a');
     left.href = 'profile.html';
     left.className = 'profile-banner__id';
     left.title = 'Voir mon dossier';
+
+    const titleHtml = equippedTitle
+      ? `<span class="profile-banner__title" title="${escapeHtml(equippedTitle.desc)}">★ ${escapeHtml(equippedTitle.label)}</span><span class="profile-banner__sep">·</span>`
+      : '';
+
     left.innerHTML = `
       <span class="profile-banner__icon">${trackIcon}</span>
       <span class="profile-banner__name">${escapeHtml(snap.agent.name)}</span>
       <span class="profile-banner__sep">·</span>
+      ${titleHtml}
       <span class="profile-banner__rank">${snap.rank.emoji} ${escapeHtml(snap.rank.name)}</span>
     `;
     inner.appendChild(left);
