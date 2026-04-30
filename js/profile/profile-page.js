@@ -52,6 +52,17 @@
 
     // Hero
     setText('profile-rank-emoji', snap.rank.emoji);
+    // v3 : tier visuel pour le cadre/glow par rang (0..4)
+    //   idx 0..2 → 0 (stagiaire)
+    //   idx 3..5 → 1 (bronze)
+    //   idx 6..8 → 2 (argent)
+    //   idx 9..11 → 3 (or)
+    //   idx 12..14 → 4 (légende)
+    const emojiEl = $('profile-rank-emoji');
+    if (emojiEl) {
+      const tier = Math.min(4, Math.floor((snap.rank.idx || 0) / 3));
+      emojiEl.setAttribute('data-rank-tier', String(tier));
+    }
     setText('profile-agent-name', snap.agent.name);
     setText('profile-rank-name', snap.rank.name);
     setText('profile-clearance', `Clearance lvl ${snap.rank.clearance}`);
@@ -709,6 +720,14 @@
     bindPseudo();
     bindTitle();
     window.Profile.onChange(render);
+
+    // Version SW (asynchrone, silencieux si indisponible)
+    if (window.CasInPwa && typeof window.CasInPwa.getVersion === 'function') {
+      window.CasInPwa.getVersion().then(v => {
+        const el = document.getElementById('profile-sw-version');
+        if (el) el.textContent = v || 'inconnue';
+      });
+    }
   }
 
   if (document.readyState === 'loading') {
