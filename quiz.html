@@ -23,12 +23,17 @@
     <link rel="stylesheet" href="style/style.css">
     <link rel="stylesheet" href="style/quiz.css">
     <link rel="stylesheet" href="style/profile-banner.css">
-    <script src="js/cas-in-profile.js" defer></script>
-<script src="js/profile-track-v5.js" defer></script>
-    <script src="js/quiz-profile-bridge.js" defer></script>
-    <script src="js/cas-in-counts.js" defer></script>
-    <script src="js/cas-in-pwa.js" defer></script>
-    <script src="js/cas-in-search.js" defer></script>
+    <!-- ⚠ ORDRE CRITIQUE — ne pas réordonner :
+         1. cas-in-profile.js définit window.Profile (source de vérité)
+         2. profile-track-v5.js / quiz-profile-bridge.js dépendent de Profile
+         3. quiz-app.js (chargé en bas) lit/écrit via le bridge
+         Voir ARCHITECTURE.md § « Couches & ordre de chargement ». -->
+    <script src="js/core/cas-in-profile.js" defer></script>
+    <script src="js/profile/profile-track-v5.js" defer></script>
+    <script src="js/bridges/quiz-profile-bridge.js" defer></script>
+    <script src="js/core/cas-in-counts.js" defer></script>
+    <script src="js/core/cas-in-pwa.js" defer></script>
+    <script src="js/core/cas-in-search.js" defer></script>
   </head>
   <body>
     <h1 class="sr-only">Quiz CAS-IN — Investigation Numérique Forensique</h1>
@@ -105,12 +110,13 @@
       <span id="db-info"></span>
       <span id="db-score" class="db-score"></span>
       <button type="button" class="db-btn" id="db-btn" onclick="startDailyChallenge()">Jouer</button>
-      <button type="button" class="banner-cta" onclick="document.getElementById('daily-banner').style.display='none'" aria-label="Masquer le défi du jour">✕</button>
+      <button type="button" class="banner-cta" onclick="dismissDailyBanner()" aria-label="Masquer le défi du jour pour aujourd'hui">✕</button>
     </div>
     <button type="button" id="focus-exit" onclick="toggleFocusMode()">✕ Quitter le focus</button>
     <header>
 
-  <!-- ZONE GAUCHE : logo + identité + navigation -->
+  <!-- ZONE GAUCHE : logo + navigation
+       (Phase 2 v2.10 : avatar-chip retiré — info redondante avec profile-banner) -->
   <div class="hdr-left">
     <svg class="hdr-left-svg" width="28" height="28" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
       <circle cx="18" cy="18" r="17" fill="none" stroke="#00e5cc" stroke-width="1.5" opacity=".7"/>
@@ -118,42 +124,14 @@
       <circle cx="24" cy="22" r="4" fill="none" stroke="#f0c040" stroke-width="1.5"/>
       <line x1="27" y1="25" x2="30" y2="28" stroke="#f0c040" stroke-width="2" stroke-linecap="round"/>
     </svg>
-    <div id="avatar-chip" onclick="openAvatarSetup()" title="Modifier profil">
-      <span id="avatar-emoji">🔰</span>
-      <span id="avatar-name">Enquêteur</span>
-    </div>
-    <div class="hdr-sep"></div>
     <a href="index.html" class="hdr-navbtn" title="Accueil">🏠 Accueil</a>
     <a href="fiches/index.html" class="hdr-navbtn" title="Fiches de révision" target="_blank" rel="noopener noreferrer">📄 Fiches</a>
   </div>
 
-  <!-- ZONE CENTRE : jauge unifiée XP+rang+streak -->
-  <div class="hdr-center">
-    <div id="xp-wrap" class="xp-gauge" title="Progression : XP, rang et série quotidienne">
-      <!-- Anneau XP + emoji rang (compact) -->
-      <div id="xp-ring-wrap">
-        <svg id="xp-ring-svg" viewBox="0 0 36 36" width="28" height="28">
-          <defs>
-            <linearGradient id="xp-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#a78bfa"/>
-              <stop offset="100%" stop-color="#c084fc"/>
-            </linearGradient>
-          </defs>
-          <circle id="xp-ring-bg" cx="18" cy="18" r="14" fill="none" stroke="rgba(167,139,250,.15)" stroke-width="2.5"/>
-          <circle id="xp-ring-fill" cx="18" cy="18" r="14" fill="none" stroke="url(#xp-grad)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="87.96" stroke-dashoffset="87.96" transform="rotate(-90 18 18)"/>
-        </svg>
-        <span id="rank-emoji-display">🔰</span>
-      </div>
-      <!-- Bloc texte : rang + streak alignés -->
-      <div class="xp-gauge-text">
-        <span id="rank-badge">Stagiaire</span>
-        <span class="xp-gauge-streak" title="Série quotidienne">
-          <span id="streak-display">🔥 0</span>
-          <button aria-label="Utiliser un Streak Freeze" type="button" id="freeze-btn" onclick="useStreakFreeze()" title="Streak Freeze">🧊<span id="fz-badge">1</span></button>
-        </span>
-      </div>
-    </div>
-  </div>
+  <!-- ZONE CENTRE : vide depuis la Phase 2 v2.10
+       (#xp-wrap retiré — rang/XP/streak quotidien sont dans profile-banner.
+       Les éléments de gameplay (combo, score session) restent dans la card-top.) -->
+  <div class="hdr-center"></div>
 
   <!-- ZONE DROITE : actions principales + menu Plus -->
   <div class="hdr-right">
@@ -188,10 +166,12 @@
     </div>
     <button aria-label="Ouvrir le bilan" type="button" class="hdr-action" onclick="openBilan()" title="Bilan">📊 Bilan</button>
     <button aria-label="Ouvrir les succès" type="button" class="hdr-action" onclick="openAchievements()" title="Succès">🏅 Succès</button>
-    <!-- Menu compact ⋯ : aide, son, focus -->
+    <!-- Menu compact ⋯ : profil, aide, son, focus, freeze -->
     <div class="hdr-dropdown" id="more-dropdown">
       <button aria-label="Plus d'options" type="button" class="hdr-action hdr-action-more" onclick="toggleMoreMenu()" title="Plus">⋯</button>
       <div class="hdr-dropdown-menu" id="more-menu">
+        <button type="button" onclick="openAvatarSetup(); closeMoreMenu()" class="hdr-dropdown-item" title="Modifier ton pseudo et avatar"><span>👤</span> Modifier profil</button>
+        <button type="button" id="freeze-btn" onclick="useStreakFreeze(); closeMoreMenu()" class="hdr-dropdown-item" title="Streak Freeze (préserve la série quotidienne)"><span>🧊</span> Streak Freeze <span id="fz-badge" class="menu-badge"></span></button>
         <button type="button" onclick="openHelp(); closeMoreMenu()" class="hdr-dropdown-item"><span>❓</span> Raccourcis (?)</button>
         <button type="button" id="sound-btn" onclick="toggleSound()" class="hdr-dropdown-item"><span>🔊</span> <span id="sound-label">Son activé</span></button>
         <button type="button" onclick="toggleFocusMode(); closeMoreMenu()" class="hdr-dropdown-item"><span>🎯</span> Mode Focus (F)</button>
@@ -452,9 +432,9 @@
         <button type="button" id="ms-close" onclick="closeMilestone()">Super !</button>
       </div>
     </div>
-    <script src="js/quiz-app.js" defer></script>
-    <script src="js/quiz-ui-patch.js" defer></script>
-    <script src="js/profile-banner.js" defer></script>
+    <script src="js/pages/quiz-app.js" defer></script>
+    <script src="js/pages/quiz-ui-patch.js" defer></script>
+    <script src="js/profile/profile-banner.js" defer></script>
     <!-- AVATAR SETUP -->
     <div class="overlay" tabindex="-1" id="avatar-overlay">
       <div class="panel">

@@ -17,15 +17,22 @@ Chaque exercice TP est **régénéré aléatoirement** à chaque passage — ce 
 
 ## Architecture
 
+> Vue d'ensemble. Pour le détail (couches, ordre de chargement, mapping localStorage,
+> dette technique), voir **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+
 ```
 CAS-IN/
 ├── index.html              # Landing (Matrix rain, drawer profil, raccourcis B/V/O/R)
-├── quiz.html               # 1630 questions gamifiées
+├── quiz.html               # 1750 questions gamifiées
 ├── tp.html                 # 25 catégories TP avec sidebar
 ├── scene.html              # 90 scénarios DFIR
 ├── tools.html              # Outils & cheatsheets
 ├── exam.html               # Mode examen blanc
+├── profile.html            # Dossier enquêteur (rang, XP, ladder, badges, export)
 ├── offline.html            # Page fallback hors-ligne (PWA)
+│
+├── ARCHITECTURE.md         # ⭐ Documentation des couches & ordre de chargement
+├── CHANGELOG.md            # Keep-a-Changelog
 │
 ├── manifest.json           # Source de vérité : 95 fiches × 7 catégories
 ├── pwa.manifest.json       # Manifest PWA (W3C)
@@ -36,35 +43,59 @@ CAS-IN/
 │   ├── index.json          # Méta-index (~64 KB)
 │   └── *.json              # Une scène par fichier (~30 KB chacune)
 │
-├── style/
-│   ├── landing.css         # Style landing
-│   ├── style.css           # Style commun (quiz)
-│   ├── tp.css              # Style TP
-│   ├── scene.css           # Style scène
-│   └── fiche_style.css     # Style fiches
+├── style/                  # ⭐ v2.10 : tous les <style> inline extraits
+│   ├── landing.css
+│   ├── style.css           # Commun (quiz + base)
+│   ├── quiz.css
+│   ├── scene.css           # Extrait de scene.html en v2.10 (87 KB → fichier dédié)
+│   ├── tp.css              # Moteur TP (zones d'exercices)
+│   ├── tp-page.css         # Chrome de tp.html (extrait en v2.10)
+│   ├── tools.css           # Extrait de tools.html en v2.10
+│   ├── exam.css            # Extrait de exam.html en v2.10
+│   ├── profile.css
+│   ├── profile-banner.css  # Bandeau transversal (quiz/scene/tp)
+│   └── fiche_style.css
 │
-├── js/
-│   ├── landing.js          # Pluie Matrix, progression, navigation
-│   ├── cas-in-counts.js    # Patche les <span data-count="..."> au runtime
-│   ├── cas-in-pwa.js       # Enregistre le SW + détection update
-│   └── cas-in-search.js    # Recherche globale Ctrl+K (fiches + questions + TP + scènes)
+├── js/                     # ⭐ v2.10 : réorganisé en 4 couches
+│   ├── core/               # Source de vérité + services partagés
+│   │   ├── cas-in-profile.js     # XP/rang/streak/agent — UNIQUE source de vérité
+│   │   ├── cas-in-counts.js      # Patche <span data-count> au runtime
+│   │   ├── cas-in-export.js      # Export/import du profil JSON
+│   │   ├── cas-in-pwa.js         # Enregistrement SW + détection update
+│   │   └── cas-in-search.js      # Recherche globale Ctrl+K
+│   ├── profile/            # Composants UI du profil
+│   │   ├── profile-banner.js     # Bandeau transversal (rang · XP · streak)
+│   │   ├── profile-page.js       # Logique de profile.html
+│   │   └── profile-track-v5.js   # Sélecteur 4 tracks + promotions
+│   ├── bridges/            # ⚠ Dette tech : intercepte localStorage des pages
+│   │   ├── quiz-profile-bridge.js
+│   │   ├── scene-profile-bridge.js
+│   │   └── tp-profile-bridge.js
+│   └── pages/              # Apps spécifiques par page
+│       ├── landing.js, landing-3d.js
+│       ├── quiz-app.js, quiz-ui-patch.js
+│       ├── scene-app.js, scene-engine-v4.js, scene-lobby-v3.js, scene-ux-patch.js
+│       ├── exam-app.js
+│       └── tools-app.js
 │
 ├── tp/
 │   ├── tp-data.js
 │   └── tp-engine.js        # Générateurs d'exercices aléatoires
 │
-├── fiches/                 # 95 fiches HTML
+├── fiches/                 # 95 fiches HTML statiques
+│
 ├── scripts/                # Outils Python (CI)
-│   ├── check_questions.py  # QC questions.json (utilisé en GitHub Actions)
+│   ├── check_questions.py  # QC questions.json (GitHub Actions)
 │   ├── generate_counts.py  # Régénère counts.json
 │   └── build_index.py
 │
-└── sw.js                   # Service Worker (cache-first statiques, network-first HTML/JSON)
+├── test-cas-in.js          # Tests Node (syntaxe + structure HTML/JS/CSS)
+└── sw.js                   # Service Worker v31 (cache-first statiques, network-first HTML/JSON)
 ```
 
 ## PWA
 
-- **Service Worker v30** : Network-First pour HTML/JSON, Cache-First pour CSS/JS, fallback `offline.html`.
+- **Service Worker v31** (v2.10) : Network-First pour HTML/JSON, Cache-First pour CSS/JS, fallback `offline.html`.
 - **Installable** sur iOS, Android, desktop. Bannière d'install proposée après 3 s.
 - **Fonctionne 100 % offline** une fois la première visite faite.
 

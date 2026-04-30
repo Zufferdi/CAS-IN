@@ -22,9 +22,39 @@ const warn = l => { console.log('  ' + C.warn(l)); warned++; };
 const sec  = s => console.log('\n' + C.head(`── ${s} ──`));
 const chk  = (c, la, lb) => c ? ok(la) : fail(lb || la);
 
-function extractJS(html) {
-  return (html.match(/<script>([\s\S]*?)<\/script>/g) || [])
+function extractJS(html, baseDir = '') {
+  // 1) inline <script>…</script> blocks
+  const inline = (html.match(/<script>([\s\S]*?)<\/script>/g) || [])
     .map(s => s.replace(/<\/?script>/g, '')).join('\n');
+  // 2) external <script src="…"> — résout les chemins relatifs depuis baseDir
+  //    (post v2.10 : tools-app.js / exam-app.js / quiz-app.js / etc.
+  //    sont externalisés et désormais sous js/pages/, js/core/, …)
+  const external = [];
+  const re = /<script[^>]+src="([^":]+\.js)"/g;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const p = path.join(baseDir, m[1]);
+    try {
+      if (fs.existsSync(p)) external.push(fs.readFileSync(p, 'utf8'));
+    } catch (_) {}
+  }
+  return inline + '\n' + external.join('\n');
+}
+
+// Concatène HTML + CSS externes liés (pour les checks @media et autres).
+function extractCSS(html, baseDir = '') {
+  const inline = (html.match(/<style>([\s\S]*?)<\/style>/g) || [])
+    .map(s => s.replace(/<\/?style>/g, '')).join('\n');
+  const external = [];
+  const re = /<link[^>]+href="([^":]+\.css)"/g;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const p = path.join(baseDir, m[1]);
+    try {
+      if (fs.existsSync(p)) external.push(fs.readFileSync(p, 'utf8'));
+    } catch (_) {}
+  }
+  return inline + '\n' + external.join('\n');
 }
 
 // Seule source de vérité fiable pour la syntaxe JS
@@ -66,9 +96,10 @@ function testSyntaxJS(src, label) {
   return ok_syntax;
 }
 
-function testToolsHTML(src) {
+function testToolsHTML(src, baseDir) {
   sec('tools.html — Structure et fonctions');
-  const js = extractJS(src);
+  const js = extractJS(src, baseDir);
+  const css = extractCSS(src, baseDir);
 
   // Bijectif : extraire les IDs proprement
   const navSet   = new Set((src.match(/showTool\('(\w+)'/g) || []).map(m => m.match(/'(\w+)'/)[1]));
@@ -87,13 +118,14 @@ function testToolsHTML(src) {
   chk(!/<div\s+id="tool-/.test(scriptBlock), 'Pas de HTML dans <script>');
   chk(src.includes('role="tablist"'), 'ARIA role=tablist');
   chk(src.includes('role="tab"'),     'ARIA role=tab');
-  chk(src.includes('@media'),         'Media queries responsive');
+  chk(css.includes('@media'),         'Media queries responsive');
   chk(js.includes('restoreLastVals'), 'restoreLastVals()');
 }
 
-function testExamHTML(src) {
+function testExamHTML(src, baseDir) {
   sec('exam.html — Structure et fonctions');
-  const js = extractJS(src);
+  const js = extractJS(src, baseDir);
+  const css = extractCSS(src, baseDir);
 
   for (const fn of ['startExam','finishExam','restartExam','quitExam','renderQ',
                      'showScreen','escHtml','showHistory','startRevision',
@@ -109,7 +141,7 @@ function testExamHTML(src) {
   chk(js.includes('dur-custom'),                       'Timer personnalisé');
   chk(js.includes('casIn_examHistory'),                'Historique localStorage');
   chk(js.includes('ResizeObserver'),                   'ResizeObserver radar');
-  chk(src.includes('@media print'),                    '@media print PDF');
+  chk(css.includes('@media print'),                    '@media print PDF');
 
   // THEME_TO_MOD : doit exister DANS startExam (n'importe où dedans)
   const startIdx = js.indexOf('async function startExam');
@@ -199,15 +231,16 @@ function testSWJS(src) {
 function runFile(filePath) {
   const src  = fs.readFileSync(filePath, 'utf-8');
   const name = path.basename(filePath);
+  const baseDir = path.dirname(filePath);
   console.log(C.head(`\n╔══════════════════════════════════════════════════╗`));
   console.log(C.head(`║  CAS-IN Tests — ${name.padEnd(31)}║`));
   console.log(C.head(`╚══════════════════════════════════════════════════╝`));
 
-  const js = name.endsWith('.html') ? extractJS(src) : src;
+  const js = name.endsWith('.html') ? extractJS(src, baseDir) : src;
   testSyntaxJS(js, name);
 
-  if      (name === 'tools.html')    testToolsHTML(src);
-  else if (name === 'exam.html')     testExamHTML(src);
+  if      (name === 'tools.html')    testToolsHTML(src, baseDir);
+  else if (name === 'exam.html')     testExamHTML(src, baseDir);
   else if (name === 'tp-engine.js')  testTPEngine(src);
   else if (name === 'tp-data.js')    testTPData(src);
   else if (name === 'sw.js')         testSWJS(src);

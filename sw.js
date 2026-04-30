@@ -1,4 +1,7 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v31 : v2.10 cleaning — extraction des <style> inline (scene/tp/tools/exam.html)
+//       vers fichiers CSS dédiés + suppression scores doublons quiz/scene
+//       (info canonique désormais unique dans profile-banner)
 // v30 : ajout 3 nouvelles fiches forensique mobile et cloud (iOS, Android, M365)
 //       + corrections metadata des 26 fiches "(à compléter)" du manifest
 // v29 : ajout des 14 fichiers JS/CSS manquants (patches v3/v4/v5 + bridges
@@ -14,7 +17,7 @@
 // v22 : extraction du JS inline de quiz.html → js/quiz-app.js (cache séparé)
 // v21 : alignement v2.4 (post-cleanup) — STATIC_ASSETS auto-régénéré
 //       depuis manifest.json + filesystem (90 fiches au lieu de 47)
-const CACHE_VERSION = 'cas-in-v30';
+const CACHE_VERSION = 'cas-in-v31';
 
 const STATIC_ASSETS = [
   // Pages racine
@@ -41,33 +44,42 @@ const STATIC_ASSETS = [
   './style/landing.css',
   './style/style.css',
   './style/tp.css',
+  './style/tp-page.css',
+  './style/tools.css',
+  './style/exam.css',
+  './style/scene.css',
   './style/fiche_style.css',
   './style/profile.css',
   './style/profile-banner.css',
   './style/quiz.css',
 
-  // Scripts partagés
-  './js/landing.js',
-  './js/landing-3d.js',
-  './js/cas-in-counts.js',
-  './js/cas-in-pwa.js',
-  './js/cas-in-search.js',
-  './js/cas-in-export.js',
-  './js/cas-in-profile.js',
-  './js/quiz-app.js',
-  './js/quiz-ui-patch.js',
-  './js/quiz-profile-bridge.js',
-  './js/scene-app.js',
-  './js/scene-ux-patch.js',
-  './js/scene-profile-bridge.js',
-  './js/scene-lobby-v3.js',
-  './js/scene-engine-v4.js',
-  './js/tools-app.js',
-  './js/exam-app.js',
-  './js/tp-profile-bridge.js',
-  './js/profile-page.js',
-  './js/profile-banner.js',
-  './js/profile-track-v5.js',
+  // Scripts — réorganisation v2.10 en sous-dossiers (core/profile/pages/bridges)
+  // Voir ARCHITECTURE.md § « Couches & ordre de chargement ».
+  // core/ — librairies transversales (source de vérité, services partagés)
+  './js/core/cas-in-profile.js',
+  './js/core/cas-in-counts.js',
+  './js/core/cas-in-export.js',
+  './js/core/cas-in-pwa.js',
+  './js/core/cas-in-search.js',
+  // profile/ — composants de profil (banner transversal, page dédiée, track selector)
+  './js/profile/profile-banner.js',
+  './js/profile/profile-page.js',
+  './js/profile/profile-track-v5.js',
+  // bridges/ — interception localStorage des pages → routage vers Profile
+  './js/bridges/quiz-profile-bridge.js',
+  './js/bridges/scene-profile-bridge.js',
+  './js/bridges/tp-profile-bridge.js',
+  // pages/ — apps spécifiques par page
+  './js/pages/landing.js',
+  './js/pages/landing-3d.js',
+  './js/pages/quiz-app.js',
+  './js/pages/quiz-ui-patch.js',
+  './js/pages/scene-app.js',
+  './js/pages/scene-ux-patch.js',
+  './js/pages/scene-lobby-v3.js',
+  './js/pages/scene-engine-v4.js',
+  './js/pages/tools-app.js',
+  './js/pages/exam-app.js',
 
   // Scénarios DFIR (v3.0) — index + 90 fichiers individuels lazy-loadés
   // L'index est en network-first, les scènes individuelles en cache-first.
