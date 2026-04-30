@@ -27,8 +27,23 @@
 // ═══════════════════════════════════════════════════
 // STORAGE UTILS
 // ═══════════════════════════════════════════════════
-function lsGet(k, d) { try { const v = localStorage.getItem(k); return v !== null ? JSON.parse(v) : d; } catch { return d; } }
-function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+function lsGet(k, d) { try { const v = localStorage.getItem(k); return v !== null ? JSON.parse(v) : d; } catch { return d; } }function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+// ═══════════════════════════════════════════════════
+// COLOR UTILS — palette 5 paliers du score de scène
+//   0–32  → rouge foncé   (échec)
+//   33–49 → orange        (passable)
+//   50–74 → vert très clair (correct)
+//   75–99 → vert moyen    (bien)
+//   100   → vert vif      (parfait)
+// ═══════════════════════════════════════════════════
+function getScoreColor(pct) {
+  if (pct >= 100) return '#10b981'; // vert vif (emerald-500)
+  if (pct >=  75) return '#22c55e'; // vert moyen (green-500)
+  if (pct >=  50) return '#86efac'; // vert très clair (green-300)
+  if (pct >=  33) return '#f97316'; // orange vif (orange-500)
+  return '#991b1b';                  // rouge foncé (red-800)
+}
 
 // ═══════════════════════════════════════════════════
 // LAZY-LOAD SCENES (v2.7)
@@ -2139,10 +2154,11 @@ function showReport() {
     custodyText = `❌ Chaîne de custody compromise (${custodyPct}%) — Les preuves risquent d'être déclarées irrecevables.`;
   }
 
-  // Score ring
+  // Score ring — palette 5 paliers (rouge foncé / orange / vert clair / vert moyen / vert vif)
   const radius = 42, circ = 2 * Math.PI * radius;
   const dash = (pct / 100) * circ;
-  const ringColor = pct >= 70 ? '#30e88a' : pct >= 50 ? '#f0c040' : '#ff4060';
+  const ringColor = getScoreColor(pct);
+  const titleColor = ringColor; // titre du rapport aligné sur la même palette
 
   // Decision review
   const reviewHTML = G.decisions.map((d, i) => {
@@ -2198,7 +2214,7 @@ function showReport() {
         return `
           <div class="report-lb-row">
             <span class="report-lb-rank r${i+1}">#${i+1}</span>
-            <span class="report-lb-score">${r.pct}%</span>
+            <span class="report-lb-score" style="color:${getScoreColor(r.pct)}">${r.pct}%</span>
             <span class="report-lb-mode ${r.mode || 'normal'}">${(r.mode || 'normal').toUpperCase()}</span>
             <span class="report-lb-date">${r.date || '—'}${isNew ? ' <span class="report-lb-new">NEW</span>' : ''}</span>
           </div>
@@ -2238,7 +2254,7 @@ function showReport() {
   document.getElementById('report-content').innerHTML = `
     <div class="report-header">
       <div class="report-badge">${badge.icon}</div>
-      <div class="report-title" style="color:${pct >= 70 ? 'var(--green)' : pct >= 50 ? 'var(--gold)' : 'var(--red)'}">${badge.title}</div>
+      <div class="report-title" style="color:${titleColor}">${badge.title}</div>
       <div class="report-subtitle">${badge.sub}${modeBadge}</div>
     </div>
 
