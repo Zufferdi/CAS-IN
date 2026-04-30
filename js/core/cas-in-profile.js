@@ -328,6 +328,7 @@
       achievements: [],
       preferences: {
         viewMode: lsGet(LEGACY_KEYS.viewMode, 'auto') || 'auto',
+        equippedTitle: null,
       },
     };
   }
@@ -773,6 +774,20 @@
     emitChange('preferences');
   }
 
+  /**
+   * Équipe un titre (ou null pour aucun titre). L'id n'est pas validé
+   * ici — c'est à profile-titles.js de vérifier que l'id est bien
+   * débloqué avant d'appeler. On accepte juste string|null.
+   */
+  function setEquippedTitle(id) {
+    if (id !== null && typeof id !== 'string') return;
+    const p = ensureProfile();
+    if (!p.preferences) p.preferences = {};
+    p.preferences.equippedTitle = id || null;
+    saveProfile(p);
+    emitChange('preferences');
+  }
+
   // ───────────────────────────────────────────────────────────
   // API d'écriture XP / streak / achievements / activity
   // (utilisée par les bridges Quiz / Scène / TP)
@@ -1025,6 +1040,7 @@
     setAgentName,
     setTrack,
     setViewMode,
+    setEquippedTitle,
     addXp,
     bumpStreak,
     breakStreak,
