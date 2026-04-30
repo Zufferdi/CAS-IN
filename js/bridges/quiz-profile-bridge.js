@@ -57,7 +57,13 @@
       }
       const delta = n - _lastQuizXp;
       if (delta > 0) {
-        window.Profile.addXp(delta, 'quiz');
+        // Si quiz-app a publié des tags de contexte (theme question), on les
+        // transmet au Profile pour que getRoleBonus() puisse appliquer +20%
+        // selon le rôle choisi.
+        const tags = Array.isArray(window.__casInBonusTags) && window.__casInBonusTags.length
+          ? window.__casInBonusTags
+          : null;
+        window.Profile.addXp(delta, 'quiz', tags ? { tags } : undefined);
       }
       _lastQuizXp = n;
       // On n'écrit PAS la clé 'xp' en localStorage : Profile est seul

@@ -36,6 +36,12 @@
 
   function wrappedSetItem(key, value) {
     if (key === 'cas_xp') {
+      // Si scene-app a déjà appelé Profile.addXp directement (avec tags
+      // pour le bonus rôle), on évite le double comptage en ignorant
+      // l'écriture intercepté ici.
+      if (window.__casInProfileApplied) {
+        return;
+      }
       let n;
       try { n = parseInt(JSON.parse(value), 10); }
       catch { n = parseInt(value, 10); }
