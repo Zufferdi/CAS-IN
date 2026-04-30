@@ -1,13 +1,11 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v41 : install per-asset (au lieu de addAll atomique) pour identifier
+//       précisément les ressources qui 404 lors du précache. Logs détaillés.
 // v40 : refonte stratégie — fiches précachées dynamiquement depuis manifest.json
-//       (au lieu d'une liste hardcodée de 90 entrées qu'on oubliait de
-//       maintenir). Stale-while-revalidate sur CSS/JS pour que les vieilles
-//       versions ne traînent pas après un déploiement. Channel postMessage
-//       'GET_VERSION' pour permettre au client d'afficher la version.
-//       Reste : skipWaiting + clients.claim, network-first pour HTML/JSON.
-// v39..v21 : voir CHANGELOG.md (historique nettoyé du SW pour rester lisible).
+//       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
+// v39..v21 : voir CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v40';
+const CACHE_VERSION = 'cas-in-v41';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -115,13 +113,24 @@ self.addEventListener('install', event => {
   console.log('[SW] Install ' + CACHE_VERSION);
   event.waitUntil(
     caches.open(CACHE_VERSION).then(async cache => {
-      // Critique d'abord (atomique) : si une de ces ressources échoue, l'install
-      // tombe en fallback per-asset add (au lieu de tout abandonner)
-      try {
-        await cache.addAll(STATIC_ASSETS);
-      } catch (err) {
-        console.warn('[SW] addAll failed, falling back to per-asset add:', err);
-        await Promise.allSettled(STATIC_ASSETS.map(url => cache.add(url)));
+      // Per-asset add avec log des manquants. On évite addAll() atomique car
+      // sur GitHub Pages les déploiements peuvent être partiels (un asset listé
+      // qui n'est pas encore en ligne fait tout planter). Mieux : on installe
+      // ce qu'on peut et on log précisément ce qui manque.
+      const results = await Promise.all(
+        STATIC_ASSETS.map(url =>
+          cache.add(url).then(
+            () => ({ url, ok: true }),
+            err => ({ url, ok: false, err: err.message || String(err) })
+          )
+        )
+      );
+      const failed = results.filter(r => !r.ok);
+      if (failed.length) {
+        console.warn('[SW] ' + failed.length + ' asset(s) failed to cache:');
+        failed.forEach(r => console.warn('  ✗ ' + r.url + ' → ' + r.err));
+      } else {
+        console.log('[SW] All ' + results.length + ' static assets cached');
       }
       // Fiches : best-effort, ne bloque pas l'install
       await precacheFichesFromManifest(cache);
