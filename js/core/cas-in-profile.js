@@ -27,6 +27,96 @@
   const CLEARANCE_BY_RANK = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5];
 
   // ───────────────────────────────────────────────────────────
+  // Bonus XP par rôle : +20% sur les contenus du domaine de spécialité.
+  // - Tags scènes : majuscules normalisées (FORENSIQUE, DROIT, etc.)
+  // - Thèmes questions : intitulés tels quels (ex. "Système de fichiers",
+  //   "Droit", "OSINT") ; normalisation en interne (lowercase, accents).
+  // ───────────────────────────────────────────────────────────
+
+  // Note v2.10+ : trois systèmes de bonus thématique coexistaient
+  // historiquement (TRACK_BONUS_RAW, TRACK_BONUS_TAGS, ROLE_BONUS).
+  // Seul ROLE_BONUS_TAGS ci-dessous est branché à addXp(). Les deux
+  // autres ont été supprimés pour éviter la confusion lors de la
+  // maintenance future.
+
+  // ───────────────────────────────────────────────────────────
+  // Bonus XP thématique par rôle (track) — +20% si la scène/question
+  // matche au moins un tag de la liste du rôle. Plafond 1.20× : un seul
+  // match suffit, pas de cumul (lisible et juste).
+  // Les tags sont normalisés en MAJUSCULES sans accents pour comparer.
+  // ───────────────────────────────────────────────────────────
+  const ROLE_BONUS_TAGS = {
+    investigator: [
+      // Tags scène
+      'FORENSIQUE', 'OSINT', 'PREMIER INTERVENANT', 'PROFIL', 'PROFILAGE',
+      'PJ', 'POLICE', 'TERRAIN', 'PREUVES', 'CUSTODY', 'CHAINE DE POSSESSION',
+      'SCENE DE CRIME', 'PERQUISITION', 'INVESTIGATION',
+      'MOBILE FORENSICS', 'MEMORY FORENSICS', 'CLOUD FORENSICS',
+      // Thèmes quiz
+      'ACQUISITION ET ANALYSE', 'FORENSIQUE', 'OSINT',
+    ],
+    magistrate: [
+      // Tags scène
+      'DROIT', 'DROIT PENAL', 'CPP', 'CP', 'EIMP', 'PROCEDURE', 'JURISPRUDENCE',
+      'LPD', 'LSI', 'PROCUREUR', 'AUDIT FORENSIQUE', 'GOUVERNANCE',
+      'GOUVERNANCE INCIDENT', 'GOUVERNANCE CANTONALE', 'DROIT PUBLIC',
+      'DROIT CIVIL', 'JUGE', 'TMC', 'MPC', 'RGPD',
+      // Thèmes quiz
+      'DROIT',
+    ],
+    journalist: [
+      // Tags scène
+      'OSINT', 'DARKNET', 'MEDIAS', 'SOURCES', 'COMMUNICATION DE CRISE',
+      'ENQUETE COUVERTE', 'INVESTIGATION', 'PEDOCRIMINALITE', 'DEEPFAKE',
+      'IA', 'AUDIO FORENSIQUE',
+      // Thèmes quiz
+      'OSINT',
+    ],
+    hacker: [
+      // Tags scène
+      'MALWARE', 'RANSOMWARE', 'RESEAUX', 'CRYPTO', 'WINDOWS',
+      'CHAINE D\'ATTAQUE', 'OT', 'SCADA', 'BEC', 'SOCIAL ENGINEERING',
+      'SUPPLY CHAIN', 'IA', 'DDOS', 'PHISHING', 'VISHING', 'INFOSTEALER',
+      // Thèmes quiz
+      'SYSTEME DE FICHIERS', 'SPECIFICITE DES OS', 'CRYPTOLOGIE',
+    ],
+  };
+
+  // Normalise un tag pour la comparaison : MAJ + sans accents + sans ponctuation
+  function normalizeTag(t) {
+    return String(t || '')
+      .toUpperCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^A-Z0-9 ]/g, '')
+      .trim();
+  }
+
+  // Pré-calcule les Sets normalisés une fois (perfs)
+  const NORMALIZED_BONUS = Object.fromEntries(
+    Object.entries(ROLE_BONUS_TAGS).map(([role, tags]) => [
+      role, new Set(tags.map(normalizeTag))
+    ])
+  );
+
+  /**
+   * Retourne le multiplicateur d'XP à appliquer pour le rôle actif
+   * face à la liste de tags fournie. 1.20 si match, sinon 1.00.
+   * @param {string[]} tags - Tags / thèmes de la scène ou question
+   * @returns {number} multiplicateur (1.0 ou 1.2)
+   */
+  function getRoleBonus(tags) {
+    if (!Array.isArray(tags) || tags.length === 0) return 1.0;
+    const p = ensureProfile();
+    const role = p.agent && p.agent.track;
+    if (!role || !NORMALIZED_BONUS[role]) return 1.0;
+    const set = NORMALIZED_BONUS[role];
+    for (const t of tags) {
+      if (set.has(normalizeTag(t))) return 1.20;
+    }
+    return 1.0;
+  }
+
+  // ───────────────────────────────────────────────────────────
   // 4 tracks · 12 grades chacun · personnages uniques
   // ───────────────────────────────────────────────────────────
 
@@ -36,6 +126,12 @@
       label: 'Enquêteur',
       icon: '🕵',
       ambiance: 'Terrain · preuves · profilage',
+      themeColor: '#38b6ff',
+      affinity: {
+        sceneTags:  ['FORENSIQUE', 'POLICE', 'PJ', 'AUDIO FORENSIQUE', 'ENQUÊTE COUVERTE'],
+        quizThemes: ['Forensique', 'Acquisition et analyse', 'Système de fichiers'],
+        multiplier: 1.20,
+      },
       ranks: [
         { emoji: '🔰',   name: 'Stagiaire',                flavor: 'Premier jour. Le café est dans la salle de pause.' },
         { emoji: '👮',   name: 'Enquêteur de terrain',     flavor: 'Tu sais déjà ouvrir un rapport sans paniquer.' },
@@ -56,6 +152,12 @@
       label: 'Magistrat',
       icon: '⚖️',
       ambiance: 'Décision · instruction · prétoire',
+      themeColor: '#c89b3c',
+      affinity: {
+        sceneTags:  ['DROIT', 'DROIT PÉNAL', 'CPP', 'LPD', 'ENTRAIDE', 'ENTRAIDE FR-CH'],
+        quizThemes: ['Droit'],
+        multiplier: 1.20,
+      },
       ranks: [
         { emoji: '📜',   name: 'Greffier stagiaire',         flavor: 'Tu apprends à classer les pièces sans tout mélanger.' },
         { emoji: '⚖️',   name: 'Substitut du procureur',     flavor: 'Premier réquisitoire. Les mains tremblent un peu.' },
@@ -76,6 +178,12 @@
       label: 'Journaliste',
       icon: '📰',
       ambiance: 'Investigation · sources · révélation',
+      themeColor: '#ff6b6b',
+      affinity: {
+        sceneTags:  ['OSINT', 'DARKNET', 'SOCIAL ENGINEERING', 'VISHING', 'DEEPFAKE', 'IA', 'PÉDOCRIMINALITÉ', 'BEC'],
+        quizThemes: ['OSINT'],
+        multiplier: 1.20,
+      },
       ranks: [
         { emoji: '📝',   name: 'Pigiste stagiaire',          flavor: 'Premier papier corrigé en rouge. Bienvenue.' },
         { emoji: '📰',   name: 'Localier',                   flavor: 'Tu connais chaque commerçant du quartier.' },
@@ -112,6 +220,18 @@
       ],
     },
   };
+
+  // ───────────────────────────────────────────────────────────
+  // Track Bonus — chaque rôle obtient +20% XP sur les contenus de son
+  // domaine. Les tags ci-dessous sont matchés contre :
+  //   - scene.tags (UPPERCASE) lors d'une scène
+  //   - question.theme (capitalized) lors d'un quiz
+  // Le bonus se cumule MULTIPLICATIVEMENT avec le streak bonus existant.
+  // ───────────────────────────────────────────────────────────
+
+  // (Système TRACK_BONUS_VALUE/TRACK_BONUS_TAGS/getTrackBonus retiré en v2.10+
+  // — il n'a jamais été branché. Le système actif est ROLE_BONUS_TAGS +
+  // getRoleBonus() défini plus haut, appelé depuis addXp().)
 
   // ───────────────────────────────────────────────────────────
   // Clés legacy à lire / migrer
@@ -560,18 +680,33 @@
 
   /**
    * Ajoute de l'XP. La source ('quiz' | 'scene') sert à la ventilation.
-   * Retourne le nouveau total, ou null si paramètres invalides.
+   *
+   * @param {number}  amount   - XP brute (avant bonus rôle)
+   * @param {string}  source   - 'quiz' | 'scene'
+   * @param {object}  [meta]   - { tags: string[] } pour le bonus thématique
+   * @returns {object|null}    - { xp, gained, base, bonus, multiplier } ou null
+   *                             - xp        : XP totale après ajout
+   *                             - gained    : XP réellement créditée (base × multiplier)
+   *                             - base      : XP brute fournie
+   *                             - bonus     : XP supplémentaire due au bonus rôle
+   *                             - multiplier: 1.0 ou 1.20 (si match thématique)
    */
-  function addXp(amount, source) {
-    const n = asInt(amount, 0);
-    if (n <= 0) return null;
+  function addXp(amount, source, meta) {
+    const base = asInt(amount, 0);
+    if (base <= 0) return null;
     if (!['quiz', 'scene'].includes(source)) return null;
+
+    // Bonus thématique selon le rôle (track) choisi
+    const tags = meta && Array.isArray(meta.tags) ? meta.tags : [];
+    const multiplier = getRoleBonus(tags);
+    const gained = Math.round(base * multiplier);
+    const bonus = gained - base;
 
     const p = ensureProfile();
     const oldRank = computeRank(p.xp, p.agent.track || 'investigator').idx;
 
-    p.xp = (p.xp || 0) + n;
-    p.xpBySource[source] = (p.xpBySource[source] || 0) + n;
+    p.xp = (p.xp || 0) + gained;
+    p.xpBySource[source] = (p.xpBySource[source] || 0) + gained;
     p.activity[source] = Date.now();
 
     saveProfile(p);
@@ -580,7 +715,7 @@
     if (newRank > oldRank) emitChange('rank-up');
     else emitChange('xp');
 
-    return p.xp;
+    return { xp: p.xp, gained, base, bonus, multiplier };
   }
 
   /**
@@ -712,6 +847,46 @@
 
   ensureProfile();
 
+  // ───────────────────────────────────────────────────────────
+  // (Système ROLE_BONUS + computeBonusedXp retiré en v2.10+ — il n'a
+  // jamais été branché. Le système actif est ROLE_BONUS_TAGS +
+  // getRoleBonus() défini en haut de fichier, appelé depuis addXp()
+  // via le paramètre meta.tags.)
+  // ───────────────────────────────────────────────────────────
+  // Couleur d'accent par track (stratégie de différenciation visuelle).
+  // Utilisé via document.body.dataset.track + variables CSS.
+  // ───────────────────────────────────────────────────────────
+
+  const TRACK_ACCENTS = {
+    investigator: { hex: '#f0c040', label: 'Doré',     hue: 'gold'   }, // badge police, dossier classifié
+    magistrate:   { hex: '#5b8def', label: 'Bleu',     hue: 'blue'   }, // robe, prétoire, autorité
+    journalist:   { hex: '#c466e8', label: 'Violet',   hue: 'purple' }, // presse, encre, écriture
+    hacker:       { hex: '#00ff41', label: 'Vert phosphore', hue: 'green' }  // terminal classique
+  };
+
+  function getTrackAccent(trackKey) {
+    return TRACK_ACCENTS[trackKey || getTrackKey()] || TRACK_ACCENTS.investigator;
+  }
+
+  // Au chargement, applique data-track sur <body> pour activer le thème CSS
+  // correspondant au track choisi par l'utilisateur.
+  function applyTrackToBody() {
+    if (typeof document === 'undefined' || !document.body) return;
+    const tk = getTrackKey();
+    if (tk) {
+      document.body.dataset.track = tk;
+    }
+  }
+  // Application initiale + mise à jour à chaque changement de profil
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', applyTrackToBody);
+    } else {
+      applyTrackToBody();
+    }
+    window.addEventListener('profile-changed', applyTrackToBody);
+  }
+
   window.Profile = Object.freeze({
     // Lecture
     snapshot,
@@ -730,6 +905,17 @@
     getTrackLadder,
     getViewMode,
     getLastActivity,
+    /**
+     * Retourne la liste des tags qui déclenchent +20% de bonus XP pour le rôle
+     * passé en argument (ou le rôle actif si aucun argument). Utile pour
+     * afficher dans le profil ou dans le sélecteur de track « ce que ton
+     * rôle te rapporte ».
+     */
+    getRoleBonusTags: (roleKey) => {
+      const r = roleKey || (ensureProfile().agent && ensureProfile().agent.track);
+      const tags = ROLE_BONUS_TAGS[r];
+      return Array.isArray(tags) ? tags.slice() : [];
+    },
 
     // Écriture
     setAgentName,
