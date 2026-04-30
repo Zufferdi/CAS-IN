@@ -1,0 +1,224 @@
+{
+  "id": "flubot-bec-cascade",
+  "title": "FluBot et le maire — Du SMS au virement",
+  "icon": "📱",
+  "difficulty": "medium",
+  "atmosphere": "investigation",
+  "realCase": "Cas-école inspiré du communiqué de la Police cantonale neuchâteloise du 13 juillet 2021 (FluBot + arnaque au Président, ~50'000 CHF versés sur un compte étranger) et des patterns documentés par l'OFCS pour les chaînes smishing → BEC.",
+  "narrative": {
+    "success": "La chaîne d'attaque est reconstituée précisément : SMS-FluBot-mobile-exfiltration-BEC. L'enquête est consolidée auprès du MPC qui regroupe trois affaires liées dans deux cantons. Récupération partielle du virement par chaîne MROS-AML rapide. La commune sert de cas-école pour la sensibilisation cantonale.",
+    "degraded": "Les deux affaires (mobile compromis, BEC réussi) restent traitées séparément par deux services. La corrélation est faite tardivement, sans demande de jonction MPC. Récupération financière partielle. Plainte pénale fragile.",
+    "failure": "Le mobile compromis n'est jamais identifié comme vecteur. Le BEC est traité comme une simple usurpation isolée. Pas de corrélation, pas de récupération, pas de leçon transversale. La commune est une victime parmi d'autres dans une vague qui continuera."
+  },
+  "tags": [
+    "MOBILE FORENSICS",
+    "BEC",
+    "CHAÎNE D'ATTAQUE",
+    "DROIT PÉNAL"
+  ],
+  "legalRefs": [
+    "Art. 143 CP (soustraction de données)",
+    "Art. 143bis CP (accès indu à un système)",
+    "Art. 146 CP (escroquerie)",
+    "Art. 147 CP (utilisation frauduleuse d'un ordinateur)",
+    "Art. 30 CPP (jonction de procédures)"
+  ],
+  "intro": "Cas réel transposé. Lundi matin. Une commune de 6'400 habitants en Suisse romande constate qu'un virement de 47'800 CHF a quitté son compte vendredi en fin d'après-midi, vers un IBAN inconnu en Hongrie, sur ordre apparent du syndic. La banque confirme : ordre transmis depuis l'adresse mail du syndic, avec confirmation par mot de passe et code SMS — apparemment légitime. Vous êtes inspecteur cyber au sein de la police cantonale, saisi du dossier. En interrogeant les employés, l'assistante administrative mentionne incidemment que son téléphone privé 'fait des trucs bizarres depuis dix jours'. Aucun lien apparent au début, mais l'instinct vous dit de creuser.",
+  "alertLevel": "📱 BEC RÉUSSI 47'800 CHF · Hongrie · Mais — un téléphone fait des 'trucs bizarres' depuis 10 jours",
+  "objectives": [
+    {
+      "icon": "🔗",
+      "text": "Reconstituer la chaîne d'attaque potentielle entre le mobile suspect et le BEC réussi"
+    },
+    {
+      "icon": "📱",
+      "text": "Caractériser le compromis mobile (FluBot ou autre) avant qu'il ne soit effacé par l'utilisatrice"
+    },
+    {
+      "icon": "💰",
+      "text": "Maximiser les chances de récupération du virement via la chaîne MROS-AML"
+    },
+    {
+      "icon": "⚖️",
+      "text": "Qualifier les infractions correctement (143/143bis/146/147 CP) et envisager la jonction MPC"
+    }
+  ],
+  "debrief": "<p>Cette scène illustre un <strong>pattern devenu courant en Suisse depuis 2021</strong> : la chaîne <strong>smishing → mobile banker trojan → exfiltration contacts/credentials → BEC ciblé</strong>. Le piège classique d'enquête est de traiter chaque maillon comme un incident isolé : le mobile compromis chez Mme X (peu de dégâts apparents, classé), le BEC dans une commune (escroquerie isolée, plainte sans suite). C'est en croisant les deux qu'on reconstitue le mode opératoire complet et qu'on rend la plainte solide.</p>\n<p>Trois leviers juridiques importants : (1) <strong>Les qualifications pénales s'empilent</strong> — un même fait justifie souvent plusieurs articles du CP. Soustraction de données (art. 143), accès indu (art. 143bis), escroquerie (art. 146), utilisation frauduleuse d'un ordinateur (art. 147). L'art. 147 spécifiquement vise le détournement bancaire et est central dans les BEC réussis. (2) <strong>L'art. 30 CPP permet la jonction de procédures</strong> connexes — quand vous établissez la chaîne smishing→BEC, demander la jonction au MPC est cohérent. (3) <strong>La récupération du virement passe par la rapidité</strong> : SWIFT 'recall', communication entre cellules de renseignement financier (MROS suisse → ses homologues), et la fenêtre est de 24-72h en pratique. Au-delà, les fonds sont layered.</p>\n<p>Côté forensique mobile : FluBot et les bankers Android similaires se manifestent par des permissions Accessibility services anormales, l'envoi automatique de SMS aux contacts, et des injections d'overlay sur les apps bancaires. La preuve se conserve par <strong>imagerie ADB</strong> ou <strong>extraction Cellebrite/UFED</strong> — ne jamais simplement réinitialiser le téléphone, qui efface tout. Côté forensique mail/web : audit des logs M365/Google Workspace pour identifier la session attaquante, IP, User-Agent, MFA bypass éventuel.</p>",
+  "steps": [
+    {
+      "phase": "🔗 J+0 11h00 — Tisser le lien : coïncidence ou cascade ?",
+      "situation": "Vous avez deux faits : un BEC réussi vendredi, un mobile suspect chez l'assistante depuis dix jours. Trois autres employés ont accès à la messagerie liée au compte bancaire commun. Le syndic n'a pas envoyé l'ordre. Le mot de passe et le code SMS ont pourtant été utilisés.<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n📱 Téléphone Mme R. (assistante) : 'lent, fait des trucs bizarres' depuis 10 jours<br>\n📧 Boîte mail syndic : ordre vendredi 16h47, IP non identifiée d'emblée<br>\n💸 Virement 47'800 CHF, IBAN hongrois, autorisé par mot de passe + SMS<br>\n📞 Mme R. utilise son tél privé pour recevoir parfois des SMS pro\n</div>",
+      "law": "<strong>Art. 30 CPP</strong> — Jonction des procédures connexes.<br><strong>Pratique forensique mobile</strong> — Préserver le téléphone avant tout reset.",
+      "question": "<strong>Quelle est votre hypothèse principale et que faites-vous d'abord ?</strong>",
+      "choices": [
+        {
+          "text": "Hypothèse de chaîne d'attaque (mobile compromis → exfil contacts/SMS → BEC ciblé). Demande immédiate à Mme R. de ne pas toucher à son téléphone, saisie sous scellés, début d'extraction forensique mobile dans la journée.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Excellent réflexe. La saisie immédiate du mobile avant que Mme R. ne le réinitialise (réflexe humain face à un comportement bizarre) est la condition pour reconstituer la chaîne. Le pattern smishing → BEC en cascade est documenté en Suisse depuis 2021. Sans le mobile, vous reconstituerez peut-être le BEC mais pas le vecteur initial.",
+          "legal": "Art. 30 CPP + Pratique forensique — La connexité commande l'investigation parallèle.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Traiter d'abord le BEC (urgence financière, fenêtre de récupération courte), reprendre l'histoire du téléphone plus tard si pertinente.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Choix défendable mais risqué. Le BEC est urgent, mais Mme R. va probablement réinitialiser son téléphone d'ici 24h (c'est la première chose qu'on fait quand un appareil 'fait des trucs bizarres'). Vous perdez le vecteur initial. La récupération financière et l'enquête mobile peuvent se faire en parallèle, pas séquentiellement.",
+          "legal": "Pratique — Urgence financière + urgence forensique sont parallèles, pas séquentielles.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Pas de connexion à établir entre les deux faits — le téléphone privé d'une employée n'est pas lié à un BEC sur le syndic. Concentrer sur la fraude bancaire stricte.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Erreur typique de cloisonnement d'enquête. La chaîne smishing-FluBot-BEC est précisément documentée par l'OFCS et la police neuchâteloise depuis 2021. Le téléphone d'une employée ayant accès SMS pro est une porte d'entrée probable. Refuser la connexion par principe c'est rater l'enquête.",
+          "legal": "OFCS bulletins + Police NE 2021 — Le pattern smishing → BEC est officiellement documenté.",
+          "critical": true,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "📱 J+0 15h00 — Examen du mobile saisi",
+      "situation": "Vous avez le téléphone sous scellés. Android Samsung. Premier examen : l'app 'PostFinance' n'est pas la vraie (signature différente), une app appelée 'Voicemail' a des permissions Accessibility services (anormal), historique SMS contient un 'Votre colis est en retard, suivez ici : hxxps://post-ch[.]xyz/track' reçu il y a 11 jours, cliqué selon les logs. Les contacts ont été synchronisés avec un service inconnu il y a 9 jours.",
+      "law": "<strong>Art. 143 CP</strong> — Soustraction de données.<br><strong>Art. 143bis CP</strong> — Accès indu à un système informatique.",
+      "question": "<strong>Quelle est votre prochaine action prioritaire ?</strong>",
+      "choices": [
+        {
+          "text": "Imagerie complète ADB du téléphone (Cellebrite/UFED si dispo, ou logical extraction Android), avec hash MD5/SHA-256 documenté. Extraction des APKs malveillants pour analyse statique en sandbox. Demande de mandat pour analyse contenu cloud Samsung éventuellement.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Procédure forensique standard. L'imagerie d'abord, l'analyse ensuite, jamais le contraire. Les hash documentent l'intégrité de la preuve. L'extraction APK permet d'identifier la souche (FluBot, Cabassous, Anatsa, etc.) et de la lier à des campagnes connues. Le cloud Samsung peut contenir des sauvegardes utiles à la chaîne d'attaque.",
+          "legal": "Pratique forensique mobile — Imagerie avant analyse, hash pour intégrité.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Désinstaller immédiatement les apps suspectes pour 'arrêter les dégâts', puis examiner ce qui reste.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Destruction de preuves. Désinstaller efface les artefacts qui prouvent les actions du malware (timestamps, exfiltrations effectuées, contacts ciblés). On n'agit pas sur l'objet de la preuve avant son imagerie. Mme R. peut désinstaller plus tard, quand le téléphone est rendu, pas vous pendant l'enquête.",
+          "legal": "Art. 254 CPP — Préservation des preuves matérielles. La désinstallation = altération.",
+          "critical": true,
+          "next": 2
+        },
+        {
+          "text": "Renvoyer le téléphone à un laboratoire forensique externe et attendre leur rapport (typiquement 6-8 semaines).",
+          "ok": false,
+          "pts": -10,
+          "fb": "Délai incompatible avec l'urgence du BEC. Une imagerie de base peut se faire en quelques heures avec ADB et un outil standard ; l'analyse approfondie peut suivre. Attendre 6-8 semaines pour caractériser le mobile, c'est laisser passer la fenêtre de récupération financière et de corrélation avec d'autres cas en cours.",
+          "legal": "Pratique — Imagerie immédiate, analyse phasée.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "💰 J+1 09h00 — Récupération du virement",
+      "situation": "L'imagerie est faite. Vous avez confirmé : FluBot variant active, exfiltration contacts + SMS, hijack probable de session bancaire/mail. Côté financier, la banque communale informe que le virement est parti vendredi 17h02. Aujourd'hui mardi 09h00, soit ~64h après. Le bénéficiaire en Hongrie est un particulier sans antécédents AML connus. Trois pistes pour récupérer.",
+      "law": "<strong>Loi sur le blanchiment d'argent (LBA)</strong> — Communication au MROS.<br><strong>SWIFT recall procedures</strong> — Demande de retour de virement entre banques.",
+      "question": "<strong>Quelle action en priorité pour la récupération ?</strong>",
+      "choices": [
+        {
+          "text": "(a) Communication immédiate au MROS pour transmission à son homologue hongrois ; (b) demande SWIFT recall via la banque communale auprès de la banque réceptrice ; (c) plainte pénale formelle déposée pour soutenir le gel par les autorités hongroises. Les trois en parallèle.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Stratégie complète. Le MROS-CRF Hongrie est le canal le plus rapide pour un gel administratif. Le SWIFT recall est le canal bancaire technique. La plainte pénale est le support juridique pour les autorités hongroises de bloquer formellement. Les trois canaux sont parallèles, pas concurrents — chacun augmente la probabilité d'aboutir avant que l'argent soit retiré ou layered.",
+          "legal": "LBA + SWIFT + Coopération pénale — Trois canaux complémentaires.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Plainte pénale et entraide judiciaire internationale formelle (EIMP) — c'est la voie de droit la plus solide pour récupérer.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Trop lent. Une demande EIMP prend des semaines à des mois. Pendant ce temps les fonds sont retirés ou layered. L'entraide judiciaire est utile pour la phase pénale, pas pour la récupération immédiate. Pour la récupération, MROS et SWIFT recall sont les canaux rapides.",
+          "legal": "EIMP — Voie utile mais inadaptée à l'urgence financière 24-72h.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Estimer l'argent comme perdu (au-delà de 48h, taux de récupération <10%) et concentrer les efforts sur la prévention de récidive et l'enquête pénale.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Capitulation prématurée. À 64h, la récupération n'est pas perdue d'avance — le bénéficiaire en Hongrie est sans antécédents AML, ce qui évoque une mule, pas un blanchisseur sophistiqué. Les mules retirent souvent en 3-5 jours, pas 24h. La fenêtre est encore ouverte. Renoncer maintenant c'est perdre 47'800 CHF qu'on aurait peut-être récupérés.",
+          "legal": "MROS — Le délai utile va jusqu'au retrait/layering, pas 48h.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🔍 J+3 — Corrélation : trois autres cas similaires",
+      "situation": "Vos requêtes au MROS et à l'OFCS révèlent que deux autres communes romandes et une PME genevoise ont signalé des incidents similaires dans les 30 derniers jours, tous avec un mobile employé suspecté, tous avec un virement vers Europe de l'Est, tous avec des montants entre 30 et 80 KCHF. Aucun n'est encore au MPC.",
+      "law": "<strong>Art. 30 CPP</strong> — Jonction de procédures connexes.<br><strong>Art. 24 CPP</strong> — Compétence MPC pour la criminalité organisée transcantonale.",
+      "question": "<strong>Que faites-vous de cette corrélation ?</strong>",
+      "choices": [
+        {
+          "text": "Demande formelle de jonction au MPC (art. 30 CPP) avec recours à la compétence transcantonale (art. 24 CPP) — la corrélation suggère une organisation, pas des incidents isolés. Coordination avec les deux autres polices cantonales pour partage des artefacts forensiques.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Décision juste. Quatre cas avec même mode opératoire, même origine géographique des virements, même profil de cible (administrations/PME), c'est très probablement la même organisation. La jonction MPC permet une enquête à un seul niveau, le partage forensique multiplie les chances d'attribution, et la compétence transcantonale légitime l'enquête fédérale.",
+          "legal": "Art. 30 + Art. 24 CPP — Jonction et compétence MPC pour criminalité organisée.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Continuer l'enquête au niveau cantonal — chaque cas a son ministère public, la jonction MPC alourdit la procédure pour peu de gain.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Sous-utilisation des outils procéduraux. Quatre enquêtes cantonales séparées sur le même mode opératoire = quatre fois moins efficaces qu'une enquête fédérale jointe. Le coût procédural d'une jonction est marginal comparé au gain en cohérence forensique et en pression sur le réseau criminel.",
+          "legal": "Art. 30 CPP — La jonction sert précisément à éviter ce cloisonnement.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Ouvrir un dossier propre cantonal et signaler l'OFCS pour bulletin de prévention — laisser les autres cas suivre leur cours indépendamment.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Réflexe défensif individuel. Chaque police cantonale fera son enquête, aucune n'aura la vue d'ensemble, l'organisation criminelle continuera son travail. La prévention OFCS aide les futures victimes mais ne touche pas l'organisation elle-même. Sans jonction, l'enquête perd l'essentiel de sa valeur.",
+          "legal": "Pratique d'enquête — Le silo est l'allié naturel de la criminalité organisée.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "🛡️ J+30 — Bulletin de prévention et enseignements",
+      "situation": "La jonction MPC est acceptée. Quatre dossiers cantonaux en un. Récupération partielle (~35% des montants) via MROS et SWIFT recall. L'OFCS vous demande de contribuer à un bulletin de prévention destiné aux communes romandes. Trois angles sont possibles.",
+      "law": "<strong>OFCS Bulletins</strong> — Communication des modes opératoires aux acteurs concernés.<br><strong>NEDIK Guide communes</strong> — Sensibilisation employés et procédures internes.",
+      "question": "<strong>Quel angle pour le bulletin de prévention ?</strong>",
+      "choices": [
+        {
+          "text": "Bulletin axé sur la chaîne d'attaque complète (smishing → mobile compromis → BEC) avec recommandations opérationnelles précises : (a) séparation appareils privés/pro, (b) MFA non-SMS pour banques pro, (c) validation orale obligatoire pour virements >5 KCHF, (d) signalement immédiat 'téléphone bizarre' au référent cyber.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Recommandations pratiques et actionnables. Chaque mesure a une raison documentée par votre enquête. La séparation appareils privé/pro évite que FluBot accède aux SMS bancaires pros. Le MFA non-SMS contourne l'exfiltration SMS. La validation orale brise le BEC purement numérique. Le signalement précoce des 'comportements bizarres' raccourcit la fenêtre d'attaque.",
+          "legal": "Bonnes pratiques OFCS + NEDIK — Recommandations actionnables et étayées.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Bulletin générique sur les arnaques au Président — c'est ce que les communes connaissent et comprennent.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Le BEC générique est connu et déjà couvert par d'autres bulletins. Ce qui manque dans la connaissance des communes c'est précisément le maillon mobile, le smishing, FluBot, qui rend ce BEC efficace. Faire un Nième bulletin BEC sans le maillon initial reproduit l'angle mort qui a permis l'attaque.",
+          "legal": "OFCS — Bulletins ciblés sur les modes opératoires émergents.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Bulletin technique sur FluBot uniquement — composantes Android, IOC, signatures — destiné aux RSSI techniques.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Public cible mal calibré. Les communes romandes n'ont majoritairement pas de RSSI ni de technicien Android. Un bulletin uniquement technique sera lu par les rares cantons qui en ont déjà un, et ignoré par les 90% qui sont précisément les cibles. Le bulletin doit s'adresser au référent cyber non spécialiste.",
+          "legal": "OFCS — Bulletins adaptés au public destinataire.",
+          "critical": false,
+          "next": -1
+        }
+      ]
+    }
+  ]
+}
