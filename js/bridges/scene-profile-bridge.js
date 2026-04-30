@@ -1,7 +1,10 @@
 /* ============================================================
-   CAS-IN · scene-profile-bridge.js (F2)
+   CAS-IN · scene-profile-bridge.js (F2 + v3)
    Intercepte les écritures legacy 'cas_xp' et 'cas_streak' de la scène
    pour les rediriger vers Profile.addXp / Profile.bumpStreak.
+   v3 : hook supplémentaire sur 'scene_results' qui synchronise les
+   GLOBAL_BADGES (définis dans scene-app.js) vers Profile.unlockAchievement,
+   et déclenche AchievementsCore.evalAndUnlock pour les checks centralisés.
    À charger AVANT scene-app.js sur scene.html.
    ============================================================ */
 
@@ -33,6 +36,33 @@
 
   let _lastSceneXp = null;
   let _lastSceneStreak = null;
+
+  // ──────────────────────────────────────────────────────────
+  // Synchro badges : à chaque write de scene_results (fin de scénario),
+  // on appelle window.getUnlockedBadges() (défini dans scene-app.js après
+  // chargement) et on pousse chaque nouveau badge vers Profile.
+  // Aussi : evalAndUnlock pour les checks TP/fiches centralisés.
+  // ──────────────────────────────────────────────────────────
+  function syncSceneBadgesAndAchievements() {
+    // 1) Badges spécifiques aux scènes (scene-app.js)
+    if (typeof window.getUnlockedBadges === 'function') {
+      try {
+        const ids = window.getUnlockedBadges() || [];
+        ids.forEach(id => {
+          if (typeof id === 'string') window.Profile.unlockAchievement(id);
+        });
+      } catch (e) {
+        console.warn('[scene-profile-bridge] badge sync failed:', e);
+      }
+    }
+    // 2) Achievements transversaux (TP, fiches) — utiles si activité
+    // mixte au cours de la session
+    if (window.AchievementsCore && typeof window.AchievementsCore.evalAndUnlock === 'function') {
+      try {
+        window.AchievementsCore.evalAndUnlock(window.Profile.snapshot());
+      } catch (_) {}
+    }
+  }
 
   function wrappedSetItem(key, value) {
     if (key === 'cas_xp') {
@@ -78,6 +108,15 @@
         window.Profile.breakStreak();
       }
       _lastSceneStreak = newCount;
+      return;
+    }
+
+    // Hook scene_results : write transparent + sync badges/achievements
+    if (key === 'scene_results') {
+      origSetItem(key, value);
+      // Délai court : laisse scene-app finir sa tirade de lsSet
+      // (cas_no_crit_streak, cas_procureur_wins, etc.) avant le check
+      setTimeout(syncSceneBadgesAndAchievements, 50);
       return;
     }
 
@@ -133,5 +172,5 @@
   window.addEventListener('DOMContentLoaded', recordSceneActivity);
   setInterval(recordSceneActivity, 30_000);
 
-  console.info('[scene-profile-bridge] actif · Profile v' + window.Profile.snapshot().version);
+  console.info('[scene-profile-bridge v3] actif · Profile v' + window.Profile.snapshot().version);
 })();

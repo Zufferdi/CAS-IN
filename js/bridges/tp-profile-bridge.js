@@ -1,7 +1,9 @@
 /* ============================================================
-   CAS-IN · tp-profile-bridge.js (F2)
-   Pas d'XP pour les TPs (choix utilisateur). Le bridge sert juste à
-   marquer la dernière activité TP dans Profile pour le DFIR.
+   CAS-IN · tp-profile-bridge.js (F2 + v3)
+   Pas d'XP pour les TPs (choix utilisateur). Le bridge sert à :
+     - marquer la dernière activité TP dans Profile
+     - déclencher AchievementsCore.evalAndUnlock à chaque incrément
+       de tp_solved (débloque les achievements TP/fiches centralisés)
    À charger AVANT tp-engine.js sur tp.html.
    ============================================================ */
 
@@ -18,8 +20,16 @@
 
   const origSetItem = Storage.prototype.setItem.bind(localStorage);
 
-  // Hook léger : quand 'tp_solved' s'incrémente, on note l'activité
+  // Hook léger : quand 'tp_solved' s'incrémente, on note l'activité et
+  // on déclenche l'évaluation des achievements transversaux.
   let _lastTpCount = null;
+
+  function evalAchievements() {
+    if (!window.AchievementsCore || typeof window.AchievementsCore.evalAndUnlock !== 'function') return;
+    try {
+      window.AchievementsCore.evalAndUnlock(window.Profile.snapshot());
+    } catch (_) {}
+  }
 
   function wrappedSetItem(key, value) {
     origSetItem(key, value);
@@ -29,9 +39,15 @@
         const total = Object.values(map).reduce((a, b) => a + (parseInt(b, 10) || 0), 0);
         if (_lastTpCount !== null && total > _lastTpCount) {
           window.Profile.recordActivity('tp');
+          // Délai court pour laisser tp-engine finir d'écrire tp_streak
+          // avant le check (sinon bestStreak peut être stale)
+          setTimeout(evalAchievements, 30);
         }
         _lastTpCount = total;
       } catch (_) {}
+    } else if (key === 'tp_streak' || key === 'tp_bestStreak') {
+      // Streak modifié sans incrément de tp_solved : ré-évaluer aussi
+      setTimeout(evalAchievements, 30);
     }
   }
 
@@ -51,7 +67,12 @@
     _lastTpCount = Object.values(map).reduce((a, b) => a + (parseInt(b, 10) || 0), 0);
   } catch { _lastTpCount = 0; }
 
-  window.addEventListener('DOMContentLoaded', () => window.Profile.recordActivity('tp'));
+  window.addEventListener('DOMContentLoaded', () => {
+    window.Profile.recordActivity('tp');
+    // Catch-up à l'arrivée sur la page (au cas où des seuils auraient
+    // été atteints sans bridge actif lors de précédentes sessions)
+    setTimeout(evalAchievements, 100);
+  });
 
-  console.info('[tp-profile-bridge] actif · Profile v' + window.Profile.snapshot().version);
+  console.info('[tp-profile-bridge v3] actif · Profile v' + window.Profile.snapshot().version);
 })();
