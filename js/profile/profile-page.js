@@ -85,8 +85,46 @@
     // Hiérarchie : ladder dynamique selon le track
     renderLadder(snap.rank.idx, snap.agent.track);
 
+    // Spécialité du rôle : tags qui donnent +20% XP
+    renderSpecialty(snap.agent.track);
+
     // Achievements
     renderAchievements(snap.achievements);
+  }
+
+  /**
+   * Affiche les tags de spécialité du rôle choisi (ceux qui déclenchent
+   * un bonus +20% XP). Utilise Profile.getRoleBonusTags exposé par le module.
+   */
+  function renderSpecialty(trackKey) {
+    const wrap = $('profile-specialty');
+    const tagsContainer = $('profile-specialty-tags');
+    if (!wrap || !tagsContainer) return;
+    if (!window.Profile || typeof window.Profile.getRoleBonusTags !== 'function') {
+      wrap.hidden = true;
+      return;
+    }
+    const tags = window.Profile.getRoleBonusTags(trackKey);
+    if (!tags.length) {
+      wrap.hidden = true;
+      return;
+    }
+    // Dédoubler en gardant l'ordre, limiter à ~14 pour ne pas inonder
+    const seen = new Set();
+    const unique = tags.filter(t => {
+      const k = String(t).toUpperCase();
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    }).slice(0, 14);
+    tagsContainer.innerHTML = '';
+    unique.forEach(t => {
+      const pill = document.createElement('span');
+      pill.className = 'profile-specialty-tag';
+      pill.textContent = t;
+      tagsContainer.appendChild(pill);
+    });
+    wrap.hidden = false;
   }
 
   function getDossierLabel(track) {
