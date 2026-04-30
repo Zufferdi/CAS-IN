@@ -1,4 +1,10 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v36 : 3 fixes — (a) scene.html grade-card branchée sur Profile.getRank
+//       au lieu du système GRADES legacy 100/200/.../1500 XP ;
+//       (b) fiches/index.html resync depuis manifest.json (77 icônes
+//       thématiques restaurées, 28 desc + keywords reconstruits) ;
+//       (c) cas-in-achievements.js extrait de quiz-app.js → metadata
+//       disponible sur profile.html (succès affichés avec emoji + nom + desc).
 // v35 : courbe XP lissée — seuils v3 [0, 250, 550, 950, 1550, 2350, 3450, 4950,
 //       6950, 9450, 12950, 17950] (cap 17950 vs 40000) avec migration v2→v3
 //       par conversion proportionnelle qui PRÉSERVE le rang exact de chaque user.
@@ -29,7 +35,7 @@
 // v22 : extraction du JS inline de quiz.html → js/quiz-app.js (cache séparé)
 // v21 : alignement v2.4 (post-cleanup) — STATIC_ASSETS auto-régénéré
 //       depuis manifest.json + filesystem (90 fiches au lieu de 47)
-const CACHE_VERSION = 'cas-in-v35';
+const CACHE_VERSION = 'cas-in-v36';
 
 const STATIC_ASSETS = [
   // Pages racine
@@ -69,6 +75,7 @@ const STATIC_ASSETS = [
   // Voir ARCHITECTURE.md § « Couches & ordre de chargement ».
   // core/ — librairies transversales (source de vérité, services partagés)
   './js/core/cas-in-profile.js',
+  './js/core/cas-in-achievements.js',
   './js/core/cas-in-counts.js',
   './js/core/cas-in-export.js',
   './js/core/cas-in-pwa.js',
