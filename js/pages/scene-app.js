@@ -875,44 +875,103 @@ function addXP(amount) {
   const prev = getXP();
   const next = Math.max(0, prev + amount);
   lsSet('cas_xp', next);
-  return { prev, next, gradeUp: getGrade(prev).index !== getGrade(next).index };
+
+  // Rank-up via Profile (échelle v3 lissée). Fallback sur GRADES legacy
+  // si Profile indisponible (cas hors-PWA).
+  let gradeUp = false;
+  let gradeUpName = '';
+  if (window.Profile && typeof window.Profile.getRank === 'function') {
+    // Profile.getRank() lit p.xp en interne. On compare AVANT/APRÈS l'écriture
+    // d'XP (ici on n'a pas encore écrit dans Profile, donc on doit comparer
+    // via le diff cas_xp seul, en s'appuyant sur les seuils v3 indirectement).
+    // Astuce simple : recalculer le rang à partir des seuils Profile exposés.
+    const ladder = window.Profile.getTrackLadder
+      ? window.Profile.getTrackLadder()
+      : null;
+    if (ladder && ladder.length) {
+      // ladder est [{name, emoji, min, ...}, …] — on récupère idx pour prev et next
+      const findIdx = xp => {
+        let idx = 0;
+        for (let i = ladder.length - 1; i >= 0; i--) {
+          if (xp >= ladder[i].min) { idx = i; break; }
+        }
+        return idx;
+      };
+      const prevIdx = findIdx(prev);
+      const nextIdx = findIdx(next);
+      gradeUp = nextIdx > prevIdx;
+      gradeUpName = ladder[nextIdx].name;
+    }
+  }
+  if (!gradeUpName) {
+    // Fallback legacy
+    gradeUp = getGrade(prev).index !== getGrade(next).index;
+    gradeUpName = getGrade(next).title;
+  }
+
+  return { prev, next, gradeUp, gradeUpName };
 }
 
 function updateGradeDisplay() {
   const xp = getXP();
-  const grade = getGrade(xp);
+
+  // ───────────────────────────────────────────────────────────
+  // v2.10+ : on bascule sur Profile.getRank (système unifié, échelle v3
+  // lissée, 12 rangs par track choisi par l'utilisateur). Le système
+  // GRADES legacy ci-dessus n'est plus utilisé pour l'affichage scene.html.
+  // Si Profile n'est pas disponible (cas dégradé hors PWA), on retombe sur
+  // getGrade() pour ne rien casser.
+  // ───────────────────────────────────────────────────────────
+  let icon, title, sub, minXp, nextMin, nextLabel;
+  if (window.Profile && typeof window.Profile.getRank === 'function') {
+    const rank = window.Profile.getRank();
+    icon       = rank.emoji;
+    title      = rank.name;
+    sub        = rank.flavor || rank.trackLabel || '';
+    minXp      = rank.min;
+    nextMin    = rank.next ? rank.next.min : null;
+    nextLabel  = rank.next ? rank.next.name : null;
+  } else {
+    const grade = getGrade(xp);
+    icon       = grade.icon;
+    title      = grade.title;
+    sub        = grade.sub;
+    minXp      = grade.min;
+    nextMin    = grade.next ? grade.next.min : null;
+    nextLabel  = grade.next ? grade.next.title : null;
+  }
 
   // Phase 2 v2.10 : grade-mini retiré du header (info redondante avec profile-banner).
   // On garde les call-sites mais on guard chaque accès DOM.
   // Header mini (peut être absent depuis Phase 2)
   const miniIcon = document.getElementById('grade-mini-icon');
-  if (miniIcon) miniIcon.textContent = grade.icon;
+  if (miniIcon) miniIcon.textContent = icon;
   const miniTitle = document.getElementById('grade-mini-title');
-  if (miniTitle) miniTitle.textContent = grade.title;
+  if (miniTitle) miniTitle.textContent = title;
   const miniXp = document.getElementById('grade-mini-xp');
   if (miniXp) miniXp.textContent = xp + ' XP';
 
   // Lobby card (toujours présente)
   const cardIcon = document.getElementById('grade-card-icon');
-  if (cardIcon) cardIcon.textContent = grade.icon;
+  if (cardIcon) cardIcon.textContent = icon;
   const cardTitle = document.getElementById('grade-card-title');
-  if (cardTitle) cardTitle.textContent = grade.title;
+  if (cardTitle) cardTitle.textContent = title;
   const cardSub = document.getElementById('grade-card-subtitle');
-  if (cardSub) cardSub.textContent = grade.sub;
+  if (cardSub) cardSub.textContent = sub;
 
   const progXp = document.getElementById('grade-progress-xp');
   const progNext = document.getElementById('grade-progress-next');
   const progFill = document.getElementById('grade-progress-fill');
-  if (grade.next) {
-    const range = grade.next.min - grade.min;
-    const progress = xp - grade.min;
-    const pct = Math.min(100, (progress / range) * 100);
-    if (progXp) progXp.textContent = `${xp} / ${grade.next.min} XP`;
-    if (progNext) progNext.textContent = `→ ${grade.next.title}`;
+  if (nextMin != null) {
+    const range = nextMin - minXp;
+    const progress = xp - minXp;
+    const pct = Math.min(100, Math.max(0, (progress / range) * 100));
+    if (progXp) progXp.textContent = `${xp} / ${nextMin} XP`;
+    if (progNext) progNext.textContent = `→ ${nextLabel}`;
     if (progFill) progFill.style.width = pct + '%';
   } else {
-    if (progXp) progXp.textContent = `${xp} XP — GRADE MAX`;
-    if (progNext) progNext.textContent = '★ Maître du domaine ★';
+    if (progXp) progXp.textContent = `${xp} XP — RANG MAX`;
+    if (progNext) progNext.textContent = '★ Légende du domaine ★';
     if (progFill) progFill.style.width = '100%';
   }
 }
@@ -2177,7 +2236,7 @@ function showReport() {
 
   // Grade up notification
   const gradeUpHTML = xpResult.gradeUp ? `
-    <span class="xp-gained-new-grade">🎖 Nouveau grade débloqué : <strong>${getGrade(xpResult.next).title}</strong></span>
+    <span class="xp-gained-new-grade">🎖 Nouveau rang débloqué : <strong>${xpResult.gradeUpName}</strong></span>
   ` : '';
 
   // Streak bonus indicator
