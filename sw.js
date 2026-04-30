@@ -1,4 +1,16 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v38 : Stratégie 4 — couleur d'accent par rôle activée. Le scaffolding
+//       CSS [data-track="..."] existait depuis longtemps (variables
+//       --track-accent / --track-accent-glow / --track-accent-soft
+//       définies pour investigator=bleu, magistrate=or pâle,
+//       journalist=orange-rouge, hacker=vert phosphor) mais l'attribut
+//       data-track n'était JAMAIS posé sur <html>. cas-in-profile.js
+//       le pose maintenant à l'init et lors de chaque setTrack(),
+//       avec fallback sur DOMContentLoaded si <html> pas prêt.
+//       Application étendue à : barre XP profile, profile-banner (icon +
+//       rang), brand-link hover, encart spécialité (bordure, badge bonus,
+//       pastilles tags), pastille bonus rôle dans rapport scène,
+//       bordure cartes scène en cours, profile-hero-emoji glow.
 // v37 : Stratégie 1 — bonus XP thématique par rôle (+20%) RÉELLEMENT branché.
 //       Cleanup : 3 systèmes de bonus redondants ramenés à 1 seul (~150 lignes
 //       mortes supprimées dans cas-in-profile.js). Bridges quiz+scene
@@ -42,7 +54,7 @@
 // v22 : extraction du JS inline de quiz.html → js/quiz-app.js (cache séparé)
 // v21 : alignement v2.4 (post-cleanup) — STATIC_ASSETS auto-régénéré
 //       depuis manifest.json + filesystem (90 fiches au lieu de 47)
-const CACHE_VERSION = 'cas-in-v37';
+const CACHE_VERSION = 'cas-in-v38';
 
 const STATIC_ASSETS = [
   // Pages racine
@@ -76,6 +88,7 @@ const STATIC_ASSETS = [
   './style/fiche_style.css',
   './style/profile.css',
   './style/profile-banner.css',
+  './style/track-theme.css',
   './style/quiz.css',
 
   // Scripts — réorganisation v2.10 en sous-dossiers (core/profile/pages/bridges)
