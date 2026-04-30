@@ -1,4 +1,14 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v39 : extension à 15 rangs par track (v3 12 paliers → v4 15 paliers).
+//       PROFILE_VERSION 3 → 4. Nouveaux rangs ajoutés à la fin de chaque
+//       ladder (les 12 originaux restent à leur idx, +3 nouveaux entre les
+//       anciens 11 et 14). Migration v3→v4 préserve le rang exact :
+//       idx 0..10 inchangés, idx 11 (Légende v3) → idx 14 (Légende v4),
+//       les rangs intermédiaires v4 [11,12,13] sont à gagner. Nouveaux
+//       seuils XP : [0, 250, 550, 950, 1550, 2350, 3450, 4950, 6850, 9250,
+//       12250, 15950, 20450, 25950, 32650] (cap 32650 vs 17950 v3).
+//       CLEARANCE_BY_RANK étendu à 15 entrées. computeRank, ladder,
+//       migration tous adaptés. Tests Node validés.
 // v38 : Stratégie 4 — couleur d'accent par rôle activée. Le scaffolding
 //       CSS [data-track="..."] existait depuis longtemps (variables
 //       --track-accent / --track-accent-glow / --track-accent-soft
@@ -54,7 +64,7 @@
 // v22 : extraction du JS inline de quiz.html → js/quiz-app.js (cache séparé)
 // v21 : alignement v2.4 (post-cleanup) — STATIC_ASSETS auto-régénéré
 //       depuis manifest.json + filesystem (90 fiches au lieu de 47)
-const CACHE_VERSION = 'cas-in-v38';
+const CACHE_VERSION = 'cas-in-v39';
 
 const STATIC_ASSETS = [
   // Pages racine
