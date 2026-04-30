@@ -1,131 +1,1011 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>ReFS — Resilient File System — CAS-IN Forensique</title>
 <link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+.page-wrap { max-width:960px; margin:0 auto; padding:1.5rem 2rem; }
+
+.tabs { display:flex; gap:.35rem; padding:.75rem 2rem; border-bottom:1px solid var(--border);
+        background:var(--surface); flex-wrap:wrap; max-width:960px; margin:0 auto; }
+.tab  { background:transparent; border:1px solid var(--border); border-radius:6px;
+        color:var(--muted); font-family:var(--mono); font-size:.72rem; padding:.35rem .8rem;
+        cursor:pointer; transition:.15s; }
+.tab:hover  { color:var(--text); border-color:var(--cyan); }
+.tab.active { background:rgba(0,229,204,.12); border-color:var(--cyan); color:var(--cyan); }
+
+.tab-page         { display:none; max-width:960px; margin:0 auto; padding:1.5rem 2rem; }
+.tab-page.active  { display:block; animation:slideUp .3s ease; }
+
+.concept-card {
+  background:rgba(0,229,204,.04); border:1px solid rgba(0,229,204,.2);
+  border-radius:10px; padding:1rem 1.2rem; margin-bottom:1.25rem; font-size:.82rem; line-height:1.65;
+}
+.concept-title { font-family:var(--sans); font-weight:700; font-size:.85rem; color:var(--cyan); margin-bottom:.5rem; }
+
+/* Architecture disk visualizer */
+.refs-disk {
+  background:rgba(13,17,23,.6); border:1px solid var(--border); border-radius:12px;
+  padding:1.25rem; margin:1rem 0; font-size:.75rem;
+}
+.refs-disk-title {
+  font-family:var(--mono); font-size:.6rem; font-weight:700; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--blue); text-align:center; margin-bottom:1rem; opacity:.8;
+}
+.refs-zones {
+  display:flex; gap:.4rem; flex-wrap:wrap; justify-content:center; margin-bottom:.75rem;
+}
+.refs-zone {
+  flex:1; min-width:120px; padding:.65rem .6rem; border-radius:10px;
+  text-align:center; cursor:pointer; transition:transform .15s, filter .15s;
+  user-select:none; border:1px solid;
+}
+.refs-zone:hover { transform:translateY(-2px); filter:brightness(1.2); }
+.rz-sb  { background:rgba(255,64,96,.08);  border-color:rgba(255,64,96,.3);  color:var(--red); }
+.rz-obj { background:rgba(0,229,204,.08);  border-color:rgba(0,229,204,.3);  color:var(--cyan); }
+.rz-sch { background:rgba(240,192,64,.08); border-color:rgba(240,192,64,.3); color:var(--gold); }
+.rz-dat { background:rgba(48,232,138,.08); border-color:rgba(48,232,138,.3); color:var(--green); }
+.rz-log { background:rgba(188,140,255,.08);border-color:rgba(188,140,255,.3);color:var(--purple); }
+.rz-usn { background:rgba(88,166,255,.08); border-color:rgba(88,166,255,.3); color:var(--blue); }
+.refs-zone-icon  { font-size:1.2rem; display:block; margin-bottom:.25rem; }
+.refs-zone-name  { font-family:var(--sans); font-size:.72rem; font-weight:700; margin-bottom:.18rem; }
+.refs-zone-sub   { font-family:var(--mono); font-size:.57rem; opacity:.7; line-height:1.3; }
+
+.arch-detail {
+  background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+  padding:.8rem 1rem; margin-top:.5rem; font-size:.78rem; min-height:3.5rem;
+  transition:all .2s; color:var(--muted); line-height:1.55;
+}
+
+/* BTree visualizer */
+.btree-wrap {
+  background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+  padding:1.25rem; margin:1rem 0; overflow-x:auto;
+}
+.btree-level { display:flex; justify-content:center; gap:1rem; margin-bottom:.75rem; }
+.btree-node {
+  background:var(--surface); border:1px solid var(--border); border-radius:6px;
+  padding:.45rem .75rem; font-family:var(--mono); font-size:.68rem; text-align:center;
+  position:relative; min-width:90px;
+}
+.btree-node.root   { border-color:var(--cyan);   color:var(--cyan);   background:rgba(0,229,204,.06); }
+.btree-node.branch { border-color:var(--gold);   color:var(--gold);   background:rgba(240,192,64,.06); }
+.btree-node.leaf   { border-color:var(--green);  color:var(--green);  background:rgba(48,232,138,.06); }
+.btree-node.del    { border-color:var(--red);    color:var(--red);    background:rgba(255,64,96,.06);
+                     text-decoration:line-through; opacity:.7; }
+.btree-label { font-size:.58rem; color:var(--dim); margin-top:.2rem; }
+.btree-arrow { text-align:center; color:var(--dim); font-size:.7rem; margin-bottom:.25rem; }
+
+/* Hex row */
+.hex-row {
+  display:flex; gap:.4rem; align-items:center; flex-wrap:wrap;
+  margin:.35rem 0; font-family:var(--mono); font-size:.72rem;
+}
+.hb { display:inline-block; background:var(--surface2); border:1px solid var(--border);
+      padding:.08rem .4rem; border-radius:3px; }
+.hb-c { color:var(--cyan); }
+.hb-g { color:var(--green); }
+.hb-o { color:var(--orange); }
+.hb-r { color:var(--red); }
+.hb-p { color:var(--purple); }
+.hb-d { color:var(--dim); }
+.hex-label { font-size:.65rem; color:var(--dim); margin-left:.35rem; }
+
+/* Forensic flow steps */
+.fstep {
+  display:flex; gap:.9rem; padding:.7rem 1rem; border-bottom:1px solid var(--border);
+  transition:background .15s;
+}
+.fstep:hover { background:var(--surface2); }
+.fstep:last-child { border-bottom:none; }
+.fsn {
+  width:24px; height:24px; border-radius:50%; flex-shrink:0; margin-top:.1rem;
+  font-size:.68rem; font-weight:700; display:flex; align-items:center; justify-content:center;
+}
+.fsn-c { background:rgba(0,229,204,.15); border:1px solid rgba(0,229,204,.4); color:var(--cyan); }
+.fsn-g { background:rgba(48,232,138,.15); border:1px solid rgba(48,232,138,.4); color:var(--green); }
+.fsn-o { background:rgba(240,136,62,.15); border:1px solid rgba(240,136,62,.4); color:var(--orange); }
+.fsn-r { background:rgba(255,64,96,.15); border:1px solid rgba(255,64,96,.4); color:var(--red); }
+.fstep-body { flex:1; font-size:.8rem; line-height:1.55; }
+.fstep-title { font-family:var(--sans); font-weight:700; font-size:.78rem; color:var(--text); margin-bottom:.2rem; }
+.fstep-cmd { font-family:var(--mono); font-size:.69rem; color:var(--green); background:var(--bg);
+             border:1px solid var(--border); border-radius:4px; padding:.25rem .6rem;
+             display:block; margin:.25rem 0; cursor:pointer; }
+
+/* Tool cards */
+.tool-row { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:.75rem; }
+.tool-card-s {
+  flex:1; min-width:200px; background:var(--surface); border:1px solid var(--border);
+  border-radius:9px; padding:.8rem 1rem;
+}
+.tool-name-s { font-family:var(--sans); font-weight:700; font-size:.78rem; color:var(--text); margin-bottom:.2rem; }
+.tool-support { font-size:.68rem; padding:.1rem .4rem; border-radius:3px; font-weight:600; }
+.ts-full   { background:rgba(48,232,138,.12); color:var(--green); border:1px solid rgba(48,232,138,.25); }
+.ts-part   { background:rgba(240,192,64,.12); color:var(--gold);  border:1px solid rgba(240,192,64,.25); }
+.ts-no     { background:rgba(255,64,96,.12);  color:var(--red);   border:1px solid rgba(255,64,96,.25); }
+.tool-notes { font-size:.73rem; color:var(--muted); margin-top:.35rem; line-height:1.5; }
+
+/* Scenario */
+.scenario-card { background:rgba(240,192,64,.04); border:1px solid rgba(240,192,64,.2);
+                 border-radius:10px; padding:1rem 1.2rem; margin-bottom:.8rem; }
+.scenario-label { font-size:.64rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+                  color:var(--gold); margin-bottom:.4rem; }
+.scenario-body  { font-size:.78rem; color:var(--muted); line-height:1.55; }
+
+/* Quiz */
+.quiz-wrap  { background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+              padding:.9rem 1rem; margin-bottom:.75rem; }
+.quiz-q     { font-size:.8rem; color:var(--text); margin-bottom:.6rem; }
+.quiz-reveal-btn { background:rgba(0,229,204,.08); border:1px solid rgba(0,229,204,.25);
+                   border-radius:6px; color:var(--cyan); font-family:var(--mono); font-size:.72rem;
+                   padding:.3rem .8rem; cursor:pointer; transition:.15s; }
+.quiz-reveal-btn:hover { background:rgba(0,229,204,.15); }
+.quiz-answer { display:none; margin-top:.6rem; font-size:.78rem; color:var(--muted); line-height:1.55;
+               border-top:1px solid var(--border); padding-top:.6rem; }
+.quiz-answer.visible { display:block; animation:fadeIn .2s ease; }
+.quiz-ok  { color:var(--green); font-weight:700; }
+
+/* Utility */
+.breadcrumb { display:flex; align-items:center; flex-wrap:wrap; gap:.3rem; font-size:.72rem;
+              color:var(--muted); padding:.6rem 0; margin-bottom:.75rem; }
+.breadcrumb a { color:var(--muted); text-decoration:none; }
+.breadcrumb a:hover { color:var(--cyan); }
+.bc-sep { color:var(--border); }
+.bc-current { color:var(--text); }
+.read-time-badge { font-size:.65rem; background:rgba(0,229,204,.06); border:1px solid rgba(0,229,204,.15);
+                   color:var(--cyan); padding:.15rem .5rem; border-radius:4px; }
+.prereq-label { color:var(--dim); font-size:.7rem; min-width:72px; }
+.prereq-pill  { background:rgba(88,166,255,.08); border:1px solid rgba(88,166,255,.2);
+                color:var(--blue); border-radius:5px; padding:.15rem .55rem; font-size:.7rem;
+                text-decoration:none; transition:.15s; }
+.prereq-pill:hover { background:rgba(88,166,255,.18); }
+.tp-pill      { background:rgba(0,229,204,.07); border:1px solid rgba(0,229,204,.2);
+                color:var(--cyan); border-radius:5px; padding:.15rem .55rem; font-size:.7rem;
+                text-decoration:none; transition:.15s; }
+.related-pill { background:rgba(48,232,138,.06); border:1px solid rgba(48,232,138,.18);
+                color:var(--green); border-radius:5px; padding:.15rem .55rem; font-size:.7rem;
+                text-decoration:none; transition:.15s; }
+
+#scroll-progress { position:fixed; top:0; left:0; height:2px; width:0;
+  background:linear-gradient(90deg,var(--cyan),var(--green)); z-index:1000; }
+.back-top { position:fixed; bottom:1.5rem; right:1.5rem; background:var(--surface2);
+  border:1px solid var(--border); border-radius:8px; color:var(--dim); font-size:.9rem;
+  width:2rem; height:2rem; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; opacity:0; pointer-events:none; transition:.2s; }
+.back-top.visible { opacity:1; pointer-events:auto; }
+
+@media(max-width:640px){
+  .page-wrap,.tab-page { padding:1rem; }
+  .tabs { padding:.6rem 1rem; }
+  .tn-title { display:none; }
+  .refs-zone { min-width:90px; }
+  .tool-card-s { min-width:100%; }
+}
+</style>
 </head>
 <body>
 <div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
 <nav class="tn-nav">
   <a href="index.html" class="tn-back">← Fiches</a>
-  <span class="tn-title">Systèmes de Fichiers</span>
+  <span class="tn-title">SYSTÈMES DE FICHIERS</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
-<div class="page">
 
-<div class="breadcrumb">
-  <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
-  <a href="index.html">Fiches</a><span class="bc-sep">›</span>
-  <a href="index.html#cat-systèmesdefichiers">Systèmes de Fichiers</a><span class="bc-sep">›</span>
-  <span class="bc-current">ReFS</span>
-  <span class="read-time-badge" style="margin-left:auto">⏱ ~3 min</span>
-</div>
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesdefichiers">Systèmes de Fichiers</a><span class="bc-sep">›</span>
+    <span class="bc-current">ReFS</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~14 min</span>
+  </div>
 
-<div class="info" style="margin-bottom:1.5rem;border-left:3px solid var(--cyan);background:rgba(0,229,204,.04);border-radius:0 8px 8px 0;padding:.9rem 1.2rem">
-<p style="font-style:italic;color:var(--muted);font-size:.82rem">"ReFS was designed for large-scale storage infrastructure. Forensically, its lack of $MFT and sparse tool support means investigators often miss critical artefacts."</p>
-<p style="font-size:.7rem;color:var(--dim);margin-top:.3rem">— DFIR.training · ReFS Forensics 2023</p>
-<p style="margin-top:.6rem;font-size:.78rem">💡 <strong>Quand le rencontrer :</strong> ReFS apparaît sur les serveurs Windows Server 2012+, les espaces de stockage (Storage Spaces), Windows Server Backup, et les volumes Hyper-V (recommandé par Microsoft pour stocker les VMs).</p>
-</div>
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div>
+      <span style="font-size:2.2rem">🗄️</span>
+      <span class="tag tag-cyan" style="margin-left:.5rem">Windows Server</span>
+      <span class="tag tag-gold" style="margin-left:.3rem">Storage Spaces</span>
+      <span class="tag tag-red" style="margin-left:.3rem">Récupération difficile</span>
+    </div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">ReFS — Resilient File System</h1>
+    <div class="meta">Windows Server 2012+ · Object Table B+ Tree · Pas de $MFT · Checksums SHA-256 · Storage Spaces · Hyper-V</div>
+  </div>
 
-<div class="header">
-  <div class="fs-badge">🗄️</div>
-  <div>
-    <span class="tag tag-cyan">ReFS</span><span class="tag tag-green">Windows Server</span><span class="tag tag-gold">Storage Spaces</span>
-    <h1 style="font-family:var(--sans);font-size:1.6rem;font-weight:800;letter-spacing:-0.5px;margin:.3rem 0 .2rem">ReFS — Resilient File System</h1>
-    <p class="meta">Windows Server 2012+ · Pas de $MFT · Checksums intégrés · Récupération très difficile</p>
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row">
+      <span class="prereq-label">Prérequis :</span>
+      <a href="ntfs.html" class="prereq-pill">📖 NTFS</a>
+      <a href="encodage.html" class="prereq-pill">📖 Encodage</a>
+      <a href="comparaison_fs.html" class="prereq-pill">📖 Comparaison FS</a>
+    </div>
+    <div class="prereq-row">
+      <span class="prereq-label">Pratiquer :</span>
+      <a href="../tp.html?cat=offset" class="tp-pill">🧪 📐 Calcul d'offset</a>
+    </div>
+    <div class="prereq-row">
+      <span class="prereq-label">Voir aussi :</span>
+      <a href="ntfs.html" class="related-pill">🔗 NTFS</a>
+      <a href="vm_forensique.html" class="related-pill">🔗 VM Forensique</a>
+      <a href="windows_forensique.html" class="related-pill">🔗 Windows Forensique</a>
+      <a href="data_carving.html" class="related-pill">🔗 Data Carving</a>
+    </div>
   </div>
 </div>
 
-<div class="prereq-block"><div class="prereq-row"><span class="prereq-label">Prérequis</span><a href="ntfs.html" class="prereq-pill">📖 NTFS</a><a href="comparaison_fs.html" class="prereq-pill">📖 Comparaison FS</a></div><div class="prereq-row"><span class="prereq-label">Pratiquer</span><a href="../tp.html?cat=offset" class="tp-pill">🧪 📐 Calcul d'offset</a></div><div class="prereq-row"><span class="prereq-label">Voir aussi</span><a href="ntfs.html" class="related-pill">🔗 NTFS</a><a href="vm_forensique.html" class="related-pill">🔗 VM Forensique</a><a href="windows_forensique.html" class="related-pill">🔗 Windows Forensique</a></div></div>
-
-
-<div class="sec"><div class="sec-title">ReFS vs NTFS — Comparaison forensique</div>
-<table><thead><tr><th>Aspect</th><th>NTFS</th><th>ReFS</th></tr></thead><tbody>
-<tr><td>Métadonnées</td><td>$MFT (Master File Table)</td><td style="color:var(--gold)">Pas de $MFT — Object Table B+ Tree</td></tr>
-<tr><td>Récupération fichiers supprimés</td><td style="color:var(--green)">Possible (entrées MFT)</td><td style="color:var(--red)">Très difficile — entrées effacées immédiatement</td></tr>
-<tr><td>Alternate Data Streams</td><td style="color:var(--green)">Oui</td><td style="color:var(--red)">Non supporté</td></tr>
-<tr><td>Compression NTFS / EFS</td><td style="color:var(--green)">Oui</td><td style="color:var(--red)">Non supporté</td></tr>
-<tr><td>Intégrité données</td><td>Non native</td><td style="color:var(--cyan)">Checksums SHA-256 par bloc</td></tr>
-<tr><td>8.3 noms courts</td><td>Oui</td><td style="color:var(--red)">Non</td></tr>
-<tr><td>Volume Shadow Copy</td><td style="color:var(--green)">Oui</td><td style="color:var(--green)">Oui — source forensique précieuse</td></tr>
-<tr><td>$UsnJrnl</td><td style="color:var(--green)">Oui — bien documenté</td><td style="color:var(--gold)">Présent mais structure différente</td></tr>
-<tr><td>Support outils forensiques</td><td style="color:var(--green)">Excellent</td><td style="color:var(--red)">Partiel (X-Ways, Autopsy limité)</td></tr>
-</tbody></table>
+<!-- TABS -->
+<div class="tabs" id="refs-tabs">
+  <button class="tab active" onclick="showTab('intro',this)">🔑 Contexte</button>
+  <button class="tab" onclick="showTab('structure',this)">🏗 Structure</button>
+  <button class="tab" onclick="showTab('btree',this)">🌳 Object Table</button>
+  <button class="tab" onclick="showTab('on-disk',this)">🔬 On-Disk</button>
+  <button class="tab" onclick="showTab('methodo',this)">🔍 Méthodologie</button>
+  <button class="tab" onclick="showTab('outils',this)">🛠 Outils</button>
+  <button class="tab" onclick="showTab('quiz',this)">💊 Quiz</button>
 </div>
 
-<div class="sec"><div class="sec-title">Structure interne ReFS</div>
+
+<!-- ══════════════════════════════════════════
+     TAB 1 — CONTEXTE
+══════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-intro">
+
+<div style="background:rgba(13,17,23,.7);border:1px solid var(--border);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;padding:.9rem 1.2rem;margin-bottom:1.25rem">
+  <p style="font-style:italic;color:var(--muted);font-size:.82rem">"ReFS was designed for large-scale storage infrastructure. Forensically, its lack of $MFT and sparse tool support means investigators often miss critical artefacts."</p>
+  <p style="font-size:.7rem;color:var(--dim);margin-top:.3rem">— DFIR.training · ReFS Forensics 2023</p>
+</div>
+
+<div class="concept-card">
+  <div class="concept-title">🔑 Pourquoi ReFS existe et où le rencontrer</div>
+  ReFS (Resilient File System) a été introduit avec <strong>Windows Server 2012</strong> pour répondre aux besoins des datacenters : intégrité des données à grande échelle, résilience aux corruptions hardware, volumes massifs. Il n'est <strong>pas</strong> conçu pour remplacer NTFS sur les postes de travail — il cible les serveurs, le stockage NAS/SAN, les clusters Hyper-V, et les espaces de stockage Windows (Storage Spaces).
+  <br><br>
+  En forensique, le rencontrer signifie presque toujours : infrastructure d'entreprise, serveur de fichiers, NAS Windows, ou stockage de machines virtuelles Hyper-V.
+</div>
+
+<div class="sec-title">Où rencontrer ReFS en investigation</div>
 <div class="g2">
-<div class="card card-blue"><div class="ct">Composants clés</div><ul>
-<li><strong>Object Table :</strong> équivalent de la MFT (B+ Tree)</li>
-<li><strong>Schema Table :</strong> types d'objets et attributs</li>
-<li><strong>Object ID Table :</strong> association ID → fichier</li>
-<li><strong>Superblock :</strong> à l'offset 0 du volume</li>
-<li>Checksum SHA-256 sur chaque bloc de données</li>
-</ul></div>
-<div class="card card-red"><div class="ct">Limites forensiques</div><ul>
-<li>Pas de récupération native de fichiers supprimés</li>
-<li>Entrées de répertoire effacées immédiatement</li>
-<li>Journalisation différente → moins d'artefacts résiduels</li>
-<li>MFTECmd (Zimmerman) ne s'applique pas à ReFS</li>
-<li>Carving possible mais moins de repères</li>
-</ul></div>
-</div></div>
+  <div class="card card-blue">
+    <div class="ct">Contextes typiques</div>
+    <ul>
+      <li><strong>Windows Server 2012 / 2016 / 2019 / 2022</strong> — volumes de données</li>
+      <li><strong>Storage Spaces</strong> — pools de disques avec parité ou miroir</li>
+      <li><strong>Hyper-V</strong> — recommandé par Microsoft pour les VHDX</li>
+      <li><strong>Windows Server Backup</strong> — destination de sauvegarde native</li>
+      <li><strong>Scale-Out File Server (SOFS)</strong> — clusters haute disponibilité</li>
+    </ul>
+  </div>
+  <div class="card card-orange">
+    <div class="ct">Ce que ReFS n'est PAS</div>
+    <ul>
+      <li>Absent des postes Windows 10/11 grand public (sauf Pro for Workstations)</li>
+      <li>Pas sur les disques de démarrage système</li>
+      <li>Pas sur les partitions EFI / Recovery</li>
+      <li>Pas sur les disques amovibles (USB, cartes SD)</li>
+      <li>Incompatible avec BitLocker sur Server 2012 (supporté depuis 2016)</li>
+    </ul>
+  </div>
+</div>
 
-<div class="sec"><div class="sec-title">Outils &amp; Volume Shadow Copy</div>
+<div class="sec-title" style="margin-top:1.25rem">ReFS vs NTFS — Tableau forensique complet</div>
+<table class="tbl">
+  <thead>
+    <tr><th>Aspect</th><th>NTFS</th><th>ReFS</th><th>Impact forensique</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="color:var(--text);font-weight:600">Structure de métadonnées</td>
+      <td>$MFT (table plate)</td>
+      <td style="color:var(--gold)">Object Table (B+ Tree)</td>
+      <td style="font-size:.72rem;color:var(--muted)">MFTECmd / MFT parsers = inutilisables sur ReFS</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:600">Suppression de fichier</td>
+      <td style="color:var(--green)">Entrée MFT conservée (récupérable)</td>
+      <td style="color:var(--red)">B+ Tree mis à jour immédiatement</td>
+      <td style="font-size:.72rem;color:var(--muted)">Récupération quasi impossible sans VSS</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:600">Alternate Data Streams</td>
+      <td style="color:var(--green)">Oui — artefact clé (Zone.Identifier)</td>
+      <td style="color:var(--red)">Non supporté</td>
+      <td style="font-size:.72rem;color:var(--muted)">Pas de Zone.Identifier, pas de ADS malveillants</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:600">Intégrité des données</td>
+      <td>Non native (nécessite CHKDSK)</td>
+      <td style="color:var(--cyan)">Checksums par page (64-bit)</td>
+      <td style="font-size:.72rem;color:var(--muted)">Corruption détectée automatiquement — fiable pour l'authenticité</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:600">Journal / Log</td>
+      <td style="color:var(--green)">$LogFile + $UsnJrnl (riches)</td>
+      <td style="color:var(--gold)">$UsnJrnl présent, structure différente</td>
+      <td style="font-size:.72rem;color:var(--muted)">USN Journal exploitable mais format non documenté officiellement</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:600">Volume Shadow Copy (VSS)</td>
+      <td style="color:var(--green)">Oui — largement supporté</td>
+      <td style="color:var(--green)">Oui — <strong>source principale</strong></td>
+      <td style="font-size:.72rem;color:var(--muted)">VSS = première chose à vérifier sur ReFS</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:600">Compression / EFS</td>
+      <td style="color:var(--green)">Oui</td>
+      <td style="color:var(--red)">Non</td>
+      <td style="font-size:.72rem;color:var(--muted)">Pas de chiffrement EFS natif (BitLocker possible depuis 2016)</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:600">Noms 8.3 courts</td>
+      <td style="color:var(--green)">Oui</td>
+      <td style="color:var(--red)">Non</td>
+      <td style="font-size:.72rem;color:var(--muted)">Moins d'artefacts de noms alternatifs</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:600">Taille max volume</td>
+      <td>256 TB (pratique)</td>
+      <td style="color:var(--cyan)">1 YB théorique</td>
+      <td style="font-size:.72rem;color:var(--muted)">Volumes potentiellement très grands = images lentes</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:600">Support outils DFIR</td>
+      <td style="color:var(--green)">Excellent (toute la suite)</td>
+      <td style="color:var(--red)">Partiel — X-Ways, FTK en tête</td>
+      <td style="font-size:.72rem;color:var(--muted)">Vérifier la version de l'outil avant investigation</td>
+    </tr>
+  </tbody>
+</table>
+
+</div><!-- /tab-intro -->
+
+
+<!-- ══════════════════════════════════════════
+     TAB 2 — STRUCTURE
+══════════════════════════════════════════ -->
+<div class="tab-page" id="tab-structure">
+
+<div class="concept-card">
+  <div class="concept-title">🏗 Architecture ReFS — Tout est B+ Tree</div>
+  Là où NTFS organise ses métadonnées dans une <strong>table plate</strong> ($MFT), ReFS utilise des <strong>arbres B+</strong> imbriqués pour tout : répertoires, fichiers, identifiants, checksums. Cette architecture garantit l'intégrité mais rend la récupération forensique radicalement plus difficile.
+</div>
+
+<div class="sec-title">Cartographie du volume ReFS</div>
+<div class="refs-disk">
+  <div class="refs-disk-title">💿 Volume ReFS — Structure on-disk</div>
+  <div class="refs-zones">
+    <div class="refs-zone rz-sb" onclick="showRefs('sb')">
+      <span class="refs-zone-icon">🔴</span>
+      <div class="refs-zone-name">Superblock</div>
+      <div class="refs-zone-sub">Offset 0x00<br>Signature · Version · Checksum</div>
+    </div>
+    <div class="refs-zone rz-obj" onclick="showRefs('obj')">
+      <span class="refs-zone-icon">🗂</span>
+      <div class="refs-zone-name">Object Table</div>
+      <div class="refs-zone-sub">B+ Tree racine<br>Équivalent $MFT</div>
+    </div>
+    <div class="refs-zone rz-sch" onclick="showRefs('sch')">
+      <span class="refs-zone-icon">📋</span>
+      <div class="refs-zone-name">Schema Table</div>
+      <div class="refs-zone-sub">Types d'objets<br>Définitions attributs</div>
+    </div>
+    <div class="refs-zone rz-dat" onclick="showRefs('dat')">
+      <span class="refs-zone-icon">📦</span>
+      <div class="refs-zone-name">Data Area</div>
+      <div class="refs-zone-sub">Contenu fichiers<br>Checksums par page</div>
+    </div>
+    <div class="refs-zone rz-log" onclick="showRefs('log')">
+      <span class="refs-zone-icon">📜</span>
+      <div class="refs-zone-name">Log (Journal)</div>
+      <div class="refs-zone-sub">Transactions<br>Résilience crash</div>
+    </div>
+    <div class="refs-zone rz-usn" onclick="showRefs('usn')">
+      <span class="refs-zone-icon">📊</span>
+      <div class="refs-zone-name">$UsnJrnl</div>
+      <div class="refs-zone-sub">Journal USN<br>Historique modifications</div>
+    </div>
+  </div>
+  <div class="arch-detail" id="refs-detail">
+    <span style="color:var(--dim);font-size:.75rem">ℹ️ Cliquez sur une zone pour afficher ses détails forensiques</span>
+  </div>
+</div>
+
+<div class="sec-title">Composants principaux détaillés</div>
 <div class="g2">
-<div class="card card-green"><div class="ct">Support outils</div><ul>
-<li><strong>X-Ways Forensics :</strong> lecture OK, récupération limitée</li>
-<li><strong>Autopsy / TSK :</strong> expérimental</li>
-<li><strong>FTK Imager :</strong> montage OK</li>
-<li><strong>Windows natif :</strong> complet — PowerShell + robocopy</li>
-</ul></div>
-<div class="card card-cyan"><div class="ct">Volume Shadow Copy (VSS)</div><ul>
-<li>VSS fonctionne sur ReFS — source forensique principale</li>
-<li><code>vssadmin list shadows /for=X:</code></li>
-<li>Montage : <code>mklink /D C:\shadow \?\GLOBALROOT\...\ShadowCopyX\</code></li>
-<li>ShadowExplorer (GUI) pour accès facilité</li>
-</ul></div>
-</div></div>
-
-
-<div class="exam-tip">
-  <div class="exam-tip-title">🎓 Exam Tip — ReFS</div>
-  <p><strong>ReFS</strong> = Resilient File System · Windows Server 2012+ · Storage Spaces · Hyper-V VMs</p>
-  <p><strong>Pas de $MFT</strong> : Object Table B+ Tree → MFTECmd inutilisable sur ReFS</p>
-  <p><strong>Suppression</strong> : entrées effacées immédiatement → récupération quasi impossible</p>
-  <p><strong>Absent</strong> : ADS · Compression EFS · Noms 8.3 · Récupération native</p>
-  <p><strong>Source principale</strong> : Volume Shadow Copy (VSS) — <code>vssadmin list shadows /for=X:</code></p>
-  <p><strong>Checksums SHA-256</strong> intégrés par bloc de données · $UsnJrnl présent (structure différente)</p>
+  <div class="card card-red">
+    <div class="ct">Superblock (offset 0x00)</div>
+    <p>Première structure lisible. Contient la signature ReFS, la version (1.x ou 3.x), la taille de page (4KB par défaut), le GUID du volume, et un checksum de l'ensemble. Offset 0 → 0x200 (512 octets). <strong>Forensiquement</strong> : identification rapide du volume.</p>
+    <div class="hex-row" style="margin-top:.5rem">
+      <span class="hb hb-c">52 65 46 53</span>
+      <span class="hex-label">Signature "ReFS"</span>
+    </div>
+    <div class="hex-row">
+      <span class="hb hb-g">01 00 00 00</span>
+      <span class="hex-label">Version majeure</span>
+    </div>
+  </div>
+  <div class="card card-cyan">
+    <div class="ct">Object Table (B+ Tree racine)</div>
+    <p>Remplace la $MFT. Chaque fichier/répertoire = un <strong>Object ID</strong> 64-bit qui pointe vers un sous-arbre B+. La suppression d'un fichier supprime son entrée dans l'arbre — <strong>immédiatement et sans résidu</strong>, contrairement à NTFS. Pas de "slack space" dans les nœuds d'arbre exploitable.</p>
+  </div>
+  <div class="card card-gold">
+    <div class="ct">Schema Table</div>
+    <p>Définit la structure des attributs pour chaque type d'objet (fichier, répertoire, lien, etc.). En pratique invisible pour l'investigateur — mais cruciale pour les parsers qui doivent comprendre la structure avant de la lire.</p>
+  </div>
+  <div class="card card-purple">
+    <div class="ct">Journal de transactions</div>
+    <p>ReFS maintient un journal write-ahead pour garantir la cohérence. Les transactions non commitées peuvent rester dans le journal après un crash. <strong>Source potentielle d'artefacts</strong> si le journal n'a pas été rejoué (recovery incomplète).</p>
+  </div>
 </div>
+
+<div class="sec-title" style="margin-top:1.25rem">Versioning ReFS — Impact forensique</div>
+<table class="tbl">
+  <thead>
+    <tr><th>Version</th><th>OS hôte</th><th>Nouveautés</th><th>Impact forensique</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="color:var(--gold);font-weight:700">ReFS 1.x</td>
+      <td>Server 2012 / 2012 R2</td>
+      <td>Base — pas de déduplication, pas de BitLocker</td>
+      <td style="font-size:.72rem;color:var(--muted)">Pas de chiffrement → carving possible sur données</td>
+    </tr>
+    <tr>
+      <td style="color:var(--cyan);font-weight:700">ReFS 2.x</td>
+      <td>Server 2016</td>
+      <td>BitLocker, déduplication, clonage de blocs</td>
+      <td style="font-size:.72rem;color:var(--muted)">BitLocker possible → vérifier chiffrement avant tout</td>
+    </tr>
+    <tr>
+      <td style="color:var(--green);font-weight:700">ReFS 3.x</td>
+      <td>Server 2019 / 2022, Win 10 Pro WS</td>
+      <td>Integrity streams, mirror accelerated parity</td>
+      <td style="font-size:.72rem;color:var(--muted)">Integrity streams = checksums par fichier → authenticité vérifiable</td>
+    </tr>
+  </tbody>
+</table>
+<div class="tip" style="margin-top:.75rem">
+  💡 <strong>Identifier la version</strong> : <code style="font-family:var(--mono);color:var(--green);font-size:.75rem">fsutil fsinfo refsinfo X:</code> sous Windows, ou lire l'offset 0x08 du Superblock (Major version).
+</div>
+
+</div><!-- /tab-structure -->
+
+
+<!-- ══════════════════════════════════════════
+     TAB 3 — OBJECT TABLE (B+ TREE)
+══════════════════════════════════════════ -->
+<div class="tab-page" id="tab-btree">
+
+<div class="concept-card">
+  <div class="concept-title">🌳 L'Object Table — Le cœur forensique de ReFS</div>
+  Comprendre l'Object Table est essentiel pour saisir <strong>pourquoi</strong> la récupération de fichiers supprimés est quasi impossible sur ReFS. Contrairement à la $MFT de NTFS (table plate avec marquage), le B+ Tree de ReFS se réorganise activement à chaque suppression.
+</div>
+
+<div class="sec-title">Structure B+ Tree de ReFS</div>
+<div class="btree-wrap">
+  <div class="btree-level">
+    <div class="btree-node root">Root Node<br><span class="btree-label">Object Table</span></div>
+  </div>
+  <div class="btree-arrow">↙&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↘</div>
+  <div class="btree-level">
+    <div class="btree-node branch">Internal Node<br><span class="btree-label">ID 0x01–0x3FF</span></div>
+    <div class="btree-node branch">Internal Node<br><span class="btree-label">ID 0x400–0x7FF</span></div>
+    <div class="btree-node branch">Internal Node<br><span class="btree-label">ID 0x800–0xFFF</span></div>
+  </div>
+  <div class="btree-arrow">↙↓↘&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↙↓↘&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↙↓↘</div>
+  <div class="btree-level">
+    <div class="btree-node leaf">Leaf: fichier.docx<br><span class="btree-label">Object ID 0x00A2</span></div>
+    <div class="btree-node leaf">Leaf: rapport.pdf<br><span class="btree-label">Object ID 0x00B1</span></div>
+    <div class="btree-node del">Leaf: [SUPPRIMÉ]<br><span class="btree-label">Entrée retirée</span></div>
+    <div class="btree-node leaf">Leaf: image.jpg<br><span class="btree-label">Object ID 0x00C4</span></div>
+    <div class="btree-node leaf">Leaf: config.xml<br><span class="btree-label">Object ID 0x00D9</span></div>
+  </div>
+</div>
+<div style="font-size:.73rem;color:var(--dim);text-align:center;margin-top:.3rem">
+  ⚠️ L'entrée rouge est <strong>définitivement retirée</strong> de l'arbre — aucun résidu dans la table, contrairement à NTFS (entrée marquée $FILE_NAME = 0xE5).
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">Pourquoi NTFS permet la récupération et pas ReFS</div>
+<div class="g2">
+  <div class="card card-green">
+    <div class="ct">NTFS — Suppression</div>
+    <ul>
+      <li>Entrée $MFT marquée comme libre (<code>0xE5</code> dans le nom)</li>
+      <li>Attributs <code>$FILE_NAME</code>, <code>$DATA</code> toujours présents</li>
+      <li>Run list intacte → clusters connus</li>
+      <li>MFTECmd / Autopsy peuvent lire l'entrée résiduelle</li>
+      <li>Récupération possible tant que les clusters ne sont pas réalloués</li>
+    </ul>
+  </div>
+  <div class="card card-red">
+    <div class="ct">ReFS — Suppression</div>
+    <ul>
+      <li>Entrée retirée du B+ Tree immédiatement</li>
+      <li>Arbre rééquilibré — pas de "trou" exploitable</li>
+      <li>Object ID libéré et réutilisable</li>
+      <li>Clusters marqués libres dans l'allocation map</li>
+      <li>Aucune trace dans les métadonnées FS</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">Checksums par page — Mécanisme d'intégrité</div>
+<div class="algo-viz" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin:1rem 0;">
+  <p style="font-size:.8rem;color:var(--muted);margin-bottom:.85rem">Chaque page de données (4KB par défaut) dans ReFS est accompagnée d'un <strong>checksum 64-bit</strong> stocké séparément dans les métadonnées. Lors d'une lecture, le FS recalcule le checksum et le compare — toute divergence déclenche une réparation automatique (si Storage Spaces avec miroir) ou une alerte.</p>
+  <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;font-size:.78rem">
+    <div style="background:rgba(0,229,204,.08);border:1px solid rgba(0,229,204,.2);border-radius:7px;padding:.5rem .9rem;color:var(--cyan)">Page données 4KB</div>
+    <div style="color:var(--dim)">→ hash →</div>
+    <div style="background:rgba(240,192,64,.08);border:1px solid rgba(240,192,64,.2);border-radius:7px;padding:.5rem .9rem;color:var(--gold)">Checksum 64-bit</div>
+    <div style="color:var(--dim)">→ stocké dans →</div>
+    <div style="background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);border-radius:7px;padding:.5rem .9rem;color:var(--blue)">Metadata Tree</div>
+  </div>
+  <div class="tip" style="margin-top:.85rem">
+    💡 <strong>Forensiquement utile</strong> : si un checksum échoue, ReFS documente l'événement dans le journal système Windows (Event Log). Ces événements peuvent dater une corruption et prouver une altération physique du support.
+  </div>
+</div>
+
+<div class="sec-title">$UsnJrnl sur ReFS — Ce qu'on peut en tirer</div>
+<div class="concept-card" style="background:rgba(88,166,255,.04);border-color:rgba(88,166,255,.2)">
+  <div class="concept-title" style="color:var(--blue)">📊 USN Journal — Artefact exploitable</div>
+  ReFS maintient un $UsnJrnl (Update Sequence Number Journal) similaire à NTFS. Il enregistre les <strong>opérations sur les fichiers</strong> (création, modification, suppression, renommage) avec horodatage. La structure est légèrement différente de NTFS mais <strong>lisible par certains outils</strong> (MFTECmd en mode USN, Log2Timeline).
+  <br><br>
+  <strong>Ce qu'on y trouve</strong> : nom du fichier, type d'opération (USN_REASON_*), timestamp FILETIME, Object ID parent. C'est souvent <strong>la seule trace</strong> d'un fichier supprimé sur ReFS.
+  <code style="display:block;margin-top:.6rem;font-family:var(--mono);font-size:.72rem;color:var(--green);background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:.35rem .7rem">fsutil usn readjournal X: csv > usn_refs.csv</code>
+</div>
+
+</div><!-- /tab-btree -->
+
+
+<!-- ══════════════════════════════════════════
+     TAB 4 — ON-DISK (HEX)
+══════════════════════════════════════════ -->
+<div class="tab-page" id="tab-on-disk">
+
+<div class="concept-card">
+  <div class="concept-title">🔬 Lecture hexadécimale d'un volume ReFS</div>
+  La structure on-disk de ReFS est <strong>peu documentée officiellement</strong> — Microsoft n'a pas publié de spécification complète. Les connaissances forensiques actuelles proviennent de rétro-ingénierie (notamment Paul Mayfield / DFIR.training, et les travaux de Russ Loomis). Ce qui suit couvre ce qui est stabilisé et reproductible.
+</div>
+
+<div class="sec-title">Superblock — Offset 0x00</div>
+<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1.1rem;margin:.75rem 0;font-size:.78rem">
+  <div style="font-family:var(--mono);font-size:.65rem;color:var(--dim);margin-bottom:.6rem;letter-spacing:.05em">SUPERBLOCK — Offset 0x000000 (lecture sector 0)</div>
+
+  <div style="margin-bottom:.5rem">
+    <div style="color:var(--dim);font-size:.65rem;margin-bottom:.2rem">0x00 – 0x03 · Signature</div>
+    <div class="hex-row">
+      <span class="hb hb-c">52</span><span class="hb hb-c">65</span><span class="hb hb-c">46</span><span class="hb hb-c">53</span>
+      <span style="font-size:.65rem;color:var(--dim)">ASCII</span>
+      <span class="hb hb-d">52 65 46 53</span>
+      <span class="hex-label">→ "ReFS" (identifier du volume)</span>
+    </div>
+  </div>
+
+  <div style="margin-bottom:.5rem">
+    <div style="color:var(--dim);font-size:.65rem;margin-bottom:.2rem">0x04 – 0x07 · Réservé (padding)</div>
+    <div class="hex-row">
+      <span class="hb hb-d">00 00 00 00</span>
+    </div>
+  </div>
+
+  <div style="margin-bottom:.5rem">
+    <div style="color:var(--dim);font-size:.65rem;margin-bottom:.2rem">0x08 – 0x09 · Version majeure / mineure</div>
+    <div class="hex-row">
+      <span class="hb hb-g">01 00</span>
+      <span class="hex-label">→ ReFS v1.x (Server 2012)</span>
+    </div>
+    <div class="hex-row">
+      <span class="hb hb-g">03 00</span>
+      <span class="hex-label">→ ReFS v3.x (Server 2019+)</span>
+    </div>
+  </div>
+
+  <div style="margin-bottom:.5rem">
+    <div style="color:var(--dim);font-size:.65rem;margin-bottom:.2rem">0x30 – 0x37 · Identifiant de volume (GUID partiel)</div>
+    <div class="hex-row">
+      <span class="hb hb-p">A1 3F 88 C2 D4 11 42 B7</span>
+      <span class="hex-label">→ GUID unique par volume (exemple)</span>
+    </div>
+  </div>
+
+  <div>
+    <div style="color:var(--dim);font-size:.65rem;margin-bottom:.2rem">0x50 – 0x57 · Pointeur vers l'Object Table</div>
+    <div class="hex-row">
+      <span class="hb hb-o">00 40 00 00 00 00 00 00</span>
+      <span class="hex-label">→ LCN (Logical Cluster Number) de la racine Object Table</span>
+    </div>
+  </div>
+</div>
+
+<div class="alert">
+  ⚠️ <strong>Spécification non publique</strong> — Les offsets ci-dessus sont issus de rétro-ingénierie et peuvent varier entre versions majeures de ReFS. Toujours valider sur un volume de référence avant d'utiliser en contexte judiciaire.
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">Entrée B+ Tree — Structure d'un nœud feuille</div>
+<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1.1rem;margin:.75rem 0;font-size:.78rem">
+  <div style="font-family:var(--mono);font-size:.65rem;color:var(--dim);margin-bottom:.6rem">LEAF NODE — Entrée fichier dans l'Object Table</div>
+
+  <div style="display:grid;grid-template-columns:120px 1fr;gap:.3rem .75rem;font-size:.73rem">
+    <div style="color:var(--dim)">Object ID (8B)</div>
+    <div><span class="hb hb-c">A2 00 00 00 00 00 00 00</span> <span style="color:var(--muted);font-size:.68rem">→ ID unique du fichier</span></div>
+    <div style="color:var(--dim)">Parent ID (8B)</div>
+    <div><span class="hb hb-g">10 00 00 00 00 00 00 00</span> <span style="color:var(--muted);font-size:.68rem">→ Répertoire parent</span></div>
+    <div style="color:var(--dim)">Timestamps (32B)</div>
+    <div><span class="hb hb-o">... FILETIME × 4 ...</span> <span style="color:var(--muted);font-size:.68rem">→ Créé, Modifié, Accédé, MFT-changé</span></div>
+    <div style="color:var(--dim)">Taille logique (8B)</div>
+    <div><span class="hb hb-p">00 80 25 00 00 00 00 00</span> <span style="color:var(--muted);font-size:.68rem">→ Taille du fichier en octets</span></div>
+    <div style="color:var(--dim)">Nom (var.)</div>
+    <div><span class="hb hb-d">66 00 69 00 63 00 68 00 65 00 72 00</span> <span style="color:var(--muted);font-size:.68rem">→ UTF-16LE "ficher"</span></div>
+    <div style="color:var(--dim)">Run extents</div>
+    <div><span style="color:var(--muted);font-size:.68rem">Pointeurs vers les clusters de données — structure similaire aux extents EXT4</span></div>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">Identifier un volume ReFS — Checklist rapide</div>
+<div class="steps">
+  <div class="step">
+    <div class="sn fsn-c">1</div>
+    <div class="step-text"><strong>Signature Superblock</strong> : <code style="font-family:var(--mono);color:var(--cyan)">52 65 46 53</code> à l'offset 0x00 du volume. Si absent → pas ReFS.</div>
+  </div>
+  <div class="step">
+    <div class="sn fsn-c">2</div>
+    <div class="step-text"><strong>Via Windows live</strong> : <code style="font-family:var(--mono);color:var(--green)">fsutil fsinfo refsinfo X:</code> — retourne version, taille de page, features.</div>
+  </div>
+  <div class="step">
+    <div class="sn fsn-c">3</div>
+    <div class="step-text"><strong>Via X-Ways</strong> : File System Info dans le panneau Volume — affiche "ReFS" si reconnu, avec version.</div>
+  </div>
+  <div class="step">
+    <div class="sn fsn-c">4</div>
+    <div class="step-text"><strong>Via FTK Imager</strong> : Properties du volume → File System = ReFS. Montage possible pour navigation.</div>
+  </div>
+</div>
+
+</div><!-- /tab-on-disk -->
+
+
+<!-- ══════════════════════════════════════════
+     TAB 5 — MÉTHODOLOGIE
+══════════════════════════════════════════ -->
+<div class="tab-page" id="tab-methodo">
+
+<div class="concept-card">
+  <div class="concept-title">🔍 Protocole d'investigation ReFS — Ordre des opérations</div>
+  La résilience de ReFS est son atout principal — et son défaut forensique majeur. Le protocole doit être adapté : <strong>VSS en premier</strong>, $UsnJrnl en second, carving en dernier recours.
+</div>
+
+<div class="sec-title">Étapes d'investigation — Flux recommandé</div>
+<div class="steps">
+  <div class="fstep">
+    <div class="fsn fsn-c">1</div>
+    <div class="fstep-body">
+      <div class="fstep-title">Acquisition — Image bit-à-bit du volume ReFS</div>
+      <div style="font-size:.78rem;color:var(--muted)">FTK Imager, dcfldd, ou X-Ways (avec write-blocker). Format E01 recommandé pour les métadonnées d'acquisition. Hasher avant et après. Sur Storage Spaces : imager chaque disque physique <em>séparément</em> puis reconstruire le pool logiquement.</div>
+      <code class="fstep-cmd">FTK Imager → Add Evidence Item → Physical/Logical Drive → Format E01</code>
+    </div>
+  </div>
+  <div class="fstep">
+    <div class="fsn fsn-g">2</div>
+    <div class="fstep-body">
+      <div class="fstep-title">Volume Shadow Copy — Première source à exploiter</div>
+      <div style="font-size:.78rem;color:var(--muted)">VSS fonctionne sur ReFS. C'est souvent la <strong>seule</strong> façon de retrouver des fichiers supprimés. Lister toutes les shadows disponibles, les monter et les comparer au volume actuel.</div>
+      <code class="fstep-cmd">vssadmin list shadows /for=X:</code>
+      <code class="fstep-cmd">mklink /D C:\shadow \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1\</code>
+      <code class="fstep-cmd">ShadowExplorer.exe  # GUI alternative</code>
+    </div>
+  </div>
+  <div class="fstep">
+    <div class="fsn fsn-g">3</div>
+    <div class="fstep-body">
+      <div class="fstep-title">$UsnJrnl — Journal des opérations fichiers</div>
+      <div style="font-size:.78rem;color:var(--muted)">Extraire et parser l'USN Journal. Sur ReFS, le journal est présent mais la structure diffère de NTFS. Les entrées contiennent nom, type d'opération, timestamp, et Object ID. Traces de suppression récentes visibles ici.</div>
+      <code class="fstep-cmd">fsutil usn readjournal X: csv > usn_refs.csv</code>
+      <code class="fstep-cmd">MFTECmd.exe -f "$UsnJrnl" --csv output\  # Zimmerman — support partiel ReFS</code>
+    </div>
+  </div>
+  <div class="fstep">
+    <div class="fsn fsn-o">4</div>
+    <div class="fstep-body">
+      <div class="fstep-title">Event Logs Windows — Corrélation système</div>
+      <div style="font-size:.78rem;color:var(--muted)">Les événements système Windows tracent les accès, erreurs ReFS, et opérations VSS. Corrélation avec les timestamps du $UsnJrnl pour reconstituer une timeline.</div>
+      <code class="fstep-cmd">Get-WinEvent -LogName System | Where-Object {$_.ProviderName -like "*ReFS*"}</code>
+      <code class="fstep-cmd">EvtxECmd.exe -f System.evtx --csv output\</code>
+    </div>
+  </div>
+  <div class="fstep">
+    <div class="fsn fsn-o">5</div>
+    <div class="fstep-body">
+      <div class="fstep-title">Carving sur espace non alloué</div>
+      <div style="font-size:.78rem;color:var(--muted)">En dernier recours : carver l'espace non alloué pour les types de fichiers ciblés. Rendement faible car le B+ Tree libère les clusters immédiatement, mais possible si la suppression est récente et les clusters non réalloués.</div>
+      <code class="fstep-cmd">photorec image_refs.E01  # Extraire l'espace non alloué d'abord</code>
+      <code class="fstep-cmd">mmls image_refs.E01 && blkls -A image_refs.E01 > unalloc.raw</code>
+    </div>
+  </div>
+  <div class="fstep">
+    <div class="fsn fsn-r">!</div>
+    <div class="fstep-body">
+      <div class="fstep-title">BitLocker — Vérifier avant tout sur ReFS 2.x+</div>
+      <div style="font-size:.78rem;color:var(--muted)">Depuis Server 2016, ReFS supporte BitLocker. Si le volume est chiffré, toute analyse FS est impossible sans la clé de récupération. Identifier le chiffrement dès l'acquisition.</div>
+      <code class="fstep-cmd">manage-bde -status X:  # Vérifier chiffrement</code>
+      <code class="fstep-cmd">manage-bde -unlock X: -RecoveryPassword XXXXXX-...  # Déverrouiller</code>
+    </div>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Scénarios forensiques ReFS</div>
+
+<div class="scenario-card">
+  <div class="scenario-label">🖥️ Scénario 1 — Serveur Hyper-V compromis</div>
+  <div class="scenario-body">
+    Un attaquant a accédé à un serveur Hyper-V avec stockage ReFS. Les VHDX des VMs sont stockés sur un volume ReFS. L'attaquant a supprimé des VMs pour effacer ses traces.<br><br>
+    <strong>Approche :</strong> (1) Lister les VSS du volume ReFS — les snapshots Hyper-V créent souvent des shadow copies. (2) Parser le $UsnJrnl pour retrouver les suppressions de fichiers .VHDX avec timestamps. (3) Carver l'espace non alloué pour les headers VHDX (<code style="font-family:var(--mono);color:var(--cyan)">76 68 64 78 66 69 6C 65</code>). (4) Corréler avec les Event Logs Hyper-V (ID 12100, 12104).
+  </div>
+</div>
+
+<div class="scenario-card">
+  <div class="scenario-label">💾 Scénario 2 — Storage Spaces avec parité</div>
+  <div class="scenario-body">
+    Un NAS Windows Server utilise Storage Spaces en parité sur 5 disques physiques avec un volume ReFS. Un suspect a supprimé des données.<br><br>
+    <strong>Enjeu :</strong> Le pool Storage Spaces est une abstraction au-dessus des disques physiques. Il faut reconstruire le pool logiquement avant d'y accéder.<br><br>
+    <strong>Approche :</strong> Imager les 5 disques séparément. Utiliser X-Ways (support Storage Spaces) ou monter les images dans une VM Windows Server pour reconstruire le pool en lecture seule via PowerShell : <code style="font-family:var(--mono);color:var(--green)">Get-StoragePool</code>. Puis appliquer le protocole standard ReFS.
+  </div>
+</div>
+
+<div class="scenario-card">
+  <div class="scenario-label">⚖️ Scénario 3 — Anti-forensique via ReFS intentionnel</div>
+  <div class="scenario-body">
+    Un suspect a formaté un volume NTFS en ReFS avant de supprimer des fichiers — sachant que la récupération serait beaucoup plus difficile.<br><br>
+    <strong>Enjeu juridique :</strong> L'acte de reformatage intentionnel avant suppression peut être constitutif d'entrave à l'action pénale (Art. 305 CP suisse). Documenter : (1) la date du formatage (Event Log, $UsnJrnl du nouveau volume), (2) que des données existaient avant (carving de l'espace qui était NTFS, résidus de signatures NTFS dans les zones non réécrites).
+  </div>
+</div>
+
+</div><!-- /tab-methodo -->
+
+
+<!-- ══════════════════════════════════════════
+     TAB 6 — OUTILS
+══════════════════════════════════════════ -->
+<div class="tab-page" id="tab-outils">
+
+<div class="concept-card">
+  <div class="concept-title">🛠 Support ReFS dans les outils DFIR — État 2025</div>
+  Le support de ReFS dans les outils forensiques reste <strong>inégal</strong>. Contrairement à NTFS ou EXT4, ReFS est un FS jeune et non documenté officiellement — chaque outil a sa propre implémentation basée sur la rétro-ingénierie.
+</div>
+
+<div class="sec-title">Tableau de support par outil</div>
+<div class="tool-row">
+  <div class="tool-card-s">
+    <div class="tool-name-s">X-Ways Forensics <span class="tool-support ts-full">Support le plus complet</span></div>
+    <div class="tool-notes">Navigation du volume, extraction de fichiers actifs, parsing partiel de la structure B+ Tree. Support Storage Spaces. Récupération de fichiers supprimés très limitée (B+ Tree oblige). <strong>Référence judiciaire</strong> pour ReFS.</div>
+    <code class="fstep-cmd" style="font-size:.67rem">Open Image → File System Info → ReFS Navigator</code>
+  </div>
+  <div class="tool-card-s">
+    <div class="tool-name-s">FTK Imager / FTK <span class="tool-support ts-part">Partiel</span></div>
+    <div class="tool-notes">Montage du volume et navigation de la structure existante. Acquisition fiable. Pas de recovery avancée sur fichiers supprimés. FTK 7+ améliore le support.</div>
+  </div>
+</div>
+<div class="tool-row">
+  <div class="tool-card-s">
+    <div class="tool-name-s">Autopsy + TSK <span class="tool-support ts-part">Expérimental</span></div>
+    <div class="tool-notes">TSK (The Sleuth Kit) a un support ReFS expérimental depuis 4.x. Navigation basique possible. Recovery très limitée. Ne pas compter dessus pour une investigation sérieuse sur ReFS.</div>
+    <code class="fstep-cmd" style="font-size:.67rem">fls -r -o [offset] image.dd  # TSK — support limité</code>
+  </div>
+  <div class="tool-card-s">
+    <div class="tool-name-s">Suite Zimmerman <span class="tool-support ts-part">Partiel (USN)</span></div>
+    <div class="tool-notes"><strong>MFTECmd</strong> : inutilisable sur l'Object Table ReFS. <strong>EvtxECmd</strong> : pleinement fonctionnel pour les Event Logs corrélés. <strong>MFTECmd en mode $UsnJrnl</strong> : support partiel du journal ReFS.</div>
+    <code class="fstep-cmd" style="font-size:.67rem">MFTECmd.exe -f "$UsnJrnl:$J" --csv C:\output\</code>
+  </div>
+</div>
+<div class="tool-row">
+  <div class="tool-card-s">
+    <div class="tool-name-s">Windows natif PowerShell <span class="tool-support ts-full">Complet (live)</span></div>
+    <div class="tool-notes">Sur un système Windows live, PowerShell donne accès complet au volume ReFS via le FS driver. Utile pour l'acquisition logique rapide et l'interrogation du $UsnJrnl.</div>
+    <code class="fstep-cmd" style="font-size:.67rem">Get-ChildItem -Path X:\ -Recurse -Force | Export-Csv listing.csv</code>
+    <code class="fstep-cmd" style="font-size:.67rem">fsutil usn readjournal X: csv > usn.csv</code>
+    <code class="fstep-cmd" style="font-size:.67rem">fsutil fsinfo refsinfo X:</code>
+  </div>
+  <div class="tool-card-s">
+    <div class="tool-name-s">ShadowExplorer <span class="tool-support ts-full">VSS — Complet</span></div>
+    <div class="tool-notes">GUI pour parcourir les Volume Shadow Copies — fonctionne parfaitement sur ReFS. Permet de comparer les versions antérieures, exporter des fichiers supprimés qui existaient lors d'un snapshot. <strong>Premier outil à utiliser sur ReFS.</strong></div>
+    <code class="fstep-cmd" style="font-size:.67rem">ShadowExplorer.exe → sélectionner volume + date VSS</code>
+  </div>
+</div>
+<div class="tool-row">
+  <div class="tool-card-s">
+    <div class="tool-name-s">PhotoRec / Scalpel <span class="tool-support ts-part">Carving — Partiel</span></div>
+    <div class="tool-notes">Carving brut sur l'espace non alloué extrait. Efficacité réduite sur ReFS (clusters libérés rapidement) mais pas nulle. À utiliser en dernier recours sur l'image brute.</div>
+    <code class="fstep-cmd" style="font-size:.67rem">blkls -A image.E01 > unalloc.raw && photorec unalloc.raw</code>
+  </div>
+  <div class="tool-card-s">
+    <div class="tool-name-s">ReFS Parser (communauté) <span class="tool-support ts-part">Recherche</span></div>
+    <div class="tool-notes">Des parsers Python open-source ont été développés par la communauté DFIR (ex: github.com/horensic/ARIN). Utiles pour la recherche et le développement d'outils, mais non validés pour usage judiciaire.</div>
+    <code class="fstep-cmd" style="font-size:.67rem">python refs_parser.py --image image.dd --output out/</code>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1rem">Commandes de référence — Récap</div>
+<table class="tbl">
+  <thead>
+    <tr><th>Objectif</th><th>Commande</th><th>Contexte</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="color:var(--text)">Identifier ReFS</td>
+      <td><code style="font-family:var(--mono);font-size:.7rem;color:var(--green)">fsutil fsinfo refsinfo X:</code></td>
+      <td style="font-size:.72rem;color:var(--muted)">Windows live</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text)">Lister VSS</td>
+      <td><code style="font-family:var(--mono);font-size:.7rem;color:var(--green)">vssadmin list shadows /for=X:</code></td>
+      <td style="font-size:.72rem;color:var(--muted)">Windows live</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text)">Monter VSS</td>
+      <td><code style="font-family:var(--mono);font-size:.7rem;color:var(--green)">mklink /D C:\vss \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopyN\</code></td>
+      <td style="font-size:.72rem;color:var(--muted)">Windows live</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text)">Extraire USN Journal</td>
+      <td><code style="font-family:var(--mono);font-size:.7rem;color:var(--green)">fsutil usn readjournal X: csv > usn.csv</code></td>
+      <td style="font-size:.72rem;color:var(--muted)">Windows live</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text)">Lister fichiers (TSK)</td>
+      <td><code style="font-family:var(--mono);font-size:.7rem;color:var(--green)">fls -r -p -o OFFSET image.E01</code></td>
+      <td style="font-size:.72rem;color:var(--muted)">Linux / Autopsy</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text)">Extraire espace non alloué</td>
+      <td><code style="font-family:var(--mono);font-size:.7rem;color:var(--green)">blkls -A -o OFFSET image.E01 > unalloc.raw</code></td>
+      <td style="font-size:.72rem;color:var(--muted)">Linux</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text)">Vérifier BitLocker</td>
+      <td><code style="font-family:var(--mono);font-size:.7rem;color:var(--green)">manage-bde -status X:</code></td>
+      <td style="font-size:.72rem;color:var(--muted)">Windows live</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text)">Events ReFS système</td>
+      <td><code style="font-family:var(--mono);font-size:.7rem;color:var(--green)">Get-WinEvent -LogName System | Where {$_.ProviderName -like "*ReFS*"}</code></td>
+      <td style="font-size:.72rem;color:var(--muted)">PowerShell</td>
+    </tr>
+  </tbody>
+</table>
+
+</div><!-- /tab-outils -->
+
+
+<!-- ══════════════════════════════════════════
+     TAB 7 — QUIZ
+══════════════════════════════════════════ -->
+<div class="tab-page" id="tab-quiz">
+
 <div class="quiz-wrap">
-  <div class="quiz-q">Pourquoi ReFS rend-il la récupération de fichiers supprimés quasi impossible ?<small>ReFS forensique · Niveau : moyen</small></div>
-  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
-  <div class="quiz-answer">ReFS efface les entrées de répertoire <strong>immédiatement</strong>. Pas de $MFT avec entrées orphelines (NTFS), pas de marquage 0xE5 (FAT). L'Object Table B+ Tree est mise à jour en place. Source principale : <strong>Volume Shadow Copy</strong>.</div>
+  <div class="quiz-q">💊 Q1 — Pourquoi ReFS rend-il la récupération de fichiers supprimés quasi impossible, contrairement à NTFS ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> ReFS utilise un <strong>B+ Tree (Object Table)</strong> dont les entrées sont retirées <strong>immédiatement</strong> lors d'une suppression — sans laisser de résidu exploitable. NTFS en revanche conserve l'entrée $MFT avec le premier octet du nom marqué <code style="font-family:var(--mono)">0xE5</code>, ce qui permet de retrouver la run list et de reconstruire le fichier tant que ses clusters n'ont pas été réalloués.
+  </div>
 </div>
+
 <div class="quiz-wrap">
-  <div class="quiz-q">Quelles 3 fonctionnalités NTFS sont absentes de ReFS ?<small>ReFS vs NTFS · Niveau : facile</small></div>
-  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
-  <div class="quiz-answer">ReFS ne supporte pas : <strong>ADS</strong> (Alternate Data Streams) · <strong>Compression EFS</strong> · <strong>Noms 8.3 courts</strong>. En contrepartie : checksums SHA-256 par bloc, conçu pour Storage Spaces.</div>
+  <div class="quiz-q">💊 Q2 — Quelle est la <strong>première</strong> action à effectuer lors d'une investigation sur un volume ReFS dont des fichiers ont été supprimés ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> Vérifier l'existence de <strong>Volume Shadow Copies (VSS)</strong> : <code style="font-family:var(--mono);color:var(--green)">vssadmin list shadows /for=X:</code>. C'est souvent la <strong>seule</strong> source permettant de retrouver des fichiers supprimés sur ReFS. Si des shadows existent, les monter et comparer leur contenu au volume actuel avant toute autre manipulation.
+  </div>
 </div>
 
-<div class="footer">
-  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
-  <span>Microsoft ReFS Documentation · DFIR.training · SANS FOR508</span>
-</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q3 — Quelles 3 fonctionnalités NTFS sont absentes de ReFS ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> ReFS ne supporte pas : <strong>(1) Alternate Data Streams (ADS)</strong> — pas de Zone.Identifier, pas de malware se cachant en ADS ; <strong>(2) Compression EFS</strong> — pas de chiffrement fichier natif (BitLocker possible sur le volume depuis 2016) ; <strong>(3) Noms 8.3 courts</strong> — moins d'artefacts de nommage alternatif. En revanche, ReFS apporte les <strong>checksums SHA-256 par page</strong> absents de NTFS.
+  </div>
 </div>
 
-<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q4 — Sur quels systèmes et contextes est-il probable de rencontrer ReFS lors d'une investigation ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> ReFS apparaît sur : <strong>Windows Server 2012+</strong> (volumes de données), <strong>Storage Spaces</strong> (pools de disques avec parité/miroir), volumes de stockage <strong>Hyper-V</strong> (recommandé par Microsoft pour les VHDX), destinations <strong>Windows Server Backup</strong>, et <strong>Scale-Out File Servers</strong>. Il est absent des postes grand public, disques de démarrage, et supports amovibles.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q5 — Un suspect a reformaté intentionnellement un volume NTFS en ReFS avant de supprimer des fichiers sensibles. Quels artefacts recherchez-vous et quelle infraction cela peut-il constituer ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> <strong>Artefacts à rechercher :</strong> (1) Date du formatage dans les Event Logs Windows et le $UsnJrnl du nouveau volume ReFS ; (2) résidus de signatures NTFS (<code style="font-family:var(--mono);color:var(--cyan)">FILE0000</code>, <code style="font-family:var(--mono);color:var(--cyan)">INDX</code>) dans les zones non écrasées par le formatage ; (3) carving sur l'intégralité de l'image pour les types ciblés. <strong>Infraction potentielle :</strong> Art. 305 CP suisse (entrave à l'action pénale / destruction de preuves). Documenter l'intentionnalité (chronologie de l'investigation, date de la plainte vs date du formatage).
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q6 — Quelle commande PowerShell permet d'identifier la version de ReFS et les fonctionnalités activées sur un volume X: en live ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> <code style="font-family:var(--mono);color:var(--green)">fsutil fsinfo refsinfo X:</code> — retourne la version ReFS (1.x / 3.x), la taille de page, et les feature flags activés (integrity streams, etc.). Compléter avec <code style="font-family:var(--mono);color:var(--green)">Get-Volume -DriveLetter X | Select-Object *</code> pour les métadonnées PowerShell et <code style="font-family:var(--mono);color:var(--green)">manage-bde -status X:</code> pour vérifier BitLocker.
+  </div>
+</div>
+
+<div style="text-align:center;margin-top:1.5rem">
+  <a href="../quiz.html?theme=systèmes+de+fichiers" class="fiche-cta-btn fiche-cta-red">💊 Plus de questions — Mode Quiz complet</a>
+</div>
+
+</div><!-- /tab-quiz -->
+
+
+<!-- Footer CTA -->
+<div class="fiche-cta-section">
+  <div class="fiche-cta-text">Continuer l'exploration</div>
+  <div class="fiche-cta-buttons">
+    <a href="ntfs.html" class="fiche-cta-btn fiche-cta-dim">🗄 NTFS</a>
+    <a href="comparaison_fs.html" class="fiche-cta-btn fiche-cta-dim">📊 Comparaison FS</a>
+    <a href="vm_forensique.html" class="fiche-cta-btn fiche-cta-dim">🖥 VM Forensique</a>
+    <a href="data_carving.html" class="fiche-cta-btn fiche-cta-dim">🔪 Data Carving</a>
+    <a href="../quiz.html" class="fiche-cta-btn fiche-cta-red">💊 Quiz →</a>
+    <a href="index.html" class="fiche-cta-btn fiche-cta-orange">← Toutes les fiches</a>
+  </div>
+</div>
+
 <script>
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.tab').forEach(function(b){ b.classList.remove('active'); });
+  var page = document.getElementById('tab-' + id);
+  if(page) page.classList.add('active');
+  if(btn) btn.classList.add('active');
+  window.scrollTo({top: document.getElementById('refs-tabs').offsetTop - 60, behavior:'smooth'});
+}
 
-</script>
-<script>
+var refsDetails = {
+  sb:  '<strong style="color:var(--red)">Superblock</strong> — Offset 0x00 du volume. Contient la signature <code style="font-family:var(--mono);color:var(--cyan)">ReFS</code> (52 65 46 53), la version majeure/mineure, la taille de cluster, et un pointeur vers la racine de l\'Object Table. Premier élément à lire pour identifier un volume ReFS.',
+  obj: '<strong style="color:var(--cyan)">Object Table</strong> — B+ Tree racine de ReFS. Chaque fichier et répertoire est un nœud identifié par un Object ID 64-bit. <span style="color:var(--red)">La suppression d\'un fichier retire immédiatement son entrée</span> — aucun résidu exploitable, contrairement à la $MFT de NTFS. Source forensique très limitée.',
+  sch: '<strong style="color:var(--gold)">Schema Table</strong> — Définit les types d\'objets et leurs attributs. Invisible pour l\'investigateur en pratique, mais essentielle pour les parsers ReFS. Sa structure varie entre les versions 1.x et 3.x de ReFS.',
+  dat: '<strong style="color:var(--green)">Data Area</strong> — Contenu réel des fichiers. Chaque page (4KB par défaut) est accompagnée d\'un <strong>checksum 64-bit</strong> stocké dans les métadonnées. Une corruption est détectée automatiquement — et peut être signalée dans les Event Logs, ce qui peut dater une altération physique forensiquement.',
+  log: '<strong style="color:var(--purple)">Journal de transactions</strong> — ReFS maintient un log write-ahead pour la cohérence des écritures. Les transactions non commitées après un crash peuvent rester dans le journal — <span style="color:var(--gold)">source potentielle d\'artefacts</span> si la recovery n\'a pas été complétée.',
+  usn: '<strong style="color:var(--blue)">$UsnJrnl (USN Journal)</strong> — Présent sur ReFS, structure légèrement différente de NTFS. Enregistre les opérations fichiers (création, modification, suppression, renommage) avec horodatage et nom. <span style="color:var(--green)">Souvent la seule trace d\'un fichier supprimé sur ReFS</span> si aucune VSS n\'existe. Extractible via <code style="font-family:var(--mono)">fsutil usn readjournal</code>.',
+};
+
+function showRefs(key) {
+  var el = document.getElementById('refs-detail');
+  if(el && refsDetails[key]) {
+    el.innerHTML = refsDetails[key];
+    el.style.borderColor = 'var(--border)';
+  }
+}
+
 (function(){
-  var bar=document.getElementById("scroll-progress");
-  if(bar) window.addEventListener("scroll",function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+"%";},{passive:true});
-  var bt=document.getElementById("back-top")||document.querySelector(".back-top");
-  if(bt){if(!bt.id)bt.id="back-top";window.addEventListener("scroll",function(){bt.classList.toggle("visible",window.scrollY>300);},{passive:true});}
-  document.querySelectorAll(".quiz-reveal-btn").forEach(function(btn){btn.addEventListener("click",function(){var ans=btn.closest(".quiz-wrap").querySelector(".quiz-answer");ans.classList.toggle("visible");btn.textContent=ans.classList.contains("visible")?"Masquer ↑":"Révéler →";});});
+  var bar = document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll', function(){
+    var d = document.documentElement;
+    bar.style.width = Math.min(100, (d.scrollTop / (d.scrollHeight - d.clientHeight)) * 100) + '%';
+  }, {passive:true});
+
+  var bt = document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll', function(){ bt.classList.toggle('visible', window.scrollY > 300); }, {passive:true});
+
+  document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var ans = btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+      ans.classList.toggle('visible');
+      btn.textContent = ans.classList.contains('visible') ? 'Masquer ↑' : 'Révéler →';
+    });
+  });
+
+  document.querySelectorAll('.fstep-cmd, .tool-cmd').forEach(function(el){
+    el.title = 'Cliquer pour copier';
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', function(){
+      navigator.clipboard && navigator.clipboard.writeText(el.innerText.trim()).then(function(){
+        var o = el.style.background;
+        el.style.background = 'rgba(48,232,138,.2)';
+        setTimeout(function(){ el.style.background = o; }, 700);
+      });
+    });
+  });
 })();
 </script>
-</body></html>
+
+</body>
+</html>
