@@ -1,7 +1,10 @@
 /* ============================================================
-   CAS-IN · profile-page.js (v2 — F2)
+   CAS-IN · profile-page.js (v3 — F2 + gamification)
    Logique de profile.html : peuple depuis Profile.snapshot(),
    gère la modale d'édition pseudo + sélection de track.
+
+   v3 : rendu achievements catégorisé, verrouillés grisés avec jauge
+   de progression, secrets en ???, summary "prochains défis".
    ============================================================ */
 
 (function () {
@@ -13,6 +16,11 @@
   }
   function setText(id, txt) { const el = $(id); if (el) el.textContent = txt; }
 
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
   // ───────────────────────────────────────────────────────────
   // Render principal
   // ───────────────────────────────────────────────────────────
@@ -23,6 +31,12 @@
       return;
     }
     const snap = window.Profile.snapshot();
+
+    // Catch-up : évalue les achievements centralisés (TP, fiches) à
+    // chaque rendu pour rattraper d'anciennes activités sans bridge actif
+    if (window.AchievementsCore && typeof window.AchievementsCore.evalAndUnlock === 'function') {
+      window.AchievementsCore.evalAndUnlock(snap);
+    }
 
     // Header UTC
     const utc = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
@@ -88,8 +102,8 @@
     // Spécialité du rôle : tags qui donnent +20% XP
     renderSpecialty(snap.agent.track);
 
-    // Achievements
-    renderAchievements(snap.achievements);
+    // Achievements (catégorisé, avec verrouillés + jauges)
+    renderAchievements(snap);
   }
 
   /**
@@ -109,7 +123,6 @@
       wrap.hidden = true;
       return;
     }
-    // Dédoubler en gardant l'ordre, limiter à ~14 pour ne pas inonder
     const seen = new Set();
     const unique = tags.filter(t => {
       const k = String(t).toUpperCase();
@@ -176,42 +189,192 @@
     });
   }
 
-  function renderAchievements(unlocked) {
-    const wrap = $('profile-achievements');
-    if (!wrap) return;
-    unlocked = Array.isArray(unlocked) ? unlocked : [];
-    setText('profile-ach-count', String(unlocked.length));
+  // ───────────────────────────────────────────────────────────
+  // Achievements : rendu catégorisé + verrouillés + secrets
+  // ───────────────────────────────────────────────────────────
 
-    if (!unlocked.length) {
-      wrap.innerHTML = '<div class="profile-empty">Aucun succès débloqué pour l\'instant. Continue l\'enquête.</div>';
+  function renderAchievements(snap) {
+    const wrap = $('profile-achievements');
+    const countEl = $('profile-ach-count');
+    if (!wrap) return;
+
+    const unlocked = new Set(Array.isArray(snap.achievements) ? snap.achievements : []);
+    const meta = window.ACHIEVEMENTS_META || [];
+
+    // Affichage du compteur "X / Y débloqués"
+    if (countEl) {
+      countEl.textContent = `${unlocked.size} / ${meta.length}`;
+    }
+
+    if (!meta.length) {
+      wrap.innerHTML = '<div class="profile-empty">Aucun succès défini.</div>';
       return;
     }
 
-    const allAch = (typeof window.ACHIEVEMENTS !== 'undefined' && Array.isArray(window.ACHIEVEMENTS))
-      ? window.ACHIEVEMENTS : null;
+    // Catégories ordonnées
+    const categories = (window.AchievementsCore && window.AchievementsCore.CATEGORIES)
+      ? window.AchievementsCore.CATEGORIES
+      : null;
+    const grouped = (window.AchievementsCore && typeof window.AchievementsCore.byCategory === 'function')
+      ? window.AchievementsCore.byCategory()
+      : groupFallback(meta);
 
     wrap.innerHTML = '';
-    unlocked.forEach(id => {
-      const meta = allAch ? allAch.find(a => a.id === id) : null;
-      const card = document.createElement('div');
-      card.className = 'profile-achievement-card';
-      const emoji = document.createElement('div');
-      emoji.className = 'profile-achievement-emoji';
-      emoji.textContent = meta?.emoji || '🏅';
-      const body = document.createElement('div');
-      body.className = 'profile-achievement-body';
-      const name = document.createElement('div');
-      name.className = 'profile-achievement-name';
-      name.textContent = meta?.name || id;
-      const desc = document.createElement('div');
-      desc.className = 'profile-achievement-desc';
-      desc.textContent = meta?.desc || '—';
-      body.appendChild(name);
-      body.appendChild(desc);
-      card.appendChild(emoji);
-      card.appendChild(body);
-      wrap.appendChild(card);
+
+    // Bandeau "Prochains défis" : 3 verrouillés les plus proches
+    const nextChallenges = computeNextChallenges(meta, unlocked, snap, 3);
+    if (nextChallenges.length) {
+      wrap.appendChild(renderNextChallenges(nextChallenges));
+    }
+
+    // Itération par catégorie
+    const order = categories || Object.keys(grouped);
+    order.forEach(cat => {
+      const items = grouped[cat] || [];
+      if (!items.length) return;
+
+      const unlockedInCat = items.filter(a => unlocked.has(a.id)).length;
+
+      // Header de catégorie
+      const header = document.createElement('div');
+      header.className = 'profile-ach-cat-header';
+      header.innerHTML = `
+        <span class="profile-ach-cat-name">${escapeHtml(cat)}</span>
+        <span class="profile-ach-cat-count">${unlockedInCat} / ${items.length}</span>
+      `;
+      wrap.appendChild(header);
+
+      // Grille de cartes
+      const grid = document.createElement('div');
+      grid.className = 'profile-ach-grid';
+      items.forEach(a => {
+        grid.appendChild(renderAchCard(a, unlocked.has(a.id), snap));
+      });
+      wrap.appendChild(grid);
     });
+  }
+
+  /**
+   * Fallback groupage si AchievementsCore.byCategory absent (ne devrait
+   * pas arriver, mais safe).
+   */
+  function groupFallback(meta) {
+    const out = {};
+    meta.forEach(a => {
+      const cat = a.category || 'Autres';
+      if (!out[cat]) out[cat] = [];
+      out[cat].push(a);
+    });
+    return out;
+  }
+
+  /**
+   * Carte individuelle. Trois variantes : unlocked, locked-with-progress,
+   * locked-secret-hidden.
+   */
+  function renderAchCard(a, isUnlocked, snap) {
+    const card = document.createElement('div');
+    const isSecret = !!a.secret;
+    const isHiddenSecret = isSecret && !isUnlocked;
+
+    let cls = 'profile-achievement-card';
+    if (isUnlocked) cls += ' is-unlocked';
+    else cls += ' is-locked';
+    if (isSecret) cls += ' is-secret';
+    card.className = cls;
+
+    // Emoji
+    const emoji = document.createElement('div');
+    emoji.className = 'profile-achievement-emoji';
+    emoji.textContent = isHiddenSecret ? '❓' : (a.emoji || '🏅');
+    card.appendChild(emoji);
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'profile-achievement-body';
+
+    const name = document.createElement('div');
+    name.className = 'profile-achievement-name';
+    name.textContent = isHiddenSecret ? '???' : (a.name || a.id);
+    body.appendChild(name);
+
+    const desc = document.createElement('div');
+    desc.className = 'profile-achievement-desc';
+    desc.textContent = isHiddenSecret
+      ? 'Succès secret — à découvrir…'
+      : (a.desc || '—');
+    body.appendChild(desc);
+
+    // Jauge de progression (verrouillé non-secret avec progress fn)
+    if (!isUnlocked && !isHiddenSecret && window.AchievementsCore) {
+      const prog = window.AchievementsCore.getProgress(a.id, snap);
+      if (prog && prog.target > 0) {
+        const pct = Math.min(100, Math.round((prog.current / prog.target) * 100));
+        const bar = document.createElement('div');
+        bar.className = 'profile-achievement-bar';
+        bar.innerHTML = `
+          <div class="profile-achievement-bar-track">
+            <div class="profile-achievement-bar-fill" style="width:${pct}%"></div>
+          </div>
+          <div class="profile-achievement-bar-label">${fmtNumber(prog.current)} / ${fmtNumber(prog.target)}</div>
+        `;
+        body.appendChild(bar);
+      }
+    }
+
+    card.appendChild(body);
+    return card;
+  }
+
+  /**
+   * Trouve les N achievements verrouillés non-secrets dont la progression
+   * est la plus avancée (en %). Permet d'afficher un "prochains défis".
+   */
+  function computeNextChallenges(meta, unlocked, snap, n) {
+    if (!window.AchievementsCore || typeof window.AchievementsCore.getProgress !== 'function') return [];
+    const candidates = [];
+    meta.forEach(a => {
+      if (unlocked.has(a.id)) return;
+      if (a.secret) return;
+      const prog = window.AchievementsCore.getProgress(a.id, snap);
+      if (!prog || prog.target <= 0) return;
+      if (prog.current <= 0) return; // pas encore commencé : pas un "défi en cours"
+      const pct = prog.current / prog.target;
+      if (pct >= 1) return; // techniquement à débloquer, prochain render le fera
+      candidates.push({ a, prog, pct });
+    });
+    candidates.sort((x, y) => y.pct - x.pct);
+    return candidates.slice(0, n);
+  }
+
+  function renderNextChallenges(list) {
+    const wrap = document.createElement('div');
+    wrap.className = 'profile-ach-next';
+    const title = document.createElement('div');
+    title.className = 'profile-ach-next-title';
+    title.textContent = '⚡ Prochains défis';
+    wrap.appendChild(title);
+    const grid = document.createElement('div');
+    grid.className = 'profile-ach-next-grid';
+    list.forEach(({ a, prog, pct }) => {
+      const item = document.createElement('div');
+      item.className = 'profile-ach-next-item';
+      const pctRound = Math.round(pct * 100);
+      item.innerHTML = `
+        <span class="profile-ach-next-emoji">${a.emoji || '🏅'}</span>
+        <div class="profile-ach-next-body">
+          <div class="profile-ach-next-name">${escapeHtml(a.name || a.id)}</div>
+          <div class="profile-ach-next-desc">${escapeHtml(a.desc || '')}</div>
+          <div class="profile-ach-next-bar">
+            <div class="profile-ach-next-bar-fill" style="width:${pctRound}%"></div>
+          </div>
+          <div class="profile-ach-next-meta">${fmtNumber(prog.current)} / ${fmtNumber(prog.target)} · ${pctRound}%</div>
+        </div>
+      `;
+      grid.appendChild(item);
+    });
+    wrap.appendChild(grid);
+    return wrap;
   }
 
   // ───────────────────────────────────────────────────────────
@@ -252,7 +415,7 @@
     setText('profile-track-chooser-text',
       isChange
         ? 'Ton XP reste identique, seuls les noms des grades changent.'
-        : 'L\'XP est universelle. Seul l\'univers narratif change selon ton choix.');
+        : "L'XP est universelle. Seul l'univers narratif change selon ton choix.");
 
     renderTrackOptions();
   }
@@ -315,11 +478,6 @@
     });
   }
 
-  function escapeHtml(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
   function onPickTrack(trackKey) {
     if (!window.Profile) return;
     const chooser = $('profile-track-chooser');
@@ -327,7 +485,6 @@
     const current = window.Profile.getTrack();
 
     if (isChange && current && current !== trackKey) {
-      // Confirmation requise pour changer
       const ok = confirm(
         'Changer de rôle pour ' + trackKey + ' ?\n\n' +
         'Ton XP reste identique, mais tous tes grades vont changer pour le nouveau univers.\n\n' +
