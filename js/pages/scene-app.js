@@ -1344,7 +1344,7 @@ function initLobby() {
     if (isEU) card.dataset.region = 'EU';
 
     const statusHTML = res
-      ? `<span class="scene-status done">✓ ${res.pct}%</span>`
+      ? `<span class="scene-status done" style="color:${getScoreColor(res.pct)}">✓ ${res.pct}%</span>`
       : isLocked
         ? `<span class="scene-status locked-lbl">🔒 ${lockedAlt || 'Verrouillé'}</span>`
         : `<span class="scene-status" style="color:${isEU ? 'var(--gold)' : 'var(--cyan)'}">→ Jouer</span>`;
@@ -1357,7 +1357,7 @@ function initLobby() {
       <div class="scene-leaderboard">
         ${lb.slice(0, 3).map((r, j) => {
           const cls = j === 0 ? 'gold' : j === 1 ? 'silver' : 'bronze';
-          return `<span class="scene-lb-pill ${cls}" title="Top ${j+1}">#${j+1} · ${r.pct}%</span>`;
+          return `<span class="scene-lb-pill ${cls}" title="Top ${j+1}" style="color:${getScoreColor(r.pct)}">#${j+1} · ${r.pct}%</span>`;
         }).join('')}
       </div>
     ` : '';
@@ -2850,7 +2850,7 @@ function renderSkillTree() {
       const isDone = !!result;
       const cls = isDone ? 'skill-node completed' : 'skill-node';
       const meta = isDone
-        ? `${result.pct}% · ${({easy:'F',medium:'M',hard:'D',expert:'X'})[scene.difficulty]||'?'}`
+        ? `<span style="color:${getScoreColor(result.pct)}">${result.pct}%</span> · ${({easy:'F',medium:'M',hard:'D',expert:'X'})[scene.difficulty]||'?'}`
         : `${({easy:'Facile',medium:'Moyen',hard:'Difficile',expert:'Expert'})[scene.difficulty]||scene.difficulty}`;
       return `
         <div class="${cls}" onclick="launchSceneFromTree('${scene.id}')">
