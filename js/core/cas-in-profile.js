@@ -628,7 +628,22 @@
     p.agent.track = trackKey;
     p.agent.trackChosenAt = Date.now();
     saveProfile(p);
+    applyTrackToDocument(trackKey);
     emitChange('track');
+  }
+
+  /**
+   * Pose l'attribut data-track sur <html> pour que le CSS [data-track="..."]
+   * applique l'accent de couleur du rôle (LED, badges, bordures HUD…).
+   * Appelé à l'init et après chaque setTrack.
+   */
+  function applyTrackToDocument(trackKey) {
+    if (typeof document === 'undefined' || !document.documentElement) return;
+    if (trackKey && TRACKS[trackKey]) {
+      document.documentElement.setAttribute('data-track', trackKey);
+    } else {
+      document.documentElement.removeAttribute('data-track');
+    }
   }
 
   function listTracks() {
@@ -869,12 +884,16 @@
   }
 
   // Au chargement, applique data-track sur <body> pour activer le thème CSS
-  // correspondant au track choisi par l'utilisateur.
+  // correspondant au track choisi par l'utilisateur. Retire l'attribut si le
+  // rôle est absent ou inconnu (retombée sur les valeurs par défaut du :root).
   function applyTrackToBody() {
     if (typeof document === 'undefined' || !document.body) return;
     const tk = getTrackKey();
-    if (tk) {
+    const validTracks = ['investigator', 'magistrate', 'journalist', 'hacker'];
+    if (tk && validTracks.includes(tk)) {
       document.body.dataset.track = tk;
+    } else {
+      document.body.removeAttribute('data-track');
     }
   }
   // Application initiale + mise à jour à chaque changement de profil
@@ -935,5 +954,20 @@
     XP_THRESHOLDS: Object.freeze(XP_THRESHOLDS.slice()),
     CLEARANCE_BY_RANK: Object.freeze(CLEARANCE_BY_RANK.slice()),
   });
+
+  // Appliquer le data-track au chargement du module (toutes les pages qui
+  // chargent cas-in-profile.js bénéficient de l'accent couleur du rôle).
+  // Si <html> n'est pas encore prêt (cas IIFE chargé avant <body>), on
+  // déclenche après DOMContentLoaded.
+  try {
+    const p = ensureProfile();
+    const trackKey = p && p.agent && p.agent.track;
+    if (typeof document !== 'undefined' && document.documentElement) {
+      applyTrackToDocument(trackKey);
+    }
+    if (typeof document !== 'undefined' && document.addEventListener) {
+      document.addEventListener('DOMContentLoaded', () => applyTrackToDocument(trackKey), { once: true });
+    }
+  } catch (e) { /* silencieux : ne pas bloquer le chargement */ }
 
 })();
