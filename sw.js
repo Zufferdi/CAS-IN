@@ -1,4 +1,7 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v44 : nettoyage STATIC_ASSETS — retrait de track-theme.css (fichier inexistant,
+//       générait un 404 au précache) et fiche-hub.css (CSS orphelin obsolète,
+//       remplacé par fiche_style.css depuis longtemps).
 // v43 : split tp-engine.js — tp-engine-windows.js (Registry/Prefetch/LNK) extrait
 //       en module séparé. Ajout au précache.
 // v42 : restructuration — JSON data déplacés vers data/ (questions, manifest, counts)
@@ -9,7 +12,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v43';
+const CACHE_VERSION = 'cas-in-v44';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -47,7 +50,6 @@ const STATIC_ASSETS = [
   './style/fiche_style.css',
   './style/profile.css',
   './style/profile-banner.css',
-  './style/track-theme.css',
   './style/quiz.css',
 
   // Scripts core
@@ -89,7 +91,6 @@ const STATIC_ASSETS = [
 
   // Hub des fiches (les fiches elles-mêmes sont précachées dynamiquement)
   './fiches/index.html',
-  './fiches/fiche-hub.css',
 ];
 
 const OFFLINE_FALLBACK = './offline.html';
