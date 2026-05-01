@@ -1500,6 +1500,14 @@ function checkMismatch(btn, isCorrect, sigName, note) {
 // ═══════════════════════════════════════════════════
 
 function genRunList() {
+  // Sous-type 0 (default, ~70%) : décodage classique des fragments (existant)
+  // Sous-type 1 (~30%)         : QCM identifier le type de RunList (dense/sparse/compressée)
+  const subtype = Math.random() < 0.3 ? 1 : 0;
+
+  if (subtype === 1) {
+    return genRunListClassify();
+  }
+
   // Générer une Run List aléatoire avec 1 à 3 fragments
   const numFragments = rand(1, 3);
   const fragments = [];
@@ -1604,6 +1612,133 @@ function encodeVarInt(val) {
 function encodeSignedVarInt(val) {
   // On génère des valeurs positives uniquement ici (exercice pédagogique)
   return encodeVarInt(val);
+}
+
+// ───────────────────────────────────────────────────────────────
+// genRunListClassify — Sous-type QCM
+// Affiche une RunList et demande d'identifier son type :
+//   • Dense        : runs normaux avec LCN ≥ 0
+//   • Sparse       : un run avec header=0x0X (delta=0) → "hole"
+//   • Compressée   : un run avec length < expected (signature LZNT1 NTFS)
+// Pédagogie : forensique NTFS, $DATA non-resident attribute, sparse files
+// ───────────────────────────────────────────────────────────────
+function genRunListClassify() {
+  // Choix du type cible : dense, sparse, compressed
+  const types = ['dense', 'sparse', 'compressed'];
+  const target = types[rand(0, types.length - 1)];
+
+  // Build une runlist avec le pattern correspondant
+  // Format simplifié pour l'affichage : on affiche du hex pré-construit
+  // pour rester lisible et focus sur la classification (pas le décodage byte-par-byte)
+  let hexDisplay, structure, kicker;
+
+  if (target === 'dense') {
+    // Run normal : 2-3 fragments avec LCN différents, pas de delta=0
+    const f1Len = rand(8, 30), f1Lcn = rand(100, 500);
+    const f2Len = rand(8, 30), f2Delta = rand(50, 200);
+    hexDisplay = `21 ${f1Len.toString(16).padStart(2,'0').toUpperCase()} ${(f1Lcn & 0xFF).toString(16).padStart(2,'0').toUpperCase()} ${((f1Lcn >> 8) & 0xFF).toString(16).padStart(2,'0').toUpperCase()} 11 ${f2Len.toString(16).padStart(2,'0').toUpperCase()} ${f2Delta.toString(16).padStart(2,'0').toUpperCase()} 00`;
+    structure = `Frag 1 : header 0x21 → length=1 oct, delta=2 oct  →  ${f1Len} clusters @ LCN ${f1Lcn}<br>Frag 2 : header 0x11 → length=1 oct, delta=1 oct  →  ${f2Len} clusters @ LCN ${f1Lcn + f2Delta}`;
+    kicker = `Tous les runs ont une partie <strong>delta LCN ≠ 0</strong> (nibble haut du header > 0). Les clusters sont <strong>physiquement alloués</strong>.`;
+  } else if (target === 'sparse') {
+    // Sparse run : un fragment avec nibble haut = 0 → "hole"
+    const f1Len = rand(10, 30), f1Lcn = rand(100, 400);
+    const holeLen = rand(20, 60);
+    const f3Len = rand(5, 20), f3Delta = rand(80, 200);
+    hexDisplay = `21 ${f1Len.toString(16).padStart(2,'0').toUpperCase()} ${(f1Lcn & 0xFF).toString(16).padStart(2,'0').toUpperCase()} ${((f1Lcn >> 8) & 0xFF).toString(16).padStart(2,'0').toUpperCase()} 01 ${holeLen.toString(16).padStart(2,'0').toUpperCase()} 11 ${f3Len.toString(16).padStart(2,'0').toUpperCase()} ${f3Delta.toString(16).padStart(2,'0').toUpperCase()} 00`;
+    structure = `Frag 1 : header 0x21 → ${f1Len} clusters @ LCN ${f1Lcn}<br><strong style="color:var(--gold)">Frag 2 : header 0x01 → length=1 oct, delta=<span style="color:var(--red)">0 oct</span></strong>  →  ${holeLen} clusters virtuels (HOLE)<br>Frag 3 : header 0x11 → ${f3Len} clusters @ LCN ${f1Lcn + f3Delta}`;
+    kicker = `Le <strong>fragment 2 a un header 0x01</strong> : nibble haut = 0 → <strong>aucun delta LCN</strong>. C'est un trou (sparse run / "hole") : ces clusters ne sont <strong>pas physiquement alloués</strong> sur le disque, le FS retourne des zéros à la lecture. Économise l'espace disque pour les fichiers à grandes zones nulles (DB sparse, VM disks).`;
+  } else { // compressed
+    // Compressed : NTFS LZNT1 — pattern où length de la dernière unité = 16 et le run est "padded"
+    // Signature : un fragment de 16 clusters logiques (1 unité de compression) avec moins de blocs alloués réels
+    const f1Len = 16; // 1 unité de compression NTFS = 16 clusters
+    const f1Lcn = rand(200, 600);
+    const compRatio = rand(8, 14); // 8-14 clusters réellement alloués pour 16 logiques
+    const padding = 16 - compRatio;
+    hexDisplay = `21 ${compRatio.toString(16).padStart(2,'0').toUpperCase()} ${(f1Lcn & 0xFF).toString(16).padStart(2,'0').toUpperCase()} ${((f1Lcn >> 8) & 0xFF).toString(16).padStart(2,'0').toUpperCase()} 01 ${padding.toString(16).padStart(2,'0').toUpperCase()} 00`;
+    structure = `Frag 1 : header 0x21 → <strong style="color:var(--gold)">${compRatio} clusters réels</strong> @ LCN ${f1Lcn}<br>Frag 2 : header 0x01 → length=1 oct, delta=0  →  <strong>${padding} clusters virtuels</strong> (padding compression)<br>Total logique : ${compRatio} + ${padding} = <strong>16 clusters</strong> (1 unité LZNT1)`;
+    kicker = `Pattern caractéristique : <strong>${compRatio} clusters réels suivis de ${padding} clusters virtuels</strong>, total = <strong>16</strong> (taille d'une unité de compression NTFS LZNT1, voir <code>$ATTRIBUTE_LIST</code> + flag <code>0x0001</code> dans <code>$STANDARD_INFORMATION</code>). NTFS lit les ${compRatio} clusters et décompresse vers 16 clusters logiques. Économise ~${Math.round(100*(1-compRatio/16))}% d'espace.`;
+  }
+
+  // Choices QCM
+  const choices = [
+    { type: 'dense', label: '<strong>Dense</strong> — fragments normaux, tous physiquement alloués',
+      explain: 'Une RunList dense a tous ses runs avec un delta LCN ≠ 0 (nibble haut du header > 0). Cas le plus courant pour les fichiers continus.' },
+    { type: 'sparse', label: '<strong>Sparse</strong> — contient un "hole" (cluster non alloué)',
+      explain: 'Une RunList sparse contient un run avec header de la forme 0x0X (nibble haut = 0). Ce fragment représente un trou : aucun cluster physique alloué, lecture retourne 0x00. Caractéristique des fichiers sparse (DB, disques VM).' },
+    { type: 'compressed', label: '<strong>Compressée</strong> — LZNT1 (NTFS native compression)',
+      explain: 'Pattern : N clusters réels suivis de (16-N) clusters virtuels totalisant 16 (taille d\'unité de compression NTFS LZNT1). Le flag 0x0001 dans $STANDARD_INFORMATION confirme la compression.' },
+  ];
+  const shuffled = choices.map(c => ({
+    text: c.label,
+    correct: c.type === target,
+    explain: c.type === target
+      ? `<strong>Bonne réponse.</strong> ${c.explain}<br><br>${kicker}`
+      : `Ce n'est pas une RunList ${c.type}. ${c.explain}`,
+  })).sort(() => Math.random() - 0.5);
+  const correctIdx = shuffled.findIndex(c => c.correct);
+  const correctExplain = shuffled[correctIdx].explain;
+
+  const div = document.createElement('div');
+  div.className = 'ex-card';
+  div.innerHTML = `
+    <div class="ex-header">
+      <div class="ex-num">🧩</div>
+      <div class="ex-title">Classification d'une Run List NTFS</div>
+      <span class="ex-badge medium">medium</span>
+    </div>
+    <div class="ex-scenario">
+      Tu analyses un attribut <strong>$DATA non-resident</strong> d'un fichier NTFS et trouves cette Run List.<br>
+      <em style="color:var(--dim);font-size:.78rem">Rappel : header byte = nibble haut (octets delta LCN) | nibble bas (octets length). 0x00 = fin.</em>
+    </div>
+
+    <div class="sec-title">Séquence Run List</div>
+    <div class="hex-display" style="margin-bottom:.75rem;font-family:var(--mono);font-size:.85rem;padding:.6rem;background:var(--bg);border-radius:6px;letter-spacing:.1em">
+      ${hexDisplay}
+    </div>
+
+    <div class="sec-title">Décomposition</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.85rem;line-height:1.6">
+      ${structure}
+    </div>
+
+    <div class="sec-title">À quel type de Run List as-tu affaire ?</div>
+    <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="rlc-choices">
+      ${shuffled.map((c, i) => `<button class="tp-choice"
+        data-correct="${c.correct}"
+        data-explain="${encData(c.explain)}"
+        data-correct-explain="${encData(correctExplain)}">
+        <span class="tp-choice-letter">${String.fromCharCode(65+i)}</span><span>${c.text}</span></button>`).join('')}
+    </div>
+    <div class="ex-feedback" id="ex-feedback-rlc" style="display:none"></div>
+    <button class="btn-next" id="btn-next-rlc" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+  `;
+  setTimeout(() => {
+    div.querySelectorAll('#rlc-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        const explain = decData(b.dataset.explain) || '';
+        const correctEx = decData(b.dataset.correctExplain) || '';
+        document.querySelectorAll('#rlc-choices .tp-choice').forEach(btn => { btn.disabled = true; });
+        b.classList.add(isOk ? 'correct' : 'wrong');
+        if (isOk) { if (!STATE.hintUsed) incSolved('runlist'); }
+        else {
+          breakStreak();
+          document.querySelectorAll('#rlc-choices .tp-choice').forEach(btn => {
+            if (btn.dataset.correct === 'true') btn.classList.add('correct');
+            else if (btn !== b) btn.classList.add('dim');
+          });
+        }
+        const fb = document.getElementById('ex-feedback-rlc');
+        if (fb) {
+          fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+          fb.innerHTML = formatChoiceFeedback(isOk, correctEx || explain, explain);
+          fb.style.display = 'block';
+        }
+        document.getElementById('btn-next-rlc').style.display = 'inline-block';
+      });
+    });
+  }, 0);
+  return div;
 }
 
 function buildRunListHex(fragments, allBytes) {
@@ -4313,7 +4448,7 @@ function genFSIdentify() {
       fs: 'EXT4',
       context: 'Superbloc EXT4 — commence à l\'offset 1024 du volume',
       build: () => {
-        const bytes = new Array(64).fill(0x00);
+        const bytes = new Array(128).fill(0x00);
         // s_inodes_count (LE32) à 0x00
         bytes[0]=0x00; bytes[1]=0x80; bytes[2]=0x00; bytes[3]=0x00; // 32768 inodes
         // s_blocks_count (LE32) à 0x04
@@ -4324,7 +4459,16 @@ function genFSIdentify() {
         bytes[0x38]=0x53; bytes[0x39]=0xEF;
         // s_rev_level à 0x3C : 1 = dynamic (EXT3/4)
         bytes[0x3C]=0x01; bytes[0x3D]=0x00; bytes[0x3E]=0x00; bytes[0x3F]=0x00;
-        return { bytes, key: 'Magic 0xEF53 (53 EF en Little Endian) à l\'offset 0x38 du superbloc (offset 1024 du volume) identifie EXT2/3/4. s_log_block_size=2 → taille bloc = 4096 o.' };
+        // s_uuid (16 octets) à 0x68 — UUID unique du système de fichiers
+        // Permet d'identifier ce volume précis (utilisé dans /etc/fstab)
+        // On génère un UUID v4 simulé : 4 octets random pour le rendre déterministe par boot
+        const uuidBytes = [0xA3, 0xF8, 0x12, 0x6E, 0x4B, 0x1C, 0x4D, 0x9A,
+                           0xB7, 0x55, 0xE2, 0x91, 0x44, 0x8F, 0x2C, 0x6D];
+        uuidBytes.forEach((u, i) => bytes[0x68 + i] = u);
+        return {
+          bytes,
+          key: 'Magic 0xEF53 (53 EF en Little Endian) à l\'offset 0x38 du superbloc (offset 1024 du volume) identifie EXT2/3/4. s_log_block_size=2 → taille bloc = 4096 o. L\'UUID à 0x68 (16 octets) identifie ce volume précis — utilisé par /etc/fstab et blkid.'
+        };
       }
     },
     {
@@ -4444,7 +4588,7 @@ const HASH_SAMPLES = {
 function genHashIdentify() {
   const types = Object.keys(HASH_SAMPLES);
   const target = types[rand(0, types.length-1)];
-  const qType = rand(0, 5);
+  const qType = rand(0, 6);
   let scenario, choices;
 
   if (qType === 0) {
@@ -4520,7 +4664,7 @@ function genHashIdentify() {
        correct: false,
        explain: 'SHA-256 seul est suffisant selon ISO/IEC 27037. Ajouter MD5 (vulnérable aux collisions) n\'apporte rien de plus à un SHA-256 identique. Pratique acceptable mais non requise.'},
     ].sort(()=>Math.random()-.5);
-  } else {
+  } else if (qType === 5) {
     // ── Sous-type 5 : Identifier algorithme depuis sortie d'outil (hashid) ──
     const algos = [
       { name: 'NTLM',         len: 32, sample: 'b4b9b02e6f09a9bd760f388b67351e2b', hashidOutput: '[+] NTLM\n[+] Domain Cached Credentials' },
@@ -4547,6 +4691,73 @@ function genHashIdentify() {
         explain: `${d.name} aurait un format différent : préfixe ${d.sample.substring(0, 6)}…`
       }))
     ].sort(()=>Math.random()-.5);
+  } else {
+    // ── Sous-type 6 : Détecter une collision MD5 (cas pédagogique réel) ──
+    // Les attaques de collision sur MD5 (chosen-prefix) permettent de produire
+    // 2 fichiers DIFFÉRENTS avec le MÊME hash MD5 mais MD5 ≠ SHA-256 différents.
+    // Ce sous-type apprend à reconnaître ce piège forensique.
+    // Référence : Wang & Yu 2005, MD5 considered harmful today (Stevens et al. 2008)
+
+    // 4 paires possibles (pédagogiques, valeurs fictives mais structurellement réalistes)
+    const pairs = [
+      {
+        title: 'Document Word "Contrat_v1.docx" vs "Contrat_v2.docx"',
+        details: 'Deux contrats avec clauses différentes mais MD5 identique',
+      },
+      {
+        title: 'Image "evidence_orig.jpg" vs "evidence_modified.jpg"',
+        details: 'Photo d\'origine et version retouchée',
+      },
+      {
+        title: 'Binaire "installer.exe" légitime vs "installer.exe" troyenné',
+        details: 'Le malware se fait passer pour le légitime via collision',
+      },
+    ];
+    const pair = pairs[rand(0, pairs.length - 1)];
+
+    // Génération de hashes : MD5 identique pour les 2, SHA-256 différents
+    const md5Same = Array.from({length: 32}, () => '0123456789abcdef'[rand(0, 15)]).join('');
+    const sha1A = Array.from({length: 40}, () => '0123456789abcdef'[rand(0, 15)]).join('');
+    const sha1B = Array.from({length: 40}, () => '0123456789abcdef'[rand(0, 15)]).join('');
+    const sha256A = Array.from({length: 64}, () => '0123456789abcdef'[rand(0, 15)]).join('');
+    const sha256B = Array.from({length: 64}, () => '0123456789abcdef'[rand(0, 15)]).join('');
+
+    scenario = `Un suspect prétend que deux fichiers sont identiques car leur MD5 correspond.<br>
+      <strong>${pair.title}</strong>
+      <div style="font-size:.65rem;margin-top:.4rem;padding:.4rem;background:var(--bg);border-radius:4px;font-family:var(--mono);line-height:1.55">
+        <span style="color:var(--dim)">Fichier A :</span><br>
+        &nbsp;&nbsp;MD5    : <span style="color:var(--gold)">${md5Same}</span><br>
+        &nbsp;&nbsp;SHA-1  : <span style="color:var(--cyan)">${sha1A}</span><br>
+        &nbsp;&nbsp;SHA-256: <span style="color:var(--green)">${sha256A}</span><br>
+        <span style="color:var(--dim)">Fichier B :</span><br>
+        &nbsp;&nbsp;MD5    : <span style="color:var(--gold)">${md5Same}</span><br>
+        &nbsp;&nbsp;SHA-1  : <span style="color:var(--cyan)">${sha1B}</span><br>
+        &nbsp;&nbsp;SHA-256: <span style="color:var(--green)">${sha256B}</span>
+      </div>
+      <strong>Quelle est la conclusion correcte ?</strong>`;
+
+    choices = [
+      {
+        text: 'Les fichiers sont DIFFÉRENTS — c\'est une collision MD5 forgée',
+        correct: true,
+        explain: `<strong>Bonne réponse — c'est exactement le piège.</strong> MD5 identique mais SHA-1 et SHA-256 différents = <strong>collision MD5 délibérée</strong>. Possibles depuis Wang & Yu 2005 (collision en quelques heures sur PC standard depuis 2008). Cas réel : Flame malware (2012) avait un certificat Microsoft signé via collision MD5. ${pair.details}. <strong>Ne jamais utiliser MD5 seul</strong> — toujours croiser avec SHA-256 (RFC 6151, ISO/IEC 27037).`,
+      },
+      {
+        text: 'Les fichiers sont identiques — MD5 confirme l\'égalité',
+        correct: false,
+        explain: 'Faux. Si MD5 est identique mais SHA-1 et SHA-256 diffèrent, les fichiers sont DIFFÉRENTS. MD5 a une attaque de collision pratique depuis 2005. Conséquence forensique : un MD5 identique ne PROUVE PAS l\'identité de 2 fichiers. Toujours utiliser SHA-256.',
+      },
+      {
+        text: 'Erreur de calcul — un même fichier ne peut avoir 2 SHA-256 différents',
+        correct: false,
+        explain: 'Faux. Les 2 SHA-256 différents ne sont pas une erreur — ils prouvent justement que les fichiers sont différents. C\'est la collision MD5 qui crée l\'illusion d\'égalité.',
+      },
+      {
+        text: 'Les fichiers sont identiques mais l\'un est corrompu',
+        correct: false,
+        explain: 'Une corruption changerait TOUS les hashes (MD5 + SHA-1 + SHA-256), pas juste 2 sur 3. Le pattern "MD5= mais SHA-1≠ et SHA-256≠" est la signature classique d\'une collision MD5 intentionnelle.',
+      },
+    ].sort(() => Math.random() - .5);
   }
 
   const shuffled = choices.sort(()=>Math.random()-.5);
@@ -4631,7 +4842,7 @@ function checkHashIdentify(btn, isOk, wrongExplain, correctExplain) {
 //   9 — FAT32 BPB : SectorsPerFAT @ 0x24 (extended BPB)
 //
 function genHexDump() {
-  const scenario = rand(0, 9);
+  const scenario = rand(0, 12);
 
   const le16 = v => [v & 0xFF, (v>>8) & 0xFF];
   const le32 = v => [v & 0xFF,(v>>8)&0xFF,(v>>16)&0xFF,(v>>24)&0xFF];
@@ -4713,6 +4924,93 @@ function genHexDump() {
     b[0x38]=0x53; b[0x39]=0xEF;  // magic LE
     b[0x18]=0x02; b[0x19]=0x00; b[0x1A]=0x00; b[0x1B]=0x00; // log_block_size=2 → 4096
     return { b };
+  }
+
+  // ── HFS+ Volume Header ─────────────────────────────────────
+  // Volume Header = 1024 octets, démarre à offset 0x400 du volume.
+  // Big Endian (Apple legacy). Signature 'H+' (0x482B) à offset 0x000.
+  // version 4 (0x0004) à offset 0x002. blockSize uint32 BE @ 0x028.
+  function makeHFSPlusVolumeHeader() {
+    const b = new Array(512).fill(0);
+    // Signature 'H+' BE
+    b[0x00] = 0x48; b[0x01] = 0x2B;
+    // Version 4 BE
+    b[0x02] = 0x00; b[0x03] = 0x04;
+    // Attributes (BE) @ 0x004 — kHFSVolumeJournaled = 0x00002000
+    b[0x04] = 0x00; b[0x05] = 0x00; b[0x06] = 0x20; b[0x07] = 0x00;
+    // lastMountedVersion = 'HFSJ' (journaling) @ 0x008
+    'HFSJ'.split('').forEach((c, i) => b[0x08 + i] = c.charCodeAt(0));
+    // blockSize = 4096 (0x00001000) en BE @ 0x028
+    b[0x28] = 0x00; b[0x29] = 0x00; b[0x2A] = 0x10; b[0x2B] = 0x00;
+    // totalBlocks BE @ 0x02C — par exemple 0x00100000 = 1M blocs
+    b[0x2C] = 0x00; b[0x2D] = 0x10; b[0x2E] = 0x00; b[0x2F] = 0x00;
+    return { b, blockSize: 4096, totalBlocks: 0x00100000 };
+  }
+
+  // ── exFAT Boot Sector ─────────────────────────────────────
+  // exFAT : 512 octets, signature 'EXFAT   ' (8 octets ASCII) à offset 0x03.
+  // VolumeSerialNumber uint32 LE @ 0x064.
+  // Le FS est entièrement Little Endian.
+  function makeExFATSector() {
+    const b = new Array(512).fill(0);
+    // Jump
+    b[0] = 0xEB; b[1] = 0x76; b[2] = 0x90;
+    // Signature 'EXFAT   ' (8 chars dont 3 espaces)
+    'EXFAT   '.split('').forEach((c, i) => b[3 + i] = c.charCodeAt(0));
+    // PartitionOffset (uint64 LE) @ 0x040 — placeholder
+    b[0x40] = 0x00; b[0x41] = 0x08; b[0x42] = 0x00; b[0x43] = 0x00;
+    // VolumeLength (uint64 LE) @ 0x048
+    b[0x48] = 0x00; b[0x49] = 0x00; b[0x4A] = 0x10; b[0x4B] = 0x00;
+    // VolumeSerialNumber (uint32 LE) @ 0x064 — valeur unique, ex 0xC1A2B3D4
+    const serial = 0xC1A2B3D4;
+    b[0x64] = serial & 0xFF;
+    b[0x65] = (serial >> 8) & 0xFF;
+    b[0x66] = (serial >> 16) & 0xFF;
+    b[0x67] = (serial >> 24) & 0xFF;
+    // FileSystemRevision (uint16) @ 0x068
+    b[0x68] = 0x00; b[0x69] = 0x01;
+    // BytesPerSectorShift @ 0x06C — 9 = 2^9 = 512 octets
+    b[0x6C] = 0x09;
+    // SectorsPerClusterShift @ 0x06D — 8 = 2^8 = 256 sectors
+    b[0x6D] = 0x08;
+    // Boot signature
+    b[510] = 0x55; b[511] = 0xAA;
+    return { b, serial };
+  }
+
+  // ── GPT Primary Header ─────────────────────────────────────
+  // Le GPT Primary Header se trouve au LBA 1 (offset 0x200 du disque).
+  // Signature 8 octets ASCII 'EFI PART' @ 0x000.
+  // Revision uint32 LE @ 0x008. HeaderSize uint32 LE @ 0x00C.
+  // CurrentLBA uint64 LE @ 0x018. NumberOfPartitionEntries uint32 LE @ 0x050.
+  function makeGPTHeader() {
+    const b = new Array(512).fill(0);
+    // Signature 'EFI PART' (8 ASCII)
+    'EFI PART'.split('').forEach((c, i) => b[i] = c.charCodeAt(0));
+    // Revision 0x00010000 LE
+    b[0x08] = 0x00; b[0x09] = 0x00; b[0x0A] = 0x01; b[0x0B] = 0x00;
+    // HeaderSize 0x5C (92 octets) LE
+    b[0x0C] = 0x5C; b[0x0D] = 0x00; b[0x0E] = 0x00; b[0x0F] = 0x00;
+    // HeaderCRC32 placeholder
+    b[0x10] = 0x12; b[0x11] = 0x34; b[0x12] = 0x56; b[0x13] = 0x78;
+    // Reserved (4) @ 0x014
+    // CurrentLBA = 1 (uint64 LE) @ 0x018
+    b[0x18] = 0x01;
+    // BackupLBA placeholder @ 0x020
+    b[0x20] = 0xFF; b[0x21] = 0xFF; b[0x22] = 0xFF; b[0x23] = 0x00;
+    // FirstUsableLBA = 34 LE @ 0x028
+    b[0x28] = 0x22;
+    // LastUsableLBA placeholder @ 0x030
+    b[0x30] = 0xCE; b[0x31] = 0xFF; b[0x32] = 0xFF; b[0x33] = 0x00;
+    // DiskGUID 16 octets @ 0x038 (placeholder)
+    for (let i = 0; i < 16; i++) b[0x38 + i] = (i * 17) & 0xFF;
+    // PartitionEntriesLBA = 2 LE @ 0x048
+    b[0x48] = 0x02;
+    // NumberOfPartitionEntries = 128 LE @ 0x050
+    b[0x50] = 0x80; b[0x51] = 0x00; b[0x52] = 0x00; b[0x53] = 0x00;
+    // SizeOfPartitionEntry = 128 LE @ 0x054
+    b[0x54] = 0x80; b[0x55] = 0x00; b[0x56] = 0x00; b[0x57] = 0x00;
+    return { b, numEntries: 128, sizeEntry: 128 };
   }
 
   // ── Scénario ─────────────────────────────────────────────────
@@ -4879,7 +5177,7 @@ function genHexDump() {
       distFn = () => ['AA 55','00 00','FF FF'];
     }
 
-  } else { // scenario === 8 — EXT4 magic
+  } else if (scenario === 8) { // EXT4 magic
     const ext4 = makeEXT4Superbloc();
     sector = ext4.b;
     title  = 'Superbloc EXT4 (offset 0x400 du volume — 512 octets affichés)';
@@ -4896,6 +5194,65 @@ function genHexDump() {
       `LE → 0xEF53 — identifiant universel EXT2/3/4. La valeur brute est <strong>53 EF</strong> en mémoire (Little Endian).`,
     ];
     distFn = () => ['EF 53','53 EF','EF 00'].filter(v=>v!==answerDisplay).slice(0,3);
+
+  } else if (scenario === 10) { // HFS+ Volume Header — signature
+    const hfs = makeHFSPlusVolumeHeader();
+    sector = hfs.b;
+    title  = 'Volume Header HFS+ (offset 0x400 du volume — Big Endian)';
+    baseOffset = 0x400;
+    fieldName   = 'Signature HFS+';
+    fieldOffset = 0x400;  // = baseOffset + 0x00
+    fieldLen    = 2;
+    answerDisplay = '48 2B';
+    highlightColor = '--gold';
+    hints = [
+      `<strong>HFS+ (Apple)</strong> est <strong>Big Endian</strong> contrairement aux FS Windows. La <strong>signature</strong> est 'H+' = <code>0x482B</code> sur 2 octets, à l'<strong>offset 0x000 du Volume Header</strong> (= 0x400 du volume).`,
+      `Lis les 2 premiers octets de la fenêtre : <code style="color:var(--gold)">${bytesToHexStr([sector[0],sector[1]])}</code>. En BE, lit dans l'ordre direct (octet de poids fort en premier).`,
+      `'H' = 0x48, '+' = 0x2B → signature <strong>"H+"</strong>. La version (4) à l'offset 0x002 confirme HFS Plus (HFSX serait 0x0005).`,
+    ];
+    distFn = () => ['48 2B', '2B 48', '48 5A', 'EF 53'].filter(v => v !== answerDisplay).slice(0,3);
+
+  } else if (scenario === 11) { // exFAT — VolumeSerialNumber
+    const xfat = makeExFATSector();
+    sector = xfat.b;
+    title  = 'Boot Sector exFAT — 512 octets (Little Endian)';
+    baseOffset = 0;
+    fieldName   = 'VolumeSerialNumber';
+    fieldOffset = 0x064;
+    fieldLen    = 4;
+    answerRaw   = xfat.serial;
+    answerDisplay = '0x' + xfat.serial.toString(16).toUpperCase().padStart(8, '0');
+    highlightColor = '--cyan';
+    hints = [
+      `Le <strong>VolumeSerialNumber</strong> exFAT identifie une partition de manière unique. Stocké sur 4 octets <strong>Little Endian</strong> à l'offset <code>0x064</code>. Utilisé pour distinguer 2 volumes formatés exFAT identiques.`,
+      `À l'offset <code>0x064</code> de la fenêtre, lis 4 octets : <code style="color:var(--cyan)">${bytesToHexStr(sector.slice(0x64, 0x68))}</code>. Inverse l'ordre pour LE → BE.`,
+      `LE octets ${bytesToHexStr(sector.slice(0x64, 0x68))} → 0x${xfat.serial.toString(16).toUpperCase().padStart(8,'0')} = <strong>${xfat.serial.toLocaleString('fr-CH')}</strong> en décimal.`,
+    ];
+    // Distracteurs : version BE (inversée) et autres serials plausibles
+    const reversed = ((xfat.serial & 0xFF) << 24) | ((xfat.serial & 0xFF00) << 8) | ((xfat.serial & 0xFF0000) >>> 8) | ((xfat.serial >>> 24) & 0xFF);
+    distFn = () => [
+      '0x' + (reversed >>> 0).toString(16).toUpperCase().padStart(8, '0'),
+      '0x' + ((xfat.serial + 0x10000) >>> 0).toString(16).toUpperCase().padStart(8, '0'),
+      '0x00000000',
+    ].filter(v => v !== answerDisplay).slice(0, 3);
+
+  } else if (scenario === 12) { // GPT Primary Header — NumberOfPartitionEntries
+    const gpt = makeGPTHeader();
+    sector = gpt.b;
+    title  = 'GPT Primary Header (LBA 1 = offset 0x200 du disque, 512 octets)';
+    baseOffset = 0x200;
+    fieldName   = 'NumberOfPartitionEntries';
+    fieldOffset = 0x200 + 0x050;
+    fieldLen    = 4;
+    answerRaw   = gpt.numEntries;
+    answerDisplay = `${gpt.numEntries}`;
+    highlightColor = '--purple';
+    hints = [
+      `Le <strong>GPT Primary Header</strong> est au <strong>LBA 1</strong> (offset <code>0x200</code> du disque) — juste après le Protective MBR. La signature <code>'EFI PART'</code> à l'offset 0x000 le confirme. <strong>NumberOfPartitionEntries</strong> est un uint32 LE à l'offset <code>0x050</code> du header (= 0x250 du disque).`,
+      `Cherche la ligne <code>00000250</code>, lis 4 octets : <code style="color:var(--purple)">${bytesToHexStr(sector.slice(0x50, 0x54))}</code>. Convertis en uint32 LE.`,
+      `LE → 0x${gpt.numEntries.toString(16).toUpperCase().padStart(8,'0')} = <strong>${gpt.numEntries}</strong>. C'est le maximum d'entrées de partition réservées (typiquement 128 sur Windows/Linux/macOS, soit 16 KB pour la table à 128 octets/entrée).`,
+    ];
+    distFn = () => ['64', '256', '512', '1024'].filter(v => v !== answerDisplay).slice(0, 3);
   }
 
   // ── Construire les lignes du dump ────────────────────────────
