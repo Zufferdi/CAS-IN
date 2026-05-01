@@ -3,19 +3,18 @@ name: Check questions.json
 on:
   push:
     paths:
-      - 'questions.json'
-      - 'questions.js'
+      - 'data/questions.json'
+      - 'data/manifest.json'
       - 'scripts/check_questions.py'
       - 'scripts/generate_counts.py'
       - 'fiches/index.html'
       - 'scene.html'
-      - 'scenes.js'
       - 'tp.html'
+      - 'tp/tp-data.js'
       - '.github/workflows/check-questions.yml'
   pull_request:
     paths:
-      - 'questions.json'
-      - 'questions.js'
+      - 'data/questions.json'
       - 'scripts/check_questions.py'
       - 'scripts/generate_counts.py'
   workflow_dispatch:
@@ -44,17 +43,17 @@ jobs:
 
       - name: Run quality checks
         run: |
-          if [ -f questions.json ]; then
-            python3 scripts/check_questions.py questions.json
+          if [ -f data/questions.json ]; then
+            python3 scripts/check_questions.py data/questions.json
           else
-            python3 scripts/check_questions.py questions.js
+            echo "⚠ data/questions.json introuvable" && exit 1
           fi
 
       - name: Generate cleaned version
         if: success()
         run: |
-          if [ -f questions.json ]; then
-            python3 scripts/check_questions.py questions.json --fix --out questions.cleaned.json
+          if [ -f data/questions.json ]; then
+            python3 scripts/check_questions.py data/questions.json --fix --out questions.cleaned.json
           fi
         continue-on-error: true
 
@@ -76,21 +75,21 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git pull --rebase origin ${{ github.ref_name }}
 
-      - name: Generate counts.json
+      - name: Generate data/counts.json
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           python3 scripts/generate_counts.py --pretty
 
-      - name: Commit counts.json if changed (with retry on conflict)
+      - name: Commit data/counts.json if changed (with retry on conflict)
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
-          if ! git diff --quiet counts.json; then
-            git add counts.json
-            git commit -m "chore: auto-update counts.json"
+          if ! git diff --quiet data/counts.json; then
+            git add data/counts.json
+            git commit -m "chore: auto-update data/counts.json"
             # Retry logic : si le push fail, on pull/rebase et on retente
             for i in 1 2 3; do
               if git push; then
-                echo "✓ counts.json pushed successfully on attempt $i"
+                echo "✓ data/counts.json pushed successfully on attempt $i"
                 exit 0
               fi
               echo "Push attempt $i failed, pulling latest..."
@@ -99,5 +98,5 @@ jobs:
             echo "❌ Failed to push after 3 attempts"
             exit 1
           else
-            echo "→ counts.json inchangé, rien à committer"
+            echo "→ data/counts.json inchangé, rien à committer"
           fi
