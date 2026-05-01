@@ -6,6 +6,18 @@
 <title>TP Forensique — CAS-IN</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
 <meta name="description" content="25 exercices de TP forensique interactifs — endianness, FAT16, NTFS, exFAT, EXT3, HFS+, MFT, RunList, parsing hex. Chaque exercice avec correction commentée.">
+<link rel="canonical" href="https://zufferdi.github.io/CAS-IN/tp.html">
+<meta property="og:title" content="TP Forensique · CAS-IN">
+<meta property="og:description" content="Travaux pratiques interactifs de forensique numérique — parsing hex, MFT, RunList, systèmes de fichiers, avec correction commentée">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://zufferdi.github.io/CAS-IN/tp.html">
+<meta property="og:image" content="https://zufferdi.github.io/CAS-IN/og-image.svg">
+<meta property="og:site_name" content="CAS-IN · Investigation Numérique">
+<meta property="og:locale" content="fr_CH">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="TP Forensique · CAS-IN">
+<meta name="twitter:description" content="Travaux pratiques interactifs de forensique numérique — parsing hex, MFT, RunList, systèmes de fichiers">
+<meta name="twitter:image" content="https://zufferdi.github.io/CAS-IN/og-image.svg">
 <link rel="stylesheet" href="style/tp.css">
 <script src="js/core/cas-in-counts.js" defer></script>
 <script src="js/core/cas-in-pwa.js" defer></script>
@@ -71,6 +83,22 @@
           <button type="button" class="sb-cat"        data-cat="direntry"    onclick="go('direntry',this)">    <span class="sb-cat-icon">📁</span><span class="sb-cat-name">Directory Entry FAT</span>   <span class="sb-badge sb-badge-none" id="bd-direntry">—</span></button>
           <button type="button" class="sb-cat"        data-cat="hexdump"     onclick="go('hexdump',this)">     <span class="sb-cat-icon">🔬</span><span class="sb-cat-name">Dump Hex en contexte</span>  <span class="sb-badge sb-badge-none" id="bd-hexdump">—</span></button>
           <button type="button" class="sb-cat"        data-cat="slackspace"  onclick="go('slackspace',this)">  <span class="sb-cat-icon">🪣</span><span class="sb-cat-name">Slack Space</span>           <span class="sb-badge sb-badge-none" id="bd-slackspace">—</span></button>
+        </div>
+      </div>
+
+      <!-- Groupe 1bis — Artefacts Windows -->
+      <div class="sb-group group-win collapsed" id="grp-win">
+        <div class="sb-group-header" onclick="toggleGrp('grp-win')">
+          <span class="sb-group-icon">🪟</span>
+          <span class="sb-group-name">Artefacts Windows</span>
+          <span class="sb-group-count" id="gc-win">3</span>
+          <div class="sb-grp-prog"><div class="sb-grp-track"><div class="sb-grp-fill" id="gp-win" style="width:0%;background:var(--cyan)"></div></div><span class="sb-grp-label" id="gl-win">0%</span></div>
+          <span class="sb-arrow">›</span>
+        </div>
+        <div class="sb-group-body">
+          <button type="button" class="sb-cat" data-cat="registry" onclick="go('registry',this)"><span class="sb-cat-icon">📂</span><span class="sb-cat-name">Registry NK/VK</span>        <span class="sb-badge sb-badge-none" id="bd-registry">—</span><span class="sb-new">NEW</span></button>
+          <button type="button" class="sb-cat" data-cat="prefetch" onclick="go('prefetch',this)"><span class="sb-cat-icon">⏱️</span><span class="sb-cat-name">Prefetch (.pf)</span>        <span class="sb-badge sb-badge-none" id="bd-prefetch">—</span><span class="sb-new">NEW</span></button>
+          <button type="button" class="sb-cat" data-cat="lnk"      onclick="go('lnk',this)">     <span class="sb-cat-icon">🔗</span><span class="sb-cat-name">LNK (raccourcis)</span>     <span class="sb-badge sb-badge-none" id="bd-lnk">—</span><span class="sb-new">NEW</span></button>
         </div>
       </div>
 
@@ -213,6 +241,9 @@ const CAT_META = {
   direntry:    {icon:'📁', name:'Directory Entry FAT',   sub:'Entrée de répertoire 32 octets — nom, attributs, cluster, timestamps'},
   hexdump:     {icon:'🔬', name:'Dump Hex en contexte',  sub:'Localiser + décoder un champ dans un secteur brut — 3 niveaux d\'indices'},
   slackspace:  {icon:'🪣', name:'Slack Space',           sub:'File slack, RAM slack, calcul direct et inverse — FAT'},
+  registry:    {icon:'📂', name:'Registry NK/VK',        sub:'Cellules NTUSER.DAT — type, nom, REG_DWORD inline'},
+  prefetch:    {icon:'⏱️', name:'Prefetch (.pf)',         sub:'Format Win XP/7/8/10/11 — run count, last run FILETIME'},
+  lnk:         {icon:'🔗', name:'LNK (raccourcis)',      sub:'Header 0x4C, CLSID, LinkFlags, FileAttributes, FileSize'},
 };
 
 const CAT_MAX = {
@@ -220,7 +251,8 @@ const CAT_MAX = {
   runlist:5, effacement:5, timestomping:5,
   hextable:5, fsidentify:5, offset:5, bases:5, hash:5,
   email:5, network:5, ir:5, droitpenal:5, glossaire:5, examen:10,
-  mbr:5, direntry:5, hexdump:5, slackspace:5
+  mbr:5, direntry:5, hexdump:5, slackspace:5,
+  registry:5, prefetch:5, lnk:5
 };
 
 let currentCat = 'endian';
@@ -318,19 +350,11 @@ function updateGroupProgress() {
   } catch(e) {}
 }
 
-// ── Sidebar search — étendue aux sous-titres et mots-clés CAT_META ──────────
+// ── Sidebar search ─────────────────────────────────────────────
 function sbSearch(q) {
-  const low = q.toLowerCase().trim();
+  const low = q.toLowerCase();
   document.querySelectorAll('.sb-cat').forEach(btn => {
-    const cat  = btn.dataset.cat || '';
-    const meta = CAT_META[cat] || {};
-    const searchable = [
-      btn.textContent,
-      cat,
-      meta.sub || '',
-      meta.name || '',
-    ].join(' ').toLowerCase();
-    const match = !q || searchable.includes(low);
+    const match = !q || btn.textContent.toLowerCase().includes(low) || btn.dataset.cat?.includes(low);
     btn.style.display = match ? '' : 'none';
   });
   document.querySelectorAll('.sb-group').forEach(grp => {
@@ -339,40 +363,6 @@ function sbSearch(q) {
     if (q && hasVis) grp.classList.remove('collapsed');
   });
 }
-
-// ── Raccourcis clavier ────────────────────────────────────────────────────────
-// N → Nouvel exercice
-// H → Indice (premier bouton .btn-hint visible)
-// Entrée → Valider (premier .btn-validate visible)
-// Échap → Vider la recherche et remettre le focus sur l'exercice
-document.addEventListener('keydown', function(e) {
-  // Ignorer si le focus est sur un input/textarea/select
-  const tag = document.activeElement && document.activeElement.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-
-  if (e.key === 'n' || e.key === 'N') {
-    e.preventDefault();
-    newExercise();
-    showToast('⌨️', 'Raccourci', 'N — Nouvel exercice');
-  }
-  if (e.key === 'h' || e.key === 'H') {
-    e.preventDefault();
-    const hint = document.querySelector('.btn-hint:not([disabled]):not([style*="opacity: 0"])');
-    if (hint) { hint.click(); }
-  }
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    const val = document.querySelector('.btn-validate:not([disabled])');
-    if (val) val.click();
-  }
-  if (e.key === 'Escape') {
-    const searchInput = document.getElementById('sb-search');
-    if (searchInput) {
-      searchInput.value = '';
-      sbSearch('');
-    }
-  }
-});
 
 // ── Badges per category ────────────────────────────────────────
 function updateBadges() {
