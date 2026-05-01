@@ -321,20 +321,41 @@
         50: '🏆 50 ! IMPOSSIBLE… et pourtant.',
         75: '🏆 75 ! Banzaï ! On est bons.',
       };
+      // ─────────────────────────────────────────────────────────────
+      // Namespace _qz : drapeaux internes du quiz (privés)
+      // Regroupe les anciens "let _xxx = ..." top-level en un seul objet
+      // pour réduire la pollution du scope global et clarifier l'intent.
+      // ─────────────────────────────────────────────────────────────
+      const _qz = {
+        qRenderTime: 0,
+        loadMsgInt: null,
+        lastRankCloseNotif: 0,
+        toastTimers: {},
+        focusMode: false,
+        forensicShown: false,
+        konamiPos: 0,
+        godMode: false,
+        godModeTimer: null,
+        dorActive: false,
+        dorSessionScore: 0,
+        bilanShareOpen: false,
+        bilanShareDrawn: false,
+        ac: null,
+      };
 
 
 
 
- let _qRenderTime = 0;
+ // let _qRenderTime = 0; [migré vers _qz.qRenderTime]
 
- let _loadMsgInt = null;
+ // let _loadMsgInt = null; [migré vers _qz.loadMsgInt]
 
  function startLoadingMessages() {
  const el = document.getElementById('loading-msg');
  if (!el) return;
  let i = Math.floor(Math.random() * LOADING_MSGS.length);
  el.textContent = LOADING_MSGS[i];
- _loadMsgInt = setInterval(() => {
+ _qz.loadMsgInt = setInterval(() => {
  i = (i + 1) % LOADING_MSGS.length;
  el.style.animation = 'none';
  void el.offsetWidth; // reflow to restart animation
@@ -344,9 +365,9 @@
  }
 
  function stopLoadingMessages() {
- if (_loadMsgInt) {
- clearInterval(_loadMsgInt);
- _loadMsgInt = null;
+ if (_qz.loadMsgInt) {
+ clearInterval(_qz.loadMsgInt);
+ _qz.loadMsgInt = null;
  }
  }
 
@@ -731,7 +752,7 @@
  }
  // Thresholds at which we notify (XP remaining)
  const RANK_CLOSE_THRESHOLDS = [50, 20, 5];
- let _lastRankCloseNotif = 0;
+ // let _lastRankCloseNotif = 0; [migré vers _qz.lastRankCloseNotif]
 
  function checkCloseToNextRank(rankIdx) {
  const next = RANKS[rankIdx + 1];
@@ -741,8 +762,8 @@
  if (remaining <= threshold && remaining > 0) {
  // Only notify once per threshold crossing (debounce 10s)
  const now = Date.now();
- if (now - _lastRankCloseNotif < 10000) return;
- _lastRankCloseNotif = now;
+ if (now - _qz.lastRankCloseNotif < 10000) return;
+ _qz.lastRankCloseNotif = now;
  const {
  rank
  } = getRank(S.xp);
@@ -797,15 +818,15 @@
  // #combo-display, #combo-badge, #question-card (toujours présents).
  updateComboDisplay();
  }
- let _toastTimers = {};
+ // let _toastTimers = {}; [migré vers _qz.toastTimers]
 
  function showToast(id, msg, duration = 2200) {
  const t = document.getElementById(id);
  if (!t) return;
  t.textContent = msg;
  t.classList.add('show');
- clearTimeout(_toastTimers[id]);
- _toastTimers[id] = setTimeout(() => t.classList.remove('show'), duration);
+ clearTimeout(_qz.toastTimers[id]);
+ _qz.toastTimers[id] = setTimeout(() => t.classList.remove('show'), duration);
  }
 
  function spawnParticles(x, y, ok) {
@@ -841,7 +862,7 @@
         S.sel = new Set();
         S.selCorrect = new Map();
         S._hintUsedThisQ = false;
-        _qRenderTime = Date.now();
+        _qz.qRenderTime = Date.now();
         const hb = document.getElementById('hint-btn');
         if (hb) {
           hb.disabled = S.hintsLeft <= 0;
@@ -920,7 +941,7 @@
         document.getElementById('next-btn').style.display = 'none';
         startTimer();
         clearGodModeHints();
-        if (_godMode) setTimeout(revealGodModeHints, 50);
+        if (_qz.godMode) setTimeout(revealGodModeHints, 50);
       }
 
       function toggleChoice(btn, i, type, isCorrect) {
@@ -965,7 +986,7 @@
         maybeShowForensicAlert();
         if (ok) {
           const hintPenalty = S._hintUsedThisQ ? 0.5 : 1;
-          const elapsed = (Date.now() - _qRenderTime) / 1000;
+          const elapsed = (Date.now() - _qz.qRenderTime) / 1000;
           const speedBonus = (elapsed < 5 && !S.timerSec && !S._hintUsedThisQ) ? 1 : 0;
           S.score += pts;
           S.correct++;
@@ -1165,13 +1186,13 @@
         bb.className = 'bookmark-btn' + (S.bookmarks.has(idx) ? ' active' : '');
         savePersist();
       }
-      let _ac = null;
+      // let _ac = null; [migré vers _qz.ac]
 
       function ac() {
-        if (!_ac) try {
-          _ac = new(window.AudioContext || window.webkitAudioContext)();
+        if (!_qz.ac) try {
+          _qz.ac = new(window.AudioContext || window.webkitAudioContext)();
         } catch {}
-        return _ac;
+        return _qz.ac;
       }
 
       function playSound(ok) {
@@ -3071,7 +3092,7 @@
           sf.streak13 = true;
         }
         if (ok) {
-          const elapsed = (Date.now() - _qRenderTime) / 1000;
+          const elapsed = (Date.now() - _qz.qRenderTime) / 1000;
           if (elapsed < 5 && !S._hintUsedThisQ) {
             S._speedCorrect = (S._speedCorrect || 0) + 1;
             if (S._speedCorrect >= 5 && !sf.speed5row) {
@@ -3471,25 +3492,25 @@
       // ══════════════════════════════════════════════════════════
       // FOCUS MODE
       // ══════════════════════════════════════════════════════════
-      let _focusMode = false;
+      // let _focusMode = false; [migré vers _qz.focusMode]
 
       function toggleFocusMode() {
-        _focusMode = !_focusMode;
-        document.body.classList.toggle('focus-mode', _focusMode);
-        if (_focusMode) showToast('streak-toast', '🎯 Mode Focus activé — ESC pour quitter', 2000);
+        _qz.focusMode = !_qz.focusMode;
+        document.body.classList.toggle('focus-mode', _qz.focusMode);
+        if (_qz.focusMode) showToast('streak-toast', '🎯 Mode Focus activé — ESC pour quitter', 2000);
       }
       document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && _focusMode) toggleFocusMode();
+        if (e.key === 'Escape' && _qz.focusMode) toggleFocusMode();
       });
       // ══════════════════════════════════════════════════════════
       // ALERTE FORENSIQUE SIMULÉE
       // ══════════════════════════════════════════════════════════
-      let _forensicShown = false;
+      // let _forensicShown = false; [migré vers _qz.forensicShown]
 
       function maybeShowForensicAlert() {
-        if (_forensicShown || S.total !== 100) return;
+        if (_qz.forensicShown || S.total !== 100) return;
         if (lsGet('forensicShown', false)) return;
-        _forensicShown = true;
+        _qz.forensicShown = true;
         lsSet('forensicShown', true);
         setTimeout(showForensicAlert, 800);
       }
@@ -3623,30 +3644,30 @@
       // CODE KONAMI — God Mode
       // ══════════════════════════════════════════════════════════
 
-      let _konamiPos = 0;
-      let _godMode = false;
-      let _godModeTimer = null;
+      // let _konamiPos = 0; [migré vers _qz.konamiPos]
+      // let _godMode = false; [migré vers _qz.godMode]
+      // let _godModeTimer = null; [migré vers _qz.godModeTimer]
       document.addEventListener('keydown', e => {
         // Konami tracking
-        if (e.key === KONAMI[_konamiPos]) {
-          _konamiPos++;
-          if (_konamiPos === KONAMI.length) {
-            _konamiPos = 0;
+        if (e.key === KONAMI[_qz.konamiPos]) {
+          _qz.konamiPos++;
+          if (_qz.konamiPos === KONAMI.length) {
+            _qz.konamiPos = 0;
             activateGodMode();
           }
         } else {
-          _konamiPos = (e.key === KONAMI[0]) ? 1 : 0;
+          _qz.konamiPos = (e.key === KONAMI[0]) ? 1 : 0;
         }
       });
 
       function activateGodMode() {
-        _godMode = true;
-        clearTimeout(_godModeTimer);
+        _qz.godMode = true;
+        clearTimeout(_qz.godModeTimer);
         showToast('combo-toast', '🕹️ GOD MODE — La honte sera dans les logs.', 4000);
         // Reveal all wrong answers as dimmed gray for this question
         revealGodModeHints();
         // Auto-disable after 3 questions or 90s
-        _godModeTimer = setTimeout(deactivateGodMode, 90000);
+        _qz.godModeTimer = setTimeout(deactivateGodMode, 90000);
         // Konami visual flash
         document.body.style.transition = 'filter .15s';
         document.body.style.filter = 'brightness(1.3) hue-rotate(180deg)';
@@ -3656,12 +3677,12 @@
       }
 
       function deactivateGodMode() {
-        _godMode = false;
-        clearTimeout(_godModeTimer);
+        _qz.godMode = false;
+        clearTimeout(_qz.godModeTimer);
       }
 
       function revealGodModeHints() {
-        if (!_godMode || !S.curQ || S.answered) return;
+        if (!_qz.godMode || !S.curQ || S.answered) return;
         const q = S.curQ;
         document.querySelectorAll('.choice-btn:not(:disabled)').forEach(btn => {
           const origI = +btn.dataset.origIdx;
@@ -3682,11 +3703,11 @@
       // ══════════════════════════════════════════════════════════
       // MODE DOUBLE OU RIEN
       // ══════════════════════════════════════════════════════════
-      let _dorActive = false;
-      let _dorSessionScore = 0; // score accumulé pendant la série
+      // let _dorActive = false; [migré vers _qz.dorActive]
+      // let _dorSessionScore = 0; [migré vers _qz.dorSessionScore] // score accumulé pendant la série
       function checkDorOffer() {
         // Offer after exactly 5 correct in a row (and not already active)
-        if (S.streak === 5 && !_dorActive) {
+        if (S.streak === 5 && !_qz.dorActive) {
           showDorBanner();
         }
       }
@@ -3696,7 +3717,7 @@
         if (b) {
           b.classList.add('show');
           // Save the current streak score to know what's at stake
-          _dorSessionScore = S.score;
+          _qz.dorSessionScore = S.score;
         }
       }
 
@@ -3706,15 +3727,15 @@
       }
 
       function activateDor() {
-        _dorActive = true;
+        _qz.dorActive = true;
         hideDorBanner();
         showToast('combo-toast', '🎲 Double ou Rien activé ! Prochaine réponse decisive…', 3000);
         document.getElementById('question-card')?.classList.add('dor-active');
       }
 
       function resolveDor(correct) {
-        if (!_dorActive) return;
-        _dorActive = false;
+        if (!_qz.dorActive) return;
+        _qz.dorActive = false;
         document.getElementById('question-card')?.classList.remove('dor-active');
         if (correct) {
           // Double the points earned since DOR activation
@@ -5108,19 +5129,19 @@ document.addEventListener('click', e => {
 });
 
 // ── Partager intégré dans Bilan ──
-let _bilanShareOpen = false;
-let _bilanShareDrawn = false;
+// let _bilanShareOpen = false; [migré vers _qz.bilanShareOpen]
+// let _bilanShareDrawn = false; [migré vers _qz.bilanShareDrawn]
 
 function toggleBilanShare() {
   const content = document.getElementById('bilan-share-content');
   const label   = document.getElementById('share-toggle-label');
   if (!content) return;
-  _bilanShareOpen = !_bilanShareOpen;
-  content.style.display = _bilanShareOpen ? 'block' : 'none';
-  label.textContent = _bilanShareOpen ? 'Masquer la carte' : 'Générer ma carte de score';
-  if (_bilanShareOpen && !_bilanShareDrawn) {
+  _qz.bilanShareOpen = !_qz.bilanShareOpen;
+  content.style.display = _qz.bilanShareOpen ? 'block' : 'none';
+  label.textContent = _qz.bilanShareOpen ? 'Masquer la carte' : 'Générer ma carte de score';
+  if (_qz.bilanShareOpen && !_qz.bilanShareDrawn) {
     drawBilanCard();
-    _bilanShareDrawn = true;
+    _qz.bilanShareDrawn = true;
   }
 }
 
@@ -5128,8 +5149,8 @@ function toggleBilanShare() {
 const _orig_closeOverlay = closeOverlay;
 closeOverlay = function(id) {
   if (id === 'bilan-overlay') {
-    _bilanShareOpen = false;
-    _bilanShareDrawn = false;
+    _qz.bilanShareOpen = false;
+    _qz.bilanShareDrawn = false;
     const c = document.getElementById('bilan-share-content');
     if (c) c.style.display = 'none';
     const l = document.getElementById('share-toggle-label');
