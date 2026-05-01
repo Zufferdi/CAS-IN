@@ -1,4 +1,6 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v45 : split quiz-app.js — quiz-data.js (1562 lignes de constantes) extrait
+//       en module séparé pour alléger le caching et la maintenance.
 // v44 : nettoyage STATIC_ASSETS — retrait de track-theme.css (fichier inexistant,
 //       générait un 404 au précache) et fiche-hub.css (CSS orphelin obsolète,
 //       remplacé par fiche_style.css depuis longtemps).
@@ -12,7 +14,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v44';
+const CACHE_VERSION = 'cas-in-v45';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -71,6 +73,7 @@ const STATIC_ASSETS = [
   // Pages
   './js/pages/landing.js',
   './js/pages/landing-3d.js',
+  './js/pages/quiz-data.js',
   './js/pages/quiz-app.js',
   './js/pages/quiz-ui-patch.js',
   './js/pages/scene-app.js',
