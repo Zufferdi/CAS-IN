@@ -510,8 +510,8 @@ function checkEndianChoice(btn, isCorrect, expectedVal, displayBytes, orderedByt
 
 // ── 2. HORODATAGES MS-DOS ─────────────────────────
 function genTimestamp() {
-  // Mode 0 = FAT timestamp (existant), Mode 1 = NTFS FILETIME
-  const tsMode = rand(0, 1);
+  // Mode 0 = FAT timestamp, Mode 1 = NTFS FILETIME, Mode 2 = EXT4 Unix epoch
+  const tsMode = rand(0, 2);
   if (tsMode === 1) {
     // NTFS FILETIME : intervalles de 100ns depuis 01/01/1601 UTC
     // Bug fix : (yr - 1601) * 365.25 * 24 * 3600 * 1e7 dépasse Number.MAX_SAFE_INTEGER
@@ -577,7 +577,107 @@ function genTimestamp() {
     `;
     return div;
   }
-  // Date FAT : bits 15-9 = année (offset 1980), 8-5 = mois, 4-0 = jour
+  // ── Mode 2 : EXT4 / Unix epoch (uint32, secondes depuis 01/01/1970 UTC) ──
+  if (tsMode === 2) {
+    // Plage 2010–2024 — valeurs uint32 calculables mentalement par approximation
+    const yr   = rand(2010, 2024);
+    const mon  = rand(1, 12);
+    const day  = rand(1, 28);
+    const hour = rand(0, 23);
+    const min  = rand(0, 59);
+    // Calcul précis de l'epoch Unix via Date.UTC
+    const epoch = Math.floor(Date.UTC(yr, mon-1, day, hour, min, 0) / 1000);
+    // Représentation LE32 (4 octets)
+    const b = [epoch & 0xFF, (epoch>>8)&0xFF, (epoch>>16)&0xFF, (epoch>>>24)&0xFF];
+    const hexBytes = b.map(x => pad(x.toString(16).toUpperCase(), 2));
+    // Valeur hex BE pour l'affichage (ordre réseau, plus lisible)
+    const epochHex = '0x' + epoch.toString(16).toUpperCase().padStart(8, '0');
+    // Années depuis 1970 — approximation mentale : epoch ÷ 31 557 600
+    const approxYears = Math.floor(epoch / 31557600);
+    // Distracteurs : ±1 an
+    const dists = [yr - 1, yr + 1, yr - 2].filter(v => v !== yr && v >= 2000 && v <= 2030);
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-ts">🐧</div>
+        <div class="ex-title">EXT4 — Unix Timestamp (epoch 1970)</div>
+        <span class="ex-badge medium">Linux · uint32 · inode ctime/mtime/atime</span>
+      </div>
+      <div class="ex-scenario">
+        Les systèmes EXT2/3/4 stockent les timestamps dans les <strong>inodes</strong> sous forme d'un entier de 32 bits non signé
+        représentant le nombre de <strong>secondes écoulées depuis le 1er janvier 1970 00:00:00 UTC</strong> (Unix epoch).<br><br>
+        Les 4 octets ci-dessous sont extraits du champ <code>i_mtime</code> d'un inode EXT4, en <strong>Little Endian</strong>.
+        À quelle <strong>année</strong> correspond ce timestamp ?
+      </div>
+      <div class="sec-title">Champ i_mtime — 4 octets Little Endian</div>
+      <div class="hex-display">${hexBytes.map(h => `<span class="hex-byte highlight">${h}</span>`).join('')}</div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;margin:.75rem 0;font-size:.78rem">
+        <div style="color:var(--dim);margin-bottom:.4rem">Méthode de décodage :</div>
+        <div style="font-family:var(--mono);color:var(--cyan);margin-bottom:.25rem">1. Inverser LE → valeur uint32 = ${epochHex}</div>
+        <div style="font-family:var(--mono);color:var(--muted);margin-bottom:.25rem">2. Convertir en décimal = ${epoch.toLocaleString('fr-CH')} secondes</div>
+        <div style="font-family:var(--mono);color:var(--muted)">3. Diviser par 31 557 600 (sec/an) → ≈ ${approxYears} ans depuis 1970</div>
+        <div style="margin-top:.4rem;color:var(--dim);font-size:.7rem">📌 Mémo : <em>« Unix is born in 1970 »</em> · 1 an ≈ 31,5 M secondes · Limite uint32 : <strong>19 janvier 2038</strong> (Year 2038 problem)</div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="ts-choices">
+        ${[yr, ...dists].sort(() => Math.random() - .5).map(y =>
+          `<button class="tp-choice" style="flex:1;min-width:80px;font-family:var(--mono)"
+            data-correct="${y === yr}">${y}</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.4rem">
+        <button class="btn-hint" id="ts-h1">💡 Niveau 1 — Inverser LE</button>
+        <button class="btn-hint" id="ts-h2" disabled style="opacity:.45">💡 Niveau 2 — Valeur décimale</button>
+        <button class="btn-hint" id="ts-h3" disabled style="opacity:.45">💡 Niveau 3 — Calcul de l'année</button>
+      </div>
+      <div class="ex-feedback" id="ex-feedback-ts" style="display:none"></div>
+      <button class="btn-next" id="btn-next-ts" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+
+    const hints = [
+      `Inverser les 4 octets (Little Endian) : <code>${hexBytes.join(' ')}</code> → <code>${[...hexBytes].reverse().join(' ')}</code> = <strong>${epochHex}</strong>`,
+      `${epochHex} en décimal = <strong>${epoch.toLocaleString('fr-CH')}</strong> secondes depuis le 01/01/1970.`,
+      `${epoch.toLocaleString('fr-CH')} ÷ 31 557 600 ≈ <strong>${approxYears} ans</strong> depuis 1970 → année <strong>${yr}</strong>.`,
+    ];
+    function showTSHintEXT(level) {
+      markHintUsed();
+      const fb = div.querySelector('#ex-feedback-ts');
+      fb.style.display = 'block'; fb.className = 'ex-feedback correct';
+      fb.innerHTML = `<div style="font-size:.7rem;color:var(--dim);margin-bottom:.2rem">Indice ${level}/3</div>${hints[level-1]}`;
+      const next = div.querySelector('#ts-h'+( level+1));
+      if (next) { next.disabled = false; next.style.opacity = '1'; }
+      div.querySelector('#ts-h'+level).style.opacity = '.35';
+    }
+    div.querySelector('#ts-h1').addEventListener('click', () => showTSHintEXT(1));
+    div.querySelector('#ts-h2').addEventListener('click', () => showTSHintEXT(2));
+    div.querySelector('#ts-h3').addEventListener('click', () => showTSHintEXT(3));
+
+    div.querySelectorAll('#ts-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        div.querySelectorAll('#ts-choices .tp-choice').forEach(x => {
+          x.disabled = true;
+          if (x.dataset.correct === 'true') x.classList.add('correct');
+          else if (x !== b) x.classList.add('dim');
+        });
+        if (!isOk) { b.classList.add('wrong'); breakStreak(); }
+        else if (!STATE.hintUsed) incSolved('timestamp');
+        const fb = div.querySelector('#ex-feedback-ts');
+        fb.style.display = 'block';
+        fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+        const explain = `${epochHex} = ${epoch.toLocaleString('fr-CH')} s depuis 1970 → ÷ 31 557 600 ≈ ${approxYears} ans → <strong>${yr}</strong>.`;
+        fb.innerHTML = isOk
+          ? `✅ Correct ! ${explain} Date exacte : ${yr}-${pad(mon,2)}-${pad(day,2)} ${pad(hour,2)}:${pad(min,2)}:00 UTC`
+          : `❌ Attendu : <strong>${yr}</strong>. ${explain}`;
+        div.querySelector('#btn-next-ts').style.display = 'inline-block';
+        div.querySelector('#ex-num-ts').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      });
+    });
+    return div;
+  }
+
+  // ── Mode 0 : FAT timestamp ────────────────────────────────────
   // Time FAT : bits 15-11 = heures, 10-5 = minutes, 4-0 = secondes/2
   const year  = rand(1990, 2024); const month = rand(1,12); const day = rand(1,28);
   const hours = rand(0,23);       const mins  = rand(0,59); const secs = rand(0,29)*2;
@@ -844,8 +944,336 @@ function checkBitmap(expected) {
 
 // ── 4. CHAÎNE FAT ──────────────────────────────────
 function genFAT() {
-  const chainLen = rand(3, 7);
-  const startCluster = rand(2, 50);
+  // Sous-types :
+  //   0 — FAT32 : reconstruire la chaîne (existant, amélioré)
+  //   1 — FAT16 : chaîne avec EOC 0xFFFF, valeurs 16 bits
+  //   2 — Identifier un cluster défectueux (0xFFF7 / 0x0FFFFFF7)
+  //   3 — Compter les clusters libres dans un extrait de FAT
+  const subtype = rand(0, 3);
+
+  // ── Helpers ──────────────────────────────────────────────────
+  const isFAT16 = (subtype === 1);
+  const EOC  = isFAT16 ? 0xFFFF    : 0x0FFFFFFF;
+  const BAD  = isFAT16 ? 0xFFF7    : 0x0FFFFFF7;
+  const FREE = 0x0000;
+  const fmtEntry = (v) => isFAT16
+    ? '0x' + pad(v.toString(16).toUpperCase(), 4)
+    : '0x' + pad(v.toString(16).toUpperCase(), 8);
+
+  function sigOf(v) {
+    if (v === EOC)  return isFAT16 ? 'Fin de chaîne (EOC)' : 'Fin de chaîne (EOC)';
+    if (v === BAD)  return '⚠ Cluster défectueux';
+    if (v === FREE) return 'Cluster libre';
+    return `→ cluster ${v}`;
+  }
+  function colorOf(isChain) { return isChain ? 'color:var(--cyan)' : ''; }
+
+  // ── Sous-type 0 & 1 : reconstruction de chaîne ──────────────
+  if (subtype <= 1) {
+    const chainLen    = rand(3, 6);
+    const startCluster= rand(2, 40);
+    const chain = [startCluster];
+    for (let i = 1; i < chainLen; i++) chain.push(chain[i-1] + rand(1, 4));
+
+    const fatEntries = {};
+    for (let i = 0; i < chain.length - 1; i++) fatEntries[chain[i]] = chain[i+1];
+    fatEntries[chain[chain.length-1]] = EOC;
+
+    // Leurres : clusters libres et un cluster hors-chaîne
+    for (let i = 0; i < 4; i++) {
+      const decoy = rand(2, 80);
+      if (fatEntries[decoy] === undefined) fatEntries[decoy] = rand(2, 60);
+    }
+
+    const allClusters = [...new Set([...chain, ...Object.keys(fatEntries).map(Number)])].sort((a,b)=>a-b);
+
+    const badge = isFAT16 ? 'FAT16 · EOC 0xFFFF · 16 bits' : 'FAT32 · EOC 0x0FFFFFFF · 32 bits';
+    const title = isFAT16 ? 'Reconstruction d\'une chaîne FAT16' : 'Reconstruction d\'une chaîne FAT32';
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-fat">⛓</div>
+        <div class="ex-title">${title}</div>
+        <span class="ex-badge medium">${badge}</span>
+      </div>
+      <div class="ex-scenario">
+        Dans une table ${isFAT16 ? 'FAT16' : 'FAT32'}, chaque entrée de
+        <strong>${isFAT16 ? '2 octets (16 bits)' : '4 octets (32 bits)'}</strong>
+        pointe vers le cluster suivant d'un fichier.<br>
+        Reconstitue la chaîne complète à partir du cluster <strong>${startCluster}</strong>.<br>
+        <em style="color:var(--dim);font-size:.78rem">
+          ${fmtEntry(EOC)} = fin de chaîne (EOC) ·
+          ${fmtEntry(FREE)} = cluster libre
+          ${isFAT16 ? '· ' + fmtEntry(BAD) + ' = défectueux' : ''}
+        </em>
+      </div>
+      <div class="sec-title">Table FAT${isFAT16?'16':'32'} (extrait)</div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1rem">
+        <div style="display:grid;grid-template-columns:auto auto auto;font-size:.78rem;font-family:var(--mono)">
+          <div style="padding:.4rem .75rem;background:var(--surface2);color:var(--dim);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Cluster</div>
+          <div style="padding:.4rem .75rem;background:var(--surface2);color:var(--dim);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Entrée FAT</div>
+          <div style="padding:.4rem .75rem;background:var(--surface2);color:var(--dim);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Signification</div>
+          ${allClusters.map(c => {
+            const entry   = fatEntries[c] !== undefined ? fatEntries[c] : FREE;
+            const isChain = chain.includes(c);
+            return `<div style="padding:.35rem .75rem;border-bottom:1px solid rgba(255,255,255,.04);${colorOf(isChain)}">${c}</div>
+                    <div style="padding:.35rem .75rem;border-bottom:1px solid rgba(255,255,255,.04);${colorOf(isChain)}">${fmtEntry(entry)}</div>
+                    <div style="padding:.35rem .75rem;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim);font-size:.72rem">${sigOf(entry)}</div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="ex-input-row">
+        <span class="ex-input-label">Chaîne (clusters séparés par →) :</span>
+        <input class="ex-input" id="ans-fat" placeholder="${chain[0]} → ${chain[1]} → … → EOC" style="min-width:200px" autocomplete="off">
+      </div>
+      <div class="ex-input-row" style="margin-top:.5rem">
+        <button class="btn-hint" id="fat-hint-btn">💡 Indice</button>
+        <button class="btn-validate" id="fat-val-btn">Valider ✓</button>
+        <button class="btn-next" id="btn-next-fat" onclick="newExercise()" style="display:none">Exercice suivant →</button>
+      </div>
+      <div class="ex-feedback" id="ex-feedback-fat" style="display:none"></div>
+    `;
+
+    div.querySelector('#fat-hint-btn').addEventListener('click', () => {
+      markHintUsed();
+      const fb = div.querySelector('#ex-feedback-fat');
+      fb.style.display = 'block'; fb.className = 'ex-feedback correct';
+      fb.innerHTML = `💡 Commence au cluster <strong>${startCluster}</strong>. Lis son entrée → cluster suivant. Continue jusqu'à ${fmtEntry(EOC)}.
+        <br>Premiers pas : ${startCluster} → ${fatEntries[startCluster]} → ...`;
+    });
+
+    const validate = () => {
+      const inp = div.querySelector('#ans-fat');
+      const raw = inp.value.replace(/[^0-9\s,→\-]/g, '');
+      const parsed = raw.split(/[\s,→\-]+/).map(Number).filter(n => !isNaN(n) && n > 0);
+      const isOk = parsed.length === chain.length && parsed.every((v,i) => v === chain[i]);
+      if (!isOk) { breakStreak(); }
+      else if (!STATE.hintUsed) incSolved('fat');
+      const fb = div.querySelector('#ex-feedback-fat');
+      fb.style.display = 'block';
+      fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+      fb.innerHTML = isOk
+        ? `✅ Correct ! Chaîne : <span style="font-family:var(--mono);color:var(--cyan)">${chain.join(' → ')} → EOC</span>`
+        : `❌ Incorrect. Saisi : <span style="font-family:var(--mono)">${parsed.join(' → ') || '—'}</span><br>Suis chaque entrée depuis le cluster ${startCluster} jusqu'à ${fmtEntry(EOC)}.`;
+      div.querySelector('#btn-next-fat').style.display = 'inline-block';
+      div.querySelector('#ex-num-fat').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+      div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+    };
+    div.querySelector('#fat-val-btn').addEventListener('click', validate);
+    setTimeout(() => { div.querySelector('#ans-fat')?.addEventListener('keydown', e => { if(e.key==='Enter') validate(); }); }, 50);
+    return div;
+  }
+
+  // ── Sous-type 2 : identifier un cluster défectueux ───────────
+  if (subtype === 2) {
+    // Construire un extrait FAT32 avec 1 cluster BAD parmi des clusters libres et normaux
+    const badCluster  = rand(5, 20);
+    const chainCluster= rand(21, 35);
+    const nextCluster = chainCluster + rand(1, 3);
+
+    const tableData = [];
+    for (let c = 2; c <= 30; c++) {
+      let val, meaning, isBad = false, isHighlight = false;
+      if (c === badCluster)   { val = 0x0FFFFFF7; meaning = '???'; isBad = true; isHighlight = true; }
+      else if (c === chainCluster) { val = nextCluster; meaning = `→ cluster ${nextCluster}`; isHighlight = true; }
+      else if (c === nextCluster)  { val = 0x0FFFFFFF; meaning = 'EOC'; isHighlight = true; }
+      else val = 0x00000000, meaning = 'Libre';
+      tableData.push({ c, val, meaning, isBad, isHighlight });
+    }
+
+    const choices = [
+      { val: 'bad',    label: `Cluster défectueux (bad sector) — ${fmtEntry(0x0FFFFFF7)}`, correct: true },
+      { val: 'free',   label: `Cluster libre — ${fmtEntry(0x00000000)}`,                  correct: false },
+      { val: 'eoc',    label: `Fin de chaîne (EOC) — ${fmtEntry(0x0FFFFFFF)}`,            correct: false },
+      { val: 'chain',  label: `Pointeur vers le cluster suivant`,                          correct: false },
+    ].sort(() => Math.random() - .5);
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-fat">⛓</div>
+        <div class="ex-title">FAT32 — Valeur spéciale : cluster défectueux</div>
+        <span class="ex-badge hard">FAT32 · 0x0FFFFFF7 · Bad Cluster</span>
+      </div>
+      <div class="ex-scenario">
+        Dans l'extrait de FAT32 ci-dessous, le cluster <strong>${badCluster}</strong>
+        contient la valeur <strong style="color:var(--red)">${fmtEntry(0x0FFFFFF7)}</strong>.<br>
+        Que signifie cette valeur ?
+      </div>
+      <div class="sec-title">Extrait FAT32 (cluster ${badCluster} mis en évidence)</div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1rem;max-height:280px;overflow-y:auto">
+        <div style="display:grid;grid-template-columns:auto auto auto;font-size:.75rem;font-family:var(--mono)">
+          <div style="padding:.3rem .75rem;background:var(--surface2);color:var(--dim);font-size:.65rem;text-transform:uppercase;border-bottom:1px solid var(--border)">Cluster</div>
+          <div style="padding:.3rem .75rem;background:var(--surface2);color:var(--dim);font-size:.65rem;text-transform:uppercase;border-bottom:1px solid var(--border)">Entrée FAT32</div>
+          <div style="padding:.3rem .75rem;background:var(--surface2);color:var(--dim);font-size:.65rem;text-transform:uppercase;border-bottom:1px solid var(--border)">Rôle</div>
+          ${tableData.map(({c, val, meaning, isBad, isHighlight}) => {
+            const style = isBad
+              ? 'color:var(--red);background:rgba(255,64,96,.08);font-weight:700'
+              : isHighlight ? 'color:var(--cyan)' : 'color:var(--dim)';
+            return `<div style="padding:.3rem .75rem;border-bottom:1px solid rgba(255,255,255,.04);${style}">${c}${isBad?' ◄':''}</div>
+                    <div style="padding:.3rem .75rem;border-bottom:1px solid rgba(255,255,255,.04);${style}">${fmtEntry(val)}</div>
+                    <div style="padding:.3rem .75rem;border-bottom:1px solid rgba(255,255,255,.04);${style};font-size:.68rem">${meaning}</div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="sec-title">Signification de ${fmtEntry(0x0FFFFFF7)}</div>
+      <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem" id="fat-choices">
+        ${choices.map(c => `
+          <button class="tp-choice" data-correct="${c.correct}" style="text-align:left">
+            <span class="tp-choice-letter" style="font-family:var(--mono);min-width:30px">${c.correct?'✓':'·'}</span>
+            ${c.label}
+          </button>`).join('')}
+      </div>
+      <div style="display:flex;gap:.5rem;margin-bottom:.4rem">
+        <button class="btn-hint" id="fat-hint-btn">💡 Indice</button>
+      </div>
+      <div class="ex-feedback" id="ex-feedback-fat" style="display:none"></div>
+      <button class="btn-next" id="btn-next-fat" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+
+    div.querySelector('#fat-hint-btn').addEventListener('click', () => {
+      markHintUsed();
+      const fb = div.querySelector('#ex-feedback-fat');
+      fb.style.display = 'block'; fb.className = 'ex-feedback correct';
+      fb.innerHTML = `💡 Mémo des valeurs FAT32 spéciales :<br>
+        <span style="font-family:var(--mono);font-size:.76rem">
+        0x00000000 = libre · 0x0FFFFFF7 = <strong>bad cluster</strong> · 0x0FFFFFF8–0x0FFFFFFF = EOC
+        </span>`;
+    });
+
+    div.querySelectorAll('#fat-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        div.querySelectorAll('#fat-choices .tp-choice').forEach(x => {
+          x.disabled = true;
+          if (x.dataset.correct === 'true') x.classList.add('correct');
+          else if (x !== b) x.classList.add('dim');
+        });
+        if (!isOk) { b.classList.add('wrong'); breakStreak(); }
+        else if (!STATE.hintUsed) incSolved('fat');
+        const fb = div.querySelector('#ex-feedback-fat');
+        fb.style.display = 'block';
+        fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+        fb.innerHTML = isOk
+          ? `✅ Correct ! <code>0x0FFFFFF7</code> = <strong>cluster défectueux</strong> (bad cluster). L'OS marque ce cluster et ne l'alloue plus. Les données qui y étaient sont perdues. En FAT16 : <code>0xFFF7</code>.`
+          : `❌ Incorrect. <code>0x0FFFFFF7</code> = cluster défectueux — l'OS le détecte via CHKDSK ou lors du formatage et le marque pour ne plus l'utiliser.`;
+        div.querySelector('#btn-next-fat').style.display = 'inline-block';
+        div.querySelector('#ex-num-fat').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      });
+    });
+    return div;
+  }
+
+  // ── Sous-type 3 : compter les clusters libres ────────────────
+  {
+    // Petit extrait de FAT32 (10–16 entrées) mélant libres, chaînes et EOC
+    const total   = rand(10, 16);
+    const start   = rand(2, 10);
+    const freeCount = rand(3, Math.floor(total / 2));
+    const entries = [];
+    const freeSet = new Set();
+
+    // Choisir aléatoirement les clusters libres
+    while (freeSet.size < freeCount) freeSet.add(rand(0, total - 1));
+
+    // Construire les entrées
+    for (let i = 0; i < total; i++) {
+      const c = start + i;
+      if (freeSet.has(i)) { entries.push({ c, val: 0x00000000, meaning: 'Libre' }); }
+      else {
+        const next = start + i + rand(1, 3);
+        const isLast = i === total - 1 || (!freeSet.has(i+1) && rand(0,1));
+        const val = isLast ? 0x0FFFFFFF : Math.min(next, start + total - 1);
+        entries.push({ c, val, meaning: val === 0x0FFFFFFF ? 'EOC' : `→ ${val}` });
+      }
+    }
+
+    const answer = freeCount;
+    const distractors = [answer + 1, answer - 1, answer + 2].filter(v => v !== answer && v >= 0);
+    const choices = [answer, ...distractors].sort(() => Math.random() - .5);
+
+    const div = document.createElement('div');
+    div.className = 'ex-card';
+    div.innerHTML = `
+      <div class="ex-header">
+        <div class="ex-num" id="ex-num-fat">⛓</div>
+        <div class="ex-title">FAT32 — Compter les clusters libres</div>
+        <span class="ex-badge easy">FAT32 · 0x00000000 · Espace libre</span>
+      </div>
+      <div class="ex-scenario">
+        Dans l'extrait de FAT32 ci-dessous, identifie les clusters dont l'entrée vaut
+        <strong style="color:var(--green)">0x00000000</strong> (cluster libre).<br>
+        <strong>Combien de clusters libres y a-t-il dans cet extrait ?</strong>
+      </div>
+      <div class="sec-title">Extrait FAT32 (clusters ${start}–${start+total-1})</div>
+      <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1rem">
+        <div style="display:grid;grid-template-columns:auto auto auto;font-size:.75rem;font-family:var(--mono)">
+          <div style="padding:.3rem .75rem;background:var(--surface2);color:var(--dim);font-size:.65rem;text-transform:uppercase;border-bottom:1px solid var(--border)">Cluster</div>
+          <div style="padding:.3rem .75rem;background:var(--surface2);color:var(--dim);font-size:.65rem;text-transform:uppercase;border-bottom:1px solid var(--border)">Entrée FAT32</div>
+          <div style="padding:.3rem .75rem;background:var(--surface2);color:var(--dim);font-size:.65rem;text-transform:uppercase;border-bottom:1px solid var(--border)">État</div>
+          ${entries.map(({c, val, meaning}) => {
+            const isFree = val === 0x00000000;
+            const style  = isFree ? 'color:var(--green)' : val === 0x0FFFFFFF ? 'color:var(--gold)' : 'color:var(--cyan)';
+            return `<div style="padding:.3rem .75rem;border-bottom:1px solid rgba(255,255,255,.04);${style}">${c}</div>
+                    <div style="padding:.3rem .75rem;border-bottom:1px solid rgba(255,255,255,.04);${style}">${fmtEntry(val)}</div>
+                    <div style="padding:.3rem .75rem;border-bottom:1px solid rgba(255,255,255,.04);${style};font-size:.68rem">${meaning}</div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="sec-title">Nombre de clusters libres</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem" id="fat-choices">
+        ${choices.map(c => `<button class="tp-choice" style="flex:1;min-width:60px;font-family:var(--mono)"
+            data-correct="${c === answer}">${c}</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:.5rem;margin-bottom:.4rem">
+        <button class="btn-hint" id="fat-hint-btn">💡 Indice</button>
+      </div>
+      <div class="ex-feedback" id="ex-feedback-fat" style="display:none"></div>
+      <button class="btn-next" id="btn-next-fat" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
+    `;
+
+    div.querySelector('#fat-hint-btn').addEventListener('click', () => {
+      markHintUsed();
+      const fb = div.querySelector('#ex-feedback-fat');
+      fb.style.display = 'block'; fb.className = 'ex-feedback correct';
+      const freeClusters = entries.filter(e => e.val === 0).map(e => e.c);
+      fb.innerHTML = `💡 Les clusters libres ont la valeur <code>0x00000000</code>.<br>
+        Clusters libres dans cet extrait : <strong>${freeClusters.join(', ')}</strong> → total = <strong>${freeCount}</strong>`;
+    });
+
+    div.querySelectorAll('#fat-choices .tp-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        const isOk = b.dataset.correct === 'true';
+        div.querySelectorAll('#fat-choices .tp-choice').forEach(x => {
+          x.disabled = true;
+          if (x.dataset.correct === 'true') x.classList.add('correct');
+          else if (x !== b) x.classList.add('dim');
+        });
+        if (!isOk) { b.classList.add('wrong'); breakStreak(); }
+        else if (!STATE.hintUsed) incSolved('fat');
+        const fb = div.querySelector('#ex-feedback-fat');
+        fb.style.display = 'block';
+        fb.className = 'ex-feedback ' + (isOk ? 'correct' : 'wrong');
+        const freeClusters = entries.filter(e => e.val === 0).map(e => e.c);
+        fb.innerHTML = isOk
+          ? `✅ Correct ! ${freeCount} cluster(s) libre(s) : clusters ${freeClusters.join(', ')}.`
+          : `❌ Incorrect. Clusters libres (0x00000000) : ${freeClusters.join(', ')} → ${freeCount} au total.`;
+        div.querySelector('#btn-next-fat').style.display = 'inline-block';
+        div.querySelector('#ex-num-fat').className = 'ex-num ' + (isOk ? 'solved' : 'error');
+        div.querySelector('.ex-card').className = 'ex-card ' + (isOk ? 'solved' : 'error');
+      });
+    });
+    return div;
+  }
+}
+
+// ── 5. MAGIC BYTES ─────────────────────────────────
+// [MAGIC_DB chargé depuis tp-data.js]
+function genMagic() {
   const chain = [startCluster];
   for (let i = 1; i < chainLen; i++) chain.push(chain[i-1] + rand(1,5));
 
