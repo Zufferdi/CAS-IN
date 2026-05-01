@@ -1397,23 +1397,8 @@
 
  function updateXpBar() {
  // Phase 2 v2.10 : éléments d'affichage déplacés vers profile-banner (transversal).
- // On garde la fonction pour ne pas casser les call-sites mais on guard chaque accès.
- const {
- rank,
- idx
- } = getRank(S.xp);
- const next = RANKS[idx + 1];
- const pct = next ? Math.min(100, Math.round((S.xp - rank.min) / (next.min - rank.min) * 100)) : 100;
- const badge = document.getElementById('rank-badge');
- if (badge) badge.textContent = rank.name;
- const em = document.getElementById('rank-emoji-display');
- if (em) em.textContent = rank.emoji;
- // SVG ring: circumference = 2π×14 ≈ 87.96
- const ring = document.getElementById('xp-ring-fill');
- if (ring) ring.style.strokeDashoffset = String(Math.round(87.96 * (1 - pct / 100) * 100) / 100);
- // Tooltip
- const wrap = document.getElementById('xp-wrap');
- if (wrap) wrap.title = (next ? `${S.xp} XP · ${next.min-S.xp} XP jusqu\'à ${next.name}` : `${S.xp} XP · Rang maximum !`);
+ // Stub conservé : les call-sites appellent encore cette fonction, mais l'affichage
+ // est désormais géré par js/profile/profile-banner.js qui réagit aux events Profile.
  }
 
  function getComboMultiplier() {
@@ -1450,13 +1435,9 @@
  }
 
  function updateStreakDisplay() {
- const el = document.getElementById('streak-display');
- if (!el) return;
- const n = S.streak;
- el.textContent = n >= 5 ? '🔥 ' + n : n >= 2 ? '⚡ ' + n : '🔥 ' + n;
- el.className = '';
- if (n >= 10) el.classList.add('fire');
- else if (n >= 5) el.classList.add('hot');
+ // Phase 2 v2.10 : #streak-display déplacé vers profile-banner.
+ // On préserve uniquement l'appel à updateComboDisplay() qui touche
+ // #combo-display, #combo-badge, #question-card (toujours présents).
  updateComboDisplay();
  }
  let _toastTimers = {};
@@ -1565,10 +1546,7 @@
           btn.dataset.idx = newI;
           btn.dataset.origIdx = origI;
           btn.innerHTML = `
-																	
-										
-												
-																		<span class="choice-letter">${L[newI]}</span>
+          																		<span class="choice-letter">${L[newI]}</span>
 																		<span>${q.opts[origI]}</span>`;
           const isCorrect = ansSet.has(origI);
           btn.addEventListener('click', () => toggleChoice(btn, newI, q.type, isCorrect));
@@ -1577,8 +1555,6 @@
         document.getElementById('feedback').style.display = 'none';
         document.getElementById('feedback').innerHTML = '';
         document.getElementById('feedback').dataset.pendingExpl = '';
-        const eb2 = document.getElementById('expl-btn');
-        if (eb2) eb2.style.display = 'none';
         const vb = document.getElementById('validate-btn');
         vb.style.display = q.type === 'multi' ? 'block' : 'none';
         vb.disabled = true;
@@ -1718,20 +1694,11 @@
         const _pname = S.avatarName && S.avatarName !== 'Enquêteur' ? ` ${S.avatarName} !` : '!';
         const msg = ok ? FEEDBACK_OK[Math.floor(Math.random() * FEEDBACK_OK.length)].replace('!', _pname) : FEEDBACK_KO[Math.floor(Math.random() * FEEDBACK_KO.length)];
         const ptsLine = ok && pts > basePts ? `
-																		
-										
-												
-																		<span class="pts-earned"> +${pts} pts (×${m} combo !)</span>` : (ok ? `
-																		
-										
-												
-																		<span class="pts-earned"> +${pts} pt${pts>1?'s':''}</span>` : '');
+          																		<span class="pts-earned"> +${pts} pts (×${m} combo !)</span>` : (ok ? `
+          																		<span class="pts-earned"> +${pts} pt${pts>1?'s':''}</span>` : '');
         const showTip = Math.random() < 0.25;
         const tipLine = showTip ? `
-																			
-										
-												
-																		<div style="margin-top:10px;padding:8px 10px;border-radius:7px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);font-size:12px;color:var(--dim)">${FORENSIC_TIPS[Math.floor(Math.random()*FORENSIC_TIPS.length)]}</div>` : '';
+          																		<div style="margin-top:10px;padding:8px 10px;border-radius:7px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);font-size:12px;color:var(--dim)">${FORENSIC_TIPS[Math.floor(Math.random()*FORENSIC_TIPS.length)]}</div>` : '';
         const explTxt = sanitizeHTML(ok ? (q.expl_ok || q.expl_ko || '') : (q.expl_ko || q.expl_ok || ''));
         const explStyle = ok ? 'margin-top:10px;padding:9px 11px;border-radius:7px;font-size:12px;line-height:1.65;background:rgba(48,232,138,.15);border:1px solid rgba(48,232,138,.3);color:var(--text-ok)' : 'margin-top:10px;padding:9px 11px;border-radius:7px;font-size:12px;line-height:1.65;background:rgba(255,64,96,.15);border:1px solid rgba(255,64,96,.3);color:#ffe0e5';
         const explLine = explTxt ? `
@@ -1748,8 +1715,7 @@
         document.getElementById('validate-btn').style.display = 'none';
         document.getElementById('skip-btn').style.display = 'none';
         document.getElementById('next-btn').style.display = 'block';
-        const eb = document.getElementById('expl-btn');
-        eb.style.display = 'none'; // explication déjà inline
+        // Phase 2 v2.10 : #expl-btn supprimé (explication désormais inline dans #feedback).
         clearGodModeHints();
         playSound(ok);
         savePersist();
@@ -1905,10 +1871,7 @@
           preview.className = 'theme-preview';
           preview.style.background = `linear-gradient(135deg,${t.colors[0]},${t.colors[1]})`;
           d.innerHTML = `
-																				
-										
-												
-																		<div class="theme-name" style="color:${locked?'var(--dim)':t.colors[1]}">${locked?'🔒 ':''} ${t.name}</div>
+          																		<div class="theme-name" style="color:${locked?'var(--dim)':t.colors[1]}">${locked?'🔒 ':''} ${t.name}</div>
 																		<div class="theme-desc">${locked?'Requis: '+t.minXp+' XP':t.desc}</div>`;
           d.prepend(preview);
           if (!locked) {
@@ -2061,12 +2024,6 @@
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === S.mode));
         buildVisualThemeUI();
         document.getElementById('settings-overlay').classList.add('show');
-      }
-
-      function pickMode(btn) {
-        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        S.mode = btn.dataset.mode;
       }
 
 
@@ -2247,10 +2204,7 @@
         EX.sel = new Set();
         const prog = document.getElementById('exam-progress');
         prog.innerHTML = `
-																				
-										
-												
-																		<span style="font-size:12px;color:var(--dim)">${EX.idx+1} / ${EX.pool.length}</span>
+          																		<span style="font-size:12px;color:var(--dim)">${EX.idx+1} / ${EX.pool.length}</span>
 																		<div class="exam-prog-bar">
 																			<div class="exam-prog-fill" style="width:${EX.idx/EX.pool.length*100}%"></div>
 																		</div>`;
@@ -2280,10 +2234,7 @@
           btn.dataset.origIdx = origI;
           btn.dataset.newIdx = newI;
           btn.innerHTML = `
-																				
-										
-												
-																		<span class="choice-letter">${L[newI]}</span>
+          																		<span class="choice-letter">${L[newI]}</span>
 																		<span>${q.opts[origI]}</span>`;
           btn.onclick = () => {
             if (q.type === 'single') {
@@ -2344,10 +2295,7 @@
         vd.textContent = verdict;
         vd.style.color = pct >= 70 ? 'var(--green)' : 'var(--red)';
         document.getElementById('exam-stat-grid').innerHTML = `
-																				
-										
-												
-																		<div class="stat-box">
+          																		<div class="stat-box">
 																			<div class="stat-val">${n}/${EX.answers.length}</div>
 																			<div class="stat-lbl">Bonnes réponses</div>
 																		</div>
@@ -2392,23 +2340,14 @@
           const d = document.createElement('div');
           d.className = 'exam-result-item ' + (a.ok ? 'correct' : 'wrong');
           d.innerHTML = `
-																				
-										
-												
-																		<strong>${i+1}. ${a.q.q}</strong>
+          																		<strong>${i+1}. ${a.q.q}</strong>
 																		<br>
 																			<span style="color:var(--dim)">Ta réponse : ${a.sel.map(s=>a.q.opts[s]).join(', ')||'—'}</span>
       ${!a.ok?`
-																					
-											
-													
-																			<br>
+          																			<br>
 																				<span style="color:var(--green)">✓ Bonne réponse : ${a.ans.map(s=>a.q.opts[s]).join(', ')}</span>`:''}
       ${(a.ok?(a.q.expl_ok||a.q.expl_ko):(a.q.expl_ko||a.q.expl_ok))?`
-																						
-												
-														
-																				<br>
+          																				<br>
 																					<div style="margin-top:8px;padding:8px 10px;border-radius:6px;font-size:12px;line-height:1.55;${a.ok?'background:rgba(48,232,138,.12);border:1px solid rgba(48,232,138,.25);color:var(--text-ok)':'background:rgba(255,64,96,.12);border:1px solid rgba(255,64,96,.25);color:#ffe0e5'}">${a.ok?(a.q.expl_ok||a.q.expl_ko):(a.q.expl_ko||a.q.expl_ok)}</div>`:''}
       ${(a.q.refs&&a.q.refs.length)?`<div style="margin-top:6px;padding:5px 9px;border-radius:5px;font-size:11px;line-height:1.5;background:rgba(120,120,180,.08);border:1px solid rgba(120,120,180,.18);color:var(--dim)">📚 ${a.q.refs.map(r=>'<em>'+r+'</em>').join(' · ')}</div>`:''}`;
           rev.appendChild(d);
@@ -2501,10 +2440,7 @@
         }
 
         document.getElementById('bilan-stats').innerHTML = `
-																							
-													
-															
-																					<div class="stat-box">
+          																					<div class="stat-box">
 																						<div class="stat-val">${S.score}</div>
 																						<div class="stat-lbl">Score</div>
 																					</div>
@@ -2536,10 +2472,7 @@
           const p = tot ? Math.round(ok / tot * 100) : 0;
           const col = d === 'easy' ? 'var(--easy)' : d === 'medium' ? 'var(--medium)' : 'var(--hard)';
           return `
-																							
-													
-															
-																					<div class="diff-pill">
+          																					<div class="diff-pill">
 																						<div class="dv" style="color:${col}">${p}%</div>
 																						<div class="dl">${DIFF_LABELS[d]}</div>
 																					</div>`;
@@ -2558,10 +2491,7 @@
           const row = document.createElement('div');
           row.className = 'tbar-row';
           row.innerHTML = `
-																							
-													
-															
-																					<span class="tbar-name" style="color:${TC[t]||'#fff'}">${t}</span>
+          																					<span class="tbar-name" style="color:${TC[t]||'#fff'}">${t}</span>
 																					<div class="tbar-bg">
 																						<div class="tbar-fill" style="width:${p}%;background:${TC[t]||'#fff'}"></div>
 																					</div>
@@ -2588,10 +2518,7 @@
               const row = document.createElement('div');
               row.className = 'tbar-row';
               row.innerHTML = `
-																							
-													
-															
-																					<span class="tbar-name" style="color:var(--dim);font-size:10px" title="${c}">${c.length>14?c.substring(0,13)+'…':c}</span>
+          																					<span class="tbar-name" style="color:var(--dim);font-size:10px" title="${c}">${c.length>14?c.substring(0,13)+'…':c}</span>
 																					<div class="tbar-bg">
 																						<div class="tbar-fill" style="width:${p}%;background:${col}"></div>
 																					</div>
@@ -2671,10 +2598,7 @@
           const d = document.createElement('div');
           d.className = 'flop-item';
           d.innerHTML = `
-																							
-													
-															
-																					<span class="flop-pct">${Math.round(s.ok/s.tot*100)}%</span>${q.q.substring(0,80)}…`;
+          																					<span class="flop-pct">${Math.round(s.ok/s.tot*100)}%</span>${q.q.substring(0,80)}…`;
           fl.appendChild(d);
         });
         // Exam history
@@ -2688,10 +2612,7 @@
             examHistEl.innerHTML = hist.map(h => {
               const pctColor = h.pct >= 80 ? 'var(--green)' : h.pct >= 50 ? 'var(--gold)' : 'var(--red)';
               return `
-																							
-												
-															
-																					<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(16,28,48,.7);border:1px solid rgba(26,45,74,.8);margin-bottom:6px;font-size:12px">
+          																					<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(16,28,48,.7);border:1px solid rgba(26,45,74,.8);margin-bottom:6px;font-size:12px">
 																						<span style="font-size:18px">${h.emoji}</span>
 																						<span style="font-family:var(--font-mono);font-weight:700;color:${pctColor};min-width:36px">${h.pct}%</span>
 																						<span style="color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.themes}</span>
@@ -2717,32 +2638,13 @@
         el.innerHTML = weeks.map(([wk, v], i) => {
           const label = i === 0 ? 'Cette semaine' : i === 1 ? 'Semaine passée' : `S-${i+1}`;
           return `
-																							
-												
-															
-																					<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(16,28,48,.7);border:1px solid rgba(26,45,74,.8);margin-bottom:6px;font-size:13px">
+          																					<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(16,28,48,.7);border:1px solid rgba(26,45,74,.8);margin-bottom:6px;font-size:13px">
 																						<span style="font-size:16px">${i===0?'🥇':i===1?'🥈':'🥉'}</span>
 																						<span style="color:var(--dim);font-size:11px;width:90px;flex-shrink:0">${label}</span>
 																						<span style="font-family:var(--font-mono);color:var(--gold);font-weight:700">${v.score} pts</span>
 																						<span style="color:var(--dim);font-size:11px;margin-left:auto">${v.acc}% · ${v.date}</span>
 																					</div>`;
         }).join('');
-      }
-
-      function shareBilan() {
-        const {
-          rank
-        } = getRank(S.xp);
-        const acc = S.total ? Math.round(S.correct / S.total * 100) : 0;
-        const text = `🕵️ CAS-IN Investigation Numérique\n${rank.emoji} ${rank.name}\n📊 ${S.correct}/${S.total} correctes · ${acc}% · ${S.score} pts\n🔥 Meilleure série : ${S.maxStreak}\n⚡ ${S.xp} XP total\n\n#DFIR #Forensics #CAS_IN`;
-        if (navigator.share) {
-          navigator.share({
-            title: 'Mon bilan CAS-IN',
-            text
-          }).catch(() => {});
-        } else {
-          navigator.clipboard?.writeText(text).then(() => showToast('streak-toast', '📋 Bilan copié dans le presse-papier !', 2500)).catch(() => prompt('Copier ce texte :', text));
-        }
       }
 
       function checkAchievements() {
@@ -2783,11 +2685,7 @@
         const next = RANKS[idx + 1];
         const pct = next ? Math.min(100, Math.round((S.xp - rank.min) / (next.min - rank.min) * 100)) : 100;
         document.getElementById('xp-rank-panel').innerHTML = `
-    
-																							
-												
-															
-																					<div class="rank-display">
+          																					<div class="rank-display">
 																						<span class="rank-emoji">${rank.emoji}</span>
 																						<div class="rank-info">
 																							<div class="rank-name">${rank.name}</div>
@@ -2842,10 +2740,7 @@
             const isSecret = a.secret && !ok;
             d.className = 'achiev-item' + (ok ? ' unlocked' : '') + (a.secret ? ' secret' : '');
             d.innerHTML = `
-																							
-												
-															
-																					<span class="achiev-emoji">${isSecret?'❓':a.emoji}</span>
+          																					<span class="achiev-emoji">${isSecret?'❓':a.emoji}</span>
 																					<div class="achiev-name">${isSecret?'???':a.name}</div>
 																					<div class="achiev-desc">${isSecret?'Succès secret — à découvrir...':a.desc}</div>`;
             grid.appendChild(d);
@@ -3054,11 +2949,8 @@
       }
 
       function updateRankFlavor() {
-        const {
-          rank
-        } = getRank(S.xp);
-        const fl = document.getElementById('rank-flavor');
-        if (fl && rank.flavor) fl.textContent = rank.flavor;
+        // Phase 2 v2.10 : #rank-flavor déplacé vers profile-banner.
+        // Stub conservé pour compatibilité avec les call-sites existants.
       }
 
       function closeOverlay(id) {
@@ -3197,11 +3089,7 @@
         renderQuestion(getNext());
       }).catch(err => {
         document.getElementById('loading').innerHTML = `
-      
-																								
-												
-															
-																					<div style="text-align:center;padding:20px;max-width:380px">
+          																					<div style="text-align:center;padding:20px;max-width:380px">
 																						<div style="font-size:48px;margin-bottom:12px">🕵️</div>
 																						<p style="font-weight:700;color:var(--red);margin-bottom:8px">Fichier introuvable !</p>
 																						<p style="font-size:13px;color:var(--dim);margin-bottom:12px">${err.message}</p>
@@ -3977,10 +3865,7 @@
           const g = GLOSSARY[term];
           if (!g) return;
           popup.innerHTML = `
-																															
-												
-															
-																					<strong>${term}</strong> — ${g.full}
+          																					<strong>${term}</strong> — ${g.full}
 																															
 												
 															
@@ -4141,10 +4026,8 @@
       const AVATAR_EMOJIS = ['🔰', '🕵️', '🔬', '⚖️', '💀', '🧠', '👮', '🦊', '🐉', '🧬', '🛡️', '⚡', '🎯', '🔐', '🌐', '💻', '🗂️', '🔍', '📡', '🧩'];
 
       function updateAvatarChip() {
-        const em = document.getElementById('avatar-emoji');
-        const nm = document.getElementById('avatar-name');
-        if (em) em.textContent = S.avatarEmoji;
-        if (nm) nm.textContent = S.avatarName || 'Enquêteur';
+        // Phase 2 v2.10 : #avatar-emoji et #avatar-name déplacés vers profile-banner.
+        // Stub conservé pour compatibilité avec les call-sites existants.
       }
 
       function openAvatarSetup() {
@@ -4179,19 +4062,9 @@
         closeOverlay('avatar-overlay');
         showToast('streak-toast', `👤 Profil enregistré ! Bonjour ${S.avatarName} 👋`, 2500);
       }
-      // Personalised toasts — patch FEEDBACK_OK/KO display with name
-      function personalizedGreeting() {
-        const name = S.avatarName && S.avatarName !== 'Enquêteur' ? ` ${S.avatarName}` : '';
-        return name;
-      }
       // ══════════════════════════════════════════════════════════
       // SHARE CARD (Canvas)
       // ══════════════════════════════════════════════════════════
-      function openShareCard() {
-        document.getElementById('share-overlay').classList.add('show');
-        setTimeout(drawShareCard, 80); // let overlay render first
-      }
-
       function drawShareCard() {
         const canvas = document.getElementById('share-canvas');
         if (!canvas) return;
@@ -4474,11 +4347,7 @@
           const div = document.createElement('div');
           div.className = 'weak-item';
           div.innerHTML = `
-      
-																																				
-													
-																
-																						<div class="weak-theme" style="color:${col}">${w.t}</div>
+          																						<div class="weak-theme" style="color:${col}">${w.t}</div>
 																						<div class="weak-stat">${w.ok}/${w.tot} correctes · ${w.pct}%</div>
 																						<div class="weak-bar">
 																							<div class="weak-bar-fill" style="width:${w.pct}%;background:${col}"></div>
@@ -4491,14 +4360,8 @@
         const strongEl = document.getElementById('ms-strong');
         if (strong.length) {
           strongEl.innerHTML = `
-																																				
-													
-																
-																						<div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">✅ Points forts</div>` + strong.map(s => `
-																																				
-													
-																
-																						<span style="display:inline-block;margin:3px 4px;padding:4px 10px;border-radius:16px;font-size:11px;font-weight:700;background:rgba(48,232,138,.1);border:1px solid rgba(48,232,138,.3);color:var(--green)">${s.t} · ${s.pct}%</span>`).join('');
+          																						<div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">✅ Points forts</div>` + strong.map(s => `
+          																						<span style="display:inline-block;margin:3px 4px;padding:4px 10px;border-radius:16px;font-size:11px;font-weight:700;background:rgba(48,232,138,.1);border:1px solid rgba(48,232,138,.3);color:var(--green)">${s.t} · ${s.pct}%</span>`).join('');
         } else {
           strongEl.innerHTML = '';
         }
@@ -5545,9 +5408,6 @@ function renderTerritoryMap() {
 // ═══════════════════════════════════════════════════════════════
 // HOOKS — Intégration dans le flux existant
 // ═══════════════════════════════════════════════════════════════
-
-// Appelé après chaque bonne réponse
-const _orig_processAnswer = typeof processAnswer === 'function' ? processAnswer : null;
 
 // Hook sur openBilan pour mettre à jour la carte
 const _orig_openBilan = openBilan;
