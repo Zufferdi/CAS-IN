@@ -112,7 +112,7 @@
     { id: 'smart50',   emoji: '🧠',   name: 'Révision ×50',        desc: '50 Q en Révision Intelligente', category: 'Quiz · Spécial' },
     { id: 'smart200',  emoji: '🤖',   name: 'Machine de révision', desc: '200 Q en Révision Intelligente', category: 'Quiz · Spécial' },
     { id: 'daily_ch',  emoji: '⚡',   name: 'Défi relevé',         desc: 'Terminer le défi du jour',       category: 'Quiz · Spécial' },
-    { id: 'hint',      emoji: '💡',   name: 'Coup de pouce',       desc: 'Utiliser un indice',             category: 'Quiz · Spécial' },
+    { id: 'hint',      emoji: '💡',   name: 'J\'avais besoin d\'un coup de pouce', desc: 'Utiliser un indice', category: 'Quiz · Spécial' },
 
     // Secrets quiz
     { id: 's_3am',     emoji: '🦇',   name: '???', desc: '???', category: 'Secrets 🤫', secret: true },
