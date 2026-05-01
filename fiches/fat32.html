@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>FAT32 — CAS-IN Forensique</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">SYSTÈMES DE FICHIERS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesdefichiers">Systèmes de Fichiers</a><span class="bc-sep">›</span>
+    <span class="bc-current">FAT32</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~9 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🗂</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">Filesystem</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Windows · USB · SD</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">FAT32 — File Allocation Table 32 bits</h1>
+    <div class="meta">BPB · FAT · Directory Entry 32 o · Chaîne de clusters · 0xE5 · Timestamps 2 s · USB · Cartes SD · Windows 95 OSR2 → aujourd'hui</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="encodage.html" class="prereq-pill">📖 Encodage</a><a href="disques.html" class="prereq-pill">📖 Disques &amp; Clusters</a><a href="mbr_gpt.html" class="prereq-pill">📖 MBR &amp; GPT</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=fat" class="tp-pill">🧪 🔗 Chaîne FAT</a><a href="../tp.html?cat=direntry" class="tp-pill">🧪 📁 Directory Entry</a><a href="../tp.html?cat=timestamp" class="tp-pill">🧪 ⏱ Timestamps</a><a href="../tp.html?cat=effacement" class="tp-pill">🧪 🗑 Effacement FAT</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="ntfs.html" class="related-pill">🔗 NTFS</a><a href="mbr_gpt.html" class="related-pill">🔗 MBR &amp; GPT</a><a href="disques.html" class="related-pill">🔗 Disques</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="fat32-tabs">
+  <button class="tab active" onclick="showTab('arch',this)">🏗 Architecture</button>
+  <button class="tab" onclick="showTab('bpb',this)">📐 BPB &amp; Boot</button>
+  <button class="tab" onclick="showTab('direntry',this)">📁 Directory Entry</button>
+  <button class="tab" onclick="showTab('forensique',this)">🔍 Forensique</button>
+  <button class="tab" onclick="showTab('outils',this)">🔧 Outils &amp; Quiz</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — ARCHITECTURE
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-arch">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 Principe FAT32 — Table d'allocation chaînée</div>
+  FAT32 stocke la <strong>carte d'allocation des clusters</strong> dans une table (la FAT) qui fonctionne comme une liste chaînée. Chaque entrée de 32 bits dans la FAT correspond à un cluster du volume et contient soit le <strong>numéro du cluster suivant</strong> (si le fichier continue), soit la valeur <strong>EOC</strong> (End Of Chain = 0x0FFFFFFF) si c'est le dernier cluster. Les Directory Entries pointent vers le <strong>premier cluster</strong> du fichier.
+</div>
+
+<div class="sec-title">Structure on-disk FAT32</div>
+<div class="sec-sub">Cliquez sur chaque zone pour afficher ses détails forensiques.</div>
+
+<div class="arch-viz">
+  <div style="background:rgba(88,166,255,.04);border:2px solid rgba(88,166,255,.25);border-radius:12px;padding:1rem;margin-bottom:.5rem">
+    <div style="font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);text-align:center;margin-bottom:.75rem;opacity:.8">💿 Partition FAT32</div>
+    <div style="display:flex!important;gap:.4rem;flex-wrap:wrap;justify-content:center">
+      <div style="flex:0 0 100px;padding:.65rem .5rem;border-radius:10px;border:1px solid rgba(240,192,64,.4);text-align:center;cursor:pointer;background:rgba(240,192,64,.1);color:var(--gold)" onclick="showZone('boot')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">🟡</span>
+        <div style="font-family:var(--sans);font-size:.7rem;font-weight:700;margin-bottom:.18rem">Boot Sector</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">VBR · Secteur 0<br>BPB · 512 o</div>
+      </div>
+      <div style="flex:0 0 100px;padding:.65rem .5rem;border-radius:10px;border:1px solid rgba(240,192,64,.25);text-align:center;cursor:pointer;background:rgba(240,192,64,.06);color:var(--gold)" onclick="showZone('rsvd')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">⚙️</span>
+        <div style="font-family:var(--sans);font-size:.7rem;font-weight:700;margin-bottom:.18rem">Secteurs Réservés</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">ReservedSectors<br>Typiquement 32</div>
+      </div>
+      <div style="flex:1;min-width:100px;padding:.65rem .5rem;border-radius:10px;border:1px solid rgba(0,229,204,.45);text-align:center;cursor:pointer;background:rgba(0,229,204,.12);color:var(--cyan)" onclick="showZone('fat1')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">🔗</span>
+        <div style="font-family:var(--sans);font-size:.7rem;font-weight:700;margin-bottom:.18rem">FAT 1 (Principale)</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">SectorsPerFAT × 512<br>32 bits/cluster</div>
+      </div>
+      <div style="flex:1;min-width:100px;padding:.65rem .5rem;border-radius:10px;border:1px solid rgba(0,229,204,.25);text-align:center;cursor:pointer;background:rgba(0,229,204,.06);color:var(--cyan)" onclick="showZone('fat2')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">🔗</span>
+        <div style="font-family:var(--sans);font-size:.7rem;font-weight:700;margin-bottom:.18rem">FAT 2 (Backup)</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">Copie identique<br>NumFATs = 2</div>
+      </div>
+      <div style="flex:3;min-width:120px;padding:.65rem .5rem;border-radius:10px;border:1px solid rgba(48,232,138,.35);text-align:center;cursor:pointer;background:rgba(48,232,138,.1);color:var(--green)" onclick="showZone('data')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">📦</span>
+        <div style="font-family:var(--sans);font-size:.7rem;font-weight:700;margin-bottom:.18rem">Data Area</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">Cluster 2 onwards<br>Répertoires + Données fichiers</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="arch-detail" id="zone-detail">
+  <div style="color:var(--dim);font-size:.78rem">ℹ️ Sélectionnez une zone ci-dessus pour afficher ses détails forensiques</div>
+</div>
+
+<!-- Layout linéaire -->
+<div class="sec-title" style="margin-top:1.5rem">Vue linéaire — Structure on-disk</div>
+<div style="display:flex!important;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0;box-shadow:0 3px 14px rgba(0,0,0,.25)">
+  <div style="flex:0 0 80px;padding:.8rem .5rem;text-align:center;border-right:1px solid var(--border);background:rgba(240,192,64,.12);color:var(--gold);font-size:.68rem;font-weight:600">Boot Sector<br><span style="font-family:var(--mono);font-size:.58rem">Secteur 0</span></div>
+  <div style="flex:0 0 90px;padding:.8rem .5rem;text-align:center;border-right:1px solid var(--border);background:rgba(240,192,64,.07);color:var(--gold);font-size:.68rem;font-weight:600">Réservés<br><span style="font-family:var(--mono);font-size:.58rem">Secteurs 1–31</span></div>
+  <div style="flex:1;padding:.8rem .5rem;text-align:center;border-right:1px solid var(--border);background:rgba(0,229,204,.12);color:var(--cyan);font-size:.68rem;font-weight:600">FAT 1<br><span style="font-family:var(--mono);font-size:.58rem">32 bits par cluster</span></div>
+  <div style="flex:1;padding:.8rem .5rem;text-align:center;border-right:1px solid var(--border);background:rgba(0,229,204,.06);color:var(--cyan);font-size:.68rem;font-weight:600">FAT 2 (Backup)<br><span style="font-family:var(--mono);font-size:.58rem">Copie de FAT 1</span></div>
+  <div style="flex:4;padding:.8rem .5rem;text-align:center;background:rgba(48,232,138,.1);color:var(--green);font-size:.68rem;font-weight:600">Data Area — Cluster 2 → fin du volume<br><span style="font-family:var(--mono);font-size:.58rem">Répertoire racine (cluster variable) + tous les fichiers</span></div>
+</div>
+
+<!-- FAT Chain visualizer -->
+<div class="sec-title">Chaîne FAT — Visualisation interactive</div>
+<div class="sec-sub">Entrez les valeurs d'entrées FAT (hex, séparées par des espaces) pour visualiser la chaîne de clusters d'un fichier.</div>
+<div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:10px;padding:1rem;margin:.75rem 0">
+  <div style="display:flex!important;flex-wrap:wrap;gap:.5rem;align-items:center;margin-bottom:.75rem">
+    <div>
+      <label style="font-size:.73rem;color:var(--dim);display:block;margin-bottom:.2rem">Premier cluster du fichier</label>
+      <input id="fat-start" type="number" value="2" min="2"
+        style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;padding:.4rem .65rem;color:var(--text);font-family:var(--mono);font-size:.85rem;width:90px">
+    </div>
+    <div>
+      <label style="font-size:.73rem;color:var(--dim);display:block;margin-bottom:.2rem">Entrées FAT (hex, cluster 0, 1, 2…)</label>
+      <input id="fat-entries" type="text" value="F8FFFF0F FFFFFFFF 00000000 03000000 04000000 05000000 FFFFFF0F 00000000"
+        style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;padding:.4rem .65rem;color:var(--text);font-family:var(--mono);font-size:.75rem;width:340px">
+    </div>
+    <button onclick="traceChain()"
+      style="padding:.45rem 1rem;background:rgba(0,229,204,.15);border:1px solid rgba(0,229,204,.4);border-radius:6px;color:var(--cyan);font-size:.82rem;cursor:pointer;margin-top:1rem">
+      Tracer →
+    </button>
+  </div>
+  <div id="fat-result" style="font-size:.78rem;color:var(--muted)">—</div>
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>🔍 Valeurs FAT32 spéciales</h4>
+    <ul class="memo-list">
+      <li><code>0x00000000</code> = cluster <strong>libre</strong></li>
+      <li><code>0x0FFFFFF7</code> = cluster <strong>défectueux</strong> (bad cluster)</li>
+      <li><code>0x0FFFFFF8</code>–<code>0x0FFFFFFF</code> = <strong>EOC</strong> (dernier cluster)</li>
+      <li>Entrées 0 et 1 réservées — ne correspondent pas à des clusters réels</li>
+      <li>Cluster #2 = début de la Data Area (premier cluster utilisable)</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>⚡ Formules FAT32 essentielles</h4>
+    <ul class="memo-list">
+      <li><strong>Taille FAT</strong> = SectorsPerFAT32 × BytesPerSector</li>
+      <li><strong>Début Data Area</strong> = (ReservedSectors + NumFATs × SectorsPerFAT32) × BPS</li>
+      <li><strong>Offset cluster N</strong> = Début_Data + (N − 2) × ClusterSize</li>
+      <li><strong>Cluster N dans FAT</strong> = offset (N × 4) dans la FAT</li>
+      <li>Ex. cluster 5 → FAT[5] à offset 20 (0x14) dans la FAT</li>
+    </ul>
+  </div>
+</div>
+</div><!-- /tab-arch -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — BPB & BOOT SECTOR
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-bpb">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 BPB — BIOS Parameter Block</div>
+  Le <strong>BIOS Parameter Block</strong> est la carte de géométrie du volume FAT32. Il occupe les 90 premiers octets du Boot Sector (secteur 0 de la partition). Tous les champs sont en <strong>Little Endian</strong>. Sans lui, impossible de localiser la FAT, le Root Directory, ni la Data Area. C'est le premier élément à analyser.
+</div>
+
+<div class="sec-title">Boot Sector FAT32 — Champs clés</div>
+<div class="sec-sub">Cliquez sur un champ pour afficher ses détails forensiques.</div>
+
+<div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.55rem;margin:.75rem 0">
+  <div class="meta-card mc-0" onclick="showBPB('jmp')">
+    <div class="meta-num" style="font-family:var(--mono);color:var(--gold)">0x00 · 3 o</div>
+    <div class="meta-name">JMP + NOP</div>
+    <div class="meta-desc">Saut vers le code de boot. FAT32 : <code>EB 58 90</code>. Ne pas utiliser pour identifier le FS.</div>
+  </div>
+  <div class="meta-card mc-1" onclick="showBPB('oem')">
+    <div class="meta-num" style="font-family:var(--mono);color:var(--cyan)">0x03 · 8 o</div>
+    <div class="meta-name">OEM Name (ASCII)</div>
+    <div class="meta-desc">"MSWIN4.1" ou "MSDOS5.0" pour FAT32. Permet de distinguer FAT32 de exFAT ("EXFAT   ").</div>
+  </div>
+  <div class="meta-card mc-2" onclick="showBPB('bps')">
+    <div class="meta-num" style="font-family:var(--mono);color:var(--cyan)">0x0B · 2 o LE</div>
+    <div class="meta-name">BytesPerSector</div>
+    <div class="meta-desc">Typiquement 512. Peut être 1024, 2048 ou 4096 sur certains supports.</div>
+  </div>
+  <div class="meta-card mc-3" onclick="showBPB('spc')">
+    <div class="meta-num" style="font-family:var(--mono);color:var(--cyan)">0x0D · 1 o</div>
+    <div class="meta-name">SectorsPerCluster</div>
+    <div class="meta-desc">Puissance de 2 (1, 2, 4, 8, 16, 32, 64, 128). Détermine la granularité d'allocation.</div>
+  </div>
+  <div class="meta-card mc-5" onclick="showBPB('rsvd')">
+    <div class="meta-num" style="font-family:var(--mono);color:var(--gold)">0x0E · 2 o LE</div>
+    <div class="meta-name">ReservedSectors</div>
+    <div class="meta-desc">Nombre de secteurs avant la FAT 1. FAT32 : typiquement 32. FAT16 : 4 ou 1.</div>
+  </div>
+  <div class="meta-card mc-6" onclick="showBPB('numfat')">
+    <div class="meta-num" style="font-family:var(--mono);color:var(--gold)">0x10 · 1 o</div>
+    <div class="meta-name">NumFATs</div>
+    <div class="meta-desc">Presque toujours 2 (principale + backup). Rarement 1 sur certaines cartes SD bas coût.</div>
+  </div>
+  <div class="meta-card mc-7" onclick="showBPB('rootent')">
+    <div class="meta-num" style="font-family:var(--mono);color:var(--dim)">0x11 · 2 o LE</div>
+    <div class="meta-name">RootEntryCount</div>
+    <div class="meta-desc">Toujours 0 en FAT32 (le Root Directory est dans la Data Area). Non nul → FAT12/FAT16.</div>
+  </div>
+  <div class="meta-card mc-usn" onclick="showBPB('spf')">
+    <div class="meta-num" style="font-family:var(--mono);color:var(--purple)">0x24 · 4 o LE</div>
+    <div class="meta-name">SectorsPerFAT32</div>
+    <div class="meta-desc">Nombre de secteurs occupés par chaque FAT. Champ étendu FAT32 (à 0x16 pour FAT12/16).</div>
+  </div>
+  <div class="meta-card mc-0" onclick="showBPB('rootclus')">
+    <div class="meta-num" style="font-family:var(--mono);color:var(--green)">0x2C · 4 o LE</div>
+    <div class="meta-name">RootCluster</div>
+    <div class="meta-desc">Numéro du cluster du Root Directory. Typiquement 2 — le premier cluster de la Data Area.</div>
+  </div>
+  <div class="meta-card mc-1" onclick="showBPB('fsinfo')">
+    <div class="meta-num" style="font-family:var(--mono);color:var(--dim)">0x30 · 2 o LE</div>
+    <div class="meta-name">FSInfo Sector</div>
+    <div class="meta-desc">Numéro du secteur contenant le FSInfo (clusters libres en cache). Typiquement secteur 1.</div>
+  </div>
+  <div class="meta-card mc-2" onclick="showBPB('volid')">
+    <div class="meta-num" style="font-family:var(--mono);color:var(--purple)">0x43 · 4 o</div>
+    <div class="meta-name">Volume ID (Serial)</div>
+    <div class="meta-desc">Numéro de série 32 bits généré aléatoirement à la création. Corrélable avec les logs Windows.</div>
+  </div>
+  <div class="meta-card mc-3" onclick="showBPB('sig')">
+    <div class="meta-num" style="font-family:var(--mono);color:var(--green)">0x1FE · 2 o</div>
+    <div class="meta-name">Boot Signature</div>
+    <div class="meta-desc"><code>55 AA</code> — présent sur tout secteur de boot valide. Absence = secteur corrompu ou non formaté.</div>
+  </div>
+</div>
+<div class="meta-detail" id="bpb-detail"></div>
+
+<!-- Hex dump schématique du BPB -->
+<div class="sec-title" style="margin-top:1.5rem">Calculateur — Géométrie du volume FAT32</div>
+<div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:10px;padding:1rem;margin:.75rem 0">
+  <div style="display:flex!important;flex-wrap:wrap;gap:.65rem;margin-bottom:.75rem">
+    <div><label style="font-size:.72rem;color:var(--dim);display:block;margin-bottom:.2rem">BPS (BytesPerSector)</label>
+      <select id="c-bps" onchange="calcGeom()" style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;padding:.4rem .6rem;color:var(--text);font-family:var(--mono);font-size:.82rem">
+        <option value="512" selected>512</option><option value="1024">1024</option><option value="2048">2048</option><option value="4096">4096</option>
+      </select></div>
+    <div><label style="font-size:.72rem;color:var(--dim);display:block;margin-bottom:.2rem">SPC (SectorsPerCluster)</label>
+      <select id="c-spc" onchange="calcGeom()" style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;padding:.4rem .6rem;color:var(--text);font-family:var(--mono);font-size:.82rem">
+        <option value="1">1</option><option value="2">2</option><option value="4">4</option><option value="8" selected>8</option><option value="16">16</option><option value="32">32</option><option value="64">64</option>
+      </select></div>
+    <div><label style="font-size:.72rem;color:var(--dim);display:block;margin-bottom:.2rem">ReservedSectors</label>
+      <input id="c-rsvd" type="number" value="32" min="1" onchange="calcGeom()" style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;padding:.4rem .6rem;color:var(--text);font-family:var(--mono);font-size:.82rem;width:80px"></div>
+    <div><label style="font-size:.72rem;color:var(--dim);display:block;margin-bottom:.2rem">NumFATs</label>
+      <select id="c-nf" onchange="calcGeom()" style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;padding:.4rem .6rem;color:var(--text);font-family:var(--mono);font-size:.82rem">
+        <option value="1">1</option><option value="2" selected>2</option>
+      </select></div>
+    <div><label style="font-size:.72rem;color:var(--dim);display:block;margin-bottom:.2rem">SectorsPerFAT32</label>
+      <input id="c-spf" type="number" value="64" min="1" onchange="calcGeom()" style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;padding:.4rem .6rem;color:var(--text);font-family:var(--mono);font-size:.82rem;width:80px"></div>
+  </div>
+  <div id="geom-result" style="font-family:var(--mono);font-size:.78rem;color:var(--muted);line-height:1.9"></div>
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>🔍 Signatures FAT32 essentielles</h4>
+    <ul class="memo-list">
+      <li>JMP : <code>EB 58 90</code> (≠ NTFS <code>EB 52 90</code>)</li>
+      <li>OEM Name @ 0x03 : <code>"MSWIN4.1"</code> ou <code>"MSDOS5.0"</code></li>
+      <li>RootEntryCount @ 0x11 : <strong>0x0000</strong> (FAT32 uniquement)</li>
+      <li>FATSz16 @ 0x16 : <strong>0x0000</strong> (FAT32 utilise 0x24 à la place)</li>
+      <li>Signature Boot : <code>55 AA</code> @ offset 0x1FE</li>
+      <li>FAT[0] : <code>F8 FF FF 0F</code> · FAT[1] : <code>FF FF FF FF</code></li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>⚡ FAT32 vs FAT16 vs FAT12</h4>
+    <ul class="memo-list">
+      <li><strong>FAT12</strong> : entrées 12 bits · max ~4 Mo · disquettes</li>
+      <li><strong>FAT16</strong> : entrées 16 bits · max 2 Go · RootEntryCount fixe</li>
+      <li><strong>FAT32</strong> : entrées 32 bits (28 utilisés) · max 2 To · Root dans Data Area</li>
+      <li>Identification par <strong>nombre de clusters</strong> (pas par le type MBR seul)</li>
+      <li>FAT12 : &lt; 4 085 clusters · FAT16 : 4 085–65 524 · FAT32 : ≥ 65 525</li>
+    </ul>
+  </div>
+</div>
+</div><!-- /tab-bpb -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — DIRECTORY ENTRY
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-direntry">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 Directory Entry — 32 octets par fichier</div>
+  Chaque fichier ou sous-répertoire est décrit par une <strong>directory entry de 32 octets</strong>. Le Root Directory (et chaque sous-répertoire) est une liste contiguë d'entries de 32 octets stockée dans la Data Area. L'entrée donne le nom, les attributs, les timestamps, le <strong>premier cluster</strong>, et la taille du fichier — c'est le point d'entrée de toute récupération forensique.
+</div>
+
+<div class="sec-title">Structure d'une Directory Entry — 32 octets</div>
+<div class="sec-sub">Cliquez sur un champ pour afficher ses détails forensiques.</div>
+
+<!-- Tuple bar -->
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem 1rem .85rem;margin:.75rem 0;box-shadow:0 4px 20px rgba(0,0,0,.25)">
+  <div style="font-family:var(--mono);font-size:.58rem;color:var(--dim);text-align:center;margin-bottom:.65rem;letter-spacing:.05em">DIRECTORY ENTRY — 32 OCTETS · CLIQUER SUR UN SEGMENT</div>
+  <div style="display:flex!important;gap:2px;flex-wrap:nowrap;overflow-x:auto">
+    <div style="flex:4;min-width:70px;padding:.6rem .4rem;text-align:center;border-radius:6px;background:rgba(0,229,204,.15);border:1px solid rgba(0,229,204,.4);cursor:pointer;color:var(--cyan)" onclick="showDE('name')">
+      <div style="font-size:.65rem;font-weight:700">Nom 8.3</div>
+      <div style="font-family:var(--mono);font-size:.55rem;opacity:.7;margin-top:.15rem">0x00 · 8 o</div>
+    </div>
+    <div style="flex:2;min-width:50px;padding:.6rem .4rem;text-align:center;border-radius:6px;background:rgba(0,229,204,.1);border:1px solid rgba(0,229,204,.3);cursor:pointer;color:var(--cyan)" onclick="showDE('ext')">
+      <div style="font-size:.65rem;font-weight:700">Extension</div>
+      <div style="font-family:var(--mono);font-size:.55rem;opacity:.7;margin-top:.15rem">0x08 · 3 o</div>
+    </div>
+    <div style="flex:1;min-width:45px;padding:.6rem .4rem;text-align:center;border-radius:6px;background:rgba(188,140,255,.15);border:1px solid rgba(188,140,255,.4);cursor:pointer;color:var(--purple)" onclick="showDE('attr')">
+      <div style="font-size:.65rem;font-weight:700">Attrs</div>
+      <div style="font-family:var(--mono);font-size:.55rem;opacity:.7;margin-top:.15rem">0x0B · 1 o</div>
+    </div>
+    <div style="flex:1;min-width:35px;padding:.6rem .4rem;text-align:center;border-radius:6px;background:rgba(106,128,168,.1);border:1px solid rgba(106,128,168,.2);cursor:pointer;color:var(--dim)" onclick="showDE('ntres')">
+      <div style="font-size:.65rem;font-weight:700">Rsvd</div>
+      <div style="font-family:var(--mono);font-size:.55rem;opacity:.7;margin-top:.15rem">0x0C · 1 o</div>
+    </div>
+    <div style="flex:1;min-width:35px;padding:.6rem .4rem;text-align:center;border-radius:6px;background:rgba(106,128,168,.1);border:1px solid rgba(106,128,168,.2);cursor:pointer;color:var(--dim)" onclick="showDE('crt10ms')">
+      <div style="font-size:.65rem;font-weight:700">CrtTenth</div>
+      <div style="font-family:var(--mono);font-size:.55rem;opacity:.7;margin-top:.15rem">0x0D · 1 o</div>
+    </div>
+    <div style="flex:1;min-width:40px;padding:.6rem .4rem;text-align:center;border-radius:6px;background:rgba(240,192,64,.12);border:1px solid rgba(240,192,64,.35);cursor:pointer;color:var(--gold)" onclick="showDE('crttime')">
+      <div style="font-size:.65rem;font-weight:700">CrtTime</div>
+      <div style="font-family:var(--mono);font-size:.55rem;opacity:.7;margin-top:.15rem">0x0E · 2 o</div>
+    </div>
+    <div style="flex:1;min-width:40px;padding:.6rem .4rem;text-align:center;border-radius:6px;background:rgba(240,192,64,.12);border:1px solid rgba(240,192,64,.35);cursor:pointer;color:var(--gold)" onclick="showDE('crtdate')">
+      <div style="font-size:.65rem;font-weight:700">CrtDate</div>
+      <div style="font-family:var(--mono);font-size:.55rem;opacity:.7;margin-top:.15rem">0x10 · 2 o</div>
+    </div>
+    <div style="flex:1;min-width:40px;padding:.6rem .4rem;text-align:center;border-radius:6px;background:rgba(240,192,64,.08);border:1px solid rgba(240,192,64,.2);cursor:pointer;color:var(--gold)" onclick="showDE('accdate')">
+      <div style="font-size:.65rem;font-weight:700">AccDate</div>
+      <div style="font-family:var(--mono);font-size:.55rem;opacity:.7;margin-top:.15rem">0x12 · 2 o</div>
+    </div>
+    <div style="flex:1;min-width:40px;padding:.6rem .4rem;text-align:center;border-radius:6px;background:rgba(48,232,138,.12);border:1px solid rgba(48,232,138,.35);cursor:pointer;color:var(--green)" onclick="showDE('clushi')">
+      <div style="font-size:.65rem;font-weight:700">Clus Hi</div>
+      <div style="font-family:var(--mono);font-size:.55rem;opacity:.7;margin-top:.15rem">0x14 · 2 o</div>
+    </div>
+    <div style="flex:1;min-width:40px;padding:.6rem .4rem;text-align:center;border-radius:6px;background:rgba(240,192,64,.12);border:1px solid rgba(240,192,64,.35);cursor:pointer;color:var(--gold)" onclick="showDE('wrttime')">
+      <div style="font-size:.65rem;font-weight:700">WrtTime</div>
+      <div style="font-family:var(--mono);font-size:.55rem;opacity:.7;margin-top:.15rem">0x16 · 2 o</div>
+    </div>
+    <div style="flex:1;min-width:40px;padding:.6rem .4rem;text-align:center;border-radius:6px;background:rgba(240,192,64,.12);border:1px solid rgba(240,192,64,.35);cursor:pointer;color:var(--gold)" onclick="showDE('wrtdate')">
+      <div style="font-size:.65rem;font-weight:700">WrtDate</div>
+      <div style="font-family:var(--mono);font-size:.55rem;opacity:.7;margin-top:.15rem">0x18 · 2 o</div>
+    </div>
+    <div style="flex:1;min-width:40px;padding:.6rem .4rep;text-align:center;border-radius:6px;background:rgba(48,232,138,.12);border:1px solid rgba(48,232,138,.35);cursor:pointer;color:var(--green)" onclick="showDE('cluslo')">
+      <div style="font-size:.65rem;font-weight:700">Clus Lo</div>
+      <div style="font-family:var(--mono);font-size:.55rem;opacity:.7;margin-top:.15rem">0x1A · 2 o</div>
+    </div>
+    <div style="flex:2;min-width:55px;padding:.6rem .4rem;text-align:center;border-radius:6px;background:rgba(255,64,96,.12);border:1px solid rgba(255,64,96,.35);cursor:pointer;color:var(--red)" onclick="showDE('size')">
+      <div style="font-size:.65rem;font-weight:700">File Size</div>
+      <div style="font-family:var(--mono);font-size:.55rem;opacity:.7;margin-top:.15rem">0x1C · 4 o LE</div>
+    </div>
+  </div>
+</div>
+<div class="tuple-detail" id="de-detail">
+  <div style="color:var(--dim);font-size:.78rem">📁 Cliquez sur un champ pour afficher son contenu forensique</div>
+</div>
+
+<!-- Attributs -->
+<div class="sec-title" style="margin-top:1.5rem">Octet d'attributs — offset 0x0B</div>
+<div style="overflow-x:auto;margin:.75rem 0">
+<table style="width:100%;border-collapse:collapse;font-size:.77rem">
+  <thead>
+    <tr style="background:rgba(255,255,255,.04);border-bottom:1px solid var(--border)">
+      <th style="padding:.5rem .75rem;text-align:left;color:var(--dim);font-weight:600">Bit</th>
+      <th style="padding:.5rem .75rem;text-align:left;color:var(--dim);font-weight:600">Valeur</th>
+      <th style="padding:.5rem .75rem;text-align:left;color:var(--dim);font-weight:600">Attribut</th>
+      <th style="padding:.5rem .75rem;text-align:left;color:var(--dim);font-weight:600">Signification forensique</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="border-bottom:1px solid rgba(255,255,255,.05)">
+      <td style="padding:.45rem .75rem;font-family:var(--mono)">0</td>
+      <td style="padding:.45rem .75rem;font-family:var(--mono);color:var(--red)">0x01</td>
+      <td style="padding:.45rem .75rem;font-weight:600">Read-Only</td>
+      <td style="padding:.45rem .75rem;color:var(--muted)">Modification bloquée par l'OS. Peut indiquer un fichier système protégé ou une configuration.</td>
+    </tr>
+    <tr style="border-bottom:1px solid rgba(255,255,255,.05)">
+      <td style="padding:.45rem .75rem;font-family:var(--mono)">1</td>
+      <td style="padding:.45rem .75rem;font-family:var(--mono);color:var(--gold)">0x02</td>
+      <td style="padding:.45rem .75rem;font-weight:600">Hidden</td>
+      <td style="padding:.45rem .75rem;color:var(--muted)">Invisible dans l'Explorateur par défaut. Combiné avec System (0x06) → fichier système caché. IOC si on le voit sur des données utilisateur.</td>
+    </tr>
+    <tr style="border-bottom:1px solid rgba(255,255,255,.05)">
+      <td style="padding:.45rem .75rem;font-family:var(--mono)">2</td>
+      <td style="padding:.45rem .75rem;font-family:var(--mono);color:var(--gold)">0x04</td>
+      <td style="padding:.45rem .75rem;font-weight:600">System</td>
+      <td style="padding:.45rem .75rem;color:var(--muted)">Fichier système OS. Hidden + System (0x06) = invisibilité totale dans l'Explorateur.</td>
+    </tr>
+    <tr style="border-bottom:1px solid rgba(255,255,255,.05)">
+      <td style="padding:.45rem .75rem;font-family:var(--mono)">3</td>
+      <td style="padding:.45rem .75rem;font-family:var(--mono);color:var(--dim)">0x08</td>
+      <td style="padding:.45rem .75rem;font-weight:600">Volume ID</td>
+      <td style="padding:.45rem .75rem;color:var(--muted)">Label du volume. Une seule entrée par volume, dans le répertoire racine. Taille = 0.</td>
+    </tr>
+    <tr style="border-bottom:1px solid rgba(255,255,255,.05)">
+      <td style="padding:.45rem .75rem;font-family:var(--mono)">4</td>
+      <td style="padding:.45rem .75rem;font-family:var(--mono);color:var(--cyan)">0x10</td>
+      <td style="padding:.45rem .75rem;font-weight:600">Directory</td>
+      <td style="padding:.45rem .75rem;color:var(--muted)">L'entrée pointe vers un sous-répertoire. Taille = 0 (ignorée par l'OS). Premier cluster = début du contenu du répertoire.</td>
+    </tr>
+    <tr style="border-bottom:1px solid rgba(255,255,255,.05)">
+      <td style="padding:.45rem .75rem;font-family:var(--mono)">5</td>
+      <td style="padding:.45rem .75rem;font-family:var(--mono);color:var(--green)">0x20</td>
+      <td style="padding:.45rem .75rem;font-weight:600">Archive</td>
+      <td style="padding:.45rem .75rem;color:var(--muted)">Mis à 1 à la création ou modification. Remis à 0 par les logiciels de backup. Utile pour la timeline d'activité.</td>
+    </tr>
+    <tr>
+      <td style="padding:.45rem .75rem;font-family:var(--mono)">0–3</td>
+      <td style="padding:.45rem .75rem;font-family:var(--mono);color:var(--purple)">0x0F</td>
+      <td style="padding:.45rem .75rem;font-weight:600">LFN Entry</td>
+      <td style="padding:.45rem .75rem;color:var(--muted)">Combinaison spéciale : Read-Only + Hidden + System + Volume ID = entrée LFN (Long File Name). Précède l'entrée SFN 8.3 correspondante.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- Status du premier octet -->
+<div class="sec-title">Premier octet de l'entry — État du fichier</div>
+<div style="display:grid!important;grid-template-columns:repeat(3,1fr);gap:.55rem;margin:.75rem 0">
+  <div style="padding:.7rem;border-radius:8px;border:1px solid rgba(48,232,138,.35);background:rgba(48,232,138,.07);text-align:center">
+    <div style="font-family:var(--mono);font-size:1.2rem;font-weight:800;color:var(--green);margin-bottom:.3rem">0x41–0x5A</div>
+    <div style="font-weight:700;font-size:.8rem;margin-bottom:.2rem">Fichier actif</div>
+    <div style="font-size:.73rem;color:var(--muted)">Premier caractère du nom en ASCII. L'entrée est valide et utilisée.</div>
+  </div>
+  <div style="padding:.7rem;border-radius:8px;border:1px solid rgba(255,64,96,.35);background:rgba(255,64,96,.07);text-align:center">
+    <div style="font-family:var(--mono);font-size:1.2rem;font-weight:800;color:var(--red);margin-bottom:.3rem">0xE5</div>
+    <div style="font-weight:700;font-size:.8rem;margin-bottom:.2rem">Fichier supprimé</div>
+    <div style="font-size:.73rem;color:var(--muted)">L'OS écrase le 1er octet par 0xE5. Tous les autres champs intacts — récupération possible si clusters non réalloués.</div>
+  </div>
+  <div style="padding:.7rem;border-radius:8px;border:1px solid rgba(106,128,168,.35);background:rgba(106,128,168,.07);text-align:center">
+    <div style="font-family:var(--mono);font-size:1.2rem;font-weight:800;color:var(--dim);margin-bottom:.3rem">0x00</div>
+    <div style="font-weight:700;font-size:.8rem;margin-bottom:.2rem">Fin de répertoire</div>
+    <div style="font-size:.73rem;color:var(--muted)">Marqueur de fin : toutes les entries suivantes sont libres. La lecture s'arrête ici.</div>
+  </div>
+</div>
+
+<div class="alert">
+  🔴 <strong>0xE5 — Clé de récupération :</strong> lors d'une suppression FAT32, seul le premier octet de l'entry est remplacé par 0xE5. Le nom (moins le 1er caractère), les timestamps, le premier cluster, et la taille restent intacts. La FAT libère la chaîne (clusters remis à 0x00) mais les données sur disque ne sont PAS effacées. Récupération quasi-certaine si les clusters n'ont pas été réalloués.
+</div>
+
+<!-- Timestamps FAT -->
+<div class="sec-title">Timestamps FAT32 — Encodage</div>
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div style="padding:.8rem;border-radius:8px;border:1px solid var(--border);background:rgba(0,0,0,.2)">
+    <div style="font-weight:700;color:var(--gold);margin-bottom:.4rem">⏱ Time Word (2 octets LE)</div>
+    <div style="font-family:var(--mono);font-size:.75rem;margin-bottom:.4rem">bits 15–11 : Heures (0–23)<br>bits 10–5 : Minutes (0–59)<br>bits 4–0 : Secondes ÷ 2 (0–29)</div>
+    <div style="font-size:.73rem;color:var(--muted)">⚠ Précision : <strong>2 secondes</strong> — limite structurelle. Un fichier créé à 14h32:07 est enregistré à 14h32:06.</div>
+  </div>
+  <div style="padding:.8rem;border-radius:8px;border:1px solid var(--border);background:rgba(0,0,0,.2)">
+    <div style="font-weight:700;color:var(--gold);margin-bottom:.4rem">📅 Date Word (2 octets LE)</div>
+    <div style="font-family:var(--mono);font-size:.75rem;margin-bottom:.4rem">bits 15–9 : Année − 1980 (0–127 → 1980–2107)<br>bits 8–5 : Mois (1–12)<br>bits 4–0 : Jour (1–31)</div>
+    <div style="font-size:.73rem;color:var(--muted)">Epoch = <strong>1er janvier 1980</strong>. Date 0 = 00/00/1980 (invalide) → entrée non initialisée.</div>
+  </div>
+</div>
+<div style="background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;margin-bottom:.75rem;font-size:.76rem;font-family:var(--mono)">
+  <strong style="color:var(--gold)">Exemple :</strong> WrtTime = <code>4A 6D</code> LE → 0x6D4A → binaire : <code>0110 1101 0100 1010</code><br>
+  Heures = <code>01101</code> = 13 · Minutes = <code>101010</code> = 42 · Secondes = <code>01010</code> × 2 = 20<br>
+  → <strong style="color:var(--text)">13:42:20</strong>
+</div>
+</div><!-- /tab-direntry -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — FORENSIQUE
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-forensique">
+
+<div class="concept-card">
+  <div class="concept-title">🔍 FAT32 — Cible forensique fréquente</div>
+  FAT32 est le système de fichiers le plus répandu sur les <strong>clés USB, cartes SD et disques amovibles</strong> — vecteurs d'exfiltration et supports saisis en priorité. Sa simplicité le rend très analysable manuellement. Sa faiblesse principale : <strong>pas de journal</strong>, pas de métadonnées étendues, pas de contrôle d'accès — ce qui simplifie aussi la récupération.
+</div>
+
+<!-- Workflow -->
+<div class="sec-title">Workflow d'analyse FAT32</div>
+<div style="display:flex!important;flex-direction:column;gap:.5rem;margin:.75rem 0">
+  <div style="display:flex;align-items:flex-start;gap:.75rem;padding:.7rem .9rem;border-radius:8px;border:1px solid rgba(240,192,64,.3);background:rgba(240,192,64,.06)">
+    <div style="min-width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;font-weight:800;font-size:.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+    <div style="font-size:.8rem"><strong style="color:var(--gold)">Lire le BPB</strong><br>
+    <span style="color:var(--muted)">Extraire BPS, SPC, ReservedSectors, NumFATs, SectorsPerFAT32, RootCluster. Calculer les offsets de la FAT 1 et de la Data Area. Vérifier OEM Name pour confirmer FAT32 vs exFAT.</span></div>
+  </div>
+  <div style="display:flex;align-items:flex-start;gap:.75rem;padding:.7rem .9rem;border-radius:8px;border:1px solid rgba(0,229,204,.3);background:rgba(0,229,204,.06)">
+    <div style="min-width:28px;height:28px;border-radius:50%;background:var(--cyan);color:#000;font-weight:800;font-size:.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+    <div style="font-size:.8rem"><strong style="color:var(--cyan)">Cartographier le Root Directory</strong><br>
+    <span style="color:var(--muted)">Localiser via RootCluster × ClusterSize + Début_Data. Lire les entries de 32 octets — noter les 0xE5 (supprimés) et les 0x00 (fin). Un répertoire peut s'étendre sur plusieurs clusters.</span></div>
+  </div>
+  <div style="display:flex;align-items:flex-start;gap:.75rem;padding:.7rem .9rem;border-radius:8px;border:1px solid rgba(188,140,255,.3);background:rgba(188,140,255,.06)">
+    <div style="min-width:28px;height:28px;border-radius:50%;background:var(--purple);color:#fff;font-weight:800;font-size:.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+    <div style="font-size:.8rem"><strong style="color:var(--purple)">Reconstruire les chaînes FAT</strong><br>
+    <span style="color:var(--muted)">Pour chaque fichier : lire FAT[FirstCluster], suivre la chaîne jusqu'à 0x0FFFFFF8+. Pour les fichiers supprimés : les entrées FAT sont remises à 0 — utiliser la taille de l'entry pour estimer la chaîne théorique (clusters contigus).</span></div>
+  </div>
+  <div style="display:flex;align-items:flex-start;gap:.75rem;padding:.7rem .9rem;border-radius:8px;border:1px solid rgba(48,232,138,.3);background:rgba(48,232,138,.06)">
+    <div style="min-width:28px;height:28px;border-radius:50%;background:var(--green);color:#000;font-weight:800;font-size:.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
+    <div style="font-size:.8rem"><strong style="color:var(--green)">Scanner les clusters libres</strong><br>
+    <span style="color:var(--muted)">Clusters marqués libres dans la FAT mais contenant des données = résidus de fichiers supprimés. Carving par magic bytes si la chaîne FAT n'est plus reconstructible.</span></div>
+  </div>
+  <div style="display:flex;align-items:flex-start;gap:.75rem;padding:.7rem .9rem;border-radius:8px;border:1px solid rgba(255,64,96,.3);background:rgba(255,64,96,.06)">
+    <div style="min-width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;font-weight:800;font-size:.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0">5</div>
+    <div style="font-size:.8rem"><strong style="color:var(--red)">Comparer FAT 1 et FAT 2</strong><br>
+    <span style="color:var(--muted)">Les deux FAT doivent être identiques. Une divergence indique une corruption ou une manipulation anti-forensique ciblée de la FAT principale.</span></div>
+  </div>
+</div>
+
+<!-- Récupération de fichiers supprimés -->
+<div class="sec-title" style="margin-top:1rem">Récupération de fichiers supprimés — Mécanisme</div>
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div style="padding:.8rem;border-radius:8px;border:1px solid rgba(48,232,138,.3);background:rgba(48,232,138,.06)">
+    <div style="font-weight:700;color:var(--green);margin-bottom:.4rem">✅ Ce qui reste après suppression</div>
+    <ul style="font-size:.77rem;color:var(--muted);line-height:1.8;margin:0;padding-left:1.2rem">
+      <li>Directory entry intacte (sauf byte 0x00 → 0xE5)</li>
+      <li>Timestamps Write, Create, Access</li>
+      <li>Premier cluster (champ 0x1A–0x1B + 0x14–0x15)</li>
+      <li>Taille du fichier (champ 0x1C–0x1F)</li>
+      <li>Données physiques sur disque (non effacées)</li>
+      <li>LFN entries précédentes (si présentes)</li>
+    </ul>
+  </div>
+  <div style="padding:.8rem;border-radius:8px;border:1px solid rgba(255,64,96,.3);background:rgba(255,64,96,.06)">
+    <div style="font-weight:700;color:var(--red);margin-bottom:.4rem">❌ Ce qui est effacé</div>
+    <ul style="font-size:.77rem;color:var(--muted);line-height:1.8;margin:0;padding-left:1.2rem">
+      <li>Premier octet du nom (remplacé par 0xE5)</li>
+      <li>Chaîne FAT (tous les clusters remis à 0x00)</li>
+      <li><em>Les données elles-mêmes NE sont PAS effacées</em></li>
+      <li>Sur SSD avec TRIM : données potentiellement zeroisées</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Slack Space FAT32 -->
+<div class="sec-title">Slack Space FAT32</div>
+<div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;margin-bottom:.75rem;font-size:.78rem">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem .8rem">
+    <div><strong style="color:var(--gold)">RAM Slack</strong> (Sector Slack)<br>
+    <span style="color:var(--muted)">Fin du fichier → fin du dernier secteur utilisé. Rempli de <strong>zéros</strong> sous Windows NT+. Pas de contenu RAM sur les OS modernes.</span></div>
+    <div><strong style="color:var(--red)">Drive Slack</strong><br>
+    <span style="color:var(--muted)">Secteurs entiers non utilisés jusqu'à la fin du dernier cluster alloué. Contient les <strong>résidus de l'ancien fichier</strong> — zone forensiquement exploitable.</span></div>
+    <div><strong style="color:var(--cyan)">Formule File Slack</strong><br>
+    <span style="color:var(--muted);font-family:var(--mono)">slack = ClusterSize − (FileSize mod ClusterSize)</span></div>
+    <div><strong style="color:var(--cyan)">Formule RAM Slack</strong><br>
+    <span style="color:var(--muted);font-family:var(--mono)">ram_slack = BPS − (FileSize mod BPS)</span></div>
+  </div>
+</div>
+<a href="../tp.html?cat=slackspace" class="tp-pill" style="text-decoration:none;display:inline-block;margin-bottom:.75rem">🧪 S'entraîner — Slack Space →</a>
+
+<!-- Limitations forensiques -->
+<div class="sec-title">Limitations forensiques de FAT32</div>
+<div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:.55rem;margin:.75rem 0">
+  <div style="padding:.7rem;border-radius:8px;border:1px solid rgba(255,64,96,.25);background:rgba(255,64,96,.05)">
+    <div style="font-weight:700;color:var(--red);margin-bottom:.25rem;font-size:.8rem">❌ Pas de journal</div>
+    <div style="font-size:.74rem;color:var(--muted)">Contrairement à NTFS ($LogFile, $UsnJrnl), FAT32 n'a pas de journal d'opérations. Impossible de prouver qu'un fichier a existé s'il n'y a plus d'entry et plus de données.</div>
+  </div>
+  <div style="padding:.7rem;border-radius:8px;border:1px solid rgba(255,64,96,.25);background:rgba(255,64,96,.05)">
+    <div style="font-weight:700;color:var(--red);margin-bottom:.25rem;font-size:.8rem">❌ Précision timestamps 2 secondes</div>
+    <div style="font-size:.74rem;color:var(--muted)">La résolution de 2 secondes (bits 4–0 = sec÷2) empêche la corrélation précise avec des logs réseau (secondes précises). Limitation structurelle non contournable.</div>
+  </div>
+  <div style="padding:.7rem;border-radius:8px;border:1px solid rgba(255,64,96,.25);background:rgba(255,64,96,.05)">
+    <div style="font-weight:700;color:var(--red);margin-bottom:.25rem;font-size:.8rem">❌ Pas de contrôle d'accès</div>
+    <div style="font-size:.74rem;color:var(--muted)">Pas d'ACL, pas de SID propriétaire, pas de permissions. Impossible d'attribuer un fichier à un utilisateur spécifique sur la base du FS seul.</div>
+  </div>
+  <div style="padding:.7rem;border-radius:8px;border:1px solid rgba(255,64,96,.25);background:rgba(255,64,96,.05)">
+    <div style="font-weight:700;color:var(--red);margin-bottom:.25rem;font-size:.8rem">❌ Timestamp local (pas UTC)</div>
+    <div style="font-size:.74rem;color:var(--muted)">FAT32 stocke l'heure locale sans information de fuseau. Problème de corrélation si le support a été utilisé dans des fuseaux différents. NTFS stocke en UTC.</div>
+  </div>
+  <div style="padding:.7rem;border-radius:8px;border:1px solid rgba(255,64,96,.25);background:rgba(255,64,96,.05)">
+    <div style="font-weight:700;color:var(--red);margin-bottom:.25rem;font-size:.8rem">❌ Fichier max 4 Go − 1 octet</div>
+    <div style="font-size:.74rem;color:var(--muted)">Champ FileSize sur 32 bits non signé. Images disque, dumps RAM, vidéos 4K dépassent souvent cette limite — inutilisable dans ces cas.</div>
+  </div>
+  <div style="padding:.7rem;border-radius:8px;border:1px solid rgba(48,232,138,.25);background:rgba(48,232,138,.05)">
+    <div style="font-weight:700;color:var(--green);margin-bottom:.25rem;font-size:.8rem">✅ Avantage : simplicité</div>
+    <div style="font-size:.74rem;color:var(--muted)">Structure entièrement analysable manuellement avec un éditeur hex. Pas de chiffrement natif, pas de compression opaque. Récupération plus directe que NTFS.</div>
+  </div>
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>🔑 Volume ID — corrélation Windows</h4>
+    <ul class="memo-list">
+      <li>Volume ID (Serial) @ 0x43 dans le BPB — 4 octets</li>
+      <li>Référencé dans <code>HKLM\SYSTEM\MountedDevices</code></li>
+      <li>Visible dans <code>vol C:</code> (Windows) ou <code>blkid</code> (Linux)</li>
+      <li>Corrélable avec les logs d'événements de connexion USB (Event ID 20001, 2003)</li>
+      <li>Incohérence Volume ID ↔ registre = volume cloné ou modifié</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>🔑 FAT2 — indicateur de manipulation</h4>
+    <ul class="memo-list">
+      <li>FAT 1 (principale) et FAT 2 (backup) doivent être identiques</li>
+      <li>Windows maintient la FAT 2 en sync automatiquement</li>
+      <li>Divergence FAT1 ≠ FAT2 → corruption, arrachage ou manipulation ciblée</li>
+      <li>Comparer : <code>dd</code> les deux zones et <code>diff</code> les dumps</li>
+      <li>Certains outils d'anti-forensique ne modifient que FAT 1</li>
+    </ul>
+  </div>
+</div>
+</div><!-- /tab-forensique -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — OUTILS & QUIZ
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-outils">
+
+<div class="sec-title">🔧 Outils forensiques — FAT32</div>
+<div class="tool-grid">
+  <div class="tool-card" style="border-left:3px solid var(--cyan)">
+    <div class="tool-name">Autopsy / TSK</div>
+    <div class="tool-by">Brian Carrier / Basis Tech</div>
+    <div class="tool-desc"><code>fls -r -p -f fat image.dd</code> (lister + supprimés) · <code>icat -f fat image.dd 5</code> (extraire cluster) · <code>fsstat</code> (géométrie BPB). Référence open-source.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI + GUI</span></div>
+  </div>
+  <div class="tool-card" style="border-left:3px solid var(--blue)">
+    <div class="tool-name">X-Ways Forensics</div>
+    <div class="tool-by">X-Ways AG</div>
+    <div class="tool-desc">Navigation FAT32 complète, visualisation de la FAT en hex, affichage des entries supprimées (0xE5), carving intégré dans les clusters libres.</div>
+    <div><span class="tool-tag tt-com">Commercial</span></div>
+  </div>
+  <div class="tool-card" style="border-left:3px solid var(--green)">
+    <div class="tool-name">Recuva / PhotoRec</div>
+    <div class="tool-by">Piriform / CGSecurity</div>
+    <div class="tool-desc">Récupération de fichiers supprimés sur FAT32. PhotoRec = carving pur par magic bytes (pas besoin de FAT). Recuva = interface graphique Windows.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span></div>
+  </div>
+  <div class="tool-card" style="border-left:3px solid var(--gold)">
+    <div class="tool-name">FTK Imager</div>
+    <div class="tool-by">AccessData / Exterro</div>
+    <div class="tool-desc">Navigation graphique FAT32 — affiche les entries actives et supprimées, timestamps, clusters. Permet d'exporter des fichiers sans modifier le support.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span></div>
+  </div>
+  <div class="tool-card" style="border-left:3px solid var(--purple)">
+    <div class="tool-name">wxHexEditor / 010 Editor</div>
+    <div class="tool-by">Open Source / SweetScape</div>
+    <div class="tool-desc">Analyse manuelle du BPB et des directory entries. 010 Editor : template FAT.bt disponible — decode automatiquement la structure en overlay.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-com">Commercial</span></div>
+  </div>
+  <div class="tool-card" style="border-left:3px solid var(--red)">
+    <div class="tool-name">bulk_extractor</div>
+    <div class="tool-by">Simson Garfinkel / NIST</div>
+    <div class="tool-desc">Carving dans les clusters libres et le slack space — URLs, adresses email, numéros de carte, mots de passe, clés WiFi — sans monter le volume.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI</span></div>
+  </div>
+</div>
+
+<div class="sec-title">Commandes essentielles</div>
+<div class="cli">
+<span class="c"># TSK — Géométrie du volume FAT32</span><br>
+<span class="v">fsstat</span> <span class="a">-f fat image.dd</span><br><br>
+<span class="c"># TSK — Lister tous les fichiers (incluant supprimés)</span><br>
+<span class="v">fls</span> <span class="a">-r -p -f fat image.dd</span><br><br>
+<span class="c"># TSK — Extraire un fichier par numéro d'inode (= premier cluster)</span><br>
+<span class="v">icat</span> <span class="a">-f fat image.dd 5 > recovered.bin</span><br><br>
+<span class="c"># TSK — Infos sur un fichier spécifique</span><br>
+<span class="v">istat</span> <span class="a">-f fat image.dd 5</span><br><br>
+<span class="c"># Monter en lecture seule (Linux)</span><br>
+<span class="v">mount</span> <span class="a">-o ro,noatime,offset=1048576 image.dd /mnt/evidence</span><br><br>
+<span class="c"># PhotoRec — Carving sans système de fichiers</span><br>
+<span class="v">photorec</span> <span class="a">/d /output image.dd</span><br><br>
+<span class="c"># Comparer FAT 1 et FAT 2 (vérifier cohérence)</span><br>
+<span class="v">dd</span> <span class="a">if=image.dd bs=512 skip=32 count=64 | md5sum</span> <span class="c"># FAT 1</span><br>
+<span class="v">dd</span> <span class="a">if=image.dd bs=512 skip=96 count=64 | md5sum</span> <span class="c"># FAT 2 (si SectorsPerFAT32=64)</span>
+</div>
+
+<!-- Quiz -->
+<div class="sec-title" style="margin-top:1.5rem">❓ Questions de révision</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Quels champs du BPB FAT32 permettent de calculer l'offset de la Data Area ?<small>BPB · Niveau : moyen</small></div>
+  <button class="quiz-btn" onclick="toggleQuiz(this)">Révéler →</button>
+  <div class="quiz-answer">
+    <strong>Formule :</strong><br>
+    <code>Offset_Data = (ReservedSectors + NumFATs × SectorsPerFAT32) × BytesPerSector</code><br><br>
+    <strong>Champs nécessaires :</strong><br>
+    · <strong>ReservedSectors</strong> @ 0x0E (2 o LE) — typiquement 32<br>
+    · <strong>NumFATs</strong> @ 0x10 (1 o) — typiquement 2<br>
+    · <strong>SectorsPerFAT32</strong> @ 0x24 (4 o LE) — variable<br>
+    · <strong>BytesPerSector</strong> @ 0x0B (2 o LE) — typiquement 512<br><br>
+    Exemple : 32 + 2 × 64 = 160 secteurs × 512 = <strong>81 920 octets</strong> = offset de la Data Area.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un fichier a été supprimé sur une clé FAT32. Quelles informations subsistent dans la directory entry, et lesquelles ont disparu ?<small>Suppression FAT32 · Niveau : facile</small></div>
+  <button class="quiz-btn" onclick="toggleQuiz(this)">Révéler →</button>
+  <div class="quiz-answer">
+    <strong>Ce qui subsiste (intact) :</strong><br>
+    · Octets 1–10 du nom (8.3), sauf le byte 0 remplacé par <strong>0xE5</strong><br>
+    · Tous les timestamps (Write, Create, Access)<br>
+    · Premier cluster (0x1A–0x1B + 0x14–0x15)<br>
+    · Taille du fichier (0x1C–0x1F)<br>
+    · Attributs<br>
+    · Données physiques sur disque (non effacées)<br><br>
+    <strong>Ce qui est effacé :</strong><br>
+    · Premier octet du nom → 0xE5<br>
+    · Chaîne FAT (tous les clusters de la chaîne remis à 0x00000000 = libre)<br><br>
+    La récupération est possible tant que les clusters n'ont pas été réalloués à un autre fichier.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Pourquoi RootEntryCount (offset 0x11) doit être à 0 en FAT32 ? Quelle est la différence avec FAT16 ?<small>FAT32 vs FAT16 · Niveau : facile</small></div>
+  <button class="quiz-btn" onclick="toggleQuiz(this)">Révéler →</button>
+  <div class="quiz-answer">En <strong>FAT16</strong>, le Root Directory est une zone fixe de taille prédéfinie immédiatement après les FAT. RootEntryCount indique le nombre maximal d'entries (souvent 512 = 512 × 32 octets = 16 384 octets).<br><br>
+  En <strong>FAT32</strong>, cette limitation a été supprimée : le Root Directory est un <strong>répertoire ordinaire</strong> dans la Data Area, identifié par le champ <code>RootCluster</code> (@ 0x2C). Il peut grandir dynamiquement en occupant plusieurs clusters. RootEntryCount doit donc être <strong>0x0000</strong> — une valeur non nulle ici indique FAT12 ou FAT16, pas FAT32.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Comment distinguer FAT32 de exFAT en analysant le secteur de boot ? Les deux ont le type MBR 0x07 — que faire ?<small>FAT32 vs exFAT · Niveau : moyen</small></div>
+  <button class="quiz-btn" onclick="toggleQuiz(this)">Révéler →</button>
+  <div class="quiz-answer">
+    Le type byte MBR <strong>0x07</strong> est effectivement partagé par NTFS et exFAT, tandis que FAT32 utilise plutôt <strong>0x0B/0x0C</strong> — mais des cas existent où 0x07 est mis pour FAT32. Le type MBR seul ne suffit pas.<br><br>
+    <strong>Méthode fiable : lire l'OEM Name @ offset 0x03 du Boot Sector (8 octets ASCII) :</strong><br>
+    · <code>"MSWIN4.1"</code> ou <code>"MSDOS5.0"</code> → <strong>FAT32</strong><br>
+    · <code>"EXFAT   "</code> (5 lettres + 3 espaces) → <strong>exFAT</strong><br>
+    · <code>"NTFS    "</code> (4 lettres + 4 espaces) → <strong>NTFS</strong><br><br>
+    Confirmer FAT32 : vérifier RootEntryCount = 0x0000 et que le champ SectorsPerFAT32 @ 0x24 est non nul.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">La FAT 1 et la FAT 2 d'un disque saisi divergent sur 3 entrées. Quelle est ton interprétation et que fais-tu ?<small>FAT1 vs FAT2 · Niveau : difficile</small></div>
+  <button class="quiz-btn" onclick="toggleQuiz(this)">Révéler →</button>
+  <div class="quiz-answer">
+    <strong>Interprétations possibles :</strong><br>
+    · <strong>Arrachage brutal</strong> du support — Windows n'a pas eu le temps de synchroniser FAT 2 après avoir modifié FAT 1. Signe de corruption non intentionnelle.<br>
+    · <strong>Manipulation ciblée</strong> — outil anti-forensique qui modifie uniquement FAT 1 pour cacher une chaîne de clusters (les clusters modifiés en FAT 1 restent visibles dans FAT 2).<br>
+    · <strong>Formatage partiel</strong> — certains outils "rapides" ne mettent à jour que FAT 1.<br><br>
+    <strong>Actions :</strong><br>
+    · Identifier précisément les clusters divergents (numéros d'entrée × 4 = offset)<br>
+    · Analyser les données aux clusters concernés — présence de données malgré FAT 1 à 0 = suppression incomplète<br>
+    · Documenter la divergence dans le rapport comme indice d'altération potentielle<br>
+    · Travailler sur une image — ne jamais monter l'original
+  </div>
+</div>
+
+<div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> FAT32 = BPB + FAT(s) + Data Area · Cluster 2 = premier cluster Data Area · EOC = 0x0FFFFFFF · Suppression = 0xE5 sur byte 0 + clusters remis à 0 dans FAT · RootEntryCount = 0 en FAT32 (≠ FAT16) · Timestamps = précision 2 s, heure locale (pas UTC) · Volume ID @ 0x43 corrélable au registre Windows · FAT1 ≠ FAT2 = corruption ou manipulation · Slack : RAM Slack = zéros (NT+), Drive Slack = résidus.</div>
+
+<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem">
+  <a href="../tp.html?cat=fat" class="tp-pill" style="text-decoration:none">🧪 Chaîne FAT →</a>
+  <a href="../tp.html?cat=direntry" class="tp-pill" style="text-decoration:none">🧪 Directory Entry →</a>
+  <a href="../tp.html?cat=effacement" class="tp-pill" style="text-decoration:none">🧪 Effacement 0xE5 →</a>
+  <a href="../tp.html?cat=timestamp" class="tp-pill" style="text-decoration:none">🧪 Timestamps FAT →</a>
+</div>
+
+</div><!-- /tab-outils -->
+
+<div style="max-width:980px;margin:0 auto;padding:0 2rem 2rem">
+  <div class="footer">
+    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+    <span>FAT32 · Microsoft FAT Specification 1.03 · Sleuth Kit · SANS FOR500</span>
+  </div>
+</div>
+
+<script>
+// ── Scroll + Back-top ──
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
+  var bt=document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+})();
+
+// ── Tab switching ──
+function showTab(id,btn){
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('#fat32-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  var el=document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+  window.scrollTo({top:Math.max(0,document.getElementById('fat32-tabs').offsetTop-60),behavior:'smooth'});
+}
+
+// ── Quiz toggle ──
+function toggleQuiz(btn){
+  var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+  ans.classList.toggle('visible');
+  btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+}
+
+// ── Zone details (Architecture) ──
+var zoneDetails={
+  boot:{icon:'🟡',title:'Boot Sector — Secteur 0 de la partition',body:`Contient le BPB (BIOS Parameter Block), le code de bootstrap (446 octets) et la signature <code>55 AA</code>.<br><br>
+    <strong>OEM Name @ 0x03</strong> : "MSWIN4.1" pour FAT32. C'est le seul moyen fiable de distinguer FAT32 de exFAT au niveau du secteur de boot.<br>
+    <strong>Forensique</strong> : lire BytesPerSector, SectorsPerCluster, ReservedSectors, NumFATs, SectorsPerFAT32 et RootCluster pour reconstituer toute la géométrie du volume.`},
+  rsvd:{icon:'⚙️',title:'Secteurs Réservés — Entre le Boot Sector et la FAT 1',body:`Contient le Boot Sector (secteur 0) et le FSInfo (secteur 1 par défaut). Les secteurs 2–31 sont généralement vides ou utilisés par des outils OEM.<br><br>
+    <strong>FSInfo (secteur 1)</strong> : cache le nombre de clusters libres et le dernier cluster alloué. Peut être incohérent avec la FAT réelle si le volume n'a pas été démonté proprement.<br>
+    <strong>Forensique</strong> : des données cachées peuvent être stockées dans les secteurs réservés vides (2–31). Scanner ces secteurs en priorité.`},
+  fat1:{icon:'🔗',title:'FAT 1 — Table d\'allocation principale',body:`Table indexée par numéro de cluster. Chaque entrée de <strong>4 octets (32 bits)</strong> contient le numéro du cluster suivant ou une valeur spéciale.<br><br>
+    <strong>Entrées spéciales</strong> : FAT[0] = <code>F8 FF FF 0F</code> (media type) · FAT[1] = <code>FF FF FF FF</code> (EOC réservé).<br>
+    <strong>Premier cluster de fichier → FAT[N]</strong> : si la valeur est 0x0FFFFFFF = EOC (dernier cluster) · 0x00000000 = libre · 0x0FFFFFF7 = défectueux.<br>
+    <strong>Forensique</strong> : clusters libres (0x00) mais avec données = fichiers supprimés récupérables.`},
+  fat2:{icon:'🔗',title:'FAT 2 — Copie de sauvegarde',body:`Copie exacte de la FAT 1. Maintenue en synchronisation par Windows automatiquement.<br><br>
+    <strong>Forensique</strong> : comparer FAT 1 et FAT 2 via hash MD5. Divergence = signal fort de corruption ou manipulation. Certains outils anti-forensique ne modifient que FAT 1 — la FAT 2 révèle alors l'état original.`},
+  data:{icon:'📦',title:'Data Area — Cluster 2 onwards',body:`Commence au cluster 2 (premier cluster utilisable). Contient le Root Directory (cluster défini par RootCluster @ 0x2C) et tous les fichiers/sous-répertoires.<br><br>
+    <strong>Calcul offset cluster N</strong> : <code>Offset = Debut_Data + (N − 2) × ClusterSize</code><br>
+    <strong>Forensique</strong> : clusters libres (FAT = 0) avec données résiduelles = zone prioritaire pour le carving. Les répertoires supprimés laissent leurs entries 32 octets intactes jusqu'à réutilisation.`}
+};
+function showZone(key){
+  var d=zoneDetails[key]; if(!d) return;
+  var p=document.getElementById('zone-detail');
+  p.className='arch-detail live';
+  p.innerHTML='<div class="dp-title"><span>'+d.icon+'</span><span>'+d.title+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── BPB field details ──
+var bpbDetails={
+  jmp:{icon:'🟡',name:'JMP + NOP — offsets 0x00–0x02',body:`Instruction de saut vers le code de boot. FAT32 typique : <code>EB 58 90</code> (JMP SHORT 0x58 + NOP).<br><br>
+    <strong>⚠ Ne pas utiliser pour identifier le FS</strong> — ce champ peut varier selon l'outil de formatage. Utiliser l'OEM Name et RootEntryCount à la place.`},
+  oem:{icon:'🔵',name:'OEM Name — offsets 0x03–0x0A (8 octets ASCII)',body:`Identifiant du système qui a formaté le volume. Valeurs courantes : <code>"MSWIN4.1"</code> (Windows), <code>"MSDOS5.0"</code> (DOS/format ancien), <code>"mkdosfs "</code> (Linux mkfs.fat).<br><br>
+    <strong>Forensique clé</strong> : <code>"EXFAT   "</code> (5+3 espaces) → exFAT, pas FAT32. <code>"NTFS    "</code> (4+4 espaces) → NTFS. Toujours vérifier ce champ avant de supposer le type de FS.`},
+  bps:{icon:'🔵',name:'BytesPerSector — offsets 0x0B–0x0C (LE16)',body:`Taille d'un secteur en octets. Valeur standard : <strong>512</strong>. Valeurs valides : 512, 1024, 2048, 4096.<br><br>
+    <strong>Forensique</strong> : valeur inhabituelle (ex: 4096 sur une clé USB classique) → formatage spécial ou modification du BPB. Toujours utilisé pour tous les calculs d'offset.`},
+  spc:{icon:'🔵',name:'SectorsPerCluster — offset 0x0D (1 octet)',body:`Nombre de secteurs par cluster. Doit être une <strong>puissance de 2</strong> (1, 2, 4, 8, 16, 32, 64, 128).<br><br>
+    <strong>Impact forensique</strong> : plus la valeur est grande, plus le slack space est important. SPC=8 sur BPS=512 → cluster=4096 octets → jusqu'à 4095 octets de slack par fichier. Sur un volume avec des milliers de petits fichiers, le slack total peut représenter plusieurs Mo de résidus.`},
+  rsvd:{icon:'🟡',name:'ReservedSectors — offsets 0x0E–0x0F (LE16)',body:`Nombre de secteurs avant le début de la FAT 1. FAT32 : typiquement <strong>32</strong> (pour aligner la FAT sur une limite de 16 Ko). FAT16 : souvent 4 ou 1.<br><br>
+    <strong>Calcul</strong> : FAT 1 commence à l'offset <code>ReservedSectors × BytesPerSector</code>.<br>
+    <strong>Forensique</strong> : secteurs 2–31 (si ReservedSectors=32) sont souvent vides — potentielle zone de données cachées à scanner.`},
+  numfat:{icon:'🟡',name:'NumFATs — offset 0x10 (1 octet)',body:`Nombre de copies de la FAT. Presque toujours <strong>2</strong> (principale + backup).<br><br>
+    <strong>Forensique</strong> : NumFATs=1 → pas de FAT backup → corruption plus risquée, et impossibilité de comparer FAT1 vs FAT2 pour détecter des manipulations.`},
+  rootent:{icon:'⚙️',name:'RootEntryCount — offsets 0x11–0x12 (LE16)',body:`<strong>DOIT être 0x0000 en FAT32.</strong> En FAT16, contient le nombre maximal d'entries dans le répertoire racine fixe (souvent 512).<br><br>
+    <strong>Forensique</strong> : valeur non nulle = FAT12 ou FAT16, pas FAT32. Indicateur de type de FS fiable.`},
+  spf:{icon:'🟣',name:'SectorsPerFAT32 — offsets 0x24–0x27 (LE32)',body:`Nombre de secteurs occupés par <strong>chaque</strong> FAT. Spécifique à FAT32 (le champ équivalent FAT16 est à 0x16 et est à 0 en FAT32).<br><br>
+    <strong>Calcul taille FAT</strong> = SectorsPerFAT32 × BytesPerSector<br>
+    <strong>Calcul cluster max dans FAT</strong> = TailleFAT ÷ 4 (4 octets par entrée).<br>
+    <strong>Forensique</strong> : permet de localiser précisément le début de FAT 2 = (ReservedSectors + SectorsPerFAT32) × BPS.`},
+  rootclus:{icon:'🟢',name:'RootCluster — offsets 0x2C–0x2F (LE32)',body:`Numéro du premier cluster du répertoire racine. Typiquement <strong>2</strong> (premier cluster de la Data Area).<br><br>
+    <strong>Formule offset Root Directory</strong> = Debut_Data + (RootCluster − 2) × ClusterSize<br>
+    <strong>Forensique</strong> : valeur ≠ 2 → le Root Directory a été déplacé (possible anti-forensique ou corruption). Vérifier si le cluster 2 contient quand même des directory entries.`},
+  fsinfo:{icon:'⚙️',name:'FSInfo Sector — offsets 0x30–0x31 (LE16)',body:`Secteur contenant le FSInfo — cache du nombre de clusters libres et du dernier cluster alloué. Typiquement secteur 1.<br><br>
+    <strong>Signatures FSInfo</strong> : <code>52 52 61 41</code> ("RRaA") @ offset 0 · <code>72 72 41 61</code> ("rrAa") @ offset 484 · <code>55 AA</code> @ offset 510.<br>
+    <strong>Forensique</strong> : si FreeCount dans FSInfo ≠ nombre réel de clusters libres → volume non démonté proprement ou FSInfo manipulé.`},
+  volid:{icon:'🟣',name:'Volume ID (Serial Number) — offsets 0x43–0x46 (4 octets)',body:`Numéro de série 32 bits généré aléatoirement lors du formatage (<code>format /v</code> ou <code>mkfs.fat</code>).<br><br>
+    <strong>Forensique</strong> : référencé dans <code>HKLM\SYSTEM\MountedDevices</code> et les logs USB Windows. Permet de prouver qu'un volume spécifique a été branché sur une machine. Incohérence Volume ID ↔ registre = volume cloné ou échangé.`},
+  sig:{icon:'✅',name:'Boot Signature — offsets 0x1FE–0x1FF',body:`<code>55 AA</code> — requis pour que le BIOS/UEFI reconnaisse le secteur. Présent sur tout VBR FAT32 valide.<br><br>
+    <strong>Forensique</strong> : absence = volume non formaté, secteur corrompu, ou image tronquée. Présence seule ne garantit pas l'intégrité du BPB.`}
+};
+function showBPB(key){
+  var d=bpbDetails[key]; if(!d) return;
+  var p=document.getElementById('bpb-detail');
+  p.className='meta-detail live';
+  p.innerHTML='<div class="dp-title"><span>'+d.icon+'</span><span>'+d.name+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── Directory Entry field details ──
+var deDetails={
+  name:{icon:'🔵',title:'Nom 8.3 — offsets 0x00–0x07 (8 octets ASCII)',body:`Nom du fichier padé avec des espaces (0x20) jusqu'à 8 caractères. Majuscules uniquement en SFN (Short File Name).<br><br>
+    <strong>Status du byte 0</strong> :<br>
+    · Caractère ASCII valide → entrée active<br>
+    · <code>0xE5</code> → fichier supprimé<br>
+    · <code>0x00</code> → fin du répertoire<br>
+    · <code>0x05</code> → caractère 0xE5 réel dans le nom (cas rare)<br><br>
+    <strong>Forensique</strong> : après 0xE5, les octets 1–7 contiennent encore les 7 caractères suivants du nom — souvent suffisant pour identifier le fichier.`},
+  ext:{icon:'🔵',title:'Extension — offsets 0x08–0x0A (3 octets ASCII)',body:`Extension de fichier padée avec des espaces. "TXT", "EXE", "JPG", etc. En majuscules. Espaces si pas d'extension.<br><br>
+    <strong>Forensique</strong> : extension ≠ magic bytes du fichier = camouflage. Ex: extension "JPG" mais magic bytes <code>4D 5A</code> (MZ = exécutable Windows). Toujours vérifier le contenu réel.`},
+  attr:{icon:'🟣',title:'Attributs — offset 0x0B (1 octet)',body:`Masque de bits décrivant les propriétés du fichier. Voir tableau des attributs dans cet onglet.<br><br>
+    <strong>Valeur 0x0F</strong> (combinaison R+H+S+VolumeID) = entrée LFN (Long File Name). Ne pas confondre avec une entrée de fichier réel.<br>
+    <strong>Forensique</strong> : Hidden (0x02) + System (0x04) = 0x06 → invisible dans l'Explorateur. IOC classique pour cacher des données sur une clé USB.`},
+  ntres:{icon:'⚙️',title:'NTRes — offset 0x0C (1 octet)',body:`Byte réservé par Windows NT. Utilisé par certaines implémentations pour stocker des métadonnées étendues (case sensitivity, etc.).<br><br>
+    <strong>Forensique</strong> : toujours à 0x00 sur les volumes formatés par Windows standard. Valeur non nulle = formatage non standard ou modification directe.`},
+  crt10ms:{icon:'⚙️',title:'CrtTimeTenth — offset 0x0D (1 octet)',body:`Dixièmes de seconde de la date de création (0–199). Permet d'étendre la précision des timestamps de création à 10ms (vs 2 secondes pour les autres champs).<br><br>
+    <strong>Forensique</strong> : seul le timestamp de création bénéficie de cette précision accrue. WrtTime et AccDate restent à 2 secondes.`},
+  crttime:{icon:'🟡',title:'CrtTime — offsets 0x0E–0x0F (LE16)',body:`Date et heure de création du fichier. Encodage Time Word (voir onglet forensique).<br><br>
+    <strong>Forensique</strong> : heure locale, pas UTC. Sur un support utilisé dans plusieurs fuseaux horaires, difficile à corréler avec des logs UTC sans connaître le contexte de création.`},
+  crtdate:{icon:'🟡',title:'CrtDate — offsets 0x10–0x11 (LE16)',body:`Date de création. Encodage Date Word. Bits 15–9 = année − 1980. Epoch = 1er janvier 1980.<br><br>
+    <strong>Forensique</strong> : date de création 00/00/1980 (valeur 0x0000) = entrée non initialisée ou formatage avec un outil défaillant. IOC possible.`},
+  accdate:{icon:'🟡',title:'AccDate — offsets 0x12–0x13 (LE16)',body:`Date du dernier accès en lecture. Pas d'heure — précision 1 jour seulement.<br><br>
+    <strong>⚠ Peu fiable forensiquement</strong> : certains OS désactivent la mise à jour de ce champ pour des raisons de performance (<code>noatime</code> en Linux, désactivé par défaut dans Windows Vista+). Ne pas se fier seul à ce champ.`},
+  clushi:{icon:'🟢',title:'First Cluster High — offsets 0x14–0x15 (LE16)',body:`Partie haute (bits 16–27) du numéro de premier cluster en FAT32. Toujours à 0x0000 en FAT16.<br><br>
+    <strong>Premier cluster complet</strong> = (ClusterHigh &lt;&lt; 16) | ClusterLow<br>
+    <strong>Forensique</strong> : valeur non nulle ici confirme FAT32 (volume > 65 535 clusters). Vérifier la cohérence avec l'entrée FAT correspondante.`},
+  wrttime:{icon:'🟡',title:'WrtTime — offsets 0x16–0x17 (LE16)',body:`Heure de dernière modification. Même encodage que CrtTime. Précision 2 secondes, heure locale.<br><br>
+    <strong>Forensique</strong> : champ le plus utile pour la timeline. Toujours croiser avec d'autres artefacts (logs, registry) car l'heure locale sans fuseau complique la corrélation.`},
+  wrtdate:{icon:'🟡',title:'WrtDate — offsets 0x18–0x19 (LE16)',body:`Date de dernière modification. Epoch 1980. Precision 1 jour.<br><br>
+    <strong>Forensique</strong> : date avant la date de création = timestamp manipulé. IOC de timestomping possible même sur FAT32 (via des outils comme SetFileTime() sous Windows).`},
+  cluslo:{icon:'🟢',title:'First Cluster Low — offsets 0x1A–0x1B (LE16)',body:`Partie basse (bits 0–15) du numéro de premier cluster. En FAT16, c'est le numéro de cluster complet.<br><br>
+    <strong>Après suppression</strong> : ce champ reste intact (avec ClusterHigh). Le premier cluster du fichier supprimé est donc connu — et les données sont physiquement à <code>Debut_Data + (N−2) × ClusterSize</code>.<br>
+    <strong>Forensique</strong> : valeur 0x0000 avec taille non nulle = entrée incohérente (corruption ou anti-forensique).`},
+  size:{icon:'🔴',title:'File Size — offsets 0x1C–0x1F (LE32)',body:`Taille logique du fichier en octets. Max : 4 294 967 295 (2³² − 1) = ~4 Go.<br><br>
+    <strong>Après suppression</strong> : intact — permet de calculer le nombre de clusters attendus et de reconstruire la chaîne théorique (si contigus).<br>
+    <strong>Forensique</strong> : taille 0 pour un fichier non-répertoire = suspect (fichier vide ou entrée corrompue). Taille > espace réel disponible = corruption ou falsification. Pour les répertoires, ce champ est toujours 0 (la taille réelle se déduit de la chaîne FAT).`}
+};
+function showDE(key){
+  var d=deDetails[key]; if(!d) return;
+  var p=document.getElementById('de-detail');
+  p.className='tuple-detail live';
+  p.innerHTML='<div class="dp-title"><span>'+d.icon+'</span><span>'+d.title+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── FAT Chain tracer ──
+function traceChain(){
+  var start=parseInt(document.getElementById('fat-start').value)||2;
+  var raw=document.getElementById('fat-entries').value.trim().split(/\s+/);
+  var fat=raw.map(function(h){return parseInt(h.replace(/0x/i,''),16)||0;});
+  var result=document.getElementById('fat-result');
+  if(!fat.length){result.innerHTML='—';return;}
+
+  var chain=[];var cur=start;var MAX=64;
+  while(cur>=2 && chain.length<MAX){
+    chain.push(cur);
+    if(cur>=fat.length){result.innerHTML='<span style="color:var(--red)">⚠ Cluster '+cur+' hors de la table FAT fournie.</span>';return;}
+    var next=fat[cur];
+    if(next>=0x0FFFFFF8){chain.push('EOC');break;}
+    if(next===0x0FFFFFF7){chain.push('BAD');break;}
+    if(next===0){chain.push('LIBRE?');break;}
+    cur=next;
+  }
+  if(chain.length>=MAX) chain.push('...(tronqué)');
+
+  var clusterCount=chain.filter(function(c){return typeof c==='number';}).length;
+  var html='<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-bottom:.5rem">';
+  chain.forEach(function(c,i){
+    if(c==='EOC') html+='<div style="padding:.25rem .5rem;border-radius:4px;background:rgba(48,232,138,.15);border:1px solid rgba(48,232,138,.4);font-family:var(--mono);font-size:.72rem;color:var(--green)">EOC ✓</div>';
+    else if(c==='BAD') html+='<div style="padding:.25rem .5rem;border-radius:4px;background:rgba(255,64,96,.15);border:1px solid rgba(255,64,96,.4);font-family:var(--mono);font-size:.72rem;color:var(--red)">0xFFFFFFF7 (bad)</div>';
+    else if(c==='LIBRE?') html+='<div style="padding:.25rem .5rem;border-radius:4px;background:rgba(255,64,96,.1);border:1px solid rgba(255,64,96,.3);font-family:var(--mono);font-size:.72rem;color:var(--red)">0x00 (libre?)</div>';
+    else{
+      html+='<div style="padding:.25rem .5rem;border-radius:4px;background:rgba(0,229,204,.1);border:1px solid rgba(0,229,204,.3);font-family:var(--mono);font-size:.72rem;color:var(--cyan)">'+c+'</div>';
+      if(i<chain.length-1 && typeof chain[i+1]==='number') html+='<span style="color:var(--dim);font-size:.7rem">→</span>';
+    }
+  });
+  html+='</div>';
+  html+='<div style="font-size:.76rem;color:var(--muted)"><strong style="color:var(--text)">'+clusterCount+' cluster(s)</strong> dans la chaîne · Départ cluster '+start+'</div>';
+  result.innerHTML=html;
+}
+
+// ── Geometry calculator ──
+function calcGeom(){
+  var bps=parseInt(document.getElementById('c-bps').value)||512;
+  var spc=parseInt(document.getElementById('c-spc').value)||8;
+  var rsvd=parseInt(document.getElementById('c-rsvd').value)||32;
+  var nf=parseInt(document.getElementById('c-nf').value)||2;
+  var spf=parseInt(document.getElementById('c-spf').value)||64;
+  var cs=bps*spc;
+  var fatOffset=rsvd*bps;
+  var fat2Offset=fatOffset+spf*bps;
+  var dataOffset=fatOffset+nf*spf*bps;
+  var r=document.getElementById('geom-result');
+  r.innerHTML=
+    '<span style="color:var(--gold)">Taille cluster</span> = '+bps+' × '+spc+' = <strong style="color:var(--text)">'+cs.toLocaleString('fr-CH')+' o</strong><br>'+
+    '<span style="color:var(--cyan)">FAT 1 commence</span> à l\'offset <strong style="color:var(--text)">'+fatOffset.toLocaleString('fr-CH')+' o</strong> (LBA '+Math.floor(fatOffset/bps)+')<br>'+
+    (nf===2?'<span style="color:var(--cyan)">FAT 2 commence</span> à l\'offset <strong style="color:var(--text)">'+fat2Offset.toLocaleString('fr-CH')+' o</strong><br>':'')+
+    '<span style="color:var(--green)">Data Area commence</span> à l\'offset <strong style="color:var(--text)">'+dataOffset.toLocaleString('fr-CH')+' o</strong> (Cluster 2)<br>'+
+    '<span style="color:var(--muted)">Offset cluster N</span> = '+dataOffset.toLocaleString('fr-CH')+' + (N − 2) × '+cs.toLocaleString('fr-CH');
+}
+calcGeom();
+
+// ── Auto-trace on load ──
+window.addEventListener('load',function(){traceChain();});
+</script>
+</body>
+</html>
