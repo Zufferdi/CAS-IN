@@ -130,7 +130,7 @@ async function startExam() {
   document.getElementById('start-btn').disabled = true;
   document.getElementById('start-btn').textContent = 'Chargement…';
   try {
-    const r = await fetch('questions.json');
+    const r = await fetch('data/questions.json');
     if (!r.ok) throw new Error('HTTP '+r.status);
     const data = await r.json();
     allQ = Array.isArray(data) ? data : (data.questions || data.items || []);

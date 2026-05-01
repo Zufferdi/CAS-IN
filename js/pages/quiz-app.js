@@ -3035,8 +3035,8 @@
         lsSet('playdates', [...dates].slice(-60));
       }
       startLoadingMessages();
-      fetch(new URL('questions.json', document.baseURI)).then(r => {
-        if (!r.ok) throw new Error('HTTP ' + r.status + ' — questions.json introuvable');
+      fetch(new URL('data/questions.json', document.baseURI)).then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status + ' — data/questions.json introuvable');
         return r.json();
       }).then(data => {
         ALL_Q = data;
@@ -3097,7 +3097,7 @@
 																										
 														
 																	
-																							<code style="background:rgba(255,255,255,.08);padding:2px 5px;border-radius:3px">questions.json</code> est dans le même dossier.
+																							<code style="background:rgba(255,255,255,.08);padding:2px 5px;border-radius:3px">data/questions.json</code> est accessible.
 																									
 													
 																
