@@ -1,4 +1,9 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v46 : extensions TP pédagogiques (hexdump +3 scénarios HFS+/exFAT/GPT,
+//       genHashIdentify +1 sous-type collision MD5, genFSIdentify EXT4 enrichi
+//       avec UUID superblock, genRunList +1 sous-type sparse/compressed) +
+//       refactor pollution globale quiz-app.js : 14 let _privé top-level
+//       regroupés dans namespace _qz pour clarifier l'intent.
 // v45 : split quiz-app.js — quiz-data.js (1562 lignes de constantes) extrait
 //       en module séparé pour alléger le caching et la maintenance.
 // v44 : nettoyage STATIC_ASSETS — retrait de track-theme.css (fichier inexistant,
@@ -14,7 +19,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v45';
+const CACHE_VERSION = 'cas-in-v46';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
