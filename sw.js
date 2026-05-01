@@ -1,4 +1,6 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v43 : split tp-engine.js — tp-engine-windows.js (Registry/Prefetch/LNK) extrait
+//       en module séparé. Ajout au précache.
 // v42 : restructuration — JSON data déplacés vers data/ (questions, manifest, counts)
 //       Cache invalidé pour forcer re-précache des nouveaux chemins.
 // v41 : install per-asset (au lieu de addAll atomique) pour identifier
@@ -7,7 +9,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v42';
+const CACHE_VERSION = 'cas-in-v43';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -82,6 +84,8 @@ const STATIC_ASSETS = [
   // TP
   './tp/tp-data.js',
   './tp/tp-engine.js',
+  './tp/tp-engine-windows.js',
+  './tp/tp-engine-meta.js',
 
   // Hub des fiches (les fiches elles-mêmes sont précachées dynamiquement)
   './fiches/index.html',
