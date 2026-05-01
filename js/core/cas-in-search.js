@@ -50,9 +50,9 @@
       const result = { fiches: [], questions: [], tp: [], scenes: [] };
       const base = basePath();
 
-      // 1. Fiches : depuis manifest.json (source unique)
+      // 1. Fiches : depuis data/manifest.json (source unique)
       try {
-        const resp = await fetch(base + 'manifest.json', { cache: 'force-cache' });
+        const resp = await fetch(base + 'data/manifest.json', { cache: 'force-cache' });
         if (resp.ok) {
           const manifest = await resp.json();
           const cats = Object.fromEntries((manifest.categories || []).map(c => [c.id, c]));
@@ -72,9 +72,9 @@
         }
       } catch (_) { /* silencieux */ }
 
-      // 2. Questions : charge questions.json (TOUTES, sans slice)
+      // 2. Questions : charge data/questions.json (TOUTES, sans slice)
       try {
-        const resp = await fetch(base + 'questions.json', { cache: 'force-cache' });
+        const resp = await fetch(base + 'data/questions.json', { cache: 'force-cache' });
         if (resp.ok) {
           const data = await resp.json();
           result.questions = data.map((q, i) => {

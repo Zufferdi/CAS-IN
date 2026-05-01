@@ -1,28 +1,28 @@
 // ═══════════════════════════════════════════════════════════════
-// cas-in-counts.js — Compteurs dynamiques à partir de counts.json
+// cas-in-counts.js — Compteurs dynamiques à partir de data/counts.json
 //
 // Fonctionnement :
-//   1. Au chargement, fetch /counts.json (mis à jour par la CI à chaque push)
+//   1. Au chargement, fetch data/counts.json (mis à jour par la CI à chaque push)
 //   2. Remplace le contenu de chaque [data-count="KEY"] par la valeur correspondante
 //   3. Gère les templates [data-count-fmt="KEY questions"] pour des phrases complètes
 //
-// Clés disponibles dans counts.json :
+// Clés disponibles dans data/counts.json :
 //   - questions, themes, fiches, scenes, tp_categories, updated
 //
 // Exemples d'usage dans le HTML :
 //   <span data-count="questions">1439</span>
 //   <span data-count-fmt="{questions} questions · {fiches} fiches">…</span>
 //
-// Le fallback (texte déjà dans le HTML) reste visible si counts.json
+// Le fallback (texte déjà dans le HTML) reste visible si data/counts.json
 // est inaccessible, donc aucune régression.
 // ═══════════════════════════════════════════════════════════════
 (function () {
   'use strict';
 
-  // Résolution du chemin vers counts.json selon la profondeur
+  // Résolution du chemin vers data/counts.json selon la profondeur
   function countsUrl() {
     const depth = (window.location.pathname.match(/\//g) || []).length - 1;
-    return (depth > 1 ? '../'.repeat(depth - 1) : './') + 'counts.json';
+    return (depth > 1 ? '../'.repeat(depth - 1) : './') + 'data/counts.json';
   }
 
   function formatNumber(n) {
