@@ -13,7 +13,7 @@ import json, re, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-MANIFEST = ROOT / 'manifest.json'
+MANIFEST = ROOT / 'data' / 'manifest.json'
 INDEX = ROOT / 'fiches' / 'index.html'
 
 def desc_to_keywords(desc: str) -> str:

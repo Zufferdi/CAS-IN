@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
 generate_counts.py — CAS-IN
-Génère le fichier counts.json à partir de la vérité terrain du repo :
-  - manifest.json       → nombre de fiches
-  - questions.json      → nombre de questions
-  - scenes/index.json   → nombre de scènes (lazy-load v3.0+)
-  - tp/tp-data.js       → nombre de catégories de TP
+Génère le fichier data/counts.json à partir de la vérité terrain du repo :
+  - data/manifest.json       → nombre de fiches
+  - data/questions.json      → nombre de questions
+  - scenes/index.json        → nombre de scènes (lazy-load v3.0+)
+  - tp/tp-data.js            → nombre de catégories de TP
 
 Usage :
     python3 scripts/generate_counts.py
 
-Écrit counts.json à la racine du projet.
+Écrit data/counts.json.
 """
 import json
 import re
@@ -27,13 +27,13 @@ def repo_root() -> Path:
 
 
 def count_questions(root: Path) -> int:
-    """Compte les questions dans questions.json (liste JSON en racine)."""
-    path = root / "questions.json"
+    """Compte les questions dans data/questions.json (liste JSON en racine)."""
+    path = root / "data" / "questions.json"
     if not path.exists():
         # Fallback sur questions.js (export const questions = [...])
         path_js = root / "questions.js"
         if not path_js.exists():
-            print("[warn] ni questions.json ni questions.js trouvés", file=sys.stderr)
+            print("[warn] ni data/questions.json ni questions.js trouvés", file=sys.stderr)
             return 0
         content = path_js.read_text(encoding="utf-8")
         # Heuristique : compter les occurrences de `{ theme:` ou `"theme":`
@@ -54,10 +54,10 @@ def count_questions(root: Path) -> int:
 
 
 def count_fiches(root: Path) -> int:
-    """Compte les fiches listées dans manifest.json (clé 'fiches')."""
-    path = root / "manifest.json"
+    """Compte les fiches listées dans data/manifest.json (clé 'fiches')."""
+    path = root / "data" / "manifest.json"
     if not path.exists():
-        print("[warn] manifest.json absent — fallback sur listing de fiches/", file=sys.stderr)
+        print("[warn] data/manifest.json absent — fallback sur listing de fiches/", file=sys.stderr)
         fdir = root / "fiches"
         if not fdir.exists():
             return 0
@@ -66,7 +66,7 @@ def count_fiches(root: Path) -> int:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
-        print(f"[error] manifest.json JSON invalide : {e}", file=sys.stderr)
+        print(f"[error] data/manifest.json JSON invalide : {e}", file=sys.stderr)
         return 0
 
     fiches = data.get("fiches", [])
@@ -142,13 +142,14 @@ def main():
     # tp_exercises = tp_categories par convention (1 catégorie = 1 générateur d'exercice)
     counts["tp_exercises"] = counts["tp_categories"]
 
-    out = root / "counts.json"
+    out = root / "data" / "counts.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
         json.dumps(counts, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8"
     )
 
-    print("[ok] counts.json généré :")
+    print("[ok] data/counts.json généré :")
     for k, v in counts.items():
         if not k.startswith("$"):
             print(f"     {k:16} = {v}")

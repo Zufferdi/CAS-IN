@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-check_questions.py — Qualité du fichier questions.json du quiz CAS-IN.
+check_questions.py — Qualité du fichier data/questions.json du quiz CAS-IN.
 
 Usage :
-    python3 check_questions.py questions.json                 # rapport seul
-    python3 check_questions.py questions.json --fix           # écrit questions.cleaned.json
-    python3 check_questions.py questions.json --fix --out foo.json
+    python3 check_questions.py data/questions.json                 # rapport seul
+    python3 check_questions.py data/questions.json --fix           # écrit questions.cleaned.json
+    python3 check_questions.py data/questions.json --fix --out foo.json
 
 Détecte :
   - champs requis manquants ou vides

@@ -28,7 +28,7 @@ from bs4 import BeautifulSoup
 ROOT          = Path(__file__).resolve().parents[1]
 FICHES_DIR    = ROOT / "fiches"
 INDEX_PATH    = FICHES_DIR / "index.html"
-MANIFEST_PATH = ROOT / "manifest.json"
+MANIFEST_PATH = ROOT / "data" / "manifest.json"
 
 # ── Ordre pédagogique des modules ───────────────────────────────────
 # Du plus fondamental (prérequis) au plus appliqué (outils).
