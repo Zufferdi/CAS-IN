@@ -1,9 +1,10 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v46 : extensions TP pédagogiques (hexdump +3 scénarios HFS+/exFAT/GPT,
-//       genHashIdentify +1 sous-type collision MD5, genFSIdentify EXT4 enrichi
-//       avec UUID superblock, genRunList +1 sous-type sparse/compressed) +
-//       refactor pollution globale quiz-app.js : 14 let _privé top-level
-//       regroupés dans namespace _qz pour clarifier l'intent.
+// v46 : 3 nouvelles fiches forensiques basées sur cheat sheets SANS officielles :
+//       - ics_forensique.html (ICS/SCADA, Modèle Purdue, Modbus/DNP3/IEC 61850, NSM ICS, IR jump bag)
+//       - cmd_windows_forensique.html (live response Windows : wmic, sc, netsh, netstat, reg)
+//       - magic_bytes_signatures.html (file signatures, outils file/binwalk/xxd, regex forensique)
+//       Enrichissement zimmerman.html avec section bstrings (extraction strings + regex multi-encoding).
+//       Manifest mis à jour : 100 → 103 fiches. Pré-cache dynamique via manifest.json.
 // v45 : split quiz-app.js — quiz-data.js (1562 lignes de constantes) extrait
 //       en module séparé pour alléger le caching et la maintenance.
 // v44 : nettoyage STATIC_ASSETS — retrait de track-theme.css (fichier inexistant,
