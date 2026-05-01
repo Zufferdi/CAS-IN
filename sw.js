@@ -1,11 +1,13 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v42 : restructuration — JSON data déplacés vers data/ (questions, manifest, counts)
+//       Cache invalidé pour forcer re-précache des nouveaux chemins.
 // v41 : install per-asset (au lieu de addAll atomique) pour identifier
 //       précisément les ressources qui 404 lors du précache. Logs détaillés.
 // v40 : refonte stratégie — fiches précachées dynamiquement depuis manifest.json
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
-// v39..v21 : voir CHANGELOG.md.
+// v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v41';
+const CACHE_VERSION = 'cas-in-v42';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -22,15 +24,15 @@ const STATIC_ASSETS = [
   './profile.html',
 
   // Manifests & data
-  './manifest.json',
+  './data/manifest.json',
   './pwa.manifest.json',
   './offline.html',
   './og-image.svg',
   './favicon.ico',
   './icon-192.png',
   './icon-512.png',
-  './questions.json',
-  './counts.json',
+  './data/questions.json',
+  './data/counts.json',
 
   // Styles
   './style/landing.css',
@@ -94,7 +96,7 @@ const OFFLINE_FALLBACK = './offline.html';
 // mises en cache à la première visite via le fetch handler).
 async function precacheFichesFromManifest(cache) {
   try {
-    const resp = await fetch('./manifest.json', { cache: 'no-store' });
+    const resp = await fetch('./data/manifest.json', { cache: 'no-store' });
     if (!resp.ok) return;
     const manifest = await resp.json();
     const fiches = (manifest.fiches || [])
