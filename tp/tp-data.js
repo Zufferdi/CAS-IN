@@ -1002,6 +1002,81 @@ const BASES_EXERCISES = [
       };
     }
   },
+  {
+    gen: () => {
+      // Base64 decode → ASCII court
+      const words = ["forensic", "windows", "memory", "secret", "cas-in", "evidence", "malware"];
+      const word = words[Math.floor(Math.random() * words.length)];
+      // Encode en base64 (méthode manuelle pour ne pas dépendre d'environnement)
+      const bytes = [...word].map(c => c.charCodeAt(0));
+      const b64chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+      let b64 = '';
+      for (let i = 0; i < bytes.length; i += 3) {
+        const b1 = bytes[i], b2 = bytes[i+1] || 0, b3 = bytes[i+2] || 0;
+        b64 += b64chars[(b1 >> 2) & 0x3F];
+        b64 += b64chars[((b1 << 4) | (b2 >> 4)) & 0x3F];
+        b64 += (i+1 < bytes.length) ? b64chars[((b2 << 2) | (b3 >> 6)) & 0x3F] : '=';
+        b64 += (i+2 < bytes.length) ? b64chars[b3 & 0x3F] : '=';
+      }
+      return {
+        question: `Décode cette chaîne <strong>Base64</strong> : <span class="hex">${b64}</span>`,
+        label: 'Texte ASCII :',
+        placeholder: 'ex: hello',
+        answer: word,
+        hint: `Base64 utilise A-Z a-z 0-9 + / et = pour padding. 4 caractères Base64 → 3 octets. Tu peux utiliser <code>echo "${b64}" | base64 -d</code> en Linux.`,
+        explain: `Base64 "${b64}" → "${word}" en ASCII. Très utilisé pour encoder du binaire dans des emails ou logs.`
+      };
+    }
+  },
+  {
+    gen: () => {
+      // Base32 (utilisé pour .onion v3 et TOTP)
+      const samples = ["MEET", "AT", "DAWN", "ABORT", "FBI", "TOR"];
+      const word = samples[Math.floor(Math.random() * samples.length)];
+      const bytes = [...word].map(c => c.charCodeAt(0));
+      // Encode en base32 (RFC 4648)
+      const b32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+      let bits = '';
+      bytes.forEach(b => bits += b.toString(2).padStart(8, '0'));
+      // Pad bits to multiple of 5
+      while (bits.length % 5 !== 0) bits += '0';
+      let b32 = '';
+      for (let i = 0; i < bits.length; i += 5) {
+        b32 += b32chars[parseInt(bits.substr(i, 5), 2)];
+      }
+      // Pad with = jusqu'à multiple de 8 chars
+      while (b32.length % 8 !== 0) b32 += '=';
+      return {
+        question: `Décode cette chaîne <strong>Base32</strong> (RFC 4648 — utilisé pour les adresses .onion v3 et TOTP) : <span class="hex">${b32}</span>`,
+        label: 'Texte ASCII :',
+        placeholder: 'ex: HELLO',
+        answer: word,
+        hint: `Base32 utilise A-Z 2-7 (insensible à la casse). 8 caractères Base32 → 5 octets. <code>echo "${b32}" | base32 -d</code> en Linux.`,
+        explain: `Base32 "${b32}" → "${word}". Note : les domaines .onion v3 sont 56 caractères Base32 (clé publique Ed25519).`
+      };
+    }
+  },
+  {
+    gen: () => {
+      // ROT13 — chiffrement César avec décalage 13
+      const words = ["FORENSIC", "MALWARE", "SECRET", "RANSOMWARE", "TROJAN"];
+      const word = words[Math.floor(Math.random() * words.length)];
+      // Encoder en ROT13
+      const rot13 = [...word].map(c => {
+        const code = c.charCodeAt(0);
+        if (code >= 65 && code <= 90) return String.fromCharCode(((code - 65 + 13) % 26) + 65);
+        return c;
+      }).join('');
+      return {
+        question: `Décode cette chaîne <strong>ROT13</strong> (chaque lettre décalée de 13 positions dans l'alphabet) : <span class="hex">${rot13}</span>`,
+        label: 'Texte clair :',
+        placeholder: 'ex: HELLO',
+        answer: word,
+        hint: `ROT13 est auto-inverse : appliquer ROT13 deux fois redonne l'original. Décalage de +13 (ou -13) modulo 26. A↔N, B↔O, ... M↔Z.`,
+        explain: `ROT13("${rot13}") = "${word}". Chiffrement classique encore utilisé pour offusquer des spoilers ou des données peu sensibles. Note : Windows UserAssist du Registre utilise ROT13 sur les noms d'exécutables.`
+      };
+    }
+  },
 ];
 
 
