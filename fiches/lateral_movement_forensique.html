@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lateral Movement Forensique — CAS-IN Forensique</title>
+<meta name="description" content="Forensique du mouvement latéral · PsExec · WMI · RDP · Pass-the-Hash · Kerberoasting · SMB · DCOM · artefacts Windows">
+<meta name="theme-color" content="#0d1117">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+
+<nav class="tn-nav" aria-label="Navigation fiche">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">LATERAL MOVEMENT FORENSIQUE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-windows">Windows</a><span class="bc-sep">›</span>
+    <span class="bc-current">Lateral Movement Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~13 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🔀</span>
+    <span class="tag tag-red" style="margin-left:.5rem">APT</span>
+    <span class="tag tag-gold" style="margin-left:.3rem">DFIR</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Windows</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Lateral Movement Forensique</h1>
+    <div class="meta">PsExec · WMI · RDP · Pass-the-Hash · Kerberoasting · SMB · DCOM · artefacts Windows · Event IDs</div>
+  </div>
+
+  <div style="margin:1rem 0;padding:.9rem 1.25rem;background:rgba(255,64,96,.04);border-left:3px solid var(--red);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+    <span style="color:var(--red);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Réalité terrain</span><br>
+    <em style="color:var(--text)">"Le mouvement latéral est la phase où les attaquants passent d'un système compromis à l'ensemble du réseau. C'est aussi la phase la plus riche en artefacts forensiques — et la moins bien comprise par les équipes défensives. Chaque technique laisse des traces distinctes si on sait où chercher."</em><br>
+    <span style="font-size:.72rem;margin-top:.3rem;display:block">— SANS FOR508, <em>Advanced Incident Response, Threat Hunting, and Digital Forensics</em>, 2024</span>
+  </div>
+
+  <div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(240,192,64,.05);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
+    <span style="color:var(--gold);font-weight:700">🇨🇭 Contexte suisse :</span> Les incidents APT ciblant la Suisse (Xplain 2023, NZZ 2023, Meier+Cie, RUAG 2016) impliquent systématiquement du lateral movement entre systèmes Windows avant le déclenchement du ransomware ou l'exfiltration. La compréhension des techniques de déplacement latéral est indispensable pour reconstituer la kill chain complète et identifier le patient zéro.
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="windows_forensique.html" class="prereq-pill">📖 Windows Forensique</a><a href="active_directory.html" class="prereq-pill">📖 Active Directory</a><a href="logs_windows.html" class="prereq-pill">📖 Logs Windows</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="mitre_attack.html" class="related-pill">🔗 MITRE ATT&amp;CK</a><a href="sysmon.html" class="related-pill">🔗 Sysmon</a><a href="powershell_forensique.html" class="related-pill">🔗 PowerShell Forensique</a><a href="incident_response.html" class="related-pill">🔗 Incident Response</a><a href="kape_velociraptor.html" class="related-pill">🔗 KAPE / Velociraptor</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="lm-tabs">
+  <button class="tab active" onclick="showTab('techniques',this)">🗺 Techniques</button>
+  <button class="tab" onclick="showTab('psexec',this)">⚙️ PsExec &amp; SMB</button>
+  <button class="tab" onclick="showTab('wmi',this)">🔮 WMI &amp; DCOM</button>
+  <button class="tab" onclick="showTab('creds',this)">🔑 Credentials</button>
+  <button class="tab" onclick="showTab('detection',this)">🔍 Détection</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — TECHNIQUES
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-techniques">
+
+<div class="concept-card">
+  <div class="concept-title">🔀 Lateral Movement — Définition et contexte MITRE ATT&amp;CK</div>
+  Le <strong>mouvement latéral</strong> (TA0008 dans MITRE ATT&amp;CK) désigne l'ensemble des techniques permettant à un attaquant de <strong>se déplacer d'un système compromis vers d'autres systèmes</strong> du réseau. Il intervient après la compromission initiale et la phase de découverte, et précède généralement l'exfiltration ou l'impact (ransomware). <strong>Chaque technique laisse des artefacts forensiques distincts</strong> sur la machine source (initiateur) et sur la machine cible (victime). Le technicien DFIR doit analyser les deux côtés simultanément.
+</div>
+
+<div class="sec-title">Cartographie des techniques — Cliquez pour les artefacts</div>
+<div class="sec-sub">Vue d'ensemble MITRE ATT&amp;CK TA0008 — techniques les plus fréquentes en incidents Windows</div>
+
+<div style="background:rgba(255,64,96,.03);border:2px solid rgba(255,64,96,.2);border-radius:12px;padding:1rem;margin-bottom:.5rem">
+  <div style="font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--red);text-align:center;margin-bottom:.75rem">TA0008 — Lateral Movement · Techniques principales</div>
+  <div style="display:grid!important;grid-template-columns:repeat(3,1fr);gap:.5rem">
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(255,64,96,.4);text-align:center;cursor:pointer;background:rgba(255,64,96,.08);color:var(--red)" onclick="showTech('psexec')">
+      <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">⚙️</span>
+      <div style="font-size:.72rem;font-weight:700">PsExec / SMB</div>
+      <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">T1570 · T1021.002<br>Le classique des admins</div>
+    </div>
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(240,192,64,.4);text-align:center;cursor:pointer;background:rgba(240,192,64,.08);color:var(--gold)" onclick="showTech('wmi')">
+      <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">🔮</span>
+      <div style="font-size:.72rem;font-weight:700">WMI</div>
+      <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">T1047<br>Sans fichier sur cible</div>
+    </div>
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(88,166,255,.4);text-align:center;cursor:pointer;background:rgba(88,166,255,.08);color:var(--blue)" onclick="showTech('rdp')">
+      <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">🖥️</span>
+      <div style="font-size:.72rem;font-weight:700">RDP</div>
+      <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">T1021.001<br>Accès graphique</div>
+    </div>
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(188,140,255,.4);text-align:center;cursor:pointer;background:rgba(188,140,255,.08);color:var(--purple)" onclick="showTech('pth')">
+      <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">🔑</span>
+      <div style="font-size:.72rem;font-weight:700">Pass-the-Hash</div>
+      <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">T1550.002<br>Hash NTLM sans mdp</div>
+    </div>
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(0,229,204,.4);text-align:center;cursor:pointer;background:rgba(0,229,204,.08);color:var(--cyan)" onclick="showTech('dcom')">
+      <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">🧩</span>
+      <div style="font-size:.72rem;font-weight:700">DCOM</div>
+      <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">T1021.003<br>COM objects distants</div>
+    </div>
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(48,232,138,.4);text-align:center;cursor:pointer;background:rgba(48,232,138,.08);color:var(--green)" onclick="showTech('winrm')">
+      <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">💻</span>
+      <div style="font-size:.72rem;font-weight:700">WinRM / PS Remoting</div>
+      <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">T1021.006<br>PowerShell à distance</div>
+    </div>
+
+  </div>
+</div>
+<div class="arch-detail" id="tech-detail" style="margin-bottom:1rem">
+  <div style="color:var(--dim);font-size:.78rem">ℹ️ Sélectionnez une technique pour afficher ses artefacts forensiques source et cible</div>
+</div>
+
+<!-- Table Event IDs clés -->
+<div class="sec-title">Event IDs Windows — Référence lateral movement</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Event ID</th><th>Canal</th><th>Signification</th><th>Technique associée</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.78rem;color:var(--red);font-weight:700">4624</td>
+      <td style="font-size:.72rem">Security</td>
+      <td style="font-size:.74rem">Logon réussi. <strong>Type 3</strong> = réseau · <strong>Type 10</strong> = RemoteInteractive (RDP) · <strong>Type 2</strong> = interactif local</td>
+      <td style="font-size:.72rem;color:var(--gold)">Tous</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.78rem;color:var(--red);font-weight:700">4625</td>
+      <td style="font-size:.72rem">Security</td>
+      <td style="font-size:.74rem">Logon échoué. Brute force, mauvaises credentials. Sous-status code révèle la cause (0xC000006A = mauvais mdp, 0xC0000064 = compte inconnu).</td>
+      <td style="font-size:.72rem;color:var(--gold)">Tous</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.78rem;color:var(--red);font-weight:700">4648</td>
+      <td style="font-size:.72rem">Security</td>
+      <td style="font-size:.74rem">Logon avec credentials explicites (runas). <strong>Source</strong> : la machine qui initie. Révèle l'utilisateur et la cible. Clé pour Pass-the-Hash.</td>
+      <td style="font-size:.72rem;color:var(--gold)">PtH · PsExec</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.78rem;color:var(--red);font-weight:700">4672</td>
+      <td style="font-size:.72rem">Security</td>
+      <td style="font-size:.74rem">Privilèges spéciaux assignés au logon. Accompagne 4624 pour les comptes admin. Indicateur de connexion privilégiée.</td>
+      <td style="font-size:.72rem;color:var(--gold)">Tous admin</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.78rem;color:var(--cyan);font-weight:700">4688</td>
+      <td style="font-size:.72rem">Security</td>
+      <td style="font-size:.74rem">Création de processus (avec audit activé). Révèle PsExec, cmd.exe, powershell.exe lancés à distance. Inclut le process parent.</td>
+      <td style="font-size:.72rem;color:var(--gold)">PsExec · WMI</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.78rem;color:var(--cyan);font-weight:700">4698 / 4702</td>
+      <td style="font-size:.72rem">Security</td>
+      <td style="font-size:.74rem">Création / modification de tâche planifiée. Technique de persistance et de lateral movement combinée.</td>
+      <td style="font-size:.72rem;color:var(--gold)">Scheduled Task</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.78rem;color:var(--green);font-weight:700">7045 / 7036</td>
+      <td style="font-size:.72rem">System</td>
+      <td style="font-size:.74rem">Installation d'un nouveau service (7045) / changement d'état (7036). PsExec installe PSEXESVC.exe comme service sur la cible.</td>
+      <td style="font-size:.72rem;color:var(--gold)">PsExec</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.78rem;color:var(--green);font-weight:700">4104</td>
+      <td style="font-size:.72rem">PS/Operational</td>
+      <td style="font-size:.74rem">Script block logging PowerShell. Capture le contenu complet des scripts exécutés, même obfusqués (après déobfuscation par le moteur).</td>
+      <td style="font-size:.72rem;color:var(--gold)">WinRM · WMI</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>🔑 Logon Types — Mémo rapide</h4>
+    <ul class="memo-list">
+      <li><strong>Type 2</strong> — Interactif (clavier local)</li>
+      <li><strong>Type 3</strong> — Réseau (SMB, net use, PsExec)</li>
+      <li><strong>Type 4</strong> — Batch (tâche planifiée)</li>
+      <li><strong>Type 5</strong> — Service (service Windows)</li>
+      <li><strong>Type 7</strong> — Unlock (déverrouillage écran)</li>
+      <li><strong>Type 10</strong> — RemoteInteractive (RDP)</li>
+      <li><strong>Type 11</strong> — CachedInteractive (offline)</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>📍 Analyse source vs cible</h4>
+    <ul class="memo-list">
+      <li><strong>Machine source</strong> : 4648 (credentials explicites), artefacts prefetch, shimcache, amcache, MRU réseau</li>
+      <li><strong>Machine cible</strong> : 4624 type 3/10, 7045 (service), artefacts prefetch de psexesvc.exe, ADMIN$ share access</li>
+      <li>Toujours analyser les <strong>deux machines</strong> — la cible seule est insuffisante</li>
+    </ul>
+  </div>
+</div>
+</div><!-- /tab-techniques -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — PSEXEC & SMB
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-psexec">
+
+<div class="concept-card">
+  <div class="concept-title">⚙️ PsExec — L'outil d'admin devenu arme d'attaquant</div>
+  <strong>PsExec</strong> (Sysinternals, maintenant Microsoft) est un outil légitime d'administration permettant d'exécuter des processus sur des machines distantes via SMB. Il est <strong>massivement détourné par les attaquants</strong> car il est souvent autorisé par les politiques de sécurité et laisse des traces distinctives bien documentées. Les frameworks d'attaque (Metasploit, Impacket, CobaltStrike) incluent tous une implémentation PsExec-like. <strong>MITRE T1570</strong> (Transfer Tool) + <strong>T1021.002</strong> (SMB/Windows Admin Shares).
+</div>
+
+<div class="sec-title">Mécanisme PsExec — Étapes et artefacts</div>
+
+<div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:.75rem 0">
+  <div style="background:var(--surface2);padding:.5rem 1rem;font-size:.6rem;font-family:var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--dim);font-weight:700;border-bottom:1px solid var(--border)">
+    SÉQUENCE D'EXÉCUTION PSEXEC — ARTEFACTS PAR ÉTAPE
+  </div>
+
+  <div style="padding:.75rem 1rem;border-bottom:1px solid var(--border);display:grid!important;grid-template-columns:32px 1fr 1fr;gap:.5rem;align-items:start">
+    <div style="font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--red);padding-top:.1rem">1</div>
+    <div>
+      <div style="font-size:.72rem;font-weight:700;color:var(--text);margin-bottom:.2rem">Connexion SMB à ADMIN$ ou IPC$</div>
+      <div style="font-size:.7rem;color:var(--muted)">Authentification NTLM ou Kerberos vers la machine cible. Ouverture du partage ADMIN$ (= C:\Windows).</div>
+    </div>
+    <div style="background:rgba(255,64,96,.05);border:1px solid rgba(255,64,96,.2);border-radius:6px;padding:.4rem .6rem">
+      <div style="font-size:.6rem;color:var(--red);font-weight:700;margin-bottom:.2rem">📋 CIBLE — Security.evtx</div>
+      <div style="font-size:.68rem;color:var(--muted)"><strong>4624 Type 3</strong> (logon réseau)<br><strong>4648</strong> (credentials explicites)<br><strong>5140</strong> (accès partage réseau ADMIN$)</div>
+    </div>
+  </div>
+
+  <div style="padding:.75rem 1rem;border-bottom:1px solid var(--border);display:grid!important;grid-template-columns:32px 1fr 1fr;gap:.5rem;align-items:start">
+    <div style="font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--red);padding-top:.1rem">2</div>
+    <div>
+      <div style="font-size:.72rem;font-weight:700;color:var(--text);margin-bottom:.2rem">Copie de PSEXESVC.exe vers C:\Windows\</div>
+      <div style="font-size:.7rem;color:var(--muted)">Le binaire de service est déposé sur la cible via le partage ADMIN$. Variantes impacket utilisent des noms aléatoires.</div>
+    </div>
+    <div style="background:rgba(255,64,96,.05);border:1px solid rgba(255,64,96,.2);border-radius:6px;padding:.4rem .6rem">
+      <div style="font-size:.6rem;color:var(--red);font-weight:700;margin-bottom:.2rem">📋 CIBLE — Filesystem</div>
+      <div style="font-size:.68rem;color:var(--muted)">Fichier <strong>C:\Windows\PSEXESVC.exe</strong><br>MFT : $STANDARD_INFO timestamps<br>Prefetch : PSEXESVC.EXE-*.pf</div>
+    </div>
+  </div>
+
+  <div style="padding:.75rem 1rem;border-bottom:1px solid var(--border);display:grid!important;grid-template-columns:32px 1fr 1fr;gap:.5rem;align-items:start">
+    <div style="font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--red);padding-top:.1rem">3</div>
+    <div>
+      <div style="font-size:.72rem;font-weight:700;color:var(--text);margin-bottom:.2rem">Création et démarrage du service PSEXESVC</div>
+      <div style="font-size:.7rem;color:var(--muted)">Service Control Manager crée le service, le démarre. Le service exécute la commande demandée avec les droits SYSTEM.</div>
+    </div>
+    <div style="background:rgba(255,64,96,.05);border:1px solid rgba(255,64,96,.2);border-radius:6px;padding:.4rem .6rem">
+      <div style="font-size:.6rem;color:var(--red);font-weight:700;margin-bottom:.2rem">📋 CIBLE — System.evtx</div>
+      <div style="font-size:.68rem;color:var(--muted)"><strong>7045</strong> : service PSEXESVC installé<br><strong>7036</strong> : service démarré/arrêté<br>Registre : HKLM\SYSTEM\CurrentControlSet\Services\PSEXESVC</div>
+    </div>
+  </div>
+
+  <div style="padding:.75rem 1rem;display:grid!important;grid-template-columns:32px 1fr 1fr;gap:.5rem;align-items:start">
+    <div style="font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--red);padding-top:.1rem">4</div>
+    <div>
+      <div style="font-size:.72rem;font-weight:700;color:var(--text);margin-bottom:.2rem">Exécution de la commande + nettoyage</div>
+      <div style="font-size:.7rem;color:var(--muted)">Le service exécute la commande (cmd.exe, powershell.exe…). À la fin, PSEXESVC.exe est supprimé — mais les traces persistent.</div>
+    </div>
+    <div style="background:rgba(255,64,96,.05);border:1px solid rgba(255,64,96,.2);border-radius:6px;padding:.4rem .6rem">
+      <div style="font-size:.6rem;color:var(--red);font-weight:700;margin-bottom:.2rem">📋 CIBLE — Multi-sources</div>
+      <div style="font-size:.68rem;color:var(--muted)"><strong>4688</strong> : processus créé par PSEXESVC<br>Shimcache / Amcache : PSEXESVC.exe<br>$UsnJrnl : création + suppression fichier</div>
+    </div>
+  </div>
+</div>
+
+<!-- SMB shares forensique -->
+<div class="sec-title">Partages administratifs SMB — Artefacts</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Partage</th><th>Chemin réel</th><th>Valeur forensique</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.78rem;color:var(--cyan)">ADMIN$</td>
+      <td style="font-family:var(--mono);font-size:.72rem">C:\Windows\</td>
+      <td style="font-size:.74rem">Utilisé par PsExec pour déposer PSEXESVC.exe. Event <strong>5140</strong> sur la cible = accès à ce partage. Toujours actif sur les Windows par défaut.</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.78rem;color:var(--cyan)">C$</td>
+      <td style="font-family:var(--mono);font-size:.72rem">C:\</td>
+      <td style="font-size:.74rem">Partage admin complet du lecteur C. Utilisé pour copier des outils, exfiltrer des fichiers. Event <strong>5140</strong> + <strong>5145</strong> (accès fichier).</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.78rem;color:var(--cyan)">IPC$</td>
+      <td style="font-family:var(--mono);font-size:.72rem">Pipes nommés</td>
+      <td style="font-size:.74rem">Communication inter-processus. Utilisé pour l'authentification initiale et les communications de service. Toujours présent.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- Variantes impacket -->
+<div class="sec-title">Variantes modernes — Impacket, CobaltStrike, Metasploit</div>
+<div class="alert">
+  ⚠️ Les variantes Impacket (<code>psexec.py</code>, <code>smbexec.py</code>, <code>wmiexec.py</code>) utilisent des <strong>noms de service et fichiers aléatoires</strong> pour contourner les signatures basées sur "PSEXESVC". L'artefact Event 7045 reste présent mais avec un nom différent. Chercher : service avec nom aléatoire (8 caractères hex), binaire dans C:\Windows\ ou %TEMP\, durée de vie très courte (secondes).
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;margin:.75rem 0;font-family:var(--mono);font-size:.68rem;line-height:1.9;color:var(--text)">
+  <span style="color:var(--cyan)"># Chercher services éphémères suspects dans les logs</span><br>
+  Get-WinEvent -LogName System | Where {$_.Id -eq 7045} |<br>
+  &nbsp;&nbsp;Select TimeCreated, @{N='Service';E={$_.Properties[0].Value}},<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;@{N='Path';E={$_.Properties[3].Value}} |<br>
+  &nbsp;&nbsp;Where {$_.Path -match "Temp|Windows\\[a-f0-9]{8}"}<br><br>
+  <span style="color:var(--cyan)"># Chercher dans le registre les services créés (même supprimés via shimcache)</span><br>
+  reg query HKLM\SYSTEM\CurrentControlSet\Services /s | findstr "ImagePath"
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un analyste trouve Event ID 7045 sur la machine SERVEUR-01 avec ServiceName = "a1b2c3d4" et ImagePath = "C:\Windows\a1b2c3d4.exe". Le fichier n'existe plus. Comment reconstituer ce qui s'est passé ?<small>PsExec · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>1. Timestamp Event 7045</strong> → heure exacte de l'installation du service.<br>
+    <strong>2. Shimcache / AppCompatCache</strong> (HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\AppCompatCache) → confirme que a1b2c3d4.exe a été exécuté, avec le timestamp de dernière modification du binaire.<br>
+    <strong>3. Amcache.hve</strong> (C:\Windows\AppCompat\Programs\Amcache.hve) → hash SHA1 du binaire exécuté — même si le fichier est supprimé. Soumettre à VirusTotal.<br>
+    <strong>4. $UsnJrnl</strong> → entrées de création et suppression de a1b2c3d4.exe avec timestamps précis.<br>
+    <strong>5. Event 4624 Type 3</strong> juste avant 7045 → identifie la machine source et le compte utilisé.<br>
+    <strong>6. Prefetch</strong> (C:\Windows\Prefetch\a1b2c3d4.EXE-*.pf) → confirme l'exécution, liste les fichiers ouverts par le binaire.<br>
+    <strong>Conclusion</strong> : variante Impacket psexec.py ou smbexec.py — noms aléatoires = signature caractéristique.
+  </div>
+</div>
+</div><!-- /tab-psexec -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — WMI & DCOM
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-wmi">
+
+<div class="concept-card">
+  <div class="concept-title">🔮 WMI — Windows Management Instrumentation</div>
+  <strong>WMI</strong> est l'infrastructure de gestion Windows permettant d'exécuter des commandes, de créer des processus et de gérer des systèmes à distance. C'est la technique de lateral movement <strong>la plus furtive</strong> : elle n'installe pas de service, ne crée pas de fichier exécutable sur la cible, et utilise des ports légitimes (DCOM/RPC 135 + ports dynamiques). Elle est utilisée massivement par les APT avancés. <strong>MITRE T1047</strong>.
+</div>
+
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div class="card card-gold">
+    <div class="ct">⚙️ Exécution WMI distante</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
+      <strong>Mécanisme</strong> : appel Win32_Process.Create() via DCOM<br>
+      <strong>Port initial</strong> : 135 (DCOM endpoint mapper)<br>
+      <strong>Ports dynamiques</strong> : 49152-65535 (RPC)<br>
+      <strong>Auth</strong> : NTLM ou Kerberos<br>
+      <strong>Avantage attaquant</strong> : pas de fichier déposé, processus lancé comme enfant de WmiPrvSE.exe<br>
+      <strong>Outils</strong> : wmic.exe, Invoke-WmiMethod, impacket wmiexec.py
+    </div>
+  </div>
+  <div class="card card-red">
+    <div class="ct">🕵️ Persistance WMI (Event Subscription)</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
+      <strong>Mécanisme</strong> : Event Filter + Event Consumer + Binding<br>
+      <strong>Déclencheurs</strong> : démarrage système, heure, événement Windows<br>
+      <strong>Stockage</strong> : WMI repository (<code>C:\Windows\System32\wbem\Repository\</code>)<br>
+      <strong>Furtivité</strong> : aucune clé de registre RUN, aucun fichier .plist<br>
+      <strong>MITRE</strong> : T1546.003
+    </div>
+  </div>
+</div>
+
+<!-- Artefacts WMI -->
+<div class="sec-title">Artefacts forensiques WMI</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Artefact</th><th>Emplacement</th><th>Valeur forensique</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Microsoft-Windows-WMI-Activity/Operational</td>
+      <td style="font-family:var(--mono);font-size:.68rem">Event Log WMI</td>
+      <td style="font-size:.74rem">Event <strong>5857</strong> : fournisseur WMI chargé · <strong>5858</strong> : erreur requête (révèle l'opération tentée) · <strong>5860/5861</strong> : enregistrement d'Event Consumer (persistance WMI). <strong>Source forensique clé</strong> pour détecter les subscriptions malveillantes.</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">WMI Repository</td>
+      <td style="font-family:var(--mono);font-size:.68rem">C:\Windows\System32\<br>wbem\Repository\<br>OBJECTS.DATA</td>
+      <td style="font-size:.74rem">Contient les Event Subscriptions WMI persistantes. Parser avec <strong>python-cim</strong> ou <strong>WMI-Forensics</strong>. Révèle les filtres, consumers et bindings même après tentative de suppression.</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Security.evtx — 4688</td>
+      <td style="font-family:var(--mono);font-size:.68rem">Event Log Security</td>
+      <td style="font-size:.74rem">Processus créés <strong>enfants de WmiPrvSE.exe</strong> = exécution WMI distante. Parent process = WmiPrvSE.exe est la signature caractéristique.</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Prefetch</td>
+      <td style="font-family:var(--mono);font-size:.68rem">C:\Windows\Prefetch\</td>
+      <td style="font-size:.74rem">WMIC.EXE-*.pf et WMIPRVSE.EXE-*.pf avec les dernières exécutions et les fichiers référencés. Révèle les scripts ou commandes exécutés.</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Sysmon Event 20/21</td>
+      <td style="font-family:var(--mono);font-size:.68rem">Sysmon Log</td>
+      <td style="font-size:.74rem"><strong>Event 20</strong> : WmiEventFilter créé · <strong>Event 21</strong> : WmiEventConsumer créé. Détection directe de persistance WMI si Sysmon est déployé.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- DCOM -->
+<div class="sec-title">DCOM — Distributed COM Objects</div>
+<div class="alert">
+  🎯 <strong>DCOM</strong> (T1021.003) permet d'instancier des objets COM sur une machine distante et d'appeler leurs méthodes. Technique popularisée par Matt Nelson (@enigma0x3). Objets COM couramment abusés : <strong>ShellBrowserWindow</strong>, <strong>MMC20.Application</strong>, <strong>ShellWindows</strong>. Laisse des traces similaires à WMI : Event 4624 Type 3, processus enfant de <code>svchost.exe</code> ou <code>mmc.exe</code> distants, Event 4688 avec parent inhabituel.
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;margin:.75rem 0;font-family:var(--mono);font-size:.68rem;line-height:1.9;color:var(--text)">
+  <span style="color:var(--cyan)"># Détecter persistance WMI sur système live</span><br>
+  Get-WMIObject -Namespace root\subscription -Class __EventFilter<br>
+  Get-WMIObject -Namespace root\subscription -Class __EventConsumer<br>
+  Get-WMIObject -Namespace root\subscription -Class __FilterToConsumerBinding<br><br>
+  <span style="color:var(--cyan)"># Parser le repository WMI hors-ligne (python-cim)</span><br>
+  python3 python-cim/samples/dump_root_namespace.py win7 ./Repository/<br><br>
+  <span style="color:var(--cyan)"># Chercher WmiEventConsumer dans les logs Sysmon</span><br>
+  Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" |<br>
+  &nbsp;&nbsp;Where {$_.Id -in @(19,20,21)} | Select TimeCreated, Message
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>🔍 Signature WMI Lateral Movement</h4>
+    <ul class="memo-list">
+      <li>Event 4624 Type 3 depuis IP source externe → machine cible</li>
+      <li>Event 4688 avec ParentProcess = <strong>WmiPrvSE.exe</strong></li>
+      <li>Processus inhabituel (cmd.exe, powershell.exe, cscript.exe) enfant de WmiPrvSE</li>
+      <li>Connexion réseau port 135 suivie de ports dynamiques &gt;49152</li>
+      <li>Event WMI-Activity 5861 = subscription malveillante créée</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>⚠️ WMI vs PsExec — Différences clés</h4>
+    <ul class="memo-list">
+      <li><strong>PsExec</strong> : dépose un fichier + crée un service → Event 7045</li>
+      <li><strong>WMI</strong> : aucun fichier, aucun service → plus furtif</li>
+      <li><strong>PsExec</strong> : processus enfant de <code>services.exe</code></li>
+      <li><strong>WMI</strong> : processus enfant de <code>WmiPrvSE.exe</code></li>
+      <li>Les deux laissent Event 4624 Type 3 sur la cible</li>
+    </ul>
+  </div>
+</div>
+</div><!-- /tab-wmi -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — CREDENTIALS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-creds">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 Techniques de vol et réutilisation de credentials</div>
+  Le lateral movement repose quasi-systématiquement sur des credentials volés. Les attaquants récupèrent des hashes NTLM ou des tickets Kerberos depuis la mémoire (<strong>Mimikatz</strong>, LSASS dump) et les réutilisent sans connaître le mot de passe en clair. Comprendre ces techniques est indispensable pour tracer la propagation dans le réseau et identifier le premier compte compromis.
+</div>
+
+<!-- Cards techniques credentials -->
+<div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.6rem;margin:.75rem 0">
+
+  <div class="meta-card mc-0" onclick="showCred('pth')">
+    <div class="meta-num">T1550.002</div>
+    <div class="meta-name">Pass-the-Hash (PtH)</div>
+    <div class="meta-desc">Réutilisation du hash NTLM sans connaître le mot de passe.</div>
+  </div>
+
+  <div class="meta-card mc-1" onclick="showCred('ptk')">
+    <div class="meta-num">T1550.003</div>
+    <div class="meta-name">Pass-the-Ticket (PtT)</div>
+    <div class="meta-desc">Réutilisation d'un ticket Kerberos TGT ou TGS volé.</div>
+  </div>
+
+  <div class="meta-card mc-2" onclick="showCred('overpass')">
+    <div class="meta-num">T1550.003</div>
+    <div class="meta-name">Overpass-the-Hash</div>
+    <div class="meta-desc">Hash NTLM → ticket Kerberos. Kerberos sur réseau Kerberos.</div>
+  </div>
+
+  <div class="meta-card mc-3" onclick="showCred('kerberoast')">
+    <div class="meta-num">T1558.003</div>
+    <div class="meta-name">Kerberoasting</div>
+    <div class="meta-desc">Demande de TGS pour comptes de service → crack offline.</div>
+  </div>
+
+  <div class="meta-card mc-5" onclick="showCred('mimikatz')">
+    <div class="meta-num">T1003.001</div>
+    <div class="meta-name">LSASS Dump / Mimikatz</div>
+    <div class="meta-desc">Extraction credentials depuis la mémoire du processus LSASS.</div>
+  </div>
+
+  <div class="meta-card mc-6" onclick="showCred('dcsync')">
+    <div class="meta-num">T1003.006</div>
+    <div class="meta-name">DCSync</div>
+    <div class="meta-desc">Simulation d'un DC pour extraire tous les hashes du domaine.</div>
+  </div>
+
+</div>
+<div class="meta-detail" id="cred-detail"></div>
+
+<!-- RDP forensique -->
+<div class="sec-title">RDP — Remote Desktop Protocol (T1021.001)</div>
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(88,166,255,.3);background:rgba(88,166,255,.05)">
+    <div style="font-size:.65rem;color:var(--blue);font-weight:700;margin-bottom:.4rem;text-transform:uppercase">📋 Artefacts sur la machine SOURCE (client)</div>
+    <ul style="font-size:.73rem;color:var(--muted);line-height:1.85;margin:0;padding-left:1.1rem">
+      <li>Registre <strong>NTUSER.DAT\Software\Microsoft\Terminal Server Client\Servers\</strong> — liste des serveurs RDP contactés</li>
+      <li>Fichiers <strong>.rdp</strong> dans Documents, Desktop, Recent</li>
+      <li><strong>Bitmap cache</strong> : <code>C:\Users\[user]\AppData\Local\Microsoft\Terminal Server Client\Cache\</code> — captures d'écran fragmentées de la session RDP distante</li>
+      <li>Event <strong>4648</strong> : credentials utilisés pour la connexion</li>
+      <li>Prefetch : <strong>MSTSC.EXE-*.pf</strong></li>
+    </ul>
+  </div>
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(255,64,96,.3);background:rgba(255,64,96,.05)">
+    <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.4rem;text-transform:uppercase">📋 Artefacts sur la machine CIBLE (serveur RDP)</div>
+    <ul style="font-size:.73rem;color:var(--muted);line-height:1.85;margin:0;padding-left:1.1rem">
+      <li>Event <strong>4624 Type 10</strong> (RemoteInteractive) + <strong>4778/4779</strong> (reconnexion/déconnexion session)</li>
+      <li>Event <strong>TerminalServices-LocalSessionManager 21/23/24/25</strong> — ouverture, déconnexion, reconnexion session</li>
+      <li><strong>Shimcache / Amcache</strong> : exécutables lancés pendant la session</li>
+      <li>Registre <strong>HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList</strong> — profil utilisateur créé si premier login</li>
+      <li>Dossier <strong>C:\Users\[user]\</strong> créé si nouveau compte</li>
+    </ul>
+  </div>
+</div>
+
+<div class="key-fact">
+  <div class="key-fact-label">🎯 Bitmap Cache RDP — Technique de reconstruction visuelle</div>
+  <div style="font-size:.78rem;line-height:1.75;margin-top:.4rem;color:var(--muted)">
+    Le <strong>Bitmap Cache RDP</strong> (<code>bcache22.bmc</code>, <code>cache0000.bin</code>) est un cache de tuiles graphiques utilisé pour optimiser la session RDP. Il contient des <strong>fragments d'écran</strong> de la session distante — des fenêtres, icônes, textes partiels. L'outil <strong>BMC-Tools</strong> (NCC Group) reconstitue ces tuiles en images PNG exploitables forensiquement. Même après fermeture de la session, ces fragments persistent et peuvent révéler ce que l'attaquant a vu ou fait sur la machine distante.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un analyste trouve Event 4768 avec ResulCode 0x0 suivi de multiples Event 4769 avec ServiceName se terminant par "$" depuis un compte de service <code>svc_backup</code>. Quelle technique est en cours et quels artefacts confirmer ?<small>Kerberoasting · Niveau : difficile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>Technique identifiée : Kerberoasting</strong> (T1558.003)<br><br>
+    <strong>Explication</strong> : Event 4769 = demande de ticket TGS (Service Ticket). Quand un compte demande de nombreux TGS pour des comptes avec SPN (Service Principal Names), c'est le signe d'un Kerberoasting — l'attaquant demande des tickets pour les compter offline. ResulCode 0x0 = succès. Les ServiceName se terminant par "$" indiquent des comptes machine.<br><br>
+    <strong>Artefacts de confirmation</strong> :<br>
+    · Event <strong>4769</strong> en masse depuis une seule IP source = anormal (légitime = rare, quelques tickets/jour)<br>
+    · <strong>Ticket Encryption Type = 0x17</strong> (RC4-HMAC) dans 4769 = RC4 au lieu d'AES → signature Kerberoasting (RC4 cracké plus facilement)<br>
+    · Si Sysmon déployé : Event 1 (process create) avec <code>Rubeus.exe</code> ou <code>GetUserSPNs.py</code><br>
+    · Réseau : capture des paquets KRB_TGS_REQ/REP → extraire les hashes avec <code>tshark</code> + <code>hashcat</code><br><br>
+    <strong>Correction</strong> : forcer AES256 pour tous les comptes de service (désactive RC4 downgrade).
+  </div>
+</div>
+</div><!-- /tab-creds -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — DÉTECTION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-detection">
+
+<div class="concept-card">
+  <div class="concept-title">🔍 Détection forensique — Approche systématique</div>
+  La détection du lateral movement repose sur la <strong>corrélation multi-sources</strong> : les Event Logs seuls ne suffisent pas. Il faut croiser les artefacts Windows (Prefetch, Shimcache, Amcache, $UsnJrnl), les logs réseau, les logs Active Directory et les artefacts de chaque machine impliquée. L'outil de choix pour cette corrélation est <strong>Velociraptor</strong> + <strong>KAPE</strong> pour la collecte, et <strong>Elastic / Splunk</strong> pour la corrélation.
+</div>
+
+<!-- Checklist de triage -->
+<div class="sec-title">Checklist de triage — Lateral Movement</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin:.75rem 0">
+
+  <div style="margin-bottom:.75rem">
+    <div style="font-size:.65rem;color:var(--red);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">1. Connexions réseau suspectes (machine cible)</div>
+    <code style="font-size:.67rem;color:var(--text);line-height:1.9;display:block">
+      <span style="color:var(--dim)"># Event 4624 Type 3 ou 10 depuis IPs internes inhabituelles</span><br>
+      Get-WinEvent -LogName Security | Where {$_.Id -eq 4624} |<br>
+      &nbsp;&nbsp;Where {$_.Message -match "Logon Type:\s+3|10"} | Select TimeCreated, Message<br><br>
+      <span style="color:var(--dim)"># Event 5140 : accès partages ADMIN$, C$</span><br>
+      Get-WinEvent -LogName Security | Where {$_.Id -eq 5140} |<br>
+      &nbsp;&nbsp;Where {$_.Message -match "ADMIN\$|C\$"}
+    </code>
+  </div>
+
+  <div style="margin-bottom:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+    <div style="font-size:.65rem;color:var(--gold);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">2. Services éphémères (PsExec / variantes)</div>
+    <code style="font-size:.67rem;color:var(--text);line-height:1.9;display:block">
+      <span style="color:var(--dim)"># Event 7045 : installation service — chercher noms suspects</span><br>
+      Get-WinEvent -LogName System | Where {$_.Id -eq 7045} |<br>
+      &nbsp;&nbsp;Select TimeCreated, @{N='Svc';E={$_.Properties[0].Value}},<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;@{N='Path';E={$_.Properties[3].Value}}<br><br>
+      <span style="color:var(--dim)"># Shimcache : exécutables qui ont tourné (Eric Zimmerman AppCompatCacheParser)</span><br>
+      AppCompatCacheParser.exe -f SYSTEM --csv . --csvf shimcache.csv
+    </code>
+  </div>
+
+  <div style="margin-bottom:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+    <div style="font-size:.65rem;color:var(--purple);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">3. Processus avec parents anormaux (WMI / DCOM)</div>
+    <code style="font-size:.67rem;color:var(--text);line-height:1.9;display:block">
+      <span style="color:var(--dim)"># Sysmon Event 1 : cmd/powershell enfant de WmiPrvSE ou mmc</span><br>
+      Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" |<br>
+      &nbsp;&nbsp;Where {$_.Id -eq 1 -and $_.Message -match "WmiPrvSE|mmc.exe"}<br><br>
+      <span style="color:var(--dim)"># Event 4688 avec CommandLine (si audit activé)</span><br>
+      Get-WinEvent -LogName Security | Where {$_.Id -eq 4688} |<br>
+      &nbsp;&nbsp;Where {$_.Message -match "WmiPrvSE"}
+    </code>
+  </div>
+
+  <div style="margin-bottom:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+    <div style="font-size:.65rem;color:var(--cyan);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">4. RDP — Sessions distantes</div>
+    <code style="font-size:.67rem;color:var(--text);line-height:1.9;display:block">
+      <span style="color:var(--dim)"># Event 4624 Type 10 + TerminalServices logs</span><br>
+      Get-WinEvent -LogName "Microsoft-Windows-TerminalServices-LocalSessionManager/Operational" |<br>
+      &nbsp;&nbsp;Where {$_.Id -in @(21,23,24,25)} | Select TimeCreated, Message<br><br>
+      <span style="color:var(--dim)"># Bitmap cache source (client RDP)</span><br>
+      ls "$env:LOCALAPPDATA\Microsoft\Terminal Server Client\Cache\"
+    </code>
+  </div>
+
+  <div style="padding-top:.75rem;border-top:1px solid var(--border)">
+    <div style="font-size:.65rem;color:var(--green);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">5. Kerberos / Credentials</div>
+    <code style="font-size:.67rem;color:var(--text);line-height:1.9;display:block">
+      <span style="color:var(--dim)"># Event 4769 en masse = Kerberoasting</span><br>
+      Get-WinEvent -LogName Security -ComputerName DC01 |<br>
+      &nbsp;&nbsp;Where {$_.Id -eq 4769} | Group-Object {$_.TimeCreated.Hour} | Sort Count -Desc<br><br>
+      <span style="color:var(--dim)"># Event 4776 NTLM + 4768/4769 depuis même IP = PtH ou PtT</span><br>
+      <span style="color:var(--dim)"># Chercher aussi Event 4625 avec sous-status 0xC000006E (compte désactivé utilisé)</span>
+    </code>
+  </div>
+</div>
+
+<!-- Outils -->
+<div class="sec-title">Outils forensiques — Lateral Movement</div>
+<div class="tool-grid">
+
+  <div class="tool-card" style="border-left:3px solid var(--cyan)">
+    <div class="tool-name">Velociraptor</div>
+    <div class="tool-by">Rapid7 / Open Source</div>
+    <div class="tool-desc">Collecte et hunting à l'échelle du réseau. Artifacts Exchange : Windows.EventLogs.Hayabusa, Windows.Forensics.Prefetch, Windows.Forensics.Shimcache. Idéal pour interroger 100+ machines simultanément.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">GUI/CLI</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--gold)">
+    <div class="tool-name">Hayabusa</div>
+    <div class="tool-by">Yamato Security</div>
+    <div class="tool-desc">Analyse rapide des Event Logs Windows avec règles Sigma. Détecte automatiquement les patterns de lateral movement (PsExec, WMI, Pass-the-Hash). Sortie CSV/timeline HTML.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI Rust</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--purple)">
+    <div class="tool-name">Eric Zimmerman Tools</div>
+    <div class="tool-by">Eric Zimmerman / SANS</div>
+    <div class="tool-desc">AppCompatCacheParser (Shimcache), AmcacheParser, PECmd (Prefetch), MFTECmd ($UsnJrnl). Extraction des artefacts d'exécution — indispensables pour valider le lateral movement.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI .NET</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--blue)">
+    <div class="tool-name">Impacket (attaquant)</div>
+    <div class="tool-by">SecureAuth / Open Source</div>
+    <div class="tool-desc">Suite Python de protocoles réseau Windows. psexec.py, wmiexec.py, smbexec.py, secretsdump.py, GetUserSPNs.py. Comprendre les outils = comprendre les traces qu'ils laissent.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI Python</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--green)">
+    <div class="tool-name">BloodHound / SharpHound</div>
+    <div class="tool-by">SpecterOps</div>
+    <div class="tool-desc">Cartographie des chemins d'attaque Active Directory. Utilisé par les attaquants pour planifier le lateral movement — et par les défenseurs pour comprendre comment ils ont progressé.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-gui">GUI</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--red)">
+    <div class="tool-name">BMC-Tools</div>
+    <div class="tool-by">NCC Group</div>
+    <div class="tool-desc">Reconstruction du Bitmap Cache RDP. Extrait les tuiles graphiques des sessions RDP distantes depuis bcache22.bmc / cache0000.bin. Révèle visuellement ce que l'attaquant a vu.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI Python</span></div>
+  </div>
+
+</div>
+
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — Lateral Movement Forensique</div>
+  <p><strong>PsExec</strong> → Event 7045 (service PSEXESVC) + 4624 Type 3 + 5140 (ADMIN$) sur la <em>cible</em></p>
+  <p><strong>WMI</strong> → 4688 avec ParentProcess = WmiPrvSE.exe · plus furtif que PsExec (pas de service)</p>
+  <p><strong>RDP</strong> → 4624 Type 10 + TerminalServices Event 21 sur la <em>cible</em> · Bitmap Cache sur la <em>source</em></p>
+  <p><strong>Pass-the-Hash</strong> → 4624 Type 3 avec compte + Event 4648 côté source · NTLM auth sans Kerberos</p>
+  <p><strong>Kerberoasting</strong> → multiples Event 4769 depuis même IP · Ticket Encryption Type 0x17 (RC4) = red flag</p>
+  <p><strong>Règle d'or</strong> : analyser toujours <em>source ET cible</em> — les artefacts sont complémentaires</p>
+</div>
+</div><!-- /tab-detection -->
+
+<script>
+// ── Tabs ──
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
+  var el = document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+// ── Quiz ──
+document.addEventListener('click', function(e) {
+  if(e.target && e.target.classList.contains('quiz-reveal-btn')) {
+    var wrap = e.target.closest('.quiz-wrap');
+    if(!wrap) return;
+    var ans = wrap.querySelector('.quiz-answer');
+    if(ans) ans.style.display = ans.style.display === 'block' ? 'none' : 'block';
+  }
+});
+
+// ── Technique cards ──
+var techDetails = {
+  psexec: {
+    icon:'⚙️', title:'PsExec / SMB — T1021.002 + T1570',
+    body:`<strong>Source</strong> : Event 4648, prefetch PSEXEC.EXE, connexion SMB port 445.<br>
+    <strong>Cible</strong> : Event 4624 Type 3, <strong>7045</strong> (PSEXESVC installé), 5140 (accès ADMIN$), prefetch PSEXESVC.EXE, shimcache, $UsnJrnl (fichier créé/supprimé).<br>
+    <strong>Variantes</strong> : Impacket psexec.py (nom aléatoire), smbexec.py (exécution via fichier BAT temporaire).<br>
+    <strong>Registre cible</strong> : HKLM\SYSTEM\CurrentControlSet\Services\PSEXESVC (supprimé après mais trace dans shimcache).`
+  },
+  wmi: {
+    icon:'🔮', title:'WMI — T1047',
+    body:`<strong>Source</strong> : wmic.exe ou Invoke-WmiMethod, connexion port 135 + dynamique.<br>
+    <strong>Cible</strong> : Event 4624 Type 3, Event <strong>4688 avec parent WmiPrvSE.exe</strong>, WMI-Activity log 5857/5858, prefetch WMIPRVSE.EXE.<br>
+    <strong>Persistance WMI</strong> : Event 5860/5861, repository OBJECTS.DATA (C:\Windows\System32\wbem\Repository\).<br>
+    <strong>Sysmon</strong> : Events 19/20/21 pour les subscriptions WMI.`
+  },
+  rdp: {
+    icon:'🖥️', title:'RDP — T1021.001',
+    body:`<strong>Source (client)</strong> : NTUSER.DAT\Software\Microsoft\Terminal Server Client\Servers\, Bitmap Cache (bcache22.bmc), prefetch MSTSC.EXE, Event 4648.<br>
+    <strong>Cible (serveur)</strong> : Event <strong>4624 Type 10</strong>, Events TerminalServices-LocalSessionManager <strong>21</strong> (connexion) / <strong>23</strong> (déconnexion) / <strong>24</strong> (session released) / <strong>25</strong> (reconnexion), shimcache des exécutables lancés pendant la session.<br>
+    <strong>Répertoire utilisateur</strong> : créé à C:\Users\[attaquant]\ si première connexion.`
+  },
+  pth: {
+    icon:'🔑', title:'Pass-the-Hash — T1550.002',
+    body:`<strong>Mécanisme</strong> : le hash NTLM est utilisé directement dans l'authentification NTLM sans connaître le mot de passe en clair. Fonctionne avec SMB, WMI, RDP (NLA désactivé).<br>
+    <strong>Source</strong> : Event 4648 (logon avec credentials explicites), outil Mimikatz / Impacket.<br>
+    <strong>Cible</strong> : Event 4624 Type 3 avec authentification NTLM (pas Kerberos) — visible dans le champ AuthenticationPackage = NTLM.<br>
+    <strong>Indicateur</strong> : connexion NTLM depuis une IP non-membre du domaine, ou Kerberos absent là où il devrait être utilisé.`
+  },
+  dcom: {
+    icon:'🧩', title:'DCOM — T1021.003',
+    body:`<strong>Mécanisme</strong> : instanciation d'objets COM distants via DCOM/RPC. Objets abusés : MMC20.Application, ShellWindows, ShellBrowserWindow.<br>
+    <strong>Connexion</strong> : port 135 (DCOM) + ports dynamiques RPC.<br>
+    <strong>Cible</strong> : Event 4624 Type 3, Event 4688 avec processus enfant de <code>mmc.exe</code>, <code>explorer.exe</code> ou <code>svchost.exe</code> distant.<br>
+    <strong>Furtivité</strong> : similaire à WMI — pas de fichier déposé, pas de service créé. Processus parent inhabituel = signature principale.`
+  },
+  winrm: {
+    icon:'💻', title:'WinRM / PowerShell Remoting — T1021.006',
+    body:`<strong>Mécanisme</strong> : Windows Remote Management sur port <strong>5985</strong> (HTTP) ou <strong>5986</strong> (HTTPS). Invoke-Command, Enter-PSSession, New-PSSession.<br>
+    <strong>Source</strong> : prefetch POWERSHELL.EXE, PSReadLine history, Event 4648, connexion port 5985.<br>
+    <strong>Cible</strong> : Event 4624 Type 3, Event <strong>4688</strong> avec wsmprovhost.exe comme parent, PowerShell Operational Log Event <strong>4103/4104</strong> (script block), prefetch WSMPROVHOST.EXE.<br>
+    <strong>Signature</strong> : processus PowerShell enfant de <code>wsmprovhost.exe</code> = WinRM distant.`
+  }
+};
+
+function showTech(key) {
+  var d = techDetails[key];
+  if(!d) return;
+  var p = document.getElementById('tech-detail');
+  p.className = 'arch-detail live';
+  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.title+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── Credentials details ──
+var credDetails = {
+  pth: {
+    icon:'🔑', name:'Pass-the-Hash (PtH)',
+    body:`<strong>Principe</strong> : Windows stocke les hashes NTLM des mots de passe. PtH consiste à injecter directement ce hash dans le processus d'authentification NTLM sans connaître le mot de passe en clair.<br><br>
+    <strong>Prérequis</strong> : obtenir le hash NTLM via Mimikatz (sekurlsa::logonpasswords), reg save HKLM\SAM, ou ntds.dit dump.<br>
+    <strong>Outil</strong> : <code>mimikatz sekurlsa::pth</code>, <code>impacket psexec.py -hashes :NTHASH</code>, <code>crackmapexec</code>.<br><br>
+    <strong>Artefacts</strong> :<br>
+    · Source : Event 4648, processus lsass.exe accédé (si Sysmon Event 10)<br>
+    · Cible : Event 4624 Type 3 avec <strong>AuthenticationPackage = NTLM</strong> (au lieu de Kerberos = suspect en domaine AD)<br>
+    · Ticket Kerberos absent = signe d'authentification NTLM forcée`
+  },
+  ptk: {
+    icon:'🎫', name:'Pass-the-Ticket (PtT)',
+    body:`<strong>Principe</strong> : vol d'un ticket Kerberos TGT ou TGS depuis la mémoire LSASS et injection dans une autre session. Le ticket permet d'accéder aux ressources sans re-authentification.<br><br>
+    <strong>Prérequis</strong> : accès admin local pour dumper LSASS. <code>mimikatz sekurlsa::tickets /export</code> ou <code>Rubeus dump</code>.<br>
+    <strong>Injection</strong> : <code>mimikatz kerberos::ptt ticket.kirbi</code> ou <code>Rubeus ptt /ticket:base64</code>.<br><br>
+    <strong>Artefacts</strong> :<br>
+    · Event 4769 sur le DC : demande TGS depuis une IP inattendue<br>
+    · Ticket avec UserName différent du compte local = injection<br>
+    · Durée de vie du ticket anormale (Golden Ticket = 10 ans)`
+  },
+  overpass: {
+    icon:'🔄', name:'Overpass-the-Hash',
+    body:`<strong>Principe</strong> : conversion d'un hash NTLM en ticket Kerberos TGT via une demande AS-REQ. Permet d'utiliser le hash NTLM sur un réseau qui impose Kerberos.<br><br>
+    <strong>Avantage</strong> : contourne les restrictions NTLM tout en partant d'un hash. Génère du trafic Kerberos légitime en apparence.<br><br>
+    <strong>Outil</strong> : <code>mimikatz sekurlsa::pth /user:admin /domain:corp /ntlm:HASH /run:powershell</code><br><br>
+    <strong>Artefacts</strong> :<br>
+    · Event 4768 (TGT request) depuis une IP inhabituelle pour ce compte<br>
+    · RC4 encryption type au lieu d'AES256 dans la demande AS-REQ = suspect<br>
+    · Processus Kerberos.exe ou lsass.exe accédé (Sysmon Event 10)`
+  },
+  kerberoast: {
+    icon:'🎣', name:'Kerberoasting',
+    body:`<strong>Principe</strong> : tout utilisateur du domaine peut demander un TGS pour n'importe quel compte avec un SPN (Service Principal Name). Le TGS est chiffré avec le hash du compte de service → cracké offline.<br><br>
+    <strong>Cibles</strong> : comptes de service avec SPN et mot de passe faible. Comptes SQL, IIS, Exchange.<br>
+    <strong>Outils</strong> : <code>Rubeus kerberoast</code>, <code>impacket GetUserSPNs.py</code>.<br><br>
+    <strong>Artefacts DC</strong> :<br>
+    · Event <strong>4769</strong> en masse depuis une IP source = red flag majeur<br>
+    · <strong>Ticket Encryption Type = 0x17</strong> (RC4-HMAC) dans le champ TicketEncryptionType<br>
+    · Comptes demandés = comptes avec SPN faibles<br>
+    · Réseau : nombreuses requêtes KRB_TGS_REQ vers le DC sur port 88`
+  },
+  mimikatz: {
+    icon:'🧠', name:'LSASS Dump / Mimikatz',
+    body:`<strong>Principe</strong> : le processus <code>lsass.exe</code> contient en mémoire les credentials des sessions actives (hashes NTLM, tickets Kerberos, parfois mots de passe en clair). Mimikatz les extrait.<br><br>
+    <strong>Méthodes</strong> :<br>
+    · <code>mimikatz sekurlsa::logonpasswords</code> (accès direct LSASS)<br>
+    · <code>procdump -ma lsass.exe lsass.dmp</code> puis analyse offline<br>
+    · Shadow copy ou VSS dump du NTDS.dit<br><br>
+    <strong>Artefacts</strong> :<br>
+    · Sysmon <strong>Event 10</strong> : accès au processus lsass.exe depuis un processus non-système<br>
+    · Event <strong>4656/4663</strong> : handle ouvert sur lsass.exe<br>
+    · Fichier <code>lsass.dmp</code> dans %TEMP% ou sur partage réseau<br>
+    · WER (Windows Error Reporting) si crash provoqué`
+  },
+  dcsync: {
+    icon:'🌐', name:'DCSync',
+    body:`<strong>Principe</strong> : simulation d'un contrôleur de domaine pour demander la réplication de tous les hashes via le protocole MS-DRSR. L'attaquant obtient tous les hashes du domaine sans accéder physiquement au DC.<br><br>
+    <strong>Prérequis</strong> : droit DS-Replication-Get-Changes-All (Domain Admins, Enterprise Admins, ou délégation spécifique).<br>
+    <strong>Outil</strong> : <code>mimikatz lsadump::dcsync /domain:corp /all</code>, <code>impacket secretsdump.py</code>.<br><br>
+    <strong>Artefacts DC</strong> :<br>
+    · Event <strong>4662</strong> : opération sur un objet AD avec rights {1131f6aa-...} (DS-Replication)<br>
+    · Source IP non-DC effectuant la réplication = DCSync confirmé<br>
+    · Réseau : trafic DRSUAPI depuis IP non-DC<br>
+    · <strong>Seulement détectable sur le DC</strong> — aucun artefact sur la machine source`
+  }
+};
+
+function showCred(key) {
+  var d = credDetails[key];
+  if(!d) return;
+  document.querySelectorAll('.meta-card').forEach(function(c){c.classList.remove('sel');});
+  var p = document.getElementById('cred-detail');
+  p.className = 'meta-detail live';
+  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.name+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── Scroll progress ──
+(function(){
+  var bar = document.getElementById('scroll-progress');
+  var btn = document.getElementById('back-top');
+  window.addEventListener('scroll', function(){
+    var doc = document.documentElement;
+    var scrolled = doc.scrollTop || document.body.scrollTop;
+    var total = doc.scrollHeight - doc.clientHeight;
+    if(bar) bar.style.width = (total > 0 ? (scrolled/total*100) : 0)+'%';
+    if(btn) btn.classList.toggle('visible', scrolled > 300);
+  });
+})();
+</script>
+</body>
+</html>
