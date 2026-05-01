@@ -116,8 +116,87 @@
     // Spécialité du rôle : tags qui donnent +20% XP
     renderSpecialty(snap.agent.track);
 
+    // Stats SM-2 (révision espacée) — visible uniquement si l'utilisateur en a
+    renderSM2Stats();
+
     // Achievements (catégorisé, avec verrouillés + jauges)
     renderAchievements(snap);
+  }
+
+  /**
+   * Affiche les stats du système SM-2 (révision espacée).
+   * Section masquée si aucune carte SM-2 (= utilisateur n'a pas encore utilisé le mode).
+   * Lit window.getSM2Stats() exposé par quiz-app.js — si quiz-app.js pas chargé,
+   * on lit directement localStorage car les clés sm2_* sont indépendantes.
+   */
+  function renderSM2Stats() {
+    const section = $('sm2-stats-section');
+    const grid = $('sm2-stats-grid');
+    if (!section || !grid) return;
+
+    // Calcul des stats inline (autonome, pas de dépendance à quiz-app.js)
+    const today = new Date().toISOString().slice(0, 10);
+    const weekFromNow = new Date(); weekFromNow.setDate(weekFromNow.getDate() + 7);
+    const weekDate = weekFromNow.toISOString().slice(0, 10);
+
+    const cards = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || !k.startsWith('sm2_')) continue;
+      try {
+        const d = JSON.parse(localStorage.getItem(k));
+        if (d) cards.push(d);
+      } catch {}
+    }
+
+    if (!cards.length) {
+      section.hidden = true;
+      return;
+    }
+    section.hidden = false;
+
+    let dueToday = 0, dueWeek = 0, mature = 0, learning = 0;
+    let sumEF = 0, longestInt = 0;
+    cards.forEach(c => {
+      if (c.due <= today) dueToday++;
+      if (c.due <= weekDate) dueWeek++;
+      if ((c.reps || 0) >= 3) mature++; else learning++;
+      sumEF += (c.ef || 2.5);
+      longestInt = Math.max(longestInt, c.interval || 0);
+    });
+    const avgEF = (sumEF / cards.length).toFixed(2);
+    const maturePct = Math.round(100 * mature / cards.length);
+
+    const longestLabel = longestInt < 7 ? `${longestInt}j`
+      : longestInt < 30 ? `${Math.round(longestInt/7)}sem`
+      : `${Math.round(longestInt/30)}mois`;
+
+    grid.innerHTML = `
+      <div class="sm2-stat ${dueToday > 0 ? 'sm2-urgent' : ''}">
+        <div class="sm2-stat-num">${dueToday}</div>
+        <div class="sm2-stat-lbl">Dues aujourd'hui</div>
+      </div>
+      <div class="sm2-stat">
+        <div class="sm2-stat-num">${dueWeek}</div>
+        <div class="sm2-stat-lbl">Dues cette semaine</div>
+      </div>
+      <div class="sm2-stat">
+        <div class="sm2-stat-num">${cards.length}</div>
+        <div class="sm2-stat-lbl">Total cartes</div>
+      </div>
+      <div class="sm2-stat">
+        <div class="sm2-stat-num">${maturePct}<span style="font-size:.55em">%</span></div>
+        <div class="sm2-stat-lbl">Acquises (${mature}/${cards.length})</div>
+      </div>
+      <div class="sm2-stat">
+        <div class="sm2-stat-num">${avgEF}</div>
+        <div class="sm2-stat-lbl">EF moyen <span title="Easiness Factor — plus haut = mieux mémorisé">ⓘ</span></div>
+      </div>
+      <div class="sm2-stat">
+        <div class="sm2-stat-num">${longestLabel}</div>
+        <div class="sm2-stat-lbl">Plus long intervalle</div>
+      </div>
+    `;
   }
 
   /**
