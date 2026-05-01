@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>CMD Windows Forensique — CAS-IN</title>
+<meta name="description" content="Live response Windows · cmd.exe · wmic · sc · netsh · netstat · reg · tasklist — workflow forensique sans GUI">
+<link rel="stylesheet" href="../style/fiche_style.css">
+
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">WINDOWS LIVE RESPONSE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Windows</span>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">CMD Windows Forensique</span>
+  </div>
+</div>
+
+<div class="page">
+  <div class="header">
+    <div class="badge">⌨️ Live Response Windows</div>
+    <h1>CMD Windows Forensique</h1>
+  </div>
+
+  <div class="info">
+    💡 <strong>Pourquoi connaître <code>cmd.exe</code> en 2026 ?</strong> Parce que sur un système compromis ou legacy, PowerShell peut être <strong>désactivé par GPO</strong>, restreint en <strong>Constrained Language Mode</strong>, ou journalisé en détail (un attaquant le sait). <code>cmd.exe</code> reste universel : il fonctionne sur Windows XP comme sur Windows Server 2025, et il est <strong>moins surveillé</strong> que PowerShell — ce qui rend sa connaissance autant utile en defense qu'en offensive.
+  </div>
+
+  <h2 class="sec-title" id="processes">🔄 Processus &amp; Services</h2>
+
+  <div class="page-wrap">
+    <div class="tool-card card-blue">
+      <div class="tool-name">tasklist <span style="font-size:.65rem;color:var(--muted)">Liste des processus</span></div>
+      <code class="tool-cmd">tasklist /v /fo csv > tasks.csv</code>
+      <div class="tool-note">Mode verbose en CSV → import direct dans Excel/Timeline Explorer. Sans <code>/v</code> : juste PID + nom.</div>
+    </div>
+
+    <div class="tool-card card-cyan">
+      <div class="tool-name">tasklist /m <span style="font-size:.65rem;color:var(--muted)">DLLs chargées</span></div>
+      <code class="tool-cmd">tasklist /m crypto.dll</code>
+      <div class="tool-note">Liste tous les processus qui ont chargé <code>crypto.dll</code>. Excellent pour détecter une <strong>DLL injectée</strong> (par ex. malware persistant via DLL hijacking).</div>
+    </div>
+
+    <div class="tool-card card-green">
+      <div class="tool-name">tasklist /svc <span style="font-size:.65rem;color:var(--muted)">PID ↔ Service</span></div>
+      <code class="tool-cmd">tasklist /svc | findstr /i svchost</code>
+      <div class="tool-note">Déplie le mapping <strong>svchost.exe ↔ services hébergés</strong>. Utile pour identifier quel service tourne dans quel conteneur svchost (Windows 10+ a un svchost par service).</div>
+    </div>
+
+    <div class="tool-card card-purple">
+      <div class="tool-name">sc query <span style="font-size:.65rem;color:var(--muted)">État services</span></div>
+      <code class="tool-cmd">sc query state= all > services.txt</code>
+      <div class="tool-note">⚠️ <strong>Espace après <code>=</code> obligatoire</strong> ! Liste tous les services (running + stopped). Compléter avec <code>sc qc &lt;ServiceName&gt;</code> pour la config détaillée (binPath, startMode).</div>
+    </div>
+
+    <div class="tool-card card-gold">
+      <div class="tool-name">sc qc <span style="font-size:.65rem;color:var(--muted)">Config service</span></div>
+      <code class="tool-cmd">sc qc TermService</code>
+      <div class="tool-note">Inspect la config d'un service spécifique. <strong>BINARY_PATH_NAME</strong> est la cible critique : un service modifié pour pointer sur <code>cmd.exe /c &lt;malware&gt;</code> = persistance classique.</div>
+    </div>
+  </div>
+
+  <h2 class="sec-title" id="wmic">🛠️ WMIC — Le couteau suisse legacy</h2>
+
+  <div class="info">
+    <code>wmic</code> est <strong>déprécié depuis Windows 11 24H2</strong> (octobre 2024) mais reste présent sur tous les systèmes plus anciens — donc en forensique, on le rencontre encore en 2026 sur la grande majorité du parc en production. Sur les systèmes récents, basculer sur <code>Get-CimInstance</code> (PowerShell).
+  </div>
+
+  <div class="card card-blue">
+    <h3>Grammaire fondamentale</h3>
+    <code class="tool-cmd">wmic [alias] [where clause] [verb clause]</code>
+    <p style="font-size:.85rem;margin-top:.5rem">Trois parties : <strong>quoi</strong> regarder (alias), <strong>filtre</strong> (where), <strong>action</strong> (verb).</p>
+  </div>
+
+  <div class="page-wrap">
+    <div class="tool-card card-cyan">
+      <div class="tool-name">Alias utiles</div>
+      <code class="tool-cmd">process · service · share · nicconfig
+startup · useraccount · qfe</code>
+      <div class="tool-note"><strong>qfe</strong> = Quick Fix Engineering = patches appliqués (KB). Idéal pour vérifier si un système est patché contre une CVE donnée.</div>
+    </div>
+
+    <div class="tool-card card-purple">
+      <div class="tool-name">Découvrir les attributs</div>
+      <code class="tool-cmd">wmic process get /?</code>
+      <div class="tool-note">Liste TOUS les attributs disponibles pour un alias. Combiner avec <code>get attr1,attr2</code> pour ne récupérer que ceux qui intéressent.</div>
+    </div>
+
+    <div class="tool-card card-green">
+      <div class="tool-name">Lister callable methods</div>
+      <code class="tool-cmd">wmic process call /?</code>
+      <div class="tool-note">Voir les méthodes invocables (par ex. <code>terminate</code>, <code>create</code>). Permet par ex. de tuer un processus à distance.</div>
+    </div>
+  </div>
+
+  <div class="card card-orange">
+    <h3>Exemples forensiques pratiques</h3>
+    <code class="tool-cmd"># Tous les processus + parent + commande complète
+wmic process get name,processid,parentprocessid,commandline /format:csv
+
+# Recherche : nc.exe ou variantes
+wmic process where "name='nc.exe' or name='ncat.exe'" get processid,commandline
+
+# Processus enfants de cmd.exe (souvent suspect via webshell ou pivot)
+wmic process where "name='cmd.exe'" get processid,parentprocessid,commandline
+
+# Tous les services configurés en démarrage automatique
+wmic service where "startmode='Auto'" get name,pathname,startname
+
+# Les patches Windows installés (dépister un système vulnérable)
+wmic qfe list brief</code>
+  </div>
+
+  <div class="card card-red">
+    <h3>WMIC à distance (pivot ou audit)</h3>
+    <code class="tool-cmd">wmic /node:&lt;TargetIP&gt; /user:&lt;User&gt; /password:&lt;Pass&gt; \
+  process list full</code>
+    <p style="font-size:.85rem;margin-top:.5rem">⚠️ <strong>Ne JAMAIS</strong> taper le mot de passe en clair sur la ligne de commande pendant un IR — il finit dans <code>cmd.exe</code> history et events 4688. Utiliser <code>runas /user:DOMAIN\\user "wmic /node:..."</code> ou <code>psexec</code>.</p>
+  </div>
+
+  <h2 class="sec-title" id="reg">🗝️ Registre Windows en CLI</h2>
+
+  <div class="card card-blue">
+    <h3>Commandes <code>reg</code> de base</h3>
+    <table class="tbl">
+      <thead><tr><th>Action</th><th>Commande</th></tr></thead>
+      <tbody>
+        <tr><td>Lire une valeur</td><td><code>reg query "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /s</code></td></tr>
+        <tr><td>Lire une valeur précise</td><td><code>reg query "HKLM\...\Run" /v MyValue</code></td></tr>
+        <tr><td>Ajouter une clé</td><td><code>reg add HKLM\Software\TestKey /v Foo /t REG_SZ /d "bar"</code></td></tr>
+        <tr><td>Exporter une ruche</td><td><code>reg export HKLM\Software hive_software.reg</code></td></tr>
+        <tr><td>Importer un .reg</td><td><code>reg import hive_software.reg</code></td></tr>
+        <tr><td>Sur poste distant</td><td><code>reg query \\TARGET\HKLM\... /v Value</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card card-orange">
+    <h3>Clés à scanner en priorité (live response)</h3>
+    <code class="tool-cmd"># Persistance classique (Run / RunOnce)
+reg query "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /s
+reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /s
+reg query "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce" /s
+
+# Image File Execution Options (debugger hijacking)
+reg query "HKLM\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options" /s
+
+# Services autostart
+reg query HKLM\System\CurrentControlSet\Services /s | findstr /i "ImagePath"
+
+# WinLogon (custom shell)
+reg query "HKLM\Software\Microsoft\Windows NT\CurrentVersion\Winlogon"
+
+# Last logged-on user
+reg query "HKLM\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI" /v LastLoggedOnUser</code>
+  </div>
+
+  <h2 class="sec-title" id="network">🌐 Réseau en CLI</h2>
+
+  <div class="page-wrap">
+    <div class="tool-card card-cyan">
+      <div class="tool-name">netstat -nao <span style="font-size:.65rem;color:var(--muted)">Connexions + PID</span></div>
+      <code class="tool-cmd">netstat -nao | findstr ESTABLISHED</code>
+      <div class="tool-note"><code>-n</code> = numérique (pas de DNS) · <code>-a</code> = all · <code>-o</code> = PID. Combiner avec <code>tasklist | findstr &lt;PID&gt;</code> pour identifier le processus.</div>
+    </div>
+
+    <div class="tool-card card-purple">
+      <div class="tool-name">netstat -anob <span style="font-size:.65rem;color:var(--muted)">Bonus EXE</span></div>
+      <code class="tool-cmd">netstat -anob > net.txt</code>
+      <div class="tool-note"><code>-b</code> ajoute le binaire propriétaire de chaque connexion (nécessite admin). Très utile pour identifier directement le malware C2.</div>
+    </div>
+
+    <div class="tool-card card-green">
+      <div class="tool-name">netstat surveillance continue</div>
+      <code class="tool-cmd">netstat -nao 5 | findstr 4444</code>
+      <div class="tool-note">Refresh toutes les 5 sec — utile pour traquer une connexion intermittente vers un port suspect (4444 = port par défaut Metasploit).</div>
+    </div>
+
+    <div class="tool-card card-blue">
+      <div class="tool-name">netstat statistiques protocole</div>
+      <code class="tool-cmd">netstat -s -p tcp</code>
+      <div class="tool-note">Stats détaillées du protocole. Une explosion de "Connections Reset" peut indiquer un scan agressif ou une attaque DoS.</div>
+    </div>
+  </div>
+
+  <div class="card card-red">
+    <h3>netsh — config réseau et firewall</h3>
+    <code class="tool-cmd"># État firewall + règles actives
+netsh advfirewall show allprofiles
+netsh advfirewall firewall show rule name=all > fw_rules.txt
+
+# Désactiver firewall (⚠️ contexte test uniquement)
+netsh advfirewall set allprofiles state off
+
+# Voir interfaces et IP
+netsh interface ip show config
+
+# Voir la config DNS (détecte hijacking)
+netsh interface ip show dnsservers
+
+# Wifi : profils + clés en clair (admin)
+netsh wlan show profiles
+netsh wlan show profile name="MyWifi" key=clear</code>
+    <p style="font-size:.85rem;margin-top:.5rem">⚠️ <strong>netsh wlan show profile key=clear</strong> exfiltre les passwords WiFi en clair — c'est une technique d'attaquant classique post-exploitation. À surveiller en defense (event 4688).</p>
+  </div>
+
+  <h2 class="sec-title" id="files">📁 Fichiers — Recherche et énumération</h2>
+
+  <div class="card card-blue">
+    <h3>Recherche par nom de fichier</h3>
+    <code class="tool-cmd"># Cherche tous les .lnk dans Windows + sous-dossiers, format brief
+dir /b /s C:\Windows\*.lnk
+
+# Cherche tous les exécutables modifiés dans les 7 derniers jours
+forfiles /p C:\Windows\System32 /m *.exe /d -7 /c "cmd /c echo @path @fdate"
+
+# Compter les lignes d'output (combien de hits ?)
+dir /b /s C:\Users\*.docx | find /c /v ""</code>
+  </div>
+
+  <h2 class="sec-title" id="loops">🔁 Boucles for — automatisation</h2>
+
+  <div class="card card-purple">
+    <h3>Boucle compteur <code>for /L</code></h3>
+    <code class="tool-cmd">for /L %i in (1,1,254) do @ping -n 1 -w 100 192.168.1.%i | find "Reply"</code>
+    <p style="font-size:.85rem;margin-top:.5rem">Ping sweep manuel sur un /24. <code>(start, step, stop)</code> = de 1 à 254 par pas de 1. Lent mais ne nécessite aucun outil tiers.</p>
+  </div>
+
+  <div class="card card-green">
+    <h3>Boucle sur fichier <code>for /F</code></h3>
+    <code class="tool-cmd">for /F "tokens=*" %i in (hashes.txt) do @echo Checking %i &amp; certutil -hashfile %i SHA256</code>
+    <p style="font-size:.85rem;margin-top:.5rem">Itère sur chaque ligne d'un fichier de chemins, calcule le SHA256 de chacun. <code>certutil</code> est natif Windows depuis Vista.</p>
+  </div>
+
+  <h2 class="sec-title" id="shutdown">🔌 Arrêt &amp; redémarrage</h2>
+
+  <div class="card card-orange">
+    <code class="tool-cmd"># Arrêt immédiat (pas de notice utilisateur, pas de timer)
+shutdown /s /t 0
+
+# Redémarrage immédiat
+shutdown /r /t 0
+
+# Redémarrage forcé même si applications bloquent
+shutdown /r /f /t 0
+
+# Annuler un shutdown lancé
+shutdown /a
+
+# Arrêt distant (admin requis)
+shutdown /m \\TARGET /s /t 30 /c "Maintenance security"</code>
+    <p style="font-size:.85rem;margin-top:.5rem">⚠️ En live response, <strong>n'éteins jamais</strong> un système compromis avant d'avoir capturé la RAM (cf. <a href="ram_forensique.html">RAM Forensique</a>). L'extinction détruit l'état volatil.</p>
+  </div>
+
+  <h2 class="sec-title" id="gui-from-cli">🖱️ Lancer des GUI depuis le CLI</h2>
+
+  <div class="card card-blue">
+    <table class="tbl">
+      <thead><tr><th>GUI</th><th>Commande</th></tr></thead>
+      <tbody>
+        <tr><td>Local Users &amp; Groups</td><td><code>lusrmgr.msc</code></td></tr>
+        <tr><td>Services</td><td><code>services.msc</code></td></tr>
+        <tr><td>Task Manager</td><td><code>taskmgr.exe</code></td></tr>
+        <tr><td>Local Security Policy</td><td><code>secpol.msc</code></td></tr>
+        <tr><td>Event Viewer</td><td><code>eventvwr.msc</code></td></tr>
+        <tr><td>Disk Management</td><td><code>diskmgmt.msc</code></td></tr>
+        <tr><td>Device Manager</td><td><code>devmgmt.msc</code></td></tr>
+        <tr><td>Group Policy</td><td><code>gpedit.msc</code></td></tr>
+        <tr><td>Registry Editor</td><td><code>regedit</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sec-title" id="workflow">🎯 Workflow live response (15 minutes)</h2>
+
+  <div class="prereq-block">
+    <div class="prereq-row">
+      <div class="prereq-label">1. Volatile FIRST</div>
+      <div class="prereq-pill">Acquisition RAM (winpmem) AVANT tout</div>
+      <div class="prereq-pill">Liste connexions (netstat -nao)</div>
+      <div class="prereq-pill">Snapshot processus (tasklist /v /svc /m)</div>
+    </div>
+    <div class="prereq-row">
+      <div class="prereq-label">2. Persistance</div>
+      <div class="prereq-pill">Run, RunOnce, IFEO, Scheduled Tasks</div>
+      <div class="prereq-pill">Services autostart</div>
+      <div class="prereq-pill">WMI subscriptions (<code>wmic /namespace:...</code>)</div>
+    </div>
+    <div class="prereq-row">
+      <div class="prereq-label">3. Comptes</div>
+      <div class="prereq-pill"><code>net user</code> · <code>net localgroup administrators</code></div>
+      <div class="prereq-pill"><code>quser</code> (sessions actives RDP)</div>
+      <div class="prereq-pill"><code>wmic useraccount</code> avec last login</div>
+    </div>
+    <div class="prereq-row">
+      <div class="prereq-label">4. Logs &amp; configs</div>
+      <div class="prereq-pill"><code>wevtutil</code> export Security/System/Application</div>
+      <div class="prereq-pill"><code>reg export</code> ruches HKLM\Software</div>
+      <div class="prereq-pill">Hashs des binaires suspects (<code>certutil -hashfile</code>)</div>
+    </div>
+  </div>
+
+  <h2 class="sec-title" id="quiz">💊 Auto-évaluation</h2>
+
+  <div class="page-wrap">
+    <div class="quiz-wrap">
+      <div class="quiz-q">Tu vois une connexion <code>ESTABLISHED</code> vers <code>185.220.100.42:443</code> dans <code>netstat -nao</code> avec PID 4632. Quelles sont tes <strong>3 prochaines étapes</strong> sans utiliser PowerShell ?<small>Live response · Niveau : moyen</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer">
+        <strong>1.</strong> Identifier le processus : <code>tasklist /v | findstr 4632</code><br>
+        <strong>2.</strong> Voir la commande exacte : <code>wmic process where "processid=4632" get name,executablepath,commandline</code><br>
+        <strong>3.</strong> Examiner le binaire : <code>certutil -hashfile &lt;path&gt; SHA256</code> puis chercher le hash sur VirusTotal. Optionnel : <code>tasklist /m /fi "PID eq 4632"</code> pour les DLLs chargées.
+      </div>
+    </div>
+
+    <div class="quiz-wrap">
+      <div class="quiz-q">Quelle est la <strong>différence forensique majeure</strong> entre <code>tasklist /svc</code> et <code>sc query</code> ?<small>Services Windows · Niveau : facile</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer"><code>tasklist /svc</code> montre quels <strong>services tournent dans quels processus</strong> (vue par PID). <code>sc query</code> montre l'<strong>état configuré de tous les services</strong> (running/stopped, démarrage auto/manuel). Combiner : <code>sc query</code> trouve un service "running" suspect, puis <code>tasklist /svc | findstr ServiceName</code> identifie le PID associé pour analyse mémoire.</div>
+    </div>
+
+    <div class="quiz-wrap">
+      <div class="quiz-q">Pourquoi un attaquant <strong>préfère</strong> souvent <code>cmd.exe</code> à PowerShell sur un système moderne (Windows 10+) ?<small>OPSEC · Niveau : moyen</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer">PowerShell 5+ a un <strong>logging très détaillé</strong> activable par GPO : Module Logging, Script Block Logging (event 4104), Transcription. Sur les environnements durcis, tout script PowerShell est tracé voire bloqué (Constrained Language Mode, AMSI). <code>cmd.exe</code> ne logge que via Process Creation Auditing (event 4688) — pas le contenu des scripts batch ni l'output. Donc en defense : activer <strong>Process Command Line Auditing</strong> (4688 + GPO "Include command line in process creation events") pour capturer aussi les arguments de cmd.exe.</div>
+    </div>
+  </div>
+
+  <div class="exam-tip">
+    <div class="exam-tip-title">🎓 Exam Tip — CMD Forensique</div>
+    <p><strong>WMIC</strong> : grammaire <code>alias + where + verb</code>. Déprécié sur W11 24H2 mais toujours présent partout ailleurs. Migrer vers <code>Get-CimInstance</code> sur les systèmes récents.</p>
+    <p><strong>tasklist</strong> : <code>/v</code> verbose · <code>/m</code> DLLs · <code>/svc</code> services par PID · <code>/fi</code> filtre.</p>
+    <p><strong>netstat -nao</strong> : connexions + listening ports + PID. Combine avec <code>tasklist /fi "PID eq X"</code>.</p>
+    <p><strong>reg query</strong> : <code>/s</code> recurse · <code>/v</code> valeur précise. Sur poste distant : <code>\\TARGET\HKLM\...</code>.</p>
+    <p><strong>Persistance Run/RunOnce</strong> : <code>HKLM\Software\Microsoft\Windows\CurrentVersion\Run</code> et <code>RunOnce</code>, idem dans <code>HKCU</code>.</p>
+    <p><strong>Logging</strong> : Process Command Line Auditing (event 4688) capture les arguments. À activer en GPO.</p>
+  </div>
+
+  <div class="related-pill">
+    🔗 Voir aussi :
+    <a href="powershell_forensique.html">PowerShell Forensique</a> ·
+    <a href="windows_forensique.html">Windows Forensique</a> ·
+    <a href="logs_windows.html">Logs Windows</a> ·
+    <a href="registre_windows.html">Registre Windows</a> ·
+    <a href="incident_response.html">Incident Response</a>
+  </div>
+
+</div>
+
+<div class="footer">
+  <p>CAS-IN · Investigation Numérique — Forensique Suisse</p>
+</div>
+
+<script>
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){
+    var d=document.documentElement;
+    bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';
+  },{passive:true});
+  var bt=document.getElementById('back-top')||document.querySelector('.back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+  document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+      ans.classList.toggle('visible');
+      btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+    });
+  });
+  document.querySelectorAll('.tool-cmd,.copy-code,.vol-cmd').forEach(function(el){
+    el.title='Cliquer pour copier';
+    el.style.cursor='pointer';
+    el.addEventListener('click',function(){
+      navigator.clipboard&&navigator.clipboard.writeText(el.innerText.trim()).then(function(){
+        var o=el.style.background;el.style.background='rgba(48,232,138,.2)';
+        setTimeout(function(){el.style.background=o;},700);
+      });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

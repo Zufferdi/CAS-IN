@@ -91,6 +91,7 @@
       <li><a href="#shellbags">ShellBags Explorer</a></li>
       <li><a href="#amcache">AmcacheParser</a></li>
       <li><a href="#autres">Autres outils — RECmd · JLECmd · SDBExplorer</a></li>
+      <li><a href="#bstrings">bstrings — extraction strings + regex</a></li>
       <li><a href="#timeline-exp">Timeline Explorer</a></li>
       <li><a href="#workflow">Workflow forensique type</a></li>
       <li><a href="#bonnes-pratiques">Bonnes pratiques</a></li>
@@ -650,6 +651,77 @@
       <p style="margin-top:.3rem">Emplacements classiques :
       <span class="hex">C:\Windows\AppPatch\</span> (système) et
       <span class="hex">C:\Windows\AppPatch\Custom\</span> (shims personnalisés — à surveiller).</p>
+    </div>
+  </div>
+
+  <!-- BSTRINGS — extraction de strings avec regex -->
+  <div class="section" id="bstrings">
+    <div class="section-title">⑫ bstrings — extraction de strings avec regex multi-encoding</div>
+    <p class="meta" style="margin-bottom:.75rem">L'équivalent de <code>strings</code> Linux mais
+    <strong>moderne, scriptable, multi-encoding</strong>. Indispensable pour explorer des dumps mémoire,
+    fichiers binaires inconnus, page files, slack space.</p>
+
+    <div class="card card-cyan">
+      <div class="card-title">🔍 Usage de base</div>
+      <pre class="formula" style="line-height:1.4"><span class="cyan">bstrings.exe</span> <span class="gold">-f</span> suspect.bin</pre>
+      <p style="margin-top:.3rem">Par défaut : strings &gt; 3 caractères en Unicode + Western (1252).
+      <strong>Plus exhaustif que <code>strings</code></strong> qui ne lit qu'un encoding à la fois.</p>
+    </div>
+
+    <div class="card-grid" style="margin-top:.75rem">
+      <div class="card card-blue">
+        <div class="card-title">🎯 Recherche d'une chaîne précise</div>
+        <pre class="formula" style="line-height:1.4"><span class="cyan">bstrings</span> <span class="gold">-f</span> mem.raw <span class="gold">--ls</span> "<span class="green">forensics</span>"</pre>
+        <p>Equivalent rapide à <code>strings | grep</code> mais sans pipe (plus rapide sur gros fichiers).</p>
+      </div>
+
+      <div class="card card-green">
+        <div class="card-title">📏 Filtrer par longueur</div>
+        <pre class="formula" style="line-height:1.4"><span class="cyan">bstrings</span> <span class="gold">-f</span> file.bin <span class="gold">-m</span> 8 <span class="gold">-x</span> 64</pre>
+        <p><code>-m</code> = min length · <code>-x</code> = max length. Élimine le bruit (chaînes très courtes ou très longues sans intérêt).</p>
+      </div>
+
+      <div class="card card-purple">
+        <div class="card-title">📍 Afficher l'offset</div>
+        <pre class="formula" style="line-height:1.4"><span class="cyan">bstrings</span> <span class="gold">-f</span> mem.raw <span class="gold">--ls</span> "<span class="green">password</span>" <span class="gold">--off</span></pre>
+        <p>Indispensable pour relier un hit à une structure connue (par ex. EPROCESS dans un dump RAM).</p>
+      </div>
+
+      <div class="card card-gold">
+        <div class="card-title">🌐 Code page custom</div>
+        <pre class="formula" style="line-height:1.4"><span class="cyan">bstrings</span> <span class="gold">-f</span> file <span class="gold">--cp</span> 932</pre>
+        <p>Cherche les strings en encoding <strong>Shift-JIS</strong> (japonais). Liste complète des code pages .NET supportés.</p>
+      </div>
+    </div>
+
+    <div class="card card-orange" style="margin-top:.75rem">
+      <div class="card-title">🪄 Built-in regex patterns</div>
+      <p>bstrings inclut une <strong>douzaine de regex pré-définies</strong> pour les patterns les plus fréquents en forensique :</p>
+      <pre class="formula" style="line-height:1.4"><span class="cyan">bstrings</span> <span class="gold">-p</span>     <span class="muted">// liste tous les patterns disponibles</span>
+<span class="cyan">bstrings</span> <span class="gold">-f</span> mem.raw <span class="gold">--lr</span> <span class="green">email</span>
+<span class="cyan">bstrings</span> <span class="gold">-f</span> mem.raw <span class="gold">--lr</span> <span class="green">ipv4</span>
+<span class="cyan">bstrings</span> <span class="gold">-f</span> mem.raw <span class="gold">--lr</span> <span class="green">cc</span>      <span class="muted">// credit card</span>
+<span class="cyan">bstrings</span> <span class="gold">-f</span> mem.raw <span class="gold">--lr</span> <span class="green">ssn</span>     <span class="muted">// SSN US</span>
+<span class="cyan">bstrings</span> <span class="gold">-f</span> mem.raw <span class="gold">--lr</span> <span class="green">guid</span></pre>
+      <p style="margin-top:.4rem">Évite de réécrire les regex à chaque fois — gain de temps énorme. Pour des patterns custom : <code>--lr "&lt;regex&gt;"</code> directement.</p>
+    </div>
+
+    <div class="card card-red" style="margin-top:.75rem">
+      <div class="card-title">⚙️ Recherche de plusieurs patterns en parallèle</div>
+      <pre class="formula" style="line-height:1.4"><span class="cyan">bstrings</span> <span class="gold">-f</span> mem.raw <span class="gold">--fr</span> patterns.txt</pre>
+      <p><code>--fr</code> charge un fichier de regex (une par ligne). <code>--fs</code> fait pareil pour les strings simples.
+      Idéal pour matcher une <strong>liste d'IOC</strong> en une seule passe sur un dump de plusieurs GB.</p>
+    </div>
+
+    <div class="card card-blue" style="margin-top:.75rem">
+      <div class="card-title">🎯 Cas d'usage forensiques typiques</div>
+      <ul style="margin:.4rem 0 0 1rem">
+        <li><strong>Dump RAM</strong> : extraire emails, URLs, mots de passe en clair, clés crypto résiduelles</li>
+        <li><strong>Pagefile.sys</strong> : retrouver des fragments de chats supprimés, requêtes web, secrets</li>
+        <li><strong>Slack space MFT</strong> : noms de fichiers anciens, métadonnées résiduelles</li>
+        <li><strong>Fichiers binaires inconnus</strong> : strings + magic bytes pour identifier le format</li>
+        <li><strong>Image disque chiffrée mais pas montée</strong> : header en clair vs reste aléa</li>
+      </ul>
     </div>
   </div>
 

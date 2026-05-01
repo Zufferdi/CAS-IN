@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ICS/SCADA Forensique — CAS-IN</title>
+<meta name="description" content="Industrial Control Systems · Modèle Purdue · Modbus/DNP3/IEC 61850 · NSM ICS · IR Jump Bag · Spécificités Suisse (LIE, OFCS)">
+<link rel="stylesheet" href="../style/fiche_style.css">
+
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">SYSTÈMES INDUSTRIELS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Plateformes spécialisées</span>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">ICS/SCADA Forensique</span>
+  </div>
+</div>
+
+<div class="page">
+  <div class="header">
+    <div class="badge">⚙️ Industrial Control Systems</div>
+    <h1>ICS/SCADA Forensique</h1>
+  </div>
+
+  <div class="info">
+    ⚠️ <strong>Différence fondamentale avec l'IT</strong> : un incident ICS peut entraîner des <strong>dégâts physiques, des risques pour la sécurité humaine et environnementale</strong>. La réponse sur incident est un effort joint entre cyber-analystes, ingénieurs procédés, opérateurs, et architectes réseau. La <strong>safety</strong> (sécurité physique) prime toujours sur la <strong>security</strong> (cybersécurité).
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       SCHÉMA — MODÈLE PURDUE
+       ════════════════════════════════════════════════════════════ -->
+  <div class="schema">
+    <div class="schema-title">🏭 Modèle Purdue (ISA-95) — architecture de référence ICS</div>
+    <div class="schema-sub">DE L'IT (NIVEAU 5) AU PROCÉDÉ PHYSIQUE (NIVEAU 0)</div>
+    <svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Modèle Purdue">
+      <defs>
+        <marker id="arr-purdue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <polygon points="0,0 10,3 0,6" fill="#7ab8ff"/>
+        </marker>
+      </defs>
+      <!-- Niveaux IT (haut) -->
+      <rect x="20" y="20" width="680" height="40" rx="6" fill="#1e293b" stroke="#7ab8ff"/>
+      <text x="360" y="45" text-anchor="middle" fill="#7ab8ff" font-size="13" font-weight="700">Niveau 5 — Réseau d'entreprise (ERP, mail, web, AD)</text>
+
+      <rect x="20" y="70" width="680" height="40" rx="6" fill="#1e293b" stroke="#7ab8ff"/>
+      <text x="360" y="95" text-anchor="middle" fill="#7ab8ff" font-size="13" font-weight="700">Niveau 4 — DMZ industrielle (historian, jump server, Patch server)</text>
+
+      <!-- Frontière IT/OT -->
+      <line x1="20" y1="125" x2="700" y2="125" stroke="#ff6b9d" stroke-width="2" stroke-dasharray="6,4"/>
+      <text x="360" y="120" text-anchor="middle" fill="#ff6b9d" font-size="10" font-weight="700">═══ FRONTIÈRE IT / OT — chokepoint critique pour NSM et IR ═══</text>
+
+      <!-- Niveaux OT -->
+      <rect x="20" y="135" width="680" height="40" rx="6" fill="#1f2937" stroke="#fbbf24"/>
+      <text x="360" y="160" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="700">Niveau 3 — Opérations site (MES, batch control, supervision globale)</text>
+
+      <rect x="20" y="185" width="680" height="40" rx="6" fill="#1f2937" stroke="#fbbf24"/>
+      <text x="360" y="210" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="700">Niveau 2 — Supervision (HMI, SCADA, Engineering Workstation)</text>
+
+      <rect x="20" y="235" width="680" height="40" rx="6" fill="#1f2937" stroke="#f59e0b"/>
+      <text x="360" y="260" text-anchor="middle" fill="#f59e0b" font-size="13" font-weight="700">Niveau 1 — Contrôle (PLC, RTU, DCS controllers)</text>
+
+      <rect x="20" y="285" width="680" height="40" rx="6" fill="#1f2937" stroke="#ef4444"/>
+      <text x="360" y="310" text-anchor="middle" fill="#ef4444" font-size="13" font-weight="700">Niveau 0 — Procédé physique (capteurs, vannes, moteurs, actionneurs)</text>
+
+      <text x="360" y="350" text-anchor="middle" fill="#94a3b8" font-size="10">Plus on descend, plus une compromission a un impact PHYSIQUE direct (safety, environnement)</text>
+    </svg>
+    <div class="schema-legend">
+      <div class="lg-item"><span class="lg-dot" style="background:#7ab8ff"></span>IT — données &amp; business</div>
+      <div class="lg-item"><span class="lg-dot" style="background:#fbbf24"></span>Supervision OT — opérations</div>
+      <div class="lg-item"><span class="lg-dot" style="background:#ef4444"></span>Procédé physique — safety critique</div>
+    </div>
+  </div>
+
+  <h2 class="sec-title" id="protocoles">📡 Protocoles industriels clés</h2>
+
+  <div class="page-wrap">
+    <div class="tool-card card-blue">
+      <div class="tool-name">Modbus TCP <span style="font-size:.65rem;color:var(--muted)">port 502</span></div>
+      <code class="tool-cmd">tshark -Y "modbus" -r capture.pcap</code>
+      <div class="tool-note">Protocole le plus répandu (1979, Modicon). Aucune authentification, aucun chiffrement par défaut. Function Code 5 = Force Single Coil (déclencheur d'actionneur). Wireshark a un excellent dissector intégré. Dans un PCAP, identifier <strong>HMI ↔ PLC</strong> par les patterns request/response.</div>
+    </div>
+
+    <div class="tool-card card-cyan">
+      <div class="tool-name">DNP3 <span style="font-size:.65rem;color:var(--muted)">port 20000</span></div>
+      <code class="tool-cmd">tshark -Y "dnp3" -r capture.pcap</code>
+      <div class="tool-note">Distributed Network Protocol — utilisé surtout dans l'énergie (smart grids, postes électriques). Supporte l'authentification Secure Authentication v5 (rare en pratique). Reconnaissable au pattern octet de start <code>0x05 0x64</code>.</div>
+    </div>
+
+    <div class="tool-card card-green">
+      <div class="tool-name">IEC 61850 <span style="font-size:.65rem;color:var(--muted)">multicast L2</span></div>
+      <code class="tool-cmd">tshark -Y "goose || sv" -r capture.pcap</code>
+      <div class="tool-note">Standard IEC pour postes électriques (Suisse : Swissgrid). GOOSE = trame multicast L2 ultra-rapide (< 4 ms) pour protection. SV = Sampled Values (échantillons de mesure 4 kHz). <strong>Pas de routage</strong> — confinés à un VLAN.</div>
+    </div>
+
+    <div class="tool-card card-purple">
+      <div class="tool-name">OPC-UA <span style="font-size:.65rem;color:var(--muted)">port 4840</span></div>
+      <code class="tool-cmd">tshark -Y "opcua" -r capture.pcap</code>
+      <div class="tool-note">Protocole moderne, sécurisé par design (TLS, signature, AES). Recommandé par BSI/IEC 62443. Coexiste avec Modbus en pratique sur les sites en transition. Détection de tunneling possible via l'analyse SecureChannel.</div>
+    </div>
+
+    <div class="tool-card card-gold">
+      <div class="tool-name">EtherNet/IP <span style="font-size:.65rem;color:var(--muted)">ports 44818 + 2222 UDP</span></div>
+      <code class="tool-cmd">tshark -Y "enip || cip" -r capture.pcap</code>
+      <div class="tool-note">Allen-Bradley/Rockwell — implicite, pas de lien avec Internet IP. CIP (Common Industrial Protocol) encapsulé. Souvent en environnements automobile, agro, fabrication US.</div>
+    </div>
+
+    <div class="tool-card card-red">
+      <div class="tool-name">S7comm <span style="font-size:.65rem;color:var(--muted)">port 102</span></div>
+      <code class="tool-cmd">tshark -Y "s7comm" -r capture.pcap</code>
+      <div class="tool-note">Siemens propriétaire (S7-300/400/1200/1500). Pas d'authentification jusqu'à S7-1500 récents. Stuxnet (2010) ciblait spécifiquement S7-300/400 via injection de DB et OB. Ports 102 (TPKT/COTP) et 4840 (OPC-UA) coexistent souvent.</div>
+    </div>
+  </div>
+
+  <h2 class="sec-title" id="nsm-ics">🔍 Network Security Monitoring ICS</h2>
+
+  <div class="card card-blue">
+    <h3>Méthodes de capture passive</h3>
+    <p>L'ICS NSM est <strong>strictement passif</strong> — toute action active risque de perturber le procédé. Deux options :</p>
+    <ul>
+      <li><strong>Network TAP</strong> (hardware) — duplique le trafic en hardware, <strong>fail-open</strong> obligatoire (si le TAP plante, le trafic passe encore). Installation : exige une <strong>fenêtre d'arrêt</strong>.</li>
+      <li><strong>Port SPAN</strong> (mirror sur switch managé) — pas d'arrêt requis, mais peut <strong>perdre des paquets</strong> si CPU/RAM du switch saturés. Activer un VLAN à la fois.</li>
+    </ul>
+  </div>
+
+  <div class="card card-green">
+    <h3>Configuration SPAN typique (Cisco IOS)</h3>
+    <code class="tool-cmd"># monitor session 1 source interface gi1/1 both
+# monitor session 1 destination interface gi1/2
+# show monitor all</code>
+    <p style="font-size:.85rem;margin-top:.5rem">Capture bidirectionnelle de <strong>gi1/1</strong> vers la sonde NSM connectée à <strong>gi1/2</strong>. Adapter aux conventions du fabricant (Hirschmann, Moxa, Stratix, etc.).</p>
+  </div>
+
+  <div class="card card-orange">
+    <h3>Niveau de capture : 5-tuple vs full packet</h3>
+    <table class="tbl">
+      <thead><tr><th>Type</th><th>Contenu</th><th>Stockage</th><th>Cas d'usage</th></tr></thead>
+      <tbody>
+        <tr><td>5-tuple IPFIX</td><td>IP src/dst, port src/dst, proto</td><td>Faible (~1 % du PCAP)</td><td>Détection anomalies à long terme</td></tr>
+        <tr><td>Full Packet Capture</td><td>Tout le payload</td><td>Élevé (~10-100 GB/jour)</td><td>Forensique post-incident, extraction fichiers</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:.85rem;margin-top:.5rem"><strong>Stratégie pragmatique</strong> : IPFIX en continu sur tous les niveaux, full PCAP sur les chokepoints (frontière IT/OT, autour HMI critiques) avec rotation 7-30 jours.</p>
+  </div>
+
+  <h2 class="sec-title" id="detection">🚨 Règles de détection ICS (Suricata/Snort pseudocode)</h2>
+
+  <div class="card card-purple">
+    <h3>Communications interdites vers PLC</h3>
+    <code class="tool-cmd">alert tcp !$Modbus_HMI any -> $Modbus_PLC any \
+  (msg:"COMMS DIRECTES VERS PLC NON-HMI"; sid:1000001;)</code>
+    <p style="font-size:.85rem;margin-top:.5rem">En production normale, <strong>seul le HMI</strong> doit communiquer avec le PLC. Toute autre source = scan, exfiltration, ou pivot d'attaquant.</p>
+  </div>
+
+  <div class="card card-purple">
+    <h3>Scan/usage Modbus sur réseau qui n'en a pas</h3>
+    <code class="tool-cmd">alert tcp any any -> any 502 \
+  (msg:"SCAN OU USAGE MODBUS-TCP NON ATTENDU"; sid:1000002;)</code>
+    <p style="font-size:.85rem;margin-top:.5rem">Si ton inventaire ne liste aucun équipement Modbus, toute connexion port 502 est suspecte (recon).</p>
+  </div>
+
+  <div class="card card-purple">
+    <h3>Connexion vers C2 connu</h3>
+    <code class="tool-cmd">alert tcp any any -> [evil_c2_ip] any \
+  (msg:"CONNEXION VERS C2 INDUSTROYER/PIPEDREAM"; sid:1000003;)</code>
+    <p style="font-size:.85rem;margin-top:.5rem">Compléter avec les IOC publiés par les CERT sectoriels (ICS-CERT, MELANI/NCSC en Suisse).</p>
+  </div>
+
+  <h2 class="sec-title" id="ir-jumpbag">🎒 ICS IR Jump Bag</h2>
+
+  <div class="info">
+    Le jump bag ICS est <strong>physique</strong> — souvent dans une mallette roulante stockée sur site. Il contient des outils utilisables même quand l'infrastructure est compromise (mode avion forcé).
+  </div>
+
+  <div class="page-wrap">
+    <div class="card card-cyan">
+      <h3>🛠️ Outils techniques</h3>
+      <ul>
+        <li><strong>Acquisition mémoire</strong> prioritaire (winpmem, FTK Imager Lite)</li>
+        <li>Laptops avec <strong>Security Onion</strong>, <strong>REMnux</strong>, <strong>SIFT Workstation</strong></li>
+        <li>Outils malware : statique (PE Studio, CFF Explorer) + sandbox</li>
+        <li><strong>Hashes</strong> de logiques/configs PLC <em>de référence</em> (signature avant incident)</li>
+        <li>Images baseline des assets critiques</li>
+        <li>Wireshark + dissectors ICS (Modbus, DNP3, IEC 61850, S7comm)</li>
+      </ul>
+    </div>
+
+    <div class="card card-orange">
+      <h3>🎒 Matériel physique</h3>
+      <ul>
+        <li>Câbles de conversion (USB ↔ Serial, USB ↔ RS-485)</li>
+        <li><strong>Radio handheld</strong> hors-bande (pas de réseau IP)</li>
+        <li>USB et disques <strong>forensiquement propres</strong></li>
+        <li>EPI safety (casque, chaussures, gilet)</li>
+        <li>Certificats de formation safety du site</li>
+        <li>Caméra numérique <strong>sans métadonnées GPS</strong></li>
+      </ul>
+    </div>
+
+    <div class="card card-red">
+      <h3>📞 Contacts &amp; documentation</h3>
+      <ul>
+        <li>Contacts <strong>safety</strong>, ingénieurs procédé, intégrateurs</li>
+        <li>Schémas réseau imprimés (papier, pas PDF !)</li>
+        <li>Playbooks IR ICS imprimés</li>
+        <li>Numéros d'astreinte fournisseurs (Siemens, Schneider, ABB, etc.)</li>
+        <li>Coordonnées MELANI/NCSC Suisse en cas d'incident IIC</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2 class="sec-title" id="roles">👥 Rôles dans l'IR ICS</h2>
+
+  <table class="tbl">
+    <thead>
+      <tr><th>Rôle</th><th>Responsabilités</th><th>Profil typique</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>IR Director</strong></td>
+        <td>Interface direction, décisions business/safety, allocation ressources</td>
+        <td>RSSI / Direction sécurité site</td>
+      </tr>
+      <tr>
+        <td><strong>Lead Responder</strong></td>
+        <td>Orchestration technique, triage rapide, timeline analysis, advice au Director</td>
+        <td>Expert DFIR senior</td>
+      </tr>
+      <tr>
+        <td><strong>Incident Handlers</strong></td>
+        <td>Acquisition forensique, scoping, modifications systèmes/assets</td>
+        <td>Cyber + ingénieurs ICS</td>
+      </tr>
+      <tr>
+        <td><strong>Fire &amp; Safety</strong></td>
+        <td>Premiers secours physiques, plan d'évacuation, gestion effets externes</td>
+        <td>Pompiers d'usine, sécurité site</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 class="sec-title" id="suisse">🇨🇭 Spécificités suisses</h2>
+
+  <div class="card card-red">
+    <h3>Cadre légal IIC (Infrastructures d'importance critique)</h3>
+    <ul>
+      <li><strong>Loi sur la sécurité de l'information (LSI)</strong>, art. 73-78 — devoir d'annonce des cyberincidents pour les exploitants d'IIC.</li>
+      <li><strong>OFCS</strong> (Office fédéral de la cybersécurité) — successeur du NCSC depuis 2024 — est l'autorité de signalement.</li>
+      <li>Délai d'annonce : <strong>24 heures</strong> à compter de la connaissance de l'incident (loi du 1<sup>er</sup> avril 2025).</li>
+      <li>Secteurs IIC : énergie (Swissgrid, BKW, Axpo), eau, transports (CFF), télécoms (Swisscom), santé, finance.</li>
+    </ul>
+  </div>
+
+  <div class="card card-blue">
+    <h3>Coopération supra-cantonale</h3>
+    <p>Pour des incidents touchant plusieurs cantons (par ex. cascade sur stations d'épuration), <strong>fedpol</strong> et le <strong>Ministère public de la Confédération (MPC)</strong> peuvent ouvrir une enquête. Voir aussi <a href="autorites_competences_ch.html">Autorités &amp; compétences CH</a>.</p>
+  </div>
+
+  <h2 class="sec-title" id="practice">🎯 IR ICS — En pratique</h2>
+
+  <div class="prereq-block">
+    <div class="prereq-row">
+      <div class="prereq-label">Étape 1 — Triage</div>
+      <div class="prereq-pill">Compare hashes config/logique PLC vs baseline</div>
+      <div class="prereq-pill">Cherche IOC (IP, hash, comportement) dans logs</div>
+      <div class="prereq-pill">Acquisition mémoire en priorité (volatile !)</div>
+    </div>
+    <div class="prereq-row">
+      <div class="prereq-label">Étape 2 — Containment</div>
+      <div class="prereq-pill">Bascule en mode <strong>manuel</strong> si possible (opérateur prend le contrôle)</div>
+      <div class="prereq-pill">Bloque le C2 (firewall périmètre)</div>
+      <div class="prereq-pill">Désactive les accès distants vendeurs</div>
+    </div>
+    <div class="prereq-row">
+      <div class="prereq-label">Étape 3 — Eradication</div>
+      <div class="prereq-pill">⚠️ <strong>Uniquement</strong> quand opérations/safety le permettent</div>
+      <div class="prereq-pill">Re-flash PLC depuis baseline signée</div>
+      <div class="prereq-pill">Reconstruction HMI/SCADA depuis ISO certifié</div>
+    </div>
+    <div class="prereq-row">
+      <div class="prereq-label">Étape 4 — Lessons learned</div>
+      <div class="prereq-pill">Mise à jour ICS IR Plan</div>
+      <div class="prereq-pill">Tabletop trimestriel obligatoire</div>
+      <div class="prereq-pill">Gap analysis NSM &amp; controls</div>
+    </div>
+  </div>
+
+  <h2 class="sec-title" id="pieges">⚠️ Pièges spécifiques ICS</h2>
+
+  <div class="card card-red">
+    <ul>
+      <li><strong>Ne JAMAIS scanner activement</strong> un PLC en production — un nmap mal configuré peut faire crasher un PLC et arrêter une chaîne entière (cas documentés Allen-Bradley, Siemens).</li>
+      <li><strong>Pas de mise à jour antivirus en plein procédé</strong> : un EDR mal calibré peut quarantainer un fichier de configuration et planter un HMI.</li>
+      <li><strong>Legacy devices</strong> : nombreux PLC tournent depuis 15-20 ans avec des OS qui ne reçoivent plus de patches. La sécurité repose sur l'isolement réseau, pas sur le patching.</li>
+      <li><strong>Vendor lock-in</strong> : Siemens, Rockwell, Schneider imposent souvent des outils propriétaires — la collaboration vendeur est vitale en IR.</li>
+      <li><strong>Safety &gt; Security</strong> : si une action de containment risque de provoquer un accident, on ne la fait <strong>pas</strong>. Documenter le compromis.</li>
+    </ul>
+  </div>
+
+  <h2 class="sec-title" id="quiz">💊 Auto-évaluation</h2>
+
+  <div class="page-wrap">
+    <div class="quiz-wrap">
+      <div class="quiz-q">Tu interviens sur un incident sur un poste électrique. Le RSSI demande de "scanner toutes les IP du VLAN OT pour trouver le malware". Que réponds-tu ?<small>ICS · Niveau : moyen</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer"><strong>Refuser et expliquer.</strong> Un scan actif (même nmap -sT) peut crasher un PLC en production et provoquer un déclenchement non sollicité (perte de courant, accident). À la place : capturer passivement le trafic via SPAN/TAP, comparer hashes des configs PLC à la baseline, analyser logs HMI. Toujours préférer le passif au risque opérationnel.</div>
+    </div>
+
+    <div class="quiz-wrap">
+      <div class="quiz-q">Sur un capture PCAP en provenance d'une chaîne de production, tu identifies du trafic Modbus TCP entre <code>10.20.0.5</code> (HMI connu) et <code>10.20.0.42</code>. Plus tard tu vois aussi du trafic Modbus depuis <code>10.20.0.99</code> (jamais vu) vers <code>10.20.0.42</code>. Que conclus-tu ?<small>ICS · Niveau : facile</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer"><strong>Très probable compromission ou pivot d'attaquant.</strong> En ICS, le PLC ne devrait recevoir d'ordres que d'un HMI inventorié. Une nouvelle source qui parle Modbus = soit poste légitime non documenté (corriger l'inventaire), soit poste compromis utilisé pour reconnaissance ou injection. Action immédiate : isoler <code>10.20.0.99</code> via VLAN, capturer ses communications, analyser la machine.</div>
+    </div>
+
+    <div class="quiz-wrap">
+      <div class="quiz-q">Pourquoi est-il <strong>obligatoire</strong> qu'un Network TAP installé sur une ligne de communication ICS soit <strong>fail-open</strong> ?<small>ICS · Niveau : facile</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer">Si le TAP tombe en panne en mode <strong>fail-closed</strong>, il <strong>coupe la communication</strong> entre le HMI et le PLC, ce qui peut déclencher un arrêt d'urgence ou une perte de visibilité opérateur. En <strong>fail-open</strong>, la panne du TAP n'affecte pas le trafic légitime — la sonde NSM perd juste sa visibilité, ce qui est un compromis acceptable (safety &gt; security).</div>
+    </div>
+  </div>
+
+  <div class="exam-tip">
+    <div class="exam-tip-title">🎓 Exam Tip — ICS Forensique</div>
+    <p><strong>Modèle Purdue</strong> : 5 niveaux (5 = ERP, 0 = procédé physique). Frontière IT/OT entre N4 et N3 = chokepoint NSM critique.</p>
+    <p><strong>Protocoles</strong> : Modbus (port 502, sans auth) · DNP3 (énergie) · IEC 61850 (postes électriques, GOOSE/SV) · OPC-UA (moderne, TLS) · S7comm (Siemens, port 102) · EtherNet/IP (Rockwell)</p>
+    <p><strong>Attaques historiques</strong> : Stuxnet (2010, S7) · BlackEnergy (2015, Ukraine) · Industroyer (2016) · TRITON/Trisis (2017, Schneider Triconex SIS) · CrashOverride · PipeDream (2022, multi-vendeur)</p>
+    <p><strong>Standards</strong> : IEC 62443 (cybersécurité ICS) · NERC CIP (énergie US) · NIS2 (UE) · ISO/IEC 27019 (énergie)</p>
+    <p><strong>Suisse</strong> : OFCS (autorité), LSI art. 73-78 (annonce 24 h obligatoire), IIC = énergie/eau/transports/télécoms/santé/finance.</p>
+    <p><strong>Règle d'or IR ICS</strong> : <strong>Safety &gt; Security</strong>. Ne jamais containment au prix d'un accident physique.</p>
+  </div>
+
+  <div class="related-pill">
+    🔗 Voir aussi :
+    <a href="reseau.html">Réseau</a> ·
+    <a href="incident_response.html">Incident Response</a> ·
+    <a href="autorites_competences_ch.html">Autorités CH</a> ·
+    <a href="iot_forensique.html">IoT Forensique</a> ·
+    <a href="suisse.html">Cadre légal CH</a>
+  </div>
+
+</div>
+
+<div class="footer">
+  <p>CAS-IN · Investigation Numérique — Forensique Suisse</p>
+</div>
+
+<script>
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){
+    var d=document.documentElement;
+    bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';
+  },{passive:true});
+  var bt=document.getElementById('back-top')||document.querySelector('.back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+  document.querySelectorAll('.collapsible-header').forEach(function(h){
+    h.addEventListener('click',function(){h.closest('.collapsible').classList.toggle('open');});
+  });
+  document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+      ans.classList.toggle('visible');
+      btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+    });
+  });
+  document.querySelectorAll('.tool-cmd,.copy-code,.vol-cmd').forEach(function(el){
+    el.title='Cliquer pour copier';
+    el.style.cursor='pointer';
+    el.addEventListener('click',function(){
+      navigator.clipboard&&navigator.clipboard.writeText(el.innerText.trim()).then(function(){
+        var o=el.style.background;el.style.background='rgba(48,232,138,.2)';
+        setTimeout(function(){el.style.background=o;},700);
+      });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

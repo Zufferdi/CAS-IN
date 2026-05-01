@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Magic Bytes &amp; Signatures Fichiers — CAS-IN</title>
+<meta name="description" content="Magic numbers / file signatures · Identification de format · Carving · Outils file/binwalk/xxd · Regex grep/sed/awk pour forensique">
+<link rel="stylesheet" href="../style/fiche_style.css">
+
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">FORMATS &amp; IDENTIFICATION</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Acquisition &amp; Outils</span>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Magic Bytes &amp; Signatures</span>
+  </div>
+</div>
+
+<div class="page">
+  <div class="header">
+    <div class="badge">🔢 File Signatures</div>
+    <h1>Magic Bytes &amp; Signatures Fichiers</h1>
+  </div>
+
+  <div class="info">
+    🪄 <strong>Magic bytes</strong> (ou <strong>magic numbers</strong>, ou <strong>file signatures</strong>) : les premiers octets d'un fichier qui identifient son <strong>vrai format</strong>, indépendamment de l'extension. C'est la <strong>première chose à vérifier</strong> en forensique : un attaquant peut renommer <code>malware.exe</code> en <code>image.jpg</code>, mais les magic bytes ne mentent pas.
+  </div>
+
+  <h2 class="sec-title" id="table">📋 Tableau des signatures principales</h2>
+
+  <div class="card card-blue">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Format</th>
+          <th>Magic (hex)</th>
+          <th>ASCII</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>PNG</strong></td><td><code>89 50 4E 47 0D 0A 1A 0A</code></td><td><code>.PNG\r\n.\n</code></td><td>Les 4 octets après <code>89</code> = "PNG". Suivis de fragments IHDR/IDAT/IEND.</td></tr>
+        <tr><td><strong>JPEG/JPG</strong></td><td><code>FF D8 FF E0</code> (JFIF)</td><td>—</td><td>Variantes : <code>FF D8 FF E1</code> (Exif) · <code>FF D8 FF FE</code> (Comment). Toujours commence par <code>FF D8</code>, finit par <code>FF D9</code>.</td></tr>
+        <tr><td><strong>GIF</strong></td><td><code>47 49 46 38 39 61</code></td><td><code>GIF89a</code></td><td>Variante <code>GIF87a</code> rare aujourd'hui. ASCII directement lisible.</td></tr>
+        <tr><td><strong>BMP</strong></td><td><code>42 4D</code></td><td><code>BM</code></td><td>2 octets seulement. Le 3<sup>e</sup>/4<sup>e</sup> = taille fichier en LE.</td></tr>
+        <tr><td><strong>PDF</strong></td><td><code>25 50 44 46 2D</code></td><td><code>%PDF-</code></td><td>Suivi de la version : <code>%PDF-1.7</code> par ex. Footer : <code>%%EOF</code>.</td></tr>
+        <tr><td><strong>ZIP / DOCX / XLSX / JAR</strong></td><td><code>50 4B 03 04</code></td><td><code>PK..</code></td><td>"PK" = initiales de Phil Katz, créateur du format. Office Open XML = ZIP renommé.</td></tr>
+        <tr><td><strong>RAR</strong></td><td><code>52 61 72 21 1A 07</code></td><td><code>Rar!..</code></td><td>RAR v1.5+ — RAR5 ajoute <code>00</code> à la fin (7 octets).</td></tr>
+        <tr><td><strong>7z</strong></td><td><code>37 7A BC AF 27 1C</code></td><td><code>7z....</code></td><td>—</td></tr>
+        <tr><td><strong>GZIP</strong></td><td><code>1F 8B 08</code></td><td>—</td><td>Le 3<sup>e</sup> octet (<code>08</code>) = method DEFLATE. tar.gz combine tar + gzip.</td></tr>
+        <tr><td><strong>TAR</strong></td><td><code>75 73 74 61 72</code> à offset <code>0x101</code></td><td><code>ustar</code></td><td>Pas de magic en début ! Magic à l'<strong>offset 257</strong>. Sinon, archive sans magic.</td></tr>
+        <tr><td><strong>EXE/DLL (PE)</strong></td><td><code>4D 5A</code></td><td><code>MZ</code></td><td>"MZ" = initiales de Mark Zbikowski. À 0x3C : offset du header PE (<code>50 45 00 00</code> = "PE\0\0").</td></tr>
+        <tr><td><strong>ELF (Linux)</strong></td><td><code>7F 45 4C 46</code></td><td><code>.ELF</code></td><td>Octet 5 = classe (32/64 bits). Octet 6 = endian.</td></tr>
+        <tr><td><strong>Mach-O (macOS)</strong></td><td><code>FE ED FA CE</code> (32b)<br><code>FE ED FA CF</code> (64b)<br><code>CA FE BA BE</code> (Universal)</td><td>—</td><td>"CAFEBABE" = aussi le magic Java <code>.class</code> ! Distinguer par contexte.</td></tr>
+        <tr><td><strong>Java .class</strong></td><td><code>CA FE BA BE</code></td><td>—</td><td>Identique à Mach-O Universal. Désambiguïser : <code>CA FE BA BE</code> seul suivi de version Java vs. plusieurs sous-binaires Mach-O.</td></tr>
+        <tr><td><strong>SQLite 3</strong></td><td><code>53 51 4C 69 74 65 20 66 6F 72 6D 61 74 20 33 00</code></td><td><code>SQLite format 3.</code></td><td>16 octets ASCII en clair. Bases de données browser, SMS Android, etc.</td></tr>
+        <tr><td><strong>MS Office legacy (DOC/XLS/PPT)</strong></td><td><code>D0 CF 11 E0 A1 B1 1A E1</code></td><td>—</td><td>OLE2 / Compound File Binary Format. Pré-2007. Aussi : MSI, Outlook MSG.</td></tr>
+        <tr><td><strong>MP3 (ID3v2)</strong></td><td><code>49 44 33</code></td><td><code>ID3</code></td><td>Tag ID3 en début. Sans tag : commence directement par frame audio (sync word <code>FF Ex</code>).</td></tr>
+        <tr><td><strong>MP4 / MOV</strong></td><td><code>?? ?? ?? ?? 66 74 79 70</code></td><td><code>....ftyp</code></td><td>4 octets de taille puis "ftyp" à offset 4. Brand <code>isom</code>, <code>mp42</code>, <code>qt</code>...</td></tr>
+        <tr><td><strong>WAV</strong></td><td><code>52 49 46 46 ?? ?? ?? ?? 57 41 56 45</code></td><td><code>RIFF....WAVE</code></td><td>Conteneur RIFF. Idem AVI : <code>RIFF....AVI&nbsp;</code>.</td></tr>
+        <tr><td><strong>BitLocker</strong></td><td><code>2D 46 56 45 2D 46 53 2D</code></td><td><code>-FVE-FS-</code></td><td>Volume chiffré BitLocker. Reconnaissance immédiate sur disque saisi.</td></tr>
+        <tr><td><strong>VeraCrypt</strong></td><td>Aucun magic en clair</td><td>—</td><td>Conteneur indistinguable de données aléatoires (entropie ≈ 1). Détection par <strong>absence</strong> de structure et taille fixe.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sec-title" id="cas-ntfs-ext">🎯 Cas spéciaux : magic à offset non-zéro</h2>
+
+  <div class="card card-orange">
+    <h3>Systèmes de fichiers — magic dans le superblock/boot sector</h3>
+    <table class="tbl">
+      <thead><tr><th>FS</th><th>Magic</th><th>Offset</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><strong>NTFS</strong></td><td><code>4E 54 46 53 20 20 20 20</code> (<code>NTFS&nbsp;&nbsp;&nbsp;&nbsp;</code>)</td><td>0x03 du boot sector</td><td>Précédé de <code>EB 52 90</code> (jump instruction).</td></tr>
+        <tr><td><strong>FAT12/16/32</strong></td><td><code>"FAT12&nbsp;&nbsp;&nbsp;"</code> / <code>"FAT16&nbsp;&nbsp;&nbsp;"</code> / <code>"FAT32&nbsp;&nbsp;&nbsp;"</code></td><td>0x36 (FAT12/16) ou 0x52 (FAT32)</td><td>Label texte, pas une vraie signature crypto. Toujours vérifier avec BPB.</td></tr>
+        <tr><td><strong>exFAT</strong></td><td><code>EXFAT&nbsp;&nbsp;&nbsp;</code> (8 ASCII)</td><td>0x03</td><td>Idem NTFS pour la position.</td></tr>
+        <tr><td><strong>EXT2/3/4</strong></td><td><code>53 EF</code> (LE → 0xEF53)</td><td>0x438 (= superblock @ 0x400 + offset 0x38)</td><td>Le superblock est à 1024 octets du début de la partition.</td></tr>
+        <tr><td><strong>HFS+</strong></td><td><code>48 2B</code> (BE = "H+")</td><td>0x400 (Volume Header)</td><td>Big Endian (héritage Apple PowerPC).</td></tr>
+        <tr><td><strong>APFS</strong></td><td><code>4E 58 53 42</code> (= "NXSB", BE)</td><td>0x20 du Container Superblock</td><td>"NX Superblock". Apple File System (macOS 10.13+).</td></tr>
+        <tr><td><strong>GPT</strong></td><td><code>EFI PART</code> (8 ASCII)</td><td>LBA 1 = 0x200 du disque</td><td>LBA 0 = MBR Protective. Backup à la fin du disque.</td></tr>
+        <tr><td><strong>MBR</strong></td><td><code>55 AA</code></td><td>0x1FE (= 510)</td><td>2 octets de signature "boot". Présent aussi à la fin de chaque boot sector FAT/NTFS.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sec-title" id="outils">🛠️ Outils d'identification</h2>
+
+  <div class="page-wrap">
+    <div class="tool-card card-blue">
+      <div class="tool-name">file <span style="font-size:.65rem;color:var(--muted)">Linux/macOS</span></div>
+      <code class="tool-cmd">file inconnu.bin</code>
+      <div class="tool-note">Outil universel basé sur la base <code>/usr/share/file/magic</code>. Reconnaît &gt; 1500 formats. Mode strict : <code>file --mime-type</code>. Recurse : <code>find /path -type f -exec file {} \;</code>.</div>
+    </div>
+
+    <div class="tool-card card-cyan">
+      <div class="tool-name">xxd <span style="font-size:.65rem;color:var(--muted)">hexdump tool</span></div>
+      <code class="tool-cmd">xxd suspect.bin | head</code>
+      <div class="tool-note">Affiche les premiers octets en hex + ASCII. Beaucoup plus lisible que <code>hexdump -C</code>. Inverse : <code>xxd -r</code> reconstruit le binaire.</div>
+    </div>
+
+    <div class="tool-card card-green">
+      <div class="tool-name">binwalk <span style="font-size:.65rem;color:var(--muted)">scan multi-magic</span></div>
+      <code class="tool-cmd">binwalk firmware.bin</code>
+      <div class="tool-note">Scanne TOUT le fichier et détecte les magic bytes <strong>imbriqués</strong>. Indispensable pour firmware, dump RAM, fichiers carving. Extraction : <code>binwalk -e</code>.</div>
+    </div>
+
+    <div class="tool-card card-purple">
+      <div class="tool-name">photorec <span style="font-size:.65rem;color:var(--muted)">data carving</span></div>
+      <code class="tool-cmd">photorec /dev/sdb</code>
+      <div class="tool-note">Carve les fichiers à partir des magic bytes sur un disque (même partition corrompue ou supprimée). Reconnaît &gt; 480 formats. De TestDisk family.</div>
+    </div>
+
+    <div class="tool-card card-gold">
+      <div class="tool-name">trid <span style="font-size:.65rem;color:var(--muted)">détection profonde</span></div>
+      <code class="tool-cmd">trid -ce inconnu</code>
+      <div class="tool-note">Approche probabiliste avec base de patterns &gt; 14 000 formats. Utile quand <code>file</code> donne "data" ou ne reconnaît pas.</div>
+    </div>
+
+    <div class="tool-card card-red">
+      <div class="tool-name">PowerShell <span style="font-size:.65rem;color:var(--muted)">Windows natif</span></div>
+      <code class="tool-cmd">Get-Content suspect.bin -Encoding Byte -TotalCount 16 |
+  ForEach-Object { '{0:X2}' -f $_ }</code>
+      <div class="tool-note">Lit les 16 premiers octets et les affiche en hex. Plus moderne : <code>Format-Hex -Path suspect.bin</code>.</div>
+    </div>
+  </div>
+
+  <h2 class="sec-title" id="regex">🔎 Regex pour parser les outputs forensiques</h2>
+
+  <div class="info">
+    Une fois qu'on a un dump (logs, mémoire, registres), on cherche des <strong>patterns</strong> : adresses IP, emails, hashes, base64, GUIDs. <code>grep</code>, <code>egrep</code>, <code>awk</code>, <code>sed</code> sont les outils universels.
+  </div>
+
+  <div class="card card-blue">
+    <h3>Patterns regex courants en forensique</h3>
+    <table class="tbl">
+      <thead><tr><th>Cible</th><th>Regex</th></tr></thead>
+      <tbody>
+        <tr><td>IPv4</td><td><code>\b(?:\d{1,3}\.){3}\d{1,3}\b</code></td></tr>
+        <tr><td>IPv6 (basique)</td><td><code>\b[0-9a-fA-F]{1,4}(:[0-9a-fA-F]{1,4}){7}\b</code></td></tr>
+        <tr><td>Email</td><td><code>[\w.+-]+@[\w-]+\.[\w.-]+</code></td></tr>
+        <tr><td>URL</td><td><code>https?://[^\s'"&lt;&gt;]+</code></td></tr>
+        <tr><td>MAC address</td><td><code>(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}</code></td></tr>
+        <tr><td>MD5</td><td><code>\b[a-fA-F0-9]{32}\b</code></td></tr>
+        <tr><td>SHA-1</td><td><code>\b[a-fA-F0-9]{40}\b</code></td></tr>
+        <tr><td>SHA-256</td><td><code>\b[a-fA-F0-9]{64}\b</code></td></tr>
+        <tr><td>Base64 (≥ 16 chars)</td><td><code>[A-Za-z0-9+/]{16,}={0,2}</code></td></tr>
+        <tr><td>GUID/UUID</td><td><code>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}</code></td></tr>
+        <tr><td>Carte bancaire (Luhn-naïf)</td><td><code>\b(?:\d[ -]?){13,19}\b</code></td></tr>
+        <tr><td>BTC address (P2PKH/P2SH)</td><td><code>\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sec-title" id="cli-tools">🐧 CLI Linux pour forensique</h2>
+
+  <div class="card card-purple">
+    <h3>grep / egrep — extraction de patterns</h3>
+    <code class="tool-cmd"># Recherche simple
+grep "John" addressbook.txt
+
+# Insensible à la casse + lignes contexte avant/après
+grep -i -B 2 -A 2 "password" config.log
+
+# Plusieurs patterns (OR)
+egrep "error|fail|crit" /var/log/syslog
+grep "error\|fail\|crit" /var/log/syslog
+
+# Reverse (lignes qui NE matchent PAS)
+grep -v "^#" config.txt   # supprime commentaires
+
+# Compter les hits
+grep -c "Failed login" auth.log
+
+# Recherche récursive dans dossier
+grep -rn "secret_key" /var/www/
+
+# Mode Perl regex (lookahead, etc.)
+grep -P "^\d{4}-\d{2}-\d{2}" log.txt</code>
+  </div>
+
+  <div class="card card-cyan">
+    <h3>awk — extraire des colonnes</h3>
+    <code class="tool-cmd"># Top 10 IP les plus fréquentes dans access.log
+awk '{print $1}' access.log | sort | uniq -c | sort -rn | head
+
+# Séparateur custom (':') puis colonne 7 (shell de chaque user)
+awk -F: '{print $1 " → " $7}' /etc/passwd
+
+# Filtrer puis afficher (équivalent SQL WHERE)
+awk -F: '$3 >= 1000 {print $1}' /etc/passwd  # users avec UID >= 1000
+
+# Calculer une somme
+awk '{sum += $5} END {print "Total bytes:", sum}' transfer.log</code>
+  </div>
+
+  <div class="card card-green">
+    <h3>sed — substitution</h3>
+    <code class="tool-cmd"># Première occurrence par ligne
+echo "hallo" | sed 's/a/e/'    # → hello
+
+# Globale (tout sur la ligne)
+sed 's/a/e/g' file > out
+
+# Anonymiser des IPs en masse
+sed -E 's/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/X.X.X.X/g' log.txt
+
+# Supprimer les commentaires + lignes vides d'un fichier conf
+sed '/^#/d; /^$/d' nginx.conf
+
+# Modification in-place (avec backup .bak)
+sed -i.bak 's/old/new/g' fichier.txt</code>
+  </div>
+
+  <div class="card card-orange">
+    <h3>sort + uniq — déduplication et statistiques</h3>
+    <code class="tool-cmd"># Trier puis dédupliquer
+sort access.log | uniq
+
+# Compter les occurrences (style histogram)
+sort | uniq -c | sort -rn
+
+# Lignes uniques (jamais dupliquées) — utile pour anomalies
+sort | uniq -u
+
+# Lignes en double (potentielles répétitions suspectes)
+sort | uniq -d
+
+# Ignorer les N premiers champs (par ex. timestamp variable)
+sort | uniq -f 2 -c</code>
+  </div>
+
+  <div class="card card-blue">
+    <h3>Combo classique : top user-agents suspects</h3>
+    <code class="tool-cmd">awk -F'"' '{print $6}' access.log | \
+  sort | uniq -c | sort -rn | head -20</code>
+    <p style="font-size:.85rem;margin-top:.5rem">Extrait le 6<sup>e</sup> champ entre guillemets (= User-Agent en log Apache/Nginx), trie, dédoublonne avec compteur, retient les 20 plus fréquents. Idéal pour repérer un scanner (souvent UA bizarre type "Mozilla/5.0 (compatible; bot/1.0)").</p>
+  </div>
+
+  <h2 class="sec-title" id="findstr">🪟 Windows : findstr (équivalent grep)</h2>
+
+  <div class="card card-purple">
+    <code class="tool-cmd"># Recherche insensible à la casse, regex
+findstr /i /r "password" config.txt
+
+# Plusieurs patterns
+findstr "error fail crit" log.txt   # OR par défaut
+
+# Lignes qui ne matchent PAS
+findstr /v "^#" config.txt
+
+# Mode regex étendu (équivalent grep -E partiel)
+findstr /r "^[0-9][0-9]*$" data.txt   # lignes purement numériques
+
+# Recherche récursive
+findstr /s /i "secret" C:\Users\*.txt</code>
+    <p style="font-size:.85rem;margin-top:.5rem">⚠️ <code>findstr</code> est <strong>moins puissant</strong> que <code>grep</code> : pas de lookahead, pas de classes Unicode, regex limité. En PowerShell, préférer <code>Select-String</code>.</p>
+  </div>
+
+  <h2 class="sec-title" id="quiz">💊 Auto-évaluation</h2>
+
+  <div class="page-wrap">
+    <div class="quiz-wrap">
+      <div class="quiz-q">Tu as un fichier <code>photo.jpg</code> de 8 MB qui ne s'ouvre pas. <code>xxd photo.jpg | head</code> donne :<br><code>00000000: 504b 0304 1400 0000 0800 ...</code><br>Que conclus-tu ?<small>Magic bytes · Niveau : facile</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer"><strong><code>50 4B 03 04</code> = "PK\x03\x04" = ZIP</strong>. Le fichier n'est PAS un JPEG (qui commencerait par <code>FF D8 FF</code>). Suspect classique : extension renommée pour cacher un payload (ZIP contenant un script malveillant), ou simple confusion d'extension. Renomme en <code>.zip</code>, ouvre, examine le contenu. Si plusieurs fichiers à l'intérieur dont un .exe ou un .lnk, niveau de suspicion très élevé.</div>
+    </div>
+
+    <div class="quiz-wrap">
+      <div class="quiz-q">Pourquoi est-il <strong>impossible</strong> de distinguer de manière sûre un fichier <strong>VeraCrypt</strong> d'un fichier de pure aléa ?<small>Crypto + magic · Niveau : moyen</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer">Par <strong>design cryptographique</strong>. VeraCrypt (et TrueCrypt avant lui) chiffre TOUT le conteneur, header inclus. Aucun magic byte n'est laissé en clair, pour offrir une <strong>plausible deniability</strong> : "ce fichier de 5 GB n'est pas un conteneur, c'est juste du bruit". Détection en pratique : (1) entropie de Shannon ≈ 1.0 sur tout le fichier, (2) taille caractéristique (multiple de 512), (3) contexte (fichier mystérieux nommé <code>backup.dat</code>...). C'est aussi pourquoi la défense d'un suspect peut être "je ne me souviens pas du mot de passe" — on ne peut pas prouver qu'il y a quelque chose dedans.</div>
+    </div>
+
+    <div class="quiz-wrap">
+      <div class="quiz-q">Construis une commande qui extrait <strong>les 10 IP les plus fréquentes</strong> dans <code>access.log</code> Apache, avec leur nombre d'occurrences.<small>Bash forensique · Niveau : moyen</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer"><code>awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -10</code><br><br>Décomposition :<br>• <code>awk '{print $1}'</code> : extrait la 1<sup>re</sup> colonne (= IP en format Apache combined log)<br>• <code>sort</code> : trie alphabétiquement (prérequis pour uniq)<br>• <code>uniq -c</code> : déduplique en préfixant par le nombre d'occurrences<br>• <code>sort -rn</code> : trie numériquement en ordre décroissant (-n = numeric, -r = reverse)<br>• <code>head -10</code> : garde les 10 premières lignes</div>
+    </div>
+  </div>
+
+  <div class="exam-tip">
+    <div class="exam-tip-title">🎓 Exam Tip — Magic Bytes &amp; Regex</div>
+    <p><strong>Top 10 magic à mémoriser</strong> : PNG (<code>89 50 4E 47</code>), JPEG (<code>FF D8 FF</code>), PDF (<code>25 50 44 46</code>), ZIP (<code>50 4B 03 04</code>), MZ/PE (<code>4D 5A</code>), ELF (<code>7F 45 4C 46</code>), GZIP (<code>1F 8B</code>), SQLite (<code>SQLite format 3</code>), MBR (<code>55 AA</code> à 0x1FE), GIF89a.</p>
+    <p><strong>FS magic à offset</strong> : EXT4 = <code>53 EF</code> @ 0x438 · NTFS = "NTFS    " @ 0x03 · HFS+ = "H+" @ 0x400 (BE) · GPT = "EFI PART" @ 0x200.</p>
+    <p><strong>Outils</strong> : <code>file</code> · <code>xxd</code> · <code>binwalk</code> (imbriqué) · <code>photorec</code> (carving) · <code>trid</code> (probabiliste).</p>
+    <p><strong>Regex hashes</strong> : MD5 = <code>[a-f0-9]{32}</code> · SHA-1 = <code>[a-f0-9]{40}</code> · SHA-256 = <code>[a-f0-9]{64}</code>.</p>
+    <p><strong>Combo bash</strong> : <code>awk | sort | uniq -c | sort -rn | head</code> = pattern incontournable pour stats top-N.</p>
+    <p><strong>Piège VeraCrypt</strong> : pas de magic = entropie ≈ 1 = plausible deniability cryptographique.</p>
+  </div>
+
+  <div class="related-pill">
+    🔗 Voir aussi :
+    <a href="formats.html">Formats fichiers</a> ·
+    <a href="data_carving.html">Data Carving</a> ·
+    <a href="hash.html">Hash &amp; intégrité</a> ·
+    <a href="cmd_windows_forensique.html">CMD Windows</a> ·
+    <a href="linux_forensique.html">Linux Forensique</a>
+  </div>
+
+  <p style="text-align:center;color:var(--muted);font-size:.8rem;margin-top:1.5rem">
+    🎯 <a href="../tp.html#magic" style="color:var(--cyan)">TP associé : Magic Numbers &amp; identification de format</a>
+  </p>
+
+</div>
+
+<div class="footer">
+  <p>CAS-IN · Investigation Numérique — Forensique Suisse</p>
+</div>
+
+<script>
+(function(){
+  var bar=document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll',function(){
+    var d=document.documentElement;
+    bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';
+  },{passive:true});
+  var bt=document.getElementById('back-top')||document.querySelector('.back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+  document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+      ans.classList.toggle('visible');
+      btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
+    });
+  });
+  document.querySelectorAll('.tool-cmd,.copy-code,.vol-cmd').forEach(function(el){
+    el.title='Cliquer pour copier';
+    el.style.cursor='pointer';
+    el.addEventListener('click',function(){
+      navigator.clipboard&&navigator.clipboard.writeText(el.innerText.trim()).then(function(){
+        var o=el.style.background;el.style.background='rgba(48,232,138,.2)';
+        setTimeout(function(){el.style.background=o;},700);
+      });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
