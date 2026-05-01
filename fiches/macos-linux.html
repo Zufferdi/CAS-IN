@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>macOS & Linux — CAS-IN Forensique</title>
-<meta name="description" content="Forensique macOS et Linux · Quarantine · FSEvents · LaunchDaemons · Crontabs · authorized_keys">
+<title>macOS & Linux — Vue comparative POSIX — CAS-IN Forensique</title>
+<meta name="description" content="Vue comparative macOS et Linux · Héritage Unix/POSIX · Hub de navigation vers les fiches forensiques approfondies">
 <meta name="theme-color" content="#0d1117">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,7 +27,7 @@
 <a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:0;z-index:999;padding:.5rem 1rem;background:var(--cyan);color:var(--bg);font-size:.8rem;border-radius:0 0 4px 0;text-decoration:none">Aller au contenu</a>
 <nav class="tn-nav" aria-label="Navigation fiche">
   <a href="index.html" class="tn-back">← Fiches</a>
-  <span class="tn-title">macOS & LINUX</span>
+  <span class="tn-title">macOS & LINUX — VUE COMPARATIVE</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
 <div class="page" style="padding-top:.5rem;padding-bottom:0">
@@ -38,8 +38,8 @@
     <span class="bc-sep">›</span>
     <a href="index.html#cat-systèmesspéciaux">Systèmes spéciaux</a>
     <span class="bc-sep">›</span>
-    <span class="bc-current">Macos-Linux</span>
-    <span class="read-time-badge">⏱ ~6 min</span>
+    <span class="bc-current">macOS & Linux — Vue comparative</span>
+    <span class="read-time-badge">⏱ ~3 min</span>
   </div>
 </div>
 <main id="main-content">
@@ -64,6 +64,7 @@
 <div class="prereq-block" style="margin-top:1rem">
   <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="acquisition.html" class="prereq-pill">📖 Acquisition</a><a href="apfs.html" class="prereq-pill">📖 APFS</a><a href="ext.html" class="prereq-pill">📖 EXT4</a></div>
   <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=fs" class="tp-pill">🧪 🔍 Identifier le FS</a></div>
+  <div class="prereq-row"><span class="prereq-label">Approfondir :</span><a href="macos_forensique.html" class="related-pill" style="border-color:rgba(0,229,204,.4);color:var(--cyan)">🍎 macOS Forensique →</a><a href="linux_forensique.html" class="related-pill" style="border-color:rgba(48,232,138,.4);color:var(--green)">🐧 Linux Forensique →</a></div>
   <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="apfs.html" class="related-pill">🔗 APFS</a><a href="hfs.html" class="related-pill">🔗 HFS+</a><a href="ext.html" class="related-pill">🔗 EXT4</a><a href="windows.html" class="related-pill">🔗 Windows artefacts</a></div>
 </div>
 
@@ -160,189 +161,47 @@
   </div>
 </div>
 
+<!-- Hub de navigation vers les fiches approfondies -->
 <div class="sec">
-<div class="ch-header">macOS — Artefacts et analyse</div>
-<table class="tbl">
-<thead><tr><th>Artefact</th><th>Chemin</th><th>Valeur forensique</th></tr></thead>
-<tbody>
-<tr class="hi"><td><strong>QuarantineEventsV2</strong></td><td>~/Library/Application Support/com.apple.LaunchServices/</td><td>URL source exacte de chaque téléchargement. Persist après suppression du fichier.</td></tr>
-<tr><td><strong>Historique Safari</strong></td><td>~/Library/Safari/History.db</td><td>SQLite. Downloads.plist & BrowserState.db persistent après effacement de l'historique Safari.</td></tr>
-<tr class="hi"><td><strong>FSEvents</strong></td><td>/.fseventsd/</td><td>Modifications système de fichiers. Similaire à $USNJrnl NTFS. Survit aux redémarrages.</td></tr>
-<tr><td><strong>Spotlight</strong></td><td>~/.Spotlight-V100/Store-V2/</td><td>Index de recherche très riche. Contient métadonnées de fichiers supprimés.</td></tr>
-<tr class="hi"><td><strong>Unified Log</strong></td><td>var/db/uuidtext/ · /var/db/diagnostics/</td><td>Remplace les anciens syslog depuis macOS 10.12. Binaire .tracev3. <code class="copy-code">log show --last 24h</code></td></tr>
-<tr><td><strong>Recent Items</strong></td><td>~/Library/Preferences/com.apple.recentitems.plist</td><td>Fichiers et apps récents. Persist après effacement via menu.</td></tr>
-<tr class="hi"><td><strong>LaunchDaemons</strong></td><td>/Library/LaunchDaemons/</td><td>Persistance au démarrage système (root, sans session utilisateur). <strong>Cible des malwares macOS.</strong></td></tr>
-<tr><td><strong>LaunchAgents</strong></td><td>~/Library/LaunchAgents/</td><td>Persistance par session utilisateur. Chargement à l'ouverture de session.</td></tr>
-<tr class="hi"><td><strong>Fuseau horaire</strong></td><td>/etc/localtime · /Library/Preferences/.GlobalPreferences.plist</td><td>Comparer avec EXIF : manipulation timezone = indicateur de falsification timeline.</td></tr>
-</tbody>
-</table>
-<div class="g2" style="margin-top:.75rem">
-  <div class="card card-orange">
-    <div class="ct">Timestamps macOS</div>
-    <ul>
-      <li>HFS+ : secondes depuis <strong>01.01.1904</strong> (Mac Epoch)</li>
-      <li>APFS : nanosecondes depuis <strong>01.01.2001</strong> (macOS Epoch)</li>
-      <li>plist : secondes depuis <strong>01.01.2001</strong></li>
-      <li>Conversion : <code class="copy-code">plutil -convert xml1 fichier.plist</code></li>
-    </ul>
-  </div>
-  <div class="card card-blue">
-    <div class="ct">Outils forensiques macOS</div>
-    <ul>
-      <li><strong>Autopsy / TSK</strong> : analyse images HFS+/APFS</li>
-      <li><strong>mac_apt</strong> : extraction automatisée artefacts macOS</li>
-      <li><strong>Cellebrite / AXIOM</strong> : extraction complète + corrélation</li>
-      <li><strong>plutil</strong> : conversion plist binaire → XML</li>
-      <li><strong>log</strong> : lecture Unified Log (natif macOS)</li>
-    </ul>
-  </div>
-</div>
-</div>
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.75rem;margin:.75rem 0">
 
-<div class="sec">
-<div class="ch-header">Linux — Artefacts et analyse</div>
-<div class="g2">
-  <div class="card card-green">
-    <div class="ct">Logs système</div>
-    <ul>
-      <li><strong>/var/log/auth.log</strong> : authentifications, sudo, SSH</li>
-      <li><strong>/var/log/syslog</strong> : logs système général</li>
-      <li><strong>journald</strong> : <code class="copy-code">journalctl -u sshd --since "1h ago"</code></li>
-      <li><strong>/var/log/apache2/</strong> : logs web (oubliés par les attaquants)</li>
-    </ul>
-  </div>
-  <div class="card card-orange">
-    <div class="ct">Répertoires volatils clés</div>
-    <ul>
-      <li><strong>/tmp/</strong> : effacé au redémarrage (souvent tmpfs en mémoire)</li>
-      <li><strong>/var/tmp/</strong> : persiste entre redémarrages → scripts malveillants</li>
-      <li><strong>/proc/&lt;pid&gt;/</strong> : infos processus en cours (cmdline, environ, maps)</li>
-      <li><strong>/dev/shm/</strong> : mémoire partagée — malwares fileless</li>
-    </ul>
-  </div>
-  <div class="card card-blue">
-    <div class="ct">Persistance Linux</div>
-    <ul>
-      <li><strong>~/.ssh/authorized_keys</strong> : accès SSH permanent silencieux</li>
-      <li><strong>/etc/cron.d/</strong> · <strong>/var/spool/cron/crontabs/</strong> : tâches planifiées</li>
-      <li><strong>systemd</strong> : /etc/systemd/system/ (système) · ~/.config/systemd/user/ (utilisateur)</li>
-      <li><strong>~/.bashrc / ~/.profile</strong> : exécuté à chaque connexion</li>
-    </ul>
-  </div>
-  <div class="card card-red">
-    <div class="ct">Corbeille & Suppression</div>
-    <ul>
-      <li>Corbeille FreeDesktop : <strong>~/.local/share/Trash/files/</strong> (contenu) + <strong>~/.local/share/Trash/info/*.trashinfo</strong> (chemin original + date suppression)</li>
-      <li><code>rm</code> sur EXT3/4 : efface pointeurs de blocs</li>
-      <li>Récupération : <code class="copy-code">ext4magic</code> ou carving</li>
-    </ul>
-  </div>
-</div>
-<div class="formula" style="border-left-color:var(--green)">
-  <div><span class="f">~/.bash_history</span> : souvent effacé (<code class="copy-code">history -c && unset HISTFILE</code>). Alternatives : journald, /proc/&lt;pid&gt;/cmdline, auth.log.</div>
-  <div><span class="f">Inode 2</span> = répertoire racine / sur tous les volumes EXT (constante universelle).</div>
-  <div><span class="f">/root/</span> = home de root (et non /home/root/). Contient .bash_history, .ssh/, fichiers de session.</div>
-</div>
-</div>
-<div class="tip">💡 <strong>Tip :</strong> Sur macOS, les QuarantineEventsV2 contiennent l'URL complète du téléchargement, le nom de l'application et le hash du fichier — tout cela persiste après suppression du fichier lui-même. Source forensique souvent négligée mais très riche.</div>
-
-
-
-<div class="sec" id="recuperation-forensique-linux-outils-tsk">
-  <div class="sec-title">Récupération forensique Linux — Outils TSK</div>
-  <div class="g2">
-    <div class="card card-red">
-      <div class="ct">Commandes The Sleuth Kit (TSK)</div>
-      <table style="font-size:.72rem;margin-top:.3rem">
-        <tbody>
-          <tr><td style="padding:.3rem .5rem"><code style="color:var(--cyan)" class="copy-code">fls -r image.dd</code></td><td style="padding:.3rem .5rem">Lister <strong>tous</strong> les fichiers (y compris supprimés) récursivement</td></tr>
-          <tr><td style="padding:.3rem .5rem"><code style="color:var(--cyan)" class="copy-code">istat image.dd 42</code></td><td style="padding:.3rem .5rem">Détail de l'inode 42 : timestamps, blocs alloués<div class="prereq-block">
-<div class="prereq-row">
-  <span class="prereq-label">Prérequis :</span><a href="ext.html" class="prereq-pill">📖 EXT4</a><a href="hfs.html" class="prereq-pill">📖 HFS+</a>
-</div><div class="prereq-row">
-  <span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=offset" class="tp-pill" onclick="sessionStorage.setItem('tp_start_cat','offset')">🧪 📐 Calcul d'offset</a><a href="../tp.html?cat=hextable" class="tp-pill" onclick="sessionStorage.setItem('tp_start_cat','hextable')">🧪 🗺 Table Hex</a>
-</div><div class="prereq-row">
-  <span class="prereq-label">Voir aussi :</span><a href="timeline.html" class="related-pill">🔗 Timeline</a>
-</div></div>
-, taille</td></tr>
-          <tr><td style="padding:.3rem .5rem"><code style="color:var(--cyan)" class="copy-code">icat image.dd 42</code></td><td style="padding:.3rem .5rem">Extraire le contenu de l'inode 42</td></tr>
-          <tr><td style="padding:.3rem .5rem"><code style="color:var(--cyan)" class="copy-code">ext4magic image.dd -r -d ./recov/</code></td><td style="padding:.3rem .5rem">Récupération EXT4 via le journal</td></tr>
-          <tr><td style="padding:.3rem .5rem"><code style="color:var(--cyan)" class="copy-code">fsstat image.dd</code></td><td style="padding:.3rem .5rem">Informations sur le système de fichiers (superbloc)</td></tr>
-          <tr><td style="padding:.3rem .5rem"><code style="color:var(--cyan)" class="copy-code">blkcat image.dd 1024</code></td><td style="padding:.3rem .5rem">Afficher le contenu brut du bloc 1024</td></tr>
-        </tbody>
-      </table>
+  <div style="border:2px solid rgba(0,229,204,.4);border-radius:12px;padding:1.1rem 1.2rem;background:rgba(0,229,204,.04)">
+    <div style="font-size:1.5rem;margin-bottom:.3rem">🍎</div>
+    <div style="font-family:var(--sans);font-weight:800;font-size:1rem;color:var(--cyan);margin-bottom:.5rem">macOS Forensique</div>
+    <div style="font-size:.74rem;color:var(--muted);line-height:1.7;margin-bottom:.75rem">
+      knowledgeC.db · QuarantineEventsV2 · Unified Log · FSEvents · LaunchAgents/Daemons · APFS timestamps · mac_apt · APOLLO · T2/M-series
     </div>
-    <div class="card card-green">
-      <div class="ct">/proc/[pid]/fd/ — Fichiers ouverts en temps réel</div>
-      <p>Si un fichier est <strong>supprimé pendant qu'un processus l'a ouvert</strong>, il reste accessible via <code style="color:var(--cyan)" class="copy-code">/proc/[pid]/fd/[numéro]</code> jusqu'à la fermeture du processus.</p>
-      <br>
-      <p><code style="color:var(--cyan)" class="copy-code">ls -la /proc/$(pidof apache2)/fd/</code><br>
-      → Liens symboliques vers les fichiers ouverts, même supprimés.</p>
-      <br>
-      <p><code style="color:var(--cyan)" class="copy-code">cp /proc/[pid]/fd/4 /tmp/recovered.log</code><br>
-      → Copie d'un log supprimé encore ouvert par le daemon.</p>
-      <br>
-      <p style="color:var(--muted);font-size:.72rem">Technique critique pour récupérer des fichiers supprimés sur un système live sans redémarrage.</p>
-    </div>
+    <a href="macos_forensique.html" style="display:inline-block;padding:.45rem 1rem;background:rgba(0,229,204,.15);border:1px solid rgba(0,229,204,.4);border-radius:6px;color:var(--cyan);font-size:.78rem;font-weight:700;text-decoration:none">Ouvrir la fiche →</a>
   </div>
-  <div class="info" style="margin-top:.75rem">💡 <strong>EXT4 vs EXT2 récupération :</strong> EXT2 conserve les pointeurs de blocs après suppression → récupération directe. EXT4 efface les pointeurs (block pointer zeroing) → obligatoire de passer par le journal (<code style="color:var(--cyan)" class="copy-code">ext4magic</code>) ou le carving. Voir aussi : <code style="color:var(--cyan)">debugfs</code> pour inspection interactive.</div>
-</div>
 
-<!-- QUIZ -->
-<div class="sec">
-<div class="sec-title">🧠 Testez-vous</div>
-<div class="quiz-wrap">
-  <div class="quiz-q">Vous voulez prouver qu'un suspect a téléchargé un PDF sensible sur son Mac le 12 mars. Quel artefact privilégier ?<small>macOS · Niveau : facile</small></div>
-  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
-  <div class="quiz-answer"><strong>QuarantineEventsV2</strong>. Localisation : <code>~/Library/Application Support/com.apple.LaunchServices/com.apple.LaunchServices.QuarantineEventsV2</code> = base SQLite. Quand macOS télécharge un fichier (Safari, Mail, Messages, AirDrop...), il <strong>marque le fichier comme « quarantine »</strong> via un attribut étendu <code>com.apple.quarantine</code> et <strong>enregistre dans QuarantineEventsV2</strong> : <strong>(1) URL exacte</strong> de la source, <strong>(2) horodatage</strong> précis, <strong>(3) application</strong> qui a téléchargé, <strong>(4) titre</strong> de la page source, <strong>(5) UUID</strong> de l'événement. <strong>Avantage forensique majeur</strong> : <strong>persiste après suppression du fichier</strong> téléchargé. <strong>Requête SQL</strong> : <code>SELECT datetime(LSQuarantineTimeStamp+978307200,'unixepoch'), LSQuarantineDataURLString, LSQuarantineAgentName FROM LSQuarantineEvent ORDER BY LSQuarantineTimeStamp DESC;</code> (epoch Cocoa = +978307200 sec UNIX). <strong>Compléments</strong> : (a) <strong>knowledgeC.db</strong> peut prouver que Safari était utilisé à ce moment, (b) <strong>Unified Log</strong> peut contenir l'événement réseau, (c) <strong>~/Library/Safari/Downloads.plist</strong> liste l'historique download Safari spécifiquement.</div>
-</div>
-<div class="quiz-wrap">
-  <div class="quiz-q">Sur un serveur Linux compromis, où chercher des persistances installées par l'attaquant ?<small>Linux Persistance · Niveau : moyen</small></div>
-  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
-  <div class="quiz-answer">Plusieurs emplacements à inspecter (par ordre de priorité forensique) : <strong>(1) Cron jobs</strong> — <code>/var/spool/cron/crontabs/*</code> (par user), <code>/etc/crontab</code> (système), <code>/etc/cron.{daily,hourly,weekly,monthly}/</code> (scripts), <code>/etc/cron.d/</code> (fichiers cron). Lister tous : <code>for u in $(cut -f1 -d: /etc/passwd); do crontab -l -u $u 2>/dev/null; done</code>. <strong>(2) Systemd units</strong> — <code>/etc/systemd/system/*.service</code>, <code>/lib/systemd/system/</code>, <code>/usr/lib/systemd/system/</code>, <code>~/.config/systemd/user/</code>. Lister actifs : <code>systemctl list-unit-files --state=enabled</code>. <strong>(3) SSH keys</strong> — <code>~/.ssh/authorized_keys</code> de chaque utilisateur (donne accès distant). <strong>(4) Init scripts (legacy)</strong> — <code>/etc/init.d/</code>, <code>/etc/rc.local</code>. <strong>(5) Profile / shell init</strong> — <code>~/.bashrc</code>, <code>~/.bash_profile</code>, <code>/etc/profile</code>, <code>/etc/bash.bashrc</code> (commandes au login). <strong>(6) sudoers</strong> — <code>/etc/sudoers</code>, <code>/etc/sudoers.d/*</code> (privilèges escaladés). <strong>(7) PAM modules</strong> — <code>/etc/pam.d/</code> (backdoors auth). <strong>(8) LD_PRELOAD</strong> — <code>/etc/ld.so.preload</code> (injection libs). <strong>(9) Comptes</strong> — <code>/etc/passwd</code> + <code>/etc/shadow</code> : nouveaux utilisateurs créés. <strong>(10) Kernel modules</strong> — <code>lsmod</code> + <code>/etc/modules-load.d/</code>. <strong>Outil forensique</strong> : <strong>UAC (Unix-like Artifacts Collector)</strong> automatise toute cette collecte.</div>
-</div>
-<div class="quiz-wrap">
-  <div class="quiz-q">Vous saisissez un Mac. Le suspect a effacé son <code>~/.bash_history</code>. Tout est-il perdu ?<small>macOS Terminal · Niveau : moyen</small></div>
-  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
-  <div class="quiz-answer"><strong>Pas du tout.</strong> Plusieurs sources alternatives : <strong>(1) Sur Mac récents (10.15+), le shell par défaut est zsh, pas bash</strong> — chercher <code>~/.zsh_history</code>. Beaucoup ne savent pas et continuent d'effacer <code>.bash_history</code> sans toucher au vrai. <strong>(2) Unified Log</strong> — <code>log show --predicate 'process == "Terminal"' --last 7d</code> peut contenir des références à des commandes (selon verbosity). <strong>(3) Récupération SQLite</strong> de Terminal.app — <code>~/Library/Saved Application State/com.apple.Terminal.savedState/</code> contient parfois l'état d'anciennes sessions. <strong>(4) Spotlight Store-V2</strong> peut avoir indexé le contenu de <code>.bash_history</code> avant suppression. <strong>(5) Time Machine</strong> backups locaux automatiques sur disque externe ou local snapshots APFS — <code>tmutil listlocalsnapshots /</code>. <strong>(6) APFS snapshots</strong> automatiques (jusqu'à 24h). <strong>(7) FSEvents</strong> peut révéler les modifications de <code>.bash_history</code> — heure d'effacement. <strong>(8) Fichiers <code>.lesshst</code>, <code>.viminfo</code>, <code>.python_history</code>, <code>.mysql_history</code>, etc.</strong> — autres histories spécifiques. <strong>(9) Process accounting</strong> si activé (<code>/var/log/usrmon</code>). <strong>(10) RAM dump</strong> si machine encore vive — bash garde l'historique en mémoire jusqu'à fermeture du shell. <strong>L'effacement de <code>.bash_history</code> est un IOC en soi</strong> — preuve d'intention de dissimulation.</div>
-</div>
-<div class="quiz-wrap">
-  <div class="quiz-q">Sur Linux EXT4, vous voulez récupérer un fichier supprimé il y a 1 heure. Comment faire ?<small>EXT4 récupération · Niveau : difficile</small></div>
-  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
-  <div class="quiz-answer">EXT4 a une particularité : à la différence de EXT2/EXT3, il efface les <strong>pointeurs de blocs</strong> dans l'inode lors de la suppression (<em>block pointer zeroing</em>) — donc la récupération directe via inode est impossible. Stratégies : <strong>(1) Vérifier si le fichier est encore ouvert</strong> par un process : <code>lsof | grep deleted</code> ou <code>ls -la /proc/*/fd/ 2>/dev/null | grep deleted</code>. Si oui, le récupérer via <code>cp /proc/&lt;pid&gt;/fd/&lt;n&gt; /tmp/recovered_file</code> (technique magique POSIX : tant que le file descriptor est ouvert, le fichier reste accessible même après <code>rm</code>). <strong>(2) Journal EXT4</strong> — le journal contient parfois encore les anciens pointeurs : utiliser <strong><code>ext4magic</code></strong> qui parse le journal et reconstruit les inodes : <code>ext4magic -r -j /dev/sda1</code>. Fenêtre de récupération typique : quelques heures à quelques jours. <strong>(3) <code>extundelete</code></strong> — outil similaire mais moins efficace sur EXT4 récents. <strong>(4) <code>debugfs</code></strong> — exploration interactive : <code>debugfs -R 'lsdel' /dev/sda1</code> liste les inodes supprimés récemment, puis <code>debugfs -R 'dump &lt;inode&gt; /tmp/recovered' /dev/sda1</code>. <strong>(5) Carving</strong> — dernier recours, par signature avec <strong>foremost</strong>, <strong>scalpel</strong>, ou <strong>PhotoRec</strong>. Récupère le contenu mais perd le nom et la structure. <strong>Best practice</strong> : démonter immédiatement le filesystem (<code>umount</code>) ou monter en read-only pour éviter que le bloc soit réutilisé. Sur SSD avec TRIM, fenêtre <strong>très courte</strong> (minutes).</div>
+  <div style="border:2px solid rgba(48,232,138,.4);border-radius:12px;padding:1.1rem 1.2rem;background:rgba(48,232,138,.04)">
+    <div style="font-size:1.5rem;margin-bottom:.3rem">🐧</div>
+    <div style="font-family:var(--sans);font-weight:800;font-size:1rem;color:var(--green);margin-bottom:.5rem">Linux Forensique</div>
+    <div style="font-size:.74rem;color:var(--muted);line-height:1.7;margin-bottom:.75rem">
+      /proc/ · journald · auditd · auth.log · authorized_keys · persistance systemd/cron/LD_PRELOAD · LiME · Volatility · anti-forensique
+    </div>
+    <a href="linux_forensique.html" style="display:inline-block;padding:.45rem 1rem;background:rgba(48,232,138,.15);border:1px solid rgba(48,232,138,.4);border-radius:6px;color:var(--green);font-size:.78rem;font-weight:700;text-decoration:none">Ouvrir la fiche →</a>
+  </div>
+
 </div>
 </div>
 
 <!-- EXAM TIP -->
 <div class="exam-tip">
-  <div class="exam-tip-title">🎓 Exam Tip — macOS &amp; Linux</div>
-  <p><strong>Héritage Unix/POSIX commun</strong> : structure /, permissions rwx, processes, /etc, /var, /home</p>
-  <p><strong>macOS = Darwin (BSD)</strong> + couches Apple · <strong>Linux = noyau Linux</strong> + GNU + distros</p>
-  <p><strong>━━ macOS ARTEFACTS CLÉS ━━</strong></p>
-  <p>• <strong>QuarantineEventsV2</strong> = URL source de chaque téléchargement (persistant !)</p>
-  <p>• <strong>FSEvents</strong> (<code>/.fseventsd/</code>) = équivalent USN Journal NTFS — modifs FS</p>
-  <p>• <strong>Spotlight Store-V2</strong> = index de recherche très riche</p>
-  <p>• <strong>Unified Log</strong> (<code>.tracev3</code>) = remplace syslog depuis 10.12 · <code>log show --last 24h</code></p>
-  <p>• <strong>knowledgeC.db</strong> = timeline d'usage (apps, verrouillages, mouvement)</p>
-  <p>• <strong>LaunchDaemons</strong> (root) / <strong>LaunchAgents</strong> (user) = persistance</p>
-  <p>• Epochs : <strong>HFS+ = 1904</strong> · <strong>APFS / plist = 2001</strong> (Cocoa epoch)</p>
-  <p><strong>━━ LINUX ARTEFACTS CLÉS ━━</strong></p>
-  <p>• <strong>~/.bash_history · ~/.zsh_history</strong> = commandes shell</p>
-  <p>• <strong>/var/log/auth.log · syslog · journalctl</strong> (systemd)</p>
-  <p>• <strong>/var/log/wtmp</strong> = logins (<code>last -f</code>)</p>
-  <p>• <strong>/etc/crontab · /var/spool/cron/</strong> = persistance scheduler</p>
-  <p>• <strong>/etc/systemd/system/*.service</strong> = persistance moderne</p>
-  <p>• <strong>~/.ssh/authorized_keys</strong> = accès SSH</p>
-  <p>• <strong>/proc/&lt;pid&gt;/fd/</strong> = fichiers ouverts (récupération live possible !)</p>
-  <p><strong>━━ EXT4 PARTICULARITÉ ━━</strong></p>
-  <p>EXT4 efface les pointeurs de blocs à la suppression (<em>block pointer zeroing</em>)</p>
-  <p>→ obligation de passer par le journal (<code>ext4magic</code>) ou le carving</p>
-  <p><strong>━━ OUTILS ━━</strong></p>
-  <p>macOS : mac_apt · APOLLO · iLEAPP · UFADE</p>
-  <p>Linux : TSK · Autopsy · LiME (RAM) · Volatility · plaso/log2timeline · ext4magic · UAC</p>
+  <div class="exam-tip-title">🎓 Exam Tip — macOS &amp; Linux (vue comparative)</div>
+  <p><strong>Héritage Unix/POSIX commun</strong> : arborescence /, permissions rwx, /etc, /var, /home, shell, inode</p>
+  <p><strong>macOS = Darwin (BSD)</strong> + couches Apple · <strong>Linux = noyau Linux</strong> + GNU + distributions</p>
+  <p><strong>━━ macOS — Points clés ━━</strong></p>
+  <p>• <strong>QuarantineEventsV2</strong> = URL source de chaque téléchargement (persiste après suppression du fichier)</p>
+  <p>• <strong>FSEvents</strong> (<code>/.fseventsd/</code>) ≈ $UsnJrnl NTFS · <strong>knowledgeC.db</strong> = boîte noire utilisateur</p>
+  <p>• <strong>LaunchDaemons</strong> (root, avant login) / <strong>LaunchAgents</strong> (user, au login) = persistance</p>
+  <p>• Epochs : <strong>HFS+ = 1904</strong> · <strong>APFS / plist = 2001</strong> · conversion Unix : <code>+978307200</code></p>
+  <p><strong>━━ Linux — Points clés ━━</strong></p>
+  <p>• <strong>auth.log</strong> = SSH/sudo · <strong>audit.log</strong> = syscalls kernel · <strong>journalctl</strong> = systemd logs</p>
+  <p>• <strong>~/.ssh/authorized_keys</strong> = persistance SSH · <strong>/proc/[pid]/fd/</strong> = fichiers ouverts live</p>
+  <p>• EXT4 : block pointer zeroing → journal (<code>ext4magic</code>) ou carving obligatoire pour la récupération</p>
+  <p style="margin-top:.5rem">→ Détails complets : <a href="macos_forensique.html" style="color:var(--cyan);font-weight:700">🍎 macOS Forensique</a> &nbsp;·&nbsp; <a href="linux_forensique.html" style="color:var(--green);font-weight:700">🐧 Linux Forensique</a></p>
 </div>
-
-<div class="alert">⚖️ <strong>Examen CAS-IN :</strong> macOS epoch HFS+ = 1904, APFS = 2001, plist = 2001 · QuarantineEventsV2 = URL source exacte de chaque téléchargement · FSEvents ≈ $UsnJrnl NTFS · LaunchDaemons = persistance root · knowledgeC.db = timeline activité macOS · Linux inode 2 = racine / · EXT4 : block pointer zeroing → journal obligatoire pour récupérer · /proc/[pid]/fd/ = fichiers ouverts même après suppression · ~/.ssh/authorized_keys = accès SSH persistant · journalctl = systemd · /var/log/wtmp = logins.</div>
 
 <div class="footer">
   <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
@@ -353,13 +212,7 @@
 <script>
 var bar=document.getElementById('scroll-progress');
 if(bar) window.addEventListener('scroll',function(){var d=document.documentElement;bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';},{passive:true});
-document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
-  btn.addEventListener('click',function(){
-    var ans=btn.closest('.quiz-wrap').querySelector('.quiz-answer');
-    ans.classList.toggle('visible');
-    btn.textContent=ans.classList.contains('visible')?'Masquer ↑':'Révéler →';
-  });
-});
+/* quiz listeners removed — see fiches approfondies */
 </script>
 
 <script>
