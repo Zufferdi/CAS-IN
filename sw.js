@@ -1,4 +1,18 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v53 : v2.19 — Liens croisés Q ↔ Fiche ↔ TP ↔ Scènes (navigation transverse)
+//       NEW data/cross-links.json (35 KB) : mapping généré par
+//       scripts/build_cross_links.py — 1730 liens fiches→questions,
+//       26 liens fiches→TP, 73 liens fiches→scènes.
+//       NEW js/components/fiche-related.js : injecte une section "Voir aussi"
+//       en bas de chaque fiche avec liens vers quiz filtré, TP connexes
+//       et scénarios DFIR pertinents.
+//       Quiz : ouverture depuis une fiche filtre les questions sur le sujet
+//       (via localStorage 'cas-in-quiz-filter').
+//       +27 questions ICS/SCADA/OT Forensique (1750 → 1777).
+//       Nettoyage prod : 7 console.log retirés, 6 alert() derrière showToast,
+//       2 catch silencieux complétés.
+//       Build orchestrator : scripts/build-all.sh + git pre-commit hook.
+//
 // v52 : v2.18 — Moteur de recherche full-text dans les fiches.
 //       NEW js/components/fiche-search.js (466 L) : tokenization FR/EN,
 //       normalisation accents, synonymes bidirectionnels, indexation
@@ -75,7 +89,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v52';
+const CACHE_VERSION = 'cas-in-v53';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -162,7 +176,9 @@ const STATIC_ASSETS = [
   './fiches/index.html',
   './js/components/fiche-search.js',
   './js/components/search-modal.js',
+  './js/components/fiche-related.js',
   './data/search-index.json',
+  './data/cross-links.json',
 ];
 
 const OFFLINE_FALLBACK = './offline.html';
