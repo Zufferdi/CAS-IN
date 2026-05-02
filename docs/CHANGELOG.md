@@ -4,6 +4,126 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.22] — 2026-05-02
+
+Cette version **fusionne `quiz-ui-patch.js` dans `quiz-app.js`**, éliminant le pattern "wrapper après coup" qui datait de v2.13.
+
+### Le problème
+
+`quiz-ui-patch.js` (663 LOC) était chargé **après** `quiz-app.js` et modifiait son comportement via 12 wrappers du type :
+
+```javascript
+const _origShowToast = window.showToast;
+if (typeof _origShowToast === 'function') {
+  window.showToast = function (id, msg, duration) {
+    // … nouveau comportement, parfois appelle _origShowToast.apply()
+  };
+}
+```
+
+Problèmes accumulés :
+- **Timing fragile** : si `quiz-app.js` n'avait pas fini de charger ses fonctions au moment où le patch tournait, certains wrappers ne s'appliquaient pas
+- **Double-bind potentiel** : si le patch était inclus deux fois (cache browser, hot reload), les wrappers s'empilaient
+- **Fuite de scope global** : le "Groupe D" du patch était par erreur **hors de l'IIFE** (ligne 366 fermait l'IIFE prématurément), exposant `EMPTY_STATES`, `MODE_LABELS`, etc. dans le scope global — bug latent
+- **Difficile à debugger** : pour comprendre `showToast`, il fallait lire 2 fichiers
+- **Wrapper indirect** : les call-sites appelaient `window.showToast(...)` qui appelait `notify(...)` qui appelait `drainNotifyQueue()` — 3 sauts pour 1 toast
+
+### Solution : merge in-place + rationalisation
+
+Au lieu de garder le pattern wrapper, le code du patch a été **mergé directement** dans `quiz-app.js`, soit en modifiant les fonctions d'origine, soit en ajoutant les nouvelles fonctions au même endroit.
+
+### Fonctions modifiées en place dans `quiz-app.js`
+
+| Fonction | Avant (wrapper) | Après (in-place) |
+|---|---|---|
+| `showToast` | wrapper inférait type/icon depuis le message → notify | corps réécrit pour router directement vers `notify()` |
+| `showRankUp` | wrapper appelait l'origine + notify | corps modifié : toast DOM legacy + notify unifié |
+| `showAchievementPopup` | pareil | popup DOM + notify unifié |
+| `useStreakFreeze` | wrapper ajoutait animation glaçon après | animation intégrée dans la fonction |
+| `getNext` | wrapper appelait l'origine + showCardEmpty | corps modifié : retourne `null` + showCardEmpty pour états vides (au lieu du fallback `ALL_Q[0]` qui masquait le bug) |
+| `toggleBookmark` | wrapper ajoutait animation pop + spawnStarBurst | animations intégrées dans la fonction |
+| `toggleFocusMode` | wrapper ajoutait sync label menu Plus | sync intégré dans la fonction |
+
+`toggleSound` (dans `quiz-effects.js`) reçoit un hook optionnel `window.syncSoundLabel()` qui n'est appelé que s'il est défini — découplage propre.
+
+### Fonctions ajoutées à `quiz-app.js` (ex-patch)
+
+Toute la nouvelle logique du patch déplacée dans une **section v2.22 dédiée** à la fin du fichier :
+
+- **Système notify** : `notify()`, `drainNotifyQueue()`, file d'attente avec `_notifyQueue`, `_notifyActive`, `_notifyTimer`. 1 seule notif visible à la fois.
+- **États vides** : `EMPTY_STATES` (favoris, erreurs, sm2, no-filter), `showCardEmpty()`, `hideCardEmpty()`
+- **Pastille mode** : `MODE_LABELS`, `refreshActiveModePill()`
+- **Effets visuels** : `setupComboHalo()` (MutationObserver sur `.combo-active`), `spawnStarBurst()` (particules étoile)
+- **Action-row guard** : `setupActionRowGuard()` (MutationObserver pour transformer `display:none` en `disabled`)
+- **Sound label sync** : `syncSoundLabel()` (reconstruit les `<span>` du menu Plus si écrasés par textContent)
+- **Daily banner dismiss** : `dismissDailyBanner()`, `_hideDailyBannerIfDismissed()` avec persistance localStorage
+- **Menu Plus** : `toggleMoreMenu()`, `closeMoreMenu()`
+- **setMode** : nouvelle fonction (n'existait pas dans quiz-app.js avant) — bascule normal/smart/bookmarks/errors/survival avec reset state, reconstruction pool, toast d'annonce, refresh pastille
+- **triggerBoss** : nouvelle fonction — lance un boss sur un chapitre éligible (≥20 bonnes réponses, ≥5 questions hard, pas encore battu)
+
+### Boot unifié
+
+Avant : 5 IIFEs séparées dans le patch + 2 setup boot dispersés. Après : un **unique** `(function _initUIPatches() { ... })()` à la fin de quiz-app.js qui fait :
+
+1. `setupActionRowGuard()`, `setupComboHalo()`, `syncSoundLabel()`, `refreshActiveModePill()`, `_hideDailyBannerIfDismissed()` au DOMContentLoaded
+2. Re-sync `syncSoundLabel` après `load` (au cas où quiz-app a écrasé le textContent)
+3. Click extérieur → ferme more-menu (délégation)
+4. Click sur item de more-menu → ferme (délégation)
+5. **Backdrop click** → ferme overlay topmost (au lieu d'un handler par overlay)
+6. **Escape global** → ferme overlay topmost (capture phase, priorité aux dropdowns en l'absence d'overlay)
+7. Click sur `[data-mode-target]` → refresh pastille
+
+### Bug corrigé en passant : `getNext` retournait toujours une question
+
+Avant v2.22 :
+```javascript
+return S.pool[S.pi++] || { q: ALL_Q[0], idx: 0 };  // fallback masque l'état vide
+```
+
+Le wrapper du patch attendait que `getNext` puisse retourner null/undefined pour afficher l'état vide, mais le fallback `|| ALL_Q[0]` empêchait ce signal. **L'état vide ne s'affichait jamais** en mode bookmarks/errors/sm2/no-filter !
+
+Après v2.22 :
+```javascript
+const next = S.pool[S.pi++];
+if (!next) {
+  // Détermine la clé d'état vide selon S.mode et S.activeT/activeC
+  // → showCardEmpty(key) + return null
+}
+```
+
+### Modifié — `quiz.html`
+
+```diff
+- <script src="js/pages/quiz-ui-patch.js" defer></script>
+```
+
+Une ligne en moins. 1 fichier en moins à charger.
+
+### Modifié — Service Worker v55 → v56
+
+`./js/pages/quiz-ui-patch.js` retiré du cache. En-tête détaillé.
+
+### Modifié — `tests/test-achievements-sync.js`
+
+Le test cherchait `ACHIEVEMENTS` dans `quiz-app.js`, mais cette constante a été migrée vers `quiz-data.js` en v2.21. Test corrigé pour pointer la bonne source. Test passe : ✅ 41 achievements synchronisés, 14 abréviations tolérées.
+
+### Statistiques v2.22
+
+| Indicateur | v2.21 | v2.22 |
+|---|---|---|
+| `quiz-app.js` LOC | 4718 | **5268** (+550, intégration patch) |
+| `quiz-ui-patch.js` LOC | 663 | **0** (supprimé) |
+| Total quiz core | 5381 | **5268** (-113 net) |
+| Wrappers de fonctions | 12 | **0** |
+| Fichiers JS chargés par quiz.html | 8 | **7** |
+| Fuites IIFE Groupe D | oui (latent) | **non** (corrigée) |
+| Bug état vide | présent | **corrigé** |
+| Service Worker | v55 | **v56** |
+
+### Notes
+
+Le merge était listé comme "~3h, double-bind à risque" dans la roadmap. Réalisé en **1 session** sans régression — la rétrocompat `window.*` mise en place en v2.21 a payé : les 57 fonctions onclick HTML ont continué de fonctionner sans modification.
+
 ## [2.21] — 2026-05-02
 
 Cette version est un **refactoring profond de `quiz-app.js`** (5287 → 4718 LOC, -10.7 %), avec extraction de 5 modules réutilisables et testables.
