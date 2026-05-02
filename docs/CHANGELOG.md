@@ -4,6 +4,102 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.20] — 2026-05-02
+
+Cette version cible 3 quick wins : **factorisation du code répété**, **fix de désynchronisation** entre fichiers d'index, et **complétion d'accessibilité** sur les fiches.
+
+### Le problème — bilan d'audit
+
+Audit complet du repo après v2.19 a révélé :
+- **108 fiches** contenaient des blocs `<script>` inline avec du code dupliqué (scroll-progress, back-top, quiz-reveal, collapsibles)
+- **`data/counts.json`** affichait `93 scènes` alors qu'il y en a `97` sur le disque (drift de l'index)
+- **15 fiches** sans aucun `<h1>` — mauvais pour l'accessibilité (lecteurs d'écran) et le SEO (Google se fie au h1)
+- **5 scènes orphelines** ajoutées récemment mais jamais enregistrées dans `scenes/index.json` (donc pas indexables par `cas-in-search.js`)
+
+### Ajouté — `js/components/fiche-common.js` (171 L)
+
+Module factorisé qui remplace le code dupliqué dans 109 fiches. Implémente :
+
+- **Barre de progression de défilement** (`#scroll-progress`) : 1 IIFE avec `passive: true`
+- **Bouton retour-haut** (`#back-top`) : toggle classe `.visible` au-delà de 300 px
+- **Quiz révélation** (`.quiz-reveal-btn` → `.quiz-answer`) : toggle + texte du bouton
+- **Sections collapsibles** (`.collapsible-header` → `.collapsible.open`)
+- **Onglets génériques** (`data-tab-group`, `data-tab-btn`, `data-tab-page`) : version uniforme de toutes les variantes `showTab()` / `T(id)` qu'on trouvait dans les fiches
+
+Conçu **idempotent** : utilise des `data-*Bound` flags pour éviter le double-bind si le script est rechargé. Compatible avec les `showTab` fiche-spécifiques préservés (architecture NTFS, etc.).
+
+### Ajouté — `scripts/migrate_fiche_common.py`
+
+Script qui :
+1. Détecte les patterns dupliqués dans chaque fiche (regex multi-variantes : IIFE, fonctions, arrow functions)
+2. Les supprime du HTML
+3. Injecte `<script src="../js/components/fiche-common.js" defer></script>` au bon endroit
+4. Préserve la logique fiche-spécifique (variables custom, `archDetails`, calculateurs hash, etc.)
+
+Résultats sur le repo :
+- **92 patterns retirés** sur 109 fiches
+- **52 blocs `<script>` entièrement vidés** (rien d'autre que des patterns communs)
+- **~54 KB économisés** (lecture-écriture HTML cumulée)
+- **3 résiduels** non factorisés (variantes trop spécifiques) → idempotence préserve la cohérence
+
+### Ajouté — `scripts/build_scenes_index.py` + fix désync
+
+Le bug : `scenes/index.json` (consommé par `cas-in-search.js` et `scene-app.js`) était maintenu à la main. Quand on ajoutait une scène, on oubliait parfois d'updater l'index. Au moment de l'audit, il y avait :
+- **5 scènes manquantes** : `audit-prestataire-systemique`, `flubot-bec-cascade`, `lsi-vs-lpd-timing`, `referent-milice-ransomware`, `valais-cascade-12-communes`
+- **1 entrée fantôme** : `step-martigny-ransomware` (l'index pointait sur un fichier supprimé)
+
+Solution : `build_scenes_index.py` régénère `scenes/index.json` depuis les fichiers individuels. Extrait : `id`, `title`, `icon`, `difficulty`, `atmosphere`, `tags`, `intro`, `alertLevel`, `stepCount`, `legalRefs`. Tri stable par id.
+
+Conséquences :
+- `scenes/index.json` : 93 → **97 entrées**
+- `data/counts.json` : `scenes: 93` → **`scenes: 97`** (cohérent avec le repo)
+- Le moteur de recherche full-text peut maintenant indexer les 5 scènes oubliées
+- `scene.html` lazy-load les 5 scènes (avant : 404)
+
+### Ajouté — `scripts/add_h1_to_fiches.py` + a11y
+
+Les 15 fiches sans `<h1>` :
+`autopsy`, `browser_forensique`, `comparaison_fs`, `email_forensique`, `encodage`, `ext`, `fat12`, `formats`, `incident_response`, `logs_windows`, `mac_times`, `macos-linux`, `preuve`, `suisse`, `wireshark_pcap`.
+
+Ces fiches affichaient leur titre uniquement dans `<span class="tn-title">` (nav header) — bien visible mais **invisible aux outils d'a11y** (lecteurs d'écran annoncent le `<h1>`, pas les spans de navigation).
+
+Solution : extraction du titre depuis `tn-title` (avec smart-casing préservant les acronymes : `NTFS`, `FAT`, `MAC`, `EXIF`, etc.) et injection d'un `<h1>` stylé identiquement aux autres fiches du repo (`font-family: var(--sans); font-size: 2rem; font-weight: 800`).
+
+Préservation : la nav `tn-title` et le breadcrumb `bc-current` restent intacts (visuel inchangé). Idempotence : skip les fiches qui ont déjà un `<h1>`.
+
+Résultat : **109/109 fiches ont maintenant exactement 1 `<h1>` unique** ✅. Lighthouse a11y et SEO Google bénéficient.
+
+### Modifié — Workflow GitHub Actions étendu
+
+`.github/workflows/sync-fiches-index.yml` orchestre désormais 6 étapes (vs 4 en v2.19) :
+
+1. `inject_fiche_related.py` (existant)
+2. **`migrate_fiche_common.py`** (NEW)
+3. **`build_scenes_index.py`** (NEW)
+4. `build_index.py` (existant)
+5. `build_search_index.py` (existant)
+6. `build_cross_links.py` (existant)
+
+Tout reste automatique : à chaque ajout/modif de fiche ou de scène sur github.com, le bot régénère les 4 indexes (`fiches/index.html`, `scenes/index.json`, `data/search-index.json`, `data/cross-links.json`) et injecte les composants manquants. Aucune action manuelle requise.
+
+### Modifié — Service Worker v53 → v54
+
+- Cache version : `cas-in-v53` → `cas-in-v54`
+- Nouveau fichier ajouté au cache : `js/components/fiche-common.js` (~5 KB gzippé)
+
+### Statistiques v2.20
+
+| Indicateur | v2.19 | v2.20 |
+|---|---|---|
+| Fiches | 109 | 109 |
+| Fiches avec `<h1>` | 94 / 109 (86 %) | **109 / 109 (100 %)** |
+| Fiches avec `fiche-common.js` | 0 | **109 / 109** |
+| Scènes (counts.json) | 93 | **97** (réel) |
+| `scenes/index.json` | 93 | **97** |
+| Patterns inline dupliqués | ~150 | **~58** (-61 %) |
+| Service Worker | v53 | **v54** |
+| Étapes du workflow | 4 | **6** |
+
 ## [2.19] — 2026-05-02
 
 Cette version livre la **navigation transverse** entre fiches, quiz, TP et scènes, ainsi que **27 questions ICS/SCADA** dédiées et un nettoyage des restes de prototype en prod.
