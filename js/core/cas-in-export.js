@@ -36,6 +36,19 @@
 //     }
 //   }
 // ═══════════════════════════════════════════════════════════════
+
+// ─── Notification helper : préfère showToast, fallback alert ───
+function casNotify(msg, opts) {
+  opts = opts || {};
+  var duration = opts.duration || 2800;
+  // 1) showToast custom (defined in scene-app, quiz-app, quiz-ui-patch)
+  if (typeof window.showToast === 'function') {
+    try { window.showToast('cas-export-toast', msg, duration); return; } catch (e) {}
+  }
+  // 2) fallback alert (force user attention, OK avant reload)
+  alert(msg);
+}
+
 (function () {
   'use strict';
 
@@ -172,7 +185,6 @@
       URL.revokeObjectURL(url);
     }, 100);
 
-    console.log('[export] downloaded', Object.keys(data).length, 'keys');
     return { keys: Object.keys(data).length, summary };
   }
 
@@ -263,7 +275,7 @@
         document.body.removeChild(input);
 
         if (!preview.ok) {
-          alert('Import impossible :\n\n' + preview.error);
+          casNotify('Import impossible : ' + preview.error, { duration: 4500 });
           return;
         }
 
@@ -294,12 +306,12 @@
 
         const parsed = JSON.parse(text);
         const result = applyImport(parsed, { merge: false });
-        alert('Import terminé.\n' + result.written + ' clés appliquées, ' + result.skipped + ' ignorées.\n\nLa page va se recharger.');
+        casNotify('Import terminé : ' + result.written + ' clés appliquées, ' + result.skipped + ' ignorées. Rechargement…', { duration: 1500 });
         // Recharger pour que l'app reprenne avec les nouvelles données
         setTimeout(() => location.reload(), 200);
       };
       reader.onerror = () => {
-        alert('Erreur de lecture du fichier.');
+        casNotify('Erreur de lecture du fichier.', { duration: 3000 });
         document.body.removeChild(input);
       };
       reader.readAsText(file);
@@ -319,7 +331,7 @@
       if (key && isCasInKey(key)) keysToDelete.push(key);
     }
     keysToDelete.forEach(k => localStorage.removeItem(k));
-    alert('Progression réinitialisée (' + keysToDelete.length + ' clés). La page va se recharger.');
+    casNotify('Progression réinitialisée (' + keysToDelete.length + ' clés). Rechargement…', { duration: 1500 });
     setTimeout(() => location.reload(), 200);
   }
 
