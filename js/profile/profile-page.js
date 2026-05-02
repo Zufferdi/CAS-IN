@@ -742,14 +742,14 @@
       if (window.CasInExport && window.CasInExport.exportProgress) {
         window.CasInExport.exportProgress();
       } else {
-        alert('Module export non chargé.');
+        if (typeof window.showToast === 'function') window.showToast('profile-export-error', 'Module export non chargé.', 3000); else alert('Module export non chargé.');
       }
     });
     if (imp) imp.addEventListener('click', () => {
       if (window.CasInExport && window.CasInExport.openImportDialog) {
         window.CasInExport.openImportDialog();
       } else {
-        alert('Module import non chargé.');
+        if (typeof window.showToast === 'function') window.showToast('profile-import-error', 'Module import non chargé.', 3000); else alert('Module import non chargé.');
       }
     });
     if (rst) rst.addEventListener('click', () => {

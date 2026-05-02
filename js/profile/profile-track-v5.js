@@ -725,7 +725,9 @@
         if (typeof window.Profile.getTrackLadder === 'function') {
           ranks = window.Profile.getTrackLadder(t.key) || [];
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[profile-track-v5] getTrackLadder failed for', t.key, e);
+      }
 
       const dotsHtml = ranks.length === 12
         ? ranks.map(r => `<span class="v5-tc-rank-dot" title="${escapeHtml(r.name)}">${r.emoji}</span>`).join('')
@@ -1161,7 +1163,6 @@
     });
     observer.observe(document.body, { childList: true, subtree: true });
 
-    console.log('[profile-track-v5] ✓ Profile track v5 attached');
     window.__casProfileV5Installed = true;
 
     // Expose debug API
