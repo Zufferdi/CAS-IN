@@ -4,11 +4,12 @@
 //
 // Vérifie que les définitions d'ACHIEVEMENTS sont SYNCHRONISÉES entre
 // les deux sources de vérité :
-//   - js/pages/quiz-app.js → const ACHIEVEMENTS (id, emoji, name, desc, check)
+//   - js/pages/quiz-data.js → const ACHIEVEMENTS (id, emoji, name, desc, check)
+//     (depuis v2.21, déplacé de quiz-app.js → quiz-data.js)
 //   - js/core/cas-in-achievements.js → const QUIZ_ACH (id, emoji, name, desc, category, progress)
 //
 // Pourquoi 2 sources ?
-//   - quiz-app.js a besoin des `check` (qui dépendent du runtime quiz `S`).
+//   - quiz-data.js a besoin des `check` (qui dépendent du runtime quiz `S`).
 //   - cas-in-achievements.js a besoin des `category` et `progress` (utilisés
 //     par profile-page.js sans charger tout quiz-app.js).
 //
@@ -33,13 +34,14 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 
-// ─── Lire quiz-app.js et extraire le bloc ACHIEVEMENTS ───
-const quizApp = fs.readFileSync(path.join(ROOT, 'js/pages/quiz-app.js'), 'utf8');
+// ─── Lire quiz-data.js et extraire le bloc ACHIEVEMENTS ───
+// (depuis v2.21, ACHIEVEMENTS a été déplacé de quiz-app.js vers quiz-data.js)
+const quizApp = fs.readFileSync(path.join(ROOT, 'js/pages/quiz-data.js'), 'utf8');
 
 // Extraire le tableau via eval contrôlé
 function extractAchievementsFromQuizApp(src) {
   const m = src.match(/const ACHIEVEMENTS\s*=\s*\[/);
-  if (!m) throw new Error("ACHIEVEMENTS non trouvé dans quiz-app.js");
+  if (!m) throw new Error("ACHIEVEMENTS non trouvé dans quiz-data.js");
   const start = m.index;
   const bracketOpen = src.indexOf('[', start);
   let depth = 1;
