@@ -4,6 +4,123 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.17] — 2026-05-02
+
+Cette version finalise le **mode dark/light** sur l'ensemble du site et règle quelques entrées orphelines du manifest.
+
+### Modifié — Mode light propagé dans les 7 CSS qui en manquaient
+
+Avant : seul `style/style.css` avait des règles `[data-theme="light"]` (28 sélecteurs). Le toggle fonctionnait mais 90 % de l'UI restait en mode sombre car les CSS spécifiques (`fiche_style.css`, `landing.css`, etc.) redéfinissent `:root` localement, écrasant les overrides.
+
+Après : ajout de blocs `[data-theme="light"]` dans tous les CSS principaux :
+
+| CSS | Sélecteurs light ajoutés | Variables override |
+|---|---|---|
+| `style/fiche_style.css` | 47 | --bg, --surface, --surface2, --border, --text, --muted, --dim, --cyan, --gold, --red, --green, --blue, --orange, --purple |
+| `style/landing.css` | 14 | --bg, --surface, --surface2, --border, --text, --green, --green-mid, --cyan, --gold, --red |
+| `style/quiz.css` | 13 | + --share-purple, --cyan-soft-bg, --gold-soft-bg, --dim-soft-border |
+| `style/scene.css` | 11 | + --easy/medium/hard/expert, --scene-glow, --atm-glow-1/2 |
+| `style/tp.css` | 10 | core vars |
+| `style/profile.css` | 10 | héritage depuis landing.css (load order) |
+| `style/tools.css` | 4 | héritage depuis style.css |
+
+Total : **137 sélecteurs `[data-theme="light"]`** distribués dans 8 fichiers CSS.
+
+Palette light cohérente : fond `#f7f9fc`, surfaces `#fff`/`#eef2f7`, texte `#1a2235`, accents assombris pour AA contrast (cyan `#008c80`, gold `#b07000`, red `#c0392b`, green `#1a7a4a`).
+
+### Ajouté — 3 fiches orphelines intégrées au manifest
+
+Découvertes lors de l'audit : `docker_kubernetes_forensique.html`, `fat32.html`, `lateral_movement_forensique.html` existaient mais n'étaient pas dans `data/manifest.json` → tombaient en fallback HTML lors du build d'index. Ajoutées avec catégorie/icône/desc appropriés.
+
+Manifest : 106 → 109 fiches.
+
+### Service Worker
+
+`v50 → v51`. Cache invalidé pour récupérer les CSS modifiées.
+
+---
+
+## [2.17] — 2026-05-02
+
+Session « tout faire » : 5 chantiers en parallèle. Refactor SQLite + nouvelles fiches Linux/Mobile + mode clair/sombre.
+
+### Phase 1 — Refactor des 2 fiches SQLite
+
+`sqlite_forensique.html` (390L) et `sqlite_forensique_avance.html` (479L) avaient des titres trop similaires. Harmonisation en parcours 2 étapes :
+
+| Avant | Après | Rôle |
+|---|---|---|
+| SQLite Forensique | **SQLite Forensique — Démarrage** (Étape 1/2) | 🗃️ Pratique |
+| SQLite Forensique Avancé | **SQLite Forensique — Internals Avancés** (Étape 2/2) | 🧬 Approfondir |
+
+Bannières cross-référence harmonisées entre les 2.
+
+### Phase 2 — `cmd_windows_forensique.html` enrichi (+113 L)
+
+Nouvelle section « Intrusion Discovery — détecter une compromission en live » inspirée du cheat sheet SANS Ed Skoudis (Windows Intrusion Discovery v3.0). 5 cards :
+
+- **Connexions et sessions SMB inhabituelles** — `net view \\127.0.0.1`, `net session`, `net use`, `nbtstat -S`, `netstat -nao/-naob`, `netsh advfirewall`
+- **Persistance — Run / RunOnce / RunonceEx** — 3 clés registre HKLM+HKCU
+- **Logs Windows — Event IDs critiques** — tableau 9 IDs (1102, 4624 type 10, 4625, 4672, 4688, 4697, 4698, 4720, 7034-7045)
+- **Outils Sysinternals indispensables** — Process Explorer, Process Monitor, Sysmon, Autoruns, PsExec, Process Hacker
+- **Performances anormales** — `taskmgr`, `dir C:\`, WER crashes
+
+### Phase 3 — Nouvelle fiche `cmd_linux_forensique.html` (479 L)
+
+Parallèle Linux du cmd_windows. Inspirée du cheat sheet SANS « Linux Intrusion Discovery v2.0 » (Ed Skoudis). 8 sections :
+
+1. **Processus** : `ps auxf`, `lsof -p`, `lsof +L1` (binaires supprimés), comparaison ps/proc
+2. **Fichiers** : SUID root, `find -nouser`, fichiers cachés (..., .., .), `debsums -c`, `rpm -Va`
+3. **Réseau** : `ss -tulnp`, `ip link grep PROMISC`, cache ARP
+4. **Tâches planifiées** : crontab par user, `/etc/cron.d/`, timers systemd, atq
+5. **Comptes** : `egrep ':0+:' /etc/passwd`, NSS, comptes shell, mot de passe shadow, last/lastb
+6. **Logs** : journalctl, /var/log/auth.log, auditd, ausearch
+7. **Performances** : uptime, free, df, iotop, nethogs
+8. **Outils** : chkrootkit, rkhunter, AIDE, Tripwire, Lynis, OSSEC/Wazuh, CIS Benchmarks
+
+Workflow 15 min en 7 étapes (parallèle au workflow Windows).
+
+### Phase 4 — Nouvelle fiche `mobile_apps_forensique.html` (637 L)
+
+Catalogue 30+ apps iOS tierces avec leurs paths SQLite/Plist/Realm. Inspiré du poster officiel SANS DFIR « iOS Third-Party Apps Forensics v1.1 » (Mattia Epifani, 2021). Catégories couvertes :
+
+- **Messageries** (14 apps) : WhatsApp, Telegram, Signal, Skype, Viber, LINE, Facebook Messenger, Discord, Wickr Me, Snapchat, TikTok, Instagram, WeChat, Kik
+- **Cloud** (5) : Dropbox, Google Drive, OneDrive, Gmail, ProtonMail
+- **Voyage** (6) : Uber, Waze, Google Maps, Airbnb, Booking, Air France/KLM
+- **Finance** (2) : PayPal, Venmo
+- **Social** (5) : Facebook, Twitter/X, LinkedIn, Tinder, Reddit
+- **Médias** (3) : Spotify, Netflix, Private Photo Vault
+- **Santé** (3) : Fitbit, Strava, Adidas Running
+
+Pour chaque app : path Sandbox `Data/`, path `Shared/AppGroup/` quand applicable, fichiers critiques (⭐), notes forensiques. Section outils : iLEAPP, APOLLO, Cellebrite, Magnet AXIOM, Oxygen, DB Browser, SQLECmd, Realm Studio.
+
+### Phase 5 — Mode clair/sombre toggle
+
+Nouveau thème `[data-theme="light"]` dans `style/style.css` (+85 L) avec palette professionnelle :
+- Fond blanc cassé `#f7f9fc`
+- Texte presque noir `#1a2235`
+- Cyan/Gold/Red/Green/Purple assombris pour AA contrast
+- Tags, cards, panels, inputs, scrollbars adaptés
+- Code/CLI rendus avec syntax highlighting clair
+
+Composant `js/components/theme-toggle.js` (170 L) :
+- **Bouton flottant** bottom-left (☀️/🌙) — ne chevauche pas le FAB notes (bottom-right)
+- **Persistence** localStorage (`cas-in-theme`)
+- **Boot synchrone** avant render pour éviter FOUC
+- **API** `window.CASTheme.{get,set,toggle}` pour intégrations
+- **Conserve** les thèmes exotiques existants (hacker/crimson/retro/blueprint)
+
+**118 pages patchées** avec inclusion auto : 110 fiches + 8 pages racine (index/quiz/tp/scene/exam/tools/profile/offline).
+
+### Stats finales v2.17
+
+```
+1750 questions · 106 fiches · 93 scènes · 32 TP
+SW v49 → v50
+```
+
+---
+
 ## [2.16] — 2026-05-02
 
 Cette version finalise le « parcours forensique mémoire » et ajoute deux fonctionnalités UX majeures : **CHANGELOG à jour** + **fiche poster Windows** + **système de notes utilisateur** sur fiches.
