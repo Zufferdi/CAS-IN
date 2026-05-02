@@ -1,4 +1,12 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v48 : refactor des 3 fiches mémoire pour éliminer la confusion utilisateur :
+//       - ram_forensique.html → "Acquisition Mémoire RAM" (Étape 1/3) + 6 edge cases modernes
+//         (Secure Boot, KASLR, VBS/Credential Guard, TPM 2.0+PIN, Hyperviseurs type-1, SSD SED Opal)
+//       - volatilite.html → "Volatility 3 — Démarrage" (Étape 2/3) avec H1 dédié
+//       - volatility_memory_forensics.html → "Mémoire — Internals Avancés" (Étape 3/3)
+//       Bannières de cross-référence harmonisées entre les 3. Manifest + index régénérés.
+//       Nouvelle scène ICS : swissgrid-iec61850-jura.json (poste électrique 380 kV, IEC 61850 GOOSE).
+// v47 : (version intermédiaire — voir v48 pour les changements consolidés)
 // v46 : 3 nouvelles fiches forensiques basées sur cheat sheets SANS officielles :
 //       - ics_forensique.html (ICS/SCADA, Modèle Purdue, Modbus/DNP3/IEC 61850, NSM ICS, IR jump bag)
 //       - cmd_windows_forensique.html (live response Windows : wmic, sc, netsh, netstat, reg)
@@ -20,7 +28,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v46';
+const CACHE_VERSION = 'cas-in-v48';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
