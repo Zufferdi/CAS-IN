@@ -1,4 +1,12 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v49 : v2.16 — CHANGELOG mis à jour (v2.11→v2.16) + nouvelle fiche
+//       poster_windows_artefacts.html (vue d'ensemble par question forensique,
+//       inspirée du poster SANS FOR500 Rob Lee) + système de NOTES utilisateur
+//       sur fiches (composant js/components/fiche-notes.js + style/fiche-notes.css
+//       + section gestion dans profile.html via js/profile/profile-notes.js).
+//       104 fiches HTML patchées avec inclusion automatique du composant.
+//       Persistence localStorage par fiche (cas-in-notes-{ficheId}).
+//       Manifest 103→104. Cache invalidé.
 // v48 : refactor des 3 fiches mémoire pour éliminer la confusion utilisateur :
 //       - ram_forensique.html → "Acquisition Mémoire RAM" (Étape 1/3) + 6 edge cases modernes
 //         (Secure Boot, KASLR, VBS/Credential Guard, TPM 2.0+PIN, Hyperviseurs type-1, SSD SED Opal)
@@ -28,7 +36,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v48';
+const CACHE_VERSION = 'cas-in-v49';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -64,6 +72,7 @@ const STATIC_ASSETS = [
   './style/exam.css',
   './style/scene.css',
   './style/fiche_style.css',
+  './style/fiche-notes.css',
   './style/profile.css',
   './style/profile-banner.css',
   './style/quiz.css',
@@ -80,10 +89,13 @@ const STATIC_ASSETS = [
   './js/profile/profile-page.js',
   './js/profile/profile-track-v5.js',
   './js/profile/profile-titles.js',
+  './js/profile/profile-notes.js',
   // Bridges
   './js/bridges/quiz-profile-bridge.js',
   './js/bridges/scene-profile-bridge.js',
   './js/bridges/tp-profile-bridge.js',
+  // Components
+  './js/components/fiche-notes.js',
   // Pages
   './js/pages/landing.js',
   './js/pages/landing-3d.js',
