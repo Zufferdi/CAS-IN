@@ -1,4 +1,18 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v57 : v2.23 — Split de tp-engine.js (proof-of-concept)
+//       NEW tp/tp-engine-carving.js (247 L) : exercices "carving"
+//       (signatures de fichiers) extraits de tp-engine.js.
+//       Couvre genMagic + checkMagic + _magicNotes + genMismatch +
+//       buildMismatchChoices + checkMismatch + _mismatchAnswered.
+//       Pattern identique à tp-engine-meta.js et tp-engine-windows.js :
+//       le module satellite mute le dispatcher GENERATORS pour
+//       enregistrer ses 2 générateurs.
+//       tp-engine.js : 6786 → 6584 LOC (-202 L, -3.0%).
+//       Méthodologie validée : si nécessaire pour la suite, on peut
+//       extraire d'autres modules selon le même pattern (fs, encoding,
+//       misc). Pour l'instant on consolide ici — le ROI sur les autres
+//       modules est faible (fonctions très longues, peu isolables).
+//
 // v56 : v2.22 — Merge de quiz-ui-patch.js dans quiz-app.js (-1 fichier)
 //       Le patch v2.13 (663 LOC) qui modifiait l'UI APRÈS chargement via
 //       12 wrappers de fonctions a été MERGÉ dans quiz-app.js. Plus de
@@ -155,7 +169,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v56';
+const CACHE_VERSION = 'cas-in-v57';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -240,6 +254,7 @@ const STATIC_ASSETS = [
   // TP
   './tp/tp-data.js',
   './tp/tp-engine.js',
+  './tp/tp-engine-carving.js',
   './tp/tp-engine-windows.js',
   './tp/tp-engine-meta.js',
 
