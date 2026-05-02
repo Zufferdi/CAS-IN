@@ -820,7 +820,9 @@
             .map(id => GLOBAL_BADGES.find(b => b.id === id))
             .filter(Boolean);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[engine-v4] new badges computation failed', e);
+      }
 
       lastReportContext = {
         scene,
@@ -1124,7 +1126,6 @@
     const root = document.body || document.documentElement;
     observer.observe(root, { attributes: true, attributeFilter: ['class'], subtree: true });
 
-    console.log('[engine-v4] ✓ Scene engine v4 attached — briefing, recap, review, glossary (' + Object.keys(LEGAL_GLOSSARY).length + ' articles)');
     window.__casEngineV4Installed = true;
   }
 

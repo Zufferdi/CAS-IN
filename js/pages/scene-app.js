@@ -97,7 +97,6 @@ function loadSceneIndex() {
       SCENES.length = 0;
       Array.prototype.push.apply(SCENES, idx);
       _sceneIndexLoaded = true;
-      console.log('[scenes] Index chargé : ' + idx.length + ' scènes');
       return SCENES;
     })
     .catch(err => {
@@ -3090,7 +3089,7 @@ document.addEventListener('keydown', e => {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('[CAS-IN] SW enregistré:', reg.scope))
+      
       .catch(err => console.warn('[CAS-IN] SW échec:', err));
   });
 }

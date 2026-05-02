@@ -726,6 +726,5 @@
     initInlineGlossary();
   }
 
-  console.log('[CAS-IN UX Patch v2] Chargé — 10 améliorations actives');
 
 })();

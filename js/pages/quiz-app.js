@@ -321,41 +321,20 @@
         50: '🏆 50 ! IMPOSSIBLE… et pourtant.',
         75: '🏆 75 ! Banzaï ! On est bons.',
       };
-      // ─────────────────────────────────────────────────────────────
-      // Namespace _qz : drapeaux internes du quiz (privés)
-      // Regroupe les anciens "let _xxx = ..." top-level en un seul objet
-      // pour réduire la pollution du scope global et clarifier l'intent.
-      // ─────────────────────────────────────────────────────────────
-      const _qz = {
-        qRenderTime: 0,
-        loadMsgInt: null,
-        lastRankCloseNotif: 0,
-        toastTimers: {},
-        focusMode: false,
-        forensicShown: false,
-        konamiPos: 0,
-        godMode: false,
-        godModeTimer: null,
-        dorActive: false,
-        dorSessionScore: 0,
-        bilanShareOpen: false,
-        bilanShareDrawn: false,
-        ac: null,
-      };
 
 
 
 
- // let _qRenderTime = 0; [migré vers _qz.qRenderTime]
+ let _qRenderTime = 0;
 
- // let _loadMsgInt = null; [migré vers _qz.loadMsgInt]
+ let _loadMsgInt = null;
 
  function startLoadingMessages() {
  const el = document.getElementById('loading-msg');
  if (!el) return;
  let i = Math.floor(Math.random() * LOADING_MSGS.length);
  el.textContent = LOADING_MSGS[i];
- _qz.loadMsgInt = setInterval(() => {
+ _loadMsgInt = setInterval(() => {
  i = (i + 1) % LOADING_MSGS.length;
  el.style.animation = 'none';
  void el.offsetWidth; // reflow to restart animation
@@ -365,9 +344,9 @@
  }
 
  function stopLoadingMessages() {
- if (_qz.loadMsgInt) {
- clearInterval(_qz.loadMsgInt);
- _qz.loadMsgInt = null;
+ if (_loadMsgInt) {
+ clearInterval(_loadMsgInt);
+ _loadMsgInt = null;
  }
  }
 
@@ -618,6 +597,14 @@
  }
 
  function buildPool() {
+ // ─── v2.19 : filtre fiche prend précédence sur tous les modes ───
+ if (window.S_ficheFilter && window.S_ficheFilter.indices && window.S_ficheFilter.indices.size > 0) {
+   const fIndices = window.S_ficheFilter.indices;
+   return ALL_Q
+     .map((q, i) => ({ q, idx: i }))
+     .filter(x => fIndices.has(x.idx));
+ }
+ // ───────────────────────────────────────────────────────────────
  let p;
  if (S.mode === 'survival') {
  p = ALL_Q.map((q, i) => ({
@@ -752,7 +739,7 @@
  }
  // Thresholds at which we notify (XP remaining)
  const RANK_CLOSE_THRESHOLDS = [50, 20, 5];
- // let _lastRankCloseNotif = 0; [migré vers _qz.lastRankCloseNotif]
+ let _lastRankCloseNotif = 0;
 
  function checkCloseToNextRank(rankIdx) {
  const next = RANKS[rankIdx + 1];
@@ -762,8 +749,8 @@
  if (remaining <= threshold && remaining > 0) {
  // Only notify once per threshold crossing (debounce 10s)
  const now = Date.now();
- if (now - _qz.lastRankCloseNotif < 10000) return;
- _qz.lastRankCloseNotif = now;
+ if (now - _lastRankCloseNotif < 10000) return;
+ _lastRankCloseNotif = now;
  const {
  rank
  } = getRank(S.xp);
@@ -818,15 +805,15 @@
  // #combo-display, #combo-badge, #question-card (toujours présents).
  updateComboDisplay();
  }
- // let _toastTimers = {}; [migré vers _qz.toastTimers]
+ let _toastTimers = {};
 
  function showToast(id, msg, duration = 2200) {
  const t = document.getElementById(id);
  if (!t) return;
  t.textContent = msg;
  t.classList.add('show');
- clearTimeout(_qz.toastTimers[id]);
- _qz.toastTimers[id] = setTimeout(() => t.classList.remove('show'), duration);
+ clearTimeout(_toastTimers[id]);
+ _toastTimers[id] = setTimeout(() => t.classList.remove('show'), duration);
  }
 
  function spawnParticles(x, y, ok) {
@@ -862,7 +849,7 @@
         S.sel = new Set();
         S.selCorrect = new Map();
         S._hintUsedThisQ = false;
-        _qz.qRenderTime = Date.now();
+        _qRenderTime = Date.now();
         const hb = document.getElementById('hint-btn');
         if (hb) {
           hb.disabled = S.hintsLeft <= 0;
@@ -941,7 +928,7 @@
         document.getElementById('next-btn').style.display = 'none';
         startTimer();
         clearGodModeHints();
-        if (_qz.godMode) setTimeout(revealGodModeHints, 50);
+        if (_godMode) setTimeout(revealGodModeHints, 50);
       }
 
       function toggleChoice(btn, i, type, isCorrect) {
@@ -986,7 +973,7 @@
         maybeShowForensicAlert();
         if (ok) {
           const hintPenalty = S._hintUsedThisQ ? 0.5 : 1;
-          const elapsed = (Date.now() - _qz.qRenderTime) / 1000;
+          const elapsed = (Date.now() - _qRenderTime) / 1000;
           const speedBonus = (elapsed < 5 && !S.timerSec && !S._hintUsedThisQ) ? 1 : 0;
           S.score += pts;
           S.correct++;
@@ -1186,13 +1173,13 @@
         bb.className = 'bookmark-btn' + (S.bookmarks.has(idx) ? ' active' : '');
         savePersist();
       }
-      // let _ac = null; [migré vers _qz.ac]
+      let _ac = null;
 
       function ac() {
-        if (!_qz.ac) try {
-          _qz.ac = new(window.AudioContext || window.webkitAudioContext)();
+        if (!_ac) try {
+          _ac = new(window.AudioContext || window.webkitAudioContext)();
         } catch {}
-        return _qz.ac;
+        return _ac;
       }
 
       function playSound(ok) {
@@ -1487,6 +1474,57 @@
         buildPool();
         closeOverlay('settings-overlay');
         renderQuestion(getNext());
+      }
+
+      // ─── v2.19 : Bannière indiquant que le quiz est filtré sur une fiche ───
+      function showFicheFilterBanner(filt) {
+        if (document.getElementById('fiche-filter-banner')) return;
+        const escFiche = String(filt.label || '').replace(/[&<>"']/g, c =>
+          ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const banner = document.createElement('div');
+        banner.id = 'fiche-filter-banner';
+        banner.style.cssText = `
+          margin: .8rem auto;
+          padding: .7rem 1rem;
+          background: rgba(0, 229, 204, .08);
+          border: 1px solid rgba(0, 229, 204, .25);
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          gap: .8rem;
+          font-family: var(--mono, monospace);
+          font-size: .85rem;
+          max-width: 700px;
+        `;
+        banner.innerHTML = `
+          <span style="font-size:1.2rem">📖</span>
+          <span style="flex:1; line-height:1.4">
+            Quiz filtré sur la fiche <strong>${escFiche}</strong> ·
+            <span style="color:var(--cyan)">${filt.indices.size} question${filt.indices.size > 1 ? 's' : ''}</span>
+          </span>
+          <button id="fiche-filter-clear" style="
+            background: transparent;
+            border: 1px solid rgba(0, 229, 204, .35);
+            color: var(--cyan);
+            padding: .35rem .8rem;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: .75rem;
+            cursor: pointer;
+          ">Voir toutes les questions</button>
+        `;
+        const main = document.getElementById('main');
+        if (main && main.firstChild) {
+          main.insertBefore(banner, main.firstChild);
+        }
+        document.getElementById('fiche-filter-clear').addEventListener('click', () => {
+          window.S_ficheFilter = null;
+          banner.remove();
+          if (typeof buildPool === 'function') buildPool();
+          if (typeof renderQuestion === 'function' && typeof getNext === 'function') {
+            renderQuestion(getNext());
+          }
+        });
       }
 
       function showDailyBanner() {
@@ -2435,6 +2473,32 @@
         ALL_Q = data;
         ALL_T = [...new Set(ALL_Q.map(q => q.theme))].sort();
         ALL_C = [...new Set(ALL_Q.map(q => q.chapter).filter(Boolean))].sort();
+
+        // ─── v2.19 : filtre fiche (depuis fiche-related.js) ───
+        // Détection d'un filtre passé par une fiche via localStorage.
+        // S'il est présent et frais (< 1h), on l'active automatiquement.
+        try {
+          const raw = localStorage.getItem('cas-in-quiz-filter');
+          if (raw) {
+            const filt = JSON.parse(raw);
+            const ageMs = Date.now() - (filt.createdAt || 0);
+            if (filt && filt.type === 'fiche' && Array.isArray(filt.indices)
+                && filt.indices.length > 0 && ageMs < 3600000) {
+              // Garder uniquement les indices valides
+              const validIndices = filt.indices.filter(i => Number.isInteger(i) && i >= 0 && i < ALL_Q.length);
+              if (validIndices.length > 0) {
+                window.S_ficheFilter = {
+                  ficheFile: filt.fiche || '',
+                  indices: new Set(validIndices),
+                  label: (filt.fiche || '').replace('.html', '').replace(/_/g, ' '),
+                };
+              }
+            }
+            // Filtre consommé : on le retire (pour ne pas re-déclencher au prochain quiz)
+            localStorage.removeItem('cas-in-quiz-filter');
+          }
+        } catch (e) { /* ignore */ }
+        // ──────────────────────────────────────────────────────
         // Mapping thème → chapitres (pour affichage groupé dans les filtres)
         window.THEME_CHAPTERS = {};
         ALL_Q.forEach(q => {
@@ -2479,6 +2543,10 @@
         updateXpBar();
         showDailyBanner();
         showSessionResumeToast();
+        // ─── v2.19 : bannière "Quiz filtré sur la fiche X" ───
+        if (window.S_ficheFilter) {
+          showFicheFilterBanner(window.S_ficheFilter);
+        }
         renderQuestion(getNext());
       }).catch(err => {
         document.getElementById('loading').innerHTML = `
@@ -3092,7 +3160,7 @@
           sf.streak13 = true;
         }
         if (ok) {
-          const elapsed = (Date.now() - _qz.qRenderTime) / 1000;
+          const elapsed = (Date.now() - _qRenderTime) / 1000;
           if (elapsed < 5 && !S._hintUsedThisQ) {
             S._speedCorrect = (S._speedCorrect || 0) + 1;
             if (S._speedCorrect >= 5 && !sf.speed5row) {
@@ -3492,25 +3560,25 @@
       // ══════════════════════════════════════════════════════════
       // FOCUS MODE
       // ══════════════════════════════════════════════════════════
-      // let _focusMode = false; [migré vers _qz.focusMode]
+      let _focusMode = false;
 
       function toggleFocusMode() {
-        _qz.focusMode = !_qz.focusMode;
-        document.body.classList.toggle('focus-mode', _qz.focusMode);
-        if (_qz.focusMode) showToast('streak-toast', '🎯 Mode Focus activé — ESC pour quitter', 2000);
+        _focusMode = !_focusMode;
+        document.body.classList.toggle('focus-mode', _focusMode);
+        if (_focusMode) showToast('streak-toast', '🎯 Mode Focus activé — ESC pour quitter', 2000);
       }
       document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && _qz.focusMode) toggleFocusMode();
+        if (e.key === 'Escape' && _focusMode) toggleFocusMode();
       });
       // ══════════════════════════════════════════════════════════
       // ALERTE FORENSIQUE SIMULÉE
       // ══════════════════════════════════════════════════════════
-      // let _forensicShown = false; [migré vers _qz.forensicShown]
+      let _forensicShown = false;
 
       function maybeShowForensicAlert() {
-        if (_qz.forensicShown || S.total !== 100) return;
+        if (_forensicShown || S.total !== 100) return;
         if (lsGet('forensicShown', false)) return;
-        _qz.forensicShown = true;
+        _forensicShown = true;
         lsSet('forensicShown', true);
         setTimeout(showForensicAlert, 800);
       }
@@ -3644,30 +3712,30 @@
       // CODE KONAMI — God Mode
       // ══════════════════════════════════════════════════════════
 
-      // let _konamiPos = 0; [migré vers _qz.konamiPos]
-      // let _godMode = false; [migré vers _qz.godMode]
-      // let _godModeTimer = null; [migré vers _qz.godModeTimer]
+      let _konamiPos = 0;
+      let _godMode = false;
+      let _godModeTimer = null;
       document.addEventListener('keydown', e => {
         // Konami tracking
-        if (e.key === KONAMI[_qz.konamiPos]) {
-          _qz.konamiPos++;
-          if (_qz.konamiPos === KONAMI.length) {
-            _qz.konamiPos = 0;
+        if (e.key === KONAMI[_konamiPos]) {
+          _konamiPos++;
+          if (_konamiPos === KONAMI.length) {
+            _konamiPos = 0;
             activateGodMode();
           }
         } else {
-          _qz.konamiPos = (e.key === KONAMI[0]) ? 1 : 0;
+          _konamiPos = (e.key === KONAMI[0]) ? 1 : 0;
         }
       });
 
       function activateGodMode() {
-        _qz.godMode = true;
-        clearTimeout(_qz.godModeTimer);
+        _godMode = true;
+        clearTimeout(_godModeTimer);
         showToast('combo-toast', '🕹️ GOD MODE — La honte sera dans les logs.', 4000);
         // Reveal all wrong answers as dimmed gray for this question
         revealGodModeHints();
         // Auto-disable after 3 questions or 90s
-        _qz.godModeTimer = setTimeout(deactivateGodMode, 90000);
+        _godModeTimer = setTimeout(deactivateGodMode, 90000);
         // Konami visual flash
         document.body.style.transition = 'filter .15s';
         document.body.style.filter = 'brightness(1.3) hue-rotate(180deg)';
@@ -3677,12 +3745,12 @@
       }
 
       function deactivateGodMode() {
-        _qz.godMode = false;
-        clearTimeout(_qz.godModeTimer);
+        _godMode = false;
+        clearTimeout(_godModeTimer);
       }
 
       function revealGodModeHints() {
-        if (!_qz.godMode || !S.curQ || S.answered) return;
+        if (!_godMode || !S.curQ || S.answered) return;
         const q = S.curQ;
         document.querySelectorAll('.choice-btn:not(:disabled)').forEach(btn => {
           const origI = +btn.dataset.origIdx;
@@ -3703,11 +3771,11 @@
       // ══════════════════════════════════════════════════════════
       // MODE DOUBLE OU RIEN
       // ══════════════════════════════════════════════════════════
-      // let _dorActive = false; [migré vers _qz.dorActive]
-      // let _dorSessionScore = 0; [migré vers _qz.dorSessionScore] // score accumulé pendant la série
+      let _dorActive = false;
+      let _dorSessionScore = 0; // score accumulé pendant la série
       function checkDorOffer() {
         // Offer after exactly 5 correct in a row (and not already active)
-        if (S.streak === 5 && !_qz.dorActive) {
+        if (S.streak === 5 && !_dorActive) {
           showDorBanner();
         }
       }
@@ -3717,7 +3785,7 @@
         if (b) {
           b.classList.add('show');
           // Save the current streak score to know what's at stake
-          _qz.dorSessionScore = S.score;
+          _dorSessionScore = S.score;
         }
       }
 
@@ -3727,15 +3795,15 @@
       }
 
       function activateDor() {
-        _qz.dorActive = true;
+        _dorActive = true;
         hideDorBanner();
         showToast('combo-toast', '🎲 Double ou Rien activé ! Prochaine réponse decisive…', 3000);
         document.getElementById('question-card')?.classList.add('dor-active');
       }
 
       function resolveDor(correct) {
-        if (!_qz.dorActive) return;
-        _qz.dorActive = false;
+        if (!_dorActive) return;
+        _dorActive = false;
         document.getElementById('question-card')?.classList.remove('dor-active');
         if (correct) {
           // Double the points earned since DOR activation
@@ -5129,19 +5197,19 @@ document.addEventListener('click', e => {
 });
 
 // ── Partager intégré dans Bilan ──
-// let _bilanShareOpen = false; [migré vers _qz.bilanShareOpen]
-// let _bilanShareDrawn = false; [migré vers _qz.bilanShareDrawn]
+let _bilanShareOpen = false;
+let _bilanShareDrawn = false;
 
 function toggleBilanShare() {
   const content = document.getElementById('bilan-share-content');
   const label   = document.getElementById('share-toggle-label');
   if (!content) return;
-  _qz.bilanShareOpen = !_qz.bilanShareOpen;
-  content.style.display = _qz.bilanShareOpen ? 'block' : 'none';
-  label.textContent = _qz.bilanShareOpen ? 'Masquer la carte' : 'Générer ma carte de score';
-  if (_qz.bilanShareOpen && !_qz.bilanShareDrawn) {
+  _bilanShareOpen = !_bilanShareOpen;
+  content.style.display = _bilanShareOpen ? 'block' : 'none';
+  label.textContent = _bilanShareOpen ? 'Masquer la carte' : 'Générer ma carte de score';
+  if (_bilanShareOpen && !_bilanShareDrawn) {
     drawBilanCard();
-    _qz.bilanShareDrawn = true;
+    _bilanShareDrawn = true;
   }
 }
 
@@ -5149,8 +5217,8 @@ function toggleBilanShare() {
 const _orig_closeOverlay = closeOverlay;
 closeOverlay = function(id) {
   if (id === 'bilan-overlay') {
-    _qz.bilanShareOpen = false;
-    _qz.bilanShareDrawn = false;
+    _bilanShareOpen = false;
+    _bilanShareDrawn = false;
     const c = document.getElementById('bilan-share-content');
     if (c) c.style.display = 'none';
     const l = document.getElementById('share-toggle-label');

@@ -938,7 +938,6 @@
     const root = document.getElementById('screen-lobby') || document.body;
     observer.observe(root, { attributes: true, attributeFilter: ['class'], subtree: true });
 
-    console.log('[lobby-v3] ✓ Lobby UX v3 attached');
   }
 
   if (document.readyState === 'loading') {
