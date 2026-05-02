@@ -1,4 +1,23 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v55 : v2.21 — Split de quiz-app.js (5287 → 4718 LOC, -10.7%)
+//       NEW js/components/quiz-utils.js (126 L) : helpers purs
+//       (lsGet/lsSet, shuffle, sanitizeHTML, getDailyDate, seededRng).
+//       NEW js/components/quiz-sm2.js (190 L) : algorithme SM-2
+//       de répétition espacée (testable en Node, isolé du DOM).
+//       NEW js/components/quiz-ranks.js (106 L) : logique purs des
+//       rangs et combos (getRank, getNextRank, getXpToNextRank,
+//       getComboMultiplier).
+//       NEW js/components/quiz-effects.js (199 L) : audio synthétisé,
+//       particules de feedback, thèmes visuels.
+//       NEW js/components/quiz-share.js (138 L) : helpers canvas
+//       génériques (downloadCanvas, copyCanvasToClipboard,
+//       shareCanvasNative). Réutilisables par d'autres pages.
+//       Migration vers quiz-data.js : DIFF_LABELS, DIFF_PTS, TC,
+//       ACHIEVEMENTS (252 L), STREAK_MSGS.
+//       Tests unitaires en Node : tous les modules purs validés.
+//       Rétrocompat : globales window.* préservées pour les 57
+//       fonctions appelées depuis onclick="..." dans quiz.html.
+//
 // v54 : v2.20 — Quick wins : factorisation, a11y, cohérence index
 //       NEW js/components/fiche-common.js (171 L) : factorisation des
 //       comportements UI répétés sur toutes les fiches (scroll-progress,
@@ -106,7 +125,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v54';
+const CACHE_VERSION = 'cas-in-v55';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -170,6 +189,11 @@ const STATIC_ASSETS = [
   // Pages
   './js/pages/landing.js',
   './js/pages/landing-3d.js',
+  './js/components/quiz-utils.js',
+  './js/components/quiz-sm2.js',
+  './js/components/quiz-ranks.js',
+  './js/components/quiz-effects.js',
+  './js/components/quiz-share.js',
   './js/pages/quiz-data.js',
   './js/pages/quiz-app.js',
   './js/pages/quiz-ui-patch.js',
