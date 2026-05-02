@@ -4,6 +4,94 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.19] — 2026-05-02
+
+Cette version livre la **navigation transverse** entre fiches, quiz, TP et scènes, ainsi que **27 questions ICS/SCADA** dédiées et un nettoyage des restes de prototype en prod.
+
+### Le problème
+
+Jusqu'ici, fiches, quiz, TP et scènes vivaient en silos. Une fiche NTFS ne renvoyait pas vers les questions sur NTFS, ni vers le TP « Run List », ni vers la scène d'investigation BitLocker. Naviguer entre les supports d'apprentissage demandait à l'utilisateur de chercher manuellement.
+
+Côté contenu, le thème **Forensique** ne comptait que **43 questions sur 1750** (2,5 %), et l'investigation des systèmes industriels (ICS/SCADA/OT) n'avait pas de chapitre dédié — alors que c'est un des sujets phares du CAS Investigation Numérique.
+
+### Ajouté — Liens croisés Q ↔ Fiche ↔ TP ↔ Scènes
+
+#### Mapping généré (`data/cross-links.json`, 35 KB)
+
+- Nouveau script `scripts/build_cross_links.py` qui construit le mapping bidirectionnel à partir de `data/manifest.json`, `data/questions.json`, `scenes/*.json` et `tp.html`.
+- Stratégie hybride : **hard-coded mappings** explicites pour les 70+ fiches principales (priorité), complétés par un **auto-fill** par mots-clés distinctifs (≥4 caractères, hors mots génériques).
+- Statistiques générées :
+  - **1730 liens** fiches → questions (52/109 fiches couvertes)
+  - **26 liens** fiches → TP
+  - **73 liens** fiches → scènes
+- Mappings inverses (TP → fiches, scène → fiches) inclus dans le même fichier.
+- Régénération automatique via `scripts/build-all.sh`.
+
+#### Section « Voir aussi » dans chaque fiche (`js/components/fiche-related.js`)
+
+- Composant injecté en bas des **109 fiches** (après `.fiche-cta-row`) qui affiche jusqu'à 7 cartes :
+  - 🎯 **1 carte Quiz** (cyan) : « Tester vos connaissances · N questions sur ce sujet »
+  - 🧪 **3 cartes TP** (orange) : exercices pratiques liés (ex. NTFS → Run List, MBR, Slack Space)
+  - 🎭 **3 cartes Scènes** (purple) : scénarios DFIR pertinents
+- Stylé en flexbox responsive (cards full-width sous 600px), compatible mode dark/light.
+- Hover effect : `translateY(-2px) + shadow`.
+- Le lien Quiz dépose un filtre dans `localStorage['cas-in-quiz-filter']` (TTL 1h) avant de naviguer vers `quiz.html`.
+
+#### Filtrage du quiz par fiche (modif `js/pages/quiz-app.js`)
+
+- Au démarrage du quiz, lecture de `localStorage['cas-in-quiz-filter']`. Si présent, frais (< 1h) et avec des indices valides : crée `window.S_ficheFilter = { ficheFile, indices, label }`.
+- `buildPool()` : nouveau **mode prioritaire** qui retourne uniquement les questions dont l'index est dans le filtre — passe avant `survival`/`sm2`/`smart`/etc.
+- **Bannière** affichée en haut du quiz : « 📖 Quiz filtré sur la fiche [X] · N questions » avec bouton « Voir toutes les questions » (clear le filtre + rebuild pool en place, sans reload).
+- Le filtre est consommé une fois (supprimé du localStorage à la lecture).
+
+### Ajouté — Questions ICS/SCADA/OT (+27)
+
+Nouveau chapitre `ICS / SCADA / OT Forensique` dans le thème **Forensique** (🔬), passant de **43 → 70 questions**. Total questions : **1750 → 1777**.
+
+Distribution :
+- **6 easy** : fondamentaux (CIA vs SAID, modèle Purdue, PLC, IEC 62443, HMI, historian).
+- **13 medium** : protocoles (Modbus TCP/502, IEC 61850 MMS/GOOSE/SV, OPC UA), attaques historiques (Stuxnet, Industroyer, Triton/Trisis, Pipedream, Colonial Pipeline), forensique (engineering workstation, Conpot honeypot, Snap7).
+- **8 hard** : analyse de tags historian, PLC live forensics avec Snap7/libnodave, IOCs Triton, data diodes, IKT-Minimalstandard suisse (OFAE/BWL).
+
+Toutes les questions ont des références sourcées (NIST 800-82r3, IEC 62443, MITRE ATT&CK for ICS, ENISA, rapports Mandiant/Dragos).
+
+### Modifié — Build orchestrator + git hook
+
+- Nouveau `scripts/build-all.sh` : orchestre les 5 étapes (counts → fiche-index → search-index → cross-links → checks) en un appel.
+- Mode `--quick` qui saute la régénération de l'index full-text (utile lors d'itérations rapides).
+- Nouveau `scripts/git-hooks/pre-commit` : détecte les fiches modifiées dans le commit, régénère automatiquement `search-index.json` et `fiches/index.html`, les ajoute au commit. Évite l'oubli classique de l'index obsolète.
+- Documentation dans `scripts/README.md`.
+
+### Modifié — `scripts/build_index.py` (idempotence)
+
+- Le générateur de `fiches/index.html` produit désormais le bloc moderne avec `fiche-search.js` + `search-modal.js` (au lieu de l'ancien `filterFiches()` inline). Une régénération ne casse plus le moteur de recherche.
+- Le `filterFiches()` reste embarqué comme fallback (au cas où les modules JS échouent à charger).
+
+### Modifié — Service Worker v52 → v53
+
+- Cache version : `cas-in-v52` → `cas-in-v53`.
+- Nouveaux fichiers ajoutés au cache : `js/components/fiche-related.js`, `data/cross-links.json`.
+
+### Nettoyage prod
+
+- **`console.log` retirés (7 → 0)** : les logs de boot verbeux des modules attachés (`profile-track-v5`, `scene-engine-v4`, `scene-app`, `scene-ux-patch`, `scene-lobby-v3`, `cas-in-export`, ainsi que le `SW enregistré` dans `scene-app`). Aucun log de bruit en console pour un visiteur normal.
+- **`alert()` retirés (6 → 0 en direct)** : remplacés par `casNotify()` (cas-in-export.js) et un fallback inline `showToast || alert` (profile-page.js). Les 2 alertes suivies de `location.reload()` ont leur reload allongé de 200 ms → 1200 ms pour que le toast soit lisible.
+- **2 catch silencieux complétés** par un `console.warn` ciblé (lecture de track ladder, calcul des nouveaux badges) — les autres `catch (e) {}` étaient des patterns défensifs légitimes (mode privé `localStorage`, API `vibrate`/`audio context` non supportées) et ont été conservés.
+
+### Statistiques v2.19
+
+| Indicateur | v2.18 | v2.19 |
+|---|---|---|
+| Fiches | 109 | 109 |
+| Questions | 1750 | **1777** (+27 ICS) |
+| Scènes | 98 | 98 |
+| Catégories TP | 27 | 27 |
+| Thème Forensique | 43 q | **70 q** (+27) |
+| Liens croisés générés | 0 | **1829** (1730 Q + 26 TP + 73 scènes) |
+| `console.log` prod | 7 | **0** |
+| `alert()` directs | 6 | **0** |
+| Service Worker | v52 | **v53** |
+
 ## [2.18] — 2026-05-02
 
 Cette version remplace le filtre de cards basique par un **véritable moteur de recherche full-text** sur les 109 fiches.
