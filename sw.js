@@ -1,4 +1,20 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v52 : v2.18 — Moteur de recherche full-text dans les fiches.
+//       NEW js/components/fiche-search.js (466 L) : tokenization FR/EN,
+//       normalisation accents, synonymes bidirectionnels, indexation
+//       du contenu RÉEL des fiches (875 sections), scoring pondéré
+//       par champ (title=10, sec_title=5, command=4, term=3, body=1),
+//       fuzzy matching Levenshtein pour fautes de frappe.
+//       NEW js/components/search-modal.js (508 L) : modal Cmd+K accessible
+//       depuis 118 pages, navigation clavier, snippets surlignés,
+//       recherches récentes en localStorage, FAB mobile.
+//       NEW scripts/build_search_index.py (218 L) : génère search-index.json
+//       à partir des HTML (875 sections, 6622 termes, 38 commandes).
+//       NEW data/search-index.json (581 KB, ~80 KB gzippé).
+//       Maintenant : 'Ed Skoudis', 'ip link', '4624 type 10', 'WhatsApp database',
+//       'comment trouver les processus malveillants' renvoient les BONNES
+//       sections des bonnes fiches avec extraits surlignés.
+//
 // v51 : v2.17 — Mode dark/light propagé dans les 7 CSS qui n'avaient pas de
 //       règles [data-theme="light"] : fiche_style.css (47 sélecteurs),
 //       landing.css (14), quiz.css (13), scene.css (11), profile.css (10),
@@ -59,7 +75,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v51';
+const CACHE_VERSION = 'cas-in-v52';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -144,6 +160,9 @@ const STATIC_ASSETS = [
 
   // Hub des fiches (les fiches elles-mêmes sont précachées dynamiquement)
   './fiches/index.html',
+  './js/components/fiche-search.js',
+  './js/components/search-modal.js',
+  './data/search-index.json',
 ];
 
 const OFFLINE_FALLBACK = './offline.html';
