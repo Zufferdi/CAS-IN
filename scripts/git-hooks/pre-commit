@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# CAS-IN — Git pre-commit hook
+# ────────────────────────────
+# Régénère automatiquement data/search-index.json si une fiche HTML a été modifiée
+# dans le commit en cours. Évite que l'index soit obsolète.
+#
+# Installation :
+#   ln -sf ../../scripts/git-hooks/pre-commit .git/hooks/pre-commit
+# OU :
+#   cp scripts/git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+#
+# v1.0 — 2026-05-02
+
+# Trouver la racine du repo
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [[ -z "$REPO_ROOT" ]]; then
+  exit 0   # pas dans un repo git, skip
+fi
+cd "$REPO_ROOT"
+
+# Détecter si une fiche HTML est modifiée dans ce commit
+CHANGED_FICHES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^fiches/.*\.html$' | grep -v 'fiches/index.html$' || true)
+
+if [[ -z "$CHANGED_FICHES" ]]; then
+  exit 0   # rien à faire
+fi
+
+echo "▸ pre-commit: $(echo "$CHANGED_FICHES" | wc -l | tr -d ' ') fiche(s) modifiée(s) → régénération de l'index full-text"
+
+# Régénérer l'index
+if ! python3 scripts/build_search_index.py >/dev/null 2>&1; then
+  echo "❌ Échec de la régénération de search-index.json — commit annulé"
+  exit 1
+fi
+
+# Régénérer aussi fiches/index.html (cards) au cas où une nouvelle fiche est ajoutée
+python3 scripts/build_index.py >/dev/null 2>&1 || true
+
+# Ajouter les fichiers régénérés au commit
+git add data/search-index.json fiches/index.html 2>/dev/null || true
+
+echo "  ✓ search-index.json régénéré et ajouté au commit"
+exit 0
