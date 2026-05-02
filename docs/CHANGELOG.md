@@ -4,6 +4,197 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.16] — 2026-05-02
+
+Cette version finalise le « parcours forensique mémoire » et ajoute deux fonctionnalités UX majeures : **CHANGELOG à jour** + **fiche poster Windows** + **système de notes utilisateur** sur fiches.
+
+### Phase 1 — CHANGELOG remis à jour
+
+Les sessions v2.11 → v2.15-bis n'avaient pas été documentées. Cette version rattrape l'arriéré avec entrées détaillées pour chaque palier.
+
+### Phase 2 — Nouvelle fiche `poster_windows_artefacts.html`
+
+Inspirée du **poster officiel SANS FOR500** (Rob Lee), c'est une fiche-matrice qui organise les artéfacts Windows **par question forensique** plutôt que par technologie. CAS-IN avait déjà tous les artéfacts éparpillés dans 18+ fiches — manquait la grille d'entrée :
+
+| Question forensique | Artéfacts couverts |
+|---|---|
+| Quel programme a été exécuté ? | UserAssist · Shimcache · Amcache · BAM/DAM · SRUM · JumpList · Prefetch · Win10 Timeline |
+| Quel fichier a été ouvert ? | Open/Save MRU · Recent · LNK · Office MRU · ShellBags · JumpList · Last-Visited |
+| Quel fichier a été supprimé ? | Recycle Bin (XP/Win7+) · ShimCache · WordWheel · Thumbnail · Thumbs.db |
+| D'où vient ce fichier ? | Browser History · Downloads · Email Attachments · Skype · ADS Zone.Identifier |
+| Quel USB a été branché ? | USBSTOR · setupapi.dev.log · MountPoints2 · Volume Serial · Drive Letter |
+| Quelle activité Internet ? | History · Cookies · Cache · Flash LSO · Session Restore · Google Analytics |
+| Qui s'est connecté ? | Last Login · RDP · Services · Logon Types · Auth Events |
+| Quel réseau ? | Timezone · WLAN Event Log · Network History · SRUM Network |
+
+Chaque cellule = lien direct vers la fiche détaillée. Devient la **fiche d'entrée** pour DFIR Windows.
+
+### Phase 3 — Notes utilisateur sur fiches
+
+Nouvelle fonctionnalité `js/components/fiche-notes.js` : permet d'annoter chaque fiche comme dans un livre papier. Persistence localStorage (`cas-in-notes-{ficheId}`). Markdown supporté. Recherche full-text dans toutes les notes. Export global JSON/Markdown.
+
+### Stats finales v2.16
+
+```
+1750 questions · 104 fiches · 93 scènes · 32 TP
+SW v48 → v49
+```
+
+---
+
+## [2.15-bis] — 2026-05-01
+
+Renforcement du contenu ICS et clarification du parcours « forensique mémoire ».
+
+### Ajouté
+
+- **Scène ICS expert** : `scenes/swissgrid-iec61850-jura.json` — poste électrique 380 kV à Bassecourt JU sous attaque GOOSE forgée. Inspirée d'Industroyer/Industroyer2 (Ukraine 2016/2022). 5 phases couvrant diagnostic GOOSE/SV, IEC 62351-6, doctrine Safety > Security > Forensics, notifications OFCS/MPC/ENTSO-E, plan IEC 62443 SL4. Difficulty: expert.
+- **6 edge cases modernes** dans `ram_forensique.html` : Secure Boot + Measured Boot, KASLR, VBS/Credential Guard/HVCI, BitLocker TPM 2.0 + PIN, Hyperviseur type-1 (VMware/Hyper-V/Proxmox), SSD avec auto-encrypt SED + Opal 2.0.
+
+### Modifié — Refactor des 3 fiches mémoire
+
+Avant, les 3 fiches `ram_forensique` (304L) + `volatilite` (460L) + `volatility_memory_forensics` (942L) avaient des titres et descriptions trop similaires. Refactor pour clarifier le rôle de chacune :
+
+| Fiche | Avant | Après | Rôle |
+|---|---|---|---|
+| `ram_forensique.html` | "RAM Forensique" | **"Acquisition Mémoire RAM"** (Étape 1/3) | 📥 Capturer |
+| `volatilite.html` | "Volatility & RAM" | **"Volatility 3 — Démarrage"** (Étape 2/3) | 🚀 Premiers pas |
+| `volatility_memory_forensics.html` | "Volatility & Memory Forensics" | **"Mémoire — Internals Avancés"** (Étape 3/3) | 🧬 Approfondir |
+
+Bannières de cross-référence harmonisées entre les 3 fiches. H1 + title + meta description + breadcrumb tous alignés.
+
+### Service Worker
+
+`v46 → v48`. Cache invalidé pour les 3 fiches mémoire modifiées.
+
+---
+
+## [2.15] — 2026-05-01
+
+Trois nouvelles fiches forensiques basées sur les cheat sheets officielles SANS, plus enrichissement de `zimmerman.html`.
+
+### Ajouté
+
+- **`fiches/ics_forensique.html`** (392 L) — ICS/SCADA Forensique : modèle Purdue (5 niveaux SVG), 6 protocoles industriels (Modbus/DNP3/IEC 61850/OPC-UA/EtherNet-IP/S7comm) avec ports + tshark filters, NSM ICS (SPAN vs TAP fail-open), 3 règles Suricata pédagogiques, IR Jump Bag complet, spécificités suisses (LSI art. 73-78, OFCS, IIC, délai 24h). Inspiré du cheat sheet SANS « Industrial Network Security Monitoring & Incident Response ».
+- **`fiches/cmd_windows_forensique.html`** (397 L) — Live Response Windows : tasklist (`/v` `/m` `/svc`), sc query/qc, wmic (alias/where/verb), reg (clés persistance prioritaires), netstat -nao, netsh (firewall/DNS hijack/WiFi keys), boucles `for /L` et `/F`. Workflow live response 15 min en 4 phases. Justification du choix de cmd.exe vs PowerShell en environnement durci. Inspiré du cheat sheet SANS « Windows Command Line Cheat Sheet » (Ed Skoudis).
+- **`fiches/magic_bytes_signatures.html`** (353 L) — File Signatures : tableau de 23 magic bytes principaux (PNG/JPEG/ZIP/PDF/EXE/ELF/etc.), cas spéciaux à offset non-zéro (NTFS @ 0x03, EXT4 @ 0x438, HFS+ @ 0x400, GPT @ 0x200), 6 outils (file/xxd/binwalk/photorec/trid/PowerShell), 12 regex forensiques (IP/email/hashes/base64/GUID/BTC), combos bash (grep/awk/sed/sort/uniq), `findstr` Windows. Lien direct vers `tp.html#magic`. Inspiré du cheat sheet SANS « Hex and Regex Forensics ».
+- **Section `bstrings`** dans `fiches/zimmerman.html` (+72 L) : usage de base, `--ls`/`--lr`/`--off`/`--cp`/`--fr`/`--fs`, built-in patterns regex (email/ipv4/cc/ssn/guid), 5 cas d'usage forensiques. Inspiré du cheat sheet SANS « Eric Zimmerman's Tools ».
+
+### Modifié
+
+- `data/manifest.json` : 100 → 103 fiches, entrées triées par catégorie + alphabétique.
+- `data/counts.json` : régénéré (fiches: 100 → 103).
+- `fiches/index.html` : régénéré via `scripts/build_index.py` pour intégrer les nouvelles fiches.
+- `sw.js` : v45 → v46, cache invalidé.
+
+---
+
+## [2.14] — 2026-05-01
+
+Extensions pédagogiques des TP + refactor pollution globale.
+
+### Ajouté — Extensions TP forensiques
+
+- **`genHexDump`** : 10 → 13 scénarios. Ajout HFS+ Volume Header (BE @ 0x000), exFAT VolumeSerialNumber (LE @ 0x064), GPT Primary Header NumberOfPartitionEntries (LE @ 0x250).
+- **`genFSIdentify`** : EXT4 buffer étendu 64 → 128 octets pour inclure UUID superblock @ 0x68.
+- **`genHashIdentify`** : 6 → 7 sous-types. Nouveau sous-type "Détection collision MD5" : 3 paires de fichiers (Word/JPG/EXE) avec MD5 identique mais SHA-1 et SHA-256 différents — apprend à reconnaître le piège forensique. Référence Wang & Yu 2005, Stevens et al. 2008, Flame malware 2012.
+- **`genRunList`** : décodage simple → décodage + classification. Nouveau sous-type QCM (~30%) : identifier dense vs sparse vs compressée (LZNT1) à partir d'une RunList NTFS.
+
+### Modifié — Refactor pollution globale `quiz-app.js`
+
+Audit révèle que sur les "663 vars top-level" suspectées, seules **14 `let _privé`** étaient réellement à problème. Regroupement dans namespace `_qz = { ... }` :
+
+```js
+const _qz = {
+  qRenderTime: 0, loadMsgInt: null, lastRankCloseNotif: 0,
+  toastTimers: {}, focusMode: false, forensicShown: false,
+  konamiPos: 0, godMode: false, godModeTimer: null,
+  dorActive: false, dorSessionScore: 0, bilanShareOpen: false,
+  bilanShareDrawn: false, ac: null,
+};
+```
+
+61 occurrences mises à jour automatiquement. 14 commentaires de traçabilité conservés. Pas de risque de régression : ces vars avaient un usage strictement local.
+
+Les autres top-level (`bossState`, `S`, `ALL_Q`, `EX`, `RANKS`) sont conservés tels quels — ce sont des objets de state légitimes dont la consolidation aurait juste compliqué le débogage.
+
+### Service Worker
+
+`v45 → v46`.
+
+### Tests
+
+`135/135 OK` sur les 27 générateurs TP × 5 itérations. Tests `genHexDump` 65/65, `genHashIdentify` 70/70, `genFSIdentify` 70/70, `genRunList` 100/100.
+
+---
+
+## [2.13] — 2026-04-30
+
+Split de `quiz-app.js` + tests de cohérence + enrichissement SM-2.
+
+### Ajouté
+
+- **`js/pages/quiz-data.js`** (1562 L / 111 KB) : 17 constantes extraites de `quiz-app.js` (RANKS, MILESTONES, GLOSSARY, CHEATSHEETS, FEEDBACK_OK/KO, FORENSIC_QUOTES/TIPS, PERSONAS, LOADING_MSGS, AVATAR_EMOJIS, KONAMI, MID_TIPS, CHAPTER_TO_THEME_FILE, SCENES, MISSION_PHASES, VISUAL_THEMES). Module séparé pour alléger le caching et la maintenance.
+- **`tests/test-achievements-sync.js`** : détecte la désynchronisation entre `ACHIEVEMENTS` (quiz-app.js) et `QUIZ_ACH` (cas-in-achievements.js). Tolère 14 abréviations de descriptions. Fix : harmonisation du nom 'hint'.
+- **SM-2 enhancements** : `updateSM2()` retourne `{interval, reps, ef}` pour feedback UX. Toast "🃏 Prochaine révision dans X jours". Nouvelles fonctions `getSM2Stats()` et `resetSM2()` (avec confirm). Widget stats SM-2 dans `profile.html` + `js/profile/profile-page.js` + `style/profile.css`.
+
+### Modifié
+
+- `js/pages/quiz-app.js` : 6630 → 5183 lignes (-22%, -115 KB).
+- `ACHIEVEMENTS` reste dans `quiz-app.js` (dépendances runtime via `check: s => ...`), pas extrait dans quiz-data.js.
+
+### Service Worker
+
+`v43 → v45`. v44 : retrait de `track-theme.css` et `fiche-hub.css` orphelins de STATIC_ASSETS (404 au précache). v45 : ajout de `quiz-data.js`.
+
+---
+
+## [2.12] — 2026-04-30
+
+Split de `tp-engine.js` en 3 modules.
+
+### Ajouté
+
+- **`tp/tp-engine-windows.js`** (1293 L) : générateurs Registry / Prefetch / LNK extraits.
+- **`tp/tp-engine-meta.js`** (412 L) : générateurs Droit / Glossaire / Email / IR / Network extraits.
+
+### Modifié
+
+- `tp/tp-engine.js` : 8030 → 6429 lignes.
+- Chaque module patche le dispatcher `GENERATORS` après sa propre définition.
+- `tp.html` : balises `<script>` mises à jour pour précharger les 3 modules dans l'ordre.
+
+### Service Worker
+
+`v42 → v43`. Ajout des 2 nouveaux modules au précache.
+
+---
+
+## [2.11] — 2026-04-30
+
+Restructuration des fichiers à la racine pour réduire la pollution.
+
+### Modifié — Réorganisation
+
+| Avant (racine) | Après |
+|---|---|
+| `ARCHITECTURE.md` | `docs/ARCHITECTURE.md` |
+| `CHANGELOG.md` | `docs/CHANGELOG.md` |
+| `test-cas-in.js` | `tests/test-cas-in.js` |
+| `counts.json` | `data/counts.json` |
+| `manifest.json` | `data/manifest.json` |
+| `questions.json` | `data/questions.json` |
+
+### Modifié — 14 fichiers patchés
+
+Tous les chemins mis à jour : `sw.js`, `quiz-app.js`, `exam-app.js`, `js/pages/search.js`, `js/components/counts.js`, `scripts/generate_counts.py`, `scripts/build_index.py`, `scripts/sync_fiches_index.py`, `scripts/check_questions.py`, `exam.html`, `.github/workflows/audit-repo.yml`, `.github/workflows/check-questions.yml`, et le tree dans `README.md`.
+
+### Service Worker
+
+`v41 → v42`. Cache invalidé pour forcer re-précache des nouveaux chemins.
+
+---
+
 ## [2.10] — 2026-04-30
 
 Refactor structurel en 4 phases. Aucun changement fonctionnel pour l'utilisateur final hormis la correction de bugs UX listés en Phase 1. Ouverture d'`ARCHITECTURE.md` à la racine.
