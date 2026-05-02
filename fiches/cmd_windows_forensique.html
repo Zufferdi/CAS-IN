@@ -284,6 +284,116 @@ shutdown /m \\TARGET /s /t 30 /c "Maintenance security"</code>
     </table>
   </div>
 
+  <h2 class="sec-title" id="intrusion-discovery">🚨 Intrusion Discovery — détecter une compromission en live</h2>
+
+  <p>Inspiré du <strong>cheat sheet SANS « Windows Intrusion Discovery »</strong> (Ed Skoudis). À exécuter périodiquement sur chaque machine sensible. Chaque commande répond à une question précise : « est-ce que cette machine a été compromise ? »</p>
+
+  <div class="info" style="margin-bottom:1rem">
+    💡 <strong>Méthode</strong> : connaître le « normal » de la machine (baseline), puis chercher les <strong>déviations</strong>. Une commande ne dit rien dans l'absolu — elle dit qu'il y a un truc bizarre <em>par rapport à d'habitude</em>.
+  </div>
+
+  <div class="card card-red">
+    <h3>🌐 Connexions et sessions SMB inhabituelles</h3>
+    <div class="cli">
+<span class="c"># Liste des partages exposés par cette machine (\\127.0.0.1)</span>
+C:\&gt; <span class="cmd">net view \\127.0.0.1</span>
+
+<span class="c"># Sessions SMB ENTRANTES (machines connectées à mes partages)</span>
+C:\&gt; <span class="cmd">net session</span>
+
+<span class="c"># Sessions SMB SORTANTES (j'ai ouvert sur d'autres machines)</span>
+C:\&gt; <span class="cmd">net use</span>
+
+<span class="c"># NetBIOS sessions actives — utile pour mouvement latéral</span>
+C:\&gt; <span class="cmd">nbtstat -S</span>
+
+<span class="c"># Connexions TCP/UDP avec PID owner (-o)</span>
+C:\&gt; <span class="cmd">netstat -nao</span>
+
+<span class="c"># Idem + DLL chargées par chaque connexion (-b nécessite admin)</span>
+C:\&gt; <span class="cmd">netstat -naob</span>
+
+<span class="c"># Mode continu (rafraîchit toutes les 5 sec)</span>
+C:\&gt; <span class="cmd">netstat -nao 5</span>
+
+<span class="c"># Configuration firewall complète</span>
+C:\&gt; <span class="cmd">netsh advfirewall firewall show rule name=all</span>
+    </div>
+    <p style="font-size:.85rem;margin-top:.5rem"><strong>À chercher</strong> : ports en LISTENING inattendus (RAT typiquement 4444/5555/8080), connexions ESTABLISHED vers des IPs étrangères, sessions SMB depuis des comptes non-admin, partages c$/admin$ exposés.</p>
+  </div>
+
+  <div class="card card-orange" style="margin-top:1rem">
+    <h3>🚀 Persistance — clés Run / RunOnce / RunonceEx</h3>
+    <p style="margin:.3rem 0">Les <strong>3 clés registre</strong> exécutées au démarrage utilisateur. À auditer systématiquement :</p>
+    <div class="cli">
+<span class="c"># Au démarrage de chaque session utilisateur (chargé permanent)</span>
+C:\&gt; <span class="cmd">reg query HKLM\Software\Microsoft\Windows\CurrentVersion\Run</span>
+C:\&gt; <span class="cmd">reg query HKCU\Software\Microsoft\Windows\CurrentVersion\Run</span>
+
+<span class="c"># Au prochain redémarrage seulement (puis effacé)</span>
+C:\&gt; <span class="cmd">reg query HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce</span>
+C:\&gt; <span class="cmd">reg query HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce</span>
+
+<span class="c"># Idem mais avec dépendances ordonnées (rare, suspect si présent)</span>
+C:\&gt; <span class="cmd">reg query HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnceEx</span>
+    </div>
+    <p style="font-size:.85rem;margin-top:.5rem"><strong>Cumuler</strong> avec : <code>schtasks /query /v /fo LIST</code> (tâches planifiées), <code>wmic startup list full</code> (tous les points de démarrage), Sysmon Event ID 12/13 (Registry mod).</p>
+  </div>
+
+  <div class="card card-purple" style="margin-top:1rem">
+    <h3>📋 Logs Windows à scruter (Event IDs critiques)</h3>
+    <table class="tbl" style="font-size:.78rem">
+      <thead>
+        <tr><th>Event ID</th><th>Signification</th><th>Pourquoi suspect</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>1102</code></td><td>Audit log cleared</td><td>⚠️ <strong>Effacement de logs</strong> = couvre les traces</td></tr>
+        <tr><td><code>4624 type 10</code></td><td>RDP successful</td><td>Connexion à distance — doit correspondre à un user légitime</td></tr>
+        <tr><td><code>4625</code></td><td>Failed logon</td><td>Brute force ou pivot raté — corréler avec source IP</td></tr>
+        <tr><td><code>4672</code></td><td>Special privileges assigned</td><td>Élévation à admin/SYSTEM — légitime ?</td></tr>
+        <tr><td><code>4688</code></td><td>Process creation</td><td>Avec command line si Sysmon — toute exécution suspecte</td></tr>
+        <tr><td><code>4697</code></td><td>Service installed</td><td>Persistance par service — surveiller</td></tr>
+        <tr><td><code>4698</code></td><td>Scheduled task created</td><td>Persistance par tâche planifiée</td></tr>
+        <tr><td><code>4720</code></td><td>User account created</td><td>Création de compte = backdoor potentiel</td></tr>
+        <tr><td><code>7034-7045</code></td><td>Service crashed/installed</td><td>Voir <a href="logs_windows.html">Logs Windows</a></td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:.8rem;margin-top:.5rem"><strong>Lookup rapide en CLI</strong> :</p>
+    <div class="cli">
+C:\&gt; <span class="cmd">wevtutil qe Security /q:"*[System[EventID=4720]]" /f:text /c:5</span>
+C:\&gt; <span class="cmd">wevtutil qe System /q:"*[System[EventID=7045]]" /f:text /c:10</span>
+    </div>
+  </div>
+
+  <div class="card card-cyan" style="margin-top:1rem">
+    <h3>🛠️ Outils Sysinternals indispensables (hors Windows par défaut)</h3>
+    <p style="margin:.3rem 0">Téléchargeables sur <a href="https://learn.microsoft.com/en-us/sysinternals/" target="_blank" rel="noopener">learn.microsoft.com/sysinternals</a>. Signés Microsoft, exécutables sans installation :</p>
+    <ul style="margin:.3rem 0 .3rem 1.2rem;font-size:.85rem;line-height:1.7">
+      <li><strong>Process Explorer</strong> (<code>procexp.exe</code>) — Task Manager sur stéroïdes : VirusTotal lookup, signature check, parent-child tree, DLLs chargées par processus.</li>
+      <li><strong>Process Monitor</strong> (<code>procmon.exe</code>) — Trace temps réel : tous les accès filesystem / registre / réseau de chaque processus. Volume énorme, à filtrer.</li>
+      <li><strong>Sysmon</strong> — Service de logging persistant. Loggue process creation (Event ID 1), network connection (3), driver load (6), registry mod (12-14), DNS query (22). Configuration via XML (Sysmon-Modular).</li>
+      <li><strong>Autoruns</strong> (<code>autoruns.exe</code>) — Énumère <strong>tous</strong> les points de démarrage (Run/RunOnce + Services + Tasks + WMI Subscriptions + 50+ autres).</li>
+      <li><strong>PsExec</strong> — Exécution distante. Légitime mais aussi utilisé par attaquants (lateral movement). Détecter via Event ID 7045 service "PSEXESVC".</li>
+      <li><strong>Process Hacker</strong> (<a href="https://processhacker.sourceforge.io/" target="_blank" rel="noopener">processhacker.sourceforge.io</a>) — Alternative open source à Process Explorer.</li>
+    </ul>
+  </div>
+
+  <div class="card card-green" style="margin-top:1rem">
+    <h3>⚡ Performances anormales (signaux faibles)</h3>
+    <div class="cli">
+<span class="c"># CPU/RAM/Disque par processus (live)</span>
+C:\&gt; <span class="cmd">taskmgr.exe</span>
+
+<span class="c"># Espace disque (alarme si chute soudaine = exfiltration ou logs malveillants)</span>
+C:\&gt; <span class="cmd">dir C:\</span>
+PowerShell&gt; <span class="cmd">Get-PSDrive C | Select-Object Used,Free</span>
+
+<span class="c"># Crashs systeme (si nombreux = instabilité due à malware/exploit)</span>
+C:\&gt; <span class="cmd">wevtutil qe System /q:"*[System[Provider[@Name='Microsoft-Windows-WER-SystemErrorReporting']]]" /c:20 /f:text</span>
+    </div>
+    <p style="font-size:.85rem;margin-top:.5rem">Sluggish ≠ forcément malware (peut être MAJ/AV/indexation), mais combiné avec <strong>nouveau processus</strong> + <strong>nouvelle connexion sortante</strong> = très suspect.</p>
+  </div>
+
   <h2 class="sec-title" id="workflow">🎯 Workflow live response (15 minutes)</h2>
 
   <div class="prereq-block">
@@ -396,5 +506,8 @@ shutdown /m \\TARGET /s /t 30 /c "Maintenance security"</code>
 
 <!-- Notes utilisateur (CAS-IN v2.16) -->
 <script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/theme-toggle.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
 </body>
 </html>
