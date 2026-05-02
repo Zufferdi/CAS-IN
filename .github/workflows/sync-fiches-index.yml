@@ -1,47 +1,118 @@
-name: Sync fiches index
+name: Sync fiches index, search-index, cross-links & inject fiche-related
 
-# Régénère fiches/index.html à chaque ajout/modification de fiche
+# Régénère TOUTES les données dérivées à chaque ajout/modification de fiche :
+#   1. Injecte fiche-related.js dans les nouvelles fiches qui ne l'ont pas
+#   2. Régénère fiches/index.html (cards d'accès)
+#   3. Régénère data/search-index.json (moteur de recherche full-text)
+#   4. Régénère data/cross-links.json (liens Q ↔ Fiche ↔ TP ↔ Scènes)
+#
+# Fait tout en un seul job pour éviter les race conditions entre workflows
+# parallèles qui voudraient committer les mêmes fichiers.
+
 on:
   push:
     paths:
       - 'fiches/**.html'
+      - 'data/manifest.json'
+      - 'scenes/**.json'
+      - 'tp.html'
       - 'scripts/build_index.py'
+      - 'scripts/build_search_index.py'
+      - 'scripts/build_cross_links.py'
+      - 'scripts/inject_fiche_related.py'
       - '.github/workflows/sync-fiches-index.yml'
   workflow_dispatch:  # exécution manuelle depuis l'onglet Actions
 
 permissions:
-  contents: write  # nécessaire pour commit le nouvel index
+  contents: write  # nécessaire pour commit les fichiers régénérés
+
+# Empêche deux runs sur la même branche en parallèle (les anciens sont annulés)
+concurrency:
+  group: sync-fiches-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   rebuild:
     runs-on: ubuntu-latest
+    # Évite la boucle infinie : ne tourne pas si le commit vient déjà du bot
+    if: ${{ !contains(github.event.head_commit.message, 'auto-rebuild') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: pip install beautifulsoup4 lxml
 
-      - name: Rebuild fiches/index.html
-        run: python scripts/build_index.py
-
-      - name: Commit & push if changed
+      # ─── 1) Inject fiche-related.js dans les fiches qui ne l'ont pas ───
+      - name: Inject fiche-related.js into new fiches
         run: |
-          if [ -n "$(git status --porcelain fiches/index.html)" ]; then
-            git config user.name  "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add fiches/index.html
-            git commit -m "chore(index): auto-rebuild fiches/index.html"
-            # Pull rebase avant push pour éviter les conflits
-            git pull --rebase origin ${{ github.ref_name }}
-            git push
+          python3 scripts/inject_fiche_related.py
+
+      # ─── 2) Régénérer fiches/index.html ───
+      - name: Rebuild fiches/index.html
+        run: |
+          python3 scripts/build_index.py
+
+      # ─── 3) Régénérer data/search-index.json (moteur de recherche) ───
+      - name: Rebuild data/search-index.json
+        run: |
+          if [ -f scripts/build_search_index.py ]; then
+            python3 scripts/build_search_index.py
           else
-            echo "✓ fiches/index.html est déjà à jour."
+            echo "⚠ scripts/build_search_index.py introuvable, skip"
           fi
+
+      # ─── 4) Régénérer data/cross-links.json (liens transverses) ───
+      - name: Rebuild data/cross-links.json
+        run: |
+          if [ -f scripts/build_cross_links.py ]; then
+            python3 scripts/build_cross_links.py
+          else
+            echo "⚠ scripts/build_cross_links.py introuvable, skip"
+          fi
+
+      # ─── 5) Pull AVANT commit pour éviter conflits avec autres workflows ───
+      - name: Pull latest changes before commit
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name  "github-actions[bot]"
+          git pull --rebase origin ${{ github.ref_name }}
+
+      # ─── 6) Commit groupé de tous les fichiers régénérés ───
+      - name: Commit changed files (with retry on conflict)
+        run: |
+          # Stage tous les fichiers potentiellement modifiés
+          git add fiches/index.html fiches/*.html 2>/dev/null || true
+          git add data/search-index.json 2>/dev/null || true
+          git add data/cross-links.json 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "→ Aucun changement, rien à committer"
+            exit 0
+          fi
+
+          # Compte ce qui a changé pour le message de commit
+          CHANGED=$(git diff --cached --name-only | tr '\n' ' ')
+          echo "Files changed: $CHANGED"
+
+          git commit -m "chore: auto-rebuild fiches/index, search-index, cross-links + inject fiche-related"
+
+          # Retry logic : push avec rebase si conflit
+          for i in 1 2 3; do
+            if git push; then
+              echo "✓ Push réussi à la tentative $i"
+              exit 0
+            fi
+            echo "Push attempt $i failed, pulling latest..."
+            git pull --rebase origin ${{ github.ref_name }}
+          done
+          echo "❌ Failed to push after 3 attempts"
+          exit 1
