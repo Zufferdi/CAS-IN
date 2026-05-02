@@ -1,4 +1,27 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v51 : v2.17 — Mode dark/light propagé dans les 7 CSS qui n'avaient pas de
+//       règles [data-theme="light"] : fiche_style.css (47 sélecteurs),
+//       landing.css (14), quiz.css (13), scene.css (11), profile.css (10),
+//       tp.css (10), tools.css (4). Le toggle theme-toggle.js fonctionne
+//       maintenant sur TOUTES les pages, pas juste celles qui chargent style.css.
+//       Audit confirmé : mobile_apps_forensique.html, cmd_linux_forensique.html,
+//       sqlite_forensique.html (Démarrage), sqlite_forensique_avance.html
+//       (Internals Avancés) tous bien intégrés et cross-référencés.
+//
+// v50 : v2.17 — session "tout faire" :
+//       * Refactor SQLite : 2 fiches harmonisées en parcours 2 étapes
+//         (Démarrage → Internals Avancés) avec bannières cross-ref
+//       * cmd_windows_forensique.html enrichi : section Intrusion Discovery
+//         (5 cards : SMB sessions, Run/RunOnce, Event IDs, Sysinternals, perfs)
+//       * Nouvelle fiche cmd_linux_forensique.html (live response Linux,
+//         8 sections parallèles à Windows : ps/lsof/find/passwd/cron/logs/perf/outils)
+//       * Nouvelle fiche mobile_apps_forensique.html (catalogue 30+ apps iOS
+//         avec paths SQLite/Plist/Realm — inspiré poster SANS FOR585)
+//       * Mode CLAIR/SOMBRE toggle : nouveau thème [data-theme="light"]
+//         dans style.css, composant js/components/theme-toggle.js bouton
+//         flottant bottom-left + persistence localStorage. 118 pages patchées
+//         (110 fiches + 8 pages racine).
+//       Manifest 104→106. Cache invalidé.
 // v49 : v2.16 — CHANGELOG mis à jour (v2.11→v2.16) + nouvelle fiche
 //       poster_windows_artefacts.html (vue d'ensemble par question forensique,
 //       inspirée du poster SANS FOR500 Rob Lee) + système de NOTES utilisateur
@@ -36,7 +59,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v49';
+const CACHE_VERSION = 'cas-in-v51';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -96,6 +119,7 @@ const STATIC_ASSETS = [
   './js/bridges/tp-profile-bridge.js',
   // Components
   './js/components/fiche-notes.js',
+  './js/components/theme-toggle.js',
   // Pages
   './js/pages/landing.js',
   './js/pages/landing-3d.js',
