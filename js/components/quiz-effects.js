@@ -127,6 +127,8 @@
 
   // ─── Toggle son ──────────────────────────────────────────
   // Persiste dans localStorage et met à jour l'icône du bouton.
+  // Si window.syncSoundLabel existe (défini par quiz-app.js), il est appelé après
+  // pour reconstruire les <span> du label dans le menu Plus (v2.22).
 
   function toggleSound() {
     global.SOUND_ON = !global.SOUND_ON;
@@ -134,6 +136,9 @@
     const btn = document.getElementById('sound-btn');
     if (btn) btn.textContent = global.SOUND_ON ? '🔊' : '🔇';
     if (global.SOUND_ON) playSound(true);
+    if (typeof global.syncSoundLabel === 'function') {
+      try { global.syncSoundLabel(); } catch {}
+    }
   }
 
   // ─── Particules de feedback ──────────────────────────────
