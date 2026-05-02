@@ -29,298 +29,8 @@
 //
 // ═══════════════════════════════════════════════════════════════
 
-      const DIFF_LABELS = {
-        easy: 'Facile',
-        medium: 'Moyen',
-        hard: 'Difficile'
-      };
-      const DIFF_PTS = {
-        easy: 1,
-        medium: 2,
-        hard: 3
-      };
-      const TC = {
-        'Informatique de base': '#7ab8ff',
-        'Acquisition et analyse': '#00e5cc',
-        'Système de fichiers': '#7affea',
-        'Spécificité des OS': '#ff6b9d',
-        'Cryptologie': '#f0c040',
-        'OSINT': '#ffd580',
-        'Droit': '#ff8c42',
-        'Forensique': '#fb923c'
-      };
-
-      const ACHIEVEMENTS = [{
-        id: 'first',
-        emoji: '🎯',
-        name: 'Premier pas',
-        desc: 'Répondre à 1 question',
-        check: s => s.total >= 1
-      }, {
-        id: 'ten',
-        emoji: '🔟',
-        name: 'Décollage',
-        desc: 'Répondre à 10 questions',
-        check: s => s.total >= 10
-      }, {
-        id: 'fifty',
-        emoji: '5️⃣0️⃣',
-        name: 'Cinquantaine',
-        desc: 'Répondre à 50 questions',
-        check: s => s.total >= 50
-      }, {
-        id: 'hundred',
-        emoji: '💯',
-        name: 'Centurion',
-        desc: 'Répondre à 100 questions',
-        check: s => s.total >= 100
-      }, {
-        id: 'five00',
-        emoji: '🚀',
-        name: 'Marathon',
-        desc: 'Répondre à 500 questions',
-        check: s => s.total >= 500
-      }, {
-        id: 'thou',
-        emoji: '🌟',
-        name: 'Millénaire',
-        desc: 'Répondre à 1000 questions',
-        check: s => s.total >= 1000
-      }, {
-        id: 'twoK',
-        emoji: '🔱',
-        name: 'Légende vivante',
-        desc: 'Répondre à 2000 questions',
-        check: s => s.total >= 2000
-      }, {
-        id: 'streak1',
-        emoji: '✊',
-        name: 'La première',
-        desc: '1 bonne réponse — ça commence toujours ainsi',
-        check: s => s.streak >= 1
-      }, {
-        id: 'streak3',
-        emoji: '⚡',
-        name: 'C\'est parti !',
-        desc: '3 bonnes réponses de suite',
-        check: s => s.streak >= 3
-      }, {
-        id: 'streak5',
-        emoji: '🔥',
-        name: 'Série de feu',
-        desc: '5 bonnes réponses de suite',
-        check: s => s.streak >= 5
-      }, {
-        id: 'streak10',
-        emoji: '💥',
-        name: 'Inarrêtable',
-        desc: '10 bonnes réponses de suite',
-        check: s => s.streak >= 10
-      }, {
-        id: 'streak20',
-        emoji: '🌋',
-        name: 'Mode Dieu',
-        desc: '20 bonnes réponses de suite',
-        check: s => s.streak >= 20
-      }, {
-        id: 'streak50',
-        emoji: '👑',
-        name: 'Légende de la série',
-        desc: '50 bonnes réponses de suite — irréel',
-        check: s => s.streak >= 50
-      }, {
-        id: 'acc90',
-        emoji: '🎓',
-        name: 'Précision laser',
-        desc: '90%+ sur 50 questions minimum',
-        check: s => s.total >= 50 && Math.round(s.correct / s.total * 100) >= 90
-      }, {
-        id: 'acc95',
-        emoji: '💎',
-        name: 'Mode élite',
-        desc: '95%+ sur 100 questions minimum',
-        check: s => s.total >= 100 && Math.round(s.correct / s.total * 100) >= 95
-      }, {
-        id: 'perfect',
-        emoji: '🏆',
-        name: 'Examen parfait',
-        desc: '100% à un examen ≥ 10 questions',
-        check: s => s.perfectExam
-      }, {
-        id: 'perfect20',
-        emoji: '🎖️',
-        name: 'Héros de l\'examen',
-        desc: '100% à un examen ≥ 20 questions',
-        check: s => s.perfectExam20
-      }, {
-        id: 'combo',
-        emoji: '⚡',
-        name: 'Combinaison ×2',
-        desc: 'Atteindre le multiplicateur ×2',
-        check: s => s.maxCombo >= 6
-      }, {
-        id: 'combo3',
-        emoji: '🔱',
-        name: 'Triple Kill',
-        desc: 'Atteindre le multiplicateur ×3',
-        check: s => s.maxCombo >= 12
-      }, {
-        id: 'hard10',
-        emoji: '💀',
-        name: 'Masochiste',
-        desc: '10 questions difficiles correctes',
-        check: s => (s.byDiff.hard?.ok || 0) >= 10
-      }, {
-        id: 'hard50',
-        emoji: '🔥',
-        name: 'Cherche la douleur',
-        desc: '50 questions difficiles correctes',
-        check: s => (s.byDiff.hard?.ok || 0) >= 50
-      }, {
-        id: 'daily3',
-        emoji: '📅',
-        name: 'Régularité',
-        desc: 'Jouer 3 jours de suite',
-        check: s => s.dayStreak >= 3
-      }, {
-        id: 'daily7',
-        emoji: '🗓️',
-        name: 'Abonné',
-        desc: 'Jouer 7 jours de suite',
-        check: s => s.dayStreak >= 7
-      }, {
-        id: 'daily10',
-        emoji: '🔟',
-        name: 'Double semaine',
-        desc: 'Jouer 10 jours de suite',
-        check: s => s.dayStreak >= 10
-      }, {
-        id: 'daily14',
-        emoji: '📆',
-        name: 'Quinzaine',
-        desc: 'Jouer 14 jours de suite',
-        check: s => s.dayStreak >= 14
-      }, {
-        id: 'daily30',
-        emoji: '🏅',
-        name: 'Mensuel',
-        desc: 'Jouer 30 jours de suite — respect total',
-        check: s => s.dayStreak >= 30
-      }, {
-        id: 'night',
-        emoji: '🌙',
-        name: 'Nuit blanche',
-        desc: 'Jouer après minuit — l\'enquête attend',
-        check: s => s.nightOwl
-      }, {
-        id: 'comeback',
-        emoji: '🦋',
-        name: 'Come-back',
-        desc: '5 bonnes réponses après 3 mauvaises',
-        check: s => s.comeback
-      }, {
-        id: 'allthemes',
-        emoji: '🗺️',
-        name: 'Polymathes',
-        desc: 'Questions répondues dans 5 thèmes différents',
-        check: s => Object.values(s.byTheme).filter(t => t.tot > 0).length >= 5
-      }, {
-        id: 'book10',
-        emoji: '⭐',
-        name: 'Collectionneur',
-        desc: '10 questions mises en favoris',
-        check: s => s.bookmarks.size >= 10
-      }, {
-        id: 'book25',
-        emoji: '📚',
-        name: 'Bibliothécaire',
-        desc: '25 questions mises en favoris',
-        check: s => s.bookmarks.size >= 25
-      }, {
-        id: 'smart50',
-        emoji: '🧠',
-        name: 'Révision ×50',
-        desc: '50 questions en mode Révision Intelligente',
-        check: s => s.smartCount >= 50
-      }, {
-        id: 'smart200',
-        emoji: '🤖',
-        name: 'Machine de révision',
-        desc: '200 questions en mode Révision Intelligente',
-        check: s => s.smartCount >= 200
-      }, {
-        id: 'daily_ch',
-        emoji: '⚡',
-        name: 'Défi relevé',
-        desc: 'Terminer le défi du jour',
-        check: s => s.dailyDone
-      }, {
-        id: 'hint',
-        emoji: '💡',
-        name: 'J\'avais besoin d\'un coup de pouce',
-        desc: 'Utiliser un indice',
-        check: s => s.hintsUsed >= 1
-      }, {
-        id: 's_3am',
-        emoji: '🦇',
-        name: '???',
-        desc: '???',
-        secret: true,
-        check: s => s._secretFlags?.at3am
-      }, {
-        id: 's_42',
-        emoji: '🌌',
-        name: '???',
-        desc: '???',
-        secret: true,
-        check: s => s._secretFlags?.exam42
-      }, {
-        id: 's_13',
-        emoji: '🎱',
-        name: '???',
-        desc: '???',
-        secret: true,
-        check: s => s._secretFlags?.streak13
-      }, {
-        id: 's_hints3',
-        emoji: '🧙',
-        name: '???',
-        desc: '???',
-        secret: true,
-        check: s => s._secretFlags?.hints3day
-      }, {
-        id: 's_speed5',
-        emoji: '🏎️',
-        name: '???',
-        desc: '???',
-        secret: true,
-        check: s => s._secretFlags?.speed5row
-      }, {
-        id: 's_skip',
-        emoji: '🙈',
-        name: '???',
-        desc: '???',
-        secret: true,
-        check: s => s._secretFlags?.skip20
-      }, ];
-
-
-
-      const STREAK_MSGS = {
-        1: '⚡ 1 — ça commence !',
-        2: '⚡ 2 de suite !',
-        3: '⚡ 3 d\'affilée !',
-        5: '🔥 5 en série !',
-        7: '🔥 7 ! Tu brûles !',
-        10: '🔥🔥 10 de suite !',
-        12: '💥 12 ! Inarrêtable !',
-        15: '💥 15 ! On est chauds !',
-        20: '🚀 20 ! Mode Dieu !',
-        25: '🌋 25 ! Mythe vivant !',
-        30: '👑 30 ! LÉGENDE !',
-        50: '🏆 50 ! IMPOSSIBLE… et pourtant.',
-        75: '🏆 75 ! Banzaï ! On est bons.',
-      };
+      // ─── v2.21 : DIFF_LABELS, DIFF_PTS, TC, ACHIEVEMENTS, STREAK_MSGS
+      // ont été migrés vers quiz-data.js (chargé en globales avant ce script).
 
 
 
@@ -350,23 +60,8 @@
  }
  }
 
- function getDailyDate() {
- return new Date().toISOString().slice(0, 10);
- }
-
- function seededRng(seed) {
- let h = seed;
- return () => {
- h = Math.imul(h ^ h >>> 16, 0x45d9f3b);
- h = Math.imul(h ^ h >>> 15, 0x2b9c4d);
- return (h ^ h >>> 13) >>> 0;
- };
- }
-
- function getDailySeed() {
- const d = getDailyDate();
- return d.split('-').reduce((a, v) => a * 100 + parseInt(v), 0);
- }
+ // Note v2.21 : getDailyDate, seededRng, getDailySeed extraites vers quiz-utils.js
+ // (chargé en globales window.* avant ce script).
  let ALL_Q = [],
  ALL_T = [],
  ALL_C = [];
@@ -442,20 +137,7 @@
  _speedCorrect: 0,
  };
 
- function lsGet(k, d) {
- try {
- const v = localStorage.getItem(k);
- return v !== null ? JSON.parse(v) : d;
- } catch {
- return d;
- }
- }
-
- function lsSet(k, v) {
- try {
- localStorage.setItem(k, JSON.stringify(v));
- } catch {}
- }
+ // Note v2.21 : lsGet, lsSet extraits vers quiz-utils.js (window.lsGet, window.lsSet)
 
  function loadPersist() {
  S.bookmarks = new Set(lsGet('bm', []));
@@ -554,12 +236,7 @@
  }
  }
 
- function getWeekKey() {
- const d = new Date();
- const day = d.getDay() || 7;
- d.setDate(d.getDate() - day + 1);
- return d.toISOString().slice(0, 10);
- }
+ // Note v2.21 : getWeekKey extrait vers quiz-utils.js
 
  function updateDayStreak() {
  const today = getDailyDate();
@@ -587,14 +264,7 @@
  }
  }
 
- function shuffle(a, rng) {
- const b = [...a];
- for (let i = b.length - 1; i > 0; i--) {
- const j = rng ? Math.floor(rng() / (0xffffffff + 1) * (i + 1)) : 0 | Math.random() * (i + 1);
- [b[i], b[j]] = [b[j], b[i]];
- }
- return b;
- }
+ // Note v2.21 : shuffle extrait vers quiz-utils.js (window.shuffle)
 
  function buildPool() {
  // ─── v2.19 : filtre fiche prend précédence sur tous les modes ───
@@ -707,17 +377,7 @@
  }, 1000);
  }
 
- function getRank(xp) {
- for (let i = RANKS.length - 1; i >= 0; i--)
- if (xp >= RANKS[i].min) return {
- rank: RANKS[i],
- idx: i
- };
- return {
- rank: RANKS[0],
- idx: 0
- };
- }
+ // Note v2.21 : getRank extrait vers quiz-ranks.js (window.getRank / window.QuizRanks)
 
  function addXp(pts, contextTags) {
    const prev = getRank(S.xp);
@@ -766,12 +426,7 @@
  // est désormais géré par js/profile/profile-banner.js qui réagit aux events Profile.
  }
 
- function getComboMultiplier() {
- if (S.streak >= 12) return 3;
- if (S.streak >= 6) return 2;
- if (S.streak >= 3) return 1.5;
- return 1;
- }
+ // Note v2.21 : getComboMultiplier extrait vers quiz-ranks.js
 
  function updateComboDisplay() {
  const m = getComboMultiplier();
@@ -816,27 +471,8 @@
  _toastTimers[id] = setTimeout(() => t.classList.remove('show'), duration);
  }
 
- function spawnParticles(x, y, ok) {
- const wrap = document.getElementById('particles-wrap');
- const cols = ok ? ['#30e88a',
-  '#00e5cc',
-  '#7affea',
-  '#ffffff'] : ['#ff4060',
-  '#ff8080',
-  '#ffd0d0'];
-        const count = ok ? 18 : 8;
-        for (let i = 0; i < count; i++) {
-          const el = document.createElement('div');
-          const sz = 4 + Math.random() * 6;
-          const angle = Math.random() * Math.PI * 2;
-          const dist = 40 + Math.random() * 80;
-          const dx = Math.cos(angle) * dist;
-          const dy = Math.sin(angle) * dist - 50;
-          el.style.cssText = `position:absolute;width:${sz}px;height:${sz}px;border-radius:${Math.random()>.5?'50%':'2px'};background:${cols[0|Math.random()*cols.length]};left:${x}px;top:${y}px;pointer-events:none;--dx:${dx}px;--dy:${dy}px;--rot:${Math.random()*720}deg;animation:particleFly ${0.5+Math.random()*.4}s ease-out forwards;`;
-          wrap.appendChild(el);
-          setTimeout(() => el.remove(), 900);
-        }
-      }
+ // Note v2.21 : spawnParticles extrait vers quiz-effects.js
+
 
       function renderQuestion(item) {
         const {
@@ -1004,6 +640,7 @@
         }
         checkSecrets(ok);
         const sm2Result = updateSM2(S.curIdx, ok);
+        updateSM2Badge();   // v2.21 : refresh badge après mise à jour de la carte
         // En mode SM-2, afficher la prochaine révision pour ancrer la mémorisation
         if (S.mode === 'sm2' && sm2Result) {
           const intervalLabel = sm2Result.interval === 1
@@ -1173,70 +810,9 @@
         bb.className = 'bookmark-btn' + (S.bookmarks.has(idx) ? ' active' : '');
         savePersist();
       }
-      let _ac = null;
 
-      function ac() {
-        if (!_ac) try {
-          _ac = new(window.AudioContext || window.webkitAudioContext)();
-        } catch {}
-        return _ac;
-      }
-
-      function playSound(ok) {
-        if (!SOUND_ON) return;
-        const a = ac();
-        if (!a) return;
-        const t = a.currentTime;
-        if (ok === null) {
-          const o = a.createOscillator(),
-            g = a.createGain();
-          o.connect(g);
-          g.connect(a.destination);
-          o.frequency.setValueAtTime(350, t);
-          o.frequency.linearRampToValueAtTime(250, t + .15);
-          g.gain.setValueAtTime(.08, t);
-          g.gain.exponentialRampToValueAtTime(.001, t + .2);
-          o.start(t);
-          o.stop(t + .2);
-        } else if (ok) {
-          const m = getComboMultiplier();
-          const notes = m >= 2 ? [523, 659, 784, 1047] : [523, 659, 784];
-          notes.forEach((f, i) => {
-            const o = a.createOscillator(),
-              g = a.createGain();
-            o.connect(g);
-            g.connect(a.destination);
-            o.frequency.value = f;
-            g.gain.setValueAtTime(.12, t + i * .07);
-            g.gain.exponentialRampToValueAtTime(.001, t + i * .07 + .2);
-            o.start(t + i * .07);
-            o.stop(t + i * .07 + .25);
-          });
-        } else {
-          const o = a.createOscillator(),
-            g = a.createGain();
-          o.connect(g);
-          g.connect(a.destination);
-          o.frequency.setValueAtTime(220, t);
-          o.frequency.exponentialRampToValueAtTime(110, t + .3);
-          g.gain.setValueAtTime(.18, t);
-          g.gain.exponentialRampToValueAtTime(.001, t + .3);
-          o.start(t);
-          o.stop(t + .3);
-        }
-      }
-
-      function toggleSound() {
-        SOUND_ON = !SOUND_ON;
-        lsSet('soundOn', SOUND_ON);
-        document.getElementById('sound-btn').textContent = SOUND_ON ? '🔊' : '🔇';
-        if (SOUND_ON) playSound(true);
-      }
-
-      function applyVisualTheme(id) {
-        document.body.dataset.theme = id === 'default' ? '' : id;
-        lsSet('visualTheme', id);
-      }
+      // Note v2.21 : ac() et playSound() extraits vers quiz-effects.js
+      // (window.playSound, window.QuizEffects.ac)
 
       function buildVisualThemeUI() {
         const wrap = document.getElementById('visual-themes');
@@ -1420,21 +996,7 @@
 
 
       // Sanitize HTML pour prévenir les injections XSS depuis le JSON
-      function sanitizeHTML(raw) {
-        const tmp = document.createElement('div');
-        tmp.innerHTML = raw || '';
-        tmp.querySelectorAll('script,iframe,object,embed,link,meta').forEach(el => el.remove());
-        tmp.querySelectorAll('*').forEach(el => {
-          [...el.attributes].forEach(attr => {
-            if (attr.name.startsWith('on') ||
-                (attr.name === 'href' && /^javascript:/i.test(attr.value)) ||
-                (attr.name === 'src'  && /^javascript:/i.test(attr.value))) {
-              el.removeAttribute(attr.name);
-            }
-          });
-        });
-        return tmp.innerHTML;
-      }
+      // Note v2.21 : sanitizeHTML extrait vers quiz-utils.js (window.sanitizeHTML)
 
       function applySettings() {
         if (!S.activeT.size) {
@@ -2656,130 +2218,34 @@
         renderQuestion(getNext());
       }
 
-      function getSM2Data(idx) {
-        const d = lsGet('sm2_' + idx, null);
-        return d || {
-          interval: 1,
-          ef: 2.5,
-          due: getDailyDate(),
-          reps: 0
-        };
-      }
-
-      function saveSM2Data(idx, d) {
-        lsSet('sm2_' + idx, d);
-      }
-
-      function updateSM2(idx, ok) {
-        const d = getSM2Data(idx);
-        const q = ok ? 5 : 1;
-        let {
-          interval,
-          ef,
-          reps
-        } = d;
-        if (q >= 3) {
-          if (reps === 0) interval = 1;
-          else if (reps === 1) interval = 6;
-          else interval = Math.round(interval * ef);
-          reps++;
-        } else {
-          reps = 0;
-          interval = 1;
-        }
-        ef = Math.max(1.3, ef + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)));
-        const due = new Date();
-        due.setDate(due.getDate() + interval);
-        saveSM2Data(idx, {
-          interval,
-          ef,
-          due: due.toISOString().slice(0, 10),
-          reps
-        });
-        updateSM2Badge();
-        // Retourne l'intervalle pour permettre l'affichage UX "Prochaine révision dans X jours"
-        return { interval, reps, ef: ef.toFixed(2) };
-      }
-
-      // ── SM-2 Statistiques (vue agrégée pour UX) ──────────────────
-      // Renvoie : { total, dueToday, dueThisWeek, mature, learning, avgEF, longestInterval }
-      function getSM2Stats() {
-        const today = getDailyDate();
-        const todayD = new Date(today);
-        const weekFromNow = new Date(todayD);
-        weekFromNow.setDate(weekFromNow.getDate() + 7);
-        const weekDate = weekFromNow.toISOString().slice(0, 10);
-
-        const cards = [];
-        Object.keys(localStorage).forEach(k => {
-          if (!k.startsWith('sm2_')) return;
-          try {
-            const d = JSON.parse(localStorage.getItem(k));
-            if (d) cards.push(d);
-          } catch {}
-        });
-
-        const stats = {
-          total: cards.length,
-          dueToday: 0,
-          dueThisWeek: 0,
-          mature: 0,        // reps >= 3 (la carte est "apprise")
-          learning: 0,      // reps < 3
-          avgEF: 0,
-          longestInterval: 0,
-        };
-        if (!cards.length) return stats;
-
-        let sumEF = 0;
-        cards.forEach(c => {
-          if (c.due <= today) stats.dueToday++;
-          if (c.due <= weekDate) stats.dueThisWeek++;
-          if ((c.reps || 0) >= 3) stats.mature++;
-          else stats.learning++;
-          sumEF += (c.ef || 2.5);
-          stats.longestInterval = Math.max(stats.longestInterval, c.interval || 0);
-        });
-        stats.avgEF = (sumEF / cards.length).toFixed(2);
-        return stats;
-      }
+      // ─── SM-2 : extrait vers js/components/quiz-sm2.js (v2.21) ───
+      // Helpers globaux : window.getSM2Data, window.updateSM2, window.getSM2Due,
+      // window.getSM2Stats, window.QuizSM2.
+      // Ce qui reste ici = la couche UI/DOM-spécifique au quiz.
 
       // ── SM-2 Reset complet (purge toutes les cartes) ────────────
-      // Utile en début de préparation examen pour repartir à zéro.
+      // Wrapper avec confirm UX + toast + reset additionnel state quiz
       function resetSM2() {
-        const keys = Object.keys(localStorage).filter(k => k.startsWith('sm2_'));
-        if (!keys.length) {
+        const stats = QuizSM2.getSM2Stats();
+        if (!stats.total) {
           showToast('streak-toast', '🃏 Aucune carte SM-2 à réinitialiser', 2000);
           return false;
         }
-        if (!confirm(`Réinitialiser tes ${keys.length} cartes de révision SM-2 ?\n\nCette action est IRRÉVERSIBLE.\nUtile en début de préparation à un examen.`)) {
+        if (!confirm(`Réinitialiser tes ${stats.total} cartes de révision SM-2 ?\n\nCette action est IRRÉVERSIBLE.\nUtile en début de préparation à un examen.`)) {
           return false;
         }
-        keys.forEach(k => localStorage.removeItem(k));
+        const n = QuizSM2.resetSM2();
         S.smartCount = 0;
         lsSet('smartCount', 0);
         S.sm2Queue = [];
         lsSet('sm2q', []);
         updateSM2Badge();
-        showToast('streak-toast', `🔄 ${keys.length} cartes SM-2 réinitialisées`, 2500);
+        showToast('streak-toast', `🔄 ${n} cartes SM-2 réinitialisées`, 2500);
         return true;
       }
       // Exposer pour usage depuis HTML/console
       window.resetSM2 = resetSM2;
-      window.getSM2Stats = getSM2Stats;
-
-      function getSM2Due() {
-        const today = getDailyDate();
-        const due = [];
-        Object.keys(localStorage).forEach(k => {
-          if (!k.startsWith('sm2_')) return;
-          try {
-            const idx = parseInt(k.slice(4));
-            const d = JSON.parse(localStorage.getItem(k));
-            if (d && d.due <= today) due.push(idx);
-          } catch {}
-        });
-        return due;
-      }
+      window.getSM2Stats = QuizSM2.getSM2Stats;
 
       function updateSM2Badge() {
         const due = getSM2Due();
@@ -3452,46 +2918,25 @@
         }
       }
 
+      // ── v2.21 : wrappers utilisant QuizShare (helpers génériques) ──
       function downloadShareCard() {
         drawShareCard();
         const canvas = document.getElementById('share-canvas');
-        const a = document.createElement('a');
-        a.download = 'casin-score.png';
-        a.href = canvas.toDataURL('image/png');
-        a.click();
+        QuizShare.downloadCanvas(canvas, 'casin-score.png');
       }
+
       async function copyShareCard() {
         drawShareCard();
         const canvas = document.getElementById('share-canvas');
-        try {
-          canvas.toBlob(async blob => {
-            await navigator.clipboard.write([new ClipboardItem({
-              'image/png': blob
-            })]);
-            showToast('streak-toast', '📋 Image copiée dans le presse-papier !', 2500);
-          });
-        } catch {
-          showToast('streak-toast', '⚠️ Copie non supportée — essaie le téléchargement', 2500);
-        }
+        await QuizShare.copyCanvasToClipboard(canvas);
       }
 
       function shareNative() {
         drawShareCard();
         const canvas = document.getElementById('share-canvas');
-        canvas.toBlob(async blob => {
-          const file = new File([blob], 'casin-score.png', {
-            type: 'image/png'
-          });
-          if (navigator.canShare?.({
-              files: [file]
-            })) {
-            await navigator.share({
-              files: [file],
-              title: 'Mon score CAS-IN'
-            }).catch(() => {});
-          } else {
-            downloadShareCard();
-          }
+        QuizShare.shareCanvasNative(canvas, {
+          filename: 'casin-score.png',
+          title: 'Mon score CAS-IN',
         });
       }
       // ══════════════════════════════════════════════════════════
@@ -5248,40 +4693,26 @@ function downloadBilanCard() {
   drawBilanCard();
   setTimeout(() => {
     const c = document.getElementById('bilan-share-canvas');
-    if (!c) return;
-    const a = document.createElement('a');
-    a.download = 'casin-score.png';
-    a.href = c.toDataURL('image/png');
-    a.click();
+    QuizShare.downloadCanvas(c, 'casin-score.png');
   }, 300);
 }
 
 async function copyBilanCard() {
   drawBilanCard();
-  setTimeout(async () => {
+  setTimeout(() => {
     const c = document.getElementById('bilan-share-canvas');
-    if (!c) return;
-    try {
-      c.toBlob(async blob => {
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        showToast('combo-toast', '📋 Image copiée !', 2000);
-      });
-    } catch(e) { showToast('combo-toast', '⚠ Copie non supportée sur ce navigateur', 2000); }
+    QuizShare.copyCanvasToClipboard(c, { toastId: 'combo-toast' });
   }, 300);
 }
 
 async function shareBilanCard() {
   drawBilanCard();
-  setTimeout(async () => {
+  setTimeout(() => {
     const c = document.getElementById('bilan-share-canvas');
-    if (!c) return;
-    try {
-      c.toBlob(async blob => {
-        const file = new File([blob], 'casin-score.png', { type: 'image/png' });
-        if (navigator.share && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: 'Mon score CAS-IN', text: 'Quiz Investigation Numérique' });
-        } else { downloadBilanCard(); }
-      });
-    } catch(e) { downloadBilanCard(); }
+    QuizShare.shareCanvasNative(c, {
+      filename: 'casin-score.png',
+      title: 'Mon score CAS-IN',
+      text: 'Quiz Investigation Numérique',
+    });
   }, 300);
 }
