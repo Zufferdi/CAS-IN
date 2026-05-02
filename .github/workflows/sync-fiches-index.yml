@@ -79,16 +79,12 @@ jobs:
             echo "⚠ scripts/build_cross_links.py introuvable, skip"
           fi
 
-      # ─── 5) Pull AVANT commit pour éviter conflits avec autres workflows ───
-      - name: Pull latest changes before commit
+      # ─── 5) Configuration git + commit groupé ───
+      - name: Commit & push regenerated files (with retry on conflict)
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name  "github-actions[bot]"
-          git pull --rebase origin ${{ github.ref_name }}
 
-      # ─── 6) Commit groupé de tous les fichiers régénérés ───
-      - name: Commit changed files (with retry on conflict)
-        run: |
           # Stage tous les fichiers potentiellement modifiés
           git add fiches/index.html fiches/*.html 2>/dev/null || true
           git add data/search-index.json 2>/dev/null || true
@@ -99,20 +95,21 @@ jobs:
             exit 0
           fi
 
-          # Compte ce qui a changé pour le message de commit
           CHANGED=$(git diff --cached --name-only | tr '\n' ' ')
           echo "Files changed: $CHANGED"
 
           git commit -m "chore: auto-rebuild fiches/index, search-index, cross-links + inject fiche-related"
 
-          # Retry logic : push avec rebase si conflit
+          # Retry logic : push avec rebase si conflit avec un autre workflow
           for i in 1 2 3; do
-            if git push; then
+            # Pull rebase au cas où d'autres workflows ont pushé entre-temps
+            git pull --rebase origin ${{ github.ref_name }} || true
+            if git push origin HEAD:${{ github.ref_name }}; then
               echo "✓ Push réussi à la tentative $i"
               exit 0
             fi
-            echo "Push attempt $i failed, pulling latest..."
-            git pull --rebase origin ${{ github.ref_name }}
+            echo "Push attempt $i failed, retrying..."
+            sleep 2
           done
           echo "❌ Failed to push after 3 attempts"
           exit 1
