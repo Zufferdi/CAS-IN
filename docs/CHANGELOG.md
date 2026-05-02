@@ -4,6 +4,133 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.21] — 2026-05-02
+
+Cette version est un **refactoring profond de `quiz-app.js`** (5287 → 4718 LOC, -10.7 %), avec extraction de 5 modules réutilisables et testables.
+
+### Le problème
+
+`quiz-app.js` accumulait depuis v2.10 :
+- **5287 lignes** dans un seul fichier
+- **166 fonctions** mêlées (rendu, state, audio, sharing, SM-2…)
+- **Code dupliqué** avec exam-app, scene-app (logique SM-2 réimplémentée)
+- **Difficile à tester** : tout dépend du DOM et du state global `S`
+
+Mais : **57 fonctions** sont appelées depuis le HTML via `onclick="..."`, donc on ne peut pas wrapper en module ES6 ni en IIFE classique.
+
+### Solution : modules complémentaires + globales rétrocompat
+
+Chaque nouveau module expose un namespace `window.QuizX` propre **et** réinjecte les fonctions en globales (`window.lsGet`, `window.shuffle`, etc.) pour préserver la compatibilité avec le code existant.
+
+### Ajouté — `js/components/quiz-utils.js` (126 L)
+
+Helpers purs sans dépendance DOM :
+- `lsGet(k, d)` / `lsSet(k, v)` : localStorage avec fallback (mode privé OK)
+- `getDailyDate()` / `getDailySeed()` / `getWeekKey()` : horodatage
+- `seededRng(seed)` : PRNG pour le défi quotidien (tirage reproductible)
+- `shuffle(arr, rng?)` : Fisher-Yates avec/sans seed
+- `sanitizeHTML(raw)` : nettoyage scripts/iframe/onX/javascript:
+
+Tests : tous les retours validés (shuffle déterministe avec seed, lsGet roundtrip, etc.).
+
+### Ajouté — `js/components/quiz-sm2.js` (190 L)
+
+**Algorithme SM-2** (Wozniak 1985-1990, utilisé par Anki) **isolé du DOM** :
+
+- `getSM2Data(idx)` / `saveSM2Data(idx, d)` : I/O par carte
+- `updateSM2(idx, ok, qOverride?)` : applique la formule SM-2 et retourne le nouvel état
+- `getSM2Stats()` : vue agrégée (total, dueToday, dueThisWeek, mature, learning, avgEF, longestInterval)
+- `getSM2Due()` : indices des cartes dues aujourd'hui
+- `resetSM2()` : purge complète (sans confirm — wrapper UX dans quiz-app)
+
+Test Node validé : 3 réussites consécutives donnent intervals 1 → 6 → 16 jours, échec ramène EF de 2.80 à 2.26 et interval à 1. Comportement conforme à la spec SM-2.
+
+### Ajouté — `js/components/quiz-ranks.js` (106 L)
+
+Logique pure des rangs et combos :
+- `getRank(xp)` → `{ rank, idx }`
+- `getRankAtIndex(idx)` → rang ou null
+- `getNextRank(xp)` → prochain rang ou null si max
+- `getXpToNextRank(xp)` → XP restants
+- `getComboMultiplier(streak)` → 1, 1.5, 2 ou 3
+
+Lecture simplifiée : tout est dérivé de `xp` ou `streak`, aucun side-effect.
+
+### Ajouté — `js/components/quiz-effects.js` (199 L)
+
+Effets audio + visuels :
+- `spawnParticles(x, y, ok)` : 18 particules (succès) ou 8 (raté) avec animation CSS
+- `playSound(ok)` : Web Audio API synthétisé (pas de fichier audio) — accord montant 3 ou 4 notes selon le combo, note grave descendante en cas d'échec, dim 350→250 Hz pour skip
+- `toggleSound()` : persiste `SOUND_ON` dans localStorage + sync icône `#sound-btn`
+- `applyVisualTheme(id)` : default / matrix / vintage / etc.
+- `ac()` : AudioContext lazy (respecte les politiques d'autoplay des navigateurs)
+
+### Ajouté — `js/components/quiz-share.js` (138 L)
+
+Helpers canvas génériques pour partage :
+- `downloadCanvas(canvas, filename)` : crée un `<a download>` (toujours fonctionne)
+- `copyCanvasToClipboard(canvas, opts)` : Clipboard API moderne avec fallback toast
+- `shareCanvasNative(canvas, opts)` : `navigator.share()` si dispo, fallback download
+
+Avant : 6 fonctions dupliquées (`downloadShareCard`, `copyShareCard`, `shareNative`, `downloadBilanCard`, `copyBilanCard`, `shareBilanCard`). Après : wrappers de 2-5 lignes appelant `QuizShare.X`.
+
+### Modifié — `js/pages/quiz-data.js` (1562 → 1861 L)
+
+Migration des constantes restées dans `quiz-app.js` :
+- `DIFF_LABELS`, `DIFF_PTS`, `TC` (couleurs par thème)
+- `ACHIEVEMENTS` (252 lignes — le plus gros)
+- `STREAK_MSGS`
+
+Cohérence avec le style existant (toutes les data statiques au même endroit).
+
+### Modifié — `js/pages/quiz-app.js` (5287 → 4718 L)
+
+569 lignes extraites. Toutes les fonctions extraites laissent un commentaire de placeholder pour aider la navigation future :
+
+```javascript
+// Note v2.21 : sanitizeHTML extrait vers quiz-utils.js (window.sanitizeHTML)
+```
+
+Wrapper `resetSM2` enrichi : confirm UX + reset state quiz (`S.smartCount`, `S.sm2Queue`) + toast de confirmation.
+
+`updateSM2Badge()` ajouté après chaque `updateSM2()` (le module pur ne touche plus au DOM).
+
+### Modifié — `quiz.html`
+
+Ordre de chargement (5 nouveaux scripts AVANT `quiz-app.js`) :
+
+```html
+<script src="js/components/quiz-utils.js" defer></script>
+<script src="js/components/quiz-sm2.js" defer></script>
+<script src="js/components/quiz-ranks.js" defer></script>
+<script src="js/components/quiz-effects.js" defer></script>
+<script src="js/components/quiz-share.js" defer></script>
+<script src="js/pages/quiz-data.js" defer></script>
+<script src="js/pages/quiz-app.js" defer></script>
+<script src="js/pages/quiz-ui-patch.js" defer></script>
+```
+
+### Modifié — Service Worker v54 → v55
+
+5 nouveaux fichiers ajoutés au cache (~750 lignes au total, ~25 KB gzippés).
+
+### Statistiques v2.21
+
+| Indicateur | v2.20 | v2.21 |
+|---|---|---|
+| `quiz-app.js` LOC | 5287 | **4718** (-10.7 %) |
+| Modules quiz | 1 | **6** (utils, sm2, ranks, effects, share, app) |
+| Tests Node passants | 0 | **4** (utils, sm2, ranks, effects) |
+| Service Worker | v54 | **v55** |
+| Fonctions extractées | 0 | **17** (lsGet, lsSet, shuffle, sanitizeHTML, getDailyDate, getDailySeed, seededRng, getWeekKey, getRank, getComboMultiplier, spawnParticles, playSound, toggleSound, applyVisualTheme, getSM2Data, updateSM2, getSM2Due) |
+| Constants déplacées | 0 | **6** vers quiz-data (DIFF_LABELS, DIFF_PTS, TC, ACHIEVEMENTS, STREAK_MSGS) |
+
+### Notes
+
+Le découpage proposé initialement (`quiz-state.js`, `quiz-pool.js`, `quiz-modes.js`, `quiz-ui.js`) **n'a pas été retenu** : 57 fonctions sont appelées depuis le HTML, et `S` (state global) est référencé dans 600+ endroits. L'extraire = retoucher trop de code.
+
+Approche pragmatique : extraire les morceaux **isolables** (utils purs, algos mathématiques, helpers génériques) sans toucher au tissu state-driven. Risque zéro, bénéfice immédiat.
+
 ## [2.20] — 2026-05-02
 
 Cette version cible 3 quick wins : **factorisation du code répété**, **fix de désynchronisation** entre fichiers d'index, et **complétion d'accessibilité** sur les fiches.
