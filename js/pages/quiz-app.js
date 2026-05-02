@@ -338,14 +338,31 @@
  }
 
  function getNext() {
- if (S.pi >= S.pool.length) {
- if (S.mode === 'normal' || S.mode === 'smart') buildPool();
- else S.pi = 0;
- }
- return S.pool[S.pi++] || {
- q: ALL_Q[0],
- idx: 0
- };
+   if (S.pi >= S.pool.length) {
+     if (S.mode === 'normal' || S.mode === 'smart') buildPool();
+     else S.pi = 0;
+   }
+   const next = S.pool[S.pi++];
+
+   // v2.22 : si pool vide en mode filtré (bookmarks/errors/sm2 sans cartes,
+   // ou activeT/activeC vide), afficher l'état vide approprié au lieu d'un fallback.
+   if (!next) {
+     let key = null;
+     if (S.mode === 'bookmarks') key = 'bookmarks';
+     else if (S.mode === 'errors') key = 'errors';
+     else if (S.mode === 'sm2') key = 'sm2';
+     else if (S.activeT && S.activeT.size === 0) key = 'no-filter';
+     else if (S.activeC && S.activeC.size === 0) key = 'no-filter';
+     if (key && typeof showCardEmpty === 'function') {
+       showCardEmpty(key);
+       return null;
+     }
+     // Fallback (préservation API legacy : toujours retourner quelque chose)
+     return { q: ALL_Q[0], idx: 0 };
+   }
+
+   if (typeof hideCardEmpty === 'function') hideCardEmpty();
+   return next;
  }
 
  function stopTimer() {
@@ -462,13 +479,30 @@
  }
  let _toastTimers = {};
 
+ // showToast — v2.22 : redirige vers notify() (système de notification unifié)
+ // L'API legacy (id, msg, duration) reste préservée pour les call-sites existants.
+ // Le paramètre id (streak-toast / combo-toast) sert seulement à inférer le type.
  function showToast(id, msg, duration = 2200) {
- const t = document.getElementById(id);
- if (!t) return;
- t.textContent = msg;
- t.classList.add('show');
- clearTimeout(_toastTimers[id]);
- _toastTimers[id] = setTimeout(() => t.classList.remove('show'), duration);
+   // Type inféré depuis l'ID legacy
+   let type = 'info';
+   let icon = 'ℹ';
+   if (id === 'streak-toast') { type = 'streak'; icon = '🔥'; }
+   else if (id === 'combo-toast') { type = 'combo'; icon = '⚡'; }
+
+   // Détection warnings/info via préfixe message
+   if (typeof msg === 'string') {
+     if (msg.startsWith('⚠')) { type = 'warning'; icon = '⚠'; }
+     else if (msg.startsWith('📋') || msg.startsWith('⭐') || msg.startsWith('☆')) {
+       type = 'info'; icon = msg.charAt(0);
+     }
+   }
+
+   // Strip leading emoji déjà repris dans icon
+   let title = (typeof msg === 'string') ? msg.trim() : String(msg);
+   const m = title.match(/^([\u{1F300}-\u{1FAFF}\u2600-\u27BF]+)\s*(.*)$/u);
+   if (m && m[2]) { icon = m[1]; title = m[2]; }
+
+   notify({ type, icon, title, duration });
  }
 
  // Note v2.21 : spawnParticles extrait vers quiz-effects.js
@@ -804,11 +838,23 @@
 
       function toggleBookmark() {
         const idx = S.curIdx;
-        S.bookmarks.has(idx) ? S.bookmarks.delete(idx) : S.bookmarks.add(idx);
+        const wasBookmarked = S.bookmarks.has(idx);
+        wasBookmarked ? S.bookmarks.delete(idx) : S.bookmarks.add(idx);
         const bb = document.getElementById('bookmark-btn');
         bb.textContent = S.bookmarks.has(idx) ? '⭐' : '☆';
         bb.className = 'bookmark-btn' + (S.bookmarks.has(idx) ? ' active' : '');
         savePersist();
+
+        // v2.22 : animation pop + particules étoile si on vient d'ajouter
+        if (bb) {
+          bb.classList.remove('bookmark-pop');
+          void bb.offsetWidth;
+          bb.classList.add('bookmark-pop');
+          setTimeout(() => bb.classList.remove('bookmark-pop'), 600);
+          if (!wasBookmarked && typeof spawnStarBurst === 'function') {
+            spawnStarBurst(bb);
+          }
+        }
       }
 
       // Note v2.21 : ac() et playSound() extraits vers quiz-effects.js
@@ -1659,6 +1705,7 @@
       }
 
       function showAchievementPopup(a) {
+        // v2.22 : ancien popup DOM gardé (compat) mais notify unifié en plus
         document.getElementById('ap-emoji').textContent = a.emoji;
         document.getElementById('ap-name').textContent = a.name;
         document.getElementById('ap-desc').textContent = a.desc;
@@ -1667,6 +1714,16 @@
         setTimeout(() => p.classList.remove('show'), 3000);
         playSound(true);
         addXp(25);
+
+        // Notification unifiée
+        notify({
+          type: 'achievement',
+          icon: a.emoji || '🏅',
+          title: 'Succès débloqué : ' + (a.name || ''),
+          message: a.desc || '',
+          duration: 4000,
+          flash: true,
+        });
       }
 
       function openAchievements() {
@@ -1824,14 +1881,18 @@
       function showRankUp(rank) {
         updateAvatarChip();
         const t = document.getElementById('rankup-toast');
-        if (!t) return;
-        document.getElementById('ru-emoji').textContent = rank.emoji;
-        document.getElementById('ru-name').textContent = rank.name;
-        document.getElementById('ru-flavor').textContent = rank.flavor || '';
-        t.classList.remove('show');
-        void t.offsetWidth;
-        t.classList.add('show');
-        const a = ac();
+        // v2.22 : le toast DOM rankup-toast est caché par CSS (système notify unifié),
+        // mais on garde les side-effects (avatar update, son, confetti) intacts.
+        if (t) {
+          document.getElementById('ru-emoji').textContent = rank.emoji;
+          document.getElementById('ru-name').textContent = rank.name;
+          document.getElementById('ru-flavor').textContent = rank.flavor || '';
+          t.classList.remove('show');
+          void t.offsetWidth;
+          t.classList.add('show');
+          setTimeout(() => t.classList.remove('show'), 3500);
+        }
+        const a = (typeof QuizEffects !== 'undefined') ? QuizEffects.ac() : null;
         if (a && SOUND_ON) {
           const t2 = a.currentTime;
           [523, 659, 784, 1047, 1319].forEach((f, i) => {
@@ -1846,8 +1907,17 @@
             o.stop(t2 + i * .1 + .35);
           });
         }
-        setTimeout(() => t.classList.remove('show'), 3500);
         launchConfetti(S.curQ?.theme);
+
+        // v2.22 : notification unifiée (système notify)
+        notify({
+          type: 'rank',
+          icon: rank.emoji || '🆙',
+          title: 'Nouveau rang : ' + (rank.name || ''),
+          message: rank.flavor || '',
+          duration: 4000,
+          flash: true,
+        });
       }
 
       function useHint() {
@@ -2566,6 +2636,15 @@
         lsSet('freezeUsed_' + today, true);
         updateFreezeBtn();
         showToast('streak-toast', '🧊 Streak Freeze activé ! Ta série est protégée pour demain.', 3000);
+
+        // v2.22 : animation glaçon sur le freeze-btn
+        const fb = document.getElementById('freeze-btn');
+        if (fb) {
+          fb.classList.remove('freeze-anim');
+          void fb.offsetWidth;
+          fb.classList.add('freeze-anim');
+          setTimeout(() => fb.classList.remove('freeze-anim'), 1200);
+        }
       }
 
       function updateFreezeBtn() {
@@ -3010,7 +3089,18 @@
       function toggleFocusMode() {
         _focusMode = !_focusMode;
         document.body.classList.toggle('focus-mode', _focusMode);
+        window._focusMode = _focusMode;
         if (_focusMode) showToast('streak-toast', '🎯 Mode Focus activé — ESC pour quitter', 2000);
+
+        // v2.22 : sync label dans le menu Plus
+        setTimeout(() => {
+          document.querySelectorAll('[onclick*="toggleFocusMode"]').forEach(el => {
+            if (el.classList.contains('hdr-dropdown-item')) {
+              el.innerHTML = '<span>🎯</span> Mode Focus ' +
+                (_focusMode ? '<span class="menu-item-on">ON</span>' : '(F)');
+            }
+          });
+        }, 50);
       }
       document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && _focusMode) toggleFocusMode();
@@ -4716,3 +4806,463 @@ async function shareBilanCard() {
     });
   }, 300);
 }
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION v2.22 — UI patches mergés (ex quiz-ui-patch.js)
+//
+// Ce bloc contient le contenu de l'ex `quiz-ui-patch.js` qui était
+// chargé séparément après quiz-app.js. Il a été mergé ici pour :
+//   • Éliminer les "wrappers" (override des fonctions juste pour
+//     ajouter du comportement) → maintenant les fonctions d'origine
+//     contiennent directement le code du patch
+//   • Supprimer la fuite de scope global du Groupe D (était hors IIFE)
+//   • Réduire le timing fragile : plus besoin d'attendre que le wrapper
+//     se mette en place après chargement
+//   • Un seul fichier source de vérité pour la logique du quiz
+//
+// Sections :
+//   A. Système de notification unifié (file d'attente, 1 notif visible)
+//   B. États vides (Favoris/Erreurs/SM2/Filtre vide)
+//   C. Pastille mode actif
+//   D. Effets visuels divers (combo halo, star burst bookmark)
+//   E. Fermeture overlay (backdrop click, Escape global)
+//   F. Action-row guard (griser hint/skip au lieu de masquer)
+//   G. Daily-banner dismiss persistant
+//   H. Menu Plus (⋯)
+//   I. setMode(), triggerBoss()
+//   J. Initialisation au boot
+//
+// Note : les fonctions d'origine (showToast, showRankUp, getNext,
+// toggleBookmark, toggleFocusMode, useStreakFreeze, toggleSound)
+// ont été modifiées EN PLACE plus haut dans ce fichier — le code
+// ci-dessous ne contient que les nouveautés.
+// ═══════════════════════════════════════════════════════════════
+
+
+// ─── A. Système de notification unifié ─────────────────────────
+// Une seule notif visible à la fois, file d'attente automatique.
+// Utilisé par showToast, showRankUp, showAchievementPopup (modifiées plus haut).
+
+const _notifyQueue = [];
+let _notifyActive = false;
+let _notifyTimer = null;
+
+function notify(opts) {
+  _notifyQueue.push(opts);
+  if (!_notifyActive) drainNotifyQueue();
+}
+window.notify = notify;
+
+function drainNotifyQueue() {
+  if (!_notifyQueue.length) { _notifyActive = false; return; }
+  _notifyActive = true;
+  const opts = _notifyQueue.shift();
+  const stream = document.getElementById('notify-stream');
+  const card   = document.getElementById('notify-card');
+  const iconEl = document.getElementById('notify-icon');
+  const titleEl = document.getElementById('notify-title');
+  const msgEl  = document.getElementById('notify-msg');
+  if (!stream || !card) {
+    // Fallback : log si DOM absent (ne devrait pas arriver)
+    console.warn('[notify]', opts.title, opts.message);
+    drainNotifyQueue();
+    return;
+  }
+  iconEl.textContent  = opts.icon || '';
+  titleEl.textContent = opts.title || '';
+  msgEl.textContent   = opts.message || '';
+  msgEl.style.display = opts.message ? '' : 'none';
+  card.className = 'notify-card notify-card--' + (opts.type || 'info');
+  if (opts.flash) card.classList.add('notify-card--flash');
+  void stream.offsetWidth;
+  stream.classList.add('show');
+
+  clearTimeout(_notifyTimer);
+  _notifyTimer = setTimeout(() => {
+    stream.classList.remove('show');
+    setTimeout(drainNotifyQueue, 300);
+  }, opts.duration || 2200);
+}
+
+
+// ─── B. États vides (Favoris vide, Erreurs vides, SM2 vide…) ──
+
+const EMPTY_STATES = {
+  bookmarks: {
+    icon:  '⭐',
+    title: 'Aucun favori pour l\'instant',
+    desc:  'Étoile ☆ une question pendant le quiz pour la retrouver ici.',
+    actions: [{ label: '🎯 Mode Libre', primary: true, fn: () => setMode('normal') }],
+  },
+  errors: {
+    icon:  '⚠',
+    title: 'Aucune erreur à reprendre',
+    desc:  'Tes ratés s\'accumuleront automatiquement ici. Continue à répondre !',
+    actions: [{ label: '🎯 Mode Libre', primary: true, fn: () => setMode('normal') }],
+  },
+  sm2: {
+    icon:  '🃏',
+    title: 'Aucune révision due aujourd\'hui',
+    desc:  'Reviens demain — l\'algorithme SM-2 espace les rappels selon ta mémoire.',
+    actions: [{ label: '🎯 Mode Libre', primary: true, fn: () => setMode('normal') }],
+  },
+  'no-filter': {
+    icon:  '🔍',
+    title: 'Aucun thème sélectionné',
+    desc:  'Tu as désélectionné tous les thèmes ou chapitres. Choisis-en au moins un.',
+    actions: [{ label: '⚙ Ouvrir les filtres', primary: true, fn: () => window.openSettings?.() }],
+  },
+};
+
+function showCardEmpty(stateKey) {
+  const state = EMPTY_STATES[stateKey];
+  if (!state) return;
+  const card = document.getElementById('card-empty-state');
+  if (!card) return;
+  document.getElementById('card-empty-icon').textContent = state.icon;
+  document.getElementById('card-empty-title').textContent = state.title;
+  document.getElementById('card-empty-desc').textContent  = state.desc;
+  const actionsEl = document.getElementById('card-empty-actions');
+  actionsEl.innerHTML = '';
+  state.actions.forEach(a => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'apply-btn apply-btn--small' + (a.primary ? '' : ' apply-btn--secondary');
+    btn.textContent = a.label;
+    btn.onclick = a.fn;
+    actionsEl.appendChild(btn);
+  });
+  card.hidden = false;
+  document.getElementById('choices').style.display = 'none';
+  document.getElementById('question-text').style.display = 'none';
+  const multiHint = document.getElementById('multi-hint');
+  if (multiHint) multiHint.style.display = 'none';
+}
+
+function hideCardEmpty() {
+  const card = document.getElementById('card-empty-state');
+  if (!card || card.hidden) return;
+  card.hidden = true;
+  document.getElementById('choices').style.display = '';
+  document.getElementById('question-text').style.display = '';
+}
+
+
+// ─── C. Pastille du mode actif ─────────────────────────────────
+
+const MODE_LABELS = {
+  normal:    null,           // mode par défaut → pas de pastille
+  smart:     '🧠',
+  bookmarks: '⭐',
+  errors:    '⚠',
+  survival:  '💀',
+  sm2:       '🃏',
+  daily:     '⚡',
+  exam:      '📝',
+  mission:   '🎯',
+  scene:     '🔍',
+  boss:      '👹',
+};
+
+function refreshActiveModePill() {
+  const pill = document.getElementById('active-mode-pill');
+  if (!pill || typeof S === 'undefined') return;
+  const icon = MODE_LABELS[S.mode];
+  if (icon) {
+    pill.textContent = icon;
+    pill.hidden = false;
+  } else {
+    pill.hidden = true;
+  }
+  document.querySelectorAll('[data-mode-target]').forEach(el => {
+    el.classList.toggle('is-active', el.dataset.modeTarget === S.mode);
+  });
+}
+
+
+// ─── D. Effets visuels divers ──────────────────────────────────
+
+function setupComboHalo() {
+  const card = document.getElementById('question-card');
+  const gauge = document.getElementById('xp-wrap');
+  if (!card || !gauge) return;
+  const obs = new MutationObserver(() => {
+    gauge.classList.toggle('combo-halo-x2',  card.classList.contains('combo-x2'));
+    gauge.classList.toggle('combo-halo',     card.classList.contains('combo-active'));
+  });
+  obs.observe(card, { attributes: true, attributeFilter: ['class'] });
+}
+
+function spawnStarBurst(originEl) {
+  if (!originEl) return;
+  const rect = originEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  for (let i = 0; i < 6; i++) {
+    const star = document.createElement('span');
+    star.className = 'star-particle';
+    star.textContent = '⭐';
+    star.style.left = cx + 'px';
+    star.style.top  = cy + 'px';
+    const angle = (i / 6) * Math.PI * 2;
+    const dist  = 40 + Math.random() * 20;
+    star.style.setProperty('--dx', (Math.cos(angle) * dist).toFixed(1) + 'px');
+    star.style.setProperty('--dy', (Math.sin(angle) * dist).toFixed(1) + 'px');
+    document.body.appendChild(star);
+    setTimeout(() => star.remove(), 700);
+  }
+}
+
+
+// ─── E. Action-row guard (hint/skip grisé au lieu de masqué) ──
+
+function setupActionRowGuard() {
+  const hint = document.getElementById('hint-btn');
+  const skip = document.getElementById('skip-btn');
+  if (!hint || !skip) return;
+
+  function syncDisabled(btn) {
+    const dispStyle = btn.style.display;
+    if (dispStyle === 'none') {
+      btn.disabled = true;
+      btn.style.display = '';
+    } else if (dispStyle === 'block' || dispStyle === '') {
+      btn.disabled = false;
+    }
+  }
+
+  const obs = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      if (m.attributeName === 'style') syncDisabled(m.target);
+    }
+  });
+  [hint, skip].forEach(btn => {
+    obs.observe(btn, { attributes: true, attributeFilter: ['style'] });
+    syncDisabled(btn);
+  });
+}
+
+
+// ─── F. Sync sound label dans le menu Plus ─────────────────────
+
+function syncSoundLabel() {
+  const btn = document.getElementById('sound-btn');
+  const lbl = document.getElementById('sound-label');
+  if (!btn || !lbl) return;
+  const txt = btn.textContent.trim();
+  if (txt === '🔊') {
+    btn.innerHTML = '<span>🔊</span> <span id="sound-label">Son activé</span>';
+  } else if (txt === '🔇') {
+    btn.innerHTML = '<span>🔇</span> <span id="sound-label">Son coupé</span>';
+  }
+}
+
+
+// ─── G. Daily banner — dismiss persistant pour la journée ─────
+
+function _todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function dismissDailyBanner() {
+  const el = document.getElementById('daily-banner');
+  if (el) el.style.display = 'none';
+  try { localStorage.setItem('dailyBannerDismissed', _todayISO()); } catch (_) {}
+}
+window.dismissDailyBanner = dismissDailyBanner;
+
+function _hideDailyBannerIfDismissed() {
+  let stored = null;
+  try { stored = localStorage.getItem('dailyBannerDismissed'); } catch (_) {}
+  if (stored === _todayISO()) {
+    const el = document.getElementById('daily-banner');
+    if (el) el.style.display = 'none';
+  }
+}
+
+
+// ─── H. Menu Plus (⋯) ──────────────────────────────────────────
+
+function toggleMoreMenu() {
+  const menu = document.getElementById('more-menu');
+  if (!menu) return;
+  const wasOpen = menu.classList.contains('open');
+  document.getElementById('enquete-menu')?.classList.remove('open');
+  if (!wasOpen) menu.classList.add('open');
+  else menu.classList.remove('open');
+}
+window.toggleMoreMenu = toggleMoreMenu;
+
+function closeMoreMenu() {
+  document.getElementById('more-menu')?.classList.remove('open');
+}
+window.closeMoreMenu = closeMoreMenu;
+
+
+// ─── I. setMode (bascule entre modes) ──────────────────────────
+// Couvre : normal, smart, bookmarks, errors, survival.
+// Pour 'sm2', 'daily', 'exam', 'mission', 'scene', 'boss' → fonctions dédiées.
+
+function setMode(mode) {
+  if (typeof S === 'undefined') return;
+  const previous = S.mode;
+  S.mode = mode;
+
+  document.querySelectorAll('.mode-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === mode));
+  document.querySelectorAll('[data-mode-target]').forEach(el =>
+    el.classList.toggle('is-active', el.dataset.modeTarget === mode));
+
+  if (mode === 'survival' && previous !== 'survival') {
+    S.lives = 3;
+    if (typeof updateLivesDisplay === 'function') updateLivesDisplay();
+  }
+
+  if (typeof buildPool === 'function') buildPool();
+  if (typeof renderQuestion === 'function' && typeof getNext === 'function') {
+    renderQuestion(getNext());
+  }
+
+  const labels = {
+    normal:    { icon: '🎯', text: 'Mode Libre' },
+    smart:     { icon: '🧠', text: 'Mode Smart — adapté à tes erreurs' },
+    bookmarks: { icon: '⭐', text: 'Favoris (' + ((S.bookmarks && S.bookmarks.size) || 0) + ')' },
+    errors:    { icon: '⚠',  text: 'Erreurs à reprendre (' + ((S.errors && S.errors.length) || 0) + ')' },
+    survival:  { icon: '💀', text: 'Mode Survie — 3 vies' },
+  };
+  const lbl = labels[mode];
+  if (lbl) notify({ type: 'info', icon: lbl.icon, title: lbl.text, duration: 2200 });
+
+  refreshActiveModePill();
+}
+window.setMode = setMode;
+
+
+// ─── triggerBoss : lance un boss sur un chapitre éligible ─────
+
+function triggerBoss() {
+  if (typeof S === 'undefined' || typeof bossState === 'undefined' || typeof launchBoss !== 'function') {
+    notify({ type: 'warning', icon: '⏳', title: 'Boss indisponible',
+             message: 'Continue à répondre pour en débloquer.', duration: 2800 });
+    return;
+  }
+  const threshold = (typeof BOSS_THRESHOLD !== 'undefined') ? BOSS_THRESHOLD : 20;
+  const total = (typeof BOSS_QUESTIONS !== 'undefined') ? BOSS_QUESTIONS : 5;
+
+  const eligible = [];
+  if (S.byChapter && typeof ALL_Q !== 'undefined') {
+    for (const ch in S.byChapter) {
+      const stat = S.byChapter[ch];
+      if (stat && stat.ok >= threshold && !bossState.beaten.has(ch)) {
+        const hardCount = ALL_Q.filter(q => q.chapter === ch && q.diff === 'hard').length;
+        if (hardCount >= total) eligible.push(ch);
+      }
+    }
+  }
+  if (!eligible.length) {
+    notify({ type: 'warning', icon: '👹',
+      title: 'Aucun boss disponible',
+      message: 'Atteins ' + threshold + ' bonnes réponses sur un chapitre pour le débloquer.',
+      duration: 4000 });
+    return;
+  }
+  const chapter = eligible[Math.floor(Math.random() * eligible.length)];
+  bossState.active = true;
+  bossState.chapter = chapter;
+  const pool = ALL_Q.filter(q => q.chapter === chapter && q.diff === 'hard');
+  bossState.questions = pool.sort(() => Math.random() - 0.5).slice(0, total);
+  bossState.qi = 0;
+  bossState.correct = 0;
+  launchBoss();
+}
+window.triggerBoss = triggerBoss;
+
+
+// ─── J. Stub openExplModal (fallback si pas défini) ────────────
+// Le bouton expl-btn a été supprimé, mais le JS principal a encore
+// une référence dormante au cas où.
+
+if (typeof window.openExplModal !== 'function') {
+  window.openExplModal = function () {
+    console.debug('[quiz-app] openExplModal called but explanation now inline.');
+  };
+}
+
+
+// ─── K. Initialisation au boot ─────────────────────────────────
+
+(function _initUIPatches() {
+  function bootUIPatches() {
+    setupActionRowGuard();
+    setupComboHalo();
+    syncSoundLabel();
+    refreshActiveModePill();
+    _hideDailyBannerIfDismissed();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootUIPatches);
+  } else {
+    bootUIPatches();
+  }
+
+  // Re-sync sound label après chargement complet
+  window.addEventListener('load', () => setTimeout(syncSoundLabel, 100));
+
+  // Click extérieur → ferme more-menu
+  document.addEventListener('click', function (e) {
+    const more = document.getElementById('more-dropdown');
+    if (more && !more.contains(e.target)) closeMoreMenu();
+  });
+
+  // Click sur item de more-menu → ferme
+  document.addEventListener('click', function (e) {
+    const item = e.target.closest('#more-menu .hdr-dropdown-item');
+    if (item) setTimeout(closeMoreMenu, 0);
+  });
+
+  // Backdrop click → ferme overlay topmost
+  document.addEventListener('click', function (e) {
+    if (e.target.classList && e.target.classList.contains('overlay') &&
+        e.target.classList.contains('show')) {
+      const id = e.target.id;
+      if (id && typeof window.closeOverlay === 'function') {
+        window.closeOverlay(id);
+      }
+    }
+  });
+
+  // Escape global → ferme overlay topmost (priorité dropdowns)
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    const openOverlays = [...document.querySelectorAll('.overlay.show, .mode-end-overlay.is-open')];
+    if (!openOverlays.length) {
+      const enqueteOpen = document.getElementById('enquete-menu')?.classList.contains('open');
+      const moreOpen    = document.getElementById('more-menu')?.classList.contains('open');
+      if (enqueteOpen)  { e.preventDefault(); window.closeEnqueteMenu?.(); return; }
+      if (moreOpen)     { e.preventDefault(); closeMoreMenu();              return; }
+      return;
+    }
+    const top = openOverlays.reduce((max, el) => {
+      const z = parseInt(getComputedStyle(el).zIndex, 10) || 0;
+      const zMax = parseInt(getComputedStyle(max).zIndex, 10) || 0;
+      return z >= zMax ? el : max;
+    }, openOverlays[0]);
+    if (top && top.id) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (top.classList.contains('mode-end-overlay')) {
+        if (top.id === 'scene-end-overlay'   && typeof window.closeSceneEnd     === 'function') return window.closeSceneEnd();
+        if (top.id === 'mission-overlay'     && typeof window.closeMissionIntro === 'function') return window.closeMissionIntro();
+        if (top.id === 'mission-end-overlay' && typeof window.closeMissionEnd   === 'function') return window.closeMissionEnd();
+      } else if (typeof window.closeOverlay === 'function') {
+        window.closeOverlay(top.id);
+      }
+    }
+  }, true); // capture phase
+
+  // Refresh pill après click sur un mode-target
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('[data-mode-target]')) setTimeout(refreshActiveModePill, 50);
+  });
+})();
