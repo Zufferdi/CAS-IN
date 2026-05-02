@@ -4,6 +4,113 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.23] — 2026-05-02
+
+Cette version extrait un **module pilote** de `tp-engine.js` pour valider la méthodologie de split du plus gros fichier JS du repo (6786 LOC).
+
+### Le contexte
+
+Après le split réussi de `quiz-app.js` en v2.21 (5287 → 4718 LOC, -10.7%), le seul gros monolithe JS restant est `tp-engine.js` (6786 LOC). Mais sa structure est différente :
+
+- **21 fonctions générateurs** `genX()` (vs 166 fonctions courtes dans quiz-app)
+- **Fonctions très longues** : genRunList = 200 L, genExamen = 250 L, genHexDump = 580 L
+- **Architecture déjà partiellement modulaire** : tp-data.js, tp-engine-meta.js (droit/glossaire), tp-engine-windows.js (Registry/Prefetch/LNK) existent depuis v2.13
+- **Helpers partagés** : `renderHexDump` est utilisé par genHexDump, genSlackSpace, genMBR, genDirEntry
+
+### Ajouté — `tp/tp-engine-carving.js` (247 L)
+
+Module satellite **proof of concept** qui regroupe les exercices "carving" (signatures de fichiers) :
+
+- `genMagic()` / `checkMagic()` — Identification par signature hexadécimale (1 fichier, 4 choix)
+- `_magicNotes` — Tableau interne pour stocker les notes des choix
+- `genMismatch()` / `checkMismatch()` — Détection extension trompeuse vs vraie signature (5 fichiers, 4 choix chacun)
+- `buildMismatchChoices()` — Helper interne pour construire les boutons
+- `_mismatchAnswered` — Flag interne
+
+Pattern identique aux modules satellites existants : à la fin du fichier, le module **mute le dispatcher GENERATORS** pour s'enregistrer :
+
+```javascript
+if (typeof GENERATORS !== 'undefined') {
+  GENERATORS.magic    = genMagic;
+  GENERATORS.mismatch = genMismatch;
+}
+```
+
+Les dépendances (rand, pad, escAttr, encData, decData, formatChoiceFeedback, breakStreak, incSolved, STATE, MAGIC_DB, MISMATCH_DB) restent globales dans tp-engine.js et tp-data.js (chargés avant).
+
+### Modifié — `tp/tp-engine.js`
+
+Réduit : **6786 → 6584 LOC** (-202 lignes, -3.0%).
+
+Les fonctions extraites sont remplacées par un commentaire de placeholder :
+
+```javascript
+// ─── v2.23 : carving exercises (genMagic, checkMagic, genMismatch,
+// buildMismatchChoices, checkMismatch, _magicNotes, _mismatchAnswered)
+// extraits vers tp/tp-engine-carving.js (chargé après ce fichier).
+```
+
+Le dispatcher `GENERATORS` initial ne référence plus `genMagic` / `genMismatch` (réinjectés par le satellite). Pattern cohérent avec les commentaires existants pour glossaire/email/network/ir/droitpenal (meta) et registry/prefetch/lnk (windows).
+
+### Modifié — `tp.html`
+
+Ordre de chargement étendu :
+
+```html
+<script src="tp/tp-data.js"></script>
+<script src="tp/tp-engine.js"></script>
+<script src="tp/tp-engine-carving.js"></script>   <!-- NEW -->
+<script src="tp/tp-engine-windows.js"></script>
+<script src="tp/tp-engine-meta.js"></script>
+```
+
+### Modifié — Service Worker v56 → v57
+
+`./tp/tp-engine-carving.js` ajouté au cache.
+
+### Validation
+
+Test fonctionnel via Node + vm sandbox (simule le scope global navigateur après concaténation des scripts) :
+
+```
+═══ GENERATORS dispatcher après chargement complet ═══
+  Total générateurs : 27 (avant : 27)
+  ✓ GENERATORS.endian       : function
+  ✓ GENERATORS.timestamp    : function
+  ✓ GENERATORS.magic        : function   ← réinjecté par satellite
+  ✓ GENERATORS.mismatch     : function   ← réinjecté par satellite
+  ✓ GENERATORS.runlist      : function
+  ✓ GENERATORS.effacement   : function
+  ✓ GENERATORS.registry     : function   (depuis tp-engine-windows.js)
+  ✓ GENERATORS.glossaire    : function   (depuis tp-engine-meta.js)
+  ✓ GENERATORS.direntry     : function
+```
+
+Aucune régression. Tous les 27 générateurs sont présents et fonctionnels.
+
+### Note méthodologique
+
+Le split de `tp-engine.js` est **techniquement faisable** (même pattern que quiz-app v2.21), mais le ROI est **plus faible** que pour quiz-app :
+
+- quiz-app : 569 L extraites en 5 modules → -10.7 %
+- tp-engine (estimation pour 4 modules de plus) : ~3000 L extractibles → -45 %
+
+Mais à efficacité par heure de travail :
+- quiz-app : ~100 L isolables / heure
+- tp-engine : ~50 L isolables / heure (fonctions plus longues, plus couplées)
+
+Pour cette session, on **consolide ici** avec un module pilote qui prouve la méthodologie. Si on veut continuer plus tard, on aura une base saine.
+
+### Statistiques v2.23
+
+| Indicateur | v2.22 | v2.23 |
+|---|---|---|
+| `tp-engine.js` LOC | 6786 | **6584** (-202, -3.0%) |
+| Modules tp/ | 4 | **5** (data + engine + carving + windows + meta) |
+| Total LOC tp/ | 7766 | **7811** (+45 dû au header du nouveau module) |
+| Service Worker | v56 | **v57** |
+| Générateurs total | 27 | **27** (inchangé) |
+
 ## [2.22] — 2026-05-02
 
 Cette version **fusionne `quiz-ui-patch.js` dans `quiz-app.js`**, éliminant le pattern "wrapper après coup" qui datait de v2.13.
