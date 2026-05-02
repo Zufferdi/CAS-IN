@@ -42,22 +42,41 @@ REPO = Path(__file__).resolve().parent.parent
 # auxquels elle est liée + tps + scene-tags.
 
 HARD_LINKS_FICHE_TO_CHAPTERS = {
-    # Acquisition & analyse
+    # ─── Acquisition & méthodologie ───
     'acquisition':          ['Acquisition et préservation', 'Méthodologie forensique'],
     'methodologie_dfir':    ['Méthodologie forensique', 'Méthodologie et bonnes pratiques'],
     'chain_of_custody':     ['Acquisition et préservation', 'Méthodologie forensique'],
+    'premier_intervenant':  ['Acquisition et préservation', 'Méthodologie forensique', 'Méthodologie et bonnes pratiques'],
+    'rapport_forensique':   ['Expertise et rapport judiciaire', 'Méthodologie forensique'],
+    'algorithmes_forensique': ['Hachage et intégrité', 'Logiciels et outils forensiques'],
+    'mathematiques_forensique': ['Représentation des données', 'Hachage et intégrité'],
+    'timeline':             ['Artefacts temporels et MAC times', 'Logiciels et outils forensiques'],
+    'autopsy':              ['Logiciels et outils forensiques', 'Analyse et recovery'],
+    'kape_velociraptor':    ['Logiciels et outils forensiques', 'Acquisition et préservation'],
+    'log_forensique_avance':['Logiciels et outils forensiques', 'Windows — Journaux et Event Logs'],
+    'browser_artifacts_deep_dive': ['Logiciels et outils forensiques', 'Windows — Artefacts et exécution'],
+    'ia_deepfake_forensique':['Métadonnées et EXIF', 'Formats de fichiers et Magic Bytes'],
+    'metadata_avancees':    ['Métadonnées et EXIF', 'Formats de fichiers et Magic Bytes'],
 
-    # Filesystems
+    # ─── Filesystems ───
     'ntfs':                 ['NTFS'],
     'fat32':                ['FAT12 / FAT16 / FAT32'],
+    'fat12':                ['FAT12 / FAT16 / FAT32'],
     'exfat':                ['exFAT'],
     'apfs':                 ['HFS+ et APFS'],
     'hfs_plus':             ['HFS+ et APFS'],
+    'hfs':                  ['HFS+ et APFS'],
     'ext4':                 ['EXT2 / EXT3 / EXT4'],
+    'ext':                  ['EXT2 / EXT3 / EXT4'],
     'refs':                 ['NTFS'],
     'btrfs_zfs':            ['EXT2 / EXT3 / EXT4'],
+    'f2fs':                 ['EXT2 / EXT3 / EXT4'],
+    'comparaison_fs':       ['NTFS', 'FAT12 / FAT16 / FAT32', 'exFAT', 'EXT2 / EXT3 / EXT4', 'HFS+ et APFS'],
+    'disques':              ['Technologie des disques'],
+    'mbr_gpt':              ['Technologie des disques', 'NTFS'],
+    'encodage':             ['Représentation des données'],
 
-    # Windows
+    # ─── Windows ───
     'windows':              ['Windows — Artefacts et exécution'],
     'windows_forensique':   ['Windows — Artefacts et exécution', 'Windows — Journaux et Event Logs'],
     'registre_windows':     ['Windows — Registre et artefacts'],
@@ -66,145 +85,301 @@ HARD_LINKS_FICHE_TO_CHAPTERS = {
     'powershell_forensique':['Windows — Artefacts et exécution'],
     'lateral_movement_forensique': ['Windows — Artefacts et exécution', 'Windows — Journaux et Event Logs'],
     'cmd_windows_forensique': ['Windows — Artefacts et exécution', 'Windows — Journaux et Event Logs'],
+    'shellbags':            ['Windows — Registre et artefacts', 'Windows — Artefacts et exécution'],
+    'sysmon':               ['Windows — Journaux et Event Logs'],
+    'usb_forensique':       ['Windows — Registre et artefacts', 'Technologie des disques'],
+    'usb_removable_media_forensique': ['Windows — Registre et artefacts', 'Windows — Journaux et Event Logs', 'Technologie des disques'],
+    'usb_storage':          ['Technologie des disques', 'Windows — Registre et artefacts'],
+    'usb_removable':        ['Technologie des disques', 'Windows — Registre et artefacts'],
 
-    # Linux / macOS
+    # ─── Linux / macOS ───
     'linux_forensique':     ['Linux — Artefacts et analyse'],
     'cmd_linux_forensique': ['Linux — Artefacts et analyse'],
     'macos_forensique':     ['macOS — Artefacts et analyse'],
     'wsl_forensique':       ['Linux — Artefacts et analyse', 'Windows — Artefacts et exécution'],
 
-    # Mémoire
+    # ─── Mémoire ───
     'ram_forensique':       ['Logiciels et outils forensiques', 'Acquisition et préservation'],
     'memoire_internals':    ['Logiciels et outils forensiques'],
     'volatility_memory_forensics': ['Logiciels et outils forensiques'],
     'volatilite':           ['Acquisition et préservation'],
 
-    # Réseaux
+    # ─── Réseaux ───
     'wireshark_pcap':       ['Réseau, protocoles et Internet'],
     'tor_forensique':       ['Réseau, protocoles et Internet', 'Infrastructure, DNS et pivots'],
+    'tor_darkweb':          ['Réseau, protocoles et Internet', 'Infrastructure, DNS et pivots'],
     'tcp_ip':               ['Adressage IP', 'Réseau, protocoles et Internet'],
     'dns_dhcp':             ['Infrastructure, DNS et pivots', 'Réseau, protocoles et Internet'],
+    'dns_forensique':       ['Infrastructure, DNS et pivots', 'Réseau, protocoles et Internet'],
+    'dns_forensique_avance':['Infrastructure, DNS et pivots', 'Réseau, protocoles et Internet'],
+    'siem_logs':            ['Logiciels et outils forensiques', 'Réseau, protocoles et Internet', 'Windows — Journaux et Event Logs'],
 
-    # Cloud / Email
+    # ─── Cloud / Email / Messageries ───
     'cloud_forensique':     ['Réseau, protocoles et Internet'],
     'm365_forensique':      ['Réseau, protocoles et Internet'],
     'email_forensique':     ['Réseau, protocoles et Internet'],
+    'email_headers_smtp_forensique': ['Réseau, protocoles et Internet'],
     'entreprise_messaging_forensique': ['Réseau, protocoles et Internet'],
+    'messagerie_im':        ['Réseau, protocoles et Internet'],
+    'messagerie_im_forensique': ['Réseau, protocoles et Internet'],
 
-    # Cryptologie
+    # ─── Cryptologie ───
+    'crypto':               ['Chiffrement symétrique', 'Chiffrement asymétrique et RSA', 'PKI et certificats'],
     'hash':                 ['Hachage et intégrité'],
     'cassage_mdp':          ['Cassage et attaques', 'Hachage et intégrité'],
     'pki':                  ['PKI et certificats'],
+    'pki_certificats':      ['PKI et certificats'],
     'ssl_tls':              ['PKI et certificats'],
     'chiffrement_symetrique': ['Chiffrement symétrique'],
     'chiffrement_asymetrique': ['Chiffrement asymétrique et RSA'],
+    'chiffrement_volumes':  ['Chiffrement symétrique', 'Acquisition et préservation'],
+    'cryptomonnaies':       ['Chiffrement asymétrique et RSA'],
+    'cryptomonnaies_blockchain': ['Chiffrement asymétrique et RSA'],
 
-    # OSINT
+    # ─── Malware / Anti-Forensique ───
+    'malware_forensique':   ['Logiciels et outils forensiques', 'Windows — Artefacts et exécution'],
+    'yara':                 ['Logiciels et outils forensiques', 'Formats de fichiers et Magic Bytes'],
+    'antiforensique':       ['Techniques et méthodologie'],
+    'anti_forensique':      ['Techniques et méthodologie'],
+    'steganographie':       ['Techniques et méthodologie'],
+    'ransomware_forensique':['Logiciels et outils forensiques', 'Chiffrement symétrique', 'Méthodologie forensique'],
+
+    # ─── OSINT ───
     'osint':                ['Fondamentaux OSINT', 'Outils et automatisation OSINT'],
     'osint_metadonnees':    ['Fondamentaux OSINT', 'Recherche web et Google Dorks', 'Métadonnées et EXIF'],
     'metadonnees_avancees': ['Recherche web et Google Dorks', 'Métadonnées et EXIF'],
 
-    # Carving / Recovery
+    # ─── Carving / Recovery / Formats ───
     'data_carving':         ['Analyse et recovery', 'Formats de fichiers et Magic Bytes'],
     'magic_bytes':          ['Formats de fichiers et Magic Bytes'],
     'documents_office_forensique': ['Formats de fichiers et Magic Bytes'],
+    'pdf_forensique_avance':['Formats de fichiers et Magic Bytes'],
 
-    # Anti-forensics
-    'antiforensique':       ['Techniques et méthodologie'],
-    'steganographie':       ['Techniques et méthodologie'],
+    # ─── SQLite ───
+    'sqlite_forensique':    ['Logiciels et outils forensiques', 'Formats de fichiers et Magic Bytes'],
+    'sqlite_forensique_avance': ['Logiciels et outils forensiques', 'Formats de fichiers et Magic Bytes'],
 
-    # Droit
+    # ─── Mobile ───
+    'mobile_forensique':    ['Logiciels et outils forensiques', 'Acquisition et préservation'],
+    'mobile':               ['Logiciels et outils forensiques', 'Acquisition et préservation'],
+    'ios_forensique':       ['Logiciels et outils forensiques', 'Acquisition et préservation'],
+    'android_forensique':   ['Logiciels et outils forensiques', 'Acquisition et préservation'],
+    'mobile_apps_forensique': ['Logiciels et outils forensiques'],
+    'browser_forensique':   ['Logiciels et outils forensiques', 'Windows — Artefacts et exécution'],
+
+    # ─── Plateformes spécialisées ───
+    'docker_kubernetes_forensique': ['Logiciels et outils forensiques', 'Linux — Artefacts et analyse'],
+    'vm_forensique':        ['Logiciels et outils forensiques', 'Acquisition et préservation'],
+    'nas_forensique':       ['Logiciels et outils forensiques', 'EXT2 / EXT3 / EXT4', 'Réseau, protocoles et Internet'],
+    'vehicules_forensique': ['Logiciels et outils forensiques', 'Acquisition et préservation'],
+    'iot_forensique':       ['ICS / SCADA / OT Forensique', 'Logiciels et outils forensiques'],
+    'ics_forensique':       ['ICS / SCADA / OT Forensique'],
+    'mitre_attack':         ['ICS / SCADA / OT Forensique', 'Méthodologie forensique', 'Windows — Artefacts et exécution'],
+
+    # ─── Droit ───
     'droit_ch':             ['Droit pénal informatique', 'Procédure pénale'],
     'cppdroit':             ['Droit pénal informatique', 'Procédure pénale'],
     'autorites_competences_ch': ['Procédure pénale', 'Entraide judiciaire internationale'],
     'sequestre':            ['Séquestre informatique'],
     'expertise':            ['Expertise et rapport judiciaire'],
     'perquisition':         ['Perquisition de documents'],
+    'suisse':               ['Droit pénal informatique', 'Procédure pénale', 'Séquestre informatique'],
+    'lscpt':                ['Procédure pénale', 'Entraide judiciaire internationale'],
 
-    # Outils
+    # ─── Outils ───
     'autopsy_tsk':          ['Logiciels et outils forensiques'],
     'zimmerman':            ['Logiciels et outils forensiques'],
 
-    # IoT / ICS
-    'iot_forensique':       ['ICS / SCADA / OT Forensique'],
-    'mitre_attack':         ['ICS / SCADA / OT Forensique', 'Méthodologie forensique'],
-
-    # Disque
+    # ─── Disque & Time ───
     'mac_times':            ['Artefacts temporels et MAC times'],
-    'usb_storage':          ['Technologie des disques'],
-    'usb_removable':        ['Technologie des disques'],
 
-    # Bases
+    # ─── Bases ───
     'bases_numeriques':     ['Représentation des données'],
     'representation_donnees': ['Représentation des données'],
 }
 
 # Liens fiche → catégories TP (données via tp.html data-cat)
 HARD_LINKS_FICHE_TO_TPS = {
+    # Filesystems
     'mac_times':            ['timestamp', 'timestomping'],
     'fat32':                ['fat', 'effacement', 'bitmap', 'direntry'],
+    'fat12':                ['fat', 'effacement', 'direntry'],
     'exfat':                ['bitmap', 'effacement'],
     'ntfs':                 ['runlist', 'mbr', 'slackspace'],
+    'ext':                  ['fsidentify'],
+    'ext4':                 ['fsidentify'],
+    'hfs':                  ['fsidentify'],
+    'apfs':                 ['fsidentify'],
+    'hfs_plus':             ['fsidentify'],
+    'comparaison_fs':       ['fsidentify', 'magic'],
+    'mbr_gpt':              ['mbr', 'offset'],
+    'disques':              ['mbr'],
+
+    # Carving / Magic
     'magic_bytes':          ['magic', 'mismatch', 'fsidentify'],
     'data_carving':         ['magic', 'fsidentify', 'slackspace'],
+    'documents_office_forensique': ['mismatch', 'magic'],
+    'pdf_forensique_avance':['magic', 'mismatch'],
+
+    # Windows
     'registre_windows':     ['registry'],
     'windows_registry_forensique_avance': ['registry'],
     'windows_forensique':   ['prefetch', 'lnk', 'registry'],
     'lateral_movement_forensique': ['lnk', 'registry'],
+    'shellbags':            ['registry'],
+    'sysmon':               ['ir', 'registry'],
+    'usb_forensique':       ['registry'],
+    'usb_removable_media_forensique': ['registry'],
+    'logs_windows':         ['registry', 'ir'],
+
+    # Crypto / Hash
     'hash':                 ['hash'],
+    'algorithmes_forensique': ['hash'],
+    'cassage_mdp':          ['hash'],
+    'crypto':               ['hash'],
+
+    # Email / réseau
     'email_forensique':     ['email'],
+    'email_headers_smtp_forensique': ['email'],
     'wireshark_pcap':       ['network'],
+    'siem_logs':            ['network', 'ir'],
+    'dns_forensique':       ['network'],
+    'dns_forensique_avance':['network'],
+
+    # Méthodo / IR
     'methodologie_dfir':    ['ir'],
+    'premier_intervenant':  ['ir'],
+    'ransomware_forensique':['ir'],
+    'malware_forensique':   ['ir'],
+
+    # Droit
     'droit_ch':             ['droitpenal'],
     'cppdroit':             ['droitpenal'],
-    'documents_office_forensique': ['mismatch', 'magic'],
+    'suisse':               ['droitpenal'],
+    'lscpt':                ['droitpenal'],
+    'autorites_competences_ch': ['droitpenal'],
+
+    # Bases
+    'encodage':             ['bases', 'hexdump', 'hextable', 'offset'],
+    'bases_numeriques':     ['bases', 'hexdump', 'hextable'],
+    'representation_donnees': ['bases', 'hexdump', 'hextable'],
 }
 
 # Liens fiche → tags de scènes (les scènes ont des tags comme 'WINDOWS', 'FORENSIQUE')
 HARD_LINKS_FICHE_TO_SCENE_TAGS = {
+    # Windows
+    'windows':                  ['WINDOWS'],
     'windows_forensique':       ['WINDOWS'],
     'registre_windows':         ['WINDOWS'],
     'windows_registry_forensique_avance': ['WINDOWS'],
-    'lateral_movement_forensique': ['WINDOWS', 'INTRUSION'],
+    'lateral_movement_forensique': ['WINDOWS'],
     'logs_windows':             ['WINDOWS'],
-    'powershell_forensique':    ['WINDOWS', 'INTRUSION'],
+    'powershell_forensique':    ['WINDOWS'],
+    'shellbags':                ['WINDOWS'],
+    'sysmon':                   ['WINDOWS'],
+    'usb_forensique':           ['WINDOWS'],
+    'usb_removable_media_forensique': ['WINDOWS'],
+    'cmd_windows_forensique':   ['WINDOWS'],
 
-    'linux_forensique':         ['LINUX'],
-    'cmd_linux_forensique':     ['LINUX'],
+    # Linux / macOS / WSL
+    'linux_forensique':         ['FORENSIQUE'],
+    'cmd_linux_forensique':     ['FORENSIQUE'],
+    'macos_forensique':         ['FORENSIQUE'],
+    'wsl_forensique':           ['WINDOWS'],
 
-    'macos_forensique':         ['MACOS'],
+    # Mobile
+    'mobile_forensique':        ['MOBILE', 'MOBILE FORENSICS'],
+    'ios_forensique':           ['MOBILE', 'MOBILE FORENSICS'],
+    'android_forensique':       ['MOBILE', 'MOBILE FORENSICS'],
+    'mobile_apps_forensique':   ['MOBILE'],
+    'messagerie_im':            ['MOBILE'],
+    'messagerie_im_forensique': ['MOBILE'],
 
-    'mobile_forensique':        ['MOBILE'],
-    'ios_forensique':           ['MOBILE'],
-    'android_forensique':       ['MOBILE'],
-
-    'malware_forensique':       ['MALWARE', 'INTRUSION'],
+    # Malware / Ransomware
+    'malware_forensique':       ['MALWARE'],
     'yara':                     ['MALWARE'],
+    'ransomware_forensique':    ['RANSOMWARE'],
 
-    'ram_forensique':           ['MEMOIRE', 'INTRUSION'],
-    'volatility_memory_forensics': ['MEMOIRE'],
+    # Mémoire
+    'ram_forensique':           ['MEMORY FORENSICS', 'RAM', 'VOLATILITY'],
+    'volatility_memory_forensics': ['MEMORY FORENSICS', 'VOLATILITY'],
+    'memoire_internals':        ['MEMORY FORENSICS', 'RAM'],
 
-    'wireshark_pcap':           ['RESEAU'],
-    'tor_forensique':           ['DARKNET', 'RESEAU'],
+    # Réseaux / DNS / SIEM
+    'wireshark_pcap':           ['RÉSEAUX'],
+    'tor_forensique':           ['DARKNET', 'DARK WEB', 'RÉSEAUX'],
+    'tor_darkweb':              ['DARKNET', 'DARK WEB'],
+    'dns_forensique':           ['RÉSEAUX'],
+    'dns_forensique_avance':    ['RÉSEAUX'],
+    'siem_logs':                ['RÉSEAUX', 'INCIDENT RESPONSE', 'RÉPONSE INCIDENT'],
 
+    # Crypto
+    'crypto':                   ['CRYPTO'],
+    'cassage_mdp':              ['CRYPTO'],
+    'chiffrement_volumes':      ['CRYPTO'],
+    'pki':                      ['CRYPTO'],
+    'pki_certificats':          ['CRYPTO'],
+    'cryptomonnaies':           ['CRYPTO', 'BLANCHIMENT'],
+    'cryptomonnaies_blockchain':['CRYPTO', 'BLANCHIMENT'],
+    'data_carving':             ['FORENSIQUE'],
+
+    # Droit
+    'droit_ch':                 ['DROIT', 'DROIT PÉNAL'],
+    'cppdroit':                 ['DROIT', 'DROIT PÉNAL', 'CPP'],
+    'autorites_competences_ch': ['DROIT', 'DROIT PÉNAL'],
+    'sequestre':                ['DROIT', 'CPP'],
+    'expertise':                ['DROIT', 'CPP'],
+    'perquisition':             ['DROIT', 'CPP', 'PERQUISITION'],
+    'suisse':                   ['DROIT', 'DROIT PÉNAL'],
+    'lscpt':                    ['DROIT', 'CPP'],
+
+    # OSINT
     'osint':                    ['OSINT'],
     'osint_metadonnees':        ['OSINT'],
-    'cryptomonnaies_blockchain':['CRYPTO', 'FINANCIER'],
 
-    'cassage_mdp':              ['CRYPTO'],
-    'data_carving':             ['CARVING'],
-
-    'droit_ch':                 ['DROIT', 'JURIDIQUE'],
-    'cppdroit':                 ['DROIT', 'JURIDIQUE'],
-    'autorites_competences_ch': ['JURIDIQUE'],
-
+    # ICS / IoT / véhicules
     'iot_forensique':           ['IOT', 'ICS'],
+    'ics_forensique':           ['ICS', 'SCADA', 'OT', 'INFRASTRUCTURE CRITIQUE'],
+    'mitre_attack':             ['INCIDENT RESPONSE', 'RÉPONSE INCIDENT'],
+    'vehicules_forensique':     ['FORENSIQUE'],
 
-    'cloud_forensique':         ['CLOUD'],
-    'm365_forensique':          ['CLOUD'],
+    # Cloud / Containers
+    'cloud_forensique':         ['CLOUD', 'FORENSIQUE CLOUD'],
+    'm365_forensique':          ['CLOUD', 'M365'],
+    'docker_kubernetes_forensique': ['CLOUD'],
+    'vm_forensique':            ['FORENSIQUE'],
+    'nas_forensique':           ['FORENSIQUE'],
 
-    'email_forensique':         ['EMAIL', 'BEC'],
-    'entreprise_messaging_forensique': ['EMAIL'],
+    # Email / Phishing
+    'email_forensique':         ['BEC', 'PHISHING'],
+    'email_headers_smtp_forensique': ['BEC', 'PHISHING'],
+    'entreprise_messaging_forensique': ['BEC'],
+
+    # IA & Deepfakes
+    'ia_deepfake_forensique':   ['IA', 'DEEPFAKE', 'GENAI'],
+
+    # Méthodologie / IR
+    'methodologie_dfir':        ['DFIR', 'INCIDENT RESPONSE'],
+    'premier_intervenant':      ['PREMIER INTERVENANT', 'GESTION DE CRISE'],
+    'rapport_forensique':       ['CHAÎNE PROBATOIRE'],
+    'chain_of_custody':         ['CHAÎNE PROBATOIRE'],
+
+    # Anti-forensique
+    'antiforensique':           ['FORENSIQUE'],
+    'anti_forensique':          ['FORENSIQUE'],
+    'steganographie':           ['FORENSIQUE'],
+
+    # SQLite
+    'sqlite_forensique':        ['MOBILE', 'MOBILE FORENSICS'],
+    'sqlite_forensique_avance': ['MOBILE', 'MOBILE FORENSICS'],
+
+    # Browser
+    'browser_artifacts_deep_dive': ['FORENSIQUE'],
+
+    # Logs
+    'log_forensique_avance':    ['INCIDENT RESPONSE', 'RÉPONSE INCIDENT'],
+    'kape_velociraptor':        ['INCIDENT RESPONSE', 'RÉPONSE INCIDENT'],
+    'timeline':                 ['FORENSIQUE'],
 }
 
 
@@ -263,31 +438,44 @@ def get_tp_categories():
 # ─── Auto-matching: questions ↔ fiches via chapter ───────────────────────────
 
 def match_questions_to_fiche(fiche_name, fiche_meta, questions, hard_chapters):
-    """Pour chaque fiche, retourner les indices des questions qui la concernent."""
-    matched = set()
+    """Pour chaque fiche, retourner les indices des questions qui la concernent.
+
+    Stratégie de scoring (plus haut = plus pertinent) :
+      • +10  question dans un chapter HARD précis (≤50 q)
+      • +5   question dans un chapter HARD large (>50 q)
+      • +3   auto-match par mots-clés (≥2 mots distinctifs)
+    Au final on trie par score décroissant pour que le cap [:30] garde le meilleur.
+    """
+    from collections import Counter
+    chapter_sizes = Counter(q.get('chapter', '') for q in questions)
+
+    scored = {}  # idx → score
 
     # 1) Chapters explicites (HARD_LINKS)
     for chapter in hard_chapters:
+        size = chapter_sizes.get(chapter, 0)
+        # Bonus si chapter précis (peu de questions = très pertinent)
+        weight = 10 if size <= 50 else 5
         for i, q in enumerate(questions):
             if q.get('chapter') == chapter:
-                matched.add(i)
+                scored[i] = max(scored.get(i, 0), weight)
 
     # 2) Auto-match par mots-clés du titre fiche dans la question
     title_words = set(w.lower() for w in re.findall(r'\w+', fiche_meta.get('title', '')) if len(w) >= 4)
     if title_words:
-        # Mots distinctifs présents dans le titre/desc/keywords de la fiche
         fiche_distinctive = title_words - {'forensique', 'forensic', 'analyse', 'systeme', 'système',
-                                            'avance', 'avancé', 'avancée', 'fiche', 'cours'}
+                                            'avance', 'avancé', 'avancée', 'fiche', 'cours',
+                                            'forensiques', 'forensics'}
         for i, q in enumerate(questions):
-            if i in matched:
-                continue
             q_text = (q.get('q', '') + ' ' + q.get('chapter', '') +
                       ' ' + ' '.join(q.get('refs', []))).lower()
-            # Au moins 2 mots distinctifs présents
-            if sum(1 for w in fiche_distinctive if w in q_text) >= 2:
-                matched.add(i)
+            n_match = sum(1 for w in fiche_distinctive if w in q_text)
+            if n_match >= 2:
+                # Cumule avec le score précédent : un match HARD + auto = bonus
+                scored[i] = scored.get(i, 0) + 3 + n_match  # plus de mots = mieux
 
-    return sorted(matched)
+    # Trier par score décroissant, puis par index pour stabilité
+    return sorted(scored.keys(), key=lambda i: (-scored[i], i))
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -332,7 +520,7 @@ def main():
                     scene_ids.append(s['id'])
 
         cross['fiches'][fiche_file] = {
-            'questions': question_indices[:50],   # cap pour ne pas exploser
+            'questions': question_indices[:30],   # cap pour ne pas noyer l'utilisateur
             'tps': tps,
             'scenes': scene_ids[:8],
         }
