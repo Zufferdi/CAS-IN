@@ -1,4 +1,34 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v56 : v2.22 — Merge de quiz-ui-patch.js dans quiz-app.js (-1 fichier)
+//       Le patch v2.13 (663 LOC) qui modifiait l'UI APRÈS chargement via
+//       12 wrappers de fonctions a été MERGÉ dans quiz-app.js. Plus de
+//       wrappers, plus de timing fragile, plus de fuite IIFE (le Groupe D
+//       du patch était par erreur en dehors de l'IIFE — bug latent corrigé).
+//
+//       Fonctions modifiées en place dans quiz-app.js :
+//         - showToast (route maintenant vers notify())
+//         - showRankUp (toast DOM + notify unifié)
+//         - showAchievementPopup (popup DOM + notify unifié)
+//         - useStreakFreeze (animation glaçon intégrée)
+//         - getNext (retourne null + showCardEmpty pour états vides)
+//         - toggleBookmark (animation pop + spawnStarBurst)
+//         - toggleFocusMode (sync label dans le menu Plus)
+//
+//       Fonctions ajoutées à quiz-app.js (ex-patch) :
+//         - notify, drainNotifyQueue + EMPTY_STATES + MODE_LABELS
+//         - showCardEmpty, hideCardEmpty, refreshActiveModePill
+//         - setupActionRowGuard, setupComboHalo (MutationObservers)
+//         - syncSoundLabel, _hideDailyBannerIfDismissed
+//         - toggleMoreMenu, closeMoreMenu, dismissDailyBanner
+//         - setMode, triggerBoss, spawnStarBurst
+//
+//       toggleSound (dans quiz-effects.js) appelle window.syncSoundLabel
+//       si défini (hook optionnel, dégradation gracieuse).
+//
+//       SUPPRIMÉ : js/pages/quiz-ui-patch.js
+//       Test corrigé : tests/test-achievements-sync.js lit maintenant
+//       ACHIEVEMENTS depuis quiz-data.js (déplacé en v2.21).
+//
 // v55 : v2.21 — Split de quiz-app.js (5287 → 4718 LOC, -10.7%)
 //       NEW js/components/quiz-utils.js (126 L) : helpers purs
 //       (lsGet/lsSet, shuffle, sanitizeHTML, getDailyDate, seededRng).
@@ -125,7 +155,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v55';
+const CACHE_VERSION = 'cas-in-v56';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -196,7 +226,7 @@ const STATIC_ASSETS = [
   './js/components/quiz-share.js',
   './js/pages/quiz-data.js',
   './js/pages/quiz-app.js',
-  './js/pages/quiz-ui-patch.js',
+  // quiz-ui-patch.js supprimé en v2.22 (mergé dans quiz-app.js)
   './js/pages/scene-app.js',
   './js/pages/scene-ux-patch.js',
   './js/pages/scene-lobby-v3.js',
