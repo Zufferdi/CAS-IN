@@ -41,7 +41,7 @@
 function casNotify(msg, opts) {
   opts = opts || {};
   var duration = opts.duration || 2800;
-  // 1) showToast custom (defined in scene-app, quiz-app, quiz-ui-patch)
+  // 1) showToast custom (defined in scene-app, quiz-app)
   if (typeof window.showToast === 'function') {
     try { window.showToast('cas-export-toast', msg, duration); return; } catch (e) {}
   }
