@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Mémoire — Internals Avancés — CAS-IN</title>
+<meta name="description" content="Étape 3 — Forensique mémoire avancée · EPROCESS · DKOM · SSDT · VAD · ldrmodules · Détection de rootkits · Niveau internals Windows">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+.page-wrap { max-width:960px; margin:0 auto; padding:1.5rem 2rem; }
+
+.tabs-mem { display:flex; gap:.35rem; padding:.75rem 2rem; border-bottom:1px solid var(--border);
+        background:var(--surface); flex-wrap:wrap; max-width:960px; margin:0 auto; }
+.tab-btn  { background:transparent; border:1px solid var(--border); border-radius:6px;
+        color:var(--muted); font-family:var(--mono); font-size:.72rem; padding:.35rem .8rem;
+        cursor:pointer; transition:.15s; }
+.tab-btn:hover  { color:var(--text); border-color:var(--purple); }
+.tab-btn.active { background:rgba(188,140,255,.12); border-color:var(--purple); color:var(--purple); }
+
+.tab-page         { display:none; max-width:960px; margin:0 auto; padding:1.5rem 2rem; }
+.tab-page.active  { display:block; animation:slideUp .3s ease; }
+
+.concept-card {
+  background:rgba(188,140,255,.04); border:1px solid rgba(188,140,255,.2);
+  border-radius:10px; padding:1rem 1.2rem; margin-bottom:1.25rem; font-size:.82rem; line-height:1.65;
+}
+.concept-title { font-family:var(--sans); font-weight:700; font-size:.85rem; color:var(--purple); margin-bottom:.5rem; }
+
+/* Distinguish box */
+.distinguish-box {
+  display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-bottom:1.25rem;
+}
+.dist-card {
+  border-radius:10px; padding:.9rem 1rem; font-size:.78rem; line-height:1.55;
+}
+.dist-this {
+  background:rgba(188,140,255,.06); border:2px solid rgba(188,140,255,.35);
+}
+.dist-other {
+  background:rgba(0,229,204,.04); border:1px dashed rgba(0,229,204,.3);
+}
+.dist-label {
+  font-size:.62rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:.4rem;
+}
+.dist-this .dist-label { color:var(--purple); }
+.dist-other .dist-label { color:var(--cyan); }
+
+/* Memory map */
+.mem-map {
+  background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+  padding:1.1rem; margin:1rem 0;
+}
+.mem-row {
+  display:flex; align-items:center; gap:.6rem; padding:.35rem .2rem;
+  border-bottom:1px solid rgba(48,54,61,.4); font-size:.74rem;
+  cursor:pointer; transition:background .1s; border-radius:4px;
+}
+.mem-row:hover { background:rgba(255,255,255,.03); }
+.mem-row:last-child { border-bottom:none; }
+.mem-addr { font-family:var(--mono); font-size:.68rem; color:var(--dim); min-width:145px; }
+.mem-name { font-family:var(--sans); font-weight:700; font-size:.73rem; min-width:140px; }
+.mem-bar  { flex:1; height:14px; border-radius:3px; }
+.mem-desc { font-size:.68rem; color:var(--muted); flex:2; }
+
+/* Injection types grid */
+.inject-grid { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-top:.75rem; }
+.inject-card {
+  background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  padding:.9rem 1rem; cursor:pointer; transition:border-color .2s;
+}
+.inject-card:hover { border-color:var(--purple); }
+.inject-name { font-family:var(--sans); font-weight:700; font-size:.78rem; margin-bottom:.3rem; }
+.inject-detect { font-size:.7rem; font-weight:700; letter-spacing:.06em; padding:.1rem .4rem;
+                 border-radius:3px; text-transform:uppercase; margin-left:.4rem; }
+.id-malfind { background:rgba(255,64,96,.12); color:var(--red); border:1px solid rgba(255,64,96,.25); }
+.id-psscan  { background:rgba(240,192,64,.12); color:var(--gold); border:1px solid rgba(240,192,64,.25); }
+.id-manual  { background:rgba(88,166,255,.12); color:var(--blue); border:1px solid rgba(88,166,255,.25); }
+.id-hard    { background:rgba(188,140,255,.12); color:var(--purple); border:1px solid rgba(188,140,255,.25); }
+.inject-body { font-size:.74rem; color:var(--muted); line-height:1.55; margin-top:.3rem; }
+.inject-cmd  { font-family:var(--mono); font-size:.67rem; color:var(--green); background:var(--bg);
+               border:1px solid var(--border); border-radius:4px; padding:.2rem .5rem;
+               display:block; margin:.3rem 0; cursor:pointer; }
+
+/* SSDT hooks */
+.hook-table { width:100%; border-collapse:collapse; font-size:.74rem; }
+.hook-table th { background:var(--surface2); padding:.45rem .7rem; border-bottom:2px solid var(--border);
+                  font-size:.62rem; text-transform:uppercase; letter-spacing:.08em; color:var(--dim);
+                  font-weight:700; text-align:left; }
+.hook-table td { padding:.4rem .7rem; border-bottom:1px solid var(--border); vertical-align:middle; }
+.hook-table tr:hover td { background:var(--surface); }
+.hook-table tr:last-child td { border-bottom:none; }
+.hook-normal { color:var(--green); font-size:.68rem; font-family:var(--mono); }
+.hook-hooked { color:var(--red); font-size:.68rem; font-family:var(--mono); font-weight:700; }
+.hook-badge  { font-size:.62rem; padding:.1rem .4rem; border-radius:3px; font-weight:600; }
+.hb-inline   { background:rgba(255,64,96,.1); color:var(--red); border:1px solid rgba(255,64,96,.2); }
+.hb-detour   { background:rgba(240,192,64,.1); color:var(--gold); border:1px solid rgba(240,192,64,.2); }
+.hb-filter   { background:rgba(88,166,255,.1); color:var(--blue); border:1px solid rgba(88,166,255,.2); }
+
+/* Timeline */
+.tl-item {
+  display:flex; gap:.85rem; padding:.6rem .3rem;
+  border-left:2px solid var(--border); margin-left:1rem; padding-left:1.1rem;
+  position:relative; transition:border-color .15s;
+}
+.tl-item:hover { border-left-color:var(--purple); }
+.tl-dot {
+  position:absolute; left:-6px; top:.9rem;
+  width:10px; height:10px; border-radius:50%; border:2px solid;
+  background:var(--bg); flex-shrink:0;
+}
+.tl-dot-ok  { border-color:var(--green);  }
+.tl-dot-warn{ border-color:var(--gold);   }
+.tl-dot-crit{ border-color:var(--red);    }
+.tl-dot-info{ border-color:var(--purple); }
+.tl-time  { font-family:var(--mono); font-size:.68rem; color:var(--dim); min-width:140px; padding-top:.05rem; }
+.tl-body  { flex:1; font-size:.78rem; line-height:1.5; }
+.tl-event { font-weight:700; color:var(--text); margin-bottom:.15rem; }
+.tl-detail{ color:var(--muted); font-size:.73rem; }
+.tl-cmd   { font-family:var(--mono); font-size:.67rem; color:var(--green); background:var(--bg);
+            border:1px solid var(--border); border-radius:4px; padding:.15rem .5rem;
+            display:inline-block; margin:.2rem 0; cursor:pointer; }
+
+/* Case study */
+.case-card { background:rgba(188,140,255,.04); border:1px solid rgba(188,140,255,.2);
+             border-radius:10px; padding:1rem 1.2rem; margin-bottom:.9rem; }
+.case-label { font-size:.64rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+              color:var(--purple); margin-bottom:.45rem; }
+.case-body  { font-size:.78rem; color:var(--muted); line-height:1.55; }
+.case-cmd   { font-family:var(--mono); font-size:.68rem; color:var(--green); background:var(--bg);
+              border:1px solid var(--border); border-radius:4px; padding:.25rem .6rem;
+              display:block; margin:.25rem 0; cursor:pointer; }
+.case-finding { background:rgba(48,232,138,.05); border-left:3px solid var(--green);
+                border-radius:0 5px 5px 0; padding:.4rem .7rem; margin:.4rem 0;
+                font-size:.74rem; color:var(--muted); }
+
+/* Quiz */
+.quiz-wrap  { background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+              padding:.9rem 1rem; margin-bottom:.75rem; }
+.quiz-q     { font-size:.8rem; color:var(--text); margin-bottom:.6rem; }
+.quiz-reveal-btn { background:rgba(188,140,255,.08); border:1px solid rgba(188,140,255,.25);
+                   border-radius:6px; color:var(--purple); font-family:var(--mono); font-size:.72rem;
+                   padding:.3rem .8rem; cursor:pointer; transition:.15s; }
+.quiz-reveal-btn:hover { background:rgba(188,140,255,.15); }
+.quiz-answer { display:none; margin-top:.6rem; font-size:.78rem; color:var(--muted); line-height:1.55;
+               border-top:1px solid var(--border); padding-top:.6rem; }
+.quiz-answer.visible { display:block; animation:fadeIn .2s ease; }
+.quiz-ok  { color:var(--green); font-weight:700; }
+
+.breadcrumb { display:flex; align-items:center; flex-wrap:wrap; gap:.3rem; font-size:.72rem;
+              color:var(--muted); padding:.6rem 0; margin-bottom:.75rem; }
+.breadcrumb a { color:var(--muted); text-decoration:none; }
+.breadcrumb a:hover { color:var(--purple); }
+.bc-sep { color:var(--border); }
+.bc-current { color:var(--text); }
+.read-time-badge { font-size:.65rem; background:rgba(188,140,255,.06); border:1px solid rgba(188,140,255,.15);
+                   color:var(--purple); padding:.15rem .5rem; border-radius:4px; }
+.prereq-label { color:var(--dim); font-size:.7rem; min-width:72px; }
+.prereq-pill  { background:rgba(88,166,255,.08); border:1px solid rgba(88,166,255,.2);
+                color:var(--blue); border-radius:5px; padding:.15rem .55rem; font-size:.7rem;
+                text-decoration:none; transition:.15s; }
+.prereq-pill:hover { background:rgba(88,166,255,.18); }
+.tp-pill      { background:rgba(188,140,255,.07); border:1px solid rgba(188,140,255,.2);
+                color:var(--purple); border-radius:5px; padding:.15rem .55rem; font-size:.7rem;
+                text-decoration:none; }
+.related-pill { background:rgba(48,232,138,.06); border:1px solid rgba(48,232,138,.18);
+                color:var(--green); border-radius:5px; padding:.15rem .55rem; font-size:.7rem;
+                text-decoration:none; }
+
+#scroll-progress { position:fixed; top:0; left:0; height:2px; width:0;
+  background:linear-gradient(90deg,var(--purple),var(--cyan)); z-index:1000; }
+.back-top { position:fixed; bottom:1.5rem; right:1.5rem; background:var(--surface2);
+  border:1px solid var(--border); border-radius:8px; color:var(--dim); font-size:.9rem;
+  width:2rem; height:2rem; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; opacity:0; pointer-events:none; transition:.2s; }
+.back-top.visible { opacity:1; pointer-events:auto; }
+
+@media(max-width:640px){
+  .page-wrap,.tab-page { padding:1rem; }
+  .tabs-mem { padding:.6rem 1rem; }
+  .tn-title { display:none; }
+  .distinguish-box { grid-template-columns:1fr; }
+  .inject-grid { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">MEMORY & VOLATILE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-windows">Windows</a><span class="bc-sep">›</span>
+    <span class="bc-current">Mémoire — Internals Avancés</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~15 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div>
+      <span style="font-size:2.2rem">💉</span>
+      <span class="tag tag-purple" style="margin-left:.5rem">Avancé</span>
+      <span class="tag tag-red" style="margin-left:.3rem">Malware</span>
+      <span class="tag tag-gold" style="margin-left:.3rem">Rootkit</span>
+    </div>
+    <h1>Mémoire — Internals Avancés</h1>
+      <p style="color:var(--muted);font-size:.85rem;margin:.2rem 0 0">Étape 3 / 3 du parcours « forensique mémoire »</p>
+    <div class="meta">Structures Windows · Injection de code · Rootkits · SSDT Hooks · VAD · Timeline mémoire · Cas pratiques IR</div>
+  </div>
+
+  <!-- Famille mémoire — fiche maîtresse -->
+  <div class="info" style="background:linear-gradient(135deg,rgba(188,140,255,.12) 0%,rgba(168,181,200,.05) 100%);border-color:rgba(188,140,255,.5);margin-top:1.1rem">
+    <strong>🧠 Famille « Forensique mémoire » — vous êtes ici sur l'<u>analyse avancée</u></strong>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.55rem;margin-top:.6rem">
+      <a href="ram_forensique.html" class="related-pill" style="margin:0">
+        📥 RAM Forensique<br>
+        <small style="opacity:.75">Acquisition · outils · BitLocker · edge cases</small>
+      </a>
+      <a href="volatilite.html" class="related-pill" style="margin:0">
+        🚀 Volatility 3 — Démarrage<br>
+        <small style="opacity:.75">Workflow + plugins essentiels</small>
+      </a>
+      <div class="related-pill" style="margin:0;background:rgba(188,140,255,.18);border-color:#BC8CFF;font-weight:700">
+        🧬 Internals Avancés <span style="font-size:.7rem;opacity:.85">(cette fiche)</span><br>
+        <small style="opacity:.85;font-weight:400">Rootkits · SSDT · injection · structures · IR</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:.5rem">
+    <div class="prereq-row">
+      <span class="prereq-label">Prérequis :</span>
+      <a href="ram_forensique.html" class="prereq-pill">📥 RAM Forensique (acquisition)</a>
+      <a href="volatilite.html" class="prereq-pill">🚀 Volatility 3 démarrage</a>
+      <a href="windows_forensique.html" class="prereq-pill">📖 Windows Forensique</a>
+      <a href="mitre_attack.html" class="prereq-pill">📖 MITRE ATT&amp;CK</a>
+    </div>
+    <div class="prereq-row">
+      <span class="prereq-label">Voir aussi :</span>
+      <a href="sysmon.html" class="related-pill">🔗 Sysmon</a>
+      <a href="threat_intel_ioc.html" class="related-pill">🔗 Threat Intel &amp; IOC</a>
+      <a href="anti_forensique.html" class="related-pill">🔗 Anti-Forensique</a>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-mem" id="mem-tabs">
+  <button class="tab-btn active" onclick="showTab('structures',this)">🏗 Structures Windows</button>
+  <button class="tab-btn" onclick="showTab('injection',this)">💉 Injection avancée</button>
+  <button class="tab-btn" onclick="showTab('rootkits',this)">👻 Rootkits &amp; Hooks</button>
+  <button class="tab-btn" onclick="showTab('vad',this)">🗺 VAD Tree</button>
+  <button class="tab-btn" onclick="showTab('timeline',this)">⏱ Timeline mémoire</button>
+  <button class="tab-btn" onclick="showTab('cases',this)">🎯 Cas pratiques IR</button>
+  <button class="tab-btn" onclick="showTab('quiz',this)">💊 Quiz</button>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     TAB 1 — STRUCTURES WINDOWS EN MÉMOIRE
+══════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-structures">
+
+<div class="concept-card">
+  <div class="concept-title">🏗 Comprendre les structures Windows = lire la mémoire comme le kernel</div>
+  Volatility reconstruit les structures internes du kernel Windows depuis le dump RAM. Pour interpréter correctement ses sorties — et détecter les manipulations malveillantes — il faut comprendre les structures fondamentales : <strong>EPROCESS</strong>, <strong>ETHREAD</strong>, <strong>PEB</strong>, <strong>VAD</strong>, et la <strong>SSDT</strong>.
+</div>
+
+<div class="sec-title">EPROCESS — La structure de base d'un processus</div>
+<div class="g2">
+  <div class="card card-purple">
+    <div class="ct">Champs forensiquement critiques</div>
+    <table style="width:100%;font-size:.72rem;border-collapse:collapse">
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:.3rem .4rem;font-family:var(--mono);color:var(--purple)">ActiveProcessLinks</td>
+        <td style="padding:.3rem .4rem;color:var(--muted)">Liste doublement chaînée de tous les EPROCESS — manipulée par les rootkits (DKOM)</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:.3rem .4rem;font-family:var(--mono);color:var(--cyan)">ImageFileName</td>
+        <td style="padding:.3rem .4rem;color:var(--muted)">Nom du processus (15 cars max) — falsifiable</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:.3rem .4rem;font-family:var(--mono);color:var(--gold)">UniqueProcessId</td>
+        <td style="padding:.3rem .4rem;color:var(--muted)">PID — comparaison pslist vs psscan révèle les processus cachés</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:.3rem .4rem;font-family:var(--mono);color:var(--green)">CreateTime</td>
+        <td style="padding:.3rem .4rem;color:var(--muted)">Timestamp FILETIME de création — clé pour la timeline</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:.3rem .4rem;font-family:var(--mono);color:var(--orange)">Peb</td>
+        <td style="padding:.3rem .4rem;color:var(--muted)">Pointeur vers Process Environment Block (voir ci-dessous)</td>
+      </tr>
+      <tr>
+        <td style="padding:.3rem .4rem;font-family:var(--mono);color:var(--blue)">VadRoot</td>
+        <td style="padding:.3rem .4rem;color:var(--muted)">Racine du VAD Tree — cartographie de la mémoire virtuelle</td>
+      </tr>
+    </table>
+  </div>
+  <div class="card card-blue">
+    <div class="ct">PEB — Process Environment Block</div>
+    <p style="font-size:.75rem;color:var(--muted);margin-bottom:.5rem">Structure en user-space qui décrit l'environnement du processus. Contient les chemins, les variables d'environnement, et la liste des DLLs chargées.</p>
+    <table style="width:100%;font-size:.72rem;border-collapse:collapse">
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:.3rem .4rem;font-family:var(--mono);color:var(--cyan)">ImageBaseAddress</td>
+        <td style="padding:.3rem .4rem;color:var(--muted)">Adresse de base de l'EXE en mémoire</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:.3rem .4rem;font-family:var(--mono);color:var(--gold)">Ldr</td>
+        <td style="padding:.3rem .4rem;color:var(--muted)">Liste des DLLs chargées (InLoadOrderModuleList) — falsifiable par les rootkits user-mode</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:.3rem .4rem;font-family:var(--mono);color:var(--green)">ProcessParameters</td>
+        <td style="padding:.3rem .4rem;color:var(--muted)">Ligne de commande complète, répertoire courant, variables env.</td>
+      </tr>
+      <tr>
+        <td style="padding:.3rem .4rem;font-family:var(--mono);color:var(--red)">BeingDebugged</td>
+        <td style="padding:.3rem .4rem;color:var(--muted)">Flag anti-debug — certains malwares quittent si =1</td>
+      </tr>
+    </table>
+    <code style="display:block;margin-top:.5rem;font-family:var(--mono);font-size:.67rem;color:var(--green);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:.25rem .5rem">vol.py -f ram.raw windows.dlllist --pid [PID]</code>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">Cartographie de l'espace mémoire Windows x64</div>
+<div class="mem-map">
+  <div style="font-family:var(--mono);font-size:.6rem;color:var(--dim);margin-bottom:.6rem;letter-spacing:.08em">VIRTUAL ADDRESS SPACE — Processus Windows x64 (simplifié)</div>
+  <div class="mem-row">
+    <span class="mem-addr">0xFFFF800000000000+</span>
+    <span class="mem-name" style="color:var(--red)">Kernel Space</span>
+    <div class="mem-bar" style="background:rgba(255,64,96,.25);border:1px solid rgba(255,64,96,.3)"></div>
+    <span class="mem-desc">SSDT, drivers, kernel heap. Non accessible depuis user-mode sans vulnérabilité.</span>
+  </div>
+  <div class="mem-row">
+    <span class="mem-addr">0x00007FF000000000</span>
+    <span class="mem-name" style="color:var(--gold)">ntdll.dll / DLLs sys</span>
+    <div class="mem-bar" style="background:rgba(240,192,64,.2);border:1px solid rgba(240,192,64,.3)"></div>
+    <span class="mem-desc">DLLs système Windows (ntdll, kernel32, user32). Zone cible des hooks user-mode.</span>
+  </div>
+  <div class="mem-row">
+    <span class="mem-addr">0x00007FFF00000000</span>
+    <span class="mem-name" style="color:var(--purple)">Stack (threads)</span>
+    <div class="mem-bar" style="background:rgba(188,140,255,.2);border:1px solid rgba(188,140,255,.3)"></div>
+    <span class="mem-desc">Piles d'exécution des threads. Croissance vers le bas. Shellcodes parfois ici.</span>
+  </div>
+  <div class="mem-row">
+    <span class="mem-addr">variable</span>
+    <span class="mem-name" style="color:var(--red)">Pages RWX 🚨</span>
+    <div class="mem-bar" style="background:rgba(255,64,96,.35);border:1px solid rgba(255,64,96,.5)"></div>
+    <span class="mem-desc"><strong>Read+Write+Execute</strong> = IOC majeur. Shellcodes, code injecté. Détecté par malfind.</span>
+  </div>
+  <div class="mem-row">
+    <span class="mem-addr">variable</span>
+    <span class="mem-name" style="color:var(--green)">Heap (tas)</span>
+    <div class="mem-bar" style="background:rgba(48,232,138,.2);border:1px solid rgba(48,232,138,.3)"></div>
+    <span class="mem-desc">Allocations dynamiques. Données applicatives. Credentials souvent ici.</span>
+  </div>
+  <div class="mem-row">
+    <span class="mem-addr">0x0000000000400000</span>
+    <span class="mem-name" style="color:var(--cyan)">Image (EXE)</span>
+    <div class="mem-bar" style="background:rgba(0,229,204,.2);border:1px solid rgba(0,229,204,.3)"></div>
+    <span class="mem-desc">Code et données de l'exécutable. Process hollowing = EXE légitime remplacé ici.</span>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">pslist vs psscan — La différence fondamentale</div>
+<div class="g2">
+  <div class="card card-cyan">
+    <div class="ct">windows.pslist — Suit la liste chaînée</div>
+    <p style="font-size:.75rem;color:var(--muted)">Parcourt <code style="font-family:var(--mono)">ActiveProcessLinks</code> dans l'EPROCESS. Un rootkit DKOM qui retire son processus de cette liste le rend <strong>invisible à pslist</strong>. Résultats fiables pour les processus normaux.</p>
+    <code style="display:block;font-family:var(--mono);font-size:.67rem;color:var(--green);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:.25rem .5rem;margin-top:.4rem">vol.py -f ram.raw windows.pslist</code>
+  </div>
+  <div class="card card-red">
+    <div class="ct">windows.psscan — Scan les structures EPROCESS</div>
+    <p style="font-size:.75rem;color:var(--muted)">Scanne toute la mémoire à la recherche de la signature <code style="font-family:var(--mono)">PROC</code> (magic bytes EPROCESS). Trouve les processus <strong>cachés par DKOM</strong> ET les processus terminés encore en mémoire.</p>
+    <code style="display:block;font-family:var(--mono);font-size:.67rem;color:var(--green);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:.25rem .5rem;margin-top:.4rem">vol.py -f ram.raw windows.psscan</code>
+    <div style="font-size:.7rem;color:var(--red);margin-top:.35rem">⚠️ Processus dans psscan mais PAS dans pslist = rootkit DKOM probable</div>
+  </div>
+</div>
+
+</div><!-- /tab-structures -->
+
+
+<!-- ══════════════════════════════════════════
+     TAB 2 — INJECTION AVANCÉE
+══════════════════════════════════════════ -->
+<div class="tab-page" id="tab-injection">
+
+<div class="concept-card">
+  <div class="concept-title">💉 Les 6 techniques d'injection de code — Du classique à l'évasif</div>
+  L'injection de code est la technique de persistance et d'évasion favorite des malwares Windows. Chaque technique laisse des traces différentes en mémoire — connaître le mécanisme permet de cibler le bon plugin Volatility.
+</div>
+
+<div class="inject-grid">
+
+  <div class="inject-card">
+    <div class="inject-name">
+      1. DLL Injection classique
+      <span class="inject-detect id-malfind">malfind</span>
+    </div>
+    <div class="inject-body">
+      <strong>Mécanisme :</strong> OpenProcess → VirtualAllocEx → WriteProcessMemory → CreateRemoteThread(LoadLibrary). La DLL malveillante est mappée dans le processus cible et exécutée via un thread distant.<br><br>
+      <strong>Traces mémoire :</strong> DLL visible dans la liste des modules du PEB (InLoadOrderModuleList). Path souvent suspect (temp, AppData).
+    </div>
+    <code class="inject-cmd">vol.py -f ram.raw windows.dlllist --pid [PID]</code>
+    <code class="inject-cmd">vol.py -f ram.raw windows.ldrmodules  # Discordances PEB vs VAD</code>
+  </div>
+
+  <div class="inject-card">
+    <div class="inject-name">
+      2. Process Hollowing
+      <span class="inject-detect id-malfind">malfind</span>
+    </div>
+    <div class="inject-body">
+      <strong>Mécanisme :</strong> Créer un processus légitime en état suspendu (CREATE_SUSPENDED) → NtUnmapViewOfSection pour vider son image → écrire le payload à la place → reprendre l'exécution. Le nom du processus reste légitime (ex: svchost.exe).<br><br>
+      <strong>Traces mémoire :</strong> ImageBaseAddress dans le PEB ≠ adresse de base réelle du VAD. malfind détecte les pages RWX dans la section image.
+    </div>
+    <code class="inject-cmd">vol.py -f ram.raw windows.malfind --pid [PID]</code>
+    <code class="inject-cmd">vol.py -f ram.raw windows.vadinfo --pid [PID]  # Base mismatch</code>
+  </div>
+
+  <div class="inject-card">
+    <div class="inject-name">
+      3. Process Doppelgänging
+      <span class="inject-detect id-hard">Difficile</span>
+    </div>
+    <div class="inject-body">
+      <strong>Mécanisme :</strong> Utilise les transactions NTFS (TxF) pour créer un fichier exécutable temporaire dans une transaction non commitée — invisible au FS et à l'antivirus. Mappe l'image depuis cette transaction puis rollback.<br><br>
+      <strong>Traces mémoire :</strong> Pas de fichier sur disque correspondant. Discordance entre le path affiché et le contenu réel. Détection complexe, peu d'outils supportent.
+    </div>
+    <code class="inject-cmd">vol.py -f ram.raw windows.cmdline  # Path suspect</code>
+    <code class="inject-cmd">vol.py -f ram.raw windows.dumpfiles --pid [PID]  # Extraire pour analyse</code>
+  </div>
+
+  <div class="inject-card">
+    <div class="inject-name">
+      4. Reflective DLL Injection
+      <span class="inject-detect id-manual">Manuel</span>
+    </div>
+    <div class="inject-body">
+      <strong>Mécanisme :</strong> La DLL embarque son propre loader — elle se charge elle-même en mémoire sans appeler LoadLibrary. Ne laisse aucune trace dans le PEB (InLoadOrderModuleList vide pour ce module).<br><br>
+      <strong>Traces mémoire :</strong> Plage mémoire RWX sans module correspondant dans le PEB. ldrmodules montre une discordance VAD vs DLL list. Popularisé par Metasploit (meterpreter).
+    </div>
+    <code class="inject-cmd">vol.py -f ram.raw windows.ldrmodules  # Pas dans PEB mais dans VAD</code>
+    <code class="inject-cmd">vol.py -f ram.raw windows.malfind  # RWX sans PE header légitime</code>
+  </div>
+
+  <div class="inject-card">
+    <div class="inject-name">
+      5. Thread Execution Hijacking
+      <span class="inject-detect id-psscan">psscan</span>
+    </div>
+    <div class="inject-body">
+      <strong>Mécanisme :</strong> Suspendre un thread existant d'un processus légitime → modifier son contexte (registre RIP/EIP) pour pointer vers du shellcode → reprendre. Pas de nouveau thread créé.<br><br>
+      <strong>Traces mémoire :</strong> Thread légitime avec RIP pointant vers une zone RWX inhabituelle. windows.threads peut révéler des contextes suspects.
+    </div>
+    <code class="inject-cmd">vol.py -f ram.raw windows.threads --pid [PID]</code>
+    <code class="inject-cmd">vol.py -f ram.raw windows.malfind  # Zone RWX cible</code>
+  </div>
+
+  <div class="inject-card">
+    <div class="inject-name">
+      6. AtomBombing
+      <span class="inject-detect id-hard">Très difficile</span>
+    </div>
+    <div class="inject-body">
+      <strong>Mécanisme :</strong> Exploite la Global Atom Table Windows pour écrire du shellcode dans le processus cible via NtSetContextThread + QueueUserAPC. N'utilise pas WriteProcessMemory — invisible pour les hooks API classiques.<br><br>
+      <strong>Traces mémoire :</strong> Shellcode dans des plages mémoire qui semblent légitimes. Très peu de traces directes. Corrélation APC queue + plages RWX nécessaire.
+    </div>
+    <code class="inject-cmd">vol.py -f ram.raw windows.malfind  # RWX + vérification APC</code>
+    <code class="inject-cmd">strings ram.raw | grep -i "atom"  # Signatures d'exploitation</code>
+  </div>
+
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Flux de détection recommandé</div>
+<div class="steps">
+  <div class="step">
+    <div class="sn">1</div>
+    <div class="step-text"><strong>malfind</strong> — Première passe : pages RWX avec PE header ou shellcode. Couvre DLL injection, hollowing, reflective.</div>
+  </div>
+  <div class="step">
+    <div class="sn">2</div>
+    <div class="step-text"><strong>ldrmodules</strong> — Discordances entre les 3 listes PEB (InLoad, InMem, InInit) et les VAD entries. Reflective DLL = présent dans VAD, absent du PEB.</div>
+  </div>
+  <div class="step">
+    <div class="sn">3</div>
+    <div class="step-text"><strong>vadinfo + dumpfiles</strong> — Pour chaque candidat suspect : extraire le binaire, vérifier le PE header, soumettre à YARA ou VirusTotal.</div>
+  </div>
+  <div class="step">
+    <div class="sn">4</div>
+    <div class="step-text"><strong>cmdline + dlllist</strong> — Vérifier la cohérence entre le nom du processus, son chemin d'exécution, et ses DLLs chargées. Un svchost.exe depuis %TEMP% = IOC majeur.</div>
+  </div>
+</div>
+
+</div><!-- /tab-injection -->
+
+
+<!-- ══════════════════════════════════════════
+     TAB 3 — ROOTKITS & HOOKS
+══════════════════════════════════════════ -->
+<div class="tab-page" id="tab-rootkits">
+
+<div class="concept-card">
+  <div class="concept-title">👻 Rootkits — Manipulation des structures kernel pour l'invisibilité</div>
+  Les rootkits kernel-mode (ring 0) modifient les structures internes du Windows kernel pour cacher leur présence. Les deux techniques principales forensiquement sont le <strong>DKOM</strong> (Direct Kernel Object Manipulation) et le <strong>SSDT Hooking</strong>.
+</div>
+
+<div class="sec-title">DKOM — Direct Kernel Object Manipulation</div>
+<div class="g2">
+  <div class="card card-red">
+    <div class="ct">Principe du DKOM</div>
+    <p style="font-size:.75rem;color:var(--muted)">Le rootkit modifie directement la liste doublement chaînée <code style="font-family:var(--mono)">ActiveProcessLinks</code> dans l'EPROCESS pour retirer son propre processus. Le Task Manager, pslist, et tout outil qui suit cette liste ne le voient plus.</p>
+    <div style="margin-top:.6rem;font-family:var(--mono);font-size:.65rem;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:.5rem .7rem;color:var(--muted)">
+      <span style="color:var(--green)">ProcA.Flink</span> → <span style="color:var(--red)">ProcMalware</span> → <span style="color:var(--green)">ProcB</span><br>
+      <span style="color:var(--dim)">après DKOM :</span><br>
+      <span style="color:var(--green)">ProcA.Flink</span> → <span style="color:var(--green)">ProcB</span> <span style="color:var(--red)">(ProcMalware retiré)</span>
+    </div>
+  </div>
+  <div class="card card-purple">
+    <div class="ct">Détection DKOM avec Volatility</div>
+    <p style="font-size:.75rem;color:var(--muted)">La clé : comparer <code style="font-family:var(--mono)">pslist</code> (suit la liste chaînée) avec <code style="font-family:var(--mono)">psscan</code> (scanne les structures EPROCESS directement).</p>
+    <code style="display:block;font-family:var(--mono);font-size:.67rem;color:var(--green);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:.25rem .5rem;margin:.4rem 0">vol.py -f ram.raw windows.psscan</code>
+    <code style="display:block;font-family:var(--mono);font-size:.67rem;color:var(--green);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:.25rem .5rem;margin:.4rem 0">vol.py -f ram.raw windows.psxview  # Compare toutes les sources</code>
+    <div style="font-size:.7rem;color:var(--red);margin-top:.35rem">⚠️ PID dans psscan absent de pslist = DKOM probable</div>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">SSDT Hooking — Interception des appels système</div>
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-color:rgba(255,64,96,.2)">
+  <div class="concept-title" style="color:var(--red)">SSDT = System Service Descriptor Table</div>
+  La SSDT est un tableau qui mappe les numéros de syscall Windows vers les adresses des fonctions kernel correspondantes (NtCreateProcess, NtOpenFile, etc.). Un rootkit peut remplacer ces adresses pour intercepter tous les appels système et filtrer les résultats — rendant fichiers, processus, et connexions invisibles.
+</div>
+
+<table class="hook-table">
+  <thead>
+    <tr><th>Syscall</th><th>Adresse légitime</th><th>Adresse hookée (exemple)</th><th>Type de hook</th><th>Effet</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.7rem;color:var(--text)">NtQuerySystemInformation</td>
+      <td class="hook-normal">0xfffff800`12345678</td>
+      <td class="hook-hooked">0xfffff800`DEADBEEF</td>
+      <td><span class="hook-badge hb-inline">Inline</span></td>
+      <td style="font-size:.72rem;color:var(--muted)">Cache processus dans le Task Manager</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.7rem;color:var(--text)">NtEnumerateKey</td>
+      <td class="hook-normal">0xfffff800`23456789</td>
+      <td class="hook-hooked">0xfffff800`CAFEBABE</td>
+      <td><span class="hook-badge hb-detour">Detour</span></td>
+      <td style="font-size:.72rem;color:var(--muted)">Cache clés de registre</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.7rem;color:var(--text)">NtQueryDirectoryFile</td>
+      <td class="hook-normal">0xfffff800`34567890</td>
+      <td class="hook-hooked">0xfffff800`BADF00D1</td>
+      <td><span class="hook-badge hb-filter">Filter</span></td>
+      <td style="font-size:.72rem;color:var(--muted)">Cache fichiers dans l'explorateur</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.7rem;color:var(--text)">NtDeviceIoControlFile</td>
+      <td class="hook-normal">0xfffff800`45678901</td>
+      <td class="hook-hooked">0xfffff800`FEEDFACE</td>
+      <td><span class="hook-badge hb-inline">Inline</span></td>
+      <td style="font-size:.72rem;color:var(--muted)">Cache connexions réseau</td>
+    </tr>
+  </tbody>
+</table>
+
+<div style="margin-top:.75rem">
+  <code style="display:block;font-family:var(--mono);font-size:.69rem;color:var(--green);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.45rem .8rem;margin:.3rem 0;cursor:pointer">vol.py -f ram.raw windows.ssdt  # Lister toutes les entrées SSDT et détecter les hooks</code>
+  <code style="display:block;font-family:var(--mono);font-size:.69rem;color:var(--green);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.45rem .8rem;margin:.3rem 0;cursor:pointer">vol.py -f ram.raw windows.callbacks  # Callbacks kernel enregistrés (PsSetCreateProcessNotifyRoutine etc.)</code>
+  <code style="display:block;font-family:var(--mono);font-size:.69rem;color:var(--green);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.45rem .8rem;margin:.3rem 0;cursor:pointer">vol.py -f ram.raw windows.driverirp  # IRP handlers des drivers (hooks bas niveau)</code>
+</div>
+
+<div class="tip" style="margin-top:.75rem">
+  💡 <strong>Astuce</strong> — Sur Windows 10+ avec Kernel Patch Protection (KPP / PatchGuard), le SSDT hooking direct provoque un BSOD. Les rootkits modernes utilisent plutôt des <strong>minifilters</strong> (callbacks légitimes) et des techniques user-mode plus sophistiquées. PatchGuard n'est pas parfait — des bypass existent mais sont complexes à maintenir.
+</div>
+
+</div><!-- /tab-rootkits -->
+
+
+<!-- ══════════════════════════════════════════
+     TAB 4 — VAD TREE
+══════════════════════════════════════════ -->
+<div class="tab-page" id="tab-vad">
+
+<div class="concept-card">
+  <div class="concept-title">🗺 VAD Tree — Virtual Address Descriptor</div>
+  Le VAD Tree est la structure kernel qui cartographie <strong>toutes les plages de mémoire virtuelle</strong> allouées pour un processus : leur type (privée, mappée, image), leurs permissions (RWX), et leur origine (fichier sur disque, mémoire anonyme, section partagée). C'est la source de vérité pour détecter les injections — même quand le PEB a été manipulé.
+</div>
+
+<div class="sec-title">Structure d'un nœud VAD</div>
+<div class="g2">
+  <div class="card card-gold">
+    <div class="ct">Champs clés d'un VAD node</div>
+    <table style="width:100%;font-size:.72rem;border-collapse:collapse">
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:.3rem .4rem;font-family:var(--mono);color:var(--gold)">StartingVpn</td>
+        <td style="padding:.3rem .4rem;color:var(--muted)">Adresse de début de la plage (en page number)</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:.3rem .4rem;font-family:var(--mono);color:var(--gold)">EndingVpn</td>
+        <td style="padding:.3rem .4rem;color:var(--muted)">Adresse de fin</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:.3rem .4rem;font-family:var(--mono);color:var(--red)">u.VadFlags.Protection</td>
+        <td style="padding:.3rem .4rem;color:var(--muted)">Permissions : PAGE_EXECUTE_READWRITE = 🚨</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:.3rem .4rem;font-family:var(--mono);color:var(--cyan)">u.VadFlags.VadType</td>
+        <td style="padding:.3rem .4rem;color:var(--muted)">VadNone (privé), VadImageMap (image EXE/DLL), VadAwe</td>
+      </tr>
+      <tr>
+        <td style="padding:.3rem .4rem;font-family:var(--mono);color:var(--green)">Subsection.ControlArea.FileObject</td>
+        <td style="padding:.3rem .4rem;color:var(--muted)">Pointeur vers le fichier sur disque (si image mappée)</td>
+      </tr>
+    </table>
+  </div>
+  <div class="card card-red">
+    <div class="ct">IOC dans le VAD Tree</div>
+    <ul>
+      <li><strong style="color:var(--red)">PAGE_EXECUTE_READWRITE</strong> (RWX) sans fichier associé = shellcode / injection</li>
+      <li><strong>VadImageMap avec chemin %TEMP%</strong> = DLL suspecte mappée depuis un répertoire inhabituel</li>
+      <li><strong>Discordance PEB vs VAD</strong> = reflective injection (DLL dans VAD absente du PEB Ldr)</li>
+      <li><strong>Grande plage privée RX</strong> = code injecté après déchiffrement</li>
+      <li><strong>VadNone avec permissions RX</strong> = shellcode alloué dynamiquement</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">ldrmodules — La discordance révélatrice</div>
+<div class="concept-card" style="background:rgba(240,192,64,.04);border-color:rgba(240,192,64,.2)">
+  <div class="concept-title" style="color:var(--gold)">3 listes PEB + VAD = 4 sources à comparer</div>
+  <p style="font-size:.78rem;margin-bottom:.6rem"><code style="font-family:var(--mono)">windows.ldrmodules</code> compare simultanément :</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.74rem">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.5rem .7rem">
+      <div style="color:var(--cyan);font-weight:700;margin-bottom:.2rem">PEB InLoadOrderModuleList</div>
+      <div style="color:var(--muted)">DLLs dans l'ordre de chargement</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.5rem .7rem">
+      <div style="color:var(--gold);font-weight:700;margin-bottom:.2rem">PEB InMemOrderModuleList</div>
+      <div style="color:var(--muted)">DLLs dans l'ordre en mémoire</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.5rem .7rem">
+      <div style="color:var(--green);font-weight:700;margin-bottom:.2rem">PEB InInitOrderModuleList</div>
+      <div style="color:var(--muted)">DLLs dans l'ordre d'initialisation</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid rgba(255,64,96,.3);border-radius:6px;padding:.5rem .7rem">
+      <div style="color:var(--red);font-weight:700;margin-bottom:.2rem">VAD Entries (VadImageMap)</div>
+      <div style="color:var(--muted)">Fichiers images mappés en mémoire virtuelle</div>
+    </div>
+  </div>
+  <code style="display:block;margin-top:.7rem;font-family:var(--mono);font-size:.68rem;color:var(--green);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:.3rem .65rem">vol.py -f ram.raw windows.ldrmodules --pid [PID]</code>
+  <div style="font-size:.73rem;color:var(--muted);margin-top:.4rem">
+    Colonnes : InLoad | InMem | InInit | MappedPath<br>
+    <span style="color:var(--red)">False | False | False</span> dans les 3 listes PEB mais présent en VAD → <strong>Reflective DLL injection</strong><br>
+    <span style="color:var(--gold)">True | True | True</span> mais MappedPath = chemin suspect → <strong>DLL hijacking</strong>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">Commandes VAD essentielles</div>
+<code style="display:block;font-family:var(--mono);font-size:.69rem;color:var(--green);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.45rem .8rem;margin:.3rem 0;cursor:pointer">vol.py -f ram.raw windows.vadinfo --pid [PID]  # Dump complet du VAD Tree</code>
+<code style="display:block;font-family:var(--mono);font-size:.69rem;color:var(--green);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.45rem .8rem;margin:.3rem 0;cursor:pointer">vol.py -f ram.raw windows.vadwalk --pid [PID]  # Parcours récursif</code>
+<code style="display:block;font-family:var(--mono);font-size:.69rem;color:var(--green);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.45rem .8rem;margin:.3rem 0;cursor:pointer">vol.py -f ram.raw windows.malfind  # Filtre automatiquement les VAD RWX suspects</code>
+<code style="display:block;font-family:var(--mono);font-size:.69rem;color:var(--green);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.45rem .8rem;margin:.3rem 0;cursor:pointer">vol.py -f ram.raw windows.ldrmodules  # Comparaison PEB vs VAD pour tous les processus</code>
+
+</div><!-- /tab-vad -->
+
+
+<!-- ══════════════════════════════════════════
+     TAB 5 — TIMELINE MÉMOIRE
+══════════════════════════════════════════ -->
+<div class="tab-page" id="tab-timeline">
+
+<div class="concept-card">
+  <div class="concept-title">⏱ Timeline mémoire — Reconstituer la séquence d'une attaque</div>
+  La mémoire RAM contient des timestamps précieux : création des processus (EPROCESS.CreateTime), connexions réseau (netscan timestamps), modifications du registre en cache. Combinés avec les artefacts disque et les logs, ils permettent de reconstruire la <strong>kill chain complète</strong>.
+</div>
+
+<div class="sec-title">Sources de timestamps dans la RAM</div>
+
+<div class="tl-item">
+  <div class="tl-dot tl-dot-crit"></div>
+  <div class="tl-time">EPROCESS.CreateTime</div>
+  <div class="tl-body">
+    <div class="tl-event">Timestamp de création de processus</div>
+    <div class="tl-detail">Présent dans chaque structure EPROCESS. Fiable même pour les processus cachés (psscan le récupère). Format FILETIME 100ns. Clé pour ordonner l'exécution des payloads.</div>
+    <code class="tl-cmd">vol.py -f ram.raw windows.pstree  # Affiche CreateTime de chaque processus</code>
+  </div>
+</div>
+
+<div class="tl-item">
+  <div class="tl-dot tl-dot-warn"></div>
+  <div class="tl-time">Netscan timestamps</div>
+  <div class="tl-body">
+    <div class="tl-event">Connexions réseau avec horodatage</div>
+    <div class="tl-detail">windows.netscan extrait les structures _TCP_ENDPOINT et _UDP_ENDPOINT avec leurs timestamps de création. Connexions actives ET fermées encore en mémoire.</div>
+    <code class="tl-cmd">vol.py -f ram.raw windows.netscan --include-corrupt</code>
+  </div>
+</div>
+
+<div class="tl-item">
+  <div class="tl-dot tl-dot-info"></div>
+  <div class="tl-time">Hive timestamps (registre)</div>
+  <div class="tl-body">
+    <div class="tl-event">Clés de registre modifiées en cache</div>
+    <div class="tl-detail">Le registre Windows est partiellement en mémoire. windows.hivelist + windows.printkey permettent d'accéder aux clés de persistance (Run, Services) avec leurs LastWriteTime.</div>
+    <code class="tl-cmd">vol.py -f ram.raw windows.hivelist</code>
+    <code class="tl-cmd">vol.py -f ram.raw windows.printkey --key "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"</code>
+  </div>
+</div>
+
+<div class="tl-item">
+  <div class="tl-dot tl-dot-ok"></div>
+  <div class="tl-time">Thread CreateTime</div>
+  <div class="tl-body">
+    <div class="tl-event">Création de threads (injection via CreateRemoteThread)</div>
+    <div class="tl-detail">Chaque ETHREAD a un CreateTime. Un thread créé dans un processus légitime à un moment suspect (juste après un email ouvert, après une connexion web) est un IOC fort.</div>
+    <code class="tl-cmd">vol.py -f ram.raw windows.threads --pid [PID]</code>
+  </div>
+</div>
+
+<div class="tl-item">
+  <div class="tl-dot tl-dot-warn"></div>
+  <div class="tl-time">NTLM / Kerberos tickets</div>
+  <div class="tl-body">
+    <div class="tl-event">Tickets Kerberos avec validité temporelle</div>
+    <div class="tl-detail">Les tickets Kerberos en mémoire (LSASS) ont des timestamps StartTime/EndTime. Un Golden Ticket a souvent une durée anormale (10 ans). Pass-the-Hash = tickets NTLM sans expiration normale.</div>
+    <code class="tl-cmd">vol.py -f ram.raw windows.hashdump  # NTLM hashes</code>
+    <code class="tl-cmd">vol.py -f ram.raw windows.cachedump  # Domain cached creds</code>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Intégration avec Plaso / log2timeline</div>
+<div class="g2">
+  <div class="card card-cyan">
+    <div class="ct">Exporter depuis Volatility pour Plaso</div>
+    <code style="display:block;font-family:var(--mono);font-size:.66rem;color:var(--green);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:.3rem .55rem;margin:.25rem 0">vol.py -f ram.raw windows.pstree > pstree.txt</code>
+    <code style="display:block;font-family:var(--mono);font-size:.66rem;color:var(--green);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:.3rem .55rem;margin:.25rem 0">vol.py -f ram.raw windows.netscan > netscan.txt</code>
+    <code style="display:block;font-family:var(--mono);font-size:.66rem;color:var(--green);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:.3rem .55rem;margin:.25rem 0">log2timeline.py --parsers volatility plaso.db ram.raw</code>
+  </div>
+  <div class="card card-purple">
+    <div class="ct">Corrélation avec les sources disque</div>
+    <ul>
+      <li>EPROCESS.CreateTime ↔ Event Log 4688 (Process Creation)</li>
+      <li>Netscan connexion ↔ firewall logs / Zeek conn.log</li>
+      <li>Thread CreateTime ↔ Sysmon Event ID 8 (CreateRemoteThread)</li>
+      <li>Hive LastWriteTime ↔ Autoruns / Registry forensics</li>
+    </ul>
+  </div>
+</div>
+
+</div><!-- /tab-timeline -->
+
+
+<!-- ══════════════════════════════════════════
+     TAB 6 — CAS PRATIQUES IR
+══════════════════════════════════════════ -->
+<div class="tab-page" id="tab-cases">
+
+<div class="concept-card">
+  <div class="concept-title">🎯 Cas pratiques — De la mémoire à la preuve</div>
+  Ces 3 cas illustrent comment appliquer les techniques précédentes dans des scénarios réels d'Incident Response. Chaque cas suit le flux : symptôme → hypothèse → commandes → findings → conclusion.
+</div>
+
+<div class="case-card">
+  <div class="case-label">🎯 Cas 1 — Meterpreter en mémoire (Red Team détecté)</div>
+  <div class="case-body">
+    <strong>Symptôme :</strong> L'EDR alerte sur un comportement réseau anormal depuis <code style="font-family:var(--mono)">explorer.exe</code>. Connexion sortante vers une IP externe sur le port 4444. L'antivirus ne détecte rien sur disque.
+    <br><br>
+    <strong>Hypothèse :</strong> Meterpreter injecté par reflective DLL injection dans explorer.exe — pas de fichier sur disque, donc l'AV ne voit rien.
+  </div>
+
+  <code class="case-cmd">vol.py -f ram.raw windows.pslist  # Confirmer PID de explorer.exe</code>
+  <code class="case-cmd">vol.py -f ram.raw windows.netscan  # Confirmer connexion 4444</code>
+  <code class="case-cmd">vol.py -f ram.raw windows.ldrmodules --pid 1234  # Discordances PEB vs VAD</code>
+  <code class="case-cmd">vol.py -f ram.raw windows.malfind --pid 1234  # Pages RWX sans PE légitime</code>
+  <code class="case-cmd">vol.py -f ram.raw windows.dumpfiles --pid 1234  # Extraire toutes les régions</code>
+
+  <div class="case-finding">
+    <strong>Finding :</strong> ldrmodules révèle une plage mémoire RWX présente dans le VAD mais absente des 3 listes PEB — signature classique de reflective DLL injection. malfind confirme le PE header MZ dans cette plage. Le binaire extrait match les signatures YARA Meterpreter (stageless).
+  </div>
+</div>
+
+<div class="case-card">
+  <div class="case-label">🎯 Cas 2 — Rootkit DKOM (processus fantôme)</div>
+  <div class="case-body">
+    <strong>Symptôme :</strong> Activité réseau détectée par le pare-feu vers un domaine C2 connu, mais aucun processus correspondant visible dans le Task Manager ou les outils live.
+    <br><br>
+    <strong>Hypothèse :</strong> Rootkit kernel-mode avec DKOM — processus retiré d'ActiveProcessLinks mais toujours actif.
+  </div>
+
+  <code class="case-cmd">vol.py -f ram.raw windows.pslist  # Liste "officielle" — processus absent</code>
+  <code class="case-cmd">vol.py -f ram.raw windows.psscan  # Scan brut — processus détecté!</code>
+  <code class="case-cmd">vol.py -f ram.raw windows.ssdt     # Vérifier hooks SSDT</code>
+  <code class="case-cmd">vol.py -f ram.raw windows.modules  # Comparer avec modscan</code>
+  <code class="case-cmd">vol.py -f ram.raw windows.modscan  # Modules kernel cachés</code>
+
+  <div class="case-finding">
+    <strong>Finding :</strong> psscan révèle un PID (2744) présent en mémoire mais absent de pslist — DKOM confirmé. Le processus a le nom <code style="font-family:var(--mono)">svchost.exe</code> mais son chemin d'image est <code style="font-family:var(--mono)">C:\Users\user\AppData\Local\Temp\svch0st.exe</code>. windows.ssdt révèle NtQuerySystemInformation hookée → module rootkit identifié.
+  </div>
+</div>
+
+<div class="case-card">
+  <div class="case-label">🎯 Cas 3 — Credential dumping via LSASS (Mimikatz)</div>
+  <div class="case-body">
+    <strong>Symptôme :</strong> Sysmon Event ID 10 (ProcessAccess) sur lsass.exe depuis un processus non autorisé. Pas de fichier dump lsass.dmp trouvé sur disque.
+    <br><br>
+    <strong>Hypothèse :</strong> Mimikatz utilisé en mémoire (réflexif) ou credentials extraits directement depuis la RAM via ReadProcessMemory sur LSASS.
+  </div>
+
+  <code class="case-cmd">vol.py -f ram.raw windows.pslist  # Trouver PID lsass.exe</code>
+  <code class="case-cmd">vol.py -f ram.raw windows.handles --pid [lsass_pid]  # Handles ouverts sur lsass</code>
+  <code class="case-cmd">vol.py -f ram.raw windows.hashdump   # NTLM hashes depuis SAM en mémoire</code>
+  <code class="case-cmd">vol.py -f ram.raw windows.lsadump    # Secrets LSA</code>
+  <code class="case-cmd">vol.py -f ram.raw windows.cachedump  # Domain cached credentials</code>
+  <code class="case-cmd">vol.py -f ram.raw windows.cmdline    # Commandes exécutées (Mimikatz CLI?)</code>
+
+  <div class="case-finding">
+    <strong>Finding :</strong> windows.handles révèle que le PID 3892 (powershell.exe) avait un handle PROCESS_VM_READ + PROCESS_QUERY_INFORMATION sur lsass.exe — permissions exactes nécessaires à Mimikatz. windows.hashdump extrait 14 hashes NTLM dont celui de l'administrateur du domaine. Corréler avec Sysmon EID 10 pour confirmer l'heure exacte de l'accès.
+  </div>
+</div>
+
+</div><!-- /tab-cases -->
+
+
+<!-- ══════════════════════════════════════════
+     TAB 7 — QUIZ
+══════════════════════════════════════════ -->
+<div class="tab-page" id="tab-quiz">
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q1 — Un processus apparaît dans <code style="font-family:var(--mono)">windows.psscan</code> mais PAS dans <code style="font-family:var(--mono)">windows.pslist</code>. Que cela indique-t-il, et quel est le mécanisme ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> C'est la signature d'un <strong>rootkit DKOM</strong> (Direct Kernel Object Manipulation). Le rootkit a retiré le processus de la liste doublement chaînée <code style="font-family:var(--mono)">ActiveProcessLinks</code> dans l'EPROCESS — <code>pslist</code> suit cette liste et ne le voit plus. En revanche, <code>psscan</code> scanne toute la mémoire à la recherche de la signature des structures EPROCESS directement — il le trouve car la structure est toujours en mémoire.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q2 — Qu'est-ce que le Process Hollowing et quelle est sa trace caractéristique détectable par Volatility ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> Le Process Hollowing crée un processus légitime en état suspendu (ex: svchost.exe), vide son image avec <code style="font-family:var(--mono)">NtUnmapViewOfSection</code>, écrit le payload malveillant à la place, puis reprend l'exécution. <strong>Trace caractéristique :</strong> l'<code>ImageBaseAddress</code> dans le PEB ne correspond pas à l'adresse de base réelle dans le VAD Tree. <code>windows.malfind</code> détecte les pages RWX dans la section image. <code>windows.vadinfo</code> montre la discordance d'adresse.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q3 — Comment <code style="font-family:var(--mono)">windows.ldrmodules</code> permet-il de détecter une Reflective DLL Injection ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> La Reflective DLL Injection charge une DLL en mémoire <strong>sans passer par LoadLibrary</strong> — elle ne s'enregistre donc pas dans les 3 listes PEB (InLoad, InMem, InInit). <code>windows.ldrmodules</code> compare simultanément ces 3 listes PEB avec les entrées VAD de type VadImageMap. Une DLL présente dans le VAD (<code>True</code> dans la colonne VAD) mais <code>False | False | False</code> dans les 3 colonnes PEB = Reflective DLL injection. C'est la signature exacte de Meterpreter stageless, par exemple.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q4 — Qu'est-ce que la SSDT et pourquoi un hook SSDT rend-il des artefacts invisibles aux outils forensiques classiques ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> La <strong>SSDT (System Service Descriptor Table)</strong> mappe les numéros de syscall Windows vers les adresses des fonctions kernel (NtCreateProcess, NtQuerySystemInformation, etc.). Tous les appels système passent par elle. Un rootkit qui remplace l'adresse de <code>NtQuerySystemInformation</code> dans la SSDT intercepte tous les appels à cette fonction — y compris ceux de Volatility — et peut filtrer les résultats (cacher un processus, une clé de registre, un fichier). <code>windows.ssdt</code> de Volatility détecte ces hooks en comparant les adresses actuelles avec celles attendues dans les modules légitimes.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q5 — Quelles permissions mémoire (flags VAD) indiquent un shellcode ou du code injecté ? Comment les détecter ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> <strong>PAGE_EXECUTE_READWRITE (RWX)</strong> — une région mémoire à la fois exécutable, lisible et modifiable est anormale pour du code légitime. Les EXE et DLL normaux chargés par Windows ont des sections séparées (code = RX, données = RW). Une plage RWX sans fichier image correspondant dans le VAD est un IOC majeur. Détection : <code style="font-family:var(--mono)">windows.malfind</code> filtre automatiquement les plages RWX suspectes et affiche un hexdump + désassemblage des premiers octets.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q6 — Dans le cadre d'un dump LSASS pour credential dumping, quels handles sur lsass.exe sont révélateurs d'un accès malveillant ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> Les handles révélateurs sont ceux combinant <code style="font-family:var(--mono)">PROCESS_VM_READ</code> (lecture de la mémoire du processus) et <code style="font-family:var(--mono)">PROCESS_QUERY_INFORMATION</code> (query des informations) sur lsass.exe depuis un processus non système. Ce sont exactement les permissions utilisées par Mimikatz, ProcDump (-ma lsass), et les outils de credential dumping. <code>windows.handles --pid [lsass_pid]</code> liste tous les handles ouverts sur lsass — identifier quel autre processus tient ces handles révèle l'attaquant.
+  </div>
+</div>
+
+<div style="text-align:center;margin-top:1.5rem">
+  <a href="../quiz.html?theme=mémoire" class="fiche-cta-btn fiche-cta-red">💊 Plus de questions — Mode Quiz complet</a>
+</div>
+
+</div><!-- /tab-quiz -->
+
+
+<!-- Footer CTA -->
+<div class="fiche-cta-section">
+  <div class="fiche-cta-text">Continuer l'exploration</div>
+  <div class="fiche-cta-buttons">
+    <a href="volatilite.html" class="fiche-cta-btn fiche-cta-dim">🧠 Volatility &amp; RAM (base)</a>
+    <a href="sysmon.html" class="fiche-cta-btn fiche-cta-dim">🔭 Sysmon</a>
+    <a href="mitre_attack.html" class="fiche-cta-btn fiche-cta-dim">🎯 MITRE ATT&amp;CK</a>
+    <a href="anti_forensique.html" class="fiche-cta-btn fiche-cta-dim">🕵️ Anti-Forensique</a>
+    <a href="../quiz.html" class="fiche-cta-btn fiche-cta-red">💊 Quiz →</a>
+    <a href="index.html" class="fiche-cta-btn fiche-cta-orange">← Toutes les fiches</a>
+  </div>
+</div>
+
+<script>
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  var page = document.getElementById('tab-' + id);
+  if(page) page.classList.add('active');
+  if(btn) btn.classList.add('active');
+  window.scrollTo({top: document.getElementById('mem-tabs').offsetTop - 60, behavior:'smooth'});
+}
+
+(function(){
+  var bar = document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll', function(){
+    var d = document.documentElement;
+    bar.style.width = Math.min(100, (d.scrollTop / (d.scrollHeight - d.clientHeight)) * 100) + '%';
+  }, {passive:true});
+
+  var bt = document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll', function(){ bt.classList.toggle('visible', window.scrollY > 300); }, {passive:true});
+
+  document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var ans = btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+      ans.classList.toggle('visible');
+      btn.textContent = ans.classList.contains('visible') ? 'Masquer ↑' : 'Révéler →';
+    });
+  });
+
+  document.querySelectorAll('code[style*="cursor:pointer"], .inject-cmd, .case-cmd, .tl-cmd').forEach(function(el){
+    el.title = 'Cliquer pour copier';
+    el.addEventListener('click', function(){
+      navigator.clipboard && navigator.clipboard.writeText(el.innerText.trim()).then(function(){
+        var o = el.style.background;
+        el.style.background = 'rgba(48,232,138,.2)';
+        setTimeout(function(){ el.style.background = o; }, 700);
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>
