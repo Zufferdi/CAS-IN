@@ -1,0 +1,231 @@
+{
+  "id": "swissgrid-iec61850-jura",
+  "title": "Poste 380 kV — IEC 61850 sous attaque",
+  "icon": "⚡",
+  "difficulty": "expert",
+  "atmosphere": "tactique",
+  "realCase": "Inspiré des attaques CrashOverride/Industroyer (Ukraine 2016) et Industroyer2 (Ukraine 2022) qui ciblaient spécifiquement IEC 61850/104 et IEC 60870-5-104 dans les postes électriques. Aucun cas suisse confirmé, mais MELANI/OFCS a alerté en 2023 sur l'exposition de Swissgrid et des distributeurs régionaux (BKW, Romande Energie, Axpo).",
+  "narrative": {
+    "success": "L'attaque est neutralisée avant l'ordre d'ouverture des disjoncteurs. La région Jura+Berne reste alimentée. Coordination Swissgrid-OFCS exemplaire. Plainte MPC + signalement ENISA. Reconstruction du poste en 72h avec config IEC 61850 signée. Doctrine de défense IEC 62443 SL4 validée.",
+    "degraded": "Une coupure de 47 minutes affecte 31 000 abonnés. Pas de blessé mais SMS commune en panique. Forensique partielle — l'attaquant n'a pas été identifié formellement. Plainte déposée 36h après l'incident (au-delà des 24h LSI). Apprentissages limités.",
+    "failure": "Cascade : 4 postes ouvrent leurs disjoncteurs en ~15 minutes. Black-out sur la Suisse romande + Jura pendant 2h47. Trois hôpitaux sur générateurs, deux usines en arrêt d'urgence. Mention dans le rapport annuel ENTSO-E. Attribution non établie."
+  },
+  "tags": [
+    "ICS",
+    "IEC 61850",
+    "POSTE ÉLECTRIQUE",
+    "INFRASTRUCTURE CRITIQUE",
+    "GOOSE",
+    "OFCS",
+    "LIE",
+    "SWISSGRID"
+  ],
+  "legalRefs": [
+    "LSI Art. 73-78 (annonce OFCS 24h, IIC énergie)",
+    "LIE (Loi sur les installations électriques) Art. 4 et 14",
+    "OPIE (Ordonnance sur la procédure en cas d'incident énergétique)",
+    "Art. 144bis CP (modification de données)",
+    "Art. 147 CP (utilisation frauduleuse d'un ordinateur)",
+    "Art. 224 CP (emploi d'explosifs / mise en danger collective — par analogie)",
+    "Art. 322ter CP (corruption — si dimension humaine)",
+    "ENTSO-E Network Code on Cybersecurity 2024"
+  ],
+  "intro": "Mardi 13 mai 2026, 03h47. Un opérateur du <strong>centre national de conduite Swissgrid à Aarau</strong> vous appelle en astreinte DFIR. Le SCADA national affiche depuis 38 minutes un <strong>flux GOOSE anormal</strong> en provenance du poste 380/220 kV de <strong>Bassecourt (JU)</strong> — un nœud critique de l'interconnexion Suisse-France. Les ingénieurs d'astreinte ont remarqué des trames GOOSE avec un <code>stNum</code> qui s'incrémente trop vite et un <code>sqNum</code> qui ne se réinitialise jamais — pattern compatible avec une <strong>injection de trames forgées</strong>. Le poste lui-même semble fonctionner, mais les <strong>IED (Intelligent Electronic Devices)</strong> de protection sont dans un état incohérent. Si les disjoncteurs s'ouvrent, c'est minimum 280 000 foyers coupés et un risque cascade UCTE. Vous avez 90 minutes avant la pointe de consommation matinale.",
+  "alertLevel": "⚡ POSTE BASSECOURT 380 kV — TRAMES GOOSE INJECTÉES · IED INCOHÉRENTS · 280 000 FOYERS À RISQUE · CASCADE UCTE POSSIBLE",
+  "objectives": [
+    {
+      "icon": "📡",
+      "text": "Diagnostiquer l'attaque sur les flux GOOSE/SV (IEC 61850) sans déclencher de fausse manœuvre"
+    },
+    {
+      "icon": "⚡",
+      "text": "Préserver l'alimentation pendant l'investigation — éviter le black-out cascade"
+    },
+    {
+      "icon": "🚨",
+      "text": "Coordonner OFCS (signalement 24h LSI), MPC (plainte pénale), ENTSO-E (cascade transfrontalière)"
+    },
+    {
+      "icon": "🔬",
+      "text": "Acquérir les preuves forensiques sur les IED et la station de conduite SANS perturber le service"
+    }
+  ],
+  "debrief": "<p>L'affaire Bassecourt illustre la <strong>cybersécurité des postes électriques modernes</strong> sous IEC 61850. Trois leçons clés :</p><p><strong>1. Spécificités GOOSE/SV.</strong> Les trames GOOSE (Generic Object Oriented Substation Event) sont des messages multicast L2 ultra-rapides (&lt; 4 ms) qui transportent les ordres de protection entre IED. <strong>Aucune authentification cryptographique</strong> dans la spec originale (l'extension IEC 62351 existe mais n'est presque pas déployée en production). Une attaque par <strong>injection GOOSE forgée</strong> peut déclencher l'ouverture intempestive de disjoncteurs en quelques millisecondes — c'est exactement ce que faisait <em>Industroyer</em> en Ukraine en 2016.</p><p><strong>2. Doctrine IR pour postes électriques.</strong> Contrairement à un IT classique, on ne peut <strong>pas</strong> simplement « débrancher » un poste pour investiguer : la stabilité du réseau dépend de sa réponse instantanée aux variations de charge. La doctrine est une <strong>défense en profondeur en marche</strong> — segmenter la station de conduite, vérifier l'authenticité des configurations IED (fichiers SCD/CID/ICD), comparer avec un baseline signé, et n'isoler les IED qu'un par un, en coordination avec le dispatching national.</p><p><strong>3. Cadre légal suisse.</strong> Swissgrid est une IIC critique au sens de la LSI : l'annonce à l'OFCS doit intervenir dans les <strong>24h</strong> à compter de la connaissance, même si l'incident est encore en cours. La <strong>LIE</strong> (Loi sur les installations électriques) impose des standards de cybersécurité depuis sa révision 2023. Pour la dimension transfrontalière (interconnexion France 380 kV), <strong>ENTSO-E</strong> doit être informé sous 1h via le Network Code on Cybersecurity 2024 — c'est un signalement opérationnel, pas un signalement juridique.</p>",
+  "steps": [
+    {
+      "phase": "📡 03h55 — Diagnostic GOOSE : injection ou défaut ?",
+      "situation": "Vous obtenez un dump réseau du VLAN de protection (capture passive sur SPAN) des 10 dernières minutes :<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n📊 <code>tshark -r goose_capture.pcap -Y \"goose\"</code> montre :<br>\n• MAC source légitime (IED Siemens 7SJ85) : <code>00:50:56:8A:B3:21</code><br>\n• <strong>Mais aussi</strong> trames GOOSE avec MAC <code>00:0C:29:7F:F2:E8</code> (VMware OUI !)<br>\n• <code>stNum</code> du publisher légitime : 1247 → 1248 → 1249 (normal, increment lent)<br>\n• <code>stNum</code> du publisher suspect : 8423 → 8425 → 8429 (incréments irréguliers)<br>\n• Le <strong>goCBRef</strong> (control block reference) du suspect copie celui du légitime<br>\n• Aucune signature IEC 62351 — les trames sont en clair sur le bus de processus\n</div>",
+      "law": "<strong>IEC 61850-7-2</strong> — Le <code>stNum</code> doit s'incrémenter à chaque changement d'état, le <code>sqNum</code> à chaque retransmission de la même trame. Une incohérence = manipulation.<br><strong>Art. 144bis CP</strong> — Modification de données informatiques : peine privative jusqu'à 5 ans si dommage important.",
+      "question": "<strong>Quelle est votre conclusion forensique immédiate ?</strong>",
+      "choices": [
+        {
+          "text": "Il s'agit d'une <strong>injection GOOSE par publisher forgé</strong>. Le MAC OUI VMware indique une VM dans le réseau OT (probablement un poste de maintenance contaminé). Les sauts irréguliers de <code>stNum</code> sont la signature classique d'un attaquant qui ne synchronise pas finement avec l'état des IED réels. Confirmer en isolant le bus de processus du segment exposé.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Excellent diagnostic. Une VM dans le VLAN de protection est anormale par design (les IED de protection sont des hardware physiques dédiés). Les <code>stNum</code> qui sautent de manière irrégulière (+2, +4) montrent que l'attaquant publie des trames sans suivre la machine d'états réelle de l'IED — il essaie de provoquer des transitions, pas de surveiller. Cette signature est documentée dans les analyses Industroyer/CrashOverride par Dragos et ESET.",
+          "legal": "IEC 61850-7-2 + IEC 62351-6 — un publisher GOOSE non-authentifié dans un VLAN de protection est un <em>red flag</em> immédiat.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Il s'agit probablement d'un <strong>défaut matériel</strong> sur l'IED Siemens 7SJ85 (firmware bug ou problème de carte réseau). Les IED ont parfois des comportements erratiques quand leur batterie de sauvegarde faiblit. Demander à Siemens un diagnostic distant.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Mauvaise direction. Un défaut matériel ne crée pas un <strong>second</strong> publisher avec un MAC différent — il fait juste dérailler le publisher légitime. La présence de DEUX sources GOOSE dont une avec un MAC VMware est strictement incompatible avec un défaut HW. Vous perdriez 30 à 60 minutes en aller-retour avec le support Siemens, pendant que l'attaquant peut déclencher l'ouverture des disjoncteurs.",
+          "legal": "—",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Cela ressemble à du <strong>trafic de test légitime</strong> d'un sous-traitant de Swissgrid en intervention nocturne. Les fenêtres de maintenance ont souvent lieu entre 02h et 06h. Vérifier les tickets d'intervention avant de qualifier d'attaque.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Réflexe de prudence légitime mais ici trompeur. Les sous-traitants de Swissgrid <strong>ne sont jamais autorisés</strong> à injecter des GOOSE dans le bus de protection en production — la procédure standard impose un IED de test physique connecté à un port dédié, pas de VM. De plus, l'absence de ticket d'intervention dans le dispatching national (vérification possible en 30 sec) lève le doute. Vous gaspillez du temps sur une piste fausse.",
+          "legal": "Procédure interne Swissgrid — interdiction d'injection logicielle GOOSE en production.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "⚡ 04h12 — L'attaquant tente d'ouvrir les disjoncteurs",
+      "situation": "L'attaquant a remarqué votre capture. Il accélère :<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n⚠️ <strong>Trames GOOSE avec <code>Trip=TRUE</code></strong> émises depuis le publisher forgé vers les IED de baie<br>\n🔌 Disjoncteurs 380 kV (Q1, Q2, Q3, Q4) : 4 baies critiques exposées<br>\n🛡️ Heureusement : les IED ont une logique de <strong>vote 2-of-3</strong> (3 sources doivent confirmer le trip)<br>\n📡 Mais l'attaquant peut publier 3 sources forgées s'il connaît la config<br>\n⏱️ Vous avez ~3 minutes avant qu'il trouve le bon pattern<br>\n🚨 Options : (a) bloquer en amont (firewall L2 du switch managé), (b) couper le bus, (c) basculer en local<br>\n📞 Le directeur du poste est sur place dans 25 min (voiture depuis Delémont)\n</div>",
+      "law": "<strong>LIE Art. 14</strong> — l'exploitant doit prendre toutes mesures nécessaires pour préserver la sécurité des installations électriques.<br><strong>Art. 224 CP</strong> (par analogie) — mise en danger collective : la coupure d'un poste 380 kV peut affecter directement la sécurité de plusieurs cantons.",
+      "question": "<strong>Action immédiate (3 minutes) ?</strong>",
+      "choices": [
+        {
+          "text": "Demander au switch managé Cisco IE-4000 de filtrer le MAC <code>00:0C:29:7F:F2:E8</code> (drop niveau L2) sur tous les ports du VLAN protection. Pendant ce temps, faire un appel d'urgence à l'opérateur de garde sur site pour passer les IED en <strong>mode local</strong> (basculement manuel) et désactiver l'écoute GOOSE externe.",
+          "ok": true,
+          "pts": 35,
+          "fb": "Exécution parfaite. Le filtrage MAC niveau L2 est instantané (sub-seconde) et bloque le canal d'attaque sans perturber les IED légitimes. Le passage en mode local (procédure documentée Swissgrid OG-MIL-2024) restaure la sécurité même si l'attaquant trouve un nouveau MAC. La double mesure — réseau + opérateur sur place — est la doctrine IEC 62443 SL4.",
+          "legal": "ISO/IEC 27035 — Containment précoce. Doctrine Swissgrid OG-MIL-2024.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Ouvrir manuellement <strong>tous les disjoncteurs</strong> du poste depuis la salle de conduite distante avant que l'attaquant le fasse. \"Si on doit couper, autant que ce soit nous.\" Cela laisse Swissgrid en contrôle de la coupure, et on peut reconstruire proprement après.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Geste catastrophique. Vous donnez à l'attaquant ce qu'il voulait — la coupure du poste — sans même vérifier qu'il en avait les moyens. La logique de vote 2-of-3 protégeait peut-être contre son attaque. En ouvrant volontairement, vous coupez 280 000 foyers et créez la cascade UCTE qu'on cherchait à éviter. ENTSO-E reportera cela comme un incident niveau 3 (sur 5).",
+          "legal": "LIE Art. 4 — obligation de continuité. Une coupure préventive non justifiée est constitutive de manquement à l'obligation.",
+          "critical": true,
+          "next": 2
+        },
+        {
+          "text": "Capturer un dump complet de la mémoire de la station de conduite (winpmem) pour préserver la preuve avant toute action de containment. La preuve volatile prime, le cadre LIE permet une coupure ultérieure justifiée.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Mauvaise priorité. La forensique mémoire est utile mais elle prend 5 à 10 minutes — pendant lesquelles l'attaquant trouve son pattern de vote 2-of-3 et fait sauter le poste. La doctrine IR ICS est claire : <strong>safety &gt; security &gt; forensics</strong>. La preuve sera capturée APRÈS le containment, sur un système isolé. Le DFIR ICS n'est pas du DFIR IT — l'ordre des priorités change.",
+          "legal": "Doctrine SANS ICS / IEC 62443 — Safety prime sur Forensics.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🔬 04h45 — Forensique sur IED et investigation du vecteur",
+      "situation": "Le filtrage MAC a tenu. Les IED sont en mode local, surveillés par l'opérateur sur site. Le bus de protection est gelé. Vous pouvez maintenant investiguer.<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n🖥️ La VM source de l'attaque a été identifiée : poste de maintenance Windows 10 LTSC<br>\n🔌 Ce poste est branché sur le VLAN ingénierie (170) ET sur le VLAN protection (250) — <strong>misconfiguration historique</strong><br>\n📂 Sur le poste : <code>C:\\Tools\\\\libiec61850\\\\goose_publisher.exe</code> (binaire signé légitimement par MZ Automation pour test)<br>\n📜 Mais aussi : <code>C:\\Users\\maintenance\\\\AppData\\\\Roaming\\\\winrar.exe</code> (taille 8.4 MB, signature invalide)<br>\n📝 Logs Windows : RDP entrant le 13 mai 02h17 depuis IP <code>185.220.101.42</code> (Tor exit node)<br>\n🗂️ Le compte <code>maintenance.swissgrid</code> existe mais ne devrait jamais être utilisé en RDP\n</div>",
+      "law": "<strong>Art. 143 CP</strong> — accès indu à un système informatique : peine privative jusqu'à 5 ans.<br><strong>Art. 143bis CP</strong> — accès indu à un système avec atteinte à des données.<br><strong>Art. 67a CPP</strong> — moyens de preuve numérique : exigences de chaîne de custody.",
+      "question": "<strong>Quelle est la séquence forensique correcte ?</strong>",
+      "choices": [
+        {
+          "text": "Acquisition mémoire RAM en premier (winpmem en USB read-only), puis hash du <code>winrar.exe</code> suspect (certutil -hashfile SHA256), puis export des Event Logs avec <code>wevtutil epl</code>, puis enfin imaging disque complet en write-blocked. Chaque étape sur un support neuf, hash documenté, scellé.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Ordre canonique correct (volatile → moins volatile, conformément à RFC 3227). Le hash du binaire suspect AVANT toute autre interaction garantit la non-altération. L'usage d'un USB read-only évite les écritures accidentelles. Le scellement immédiat permet la traçabilité MPC. Cette procédure résiste à toute contestation au tribunal.",
+          "legal": "RFC 3227 + ISO/IEC 27037 + ACPO Principles. Pleinement compatible Art. 67a CPP.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Lancer immédiatement un scan antivirus complet (Defender + Kaspersky portable) sur le poste pour identifier le malware avant qu'il ne s'autodétruise. Documenter ensuite ce qui a été trouvé.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Erreur procédurale grave. Un scan AV : (1) modifie les <strong>access timestamps</strong> de presque tous les fichiers, détruisant l'horodatage forensique ; (2) peut <strong>quarantainer le binaire suspect</strong>, l'enlevant de votre vue ; (3) modifie le contenu RAM ; (4) écrit ses propres logs sur le système. Aucun expert appelé à témoigner ne pourra défendre cette acquisition. La chaîne de custody est rompue.",
+          "legal": "Art. 67a CPP / ISO/IEC 27037 — atteinte à l'intégrité du moyen de preuve.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Imager le disque entier d'abord (FTK Imager Lite) avant de toucher à la RAM — un disque imaging est plus stable juridiquement, et la RAM peut être capturée ensuite si elle a survécu.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Inversion de l'ordre RFC 3227. La RAM contient des éléments qui ne sont PAS sur le disque : clés crypto en clair, processus actifs, connexions TLS établies, contenu déchiffré. Pendant que vous imagez le disque (45-90 minutes selon la taille), un grand nombre de ces éléments sont perdus à cause de la mémoire qui se réécrit ou de timeout réseau. La séquence correcte : volatil d'abord (RAM, mémoire vidéo, état réseau), puis le disque.",
+          "legal": "RFC 3227 — ordre de volatilité.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "📣 05h30 — Notifications réglementaires : OFCS, MPC, ENTSO-E",
+      "situation": "Le poste est sécurisé. Les preuves sont dans le coffre. Vous devez maintenant gérer les obligations réglementaires.<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n🇨🇭 <strong>OFCS</strong> (Office fédéral de la cybersécurité) : annonce LSI Art. 73 dans les 24h<br>\n⚖️ <strong>MPC</strong> (Ministère public de la Confédération) : plainte pénale ; juridiction probable car IIC + transfrontalier<br>\n🇪🇺 <strong>ENTSO-E</strong> : Network Code on Cybersecurity — signalement opérationnel sous 1h pour cascade transfrontalière<br>\n🔌 <strong>RTE</strong> (gestionnaire français interconnexion 380 kV) : briefing technique car Swissgrid-RTE partagent le bus<br>\n🏛️ <strong>OFEN</strong> (Office fédéral de l'énergie) : tutelle Swissgrid<br>\n📺 <strong>Médias</strong> : le directeur Swissgrid demande un draft de communiqué\n</div>",
+      "law": "<strong>LSI Art. 74</strong> — annonce OFCS dans les 24h dès la connaissance de l'incident, même si l'incident est en cours.<br><strong>Art. 24 LPD 2023</strong> — notification PFPDT non requise ici (pas de données personnelles touchées).<br><strong>ENTSO-E NC CS 2024</strong> — notification opérationnelle distincte de l'annonce judiciaire.",
+      "question": "<strong>Dans quel ordre lancer les notifications ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>1)</strong> ENTSO-E + RTE en parallèle (sous 1h, dimension opérationnelle transfrontalière). <strong>2)</strong> OFCS (annonce LSI 24h, mais on a le temps de bien préparer le dossier). <strong>3)</strong> MPC (plainte pénale dès que les éléments forensiques sont consolidés, idéalement sous 12h). <strong>4)</strong> OFEN (tutelle, notification non urgente). <strong>5)</strong> Communiqué presse uniquement après concertation avec OFCS et OFEN.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Hiérarchisation correcte. Les notifications opérationnelles (ENTSO-E, RTE) sont prioritaires car elles préviennent une cascade en cours. L'OFCS et le MPC sont des notifications administratives/judiciaires qui ont leurs délais propres. Le communiqué presse arrive en dernier — un communiqué prématuré pourrait alerter l'attaquant, contaminer l'investigation, ou créer un mouvement de panique. La concertation avec les autorités est cruciale.",
+          "legal": "ENTSO-E NC CS 2024 + LSI Art. 74 + Code de communication crise OFCS.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "<strong>1)</strong> Communiqué presse immédiat pour transparence démocratique. <strong>2)</strong> OFCS + MPC + OFEN. <strong>3)</strong> ENTSO-E en dernier (la dimension internationale peut attendre).",
+          "ok": false,
+          "pts": -20,
+          "fb": "Inversion catastrophique de l'ordre. Le communiqué presse en premier : (1) alerte l'attaquant qui peut détruire des preuves ; (2) crée un mouvement de panique pour 280 000 foyers qui n'ont pas été coupés ; (3) court-circuite la concertation avec les autorités. ENTSO-E en dernier : la cascade transfrontalière est précisément ce qu'il faut prévenir en priorité — RTE a peut-être besoin d'ajuster ses échanges en temps réel.",
+          "legal": "Manquement au principe de coordination institutionnelle (OFCS + OFEN).",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Une seule notification commune adressée à OFCS, qui transmettra ensuite aux autres autorités selon ses canaux. Cela évite les contradictions entre signalements multiples et respecte la primauté fédérale.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Confusion entre les rôles. L'OFCS est un point de contact <strong>cybersécurité</strong>, pas un point de contact opérationnel-réseau (ENTSO-E) ni judiciaire (MPC). Les obligations sont parallèles, pas séquentielles. ENTSO-E doit être notifié dans l'heure indépendamment de l'OFCS, sinon c'est Swissgrid qui est en infraction au Network Code. Le MPC est saisi par plainte directe, pas par transmission OFCS.",
+          "legal": "Distinction des compétences : LSI (OFCS) ≠ NC CS (ENTSO-E) ≠ CPP (MPC).",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "🛡️ J+5 — Reconstruction et leçons apprises",
+      "situation": "Cinq jours plus tard. Le poste de Bassecourt fonctionne en mode dégradé sécurisé. Le rapport préliminaire est prêt. Le directeur Swissgrid demande des recommandations stratégiques.<br><br>\n<div style=\"background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.8rem;line-height:1.8\">\n🔬 Vecteur identifié : RDP exposé sur le poste de maintenance via VPN sous-traitant<br>\n🔓 Identifiants <code>maintenance.swissgrid</code> compromis dans une fuite combolist 2024<br>\n📦 <code>winrar.exe</code> = en réalité <strong>Cobalt Strike beacon</strong> avec C2 Tor<br>\n🆔 Attribution provisoire : <strong>Sandworm (GRU 74455)</strong> — TTP compatibles avec Industroyer2<br>\n📋 12 autres postes Swissgrid ont des configurations similaires (audit en cours)<br>\n💰 Coût estimé incident : 2.8 M CHF (forensique, reconstruction, audit, communication)\n</div>",
+      "law": "<strong>LSI Art. 75</strong> — partage des informations de menace entre IIC du même secteur (energy ISAC).<br><strong>Art. 67a CPP</strong> — préservation des preuves jusqu'à la clôture procédurale.<br><strong>Code des obligations Art. 41</strong> — responsabilité civile éventuelle du sous-traitant (sécurité du VPN).",
+      "question": "<strong>Quelle recommandation stratégique prioritaire pour Swissgrid ?</strong>",
+      "choices": [
+        {
+          "text": "Plan d'action pluriannuel : <strong>(1) déploiement IEC 62351-6</strong> sur tous les postes (signature cryptographique des GOOSE), <strong>(2) suppression des dual-VLAN sur les postes maintenance</strong> (séparation stricte ingénierie/protection), <strong>(3) MFA obligatoire</strong> sur tous accès distants OT, <strong>(4) partage IOC Sandworm</strong> via l'energy ISAC européen, <strong>(5) tabletop trimestriel</strong> avec scénario IEC 61850 dédié.",
+          "ok": true,
+          "pts": 30,
+          "fb": "Stratégie complète et proportionnée. IEC 62351-6 est la réponse cryptographique structurelle aux attaques GOOSE forgées (mais déploiement long, 24-36 mois). La suppression des dual-VLAN est une correction de misconfiguration immédiate. La MFA + le partage IOC + les tabletops complètent la défense en profondeur. C'est exactement la doctrine IEC 62443 SL4 + le NIS2 européen.",
+          "legal": "IEC 62443 SL4 + NIS2 + LSI Art. 75 (information sharing).",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Solution radicale : <strong>déconnecter Swissgrid d'ENTSO-E</strong> jusqu'à ce qu'on ait reconstruit toute l'infrastructure depuis zéro avec du matériel certifié EAL4+. La sécurité absolue justifie le coût d'isolement temporaire.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Démesure totale. Déconnecter du UCTE européen : (1) viole les obligations contractuelles ENTSO-E (pénalités multimillions/jour) ; (2) déstabilise la fréquence 50 Hz suisse (gestion des pointes plus difficile) ; (3) ne résout aucun problème — l'attaque venait du VPN sous-traitant, pas de l'interconnexion. Une reconstruction \"depuis zéro\" en EAL4+ prend 5-10 ans et coûte des centaines de millions. C'est la définition même d'une mauvaise réponse à un incident.",
+          "legal": "Disproportion manifeste — Art. 4 LIE viole continuité.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Mise en place d'un <strong>SOC interne dédié OT</strong> (24/7) avec surveillance temps réel des flux GOOSE/SV via Suricata + signatures Industroyer. Pas de modification structurelle des protocoles.",
+          "ok": false,
+          "pts": 5,
+          "fb": "Réponse partielle utile mais insuffisante. Un SOC OT est précieux pour la <strong>détection</strong>, mais ne corrige pas la cause racine (GOOSE non signés, dual-VLAN, MFA absente). C'est ajouter une couche de surveillance sans fermer les portes ouvertes. La défense en profondeur exige les deux : prévention structurelle (62351, MFA, segmentation) ET détection (SOC, IDS spécialisé).",
+          "legal": "Réponse incomplète à l'obligation de sécurité de l'IIC.",
+          "critical": false,
+          "next": -1
+        }
+      ]
+    }
+  ]
+}
