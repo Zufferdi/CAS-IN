@@ -4,6 +4,119 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.18] — 2026-05-02
+
+Cette version remplace le filtre de cards basique par un **véritable moteur de recherche full-text** sur les 109 fiches.
+
+### Le problème — diagnostic chiffré
+
+L'ancien filtre `filterFiches()` (12 lignes, substring sur `title + desc + data-keywords`) indexait **18 KB de texte = 0,46 % du contenu réel des fiches** (3,9 MB). Sur un panel de 26 requêtes typiques, environ **38 % de hits seulement** :
+
+| Type de requête | Avant | Après |
+|---|---|---|
+| `RAM`, `MFT`, `EXIF`, `Volatility` | ✅ | ✅ |
+| `mémoire vive` (synonyme RAM) | ❌ | ✅ |
+| `forensique mobile` / `forensic mobile` | ❌ | ✅ |
+| `comment trouver les fichiers cachés ?` | ❌ | ✅ |
+| `EXIF metadata` (multi-mots) | ❌ | ✅ |
+| `Ed Skoudis` (auteur dans le contenu) | ❌ | ✅ |
+| `ip link` (commande Linux) | ❌ | ✅ |
+| `4624 type 10` (Event ID) | ❌ | ✅ |
+| `volatlity` (faute de frappe) | ❌ | ✅ |
+| `Volátility` (accent anormal) | ❌ | ✅ |
+
+### Ajouté — Moteur de recherche v2 (4 niveaux)
+
+#### N1 — Tokenization, accents, synonymes (`js/components/fiche-search.js` v2, 466 L)
+
+- **Normalisation** : lowercase + suppression accents NFD + ponctuation → recherche stable quelle que soit la casse ou les diacritiques.
+- **Tokenization** : split en mots, filtre stopwords FR + EN (~80 termes incluant les mots interrogatifs `comment`, `pourquoi`, `what`, `why`…) → permet de **poser des questions** sans dégrader la recherche.
+- **Synonymes bidirectionnels FR ↔ EN** (~50 entrées) :
+  - `ram ↔ mémoire ↔ memory ↔ vive`
+  - `browser ↔ navigateur`
+  - `forensique ↔ forensic ↔ forensics`
+  - `carving ↔ récupérer ↔ recover ↔ supprimés ↔ deleted`
+  - `registre ↔ registry`, `chiffrement ↔ encryption ↔ crypto`
+  - `mobile ↔ smartphone ↔ téléphone ↔ phone ↔ ios ↔ android`
+  - … etc.
+- **Tous les tokens doivent matcher** (AND) : recherche multi-mots dans le désordre.
+
+#### N2 — Indexation full-text du contenu réel (`scripts/build_search_index.py`, 218 L → `data/search-index.json`, 581 KB)
+
+Script Python qui parse les 109 fiches et extrait :
+
+- **Titre** (`<h1>`)
+- **Sections** (`<h2>` + `<div class="sec-title">` — 875 sections au total)
+- **Commandes** (`<div class="cli">` avec extraction par balance des `<div>` imbriqués — 38 blocs)
+- **Termes** (`<code>`, `<strong>` — 6622 termes)
+- **Texte des paragraphes** (limité à 400 chars/section pour économiser bande passante)
+
+L'index pèse **581 KB** non compressé (~80-120 KB gzippé côté serveur GitHub Pages).
+
+#### N3 — Scoring intelligent + fuzzy
+
+- **Pondération par champ** : title=10, sectionTitle=5, command=4, term=3, desc=2, body=1
+- **Bonus mot entier** (vs sous-chaîne) : +5
+- **Bonus tous les tokens dans la même section** : ×2
+- **Bonus tous les tokens matchent quelque part** : ×1.5
+- **Fuzzy fallback Levenshtein** (distance ≤ min(2, len/3)) : trouve `volatlity` → `volatility`, `réseaau` → `réseau`, etc.
+- **Tri par score décroissant**, retourne top 20 résultats avec extraits surlignés.
+- **Pas de dépendance externe** (pas de Fuse.js) : ~5 KB de code search inhouse vs 30 KB de lib.
+
+#### N5 — Modal Cmd+K global (`js/components/search-modal.js`, 508 L)
+
+Recherche cross-fiches accessible **depuis n'importe quelle page** (118 pages) :
+
+- **Trigger** : `⌘K` (Mac) / `Ctrl+K` (Windows/Linux), ou bouton FAB 🔍 bottom-right.
+- **Modal centré** (max-width 680px, max-height 70vh, backdrop blur).
+- **Recherche live** (debounce 100ms).
+- **Résultats** : icône + titre fiche + section pertinente + extrait surligné (`<mark>`) + score.
+- **Navigation clavier** : ↑↓ navigue, Enter ouvre, Esc ferme.
+- **Recherches récentes** (5 max) en localStorage `cas-in-search-recent`.
+- **Deep-linking** : si la section a un `id`, le lien ouvre directement à l'ancre (`fiche.html#section-id`).
+- **Cohérent dark/light** via `[data-theme="light"]` selectors.
+
+### Tests runtime
+
+Sur un panel de **20 requêtes représentatives**, toutes retournent les bonnes fiches avec scores et snippets pertinents :
+
+```
+"RAM"                           → Acquisition Mémoire RAM (160), Mémoire Internals (139), Volatility (78)
+"mémoire vive"                  → mêmes résultats (synonymes)
+"comment analyser une RAM ?"    → Acquisition Mémoire (61) [stopwords filtrés]
+"volatlity" (faute)             → Volatility 3 (4.5) [fuzzy match]
+"Ed Skoudis"                    → cmd_windows › Intrusion Discovery (46.5)
+"ip link"                       → cmd_linux › Réseau (79.5)
+"4624 type 10"                  → lateral_movement › RDP (129), logs_windows (90)
+"EXIF metadata"                 → Métadonnées Avancées (249)
+"récupérer fichiers supprimés"  → Data Carving (249)
+"forensic mobile"               → Mobile Forensics (195) [synonymes EN↔FR]
+"WhatsApp database"             → Messagerie IM (91), SQLite Internals (61)
+"NTFS MFT"                      → NTFS (184), ReFS (64), MAC Times (52)
+"comment trouver les processus malveillants" → cmd_linux + Mémoire + cmd_windows
+```
+
+### Ajouté
+
+- `js/components/fiche-search.js` (466 L, 17 KB) — moteur de recherche v2.
+- `js/components/search-modal.js` (508 L, 18 KB) — modal Cmd+K.
+- `scripts/build_search_index.py` (218 L) — générateur d'index full-text.
+- `data/search-index.json` (581 KB) — index pré-calculé des 109 fiches × 875 sections.
+
+### Modifié
+
+- `fiches/index.html` — chargement des 2 nouveaux scripts ; ancien `filterFiches()` conservé en fallback minimal.
+- 117 autres pages HTML (109 fiches + 8 pages racine) — chargement des 2 scripts via `<script defer>`.
+- `sw.js` v51 → v52 — ajout des 3 nouveaux assets aux STATIC_ASSETS pour cache offline.
+
+### À noter
+
+- L'index est **pré-calculé à la build** (run manuel de `python3 scripts/build_search_index.py`) : pas de coût CPU côté navigateur.
+- L'index est **chargé une seule fois** au boot via fetch + pré-normalisé en mémoire pour des recherches très rapides.
+- Les `data-keywords` des cards (générés par `build_index.py`) restent utilisés en fallback côté page d'index.
+
+---
+
 ## [2.17] — 2026-05-02
 
 Cette version finalise le **mode dark/light** sur l'ensemble du site et règle quelques entrées orphelines du manifest.
