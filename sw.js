@@ -1,4 +1,21 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v54 : v2.20 — Quick wins : factorisation, a11y, cohérence index
+//       NEW js/components/fiche-common.js (171 L) : factorisation des
+//       comportements UI répétés sur toutes les fiches (scroll-progress,
+//       back-top, quiz-reveal, collapsibles, tabs génériques data-tab-*).
+//       Économie : ~54 KB en supprimant la duplication inline (~92 patterns
+//       retirés sur 109 fiches via scripts/migrate_fiche_common.py).
+//       Bénéfice supplémentaire : la barre scroll/back-top fonctionne
+//       maintenant sur les fiches qui n'avaient PAS le JS associé.
+//       NEW scripts/build_scenes_index.py : régénère scenes/index.json
+//       à chaque modif de scène (5 scènes orphelines retrouvées,
+//       1 fantôme nettoyée). counts.json passe de 93 → 97 scènes.
+//       NEW scripts/add_h1_to_fiches.py : ajout d'un <h1> sur les
+//       15 fiches qui n'en avaient pas (a11y + SEO). 109/109 fiches
+//       ont maintenant un h1 unique avec style cohérent.
+//       Workflow GitHub Actions : étapes ajoutées (build_scenes_index +
+//       migrate_fiche_common). Tout reste auto à chaque commit.
+//
 // v53 : v2.19 — Liens croisés Q ↔ Fiche ↔ TP ↔ Scènes (navigation transverse)
 //       NEW data/cross-links.json (35 KB) : mapping généré par
 //       scripts/build_cross_links.py — 1730 liens fiches→questions,
@@ -89,7 +106,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v53';
+const CACHE_VERSION = 'cas-in-v54';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -177,6 +194,7 @@ const STATIC_ASSETS = [
   './js/components/fiche-search.js',
   './js/components/search-modal.js',
   './js/components/fiche-related.js',
+  './js/components/fiche-common.js',
   './data/search-index.json',
   './data/cross-links.json',
 ];
