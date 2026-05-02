@@ -1,10 +1,12 @@
-name: Sync fiches index, search-index, cross-links & inject fiche-related
+name: Sync fiches index, search-index, cross-links, scenes-index & inject components
 
-# Régénère TOUTES les données dérivées à chaque ajout/modification de fiche :
-#   1. Injecte fiche-related.js dans les nouvelles fiches qui ne l'ont pas
-#   2. Régénère fiches/index.html (cards d'accès)
-#   3. Régénère data/search-index.json (moteur de recherche full-text)
-#   4. Régénère data/cross-links.json (liens Q ↔ Fiche ↔ TP ↔ Scènes)
+# Régénère TOUTES les données dérivées à chaque ajout/modification de fiche ou scène :
+#   1. Injecte fiche-related.js dans les fiches qui ne l'ont pas
+#   2. Injecte fiche-common.js dans les fiches qui ne l'ont pas
+#   3. Régénère scenes/index.json depuis les scènes individuelles
+#   4. Régénère fiches/index.html (cards d'accès)
+#   5. Régénère data/search-index.json (moteur de recherche full-text)
+#   6. Régénère data/cross-links.json (liens Q ↔ Fiche ↔ TP ↔ Scènes)
 #
 # Fait tout en un seul job pour éviter les race conditions entre workflows
 # parallèles qui voudraient committer les mêmes fichiers.
@@ -19,7 +21,9 @@ on:
       - 'scripts/build_index.py'
       - 'scripts/build_search_index.py'
       - 'scripts/build_cross_links.py'
+      - 'scripts/build_scenes_index.py'
       - 'scripts/inject_fiche_related.py'
+      - 'scripts/migrate_fiche_common.py'
       - '.github/workflows/sync-fiches-index.yml'
   workflow_dispatch:  # exécution manuelle depuis l'onglet Actions
 
@@ -54,14 +58,36 @@ jobs:
       # ─── 1) Inject fiche-related.js dans les fiches qui ne l'ont pas ───
       - name: Inject fiche-related.js into new fiches
         run: |
-          python3 scripts/inject_fiche_related.py
+          if [ -f scripts/inject_fiche_related.py ]; then
+            python3 scripts/inject_fiche_related.py
+          else
+            echo "⚠ scripts/inject_fiche_related.py introuvable, skip"
+          fi
 
-      # ─── 2) Régénérer fiches/index.html ───
+      # ─── 2) Inject fiche-common.js + nettoyer patterns inline répétés ───
+      - name: Migrate fiches to fiche-common.js
+        run: |
+          if [ -f scripts/migrate_fiche_common.py ]; then
+            python3 scripts/migrate_fiche_common.py
+          else
+            echo "⚠ scripts/migrate_fiche_common.py introuvable, skip"
+          fi
+
+      # ─── 3) Régénérer scenes/index.json depuis les scènes individuelles ───
+      - name: Rebuild scenes/index.json
+        run: |
+          if [ -f scripts/build_scenes_index.py ]; then
+            python3 scripts/build_scenes_index.py
+          else
+            echo "⚠ scripts/build_scenes_index.py introuvable, skip"
+          fi
+
+      # ─── 4) Régénérer fiches/index.html (cards d'accès) ───
       - name: Rebuild fiches/index.html
         run: |
           python3 scripts/build_index.py
 
-      # ─── 3) Régénérer data/search-index.json (moteur de recherche) ───
+      # ─── 5) Régénérer data/search-index.json (moteur de recherche) ───
       - name: Rebuild data/search-index.json
         run: |
           if [ -f scripts/build_search_index.py ]; then
@@ -70,7 +96,7 @@ jobs:
             echo "⚠ scripts/build_search_index.py introuvable, skip"
           fi
 
-      # ─── 4) Régénérer data/cross-links.json (liens transverses) ───
+      # ─── 6) Régénérer data/cross-links.json (liens transverses) ───
       - name: Rebuild data/cross-links.json
         run: |
           if [ -f scripts/build_cross_links.py ]; then
@@ -79,7 +105,7 @@ jobs:
             echo "⚠ scripts/build_cross_links.py introuvable, skip"
           fi
 
-      # ─── 5) Configuration git + commit groupé ───
+      # ─── 7) Configuration git + commit groupé ───
       - name: Commit & push regenerated files (with retry on conflict)
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
@@ -89,6 +115,7 @@ jobs:
           git add fiches/index.html fiches/*.html 2>/dev/null || true
           git add data/search-index.json 2>/dev/null || true
           git add data/cross-links.json 2>/dev/null || true
+          git add scenes/index.json 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "→ Aucun changement, rien à committer"
@@ -98,7 +125,7 @@ jobs:
           CHANGED=$(git diff --cached --name-only | tr '\n' ' ')
           echo "Files changed: $CHANGED"
 
-          git commit -m "chore: auto-rebuild fiches/index, search-index, cross-links + inject fiche-related"
+          git commit -m "chore: auto-rebuild indexes + inject components"
 
           # Retry logic : push avec rebase si conflit avec un autre workflow
           for i in 1 2 3; do
