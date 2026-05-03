@@ -4,6 +4,75 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.34] — 2026-05-03
+
+Release de **mise à niveau du corpus**, sans nouveau scénario. **Bloc 6 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique continue : opération multi-juridictions Eurojust / traite EH / vishing aînés / malware fileless / SCADA hydroélectrique. Le corpus reste à 110 scènes ; le catalogue PNJ reste à 30 personnages (réutilisation maximale des 8 transposables existants).
+
+### Ajouté — Retrofit bloc 6 (5 anciennes scènes adaptées)
+
+| Scène | Steps | Difficulté | NPCs assignés | Bifurcation marquée |
+|---|---|---|---|---|
+| `eu-endgame-botnets` | 5 | hard | `fbi_legat_bern`, `nicolet` | step 0 #1 (catastrophe multi-juridictions) |
+| `eu-traite-roumain` | 5 | hard | `fbi_legat_bern`, `nicolet` | step 0 #1 (catastrophe trauma-informed) |
+| `faux-policiers` | 4 | medium | `ge_prosecutor_cyber`, `forensics_lead_zh` | step 0 #1 (catastrophe communication précoce) |
+| `fileless` | 8 | hard | `forensics_lead_zh`, `ciso_logitech` | step 0 #0 (catastrophe forensique RAM) |
+| `hydro-valais` | 5 | hard | `ofcs_coordinator`, `forensics_lead_zh` | step 4 #1 et #2 → 'end' explicite |
+
+**Diversification thématique du bloc 6** : (a) **Opération Endgame botnets** (Eurojust + FR-DE-NL, sinkholes, droppers SmokeLoader/IcedID/Pikabot/BumbleBee), (b) **Réseau roumain traite EH** (DIICOT + opération Bukareszt, Convention de Varsovie art. 13 période rétablissement obligatoire 30-90 jours), (c) **Vishing aînés "faux policier"** (NE 2025, scripts WhatsApp, coursiers cash, MLAT CH-FR), (d) **Malware fileless bancaire** (Cobalt Strike T1055 MITRE ATT&CK, beaconing 60s, exfiltration .pst Outlook), (e) **SCADA hydroélectrique** (barrage Mauvoisin VS, Val de Bagnes 10'000 habitants en aval, OSP-IC énergie).
+
+**Note de sélection** : 2 scènes initialement proposées (`fr-gendarmerie`, `gestionnaire-fortune`) n'existent pas dans le corpus. Elles ont été remplacées par `fileless` (malware fileless RAM-only) et `hydro-valais` (SCADA hydroélectrique CII) — thématiques distinctes mais cohérentes avec la diversification recherchée.
+
+### Pas de nouveau PNJ
+
+Cette release exploite pleinement le catalogue de 30 PNJ existant, en privilégiant la réutilisation des **8 PNJ transposables** (forensics_lead_zh, ge_prosecutor_cyber, pjf_undercover_lead, fim_genealogist, fr_prosecutor_cyber, cicr_dpo, ofs_rssi_fedch, ddps_general_counsel). Deuxième release consécutive (après v2.32) sans création de PNJ — confirmant que le catalogue atteint la masse critique nécessaire.
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 43 scènes touchées par v2.24 → v2.34 (était 38). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v67 → v68
+
+Header v2.34 documentant le retrofit bloc 6. Pas de nouveau PNJ.
+
+### Statistiques v2.34
+
+| Indicateur | v2.33 | v2.34 |
+|---|---|---|
+| Scènes totales | 110 | **110** (inchangé) |
+| Scènes avec NPCs assignés | 33 | **38** (+5) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 33 | **38** (+5) |
+| Scènes avec sources presse réelles | 17 | **18** (+1 — eu-endgame-botnets phase 3 documentée) |
+| PNJ catalogue | 30 | **30** (inchangé) |
+| PNJ transposables (multi-scènes) | 8 | 8 (inchangé) |
+| Cantons couverts | 14/26 | 14/26 (inchangé) |
+| Service Worker | v67 | **v68** |
+
+### Notes éditoriales
+
+**Sur la scène `eu-endgame-botnets`.** Scène hard documentée par l'opération Endgame réelle (mai 2024 puis phases 2-3 en 2025), coalition multi-juridictions Eurojust contre les botnets droppers (SmokeLoader, IcedID, Pikabot, BumbleBee, TrickBot). La scène modélise les questions stratégiques d'une participation suisse à une opération coordonnée à la minute près sur 4+ pays. Le marqueur souligne le piège classique de l'unilatéralisme : avancer ou retarder les actions suisses sans coordination Eurojust détruit l'effet de surprise multi-juridictions et expose les agents/sources des autres pays.
+
+**Sur la scène `eu-traite-roumain`.** Scène hard très difficile car elle articule procédure pénale standard et **doctrine victim-centered** (Convention de Varsovie + Directive UE 2011/36 + Loi suisse LEH). Le marqueur souligne que les 11 victimes identifiées (femmes roumaines exploitées dans des domiciles soleurois) sont d'abord des **victimes**, pas des suspectes ni des témoins à presser. La période de rétablissement obligatoire (30-90 jours, art. 13 Convention de Varsovie) est OBLIGATOIRE — elle ne peut être contournée par l'urgence procédurale. La doctrine trauma-informed exige interprètes roumanophones qualifiés, hébergement LAVI sécurisé, soins médicaux + psychologue spécialisé, et audition uniquement quand les victimes sont prêtes.
+
+**Sur la scène `faux-policiers`.** Scène medium très d'actualité (vishing aînés en explosion en Suisse romande 2024-2026). Le scénario est documenté par le cas réel des opérations « faux policier » à Neuchâtel et Vaud avec scripts WhatsApp standardisés en plusieurs langues, coursiers payés au pourcentage venant collecter le cash chez les victimes, et organisateurs souvent basés à l'étranger (France, Pologne, Israël). Le marqueur souligne le piège classique : communiquer publiquement le mode opératoire avant la coordination internationale alerte les organisateurs et fait migrer leur infrastructure téléphonique en quelques heures.
+
+**Sur la scène `fileless`.** Scène hard à 8 steps, l'une des plus longues du corpus. Documentée par les attaques bancaires fileless de 2018-2024 (Cobalt Strike + injection mémoire T1055 MITRE ATT&CK + beaconing HTTPS + exfiltration .pst Outlook ciblée). Le marqueur initial est crucial : éteindre le système compromis efface la RAM où réside exclusivement le malware fileless — la preuve disparaît définitivement. La doctrine forensique 2025 pour fileless est : capture RAM live + isolation logique sans extinction.
+
+**Sur la scène `hydro-valais`.** Scène hard sur infrastructure critique au sens OSP-IC (Ordonnance sur la protection des infrastructures critiques) — secteur énergie. Le scénario modélise une compromission SCADA partielle d'un barrage de classe I (Mauvoisin, Val de Bagnes, capacité utile 211.5 millions m³) où les commandes vannes sont compromises mais l'opérateur a refusé manuellement à temps. La question stratégique : maintenir le barrage en service standard ou basculer en mode dégradé local manuel ? Le marqueur souligne la doctrine OFEN/OFCS : compromission cyber avérée d'un barrage classe I = basculement obligatoire mode dégradé.
+
+**Sur le rythme du retrofit.** Avec 6 blocs livrés en 6 versions (v2.29 à v2.34), 38 scènes du corpus historique sont désormais équipées de NPCs et marqueurs narratifs (sur 110 totales). La progression est de **35 % du corpus mis à niveau**. Reste **~67 scènes** à traiter (~13 blocs au rythme actuel). La mécanique est désormais bien rodée : les blocs sans nouveau scénario (v2.31, v2.32, v2.34) sont les plus efficaces (~2-3h éditoriales par bloc).
+
+### Prochaines évolutions possibles
+
+```
+v2.35  Retrofit bloc 7 (5 anciennes scènes, à proposer)
+       Candidats par diversification : flubot-bec-cascade, frontieres,
+                                        harcelement-ne, ia-medicale-genome,
+                                        intrusion-stable
+v2.36  Retrofit bloc 8
+v2.37  Examen blanc 50q/90 min
+v2.38  Heatmap canton enrichie + badges par canton
+```
+
 ## [2.33] — 2026-05-03
 
 Cette version ajoute **1 nouveau scénario suisse inspiré d'une affaire d'État réelle** (espionnage interne au SRC via Kaspersky 2015-2020, révélée en juin 2025) et enchaîne le **bloc 5 du retrofit du corpus historique**. Le corpus passe à **110 scènes** et le catalogue PNJ à **30 personnages**.
