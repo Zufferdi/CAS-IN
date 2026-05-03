@@ -110,6 +110,12 @@ def main() -> None:
             SCENES_DIR / "banquier-fantome.json",
             SCENES_DIR / "boutique-fantome.json",
             SCENES_DIR / "clone-vocal.json",
+            # v2.31 retrofit bloc 3 (5 scènes)
+            SCENES_DIR / "burgenstock-neutralite.json",
+            SCENES_DIR / "cicr_2022.json",
+            SCENES_DIR / "cistec-2025-sante.json",
+            SCENES_DIR / "cloud-aws-s3-leak.json",
+            SCENES_DIR / "comparis_2021.json",
         ]
 
     has_error = False
