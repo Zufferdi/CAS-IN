@@ -4,6 +4,193 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.24] — 2026-05-03
+
+Cette version ajoute **5 nouvelles scènes suisses** (focus Fribourg + hockey) et une **fonctionnalité majeure de mode lecture continue** entre fiches.
+
+### Ajouté — 5 nouvelles scènes suisses (97 → 102)
+
+#### `gruyere-coop-affinage-stuxnet` 🧀 — *Sabotage IIoT en pays fribourgeois*
+
+```
+Lieu       : Coopérative laitière de Bulle (FR)
+Difficulté : hard
+Atmosphère : industriel
+Tags       : MODBUS, IIoT, SABOTAGE, INFRASTRUCTURE CRITIQUE,
+             AOP, FRIBOURG, ENTRAIDE FR-CH
+```
+
+Un employé licencié 3 mois plus tôt a laissé une "bombe logique" dans le système de pilotage des cuves d'affinage du Gruyère AOP. Sondes de température altérées de ±0.3°C, 6 mois de production en jeu (4M CHF). VPN encore actif post-licenciement (faute RH), connexions depuis Annecy. Articles 144bis CP (détérioration de données), 143 CP, 162 CP. Coordination Schengen / CCPD / IPI pour l'AOP.
+
+#### `epfl-recherche-lai-fuite-chine` 🎓 — *Espionnage IA, focus DPO*
+
+```
+Lieu       : EPFL — bureau du DPO, bâtiment BC (Lausanne)
+Difficulté : expert
+Atmosphère : académique
+Tags       : IA, ESPIONNAGE, VAUD, DROIT PÉNAL, LPD, ENTRAIDE, RECHERCHE
+```
+
+Un doctorant chinois a exfiltré 18 mois de code source d'un modèle d'IA médicale (financé par Innosuisse 2.4M CHF). Vous êtes le DPO. Tension liberté académique (LERI) vs secret commercial, EIMP face à la Chine (pas de MLAT), pression DFAE, art. 162 CP, LPD revisée art. 24.
+
+#### `epfl-laboratoire-ia-medicale-chine` 🔬 — *Espionnage IA, focus laboratoire (bonus)*
+
+```
+Lieu       : EPFL — labo Pr. Schaffner, avenue Forel
+Difficulté : expert
+Atmosphère : académique
+Tags       : FORENSIQUE, IA, ESPIONNAGE, VAUD, EIMP, LPD, CRYPTO, GOUVERNANCE
+```
+
+Variante du même thème, focalisée sur la **réponse opérationnelle** côté laboratoire : préservation immédiate des preuves, choc et premières décisions critiques, refonte de la gouvernance recherche EPFL. Complémentaire du scénario DPO.
+
+#### `lugano-dpfl-mafia-finance` 💰 — *Blanchiment 'ndrangheta*
+
+```
+Lieu       : Lugano (TI)
+Difficulté : hard
+Atmosphère : feutré
+Tags       : LBA, MROS, BLANCHIMENT, NDRANGHETA, ENTRAIDE IT-CH,
+             SECRET BANCAIRE, TESSIN
+```
+
+28M CHF entre Lugano-Milan-Malte pour un client italien fiché anti-mafia. Tension LBA art. 9 (signalement) vs art. 47 LB (secret bancaire). Coopération avec la DDA italienne. Saisie de devices, chiffrement T2/Secure Enclave. Art. 305bis CP (blanchiment aggravé), art. 271 CP face aux carabinieri.
+
+#### `hcfr-bec-transfer-deepfake` 🏒 — *Deepfake hockey + BEC*
+
+```
+Lieu       : HC Fribourg-Gottéron — administration BCF Arena
+Difficulté : hard
+Atmosphère : tension sportive
+Tags       : BEC, DEEPFAKE, VOIX CLONÉE, CRYPTO, BUDAPEST,
+             NATIONAL LEAGUE, FRIBOURG, MROS
+```
+
+Mardi 14 janvier 23h47, en pleine fenêtre de transferts National League. Le DS reçoit un appel "urgent" du président — voix clonée à partir des conférences de presse YouTube. 380'000 CHF virés à un faux agent suédois, fonds en Estonie → Hong Kong → crypto-mixeur. Conférence de presse improvisée à 11h, match CHL contre Tampere à 19h45. Convention Budapest (entraide cybercriminalité avec Estonie ✓), pas de MLAT directe avec Hong Kong, art. 146 / 143bis / 251 CP.
+
+### Ajouté — Mode "lecture continue" entre fiches
+
+Nouvelle fonctionnalité qui transforme les **109 fiches isolées** en un **parcours pédagogique guidé**. En bas de chaque fiche, un bandeau apparaît avec :
+
+- **Navigation linéaire** : boutons "Précédent" et "Suivant" entre fiches de la même catégorie (ordre alphabétique du titre)
+- **Indicateur de progression** : "Acquisition · Fiche 3/24 · 12/24 lues (50%)"
+- **Barre de progression visuelle** dans la couleur du thème
+- **Section "Fiches connexes"** : top 4 fiches les plus proches (calcul Jaccard sur les questions partagées)
+- **Marqueur "Thème terminé ✓"** avec lien vers l'index quand on atteint la dernière fiche d'une catégorie
+
+Persistence dans `localStorage` (clé `fiche-reader.read`) : une fiche est marquée comme "lue" après **90 secondes** sur la page (suffisant pour ne pas compter un coup d'œil rapide). L'indicateur de progression se met à jour automatiquement.
+
+#### Nouveau — `js/components/fiche-reader.js` (382 LOC)
+
+Composant autonome qui :
+
+1. Lit l'URL pour identifier la fiche courante
+2. Charge le graphe `data/fiche-graph.json`
+3. Trouve le voisinage prev/next dans la même catégorie
+4. Construit le HTML du bandeau et l'injecte avant le footer (ou avant `#back-top`)
+5. Inclut son CSS thémé (compatible mode sombre via variables `--cyan`, `--green`, `--text`, `--surface`, etc.)
+6. Marque la fiche comme lue après 90s
+7. Expose `window.FicheReader` pour debug
+
+Aucune dépendance externe. ~6 KB minifié inline.
+
+#### Nouveau — `data/fiche-graph.json` (128 KB)
+
+Pré-calculé par `scripts/build_fiche_graph.py`. Structure :
+
+```json
+{
+  "categories": {
+    "acquisition": { "icon": "📥", "title": "Acquisition", "fiches": [...] },
+    "windows":     { "icon": "🪟", "title": "Windows", "fiches": [...] },
+    ...
+  },
+  "fiches": {
+    "acquisition.html": {
+      "category": "acquisition",
+      "category_index": 0,
+      "category_total": 24,
+      "prev": null,
+      "next": { "file": "...", "title": "...", "icon": "..." },
+      "related": [
+        { "file": "...", "title": "...", "shared": 18 },
+        ...
+      ]
+    },
+    ...
+  }
+}
+```
+
+**Stats** : 9 catégories couvrent 109 fiches. **98/109 fiches** ont ≥1 fiche connexe (les 11 isolées sont dans la catégorie "droit" qui partage peu de questions avec le reste).
+
+#### Nouveau — `scripts/build_fiche_graph.py` (170 LOC)
+
+Construit `data/fiche-graph.json` à partir de :
+- `data/manifest.json` (catégories + métadonnées des fiches)
+- `data/cross-links.json` (questions associées à chaque fiche)
+
+Algorithme :
+1. **Grouper** les fiches par catégorie
+2. **Trier** chaque catégorie par titre alphabétique
+3. **Calculer prev/next** pour chaque fiche dans sa catégorie
+4. **Calculer related** : top 5 fiches par similarité Jaccard sur les questions communes (seuil minimum 5 questions partagées)
+
+Idempotent. Régénéré automatiquement par le workflow GitHub Actions à chaque modif de manifest, fiche, ou questions.
+
+#### Nouveau — `scripts/inject_fiche_reader.py` (76 LOC)
+
+Injecte la balise `<script src="../js/components/fiche-reader.js" defer></script>` dans les 109 fiches HTML, juste après la balise existante de `fiche-common.js` (respecte l'ordre de chargement). Idempotent.
+
+### Modifié — Workflow GitHub Actions
+
+Étendu de **6 → 8 étapes** :
+
+```diff
+  1. Inject fiche-related.js
+  2. Migrate fiches to fiche-common.js
++ 3. Inject fiche-reader.js          [NEW]
+  4. Rebuild scenes/index.json
+  5. Rebuild fiches/index.html
+  6. Rebuild data/search-index.json
+  7. Rebuild data/cross-links.json
++ 8. Rebuild data/fiche-graph.json   [NEW]
+  9. Commit & push (avec retry)
+```
+
+Trigger ajouté : modifications de `scripts/build_fiche_graph.py` ou `scripts/inject_fiche_reader.py` déclenchent aussi le pipeline.
+
+### Modifié — Service Worker v57 → v58
+
+Nouveaux assets ajoutés au cache :
+- `./js/components/fiche-reader.js`
+- `./data/fiche-graph.json`
+
+### Statistiques v2.24
+
+| Indicateur | v2.23 | v2.24 |
+|---|---|---|
+| Scènes | 97 | **102** (+5) |
+| Scènes Fribourg | 1 | **3** (+2) |
+| Scènes hockey | 0 | **1** |
+| Fiches | 109 | 109 |
+| Fiches avec mode lecture | 0 | **109** |
+| Fiches avec voisinage Jaccard | 0 | **98** |
+| Catégories navigables | 0 | **9** |
+| Workflow étapes | 6 | **8** |
+| Service Worker | v57 | **v58** |
+
+### Notes pédagogiques
+
+Les 5 nouvelles scènes ont été calibrées pour couvrir les **angles morts du syllabus existant** :
+
+- **Fribourg** : passe de 1 à 3 scènes (Bulle gruyère + BCF Arena hockey + EPFL côté DPO suisse)
+- **Hockey suisse** : première scène incorporant l'écosystème NL (HC Fribourg-Gottéron, sponsor BCF Banque, CHL, fenêtre de transferts IIHF)
+- **IA / espionnage chinois** : double angle (DPO institutionnel + chercheur opérationnel)
+- **Crime organisé italien en Suisse** : 'ndrangheta + LBA + secret bancaire tessinois (peu couvert auparavant)
+
+Le mode lecture continue a été conçu pour transformer le contenu existant en **parcours guidé**. Avant : 109 fiches isolées qu'on lit "au hasard". Après : 9 thèmes structurés où on peut "lire de A à Z" avec progression visible.
+
 ## [2.23] — 2026-05-02
 
 Cette version extrait un **module pilote** de `tp-engine.js` pour valider la méthodologie de split du plus gros fichier JS du repo (6786 LOC).
