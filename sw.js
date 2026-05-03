@@ -1,5 +1,89 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v66 : v2.32 — Retrofit bloc 4 (5 anciennes scènes adaptées)
+// v67 : v2.33 — Nouveau scénario SRC-Kaspersky (espionnage interne) +
+//               retrofit bloc 5 (5 anciennes scènes adaptées) + 1 PNJ
+//
+//       Nouveau scénario v2.33 (corpus 109 → 110) :
+//
+//         • src-fonctionnaire-russe-kaspersky (hard, BE/MPC)
+//             Pitch  : Affaire SRC-Kaspersky 2015-2020 révélée par
+//                      SRF Investigativ en juin 2025 ; Conseil fédéral
+//                      autorise enquête MPC le 30 juin 2025. Officier
+//                      SRC en chef équipe cyber aurait transmis des
+//                      données sensibles à Kaspersky → GRU via 3
+//                      entreprises (Kaspersky + "Bleu" Zurich + "Violette"
+//                      Tessin/Berne). Période 2015-2020, 2 alertes
+//                      services alliés (NSA + BfV) en 2020.
+//             Rôle   : Procureur fédéral cyber au MPC à Berne
+//             PNJ    : nicolet (procureur cyber MPC, réel),
+//                      src_director (fictif), ddps_general_counsel
+//                      (Aebischer, fictif transposable, ajout v2.33)
+//             Bif.   : step 0 #1 → 'end' (communication publique
+//                      nominative + qualification "trahison" art. 267
+//                      + détention provisoire = catastrophe procédurale
+//                      CEDH + rupture coopération NSA/BfV/BND)
+//             Tags   : SRC, Kaspersky, GRU, art. 267/271/272/320 CP,
+//                      LRens, art. 73 CPP secret enquête, art. 86 CPP
+//                      pièces classifiées, présomption innocence
+//                      (Allenet de Ribemont 1995), CRP préparée pour
+//                      témoignage déclassifié, doctrine responsabilité
+//                      fonctionnelle, GPDel parlementaire, bilan en
+//                      4 cercles (citoyens / parlement / exécutif /
+//                      alliés)
+//             Sources : RTS + SRF Investigativ + ICTjournal + 20min
+//                      + swissinfo + watson (juin-juillet 2025)
+//             Anonymisation : personnes réelles → M. X. (officier),
+//                      M. P. (ingénieur Kaspersky), Chefs A/B/C,
+//                      "Bleu"/"Violette" entreprises. Conseiller
+//                      fédéral Pfister mentionné par fonction.
+//
+//       Retrofit bloc 5 — 5 anciennes scènes adaptées :
+//
+//         • darkmarket_2021 (8 steps, hard) — Europol darknet ZH
+//             npcs=[pjf_undercover_lead, nicolet]
+//             Marqueur step 0 #0 (perquisition mal cadrée brûle
+//             coopération Europol + chaîne forensique crypto)
+//
+//         • deepfake-audio-garde-a-vue (5 steps, hard) — deepfake
+//             audio en interrogatoire enlèvement enfant
+//             npcs=[forensics_lead_zh, ge_prosecutor_cyber]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : conclusion publique definitive sans
+//             expertise forensique contradictoire = cassation appel
+//
+//         • delemont-forum (5 steps, easy) — Forum Cyber des
+//             Communes JU, sensibilisation
+//             npcs=[ofs_rssi_fedch, ofcs_coordinator]
+//             Marqueur step 1 #2 (message techno-anxiogène sans
+//             solutions concrètes décrédibilise et démotive)
+//
+//         • eu-crypto-kidnapping (5 steps, medium) — enlèvement-
+//             chantage rançon crypto Arc Lémanique GE/FR
+//             npcs=[ge_prosecutor_cyber, nicolet]
+//             Marqueur step 0 #1 (sous-estimer urgence transforme
+//             cellule active en cold case 24h)
+//
+//         • eu-cyber-trading-fraud (5 steps, medium) — fraude
+//             trading retraité 73 ans Schaffhouse
+//             npcs=[forensics_lead_zh, nicolet]
+//             Marqueur step 0 #1 (accueil sceptique = victimisation
+//             secondaire, victimes ne reviennent plus signaler)
+//
+//       1 nouveau PNJ ajouté à data/npcs.json (29 → 30) :
+//         • ddps_general_counsel (Aebischer, fictive transposable,
+//                                  conseillère juridique principale
+//                                  DDPS, expertise LRens + art. 271-
+//                                  272 + 320 CP + supervision SRC
+//                                  via GPDel)
+//
+//       Stats : 110 scènes / 30 PNJ / 33 scènes avec NPCs (8 v2.24
+//       + v2.28 + 5 retrofit bloc 1 + 2 v2.30 nouveaux + 5 retrofit
+//       bloc 2 + 5 retrofit bloc 3 + 5 retrofit bloc 4 + 1 v2.33
+//       nouveau + 5 retrofit bloc 5 - 3 doublons = 33 scènes au
+//       total avec NPCs).
+//
+//       Approche retrofit "par bloc de 5" : ~72 scènes restantes
+//       après v2.33. Reste ~14 blocs à retrofit.
+//
 //
 //       Version sans nouveau scénario, focalisée sur la mise à niveau
 //       systématique du corpus historique. Bloc 4 = diversification
@@ -643,7 +727,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v66';
+const CACHE_VERSION = 'cas-in-v67';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
