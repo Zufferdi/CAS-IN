@@ -116,6 +116,12 @@ def main() -> None:
             SCENES_DIR / "cistec-2025-sante.json",
             SCENES_DIR / "cloud-aws-s3-leak.json",
             SCENES_DIR / "comparis_2021.json",
+            # v2.32 retrofit bloc 4 (5 scènes)
+            SCENES_DIR / "conclusion.json",
+            SCENES_DIR / "coup-de-filet-europol-27-pays.json",
+            SCENES_DIR / "crypto-stalking-airtag-emirats.json",
+            SCENES_DIR / "dab-villaz.json",
+            SCENES_DIR / "deepfake-electoral.json",
         ]
 
     has_error = False
