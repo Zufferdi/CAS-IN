@@ -80,13 +80,18 @@ def main() -> None:
     if args:
         targets = [SCENES_DIR / f"{a}.json" for a in args]
     else:
-        # Liste des 5 nouvelles scènes v2.24
+        # Liste des scènes v2.24 + v2.28
         targets = [
+            # v2.24 (5 scènes)
             SCENES_DIR / "gruyere-coop-affinage-stuxnet.json",
             SCENES_DIR / "epfl-recherche-lai-fuite-chine.json",
             SCENES_DIR / "epfl-laboratoire-ia-medicale-chine.json",
             SCENES_DIR / "lugano-dpfl-mafia-finance.json",
             SCENES_DIR / "hcfr-bec-transfer-deepfake.json",
+            # v2.28 (3 scènes)
+            SCENES_DIR / "crypto-tinder-pig-butchering-vaud.json",
+            SCENES_DIR / "attentat-deja-couteau-mineur.json",
+            SCENES_DIR / "logitech-clop-zero-day-supply-chain.json",
         ]
 
     has_error = False
