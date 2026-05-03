@@ -2824,7 +2824,7 @@ function launchNextScene() {
 // ═══════════════════════════════════════════════════
 const CANTON_DATA = {
   GE: { name: "Genève", scenarios: ["sms-blasters","darkmarket_2021"] },
-  VD: { name: "Vaud", scenarios: ["ncmec-cypertip","lockbit-victime","comparis_2021","unine_2022","epfl-recherche-lai-fuite-chine","epfl-laboratoire-ia-medicale-chine"] },
+  VD: { name: "Vaud", scenarios: ["ncmec-cypertip","lockbit-victime","comparis_2021","unine_2022","epfl-recherche-lai-fuite-chine","epfl-laboratoire-ia-medicale-chine","crypto-tinder-pig-butchering-vaud","logitech-clop-zero-day-supply-chain"] },
   VS: { name: "Valais", scenarios: ["vetroz-akira","sati-bec","rajeunissement-ia","saxon-curatelle","competence-mpc-vs","hydro-valais"] },
   FR: { name: "Fribourg", scenarios: ["dab-villaz","gruyere-coop-affinage-stuxnet","hcfr-bec-transfer-deepfake"] },
   NE: { name: "Neuchâtel", scenarios: ["faux-policiers","harcelement-ne"] },
@@ -2834,7 +2834,7 @@ const CANTON_DATA = {
   SZ: { name: "Schwyz", scenarios: ["clone-vocal"] },
   TI: { name: "Tessin", scenarios: ["sati-bec","lugano-dpfl-mafia-finance"] },
   SG: { name: "Saint-Gall", scenarios: ["operation-alice","stgall-infiltration"] },
-  AG: { name: "Argovie", scenarios: ["operation-alice"] },
+  AG: { name: "Argovie", scenarios: ["operation-alice","attentat-deja-couteau-mineur"] },
   LU: { name: "Lucerne", scenarios: ["operation-alice"] },
   TG: { name: "Thurgovie", scenarios: ["operation-alice"] },
 };
