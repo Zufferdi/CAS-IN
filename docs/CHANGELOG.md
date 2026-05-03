@@ -4,6 +4,70 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.37] — 2026-05-03
+
+Release de **mise à niveau du corpus**, sans nouveau scénario. **Bloc 9 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique continue : forensique RAM Volatility / métadonnées EXIF / mineur étranger GAV / blanchiment LBA / NCMEC CyberTip. Le corpus reste à 110 scènes ; le catalogue PNJ reste à 30.
+
+### Ajouté — Retrofit bloc 9 (5 anciennes scènes adaptées)
+
+| Scène | Steps | Difficulté | NPCs assignés | Bifurcation marquée |
+|---|---|---|---|---|
+| `memory-forensics-volatility` | 5 | hard | `forensics_lead_zh`, `ciso_logitech` | step 4 #1 et #2 → 'end' explicite |
+| `metadata` | 3 | easy | `forensics_lead_zh`, `ge_prosecutor_cyber` | step 0 #0 (catastrophe EXIF brut) |
+| `mineur-etranger-garde-a-vue` | 5 | hard | `cicr_dpo`, `ge_prosecutor_cyber` | step 4 #1 et #2 → 'end' explicite |
+| `mros-banquier` | 4 | medium | `compliance_bs`, `ge_prosecutor_cyber` | step 3 #0 (catastrophe communication publique) |
+| `ncmec-cypertip` | 4 | medium | `fbi_legat_bern`, `pjf_undercover_lead` | step 1 #0 (catastrophe perquisition) |
+
+**Diversification thématique du bloc 9** : (a) **Forensique RAM Volatility 3** (APT cyber industriel semi-conducteurs, NIST SP 800-86, ENISA Good Practices), (b) **Métadonnées EXIF GPS** (photo Instagram, croisement Tours GSM + Meta logs, manipulation EXIF par ExifTool), (c) **MNA cambriolage + traite EH** (Lausanne, art. 139 ch. 3 CP + art. 182 CP, PPMin, CIDE art. 40, Convention de Varsovie), (d) **MROS-banquier** (art. 305ter CP négligence vs art. 305bis CP intentionnel, LBA Art. 6/9/10, dol éventuel), (e) **NCMEC CyberTip pédocriminalité** (art. 197 al. 4 et 5 CP, ICSE Interpol, capture RAM avant extinction).
+
+### Pas de nouveau PNJ — cinquième fois consécutive
+
+Cinquième release sans création de PNJ depuis v2.32. Le catalogue de 30 PNJ avec 8 transposables est désormais largement stabilisé pour le retrofit.
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 58 scènes touchées par v2.24 → v2.37 (était 53). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v70 → v71
+
+Header v2.37 documentant le retrofit bloc 9.
+
+### Statistiques v2.37
+
+| Indicateur | v2.36 | v2.37 |
+|---|---|---|
+| Scènes totales | 110 | **110** (inchangé) |
+| Scènes avec NPCs assignés | 48 | **53** (+5) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 48 | **53** (+5) |
+| PNJ catalogue | 30 | **30** (inchangé) |
+| Service Worker | v70 | **v71** |
+
+### Notes éditoriales
+
+**Sur la scène `memory-forensics-volatility`.** Scène hard dédiée à la **doctrine forensique RAM** dans une attaque APT contre un industriel suisse (semi-conducteurs, 3'400 employés). Les 5 steps explorent la décision capture-mémoire-avant-reboot vs. demande DG de redémarrer immédiatement, l'analyse Volatility 3 multi-axes, la qualification art. 273 CP (espionnage économique pour État étranger), la stratégie EIMP en 2 vagues (Singapour first / pays final), et le rapport forensique conforme NIST SP 800-86. Le marqueur souligne que conclure la procédure pénale uniquement sur les artefacts disque sans capture RAM est une lacune forensique majeure exploitable par la défense.
+
+**Sur la scène `metadata`.** Scène easy pédagogique sur **l'authentification forensique des métadonnées EXIF**. Question centrale : une photo Instagram avec coordonnées GPS EXIF prouve-t-elle la localisation du suspect ? Le marqueur souligne que les EXIF sont facilement manipulables (ExifTool en mode écriture, ré-encodage, applications fakeGPS) — leur valeur probatoire dépend de l'authentification forensique (timestamp NTP fiable, hash du fichier original sur l'iPhone saisi, cohérence avec les autres photos, croisement Tours GSM, croisement logs Instagram/Meta).
+
+**Sur la scène `mineur-etranger-garde-a-vue`.** Scène hard sur l'articulation **GAV mineur + suspicion de traite EH**. Arianit, MNA d'origine albanaise/kosovare, est interpellé pour cambriolage avec violence à Lausanne mais des éléments suggèrent qu'il agit sous contrainte de « Driton ». Le scénario explore : (1) le triage initial humanitaire/procédural, (2) la communication identifiante avant audition, (3) la qualification double victime ET auteur, (4) le placement protégé en foyer MNA-traite, (5) la note méthodologique pour la CCDJP. Le marqueur souligne que toute audition sans interprète qualifié + avocat de garde mineurs viole simultanément l'art. 6 CEDH, l'art. 30 al. 3 Cst, la PPMin, et la CIDE art. 40.
+
+**Sur la scène `mros-banquier`.** Scène medium qui distingue rigoureusement **art. 305ter CP (défaut de vigilance, négligence)** et **art. 305bis CP (blanchiment intentionnel, dol éventuel)**. Le scénario porte sur un gestionnaire de fortune genevois qui a accepté 21.5M CHF d'un « investisseur immobilier » mafieux, accusé deux ans plus tard par le MPC. Question juridique : qualification 305ter ou 305bis ? La doctrine moderne (Cassani, Schweizerisches Strafrecht 2024 + jurisprudence TF 6B_136/2018) impose la 305ter pour les négligences caractérisées, la 305bis pour les cas où le dol éventuel est démontré (red flags massifs et conscients).
+
+**Sur la scène `ncmec-cypertip`.** Scène medium sur le **cycle complet d'un CyberTip NCMEC** : signalement → triangulation forensique → ordonnance MP → perquisition → qualification graduée art. 197 CP. Le scénario porte sur un suspect domicilié dans le canton de Vaud, possible enseignant. Le marqueur souligne le danger d'une perquisition sans validation forensique préalable : si l'IP NCMEC est mal attribuée (CGNAT, erreur de mapping) la perquisition tombe sur la mauvaise personne — drame humain irréparable et catastrophe procédurale. La doctrine fedpol-NCMEC impose la triangulation préalable (hash, IP, cohérence comportementale).
+
+**Sur le rythme du retrofit.** Avec 9 blocs livrés en 9 versions (v2.29 à v2.37), 53 scènes du corpus historique sont désormais équipées de NPCs et marqueurs narratifs (sur 110 totales). La progression est de **48 % du corpus mis à niveau** — quasiment la moitié. Reste **~52 scènes** à traiter (~10 blocs au rythme actuel).
+
+### Prochaines évolutions possibles
+
+```
+v2.38  Retrofit bloc 10 (5 anciennes scènes, à proposer)
+       Candidates par diversification : noname_2023, operation-alice,
+                                         osint-licite, palais_federal,
+                                         perquisition-conjugale
+v2.39  Retrofit bloc 11
+v2.40  Examen blanc 50q/90 min
+v2.41  Heatmap canton enrichie + badges par canton
+```
+
 ## [2.36] — 2026-05-03
 
 Release de **mise à niveau du corpus**, sans nouveau scénario. **Bloc 8 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique continue : forensique IP / vishing JU 1.5M / deepfake personnalité publique / LockBit ransomware / coordination LSI-LPD timing. Le corpus reste à 110 scènes ; le catalogue PNJ reste à 30.
