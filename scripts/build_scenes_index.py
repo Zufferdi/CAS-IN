@@ -30,7 +30,7 @@ INDEX_FILE = SCENES_DIR / 'index.json'
 
 # Champs à extraire pour chaque scène
 INDEX_FIELDS = ['id', 'title', 'icon', 'difficulty', 'atmosphere',
-                'tags', 'intro', 'alertLevel', 'legalRefs']
+                'tags', 'intro', 'alertLevel', 'legalRefs', 'npcs']
 
 
 def main():
