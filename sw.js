@@ -1,4 +1,52 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v60 : v2.26 — Gamification scènes : C (Timer) + D (Branches) + E (PNJ) + H (Achievements)
+//
+//       FEATURE C — Timer de stress (mode Procureur, déjà existant)
+//         Documenté comme la fonctionnalité de timer opt-in. Activable via
+//         le toggle "Mode Procureur" dans le lobby des scènes. Durée par
+//         difficulté : 45s (easy), 60s (medium), 75s (hard), 90s (expert).
+//
+//       FEATURE D — Embranchements narratifs (moteur existant exploité)
+//         Le moteur scene-app supportait déjà `choice.next` non-linéaire
+//         et `next: 'end'` (fin anticipée). Première vraie bifurcation
+//         dans la pilote `gruyere-coop-affinage-stuxnet` step 1 :
+//           • OK (notification OSAV 4h) → step 2 (forensique normale)
+//           • Distracteur 2 (Interprofession seule) → SAUTE à step 4 (audit
+//             dégradé) sans passer par forensique + communication. Le
+//             feedback explique cette voie d'évitement au joueur.
+//         C'est le pattern de bifurcation pédagogique : un mauvais choix
+//         tôt change matériellement la suite.
+//
+//       FEATURE E — PNJ récurrents (NEW)
+//         • data/npcs.json (10 fiches) : 2 personnalités publiques réelles
+//           (Yves Nicolet procureur fédéral cyber, Stefan Blättler PG) +
+//           8 personnages fictifs liés aux scènes (Tinguely affineur Bulle,
+//           Délémont Pr. EPFL, Rotzetter président HCFR fictif, etc.)
+//         • js/components/scene-npcs.js (530 L) : panneau "Acteurs en
+//           présence" injecté dans le briefing, chips cliquables ouvrant
+//           une modale avec bio, expertise, contexte pédagogique, autres
+//           scènes où le PNJ apparaît, badge "réel/fictif".
+//         • Tracking : localStorage 'cas_npcs_met' alimente l'achievement
+//           npc_collector (rencontrer ≥8 PNJ différents).
+//         • 5 scènes v2.24 enrichies avec leurs PNJ assignés.
+//
+//       FEATURE H — Achievements canton + PNJ + thèmes (6 nouveaux)
+//         • fr_detective    🧀 — 3 scénarios fribourgeois ≥80%
+//         • ti_sherlock     🇮🇹 — 3 scénarios tessinois ≥80%
+//         • vd_procureur    ⚖️ — 5 scénarios vaudois ≥80%
+//         • apple_forensic  🍎 — 3 scénarios AFU/BFU iPhone-MacBook ≥80%
+//         • anti_deepfake   🎭 — Scénario deepfake résolu à ≥90%
+//         • npc_collector   👥 — Rencontrer ≥8 PNJ différents
+//         CANTON_DATA mis à jour avec les 5 scènes v2.24 (FR+2, VD+2, TI+1).
+//         Métriques ajoutées dans getStatsSnapshot() : canton80, apple_forensic_wins,
+//         deepfake_excellence, npcs_met.
+//
+//       SCRIPTS : build_scenes_index.py exporte désormais le champ `npcs`
+//                 dans scenes/index.json pour permettre l'index inversé
+//                 du composant scene-npcs.
+//
+//       Tests : tous passent. 47 achievements (41 quiz + 6 nouveaux scènes).
+//
 // v59 : v2.25 — Qualité des scènes : équilibrage des choix + corrections factuelles
 //
 //       PHASE 1 — Rééquilibrage des choix dans les 5 scènes v2.24 (25 steps).
@@ -226,7 +274,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v59';
+const CACHE_VERSION = 'cas-in-v60';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -322,9 +370,11 @@ const STATIC_ASSETS = [
   './js/components/fiche-related.js',
   './js/components/fiche-common.js',
   './js/components/fiche-reader.js',
+  './js/components/scene-npcs.js',
   './data/search-index.json',
   './data/cross-links.json',
   './data/fiche-graph.json',
+  './data/npcs.json',
 ];
 
 const OFFLINE_FALLBACK = './offline.html';
