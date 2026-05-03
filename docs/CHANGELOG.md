@@ -4,6 +4,81 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.32] — 2026-05-03
+
+Release de **mise à niveau du corpus**, sans nouveau scénario. **Bloc 4 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique continue : rédaction rapport / coopération européenne EUROPOL / IoT-stalking / fraude DAB / deepfake électoral. Le corpus reste à 109 scènes ; le catalogue PNJ reste à 29 personnages (réutilisation maximale des 7 transposables existants).
+
+### Ajouté — Retrofit bloc 4 (5 anciennes scènes adaptées)
+
+| Scène | Steps | Difficulté | NPCs assignés | Bifurcation marquée |
+|---|---|---|---|---|
+| `conclusion` | 5 | medium | `forensics_lead_zh`, `nicolet` | step 0 #0 (catastrophe rédactionnelle) |
+| `coup-de-filet-europol-27-pays` | 5 | expert | `fbi_legat_bern`, `nicolet` | step 4 #1 et #2 (next=-1 → 'end' explicite) |
+| `crypto-stalking-airtag-emirats` | 5 | hard | `ge_prosecutor_cyber`, `ofcs_coordinator` | step 4 #1 et #2 (next=-1 → 'end' explicite) |
+| `dab-villaz` | 5 | medium | `fr_prosecutor_cyber`, `forensics_lead_zh` | step 0 #1 (catastrophe initiale enquête) |
+| `deepfake-electoral` | 5 | hard | `ofcs_coordinator`, `src_director` | step 4 #1 (rupture calendrier démocratique) |
+
+**Diversification thématique du bloc 4** : (a) **rédaction de rapport forensique** (chaque mot compte devant le tribunal, rigueur reproductibilité), (b) **coopération multilatérale EUROPOL** (27 pays simultanés, gestion fuite presse, coordination communicative), (c) **IoT-stalking transfrontalier** (AirTag, ex-conjoint aux Émirats, CEDH Opuz, art. 181 + art. 179novies CP), (d) **fraude DAB physique-cyber** (attaque au gaz, art. 224 CP, coordination CH-FR EIMP), (e) **désinformation électorale par deepfake** (J-48h votation fédérale, doctrine OFCS de la résilience démocratique, refus du report).
+
+**Note** : la scène initialement proposée pour le bloc 4 (`deepfake-formation-rh`) n'existe pas dans le corpus actuel. Elle a été remplacée par `deepfake-electoral` (deepfake d'un Conseiller fédéral à J-48h d'une votation populaire fédérale), qui couvre une thématique similaire avec une dimension institutionnelle plus marquée.
+
+Pour `coup-de-filet-europol-27-pays` et `crypto-stalking-airtag-emirats`, conversion des `next=-1` historiques en `next='end'` explicites pour cohérence avec le moteur v2.24+. Étoffement substantiel des distracteurs anciens trop courts pour passer le seuil de balance 30%, et raccourcissement de quelques bons choix devenus disproportionnés au fil des étoffements précédents.
+
+### Pas de nouveau PNJ
+
+Cette release exploite pleinement le catalogue de 29 PNJ existant, en privilégiant la réutilisation des **7 PNJ transposables** (forensics_lead_zh, ge_prosecutor_cyber, pjf_undercover_lead, fim_genealogist, fr_prosecutor_cyber, cicr_dpo, ofs_rssi_fedch). C'est la première release de retrofit qui n'ajoute aucun PNJ — signe que le catalogue commence à atteindre la masse critique nécessaire pour couvrir la plupart des scénarios cantonaux et fédéraux suisses.
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 32 scènes touchées par v2.24/v2.28/v2.29/v2.30/v2.31/v2.32 (était 27). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v65 → v66
+
+Header v2.32 documentant le retrofit bloc 4. Pas de nouveau PNJ.
+
+### Statistiques v2.32
+
+| Indicateur | v2.31 | v2.32 |
+|---|---|---|
+| Scènes totales | 109 | **109** (inchangé) |
+| Scènes avec NPCs assignés | 23 | **28** (+5) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 23 | **28** (+5) |
+| Scènes avec sources presse réelles | 14 | **15** (+1 — comparis et CICR déjà comptés v2.31) |
+| PNJ catalogue | 29 | **29** (inchangé) |
+| PNJ transposables (multi-scènes) | 7 | 7 (inchangé) |
+| Cantons couverts | 14/26 | 14/26 (inchangé) |
+| Service Worker | v65 | **v66** |
+
+### Notes éditoriales
+
+**Sur la scène `conclusion`.** Cette scène est unique dans le corpus car elle ne traite pas d'un incident technique mais de la **rédaction du rapport forensique** post-incident. Elle est centrale pour les apprenants car la qualité du rapport conditionne la solidité du dossier au procès. Les 4 bifurcations 'end' préexistantes sont remarquables : elles modélisent les manières de tuer un dossier par un mauvais choix rédactionnel. Le marqueur ajouté souligne le principe-clé : **chaque affirmation doit être appuyée sur une preuve technique citée**, sinon le rapport sera démoli en appel. La rigueur rédactionnelle distingue les rapports tenus en appel des rapports cassés.
+
+**Sur la scène `coup-de-filet-europol-27-pays`.** Scène expert qui modélise les tensions stratégiques d'une opération multilatérale simultanée à grande échelle (27 pays, ~234 arrestations attendues, 14 mois de préparation). Les questions clés sont la **gestion d'une fuite presse de dernière minute** (avancer / reporter / continuer), la **localisation d'un suspect en cavale** (M. C. Zurich), et la **communication post-opération** (fedpol seul / EUROPOL central). Le scénario insiste sur la doctrine de **cohérence européenne préservée + visibilité nationale équilibrée** plutôt que la dichotomie maximale ou minimale.
+
+**Sur la scène `crypto-stalking-airtag-emirats`.** Scène hard qui explore la **limite des outils suisses face aux suspects extra-territoriaux**. M. R. (ex-conjoint, ressortissant suisse mais résidant aux Émirats) géolocalise Mme M. via un AirTag glissé dans son sac. Les questions juridiques : (a) compétence personnelle active art. 7 CP (ressortissant CH suisses), (b) coopération CH-UAE sans EIMP (pression diplomatique vs. acceptation d'impuissance), (c) demande Apple via canal LE pour historique d'appairage, (d) qualification art. 181 CP + art. 179novies CP par analogie pour traceurs IoT. Le marqueur souligne l'importance de la **doctrine CEDH Opuz v Turquie 2009** (obligation positive de protection effective des victimes de violences domestiques — c'est le suspect qu'il faut éloigner, pas la victime).
+
+**Sur la scène `dab-villaz`.** Scène medium documentée par le cas réel des attaques au gaz contre des DAB Raiffeisen et BCF dans la Glâne fribourgeoise (2022-2024). Le retrofit insiste sur la nécessité d'une **approche multi-source cyber** (vidéosurveillance routière + bornes téléphoniques + géolocalisation + Signal Telegram) pour résoudre ces dossiers DAB qui sont restés froids quand traités uniquement par enquête classique de gendarmerie. La coordination CH-FR via EIMP (les attaquants français passant la frontière) est un autre élément central.
+
+**Sur la scène `deepfake-electoral`.** Scène hard très d'actualité 2025-2026 (vidéo deepfake d'un Conseiller fédéral à J-48h d'une votation populaire fédérale). Les questions stratégiques : (a) résilience démocratique (refuser le report de la votation art. 34 LDP malgré la pression presse), (b) coordination cellule de crise (Chancellerie fédérale + OFCS + SRC + DDPS + DFAE), (c) communication forte du Conseil fédéral pour démentir le deepfake (vidéo authentique du conseiller en réponse), (d) demande aux plateformes (X, TikTok, WhatsApp) de retrait via art. 47 CPP, (e) attribution sans accusation publique précipitée. Le marqueur souligne la **doctrine de la résilience** plutôt que la **logique de la concession**.
+
+**Sur le rythme du retrofit.** Avec 4 blocs livrés en 4 versions (v2.29 à v2.32), 28 scènes du corpus historique sont désormais équipées de NPCs et marqueurs narratifs (sur 109 totales). La mécanique se stabilise : la durée moyenne d'un bloc de retrofit (5 scènes) est désormais de **2-3 heures éditoriales** environ, dont 30-50% sont consacrées à l'étoffement des distracteurs pour passer le linter de balance. Reste **~77 scènes** à traiter (~15 blocs au rythme actuel).
+
+### Prochaines évolutions possibles
+
+```
+v2.33  Retrofit bloc 5 (5 anciennes scènes, à proposer)
+       Candidates par diversification : darkmarket_2021, deepfake-audio-garde-a-vue,
+                                        delemont-forum, eu-crypto-kidnapping,
+                                        eu-cyber-trading-fraud
+v2.34  Retrofit bloc 6
+v2.35  Examen blanc 50q/90 min
+v2.36  Heatmap canton enrichie + badges par canton
+
+Scénarios PDF candidats restants :
+  • deepfake-conseiller-etat (Pierre-Yves Maillard, à anonymiser)
+  • src-fonctionnaire-russe-kaspersky (espionnage interne)
+```
+
 ## [2.31] — 2026-05-03
 
 Release de **mise à niveau du corpus historique**, sans nouveau scénario. **Bloc 3 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique maximale : diplomatie / humanitaire / santé / cloud public / ransomware. Le corpus reste à 109 scènes ; le catalogue PNJ passe à 29 personnages.
