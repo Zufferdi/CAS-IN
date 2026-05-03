@@ -122,6 +122,14 @@ def main() -> None:
             SCENES_DIR / "crypto-stalking-airtag-emirats.json",
             SCENES_DIR / "dab-villaz.json",
             SCENES_DIR / "deepfake-electoral.json",
+            # v2.33 nouveau (1 scène)
+            SCENES_DIR / "src-fonctionnaire-russe-kaspersky.json",
+            # v2.33 retrofit bloc 5 (5 scènes)
+            SCENES_DIR / "darkmarket_2021.json",
+            SCENES_DIR / "deepfake-audio-garde-a-vue.json",
+            SCENES_DIR / "delemont-forum.json",
+            SCENES_DIR / "eu-crypto-kidnapping.json",
+            SCENES_DIR / "eu-cyber-trading-fraud.json",
         ]
 
     has_error = False
