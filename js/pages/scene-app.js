@@ -1035,6 +1035,16 @@ const GLOBAL_BADGES = [
   { id: "tour_de_suisse", icon: "🌐", title: "Tour de Suisse",   desc: "Au moins 1 scénario par canton sur la carte",        check: (s) => s.cantons_visited >= s.cantons_total && s.cantons_total > 0 },
   { id: "perseverant",   icon: "🔁", title: "Persévérant",       desc: "Score amélioré de ≥20 points sur 3 scénarios",        check: (s) => s.improvements_20 >= 3 },
   { id: "unstoppable",   icon: "🔥", title: "Inarrêtable",       desc: "3 scénarios à ≥70% dans la même journée (×3 jours)",  check: (s) => s.combo_days >= 3 },
+  // ═══════════════════════════════════════════════════
+  // BADGES v2.26 — spécialités cantonales + PNJ + thèmes techniques
+  // (s'appuient sur scene_results, npcs.json, et les tags de scènes)
+  // ═══════════════════════════════════════════════════
+  { id: "fr_detective",   icon: "🧀", title: "Détective fribourgeois",  desc: "3 scénarios fribourgeois complétés ≥80%",      check: (s) => (s.canton80['FR'] || 0) >= 3 },
+  { id: "ti_sherlock",    icon: "🇮🇹", title: "Sherlock du Tessin",      desc: "3 scénarios tessinois complétés ≥80%",         check: (s) => (s.canton80['TI'] || 0) >= 3 },
+  { id: "vd_procureur",   icon: "⚖️", title: "Procureur vaudois",       desc: "5 scénarios vaudois complétés ≥80%",           check: (s) => (s.canton80['VD'] || 0) >= 5 },
+  { id: "apple_forensic", icon: "🍎", title: "Forensicien Apple",       desc: "3 scénarios AFU/BFU iPhone-MacBook ≥80%",      check: (s) => s.apple_forensic_wins >= 3 },
+  { id: "anti_deepfake",  icon: "🎭", title: "Anti-deepfake",           desc: "Scénario deepfake résolu à ≥90%",              check: (s) => s.deepfake_excellence >= 1 },
+  { id: "npc_collector",  icon: "👥", title: "Tour des protagonistes",  desc: "Rencontrer ≥8 PNJ différents dans les scènes", check: (s) => s.npcs_met >= 8 },
 ];
 
 function getStatsSnapshot() {
@@ -1094,6 +1104,37 @@ function getStatsSnapshot() {
     snap.cantons_visited = cantonsSeen;
     snap.cantons_total = Object.keys(CANTON_DATA).length;
   }
+
+  // v2.26 : métriques pour les badges spécialités cantonales + PNJ + thèmes
+  // canton80[CANTON] = nombre de scènes de ce canton complétées à ≥80%
+  snap.canton80 = {};
+  if (typeof CANTON_DATA !== 'undefined') {
+    Object.entries(CANTON_DATA).forEach(([code, canton]) => {
+      let n = 0;
+      canton.scenarios.forEach(sid => {
+        const r = results[sid];
+        if (r && r.pct >= 80) n++;
+      });
+      snap.canton80[code] = n;
+    });
+  }
+
+  // apple_forensic_wins : scènes EPFL (AFU/BFU MacBook) ou Lugano (iPhone) à ≥80%
+  // — on utilise une heuristique sur les tags/IDs car aucun champ explicite
+  const APPLE_SCENES = ['epfl-laboratoire-ia-medicale-chine', 'lugano-dpfl-mafia-finance'];
+  snap.apple_forensic_wins = APPLE_SCENES.filter(sid =>
+    results[sid] && results[sid].pct >= 80
+  ).length;
+
+  // deepfake_excellence : scène HCFR deepfake résolue à ≥90%
+  const r_hcfr = results['hcfr-bec-transfer-deepfake'];
+  snap.deepfake_excellence = (r_hcfr && r_hcfr.pct >= 90) ? 1 : 0;
+
+  // npcs_met : compteur cumulé de PNJ rencontrés (alimenté à chaque scène
+  // ouverte par le bridge scene-npcs ; lu depuis localStorage 'cas_npcs_met').
+  // Set unique stocké en JSON. Fallback 0 si jamais initialisé.
+  const npcsMetSet = lsGet('cas_npcs_met', []);
+  snap.npcs_met = Array.isArray(npcsMetSet) ? npcsMetSet.length : 0;
 
   return snap;
 }
@@ -1622,6 +1663,15 @@ function startScene(scene) {
   `;
 
   showScreen('briefing');
+
+  // ─── v2.26 : Hook panneau "Acteurs en présence" (scene-npcs.js) ───
+  // Idempotent + non-bloquant : si le composant n'est pas chargé ou
+  // si la scène n'a pas de champ `npcs`, rien ne s'affiche.
+  if (window.SceneNPCs && typeof window.SceneNPCs.injectInBriefing === 'function') {
+    setTimeout(() => {
+      try { window.SceneNPCs.injectInBriefing(scene); } catch (_) {}
+    }, 0);
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -2774,15 +2824,15 @@ function launchNextScene() {
 // ═══════════════════════════════════════════════════
 const CANTON_DATA = {
   GE: { name: "Genève", scenarios: ["sms-blasters","darkmarket_2021"] },
-  VD: { name: "Vaud", scenarios: ["ncmec-cypertip","lockbit-victime","comparis_2021","unine_2022"] },
+  VD: { name: "Vaud", scenarios: ["ncmec-cypertip","lockbit-victime","comparis_2021","unine_2022","epfl-recherche-lai-fuite-chine","epfl-laboratoire-ia-medicale-chine"] },
   VS: { name: "Valais", scenarios: ["vetroz-akira","sati-bec","rajeunissement-ia","saxon-curatelle","competence-mpc-vs","hydro-valais"] },
-  FR: { name: "Fribourg", scenarios: ["dab-villaz"] },
+  FR: { name: "Fribourg", scenarios: ["dab-villaz","gruyere-coop-affinage-stuxnet","hcfr-bec-transfer-deepfake"] },
   NE: { name: "Neuchâtel", scenarios: ["faux-policiers","harcelement-ne"] },
   JU: { name: "Jura", scenarios: ["delemont-forum","jura-vishing-1m"] },
   BE: { name: "Berne", scenarios: ["ruag_2016","palais_federal","deepfake-electoral"] },
   ZH: { name: "Zurich", scenarios: ["attribution","bitlocker","bitlocker_froid"] },
   SZ: { name: "Schwyz", scenarios: ["clone-vocal"] },
-  TI: { name: "Tessin", scenarios: ["sati-bec"] },
+  TI: { name: "Tessin", scenarios: ["sati-bec","lugano-dpfl-mafia-finance"] },
   SG: { name: "Saint-Gall", scenarios: ["operation-alice","stgall-infiltration"] },
   AG: { name: "Argovie", scenarios: ["operation-alice"] },
   LU: { name: "Lucerne", scenarios: ["operation-alice"] },
