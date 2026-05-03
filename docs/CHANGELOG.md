@@ -4,6 +4,118 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.43] — 2026-05-03
+
+**Diversification continue du casting** : 6 nouveaux PNJ thématiquement adaptés. **Bloc 15 du retrofit** (8 anciennes scènes adaptées). Le catalogue passe à **48 PNJ**.
+
+### Ajouté — 6 nouveaux PNJ dans `data/npcs.json` (42 → 48)
+
+| ID | Type | Rôle | Apparition principale |
+|---|---|---|---|
+| `whistleblower_lawyer` | Fictive **transposable** | Me Berisha, Avocate spécialisée droit du travail/lanceurs d'alerte | `whistleblower-ddps` |
+| `xplain_ofit_juriste` | Fictive | Mme Bühlmann, Directrice juridique OFIT | `xplain-lmp` |
+| `play_ransom_analyst` | Fictif **transposable** | M. Schöb, Analyste senior threat intel ransomware OFCS | `xplain`, `xplain-play` |
+| `zurich_airport_ciso` | Fictif | M. Locher, CISO Flughafen Zürich AG | `swissport_2022` |
+| `europol_jcat_analyst` | Fictif **transposable** | Mr. Lindgren, EC3 J-CAT senior, citoyen suédois | `infostealer-magnus` |
+| `bitlocker_forensic` | Fictif **transposable** | Dr. Häberli, Chercheur ETHZ cryptanalyse BitLocker | `bitlocker_froid` |
+
+**Diversification thématique des nouveaux PNJ** :
+- **Avocate whistleblowers** (Berisha) — première figure d'avocat·e privé·e dans le casting (à côté des procureur·e·s et juges déjà multiples)
+- **Direction juridique OFIT** (Bühlmann) — pivot LMP fédéral spécifique au cas Xplain
+- **Analyste threat intel** (Schöb) — distinct de `ofcs_coordinator` (coordination opérationnelle), spécialiste tracking opérateurs ransomware
+- **CISO aviation** (Locher) — distinct de `ciso_logitech` (consumer electronics), expertise IATA/ICAO Annex 17
+- **Europol J-CAT** (Lindgren) — première figure non-suisse opérationnelle dans le casting (citoyen suédois)
+- **Chercheur cryptanalyse** (Häberli, ETHZ) — distinct de tous les autres profils techniques (universitaire-opérationnel hybride)
+
+**4 nouveaux transposables** (catalogue total 15 → 19) : `whistleblower_lawyer`, `play_ransom_analyst`, `europol_jcat_analyst`, `bitlocker_forensic`. **`play_ransom_analyst` apparaît dans 2 scènes** du bloc 15 (xplain, xplain-play) — pivot threat intel ransomware du corpus.
+
+### Ajouté — Retrofit bloc 15 (8 anciennes scènes adaptées)
+
+| Scène | Steps | Difficulté | NPCs assignés (★ = nouveau) | Bifurcation marquée |
+|---|---|---|---|---|
+| `whistleblower-ddps` | 5 | hard | `whistleblower_lawyer`★, `ddps_general_counsel` | step 4 #1 et #2 → 'end' explicite |
+| `xplain` | 8 | hard | `ofs_rssi_fedch`, `play_ransom_analyst`★ | step 0 #0 (catastrophe inversion forensique) |
+| `xplain-lmp` | 5 | hard | `xplain_ofit_juriste`★, `pfpdt_inspector` | step 4 #1 et #2 → 'end' explicite |
+| `xplain-play` | 6 | hard | `play_ransom_analyst`★, `nicolet` | step 5 #0 et #2 → 'end' explicite |
+| `swissport_2022` | 5 | medium | `zurich_airport_ciso`★, `ofcs_coordinator` | step 0 #0 (catastrophe kill-switch hub) |
+| `infostealer-magnus` | 4 | medium | `europol_jcat_analyst`★, `fbi_legat_bern` | step 3 #0 et #2 → 'end' explicite |
+| `bitlocker_froid` | 8 | hard | `bitlocker_forensic`★, `forensics_lead_zh` | step 0 #0 (catastrophe estimation) |
+| `custody` | 3 | easy | `fim_xways_expert`, `forensics_lead_zh` | step 0 #0 (catastrophe revue par pair manquante) |
+
+**Diversification thématique du bloc 15** (8 thématiques distinctes) : (a) **Whistleblowing fédéral DDPS** (art. 22a LPers + 17a CP, jurisprudence ATF 145 I 73, Convention OCDE), (b) **Xplain affaire 2023 vue forensique** (907 Go fédéraux, gouvernance LMP, Dwell Time 3.5 mois), (c) **Xplain LMP supply chain fédérale** (résiliation contradictoire art. 41 LMP, TAF, GPDel), (d) **Xplain-Play darknet HOOGAN** (Task Force fedpol, fichage hooligans suisses compromis), (e) **Swissport BlackCat ZRH 2022** (cas réel, IATA + ICAO Annex 17, OFCS-CII aviation), (f) **Infostealers RedLine + META** (Op. Magnus octobre 2024, J-CAT coordination, 47'200 victimes CH), (g) **BitLocker à froid** (qualification mode actif TPM/PIN/recovery, ETHZ TPM sniffing 2023), (h) **Audit chaîne de custody** (revue par pair, doctrine NIST SP 800-86 + ENFSI BPM).
+
+**Cas particuliers** :
+- `xplain` (8 steps), `xplain-lmp`, `xplain-play` constituent une **trilogie cohérente** sur le cas réel Xplain 2023, vue sous 3 angles complémentaires (forensique OFCS, juridique OFIT, threat intel fedpol Task Force).
+- `swissport_2022` est documenté par le **cas réel BlackCat ransomware Swissport du 3 février 2022** à l'aéroport de Zurich (~280 vols matinaux impactés).
+- `infostealer-magnus` est documenté par l'**Operation Magnus du 28 octobre 2024** (Europol + Pays-Bas + FBI + 9 autres pays) qui a démantelé l'infrastructure des infostealers RedLine et META, avec 47'200 victimes suisses identifiées dans les bases C2 saisies.
+- `whistleblower-ddps` introduit la **doctrine art. 22a LPers + 17a CP** (exception au secret de fonction pour les lanceurs d'alerte de la Confédération) avec la jurisprudence TF récente (ATF 145 I 73 sur les conditions strictes : subsidiarité + intérêt public prépondérant + proportionnalité).
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 100 scènes touchées par v2.24 → v2.43 (était 92, +8). Toutes passent le seuil de balance 30%. **Le cap des 100 scènes équilibrées est franchi.**
+
+### Modifié — Service Worker v76 → v77
+
+Header v2.43 documentant les 6 nouveaux PNJ + le retrofit bloc 15.
+
+### Statistiques v2.43
+
+| Indicateur | v2.42 | v2.43 |
+|---|---|---|
+| Scènes totales | 110 | **110** (inchangé) |
+| Scènes avec NPCs assignés | 87 | **95** (+8) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 87 | **95** (+8) |
+| **Progression retrofit** | **79%** | **86%** ✨ |
+| **PNJ catalogue** | **42** | **48** ✨ (+6) |
+| PNJ réels | 8 | 8 (inchangé) |
+| PNJ fictifs | 34 | **40** (+6) |
+| PNJ transposables | 15 | **19** (+4) |
+| Service Worker | v76 | **v77** |
+
+### Notes éditoriales
+
+**Sur la création des 6 nouveaux PNJ.** Continuant la diversification entamée en v2.41-v2.42, cette release crée 6 PNJ adaptés aux thématiques du bloc 15 :
+
+1. **whistleblower_lawyer (Me Berisha)** : **première figure d'avocat·e privé·e** dans le casting (les autres avocat·e·s du corpus sont des magistrat·e·s ou DPO institutionnel·le·s). Spécialiste lanceurs d'alerte fédéraux, expertise art. 22a LPers + Convention OCDE + Directive UE 2019/1937. Co-fondatrice (fictive) du collectif romand-alémanique 'Alerte!'.
+
+2. **xplain_ofit_juriste (Mme Bühlmann)** : pivot juridique fédéral spécifique au cas Xplain. Distincte de tous les autres profils juridiques fédéraux (`ddps_general_counsel`, `pfpdt_inspector`, etc.) par son ancrage **OFIT supply chain LMP** plutôt que défense, données ou justice.
+
+3. **play_ransom_analyst (M. Schöb)** : référence **threat intelligence ransomware** spécifique. Distinct de `ofcs_coordinator` (coordination opérationnelle large) — Schöb est un spécialiste analyste qui suit individuellement les opérateurs Play, BlackCat, LockBit, Akira sur leurs LeakSites Tor onion. Apparaît dans 2 scènes (xplain + xplain-play).
+
+4. **zurich_airport_ciso (M. Locher)** : référence **aviation cyber** avec expertise IATA + ICAO Annex 17 + EASA. Distinct de tous les autres CISO du corpus par son ancrage hub aéroportuaire (Flughafen Zürich AG, 31M passagers annuels, infrastructure critique).
+
+5. **europol_jcat_analyst (Mr. Lindgren)** : **première figure non-suisse opérationnelle** dans le casting. Citoyen suédois, ancien Polismyndigheten, 14 ans Europol J-CAT à La Haye. Coordonne les ops multi-juridictions (Magnus, Endgame, Cronos, PowerOFF). Anglais courant, comprend FR/DE/IT.
+
+6. **bitlocker_forensic (Dr. Häberli)** : **profil hybride universitaire-opérationnel** (chercheur ETHZ + mandats fedpol). Distinct des autres experts forensiques (`forensics_lead_zh`, `fim_xways_expert`) par son ancrage **cryptanalyse académique** et son apport théorique sur BitLocker (papier USENIX Security 2023 fictif).
+
+**Sur la doctrine de transposabilité après v2.43.** Le catalogue compte maintenant **19 PNJ transposables** sur 48 (39.6%). Cette proportion est saine pour permettre la cohérence narrative cross-scénarios sans tomber dans la sur-utilisation des mêmes personnages. Les **29 PNJ non-transposables** sont des figures liées à un cas spécifique (Stadler, Swisscom, UniNE, IFC SG, Xplain, Swissport ZRH, etc.) qui auraient peu de sens dans d'autres scénarios.
+
+**Sur la trilogie Xplain.** Les scènes `xplain`, `xplain-lmp` et `xplain-play` constituent une trilogie cohérente sur l'**affaire Xplain 2023**, vue sous 3 angles complémentaires :
+- `xplain` : angle **forensique OFCS** (cartographie des 907 Go, qualification gouvernance, Dwell Time 3.5 mois)
+- `xplain-lmp` : angle **juridique OFIT** (LMP, résiliation contradictoire, GPDel + CDF + TAF)
+- `xplain-play` : angle **threat intel fedpol** (Task Force darknet, tracking Play, fichage HOOGAN compromis)
+
+Cette trilogie offre une **vision intégrée** du cas Xplain pour le programme CAS, avec 3 PNJ distincts (RSSI fedpol, juriste OFIT, analyste threat intel) qui peuvent être mobilisés ensemble ou séparément selon les modules pédagogiques.
+
+**Sur la scène `whistleblower-ddps`.** Scène hard introduisant la **doctrine art. 22a LPers + 17a CP** sur les lanceurs d'alerte de la Confédération. Le scénario porte sur M. R., 47 ans, ingénieur civil au DDPS, qui a découvert une violation présumée d'embargo (livraisons de matériel militaire suisse vers Russie/Iran via société-écran). Il consulte Me Berisha (whistleblower_lawyer) pour structurer sa démarche. Les 5 steps couvrent : voie CDF en priorité (vs presse vs démission), gestion de la mutation représailles, préparation entretien disciplinaire, défense art. 17a CP (intérêt public prépondérant), position politique sur la réforme du cadre. Le marqueur souligne le piège de la divulgation publique précoce sans démarches internes préalables.
+
+**Sur la scène `swissport_2022`.** Scène medium documentée par le **cas réel BlackCat (ALPHV) ransomware Swissport du 3 février 2022** à l'aéroport de Zurich. À 6h00, en pleine pointe matinale du hub ZRH, Swissport (opérateur services au sol : check-in, bagages, ravitaillement) détecte la compromission. Question critique : **kill-switch ou containment graduel ?** La doctrine OFCS-CII aviation impose une coordination en cellule de crise multi-acteurs (Swissport + Flughafen Zürich AG + Swiss + BAZL/FOCA + OFCS) avant tout containment majeur, car un kill-switch unilatéral à 6h00 paralyse le hub et provoque des cascades sur l'ensemble du trafic aérien européen.
+
+**Sur la scène `bitlocker_froid`.** Scène hard sur la **cryptanalyse opérationnelle BitLocker**. Le scénario porte sur un laptop saisi éteint, avec écran de demande de clé BitLocker, aucune clé trouvée dans l'appartement. Le MP demande à Dr. Häberli (bitlocker_forensic, ETHZ) une estimation de durée de décryptage. Question doctrinale : **caractérisation préalable du mode BitLocker actif** (TPM seulement, TPM+PIN, TPM+startup key, recovery password) avant toute estimation. Selon le mode actif, la stratégie change radicalement : TPM seul = exploitable via TPM sniffing (Black Hat 2023, USENIX Security 2023), TPM+PIN = brute-force PIN (4-20 chiffres), recovery password = cryptanalyse AES-256 inviolable. Le marqueur souligne le piège d'une estimation fantaisiste sans qualification préalable du mode.
+
+**Sur le rythme du retrofit.** Avec 15 blocs livrés en 15 versions (v2.29 à v2.43), 95 scènes du corpus historique sont équipées de NPCs et marqueurs (sur 110 totales). **Progression à 86%**. Reste **~15 scènes** à traiter (~2 blocs au rythme 8/bloc). Le **cap des 100% est désormais à portée pour v2.45**.
+
+### Prochaines évolutions possibles
+
+```
+v2.44  Retrofit bloc 16 (8 scènes)
+       Candidates par diversification : eu-france-travail, eu-free-leak,
+                                         eu-ghgo-ddos, eu-kidflix-stream,
+                                         eu-livestream-philippines, eu-revil-attribution,
+                                         evoting-cantonal, exit-suicide-assiste-conteste
+v2.45  Retrofit bloc 17 final (~7 scènes restantes) — ATTEINTE 100% ✨
+```
+
 ## [2.42] — 2026-05-03
 
 **Diversification continue du casting** : 6 nouveaux PNJ thématiquement adaptés. **Bloc 14 du retrofit** (8 anciennes scènes adaptées). Le catalogue passe à **42 PNJ**.
