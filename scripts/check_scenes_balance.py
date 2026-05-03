@@ -136,6 +136,12 @@ def main() -> None:
             SCENES_DIR / "faux-policiers.json",
             SCENES_DIR / "fileless.json",
             SCENES_DIR / "hydro-valais.json",
+            # v2.35 retrofit bloc 7 (5 scènes)
+            SCENES_DIR / "flubot-bec-cascade.json",
+            SCENES_DIR / "frontieres.json",
+            SCENES_DIR / "harcelement-ne.json",
+            SCENES_DIR / "ia-generative-faux-titres.json",
+            SCENES_DIR / "iot-camera-compromise.json",
         ]
 
     has_error = False
