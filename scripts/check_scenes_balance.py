@@ -148,6 +148,12 @@ def main() -> None:
             SCENES_DIR / "kks-deepfake.json",
             SCENES_DIR / "lockbit-victime.json",
             SCENES_DIR / "lsi-vs-lpd-timing.json",
+            # v2.37 retrofit bloc 9 (5 scènes)
+            SCENES_DIR / "memory-forensics-volatility.json",
+            SCENES_DIR / "metadata.json",
+            SCENES_DIR / "mineur-etranger-garde-a-vue.json",
+            SCENES_DIR / "mros-banquier.json",
+            SCENES_DIR / "ncmec-cypertip.json",
         ]
 
     has_error = False
