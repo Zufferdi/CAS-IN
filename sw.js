@@ -1,6 +1,62 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v67 : v2.33 — Nouveau scénario SRC-Kaspersky (espionnage interne) +
-//               retrofit bloc 5 (5 anciennes scènes adaptées) + 1 PNJ
+// v68 : v2.34 — Retrofit bloc 6 (5 anciennes scènes adaptées)
+//
+//       Version sans nouveau scénario, focalisée sur la mise à niveau
+//       systématique du corpus historique. Bloc 6 = diversification
+//       continue : opération multi-juridictions / traite EH / vishing
+//       aînés / malware fileless / SCADA hydroélectrique.
+//
+//       Retrofit bloc 6 — 5 anciennes scènes adaptées :
+//
+//         • eu-endgame-botnets (5 steps, hard) — Opération Endgame
+//             botnets droppers FR-DE-NL coordonnée Eurojust
+//             npcs=[fbi_legat_bern, nicolet]
+//             Marqueur step 0 #1 (avancer/retarder unilatéralement
+//             les actions suisses sans coordination Eurojust brûle
+//             l'opération multi-juridictions)
+//
+//         • eu-traite-roumain (5 steps, hard) — Réseau roumain
+//             traite EH Eurojust + DIICOT, opération Bukareszt
+//             npcs=[fbi_legat_bern, nicolet]
+//             Marqueur step 0 #1 (procéder sans coordination LAVI
+//             trauma-informed transforme victimes en suspectes ou
+//             témoins muets)
+//
+//         • faux-policiers (4 steps, medium) — Vishing aînés NE
+//             "faux policier coursier"
+//             npcs=[ge_prosecutor_cyber, forensics_lead_zh]
+//             Marqueur step 0 #1 (communication publique précoce
+//             alerte les organisateurs et fait migrer infra)
+//
+//         • fileless (8 steps, hard) — Malware fileless bancaire,
+//             RAM-only Cobalt Strike T1055
+//             npcs=[forensics_lead_zh, ciso_logitech]
+//             Marqueur step 0 #0 (extinction du système efface la
+//             RAM = preuve disparait définitivement)
+//
+//         • hydro-valais (5 steps, hard) — Barrage Mauvoisin
+//             SCADA compromis, Val de Bagnes >10k habitants en aval
+//             npcs=[ofcs_coordinator, forensics_lead_zh]
+//             Bif. step 4 #1 et #2 → 'end' (déjà en place)
+//             Marqueur : maintenir barrage en service standard
+//             après compromission SCADA viole doctrine OFEN/OFCS
+//             classe I.
+//
+//       Pas de nouveau PNJ cette release (réutilisation des 8 PNJ
+//       transposables existants).
+//
+//       Note : 2 scènes initialement proposées (fr-gendarmerie,
+//       gestionnaire-fortune) n'existent pas dans le corpus.
+//       Remplacées par 'fileless' (malware fileless bancaire) et
+//       'hydro-valais' (SCADA hydroélectrique CII), thématiques
+//       distinctes mais cohérentes avec la diversification.
+//
+//       Stats : 110 scènes / 30 PNJ / 38 scènes avec NPCs
+//       (33 v2.33 + 5 retrofit bloc 6).
+//
+//       Approche retrofit "par bloc de 5" : ~67 scènes restantes
+//       après v2.34. Reste ~13 blocs.
+//
 //
 //       Nouveau scénario v2.33 (corpus 109 → 110) :
 //
@@ -727,7 +783,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v67';
+const CACHE_VERSION = 'cas-in-v68';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
