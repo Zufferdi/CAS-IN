@@ -1,5 +1,64 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v62 : v2.28 — 3 nouveaux scénarios suisses inspirés du dossier de presse 2025
+// v63 : v2.29 — 2 nouveaux scénarios suisses + retrofit bloc 1 (5 anciennes scènes)
+//
+//       Nouveaux scénarios v2.29 (corpus 105 → 107) :
+//
+//         • mini-natels-prison-pochwies (medium, ZH/Pöschwies)
+//             Pitch  : Fouille EPO Pöschwies, 3 mini-natels chinois (18 CHF
+//                      pièce) avec firmware Necro préinstallé contactant
+//                      C2 cambodgien — risque supply chain pénitentiaire
+//             Rôle   : inspecteur·trice cyber-enquêtes PolCant ZH
+//             PNJ    : epo_director (Wegmann, fictif), mobile_expert_lookout
+//                      (Halder, fictif), labhart (procureur MP-ZH, réel)
+//             Bif.   : step 0 #1 → next: 'end' (déverrouillage forcé =
+//                      violation art. 113 CPP nemo tenetur)
+//             Tags   : OPE 2024, art. 304-307bis CP, Necro firmware,
+//                      Lookout/Citizen Lab, audit CCDJP cross-cantonal,
+//                      brouilleurs LTC art. 34
+//
+//         • drone-laufenburg-swissgrid-aargau (hard, AG/Laufenburg)
+//             Pitch  : 5 survols nocturnes drones sur l'étoile Swissgrid
+//                      (380 kV, hub ENTSO-E européen). Attribution difficile.
+//             Rôle   : commissaire fedpol PJF / division CII
+//             PNJ    : swissgrid_cirt (Hauser, fictif), ofcs_coordinator
+//                      (Tschanz, fictif), nicolet (procureur cyber MPC, réel)
+//             Bif.   : step 0 #1 → next: 'end' (escalade militaire prématurée
+//                      Forces aériennes = LAAM art. 92 disproportionné)
+//             Tags   : art. 224bis CP sabotage CII, ENTSO-E coordination,
+//                      doctrine OFCS Drone-CII, attribution false flag
+//
+//       Retrofit bloc 1 — 5 anciennes scènes adaptées :
+//
+//         • attribution (8 steps, hard) — npcs=[forensics_lead_zh, nicolet]
+//         • bitlocker (5 steps, medium) — npcs=[forensics_lead_zh]
+//         • adn-genealogique-cold-case (5 steps, hard) — npcs=[fim_genealogist,
+//                                                              forensics_lead_zh]
+//         • agent-infiltre-darknet-14-mois (5 steps, expert) —
+//                                            npcs=[pjf_undercover_lead]
+//         • bec-pme-geneve-italie (6 steps, expert) — npcs=[ge_prosecutor_cyber,
+//                                                            compliance_bs]
+//                Bifurcation créée step 3 #2 (court-circuit EIMP via Polizia
+//                Postale Milano = art. 271 CP violation souveraineté) → 'end'
+//
+//       Pour chaque scène retrofit : ajout npcs + marqueur "📍 BIFURCATION
+//       NARRATIVE" dans le fb du distracteur de bifurcation. Conversion
+//       next=-1 → 'end' explicite pour adn-genealogique et agent-infiltre.
+//
+//       8 nouveaux PNJ ajoutés à data/npcs.json (16 → 24) :
+//         • epo_director (fictif, dir. sécurité Pöschwies)
+//         • mobile_expert_lookout (fictif, mobile threat intel)
+//         • swissgrid_cirt (fictif, CIRT Swissgrid)
+//         • ofcs_coordinator (fictif, OFCS desk CII)
+//         • forensics_lead_zh (fictif, transposable, chef labo cyber-forensics PolCant ZH)
+//         • ge_prosecutor_cyber (fictif, transposable, procureure GE cyber)
+//         • pjf_undercover_lead (fictif, cheffe agents infiltrés PJF)
+//         • fim_genealogist (fictif, cheffe FGG forensique FOR-ZH)
+//
+//       Stats : 107 scènes / 24 PNJ / 13 scènes avec NPCs (8 v2.24+v2.28
+//       + 5 retrofit bloc 1).
+//
+//       Approche retrofit "par bloc de 5" : ~92 scènes restantes à
+//       adapter dans les versions ultérieures (~18 blocs).
 //
 //       Cette version ajoute 3 scènes documentées sur l'actualité DFIR
 //       suisse récente (sources : Bilan 17.12.2025, Tribune de Genève
@@ -396,7 +455,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v62';
+const CACHE_VERSION = 'cas-in-v63';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
