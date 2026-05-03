@@ -4,6 +4,77 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.25] — 2026-05-03
+
+Cette version corrige deux types de défauts dans les 5 scènes ajoutées en v2.24 : un **biais pédagogique** (déséquilibre de longueur entre choix) et plusieurs **anomalies factuelles** (références géographiques inexistantes, noms de personnalités réelles utilisés dans des contextes sensibles).
+
+### Corrigé — Biais pédagogique sur la longueur des choix
+
+Avant cette version, dans les 5 scènes v2.24, **24 des 25 steps** présentaient un déséquilibre de longueur entre la bonne réponse et les distracteurs : la bonne réponse faisait systématiquement 200-450 caractères (avec sous-listes structurées en a, b, c, d), alors que les distracteurs faisaient 100-200 caractères (sans détails). Un étudiant pouvait ainsi deviner la bonne réponse sans lire les questions, simplement en choisissant le texte le plus long.
+
+**État avant** :
+- 12 steps avec écart > 50% (erreurs critiques)
+- 7 steps avec écart 30-50% (warnings)
+- Pire cas : `lugano-dpfl-mafia-finance` step 4 à 90% d'écart (442 chars vs 122 et 134)
+
+**État après** :
+- **0 erreur, 0 warning**
+- Tous les steps avec écart ≤ 26%
+- Distracteurs étoffés avec justification du raisonnement erroné (mais plausible), conditions structurées similaires à la bonne réponse, détails techniques cohérents
+
+Les distracteurs réécrits gardent leur logique fausse mais ajoutent du contexte : justification du choix, références juridiques précises, conséquences opérationnelles. Un étudiant inexpérimenté pourrait être tenté par ces choix qui paraissent désormais aussi sérieux que la bonne réponse — ce qui est précisément l'effet pédagogique recherché.
+
+### Corrigé — Anomalies factuelles dans 3 scènes
+
+#### `epfl-laboratoire-ia-medicale-chine`
+
+- **avenue Forel** (qui n'existe pas sur le campus EPFL) → **bâtiment INF (Faculté IC)**. Les bâtiments EPFL sont nommés par codes (BC, BM, INF, INM, etc.), pas par avenues.
+- **Pr. Schaffner** → **Pr. Délémont**. Choix d'un nom suisse romand neutre, fictif clair, pour éviter toute confusion avec un PI réel de l'EPFL.
+
+#### `lugano-dpfl-mafia-finance`
+
+- **Banca Cantonale del Ticino e Italia (BCFI)** → **BancaStato Ticino**. L'acronyme BCFI prêtait à confusion avec BCF (Banque Cantonale Fribourgeoise), et la vraie banque cantonale tessinoise s'appelle officiellement *BancaStato* (Banca dello Stato del Cantone Ticino).
+
+#### `hcfr-bec-transfer-deepfake`
+
+- **Hubert Waeber** → **Olivier Rotzetter**. Hubert Waeber est le vrai président du HC Fribourg-Gottéron. Le scénario décrit sa voix clonée par deepfake dans une attaque BEC. Utiliser le nom réel d'une personnalité publique vivante dans une fiction d'usurpation présente un risque éthique et de diffamation, même dans un cadre éducatif. Le nom fictif **Olivier Rotzetter** reste plausible pour Fribourg (toponymie locale) tout en levant toute ambiguïté.
+
+### Ajouté — `scripts/check_scenes_balance.py`
+
+Nouveau script de lint qui vérifie l'équilibrage des choix dans chaque step :
+
+```bash
+python3 scripts/check_scenes_balance.py                          # toutes les scènes v2.24+
+python3 scripts/check_scenes_balance.py lugano-dpfl-mafia-finance # une scène
+```
+
+Pour chaque step, le script mesure l'écart maximal de longueur entre les choix et signale :
+- **WARN** si écart > 30% (à surveiller)
+- **ERROR** si écart > 50% (à corriger)
+
+Exit code 0 si aucun écart > 50%, 1 sinon. Utilisable comme pre-commit hook ou en CI.
+
+### Modifié — Service Worker v58 → v59
+
+Bump pour invalider le cache et propager les corrections aux clients.
+
+### Statistiques v2.25
+
+| Indicateur | v2.24 | v2.25 |
+|---|---|---|
+| Steps avec écart > 50% | 12 | **0** |
+| Steps avec écart 30-50% | 7 | **0** |
+| Anomalies factuelles | 4 | **0** |
+| Scènes équilibrées (5/5 steps) | 0/5 | **5/5** |
+| Scripts de lint | 0 | **1** (check_scenes_balance) |
+| Service Worker | v58 | **v59** |
+
+### Notes pédagogiques
+
+Le biais "longueur révélatrice" est un classique des QCM mal calibrés. Détecté par hasard en revoyant les scènes v2.24, ce bug rendait les scénarios trop faciles : un étudiant pouvait obtenir 25/25 simplement en choisissant systématiquement le texte le plus long. La correction préserve le détail pédagogique du bon choix tout en élevant le niveau d'élaboration des distracteurs.
+
+Sur le plan factuel, les corrections renforcent la **crédibilité** des scénarios : utiliser de vraies institutions (BancaStato, EPFL bâtiment INF) tout en évitant les **noms réels de personnalités vivantes** dans des contextes potentiellement diffamatoires (deepfake d'usurpation, espionnage).
+
 ## [2.24] — 2026-05-03
 
 Cette version ajoute **5 nouvelles scènes suisses** (focus Fribourg + hockey) et une **fonctionnalité majeure de mode lecture continue** entre fiches.
