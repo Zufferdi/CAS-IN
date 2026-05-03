@@ -130,6 +130,12 @@ def main() -> None:
             SCENES_DIR / "delemont-forum.json",
             SCENES_DIR / "eu-crypto-kidnapping.json",
             SCENES_DIR / "eu-cyber-trading-fraud.json",
+            # v2.34 retrofit bloc 6 (5 scènes)
+            SCENES_DIR / "eu-endgame-botnets.json",
+            SCENES_DIR / "eu-traite-roumain.json",
+            SCENES_DIR / "faux-policiers.json",
+            SCENES_DIR / "fileless.json",
+            SCENES_DIR / "hydro-valais.json",
         ]
 
     has_error = False
