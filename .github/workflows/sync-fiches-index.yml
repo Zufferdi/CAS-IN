@@ -3,10 +3,12 @@ name: Sync fiches index, search-index, cross-links, scenes-index & inject compon
 # Régénère TOUTES les données dérivées à chaque ajout/modification de fiche ou scène :
 #   1. Injecte fiche-related.js dans les fiches qui ne l'ont pas
 #   2. Injecte fiche-common.js dans les fiches qui ne l'ont pas
-#   3. Régénère scenes/index.json depuis les scènes individuelles
-#   4. Régénère fiches/index.html (cards d'accès)
-#   5. Régénère data/search-index.json (moteur de recherche full-text)
-#   6. Régénère data/cross-links.json (liens Q ↔ Fiche ↔ TP ↔ Scènes)
+#   3. Injecte fiche-reader.js dans les fiches qui ne l'ont pas (mode lecture continue)
+#   4. Régénère scenes/index.json depuis les scènes individuelles
+#   5. Régénère fiches/index.html (cards d'accès)
+#   6. Régénère data/search-index.json (moteur de recherche full-text)
+#   7. Régénère data/cross-links.json (liens Q ↔ Fiche ↔ TP ↔ Scènes)
+#   8. Régénère data/fiche-graph.json (voisinages pour mode lecture continue)
 #
 # Fait tout en un seul job pour éviter les race conditions entre workflows
 # parallèles qui voudraient committer les mêmes fichiers.
@@ -22,7 +24,9 @@ on:
       - 'scripts/build_search_index.py'
       - 'scripts/build_cross_links.py'
       - 'scripts/build_scenes_index.py'
+      - 'scripts/build_fiche_graph.py'
       - 'scripts/inject_fiche_related.py'
+      - 'scripts/inject_fiche_reader.py'
       - 'scripts/migrate_fiche_common.py'
       - '.github/workflows/sync-fiches-index.yml'
   workflow_dispatch:  # exécution manuelle depuis l'onglet Actions
@@ -73,7 +77,16 @@ jobs:
             echo "⚠ scripts/migrate_fiche_common.py introuvable, skip"
           fi
 
-      # ─── 3) Régénérer scenes/index.json depuis les scènes individuelles ───
+      # ─── 3) Inject fiche-reader.js (mode lecture continue) ───
+      - name: Inject fiche-reader.js into fiches
+        run: |
+          if [ -f scripts/inject_fiche_reader.py ]; then
+            python3 scripts/inject_fiche_reader.py
+          else
+            echo "⚠ scripts/inject_fiche_reader.py introuvable, skip"
+          fi
+
+      # ─── 4) Régénérer scenes/index.json depuis les scènes individuelles ───
       - name: Rebuild scenes/index.json
         run: |
           if [ -f scripts/build_scenes_index.py ]; then
@@ -82,12 +95,12 @@ jobs:
             echo "⚠ scripts/build_scenes_index.py introuvable, skip"
           fi
 
-      # ─── 4) Régénérer fiches/index.html (cards d'accès) ───
+      # ─── 5) Régénérer fiches/index.html (cards d'accès) ───
       - name: Rebuild fiches/index.html
         run: |
           python3 scripts/build_index.py
 
-      # ─── 5) Régénérer data/search-index.json (moteur de recherche) ───
+      # ─── 6) Régénérer data/search-index.json (moteur de recherche) ───
       - name: Rebuild data/search-index.json
         run: |
           if [ -f scripts/build_search_index.py ]; then
@@ -96,7 +109,7 @@ jobs:
             echo "⚠ scripts/build_search_index.py introuvable, skip"
           fi
 
-      # ─── 6) Régénérer data/cross-links.json (liens transverses) ───
+      # ─── 7) Régénérer data/cross-links.json (liens transverses) ───
       - name: Rebuild data/cross-links.json
         run: |
           if [ -f scripts/build_cross_links.py ]; then
@@ -105,7 +118,16 @@ jobs:
             echo "⚠ scripts/build_cross_links.py introuvable, skip"
           fi
 
-      # ─── 7) Configuration git + commit groupé ───
+      # ─── 8) Régénérer data/fiche-graph.json (voisinages pour lecture continue) ───
+      - name: Rebuild data/fiche-graph.json
+        run: |
+          if [ -f scripts/build_fiche_graph.py ]; then
+            python3 scripts/build_fiche_graph.py
+          else
+            echo "⚠ scripts/build_fiche_graph.py introuvable, skip"
+          fi
+
+      # ─── 9) Configuration git + commit groupé ───
       - name: Commit & push regenerated files (with retry on conflict)
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
@@ -115,6 +137,7 @@ jobs:
           git add fiches/index.html fiches/*.html 2>/dev/null || true
           git add data/search-index.json 2>/dev/null || true
           git add data/cross-links.json 2>/dev/null || true
+          git add data/fiche-graph.json 2>/dev/null || true
           git add scenes/index.json 2>/dev/null || true
 
           if git diff --cached --quiet; then
