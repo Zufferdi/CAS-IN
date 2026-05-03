@@ -166,6 +166,15 @@ def main() -> None:
             SCENES_DIR / "premier_appel.json",
             SCENES_DIR / "rajeunissement-ia.json",
             SCENES_DIR / "ransomware.json",
+            # v2.40 retrofit bloc 12 (8 scènes — premier bloc de 8)
+            SCENES_DIR / "ransomware-hopital-doj-conflit.json",
+            SCENES_DIR / "ransomware_raid.json",
+            SCENES_DIR / "referent-milice-ransomware.json",
+            SCENES_DIR / "ruag_2016.json",
+            SCENES_DIR / "sati-bec.json",
+            SCENES_DIR / "saxon-curatelle.json",
+            SCENES_DIR / "secret-fonction-parlementaire.json",
+            SCENES_DIR / "smartphone.json",
         ]
 
     has_error = False
