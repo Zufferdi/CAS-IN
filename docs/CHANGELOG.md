@@ -4,6 +4,207 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.42] — 2026-05-03
+
+**Diversification continue du casting** : 6 nouveaux PNJ thématiquement adaptés. **Bloc 14 du retrofit** (8 anciennes scènes adaptées). Le catalogue passe à **42 PNJ**.
+
+### Ajouté — 6 nouveaux PNJ dans `data/npcs.json` (36 → 42)
+
+| ID | Type | Rôle | Apparition principale |
+|---|---|---|---|
+| `tmc_juge_ge` | Fictif **transposable** | Mme Vaucher, Juge TMC Genève | `tmc-refus-surveillance` + futurs scénarios procéduraux |
+| `unine_ciso` | Fictif | M. Pillonel, RSSI Université de Neuchâtel | `unine_2022` |
+| `vs_secretaire_communal` | Fictif **transposable** | M. Métrailler, Coordinateur cyber Bas-Valais | `valais-cascade-12-communes`, `vetroz-akira` |
+| `switch_cert_lead` | Fictive **transposable** | Mme Reusser, Cheffe SWITCH-CERT (Zurich) | `unine_2022` + futurs scénarios académiques |
+| `ti_pol_chiasso` | Fictif | M. De Bernardi, Inspecteur cyber PolCant TI Chiasso | `telephone-scelles` |
+| `fim_xways_expert` | Fictive **transposable** | Mme Tremp, Experte X-Ways senior fedpol | `timeline`, `trois_artefacts`, `veracrypt` |
+
+**Diversification thématique des nouveaux PNJ** :
+- **Magistrature TMC** (Vaucher, GE) — distincte de tout magistrat de jugement, fonction préventive de contrôle
+- **RSSI académique** (Pillonel, UniNE) — distinct de `dpo_epfl` qui est plus orientée DPO
+- **Coordinateur cyber communes** (Métrailler, Bas-Valais) — pivot pour les 28 communes valaisannes <5'000 hab.
+- **CERT académique** (Reusser, SWITCH-CERT) — TF-CSIRT GÉANT, pour tous scénarios EDU
+- **Police frontière cyber** (De Bernardi, PolCant TI Chiasso) — coopération CH-IT, scellés numériques
+- **Forensique X-Ways** (Tremp) — référence forensique digital approfondi (artefacts Windows/Linux/macOS)
+
+**4 nouveaux transposables** (catalogue total 11 → 15) : `tmc_juge_ge`, `vs_secretaire_communal`, `switch_cert_lead`, `fim_xways_expert`. **`fim_xways_expert` est apparue dans 3 scènes du bloc 14** (timeline, trois_artefacts, veracrypt) — pivot forensique X-Ways du corpus.
+
+### Ajouté — Retrofit bloc 14 (8 anciennes scènes adaptées)
+
+| Scène | Steps | Difficulté | NPCs assignés (★ = nouveau) | Bifurcation marquée |
+|---|---|---|---|---|
+| `telephone-scelles` | 4 | medium | `ti_pol_chiasso`★, `mroz_ti` | step 1 #0 (catastrophe scellés) |
+| `timeline` | 8 | hard | `fim_xways_expert`★, `forensics_lead_zh` | step 1 #0 (catastrophe UTC) |
+| `tmc-refus-surveillance` | 5 | hard | `tmc_juge_ge`★, `ti_ge_proc_cyber` | step 4 #1 et #2 → 'end' explicite |
+| `trois_artefacts` | 5 | medium | `fim_xways_expert`★, `fim_genealogist` | step 0 #0 (catastrophe triangulation) |
+| `unine_2022` | 8 | hard | `unine_ciso`★, `switch_cert_lead`★ | step 0 #0 (catastrophe kill-switch) |
+| `valais-cascade-12-communes` | 5 | hard | `vs_secretaire_communal`★, `ofcs_coordinator` | step 4 #1 et #2 → 'end' explicite |
+| `veracrypt` | 8 | hard | `fim_xways_expert`★, `forensics_lead_zh` | step 0 #0 (catastrophe mount) |
+| `vetroz-akira` | 5 | medium | `vs_secretaire_communal`★, `forensics_lead_zh` | step 1 #1 (catastrophe supply chain) |
+
+**Diversification thématique du bloc 14** (8 thématiques distinctes) : (a) **Scellés numériques A2 Chiasso** (TI, art. 248 CPP, coopération CH-IT), (b) **Timeline forensique multi-fuseaux** (UTC conversion, hash SHA-256, NIST SP 800-86), (c) **Refus art. 269 CPP par TMC** (recours TF, motivation factuelle), (d) **3 artefacts X-Ways convergents** (ShellBag + USBSTOR + .lnk, triangulation), (e) **Conti UniNE 17 février 2022** (cas réel, SWITCH-CERT, communication communauté académique), (f) **Cascade CyberStratVS 12 communes** (autonomie communale art. 50 Cst, coordination régionale Bas-Valais), (g) **Volume VeraCrypt extraction RAM** (PBKDF2, AES Key Schedule, art. 113 CPP nemo tenetur), (h) **Akira supply chain VS** (prestataire IT régional, jonction MPC art. 30 CPP).
+
+**Cas particuliers** :
+- `unine_2022` est documenté par le **cas réel Conti UniNE du 17 février 2022** (rentrée semestre printemps interrompue, 5'200 étudiants impactés, services pédagogiques bloqués 3 semaines).
+- `valais-cascade-12-communes` introduit le concept de **CyberStratVS** (stratégie cyber cantonale valaisanne) et la **doctrine de coordination cyber régionale Bas-Valais** (28 communes coordonnées via secrétaire communal mutualisé).
+- `vetroz-akira` modélise une **attaque supply chain régionale** où le prestataire IT régional VS est le vecteur réel, les 3 entités touchées (Vétroz + Abrifeu + Air-Glaciers) étant les victimes finales.
+- `veracrypt` introduit la **doctrine d'extraction de clé via analyse RAM** (Volatility plugin vcrypthunt, Elcomsoft Forensic Disk Decryptor) avec **conformité art. 113 CPP** (pas de demande au suspect = pas de violation nemo tenetur).
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 92 scènes touchées par v2.24 → v2.42 (était 84, +8). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v75 → v76
+
+Header v2.42 documentant les 6 nouveaux PNJ + le retrofit bloc 14.
+
+### Statistiques v2.42
+
+| Indicateur | v2.41 | v2.42 |
+|---|---|---|
+| Scènes totales | 110 | **110** (inchangé) |
+| Scènes avec NPCs assignés | 79 | **87** (+8) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 79 | **87** (+8) |
+| **Progression retrofit** | **72%** | **79%** ✨ |
+| **PNJ catalogue** | **36** | **42** ✨ (+6) |
+| PNJ réels | 8 | 8 (inchangé) |
+| PNJ fictifs | 28 | **34** (+6) |
+| PNJ transposables | 11 | **15** (+4) |
+| Service Worker | v75 | **v76** |
+
+### Notes éditoriales
+
+**Sur la création des 6 nouveaux PNJ.** Continuant la diversification entamée en v2.41, cette release crée 6 PNJ adaptés aux thématiques du bloc 14 :
+
+1. **tmc_juge_ge (Mme Vaucher)** : seconde figure judiciaire après les procureurs (nicolet, ge_prosecutor_cyber, fr_prosecutor_cyber, ti_ge_proc_cyber). Le TMC a une fonction **préventive distincte** du juge du fond — il contrôle la légalité des mesures de contrainte (art. 269 CPP surveillance, art. 280 CPP IMSI-catcher, art. 286 CPP investigation secrète) avant leur mise en œuvre.
+
+2. **unine_ciso (M. Pillonel)** : RSSI universitaire avec **expertise contexte académique spécifique** (libertés universitaires, open data, collaboration internationale, budgets contraints). Distinct de `dpo_epfl` qui est plus orientée DPO/RGPD que sécurité opérationnelle.
+
+3. **vs_secretaire_communal (M. Métrailler)** : pivot opérationnel pour les **28 communes du Bas-Valais** coordonnées sur le cyber. Profil hybride entre secrétaire communal de carrière et coordinateur cyber régional — utile pour les futurs scénarios communes valaisannes.
+
+4. **switch_cert_lead (Mme Reusser)** : référence **CERT académique CH** (TF-CSIRT GÉANT, FIRST). Distincte de `ofcs_coordinator` (coordination fédérale large) — SWITCH-CERT est spécifiquement le CERT du **secteur académique** (universités, HES, EPF).
+
+5. **ti_pol_chiasso (M. De Bernardi)** : référence **police cyber-frontalière** (A2 Chiasso, contrôles routiers, coopération bilatérale CH-IT avec Polizia di Stato lombarde). Spécialiste scellés numériques et Cellebrite UFED.
+
+6. **fim_xways_expert (Mme Tremp)** : référence **forensique X-Ways senior** (X-PERT + EnCE + GIAC GCFA + GREM). Distincte de `forensics_lead_zh` (Bachmann, plus orientée incident response cantonal) et `fim_genealogist` (Strebel, plus orientée FGG forensique). **Apparaît dans 3 scènes** du bloc 14 (timeline, trois_artefacts, veracrypt) — pivot X-Ways du corpus.
+
+**Sur la doctrine de transposabilité.** Le catalogue compte maintenant **15 PNJ transposables** sur 42 (35.7%). Cette proportion est saine pour permettre la cohérence narrative cross-scénarios sans tomber dans la sur-utilisation des mêmes personnages. Les 27 PNJ non-transposables sont des figures liées à un cas spécifique (Stadler, Swisscom, UniNE, IFC SG, etc.) qui auraient peu de sens dans d'autres scénarios.
+
+**Sur la scène `unine_2022`.** Documentée par le **cas réel Conti UniNE du 17 février 2022** : à 22h50, les premières alertes de chiffrement de fichiers sont remontées. La rentrée semestre printemps (24 février) était à 7 jours. Conti a chiffré une grande partie des serveurs académiques. UniNE n'a pas payé la rançon (montant typique Conti pour université CH ~250-500K USD). La restauration a pris 3 semaines, avec impact pédagogique majeur. La scène modélise les 8 décisions critiques du RSSI sur cette séquence de 17 février → 10 mars 2022.
+
+**Sur la scène `vetroz-akira`.** Documentée par les **attaques Akira contre les communes valaisannes 2024-2026**. Le scénario porte sur le 12 avril 2026 où Vétroz, Abrifeu (Riddes) et Air-Glaciers (Sion) signalent simultanément des perturbations. L'angle d'enquête révèle qu'il ne s'agit pas de 3 attaques distinctes mais d'**une compromission supply chain unique** chez le prestataire IT régional commun aux 3 entités. Cette qualification est cruciale pour orienter l'enquête et protéger les 25 autres clients du même prestataire.
+
+**Sur le rythme du retrofit.** Avec 14 blocs livrés en 14 versions (v2.29 à v2.42), 87 scènes du corpus historique sont équipées de NPCs et marqueurs (sur 110 totales). **Progression à 79%**. Reste **~23 scènes** à traiter (~3 blocs au rythme 8/bloc). Le **cap des 100% reste atteignable en v2.45** au rythme actuel.
+
+### Prochaines évolutions possibles
+
+```
+v2.43  Retrofit bloc 15 (8 scènes)
+       Candidates par diversification : whistleblower-ddps, xplain, xplain-lmp,
+                                         xplain-play, swissport_2022, infostealer-magnus,
+                                         bitlocker_froid, custody
+v2.44  Retrofit bloc 16 (8 scènes)
+       Candidates : eu-france-travail, eu-free-leak, eu-ghgo-ddos,
+                    eu-kidflix-stream, eu-livestream-philippines, eu-revil-attribution,
+                    evoting-cantonal, exit-suicide-assiste-conteste
+v2.45  Retrofit bloc 17 final (~7 scènes restantes) — atteinte 100%
+```
+
+## [2.41] — 2026-05-03
+
+**Reprise de la création de PNJ** après 8 releases consécutives sans nouveau personnage. **Bloc 13 du retrofit** (8 anciennes scènes adaptées) avec **+6 nouveaux PNJ thématiques** pour diversifier le casting au-delà des 8 transposables.
+
+### Ajouté — 6 nouveaux PNJ dans `data/npcs.json` (30 → 36)
+
+| ID | Type | Rôle | Usage |
+|---|---|---|---|
+| `ge_cyber_brigade_chief` | Fictif transposable | M. Pellissier, chef Brigade cyber enquêtes PolGE | sms-blasters + cyber-physique romand |
+| `stadler_ciso` | Fictif transposable | M. Frischknecht, CISO Stadler Rail Bussnang | stadler_2020 + industriel ferroviaire |
+| `sg_polcyber_chief` | Fictif transposable | Mme Brägger, cheffe juridique IFC PolSG | stgall-infiltration, specialite-eimp + investigations cyber alémaniques |
+| `mediswiss_ciso` | Fictif transposable | Mme Borgeat, CISO MediSwiss SA (éditeur SaaS médical fictif) | supply_chain_sante + cyber-santé suisse |
+| `swatch_security_lead` | Fictif transposable | M. Stocker, responsable sécurité OT Swatch Group | swatch-2020-ot + espionnage industriel |
+| `swisscom_dpo` | Fictif transposable | M. Bachmann, DPO Group Swisscom | swisscom_2018 + nLPD opérateurs télécom |
+
+**Approche éditoriale** : les 6 nouveaux PNJ sont tous **fictifs transposables**, c'est-à-dire utilisables au-delà de leur scène d'origine pour des scénarios sectoriels similaires. Le catalogue compte maintenant **14 PNJ transposables** (sur 36 au total), enrichissant significativement les choix narratifs pour les blocs suivants.
+
+**Pourquoi maintenant ?** Après 8 releases consécutives (v2.32 à v2.40) sans création de PNJ, certains scénarios sectoriels (ferroviaire Stadler, SaaS médical MediSwiss, horloger Swatch, télécom Swisscom) méritaient leurs propres CISO/responsables identifiés plutôt que de réutiliser systématiquement `ciso_logitech` ou `ciso_medsupplier_ne` qui ont leurs propres histoires.
+
+### Ajouté — Retrofit bloc 13 (8 anciennes scènes adaptées)
+
+| Scène | Steps | Difficulté | NPCs assignés | Bifurcation marquée |
+|---|---|---|---|---|
+| `sms-blasters` | 5 | medium | `ge_cyber_brigade_chief`, `forensics_lead_zh` | step 0 #0 |
+| `specialite-eimp` | 5 | hard | `nicolet`, `sg_polcyber_chief` | step 4 #1 et #2 → 'end' |
+| `stadler_2020` | 8 | hard | `stadler_ciso`, `ofcs_coordinator` | step 0 #0 |
+| `stgall-infiltration` | 5 | hard | `sg_polcyber_chief`, `pjf_undercover_lead` | step 0 #1 |
+| `supply_chain_sante` | 11 | **expert** | `mediswiss_ciso`, `ofcs_coordinator`, `cicr_dpo` | step 0 #0 |
+| `swatch-2020-ot` | 5 | hard | `swatch_security_lead`, `forensics_lead_zh` | step 4 #1 et #2 → 'end' |
+| `swisscom_2018` | 5 | medium | `swisscom_dpo`, `ofs_rssi_fedch` | step 1 #0 |
+| `swissgrid-iec61850-jura` | 5 | expert | `ofcs_coordinator`, `ddps_general_counsel` | step 4 #1 et #2 → 'end' |
+
+**Diversification thématique du bloc 13** (8 thématiques distinctes, mêlant 6 cas réels suisses et 2 scénarios doctrinaux) : (a) **SMS Blasters mobiles GE** (cyber-physique, ComCom + LSCPT + LTC), (b) **Spécialité EIMP art. 67** (extension périmètre BLN → corruption), (c) **Stadler Rail 2020** (cas réel ransomware DoppelPaymer 7 To 6M USD), (d) **Projet IFC PolSG** (investigations darknet sous couverture), (e) **MediSwiss supply chain SaaS médical** (dépendance npm @medi-utils/pdf-gen v3.4.7 compromise, 627k patients, 140 hôpitaux), (f) **Swatch 2020 OT** (espionnage industriel horloger Granges), (g) **Swisscom 2017-2018** (cas réel vol 800k clients via sous-traitant tunisien), (h) **Swissgrid IEC 61850 JU** (poste 380kV expert SCADA niveau national).
+
+**Cas particuliers** :
+- `supply_chain_sante` est une scène **expert à 11 steps** (la 2e plus longue du corpus après `palais_federal`)
+- `swissgrid-iec61850-jura` est expert : protocole IEC 61850 GOOSE/SV niveau ENTSO-E
+- `stadler_2020` est documentée par le **cas réel mai 2020** (DoppelPaymer 6M USD)
+- `swisscom_2018` est documentée par le **cas réel 2017-2018** (vol 800k clients)
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 84 scènes touchées par v2.24 → v2.41 (était 76, soit +8). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v74 → v75
+
+Header v2.41 documentant le retrofit bloc 13 + les 6 nouveaux PNJ.
+
+### Statistiques v2.41
+
+| Indicateur | v2.40 | v2.41 |
+|---|---|---|
+| Scènes totales | 110 | **110** (inchangé) |
+| Scènes avec NPCs assignés | 71 | **79** (+8) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 71 | **79** (+8) |
+| **Progression retrofit** | **65%** | **72%** ✨ |
+| **PNJ catalogue** | 30 | **36 (+6)** ✨ |
+| **PNJ transposables** | 8 | **14 (+6)** ✨ |
+| Service Worker | v74 | **v75** |
+
+### Notes éditoriales
+
+**Sur la reprise de la création de PNJ.** Après 8 releases consécutives sans nouveau personnage (v2.33 à v2.40), le retour à la création est piloté par l'utilisateur ("ajoute d'autres personnages et reprends pas toujours les 30 mêmes"). C'est un retour pertinent : les scénarios sectoriels (ferroviaire, télécom, SaaS médical, horloger) bénéficient grandement d'avoir leurs propres CISO/responsables identifiés. Le catalogue passe de 30 à **36 PNJ**, avec **14 transposables** (+6) qui peuvent être réutilisés dans les blocs futurs.
+
+**Sur la scène `sms-blasters`.** Scène medium très technique sur la **doctrine cyber-physique suisse**. Le scénario porte sur des SMS Blasters mobiles à Genève (faux SMS de stationnement Ville de Genève envoyés depuis un véhicule équipé d'IMSI catcher). Question juridique centrale : comment articuler LSCPT (loi sur la surveillance correspondance), LTC (loi sur les télécommunications), ComCom (autorité fédérale des télécommunications) et art. 269-279 CPP ? La nouvelle PNJ `ge_cyber_brigade_chief` (M. Pellissier) incarne la coordination opérationnelle terrain.
+
+**Sur la scène `specialite-eimp`.** Scène hard sur **le piège du principe de spécialité art. 67 EIMP**. Le scénario explore comment des pièces obtenues par EIMP allemande pour blanchiment ne peuvent pas être directement utilisées pour étendre l'enquête à de la corruption sans demande d'extension formelle. La PNJ `sg_polcyber_chief` (Mme Brägger) apporte son expertise spécifique en EIMP et coopération bilatérale CH-DE.
+
+**Sur la scène `stadler_2020`.** Scène hard à 8 steps documentée par le **cas réel mai 2020** : Stadler Rail (Bussnang TG, 13'500 employés) frappé par DoppelPaymer ransomware avec demande de 6M USD et exfiltration revendiquée de 7 To. Le scénario explore les questions stratégiques d'un industriel suisse fournissant Bombardier US, SBB CFF FFS, et exposé aux sanctions OFAC + export control SECO. La nouvelle PNJ `stadler_ciso` (M. Frischknecht) incarne la perspective industrielle ferroviaire.
+
+**Sur la scène `stgall-infiltration`.** Scène hard sur le **Projet IFC** de la PolSG (IT-Forensik & Cybercrime Saint-Gall) : investigations sous couverture darknet avec création d'identités fictives. Question juridique centrale : art. 285a CPP (recherches secrètes, sans TMC) vs. art. 286 CPP (investigations secrètes, avec TMC) — quel cadre s'applique ? La PNJ `sg_polcyber_chief` (Mme Brägger) est l'auteure fictive du chapitre « Investigations sous couverture cyber » dans le manuel Niggli/Heimgartner Strafrecht II.
+
+**Sur la scène `supply_chain_sante`.** Scène **expert à 11 steps** (l'une des deux plus longues du corpus avec `palais_federal`). Documentée par les attaques supply chain réelles 2020-2025 (SolarWinds, 3CX, XZ-utils, ua-parser-js). Le scénario MediSwiss SA modélise une dépendance npm compromise (@medi-utils/pdf-gen v3.4.7) qui propage la compromission à 140 hôpitaux clients suisses (47% du parc) avec 627'000 patients impactés. La nouvelle PNJ `mediswiss_ciso` (Mme Borgeat) incarne la perspective éditeur SaaS santé suisse.
+
+**Sur la scène `swatch-2020-ot`.** Scène hard sur **l'espionnage industriel horloger** (Swatch Group, usines de Granges SO, mars 2020). Question juridique centrale : art. 273 CP (espionnage économique pour État étranger) vs. art. 162 CP (violation du secret commercial classique) — quelle qualification ? La nouvelle PNJ `swatch_security_lead` (M. Stocker) incarne la doctrine « sanctuaire » des montres haut de gamme suisses face aux concurrents asiatiques.
+
+**Sur la scène `swisscom_2018`.** Scène medium documentée par le **cas réel 2017-2018** : vol des données de 800'000+ clients Swisscom via l'accès compromis d'un partenaire commercial (sous-traitant tunisien). Le scénario explore l'articulation responsabilité du donneur d'ordre (art. 9 nLPD) et responsabilité du sous-traitant. La nouvelle PNJ `swisscom_dpo` (M. Bachmann) incarne le DPO Group qui a piloté la transition Swisscom vers la nLPD 2023.
+
+**Sur la scène `swissgrid-iec61850-jura`.** Scène **expert** sur le **protocole IEC 61850** (norme internationale de communication pour les sous-stations électriques) et la coordination Swissgrid + ENTSO-E. Le scénario porte sur un poste 380 kV jurassien dont le système de protection IEC 61850 (IED Siemens 7SJ85) montre des anomalies à 03h47. Question : compromission cyber Industroyer-style ou défaut matériel ? Le marqueur souligne que maintenir le poste en service standard sans isolation OT/IT en cas de compromission cyber avérée peut cascader sur le réseau européen UCTE.
+
+**Sur le rythme du retrofit.** Avec 13 blocs livrés en 13 versions (v2.29 à v2.41), 79 scènes du corpus historique sont équipées de NPCs et marqueurs. **Progression à 72 %**. Reste **~31 scènes** à traiter (~4 blocs au rythme de 8/bloc). **Sprint final à portée de main**, objectif 100% en v2.45.
+
+### Prochaines évolutions possibles
+
+```
+v2.42  Retrofit bloc 14 (8 scènes, à proposer)
+       Candidates par diversification : telegram_2025, telephone_compromis,
+                                         tessin-cyber-fraude-pme, threema-hacker-shop,
+                                         touche_atomique, tractor-ferme-bio,
+                                         tribunal-administratif-vd, urs-rh-leak
+v2.43  Retrofit bloc 15 (8 scènes)
+v2.44  Retrofit bloc 16 (~7 scènes restantes)
+v2.45  Examen blanc 50q/90 min + heatmap canton enrichie
+```
+
 ## [2.40] — 2026-05-03
 
 **Premier bloc à 8 scènes** — accélération du sprint final pour atteindre 100% du retrofit corpus. **Bloc 12 du retrofit** (8 anciennes scènes adaptées en une seule release) avec diversification thématique maximale : conflit juridictionnel CH-US / RAID forensique / référent milice / APT RUAG / Tessin BEC / curatelle VS / secret de fonction parlementaire / smartphone déverrouillé.
