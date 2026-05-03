@@ -1,5 +1,84 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v63 : v2.29 — 2 nouveaux scénarios suisses + retrofit bloc 1 (5 anciennes scènes)
+// v64 : v2.30 — 2 nouveaux scénarios (Handala/Stryker NE + Pédo-hunter FR) + retrofit bloc 2
+//
+//       Nouveaux scénarios v2.30 (corpus 107 → 109) :
+//
+//         • handala-hack-iran-rhne-stryker (medium, NE/Marin-Épagnier)
+//             Pitch  : Sous-traitant suisse de Stryker à Neuchâtel touché
+//                      par Handala (groupe iranien lié au MOIS) via
+//                      latéralisation cross-tenant Microsoft Intune
+//                      depuis Stryker mère (mars 2026, attaque réelle)
+//             Rôle   : CISO Rhône-Médical SA (PME medtech 220 ETP)
+//             PNJ    : ciso_medsupplier_ne (Pellet, fictif), fbi_legat_bern
+//                      (Donovan, fictif), ofcs_coordinator (Tschanz, fictif)
+//             Bif.   : step 0 #1 → 'end' (réinitialisation Intune brutale =
+//                      destruction des preuves forensiques)
+//             Tags   : APT iranien, Microsoft Intune wiper, OAuth persistance,
+//                      FIDO2 vs MFA SMS, cross-tenant federation, MITRE
+//                      T1098/T1486/T1078, nLPD art. 24, Convention Budapest
+//                      art. 31, MLAT US-CH, OFCS hub coordination
+//             Sources réelles : TechCrunch + CheckPoint + CyberScoop
+//                      + CISA + Times of Israel (mars 2026 Stryker hack)
+//
+//         • cyber-justicier-vigilante-fr (hard, FR/Bulle)
+//             Pitch  : Pédo-hunter amateur fribourgeois (inspiré Yannick
+//                      RTS oct 2025) transmet à PolCant FR un dossier
+//                      800 pages incluant chats + embuscade physique +
+//                      diffusion publique Telegram. Question recevabilité
+//                      des preuves obtenues par tiers + qualification.
+//             Rôle   : Procureure adjointe MP-FR section criminalité
+//                      informatique et atteintes aux mineurs
+//             PNJ    : fr_prosecutor_cyber (Genoud, fictif transposable),
+//                      ge_prosecutor_cyber (Cottier, fictif transposable),
+//                      src_director (fictif, conseil stratégique)
+//             Bif.   : step 0 #1 → 'end' (audition Yannick comme témoin +
+//                      versement sans tri + arrestation brutale M.T. =
+//                      catastrophe procédurale + risque suicide majeur)
+//             Tags   : ATF 137 IV 33 preuves de tiers, CEDH Sutherland 2020,
+//                      art. 141 al. 2 CPP, art. 187/197 CP, art. 22 tentative,
+//                      TF 6B_572/2018 (enfants fictifs), art. 181/183/173-174
+//                      CP qualification cyber-vigilantes, audition
+//                      parlementaire posture équilibrée
+//             Sources réelles : RTS oct 2025 article "Yannick" pédo-hunters,
+//                      AOC media analyse vigilantisme, jurisprudence
+//                      Sutherland UKSC 32 (2020)
+//
+//       Retrofit bloc 2 — 5 anciennes scènes adaptées :
+//
+//         • audit-prestataire-systemique (5 steps, hard) — ISAE 3402, VS
+//             npcs=[forensics_lead_zh, ofcs_coordinator]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//
+//         • banque-privee-mlat (5 steps, expert) — MLAT US-CH, GE
+//             npcs=[ge_prosecutor_cyber, compliance_bs, fbi_legat_bern]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//
+//         • banquier-fantome (5 steps, hard) — faux technicien NE/MPC
+//             npcs=[nicolet, compliance_bs]
+//             Marqueur step 3 #2 (court-circuit procédural)
+//
+//         • boutique-fantome (4 steps, medium) — fraude e-commerce BS
+//             npcs=[forensics_lead_zh, nicolet]
+//             Marqueur step 0 #1 (qualification 146 vs 147 CP)
+//
+//         • clone-vocal (5 steps, medium) — deepfake voix CEO fraud SZ
+//             npcs=[ciso_logitech, nicolet]
+//             Marqueur step 0 #2 (catastrophe forensique audio)
+//
+//       3 nouveaux PNJ ajoutés à data/npcs.json (24 → 27) :
+//         • ciso_medsupplier_ne (fictif, CISO Rhône-Médical NE)
+//         • fbi_legat_bern (fictif, FBI Legal Attaché ambassade US Berne)
+//         • fr_prosecutor_cyber (fictif transposable, procureure cyber FR)
+//
+//       Stats : 109 scènes / 27 PNJ / 18 scènes avec NPCs (8 v2.24+v2.28 +
+//       5 retrofit bloc 1 + 2 v2.30 nouveaux + 5 retrofit bloc 2 — wait,
+//       les 2 v2.30 nouveaux sont comptés à part : 8 + 5 + 2 + 3 = 18. La
+//       scène cyber-justicier est nouvelle, et boutique-fantome existait
+//       déjà — 13 anciennes + 5 nouvelles = 18 scènes avec NPCs).
+//
+//       Approche retrofit "par bloc de 5" : ~92 scènes restantes après
+//       v2.29 → ~87 scènes restantes après v2.30. Reste ~17 blocs.
+//
 //
 //       Nouveaux scénarios v2.29 (corpus 105 → 107) :
 //
@@ -455,7 +534,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v63';
+const CACHE_VERSION = 'cas-in-v64';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
