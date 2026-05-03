@@ -1,4 +1,29 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v58 : v2.24 — Mode lecture continue + 5 nouvelles scènes suisses
+//
+//       NOUVELLES SCÈNES (5 ajouts → 97 → 102 scènes total) :
+//         • gruyere-coop-affinage-stuxnet     (FR Bulle, IIoT/sabotage)
+//         • epfl-recherche-lai-fuite-chine    (VD Lausanne, espionnage IA, focus DPO)
+//         • epfl-laboratoire-ia-medicale-chine (VD Lausanne, focus laboratoire — bonus)
+//         • lugano-dpfl-mafia-finance         (TI Lugano, blanchiment 'ndrangheta)
+//         • hcfr-bec-transfer-deepfake        (FR BCF Arena, deepfake hockey + BEC)
+//
+//       MODE LECTURE CONTINUE (nouvelle feature) :
+//         • js/components/fiche-reader.js (382 L) : composant qui injecte un
+//           bandeau "Précédent · Suivant" en bas de chaque fiche, avec :
+//             - Navigation linéaire dans la même catégorie (ordre alpha)
+//             - Indicateur de progression "Fiche X/Y dans le thème"
+//             - Barre de progression visuelle (% de fiches lues dans la cat.)
+//             - Section "Fiches connexes" (top 5 par questions partagées)
+//         • data/fiche-graph.json (128 KB) : graphe pré-calculé des voisinages
+//           - 9 catégories avec navigation linéaire
+//           - 98/109 fiches ont ≥1 fiche connexe (Jaccard sur questions)
+//         • scripts/build_fiche_graph.py : génère le graphe (étape 7 du workflow)
+//         • scripts/inject_fiche_reader.py : injecte la balise dans les 109 fiches
+//         • Persistence localStorage (fiche-reader.read) : marque "lue" après 90s
+//
+//       Tests : tous passent. Pipeline 7/7 étapes.
+//
 // v57 : v2.23 — Split de tp-engine.js (proof-of-concept)
 //       NEW tp/tp-engine-carving.js (247 L) : exercices "carving"
 //       (signatures de fichiers) extraits de tp-engine.js.
@@ -169,7 +194,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v57';
+const CACHE_VERSION = 'cas-in-v58';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -264,8 +289,10 @@ const STATIC_ASSETS = [
   './js/components/search-modal.js',
   './js/components/fiche-related.js',
   './js/components/fiche-common.js',
+  './js/components/fiche-reader.js',
   './data/search-index.json',
   './data/cross-links.json',
+  './data/fiche-graph.json',
 ];
 
 const OFFLINE_FALLBACK = './offline.html';
