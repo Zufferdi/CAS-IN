@@ -175,6 +175,15 @@ def main() -> None:
             SCENES_DIR / "saxon-curatelle.json",
             SCENES_DIR / "secret-fonction-parlementaire.json",
             SCENES_DIR / "smartphone.json",
+            # v2.41 retrofit bloc 13 (8 scènes + 6 nouveaux PNJ)
+            SCENES_DIR / "sms-blasters.json",
+            SCENES_DIR / "specialite-eimp.json",
+            SCENES_DIR / "stadler_2020.json",
+            SCENES_DIR / "stgall-infiltration.json",
+            SCENES_DIR / "supply_chain_sante.json",
+            SCENES_DIR / "swatch-2020-ot.json",
+            SCENES_DIR / "swisscom_2018.json",
+            SCENES_DIR / "swissgrid-iec61850-jura.json",
         ]
 
     has_error = False
