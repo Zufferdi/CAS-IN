@@ -1,5 +1,58 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v65 : v2.31 — Retrofit bloc 3 (5 anciennes scènes adaptées) + 2 PNJ
+// v66 : v2.32 — Retrofit bloc 4 (5 anciennes scènes adaptées)
+//
+//       Version sans nouveau scénario, focalisée sur la mise à niveau
+//       systématique du corpus historique. Bloc 4 = diversification
+//       continue : rédaction rapport / coopération européenne / IoT-
+//       stalking / fraude DAB / deepfake électoral.
+//
+//       Retrofit bloc 4 — 5 anciennes scènes adaptées :
+//
+//         • conclusion (5 steps, medium) — rédaction rapport forensique
+//             npcs=[forensics_lead_zh, nicolet]
+//             Marqueur step 0 #0 (affirmations sans support technique
+//             direct invalidées au procès).
+//
+//         • coup-de-filet-europol-27-pays (5 steps, expert) — opération
+//             EUROPOL multi-juridictionnelle simultanée
+//             npcs=[fbi_legat_bern, nicolet]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : communiquer noms 200+ agents avant bouclage =
+//             représailles + fragilisation opérations futures.
+//
+//         • crypto-stalking-airtag-emirats (5 steps, hard) — IoT
+//             stalking AirTag par ex-conjoint aux Émirats
+//             npcs=[ge_prosecutor_cyber, ofcs_coordinator]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : faire fuir la victime = inversion des rôles
+//             violant CEDH Opuz v Turquie 2009 (obligation positive).
+//
+//         • dab-villaz (5 steps, medium) — attaques au gaz DAB FR
+//             npcs=[fr_prosecutor_cyber, forensics_lead_zh]
+//             Marqueur step 0 #1 (enquête sans cyber-forensics =
+//             reproduction erreur Glâne 2022-2023, dossier froid).
+//
+//         • deepfake-electoral (5 steps, hard) — Conseiller fédéral à
+//             J-48h votation populaire
+//             npcs=[ofcs_coordinator, src_director]
+//             Marqueur step 4 #1 (report votation art. 34 LDP =
+//             rupture sans précédent calendrier démocratique).
+//
+//       Pas de nouveau PNJ cette release (réutilisation des 7 PNJ
+//       transposables existants).
+//
+//       Note : la scène initialement proposée 'deepfake-formation-rh'
+//       n'existe pas dans le corpus, remplacée par 'deepfake-electoral'
+//       (deepfake d'un Conseiller fédéral 48h avant votation populaire).
+//
+//       Stats : 109 scènes / 29 PNJ / 28 scènes avec NPCs (8 v2.24+v2.28
+//       + 5 retrofit bloc 1 + 2 v2.30 nouveaux + 5 retrofit bloc 2 + 5
+//       retrofit bloc 3 + 5 retrofit bloc 4 - 2 doublons des v2.30
+//       comptés ailleurs = 28 scènes au total).
+//
+//       Approche retrofit "par bloc de 5" : ~77 scènes restantes après
+//       v2.32. Reste ~15 blocs.
+//
 //
 //       Version sans nouveau scénario, focalisée sur la mise à niveau
 //       systématique du corpus historique. Bloc 3 = diversification
@@ -590,7 +643,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v65';
+const CACHE_VERSION = 'cas-in-v66';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
