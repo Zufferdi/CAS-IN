@@ -4,6 +4,130 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.29] — 2026-05-03
+
+Cette version ajoute **2 nouveaux scénarios suisses** (mini-natels en EPO Pöschwies + survols drones sur Swissgrid Laufenburg) et amorce le **retrofit du corpus historique** : adaptation par blocs de 5 anciennes scènes pour les aligner sur la nouvelle mouture (PNJ assignés, marqueurs de bifurcation narrative explicites). Le corpus passe à **107 scènes** et le catalogue PNJ à **24 personnages**.
+
+### Ajouté — 2 nouveaux scénarios
+
+#### 📱 `mini-natels-prison-pochwies` (medium, ZH/Pöschwies)
+
+| Aspect | Détail |
+|---|---|
+| **Source** | Phénomène documenté : téléphones miniatures chinois (Itel-style, ~60 g, 18 CHF/pièce sur AliExpress) en EPO suisses ; rapports Kaspersky GReAT et Lookout sur firmware Necro préinstallé |
+| **Pitch** | Saisie de 3 mini-natels en cellule de M. T. à Pöschwies (Regensdorf, plus grand pénitencier suisse). À l'allumage : firmware Android compromis, contact C2 Cambodge. Volet pénal individuel + volet stratégique supply chain pénitentiaire |
+| **Rôle joueur** | Inspecteur·trice cyber-enquêtes PolCant ZH |
+| **PNJ** | `epo_director` (Mme Wegmann, fictif), `mobile_expert_lookout` (M. Halder, fictif), `labhart` (procureur MP-ZH, **réel**) |
+| **Difficulté** | medium |
+| **Steps** | (0) Saisie + chaîne de garde · (1) Analyse firmware Lookout · (2) Coordination OFCS/fedpol · (3) Audit CCDJP cross-cantonal · (4) Audition parlementaire |
+| **Bifurcation** | step 0 #1 (déverrouillage forcé sous coercition) → **next: 'end'** — violation art. 113 CPP (nemo tenetur), invalidation des preuves (jurisprudence TF 6B_510/2014) |
+| **Pédagogie** | OPE art. 91, art. 304-307bis CP, art. 244/247 CPP, jurisprudence TF déverrouillage forcé, brouilleurs LTC art. 34, doctrine CCDJP, audit cross-cantonal, communication parlementaire |
+
+#### 🚁 `drone-laufenburg-swissgrid-aargau` (hard, AG/Laufenburg)
+
+| Aspect | Détail |
+|---|---|
+| **Source** | Phénomène documenté : survols de drones non identifiés sur infrastructures électriques européennes (RTE Bure/Cattenom 2019-2020, 50Hertz 2023, Swissgrid 2024-2025) |
+| **Pitch** | 5 survols nocturnes en 11 jours sur l'étoile de Laufenburg (hub 380 kV ENTSO-E reliant FR/DE/IT/AT). Attribution difficile : activisme, espionnage industriel, opération étatique false flag |
+| **Rôle joueur** | Commissaire fedpol PJF, division Cybercriminalité et CII |
+| **PNJ** | `swissgrid_cirt` (M. Hauser, fictif), `ofcs_coordinator` (Mme Tschanz, fictif), `nicolet` (procureur cyber MPC, **réel**) |
+| **Difficulté** | hard |
+| **Steps** | (0) Coordination CII · (1) Détection multi-couches · (2) Communication 3 cercles · (3) Attribution + CRP française · (4) Capitalisation institutionnelle |
+| **Bifurcation** | step 0 #1 (escalade militaire prématurée Forces aériennes) → **next: 'end'** — LAAM art. 92 disproportionné, signal stratégique catastrophique, désorganisation cellule CII |
+| **Pédagogie** | art. 224bis CP (sabotage CII), LMSI art. 23, OACS art. 17, ENTSO-E coordination, opacité tactique vs. transparence démocratique, doctrine OFCS Drone-CII, false flag attribution, LAAM art. 92 |
+
+### Ajouté — Retrofit bloc 1 (5 anciennes scènes adaptées)
+
+L'utilisateur a demandé une démarche systématique : reprendre les anciennes scènes du corpus pour les aligner sur le format v2.24+ (PNJ assignés, marqueurs de bifurcation narrative explicites, équilibrage des longueurs de choix). Démarche par blocs de 5. **Bloc 1 livré dans cette release** :
+
+| Scène | Steps | Difficulté | NPCs assignés | Bifurcation marquée |
+|---|---|---|---|---|
+| `attribution` | 8 | hard | `forensics_lead_zh`, `nicolet` | step 0 #0 → 'end' (qualification prématurée) |
+| `bitlocker` | 5 | medium | `forensics_lead_zh` | step 0 #0 → 'end' (laisser fermer = perte état mémoire) |
+| `adn-genealogique-cold-case` | 5 | hard | `fim_genealogist`, `forensics_lead_zh` | step 4 #1 → 'end' (position permissive maximale FGG) |
+| `agent-infiltre-darknet-14-mois` | 5 | expert | `pjf_undercover_lead` | step 4 #1 → 'end' (débriefing minimaliste post-mission) |
+| `bec-pme-geneve-italie` | 6 | expert | `ge_prosecutor_cyber`, `compliance_bs` | **bifurcation créée** step 3 #2 → 'end' (court-circuit EIMP via Polizia Postale Milano = art. 271 CP) |
+
+`bec-pme-geneve-italie` était la seule scène strictement linéaire du corpus (104 autres avaient déjà des bifurcations). Une vraie bifurcation 'end' a été créée sur le distractor critical du step 3 (contact direct hors EIMP avec la Polizia Postale Milano), avec marqueur étendu expliquant la triple violation : (a) art. 271 CP (acte d'autorité étranger), (b) art. 312 CP (abus d'autorité), (c) blocage durable de l'EIMP CH↔IT pour 18-24 mois.
+
+Pour `adn-genealogique-cold-case` et `agent-infiltre-darknet-14-mois`, conversion de la convention historique `next=-1` (équivalent à 'end' implicite si dernier step) en `next='end'` explicite pour cohérence avec le moteur v2.24+.
+
+### Ajouté — 8 nouveaux PNJ dans `data/npcs.json` (16 → 24)
+
+| ID | Type | Rôle | Usage |
+|---|---|---|---|
+| `epo_director` | Fictif | Mme Wegmann, dir. sécurité EPO Pöschwies | mini-natels |
+| `mobile_expert_lookout` | Fictif | M. Halder, mobile threat intel Lookout | mini-natels |
+| `swissgrid_cirt` | Fictif | M. Hauser, CIRT Swissgrid | drone-laufenburg |
+| `ofcs_coordinator` | Fictif | Mme Tschanz, desk CII OFCS | drone-laufenburg |
+| `forensics_lead_zh` | Fictif **transposable** | M. Bachmann, chef labo cyber-forensics PolCant ZH | attribution + bitlocker + adn |
+| `ge_prosecutor_cyber` | Fictif **transposable** | Mme Cottier, procureure GE cyber | bec-pme |
+| `pjf_undercover_lead` | Fictif | Mme Roesti, cheffe agents infiltrés PJF | agent-infiltre |
+| `fim_genealogist` | Fictif | Mme Strebel, cheffe FGG forensique FOR-ZH | adn-genealogique |
+
+Les 4 PNJ marqués **transposables** sont conçus génériquement pour réutilisation sur de multiples scénarios de la même thématique (forensics technique, procureure GE, etc.) dans les blocs de retrofit ultérieurs.
+
+### Modifié — `js/pages/scene-app.js` (CANTON_DATA)
+
+```diff
+-  ZH: { name: "Zurich", scenarios: ["attribution","bitlocker","bitlocker_froid"] },
++  ZH: { name: "Zurich", scenarios: ["attribution","bitlocker","bitlocker_froid","mini-natels-prison-pochwies"] },
+-  AG: { name: "Argovie", scenarios: ["operation-alice","attentat-deja-couteau-mineur"] },
++  AG: { name: "Argovie", scenarios: ["operation-alice","attentat-deja-couteau-mineur","drone-laufenburg-swissgrid-aargau"] },
+```
+
+### Modifié — `scenes/index.json`
+
+Régénéré (105 → 107 entrées, 157 KB).
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 15 scènes touchées par v2.24/v2.28/v2.29 (était 8). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v62 → v63
+
+Header v2.29 documentant les 2 nouveaux scénarios + le retrofit bloc 1 + les 8 nouveaux PNJ.
+
+### Statistiques v2.29
+
+| Indicateur | v2.28 | v2.29 |
+|---|---|---|
+| Scènes totales | 105 | **107** (+2) |
+| Scènes avec NPCs assignés | 8 | **13** (+5 retrofit bloc 1) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 8 | **13** (+5) |
+| Scènes strictement linéaires | 1 (bec-pme) | **0** (bifurcation créée) |
+| PNJ catalogue | 16 | **24** (+8) |
+| PNJ réels (publics) | 7 | 7 (inchangé) |
+| PNJ fictifs | 9 | **17** (+8) |
+| PNJ transposables (multi-scènes) | 0 | **4** (forensics_lead_zh, ge_prosecutor_cyber, pjf_undercover_lead, fim_genealogist) |
+| Cantons couverts | 14/26 | 14/26 (densification ZH+1, AG+1) |
+| Service Worker | v62 | **v63** |
+
+### Notes éditoriales
+
+**Sur la mécanique de retrofit.** L'audit du corpus avant v2.29 montrait que 97/105 scènes n'avaient pas de PNJ assignés (uniquement les 8 de v2.24+v2.28). En revanche, 104/105 avaient déjà des bifurcations narratives (mécanique préexistante du moteur via `next` non-séquentiel ou `'end'`). Le travail de retrofit consiste donc principalement en **deux gestes minimaux** : (1) assigner 1-3 PNJ pertinents du catalogue, (2) ajouter le marqueur "📍 BIFURCATION NARRATIVE" en préfixe du `fb` du distracteur catastrophique. Pour la seule scène strictement linéaire (`bec-pme-geneve-italie`), une vraie bifurcation a été créée. Le travail est rapide et reproductible sur les 92 scènes restantes (~18 blocs).
+
+**Sur l'équilibrage des choix (length deviation).** Toutes les anciennes scènes du bloc 1 avaient des distracteurs significativement plus courts que le bon choix (déviations de 80-125% sur certains steps). Cette asymétrie crée un biais "longueur révélatrice" (l'étudiant devine la bonne réponse à la longueur). Les 25+ distracteurs étoffés cette release ramènent toutes les scènes sous le seuil de 30% (cible : <30% par step, <50% obligatoire). Le linter `scripts/check_scenes_balance.py` est désormais aligné avec la liste à jour.
+
+**Sur les 8 nouveaux PNJ.** 4 sont conçus pour réutilisation transposable sur les scènes restantes du corpus (économie de catalogue). Les 4 autres sont plus spécifiques aux 2 nouveaux scénarios v2.29. Tous fictifs (les rôles institutionnels représentés sont occupés par des personnes réelles dont la doctrine n'est pas de communiquer publiquement sur leurs missions opérationnelles : direction sécurité EPO, CIRT Swissgrid, agents infiltrés PJF, etc.).
+
+**Sur la suite du retrofit.** L'utilisateur a explicitement demandé une démarche par blocs de 5. Avec 92 scènes restantes, cela représente ~18 blocs. Les blocs ultérieurs peuvent être priorisés selon plusieurs critères : par canton (équilibrer les couverts), par thématique (cyber-forensique, BEC, terrorisme, etc.), par âge dans le corpus (les plus anciennes en priorité). Une proposition de bloc 2 sera présentée en début de prochaine session.
+
+### Prochaines évolutions possibles
+
+```
+v2.30  Retrofit bloc 2 (5 anciennes scènes, à proposer)
+v2.31  Examen blanc 50q/90 min (~4h)
+v2.32  Heatmap canton enrichie + badges par canton
+v2.33  Bugs corpus (Q#1482 doublon, Q#1775 6 options, 9 quasi-doublons)
+
+Scénarios PDF candidats restants :
+  • handala-hack-iran-rhne-stryker (chasseurs de têtes Iran)
+  • cyber-justicier-vigilante (Marvin Ojaghi)
+  • deepfake-conseiller-etat (Pierre-Yves Maillard, à anonymiser)
+  • src-fonctionnaire-russe-kaspersky (espionnage interne)
+```
+
 ## [2.28] — 2026-05-03
 
 Cette version ajoute **3 nouveaux scénarios suisses** documentés sur l'actualité DFIR récente (dossier de presse 2025), portant le corpus à **105 scènes** au total. Chaque scénario est ancré sur des sources publiées et a été co-conçu pour exploiter et étendre les PNJ existants.
