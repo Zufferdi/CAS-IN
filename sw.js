@@ -1,4 +1,36 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v59 : v2.25 — Qualité des scènes : équilibrage des choix + corrections factuelles
+//
+//       PHASE 1 — Rééquilibrage des choix dans les 5 scènes v2.24 (25 steps).
+//         Avant : le bon choix était systématiquement le plus long (200-450 chars)
+//                 face à des distracteurs courts (100-200 chars). Biais "longueur
+//                 révélatrice" : un étudiant pouvait deviner la bonne réponse
+//                 sans lire les questions. 12 erreurs (>50% écart) + 7 warnings.
+//         Après : 0 erreur, 0 warning. Tous les steps avec écart ≤ 26%.
+//                 Les distracteurs ont été étoffés avec :
+//                   - Justification du raisonnement erroné (qui paraît plausible)
+//                   - Conditions/qualifications similaires aux structures (a)(b)(c)
+//                   - Détails techniques cohérents (ex: TIA Portal, S7-1500)
+//                   - Références juridiques précises (ex: CEDH art. 6, ATF 141 IV 142)
+//
+//       PHASE 2 — Corrections factuelles dans 3 scènes :
+//         • epfl-laboratoire-ia-medicale-chine :
+//           - "avenue Forel" (n'existe pas sur le campus EPFL) → "bâtiment INF (Faculté IC)"
+//           - "Pr. Schaffner" → "Pr. Délémont" (nom suisse romand fictif neutre)
+//         • lugano-dpfl-mafia-finance :
+//           - "Banca Cantonale del Ticino e Italia (BCFI)" (confusion avec BCF Fribourg)
+//             → "BancaStato Ticino" (vraie banque cantonale tessinoise)
+//         • hcfr-bec-transfer-deepfake :
+//           - "Hubert Waeber" (vrai président HC Fribourg-Gottéron, risque diffamation
+//             dans une fiction d'usurpation) → "Olivier Rotzetter" (nom fribourgeois
+//             plausible mais fictif)
+//
+//       NOUVEAU : scripts/check_scenes_balance.py
+//         Lint script qui mesure l'équilibrage des choix et signale les biais
+//         de longueur. Utilisable comme pre-commit hook ou en CI.
+//
+//       Tests : tous passent. Pipeline 8/8 étapes.
+//
 // v58 : v2.24 — Mode lecture continue + 5 nouvelles scènes suisses
 //
 //       NOUVELLES SCÈNES (5 ajouts → 97 → 102 scènes total) :
@@ -194,7 +226,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v58';
+const CACHE_VERSION = 'cas-in-v59';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
