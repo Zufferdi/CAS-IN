@@ -4,6 +4,97 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.27] — 2026-05-03
+
+Cette version étend les **embranchements narratifs** initiés en v2.26 aux 4 autres scènes v2.24. Chaque scène v2.24 dispose désormais d'au moins une vraie bifurcation, avec une variété pédagogique délibérée : 1 fin anticipée catastrophe + 3 sauts de plusieurs steps.
+
+### Ajouté — 4 nouvelles bifurcations narratives
+
+Pattern systématique : un mauvais choix à un step précoce **change matériellement la suite du scénario** (le joueur saute plusieurs steps ou la scène s'achève). Chaque feedback contient le marqueur **« 📍 BIFURCATION NARRATIVE »** suivi de l'explication cause→effet.
+
+| Scène | Step | Distracteur | Type | Conséquence |
+|---|---|---|---|---|
+| `lugano-dpfl-mafia-finance` | 1 | #2 — Forcer le code PIN iPhone | `next: 'end'` | Violation CPP art. 113 (nemo tenetur) → fruit de l'arbre empoisonné (art. 141 al. 4 CPP) → toute la procédure invalidée, F. acquitté, l'enquêteur lui-même fait l'objet d'une procédure disciplinaire. Fin immédiate du scénario. |
+| `epfl-recherche-lai-fuite-chine` | 0 | #1 — Accepter 48h enquête interne Pr. Z. | `next: 3` | Pendant les 48h, Chen Wei est alerté par la rumeur dans un labo de 12 personnes, efface ses traces locales et réserve un vol Lausanne→Beijing. Le scénario saute les steps 1 (Innosuisse/PFPDT/DFAE) et 2 (qualification fine art. 273 CP), désormais impossibles avec un dossier compromis. |
+| `epfl-laboratoire-ia-medicale-chine` | 0 | #2 — Réunion crise dans 4h | `next: 4` | Cascade 4h : (a) laptop Zhang Yi passe AFU→BFU, (b) Pr. Délémont alerte le suspect via WhatsApp, (c) un post-doc chinois prévient Zhang Yi par téléphone, (d) la rumeur sort sur Twitter académique. Le scénario saute 3 steps (qualification, coordination MPC/SEM/DFAE, communication) pour atterrir directement à la refonte de gouvernance. |
+| `hcfr-bec-transfer-deepfake` | 2 | #2 — Confession totale émotionnelle en presse | `next: 4` | Diffuser publiquement l'audio deepfake en conférence déclenche : (a) une boucle médiatique sur l'extrait audio, (b) les attaquants déplacent les fonds vers un mixeur crypto avant que la coopération Convention de Budapest n'aboutisse, (c) le sponsor BCF retire son naming. Le scénario saute la coordination Swiss Ice Hockey (sans objet) pour aller directement aux leçons apprises. |
+
+### Variété pédagogique
+
+```
+1× 'end'     — lugano (catastrophe procédurale immédiate)
+3× sauts     — epfl-rech (2 steps), epfl-labo (3 steps), hcfr (1 step)
+```
+
+Cette variété est délibérée : un seul type de bifurcation (toujours `'end'` ou toujours un saut) deviendrait prévisible. La diversité force le joueur à anticiper différemment selon la nature du mauvais choix : violer un droit fondamental tue immédiatement le dossier (`'end'`), alors qu'un manque de réactivité conduit à un dossier dégradé sur lequel on continue (saut). C'est le reflet authentique du DFIR : certaines erreurs sont fatales, d'autres réduisent l'efficacité sans annuler la procédure.
+
+### État après v2.27
+
+```
+Scène                                  Bifurcations  Type
+─────────────────────────────────────────────────────────────────
+gruyere-coop-affinage-stuxnet          1             saut 3 steps   (v2.26)
+lugano-dpfl-mafia-finance              1             'end'          (v2.27)
+epfl-recherche-lai-fuite-chine         1             saut 2 steps   (v2.27)
+epfl-laboratoire-ia-medicale-chine     1             saut 3 steps   (v2.27)
+hcfr-bec-transfer-deepfake             1             saut 1 step    (v2.27)
+─────────────────────────────────────────────────────────────────
+TOTAL                                  5             1× end + 4× sauts
+```
+
+Les 5 scènes v2.24 disposent toutes d'au moins une vraie embranchement.
+
+### Aucun changement de moteur
+
+Le moteur `scene-app.js` supportait déjà :
+
+- `choice.next` numérique non-linéaire (saut vers n'importe quel step suivant ou précédent)
+- `choice.next: 'end'` (fin anticipée du scénario, déclenche `showReport()`)
+- Choix critique (`critical: true`) qui en mode Procureur termine la scène
+
+Les bifurcations v2.27 exploitent uniquement ces mécaniques existantes — aucune ligne de code modifiée dans le moteur.
+
+### Aucun déséquilibre introduit
+
+Les feedbacks (`fb`) ont été allongés pour expliquer chaque bifurcation, mais les textes des choix (`text`) sont restés inchangés. Le linter `scripts/check_scenes_balance.py` confirme que **toutes les scènes v2.24 conservent un écart maximum de 26%** (cible v2.25 atteinte) :
+
+```
+✓ gruyere-coop-affinage-stuxnet          26.0%      5/5
+✓ epfl-recherche-lai-fuite-chine         13.0%      5/5
+✓ epfl-laboratoire-ia-medicale-chine     26.0%      5/5
+✓ lugano-dpfl-mafia-finance              14.0%      5/5
+✓ hcfr-bec-transfer-deepfake             23.0%      5/5
+─────────────────────────────────────────────────────
+  Total: ⚠ 0 warnings   ✗ 0 errors
+```
+
+### Modifié — Service Worker v60 → v61
+
+Bump pour propager les modifications des 4 scènes au cache des clients existants. Aucun nouvel asset, aucune dépendance ajoutée.
+
+### Statistiques v2.27
+
+| Indicateur | v2.26 | v2.27 |
+|---|---|---|
+| Bifurcations narratives utilisées | 1 | **5** (+4) |
+| Scènes v2.24 avec ≥1 bifurcation | 1/5 | **5/5** |
+| Bifurcations type `'end'` | 0 | **1** |
+| Bifurcations type saut multi-steps | 1 | **4** |
+| Service Worker | v60 | **v61** |
+
+### Notes pédagogiques
+
+**Pourquoi varier les types de bifurcations** : si toutes les bifurcations menaient à `'end'`, le joueur apprendrait simplement à éviter quelques choix « rouges » sans comprendre les nuances. Si elles menaient toutes à des sauts, l'enjeu de certaines erreurs (violation des droits fondamentaux, par exemple) serait sous-évalué. La variété — 1 fin sur 5 — communique implicitement que **certaines erreurs sont fatales et d'autres seulement coûteuses**, ce qui correspond à la réalité du métier.
+
+**Pourquoi ces choix précis** : chaque bifurcation a été choisie pour illustrer un piège *typique* du DFIR :
+
+- **lugano** : forcer un suspect à révéler ses codes — tentation classique de l'urgence opérationnelle — viole le droit de ne pas s'incriminer et **invalide tout** par contamination (art. 141 al. 4).
+- **epfl-recherche** : « accordons 48h pour vérifier en interne » — la pression hiérarchique de préserver la communauté académique — alerte le suspect dans une organisation à fuites prévisibles.
+- **epfl-labo** : « réunissons-nous dans 4h pour décider collectivement » — l'inertie de gouvernance — détruit les preuves volatiles (AFU→BFU) et donne au suspect le temps de coordonner.
+- **hcfr** : « soyons radicalement transparents » — confusion entre transparence et exhibition — détruit les leviers d'enquête et attire la tempête médiatique.
+
+Ces 4 archétypes couvrent un large spectre des erreurs réelles documentées dans la littérature DFIR.
+
 ## [2.26] — 2026-05-03
 
 Cette version ajoute **4 fonctionnalités de gamification** aux scènes : timer de stress (C, déjà existant — documenté), embranchements narratifs (D, exploitation du moteur existant), **personnages récurrents** (E, nouveau), et **6 nouveaux achievements** spécialités cantonales et thèmes techniques (H).
