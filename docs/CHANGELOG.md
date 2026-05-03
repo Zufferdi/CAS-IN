@@ -4,6 +4,82 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.31] — 2026-05-03
+
+Release de **mise à niveau du corpus historique**, sans nouveau scénario. **Bloc 3 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique maximale : diplomatie / humanitaire / santé / cloud public / ransomware. Le corpus reste à 109 scènes ; le catalogue PNJ passe à 29 personnages.
+
+### Ajouté — Retrofit bloc 3 (5 anciennes scènes adaptées)
+
+| Scène | Steps | Difficulté | NPCs assignés | Bifurcation marquée |
+|---|---|---|---|---|
+| `burgenstock-neutralite` | 5 | hard | `ofcs_coordinator`, `src_director` | step 4 #1 et #2 (next=-1 → 'end' explicite) |
+| `cicr_2022` | 8 | hard | `cicr_dpo`, `ge_prosecutor_cyber` | step 0 #0 (catastrophe humanitaire initiale) |
+| `cistec-2025-sante` | 5 | hard | `ciso_logitech`, `forensics_lead_zh` | step 4 #1 et #2 (next=-1 → 'end' explicite) |
+| `cloud-aws-s3-leak` | 5 | hard | `ofs_rssi_fedch`, `ofcs_coordinator` | step 4 #1 et #2 (next=-1 → 'end' explicite) |
+| `comparis_2021` | 5 | medium | `ciso_logitech`, `nicolet` | step 0 #2 (paiement rançon catastrophique) |
+
+**Diversification thématique** : sommet diplomatique de Bürgenstock (neutralité + LMSI), incident CICR Genève janvier 2022 (515'000 personnes humanitaires exposées, doctrine 'do no harm'), éditeur logiciel hospitalier suisse (23 hôpitaux clients, art. 224bis CP), bucket S3 mal configuré chez sous-traitant fédéral (accountability art. 5 nLPD), Hive ransomware sur Comparis.ch en 2021.
+
+Pour `burgenstock-neutralite`, `cistec-2025-sante` et `cloud-aws-s3-leak`, conversion des `next=-1` historiques en `next='end'` explicites. La scène `cicr_2022` est notable car elle compte **8 steps** (la plupart des scènes en font 5) et avait déjà 6 bifurcations 'end' préexistantes — seul un marqueur narratif initial a été ajouté.
+
+### Ajouté — 2 nouveaux PNJ dans `data/npcs.json` (27 → 29)
+
+| ID | Type | Rôle | Usage |
+|---|---|---|---|
+| `cicr_dpo` | Fictif **transposable** | Mme Tedeschi, DPO CICR Genève | cicr_2022 + scénarios humanitaires futurs |
+| `ofs_rssi_fedch` | Fictif **transposable** | M. Schaller, RSSI office fédéral générique | cloud-aws-s3-leak + scénarios Confédération futurs |
+
+Les deux PNJ sont conçus pour réutilisation transposable dans les blocs futurs : `cicr_dpo` couvre tout scénario humanitaire genevois (CICR, HCR, MSF), `ofs_rssi_fedch` couvre tout scénario de la Confédération (offices fédéraux, sous-traitants cloud, fuites administratives). Le catalogue passe à **7 PNJ transposables** (sur 29 au total), ce qui réduit le besoin de créer de nouveaux PNJ pour chaque bloc.
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 27 scènes touchées par v2.24/v2.28/v2.29/v2.30/v2.31 (était 22). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v64 → v65
+
+Header v2.31 documentant le retrofit bloc 3 + les 2 nouveaux PNJ.
+
+### Statistiques v2.31
+
+| Indicateur | v2.30 | v2.31 |
+|---|---|---|
+| Scènes totales | 109 | **109** (inchangé) |
+| Scènes avec NPCs assignés | 18 | **23** (+5) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 18 | **23** (+5) |
+| Scènes avec sources presse réelles | 12 | **14** (+2 — cicr_2022, comparis_2021) |
+| PNJ catalogue | 27 | **29** (+2) |
+| PNJ réels (publics) | 7 | 7 (inchangé) |
+| PNJ fictifs | 20 | **22** (+2) |
+| PNJ transposables (multi-scènes) | 5 | **7** (+2 : cicr_dpo, ofs_rssi_fedch) |
+| Cantons couverts | 14/26 | 14/26 (inchangé) |
+| Service Worker | v64 | **v65** |
+
+### Notes éditoriales
+
+**Sur la sélection du bloc 3.** Diversification thématique délibérée pour exposer l'apprenant à 5 domaines techniques et juridiques distincts en une session : (a) **diplomatie / neutralité** (Bürgenstock + LMSI + Convention de La Haye 1907 + art. 296 CP), (b) **humanitaire / 'do no harm'** (CICR + droit international humanitaire + populations vulnérables en zones de conflit), (c) **santé / supply chain hospitalière** (Cistec + ISO 13485 + LIE + 23 hôpitaux suisses), (d) **cloud public / accountability** (OFS + AWS S3 + art. 5 nLPD + doctrine 'cloud first' Confédération 2024), (e) **ransomware / paiement rançon** (Hive + Comparis + recommandations OFCS/FBI/NCSC sur le non-paiement).
+
+**Sur l'incident CICR de janvier 2022.** L'attaque réelle sur le programme Rétablissement des liens familiaux du CICR (515'000 personnes vulnérables exposées) reste un cas d'école dans le secteur humanitaire international. Le scénario explore les questions stratégiques que cet incident a posées : équilibre entre transparence (mission humanitaire) et discrétion (protection des bénéficiaires en zones de conflit), notification différenciée par contexte de la victime (zone sûre vs. zone à risque), attribution étatique (CICR a évité de nommer publiquement, posture compatible avec sa neutralité statutaire), refonte des infrastructures (souveraineté des données + patching + threat hunting). Le scénario CAS-IN reproduit ces dilemmes avec les outils Zoho / ADSelfService Plus identifiés dans les rapports publics post-incident.
+
+**Sur l'incident Comparis 2021.** L'attaque Hive sur Comparis.ch en août 2021 (1M USD de rançon demandée, 20 Go exfiltrés) reste un des cas les plus visibles de ransomware suisse. Le scénario explore la décision-clé du paiement (analyse coûts/bénéfices vs. recommandations OFCS/FBI/NCSC sur le non-paiement, risques sanctions OFAC US si Hive lié à entité sanctionnée, non-garantie de non-publication même après paiement) et la coordination MELANI/OFCS de l'époque. Comparis avait à l'époque refusé le paiement, conformément à la doctrine recommandée — choix qui a été validé par la communauté cyber suisse.
+
+**Sur le rythme de retrofit.** Avec 3 blocs livrés en 3 versions (v2.29, v2.30, v2.31), le corpus passe de 8 à 23 scènes équipées de NPCs et marqueurs narratifs en moins d'une semaine éditoriale. Reste ~82 scènes à traiter dans les blocs futurs (~16 blocs au rythme actuel). La mécanique se stabilise : (1) audit des candidates, (2) identification des bifurcations existantes, (3) assignment de NPCs (priorité aux 7 transposables existants), (4) ajout du marqueur "📍 BIFURCATION NARRATIVE" sur le distracteur catastrophique, (5) étoffement des distracteurs pour passer le seuil de balance 30%, (6) régénération de l'index et bump du SW.
+
+### Prochaines évolutions possibles
+
+```
+v2.32  Retrofit bloc 4 (5 anciennes scènes, à proposer)
+       Candidats : conclusion, coup-de-filet-europol-27-pays, crypto-stalking-airtag-emirats,
+                    crypto-tinder-pig-butchering-vaud (déjà v2.28), dab-villaz...
+                    À sélectionner par diversification thématique
+v2.33  Retrofit bloc 5
+v2.34  Examen blanc 50q/90 min
+v2.35  Heatmap canton enrichie + badges par canton
+
+Scénarios PDF candidats restants :
+  • deepfake-conseiller-etat (Pierre-Yves Maillard, à anonymiser)
+  • src-fonctionnaire-russe-kaspersky (espionnage interne)
+```
+
 ## [2.30] — 2026-05-03
 
 Cette version ajoute **2 nouveaux scénarios suisses inspirés de l'actualité** (Handala/Stryker NE + pédo-hunter FR) et enchaîne le **bloc 2 du retrofit du corpus historique**. Le corpus passe à **109 scènes** et le catalogue PNJ à **27 personnages**.
