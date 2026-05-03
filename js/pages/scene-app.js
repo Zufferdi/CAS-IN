@@ -2830,11 +2830,11 @@ const CANTON_DATA = {
   NE: { name: "Neuchâtel", scenarios: ["faux-policiers","harcelement-ne"] },
   JU: { name: "Jura", scenarios: ["delemont-forum","jura-vishing-1m"] },
   BE: { name: "Berne", scenarios: ["ruag_2016","palais_federal","deepfake-electoral"] },
-  ZH: { name: "Zurich", scenarios: ["attribution","bitlocker","bitlocker_froid"] },
+  ZH: { name: "Zurich", scenarios: ["attribution","bitlocker","bitlocker_froid","mini-natels-prison-pochwies"] },
   SZ: { name: "Schwyz", scenarios: ["clone-vocal"] },
   TI: { name: "Tessin", scenarios: ["sati-bec","lugano-dpfl-mafia-finance"] },
   SG: { name: "Saint-Gall", scenarios: ["operation-alice","stgall-infiltration"] },
-  AG: { name: "Argovie", scenarios: ["operation-alice","attentat-deja-couteau-mineur"] },
+  AG: { name: "Argovie", scenarios: ["operation-alice","attentat-deja-couteau-mineur","drone-laufenburg-swissgrid-aargau"] },
   LU: { name: "Lucerne", scenarios: ["operation-alice"] },
   TG: { name: "Thurgovie", scenarios: ["operation-alice"] },
 };
