@@ -2829,7 +2829,7 @@ const CANTON_DATA = {
   FR: { name: "Fribourg", scenarios: ["dab-villaz","gruyere-coop-affinage-stuxnet","hcfr-bec-transfer-deepfake","cyber-justicier-vigilante-fr"] },
   NE: { name: "Neuchâtel", scenarios: ["faux-policiers","harcelement-ne","handala-hack-iran-rhne-stryker"] },
   JU: { name: "Jura", scenarios: ["delemont-forum","jura-vishing-1m"] },
-  BE: { name: "Berne", scenarios: ["ruag_2016","palais_federal","deepfake-electoral"] },
+  BE: { name: "Berne", scenarios: ["ruag_2016","palais_federal","deepfake-electoral","src-fonctionnaire-russe-kaspersky"] },
   ZH: { name: "Zurich", scenarios: ["attribution","bitlocker","bitlocker_froid","mini-natels-prison-pochwies"] },
   SZ: { name: "Schwyz", scenarios: ["clone-vocal"] },
   TI: { name: "Tessin", scenarios: ["sati-bec","lugano-dpfl-mafia-finance"] },
