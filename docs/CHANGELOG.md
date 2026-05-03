@@ -4,6 +4,70 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.39] — 2026-05-03
+
+Release de **mise à niveau du corpus**, sans nouveau scénario. **Bloc 11 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique continue : phishing classique / Operation PowerOFF DDoS-for-hire / SOC premier appel / rajeunissement IA pédopornographie / ransomware hôpital.
+
+### Ajouté — Retrofit bloc 11 (5 anciennes scènes adaptées)
+
+| Scène | Steps | Difficulté | NPCs assignés | Bifurcation marquée |
+|---|---|---|---|---|
+| `phishing` | 3 | easy | `ofs_rssi_fedch`, `forensics_lead_zh` | step 1 #0 (catastrophe sandbox manquante) |
+| `poweroff-ddos` | 4 | medium | `fbi_legat_bern`, `nicolet` | step 3 #0 (catastrophe communication) |
+| `premier_appel` | 3 | easy | `ciso_logitech`, `ofcs_coordinator` | step 0 #0 (catastrophe promesse SOC) |
+| `rajeunissement-ia` | 5 | medium | `fbi_legat_bern`, `ge_prosecutor_cyber` | step 1 #1 (catastrophe sous-qualification) |
+| `ransomware` | 5 | medium | `ciso_logitech`, `forensics_lead_zh` | step 1 #2 (catastrophe forensique manquante) |
+
+**Diversification thématique du bloc 11** : (a) **Phishing classique SOC** (bouton signaler Outlook, sandbox urlscan.io/VirusTotal, doctrine triage), (b) **Operation PowerOFF DDoS-for-hire** (Europol avril 2026, 53 plateformes 15 pays, art. 144bis al. 2 + 24 + 143bis CP, Convention Budapest art. 29), (c) **SOC premier appel** (triage factuel avant promesse, escalade niveau 2 + RSSI, contre-pied à la posture "rassurer"), (d) **Rajeunissement IA pédopornographie** (ATF 6B_1335/2021, art. 197 al. 4 vs al. 5 CP, Convention de Lanzarote art. 20), (e) **Ransomware hôpital** (12'000 patients, doctrine OFCS/Health-CERT forensique avant restauration, nLPD art. 24).
+
+### Pas de nouveau PNJ — septième fois consécutive
+
+Septième release sans création de PNJ depuis v2.32. Le catalogue de 30 PNJ avec 8 transposables est désormais à pleine maturité.
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 68 scènes touchées par v2.24 → v2.39 (était 63). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v72 → v73
+
+Header v2.39 documentant le retrofit bloc 11.
+
+### Statistiques v2.39
+
+| Indicateur | v2.38 | v2.39 |
+|---|---|---|
+| Scènes totales | 110 | **110** (inchangé) |
+| Scènes avec NPCs assignés | 58 | **63** (+5) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 58 | **63** (+5) |
+| **Progression retrofit** | **53%** | **57%** |
+| PNJ catalogue | 30 | **30** (inchangé) |
+| Service Worker | v72 | **v73** |
+
+### Notes éditoriales
+
+**Sur la scène `phishing`.** Scène easy mais doctrinalement importante : elle modélise la **doctrine SOC standard** face à un email signalé via le bouton Outlook. Le marqueur souligne que cliquer sur le lien suspect depuis un poste de production normal pour vérifier où il mène (au lieu d'utiliser une sandbox isolée ou un service tiers comme urlscan.io / VirusTotal) compromet potentiellement le poste de l'analyste avec malware-as-a-service ou exploit kit, et propage l'incident plutôt que de le contenir.
+
+**Sur la scène `poweroff-ddos`.** Scène medium documentée par les opérations Europol réelles **PowerOFF (2018, 2022, 2024-2026)** qui ont démantelé plusieurs vagues de plateformes DDoS-for-hire (booters / stressers). Le scénario suisse modélise les 4 questions stratégiques : (1) qualification multi-axes art. 144bis + 24 + 143bis CP, (2) triage des 8'400 comptes clients identifiés, (3) qualification du dol direct face à l'argument client « j'ai juste testé un service marketing », (4) coordination internationale avec ordonnance MP préparée + Convention de Budapest art. 29.
+
+**Sur la scène `premier_appel`.** Scène easy mais subtile : elle modélise le **triage SOC** face à un appel d'urgence à 14h37 (comptable PME en panique). Le marqueur souligne le piège classique : promettre au client « tout va bien se passer, on va récupérer vos fichiers » sans avoir évalué la situation factuelle (souche, périmètre, exfiltration, sauvegardes) crée des attentes irréalistes qui se traduiront en perte de confiance majeure si la situation est plus grave (LockBit avec exfiltration + sauvegardes compromises).
+
+**Sur la scène `rajeunissement-ia`.** Scène medium très d'actualité 2025-2026. Le scénario modélise un cas hybride : suspect (M. T., enseignant valaisan avec accès à des enfants) qui utilise l'IA pour : (a) « rajeunir » des photos de lui-même enfant à des fins de simulation pédopornographique, (b) générer des images d'enfants fictifs IA-pures. Question juridique centrale : **l'art. 197 al. 4 CP couvre-t-il les images IA-générées simulant des mineurs ?** L'arrêt TF de novembre 2025 (référence ATF 6B_1335/2021 fictive ici) répond OUI — le caractère IA-généré ne réduit pas la qualification, et la diffusion publique sur Instagram = al. 4 (mise à disposition, peine MAX 3 ans), pas seulement al. 5 (possession).
+
+**Sur la scène `ransomware`.** Scène medium documentée par les attaques ransomware réelles contre les hôpitaux européens 2020-2025 (Anhalt-Bitterfeld DE, Düsseldorf, IRO Mexico, plusieurs hôpitaux suisses 2023). Le scénario porte sur un **hôpital cantonal frappé à 03h00**, 12'000 patients impactés, exfiltration confirmée. Les 5 steps couvrent : forensique vs restauration immédiate, notification PFPDT timing, attribution Ryuk/TrickBot, communication patients individuelle vs masse, refus du paiement avec investissement équivalent dans la résilience. Le marqueur souligne que la doctrine OFCS/Health-CERT pour les hôpitaux est : **forensique d'abord (2-4h), restauration ensuite**.
+
+**Sur le rythme du retrofit.** Avec 11 blocs livrés en 11 versions (v2.29 à v2.39), 63 scènes du corpus historique sont équipées de NPCs et marqueurs. **Progression à 57 %** — la barre des 60% se profile pour v2.40. Reste **~47 scènes** à traiter (~9 blocs).
+
+### Prochaines évolutions possibles
+
+```
+v2.40  Retrofit bloc 12 (5 anciennes scènes, à proposer)
+       Candidates par diversification : ransomware-hopital-doj-conflit,
+                                         ransomware_raid, referent-milice-ransomware,
+                                         ruag_2016, sati-bec
+v2.41  Retrofit bloc 13
+v2.42  Examen blanc 50q/90 min
+```
+
 ## [2.38] — 2026-05-03
 
 Release de **mise à niveau du corpus** franchissant le **cap symbolique des 50 %**. **Bloc 10 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique continue : DDoS NoName057 pro-russe / Opération Alice darknet / OSINT licite / Palais fédéral APT (scène expert 11 steps) / perquisition conjugale.
