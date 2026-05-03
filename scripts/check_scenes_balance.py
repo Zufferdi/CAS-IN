@@ -160,6 +160,12 @@ def main() -> None:
             SCENES_DIR / "osint-licite.json",
             SCENES_DIR / "palais_federal.json",
             SCENES_DIR / "perquisition-conjugale.json",
+            # v2.39 retrofit bloc 11 (5 scènes)
+            SCENES_DIR / "phishing.json",
+            SCENES_DIR / "poweroff-ddos.json",
+            SCENES_DIR / "premier_appel.json",
+            SCENES_DIR / "rajeunissement-ia.json",
+            SCENES_DIR / "ransomware.json",
         ]
 
     has_error = False
