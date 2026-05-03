@@ -4,6 +4,87 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.40] — 2026-05-03
+
+**Premier bloc à 8 scènes** — accélération du sprint final pour atteindre 100% du retrofit corpus. **Bloc 12 du retrofit** (8 anciennes scènes adaptées en une seule release) avec diversification thématique maximale : conflit juridictionnel CH-US / RAID forensique / référent milice / APT RUAG / Tessin BEC / curatelle VS / secret de fonction parlementaire / smartphone déverrouillé.
+
+### Ajouté — Retrofit bloc 12 (8 anciennes scènes adaptées)
+
+| Scène | Steps | Difficulté | NPCs assignés | Bifurcation marquée |
+|---|---|---|---|---|
+| `ransomware-hopital-doj-conflit` | 5 | hard | `nicolet`, `fbi_legat_bern` | step 4 #1 et #2 → 'end' explicite |
+| `ransomware_raid` | 8 | hard | `forensics_lead_zh`, `ciso_logitech` | step 0 #0 (catastrophe RAID) |
+| `referent-milice-ransomware` | 5 | easy | `ofcs_coordinator`, `ofs_rssi_fedch` | step 4 #1 et #2 → 'end' explicite |
+| `ruag_2016` | 8 | hard | `ddps_general_counsel`, `ofcs_coordinator` | step 0 #0 (catastrophe APT containment) |
+| `sati-bec` | 6 | hard | `mroz_ti`, `compliance_bs` | step 0 #1 (catastrophe victim-blaming) |
+| `saxon-curatelle` | 5 | hard | `cicr_dpo`, `ofcs_coordinator` | step 1 #2 (catastrophe communication) |
+| `secret-fonction-parlementaire` | 5 | hard | `nicolet`, `ddps_general_counsel` | step 4 #1 et #2 → 'end' explicite |
+| `smartphone` | 5 | medium | `forensics_lead_zh`, `ge_prosecutor_cyber` | step 0 #0 (catastrophe forensique) |
+
+**Diversification thématique du bloc 12** (8 thématiques distinctes) : (a) **Conflit juridictionnel CH-US ransomware hospitalier** (DOJ, EIMP, ne bis in idem, art. 8 EIMP extradition, partage butin négocié), (b) **RAID 5 + ransomware** (imagerie individuelle préalable obligatoire, write-blocker, doctrine SANS DFIR + ENISA 2024), (c) **Référent cyber milice commune** (Evolène 1'860 hab., doctrine OFCS/CCDJP communes <2'000 hab.), (d) **APT RUAG 21 mois** (cas réel 2016, infrastructures critiques DDPS, coordination Five Eyes, doctrine OFCS-CII), (e) **Tessin BEC 18.6M CHF** (SATI, MROZ-TI, ATF 6B_135/2018 victim-centered, MLAT cascade), (f) **Curatelle VS 380 vulnérables** (nLPD art. 24 « meilleurs délais », population fragile trauma-informed), (g) **Secret de fonction parlementaire** (art. 73 CPP, art. 320 CP, LParl art. 162, séparation pouvoirs MPC-Parlement), (h) **Smartphone déverrouillé** (capture RAM Signal + mode avion + photo écran avant saisie).
+
+**Cas particuliers** :
+- `ruag_2016` (8 steps) et `ransomware_raid` (8 steps) sont parmi les scènes les plus longues du corpus
+- `secret-fonction-parlementaire` est unique par sa dimension de **résistance institutionnelle** (le procureur fédéral lui-même ferait l'objet de poursuites art. 320 CP s'il cédait à la pression parlementaire individuelle)
+- `ransomware-hopital-doj-conflit` introduit la **doctrine ne bis in idem** dans un contexte cyber multi-juridictions
+
+### Pas de nouveau PNJ — huitième fois consécutive
+
+Huitième release sans création de PNJ depuis v2.32. Le catalogue de 30 PNJ est durablement stable.
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 76 scènes touchées par v2.24 → v2.40 (était 68, soit +8 d'un coup pour la première fois). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v73 → v74
+
+Header v2.40 documentant le retrofit bloc 12 (premier bloc de 8).
+
+### Statistiques v2.40
+
+| Indicateur | v2.39 | v2.40 |
+|---|---|---|
+| Scènes totales | 110 | **110** (inchangé) |
+| Scènes avec NPCs assignés | 63 | **71** (+8) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 63 | **71** (+8) |
+| **Progression retrofit** | **57%** | **65%** ✨ |
+| PNJ catalogue | 30 | **30** (inchangé) |
+| Service Worker | v73 | **v74** |
+
+### Notes éditoriales
+
+**Sur la scène `ransomware-hopital-doj-conflit`.** Scène hard introduisant la **doctrine ne bis in idem** appliquée au contexte cyber multi-juridictions. Le scénario porte sur un suspect M. K. arrêté aux États-Unis, lié simultanément à un ransomware hospitalier suisse (HCS, 3 décès) et à une extorsion bancaire US. Le DOJ propose à la Suisse une cession globale du dossier. Question juridique centrale : **comment articuler la souveraineté procédurale suisse, l'efficacité de coopération internationale, et la dignité des 3 victimes décédées ?** La doctrine OFJ + DFJP refuse la cession globale et privilégie la coordination en 4 axes.
+
+**Sur la scène `ransomware_raid`.** Scène hard à 8 steps sur la **doctrine forensique RAID** dans un contexte ransomware. Question technique centrale : avant de tenter la reconstruction RAID 5 (sur 2 disques sains + 1 disque ransomwarisé), faut-il imager individuellement chaque disque ? La doctrine SANS DFIR + ENISA Good Practices Cyber Incident Response 2024 répond OUI — l'imagerie individuelle préalable avec write-blocker est obligatoire pour préserver les 60% de données potentiellement récupérables.
+
+**Sur la scène `referent-milice-ransomware`.** Scène easy mais doctrinalement importante. Le **référent cyber de milice** dans une commune de moins de 2'000 habitants (Evolène, 1'860 hab.) est confronté dimanche 19h47 à un ransomware. Question centrale : quelles sont les limites de son pouvoir d'action en l'absence du syndic et du prestataire IT ? La doctrine OFCS + CCDJP est claire : **référent de milice = triage et alerte uniquement, pas décision opérationnelle**. Toute décision de paiement ou de communication publique doit attendre la coordination avec le syndic, l'OFCS et le préposé cantonal.
+
+**Sur la scène `ruag_2016`.** Scène hard à 8 steps documentée par le **cas réel RUAG 2016** (cyber-espionnage présumé russe sur l'entreprise d'armement suisse, APT présent depuis 21 mois lors de la détection). Le scénario explore la coordination DDPS + OFCS + SRC + fedpol + Five Eyes (BfV, NSA, GCHQ). Le marqueur souligne que couper publiquement la connectivité de RUAG sans coordination préalable alerte l'APT et lui permet de wiper ses traces — la doctrine OFCS-CII militaire impose un containment ciblé sur les machines compromises, pas une coupure totale visible.
+
+**Sur la scène `sati-bec`.** Scène hard à 6 steps sur **un BEC tessinois de 18.6 millions CHF** investigué par la SATI (Sezione Analisi Tecnica Informatica de la PolCant tessinoise). Le scénario explore : la qualification de la PME victime (pas suspecte de complicité), l'investigation MROZ-TI sur les flux financiers, la cascade des mules bancaires, la coordination MLAT vers les juridictions de réception (Hong Kong, EAU, Israël), la communication SATI sectorielle aux 17 autres PME tessinoises identifiées comme cibles potentielles. Le marqueur souligne le piège du victim-blaming.
+
+**Sur la scène `saxon-curatelle`.** Scène hard sur les **populations vulnérables** : 380 personnes sous curatelle au Service de Saxon (personnes âgées, handicapés, addictions). La compromission ransomware expose des données particulièrement sensibles. La doctrine nLPD art. 24 « meilleurs délais » impose une qualification fine des données touchées avant communication aux bénéficiaires fragiles — une notification massive prématurée provoque une panique disproportionnée chez une population qui ne peut pas toujours évaluer rationnellement l'information reçue.
+
+**Sur la scène `secret-fonction-parlementaire`.** Scène hard unique dans le corpus : elle modélise la **résistance institutionnelle d'un procureur fédéral** face à la demande informelle d'une Conseillère nationale d'accéder à un dossier d'instruction confidentielle (Conseiller d'État vaudois en cours d'instruction depuis 8 mois). Question juridique centrale : que faire face à la pression politique individuelle ? Le marqueur souligne que **le procureur fédéral lui-même ferait l'objet de poursuites art. 320 CP** s'il cédait. La voie correcte est : refus motivé + orientation vers les voies parlementaires formelles (interpellation au CF, saisine CdG/DélCdG selon procédure).
+
+**Sur la scène `smartphone`.** Scène medium technique sur la **doctrine forensique smartphone déverrouillé**. L'iPhone du suspect est posé sur la table, déverrouillé, des notifications Signal sont visibles, l'avocat de la défense entre dans l'appartement à la fin de la perquisition. Que faire dans les 60 secondes critiques ? La doctrine moderne (NIST SP 800-101 + ENFSI Best Practice Manual 2024) impose : (1) **photographier l'écran** immédiatement avec les notifications Signal visibles, (2) **basculer en mode avion** pour empêcher l'effacement à distance (FindMy, Signal disappearing messages), (3) **capturer la mémoire vive** via UFED Premium ou équivalent, (4) **maintenir l'écran allumé** jusqu'à l'extraction.
+
+**Sur le passage à 8 scènes par bloc.** L'utilisateur a explicitement autorisé v2.40 à augmenter la taille des blocs. Cette accélération est rendue possible par la stabilisation du catalogue PNJ (8 transposables) et la maîtrise éditoriale des marqueurs et de la balance. Le sprint vers 100% peut désormais atteindre **65%** dès cette release et viser **~100%** en 5 blocs supplémentaires (v2.41 à v2.45) au rythme de 8 scènes/bloc.
+
+### Prochaines évolutions possibles
+
+```
+v2.41  Retrofit bloc 13 (8 scènes, à proposer)
+       Candidates par diversification : sms-blasters, specialite-eimp,
+                                         stadler_2020, stgall-infiltration,
+                                         supply_chain_sante, swatch-2020-ot,
+                                         swisscom_2018, swissgrid-iec61850-jura
+v2.42  Retrofit bloc 14 (8 scènes)
+v2.43  Retrofit bloc 15 (8 scènes)
+v2.44  Examen blanc 50q/90 min
+v2.45  Heatmap canton enrichie + badges par canton
+```
+
 ## [2.39] — 2026-05-03
 
 Release de **mise à niveau du corpus**, sans nouveau scénario. **Bloc 11 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique continue : phishing classique / Operation PowerOFF DDoS-for-hire / SOC premier appel / rajeunissement IA pédopornographie / ransomware hôpital.
