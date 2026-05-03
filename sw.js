@@ -1,4 +1,77 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v62 : v2.28 — 3 nouveaux scénarios suisses inspirés du dossier de presse 2025
+//
+//       Cette version ajoute 3 scènes documentées sur l'actualité DFIR
+//       suisse récente (sources : Bilan 17.12.2025, Tribune de Genève
+//       17.11.2025, Blick 12.10.2025, Le Temps 15.11.2025).
+//
+//         • crypto-tinder-pig-butchering-vaud (hard, VD/Morges)
+//             Source : ICIJ « Coin Laundry »
+//             Pitch  : Eléonore (43 ans) plainte 208'000 CHF perdus
+//                      via Tinder + bdsuex.com → Cambodge/Huione
+//             Rôle   : inspecteur cyber-enquêtes PolCant VD
+//             PNJ    : eleonore (fictif), vuilleumier (Heptagone, réel),
+//                      labhart (MP-ZH expert pig butchering, réel)
+//             Bif.   : step 1 #2 → next: 4 (saute 2 steps)
+//             Tags   : pig butchering, cryptotraçage, MLAT, Convention
+//                      de Budapest, Huione, OFS 6.6%
+//
+//         • attentat-deja-couteau-mineur (expert, AG/Aarau)
+//             Source : interview Stefan Blättler, Blick 10.2025
+//             Pitch  : SRC alerte sur radicalisation 18 ans Aarau,
+//                      passage à l'acte estimé < 9 jours, projet
+//                      « action au couteau dans un lieu chrétien »
+//             Rôle   : procureur·e fédéral·e cellule terrorisme MPC
+//             PNJ    : blattler (PG MPC, réel), nicolet (procureur cyber
+//                      MPC, réel), src_director (cheffe SRC, fictif)
+//             Bif.   : step 0 #2 (transmettre PolCant ZH) → next: 'end'
+//             Tags   : terrorisme, art. 260sexies/260bis CP, LRens 79,
+//                      mineur radicalisé, DPMin, TIGRIS, déradicalisation
+//
+//         • logitech-clop-zero-day-supply-chain (hard, VD/Crissier)
+//             Source : Le Temps 15.11.2025
+//             Pitch  : Logitech découvre leak Clop sur darkweb DLS,
+//                      0-day Oracle E-Business Suite, 1.79 TB exfiltrés,
+//                      218'000 personnes touchées, position non-paiement
+//             Rôle   : CISO Logitech (fictif M. Aellig)
+//             PNJ    : ciso_logitech (fictif), nicolet (procureur cyber
+//                      MPC, réel), pfpdt_inspector (PFPDT, fictif)
+//             Bif.   : step 1 #2 (payer rançon en cachant à PFPDT)
+//                      → next: 4 (saute 2 steps, dossier devient leak
+//                      progressif et catastrophe régulatoire)
+//             Tags   : ransomware, Clop, supply chain, 0-day, LPD art. 24,
+//                      OFCS, position non-paiement, devoir SEC cotée
+//
+//       Variété des bifurcations : 1× 'end' (attentat) + 2× sauts.
+//       Cohérent avec la philosophie v2.27 : « certaines erreurs sont
+//       fatales (ex : violer la doctrine MPC = transmettre PolCant pour
+//       le terrorisme), d'autres réduisent l'efficacité » (ex : payer
+//       Clop dans le dos du PFPDT = scandale + amende mais procédure
+//       continue, ou interroger Eléonore agressivement = dossier mort
+//       mais autres dossiers similaires continuent).
+//
+//       6 nouveaux PNJ ajoutés à data/npcs.json (total : 16) :
+//         • eleonore (fictif, victime pig butchering VD)
+//         • vuilleumier (réel, Heptagone Genève, expert cryptotraçage)
+//         • labhart (réel, procureur MP-ZH, référent national pig butch.)
+//         • src_director (fictif, cheffe section anti-terrorisme SRC)
+//         • ciso_logitech (fictif, M. Aellig, CISO Logitech)
+//         • pfpdt_inspector (fictif, Mme Schöni, PFPDT)
+//
+//       Approches narratives :
+//         - crypto-tinder : trauma-informed (victime), honnête sur les
+//                           limites (taux résolution 6.6% OFS), respect
+//                           de la dignité dans la communication
+//         - attentat      : équilibre LRens / CPP, sources SRC, mineur,
+//                           DPMin, communication contrôlée
+//         - logitech      : tensions techniques/régulatoires/médiatiques,
+//                           position non-paiement (cohérente Suisse),
+//                           devoir info SEC pour cotée + LPD 72h
+//
+//       Stats : 102 → 105 scènes. Cantons VD+2, ZH+1, AG+1.
+//       CANTON_DATA mis à jour dans scene-app.js.
+//       Index scenes/index.json régénéré (105 entrées, 150 KB).
+//
 // v61 : v2.27 — Embranchements narratifs étendus aux 4 autres scènes v2.24
 //
 //       En v2.26, la première vraie bifurcation avait été introduite dans
@@ -323,7 +396,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v61';
+const CACHE_VERSION = 'cas-in-v62';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
