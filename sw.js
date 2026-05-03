@@ -1,5 +1,54 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v70 : v2.36 — Retrofit bloc 8 (5 anciennes scènes adaptées)
+// v71 : v2.37 — Retrofit bloc 9 (5 anciennes scènes adaptées)
+//
+//       Version sans nouveau scénario, focalisée sur la mise à niveau
+//       systématique du corpus historique. Bloc 9 = diversification
+//       continue : forensique RAM Volatility / métadonnées EXIF /
+//       mineur étranger GAV / blanchiment LBA art. 305ter / NCMEC
+//       CyberTip pédocriminalité.
+//
+//       Retrofit bloc 9 — 5 anciennes scènes adaptées :
+//
+//         • memory-forensics-volatility (5 steps, hard) — APT cyber
+//             industriel semi-conducteurs SH/AG, capture RAM
+//             npcs=[forensics_lead_zh, ciso_logitech]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : conclusion sans capture RAM = cassation
+//             défense (NIST SP 800-86, ENISA)
+//
+//         • metadata (3 steps, easy) — Photo Instagram + EXIF GPS
+//             47.3769°N 8.5417°E Zurich-Bellevue
+//             npcs=[forensics_lead_zh, ge_prosecutor_cyber]
+//             Marqueur step 0 #0 (verser EXIF brut sans expertise =
+//             contestation systématique défense, EXIF manipulables)
+//
+//         • mineur-etranger-garde-a-vue (5 steps, hard) — MNA Lausanne
+//             cambriolage + traite EH probable
+//             npcs=[cicr_dpo, ge_prosecutor_cyber]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : audition sans interprète + avocat = nullité
+//             absolue (CEDH art. 6, CIDE art. 40, CPP, PPMin)
+//
+//         • mros-banquier (4 steps, medium) — Gestionnaire fortune
+//             GE 21.5M CHF, art. 305ter CP négligence
+//             npcs=[compliance_bs, ge_prosecutor_cyber]
+//             Marqueur step 3 #0 (communication publique nominative
+//             prématurée viole présomption innocence)
+//
+//         • ncmec-cypertip (4 steps, medium) — CyberTip NCMEC VD,
+//             pédocriminalité avec enseignant
+//             npcs=[fbi_legat_bern, pjf_undercover_lead]
+//             Marqueur step 1 #0 (perquisition sans validation
+//             forensique préalable = drame irréparable si erreur IP)
+//
+//       Pas de nouveau PNJ cette release. Cinquième release consécutive
+//       (après v2.32, v2.34, v2.35, v2.36) sans création de PNJ.
+//
+//       Stats : 110 scènes / 30 PNJ / 53 scènes avec NPCs.
+//
+//       Approche retrofit "par bloc de 5" : ~52 scènes restantes
+//       après v2.37. Reste ~10 blocs.
+//
 //
 //       Version sans nouveau scénario, focalisée sur la mise à niveau
 //       systématique du corpus historique. Bloc 8 = diversification
@@ -885,7 +934,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v70';
+const CACHE_VERSION = 'cas-in-v71';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
