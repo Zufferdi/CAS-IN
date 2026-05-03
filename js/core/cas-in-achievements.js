@@ -170,6 +170,14 @@
     { id: 'tour_de_suisse',  emoji: '🌐', name: 'Tour de Suisse',      desc: 'Au moins 1 scénario par canton',    category: 'Scènes · Comportement' },
     { id: 'perseverant',     emoji: '🔁', name: 'Persévérant',         desc: '+20 pts sur 3 scénarios refaits',   category: 'Scènes · Comportement' },
     { id: 'unstoppable',     emoji: '🔥', name: 'Inarrêtable',         desc: '3 scénarios ≥70% le même jour ×3',  category: 'Scènes · Comportement' },
+
+    // v2.26 : spécialités cantonales + PNJ + thèmes techniques
+    { id: 'fr_detective',    emoji: '🧀', name: 'Détective fribourgeois',  desc: '3 scénarios fribourgeois ≥80%',          category: 'Scènes · Spécialité' },
+    { id: 'ti_sherlock',     emoji: '🇮🇹', name: 'Sherlock du Tessin',      desc: '3 scénarios tessinois ≥80%',             category: 'Scènes · Spécialité' },
+    { id: 'vd_procureur',    emoji: '⚖️', name: 'Procureur vaudois',       desc: '5 scénarios vaudois ≥80%',                category: 'Scènes · Spécialité' },
+    { id: 'apple_forensic',  emoji: '🍎', name: 'Forensicien Apple',       desc: '3 scénarios AFU/BFU iPhone-MacBook ≥80%', category: 'Scènes · Spécialité' },
+    { id: 'anti_deepfake',   emoji: '🎭', name: 'Anti-deepfake',           desc: 'Scénario deepfake résolu à ≥90%',         category: 'Scènes · Spécialité' },
+    { id: 'npc_collector',   emoji: '👥', name: 'Tour des protagonistes',  desc: 'Rencontrer ≥8 PNJ différents',            category: 'Scènes · Comportement' },
   ];
 
   // ─────────────────────────────────────────────────────────────
