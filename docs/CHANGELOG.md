@@ -4,6 +4,73 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.38] — 2026-05-03
+
+Release de **mise à niveau du corpus** franchissant le **cap symbolique des 50 %**. **Bloc 10 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique continue : DDoS NoName057 pro-russe / Opération Alice darknet / OSINT licite / Palais fédéral APT (scène expert 11 steps) / perquisition conjugale.
+
+### Ajouté — Retrofit bloc 10 (5 anciennes scènes adaptées)
+
+| Scène | Steps | Difficulté | NPCs assignés | Bifurcation marquée |
+|---|---|---|---|---|
+| `noname_2023` | 5 | medium | `ofcs_coordinator`, `ddps_general_counsel` | step 0 #2 (catastrophe communication timing) |
+| `operation-alice` | 5 | hard | `pjf_undercover_lead`, `fbi_legat_bern` | step 0 #0 (refus participation = ferme Op.Alice) |
+| `osint-licite` | 3 | easy | `forensics_lead_zh`, `nicolet` | step 0 #0 (OSINT sans cadre = cassation) |
+| `palais_federal` | 11 | **expert** | `nicolet`, `ofcs_coordinator`, `ddps_general_counsel` | step 0 #0 (communication 5h47 sans coordination) |
+| `perquisition-conjugale` | 5 | medium | `forensics_lead_zh`, `ge_prosecutor_cyber` | step 4 #1 et #2 → 'end' explicite |
+
+**Diversification thématique du bloc 10** : (a) **DDoS hacktiviste pro-russe** (NoName057, 15 juin 2023, allocution Zelensky Parlement, doctrine OFCS/CDN/communication), (b) **Opération Alice darknet pédocriminalité** (Europol 23 pays, art. 285a-298 CPP investigation secrète, agent infiltré, EIMP transmission spontanée art. 67a), (c) **OSINT licite** (CGU plateformes, art. 273 CP espionnage économique, art. 162 CP secret commercial, ATF 6B_421/2022), (d) **APT Palais fédéral** (Chancellerie 14 machines, art. 269 CPP interception HTTPS, briefing DélCdG SCIF, attribution iranienne TA450, art. 73 CPP secret enquête vs DFAE diplomatie), (e) **Perquisition domicile conjugal** (art. 244 + 246 + 248 CPP, ATF 6B_517/2017 données conjugales, droits Mme T. art. 13 al. 1 Cst).
+
+**Cas particulier `palais_federal`** : scène **expert à 11 steps** (la plus longue du corpus), avec un graphe narratif complexe (10 bifurcations 'end' existantes). Le retrofit a nécessité 12 ajustements de balance (étoffement systématique des distracteurs courts ~250c face aux bons choix riches ~500-600c). Cette scène est désormais l'un des piliers pédagogiques du corpus, illustrant la **gestion intégrée d'une crise cyber étatique** sous toutes ses dimensions : forensique (containment vs préservation), procédurale (interception HTTPS art. 269 CPP), institutionnelle (briefing DélCdG SCIF, art. 73 CPP), diplomatique (attribution iranienne et position DFAE), et communicationnelle (conférence de presse coordonnée).
+
+### Pas de nouveau PNJ — sixième fois consécutive
+
+Sixième release sans création de PNJ depuis v2.32. Le catalogue de 30 PNJ avec 8 transposables suffit largement au retrofit.
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 63 scènes touchées par v2.24 → v2.38 (était 58). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v71 → v72
+
+Header v2.38 documentant le retrofit bloc 10.
+
+### Statistiques v2.38
+
+| Indicateur | v2.37 | v2.38 |
+|---|---|---|
+| Scènes totales | 110 | **110** (inchangé) |
+| Scènes avec NPCs assignés | 53 | **58** (+5) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 53 | **58** (+5) |
+| **Progression retrofit** | **48%** | **53%** ✨ |
+| PNJ catalogue | 30 | **30** (inchangé) |
+| Service Worker | v71 | **v72** |
+
+### Notes éditoriales
+
+**Sur la scène `noname_2023`.** Scène medium documentée par les **DDoS réels du 15 juin 2023** : NoName057 (groupe hacktiviste pro-russe Telegram) revendique des attaques contre plusieurs sites d'administration suisse en marge de l'allocution vidéo du Président Zelensky devant le Parlement. La scène modélise les questions stratégiques de **timing de communication** : avant 14h (allocution Zelensky), toute déclaration MPC/OFCS qui attribue les attaques nominativement à NoName amplifie l'effet recherché (« la Suisse a peur ») et embarrasse politiquement le Parlement pendant l'allocution. La doctrine OTAN sur les opérations psychologiques cyber recommande d'éviter cette amplification.
+
+**Sur la scène `operation-alice`.** Scène hard sur **agent infiltré darknet pédocriminalité** dans le cadre Europol multi-juridictions (23 pays). Le scénario explore : (1) le cadre juridique suisse strict de l'investigation secrète (art. 285a-298 CPP, ordonnance MP + autorisation TMC), (2) l'éthique de l'agent infiltré face aux demandes des suspects (jamais participer, documenter), (3) la transmission de preuves obtenues à l'étranger (BKA allemand) avec garanties art. 67a EIMP, (4) la protection psychologique des enquêteurs spécialisés (rotation, traumathérapie, sessions limitées 2h), (5) la transmission spontanée internationale conditionnelle.
+
+**Sur la scène `osint-licite`.** Scène easy mais juridiquement subtile. Le scénario porte sur un **analyste DFIR mandaté par le MP** qui doit choisir entre 5 techniques OSINT (A=presse publique, B=LinkedIn public, C=Twitter public, D=darknet, E=infiltration forum). Question juridique : lesquelles sont licites en procédure pénale suisse ? Réponse doctrinale : A, B, C uniquement (données volontairement publiques sans authentification). Le marqueur souligne que pratiquer un OSINT sans cadre juridique préalable expose la totalité du dossier à une cassation procédurale au procès (jurisprudence TF 6B_421/2022, doctrine MROZ-LIM 2024).
+
+**Sur la scène `palais_federal`.** Scène **expert à 11 steps**, l'une des plus complexes du corpus. Documentée par les **incidents cyber réels touchant l'administration fédérale 2022-2025** (Xplain, RUAG, Microsoft Exchange, etc.). Le scénario modélise une intrusion APT sur la Chancellerie fédérale détectée à 5h47 du matin (14 machines compromises identifiées). Les 11 steps couvrent : ouverture instruction Art. 309 CPP, séquestre proportionné Art. 267 CPP, partage international IoC, ordre de containment ciblé, briefing DélCdG en SCIF, demande interception HTTPS Art. 269 CPP, articulation MPC-DFAE sur attribution iranienne, extraction RAM ciblée, briefing au CF, conférence de presse coordonnée, contribution rapport national OFCS. C'est la scène la plus pédagogiquement dense pour la gestion intégrée d'une crise cyber étatique.
+
+**Sur la scène `perquisition-conjugale`.** Scène medium sur **les limites de la perquisition au domicile conjugal** quand le suspect (Mr. T.) n'est pas présent et que l'épouse (Mme T., non-suspecte) reçoit l'équipe à 6h12. Le scénario explore : présenter le mandat avec calme et expliquer les droits, saisir avec scellés systématiques uniquement les appareils potentiellement liés, respecter les zones strictement privées de Mme T. (chambre conjugale = oui ; bureau partagé = oui avec scellés ; chambre de la fille = non sauf nécessité), rédiger un PV détaillé avec présence et signature de Mme T. Le marqueur souligne que verser tous les éléments sans tri viole l'ATF 6B_517/2017 et les droits art. 13 al. 1 Cst.
+
+**Sur le rythme du retrofit — cap des 50% atteint.** Avec 10 blocs livrés en 10 versions (v2.29 à v2.38), **58 scènes du corpus historique** sont désormais équipées de NPCs et marqueurs narratifs (sur 110 totales). La progression est de **53 % du corpus mis à niveau** — la moitié est largement franchie. Reste **~47 scènes** à traiter (~9 blocs au rythme actuel). Le sprint vers le 100 % continue avec une mécanique désormais bien rodée.
+
+### Prochaines évolutions possibles
+
+```
+v2.39  Retrofit bloc 11 (5 anciennes scènes, à proposer)
+       Candidates par diversification : phishing, poweroff-ddos,
+                                         premier_appel, rajeunissement-ia,
+                                         ransomware
+v2.40  Retrofit bloc 12
+v2.41  Examen blanc 50q/90 min
+v2.42  Heatmap canton enrichie + badges par canton
+```
+
 ## [2.37] — 2026-05-03
 
 Release de **mise à niveau du corpus**, sans nouveau scénario. **Bloc 9 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique continue : forensique RAM Volatility / métadonnées EXIF / mineur étranger GAV / blanchiment LBA / NCMEC CyberTip. Le corpus reste à 110 scènes ; le catalogue PNJ reste à 30.
