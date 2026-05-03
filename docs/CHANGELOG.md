@@ -4,6 +4,124 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.30] — 2026-05-03
+
+Cette version ajoute **2 nouveaux scénarios suisses inspirés de l'actualité** (Handala/Stryker NE + pédo-hunter FR) et enchaîne le **bloc 2 du retrofit du corpus historique**. Le corpus passe à **109 scènes** et le catalogue PNJ à **27 personnages**.
+
+### Ajouté — 2 nouveaux scénarios
+
+#### 🏥 `handala-hack-iran-rhne-stryker` (medium, NE/Marin-Épagnier)
+
+| Aspect | Détail |
+|---|---|
+| **Source** | Attaque Handala/Void Manticore sur Stryker (multinationale medtech US, Fortune 300) le 11 mars 2026 via abus Microsoft Intune — wiper sur 200 000 appareils, 50 TB exfiltrés, 79 pays touchés. Sources : TechCrunch, CheckPoint Research, CyberScoop, Times of Israel, NBC News (FBI saisie du site Handala). Le scénario imagine un sous-traitant suisse fictif (Rhône-Médical SA, Neuchâtel) latéralisé via federation B2B Microsoft Intune cross-tenant depuis Stryker mère. |
+| **Pitch** | PME medtech neuchâteloise (220 ETP, ISO 13485, IATF 16949) découvre logo Handala sur écrans Entra/Intune. 47 laptops + 23 mobiles wipés. Coordination avec Stryker US, FBI Legat à Berne, OFCS, PFPDT |
+| **Rôle joueur** | CISO Rhône-Médical SA (Mme Pellet, fictive) |
+| **PNJ** | `ciso_medsupplier_ne` (Pellet), `fbi_legat_bern` (Donovan, fictif — la doctrine FBI ne nomme pas les Legats), `ofcs_coordinator` (Tschanz) |
+| **Difficulté** | medium |
+| **Steps** | (0) Confinement préservant preuves · (1) Notification + coordination FBI/OFCS · (2) Caractérisation forensique + co-advisory CISA/OFCS · (3) Restauration et durcissement · (4) Capitalisation sectorielle CCEC |
+| **Bifurcation** | step 0 #1 (réinitialisation Intune brutale = destruction des preuves) → **next: 'end'** |
+| **Pédagogie** | APT iranien (MOIS), Microsoft Intune wiper, OAuth persistance, FIDO2 vs MFA SMS, PIM/PAM, cross-tenant federation cloisonnée, MITRE ATT&CK T1098/T1486/T1078, nLPD art. 24 (72h), Convention Budapest art. 31 (urgence), MLAT US-CH, doctrine OFCS hub coordination |
+
+#### ⚖️ `cyber-justicier-vigilante-fr` (hard, FR/Bulle)
+
+| Aspect | Détail |
+|---|---|
+| **Source** | Phénomène pédo-hunters en Suisse (article RTS « Pedo-Hunter : quand la traque dérape en violence », octobre 2025, sur "Yannick" se faisant passer pour fille de 14 ans). Jurisprudence : Sutherland v HM Advocate UKSC 32 (2020) sur la recevabilité des preuves de tiers, ATF 137 IV 33 sur les preuves recueillies par particuliers, TF 6B_572/2018 sur la tentative art. 187+22 CP avec « enfants fictifs ». Référence académique : Anna Tippett "The rise of paedophile hunters" (Sage 2024). |
+| **Pitch** | Pédo-hunter amateur fribourgeois transmet à PolCant FR un dossier 800 pages incluant 18 mois de chats Snapchat/Telegram (en se faisant passer pour mineure), embuscade physique au parking de Charmey filmée, diffusion publique Telegram (8'400 vues). Question : recevabilité des preuves + qualification de M. T. (suspect) + qualification de Yannick (auteur des actes coercitifs) |
+| **Rôle joueur** | Procureure adjointe MP-FR (Mme Genoud, fictive) section criminalité informatique et atteintes aux mineurs |
+| **PNJ** | `fr_prosecutor_cyber` (Genoud, transposable), `ge_prosecutor_cyber` (Cottier, transposable), `src_director` (fictif, conseil stratégique) |
+| **Difficulté** | hard |
+| **Steps** | (0) Triage initial + protection M. T. + retrait Telegram · (1) Analyse différenciée recevabilité · (2) Décision sur Yannick et complices · (3) Décision sur M. T. + tentative art. 22 · (4) Audition parlementaire |
+| **Bifurcation** | step 0 #1 (audition Yannick comme témoin + versement sans tri + arrestation brutale M. T.) → **next: 'end'** — catastrophe procédurale + risque suicide majeur |
+| **Pédagogie** | art. 141 al. 2 CPP, ATF 137 IV 33, CEDH Sutherland UKSC 32 (2020), CEDH Saunders, art. 187/197/198 CP, art. 22 CP (tentative), TF 6B_572/2018 (enfants fictifs sur Internet), art. 181/183/173-174 CP qualification cyber-vigilantes, coordination SPMi (enfants suspects = victimes secondaires LAVI), audition parlementaire posture équilibrée |
+
+### Ajouté — Retrofit bloc 2 (5 anciennes scènes adaptées)
+
+Suite du retrofit systématique demandé par l'utilisateur. Bloc 2 livré avec diversification thématique (audit/finance/fraude/e-commerce/deepfake) :
+
+| Scène | Steps | Difficulté | NPCs assignés | Bifurcation marquée |
+|---|---|---|---|---|
+| `audit-prestataire-systemique` | 5 | hard | `forensics_lead_zh`, `ofcs_coordinator` | step 4 #1 et #2 (next=-1 → 'end' explicite) |
+| `banque-privee-mlat` | 5 | expert | `ge_prosecutor_cyber`, `compliance_bs`, `fbi_legat_bern` | step 4 #1 et #2 (next=-1 → 'end' explicite) |
+| `banquier-fantome` | 5 | hard | `nicolet`, `compliance_bs` | step 3 #2 (court-circuit procédural) |
+| `boutique-fantome` | 4 | medium | `forensics_lead_zh`, `nicolet` | step 0 #1 (qualification 146 vs 147 CP) |
+| `clone-vocal` | 5 | medium | `ciso_logitech`, `nicolet` | step 0 #2 (catastrophe forensique audio) |
+
+Pour `audit-prestataire-systemique` et `banque-privee-mlat`, conversion de `next=-1` (convention historique) en `next='end'` explicite, en cohérence avec les autres scènes du retrofit. Étoffement substantiel des distracteurs anciens trop courts pour passer le seuil de balance 30%.
+
+### Ajouté — 3 nouveaux PNJ dans `data/npcs.json` (24 → 27)
+
+| ID | Type | Rôle | Usage |
+|---|---|---|---|
+| `ciso_medsupplier_ne` | Fictif | Mme Pellet, CISO Rhône-Médical SA Neuchâtel | handala-stryker |
+| `fbi_legat_bern` | Fictif | Special Agent Donovan, FBI Legal Attaché ambassade US Berne | handala-stryker, banque-privee-mlat |
+| `fr_prosecutor_cyber` | Fictif **transposable** | Mme Genoud, procureure adjointe MP-FR cyber/mineurs | cyber-justicier-fr |
+
+Le PNJ FBI Legat est nécessairement fictif : la doctrine du FBI ne communique pas publiquement les noms des Legats par protection des sources et des opérations. Les Legats existent réellement à Berne (un poste permanent depuis les années 1990), mais leurs noms ne sont pas du domaine public.
+
+### Modifié — `js/pages/scene-app.js` (CANTON_DATA)
+
+```diff
+-  FR: { name: "Fribourg", scenarios: ["dab-villaz","gruyere-coop-affinage-stuxnet","hcfr-bec-transfer-deepfake"] },
++  FR: { name: "Fribourg", scenarios: ["dab-villaz","gruyere-coop-affinage-stuxnet","hcfr-bec-transfer-deepfake","cyber-justicier-vigilante-fr"] },
+-  NE: { name: "Neuchâtel", scenarios: ["faux-policiers","harcelement-ne"] },
++  NE: { name: "Neuchâtel", scenarios: ["faux-policiers","harcelement-ne","handala-hack-iran-rhne-stryker"] },
+```
+
+### Modifié — `scenes/index.json`
+
+Régénéré (107 → 109 entrées, 165 KB).
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 22 scènes touchées par v2.24/v2.28/v2.29/v2.30 (était 15). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v63 → v64
+
+Header v2.30 documentant les 2 nouveaux scénarios + le retrofit bloc 2 + les 3 nouveaux PNJ + sources presse réelles.
+
+### Statistiques v2.30
+
+| Indicateur | v2.29 | v2.30 |
+|---|---|---|
+| Scènes totales | 107 | **109** (+2) |
+| Scènes avec NPCs assignés | 13 | **18** (+5) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 13 | **18** (+5) |
+| Scènes avec sources presse réelles | 10 | **12** (+2 — Handala/Stryker, RTS pédo-hunter) |
+| PNJ catalogue | 24 | **27** (+3) |
+| PNJ réels (publics) | 7 | 7 (inchangé) |
+| PNJ fictifs | 17 | **20** (+3) |
+| PNJ transposables (multi-scènes) | 4 | **5** (+1, fr_prosecutor_cyber) |
+| Cantons couverts | 14/26 | 14/26 (densification NE+1, FR+1) |
+| Service Worker | v63 | **v64** |
+
+### Notes éditoriales
+
+**Sur le scénario Handala.** L'attaque réelle sur Stryker (mars 2026, abus Microsoft Intune comme kill switch) est documentée par TechCrunch, CheckPoint, CyberScoop, Times of Israel. Le scénario inscrit cette dimension dans un cadre suisse fictif mais réaliste : Stryker possède effectivement des sites en Suisse (Selzach SO notamment) et opère avec un réseau dense de sous-traitants medtech romands. La problématique de la latéralisation cross-tenant Microsoft Intune est représentative des questions stratégiques 2026 (CISA advisory, NCSC UK guidance). Le scénario insiste sur le réflexe forensique préservant les preuves (pas de réinitialisation brutale), la coordination via OFCS comme hub, et la distinction IOCs/données personnelles dans le partage international (Convention Budapest art. 31 vs MLAT formel).
+
+**Sur le scénario Pédo-hunter.** Le contexte Suisse romande des cyber-vigilantes anti-pédocriminalité est documenté par RTS (« Pedo-Hunter », octobre 2025) qui décrit un certain "Yannick" se faisant passer pour fille de 14 ans pour piéger des suspects. L'article RTS souligne la dérive violente et la rhétorique d'extrême droite qui caractérisent certains groupes. Le scénario est un prétexte pédagogique pour explorer **deux questions juridiques de fond** : (1) la recevabilité différenciée des preuves obtenues par tiers (jurisprudence ATF 137 IV 33 + CEDH Sutherland v UK UKSC 32 2020), distincte de la provocation policière interdite par l'art. 293 CPP, et (2) la qualification de la tentative art. 187+22 CP en cas d'« enfant fictif » (TF 6B_572/2018 et doctrine européenne BGH allemand 2014). Le scénario insiste sur la **gestion humaine** (information préventive du suspect avant arrestation pour éviter le risque suicide majeur, soutien LAVI pour la famille suspecte avec enfants mineurs comme victimes secondaires) et l'**équilibre procédural** (multi-qualification proportionnée des cyber-vigilantes pour effet dissuasif sans créer de martyrs médiatiques).
+
+**Sur les éléments réels.** Conformément à la doctrine éditoriale CAS-IN, les références presse sont vérifiées et datées. Les personnes physiques (PDG, employés, suspects, victimes) sont fictives ou transposées. Stryker est nommé (entité publique cotée Fortune 500). Handala est nommé (groupe public revendiqué dans les médias). Le sous-traitant suisse (Rhône-Médical SA) est fictif. "Yannick" du scénario pédo-hunter est inspiré du témoignage anonymisé RTS, sans identification du suspect réel.
+
+**Sur le retrofit bloc 2.** La diversification thématique (audit ISAE / finance MLAT / fraude bancaire / e-commerce / deepfake audio) est plus utile pédagogiquement qu'un découpage canton par canton, car elle permet à un même apprenant de toucher plusieurs domaines techniques et juridiques en une session. La mécanique reste : assigner 1-3 PNJ pertinents du catalogue (avec privilège donné aux PNJ transposables), ajouter le marqueur "📍 BIFURCATION NARRATIVE" sur le distracteur catastrophique, étoffer les distracteurs trop courts pour passer le seuil de balance 30%. ~17 blocs de 5 scènes restent à traiter dans les versions ultérieures.
+
+**Sur la qualité des distracteurs.** Le travail d'étoffement des distracteurs anciens (50+ distracteurs réécrits cette release sur les 5 anciennes scènes) confirme la valeur du linter de balance : un distracteur trop court révèle souvent un distracteur trop pauvre pédagogiquement (juste « non, c'est pas ça » au lieu d'une posture alternative argumentée et plausible). L'étoffement améliore donc à la fois l'équilibrage statistique et la richesse pédagogique.
+
+### Prochaines évolutions possibles
+
+```
+v2.31  Retrofit bloc 3 (5 anciennes scènes, à proposer)
+       Candidats : burgenstock-neutralite, cicr_2022, cistec-2025-sante,
+                    cloud-aws-s3-leak, comparis_2021
+v2.32  Examen blanc 50q/90 min
+v2.33  Heatmap canton enrichie + badges par canton
+
+Scénarios PDF candidats restants :
+  • deepfake-conseiller-etat (Pierre-Yves Maillard, à anonymiser)
+  • src-fonctionnaire-russe-kaspersky (espionnage interne)
+```
+
 ## [2.29] — 2026-05-03
 
 Cette version ajoute **2 nouveaux scénarios suisses** (mini-natels en EPO Pöschwies + survols drones sur Swissgrid Laufenburg) et amorce le **retrofit du corpus historique** : adaptation par blocs de 5 anciennes scènes pour les aligner sur la nouvelle mouture (PNJ assignés, marqueurs de bifurcation narrative explicites). Le corpus passe à **107 scènes** et le catalogue PNJ à **24 personnages**.
