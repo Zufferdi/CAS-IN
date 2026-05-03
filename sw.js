@@ -1,4 +1,53 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v61 : v2.27 — Embranchements narratifs étendus aux 4 autres scènes v2.24
+//
+//       En v2.26, la première vraie bifurcation avait été introduite dans
+//       gruyere-coop-affinage-stuxnet (step 1 distractor 2 → next: 4).
+//       Cette version étend le pattern aux 4 autres scènes v2.24, avec
+//       une variété pédagogique délibérée :
+//
+//         • lugano-dpfl-mafia-finance       step 1 #2 → next: 'end'
+//             "Forcer code PIN" = violation CPP art. 113 / CEDH art. 6
+//             → fruit de l'arbre empoisonné (CPP art. 141 al. 4)
+//             → toute la procédure invalidée, F. acquitté, scénario END
+//
+//         • epfl-recherche-lai-fuite-chine  step 0 #1 → next: 3
+//             "Accepter 48h enquête interne Pr. Z."
+//             → suspect alerté par rumeur dans le labo (12 personnes)
+//             → Chen Wei efface ses traces, vol Beijing
+//             → saute steps 1 et 2 (qualif/PFPDT impossibles)
+//
+//         • epfl-laboratoire-ia-medicale    step 0 #2 → next: 4
+//             "Réunion crise dans 4h pendant que Pr. Délémont
+//              tente de joindre Zhang Yi"
+//             → cascade 4h : laptop AFU→BFU, suspect alerté WhatsApp,
+//                Twitter académique, postdoc chinois prévient
+//             → saute 3 steps (qualification/coordination/communication
+//                impossibles avec preuves volatilisées)
+//
+//         • hcfr-bec-transfer-deepfake      step 2 #2 → next: 4
+//             "Confession totale presse + audio deepfake"
+//             → tempête médiatique, attaquants déplacent fonds avant
+//                Convention de Budapest, BCF retire son naming
+//             → saute coordination Swiss Ice Hockey (sans objet)
+//
+//       Pattern systématique : chaque feedback de bifurcation contient
+//       le marqueur "📍 BIFURCATION NARRATIVE" suivi de l'explication
+//       cause→effet pour que le joueur comprenne pourquoi le scénario
+//       saute des étapes (ou s'achève).
+//
+//       Variété : 1× 'end' (fin catastrophe procédurale immédiate)
+//                + 3× sauts (2-3 steps, dossier dégradé selon la phase
+//                  où le mauvais choix a été pris).
+//
+//       Aucun changement du moteur scene-app.js (qui supportait déjà
+//       `choice.next` non-linéaire et `'end'` depuis longtemps).
+//       Aucun changement structure JSON. Aucun nouvel asset.
+//       L'équilibrage des choix v2.25 reste OK (les fb sont allongés,
+//       les text non — l'écart max reste 26%).
+//
+//       Tests : tous passent. Balance check : 0 warning, 0 error.
+//
 // v60 : v2.26 — Gamification scènes : C (Timer) + D (Branches) + E (PNJ) + H (Achievements)
 //
 //       FEATURE C — Timer de stress (mode Procureur, déjà existant)
@@ -274,7 +323,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v60';
+const CACHE_VERSION = 'cas-in-v61';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
