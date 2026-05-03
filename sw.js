@@ -1,5 +1,127 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v74 : v2.40 — Retrofit bloc 12 (PREMIER BLOC DE 8 scènes)
+// v76 : v2.42 — Retrofit bloc 14 (8 scènes) + 6 NOUVEAUX PNJ
+//
+//       Diversification continue du casting : 6 nouveaux PNJ
+//       thématiquement adaptés (TMC GE, RSSI UniNE, secrétaire
+//       communal VS, SWITCH-CERT, PolCant TI Chiasso, X-Ways expert).
+//       Catalogue total : 36 → 42 PNJ.
+//
+//       6 nouveaux PNJ ajoutés à data/npcs.json (36 → 42) :
+//
+//         • tmc_juge_ge (Mme Vaucher, fictive transposable) —
+//             Juge TMC Genève, art. 269/280/286 CPP
+//         • unine_ciso (M. Pillonel, fictif) — RSSI Université de
+//             Neuchâtel, contexte académique
+//         • vs_secretaire_communal (M. Métrailler, fictif
+//             transposable) — Coordinateur cyber régional VS Bas-
+//             Valais, 28 communes
+//         • switch_cert_lead (Mme Reusser, fictive transposable) —
+//             Cheffe SWITCH-CERT, CERT académique CH
+//         • ti_pol_chiasso (M. De Bernardi, fictif) — Inspecteur
+//             principal cyber PolCant TI Chiasso, frontière A2
+//         • fim_xways_expert (Mme Tremp, fictive transposable) —
+//             Experte forensique X-Ways senior fedpol Berne
+//
+//       Retrofit bloc 14 — 8 anciennes scènes adaptées :
+//         (voir CHANGELOG.md pour détail)
+//
+//       6 scènes sur 8 utilisent ≥1 nouveau PNJ.
+//       fim_xways_expert utilisée 3 fois (timeline, trois_artefacts,
+//       veracrypt) — pivot forensique X-Ways du corpus.
+//
+//       Stats : 110 scènes / 42 PNJ / 87 scènes avec NPCs.
+//       PNJ catalogue : 36 → 42 (+6)
+//                       Réels : 8 (inchangé)
+//                       Fictifs : 28 → 34 (+6)
+//                       Transposables : 11 → 15 (+4)
+//
+//       Progression : 87/110 = 79% du corpus mis à niveau.
+//       Reste ~23 scènes (~3 blocs au rythme de 8).
+//
+// v75 : v2.41 — Retrofit bloc 13 (8 scènes) + 5 NOUVEAUX PNJ
+//
+//       Cette release ajoute 6 PNJ thématiques pour diversifier
+//       le casting : la stabilisation à 30 PNJ depuis v2.33 a
+//       atteint sa limite, certains scénarios sectoriels
+//       méritent leurs propres personnages identifiés.
+//
+//       Catalogue PNJ : 30 → 36 (+6).
+//
+//       Nouveaux PNJ v2.41 :
+//
+//         • ge_cyber_brigade_chief (M. Pellissier)
+//             Chef Brigade cyber enquêtes PolGE
+//             Apparaît dans 'sms-blasters'
+//             Transposable cyber-physique romand
+//
+//         • stadler_ciso (M. Frischknecht)
+//             CISO Stadler Rail Bussnang
+//             Apparaît dans 'stadler_2020'
+//             Transposable industriel suisse
+//
+//         • sg_polcyber_chief (Mme Brägger)
+//             Cheffe juridique IFC PolSG
+//             Apparaît dans 'stgall-infiltration', 'specialite-eimp'
+//             Transposable investigations cyber alémaniques
+//
+//         • mediswiss_ciso (Mme Borgeat)
+//             CISO MediSwiss SA (éditeur SaaS médical fictif)
+//             Apparaît dans 'supply_chain_sante'
+//             Transposable cyber-santé suisse
+//
+//         • swatch_security_lead (M. Stocker)
+//             Responsable sécurité OT Swatch Group
+//             Apparaît dans 'swatch-2020-ot'
+//             Transposable espionnage industriel
+//
+//         • swisscom_dpo (M. Bachmann)
+//             DPO Group Swisscom
+//             Apparaît dans 'swisscom_2018'
+//             Transposable nLPD opérateurs télécom
+//
+//       Retrofit bloc 13 — 8 anciennes scènes adaptées :
+//
+//         • sms-blasters (5 steps, medium) — SMS Blasters mobiles GE
+//             ComCom + LSCPT + LTC + cyber-physique
+//             npcs=[ge_cyber_brigade_chief, forensics_lead_zh]
+//
+//         • specialite-eimp (5 steps, hard) — Spécialité art. 67 EIMP
+//             extension périmètre BLN→corruption
+//             npcs=[nicolet, sg_polcyber_chief]
+//             Bif. step 4 #1 et #2 → 'end'
+//
+//         • stadler_2020 (8 steps, hard) — Ransomware DoppelPaymer
+//             7 To exfiltrés, 6M USD demandés
+//             npcs=[stadler_ciso, ofcs_coordinator]
+//
+//         • stgall-infiltration (5 steps, hard) — Projet IFC PolSG
+//             art. 285a-298 CPP investigations secrètes
+//             npcs=[sg_polcyber_chief, pjf_undercover_lead]
+//
+//         • supply_chain_sante (11 steps, expert) — MediSwiss SaaS
+//             dépendance npm compromise, 627k patients, 140 hôpitaux
+//             npcs=[mediswiss_ciso, ofcs_coordinator, cicr_dpo]
+//             Note : 11 steps, scène expert très dense
+//
+//         • swatch-2020-ot (5 steps, hard) — Espionnage industriel
+//             usine OT Granges, secrets horlogers
+//             npcs=[swatch_security_lead, forensics_lead_zh]
+//             Bif. step 4 #1 et #2 → 'end'
+//
+//         • swisscom_2018 (5 steps, medium) — Vol 800k clients via
+//             sous-traitant tunisien (cas réel)
+//             npcs=[swisscom_dpo, ofs_rssi_fedch]
+//
+//         • swissgrid-iec61850-jura (5 steps, expert) — Poste 380kV
+//             attaque IEC 61850 SCADA niveau national
+//             npcs=[ofcs_coordinator, ddps_general_counsel]
+//             Bif. step 4 #1 et #2 → 'end'
+//
+//       Stats : 110 scènes / 36 PNJ / 79 scènes avec NPCs.
+//
+//       Progression : 79/110 = 72% du corpus mis à niveau.
+//       Reste ~31 scènes (~4 blocs au rythme de 8).
+//
 //
 //       Acceleration du sprint final : passage à 8 scènes par bloc
 //       (au lieu de 5) pour atteindre 100% du retrofit corpus en
@@ -1097,7 +1219,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v74';
+const CACHE_VERSION = 'cas-in-v76';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
