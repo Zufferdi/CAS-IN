@@ -154,6 +154,12 @@ def main() -> None:
             SCENES_DIR / "mineur-etranger-garde-a-vue.json",
             SCENES_DIR / "mros-banquier.json",
             SCENES_DIR / "ncmec-cypertip.json",
+            # v2.38 retrofit bloc 10 (5 scènes)
+            SCENES_DIR / "noname_2023.json",
+            SCENES_DIR / "operation-alice.json",
+            SCENES_DIR / "osint-licite.json",
+            SCENES_DIR / "palais_federal.json",
+            SCENES_DIR / "perquisition-conjugale.json",
         ]
 
     has_error = False
