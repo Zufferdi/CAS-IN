@@ -4,6 +4,107 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.33] — 2026-05-03
+
+Cette version ajoute **1 nouveau scénario suisse inspiré d'une affaire d'État réelle** (espionnage interne au SRC via Kaspersky 2015-2020, révélée en juin 2025) et enchaîne le **bloc 5 du retrofit du corpus historique**. Le corpus passe à **110 scènes** et le catalogue PNJ à **30 personnages**.
+
+### Ajouté — 1 nouveau scénario
+
+#### 🕵️ `src-fonctionnaire-russe-kaspersky` (hard, BE/MPC)
+
+| Aspect | Détail |
+|---|---|
+| **Source** | Affaire SRC-Kaspersky 2015-2020 révélée par SRF Investigativ en juin 2025 ; Conseil fédéral autorise enquête MPC le 30 juin 2025 (RTS, ICTjournal, 20min, swissinfo, watson). Officier en chef de l'équipe cyber SRC aurait transmis des données sensibles à Kaspersky → GRU via 3 entreprises identifiées dans le rapport interne SRC 2021 : Kaspersky, "Bleu" (Zurich, fondée par 2 Russes + 1 Suisse), "Violette" (serveurs Suisse, Tessin/Berne). 2 services alliés (NSA + BfV) ont alerté en 2020 et menacé de cesser toute coopération. Réorganisation cyber SRC en 2021 sous nouvelle direction. Enquête administrative DDPS lancée juin 2025 par Conseiller fédéral Pfister. Qualifications visées : art. 271 CP (actes interdits pour État étranger), art. 272 CP (service de renseignement politique), art. 320 CP (violation secret de fonction). |
+| **Pitch** | Le Conseil fédéral vient d'autoriser le MPC à ouvrir l'enquête. 5 phases : (1) cadrage initial du périmètre, (2) coopération avec services alliés sans révéler sources/méthodes, (3) audition de M. X. avec exploration art. 14 CP (devoir professionnel), (4) audition hiérarchie SRC et doctrine de la responsabilité fonctionnelle, (5) bilan public et leçons institutionnelles via GPDel. |
+| **Rôle joueur** | Procureur fédéral cyber au MPC à Berne |
+| **PNJ** | `nicolet` (procureur cyber MPC, **réel**), `src_director` (directeur SRC, fictif), `ddps_general_counsel` (Mme Aebischer, fictive transposable, **nouveau v2.33**) |
+| **Difficulté** | hard |
+| **Steps** | (0) Cadrage périmètre + communication presse · (1) Coopération NSA/BfV via canaux NCSC-CIRT · (2) Première audition M. X. + élément subjectif · (3) Audition hiérarchie SRC (3 chefs) + extension Chef C · (4) Bilan en 4 cercles + capitalisation institutionnelle |
+| **Bifurcation** | step 0 #1 (communication publique nominative + qualification "trahison" art. 267 CP + détention provisoire immédiate) → **next: 'end'** — catastrophe procédurale CEDH (Allenet de Ribemont 1995) + rupture coopération NSA/BfV/BND |
+| **Pédagogie** | art. 267/271/272/320 CP, distinction trahison vs. négligence consciente, art. 86 CPP pièces classifiées, présomption innocence, doctrine de la responsabilité fonctionnelle, CRP préparée pour témoignage déclassifié au procès, art. 73 CPP secret enquête, GPDel parlementaire, bilan en 4 cercles |
+
+**Anonymisation éditoriale** : personnes réelles transposées en M. X. (officier), M. P. (ingénieur Kaspersky Moscou), Chefs A/B/C (3 supérieurs hiérarchiques successifs 2015-2020), "Bleu" et "Violette" (les 2 entreprises russes anonymisées dans le rapport SRF). Le Conseiller fédéral Pfister est mentionné par sa fonction publique de chef du DDPS. Kaspersky et le GRU sont nommés (entités publiques connues). L'affaire est traitée comme exercice pédagogique sur la gestion d'un dossier d'espionnage interne en démocratie, pas comme une instruction pénale fictive.
+
+### Ajouté — Retrofit bloc 5 (5 anciennes scènes adaptées)
+
+| Scène | Steps | Difficulté | NPCs assignés | Bifurcation marquée |
+|---|---|---|---|---|
+| `darkmarket_2021` | 8 | hard | `pjf_undercover_lead`, `nicolet` | step 0 #0 (perquisition mal cadrée) |
+| `deepfake-audio-garde-a-vue` | 5 | hard | `forensics_lead_zh`, `ge_prosecutor_cyber` | step 4 #1 et #2 (next=-1 → 'end' explicite) |
+| `delemont-forum` | 5 | easy | `ofs_rssi_fedch`, `ofcs_coordinator` | step 1 #2 (catastrophe pédagogique) |
+| `eu-crypto-kidnapping` | 5 | medium | `ge_prosecutor_cyber`, `nicolet` | step 0 #1 (sous-estimation urgence) |
+| `eu-cyber-trading-fraud` | 5 | medium | `forensics_lead_zh`, `nicolet` | step 0 #1 (victimisation secondaire) |
+
+**Diversification thématique du bloc 5** : (a) **darkmarket / Europol** (perquisition Tor, BTC saisis, scellés YubiKey), (b) **deepfake audio en interrogatoire** (enlèvement enfant, expertise contradictoire), (c) **sensibilisation cyber communes** (forum JU, doctrine ENISA pour collectivités locales), (d) **enlèvement-chantage crypto** (Arc Lémanique CH-FR, urgence opérationnelle), (e) **fraude trading retraités** (cyber-trading-fraud, accueil LAVI, blockchain analytics).
+
+### Ajouté — 1 nouveau PNJ dans `data/npcs.json` (29 → 30)
+
+| ID | Type | Rôle | Usage |
+|---|---|---|---|
+| `ddps_general_counsel` | Fictif **transposable** | Mme Aebischer, conseillère juridique principale DDPS Berne | src-fonctionnaire-russe-kaspersky + scénarios sécurité nationale futurs |
+
+Le catalogue compte maintenant **8 PNJ transposables** (sur 30 au total), ce qui réduit encore le besoin de créer de nouveaux PNJ pour les blocs futurs.
+
+### Modifié — `js/pages/scene-app.js` (CANTON_DATA)
+
+```diff
+-  BE: { name: "Berne", scenarios: ["ruag_2016","palais_federal","deepfake-electoral"] },
++  BE: { name: "Berne", scenarios: ["ruag_2016","palais_federal","deepfake-electoral","src-fonctionnaire-russe-kaspersky"] },
+```
+
+### Modifié — `scenes/index.json`
+
+Régénéré (109 → 110 entrées, 169.5 KB).
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 38 scènes touchées par v2.24 → v2.33 (était 32). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v66 → v67
+
+Header v2.33 documentant le nouveau scénario SRC-Kaspersky + le retrofit bloc 5 + le nouveau PNJ.
+
+### Statistiques v2.33
+
+| Indicateur | v2.32 | v2.33 |
+|---|---|---|
+| Scènes totales | 109 | **110** (+1) |
+| Scènes avec NPCs assignés | 28 | **33** (+5) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 28 | **33** (+5) |
+| Scènes avec sources presse réelles | 15 | **17** (+2 — SRC-Kaspersky, comparis-2021) |
+| PNJ catalogue | 29 | **30** (+1) |
+| PNJ réels (publics) | 7 | 7 (inchangé) |
+| PNJ fictifs | 22 | **23** (+1) |
+| PNJ transposables (multi-scènes) | 7 | **8** (+1, ddps_general_counsel) |
+| Cantons couverts | 14/26 | 14/26 (densification BE+1) |
+| Service Worker | v66 | **v67** |
+
+### Notes éditoriales
+
+**Sur l'affaire SRC-Kaspersky (juin 2025).** L'affaire réelle, révélée par SRF Investigativ le 4 juin 2025 sur la base d'un rapport interne SRC de 2021 classé secret défense, documente une coopération informelle entre l'équipe cyber du SRC et trois entreprises liées à la Russie (Kaspersky + "Bleu" + "Violette") entre 2015 et 2020. L'officier en chef de l'équipe cyber aurait transmis des samples malveillants et des analyses cyber-tactiques à un ingénieur Kaspersky basé à Moscou, qui aurait servi de relais vers le GRU (renseignement militaire russe). Deux services alliés (NSA + BfV) ont alerté le SRC en 2020 et menacé de cesser toute coopération si l'officier restait en poste, ce qui a déclenché une enquête interne SRC en 2021 et une réorganisation complète de l'équipe cyber. Le 30 juin 2025, le Conseil fédéral a autorisé le MPC à ouvrir une enquête pénale formelle pour soupçon de violation du secret de fonction (art. 320 CP), service de renseignement politique (art. 272 CP), et actes exécutés sans droit pour un État étranger (art. 271 CP). Le Conseiller fédéral Pfister, à la tête du DDPS depuis mars 2025, a parallèlement lancé une enquête administrative externe pour rétablir la confiance dans le SRC.
+
+**Pourquoi ce scénario est important pédagogiquement.** L'affaire SRC-Kaspersky illustre plusieurs questions stratégiques majeures rarement combinées dans un même dossier : (1) **l'articulation administratif/pénal** sur un dossier classifié, où les éléments DDPS doivent être déclassifiés ad hoc pour être versés à la procédure pénale (art. 86 CPP) ; (2) **la coopération internationale renseignement vs. pénal**, où les services alliés acceptent de partager des éléments d'orientation à condition qu'ils ne deviennent pas publics dans une procédure pénale suisse (séparation des cadres) ; (3) **la doctrine de la responsabilité fonctionnelle**, où la chaîne hiérarchique ne peut pas être ignorée et où le bouc émissaire individuel n'est pas une réponse pénale acceptable si la hiérarchie tolérait ou validait tacitement ; (4) **la présomption d'innocence en contexte sensible**, où la pression médiatique et politique pour communiquer publiquement les noms et les chefs d'accusation doit être résistée (jurisprudence CEDH Allenet de Ribemont 1995) ; (5) **le bilan en 4 cercles** (citoyens / parlement / exécutif / alliés), qui structure la communication post-instruction d'une manière contributive et non triomphaliste.
+
+**Sur le rythme du retrofit.** Avec 5 blocs livrés en 5 versions (v2.29 à v2.33), 33 scènes du corpus historique sont désormais équipées de NPCs et marqueurs narratifs (sur 110 totales). La progression est de **30 % du corpus mis à niveau**. Reste **~72 scènes** à traiter (~14 blocs au rythme actuel). La mécanique est désormais bien rodée et reproductible : les 2-3 heures éditoriales par bloc se confirment, dont 30-50 % consacrées à l'étoffement des distracteurs pour passer le linter de balance.
+
+**Sur la qualité du nouveau scénario.** Le scénario `src-fonctionnaire-russe-kaspersky` se distingue des autres scénarios « hard » par sa dimension géopolitique et institutionnelle. Il introduit le concept de **séparation des cadres** (renseignement / pénal / international) qui est central dans les dossiers d'espionnage moderne, et explore en profondeur la **doctrine de la responsabilité fonctionnelle** (Chef C validait tacitement, M. X. exécutait — qui est le plus coupable ?). Le bilan en 4 cercles est un format de communication post-instruction transposable à d'autres dossiers institutionnels sensibles.
+
+### Prochaines évolutions possibles
+
+```
+v2.34  Retrofit bloc 6 (5 anciennes scènes, à proposer)
+       Candidats par diversification : eu-endgame-botnets, eu-traite-roumain,
+                                        faux-policiers, fr-gendarmerie,
+                                        gestionnaire-fortune
+v2.35  Retrofit bloc 7
+v2.36  Examen blanc 50q/90 min
+v2.37  Heatmap canton enrichie + badges par canton
+
+Scénarios PDF candidats restants :
+  • deepfake-conseiller-etat (Pierre-Yves Maillard, à anonymiser)
+  • cas-ddos-ofcom-electorale-2024 (à creuser)
+```
+
 ## [2.32] — 2026-05-03
 
 Release de **mise à niveau du corpus**, sans nouveau scénario. **Bloc 4 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique continue : rédaction rapport / coopération européenne EUROPOL / IoT-stalking / fraude DAB / deepfake électoral. Le corpus reste à 109 scènes ; le catalogue PNJ reste à 29 personnages (réutilisation maximale des 7 transposables existants).
