@@ -4,6 +4,70 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.36] — 2026-05-03
+
+Release de **mise à niveau du corpus**, sans nouveau scénario. **Bloc 8 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique continue : forensique IP / vishing JU 1.5M / deepfake personnalité publique / LockBit ransomware / coordination LSI-LPD timing. Le corpus reste à 110 scènes ; le catalogue PNJ reste à 30.
+
+### Ajouté — Retrofit bloc 8 (5 anciennes scènes adaptées)
+
+| Scène | Steps | Difficulté | NPCs assignés | Bifurcation marquée |
+|---|---|---|---|---|
+| `ip_accusatrice` | 5 | medium | `forensics_lead_zh`, `nicolet` | step 0 #0 (arrestation IP prématurée) |
+| `jura-vishing-1m` | 5 | medium | `fr_prosecutor_cyber`, `forensics_lead_zh` | step 0 #2 (qualification simple insuffisante) |
+| `kks-deepfake` | 4 | hard | `ofcs_coordinator`, `src_director` | step 3 #0 (communication publique précoce) |
+| `lockbit-victime` | 3 | easy | `ciso_logitech`, `ofcs_coordinator` | step 0 #1 (paiement rançon immédiat) |
+| `lsi-vs-lpd-timing` | 5 | hard | `ofcs_coordinator`, `cicr_dpo` | step 4 #1 et #2 → 'end' explicite |
+
+**Diversification thématique du bloc 8** : (a) **Forensique IP-FAI** (CGNAT, MAC spoofing, VPN compromis, ATF 6B_372/2017), (b) **Vishing JU « par métier »** (14 victimes en 8 mois, art. 146 al. 2 CP peine MAX 10 ans), (c) **Deepfake personnalité publique** (art. 179decies CP nouveau + art. 146 + art. 173 CP, escroquerie crypto 340 victimes 800k CHF), (d) **LockBit PME** (80k CHF Bitcoin, doctrine OFCS non-paiement, Opération Cronos déchiffreurs gratuits), (e) **LSI-nLPD timing** (parapublic VS 38'000 patients, articulation 3 cadres notification, communication publique).
+
+### Pas de nouveau PNJ — quatrième fois consécutive
+
+Quatrième release sans création de PNJ depuis v2.32. Confirmation que le catalogue de 30 PNJ avec 8 transposables est stabilisé.
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 53 scènes touchées par v2.24 → v2.36 (était 48). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v69 → v70
+
+Header v2.36 documentant le retrofit bloc 8.
+
+### Statistiques v2.36
+
+| Indicateur | v2.35 | v2.36 |
+|---|---|---|
+| Scènes totales | 110 | **110** (inchangé) |
+| Scènes avec NPCs assignés | 43 | **48** (+5) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 43 | **48** (+5) |
+| PNJ catalogue | 30 | **30** (inchangé) |
+| Service Worker | v69 | **v70** |
+
+### Notes éditoriales
+
+**Sur la scène `ip_accusatrice`.** Scène medium très pédagogique sur les **multiples sources d'erreur d'attribution** d'une adresse IP : CGNAT (Carrier-Grade NAT, où plusieurs centaines de clients partagent une même IP publique), routeur ouvert (un voisin ou un visiteur ayant utilisé le WiFi non protégé), MAC spoofing (usurpation d'identifiant matériel), malware proxy (machine compromise utilisée comme rebond), VPN compromis (chaîne de pseudonymisation incomplète). Le marqueur souligne que l'imputation personnelle exige des éléments corroboratifs (jurisprudence TF ATF 6B_372/2017).
+
+**Sur la scène `jura-vishing-1m`.** Scène medium documentée par les opérations vishing aînés en Suisse romande 2022-2025 : H. (34 ans, belge, interpellé en JU) opère 14 victimes en 8 mois pour 1.5M CHF. Question juridique centrale : caractériser le **« par métier »** au sens art. 146 al. 2 CP (peine privative jusqu'à 10 ans, contre 5 ans pour 146 al. 1 simple). La jurisprudence TF (ATF 129 IV 49) considère le métier comme caractérisé par : volume + méthode systématique + revenus réguliers + activité professionnalisée.
+
+**Sur la scène `kks-deepfake`.** Scène hard sur l'art. 179decies CP **nouveau** (atteinte à la personnalité par usurpation d'identité — entré en vigueur 2024) en concours avec art. 146 CP (escroquerie crypto sur 340 victimes pour 800k CHF) et art. 173 CP (diffamation). Le marqueur souligne le piège de la communication publique précoce nominative : demander à la haute personnalité ciblée un démenti immédiat sans préparation peut transformer le démenti en confirmation involontaire (effet Streisand).
+
+**Sur la scène `lockbit-victime`.** Scène easy à 3 steps qui modélise le **premier réflexe** d'une PME face au ransomware LockBit. Question centrale : payer ou pas. Le marqueur souligne 4 raisons de NON-paiement : (a) finance directement LockBit, (b) taux de respect engagement ~62% selon Chainalysis 2024, (c) viole recommandations OFCS/FBI/NCSC, (d) sanctions OFAC US si LockBit liste sanctionnée. La voie alternative est l'OFCS qui peut fournir des outils de déchiffrement issus de l'**Opération Cronos** (saisie LockBit février 2024 par NCA UK + FBI + Europol).
+
+**Sur la scène `lsi-vs-lpd-timing`.** Scène hard très subtile qui articule **trois cadres de notification distincts** : LSI (Loi sur la sécurité des informations — assujettissement OFCS pour CII), nLPD art. 24 (notification 72h pour données personnelles), communication patients individuelle. Le scénario pose les bonnes questions : assujettissement LSI mixte parapublic/privé incertain, périmètre 38'000 patients incertain, chronologie de connaissance technique discutée par un journaliste. Le marqueur souligne la doctrine nLPD « meilleurs délais » qui inclut la qualification médicale fine des données.
+
+**Sur le rythme du retrofit.** Avec 8 blocs livrés en 8 versions (v2.29 à v2.36), 48 scènes du corpus historique sont désormais équipées de NPCs et marqueurs narratifs (sur 110 totales). La progression est de **44 % du corpus mis à niveau**. Reste **~57 scènes** à traiter (~11 blocs au rythme actuel). Approche du milieu du sprint.
+
+### Prochaines évolutions possibles
+
+```
+v2.37  Retrofit bloc 9 (5 anciennes scènes, à proposer)
+       Candidates par diversification : lugano-mallette, malware-cascade,
+                                         medusa-grade-3, mysecuritybox-zh,
+                                         neom-evangeliste
+v2.38  Retrofit bloc 10
+v2.39  Examen blanc 50q/90 min
+v2.40  Heatmap canton enrichie + badges par canton
+```
+
 ## [2.35] — 2026-05-03
 
 Release de **mise à niveau du corpus**, sans nouveau scénario. **Bloc 7 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique continue : Android malware + BEC / douane frontière / harcèlement portail anonyme / IA générative / IoT camera. Le corpus reste à 110 scènes ; le catalogue PNJ reste à 30 personnages.
