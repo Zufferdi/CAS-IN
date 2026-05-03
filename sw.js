@@ -1,5 +1,60 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v68 : v2.34 — Retrofit bloc 6 (5 anciennes scènes adaptées)
+// v69 : v2.35 — Retrofit bloc 7 (5 anciennes scènes adaptées)
+//
+//       Version sans nouveau scénario, focalisée sur la mise à niveau
+//       systématique du corpus historique. Bloc 7 = diversification
+//       continue : Android malware + BEC / douane / harcèlement portail
+//       anonyme / IA générative / IoT camera.
+//
+//       Retrofit bloc 7 — 5 anciennes scènes adaptées :
+//
+//         • flubot-bec-cascade (5 steps, medium) — FluBot Android
+//             commune romande 6'400 habitants, BEC 47'800 CHF
+//             npcs=[ofs_rssi_fedch, fr_prosecutor_cyber]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : sanction individuelle secrétaire = ATF
+//             6B_383/2019 erreur excusable, démotive déclarations.
+//
+//         • frontieres (5 steps, medium) — Voyageur Moscou ZH,
+//             douanier veut accéder laptop chiffré
+//             npcs=[nicolet, ddps_general_counsel]
+//             Marqueur step 0 #0 (forcer accès laptop sans cadre =
+//             violation art. 31 al. 1 Cst + art. 4 al. 1 LDoua)
+//
+//         • harcelement-ne (5 steps, easy) — Portail Anonyme NE,
+//             signalements harcèlement
+//             npcs=[ge_prosecutor_cyber, forensics_lead_zh]
+//             Marqueur step 0 #1 (publication clear non vérifiée
+//             viole nLPD + présomption innocence + diligence cantonale)
+//
+//         • ia-generative-faux-titres (5 steps, hard) — Faux CV/
+//             contrats IA-générés, M. V. consultant TechCorp
+//             npcs=[ge_prosecutor_cyber, forensics_lead_zh]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : peine plancher 5 ans pour usage IA =
+//             disproportionnée (art. 251 CP : 5 ans MAX, pas plancher)
+//
+//         • iot-camera-compromise (5 steps, hard) — Caméra Reolink
+//             compromise 47 connexions étrangères, cambriolage Mme L.
+//             npcs=[forensics_lead_zh, ge_prosecutor_cyber]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : bloquer toutes preuves IoT = priver victime,
+//             expertise forensique adaptée existe (NTP+EXIF+hash+logs)
+//
+//       Pas de nouveau PNJ cette release (réutilisation des 8 PNJ
+//       transposables existants). Troisième release consécutive
+//       (après v2.32 et v2.34) sans création de PNJ.
+//
+//       Note : 2 scènes initialement proposées (ia-medicale-genome,
+//       intrusion-stable) n'existent pas dans le corpus. Remplacées
+//       par 'ia-generative-faux-titres' et 'iot-camera-compromise',
+//       thématiques distinctes mais cohérentes avec la diversification.
+//
+//       Stats : 110 scènes / 30 PNJ / 43 scènes avec NPCs.
+//
+//       Approche retrofit "par bloc de 5" : ~62 scènes restantes
+//       après v2.35. Reste ~12 blocs.
+//
 //
 //       Version sans nouveau scénario, focalisée sur la mise à niveau
 //       systématique du corpus historique. Bloc 6 = diversification
@@ -783,7 +838,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v68';
+const CACHE_VERSION = 'cas-in-v69';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
