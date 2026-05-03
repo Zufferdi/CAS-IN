@@ -142,6 +142,12 @@ def main() -> None:
             SCENES_DIR / "harcelement-ne.json",
             SCENES_DIR / "ia-generative-faux-titres.json",
             SCENES_DIR / "iot-camera-compromise.json",
+            # v2.36 retrofit bloc 8 (5 scènes)
+            SCENES_DIR / "ip_accusatrice.json",
+            SCENES_DIR / "jura-vishing-1m.json",
+            SCENES_DIR / "kks-deepfake.json",
+            SCENES_DIR / "lockbit-victime.json",
+            SCENES_DIR / "lsi-vs-lpd-timing.json",
         ]
 
     has_error = False
