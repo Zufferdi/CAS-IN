@@ -1,5 +1,71 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v73 : v2.39 — Retrofit bloc 11 (5 anciennes scènes adaptées)
+// v74 : v2.40 — Retrofit bloc 12 (PREMIER BLOC DE 8 scènes)
+//
+//       Acceleration du sprint final : passage à 8 scènes par bloc
+//       (au lieu de 5) pour atteindre 100% du retrofit corpus en
+//       moins de blocs restants. 65% atteint — 100% en vue.
+//
+//       Retrofit bloc 12 — 8 anciennes scènes adaptées :
+//
+//         • ransomware-hopital-doj-conflit (5 steps, hard) — Conflit
+//             juridictionnel CH-US ransomware Hôpital cantonal SG
+//             3 décès, demande cession DOJ
+//             npcs=[nicolet, fbi_legat_bern]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : céder cession DOJ globale = perte
+//             souveraineté procédurale + précédent dangereux
+//
+//         • ransomware_raid (8 steps, hard) — RAID 5 + ransomware,
+//             reconstruction forensique, 60% récupérables
+//             npcs=[forensics_lead_zh, ciso_logitech]
+//             Marqueur step 0 #0 (reconstruction RAID directe sans
+//             imagerie individuelle = perte définitive 60%)
+//
+//         • referent-milice-ransomware (5 steps, easy) — Référent
+//             cyber milice Evolène 1'860 hab., dimanche 19h47
+//             npcs=[ofcs_coordinator, ofs_rssi_fedch]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : décision unilatérale paiement = usurpation
+//             pouvoir communal, doctrine OFCS/CCDJP
+//
+//         • ruag_2016 (8 steps, hard) — APT 21 mois RUAG
+//             cas réel cyber-espionnage 2016
+//             npcs=[ddps_general_counsel, ofcs_coordinator]
+//             Marqueur step 0 #0 (coupure publique sans coordination
+//             DDPS+OFCS+SRC+fedpol = alerte APT, wipe traces)
+//
+//         • sati-bec (6 steps, hard) — Tessin BEC 18.6M CHF
+//             SATI Sezione Analisi Tecnica Informatica
+//             npcs=[mroz_ti, compliance_bs]
+//             Marqueur step 0 #1 (PME victime considérée comme
+//             suspecte = retournement victim-blaming, ATF 6B_135/2018)
+//
+//         • saxon-curatelle (5 steps, hard) — Service curatelle VS,
+//             380 personnes vulnérables, données sensibles
+//             npcs=[cicr_dpo, ofcs_coordinator]
+//             Marqueur step 1 #2 (communication 7h30 sans
+//             qualification fine = panique population fragile)
+//
+//         • secret-fonction-parlementaire (5 steps, hard) — Conseillère
+//             nationale demande dossier instruction Conseiller d'État VD
+//             npcs=[nicolet, ddps_general_counsel]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : céder pression parlementaire = violation
+//             art. 73 CPP + art. 320 CP par procureur lui-même
+//
+//         • smartphone (5 steps, medium) — iPhone déverrouillé
+//             notifications Signal visibles, avocat entrant
+//             npcs=[forensics_lead_zh, ge_prosecutor_cyber]
+//             Marqueur step 0 #0 (saisie sans capture RAM + photo +
+//             mode avion = perte Signal chiffré + auto-destruction)
+//
+//       Pas de nouveau PNJ. 8e release consécutive depuis v2.32.
+//
+//       Stats : 110 scènes / 30 PNJ / 71 scènes avec NPCs.
+//
+//       Progression : 71/110 = 65% du corpus mis à niveau.
+//       Reste ~39 scènes (~5 blocs au rythme de 8).
+//
 //
 //       Version sans nouveau scénario, focalisée sur la mise à niveau
 //       systématique du corpus historique. Bloc 11 = diversification
@@ -1031,7 +1097,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v73';
+const CACHE_VERSION = 'cas-in-v74';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
