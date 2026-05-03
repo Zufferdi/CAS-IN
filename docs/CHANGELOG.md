@@ -4,6 +4,163 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.28] — 2026-05-03
+
+Cette version ajoute **3 nouveaux scénarios suisses** documentés sur l'actualité DFIR récente (dossier de presse 2025), portant le corpus à **105 scènes** au total. Chaque scénario est ancré sur des sources publiées et a été co-conçu pour exploiter et étendre les PNJ existants.
+
+### Ajouté — 3 scénarios
+
+#### 💔 `crypto-tinder-pig-butchering-vaud` (hard, VD/Morges)
+
+| Aspect | Détail |
+|---|---|
+| **Source** | Enquête ICIJ « Coin Laundry » — *Bilan* 17.12.2025, *Tribune de Genève* 17.11.2025 |
+| **Pitch** | Eléonore (43 ans, Morges) dépose plainte pour 208'000 CHF perdus en pig butchering : « Gili Thompson » Tinder → bdsuex.com → portefeuilles de concentration → OKX/Binance Seychelles → conglomérat Huione (Phnom Penh) |
+| **Rôle joueur** | Inspecteur·trice cyber-enquêtes PolCant VD |
+| **PNJ** | `eleonore` (fictif, victime), `vuilleumier` (Heptagone Genève, **réel**), `labhart` (procureur MP-ZH, référent national, **réel**) |
+| **Difficulté** | hard |
+| **Steps** | (0) Plainte + premières mesures · (1) Cryptotraçage Heptagone · (2) Coopération Binance/OKX · (3) Cambodge/Huione · (4) Bilan + doctrine |
+| **Bifurcation** | step 1 #2 (négliger la conservation Convention de Budapest art. 29) → **next: 4** — saute le cryptotraçage et la coopération internationale, dossier mort |
+| **Pédagogie** | Trauma-informed (victime traumatisée), Convention de Budapest art. 16/29, MLAT multicanal, taux de résolution 6.6% (OFS), recovery scam warning, art. 146 al. 2 CP + 305bis al. 2 CP + 260ter |
+
+**Tone** : honnêteté sur les limites (6.6% de résolution), respect de la dignité d'Eléonore, plaidoyer pour plus de moyens fédéraux. Co-intervention Vuilleumier (Heptagone) + Labhart (MP-ZH) en mode pédagogique.
+
+#### ⚔️ `attentat-deja-couteau-mineur` (expert, AG/Aarau)
+
+| Aspect | Détail |
+|---|---|
+| **Source** | Interview Stefan Blättler dans *Blick* 12.10.2025 (140 procédures terrorisme actives au MPC) |
+| **Pitch** | Le SRC alerte le MPC : suspect de 18 ans, citoyen suisse domicilié à Aarau, fréquente un canal Telegram pro-EI, source HumInt cat. A entend le projet « action au couteau dans un lieu chrétien d'ici Pâques » (9 jours). Coordination SRC-MPC-PolCant AG urgente. |
+| **Rôle joueur** | Procureur·e fédéral·e cellule terrorisme MPC |
+| **PNJ** | `blattler` (PG MPC, **réel**), `nicolet` (procureur cyber MPC, **réel**), `src_director` (cheffe section anti-terrorisme SRC, fictif) |
+| **Difficulté** | expert |
+| **Steps** | (0) Réception SRC + saisine · (1) Surveillance technique TMC · (2) Phase observation · (3) Perquisition + arrestation · (4) Communication + suite procédurale |
+| **Bifurcation** | step 0 #2 (communication publique préventive prématurée) → **next: 'end'** — suspect alerté, preuves volatilisées, dossier juridiquement très affaibli |
+| **Pédagogie** | LRens art. 79 (transmission SRC→MPC), CPP art. 269-280 (surveillance technique), art. 260sexies CP (actes préparatoires terrorisme), DPMin (mineur), avocat 1ère heure renforcé, cellule TIGRIS AG déradicalisation, doctrine communication crise terrorisme, séparation poursuite/déradicalisation |
+
+**Tone** : équilibre délicat entre renseignement (LRens, sources SRC) et procédure pénale (CPP, droits de la défense), spécificité « mineur radicalisé » (DPMin + TIGRIS), doctrine PG Blättler sur la communication contrôlée. Plaidoyer pour les ressources MPC en audition parlementaire.
+
+#### 🛡️ `logitech-clop-zero-day-supply-chain` (hard, VD/Crissier)
+
+| Aspect | Détail |
+|---|---|
+| **Source** | *Le Temps* 15.11.2025 |
+| **Pitch** | Logitech (HQ Lausanne) découvre un leak Clop sur le data leak site darkweb : 1.79 TB de données exfiltrées via 0-day Oracle E-Business Suite, ~218'000 personnes touchées (employés/clients/fournisseurs). Notifications PFPDT (LPD art. 24, 72h), arbitrage paiement rançon, communication multi-public (clients, presse, SEC pour société cotée), refonte supply chain. |
+| **Rôle joueur** | CISO Logitech (M. Aellig, fictif) |
+| **PNJ** | `ciso_logitech` (fictif), `nicolet` (procureur cyber MPC, **réel**), `pfpdt_inspector` (PFPDT, fictif) |
+| **Difficulté** | hard |
+| **Steps** | (0) Détection + premières heures · (1) Décision rançon · (2) Communication multi-public · (3) Investigation post-incident MITRE ATT&CK · (4) Témoignage public + leçons OFCS |
+| **Bifurcation** | step 1 #2 (payer la rançon en cachant la décision au PFPDT) → **next: 4** — communication ratée, leak progressif sur le DLS, scandale médiatique, amende PFPDT |
+| **Pédagogie** | LPD revisée art. 24 (notification 72h), OFCS coordination, supply chain attack, position suisse de non-paiement (cohérente avec doctrine OFCS et politique fédérale), devoir d'information SEC pour société cotée, MITRE ATT&CK Clop TTP, leçons supply chain (Oracle E-Business Suite, audit fournisseurs) |
+
+**Tone** : tensions techniques/régulatoires/médiatiques, position de non-paiement (souvent contestée mais cohérente avec doctrine suisse), articulation triple LPD/SEC/OFCS, témoignage public final pour transformer l'incident en cas pédagogique national.
+
+### Ajouté — 6 nouveaux PNJ dans `data/npcs.json` (10 → 16)
+
+| ID | Type | Rôle |
+|---|---|---|
+| `eleonore` | Fictif | « Eléonore » (pseudonyme), 43 ans, victime pig butchering VD, composite anonymisé d'une victime documentée par ICIJ Coin Laundry |
+| `vuilleumier` | **Réel** | Aurélien Vuilleumier, Heptagone Genève, spécialiste cryptotraçage (cité dans Bilan 17.12.2025) |
+| `labhart` | **Réel** | Oliver Labhart, procureur MP-ZH, référent national pig butchering (cité dans TG 17.11.2025) |
+| `src_director` | Fictif | Mme Müller, cheffe de section anti-terrorisme SRC (anonymisé conformément à la doctrine renseignement) |
+| `ciso_logitech` | Fictif | M. Aellig, CISO Logitech (rôle fictif dans le scénario pédagogique) |
+| `pfpdt_inspector` | Fictif | Mme Schöni, inspectrice PFPDT (contrepartie régulatoire) |
+
+Chaque PNJ dispose de : `id`, `name`, `fictional` (bool), `icon`, `role`, `institution`, `shortBio` (~120 mots), `expertise` (3-5 items), `publicProfile` (pour les réels avec sources), `context` (rôle dans la scène). Cohérence stricte avec la politique éditoriale v2.26 sur la séparation fictif/réel.
+
+### Bifurcations narratives v2.28
+
+```
+crypto-tinder-pig-butchering-vaud   step 1 #2  →  next: 4    (saut 2 steps)
+attentat-deja-couteau-mineur        step 0 #2  →  next: 'end' (fin catastrophe)
+logitech-clop-zero-day-supply-chain step 1 #2  →  next: 4    (saut 2 steps)
+```
+
+**Variété : 1× 'end' + 2× sauts.** Conforme à la philosophie v2.27 sur la pédagogie différenciée des bifurcations.
+
+État global après v2.28 (toutes versions) :
+
+```
+Scène                                  Bifurcations  Type           Version
+─────────────────────────────────────────────────────────────────────────────
+gruyere-coop-affinage-stuxnet          1             saut 3 steps   v2.26
+lugano-dpfl-mafia-finance              1             'end'          v2.27
+epfl-recherche-lai-fuite-chine         1             saut 2 steps   v2.27
+epfl-laboratoire-ia-medicale-chine     1             saut 3 steps   v2.27
+hcfr-bec-transfer-deepfake             1             saut 1 step    v2.27
+crypto-tinder-pig-butchering-vaud      1             saut 2 steps   v2.28  ← nouveau
+attentat-deja-couteau-mineur           1             'end'          v2.28  ← nouveau
+logitech-clop-zero-day-supply-chain    1             saut 2 steps   v2.28  ← nouveau
+─────────────────────────────────────────────────────────────────────────────
+TOTAL                                  8             2× end + 6× sauts
+```
+
+### Modifié — `js/pages/scene-app.js` (CANTON_DATA)
+
+Ajout des 3 nouvelles scènes dans la heatmap canton :
+
+```diff
+   VD: { ..., "epfl-recherche-lai-fuite-chine","epfl-laboratoire-ia-medicale-chine"
++        ,"crypto-tinder-pig-butchering-vaud","logitech-clop-zero-day-supply-chain"
+        ] },
+-  AG: { name: "Argovie", scenarios: ["operation-alice"] },
++  AG: { name: "Argovie", scenarios: ["operation-alice","attentat-deja-couteau-mineur"] },
+```
+
+ZH inchangé (le scénario attentat est juridictionnellement fédéral MPC + canton de domicile AG, pas ZH).
+
+### Modifié — `scenes/index.json`
+
+Régénéré (102 → 105 entrées, 150 KB). Pipeline `scripts/build_scenes_index.py` exécuté.
+
+### Modifié — Service Worker v61 → v62
+
+Header v2.28 détaillant les 3 scénarios, leurs sources, leurs PNJ, et leurs bifurcations.
+
+### Statistiques v2.28
+
+| Indicateur | v2.27 | v2.28 |
+|---|---|---|
+| Scènes totales | 102 | **105** (+3) |
+| Scènes avec bifurcation narrative | 5/5 v2.24 | **8** (5 v2.24 + 3 v2.28) |
+| PNJ catalogue | 10 | **16** (+6) |
+| PNJ réels (publics) | 5 | **7** (+2 : Vuilleumier, Labhart) |
+| PNJ fictifs | 5 | **9** (+4) |
+| Cantons couverts | 14/26 | 14/26 (densification VD ZH AG) |
+| Service Worker | v61 | **v62** |
+| Sources de presse 2025 utilisées | — | **4** (Bilan, TG, Blick, Le Temps) |
+
+### Notes éditoriales
+
+**Sur les sources et la véracité.** Les 3 scénarios sont strictement fondés sur des publications de presse suisse documentées (URL dans les PNJ réels). Les PNJ « réels » apparaissent dans leur rôle public officiel uniquement (Vuilleumier en expert cryptotraçage, Labhart en procureur ZH) avec sources documentées. Les PNJ « fictifs » sont composites ou anonymisations explicites (Eléonore est un pseudonyme dans la presse elle-même ; les agents SRC ne sont jamais nommés publiquement par doctrine renseignement).
+
+**Sur la dignité des victimes.** Le scénario crypto-tinder traite avec sensibilité la situation d'Eléonore, victime traumatisée par la perte de l'héritage de son père. Les choix de l'enquêteur·trice incluent explicitement la posture trauma-informed comme bonne pratique (et inversement, l'erreur d'interroger agressivement comme distractor négatif). Les statistiques sont honnêtes (6.6% de résolution OFS pour les fraudes en ligne) sans dramatiser ni minimiser.
+
+**Sur le scénario attentat.** Le choix d'éviter un scénario où l'attentat aurait lieu est délibéré : la pédagogie reste sur le déjouement professionnel et les pièges procéduraux, pas sur la peur. Le mineur (17 ans atteignant 18 ans en cours de scénario) est traité dans le cadre DPMin avec la chaîne complète avocat 1ère heure + représentant légal + assistant social, et le suivi de déradicalisation TIGRIS apparaît comme la spécificité suisse face aux pays plus répressifs.
+
+**Sur Logitech.** Le scénario suit fidèlement les éléments publiés (1.79 TB, 218'000 personnes, 0-day Oracle, position non-paiement) sans extrapolation. Le CISO M. Aellig est explicitement fictif. La doctrine OFCS / position de non-paiement est présentée fidèlement (voir aussi position OFCS publique 2024-2025). Le devoir d'information SEC pour société cotée à Nasdaq est juridiquement exact.
+
+**Limites pédagogiques assumées.** Ces scénarios ne prétendent pas remplacer la formation continue des enquêteurs PolCant ou des procureurs : ils proposent une mise en situation réaliste pour ancrer les concepts juridiques, méthodologiques et déontologiques. Les références pratiques (ICIJ, Eurojust, Manuel MPC, doctrine BfV/MI5) permettent au joueur d'aller plus loin.
+
+### Prochaines évolutions possibles
+
+```
+v2.29  Examen blanc 50q/90 min (~4h)
+
+v2.30  Heatmap canton enrichie (gamification J : badges par canton)
+
+v2.31  Bugs résiduels corpus (Q#1482 doublon, Q#1775 6 options,
+       9 quasi-doublons à trier)
+
+Scénarios PDF restants (6 candidats) :
+  • handala-hack-iran-rhne-stryker (chasseurs de têtes Iran)
+  • cyber-justicier-vigilante (Marvin Ojaghi)
+  • deepfake-conseiller-etat (Pierre-Yves Maillard, à anonymiser)
+  • src-fonctionnaire-russe-kaspersky (espionnage interne)
+  • mini-natels-prison-pochwies (téléphones contrebande)
+  • drone-laufenburg-swissgrid (sabotage électrique)
+```
+
 ## [2.27] — 2026-05-03
 
 Cette version étend les **embranchements narratifs** initiés en v2.26 aux 4 autres scènes v2.24. Chaque scène v2.24 dispose désormais d'au moins une vraie bifurcation, avec une variété pédagogique délibérée : 1 fin anticipée catastrophe + 3 sauts de plusieurs steps.
