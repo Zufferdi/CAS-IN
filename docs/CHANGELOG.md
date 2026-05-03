@@ -4,6 +4,129 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.26] — 2026-05-03
+
+Cette version ajoute **4 fonctionnalités de gamification** aux scènes : timer de stress (C, déjà existant — documenté), embranchements narratifs (D, exploitation du moteur existant), **personnages récurrents** (E, nouveau), et **6 nouveaux achievements** spécialités cantonales et thèmes techniques (H).
+
+### Ajouté — Catalogue de personnages récurrents (PNJ)
+
+Nouveau fichier `data/npcs.json` avec **10 fiches de personnages** qui peuplent les scènes CAS-IN. Distinction explicite entre :
+
+- **2 personnalités publiques réelles** utilisées dans leur rôle officiel (sources : presse SMD) :
+  - **Yves Nicolet** ⚖️ — Procureur fédéral chargé de la cybercriminalité au MPC depuis juillet 2024
+  - **Stefan Blättler** 🏛 — Procureur général de la Confédération depuis 2022
+  
+- **8 personnages fictifs** liés à des scènes spécifiques :
+  - **M. Tinguely** 🧀 — Maître affineur Gruyère AOP, coopérative de Bulle
+  - **M. Bertschy** 🧀 — Directeur de la coopérative
+  - **Pr. Délémont** 🔬 — Professeur EPFL, IA médicale
+  - **M. Buchser** 🔐 — DPO de l'EPFL
+  - **Carla Antonini** 🎯 — Substitut adjointe MP-TI Lugano
+  - **Marco Bernasconi** 💼 — Compliance officer BancaStato
+  - **Olivier Rotzetter** 🏒 — Président fictif HCFR (évite le nom réel)
+  - **Nicolas** 🏒 — Directeur sportif HCFR (prénom fictif)
+
+Chaque PNJ est défini avec : `name`, `fictional`, `icon`, `role`, `institution`, `shortBio`, `expertise`, `context` pédagogique, et `publicProfile` (source) pour les personnages réels.
+
+### Ajouté — Composant `js/components/scene-npcs.js` (530 LOC)
+
+Nouveau composant qui s'intègre au moteur de scènes existant via le hook `SceneNPCs.injectInBriefing(scene)`. Injecte un panneau **« Acteurs en présence »** dans le briefing de la scène avec :
+
+- **Chips cliquables** pour chaque PNJ : icône, nom, rôle, badge "réel" ou "fictif"
+- **Modale détaillée** au clic : avatar, bio, institution, tags d'expertise, contexte pédagogique, source publique (pour les personnes réelles), et **liste des autres scènes où le PNJ apparaît** (cliquables pour navigation rapide)
+- **Tracking discret** : chaque PNJ rencontré est ajouté à `localStorage.cas_npcs_met` (Set unique d'IDs) pour alimenter l'achievement `npc_collector`
+- **CSS thémé** compatible mode sombre via variables CSS, badge `fictif/réel` distinct
+
+Le composant lit `data/npcs.json` et calcule un index inversé `npcId → [scenes]` à partir de `scenes/index.json`, mémoïsé en mémoire.
+
+### Modifié — `scripts/build_scenes_index.py`
+
+Le champ `npcs` (tableau d'IDs) est désormais propagé dans `scenes/index.json`. Permet à `scene-npcs.js` de calculer son index inversé sans charger toutes les scènes individuellement.
+
+### Modifié — Les 5 scènes v2.24 enrichies
+
+Champ `npcs` ajouté à chaque scène, pointant vers les IDs des personnages présents :
+
+```json
+"gruyere-coop-affinage-stuxnet"      → ["tinguely", "fr_director"]
+"epfl-recherche-lai-fuite-chine"     → ["dpo_epfl"]
+"epfl-laboratoire-ia-medicale-chine" → ["delemont"]
+"lugano-dpfl-mafia-finance"          → ["mroz_ti", "compliance_bs"]
+"hcfr-bec-transfer-deepfake"         → ["rotzetter", "ds_hcfr"]
+```
+
+### Ajouté — Première bifurcation narrative dans `gruyere-coop-affinage-stuxnet`
+
+Premier exemple de **vraie embranchement** dans le corpus. Au step 1 (« Pression sanitaire et commerciale »), le distracteur 2 (« Notifier seulement l'Interprofession AOP en interne ») a désormais `next: 4` au lieu de `next: 2`. Le joueur qui choisit cette voie d'évitement **saute** l'analyse forensique (step 2) et la communication transparente (step 3) pour atterrir directement à l'audit du mois +6 avec un dossier dégradé.
+
+Le feedback du choix explique cette bifurcation au joueur : c'est une **voie pédagogique** pour expérimenter concrètement les conséquences d'un raccourci procédural. Le moteur `scene-app.js` supportait déjà `choice.next` non-linéaire (et `'end'` pour fin anticipée) — cette version est la première à l'exploiter.
+
+### Documenté — Timer de stress (mode Procureur)
+
+La fonctionnalité C (« Timer de stress ») demandée existait déjà dans le moteur sous le nom **« Mode Procureur »** :
+
+- Activable depuis le lobby des scènes via le toggle `setMode('procureur')`
+- Durée par difficulté : **45s** (easy), **60s** (medium), **75s** (hard), **90s** (expert)
+- Une erreur critique en mode Procureur termine la scène immédiatement
+- Bonus de score si scénario complété dans les délais
+- Achievements liés : `speed_demon`, `prosecutor`, `expert_clean`
+
+Cette version documente le mode comme la réponse au besoin « timer opt-in » identifié à l'audit v2.25, sans changement de comportement.
+
+### Ajouté — 6 nouveaux achievements (H)
+
+```javascript
+{ id: "fr_detective",   icon: "🧀",  desc: "3 scénarios fribourgeois complétés ≥80%" }
+{ id: "ti_sherlock",    icon: "🇮🇹", desc: "3 scénarios tessinois complétés ≥80%" }
+{ id: "vd_procureur",   icon: "⚖️",  desc: "5 scénarios vaudois complétés ≥80%" }
+{ id: "apple_forensic", icon: "🍎",  desc: "3 scénarios AFU/BFU iPhone-MacBook ≥80%" }
+{ id: "anti_deepfake",  icon: "🎭",  desc: "Scénario deepfake résolu à ≥90%" }
+{ id: "npc_collector",  icon: "👥",  desc: "Rencontrer ≥8 PNJ différents" }
+```
+
+Métriques associées dans `getStatsSnapshot()` :
+
+- **`canton80`** : pour chaque code canton (FR, TI, VD, etc.), nombre de scènes du canton complétées à ≥80%. Utilise `CANTON_DATA` (mis à jour avec les 5 nouvelles scènes v2.24 : FR+2, VD+2, TI+1).
+- **`apple_forensic_wins`** : count de scènes EPFL labo + Lugano (qui mobilisent AFU/BFU) à ≥80%.
+- **`deepfake_excellence`** : 1 si la scène HCFR deepfake est résolue à ≥90%, sinon 0.
+- **`npcs_met`** : taille du Set persistant `localStorage.cas_npcs_met`, alimenté par chaque ouverture de scène.
+
+Mirror des nouveaux badges dans `js/core/cas-in-achievements.js` pour affichage profil cohérent.
+
+### Modifié — `CANTON_DATA` étendu
+
+Les 5 scènes v2.24 sont désormais associées à leurs cantons respectifs. Le badge `tour_de_suisse` (1 scénario par canton) prend en compte ces nouvelles scènes. Le canton de Fribourg passe de 1 scène (`dab-villaz`) à 3 scènes (+ `gruyere-coop-affinage-stuxnet`, + `hcfr-bec-transfer-deepfake`).
+
+### Modifié — `scene.html`
+
+Ajout du tag `<script src="js/components/scene-npcs.js" defer></script>` avant les autres composants UI.
+
+### Modifié — Service Worker v59 → v60
+
+Nouveaux assets ajoutés au cache : `js/components/scene-npcs.js` et `data/npcs.json`. Bump de version pour propager les modifications scene-app.js + cas-in-achievements.js.
+
+### Statistiques v2.26
+
+| Indicateur | v2.25 | v2.26 |
+|---|---|---|
+| Achievements scènes | 30 | **36** (+6) |
+| Achievements totaux (quiz+scènes+TP+fiches) | ~85 | **91** |
+| PNJ référencés | 0 | **10** |
+| Scènes avec PNJ | 0 | **5** |
+| Bifurcations narratives utilisées | 0 | **1** (gruyere step 1) |
+| Cantons FR (scènes) | 1 | **3** |
+| Cantons VD (scènes) | 4 | **6** |
+| Cantons TI (scènes) | 1 | **2** |
+| Service Worker | v59 | **v60** |
+
+### Notes de design
+
+**PNJ réels vs fictifs** : la distinction explicite (`fictional: true/false`) est cruciale. Yves Nicolet et Stefan Blättler sont utilisés dans leur rôle public officiel, sources documentées (interview Le Temps 04.2026, Blick 10.2025). Tous les autres personnages sont fictifs pour préserver la liberté pédagogique sans risque de diffamation. Le nom **Hubert Waeber** (vrai président HCFG) a été remplacé par **Olivier Rotzetter** en v2.25 précisément pour cette raison ; la fiche `rotzetter` dans `npcs.json` documente ce choix.
+
+**Bifurcation pédagogique** : la première bifurcation est volontairement subtile. Le joueur qui choisit la « voie d'évitement » au step 1 ne réalise pas immédiatement qu'il va sauter 2 steps — le feedback l'explique a posteriori. C'est exactement le type d'expérience que les pédagogues DFIR souhaitent : « les raccourcis procéduraux ont des conséquences durables ». Si l'approche fonctionne, on pourra l'étendre aux 4 autres scènes en v2.27.
+
+**Timer opt-in** : le mode procureur existant cochait déjà toutes les cases du besoin C. Plutôt que de créer un nouveau toggle, cette version documente le pattern existant. Si une demande ultérieure émerge pour un timer **par défaut** sur hard/expert, ce serait un changement minimal dans `scene-app.js`.
+
 ## [2.25] — 2026-05-03
 
 Cette version corrige deux types de défauts dans les 5 scènes ajoutées en v2.24 : un **biais pédagogique** (déséquilibre de longueur entre choix) et plusieurs **anomalies factuelles** (références géographiques inexistantes, noms de personnalités réelles utilisés dans des contextes sensibles).
