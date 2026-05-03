@@ -1,5 +1,52 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v69 : v2.35 — Retrofit bloc 7 (5 anciennes scènes adaptées)
+// v70 : v2.36 — Retrofit bloc 8 (5 anciennes scènes adaptées)
+//
+//       Version sans nouveau scénario, focalisée sur la mise à niveau
+//       systématique du corpus historique. Bloc 8 = diversification
+//       continue : forensique IP / vishing JU / deepfake personnalité
+//       publique / LockBit ransomware / coordination LSI-LPD timing.
+//
+//       Retrofit bloc 8 — 5 anciennes scènes adaptées :
+//
+//         • ip_accusatrice (5 steps, medium) — IP Swisscom et
+//             multiples sources d'erreur (CGNAT, MAC spoofing, VPN)
+//             npcs=[forensics_lead_zh, nicolet]
+//             Marqueur step 0 #0 (arrestation immédiate sur IP =
+//             ATF 6B_372/2017 éléments corroboratifs requis)
+//
+//         • jura-vishing-1m (5 steps, medium) — Vishing JU 1.5M CHF,
+//             14 victimes en 8 mois (escroquerie par métier)
+//             npcs=[fr_prosecutor_cyber, forensics_lead_zh]
+//             Marqueur step 0 #2 (qualification simple ignore le
+//             "par métier" art. 146 al. 2 CP, peine 10 ans MAX)
+//
+//         • kks-deepfake (4 steps, hard) — Deepfake personnalité
+//             publique + escroquerie crypto 340 victimes
+//             npcs=[ofcs_coordinator, src_director]
+//             Marqueur step 3 #0 (communication publique précoce
+//             nominative = effet Streisand involontaire)
+//
+//         • lockbit-victime (3 steps, easy) — Premier réflexe
+//             ransomware PME 80'000 CHF Bitcoin
+//             npcs=[ciso_logitech, ofcs_coordinator]
+//             Marqueur step 0 #1 (paiement immédiat finance LockBit
+//             + non-garantie + sanctions OFAC + viole OFCS/FBI/NCSC)
+//
+//         • lsi-vs-lpd-timing (5 steps, hard) — RSSI parapublic VS
+//             38'000 patients, articulation LSI/nLPD/communication
+//             npcs=[ofcs_coordinator, cicr_dpo]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : sur-notification 24h sans qualification
+//             médicale fine viole nLPD "meilleurs délais"
+//
+//       Pas de nouveau PNJ cette release. Quatrième release consécutive
+//       (après v2.32, v2.34, v2.35) sans création de PNJ.
+//
+//       Stats : 110 scènes / 30 PNJ / 48 scènes avec NPCs.
+//
+//       Approche retrofit "par bloc de 5" : ~57 scènes restantes
+//       après v2.36. Reste ~11 blocs.
+//
 //
 //       Version sans nouveau scénario, focalisée sur la mise à niveau
 //       systématique du corpus historique. Bloc 7 = diversification
@@ -838,7 +885,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v69';
+const CACHE_VERSION = 'cas-in-v70';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
