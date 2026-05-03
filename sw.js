@@ -1,4 +1,98 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v77 : v2.43 — Retrofit bloc 15 (8 scènes) + 6 NOUVEAUX PNJ
+//
+//       Diversification continue du casting : 6 nouveaux PNJ
+//       thématiquement adaptés. Catalogue : 42 → 48 PNJ.
+//
+//       6 nouveaux PNJ ajoutés à data/npcs.json (42 → 48) :
+//
+//         • whistleblower_lawyer (Me Berisha, fictive transposable) —
+//             Avocate spécialisée droit de la fonction publique
+//             fédérale et lanceurs d'alerte (art. 22a LPers)
+//         • xplain_ofit_juriste (Mme Bühlmann, fictive) —
+//             Directrice juridique OFIT (Office fédéral
+//             informatique et télécommunication), LMP + Xplain
+//         • play_ransom_analyst (M. Schöb, fictif transposable) —
+//             Analyste senior threat intel ransomware OFCS,
+//             tracking Play/BlackCat/LockBit/Akira
+//         • zurich_airport_ciso (M. Locher, fictif) — CISO
+//             Flughafen Zürich AG, aviation IATA/ICAO Annex 17
+//         • europol_jcat_analyst (Mr. Lindgren, fictif transposable)
+//             — Senior analyst Europol EC3 J-CAT, citoyen suédois
+//         • bitlocker_forensic (Dr. Häberli, fictif transposable) —
+//             Chercheur ETHZ Information Security Group,
+//             cryptanalyse BitLocker
+//
+//       Retrofit bloc 15 — 8 anciennes scènes adaptées :
+//
+//         • whistleblower-ddps (5 steps, hard) — Lanceur d'alerte
+//             DDPS, exception art. 22a LPers + 17a CP
+//             npcs=[whistleblower_lawyer★, ddps_general_counsel]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : divulgation publique sans démarches
+//             internes = art. 320 CP + révocation
+//
+//         • xplain (8 steps, hard) — Xplain 2023, 907 Go fédéraux
+//             publiés par Play
+//             npcs=[ofs_rssi_fedch, play_ransom_analyst★]
+//             Marqueur step 0 #0 (focus Play sans qualifier
+//             gouvernance Xplain = inversion forensique)
+//
+//         • xplain-lmp (5 steps, hard) — Direction juridique OFIT
+//             face à crise supply chain LMP
+//             npcs=[xplain_ofit_juriste★, pfpdt_inspector]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : résiliation LMP unilatérale = TAF
+//             annulation 6-12 semaines
+//
+//         • xplain-play (6 steps, hard) — Task Force darknet
+//             tracking Play, fichage HOOGAN compromis
+//             npcs=[play_ransom_analyst★, nicolet]
+//             Bif. step 5 #0 et #2 → 'end'
+//             Marqueur : paiement Play = sanctions OFAC + non-
+//             garantie retrait + double-extorsion
+//
+//         • swissport_2022 (5 steps, medium) — BlackCat ransomware
+//             Swissport ZRH 3 février 2022 6h00
+//             npcs=[zurich_airport_ciso★, ofcs_coordinator]
+//             Marqueur step 0 #0 (kill-switch hub ZRH 6h00 sans
+//             coordination = paralysie aviation européenne)
+//
+//         • infostealer-magnus (4 steps, medium) — Op. Magnus
+//             octobre 2024, RedLine + META, 47'200 victimes CH
+//             npcs=[europol_jcat_analyst★, fbi_legat_bern]
+//             Bif. step 3 #0 et #2 → 'end'
+//             Marqueur : communication 47k victimes nominatives
+//             sans coordination J-CAT = choc médiatique non
+//             maîtrisé + rupture confiance Europol
+//
+//         • bitlocker_froid (8 steps, hard) — Laptop saisi
+//             BitLocker éteint, demande MP durée décryptage
+//             npcs=[bitlocker_forensic★, forensics_lead_zh]
+//             Marqueur step 0 #0 (estimation fantaisiste sans
+//             qualification mode BitLocker actif)
+//
+//         • custody (3 steps, easy) — Audit chaîne de possession,
+//             ruptures non documentées
+//             npcs=[fim_xways_expert, forensics_lead_zh]
+//             Marqueur step 0 #0 (validation rapport sans révision
+//             par pair = invalidation au procès)
+//
+//       6 scènes sur 8 utilisent ≥1 nouveau PNJ.
+//       play_ransom_analyst utilisée 2 fois (xplain, xplain-play).
+//
+//       Stats : 110 scènes / 48 PNJ / 95 scènes avec NPCs.
+//       PNJ catalogue : 42 → 48 (+6)
+//                       Réels : 8 (inchangé)
+//                       Fictifs : 34 → 40 (+6)
+//                       Transposables : 15 → 19 (+4 :
+//                         whistleblower_lawyer, play_ransom_analyst,
+//                         europol_jcat_analyst, bitlocker_forensic)
+//
+//       Progression : 95/110 = 86% du corpus mis à niveau.
+//       Reste ~15 scènes (~2 blocs au rythme de 8).
+//       100% atteignable en v2.45.
+//
 // v76 : v2.42 — Retrofit bloc 14 (8 scènes) + 6 NOUVEAUX PNJ
 //
 //       Diversification continue du casting : 6 nouveaux PNJ
@@ -1219,7 +1313,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v76';
+const CACHE_VERSION = 'cas-in-v77';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
