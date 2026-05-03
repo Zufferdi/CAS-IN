@@ -1,5 +1,52 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v72 : v2.38 — Retrofit bloc 10 (5 anciennes scènes adaptées)
+// v73 : v2.39 — Retrofit bloc 11 (5 anciennes scènes adaptées)
+//
+//       Version sans nouveau scénario, focalisée sur la mise à niveau
+//       systématique du corpus historique. Bloc 11 = diversification
+//       continue : phishing classique / Operation PowerOFF DDoS /
+//       triage SOC premier appel / rajeunissement IA pédopornographie /
+//       ransomware hôpital.
+//
+//       Retrofit bloc 11 — 5 anciennes scènes adaptées :
+//
+//         • phishing (3 steps, easy) — Mail suspect bouton Outlook,
+//             triage SOC standard
+//             npcs=[ofs_rssi_fedch, forensics_lead_zh]
+//             Marqueur step 1 #0 (cliquer link suspect sans sandbox =
+//             compromission analyste + propagation)
+//
+//         • poweroff-ddos (4 steps, medium) — Op. PowerOFF Europol
+//             53 plateformes DDoS-for-hire 15 pays avril 2026
+//             npcs=[fbi_legat_bern, nicolet]
+//             Marqueur step 3 #0 (communication non-coordonnée
+//             fragmente effet 14 partenaires + organisateurs migrent)
+//
+//         • premier_appel (3 steps, easy) — SOC ligne d'urgence,
+//             comptable PME panique ransomware
+//             npcs=[ciso_logitech, ofcs_coordinator]
+//             Marqueur step 0 #0 (promesse "tout va bien" sans triage
+//             factuel = perte confiance majeure si LockBit + exfil)
+//
+//         • rajeunissement-ia (5 steps, medium) — VS, suspect avec
+//             enfants utilise IA pour rajeunir + générer pédopornographie
+//             npcs=[fbi_legat_bern, ge_prosecutor_cyber]
+//             Marqueur step 1 #1 (Art. 197 al. 5 sous-qualifie face à
+//             diffusion publique Instagram = ATF 6B_1335/2021)
+//
+//         • ransomware (5 steps, medium) — Hôpital cantonal 03h00,
+//             12'000 patients, exfiltration confirmée
+//             npcs=[ciso_logitech, forensics_lead_zh]
+//             Marqueur step 1 #2 (restauration immédiate sans
+//             forensique = perte attribution + IoC + Op. Cronos)
+//
+//       Pas de nouveau PNJ. Septième release consécutive (depuis
+//       v2.32) sans création de PNJ.
+//
+//       Stats : 110 scènes / 30 PNJ / 63 scènes avec NPCs.
+//
+//       Progression : 63/110 = 57% du corpus mis à niveau.
+//       Reste ~47 scènes (~9 blocs).
+//
 //
 //       Cap symbolique des 50% du corpus mis à niveau : 58 scènes
 //       sur 110 ont désormais NPCs + marqueur. Inclut une scène
@@ -984,7 +1031,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v72';
+const CACHE_VERSION = 'cas-in-v73';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
