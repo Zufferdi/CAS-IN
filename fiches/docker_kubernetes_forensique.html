@@ -3,18 +3,155 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Docker &amp; Kubernetes Forensique — CAS-IN Forensique</title>
-<meta name="description" content="Forensique Docker et Kubernetes · layers · volumes · container logs · runtime forensique · audit K8s · namespace · etcd · acquisition">
-<meta name="theme-color" content="#0d1117">
+<title>Docker & Container Forensique — CAS-IN</title>
+<meta name="description" content="Layers overlay · Namespaces · Volumes · containerd · Kubernetes · Artefacts · Investigation · IR containers">
 <link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+.page-wrap { max-width:960px; margin:0 auto; padding:1.5rem 2rem; }
+.tabs-dk { display:flex; gap:.35rem; padding:.75rem 2rem; border-bottom:1px solid var(--border);
+           background:var(--surface); flex-wrap:wrap; max-width:960px; margin:0 auto; }
+.tab-dk { background:transparent; border:1px solid var(--border); border-radius:6px;
+          color:var(--muted); font-family:var(--mono); font-size:.72rem; padding:.35rem .8rem;
+          cursor:pointer; transition:.15s; }
+.tab-dk:hover  { color:var(--text); border-color:var(--cyan); }
+.tab-dk.active { background:rgba(0,229,204,.12); border-color:var(--cyan); color:var(--cyan); }
+.tab-page      { display:none; max-width:960px; margin:0 auto; padding:1.5rem 2rem; }
+.tab-page.active{ display:block; animation:slideUp .3s ease; }
+
+.concept-card { background:rgba(0,229,204,.04); border:1px solid rgba(0,229,204,.2);
+                border-radius:10px; padding:1rem 1.2rem; margin-bottom:1.25rem;
+                font-size:.82rem; line-height:1.65; }
+.concept-title { font-family:var(--sans); font-weight:700; font-size:.85rem;
+                 color:var(--cyan); margin-bottom:.5rem; }
+
+/* Architecture diagram layers */
+.layer-stack { display:flex; flex-direction:column; gap:0; margin:.75rem 0;
+               border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.layer { display:flex; align-items:center; gap:1rem; padding:.7rem 1rem;
+         border-bottom:1px solid var(--border); transition:background .15s; cursor:pointer; }
+.layer:last-child { border-bottom:none; }
+.layer:hover { background:rgba(255,255,255,.03); }
+.layer-icon { font-size:1.2rem; flex-shrink:0; width:28px; text-align:center; }
+.layer-name { font-family:var(--sans); font-weight:700; font-size:.78rem; min-width:160px; }
+.layer-desc { font-size:.73rem; color:var(--muted); flex:1; line-height:1.45; }
+.layer-badge { font-size:.62rem; padding:.1rem .4rem; border-radius:3px; font-weight:600;
+               white-space:nowrap; }
+.lb-kernel { background:rgba(255,64,96,.1); color:var(--red); border:1px solid rgba(255,64,96,.2); }
+.lb-rw     { background:rgba(255,64,96,.1); color:var(--red); border:1px solid rgba(255,64,96,.2); }
+.lb-ro     { background:rgba(88,166,255,.1); color:var(--blue); border:1px solid rgba(88,166,255,.2); }
+.lb-host   { background:rgba(48,232,138,.1); color:var(--green); border:1px solid rgba(48,232,138,.2); }
+.lb-ns     { background:rgba(188,140,255,.1); color:var(--purple); border:1px solid rgba(188,140,255,.2); }
+
+/* Namespace grid */
+.ns-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:.65rem; margin:.75rem 0; }
+.ns-card { background:var(--surface); border:1px solid var(--border); border-radius:8px;
+           padding:.75rem .85rem; }
+.ns-name { font-family:var(--mono); font-weight:700; font-size:.75rem; color:var(--purple);
+           margin-bottom:.2rem; }
+.ns-desc { font-size:.72rem; color:var(--muted); line-height:1.5; }
+.ns-forensic { font-size:.68rem; color:var(--cyan); margin-top:.3rem;
+               border-top:1px solid var(--border); padding-top:.3rem; }
+
+/* Path cards */
+.path-block { background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+              padding:.85rem 1rem; margin:.5rem 0; }
+.path-title { font-family:var(--sans); font-weight:700; font-size:.78rem;
+              color:var(--text); margin-bottom:.5rem; }
+.path-row { display:flex; align-items:flex-start; gap:.65rem; padding:.3rem 0;
+            border-bottom:1px solid rgba(48,54,61,.4); font-size:.73rem; }
+.path-row:last-child { border-bottom:none; }
+.path-key { font-family:var(--mono); font-size:.68rem; color:var(--cyan); min-width:260px;
+            flex-shrink:0; }
+.path-val { color:var(--muted); flex:1; line-height:1.4; }
+
+/* Commands */
+.dk-cmd { font-family:var(--mono); font-size:.69rem; color:var(--green); background:var(--bg);
+          border:1px solid var(--border); border-radius:4px; padding:.28rem .65rem;
+          display:block; margin:.22rem 0; cursor:pointer; transition:background .15s; }
+.dk-cmd:hover { background:rgba(48,232,138,.08); }
+
+/* Investigation flow */
+.inv-step { display:flex; gap:.85rem; padding:.65rem .3rem;
+            border-bottom:1px solid var(--border); }
+.inv-step:last-child { border-bottom:none; }
+.inv-n { width:26px; height:26px; border-radius:50%; flex-shrink:0; margin-top:.05rem;
+         font-size:.68rem; font-weight:700; display:flex; align-items:center;
+         justify-content:center; }
+.in-c { background:rgba(0,229,204,.15); border:1px solid rgba(0,229,204,.4); color:var(--cyan); }
+.in-g { background:rgba(48,232,138,.15); border:1px solid rgba(48,232,138,.4); color:var(--green); }
+.in-o { background:rgba(240,136,62,.15); border:1px solid rgba(240,136,62,.4); color:var(--orange); }
+.in-r { background:rgba(255,64,96,.15); border:1px solid rgba(255,64,96,.4); color:var(--red); }
+.inv-body { flex:1; font-size:.78rem; line-height:1.55; }
+.inv-title { font-family:var(--sans); font-weight:700; font-size:.78rem;
+             color:var(--text); margin-bottom:.2rem; }
+
+/* IOC table */
+.ioc-t { width:100%; border-collapse:collapse; font-size:.72rem; }
+.ioc-t th { background:var(--surface2); padding:.45rem .65rem; border-bottom:2px solid var(--border);
+            font-size:.61rem; text-transform:uppercase; letter-spacing:.08em; color:var(--dim);
+            font-weight:700; text-align:left; }
+.ioc-t td { padding:.4rem .65rem; border-bottom:1px solid var(--border); vertical-align:middle; }
+.ioc-t tr:hover td { background:var(--surface); }
+.ioc-t tr:last-child td { border-bottom:none; }
+
+/* K8s */
+.k8s-grid { display:grid; grid-template-columns:1fr 1fr; gap:.65rem; margin:.75rem 0; }
+.k8s-card { background:var(--surface); border:1px solid var(--border); border-radius:8px;
+            padding:.75rem .85rem; }
+.k8s-name { font-family:var(--sans); font-weight:700; font-size:.76rem;
+            color:var(--text); margin-bottom:.2rem; }
+.k8s-desc { font-size:.72rem; color:var(--muted); line-height:1.5; }
+
+/* Quiz */
+.quiz-wrap { background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+             padding:.9rem 1rem; margin-bottom:.75rem; }
+.quiz-q { font-size:.8rem; color:var(--text); margin-bottom:.6rem; }
+.quiz-reveal-btn { background:rgba(0,229,204,.08); border:1px solid rgba(0,229,204,.25);
+                   border-radius:6px; color:var(--cyan); font-family:var(--mono);
+                   font-size:.72rem; padding:.3rem .8rem; cursor:pointer; }
+.quiz-answer { display:none; margin-top:.6rem; font-size:.78rem; color:var(--muted);
+               line-height:1.55; border-top:1px solid var(--border); padding-top:.6rem; }
+.quiz-answer.visible { display:block; animation:fadeIn .2s ease; }
+.quiz-ok { color:var(--green); font-weight:700; }
+
+.breadcrumb { display:flex; align-items:center; flex-wrap:wrap; gap:.3rem; font-size:.72rem;
+              color:var(--muted); padding:.6rem 0; margin-bottom:.75rem; }
+.breadcrumb a { color:var(--muted); text-decoration:none; }
+.bc-sep { color:var(--border); }
+.read-time-badge { font-size:.65rem; background:rgba(0,229,204,.06);
+                   border:1px solid rgba(0,229,204,.15); color:var(--cyan);
+                   padding:.15rem .5rem; border-radius:4px; }
+.prereq-pill { background:rgba(88,166,255,.08); border:1px solid rgba(88,166,255,.2);
+               color:var(--blue); border-radius:5px; padding:.15rem .55rem;
+               font-size:.7rem; text-decoration:none; }
+.related-pill { background:rgba(48,232,138,.06); border:1px solid rgba(48,232,138,.18);
+                color:var(--green); border-radius:5px; padding:.15rem .55rem;
+                font-size:.7rem; text-decoration:none; }
+
+#scroll-progress { position:fixed; top:0; left:0; height:2px; width:0;
+  background:linear-gradient(90deg,var(--cyan),var(--blue)); z-index:1000; }
+.back-top { position:fixed; bottom:1.5rem; right:1.5rem; background:var(--surface2);
+  border:1px solid var(--border); border-radius:8px; color:var(--dim); font-size:.9rem;
+  width:2rem; height:2rem; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; opacity:0; pointer-events:none; transition:.2s; }
+.back-top.visible { opacity:1; pointer-events:auto; }
+
+@media(max-width:640px){
+  .page-wrap,.tab-page { padding:1rem; }
+  .tabs-dk { padding:.6rem 1rem; }
+  .tn-title { display:none; }
+  .ns-grid  { grid-template-columns:1fr; }
+  .k8s-grid { grid-template-columns:1fr; }
+}
+</style>
 </head>
 <body>
 <div id="scroll-progress"></div>
-<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 
-<nav class="tn-nav" aria-label="Navigation fiche">
+<nav class="tn-nav">
   <a href="index.html" class="tn-back">← Fiches</a>
-  <span class="tn-title">DOCKER &amp; KUBERNETES FORENSIQUE</span>
+  <span class="tn-title">PLATEFORMES &amp; ENVIRONNEMENTS</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
 
@@ -22,779 +159,761 @@
   <div class="breadcrumb">
     <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
     <a href="index.html">Fiches</a><span class="bc-sep">›</span>
-    <a href="index.html#cat-cloud">Cloud</a><span class="bc-sep">›</span>
-    <span class="bc-current">Docker &amp; Kubernetes Forensique</span>
-    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
+    <a href="index.html#cat-plateformes">Plateformes</a><span class="bc-sep">›</span>
+    <span style="color:var(--text)">Docker &amp; Container Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~13 min</span>
   </div>
 
   <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
-    <div><span style="font-size:2.2rem">🐳</span>
-    <span class="tag tag-blue" style="margin-left:.5rem">Cloud</span>
-    <span class="tag tag-gold" style="margin-left:.3rem">DFIR</span>
-    <span class="tag tag-green" style="margin-left:.3rem">Conteneurs</span></div>
-    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Docker &amp; Kubernetes Forensique</h1>
-    <div class="meta">Image layers · volumes · runtime forensique · logs container · audit K8s · etcd · namespace · acquisition live</div>
-  </div>
-
-  <div style="margin:1rem 0;padding:.9rem 1.25rem;background:rgba(48,232,138,.04);border-left:3px solid var(--green);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
-    <span style="color:var(--green);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Réalité terrain</span><br>
-    <em style="color:var(--text)">"Les conteneurs brisent les hypothèses classiques de la forensique : ils sont éphémères, partagent le noyau hôte, et leurs logs disparaissent à leur suppression. Un container compromis peut laisser presque zéro trace — ou au contraire révéler l'intégralité de l'attaque si le runtime est instrumenté correctement."</em><br>
-    <span style="font-size:.72rem;margin-top:.3rem;display:block">— Aqua Security, <em>Cloud Native Security Report</em>, 2024</span>
-  </div>
-
-  <div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(88,166,255,.05);border-left:3px solid var(--blue);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
-    <span style="color:var(--blue);font-weight:700">🇨🇭 Contexte suisse :</span> HES-SO, CHUV, hôpitaux cantonaux, services informatiques des villes (Lausanne, Genève, Zurich) et nombreuses PME tech suisses utilisent Kubernetes pour leurs applications critiques. L'infrastructure Kubernetes est aussi au cœur des services cloud proposés par Switch (réseau académique suisse) et par les hébergeurs helvétiques (Exoscale, nine.ch).
+    <div>
+      <span style="font-size:2.2rem">🐳</span>
+      <span class="tag tag-cyan"   style="margin-left:.5rem">Containers</span>
+      <span class="tag tag-blue"   style="margin-left:.3rem">Kubernetes</span>
+      <span class="tag tag-purple" style="margin-left:.3rem">Namespaces</span>
+    </div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Docker &amp; Container Forensique</h1>
+    <div class="meta">Layers overlay · Namespaces Linux · Volumes · containerd · Images · Kubernetes · Artefacts · IR containers</div>
   </div>
 
   <div class="prereq-block" style="margin-top:1rem">
-    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="linux_forensique.html" class="prereq-pill">📖 Linux Forensique</a><a href="cloud_forensique.html" class="prereq-pill">📖 Cloud Forensique</a><a href="acquisition.html" class="prereq-pill">📖 Acquisition</a></div>
-    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="linux_forensique.html" class="related-pill">🔗 Linux Forensique</a><a href="malware_forensique.html" class="related-pill">🔗 Malware Forensique</a><a href="incident_response.html" class="related-pill">🔗 Incident Response</a><a href="lateral_movement_forensique.html" class="related-pill">🔗 Lateral Movement</a></div>
+    <div class="prereq-row">
+      <span style="color:var(--dim);font-size:.7rem;min-width:72px">Prérequis :</span>
+      <a href="linux_forensique.html" class="prereq-pill">📖 Linux Forensique</a>
+      <a href="vm_forensique.html"    class="prereq-pill">📖 VM Forensique</a>
+      <a href="reseau.html"           class="prereq-pill">📖 Réseaux</a>
+    </div>
+    <div class="prereq-row">
+      <span style="color:var(--dim);font-size:.7rem;min-width:72px">Voir aussi :</span>
+      <a href="cloud_forensique.html"               class="related-pill">🔗 Cloud Forensique</a>
+      <a href="incident_response.html"              class="related-pill">🔗 Incident Response</a>
+      <a href="network_traffic_analysis_avance.html" class="related-pill">🔗 Network Analysis</a>
+      <a href="anti_forensique.html"                class="related-pill">🔗 Anti-Forensique</a>
+    </div>
   </div>
 </div>
 
 <!-- TABS -->
-<div class="tabs" id="dk-tabs">
-  <button class="tab active" onclick="showTab('docker',this)">🐳 Docker</button>
-  <button class="tab" onclick="showTab('layers',this)">📦 Layers &amp; Images</button>
-  <button class="tab" onclick="showTab('k8s',this)">☸️ Kubernetes</button>
-  <button class="tab" onclick="showTab('attaques',this)">⚔️ Attaques</button>
-  <button class="tab" onclick="showTab('outils',this)">🔧 Outils</button>
+<div class="tabs-dk" id="dk-tabs">
+  <button class="tab-dk active" onclick="showTab('archi',this)">🏗 Architecture</button>
+  <button class="tab-dk" onclick="showTab('artefacts',this)">📂 Artefacts</button>
+  <button class="tab-dk" onclick="showTab('investigation',this)">🔍 Investigation</button>
+  <button class="tab-dk" onclick="showTab('images',this)">📦 Images &amp; Layers</button>
+  <button class="tab-dk" onclick="showTab('k8s',this)">☸️ Kubernetes</button>
+  <button class="tab-dk" onclick="showTab('ioc',this)">🚨 IOC &amp; Attaques</button>
+  <button class="tab-dk" onclick="showTab('quiz',this)">💊 Quiz</button>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     TAB 1 — DOCKER
-══════════════════════════════════════════════ -->
-<div class="tab-page active" id="tab-docker">
+
+<!-- ══════════════════════════
+     TAB 1 — ARCHITECTURE
+══════════════════════════ -->
+<div class="tab-page active" id="tab-archi">
 
 <div class="concept-card">
-  <div class="concept-title">🐳 Docker forensique — Le container n'est pas une VM</div>
-  Un container Docker <strong>partage le noyau de l'hôte Linux</strong> — il ne s'en isole que par les namespaces et cgroups. Forensiquement, cela signifie que les processus d'un container sont <strong>visibles depuis l'hôte</strong> via <code>/proc/</code>, que les appels système passent par le même noyau, et que les techniques forensiques Linux s'appliquent. La difficulté : les containers sont <strong>éphémères</strong> — arrêtés, ils perdent toutes leurs données (sauf volumes). Après suppression (<code>docker rm</code>), les traces sont minimales.
+  <div class="concept-title">🏗 Docker forensique — Une VM sans noyau dédié</div>
+  Contrairement aux VMs, les containers Docker <strong>partagent le noyau de l'hôte</strong>. Forensiquement, cela implique que les artefacts sont répartis entre l'<strong>hôte</strong> (daemon Docker, layers overlay, logs containerd) et le <strong>container</strong> (processus, filesystem, réseau). Un container compromis laisse des traces sur l'hôte même après sa suppression.
 </div>
 
-<div class="sec-title">Artefacts Docker — Cartographie</div>
-<div style="display:grid!important;grid-template-columns:repeat(3,1fr);gap:.5rem;margin:.75rem 0">
-
-  <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(0,229,204,.4);text-align:center;cursor:pointer;background:rgba(0,229,204,.08);color:var(--cyan)" onclick="showDockerZone('daemon')">
-    <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">⚙️</span>
-    <div style="font-size:.72rem;font-weight:700">Docker Daemon</div>
-    <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">Logs · config<br>/var/lib/docker/</div>
+<div class="sec-title">Stack d'un container Docker — Vue forensique</div>
+<div class="layer-stack">
+  <div class="layer">
+    <div class="layer-icon">🖥</div>
+    <div class="layer-name" style="color:var(--green)">Noyau Linux (hôte)</div>
+    <div class="layer-desc">Noyau partagé entre l'hôte et tous les containers. Namespaces + cgroups = isolation. Appels système = traces dans auditd hôte.</div>
+    <span class="layer-badge lb-kernel">Partagé</span>
   </div>
-
-  <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(240,192,64,.4);text-align:center;cursor:pointer;background:rgba(240,192,64,.08);color:var(--gold)" onclick="showDockerZone('containers')">
-    <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">📦</span>
-    <div style="font-size:.72rem;font-weight:700">Containers</div>
-    <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">Metadata · logs<br>config.v2.json</div>
+  <div class="layer">
+    <div class="layer-icon">🔧</div>
+    <div class="layer-name" style="color:var(--cyan)">containerd / dockerd</div>
+    <div class="layer-desc">Daemon hôte qui gère le cycle de vie des containers. Logs dans <code style="font-family:var(--mono);font-size:.68rem">/var/log/docker.log</code> ou journald. Toutes les opérations (create/start/stop/exec) y sont tracées.</div>
+    <span class="layer-badge lb-host">Hôte</span>
   </div>
-
-  <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(188,140,255,.4);text-align:center;cursor:pointer;background:rgba(188,140,255,.08);color:var(--purple)" onclick="showDockerZone('volumes')">
-    <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">💾</span>
-    <div style="font-size:.72rem;font-weight:700">Volumes</div>
-    <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">Données persistantes<br>/var/lib/docker/volumes/</div>
+  <div class="layer">
+    <div class="layer-icon">📁</div>
+    <div class="layer-name" style="color:var(--blue)">Overlay2 filesystem</div>
+    <div class="layer-desc">Système de fichiers union : layers read-only (image) + layer read-write (container). Dans <code style="font-family:var(--mono);font-size:.68rem">/var/lib/docker/overlay2/</code>. Persistant sur l'hôte même après arrêt du container.</div>
+    <span class="layer-badge lb-rw">RW layer hôte</span>
   </div>
-
-  <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(255,64,96,.4);text-align:center;cursor:pointer;background:rgba(255,64,96,.08);color:var(--red)" onclick="showDockerZone('network')">
-    <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">🌐</span>
-    <div style="font-size:.72rem;font-weight:700">Réseau</div>
-    <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">Interfaces · iptables<br>/proc/net/</div>
+  <div class="layer">
+    <div class="layer-icon">📦</div>
+    <div class="layer-name" style="color:var(--gold)">Image layers (read-only)</div>
+    <div class="layer-desc">Couches immuables de l'image Docker. Chacune correspond à une instruction Dockerfile (FROM, RUN, COPY…). Chaque layer a un hash SHA256 unique.</div>
+    <span class="layer-badge lb-ro">Read-only</span>
   </div>
-
-  <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(48,232,138,.4);text-align:center;cursor:pointer;background:rgba(48,232,138,.08);color:var(--green)" onclick="showDockerZone('proc')">
-    <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">🔬</span>
-    <div style="font-size:.72rem;font-weight:700">/proc/ hôte</div>
-    <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">Processus container<br>visibles depuis hôte</div>
+  <div class="layer">
+    <div class="layer-icon">🔒</div>
+    <div class="layer-name" style="color:var(--purple)">Namespaces Linux</div>
+    <div class="layer-desc">PID, NET, MNT, UTS, IPC, USER — isolent le container. Un process container a un PID dans le namespace container ET un PID sur l'hôte (plus grand). Les deux sont visibles depuis l'hôte.</div>
+    <span class="layer-badge lb-ns">Isolation</span>
   </div>
-
-  <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(88,166,255,.4);text-align:center;cursor:pointer;background:rgba(88,166,255,.08);color:var(--blue)" onclick="showDockerZone('images')">
-    <span style="font-size:1.3rem;display:block;margin-bottom:.2rem">🖼️</span>
-    <div style="font-size:.72rem;font-weight:700">Images</div>
-    <div style="font-size:.57rem;opacity:.75;margin-top:.1rem">Layers overlay2<br>Manifest · config</div>
-  </div>
-
-</div>
-<div class="arch-detail" id="docker-zone-detail" style="margin-bottom:1rem">
-  <div style="color:var(--dim);font-size:.78rem">ℹ️ Cliquez sur une zone pour afficher ses artefacts forensiques</div>
-</div>
-
-<!-- Commandes live -->
-<div class="sec-title">Triage Docker live — Commandes essentielles</div>
-<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin:.75rem 0">
-  <div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.5rem">
-
-    <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.15);border-radius:8px;padding:.6rem .75rem">
-      <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.35rem">📋 Inventaire rapide</div>
-      <code style="font-size:.66rem;color:var(--text);line-height:1.9;display:block">docker ps -a <span style="color:var(--dim)"># Tous les containers</span><br>docker images -a <span style="color:var(--dim)"># Toutes les images</span><br>docker network ls <span style="color:var(--dim)"># Réseaux</span><br>docker volume ls <span style="color:var(--dim)"># Volumes</span></code>
-    </div>
-
-    <div style="background:rgba(240,192,64,.04);border:1px solid rgba(240,192,64,.15);border-radius:8px;padding:.6rem .75rem">
-      <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.35rem">🔍 Inspection container</div>
-      <code style="font-size:.66rem;color:var(--text);line-height:1.9;display:block">docker inspect &lt;ID&gt; <span style="color:var(--dim)"># Métadonnées complètes</span><br>docker logs &lt;ID&gt; --timestamps<br>docker top &lt;ID&gt; <span style="color:var(--dim)"># Processus</span><br>docker diff &lt;ID&gt; <span style="color:var(--dim)"># Fichiers modifiés</span></code>
-    </div>
-
-    <div style="background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.15);border-radius:8px;padding:.6rem .75rem">
-      <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.35rem">💾 Acquisition container live</div>
-      <code style="font-size:.66rem;color:var(--text);line-height:1.9;display:block">docker export &lt;ID&gt; -o container.tar<br>docker commit &lt;ID&gt; forensic-snapshot<br>docker save forensic-snapshot -o image.tar<br>sha256sum container.tar image.tar</code>
-    </div>
-
-    <div style="background:rgba(48,232,138,.04);border:1px solid rgba(48,232,138,.15);border-radius:8px;padding:.6rem .75rem">
-      <div style="font-size:.65rem;color:var(--green);font-weight:700;margin-bottom:.35rem">⚡ Accès au container</div>
-      <code style="font-size:.66rem;color:var(--text);line-height:1.9;display:block">docker exec -it &lt;ID&gt; /bin/sh<br><span style="color:var(--dim)"># Si arrêté — accès via /proc/ hôte :</span><br>nsenter -t &lt;PID&gt; -m -u -i -n -p /bin/bash<br>ls /proc/&lt;PID&gt;/root/ <span style="color:var(--dim)"># Filesystem container</span></code>
-    </div>
-
+  <div class="layer">
+    <div class="layer-icon">💾</div>
+    <div class="layer-name" style="color:var(--orange)">Volumes &amp; Bind mounts</div>
+    <div class="layer-desc">Données persistantes montées depuis l'hôte. Dans <code style="font-family:var(--mono);font-size:.68rem">/var/lib/docker/volumes/</code> ou chemin hôte arbitraire. Persistent après suppression du container — source d'artefacts clé.</div>
+    <span class="layer-badge lb-host">Hôte persistant</span>
   </div>
 </div>
 
-<div class="memo-grid">
-  <div class="memo-card">
-    <h4>🔑 docker diff — Fichiers modifiés</h4>
-    <ul class="memo-list">
-      <li><code>docker diff &lt;ID&gt;</code> compare le filesystem du container avec l'image de base</li>
-      <li><strong>A</strong> = Added · <strong>C</strong> = Changed · <strong>D</strong> = Deleted</li>
-      <li>Révèle les outils déposés, fichiers config modifiés, malwares téléchargés</li>
-      <li>Stocké dans overlay2 : <code>/var/lib/docker/overlay2/[hash]/diff/</code></li>
-      <li>Accessible même sur container <strong>arrêté</strong> (pas supprimé)</li>
-    </ul>
+<div class="sec-title" style="margin-top:1.25rem">Namespaces Linux — Isolation et visibilité forensique</div>
+<div class="ns-grid">
+  <div class="ns-card">
+    <div class="ns-name">PID namespace</div>
+    <div class="ns-desc">Le container voit ses processus avec des PID commençant à 1. L'hôte les voit avec leurs vrais PIDs (ex: 3842).</div>
+    <div class="ns-forensic">Sur l'hôte : <code style="font-family:var(--mono)">ps aux</code> montre tous les processus de tous les containers.</div>
   </div>
-  <div class="memo-card">
-    <h4>⚠️ Signaux d'anti-forensique Docker</h4>
-    <ul class="memo-list">
-      <li><code>--rm</code> flag : container supprimé automatiquement à l'arrêt</li>
-      <li>Image FROM scratch : pas de shell, pas d'outils, logs minimaux</li>
-      <li>Log driver <code>none</code> : <code>docker logs</code> ne retourne rien</li>
-      <li>Volume monté en <code>:ro</code> depuis hôte + write vers <code>/dev/null</code></li>
-      <li>Container avec namespace réseau = host : pas de réseau isolé</li>
-    </ul>
+  <div class="ns-card">
+    <div class="ns-name">NET namespace</div>
+    <div class="ns-desc">Chaque container a ses propres interfaces réseau (eth0, lo). L'hôte a une interface veth par container + docker0 bridge.</div>
+    <div class="ns-forensic">Trafic capturé sur <code style="font-family:var(--mono)">docker0</code> ou <code style="font-family:var(--mono)">vethXXXX</code> depuis l'hôte.</div>
+  </div>
+  <div class="ns-card">
+    <div class="ns-name">MNT namespace</div>
+    <div class="ns-desc">Chaque container a sa propre arborescence de fichiers (via overlay2). L'hôte voit le tout dans <code style="font-family:var(--mono)">/var/lib/docker/overlay2/</code>.</div>
+    <div class="ns-forensic">Accès direct au FS du container depuis l'hôte sans l'exécuter.</div>
+  </div>
+  <div class="ns-card">
+    <div class="ns-name">UTS namespace</div>
+    <div class="ns-desc">Hostname et domainname isolés. Un container peut avoir son propre hostname sans affecter l'hôte.</div>
+    <div class="ns-forensic">Le hostname du container est dans sa config JSON.</div>
+  </div>
+  <div class="ns-card">
+    <div class="ns-name">USER namespace</div>
+    <div class="ns-desc">Mappage d'UIDs container → hôte. Root (0) dans le container peut mapper à un UID non-privilégié sur l'hôte (si user namespaces activés).</div>
+    <div class="ns-forensic">Vérifier si le container tourne en root réel ou mappé.</div>
+  </div>
+  <div class="ns-card">
+    <div class="ns-name">IPC / Cgroup namespace</div>
+    <div class="ns-desc">Isolation des IPC (sémaphores, mémoire partagée) et des groupes de contrôle (ressources CPU/mémoire).</div>
+    <div class="ns-forensic">Cgroups dans <code style="font-family:var(--mono)">/sys/fs/cgroup/</code> — identifier les limites et violations.</div>
   </div>
 </div>
 
-<div class="quiz-wrap">
-  <div class="quiz-q">Un container suspect a été supprimé (<code>docker rm -f</code>) avant l'arrivée du technicien DFIR. Il reste une image Docker sur l'hôte et des volumes. Quelles sources forensiques sont encore disponibles ?<small>Docker · Niveau : moyen</small></div>
-  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
-  <div class="quiz-answer">
-    <strong>Encore disponibles après <code>docker rm</code> :</strong><br><br>
-    <strong>1. Volumes</strong> : <code>/var/lib/docker/volumes/</code> — les volumes nommés survivent à <code>docker rm</code> (sauf <code>docker rm -v</code>). Contiennent les données persistantes de l'application.<br><br>
-    <strong>2. Image Docker</strong> : <code>docker images -a</code> — l'image de base est intacte. <code>docker save image -o image.tar</code> + analyse des layers avec Dive ou Trivy.<br><br>
-    <strong>3. Logs Docker daemon</strong> : <code>/var/log/docker.log</code> ou <code>journalctl -u docker</code> — peut contenir les commandes exécutées, erreurs, timestamps de démarrage/arrêt.<br><br>
-    <strong>4. /var/lib/docker/containers/[ID]/</strong> : si le répertoire de container n'est pas nettoyé — config.v2.json, hostconfig.json, <code>*-json.log</code> (logs du container). <strong>docker rm nettoie ce répertoire</strong> mais une image disque peut le révéler via carving ou l'espace non alloué ext4.<br><br>
-    <strong>5. Auditd / syslog hôte</strong> : si auditd était actif, les syscalls du container (execve, open, connect) ont été enregistrés avec le PID de l'hôte.<br><br>
-    <strong>6. Réseau</strong> : iptables rules, connexions dans /var/log/syslog si firewall logging activé, PCAP si tcpdump tournait.
-  </div>
-</div>
-</div><!-- /tab-docker -->
+</div><!-- /tab-archi -->
 
-<!-- ══════════════════════════════════════════════
-     TAB 2 — LAYERS & IMAGES
-══════════════════════════════════════════════ -->
-<div class="tab-page" id="tab-layers">
+
+<!-- ══════════════════════════
+     TAB 2 — ARTEFACTS
+══════════════════════════ -->
+<div class="tab-page" id="tab-artefacts">
 
 <div class="concept-card">
-  <div class="concept-title">📦 Layers Docker — Chaque couche est un artefact forensique</div>
-  Une image Docker est composée de <strong>layers superposés en lecture seule</strong> + une couche de container en lecture/écriture. Chaque layer correspond à une instruction Dockerfile (<code>RUN</code>, <code>COPY</code>, <code>ADD</code>). Forensiquement, les layers révèlent <strong>l'historique de construction de l'image</strong> : outils installés, fichiers copiés, commandes exécutées — même si ces fichiers ont été supprimés dans des layers ultérieurs (le contenu reste dans le layer précédent).
+  <div class="concept-title">📂 Artefacts Docker — Où chercher sur l'hôte</div>
+  La force forensique des containers : tous les artefacts sont sur l'<strong>hôte</strong> — même après la destruction du container. Le daemon Docker conserve logs, configs, layers et volumes. La clé est de savoir où regarder.
 </div>
 
-<div class="sec-title">Structure overlay2 — Filesystem des containers</div>
-<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
-  <div class="card card-blue">
-    <div class="ct">🗂 Stockage on-disk Docker</div>
-    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
-      <strong>/var/lib/docker/</strong><br>
-      · <code>overlay2/</code> — layers des images et containers (driver par défaut)<br>
-      · <code>containers/[ID]/</code> — metadata, logs, config de chaque container<br>
-      · <code>image/overlay2/imagedb/</code> — manifests et configs des images<br>
-      · <code>volumes/</code> — données des volumes nommés<br>
-      · <code>network/files/local-kv.db</code> — config réseau (SQLite)
-    </div>
+<div class="path-block">
+  <div class="path-title">📁 /var/lib/docker/ — Le dépôt principal</div>
+  <div class="path-row">
+    <span class="path-key">/var/lib/docker/containers/[ID]/</span>
+    <span class="path-val"><strong>Config + logs de chaque container.</strong> Contient config.v2.json (métadonnées complètes), hostconfig.json (montages, réseau, privilèges), et [ID]-json.log (stdout/stderr du container).</span>
   </div>
-  <div class="card card-gold">
-    <div class="ct">🔬 Container layer — diff/</div>
-    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
-      <strong>overlay2/[hash]/diff/</strong> = fichiers modifiés par le container<br>
-      <strong>overlay2/[hash]/merged/</strong> = vue complète du filesystem (montée)<br>
-      <strong>overlay2/[hash]/work/</strong> = fichiers temporaires overlay<br><br>
-      <code>find /var/lib/docker/overlay2/ -name "*.sh" -newer /var/lib/docker/image/</code><br>
-      → Trouver des scripts récents dans les layers
-    </div>
+  <div class="path-row">
+    <span class="path-key">/var/lib/docker/overlay2/[hash]/</span>
+    <span class="path-val"><strong>Filesystem du container.</strong> Sous-dossier <code style="font-family:var(--mono)">diff/</code> = layer RW du container (fichiers créés/modifiés). <code style="font-family:var(--mono)">merged/</code> = vue complète (visible si container actif).</span>
+  </div>
+  <div class="path-row">
+    <span class="path-key">/var/lib/docker/volumes/[name]/_data/</span>
+    <span class="path-val"><strong>Volumes nommés persistants.</strong> Subsistent après <code style="font-family:var(--mono)">docker rm</code>. Contiennent souvent des bases de données, configs, credentials.</span>
+  </div>
+  <div class="path-row">
+    <span class="path-key">/var/lib/docker/image/overlay2/imagedb/</span>
+    <span class="path-val"><strong>Métadonnées des images</strong> — layers, config, history de build. Permet de reconstituer le Dockerfile originel.</span>
   </div>
 </div>
 
-<!-- Analyse d'image -->
-<div class="sec-title">Analyse forensique d'une image Docker</div>
-<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;margin:.75rem 0;font-family:var(--mono);font-size:.68rem;line-height:1.9;color:var(--text)">
-  <span style="color:var(--cyan)"># Exporter l'image et analyser sa structure</span><br>
-  docker save suspicious-image:latest -o suspicious.tar<br>
-  mkdir /tmp/image-analysis && tar xf suspicious.tar -C /tmp/image-analysis<br><br>
-  <span style="color:var(--cyan)"># Voir l'historique de construction (Dockerfile reconstruit)</span><br>
-  docker history suspicious-image:latest --no-trunc<br><br>
-  <span style="color:var(--cyan)"># Inspecter le manifest et la config</span><br>
-  cat /tmp/image-analysis/manifest.json<br>
-  cat /tmp/image-analysis/[sha256-config].json | python3 -m json.tool<br><br>
-  <span style="color:var(--cyan)"># Extraire et analyser chaque layer (tar dans tar)</span><br>
-  for layer in /tmp/image-analysis/*/layer.tar; do<br>
-  &nbsp;&nbsp;echo "=== $layer ===" && tar tf "$layer" | grep -E "(\.sh|\.py|\.bin|cron|passwd)"<br>
-  done<br><br>
-  <span style="color:var(--cyan)"># Outil dédié : Dive (visualisation interactive des layers)</span><br>
-  dive suspicious-image:latest
+<div class="path-block">
+  <div class="path-title">📋 Logs et configuration daemon</div>
+  <div class="path-row">
+    <span class="path-key">journalctl -u docker.service</span>
+    <span class="path-val"><strong>Logs du daemon Docker</strong> — toutes les opérations : pull d'image, création, démarrage, arrêt, erreurs. Timestamps précis de chaque événement.</span>
+  </div>
+  <div class="path-row">
+    <span class="path-key">/etc/docker/daemon.json</span>
+    <span class="path-val">Configuration du daemon : log driver, registry mirrors, insecure registries, userns-remap. Révèle les pratiques de sécurité (ou leur absence).</span>
+  </div>
+  <div class="path-row">
+    <span class="path-key">/var/lib/docker/containers/[ID]/[ID]-json.log</span>
+    <span class="path-val"><strong>Logs stdout/stderr du container</strong> (si log driver = json-file, défaut). Contient tout ce que le container a affiché — commandes, erreurs, connexions.</span>
+  </div>
+  <div class="path-row">
+    <span class="path-key">/proc/[PID]/ns/</span>
+    <span class="path-val">Namespaces d'un processus container (via son PID hôte). <code style="font-family:var(--mono)">ls -la /proc/[PID]/ns/</code> montre les namespaces partagés ou dédiés.</span>
+  </div>
 </div>
 
-<div class="sec-title">Fichiers sensibles à chercher dans les layers</div>
-<div style="overflow-x:auto">
-<table>
-  <thead><tr><th>Fichier / Pattern</th><th>Signification forensique</th></tr></thead>
+<div class="path-block">
+  <div class="path-title">🔑 config.v2.json — La fiche d'identité du container</div>
+  <div class="path-row">
+    <span class="path-key">Image / ImageID</span>
+    <span class="path-val">Hash SHA256 de l'image utilisée — traçable dans Docker Hub ou registry privé.</span>
+  </div>
+  <div class="path-row">
+    <span class="path-key">Created</span>
+    <span class="path-val"><strong>Timestamp de création</strong> du container — clé pour la timeline.</span>
+  </div>
+  <div class="path-row">
+    <span class="path-key">Cmd / Entrypoint</span>
+    <span class="path-val"><strong>Commande exécutée</strong> au démarrage — peut révéler une commande malveillante.</span>
+  </div>
+  <div class="path-row">
+    <span class="path-key">Env</span>
+    <span class="path-val"><strong>Variables d'environnement</strong> — souvent des secrets : API keys, passwords, tokens JWT passés en clair.</span>
+  </div>
+  <div class="path-row">
+    <span class="path-key">Mounts</span>
+    <span class="path-val">Bind mounts et volumes — quels chemins hôte sont exposés au container.</span>
+  </div>
+  <div class="path-row">
+    <span class="path-key">HostConfig.Privileged</span>
+    <span class="path-val"><code style="font-family:var(--mono)">true</code> = container sans isolation de sécurité — accès root réel à l'hôte. IOC critique.</span>
+  </div>
+  <div class="path-row">
+    <span class="path-key">HostConfig.Binds</span>
+    <span class="path-val">Liste des montages — <code style="font-family:var(--mono)">/:/host</code> = le container a accès à tout le FS hôte. IOC extrême.</span>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">Commandes d'extraction des artefacts</div>
+<code class="dk-cmd">docker inspect [ID]  # Config complète JSON du container</code>
+<code class="dk-cmd">docker logs [ID]  # stdout/stderr du container</code>
+<code class="dk-cmd">docker diff [ID]  # Fichiers modifiés dans le layer RW</code>
+<code class="dk-cmd">docker history [IMAGE]  # Layers de l'image + commandes Dockerfile</code>
+<code class="dk-cmd">docker export [ID] | tar -t | head -50  # Lister le FS du container</code>
+<code class="dk-cmd">docker export [ID] > container_fs.tar && tar xf container_fs.tar -C /evidence/</code>
+<code class="dk-cmd">cat /var/lib/docker/containers/[ID]/config.v2.json | python3 -m json.tool</code>
+<code class="dk-cmd">find /var/lib/docker/overlay2/[HASH]/diff/ -newer /tmp/ref -type f  # Fichiers récents</code>
+
+</div><!-- /tab-artefacts -->
+
+
+<!-- ══════════════════════════
+     TAB 3 — INVESTIGATION
+══════════════════════════ -->
+<div class="tab-page" id="tab-investigation">
+
+<div class="concept-card">
+  <div class="concept-title">🔍 Protocole d'investigation container — Vivant ou mort</div>
+  L'investigation diffère selon que le container est encore <strong>actif</strong> (live forensics = plus de données mais risque d'altération) ou <strong>arrêté/supprimé</strong> (post-mortem = artefacts statiques sur l'hôte). Dans les deux cas, commencer par l'hôte.
+</div>
+
+<div class="sec-title">Container actif — Live forensics</div>
+
+<div class="inv-step">
+  <div class="inv-n in-c">1</div>
+  <div class="inv-body">
+    <div class="inv-title">Inventaire des containers en cours</div>
+    <code class="dk-cmd">docker ps -a --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.CreatedAt}}\t{{.Names}}"</code>
+    <code class="dk-cmd">docker stats --no-stream  # CPU/RAM par container</code>
+  </div>
+</div>
+
+<div class="inv-step">
+  <div class="inv-n in-c">2</div>
+  <div class="inv-body">
+    <div class="inv-title">Inspecter la configuration complète</div>
+    <code class="dk-cmd">docker inspect [ID] | python3 -m json.tool > inspect_[ID].json</code>
+    <code class="dk-cmd"># Vérifier les flags dangereux
+docker inspect [ID] --format '{{.HostConfig.Privileged}} {{.HostConfig.Binds}}'</code>
+  </div>
+</div>
+
+<div class="inv-step">
+  <div class="inv-n in-c">3</div>
+  <div class="inv-body">
+    <div class="inv-title">Processus dans le container (via l'hôte)</div>
+    <code class="dk-cmd">docker top [ID] auxf  # Processus avec PID hôte</code>
+    <code class="dk-cmd"># Depuis l'hôte — voir le vrai PID
+ps aux | grep -v grep | grep $(docker inspect [ID] --format '{{.State.Pid}}')</code>
+  </div>
+</div>
+
+<div class="inv-step">
+  <div class="inv-n in-g">4</div>
+  <div class="inv-body">
+    <div class="inv-title">Réseau — Connexions actives</div>
+    <code class="dk-cmd">docker exec [ID] ss -tupn  # Depuis l'intérieur</code>
+    <code class="dk-cmd"># Depuis l'hôte via nsenter
+nsenter -t $(docker inspect [ID] --format '{{.State.Pid}}') -n ss -tupn</code>
+    <code class="dk-cmd">tcpdump -i docker0 -w /evidence/docker_traffic.pcap  # Capture réseau hôte</code>
+  </div>
+</div>
+
+<div class="inv-step">
+  <div class="inv-n in-g">5</div>
+  <div class="inv-body">
+    <div class="inv-title">Filesystem — Fichiers modifiés et secrets</div>
+    <code class="dk-cmd">docker diff [ID]  # A=added, C=changed, D=deleted</code>
+    <code class="dk-cmd">docker exec [ID] find / -newer /proc/1 -not -path '/proc/*' -not -path '/sys/*' 2>/dev/null</code>
+    <code class="dk-cmd"># Variables d'environnement (potentiels secrets)
+docker exec [ID] env</code>
+    <code class="dk-cmd">cat /proc/$(docker inspect [ID] --format '{{.State.Pid}}')/environ | tr '\0' '\n'</code>
+  </div>
+</div>
+
+<div class="inv-step">
+  <div class="inv-n in-o">6</div>
+  <div class="inv-body">
+    <div class="inv-title">Exporter le filesystem complet avant arrêt</div>
+    <code class="dk-cmd">docker export [ID] | gzip > /evidence/container_[ID]_$(date +%Y%m%d).tar.gz</code>
+    <code class="dk-cmd">sha256sum /evidence/container_[ID]_*.tar.gz > /evidence/hashes.txt</code>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">Container arrêté/supprimé — Post-mortem</div>
+
+<div class="inv-step">
+  <div class="inv-n in-o">1</div>
+  <div class="inv-body">
+    <div class="inv-title">Retrouver le container ID depuis les logs daemon</div>
+    <code class="dk-cmd">journalctl -u docker.service --since "2024-01-01" | grep -E "create|start|stop|kill"</code>
+    <code class="dk-cmd">grep -r "container" /var/log/docker.log 2>/dev/null | tail -50</code>
+  </div>
+</div>
+
+<div class="inv-step">
+  <div class="inv-n in-o">2</div>
+  <div class="inv-body">
+    <div class="inv-title">Layer RW dans overlay2 — souvent encore présent</div>
+    <div style="font-size:.76rem;color:var(--muted)"><code style="font-family:var(--mono)">docker rm</code> supprime le container mais peut laisser des traces dans overlay2 selon la configuration. Inspecter le dossier même si le container n'existe plus.</div>
+    <code class="dk-cmd">ls -lat /var/lib/docker/overlay2/ | head -20  # Layers récents</code>
+    <code class="dk-cmd">find /var/lib/docker/overlay2/*/diff -name "*.log" -o -name "*.sh" -o -name "*.py" 2>/dev/null</code>
+  </div>
+</div>
+
+<div class="inv-step">
+  <div class="inv-n in-o">3</div>
+  <div class="inv-body">
+    <div class="inv-title">Volumes — Persistent même après rm</div>
+    <code class="dk-cmd">docker volume ls  # Volumes encore présents</code>
+    <code class="dk-cmd">ls -la /var/lib/docker/volumes/  # Vue directe</code>
+    <code class="dk-cmd">find /var/lib/docker/volumes/ -type f -newer /tmp/ref 2>/dev/null</code>
+  </div>
+</div>
+
+<div class="inv-step">
+  <div class="inv-n in-r">4</div>
+  <div class="inv-body">
+    <div class="inv-title">Image — Reconstituer l'historique de build</div>
+    <code class="dk-cmd">docker history [IMAGE] --no-trunc  # Commandes Dockerfile layer par layer</code>
+    <code class="dk-cmd">docker image inspect [IMAGE] | python3 -m json.tool</code>
+    <code class="dk-cmd"># Extraire et analyser une image sans la lancer
+docker save [IMAGE] | tar xf - -C /evidence/image/</code>
+  </div>
+</div>
+
+</div><!-- /tab-investigation -->
+
+
+<!-- ══════════════════════════
+     TAB 4 — IMAGES & LAYERS
+══════════════════════════ -->
+<div class="tab-page" id="tab-images">
+
+<div class="concept-card">
+  <div class="concept-title">📦 Images Docker — Anatomie forensique des layers</div>
+  Une image Docker est un empilement de layers immuables. Chaque layer est identifié par un hash SHA256 et correspond à une instruction Dockerfile. Cette structure permet de <strong>retrouver l'historique de construction</strong> d'une image et d'identifier les couches malveillantes.
+</div>
+
+<div class="sec-title">Structure d'une image sauvegardée</div>
+<div class="path-block">
+  <div class="path-title">Contenu de <code style="font-family:var(--mono)">docker save image:tag | tar t</code></div>
+  <div class="path-row">
+    <span class="path-key">manifest.json</span>
+    <span class="path-val">Index des layers — liste ordonnée des couches de l'image avec leurs hashes.</span>
+  </div>
+  <div class="path-row">
+    <span class="path-key">[SHA256].json</span>
+    <span class="path-val"><strong>Config de l'image</strong> — history complet (commandes Dockerfile), variables d'environnement, entrypoint, architecture, OS, dates de création.</span>
+  </div>
+  <div class="path-row">
+    <span class="path-key">[HASH]/layer.tar</span>
+    <span class="path-val"><strong>Contenu de chaque layer</strong> — archive tar des fichiers ajoutés/modifiés par cette couche. Analysable directement avec tar.</span>
+  </div>
+  <div class="path-row">
+    <span class="path-key">[HASH]/json</span>
+    <span class="path-val">Métadonnées du layer — parent, créé, commande utilisée.</span>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">Analyse forensique d'une image suspecte</div>
+<code class="dk-cmd"># 1. Sauvegarder l'image
+docker save malicious:latest -o image.tar</code>
+<code class="dk-cmd"># 2. Extraire
+mkdir /evidence/image && tar xf image.tar -C /evidence/image/</code>
+<code class="dk-cmd"># 3. Lire l'historique (commandes Dockerfile)
+docker history malicious:latest --no-trunc --format "{{.CreatedAt}}\t{{.CreatedBy}}"</code>
+<code class="dk-cmd"># 4. Analyser chaque layer
+for layer in /evidence/image/*/layer.tar; do
+  echo "=== $layer ==="; tar tf $layer | grep -E "\.sh|\.py|passwd|shadow|key|\.env"
+done</code>
+<code class="dk-cmd"># 5. Outil dédié — Dive
+dive malicious:latest  # Visualisation interactive des layers</code>
+<code class="dk-cmd"># 6. Scanner pour secrets
+docker run --rm -v /evidence/image:/scan trufflesecurity/trufflehog filesystem /scan</code>
+
+<div class="sec-title" style="margin-top:1.25rem">Red flags dans une image</div>
+<table class="ioc-t">
+  <thead>
+    <tr><th>Élément</th><th>Red flag</th><th>Implication</th></tr>
+  </thead>
   <tbody>
     <tr>
-      <td style="font-family:var(--mono);font-size:.72rem;color:var(--red)">.env · secrets.* · .aws/credentials</td>
-      <td style="font-size:.74rem">Credentials hardcodés dans l'image — erreur de développement fréquente révélant des clés API, mots de passe, tokens AWS/Azure.</td>
+      <td style="color:var(--text)">Layer <code style="font-family:var(--mono)">RUN</code></td>
+      <td style="color:var(--red)"><code style="font-family:var(--mono)">curl | bash</code></td>
+      <td style="font-size:.71rem;color:var(--muted)">Exécution de script depuis URL — supply chain attack</td>
     </tr>
     <tr>
-      <td style="font-family:var(--mono);font-size:.72rem;color:var(--red)">/root/.ssh/ · authorized_keys</td>
-      <td style="font-size:.74rem">Clés SSH intégrées dans l'image — accès backdoor. Chercher aussi les clés privées (.pem, id_rsa).</td>
+      <td style="color:var(--text)">Variables ENV</td>
+      <td style="color:var(--red)"><code style="font-family:var(--mono)">PASSWORD=</code> / <code style="font-family:var(--mono)">SECRET=</code></td>
+      <td style="font-size:.71rem;color:var(--muted)">Credentials hardcodés dans l'image</td>
     </tr>
     <tr>
-      <td style="font-family:var(--mono);font-size:.72rem;color:var(--gold)">/etc/crontab · /var/spool/cron/</td>
-      <td style="font-size:.74rem">Tâches planifiées dans le container — persistance ou exécution périodique de scripts malveillants.</td>
+      <td style="color:var(--text)">Base image</td>
+      <td style="color:var(--red)">Image inconnue / non officielle</td>
+      <td style="font-size:.71rem;color:var(--muted)">Backdoor possible dans l'image de base</td>
     </tr>
     <tr>
-      <td style="font-family:var(--mono);font-size:.72rem;color:var(--gold)">binaires dans /tmp/ ou /dev/shm/</td>
-      <td style="font-size:.74rem">Binaires dans des zones volatiles — malware fileless ou dropper téléchargé à l'exécution.</td>
+      <td style="color:var(--text)">USER instruction</td>
+      <td style="color:var(--red)">Absent = root par défaut</td>
+      <td style="font-size:.71rem;color:var(--muted)">Container tourne en root — élévation triviale</td>
     </tr>
     <tr>
-      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">ENTRYPOINT / CMD modifiés</td>
-      <td style="font-size:.74rem">Supply chain attack : image légitime avec ENTRYPOINT remplacé par un script malveillant. Comparer avec l'image officielle du registry.</td>
+      <td style="color:var(--text)">COPY/ADD depuis URL</td>
+      <td style="color:var(--red)"><code style="font-family:var(--mono)">ADD http://</code></td>
+      <td style="font-size:.71rem;color:var(--muted)">Téléchargement non authentifié au build</td>
     </tr>
     <tr>
-      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Fichier supprimé dans layer N+1</td>
-      <td style="font-size:.74rem">Un fichier supprimé dans un layer reste présent dans le layer précédent. <code>docker history</code> + extraction du layer tar révèle le contenu supprimé.</td>
+      <td style="color:var(--text)">History layer</td>
+      <td style="color:var(--red)">Layer <code style="font-family:var(--mono)">&lt;missing&gt;</code> en milieu de stack</td>
+      <td style="font-size:.71rem;color:var(--muted)">Layer importé d'une autre source — non traçable</td>
     </tr>
   </tbody>
 </table>
-</div>
 
-<div class="key-fact">
-  <div class="key-fact-label">🎯 Supply Chain Attack — Image Docker compromise</div>
-  <div style="font-size:.78rem;line-height:1.75;margin-top:.4rem;color:var(--muted)">
-    Les attaques de supply chain Docker consistent à publier une image malveillante sur Docker Hub avec un nom similaire à une image populaire (<strong>typosquatting</strong> : <code>nginx-lastest</code> au lieu de <code>nginx:latest</code>) ou à compromettre directement le pipeline CI/CD d'une image légitime. Pour détecter : <strong>vérifier le digest SHA256</strong> de l'image (<code>docker inspect --format='{{.RepoDigests}}'</code>), comparer avec le digest officiel du registry, et analyser l'historique des layers pour détecter des instructions inattendues.
-  </div>
-</div>
-</div><!-- /tab-layers -->
+</div><!-- /tab-images -->
 
-<!-- ══════════════════════════════════════════════
-     TAB 3 — KUBERNETES
-══════════════════════════════════════════════ -->
+
+<!-- ══════════════════════════
+     TAB 5 — KUBERNETES
+══════════════════════════ -->
 <div class="tab-page" id="tab-k8s">
 
 <div class="concept-card">
-  <div class="concept-title">☸️ Kubernetes forensique — L'orchestrateur comme terrain d'enquête</div>
-  Kubernetes ajoute une couche d'abstraction au-dessus des containers : <strong>Pods, Services, Namespaces, RBAC, Secrets, ConfigMaps</strong>. En cas d'incident, le technicien DFIR doit analyser <strong>deux niveaux simultanément</strong> : le cluster K8s (API Server, etcd, audit logs) et les nœuds worker Linux (containers, processus, réseau). L'<strong>API Server</strong> est la pièce centrale — toute action dans K8s passe par lui et peut être auditée.
+  <div class="concept-title">☸️ Kubernetes forensique — L'orchestrateur comme source d'artefacts</div>
+  Kubernetes (K8s) ajoute une couche d'abstraction au-dessus des containers. Les artefacts sont distribués entre l'<strong>API server</strong> (source de vérité), l'<strong>etcd</strong> (état du cluster), les <strong>nodes</strong> (containers réels), et les <strong>audit logs</strong> (actions utilisateurs/système).
 </div>
 
-<!-- Architecture K8s forensique -->
-<div class="sec-title">Sources forensiques Kubernetes</div>
-<div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.5rem;margin:.75rem 0">
+<div class="sec-title">Sources de données forensiques K8s</div>
+<div class="k8s-grid">
 
-  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(255,64,96,.3);background:rgba(255,64,96,.05);cursor:pointer" onclick="showK8s('apiserver')">
-    <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.3rem">🔴 API Server Audit Log</div>
-    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">Toutes les requêtes API K8s · RBAC · kubectl · automation</div>
+  <div class="k8s-card">
+    <div class="k8s-name">🗄 etcd — Source de vérité</div>
+    <div class="k8s-desc">Base de données clé-valeur de K8s. Contient l'état complet du cluster : tous les objets (pods, secrets, configmaps, RBAC). Un backup etcd = snapshot forensique complet de la configuration.</div>
+    <code class="dk-cmd" style="font-size:.65rem">etcdctl get / --prefix --keys-only</code>
+    <code class="dk-cmd" style="font-size:.65rem">etcdctl snapshot save /evidence/etcd.db</code>
   </div>
 
-  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(240,192,64,.3);background:rgba(240,192,64,.05);cursor:pointer" onclick="showK8s('etcd')">
-    <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.3rem">🗄️ etcd</div>
-    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">État du cluster · Secrets · ConfigMaps · historique</div>
+  <div class="k8s-card">
+    <div class="k8s-name">📋 API Server Audit Logs</div>
+    <div class="k8s-desc">Toutes les requêtes API avec : utilisateur, timestamp, verbe (get/create/delete), ressource, namespace. Source principale pour retrouver qui a fait quoi et quand.</div>
+    <code class="dk-cmd" style="font-size:.65rem"># Config dans kube-apiserver --audit-log-path</code>
+    <code class="dk-cmd" style="font-size:.65rem">grep '"verb":"create"' audit.log | jq '.user.username,.requestURI'</code>
   </div>
 
-  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(0,229,204,.3);background:rgba(0,229,204,.05);cursor:pointer" onclick="showK8s('pods')">
-    <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.3rem">📦 Pods &amp; Containers</div>
-    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">Logs kubectl · events · describe</div>
+  <div class="k8s-card">
+    <div class="k8s-name">🐳 Node — Containers réels</div>
+    <div class="k8s-desc">Sur chaque node worker, containerd ou docker gère les containers. Les artefacts sont identiques à un hôte Docker standard. Les logs sont dans <code style="font-family:var(--mono)">/var/log/pods/</code>.</div>
+    <code class="dk-cmd" style="font-size:.65rem">ls /var/log/pods/  # Logs par namespace/pod/container</code>
+    <code class="dk-cmd" style="font-size:.65rem">crictl ps -a  # Tous les containers (containerd)</code>
   </div>
 
-  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(188,140,255,.3);background:rgba(188,140,255,.05);cursor:pointer" onclick="showK8s('rbac')">
-    <div style="font-size:.65rem;color:var(--purple);font-weight:700;margin-bottom:.3rem">🔐 RBAC &amp; ServiceAccounts</div>
-    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">Droits · Roles · ClusterRoles · tokens</div>
+  <div class="k8s-card">
+    <div class="k8s-name">🔑 Secrets K8s</div>
+    <div class="k8s-desc">Stockés en Base64 dans etcd (non chiffrés par défaut). Contiennent credentials, tokens, certificats. Si etcd est compromis, tous les secrets le sont.</div>
+    <code class="dk-cmd" style="font-size:.65rem">kubectl get secrets -A -o json | jq '.items[].data'</code>
+    <code class="dk-cmd" style="font-size:.65rem">echo "BASE64" | base64 -d  # Décoder un secret</code>
   </div>
 
-  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(48,232,138,.3);background:rgba(48,232,138,.05);cursor:pointer" onclick="showK8s('nodes')">
-    <div style="font-size:.65rem;color:var(--green);font-weight:700;margin-bottom:.3rem">🖥️ Nœuds worker</div>
-    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">kubelet logs · /var/log/containers/ · runtime</div>
+  <div class="k8s-card">
+    <div class="k8s-name">📡 Réseau K8s</div>
+    <div class="k8s-desc">CNI (Calico, Flannel…) gère le réseau inter-pods. NetworkPolicies définissent les règles. Les logs CNI et les captures réseau sur les nodes révèlent les flux suspects.</div>
+    <code class="dk-cmd" style="font-size:.65rem">kubectl get networkpolicies -A</code>
+    <code class="dk-cmd" style="font-size:.65rem">kubectl get events -A --sort-by=.metadata.creationTimestamp</code>
   </div>
 
-  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(88,166,255,.3);background:rgba(88,166,255,.05);cursor:pointer" onclick="showK8s('secrets')">
-    <div style="font-size:.65rem;color:var(--blue);font-weight:700;margin-bottom:.3rem">🔑 Secrets &amp; ConfigMaps</div>
-    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">Credentials · tokens · config sensible</div>
+  <div class="k8s-card">
+    <div class="k8s-name">📜 RBAC — Qui peut faire quoi</div>
+    <div class="k8s-desc">Role-Based Access Control — identifier les permissions excessives (cluster-admin attribué à un ServiceAccount), les bindings suspects, les tokens de service compromis.</div>
+    <code class="dk-cmd" style="font-size:.65rem">kubectl get clusterrolebindings -o wide</code>
+    <code class="dk-cmd" style="font-size:.65rem">kubectl auth can-i --list --as=system:serviceaccount:default:default</code>
   </div>
 
 </div>
-<div class="arch-detail" id="k8s-detail" style="margin-bottom:1rem">
-  <div style="color:var(--dim);font-size:.78rem">ℹ️ Cliquez sur une source pour afficher ses artefacts forensiques</div>
-</div>
 
-<!-- Commandes kubectl forensiques -->
-<div class="sec-title">kubectl — Commandes forensiques essentielles</div>
-<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin:.75rem 0">
-  <div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.5rem">
+<div class="sec-title" style="margin-top:1.25rem">Investigation K8s — Commandes clés</div>
+<code class="dk-cmd">kubectl get pods -A -o wide  # Tous les pods sur tous les namespaces</code>
+<code class="dk-cmd">kubectl describe pod [POD] -n [NS]  # Détail complet + events</code>
+<code class="dk-cmd">kubectl logs [POD] -n [NS] --previous  # Logs du container précédent (après crash)</code>
+<code class="dk-cmd">kubectl exec -it [POD] -n [NS] -- /bin/sh  # Shell dans le pod (si encore actif)</code>
+<code class="dk-cmd">kubectl get events -A --sort-by=.metadata.creationTimestamp | tail -50</code>
+<code class="dk-cmd"># Exporter le FS d'un pod
+kubectl cp [NS]/[POD]:/chemin /evidence/pod_files/</code>
+<code class="dk-cmd"># Timeline complète des ressources
+kubectl get all -A -o json | jq '.items[] | {kind:.kind, name:.metadata.name, created:.metadata.creationTimestamp}'</code>
 
-    <div style="background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.15);border-radius:8px;padding:.6rem .75rem">
-      <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.35rem">📋 Inventaire cluster</div>
-      <code style="font-size:.65rem;color:var(--text);line-height:1.9;display:block">kubectl get pods --all-namespaces -o wide<br>kubectl get events --all-namespaces --sort-by='.lastTimestamp'<br>kubectl get serviceaccounts --all-namespaces<br>kubectl get clusterrolebindings -o wide</code>
-    </div>
-
-    <div style="background:rgba(240,192,64,.04);border:1px solid rgba(240,192,64,.15);border-radius:8px;padding:.6rem .75rem">
-      <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.35rem">🔍 Inspection pod suspect</div>
-      <code style="font-size:.65rem;color:var(--text);line-height:1.9;display:block">kubectl describe pod &lt;name&gt; -n &lt;ns&gt;<br>kubectl logs &lt;pod&gt; -n &lt;ns&gt; --previous<br>kubectl exec -it &lt;pod&gt; -- ps aux<br>kubectl exec -it &lt;pod&gt; -- netstat -antp</code>
-    </div>
-
-    <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.15);border-radius:8px;padding:.6rem .75rem">
-      <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.35rem">🔐 Audit RBAC</div>
-      <code style="font-size:.65rem;color:var(--text);line-height:1.9;display:block">kubectl auth can-i --list --as=system:serviceaccount:&lt;ns&gt;:&lt;sa&gt;<br>kubectl get rolebinding,clusterrolebinding -o wide --all-namespaces | grep &lt;user&gt;<br>kubectl get secret --all-namespaces -o yaml | grep -i token</code>
-    </div>
-
-    <div style="background:rgba(48,232,138,.04);border:1px solid rgba(48,232,138,.15);border-radius:8px;padding:.6rem .75rem">
-      <div style="font-size:.65rem;color:var(--green);font-weight:700;margin-bottom:.35rem">💾 Acquisition pod live</div>
-      <code style="font-size:.65rem;color:var(--text);line-height:1.9;display:block">kubectl cp &lt;pod&gt;:/tmp/suspicious.elf ./suspicious.elf<br>kubectl exec &lt;pod&gt; -- tar czf - /app | cat &gt; app-backup.tar.gz<br><span style="color:var(--dim)"># Dump mémoire via crictl sur le nœud</span><br>crictl inspect &lt;container-id&gt;</code>
-    </div>
-
-  </div>
-</div>
-
-<!-- Audit log K8s -->
-<div class="sec-title">Kubernetes Audit Log — Configuration et analyse</div>
-<div class="alert">
-  🎯 Le <strong>Kubernetes Audit Log</strong> est l'équivalent du Unified Audit Log M365 pour K8s. Il enregistre <strong>toutes les requêtes vers l'API Server</strong> : qui a créé quel Pod, qui a accédé à un Secret, qui a exécuté <code>kubectl exec</code>. <strong>Il n'est pas activé par défaut</strong> sur la plupart des distributions K8s — son absence est une lacune de sécurité majeure et rend la forensique post-incident très difficile.
-</div>
-
-<div style="overflow-x:auto">
-<table>
-  <thead><tr><th>Champ Audit Log</th><th>Valeur forensique</th></tr></thead>
-  <tbody>
-    <tr><td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">requestURI</td><td style="font-size:.74rem">Ressource K8s accédée (/api/v1/namespaces/default/pods/evil-pod). Révèle l'action précise.</td></tr>
-    <tr><td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">user.username</td><td style="font-size:.74rem">Qui a fait la requête : user humain, ServiceAccount, ou système (system:node).</td></tr>
-    <tr><td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">sourceIPs</td><td style="font-size:.74rem">IP source de la requête. Comparer avec les IPs attendues pour cet utilisateur.</td></tr>
-    <tr><td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">verb</td><td style="font-size:.74rem">create · delete · get · list · patch · update · watch · exec. "exec" = kubectl exec dans un pod.</td></tr>
-    <tr><td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">responseStatus.code</td><td style="font-size:.74rem">200/201 = succès · 403 = accès refusé (tentatives d'escalade) · 404 = ressource inexistante.</td></tr>
-  </tbody>
-</table>
-</div>
 </div><!-- /tab-k8s -->
 
-<!-- ══════════════════════════════════════════════
-     TAB 4 — ATTAQUES
-══════════════════════════════════════════════ -->
-<div class="tab-page" id="tab-attaques">
+
+<!-- ══════════════════════════
+     TAB 6 — IOC & ATTAQUES
+══════════════════════════ -->
+<div class="tab-page" id="tab-ioc">
 
 <div class="concept-card">
-  <div class="concept-title">⚔️ Attaques sur les environnements conteneurisés</div>
-  Les environnements Docker/Kubernetes présentent des surfaces d'attaque spécifiques. Les attaquants ciblent : les containers mal configurés (privilèges excessifs, montages dangereux), les API exposées (Docker socket, API Server K8s non authentifiée), la supply chain (images malveillantes), et l'évasion de container vers l'hôte. Chaque technique laisse des traces spécifiques.
+  <div class="concept-title">🚨 Attaques sur les containers — TTPs et IOC</div>
+  Les containers sont une cible croissante. Les attaques vont de l'<strong>escape de container</strong> (sortir vers l'hôte) au <strong>cryptominage</strong> (déploiement de miners), en passant par la <strong>supply chain</strong> (images malveillantes) et le <strong>mouvement latéral</strong> via l'API K8s.
 </div>
 
-<div class="sec-title">Techniques d'attaque — Cliquez pour les artefacts</div>
-<div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.55rem;margin:.75rem 0">
+<div class="sec-title">Techniques d'attaque et artefacts forensiques</div>
+<table class="ioc-t">
+  <thead>
+    <tr><th>Attaque</th><th>MITRE</th><th>Mécanisme</th><th>IOC / Artefact</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="color:var(--text);font-weight:700">Container escape (privileged)</td>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--orange)">T1611</td>
+      <td style="font-size:.71rem;color:var(--muted)">Container lancé avec <code style="font-family:var(--mono)">--privileged</code> → accès à /dev/sda, mount du FS hôte, cgroup escape.</td>
+      <td style="font-size:.71rem;color:var(--cyan)">config.v2.json Privileged=true · mount de / · nsenter vers PID 1 hôte</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:700">Docker socket exposé</td>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--orange)">T1552.007</td>
+      <td style="font-size:.71rem;color:var(--muted)">Mount de /var/run/docker.sock dans le container → contrôle total du daemon depuis le container.</td>
+      <td style="font-size:.71rem;color:var(--cyan)">Bind mount docker.sock · docker ps depuis l'intérieur · Sysmon EID 11</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:700">Cryptomining via image</td>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--orange)">T1496</td>
+      <td style="font-size:.71rem;color:var(--muted)">Image malveillante publiée sur Docker Hub contenant xmrig ou nbminer. Pull automatique via CI/CD ou Kubernetes.</td>
+      <td style="font-size:.71rem;color:var(--cyan)">CPU 100% · connexions pool minier · processus xmrig/nbminer · docker logs</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:700">API Docker exposée</td>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--orange)">T1133</td>
+      <td style="font-size:.71rem;color:var(--muted)">daemon Docker écoutant sur TCP 2375 (non authentifié) → création de containers arbitraires par un attaquant distant.</td>
+      <td style="font-size:.71rem;color:var(--cyan)">Logs daemon : containers créés depuis IP externe · port 2375 ouvert</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:700">K8s API server exposed</td>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--orange)">T1078.004</td>
+      <td style="font-size:.71rem;color:var(--muted)">API K8s accessible depuis Internet sans auth → création de pods malveillants, vol de secrets.</td>
+      <td style="font-size:.71rem;color:var(--cyan)">Audit logs K8s : verb=create depuis IP externe · pods namespaces suspects</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:700">Supply chain (image empoisonnée)</td>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--orange)">T1195.003</td>
+      <td style="font-size:.71rem;color:var(--muted)">Typosquatting sur Docker Hub (nginx vs ngiinx) ou compromission d'un registry privé.</td>
+      <td style="font-size:.71rem;color:var(--cyan)">Image ID inattendu · docker history révèle commandes suspectes · Cosign signature absente</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:700">Lateral movement via K8s ServiceAccount</td>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--orange)">T1134.001</td>
+      <td style="font-size:.71rem;color:var(--muted)">Token ServiceAccount dans /var/run/secrets/kubernetes.io/serviceaccount/ → appels API K8s depuis le pod compromis.</td>
+      <td style="font-size:.71rem;color:var(--cyan)">Audit logs : requêtes API depuis IP pod · kubectl depuis un container · RBAC escalation</td>
+    </tr>
+  </tbody>
+</table>
 
-  <div class="meta-card mc-0" onclick="showAttack('socket')">
-    <div class="meta-num">T1552.007</div>
-    <div class="meta-name">Docker Socket Abuse</div>
-    <div class="meta-desc">Montage du socket Docker → accès root hôte.</div>
+<div class="sec-title" style="margin-top:1.25rem">Outils de détection runtime &amp; scan d'images</div>
+<div class="k8s-grid" style="margin-bottom:1.25rem">
+
+  <div class="k8s-card">
+    <div class="k8s-name">🦅 Falco <span style="font-size:.62rem;color:var(--green);font-weight:600;margin-left:.3rem">CNCF · Gratuit</span></div>
+    <div class="k8s-desc">Détection comportementale en runtime via <strong>eBPF/kprobe</strong>. Règles prédéfinies pour : container escape, accès au docker.sock, shell dans un container, lecture de <code style="font-family:var(--mono)">/etc/shadow</code>, connexions réseau suspectes. Génère des alertes JSON/syslog. Standard de facto pour la runtime security K8s.</div>
+    <code class="dk-cmd">falco -r /etc/falco/falco_rules.yaml  # Lancer avec règles par défaut</code>
+    <code class="dk-cmd">cat /var/log/falco.log | jq 'select(.priority=="Critical")'</code>
+    <code class="dk-cmd">kubectl logs -n falco daemonset/falco | grep "Notice\|Warning\|Critical"</code>
   </div>
 
-  <div class="meta-card mc-1" onclick="showAttack('escape')">
-    <div class="meta-num">T1611</div>
-    <div class="meta-name">Container Escape</div>
-    <div class="meta-desc">Évasion vers l'hôte via privilèges ou CVE noyau.</div>
+  <div class="k8s-card">
+    <div class="k8s-name">🔍 Trivy <span style="font-size:.62rem;color:var(--green);font-weight:600;margin-left:.3rem">Aqua Security · Gratuit</span></div>
+    <div class="k8s-desc">Scanner de vulnérabilités, secrets, et misconfigurations dans les images Docker, FS, et manifests K8s. Détecte : CVEs dans les packages, secrets hardcodés (.env, clés API), configurations dangereuses (Dockerfile, K8s YAML). Intégrable en CI/CD.</div>
+    <code class="dk-cmd">trivy image nginx:latest  # Scanner une image</code>
+    <code class="dk-cmd">trivy image --severity CRITICAL,HIGH nginx:latest</code>
+    <code class="dk-cmd">trivy fs /var/lib/docker/overlay2/[HASH]/diff/  # Scanner le layer RW</code>
+    <code class="dk-cmd">trivy k8s --report summary cluster  # Scanner tout le cluster K8s</code>
   </div>
 
-  <div class="meta-card mc-2" onclick="showAttack('cryptominer')">
-    <div class="meta-num">T1496</div>
-    <div class="meta-name">Cryptomining</div>
-    <div class="meta-desc">Container déployé pour miner de la crypto sur K8s.</div>
+  <div class="k8s-card">
+    <div class="k8s-name">🤿 Dive <span style="font-size:.62rem;color:var(--green);font-weight:600;margin-left:.3rem">wagoodman · Gratuit</span></div>
+    <div class="k8s-desc">Exploration interactive des layers d'une image Docker. Affiche layer par layer les fichiers ajoutés/modifiés/supprimés, l'efficacité de l'image, et les fichiers dupliqués. Idéal pour l'analyse forensique des images suspectes.</div>
+    <code class="dk-cmd">dive [IMAGE]  # Interface interactive TUI</code>
+    <code class="dk-cmd">dive [IMAGE] --ci  # Mode CI — exit 1 si efficacité &lt; seuil</code>
   </div>
 
-  <div class="meta-card mc-3" onclick="showAttack('apiserver')">
-    <div class="meta-num">T1078</div>
-    <div class="meta-name">API Server anonyme</div>
-    <div class="meta-desc">K8s API exposée sans auth → création de pods.</div>
-  </div>
-
-  <div class="meta-card mc-5" onclick="showAttack('secrets')">
-    <div class="meta-num">T1552.001</div>
-    <div class="meta-name">Secrets K8s exfiltrés</div>
-    <div class="meta-desc">Lecture de Secrets via ServiceAccount compromis.</div>
-  </div>
-
-  <div class="meta-card mc-6" onclick="showAttack('supply')">
-    <div class="meta-num">T1195.002</div>
-    <div class="meta-name">Supply Chain Image</div>
-    <div class="meta-desc">Image malveillante injectée dans le pipeline CI/CD.</div>
-  </div>
-
-</div>
-<div class="meta-detail" id="attack-detail"></div>
-
-<!-- Indicateurs de compromission -->
-<div class="sec-title">Indicateurs de compromission — Containers</div>
-<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
-  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(255,64,96,.3);background:rgba(255,64,96,.05)">
-    <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.4rem;text-transform:uppercase">🔴 Signaux runtime suspects</div>
-    <ul style="font-size:.73rem;color:var(--muted);line-height:1.85;margin:0;padding-left:1.1rem">
-      <li>Container avec <code>--privileged</code> ou <code>--cap-add ALL</code></li>
-      <li>Montage de <code>/var/run/docker.sock</code> ou <code>/</code> (host root)</li>
-      <li>Processus <code>nmap</code>, <code>masscan</code>, <code>nc</code>, <code>curl</code>, <code>wget</code> dans un container applicatif</li>
-      <li>Connection sortante vers port 443/80 depuis un container backend (ne devrait pas)</li>
-      <li>Modification de <code>/etc/hosts</code> ou <code>/etc/resolv.conf</code> dans le container</li>
-    </ul>
-  </div>
-  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(240,192,64,.3);background:rgba(240,192,64,.05)">
-    <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.4rem;text-transform:uppercase">🟡 Signaux K8s suspects</div>
-    <ul style="font-size:.73rem;color:var(--muted);line-height:1.85;margin:0;padding-left:1.1rem">
-      <li>Pod créé dans le namespace <code>kube-system</code> par un ServiceAccount non-système</li>
-      <li>ClusterRoleBinding donnant <code>cluster-admin</code> à un ServiceAccount d'application</li>
-      <li>Pod avec <code>hostPID: true</code>, <code>hostNetwork: true</code>, ou <code>hostPath: /</code></li>
-      <li>Image depuis un registry non autorisé (pas le registry interne)</li>
-      <li><code>kubectl exec</code> dans un pod de production en dehors des heures ouvrables</li>
-    </ul>
-  </div>
-</div>
-</div><!-- /tab-attaques -->
-
-<!-- ══════════════════════════════════════════════
-     TAB 5 — OUTILS
-══════════════════════════════════════════════ -->
-<div class="tab-page" id="tab-outils">
-
-<div class="sec-title">Outils forensiques Docker &amp; Kubernetes</div>
-<div class="tool-grid">
-
-  <div class="tool-card" style="border-left:3px solid var(--cyan)">
-    <div class="tool-name">Falco</div>
-    <div class="tool-by">CNCF / Sysdig</div>
-    <div class="tool-desc">Détection des comportements suspects en runtime via les syscalls (eBPF/kprobe). Règles prédéfinies pour : container escape, accès au socket Docker, exécution de shells dans des containers. Génère des alertes en JSON/syslog. Standard de facto en runtime security K8s.</div>
-    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">Daemon</span></div>
-  </div>
-
-  <div class="tool-card" style="border-left:3px solid var(--gold)">
-    <div class="tool-name">Trivy</div>
-    <div class="tool-by">Aqua Security</div>
-    <div class="tool-desc">Scanner de vulnérabilités et de secrets dans les images Docker. Détecte : CVEs dans les packages, secrets hardcodés (.env, clés API), configurations dangereuses (Dockerfile, K8s YAML). Intégrable en CI/CD.</div>
-    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI</span></div>
-  </div>
-
-  <div class="tool-card" style="border-left:3px solid var(--purple)">
-    <div class="tool-name">Dive</div>
-    <div class="tool-by">wagoodman</div>
-    <div class="tool-desc">Exploration interactive des layers d'une image Docker. Affiche les fichiers ajoutés/modifiés/supprimés par chaque layer. Idéal pour analyser une image suspecte et retrouver des fichiers "supprimés" dans des layers précédents.</div>
-    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI TUI</span></div>
-  </div>
-
-  <div class="tool-card" style="border-left:3px solid var(--blue)">
-    <div class="tool-name">Sysdig</div>
-    <div class="tool-by">Sysdig Inc.</div>
-    <div class="tool-desc">Capture système-level des activités kernel (syscalls, réseau, I/O). <code>sysdig -pk</code> capture tous les events avec contexte container. Les .scap peuvent être rejoués comme un pcap. Gold standard pour forensique container post-incident.</div>
-    <div><span class="tool-tag tt-free">Gratuit (open)</span><span class="tool-tag tt-cmd">CLI</span></div>
-  </div>
-
-  <div class="tool-card" style="border-left:3px solid var(--green)">
-    <div class="tool-name">kube-forensics</div>
-    <div class="tool-by">Aqua Security</div>
-    <div class="tool-desc">Outil d'acquisition forensique de pods K8s live : snapshot du filesystem, dump mémoire, logs, config réseau. Crée un pod forensique éphémère dans le même nœud que le pod suspect. Respecte l'ordre de volatilité.</div>
-    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI kubectl plugin</span></div>
-  </div>
-
-  <div class="tool-card" style="border-left:3px solid var(--red)">
-    <div class="tool-name">kubeaudit / kube-bench</div>
-    <div class="tool-by">Shopify / Aqua Security</div>
-    <div class="tool-desc">Audit de configuration K8s : kubeaudit vérifie les RBAC, SecurityContext, NetworkPolicies. kube-bench valide la conformité CIS Kubernetes Benchmark. Utilisé pour identifier les misconfigurations exploitées.</div>
-    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI</span></div>
+  <div class="k8s-card">
+    <div class="k8s-name">🔐 Cosign / Notation <span style="font-size:.62rem;color:var(--green);font-weight:600;margin-left:.3rem">Sigstore · Gratuit</span></div>
+    <div class="k8s-desc">Vérification de la signature cryptographique des images Docker. Permet de détecter si une image a été altérée depuis sa publication. Si une image n'a pas de signature valide → supply chain attack possible.</div>
+    <code class="dk-cmd">cosign verify --key cosign.pub [IMAGE]</code>
+    <code class="dk-cmd">cosign tree [IMAGE]  # Voir attestations et signatures</code>
   </div>
 
 </div>
 
-<div class="exam-tip">
-  <div class="exam-tip-title">🎓 Exam Tip — Docker &amp; Kubernetes Forensique</div>
-  <p><strong>docker diff</strong> = fichiers modifiés dans le container vs l'image de base (A/C/D)</p>
-  <p><strong>docker export</strong> = snapshot du filesystem · <strong>docker commit</strong> = snapshot en nouvelle image</p>
-  <p><strong>overlay2/[hash]/diff/</strong> = couche d'écriture du container on-disk — accessible même sur container arrêté</p>
-  <p><strong>docker rm</strong> supprime les métadonnées mais pas les <strong>volumes</strong> (sauf <code>-v</code>)</p>
-  <p><strong>K8s Audit Log</strong> = pas activé par défaut · toutes les requêtes API Server · verb "exec" = kubectl exec</p>
-  <p><strong>Container Escape</strong> : chercher <code>--privileged</code>, montage <code>/var/run/docker.sock</code>, <code>hostPID: true</code></p>
-  <p><strong>Falco</strong> = runtime security via syscalls · <strong>Trivy</strong> = scan image (CVE + secrets) · <strong>Dive</strong> = analyse layers</p>
+<div class="sec-title">Anti-forensique Docker — Signaux à connaître</div>
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-color:rgba(255,64,96,.2);margin-bottom:1rem">
+  <div class="concept-title" style="color:var(--red)">⚠️ Techniques d'évasion forensique spécifiques aux containers</div>
+  <div class="g2" style="margin-top:.5rem">
+    <div>
+      <ul style="font-size:.74rem;color:var(--muted);padding-left:1rem;line-height:1.9">
+        <li><code style="font-family:var(--mono)">--rm</code> flag — container supprimé automatiquement à l'arrêt → pas de config.v2.json résiduelle</li>
+        <li><code style="font-family:var(--mono)">--log-driver none</code> — <code style="font-family:var(--mono)">docker logs</code> ne retourne rien</li>
+        <li><code style="font-family:var(--mono)">FROM scratch</code> — image sans shell, sans outils, logs minimaux → analyse difficile</li>
+        <li>Namespace réseau <code style="font-family:var(--mono)">--network host</code> — pas d'interface réseau isolée à capturer</li>
+        <li>Volume monté <code style="font-family:var(--mono)">:ro</code> + écriture vers <code style="font-family:var(--mono)">/dev/null</code> — pas de trace sur disque</li>
+      </ul>
+    </div>
+    <div>
+      <ul style="font-size:.74rem;color:var(--muted);padding-left:1rem;line-height:1.9">
+        <li><strong>Contre-mesure :</strong> journald hôte capture quand même le démarrage/arrêt même avec <code style="font-family:var(--mono)">--rm</code></li>
+        <li><strong>Contre-mesure :</strong> auditd sur l'hôte trace les syscalls même si le container n'a pas de logs</li>
+        <li><strong>Contre-mesure :</strong> Falco détecte les comportements même dans les images FROM scratch</li>
+        <li><strong>Contre-mesure :</strong> Réseau capturé depuis l'hôte (docker0/veth) indépendamment du log driver</li>
+        <li><strong>Contre-mesure :</strong> overlay2 peut garder le layer diff même après <code style="font-family:var(--mono)">docker rm</code></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="sec-title">Vérifications de sécurité rapides — IOC à chercher</div>
+<div class="g2">
+  <div class="card card-red">
+    <div class="ct">Configurations dangereuses</div>
+    <code class="dk-cmd">docker ps --quiet | xargs docker inspect --format '{{.Name}} Privileged={{.HostConfig.Privileged}}'</code>
+    <code class="dk-cmd">docker ps -q | xargs docker inspect --format '{{.Name}}: {{.HostConfig.Binds}}' | grep "docker.sock\|/:/\|/etc"</code>
+    <code class="dk-cmd">docker ps -q | xargs docker inspect --format '{{.Name}} User={{.Config.User}}' | grep ": $"  # Root</code>
+    <code class="dk-cmd"># Ports exposés sur 0.0.0.0
+docker ps --format '{{.Names}}\t{{.Ports}}' | grep "0.0.0.0"</code>
+  </div>
+  <div class="card card-red">
+    <div class="ct">Activité suspecte</div>
+    <code class="dk-cmd"># Containers créés récemment
+docker ps -a --format '{{.CreatedAt}}\t{{.Names}}\t{{.Image}}' | sort -r | head -10</code>
+    <code class="dk-cmd"># Processus réseau inhabituels
+docker ps -q | xargs -I{} docker exec {} ss -tupn 2>/dev/null | grep -v "127.0.0"</code>
+    <code class="dk-cmd"># Images non taguées (souvent suspectes)
+docker images | grep "&lt;none&gt;"</code>
+    <code class="dk-cmd"># Connexions K8s suspectes
+kubectl get events -A | grep -i "failed\|error\|forbidden"</code>
+  </div>
+</div>
+
+</div><!-- /tab-ioc -->
+
+
+<!-- ══════════════════════════
+     TAB 7 — QUIZ
+══════════════════════════ -->
+<div class="tab-page" id="tab-quiz">
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q1 — Quelle est la différence fondamentale entre un container Docker et une VM d'un point de vue forensique ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> Contrairement à une VM qui a son propre noyau isolé, un container Docker <strong>partage le noyau de l'hôte</strong> via les namespaces Linux. Forensiquement, cela implique : (1) tous les processus du container sont visibles sur l'hôte avec <code style="font-family:var(--mono)">ps aux</code> (avec leur vrai PID hôte) ; (2) le filesystem du container est accessible depuis l'hôte dans <code style="font-family:var(--mono)">/var/lib/docker/overlay2/</code> sans lancer le container ; (3) le trafic réseau peut être capturé depuis l'hôte sur l'interface veth ou docker0 ; (4) tous les artefacts persistent sur l'hôte même après suppression du container.
+  </div>
 </div>
 
 <div class="quiz-wrap">
-  <div class="quiz-q">Un pod Kubernetes nommé <code>kube-update-helper</code> dans le namespace <code>kube-system</code> exécute l'image <code>alpine:latest</code> avec <code>hostPID: true</code> et <code>hostNetwork: true</code>. Il a été créé par le ServiceAccount <code>default</code> du namespace <code>default</code>. Quels sont les indicateurs de compromission et comment investiguer ?<small>K8s · Niveau : difficile</small></div>
-  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-q">💊 Q2 — Un container Docker a été supprimé (<code style="font-family:var(--mono)">docker rm</code>). Quels artefacts peut-on encore retrouver sur l'hôte ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
   <div class="quiz-answer">
-    <strong>Indicateurs de compromission multiples :</strong><br><br>
-    1. <strong>Nom trompeur</strong> : "kube-update-helper" imite les composants système légitimes. Vérifier avec <code>kubectl get pods -n kube-system</code> — ce pod ne devrait pas exister.<br>
-    2. <strong>Image générique</strong> : alpine:latest dans kube-system est suspect. Les composants K8s utilisent des images spécifiques (k8s.gcr.io/).<br>
-    3. <strong>hostPID: true</strong> : le container voit tous les processus de l'hôte — permet d'attaquer les processus hôte ou de s'injecter dans un autre processus.<br>
-    4. <strong>hostNetwork: true</strong> : le container partage le réseau de l'hôte — accès direct au réseau interne sans isolation.<br>
-    5. <strong>ServiceAccount default/default</strong> : un pod système ne devrait pas utiliser le ServiceAccount par défaut d'un namespace applicatif.<br><br>
-    <strong>Investigation :</strong><br>
-    · <code>kubectl describe pod kube-update-helper -n kube-system</code> → voir les events et l'historique<br>
-    · <code>kubectl logs kube-update-helper -n kube-system</code> → activité du container<br>
-    · K8s Audit Log : <code>verb=create resource=pods</code> → qui a créé ce pod et depuis quelle IP<br>
-    · <code>kubectl exec kube-update-helper -n kube-system -- ps aux</code> → processus en cours<br>
-    · Falco : events de type "shell spawned in container" ou "write to sensitive file"<br>
-    · <strong>Ne pas supprimer avant acquisition</strong> : <code>kubectl cp</code> pour récupérer les fichiers suspects
+    <span class="quiz-ok">✓</span> Plusieurs sources persistent après <code style="font-family:var(--mono)">docker rm</code> : (1) <strong>Logs daemon Docker</strong> dans journald — toutes les opérations create/start/stop/rm avec timestamps ; (2) <strong>Volumes nommés</strong> dans <code style="font-family:var(--mono)">/var/lib/docker/volumes/</code> — non supprimés par <code style="font-family:var(--mono)">docker rm</code> (nécessite <code style="font-family:var(--mono)">docker volume rm</code>) ; (3) <strong>Layers overlay2</strong> — peuvent rester sur disque selon la politique de cleanup ; (4) <strong>L'image</strong> utilisée reste présente (voir avec <code style="font-family:var(--mono)">docker images</code>) ; (5) <strong>Audit logs système</strong> (auditd) si configurés sur l'hôte.
   </div>
 </div>
-</div><!-- /tab-outils -->
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q3 — Comment un attaquant peut-il s'échapper d'un container Docker vers l'hôte via le flag <code style="font-family:var(--mono)">--privileged</code> ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> Un container <code style="font-family:var(--mono)">--privileged</code> a accès à tous les devices (<code style="font-family:var(--mono)">/dev/</code>), peut modifier les namespaces, et a toutes les capabilities Linux. L'escape classique : <code style="font-family:var(--mono)">fdisk -l</code> pour identifier le disque hôte → <code style="font-family:var(--mono)">mkdir /mnt/hôte && mount /dev/sda1 /mnt/hôte</code> → accès complet au FS hôte → <code style="font-family:var(--mono)">chroot /mnt/hôte</code> → shell root sur l'hôte. Détection : <code style="font-family:var(--mono)">config.v2.json</code> avec <code style="font-family:var(--mono)">Privileged=true</code>, appels <code style="font-family:var(--mono)">mount</code> dans les logs container.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q4 — Quels sont les artefacts forensiques clés dans Kubernetes pour identifier qui a créé un pod malveillant ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> La source principale est l'<strong>API Server Audit Log</strong> — chaque requête API est enregistrée avec : l'identité de l'utilisateur (<code style="font-family:var(--mono)">user.username</code> ou ServiceAccount), le timestamp, le verbe (<code style="font-family:var(--mono)">create</code>), la ressource (<code style="font-family:var(--mono)">pods</code>), le namespace, et l'IP source. Compléter avec : <code style="font-family:var(--mono)">kubectl get events</code> pour la timeline des opérations, <code style="font-family:var(--mono)">kubectl describe pod</code> pour les métadonnées du pod (annotations, labels, créateur), et les bindings RBAC pour comprendre comment l'identité avait ces permissions.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q5 — Pourquoi le docker.sock monté dans un container est-il un IOC critique ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> <code style="font-family:var(--mono)">/var/run/docker.sock</code> est la socket Unix du daemon Docker. Quand elle est montée dans un container (via <code style="font-family:var(--mono)">-v /var/run/docker.sock:/var/run/docker.sock</code>), le container peut <strong>contrôler le daemon Docker de l'hôte</strong> directement — créer de nouveaux containers, lancer des containers privilégiés, monter le FS hôte, exécuter des commandes sur l'hôte. C'est un <strong>escape de container immédiat</strong> : depuis l'intérieur, un attaquant peut faire <code style="font-family:var(--mono)">docker run --privileged -v /:/host alpine chroot /host</code> pour obtenir un shell root sur l'hôte. Détection : <code style="font-family:var(--mono)">docker inspect</code> → <code style="font-family:var(--mono)">HostConfig.Binds</code> contient <code style="font-family:var(--mono)">docker.sock</code>.
+  </div>
+</div>
+
+<div style="text-align:center;margin-top:1.5rem">
+  <a href="../quiz.html" class="fiche-cta-btn fiche-cta-red">💊 Plus de questions</a>
+</div>
+
+</div><!-- /tab-quiz -->
+
+
+<!-- Footer -->
+<div class="fiche-cta-section">
+  <div class="fiche-cta-text">Continuer l'exploration</div>
+  <div class="fiche-cta-buttons">
+    <a href="linux_forensique.html"               class="fiche-cta-btn fiche-cta-dim">🐧 Linux Forensique</a>
+    <a href="vm_forensique.html"                  class="fiche-cta-btn fiche-cta-dim">🖥 VM Forensique</a>
+    <a href="cloud_forensique.html"               class="fiche-cta-btn fiche-cta-dim">☁️ Cloud Forensique</a>
+    <a href="network_traffic_analysis_avance.html" class="fiche-cta-btn fiche-cta-dim">📡 Network Analysis</a>
+    <a href="../quiz.html"                        class="fiche-cta-btn fiche-cta-red">💊 Quiz →</a>
+    <a href="index.html"                          class="fiche-cta-btn fiche-cta-orange">← Toutes les fiches</a>
+  </div>
+</div>
 
 <script>
-// ── Tabs ──
 function showTab(id, btn) {
-  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
-  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
-  var el = document.getElementById('tab-'+id);
-  if(el) el.classList.add('active');
+  document.querySelectorAll('.tab-page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.tab-dk').forEach(function(b){ b.classList.remove('active'); });
+  var page = document.getElementById('tab-' + id);
+  if(page) page.classList.add('active');
   if(btn) btn.classList.add('active');
+  window.scrollTo({top: document.getElementById('dk-tabs').offsetTop - 60, behavior:'smooth'});
 }
-
-// ── Quiz ──
-document.addEventListener('click', function(e) {
-  if(e.target && e.target.classList.contains('quiz-reveal-btn')) {
-    var wrap = e.target.closest('.quiz-wrap');
-    if(!wrap) return;
-    var ans = wrap.querySelector('.quiz-answer');
-    if(ans) ans.style.display = ans.style.display === 'block' ? 'none' : 'block';
-  }
-});
-
-// ── Docker zones ──
-var dockerZones = {
-  daemon: {
-    icon:'⚙️', title:'Docker Daemon — Logs et configuration',
-    body:`<strong>Logs daemon</strong> : <code>journalctl -u docker.service</code> ou <code>/var/log/docker.log</code> selon la distrib. Contient les démarrages/arrêts de containers, erreurs de pull d'image, crashes.<br><br>
-    <strong>/var/lib/docker/</strong> : racine du stockage Docker.<br>
-    · <code>containers/[ID]/config.v2.json</code> : configuration complète du container (image, commande, variables d'env, montages, réseau)<br>
-    · <code>containers/[ID]/hostconfig.json</code> : configuration hôte (privileged, caps, mounts)<br>
-    · <code>containers/[ID]/[ID]-json.log</code> : logs stdout/stderr du container (si log driver = json-file)<br><br>
-    <strong>daemon.json</strong> : <code>/etc/docker/daemon.json</code> — configuration du daemon (log driver, registries autorisés, réseau). Un log driver = "none" = anti-forensique.`
-  },
-  containers: {
-    icon:'📦', title:'Containers — Métadonnées et logs',
-    body:`<strong>config.v2.json</strong> : exhaustif — image utilisée, commande ENTRYPOINT/CMD, variables d'environnement (credentials!), montages, réseau, labels, timestamps (créé, démarré, fini).<br><br>
-    <strong>hostconfig.json</strong> : configuration sécurité critique — <code>Privileged: true</code>, <code>CapAdd</code>, <code>Binds</code> (montages), <code>NetworkMode: host</code>. Révèle immédiatement les containers dangereux.<br><br>
-    <strong>[ID]-json.log</strong> : logs JSON du container avec timestamps. Même si le container est arrêté, ce fichier persiste jusqu'à <code>docker rm</code>.<br><br>
-    <strong>Variables d'environnement</strong> : souvent utilisées pour passer des credentials (AWS_ACCESS_KEY, DB_PASSWORD). Visibles dans config.v2.json en clair.`
-  },
-  volumes: {
-    icon:'💾', title:'Volumes — Données persistantes',
-    body:`<strong>/var/lib/docker/volumes/[nom]/</strong> : données des volumes nommés. Persistent après <code>docker rm</code> (sauf <code>docker rm -v</code>).<br><br>
-    <strong>Contenu typique</strong> : bases de données, fichiers de configuration, logs applicatifs, uploads utilisateur.<br><br>
-    <strong>Forensique</strong> : inspecter le contenu directement depuis l'hôte — pas besoin d'un container actif.<br>
-    <code>ls /var/lib/docker/volumes/[nom]/_data/</code><br><br>
-    <strong>Bind mounts</strong> : si le container montait un répertoire hôte (<code>-v /host/path:/container/path</code>), les données sont dans le répertoire hôte lui-même — chercher dans config.v2.json le champ Binds.<br><br>
-    <strong>tmpfs mounts</strong> : montage en mémoire uniquement — disparaît à l'arrêt du container. Anti-forensique.`
-  },
-  network: {
-    icon:'🌐', title:'Réseau Docker — Interfaces et connexions',
-    body:`<strong>Interfaces réseau hôte</strong> : <code>ip addr</code> — les bridges Docker apparaissent (<code>docker0</code>, <code>br-[hash]</code>). Chaque réseau Docker = un bridge.<br><br>
-    <strong>/proc/net/tcp</strong> depuis l'hôte : toutes les connexions TCP incluant celles des containers (ils partagent le noyau). Permet de détecter les connexions C2 même si <code>netstat</code> dans le container est modifié.<br><br>
-    <strong>iptables</strong> : <code>iptables -L -n -v</code> — Docker ajoute des règles NAT pour le port forwarding. Révèle les ports exposés de chaque container.<br><br>
-    <strong>network/files/local-kv.db</strong> : <code>/var/lib/docker/network/files/</code> — base SQLite des réseaux Docker. Contient les configurations de réseaux et leurs membres.`
-  },
-  proc: {
-    icon:'🔬', title:'/proc/ hôte — Processus container visibles',
-    body:`Les processus d'un container sont des processus Linux normaux vus depuis l'hôte, avec des namespaces différents. <code>ps aux</code> sur l'hôte montre les processus container.<br><br>
-    <strong>Identifier un processus container</strong> : <code>cat /proc/[PID]/cgroup</code> → contient l'ID du container si c'est un processus containerisé.<br><br>
-    <strong>Accéder au filesystem d'un container via /proc/</strong> :<br>
-    <code>ls /proc/[PID]/root/</code> = racine du filesystem container<br>
-    <code>cat /proc/[PID]/environ | tr '\0' '\n'</code> = variables d'env avec credentials<br>
-    <code>ls /proc/[PID]/fd/</code> = fichiers ouverts par le processus container<br><br>
-    <strong>nsenter</strong> : <code>nsenter -t [PID] -m -u -i -n -p /bin/bash</code> = entrer dans les namespaces d'un container arrêté.`
-  },
-  images: {
-    icon:'🖼️', title:'Images Docker — Layers overlay2',
-    body:`<strong>/var/lib/docker/image/overlay2/</strong> : base de données des images.<br>
-    · <code>imagedb/content/sha256/</code> : configs des images (entrypoint, cmd, env, layers)<br>
-    · <code>imagedb/metadata/</code> : métadonnées (tags, timestamps de pull)<br>
-    · <code>layerdb/sha256/</code> : index des layers<br><br>
-    <strong>/var/lib/docker/overlay2/[hash]/diff/</strong> : contenu de chaque layer (décompressé). Navigable directement avec <code>ls</code>.<br><br>
-    <strong>Forensique</strong> :<br>
-    <code>find /var/lib/docker/overlay2/ -name "*.sh" -newer /etc/passwd</code><br>
-    <code>grep -r "password\|token\|secret" /var/lib/docker/overlay2/ 2>/dev/null</code>`
-  }
-};
-
-function showDockerZone(key) {
-  var d = dockerZones[key];
-  if(!d) return;
-  var p = document.getElementById('docker-zone-detail');
-  p.className = 'arch-detail live';
-  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.title+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
-}
-
-// ── K8s sources ──
-var k8sSources = {
-  apiserver: {
-    icon:'🔴', title:'API Server Audit Log',
-    body:`<strong>Emplacement</strong> : défini dans la config kube-apiserver, typiquement <code>/var/log/kubernetes/audit.log</code> sur le control plane.<br><br>
-    <strong>Format</strong> : JSON, un événement par ligne. Champs clés : timestamp, user.username, sourceIPs, verb, objectRef (resource, namespace, name), responseStatus.code.<br><br>
-    <strong>Requêtes forensiques critiques</strong> :<br>
-    · verb = "exec" → <code>kubectl exec</code> dans un pod (qui, quand, quel pod)<br>
-    · verb = "create" + resource = "pods" depuis IP inhabituelle → pod malveillant créé<br>
-    · verb = "get" + resource = "secrets" → accès aux secrets K8s<br>
-    · user.username = "system:anonymous" → accès non authentifié<br><br>
-    <code>cat /var/log/kubernetes/audit.log | jq 'select(.verb=="exec")'</code>`
-  },
-  etcd: {
-    icon:'🗄️', title:'etcd — Base de données de l\'état du cluster',
-    body:`<strong>etcd</strong> stocke <em>tout</em> l'état du cluster K8s : pods, services, secrets, configmaps, RBAC. C'est la cible ultime d'un attaquant — accès à etcd = accès à tous les secrets du cluster.<br><br>
-    <strong>Accès forensique</strong> :<br>
-    <code>ETCDCTL_API=3 etcdctl get / --prefix --keys-only</code> → lister toutes les clés<br>
-    <code>ETCDCTL_API=3 etcdctl get /registry/secrets --prefix</code> → tous les secrets<br><br>
-    <strong>Secrets en base64</strong> : les Secrets K8s sont stockés en base64 dans etcd (pas chiffrés par défaut). Un accès à etcd expose tous les tokens, credentials, clés SSH.<br><br>
-    <strong>Chiffrement at-rest</strong> : si activé (EncryptionConfig), les secrets sont chiffrés dans etcd — vérifier avec <code>--encryption-provider-config</code> dans kube-apiserver.`
-  },
-  pods: {
-    icon:'📦', title:'Pods &amp; Containers — Sources de logs',
-    body:`<strong>kubectl logs</strong> : logs stdout/stderr du container principal. <code>--previous</code> = logs du container précédent (si redémarré). Stockés dans <code>/var/log/containers/</code> sur le nœud worker.<br><br>
-    <strong>/var/log/containers/</strong> : symlinks vers les logs container (format: pod-name_namespace_container-name-[hash].log).<br>
-    <strong>/var/log/pods/</strong> : organisation par pod et container.<br><br>
-    <strong>kubectl describe pod</strong> : events du pod (schedule, pull image, start, crash). Les events K8s sont conservés ~1h par défaut.<br><br>
-    <strong>crictl</strong> (container runtime interface) : <code>crictl logs [container-id]</code>, <code>crictl inspect [container-id]</code>. Accès direct au runtime (containerd, CRI-O) sans passer par kubectl.`
-  },
-  rbac: {
-    icon:'🔐', title:'RBAC &amp; ServiceAccounts — Droits et permissions',
-    body:`<strong>ServiceAccount tokens</strong> : montés automatiquement dans chaque pod à <code>/var/run/secrets/kubernetes.io/serviceaccount/token</code>. Un attaquant dans un pod peut utiliser ce token pour appeler l'API K8s.<br><br>
-    <strong>Vérifier les droits d'un ServiceAccount</strong> :<br>
-    <code>kubectl auth can-i --list --as=system:serviceaccount:default:mysa</code><br><br>
-    <strong>ClusterRoleBindings dangereux</strong> :<br>
-    <code>kubectl get clusterrolebinding -o json | jq '.items[] | select(.roleRef.name=="cluster-admin")'</code><br><br>
-    <strong>Forensique escalade</strong> : chercher dans l'Audit Log les attributions de rôles (verb=create, resource=rolebindings) depuis une IP ou un ServiceAccount inhabituel.`
-  },
-  nodes: {
-    icon:'🖥️', title:'Nœuds worker — Forensique Linux + runtime',
-    body:`Les nœuds worker sont des machines Linux — toutes les techniques de <strong>Linux forensique s'appliquent</strong>.<br><br>
-    <strong>Spécificités K8s</strong> :<br>
-    · <code>journalctl -u kubelet</code> : logs du kubelet (agent K8s sur le nœud)<br>
-    · <code>journalctl -u containerd</code> : logs du runtime de containers<br>
-    · <code>/var/lib/kubelet/pods/[pod-uid]/</code> : données et volumes des pods sur ce nœud<br>
-    · <code>/var/log/containers/</code> : logs de tous les containers du nœud<br><br>
-    <strong>Depuis l'hôte nœud</strong> :<br>
-    <code>crictl ps -a</code> : tous les containers (incluant arrêtés)<br>
-    <code>crictl inspect [id]</code> : détails container<br>
-    <code>crictl logs [id]</code> : logs directs`
-  },
-  secrets: {
-    icon:'🔑', title:'Secrets K8s — Credentials exposés',
-    body:`<strong>Secrets K8s</strong> : ressources encodées en base64 (pas chiffrées !). Contiennent des credentials, tokens, clés TLS, mots de passe de base de données.<br><br>
-    <strong>Accès depuis un pod compromis</strong> :<br>
-    <code>cat /var/run/secrets/kubernetes.io/serviceaccount/token</code> → token ServiceAccount<br>
-    <code>kubectl get secret --all-namespaces -o yaml</code> → si droits suffisants<br><br>
-    <strong>Forensique</strong> :<br>
-    · Audit Log : verb = "get/list" sur resource = "secrets" depuis ServiceAccount inattendu<br>
-    · etcd : lire directement les secrets (accès control plane requis)<br><br>
-    <strong>Décodage</strong> : <code>kubectl get secret mysecret -o jsonpath='{.data.password}' | base64 -d</code>`
-  }
-};
-
-function showK8s(key) {
-  var d = k8sSources[key];
-  if(!d) return;
-  var p = document.getElementById('k8s-detail');
-  p.className = 'arch-detail live';
-  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.title+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
-}
-
-// ── Attack details ──
-var attackDetails = {
-  socket: {
-    icon:'🔌', name:'Docker Socket Abuse (T1552.007)',
-    body:`<strong>Mécanisme</strong> : si <code>/var/run/docker.sock</code> est monté dans un container, ce container peut contrôler le daemon Docker de l'hôte — créer de nouveaux containers avec montage <code>/:/hostroot</code>, obtenir un shell root sur l'hôte.<br><br>
-    <strong>Détection</strong> :<br>
-    · <code>docker inspect [ID] | grep docker.sock</code> — montage du socket<br>
-    · config.v2.json : champ Binds contenant "docker.sock"<br>
-    · Falco rule : "Docker socket mounted in container"<br>
-    · Audit K8s : pod créé avec hostPath /var/run/docker.sock<br><br>
-    <strong>Impact</strong> : équivalent d'un accès root sur l'hôte — escape immédiat du container.`
-  },
-  escape: {
-    icon:'🚀', name:'Container Escape (T1611)',
-    body:`<strong>Vecteurs principaux</strong> :<br>
-    · <strong>--privileged</strong> : accès à tous les devices hôte → <code>mount /dev/sda1 /mnt</code> = accès disque hôte<br>
-    · <strong>CVE noyau</strong> : exploits du noyau partagé (CVE-2022-0492 cgroup escape, runc CVE-2019-5736)<br>
-    · <strong>hostPID + ptrace</strong> : injection dans un processus hôte<br>
-    · <strong>hostPath /</strong> : montage de la racine hôte → accès complet au filesystem<br><br>
-    <strong>Artefacts forensiques</strong> :<br>
-    · Syslog hôte : montages inattendus, accès à /dev/<br>
-    · Falco : "container started with privileged flag"<br>
-    · /proc/[PID]/mounts du container : montages inhabituels`
-  },
-  cryptominer: {
-    icon:'⛏️', name:'Cryptomining (T1496)',
-    body:`<strong>Scénario typique</strong> : attaquant accède à un cluster K8s mal sécurisé → déploie des DaemonSets ou Deployments exécutant XMRig (Monero) sur tous les nœuds.<br><br>
-    <strong>Indicateurs</strong> :<br>
-    · CPU à 100% sur les nœuds<br>
-    · Image inconnue depuis registry externe<br>
-    · Connexions sortantes vers des pools de mining (pool.minexmr.com, :3333, :4444)<br>
-    · Processus <code>xmrig</code>, <code>minerd</code>, <code>kdevtmpfsi</code> dans les containers<br><br>
-    <strong>Artefacts K8s</strong> :<br>
-    · <code>kubectl get pods --all-namespaces | grep -v Running</code> → pods suspects<br>
-    · Events K8s : création de pods depuis compte compromis<br>
-    · Audit Log : verb=create resource=daemonsets depuis IP externe`
-  },
-  apiserver: {
-    icon:'🔓', name:'API Server non authentifié (T1078)',
-    body:`<strong>Mécanisme</strong> : si l'API Server K8s est exposé publiquement sans authentification (port 8080 non sécurisé ou mauvaise config RBAC avec system:anonymous), un attaquant peut créer des pods, lire des secrets, prendre le contrôle du cluster.<br><br>
-    <strong>Détection</strong> :<br>
-    · Audit Log : <code>user.username = "system:anonymous"</code> avec verb=create/get<br>
-    · Logs API Server : requêtes HTTP depuis IPs externes<br>
-    · Shodan / Censys : clusters K8s exposés publiquement (scan passif)<br><br>
-    <strong>Vérification</strong> :<br>
-    <code>curl -k https://[k8s-ip]:6443/api/v1/namespaces/default/pods</code><br>
-    → Si répond sans credentials : API Server non authentifiée`
-  },
-  secrets: {
-    icon:'🔑', name:'Exfiltration de Secrets K8s (T1552.001)',
-    body:`<strong>Mécanisme</strong> : un attaquant dans un pod utilise le ServiceAccount token monté automatiquement pour appeler l'API K8s et lire tous les Secrets du namespace (ou du cluster si ClusterRole trop permissif).<br><br>
-    <strong>Depuis un pod compromis</strong> :<br>
-    <code>TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)</code><br>
-    <code>curl -H "Authorization: Bearer $TOKEN" https://kubernetes.default/api/v1/namespaces/default/secrets</code><br><br>
-    <strong>Artefacts</strong> :<br>
-    · Audit Log : verb=list resource=secrets depuis ServiceAccount d'application<br>
-    · Réseau : connexions inhabituelles vers kubernetes.default depuis un pod applicatif`
-  },
-  supply: {
-    icon:'🏭', name:'Supply Chain — Image compromise (T1195.002)',
-    body:`<strong>Mécanismes</strong> :<br>
-    · Typosquatting sur Docker Hub : <code>ngnix</code> vs <code>nginx</code><br>
-    · Compromission du pipeline CI/CD : injection de code dans le Dockerfile ou les scripts de build<br>
-    · Tag poisoning : image légitime retaguée avec contenu malveillant<br>
-    · Dépendance compromise : package npm/pip malveillant intégré à l'image<br><br>
-    <strong>Détection</strong> :<br>
-    · Comparer le digest SHA256 : <code>docker inspect --format='{{.Id}}'</code> vs digest officiel<br>
-    · <code>trivy image [nom]</code> : scan de vulnérabilités et secrets<br>
-    · <code>docker history [image] --no-trunc</code> : instructions inhabituelles<br>
-    · Signature d'image : Docker Content Trust (NOTARY) ou cosign (Sigstore)`
-  }
-};
-
-function showAttack(key) {
-  var d = attackDetails[key];
-  if(!d) return;
-  document.querySelectorAll('.meta-card').forEach(function(c){c.classList.remove('sel');});
-  var p = document.getElementById('attack-detail');
-  p.className = 'meta-detail live';
-  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.name+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
-}
-
 (function(){
   var bar = document.getElementById('scroll-progress');
-  var btn = document.getElementById('back-top');
-  window.addEventListener('scroll', function(){
-    var doc = document.documentElement;
-    var scrolled = doc.scrollTop || document.body.scrollTop;
-    var total = doc.scrollHeight - doc.clientHeight;
-    if(bar) bar.style.width = (total > 0 ? (scrolled/total*100) : 0)+'%';
-    if(btn) btn.classList.toggle('visible', scrolled > 300);
+  if(bar) window.addEventListener('scroll', function(){
+    var d = document.documentElement;
+    bar.style.width = Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';
+  },{passive:true});
+  var bt = document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){
+    bt.classList.toggle('visible', window.scrollY > 300);
+  },{passive:true});
+  document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var ans = btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+      ans.classList.toggle('visible');
+      btn.textContent = ans.classList.contains('visible') ? 'Masquer ↑' : 'Révéler →';
+    });
+  });
+  document.querySelectorAll('.dk-cmd').forEach(function(el){
+    el.title = 'Cliquer pour copier';
+    el.addEventListener('click', function(){
+      navigator.clipboard && navigator.clipboard.writeText(el.innerText.trim()).then(function(){
+        var o = el.style.background;
+        el.style.background = 'rgba(48,232,138,.2)';
+        setTimeout(function(){ el.style.background = o; }, 700);
+      });
+    });
   });
 })();
 </script>
-
-<!-- Notes utilisateur (CAS-IN v2.16) -->
-<script src="../js/components/fiche-notes.js" defer></script>
-<script src="../js/components/theme-toggle.js" defer></script>
-<script src="../js/components/fiche-common.js" defer></script>
-    <script src="../js/components/fiche-reader.js" defer></script>
-<script src="../js/components/fiche-search.js" defer></script>
-<script src="../js/components/search-modal.js" defer></script>
-<script src="../js/components/fiche-related.js" defer></script>
 </body>
 </html>
