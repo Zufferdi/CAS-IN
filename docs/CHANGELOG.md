@@ -4,6 +4,74 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.35] — 2026-05-03
+
+Release de **mise à niveau du corpus**, sans nouveau scénario. **Bloc 7 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique continue : Android malware + BEC / douane frontière / harcèlement portail anonyme / IA générative / IoT camera. Le corpus reste à 110 scènes ; le catalogue PNJ reste à 30 personnages.
+
+### Ajouté — Retrofit bloc 7 (5 anciennes scènes adaptées)
+
+| Scène | Steps | Difficulté | NPCs assignés | Bifurcation marquée |
+|---|---|---|---|---|
+| `flubot-bec-cascade` | 5 | medium | `ofs_rssi_fedch`, `fr_prosecutor_cyber` | step 4 #1 et #2 → 'end' explicite |
+| `frontieres` | 5 | medium | `nicolet`, `ddps_general_counsel` | step 0 #0 (catastrophe douane) |
+| `harcelement-ne` | 5 | easy | `ge_prosecutor_cyber`, `forensics_lead_zh` | step 0 #1 (catastrophe portail anonyme) |
+| `ia-generative-faux-titres` | 5 | hard | `ge_prosecutor_cyber`, `forensics_lead_zh` | step 4 #1 et #2 → 'end' explicite |
+| `iot-camera-compromise` | 5 | hard | `forensics_lead_zh`, `ge_prosecutor_cyber` | step 4 #1 et #2 → 'end' explicite |
+
+**Diversification thématique du bloc 7** : (a) **FluBot Android + BEC commune** (smishing → mobile compromis → exfiltration contacts → BEC ciblé sur secrétaire communale), (b) **Douane frontière laptop chiffré** (LD art. 100, LMAD, art. 31 Cst, refus mot de passe), (c) **Harcèlement portail anonyme cantonal** (DSA art. 16, mesures superprovisionnelles 261 CPC, plainte art. 173-174 CP), (d) **IA générative faux titres** (art. 251 CP applicable malgré rédaction IA, expertise EPFL stylométrique), (e) **IoT camera compromise** (Reolink + 47 connexions étrangères, art. 179quater vs. 143bis+144bis CP).
+
+**Note de sélection** : 2 scènes initialement proposées (`ia-medicale-genome`, `intrusion-stable`) n'existent pas dans le corpus. Remplacées par `ia-generative-faux-titres` (IA générative + faux titres) et `iot-camera-compromise` (IoT caméra Reolink) — thématiques distinctes mais cohérentes avec la diversification recherchée.
+
+### Pas de nouveau PNJ
+
+Troisième release consécutive (après v2.32 et v2.34) sans création de PNJ. Confirmation que le catalogue de 30 PNJ avec 8 transposables est désormais à pleine maturité pour le retrofit.
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 48 scènes touchées par v2.24 → v2.35 (était 43). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v68 → v69
+
+Header v2.35 documentant le retrofit bloc 7. Pas de nouveau PNJ.
+
+### Statistiques v2.35
+
+| Indicateur | v2.34 | v2.35 |
+|---|---|---|
+| Scènes totales | 110 | **110** (inchangé) |
+| Scènes avec NPCs assignés | 38 | **43** (+5) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 38 | **43** (+5) |
+| PNJ catalogue | 30 | **30** (inchangé) |
+| PNJ transposables (multi-scènes) | 8 | 8 (inchangé) |
+| Cantons couverts | 14/26 | 14/26 (inchangé) |
+| Service Worker | v68 | **v69** |
+
+### Notes éditoriales
+
+**Sur la scène `flubot-bec-cascade`.** Scène medium documentée par les attaques FluBot réelles 2021-2024 sur les communes suisses. Le scénario modélise une **chaîne d'attaque complète** rarement observée dans une seule scène : SMS Flubot → Android compromis → exfiltration contacts/SMS → BEC ciblé sur secrétaire communale → virement 47'800 CHF vers compte hongrois. Le marqueur souligne la doctrine ATF 6B_383/2019 sur l'erreur excusable face à des SMS spoofés sophistiqués — la sanction individuelle décrédibilise la fonction publique et démotive les déclarations futures de communes victimes.
+
+**Sur la scène `frontieres`.** Scène medium qui explore les **limites des pouvoirs douaniers** face à un voyageur refusant de donner son mot de passe d'ordinateur. Le scénario est documenté par plusieurs cas réels suisses 2018-2024 (notamment les voyageurs en provenance de Russie / Chine). Le marqueur souligne que les pouvoirs LD/LMAD ne couvrent PAS l'obligation de déchiffrer un appareil chiffré sans mandat MP — la fouille forcée serait invalidée par le TAF et l'incident transformé en cause célèbre médiatique sur la souveraineté numérique.
+
+**Sur la scène `harcelement-ne`.** Scène easy mais très subtile car elle articule **trois cadres juridiques distincts** : DSA européen (notification art. 16 aux plateformes), procédure civile (mesures superprovisionnelles 261 CPC ex parte), procédure pénale (art. 173-174 CP, art. 198 CP). Le marqueur souligne le piège majeur d'un Portail Anonyme cantonal : publier des signalements anonymes non vérifiés viole simultanément la nLPD, la présomption d'innocence (CEDH Allenet de Ribemont 1995), et le devoir de diligence cantonal. Le portail doit être conçu comme outil de signalement à PISTES vérifiées par enquêteurs, pas comme outil de publication directe.
+
+**Sur la scène `ia-generative-faux-titres`.** Scène hard très d'actualité 2025-2026. Le scénario modélise un **dossier précurseur** sur l'IA générative en droit pénal suisse : M. V. consultant a fabriqué intégralement par IA son CV, ses lettres de recommandation, ses contrats de travail antérieurs, ses certificats de formation. Question juridique centrale : **l'art. 251 CP (faux dans les titres) s'applique-t-il à des documents IA-générés** ? La doctrine moderne (Dupont-Lassalle, Revue pénale suisse 2024 + Niggli/Heimgartner Strafrecht II 2025) répond OUI — le faux ne dépend pas du moyen de fabrication mais du caractère mensonger. Le marqueur souligne la disproportion d'une demande de peine plancher 5 ans (alors que art. 251 CP a un MAXIMUM de 5 ans, pas un plancher).
+
+**Sur la scène `iot-camera-compromise`.** Scène hard sur la **double dimension d'une caméra IoT compromise** : preuve d'un cambriolage et vecteur d'une atteinte au domaine secret distincte (art. 179quater CP). Le scénario modélise une caméra Reolink chez Mme L. (67 ans, agressée lors du cambriolage) avec 47 connexions étrangères et firmware modifié. Question juridique fine : la backdoor SSH est-elle un « dispositif d'écoute » au sens art. 179quater CP, ou relève-t-elle plutôt de l'art. 143bis + 144bis CP ? Le marqueur souligne que bloquer toutes les preuves IoT au nom du « risque de manipulation » prive la victime de la principale preuve disponible — la doctrine forensique 2025 permet d'authentifier les caméras IoT compromises (timestamps NTP + métadonnées EXIF + hash + logs serveur cloud).
+
+**Sur le rythme du retrofit.** Avec 7 blocs livrés en 7 versions (v2.29 à v2.35), 43 scènes du corpus historique sont désormais équipées de NPCs et marqueurs narratifs (sur 110 totales). La progression est de **39 % du corpus mis à niveau**. Reste **~62 scènes** à traiter (~12 blocs au rythme actuel). Le sprint vers le 100 % continue.
+
+### Prochaines évolutions possibles
+
+```
+v2.36  Retrofit bloc 8 (5 anciennes scènes, à proposer)
+       Candidates par diversification : ip_accusatrice, jura-vishing-1m,
+                                         kks-deepfake, lockbit-victime,
+                                         lsi-vs-lpd-timing
+v2.37  Retrofit bloc 9
+v2.38  Examen blanc 50q/90 min
+v2.39  Heatmap canton enrichie + badges par canton
+```
+
 ## [2.34] — 2026-05-03
 
 Release de **mise à niveau du corpus**, sans nouveau scénario. **Bloc 6 du retrofit** (5 anciennes scènes adaptées) avec diversification thématique continue : opération multi-juridictions Eurojust / traite EH / vishing aînés / malware fileless / SCADA hydroélectrique. Le corpus reste à 110 scènes ; le catalogue PNJ reste à 30 personnages (réutilisation maximale des 8 transposables existants).
