@@ -1,5 +1,61 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v64 : v2.30 — 2 nouveaux scénarios (Handala/Stryker NE + Pédo-hunter FR) + retrofit bloc 2
+// v65 : v2.31 — Retrofit bloc 3 (5 anciennes scènes adaptées) + 2 PNJ
+//
+//       Version sans nouveau scénario, focalisée sur la mise à niveau
+//       systématique du corpus historique. Bloc 3 = diversification
+//       maximale : diplomatie / humanitaire / santé / cloud / ransomware.
+//
+//       Retrofit bloc 3 — 5 anciennes scènes adaptées :
+//
+//         • burgenstock-neutralite (5 steps, hard) — sommet diplomatique
+//             npcs=[ofcs_coordinator, src_director]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : attribution publique précipitée à un État
+//             (Russie/Chine/Iran) sans validation SRC viole la
+//             neutralité (Convention La Haye 1907 + LMSI).
+//
+//         • cicr_2022 (8 steps, hard) — Croix-Rouge Genève, incident réel
+//             janvier 2022 (515'000 personnes vulnérables exposées)
+//             npcs=[cicr_dpo, ge_prosecutor_cyber]
+//             Marqueur step 0 #0 (sous-estimer la gravité humanitaire =
+//             violation doctrine 'do no harm', risque physique pour
+//             réfugiés / disparus / personnes en zones de conflit).
+//
+//         • cistec-2025-sante (5 steps, hard) — éditeur logiciel
+//             hospitalier ZH, 23 hôpitaux clients (CHUV, HUG, Inselspital)
+//             npcs=[ciso_logitech, forensics_lead_zh]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : communication anticipée alarmiste = réaction en
+//             chaîne (patients, presse, hôpitaux poursuivant Cistec).
+//
+//         • cloud-aws-s3-leak (5 steps, hard) — RSSI OFS, bucket S3 ouvert
+//             chez sous-traitant fédéral DataMine
+//             npcs=[ofs_rssi_fedch, ofcs_coordinator]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : saisir uniquement le sous-traitant viole le
+//             principe d'accountability (art. 5 nLPD), l'OFS reste
+//             responsable du traitement.
+//
+//         • comparis_2021 (5 steps, medium) — Hive ransomware, incident
+//             réel août 2021 sur Comparis.ch
+//             npcs=[ciso_logitech, nicolet]
+//             Marqueur step 0 #2 (paiement rançon Bitcoin sans analyse
+//             forensique = financement criminel + non-garantie + viole
+//             recommandations OFCS/FBI/NCSC).
+//
+//       2 nouveaux PNJ ajoutés à data/npcs.json (27 → 29) :
+//         • cicr_dpo (Tedeschi, fictif transposable, DPO CICR Genève)
+//         • ofs_rssi_fedch (Schaller, fictif transposable, RSSI office
+//                            fédéral générique)
+//
+//       Stats : 109 scènes / 29 PNJ / 23 scènes avec NPCs (8 v2.24+v2.28
+//       + 5 retrofit bloc 1 + 2 v2.30 nouveaux + 5 retrofit bloc 2 + 5
+//       retrofit bloc 3 (- 2 doublons des nouveaux comptés ailleurs)
+//       = 23 scènes avec NPCs au total).
+//
+//       Approche retrofit "par bloc de 5" : ~82 scènes restantes après
+//       v2.31. Reste ~16 blocs.
+//
 //
 //       Nouveaux scénarios v2.30 (corpus 107 → 109) :
 //
@@ -534,7 +590,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v64';
+const CACHE_VERSION = 'cas-in-v65';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
