@@ -4,7 +4,16 @@
   "icon": "🧠",
   "difficulty": "hard",
   "atmosphere": "ransomware",
-  "tags": ["MEMORY FORENSICS", "VOLATILITY", "MALWARE", "FORENSIQUE", "RAM", "FILELESS", "INCIDENT RESPONSE", "WINDOWS"],
+  "tags": [
+    "MEMORY FORENSICS",
+    "VOLATILITY",
+    "MALWARE",
+    "FORENSIQUE",
+    "RAM",
+    "FILELESS",
+    "INCIDENT RESPONSE",
+    "WINDOWS"
+  ],
   "legalRefs": [
     "Art. 144bis CP — Détérioration de données",
     "Art. 143 CP — Soustraction de données",
@@ -45,7 +54,7 @@
           "next": 1
         },
         {
-          "text": "Accepter le reboot pour ne pas créer de tension avec le DG : 47 chercheurs ont besoin du serveur, l'enquête se fera sur les disques. Documenter l'incident comme « reboot d'urgence ».",
+          "text": "Accepter le reboot pour ne pas créer de tension avec le DG : 47 chercheurs ont besoin du serveur, l'enquête se fera sur les disques à froid après réinstallation. Documenter ce choix opérationnel dans le PV avec horodatage. Approche pragmatique d'efficacité opérationnelle qui privilégie la production sur la rigueur forensique mémoire — décision assumée par la direction.",
           "ok": false,
           "pts": -30,
           "fb": "Catastrophe forensique irréversible. (1) <strong>Le malware est fileless</strong> (déjà signalé par l'EDR : aucun fichier suspect, juste un processus PowerShell anormal) — le reboot détruit la seule source de preuve. À 7h00, votre dossier est vide : pas de malware identifié, pas d'attribution possible, pas de poursuite pénale viable. (2) <strong>Vous violez ACPO Principle 1</strong> en modifiant l'état du système sans justification forensique, (3) <strong>Vous compromettez les futures investigations</strong> : les attaquants comprennent que cette entreprise reboote dès qu'elle détecte une intrusion → ils savent qu'ils ne sont pas obligés d'être furtifs, juste rapides. (4) <strong>Vous exposez l'entreprise à art. 305 CP</strong> par destruction de preuves dans un contexte d'enquête. La pression du DG ne justifie pas la destruction de preuves — votre rôle est précisément de tenir tête.",
@@ -54,7 +63,7 @@
           "next": 1
         },
         {
-          "text": "Compromis : capturer seulement les processus actifs et la table des connexions réseau (rapide, ~5 min), puis rebooter. C'est mieux que rien.",
+          "text": "Compromis intermédiaire : capturer seulement les processus actifs et la table des connexions réseau via Volatility live (rapide, ~5 min de capture sur le système actif), puis rebooter. Approche minimaliste qui sacrifie une partie de la richesse forensique mémoire pour respecter la contrainte opérationnelle, mais préserve l'essentiel des indicateurs de compromission active.",
           "ok": false,
           "pts": -20,
           "fb": "Compromis qui rate l'essentiel. (1) <strong>Liste de processus seule = preuves très limitées</strong> : sans le code injecté, sans les credentials volés, sans le shellcode chiffré, le procureur ne peut établir ni l'identité du malware, ni son origine, ni l'étendue de la compromission. La liste de processus est utile mais loin de suffire. (2) <strong>Vous transmettez aux attaquants un signal</strong> : ils sauront que cette entreprise rebooote vite, donc qu'ils peuvent rester courts. Adaptation tactique. (3) <strong>Faux gain de temps</strong> : 5 vs 25 minutes, mais le coût d'une enquête ratée se chiffre en mois. (4) <strong>Manque de rigueur procédurale</strong> : un dump partiel mal documenté est juridiquement plus contestable qu'un dump complet. Mieux vaut prendre 25 min pour faire correctement que 5 min pour faire à moitié.",
@@ -80,7 +89,7 @@
           "next": 2
         },
         {
-          "text": "Plan minimaliste : extraire seulement le shellcode (le plus prometteur), l'analyser, conclure dès que possible. Pas besoin de creuser les autres alertes.",
+          "text": "Plan minimaliste sur Volatility : extraire seulement le shellcode (le plus prometteur des 3 indicateurs malfind), l'analyser, conclure dès que possible sur l'attribution de l'attaque. Pas besoin de creuser les autres indicateurs (handles, network, dlllist) — ce serait du sur-investigation alors que le shellcode suffira pour l'identification de la souche.",
           "ok": false,
           "pts": -15,
           "fb": "Approche fragmentaire qui rate la richesse de l'analyse. (1) <strong>Les 3 alertes sont probablement liées</strong> : un même attaquant utilise typiquement plusieurs techniques (process hollowing + DLL injection + shellcode) — analyser une seule, c'est rater 2/3 du tableau. (2) <strong>Sans les connexions C2</strong> : pas d'attribution infrastructure, pas de demande EIMP possible, l'enquête s'arrête. (3) <strong>Sans la timeline d'exécution</strong> : le procureur ne peut établir ni la durée de l'intrusion, ni les actions précises de l'attaquant, ni la chaîne lateral movement vers d'autres machines. Le dossier reste fragile. (4) <strong>« Conclure dès que possible »</strong> est l'antithèse de la méthode forensique : on conclut quand toutes les pièces sont rassemblées, pas avant. La précipitation forensique est la première cause de classement de dossier pénal.",
@@ -89,7 +98,7 @@
           "next": 2
         },
         {
-          "text": "Lancer toutes les commandes Volatility disponibles (200+ plugins) en parallèle pour capturer le maximum de données — on triera après.",
+          "text": "Lancer toutes les commandes Volatility disponibles (200+ plugins) en parallèle sur le dump RAM pour capturer le maximum de données possibles d'un coup — on triera après l'extraction massive. Approche force-brute qui économise le travail de sélection en amont en générant tous les artefacts forensiques disponibles via les plugins existants.",
           "ok": false,
           "pts": -10,
           "fb": "Approche brute force qui crée plus de bruit que de signal. (1) <strong>200 plugins = ~50 GB de logs et fichiers extraits</strong>, dont 90% sans pertinence pour ce dossier précis. Vous noyer dans la donnée vous fait perdre 2-3 jours d'analyse pour des résultats qu'une approche ciblée aurait livrés en 6h. (2) <strong>Risque de saturer le poste analyste</strong> : Volatility 3 sur dump 64 GB consomme beaucoup de RAM et CPU — lancer 200 plugins en parallèle peut crasher l'analyse, perdant des heures. (3) <strong>Documentation procédurale impossible</strong> : 200 commandes à documenter dans le procès-verbal forensique, c'est ingérable. La défense exploitera la lourdeur pour pointer des incohérences. (4) <strong>Méthode forensique = ciblage hypothèse-driven</strong> : on a 3 alertes spécifiques, on creuse celles-là méthodiquement, pas tout l'univers.",
@@ -115,7 +124,7 @@
           "next": 3
         },
         {
-          "text": "Qualification simple art. 144bis CP (détérioration de données) — l'attribution APT via watermark est trop technique pour tenir devant un tribunal, on reste sobre.",
+          "text": "Qualification simple art. 144bis CP (détérioration de données) — l'attribution APT via watermark Cobalt Strike est trop technique pour tenir devant un tribunal cantonal et le juge ordinaire ne maîtrise pas les nuances de threat intelligence. Approche conservatrice qui privilégie une qualification simple et tenable juridiquement sur une qualification ambitieuse mais fragile.",
           "ok": false,
           "pts": -20,
           "fb": "Sous-qualification stratégique qui rate l'enjeu. (1) <strong>Le watermark Cobalt Strike est probant</strong> : les chercheurs threat intel publient leurs analyses dans des revues scientifiques peer-reviewed, et le TPF reconnaît cette littérature comme source d'expertise valide. Présentée correctement (avec rapport d'expert externe si besoin), l'attribution tient. (2) <strong>Sans art. 273 CP, vous restez en compétence cantonale</strong> — perte d'expertise et de ressources. (3) <strong>Vous figez le récit médiatique</strong> sur la qualification ransomware/cybercrime alors que c'est de l'espionnage étatique — perte de l'effet d'alerte sectorielle pour les autres industriels suisses. (4) <strong>Précédent défavorable</strong> : si chaque attaque APT est sous-qualifiée, le droit suisse ne s'adapte jamais à la réalité géopolitique des cybermenaces.",
@@ -124,7 +133,7 @@
           "next": 3
         },
         {
-          "text": "Pas de plainte pénale tant que l'attribution n'est pas certaine à 100%. Lancer une enquête interne pour identifier qui est responsable, puis décider.",
+          "text": "Pas de plainte pénale tant que l'attribution n'est pas certaine à 100% — lancer une enquête interne pour identifier qui est responsable, puis décider plus tard de l'opportunité d'une plainte. Approche prudente qui évite la précipitation procédurale au prix d'un délai d'enquête qui peut compromettre les preuves volatiles forensiques.",
           "ok": false,
           "pts": -25,
           "fb": "Procrastination juridique aux conséquences graves. (1) <strong>L'attribution à 100%</strong> est presque jamais atteinte en cyber — même dans les meilleurs cas (SolarWinds, Stuxnet), l'attribution étatique reste probabiliste. Attendre la certitude absolue, c'est ne jamais déposer plainte. (2) <strong>Pendant ce temps, les preuves volatiles s'effacent</strong> : l'attaquant adapte ses TTPs, l'infrastructure C2 disparaît, les comptes utilisés se ferment. Chaque jour de retard fait perdre des éléments. (3) <strong>L'enquête interne ne peut pas remplacer la procédure pénale</strong> : pas d'EIMP possible, pas de perquisition légale chez d'autres victimes du même APT, pas de moyens d'enquête international. (4) <strong>Risque pénal pour la direction</strong> : ne pas déposer plainte alors qu'on a des éléments solides peut être qualifié de complicité par négligence (art. 25 CP) si l'attaque continue contre d'autres victimes pendant qu'on attend.",
@@ -150,7 +159,7 @@
           "next": 4
         },
         {
-          "text": "Demande EIMP unique vers le pays hébergeant le C2 final (selon analyse threat intel) — le plus efficace de viser directement la cible.",
+          "text": "Demande EIMP unique et directe vers le pays hébergeant le serveur C2 final identifié par l'analyse threat intel — approche directe et la plus efficace de viser directement la cible juridique principale sans passer par des juridictions intermédiaires. Économise les ressources MPC et accélère la procédure d'entraide pénale internationale.",
           "ok": false,
           "pts": -10,
           "fb": "Stratégie qui contourne l'étape de consolidation. (1) <strong>Sans saisie Singapour préalable</strong>, vous ne disposez que des inférences threat intel pour identifier le C2 final — base juridique fragile pour une demande EIMP. Le pays cible peut refuser pour défaut de précision. (2) <strong>Risque de fuite</strong> : selon le pays, la demande EIMP peut être communiquée à l'attaquant (corruption locale, complicité institutionnelle), qui déplacera son infrastructure. (3) <strong>Pas de coordination EUROPOL/BfV</strong> : vous ratez l'opération simultanée multi-juridictionnelle qui aurait pu démanteler le groupe APT. Chaque victime opère seule = chaque effort est dilué. La stratégie en cascade (option correcte) est plus lente sur le papier, mais plus efficace en résultat.",
@@ -159,7 +168,7 @@
           "next": 4
         },
         {
-          "text": "Pas d'EIMP. Privilégier l'action via les services de renseignement (SRC) qui ont leurs propres canaux informels. Plus rapide.",
+          "text": "Pas d'EIMP du tout — privilégier l'action via les services de renseignement (SRC, NSA, BfV) qui ont leurs propres canaux informels de coopération. Plus rapide qu'une procédure d'entraide pénale internationale lourde et publique, et permet d'obtenir des éléments d'orientation tactique avant toute formalisation judiciaire.",
           "ok": false,
           "pts": -25,
           "fb": "Erreur que vous connaissez maintenant : violation art. 271 CP (vous l'avez déjà rencontrée dans Bürgenstock). (1) <strong>LRens art. 5</strong> : séparation renseignement/procédure pénale — les éléments collectés par le SRC ne sont pas utilisables comme preuves. (2) <strong>Art. 271 CP</strong> : si la coopération informelle implique des actes sur le territoire d'un État étranger, c'est précisément ce que cet article interdit. (3) <strong>Aucun cadre légal</strong> pour les éléments obtenus — irrecevabilité art. 141 al. 2 CPP au procès. (4) <strong>Précédent dangereux</strong> : court-circuiter l'EIMP fragilise toute la coopération internationale suisse à long terme. La voie EIMP est lente mais c'est la seule voie légale.",
@@ -176,7 +185,7 @@
       "question": "<strong>Comment structurez-vous le rapport forensique ?</strong>",
       "choices": [
         {
-          "text": "Rapport en 5 sections : (1) <strong>Procès-verbal d'acquisition</strong> (heure/min/sec, outil, version, hash SHA-256, témoin), (2) <strong>Méthodologie d'analyse</strong> (commandes Volatility 3 exactes, version 2.5.2, plugins utilisés, références SANS FOR532), (3) <strong>Constatations</strong> (avec captures d'écran horodatées et extraits de logs), (4) <strong>Interprétation</strong> (corrélation multi-sources : Volatility + sandbox + threat intel + saisies EIMP), (5) <strong>Annexes reproductibles</strong> (commandes pour qu'un expert tiers refasse l'analyse). Joindre les 3 publications peer-reviewed sur Cobalt Strike watermarks.",
+          "text": "Rapport en 5 sections : (1) <strong>Procès-verbal d'acquisition</strong> (heure, outil FTK Imager Lite v4.7.1, hash SHA-256, témoin), (2) <strong>Méthodologie Volatility</strong> (plugins utilisés, version, motivation), (3) <strong>Résultats forensiques</strong> avec captures d'écran annotées, (4) <strong>Attribution</strong> avec niveau de confiance et limites, (5) <strong>Recommandations opérationnelles</strong>. Format conforme NIST SP 800-86 + ISO 27037 pour traçabilité.",
           "ok": true,
           "pts": 30,
           "fb": "Rapport forensique exemplaire qui résiste à toute contestation. (1) <strong>Procès-verbal d'acquisition</strong> = la défense ne peut contester la chaîne (heures précises, outil, hash), (2) <strong>Méthodologie reproductible</strong> = un expert tiers nommé par la défense (art. 182 CPP) refera les commandes Volatility et obtiendra les mêmes résultats — la preuve est <em>scientifiquement</em> valide, pas opinion, (3) <strong>Constatations factuelles</strong> avec preuves visuelles = pas de zone d'ombre interprétative, (4) <strong>Interprétation cross-validée</strong> par 4 sources (Volatility + sandbox + threat intel + EIMP) = solidité argumentative maximale, (5) <strong>Publications peer-reviewed</strong> annexées = l'attribution APT n'est pas votre opinion mais celle de la communauté scientifique. Bonus : la défense, après lecture, abandonne sa contestation de l'attribution et se replie sur des moyens procéduraux secondaires. Le TPF accepte le rapport intégralement.",
@@ -185,24 +194,28 @@
           "next": -1
         },
         {
-          "text": "Rapport synthétique de 10 pages : conclusions principales, sans détailler la méthodologie (le tribunal n'est pas technique). Le rapport complet (200 pages) sera disponible en annexe.",
+          "text": "Rapport synthétique de 10 pages avec uniquement les conclusions principales, sans détailler la méthodologie Volatility (le tribunal n'est pas technique). Le rapport complet de 200 pages reste disponible en annexe sur demande, mais le format de lecture cantonal sera court et lisible. Approche efficace pour un public non-technique.",
           "ok": false,
           "pts": -15,
-          "fb": "Approche qui sous-estime les attentes du TPF. (1) <strong>Le TPF est composé de juges techniques</strong> (chambres économiques) qui apprécient la précision méthodologique — un rapport « simplifié » est interprété comme un manque de rigueur. (2) <strong>La défense exploitera l'écart</strong> entre rapport synthétique (10 pages) et rapport complet (200 pages) : « Pourquoi le procureur ne nous montre que 10 pages ? Que cache-t-il dans les 190 autres ? ». (3) <strong>Sans méthodologie détaillée dans le rapport principal</strong>, l'expert contradictoire de la défense (art. 182 CPP) aura plus de marge pour contester chaque étape. (4) <strong>Précédent défavorable</strong> : un rapport synthétique accepté ouvre la porte à des rapports forensiques bâclés dans les prochaines affaires. Le bon rapport est <em>complet et structuré</em>, pas « court pour ne pas ennuyer le juge ».",
+          "fb": "📍 BIFURCATION NARRATIVE — Position extrême non recommandée. Conclure la procédure pénale uniquement sur les artefacts disque (sans capturer la RAM avant extinction) anéantit la preuve principale dans une attaque fileless — la défense exploitera la lacune forensique pour obtenir une cassation. La doctrine forensique 2025 (NIST SP 800-86, ENISA Good Practices Cyber Incident Response) impose la capture mémoire en première priorité avant toute manipulation système. Approche qui sous-estime les attentes du TPF. (1) <strong>Le TPF est composé de juges techniques</strong> (chambres économiques) qui apprécient la précision méthodologique — un rapport « simplifié » est interprété comme un manque de rigueur. (2) <strong>La défense exploitera l'écart</strong> entre rapport synthétique (10 pages) et rapport complet (200 pages) : « Pourquoi le procureur ne nous montre que 10 pages ? Que cache-t-il dans les 190 autres ? ». (3) <strong>Sans méthodologie détaillée dans le rapport principal</strong>, l'expert contradictoire de la défense (art. 182 CPP) aura plus de marge pour contester chaque étape. (4) <strong>Précédent défavorable</strong> : un rapport synthétique accepté ouvre la porte à des rapports forensiques bâclés dans les prochaines affaires. Le bon rapport est <em>complet et structuré</em>, pas « court pour ne pas ennuyer le juge ».",
           "legal": "Standard TPF · Art. 182 CPP",
           "critical": false,
-          "next": -1
+          "next": "end"
         },
         {
-          "text": "Rapport de 200 pages très technique avec tous les détails Volatility, captures d'écran brutes, logs sans interprétation. Laisser le tribunal et l'expert contradictoire faire leur travail.",
+          "text": "Rapport de 200 pages très technique avec tous les détails Volatility, captures d'écran brutes, logs sans interprétation. Laisser le tribunal trancher seul des éléments — c'est leur rôle juridictionnel, pas le rôle de l'expert forensique de pré-mâcher les conclusions. Approche maximaliste de transparence brute documentaire.",
           "ok": false,
           "pts": -10,
           "fb": "Excès inverse : trop sans structure. (1) <strong>Un tribunal n'est pas un labo forensique</strong> : 200 pages de logs bruts sans guide narratif sont incompréhensibles. Le TPF appréciera la rigueur mais aussi la clarté pédagogique. (2) <strong>Risque d'enterrer les éléments importants</strong> sous un déluge de données — la défense pourra plaider que le rapport est inintelligible et donc juridiquement non probant. (3) <strong>Sans interprétation</strong>, le rapport ne fait pas son travail : il fournit des données, mais il n'<em>explique</em> pas pourquoi ces données prouvent l'infraction. C'est précisément le rôle du rapport. (4) <strong>L'expert contradictoire</strong> aura une marge énorme pour réinterpréter les données dans un sens favorable à la défense. La structure narrative + interprétation explicite (option correcte) est plus solide.",
           "legal": "Standard TPF · Pratique forensique",
           "critical": false,
-          "next": -1
+          "next": "end"
         }
       ]
     }
+  ],
+  "npcs": [
+    "forensics_lead_zh",
+    "ciso_logitech"
   ]
 }
