@@ -1,5 +1,55 @@
 // Service Worker — CAS-IN Investigation Numérique
-// v71 : v2.37 — Retrofit bloc 9 (5 anciennes scènes adaptées)
+// v72 : v2.38 — Retrofit bloc 10 (5 anciennes scènes adaptées)
+//
+//       Cap symbolique des 50% du corpus mis à niveau : 58 scènes
+//       sur 110 ont désormais NPCs + marqueur. Inclut une scène
+//       expert palais_federal à 11 steps qui était particulièrement
+//       lourde à équilibrer (12 ajustements).
+//
+//       Retrofit bloc 10 — 5 anciennes scènes adaptées :
+//
+//         • noname_2023 (5 steps, medium) — DDoS NoName057
+//             pro-russe Suisse + allocution Zelensky Parlement 2023
+//             npcs=[ofcs_coordinator, ddps_general_counsel]
+//             Marqueur step 0 #2 (communication 13h45 amplifie
+//             effet NoName, embarrasse Parlement pendant Zelensky 14h)
+//
+//         • operation-alice (5 steps, hard) — Opération Alice
+//             darknet pédocriminalité Europol, agent infiltré
+//             npcs=[pjf_undercover_lead, fbi_legat_bern]
+//             Marqueur step 0 #0 (refus participation suisse ferme
+//             Op. Alice, 23 pays attendent contribution CH)
+//
+//         • osint-licite (3 steps, easy) — Limites OSINT licite
+//             (analyste DFIR mandaté MP)
+//             npcs=[forensics_lead_zh, nicolet]
+//             Marqueur step 0 #0 (OSINT sans cadre = cassation
+//             complète au procès, doctrine MROZ-LIM 2024)
+//
+//         • palais_federal (11 steps, expert) — Intrusion APT
+//             Chancellerie fédérale, 14 machines compromises
+//             npcs=[nicolet, ofcs_coordinator, ddps_general_counsel]
+//             Marqueur step 0 #0 (communication 5h47 sans
+//             coordination ChF + DDPS + SRC = catastrophe)
+//             Note : 11 steps avec multiples bifurcations existantes
+//             sur (0,0), (0,2), (3,0), (4,0), (5,0), (6,0), (8,0),
+//             (9,2), (10,0), (10,2) — riche graphe narratif.
+//
+//         • perquisition-conjugale (5 steps, medium) — Perquisition
+//             14 rue des Tilleuls Lausanne, épouse non-suspecte
+//             npcs=[forensics_lead_zh, ge_prosecutor_cyber]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//             Marqueur : versement TOUS éléments sans tri = ATF
+//             6B_517/2017 droits Mme T. (art. 13 al. 1 Cst)
+//
+//       Pas de nouveau PNJ. Sixième release consécutive (depuis
+//       v2.32) sans création de PNJ.
+//
+//       Stats : 110 scènes / 30 PNJ / 58 scènes avec NPCs.
+//
+//       Cap symbolique : 58/110 = 53% du corpus mis à niveau.
+//       Reste ~47 scènes (~9 blocs).
+//
 //
 //       Version sans nouveau scénario, focalisée sur la mise à niveau
 //       systématique du corpus historique. Bloc 9 = diversification
@@ -934,7 +984,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v71';
+const CACHE_VERSION = 'cas-in-v72';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
