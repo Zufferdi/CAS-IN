@@ -4,162 +4,923 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Ransomware Forensique — CAS-IN</title>
+<meta name="description" content="Kill Chain ransomware · IOCs · Artefacts Windows · Familles · Déchiffrement · LPD 2023 · CPP · Forensique post-incident · Suisse">
+<meta name="theme-color" content="#0d1117">
 <link rel="stylesheet" href="../style/fiche_style.css">
-<style>
-
-.kill-chain{display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.25rem}
-.kc-step{display:flex;align-items:flex-start;gap:.75rem;padding:.75rem 1rem;border-radius:10px;border:1px solid var(--border);background:var(--surface)}
-.kc-num{font-size:1.4rem;font-weight:800;min-width:32px;line-height:1}
-.kc-title{font-size:.8rem;font-weight:700;margin-bottom:.2rem}
-.kc-desc{font-size:.7rem;color:var(--muted);line-height:1.45}
-.kc-ioc{font-family:var(--mono);font-size:.65rem;color:var(--cyan);margin-top:.3rem}
-.ioc-list{font-family:var(--mono);font-size:.7rem;color:var(--green);background:rgba(48,232,138,.05);border:1px solid rgba(48,232,138,.15);border-radius:6px;padding:.5rem .8rem;margin:.3rem 0}
-
-</style>
-<style>
-.back-top{position:fixed;bottom:1.5rem;right:1.5rem;width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--cyan);font-size:1.1rem;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:200;transition:.2s}
-.back-top:hover{background:rgba(0,229,204,.12);border-color:var(--cyan)}
-.back-top.visible{display:flex}
-</style>
 </head>
 <body>
-<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
-<nav class="tn-nav">
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+
+<nav class="tn-nav" aria-label="Navigation fiche">
   <a href="index.html" class="tn-back">← Fiches</a>
-  <span class="tn-title">CRYPTOLOGIE & SÉCURITÉ</span>
+  <span class="tn-title">RANSOMWARE FORENSIQUE</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
 
-<div class="page" style="padding-top:.5rem;padding-bottom:0">
+<div class="page-wrap">
   <div class="breadcrumb">
-    <a href="../index.html">🏠 Accueil</a>
-    <span class="bc-sep">›</span>
-    <a href="index.html">Fiches</a>
-    <span class="bc-sep">›</span>
-    <span class="bc-current">Cryptologie & Sécurité</span>
-    <span class="bc-sep">›</span>
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-cryptologiesécurité">Cryptologie &amp; Sécurité</a><span class="bc-sep">›</span>
     <span class="bc-current">Ransomware Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~14 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🔒</span>
+    <span class="tag tag-red" style="margin-left:.5rem">Kill Chain</span>
+    <span class="tag tag-gold" style="margin-left:.3rem">IOCs</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">LPD 2023</span>
+    <span class="tag tag-purple" style="margin-left:.3rem">CPP art. 248</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Ransomware Forensique</h1>
+    <div class="meta">Kill Chain · Patient zéro · Dwell time · Double extorsion · Artefacts Windows · Familles · Déchiffrement · Notification LPD</div>
+  </div>
+
+  <div style="margin:1rem 0;padding:.9rem 1.25rem;background:rgba(255,64,96,.04);border-left:3px solid var(--red);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+    <span style="color:var(--red);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Réalité terrain</span><br>
+    <em style="color:var(--text)">"Le ransomware n'est pas un événement — c'est le point culminant d'une intrusion qui dure en moyenne 21 jours. Ce que vous voyez le matin du chiffrement, c'est la dernière étape. Le travail forensique consiste à remonter aux 3 semaines précédentes."</em><br>
+    <span style="font-size:.72rem;margin-top:.3rem;display:block">— Mandiant M-Trends Report 2024</span>
+  </div>
+
+  <div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(240,192,64,.05);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
+    <span style="color:var(--gold);font-weight:700">🇨🇭 Contexte suisse :</span> Xplain (Play, 2023) · NZZ (2023) · Stadler Rail (2020) · Swissport (2022) · CICR (2023) · Spital Linth (Akira, 2024). La Suisse est une cible prioritaire : haute valeur économique, infrastructures critiques, données sensibles gouvernementales. La nLPD impose une notification au PFPDT « dans les meilleurs délais » — sans délai fixe contrairement aux 72h RGPD.
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="malware_forensique.html" class="prereq-pill">📖 Malware Forensics</a><a href="incident_response.html" class="prereq-pill">📖 Incident Response</a><a href="lateral_movement_forensique.html" class="prereq-pill">📖 Lateral Movement</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="windows_forensique.html" class="related-pill">🔗 Windows Forensique</a><a href="logs_windows.html" class="related-pill">🔗 Logs Windows</a><a href="suisse.html" class="related-pill">🔗 DFIR Suisse</a><a href="nldp.html" class="related-pill">🔗 nLPD</a><a href="active_directory.html" class="related-pill">🔗 Active Directory</a></div>
   </div>
 </div>
 
-<div class="page">
-  <div class="header">
-    <div class="badge">🔒 Kill Chain · IOCs · LPD 2023</div>
-    <h1>Ransomware Forensique</h1>
-  </div>
-
-  <div class="info">
-    ℹ️ Le ransomware est devenu la menace cybercriminelle n°1. La forensique ransomware doit établir la kill chain complète, identifier le patient zéro, dater le chiffrement et trouver les IOCs — le tout en préservant les preuves pour la LPD (notification 72h) et éventuellement le dépôt de plainte.
-  </div>
-
-  <div class="sec-title">Kill Chain Ransomware — 7 étapes</div>
-  <div class="kill-chain">
-    <div class="kc-step"><div class="kc-num" style="color:var(--red)">1</div><div>
-      <div class="kc-title">Initial Access (accès initial)</div>
-      <div class="kc-desc">Phishing (pièce jointe .xlsx avec macro, lien malveillant), exploitation de VPN vulnérable (Fortinet, Pulse Secure), RDP exposé (brute force ou credential stuffing), supply chain.</div>
-      <div class="kc-ioc">IOCs : logs SMTP (pièce jointe), VPN logs (IP anormale), RDP EID 4625 en masse → EID 4624</div>
-    </div></div>
-    <div class="kc-step"><div class="kc-num" style="color:var(--orange)">2</div><div>
-      <div class="kc-title">Execution</div>
-      <div class="kc-desc">PowerShell encodé, WMI, scheduled tasks, DLL injection. Le payload est souvent téléchargé depuis un C2 en HTTPS.</div>
-      <div class="kc-ioc">IOCs : EID 4688 (PowerShell -enc), Sysmon EID 1 (process creation), connexions C2 en NetFlow</div>
-    </div></div>
-    <div class="kc-step"><div class="kc-num" style="color:var(--gold)">3</div><div>
-      <div class="kc-title">Discovery & Reconnaissance</div>
-      <div class="kc-desc">Enumération AD (BloodHound, net user, nltest), scan réseau interne (nmap), identification des sauvegardes.</div>
-      <div class="kc-ioc">IOCs : EID 4624/4625 massifs, requêtes LDAP en volume, net.exe commandes</div>
-    </div></div>
-    <div class="kc-step"><div class="kc-num" style="color:var(--green)">4</div><div>
-      <div class="kc-title">Lateral Movement</div>
-      <div class="kc-desc">PsExec, WMI Exec, RDP, SMB, Pass-the-Hash. L'attaquant se propage de machine en machine.</div>
-      <div class="kc-ioc">IOCs : EID 4648 + 4624 Type 3 depuis mêmes IP, ADMIN$ shares, EID 7045 (service installé)</div>
-    </div></div>
-    <div class="kc-step"><div class="kc-num" style="color:var(--purple)">5</div><div>
-      <div class="kc-title">Exfiltration (souvent)</div>
-      <div class="kc-desc">Double extorsion : les données sont exfiltrées AVANT chiffrement. Via Rclone, MEGASync, FTP, HTTPS vers C2.</div>
-      <div class="kc-ioc">IOCs : NetFlow sortant volumique, Rclone.exe dans MFT, DNS vers megaupload/anonfiles</div>
-    </div></div>
-    <div class="kc-step"><div class="kc-num" style="color:var(--red)">6</div><div>
-      <div class="kc-title">Impact — Chiffrement</div>
-      <div class="kc-desc">Suppression des VSS, chiffrement AES-256 + clé RSA. Note de rançon déposée dans chaque dossier. Parfois destruction des backups.</div>
-      <div class="kc-ioc">IOCs : vssadmin delete shadows, wbadmin delete catalog, timestamp MACE des fichiers chiffrés</div>
-    </div></div>
-    <div class="kc-step"><div class="kc-num" style="color:var(--dim)">7</div><div>
-      <div class="kc-title">C2 & Négociation</div>
-      <div class="kc-desc">Portail Tor pour paiement. Certains groupes publient les données sur un leak site si non-paiement (Cl0p, LockBit).</div>
-      <div class="kc-ioc">IOCs : adresse .onion dans la note de rançon, logs DNS vers Tor, wallet Bitcoin/Monero</div>
-    </div></div>
-  </div>
-
-  <div class="sec-title">Identification du ransomware</div>
-  <div class="card card-cyan" style="margin-bottom:1rem">
-    <div class="ct">🔍 Outils d'identification</div>
-    <p><strong>ID Ransomware</strong> (https://id-ransomware.malwarehunterteam.com) — upload la note de rançon ou un fichier chiffré → identification en secondes.<br>
-    <strong>No More Ransom</strong> (nomoreransom.org) — propose des déchiffreurs gratuits si la clé maître est connue (Europol + éditeurs AV).<br>
-    <strong>Extension du fichier chiffré</strong> : .lockbit, .ryuk, .conti, .dharma, .phobos — chaque famille a une signature reconnaissable.</p>
-  </div>
-
-  <div class="sec-title">Chronologie forensique post-incident</div>
-  <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1.25rem">
-    <table class="tbl">
-      <tr><th>Phase</th><th>Action</th><th>Source de preuve</th></tr>
-      <tr><td><strong>Patient zéro</strong></td><td>Quel poste a été infecté en premier ?</td><td>Logs SIEM, timestamps MFT, NetFlow</td></tr>
-      <tr><td><strong>Date d'infection</strong></td><td>Quand l'accès initial a eu lieu ?</td><td>VPN logs, SMTP, EID 4624 inhabituel</td></tr>
-      <tr><td><strong>Dwell time</strong></td><td>Combien de temps avant chiffrement ?</td><td>Souvent 2–4 semaines (discovery + latéral)</td></tr>
-      <tr><td><strong>Scope</strong></td><td>Quels systèmes sont chiffrés/exfiltrés ?</td><td>MFT ($MFT scan), inventaire extensions</td></tr>
-      <tr><td><strong>Exfiltration</strong></td><td>Quelles données ont été volées ?</td><td>NetFlow, proxy logs, DLP alerts</td></tr>
-    </table>
-  </div>
-
-  <div class="sec-title">Obligations légales — LPD 2023 & CPP</div>
-  <div class="card card-red" style="margin-bottom:1rem">
-    <div class="ct">⚠️ Notification obligatoire — 72 heures</div>
-    <p><strong>LPD art. 24</strong> : Si des données personnelles ont été exfiltrées (double extorsion), notification obligatoire au PFPDT dans les <strong>72 heures</strong> après la découverte de la violation. Notification aux personnes concernées si risque élevé.</p>
-    <p style="margin-top:.4rem"><strong>CPP art. 248</strong> : Ne pas payer la rançon sans consulter les autorités — le paiement peut financer des groupes sous sanctions OFAC (USA), ce qui est illégal même indirectement.</p>
-  </div>
-
-  <div class="sec-title">IOCs — Indicateurs de compromission</div>
-  <div class="ioc-list">
-# Commandes de destruction des sauvegardes (IOC critique)
-vssadmin.exe Delete Shadows /all /quiet
-wmic shadowcopy delete
-bcdedit.exe /set {default} recoveryenabled No
-wbadmin.exe delete catalog -quiet
-net stop "Windows Backup" /y
+<!-- TABS -->
+<div class="tabs" id="rw-tabs">
+  <button class="tab active" onclick="showTab('killchain',this)">⚔️ Kill Chain</button>
+  <button class="tab" onclick="showTab('artefacts',this)">🔬 Artefacts</button>
+  <button class="tab" onclick="showTab('familles',this)">🦠 Familles</button>
+  <button class="tab" onclick="showTab('response',this)">🚨 Réponse</button>
+  <button class="tab" onclick="showTab('legal',this)">⚖️ Légal</button>
 </div>
 
-  <div class="sec-title">Familles ransomware connues</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.5rem;margin-bottom:1.25rem">
-    <div class="card card-red"><div class="ct">LockBit 3.0</div><p>Groupe le plus actif 2022-2024. RaaS (Ransomware-as-a-Service). Extensions .lockbit. Double/triple extorsion.</p></div>
-    <div class="card card-orange"><div class="ct">ALPHV/BlackCat</div><p>Écrit en Rust. Multi-plateforme (Windows, Linux, VMware). Extensions variables. Fermé après FBI takedown 2024.</p></div>
-    <div class="card card-gold"><div class="ct">Cl0p</div><p>Spécialise dans les 0-days (MOVEit, GoAnywhere). Exfiltration massive sans toujours chiffrer.</p></div>
-    <div class="card card-purple"><div class="ct">Akira</div><p>Actif depuis 2023. Cible les PME. Déchiffreur GPU trouvé par chercheurs (2024).</p></div>
-    <div class="card card-blue"><div class="ct">Play</div><p>Impliqué dans l'affaire Xplain (Suisse 2023). Publie les données sur son leak site.</p></div>
-    <div class="card card-green"><div class="ct">Royal/BlackSuit</div><p>Successeur de Conti. Cible les infrastructures critiques (hôpitaux, transports).</p></div>
-  </div>
+<!-- ══════════════════════════════════════════════
+     TAB 1 — KILL CHAIN
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-killchain">
 
-
-<div class="prereq-block">
-<div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="malware_forensique.html" class="prereq-pill">📖 Malware Forensics</a><a href="incident_response.html" class="prereq-pill">📖 Incident Response</a><a href="droit.html" class="prereq-pill">📖 Droit CPP</a></div>
-<div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html" class="tp-pill">🧪 🚨 Incident Response</a><a href="../tp.html" class="tp-pill">🧪 ⚖️ Droit pénal</a></div>
-<div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="incident_response.html" class="related-pill">🔗 Incident Response</a><a href="malware_forensique.html" class="related-pill">🔗 Malware Forensics</a><a href="suisse.html" class="related-pill">🔗 DFIR Suisse</a></div>
+<div class="concept-card">
+  <div class="concept-title">🔒 Le ransomware — La menace cybercriminelle n°1</div>
+  Le ransomware est la menace dominante depuis 2017. La forensique ransomware a un <strong>objectif triple</strong> : établir la kill chain complète (de l'accès initial au chiffrement), identifier le <strong>patient zéro</strong> (premier système compromis), et dater précisément le chiffrement et l'exfiltration. Les groupes modernes pratiquent la <strong>double extorsion</strong> — données volées AVANT chiffrement — et parfois la <strong>triple extorsion</strong> (attaque DDoS en plus). Le <strong>dwell time</strong> médian (temps entre accès initial et chiffrement) est de <strong>5 à 21 jours</strong> selon les familles.
 </div>
 
-  <div class="alert">
-    ⚖️ <strong>Examen CAS-IN</strong> — Cette fiche couvre des notions évaluées à l'examen.
-    Maîtrisez les procédures, les articles de loi et les outils cités.
+<div class="sec-title">Kill Chain Ransomware — 7 étapes · Cliquez pour les IOCs détaillés</div>
+
+<div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.5rem;margin:.75rem 0">
+
+  <div class="meta-card mc-0" onclick="showKC('access')">
+    <div class="meta-num">Étape 1</div>
+    <div class="meta-name">Initial Access</div>
+    <div class="meta-desc">Phishing · VPN vulnérable · RDP exposé · Supply chain</div>
+  </div>
+
+  <div class="meta-card mc-1" onclick="showKC('exec')">
+    <div class="meta-num">Étape 2</div>
+    <div class="meta-name">Execution</div>
+    <div class="meta-desc">PowerShell encodé · WMI · DLL injection · C2</div>
+  </div>
+
+  <div class="meta-card mc-2" onclick="showKC('disco')">
+    <div class="meta-num">Étape 3</div>
+    <div class="meta-name">Discovery</div>
+    <div class="meta-desc">BloodHound · net user · nltest · nmap interne</div>
+  </div>
+
+  <div class="meta-card mc-3" onclick="showKC('lateral')">
+    <div class="meta-num">Étape 4</div>
+    <div class="meta-name">Lateral Movement</div>
+    <div class="meta-desc">PsExec · WMI · RDP · Pass-the-Hash · SMB</div>
+  </div>
+
+  <div class="meta-card mc-5" onclick="showKC('exfil')">
+    <div class="meta-num">Étape 5</div>
+    <div class="meta-name">Exfiltration</div>
+    <div class="meta-desc">Rclone · MEGASync · FTP · HTTPS C2 · double extorsion</div>
+  </div>
+
+  <div class="meta-card mc-6" onclick="showKC('impact')">
+    <div class="meta-num">Étape 6</div>
+    <div class="meta-name">Impact — Chiffrement</div>
+    <div class="meta-desc">VSS supprimés · AES-256 · note de rançon · backups</div>
+  </div>
+
+  <div class="meta-card mc-7" onclick="showKC('c2')">
+    <div class="meta-num">Étape 7</div>
+    <div class="meta-name">C2 &amp; Négociation</div>
+    <div class="meta-desc">Portail Tor · leak site · Bitcoin/Monero</div>
+  </div>
+
+</div>
+<div class="meta-detail" id="kc-detail"></div>
+
+<!-- Dwell time -->
+<div class="sec-title">Dwell Time — Chronologie type d'un incident ransomware</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;margin:.75rem 0">
+  <div style="font-family:var(--mono);font-size:.6rem;color:var(--dim);margin-bottom:.75rem;letter-spacing:.05em;text-transform:uppercase">TIMELINE TYPE — J-21 à J0 (chiffrement)</div>
+
+  <div style="position:relative;padding-left:1.5rem">
+    <div style="position:absolute;left:.6rem;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--red),var(--gold),var(--green),var(--red))"></div>
+
+    <div style="margin-bottom:.9rem;position:relative">
+      <div style="position:absolute;left:-1.1rem;top:.2rem;width:10px;height:10px;border-radius:50%;background:var(--red)"></div>
+      <div style="font-size:.68rem;color:var(--red);font-weight:700">J-21 à J-14 — Accès initial + persistance</div>
+      <div style="font-size:.73rem;color:var(--muted);margin-top:.2rem">Compromission via phishing ou VPN. Dépôt d'un implant C2 (Cobalt Strike Beacon, Sliver). Établissement de la persistance (RunKey, service, tâche planifiée). <strong>Souvent aucune alerte.</strong></div>
+    </div>
+
+    <div style="margin-bottom:.9rem;position:relative">
+      <div style="position:absolute;left:-1.1rem;top:.2rem;width:10px;height:10px;border-radius:50%;background:var(--gold)"></div>
+      <div style="font-size:.68rem;color:var(--gold);font-weight:700">J-14 à J-7 — Reconnaissance + escalade</div>
+      <div style="font-size:.73rem;color:var(--muted);margin-top:.2rem">Dump de LSASS (Mimikatz), BloodHound pour cartographier l'AD, identification des serveurs de sauvegarde et des contrôleurs de domaine. Comptes admin compromis.</div>
+    </div>
+
+    <div style="margin-bottom:.9rem;position:relative">
+      <div style="position:absolute;left:-1.1rem;top:.2rem;width:10px;height:10px;border-radius:50%;background:var(--gold)"></div>
+      <div style="font-size:.68rem;color:var(--gold);font-weight:700">J-7 à J-3 — Lateral movement massif</div>
+      <div style="font-size:.73rem;color:var(--muted);margin-top:.2rem">PsExec ou WMI pour se propager. Domain Admin obtenu. GPO détournée pour déployer le ransomware sur tout le parc.</div>
+    </div>
+
+    <div style="margin-bottom:.9rem;position:relative">
+      <div style="position:absolute;left:-1.1rem;top:.2rem;width:10px;height:10px;border-radius:50%;background:var(--purple)"></div>
+      <div style="font-size:.68rem;color:var(--purple);font-weight:700">J-3 à J-1 — Exfiltration</div>
+      <div style="font-size:.73rem;color:var(--muted);margin-top:.2rem">Rclone ou MEGASync pour exfiltrer les données sensibles (RH, finance, R&amp;D). Volume réseau sortant anormal. <strong>Double extorsion déclenchée.</strong></div>
+    </div>
+
+    <div style="position:relative">
+      <div style="position:absolute;left:-1.1rem;top:.2rem;width:10px;height:10px;border-radius:50%;background:var(--red)"></div>
+      <div style="font-size:.68rem;color:var(--red);font-weight:700">J0 — Chiffrement (souvent la nuit ou le week-end)</div>
+      <div style="font-size:.73rem;color:var(--muted);margin-top:.2rem"><code>vssadmin delete shadows /all /quiet</code> → chiffrement AES-256 → note de rançon déposée dans chaque dossier. Tout le monde se réveille avec les fichiers chiffrés.</div>
+    </div>
   </div>
 </div>
 
-<div class="footer">CAS-IN · Forensique Numérique · Ransomware Forensique · 2025</div>
+<div class="key-fact">
+  <div class="key-fact-label">📊 Statistiques 2024 — Ransomware en Suisse</div>
+  <div style="display:grid!important;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-top:.5rem;text-align:center">
+    <div style="padding:.5rem;background:rgba(255,64,96,.06);border-radius:8px">
+      <div style="font-size:1.4rem;font-weight:800;color:var(--red)">21j</div>
+      <div style="font-size:.65rem;color:var(--muted)">Dwell time médian</div>
+    </div>
+    <div style="padding:.5rem;background:rgba(240,192,64,.06);border-radius:8px">
+      <div style="font-size:1.4rem;font-weight:800;color:var(--gold)">83%</div>
+      <div style="font-size:.65rem;color:var(--muted)">Double extorsion</div>
+    </div>
+    <div style="padding:.5rem;background:rgba(188,140,255,.06);border-radius:8px">
+      <div style="font-size:1.4rem;font-weight:800;color:var(--purple)">78%</div>
+      <div style="font-size:.65rem;color:var(--muted)">Via AD compromis</div>
+    </div>
+    <div style="padding:.5rem;background:rgba(48,232,138,.06);border-radius:8px">
+      <div style="font-size:1.4rem;font-weight:800;color:var(--green)">96%</div>
+      <div style="font-size:.65rem;color:var(--muted)">VSS supprimés</div>
+    </div>
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Le SOC détecte le lundi matin que tous les fichiers sont chiffrés avec l'extension <code>.lockbit3</code>. Les logs montrent que <code>vssadmin delete shadows /all /quiet</code> a été exécuté dimanche à 23h47, et le chiffrement a commencé à 23h52. Quelle est la première question forensique à répondre et pourquoi ?<small>Kill chain · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>Première question : Quand l'accès initial a-t-il eu lieu ?</strong> — pas quand le chiffrement a commencé.<br><br>
+    Le chiffrement du dimanche soir est la <em>dernière</em> étape d'une intrusion qui a probablement commencé 2 à 3 semaines plus tôt. Si on se concentre sur le dimanche soir, on rate l'essentiel.<br><br>
+    <strong>Pourquoi c'est critique</strong> :<br>
+    · Identifier le patient zéro permet de comprendre le vecteur d'entrée et de le fermer<br>
+    · Le dwell time révèle quelles données ont pu être exfiltrées (et depuis quand)<br>
+    · La date d'accès initial détermine la période à auditer (VPN logs, SMTP, RDP)<br><br>
+    <strong>Sources à analyser</strong> : VPN logs (30-90 jours en arrière), EID 4625/4624 en masse sur DC, SMTP logs, EDR timeline, Sysmon Process Create avec parents suspects.
+  </div>
+</div>
+</div><!-- /tab-killchain -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — ARTEFACTS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-artefacts">
+
+<div class="concept-card">
+  <div class="concept-title">🔬 Artefacts forensiques — Chaque étape laisse des traces</div>
+  Un ransomware bien exécuté tente d'effacer ses traces — mais Windows en génère trop pour tout couvrir. Les artefacts les plus résistants aux tentatives d'effacement sont les <strong>Event Logs</strong> (si centralisés dans un SIEM), le <strong>$UsnJrnl</strong> NTFS, les <strong>prefetch</strong>, et les <strong>logs réseau</strong> (NetFlow, proxy). La clé est de savoir où chercher avant que les backups soient écrasés.
+</div>
+
+<div class="sec-title">Artefacts par phase — Table de référence</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Phase</th><th>Artefact</th><th>Emplacement</th><th>Valeur forensique</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="color:var(--red);font-weight:600;font-size:.75rem">Accès initial</td>
+      <td style="font-family:var(--mono);font-size:.7rem">EID 4625 + 4624</td>
+      <td style="font-family:var(--mono);font-size:.68rem">Security.evtx</td>
+      <td style="font-size:.73rem">Brute force RDP → 4625 en masse puis 4624 réussi. Corréler IP source.</td>
+    </tr>
+    <tr>
+      <td style="color:var(--red);font-weight:600;font-size:.75rem">Accès initial</td>
+      <td style="font-family:var(--mono);font-size:.7rem">VPN Auth Logs</td>
+      <td style="font-family:var(--mono);font-size:.68rem">Firewall / VPN</td>
+      <td style="font-size:.73rem">IP étrangère, heure atypique, compte de service utilisé pour VPN.</td>
+    </tr>
+    <tr>
+      <td style="color:var(--gold);font-weight:600;font-size:.75rem">Execution</td>
+      <td style="font-family:var(--mono);font-size:.7rem">EID 4688 / Sysmon 1</td>
+      <td style="font-family:var(--mono);font-size:.68rem">Security / Sysmon</td>
+      <td style="font-size:.73rem"><code>powershell -enc [base64]</code>, <code>wscript.exe</code>, <code>mshta.exe</code> avec URL C2.</td>
+    </tr>
+    <tr>
+      <td style="color:var(--gold);font-weight:600;font-size:.75rem">Persistance</td>
+      <td style="font-family:var(--mono);font-size:.7rem">EID 7045 / RunKey</td>
+      <td style="font-family:var(--mono);font-size:.68rem">System.evtx / Registre</td>
+      <td style="font-size:.73rem">Service malveillant installé ou clé Run modifiée pour le beacon C2.</td>
+    </tr>
+    <tr>
+      <td style="color:var(--purple);font-weight:600;font-size:.75rem">Credential dump</td>
+      <td style="font-family:var(--mono);font-size:.7rem">Sysmon EID 10</td>
+      <td style="font-family:var(--mono);font-size:.68rem">Sysmon</td>
+      <td style="font-size:.73rem">Accès au processus lsass.exe depuis un processus non-système = Mimikatz.</td>
+    </tr>
+    <tr>
+      <td style="color:var(--purple);font-weight:600;font-size:.75rem">Discovery</td>
+      <td style="font-family:var(--mono);font-size:.7rem">EID 4662 / net.exe</td>
+      <td style="font-family:var(--mono);font-size:.68rem">Security / Prefetch</td>
+      <td style="font-size:.73rem"><code>net user /domain</code>, <code>nltest /domain_trusts</code>, requêtes LDAP massives sur le DC.</td>
+    </tr>
+    <tr>
+      <td style="color:var(--blue);font-weight:600;font-size:.75rem">Lateral movement</td>
+      <td style="font-family:var(--mono);font-size:.7rem">EID 4648 + 7045</td>
+      <td style="font-family:var(--mono);font-size:.68rem">Security / System</td>
+      <td style="font-size:.73rem">PsExec : 4648 (source) + 7045 PSEXESVC (cible) + 4624 Type 3.</td>
+    </tr>
+    <tr>
+      <td style="color:var(--cyan);font-weight:600;font-size:.75rem">Exfiltration</td>
+      <td style="font-family:var(--mono);font-size:.7rem">Prefetch / $MFT</td>
+      <td style="font-family:var(--mono);font-size:.68rem">C:\Windows\Prefetch\</td>
+      <td style="font-size:.73rem"><strong>RCLONE.EXE</strong>, MEGASYNC.EXE dans prefetch = exfiltration confirmée. $MFT révèle les fichiers copiés.</td>
+    </tr>
+    <tr>
+      <td style="color:var(--cyan);font-weight:600;font-size:.75rem">Exfiltration</td>
+      <td style="font-family:var(--mono);font-size:.7rem">NetFlow / Proxy</td>
+      <td style="font-family:var(--mono);font-size:.68rem">Firewall / Proxy</td>
+      <td style="font-size:.73rem">Volume sortant anormal (GB) vers des IPs cloud (MEGA, AWS) ou C2.</td>
+    </tr>
+    <tr>
+      <td style="color:var(--red);font-weight:600;font-size:.75rem">Impact</td>
+      <td style="font-family:var(--mono);font-size:.7rem">EID 4688 — vssadmin</td>
+      <td style="font-family:var(--mono);font-size:.68rem">Security.evtx</td>
+      <td style="font-size:.73rem"><code>vssadmin delete shadows /all /quiet</code> = suppression VSS. Timestamp = T-5min avant chiffrement.</td>
+    </tr>
+    <tr>
+      <td style="color:var(--red);font-weight:600;font-size:.75rem">Impact</td>
+      <td style="font-family:var(--mono);font-size:.7rem">$UsnJrnl / MFT</td>
+      <td style="font-family:var(--mono);font-size:.68rem">NTFS Volume</td>
+      <td style="font-size:.73rem">Masse d'entrées de modification/renommage en quelques minutes = timestamp précis du chiffrement.</td>
+    </tr>
+    <tr>
+      <td style="color:var(--red);font-weight:600;font-size:.75rem">Impact</td>
+      <td style="font-family:var(--mono);font-size:.7rem">Note de rançon</td>
+      <td style="font-family:var(--mono);font-size:.68rem">Filesystem (chaque dossier)</td>
+      <td style="font-size:.73rem">README.txt, DECRYPT_MY_FILES.txt, etc. Contient l'ID victime et l'adresse .onion. ID Ransomware pour l'identifier.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- Commandes destructives -->
+<div class="sec-title">Commandes destructives — IOCs critiques</div>
+<div class="alert">
+  🔴 Ces commandes sont exécutées par <strong>presque tous les ransomwares modernes</strong> dans les minutes précédant le chiffrement. Leur présence dans les Event Logs (EID 4688) avec un timestamp précis est l'IOC le plus fiable pour dater le début de l'impact.
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;margin:.75rem 0;font-family:var(--mono);font-size:.68rem;line-height:1.9;color:var(--text)">
+  <span style="color:var(--red)"># Suppression des VSS (Volume Shadow Copies)</span><br>
+  vssadmin.exe Delete Shadows /all /quiet<br>
+  wmic shadowcopy delete<br>
+  Get-WmiObject Win32_ShadowCopy | ForEach-Object { $_.Delete() }<br><br>
+  <span style="color:var(--red)"># Désactivation du Recovery Environment</span><br>
+  bcdedit.exe /set {default} recoveryenabled No<br>
+  bcdedit.exe /set {default} bootstatuspolicy ignoreallfailures<br><br>
+  <span style="color:var(--red)"># Suppression du Windows Backup Catalog</span><br>
+  wbadmin.exe delete catalog -quiet<br>
+  wbadmin.exe delete systemstatebackup<br><br>
+  <span style="color:var(--red)"># Arrêt des services de sauvegarde et sécurité</span><br>
+  net stop "Volume Shadow Copy" /y<br>
+  net stop "Windows Backup" /y<br>
+  net stop "WinDefend" /y <span style="color:var(--dim)"># Désactivation Defender</span><br><br>
+  <span style="color:var(--red)"># Désactivation restauration système</span><br>
+  reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v DisableSR /t REG_DWORD /d 1 /f
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>🔍 Identification du ransomware</h4>
+    <ul class="memo-list">
+      <li><strong>ID Ransomware</strong> : id-ransomware.malwarehunterteam.com → uploader note de rançon ou fichier chiffré</li>
+      <li><strong>No More Ransom</strong> : nomoreransom.org → déchiffreurs gratuits (Europol + éditeurs AV)</li>
+      <li><strong>Extension fichiers</strong> : <code>.lockbit</code>, <code>.akira</code>, <code>.play</code>, <code>.hive</code></li>
+      <li><strong>Note de rançon</strong> : nom du fichier = signature de famille</li>
+      <li><strong>Magic bytes</strong> : certains ransomwares laissent un header reconnaissable</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>📍 5 questions forensiques clés</h4>
+    <ul class="memo-list">
+      <li><strong>Patient zéro</strong> : quel poste infecté en premier ?</li>
+      <li><strong>Date d'accès initial</strong> : VPN logs, SMTP, EID 4624 inhabituel</li>
+      <li><strong>Dwell time</strong> : combien de temps avant chiffrement ? (médiane 21j)</li>
+      <li><strong>Scope</strong> : quels systèmes chiffrés/exfiltrés ? ($MFT scan)</li>
+      <li><strong>Exfiltration</strong> : quelles données volées ? (NetFlow, proxy, Rclone)</li>
+    </ul>
+  </div>
+</div>
+</div><!-- /tab-artefacts -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — FAMILLES
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-familles">
+
+<div class="concept-card">
+  <div class="concept-title">🦠 Familles ransomware — RaaS et groupes actifs</div>
+  Le modèle <strong>RaaS (Ransomware-as-a-Service)</strong> domine depuis 2020 : des développeurs créent et maintiennent le ransomware, des <em>affiliés</em> l'utilisent contre des cibles en échange d'une commission (20-30%). Ce modèle industrialise les attaques et rend l'attribution complexe — les affiliés changent de groupe, utilisent les mêmes outils. Identifier la famille permet de retrouver les TTPs documentés et les éventuels déchiffreurs disponibles.
+</div>
+
+<div class="sec-title">Familles actives — Cliquez pour les détails forensiques</div>
+<div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.55rem;margin:.75rem 0">
+
+  <div class="meta-card mc-0" onclick="showFamily('lockbit')">
+    <div class="meta-num">RaaS · 2019–2024</div>
+    <div class="meta-name">🔒 LockBit 3.0</div>
+    <div class="meta-desc">Groupe le plus actif 2022–2024. Extensions .lockbit. Triple extorsion.</div>
+  </div>
+
+  <div class="meta-card mc-1" onclick="showFamily('play')">
+    <div class="meta-num">Affaire Xplain CH · 2023</div>
+    <div class="meta-name">▶️ Play</div>
+    <div class="meta-desc">Impliqué dans Xplain Suisse. Pas de déchiffreur public.</div>
+  </div>
+
+  <div class="meta-card mc-2" onclick="showFamily('akira')">
+    <div class="meta-num">RaaS · 2023–présent</div>
+    <div class="meta-name">🌀 Akira</div>
+    <div class="meta-desc">Cible PME. Déchiffreur GPU disponible (2024). Spital Linth CH.</div>
+  </div>
+
+  <div class="meta-card mc-3" onclick="showFamily('blackcat')">
+    <div class="meta-num">Rust · 2021–2024</div>
+    <div class="meta-name">🐈 ALPHV/BlackCat</div>
+    <div class="meta-desc">Multi-plateforme Rust. FBI takedown 2024. Déchiffreur disponible.</div>
+  </div>
+
+  <div class="meta-card mc-5" onclick="showFamily('clop')">
+    <div class="meta-num">0-days · 2019–présent</div>
+    <div class="meta-name">🦞 Cl0p</div>
+    <div class="meta-desc">MOVEit, GoAnywhere. Exfiltration sans chiffrement parfois.</div>
+  </div>
+
+  <div class="meta-card mc-6" onclick="showFamily('blacksuit')">
+    <div class="meta-num">Ex-Conti · 2023–présent</div>
+    <div class="meta-name">🃏 Royal/BlackSuit</div>
+    <div class="meta-desc">Successeur Conti. Infrastructures critiques. Hôpitaux.</div>
+  </div>
+
+</div>
+<div class="meta-detail" id="family-detail"></div>
+
+<!-- Table signatures -->
+<div class="sec-title">Signatures de familles — Identification rapide</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Famille</th><th>Extension fichiers</th><th>Note de rançon</th><th>Chiffrement</th><th>Déchiffreur</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--red)">LockBit 3.0</td>
+      <td style="font-family:var(--mono);font-size:.7rem">.lockbit · .abcd · [ID]</td>
+      <td style="font-family:var(--mono);font-size:.68rem">Restore-My-Files.txt</td>
+      <td style="font-size:.72rem">AES-256 + RSA-2048</td>
+      <td style="font-size:.72rem;color:var(--gold)">Partiel (LB2)</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--blue)">Play</td>
+      <td style="font-family:var(--mono);font-size:.7rem">.play</td>
+      <td style="font-family:var(--mono);font-size:.68rem">ReadMe.txt</td>
+      <td style="font-size:.72rem">AES-RSA hybride</td>
+      <td style="font-size:.72rem;color:var(--red)">Non disponible</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--cyan)">Akira</td>
+      <td style="font-family:var(--mono);font-size:.7rem">.akira · .powerranges</td>
+      <td style="font-family:var(--mono);font-size:.68rem">akira_readme.txt</td>
+      <td style="font-size:.72rem">ChaCha20 + RSA-4096</td>
+      <td style="font-size:.72rem;color:var(--green)">✅ GPU (Avast 2024)</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--purple)">ALPHV/BlackCat</td>
+      <td style="font-family:var(--mono);font-size:.7rem">Variable selon config</td>
+      <td style="font-family:var(--mono);font-size:.68rem">RECOVER-[ID]-FILES.txt</td>
+      <td style="font-size:.72rem">AES-256 / XSalsa20</td>
+      <td style="font-size:.72rem;color:var(--green)">✅ FBI (2024)</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--gold)">Cl0p</td>
+      <td style="font-family:var(--mono);font-size:.7rem">.clop · .CIop</td>
+      <td style="font-family:var(--mono);font-size:.68rem">ClopReadMe.txt</td>
+      <td style="font-size:.72rem">RC4 + RSA</td>
+      <td style="font-size:.72rem;color:var(--gold)">Partiel (anciennes)</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--green)">Royal/BlackSuit</td>
+      <td style="font-family:var(--mono);font-size:.7rem">.royal · .blacksuit</td>
+      <td style="font-family:var(--mono);font-size:.68rem">README.TXT</td>
+      <td style="font-size:.72rem">AES-256 + RSA</td>
+      <td style="font-size:.72rem;color:var(--red)">Non disponible</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un technicien trouve des fichiers avec l'extension <code>.akira</code> et une note <code>akira_readme.txt</code>. La victime (PME de 15 employés) dispose d'un GPU gaming RTX 4090. Quelle est la bonne nouvelle forensique et quelle action recommandez-vous immédiatement ?<small>Familles · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>Bonne nouvelle</strong> : Avast a publié en 2024 un déchiffreur gratuit pour Akira, exploitable par GPU. Un RTX 4090 est suffisamment puissant pour l'utiliser.<br><br>
+    <strong>Actions immédiates</strong> :<br>
+    1. <strong>Ne pas redémarrer ni payer</strong> — préserver l'état des systèmes<br>
+    2. Télécharger le déchiffreur Avast depuis <strong>nomoreransom.org</strong> ou directement depuis Avast<br>
+    3. Tester d'abord sur une <strong>copie isolée</strong> d'un fichier chiffré — jamais sur les originaux<br>
+    4. Le déchiffrement par GPU peut prendre plusieurs jours selon le volume<br>
+    5. <strong>Parallèlement</strong> : lancer l'investigation forensique pour identifier le vecteur d'entrée et fermer la porte avant de restaurer<br><br>
+    <strong>Attention</strong> : même avec un déchiffreur disponible, l'investigation forensique reste obligatoire pour la notification nLPD et pour empêcher une récidive.
+  </div>
+</div>
+</div><!-- /tab-familles -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — RÉPONSE
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-response">
+
+<div class="concept-card">
+  <div class="concept-title">🚨 Réponse à incident ransomware — Les premières heures</div>
+  Les premières heures après découverte sont critiques. Deux erreurs fréquentes : <strong>éteindre les machines</strong> (perd la RAM et les connexions actives) et <strong>payer sans investiguer</strong> (ne garantit pas le déchiffrement et peut violer des sanctions OFAC). La priorité absolue est de <strong>contenir sans détruire les preuves</strong>.
+</div>
+
+<!-- Checklist -->
+<div class="sec-title">Checklist d'intervention — Les 60 premières minutes</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin:.75rem 0">
+
+  <div style="margin-bottom:.75rem">
+    <div style="font-size:.65rem;color:var(--red);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">⚡ 0–10 min — Contenir sans éteindre</div>
+    <ul style="font-size:.73rem;color:var(--muted);line-height:1.85;margin:0;padding-left:1.1rem">
+      <li>Déconnecter du réseau (câble) sans éteindre — la RAM contient les clés de chiffrement en mémoire</li>
+      <li>Photographier les écrans (note de rançon, processus actifs, connexions réseau)</li>
+      <li>Lancer <strong>WinPmem</strong> ou <strong>DumpIt</strong> pour acquérir la RAM en priorité</li>
+      <li>Alerter la hiérarchie et l'équipe juridique — décision de notification nLPD</li>
+    </ul>
+  </div>
+
+  <div style="margin-bottom:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+    <div style="font-size:.65rem;color:var(--gold);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">🔬 10–30 min — Triage et identification</div>
+    <ul style="font-size:.73rem;color:var(--muted);line-height:1.85;margin:0;padding-left:1.1rem">
+      <li>Soumettre note de rançon + fichier chiffré à <strong>id-ransomware.malwarehunterteam.com</strong></li>
+      <li>Vérifier <strong>nomoreransom.org</strong> pour un déchiffreur disponible</li>
+      <li>Acquérir l'image disque (FTK Imager) — hash SHA-256 immédiatement</li>
+      <li>Inventorier les systèmes affectés via SIEM/EDR depuis un système non compromis</li>
+    </ul>
+  </div>
+
+  <div style="margin-bottom:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+    <div style="font-size:.65rem;color:var(--purple);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">📋 30–60 min — Investigation initiale</div>
+    <ul style="font-size:.73rem;color:var(--muted);line-height:1.85;margin:0;padding-left:1.1rem">
+      <li>Extraire les Event Logs (Security, System, Sysmon) avec <strong>KAPE</strong> vers stockage externe</li>
+      <li>Exporter les logs réseau (NetFlow, proxy, firewall) des 30 derniers jours</li>
+      <li>Identifier le <strong>patient zéro</strong> via SIEM (premier système affecté)</li>
+      <li>Chercher Rclone.exe, MEGASync dans prefetch → confirmer l'exfiltration</li>
+    </ul>
+  </div>
+
+  <div style="padding-top:.75rem;border-top:1px solid var(--border)">
+    <div style="font-size:.65rem;color:var(--green);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">🔑 Décision paiement — AVANT de décider</div>
+    <ul style="font-size:.73rem;color:var(--muted);line-height:1.85;margin:0;padding-left:1.1rem">
+      <li>Vérifier si le groupe est sous <strong>sanctions OFAC</strong> (US Treasury) — payer = illégal même indirectement</li>
+      <li>Consulter les autorités suisses (OFCS/NCSC) avant tout paiement</li>
+      <li>Le paiement ne garantit pas le déchiffrement (30% des victimes ne reçoivent pas la clé)</li>
+      <li>Évaluer les backups offline — si intacts, paiement inutile</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Outils -->
+<div class="sec-title">Outils forensiques — Ransomware</div>
+<div class="tool-grid">
+
+  <div class="tool-card" style="border-left:3px solid var(--cyan)">
+    <div class="tool-name">ID Ransomware</div>
+    <div class="tool-by">MalwareHunterTeam</div>
+    <div class="tool-desc">Identification instantanée de la famille par upload de la note de rançon ou d'un fichier chiffré. Base de données de 1000+ familles. Indique si un déchiffreur est disponible.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-gui">Web</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--green)">
+    <div class="tool-name">No More Ransom</div>
+    <div class="tool-by">Europol + partenaires</div>
+    <div class="tool-desc">Portail officiel Europol avec déchiffreurs gratuits pour 150+ familles. Partenaires : Kaspersky, Avast, ESET, Bitdefender, FBI. Toujours vérifier avant de payer.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-gui">Web</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--gold)">
+    <div class="tool-name">KAPE</div>
+    <div class="tool-by">Eric Zimmerman / Kroll</div>
+    <div class="tool-desc">Collecte rapide des artefacts forensiques : Event Logs, prefetch, MFT, shimcache, amcache. Cibles prédéfinies pour ransomware (KapeFiles). Triage en moins de 10 minutes.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--purple)">
+    <div class="tool-name">Velociraptor</div>
+    <div class="tool-by">Rapid7 / Open Source</div>
+    <div class="tool-desc">Hunting à l'échelle du réseau. Requêtes VQL pour identifier tous les systèmes avec vssadmin, rclone, fichiers chiffrés. Corrélation multi-machines indispensable en incident ransomware.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">GUI/CLI</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--red)">
+    <div class="tool-name">Hayabusa</div>
+    <div class="tool-by">Yamato Security</div>
+    <div class="tool-desc">Analyse rapide des Event Logs avec règles Sigma. Détecte automatiquement vssadmin, PsExec, Mimikatz, Cobalt Strike dans les logs. Timeline HTML exportable pour le rapport.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI Rust</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--blue)">
+    <div class="tool-name">Avast Decryptors</div>
+    <div class="tool-by">Avast Threat Labs</div>
+    <div class="tool-desc">Suite de déchiffreurs gratuits. Notable : déchiffreur Akira 2024 (GPU), AES-NI, Babuk, HermeticRansom. Télécharger uniquement depuis le site officiel Avast ou nomoreransom.org.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-gui">GUI</span></div>
+  </div>
+
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Une victime suisse vous contacte : ses serveurs sont chiffrés depuis ce matin. Elle a identifié la famille comme LockBit 3.0. Le groupe est-il sous sanctions OFAC ? Quel conseil donnez-vous sur le paiement ?<small>Réponse incident · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>Statut OFAC LockBit</strong> : LockBit a été partiellement sanctionné par les USA, UK et Australie en 2024 suite à l'opération Cronos. Des membres identifiés sont sous sanctions — payer directement ces individus est illégal. Le statut peut évoluer — vérifier le site OFAC (treasury.gov/ofac) au moment de l'incident.<br><br>
+    <strong>Conseil sur le paiement</strong> :<br>
+    1. <strong>Ne pas payer immédiatement</strong> — vérifier d'abord si des backups offline sont intacts<br>
+    2. <strong>Consulter les autorités</strong> : NCSC Suisse (ncsc.admin.ch), OFCS, et l'avocat de l'entreprise avant toute décision<br>
+    3. LockBit 3.0 dispose d'un déchiffreur partiel pour LockBit 2.0 — vérifier nomoreransom.org<br>
+    4. Le paiement ne garantit pas le déchiffrement complet et encourage les futures attaques<br>
+    5. Si données personnelles exfiltrées (quasi-certain avec LockBit) : notification PFPDT « dans les meilleurs délais » obligatoire indépendamment du paiement
+  </div>
+</div>
+</div><!-- /tab-response -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — LÉGAL
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-legal">
+
+<div class="concept-card">
+  <div class="concept-title">⚖️ Obligations légales suisses — Ransomware &amp; violation de données</div>
+  Un incident ransomware déclenche <strong>plusieurs obligations légales simultanées</strong> en Suisse. La nLPD (nouvelle Loi sur la Protection des Données, en vigueur depuis le 1er septembre 2023) impose une notification en cas de violation de données à caractère personnel. Le CPP encadre le dépôt de plainte et la chaîne de custody. Et les sanctions OFAC américaines ont un effet extraterritorial qui touche les entreprises suisses payant une rançon.
+</div>
+
+<!-- Obligations légales -->
+<div class="sec-title">nLPD — Notification en cas de violation de données</div>
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(255,64,96,.3);background:rgba(255,64,96,.05)">
+    <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.4rem;text-transform:uppercase">⚠️ nLPD Art. 24 — Notification PFPDT</div>
+    <div style="font-size:.73rem;color:var(--muted);line-height:1.7">
+      <strong>Déclencheur</strong> : violation de données personnelles susceptible d'entraîner un risque élevé pour les personnes concernées.<br>
+      <strong>Délai</strong> : <em>« dans les meilleurs délais »</em> — pas de délai fixe (≠ 72h RGPD).<br>
+      <strong>Destinataire</strong> : PFPDT (Préposé Fédéral à la Protection des Données et à la Transparence).<br>
+      <strong>Contenu</strong> : nature de la violation, données concernées, mesures prises, personnes affectées.<br>
+      <strong>Double notification</strong> : si risque élevé → notifier aussi les personnes concernées.
+    </div>
+  </div>
+
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(88,166,255,.3);background:rgba(88,166,255,.05)">
+    <div style="font-size:.65rem;color:var(--blue);font-weight:700;margin-bottom:.4rem;text-transform:uppercase">🔍 CPP — Plainte pénale</div>
+    <div style="font-size:.73rem;color:var(--muted);line-height:1.7">
+      <strong>Art. 143bis CP</strong> : accès indu à un système informatique — plainte auprès du Ministère Public cantonal ou fedpol.<br>
+      <strong>Art. 143 CP</strong> : soustraction de données.<br>
+      <strong>Art. 144bis CP</strong> : dommages aux données.<br>
+      <strong>Chaîne de custody</strong> : toutes les preuves collectées doivent respecter l'art. 141 CPP (preuves illicites = irrecevables).<br>
+      <strong>Délai</strong> : plainte dès que possible — pas de délai de prescription immédiat mais agir vite.
+    </div>
+  </div>
+
+</div>
+
+<!-- OFAC -->
+<div class="sec-title">Sanctions OFAC — Effet extraterritorial sur les entreprises suisses</div>
+<div class="alert">
+  🌐 <strong>Attention aux sanctions américaines</strong> : le département du Trésor américain (OFAC) sanctionne certains groupes ransomware (LockBit, Evil Corp, Conti, ALPHV). Payer une rançon à un groupe sanctionné constitue une violation de ces sanctions <strong>même pour une entreprise suisse</strong> — si la transaction implique des dollars américains, un intermédiaire US, ou une banque correspondante américaine. Consulter un avocat spécialisé avant tout paiement.
+</div>
+
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Aspect</th><th>Suisse (nLPD / CPP)</th><th>Différence RGPD (UE)</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Délai notification</td>
+      <td style="font-size:.74rem">« Dans les meilleurs délais » — pas de délai fixe</td>
+      <td style="font-size:.74rem">72 heures max après découverte</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Autorité de notification</td>
+      <td style="font-size:.74rem">PFPDT (Berne)</td>
+      <td style="font-size:.74rem">Autorité nationale selon État membre</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Sanctions max</td>
+      <td style="font-size:.74rem">CHF 250'000 (amende pénale personnelle — pas d'entreprise)</td>
+      <td style="font-size:.74rem">4% CA mondial ou 20 M€</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Responsabilité</td>
+      <td style="font-size:.74rem">Personne physique (dirigeant) — pas l'entité juridique</td>
+      <td style="font-size:.74fem">Entité juridique principalement</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem">Seuil notification</td>
+      <td style="font-size:.74rem">Risque élevé pour les personnes</td>
+      <td style="font-size:.74rem">Toute violation (risque faible inclus)</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- Cas suisses -->
+<div class="sec-title">Cas suisses documentés — Enseignements forensiques</div>
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.5rem;margin:.75rem 0">
+
+  <div style="padding:.7rem .85rem;border-radius:9px;border:1px solid rgba(255,64,96,.25);background:rgba(255,64,96,.04)">
+    <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.3rem">🏛️ Xplain — Play Ransomware (2023)</div>
+    <div style="font-size:.72rem;color:var(--muted);line-height:1.65">Prestataire IT de la Confédération. 1.3 million de fichiers publiés dont des données fédérales sensibles. <strong>Enseignement</strong> : données gouvernementales chez des tiers non sécurisés = risque systémique. Notification au PFPDT effectuée.</div>
+  </div>
+
+  <div style="padding:.7rem .85rem;border-radius:9px;border:1px solid rgba(240,192,64,.25);background:rgba(240,192,64,.04)">
+    <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.3rem">📰 NZZ — 2023</div>
+    <div style="font-size:.72rem;color:var(--muted);line-height:1.65">Groupe de presse NZZ/CH Media. Production perturbée plusieurs semaines. <strong>Enseignement</strong> : même les médias sont des cibles. Les systèmes de production (prépresse, impression) = OT/IT convergés.</div>
+  </div>
+
+  <div style="padding:.7rem .85rem;border-radius:9px;border:1px solid rgba(88,166,255,.25);background:rgba(88,166,255,.04)">
+    <div style="font-size:.65rem;color:var(--blue);font-weight:700;margin-bottom:.3rem">✈️ Swissport — 2022</div>
+    <div style="font-size:.72rem;color:var(--muted);line-height:1.65">Prestataire aéroportuaire mondial (Genève, Zurich). Alphv/BlackCat. 1.6 TB exfiltrés. <strong>Enseignement</strong> : infrastructures critiques transport = cibles prioritaires. Résilience opérationnelle testée.</div>
+  </div>
+
+  <div style="padding:.7rem .85rem;border-radius:9px;border:1px solid rgba(48,232,138,.25);background:rgba(48,232,138,.04)">
+    <div style="font-size:.65rem;color:var(--green);font-weight:700;margin-bottom:.3rem">🚂 Stadler Rail — 2020</div>
+    <div style="font-size:.72rem;color:var(--muted);line-height:1.65">Constructeur ferroviaire suisse. Rançon de $6M demandée, refusée. Données publiées. <strong>Enseignement</strong> : refuser de payer = données publiées (double extorsion). Préparer la communication de crise.</div>
+  </div>
+
+</div>
+
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — Ransomware Forensique</div>
+  <p><strong>Kill chain 7 étapes</strong> : Initial Access → Execution → Discovery → Lateral → Exfiltration → Impact → C2</p>
+  <p><strong>Dwell time médian</strong> : 21 jours — le chiffrement est la dernière étape, pas la première</p>
+  <p><strong>IOCs critiques impact</strong> : <code>vssadmin delete shadows /all /quiet</code> · <code>wbadmin delete catalog</code> · <code>bcdedit recoveryenabled No</code></p>
+  <p><strong>Exfiltration</strong> : chercher RCLONE.EXE et MEGASYNC.EXE dans prefetch — présence = double extorsion confirmée</p>
+  <p><strong>nLPD art. 24</strong> : notification PFPDT <em>« dans les meilleurs délais »</em> — <strong>pas de délai fixe</strong> (≠ 72h RGPD)</p>
+  <p><strong>CPP</strong> : plainte pénale art. 143bis (accès indu) · art. 143 (soustraction données) · art. 144bis (dommages données)</p>
+  <p><strong>OFAC</strong> : payer un groupe sanctionné = illégal même pour une entreprise suisse</p>
+  <p><strong>Identification</strong> : id-ransomware.malwarehunterteam.com · nomoreransom.org · Akira = déchiffreur GPU disponible</p>
+  <p><strong>🇨🇭 Cas suisses</strong> : Xplain (Play) · NZZ · Swissport (ALPHV) · Stadler Rail · Spital Linth (Akira)</p>
+</div>
+</div><!-- /tab-legal -->
 
 <script>
+// ── Tabs ──
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
+  var el = document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+// ── Quiz ──
+document.addEventListener('click', function(e) {
+  if(e.target && e.target.classList.contains('quiz-reveal-btn')) {
+    var wrap = e.target.closest('.quiz-wrap');
+    if(!wrap) return;
+    var ans = wrap.querySelector('.quiz-answer');
+    if(ans) ans.style.display = ans.style.display === 'block' ? 'none' : 'block';
+  }
+});
+
+// ── Kill Chain details ──
+var kcDetails = {
+  access: {
+    icon:'🚪', name:'Initial Access — T1566 · T1190 · T1133',
+    body:`<strong>Vecteurs les plus fréquents (2024)</strong> :<br>
+    · <strong>Phishing</strong> (40%) : pièce jointe .xlsx avec macro, .lnk, .iso, lien vers page de phishing. Payload : Emotet, QBot, IcedID pour livrer le ransomware.<br>
+    · <strong>VPN vulnérable</strong> (30%) : exploitation de CVE sur Fortinet FortiGate, Pulse Secure, Citrix (Bleed). Credential stuffing sur des comptes VPN sans MFA.<br>
+    · <strong>RDP exposé</strong> (20%) : port 3389 exposé sur Internet + brute force ou credentials achetés sur des marchés dark web.<br>
+    · <strong>Supply chain</strong> (10%) : prestataire IT compromis (cas Xplain CH).<br><br>
+    <strong>IOCs</strong> :<br>
+    · SMTP logs : pièce jointe suspecte reçue (chercher dans les logs 3-4 semaines avant)<br>
+    · VPN logs : IP étrangère, heure atypique, compte de service<br>
+    · EID 4625 en masse puis EID 4624 depuis IP externe = brute force RDP réussi`
+  },
+  exec: {
+    icon:'⚡', name:'Execution — T1059 · T1047 · T1053',
+    body:`<strong>Mécanismes d'exécution courants</strong> :<br>
+    · <strong>PowerShell encodé</strong> : <code>powershell -enc [base64]</code> pour obfusquer le payload<br>
+    · <strong>WMI</strong> : exécution sans fichier, processus enfant de WmiPrvSE.exe<br>
+    · <strong>Scheduled Task</strong> : persistance + exécution différée<br>
+    · <strong>DLL Sideloading</strong> : DLL malveillante chargée par un binaire légitime signé<br>
+    · <strong>C2 Beacon</strong> : Cobalt Strike, Sliver, Brute Ratel — communication HTTPS vers infrastructure C2<br><br>
+    <strong>IOCs</strong> :<br>
+    · EID 4688 : <code>powershell.exe -enc</code> ou <code>powershell.exe -w hidden -nop</code><br>
+    · Sysmon EID 1 : processus avec parent inhabituel<br>
+    · Sysmon EID 3 : connexions sortantes vers IPs non répertoriées (C2 beaconing)<br>
+    · Prefetch : binaires inconnus exécutés depuis %TEMP% ou %APPDATA%`
+  },
+  disco: {
+    icon:'🔭', name:'Discovery & Reconnaissance — T1087 · T1069 · T1018',
+    body:`<strong>Outils utilisés par les attaquants</strong> :<br>
+    · <strong>BloodHound/SharpHound</strong> : cartographie complète de l'AD, chemins vers Domain Admin<br>
+    · <strong>ADRecon</strong> : extraction d'informations AD (utilisateurs, groupes, GPO, ACL)<br>
+    · <strong>Commandes natives</strong> : <code>net user /domain</code>, <code>net group "Domain Admins"</code>, <code>nltest /domain_trusts</code>, <code>ipconfig /all</code><br>
+    · <strong>Nmap interne</strong> : scan du réseau pour identifier les serveurs de sauvegarde, NAS, hyperviseurs<br><br>
+    <strong>IOCs</strong> :<br>
+    · EID 4662 sur le DC : requêtes LDAP massives en courte période<br>
+    · EID 4624/4625 massifs depuis même source IP<br>
+    · Prefetch : BloodHound.exe, AdFind.exe, SharpHound.exe<br>
+    · Sysmon EID 1 : <code>net.exe</code>, <code>nltest.exe</code>, <code>whoami.exe</code> exécutés en série`
+  },
+  lateral: {
+    icon:'🔀', name:'Lateral Movement — T1021 · T1570 · T1550',
+    body:`<strong>Techniques principales</strong> :<br>
+    · <strong>PsExec</strong> : dépose PSEXESVC.exe + crée service → Event 7045 sur la cible<br>
+    · <strong>WMI Exec</strong> : exécution distante via Win32_Process.Create → processus enfant de WmiPrvSE<br>
+    · <strong>Pass-the-Hash</strong> : hash NTLM réutilisé sans mot de passe → Event 4624 Type 3 avec auth NTLM<br>
+    · <strong>GPO Abuse</strong> : création d'une GPO qui déploie le ransomware sur tout le parc AD en une fois<br><br>
+    <strong>IOCs</strong> :<br>
+    · EID 4648 (source) + EID 4624 Type 3 + EID 7045 PSEXESVC (cible)<br>
+    · EID 4688 : processus enfant de WmiPrvSE.exe<br>
+    · Shimcache / Amcache : binaires exécutés sur des machines distantes<br>
+    → Voir fiche <strong>Lateral Movement Forensique</strong> pour le détail complet`
+  },
+  exfil: {
+    icon:'📤', name:'Exfiltration — T1567 · T1048',
+    body:`<strong>Double extorsion — données volées AVANT chiffrement</strong><br><br>
+    <strong>Outils d'exfiltration courants</strong> :<br>
+    · <strong>Rclone</strong> : outil légitime de sync cloud détourné. Configuration dans <code>%APPDATA%\rclone\rclone.conf</code> avec credentials MEGA/S3/Dropbox<br>
+    · <strong>MEGASync</strong> : client MEGA officiel utilisé pour uploader les données<br>
+    · <strong>WinSCP / FileZilla</strong> : transfert FTP vers serveur contrôlé par l'attaquant<br>
+    · <strong>HTTPS direct</strong> vers C2 infrastructure cloud (AWS, Azure) pour se fondre dans le trafic légitime<br><br>
+    <strong>IOCs</strong> :<br>
+    · Prefetch : <strong>RCLONE.EXE</strong>, MEGASYNC.EXE — présence = exfiltration quasi-certaine<br>
+    · NetFlow : volume sortant anormal (GB ou TB) vers IPs cloud sur courte période<br>
+    · Proxy logs : connexions vers mega.nz, api.mega.co.nz<br>
+    · Shimcache : Rclone même si supprimé après coup`
+  },
+  impact: {
+    icon:'💥', name:'Impact — Chiffrement (T1486)',
+    body:`<strong>Séquence typique du chiffrement</strong> :<br>
+    1. <code>vssadmin delete shadows /all /quiet</code> — supprime les Volume Shadow Copies (T-5 min)<br>
+    2. <code>wbadmin delete catalog -quiet</code> — supprime le catalogue Windows Backup<br>
+    3. <code>bcdedit /set {default} recoveryenabled No</code> — désactive Windows Recovery<br>
+    4. Arrêt des services : bases de données (SQL, Oracle), sauvegardes, antivirus<br>
+    5. Chiffrement AES-256 fichier par fichier + clé chiffrée avec RSA publique<br>
+    6. Note de rançon déposée dans chaque dossier<br><br>
+    <strong>IOCs</strong> :<br>
+    · EID 4688 : <code>vssadmin.exe</code> avec arguments delete shadows<br>
+    · <strong>$UsnJrnl</strong> : masse d'entrées modification/renommage en quelques minutes = timestamp précis du chiffrement<br>
+    · MFT : <code>$MFT</code> scan — tous les fichiers avec extension ajoutée au même timestamp<br>
+    · Note de rançon : timestamp de création = début du chiffrement`
+  },
+  c2: {
+    icon:'📡', name:'C2 & Négociation',
+    body:`<strong>Infrastructure C2 ransomware</strong> :<br>
+    · Portail Tor (.onion) pour la communication avec la victime<br>
+    · <strong>Leak site</strong> sur le dark web : publication des données si non-paiement (Play, LockBit, Cl0p)<br>
+    · Paiement en <strong>Bitcoin</strong> (traçable) ou <strong>Monero</strong> (plus anonyme, favorisé par certains groupes)<br>
+    · Certains groupes ont un service client 24/7 avec chat en ligne<br><br>
+    <strong>IOCs</strong> :<br>
+    · Adresse .onion dans la note de rançon → rechercher dans les bases OSINT (Ransomwhere, onionsearch)<br>
+    · Logs DNS : requêtes vers des résolveurs Tor ou des domaines .onion<br>
+    · Wallet Bitcoin/Monero dans la note → tracer sur blockchain (Chainalysis, blockchain.info)<br><br>
+    <strong>Recommandation</strong> : ne jamais contacter le groupe sans consulter les autorités et un avocat spécialisé.`
+  }
+};
+
+function showKC(key) {
+  var d = kcDetails[key];
+  if(!d) return;
+  document.querySelectorAll('.meta-card').forEach(function(c){c.classList.remove('sel');});
+  var p = document.getElementById('kc-detail');
+  p.className = 'meta-detail live';
+  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.name+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── Family details ──
+var familyDetails = {
+  lockbit: {
+    icon:'🔒', name:'LockBit 3.0 — Groupe le plus actif 2022–2024',
+    body:`<strong>Profil</strong> : RaaS (Ransomware-as-a-Service). Affiliés payent 20% de commission. Programme de bug bounty unique en son genre. Takedown partiel par Europol (opération Cronos, février 2024) mais reprise d'activité.<br><br>
+    <strong>Signatures forensiques</strong> :<br>
+    · Extensions : <code>.lockbit</code>, <code>[ID aléatoire]</code><br>
+    · Note de rançon : <code>Restore-My-Files.txt</code><br>
+    · Supprime les traces via <code>wevtutil cl</code> (effacement Event Logs)<br>
+    · Utilise GPO pour déploiement massif sur tout le domaine AD<br><br>
+    <strong>Déchiffreur</strong> : disponible pour LockBit 2.0 (clés publiées par Europol). LockBit 3.0 = pas de déchiffreur public.<br><br>
+    <strong>🇨🇭 Victimes suisses</strong> : plusieurs PME et administrations, détails non divulgués.`
+  },
+  play: {
+    icon:'▶️', name:'Play Ransomware — Affaire Xplain (CH 2023)',
+    body:`<strong>Profil</strong> : groupe fermé (pas de RaaS public). Cible les PME et les administrations. Connu pour éviter les négociations — publie directement les données.<br><br>
+    <strong>Signatures forensiques</strong> :<br>
+    · Extension : <code>.play</code><br>
+    · Note de rançon : <code>ReadMe.txt</code> très courte<br>
+    · Utilise des outils légitimes : AdFind, Grixba (outil de découverte custom)<br>
+    · Exploitation CVE Fortinet et Exchange pour l'accès initial<br><br>
+    <strong>🇨🇭 Affaire Xplain (mai 2023)</strong> : Xplain SA (prestataire IT de la Confédération, police cantonale, armée) compromise. 1.3 million de fichiers publiés incluant des données fédérales sensibles. Enquête PFPDT ouverte. Rapport OFCS publié en 2024.<br><br>
+    <strong>Déchiffreur</strong> : aucun disponible publiquement.`
+  },
+  akira: {
+    icon:'🌀', name:'Akira — Déchiffreur GPU disponible (2024)',
+    body:`<strong>Profil</strong> : actif depuis mars 2023. Cible prioritairement les PME (moins de protection). Développé en C++. Interface dark web avec esthétique rétro années 80.<br><br>
+    <strong>Signatures forensiques</strong> :<br>
+    · Extensions : <code>.akira</code>, <code>.powerranges</code> (version Linux)<br>
+    · Note : <code>akira_readme.txt</code><br>
+    · Chiffrement ChaCha20 + RSA-4096<br>
+    · Exploite des vulnérabilités Cisco VPN (CVE-2023-20269) pour l'accès initial<br>
+    · Désactive Windows Defender avant chiffrement<br><br>
+    <strong>🎯 Déchiffreur disponible</strong> : Avast a publié en mars 2024 un déchiffreur exploitant une faiblesse dans la génération des clés. Nécessite un GPU puissant (RTX 4090 recommandé). Disponible sur nomoreransom.org.<br><br>
+    <strong>🇨🇭 Victime suisse</strong> : Spital Linth (2024).`
+  },
+  blackcat: {
+    icon:'🐈', name:'ALPHV/BlackCat — Multi-plateforme Rust',
+    body:`<strong>Profil</strong> : premier grand ransomware écrit en Rust. Multi-plateforme (Windows, Linux, VMware ESXi). RaaS avec 80/20 split favorable aux affiliés. FBI takedown décembre 2023.<br><br>
+    <strong>Signatures forensiques</strong> :<br>
+    · Extension : variable selon la configuration de l'affilié<br>
+    · Note : <code>RECOVER-[ID]-FILES.txt</code><br>
+    · Chiffrement AES-256 (fichiers &lt; 128MB) ou XSalsa20 (grands fichiers)<br>
+    · Exfiltre via Exmatter (outil custom) vers des serveurs SFTP/WebDAV<br>
+    · Attaques sur le secteur santé, finance, infrastructure critique<br><br>
+    <strong>Déchiffreur</strong> : FBI a obtenu des clés de déchiffrement lors du takedown — disponibles via nomoreransom.org pour certaines victimes.<br><br>
+    <strong>🇨🇭 Victime suisse</strong> : Swissport (2022) — 1.6 TB exfiltrés.`
+  },
+  clop: {
+    icon:'🦞', name:'Cl0p — Spécialiste des 0-days',
+    body:`<strong>Profil</strong> : groupe lié à Evil Corp (Russie). Stratégie unique : exploitation de 0-days sur des logiciels de transfert de fichiers pour compromettre des milliers de victimes simultanément.<br><br>
+    <strong>Campagnes majeures</strong> :<br>
+    · <strong>MOVEit Transfer</strong> (CVE-2023-34362, juin 2023) : 2700+ organisations, 95M+ personnes touchées<br>
+    · <strong>GoAnywhere MFT</strong> (CVE-2023-0669, 2023) : 130+ organisations<br>
+    · <strong>Accellion FTA</strong> (2020-2021) : banques, universités<br><br>
+    <strong>Particularité forensique</strong> : Cl0p exfiltre parfois <strong>sans chiffrer</strong> — pur vol de données avec menace de publication. Les artefacts traditionnels (fichiers chiffrés) sont absents.<br><br>
+    <strong>Déchiffreur</strong> : disponible pour les anciennes variantes via nomoreransom.org. Variantes récentes = pas de déchiffreur.`
+  },
+  blacksuit: {
+    icon:'🃏', name:'Royal/BlackSuit — Successeur de Conti',
+    body:`<strong>Profil</strong> : émergé en 2022 après la dissolution de Conti. Rebrandé BlackSuit en 2023. Cible prioritaire : infrastructures critiques (hôpitaux, transport, énergie).<br><br>
+    <strong>Signatures forensiques</strong> :<br>
+    · Extensions : <code>.royal</code>, <code>.blacksuit</code><br>
+    · Note : <code>README.TXT</code><br>
+    · Chiffrement AES-256 + RSA partiel (chiffre seulement une partie des fichiers = plus rapide)<br>
+    · Utilise Cobalt Strike et BazarLoader comme stagers<br>
+    · Désactive les outils EDR via des drivers vulnérables (BYOVD - Bring Your Own Vulnerable Driver)<br><br>
+    <strong>BYOVD forensique</strong> : chercher des drivers <code>.sys</code> récemment chargés non signés par Microsoft dans System.evtx EID 7045.<br><br>
+    <strong>Déchiffreur</strong> : aucun disponible publiquement.`
+  }
+};
+
+function showFamily(key) {
+  var d = familyDetails[key];
+  if(!d) return;
+  document.querySelectorAll('.meta-card').forEach(function(c){c.classList.remove('sel');});
+  var p = document.getElementById('family-detail');
+  p.className = 'meta-detail live';
+  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.name+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── Scroll progress ──
 (function(){
+  var bar = document.getElementById('scroll-progress');
   var btn = document.getElementById('back-top');
-  if(btn) window.addEventListener('scroll', function(){
-    btn.classList.toggle('visible', window.scrollY > 300);
+  window.addEventListener('scroll', function(){
+    var doc = document.documentElement;
+    var scrolled = doc.scrollTop || document.body.scrollTop;
+    var total = doc.scrollHeight - doc.clientHeight;
+    if(bar) bar.style.width = (total > 0 ? (scrolled/total*100) : 0)+'%';
+    if(btn) btn.classList.toggle('visible', scrolled > 300);
   });
 })();
 </script>
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/theme-toggle.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
 </body>
 </html>
