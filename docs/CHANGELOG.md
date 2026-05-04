@@ -4,6 +4,110 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.47] — 2026-05-04
+
+🌍 **Suite de la phase d'extension EU** : 2 nouveaux scénarios inspirés de la coopération européenne 2024-2026.
+
+Cette release v2.47 continue l'**Axe 1** de la roadmap (Continuité scénarios EU). Le corpus passe de **113 à 115 scènes**. Le catalogue PNJ passe à **64 PNJ** (+4).
+
+### Ajouté — 4 nouveaux PNJ dans `data/npcs.json` (60 → 64)
+
+| ID | Type | Rôle | Apparition principale |
+|---|---|---|---|
+| `emcdda_lisbon_analyst` | Fictif **transposable** | Sr. Carvalho, Senior analyst EMCDDA Lisbonne | `eu-emcdda-trade-aml` |
+| `mros_crypto_lead` | Fictive **transposable** | Mme Stalder, Cheffe cellule crypto-tracing MROS | `eu-emcdda-trade-aml` |
+| `sem_asile_vallorbe` | Fictive | Mme Wenger, Cheffe section traitement Vallorbe SEM | `eu-frontex-deepfake-asylum` |
+| `frontex_warsaw_liaison` | Fictif **transposable** | Mr. Kowalczyk, Officier liaison Frontex Warsaw | `eu-frontex-deepfake-asylum` |
+
+**Diversification thématique** :
+- **EMCDDA Lisbonne** (Carvalho) — darknet markets monitoring, Chainalysis, EMPACT+ Drugs cycle 2026-2029
+- **MROS crypto** (Stalder) — LBA art. 9 + Monero unmasking 2024+ + FinCEN bilatéral
+- **SEM Vallorbe** (Wenger) — audition trauma-informed + Lingua + EUROSUR
+- **Frontex Warsaw** (Kowalczyk) — FRAN + EURODAC + Schengen-CH coopération asile
+
+### Ajouté — 2 nouveaux scénarios (coopération européenne)
+
+#### `eu-emcdda-trade-aml` — 4'200 utilisateurs CH sur successor Hydra (5 steps, hard)
+**Inspiration réelle** : Démantèlement Hydra (BKA + DOJ US, 5 avril 2022, 25M USD crypto saisis), Operation Bohemia (Dutch Police + Europol, mars 2024), Operation OnymousReborn (juin 2026, hypothétique mais plausible vu pattern post-Hydra). Les utilisateurs ont migré sur 4 marketplaces successeurs (Bohemia, ASAP, Tor2Door, Drughub).
+**Angle pédagogique** : 
+- Triage différencié 4'020 acheteurs (consommation personnelle) vs 180 vendeurs grossistes (14.2M EUR cumulés) selon politique des 4 piliers CH
+- Crypto-tracing graduée par cryptocurrency : BTC/USDT (60-80% identification via Chainalysis) vs Monero (25-40% via EMCDDA Labs unmasking 2024-2026)
+- Coordination FINMA-MROS sur SwissBorg (sous licence FINMA)
+- EIMP graduée 3 axes : UE fluide / Russie suspendue post-2022 / autres difficiles
+- Communication FOSAS trauma-informed avec doctrine harm reduction
+
+**Marqueurs 📍** : step 0 #1 (massification pénale catastrophique), step 4 #1 (campagne FOSAS répressive non recommandée).
+
+#### `eu-frontex-deepfake-asylum` — Deepfake IA dans une demande d'asile à Vallorbe (5 steps, hard)
+**Inspiration réelle** : 340 cas réels documentés 2024-2025 de demandeurs d'asile présentant des deepfakes IA-générés (Frontex Risk Analysis Report 2025 : FR 110, DE 87, IT 68, AT 42, CH 13 connus, NL/BE 20). Tools utilisés par les fournisseurs commerciaux : Stable Diffusion XL + LoRA personnalisés + DeepFaceLab.
+**Angle pédagogique** :
+- Triage dual-track distinguant rigoureusement (a) authenticité des pièces (vidéo deepfake) et (b) véracité du récit de persécution — 18% des cas Frontex 2025 sont des persécutés réels avec preuves fabriquées
+- Méthodologie forensique 5 axes : Sensity AI + Reality Defender + analyse spectrale + photogrammétrie + frame-level inconsistency (cross-validation 2 outils minimum BKA 2024)
+- Qualification juridique dual : art. 53 LAsi (lex specialis procédure asile, retrait administratif rapide) + art. 251 CP en concours réel (jurisprudence TF 2024-2025 : médias synthétiques = titres art. 110 ch. 4 CP)
+- Coordination Frontex FRAN + EURODAC pour identification réseau organisé (24 cas signature commune)
+- Protection du demandeur via réouverture d'office sur récit de persécution authentique potentiel (principe non-refoulement art. 33 Convention Genève + art. 25 al. 3 Cst)
+
+**Marqueurs 📍** : step 0 #1 (rejet immédiat = catastrophe non-refoulement), step 4 #1 (rejet uniforme sans dual-track = catastrophe non-refoulement).
+
+### Modifié — `scenes/index.json`
+
+Catalogue étendu de 113 → 115 scènes.
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue à 115 scènes (113 + 2 nouveaux EU). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v80 → v81
+
+Header v2.47 documentant les 4 nouveaux PNJ + les 2 nouveaux scénarios.
+
+### Statistiques v2.47
+
+| Indicateur | v2.46 | v2.47 |
+|---|---|---|
+| Scènes totales | 113 | **115** ✨ (+2) |
+| Scènes avec NPCs assignés | 113 | **115** (100%) |
+| **PNJ catalogue** | **60** | **64** ✨ (+4) |
+| PNJ réels | 8 | 8 (inchangé) |
+| PNJ fictifs | 52 | **56** (+4) |
+| PNJ transposables | 27 | **30** (+3) |
+| Service Worker | v80 | **v81** |
+
+### Notes éditoriales
+
+**Sur le scénario EMCDDA.** Le démantèlement Hydra (avril 2022) est un cas d'école de la lutte multi-juridictions contre les marketplaces darknet. Le scénario v2.47 modélise une opération hypothétique (Op. OnymousReborn juin 2026) qui s'inscrit dans la continuité réaliste : pattern observé post-Silk Road 2013 (migration vers Hansa, AlphaBay), pattern post-Hansa/AlphaBay 2017 (migration vers Dream, Wall Street), pattern post-Hydra 2022 (migration vers Bohemia/ASAP/Tor2Door/Drughub démantelés en 2024-2025). La 5e génération (Op. OnymousReborn 2026) est cohérente avec la doctrine EMPACT+ Drugs cycle 2026-2029.
+
+Le triage différencié 4'020 acheteurs vs 180 vendeurs grossistes reflète la **politique des 4 piliers CH** (1991+, prévention/thérapie/réduction des risques/répression). La doctrine moderne (FOSAS 2024) privilégie les actions sectorielles ciblées plutôt que la criminalisation massive des consommateurs.
+
+**Sur le scénario Frontex deepfake.** Les 340 cas réels documentés 2024-2025 sont un phénomène émergent qui pose des défis multiples : (a) **forensiques** (les outils 2024 sont moins matures que pour les deepfakes vidéo classiques 2018-2023, car les modèles génératifs IA évoluent rapidement), (b) **juridiques** (la qualification "titre" art. 110 ch. 4 CP des médias synthétiques a été confirmée par TF 2024-2025 mais la jurisprudence reste limitée), (c) **éthiques** (le risque de renvoyer un persécuté réel sur la base d'une fraude documentaire viole le principe de non-refoulement).
+
+La doctrine SEM 2024-2025 distingue rigoureusement (a) authenticité des pièces et (b) véracité du récit, ce qui permet la **dual-track decision** (rejet partiel + dénonciation pénale + réouverture d'office sur récit authentique). Cette approche est novatrice et reflète l'état de l'art post-2024.
+
+**Sur la suite de l'extension EU (v2.48-v2.49).** 3 scénarios EU restants des propositions v2.45 :
+- `eu-cer-directive-incident` (Directive CER 2023/2557 énergie transfrontalière)
+- `eu-nis2-pme-suisse` (Directive NIS2 2022/2555 impact extraterritorial CH)
+- `eu-ai-act-cybersecurity` (Règlement IA EU 2024/1689)
+
+Plus 2 scénarios additionnels possibles selon préférences :
+- `eu-cyresco-2027` (futur règlement EU Cyber Resilience Council)
+- `eu-pegasus-spyware` (cas réels Pegasus en CH)
+
+### Roadmap mise à jour
+
+```
+v2.48  Nouveaux scénarios EU (eu-cer-directive-incident + eu-nis2-pme-suisse)
+v2.49  Nouveau scénario EU (eu-ai-act-cybersecurity) + bilan extension EU
+       (5 scénarios EU livrés depuis v2.46 = 5 nouveaux scénarios)
+v2.50  ═══ MÉTA-GAMIFICATION ═══
+       Arcs PNJ + Univers cohérent (cross-références)
+       Achievements narratifs (6 nouveaux badges)
+       Quêtes thématiques (3 parcours pédagogiques)
+       Examen blanc CAS-IN 50q / 90 min
+v2.51  Certificats cantonaux + Profil candidat
+v2.55+ Boucles feedback pédagogique
+v2.70+ Multi-joueur asynchrone
+```
+
 ## [2.46] — 2026-05-04
 
 🚀 **Première release post-retrofit — extension avec nouveaux scénarios EU**
