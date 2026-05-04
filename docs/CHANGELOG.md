@@ -4,6 +4,182 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.46] — 2026-05-04
+
+🚀 **Première release post-retrofit — extension avec nouveaux scénarios EU**
+
+Après la milestone 100% en v2.45, cette release v2.46 lance la **phase d'extension** avec **3 nouveaux scénarios** inspirés de la coopération européenne 2024-2026 (cas réels documentés). Le corpus passe de **110 à 113 scènes**. Le catalogue PNJ passe à **60 PNJ** (+4).
+
+### Ajouté — 4 nouveaux PNJ dans `data/npcs.json` (56 → 60)
+
+| ID | Type | Rôle | Apparition principale |
+|---|---|---|---|
+| `msc_ciso_geneva` | Fictif | M. Aponte, CISO MSC Group (Genève) | `eu-eunavfor-aspides-cyber` |
+| `ofac_compliance_us` | Fictive **transposable** | Ms. Petrou, OFAC US Embassy Bern | `eu-cronos-3` |
+| `ncsc_uk_lockbit_lead` | Fictif | Mr. MacGregor, NCA UK Cronos lead | `eu-cronos-3` |
+| `swiss_navy_cyber_lead` | Fictif **transposable** | Capt. Frégate Bernhardsgrütter, DDPS Cyber-Maritime | `eu-eunavfor-aspides-cyber` |
+
+**Diversification thématique** :
+- **Maritime cyber** (Aponte MSC) — IMO MSC.428(98), TMSA-3, IEC 61162-460
+- **OFAC sanctions** (Petrou) — secondary sanctions, voluntary self-disclosure, FINMA-OFAC coordination
+- **NCA Cronos** (MacGregor) — Operation Cronos I/II/III, démantèlement LockBit
+- **DDPS Cyber-Maritime** (Bernhardsgrütter) — pavillon CH-flag, EUNAVFOR coordination
+
+### Ajouté — 3 nouveaux scénarios (coopération européenne)
+
+#### `eu-cronos-3` — Operation Cronos III (sanctions OFAC LockBit)
+**Inspiration réelle** : Operation Cronos II (NCA UK + FBI + Europol, octobre 2024) qui a démantelé l'infrastructure LockBit + identifié Dmitry Khoroshev (LockbitSupp). Cronos III (mai 2026, hypothétique mais plausible) viserait les opérateurs résiduels migrés vers DragonForce/BlackSuit.
+**Angle pédagogique** : sanctions OFAC sur paiements rançon, voluntary self-disclosure framework, articulation MP cantonal + FINMA + OFAC, distinction force majeure (PME 1) / négligence (PME 3), doctrine ATF 6B_392/2018 sur dol éventuel art. 305bis CP.
+**5 steps, hard, 5 NPCs** dont 2 nouveaux (`ofac_compliance_us`, `ncsc_uk_lockbit_lead`).
+
+#### `eu-endgame-2026` — Operation Endgame Phase 2 (notification 18'400 CH)
+**Inspiration réelle** : Operation Endgame (Europol + BKA + ANSSI + FBI, mai 2024) qui a démantelé l'infrastructure C2 IcedID + Pikabot + Smokeloader + Bumblebee + Trickbot. Phase 2 (mai 2026, hypothétique) viserait les opérateurs résiduels et infrastructures de blanchiment crypto.
+**Angle pédagogique** : notification massive 18'400 victimes en 72h, triage 4 niveaux ANSSI (N1-N4), nLPD art. 24 « meilleurs délais », gestion vague phishing post-communiqué exploitant l'imitation OFCS, retex 5 piliers structurels CSIRT-CH.
+**6 steps, hard, 5 NPCs** (utilise les transposables existants).
+
+#### `eu-eunavfor-aspides-cyber` — Mer Rouge MSC LIVORNO
+**Inspiration réelle** : Operation EUNAVFOR ASPIDES (UE, février 2024 → en cours), protection navigation Mer Rouge contre attaques Houthis. Plusieurs cyber-attaques documentées 2024-2025 contre navires européens (incl. MSC) : AIS spoofing, GPS manipulation, ECDIS ransomware.
+**Angle pédagogique** : coopération CSDP-CH ad hoc (CH non-membre UE mais accord-cadre 2014), précédent Op. ATALANTA, attribution Five Eyes (3 sources minimum, post-Olympic Destroyer 2018), capture forensique maritime IMO Cyber Forensic Guidelines 2024, protection flotte CH-flag (~30 navires marchands).
+**5 steps, expert, 5 NPCs** dont 2 nouveaux (`msc_ciso_geneva`, `swiss_navy_cyber_lead`).
+
+### Modifié — `scenes/index.json`
+
+Catalogue étendu de 110 → 113 scènes.
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 113 scènes du corpus complet (110 retrofit + 3 nouveaux EU). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v79 → v80
+
+Header v2.46 documentant les 4 nouveaux PNJ + les 3 nouveaux scénarios.
+
+### Statistiques v2.46
+
+| Indicateur | v2.45 | v2.46 |
+|---|---|---|
+| Scènes totales | 110 | **113** ✨ (+3) |
+| Scènes avec NPCs assignés | 110 | **113** (100%) |
+| Scènes avec marqueur 📍 | 110 | **113** (100%) |
+| **PNJ catalogue** | **56** | **60** ✨ (+4) |
+| PNJ réels | 8 | 8 (inchangé) |
+| PNJ fictifs | 48 | **52** (+4) |
+| PNJ transposables | 25 | **27** (+2) |
+| Service Worker | v79 | **v80** |
+
+### Notes éditoriales
+
+**Sur la phase d'extension post-retrofit.** Le sprint retrofit (v2.29 → v2.45, 17 versions sur 9 mois) a porté le corpus à 100% de couverture NPCs + marqueurs. La phase d'extension qui s'ouvre avec v2.46 vise à enrichir le corpus avec des scénarios contemporains (2024-2026) inspirés de cas réels. Le rythme cible est ~3 nouveaux scénarios par release, avec 0-2 nouveaux PNJ par scénario selon spécificité.
+
+**Sur le choix de la coopération européenne comme fil conducteur.** Les 3 scénarios v2.46 partagent une dimension de coopération européenne (Europol J-CAT, ANSSI bilatérale, NCA UK, EUNAVFOR ASPIDES CSDP). Cette orientation reflète :
+1. **La réalité opérationnelle CH** : la quasi-totalité des dossiers cyber majeurs CH 2023-2026 (Xplain, Swissport, Cronos, Endgame) ont une dimension multi-juridictions.
+2. **Les angles pédagogiques** distincts : EIMP suisse, voluntary self-disclosure OFAC, accord-cadre CH-UE 2014, Five Eyes attribution, art. 67a EIMP transmission spontanée.
+3. **L'expansion du casting transposable** : `europol_jcat_analyst`, `anssi_liaison_ch`, `bka_kidflix_lead`, `philippines_pjf_attache`, `ofac_compliance_us`, `ncsc_uk_lockbit_lead` peuvent être réutilisés dans les futurs scénarios EU.
+
+**Sur la documentation de réalité.** Chaque scénario inclut une section `references` listant les sources d'inspiration : opérations réelles documentées (Op. Cronos II 2024, Op. Endgame 2024, Op. EUNAVFOR ASPIDES en cours), conventions internationales (UNCLOS, SOLAS, IMO MSC.428(98)), jurisprudence (ATF 6B_392/2018), doctrines (OFAC Advisory 2021, ENISA 2024). Cela permet aux candidats CAS-IN de retrouver les sources primaires pour approfondissement.
+
+### Vision pour la suite de la gamification narrative
+
+Cette section présente la **roadmap stratégique** pour les prochaines releases v2.47+, en réponse à la demande utilisateur de détailler les suggestions pour la gamification narrative.
+
+**Axes structurants identifiés** :
+
+#### Axe 1 — **Continuité des nouveaux scénarios EU** (priorité immédiate)
+
+5 scénarios EU restants des propositions v2.45 (à développer en v2.47-v2.49) :
+- **`eu-emcdda-trade-aml`** — EMCDDA + Europol post-Hydra trafic crypto-stupéfiants
+- **`eu-frontex-deepfake-asylum`** — 340 cas réels deepfakes IA en demandes d'asile
+- **`eu-cer-directive-incident`** — Directive CER 2023/2557 énergie transfrontalière
+- **`eu-nis2-pme-suisse`** — Directive NIS2 impact extraterritorial CH
+- **`eu-ai-act-cybersecurity`** — Règlement IA EU 2024/1689 outils IA en procédure pénale CH
+
+Rythme suggéré : 2-3 par release, v2.47-v2.49 sur 6-9 semaines.
+
+#### Axe 2 — **Méta-gamification narrative** (priorité haute, débute v2.50)
+
+Le retrofit a doté chaque scène de NPCs riches et de marqueurs 📍. La **méta-gamification narrative** consiste à exploiter cette base pour créer des **arcs narratifs cross-scénarios**.
+
+**Mécaniques à introduire** :
+
+1. **Arcs PNJ** (continuité narrative). Permettre au candidat de retrouver les mêmes PNJ dans plusieurs scénarios avec progression de la relation. Exemples :
+   - **Arc Schöb (`play_ransom_analyst`)** : Xplain (apprentissage) → Cronos III (expertise confirmée) → Endgame Phase 2 (leadership). Le candidat voit le PNJ évoluer.
+   - **Arc Lavanchy (`ge_avocat_frontaliers`)** : France Travail (cas individuel) → Free Leak (cas collectif) → futur scénario "action collective frontaliers" (cas systémique).
+   - **Arc Tremp (`fim_xways_expert`)** : Timeline (méthodologie) → Trois artefacts (triangulation) → VeraCrypt (cryptanalyse). Le candidat suit la progression technique.
+
+2. **Univers cohérent** (consistance temporelle). Les dates dans les scénarios créent une chronologie cohérente :
+   - 2022 : Swissport ZRH, UniNE Conti
+   - 2023 : Xplain trilogie, Stadler 2020 (résolu)
+   - 2024 : NoName_2023, Operation Endgame Phase 1, RUAG-2016 (résolu)
+   - 2025 : Op. Magnus, KidFlix, Cronos II
+   - 2026 : Cronos III, Endgame Phase 2, EUNAVFOR ASPIDES (présent narratif)
+   
+   Les références aux scénarios antérieurs ("comme dans Xplain 2023") donnent une consistance d'univers.
+
+3. **Achievements narratifs** (collection PNJ). Système de badges :
+   - **"Le Cercle de Confiance"** : utiliser 5 PNJ transposables différents
+   - **"Tour d'Europe"** : compléter 5 scénarios EU
+   - **"Casting complet"** : rencontrer 30+ PNJ uniques
+   - **"Sentinelle CSIRT"** : compléter tous les scénarios incident response
+   - **"Le Procureur de Fer"** : compléter tous les scénarios à dimension procédurale
+   - **"Doctrine Five Eyes"** : compléter les 3 scénarios attribution APT (ruag, eu-revil, eu-eunavfor)
+
+4. **Quêtes thématiques** (parcours pédagogique). Regroupement de scénarios en parcours :
+   - **Parcours Ransomware Mastery** : Bec-pme → Lockbit → Ransomware (hôpital) → Xplain → Cronos III. 5 scénarios pour maîtriser la doctrine ransomware.
+   - **Parcours International Cooperation** : Eu-ghgo-ddos → Eu-france-travail → Op-magnus → Eu-cronos-3 → Eu-endgame-2026. 5 scénarios pour maîtriser les ops Europol.
+   - **Parcours OT/CII Resilience** : Hydro-valais → Swatch-2020-OT → Stadler-2020 → Swissgrid-IEC61850-jura → Eu-eunavfor-aspides. 5 scénarios pour maîtriser la cyber industrielle.
+
+#### Axe 3 — **Boucle de feedback pédagogique** (priorité moyenne, v2.55+)
+
+Le retrofit a installé des marqueurs 📍 BIFURCATION NARRATIVE explicites. La phase suivante peut introduire des **boucles d'apprentissage** :
+
+1. **Replay intelligent** : si le candidat échoue sur un step, proposer de retenter le même step après lecture de la doctrine référencée.
+
+2. **Synthèse personnalisée** : à la fin de chaque scénario, générer un PDF synthèse personnalisé incluant :
+   - Les choix faits par le candidat
+   - Les marqueurs 📍 rencontrés
+   - Les références doctrinales pour approfondissement
+   - Les liens vers les fiches du corpus DFIR
+
+3. **Recommandation adaptative** : selon les forces/faiblesses du candidat (mesurées sur 50+ scénarios complétés), recommander les prochains scénarios à compléter pour combler les lacunes.
+
+#### Axe 4 — **Évaluation et certification** (priorité haute, v2.50)
+
+L'utilisateur a évoqué l'**examen blanc** dans la roadmap v2.45. Cette piste me semble structurellement importante pour la valeur pédagogique :
+
+1. **Examen blanc CAS-IN** (50 questions / 90 minutes). Format reproduisant l'examen final CAS Investigation Numérique. Tirage aléatoire pondéré sur les 1'777 questions du corpus.
+
+2. **Certificats par canton** : génération de PDF de validation pour chaque canton (NE, GE, VD, BS, BE, ZH, etc.) selon les scénarios complétés impliquant ce canton.
+
+3. **Profil candidat** : page de profil avec progression visualisée, badges débloqués, scénarios complétés, score moyen par catégorie (DFIR / Droit / Coordination / Communication).
+
+#### Axe 5 — **Multi-joueur asynchrone** (priorité basse, v2.70+)
+
+Mécanique avancée pour exploiter la richesse du corpus :
+
+1. **Mode "Cellule de crise"** : 3-5 candidats jouent simultanément le même scénario en endossant des rôles différents (procureur, CISO, RSSI fédéral, journaliste, avocat). Discussion en chat puis vote sur les choix critiques.
+
+2. **Mode "Adversarial"** : 1 candidat joue le rôle de l'enquêteur, 1 autre joue le rôle de la défense (avocat des suspects). Les 2 confrontent leurs choix au procès simulé.
+
+3. **Mode "Mentor"** : un candidat avancé (>40 scénarios complétés) accompagne un candidat débutant (<10 scénarios) sur un scénario partagé. Le mentor débloque des badges spécifiques.
+
+#### Roadmap consolidée (proposition)
+
+```
+v2.47   Nouveaux scénarios EU (eu-emcdda-trade-aml + eu-frontex-deepfake-asylum)
+v2.48   Nouveaux scénarios EU (eu-cer-directive-incident + eu-nis2-pme-suisse)
+v2.49   Nouveau scénario EU (eu-ai-act-cybersecurity) + bilan extension EU
+v2.50   ═══ MÉTA-GAMIFICATION ═══
+        Arcs PNJ + Univers cohérent (cross-références dans intro)
+        Achievements narratifs (6 nouveaux badges)
+        Quêtes thématiques (3 parcours pédagogiques)
+v2.51   Examen blanc CAS-IN (50q / 90 min) + Certificats cantonaux
+v2.55+  Boucles feedback pédagogique (replay intelligent, synthèses PDF)
+v2.60+  Profil candidat avancé + recommandation adaptative
+v2.70+  Multi-joueur asynchrone (mode cellule de crise)
+```
+
+Cette roadmap est une **proposition modulaire** : chaque axe peut être priorisé ou désactivé selon les retours utilisateurs et l'évolution du contexte CAS-IN.
+
 ## [2.45] — 2026-05-04
 
 ✨ **MILESTONE HISTORIQUE — 100% du corpus retrofit atteint** ✨
