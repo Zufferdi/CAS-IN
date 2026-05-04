@@ -1,4 +1,73 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v82 : v2.48 — 1 SCÉNARIO EU + DÉMARRAGE MÉTA-GAMIFICATION
+//
+//       Cette release combine : (a) Axe 1 (continuité scénarios EU)
+//       avec eu-cer-directive-incident (Directive CER 2023/2557
+//       énergie transfrontalière), (b) Axe 2 (méta-gamification)
+//       avec démarrage des arcs PNJ + univers cohérent + 5 nouveaux
+//       badges narratifs.
+//       Le corpus passe de 115 à 116 scènes.
+//
+//       2 nouveaux PNJ ajoutés à data/npcs.json (64 → 66) :
+//
+//         • rte_dso_cyber_lead (Mme Berger-Klein, fictive
+//             transposable) — Cheffe cellule Cyber-OT RTE Direction
+//             Sûreté, La Défense (FR), interconnexions CH-FR
+//         • ofen_juriste_int (M. Bonvin, fictif) — Juriste senior
+//             coopération internationale OFEN, accord électrique
+//             CH-UE 2014 (suspendu)
+//
+//       1 nouveau scénario — coopération européenne :
+//
+//         • eu-cer-directive-incident (5 steps, expert) — Mardi 30
+//             juin 2026, intrusion poste 380 kV Bassecourt JU
+//             interconnecté avec Vesoul (RTE FR), invocation CER
+//             2023/2557 par RTE, articulation reciprocity
+//             opérationnelle (ENTSO-E TF Cyber TLP:AMBER+STRICT) vs
+//             juridique formelle (CER non-applicable à CH),
+//             attribution Sandworm Five Eyes, recommandation CF
+//             pour relance accord électrique CH-UE 2014
+//             npcs=[swissgrid_ot_lead, rte_dso_cyber_lead★,
+//                   anssi_liaison_ch, ofcs_coordinator,
+//                   ofen_juriste_int★]
+//
+//       MÉTA-GAMIFICATION — DÉMARRAGE :
+//
+//       Nouveau fichier data/npc-arcs.json — première itération avec
+//       5 arcs narratifs PNJ documentant la progression à travers
+//       leurs apparitions cumulées :
+//
+//         1. play_ransom_analyst (Schöb) — 'Le Traqueur Ransomware'
+//            Xplain (2023, apprenti) → Cronos III (2026, expertise) →
+//            Endgame Phase 2 (2026, leadership)
+//         2. fim_xways_expert (Tremp) — 'L'Architecte Forensique'
+//            Timeline → trois_artefacts → veracrypt → custody →
+//            frontex-deepfake (5 stages méthodologie X-Ways)
+//         3. ge_avocat_frontaliers (Lavanchy) — 'L'Avocat Transfrontalier'
+//            France Travail → Free Leak (2 stages, +1 futur)
+//         4. europol_jcat_analyst (Lindgren) — 'Le Coordinateur Européen'
+//            Magnus → Cronos III → Endgame → OnymousReborn (4 ops)
+//         5. swissgrid_ot_lead (Hodel) — 'La Sentinelle Énergétique'
+//            Mühleberg JU → Bassecourt-Vesoul (2 stages, +1 futur)
+//
+//       5 nouveaux badges 'Scènes · Arcs PNJ' ajoutés à
+//       cas-in-achievements.js (catégorie créée).
+//
+//       UNIVERS COHÉRENT — 5 cross-références ajoutées dans les
+//       intros de scénarios v2.46-v2.48 pour créer une chronologie
+//       narrative explicite : eu-cronos-3 (référence Xplain 2023),
+//       eu-endgame-2026 (référence Cronos III), eu-cer-directive
+//       (référence Mühleberg JU mai 2026), eu-emcdda (référence
+//       Endgame J-CAT), eu-frontex-deepfake (référence arc Tremp).
+//
+//       Stats : 116 scènes / 66 PNJ / 116 scènes avec NPCs (100%).
+//       PNJ catalogue : 64 → 66 (+2)
+//                       Réels : 8 (inchangé)
+//                       Fictifs : 56 → 58 (+2)
+//                       Transposables : 30 → 31 (+1)
+//       Achievements : 91 → 96 (+5 arcs PNJ)
+//       Arcs documentés : 0 → 5 (16 stages couvrant 14 scènes)
+//
 // v81 : v2.47 — 2 NOUVEAUX SCÉNARIOS EU + 4 NOUVEAUX PNJ
 //
 //       Suite de la phase d'extension lancée v2.46. Cette release
@@ -1533,7 +1602,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v81';
+const CACHE_VERSION = 'cas-in-v82';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
