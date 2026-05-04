@@ -949,6 +949,401 @@ const GLOSSARY = {
   "DélCdG": "Délégation des Commissions de gestion : haute surveillance parlementaire sur services secrets.",
   "PFPDT": "Préposé fédéral à la protection des données et à la transparence.",
   "SECO": "Secrétariat d'État à l'économie : sanctions, contrôle d'exportation (LFMG/LFAIE).",
+
+  // ─── v2.62 — Enrichissement (200+ entrées) ───────────────
+  // CPP supplémentaires
+  "AFD": "Administration fédérale des douanes (renommée OFDF en 2022).",
+  "AI Act": "Règlement UE 2024/1689 sur l'intelligence artificielle, en vigueur progressive 2024-2027.",
+  "AI Act Annexe III": "Liste des systèmes IA à haut risque par domaine d'application.",
+  "AI Act Annexe III §6": "Systèmes IA en application de la loi (procédure pénale) : à haut risque.",
+  "AI Act Annexe III §6 — systèmes IA en application de la loi (procédure pénale)": "Les systèmes IA utilisés en procédure pénale sont classés à haut risque.",
+  "AI Act art. 26": "Obligations des utilisateurs (déployeurs) de systèmes IA à haut risque.",
+  "AI Act art. 26 — obligations utilisateurs (déployeurs)": "Devoirs des organisations qui déploient des systèmes IA à haut risque.",
+  "AI Act art. 50": "Obligations de transparence : marquage IA, deepfakes, chatbots.",
+  "AI Act art. 50 — obligations transparence": "Marquage obligatoire des contenus générés par IA et des interactions avec chatbots.",
+  "AI Act art. 6": "Classification des systèmes IA à haut risque (annexes I et III).",
+  "AI Act art. 6 — classification systèmes IA haut risque": "Critères pour qualifier un système IA de haut risque.",
+  "AI Act art. 8-15": "Obligations applicables aux systèmes IA à haut risque (gestion des risques, données, documentation, transparence, surveillance humaine, robustesse).",
+  "AI Act art. 8-15 — obligations systèmes IA haut risque": "Suite d'obligations pour les fournisseurs et déployeurs de systèmes IA à haut risque.",
+  "AI Office": "Bureau européen de l'IA (Commission, DG CNECT) créé en février 2024 pour superviser l'AI Act.",
+  "AI Office (Commission européenne, DG CNECT, créé février 2024)": "Bureau de la Commission européenne chargé de la mise en œuvre de l'AI Act.",
+  "ANSSI doctrine notification cyber": "Agence nationale de sécurité des systèmes d'information (FR), doctrine post-Xplain 2023 + Endgame 2024.",
+  "ANSSI doctrine notification cyber (post-Xplain 2023 + Endgame 2024)": "Doctrine ANSSI mise à jour après les opérations Xplain et Endgame.",
+  "ATF 116 IV 319": "Sur la violation du secret professionnel : portée de l'art. 321 CP.",
+  "ATF 129 IV 253": "Conditions de l'art. 305bis CP (blanchiment) : connaissance de l'origine illicite.",
+  "ATF 137 II 209": "Limites de l'information parlementaire et secret de fonction.",
+  "ATF 137 II 209 — Limites de l'information parlementaire": "Limites posées par le TF à l'information du Parlement par le CF (haute surveillance).",
+  "ATF 137 IV 33": "Recevabilité des preuves recueillies par particuliers (preuves illicites privées).",
+  "ATF 137 IV 33 (preuves recueillies par particuliers)": "Cadre d'admissibilité des preuves obtenues par des particuliers.",
+  "ATF 139 IV 128": "Sur les conditions de la détention provisoire (art. 220 CPP).",
+  "ATF 141 IV 142": "Soustraction de données informatiques (art. 143 CP) : étendue de la protection.",
+  "ATF 141 IV 142 — Soustraction de données informatiques": "Précision sur l'art. 143 CP appliqué au numérique.",
+  "ATF 142 IV 16": "Capacité de discernement et fin de vie (art. 19 CP).",
+  "ATF 142 IV 16 — Capacité de discernement et fin de vie": "Sur l'application de l'art. 19 CP (capacité de discernement).",
+  "ATF 142 IV 388": "Recevabilité d'actes coordonnés multilatéralement.",
+  "ATF 142 IV 388 — Recevabilité d'actes coordonnés multilatéralement": "Sur la coordination internationale d'actes d'instruction.",
+  "ATF 142 IV 49": "Droits du mineur en procédure pénale.",
+  "ATF 142 IV 49 — Droits du mineur en procédure pénale": "Droits spécifiques du mineur prévenu en procédure.",
+  "ATF 143 IV 270": "Conditions du séquestre (art. 263 CPP).",
+  "ATF 144 IV 23": "Limites de l'investigation secrète (art. 285a ss CPP).",
+  "ATF 144 IV 23 — Limites de l'investigation secrète": "Précisions sur les art. 285a-289 CPP.",
+  "ATF 144 IV 28": "Distinction art. 162 CP (secret de fabrication) / 273 CP (espionnage économique).",
+  "ATF 144 IV 28 — Distinction art. 162 / 273 CP": "Différence entre violation du secret commercial et espionnage économique.",
+  "ATF 146 IV 23": "Sur la portée de l'art. 263 CPP (séquestre).",
+  "ATF 147 IV 16": "Proportionnalité dans l'usage des données génétiques.",
+  "ATF 147 IV 16 — Proportionnalité dans l'usage des données génétiques": "Application du principe de proportionnalité aux profils ADN.",
+  "ATF 148 IV 152": "Sur l'art. 269 CPP (surveillance des télécommunications).",
+  "ATF 149 IV 248": "Sur les preuves illicites (art. 141 CPP).",
+  "ATF 150 IV 188": "Jurisprudence récente sur les mesures de contrainte numériques.",
+  "ATF 6B_1180/2023": "Jurisprudence récente sur les preuves cyber.",
+  "ATF 6B_157/2019 — seuil de minimis consommation personnelle": "Seuil de minimis pour consommation personnelle de stupéfiants.",
+  "ATF 6B_392/2018 — Conditions du dol éventuel art. 305bis CP": "Précision sur le dol éventuel en matière de blanchiment.",
+  "ATF nov. 2025 (rajeunissement IA)": "Jurisprudence récente sur l'usage de l'IA en procédure (à confirmer publication).",
+  "Accord Schengen-CH 2009": "Modèle d'accord ad hoc EU+CH : association à Schengen depuis 2008.",
+  "Accord Schengen-CH 2009 — modèle d'accord ad hoc EU+CH": "Accord d'association de la Suisse à l'espace Schengen.",
+  "Accord électrique CH-UE 2014 (suspendu)": "Précédent diplomatique : accord négocié mais jamais ratifié.",
+  "Accord électrique CH-UE 2014 (suspendu) — précédent diplomatique": "Cet accord négocié mais jamais signé sert de précédent pour les accords sectoriels CH-UE.",
+  "Art. 10 Cst.": "Droit à la vie et liberté personnelle (interdiction torture, peine de mort).",
+  "Art. 100 CPP": "Tenue du dossier : pièces enregistrées, ordre chronologique, accès garanti.",
+  "Art. 101 CPP": "Consultation du dossier par les parties (droit de la défense).",
+  "Art. 12 CPP": "Autorités pénales : MP cantonal/MPC, police, tribunaux. Définition des compétences.",
+  "Art. 13 CPP": "Tribunaux : compétences matérielles selon les cantons et la nature de l'infraction.",
+  "Art. 138 CP": "Abus de confiance : usage indu d'une chose confiée.",
+  "Art. 139 CP": "Vol : soustraction d'une chose mobilière appartenant à autrui.",
+  "Art. 14 CPP": "Désignation et organisation des autorités : compétences cantonales.",
+  "Art. 140 CP": "Brigandage : vol avec violence ou menace.",
+  "Art. 140 CPP": "Méthodes d'administration interdites : torture, tromperie, contrainte physique grave.",
+  "Art. 141 al. 1 CPP": "Preuves absolument inexploitables : violation grave des règles de validité.",
+  "Art. 141 al. 2 CPP": "Preuves illicites : exploitabilité possible si nécessaire pour élucider une infraction grave (pondération in casu).",
+  "Art. 141 al. 2 CPP — Preuves illicites": "Preuves obtenues en violation simple : exploitabilité possible si nécessaire pour élucider une infraction grave.",
+  "Art. 141 al. 4 CPP": "Théorie du fruit empoisonné : preuves dérivées d'une preuve illicite également exclues.",
+  "Art. 144 CP": "Dommages à la propriété : destruction ou détérioration de biens.",
+  "Art. 145 CPP": "Rapports écrits : substituts à l'audition orale dans certains cas.",
+  "Art. 147 al. 2 CP": "Cas grave : profession ou bande, peine majorée.",
+  "Art. 157 CP": "Usure : exploitation d'une situation de faiblesse pour des avantages disproportionnés.",
+  "Art. 158 CP": "Gestion déloyale : atteinte aux intérêts pécuniaires d'autrui par violation de devoir.",
+  "Art. 158 CPP": "Information du prévenu : droits, accusation, droit au silence (premier interrogatoire).",
+  "Art. 158 CPP — Information du prévenu": "Premier interrogatoire : information sur les charges, droit au silence, droit à l'avocat.",
+  "Art. 159 CPP": "Mise en garde du prévenu et avocat de la première heure.",
+  "Art. 16 CPP": "Ministère public : conduite de la procédure, ouverture instruction, mise en accusation.",
+  "Art. 16 Cst.": "Liberté d'opinion et d'information.",
+  "Art. 162 CP": "Violation du secret de fabrication ou commercial.",
+  "Art. 162 CP — Violation du secret de fabrication ou commercial": "Protège les secrets industriels et commerciaux des entreprises.",
+  "Art. 168 CPP": "Droit de refuser de témoigner : raisons familiales.",
+  "Art. 17 CPP": "Autorités pénales compétentes en matière de contraventions (autorités administratives).",
+  "Art. 17 Cst.": "Liberté des médias, secret rédactionnel.",
+  "Art. 171 CPP": "Secret professionnel des avocats, médecins, ecclésiastiques (refus de témoigner).",
+  "Art. 173 CPP": "Secret de fonction des fonctionnaires (limité, dérogeable par l'autorité supérieure).",
+  "Art. 173-178 CP": "Atteintes à l'honneur : diffamation, calomnie, injure.",
+  "Art. 179 CP": "Violation de domaine secret ou privé : enregistrements sans consentement.",
+  "Art. 179bis CP": "Écoute et enregistrement de conversations entre tiers.",
+  "Art. 179decies CP": "Usurpation d'identité (en vigueur depuis 2024).",
+  "Art. 179novies CP": "Soustraction de données personnelles (anciennement art. 35 LPD).",
+  "Art. 179quater CP": "Violation du domaine secret par appareils de prise de vue.",
+  "Art. 179quinquies CP": "Détention/diffusion d'enregistrements obtenus illégalement.",
+  "Art. 179ter CP": "Enregistrement non autorisé de conversations.",
+  "Art. 18 CP": "État de nécessité licite : sauvegarde d'un bien juridique au prix d'un autre.",
+  "Art. 18-19 CP — Actes commis sous mission": "Cadre des actes commis dans le cadre d'une mission légale.",
+  "Art. 180 CPP": "Personnes appelées à donner des renseignements (ni prévenu, ni témoin).",
+  "Art. 185 CPP": "Établissement de l'expertise : règles, contradictoire, présence des parties.",
+  "Art. 187 CP": "Actes d'ordre sexuel avec des enfants (mineurs <16 ans).",
+  "Art. 188 CPP": "Force probante de l'expertise : libre appréciation par le juge.",
+  "Art. 19 CP": "Irresponsabilité et responsabilité restreinte : troubles psychiques, capacité de discernement.",
+  "Art. 195 CP": "Encouragement à la prostitution.",
+  "Art. 195-196 CP": "Traite des êtres humains à fins sexuelles.",
+  "Art. 196 CP": "Actes d'ordre sexuel avec des mineurs contre rémunération.",
+  "Art. 196 CPP": "Mesures de contrainte : définition générale, conditions cumulatives.",
+  "Art. 197 CP": "Pornographie : production, diffusion, possession (interdiction enfants <16).",
+  "Art. 197 al. 4-5 CP": "Pornographie enfantine : possession et consommation (qualifications aggravées).",
+  "Art. 198 CPP": "Compétence pour ordonner des mesures de contrainte (MP, tribunal, TMC).",
+  "Art. 215 CPP": "Appréhension : police peut interpeller toute personne pour vérifier identité.",
+  "Art. 217 CPP": "Arrestation provisoire par la police (flagrant délit).",
+  "Art. 22 LPD": "Données génétiques sensibles : traitement à risque élevé, DPIA obligatoire.",
+  "Art. 22 LPD — Données génétiques sensibles": "Données génétiques = sensibles, traitement à risque élevé, DPIA obligatoire.",
+  "Art. 220 CPP": "Détention provisoire : conditions (forts soupçons + risque de fuite/collusion/réitération).",
+  "Art. 224 CPP": "Procédure de détention : audition par MP, demande au TMC dans les 48h.",
+  "Art. 24 CPP": "Compétence fédérale du MPC : crimes contre la Confédération, criminalité organisée transfrontalière, terrorisme.",
+  "Art. 246 CPP": "Perquisition de documents et enregistrements électroniques.",
+  "Art. 252 CP": "Faux dans les certificats.",
+  "Art. 255-259 CPP": "Profils ADN forensiques : prélèvement, analyse, conservation, effacement.",
+  "Art. 255-259 CPP — Profils ADN forensiques": "Régime des profils ADN en procédure pénale (prélèvement, analyse, fichier).",
+  "Art. 26 CPP": "Compétences fédérales en cas de plusieurs États atteints (extraterritorialité).",
+  "Art. 27 Cst.": "Liberté économique.",
+  "Art. 270 CPP": "Objet de la surveillance : raccordements, télécommunications, courriers.",
+  "Art. 271 CP": "Actes exécutés sans droit pour un État étranger : espionnage non militaire.",
+  "Art. 271 CP — Actes exécutés sans droit pour un État étranger": "Espionnage non militaire pour un État étranger sur sol suisse.",
+  "Art. 271 CP — Actes pour État étranger": "Forme abrégée : actes exécutés sans droit pour un État étranger.",
+  "Art. 271 CPP": "Sauvegarde du secret professionnel pendant les surveillances.",
+  "Art. 272 CP": "Service de renseignements politiques au préjudice de la Suisse.",
+  "Art. 272 CPP": "Autorisation de surveillance par le TMC dans les 24h.",
+  "Art. 273 CP": "Service de renseignements économiques (espionnage industriel).",
+  "Art. 273 CP — Service de renseignements économiques": "Espionnage économique au profit d'une organisation étrangère.",
+  "Art. 280 CPP": "Recours à des dispositifs techniques de surveillance (sons et images).",
+  "Art. 285a CPP": "Investigation secrète : définition (agent infiltré sous fausse identité).",
+  "Art. 285a CPP — Investigation secrète (définition)": "Définition : agent infiltré sous fausse identité dans un milieu criminel.",
+  "Art. 286 CPP": "Conditions de l'investigation secrète (gravité, subsidiarité, proportionnalité).",
+  "Art. 286 CPP — Conditions": "Conditions de l'investigation secrète : gravité de l'infraction, subsidiarité, proportionnalité.",
+  "Art. 287 CPP": "Compétence et durée de l'investigation secrète (max 12 mois prolongeable).",
+  "Art. 287 CPP — Compétence et durée (max 12 mois prolongeable)": "MP autorise, durée max 12 mois prolongeable par TMC.",
+  "Art. 288 CPP": "Mission et formation de l'agent infiltré.",
+  "Art. 288 CPP — Mission et formation de l'agent": "L'agent infiltré est formé, sa mission est précisément délimitée.",
+  "Art. 289 CPP": "Témoignage de l'agent infiltré en procédure (anonymat possible).",
+  "Art. 289 CPP — Témoignage en procédure": "L'agent infiltré peut témoigner avec mesures de protection (anonymat).",
+  "Art. 29 Cst.": "Garanties générales de procédure (droit d'être entendu, jugement dans délai raisonnable).",
+  "Art. 295 CPP": "Recherches secrètes : différent de l'investigation secrète, sans fausse identité.",
+  "Art. 298 CPP": "Observation policière préventive (phase pré-procédurale).",
+  "Art. 302 CPP": "Obligation de dénoncer pour les autorités (fonctionnaires).",
+  "Art. 305ter CP": "Défaut de vigilance en matière d'opérations financières.",
+  "Art. 31 CPP": "Compétence territoriale : lieu de commission de l'infraction.",
+  "Art. 312 CP": "Abus d'autorité par fonctionnaire (ou pers. en charge tâche publique).",
+  "Art. 318 CPP": "Clôture de l'instruction : non-lieu, mise en accusation, ordonnance pénale.",
+  "Art. 322septies CP": "Corruption d'agents publics étrangers.",
+  "Art. 322ter CP": "Corruption d'agents publics suisses.",
+  "Art. 352 CPP": "Ordonnance pénale : peine pécuniaire ou TIG, contestable par opposition.",
+  "Art. 36 Cst.": "Restrictions des droits fondamentaux : base légale, intérêt public, proportionnalité, noyau intangible.",
+  "Art. 36 Cst. — Restriction des droits fondamentaux": "Toute restriction des droits fondamentaux doit reposer sur une base légale, un intérêt public, être proportionnée.",
+  "Art. 393 CPP": "Recours : voie ordinaire contre les décisions du MP et TMC.",
+  "Art. 422-426 CPP": "Frais de procédure : honoraires expertise, indemnité du conseil d'office.",
+  "Art. 49 CP": "Concours d'infractions : aggravation au plus à la moitié maximum + cumul.",
+  "Art. 56 CPP": "Récusation : motifs (intérêt personnel, parenté, etc.) pour magistrat ou expert.",
+  "Art. 6 CEDH": "Droit à un procès équitable.",
+  "Art. 6 CPP": "Maxime de l'instruction : autorités pénales recherchent d'office la vérité (faits à charge ET à décharge).",
+  "Art. 7 Cst.": "Dignité humaine : doit être respectée et protégée.",
+  "Art. 72 CPP": "Délégation des actes d'instruction : autorité requérante, autorité requise.",
+  "Art. 73 CPP": "Confidentialité de la procédure : secret de l'instruction, sanctions en cas de fuite.",
+  "Art. 73 CPP — Confidentialité de la procédure": "Secret de l'instruction : interdiction de divulguer les actes hors procédure.",
+  "Art. 74 CPP": "Information du public : équilibre entre transparence et présomption d'innocence.",
+  "Art. 75 CPP": "Obligations de discrétion : interdiction d'identifier les parties hors procédure.",
+  "Art. 8 CEDH": "Droit au respect de la vie privée et familiale.",
+  "Art. 8 Cst.": "Égalité juridique et interdiction de discrimination.",
+  "Art. 9 CPP": "Maxime accusatoire : le tribunal n'est saisi que des faits décrits dans l'acte d'accusation.",
+  "Art. 9 LBA — Obligation de communiquer (MROS)": "Communication obligatoire des intermédiaires financiers en cas de soupçons fondés (LBA art. 9).",
+  "Autopsy": "Plateforme open-source d'investigation numérique (basée sur The Sleuth Kit).",
+  "CCPF": "Commission consultative sur la sécurité préventive de la Confédération.",
+  "CDF": "Contrôle fédéral des finances : audit indépendant des finances et de la performance.",
+  "CEDH": "Convention européenne des droits de l'homme (1950) : socle européen des libertés fondamentales.",
+  "CER": "Directive (UE) 2022/2557 sur la résilience des entités critiques (Critical Entities Resilience).",
+  "CO": "Code des obligations (RS 220) : droit civil, contrats, responsabilité.",
+  "CRA": "Cyber Resilience Act (UE 2024/2847) : exigences de cybersécurité pour les produits avec éléments numériques.",
+  "Cellebrite": "Suite d'extraction et d'analyse mobile (UFED) : standard policier mondial.",
+  "Censys": "Moteur de recherche similaire à Shodan, basé sur scans Internet quotidiens.",
+  "Convention Lanzarote": "Convention du Conseil de l'Europe sur la protection des enfants contre l'exploitation et les abus sexuels (2007).",
+  "Convention de Vienne": "Convention de Vienne sur les relations diplomatiques (1961) : immunités diplomatiques.",
+  "CrEDH S. and Marper v. UK 2008": "Conservation des profils ADN : viole l'art. 8 CEDH si conservation indéfinie sans tri.",
+  "CrEDH S. and Marper v. UK 2008 — Conservation des profils ADN": "La CrEDH a jugé contraire à l'art. 8 CEDH la conservation indéfinie de profils ADN.",
+  "DORA": "Digital Operational Resilience Act (UE 2022/2554) : résilience numérique du secteur financier.",
+  "Directive CER": "Directive (UE) 2022/2557 : résilience physique et cyber des entités critiques (énergie, eau, transports).",
+  "Directive NIS2": "Directive (UE) 2022/2555, transposition par les États membres avant 17.10.2024.",
+  "EIMP": "Loi fédérale sur l'entraide pénale internationale (RS 351.1) : régit les commissions rogatoires.",
+  "ENISA": "Agence européenne de cybersécurité, basée à Athènes/Héraklion.",
+  "ENTSO-E": "European Network of Transmission System Operators for Electricity : réseau européen des gestionnaires de transport.",
+  "Egmont Group": "Réseau international de FIU (~170 pays), facilite l'échange d'informations entre FIU.",
+  "Encase": "Suite forensique commerciale (OpenText/Guidance) : acquisition, analyse, rapports judiciaires.",
+  "Eurojust": "Agence de coopération judiciaire pénale de l'UE (La Haye).",
+  "Europol": "Office européen de police (La Haye), CH associée depuis 2004.",
+  "FATF / GAFI": "Groupe d'action financière (Paris) : standards anti-blanchiment et anti-financement du terrorisme.",
+  "FINMA": "Autorité fédérale de surveillance des marchés financiers (Berne).",
+  "FIU": "Financial Intelligence Unit : cellule nationale de renseignement financier (MROS en CH).",
+  "FTK": "Forensic Toolkit (AccessData/Exterro) : suite d'analyse forensique informatique.",
+  "FedPol": "Office fédéral de la police (Berne) : police judiciaire fédérale, Interpol-Europol-MROS.",
+  "FinCEN": "Financial Crimes Enforcement Network (USA) : bureau du Trésor US, FIU américaine.",
+  "GovCERT": "GovCERT.ch : équipe de réponse aux incidents informatiques de la Confédération (intégrée à l'OFCS).",
+  "GovCERT.ch": "Équipe nationale de réponse aux incidents cyber, rattachée à l'OFCS depuis 2024.",
+  "GrayKey": "Outil d'extraction iOS (Grayshift) : déverrouillage de codes utilisateur.",
+  "Hashcat": "Cracker de mots de passe haute performance (GPU).",
+  "I2P": "Invisible Internet Project : réseau anonyme garlic-routing.",
+  "ISO/IEC 27001": "Norme internationale pour les systèmes de management de la sécurité de l'information (SMSI).",
+  "ISO/IEC 27041": "Assurance de l'adéquation et de la pertinence des méthodes d'investigation incident.",
+  "ISO/IEC 27042": "Lignes directrices pour l'analyse et l'interprétation des preuves numériques.",
+  "ISO/IEC 27043": "Principes et processus d'investigation des incidents.",
+  "Interpol": "Organisation internationale de police criminelle (Lyon), 196 États membres.",
+  "John the Ripper": "Cracker de mots de passe open-source (CPU/GPU).",
+  "LADN": "Loi fédérale sur l'utilisation de profils d'ADN dans les procédures pénales (RS 363).",
+  "LADN — Loi fédérale sur les profils d'ADN": "Loi fédérale sur l'utilisation de profils d'ADN en procédure pénale (RS 363).",
+  "LBA": "Loi fédérale sur le blanchiment d'argent (RS 955.0) : intermédiaires financiers, vigilance, communication MROS.",
+  "LBA Art. 9": "Obligation de communiquer au MROS en cas de soupçons fondés (devoir, pas droit).",
+  "LBA art. 9 — Communication MROS": "Communication obligatoire des intermédiaires financiers en cas de soupçons fondés de blanchiment ou financement du terrorisme.",
+  "LCR": "Loi fédérale sur la circulation routière (RS 741.01).",
+  "LMSI": "Loi fédérale instituant des mesures visant au maintien de la sûreté intérieure (abrogée par LRens).",
+  "LP": "Loi fédérale sur la poursuite pour dettes et la faillite (RS 281.1).",
+  "LPD (ancienne)": "Ancienne LPD de 1992, abrogée le 01.09.2023 et remplacée par la LPD 2023 totalement révisée.",
+  "LPD 2023": "Loi fédérale sur la protection des données (RS 235.1), version totalement révisée entrée en vigueur 01.09.2023.",
+  "LPD 2023 Art. 19": "Information de la personne concernée lors de la collecte.",
+  "LPD 2023 Art. 22": "Analyse d'impact (DPIA) : obligatoire si traitement à risque élevé.",
+  "LPD 2023 Art. 25": "Droit d'accès de la personne concernée (sous 30 jours).",
+  "LPD 2023 Art. 6": "Principes du traitement : licéité, finalité, proportionnalité, exactitude.",
+  "LRens": "Loi sur le renseignement (RS 121) : encadre l'activité du SRC.",
+  "LSCPT": "Loi fédérale sur la surveillance de la correspondance par poste et télécommunication (RS 780.1).",
+  "LSI": "Loi fédérale sur la sécurité de l'information (RS 128.0, entrée en vigueur 2024).",
+  "LSI Art. 74c": "Obligation de notification d'incidents cyber pour les exploitants d'infrastructures critiques (à l'OFCS).",
+  "LStup": "Loi fédérale sur les stupéfiants (RS 812.121).",
+  "Loi fédérale sur la sécurité de l'information (LSI, 2024)": "LSI : cadre fédéral pour la cybersécurité, oblige les opérateurs critiques à notifier les incidents à l'OFCS.",
+  "MELANI": "Centrale d'enregistrement et d'analyse pour la sûreté de l'information (ancien nom de GovCERT/OFCS).",
+  "MLAT CH-USA": "Traité d'entraide judiciaire entre la Suisse et les États-Unis (1973).",
+  "Magnet Axiom": "Suite forensique multi-sources (mobile, PC, cloud).",
+  "Maltego": "Outil OSINT de visualisation de graphes d'entités et leurs relations.",
+  "NIS2": "Directive (UE) 2022/2555 sur la sécurité des réseaux et systèmes d'information : obligations cyber pour entités essentielles/importantes.",
+  "NIST SP 800-184": "Guide pour la récupération après cyber-incident.",
+  "NIST SP 800-86": "Guide forensique : 'Guide to Integrating Forensic Techniques into Incident Response'.",
+  "OFAC": "Office of Foreign Assets Control (USA) : agence du Trésor US chargée des sanctions économiques.",
+  "OFDF": "Office fédéral de la douane et de la sécurité des frontières (anciennement AFD).",
+  "RTS / SSR": "Radio Télévision Suisse (RTS) / Société Suisse de Radiodiffusion (SSR) : service public audiovisuel.",
+  "STIX/TAXII": "Standards d'échange d'indicateurs de menace (Structured Threat Information Expression / Trusted Automated Exchange).",
+  "Shodan": "Moteur de recherche pour systèmes connectés (devices IoT, ICS, services exposés).",
+  "Sleuth Kit": "Bibliothèque open-source d'analyse de systèmes de fichiers (TSK).",
+  "Swissgrid": "Société nationale suisse pour l'exploitation du réseau électrique de transport (380/220 kV).",
+  "TF 6B_1180/2023": "Jurisprudence récente sur l'application des règles cyber.",
+  "TF 6B_157/2019": "Seuil de minimis : consommation personnelle stupéfiants (LStup).",
+  "TF 6B_392/2018": "Conditions du dol éventuel art. 305bis CP (blanchiment).",
+  "TRACFIN": "Traitement du renseignement et action contre les circuits financiers clandestins (FR) : FIU française.",
+  "Tor": "The Onion Router : réseau anonymisant par routage en oignon.",
+  "VPN": "Virtual Private Network : tunnel chiffré masquant l'IP source.",
+  "Wireshark": "Analyseur de paquets réseau open-source : capture et inspection du trafic.",
+  "art. 144bis CP (détérioration de données)": "Modification ou effacement illégitime de données électroniques (ransomware, sabotage).",
+  "tcpdump": "Outil ligne de commande de capture de paquets réseau.",
+
+  // ─── v2.62 batch 2 — EIMP, LB, conventions, normes ──────
+  "ATF 142 IV 250": "Distinction données de connexion / contenu (art. 269 ss CPP).",
+  "ATF 144 II 233": "Juridiction sur données dans le cloud : compétence territoriale extraterritoriale.",
+  "Art. 10 LBA": "Interdiction d'aviser le client d'une communication MROS (tipping-off).",
+  "Art. 10 LBA — Interdiction d'aviser le client": "Tipping-off interdit : l'intermédiaire ne peut pas avertir le client.",
+  "Art. 117 CP": "Homicide par négligence : décès causé par négligence.",
+  "Art. 117 CP — Homicide par négligence (en cas de décès dû à l'incident)": "Homicide par négligence (peine pécuniaire ou peine privative jusqu'à 3 ans).",
+  "Art. 122 CP": "Lésions corporelles graves : atteinte sérieuse à l'intégrité physique.",
+  "Art. 141 CPP (preuves illicites)": "Régime des preuves illicites en procédure pénale.",
+  "Art. 179octies CP": "Mise sous écoute autorisée : exception au secret de la correspondance.",
+  "Art. 179octies CP — Mise sous écoute": "Cadre légal des écoutes autorisées (différent de 179bis).",
+  "Art. 181 CP": "Contrainte : forcer autrui à faire/ne pas faire/tolérer.",
+  "Art. 181 CP — Contrainte": "Délit de contrainte : forcer autrui par violence ou menace.",
+  "Art. 183 CP": "Séquestration et enlèvement : privation illégale de liberté.",
+  "Art. 19 al. 2 DPMin": "Mesures pour mineurs/jeunes adultes 18-25 ans (placement spécifique).",
+  "Art. 19 al. 2 DPMin — Mesures pour mineurs/jeunes adultes (18-25 ans)": "Régime particulier de mesures pour les jeunes adultes 18-25 ans.",
+  "Art. 22 CP": "Tentative : début d'exécution sans achèvement.",
+  "Art. 22 CPP": "Compétence cantonale (règle générale) : MP du canton où l'infraction a été commise.",
+  "Art. 22 CPP — compétence cantonale (règle générale)": "Règle générale : MP cantonal compétent du lieu de commission.",
+  "Art. 23 CPP": "Compétence fédérale : exceptions à la compétence cantonale.",
+  "Art. 23 CPP — compétence fédérale (infractions fédérales)": "Compétence fédérale du MPC pour certaines infractions.",
+  "Art. 24 CP": "Instigation : déterminer autrui à commettre une infraction.",
+  "Art. 25 CP": "Complicité : aider intentionnellement un auteur.",
+  "Art. 26 CP": "Concours de personnes : co-auteurs, instigateurs, complices.",
+  "Art. 260quinquies CP": "Financement du terrorisme : peine privative jusqu'à 5 ans.",
+  "Art. 260quinquies CP — Financement du terrorisme": "Financement du terrorisme : infraction autonome.",
+  "Art. 260sexies CP": "Actes préparatoires délictueux (terrorisme).",
+  "Art. 260sexies CP — Actes préparatoires délictueux (terrorisme)": "Actes préparatoires en matière terroriste : criminalisation anticipée.",
+  "Art. 260ter CP": "Organisation criminelle : participation, soutien (terrorisme inclus).",
+  "Art. 260ter CP — Organisation criminelle (incl. terroriste)": "Participation/soutien à organisation criminelle ou terroriste.",
+  "Art. 276 CPP": "Information mutuelle entre autorités pénales (canton/MPC, etc.).",
+  "Art. 276 CPP — Information mutuelle entre autorités": "Coordination entre autorités pénales suisses.",
+  "Art. 28 CPP": "Jonction de procédures : poursuite groupée d'infractions liées.",
+  "Art. 28 CPP — jonction de procédures": "Possibilité de joindre plusieurs procédures connexes.",
+  "Art. 28b CC": "Protection de la personnalité contre la violence (mesures civiles).",
+  "Art. 28b CC — Protection de la personnalité contre la violence": "Mesures civiles d'éloignement contre auteurs de violence.",
+  "Art. 296-302 CP": "Crimes contre les États étrangers : neutralité, espionnage.",
+  "Art. 296-302 CP — Crimes contre les États étrangers": "Régime des infractions contre la neutralité et les États étrangers.",
+  "Art. 351 CP": "Service de renseignements politiques (en miroir avec art. 272).",
+  "Art. 351 CP — Service de renseignements politiques (en miroir)": "Variante de l'art. 272 CP (espionnage politique).",
+  "Art. 47 CP": "Fixation de la peine : critères (faute, antécédents, circonstances).",
+  "Art. 47 LB": "Secret bancaire suisse : violation = peine privative jusqu'à 3 ans.",
+  "Art. 47 LB — Secret bancaire suisse": "Article fondamental du secret bancaire en Suisse (LB = Loi sur les banques).",
+  "Art. 50 CP": "Motivation de la peine : justification écrite obligatoire.",
+  "Art. 61 LDA": "Violation du droit d'auteur à des fins commerciales (sanction pénale).",
+  "Art. 61 LDA — Violation du droit d'auteur à des fins commerciales": "Sanction pénale aggravée pour violation du droit d'auteur à des fins lucratives.",
+  "Art. 64 EIMP": "Mesures de contrainte en entraide : conditions, proportionnalité.",
+  "Art. 64 EIMP — Mesures de contrainte (entraide)": "Cadre des mesures de contrainte exécutées en entraide pénale internationale.",
+  "Art. 67 EIMP": "Principe de spécialité : les preuves transmises ne peuvent être utilisées que pour les infractions citées.",
+  "Art. 67 EIMP — Principe de spécialité": "Limite l'usage des preuves transmises aux infractions visées par la commission rogatoire.",
+  "Art. 72 CP": "Confiscation des valeurs patrimoniales d'une organisation criminelle.",
+  "Art. 72 CP — Confiscation des valeurs patrimoniales": "Confiscation patrimoniale des valeurs d'une organisation criminelle (charge de la preuve renversée).",
+  "Art. 75 EIMP": "Forme et contenu des demandes d'entraide : exigences formelles.",
+  "Art. 75 EIMP — Forme et contenu des demandes": "Conditions formelles de validité d'une demande d'entraide.",
+  "Art. 75 LD": "Infractions douanières : déclaration fausse ou incomplète.",
+  "Art. 75 LD — Infractions douanières": "Régime pénal des infractions douanières (déclaration fausse/incomplète).",
+  "Art. 75 LD — Infractions douanières : déclaration fausse ou incomplète": "Infraction de déclaration douanière mensongère.",
+  "Art. 80a EIMP": "Décision de clôture : transmission effective des preuves à l'État requérant.",
+  "Art. 80a EIMP — Décision de clôture": "Acte par lequel la Suisse remet finalement les preuves à l'État étranger.",
+  "Art. 80b EIMP": "Recours contre la décision de clôture : 30 jours, effet suspensif.",
+  "Art. 80c EIMP": "Procédure simplifiée : remise immédiate avec accord de l'intéressé.",
+  "Art. 97 CO": "Responsabilité contractuelle pour inexécution.",
+  "Art. 97 CO (responsabilité contractuelle)": "Responsabilité contractuelle pour inexécution ou exécution défectueuse.",
+  "COBIT": "Control Objectives for Information Technology : référentiel de gouvernance IT (ISACA).",
+  "COBIT 2019": "Version 2019 du référentiel COBIT.",
+  "COBIT 2019 — Référentiel d'audit": "Référentiel ISACA de gouvernance IT (2019).",
+  "CPP art. 24": "Compétence fédérale du MPC : crimes contre la Confédération, terrorisme, criminalité transfrontalière.",
+  "CPP art. 24 — Compétence MPC": "Compétence fédérale du MPC sur certaines infractions (terrorisme, etc.).",
+  "CPP art. 24 — Compétence MPC (terrorisme = compétence fédérale)": "Le terrorisme tombe automatiquement sous compétence MPC.",
+  "CPP art. 269 ss": "Surveillance de la correspondance par télécommunication (art. 269-279).",
+  "CPP art. 269 ss — Surveillance des télécommunications": "Régime de la surveillance des télécommunications en CH.",
+  "CPP art. 269bis": "GovWare (chevaux de Troie d'État) : dispositifs techniques particuliers.",
+  "CPP art. 269bis — GovWare (dispositifs techniques d'investigation)": "Cadre légal des chevaux de Troie d'État (GovWare) introduit en 2018.",
+  "CPP art. 280": "Surveillance par dispositifs techniques : sons et images.",
+  "CPP art. 280 — Surveillance par dispositifs techniques": "Surveillance audiovisuelle hors domaine privé sécurisé.",
+  "CVE-2021-40539": "Vulnérabilité critique ManageEngine ADSelfService Plus (auth bypass + RCE), exploitée par APT.",
+  "Code de procédure pénale art. 263": "Séquestre : voir Art. 263 CPP.",
+  "Code de procédure pénale art. 263 — Séquestre": "Variation textuelle de l'art. 263 CPP (séquestre).",
+  "Code des douanes UE": "Règlement (UE) 952/2013 : code des douanes de l'Union.",
+  "Code des douanes UE — Bloc de fonds suspects": "Permet aux douanes UE de bloquer les fonds suspects en provenance/destination de pays sanctionnés.",
+  "Communiqué CICR 19.01.2022": "Communiqué du CICR du 19.01.2022 (cyberattaque contre le CICR).",
+  "Conv. Genève (droit humanitaire)": "Conventions de Genève (1949) : protection humanitaire en temps de conflit.",
+  "Convention LCB-FT": "Convention de diligence des banques (CDB) : KYC, identification de l'ayant droit économique.",
+  "Convention LCB-FT — Communication MROS": "Convention de diligence ASB : règles pratiques anti-blanchiment.",
+  "Convention de Budapest (CETS 185)": "Convention sur la cybercriminalité (Conseil de l'Europe, 2001).",
+  "Convention de Budapest (CETS 185) — Cybercriminalité": "Convention internationale sur la cybercriminalité (Budapest 2001).",
+  "Convention de Budapest art. 29": "Conservation rapide de données stockées (preservation order).",
+  "Convention de Budapest art. 29 — Conservation rapide des données": "Permet de demander la conservation rapide de données électroniques en attendant l'entraide.",
+  "Convention de La Haye 1907": "Convention de La Haye sur la neutralité en cas de guerre.",
+  "Convention de La Haye 1907 — Neutralité": "Définit les obligations des États neutres en temps de guerre.",
+  "Convention de Schengen": "Convention d'application de l'accord de Schengen (1990) : frontières + coopération policière.",
+  "Convention de Schengen — Coopération policière": "Cadre Schengen pour la coopération policière transfrontalière (SIS, art. 39-46 CAS).",
+  "Convention européenne d'entraide judiciaire": "Convention européenne d'entraide judiciaire en matière pénale (Strasbourg 1959).",
+  "Convention européenne d'entraide judiciaire (CEEJ)": "Convention de Strasbourg 1959 (CEEJ) : entraide pénale européenne.",
+  "Convention européenne d'entraide judiciaire (CEEJ) art. 1": "Champ d'application de la CEEJ : entraide la plus large possible.",
+  "Convention européenne d'entraide judiciaire en matière pénale (1959)": "Convention de Strasbourg : socle de l'entraide pénale en Europe.",
+  "Cst. art. 173 al. 1 let. a": "Compétence du Parlement en matière de relations extérieures.",
+  "Cst. art. 173 al. 1 let. a — Compétence en relations extérieures": "L'Assemblée fédérale traite les questions de politique extérieure.",
+  "CyberStratVS": "Stratégie cyber du canton du Valais (mesures M1 à M3 inclus M3.2c).",
+  "CyberStratVS mesure M3.2c": "Mesure spécifique de la stratégie cyber valaisanne.",
+  "DPMin": "Loi fédérale régissant la condition pénale des mineurs (RS 311.1).",
+  "Doctrine ATF 142 IV 250": "Jurisprudence sur la distinction données de connexion (métadonnées) vs contenu.",
+  "Doctrine ATF 142 IV 250 — Distinction données de connexion / contenu": "Précise la frontière entre métadonnées (art. 273) et contenu (art. 269).",
+  "Doctrine ATF 144 II 233 — Juridiction sur données dans le cloud": "Précise la compétence des autorités CH sur des données stockées hors CH.",
+  "Doctrine OFSP 2024": "Doctrine OFSP 2024 sur la cybersécurité hospitalière.",
+  "Doctrine OFSP 2024 — Cybersécurité hospitalière": "Doctrine 2024 de l'Office fédéral de la santé publique sur la sécurité IT des hôpitaux.",
+  "Doctrine TF 6B_2024/X": "Jurisprudence récente sur le stalking par objet connecté (à confirmer).",
+  "Doctrine TF 6B_2024/X — Stalking par objet connecté": "Jurisprudence émergente sur l'usage d'objets connectés dans les violences conjugales.",
+  "ISAE 3402": "Norme internationale d'audit pour les contrôles internes des prestataires de services.",
+  "ISAE 3402 Type 2 / SOC 2": "Audits de contrôle interne (Type 2 = effectivité sur période ; SOC 2 = sécurité, dispo, confidentialité).",
+  "LAVI": "Loi fédérale sur l'aide aux victimes (RS 312.5) : conseil, indemnisation, accompagnement.",
+  "LAVI — Loi sur l'aide aux victimes": "Cadre fédéral d'aide aux victimes d'infractions (centres LAVI cantonaux).",
+  "LD": "Loi sur les douanes (RS 631.0).",
+  "LDA": "Loi fédérale sur le droit d'auteur (RS 231.1).",
+  "LIE": "Loi sur l'information et la sécurité (infrastructures critiques) — non standard, libellé corpus.",
+  "LIE — Loi sur l'information et la sécurité (infrastructure critique)": "Cadre fédéral sur la sécurité de l'information dans les infrastructures critiques.",
+  "LSFin": "Loi sur les services financiers (RS 950.1) : protection des investisseurs, devoir d'information.",
+  "Loi al-Qaïda / EI": "Loi fédérale interdisant les groupes 'Al-Qaïda', 'État islamique' et organisations apparentées (RS 122).",
+  "Loi al-Qaïda / EI (RS 122)": "Loi fédérale interdisant Al-Qaïda et État islamique (compétence MPC pour les infractions).",
+  "Loi al-Qaïda / EI (RS 122) — interdiction et procédure": "Loi fédérale d'interdiction Al-Qaïda/EI : procédure pénale spécifique (compétence MPC).",
+  "Loi sur les services financiers (LSFin)": "Loi fédérale sur les services financiers (RS 950.1).",
+  "Loi sur les services financiers (LSFin) — Mise en garde devoir d'information": "Devoirs d'information et de mise en garde des prestataires financiers (LSFin).",
+  "Recommandations GAFI": "40 recommandations du GAFI : standards anti-blanchiment et anti-financement du terrorisme.",
+  "Recommandations GAFI 24 et 25": "Transparence des personnes morales et fiduciaires (bénéficiaire effectif).",
+  "Recommandations GAFI 24 et 25 — Transparence des personnes morales et fiduciaires": "Standards GAFI sur la transparence des bénéficiaires effectifs.",
+  "Règlement EUROPOL": "Règlement (UE) 2016/794 sur Europol.",
+  "Règlement EUROPOL 2016/794": "Règlement (UE) 2016/794 sur Europol et la coopération policière.",
+  "Règlement UE ICS2": "Système d'information préalable sur les envois (Import Control System 2).",
+  "Règlement UE ICS2 — Système d'information préalable sur les envois": "Système douanier UE de pré-déclaration des marchandises entrant en UE.",
+  "SOC 2": "Service Organization Control 2 : audit AICPA sur sécurité, disponibilité, confidentialité, intégrité.",
+  "Traité MLAT Suisse-USA (1973)": "Traité d'entraide judiciaire CH-USA (1973) : voie privilégiée mais avec restrictions.",
+  "art. 122 CP (lésions corporelles graves)": "Lésions corporelles graves : atteintes sérieuses à l'intégrité physique.",
+  "art. 141 CPP (preuves illicites)": "Régime des preuves illicites en procédure pénale.",
+  "art. 173-174 CP (atteinte à l'honneur)": "Diffamation, calomnie (Art. 173-178 CP).",
+  "art. 181 CP (contrainte)": "Délit de contrainte (Art. 181 CP).",
+  "art. 183 CP (séquestration)": "Séquestration : privation illégale de la liberté.",
+  "art. 187 CP (actes d'ordre sexuel avec enfants)": "Actes sexuels avec mineur de moins de 16 ans (Art. 187 CP).",
+  "art. 197 CP (pornographie, y compris simulée par adulte)": "Pornographie, y compris contenus simulant des mineurs (Art. 197 CP).",
+  "art. 198 CP (désagréments d'ordre sexuel) — distinct du 198 français": "Délits de désagréments sexuels (variation suisse).",
+  "nLPD": "Nouvelle LPD (RS 235.1) : version 2023, totalement révisée.",
+  "nLPD art. 24": "Annonce des violations de sécurité au PFPDT (équivalent art. 24 LPD 2023).",
+  "nLPD art. 24 — Annonce des violations de la sécurité des données": "Notification obligatoire au PFPDT en cas de fuite de données à risque élevé.",
 };
 
 // ═══════════════════════════════════════════════════
@@ -1375,15 +1770,89 @@ function escapeHTML(str) {
   }[ch]));
 }
 
+// v2.62 — Cache des clés normalisées pour matching tolérant
+let _glossNormalized = null;
+function _normalizeForMatch(s) {
+  return String(s).toLowerCase()
+    .replace(/[—–-]/g, ' ')             // Tirets longs/courts → espace
+    .replace(/\s+/g, ' ')                // Espaces multiples → 1
+    .trim();
+}
+function _ensureGlossNormalized() {
+  if (_glossNormalized) return _glossNormalized;
+  _glossNormalized = Object.keys(GLOSSARY).map(k => ({
+    key: k,
+    norm: _normalizeForMatch(k),
+  }));
+  // Trier par longueur décroissante : matches plus spécifiques d'abord
+  _glossNormalized.sort((a, b) => b.norm.length - a.norm.length);
+  return _glossNormalized;
+}
+
 function findGlossaryMatch(term) {
-  // Exact match first
+  if (!term) return null;
+  // 1. Match exact (le plus rapide)
   if (GLOSSARY[term]) return { key: term, def: GLOSSARY[term] };
-  // Try partial: for terms like "Art. 248 CPP + ..." take the first recognizable part
-  const keys = Object.keys(GLOSSARY);
-  for (const k of keys) {
-    if (term.startsWith(k)) return { key: k, def: GLOSSARY[k] };
-    if (term.includes(k)) return { key: k, def: GLOSSARY[k] };
+
+  // 2. Match normalisé (case + tirets + espaces)
+  const termNorm = _normalizeForMatch(term);
+  const candidates = _ensureGlossNormalized();
+
+  // 2a. Match exact normalisé
+  for (const { key, norm } of candidates) {
+    if (norm === termNorm) return { key, def: GLOSSARY[key] };
   }
+
+  // 2b. Match prefix normalisé (clé contenue au début)
+  for (const { key, norm } of candidates) {
+    if (norm.length >= 4 && termNorm.startsWith(norm + ' ')) {
+      return { key, def: GLOSSARY[key] };
+    }
+  }
+
+  // 2c. Match contenu normalisé (clé citée dans le terme, avec word boundary)
+  for (const { key, norm } of candidates) {
+    if (norm.length >= 5 && termNorm.includes(norm)) {
+      return { key, def: GLOSSARY[key] };
+    }
+  }
+
+  // 3. Fallback "famille de loi" (v2.62) :
+  // Si le terme a la forme "Art. X LOI" ou "LOI art. X" et qu'on connaît
+  // la LOI, on retourne au moins une définition générique de la loi.
+  // Évite les "ref-tag" muettes pour le candidat.
+  const lawFamilyMap = {
+    'CPP': 'Code de procédure pénale (RS 312.0) — règles uniformes de procédure pénale en CH.',
+    'CP': 'Code pénal suisse (RS 311.0) — sanctions et infractions.',
+    'CO': 'Code des obligations (RS 220) — droit civil, contrats, responsabilité.',
+    'CC': 'Code civil suisse (RS 210) — droit des personnes, famille, successions, biens.',
+    'LBA': 'Loi sur le blanchiment d\'argent (RS 955.0) — lutte anti-blanchiment.',
+    'LB': 'Loi sur les banques (RS 952.0) — secret bancaire, surveillance des banques.',
+    'LPD': 'Loi sur la protection des données (RS 235.1) — version 2023 totalement révisée.',
+    'EIMP': 'Loi fédérale sur l\'entraide pénale internationale (RS 351.1).',
+    'LSI': 'Loi sur la sécurité de l\'information (RS 128.0, 2024) — cybersécurité publique.',
+    'LStup': 'Loi sur les stupéfiants (RS 812.121).',
+    'LCR': 'Loi sur la circulation routière (RS 741.01).',
+    'LDA': 'Loi sur le droit d\'auteur (RS 231.1).',
+    'LD': 'Loi sur les douanes (RS 631.0).',
+    'LSCPT': 'Loi sur la surveillance de la correspondance par poste et télécom (RS 780.1).',
+    'LRens': 'Loi sur le renseignement (RS 121).',
+    'LSFin': 'Loi sur les services financiers (RS 950.1).',
+    'LADN': 'Loi sur les profils d\'ADN dans les procédures pénales (RS 363).',
+    'LAVI': 'Loi sur l\'aide aux victimes (RS 312.5).',
+    'DPMin': 'Droit pénal des mineurs (RS 311.1).',
+    'Cst.': 'Constitution fédérale de la Confédération suisse (RS 101).',
+  };
+  // Pattern : "Art. X LAW" ou "LAW art. X" ou "Art. X LAW — texte"
+  const lawPattern = /\b(CPP|CP|CO|CC|LBA|LB|LPD|EIMP|LSI|LStup|LCR|LDA|LD|LSCPT|LRens|LSFin|LADN|LAVI|DPMin|Cst\.)\b/;
+  const lm = term.match(lawPattern);
+  if (lm && lawFamilyMap[lm[1]]) {
+    return {
+      key: lm[1] + ' (loi)',
+      def: lawFamilyMap[lm[1]] + ' (Article spécifique non détaillé dans le glossaire actuel.)',
+    };
+  }
+
   return null;
 }
 
@@ -1775,7 +2244,42 @@ function startScene(scene) {
       Chaque décision est irréversible. Les erreurs critiques réduisent l'intégrité de la chaîne de custody.
     </div>
 
-    <div class="context-text">${scene.intro}</div>
+    ${(function(intro) {
+      // v2.62 — Intros longues (>800 chars) repliées par défaut sur mobile.
+      // Le contenu n'est PAS tronqué, juste replié visuellement avec un
+      // teaser de la première phrase, et un bouton "Voir le contexte complet".
+      if (!intro) return '';
+      const length = intro.length;
+      if (length <= 800) {
+        return `<div class="context-text">${intro}</div>`;
+      }
+      // Pour les longs : extraire un teaser propre (1ère phrase ou ~250 chars
+      // jusqu'à un point d'arrêt naturel)
+      let teaserEnd = intro.indexOf('. ', 200);
+      if (teaserEnd === -1 || teaserEnd > 350) teaserEnd = 280;
+      else teaserEnd += 1; // inclure le point
+      const teaser = intro.substring(0, teaserEnd);
+      const rest = intro.substring(teaserEnd);
+      return `<div class="context-text context-text--collapsible" data-collapsed="1">
+        <div class="context-teaser">${teaser}</div>
+        <div class="context-rest" hidden>${rest}</div>
+        <button type="button" class="context-toggle"
+                onclick="(function(b){
+                  const w = b.parentNode;
+                  const rest = w.querySelector('.context-rest');
+                  const collapsed = w.dataset.collapsed === '1';
+                  if (collapsed) {
+                    rest.hidden = false;
+                    w.dataset.collapsed = '0';
+                    b.textContent = '↑ Replier le contexte';
+                  } else {
+                    rest.hidden = true;
+                    w.dataset.collapsed = '1';
+                    b.textContent = '↓ Voir le contexte complet (${length - teaserEnd} caractères)';
+                  }
+                })(this)">↓ Voir le contexte complet (${length - teaserEnd} caractères)</button>
+      </div>`;
+    })(scene.intro || '')}
 
     <div class="objective-list">
       ${(scene.objectives || []).map(o => `

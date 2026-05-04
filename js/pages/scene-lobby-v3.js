@@ -399,7 +399,10 @@
     SCENES.forEach(s => {
       const code = s.regionDetail && s.regionDetail.code;
       if (!code) return;
-      counts[code] = (counts[code] || 0) + 1;
+      // v2.62 — Regrouper CHF (Confédération) + CH (Suisse) sous 'CHF' (52+19 = 71 scènes)
+      // pour libérer de la place visuelle aux cantons précis dans le lobby
+      const grouped = (code === 'CH') ? 'CHF' : code;
+      counts[grouped] = (counts[grouped] || 0) + 1;
     });
 
     if (Object.keys(counts).length < 2) return; // Pas assez de variation
@@ -429,7 +432,7 @@
       'VD': 'Vaud', 'VS': 'Valais', 'GE': 'Genève', 'NE': 'Neuchâtel',
       'JU': 'Jura', 'ZH': 'Zurich', 'FR': 'Fribourg', 'BS': 'Bâle-Ville',
       'BE': 'Berne', 'TI': 'Tessin', 'SG': 'Saint-Gall', 'SO': 'Soleure',
-      'ZG': 'Zoug', 'CHF': 'Confédération', 'CH': 'Suisse',
+      'ZG': 'Zoug', 'CHF': 'Confédération / Suisse', 'CH': 'Suisse',
       'EU': 'Europe', 'FR-EU': 'France', 'CN': 'Chine', 'INTL': 'International',
     };
 
@@ -683,7 +686,12 @@
       // v2.60 — filtre canton
       if (show && activeCanton) {
         const cantonOnCard = card.dataset.canton || '';
-        if (cantonOnCard !== activeCanton) show = false;
+        // v2.62 — CHF (groupé) matche aussi les scènes avec code 'CH'
+        if (activeCanton === 'CHF') {
+          if (cantonOnCard !== 'CHF' && cantonOnCard !== 'CH') show = false;
+        } else if (cantonOnCard !== activeCanton) {
+          show = false;
+        }
       }
       card.style.display = show ? '' : 'none';
       if (show) visible++;
