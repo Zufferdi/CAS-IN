@@ -191,6 +191,14 @@
   `);
 
   // ─────────────────────────────────────────────────────────────
+  // ZOUG — bandes horizontales blanche/bleue (sans hampe)
+  // ─────────────────────────────────────────────────────────────
+  const ZG = svg(`
+    <rect width="100" height="50" fill="#fff"/>
+    <rect y="50" width="100" height="50" fill="#0F4C9E"/>
+  `);
+
+  // ─────────────────────────────────────────────────────────────
   // FALLBACK SUISSE GÉNÉRIQUE (Confédération + Suisse) → CH
   // ─────────────────────────────────────────────────────────────
 
@@ -259,7 +267,7 @@
     // Cantons utilisés dans le corpus
     'VD': VD, 'VS': VS, 'GE': GE, 'NE': NE, 'JU': JU,
     'ZH': ZH, 'FR': FR_canton, 'BS': BS, 'BE': BE, 'TI': TI,
-    'SG': SG, 'SO': SO,
+    'SG': SG, 'SO': SO, 'ZG': ZG,
     // Confédération + équivalents (CHF est le code utilisé dans le corpus)
     'CH': CH, 'CHF': CH, 'CONFEDERATION': CH, 'SUISSE': CH,
     // International / pays étrangers
@@ -273,7 +281,7 @@
     'Vaud': 'VD', 'Valais': 'VS', 'Genève': 'GE', 'Neuchâtel': 'NE',
     'Jura': 'JU', 'Zurich': 'ZH', 'Fribourg': 'FR', 'Bâle-Ville': 'BS',
     'Bâle-Campagne': 'BS', 'Berne': 'BE', 'Tessin': 'TI',
-    'Saint-Gall': 'SG', 'Soleure': 'SO',
+    'Saint-Gall': 'SG', 'Soleure': 'SO', 'Zoug': 'ZG',
     'Confédération': 'CHF', 'Suisse': 'CH',
     'France': 'FR-EU', 'Chine': 'CN', 'International': 'INTL',
     'Europe': 'EU',
