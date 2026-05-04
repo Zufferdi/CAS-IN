@@ -201,15 +201,47 @@ function generateSeed() {
 }
 
 // ═══════════════════════════════════════════════════
-// DAILY STREAK
+// DAILY STREAK — v2.55 : migration vers Profile (volet N — nettoyage)
+//
+// L'ancien système 'cas_streak' (count + lastDate) est désormais doublonné
+// avec Profile.streak (current + max + lastDate). Le bridge intercepte déjà
+// les écritures cas_streak vers Profile.bumpStreak/breakStreak.
+//
+// On expose ici des wrappers compatibles avec l'ancien shape { count, lastDate }
+// qui lisent en réalité Profile.getStreak() pour avoir UNE seule source de
+// vérité. Les fonctions legacy (getStreak/setStreak/updateStreakOnActivity)
+// continuent d'exister pour ne pas casser les call-sites mais utilisent
+// Profile en interne.
 // ═══════════════════════════════════════════════════
-function getStreak() { return lsGet('cas_streak', { count: 0, lastDate: null }); }
-function setStreak(s) { lsSet('cas_streak', s); }
+function getStreak() {
+  // Source unique : Profile (le bridge maintient cas_streak en miroir)
+  if (window.Profile && typeof window.Profile.getStreak === 'function') {
+    const s = window.Profile.getStreak();
+    return { count: s.current || 0, lastDate: s.lastDate || null };
+  }
+  // Mini-fallback hors-PWA : lit cas_streak directement (LS uniquement)
+  return lsGet('cas_streak', { count: 0, lastDate: null });
+}
+
+function setStreak(s) {
+  // Plus utilisé directement en v2.55 : la source unique est Profile.
+  // On garde le no-op pour ne pas casser d'éventuels appels legacy.
+  // (Le bridge écoute déjà les writes cas_streak et les redirige.)
+  lsSet('cas_streak', s);
+}
 
 function updateStreakOnActivity() {
+  // v2.55 : la mise à jour réelle est gérée par Profile.recordActivity('scene')
+  // appelé depuis le bridge. Ici on laisse une trace pour les anciens chemins
+  // de code qui appelleraient encore cette fonction.
+  if (window.Profile && typeof window.Profile.recordActivity === 'function') {
+    window.Profile.recordActivity('scene');
+    return getStreak();
+  }
+  // Fallback minimaliste (très ancien chemin) — calcule localement
   const today = new Date().toISOString().slice(0, 10);
-  const s = getStreak();
-  if (s.lastDate === today) return s; // already counted today
+  const s = lsGet('cas_streak', { count: 0, lastDate: null });
+  if (s.lastDate === today) return s;
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
   if (s.lastDate === yesterday) {
     s.count++;
@@ -217,7 +249,7 @@ function updateStreakOnActivity() {
     s.count = 1;
   }
   s.lastDate = today;
-  setStreak(s);
+  lsSet('cas_streak', s);
   return s;
 }
 
@@ -848,22 +880,23 @@ const GLOSSARY = {
   "SECO": "Secrétariat d'État à l'économie : sanctions, contrôle d'exportation (LFMG/LFAIE).",
 };
 
-const GRADES = [
-  { min: 0,    title: "Stagiaire",              icon: "🎓", sub: "Débutant en forensique numérique" },
-  { min: 100,  title: "Inspecteur·rice",        icon: "🔍", sub: "Premiers pas en investigation" },
-  { min: 300,  title: "Enquêteur·rice Spécialisé·e", icon: "🎖",  sub: "Investigations complexes maîtrisées" },
-  { min: 600,  title: "Expert·e Forensique",    icon: "⚔️", sub: "Témoin expert devant tribunal" },
-  { min: 1000, title: "Juge d'Instruction",     icon: "⚖️", sub: "Autorité suprême de l'enquête" },
-  { min: 1500, title: "Procureur·e Fédéral·e",  icon: "🏛", sub: "Maîtrise absolue du droit pénal numérique" },
-  { min: 2500, title: "Procureur·e d'Élite",    icon: "🎖️", sub: "Référence nationale en cyber-justice — palier Expert débloqué" },
-  { min: 4000, title: "Procureur·e Européen·ne", icon: "🇪🇺", sub: "Maîtrise de la coopération internationale — Eurojust, EIMP, MLAT" },
-];
-
-function getGrade(xp) {
-  for (let i = GRADES.length - 1; i >= 0; i--) {
-    if (xp >= GRADES[i].min) return { ...GRADES[i], index: i, next: GRADES[i+1] || null };
-  }
-  return { ...GRADES[0], index: 0, next: GRADES[1] };
+// ═══════════════════════════════════════════════════
+// GRADES legacy : SUPPRIMÉ en v2.55 (volet N — nettoyage)
+//
+// Ancien système hérité du moteur quiz (table de 8 paliers : Stagiaire,
+// Inspecteur, Enquêteur Spécialisé, Expert Forensique, Juge d'Instruction,
+// Procureur Fédéral, Procureur d'Élite, Procureur Européen).
+//
+// Aujourd'hui remplacé partout par window.Profile.getRank() + getTrackLadder()
+// (système v3 unifié, 12 rangs par track choisi par l'utilisateur).
+//
+// Si Profile est indisponible (cas dégradé hors PWA) on utilise un mini
+// fallback minimaliste qui ne fait que renvoyer le titre "Stagiaire" pour
+// éviter un crash. La logique métier réelle passe systématiquement par
+// Profile dans tous les call-sites.
+// ═══════════════════════════════════════════════════
+function getGradeFallback() {
+  return { min: 0, title: 'Stagiaire', icon: '🎓', sub: 'Profil non disponible', index: 0, next: null };
 }
 
 function getXP() {
@@ -900,8 +933,10 @@ function addXP(amount, tags) {
     try { window.__casInProfileApplied = false; } catch {}
   }
 
-  // Rank-up via Profile (échelle v3 lissée). Fallback sur GRADES legacy
-  // si Profile indisponible (cas hors-PWA).
+  // Rank-up via Profile (échelle v3 lissée, 12 rangs par track).
+  // En v2.55 : suppression du fallback GRADES legacy. Si Profile est
+  // indisponible (cas très dégradé), on saute la détection rank-up
+  // (l'animation NEW RANK ne s'affichera juste pas).
   let gradeUp = false;
   let gradeUpName = '';
   if (window.Profile && typeof window.Profile.getRank === 'function') {
@@ -922,11 +957,6 @@ function addXP(amount, tags) {
       gradeUpName = ladder[nextIdx].name;
     }
   }
-  if (!gradeUpName) {
-    // Fallback legacy
-    gradeUp = getGrade(prev).index !== getGrade(next).index;
-    gradeUpName = getGrade(next).title;
-  }
 
   return { prev, next, gradeUp, gradeUpName, base: amount, gained, bonus, multiplier };
 }
@@ -935,11 +965,10 @@ function updateGradeDisplay() {
   const xp = getXP();
 
   // ───────────────────────────────────────────────────────────
-  // v2.10+ : on bascule sur Profile.getRank (système unifié, échelle v3
-  // lissée, 12 rangs par track choisi par l'utilisateur). Le système
-  // GRADES legacy ci-dessus n'est plus utilisé pour l'affichage scene.html.
-  // Si Profile n'est pas disponible (cas dégradé hors PWA), on retombe sur
-  // getGrade() pour ne rien casser.
+  // v2.10+ : Profile.getRank (système unifié, échelle v3 lissée,
+  // 12 rangs par track choisi par l'utilisateur).
+  // v2.55 : suppression du fallback GRADES legacy. Si Profile est
+  // indisponible, on garde le mini-fallback Stagiaire pour ne pas crasher.
   // ───────────────────────────────────────────────────────────
   let icon, title, sub, minXp, nextMin, nextLabel;
   if (window.Profile && typeof window.Profile.getRank === 'function') {
@@ -951,13 +980,13 @@ function updateGradeDisplay() {
     nextMin    = rank.next ? rank.next.min : null;
     nextLabel  = rank.next ? rank.next.name : null;
   } else {
-    const grade = getGrade(xp);
+    const grade = getGradeFallback();
     icon       = grade.icon;
     title      = grade.title;
     sub        = grade.sub;
     minXp      = grade.min;
-    nextMin    = grade.next ? grade.next.min : null;
-    nextLabel  = grade.next ? grade.next.title : null;
+    nextMin    = null;
+    nextLabel  = null;
   }
 
   // Phase 2 v2.10 : grade-mini retiré du header (info redondante avec profile-banner).
@@ -2192,6 +2221,35 @@ function showReport() {
     lsSet('scene_results', saved);
   }
 
+  // ─── v2.55 (volet G) : Run buffer pour le système Quests ───
+  // On stocke un journal des runs des 7 derniers jours pour permettre aux
+  // quêtes journalières d'évaluer leurs conditions (firstAttempt, improvedScore,
+  // hadCriticalError, mode procureur, tags, EU, ts pour 'session intensive').
+  // Le buffer est rotatif (cap 50 entrées) pour rester léger.
+  try {
+    const runBuffer = lsGet('cas_run_buffer', []);
+    const wasFirstAttempt = !prev;
+    const improvedScore = !!(prev && pct > prev.pct);
+    runBuffer.push({
+      sceneId: scene.id,
+      pct,
+      custodyPct,
+      score,
+      mode: G.mode,
+      difficulty: scene.difficulty,
+      tags: scene.tags || [],
+      isEU: scene.region === 'EU',
+      hadCriticalError: !!G.hadCriticalError,
+      firstAttempt: wasFirstAttempt,
+      improvedScore,
+      ts: Date.now(),
+      dateISO: new Date().toISOString().slice(0, 10),
+    });
+    // Rotation : garder 50 derniers max
+    while (runBuffer.length > 50) runBuffer.shift();
+    lsSet('cas_run_buffer', runBuffer);
+  } catch (_) {}
+
   // Record daily activity
   const activity = lsGet('cas_activity', []);
   const today = new Date().toISOString().slice(0, 10);
@@ -2607,7 +2665,14 @@ function openStatsScreen() {
 // ═══════════════════════════════════════════════════
 function openProfileModal() {
   const xp = lsGet('cas_xp', 0);
-  const grade = getGrade(xp);
+  // v2.55 : utilise Profile.getRank() au lieu de getGrade() legacy
+  let gradeIcon = '🎓';
+  let gradeTitle = 'Stagiaire';
+  if (window.Profile && typeof window.Profile.getRank === 'function') {
+    const rank = window.Profile.getRank();
+    gradeIcon = rank.emoji || '🎓';
+    gradeTitle = rank.name || 'Stagiaire';
+  }
   const badges = getUnlockedBadges();
   const results = lsGet('scene_results', {});
   const streak = getStreak();
@@ -2615,7 +2680,7 @@ function openProfileModal() {
   document.getElementById('profile-content').innerHTML = `
     <div class="stats-header">
       <div class="stats-title">Mon profil</div>
-      <div class="stats-subtitle">${grade.icon} ${grade.title} · ${xp} XP · ${badges.length} badge${badges.length>1?'s':''}</div>
+      <div class="stats-subtitle">${gradeIcon} ${gradeTitle} · ${xp} XP · ${badges.length} badge${badges.length>1?'s':''}</div>
     </div>
 
     <div class="stats-section">
