@@ -4,6 +4,111 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.44] — 2026-05-03
+
+**Diversification continue du casting** : 6 nouveaux PNJ thématiquement adaptés (focus EU/internationaux). **Bloc 16 du retrofit** (8 anciennes scènes adaptées, toutes à dimension internationale). Le catalogue passe à **54 PNJ**. Cap des **94%** du retrofit franchi.
+
+### Ajouté — 6 nouveaux PNJ dans `data/npcs.json` (48 → 54)
+
+| ID | Type | Rôle | Apparition principale |
+|---|---|---|---|
+| `ge_avocat_frontaliers` | Fictif **transposable** | Me Lavanchy, droit transfrontalier CH-FR-DE (Bâle) | `eu-france-travail`, `eu-free-leak` |
+| `anssi_liaison_ch` | Fictif **transposable** | M. Pelletier, officier liaison ANSSI auprès OFCS | `eu-ghgo-ddos` |
+| `bka_kidflix_lead` | Fictive | Frau Wagner, cellule KidFlix BKA Bavière (Munich) | `eu-kidflix-stream` |
+| `philippines_pjf_attache` | Fictif | M. Sangha, attaché PJF Manille (PH) | `eu-livestream-philippines` |
+| `src_attribution_apt` | Fictif **transposable** | Mr. Roumiantsev, attribution APT SRC (russophone) | `eu-revil-attribution` |
+| `post_evote_ciso` | Fictive | Mme Wettstein, CISO e-voting La Poste Suisse | `evoting-cantonal` |
+
+**Diversification thématique des nouveaux PNJ** :
+- **Avocat transfrontalier CH-FR** (Lavanchy) — RGPD vs nLPD, data breaches multi-juridictions, art. 271 CP frontalier
+- **Officier ANSSI** (Pelletier) — coordination CSIRT-FR / OFCS, post-Xplain
+- **BKA cybercrime DE** (Wagner) — démantèlement plateformes darknet CSAM
+- **PJF Manille** (Sangha) — livestream pédocriminalité PH-CH (>4'000 cas annuels)
+- **SRC attribution APT** (Roumiantsev) — Five Eyes coordination, doublure linguistique russophone
+- **CISO e-voting** (Wettstein) — protocoles cryptographiques verifiable voting
+
+**4 nouveaux transposables** (catalogue total 19 → 23) : `ge_avocat_frontaliers`, `anssi_liaison_ch`, `src_attribution_apt`, et indirectement `bka_kidflix_lead` pour scénarios CH-DE. Le catalogue compte désormais **23 PNJ transposables sur 54** (42.6%).
+
+### Ajouté — Retrofit bloc 16 (8 anciennes scènes adaptées)
+
+| Scène | Steps | Difficulté | NPCs assignés (★ = nouveau) | Bifurcation marquée |
+|---|---|---|---|---|
+| `eu-france-travail` | 5 | hard | `ge_avocat_frontaliers`★, `pfpdt_inspector` | step 1 #0 (catastrophe CNIL seule) |
+| `eu-free-leak` | 5 | medium | `ge_avocat_frontaliers`★, `cicr_dpo` | step 1 #2 (catastrophe nLPD ignorée) |
+| `eu-ghgo-ddos` | 5 | medium | `anssi_liaison_ch`★, `ofcs_coordinator` | step 0 #0 (catastrophe supply chain CH) |
+| `eu-kidflix-stream` | 5 | hard | `bka_kidflix_lead`★, `pjf_undercover_lead` | step 0 #0 (catastrophe perquisition unilatérale) |
+| `eu-livestream-philippines` | 5 | **expert** | `philippines_pjf_attache`★, `fbi_legat_bern` | step 0 #1 (catastrophe sécurité enfants) |
+| `eu-revil-attribution` | 5 | **expert** | `src_attribution_apt`★, `play_ransom_analyst` | step 0 #1 (catastrophe attribution unilatérale) |
+| `evoting-cantonal` | 5 | **expert** | `post_evote_ciso`★, `ofcs_coordinator` | step 4 #1 et #2 → 'end' explicite |
+| `exit-suicide-assiste-conteste` | 5 | hard | `ge_prosecutor_cyber`, `cicr_dpo` | step 4 #1 et #2 → 'end' explicite |
+
+**Diversification thématique du bloc 16** (8 thématiques distinctes, focus EU+) : (a) **France Travail data breach 43M** (frontaliers BS, action coordonnée CNIL+PFPDT), (b) **Free télécom 19M** (binational FR-CH GE, données roaming nLPD), (c) **DDoS hospitalier FR ramifications CH** (GHGO Bretagne, supply chain transfrontalière), (d) **KidFlix démantèlement BKA** (Op. Stream 38 pays, 1'400 suspects mondiaux dont 10 CH), (e) **Livestream pédocriminalité PH** (Op. Sampaguita, sécurité enfants PH avant arrestations CH), (f) **Attribution UNKN REvil/GandCrab** (BKA + Five Eyes, false-flag risk), (g) **E-voting cantonal NE** (anomalie scrutin La Poste, doctrine OFCS post-2019), (h) **Suicide assisté contesté** (EXIT, art. 115 CP a contrario, capacité de discernement, ATF Pretty 2002).
+
+**Cas particuliers** :
+- `eu-livestream-philippines` introduit la **doctrine PJF Asie du Sud-Est** : sécurité physique des enfants victimes PH **avant** les arrestations CH des commanditaires (cas réels documentés où des enfants ont été tués par les exploitants pour éliminer les témoins).
+- `evoting-cantonal` introduit la **doctrine OFCS post-2019 e-voting** : suspension graduée + audits indépendants ETHZ/Université de Bern/Mozilla **avant** toute annulation publique de scrutin.
+- `eu-revil-attribution` introduit la **doctrine Five Eyes attribution publique cyber** : 3 sources indépendantes minimum + confidence-level 'high' avant communication publique.
+- `exit-suicide-assiste-conteste` aborde un sujet **très sensible socialement** (suicide assisté + emprise familiale potentielle) avec rigueur procédurale (capacité de discernement art. 16 CC, art. 115 CP a contrario, ATF Pretty 2002).
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 108 scènes touchées par v2.24 → v2.44 (était 100, +8). Toutes passent le seuil de balance 30%.
+
+### Modifié — Service Worker v77 → v78
+
+Header v2.44 documentant les 6 nouveaux PNJ + le retrofit bloc 16.
+
+### Statistiques v2.44
+
+| Indicateur | v2.43 | v2.44 |
+|---|---|---|
+| Scènes totales | 110 | **110** (inchangé) |
+| Scènes avec NPCs assignés | 95 | **103** (+8) |
+| Scènes avec marqueur "📍 BIFURCATION NARRATIVE" | 95 | **103** (+8) |
+| **Progression retrofit** | **86%** | **94%** ✨ |
+| **PNJ catalogue** | **48** | **54** ✨ (+6) |
+| PNJ réels | 8 | 8 (inchangé) |
+| PNJ fictifs | 40 | **46** (+6) |
+| PNJ transposables | 19 | **23** (+4) |
+| Service Worker | v77 | **v78** |
+
+### Notes éditoriales
+
+**Sur la création des 6 nouveaux PNJ.** Continuant la diversification entamée en v2.41-2.43, cette release crée 6 PNJ thématiquement adaptés au bloc 16 (focus européen et international) :
+
+1. **ge_avocat_frontaliers (Me Lavanchy)** : avocat bâlois spécialisé droit transfrontalier CH-FR-DE. Profil rare en CH (peu d'avocats spécialisés sur les data breaches multi-juridictions). Apparaît dans 2 scènes (eu-france-travail + eu-free-leak). Transposable à tous les scénarios frontaliers data breach.
+
+2. **anssi_liaison_ch (M. Pelletier)** : officier de liaison **ANSSI** auprès de l'OFCS Berne. Pivot de la coopération bilatérale CH-FR cyber, formalisé après l'incident Xplain juin 2023. Distinct de `ofcs_coordinator` (rôle interne fédéral CH).
+
+3. **bka_kidflix_lead (Frau Wagner)** : cheffe de la cellule **KidFlix BKA Bavière** (Munich). Profil opérationnel allemand, pivot CH-DE pour les CSAM darknet. Coordonne les 38 pays partenaires de l'opération Stream (mars 2025). Distincte des autres acteurs internationaux (FBI Legat, Europol J-CAT).
+
+4. **philippines_pjf_attache (M. Sangha)** : attaché de coopération PJF à Manille (PH). Couvre l'Asie du Sud-Est (PH/TH/VN/ID). Profil critique pour les scénarios de **livestream pédocriminalité** (>4'000 cas annuels documentés via NCMEC, avec ~12 commanditaires suisses identifiés annuellement).
+
+5. **src_attribution_apt (Mr. Roumiantsev)** : chef de la cellule attribution APT du **SRC**. Citoyen suisse d'origine russe (russophone natif) — atout linguistique pour le tracking REvil/GandCrab/Conti/Sandworm dont la majorité des opérateurs sont russophones. Coordination Five Eyes (BfV + NSA + GCHQ + NCSC NL + SUPO FI). Profil de cyber-renseignement étatique distinct des autres acteurs cyber.
+
+6. **post_evote_ciso (Mme Wettstein)** : CISO du système e-voting de La Poste Suisse. Profil rare et stratégique (un seul opérateur e-voting CH actuellement autorisé par la ChF post-2019). Diplômée ETHZ Master Cryptographie + Postdoc IBM Research Zurich. Spécialiste protocoles cryptographiques verifiable voting (Geneva Voting System legacy + Swiss Post system).
+
+**Sur les 23 PNJ transposables (42.6% du catalogue).** Cette proportion permet une utilisation cohérente cross-scénarios. Les 31 PNJ non-transposables sont des figures liées à un cas spécifique qui auraient peu de sens dans d'autres scénarios.
+
+**Sur la scène `eu-livestream-philippines`.** Scène **expert** documentée par les opérations réelles **PJF + NBI Philippines** sur les livestreams pédocriminels commandités depuis l'Europe (>4'000 cas annuels documentés via NCMEC + Interpol ICSE). Le scénario porte sur l'opération « Sampaguita » : ~12 commanditaires suisses identifiés via les flux financiers Western Union/MoneyGram vers Manille. Le marqueur souligne le piège majeur de la doctrine : **arrêter les commanditaires CH avant que les enfants PH soient en sécurité** crée un risque vital pour les victimes (cas réels documentés où des enfants ont été tués par les exploitants pour éliminer les témoins lorsque les arrestations occidentales ont été révélées prématurément).
+
+**Sur la scène `eu-revil-attribution`.** Scène **expert** sur la **doctrine d'attribution publique cyber**. Le BKA finalise une opération d'attribution majeure de "UNKN" (leader historique REvil + GandCrab). Le marqueur souligne que la communication publique d'attribution sur la base d'une seule source (BKA seul, sans corroboration Five Eyes) expose la Suisse à un retour de bâton diplomatique en cas d'attribution erronée. La doctrine Five Eyes pour les attributions publiques cyber impose **3 sources indépendantes minimum** et un confidence-level 'high'. Cas documentés de false-flag : Olympic Destroyer 2018 (attribué à tort à la Corée du Nord par certains États), NotPetya 2017 (attribution lente prise 18 mois), TA453/Charming Kitten (attributions multiples contradictoires).
+
+**Sur la scène `evoting-cantonal`.** Scène **expert** sur la **doctrine OFCS post-2019 e-voting**. Question centrale : que faire face à une anomalie technique détectée pendant un scrutin cantonal en cours (~38'000 votes déjà reçus à 9h47 dimanche) ? Le marqueur souligne que l'annulation publique immédiate sans validation indépendante crée un précédent catastrophique pour la confiance démocratique dans l'e-voting CH. La doctrine impose une **séquence graduée** : (1) suspension provisoire avec analyse forensique 4-12h, (2) validation experte indépendante 24-72h (ETHZ + Université de Bern + Mozilla), (3) décision Conseil d'État + ChF coordonnée, (4) communication publique structurée.
+
+**Sur la scène `exit-suicide-assiste-conteste`.** Scène hard sur un sujet **très sensible socialement** (suicide assisté en CH, art. 115 CP a contrario, ATF Pretty 2002 et jurisprudence subséquente). Le scénario porte sur les filles aînées de Mme V. (décédée par suicide assisté EXIT) qui contestent la procédure en alléguant une **emprise** de l'accompagnante (Mme F., qui a hérité de 2.3M CHF via testament). Le marqueur souligne qu'un classement immédiat sans investigation forensique (consultations téléphoniques, échanges email, recherches Internet, expertise psychiatre) prive le dossier de toute substance probatoire. La doctrine MP-NE post-Pretty impose une investigation forensique systématique en cas de plainte de proches.
+
+**Sur le rythme du retrofit.** Avec 16 blocs livrés en 16 versions (v2.29 à v2.44), 103 scènes du corpus historique sont équipées de NPCs et marqueurs (sur 110 totales). **Progression à 94%**. Reste **7 scènes** à traiter (1 bloc final). Le **cap des 100% sera atteint en v2.45** — qui clôturera le retrofit.
+
+### Prochaines évolutions possibles
+
+```
+v2.45  Retrofit bloc 17 final (~7 scènes restantes) — ATTEINTE 100% ✨
+       Candidates : bitlocker_froid (déjà ✓), competence-mpc-vs, custody (déjà ✓),
+                     swissgrid-iec61850-jura (déjà ✓), swissport_2022 (déjà ✓),
+                     virement, [+ identifier les 4-5 dernières]
+```
+
 ## [2.43] — 2026-05-03
 
 **Diversification continue du casting** : 6 nouveaux PNJ thématiquement adaptés. **Bloc 15 du retrofit** (8 anciennes scènes adaptées). Le catalogue passe à **48 PNJ**.
