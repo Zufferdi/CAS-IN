@@ -144,6 +144,72 @@
         return false;
       },
     },
+    // ─── v2.57 (volet E) : Quêtes spécifiques quiz ───
+    // Évaluées sur cas_quiz_run_buffer (rotation quotidienne).
+    {
+      id: 'q_quiz_20',
+      title: 'Quiz du jour',
+      desc: "Réponds à 20 questions du quiz aujourd'hui (peu importe le score)",
+      icon: '📚',
+      reward: 35,
+      evaluate: (snap) => snap.todayQuizAnswers >= 20,
+    },
+    {
+      id: 'q_quiz_streak10',
+      title: 'Combo 10',
+      desc: '10 bonnes réponses consécutives au quiz',
+      icon: '⚡',
+      reward: 50,
+      evaluate: (snap) => snap.todayQuizMaxStreak >= 10,
+    },
+    {
+      id: 'q_quiz_hard_5',
+      title: 'Discipline Hard',
+      desc: '5 bonnes réponses sur des questions Difficile (peu importe le thème)',
+      icon: '🔥',
+      reward: 60,
+      evaluate: (snap) => snap.todayQuizCorrectByDiff.hard >= 5,
+    },
+    {
+      id: 'q_quiz_acc_80',
+      title: 'Précision 80%+',
+      desc: 'Atteins 80% de précision sur ≥30 questions du jour',
+      icon: '🎯',
+      reward: 55,
+      evaluate: (snap) => snap.todayQuizAnswers >= 30 && snap.todayQuizAccuracy >= 80,
+    },
+    {
+      id: 'q_quiz_3_themes',
+      title: 'Tour des thèmes',
+      desc: 'Réponds correctement à des questions sur ≥3 thèmes différents',
+      icon: '🎨',
+      reward: 45,
+      evaluate: (snap) => snap.todayQuizCorrectThemes >= 3,
+    },
+    {
+      id: 'q_quiz_speed_5',
+      title: 'Vitesse éclair',
+      desc: '5 réponses correctes en moins de 5 secondes (sans indice)',
+      icon: '⚡',
+      reward: 50,
+      evaluate: (snap) => snap.todayQuizSpeedAnswers >= 5,
+    },
+    {
+      id: 'q_quiz_no_hint',
+      title: 'Sans indice',
+      desc: '15 bonnes réponses sans utiliser l\'indice',
+      icon: '🧠',
+      reward: 45,
+      evaluate: (snap) => snap.todayQuizCorrectNoHint >= 15,
+    },
+    {
+      id: 'q_mixed_session',
+      title: 'Polyvalence DFIR',
+      desc: '1 scène complétée + 15 questions répondues le même jour',
+      icon: '🌐',
+      reward: 65,
+      evaluate: (snap) => snap.todayRunsCount >= 1 && snap.todayQuizAnswers >= 15,
+    },
   ];
 
   function lsGet(k, fb) {
@@ -180,11 +246,24 @@
 
   function pickQuestsForDate(dateStr, count = 3) {
     const rng = mulberry32(dateToSeed(dateStr));
-    const pool = [...QUEST_POOL];
+    // v2.57 : tirage stratifié pour garantir mix scène + quiz
+    const sceneQuests = QUEST_POOL.filter(q => !q.id.startsWith('q_quiz') && q.id !== 'q_mixed_session');
+    const quizQuests = QUEST_POOL.filter(q => q.id.startsWith('q_quiz') || q.id === 'q_mixed_session');
     const picked = [];
-    while (picked.length < count && pool.length > 0) {
-      const idx = Math.floor(rng() * pool.length);
-      picked.push(pool.splice(idx, 1)[0]);
+    const used = new Set();
+    // 1 quête quiz au moins
+    if (quizQuests.length > 0) {
+      const idx = Math.floor(rng() * quizQuests.length);
+      picked.push(quizQuests[idx]);
+      used.add(quizQuests[idx].id);
+    }
+    // 2 quêtes scène au moins
+    while (picked.length < count) {
+      const remaining = [...sceneQuests, ...quizQuests].filter(q => !used.has(q.id));
+      if (remaining.length === 0) break;
+      const idx = Math.floor(rng() * remaining.length);
+      picked.push(remaining[idx]);
+      used.add(remaining[idx].id);
     }
     return picked;
   }
@@ -231,11 +310,40 @@
     const runBuffer = lsGet('cas_run_buffer', []);
     const todayRuns = runBuffer.filter(r => r.dateISO === today);
 
+    // ─── v2.57 (volet E) : Agrégats quiz du jour ───
+    // Source : cas_quiz_run_buffer (1 entrée par réponse, 200 max/jour)
+    const quizBuffer = lsGet('cas_quiz_run_buffer', []);
+    const todayQuiz = quizBuffer.filter(r => r.dateISO === today);
+    const todayQuizCorrect = todayQuiz.filter(r => r.ok);
+    // Streaks : la plus longue suite consécutive de bonnes réponses du jour
+    let curStreak = 0, maxStreak = 0;
+    todayQuiz.forEach(r => {
+      if (r.ok) { curStreak++; maxStreak = Math.max(maxStreak, curStreak); }
+      else { curStreak = 0; }
+    });
+    // Bonnes réponses par difficulté
+    const correctByDiff = { easy: 0, medium: 0, hard: 0 };
+    todayQuizCorrect.forEach(r => { if (correctByDiff[r.diff] !== undefined) correctByDiff[r.diff]++; });
+    // Thèmes distincts dans bonnes réponses
+    const correctThemes = new Set(todayQuizCorrect.map(r => r.theme).filter(Boolean));
+
     return {
+      // Stats scènes (existant)
       todayResults,
       allResults,
       todayRuns,
       todayRunsCount: todayRuns.length,
+      // Stats quiz (nouveau v2.57)
+      todayQuizAnswers: todayQuiz.length,
+      todayQuizCorrect: todayQuizCorrect.length,
+      todayQuizAccuracy: todayQuiz.length > 0
+        ? Math.round((todayQuizCorrect.length / todayQuiz.length) * 100)
+        : 0,
+      todayQuizMaxStreak: maxStreak,
+      todayQuizCorrectByDiff: correctByDiff,
+      todayQuizCorrectThemes: correctThemes.size,
+      todayQuizSpeedAnswers: todayQuiz.filter(r => r.ok && r.speedAnswer).length,
+      todayQuizCorrectNoHint: todayQuiz.filter(r => r.ok && !r.hintUsed).length,
     };
   }
 
