@@ -62,6 +62,19 @@
         window.AchievementsCore.evalAndUnlock(window.Profile.snapshot());
       } catch (_) {}
     }
+    // 3) v2.51 — Arcs narratifs PNJ (méta-gamification)
+    // Vérifie chaque arc PNJ et débloque les badges si tous les stages
+    // sont complétés. Idempotent (Profile.unlockAchievement skip si déjà
+    // débloqué).
+    if (window.NpcArcs && typeof window.NpcArcs.evalAndUnlock === 'function') {
+      try {
+        // Force load si pas encore (les arcs peuvent ne pas avoir été
+        // chargés au moment de la première fin de scène)
+        Promise.resolve(window.NpcArcs.load()).then(() => {
+          window.NpcArcs.evalAndUnlock();
+        });
+      } catch (_) {}
+    }
   }
 
   function wrappedSetItem(key, value) {
