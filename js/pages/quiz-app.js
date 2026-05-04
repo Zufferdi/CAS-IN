@@ -641,6 +641,36 @@
         S.total++;
         markPlayedToday();
         maybeShowForensicAlert();
+
+        // ─── v2.57 (volet E) : Hook quêtes journalières quiz ───
+        // Chaque réponse alimente le buffer cas_quiz_run_buffer et déclenche
+        // l'évaluation des quêtes (très rapide : 3 conditions à vérifier).
+        // Buffer tournant 200 réponses du jour pour permettre les conditions
+        // composites (X bonnes réponses Difficile, X chapitres distincts, etc.)
+        try {
+          const todayISO = new Date().toISOString().slice(0, 10);
+          const buf = JSON.parse(localStorage.getItem('cas_quiz_run_buffer') || '[]');
+          // Purge des entrées d'autres jours (rotation quotidienne)
+          const todayBuf = buf.filter(e => e.dateISO === todayISO);
+          todayBuf.push({
+            theme: q.theme || '',
+            chapter: q.chapter || '',
+            diff: q.diff || 'medium',
+            ok,
+            mode: S.mode || 'normal',
+            ts: Date.now(),
+            dateISO: todayISO,
+            speedAnswer: ok && (Date.now() - _qRenderTime) < 5000 && !S._hintUsedThisQ,
+            hintUsed: !!S._hintUsedThisQ,
+          });
+          // Cap 200 réponses/jour (largement suffisant)
+          while (todayBuf.length > 200) todayBuf.shift();
+          localStorage.setItem('cas_quiz_run_buffer', JSON.stringify(todayBuf));
+          // Évaluation des quêtes (idempotente, debounced indirectement par evalAndComplete)
+          if (window.Quests && typeof window.Quests.evalAndComplete === 'function') {
+            window.Quests.evalAndComplete();
+          }
+        } catch (_) {}
         if (ok) {
           const hintPenalty = S._hintUsedThisQ ? 0.5 : 1;
           const elapsed = (Date.now() - _qRenderTime) / 1000;
