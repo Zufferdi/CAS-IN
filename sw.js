@@ -1,4 +1,53 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v79 : v2.45 — Bloc 17 FINAL ✨ 100% du corpus retrofit atteint
+//
+//       Milestone historique : la totalité des 110 scènes du corpus
+//       sont désormais équipées de NPCs + marqueurs narratifs.
+//       Sprint retrofit lancé en v2.29 (août 2025) clos en v2.45
+//       (mai 2026) — 17 blocs livrés en 17 versions.
+//
+//       2 nouveaux PNJ ajoutés à data/npcs.json (54 → 56) :
+//
+//         • vs_securite_barrages (M. Imboden, fictif transposable) —
+//             Responsable sécurité-OT barrages valaisans (FMV),
+//             SCADA Siemens/Schneider, IEC 60870-5-104, OFEN classe 1
+//         • fim_api_pentest (Mme Roy, fictive transposable) —
+//             Forensique senior API + pentest banking, OWASP API Top 10,
+//             BOLA/JWT flaws, mandats fedpol/MROZ
+//
+//       Retrofit bloc 17 final — 3 dernières scènes adaptées :
+//
+//         • competence-mpc-vs (5 steps, medium) — Conflit MPC vs
+//             MP-VS sur double cible CII (BCV + barrage Mauvoisin)
+//             npcs=[vs_securite_barrages★, nicolet]
+//             Marqueur step 4 #1 (trancher unilatéralement = invalidation
+//             rétroactive par Cour des plaintes art. 28 CPP)
+//
+//         • swissgrid-iec61850-jura (5 steps, expert) — Poste 380 kV
+//             Mühleberg JU, GOOSE/IEC 61850
+//             [PNJ assignés en v2.41 mais NPCs perdus dans transcript,
+//              ré-assignés ici] npcs=[swissgrid_ot_lead, swissgrid_cirt]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//
+//         • virement (5 steps, medium) — 50K CHF API banking,
+//             manipulation requêtes HTTP BOLA
+//             npcs=[fim_api_pentest★, compliance_bs]
+//             Marqueur step 3 #0 (mise en cause client sur ID e-banking
+//             valides ignore BOLA technique = ATF 6B_392/2018)
+//
+//       STATS FINALES v2.45 — corpus 100% retrofit :
+//         • 110 scènes / 110 avec NPCs assignés / 110 avec marqueurs
+//         • PNJ catalogue : 30 (départ retrofit) → 56 (final, +26 PNJ)
+//         • PNJ réels : 8 (inchangé tout au long)
+//         • PNJ fictifs : 22 → 48 (+26)
+//         • PNJ transposables : 8 → 25 (+17)
+//         • 17 blocs de retrofit livrés (5×11 + 8×6 = 55+48 = 103)
+//
+//       Le corpus est désormais entièrement équipé pour la
+//       gamification narrative : chaque scène a NPCs avec biographie,
+//       chaque scène a au moins une bifurcation marquée 'end' avec
+//       feedback pédagogique sur la catastrophe évitée ou subie.
+//
 // v78 : v2.44 — Retrofit bloc 16 (8 scènes EU+autres) + 6 NOUVEAUX PNJ
 //
 //       Cap des 94% du retrofit franchi (103/110). Le bloc 17 final
@@ -1369,7 +1418,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v78';
+const CACHE_VERSION = 'cas-in-v79';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
