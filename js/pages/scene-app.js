@@ -3162,4 +3162,29 @@ window.addEventListener('DOMContentLoaded', () => {
   if (window.location.hash === '#random') {
     loadSceneIndex().then(() => setTimeout(launchRandomScene, 300));
   }
+
+  // v2.54 : si l'URL contient #scene-{id}, scroller + surligner la scène concernée
+  // (utilisé par les liens depuis la page profil — section Arcs PNJ)
+  const sceneHashMatch = window.location.hash.match(/^#scene-([\w-]+)$/);
+  if (sceneHashMatch) {
+    const targetId = sceneHashMatch[1];
+    loadSceneIndex().then(() => {
+      setTimeout(() => {
+        const card = document.querySelector(`[data-scene-id="${targetId}"]`);
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.classList.add('scene-card--highlighted');
+          setTimeout(() => card.classList.remove('scene-card--highlighted'), 2400);
+        } else {
+          // Fallback : si la card n'a pas d'attribut data-scene-id, on tente l'ID DOM
+          const fallback = document.getElementById('scene-' + targetId) || document.getElementById(targetId);
+          if (fallback) {
+            fallback.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            fallback.classList.add('scene-card--highlighted');
+            setTimeout(() => fallback.classList.remove('scene-card--highlighted'), 2400);
+          }
+        }
+      }, 400);
+    });
+  }
 });
