@@ -1,143 +1,832 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>OSINT & Métadonnées — CAS-IN Forensique</title>
-<meta name="description" content="Google Dorks · EXIF · Pivots · OPSEC">
-<link rel="stylesheet" href="../style/fiche_style.css"></head><body>
-<nav class="tn-nav"><a href="index.html" class="tn-back">← Fiches</a><span class="tn-title">Outils DFIR</span><a href="../quiz.html" class="tn-quiz">💊 Quiz →</a></nav>
-<div class="page">
-<div class="breadcrumb"><a href="../index.html">🏠 Accueil</a> <span class="bc-sep">›</span> <a href="index.html">Fiches</a> <span class="bc-sep">›</span> <a href="index.html#cat-outilsdfir">Outils DFIR</a> <span class="bc-sep">›</span> <span class="bc-current">OSINT &amp; Métadonnées</span><span class="read-time-badge" style="margin-left:auto">⏱ ~8 min</span></div>
-<div class="info" style="border-left:3px solid var(--cyan);background:rgba(0,229,204,.04);border-radius:0 8px 8px 0;padding:.9rem 1.2rem;margin-bottom:1.5rem">
-<p style="font-style:italic;color:var(--muted);font-size:.82rem">"OSINT isn't about Google. It's about structured reasoning supported by open sources — knowing what question to ask, where to look, and how to verify what you find."</p>
-<p style="font-size:.7rem;color:var(--dim);margin-top:.3rem">— Michael Bazzell, <em>Open Source Intelligence Techniques</em>, 8e éd., 2022</p>
-<p style="margin-top:.6rem;font-size:.78rem">🕵 <strong>Silk Road (2013) :</strong> Ross Ulbricht identifié via un post sur un forum crypto de 2011 — il cherchait des développeurs en utilisant son vrai email. L'OPSEC commence dès le premier message publié, même des années avant. Une information confirmée par 1 source = indice. Par 3 sources indépendantes = assertion défendable en justice.</p>
-</div>
-<div class="header"><div class="fs-badge">🕵</div><div>
-  <span class="tag tag-cyan">OSINT</span> <span class="tag tag-gold">EXIF</span> <span class="tag tag-green">Suisse 🇨🇭</span> <span class="tag tag-blue">Forensique</span>
-  <h1 style="font-family:var(--sans);font-size:1.6rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .2rem">OSINT &amp; Métadonnées</h1>
-  <p class="meta">Cycle du renseignement · Sources suisses · Maltego · EXIF · GEOINT · Cloisonnement</p>
-</div></div>
-<div class="prereq-block">
-  <div class="prereq-row"><span class="prereq-label">Pratiquer</span><a href="../tp.html" class="tp-pill">🧪 📋 Série Examen</a></div>
-  <div class="prereq-row"><span class="prereq-label">Voir aussi</span><a href="formats.html" class="related-pill">🔗 Formats &amp; Magic Bytes</a><a href="mac_times.html" class="related-pill">🔗 MAC Times</a></div>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>OSINT &amp; Métadonnées — CAS-IN Forensique</title>
+<meta name="description" content="OSINT forensique · Cycle du renseignement · Sources suisses · Google Dorks · Maltego · EXIF · GEOINT · deepfake · Sherlock · OPSEC">
+<meta name="theme-color" content="#0d1117">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+
+<nav class="tn-nav" aria-label="Navigation fiche">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">OSINT &amp; MÉTADONNÉES</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-reseau">Réseaux &amp; Investigation</a><span class="bc-sep">›</span>
+    <span class="bc-current">OSINT &amp; Métadonnées</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🕵️</span>
+    <span class="tag tag-cyan" style="margin-left:.5rem">OSINT</span>
+    <span class="tag tag-gold" style="margin-left:.3rem">EXIF</span>
+    <span class="tag tag-green" style="margin-left:.3rem">🇨🇭 Suisse</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">GEOINT</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">OSINT &amp; Métadonnées</h1>
+    <div class="meta">Cycle du renseignement · Sources suisses · Google Dorks · Maltego · EXIF · GEOINT · Deepfakes · OPSEC</div>
+  </div>
+
+  <div style="margin:1rem 0;padding:.9rem 1.25rem;background:rgba(188,140,255,.04);border-left:3px solid var(--purple);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+    <span style="color:var(--purple);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Principe fondateur</span><br>
+    <em style="color:var(--text)">"OSINT isn't about Google. It's about structured reasoning supported by open sources — knowing what question to ask, where to look, and how to verify what you find."</em><br>
+    <span style="font-size:.72rem;margin-top:.3rem;display:block">— Michael Bazzell, <em>Open Source Intelligence Techniques</em>, 8e éd., 2022</span>
+  </div>
+
+  <div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(48,232,138,.05);border-left:3px solid var(--green);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
+    <span style="color:var(--green);font-weight:700">🇨🇭 Cas suisse :</span> En 2013, Ross Ulbricht (Silk Road) a été identifié via un post sur un forum crypto de 2011 où il cherchait des développeurs en utilisant son <em>vrai email</em>. L'OPSEC commence dès le premier message publié — même des années avant. <strong>1 source = indice. 3 sources indépendantes = assertion défendable en justice.</strong>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html" class="tp-pill">🧪 📋 Série Examen</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="formats.html" class="related-pill">🔗 Formats &amp; Magic Bytes</a><a href="mac_times.html" class="related-pill">🔗 MAC Times</a><a href="email_forensique.html" class="related-pill">🔗 Email Forensics</a><a href="malware_forensique.html" class="related-pill">🔗 Malware Forensics</a></div>
+  </div>
 </div>
 
-<div class="sec"><div class="sec-title">Cycle du renseignement &amp; Cloisonnement</div>
-<div class="g2">
-<div class="card card-cyan"><div class="ct">5 phases du cycle</div>
-<div class="steps"><div class="step"><div class="step-num">1</div><div class="step-text"><strong>Planification</strong> — Définir la question précise à élucider</div></div>
-<div class="step"><div class="step-num">2</div><div class="step-text"><strong>Collecte</strong> — Sources ouvertes documentées</div></div>
-<div class="step"><div class="step-num">3</div><div class="step-text"><strong>Traitement</strong> — Structurer et normaliser</div></div>
-<div class="step"><div class="step-num">4</div><div class="step-text"><strong>Analyse</strong> — Croiser, éliminer les artefacts</div></div>
-<div class="step"><div class="step-num">5</div><div class="step-text"><strong>Diffusion</strong> — Rapport adapté au destinataire</div></div>
-</div></div>
-<div class="card card-red"><div class="ct">Cloisonnement obligatoire</div><ul>
-<li>Navigateur dédié (Brave ou Firefox profil vierge)</li>
-<li>VPN ou Tor pour les recherches actives</li>
-<li><strong>LinkedIn notifie les visites</strong> → compte anonyme obligatoire</li>
-<li>Documenter : URL + date d'accès + capture d'écran</li>
-</ul>
-<p style="font-size:.75rem;color:var(--gold);margin-top:.5rem"><strong>OPSEC checklist :</strong> cliquez pour cocher avant chaque investigation</p>
-<ul class="checklist" id="opsec-list">
-  <li onclick="this.classList.toggle('done')">Navigateur dédié configuré</li>
-  <li onclick="this.classList.toggle('done')">VPN ou Tor actif</li>
-  <li onclick="this.classList.toggle('done')">Compte anonyme prêt (LinkedIn, réseaux)</li>
-  <li onclick="this.classList.toggle('done')">Outil de capture d'écran prêt</li>
-  <li onclick="this.classList.toggle('done')">Dossier de documentation créé</li>
-</ul>
-</div></div></div>
-
-<div class="sec"><div class="sec-title">Sources — Filtre interactif</div>
-<div class="filter-bar">
-  <button class="filter-btn active" onclick="sf('all',this)">Toutes</button>
-  <button class="filter-btn" onclick="sf('ch',this)">🇨🇭 Suisses</button>
-  <button class="filter-btn" onclick="sf('web',this)">🌐 Web général</button>
-  <button class="filter-btn" onclick="sf('tech',this)">🔧 Technique</button>
-</div>
-<table id="src-table"><thead><tr><th>Source</th><th>URL</th><th>Contenu</th></tr></thead><tbody>
-<tr data-cat="ch"><td><strong>Zefix.ch</strong></td><td>zefix.ch</td><td>Registre du commerce cantonal</td></tr>
-<tr data-cat="ch"><td><strong>FOSC / SHAB</strong></td><td>shab.ch</td><td>Feuille Officielle Suisse du Commerce</td></tr>
-<tr data-cat="ch"><td><strong>Moneyhouse.ch</strong></td><td>moneyhouse.ch</td><td>Données entreprises et dirigeants suisses</td></tr>
-<tr data-cat="web"><td><strong>Wayback Machine</strong></td><td>archive.org</td><td>Snapshots de pages web depuis 1996</td></tr>
-<tr data-cat="web"><td><strong>HIBP</strong></td><td>haveibeenpwned.com</td><td>Email présent dans des fuites de données</td></tr>
-<tr data-cat="tech"><td><strong>Shodan.io</strong></td><td>shodan.io</td><td>Services exposés sur Internet (ports ouverts)</td></tr>
-<tr data-cat="tech"><td><strong>crt.sh</strong></td><td>crt.sh</td><td>Certificate Transparency logs — sous-domaines</td></tr>
-<tr data-cat="tech"><td><strong>VirusTotal</strong></td><td>virustotal.com</td><td>Analyse fichiers, URLs, IPs, domaines</td></tr>
-<tr data-cat="web"><td><strong>Google cache:</strong></td><td>Google</td><td>Version en cache d'une page supprimée</td></tr>
-</tbody></table></div>
-
-<div class="sec"><div class="sec-title">Outils d'investigation</div>
-<div class="g2">
-<div class="card card-blue"><div class="ct">Maltego — Graphe de pivot</div><ul>
-<li>Transforms : email → domaines → IPs → certificats</li>
-<li>Valeur judiciaire : chaîne de connexions visible par un juge</li>
-<li>Pivoting systématique depuis chaque entité</li>
-</ul></div>
-<div class="card card-green"><div class="ct">Outils d'identité</div><ul>
-<li><strong>Sherlock</strong> — pseudo sur 300+ plateformes</li>
-<li><strong>Holehe</strong> — email présent sur quel service ?</li>
-<li><strong>theHarvester</strong> — emails + sous-domaines</li>
-<li><code>theHarvester -d domain.ch -b google,bing</code></li>
-</ul></div>
-<div class="card card-gold"><div class="ct">Google Dorks essentiels</div><ul>
-<li><code>site:domain.ch filetype:pdf</code></li>
-<li><code>inurl:admin "index of"</code></li>
-<li><code>filetype:xls "password"</code></li>
-<li><strong>WiGLE.net</strong> — BSSID WiFi → localisation physique</li>
-</ul></div>
-<div class="card card-purple"><div class="ct">Détection deepfake (GAN)</div><ul>
-<li>Texte illisible dans l'image</li>
-<li>Asymétrie yeux / oreilles</li>
-<li>Artefacts sur dents et cheveux</li>
-<li>Outils : Illuminarty, FotoForensics, Hive</li>
-</ul></div>
-</div></div>
-
-<div class="sec"><div class="sec-title">Métadonnées EXIF &amp; Documents</div>
-<div class="g2">
-<div class="card card-cyan"><div class="ct">EXIF forensique</div><ul>
-<li>Coordonnées GPS : précision jusqu'à 3 mètres</li>
-<li>Modèle d'appareil + numéro de série → lien suspect</li>
-<li>DateTimeOriginal (prise) ≠ FileModifyDate (FS)</li>
-<li>Plateformes sociales suppriment les EXIF à l'upload (mais pas les messages privés/mails)</li>
-<li><code>exiftool photo.jpg</code> · <code>exiftool -GPS* photo.jpg</code></li>
-</ul></div>
-<div class="card card-blue"><div class="ct">Métadonnées Office</div><ul>
-<li>.docx = ZIP : <code>unzip -p doc.docx docProps/core.xml</code></li>
-<li>Contient : auteur (nom d'utilisateur Windows), organisation, dates</li>
-<li>Chemins complets des fichiers liés</li>
-<li>Versions antérieures dans les métadonnées XML</li>
-</ul></div>
-</div>
-<div class="info" style="margin-top:.75rem">📍 <strong>GEOINT :</strong> végétation + architecture + plaques + enseignes + ombres/soleil → localisation sans GPS. <strong>What3Words</strong> : 3 mots = carré de 3m×3m sur Terre entière (w3w.app).</div>
+<!-- TABS -->
+<div class="tabs" id="osint-tabs">
+  <button class="tab active" onclick="showTab('methode',this)">🔄 Méthode</button>
+  <button class="tab" onclick="showTab('sources',this)">🔍 Sources</button>
+  <button class="tab" onclick="showTab('metadata',this)">📎 Métadonnées</button>
+  <button class="tab" onclick="showTab('geoint',this)">🗺️ GEOINT &amp; Deepfakes</button>
+  <button class="tab" onclick="showTab('opsec',this)">🛡️ OPSEC</button>
 </div>
 
-<div class="sec"><div class="sec-title">🧠 Testez-vous</div>
-<div class="quiz-wrap"><div class="quiz-q">Pourquoi LinkedIn est-il un risque OPSEC en OSINT ?</div>
-<div class="quiz-actions"><button class="quiz-reveal-btn" onclick="rev(this)">Voir la réponse</button></div>
-<div class="quiz-answer">LinkedIn <strong>notifie le propriétaire du profil</strong> quand quelqu'un consulte sa page (sauf mode navigation privé LinkedIn avec compte gratuit). Un enquêteur qui consulte le profil d'un suspect avec son compte personnel révèle son identité et son organisation. Solution : compte anonyme dédié, ou utiliser l'aperçu Google cached (sans visiter LinkedIn directement).</div></div>
-<div class="quiz-wrap"><div class="quiz-q">Une photo est partagée sur WhatsApp. Contient-elle encore ses métadonnées EXIF ?</div>
-<div class="quiz-actions"><button class="quiz-reveal-btn" onclick="rev(this)">Voir la réponse</button></div>
-<div class="quiz-answer">Cela dépend du moyen d'envoi. <strong>WhatsApp compresse et supprime les EXIF</strong> lors de l'envoi standard. <strong>Exception :</strong> si le fichier est envoyé en "document" (pas comme photo), les EXIF sont préservés. Les emails conservent généralement les EXIF sauf si l'application les supprime. Les plateformes sociales (Instagram, Twitter) suppriment systématiquement les EXIF à l'upload.</div></div>
+<!-- ══════════════════════════════════════════════
+     TAB 1 — MÉTHODE
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-methode">
+
+<div class="concept-card">
+  <div class="concept-title">🕵️ OSINT — Intelligence à sources ouvertes</div>
+  L'OSINT (Open Source Intelligence) désigne la collecte et l'analyse d'informations issues de sources <strong>publiquement accessibles</strong>. En forensique suisse, il sert à reconstituer l'identité d'un suspect, à localiser une infrastructure d'attaquant, à vérifier un alibi ou à établir des liens entre entités. Sa valeur juridique dépend de la <strong>traçabilité des sources</strong> et du <strong>cloisonnement des méthodes</strong> — une preuve obtenue en violant les CGU d'une plateforme peut être irrecevable (art. 141 CPP).
 </div>
 
-<div class="tip">⚖️ <strong>Examen CAS-IN :</strong> 1 source = indice · 3 sources indépendantes = assertion défendable · Cloisonnement = navigateur dédié + VPN + compte anonyme · LinkedIn notifie les visites · Zefix.ch / SHAB = registres suisses officiels · EXIF = GPS précis jusqu'à 3m, supprimés à l'upload sur réseaux sociaux · .docx = ZIP avec core.xml (auteur, dates, chemin) · GEOINT = localisation par éléments visuels · What3Words = 3m×3m · Sherlock = pseudo sur 300+ plateformes</div>
-<div class="footer"><span>CAS-IN Investigation Numérique · Forensique Suisse</span><span>Manuel Ch. 35–37 · IntelTechniques · SANS SEC487</span></div>
+<div class="sec-title">Cycle du renseignement — 5 phases</div>
+<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0">
+  <div style="background:var(--surface2);padding:.45rem .85rem;font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border);display:grid!important;grid-template-columns:60px 160px 1fr">
+    <span>PHASE</span><span>NOM</span><span>ACTION OSINT</span>
+  </div>
+
+  <div style="display:grid!important;grid-template-columns:60px 160px 1fr;border-bottom:1px solid var(--border)">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.75rem;font-weight:700;color:var(--cyan);border-right:1px solid var(--border)">1</div>
+    <div style="padding:.5rem .85rem;font-size:.75rem;font-weight:600;border-right:1px solid var(--border)">Planification</div>
+    <div style="padding:.5rem .85rem;font-size:.73rem;color:var(--muted)">Définir la question précise. <em>Qui est cet individu ? Où était-il le 15 mars ? Quelle est son infrastructure ?</em> Une question floue donne des résultats inutilisables.</div>
+  </div>
+  <div style="display:grid!important;grid-template-columns:60px 160px 1fr;border-bottom:1px solid var(--border)">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.75rem;font-weight:700;color:var(--gold);border-right:1px solid var(--border)">2</div>
+    <div style="padding:.5rem .85rem;font-size:.75rem;font-weight:600;border-right:1px solid var(--border)">Collecte</div>
+    <div style="padding:.5rem .85rem;font-size:.73rem;color:var(--muted)">Sources ouvertes documentées. Capturer chaque source (URL + date + screenshot). Ne jamais travailler depuis son identité réelle.</div>
+  </div>
+  <div style="display:grid!important;grid-template-columns:60px 160px 1fr;border-bottom:1px solid var(--border)">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.75rem;font-weight:700;color:var(--purple);border-right:1px solid var(--border)">3</div>
+    <div style="padding:.5rem .85rem;font-size:.75rem;font-weight:600;border-right:1px solid var(--border)">Traitement</div>
+    <div style="padding:.5rem .85rem;font-size:.73rem;color:var(--muted)">Structurer et normaliser. Maltego pour les relations. Timeline des événements. Éliminer les doublons et les informations non vérifiables.</div>
+  </div>
+  <div style="display:grid!important;grid-template-columns:60px 160px 1fr;border-bottom:1px solid var(--border)">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.75rem;font-weight:700;color:var(--red);border-right:1px solid var(--border)">4</div>
+    <div style="padding:.5rem .85rem;font-size:.75rem;font-weight:600;border-right:1px solid var(--border)">Analyse</div>
+    <div style="padding:.5rem .85rem;font-size:.73rem;color:var(--muted)">Croiser les sources, valider les hypothèses, éliminer les artefacts. <strong>Règle des 3 sources</strong> : 1 source = indice · 3 sources indépendantes = assertion défendable.</div>
+  </div>
+  <div style="display:grid!important;grid-template-columns:60px 160px 1fr">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.75rem;font-weight:700;color:var(--green);border-right:1px solid var(--border)">5</div>
+    <div style="padding:.5rem .85rem;font-size:.75rem;font-weight:600;border-right:1px solid var(--border)">Diffusion</div>
+    <div style="padding:.5rem .85rem;font-size:.73rem;color:var(--muted)">Rapport adapté au destinataire (juge, avocat, RSSI). Sources citées, méthode documentée. Chaîne de custody pour les captures.</div>
+  </div>
 </div>
-<button class="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<!-- Pivotage Maltego -->
+<div class="sec-title">Pivotage systématique — Le cœur de l'investigation OSINT</div>
+<div class="alert">
+  🎯 <strong>Maltego</strong> est l'outil de référence pour visualiser et automatiser le pivotage OSINT. Chaque entité (email, domaine, IP, personne) devient un nœud. Les <em>Transforms</em> automatisent les pivots : <code>email → domaines enregistrés → IPs → certificats TLS → organisations → personnes</code>. La valeur judiciaire est maximale : la chaîne de connexions est visible et explicable devant un juge.
+</div>
+
+<div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.5rem;margin:.75rem 0">
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(0,229,204,.3);background:rgba(0,229,204,.05);cursor:pointer" onclick="showPivot('email')">
+    <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.3rem">📧 Depuis un email</div>
+    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">Domaines enregistrés · HIBP · Holehe · réseaux sociaux · GitHub commits</div>
+  </div>
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(240,192,64,.3);background:rgba(240,192,64,.05);cursor:pointer" onclick="showPivot('domaine')">
+    <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.3rem">🌐 Depuis un domaine</div>
+    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">WHOIS · crt.sh · Shodan · Passive DNS · MX records · sous-domaines</div>
+  </div>
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(255,64,96,.3);background:rgba(255,64,96,.05);cursor:pointer" onclick="showPivot('ip')">
+    <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.3rem">🖥️ Depuis une IP</div>
+    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">ASN · RDNS · Shodan · AbuseIPDB · Censys · services exposés</div>
+  </div>
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(188,140,255,.3);background:rgba(188,140,255,.05);cursor:pointer" onclick="showPivot('pseudo')">
+    <div style="font-size:.65rem;color:var(--purple);font-weight:700;margin-bottom:.3rem">👤 Depuis un pseudo</div>
+    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">Sherlock · 300+ plateformes · patterns de nommage · Wayback Machine</div>
+  </div>
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(48,232,138,.3);background:rgba(48,232,138,.05);cursor:pointer" onclick="showPivot('photo')">
+    <div style="font-size:.65rem;color:var(--green);font-weight:700;margin-bottom:.3rem">📷 Depuis une photo</div>
+    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">EXIF GPS · Google Images · Yandex · PimEyes · GEOINT</div>
+  </div>
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(88,166,255,.3);background:rgba(88,166,255,.05);cursor:pointer" onclick="showPivot('entreprise')">
+    <div style="font-size:.65rem;color:var(--blue);font-weight:700;margin-bottom:.3rem">🏢 Depuis une entreprise 🇨🇭</div>
+    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">Zefix · SHAB · Moneyhouse · UID · dirigeants · filiales</div>
+  </div>
+
+</div>
+<div class="arch-detail" id="pivot-detail" style="margin-bottom:1rem">
+  <div style="color:var(--dim);font-size:.78rem">ℹ️ Cliquez sur un point de départ pour voir les pivots et outils associés</div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un analyste trouve l'email <code>jdumont.priv@protonmail.com</code> dans les logs d'un incident. Décrivez une chaîne de pivotage OSINT complète pour identifier l'individu et son infrastructure.<small>Pivotage · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>Chaîne de pivotage depuis l'email :</strong><br><br>
+    <strong>1. Recherche directe</strong> : Google/Bing — rechercher <code>"jdumont.priv@protonmail.com"</code> entre guillemets. Apparaît-il dans des forums, GitHub, Pastebin ?<br><br>
+    <strong>2. HIBP</strong> : haveibeenpwned.com → cet email figure-t-il dans des fuites de données ? Une fuite peut révéler des informations supplémentaires.<br><br>
+    <strong>3. Holehe</strong> : <code>holehe jdumont.priv@protonmail.com</code> → sur quels services (Instagram, Twitter, Netflix, Amazon…) ce compte est-il enregistré ?<br><br>
+    <strong>4. Shodan</strong> : si des domaines sont associés → chercher les services exposés et les certificats TLS.<br><br>
+    <strong>5. Pattern de nommage</strong> : "jdumont" → Sherlock pour rechercher ce pseudo sur 300+ plateformes. GitHub : rechercher des commits avec cet email.<br><br>
+    <strong>6. Wayback Machine</strong> : des profils supprimés peuvent encore être en cache.<br><br>
+    <strong>Règle</strong> : tout documenter (URL + date + screenshot). Ne jamais contacter directement — risque d'alerte du suspect et irrecevabilité CPP.
+  </div>
+</div>
+</div><!-- /tab-methode -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — SOURCES
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-sources">
+
+<div class="sec-title">Sources — Filtre interactif</div>
+<div style="margin:.5rem 0 .75rem;display:flex;gap:.4rem;flex-wrap:wrap">
+  <button class="filter-btn active" onclick="sf('all',this)" style="padding:.3rem .75rem;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.72rem;cursor:pointer">Toutes</button>
+  <button class="filter-btn" onclick="sf('ch',this)" style="padding:.3rem .75rem;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--dim);font-size:.72rem;cursor:pointer">🇨🇭 Suisses</button>
+  <button class="filter-btn" onclick="sf('web',this)" style="padding:.3rem .75rem;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--dim);font-size:.72rem;cursor:pointer">🌐 Web général</button>
+  <button class="filter-btn" onclick="sf('tech',this)" style="padding:.3rem .75rem;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--dim);font-size:.72rem;cursor:pointer">🔧 Technique</button>
+</div>
+<div style="overflow-x:auto">
+<table id="src-table">
+  <thead><tr><th>Source</th><th>URL</th><th>Contenu</th><th>Valeur forensique</th></tr></thead>
+  <tbody>
+    <tr data-cat="ch">
+      <td style="font-weight:600;font-size:.78rem;color:var(--gold)">Zefix.ch</td>
+      <td style="font-family:var(--mono);font-size:.68rem">zefix.ch</td>
+      <td style="font-size:.73rem">Registre du commerce cantonal — toutes les entreprises suisses. Raison sociale, siège, UID, statut, publications FOSC.</td>
+      <td style="font-size:.72rem">Source officielle · recevable CPP · historique statuts</td>
+    </tr>
+    <tr data-cat="ch">
+      <td style="font-weight:600;font-size:.78rem;color:var(--gold)">FOSC / SHAB</td>
+      <td style="font-family:var(--mono);font-size:.68rem">shab.ch</td>
+      <td style="font-size:.73rem">Feuille Officielle Suisse du Commerce — fondations, modifications, faillites.</td>
+      <td style="font-size:.72rem">Publication légale officielle · daté et signé</td>
+    </tr>
+    <tr data-cat="ch">
+      <td style="font-weight:600;font-size:.78rem;color:var(--gold)">Moneyhouse.ch</td>
+      <td style="font-family:var(--mono);font-size:.68rem">moneyhouse.ch</td>
+      <td style="font-size:.73rem">Données entreprises, dirigeants, liens entre entités, score de crédit, historique des mandats.</td>
+      <td style="font-size:.72rem">Réseau de relations dirigeants · cross-références</td>
+    </tr>
+    <tr data-cat="ch">
+      <td style="font-weight:600;font-size:.78rem;color:var(--gold)">Registre foncier</td>
+      <td style="font-family:var(--mono);font-size:.68rem">Selon canton</td>
+      <td style="font-size:.73rem">Propriétaires immobiliers. Accès limité selon canton.</td>
+      <td style="font-size:.72rem">Liens patrimoniaux · adresses</td>
+    </tr>
+    <tr data-cat="ch">
+      <td style="font-weight:600;font-size:.78rem;color:var(--gold)">SECO</td>
+      <td style="font-family:var(--mono);font-size:.68rem">seco.admin.ch</td>
+      <td style="font-size:.73rem">Listes de sanctions (embargo), entreprises signalées.</td>
+      <td style="font-size:.72rem">Vérification sanctions · conformité</td>
+    </tr>
+    <tr data-cat="web">
+      <td style="font-weight:600;font-size:.78rem">Wayback Machine</td>
+      <td style="font-family:var(--mono);font-size:.68rem">archive.org</td>
+      <td style="font-size:.73rem">Snapshots de pages web depuis 1996. Pages supprimées, profils effacés.</td>
+      <td style="font-size:.72rem">Investigation rétrospective</td>
+    </tr>
+    <tr data-cat="web">
+      <td style="font-weight:600;font-size:.78rem">HIBP</td>
+      <td style="font-family:var(--mono);font-size:.68rem">haveibeenpwned.com</td>
+      <td style="font-size:.73rem">Email présent dans des fuites de données. Révèle pseudos, services utilisés.</td>
+      <td style="font-size:.72rem">Pivot email → identité</td>
+    </tr>
+    <tr data-cat="web">
+      <td style="font-weight:600;font-size:.78rem">Google cache:</td>
+      <td style="font-family:var(--mono);font-size:.68rem">Google</td>
+      <td style="font-size:.73rem">Version en cache d'une page supprimée — sans alerter le suspect.</td>
+      <td style="font-size:.72rem">Pages supprimées · OPSEC</td>
+    </tr>
+    <tr data-cat="tech">
+      <td style="font-weight:600;font-size:.78rem;color:var(--red)">Shodan.io</td>
+      <td style="font-family:var(--mono);font-size:.68rem">shodan.io</td>
+      <td style="font-size:.73rem">Services exposés sur Internet. Ports ouverts, bannières, certificats TLS.</td>
+      <td style="font-size:.72rem">Infrastructure attaquant · services vulnérables</td>
+    </tr>
+    <tr data-cat="tech">
+      <td style="font-weight:600;font-size:.78rem;color:var(--red)">crt.sh</td>
+      <td style="font-family:var(--mono);font-size:.68rem">crt.sh</td>
+      <td style="font-size:.73rem">Certificate Transparency logs — tous les sous-domaines ayant eu un certificat TLS.</td>
+      <td style="font-size:.72rem">Cartographie sous-domaines</td>
+    </tr>
+    <tr data-cat="tech">
+      <td style="font-weight:600;font-size:.78rem;color:var(--red)">VirusTotal</td>
+      <td style="font-family:var(--mono);font-size:.68rem">virustotal.com</td>
+      <td style="font-size:.73rem">Analyse fichiers, URLs, IPs, domaines. Relations historiques, Passive DNS.</td>
+      <td style="font-size:.72rem">Qualification malveillance · pivot</td>
+    </tr>
+    <tr data-cat="tech">
+      <td style="font-weight:600;font-size:.78rem;color:var(--red)">WiGLE.net</td>
+      <td style="font-family:var(--mono);font-size:.68rem">wigle.net</td>
+      <td style="font-size:.73rem">Base mondiale de réseaux Wi-Fi. BSSID → localisation physique précise.</td>
+      <td style="font-size:.72rem">GEOINT · localisation par Wi-Fi</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="sec-title">Sources web générales — Google Dorks &amp; outils</div>
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(0,229,204,.3);background:rgba(0,229,204,.05)">
+    <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.4rem;text-transform:uppercase">🔍 Google Dorks essentiels</div>
+    <div style="font-family:var(--mono);font-size:.68rem;line-height:1.9;color:var(--text)">
+      <code>site:domain.ch filetype:pdf</code><br>
+      <code>inurl:admin "index of"</code><br>
+      <code>filetype:xls "password"</code><br>
+      <code>"@domain.ch" site:linkedin.com</code><br>
+      <code>cache:domain.ch/page-supprimee</code><br>
+      <code>site:pastebin.com "email@domain.ch"</code><br>
+      <code>intext:"mot de passe" filetype:txt site:domain.ch</code>
+    </div>
+  </div>
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(240,192,64,.3);background:rgba(240,192,64,.05)">
+    <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.4rem;text-transform:uppercase">🛠️ Outils d'identité numérique</div>
+    <ul style="font-size:.73rem;color:var(--muted);line-height:1.85;margin:0;padding-left:1.1rem">
+      <li><strong>Sherlock</strong> : pseudo sur 300+ plateformes</li>
+      <li><strong>Holehe</strong> : email présent sur quel service ?</li>
+      <li><strong>theHarvester</strong> : emails + sous-domaines d'un domaine</li>
+      <li><strong>HIBP</strong> : email dans des fuites de données</li>
+      <li><strong>crt.sh</strong> : sous-domaines via Certificate Transparency</li>
+      <li><strong>WiGLE.net</strong> : BSSID Wi-Fi → localisation physique</li>
+      <li><strong>Wayback Machine</strong> : snapshots depuis 1996</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Commandes -->
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;margin:.75rem 0;font-family:var(--mono);font-size:.68rem;line-height:1.9;color:var(--text)">
+  <span style="color:var(--cyan)"># theHarvester — emails + sous-domaines</span><br>
+  theHarvester -d domain.ch -b google,bing,linkedin<br><br>
+  <span style="color:var(--cyan)"># Sherlock — pseudo sur toutes les plateformes</span><br>
+  python3 sherlock.py jdumont<br><br>
+  <span style="color:var(--cyan)"># Holehe — email présent sur quels services ?</span><br>
+  holehe jdumont@protonmail.com<br><br>
+  <span style="color:var(--cyan)"># crt.sh — sous-domaines via certificats TLS</span><br>
+  curl -s "https://crt.sh/?q=%.domain.ch&output=json" | jq '.[].name_value' | sort -u
+</div>
+
+<div class="sec-title">Sources techniques — Infrastructure</div>
+<div class="tool-grid">
+
+  <div class="tool-card" style="border-left:3px solid var(--red)">
+    <div class="tool-name">Shodan.io</div>
+    <div class="tool-by">Shodan Inc.</div>
+    <div class="tool-desc">Moteur de recherche pour les services exposés sur Internet. Ports ouverts, bannières, certificats TLS, version des logiciels. Chercher par IP, ASN, organisation, pays CH.</div>
+    <div><span class="tool-tag tt-free">Freemium</span><span class="tool-tag tt-gui">Web + CLI</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--cyan)">
+    <div class="tool-name">VirusTotal</div>
+    <div class="tool-by">Google</div>
+    <div class="tool-desc">Analyse d'URLs, IPs, domaines, fichiers. Relations historiques, Passive DNS, fichiers communicants. API pour automatiser. Indispensable pour qualifier une infrastructure suspecte.</div>
+    <div><span class="tool-tag tt-free">Gratuit limité</span><span class="tool-tag tt-gui">Web + API</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--gold)">
+    <div class="tool-name">Maltego</div>
+    <div class="tool-by">Maltego Technologies</div>
+    <div class="tool-desc">Graphe de pivotage visuel. Transforms automatisés (WHOIS, DNS, réseaux sociaux, VirusTotal). Visualisation des relations entre entités. Standard en intelligence forensique.</div>
+    <div><span class="tool-tag tt-com">Community/Pro</span><span class="tool-tag tt-gui">GUI</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--purple)">
+    <div class="tool-name">Censys</div>
+    <div class="tool-by">Censys Inc.</div>
+    <div class="tool-desc">Scan complet d'Internet (IPv4/IPv6). Certificats TLS, services, OS. Complémentaire à Shodan. Excellent pour retrouver des serveurs C2 via les caractéristiques de leurs certificats.</div>
+    <div><span class="tool-tag tt-free">Freemium</span><span class="tool-tag tt-gui">Web + API</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--blue)">
+    <div class="tool-name">Wayback Machine</div>
+    <div class="tool-by">Internet Archive</div>
+    <div class="tool-desc">Archives web depuis 1996. Retrouver des pages supprimées, des versions anciennes d'un site, des profils effacés. Indispensable pour les investigations rétrospectives.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-gui">Web + API</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--green)">
+    <div class="tool-name">DNStwist</div>
+    <div class="tool-by">Open Source</div>
+    <div class="tool-desc">Génère et vérifie les variantes typosquattées d'un domaine. Détecte les domaines frauduleux imitant une organisation (phishing, BEC). Transpositions, homoglyphes, TLD alternatifs.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI Python</span></div>
+  </div>
+
+</div>
+</div><!-- /tab-sources -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — MÉTADONNÉES
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-metadata">
+
+<div class="concept-card">
+  <div class="concept-title">📎 Métadonnées — Ce que les fichiers révèlent sans qu'on le sache</div>
+  Les métadonnées sont des informations <strong>intégrées dans les fichiers</strong> par les appareils et logiciels qui les créent. Elles peuvent révéler : la <strong>localisation GPS précise</strong> (photos), le <strong>nom d'utilisateur Windows</strong> (documents Office), les <strong>chemins réseau</strong> (PDF), l'historique des <strong>révisions</strong> (Word), et bien plus. La plupart des utilisateurs ignorent leur existence — ce qui en fait une source forensique de premier ordre.
+</div>
+
+<!-- EXIF -->
+<div class="sec-title">EXIF — Métadonnées photographiques</div>
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(255,64,96,.3);background:rgba(255,64,96,.05)">
+    <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.4rem;text-transform:uppercase">📍 Champs EXIF forensiques clés</div>
+    <div style="overflow-x:auto">
+    <table style="margin:0">
+      <thead><tr><th style="font-size:.65rem">Champ EXIF</th><th style="font-size:.65rem">Valeur forensique</th></tr></thead>
+      <tbody>
+        <tr><td style="font-family:var(--mono);font-size:.67rem">GPSLatitude/Longitude</td><td style="font-size:.7rem">Localisation précise à 3 mètres</td></tr>
+        <tr><td style="font-family:var(--mono);font-size:.67rem">GPSAltitude</td><td style="font-size:.7rem">Altitude — utile en montagne</td></tr>
+        <tr><td style="font-family:var(--mono);font-size:.67rem">DateTimeOriginal</td><td style="font-size:.7rem">Date/heure de prise de vue</td></tr>
+        <tr><td style="font-family:var(--mono);font-size:.67rem">Make / Model</td><td style="font-size:.7rem">Fabricant + modèle d'appareil</td></tr>
+        <tr><td style="font-family:var(--mono);font-size:.67rem">SerialNumber</td><td style="font-size:.7rem">N° de série — lien suspect direct</td></tr>
+        <tr><td style="font-family:var(--mono);font-size:.67rem">LensModel</td><td style="font-size:.7rem">Objectif utilisé</td></tr>
+        <tr><td style="font-family:var(--mono);font-size:.67rem">Software</td><td style="font-size:.7rem">Logiciel de traitement (Photoshop…)</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(240,192,64,.3);background:rgba(240,192,64,.05)">
+    <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.4rem;text-transform:uppercase">⚠️ Suppression EXIF par plateforme</div>
+    <div style="font-size:.73rem;color:var(--muted);line-height:1.8">
+      <strong style="color:var(--red)">Suppriment les EXIF</strong> :<br>
+      Instagram · Twitter/X · Facebook · WhatsApp (photos)<br>
+      LinkedIn · Telegram (photos) · Signal<br><br>
+      <strong style="color:var(--green)">Conservent les EXIF</strong> :<br>
+      Email (pièces jointes) · Dropbox/Drive (upload direct)<br>
+      WhatsApp (si envoi en <em>document</em>, pas en photo)<br>
+      iCloud Photo Library · Telegram (fichiers)<br><br>
+      <strong>Règle pratique</strong> : douter de l'absence d'EXIF ne signifie pas absence de preuve — chercher d'autres métadonnées.
+    </div>
+  </div>
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;margin:.75rem 0;font-family:var(--mono);font-size:.68rem;line-height:1.9;color:var(--text)">
+  <span style="color:var(--cyan)"># Lire toutes les métadonnées EXIF</span><br>
+  exiftool photo.jpg<br><br>
+  <span style="color:var(--cyan)"># Extraire uniquement les données GPS</span><br>
+  exiftool -GPS* photo.jpg<br><br>
+  <span style="color:var(--cyan)"># Convertir coordonnées GPS décimales</span><br>
+  exiftool -c "%.6f" -GPS* photo.jpg<br><br>
+  <span style="color:var(--cyan)"># Supprimer toutes les métadonnées (anonymisation)</span><br>
+  exiftool -all= photo.jpg<br><br>
+  <span style="color:var(--cyan)"># Traitement en masse d'un dossier</span><br>
+  exiftool -r -csv -GPSLatitude -GPSLongitude -DateTimeOriginal /dossier/ &gt; gps_export.csv
+</div>
+
+<!-- Métadonnées Office -->
+<div class="sec-title">Métadonnées Office — Documents .docx / .xlsx / .pdf</div>
+<div class="alert">
+  💡 <strong>Un fichier .docx est un ZIP</strong> contenant des fichiers XML. Le fichier <code>docProps/core.xml</code> contient : <strong>auteur initial</strong> (nom d'utilisateur Windows au moment de la création), <strong>dernier auteur</strong>, <strong>dates de création et modification</strong>, et parfois le <strong>nom d'organisation</strong>. Ces informations résistent à "Enregistrer sous" — seule une suppression explicite des propriétés les efface.
+</div>
+
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Type de fichier</th><th>Métadonnées disponibles</th><th>Extraction</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--blue)">.docx / .xlsx / .pptx</td>
+      <td style="font-size:.73rem">Auteur, organisation, dates, révisions, chemins réseau liés, commentaires cachés, contenu supprimé (révisions Track Changes)</td>
+      <td style="font-family:var(--mono);font-size:.68rem"><code>unzip -p doc.docx docProps/core.xml</code></td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--red)">.pdf</td>
+      <td style="font-size:.73rem">Auteur, créateur (logiciel), producteur, dates, titre, sujet, mots-clés, et parfois le chemin original du fichier source</td>
+      <td style="font-family:var(--mono);font-size:.68rem"><code>exiftool fichier.pdf</code><br><code>pdfinfo fichier.pdf</code></td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--gold)">.jpg / .png / .tiff</td>
+      <td style="font-size:.73rem">EXIF complet : GPS, appareil, objectif, logiciel, dates. IPTC pour les métadonnées éditoriales. XMP pour les métadonnées étendues.</td>
+      <td style="font-family:var(--mono);font-size:.68rem"><code>exiftool -a -u image.jpg</code></td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--purple)">.mp4 / .mov</td>
+      <td style="font-size:.73rem">GPS si enregistré sur mobile, modèle d'appareil, logiciel d'édition, date de création</td>
+      <td style="font-family:var(--mono);font-size:.68rem"><code>exiftool -a video.mp4</code></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>🔍 core.xml — Extraction rapide</h4>
+    <ul class="memo-list">
+      <li><code>unzip -p doc.docx docProps/core.xml</code></li>
+      <li>Champ <code>&lt;dc:creator&gt;</code> = auteur initial (nom Windows)</li>
+      <li>Champ <code>&lt;cp:lastModifiedBy&gt;</code> = dernier modificateur</li>
+      <li>Champ <code>&lt;dcterms:created&gt;</code> = date de création</li>
+      <li>Champ <code>&lt;cp:revision&gt;</code> = nombre de révisions</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>⚠️ Pièges timestamps documents</h4>
+    <ul class="memo-list">
+      <li><code>DateTimeOriginal</code> (prise de vue) ≠ <code>FileModifyDate</code> (filesystem)</li>
+      <li>Un document "édité sous Word" a sa date de modification mise à jour</li>
+      <li>Timestamp timezone : vérifier si UTC ou heure locale</li>
+      <li>Antidater un doc Office ne change pas <code>core.xml created</code></li>
+      <li>Croiser avec les MAC Times du filesystem (fiche MAC Times)</li>
+    </ul>
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un document Word est soumis comme preuve. L'avocat de la défense affirme qu'il a été créé le 1er mars. L'analyse de <code>docProps/core.xml</code> révèle <code>&lt;dcterms:created&gt;2024-03-15T09:23:00Z&lt;/dcterms:created&gt;</code> et <code>&lt;cp:revision&gt;1&lt;/cp:revision&gt;</code>. Le MAC time du fichier indique mtime=01/03/2024. Que conclure ?<small>Métadonnées · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>Conclusion : le document a probablement été backdaté.</strong><br><br>
+    <strong>Analyse :</strong><br>
+    · <code>core.xml created = 15 mars</code> : date réelle de création selon Office. Ce champ est difficile à falsifier sans outils spécialisés.<br>
+    · <code>revision = 1</code> : le document n'a été modifié qu'une seule fois — c'est anormalement peu pour un document "créé le 1er mars et soumis le 15 mars".<br>
+    · <code>mtime filesystem = 1er mars</code> : facilement modifiable via <code>touch -t</code> (timestomping). Non fiable seul.<br><br>
+    <strong>Incohérence flagrante</strong> : un document créé le 1er mars avec une seule révision devrait avoir un core.xml created = 1er mars. Le décalage de 14 jours entre le mtime (falsifié) et le core.xml (fiable) = preuve de timestomping.<br><br>
+    <strong>Action</strong> : demander l'historique des versions SharePoint/OneDrive si le document était hébergé, et analyser les logs Windows (récents LNK files, Jump Lists) sur la machine de l'auteur.
+  </div>
+</div>
+</div><!-- /tab-metadata -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — GEOINT & DEEPFAKES
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-geoint">
+
+<div class="concept-card">
+  <div class="concept-title">🗺️ GEOINT &amp; Deepfakes — Localisation et authenticité visuelle</div>
+  Le <strong>GEOINT (Geospatial Intelligence)</strong> consiste à localiser des personnes, véhicules ou lieux à partir d'éléments visuels dans des images ou vidéos — sans coordonnées GPS explicites. C'est l'art de lire une photo comme un témoignage géographique. Les <strong>deepfakes</strong> sont l'inverse : des contenus visuels synthétiques conçus pour tromper. Le technicien DFIR doit maîtriser les deux.
+</div>
+
+<!-- GEOINT -->
+<div class="sec-title">GEOINT — Localiser une image sans GPS</div>
+<div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.5rem;margin:.75rem 0">
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(48,232,138,.3);background:rgba(48,232,138,.05)">
+    <div style="font-size:.65rem;color:var(--green);font-weight:700;margin-bottom:.3rem">🌿 Végétation &amp; Saison</div>
+    <div style="font-size:.72rem;color:var(--muted);line-height:1.6">Type de végétation → région climatique. Etat des feuilles → saison. Plantes spécifiques → zone géographique.</div>
+  </div>
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(0,229,204,.3);background:rgba(0,229,204,.05)">
+    <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.3rem">🏗️ Architecture</div>
+    <div style="font-size:.72rem;color:var(--muted);line-height:1.6">Style architectural → pays/région/époque. Matériaux, couleurs, formes de toits. Enseignes en alphabet non-latin → pays.</div>
+  </div>
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(240,192,64,.3);background:rgba(240,192,64,.05)">
+    <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.3rem">🚗 Plaques &amp; Véhicules</div>
+    <div style="font-size:.72rem;color:var(--muted);line-height:1.6">Format des plaques → pays/canton suisse. Marques de véhicules dominantes → région. Côté de conduite.</div>
+  </div>
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(255,64,96,.3);background:rgba(255,64,96,.05)">
+    <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.3rem">☀️ Ombres &amp; Soleil</div>
+    <div style="font-size:.72rem;color:var(--muted);line-height:1.6">Direction des ombres → orientation. Longueur des ombres → latitude + saison. SunCalc.org pour calculer position solaire.</div>
+  </div>
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(188,140,255,.3);background:rgba(188,140,255,.05)">
+    <div style="font-size:.65rem;color:var(--purple);font-weight:700;margin-bottom:.3rem">📡 Antennes &amp; Infra.</div>
+    <div style="font-size:.72rem;color:var(--muted);line-height:1.6">Types de pylônes électriques → pays. Antennes GSM → opérateurs. Logos sur camions/bus → région.</div>
+  </div>
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(88,166,255,.3);background:rgba(88,166,255,.05)">
+    <div style="font-size:.65rem;color:var(--blue);font-weight:700;margin-bottom:.3rem">🗺️ What3Words</div>
+    <div style="font-size:.72rem;color:var(--muted);line-height:1.6">3 mots = carré de 3m×3m sur Terre entière. Référence de localisation ultra-précise utilisée par les secours suisses.</div>
+  </div>
+
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;margin:.75rem 0">
+  <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.07em">Outils GEOINT</div>
+  <div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.73rem;color:var(--muted)">
+    <div>
+      <strong style="color:var(--text)">Google Images / Yandex</strong> — recherche inversée d'image. Yandex est souvent plus efficace pour les visages et les bâtiments est-européens.<br><br>
+      <strong style="color:var(--text)">SunCalc.org</strong> — calculer la position du soleil à une date/heure/lieu donnés → confirmer ou invalider l'heure d'une photo.
+    </div>
+    <div>
+      <strong style="color:var(--text)">GeoGuessr / Overpass Turbo</strong> — entraînement GEOINT + requêtes OpenStreetMap pour localiser des infrastructures spécifiques.<br><br>
+      <strong style="color:var(--text)">PimEyes</strong> — reconnaissance faciale sur des images publiques. Usage légal très encadré (RGPD/nLPD). Consulter juriste avant utilisation.
+    </div>
+  </div>
+</div>
+
+<!-- Deepfakes -->
+<div class="sec-title">Détection de deepfakes &amp; manipulations visuelles</div>
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(255,64,96,.3);background:rgba(255,64,96,.05)">
+    <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.4rem;text-transform:uppercase">🤖 Indicateurs visuels — Deepfakes GAN</div>
+    <ul style="font-size:.73rem;color:var(--muted);line-height:1.85;margin:0;padding-left:1.1rem">
+      <li><strong>Texte illisible</strong> dans l'image (logos, panneaux) — les GAN échouent sur le texte</li>
+      <li><strong>Asymétrie yeux/oreilles</strong> — les visages synthétiques sont légèrement déséquilibrés</li>
+      <li><strong>Artefacts dents et cheveux</strong> — bords flous, dents mal définies</li>
+      <li><strong>Fond incohérent</strong> derrière la tête — halo, flou artificiel</li>
+      <li><strong>Clignements anormaux</strong> (vidéo) — les deepfakes anciens ne clignaient pas</li>
+      <li><strong>Cohérence de l'éclairage</strong> — lumière sur le visage ≠ lumière du fond</li>
+    </ul>
+  </div>
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(0,229,204,.3);background:rgba(0,229,204,.05)">
+    <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.4rem;text-transform:uppercase">🔬 Outils d'analyse forensique</div>
+    <ul style="font-size:.73rem;color:var(--muted);line-height:1.85;margin:0;padding-left:1.1rem">
+      <li><strong>FotoForensics</strong> (fotoforensics.com) — analyse ELA (Error Level Analysis) pour détecter les retouches</li>
+      <li><strong>Illuminarty</strong> — détection IA générative dans les images</li>
+      <li><strong>Hive Moderation</strong> — détection deepfake vidéo et image</li>
+      <li><strong>Sensity AI</strong> — plateforme de détection deepfake professionnelle</li>
+      <li><strong>exiftool</strong> — vérifier si les métadonnées signalent une création IA (Adobe Content Authenticity)</li>
+      <li><strong>C2PA / Content Credentials</strong> — standard de provenance des contenus (Adobe, Microsoft, Sony)</li>
+    </ul>
+  </div>
+</div>
+
+<div class="key-fact">
+  <div class="key-fact-label">⚖️ Valeur juridique des deepfakes en Suisse</div>
+  <div style="font-size:.78rem;line-height:1.75;margin-top:.4rem;color:var(--muted)">
+    En droit suisse, une image ou vidéo deepfake utilisée pour tromper peut constituer une <strong>escroquerie (art. 146 CP)</strong>, une <strong>diffamation (art. 173 CP)</strong> ou une violation du droit à l'image (art. 28 CC). La forensique doit démontrer l'origine synthétique du contenu de manière <strong>scientifiquement reproductible</strong> — un rapport d'expert certifiant la manipulation est indispensable pour qu'il soit recevable comme preuve (art. 182 CPP). La simple affirmation "c'est un deepfake" est insuffisante.
+  </div>
+</div>
+</div><!-- /tab-geoint -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — OPSEC
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-opsec">
+
+<div class="concept-card">
+  <div class="concept-title">🛡️ OPSEC — Sécurité opérationnelle de l'enquêteur OSINT</div>
+  L'<strong>OPSEC (Operational Security)</strong> en OSINT désigne les mesures prises pour <strong>ne pas révéler son identité, son organisation ou l'existence de l'enquête</strong> lors de la collecte d'informations. Sans cloisonnement, l'enquêteur alerte le suspect, contamine les preuves, ou s'expose à des contre-mesures. En Suisse, une enquête OSINT mal conduite peut également violer le droit de la personnalité (art. 28 CC) ou la LPD, rendant les preuves irrecevables (art. 141 CPP).
+</div>
+
+<!-- Checklist interactive -->
+<div class="sec-title">Checklist OPSEC — À cocher avant chaque investigation</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin:.75rem 0" id="opsec-checklist">
+  <div style="font-family:var(--mono);font-size:.6rem;color:var(--dim);margin-bottom:.75rem;letter-spacing:.05em;text-transform:uppercase">OPSEC CHECKLIST — Cliquez pour cocher</div>
+
+  <div id="checklist-items">
+    <div class="check-item" onclick="toggleCheck(this)" style="display:flex;gap:.6rem;align-items:flex-start;padding:.45rem .5rem;border-radius:6px;cursor:pointer;margin-bottom:.2rem">
+      <span class="check-box" style="font-size:.9rem;min-width:1.2rem">☐</span>
+      <div style="font-size:.74rem;color:var(--muted)"><strong style="color:var(--text)">Navigateur dédié configuré</strong> — Firefox profil vierge ou Brave. Aucun historique, cookie, extension personnelle.</div>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)" style="display:flex;gap:.6rem;align-items:flex-start;padding:.45rem .5rem;border-radius:6px;cursor:pointer;margin-bottom:.2rem">
+      <span class="check-box" style="font-size:.9rem;min-width:1.2rem">☐</span>
+      <div style="font-size:.74rem;color:var(--muted)"><strong style="color:var(--text)">VPN ou Tor actif</strong> — masquer l'IP réelle et l'organisation. Vérifier avec <code>whatismyip.com</code>.</div>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)" style="display:flex;gap:.6rem;align-items:flex-start;padding:.45rem .5rem;border-radius:6px;cursor:pointer;margin-bottom:.2rem">
+      <span class="check-box" style="font-size:.9rem;min-width:1.2rem">☐</span>
+      <div style="font-size:.74rem;color:var(--muted)"><strong style="color:var(--text)">Compte anonyme prêt</strong> pour LinkedIn, Twitter, forums. Ne jamais utiliser de compte professionnel.</div>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)" style="display:flex;gap:.6rem;align-items:flex-start;padding:.45rem .5rem;border-radius:6px;cursor:pointer;margin-bottom:.2rem">
+      <span class="check-box" style="font-size:.9rem;min-width:1.2rem">☐</span>
+      <div style="font-size:.74rem;color:var(--muted)"><strong style="color:var(--text)">Mode navigation privée LinkedIn</strong> — le mode standard notifie le profil visité. Paramètres → Visibilité → Mode privé.</div>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)" style="display:flex;gap:.6rem;align-items:flex-start;padding:.45rem .5rem;border-radius:6px;cursor:pointer;margin-bottom:.2rem">
+      <span class="check-box" style="font-size:.9rem;min-width:1.2rem">☐</span>
+      <div style="font-size:.74rem;color:var(--muted)"><strong style="color:var(--text)">Outil de capture d'écran prêt</strong> — Greenshot, Flameshot, ou archive.org "Save Page Now". Date et URL visibles dans la capture.</div>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)" style="display:flex;gap:.6rem;align-items:flex-start;padding:.45rem .5rem;border-radius:6px;cursor:pointer;margin-bottom:.2rem">
+      <span class="check-box" style="font-size:.9rem;min-width:1.2rem">☐</span>
+      <div style="font-size:.74rem;color:var(--muted)"><strong style="color:var(--text)">Dossier de documentation créé</strong> — arborescence par date/sujet. Chaque source = URL + date + hash SHA256 de la capture.</div>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)" style="display:flex;gap:.6rem;align-items:flex-start;padding:.45rem .5rem;border-radius:6px;cursor:pointer;margin-bottom:.2rem">
+      <span class="check-box" style="font-size:.9rem;min-width:1.2rem">☐</span>
+      <div style="font-size:.74rem;color:var(--muted)"><strong style="color:var(--text)">Ne pas contacter directement le sujet</strong> — toute interaction directe alerte, contamine et peut être illégale (surveillance privée art. 179 CP).</div>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)" style="display:flex;gap:.6rem;align-items:flex-start;padding:.45rem .5rem;border-radius:6px;cursor:pointer;margin-bottom:.2rem">
+      <span class="check-box" style="font-size:.9rem;min-width:1.2rem">☐</span>
+      <div style="font-size:.74rem;color:var(--muted)"><strong style="color:var(--text)">Vérifier les CGU des plateformes</strong> — certaines interdisent le scraping ou l'usage des données à des fins d'enquête. Art. 141 CPP : preuve illicite = irrecevable.</div>
+    </div>
+  </div>
+
+  <div id="checklist-progress" style="margin-top:.75rem;font-size:.7rem;color:var(--dim)">0/8 items cochés</div>
+</div>
+
+<!-- Risques OPSEC plateforme -->
+<div class="sec-title">Risques OPSEC par plateforme</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Plateforme</th><th>Risque OPSEC</th><th>Mitigation</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--red)">LinkedIn</td>
+      <td style="font-size:.73rem">Notifie le propriétaire du profil à chaque visite (sauf mode privé). Révèle nom + organisation de l'enquêteur.</td>
+      <td style="font-size:.73rem">Mode navigation privée LinkedIn · compte anonyme · aperçu Google cache</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--gold)">Twitter / X</td>
+      <td style="font-size:.73rem">Les "likes" et "follows" sont visibles. Les listes privées peuvent être détectées. L'IP peut être logguée.</td>
+      <td style="font-size:.73rem">Compte anonyme + VPN. Ne jamais interagir (like, follow, retweet).</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--purple)">Instagram</td>
+      <td style="font-size:.73rem">Stories vues = enquêteur identifiable. Profils privés = contenu inaccessible sans follow (qui notifie).</td>
+      <td style="font-size:.73rem">Ne jamais regarder les stories. Utiliser des captures d'archives publiques.</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--cyan)">Shodan / VirusTotal</td>
+      <td style="font-size:.73rem">Les requêtes peuvent être loggées. Un suspect peut surveiller les recherches sur son infrastructure.</td>
+      <td style="font-size:.73rem">API key non liée à l'identité réelle. Passer par Maltego pour abstraire les requêtes directes.</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--blue)">WhatsApp</td>
+      <td style="font-size:.73rem">Affiche si le message a été lu (double coche bleue). Statut "en ligne" visible. Photo de profil peut changer.</td>
+      <td style="font-size:.73rem">Utiliser un compte SIM prépayé anonyme. Ne jamais envoyer de message.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — OSINT &amp; Métadonnées</div>
+  <p><strong>Règle des 3 sources</strong> : 1 source = indice · 3 sources indépendantes = assertion défendable en justice</p>
+  <p><strong>Cycle du renseignement</strong> : Planification → Collecte → Traitement → Analyse → Diffusion</p>
+  <p><strong>EXIF GPS</strong> : précision jusqu'à 3 mètres · supprimé à l'upload sur réseaux sociaux · conservé dans les emails</p>
+  <p><strong>.docx = ZIP</strong> : <code>unzip -p doc.docx docProps/core.xml</code> → auteur Windows, dates, révisions</p>
+  <p><strong>Cloisonnement</strong> : navigateur dédié + VPN + compte anonyme · LinkedIn notifie les visites</p>
+  <p><strong>Sources 🇨🇭 suisses</strong> : Zefix.ch (registre commerce) · SHAB (publications légales) · Moneyhouse (dirigeants)</p>
+  <p><strong>GEOINT</strong> : végétation + architecture + plaques + ombres → localisation sans GPS · What3Words = 3m×3m</p>
+  <p><strong>Deepfakes</strong> : texte illisible, asymétrie yeux/oreilles, artefacts cheveux · ELA (FotoForensics) pour les retouches</p>
+  <p><strong>Art. 141 CPP</strong> : preuve obtenue illicitement = irrecevable → respecter les CGU et le droit de la personnalité</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un enquêteur DFIR consulte le profil LinkedIn d'un suspect depuis son compte professionnel de la police cantonale zurichoise. Quels sont les risques juridiques et opérationnels, et comment aurait-il dû procéder ?<small>OPSEC · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>Risques opérationnels :</strong><br>
+    · LinkedIn notifie automatiquement le suspect que "un policier du canton de Zurich a consulté votre profil" → alerte immédiate, destruction de preuves, fuite possible.<br>
+    · Le suspect peut modifier ou supprimer son profil avant la suite de l'enquête.<br><br>
+    <strong>Risques juridiques :</strong><br>
+    · Selon la jurisprudence et l'art. 141 CPP, une preuve obtenue en violant les conditions d'utilisation d'une plateforme (ou en révélant prématurément l'enquête) peut être irrecevable.<br>
+    · En cas de procédure judiciaire, la défense peut soulever la nullité de la preuve.<br><br>
+    <strong>Procédure correcte :</strong><br>
+    1. Activer le <strong>mode navigation privée LinkedIn</strong> (Paramètres → Visibilité du profil → Mode privé) avant toute consultation<br>
+    2. Utiliser un <strong>compte anonyme</strong> dédié aux investigations, sans lien avec l'organisation<br>
+    3. Alternatively : consulter une <strong>capture Google cache</strong> du profil sans visiter LinkedIn directement<br>
+    4. Documenter la méthode utilisée pour garantir la recevabilité de la preuve
+  </div>
+</div>
+</div><!-- /tab-opsec -->
+
 <script>
-function sf(cat,btn){
-  document.querySelectorAll('#src-table tbody tr').forEach(r=>{r.classList.toggle('f-hide',cat!=='all'&&r.dataset.cat!==cat);});
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+// ── Filtre sources ──
+function sf(cat, btn) {
+  document.querySelectorAll('#src-table tbody tr').forEach(function(r){
+    r.style.display = (cat==='all' || r.dataset.cat===cat) ? '' : 'none';
+  });
+  document.querySelectorAll('.filter-btn').forEach(function(b){
+    b.style.background = 'var(--surface)';
+    b.style.color = 'var(--dim)';
+    b.style.borderColor = 'var(--border)';
+  });
+  btn.style.background = 'var(--surface2)';
+  btn.style.color = 'var(--text)';
+  btn.style.borderColor = 'var(--cyan)';
 }
-function rev(btn){const w=btn.closest('.quiz-wrap'),a=w.querySelector('.quiz-answer'),v=a.classList.toggle('visible');btn.textContent=v?'Masquer':'Voir la réponse';}
-const bt=document.querySelector('.back-top');window.addEventListener('scroll',()=>bt.classList.toggle('visible',window.scrollY>300));
+
+// ── Tabs ──
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
+  var el = document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+// ── Quiz ──
+document.addEventListener('click', function(e) {
+  if(e.target && e.target.classList.contains('quiz-reveal-btn')) {
+    var wrap = e.target.closest('.quiz-wrap');
+    if(!wrap) return;
+    var ans = wrap.querySelector('.quiz-answer');
+    if(ans) ans.style.display = ans.style.display === 'block' ? 'none' : 'block';
+  }
+});
+
+// ── Checklist OPSEC ──
+function toggleCheck(el) {
+  var box = el.querySelector('.check-box');
+  var checked = box.textContent === '☑';
+  box.textContent = checked ? '☐' : '☑';
+  el.style.background = checked ? '' : 'rgba(48,232,138,.07)';
+  el.style.borderLeft = checked ? '' : '2px solid var(--green)';
+  updateProgress();
+}
+function updateProgress() {
+  var items = document.querySelectorAll('.check-item');
+  var done = Array.from(items).filter(function(i){ return i.querySelector('.check-box').textContent === '☑'; }).length;
+  var p = document.getElementById('checklist-progress');
+  if(p) p.textContent = done + '/' + items.length + ' items cochés' + (done === items.length ? ' ✅ OPSEC validée' : '');
+}
+
+// ── Pivot details ──
+var pivotDetails = {
+  email: {
+    icon:'📧', title:'Pivotage depuis un email',
+    body:`<strong>1. Recherche directe</strong> : Google/Bing avec l'email entre guillemets → forums, GitHub, Pastebin, leaks.<br><br>
+    <strong>2. HIBP</strong> (haveibeenpwned.com) : cet email figure-t-il dans des fuites ? Une fuite peut révéler un mot de passe, un pseudo, des infos personnelles.<br><br>
+    <strong>3. Holehe</strong> : <code>holehe email@domain.com</code> → liste des services où ce compte est enregistré (Instagram, Twitter, Netflix, GitHub…).<br><br>
+    <strong>4. GitHub</strong> : rechercher des commits avec cet email → code source, projets, pseudo GitHub.<br><br>
+    <strong>5. Pattern de nommage</strong> : <code>jdumont</code> → Sherlock pour rechercher ce pseudo sur 300+ plateformes.<br><br>
+    <strong>6. WHOIS historique</strong> : des domaines enregistrés avec cet email → SecurityTrails, DNSDB.`
+  },
+  domaine: {
+    icon:'🌐', title:'Pivotage depuis un domaine',
+    body:`<strong>1. WHOIS</strong> : registrant name, email, organisation, dates. Même si masqué par un service de confidentialité, des erreurs passées peuvent être dans les archives.<br><br>
+    <strong>2. crt.sh</strong> : <code>%.domain.ch</code> → tous les sous-domaines ayant eu un certificat TLS → infrastructure exposée.<br><br>
+    <strong>3. Shodan</strong> : <code>hostname:domain.com</code> → services exposés, versions, bannières, technologies.<br><br>
+    <strong>4. Passive DNS</strong> : VirusTotal / SecurityTrails → historique des IPs, quand le domaine a été créé, autres domaines sur la même IP.<br><br>
+    <strong>5. MX records</strong> : provider email → infrastructure de messagerie (Google Workspace, Office 365, hébergeur custom).<br><br>
+    <strong>6. Google Dorks</strong> : <code>site:domain.ch filetype:pdf</code>, <code>site:domain.ch inurl:admin</code>.`
+  },
+  ip: {
+    icon:'🖥️', title:'Pivotage depuis une IP',
+    body:`<strong>1. RDNS</strong> : <code>dig -x IP</code> → hostname associé → souvent révèle l'organisation.<br><br>
+    <strong>2. ASN</strong> : <code>whois IP</code> → ASN → organisation, plage d'IPs allouées. Identifier le datacenter ou l'hébergeur.<br><br>
+    <strong>3. Shodan</strong> : services exposés sur cette IP, versions, bannières, OS, certificats TLS. Historique des scans.<br><br>
+    <strong>4. AbuseIPDB</strong> : rapports de comportement malveillant, signalements de la communauté.<br><br>
+    <strong>5. Censys</strong> : certificats TLS sur cette IP → CN du certificat → d'autres domaines sur la même infrastructure.<br><br>
+    <strong>6. VirusTotal</strong> : fichiers malveillants ayant communiqué avec cette IP, rapports VT.`
+  },
+  pseudo: {
+    icon:'👤', title:'Pivotage depuis un pseudo',
+    body:`<strong>1. Sherlock</strong> : <code>python3 sherlock.py [pseudo]</code> → présence sur 300+ plateformes (Twitter, GitHub, Reddit, Steam, Twitch…).<br><br>
+    <strong>2. Patterns</strong> : analyser le style du pseudo → variantes possibles (ajout de chiffres, underscores, préfixes). Tester les variantes sur Sherlock.<br><br>
+    <strong>3. Wayback Machine</strong> : profils supprimés sur des plateformes peuvent encore être en cache. <code>site:twitter.com/[pseudo]</code> sur Wayback.<br><br>
+    <strong>4. Fuites de données</strong> : HIBP, Dehashed → le pseudo associé à quel email/IP dans des bases de données leakées.<br><br>
+    <strong>5. Forums spécialisés</strong> : Google <code>"[pseudo]" site:reddit.com</code>, <code>"[pseudo]" site:github.com</code>.<br><br>
+    <strong>6. Images de profil</strong> : télécharger et faire une recherche inversée (Google Images, Yandex, TinEye) → même photo utilisée ailleurs ?`
+  },
+  photo: {
+    icon:'📷', title:'Pivotage depuis une photo',
+    body:`<strong>1. EXIF GPS</strong> : <code>exiftool -GPS* photo.jpg</code> → coordonnées à 3m près si présentes.<br><br>
+    <strong>2. Recherche inversée</strong> : Google Images, Yandex Images, TinEye → la même photo apparaît-elle ailleurs ? Sur quel profil ? Quand ?<br><br>
+    <strong>3. GEOINT</strong> : analyser le fond de l'image (végétation, architecture, plaques, enseignes, ombres) → déduire la localisation sans GPS.<br><br>
+    <strong>4. Reconnaissance faciale</strong> : PimEyes (très encadré légalement, nLPD/RGPD) → autres photos publiques de la même personne.<br><br>
+    <strong>5. Détection de manipulation</strong> : FotoForensics (ELA) → la photo a-t-elle été retouchée ou est-ce un deepfake ?<br><br>
+    <strong>6. Hash de l'image</strong> : vérifier si l'image est référencée dans les bases de hashes de contenus illicites (NCMEC, PhotoDNA).`
+  },
+  entreprise: {
+    icon:'🏢', title:'Pivotage depuis une entreprise suisse',
+    body:`<strong>1. Zefix.ch</strong> : UID CHE-xxx.xxx.xxx → raison sociale officielle, siège, statut, date de fondation, publications FOSC.<br><br>
+    <strong>2. SHAB.ch</strong> : historique des publications légales → modifications du capital, changements d'administrateurs, faillites, poursuites.<br><br>
+    <strong>3. Moneyhouse.ch</strong> : réseau des dirigeants → quels autres mandats cette personne détient-elle ? Quelles autres entreprises ?<br><br>
+    <strong>4. LinkedIn</strong> : employés de l'entreprise → technos utilisées, prestataires, sous-traitants.<br><br>
+    <strong>5. Domaines associés</strong> : WHOIS du domaine de l'entreprise → infrastructure IT. Shodan pour les services exposés.<br><br>
+    <strong>6. Marchés publics</strong> (simap.ch) : appels d'offres et attributions → partenaires, prestataires IT, budgets.`
+  }
+};
+
+function showPivot(key) {
+  var d = pivotDetails[key];
+  if(!d) return;
+  var p = document.getElementById('pivot-detail');
+  p.className = 'arch-detail live';
+  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.title+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── Scroll progress ──
+(function(){
+  var bar = document.getElementById('scroll-progress');
+  var btn = document.getElementById('back-top');
+  window.addEventListener('scroll', function(){
+    var doc = document.documentElement;
+    var scrolled = doc.scrollTop || document.body.scrollTop;
+    var total = doc.scrollHeight - doc.clientHeight;
+    if(bar) bar.style.width = (total > 0 ? (scrolled/total*100) : 0)+'%';
+    if(btn) btn.classList.toggle('visible', scrolled > 300);
+  });
+})();
 </script>
+
 <!-- Notes utilisateur (CAS-IN v2.16) -->
 <script src="../js/components/fiche-notes.js" defer></script>
 <script src="../js/components/theme-toggle.js" defer></script>
 <script src="../js/components/fiche-common.js" defer></script>
-    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-reader.js" defer></script>
 <script src="../js/components/fiche-search.js" defer></script>
 <script src="../js/components/search-modal.js" defer></script>
 <script src="../js/components/fiche-related.js" defer></script>
-</body></html>
+</body>
+</html>
