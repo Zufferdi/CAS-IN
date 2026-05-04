@@ -1,4 +1,60 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v78 : v2.44 — Retrofit bloc 16 (8 scènes EU+autres) + 6 NOUVEAUX PNJ
+//
+//       Cap des 94% du retrofit franchi (103/110). Le bloc 17 final
+//       comportera ~7 scènes restantes pour atteindre 100% en v2.45.
+//       Diversification continue du casting : 6 nouveaux PNJ dont
+//       4 transposables. Catalogue total : 48 → 54 PNJ.
+//
+//       6 nouveaux PNJ ajoutés à data/npcs.json (48 → 54) :
+//
+//         • ge_avocat_frontaliers (Me Lavanchy, fictif transposable)
+//             — Avocat spécialisé droit transfrontalier CH-FR-DE,
+//             data breaches multi-juridictions
+//         • anssi_liaison_ch (M. Pelletier, fictif transposable) —
+//             Officier de liaison ANSSI auprès de l'OFCS
+//         • bka_kidflix_lead (Frau Wagner, fictive) — Cheffe cellule
+//             KidFlix BKA Bavière (Munich)
+//         • philippines_pjf_attache (M. Sangha, fictif) — Attaché PJF
+//             à Manille (PH), couvre Asie du Sud-Est
+//         • src_attribution_apt (Mr. Roumiantsev, fictif transposable)
+//             — Chef cellule attribution cyber SRC (russophone natif)
+//         • post_evote_ciso (Mme Wettstein, fictive) — CISO système
+//             e-voting La Poste Suisse
+//
+//       Retrofit bloc 16 — 8 anciennes scènes adaptées (toutes EU+) :
+//
+//         • eu-france-travail — Frontalière BS, fuite France Travail 43M
+//             npcs=[ge_avocat_frontaliers★, pfpdt_inspector]
+//         • eu-free-leak — Binational FR-CH GE, fuite Free 19M
+//             npcs=[ge_avocat_frontaliers★, cicr_dpo]
+//         • eu-ghgo-ddos — DDoS GHGO Bretagne, ramifications CH
+//             npcs=[anssi_liaison_ch★, ofcs_coordinator]
+//         • eu-kidflix-stream — Op. Stream KidFlix, 10 suspects CH
+//             npcs=[bka_kidflix_lead★, pjf_undercover_lead]
+//         • eu-livestream-philippines — Op. Sampaguita PH-CH (expert)
+//             npcs=[philippines_pjf_attache★, fbi_legat_bern]
+//         • eu-revil-attribution — Démasquer UNKN REvil/GandCrab
+//             npcs=[src_attribution_apt★, play_ransom_analyst]
+//         • evoting-cantonal — Anomalie scrutin NE en cours (expert)
+//             npcs=[post_evote_ciso★, ofcs_coordinator]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//         • exit-suicide-assiste-conteste — EXIT contesté NE
+//             npcs=[ge_prosecutor_cyber, cicr_dpo]
+//             Bif. step 4 #1 et #2 next=-1 → 'end'
+//
+//       7 scènes sur 8 utilisent ≥1 nouveau PNJ. ge_avocat_frontaliers
+//       apparaît dans 2 scènes (eu-france-travail + eu-free-leak).
+//
+//       Stats : 110 scènes / 54 PNJ / 103 scènes avec NPCs.
+//       PNJ catalogue : 48 → 54 (+6)
+//                       Réels : 8 (inchangé)
+//                       Fictifs : 40 → 46 (+6)
+//                       Transposables : 19 → 23 (+4)
+//
+//       Progression : 103/110 = 94% du corpus mis à niveau.
+//       Reste 7 scènes (1 bloc final v2.45 = atteinte 100%).
+//
 // v77 : v2.43 — Retrofit bloc 15 (8 scènes) + 6 NOUVEAUX PNJ
 //
 //       Diversification continue du casting : 6 nouveaux PNJ
@@ -1313,7 +1369,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v77';
+const CACHE_VERSION = 'cas-in-v78';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
