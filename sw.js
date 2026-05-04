@@ -1602,7 +1602,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v93';
+const CACHE_VERSION = 'cas-in-v94';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1654,6 +1654,9 @@ const STATIC_ASSETS = [
   './js/profile/profile-quests-ui.js',
   './js/profile/hub-gamification-ui.js',
   './js/profile/celebration-ui.js',
+  './js/core/cas-in-utils.js',
+  './js/core/cas-in-storage.js',
+  './js/profile/onboarding-ui.js',
   './js/components/swiss-flags.js',
   './js/profile/profile-leaderboard-ui.js',
   './js/core/cas-in-counts.js',
@@ -1692,8 +1695,6 @@ const STATIC_ASSETS = [
   './js/pages/exam-app.js',
 
   // Index des scènes (lazy-load des scènes individuelles via fetch + cache-first)
-  './scenes/index.json',
-
   // TP
   './tp/tp-data.js',
   './tp/tp-engine.js',
@@ -1710,8 +1711,6 @@ const STATIC_ASSETS = [
   './js/components/fiche-reader.js',
   './js/components/scene-npcs.js',
   './data/search-index.json',
-  './data/cross-links.json',
-  './data/fiche-graph.json',
   './data/npcs.json',
   './data/npc-arcs.json',
 ];
