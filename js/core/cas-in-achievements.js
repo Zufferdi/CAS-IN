@@ -171,6 +171,9 @@
     { id: 'arc_lavanchy',    emoji: '👤⚖️', name: "L'Avocat Transfrontalier", desc: 'Arc Lavanchy complété : France Travail → Free Leak', category: 'Scènes · Arcs PNJ' },
     { id: 'arc_lindgren',    emoji: '👤🌐', name: 'Le Coordinateur Européen', desc: 'Arc Lindgren complété : Magnus → Cronos III → Endgame → OnymousReborn', category: 'Scènes · Arcs PNJ' },
     { id: 'arc_hodel',       emoji: '👤⚡', name: 'La Sentinelle Énergétique', desc: 'Arc Hodel complété : Mühleberg JU → Bassecourt-Vesoul', category: 'Scènes · Arcs PNJ' },
+    // v2.51 — 2 nouveaux arcs (méta-gamification frontend)
+    { id: 'arc_nicolet',     emoji: '👤⚖️', name: 'Le Procureur Fédéral', desc: 'Arc Nicolet complété : Xplain → Palais fédéral → Compétence MPC-VS → AI Act PRESTO-CH', category: 'Scènes · Arcs PNJ' },
+    { id: 'arc_pelletier',   emoji: '👤🇫🇷🇨🇭', name: 'Le Pivot Bilatéral', desc: 'Arc Pelletier complété : France Travail → Free Mobile → Endgame Phase 2 → CER Bassecourt-Vesoul → NIS2 PME', category: 'Scènes · Arcs PNJ' },
 
     // Comportement
     { id: 'night_owl',       emoji: '🦉', name: 'Couche-tard',         desc: '5 scénarios complétés après 23h',   category: 'Scènes · Comportement' },
