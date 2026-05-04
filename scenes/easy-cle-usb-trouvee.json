@@ -1,0 +1,159 @@
+{
+  "id": "easy-cle-usb-trouvee",
+  "title": "La Clé USB Du Parking",
+  "icon": "💾",
+  "difficulty": "easy",
+  "atmosphere": "investigation",
+  "narrative": {
+    "success": "Vous transformez une menace de USB drop en cas d'école pour toute l'institution. La clé est analysée en sandbox, l'IT de l'école est sensibilisé, la stagiaire devient ambassadrice de la sécurité. Mme Brägger : « Tu as fait passer un message simple : ne jamais brancher une clé inconnue. C'est de l'or pédagogique. »",
+    "degraded": "Le réflexe technique est correct mais l'opportunité de sensibilisation à plus grande échelle est manquée.",
+    "failure": "La clé a été branchée — soit par vous, soit par quelqu'un d'autre. Si elle contenait du malware, l'incident s'étend au réseau de l'école. Mme Brägger : « Une clé USB sur un parking, c'est presque toujours un test ou une attaque. »"
+  },
+  "tags": [
+    "SUPPLY CHAIN",
+    "USB DROP",
+    "RÉFLEXES",
+    "PRÉVENTION",
+    "SANDBOX",
+    "EASY"
+  ],
+  "legalRefs": [
+    "Art. 143bis CP",
+    "Art. 144bis CP",
+    "MITRE ATT&CK T1091",
+    "MITRE ATT&CK T1200"
+  ],
+  "intro": "Lundi 8h12, école professionnelle (SUPSI) à Manno près de Lugano. Une stagiaire en 2e année (BSc Informatique) traverse le parking et trouve une clé USB par terre près d'une voiture. Étiquette manuscrite : « Ricerca Tesi - URGENTE ». Elle l'amène à l'enseignant qui l'apporte à l'inspecteur référent IT (vous) en disant : « C'est sûrement un étudiant qui l'a perdue. Tu peux regarder ce qu'il y a dessus pour qu'on lui rende ? » Vous êtes inspecteur cybercriminalité PolCant TI Chiasso. Mme Brägger répond à votre Threema dans 3 minutes selon son auto-réponse.",
+  "alertLevel": "💀 USB DROP — Attaque ciblée probable",
+  "objectives": [
+    {
+      "icon": "🚫",
+      "text": "Refuser le branchement intuitif"
+    },
+    {
+      "icon": "🔬",
+      "text": "Procéder à l'analyse en environnement isolé"
+    },
+    {
+      "icon": "📚",
+      "text": "Transformer l'incident en pédagogie pour l'établissement"
+    }
+  ],
+  "debrief": "<p>L'<strong>USB drop</strong> est une technique d'attaque documentée depuis ~15 ans. Étude classique : Tischer et al. (2016, Univ. Michigan) ont semé 297 clés USB sur un campus, 45-98% ont été branchées, dont 68% sans aucune précaution. C'est l'une des techniques les plus efficaces de pénétration initiale (MITRE ATT&CK T1091).</p><p>Trois variantes principales :</p><ul><li><strong>Malware classique</strong> : autorun, exécutable nommé pour inviter au clic (« Salaires.exe », « Photos.zip »).</li><li><strong>BadUSB / HID injection</strong> (Rubber Ducky et clones) : la clé se présente comme un clavier et tape une séquence de commandes. Ne s'arrête pas à l'antivirus.</li><li><strong>USB Killer</strong> : décharge un condensateur dans le port USB, détruisant la carte mère. Dommage matériel pur.</li></ul><p>Le bon réflexe DFIR est <strong>universel</strong> :</p><ol><li>Ne jamais brancher sur un poste de production.</li><li>Si analyse nécessaire : poste isolé, sans réseau, idéalement avec un USB write-blocker (matériel) ou en VM dédiée avec USB redirigé.</li><li>Acquisition forensique (image bit-à-bit avec dd ou FTK Imager) avant toute lecture.</li></ol><p><strong>Référence CH</strong> : doctrine GovCERT 2022 sur les supports amovibles trouvés en milieu institutionnel — toujours considérer comme hostile par défaut, jusqu'à preuve du contraire.</p>",
+  "steps": [
+    {
+      "phase": "🚫 Le premier réflexe",
+      "situation": "L'enseignant attend votre réponse. La clé est entre vos mains, gantée. Mme Brägger n'a pas encore répondu. Vous avez 30 secondes avant qu'on vous regarde bizarrement.",
+      "law": "<strong>Doctrine USB drop</strong> — Toute clé inconnue trouvée dans l'espace public = hostile par défaut.<br><strong>MITRE ATT&CK T1091</strong> — Replication Through Removable Media.",
+      "question": "<strong>Que faites-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Vous expliquez calmement que la clé ne sera pas branchée sur un poste normal. Vous la placez dans un sachet anti-statique étiqueté (date, lieu, témoin), à clé dans votre tiroir sécurisé. Vous demandez à l'enseignant de demander dans les classes si quelqu'un a perdu une clé avec ces caractéristiques exactes (étiquette « Ricerca Tesi - URGENTE ») — sans la décrire publiquement, juste en parlant à des étudiants individuels.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Réflexe DFIR exemplaire. Vous : (1) refusez le branchement (le 1er réflexe pédagogique), (2) sécurisez physiquement (sachet anti-statique = pas d'altération, traçabilité), (3) lancez la recherche du propriétaire <strong>sans révéler les détails</strong> (un vrai propriétaire saura, un attaquant ne saura pas reconstruire l'étiquette exacte).",
+          "legal": "ISO/IEC 27037 + doctrine GovCERT — Standard.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Vous la branchez sur votre poste de travail pour vérifier rapidement — vous avez un antivirus à jour et Windows Defender qui bloquera tout malware connu.",
+          "ok": false,
+          "pts": -35,
+          "fb": "📍 ERREUR CATASTROPHIQUE. (1) Antivirus = inefficace contre BadUSB / HID (la clé n'apparaît pas comme exécutable mais comme clavier, l'AV ne voit rien). (2) Windows Defender ne détecte pas les 0-days. (3) Si malware classique : votre poste est compromis, et étant celui d'un inspecteur cyber, c'est extrêmement grave (accès à des dossiers sensibles). Mme Brägger en mode Threema : « NON. ARRÊTE TOUT. »",
+          "legal": "Doctrine GovCERT — AV ≠ protection USB drop.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Vous demandez à la stagiaire qui a trouvé la clé de la brancher elle-même sur le poste de l'enseignant — elle est en informatique, elle saura voir si c'est suspect.",
+          "ok": false,
+          "pts": -40,
+          "fb": "📍 INACCEPTABLE. Demander à une stagiaire de prendre le risque que vous refusez de prendre = (1) abus d'autorité, (2) si le poste est compromis l'enseignant aura un dossier interne, (3) la stagiaire est non formée à la forensique. Au-delà des conséquences techniques, c'est une faute professionnelle grave.",
+          "legal": "Art. 312 CP + déontologie — Faute professionnelle.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "🔬 L'analyse",
+      "situation": "Mme Brägger répond : « Bien refusé le branchement. Maintenant, si on veut savoir ce qu'il y a vraiment dessus avant de la transmettre au laboratoire forensique, comment tu fais ? »",
+      "law": "<strong>Acquisition forensique</strong> — Image bit-à-bit avec write-blocker.<br><strong>FTK Imager / dd</strong> — Outils standards.",
+      "question": "<strong>Quel protocole d'analyse ?</strong>",
+      "choices": [
+        {
+          "text": "Sur poste isolé du réseau (idéalement Linux live USB), avec USB write-blocker matériel : montage en lecture seule, calcul du hash SHA-256, image disque dd ou FTK Imager, analyse de l'image (jamais de la clé directement) : structure FAT/exFAT, fichiers cachés, métadonnées, scan VirusTotal, sandbox des éventuels exécutables.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Protocole forensique standard. Vous respectez ISO/IEC 27037 : (1) intégrité (write-blocker, hash), (2) reproductibilité (image = analyse répétable sans risque), (3) traçabilité (chaque étape documentée). C'est exactement ce qu'enseignent les modules forensique du CAS.",
+          "legal": "ISO/IEC 27037 — Procédure standard.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Vous la branchez sur une VM Windows isolée dans VirtualBox sur votre poste habituel. Si quelque chose se passe, c'est dans la VM, pas sur l'hôte.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Naïf. (1) Si BadUSB : la clé tape sur le clavier de l'hôte, pas dans la VM. La VM ne protège pas contre HID injection. (2) Certains malwares modernes détectent VM (« VM-aware ») et exfiltrent quand même via vulnérabilités de l'hyperviseur. La VM peut être un complément à l'isolation matérielle, jamais un substitut.",
+          "legal": "Doctrine GovCERT — VM ≠ isolation matérielle.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Vous transmettez directement la clé au laboratoire forensique cantonal sans rien analyser vous-même. C'est leur travail, pas le vôtre.",
+          "ok": false,
+          "pts": 10,
+          "fb": "Pas faux mais minimaliste. La transmission est correcte, mais vous ratez l'<strong>opportunité d'apprentissage</strong> et la <strong>rapidité d'investigation</strong>. Une analyse préliminaire de surface (write-blocker + listage de fichiers) prend 20 min et oriente le labo. Le réflexe « ce n'est pas mon travail » fait passer à côté de la valeur ajoutée du DFIR de proximité.",
+          "legal": "Bonnes pratiques DFIR — Analyse préliminaire utile.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "📚 La pédagogie",
+      "situation": "L'analyse révèle un fichier exécutable « Tesi_Bachelor_Computer_Science.pdf.exe » (extension cachée par défaut Windows) qui, en sandbox, télécharge un beacon vers une IP en Russie. C'est une attaque APT classique. Mme Brägger : « Maintenant, le plus important : qu'est-ce que tu fais de l'incident côté école ? »",
+      "law": "<strong>Pédagogie cybersécurité</strong> — Transformer incidents en sensibilisation.",
+      "question": "<strong>Quelle suite institutionnelle ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Réunion avec direction SUPSI + IT de l'école pour rapporter (sans dramatiser ni minimiser). (2) Communication aux étudiants : courrier expliquant ce qui a été trouvé, le réflexe à avoir (\"Si vous trouvez une clé USB, ne la branchez pas, déposez-la à l'IT\"). (3) Proposition d'intégrer l'incident anonymisé dans un cours de cybersécurité du semestre prochain. (4) La stagiaire qui a trouvé la clé est invitée à co-présenter — elle a fait le bon réflexe (apporter à l'enseignant).",
+          "ok": true,
+          "pts": 25,
+          "fb": "Plan parfait. Vous transformez : (1) un incident isolé en gain pédagogique systémique, (2) une stagiaire qui aurait pu être traumatisée en ambassadrice. Le SUPSI gagne en culture sécurité, vous gagnez un canal de signalement futur (les autres étudiants reproduiront le bon réflexe), Mme Brägger : « Voilà. C'est ça qui fait la différence entre cybersécurité technique et cybersécurité durable. »",
+          "legal": "Doctrine GovCERT + pédagogie cyber — Standard moderne.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Discrétion totale : on transmet le dossier au MP-TI pour la procédure pénale, mais aucune communication interne à l'école pour ne pas \"effrayer\" les étudiants.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Mauvaise stratégie. La discrétion totale empêche toute pédagogie : les autres étudiants brancheront la prochaine clé qu'ils trouvent. La cybersécurité durable repose sur la <strong>transparence pédagogique</strong> (parler des incidents, anonymisés, pour apprendre collectivement). Le silence est l'allié de l'attaquant.",
+          "legal": "Doctrine GovCERT — Transparence pédagogique.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Communication massive : email général à tous les étudiants et personnels SUPSI avec photos de la clé, IP malveillante, et avertissement \"alerte cyber-attaque\".",
+          "ok": false,
+          "pts": -10,
+          "fb": "Trop dramatique. (1) Photos = aide les attaquants futurs à varier leurs étiquettes. (2) Mention IP malveillante = info opérationnelle qui ne sert à rien aux étudiants. (3) Tonalité \"alerte\" = anxiogène, démobilise au lieu de sensibiliser. La pédagogie efficace est <strong>calme, pratique, factuelle</strong>.",
+          "legal": "Pédagogie cyber — Tonalité calme et constructive.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "sg_polcyber_chief",
+    "ti_pol_chiasso"
+  ],
+  "regionDetail": {
+    "code": "TI",
+    "flag": "🇨🇭",
+    "name": "Tessin"
+  }
+}
