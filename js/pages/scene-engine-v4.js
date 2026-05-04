@@ -559,16 +559,28 @@
     const atmLabel = atmosphereLabels[scene.atmosphere] || (scene.atmosphere || 'Standard');
     const diffLabel = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile', expert: 'Expert' }[scene.difficulty] || scene.difficulty;
     // v2.53 : utilise regionDetail si dispo (canton CH ou pays UE), sinon fallback sur scene.region
+    // v2.59 : remplace l'emoji 🇨🇭 (qui ne distingue pas les cantons) par un SVG cantonal
+    //         via le module SwissFlags (resolves code or name).
     let regionFlag = '🇨🇭';
     let regionName = 'Suisse';
-    if (scene.regionDetail && scene.regionDetail.flag && scene.regionDetail.name) {
-      regionFlag = scene.regionDetail.flag;
+    let regionCode = 'CH';
+    if (scene.regionDetail && scene.regionDetail.name) {
+      regionFlag = scene.regionDetail.flag || '🇨🇭';
       regionName = scene.regionDetail.name;
+      regionCode = scene.regionDetail.code || 'CH';
     } else if (scene.region === 'EU') {
       regionFlag = '🇪🇺';
       regionName = 'Europe';
+      regionCode = 'EU';
     }
-    const region = `<span class="v4-id-flag">${regionFlag}</span><span>${regionName}</span>`;
+    // Préfère le SVG si le module est chargé (toujours dispo via scene.html)
+    let regionFlagHtml;
+    if (window.SwissFlags && typeof window.SwissFlags.get === 'function') {
+      regionFlagHtml = window.SwissFlags.get(regionCode || regionName);
+    } else {
+      regionFlagHtml = regionFlag; // fallback emoji
+    }
+    const region = `<span class="v4-id-flag">${regionFlagHtml}</span><span>${regionName}</span>`;
 
     // Build identity card
     const idCard = document.createElement('div');
