@@ -50,6 +50,7 @@
     'Scènes · Éthique',
     'Scènes · Modes',
     'Scènes · Europe',
+    'Scènes · Arcs PNJ',
     'Scènes · Comportement',
     'TP · Pratique',
     'Fiches · Lecture',
@@ -162,6 +163,14 @@
     { id: 'eu_budapest_spec',emoji: '📜', name: 'Spé. Budapest',       desc: '5 scénarios européens complétés',    category: 'Scènes · Europe' },
     { id: 'eu_eurojust_vet', emoji: '⚖️', name: 'Eurojust Veteran',    desc: '5 scénarios EU ≥80%',                category: 'Scènes · Europe' },
     { id: 'eu_tour_europe',  emoji: '🌍', name: "Tour d'Europe",       desc: 'Tous les scénarios EU complétés',    category: 'Scènes · Europe' },
+
+    // ─── Arcs PNJ (méta-gamification v2.48) ───
+    // Badges débloqués lorsque le candidat complète tous les stages d'un arc narratif PNJ
+    { id: 'arc_schoeb',      emoji: '👤📈', name: 'Le Traqueur Ransomware', desc: 'Arc Schöb complété : Xplain → Cronos III → Endgame Phase 2', category: 'Scènes · Arcs PNJ' },
+    { id: 'arc_tremp',       emoji: '👤🔬', name: "L'Architecte Forensique", desc: 'Arc Tremp complété : timeline → trois_artefacts → veracrypt → custody → frontex-deepfake', category: 'Scènes · Arcs PNJ' },
+    { id: 'arc_lavanchy',    emoji: '👤⚖️', name: "L'Avocat Transfrontalier", desc: 'Arc Lavanchy complété : France Travail → Free Leak', category: 'Scènes · Arcs PNJ' },
+    { id: 'arc_lindgren',    emoji: '👤🌐', name: 'Le Coordinateur Européen', desc: 'Arc Lindgren complété : Magnus → Cronos III → Endgame → OnymousReborn', category: 'Scènes · Arcs PNJ' },
+    { id: 'arc_hodel',       emoji: '👤⚡', name: 'La Sentinelle Énergétique', desc: 'Arc Hodel complété : Mühleberg JU → Bassecourt-Vesoul', category: 'Scènes · Arcs PNJ' },
 
     // Comportement
     { id: 'night_owl',       emoji: '🦉', name: 'Couche-tard',         desc: '5 scénarios complétés après 23h',   category: 'Scènes · Comportement' },
