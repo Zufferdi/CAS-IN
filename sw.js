@@ -1,4 +1,119 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v81 : v2.47 — 2 NOUVEAUX SCÉNARIOS EU + 4 NOUVEAUX PNJ
+//
+//       Suite de la phase d'extension lancée v2.46. Cette release
+//       livre 2 nouveaux scénarios EU inspirés de la coopération
+//       européenne 2024-2026 : EMCDDA crypto-stups post-Hydra +
+//       Frontex deepfake asylum.
+//       Le corpus passe de 113 à 115 scènes.
+//
+//       4 nouveaux PNJ ajoutés à data/npcs.json (60 → 64) :
+//
+//         • emcdda_lisbon_analyst (Sr. Carvalho, fictif transposable)
+//             — Senior analyst EMCDDA Lisbonne darknet markets
+//             monitoring + Chainalysis crypto-tracing
+//         • mros_crypto_lead (Mme Stalder, fictive transposable) —
+//             Cheffe cellule crypto-tracing MROS, LBA art. 9 +
+//             Monero unmasking 2024+
+//         • sem_asile_vallorbe (Mme Wenger, fictive) — Cheffe
+//             section traitement Vallorbe SEM, audition trauma-
+//             informed + Lingua
+//         • frontex_warsaw_liaison (Mr. Kowalczyk, fictif
+//             transposable) — Officier liaison Frontex Warsaw
+//             auprès SEM, FRAN + EURODAC + EUROSUR
+//
+//       2 nouveaux scénarios — coopération européenne :
+//
+//         • eu-emcdda-trade-aml (5 steps, hard) — Démantèlement
+//             coordonné Op. OnymousReborn juin 2026 (post-Hydra
+//             2022 + Bohemia 2024 + ASAP/Tor2Door/Drughub), 4'200
+//             utilisateurs CH (4'020 acheteurs vs 180 vendeurs
+//             grossistes 14.2M EUR), triage différencié pol. 4
+//             piliers, crypto-tracing BTC/USDT/Monero, EIMP
+//             graduée 12 juridictions
+//             npcs=[emcdda_lisbon_analyst★, mros_crypto_lead★,
+//                   europol_jcat_analyst, compliance_bs,
+//                   anssi_liaison_ch]
+//
+//         • eu-frontex-deepfake-asylum (5 steps, hard) — Vallorbe
+//             juin 2026, demandeur érythréen présente vidéo
+//             deepfake (Stable Diffusion XL + LoRA + DeepFaceLab),
+//             340 cas similaires UE 2024-2025 (réseau organisé),
+//             qualification dual art. 251 CP + art. 53 LAsi,
+//             principe non-refoulement protégé
+//             npcs=[sem_asile_vallorbe★, frontex_warsaw_liaison★,
+//                   bka_kidflix_lead, fim_xways_expert,
+//                   ge_prosecutor_cyber]
+//
+//       Stats : 115 scènes / 64 PNJ / 115 scènes avec NPCs (100%).
+//       PNJ catalogue : 60 → 64 (+4)
+//                       Réels : 8 (inchangé)
+//                       Fictifs : 52 → 56 (+4)
+//                       Transposables : 27 → 30 (+3)
+//
+//       Tous les nouveaux scénarios sont inspirés de cas réels
+//       documentés (démantèlement Hydra avril 2022, Bohemia mars
+//       2024, 340 cas deepfake asylum FR/DE/IT/AT 2024-2025,
+//       Frontex Risk Analysis Report 2025).
+//
+// v80 : v2.46 — 3 NOUVEAUX SCÉNARIOS EU + 4 nouveaux PNJ
+//
+//       Première release post-retrofit. Le sprint retrofit clos
+//       v2.45 (100% du corpus historique mis à niveau), cette
+//       release v2.46 lance la phase d'extension avec 3 nouveaux
+//       scénarios inspirés de la coopération européenne 2024-2026.
+//
+//       Le corpus passe de 110 à 113 scènes.
+//
+//       4 nouveaux PNJ ajoutés à data/npcs.json (56 → 60) :
+//
+//         • msc_ciso_geneva (M. Aponte, fictif) — CISO MSC
+//             Mediterranean Shipping Company (Genève), maritime cyber
+//         • ofac_compliance_us (Ms. Petrou, fictive transposable) —
+//             Specialist OFAC sanctions, Treasury US Embassy Bern
+//         • ncsc_uk_lockbit_lead (Mr. MacGregor, fictif) — Head of
+//             Ransomware Operations NCA UK, Operation Cronos lead
+//         • swiss_navy_cyber_lead (Capt. Frégate Bernhardsgrütter,
+//             fictif transposable) — Chef cellule Cyber-Maritime DDPS
+//
+//       3 nouveaux scénarios — coopération européenne :
+//
+//         • eu-cronos-3 (5 steps, hard) — Operation Cronos III
+//             mai 2026, sanctions OFAC sur paiements rançon LockBit,
+//             7 PME CH dont 3 payantes, articulation MP-GE + FINMA +
+//             OFAC + voluntary self-disclosure
+//             npcs=[europol_jcat_analyst, play_ransom_analyst,
+//                   compliance_bs, ofac_compliance_us★,
+//                   ncsc_uk_lockbit_lead★]
+//
+//         • eu-endgame-2026 (6 steps, hard) — Operation Endgame
+//             Phase 2 mai 2026, démantèlement IcedID + Pikabot +
+//             Smokeloader, 18'400 victimes CH à notifier en 72h,
+//             triage 4 niveaux ANSSI (N1-N4), gestion vague phishing
+//             post-communiqué
+//             npcs=[europol_jcat_analyst, anssi_liaison_ch,
+//                   swisscom_grc, pfpdt_inspector,
+//                   play_ransom_analyst]
+//
+//         • eu-eunavfor-aspides-cyber (5 steps, expert) — Op.
+//             EUNAVFOR ASPIDES juin 2026, MSC LIVORNO Bab-el-Mandeb
+//             AIS spoofing + ECDIS ransomware + drones, coopération
+//             CSDP-CH ad hoc, attribution Houthi/Cyber Av3ngers,
+//             protection flotte CH-flag
+//             npcs=[msc_ciso_geneva★, swiss_navy_cyber_lead★,
+//                   src_attribution_apt, anssi_liaison_ch,
+//                   ofcs_coordinator]
+//
+//       Stats : 113 scènes / 60 PNJ / 113 scènes avec NPCs (100%).
+//       PNJ catalogue : 56 → 60 (+4)
+//                       Réels : 8 (inchangé)
+//                       Fictifs : 48 → 52 (+4)
+//                       Transposables : 25 → 27 (+2)
+//
+//       Tous les nouveaux scénarios sont inspirés de cas réels
+//       documentés et présentent une dimension de coopération
+//       européenne (Europol, ANSSI, EUNAVFOR ASPIDES, NCA UK).
+//
 // v79 : v2.45 — Bloc 17 FINAL ✨ 100% du corpus retrofit atteint
 //
 //       Milestone historique : la totalité des 110 scènes du corpus
@@ -1418,7 +1533,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v79';
+const CACHE_VERSION = 'cas-in-v81';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
