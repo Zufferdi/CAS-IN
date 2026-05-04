@@ -419,7 +419,10 @@
  let _lastRankCloseNotif = 0;
 
  function checkCloseToNextRank(rankIdx) {
- const next = RANKS[rankIdx + 1];
+ // v2.61 — Utilise QuizRanks (qui pointe vers Profile) au lieu de RANKS legacy
+ const next = (window.QuizRanks && window.QuizRanks.getNextRank)
+   ? window.QuizRanks.getNextRank(S.xp)
+   : (RANKS && RANKS.length ? RANKS[rankIdx + 1] : null);
  if (!next) return; // already max rank
  const remaining = next.min - S.xp;
  for (const threshold of RANK_CLOSE_THRESHOLDS) {
@@ -1446,11 +1449,19 @@
         // === HERO CARD — rang en proéminence avec jauge XP + précision ===
         const heroEl = document.getElementById('bilan-hero');
         if (heroEl) {
-          // Calcul progression vers prochain rang
-          const nextRank = (typeof RANKS !== 'undefined' && Array.isArray(RANKS))
-            ? RANKS.find(r => r.min > S.xp) : null;
-          const prevMin = (typeof RANKS !== 'undefined' && Array.isArray(RANKS))
-            ? (RANKS.filter(r => r.min <= S.xp).pop()?.min || 0) : 0;
+          // v2.61 — Calcul progression via Profile (XP totale, pas juste quiz)
+          let nextRank = null, prevMin = 0;
+          if (window.Profile && typeof window.Profile.snapshot === 'function') {
+            const snap = window.Profile.snapshot();
+            nextRank = snap.rank && snap.rank.next ? snap.rank.next : null;
+            prevMin = snap.rank ? snap.rank.min : 0;
+          } else {
+            // Fallback legacy si Profile absent
+            nextRank = (typeof RANKS !== 'undefined' && Array.isArray(RANKS))
+              ? RANKS.find(r => r.min > S.xp) : null;
+            prevMin = (typeof RANKS !== 'undefined' && Array.isArray(RANKS))
+              ? (RANKS.filter(r => r.min <= S.xp).pop()?.min || 0) : 0;
+          }
           const nextMin = nextRank ? nextRank.min : (S.xp + 500);
           const xpInRank = S.xp - prevMin;
           const xpToNext = nextMin - prevMin;
@@ -1762,7 +1773,10 @@
           rank,
           idx
         } = getRank(S.xp);
-        const next = RANKS[idx + 1];
+        // v2.61 — Lit le prochain rang depuis QuizRanks (qui pointe vers Profile)
+        const next = (window.QuizRanks && window.QuizRanks.getNextRank)
+          ? window.QuizRanks.getNextRank(S.xp)
+          : (RANKS && RANKS.length ? RANKS[idx + 1] : null);
         const pct = next ? Math.min(100, Math.round((S.xp - rank.min) / (next.min - rank.min) * 100)) : 100;
         document.getElementById('xp-rank-panel').innerHTML = `
           																					<div class="rank-display">

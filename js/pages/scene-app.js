@@ -361,15 +361,14 @@ function computeNextStepSuggestions(currentScene) {
 }
 
 function launchSceneById(sceneId) {
+  // v2.61 — Fix régression v2.60 : utiliser hydrateScene + startScene comme
+  // launchSceneFromTree() le fait déjà, au lieu du hash qui ne fait que scroller.
   const scene = SCENES.find(s => s.id === sceneId);
   if (!scene) return;
-  // Réutilise le mécanisme existant : navigue vers la scène et lance
-  if (typeof launchScene === 'function') {
-    location.hash = '#scene-' + sceneId;
-    setTimeout(() => {
-      try { launchScene(); } catch (e) { console.error(e); }
-    }, 50);
-  }
+  hydrateScene(scene).then(startScene).catch(err => {
+    console.error('[scenes] launchSceneById failed:', err);
+    showToast('⚠ Scène introuvable');
+  });
 }
 
 function computeRecommendedScene() {
