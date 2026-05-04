@@ -81,6 +81,32 @@
     if (window.Quests && typeof window.Quests.evalAndComplete === 'function') {
       try { window.Quests.evalAndComplete(); } catch (_) {}
     }
+    // 5) v2.56 — Mastery par scène (paquet EXTEND)
+    // Détecte les upgrades de tier (untouched → touched → cleared → mastered)
+    // et déclenche une célébration via window.Celebration pour chaque upgrade.
+    if (window.Mastery && typeof window.Mastery.evalUpgrades === 'function') {
+      try {
+        const upgrades = window.Mastery.evalUpgrades();
+        if (upgrades && upgrades.length > 0 && window.Celebration && typeof window.Celebration.show === 'function') {
+          // Récupérer le titre humain de la scène depuis SCENES
+          const titleMap = {};
+          if (Array.isArray(window.SCENES)) {
+            window.SCENES.forEach(s => { if (s && s.id) titleMap[s.id] = s.title; });
+          }
+          upgrades.forEach(up => {
+            const tierLabel = up.newTier === 'mastered' ? 'Maîtrisée'
+                            : up.newTier === 'cleared'  ? 'Réussie'
+                            : 'Touchée';
+            window.Celebration.show({
+              icon: up.medal,
+              title: `Scène ${tierLabel}`,
+              subtitle: titleMap[up.sceneId] || up.sceneId,
+              xp: 0, // l'XP est déjà créditée par scene-app, ici c'est purement du feedback
+            });
+          });
+        }
+      } catch (_) {}
+    }
   }
 
   function wrappedSetItem(key, value) {
