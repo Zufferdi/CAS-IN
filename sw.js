@@ -1602,7 +1602,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v84';
+const CACHE_VERSION = 'cas-in-v85';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1646,6 +1646,7 @@ const STATIC_ASSETS = [
   // Scripts core
   './js/core/cas-in-profile.js',
   './js/core/cas-in-achievements.js',
+  './js/core/cas-in-arcs.js',
   './js/core/cas-in-counts.js',
   './js/core/cas-in-export.js',
   './js/core/cas-in-pwa.js',
@@ -1703,6 +1704,7 @@ const STATIC_ASSETS = [
   './data/cross-links.json',
   './data/fiche-graph.json',
   './data/npcs.json',
+  './data/npc-arcs.json',
 ];
 
 const OFFLINE_FALLBACK = './offline.html';
