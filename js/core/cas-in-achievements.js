@@ -174,6 +174,12 @@
     // v2.51 — 2 nouveaux arcs (méta-gamification frontend)
     { id: 'arc_nicolet',     emoji: '👤⚖️', name: 'Le Procureur Fédéral', desc: 'Arc Nicolet complété : Xplain → Palais fédéral → Compétence MPC-VS → AI Act PRESTO-CH', category: 'Scènes · Arcs PNJ' },
     { id: 'arc_pelletier',   emoji: '👤🇫🇷🇨🇭', name: 'Le Pivot Bilatéral', desc: 'Arc Pelletier complété : France Travail → Free Mobile → Endgame Phase 2 → CER Bassecourt-Vesoul → NIS2 PME', category: 'Scènes · Arcs PNJ' },
+    // v2.56 (EXTEND) — Mastery par scène + first-clear bonus
+    { id: 'pioneer_25',      emoji: '🌟', name: 'Pionnier·ère',         desc: '25 scénarios découverts (first-clear ≥60%)',  category: 'Scènes · Progression' },
+    { id: 'pioneer_50',      emoji: '✨', name: 'Explorateur·rice',     desc: '50 scénarios découverts (first-clear ≥60%)',  category: 'Scènes · Progression' },
+    { id: 'mastery_bronze',  emoji: '🥉', name: 'Apprenti·e des scènes', desc: '5 scénarios "Touchés" (≥60%)',                category: 'Scènes · Progression' },
+    { id: 'mastery_silver',  emoji: '🥈', name: 'Médaille d\'argent',    desc: '10 scénarios "Réussis" (≥80%)',               category: 'Scènes · Progression' },
+    { id: 'mastery_gold',    emoji: '🥇', name: 'Médaille d\'or',        desc: '5 scénarios "Maîtrisés" (3 runs ≥80% sur 2 modes)', category: 'Scènes · Progression' },
 
     // Comportement
     { id: 'night_owl',       emoji: '🦉', name: 'Couche-tard',         desc: '5 scénarios complétés après 23h',   category: 'Scènes · Comportement' },

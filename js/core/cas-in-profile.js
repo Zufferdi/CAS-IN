@@ -315,7 +315,7 @@
         trackChosenAt: null,
       },
       xp: 0,
-      xpBySource: { quiz: 0, scene: 0 },
+      xpBySource: { quiz: 0, scene: 0, quest: 0, tp: 0, fiches: 0 },
       streak: {
         current: 0,
         max: 0,
@@ -395,7 +395,19 @@
     }
 
     // Profil v=4 OK
-    if (p.v === PROFILE_VERSION) return p;
+    if (p.v === PROFILE_VERSION) {
+      // v2.56 (FIX) : backfill silencieux des nouveaux champs xpBySource pour
+      // les profils v=4 créés AVANT v2.56 (qui n'avaient que quiz + scene).
+      // On ajoute quest/tp/fiches à 0 sans toucher aux totaux existants.
+      let dirty = false;
+      if (p.xpBySource) {
+        if (p.xpBySource.quest === undefined)  { p.xpBySource.quest  = 0; dirty = true; }
+        if (p.xpBySource.tp === undefined)     { p.xpBySource.tp     = 0; dirty = true; }
+        if (p.xpBySource.fiches === undefined) { p.xpBySource.fiches = 0; dirty = true; }
+      }
+      if (dirty) lsSet(PROFILE_KEY, p);
+      return p;
+    }
 
     // Version inconnue plus récente → on ne touche pas
     return p;
@@ -607,6 +619,10 @@
     return {
       quiz: p.xpBySource.quiz || 0,
       scene: p.xpBySource.scene || 0,
+      // v2.56 (FIX) : 3 nouvelles sources exposées
+      quest: p.xpBySource.quest || 0,
+      tp: p.xpBySource.tp || 0,
+      fiches: p.xpBySource.fiches || 0,
       tp_solved_count: getTotalTpSolved(),
       fiches_read_count: getFichesReadCount(),
     };
@@ -809,7 +825,11 @@
   function addXp(amount, source, meta) {
     const base = asInt(amount, 0);
     if (base <= 0) return null;
-    if (!['quiz', 'scene'].includes(source)) return null;
+    // v2.56 (FIX) : 'quest', 'tp', 'fiches' acceptés en plus de 'quiz' et 'scene'.
+    // Avant cette version, addXp(N, 'quest') était silencieusement rejeté →
+    // les XP des quêtes journalières (cas-in-quests.js v2.55) n'étaient
+    // jamais créditées.
+    if (!['quiz', 'scene', 'quest', 'tp', 'fiches'].includes(source)) return null;
 
     // Bonus thématique selon le rôle (track) choisi
     const tags = meta && Array.isArray(meta.tags) ? meta.tags : [];
