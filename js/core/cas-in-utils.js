@@ -1,0 +1,220 @@
+// ═══════════════════════════════════════════════════════════════
+// cas-in-utils.js — Helpers JS centralisés (v2.60 consolidation)
+//
+// Avant cette version, 6+ fichiers définissaient leurs propres
+// versions de escapeHTML / escapeAttr / lsGet / etc., avec parfois
+// des variations de comportement subtiles. Ce module fournit une
+// implémentation unique et vérifiée.
+//
+// Stratégie de migration : non-breaking. Les modules existants peuvent
+// continuer d'utiliser leurs helpers locaux. Les nouveaux modules
+// utilisent window.CasInUtils. Migration progressive sans risque.
+//
+// Toutes les fonctions sont stateless et idempotentes.
+// ═══════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+
+  // ─────────────────────────────────────────────────────────────
+  // ESCAPING (HTML / attribute)
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Échappe une chaîne pour insertion dans du HTML (entre balises).
+   * Couvre &, <, >, ", '. Retourne '' pour null/undefined.
+   */
+  function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  /**
+   * Échappe pour insertion dans un attribut HTML. Plus restrictif :
+   * en plus de escapeHTML, échappe aussi les retours à la ligne
+   * pour éviter les attributs cassés sur plusieurs lignes.
+   */
+  function escapeAttr(str) {
+    if (str === null || str === undefined) return '';
+    return escapeHTML(str)
+      .replace(/\r/g, '&#13;')
+      .replace(/\n/g, '&#10;');
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // LOCALSTORAGE wrappers (avec gestion d'erreur)
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Lit une valeur dans localStorage, parse en JSON si possible.
+   * Retourne le fallback si la clé n'existe pas ou parse impossible.
+   */
+  function lsGet(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw === null) return fallback;
+      return JSON.parse(raw);
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  /**
+   * Écrit une valeur dans localStorage en JSON. Silencieux en cas
+   * d'erreur (quota, mode privé Safari).
+   */
+  function lsSet(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /**
+   * Supprime une clé. Silencieux.
+   */
+  function lsDel(key) {
+    try { localStorage.removeItem(key); return true; }
+    catch (_) { return false; }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // DATES
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Date du jour au format ISO YYYY-MM-DD (UTC).
+   * Utilisé partout pour les buffers journaliers (quêtes, runs, quiz).
+   */
+  function todayISO() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  /**
+   * Convertit une Date en chaîne 'fr' DD/MM/YYYY.
+   */
+  function dateFR(d) {
+    const date = d instanceof Date ? d : new Date();
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${date.getFullYear()}`;
+  }
+
+  /**
+   * Compare deux dates pour déterminer si elles sont le même jour
+   * (en heure locale). Accepte Date ou ISO string.
+   */
+  function isSameDay(a, b) {
+    const da = a instanceof Date ? a : new Date(a);
+    const db = b instanceof Date ? b : new Date(b);
+    return da.getFullYear() === db.getFullYear() &&
+           da.getMonth() === db.getMonth() &&
+           da.getDate() === db.getDate();
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PERFORMANCE (debounce / throttle)
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Retourne une version 'debounced' d'une fonction : n'appelle qu'après
+   * que `delay` ms se soient écoulés sans nouvel appel. Utile pour
+   * input search, resize handlers, etc.
+   */
+  function debounce(fn, delay) {
+    let timer = null;
+    return function (...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
+
+  /**
+   * Retourne une version 'throttled' : appelle au plus 1 fois par 'delay' ms.
+   */
+  function throttle(fn, delay) {
+    let last = 0;
+    let timer = null;
+    return function (...args) {
+      const now = Date.now();
+      const remaining = delay - (now - last);
+      if (remaining <= 0) {
+        if (timer) { clearTimeout(timer); timer = null; }
+        last = now;
+        fn.apply(this, args);
+      } else if (!timer) {
+        timer = setTimeout(() => {
+          last = Date.now();
+          timer = null;
+          fn.apply(this, args);
+        }, remaining);
+      }
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PRNG seedé (pour rotations déterministes par date)
+  // Utilisé par cas-in-quests.js pour pickQuestsForDate
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * mulberry32 — PRNG rapide et déterministe, seedé.
+   */
+  function mulberry32(seed) {
+    return function () {
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+      let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  /**
+   * Hash simple d'une chaîne en entier 32-bit, pour seeder un PRNG.
+   */
+  function stringToSeed(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) {
+      h = ((h << 5) - h) + str.charCodeAt(i);
+      h |= 0;
+    }
+    return h;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // CLAMPING / MATH
+  // ─────────────────────────────────────────────────────────────
+
+  function clamp(n, min, max) {
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function asInt(value, fallback) {
+    const n = parseInt(value, 10);
+    return Number.isFinite(n) ? n : (fallback || 0);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // API publique
+  // ─────────────────────────────────────────────────────────────
+  window.CasInUtils = {
+    // HTML escaping
+    escapeHTML, escapeAttr,
+    // Storage
+    lsGet, lsSet, lsDel,
+    // Dates
+    todayISO, dateFR, isSameDay,
+    // Perf
+    debounce, throttle,
+    // PRNG
+    mulberry32, stringToSeed,
+    // Math
+    clamp, asInt,
+  };
+})();
