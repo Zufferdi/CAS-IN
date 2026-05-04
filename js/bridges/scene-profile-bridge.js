@@ -75,6 +75,12 @@
         });
       } catch (_) {}
     }
+    // 4) v2.55 — Quêtes journalières (volet G — gamification)
+    // Évalue les 3 quêtes du jour et marque celles complétées + push XP.
+    // Le module est tolérant : pas crash si Quests indisponible.
+    if (window.Quests && typeof window.Quests.evalAndComplete === 'function') {
+      try { window.Quests.evalAndComplete(); } catch (_) {}
+    }
   }
 
   function wrappedSetItem(key, value) {
