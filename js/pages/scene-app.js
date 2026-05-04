@@ -300,6 +300,78 @@ function renderNoCritBanner() {
 // Progression : easy → medium → hard → expert
 // Priorise les scénarios non complétés ou à améliorer (<80%)
 // ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// v2.60 — Suggestions intelligentes après une scène
+// Combinaison de tags overlap + état joueur + difficulté progressive.
+// ═══════════════════════════════════════════════════════════════
+function computeNextStepSuggestions(currentScene) {
+  if (!currentScene || typeof SCENES === 'undefined') return [];
+  const saved = lsGet('scene_results', {});
+  const goodResult = id => saved[id] && saved[id].pct >= 80;
+  const currentTags = new Set((currentScene.tags || []).map(t => String(t).toUpperCase()));
+
+  // Score chaque autre scène
+  const candidates = [];
+  SCENES.forEach(s => {
+    if (s.id === currentScene.id) return;
+    const tagsS = new Set((s.tags || []).map(t => String(t).toUpperCase()));
+    const shared = [...currentTags].filter(t => tagsS.has(t));
+    const sharedCount = shared.length;
+    const isUntouched = saved[s.id] === undefined;
+    const isMastered = goodResult(s.id);
+    const sameDiff = s.difficulty === currentScene.difficulty;
+    const harderDiff = ['easy','medium','hard','expert'].indexOf(s.difficulty) ===
+                       ['easy','medium','hard','expert'].indexOf(currentScene.difficulty) + 1;
+
+    // Score (heuristique simple)
+    let score = 0;
+    score += sharedCount * 10;          // priorité tags overlap
+    if (isUntouched) score += 8;         // jamais joué
+    else if (!isMastered) score += 3;    // à perfectionner
+    else score -= 5;                     // déjà maîtrisée → pénalisé
+    if (harderDiff) score += 4;          // 1 niveau plus haut = progression
+    if (sameDiff && !isMastered) score += 2;
+    if (s.realCase) score += 1;          // léger boost affaires réelles
+
+    if (score <= 0) return; // Filtre les vraiment hors-sujet
+    candidates.push({ scene: s, score, sharedCount, shared, isUntouched, isMastered });
+  });
+
+  // Trier par score, prendre top 3
+  candidates.sort((a, b) => b.score - a.score);
+  const top3 = candidates.slice(0, 3);
+
+  // Construire la "raison" pour chaque
+  return top3.map(c => {
+    let reason;
+    if (c.sharedCount >= 2) {
+      reason = `Thèmes liés : ${c.shared.slice(0, 2).join(' · ')}`;
+    } else if (c.isUntouched) {
+      reason = 'Nouveau scénario';
+    } else if (!c.isMastered) {
+      const pct = saved[c.scene.id].pct;
+      reason = `À perfectionner — score actuel ${pct}%`;
+    } else if (c.sharedCount === 1) {
+      reason = `Thème lié : ${c.shared[0]}`;
+    } else {
+      reason = 'Suggestion';
+    }
+    return { scene: c.scene, reason, shared: c.shared };
+  });
+}
+
+function launchSceneById(sceneId) {
+  const scene = SCENES.find(s => s.id === sceneId);
+  if (!scene) return;
+  // Réutilise le mécanisme existant : navigue vers la scène et lance
+  if (typeof launchScene === 'function') {
+    location.hash = '#scene-' + sceneId;
+    setTimeout(() => {
+      try { launchScene(); } catch (e) { console.error(e); }
+    }, 50);
+  }
+}
+
 function computeRecommendedScene() {
   const saved = lsGet('scene_results', {});
   const hasResult = id => saved[id] !== undefined;
@@ -1514,6 +1586,10 @@ function initLobby() {
     card.dataset.tags = (scene.tags || []).join(' ');
     card.dataset.real = scene.realCase ? '1' : '0';
     if (isEU) card.dataset.region = 'EU';
+    // v2.60 — data-canton pour filtre cantonal dans le lobby
+    if (scene.regionDetail && scene.regionDetail.code) {
+      card.dataset.canton = scene.regionDetail.code;
+    }
 
     const statusHTML = res
       ? `<span class="scene-status done" style="color:${getScoreColor(res.pct)}">✓ ${res.pct}%</span>`
@@ -2496,11 +2572,10 @@ function showReport() {
     </div>
   `;
 
-  // Compute next scenario for "continue" button
-  const currentIdx = SCENES.findIndex(s => s.id === scene.id);
-  const hasNextScene = currentIdx !== -1 && currentIdx < SCENES.length - 1;
-  const nextScene = hasNextScene ? SCENES[currentIdx + 1] : null;
-  const nextSceneTitle = nextScene ? nextScene.title : '';
+  // Compute next scenario suggestions for "continue" section (v2.60)
+  // Stratégie : 3 cartes ciblées par tag overlap + état joueur
+  const nextSuggestions = computeNextStepSuggestions(scene);
+  const hasNextScene = nextSuggestions.length > 0;
 
   document.getElementById('report-content').innerHTML = `
     <div class="report-header">
@@ -2576,9 +2651,29 @@ function showReport() {
 
     <div class="report-actions">
       <button class="retry-btn" onclick="launchScene()">🔄 Recommencer ce scénario</button>
-      ${hasNextScene ? `<button class="next-scene-btn" onclick="launchNextScene()">🚀 Scénario suivant : ${nextSceneTitle} →</button>` : ''}
       <button class="back-btn" onclick="goLobby()">← Retour au lobby</button>
     </div>
+
+    ${hasNextScene ? `
+    <div class="next-step-section">
+      <div class="next-step-title">🚀 Continuer avec…</div>
+      <div class="next-step-grid">
+        ${nextSuggestions.map(sug => `
+          <button class="next-step-card" onclick="launchSceneById('${sug.scene.id}')">
+            <div class="next-step-icon">${sug.scene.icon || '🔍'}</div>
+            <div class="next-step-body">
+              <div class="next-step-stitle">${sug.scene.title}</div>
+              <div class="next-step-reason">${sug.reason}</div>
+              <div class="next-step-meta">
+                <span class="next-step-diff diff-${sug.scene.difficulty}">${({easy:'Facile',medium:'Moyen',hard:'Difficile',expert:'Expert'})[sug.scene.difficulty] || sug.scene.difficulty}</span>
+                ${sug.shared ? `<span class="next-step-shared">${sug.shared.length} thème${sug.shared.length>1?'s':''} commun${sug.shared.length>1?'s':''}</span>` : ''}
+              </div>
+            </div>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
   `;
 
   showScreen('report');

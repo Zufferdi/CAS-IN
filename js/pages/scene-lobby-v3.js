@@ -380,6 +380,91 @@
     });
 
     bar.appendChild(advRow);
+
+    // v2.60 — Rangée filtre canton (drapeaux SVG)
+    addCantonFilterRow(bar);
+  }
+
+  // ──────────────────────────────────────────────────────────
+  //  CANTON FILTER ROW (v2.60)
+  //  Affiche une rangée de drapeaux SVG des cantons utilisés.
+  //  Cliquer un drapeau filtre les scènes par regionDetail.code.
+  //  Cliquer à nouveau le même → désactive.
+  // ──────────────────────────────────────────────────────────
+  function addCantonFilterRow(bar) {
+    if (typeof SCENES === 'undefined') return;
+
+    // Dénombrer scènes par code canton
+    const counts = {};
+    SCENES.forEach(s => {
+      const code = s.regionDetail && s.regionDetail.code;
+      if (!code) return;
+      counts[code] = (counts[code] || 0) + 1;
+    });
+
+    if (Object.keys(counts).length < 2) return; // Pas assez de variation
+
+    // Ordre privilégié : les cantons précis d'abord, puis CHF/CH, puis étrangers
+    const PRIORITY = ['VD','VS','GE','NE','JU','ZH','FR','BS','BE','TI','SG','SO','ZG',
+                      'CHF','CH','EU','FR-EU','CN','INTL'];
+    const sortedCodes = Object.keys(counts).sort((a, b) => {
+      const ia = PRIORITY.indexOf(a);
+      const ib = PRIORITY.indexOf(b);
+      if (ia === -1 && ib === -1) return a.localeCompare(b);
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
+
+    const cantonRow = document.createElement('div');
+    cantonRow.className = 'lobby-advanced-row lobby-canton-row';
+
+    const label = document.createElement('span');
+    label.className = 'lobby-adv-label';
+    label.textContent = 'Région';
+    cantonRow.appendChild(label);
+
+    // Mapping code → nom lisible (pour tooltip)
+    const NAMES = {
+      'VD': 'Vaud', 'VS': 'Valais', 'GE': 'Genève', 'NE': 'Neuchâtel',
+      'JU': 'Jura', 'ZH': 'Zurich', 'FR': 'Fribourg', 'BS': 'Bâle-Ville',
+      'BE': 'Berne', 'TI': 'Tessin', 'SG': 'Saint-Gall', 'SO': 'Soleure',
+      'ZG': 'Zoug', 'CHF': 'Confédération', 'CH': 'Suisse',
+      'EU': 'Europe', 'FR-EU': 'France', 'CN': 'Chine', 'INTL': 'International',
+    };
+
+    sortedCodes.forEach(code => {
+      const chip = document.createElement('button');
+      chip.className = 'canton-chip';
+      chip.dataset.canton = code;
+      const name = NAMES[code] || code;
+      chip.title = `${name} — ${counts[code]} scénario${counts[code] > 1 ? 's' : ''}`;
+
+      // Icône : SVG si SwissFlags dispo, sinon emoji fallback
+      let icon = '';
+      if (window.SwissFlags && typeof window.SwissFlags.get === 'function') {
+        icon = window.SwissFlags.get(code);
+      } else {
+        icon = code === 'EU' ? '🇪🇺' : code === 'FR-EU' ? '🇫🇷' :
+               code === 'CN' ? '🇨🇳' : code === 'INTL' ? '🌍' : '🇨🇭';
+      }
+      chip.innerHTML = `<span class="canton-chip-flag">${icon}</span><span class="canton-chip-count">${counts[code]}</span>`;
+
+      chip.addEventListener('click', () => {
+        if (activeCanton === code) {
+          activeCanton = null;
+          chip.classList.remove('active');
+        } else {
+          activeCanton = code;
+          document.querySelectorAll('.canton-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+        }
+        applyAllFilters();
+      });
+      cantonRow.appendChild(chip);
+    });
+
+    bar.appendChild(cantonRow);
   }
 
   // ──────────────────────────────────────────────────────────
@@ -595,13 +680,18 @@
         const atm = card.dataset.atmosphere || '';
         if (atm !== activeAtmosphere) show = false;
       }
+      // v2.60 — filtre canton
+      if (show && activeCanton) {
+        const cantonOnCard = card.dataset.canton || '';
+        if (cantonOnCard !== activeCanton) show = false;
+      }
       card.style.display = show ? '' : 'none';
       if (show) visible++;
     });
 
     // Update count label
     const lbl = document.getElementById('lobby-filter-count');
-    if (lbl && (activeParcoursId || activeAtmosphere)) {
+    if (lbl && (activeParcoursId || activeAtmosphere || activeCanton)) {
       lbl.textContent = `${visible} scénario${visible !== 1 ? 's' : ''} affiché${visible !== 1 ? 's' : ''}`;
     }
 
