@@ -31,10 +31,22 @@
   "intro": "Lundi 6h30, alerte CSIRT chez un industriel suisse (semi-conducteurs, 3'400 employés). L'EDR a détecté à 4h17 une activité anormale sur un serveur Windows Server 2022 du département R&D : connexions sortantes vers une IP non listée, processus PowerShell anormalement long (8h+), aucun fichier malveillant détecté sur disque. Le sysadmin local a vu l'alerte à 6h00, et son réflexe a été d'isoler le serveur du réseau (bon) puis de préparer un reboot pour 'sécuriser' (catastrophique). Vous arrivez sur place à 6h45. Le serveur tourne encore, isolé du réseau. Le sysadmin vous attend, doigt sur le bouton power : <em>« Je redémarre, là ? Le DG s'inquiète, on perd 47'000 CHF de l'heure. »</em>. Décision dans les 5 minutes : capture mémoire d'abord, ou reboot ?",
   "alertLevel": "🧠 MALWARE FILELESS SUSPECTÉ — Aucune trace disque · RAM = seule source · Pression reboot · Volatilité maximale",
   "objectives": [
-    "Comprendre la volatilité des preuves en RAM (ACPO Principles)",
-    "Maîtriser la capture mémoire forensique sur système live",
-    "Utiliser Volatility 3 pour analyser un dump mémoire",
-    "Documenter une chaîne probatoire RAM pour un dossier pénal"
+    {
+      "icon": "🎯",
+      "text": "Comprendre la volatilité des preuves en RAM (ACPO Principles)"
+    },
+    {
+      "icon": "🎯",
+      "text": "Maîtriser la capture mémoire forensique sur système live"
+    },
+    {
+      "icon": "⚖️",
+      "text": "Utiliser Volatility 3 pour analyser un dump mémoire"
+    },
+    {
+      "icon": "🔬",
+      "text": "Documenter une chaîne probatoire RAM pour un dossier pénal"
+    }
   ],
   "debrief": "<p><strong>Le memory forensics est devenu en 5 ans la compétence centrale du DFIR moderne, à mesure que les attaquants migrent vers des techniques fileless (malware qui ne touche jamais le disque).</strong> Cette migration est une réponse aux EDR qui scannent les fichiers — si rien n'est écrit, rien n'est détecté par signature. Mais tout doit passer par la RAM pour s'exécuter — c'est notre fenêtre d'observation.</p><p><strong>Les 4 catégories d'éléments uniques en RAM :</strong></p><ol><li><strong>Processus actifs</strong> — y compris ceux camouflés (process hollowing, DLL injection, reflectively-loaded). Volatility plugins : pslist, pstree, malfind.</li><li><strong>Connexions réseau actives</strong> — les sockets C2, même si ouvertes par un thread injecté dans un processus légitime (svchost, explorer). Plugins : netscan, netstat.</li><li><strong>Credentials et secrets</strong> — passwords clairs en mémoire (Mimikatz extracts), tokens Kerberos, hashes NTLM, clés de chiffrement actives. Plugins : hashdump, mimikatz, dumpregistry.</li><li><strong>Code injecté/malveillant</strong> — shellcode, PowerShell encodé, modules Cobalt Strike beacon. Plugins : malfind, vadinfo, dumpfiles.</li></ol><p><strong>La règle fondamentale :</strong> la RAM est <em>volatile</em> — elle disparaît au moindre power cut, reboot, ou shutdown. ACPO Principle 2 (UK Best Practice) : <em>« In circumstances where a person finds it necessary to access original data, that person must be competent to do so and be able to give evidence explaining the relevance and the implications of their actions. »</em>. Concrètement : un reboot mal informé détruit irrémédiablement des preuves potentiellement décisives.</p><p><strong>Les 3 méthodes de capture mémoire :</strong></p><ul><li><strong>FTK Imager Lite</strong> — outil gratuit, écriture sur USB/réseau. Standard police.</li><li><strong>WinPmem / DumpIt</strong> — open source, plus léger, mode kernel.</li><li><strong>Acquisition matérielle (DMA)</strong> — via FireWire/Thunderbolt si disponibles, le plus propre mais rarement applicable en environnement entreprise.</li></ul><p>La capture doit être effectuée <strong>sur le système live</strong> (sans modification de l'état), avec calcul de hash (MD5+SHA-256 typiquement) immédiat sur le fichier image. La taille typique : 8-128 GB selon la RAM du système.</p><p><strong>L'analyse Volatility :</strong> Volatility 3 (Python) prend en entrée le dump RAM + le profil système (Windows version, build, architecture). Plus de 200 plugins disponibles. Pour un investigateur compétent, l'analyse d'un dump 16 GB prend 4-8h en moyenne pour reconstituer la chaîne d'infection.</p><p><strong>Le piège judiciaire :</strong> sans procès-verbal détaillé de la procédure de capture (heure exacte, commande, version de l'outil, taille du dump, hashs), le tribunal pourra écarter l'élément forensique pour défaut de chaîne probatoire. Le procès-verbal de capture mémoire doit être rédigé <em>pendant</em> la capture, pas après.</p><p><strong>Le défi du fileless :</strong> sans trace disque, le procureur doit construire son dossier sur des éléments mémoire et corrélations. Le standard de preuve « au-delà du doute raisonnable » exige un récit cohérent : timeline reconstituée, attribution étayée, élément concret de motif. Volatility seul ne suffit pas — il faut le combiner avec analyse logs, captures réseau (PCAP), threat intelligence (TTPs) pour faire un dossier solide.</p><p><strong>Référence :</strong> ATF 138 IV 169 sur la chaîne probatoire numérique. Voir aussi le SANS FOR532 (Memory Forensics) et la doctrine SWGDE 2023 sur Memory Acquisition.</p>",
   "steps": [
