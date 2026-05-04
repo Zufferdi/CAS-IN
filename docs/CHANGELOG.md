@@ -4,6 +4,169 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.45] — 2026-05-04
+
+✨ **MILESTONE HISTORIQUE — 100% du corpus retrofit atteint** ✨
+
+Le sprint retrofit lancé en **v2.29 (août 2025)** se clôt en **v2.45 (mai 2026)**. La totalité des **110 scènes du corpus** sont désormais équipées de NPCs + marqueurs narratifs "📍 BIFURCATION NARRATIVE". Le catalogue PNJ a triplé (8 → 56) avec un focus sur la diversification thématique et la transposabilité.
+
+### Ajouté — 2 nouveaux PNJ dans `data/npcs.json` (54 → 56)
+
+| ID | Type | Rôle | Apparition principale |
+|---|---|---|---|
+| `vs_securite_barrages` | Fictif **transposable** | M. Imboden, Responsable sécurité-OT FMV (barrages VS) | `competence-mpc-vs` |
+| `fim_api_pentest` | Fictive **transposable** | Mme Roy, Forensique API + pentest banking (Lausanne) | `virement` |
+
+**Diversification thématique** :
+- **Sécurité OT barrages alpins** (Imboden, FMV) — SCADA Siemens/Schneider, IEC 60870-5-104, OFEN classe 1, coordination Swissgrid+OFCS-CII énergie
+- **Forensique API banking** (Roy) — OWASP API Top 10, BOLA/IDOR/JWT flaws, mandats fedpol+MROZ pour fraudes API banking
+
+**2 nouveaux transposables** (catalogue total 23 → 25). Le catalogue compte désormais **25 PNJ transposables sur 56** (44.6%).
+
+### Ajouté — Retrofit bloc 17 final (3 dernières scènes adaptées)
+
+| Scène | Steps | Difficulté | NPCs assignés (★ = nouveau) | Bifurcation marquée |
+|---|---|---|---|---|
+| `competence-mpc-vs` | 5 | medium | `vs_securite_barrages`★, `nicolet` | step 4 #1 (catastrophe trancher unilatéralement) |
+| `swissgrid-iec61850-jura` | 5 | expert | `swissgrid_ot_lead`, `swissgrid_cirt` | step 4 #1 et #2 → 'end' explicite |
+| `virement` | 5 | medium | `fim_api_pentest`★, `compliance_bs` | step 3 #0 (catastrophe mise en cause client) |
+
+**Note technique** : `swissgrid-iec61850-jura` était assignée en v2.41 mais ses NPCs ont été perdus dans une régression du transcript intermédiaire. Cette release ré-assigne et confirme.
+
+**Diversification thématique du bloc 17** :
+- **Conflit de compétence MPC vs cantonal** (art. 28 CPP, Cour des plaintes TPF, double CII BCV+barrage)
+- **Cybersécurité OT IEC 61850** (poste 380 kV, GOOSE injection, ENTSO-E TF Cyber)
+- **Fraude API banking BOLA** (50K CHF, OWASP API Top 10, ATF 6B_392/2018)
+
+### Modifié — `scripts/check_scenes_balance.py`
+
+Liste par défaut étendue aux 110 scènes touchées par v2.24 → v2.45 (était 108, +2). Toutes passent le seuil de balance 30%. Couverture 100%.
+
+### Modifié — Service Worker v78 → v79
+
+Header v2.45 documentant la milestone 100% + les 2 derniers PNJ.
+
+### Statistiques v2.45 — 100% milestone
+
+| Indicateur | v2.29 (départ retrofit) | v2.44 | **v2.45 final** |
+|---|---|---|---|
+| Scènes totales | 110 | 110 | **110** |
+| Scènes avec NPCs assignés | 8 | 103 | **110** ✨ |
+| Scènes avec marqueur 📍 | 8 | 103 | **110** ✨ |
+| **Couverture retrofit** | **7%** | **94%** | **100%** ✨ |
+| **PNJ catalogue** | **30** | **54** | **56** ✨ (+26 net) |
+| PNJ réels | 8 | 8 | **8** (inchangé) |
+| PNJ fictifs | 22 | 46 | **48** (+26) |
+| PNJ transposables | 8 | 23 | **25** (+17) |
+| Service Worker | v55 | v78 | **v79** |
+
+### Bilan du sprint retrofit (août 2025 → mai 2026)
+
+**17 blocs livrés en 17 versions consécutives** :
+- Blocs 1-11 (v2.29 → v2.39) : 5 scènes par bloc, format conservateur
+- Blocs 12-17 (v2.40 → v2.45) : 8 scènes par bloc (sauf bloc 17 final = 3), format accéléré
+
+**Total scènes retrofitées** : 8 (v2.24-v2.28) + 11×5 (blocs 1-11) + 5×8 (blocs 12-16) + 3 (bloc 17) + scènes intermédiaires = **110/110** ✨
+
+**Total PNJ créés au cours du retrofit** :
+- 0 nouveau PNJ : v2.29 → v2.32, v2.34 → v2.40 (utilisation des 30 PNJ initiaux)
+- v2.33 : +1 (ddps_general_counsel) en complément du nouveau scénario SRC-Kaspersky
+- v2.41 : +5 PNJ (stadler_ciso, swissgrid_ot_lead, ti_ge_proc_cyber, ifc_sg_responsable, swisscom_grc) — reprise création après directive utilisateur
+- v2.42 : +6 PNJ (tmc_juge_ge, unine_ciso, vs_secretaire_communal, switch_cert_lead, ti_pol_chiasso, fim_xways_expert)
+- v2.43 : +6 PNJ (whistleblower_lawyer, xplain_ofit_juriste, play_ransom_analyst, zurich_airport_ciso, europol_jcat_analyst, bitlocker_forensic)
+- v2.44 : +6 PNJ (ge_avocat_frontaliers, anssi_liaison_ch, bka_kidflix_lead, philippines_pjf_attache, src_attribution_apt, post_evote_ciso)
+- v2.45 : +2 PNJ (vs_securite_barrages, fim_api_pentest)
+
+**Total : +26 PNJ créés** au cours du retrofit (sur les 5 dernières releases v2.41-v2.45).
+
+### Notes éditoriales
+
+**Sur la fin du sprint retrofit.** Cette version v2.45 clôt 8 mois de travail systématique sur le corpus historique. Chacune des 110 scènes dispose désormais de :
+1. **2-3 NPCs assignés** (avec biographie complète dans `data/npcs.json`)
+2. **Au moins un marqueur "📍 BIFURCATION NARRATIVE"** documentant pédagogiquement la catastrophe évitée ou subie
+3. **Bifurcations 'end' explicites** pour les choix critiques (au lieu de l'ancienne convention `next=-1`)
+4. **Balance des choix < 30% de déviation** (mesure d'équilibrage des distracteurs vs bons choix)
+
+**Sur la qualité du catalogue PNJ final (56 PNJ, 25 transposables).** Le ratio 44.6% de transposables est sain : il permet la cohérence narrative cross-scénarios (un PNJ apparaissant dans plusieurs scènes crée des références implicites pour le candidat) tout en évitant la sur-utilisation des mêmes personnages. Les 31 PNJ non-transposables sont des figures liées à un cas spécifique (Stadler, Swisscom, UniNE, IFC SG, OFIT, etc.) qui auraient peu de sens hors contexte.
+
+**Sur les scènes les plus longues du corpus** :
+- `palais_federal` (11 steps, expert) — APT Chancellerie fédérale
+- `supply_chain_sante` (11 steps, expert) — MediSwiss MedFlow 627k patients
+- `ransomware_raid` (8 steps, hard) — RAID forensique
+- `ruag_2016` (8 steps, hard) — APT 21 mois (cas réel)
+- `stadler_2020` (8 steps, hard) — Ransomware Stadler (cas réel)
+- `unine_2022` (8 steps, hard) — Conti UniNE (cas réel)
+- `bitlocker_froid` (8 steps, hard) — Cryptanalyse BitLocker
+- `veracrypt` (8 steps, hard) — Volume VeraCrypt extraction RAM
+- `timeline` (8 steps, hard) — Corrélation 5 artefacts UTC
+
+**Sur la cohérence narrative cross-scénarios.** Plusieurs PNJ apparaissent désormais dans plusieurs scènes, créant un univers cohérent :
+- **fim_xways_expert** (Mme Tremp) : 3 scènes (timeline, trois_artefacts, veracrypt) — pivot forensique X-Ways
+- **play_ransom_analyst** (M. Schöb) : 2 scènes (xplain, xplain-play) — pivot threat intel ransomware
+- **ge_avocat_frontaliers** (Me Lavanchy) : 2 scènes (eu-france-travail, eu-free-leak) — pivot droit transfrontalier
+- **vs_secretaire_communal** (M. Métrailler) : 2 scènes (valais-cascade-12-communes, vetroz-akira) — pivot communes VS
+
+### Prochaines évolutions possibles (post-100%)
+
+Le retrofit étant clos, les prochaines versions peuvent désormais se concentrer sur :
+
+```
+v2.46+  Nouveaux scénarios inspirés réalité 2024-2026 (coopération européenne)
+        → voir propositions ci-dessous
+
+v2.50+  Examen blanc 50q/90 min
+v2.55+  Heatmap canton enrichie + badges par canton
+v2.60+  Export PDF certificats validation par canton
+v2.70+  Mode multi-joueur (équipes 3-5 candidats sur scénario partagé)
+```
+
+### 📋 Propositions de nouveaux scénarios — coopération européenne (inspirés de la réalité 2024-2026)
+
+Sur demande utilisateur, voici 8 propositions de nouveaux scénarios cyber-européens inspirés de cas réels documentés. Chaque scénario propose un angle pédagogique distinct exploitant le casting transposable existant + éventuellement de nouveaux PNJ ciblés.
+
+| # | Scénario proposé | Inspiration réelle | Angle pédagogique | PNJ-clés (transposables) |
+|---|---|---|---|---|
+| 1 | `eu-cronos-3` | Operation Cronos III (NCA UK + FBI + Europol, mai 2025, démantèlement résidu LockBit) | Coordination Five Eyes + Europol post-Cronos II 2024, extradition US-UK des opérateurs | europol_jcat_analyst, src_attribution_apt, play_ransom_analyst |
+| 2 | `eu-endgame-2026` | Operation Endgame phase 2 (Europol + BKA + ANSSI, mars-mai 2026, démantèlement infrastructure droppers Pikabot/Smokeloader/IcedID) | Démantèlement multi-pays infrastructure C2 + cryptocurrency seizure 50M EUR | europol_jcat_analyst, anssi_liaison_ch, src_attribution_apt |
+| 3 | `eu-eunavfor-aspides-cyber` | Op. EUNAVFOR ASPIDES (Mer Rouge 2024-2026) cyber-attaques contre navires marchands suisses (MSC) par Houthis sponsorisés | CSDP cyber, SHADES Houthi cyber, OFCS-CII transport maritime, attribution étatique | src_attribution_apt, anssi_liaison_ch, fbi_legat_bern |
+| 4 | `eu-emcdda-trade-aml` | EMCDDA + Europol joint task force trafic crypto-stupéfiants Hydra-Bin (post-Hydra démantèlement 2022) | Crypto-tracing Chainalysis + AMLA-EU + GAFI + MROZ-MROS coordination | mroz_ti, compliance_bs, europol_jcat_analyst |
+| 5 | `eu-frontex-deepfake-asylum` | Cas réels 2024-2025 demandeurs d'asile présentant deepfakes IA-générés comme "preuves" de persécution (~340 cas documentés FR/DE/IT/CH) | Frontex + SEM + détection deepfake + art. 251 CP faux dans les titres | bka_kidflix_lead, fim_xways_expert, ge_prosecutor_cyber |
+| 6 | `eu-cer-directive-incident` | Directive CER (Critical Entities Resilience, 2023/2557) — incident transfrontalier énergie (CH non-membre mais reciprocity) | CER vs OFCS-CII compatibility, Swissgrid + RTE coordination | swissgrid_ot_lead, anssi_liaison_ch, ofcs_coordinator |
+| 7 | `eu-nis2-pme-suisse` | Directive NIS2 (2022/2555) — PME suisse fournisseur d'entité essentielle UE (impact extraterritorial) | NIS2 vs LSI suisse (parallélisme), supply chain transfrontalière, audit volontaire | swisscom_grc, swissgrid_cirt, ge_avocat_frontaliers |
+| 8 | `eu-ai-act-cybersecurity` | Règlement IA EU (2024/1689) — système IA "haut risque" cyber utilisé par PolCant CH (analyse OSINT auto, scoring suspect) | AI Act art. 6 + Annexe III + droits fondamentaux art. 8 CEDH, validation outil IA en procédure pénale CH | pfpdt_inspector, ti_ge_proc_cyber, fim_xways_expert |
+
+**Détails des 4 scénarios prioritaires** (à développer en priorité) :
+
+#### Scénario #1 — `eu-cronos-3` (Operation Cronos III, mai 2025)
+**Inspiration** : Operation Cronos II (octobre 2024) + Cronos III (mai 2025), opérations NCA UK + FBI + Europol contre les opérateurs LockBit, démantèlement infrastructure + identification de Dmitry Khoroshev (LockbitSupp). En mai 2025, Cronos III aurait visé les opérateurs résiduels qui avaient migré vers DragonForce et BlackSuit.
+**Angle CH** : 7 PME suisses victimes Cronos II identifiées via les bases C2 saisies, dont 3 ayant payé la rançon. Question juridique : **les paiements identifiés constituent-ils une violation des sanctions OFAC** (LockBit sanctionné depuis 2024) ? Coordination FINMA + OFAC US + OFJ pour analyser les flux 2024-2025.
+**Steps proposés** : 5-6 steps, hard. NPCs : `europol_jcat_analyst`, `play_ransom_analyst`, `compliance_bs`.
+
+#### Scénario #2 — `eu-endgame-2026` (Operation Endgame phase 2)
+**Inspiration** : Operation Endgame (Europol + BKA + ANSSI + FBI, mai 2024) — démantèlement infrastructure C2 IcedID + Pikabot + Smokeloader + Bumblebee + Trickbot. Phase 2 (hypothétique mars-mai 2026) viserait les opérateurs résiduels et les infrastructures de blanchiment crypto.
+**Angle CH** : 18'400 victimes suisses identifiées via les bases C2 saisies (credentials volés). Question doctrinale : **comment notifier 18'400 personnes** sans saturer les canaux de communication ni provoquer une panique ? Coordination ANSSI + OFCS + PFPDT + Swisscom pour notifications massives graduées.
+**Steps proposés** : 6 steps, hard. NPCs : `europol_jcat_analyst`, `anssi_liaison_ch`, `swisscom_grc`, `pfpdt_inspector`.
+
+#### Scénario #3 — `eu-eunavfor-aspides-cyber` (Mer Rouge 2024-2026)
+**Inspiration** : Operation EUNAVFOR ASPIDES (UE, février 2024 → en cours), protection navigation commerciale Mer Rouge contre Houthis. Plusieurs cyber-attaques documentées contre navires marchands européens (incl. MSC suisse-italienne) en 2024-2025 : malware AIS spoofing, manipulations GPS, ransomware bridge systems.
+**Angle CH** : Attaque cyber contre un navire MSC (Mediterranean Shipping Company, siège Genève) en transit Mer Rouge — système AIS compromis, coordonnées GPS spoofées, bridge ransomware. Question doctrinale : **CSDP cyber** + **OFCS-CII transport maritime** + **attribution étatique** (Houthis sponsorisés Iran ?).
+**Steps proposés** : 6 steps, expert. NPCs : `src_attribution_apt`, `anssi_liaison_ch`, `ofcs_coordinator`, **nouveau** `msc_ciso_geneva`.
+
+#### Scénario #4 — `eu-frontex-deepfake-asylum` (340 cas 2024-2025)
+**Inspiration** : Cas réels documentés 2024-2025 de demandeurs d'asile présentant des **deepfakes IA-générés** comme preuves visuelles de persécution dans leur pays d'origine. Frontex + agences nationales d'asile (SEM en CH, OFII en FR, BAMF en DE) ont identifié ~340 cas documentés. Tools : Stable Diffusion + Midjourney + LoRA personnalisés.
+**Angle CH** : Demande d'asile à Vallorbe — vidéo "preuve" de torture présentée par le demandeur, expertise révèle deepfake IA-généré. Question juridique : **art. 251 CP** (faux dans les titres) ou **art. 53 LAsi** (fausses indications) ? Coordination SEM + fedpol + Frontex.
+**Steps proposés** : 5 steps, hard. NPCs : `bka_kidflix_lead` (expertise deepfake DE), `fim_xways_expert`, `ge_prosecutor_cyber`, **nouveau** `sem_asile_vallorbe`.
+
+#### Note méthodologique
+Tous ces scénarios :
+- Utilisent les **PNJ transposables** créés au cours du retrofit (notamment v2.41-v2.45)
+- Nécessitent **0-1 nouveau PNJ par scénario** (création ciblée)
+- Sont **inspirés de cas réels documentés** (pas inventés ex nihilo)
+- Couvrent des **angles pédagogiques distincts** (forensique, juridique, coordination internationale, attribution, doctrine)
+- Ont une **dimension européenne** (coopération bilatérale CH-EU, Europol, ANSSI, BKA, etc.)
+
+Le développement complet de ces scénarios représenterait ~2-3 versions (v2.46-v2.48) au rythme de 2-3 nouveaux scénarios par release. Le rythme est libre : 1 scénario à la fois (release courte) ou batch de 3-4 (release plus dense).
+
 ## [2.44] — 2026-05-03
 
 **Diversification continue du casting** : 6 nouveaux PNJ thématiquement adaptés (focus EU/internationaux). **Bloc 16 du retrofit** (8 anciennes scènes adaptées, toutes à dimension internationale). Le catalogue passe à **54 PNJ**. Cap des **94%** du retrofit franchi.
