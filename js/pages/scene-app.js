@@ -1074,6 +1074,14 @@ const GLOBAL_BADGES = [
   { id: "apple_forensic", icon: "🍎", title: "Forensicien Apple",       desc: "3 scénarios AFU/BFU iPhone-MacBook ≥80%",      check: (s) => s.apple_forensic_wins >= 3 },
   { id: "anti_deepfake",  icon: "🎭", title: "Anti-deepfake",           desc: "Scénario deepfake résolu à ≥90%",              check: (s) => s.deepfake_excellence >= 1 },
   { id: "npc_collector",  icon: "👥", title: "Tour des protagonistes",  desc: "Rencontrer ≥8 PNJ différents dans les scènes", check: (s) => s.npcs_met >= 8 },
+  // ═══════════════════════════════════════════════════
+  // BADGES v2.56 (EXTEND) — first-clear bonus + mastery par scène
+  // ═══════════════════════════════════════════════════
+  { id: "pioneer_25",     icon: "🌟", title: "Pionnier·ère",        desc: "25 scénarios découverts (first-clear ≥60%)", check: (s) => s.first_clears >= 25 },
+  { id: "pioneer_50",     icon: "✨", title: "Explorateur·rice",    desc: "50 scénarios découverts (first-clear ≥60%)", check: (s) => s.first_clears >= 50 },
+  { id: "mastery_bronze", icon: "🥉", title: "Apprenti·e des scènes", desc: "5 scénarios 'Touchés' (≥60%)",              check: (s) => s.mastery_touched >= 5 },
+  { id: "mastery_silver", icon: "🥈", title: "Médaille d'argent",   desc: "10 scénarios 'Réussis' (≥80%)",              check: (s) => s.mastery_cleared >= 10 },
+  { id: "mastery_gold",   icon: "🥇", title: "Médaille d'or",       desc: "5 scénarios 'Maîtrisés' (3 runs ≥80% sur 2 modes)", check: (s) => s.mastery_mastered >= 5 },
 ];
 
 function getStatsSnapshot() {
@@ -1164,6 +1172,22 @@ function getStatsSnapshot() {
   // Set unique stocké en JSON. Fallback 0 si jamais initialisé.
   const npcsMetSet = lsGet('cas_npcs_met', []);
   snap.npcs_met = Array.isArray(npcsMetSet) ? npcsMetSet.length : 0;
+
+  // v2.56 (EXTEND) : compteurs first-clears + mastery
+  // first_clears : taille du Set 'cas_first_clears' (sceneIds first-cleared)
+  const firstClearsList = lsGet('cas_first_clears', []);
+  snap.first_clears = Array.isArray(firstClearsList) ? firstClearsList.length : 0;
+
+  // mastery_* : compteurs par tier (touched / cleared / mastered)
+  // Calcul lazy : si window.Mastery est dispo on l'utilise, sinon 0.
+  if (window.Mastery && typeof window.Mastery.getStats === 'function') {
+    const m = window.Mastery.getStats();
+    snap.mastery_touched  = m.touched  || 0;
+    snap.mastery_cleared  = m.cleared  || 0;
+    snap.mastery_mastered = m.mastered || 0;
+  } else {
+    snap.mastery_touched = snap.mastery_cleared = snap.mastery_mastered = 0;
+  }
 
   return snap;
 }
@@ -1512,9 +1536,22 @@ function initLobby() {
 
     const notesIndicator = notes[scene.id] ? '<span class="scene-notes-indicator" title="Notes personnelles">📝</span>' : '';
     const euTag = isEU ? '<span class="scene-eu-tag">🇪🇺 EU</span>' : '';
+    // v2.56 (EXTEND) : Médaille Mastery (🥉/🥈/🥇) sur la card si score atteint
+    let masteryMedal = '';
+    if (window.Mastery && typeof window.Mastery.getMedal === 'function') {
+      const medal = window.Mastery.getMedal(scene.id);
+      if (medal) {
+        const tier = window.Mastery.getTier(scene.id);
+        const tierLabel = tier === 'mastered' ? 'Maîtrisée'
+                        : tier === 'cleared' ? 'Réussie'
+                        : 'Touchée';
+        masteryMedal = `<span class="scene-mastery-medal mastery-${tier}" title="Scène ${tierLabel}">${medal}</span>`;
+      }
+    }
 
     card.innerHTML = `
       ${notesIndicator}
+      ${masteryMedal}
       <div class="scene-icon">${scene.icon}</div>
       <div class="scene-info">
         <div class="scene-title">
@@ -2163,9 +2200,36 @@ function showReport() {
   const baseXP = Math.round(pct * diffMult * modeMult * 0.8);
   const xpGained = Math.round(baseXP * sBonus);
 
+  // ─── v2.56 (EXTEND) : First-clear bonus +20 XP ───
+  // Premier passage d'une scène à ≥60% → bonus +20 XP. Tracké via
+  // 'cas_first_clears' (set des sceneIds first-cleared).
+  let firstClearBonus = 0;
+  if (pct >= 60) {
+    const fcSet = new Set(lsGet('cas_first_clears', []) || []);
+    if (!fcSet.has(scene.id)) {
+      fcSet.add(scene.id);
+      lsSet('cas_first_clears', [...fcSet]);
+      firstClearBonus = 20;
+    }
+  }
+
   // Save XP — passe les tags de la scène pour activer le bonus thématique
   // (Profile.addXp applique +20% si un tag matche le rôle choisi)
   const xpResult = addXP(xpGained, scene.tags || []);
+  if (firstClearBonus > 0) {
+    addXP(firstClearBonus); // pas de tags ici : c'est un bonus exploration neutre
+    // Celebration différée (pour éviter de stacker sur d'autres celebrations)
+    setTimeout(() => {
+      if (window.Celebration && typeof window.Celebration.show === 'function') {
+        window.Celebration.show({
+          icon: '🌟',
+          title: 'Première fois !',
+          subtitle: 'Tu as découvert ' + scene.title,
+          xp: firstClearBonus,
+        });
+      }
+    }, 600);
+  }
 
   // No-critical-error streak
   if (!G.hadCriticalError) {
