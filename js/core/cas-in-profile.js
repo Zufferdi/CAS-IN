@@ -1045,6 +1045,25 @@
     getViewMode,
     getLastActivity,
     /**
+     * v2.61 — Retourne la liste COMPLÈTE des rangs du track passé en
+     * argument (ou du track actif), avec leur seuil XP. Utile pour les
+     * modules satellites qui veulent reconstituer une échelle de progression
+     * (ex : quiz-ranks.js qui aligne les rangs du quiz sur ceux du profil).
+     *
+     * Format : [{ name, emoji, flavor, min, idx }, ...]
+     */
+    getAllRanks: (trackKey) => {
+      const key = trackKey || ensureProfile().agent.track || 'investigator';
+      const track = TRACKS[key] || TRACKS.investigator;
+      return track.ranks.map((r, i) => ({
+        name: r.name,
+        emoji: r.emoji,
+        flavor: r.flavor,
+        min: XP_THRESHOLDS[i] || 0,
+        idx: i,
+      }));
+    },
+    /**
      * Retourne la liste des tags qui déclenchent +20% de bonus XP pour le rôle
      * passé en argument (ou le rôle actif si aucun argument). Utile pour
      * afficher dans le profil ou dans le sélecteur de track « ce que ton
