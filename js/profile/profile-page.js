@@ -121,6 +121,123 @@
 
     // Achievements (catégorisé, avec verrouillés + jauges)
     renderAchievements(snap);
+    
+    // Arcs PNJ — progression méta-narrative (v2.51)
+    renderNpcArcs();
+  }
+
+  /**
+   * Affiche la progression des arcs PNJ.
+   * Lit window.NpcArcs.getProgress() (async, fetch npc-arcs.json).
+   * Si NpcArcs pas chargé, n'affiche rien.
+   */
+  function renderNpcArcs() {
+    const section = $('npc-arcs-section');
+    if (!section) return;  // section pas dans le DOM = profile.html non mis à jour
+    
+    if (!window.NpcArcs || typeof window.NpcArcs.getProgress !== 'function') {
+      section.style.display = 'none';
+      return;
+    }
+    
+    window.NpcArcs.getProgress().then(arcs => {
+      if (!arcs || arcs.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+      
+      section.style.display = '';
+      
+      const grid = $('npc-arcs-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      
+      // Trier : complets d'abord, puis par % décroissant, puis par ordre alphabétique
+      const sorted = arcs.slice().sort((a, b) => {
+        if (a.is_complete !== b.is_complete) return b.is_complete - a.is_complete;
+        if (a.percentage !== b.percentage) return b.percentage - a.percentage;
+        return (a.title || '').localeCompare(b.title || '');
+      });
+      
+      sorted.forEach(arc => grid.appendChild(renderArcCard(arc)));
+    }).catch(e => {
+      console.warn('[profile-page] renderNpcArcs failed:', e);
+      section.style.display = 'none';
+    });
+  }
+
+  function renderArcCard(arc) {
+    const card = document.createElement('div');
+    card.className = 'npc-arc-card';
+    if (arc.is_complete) card.classList.add('npc-arc-complete');
+    
+    const head = document.createElement('div');
+    head.className = 'npc-arc-head';
+    
+    const icon = document.createElement('div');
+    icon.className = 'npc-arc-icon';
+    icon.textContent = arc.icon || '👤';
+    head.appendChild(icon);
+    
+    const titleWrap = document.createElement('div');
+    titleWrap.className = 'npc-arc-title-wrap';
+    const title = document.createElement('div');
+    title.className = 'npc-arc-title';
+    title.textContent = arc.title || arc.arc_id;
+    titleWrap.appendChild(title);
+    if (arc.subtitle) {
+      const sub = document.createElement('div');
+      sub.className = 'npc-arc-subtitle';
+      sub.textContent = arc.subtitle;
+      titleWrap.appendChild(sub);
+    }
+    head.appendChild(titleWrap);
+    card.appendChild(head);
+    
+    // Barre de progression
+    const barWrap = document.createElement('div');
+    barWrap.className = 'npc-arc-bar';
+    const bar = document.createElement('div');
+    bar.className = 'npc-arc-bar-track';
+    const fill = document.createElement('div');
+    fill.className = 'npc-arc-bar-fill';
+    fill.style.width = arc.percentage + '%';
+    bar.appendChild(fill);
+    barWrap.appendChild(bar);
+    const label = document.createElement('div');
+    label.className = 'npc-arc-bar-label';
+    label.textContent = `${arc.completed_stages} / ${arc.total_stages} étapes${arc.is_complete ? ' ✓' : ''}`;
+    barWrap.appendChild(label);
+    card.appendChild(barWrap);
+    
+    // Stages détaillés
+    if (arc.stages && arc.stages.length) {
+      const stagesList = document.createElement('div');
+      stagesList.className = 'npc-arc-stages';
+      arc.stages.forEach(stage => {
+        const item = document.createElement('div');
+        item.className = 'npc-arc-stage' + (stage.is_completed ? ' completed' : '');
+        const dot = document.createElement('span');
+        dot.className = 'npc-arc-stage-dot';
+        dot.textContent = stage.is_completed ? '✓' : '○';
+        item.appendChild(dot);
+        const txt = document.createElement('span');
+        txt.className = 'npc-arc-stage-text';
+        const yearLabel = stage.year ? `${stage.year} · ` : '';
+        txt.textContent = `${yearLabel}${stage.scene_id}`;
+        if (stage.role_state) {
+          const role = document.createElement('span');
+          role.className = 'npc-arc-stage-role';
+          role.textContent = ` — ${stage.role_state}`;
+          txt.appendChild(role);
+        }
+        item.appendChild(txt);
+        stagesList.appendChild(item);
+      });
+      card.appendChild(stagesList);
+    }
+    
+    return card;
   }
 
   /**
