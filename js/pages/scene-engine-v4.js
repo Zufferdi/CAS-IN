@@ -210,7 +210,15 @@
       }
       .v4-id-value {
         font-size: 13px; font-weight: 600; color: var(--text);
-        font-family: var(--font-body); line-height: 1.3;
+        font-family: var(--font-body), 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Twemoji Mozilla', sans-serif;
+        line-height: 1.3;
+      }
+      .v4-id-flag {
+        display: inline-block;
+        font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Twemoji Mozilla', system-ui, sans-serif;
+        font-size: 16px;
+        margin-right: 4px;
+        vertical-align: -2px;
       }
       .v4-id-articles {
         display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px;
@@ -550,7 +558,17 @@
     };
     const atmLabel = atmosphereLabels[scene.atmosphere] || (scene.atmosphere || 'Standard');
     const diffLabel = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile', expert: 'Expert' }[scene.difficulty] || scene.difficulty;
-    const region = scene.region === 'EU' ? '🇪🇺 EU' : '🇨🇭 CH';
+    // v2.53 : utilise regionDetail si dispo (canton CH ou pays UE), sinon fallback sur scene.region
+    let regionFlag = '🇨🇭';
+    let regionName = 'Suisse';
+    if (scene.regionDetail && scene.regionDetail.flag && scene.regionDetail.name) {
+      regionFlag = scene.regionDetail.flag;
+      regionName = scene.regionDetail.name;
+    } else if (scene.region === 'EU') {
+      regionFlag = '🇪🇺';
+      regionName = 'Europe';
+    }
+    const region = `<span class="v4-id-flag">${regionFlag}</span><span>${regionName}</span>`;
 
     // Build identity card
     const idCard = document.createElement('div');
