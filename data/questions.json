@@ -42926,5 +42926,1265 @@
       "Linux Audit (RHEL guide)",
       "SANS FOR508 Linux"
     ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "NTFS",
+    "diff": "easy",
+    "type": "single",
+    "q": "À quoi sert le fichier $MFT sur un volume NTFS ?",
+    "opts": [
+      "C'est l'abréviation de 'Mount Forensic Table', un journal lecture seule",
+      "C'est la Master File Table : la base de données qui décrit chaque fichier/dossier du volume (métadonnées, allocation, attributs)",
+      "C'est un fichier de configuration introduit par Microsoft Suisse à Wallisellen",
+      "C'est le journal d'événements de Windows Defender"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>$MFT (Master File Table)</strong> est le fichier système central de NTFS : chaque fichier ou dossier du volume y a une entrée de 1024 octets contenant ses métadonnées (nom, dates MAC, taille, permissions, allocation des clusters via data runs). Pour un forensicien, c'est <strong>LA</strong> source de vérité pour reconstituer l'arborescence et identifier les fichiers supprimés (entrées MFT marquées DELETED mais non écrasées).",
+    "expl_ko": "Le bureau Microsoft à Wallisellen existe vraiment, mais le $MFT n'a rien à voir avec lui. Les autres acronymes sont inventés.",
+    "refs": [
+      "Microsoft NTFS Reference",
+      "Brian Carrier — File System Forensic Analysis"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "FAT12 / FAT16 / FAT32",
+    "diff": "medium",
+    "type": "single",
+    "q": "Quelle est la taille MAXIMUM d'un fichier individuel sur FAT32 ?",
+    "opts": [
+      "1 GB, soit environ une fondue moitié-moitié en haute définition",
+      "4 GB - 1 octet (limite à 4 294 967 295 octets, due au champ taille codé sur 32 bits)",
+      "Aucune limite, FAT32 est moderne",
+      "16 TB, comme les volumes NTFS d'entreprise"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Sur FAT32, la taille d'un fichier est stockée sur <strong>32 bits</strong> dans l'entrée de répertoire, ce qui plafonne à <strong>2³² - 1 = 4 294 967 295 octets ≈ 4 GB</strong>. C'est précisément pour ça que les clés USB FAT32 (par défaut sortie usine) refusent les ISO de Windows ou les fichiers vidéo HD volumineux. Solution : reformater en exFAT ou NTFS.",
+    "expl_ko": "La limite est bien réelle et explique le 'fichier trop volumineux' classique. NTFS n'a pas la même limite (16 EB théorique).",
+    "refs": [
+      "Microsoft FAT32 Specification"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "EXT2 / EXT3 / EXT4",
+    "diff": "medium",
+    "type": "single",
+    "q": "Que stocke un 'inode' sur EXT4 ?",
+    "opts": [
+      "Le nom du fichier",
+      "Les métadonnées du fichier (permissions, propriétaire, dates, taille, pointeurs vers les blocs de données) — mais PAS le nom",
+      "Une copie de sauvegarde quotidienne",
+      "Un certificat de naissance numérique du fichier, signé par le canton de domicile du serveur"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Un <strong>inode</strong> (index node) sur les FS Unix/Linux contient toutes les métadonnées d'un fichier <em>SAUF son nom</em>. Le nom est stocké dans l'entrée du répertoire qui pointe vers l'inode (numéro). Cette dissociation explique pourquoi un fichier peut avoir plusieurs noms (hard links) tout en partageant les mêmes données et métadonnées.",
+    "expl_ko": "Le nom n'est PAS dans l'inode (c'est dans le répertoire parent). Aucun inode n'a de domicile cantonal — Linux n'est pas administré par les communes.",
+    "refs": [
+      "man ext4",
+      "Carrier — File System Forensic Analysis"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "NTFS",
+    "diff": "hard",
+    "type": "single",
+    "q": "Sur NTFS, à quoi servent les flux de données alternatifs (ADS, Alternate Data Streams) ?",
+    "opts": [
+      "À envoyer la musique en streaming via SMB",
+      "À stocker des données supplémentaires associées à un fichier, invisibles dans l'Explorateur (techniquement utiles pour Mark-of-the-Web, mais détournables pour cacher du malware)",
+      "À synchroniser les fichiers entre les datacenters de Vernier et de Berne",
+      "À compresser automatiquement les fichiers de plus de 10 MB"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Les <strong>ADS (Alternate Data Streams)</strong> sont une fonctionnalité NTFS héritée de la compatibilité HFS Macintosh. Syntaxe : <em>fichier.ext:streamname</em>. Usage légitime : Windows utilise <em>:Zone.Identifier</em> pour le Mark-of-the-Web (origine fichier téléchargé). Usage malveillant historique : cacher des binaires (<em>document.pdf:malware.exe</em>) qui restent invisibles dans l'Explorateur. Détection forensique : <em>dir /R</em> en cmd, ou Stream.exe (Sysinternals), ou MFTECmd (Eric Zimmerman).",
+    "expl_ko": "Pas de streaming musique, pas de synchro datacenter, pas de compression auto.",
+    "refs": [
+      "MFTECmd documentation",
+      "Microsoft Streams.exe Sysinternals"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "HFS+ et APFS",
+    "diff": "medium",
+    "type": "single",
+    "q": "APFS (Apple File System) a remplacé HFS+ depuis macOS High Sierra (2017). Quelle innovation majeure apporte APFS ?",
+    "opts": [
+      "Compatibilité avec les fichiers .swiss",
+      "Snapshots, copy-on-write, container partitions, chiffrement natif multi-clé — pensé pour les SSD modernes",
+      "Le support natif du Toblerone format (8 facettes)",
+      "Support exclusif des Mac fabriqués à Lausanne"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>APFS</strong> (Apple File System, 2017) est conçu pour les SSD modernes avec : <strong>(1)</strong> snapshots (versions instantanées du FS, base de Time Machine moderne), <strong>(2)</strong> copy-on-write (les modifications créent de nouveaux blocs au lieu d'écraser, plus sûr), <strong>(3)</strong> containers (plusieurs volumes partageant l'espace libre), <strong>(4)</strong> chiffrement natif par fichier ou volume avec multi-clés, <strong>(5)</strong> nano-secondes timestamps. Forensiquement : challenge majeur pour la récupération (copy-on-write rend le carving plus difficile).",
+    "expl_ko": "Apple ne fabrique pas de Mac à Lausanne. Le Toblerone est délicieux mais sans rapport.",
+    "refs": [
+      "Apple File System Reference",
+      "WWDC 2017 — APFS"
+    ]
+  },
+  {
+    "theme": "Système de fichiers",
+    "theme_icon": "💾",
+    "chapter": "exFAT",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel est le cas d'usage typique d'exFAT ?",
+    "opts": [
+      "Les serveurs web haute disponibilité",
+      "Les supports amovibles (clés USB, cartes SD) qui doivent être lus par Windows + macOS + Linux + appareils photo + caméras, sans la limite des 4 GB de FAT32",
+      "Le système de fichiers officiel des CFF",
+      "Le formatage des coffres-forts numériques de l'AVS"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>exFAT</strong> (Extended FAT, Microsoft 2006) est conçu spécifiquement pour les supports amovibles : compatible Windows + macOS + Linux + appareils embarqués (GoPro, drones, caméras), sans la limite de 4 GB par fichier de FAT32. Plus simple que NTFS (pas de journal, pas de permissions complexes). Standard de fait pour les cartes SDXC (>32 GB). Pas adapté aux disques système ou aux serveurs.",
+    "expl_ko": "Pas un FS de serveur ni d'institutions publiques. Les CFF utilisent des SI très différents.",
+    "refs": [
+      "Microsoft exFAT specification"
+    ]
+  },
+  {
+    "theme": "Acquisition et analyse",
+    "theme_icon": "🔍",
+    "chapter": "Acquisition et préservation",
+    "diff": "easy",
+    "type": "single",
+    "q": "Pourquoi un forensicien utilise-t-il un 'write blocker' (bloqueur en écriture) lors de l'acquisition d'un disque dur saisi ?",
+    "opts": [
+      "Pour faire du sport en bloquant son écriture, comme un gardien de hockey",
+      "Pour garantir l'intégrité du support source : aucune écriture vers le disque pendant la lecture, ce qui préserve les hashes et la valeur probante",
+      "Pour empêcher l'IA générative d'écrire des poèmes sur le disque",
+      "Parce que la loi suisse interdit explicitement les claviers pendant les saisies"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Un <strong>write blocker</strong> (matériel ou logiciel) est une obligation déontologique en forensique : il garantit que le support source <strong>n'est jamais modifié</strong> pendant l'acquisition. Sans cela, le simple branchement d'un disque sur Windows déclenche des écritures (timestamps, métadonnées, indexation), ce qui invaliderait les hashes et compromettrait la valeur probante en justice. Outils : Tableau (T35u), Wiebetech, ou software (Linux mode read-only avec hdparm).",
+    "expl_ko": "Pas de hockey, pas d'IA, pas d'interdiction du clavier. C'est une question de chaîne de preuve.",
+    "refs": [
+      "NIST SP 800-86",
+      "ENFSI Best Practice Manual"
+    ]
+  },
+  {
+    "theme": "Acquisition et analyse",
+    "theme_icon": "🔍",
+    "chapter": "Acquisition et préservation",
+    "diff": "medium",
+    "type": "single",
+    "q": "Lors d'une perquisition à Genève, vous trouvez un ordinateur ALLUMÉ avec un volume Bitlocker monté. Que faites-vous ?",
+    "opts": [
+      "Tout débrancher d'urgence selon la doctrine ABBA (Always Be By-the-book Adversarial)",
+      "Acquisition de la RAM en priorité (pour capturer la clé Bitlocker en mémoire) + acquisition du disque déchiffré via le système monté avant de couper l'alimentation",
+      "Demander un mandat à Berne par fax",
+      "Éteindre proprement via Démarrer > Arrêter, comme à la maison"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Sur un système chiffré (Bitlocker, FileVault2, LUKS) <strong>déjà monté/déverrouillé</strong>, la <strong>RAM contient les clés en clair</strong>. Doctrine forensique : <strong>(1) acquisition RAM immédiate</strong> (Belkasoft RAM Capturer, FTK Imager, Magnet RAM Capture) qui pourra extraire la clé Bitlocker via Volatility, <strong>(2) acquisition logique du disque déchiffré</strong> via le système monté (méthode F-Response ou imager classique), <strong>(3) photo des écrans visibles + état des connexions actives</strong>, <strong>(4) débranchement à froid en dernier recours seulement</strong> pour préserver l'AFU. Couper sans imager = clé perdue + disque inaccessible.",
+    "expl_ko": "Pas de doctrine 'ABBA' (c'est le groupe musical). Pas de fax (Berne ≠ années 80). Arrêt propre = perte des clés en RAM.",
+    "refs": [
+      "NIST SP 800-86",
+      "SANS FOR508 — Live Response"
+    ]
+  },
+  {
+    "theme": "Acquisition et analyse",
+    "theme_icon": "🔍",
+    "chapter": "Logiciels et outils forensiques",
+    "diff": "easy",
+    "type": "single",
+    "q": "À quoi sert FTK Imager ?",
+    "opts": [
+      "À imprimer des certificats numériques sur du papier filigrané",
+      "À acquérir des images forensiques (E01, dd, AD1) de supports physiques ou logiques + lecture/exploration sans modification",
+      "À fournir les meilleures pizzas du Tessin",
+      "À reformater les SSD avec écriture aléatoire 7 passes"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>FTK Imager</strong> (AccessData, gratuit) est un outil standard de l'industrie pour l'acquisition forensique : crée des images dans les formats <strong>E01 (EnCase), dd (raw), AD1 (AccessData logique)</strong>, calcule MD5/SHA-1/SHA-256 automatiquement, et permet l'exploration en lecture seule. Existe en version live (depuis clé USB sur machine allumée) et en version installable. Limite : ne fait pas l'analyse approfondie (utiliser Magnet AXIOM, X-Ways, ou EnCase pour ça).",
+    "expl_ko": "FTK n'imprime ni ne cuisine. Il ne reformate rien (par design : c'est un outil read-only).",
+    "refs": [
+      "AccessData FTK Imager"
+    ]
+  },
+  {
+    "theme": "Acquisition et analyse",
+    "theme_icon": "🔍",
+    "chapter": "Acquisition et préservation",
+    "diff": "hard",
+    "type": "single",
+    "q": "Le format E01 (EnCase Evidence File) présente quels avantages pour la préservation forensique ?",
+    "opts": [
+      "Compression + métadonnées (case info, examiner, hash) + segmentation possible + chiffrement optionnel + checksum CRC bloc-par-bloc",
+      "Compatibilité native avec les machines à café Nespresso de bureau",
+      "Format obligatoire selon l'art. 269 CPP suisse",
+      "Format propriétaire fermé, illisible sans EnCase Forensic"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Le format <strong>E01</strong> (Expert Witness Format) est un standard industriel pour les images forensiques : <strong>(1) compression</strong> intégrée (gain typique 30-50%), <strong>(2) métadonnées de cas</strong> embarquées (case number, examiner, evidence number, notes), <strong>(3) segmentation</strong> en fichiers de taille fixée pour la portabilité (.E01, .E02, ...), <strong>(4) chiffrement AES optionnel</strong>, <strong>(5) <em>CRC32 par bloc de 32 KB</em></strong> pour détecter une corruption, <strong>(6) hash global MD5/SHA-1</strong>. Lisible par tous les outils forensiques majeurs (FTK, AXIOM, X-Ways, Autopsy, libewf open-source).",
+    "expl_ko": "Pas Nespresso. Pas obligatoire CPP (l'art. 269 traite la surveillance des télécoms, pas le format de copie). Pas propriétaire fermé : libewf est open-source.",
+    "refs": [
+      "libewf documentation",
+      "EnCase Evidence File Format"
+    ]
+  },
+  {
+    "theme": "Acquisition et analyse",
+    "theme_icon": "🔍",
+    "chapter": "Logiciels et outils forensiques",
+    "diff": "medium",
+    "type": "single",
+    "q": "Autopsy, c'est :",
+    "opts": [
+      "Un service post-mortem rendu par l'Institut universitaire de médecine légale (CURML)",
+      "Une plateforme forensique open-source basée sur The Sleuth Kit (Brian Carrier), pour l'analyse de disques + emails + navigateurs + timeline",
+      "Un mode du quiz CAS-IN où on analyse les erreurs après un examen raté",
+      "Une application mobile pour identifier les champignons"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Autopsy</strong> est la plateforme forensique open-source de référence (gratuite), créée par Brian Carrier (auteur du livre 'File System Forensic Analysis'). Couches : The Sleuth Kit (TSK) en backend, Autopsy en frontend Java multiplateforme. Modules : timeline, email, registres Windows, web (Chrome/Firefox/Edge/Safari history), keyword search, hash sets, EXIF, vidéo carving, plugins communautaires. Utilisée par fedpol, MP cantonaux, et de nombreuses universités (HEIG-VD, EPFL).",
+    "expl_ko": "Le CURML existe vraiment (excellente institution !) mais ne fournit pas l'outil. Autopsy n'est pas un mode du quiz. Pas pour les champignons (essayer iNaturalist).",
+    "refs": [
+      "sleuthkit.org/autopsy",
+      "Brian Carrier — File System Forensic Analysis"
+    ]
+  },
+  {
+    "theme": "Acquisition et analyse",
+    "theme_icon": "🔍",
+    "chapter": "Artefacts temporels et MAC times",
+    "diff": "medium",
+    "type": "single",
+    "q": "Sur Windows NTFS, quelle est la différence entre les timestamps '$STANDARD_INFORMATION' (SI) et '$FILE_NAME' (FN) ?",
+    "opts": [
+      "Aucune, ce sont des copies",
+      "SI = timestamps modifiables par les API utilisateur classiques (donc altérables par un attaquant via SetFileTime); FN = timestamps modifiés UNIQUEMENT par le kernel lors du rename → sources cruciales pour détecter la timestomping",
+      "SI est en heure suisse (CET), FN en UTC",
+      "SI = système, FN = fédéral, comme l'organisation politique"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Sur NTFS, chaque fichier a 2 jeux de timestamps (M, A, C, B = créé) : <strong>$STANDARD_INFORMATION</strong> (modifiable via API utilisateur, donc <em>altérable par malware/attaquant via SetFileTime ou outils comme timestomp.exe</em>) et <strong>$FILE_NAME</strong> (modifié uniquement par le kernel lors d'opérations de rename/move). Comparaison forensique : si SI est antérieur à FN ou avec des sous-secondes anormales, c'est un fort indicateur de <strong>timestomping</strong> (technique APT classique). Outils : MFTECmd + analyse des résolutions sub-secondes.",
+    "expl_ko": "Pas la même chose. Pas de différence horaire (les deux en UTC). Pas de SI fédéral (pun intended).",
+    "refs": [
+      "Microsoft NTFS Reference",
+      "MITRE ATT&CK T1070.006 (Timestomp)"
+    ]
+  },
+  {
+    "theme": "Acquisition et analyse",
+    "theme_icon": "🔍",
+    "chapter": "Méthodologie et bonnes pratiques",
+    "diff": "easy",
+    "type": "single",
+    "q": "L'acronyme 'CoC' en forensique signifie :",
+    "opts": [
+      "Conseil cantonal",
+      "Chain of Custody (chaîne de possession), document tracant qui a manipulé la pièce à conviction, quand, où et pourquoi — pierre angulaire de la valeur probante",
+      "Conférence des Chefs cantonaux",
+      "Certificat de Cybersécurité"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "La <strong>Chain of Custody (CoC, chaîne de possession)</strong> documente la traçabilité d'une pièce à conviction depuis la saisie jusqu'à la destruction/restitution. Chaque transfert est consigné : date, heure, lieu, identité du remettant et du récepteur, motif. Une <em>rupture</em> de CoC peut entraîner l'irrecevabilité de la preuve en procédure pénale (art. 141 CPP en CH : preuves illicites). En CH, le standard ENFSI est suivi par les MP cantonaux et fedpol.",
+    "expl_ko": "Pas un conseil cantonal. Pas une conférence des chefs. Pas un certificat.",
+    "refs": [
+      "ENFSI Best Practice Manual",
+      "ISO/IEC 27037"
+    ]
+  },
+  {
+    "theme": "Acquisition et analyse",
+    "theme_icon": "🔍",
+    "chapter": "Logiciels et outils forensiques",
+    "diff": "hard",
+    "type": "multi",
+    "q": "Lesquelles parmi ces opérations sont des bonnes pratiques pendant l'imagerie d'un disque dur saisi ?",
+    "opts": [
+      "Calculer un hash (MD5 ou SHA-256) du disque source AVANT et APRÈS imagerie pour vérifier l'intégrité",
+      "Documenter le numéro de série du disque, la marque, la capacité, l'état physique sur photo",
+      "Travailler dans la salle de pause de la PJ pour rester proche de la machine à café",
+      "Utiliser un write blocker matériel (Tableau, Wiebetech) ou logiciel certifié",
+      "Boucler le formulaire de chaîne de preuve (CoC) avec timestamps et signatures",
+      "Installer Office365 sur le disque cible pour vérifier qu'il fonctionne"
+    ],
+    "answers": [
+      0,
+      1,
+      3,
+      4
+    ],
+    "expl_ok": "Bonnes pratiques : <strong>(1) hash AVANT/APRÈS</strong> imagerie (intégrité prouvée mathématiquement), <strong>(2) documentation matérielle</strong> (S/N, marque, état), <strong>(3) write blocker</strong> obligatoire, <strong>(4) CoC documentée</strong>. À éviter : la salle de pause (environnement non contrôlé, risque manipulations) et l'installation de logiciels (le disque cible doit être stérile et reformaté avant chaque cas, pas peuplé d'Office365).",
+    "expl_ko": "Salle de pause = environnement non contrôlé (impact CoC). Installer Office = altère le disque cible et compromet l'image.",
+    "refs": [
+      "NIST SP 800-86",
+      "ISO/IEC 27037"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Windows — Registre et artefacts",
+    "diff": "medium",
+    "type": "single",
+    "q": "Que contient la ruche 'NTUSER.DAT' du Registre Windows ?",
+    "opts": [
+      "Les paramètres et activités spécifiques à l'utilisateur (RecentDocs, UserAssist, TypedURLs, RunMRU, etc.)",
+      "Les coordonnées de tous les utilisateurs du domaine, indexées par numéro AVS",
+      "Une copie quotidienne envoyée à Redmond, Suisse",
+      "Les pilotes hardware globaux"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "<strong>NTUSER.DAT</strong> est la ruche Registre <strong>par utilisateur</strong> (un fichier dans <em>C:\\Users\\&lt;user&gt;\\</em>), chargée comme HKEY_CURRENT_USER au logon. Contenu forensiquement précieux : <strong>RecentDocs</strong> (fichiers récents par extension), <strong>UserAssist</strong> (programmes lancés depuis l'Explorateur, encodé ROT-13), <strong>TypedURLs</strong> (URLs tapées dans IE/Edge), <strong>RunMRU</strong> (commandes Win+R), <strong>ShellBags</strong> (dossiers visités). Outil de référence : RegRipper (Harlan Carvey) avec plugins.",
+    "expl_ko": "Pas de numéro AVS dans le Registre. Pas de Redmond Suisse. Les pilotes globaux sont dans SYSTEM hive.",
+    "refs": [
+      "Harlan Carvey — Windows Registry Forensics",
+      "RegRipper plugins"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Windows — Artefacts et exécution",
+    "diff": "medium",
+    "type": "single",
+    "q": "À quoi sert le 'Prefetch' sur Windows ?",
+    "opts": [
+      "Optimiser le démarrage des applications (et accessoirement, fournir aux forensiciens la trace des 1024 derniers exécutables lancés, avec dates et chemins)",
+      "Prélever automatiquement la TVA sur les téléchargements",
+      "Précharger les épisodes de la RTS en background",
+      "Préformater les disques durs avant Christmas"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "<strong>Prefetch</strong> (C:\\Windows\\Prefetch\\*.pf, depuis Windows XP) optimise le démarrage des programmes en pré-chargeant les DLL souvent utilisées. Effet de bord adoré des forensiciens : chaque .pf trace l'exécutable, les <strong>8 dernières exécutions</strong>, le <strong>nombre total d'exécutions</strong>, le <strong>chemin complet du binaire</strong> et les fichiers ouverts par lui. Limites : 1024 entrées max sur Win10/11. <strong>Désactivé par défaut sur SSD</strong> dans certains cas — vérifier la valeur Registry <em>EnablePrefetcher</em>. Outil : PECmd (Eric Zimmerman).",
+    "expl_ko": "Pas de TVA, pas de RTS, pas de Christmas dans le Prefetch.",
+    "refs": [
+      "PECmd — github.com/EricZimmerman",
+      "SANS FOR500 — Windows Forensics"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Linux — Artefacts et analyse",
+    "diff": "easy",
+    "type": "single",
+    "q": "Sur Linux, où sont stockés les hashs des mots de passe utilisateurs ?",
+    "opts": [
+      "/etc/passwd, en clair depuis 1999",
+      "/etc/shadow, lisible uniquement par root (hashs sel + algo, format $algo$salt$hash)",
+      "/var/log/everything.log",
+      "Dans une base centralisée à Lausanne via NSS"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>/etc/shadow</strong> stocke les hashs salés des mots de passe sur Linux moderne (depuis ~1990s, séparation de /etc/passwd qui ne contient plus que le compte). Format : <em>username:$algo$salt$hash:lastchange:min:max:warn:inactive:expire</em>. Algos modernes : <strong>$6$ = SHA-512crypt</strong> (default Ubuntu/Debian/RHEL), <strong>$y$ = yescrypt</strong> (récent), <strong>$argon2id$</strong> (Argon2id, recommandé). Permissions strictes (0640 root:shadow) : seul root + le groupe shadow peuvent le lire.",
+    "expl_ko": "/etc/passwd est en clair mais ne contient PLUS les hashs. Pas de log 'everything'. Pas de base centralisée à Lausanne (NSS = Name Service Switch, autre concept).",
+    "refs": [
+      "man shadow(5)",
+      "Linux PAM documentation"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "macOS — Artefacts et analyse",
+    "diff": "medium",
+    "type": "single",
+    "q": "Sur macOS, à quoi sert TCC.db ?",
+    "opts": [
+      "Stocker les achats sur le Mac App Store",
+      "Persister les autorisations de confidentialité (Privacy) accordées par l'utilisateur aux applications : caméra, micro, contacts, calendrier, screen recording, etc. — artefact forensique précieux pour spyware",
+      "Centraliser les certificats SSL des CFF",
+      "TCC = Tessin Certified Configuration"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>TCC.db</strong> (<em>~/Library/Application Support/com.apple.TCC/TCC.db</em> + version système dans /Library) est la base SQLite de <strong>Transparency, Consent and Control</strong>, qui mémorise les autorisations Privacy macOS : caméra, micro, contacts, calendrier, photos, screen recording, accessibilité, automation. Forensiquement crucial pour : <strong>(1)</strong> identifier des applis qui ont demandé/obtenu des permissions sensibles (caméra/micro) — anomalie possible révélant un spyware comme Pegasus, <strong>(2)</strong> reconstituer la timeline des consentements utilisateur. Lecture via DB Browser SQLite ou outils dédiés.",
+    "expl_ko": "TCC n'a pas trait au Tessin (sympathique idée d'acronyme cantonal). Pas un App Store ni des CFF.",
+    "refs": [
+      "Apple TCC documentation",
+      "Citizen Lab — macOS spyware analysis"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Windows — Journaux et Event Logs",
+    "diff": "hard",
+    "type": "single",
+    "q": "L'Event ID 4624 dans le journal Security signifie :",
+    "opts": [
+      "An account was successfully logged on (logon réussi) — l'événement le plus fréquemment analysé en réponse à incident pour tracer le mouvement latéral",
+      "Le système a redémarré pour mise à jour Patch Tuesday",
+      "L'utilisateur a éternué devant le micro (détection acoustique 4624)",
+      "Le système d'exploitation passe en mode jet privé"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "L'<strong>Event ID 4624</strong> (Windows Security log) = <em>An account was successfully logged on</em>. Crucial en DFIR ransomware/intrusion : croisé avec le <strong>Logon Type</strong> (2 = interactif local, 3 = network/SMB, 10 = RemoteInteractive/RDP, 8 = NetworkCleartext, etc.) il permet de tracer le mouvement latéral de l'attaquant entre machines. À corréler avec 4625 (logon failed), 4634 (logoff), 4672 (privileges spéciaux assignés), 4688 (process create avec command line).",
+    "expl_ko": "Patch Tuesday c'est un autre journal (Windows Update). Les autres options sont volontairement absurdes.",
+    "refs": [
+      "Microsoft Windows Security Audit Events",
+      "SANS FOR508"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Linux — Artefacts et analyse",
+    "diff": "medium",
+    "type": "single",
+    "q": "Sur Linux, qu'est-ce que /proc ?",
+    "opts": [
+      "Un dossier de processus-verbaux administratifs",
+      "Un système de fichiers virtuel (procfs) qui expose en temps réel des informations sur les processus en cours et le kernel — chaque PID a son propre dossier /proc/<pid>/",
+      "Le dossier où le kernel écrit ses logs depuis 1991",
+      "Un dossier de procuration légale pour les clés SSH"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>/proc</strong> est un système de fichiers virtuel (<em>procfs</em>) où le kernel Linux expose en temps réel : (1) <strong>/proc/&lt;pid&gt;/</strong> par processus actif (cmdline = ligne de commande, exe = lien vers binaire, environ = variables d'environnement, fd/ = file descriptors ouverts, maps = mémoire mappée, status = état), (2) <strong>/proc/cpuinfo, /proc/meminfo, /proc/version</strong> = info système, (3) <strong>/proc/net/tcp, /proc/net/udp</strong> = connexions actives. Crucial en analyse mémoire live : <em>cat /proc/&lt;pid&gt;/cmdline</em> révèle ce que fait un processus, même si le binaire a été supprimé.",
+    "expl_ko": "Pas un dossier administratif suisse. Pas exclusivement les logs (c'est /var/log). Pas une procuration SSH.",
+    "refs": [
+      "man proc",
+      "Linux Kernel Documentation"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "macOS — Artefacts et analyse",
+    "diff": "hard",
+    "type": "single",
+    "q": "Sur macOS, à quoi sert le 'unified log' (introduit avec macOS Sierra en 2016) ?",
+    "opts": [
+      "Centraliser les logs système, applicatifs et noyau dans un format binaire structuré accessible via 'log show' (remplace l'ancien syslog/asl) — forensiquement riche mais nécessite l'outil log",
+      "Unifier les logs des cantons romands",
+      "Synchroniser tous les Mac via iCloud à Lausanne",
+      "Empêcher les logs d'aller dans /var/log par tradition Unix"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Le <strong>Unified Log</strong> (macOS Sierra 10.12+) remplace l'ancien <em>syslog</em> et <em>ASL (Apple System Logger)</em> par une infrastructure unifiée binaire. Stocké dans <em>/var/db/diagnostics/</em> et <em>/var/db/uuidtext/</em>. Accès : commande <strong>log show</strong> (avec filtres prédicats) ou outils forensiques (UnifiedLogReader / mac_apt). Volume énorme (10-100 GB par mois) mais immensément riche : tous les events kernel, processus, network, sécurité, IPC. <strong>Challenge forensique</strong> : le format binaire impose l'outil <em>log</em> ou des parsers tiers (UnifiedLogReader Open-source). En 2026, standard incontournable des invest macOS.",
+    "expl_ko": "Pas de centralisation cantonale. Pas via iCloud Lausanne. Pas une opposition à Unix (au contraire, c'est une évolution).",
+    "refs": [
+      "Apple Unified Logging documentation",
+      "UnifiedLogReader github"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "💻",
+    "chapter": "Réseau, protocoles et Internet",
+    "diff": "easy",
+    "type": "single",
+    "q": "À quoi sert le port 443 ?",
+    "opts": [
+      "Au standard HTTPS (HTTP sur TLS) — le 443 est aussi le numéro automobile du canton du Jura, mais c'est une coïncidence",
+      "À l'horloge atomique de Berne",
+      "Au démarrage de Windows en mode sans échec",
+      "Aux chats SMS multipartites"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Le port <strong>TCP 443</strong> est le port standard pour <strong>HTTPS</strong> (HTTP over TLS), assigné par l'IANA. C'est le port le plus utilisé d'Internet aujourd'hui (la majorité du trafic web). Numéro de plaque automobile JU = 443 (Jura) : pure coïncidence amusante (les plaques cantonales suivent une logique IANA-indépendante 😉). Autres ports utiles à connaître : 80 (HTTP), 22 (SSH), 25 (SMTP), 53 (DNS), 3389 (RDP), 445 (SMB).",
+    "expl_ko": "Pas l'horloge atomique. Pas Windows safe mode. Pas SMS.",
+    "refs": [
+      "IANA Service Name and Transport Protocol Port Number Registry"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "💻",
+    "chapter": "Réseau, protocoles et Internet",
+    "diff": "medium",
+    "type": "single",
+    "q": "Une adresse IPv4 publique en Suisse 'commence' typiquement par quel range ?",
+    "opts": [
+      "Toutes les IP suisses commencent par 41.* (ISO Helvetia)",
+      "Il n'y a pas de 'préfixe Suisse' : RIPE NCC (Amsterdam) attribue des blocs aux ISP CH (Swisscom, Sunrise, Init7, etc.) sans logique géographique unifiée — la géolocalisation IP est probabiliste (MaxMind, IPinfo)",
+      "Toutes commencent par 192.168.* car c'est neutre",
+      "Par 1.0.0.0 car la Suisse est première en cybersécurité"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Il n'y a <strong>pas de préfixe IPv4 'Suisse'</strong> unifié. Le RIPE NCC (Amsterdam) gère l'allocation pour l'Europe et attribue des blocs (/8, /16, /24) aux LIR (Local Internet Registry) qui sont les ISP : Swisscom, Sunrise, Salt, Init7, etc. Chacun a SES blocs, dispersés. La <strong>géolocalisation IP</strong> en OSINT/forensique est <em>probabiliste</em> via les bases MaxMind GeoIP, IPinfo, ou dbip.com — précision pays ~99%, ville ~70%. Donc 'IP suisse' n'a pas de préfixe distinctif. Cf. art. 32 Convention Budapest pour les implications transfrontalières.",
+    "expl_ko": "Pas de préfixe Helvetia. 192.168.* est privé (RFC 1918). 1.0.0.0 est APNIC (Asie-Pacifique).",
+    "refs": [
+      "RIPE NCC documentation",
+      "IANA IPv4 allocation"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "💻",
+    "chapter": "Adressage IP",
+    "diff": "easy",
+    "type": "single",
+    "q": "Que désigne le bloc d'adresses 169.254.0.0/16 ?",
+    "opts": [
+      "Le réseau interne du Palais fédéral",
+      "APIPA (Automatic Private IP Addressing) — attribué par l'OS quand le DHCP a échoué (typiquement quand votre Wi-Fi 'fonctionne mais pas Internet')",
+      "Le réseau des écoles polytechniques fédérales",
+      "Une plage réservée pour les serveurs Minecraft cantonaux"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>169.254.0.0/16 = APIPA</strong> (Automatic Private IP Addressing, RFC 3927). Quand un OS (Windows, macOS, Linux) ne reçoit pas de réponse DHCP, il s'auto-attribue une IP dans cette plage. Symptôme classique : <em>'Wi-Fi connecté, pas d'accès Internet'</em>. Diagnostic : <em>ipconfig</em> qui montre une IP en 169.254.x.y → DHCP cassé (routeur, câble, point d'accès). N'est pas routable sur Internet (link-local seulement).",
+    "expl_ko": "Pas le Palais fédéral, pas les EPF, pas Minecraft.",
+    "refs": [
+      "RFC 3927 (Dynamic Configuration of IPv4 Link-Local Addresses)"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "💻",
+    "chapter": "Représentation des données",
+    "diff": "easy",
+    "type": "single",
+    "q": "Combien de bits dans un octet ?",
+    "opts": [
+      "7, comme les Conseillers fédéraux",
+      "8 (toujours 8 depuis la standardisation IEEE)",
+      "Variable selon l'architecture, 16 sur ARM moderne",
+      "26, comme les cantons et demi-cantons"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Un <strong>octet (byte)</strong> contient <strong>8 bits</strong>, point. Standardisation IEEE/ISO. Permet de coder 2⁸ = 256 valeurs (0-255 unsigned ou -128 à +127 signed). Historiquement, certaines machines exotiques utilisaient 6, 7 ou 9 bits (PDP, mainframes), d'où le terme 'octet' (de 'huit') pour lever l'ambiguïté avec 'byte'. Sur tous les ordinateurs modernes : 1 byte = 1 octet = 8 bits.",
+    "expl_ko": "Pas 7 (Conseillers fédéraux). Pas variable. Pas 26 (cantons + demi-cantons).",
+    "refs": [
+      "IEEE Std 1541-2002"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "💻",
+    "chapter": "Formats de fichiers et Magic Bytes",
+    "diff": "medium",
+    "type": "single",
+    "q": "Les 'magic bytes' (ou file signature) servent à :",
+    "opts": [
+      "Identifier le format réel d'un fichier indépendamment de son extension (ex: PDF = '%PDF', PNG = '\\x89PNG', ZIP = 'PK\\x03\\x04')",
+      "Empêcher Steve Jobs de revenir hanter les disques durs",
+      "Marquer la propriété fédérale d'un fichier",
+      "Donner aux fichiers un avantage en combat magique"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Les <strong>magic bytes</strong> (signature ou magic number) sont les premiers octets d'un fichier qui identifient son <strong>format réel</strong>, indépendamment de l'extension (qui peut mentir). Exemples : <strong>%PDF</strong> (PDF), <strong>\\x89PNG</strong> (PNG), <strong>PK\\x03\\x04</strong> (ZIP, mais aussi DOCX/XLSX qui sont des ZIP), <strong>\\x7FELF</strong> (binaire Linux), <strong>MZ</strong> (binaire Windows PE). Forensiquement crucial : un attaquant peut renommer <em>malware.exe</em> en <em>photo.jpg</em>, mais les magic bytes le trahissent. Outils : <em>file</em> (Linux), TrID, Magic Number Database. Base du file carving (PhotoRec).",
+    "expl_ko": "Pas Steve Jobs, pas de propriété fédérale (les fichiers n'ont pas de canton de domicile), pas de magie de combat.",
+    "refs": [
+      "File signatures — gck.gck.com",
+      "TrID file identifier"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "💻",
+    "chapter": "Réseau, protocoles et Internet",
+    "diff": "medium",
+    "type": "single",
+    "q": "Que se passe-t-il quand vous tapez 'rts.ch' dans votre navigateur ?",
+    "opts": [
+      "Un mineur de bitcoin se met immédiatement à miner sur votre machine",
+      "Résolution DNS (rts.ch → IP via résolveur récursif → cache navigateur/OS, puis racine, TLD .ch (SWITCH), puis serveur autoritaire de rts.ch) → connexion TCP port 443 → handshake TLS → requête HTTPS GET /",
+      "Le routeur appelle directement Lausanne",
+      "L'ordinateur attend un signal radio depuis le Cervin"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "La séquence : <strong>(1) Résolution DNS</strong> : navigateur cherche rts.ch dans son cache, puis OS (Hosts file, cache OS), puis interroge le résolveur configuré (Swisscom DNS, ou public 1.1.1.1, 8.8.8.8). Le résolveur fait la chaîne : root servers → TLD .ch (géré par <strong>SWITCH</strong>, Zurich) → autoritaire de rts.ch. <strong>(2) Handshake TCP</strong> sur port 443 (SYN/SYN-ACK/ACK). <strong>(3) Handshake TLS 1.3</strong> avec certificat X.509. <strong>(4) Requête HTTPS GET /</strong>. Le tout en ~100-300ms typiquement.",
+    "expl_ko": "Pas de mineur bitcoin. Le routeur n'appelle pas Lausanne (les CFF ne gèrent pas le DNS). Pas de signal Cervin (il y en a, mais pour le téléphérique de Zermatt, pas Internet).",
+    "refs": [
+      "RFC 1034 (DNS)",
+      "RFC 8446 (TLS 1.3)",
+      "SWITCH — switch.ch"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "💻",
+    "chapter": "Représentation des données",
+    "diff": "medium",
+    "type": "single",
+    "q": "L'encodage UTF-8 utilise combien d'octets pour représenter le caractère 'ä' (a tréma) ?",
+    "opts": [
+      "1 octet, comme tous les caractères ASCII",
+      "2 octets (séquence \\xc3\\xa4)",
+      "4 octets, par solidarité avec les emojis",
+      "Variable selon le canton de saisie (BS = 3, ZH = 2)"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>UTF-8</strong> est un encodage à <em>longueur variable</em> : <strong>1 octet</strong> pour ASCII (0x00-0x7F, donc <em>a</em>, <em>1</em>, <em>?</em>), <strong>2 octets</strong> pour le bloc Latin étendu (latin accentués <em>é</em>, <em>ä</em>, <em>ö</em>, <em>ü</em>, <em>ñ</em>...), <strong>3 octets</strong> pour la plupart des autres langues vivantes (CJK, arabe, cyrillique...), <strong>4 octets</strong> pour les emojis 🎉 et caractères du plan supplémentaire. <em>ä</em> = U+00E4 = encodé <em>\\xc3\\xa4</em> en UTF-8 (2 octets). C'est pourquoi un fichier 'Müller.txt' encodé en UTF-8 mais ouvert en Windows-1252 affiche 'MÃ¼ller'.",
+    "expl_ko": "Pas 1 octet (caractère non-ASCII). Pas 4 (réservé emojis et plan supplémentaire). Pas cantonal (heureusement).",
+    "refs": [
+      "RFC 3629 (UTF-8)",
+      "Unicode Standard"
+    ]
+  },
+  {
+    "theme": "Informatique de base",
+    "theme_icon": "💻",
+    "chapter": "Réseau, protocoles et Internet",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle est la différence fondamentale entre TCP et UDP ?",
+    "opts": [
+      "TCP = Très Confidentiel, UDP = Ultra Discret",
+      "TCP est 'fiable' (handshake, accusé de réception, retransmission, ordre garanti) ; UDP est 'connectionless' (envoie sans garantie, plus rapide, utilisé pour DNS, VoIP, gaming)",
+      "TCP est suisse, UDP est américain",
+      "Aucune différence en 2026"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>TCP (Transmission Control Protocol, RFC 793)</strong> : connexion établie via 3-way handshake (SYN/SYN-ACK/ACK), accusé de réception (ACK), retransmission en cas de perte, livraison ordonnée → 'fiable' mais avec overhead. Usage : HTTP, HTTPS, SMTP, SSH, FTP. <strong>UDP (User Datagram Protocol, RFC 768)</strong> : envoie des datagrammes sans connexion, sans garantie de livraison ni d'ordre → rapide et léger. Usage : DNS, NTP, VoIP, jeux en ligne, vidéo streaming live. <strong>QUIC</strong> (HTTP/3) est UDP avec fiabilité réimplémentée au-dessus.",
+    "expl_ko": "Pas une question de confidentialité ni de nationalité. Différence active et fondamentale en 2026.",
+    "refs": [
+      "RFC 793 (TCP)",
+      "RFC 768 (UDP)",
+      "RFC 9000 (QUIC)"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "theme_icon": "🔐",
+    "chapter": "Hachage et intégrité",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle est la principale propriété d'une fonction de hachage cryptographique ?",
+    "opts": [
+      "Réversibilité : on peut retrouver l'entrée à partir du hash",
+      "Résistance aux préimages, secondes préimages, et collisions — le hash doit être computationnellement infaisable à inverser",
+      "Compatibilité avec Excel",
+      "Production d'un hash différent à chaque exécution sur la même entrée"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Une fonction de hachage cryptographique doit garantir : <strong>(1) résistance à la préimage</strong> (étant donné h, il est infaisable de trouver m tel que H(m)=h), <strong>(2) résistance à la seconde préimage</strong> (étant donné m₁, infaisable de trouver m₂ ≠ m₁ avec H(m₁)=H(m₂)), <strong>(3) résistance aux collisions</strong> (infaisable de trouver m₁ ≠ m₂ avec H(m₁)=H(m₂)). Bonus : <strong>déterministe</strong> (même entrée → même hash). MD5 et SHA-1 sont cassés sur (3). SHA-256, SHA-3, BLAKE3 restent sûrs en 2026.",
+    "expl_ko": "Pas réversible (sinon ce serait un chiffrement). Pas Excel-spécifique. Déterministe = même entrée = même hash, pas l'inverse.",
+    "refs": [
+      "NIST FIPS 180-4 (SHA-2)",
+      "NIST FIPS 202 (SHA-3)"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "theme_icon": "🔐",
+    "chapter": "Chiffrement symétrique",
+    "diff": "medium",
+    "type": "single",
+    "q": "AES-256 est considéré comme :",
+    "opts": [
+      "Cassé depuis 2018",
+      "L'un des standards de chiffrement symétrique les plus sûrs et performants à ce jour ; clé de 256 bits, 14 rondes ; recommandé par le NSA pour TOP SECRET, par le NIST FIPS 197, et par tous les organismes",
+      "Pas adapté aux SMS",
+      "Réservé aux institutions américaines"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>AES-256</strong> (Advanced Encryption Standard, FIPS 197, 2001) reste un des chiffrements symétriques les plus sûrs et utilisés au monde en 2026. <strong>Clé 256 bits</strong>, blocs de 128 bits, 14 rondes. Pas d'attaque pratique connue mieux que la force brute (qui demanderait 2²⁵⁶ opérations, infaisable même avec un quantique réaliste). Recommandé par <strong>NSA CNSA 2.0</strong> pour TOP SECRET, par BSI (DE), ANSSI (FR), CISA (US). Modes corrects : <strong>GCM</strong> (avec authentification) ou <strong>CTR + HMAC</strong>. À éviter : ECB (révèle des patterns) et CBC sans MAC (oracle padding).",
+    "expl_ko": "Pas cassé. Pas inadapté SMS (Signal l'utilise). Pas réservé aux US.",
+    "refs": [
+      "NIST FIPS 197",
+      "NSA CNSA 2.0"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "theme_icon": "🔐",
+    "chapter": "Chiffrement asymétrique et RSA",
+    "diff": "medium",
+    "type": "single",
+    "q": "RSA repose sur la difficulté de :",
+    "opts": [
+      "Compter en romain au-delà de M (1000)",
+      "Factoriser de grands nombres entiers (produit de 2 nombres premiers très grands)",
+      "Composer une fondue moitié-moitié sans grumeau",
+      "Trier alphabétiquement les noms de famille suisses"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>RSA</strong> (Rivest, Shamir, Adleman, 1977) repose sur la difficulté du problème de la <strong>factorisation entière</strong> : étant donné n = p × q (avec p et q premiers très grands, ~1024-2048 bits chacun), il est computationnellement infaisable de retrouver p et q. La clé publique = (n, e), la clé privée = (n, d). Sécurité actuelle : RSA-2048 sûr, RSA-3072 recommandé pour 2030+, RSA-4096 pour 2040+. <strong>Menace quantique</strong> (algorithme de Shor) → migration post-quantique (FIPS 203/204/205, août 2024).",
+    "expl_ko": "Pas en romain (mais bien tenté). Pas la fondue (qui est un autre problème non-trivial). Pas le tri.",
+    "refs": [
+      "Rivest, Shamir, Adleman 1977",
+      "NIST FIPS 186-5"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "theme_icon": "🔐",
+    "chapter": "PKI et certificats",
+    "diff": "medium",
+    "type": "single",
+    "q": "Que désigne 'X.509' ?",
+    "opts": [
+      "Une nouvelle Tesla suisse",
+      "Le standard ITU-T qui définit le format des certificats numériques utilisés dans les PKI (TLS/HTTPS, S/MIME, signatures de code, etc.)",
+      "Une zone postale fictive",
+      "Un format de signal radio"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>X.509</strong> est le standard ITU-T (1988, dernière révision majeure 2016) qui définit la structure des certificats numériques utilisés partout : <strong>HTTPS</strong> (certificats de serveur web), <strong>S/MIME</strong> (signatures email), <strong>code signing</strong> (binaires Microsoft/Apple), <strong>VPN</strong> (IKE), <strong>e-IDV</strong> (passeports biométriques). Format ASN.1 / DER (binaire) ou PEM (base64). Champs principaux : Subject, Issuer, Validity, Subject Public Key Info, Extensions (Subject Alternative Names, Key Usage, etc.). Hiérarchique : root CA → intermediate CA → end-entity.",
+    "expl_ko": "Pas Tesla. Pas une zone postale. Pas un signal radio.",
+    "refs": [
+      "ITU-T X.509",
+      "RFC 5280"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "theme_icon": "🔐",
+    "chapter": "Cassage et attaques",
+    "diff": "hard",
+    "type": "single",
+    "q": "Une attaque 'rainbow table' contre des hashs de mots de passe est efficace contre :",
+    "opts": [
+      "Les hashs salés correctement (avec sel unique par utilisateur, salt ≥ 64 bits aléatoire)",
+      "Les hashs NON salés ou avec sel faible/répété (typiquement les vieilles bases qui utilisent MD5/SHA-1 brut sans sel)",
+      "Tous les hashs, c'est inarrêtable",
+      "Les hashs avec accents suisses-allemands"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Une <strong>rainbow table</strong> est une optimisation espace/temps qui pré-calcule des chaînes de hash pour permettre la recherche inverse rapide. Efficace UNIQUEMENT contre des hashs <strong>non salés</strong> ou avec <strong>sel répété</strong>, car la table est calculable une fois et réutilisable. Mitigation : <strong>sel aléatoire unique par utilisateur</strong> (≥64 bits) rend chaque hash unique → la rainbow table devrait être recalculée par utilisateur (infaisable). Les algos modernes (bcrypt, scrypt, argon2) intègrent le sel + sont coûteux en CPU/RAM (slow hash).",
+    "expl_ko": "Pas efficace contre les hashs bien salés. Pas inarrêtable (le sel suffit). Pas lié au suisse-allemand.",
+    "refs": [
+      "OWASP Password Storage Cheat Sheet",
+      "Argon2 spec"
+    ]
+  },
+  {
+    "theme": "Cryptologie",
+    "theme_icon": "🔐",
+    "chapter": "PKI et certificats",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel est le rôle d'une Autorité de Certification (CA) ?",
+    "opts": [
+      "Vérifier les notes des étudiants",
+      "Vérifier l'identité d'un demandeur (personne, entreprise, serveur web) puis émettre un certificat X.509 signé numériquement, qui établit la chaîne de confiance",
+      "Délivrer les permis de conduire suisses",
+      "Frapper des médailles cryptographiques"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Une <strong>CA (Certificate Authority)</strong> est l'élément de confiance d'une PKI. Rôle : <strong>(1) vérifier l'identité</strong> du demandeur (Domain Validation = DV, Organization V = OV, Extended V = EV), <strong>(2) émettre un certificat X.509 signé</strong> avec la clé privée de la CA, <strong>(3) maintenir une CRL (Certificate Revocation List) ou un OCSP responder</strong> pour révoquer les certificats compromis. Confiance hiérarchique : Root CA (autorité racine, dans les trust stores des navigateurs/OS) → Intermediate CA → End-entity certificates. CA réputées : Let's Encrypt (gratuit), DigiCert, Sectigo, GlobalSign. La SwissSign Group (Berne) est la principale CA suisse.",
+    "expl_ko": "Pas les notes (université). Pas les permis (cantons via OCN). Pas des médailles.",
+    "refs": [
+      "RFC 5280",
+      "CA/Browser Forum Baseline Requirements"
+    ]
+  },
+  {
+    "theme": "Droit",
+    "theme_icon": "⚖️",
+    "chapter": "Procédure pénale",
+    "diff": "easy",
+    "type": "single",
+    "q": "En procédure pénale suisse, qui dirige l'instruction d'une enquête pénale ?",
+    "opts": [
+      "Le Conseiller fédéral en charge de la Justice",
+      "Le Ministère public (procureur cantonal ou fédéral) — depuis l'unification du CPP en 2011, c'est le procureur qui mène l'enquête, et non plus le juge d'instruction (sauf JU/VS et ZH avec spécificités résiduelles)",
+      "Le Maire de la commune où l'infraction a été commise",
+      "Un jury populaire tiré au sort"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Depuis l'<strong>entrée en vigueur du CPP unifié le 1er janvier 2011</strong>, la Suisse a adopté un modèle '<strong>ministère public</strong>' (modèle latin) où le <strong>procureur (cantonal ou MPC)</strong> dirige l'instruction. Le juge d'instruction historique (modèle 'instructeur') a été supprimé dans la majorité des cantons. Le procureur peut ouvrir l'enquête, ordonner perquisitions/séquestres (sous validation TMC pour certains actes), et clôt par non-lieu, ordonnance pénale, ou mise en accusation. Référence : art. 12-16 CPP.",
+    "expl_ko": "Pas le CF (qui ne fait pas d'instruction). Pas le Maire (compétences municipales différentes). Pas un jury (système de juges professionnels en CH).",
+    "refs": [
+      "CPP art. 12-16",
+      "Message CPP 2005"
+    ]
+  },
+  {
+    "theme": "Droit",
+    "theme_icon": "⚖️",
+    "chapter": "Procédure pénale",
+    "diff": "medium",
+    "type": "single",
+    "q": "L'art. 269 CPP (Surveillance de la correspondance par poste et télécommunication) impose quelles conditions pour autoriser une écoute ?",
+    "opts": [
+      "Suspicion grave + infraction visée listée à l'art. 269 al. 2 CPP + subsidiarité (autres mesures inefficaces) + autorisation du TMC dans les 24h, prolongation par le tribunal supérieur cantonal",
+      "Une simple décision interne du procureur après un café avec son collègue",
+      "Un mandat administratif de l'OFCS",
+      "Un référendum populaire"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "L'<strong>art. 269 CPP</strong> est très strict : <strong>(1)</strong> soupçons graves d'une infraction visée par la liste exhaustive de l'al. 2 (meurtre, brigandage, blanchiment, trafic stupéfiants, cybercriminalité grave, etc.), <strong>(2)</strong> principe de <strong>subsidiarité</strong> (les autres mesures d'enquête sont inefficaces ou disproportionnées), <strong>(3)</strong> proportionnalité (durée et champ limités), <strong>(4)</strong> ordre du procureur, <strong>(5)</strong> <strong>autorisation du TMC dans les 24h</strong>, <strong>(6) durée max 3 mois renouvelable</strong> par décision du tribunal des mesures de contrainte. Sans autorisation : preuve absolument inexploitable (art. 141 al. 1 CPP).",
+    "expl_ko": "Pas une décision informelle. L'OFCS n'a pas de pouvoir judiciaire. Pas de référendum (heureusement).",
+    "refs": [
+      "CPP art. 269",
+      "CPP art. 272 (TMC)",
+      "CPP art. 141"
+    ]
+  },
+  {
+    "theme": "Droit",
+    "theme_icon": "⚖️",
+    "chapter": "Droit pénal informatique",
+    "diff": "medium",
+    "type": "single",
+    "q": "L'art. 144bis CP punit :",
+    "opts": [
+      "L'envoi d'emails en CC à toute la commune",
+      "La détérioration de données : modification, effacement ou rendu inutilisable de données enregistrées ou transmises électroniquement, sans droit",
+      "Les fautes d'orthographe sur LinkedIn",
+      "La pose de stickers d'autocollants sur les distributeurs de billets"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "L'<strong>art. 144bis CP (Détérioration de données)</strong> punit quiconque, sans droit, modifie, efface ou rend inutilisable des données enregistrées ou transmises électroniquement. Peine MAX 3 ans + amende, aggravée à 5 ans si dommage important ou cas grave. Couvre : <strong>ransomware</strong> (chiffrement = rendre inutilisable), <strong>defacement de sites web</strong>, <strong>wipers</strong>, <strong>logic bombs</strong>, modification frauduleuse de bases. Distinct de l'art. 143 CP (extraction de données = vol) et 143bis CP (accès indu = intrusion).",
+    "expl_ko": "Pas un délit, ce sont des fautes (mais désagréables). Pas un délit. Pas dans le CP fédéral.",
+    "refs": [
+      "CP art. 144bis"
+    ]
+  },
+  {
+    "theme": "Droit",
+    "theme_icon": "⚖️",
+    "chapter": "Séquestre informatique",
+    "diff": "easy",
+    "type": "single",
+    "q": "Lors d'une perquisition pour cybercriminalité en Suisse, le séquestre du matériel informatique est régi par :",
+    "opts": [
+      "L'art. 263 CPP (Conditions générales du séquestre) + art. 246 CPP (Documents)",
+      "L'art. 1er du Pacte fédéral de 1291",
+      "La Loi sur les chiens",
+      "Une coutume locale spécifique à chaque commune"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Le <strong>séquestre informatique</strong> en CH est régi par : <strong>art. 263 CPP</strong> (conditions générales : objets pouvant servir de moyens de preuve, susceptibles de confiscation, restitution à l'ayant droit), <strong>art. 246 CPP</strong> (perquisition de documents et enregistrements électroniques), <strong>art. 248 CPP</strong> (mise sous scellés possible si secret protégé, par ex. avocat-client). Doctrine : préserver l'intégrité (chaîne de preuve), procéder à un tri minutieux des données (proportionnalité), respecter les secrets protégés (avocat, médecin, journaliste).",
+    "expl_ko": "Pas le Pacte de 1291 (vénérable mais hors sujet pour le numérique). Pas la Loi sur les chiens (LChiens, autre matière). Pas une coutume locale.",
+    "refs": [
+      "CPP art. 263, 246, 248",
+      "Manuel de procédure pénale Pra. Suisse"
+    ]
+  },
+  {
+    "theme": "Droit",
+    "theme_icon": "⚖️",
+    "chapter": "Entraide judiciaire internationale",
+    "diff": "medium",
+    "type": "single",
+    "q": "Quel est le rôle de l'OFJ (Office fédéral de la justice) dans l'entraide pénale internationale ?",
+    "opts": [
+      "Distribuer les chocolats aux États étrangers",
+      "Autorité centrale CH qui reçoit/transmet les commissions rogatoires + filtre l'opportunité politique + supervise les délais (EIMP)",
+      "Autorité judiciaire qui condamne directement les criminels étrangers",
+      "Un tribunal de première instance"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "L'<strong>OFJ (Office fédéral de la justice)</strong>, rattaché au DFJP (Berne), est l'<strong>autorité centrale CH</strong> en matière d'entraide pénale internationale (EIMP, RS 351.1) : <strong>(1)</strong> reçoit les commissions rogatoires entrantes des États étrangers + les transmet aux MP cantonaux compétents, <strong>(2)</strong> reçoit les demandes sortantes des MP CH + les transmet à l'État requis, <strong>(3)</strong> filtre les <em>questions de principe</em> politiques (recevabilité, ordre public CH), <strong>(4)</strong> peut refuser/conditionner l'entraide. La majorité des actes d'instruction reste exécutée par les MP cantonaux ou MPC.",
+    "expl_ko": "Pas chocolats (tentation suisse). L'OFJ n'a pas de compétence judicieuse directe sur le fond. Pas un tribunal.",
+    "refs": [
+      "EIMP (RS 351.1)",
+      "OFJ — bj.admin.ch"
+    ]
+  },
+  {
+    "theme": "Droit",
+    "theme_icon": "⚖️",
+    "chapter": "Procédure pénale",
+    "diff": "hard",
+    "type": "single",
+    "q": "L'art. 141 CPP régit l'exploitation des moyens de preuve obtenus illicitement. Quelle est la conséquence d'une violation grave (interdiction absolue) ?",
+    "opts": [
+      "Une amende administrative",
+      "L'exploitation est ABSOLUMENT interdite (art. 141 al. 1 CPP) — la preuve doit être détruite, ne peut servir ni en première instance ni en recours, et les preuves dérivées sont également inexploitables (théorie du fruit de l'arbre empoisonné)",
+      "L'exploitation est autorisée à 50%",
+      "Le juge décide en chambre du conseil"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Art. 141 al. 1 CPP</strong> : si la preuve est obtenue par <em>contrainte, violence, menace, promesse, tromperie</em> ou en violation des règles de validité (par ex. perquisition sans mandat), elle est <strong>absolument inexploitable</strong>. Doit être <strong>détruite</strong>. <strong>Art. 141 al. 4 CPP</strong> : les preuves dérivées (<em>fruit of the poisonous tree</em>) sont aussi inexploitables, sauf si elles auraient pu être obtenues légalement par ailleurs. Pour les violations 'simples' (al. 2), pondération in casu : exploitation possible si nécessaire pour élucider une infraction grave. Doctrine cruciale en cyber : un séquestre sans mandat → tout détruit.",
+    "expl_ko": "Pas d'amende (sanction de procédure, pas administrative). Pas 50% (binaire selon nature de la violation). Pas en chambre du conseil.",
+    "refs": [
+      "CPP art. 141",
+      "ATF 138 IV 169"
+    ]
+  },
+  {
+    "theme": "Droit",
+    "theme_icon": "⚖️",
+    "chapter": "Expertise et rapport judiciaire",
+    "diff": "easy",
+    "type": "single",
+    "q": "L'expert·e judiciaire forensique en Suisse :",
+    "opts": [
+      "Doit être suisse de souche depuis 4 générations",
+      "Est désigné·e par l'autorité (procureur ou juge), prête serment de respecter ses obligations, doit être indépendant·e et compétent·e, et son rapport doit être objectif, contradictoirement débattu, basé sur méthodes scientifiquement reconnues",
+      "Doit absolument utiliser EnCase Forensic (concurrence interdite)",
+      "Travaille uniquement bénévolement"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "L'expert·e judiciaire forensique en CH est régi·e par les <strong>art. 182-191 CPP</strong> : <strong>(1) désigné·e par l'autorité</strong> (procureur ou tribunal), <strong>(2) impartialité requise</strong> (récusation possible, art. 56 CPP par renvoi), <strong>(3) prête serment</strong> (art. 184 al. 2), <strong>(4) doit être qualifié·e</strong> (compétences techniques), <strong>(5) rapport écrit motivé</strong>, <strong>(6) audition possible en débats</strong> (contradictoire), <strong>(7) méthodes scientifiquement reconnues</strong> (Daubert / NIST / ENFSI). Honoraires fixés par le canton (art. 422-426 CPP).",
+    "expl_ko": "Pas de critère de nationalité (heureusement). Pas d'outil obligatoire. Rémunéré (art. 422 CPP).",
+    "refs": [
+      "CPP art. 182-191"
+    ]
+  },
+  {
+    "theme": "Droit",
+    "theme_icon": "⚖️",
+    "chapter": "Droit pénal informatique",
+    "diff": "medium",
+    "type": "single",
+    "q": "Le ransomware contre une entreprise suisse peut potentiellement engager :",
+    "opts": [
+      "Art. 144bis CP (détérioration de données — chiffrement) + art. 156 CP (extorsion — demande de rançon) + art. 143 CP (extraction de données si exfiltration) + art. 147 CP si fraude",
+      "Aucune disposition pénale, c'est juste embêtant",
+      "L'art. 1er du Code des obligations sur la confiance contractuelle",
+      "Une simple amende de TVA"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Un ransomware moderne (double extorsion) déclenche typiquement un <strong>concours réel</strong> d'infractions (art. 49 CP) : <strong>(1) art. 144bis CP</strong> (détérioration de données, le chiffrement rend les données inutilisables), <strong>(2) art. 156 CP</strong> (extorsion : exigence de rançon sous menace), <strong>(3) art. 143 CP</strong> (soustraction de données si exfiltration), <strong>(4) art. 143bis CP</strong> (accès indu — intrusion initiale), <strong>(5) art. 147 CP</strong> si éléments d'escroquerie informatique. Aussi : <strong>blanchiment</strong> (art. 305bis) si le paiement est tracé. Compétence : MP cantonal (lieu du dommage) ou MPC selon ampleur.",
+    "expl_ko": "Sanctions multiples. Pas du droit civil seulement. Pas la TVA.",
+    "refs": [
+      "CP art. 49, 143, 143bis, 144bis, 147, 156, 305bis"
+    ]
+  },
+  {
+    "theme": "Droit",
+    "theme_icon": "⚖️",
+    "chapter": "Perquisition de documents",
+    "diff": "medium",
+    "type": "single",
+    "q": "Lors d'une perquisition d'un cabinet d'avocat à Genève, quelle est la principale précaution à prendre face aux données numériques ?",
+    "opts": [
+      "Aucune particularité, on copie tout",
+      "Demande de mise sous scellés (art. 248 CPP) car les documents et données électroniques peuvent contenir des éléments couverts par le secret professionnel de l'avocat (art. 264 CPP) — un tri sera fait par le TMC, pas par le procureur",
+      "On demande la permission au Bâtonnier",
+      "On déchire physiquement les disques"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Perquisition d'un avocat = situation hautement sensible</strong>. Les documents et données électroniques peuvent contenir des informations couvertes par le <strong>secret professionnel</strong> (art. 264 al. 1 let. a CPP, secret renforcé pour les avocats). Procédure : <strong>(1)</strong> séquestre conservatoire du matériel, <strong>(2) MISE SOUS SCELLÉS demandée par l'avocat (art. 248 CPP)</strong>, <strong>(3) demande au TMC</strong> (Tribunal des mesures de contrainte) de lever les scellés, <strong>(4)</strong> tri des éléments couverts par le secret par le TMC <em>seul</em> (pas le procureur). En cas de doute → maintien des scellés. Le Bâtonnier peut être informé en pratique mais n'a pas de rôle légal de validation.",
+    "expl_ko": "Pas une perquisition standard (secret pro). Le Bâtonnier n'autorise pas (autorité administrative). Surtout pas de destruction physique.",
+    "refs": [
+      "CPP art. 248, 264",
+      "Loi fédérale sur les avocats (LLCA)"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🌐",
+    "chapter": "Fondamentaux OSINT",
+    "diff": "easy",
+    "type": "single",
+    "q": "Que signifie OSINT ?",
+    "opts": [
+      "Office Suisse d'Investigation Nationale et Tactique",
+      "Open-Source Intelligence : renseignement obtenu à partir de sources publiquement accessibles (sites web, réseaux sociaux, registres officiels, presse, etc.)",
+      "Optimal Search INTernet",
+      "Old School Investigation Techniques"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>OSINT (Open-Source Intelligence)</strong> = renseignement obtenu à partir de <strong>sources publiquement accessibles</strong>, sans contournement de protection ni autorisation spéciale. Distinct du HUMINT (humain), SIGINT (signal), GEOINT (géospatial), CYBINT (cyber). Sources OSINT : presse, réseaux sociaux, registres du commerce, jurisprudence publiée, GitHub, data leaks publiés, Wayback Machine. Cadre légal : licite si les données sont VRAIMENT publiques (art. 32 Convention Budapest, art. 6 LPD).",
+    "expl_ko": "Pas un acronyme suisse. Pas non plus optimal search. OSINT = standard internationaux.",
+    "refs": [
+      "U.S. Director of National Intelligence — OSINT definition"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🌐",
+    "chapter": "Recherche web et Google Dorks",
+    "diff": "medium",
+    "type": "single",
+    "q": "L'opérateur 'site:' dans Google permet de :",
+    "opts": [
+      "Rechercher l'adresse exacte d'une cible à des fins malveillantes (interdit en CH)",
+      "Restreindre la recherche à un domaine spécifique (ex: 'site:admin.ch RGPD' ne renvoie que les pages admin.ch contenant RGPD)",
+      "Trouver les sites en panne",
+      "Réserver un site de camping"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "L'opérateur Google <strong>'site:'</strong> filtre les résultats par domaine. Exemples utiles en OSINT : <em>site:admin.ch</em> (sites administration fédérale), <em>site:github.com 'API_KEY'</em> (recherche de fuites de clés sur GitHub), <em>site:linkedin.com/in/ 'CISO' Geneva</em> (profils LinkedIn ciblés), <em>-site:facebook.com OSINT</em> (exclure FB). Combinable avec <em>filetype:</em>, <em>intext:</em>, <em>inurl:</em>, etc. Légal en CH si données publiques, mais l'agrégation peut tomber sous LPD si elle révèle des données personnelles non manifestement publiques.",
+    "expl_ko": "Pas pour des adresses (Google ne fait pas ça). Pas les sites en panne. Pas le camping (utiliser Suisse Tourisme).",
+    "refs": [
+      "Google Search Operators reference"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🌐",
+    "chapter": "Métadonnées et EXIF",
+    "diff": "medium",
+    "type": "single",
+    "q": "Une photo prise avec un smartphone moderne et envoyée par email peut révéler quelles métadonnées EXIF ?",
+    "opts": [
+      "Aucune, les smartphones nettoient tout",
+      "Modèle d'appareil, date/heure exacte, COORDONNÉES GPS (si géolocalisation activée), orientation, paramètres optiques, parfois nom du propriétaire — c'est pourquoi la diffusion d'une simple photo peut révéler le domicile",
+      "Uniquement la date",
+      "Le canton de prise de vue uniquement"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Les <strong>métadonnées EXIF</strong> (Exchangeable Image File Format) embarquées dans JPEG/HEIC/TIFF révèlent typiquement : <strong>(1)</strong> marque + modèle d'appareil, <strong>(2)</strong> date/heure de prise (GPS time si dispo), <strong>(3)</strong> <strong>coordonnées GPS lat/lon/alt</strong> si géoloc activée — précision ±5m, <strong>(4)</strong> orientation, mode de prise, ISO, exposition, focale, flash, <strong>(5)</strong> parfois nom du propriétaire (configuration appareil photo), <strong>(6)</strong> miniature embarquée. <strong>Les réseaux sociaux nettoient l'EXIF</strong> au upload (Facebook, Twitter/X, Instagram), mais <strong>les emails et la plupart des plateformes de partage de fichiers le préservent</strong>. Outils : ExifTool (Phil Harvey, gold standard), exiftool-online.",
+    "expl_ko": "Tous nettoyent pas (e.g. WhatsApp original ≠ envoi tel quel email). Pas seulement date. Pas que canton.",
+    "refs": [
+      "ExifTool — exiftool.org",
+      "EXIF specification"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🌐",
+    "chapter": "Outils et automatisation OSINT",
+    "diff": "easy",
+    "type": "single",
+    "q": "À quoi sert Shodan.io ?",
+    "opts": [
+      "À acheter du shoyu (sauce soja) en ligne",
+      "À indexer les services Internet exposés (HTTP, RDP, SSH, MQTT, IoT, ICS/SCADA, etc.) — moteur de recherche pour 'objets connectés' et serveurs publics",
+      "À mesurer la vitesse de l'Internet suisse",
+      "À envoyer des notifications push"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Shodan</strong> (John Matherly, 2009) est un moteur de recherche qui scanne en permanence les services exposés sur Internet (port scans + bannière + fingerprinting). Recherche par : <em>port</em>, <em>country:CH</em>, <em>org:</em>, <em>product:</em>, <em>version:</em>, <em>vuln:</em>. Usages OSINT : <strong>(1)</strong> identifier des services exposés vulnérables, <strong>(2)</strong> énumérer l'infrastructure d'une entreprise, <strong>(3)</strong> trouver des caméras IoT publiques, <strong>(4)</strong> mapper des SCADA exposés. Concurrents : Censys, ZoomEye, BinaryEdge. Compte gratuit limité, tarifs académiques pour étudiants.",
+    "expl_ko": "Pas du shoyu (regrettable). Pas un test de vitesse (Speedtest). Pas notifications push.",
+    "refs": [
+      "shodan.io"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🌐",
+    "chapter": "Infrastructure, DNS et pivots",
+    "diff": "medium",
+    "type": "single",
+    "q": "Le service Crt.sh sert à :",
+    "opts": [
+      "Trouver des cours de yoga à Coire",
+      "Rechercher dans les logs publics de Certificate Transparency (RFC 6962) — révèle les sous-domaines via les Subject Alternative Names (SAN) de chaque certificat émis",
+      "Enregistrer des certificats électroniques",
+      "Vérifier l'âge des contributions Twitter"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>crt.sh</strong> (Sectigo) est un moteur de recherche dans les <strong>logs publics de Certificate Transparency</strong> (RFC 6962). Permet en OSINT : <strong>(1) découvrir les sous-domaines</strong> d'une organisation via les SAN des certificats (ex: rechercher 'rts.ch' révèle play.rts.ch, info.rts.ch, etc.), <strong>(2)</strong> identifier les CA utilisées, <strong>(3)</strong> détecter les certificats malveillants (homoglyphes, similaires à une marque), <strong>(4)</strong> historique des émissions. Alternative : Censys.io, certificate.transparency.dev.",
+    "expl_ko": "Pas du yoga (essayer cela.ch). Pas pour l'enregistrement (utiliser Let's Encrypt). Pas Twitter.",
+    "refs": [
+      "crt.sh",
+      "RFC 6962 (Certificate Transparency)"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🌐",
+    "chapter": "Fondamentaux OSINT",
+    "diff": "hard",
+    "type": "single",
+    "q": "Lors d'une enquête OSINT sur une personne, quel principe juridique CH s'applique en complément ?",
+    "opts": [
+      "Aucun, OSINT = libre",
+      "La LPD (Loi sur la protection des données, RS 235.1) s'applique : l'agrégation de données personnelles publiquement accessibles peut nécessiter une base légale, surtout si elle révèle un profil détaillé (art. 6 LPD principes, art. 22 DPIA si risque élevé)",
+      "Uniquement le droit du travail",
+      "Le secret bancaire, partout"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "L'OSINT ciblé sur des personnes physiques en CH n'est PAS exempt de la <strong>LPD</strong> : <strong>(1)</strong> chaque <em>traitement</em> (collection, agrégation, conservation) de données personnelles a une base légale (art. 6 LPD : licéité, finalité, proportionnalité), <strong>(2)</strong> les <strong>profils de personnalité</strong> agrégés depuis des sources éparses (LinkedIn + Facebook + presse + leaks) peuvent dépasser le 'manifestement public' et constituer un <em>traitement à risque élevé</em>, <strong>(3) DPIA art. 22 LPD</strong> si nécessaire, <strong>(4)</strong> finalités professionnelles strictes (enquête, journalisme, sécurité). En cyber-investigation par MP : couvert par les actes d'instruction (CPP).",
+    "expl_ko": "OSINT n'est pas hors-droit. Pas seulement droit du travail. Le secret bancaire est sectoriel (art. 47 LB).",
+    "refs": [
+      "LPD (RS 235.1)",
+      "PFPDT — Recommandations OSINT"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🌐",
+    "chapter": "Outils et automatisation OSINT",
+    "diff": "easy",
+    "type": "single",
+    "q": "Le 'Wayback Machine' est :",
+    "opts": [
+      "Une fonction de retour en arrière dans Excel",
+      "L'archive web du Internet Archive (archive.org) qui capture des snapshots de pages web depuis 1996 — permet de consulter l'état historique d'un site",
+      "Un service de DeLorean en location",
+      "Une fonctionnalité Cortana"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "La <strong>Wayback Machine</strong> (Internet Archive, 1996) archive les pages web. Cas d'usage OSINT : <strong>(1)</strong> consulter une page <em>supprimée ou modifiée</em>, <strong>(2)</strong> prouver l'état historique d'un site (CGU, déclarations supprimées), <strong>(3)</strong> retrouver des éléments d'enquête disparus. Limites : couverture inégale (sites populaires mieux archivés), respect du robots.txt jusqu'en 2017 (avant : non archivé), parfois incomplet. Alternative complémentaires : <em>archive.today</em>, <em>cachedview.com</em>, le cache Google (réduit en 2024).",
+    "expl_ko": "Pas Excel (Ctrl+Z). Pas DeLorean (back to the future). Pas Cortana.",
+    "refs": [
+      "archive.org/web"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Méthodologie forensique",
+    "diff": "easy",
+    "type": "single",
+    "q": "Le principe de Locard, énoncé en 1910 par Edmond Locard (criminologue lyonnais), s'applique-t-il en cyber-forensique ?",
+    "opts": [
+      "Non, c'est dépassé depuis 1923",
+      "Oui : 'tout contact laisse une trace' s'applique pleinement au numérique — chaque interaction (login, exécution, connexion réseau) laisse des artefacts (logs, journal, registre, mémoire, prefetch...)",
+      "Uniquement pour les enquêtes physiques",
+      "Seulement à Lyon"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le <strong>principe d'échange de Locard</strong> (1910, Edmond Locard, fondateur du laboratoire de police scientifique de Lyon) : <em>'Tout contact laisse une trace'</em>. <strong>Application directe en cyber-forensique</strong> : chaque action numérique laisse des artefacts dans <strong>plusieurs sources</strong> redondantes — Event Logs, Prefetch, Registre, Sysmon, EDR, logs réseau, RAM, métadonnées de fichiers, journaux applicatifs, caches navigateur. Implication méthodologique : la <strong>cross-validation</strong> de ces artefacts permet de reconstituer une timeline robuste et de détecter les manipulations (timestomping, log clearing).",
+    "expl_ko": "Pas du tout dépassé : c'est le fondement métier. Pas que physique. Pas que Lyon (Locard a internationalement essaimé).",
+    "refs": [
+      "E. Locard — L'enquête criminelle 1920",
+      "SANS FOR508"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Méthodologie forensique",
+    "diff": "medium",
+    "type": "single",
+    "q": "L'acronyme 'IOC' en réponse à incident signifie :",
+    "opts": [
+      "Indicator Of Confusion (notre quotidien à 3h du matin)",
+      "Indicator Of Compromise — élément technique observable (hash de fichier, IP, domaine, clé de registre, mutex, etc.) qui signe la présence d'une menace connue",
+      "International Olympic Committee (sans rapport)",
+      "Investigation Of Cantons"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Un <strong>IOC (Indicator of Compromise)</strong> est un artefact technique observable révélant la présence d'une menace : <strong>(1) atomique</strong> (hash MD5/SHA-256 de malware, IP/URL/domaine de C2, mutex, clé de registre persistance, nom de fichier, chaîne de caractères dans la mémoire), <strong>(2) comportemental</strong> (séquence d'actions). Format standardisé : <strong>STIX 2.1</strong> (OASIS), <strong>OpenIOC</strong> (Mandiant historique), <strong>YARA rules</strong> (signatures), <strong>SIGMA</strong> (détections SIEM). Sources : MISP (open-source threat sharing), AlienVault OTX, VirusTotal, vendors EDR. Distinction importante : les IOCs vieillissent vite, alors que les <strong>TTPs</strong> (MITRE ATT&CK) sont plus pérennes.",
+    "expl_ko": "Pas l'Olympic. Pas une investigation cantonale.",
+    "refs": [
+      "MITRE ATT&CK",
+      "STIX 2.1 specification"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Acquisition et préservation",
+    "diff": "medium",
+    "type": "single",
+    "q": "En forensique mémoire (RAM), pourquoi est-il crucial d'acquérir RAPIDEMENT ?",
+    "opts": [
+      "Parce que la RAM est volatile : son contenu disparaît à l'arrêt machine — clés de chiffrement en clair, processus actifs, connexions réseau, malware fileless ne vivent que là",
+      "Parce que les disques durs prennent froid en hiver",
+      "Pour économiser l'électricité",
+      "Parce que les RAM suisses contiennent moins de données par tradition d'efficacité"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "La <strong>RAM est volatile</strong> : sans alimentation, son contenu se dissipe en quelques secondes (effet de remanence partiel). Acquisition rapide = capture de : <strong>(1) clés de chiffrement en clair</strong> (Bitlocker, FileVault, LUKS), <strong>(2) processus actifs</strong> (avec command-line, parent, environnement), <strong>(3) connexions réseau actives</strong> (netstat équivalent), <strong>(4) malware fileless</strong> (qui ne touche pas le disque, vit uniquement en RAM, type Cobalt Strike beacon, PowerShell injection), <strong>(5) credentials cachés</strong> (LSASS sur Windows, mimikatz). Outils : Belkasoft RAM Capturer, FTK Imager (live), DumpIt, Magnet RAM Capture. Analyse : <strong>Volatility 3</strong>.",
+    "expl_ko": "Les disques durs ne 'prennent pas froid'. Pas pour l'électricité. Pas de tradition cantonale RAM.",
+    "refs": [
+      "Belkasoft RAM Capturer",
+      "Volatility 3 documentation"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "ICS / SCADA / OT Forensique",
+    "diff": "hard",
+    "type": "single",
+    "q": "Pourquoi la forensique sur ICS/SCADA (Industrial Control Systems) est-elle particulièrement délicate ?",
+    "opts": [
+      "Parce que les systèmes industriels sont vieux et fragiles : un simple scan réseau peut crash un PLC ; les outils forensiques classiques (Volatility, FTK) ne supportent pas leurs OS exotiques (VxWorks, QNX) ; les uptime de production interdisent les redémarrages ; le risque safety (humain) prime sur l'objectif d'enquête",
+      "Parce que les ICS parlent allemand suisse",
+      "Parce qu'il faut un visa pour entrer dans les usines",
+      "Parce que les opérateurs ont des contrats à durée déterminée"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Forensique <strong>ICS/SCADA</strong> = défi majeur 2026 : <strong>(1) systèmes legacy</strong> (PLC Siemens S7-300/400, Schneider Modicon, Allen-Bradley ; OS embarqués : VxWorks, QNX, RTOS propriétaires non supportés par Volatility), <strong>(2) fragilité</strong> : un Nmap aggressive peut faire redémarrer un PLC critique → arrêt de production, voire incident <em>safety</em>, <strong>(3) uptime</strong> (production en 24/7 ne tolère pas l'arrêt pour acquisition), <strong>(4) protocoles obscurs</strong> : Modbus, DNP3, PROFINET, S7Comm, EtherNet/IP — pas tous supportés par Wireshark de base, <strong>(5) priorité safety > security > forensics</strong> (vies humaines en jeu). Outils dédiés : Claroty CTD, Dragos Platform, Nozomi Networks. Référence : NIST SP 800-82 r3 (2023).",
+    "expl_ko": "Pas une question de langue, de visa, ni de contrat de travail.",
+    "refs": [
+      "NIST SP 800-82 r3 (Industrial Control Systems Security)",
+      "MITRE ATT&CK for ICS"
+    ]
   }
 ]
