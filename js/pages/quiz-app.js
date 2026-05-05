@@ -42,14 +42,18 @@
  function startLoadingMessages() {
  const el = document.getElementById('loading-msg');
  if (!el) return;
- let i = Math.floor(Math.random() * LOADING_MSGS.length);
- el.textContent = LOADING_MSGS[i];
+ // v2.64 — Garde défensive : si quiz-data.js n'a pas chargé, fallback silencieux
+ const msgs = (typeof LOADING_MSGS !== 'undefined' && Array.isArray(LOADING_MSGS) && LOADING_MSGS.length > 0)
+   ? LOADING_MSGS
+   : ['🔍 Chargement…'];
+ let i = Math.floor(Math.random() * msgs.length);
+ el.textContent = msgs[i];
  _loadMsgInt = setInterval(() => {
- i = (i + 1) % LOADING_MSGS.length;
+ i = (i + 1) % msgs.length;
  el.style.animation = 'none';
  void el.offsetWidth; // reflow to restart animation
  el.style.animation = '';
- el.textContent = LOADING_MSGS[i];
+ el.textContent = msgs[i];
  }, 1800);
  }
 

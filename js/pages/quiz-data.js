@@ -375,3 +375,26 @@ const MISSION_PHASES = [
         50: '🏆 50 ! IMPOSSIBLE… et pourtant.',
         75: '🏆 75 ! Banzaï ! On est bons.',
       };
+
+      // ═══════════════════════════════════════════════════════════════
+      // LOADING_MSGS — Messages de chargement affichés pendant la
+      // préparation d'une session de quiz. Tournent toutes les 1.8s.
+      // Ajoutés en v2.64 (correction d'un bug de référence).
+      // ═══════════════════════════════════════════════════════════════
+      const LOADING_MSGS = [
+        '🔍 Analyse des indices…',
+        '📂 Ouverture du dossier…',
+        '🧪 Calibrage des outils forensiques…',
+        '⚖️ Vérification des bases légales…',
+        '🔐 Établissement de la chaîne de custody…',
+        '📡 Connexion aux serveurs de l\'enquête…',
+        '🧬 Préparation des analyses ADN numériques…',
+        '🗂 Tri des preuves recueillies…',
+        '📜 Lecture des articles du CPP…',
+        '🎯 Ciblage des questions pertinentes…',
+        '🇨🇭 Connexion aux registres fédéraux…',
+        '☕ Café froid prêt, on commence…',
+        '📞 Mme Brägger en ligne…',
+        '🔬 Sandbox prête, échantillons isolés…',
+        '🛰 Satellites OSINT en orbite…',
+      ];
