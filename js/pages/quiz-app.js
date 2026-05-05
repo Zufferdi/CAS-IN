@@ -785,7 +785,8 @@
           																		<span class="pts-earned"> +${pts} pts (×${m} combo !)</span>` : (ok ? `
           																		<span class="pts-earned"> +${pts} pt${pts>1?'s':''}</span>` : '');
         const showTip = Math.random() < 0.25;
-        const tipLine = showTip ? `
+        const _tipsAvail = (typeof FORENSIC_TIPS !== 'undefined' && Array.isArray(FORENSIC_TIPS) && FORENSIC_TIPS.length > 0);
+        const tipLine = (showTip && _tipsAvail) ? `
           																		<div style="margin-top:10px;padding:8px 10px;border-radius:7px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);font-size:12px;color:var(--dim)">${FORENSIC_TIPS[Math.floor(Math.random()*FORENSIC_TIPS.length)]}</div>` : '';
         const explTxt = sanitizeHTML(ok ? (q.expl_ok || q.expl_ko || '') : (q.expl_ko || q.expl_ok || ''));
         const explStyle = ok ? 'margin-top:10px;padding:9px 11px;border-radius:7px;font-size:12px;line-height:1.65;background:rgba(48,232,138,.15);border:1px solid rgba(48,232,138,.3);color:var(--text-ok)' : 'margin-top:10px;padding:9px 11px;border-radius:7px;font-size:12px;line-height:1.65;background:rgba(255,64,96,.15);border:1px solid rgba(255,64,96,.3);color:#ffe0e5';
@@ -2009,6 +2010,8 @@
       function buildPersonaChips() {
         const wrap = document.getElementById('persona-chips');
         if (!wrap) return;
+        // v2.66 — Garde défensive : si PERSONAS n'a pas chargé, ne rien faire
+        if (typeof PERSONAS === 'undefined' || !Array.isArray(PERSONAS)) return;
         wrap.innerHTML = '';
         PERSONAS.forEach(p => {
           const b = document.createElement('button');
@@ -2032,6 +2035,8 @@
       }
 
       function showDailyQuote() {
+        // v2.66 — Garde défensive : si FORENSIC_QUOTES n'a pas chargé
+        if (typeof FORENSIC_QUOTES === 'undefined' || !Array.isArray(FORENSIC_QUOTES) || FORENSIC_QUOTES.length === 0) return;
         const seed = getDailySeed();
         const q = FORENSIC_QUOTES[seed % FORENSIC_QUOTES.length];
         const tb = document.getElementById('qb-text');
@@ -2822,7 +2827,9 @@
         const grid = document.getElementById('avatar-options');
         if (grid) {
           grid.innerHTML = '';
-          AVATAR_EMOJIS.forEach(em => {
+          // v2.66 — Garde défensive
+          const _emojis = (typeof AVATAR_EMOJIS !== 'undefined' && Array.isArray(AVATAR_EMOJIS)) ? AVATAR_EMOJIS : ['🕵️','🔍','⚖️','🧠'];
+          _emojis.forEach(em => {
             const btn = document.createElement('button');
             btn.className = 'av-opt' + (em === S.avatarEmoji ? ' active' : '');
             btn.textContent = em;
@@ -3825,6 +3832,8 @@ function showUnlockNotif(fichePath) {
 }
 
 function isFicheUnlocked(chapter) {
+  // v2.66 — Garde défensive : si la table n'a pas chargé, ne pas exception
+  if (typeof CHAPTER_TO_THEME_FILE === 'undefined') return true;
   const fichePath = CHAPTER_TO_THEME_FILE[chapter];
   if (!fichePath) return true; // pas de fiche = toujours accessible
   return ficheUnlocked.has(fichePath) || bossState.beaten.has(chapter);

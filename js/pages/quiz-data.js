@@ -398,3 +398,146 @@ const MISSION_PHASES = [
         '🔬 Sandbox prête, échantillons isolés…',
         '🛰 Satellites OSINT en orbite…',
       ];
+
+      // ═══════════════════════════════════════════════════════════════
+      // v2.66 — Constantes restaurées (bugs ReferenceError signalés)
+      //   PERSONAS, AVATAR_EMOJIS, FORENSIC_QUOTES, FORENSIC_TIPS,
+      //   CHAPTER_TO_THEME_FILE
+      // Ces constantes étaient référencées dans quiz-app.js mais jamais
+      // définies → ReferenceError en boucle (MutationObserver applyFicheLocks)
+      // bloquant le chargement du quiz.
+      // ═══════════════════════════════════════════════════════════════
+
+      // PERSONAS — profils de difficulté préconfigurés (boutons rapides)
+      const PERSONAS = [
+        {
+          icon: '🌱', label: 'Débutant',
+          desc: 'Questions niveau 1 uniquement, démarrer doucement',
+          diffs: ['1']
+        },
+        {
+          icon: '📚', label: 'Apprenti',
+          desc: 'Niveaux 1 et 2, consolidation des bases',
+          diffs: ['1', '2']
+        },
+        {
+          icon: '🎯', label: 'Confirmé',
+          desc: 'Niveaux 2 et 3, montée en compétence',
+          diffs: ['2', '3']
+        },
+        {
+          icon: '🔥', label: 'Expert',
+          desc: 'Niveaux 3 et 4, défi sérieux',
+          diffs: ['3', '4']
+        },
+        {
+          icon: '🏆', label: 'Tout',
+          desc: 'Tous les niveaux, mix complet',
+          diffs: ['1', '2', '3', '4']
+        },
+      ];
+
+      // AVATAR_EMOJIS — émojis sélectionnables comme avatar utilisateur
+      const AVATAR_EMOJIS = [
+        '🕵️', '🕵️‍♀️', '🔍', '🧠', '🎯', '⚖️', '🛡', '🔐',
+        '👮', '👮‍♀️', '👨‍💼', '👩‍💼', '🧑‍💻', '👨‍🔬', '👩‍🔬', '🧙',
+        '🦊', '🦉', '🐺', '🐯', '🐉', '🦅', '🦈', '🐙',
+        '⚡', '🔥', '💎', '🌟', '⭐', '✨', '🎖', '🏆',
+      ];
+
+      // FORENSIC_QUOTES — citations affichées sur la landing/quiz
+      // (rotation déterministe par jour via getDailySeed)
+      const FORENSIC_QUOTES = [
+        { q: "Toute trace est une histoire. Toute absence en est une aussi.", a: "Edmond Locard (1877-1966), pionnier de la criminalistique" },
+        { q: "L'évidence est l'ennemi du raisonnement.", a: "Sherlock Holmes" },
+        { q: "Quand vous avez éliminé l'impossible, ce qui reste, si improbable soit-il, est la vérité.", a: "Arthur Conan Doyle" },
+        { q: "Un seul indice mal collecté peut faire écrouler une enquête entière.", a: "Doctrine forensique ISO/IEC 27037" },
+        { q: "La chaîne de custody n'est pas une formalité, c'est la colonne vertébrale de la preuve.", a: "Pratique judiciaire suisse" },
+        { q: "Le doute profite à l'accusé. Mais la rigueur profite à tous.", a: "Adage du droit pénal" },
+        { q: "On ne conteste pas un hash MD5. On l'utilise comme empreinte.", a: "Manuel forensique" },
+        { q: "Tout système informatique laisse des traces. Le défi est de savoir où regarder.", a: "Brian Carrier, créateur du Sleuth Kit" },
+        { q: "La RAM oublie. Mais avant qu'elle ne le fasse, capturez-la.", a: "Doctrine analyse de mémoire vive" },
+        { q: "Les métadonnées sont les bavardages des fichiers.", a: "Adage OSINT" },
+        { q: "Un suspect ne sait jamais ce que son téléphone a déjà raconté.", a: "Pratique mobile forensique" },
+        { q: "L'art de l'investigation, c'est de poser la bonne question, pas d'avoir toutes les réponses.", a: "Maxime de l'enquête criminelle" },
+        { q: "La cybersécurité commence par savoir ce qu'on protège.", a: "Doctrine NIST CSF" },
+        { q: "Un mot de passe partagé est un mot de passe perdu.", a: "Pratique sécurité" },
+        { q: "L'attaquant ne se repose jamais. Le défenseur a le luxe du sommeil — mais pas tous les jours.", a: "Adage SOC" },
+      ];
+
+      // FORENSIC_TIPS — astuces affichées en bas de questions (random)
+      const FORENSIC_TIPS = [
+        "💡 Hash SHA-256 = 64 caractères hex. Hash MD5 = 32. À l'œil seul.",
+        "💡 NTFS = Windows. EXT = Linux. APFS = macOS. HFS+ = ancien macOS.",
+        "💡 La pratique CH n'utilise plus MD5 seul depuis 2018 — toujours coupler SHA-256.",
+        "💡 Art. 248 CPP : mise sous scellés sur demande, TMC tranche dans les 20 jours.",
+        "💡 ISO 27037 : 4 phases — identification, collecte, acquisition, préservation.",
+        "💡 RAM volatile = capture en priorité absolue avant tout autre acte.",
+        "💡 Une image dd est bit-à-bit. Une copie 'normale' ne l'est PAS.",
+        "💡 Les write-blockers existent en hardware ET software. Préférez le hardware.",
+        "💡 EXIF : métadonnées photos. Garde GPS, appareil, heure. Souvent retiré sur réseaux sociaux.",
+        "💡 Wireshark filtre 'tcp.flags.syn==1' = vues sur les ouvertures de connexion TCP.",
+        "💡 Volatility = analyse de RAM. Plugins selon profile OS.",
+        "💡 Tor : 3 nœuds de relais. L'IP de sortie n'est pas l'IP d'origine.",
+        "💡 BIP-39 : 12 ou 24 mots = clé privée Bitcoin. Toute personne avec les mots possède les fonds.",
+        "💡 LPD 2023 art. 24 : notification PFPDT \"dans les meilleurs délais\" si risque élevé.",
+        "💡 MROS : seul destinataire des communications LBA en Suisse.",
+        "💡 Art. 269 CPP : surveillance des télécommunications nécessite autorisation TMC dans les 24h.",
+        "💡 OSINT licite ≠ OSINT discret. La traçabilité fait la valeur judiciaire.",
+        "💡 MITRE ATT&CK : référentiel TTPs adversaires. T1566 = phishing.",
+        "💡 Article 143bis CP : accès indu à un système (hacking sans extraction).",
+        "💡 Article 144bis CP : détérioration de données (ransomware, defacement).",
+      ];
+
+      // CHAPTER_TO_THEME_FILE — mapping chapitre quiz → fiche associée
+      // Utilisé pour le déblocage des fiches après progression dans le quiz
+      // (isFicheUnlocked, applyFicheLocks dans quiz-app.js).
+      const CHAPTER_TO_THEME_FILE = {
+        // Filesystems
+        'NTFS': 'fiches/ntfs.html',
+        'FAT12 / FAT16 / FAT32': 'fiches/fat32.html',
+        'exFAT': 'fiches/exfat.html',
+        'EXT2 / EXT3 / EXT4': 'fiches/ext.html',
+        'HFS+ et APFS': 'fiches/apfs.html',
+        // Acquisition / méthodologie
+        'Acquisition et préservation': 'fiches/acquisition.html',
+        'Méthodologie et bonnes pratiques': 'fiches/methodologie.html',
+        'Méthodologie forensique': 'fiches/methodologie.html',
+        'Techniques et méthodologie': 'fiches/methodologie.html',
+        'Analyse et recovery': 'fiches/data_carving.html',
+        'Artefacts temporels et MAC times': 'fiches/mac_times.html',
+        'Formats de fichiers et Magic Bytes': 'fiches/formats.html',
+        'Logiciels et outils forensiques': 'fiches/outils.html',
+        'Technologie des disques': 'fiches/disques.html',
+        // Crypto
+        'Chiffrement asymétrique et RSA': 'fiches/crypto.html',
+        'Chiffrement symétrique': 'fiches/crypto.html',
+        'Hachage et intégrité': 'fiches/hash.html',
+        'Cassage et attaques': 'fiches/cassage_mdp.html',
+        'PKI et certificats': 'fiches/pki_certificats.html',
+        // OS-spécifiques
+        'Windows — Artefacts et exécution': 'fiches/windows_forensique.html',
+        'Windows — Journaux et Event Logs': 'fiches/logs_windows.html',
+        'Windows — Registre et artefacts': 'fiches/registre_windows.html',
+        'Linux — Artefacts et analyse': 'fiches/linux_forensique.html',
+        'macOS — Artefacts et analyse': 'fiches/macos_forensique.html',
+        // Réseau / OSINT
+        'Adressage IP': 'fiches/reseau.html',
+        'Réseau, protocoles et Internet': 'fiches/reseau.html',
+        'Infrastructure, DNS et pivots': 'fiches/dns_forensique.html',
+        'Fondamentaux OSINT': 'fiches/osint.html',
+        'Outils et automatisation OSINT': 'fiches/osint.html',
+        'Recherche web et Google Dorks': 'fiches/osint.html',
+        // Données / représentation
+        'Représentation des données': 'fiches/encodage.html',
+        'Métadonnées et EXIF': 'fiches/metadata_avancees.html',
+        // Droit
+        'Droit pénal informatique': 'fiches/droit.html',
+        'Procédure pénale': 'fiches/preuve.html',
+        'Perquisition de documents': 'fiches/preuve.html',
+        'Séquestre informatique': 'fiches/preuve.html',
+        'Entraide judiciaire internationale': 'fiches/eimp_entraide.html',
+        'Expertise et rapport judiciaire': 'fiches/rapport_forensique.html',
+        // Spécial
+        'ICS / SCADA / OT Forensique': 'fiches/ics_forensique.html',
+      };
