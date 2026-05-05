@@ -3,9 +3,123 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>PKI &amp; Certificats — CAS-IN Forensique</title>
-<meta name="description" content="PKI · X.509 · TLS 1.3 · CRL/OCSP · S/MIME · Certificate Pinning · PFS">
+<title>PKI & Certificats — CAS-IN Forensique</title>
+<meta name="description" content="PKI · X.509 · TLS 1.3 · Chaîne de confiance · CRL/OCSP · S/MIME · Certificate Pinning · PFS · ZertES">
 <link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+.page-wrap { max-width:960px; margin:0 auto; padding:1.5rem 2rem; }
+.tabs-pki { display:flex; gap:.35rem; padding:.75rem 2rem; border-bottom:1px solid var(--border);
+            background:var(--surface); flex-wrap:wrap; max-width:960px; margin:0 auto; }
+.tab-pki { background:transparent; border:1px solid var(--border); border-radius:6px;
+           color:var(--muted); font-family:var(--mono); font-size:.72rem; padding:.35rem .8rem;
+           cursor:pointer; transition:.15s; }
+.tab-pki:hover  { color:var(--text); border-color:var(--gold); }
+.tab-pki.active { background:rgba(240,192,64,.12); border-color:var(--gold); color:var(--gold); }
+.tab-page       { display:none; max-width:960px; margin:0 auto; padding:1.5rem 2rem; }
+.tab-page.active{ display:block; animation:slideUp .3s ease; }
+
+.concept-card { background:rgba(240,192,64,.04); border:1px solid rgba(240,192,64,.2);
+                border-radius:10px; padding:1rem 1.2rem; margin-bottom:1.25rem; font-size:.82rem; line-height:1.65; }
+.concept-title { font-family:var(--sans); font-weight:700; font-size:.85rem; color:var(--gold); margin-bottom:.5rem; }
+
+/* PKI hierarchy */
+.pki-tree { margin:.75rem 0; }
+.pki-level { display:flex; gap:.5rem; justify-content:center; flex-wrap:wrap; margin-bottom:.4rem; }
+.pki-node { padding:.55rem 1rem; border-radius:8px; text-align:center; font-size:.74rem; min-width:160px; }
+.pn-root { background:rgba(255,64,96,.08); border:2px solid rgba(255,64,96,.4); color:var(--red); }
+.pn-inter{ background:rgba(240,192,64,.08); border:1px solid rgba(240,192,64,.3); color:var(--gold); }
+.pn-leaf { background:rgba(48,232,138,.06); border:1px solid rgba(48,232,138,.25); color:var(--green); }
+.pki-arrow { text-align:center; color:var(--dim); font-size:.8rem; margin:.1rem 0; }
+.pki-label { font-family:var(--sans); font-weight:700; font-size:.75rem; margin-bottom:.15rem; }
+.pki-sub   { font-size:.66rem; opacity:.8; line-height:1.4; }
+
+/* X.509 field table */
+.x509-table { width:100%; border-collapse:collapse; font-size:.72rem; }
+.x509-table th { background:var(--surface2); padding:.45rem .65rem; border-bottom:2px solid var(--border);
+  font-size:.61rem; text-transform:uppercase; letter-spacing:.08em; color:var(--dim); font-weight:700; text-align:left; }
+.x509-table td { padding:.4rem .65rem; border-bottom:1px solid var(--border); vertical-align:middle; }
+.x509-table tr:hover td { background:var(--surface); }
+.x509-table tr:last-child td { border-bottom:none; }
+.field-name { font-family:var(--mono); color:var(--cyan); font-size:.71rem; }
+.field-ex   { font-family:var(--mono); color:var(--muted); font-size:.68rem; }
+.field-flag { font-size:.62rem; padding:.1rem .35rem; border-radius:3px; font-weight:600; }
+.ff-critical{ background:rgba(255,64,96,.1); color:var(--red); border:1px solid rgba(255,64,96,.2); }
+.ff-forensic{ background:rgba(0,229,204,.1); color:var(--cyan); border:1px solid rgba(0,229,204,.2); }
+
+/* TLS handshake */
+.tls-flow { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:1rem; margin:.75rem 0; }
+.tls-row { display:flex; align-items:center; gap:.5rem; padding:.3rem 0; border-bottom:1px solid rgba(48,54,61,.4); font-size:.72rem; }
+.tls-row:last-child { border-bottom:none; }
+.tls-step { width:22px; height:22px; border-radius:50%; flex-shrink:0; font-size:.62rem;
+  font-weight:700; display:flex; align-items:center; justify-content:center; }
+.ts-c { background:rgba(88,166,255,.15); border:1px solid rgba(88,166,255,.4); color:var(--blue); }
+.ts-s { background:rgba(48,232,138,.15); border:1px solid rgba(48,232,138,.4); color:var(--green); }
+.ts-b { background:rgba(188,140,255,.15); border:1px solid rgba(188,140,255,.4); color:var(--purple); }
+.tls-dir { font-family:var(--mono); font-size:.68rem; color:var(--dim); min-width:60px; }
+.tls-msg { font-family:var(--mono); font-size:.7rem; color:var(--text); min-width:180px; }
+.tls-desc { font-size:.7rem; color:var(--muted); flex:1; }
+.tls-forensic { font-size:.65rem; color:var(--cyan); background:rgba(0,229,204,.06);
+  border:1px solid rgba(0,229,204,.15); border-radius:3px; padding:.05rem .35rem; white-space:nowrap; }
+
+/* Revocation */
+.rev-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:.65rem; margin:.75rem 0; }
+.rev-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:.75rem .85rem; }
+.rev-name  { font-family:var(--sans); font-weight:700; font-size:.78rem; margin-bottom:.2rem; }
+.rev-desc  { font-size:.72rem; color:var(--muted); line-height:1.5; }
+.rev-cmd   { font-family:var(--mono); font-size:.66rem; color:var(--green); background:var(--bg);
+  border:1px solid var(--border); border-radius:4px; padding:.2rem .5rem;
+  display:block; margin:.25rem 0; cursor:pointer; }
+
+/* Forensic scenarios */
+.scenario-card { background:rgba(240,192,64,.04); border:1px solid rgba(240,192,64,.2);
+  border-radius:10px; padding:1rem 1.2rem; margin-bottom:.85rem; }
+.scenario-label { font-size:.64rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--gold); margin-bottom:.4rem; }
+.scenario-body  { font-size:.78rem; color:var(--muted); line-height:1.55; }
+
+/* Commands */
+.pki-cmd { font-family:var(--mono); font-size:.69rem; color:var(--green); background:var(--bg);
+  border:1px solid var(--border); border-radius:4px; padding:.28rem .65rem;
+  display:block; margin:.22rem 0; cursor:pointer; }
+
+/* Quiz */
+.quiz-wrap { background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+  padding:.9rem 1rem; margin-bottom:.75rem; }
+.quiz-q { font-size:.8rem; color:var(--text); margin-bottom:.6rem; }
+.quiz-reveal-btn { background:rgba(240,192,64,.08); border:1px solid rgba(240,192,64,.25);
+  border-radius:6px; color:var(--gold); font-family:var(--mono); font-size:.72rem;
+  padding:.3rem .8rem; cursor:pointer; }
+.quiz-answer { display:none; margin-top:.6rem; font-size:.78rem; color:var(--muted);
+  line-height:1.55; border-top:1px solid var(--border); padding-top:.6rem; }
+.quiz-answer.visible { display:block; animation:fadeIn .2s ease; }
+.quiz-ok { color:var(--green); font-weight:700; }
+
+.breadcrumb { display:flex; align-items:center; flex-wrap:wrap; gap:.3rem; font-size:.72rem;
+  color:var(--muted); padding:.6rem 0; margin-bottom:.75rem; }
+.breadcrumb a { color:var(--muted); text-decoration:none; }
+.bc-sep { color:var(--border); }
+.read-time-badge { font-size:.65rem; background:rgba(240,192,64,.06);
+  border:1px solid rgba(240,192,64,.15); color:var(--gold); padding:.15rem .5rem; border-radius:4px; }
+.prereq-pill { background:rgba(88,166,255,.08); border:1px solid rgba(88,166,255,.2);
+  color:var(--blue); border-radius:5px; padding:.15rem .55rem; font-size:.7rem; text-decoration:none; }
+.related-pill { background:rgba(48,232,138,.06); border:1px solid rgba(48,232,138,.18);
+  color:var(--green); border-radius:5px; padding:.15rem .55rem; font-size:.7rem; text-decoration:none; }
+
+#scroll-progress { position:fixed; top:0; left:0; height:2px; width:0;
+  background:linear-gradient(90deg,var(--gold),var(--orange)); z-index:1000; }
+.back-top { position:fixed; bottom:1.5rem; right:1.5rem; background:var(--surface2);
+  border:1px solid var(--border); border-radius:8px; color:var(--dim); font-size:.9rem;
+  width:2rem; height:2rem; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; opacity:0; pointer-events:none; transition:.2s; }
+.back-top.visible { opacity:1; pointer-events:auto; }
+
+@media(max-width:640px){
+  .page-wrap,.tab-page { padding:1rem; }
+  .tabs-pki { padding:.6rem 1rem; }
+  .tn-title { display:none; }
+  .rev-grid { grid-template-columns:1fr; }
+}
+</style>
 </head>
 <body>
 <div id="scroll-progress"></div>
@@ -13,7 +127,7 @@
 
 <nav class="tn-nav">
   <a href="index.html" class="tn-back">← Fiches</a>
-  <span class="tn-title">PKI &amp; CERTIFICATS</span>
+  <span class="tn-title">CRYPTOLOGIE &amp; SÉCURITÉ</span>
   <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
 </nav>
 
@@ -21,241 +135,625 @@
   <div class="breadcrumb">
     <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
     <a href="index.html">Fiches</a><span class="bc-sep">›</span>
-    <a href="index.html#cat-cryptologiesécurité">Cryptologie &amp; Sécurité</a><span class="bc-sep">›</span>
-    <span class="bc-current">PKI &amp; Certificats</span>
-    <span class="read-time-badge" style="margin-left:auto">⏱ ~9 min</span>
+    <a href="index.html#cat-crypto">Cryptologie &amp; Sécurité</a><span class="bc-sep">›</span>
+    <span style="color:var(--text)">PKI &amp; Certificats</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
   </div>
 
   <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
-    <div><span style="font-size:2.2rem">🔏</span>
-    <span class="tag tag-cyan" style="margin-left:.5rem">PKI</span>
-    <span class="tag tag-blue" style="margin-left:.3rem">X.509</span>
-    <span class="tag tag-gold" style="margin-left:.3rem">TLS 1.3</span>
-    <span class="tag tag-green" style="margin-left:.3rem">S/MIME</span></div>
+    <div>
+      <span style="font-size:2.2rem">🔏</span>
+      <span class="tag tag-gold"   style="margin-left:.5rem">PKI</span>
+      <span class="tag tag-cyan"   style="margin-left:.3rem">X.509</span>
+      <span class="tag tag-blue"   style="margin-left:.3rem">TLS 1.3</span>
+    </div>
     <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">PKI &amp; Certificats</h1>
-    <div class="meta">Infrastructure à clés publiques · X.509 · TLS 1.3 · CRL/OCSP · S/MIME · Certificate Pinning · PFS</div>
+    <div class="meta">Infrastructure à clés publiques · X.509 v3 · TLS 1.3 handshake · CRL/OCSP · S/MIME · Certificate Pinning · PFS · ZertES Suisse</div>
   </div>
 
   <div class="prereq-block" style="margin-top:1rem">
-    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="crypto.html" class="prereq-pill">📖 Cryptologie</a><a href="hash.html" class="prereq-pill">📖 Hachage</a><a href="reseau.html" class="prereq-pill">📖 Réseaux</a></div>
-    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="chiffrement_volumes.html" class="related-pill">🔗 Chiffrement Volumes</a><a href="cassage_mdp.html" class="related-pill">🔗 Cassage MDP</a><a href="wireshark_pcap.html" class="related-pill">🔗 Wireshark &amp; TLS</a></div>
-  </div>
-
-  <div class="concept-card" style="margin-top:1rem">
-    <div class="concept-title">🔏 La PKI — distribuer des clés publiques avec confiance</div>
-    Sans la PKI, comment savoir que la clé publique reçue appartient bien au serveur attendu ? La PKI résout ce problème par une <strong>chaîne de signatures</strong> : une Autorité de Certification (CA) signe des certificats qui lient une clé publique à une identité vérifiée. C'est le socle de HTTPS, S/MIME, SSH certificates et des signatures électroniques qualifiées (ZertES en Suisse).
-  </div>
-
-  <div class="info" style="margin-top:1rem">
-    <p style="font-style:italic;color:var(--muted);font-size:.82rem">« Le Certificate Pinning est la raison pour laquelle votre proxy MITM légal échoue sur l'application bancaire — et un sujet récurrent à expliquer devant un magistrat. »</p>
-    <p style="font-size:.7rem;color:var(--dim);margin-top:.3rem">— SANS FOR610 · Applied Mobile Forensics</p>
-  </div>
-</div>
-
-<div class="page-wrap">
-  <div class="schema">
-    <div class="schema-title">🏛 Architecture d'une PKI — Composants &amp; flux de confiance</div>
-    <div class="schema-sub">CA · CRL · OCSP · KEYSERVERS · WEB OF TRUST</div>
-    <svg viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture PKI">
-      <defs>
-        <marker id="arr-pki2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-          <polygon points="0 0, 10 3, 0 6" fill="#58A6FF"/>
-        </marker>
-      </defs>
-      <rect x="280" y="20" width="160" height="60" rx="8" fill="rgba(88,166,255,.15)" stroke="#58A6FF" stroke-width="2"/>
-      <text x="360" y="45" text-anchor="middle" font-family="Inter,sans-serif" font-size="13" font-weight="800" fill="#58A6FF">🏛 CA</text>
-      <text x="360" y="62" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" fill="#A8B5C8">Certificate Authority</text>
-      <text x="360" y="76" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6A80A8">émet · publie · archive</text>
-      <rect x="40" y="120" width="160" height="55" rx="8" fill="rgba(255,64,96,.1)" stroke="#FF4060" stroke-width="1.5"/>
-      <text x="120" y="143" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="800" fill="#FF4060">❌ CRL</text>
-      <text x="120" y="160" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="#A8B5C8">Certificate Revocation List</text>
-      <text x="120" y="172" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">téléchargée 24h–7j</text>
-      <line x1="200" y1="148" x2="280" y2="55" stroke="#58A6FF" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#arr-pki2)"/>
-      <rect x="40" y="200" width="160" height="55" rx="8" fill="rgba(240,192,64,.1)" stroke="#F0C040" stroke-width="1.5"/>
-      <text x="120" y="223" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="800" fill="#F0C040">✓ OCSP</text>
-      <text x="120" y="240" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="#A8B5C8">Online Cert Status Protocol</text>
-      <text x="120" y="252" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">temps réel · stapling</text>
-      <line x1="200" y1="228" x2="280" y2="65" stroke="#58A6FF" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#arr-pki2)"/>
-      <rect x="520" y="120" width="160" height="55" rx="8" fill="rgba(48,232,138,.1)" stroke="#30E88A" stroke-width="1.5"/>
-      <text x="600" y="143" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="800" fill="#30E88A">🌐 Keyservers</text>
-      <text x="600" y="160" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="#A8B5C8">Distribution clés publiques</text>
-      <text x="600" y="172" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">pgp.mit.edu</text>
-      <line x1="520" y1="148" x2="440" y2="55" stroke="#58A6FF" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#arr-pki2)"/>
-      <rect x="520" y="200" width="160" height="55" rx="8" fill="rgba(188,140,255,.1)" stroke="#BC8CFF" stroke-width="1.5"/>
-      <text x="600" y="223" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="800" fill="#BC8CFF">🔗 Web of Trust</text>
-      <text x="600" y="240" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="#A8B5C8">Confiance décentralisée (PGP)</text>
-      <text x="600" y="252" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">alternative à la CA</text>
-      <line x1="520" y1="228" x2="440" y2="65" stroke="#58A6FF" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#arr-pki2)"/>
-      <rect x="280" y="240" width="160" height="55" rx="8" fill="rgba(0,229,204,.1)" stroke="#00E5CC" stroke-width="1.5"/>
-      <text x="360" y="263" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="800" fill="#00E5CC">👆 Empreinte (Hash)</text>
-      <text x="360" y="280" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="#A8B5C8">Vérification d'intégrité</text>
-      <text x="360" y="292" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">SHA-256 du certificat</text>
-      <line x1="360" y1="80" x2="360" y2="240" stroke="#00E5CC" stroke-width="1" stroke-dasharray="2 4" opacity=".5"/>
-    </svg>
-    <div class="schema-legend">
-      <span class="lg-item"><span class="lg-dot" style="background:#58A6FF"></span>Autorité centrale</span>
-      <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>Révocation</span>
-      <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>Validation temps réel</span>
-      <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>Distribution</span>
-      <span class="lg-item"><span class="lg-dot" style="background:#BC8CFF"></span>Modèle décentralisé</span>
+    <div class="prereq-row">
+      <span style="color:var(--dim);font-size:.7rem;min-width:72px">Prérequis :</span>
+      <a href="crypto.html" class="prereq-pill">📖 Cryptologie</a>
+      <a href="algorithmes_forensique.html" class="prereq-pill">📖 Algorithmes</a>
+      <a href="reseau.html" class="prereq-pill">📖 Réseaux</a>
     </div>
-  </div>
-
-  <div class="schema">
-    <div class="schema-title">⛰ Hiérarchie de confiance — Du Root au certificat utilisateur</div>
-    <div class="schema-sub">CA RACINE → INTRODUCTEURS CERTIFIÉS → UTILISATEURS FINAUX</div>
-    <div class="pyramid">
-      <div class="py-tier py-1">CA Racine (Root)<div class="py-sub">offline · auto-signée · trust anchor</div></div>
-      <div class="py-tier py-2">Introducteurs certifiés<div class="py-sub">Intermediate CAs · online · révocables</div></div>
-      <div class="py-tier py-3">Utilisateurs finaux<div class="py-sub">End-Entity · 398 jours max · serveurs &amp; users</div></div>
+    <div class="prereq-row">
+      <span style="color:var(--dim);font-size:.7rem;min-width:72px">Voir aussi :</span>
+      <a href="chiffrement_volumes.html" class="related-pill">🔗 Chiffrement Volumes</a>
+      <a href="wireshark_pcap.html" class="related-pill">🔗 Wireshark &amp; TLS</a>
+      <a href="cassage_mdp.html" class="related-pill">🔗 Cassage MDP</a>
     </div>
   </div>
 </div>
 
-<div class="page-wrap">
-  <div class="sec-title">Chaîne de certification PKI — Hiérarchie de confiance</div>
+<!-- TABS -->
+<div class="tabs-pki" id="pki-tabs">
+  <button class="tab-pki active" onclick="showTab('pki',this)">🏛 PKI &amp; Hiérarchie</button>
+  <button class="tab-pki" onclick="showTab('x509',this)">📜 X.509 v3</button>
+  <button class="tab-pki" onclick="showTab('tls',this)">🔒 TLS 1.3</button>
+  <button class="tab-pki" onclick="showTab('revocation',this)">❌ Révocation</button>
+  <button class="tab-pki" onclick="showTab('forensique',this)">🔍 Forensique</button>
+  <button class="tab-pki" onclick="showTab('quiz',this)">💊 Quiz</button>
+</div>
 
-  <div class="steps">
-    <div class="step">
-      <div class="sn" style="color:var(--red)">🏛</div>
-      <div class="st"><strong>Root CA</strong> — Auto-signée, stockée <strong>hors ligne (air-gap)</strong>. Signe uniquement les CA intermédiaires. Compromission = invalidation de toute la PKI. Ex : DigiCert Global Root, Swiss Government Root CA IV.</div>
+
+<!-- ══════════════════════════
+     TAB 1 — PKI & HIÉRARCHIE
+══════════════════════════ -->
+<div class="tab-page active" id="tab-pki">
+
+<div class="concept-card">
+  <div class="concept-title">🏛 La PKI — Distribuer des clés publiques avec confiance</div>
+  Sans PKI, comment savoir que la clé publique reçue appartient bien au serveur attendu ? La PKI (Public Key Infrastructure) résout ce problème par une <strong>chaîne de signatures</strong> : une Autorité de Certification (CA) signe des certificats qui lient une clé publique à une identité vérifiée. C'est le socle de HTTPS, S/MIME, SSH certificates, et des signatures électroniques qualifiées (ZertES en Suisse).
+</div>
+
+<div class="sec-title">Hiérarchie de confiance — Du Root au certificat utilisateur</div>
+<div class="pki-tree">
+  <div class="pki-level">
+    <div class="pki-node pn-root">
+      <div class="pki-label">🏛 Root CA</div>
+      <div class="pki-sub">Auto-signée · Offline · Trust anchor<br>Ex: DigiCert Global Root, Swiss Gov Root CA IV</div>
     </div>
-    <div class="step">
-      <div class="sn" style="color:var(--blue)">🏢</div>
-      <div class="st"><strong>Intermediate CA</strong> — Opérationnelle (en ligne). Signe les end-entity. Révocation possible sans toucher la Root. Permet la compartimentalisation par usage (TLS, S/MIME, code signing).</div>
+  </div>
+  <div class="pki-arrow">↓ signe</div>
+  <div class="pki-level">
+    <div class="pki-node pn-inter">
+      <div class="pki-label">🏢 Intermediate CA</div>
+      <div class="pki-sub">Online · Révocable sans toucher Root<br>TLS, S/MIME, Code Signing</div>
     </div>
-    <div class="step">
-      <div class="sn" style="color:var(--green)">📄</div>
-      <div class="st"><strong>End-Entity</strong> — Serveur TLS, utilisateur S/MIME. Durée max : <strong>398 jours</strong> (CA/B Forum, depuis 2020). Contient clé publique + identité vérifiée par la CA.</div>
+    <div class="pki-node pn-inter">
+      <div class="pki-label">🏢 Intermediate CA</div>
+      <div class="pki-sub">Compartimentalisation par usage<br>Peut être cross-certifiée</div>
+    </div>
+  </div>
+  <div class="pki-arrow">↓ signe</div>
+  <div class="pki-level">
+    <div class="pki-node pn-leaf">
+      <div class="pki-label">📄 End-Entity</div>
+      <div class="pki-sub">Serveur TLS · max 398 jours<br>Clé publique + identité vérifiée</div>
+    </div>
+    <div class="pki-node pn-leaf">
+      <div class="pki-label">📄 End-Entity</div>
+      <div class="pki-sub">Utilisateur S/MIME<br>Signature email · chiffrement</div>
+    </div>
+    <div class="pki-node pn-leaf">
+      <div class="pki-label">📄 End-Entity</div>
+      <div class="pki-sub">Code Signing<br>Binaire signé · validation SBL</div>
     </div>
   </div>
 </div>
 
-<div class="page-wrap">
-  <div class="sec-title">X.509 v3 &amp; Certificat auto-signé</div>
+<div class="tip">
+  💡 <strong>Forensique Root CA</strong> — La compromission d'une Root CA invalide <em>toute</em> la PKI qu'elle chapeaute. Exemple : DigiNotar (2011) — faux certificats Google émis, CA bannie de tous les navigateurs en 24h.
+</div>
 
-  <table>
-    <thead><tr><th>Champ</th><th>Valeur forensique</th></tr></thead>
-    <tbody>
-      <tr><td><strong>Subject / Issuer</strong></td><td>Identité titulaire + CA → tracer la chaîne de confiance</td></tr>
-      <tr><td><strong>Serial Number</strong></td><td>Unique par CA → vérification CRL/OCSP</td></tr>
-      <tr><td><strong>SAN (Subject Alt Name)</strong></td><td>Vrais domaines couverts (wildcard <code>*.example.com</code>)</td></tr>
-      <tr><td><strong>Validity</strong></td><td>Not Before / Not After → durée ≤ 398j (post-2020)</td></tr>
-      <tr><td><strong>Public Key</strong></td><td>Algorithme (RSA, ECDSA, Ed25519) + clé publique elle-même</td></tr>
-      <tr><td><strong>Signature</strong></td><td>Hash du certificat signé par la clé privée de la CA</td></tr>
-      <tr><td><strong>Key Usage</strong></td><td>Restrictions (digitalSignature, keyEncipherment, codeSigning)</td></tr>
-    </tbody>
-  </table>
+<div class="sec-title" style="margin-top:1.25rem">Types de certificats et niveaux de validation</div>
+<table class="x509-table">
+  <thead>
+    <tr><th>Type</th><th>Validation</th><th>Délai</th><th>Usage</th><th>Indicator navigateur</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="color:var(--text);font-weight:700">DV — Domain Validation</td>
+      <td style="font-size:.71rem;color:var(--muted)">Contrôle du domaine uniquement (DNS/email)</td>
+      <td style="font-family:var(--mono);font-size:.7rem">Minutes</td>
+      <td style="font-size:.71rem;color:var(--muted)">Sites perso, Let's Encrypt</td>
+      <td style="font-family:var(--mono);font-size:.7rem;color:var(--green)">🔒</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:700">OV — Organization Validation</td>
+      <td style="font-size:.71rem;color:var(--muted)">Identité de l'organisation vérifiée manuellement</td>
+      <td style="font-family:var(--mono);font-size:.7rem">1-3 jours</td>
+      <td style="font-size:.71rem;color:var(--muted)">Sites entreprise</td>
+      <td style="font-family:var(--mono);font-size:.7rem;color:var(--green)">🔒 + Org dans cert</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:700">EV — Extended Validation</td>
+      <td style="font-size:.71rem;color:var(--muted)">Vérification légale complète (registre, siège)</td>
+      <td style="font-family:var(--mono);font-size:.7rem">1-2 semaines</td>
+      <td style="font-size:.71rem;color:var(--muted)">Banques, e-commerce critique</td>
+      <td style="font-family:var(--mono);font-size:.7rem;color:var(--green)">Ancien: barre verte</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:700">Wildcard (*.domain.ch)</td>
+      <td style="font-size:.71rem;color:var(--muted)">DV ou OV sur tous les sous-domaines</td>
+      <td style="font-family:var(--mono);font-size:.7rem">Minutes</td>
+      <td style="font-size:.71rem;color:var(--muted)">Infrastructure multi-sous-domaines</td>
+      <td style="font-family:var(--mono);font-size:.7rem;color:var(--gold)">⚠️ Compromission = tous les sous-domaines</td>
+    </tr>
+  </tbody>
+</table>
 
-  <div class="card card-red" style="margin-top:.75rem">
-    <div class="ct">🚩 Certificat auto-signé — Red flag forensique</div>
-    <ul>
-      <li>Issuer = Subject — aucune CA de confiance dans la chaîne</li>
-      <li><strong>Légitime</strong> — dev local, intranet non exposé · <strong>Suspect</strong> — HTTPS public, C2 malware, proxy MITM</li>
-      <li>Chercher dans le système : <code>.p12</code> / <code>.pfx</code> / <code>.pem</code> (clé privée), <code>id_rsa</code>, <code>known_hosts</code></li>
+<div class="sec-title" style="margin-top:1.25rem">ZertES — Signatures électroniques qualifiées en Suisse</div>
+<div class="g2">
+  <div class="card card-gold">
+    <div class="ct">Loi sur la signature électronique (ZertES)</div>
+    <ul style="font-size:.73rem;color:var(--muted);padding-left:1rem;line-height:1.8">
+      <li><strong>SES</strong> (Simple) — scan, email — aucune valeur légale prouvée</li>
+      <li><strong>AES</strong> (Avancée) — liée à l'identité, authentifiable</li>
+      <li><strong>QES</strong> (Qualifiée) — équivaut signature manuscrite (Art. 14 CO)</li>
+      <li>Providers accrédités CH : SwissSign, QuoVadis, SwissID, Swisscom</li>
+      <li>Standard européen équivalent : eIDAS (règlement UE)</li>
     </ul>
   </div>
-</div>
-
-<div class="page-wrap">
-  <div class="sec-title">TLS 1.3 — Implications forensiques</div>
-
-  <div class="g2">
-    <div class="card card-blue">
-      <div class="ct">🔐 Handshake &amp; clés</div>
-      <ul>
-        <li>Client Hello : <strong>SNI en clair</strong> → domaine visible même si chiffré</li>
-        <li>TLS 1.3 impose ECDHE → <strong>PFS obligatoire</strong></li>
-        <li>Clé privée serveur ne déchiffre PAS les sessions passées</li>
-        <li><code>SSLKEYLOGFILE</code> → Chrome/Firefox exporte clés de session</li>
-        <li>ECH (Encrypted Client Hello) — chiffre le SNI (déploiement progressif 2024+)</li>
-      </ul>
-    </div>
-    <div class="card card-red">
-      <div class="ct">📌 Certificate Pinning</div>
-      <ul>
-        <li>App accepte uniquement son cert hard-codé</li>
-        <li>Bloque Burp, mitmproxy, Charles</li>
-        <li>Banques, WhatsApp, Signal, apps financières</li>
-        <li><strong>Bypass :</strong> <strong>Frida</strong> (hook SSL_verify) · apktool · Magisk TrustUserCerts</li>
-      </ul>
-    </div>
+  <div class="card card-blue">
+    <div class="ct">CT — Certificate Transparency</div>
+    <p style="font-size:.74rem;color:var(--muted)">Depuis 2018, tous les certificats TLS publics doivent être loggués dans des logs CT publics et append-only. Permet de détecter les certificats frauduleux émis pour un domaine.</p>
+    <p style="font-size:.74rem;color:var(--muted);margin-top:.4rem"><strong>Forensiquement :</strong> crt.sh permet de retrouver tous les certificats historiques émis pour un domaine — y compris des sous-domaines cachés.</p>
+    <code class="pki-cmd">curl -s "https://crt.sh/?q=entreprise.ch&output=json" | jq '.[].name_value' | sort -u</code>
   </div>
 </div>
 
-<div class="page-wrap">
-  <div class="sec-title">Révocation &amp; S/MIME</div>
+</div><!-- /tab-pki -->
 
-  <div class="g2">
-    <div class="card card-blue">
-      <div class="ct">📋 CRL vs OCSP</div>
-      <ul>
-        <li><strong>CRL</strong> = liste complète téléchargée périodiquement (24h–7j)</li>
-        <li><strong>OCSP</strong> = requête unitaire temps réel → good / revoked / unknown</li>
-        <li><strong>OCSP Stapling</strong> = serveur inclut la réponse dans le handshake</li>
-        <li>OCSP Must-Staple — extension qui force le client à vérifier OCSP</li>
-      </ul>
+
+<!-- ══════════════════════════
+     TAB 2 — X.509 v3
+══════════════════════════ -->
+<div class="tab-page" id="tab-x509">
+
+<div class="concept-card">
+  <div class="concept-title">📜 X.509 v3 — Structure d'un certificat</div>
+  X.509 v3 est le format standard de certificat numérique (RFC 5280). Il contient l'identité, la clé publique, la durée de validité, et des <strong>extensions</strong> qui précisent l'usage autorisé. Chaque champ est forensiquement exploitable.
+</div>
+
+<div class="sec-title">Champs X.509 — Valeur forensique</div>
+<table class="x509-table">
+  <thead>
+    <tr><th>Champ</th><th>Exemple</th><th>Valeur forensique</th><th>Flag</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="field-name">Subject CN</td>
+      <td class="field-ex">entreprise.ch</td>
+      <td style="font-size:.71rem;color:var(--muted)">Domaine ou identité prétendue. Vérifier cohérence avec l'URL réelle.</td>
+      <td><span class="field-flag ff-forensic">Clé</span></td>
+    </tr>
+    <tr>
+      <td class="field-name">Subject Alternative Name (SAN)</td>
+      <td class="field-ex">DNS:*.entreprise.ch, IP:1.2.3.4</td>
+      <td style="font-size:.71rem;color:var(--muted)">Liste des domaines/IPs couverts. Extension obligatoire depuis 2017 (CN seul ignoré).</td>
+      <td><span class="field-flag ff-forensic">Clé</span></td>
+    </tr>
+    <tr>
+      <td class="field-name">Issuer</td>
+      <td class="field-ex">DigiCert SHA2 Secure CA</td>
+      <td style="font-size:.71rem;color:var(--muted)">CA ayant signé le cert. Vérifier si CA connue/légitime ou self-signed.</td>
+      <td><span class="field-flag ff-forensic">Clé</span></td>
+    </tr>
+    <tr>
+      <td class="field-name">Serial Number</td>
+      <td class="field-ex">0A:1B:2C:3D:...</td>
+      <td style="font-size:.71rem;color:var(--muted)">Unique par CA. Utilisé pour la révocation CRL. Traçable dans CT logs.</td>
+      <td><span class="field-flag ff-forensic">Clé</span></td>
+    </tr>
+    <tr>
+      <td class="field-name">Not Before / Not After</td>
+      <td class="field-ex">2024-01-15 → 2025-01-15</td>
+      <td style="font-size:.71rem;color:var(--muted)">Validité. Cert expiré utilisé = red flag. Durée &gt;398j depuis 2020 = non conforme CA/B Forum.</td>
+      <td><span class="field-flag ff-critical">Critique</span></td>
+    </tr>
+    <tr>
+      <td class="field-name">Public Key</td>
+      <td class="field-ex">RSA 2048 / ECDSA P-256</td>
+      <td style="font-size:.71rem;color:var(--muted)">Algorithme et taille. RSA &lt;2048 = faible. ECDSA P-256 = moderne. ED25519 = très robuste.</td>
+      <td><span class="field-flag ff-critical">Critique</span></td>
+    </tr>
+    <tr>
+      <td class="field-name">Key Usage / Extended Key Usage</td>
+      <td class="field-ex">TLS Web Server Auth, Code Signing</td>
+      <td style="font-size:.71rem;color:var(--muted)">Usage autorisé. Un cert TLS utilisé pour signer du code = mauvaise pratique / compromission.</td>
+      <td><span class="field-flag ff-critical">Critique</span></td>
+    </tr>
+    <tr>
+      <td class="field-name">Signature Algorithm</td>
+      <td class="field-ex">sha256WithRSAEncryption</td>
+      <td style="font-size:.71rem;color:var(--muted)">MD5 ou SHA1 = vulnérable (collision attacks). SHA-256 minimum requis.</td>
+      <td><span class="field-flag ff-critical">Critique</span></td>
+    </tr>
+    <tr>
+      <td class="field-name">CRL Distribution Points</td>
+      <td class="field-ex">http://crl.digicert.com/...</td>
+      <td style="font-size:.71rem;color:var(--muted)">URL de la liste de révocation. Si inaccessible = fail-open dans la plupart des clients.</td>
+      <td><span class="field-flag ff-forensic">Clé</span></td>
+    </tr>
+    <tr>
+      <td class="field-name">Authority Information Access (AIA)</td>
+      <td class="field-ex">OCSP: http://ocsp.digicert.com</td>
+      <td style="font-size:.71rem;color:var(--muted)">URL OCSP pour vérification en temps réel. Contient aussi l'URL du certificat de la CA intermédiaire.</td>
+      <td><span class="field-flag ff-forensic">Clé</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="sec-title" style="margin-top:1.25rem">Analyser un certificat — Commandes essentielles</div>
+<code class="pki-cmd">openssl s_client -connect entreprise.ch:443 -showcerts 2>/dev/null | openssl x509 -text -noout</code>
+<code class="pki-cmd">openssl x509 -in cert.pem -text -noout  # Analyser un fichier cert local</code>
+<code class="pki-cmd">openssl x509 -in cert.pem -noout -subject -issuer -dates -serial</code>
+<code class="pki-cmd">openssl x509 -in cert.pem -noout -fingerprint -sha256  # Fingerprint SHA-256</code>
+<code class="pki-cmd">openssl verify -CAfile chain.pem cert.pem  # Vérifier la chaîne de confiance</code>
+<code class="pki-cmd"># Comparer deux certificats (détecter substitution)
+diff <(openssl x509 -in cert1.pem -text -noout) <(openssl x509 -in cert2.pem -text -noout)</code>
+
+</div><!-- /tab-x509 -->
+
+
+<!-- ══════════════════════════
+     TAB 3 — TLS 1.3
+══════════════════════════ -->
+<div class="tab-page" id="tab-tls">
+
+<div class="concept-card">
+  <div class="concept-title">🔒 TLS 1.3 — Handshake et Perfect Forward Secrecy</div>
+  TLS 1.3 (RFC 8446, 2018) est la version courante du protocole de transport sécurisé. Il élimine les algorithmes faibles, réduit la latence (1-RTT vs 2-RTT pour TLS 1.2), et impose le <strong>Perfect Forward Secrecy (PFS)</strong> — ce qui a des <strong>implications forensiques majeures</strong> pour l'interception légale.
+</div>
+
+<div class="sec-title">TLS 1.3 Handshake — Flux étape par étape</div>
+<div class="tls-flow">
+  <div style="font-family:var(--mono);font-size:.6rem;color:var(--dim);margin-bottom:.5rem;letter-spacing:.08em">CLIENT ←→ SERVEUR · TLS 1.3 (1-RTT)</div>
+  <div class="tls-row">
+    <div class="tls-step ts-c">→</div>
+    <span class="tls-dir">Client →</span>
+    <span class="tls-msg">ClientHello</span>
+    <span class="tls-desc">Versions supportées, cipher suites, extensions, <strong>key_share</strong> (Diffie-Hellman public value)</span>
+    <span class="tls-forensic">🔍 Cipher suites → fingerprint JA3</span>
+  </div>
+  <div class="tls-row">
+    <div class="tls-step ts-s">←</div>
+    <span class="tls-dir">Serveur →</span>
+    <span class="tls-msg">ServerHello</span>
+    <span class="tls-desc">Cipher suite choisie, key_share serveur. Tout ce qui suit est <strong>chiffré</strong>.</span>
+    <span class="tls-forensic">🔍 TLS version négociée</span>
+  </div>
+  <div class="tls-row">
+    <div class="tls-step ts-s">←</div>
+    <span class="tls-dir">Serveur →</span>
+    <span class="tls-msg">{EncryptedExtensions}</span>
+    <span class="tls-desc">Extensions supplémentaires chiffrées (ALPN, server name)</span>
+    <span class="tls-forensic">🔒 Chiffré dès ici</span>
+  </div>
+  <div class="tls-row">
+    <div class="tls-step ts-s">←</div>
+    <span class="tls-dir">Serveur →</span>
+    <span class="tls-msg">{Certificate}</span>
+    <span class="tls-desc">Certificat X.509 du serveur (chiffré). La chaîne complète est envoyée.</span>
+    <span class="tls-forensic">🔍 Voir avec SSLKEYLOGFILE</span>
+  </div>
+  <div class="tls-row">
+    <div class="tls-step ts-s">←</div>
+    <span class="tls-dir">Serveur →</span>
+    <span class="tls-msg">{CertificateVerify}</span>
+    <span class="tls-desc">Signature du handshake avec la clé privée du serveur</span>
+    <span class="tls-forensic"></span>
+  </div>
+  <div class="tls-row">
+    <div class="tls-step ts-s">←</div>
+    <span class="tls-dir">Serveur →</span>
+    <span class="tls-msg">{Finished}</span>
+    <span class="tls-desc">MAC du handshake — authentification complète</span>
+    <span class="tls-forensic"></span>
+  </div>
+  <div class="tls-row">
+    <div class="tls-step ts-c">→</div>
+    <span class="tls-dir">Client →</span>
+    <span class="tls-msg">{Finished}</span>
+    <span class="tls-desc">MAC du handshake côté client. <strong>Connexion établie.</strong></span>
+    <span class="tls-forensic">✅ Application data commence</span>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">Perfect Forward Secrecy (PFS) — L'enjeu forensique majeur</div>
+<div class="g2">
+  <div class="card card-red">
+    <div class="ct">PFS — Ce que ça signifie</div>
+    <p style="font-size:.74rem;color:var(--muted)">TLS 1.3 utilise exclusivement des échanges de clés <strong>éphémères</strong> (ECDHE, DHE). Une nouvelle clé de session est générée pour chaque connexion et <strong>jamais stockée</strong>. Même si on capture la clé privée du serveur après coup, on ne peut pas déchiffrer les sessions passées.</p>
+    <p style="font-size:.74rem;color:var(--muted);margin-top:.4rem"><strong>Impact forensique :</strong> l'interception légale (wiretapping) de sessions TLS 1.3 capturées avant l'investigation est <strong>impossible sans la clé de session</strong> au moment de la capture.</p>
+  </div>
+  <div class="card card-gold">
+    <div class="ct">Solutions pour déchiffrer TLS forensiquement</div>
+    <ul style="font-size:.73rem;color:var(--muted);padding-left:1rem;line-height:1.8">
+      <li><strong>SSLKEYLOGFILE</strong> — variable d'environnement Firefox/Chrome qui logue les clés de session. Si le poste était sous monitoring → déchiffrement possible dans Wireshark.</li>
+      <li><strong>Proxy MITM légal</strong> — inspection TLS sur le périmètre réseau avec certificat racine installé (préalablement autorisé).</li>
+      <li><strong>RAM dump</strong> — clés de session parfois encore en mémoire. Volatility + extraction de clés TLS.</li>
+      <li><strong>Application logs</strong> — le contenu applicatif peut être dans les logs même si le transport est chiffré.</li>
+    </ul>
+    <code class="pki-cmd">SSLKEYLOGFILE=/tmp/keys.log firefox &amp;  # Capturer les clés</code>
+
+<div class="concept-card" style="background:rgba(88,166,255,.04);border-color:rgba(88,166,255,.2);margin-top:.75rem">
+  <div class="concept-title" style="color:var(--blue);font-size:.78rem">ECH — Encrypted Client Hello (2024+)</div>
+  <p style="font-size:.76rem;margin:0">TLS 1.3 laisse encore le <strong>SNI (Server Name Indication) en clair</strong> dans le ClientHello — un observateur réseau voit le domaine visité même si le contenu est chiffré. <strong>ECH</strong> (RFC en cours de standardisation) chiffre également le SNI à l'aide d'une clé publique publiée en DNS. Déploiement progressif depuis 2024 (Cloudflare, Firefox). Impact forensique : la corrélation trafic ↔ domaine devient impossible sans accès DNS.</p>
+</div>
+    <code class="pki-cmd"># Dans Wireshark : Edit → Preferences → TLS → (Pre)-Master-Secret log</code>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">JA3 — Fingerprinting TLS sans déchiffrement</div>
+<div class="concept-card" style="background:rgba(88,166,255,.04);border-color:rgba(88,166,255,.2)">
+  <div class="concept-title" style="color:var(--blue)">JA3 — Identifier un client TLS par son ClientHello</div>
+  <p style="font-size:.78rem;margin-bottom:.5rem">Le ClientHello est en <strong>clair</strong> même dans TLS 1.3. JA3 calcule un hash MD5 à partir des cipher suites, extensions, courbes elliptiques proposées — créant un <strong>fingerprint unique du client TLS</strong> sans déchiffrer.</p>
+  <div class="g2" style="margin-top:.5rem">
+    <div>
+      <p style="font-size:.74rem;color:var(--muted)"><strong>Utilisation forensique :</strong> identifier un malware par son fingerprint JA3 (même s'il utilise TLS), détecter des outils comme Metasploit ou Cobalt Strike par leur signature TLS, ou identifier un navigateur/version spécifique.</p>
     </div>
-    <div class="card card-gold">
-      <div class="ct">📧 S/MIME — Pièges examen</div>
-      <ul>
-        <li><strong>Signature</strong> = chiffrer hash avec sa <em>clé privée</em></li>
-        <li><strong>Chiffrement</strong> = chiffrer avec <em>clé publique du destinataire</em></li>
-        <li>Signature valide ≠ identité personne physique (clé peut être volée)</li>
-        <li>Signature qualifiée ZertES = équivalent juridique de la signature manuscrite</li>
-      </ul>
+    <div>
+      <code class="pki-cmd">tshark -r capture.pcap -Y tls.handshake.type==1 -T fields -e tls.handshake.ciphersuite</code>
+      <code class="pki-cmd"># JA3 dans Zeek
+zeek-cut ja3 ja3s src_ip < ssl.log | sort | uniq -c | sort -rn | head</code>
     </div>
   </div>
 </div>
 
-<div class="page-wrap">
-  <div class="sec-title">🧠 Testez-vous</div>
+<div class="sec-title" style="margin-top:1.25rem">Certificate Pinning — Le frein au MITM légal</div>
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-color:rgba(255,64,96,.2)">
+  <div class="concept-title" style="color:var(--red)">⚠️ Pinning — Pourquoi le proxy d'inspection échoue sur l'app bancaire</div>
+  <p style="font-size:.78rem">Le pinning intègre l'empreinte du certificat (ou de la clé publique) directement dans l'application. L'app refuse tout certificat différent, même s'il est signé par une CA valide. Un proxy MITM légal avec certificat racine installé sera <strong>rejeté par l'app</strong>. Solutions : bypass via Frida (hook SSL), désassembler l'APK, ou saisir le device physiquement et dumper la RAM.</p>
+</div>
 
-  <div class="quiz-wrap">
-    <div class="quiz-q">TLS 1.3 est actif. Vous avez la clé privée du serveur. Pouvez-vous déchiffrer les sessions enregistrées ?<small>TLS · PFS · Niveau : moyen</small></div>
-    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
-    <div class="quiz-answer"><strong>Non.</strong> TLS 1.3 impose ECDHE (Perfect Forward Secrecy). Les clés de session sont éphémères — jamais stockées, non dérivables de la clé privée. La clé privée du serveur sert uniquement à <em>signer</em> (prouver l'identité), pas à chiffrer le master secret. Seul <code>SSLKEYLOGFILE</code> (variable d'environnement Chrome/Firefox) permet de capturer les clés en temps réel.</div>
+</div><!-- /tab-tls -->
+
+
+<!-- ══════════════════════════
+     TAB 4 — RÉVOCATION
+══════════════════════════ -->
+<div class="tab-page" id="tab-revocation">
+
+<div class="concept-card">
+  <div class="concept-title">❌ Révocation — Invalider un certificat avant son expiration</div>
+  Un certificat doit être révoqué si sa clé privée est compromise, si l'entité n'est plus autorisée, ou si le certificat a été émis par erreur. Deux mécanismes coexistent : <strong>CRL</strong> (liste téléchargeable) et <strong>OCSP</strong> (vérification en temps réel). Leurs limites sont forensiquement importantes.
+</div>
+
+<div class="rev-grid">
+  <div class="rev-card">
+    <div class="rev-name" style="color:var(--blue)">CRL — Certificate Revocation List</div>
+    <div class="rev-desc">Liste signée par la CA de tous les certificats révoqués avec leur numéro de série et raison. Téléchargée périodiquement (toutes les 24h–7j selon la CA). Peut peser plusieurs MB pour les grandes CAs.</div>
+    <div style="font-size:.7rem;color:var(--red);margin-top:.4rem">⚠️ Délai entre révocation et mise à jour = fenêtre de vulnérabilité</div>
+    <code class="rev-cmd">openssl crl -in crl.der -inform DER -text -noout</code>
+    <code class="rev-cmd">openssl crl -in crl.pem -text | grep -A2 "Serial"</code>
   </div>
 
-  <div class="quiz-wrap">
-    <div class="quiz-q">Pourquoi l'interception TLS échoue-t-elle sur une application bancaire mobile ?<small>Pinning · Niveau : facile</small></div>
-    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
-    <div class="quiz-answer"><strong>Certificate Pinning.</strong> L'application hard-code le certificat attendu du serveur. Même si le proxy présente un certificat valide signé par une CA de confiance, l'app le rejette car il ne correspond pas au cert pinned. Bypass : <strong>Frida</strong> (hook dynamique de SSL_verify), apktool + patch du binaire, ou Magisk TrustUserCerts (root requis). Note : sur iOS, le bypass nécessite jailbreak ou repackaging via theos.</div>
+  <div class="rev-card">
+    <div class="rev-name" style="color:var(--green)">OCSP — Online Certificate Status Protocol</div>
+    <div class="rev-desc">Vérification en temps réel du statut d'un certificat via requête HTTP vers le serveur OCSP de la CA. Réponse : Good, Revoked, ou Unknown. Problème de vie privée (la CA sait quels certificats vous visitez).</div>
+    <div style="font-size:.7rem;color:var(--gold);margin-top:.4rem">⚡ OCSP Stapling : le serveur intègre la réponse OCSP dans le handshake TLS</div>
+    <code class="rev-cmd">openssl ocsp -issuer chain.pem -cert cert.pem -url http://ocsp.ca.com -resp_text</code>
+    <code class="rev-cmd">echo QUIT | openssl s_client -connect site.ch:443 -status 2>&1 | grep -A10 "OCSP"</code>
   </div>
 
-  <div class="quiz-wrap">
-    <div class="quiz-q">Un certificat a une durée de validité de 5 ans. Émis en 2024. Que conclure ?<small>Conformité · Niveau : facile</small></div>
-    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
-    <div class="quiz-answer"><strong>Non conforme aux règles CA/B Forum.</strong> Depuis le 1er septembre 2020, la durée maximale d'un certificat TLS public est de <strong>398 jours</strong> (~13 mois). Un certificat de 5 ans soit (1) émis avant 2020, (2) un certificat de CA intermédiaire ou root (durées plus longues admises pour les CA), (3) un certificat interne / privé hors écosystème public, ou (4) un certificat invalide / suspect. Vérifier le contexte d'émission et la chaîne complète.</div>
-  </div>
-
-  <div class="exam-tip">
-    <div class="exam-tip-title">🎓 Exam Tip — PKI &amp; Certificats</div>
-    <p><strong>Root CA</strong> = hors ligne (air-gap) · <strong>Durée max</strong> certificat TLS = 398 jours (depuis 2020)</p>
-    <p><strong>TLS 1.3</strong> = ECDHE → PFS → clé privée serveur ne déchiffre pas les sessions passées</p>
-    <p><strong>SNI</strong> = domaine en clair dans le Client Hello (sauf ECH)</p>
-    <p><strong>Certificate Pinning</strong> → bypass via Frida (hook SSL_verify)</p>
-    <p><strong>OCSP Stapling</strong> = réponse dans le handshake (pas de requête séparée)</p>
-    <p><strong>Signature S/MIME</strong> ≠ identité personne physique (clé peut être volée)</p>
-    <p><strong>Auto-signé en HTTPS public</strong> = red flag (C2, MITM, malware)</p>
-  </div>
-
-  <div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> Root CA = air-gap · Durée max = 398 jours · TLS 1.3 = ECDHE + PFS · SNI = en clair · Certificate Pinning → Frida · OCSP Stapling = réponse dans le handshake · Signature S/MIME ≠ identité physique · VeraCrypt → Chiffrement Volumes · Shannon → Cryptologie.</div>
-
-  <div class="footer">
-    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
-    <span>RFC 5280 (X.509) · RFC 8446 (TLS 1.3) · Manuel Ch. 21–24</span>
+  <div class="rev-card">
+    <div class="rev-name" style="color:var(--purple)">OCSP Must-Staple</div>
+    <div class="rev-desc">Extension X.509 qui oblige le serveur à fournir une réponse OCSP valide dans le handshake. Si absent → navigateur refuse la connexion (fail-closed). Renforce la révocation mais complique la forensique réseau.</div>
+    <div style="font-size:.7rem;color:var(--cyan);margin-top:.4rem">Extension: 1.3.6.1.5.5.7.1.24 dans le certificat</div>
+    <code class="rev-cmd">openssl x509 -in cert.pem -text | grep -A5 "TLS Feature"</code>
   </div>
 </div>
 
+<div class="sec-title" style="margin-top:1.25rem">Comportement des clients en cas d'échec de vérification</div>
+<table class="x509-table">
+  <thead>
+    <tr><th>Mécanisme</th><th>Si serveur OCSP/CRL inaccessible</th><th>Impact forensique</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="color:var(--text);font-weight:700">CRL classique</td>
+      <td style="color:var(--red)">Fail-open — connexion acceptée (soft fail)</td>
+      <td style="font-size:.71rem;color:var(--muted)">Un attaquant peut bloquer l'accès CRL pour utiliser un cert révoqué</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:700">OCSP standard</td>
+      <td style="color:var(--red)">Fail-open (Chrome, Firefox)</td>
+      <td style="font-size:.71rem;color:var(--muted)">Même vulnérabilité — connexion acceptée si OCSP down</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:700">OCSP Must-Staple</td>
+      <td style="color:var(--green)">Fail-closed — connexion refusée</td>
+      <td style="font-size:.71rem;color:var(--muted)">Plus sécurisé mais peut bloquer des services légitimes</td>
+    </tr>
+    <tr>
+      <td style="color:var(--text);font-weight:700">OneCRL / CRLSets</td>
+      <td style="color:var(--green)">Révocation d'urgence navigateur (hardcodée)</td>
+      <td style="font-size:.71rem;color:var(--muted)">Mis à jour via mise à jour navigateur — pas de délai réseau</td>
+    </tr>
+  </tbody>
+</table>
 
 
-<!-- Notes utilisateur (CAS-IN v2.16) -->
-<script src="../js/components/fiche-notes.js" defer></script>
-<script src="../js/components/fiche-common.js" defer></script>
-    <script src="../js/components/fiche-reader.js" defer></script>
-<script src="../js/components/fiche-search.js" defer></script>
-<script src="../js/components/search-modal.js" defer></script>
-<script src="../js/components/fiche-related.js" defer></script>
+<div class="sec-title" style="margin-top:1.25rem">S/MIME — Pièges examen &amp; forensique</div>
+<div class="g2">
+  <div class="card card-gold">
+    <div class="ct">📧 S/MIME — Concepts clés</div>
+    <ul style="font-size:.73rem;color:var(--muted);padding-left:1rem;line-height:1.85">
+      <li><strong>Signature</strong> = chiffrer le hash du message avec sa <em>clé privée</em></li>
+      <li><strong>Chiffrement</strong> = chiffrer le message avec la <em>clé publique du destinataire</em></li>
+      <li>Signature valide ≠ identité personne physique (la clé peut être volée)</li>
+      <li>Signature qualifiée ZertES = équivalent juridique de la signature manuscrite (Art. 14 CO)</li>
+      <li>Providers CH : SwissSign, QuoVadis, SwissID, Swisscom</li>
+    </ul>
+  </div>
+  <div class="card card-blue">
+    <div class="ct">🔍 S/MIME forensique</div>
+    <ul style="font-size:.73rem;color:var(--muted);padding-left:1rem;line-height:1.85">
+      <li>Emails S/MIME signés = <strong>preuve d'intégrité</strong> du message + horodatage</li>
+      <li>Extraction du certificat depuis l'email (.p7s) → identifier l'expéditeur</li>
+      <li>Vérifier la chaîne de confiance du certificat de signature</li>
+      <li>Signature valide mais CA inconnue = red flag (certificat autosigné)</li>
+    </ul>
+    <code class="rev-cmd">openssl smime -verify -in email.eml -CAfile chain.pem</code>
+    <code class="rev-cmd">openssl pkcs7 -in signature.p7s -inform DER -print_certs -noout</code>
+  </div>
+</div>
+</div><!-- /tab-revocation -->
+
+
+<!-- ══════════════════════════
+     TAB 5 — FORENSIQUE
+══════════════════════════ -->
+<div class="tab-page" id="tab-forensique">
+
+<div class="concept-card">
+  <div class="concept-title">🔍 PKI Forensique — Cas pratiques et outils</div>
+  Les certificats X.509 laissent des traces dans les navigateurs, les logs réseau, les stores OS, et les logs applicatifs. Leur analyse permet d'identifier des MITM, des malwares utilisant TLS, des infrastructures C2, et des certificats frauduleux.
+</div>
+
+<div class="sec-title">Scénarios forensiques PKI</div>
+
+<div class="scenario-card">
+  <div class="scenario-label">🎯 Scénario 1 — MITM détecté via anomalie de certificat</div>
+  <div class="scenario-body">
+    Un utilisateur signale que son navigateur a montré une alerte certificat sur le site de sa banque. Vous suspectez un proxy d'interception ou un malware.<br><br>
+    <strong>Investigation :</strong> Récupérer le certificat présenté au navigateur (<code style="font-family:var(--mono)">openssl s_client -connect banque.ch:443</code>), comparer le Subject, l'Issuer, et le fingerprint SHA-256 avec le certificat légitime visible depuis un autre réseau. Vérifier dans le store de certificats Windows (<code style="font-family:var(--mono)">certmgr.msc</code>) si une CA douteuse a été installée. Analyser le cache DNS pour un éventuel hijacking.
+  </div>
+</div>
+
+<div class="scenario-card">
+  <div class="scenario-label">🎯 Scénario 2 — C2 malware identifié via JA3 / certificat auto-signé</div>
+  <div class="scenario-body">
+    Le SIEM alerte sur des connexions TLS sortantes vers une IP inconnue depuis un poste Windows. Le certificat est auto-signé avec un CN aléatoire.<br><br>
+    <strong>Investigation :</strong> Extraire le certificat depuis Zeek (<code style="font-family:var(--mono)">x509.log</code>) ou via <code style="font-family:var(--mono)">tshark</code>. Calculer le JA3 pour identifier l'outil (Metasploit = JA3 <code style="font-family:var(--mono)">769,47-53-5...</code>). Vérifier sur VirusTotal l'IP et le fingerprint du certificat. Corréler avec Sysmon EID 3 pour identifier le processus source.
+  </div>
+</div>
+
+<div class="scenario-card">
+  <div class="scenario-label">🎯 Scénario 3 — Certificat de signature de code compromis</div>
+  <div class="scenario-body">
+    Un binaire suspect est signé numériquement avec un certificat valide d'une entreprise légitime.<br><br>
+    <strong>Investigation :</strong> Extraire le certificat de signature (<code style="font-family:var(--mono)">signtool verify /v binaire.exe</code> ou <code style="font-family:var(--mono)">osslsigncode verify</code>), vérifier la date de signature vs la date de révocation du certificat, chercher le serial dans les CRL, vérifier sur crt.sh si le certificat apparaît dans les CT logs avec l'historique attendu.
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.25rem">Sources de certificats sur un système Windows</div>
+<div class="g2">
+  <div class="card card-blue">
+    <div class="ct">Certificate Stores Windows</div>
+    <code class="pki-cmd">certmgr.msc  # GUI — Magasin de certificats utilisateur</code>
+    <code class="pki-cmd">certlm.msc   # GUI — Magasin de certificats machine</code>
+    <code class="pki-cmd">Get-ChildItem -Path Cert:\ -Recurse | Where-Object {$_.Issuer -notlike "*Microsoft*"} | Select Subject,Issuer,Thumbprint</code>
+    <code class="pki-cmd"># Lister les CAs racines installées
+Get-ChildItem Cert:\LocalMachine\Root | Select Subject,Thumbprint | Format-Table</code>
+    <p style="font-size:.72rem;color:var(--muted);margin-top:.4rem">⚠️ Une CA racine inconnue dans <code style="font-family:var(--mono)">LocalMachine\Root</code> = IOC critique (MITM, malware, proxy enterprise non documenté).</p>
+  </div>
+  <div class="card card-gold">
+    <div class="ct">Sources réseau et logs</div>
+    <code class="pki-cmd"># Zeek x509.log — tous les certs vus sur le réseau
+zeek-cut ts subject issuer not_valid_before not_valid_after < x509.log | head -20</code>
+    <code class="pki-cmd"># Certs auto-signés (Issuer == Subject)
+awk -F'\t' '$2==$3' x509.log</code>
+    <code class="pki-cmd"># crt.sh — historique certs pour un domaine
+curl -s "https://crt.sh/?q=%.domaine.ch&output=json" | jq '.[].name_value' | sort -u</code>
+    <code class="pki-cmd"># Shodan — certificats par organisation
+shodan search "ssl.cert.subject.o:\"Entreprise SA\""</code>
+  </div>
+</div>
+
+</div><!-- /tab-forensique -->
+
+
+<!-- ══════════════════════════
+     TAB 6 — QUIZ
+══════════════════════════ -->
+<div class="tab-page" id="tab-quiz">
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q1 — Pourquoi TLS 1.3 avec PFS rend-il difficile le déchiffrement rétrospectif des sessions capturées ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> TLS 1.3 impose le <strong>Perfect Forward Secrecy</strong> en utilisant exclusivement des échanges de clés <strong>éphémères</strong> (ECDHE). Une clé de session unique est générée pour chaque connexion et immédiatement détruite après la session. Même si on obtient la clé privée du serveur après coup, on ne peut pas recalculer les clés de session passées. Pour déchiffrer rétrospectivement, il faut avoir capturé les clés au moment de la session : via <code style="font-family:var(--mono)">SSLKEYLOGFILE</code>, un proxy MITM préinstallé, ou un dump RAM contemporain.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q2 — Qu'est-ce que le JA3 fingerprint et comment est-il utile en forensique réseau ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> JA3 est un hash MD5 calculé à partir des paramètres du <strong>ClientHello TLS</strong> — cipher suites proposées, extensions, courbes elliptiques — qui sont en <strong>clair</strong> même dans TLS 1.3. Ce fingerprint identifie uniquement un client/outil TLS indépendamment du contenu chiffré. Utilité forensique : identifier un malware par son JA3 (Metasploit, Cobalt Strike ont des signatures connues), détecter des outils d'attaque même si tout le contenu est chiffré, identifier la version d'un navigateur ou d'un SDK.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q3 — Une CA racine inconnue est présente dans <code style="font-family:var(--mono)">LocalMachine\Root</code> d'un poste Windows. Quelles sont les implications forensiques ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> C'est un <strong>IOC critique</strong> — cette CA racine inconnue peut signer des certificats TLS arbitraires qui seront acceptés par le navigateur sans alerte. Cela permet un <strong>MITM transparent</strong> sur tout le trafic HTTPS du poste. Causes possibles : (1) malware installant sa propre CA pour inspecter/modifier le trafic ; (2) proxy d'entreprise non documenté (Forcepoint, BlueCoat) ; (3) intrusion pour intercepter les sessions bancaires/email. Investigation : noter le Subject et Thumbprint, vérifier dans les Event Logs l'ajout du certificat (EID 1796), croiser avec les dates d'infection suspectées.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q4 — Quelle est la différence entre CRL et OCSP, et pourquoi le comportement "fail-open" est-il forensiquement important ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> <strong>CRL</strong> = liste téléchargeable de tous les certificats révoqués, mise à jour toutes les 24h-7j — délai de propagation important. <strong>OCSP</strong> = vérification en temps réel via requête HTTP. Le comportement <strong>fail-open</strong> signifie que si le serveur CRL/OCSP est inaccessible, la plupart des clients <strong>acceptent quand même le certificat</strong> (pour ne pas bloquer les utilisateurs). Un attaquant peut exploiter ceci : révoquer la capacité à joindre le serveur OCSP (firewall, DDoS) pour utiliser un certificat révoqué. OCSP Must-Staple (fail-closed) résout ce problème mais reste peu déployé.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">💊 Q5 — Qu'est-ce que la Certificate Transparency (CT) et comment l'utiliser en investigation OSINT ?</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    <span class="quiz-ok">✓</span> La <strong>Certificate Transparency</strong> oblige depuis 2018 toutes les CAs publiques à enregistrer chaque certificat émis dans des logs publics, append-only et auditables. Forensiquement : (1) <strong>crt.sh</strong> permet de retrouver tous les certificats historiques émis pour un domaine, y compris des sous-domaines cachés utilisés pour du C2 ou de l'infrastructure d'attaque ; (2) détecter des certificats frauduleux émis pour un domaine dont on est propriétaire ; (3) reconstituer l'infrastructure d'un attaquant en pivotant sur les noms dans les SAN. Commande : <code style="font-family:var(--mono)">curl -s "https://crt.sh/?q=%.domaine.ch&output=json" | jq '.[].name_value' | sort -u</code>
+  </div>
+</div>
+
+<div style="text-align:center;margin-top:1.5rem">
+  <a href="../quiz.html" class="fiche-cta-btn fiche-cta-red">💊 Plus de questions</a>
+</div>
+
+</div><!-- /tab-quiz -->
+
+
+<!-- Footer -->
+
+<div class="alert" style="margin:1.25rem 2rem;max-width:960px;margin-left:auto;margin-right:auto">
+  ⚖️ <strong>Aide-mémoire examen CAS-IN :</strong> Root CA = air-gap · Durée max = 398 jours · TLS 1.3 = ECDHE + PFS · SNI = en clair (ECH en cours) · Pinning → bypass Frida · OCSP Stapling = réponse dans le handshake · Signature S/MIME ≠ identité physique · ZertES QES = signature manuscrite
+</div>
+<div class="fiche-cta-section">
+  <div class="fiche-cta-text">Continuer l'exploration</div>
+  <div class="fiche-cta-buttons">
+    <a href="crypto.html"             class="fiche-cta-btn fiche-cta-dim">🔐 Cryptologie</a>
+    <a href="chiffrement_volumes.html" class="fiche-cta-btn fiche-cta-dim">💾 Chiffrement Volumes</a>
+    <a href="wireshark_pcap.html"      class="fiche-cta-btn fiche-cta-dim">🦈 Wireshark &amp; TLS</a>
+    <a href="cassage_mdp.html"         class="fiche-cta-btn fiche-cta-dim">🔓 Cassage MDP</a>
+    <a href="../quiz.html"             class="fiche-cta-btn fiche-cta-red">💊 Quiz →</a>
+    <a href="index.html"               class="fiche-cta-btn fiche-cta-orange">← Toutes les fiches</a>
+  </div>
+</div>
+
+<script>
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.tab-pki').forEach(function(b){ b.classList.remove('active'); });
+  var page = document.getElementById('tab-' + id);
+  if(page) page.classList.add('active');
+  if(btn) btn.classList.add('active');
+  window.scrollTo({top: document.getElementById('pki-tabs').offsetTop - 60, behavior:'smooth'});
+}
+(function(){
+  var bar = document.getElementById('scroll-progress');
+  if(bar) window.addEventListener('scroll', function(){
+    var d = document.documentElement;
+    bar.style.width = Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';
+  },{passive:true});
+  var bt = document.getElementById('back-top');
+  if(bt) window.addEventListener('scroll',function(){
+    bt.classList.toggle('visible', window.scrollY > 300);
+  },{passive:true});
+  document.querySelectorAll('.quiz-reveal-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var ans = btn.closest('.quiz-wrap').querySelector('.quiz-answer');
+      ans.classList.toggle('visible');
+      btn.textContent = ans.classList.contains('visible') ? 'Masquer ↑' : 'Révéler →';
+    });
+  });
+  document.querySelectorAll('.pki-cmd, .rev-cmd').forEach(function(el){
+    el.title = 'Cliquer pour copier';
+    el.addEventListener('click', function(){
+      navigator.clipboard && navigator.clipboard.writeText(el.innerText.trim()).then(function(){
+        var o = el.style.background;
+        el.style.background = 'rgba(48,232,138,.2)';
+        setTimeout(function(){ el.style.background = o; }, 700);
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>
