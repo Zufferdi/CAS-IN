@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Messagerie Instantanée Forensique — CAS-IN</title>
+<meta name="description" content="WhatsApp · Signal · Telegram · Bases SQLite chiffrées · Extraction iOS / Android · Signal Protocol · LSCPT">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">RÉSEAUX &amp; COMMUNICATIONS · MESSAGERIES</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-réseauxinfrastructure">Réseaux &amp; Communications</a><span class="bc-sep">›</span>
+    <span class="bc-current">Messagerie Instantanée</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~10 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">💬</span>
+    <span class="tag tag-green" style="margin-left:.5rem">WhatsApp</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Signal</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">Telegram</span>
+    <span class="tag tag-red" style="margin-left:.3rem">E2EE</span>
+    <span class="tag tag-gold" style="margin-left:.3rem">LSCPT</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Messagerie Instantanée Forensique</h1>
+    <div class="meta">Bases SQLite chiffrées · Signal Protocol · Extraction iOS/Android · Cadre légal LSCPT</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="sqlite_forensique.html" class="prereq-pill">📖 SQLite</a><a href="mobile.html" class="prereq-pill">📖 Mobile</a><a href="crypto.html" class="prereq-pill">📖 Cryptologie</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=mobile" class="tp-pill">🧪 📱 Mobile Forensics</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="sqlite_forensique.html" class="related-pill">🔗 SQLite</a><a href="lscpt.html" class="related-pill">🔗 LSCPT</a><a href="tor_darkweb.html" class="related-pill">🔗 Tor &amp; Dark Web</a></div>
+  </div>
+
+  <div class="concept-card" style="margin-top:1rem">
+    <div class="concept-title">💬 E2EE — La fin de l'écoute classique</div>
+    Avec le <strong>chiffrement de bout en bout</strong> (E2EE), seuls l'expéditeur et le destinataire peuvent lire les messages. Les serveurs de l'opérateur (WhatsApp, Signal) ne voient que des paquets chiffrés. Conséquence majeure pour la procédure pénale suisse : <strong>la surveillance LSCPT classique (RT) ne fonctionne plus sur le contenu</strong>. L'ordonnance art. 269 CPP, même autorisée par le TMC, ne récupérera que des <strong>métadonnées</strong> (qui parle à qui, quand, depuis quelle IP) — jamais le contenu lui-même. <strong>Conséquence forensique</strong> : pour accéder au contenu, il faut <strong>saisir le terminal physique</strong> (smartphone) du suspect et déchiffrer la base SQLite locale. C'est pourquoi l'extraction mobile (Cellebrite, GrayKey, AXIOM) est devenue le pilier des enquêtes contre criminalité organisée et terrorisme. Le <strong>Signal Protocol</strong> (utilisé par Signal et WhatsApp) reste à ce jour <strong>cryptographiquement intact</strong> — seules les failles d'implémentation ou l'accès au terminal permettent l'extraction.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA SVG — SIGNAL PROTOCOL & POINTS D'ATTAQUE FORENSIQUE
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="schema">
+    <div class="schema-title">🔐 Signal Protocol — E2EE et points d'attaque forensique</div>
+    <div class="schema-sub">CHIFFREMENT BOUT-EN-BOUT · DOUBLE RATCHET · TROIS POINTS D'ATTAQUE FORENSIQUE</div>
+    <svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Signal Protocol forensique">
+      <defs>
+        <marker id="arr-im" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <polygon points="0 0, 10 3, 0 6" fill="#00E5CC"/>
+        </marker>
+        <marker id="arr-im-r" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <polygon points="0 0, 10 3, 0 6" fill="#FF4060"/>
+        </marker>
+      </defs>
+
+      <!-- Header -->
+      <rect x="20" y="15" width="680" height="36" rx="6" fill="rgba(13,17,23,.5)" stroke="rgba(0,229,204,.4)" stroke-width="1.2"/>
+      <text x="360" y="33" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#00E5CC">🔐 SIGNAL PROTOCOL — Open Whisper Systems · X3DH + Double Ratchet · Cryptographiquement intact</text>
+      <text x="360" y="46" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">Utilisé par : Signal · WhatsApp · Messenger (opt-in) · Skype · Google Messages (RCS)</text>
+
+      <!-- Alice (gauche) -->
+      <rect x="20" y="75" width="160" height="100" rx="8" fill="rgba(48,232,138,.1)" stroke="#30E88A" stroke-width="1.5"/>
+      <text x="100" y="100" text-anchor="middle" font-size="32">📱</text>
+      <text x="100" y="125" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#30E88A">Alice</text>
+      <text x="100" y="142" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">clé privée locale</text>
+      <text x="100" y="155" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">SQLite chiffré</text>
+      <text x="100" y="167" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">★ POINT D'ATTAQUE 1 ★</text>
+
+      <!-- Serveur (centre, juste relais) -->
+      <rect x="280" y="75" width="160" height="100" rx="8" fill="rgba(13,17,23,.5)" stroke="rgba(168,181,200,.5)" stroke-width="1.5" stroke-dasharray="3 3"/>
+      <text x="360" y="100" text-anchor="middle" font-size="32">☁️</text>
+      <text x="360" y="125" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8">Serveur (relais)</text>
+      <text x="360" y="142" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">VOIT que des octets</text>
+      <text x="360" y="155" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">chiffrés (ciphertext)</text>
+      <text x="360" y="167" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#F0C040">métadonnées seules</text>
+
+      <!-- Bob (droite) -->
+      <rect x="540" y="75" width="160" height="100" rx="8" fill="rgba(88,166,255,.1)" stroke="#58A6FF" stroke-width="1.5"/>
+      <text x="620" y="100" text-anchor="middle" font-size="32">📱</text>
+      <text x="620" y="125" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#58A6FF">Bob</text>
+      <text x="620" y="142" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">clé privée locale</text>
+      <text x="620" y="155" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">SQLite chiffré</text>
+      <text x="620" y="167" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">★ POINT D'ATTAQUE 1 ★</text>
+
+      <!-- Flèches Alice -> Serveur -> Bob (chiffrées) -->
+      <line x1="180" y1="115" x2="278" y2="115" stroke="#30E88A" stroke-width="1.5" marker-end="url(#arr-im)"/>
+      <text x="229" y="108" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#30E88A">🔒 ciphertext</text>
+      <line x1="442" y1="115" x2="538" y2="115" stroke="#30E88A" stroke-width="1.5" marker-end="url(#arr-im)"/>
+      <text x="490" y="108" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#30E88A">🔒 ciphertext</text>
+
+      <!-- LSCPT (Point d'attaque 2 sur le serveur / opérateur) -->
+      <line x1="360" y1="180" x2="360" y2="215" stroke="#FF4060" stroke-width="1.5" marker-end="url(#arr-im-r)"/>
+      <rect x="240" y="220" width="240" height="55" rx="6" fill="rgba(255,64,96,.06)" stroke="#FF4060" stroke-width="1.5"/>
+      <text x="360" y="240" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#FF4060">★ POINT D'ATTAQUE 2 ★</text>
+      <text x="360" y="255" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#A8B5C8">LSCPT art. 273 CPP — Métadonnées</text>
+      <text x="360" y="267" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6A80A8">qui · quand · IP · pas le contenu</text>
+
+      <!-- Encadré "Saisir terminal" sur Alice/Bob -->
+      <rect x="20" y="220" width="200" height="55" rx="6" fill="rgba(255,64,96,.06)" stroke="#FF4060" stroke-width="1.5"/>
+      <text x="120" y="240" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="800" fill="#FF4060">★ ATTAQUE 1 (efficace)</text>
+      <text x="120" y="255" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">Saisir le terminal · extraire</text>
+      <text x="120" y="267" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6A80A8">Cellebrite · AXIOM · GrayKey</text>
+
+      <rect x="500" y="220" width="200" height="55" rx="6" fill="rgba(240,192,64,.06)" stroke="#F0C040" stroke-width="1.5"/>
+      <text x="600" y="240" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="800" fill="#F0C040">★ ATTAQUE 3 ★</text>
+      <text x="600" y="255" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">RAM live · Govware</text>
+      <text x="600" y="267" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#6A80A8">art. 280 CPP · clé en clair</text>
+
+      <!-- Bandeau bas - Limites -->
+      <rect x="20" y="290" width="680" height="60" rx="6" fill="rgba(0,229,204,.06)" stroke="rgba(0,229,204,.4)" stroke-width="1.2"/>
+      <text x="360" y="308" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#00E5CC">📋 BILAN FORENSIQUE — Trois angles d'attaque</text>
+      <text x="35" y="325" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8"><tspan fill="#FF4060" font-weight="700">①</tspan> TERMINAL : SQLite local + clé déchiffrement → contenu COMPLET (méthode standard)</text>
+      <text x="35" y="338" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8"><tspan fill="#FF4060" font-weight="700">②</tspan> SERVEUR : LSCPT art. 273 → métadonnées SEULES (qui parle à qui, quand) — pas de contenu</text>
+      <text x="35" y="351" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8"><tspan fill="#F0C040" font-weight="700">③</tspan> RAM/GOVWARE : art. 280 CPP → clés en clair pendant session active (technique avancée)</text>
+    </svg>
+    <div class="schema-legend">
+      <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>Alice (terminal source)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#58A6FF"></span>Bob (terminal cible)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#A8B5C8"></span>Serveur (relais aveugle)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>Points d'attaque forensique</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>LSCPT métadonnées / Govware</span>
+    </div>
+  </div>
+</div>
+
+<!-- PANORAMA DES 3 APPS -->
+<div class="page-wrap">
+  <div class="sec-title">🎯 Panorama des trois applications</div>
+  <div class="sec-sub">Chaque messagerie stocke l'historique localement dans une base SQLite — c'est <strong>la cible principale</strong> d'une extraction forensique.</div>
+  <div class="g3">
+    <div class="card card-green">
+      <div class="ct">🟢 WhatsApp</div>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:.4rem">E2EE · Signal Protocol · ~2 Md users</p>
+      <ul>
+        <li><strong>Base</strong> : <code>msgstore.db.crypt15</code></li>
+        <li><strong>Chiffrement</strong> : AES-GCM · clé 32 octets</li>
+        <li><strong>Clé</strong> : <code>/data/data/com.whatsapp/files/key</code> (Android, root)</li>
+        <li><strong>Backups</strong> : Google Drive (Android) / iCloud (iOS), chiffrés E2E depuis 2021 (opt-in)</li>
+      </ul>
+    </div>
+    <div class="card card-blue">
+      <div class="ct">🔵 Signal</div>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:.4rem">E2EE · Signal Protocol · open source</p>
+      <ul>
+        <li><strong>Base</strong> : <code>signal.db</code> (SQLCipher AES-256-CBC)</li>
+        <li><strong>Clé</strong> : dérivée du <em>Signal PIN</em> + Android Keystore / iOS Keychain</li>
+        <li><strong>Backups</strong> : chiffrés localement par phrase de 30 mots (jamais cloud)</li>
+        <li><strong>Sealed Sender</strong> : expéditeur masqué côté serveur</li>
+      </ul>
+    </div>
+    <div class="card card-cyan">
+      <div class="ct">🔷 Telegram</div>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:.4rem">MTProto · E2EE optionnelle</p>
+      <ul>
+        <li><strong>Chats classiques</strong> : <strong>NON chiffrés E2E</strong> — déchiffrables côté Telegram</li>
+        <li><strong>Secret Chats</strong> : E2E, device-to-device, jamais sur cloud</li>
+        <li><strong>Base</strong> : <code>cache4.db</code> (Android) / <code>tdata/</code> (Desktop, format propriétaire)</li>
+        <li><strong>Cloud sync</strong> : récupération possible via login depuis nouvel appareil</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ARTEFACTS LOCAUX -->
+<div class="page-wrap">
+  <div class="sec-title">📂 Artefacts locaux à cibler</div>
+  <div class="sec-sub">Paths standards sur iOS (Full File System) et Android (root / ADB backup / chip-off).</div>
+  <table>
+    <thead><tr><th>App</th><th>iOS (Full File System)</th><th>Android (/data/data/...)</th><th>Desktop</th></tr></thead>
+    <tbody>
+      <tr><td><strong>WhatsApp</strong></td><td><code>AppDomainGroup-group.net.whatsapp.WhatsApp.shared/ChatStorage.sqlite</code></td><td><code>com.whatsapp/databases/msgstore.db</code></td><td><code>%AppData%/WhatsApp/Databases</code> (Desktop)</td></tr>
+      <tr><td><strong>Signal</strong></td><td><code>AppDomain-org.whispersystems.signal/Documents/signal.sqlite</code></td><td><code>org.thoughtcrime.securesms/databases/signal.db</code></td><td><code>%AppData%/Signal/sql/db.sqlite</code> (SQLCipher)</td></tr>
+      <tr><td><strong>Telegram</strong></td><td><code>AppDomain-ph.telegra.Telegraph/Documents/</code></td><td><code>org.telegram.messenger/files/cache4.db</code></td><td><code>%AppData%/Telegram Desktop/tdata/</code></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- DÉCHIFFREMENT -->
+<div class="page-wrap">
+  <div class="sec-title">🔓 Déchiffrement — Ordre opérationnel par app</div>
+  <div class="g2">
+    <div class="card card-green">
+      <div class="ct">🟢 WhatsApp · msgstore.db.crypt15</div>
+      <p>Méthode classique (Android root) :</p>
+      <ul>
+        <li>Extraire <code>/data/data/com.whatsapp/files/key</code> (ou <code>encrypted_backup.key</code> depuis Keystore)</li>
+        <li>Récupérer <code>msgstore.db.crypt15</code> dans <code>/sdcard/WhatsApp/Databases/</code></li>
+        <li>Outil : <code>wa-crypt-tools</code> (Python, open source) ou <strong>WhatsApp Viewer</strong></li>
+        <li>Si pas de root : extraction ADB <code>backup</code> (bloquée depuis Android 6+), ou <strong>chip-off</strong></li>
+        <li>iOS : iTunes backup <em>non chiffré</em> + <code>ChatStorage.sqlite</code> directement</li>
+      </ul>
+    </div>
+    <div class="card card-blue">
+      <div class="ct">🔵 Signal · SQLCipher</div>
+      <p>Signal utilise <strong>SQLCipher</strong> avec une clé dérivée du <em>Signal PIN</em>.</p>
+      <ul>
+        <li>Sans le PIN : déchiffrement <strong>impossible</strong> en pratique (PBKDF2 + Keystore)</li>
+        <li>Si appareil déverrouillé : <strong>dump RAM</strong> avec la clé en mémoire (Volatility + plugin custom)</li>
+        <li>Desktop : la clé est stockée dans <code>config.json</code> — lisible si l'OS est accessible</li>
+        <li>Sealed Sender complique l'attribution côté serveur — pas de logs récupérables auprès de Signal Foundation</li>
+      </ul>
+    </div>
+    <div class="card card-cyan">
+      <div class="ct">🔷 Telegram · Chats classiques</div>
+      <p>Chats cloud = <strong>non-E2E</strong> — récupération via entraide :</p>
+      <ul>
+        <li>Cloud non-chiffré côté Telegram (serveurs à Dubai, Londres) — accessible via MLAT, mais Telegram refuse quasi toutes les requêtes sauf terrorisme avéré</li>
+        <li>Base locale <code>cache4.db</code> : non chiffrée, SQLite standard → lecture directe avec DB Browser</li>
+        <li>Réauthentification sur nouveau device : possible sans le téléphone d'origine si SIM récupérée (risque d'altération de preuve)</li>
+      </ul>
+    </div>
+    <div class="card card-purple">
+      <div class="ct">🔷 Telegram · Secret Chats</div>
+      <p>Les <em>Secret Chats</em> sont E2E et jamais sur serveur.</p>
+      <ul>
+        <li>Uniquement présents sur les <strong>deux devices</strong> qui ont initié la conversation</li>
+        <li>Si le mode « self-destruct » est activé : message effacé des deux côtés à expiration — récupération en <strong>slack space SQLite</strong> (pages WAL, freelist)</li>
+        <li>Outils : <code>sqlite_dissect</code> / <code>undark</code> pour carving SQLite</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- TABLES SQLITE -->
+<div class="page-wrap">
+  <div class="sec-title">🔬 Tables SQLite critiques (WhatsApp · msgstore.db)</div>
+  <table>
+    <thead><tr><th>Table</th><th>Contenu forensique</th><th>Champs clés</th></tr></thead>
+    <tbody>
+      <tr><td><code>messages</code></td><td>Tous les messages envoyés/reçus, texte + métadonnées</td><td><code>_id</code>, <code>key_remote_jid</code>, <code>timestamp</code>, <code>data</code>, <code>media_url</code>, <code>status</code></td></tr>
+      <tr><td><code>chat_list</code></td><td>Liste des conversations et groupes</td><td><code>key_remote_jid</code>, <code>subject</code>, <code>creation</code></td></tr>
+      <tr><td><code>group_participants</code></td><td>Membres des groupes avec rôles</td><td><code>gjid</code>, <code>jid</code>, <code>admin</code></td></tr>
+      <tr><td><code>messages_quotes</code></td><td>Messages cités (réponses) — peut contenir des messages supprimés</td><td><code>key_id</code>, <code>data</code></td></tr>
+      <tr><td><code>deleted_messages</code></td><td>Messages supprimés côté utilisateur — parfois toujours présents</td><td><code>_id</code>, <code>original_timestamp</code></td></tr>
+    </tbody>
+  </table>
+  <div class="warning-box" style="margin-top:.75rem;background:rgba(255,64,96,.06);border-left:3px solid #FF4060;border-radius:0 8px 8px 0;padding:.9rem 1.2rem">
+    <strong>⚠️ Messages supprimés :</strong> même après « <em>Delete for everyone</em> » dans WhatsApp, des traces subsistent :
+    notifications Android (<code>NotificationHistory</code>), <code>messages_quotes</code> (citations contenant le message original), slack SQLite (pages
+    libérées mais non réécrites), pages WAL non-checkpointées. Toujours carver la base avec <code>undark</code> ou
+    <code>sqlite_dissect</code>.
+  </div>
+</div>
+
+<!-- CADRE LÉGAL -->
+<div class="page-wrap">
+  <div class="sec-title">🇨🇭 Cadre légal suisse — LSCPT &amp; CPP</div>
+  <div class="card" style="background:rgba(13,17,23,.4);border-left:3px solid var(--gold)">
+    <div class="ct" style="color:var(--gold)">⚖️ LSCPT · CPP · Convention de Budapest</div>
+    <p><strong>LSCPT (RS 780.1)</strong> : Loi sur la surveillance de la correspondance par poste et télécommunication — régit l'obtention des données de communication auprès des opérateurs et fournisseurs de services dérivés (<em>OSCom</em>).</p>
+    <p style="margin-top:.5rem"><strong>Art. 269 CPP</strong> : surveillance de la correspondance par télécommunication <strong>en temps réel (RT)</strong> — réservée aux infractions graves du catalogue (art. 269 al. 2 CPP). Autorisation par le <strong>Tmc</strong> (Tribunal des mesures de contrainte).</p>
+    <p style="margin-top:.5rem"><strong>Art. 273 CPP</strong> : <strong>données rétroactives (RR)</strong> — qui, quand, avec qui. Durée de conservation obligatoire pour les opérateurs : <strong>6 mois</strong>.</p>
+    <p style="margin-top:.5rem"><strong>⚠️ Limite E2E</strong> : Signal et WhatsApp ne transmettent <u>pas le contenu</u> à l'OSCom. Seules les <strong>métadonnées</strong> (heure de connexion, IP, numéro inscrit) sont accessibles via LSCPT. Le contenu chiffré n'est récupérable qu'<strong>au terminal</strong> (saisie du téléphone).</p>
+    <p style="margin-top:.5rem"><strong>Art. 280 CPP</strong> : utilisation d'appareils techniques de surveillance — inclut les IMSI-catchers et l'installation de logiciels de surveillance (<strong>Govware</strong>) autorisés depuis 2018.</p>
+    <p style="margin-top:.5rem"><strong>Convention de Budapest art. 18</strong> : entraide internationale pour obtenir des données de service auprès de prestataires étrangers (Apple iCloud, Google Drive, Microsoft, Meta).</p>
+  </div>
+</div>
+
+<!-- OUTILS -->
+<div class="page-wrap">
+  <div class="sec-title">🛠 Outils DFIR pour messageries</div>
+  <div class="g2">
+    <div class="card card-blue">
+      <div class="ct">🔓 Commerciaux (référence judiciaire CH)</div>
+      <ul>
+        <li><strong>Cellebrite UFED / Physical Analyzer</strong> — extraction + décodage natif WA/Signal/TG</li>
+        <li><strong>Magnet AXIOM</strong> — artefacts IM + timeline automatique multi-app</li>
+        <li><strong>Oxygen Forensic Detective</strong> — forte couverture Telegram et apps chinoises (WeChat, QQ)</li>
+        <li><strong>MSAB XRY</strong> — utilisé par fedpol</li>
+        <li><strong>GrayKey</strong> — déverrouillage iPhone (Grayshift, US)</li>
+      </ul>
+    </div>
+    <div class="card card-green">
+      <div class="ct">🆓 Open source / gratuits</div>
+      <ul>
+        <li><strong>wa-crypt-tools</strong> — déchiffrement crypt12/14/15 WhatsApp</li>
+        <li><strong>WhatsApp Viewer</strong> — GUI Windows pour msgstore.db</li>
+        <li><strong>telegram-history-dump</strong> — export JSON via API officielle</li>
+        <li><strong>ALEAPP / iLEAPP</strong> — Android/iOS Logs, Events, Protobuf Parser (Python)</li>
+        <li><strong>undark</strong> / <strong>sqlite_dissect</strong> — carving SQLite (messages supprimés)</li>
+        <li><strong>signal-decrypt</strong> — déchiffrement Signal Desktop (avec clé extraite)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- MÉMO SAISIE -->
+<div class="page-wrap">
+  <div class="sec-title">📋 Mémo — Procédure type lors d'une saisie de smartphone</div>
+  <div class="card card-red">
+    <ul style="margin:0">
+      <li><strong>Mode avion immédiat</strong> + <strong>Faraday</strong> — empêche les commandes « Delete for everyone » à distance et le wipe Find My iPhone/Android</li>
+      <li>Vérifier si le compte est lié à d'<strong>autres appareils</strong> : WhatsApp Web (icône ordinateur), Signal Desktop, Telegram multi-device — ces appareils peuvent recevoir les messages aussi</li>
+      <li><strong>Capture de la RAM avant extinction</strong> : la clé SQLCipher (Signal) est parfois présente en clair en RAM pendant que l'app tourne</li>
+      <li>Backups locaux <code>.crypt14</code> sur <code>/sdcard/</code> — souvent plus anciens que <code>msgstore.db</code> actif (peut révéler messages supprimés depuis)</li>
+      <li>Sauvegardes cloud (Google Drive / iCloud) : requête LSCPT à l'opérateur + <strong>entraide</strong> au provider (art. 18 Convention de Budapest)</li>
+      <li>Timeline : corréler avec <code>usage_stats</code> Android et <code>knowledgeC.db</code> iOS (activité applicative) — preuve qu'un message a été lu/écrit même sans contenu</li>
+      <li>Toujours <strong>hacher SHA-256</strong> les bases extraites avant décryptage — garder une copie brute chiffrée (preuve d'intégrité)</li>
+      <li>⚠️ <strong>Ne JAMAIS allumer le téléphone</strong> sans Faraday : message « Delete for everyone » peut arriver et tout supprimer</li>
+    </ul>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div class="page-wrap">
+  <div class="sec-title">🧠 Testez-vous</div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Une ordonnance art. 269 CPP est délivrée pour surveiller un suspect qui utilise WhatsApp. Le service SCPT vous transmet les données. Que pouvez-vous lire ?<small>LSCPT · Niveau : facile</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer"><strong>Vous lisez les métadonnées, PAS le contenu.</strong> WhatsApp utilise le Signal Protocol (E2EE) — Meta/WhatsApp ne possède pas les clés et ne peut pas déchiffrer. Le service SCPT ne peut transmettre que ce que l'opérateur capture sur le réseau : <strong>(1)</strong> Heures de connexion à WhatsApp, <strong>(2)</strong> IP du suspect, <strong>(3)</strong> Volumes de données (qui révèlent des conversations actives mais pas leur contenu). <strong>Pour le contenu</strong>, deux options : (a) <strong>Saisir physiquement le téléphone</strong> et extraire <code>msgstore.db</code>, (b) <strong>Govware</strong> art. 280 CPP (logiciel de surveillance installé sur l'appareil — autorisation TMC très stricte). C'est la grande révolution forensique de la dernière décennie : la surveillance classique ne suffit plus, il faut accéder au terminal.</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Vous saisissez un téléphone Android. WhatsApp est ouvert. Que faire dans l'ordre ?<small>Procédure terrain · Niveau : moyen</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer">Ordre opérationnel : <strong>(1) Faraday immédiat</strong> — sac/cage de Faraday pour bloquer toutes les communications (4G/5G/Wi-Fi/Bluetooth). Empêche un complice d'envoyer « Delete for everyone » qui effacerait les messages des deux côtés. <strong>(2) NE PAS éteindre / verrouiller</strong> — sinon iOS/Android passera en état « After First Unlock » → certains chiffrements deviennent inactifs et plus difficiles à casser plus tard. <strong>(3) Photographier l'écran allumé</strong> tel quel (preuve de contexte). <strong>(4) Mode avion via les paramètres</strong> (sans déverrouiller si possible — accessible depuis l'écran de verrouillage Android). <strong>(5) Capturer la RAM</strong> via UFED/AXIOM si possible — clés SQLCipher peuvent y être en clair. <strong>(6) Branchement chargeur</strong> — éviter coupure batterie. <strong>(7) Transport en Faraday vers labo</strong>. <strong>(8) Au labo</strong> : extraction logique d'abord (avec ADB/iTunes), puis physique si nécessaire (Cellebrite, GrayKey).</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Vous trouvez la base <code>msgstore.db</code> WhatsApp. Le suspect a utilisé « Delete for everyone » sur 50 messages. Sont-ils définitivement perdus ?<small>Récupération · Niveau : moyen</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer"><strong>Probablement pas !</strong> Plusieurs angles d'attaque : <strong>(1) Pages libres SQLite</strong> — quand un message est supprimé, sa page est marquée libre dans la freelist mais le contenu reste jusqu'à VACUUM. <code>undark msgstore.db</code> ou <code>sqlite_dissect</code> peut récupérer ces enregistrements. <strong>(2) WAL non-checkpointé</strong> — <code>msgstore.db-wal</code> contient peut-être des écritures récentes qui incluent ces messages. <strong>(3) Table <code>messages_quotes</code></strong> — si quelqu'un a cité le message dans une réponse, le contenu original est dupliqué dans cette table (souvent oublié par les attaquants). <strong>(4) Notifications Android</strong> dans <code>NotificationHistory</code> ou <code>com.android.systemui/databases/</code> — peuvent contenir le texte du message qui s'est affiché en notif. <strong>(5) Backup local <code>.crypt14</code></strong> sur <code>/sdcard/WhatsApp/Databases/</code> daté d'avant la suppression. <strong>(6) Backup cloud Google Drive</strong> via entraide. <strong>(7) Le téléphone du destinataire</strong> peut encore avoir une copie si « Delete for everyone » n'a pas réussi (réception après expiration de la fenêtre).</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Différence entre Telegram <strong>chats classiques</strong> et <strong>Secret Chats</strong> ?<small>Telegram · Niveau : facile</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer"><strong>Chats classiques (cloud)</strong> : stockés sur les serveurs Telegram à Dubaï/Londres, chiffrés <em>côté serveur</em> avec une clé que Telegram possède (chiffrement <strong>client-to-server</strong>, pas E2EE). Theoriquement déchiffrables par Telegram sur ordre judiciaire. En pratique, Telegram refuse <strong>quasi toutes</strong> les requêtes sauf cas avérés de terrorisme. Synchronisés sur tous les appareils. <strong>Secret Chats</strong> : E2EE véritable (Diffie-Hellman 2048 bits + AES-256), <strong>device-to-device</strong>, <strong>jamais sur le cloud</strong>, uniquement sur les deux téléphones qui ont initié le chat. Pas synchronisés multi-device. Self-destruct possible. <strong>Conséquence forensique</strong> : (1) chats classiques = récupérables via cloud sync sur nouveau device avec SIM/numéro, (2) Secret Chats = uniquement extraction terminal des deux interlocuteurs. <strong>Important</strong> : par défaut, Telegram n'utilise PAS Secret Chats — il faut explicitement les activer (icône cadenas). 99% des conversations Telegram sont des chats classiques.</div>
+  </div>
+</div>
+
+<!-- EXAM TIP -->
+<div class="page-wrap">
+  <div class="exam-tip">
+    <div class="exam-tip-title">🎓 Exam Tip — Messagerie Instantanée Forensique</div>
+    <p><strong>Signal Protocol</strong> (Open Whisper Systems) = E2EE de référence · X3DH + Double Ratchet</p>
+    <p><strong>Utilisé par</strong> : Signal, WhatsApp, Messenger (opt-in), Skype, Google Messages (RCS)</p>
+    <p><strong>WhatsApp</strong> : E2EE par défaut · base <code>msgstore.db.crypt15</code> · clé dans <code>/data/data/com.whatsapp/files/key</code></p>
+    <p><strong>Signal</strong> : E2EE + SQLCipher · clé dérivée du PIN + Keystore · Sealed Sender (anonymise expéditeur)</p>
+    <p><strong>Telegram</strong> : <strong>chats classiques NON E2EE</strong> · seuls les Secret Chats le sont</p>
+    <p><strong>Trois points d'attaque forensique</strong> :</p>
+    <p>&nbsp;&nbsp;1. Terminal (saisie + extraction Cellebrite/AXIOM/GrayKey)</p>
+    <p>&nbsp;&nbsp;2. LSCPT métadonnées (qui parle à qui, quand) — pas le contenu E2EE</p>
+    <p>&nbsp;&nbsp;3. RAM / Govware (clés en clair pendant session active)</p>
+    <p><strong>Cadre légal CH</strong> : LSCPT (RS 780.1) · art. 269 CPP (RT) · art. 273 CPP (RR · 6 mois) · art. 280 CPP (Govware)</p>
+    <p><strong>Saisie type</strong> : Faraday immédiat → ne pas verrouiller → photographier → mode avion → RAM dump → transport</p>
+    <p><strong>Backups</strong> : Google Drive (Android), iCloud (iOS) — depuis 2021 : E2E opt-in WhatsApp</p>
+    <p><strong>Outils</strong> : Cellebrite UFED, Magnet AXIOM, Oxygen Detective, MSAB XRY, GrayKey, ALEAPP/iLEAPP, wa-crypt-tools</p>
+    <p><strong>Carving messages supprimés</strong> : <code>undark</code>, <code>sqlite_dissect</code>, table <code>messages_quotes</code>, NotificationHistory, backups <code>.crypt14</code></p>
+  </div>
+
+  <div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> Signal Protocol = E2EE de référence (WhatsApp + Signal) · Telegram chats classiques NON E2EE · LSCPT art. 269 (RT temps réel) + art. 273 (RR rétroactif 6 mois) · E2EE → contenu inaccessible côté serveur, seules métadonnées · Saisie terminal = méthode standard · Faraday immédiat sur saisie · RAM dump pour clés SQLCipher · undark + sqlite_dissect = carving messages supprimés · messages_quotes = table souvent oubliée contenant messages cités · backups crypt14 sur /sdcard/ · Govware art. 280 CPP autorisé depuis 2018.</div>
+
+  <div class="footer">
+    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+    <span>Manuel CAS-IN ch. 17 · Signal Protocol Specification · LSCPT RS 780.1</span>
+  </div>
+</div>
+
+
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>exFAT — CAS-IN Forensique</title>
+<meta name="description" content="$Bitmap · $UpCase · Directory Entry Set">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">SYSTÈMES DE FICHIERS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page" style="padding-top:.5rem;padding-bottom:.5rem">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesdefichiers">Systèmes de fichiers</a><span class="bc-sep">›</span>
+    <span class="bc-current">exFAT</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~8 min</span>
+  </div>
+
+  <div class="header">
+    <div>
+      <span style="font-family:var(--sans);font-size:2.4rem;font-weight:800;color:var(--orange)">💾</span>
+      <span class="tag tag-orange" style="margin-left:.4rem">exFAT</span>
+      <span class="tag tag-cyan" style="margin-left:.3rem">Flash Storage</span>
+      <span class="tag tag-blue" style="margin-left:.3rem">SD · USB · SDXC</span>
+    </div>
+    <h1>exFAT — Extensible File Allocation Table</h1>
+    <div class="meta">Lancé en 2006 · SD &gt; 64 Go · Volume 128 Po · Fichier 16 Eo · Timestamps 10 ms · Pas de journalisation</div>
+  </div>
+
+  <div class="prereq-block">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="encodage.html" class="prereq-pill">📖 Encodage</a><a href="fat16.html" class="prereq-pill">📖 FAT16/32</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=bitmap" class="tp-pill">🧪 🗺 Bitmap exFAT</a><a href="../tp.html?cat=offset" class="tp-pill">🧪 📐 Calcul d'offset</a><a href="../tp.html?cat=fsidentify" class="tp-pill">🧪 🔍 Identifier le FS</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="fat16.html" class="related-pill">🔗 FAT16/32</a><a href="comparaison_fs.html" class="related-pill">🔗 Comparaison FS</a><a href="../tools.html" class="related-pill">🔧 Calculateurs</a></div>
+  </div>
+</div>
+
+<!-- ── TABS ── -->
+<div class="page" style="padding-top:0;padding-bottom:0">
+<div class="exf-tabs" id="exf-tabs">
+  <button class="exf-tab-btn active" onclick="showTab('arch',this)">🏗 Architecture</button>
+  <button class="exf-tab-btn" onclick="showTab('entries',this)">📋 Entrées répertoire</button>
+  <button class="exf-tab-btn" onclick="showTab('bitmap',this)">🗺 Bitmap &amp; Offsets</button>
+  <button class="exf-tab-btn" onclick="showTab('compare',this)">⚖️ exFAT vs FAT32</button>
+  <button class="exf-tab-btn" onclick="showTab('tools',this)">🔧 X-Ways &amp; Outils</button>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 1 — ARCHITECTURE
+══════════════════════════════════════════ -->
+<div class="page" style="padding-top:.5rem">
+<div class="exf-tab-panel active" id="tab-arch">
+
+<!-- Info card -->
+<div class="info">
+  <strong>"Tout est optimisé pour le flash"</strong> — exFAT remplace FAT32 sur les supports &gt; 64 Go. Pas de Root Directory fixe, pas de limite de 4 Go par fichier, timestamps 100× plus précis qu'FAT32 (10 ms vs 2 s). Spécification ouverte depuis 2019 (Microsoft).
+</div>
+
+<div class="sec-title">Structure du volume — Cliquez sur une zone</div>
+
+<!-- Boot Zone + FAT + Data — inspiré du schéma -->
+<div class="exf-boot">
+  <div class="exf-zone ezb" onclick="showZone('boot1')" id="ez-boot1">
+    <div class="exf-zone-off">OFFSET 0×00</div>
+    <div class="exf-zone-name">Boot Sector</div>
+    <div class="exf-zone-sub">VBR principal<br>BPB + OEM ID</div>
+  </div>
+  <div class="exf-zone ezb" onclick="showZone('boot2')" id="ez-boot2">
+    <div class="exf-zone-off">8 SECTEURS</div>
+    <div class="exf-zone-name">Extended Boot</div>
+    <div class="exf-zone-sub">Secteurs étendus<br>0x01–0x08</div>
+  </div>
+  <div class="exf-zone ezb" onclick="showZone('boot3')" id="ez-boot3">
+    <div class="exf-zone-off">OFFSET 0×0B</div>
+    <div class="exf-zone-name">OEM Parameter</div>
+    <div class="exf-zone-sub">Paramètres OEM<br>Réservé</div>
+  </div>
+  <div class="exf-zone ezb" onclick="showZone('boot4')" id="ez-boot4">
+    <div class="exf-zone-off">CHECKSUM</div>
+    <div class="exf-zone-name">Boot Checksum</div>
+    <div class="exf-zone-sub">Vérification intégrité<br>0x0B (11e secteur)</div>
+  </div>
+  <div class="exf-zone ezb" onclick="showZone('bootcp')" id="ez-bootcp">
+    <div class="exf-zone-off">COPIE</div>
+    <div class="exf-zone-name">Backup Boot</div>
+    <div class="exf-zone-sub">Miroir complet<br>12 secteurs</div>
+  </div>
+  <div class="exf-zone ezf" onclick="showZone('fat')" id="ez-fat">
+    <div class="exf-zone-off">ZONE FAT</div>
+    <div class="exf-zone-name">FAT Region</div>
+    <div class="exf-zone-sub"><strong>1 seule FAT</strong><br>entrées 32 bits</div>
+  </div>
+  <div class="exf-zone ezd" onclick="showZone('data')" style="flex:3" id="ez-data">
+    <div class="exf-zone-off">CLUSTER 2+</div>
+    <div class="exf-zone-name">Data Region</div>
+    <div class="exf-zone-sub">$Bitmap · $UpCase · Root Dir · Fichiers<br>Premier cluster : toujours #2</div>
+  </div>
+</div>
+<div style="font-size:.62rem;color:var(--dim);text-align:center;margin-bottom:.35rem;font-family:var(--mono)">← Offset 0 ————————————————————————————————— Fin du volume →</div>
+
+<div class="exf-panel" id="zone-panel">
+  <span style="color:var(--dim)">ℹ️ Cliquez sur une zone pour afficher ses détails forensiques</span>
+</div>
+
+<!-- BPB offsets -->
+<div class="sec-title">Boot Sector — Offsets forensiques clés</div>
+<table>
+  <thead>
+    <tr><th>Offset</th><th>Taille</th><th>Champ</th><th>Notes forensiques</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="h h-cyan">0x03</td><td>8 octets</td><td><strong>FileSystemName</strong></td><td>ASCII <code style="font-family:var(--mono);color:var(--cyan)">EXFAT   </code> — identification immédiate</td></tr>
+    <tr><td class="h h-gold">0x40</td><td>8 octets</td><td>PartitionOffset</td><td>Offset de la partition en secteurs. Si 0 → ignorer.</td></tr>
+    <tr><td class="h h-gold">0x48</td><td>8 octets</td><td>VolumeLength</td><td>Taille du volume en secteurs.</td></tr>
+    <tr><td class="h h-blue">0x50</td><td>4 octets</td><td><strong>FatOffset</strong></td><td>Position de la FAT en secteurs depuis le début.</td></tr>
+    <tr><td class="h h-blue">0x58</td><td>4 octets</td><td><strong>ClusterHeapOffset</strong></td><td>Début du tas de clusters. <strong>Le cluster 2 se trouve ici.</strong></td></tr>
+    <tr><td class="h h-cyan">0x60</td><td>4 octets</td><td><strong>RootDirectoryCluster</strong></td><td>Premier cluster du répertoire racine — point d'entrée des métadonnées.</td></tr>
+    <tr><td class="h h-orange">0x64</td><td>4 octets</td><td>VolumeSerialNumber</td><td>Numéro de série — unique par formatage.</td></tr>
+    <tr><td class="h h-gold">0x6C</td><td>1 octet</td><td><strong>BytesPerSectorShift</strong></td><td>Exposant : 2^n = octets/secteur. 0x09 → 512 o/secteur.</td></tr>
+    <tr><td class="h h-gold">0x6D</td><td>1 octet</td><td><strong>SectorsPerClusterShift</strong></td><td>Exposant : 2^n = secteurs/cluster. 0x03 → 8 secteurs → 4096 o/cluster.</td></tr>
+    <tr><td class="h h-red">0x1FE</td><td>2 octets</td><td>BootSignature</td><td><code style="font-family:var(--mono);color:var(--red)">AA 55</code> — signature universelle de boot.</td></tr>
+  </tbody>
+</table>
+
+<div class="formula">TailleCluster = 2^BytesPerSectorShift × 2^SectorsPerClusterShift &nbsp;·&nbsp; Offset cluster N = ClusterHeapOffset × TailleSectr + (N − 2) × TailleCluster</div>
+
+<div class="g3" style="margin-top:1rem">
+  <div class="card card-cyan">
+    <div class="ct">$Bitmap</div>
+    <p>Table d'allocation des clusters. 1 bit = 1 cluster. Bit 1 = utilisé, bit 0 = libre. Cluster 2 par défaut. Pas de Root Directory fixe.</p>
+  </div>
+  <div class="card card-gold">
+    <div class="ct">$UpCase</div>
+    <p>Table 128 Ko de conversion minuscules → majuscules Unicode. Comparaison insensible à la casse des noms. Cluster 3 habituellement.</p>
+  </div>
+  <div class="card card-blue">
+    <div class="ct">Root Directory</div>
+    <p>Répertoire racine dynamique. Commence au cluster spécifié dans RootDirectoryCluster (BPB offset 0x60). Pas de limite fixe d'entrées.</p>
+  </div>
+</div>
+</div><!-- /tab-arch -->
+
+<!-- ══════════════════════════════════════
+     TAB 2 — ENTRÉES RÉPERTOIRE
+══════════════════════════════════════════ -->
+<div class="exf-tab-panel" id="tab-entries">
+
+<div class="sec-title">Structure des entrées — Directory Entry Set</div>
+<p style="font-size:.79rem;color:var(--muted);margin-bottom:.85rem;line-height:1.6">Un fichier exFAT occupe <strong style="color:var(--text)">3 à 19 entrées de 32 octets chacune</strong>, toujours contiguës. Chaque entrée a un type (EntryType). Cliquez sur un segment.</p>
+
+<!-- Entry Set Bar -->
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1rem .8rem;box-shadow:0 4px 16px rgba(0,0,0,.25)">
+  <div style="font-family:var(--mono);font-size:.58rem;color:var(--dim);text-align:center;margin-bottom:.6rem;letter-spacing:.05em">DIRECTORY ENTRY SET — MIN. 3 ENTRÉES × 32 OCTETS · CLIQUER POUR DÉTAILS</div>
+  <div class="exf-bar">
+    <div class="exf-seg es-primary" onclick="showEntry('primary')" title="File Entry">
+      <div class="exf-lbl">FILE ENTRY</div>
+      <div class="exf-sub">0x85 · 32 octets</div>
+    </div>
+    <div class="exf-seg es-stream" onclick="showEntry('stream')" title="Stream Extension">
+      <div class="exf-lbl">STREAM EXTENSION</div>
+      <div class="exf-sub">0xC0 · FirstCluster + DataLength</div>
+    </div>
+    <div class="exf-seg es-name" onclick="showEntry('name1')" title="File Name">
+      <div class="exf-lbl">FILE NAME</div>
+      <div class="exf-sub">0xC1 · 15 chars UTF-16</div>
+    </div>
+    <div class="exf-seg es-name2" onclick="showEntry('name2')" title="File Name suite (optionnel)">
+      <div class="exf-lbl">FILE NAME+</div>
+      <div class="exf-sub">0xC1 · si nom &gt; 15 chars</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:.65rem;flex-wrap:wrap;margin-top:.6rem;font-size:.62rem;color:var(--dim);font-family:var(--mono)">
+    <span>■ <span style="color:var(--red)">Primary (0x85) — données de base</span></span>
+    <span>■ <span style="color:var(--purple)">Stream (0xC0) — localisation physique</span></span>
+    <span>■ <span style="color:var(--green)">File Name (0xC1) — nom UTF-16</span></span>
+  </div>
+</div>
+<div class="exf-panel" id="entry-panel">
+  <span style="color:var(--dim)">📋 Cliquez sur un segment pour afficher ses détails forensiques</span>
+</div>
+
+<!-- EntryType bits -->
+<div class="sec-title">Bit 7 de l'EntryType — Fichier supprimé</div>
+<div class="key-fact">
+  <div class="key-fact-label">Mécanisme de suppression exFAT</div>
+  <p>Le <strong>bit 7 de l'EntryType</strong> (octet 0x00 de chaque entrée) = flag In-use. Mise à 0 pour marquer la suppression :</p>
+  <ul style="padding-left:1rem;margin-top:.4rem;font-size:.79rem;color:var(--text);line-height:1.8">
+    <li>File Entry : <code style="font-family:var(--mono);color:var(--red)">0x85</code> → <code style="font-family:var(--mono);color:var(--red)">0x05</code></li>
+    <li>Stream Extension : <code style="font-family:var(--mono);color:var(--purple)">0xC0</code> → <code style="font-family:var(--mono);color:var(--purple)">0x40</code></li>
+    <li>File Name : <code style="font-family:var(--mono);color:var(--green)">0xC1</code> → <code style="font-family:var(--mono);color:var(--green)">0x41</code></li>
+  </ul>
+  <p style="margin-top:.5rem">Le contenu reste intact jusqu'à réallocation → <strong>récupération possible</strong> via FirstCluster encore présent dans le Stream Extension.</p>
+</div>
+
+<!-- Tableau EntryType -->
+<div class="sec-title">Types d'entrées exFAT</div>
+<table>
+  <thead>
+    <tr><th>EntryType</th><th>Primaire ?</th><th>Critique ?</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="h h-cyan">0x81</td><td>✓</td><td>✓</td><td>Allocation Bitmap — toujours présente (1 par volume)</td></tr>
+    <tr><td class="h h-gold">0x82</td><td>✓</td><td>✓</td><td>Up-case Table — table des majuscules Unicode</td></tr>
+    <tr><td class="h h-blue">0x83</td><td>✓</td><td>✓</td><td>Volume Label — nom du volume</td></tr>
+    <tr style="background:rgba(255,64,96,.04)"><td class="h h-red">0x85</td><td>✓</td><td></td><td><strong>File Entry</strong> — entrée principale obligatoirement suivie de 0xC0</td></tr>
+    <tr style="background:rgba(188,140,255,.04)"><td class="h h-purple">0xC0</td><td></td><td>✓</td><td><strong>Stream Extension</strong> — contient FirstCluster (offset 0x14) et DataLength (offset 0x18)</td></tr>
+    <tr style="background:rgba(48,232,138,.04)"><td class="h h-green">0xC1</td><td></td><td>✓</td><td><strong>File Name</strong> — nom UTF-16, 15 caractères max par entrée. Min 1, max 17 entrées.</td></tr>
+  </tbody>
+</table>
+
+<!-- NoFatChain -->
+<div class="sec-title">NoFatChain — Fichier contigu vs fragmenté</div>
+<div class="compare">
+  <div class="compare-col">
+    <div class="compare-col-title" style="color:var(--green)">✅ NoFatChain = 1 (contigu)</div>
+    <ul>
+      <li>Clusters <strong>contigus</strong> — FAT non utilisée pour ce fichier</li>
+      <li>Seuls FirstCluster + DataLength suffisent</li>
+      <li>Bit dans le Stream Extension (GeneralSecondaryFlags)</li>
+      <li><strong>Forensique :</strong> carving plus facile, lecture directe depuis FirstCluster</li>
+    </ul>
+  </div>
+  <div class="compare-col">
+    <div class="compare-col-title" style="color:var(--orange)">🔗 NoFatChain = 0 (fragmenté)</div>
+    <ul>
+      <li>Fichier <strong>fragmenté</strong> — consulter la FAT</li>
+      <li>Navigation : FirstCluster → entrée FAT → cluster suivant</li>
+      <li>Identique au chaînage FAT32</li>
+      <li><strong>Forensique :</strong> suivre la chaîne jusqu'à <code style="font-family:var(--mono)">0xFFFFFFFF</code> (EOF)</li>
+    </ul>
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Comment identifier rapidement un fichier supprimé dans un répertoire exFAT ?<small>exFAT suppression · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Lire le bit 7 de l'EntryType (octet 0x00) de chaque entrée. Si = 0 → supprimée :<br>
+  File Entry <code style="font-family:var(--mono)">0x85</code>→<code style="font-family:var(--mono)">0x05</code> · Stream <code style="font-family:var(--mono)">0xC0</code>→<code style="font-family:var(--mono)">0x40</code> · FileName <code style="font-family:var(--mono)">0xC1</code>→<code style="font-family:var(--mono)">0x41</code>.<br>
+  Le FirstCluster dans le Stream (offset 0x14) est souvent encore valide → pointer directement sur les données.</div>
+</div>
+</div><!-- /tab-entries -->
+
+<!-- ══════════════════════════════════════
+     TAB 3 — BITMAP & OFFSETS
+══════════════════════════════════════════ -->
+<div class="exf-tab-panel" id="tab-bitmap">
+
+<div class="sec-title">$Bitmap — Visualiseur interactif</div>
+<p style="font-size:.79rem;color:var(--muted);margin-bottom:.75rem;line-height:1.6">1 bit par cluster · Index 0 = cluster 2 · Bit 1 = occupé · Bit 0 = libre · <strong style="color:var(--text)">Cliquez pour basculer</strong></p>
+
+<div class="exf-calc">
+  <div class="exf-calc-hdr">🗺 Calculateur Bitmap exFAT</div>
+  <div style="padding:.85rem 1rem">
+    <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap">
+      <div style="flex:1;min-width:180px">
+        <div class="exf-inp-lbl">Numéro de cluster</div>
+        <input class="exf-inp" id="bmp-cluster" type="number" placeholder="ex: 21" min="2" value="21" oninput="calcBitmap()">
+      </div>
+      <div style="flex:2;min-width:200px">
+        <div class="exf-inp-lbl">Résultat</div>
+        <div class="exf-out" id="bmp-result">→</div>
+      </div>
+    </div>
+    <div style="font-size:.7rem;color:var(--dim);font-family:var(--mono)">Formule : Index = cluster − 2 · Octet = Index ÷ 8 · Bit = Index mod 8</div>
+  </div>
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.85rem;margin:.75rem 0">
+  <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;flex-wrap:wrap">
+    <span style="font-family:var(--mono);font-size:.6rem;color:var(--dim)">Clusters 2–129 (16 par ligne)</span>
+    <button onclick="resetBitmap()" style="font-family:var(--mono);font-size:.62rem;border:1px solid var(--border);background:var(--surface2);color:var(--muted);border-radius:4px;padding:.1rem .5rem;cursor:pointer">Reset</button>
+    <button onclick="randomBitmap()" style="font-family:var(--mono);font-size:.62rem;border:1px solid rgba(0,229,204,.3);background:rgba(0,229,204,.07);color:var(--cyan);border-radius:4px;padding:.1rem .5rem;cursor:pointer">Aléatoire</button>
+  </div>
+  <div class="exf-bmap" id="exf-bmap"></div>
+  <div style="font-family:var(--mono);font-size:.68rem;color:var(--muted);margin-top:.4rem" id="bmap-info">Cliquez sur un cluster pour voir ses coordonnées dans le $Bitmap</div>
+  <div style="display:flex;gap:1rem;margin-top:.4rem;font-size:.66rem;color:var(--dim)">
+    <span style="display:flex;align-items:center;gap:.35rem"><span style="width:14px;height:14px;background:rgba(0,229,204,.25);border:1px solid rgba(0,229,204,.5);border-radius:2px;display:inline-block"></span>Occupé (bit=1)</span>
+    <span style="display:flex;align-items:center;gap:.35rem"><span style="width:14px;height:14px;background:rgba(106,128,168,.1);border:1px solid rgba(106,128,168,.3);border-radius:2px;display:inline-block"></span>Libre (bit=0)</span>
+  </div>
+</div>
+
+<!-- Calculateur offset cluster -->
+<div class="sec-title">Calculateur d'offset cluster</div>
+<div class="exf-calc">
+  <div class="exf-calc-hdr">📐 Offset physique du cluster N</div>
+  <div class="exf-calc-body">
+    <div>
+      <div class="exf-inp-lbl">Numéro de cluster N</div>
+      <input class="exf-inp" id="off-cluster" type="number" placeholder="ex: 8" min="2" value="8">
+    </div>
+    <div>
+      <div class="exf-inp-lbl">BytesPerSectorShift (exposant)</div>
+      <input class="exf-inp" id="off-bpss" type="number" placeholder="ex: 9 → 512 o" min="9" max="12" value="9">
+    </div>
+    <div>
+      <div class="exf-inp-lbl">SectorsPerClusterShift (exposant)</div>
+      <input class="exf-inp" id="off-spcs" type="number" placeholder="ex: 3 → 8 sect." min="0" max="22" value="3">
+    </div>
+    <div>
+      <div class="exf-inp-lbl">ClusterHeapOffset (secteurs)</div>
+      <input class="exf-inp" id="off-cho" type="number" placeholder="ex: 384" min="0" value="384">
+    </div>
+    <button class="exf-btn" onclick="calcOffset()">Calculer l'offset →</button>
+    <div style="grid-column:span 2">
+      <div class="exf-inp-lbl">Résultat</div>
+      <div class="exf-out" id="off-result">→ Remplir les champs et cliquer "Calculer"</div>
+    </div>
+  </div>
+</div>
+
+<div class="alert">
+  ⚠ En exFAT, les clusters commencent à <strong>2</strong>. L'index 0 du $Bitmap correspond au cluster 2. Ne jamais commencer à compter depuis 0 ou 1 dans les calculs.
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Bitmap = <code style="font-family:var(--mono)">FF FF 03 00...</code>. Le cluster 21 est-il libre ?<small>exFAT bitmap · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Index bitmap = 21 − 2 = 19 · Octet = 19 ÷ 8 = <strong>2</strong> · Bit = 19 mod 8 = <strong>3</strong><br>
+  Octet 2 = <code style="font-family:var(--mono)">0x03</code> = <code style="font-family:var(--mono)">0000 0011</code> → Bit 3 = 0 → <strong>Cluster 21 LIBRE</strong><br>
+  (bits 0 et 1 = clusters 18 et 19 occupés)</div>
+</div>
+</div><!-- /tab-bitmap -->
+
+<!-- ══════════════════════════════════════
+     TAB 4 — COMPARAISON
+══════════════════════════════════════════ -->
+<div class="exf-tab-panel" id="tab-compare">
+
+<div class="sec-title">Capacités comparées — exFAT vs FAT32</div>
+<p style="font-size:.79rem;color:var(--muted);margin-bottom:.75rem">Adapté du schéma : les barres s'animent à l'ouverture de l'onglet.</p>
+
+<!-- Barres visuelles — inspirées du schéma NotebookLM -->
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem;margin:.75rem 0">
+  <div style="font-family:var(--sans);font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.85rem">Volume maximum</div>
+  <div class="exf-bars" id="size-bars">
+    <div class="exf-bar-row">
+      <div class="exf-bar-lbl" style="color:var(--green)">FAT32</div>
+      <div class="exf-bar-track"><div class="exf-bar-fill" id="sb-fat32" style="width:0%;background:linear-gradient(90deg,rgba(48,232,138,.6),rgba(48,232,138,.3));color:var(--green)">8 To</div></div>
+      <div class="exf-bar-val" style="color:var(--green)">8 To</div>
+    </div>
+    <div class="exf-bar-row">
+      <div class="exf-bar-lbl" style="color:var(--orange)">exFAT</div>
+      <div class="exf-bar-track"><div class="exf-bar-fill" id="sb-exfat" style="width:0%;background:linear-gradient(90deg,rgba(240,136,62,.8),rgba(240,136,62,.4));color:var(--orange)">128 Po</div></div>
+      <div class="exf-bar-val" style="color:var(--orange)">128 Po</div>
+    </div>
+  </div>
+
+  <div style="font-family:var(--sans);font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:.85rem 0 .65rem">Taille max fichier individuel</div>
+  <div class="exf-bars">
+    <div class="exf-bar-row">
+      <div class="exf-bar-lbl" style="color:var(--green)">FAT32</div>
+      <div class="exf-bar-track"><div class="exf-bar-fill" id="sb2-fat32" style="width:0%;background:linear-gradient(90deg,rgba(48,232,138,.6),rgba(48,232,138,.3));color:var(--green)">4 Go</div></div>
+      <div class="exf-bar-val" style="color:var(--green)">4 Go − 1</div>
+    </div>
+    <div class="exf-bar-row">
+      <div class="exf-bar-lbl" style="color:var(--orange)">exFAT</div>
+      <div class="exf-bar-track"><div class="exf-bar-fill" id="sb2-exfat" style="width:0%;background:linear-gradient(90deg,rgba(240,136,62,.8),rgba(240,136,62,.4));color:var(--orange)">16 Eo</div></div>
+      <div class="exf-bar-val" style="color:var(--orange)">16 Eo</div>
+    </div>
+  </div>
+</div>
+
+<!-- Précision temporelle — inspiré image (10 ms) -->
+<div class="sec-title">Précision temporelle — Avantage forensique</div>
+<div class="exf-ts-compare">
+  <div class="exf-ts-dial" style="border-left:3px solid var(--orange)">
+    <div class="exf-ts-num" style="color:var(--orange)">10</div>
+    <div class="exf-ts-unit" style="color:var(--orange)">ms</div>
+    <div class="exf-ts-label" style="color:var(--orange)">exFAT</div>
+  </div>
+  <div style="display:flex;align-items:center;font-family:var(--sans);font-size:1.5rem;color:var(--dim);padding:0 .5rem">vs</div>
+  <div class="exf-ts-dial" style="border-left:3px solid var(--green)">
+    <div class="exf-ts-num" style="color:var(--green)">2</div>
+    <div class="exf-ts-unit" style="color:var(--green)">s</div>
+    <div class="exf-ts-label" style="color:var(--green)">FAT32</div>
+  </div>
+  <div style="flex:2;min-width:180px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.85rem">
+    <div style="font-family:var(--sans);font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Valeur forensique</div>
+    <p style="font-size:.76rem;color:var(--muted);line-height:1.6">10 ms vs 2 secondes = <strong style="color:var(--text)">200× plus précis</strong>. Corrélation possible avec les logs réseau NetFlow (résolution similaire) — chaîne de preuve temporelle quasi infaillible. L'UTC Offset est aussi stocké explicitement.</p>
+  </div>
+</div>
+
+<!-- Tableau comparatif complet -->
+<div class="sec-title">Comparatif technique complet</div>
+<div style="overflow-x:auto">
+<table>
+  <thead>
+    <tr>
+      <th>Propriété</th>
+      <th style="color:var(--green)">FAT32</th>
+      <th style="color:var(--orange)">exFAT</th>
+      <th>Impact forensique</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Volume max</strong></td><td style="color:var(--gold)">8 To</td><td style="color:var(--orange);font-weight:700">128 Po</td><td style="font-size:.72rem;color:var(--muted)">SD &gt; 64 Go → forcément exFAT</td></tr>
+    <tr><td><strong>Fichier max</strong></td><td style="color:var(--red)">4 Go − 1</td><td style="color:var(--orange);font-weight:700">16 Eo</td><td style="font-size:.72rem;color:var(--muted)">Vidéo 4K, images forensiques possibles</td></tr>
+    <tr><td><strong>Cluster max</strong></td><td>32 Ko</td><td style="color:var(--orange);font-weight:700">32 Mo</td><td style="font-size:.72rem;color:var(--muted)">Slack space plus grand = plus de résidus</td></tr>
+    <tr><td><strong>Timestamp</strong></td><td style="color:var(--red)">2 secondes</td><td style="color:var(--orange);font-weight:700">10 ms</td><td style="font-size:.72rem;color:var(--muted)">Corrélation logs réseau possible</td></tr>
+    <tr><td><strong>Nombre de FATs</strong></td><td>2 (FAT1 + FAT2)</td><td style="color:var(--orange)">1 seule</td><td style="font-size:.72rem;color:var(--muted)">Pas de copie de sauvegarde FAT</td></tr>
+    <tr><td><strong>Root Directory</strong></td><td>Cluster 2 (fixe)</td><td style="color:var(--orange)">Dynamique</td><td style="font-size:.72rem;color:var(--muted)">Lire RootDirectoryCluster au BPB</td></tr>
+    <tr><td><strong>Journalisation</strong></td><td style="color:var(--red)">Non</td><td style="color:var(--red)">Non</td><td style="font-size:.72rem;color:var(--muted)">Récupération uniquement par carving</td></tr>
+    <tr><td><strong>Permissions</strong></td><td style="color:var(--red)">Non</td><td style="color:var(--red)">Non</td><td style="font-size:.72rem;color:var(--muted)">Pas de SID/ACL — support cross-platform</td></tr>
+    <tr><td><strong>Identifier</strong></td><td><code style="font-family:var(--mono)">"FAT32   "</code> off. 0x36</td><td style="color:var(--orange)"><code style="font-family:var(--mono)">"EXFAT   "</code> off. 0x03</td><td style="font-size:.72rem;color:var(--muted)">Premier champ à lire</td></tr>
+    <tr><td><strong>ID MBR</strong></td><td><code style="font-family:var(--mono)">0x0B / 0x0C</code></td><td style="color:var(--orange)"><code style="font-family:var(--mono)">0x07</code></td><td style="font-size:.72rem;color:var(--muted)">Même type que NTFS dans la table MBR !</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="tip">⚡ <strong>Identification rapide :</strong> SD Card &gt; 64 Go → probablement exFAT (SDXC standard). MBR type 0x07 + "EXFAT" à l'offset 0x03 du Boot Sector → confirmation exFAT. Attention : 0x07 est aussi utilisé par NTFS — toujours vérifier le OEM Name à l'offset 0x03.</div>
+
+<div class="exam-tip">
+  <p><strong>Identifier :</strong> OEM Name <code style="font-family:var(--mono);color:var(--cyan)">"EXFAT   "</code> à l'offset <code style="font-family:var(--mono);color:var(--cyan)">0x03</code> · cartes SD &gt; 64 Go (SDXC) · MBR type 0x07</p>
+  <p style="margin-top:.3rem"><strong>Directory Entry Set :</strong> Primary <code style="font-family:var(--mono);color:var(--cyan)">0x85</code> + Stream <code style="font-family:var(--mono);color:var(--cyan)">0xC0</code> + FileName <code style="font-family:var(--mono);color:var(--cyan)">0xC1</code></p>
+  <p style="margin-top:.3rem"><strong>Suppression :</strong> bit 7 mis à 0 → <code style="font-family:var(--mono);color:var(--cyan)">0x85→0x05 · 0xC0→0x40 · 0xC1→0x41</code></p>
+  <p style="margin-top:.3rem"><strong>Bitmap :</strong> Index = cluster − 2 · Octet = Index÷8 · Bit = Index mod 8 · cluster 2 = bit 0 du premier octet</p>
+  <p style="margin-top:.3rem"><strong>Timestamps :</strong> précision <strong>10 ms</strong> (vs 2 s FAT32) · UTC Offset stocké explicitement</p>
+  <p style="margin-top:.3rem"><strong>Offset cluster N :</strong> ClusterHeapOffset × BPS + (N−2) × TailleCluster</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un disque a MBR type 0x07. Comment distinguer NTFS d'exFAT sans monter le volume ?<small>Identification FS · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Lire les 8 octets à l'offset <strong>0x03</strong> du Boot Sector (VBR).<br>
+  <code style="font-family:var(--mono)">EXFAT   </code> (avec espaces) → exFAT.<br>
+  <code style="font-family:var(--mono)">NTFS    </code> (avec espaces) → NTFS.<br>
+  NTFS a aussi la signature MFT (<code style="font-family:var(--mono)">FILE</code>) et l'offset $MFT dans le BPB.</div>
+</div>
+</div><!-- /tab-compare -->
+
+<!-- ══════════════════════════════════════
+     TAB 5 — X-WAYS & OUTILS
+══════════════════════════════════════════ -->
+<div class="exf-tab-panel" id="tab-tools">
+
+<div class="sec-title">Procédure X-Ways — Localiser un fichier exFAT</div>
+
+<div class="steps">
+  <div class="step">
+    <div class="sn">1</div>
+    <div class="step-text">Clic droit sur le fichier → <strong>Navigate → Seek Directory Entry</strong>. Aller à l'entrée File Entry (<code style="font-family:var(--mono);color:var(--red)">0x85</code>).</div>
+  </div>
+  <div class="step">
+    <div class="sn">2</div>
+    <div class="step-text">L'entrée suivante est le Stream Extension (<code style="font-family:var(--mono);color:var(--purple)">0xC0</code>). Se placer sur son premier octet "C".</div>
+  </div>
+  <div class="step">
+    <div class="sn">3</div>
+    <div class="step-text">Menu <strong>View → Template Manager</strong> → template <em>"ExFAT Rcrd Type C0"</em>. Le détail affiche <strong>FirstCluster</strong> (offset 0x14) et <strong>DataLength</strong> (offset 0x18).</div>
+  </div>
+  <div class="step">
+    <div class="sn">4</div>
+    <div class="step-text">Calculer le nombre de clusters : <strong>DataLength ÷ TailleCluster</strong> (arrondi au supérieur). Ex : 53 910 / 4096 = 13.16 → <strong>14 clusters</strong>.</div>
+  </div>
+  <div class="step">
+    <div class="sn">5</div>
+    <div class="step-text">Si <strong>NoFatChain = 1</strong> : données contiguës depuis FirstCluster. Offset = ClusterHeapOffset × BPS + (N−2) × TailleCluster.</div>
+  </div>
+  <div class="step">
+    <div class="sn">6</div>
+    <div class="step-text">Si <strong>NoFatChain = 0</strong> : <strong>Navigate → Seek FAT Entry → FirstCluster</strong>. Suivre le chaînage jusqu'à <code style="font-family:var(--mono);color:var(--green)">0xFFFFFFFF</code> (EOF).</div>
+  </div>
+  <div class="step">
+    <div class="sn">7</div>
+    <div class="step-text">Raccourci : clic droit → <strong>Navigate → List Clusters</strong> — voir immédiatement tous les clusters et la fragmentation.</div>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Outils d'analyse exFAT</div>
+<div class="g2" style="margin-bottom:1rem">
+  <div class="card card-blue">
+    <div class="ct">X-Ways Forensics</div>
+    <ul>
+      <li>Lecture complète exFAT — Directory Entry Sets</li>
+      <li>Template Manager pour décoder 0x85/0xC0/0xC1</li>
+      <li>Navigate → List Clusters pour fragmentation</li>
+      <li>Carving sur espace non alloué</li>
+    </ul>
+  </div>
+  <div class="card card-green">
+    <div class="ct">Autopsy / TSK</div>
+    <ul>
+      <li><code style="font-family:var(--mono)">fsstat</code> — infos volume exFAT</li>
+      <li><code style="font-family:var(--mono)">fls -r -p -f exfat</code> — liste fichiers</li>
+      <li><code style="font-family:var(--mono)">icat</code> — extraire contenu</li>
+      <li>Support exFAT via Sleuth Kit depuis v4.3+</li>
+    </ul>
+  </div>
+  <div class="card card-gold">
+    <div class="ct">PhotoRec / TestDisk</div>
+    <ul>
+      <li>File carving par magic bytes sur espace non alloué</li>
+      <li>Efficace car exFAT ne journalise pas</li>
+      <li>TestDisk pour reconstruire le Boot Sector</li>
+    </ul>
+  </div>
+  <div class="card card-orange">
+    <div class="ct">FTK Imager</div>
+    <ul>
+      <li>Montage d'image exFAT en lecture seule</li>
+      <li>Export des Directory Entry Sets en hex</li>
+      <li>Utile pour analyse manuelle des entrées 0x85/0xC0</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Collapsible : procédure bitmap manuelle -->
+<div class="collapsible">
+  <div class="collapsible-header">
+    <span class="ch-icon">📖</span>
+    <span class="ch-label">Exercice type — Bitmap exFAT : 28 clusters occupés</span>
+    <span class="ch-arrow">›</span>
+  </div>
+  <div class="collapsible-body">
+    <div class="collapsible-body-inner">
+      <p style="font-size:.79rem;color:var(--muted);line-height:1.7;margin-bottom:.5rem">Si 28 clusters sont occupés à partir du cluster 2 (index 0) :</p>
+      <div class="formula">28 ÷ 8 = 3 octets complets (24 clusters) + 4 clusters restants<br>Bitmap : FF FF FF 0F 00 00 00 00...<br>0xFF = 0000 1111 → bits 0, 1, 2, 3 = clusters 26, 27, 28, 29 occupés</div>
+      <p style="font-size:.76rem;color:var(--muted);margin-top:.5rem">⚠ Les bits vont du poids faible au poids fort : bit 0 de l'octet 0 = cluster 2, bit 7 = cluster 9, bit 0 de l'octet 1 = cluster 10, etc.</p>
+    </div>
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">ClusterHeapOffset = 384 secteurs, BPS = 512, TailleCluster = 4096. Quel est l'offset physique du cluster 8 ?<small>exFAT offset · Niveau : difficile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Offset cluster 8 = ClusterHeapOffset × BPS + (FirstCluster − 2) × TailleCluster<br>= 384 × 512 + (8 − 2) × 4096<br>= 196 608 + 24 576 = <strong>221 184 octets</strong> = 0x36000<br>Si NoFatChain = 1, les données commencent exactement à cet offset.</div>
+</div>
+
+<div class="footer" style="margin-top:1rem">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Microsoft exFAT Specification v1.00 · Ch. 6 Manuel</span>
+</div>
+</div><!-- /tab-tools -->
+</div><!-- /page -->
+
+<script>
+// ── Tabs ────────────────────────────────────────────────────
+function showTab(id,btn){
+  document.querySelectorAll('.exf-tab-panel').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.exf-tab-btn').forEach(function(b){b.classList.remove('active');});
+  var el=document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+  window.scrollTo({top:Math.max(0,document.getElementById('exf-tabs').offsetTop-55),behavior:'smooth'});
+  if(id==='compare') setTimeout(animateBars,150);
+}
+
+// ── Boot Zone details ────────────────────────────────────────
+var zoneDetails={
+  boot1:{icon:'🟡',title:'Boot Sector (offset 0x00)',body:'Le premier secteur de la partition exFAT. Contient toute la géométrie du volume (BPB).<br><br><strong>Identification</strong> : OEM Name <code>"EXFAT   "</code> à l\'offset 0x03 — premier champ à lire.<br><strong>Boot Signature</strong> : <code>AA 55</code> à l\'offset 0x1FE.<br><strong>Forensique</strong> : lire BytesPerSectorShift (0x6C), SectorsPerClusterShift (0x6D), ClusterHeapOffset (0x58), RootDirectoryCluster (0x60) pour reconstituer la géométrie.'},
+  boot2:{icon:'⬛',title:'Extended Boot Sectors (0x01–0x08)',body:'8 secteurs étendus suivant le Boot Sector. Contiennent du code de boot supplémentaire.<br><br>Chacun se termine par la signature <code>AA 55</code>.<br><strong>Forensique</strong> : rarement exploités forensiquement, mais vérifier les checksums pour détecter une corruption ou manipulation.'},
+  boot3:{icon:'⬛',title:'OEM Parameter Sector + Réservé (0x09–0x0A)',body:'Secteur de paramètres OEM (usage constructeur) et secteur réservé.<br><br><strong>Forensique</strong> : peut contenir des informations spécifiques au fabricant (modèle de contrôleur flash, numéro de série interne).'},
+  boot4:{icon:'🔵',title:'Boot Checksum (0x0B — 11e secteur)',body:'Checksum calculé sur tous les secteurs de la Boot Zone (0x00–0x0A). Répété sur tout le secteur (512 bytes / 4 = 128 répétitions de la valeur).<br><br><strong>Forensique</strong> : checksum incorrect → Boot Zone corrompue ou modifiée. Outil : <code>exfat_checksum</code> ou X-Ways.'},
+  bootcp:{icon:'🪞',title:'Backup Boot Zone (12 secteurs)',body:'Copie complète des 12 secteurs de la Boot Zone principale (0x00–0x0B).<br><br><strong>Forensique</strong> : divergence Boot Zone principale vs backup → modification ciblée de l\'une des deux. Permet la récupération si la zone principale est corrompue.'},
+  fat:{icon:'💛',title:'FAT Region — Table d\'Allocation Principale',body:'<strong>1 seule FAT</strong> en exFAT (pas de copie, contrairement à FAT32 qui en a 2).<br><br>Entrées de 32 bits. Valeurs :<br>· 0x00000000 = cluster libre<br>· 0x00000002–0xFFFFFFF6 = numéro du cluster suivant<br>· 0xFFFFFFF7 = bad cluster<br>· 0xFFFFFFFF = EOF<br><br><strong>Forensique</strong> : cluster libre mais avec données = espace récupérable. Pas de copie FAT → une corruption peut être catastrophique.'},
+  data:{icon:'🟢',title:'Data Region — Zone de Données',body:'Tous les fichiers et métadonnées. Les premiers clusters sont :<br>· Cluster 2 : <strong>$Bitmap</strong> d\'allocation<br>· Cluster 3 : <strong>$UpCase</strong> table<br>· Cluster 5 (typique) : <strong>Root Directory</strong><br><br><strong>Forensique</strong> : scanner les clusters libres pour carving. Pas de journalisation → récupération uniquement par file carving sur signatures de fichiers.'}
+};
+
+function showZone(key){
+  var d=zoneDetails[key]; if(!d) return;
+  document.querySelectorAll('.exf-zone').forEach(function(z){z.classList.remove('active');});
+  var id='ez-'+key.replace(/\d+$/,'');
+  var el=document.getElementById('ez-'+key)||document.querySelector('[onclick*="'+key+'"]');
+  if(el) el.classList.add('active');
+  var p=document.getElementById('zone-panel');
+  p.className='exf-panel live';
+  p.innerHTML='<div style="font-family:var(--sans);font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:.45rem">'+d.icon+' '+d.title+'</div><div style="font-size:.79rem;line-height:1.75">'+d.body+'</div>';
+}
+
+// ── Entry Set details ────────────────────────────────────────
+var entryDetails={
+  primary:{icon:'🔴',title:'File Entry (0x85) — Entrée Primaire',body:'<strong>Entrée principale</strong> d\'un fichier. Obligatoirement suivie du Stream Extension.<br><br>Champs forensiques :<br>· Offset 0x00 : EntryType = <code>0x85</code> (actif) ou <code>0x05</code> (supprimé)<br>· Offset 0x01 : SecondaryCount = nombre d\'entrées secondaires (2 minimum)<br>· Offset 0x02 : SetChecksum = checksum du Directory Entry Set<br>· Offset 0x04 : FileAttributes (ReadOnly, Hidden, System, Directory, Archive)<br>· Offset 0x08/0x10/0x18 : CreateTime, LastModifiedTime, LastAccessedTime'},
+  stream:{icon:'🟣',title:'Stream Extension (0xC0) — Localisation physique',body:'<strong>Entrée critique</strong> : contient la localisation physique des données du fichier.<br><br>Champs forensiques :<br>· Offset 0x00 : EntryType = <code>0xC0</code> ou <code>0x40</code> (supprimé)<br>· Offset 0x01 : GeneralSecondaryFlags — bit 1 = <strong>NoFatChain</strong> (1 = contigu)<br>· Offset 0x08 : ValidDataLength — octets valides des données<br>· Offset 0x10 : DataLength — longueur totale en octets<br>· Offset 0x14 : <strong>FirstCluster</strong> — premier cluster des données (32 bits)'},
+  name1:{icon:'🟢',title:'File Name (0xC1) — Nom UTF-16',body:'<strong>Nom du fichier</strong> encodé en UTF-16 Little Endian, 15 caractères maximum par entrée.<br><br>· Offset 0x00 : EntryType = <code>0xC1</code> ou <code>0x41</code> (supprimé)<br>· Offset 0x02–0x1F : 15 caractères UTF-16 (30 octets)<br><br>Si le nom dépasse 15 caractères → entrée(s) File Name supplémentaire(s) (<code>0xC1</code>) jusqu\'à 17 entrées max (255 caractères total).'},
+  name2:{icon:'🟢',title:'File Name suivant (0xC1) — Nom > 15 chars',body:'Entrée(s) supplémentaire(s) pour les noms longs (> 15 caractères).<br><br>Même structure que la première entrée File Name. Les caractères s\'enchaînent séquentiellement.<br><br><strong>Max</strong> : 17 entrées File Name → 255 caractères. Nombre total d\'entrées = 2 + nombre d\'entrées FileName = SecondaryCount + 1.'}
+};
+
+function showEntry(key){
+  var d=entryDetails[key]; if(!d) return;
+  document.querySelectorAll('.exf-seg').forEach(function(s){s.classList.remove('active');});
+  var p=document.getElementById('entry-panel');
+  p.className='exf-panel live';
+  p.innerHTML='<div style="font-family:var(--sans);font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:.45rem">'+d.icon+' '+d.title+'</div><div style="font-size:.79rem;line-height:1.75">'+d.body+'</div>';
+}
+
+// ── Bitmap calculator ────────────────────────────────────────
+function calcBitmap(){
+  var n=parseInt(document.getElementById('bmp-cluster').value)||0;
+  var out=document.getElementById('bmp-result');
+  if(n<2){out.textContent='Cluster minimum = 2';return;}
+  var idx=n-2,byte=Math.floor(idx/8),bit=idx%8;
+  var byteHex=(1<<bit).toString(16).toUpperCase().padStart(2,'0');
+  out.textContent='Index='+idx+' → Octet '+byte+', Bit '+bit+' → si seul ce cluster : 0x'+byteHex;
+  // Highlight in grid
+  document.querySelectorAll('.exf-bc').forEach(function(c){c.classList.remove('exf-bc-hl');});
+  var cells=document.querySelectorAll('.exf-bc');
+  if(cells[idx]) cells[idx].classList.add('exf-bc-hl');
+}
+
+// ── Bitmap visualizer ────────────────────────────────────────
+var bmpState=[];
+function initBitmap(rnd){
+  bmpState=[];
+  for(var i=0;i<128;i++) bmpState.push(rnd?(Math.random()>.45?1:0):(i<20?1:0));
+  renderBitmap();
+}
+function renderBitmap(){
+  var g=document.getElementById('exf-bmap');if(!g)return;
+  var h='';
+  for(var i=0;i<128;i++){
+    var cls=bmpState[i]?'exf-bc-used':'exf-bc-free';
+    h+='<div class="exf-bc '+cls+'" onclick="toggleCluster('+i+')" title="Cluster '+(i+2)+'"></div>';
+  }
+  g.innerHTML=h;
+}
+function toggleCluster(i){
+  bmpState[i]^=1;
+  var cells=document.querySelectorAll('.exf-bc');
+  if(cells[i]) cells[i].className='exf-bc '+(bmpState[i]?'exf-bc-used':'exf-bc-free');
+  var n=i+2,byte=Math.floor(i/8),bit=i%8;
+  var byteVal=bmpState.slice(byte*8,(byte+1)*8).reduce(function(a,b,j){return a|(b<<j);},0);
+  document.getElementById('bmap-info').textContent='Cluster '+n+' (index '+i+') → Octet '+byte+', Bit '+bit+' → '+(bmpState[i]?'OCCUPÉ':'LIBRE')+' | Octet '+byte+' = 0x'+byteVal.toString(16).toUpperCase().padStart(2,'0');
+}
+function resetBitmap(){initBitmap(false);}
+function randomBitmap(){initBitmap(true);}
+
+// ── Offset calculator ────────────────────────────────────────
+function calcOffset(){
+  var n=parseInt(document.getElementById('off-cluster').value)||0;
+  var bpss=parseInt(document.getElementById('off-bpss').value)||9;
+  var spcs=parseInt(document.getElementById('off-spcs').value)||3;
+  var cho=parseInt(document.getElementById('off-cho').value)||0;
+  if(n<2){document.getElementById('off-result').textContent='Cluster minimum = 2';return;}
+  var bps=Math.pow(2,bpss);
+  var tc=Math.pow(2,spcs)*bps;
+  var offset=cho*bps+(n-2)*tc;
+  var hex=offset.toString(16).toUpperCase();
+  document.getElementById('off-result').textContent=
+    'BPS='+bps+'o · TailleCluster='+tc+'o · Offset = '+cho+'×'+bps+' + ('+(n-2)+')×'+tc+' = '+offset+' octets (0x'+hex+')';
+}
+
+// ── Size bars animation ──────────────────────────────────────
+var barsAnimated=false;
+function animateBars(){
+  if(barsAnimated) return; barsAnimated=true;
+  setTimeout(function(){
+    document.getElementById('sb-fat32').style.width='6%';
+    document.getElementById('sb-exfat').style.width='100%';
+    document.getElementById('sb2-fat32').style.width='1%';
+    document.getElementById('sb2-exfat').style.width='100%';
+  },100);
+}
+
+// ── Init ─────────────────────────────────────────────────────
+initBitmap(false);
+calcBitmap();
+calcOffset();
+</script>
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

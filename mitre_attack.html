@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MITRE ATT&amp;CK — CAS-IN DFIR</title>
+<meta name="description" content="MITRE ATT&CK · 14 tactiques · 200+ techniques · Sub-techniques · Mapping · D3FEND">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">DÉTECTION & THREAT HUNTING</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-détection">Détection &amp; Threat Hunting</a><span class="bc-sep">›</span>
+    <span class="bc-current">MITRE ATT&amp;CK</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~14 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🎯</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">Threat Intel</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">CTI</span>
+    <span class="tag tag-purple" style="margin-left:.3rem">Framework</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">MITRE ATT&amp;CK — Adversarial Tactics, Techniques &amp; Common Knowledge</h1>
+    <div class="meta">14 tactiques · 216 techniques · 475 sous-techniques (v18, oct 2025) · TTP · Navigator · Pyramid of Pain · Sigma</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="malware_forensique.html" class="prereq-pill">📖 Malware Forensics</a><a href="incident_response.html" class="prereq-pill">📖 Incident Response</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=hunt" class="tp-pill">🧪 🔍 Threat Hunting</a><a href="../tp.html?cat=ir" class="tp-pill">🧪 🚨 Incident Response</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="threat_intel_ioc.html" class="related-pill">🔗 Threat Intel &amp; IOC</a><a href="sysmon.html" class="related-pill">🔗 Sysmon</a><a href="powershell_forensique.html" class="related-pill">🔗 PowerShell</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="att-tabs">
+  <button class="tab active" onclick="showTab('intro',this)">📚 Concepts</button>
+  <button class="tab" onclick="showTab('tactics',this)">🎯 14 Tactiques</button>
+  <button class="tab" onclick="showTab('tech',this)">⚙️ Techniques &amp; Sub</button>
+  <button class="tab" onclick="showTab('navigator',this)">🗺 Navigator &amp; Mapping</button>
+  <button class="tab" onclick="showTab('use',this)">🔧 Cas d'usage DFIR</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — CONCEPTS
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-intro">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 ATT&amp;CK — la lingua franca de la cybersécurité</div>
+  <strong>MITRE ATT&amp;CK</strong> (<em>Adversarial Tactics, Techniques, and Common Knowledge</em>) est une <strong>base de connaissances publique</strong> maintenue par <a href="https://www.mitre.org" target="_blank">MITRE Corporation</a> (ONG américaine financée par le gouvernement) qui décrit <strong>comment les attaquants opèrent réellement</strong>, étape par étape. Lancé en 2013 (publié 2015), ATT&amp;CK est devenu <strong>le langage commun</strong> de tous les acteurs cyber : SOC, Threat Hunters, Red Teams, éditeurs EDR/SIEM, vendors, gouvernements, chercheurs académiques. Quand un rapport CISA dit « APT29 a utilisé T1059.001 puis T1003.001 », tout le monde comprend exactement ce qui s'est passé. C'est <strong>la pierre angulaire du Threat-Informed Defense</strong>.
+</div>
+
+<div class="sec-title">Trois niveaux de granularité</div>
+
+<div class="arch-viz">
+  <div style="background:rgba(88,166,255,.04);border:2px solid rgba(88,166,255,.25);border-radius:12px;padding:1rem">
+    <div style="font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);text-align:center;margin-bottom:.75rem;opacity:.8">📐 La hiérarchie ATT&amp;CK · du « pourquoi » au « comment précis »</div>
+    <div style="display:flex;flex-direction:column;gap:.5rem;font-family:var(--mono);font-size:.78rem">
+      <div style="padding:.7rem 1rem;background:rgba(255,64,96,.08);border-left:4px solid var(--red);border-radius:0 6px 6px 0;cursor:pointer" onclick="showLvl('tac')">
+        <strong style="color:var(--red);font-size:.85rem">🎯 TACTIQUE</strong> — <strong>« pourquoi ? »</strong> · l'objectif tactique de l'attaquant<br>
+        <span style="color:var(--dim);font-family:var(--sans);font-size:.78rem">14 tactiques · IDs de forme <code>TA00xx</code> · ex : Credential Access (TA0006)</span>
+      </div>
+      <div style="text-align:center;color:var(--dim)">↓</div>
+      <div style="padding:.7rem 1rem;background:rgba(240,192,64,.08);border-left:4px solid var(--gold);border-radius:0 6px 6px 0;cursor:pointer" onclick="showLvl('tech')">
+        <strong style="color:var(--gold);font-size:.85rem">⚙️ TECHNIQUE</strong> — <strong>« comment ? »</strong> · le moyen général<br>
+        <span style="color:var(--dim);font-family:var(--sans);font-size:.78rem">216 techniques · IDs <code>T1xxx</code> · ex : OS Credential Dumping (T1003)</span>
+      </div>
+      <div style="text-align:center;color:var(--dim)">↓</div>
+      <div style="padding:.7rem 1rem;background:rgba(0,229,204,.08);border-left:4px solid var(--cyan);border-radius:0 6px 6px 0;cursor:pointer" onclick="showLvl('sub')">
+        <strong style="color:var(--cyan);font-size:.85rem">🔬 SOUS-TECHNIQUE</strong> — <strong>« comment précisément ? »</strong> · variante spécifique<br>
+        <span style="color:var(--dim);font-family:var(--sans);font-size:.78rem">475 sub-techniques · IDs <code>T1xxx.yyy</code> · ex : LSASS Memory (T1003.001)</span>
+      </div>
+      <div style="text-align:center;color:var(--dim)">↓</div>
+      <div style="padding:.7rem 1rem;background:rgba(48,232,138,.08);border-left:4px solid var(--green);border-radius:0 6px 6px 0">
+        <strong style="color:var(--green);font-size:.85rem">📝 PROCÉDURE</strong> — <strong>« avec quel outil ? »</strong> · l'instance concrète observée<br>
+        <span style="color:var(--dim);font-family:var(--sans);font-size:.78rem">Pas dans la matrice elle-même · ex : Mimikatz <code>sekurlsa::logonpasswords</code> implémente T1003.001</span>
+      </div>
+    </div>
+  </div>
+  <div id="att-detail" style="margin-top:.5rem;padding:.85rem 1rem;background:rgba(13,17,23,.4);border:1px solid var(--border);border-radius:8px;font-size:.82rem;color:var(--muted);min-height:60px">
+    ℹ️ Cliquez sur un niveau pour afficher des détails et exemples.
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Les trois matrices ATT&amp;CK</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🏢 Enterprise (la principale)</div>
+    <div style="font-size:.83rem;line-height:1.55">
+      <p><strong>14 tactiques · 216 techniques · 475 sub-techniques</strong> (v18, oct 2025)</p>
+      <p>Couvre Windows, macOS, Linux, Cloud (AWS/Azure/GCP/M365), Network, Containers, ESXi.</p>
+      <p>Inclut les phases pré-compromission depuis v8 (2020) : Reconnaissance + Resource Development (anciennement <em>PRE-ATT&amp;CK</em>).</p>
+      <p>C'est <strong>celle utilisée par 95 % des SOC</strong>.</p>
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📱 Mobile</div>
+    <div style="font-size:.83rem;line-height:1.55">
+      <p><strong>12 tactiques</strong> (sans Reconnaissance ni Resource Development).</p>
+      <p>iOS + Android. Techniques spécifiques : abus d'accessibilité, cassage du sandbox app, MFA bypass via SIM swap, etc.</p>
+      <p>Moins utilisé en SOC traditionnel mais <strong>essentiel</strong> pour MDR/XDR mobile.</p>
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🏭 ICS (Industrial Control Systems)</div>
+    <div style="font-size:.83rem;line-height:1.55">
+      <p><strong>12 tactiques</strong> dont 2 spécifiques : <em>Inhibit Response Function</em> + <em>Impair Process Control</em>.</p>
+      <p>Cible les SCADA, PLC, HMI, RTU. Référencée par les rapports d'attaques OT (Industroyer, Stuxnet, Triton, Pipedream/Incontroller).</p>
+      <p>Utile pour le secteur énergie / industrie / eau.</p>
+    </div>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">La Pyramide de la Douleur (Bianco, 2013)</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.74rem;line-height:1.6;color:var(--text);white-space:pre;margin:0">                          ┌─────────────────────────────┐
+                          │  TTPs (ATT&amp;CK)              │  🔴 Tough!
+                          │  comportement attaquant     │  refonte du modop
+                          ├─────────────────────────────┤
+                       ┌──┤  Tools (outils utilisés)    │  🔴 Challenging
+                       │  ├─────────────────────────────┤
+                    ┌──┤  │  Network/Host Artifacts     │  🟠 Annoying
+                    │  │  ├─────────────────────────────┤
+                ┌───┤  │  │  Domain Names               │  🟡 Simple
+                │   │  │  ├─────────────────────────────┤
+            ┌───┤   │  │  │  IP Addresses               │  🟢 Easy
+            │   │   │  │  ├─────────────────────────────┤
+        ┌───┤   │   │  │  │  Hash Values (MD5/SHA-256)  │  🟢 Trivial
+        │   │   │   │  │  └─────────────────────────────┘
+        ↓   ↓   ↓   ↓  ↓                          ↑
+   Plus c'est en bas, plus c'est facile         Plus c'est en haut,
+   pour l'attaquant de changer                   plus l'attaquant souffre
+   (régénérer un hash = 1 sec)                   (changer ses TTPs = mois)
+</pre>
+</div>
+
+<div class="alert" style="background:rgba(0,229,204,.06);border-color:rgba(0,229,204,.4);margin:1rem 0">
+  ⭐ <strong>Pourquoi ATT&amp;CK > IOC :</strong> bloquer un hash = inutile (l'attaquant recompile). Bloquer un comportement (T1003.001 = lire <code>lsass.exe</code>) = bloquer Mimikatz, ProcDump, comsvcs.dll, MiniDumpWriteDump, secretsdump.py… <strong>tous d'un coup</strong>. C'est la promesse de la défense fondée sur ATT&amp;CK : faire mal à l'attaquant, pas juste à un outil.
+</div>
+
+</div><!-- /tab-intro -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — 14 TACTIQUES
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tactics">
+
+<div class="concept-card">
+  <div class="concept-title">🎯 Les 14 Tactiques Enterprise — la kill chain ATT&amp;CK</div>
+  Les tactiques sont des <strong>« catégories de pourquoi »</strong>. Elles ne sont <strong>pas strictement séquentielles</strong> — un attaquant peut sauter d'une à l'autre, revenir en arrière, ou en ignorer plusieurs. Mais l'ordre canonique de la matrice (de gauche à droite) reflète l'évolution typique d'une intrusion.
+</div>
+
+<div class="table-wrap">
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.83rem">
+  <thead>
+  <tr style="background:rgba(106,128,168,.1)">
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">#</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Tactique</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">ID</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Objectif de l'adversaire</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Technique emblématique</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)">1</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>Reconnaissance</strong></td><td style="padding:.5rem;border:1px solid var(--border)"><code>TA0043</code></td><td style="padding:.5rem;border:1px solid var(--border)">Collecter de l'info sur la cible (avant intrusion)</td><td style="padding:.5rem;border:1px solid var(--border)">T1589 (Gather Identity Info)</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)">2</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>Resource Development</strong></td><td style="padding:.5rem;border:1px solid var(--border)"><code>TA0042</code></td><td style="padding:.5rem;border:1px solid var(--border)">Préparer infra (domaines, certs, malware)</td><td style="padding:.5rem;border:1px solid var(--border)">T1583 (Acquire Infrastructure)</td></tr>
+  <tr style="background:rgba(255,64,96,.04)"><td style="padding:.5rem;border:1px solid var(--border)">3</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>Initial Access</strong></td><td style="padding:.5rem;border:1px solid var(--border)"><code>TA0001</code></td><td style="padding:.5rem;border:1px solid var(--border)">🚪 Entrer dans le SI</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>T1566</strong> Phishing · <strong>T1190</strong> Exploit Public-Facing</td></tr>
+  <tr style="background:rgba(255,64,96,.04)"><td style="padding:.5rem;border:1px solid var(--border)">4</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>Execution</strong></td><td style="padding:.5rem;border:1px solid var(--border)"><code>TA0002</code></td><td style="padding:.5rem;border:1px solid var(--border)">⚙️ Exécuter du code malveillant</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>T1059.001</strong> PowerShell · <strong>T1204</strong> User Execution</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)">5</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>Persistence</strong></td><td style="padding:.5rem;border:1px solid var(--border)"><code>TA0003</code></td><td style="padding:.5rem;border:1px solid var(--border)">🔒 Survivre aux reboots</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>T1547.001</strong> Run Keys · <strong>T1053</strong> Scheduled Tasks</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)">6</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>Privilege Escalation</strong></td><td style="padding:.5rem;border:1px solid var(--border)"><code>TA0004</code></td><td style="padding:.5rem;border:1px solid var(--border)">⬆️ Devenir SYSTEM/admin/root</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>T1068</strong> Exploit for Priv Esc · <strong>T1548</strong> UAC Bypass</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)">7</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>Defense Evasion</strong> ⚠️</td><td style="padding:.5rem;border:1px solid var(--border)"><code>TA0005</code></td><td style="padding:.5rem;border:1px solid var(--border)">🥷 Éviter détection AV/EDR/SIEM</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>T1027</strong> Obfuscation · <strong>T1562.001</strong> Disable Security · <strong>T1070</strong> Indicator Removal</td></tr>
+  <tr style="background:rgba(255,64,96,.04)"><td style="padding:.5rem;border:1px solid var(--border)">8</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>Credential Access</strong></td><td style="padding:.5rem;border:1px solid var(--border)"><code>TA0006</code></td><td style="padding:.5rem;border:1px solid var(--border)">🔑 Voler des credentials</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>T1003.001</strong> LSASS · <strong>T1558</strong> Kerberoasting · <strong>T1110</strong> Brute Force</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)">9</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>Discovery</strong></td><td style="padding:.5rem;border:1px solid var(--border)"><code>TA0007</code></td><td style="padding:.5rem;border:1px solid var(--border)">🔭 Cartographier l'environnement</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>T1087</strong> Account Discovery · <strong>T1018</strong> Remote System</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)">10</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>Lateral Movement</strong></td><td style="padding:.5rem;border:1px solid var(--border)"><code>TA0008</code></td><td style="padding:.5rem;border:1px solid var(--border)">↪️ Pivoter vers d'autres machines</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>T1021.001</strong> RDP · <strong>T1021.002</strong> SMB · <strong>T1550.002</strong> Pass-the-Hash</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)">11</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>Collection</strong></td><td style="padding:.5rem;border:1px solid var(--border)"><code>TA0009</code></td><td style="padding:.5rem;border:1px solid var(--border)">📦 Rassembler les données ciblées</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>T1213</strong> Data from Repos · <strong>T1056</strong> Input Capture</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)">12</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>Command and Control</strong></td><td style="padding:.5rem;border:1px solid var(--border)"><code>TA0011</code></td><td style="padding:.5rem;border:1px solid var(--border)">📡 Maintenir le canal C2</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>T1071.001</strong> Web Protocols · <strong>T1573</strong> Encrypted Channel</td></tr>
+  <tr><td style="padding:.5rem;border:1px solid var(--border)">13</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>Exfiltration</strong></td><td style="padding:.5rem;border:1px solid var(--border)"><code>TA0010</code></td><td style="padding:.5rem;border:1px solid var(--border)">📤 Sortir les données du SI</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>T1041</strong> Over C2 · <strong>T1567</strong> Web Service (MEGA, Dropbox)</td></tr>
+  <tr style="background:rgba(255,64,96,.04)"><td style="padding:.5rem;border:1px solid var(--border)">14</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>Impact</strong></td><td style="padding:.5rem;border:1px solid var(--border)"><code>TA0040</code></td><td style="padding:.5rem;border:1px solid var(--border)">💥 Détruire / chiffrer / perturber</td><td style="padding:.5rem;border:1px solid var(--border)"><strong>T1486</strong> Encrypted for Impact (ransomware) · <strong>T1490</strong> Inhibit Recovery</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="alert" style="margin:1rem 0">
+  ⚠️ <strong>Évolution v19 (avril 2026) :</strong> MITRE a annoncé la <strong>dépréciation de la tactique « Defense Evasion »</strong> — les techniques seront redistribuées dans les autres tactiques (chaque technique défensive est désormais associée à son but principal). À surveiller pour les mappings futurs.
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Le scénario type d'une attaque ransomware en 2026</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.76rem;line-height:1.65;color:var(--text);white-space:pre-wrap;margin:0">  Phishing email avec pièce jointe .docm                <strong style="color:var(--cyan)">→ T1566.001</strong>
+                  ↓
+  User ouvre, macro VBA → cmd.exe → powershell.exe -Enc  <strong style="color:var(--cyan)">→ T1204.002 + T1059.001</strong>
+                  ↓
+  PowerShell télécharge stage 2 (Cobalt Strike beacon)   <strong style="color:var(--cyan)">→ T1105 (Ingress Tool Transfer)</strong>
+                  ↓
+  Beacon établit C2 HTTPS vers infra attaquante          <strong style="color:var(--cyan)">→ T1071.001 + T1573.002</strong>
+                  ↓
+  Beacon dump LSASS via comsvcs.dll                      <strong style="color:var(--red)">→ T1003.001 (LSASS Memory)</strong>
+                  ↓
+  Mimikatz extrait hash NTLM admin domain                <strong style="color:var(--red)">→ T1003.001</strong>
+                  ↓
+  Pass-the-Hash vers Domain Controller                   <strong style="color:var(--red)">→ T1550.002</strong>
+                  ↓
+  DCSync : extraire NTDS.dit (tous les hash)             <strong style="color:var(--red)">→ T1003.006</strong>
+                  ↓
+  Lateral movement via SMB + WMI vers serveurs           <strong style="color:var(--red)">→ T1021.002 + T1047</strong>
+                  ↓
+  Désactivation Defender + suppression Volume Shadow     <strong style="color:var(--red)">→ T1562.001 + T1490</strong>
+                  ↓
+  Déploiement ransomware via GPO ou PsExec               <strong style="color:var(--red)">→ T1486 (Data Encrypted for Impact)</strong>
+                  ↓
+  Note de rançon + threat de leak (double extorsion)     <strong style="color:var(--red)">→ T1657 (Financial Theft)</strong></pre>
+</div>
+
+<div class="alert" style="background:rgba(0,229,204,.06);border-color:rgba(0,229,204,.4);margin:1rem 0">
+  ⭐ <strong>Mapping en post-mortem :</strong> tout rapport d'incident moderne <em>doit</em> mapper les TTPs observés sur ATT&amp;CK. C'est ce qui permet de comparer les groupes (APT29 vs FIN7 vs LockBit affiliate), d'enrichir la threat intel, et de mesurer la couverture défensive avec ATT&amp;CK Navigator.
+</div>
+
+</div><!-- /tab-tactics -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — TECHNIQUES & SUB-TECHNIQUES
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tech">
+
+<div class="concept-card">
+  <div class="concept-title">⚙️ Anatomie d'une fiche technique ATT&amp;CK</div>
+  Chaque technique a sa <strong>page dédiée</strong> sur <a href="https://attack.mitre.org" target="_blank">attack.mitre.org</a> qui suit une structure normalisée. Cette structure est <strong>la même pour toutes les 216 techniques</strong> — la connaître permet de naviguer efficacement.
+</div>
+
+<div class="sec-title">Structure d'une fiche technique</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">📋 Métadonnées</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li><strong>ID</strong> (T1003), <strong>Sub-techniques</strong> (8 sous-techniques pour T1003)</li>
+      <li><strong>Tactic(s)</strong> (Credential Access)</li>
+      <li><strong>Platforms</strong> (Windows, Linux, macOS…)</li>
+      <li><strong>Permissions Required</strong> (Administrator, SYSTEM)</li>
+      <li><strong>Data Sources</strong> (Process: Process Access, File: File Access…)</li>
+      <li><strong>Defenses Bypassed</strong> (Anti-virus, Application Control)</li>
+      <li><strong>Contributors</strong> (chercheurs)</li>
+      <li><strong>Version + last modified</strong></li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📖 Contenu narratif</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li><strong>Description</strong> détaillée (1–3 paragraphes)</li>
+      <li><strong>Procedure Examples</strong> — outils et groupes connus qui l'utilisent (avec hyperliens)</li>
+      <li><strong>Mitigations</strong> (M1xxx) — contrôles de sécurité applicables</li>
+      <li><strong>Detection Strategies</strong> (v18+) — stratégies de détection structurées</li>
+      <li><strong>Analytics</strong> (v18+) — règles de détection concrètes (auparavant « Data Sources »)</li>
+      <li><strong>References</strong> — liens vers les rapports originaux</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Exemple : T1003 OS Credential Dumping et ses 8 sous-techniques</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.83rem">
+  <thead>
+  <tr style="background:rgba(106,128,168,.1)">
+    <th style="padding:.45rem;border:1px solid var(--border);text-align:left">ID</th>
+    <th style="padding:.45rem;border:1px solid var(--border);text-align:left">Sub-technique</th>
+    <th style="padding:.45rem;border:1px solid var(--border);text-align:left">Description</th>
+    <th style="padding:.45rem;border:1px solid var(--border);text-align:left">Outil typique</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr style="background:rgba(255,64,96,.04)"><td style="padding:.45rem;border:1px solid var(--border)"><strong>T1003.001</strong></td><td style="padding:.45rem;border:1px solid var(--border)">LSASS Memory</td><td style="padding:.45rem;border:1px solid var(--border)">Lire/dumper le processus <code>lsass.exe</code></td><td style="padding:.45rem;border:1px solid var(--border)">Mimikatz, ProcDump, comsvcs.dll, Outflank Dumpert</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><strong>T1003.002</strong></td><td style="padding:.45rem;border:1px solid var(--border)">Security Account Manager</td><td style="padding:.45rem;border:1px solid var(--border)">Extraire ruche SAM (locale)</td><td style="padding:.45rem;border:1px solid var(--border)">reg save HKLM\SAM, secretsdump.py</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><strong>T1003.003</strong></td><td style="padding:.45rem;border:1px solid var(--border)">NTDS</td><td style="padding:.45rem;border:1px solid var(--border)">Extraire <code>NTDS.dit</code> du DC</td><td style="padding:.45rem;border:1px solid var(--border)">ntdsutil, vssadmin, secretsdump</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><strong>T1003.004</strong></td><td style="padding:.45rem;border:1px solid var(--border)">LSA Secrets</td><td style="padding:.45rem;border:1px solid var(--border)">LSA cache (services creds)</td><td style="padding:.45rem;border:1px solid var(--border)">Mimikatz lsadump::secrets</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><strong>T1003.005</strong></td><td style="padding:.45rem;border:1px solid var(--border)">Cached Domain Credentials</td><td style="padding:.45rem;border:1px solid var(--border)">MSCASHv2 hashes en cache</td><td style="padding:.45rem;border:1px solid var(--border)">Mimikatz lsadump::cache</td></tr>
+  <tr style="background:rgba(255,64,96,.04)"><td style="padding:.45rem;border:1px solid var(--border)"><strong>T1003.006</strong></td><td style="padding:.45rem;border:1px solid var(--border)">DCSync</td><td style="padding:.45rem;border:1px solid var(--border)">Demande de réplication AD frauduleuse</td><td style="padding:.45rem;border:1px solid var(--border)">Mimikatz lsadump::dcsync, Impacket</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><strong>T1003.007</strong></td><td style="padding:.45rem;border:1px solid var(--border)">Proc Filesystem</td><td style="padding:.45rem;border:1px solid var(--border)">Linux : <code>/proc/&lt;pid&gt;/maps</code></td><td style="padding:.45rem;border:1px solid var(--border)">mimipenguin, LaZagne</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)"><strong>T1003.008</strong></td><td style="padding:.45rem;border:1px solid var(--border)">/etc/passwd &amp; /etc/shadow</td><td style="padding:.45rem;border:1px solid var(--border)">Linux : crackable hashes</td><td style="padding:.45rem;border:1px solid var(--border)">cat + hashcat / john</td></tr>
+  </tbody>
+</table>
+
+<div class="alert" style="background:rgba(0,229,204,.06);border-color:rgba(0,229,204,.4);margin:1rem 0">
+  💡 <strong>Pourquoi les sous-techniques importent :</strong> en SOC, dire « on a vu du T1003 » est vague. Dire <strong>« on a vu du T1003.006 (DCSync) »</strong> donne immédiatement le mode opératoire (réplication frauduleuse), la signature (event 4662 sur DC + GUID 1131f6aa pour Replicating Directory Changes) et la mitigation (auditer Domain Replication Permissions). <strong>Toujours mapper au niveau le plus précis disponible.</strong>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Objets liés (autour des techniques)</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">👥 Groups (Threat Actors)</div>
+    <div style="font-size:.82rem;line-height:1.55">
+      <p>176 groupes (v18) avec ID <code>G0xxx</code></p>
+      <p>Ex : <strong>APT29</strong> (G0016, Cozy Bear / Russie SVR), <strong>FIN7</strong> (G0046), <strong>Lazarus</strong> (G0032, Corée du Nord)</p>
+      <p>Chaque groupe est mappé à ses techniques + softwares utilisés</p>
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🛠 Software (Malware &amp; Tools)</div>
+    <div style="font-size:.82rem;line-height:1.55">
+      <p>784 softwares (v18) avec ID <code>S0xxx</code></p>
+      <p>Inclut malware (Emotet S0367), tools red team (Mimikatz S0002, Cobalt Strike S0154), LOLBins (PowerShell)</p>
+      <p>Chaque software liste les techniques qu'il implémente</p>
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📅 Campaigns</div>
+    <div style="font-size:.82rem;line-height:1.55">
+      <p>55 campagnes (v18) avec ID <code>C00xx</code></p>
+      <p>Ex : <strong>SolarWinds Compromise</strong> (C0024), <strong>2022 Ukraine Electric Power Attack</strong> (C0028)</p>
+      <p>Permet de tracer une opération concrète dans le temps</p>
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🛡 Mitigations</div>
+    <div style="font-size:.82rem;line-height:1.55">
+      <p>44 mitigations (v18) avec ID <code>M1xxx</code></p>
+      <p>Ex : <strong>M1042</strong> Disable or Remove Feature/Program, <strong>M1026</strong> Privileged Account Management, <strong>M1056</strong> Pre-compromise</p>
+      <p>Liées aux techniques qu'elles atténuent</p>
+    </div>
+  </div>
+</div>
+
+</div><!-- /tab-tech -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — NAVIGATOR & MAPPING
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-navigator">
+
+<div class="concept-card">
+  <div class="concept-title">🗺 ATT&amp;CK Navigator — l'outil de visualisation</div>
+  <strong>ATT&amp;CK Navigator</strong> (<a href="https://mitre-attack.github.io/attack-navigator/" target="_blank">mitre-attack.github.io/attack-navigator</a>) est l'outil web officiel pour visualiser, annoter, et superposer des « calques » (layers) sur la matrice ATT&amp;CK. Open source, hébergeable on-prem, exportable en PNG / SVG / Excel / JSON.
+</div>
+
+<div class="sec-title">Cas d'usage Navigator</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🎨 Visualiser la couverture défensive</div>
+    <p style="font-size:.83rem;line-height:1.55">Colorier les techniques selon que votre stack (EDR/SIEM/Sysmon) les détecte (vert), les détecte partiellement (orange), ou ne les voit pas (rouge). Identifie immédiatement les <strong>blind spots</strong>.</p>
+    <p style="font-size:.78rem;color:var(--dim)">Exemple : EDR couvre T1003.001 (LSASS) mais pas T1003.006 (DCSync) → ajouter audit DC Sync.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🎯 Profiler un adversaire</div>
+    <p style="font-size:.83rem;line-height:1.55">Charger le calque pré-fait du groupe ciblant votre secteur (APT29, FIN12, Lazarus) → voir <em>exactement</em> quelles techniques ils utilisent → prioriser les détections sur celles-là.</p>
+    <p style="font-size:.78rem;color:var(--dim)">Layer JSON officiels disponibles sur <a href="https://github.com/mitre-attack/attack-navigator" target="_blank">github.com/mitre-attack/attack-navigator</a>.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔀 Superposer plusieurs calques</div>
+    <p style="font-size:.83rem;line-height:1.55">Calque 1 = couverture EDR. Calque 2 = TTPs APT29. Soustraction = techniques APT29 NON couvertes. Visualisation immédiate des risques résiduels.</p>
+    <p style="font-size:.78rem;color:var(--dim)">Fonction « Compare Layers » native dans Navigator.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📊 Mesurer un Red Team exercise</div>
+    <p style="font-size:.83rem;line-height:1.55">Pendant un exercice, le Red Team note les techniques utilisées dans un layer. Le Blue Team note ce qu'il a détecté. Comparaison post-mortem = score de détection objectif.</p>
+    <p style="font-size:.78rem;color:var(--dim)">Méthode utilisée par Atomic Red Team, CALDERA, Purple Teaming.</p>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Mapping d'une intrusion sur ATT&amp;CK — méthode CISA</div>
+
+<div class="concept-card">
+  <strong>Best Practices for MITRE ATT&amp;CK® Mapping</strong> (CISA, mise à jour 2023) recommande deux approches complémentaires :
+  <div class="memo-grid" style="margin-top:.5rem">
+    <div class="memo-card" style="background:rgba(0,229,204,.05)">
+      <div class="memo-card-title" style="color:var(--cyan)">Approche 1 — Top-down (Data Source)</div>
+      <ol style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+        <li>Identifier la source de données disponible (ex : EVTX 4688)</li>
+        <li>Lister les techniques observables avec cette source</li>
+        <li>Filtrer celles qui correspondent au comportement vu</li>
+        <li>Confirmer le mapping par un second indicateur</li>
+      </ol>
+    </div>
+    <div class="memo-card" style="background:rgba(240,192,64,.05)">
+      <div class="memo-card-title" style="color:var(--gold)">Approche 2 — Bottom-up (artefact)</div>
+      <ol style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+        <li>Partir d'un artefact concret (Mimikatz.exe sur le disque)</li>
+        <li>Chercher le software dans ATT&amp;CK (S0002 Mimikatz)</li>
+        <li>Lister les techniques associées</li>
+        <li>Garder celles dont l'usage est confirmé dans cet incident</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<div class="alert" style="background:rgba(255,64,96,.05);border-color:rgba(255,64,96,.3);margin:1rem 0">
+  ⚠️ <strong>Pièges classiques de mapping :</strong>
+  <ol style="margin:.4rem 0 0 1.5rem;font-size:.82rem">
+    <li><strong>Sur-mapper</strong> — assigner T1059.001 à <em>chaque</em> exécution PowerShell, même légitime. Mapping = comportement adversaire confirmé, pas usage normal.</li>
+    <li><strong>Sous-mapper</strong> — se contenter de la technique parent (T1003) sans préciser la sous-technique (T1003.001) quand on a l'info.</li>
+    <li><strong>Mapper l'outil au lieu du comportement</strong> — « mimikatz.exe a été vu » ≠ technique. C'est <em>ce qu'il a fait</em> (T1003.001) qui se mappe.</li>
+    <li><strong>Confondre Tactic et Technique</strong> — <code>TA0006</code> est une tactique (Credential Access), <code>T1003</code> est la technique. ID préfixé <code>TA</code> ou <code>T</code>.</li>
+  </ol>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Sigma — règles de détection portables liées à ATT&amp;CK</div>
+
+<div class="concept-card">
+  <strong>Sigma</strong> (<a href="https://github.com/SigmaHQ/sigma" target="_blank">github.com/SigmaHQ/sigma</a>) est le standard ouvert pour écrire des règles de détection en YAML, traduisibles automatiquement vers Splunk, Elastic, Sentinel, Chronicle, QRadar, etc. <strong>Chaque règle Sigma est mappée sur une ou plusieurs techniques ATT&amp;CK</strong> via les champs <code>tags</code>.
+</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.74rem;line-height:1.55;color:var(--text);white-space:pre-wrap;margin:0">title: <strong style="color:var(--cyan)">Mimikatz Command Line via PowerShell</strong>
+status: stable
+description: Detects mimikatz invocation via PowerShell
+references:
+    - https://attack.mitre.org/techniques/T1003/001/
+tags:
+    - <strong style="color:var(--gold)">attack.credential-access</strong>
+    - <strong style="color:var(--gold)">attack.t1003.001</strong>
+logsource:
+    product: windows
+    service: powershell
+    definition: 'Requires Script Block Logging EID 4104'
+detection:
+    selection:
+        EventID: 4104
+        ScriptBlockText|contains:
+            - 'sekurlsa::logonpasswords'
+            - 'lsadump::dcsync'
+            - 'Invoke-Mimikatz'
+            - 'AmsiUtils'
+            - 'amsiInitFailed'
+    condition: selection
+falsepositives:
+    - Penetration tests authorized
+level: <strong style="color:var(--red)">high</strong></pre>
+</div>
+
+</div><!-- /tab-navigator -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — CAS D'USAGE DFIR
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-use">
+
+<div class="concept-card">
+  <div class="concept-title">🔧 Pourquoi tout enquêteur DFIR doit maîtriser ATT&amp;CK</div>
+  ATT&amp;CK n'est pas seulement un outil pour SOC — c'est <strong>un outil de communication</strong> qui structure le rapport forensique, harmonise le vocabulaire devant un magistrat, et permet la <strong>comparaison rigoureuse</strong> entre incidents. En 2026, un rapport DFIR sérieux <strong>doit</strong> contenir un mapping ATT&amp;CK des TTPs observés.
+</div>
+
+<div class="sec-title">Cas d'usage 1 — Rapport forensique judiciaire (CH)</div>
+
+<div class="alert" style="margin:1rem 0">
+  <strong>Pratique recommandée pour les expertises CAS-IN :</strong> dans le rapport au Ministère public, inclure une <strong>section « Cartographie des actions de l'auteur sur la matrice MITRE ATT&amp;CK »</strong> avec les techniques observées et les preuves (IOC) qui les supportent. Avantages :
+  <ul style="margin:.4rem 0 0 1.5rem;font-size:.85rem">
+    <li>Vocabulaire <strong>internationalement reconnu</strong> par les autorités étrangères (entraide pénale)</li>
+    <li>Pas d'ambiguïté technique pour un magistrat non-IT</li>
+    <li>Permet de comparer le mode opératoire avec d'autres dossiers ouverts</li>
+    <li>Renforce la crédibilité scientifique de l'expertise (méthodologie traçable)</li>
+  </ul>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Cas d'usage 2 — Triage SOC d'une alerte EDR</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">📥 Alerte reçue</div>
+    <div style="font-family:var(--mono);font-size:.78rem;background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;line-height:1.5">
+      Defender for Endpoint :<br>
+      "Suspicious LSASS access by<br>
+      &nbsp;procdump.exe"<br>
+      Host: WS-FINANCE-04<br>
+      User: jdupont
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🎯 Mapping ATT&amp;CK</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li><strong>T1003.001</strong> — LSASS Memory</li>
+      <li>Tactic : <strong>TA0006</strong> Credential Access</li>
+      <li>Outil : <strong>S0561</strong> ProcDump (Sysinternals — légitime, donc LOLBin)</li>
+      <li>Groups connus : APT41, FIN6, Wizard Spider…</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔍 Hunts à lancer immédiatement</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li>T1003.006 (DCSync) sur DC : EID 4662 + GUID Replicating Directory</li>
+      <li>T1550.002 (Pass-the-Hash) : 4624 LogonType=9 NTLM</li>
+      <li>T1021.x (Lateral movement) depuis WS-FINANCE-04</li>
+      <li>T1486 préventif : sauvegardes intactes ?</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🛡 Mitigations à activer</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li><strong>M1043</strong> Credential Access Protection (LSA RunAsPPL)</li>
+      <li><strong>M1028</strong> Operating System Configuration (LSASS PPL)</li>
+      <li><strong>M1026</strong> Privileged Account Management (révoquer credentials)</li>
+      <li><strong>M1041</strong> Encrypt Sensitive Information (DPAPI master key)</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Cas d'usage 3 — Maturity assessment SOC</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.83rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <th style="padding:.45rem;border:1px solid var(--border);text-align:left">Niveau</th>
+    <th style="padding:.45rem;border:1px solid var(--border);text-align:left">Maturité ATT&amp;CK</th>
+    <th style="padding:.45rem;border:1px solid var(--border);text-align:left">Indicateurs concrets</th>
+  </tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)">L1</td><td style="padding:.45rem;border:1px solid var(--border)"><strong>Initial</strong></td><td style="padding:.45rem;border:1px solid var(--border)">ATT&amp;CK connu mais pas utilisé · alertes EDR par défaut</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)">L2</td><td style="padding:.45rem;border:1px solid var(--border)"><strong>Mapping défensif</strong></td><td style="padding:.45rem;border:1px solid var(--border)">Couverture détection visualisée dans Navigator · lacunes connues</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)">L3</td><td style="padding:.45rem;border:1px solid var(--border)"><strong>Threat-Informed</strong></td><td style="padding:.45rem;border:1px solid var(--border)">Détections priorisées sur TTPs des adversaires ciblant le secteur</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)">L4</td><td style="padding:.45rem;border:1px solid var(--border)"><strong>Adversary Emulation</strong></td><td style="padding:.45rem;border:1px solid var(--border)">Atomic Red Team / CALDERA / Purple Teams réguliers</td></tr>
+  <tr><td style="padding:.45rem;border:1px solid var(--border)">L5</td><td style="padding:.45rem;border:1px solid var(--border)"><strong>Continuous Validation</strong></td><td style="padding:.45rem;border:1px solid var(--border)">Mesure continue · BAS (Breach &amp; Attack Simulation) automatisée</td></tr>
+</table>
+
+<div class="sec-title" style="margin-top:1.5rem">Outils gravitant autour d'ATT&amp;CK</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🧪 Atomic Red Team</div>
+    <div style="font-size:.82rem;line-height:1.55">
+      <p><a href="https://github.com/redcanaryco/atomic-red-team" target="_blank">github.com/redcanaryco/atomic-red-team</a></p>
+      <p>Bibliothèque de <strong>tests atomiques</strong> (PowerShell, Bash) pour reproduire chaque technique ATT&amp;CK. Utilisé pour <em>« est-ce que ma détection fonctionne ?»</em>.</p>
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🛡 CALDERA</div>
+    <div style="font-size:.82rem;line-height:1.55">
+      <p><a href="https://github.com/mitre/caldera" target="_blank">github.com/mitre/caldera</a></p>
+      <p>Plateforme MITRE pour <strong>orchestrer des emulations adversaires complètes</strong> — chaîne de techniques exécutées automatiquement avec rapports.</p>
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📊 ATT&amp;CK Workbench</div>
+    <div style="font-size:.82rem;line-height:1.55">
+      <p>Application MITRE pour <strong>maintenir sa propre version d'ATT&amp;CK</strong> avec techniques internes / indicateurs propriétaires, tout en restant compatible avec l'ATT&amp;CK officiel.</p>
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔗 D3FEND (le pendant défensif)</div>
+    <div style="font-size:.82rem;line-height:1.55">
+      <p><a href="https://d3fend.mitre.org" target="_blank">d3fend.mitre.org</a></p>
+      <p>Cadre <strong>défensif</strong> complémentaire d'ATT&amp;CK · catalogue les contre-mesures par catégorie (Harden, Detect, Isolate, Deceive, Evict).</p>
+    </div>
+  </div>
+</div>
+
+</div><!-- /tab-use -->
+
+
+<!-- ══════════════════════════════════════════════
+     QUIZ + EXAM TIP
+══════════════════════════════════════════════ -->
+<div class="page-wrap">
+
+<div class="exam-tip" style="margin-top:1.25rem">
+  <div class="exam-tip-title">🎓 Exam Tip — MITRE ATT&amp;CK</div>
+  <p><strong>Acronyme</strong> : Adversarial Tactics, Techniques and Common Knowledge · MITRE Corporation (US, ONG)</p>
+  <p><strong>Hiérarchie</strong> : Tactic (TA00xx · « pourquoi ») → Technique (T1xxx · « comment ») → Sub-technique (T1xxx.yyy · « précisément ») → Procedure (instance concrète, hors matrice)</p>
+  <p><strong>Enterprise v18</strong> (oct 2025) : <strong>14 tactiques, 216 techniques, 475 sub-techniques, 44 mitigations, 176 groupes, 784 softwares, 55 campagnes</strong></p>
+  <p><strong>14 tactiques</strong> dans l'ordre canonique : Recon · Resource Dev · Initial Access · Execution · Persistence · Priv Esc · Defense Evasion · Credential Access · Discovery · Lateral Movement · Collection · C2 · Exfiltration · Impact</p>
+  <p><strong>3 matrices</strong> : Enterprise (la principale) · Mobile (12 tactiques) · ICS (12 tactiques)</p>
+  <p><strong>Pyramid of Pain</strong> (Bianco 2013) : hash &lt; IP &lt; domaine &lt; artefact &lt; outil &lt; <strong>TTPs</strong> — TTPs = douloureux pour l'attaquant</p>
+  <p><strong>Outils</strong> : ATT&amp;CK Navigator (visualisation calques) · Atomic Red Team (tests atomiques) · CALDERA (emulation) · D3FEND (pendant défensif)</p>
+  <p><strong>Sigma</strong> = règles détection portables YAML, mappées sur ATT&amp;CK via tags <code>attack.t1003.001</code></p>
+  <p><strong>Mapping d'incident</strong> : approche top-down (data source) ou bottom-up (artefact) · piéger sur-mapping et sous-mapping</p>
+  <p><strong>Évolution v19</strong> (avril 2026) : Defense Evasion sera dépréciée · techniques redistribuées</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Quelle est la différence entre <strong>tactic</strong> et <strong>technique</strong> dans MITRE ATT&amp;CK, et pourquoi cette distinction compte-t-elle pour un rapport DFIR ?</div>
+  <div class="quiz-meta">MITRE ATT&amp;CK · Niveau : facile</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    Une <strong>tactic</strong> répond à <strong>« pourquoi »</strong> (objectif tactique de l'adversaire) — il y en a 14 dans Enterprise, identifiées <code>TA0001</code>–<code>TA0043</code>. Une <strong>technique</strong> répond à <strong>« comment »</strong> (la méthode utilisée) — il y en a 216 dans Enterprise (v18), identifiées <code>T1xxx</code>. Plusieurs techniques peuvent servir la même tactique. Exemple : pour la tactic <em>Credential Access</em> (TA0006), un attaquant peut utiliser T1003 (OS Credential Dumping), T1110 (Brute Force), T1558 (Steal/Forge Kerberos Tickets), etc.<br><br>
+    Pour un rapport DFIR, la distinction compte parce qu'elle permet de structurer la narration : « L'attaquant a cherché à <em>obtenir des credentials [TA0006]</em>, en utilisant spécifiquement <em>le dump LSASS [T1003.001]</em> via Mimikatz ». Le magistrat / le RSSI comprend la <strong>logique stratégique</strong> de l'attaque, pas juste une liste d'outils. C'est aussi la base pour comparer cet incident à d'autres : « Ce mode opératoire est compatible avec FIN12 (G0102) qui combine T1566.001 + T1059.001 + T1003.001 + T1486 ».
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Vous êtes en SOC. Une alerte signale <code>powershell.exe -nop -w hidden -enc SQBFAFg…</code>. Mappez cette observation sur ATT&amp;CK le plus précisément possible et expliquez pourquoi vous choisissez ce niveau de précision.</div>
+  <div class="quiz-meta">MITRE ATT&amp;CK · Niveau : moyen</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    Mapping correct (du plus général au plus précis) :
+    <ul style="margin:.4rem 0 0 1.5rem">
+      <li><strong>Tactic</strong> : TA0002 — <em>Execution</em></li>
+      <li><strong>Technique</strong> : T1059 — <em>Command and Scripting Interpreter</em></li>
+      <li><strong>Sous-technique</strong> : <strong>T1059.001 — PowerShell</strong></li>
+      <li><strong>Tactic complémentaire</strong> : TA0005 — <em>Defense Evasion</em></li>
+      <li><strong>Technique</strong> : T1027 — <em>Obfuscated Files or Information</em> (à cause du <code>-EncodedCommand</code>)</li>
+    </ul>
+    On choisit T1059.001 plutôt que T1059 parce qu'on dispose de l'information précise (PowerShell, pas <code>cmd.exe</code> ni <code>bash</code>). <strong>Toujours descendre au niveau de sub-technique quand l'évidence le permet.</strong> Cela permet (1) de chercher si des groupes connus (FIN7, APT29, Wizard Spider) utilisent T1059.001 pour prioriser le hunt, (2) de mapper la mitigation correcte (M1042 PowerShell logging, M1038 Execution Prevention via WDAC), (3) d'enrichir une règle Sigma <code>attack.t1059.001</code>. Mapper seulement TA0002 sans technique = <strong>sous-mapping</strong> et perd toute la valeur du framework.
+  </div>
+</div>
+
+<div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> ATT&amp;CK = MITRE Corporation · Enterprise v18 (oct 2025) = 14 tactiques + 216 techniques + 475 sub-techniques · IDs <code>TAxxxx</code> (tactic) / <code>Txxxx</code> (technique) / <code>Txxxx.yyy</code> (sub) · 14 tactiques canoniques (Recon → Impact) · matrices Enterprise / Mobile / ICS · Pyramid of Pain (Bianco) : TTP = top · Navigator pour visualiser couverture · Sigma pour détection portable mappée sur ATT&amp;CK · Atomic Red Team / CALDERA pour emulation · mapping rigoureux nécessaire en rapport judiciaire.</div>
+
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>MITRE attack.mitre.org · CISA Best Practices for ATT&amp;CK Mapping · Picus Security · SigmaHQ</span>
+</div>
+
+</div><!-- /page-wrap -->
+
+
+<script>
+// ── Tab switching ──
+function showTab(id, btn){
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('#att-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  var el=document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+  window.scrollTo({top:Math.max(0,document.getElementById('att-tabs').offsetTop-60),behavior:'smooth'});
+}
+
+// ── Level details ──
+var lvlDetails={
+  tac:{icon:'🎯',title:'TACTIQUES — les « pourquoi »',body:`Il y a <strong>14 tactiques</strong> dans la matrice Enterprise (v18). Chacune a un identifiant <code>TA0xxx</code>.<br><br>
+    Les 14 actuelles : Reconnaissance, Resource Development, Initial Access, Execution, Persistence, Privilege Escalation, Defense Evasion ⚠️, Credential Access, Discovery, Lateral Movement, Collection, Command and Control, Exfiltration, Impact.<br><br>
+    <strong>v19 (avril 2026)</strong> : Defense Evasion sera <em>dépréciée</em> — techniques redistribuées dans les autres tactiques selon leur but principal.`},
+  tech:{icon:'⚙️',title:'TECHNIQUES — les « comment »',body:`Une technique décrit le <strong>moyen général</strong> par lequel l'attaquant accomplit la tactique. Identifiant <code>T1xxx</code>.<br><br>
+    Exemples célèbres :<br>
+    • <code>T1059</code> Command and Scripting Interpreter<br>
+    • <code>T1003</code> OS Credential Dumping<br>
+    • <code>T1486</code> Data Encrypted for Impact<br>
+    • <code>T1190</code> Exploit Public-Facing Application<br>
+    Une technique peut servir <strong>plusieurs tactiques</strong> selon le contexte.`},
+  sub:{icon:'🔬',title:'SOUS-TECHNIQUES — précision opérationnelle',body:`Variantes spécifiques d'une technique. Identifiant <code>T1xxx.yyy</code>.<br><br>
+    Introduites en <strong>v7 (juillet 2020)</strong> pour répondre à la critique « les techniques sont trop floues ».<br><br>
+    Exemple : <strong>T1003 OS Credential Dumping</strong> a 8 sub-techniques (.001 LSASS Memory · .002 SAM · .003 NTDS · .004 LSA Secrets · .005 Cached Domain · .006 DCSync · .007 Proc Filesystem · .008 /etc/shadow).<br>
+    <strong>Toujours mapper au niveau le plus précis disponible</strong> dans un rapport DFIR.`}
+};
+
+function showLvl(key){
+  var det=lvlDetails[key];
+  var box=document.getElementById('att-detail');
+  if(!det||!box) return;
+  box.innerHTML='<div style="font-family:var(--sans);font-weight:700;font-size:.95rem;margin-bottom:.45rem;color:var(--cyan)">'+det.icon+' '+det.title+'</div><div style="line-height:1.6">'+det.body+'</div>';
+}
+</script>
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

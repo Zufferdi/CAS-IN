@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>iOS Apps Tierces — Catalogue Forensique — CAS-IN</title>
+<meta name="description" content="Catalogue forensique des apps iOS tierces · Paths SQLite/Plist/Realm · Messageries · Travel · Cloud · Inspiré du poster SANS FOR585 Mattia Epifani">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<style>
+.app-card { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:.85rem 1rem; margin-bottom:.75rem }
+.app-name { font-weight:700; color:var(--cyan); font-size:.95rem; display:flex; align-items:center; gap:.5rem; margin-bottom:.4rem }
+.app-name .app-icon { font-size:1.2rem }
+.app-paths { font-family:var(--mono); font-size:.72rem; line-height:1.5; color:var(--text); background:var(--bg); padding:.5rem .65rem; border-radius:4px; border-left:2px solid var(--cyan) }
+.app-paths .ph { color:var(--muted) }
+.app-paths .pf { color:var(--gold) }
+.app-paths .pt { color:var(--green) }
+.app-key { color:var(--orange); font-weight:600; font-size:.78rem; margin-top:.4rem }
+.cat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:.75rem; margin-top:.5rem }
+.cat-msg { border-left:3px solid var(--cyan) }
+.cat-cloud { border-left:3px solid var(--blue) }
+.cat-travel { border-left:3px solid var(--green) }
+.cat-social { border-left:3px solid var(--purple) }
+.cat-finance { border-left:3px solid var(--gold) }
+.cat-health { border-left:3px solid var(--red) }
+.cat-media { border-left:3px solid var(--orange) }
+</style>
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">iOS APPS TIERCES — CATALOGUE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Plateformes</span>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">iOS Apps Tierces</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~14 min</span>
+  </div>
+</div>
+
+<div class="page">
+  <div class="header">
+    <div><span style="font-size:2.2rem">📱</span>
+    <span class="tag tag-cyan" style="margin-left:.5rem">iOS</span>
+    <span class="tag tag-purple" style="margin-left:.3rem">Catalogue</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Apps Tierces</span>
+    <span class="tag tag-gold" style="margin-left:.3rem">Sandbox</span></div>
+    <h1>iOS Apps Tierces — Catalogue Forensique</h1>
+    <p style="color:var(--muted);font-size:.85rem;margin:.2rem 0 0">Paths critiques par application · Inspiré du poster SANS FOR585 (Mattia Epifani, 2021)</p>
+  </div>
+
+  <div class="info" style="margin-top:1rem">
+    📂 <strong>Comment iOS organise les apps</strong> : chaque app installée depuis l'App Store reçoit un <strong>conteneur Sandbox</strong>. Le <strong>bundle</strong> (binaire signé Apple) est dans <code>/private/var/containers/Bundle/</code>. Les <strong>données utilisateur</strong> sont dans <code>/private/var/mobile/Containers/Data/Application/&lt;APP_GUID&gt;/</code>. Certaines apps stockent aussi dans un <strong>Shared Container</strong> à <code>/private/var/mobile/Containers/Shared/AppGroup/&lt;GROUP_GUID&gt;/</code> — souvent oublié des examinateurs.
+  </div>
+
+  <div class="info" style="background:rgba(255,176,0,.10);border-color:rgba(255,176,0,.4);margin-top:.5rem">
+    🔑 <strong>Trouver l'APP_GUID</strong> : la base <code>/private/var/mobile/Library/FrontBoard/applicationState.db</code> mappe <strong>bundle ID ↔ container path</strong>. Indispensable pour passer du nom commercial (« WhatsApp ») à <code>net.whatsapp.WhatsApp</code> puis au GUID local. Outil pratique : <strong>iLEAPP</strong> (parser open source de Brignoni) qui automatise l'extraction.
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row">
+      <span class="prereq-label">Prérequis :</span>
+      <a href="ios_forensique.html" class="prereq-pill">📖 iOS Forensique</a>
+      <a href="sqlite_forensique.html" class="prereq-pill">📖 SQLite Forensique</a>
+    </div>
+    <div class="prereq-row">
+      <span class="prereq-label">Voir aussi :</span>
+      <a href="android_forensique.html" class="related-pill">🔗 Android Forensique</a>
+      <a href="messagerie_im.html" class="related-pill">🔗 Messageries IM</a>
+      <a href="mobile.html" class="related-pill">🔗 Mobile (généralités)</a>
+    </div>
+  </div>
+
+  <h2 class="sec-title" id="messaging">💬 Messageries (top priorité forensique)</h2>
+
+  <div class="cat-grid">
+
+    <div class="app-card cat-msg">
+      <div class="app-name"><span class="app-icon">🟢</span>WhatsApp Messenger</div>
+      <div class="app-paths">
+<span class="ph">Data/</span>
+  <span class="pt">Documents/</span> <span class="pf">Blockedcontacts.dat</span> <span class="ph">(Plist)</span>
+  <span class="pt">Library/Caches/ChatMedia/</span> <span class="ph">média échangés</span>
+<span class="ph">Shared/AppGroup/</span>
+  <span class="pf">ChatStorage.sqlite</span> ⭐ <span class="ph">messages</span>
+  <span class="pf">ContactsV2.sqlite</span> <span class="ph">contacts</span>
+  <span class="pf">CallHistory.sqlite</span> <span class="ph">appels</span>
+  <span class="pf">Location.sqlite</span> <span class="ph">positions partagées</span>
+  <span class="pt">Message/Media/</span> <span class="ph">photos, vidéos, docs</span>
+      </div>
+      <div class="app-key">🔑 ChatStorage.sqlite = LA base à parser. Tables ZWAMESSAGE, ZWACHATSESSION.</div>
+    </div>
+
+    <div class="app-card cat-msg">
+      <div class="app-name"><span class="app-icon">✈️</span>Telegram</div>
+      <div class="app-paths">
+<span class="ph">Shared/AppGroup/telegram-data/</span>
+  <span class="pt">account-&lt;ID&gt;/postbox/db/</span> <span class="pf">db_sqlite</span> ⭐
+  <span class="pt">account-&lt;ID&gt;/postbox/media/</span> <span class="ph">médias</span>
+  <span class="pt">logs/</span> <span class="ph">.txt</span>
+      </div>
+      <div class="app-key">🔑 db_sqlite chiffré. Outils : Telegram Forensic Tool, Oxygen Detective.</div>
+    </div>
+
+    <div class="app-card cat-msg">
+      <div class="app-name"><span class="app-icon">🔵</span>Signal</div>
+      <div class="app-paths">
+<span class="ph">Shared/AppGroup/</span>
+  <span class="pt">grdb/</span> <span class="pf">signal.sqlite</span> ⭐ <span class="ph">chiffré GRDB</span>
+  <span class="pt">Attachments/</span> <span class="ph">médias chiffrés</span>
+  <span class="pt">ProfileAvatars/</span>
+      </div>
+      <div class="app-key">🔑 Déchiffrement nécessite la clé du Keychain iOS (extraction GrayKey/Cellebrite).</div>
+    </div>
+
+    <div class="app-card cat-msg">
+      <div class="app-name"><span class="app-icon">📞</span>Skype</div>
+      <div class="app-paths">
+<span class="ph">Data/</span>
+  <span class="pt">Library/Application Support/Skype4LifeSlimCore/&lt;USER&gt;/</span>
+    <span class="pf">main.db</span> ⭐
+  <span class="pt">Library/LocalDatabase/</span> <span class="pf">s4l-&lt;USER&gt;.db</span>
+<span class="ph">Shared/AppGroup/</span>
+  <span class="pf">s4l-&lt;USER&gt;.db</span> <span class="ph">redondance</span>
+      </div>
+      <div class="app-key">🔑 Tables : messages, calls, contacts. Format SQLite standard.</div>
+    </div>
+
+    <div class="app-card cat-msg">
+      <div class="app-name"><span class="app-icon">📱</span>Viber</div>
+      <div class="app-paths">
+<span class="ph">Data/Documents/</span>
+  <span class="pt">Attachments/</span>
+  <span class="pt">UserEngagement/</span>
+<span class="ph">Shared/AppGroup/com.viber/</span>
+  <span class="pt">database/</span> <span class="pf">Contacts.data</span> ⭐ <span class="ph">SQLite</span>
+  <span class="pt">settings/</span> <span class="pf">Settings.data</span>
+      </div>
+      <div class="app-key">🔑 .data = SQLite renommé. Ouvrir avec DB Browser sans extension.</div>
+    </div>
+
+    <div class="app-card cat-msg">
+      <div class="app-name"><span class="app-icon">🟢</span>LINE</div>
+      <div class="app-paths">
+<span class="ph">Shared/AppGroup/</span>
+  <span class="pt">Library/Application Support/PrivateStore/&lt;USER&gt;/Messages/</span>
+    <span class="pf">Line.sqlite</span> ⭐ <span class="ph">messages</span>
+    <span class="pf">ChetExt.sqlite</span> <span class="ph">chats étendus</span>
+    <span class="pf">E2EEData.sqlite</span> <span class="ph">crypto E2EE</span>
+  <span class="pt">Library/Application Support/KeepFileProvider/</span> <span class="pf">Keep.sqlite</span>
+      </div>
+      <div class="app-key">🔑 LINE est dominant en Asie (JP/TW/TH). 4 bases distinctes à examiner.</div>
+    </div>
+
+    <div class="app-card cat-msg">
+      <div class="app-name"><span class="app-icon">💬</span>Facebook Messenger</div>
+      <div class="app-paths">
+<span class="ph">Data/Documents/</span>
+  <span class="pt">messenger_secure_messages.sessionless.1/</span>
+    <span class="pf">&lt;USER&gt;_v1464784789_tincan.db</span> ⭐
+<span class="ph">Shared/AppGroup/</span>
+  <span class="pf">lightspeed-&lt;USER&gt;.db</span> ⭐
+  <span class="pt">shared_messenger_messages.&lt;GUID&gt;/</span> <span class="pf">orca2.db</span>
+      </div>
+      <div class="app-key">🔑 Plusieurs DBs selon version. orca2.db = nouvelle architecture (post-2022).</div>
+    </div>
+
+    <div class="app-card cat-msg">
+      <div class="app-name"><span class="app-icon">🎮</span>Discord</div>
+      <div class="app-paths">
+<span class="ph">Data/</span>
+  <span class="pt">Documents/RCTAsyncLocalStorage_V1/</span>
+    <span class="pf">manifest.json</span> ⭐ <span class="ph">tokens, configs</span>
+  <span class="pt">Library/Caches/com.hammerandchisel.discord/</span>
+    <span class="pf">Cache.db</span>
+    <span class="pt">fsCachedData/</span>
+      </div>
+      <div class="app-key">🔑 Discord stocke les tokens en clair dans manifest.json — vol de session possible.</div>
+    </div>
+
+    <div class="app-card cat-msg">
+      <div class="app-name"><span class="app-icon">🔒</span>Wickr Me</div>
+      <div class="app-paths">
+<span class="ph">Shared/AppGroup/</span>
+  <span class="pf">wickrLocal.sqlite</span> ⭐ <span class="ph">chiffré</span>
+      </div>
+      <div class="app-key">🔑 Wickr Me retiré du store en 2023. Wickr Pro/Ent toujours actif. Déchiffrement difficile.</div>
+    </div>
+
+    <div class="app-card cat-msg">
+      <div class="app-name"><span class="app-icon">🐦</span>Snapchat</div>
+      <div class="app-paths">
+<span class="ph">Data/</span>
+  <span class="pt">Documents/</span>
+    <span class="pf">user.plist</span>
+    <span class="pf">chatConversationStore.plist</span>
+    <span class="pf">stories.plist</span>
+  <span class="pt">Documents/gallery_data_object/1/&lt;USER&gt;/</span>
+    <span class="pf">scdb-27.sqlite3</span> ⭐ <span class="ph">galerie locale</span>
+      </div>
+      <div class="app-key">🔑 « Snaps » self-destruct mais traces dans gallery_data_object si sauvés (My Eyes Only).</div>
+    </div>
+
+    <div class="app-card cat-msg">
+      <div class="app-name"><span class="app-icon">🎵</span>TikTok</div>
+      <div class="app-paths">
+<span class="ph">Data/</span>
+  <span class="pt">Documents/</span> <span class="pf">AwemeIM.db</span> ⭐ <span class="ph">DMs</span>
+  <span class="pt">Library/Application Support/ChatFiles/&lt;USER&gt;/</span> <span class="pf">db.sqlite</span>
+  <span class="pt">Library/Heimdallr/</span> <span class="pf">heimdallr.db</span> <span class="ph">analytics</span>
+  <span class="pt">Library/Caches/TTPlayerCache/</span> <span class="ph">vidéos cachées</span>
+      </div>
+      <div class="app-key">🔑 AwemeIM.db = messages directs. Drafts dans Documents/drafts/.</div>
+    </div>
+
+    <div class="app-card cat-msg">
+      <div class="app-name"><span class="app-icon">📷</span>Instagram</div>
+      <div class="app-paths">
+<span class="ph">Data/</span>
+  <span class="pt">Documents/</span> <span class="pf">time_in_app_&lt;USER&gt;.db</span>
+  <span class="pt">Library/Application Support/DirectSQLiteDatabase/</span>
+    <span class="pf">&lt;USER&gt;.db</span> ⭐ <span class="ph">DMs Instagram Direct</span>
+  <span class="pt">Library/Caches/com.burbn.instagram.IGImageCache/</span>
+      </div>
+      <div class="app-key">🔑 DMs dans DirectSQLiteDatabase. Stories cachées dans IGImageCache + IGSparseVideoCache.</div>
+    </div>
+
+    <div class="app-card cat-msg">
+      <div class="app-name"><span class="app-icon">📱</span>WeChat</div>
+      <div class="app-paths">
+<span class="ph">Data/Documents/&lt;USER&gt;/</span>
+  <span class="pf">mmsetting.archive</span> <span class="ph">Plist config</span>
+  <span class="pt">DB/</span>
+    <span class="pf">MM.sqlite</span> ⭐ <span class="ph">messages chiffrés</span>
+    <span class="pf">WCDB_Contact.sqlite</span> <span class="ph">contacts</span>
+      </div>
+      <div class="app-key">🔑 Apps chinoises : WCDB = format SQLite custom Tencent. Outils dédiés (WCDB.swift).</div>
+    </div>
+
+    <div class="app-card cat-msg">
+      <div class="app-name"><span class="app-icon">📝</span>Kik Messenger</div>
+      <div class="app-paths">
+<span class="ph">Shared/AppGroup/cores/private/&lt;USER&gt;/</span>
+  <span class="pf">kik.sqlite</span> ⭐
+  <span class="pt">attachments/</span>
+  <span class="pt">defaults/</span> <span class="pf">kik.defaults</span>
+      </div>
+      <div class="app-key">🔑 Kik = populaire chez mineurs. Souvent dans dossiers IRP juvénile.</div>
+    </div>
+
+  </div>
+
+  <h2 class="sec-title" id="cloud">☁️ Cloud Storage</h2>
+
+  <div class="cat-grid">
+
+    <div class="app-card cat-cloud">
+      <div class="app-name"><span class="app-icon">📦</span>Dropbox</div>
+      <div class="app-paths">
+<span class="ph">Data/Documents/Users/&lt;USER&gt;/</span>
+  <span class="pf">Dropbox.sqlite</span> ⭐ <span class="ph">métadonnées fichiers</span>
+  <span class="pf">metadata.db</span>
+  <span class="pf">offline.db</span> <span class="ph">fichiers offline</span>
+  <span class="pf">recent_actions_local.db</span>
+<span class="ph">Shared/AppGroup/</span>
+  <span class="pt">Users/&lt;USER&gt;/FileCache/</span> <span class="ph">cache local</span>
+      </div>
+      <div class="app-key">🔑 Tracker actions utilisateur via recent_actions_*.db.</div>
+    </div>
+
+    <div class="app-card cat-cloud">
+      <div class="app-name"><span class="app-icon">📁</span>Google Drive</div>
+      <div class="app-paths">
+<span class="ph">Data/Documents/drivekit/users/&lt;USER&gt;/cello/</span>
+  <span class="pf">cello.db</span> ⭐ <span class="ph">métadonnées sync</span>
+<span class="ph">Data/Documents/drivekit/users/&lt;USER&gt;/files/</span>
+  <span class="ph">fichiers téléchargés</span>
+<span class="ph">Data/Library/Caches/drivekit/users/&lt;USER&gt;/image-fetcher-cache/main-cache/</span>
+  <span class="pf">cacheV0.db</span>
+      </div>
+      <div class="app-key">🔑 Vue de tous les fichiers (incl. supprimés du cloud) dans cello.db.</div>
+    </div>
+
+    <div class="app-card cat-cloud">
+      <div class="app-name"><span class="app-icon">☁️</span>Microsoft OneDrive</div>
+      <div class="app-paths">
+<span class="ph">Data/Library/Database/</span>
+  <span class="pf">moddatabase.db</span> ⭐ <span class="ph">SQLite</span>
+<span class="ph">Shared/AppGroup/OneDrive/DatabaseQT/</span>
+  <span class="pf">QTMetadata.db</span>
+<span class="ph">Shared/AppGroup/OneDrive/StreamCacheQT/</span>
+  <span class="ph">cache streaming</span>
+      </div>
+      <div class="app-key">🔑 moddatabase.db = changes log. Utile pour timeline des modifs cloud.</div>
+    </div>
+
+    <div class="app-card cat-cloud">
+      <div class="app-name"><span class="app-icon">📧</span>Gmail</div>
+      <div class="app-paths">
+<span class="ph">Data/Documents/drivekit/users/&lt;USER&gt;/gdx-cello/</span>
+  <span class="pf">cello.db</span> ⭐
+<span class="ph">Data/Library/Application Support/data/&lt;EMAIL&gt;/</span>
+  <span class="pf">sqlitedb</span> ⭐ <span class="ph">emails locaux</span>
+      </div>
+      <div class="app-key">🔑 Format Gmail : architecture cello partagée avec Drive. Emails archivés en SQLite.</div>
+    </div>
+
+    <div class="app-card cat-cloud">
+      <div class="app-name"><span class="app-icon">🔒</span>ProtonMail</div>
+      <div class="app-paths">
+<span class="ph">Shared/AppGroup/</span>
+  <span class="pf">ProtonMail.sqlite</span> ⭐ <span class="ph">chiffré</span>
+      </div>
+      <div class="app-key">🔑 E2EE : déchiffrement nécessite mailbox password (mémorisable, pas dans Keychain).</div>
+    </div>
+
+  </div>
+
+  <h2 class="sec-title" id="travel">🗺️ Voyage & Navigation</h2>
+
+  <div class="cat-grid">
+
+    <div class="app-card cat-travel">
+      <div class="app-name"><span class="app-icon">🚗</span>Uber</div>
+      <div class="app-paths">
+<span class="ph">Data/Documents/</span>
+  <span class="pf">database.db</span> ⭐ <span class="ph">trajets, paiements</span>
+<span class="ph">Data/Library/Application Support/Persistent Storage/BootstrapStore/</span>
+  <span class="pf">RealtimeRider.StreamModelKey/client</span> <span class="ph">JSON</span>
+      </div>
+      <div class="app-key">🔑 database.db tracking historique trajets avec coordonnées GPS pickup/dropoff.</div>
+    </div>
+
+    <div class="app-card cat-travel">
+      <div class="app-name"><span class="app-icon">🚦</span>Waze</div>
+      <div class="app-paths">
+<span class="ph">Data/Document/</span>
+  <span class="pf">user</span> <span class="ph">TXT</span>
+  <span class="pf">session</span> <span class="ph">TXT</span>
+  <span class="pf">preferences</span> <span class="ph">TXT</span>
+  <span class="pf">user.db</span> ⭐ <span class="ph">SQLite trajets</span>
+      </div>
+      <div class="app-key">🔑 user.db = lieux fréquentés (home, work) + trajets récents avec timestamps.</div>
+    </div>
+
+    <div class="app-card cat-travel">
+      <div class="app-name"><span class="app-icon">🗺️</span>Google Maps</div>
+      <div class="app-paths">
+<span class="ph">Data/Library/Application Support/</span>
+  <span class="pt">GMSCacheStorage-MyMaps/</span> <span class="pf">MyMaps.sqlite</span>
+  <span class="pt">GMSCacheStorage-SavedUserEvent3/</span> <span class="pf">SavedUserEvent3.sqlite</span> ⭐
+  <span class="pt">GMSCacheStorage-Tiles/</span> <span class="pf">Tiles.sqlite</span> <span class="ph">cartes off-line</span>
+<span class="ph">Shared/AppGroup/Library/Preferences/</span>
+  <span class="pf">CurrentDirections</span> <span class="ph">Plist</span>
+      </div>
+      <div class="app-key">🔑 SavedUserEvent3.sqlite = recherches + lieux visités. CurrentDirections = trajet en cours.</div>
+    </div>
+
+    <div class="app-card cat-travel">
+      <div class="app-name"><span class="app-icon">🏠</span>Airbnb</div>
+      <div class="app-paths">
+<span class="ph">Data/Library/Application Support/</span>
+  <span class="pf">guest_inbox_&lt;USER&gt;.db</span> ⭐
+  <span class="pf">messaging_core.sqlite3</span>
+<span class="ph">Data/Library/Caches/</span>
+  <span class="pf">&lt;USER&gt;_itinerary.db</span> <span class="ph">réservations</span>
+  <span class="pf">AIRWishlist_&lt;USER&gt;</span> <span class="ph">favoris</span>
+      </div>
+      <div class="app-key">🔑 Inbox + itinerary = preuve de séjour à un lieu/date donné.</div>
+    </div>
+
+    <div class="app-card cat-travel">
+      <div class="app-name"><span class="app-icon">🏨</span>Booking.com</div>
+      <div class="app-paths">
+<span class="ph">Data/Library/Application Support/</span>
+  <span class="pf">BookingClouds</span> <span class="ph">Plist</span>
+  <span class="pf">KeyValueStorageAccountDomain</span> <span class="ph">Plist</span>
+<span class="ph">Data/Library/Caches/</span>
+  <span class="pf">location_cache_V2.db</span> ⭐
+      </div>
+      <div class="app-key">🔑 location_cache pour réservations + recherches géolocalisées.</div>
+    </div>
+
+    <div class="app-card cat-travel">
+      <div class="app-name"><span class="app-icon">✈️</span>Air France / KLM</div>
+      <div class="app-paths">
+<span class="ph">Data/ (Air France)</span>
+  <span class="pf">reservation.realm</span> ⭐ <span class="ph">Realm DB</span>
+  <span class="pf">flightStatusKit.realm</span>
+  <span class="pf">checkinkit.realm</span>
+<span class="ph">Data/ (KLM)</span>
+  <span class="pt">Documents/</span> <span class="pf">CoreAppRedesign_iPhone.sqlite</span> ⭐
+      </div>
+      <div class="app-key">🔑 Format Realm (≠ SQLite) — outils : Realm Studio, realm-browser. Voir realm.io.</div>
+    </div>
+
+  </div>
+
+  <h2 class="sec-title" id="finance">💳 Finance</h2>
+
+  <div class="cat-grid">
+
+    <div class="app-card cat-finance">
+      <div class="app-name"><span class="app-icon">💵</span>PayPal</div>
+      <div class="app-paths">
+<span class="ph">Data/Library/Preferences/</span>
+  <span class="pf">com.yourcompany.PPClient.plist</span> ⭐ <span class="ph">tokens, dernier user</span>
+      </div>
+      <div class="app-key">🔑 PayPal stocke peu localement (la majorité côté serveur). Plist contient les méta-data session.</div>
+    </div>
+
+    <div class="app-card cat-finance">
+      <div class="app-name"><span class="app-icon">💰</span>Venmo</div>
+      <div class="app-paths">
+<span class="ph">Data/Documents/</span>
+  <span class="pf">Model.sqlite</span> ⭐ <span class="ph">historique transactions</span>
+  <span class="pf">mParticle28.db</span> <span class="ph">analytics</span>
+      </div>
+      <div class="app-key">🔑 Venmo (US) très utilisé en P2P. Tracé social (qui paie qui = preuve relations).</div>
+    </div>
+
+  </div>
+
+  <h2 class="sec-title" id="social">📱 Social Networking</h2>
+
+  <div class="cat-grid">
+
+    <div class="app-card cat-social">
+      <div class="app-name"><span class="app-icon">📘</span>Facebook</div>
+      <div class="app-paths">
+<span class="ph">Data/Documents/</span>
+  <span class="pf">time_in_app_&lt;USER&gt;.db</span>
+<span class="ph">Data/Library/Caches/graphStoreDB/</span>
+  <span class="pf">GraphStore_&lt;USER&gt;.sqlite3</span> ⭐ <span class="ph">graph social</span>
+<span class="ph">Data/Library/Caches/messenger_contacts.&lt;GUID&gt;/</span>
+  <span class="pf">fbsyncstore.db</span>
+      </div>
+      <div class="app-key">🔑 GraphStore = qui est ami avec qui, last contact, etc. Très riche socialement.</div>
+    </div>
+
+    <div class="app-card cat-social">
+      <div class="app-name"><span class="app-icon">🐦</span>Twitter / X</div>
+      <div class="app-paths">
+<span class="ph">Data/Documents/com.atebits.tweetie.application-state/</span>
+  <span class="pf">app.acct.&lt;USERNAME&gt;</span> <span class="ph">Plist comptes</span>
+<span class="ph">Shared/AppGroup/com.atebits.tweetie.scribe/</span>
+  <span class="pf">Scribe.2.sqlite</span> ⭐ <span class="ph">analytics</span>
+<span class="ph">Shared/AppGroup/TFSModelCache.1/&lt;USER&gt;/database/</span>
+  <span class="pf">modelCache.sqlite3</span> ⭐ <span class="ph">tweets cachés</span>
+      </div>
+      <div class="app-key">🔑 modelCache pour tweets vus (incl. supprimés depuis), Scribe pour le tracking interne.</div>
+    </div>
+
+    <div class="app-card cat-social">
+      <div class="app-name"><span class="app-icon">💼</span>LinkedIn</div>
+      <div class="app-paths">
+<span class="ph">Data/Documents/</span>
+  <span class="pf">Messenger.sqlite</span> ⭐ <span class="ph">InMail/messages</span>
+  <span class="pt">LIImageCache/</span>
+      </div>
+      <div class="app-key">🔑 InMail = piste pour communication B2B / harcèlement professionnel.</div>
+    </div>
+
+    <div class="app-card cat-social">
+      <div class="app-name"><span class="app-icon">❤️</span>Tinder</div>
+      <div class="app-paths">
+<span class="ph">Data/Library/Application Support/</span>
+  <span class="pf">Tinder2.sqlite</span> ⭐ <span class="ph">matches, messages</span>
+      </div>
+      <div class="app-key">🔑 Tinder dating + harcèlement / catfishing — preuves nature des conversations.</div>
+    </div>
+
+    <div class="app-card cat-social">
+      <div class="app-name"><span class="app-icon">📌</span>Reddit</div>
+      <div class="app-paths">
+<span class="ph">Data/Documents/release02/</span>
+  <span class="pt">accounts/</span> <span class="ph">Plist par compte</span>
+  <span class="pt">accountData/</span> <span class="ph">Plist data</span>
+      </div>
+      <div class="app-key">🔑 Plusieurs accounts dans le même app = multi-comptes (utilisé pour anonymisation).</div>
+    </div>
+
+  </div>
+
+  <h2 class="sec-title" id="media">🎬 Médias & Streaming</h2>
+
+  <div class="cat-grid">
+
+    <div class="app-card cat-media">
+      <div class="app-name"><span class="app-icon">🎵</span>Spotify</div>
+      <div class="app-paths">
+<span class="ph">Data/Library/Application Support/PersistentCache/</span>
+  <span class="pf">mercury.db</span> ⭐ <span class="ph">historique écoutes</span>
+<span class="ph">Data/Library/Application Support/Users/&lt;USER&gt;-user/</span>
+  <span class="ph">profil utilisateur</span>
+      </div>
+      <div class="app-key">🔑 Historique d'écoute = profilage psychologique possible.</div>
+    </div>
+
+    <div class="app-card cat-media">
+      <div class="app-name"><span class="app-icon">🎬</span>Netflix</div>
+      <div class="app-paths">
+<span class="ph">Data/Documents/</span>
+  <span class="pf">store.sqlite</span> ⭐ <span class="ph">profils, historique</span>
+<span class="ph">Data/Library/Caches/com.netflix.Netflix/</span>
+  <span class="pf">Cache.db</span>
+      </div>
+      <div class="app-key">🔑 Multi-profils : tracker quel profil regarde quoi (forensique familiale).</div>
+    </div>
+
+    <div class="app-card cat-media">
+      <div class="app-name"><span class="app-icon">🔒</span>Private Photo Vault</div>
+      <div class="app-paths">
+<span class="ph">Data/Library/Application Support/</span>
+  <span class="pf">PPVCoreData.sqlite</span> ⭐
+<span class="ph">Data/Library/PPV_Pics/</span>
+  <span class="ph">photos cachées (chiffrées localement)</span>
+      </div>
+      <div class="app-key">⚠️ Apps "vault" = signal classique : essayer de cacher du contenu illicite ou compromettant.</div>
+    </div>
+
+  </div>
+
+  <h2 class="sec-title" id="health">🏃 Santé & Sport</h2>
+
+  <div class="cat-grid">
+
+    <div class="app-card cat-health">
+      <div class="app-name"><span class="app-icon">⌚</span>Fitbit</div>
+      <div class="app-paths">
+<span class="ph">Data/Documents/</span>
+  <span class="pf">fitbit.sqlite</span> ⭐ <span class="ph">activité, sommeil</span>
+<span class="ph">Data/Library/Application Support/Fitbit/Defaults/</span>
+  <span class="pf">UserInfo.plist</span>
+      </div>
+      <div class="app-key">🔑 Données biométriques + GPS workouts = preuves de présence/activité (cas judiciaires aux US).</div>
+    </div>
+
+    <div class="app-card cat-health">
+      <div class="app-name"><span class="app-icon">🏃</span>Strava</div>
+      <div class="app-paths">
+<span class="ph">Data/Library/Application Support/</span>
+  <span class="pf">Strava.sqlite</span> ⭐ <span class="ph">activités, traces GPX</span>
+      </div>
+      <div class="app-key">🔑 Tracé GPS minute-par-minute des activités. Confirmation/réfutation alibi.</div>
+    </div>
+
+    <div class="app-card cat-health">
+      <div class="app-name"><span class="app-icon">🏋️</span>Adidas Running (Runtastic)</div>
+      <div class="app-paths">
+<span class="ph">Data/Library/Application Support/runtastic/</span>
+  <span class="pf">RTCoreDataSession.sqlite</span> ⭐
+  <span class="pf">RTCoreDataLocationInfo.sqlite</span> ⭐ <span class="ph">positions</span>
+  <span class="pf">RTCoreDataHeartRateInfo.sqlite</span>
+  <span class="pf">RTCoreDataRoute.sqlite</span>
+      </div>
+      <div class="app-key">🔑 Plus granulaire que Strava (8+ DBs distinctes). Forensique sportive avancée.</div>
+    </div>
+
+  </div>
+
+  <h2 class="sec-title" id="tools">🛠️ Outils d'extraction et parsing</h2>
+
+  <div class="card card-cyan">
+    <table class="tbl" style="font-size:.82rem">
+      <thead>
+        <tr><th>Outil</th><th>Usage</th><th>Type</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>iLEAPP</strong></td><td>Parser open source ~200 modules apps iOS</td><td>Free · Brignoni</td></tr>
+        <tr><td><strong>APOLLO</strong></td><td>Apple Pattern of Life (KnowledgeC corrélation)</td><td>Free · Sarah Edwards</td></tr>
+        <tr><td><strong>Cellebrite UFED + Reader</strong></td><td>Extraction physique + parsing automatique</td><td>Commercial</td></tr>
+        <tr><td><strong>Magnet AXIOM</strong></td><td>Parsing automatique 1500+ apps mobile</td><td>Commercial</td></tr>
+        <tr><td><strong>Oxygen Forensic Detective</strong></td><td>Idem, fort sur les apps russes/asiatiques</td><td>Commercial</td></tr>
+        <tr><td><strong>Elcomsoft iOS Forensic Toolkit</strong></td><td>checkm8 + déchiffrement Keychain</td><td>Commercial</td></tr>
+        <tr><td><strong>DB Browser for SQLite</strong></td><td>Lecture manuelle SQLite (gratuit)</td><td>Free</td></tr>
+        <tr><td><strong>SQLECmd</strong></td><td>Parsing avec maps Eric Zimmerman</td><td>Free · Zimmerman</td></tr>
+        <tr><td><strong>Realm Studio</strong></td><td>Visualiser fichiers .realm (Air France/KLM/etc.)</td><td>Free · MongoDB</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="exam-tip">
+    <div class="exam-tip-title">🎓 Exam Tip — Méthodologie d'analyse iOS app tierce</div>
+    <p><strong>1. Identifier l'APP_GUID</strong> : <code>applicationState.db</code> → mapping bundle ID ↔ container path.</p>
+    <p><strong>2. Examiner les 3 sandboxes</strong> : <code>Data/</code> (privé), <code>Shared/AppGroup/</code> (partage entre apps du même éditeur), <code>iCloud/</code> (sync).</p>
+    <p><strong>3. Hiérarchiser les artéfacts</strong> : SQLite/Realm en priorité (données structurées), puis Plists (configuration), puis caches (médias). Logs en dernier (volumineux).</p>
+    <p><strong>4. Dater les actions</strong> : timestamps SQLite à convertir selon l'epoch utilisée. iOS = <strong>Mac Absolute Time</strong> (depuis 2001-01-01) → <code>SELECT datetime(ts+978307200, 'unixepoch')</code>.</p>
+    <p><strong>5. Ne pas oublier les KTX</strong> : <code>/SplashBoard/Snapshots/</code> contient des screenshots auto-générés à chaque mise en arrière-plan de l'app — utile si l'app efface ses données mais pas ses captures.</p>
+    <p><strong>6. BFU vs AFU</strong> : Before First Unlock = beaucoup de données chiffrées inaccessibles. After First Unlock = quasiment tout dispo. Voir <a href="ios_forensique.html">iOS Forensique</a>.</p>
+  </div>
+
+  <div class="related-pill">
+    🔗 Voir aussi :
+    <a href="ios_forensique.html">iOS Forensique</a> ·
+    <a href="android_forensique.html">Android Forensique</a> ·
+    <a href="sqlite_forensique.html">SQLite Forensique</a> ·
+    <a href="messagerie_im.html">Messageries IM</a> ·
+    <a href="mobile.html">Mobile (généralités)</a>
+  </div>
+
+  <p style="font-size:.75rem;color:var(--muted);margin-top:1.5rem;text-align:center">
+    Catalogue inspiré du poster officiel <strong>SANS DFIR « iOS Third-Party Apps Forensics » v1.1</strong> (Mattia Epifani, 2021).<br>
+    Les paths peuvent évoluer avec les versions d'app — toujours valider sur cible réelle.
+  </p>
+
+</div>
+
+<div class="footer">
+  <p>CAS-IN · Investigation Numérique — Forensique Suisse</p>
+</div>
+
+
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

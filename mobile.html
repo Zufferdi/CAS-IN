@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Mobile Forensics — CAS-IN</title>
+<meta name="description" content="Mobile Forensics · iOS · Android · 5 niveaux d'extraction · UFED · GrayKey · Cellebrite · ADB">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">SYSTÈMES SPÉCIAUX · MOBILE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesspéciaux">Systèmes spéciaux</a><span class="bc-sep">›</span>
+    <span class="bc-current">Mobile</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~8 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">📱</span>
+    <span class="tag tag-green" style="margin-left:.5rem">iOS</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">Android</span>
+    <span class="tag tag-gold" style="margin-left:.3rem">UFED</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">GrayKey</span>
+    <span class="tag tag-red" style="margin-left:.3rem">Faraday</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Mobile Forensics</h1>
+    <div class="meta">5 niveaux d'extraction · Chiffrement iOS/Android · Cellebrite · GrayKey · ADB · iTunes Backup</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="acquisition.html" class="prereq-pill">📖 Acquisition</a><a href="disques.html" class="prereq-pill">📖 Disques</a><a href="sqlite_forensique.html" class="prereq-pill">📖 SQLite</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html" class="tp-pill">🧪 ✨ Magic Bytes</a><a href="../tp.html" class="tp-pill">🧪 📋 Série Examen</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="messagerie_im.html" class="related-pill">🔗 Messageries</a><a href="cloud_forensique.html" class="related-pill">🔗 Cloud</a><a href="iot_forensique.html" class="related-pill">🔗 IoT</a></div>
+  </div>
+
+  <div class="concept-card" style="margin-top:1rem">
+    <div class="concept-title">📱 Mobile Forensics — Le smartphone, mémoire externe du suspect</div>
+    Un smartphone moderne contient typiquement <strong>plus de données personnelles</strong> que l'ordinateur de son propriétaire : conversations chiffrées, géolocalisation 24/7, photos et vidéos avec EXIF GPS, historique de paiements, contacts, calendrier, biométrie, applications bancaires, comptes professionnels. Pour le forensiste, c'est <strong>la cible principale</strong> dans la majorité des enquêtes pénales modernes. Cinq <strong>niveaux d'extraction</strong> existent, du moins au plus invasif : <strong>(1) Manual</strong> (photos d'écran, sans outil), <strong>(2) Logical</strong> (backup ADB / iTunes), <strong>(3) File System</strong> (jailbreak/root), <strong>(4) Physical</strong> (image bit-à-bit de la NAND), <strong>(5) Chip-off / JTAG</strong> (désoudage de la puce, dernier recours destructif). <strong>Difficulté majeure</strong> : iOS chiffre tout par défaut depuis iOS 8 (2014), Android depuis Marshmallow (2015). Sans le PIN/biométrie, les données sont <strong>illisibles</strong> — même avec accès physique à la NAND. Outils référence : <strong>Cellebrite UFED</strong>, <strong>Magnet AXIOM</strong>, <strong>MSAB XRY</strong>, <strong>Oxygen Forensic Detective</strong>, <strong>GrayKey</strong> (USA), <strong>ALEAPP/iLEAPP</strong> (open source). En Suisse : <strong>art. 246-248 CPP</strong> régit la saisie + <strong>cage de Faraday immédiate</strong> est protocolaire pour empêcher le wipe à distance via Find My iPhone / Find My Device.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA SVG — PYRAMIDE D'EXTRACTION MOBILE
+     ════════════════════════════════════════════════════════════ -->
+<div class="page-wrap">
+  <div class="schema">
+    <div class="schema-title">📱 Pyramide des 5 niveaux d'extraction mobile</div>
+    <div class="schema-sub">DU MOINS INVASIF AU PLUS COMPLET · COMPLEXITÉ + RISQUE CROISSANTS</div>
+    <svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pyramide extraction mobile">
+      <defs>
+        <marker id="arr-mob" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <polygon points="0 0, 10 3, 0 6" fill="#00E5CC"/>
+        </marker>
+      </defs>
+
+      <!-- Header -->
+      <rect x="20" y="15" width="680" height="36" rx="6" fill="rgba(13,17,23,.5)" stroke="rgba(0,229,204,.4)" stroke-width="1.2"/>
+      <text x="360" y="33" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#00E5CC">📱 ESCALADE FORENSIQUE — Toujours commencer par le moins invasif (preuve d'essai documenté)</text>
+      <text x="360" y="46" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">Plus on monte la pyramide, plus l'accès est complet — mais plus le risque d'altération est grand</text>
+
+      <!-- Pyramide inversée (large en bas, étroite en haut) -->
+      <!-- Niveau 1 - MANUAL (bas large) -->
+      <polygon points="40,330 680,330 600,290 120,290" fill="rgba(48,232,138,.12)" stroke="#30E88A" stroke-width="1.5"/>
+      <text x="360" y="312" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#30E88A">① MANUAL — photos d'écran · navigation manuelle · aucun outil</text>
+      <text x="360" y="324" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">Non-invasif · Limité · Toujours autorisé · Témoin requis</text>
+
+      <!-- Niveau 2 - LOGICAL -->
+      <polygon points="120,290 600,290 530,250 190,250" fill="rgba(88,166,255,.12)" stroke="#58A6FF" stroke-width="1.5"/>
+      <text x="360" y="272" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#58A6FF">② LOGICAL — ADB backup · iTunes Backup · API officielles</text>
+      <text x="360" y="284" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">Données synchronisées · contacts · SMS · agenda · médias</text>
+
+      <!-- Niveau 3 - FILE SYSTEM -->
+      <polygon points="190,250 530,250 460,210 260,210" fill="rgba(240,192,64,.12)" stroke="#F0C040" stroke-width="1.5"/>
+      <text x="360" y="232" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#F0C040">③ FILE SYSTEM — Full File System · jailbreak iOS · root Android</text>
+      <text x="360" y="244" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">Accès complet à <code>/var/mobile</code> et <code>/data/data/</code></text>
+
+      <!-- Niveau 4 - PHYSICAL -->
+      <polygon points="260,210 460,210 405,170 315,170" fill="rgba(240,136,62,.12)" stroke="#F0883E" stroke-width="1.5"/>
+      <text x="360" y="192" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#F0883E">④ PHYSICAL — image bit-à-bit NAND</text>
+      <text x="360" y="204" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">+ pages libres · supprimés · UFED Premium · GrayKey</text>
+
+      <!-- Niveau 5 - CHIP-OFF / JTAG (haut étroit) -->
+      <polygon points="315,170 405,170 380,130 340,130" fill="rgba(255,64,96,.15)" stroke="#FF4060" stroke-width="2"/>
+      <text x="360" y="155" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="800" fill="#FF4060">⑤ CHIP-OFF</text>
+      <text x="360" y="166" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">JTAG · destructif</text>
+
+      <!-- Annotations latérales -->
+      <!-- Niveau de complexité gauche -->
+      <text x="25" y="155" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#FF4060">⚠️</text>
+      <text x="25" y="165" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">Risque</text>
+      <text x="25" y="175" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">destruction</text>
+
+      <text x="25" y="200" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#F0883E">Coût élevé</text>
+      <text x="25" y="240" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#F0C040">Jailbreak</text>
+      <text x="25" y="280" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#58A6FF">Déverrouillé</text>
+      <text x="25" y="318" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A">Aucune préc.</text>
+
+      <!-- Outils droite -->
+      <text x="690" y="155" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#FF4060">Lab spécialisé</text>
+      <text x="690" y="200" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#F0883E">UFED Premium · GrayKey</text>
+      <text x="690" y="240" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#F0C040">checkra1n · Magisk</text>
+      <text x="690" y="280" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#58A6FF">UFED · iTunes</text>
+      <text x="690" y="318" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A">photo + témoin</text>
+
+      <!-- Bandeau bas - Cage Faraday -->
+      <rect x="20" y="350" width="680" height="22" rx="4" fill="rgba(255,64,96,.08)" stroke="rgba(255,64,96,.4)" stroke-width="1"/>
+      <text x="360" y="365" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#FF4060">⚠️ CAGE DE FARADAY IMMÉDIATE à la saisie · Find My iPhone / Find My Device peuvent wiper en quelques secondes</text>
+
+      <!-- Title pyramide -->
+      <text x="40" y="80" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8">↑ COMPLET</text>
+      <text x="40" y="100" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">accès NAND brute</text>
+      <text x="40" y="111" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">+ supprimés</text>
+    </svg>
+    <div class="schema-legend">
+      <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>① Manual (photos)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#58A6FF"></span>② Logical (backup ADB/iTunes)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>③ File System (jailbreak/root)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#F0883E"></span>④ Physical (image NAND)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>⑤ Chip-off / JTAG (destructif)</span>
+    </div>
+  </div>
+</div>
+
+<!-- 5 NIVEAUX DÉTAILLÉS -->
+<div class="page-wrap">
+  <div class="sec-title">📊 Les 5 niveaux d'extraction — Détail</div>
+  <table>
+    <thead><tr><th>Niveau</th><th>Méthode</th><th>Ce qu'on récupère</th><th>Outils typiques</th></tr></thead>
+    <tbody>
+      <tr><td><strong>① Manual</strong></td><td>Photos de l'écran, navigation manuelle</td><td>Ce qui est affiché à l'écran uniquement</td><td>Appareil photo + témoin</td></tr>
+      <tr><td><strong>② Logical</strong></td><td>Backup officiel (ADB, iTunes)</td><td>Contacts, SMS, agenda, photos, apps synchronisées</td><td>Cellebrite UFED, iTunes, ADB</td></tr>
+      <tr><td><strong>③ File System</strong></td><td>Jailbreak (iOS) / root (Android)</td><td>Tout le système de fichiers user (<code>/var/mobile</code>, <code>/data/data/</code>)</td><td>checkra1n, Magisk, UFED FFS</td></tr>
+      <tr><td><strong>④ Physical</strong></td><td>Image bit-à-bit de la mémoire NAND</td><td>Tout + pages non allouées + données supprimées</td><td>UFED Premium, GrayKey, AXIOM</td></tr>
+      <tr><td><strong>⑤ Chip-off / JTAG</strong></td><td>Désoudage puce / accès JTAG soudures</td><td>Image NAND brute (si non chiffrée)</td><td>Lab spécialisé, microscope, fer à dessouder</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- iOS -->
+<div class="page-wrap">
+  <div class="sec-title">🍎 iOS — Spécificités forensiques</div>
+  <div class="g2">
+    <div class="card card-cyan">
+      <div class="ct">🔐 Chiffrement iOS</div>
+      <ul>
+        <li>Chiffrement <strong>AES-256</strong> par défaut sur toute la NAND depuis iOS 8 (2014)</li>
+        <li>Clé dérivée du <strong>code PIN/passcode</strong> + <strong>UID matériel</strong> (gravé sur le SoC, jamais lisible)</li>
+        <li>Sans le PIN → données <strong>illisibles</strong> même avec accès physique à la NAND</li>
+        <li><strong>Secure Enclave</strong> (depuis iPhone 5s, 2013) : brute-force PIN limité (10 essais max si configuré) + délais croissants</li>
+        <li><strong>Boîtes</strong> : BFU (Before First Unlock = appareil pas déverrouillé depuis allumage) vs AFU (After First Unlock) — AFU plus facile à attaquer</li>
+        <li><strong>GrayKey / Cellebrite Premium</strong> : exploits propriétaires (zero-days) pour brute-force PIN sur iPhones récents</li>
+      </ul>
+    </div>
+    <div class="card card-blue">
+      <div class="ct">💾 Backup iTunes</div>
+      <ul>
+        <li>Localisation : <code>%AppData%\Apple Computer\MobileSync\Backup\</code> (Windows) · <code>~/Library/Application Support/MobileSync/Backup/</code> (macOS)</li>
+        <li>Contient : SMS, iMessages, contacts, photos, apps, données santé, calendrier, mots de passe Keychain (si chiffré)</li>
+        <li>Format : fichiers <strong>nommés par hash SHA-1</strong> du chemin original</li>
+        <li>Index : <code>Manifest.db</code> (SQLite) mappe hashes → chemins originaux</li>
+        <li>Outil d'analyse : <strong>iBackup Viewer</strong>, <strong>Autopsy</strong>, <strong>Cellebrite UFED</strong>, <strong>iLEAPP</strong></li>
+        <li><strong>Backup chiffré</strong> = Keychain inclus → si MDP connu, mine d'or. Sans MDP : <strong>Passware</strong>, <strong>Hashcat mode 14700</strong></li>
+      </ul>
+    </div>
+  </div>
+  <div class="info" style="margin-top:.75rem">💡 <strong>Mode avion = priorité absolue</strong> lors de la saisie d'un iPhone. <strong>Find My iPhone</strong> peut être déclenché en quelques secondes pour effacer l'appareil à distance. <strong>Cage de Faraday obligatoire</strong> si le mode avion ne peut être confirmé. Référence : art. 248 CPP (saisie d'objets).</div>
+</div>
+
+<!-- ANDROID -->
+<div class="page-wrap">
+  <div class="sec-title">🤖 Android — Spécificités forensiques</div>
+  <div class="g2">
+    <div class="card card-green">
+      <div class="ct">🔧 ADB (Android Debug Bridge)</div>
+      <ul>
+        <li>Backup si USB debugging activé : <code>adb backup -all -apk -shared</code> (déprécié Android 12+)</li>
+        <li>Nécessite <strong>confirmation sur l'appareil</strong> — si pas déverrouillé = problème</li>
+        <li>Shell : <code>adb shell</code> → accès système si root</li>
+        <li>Extraction directe SQLite si root : <code>adb pull /data/data/com.whatsapp/databases/msgstore.db</code></li>
+        <li>Apps installées : <code>adb shell pm list packages</code></li>
+        <li>Mode bootloader : <code>adb reboot bootloader</code> + <strong>fastboot</strong> pour OEM unlock (efface partition data)</li>
+      </ul>
+    </div>
+    <div class="card card-gold">
+      <div class="ct">🔐 Chiffrement Android</div>
+      <ul>
+        <li><strong>FDE</strong> (Full Disk Encryption, Android 5-6) : chiffrement de toute la partition <code>userdata</code></li>
+        <li><strong>FBE</strong> (File-Based Encryption, Android 7+, obligatoire Android 10+) : chiffrement par fichier avec deux classes : <em>Credential Encrypted (CE)</em> et <em>Device Encrypted (DE)</em></li>
+        <li>Clé dérivée du <strong>PIN/MDP</strong> utilisateur + Trusted Execution Environment (TEE)</li>
+        <li>Root + extraction physique nécessaires pour accès complet hors backup</li>
+        <li><strong>Samsung Knox</strong> : couche additionnelle, complique l'extraction sur Galaxy récents</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ARTEFACTS -->
+<div class="page-wrap">
+  <div class="sec-title">📂 Artefacts mobiles clés</div>
+  <table>
+    <thead><tr><th>Artefact</th><th>iOS (chemin)</th><th>Android (chemin)</th></tr></thead>
+    <tbody>
+      <tr><td><strong>SMS / iMessage</strong></td><td><code>/var/mobile/Library/SMS/sms.db</code></td><td><code>/data/data/com.android.providers.telephony/databases/mmssms.db</code></td></tr>
+      <tr><td><strong>Contacts</strong></td><td><code>/var/mobile/Library/AddressBook/AddressBook.sqlitedb</code></td><td><code>/data/data/com.android.providers.contacts/databases/contacts2.db</code></td></tr>
+      <tr><td><strong>Historique appels</strong></td><td><code>/var/mobile/Library/CallHistoryDB/CallHistory.storedata</code></td><td><code>contacts2.db</code> (table <code>calls</code>)</td></tr>
+      <tr><td><strong>Géolocalisation</strong></td><td><code>knowledgeC.db</code> · Photos.sqlite · Maps cache</td><td><code>cache.cell</code> · <code>cache.wifi</code> · Location History (Google)</td></tr>
+      <tr><td><strong>Photos</strong></td><td>EXIF GPS · DCIM · Photos.sqlite</td><td>EXIF GPS · DCIM</td></tr>
+      <tr><td><strong>Navigateur</strong></td><td>Safari : History.db · WebKit cache</td><td>Chrome : <code>/data/data/com.android.chrome/app_chrome/Default/History</code></td></tr>
+      <tr><td><strong>Notifications</strong></td><td>Apple Notification Center cache</td><td>NotificationHistory (Android 11+)</td></tr>
+      <tr><td><strong>Knowledge / Activity</strong></td><td><code>knowledgeC.db</code> = timeline d'usage applicatif</td><td><code>usagestats</code> XML</td></tr>
+      <tr><td><strong>Health / Activité</strong></td><td>HealthKit DB</td><td>Google Fit · Samsung Health</td></tr>
+      <tr><td><strong>Wallet / Paiements</strong></td><td>Wallet.sqlite · Apple Pay logs</td><td>Google Pay · Samsung Pay</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- OUTILS -->
+<div class="page-wrap">
+  <div class="sec-title">🛠 Outils mobiles forensiques</div>
+  <div class="g2">
+    <div class="card card-blue">
+      <div class="ct">💼 Commerciaux (référence judiciaire)</div>
+      <ul>
+        <li><strong>Cellebrite UFED</strong> + Physical Analyzer — référence mondiale (Israël)</li>
+        <li><strong>Cellebrite Premium</strong> — accès iPhones récents</li>
+        <li><strong>Magnet AXIOM</strong> — analyse multi-source (smartphones + ordinateurs)</li>
+        <li><strong>MSAB XRY</strong> — utilisé par fedpol</li>
+        <li><strong>Oxygen Forensic Detective</strong> — forte couverture apps chinoises</li>
+        <li><strong>GrayKey</strong> (Grayshift, USA) — déverrouillage iPhone par exploit</li>
+      </ul>
+    </div>
+    <div class="card card-green">
+      <div class="ct">🆓 Open source / gratuits</div>
+      <ul>
+        <li><strong>ALEAPP</strong> — Android Logs, Events, Protobuf Parser (Python)</li>
+        <li><strong>iLEAPP</strong> — équivalent iOS</li>
+        <li><strong>libimobiledevice</strong> — communication avec iPhone (Linux)</li>
+        <li><strong>iTunes / Finder</strong> — backup iOS officiel</li>
+        <li><strong>ADB</strong> — Android Debug Bridge (Google)</li>
+        <li><strong>Autopsy</strong> — module mobile</li>
+        <li><strong>iBackup Viewer</strong> — gratuit pour backups iTunes non chiffrés</li>
+        <li><strong>Andriller</strong> — extraction Android open source</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div class="page-wrap">
+  <div class="sec-title">🧠 Testez-vous</div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Vous saisissez un iPhone allumé et déverrouillé sur la scène d'une arrestation. Que faire en priorité ?<small>Procédure terrain · Niveau : facile</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer">Ordre opérationnel : <strong>(1) Cage de Faraday immédiate</strong> — sac/cage pour bloquer 4G/5G/Wi-Fi/Bluetooth. <strong>Find My iPhone</strong> peut être déclenché en quelques secondes par un complice pour wiper l'appareil. <strong>(2) NE PAS verrouiller</strong> — l'iPhone passe en BFU (Before First Unlock) et le chiffrement devient bien plus dur à casser. AFU (After First Unlock = état actuel déverrouillé) est beaucoup plus permissif. <strong>(3) Photographier l'écran allumé</strong> tel quel (preuve de contexte : apps ouvertes, conversations en cours, etc.). <strong>(4) Mode avion via le Centre de Contrôle</strong> (swipe depuis le coin supérieur droit, sans déverrouiller) — plus fiable que Faraday seul. <strong>(5) Désactiver Auto-Lock</strong> dans Settings → Display → Auto-Lock → Never (empêche le verrouillage auto). <strong>(6) Brancher au chargeur</strong> — éviter coupure batterie. <strong>(7) Transport en Faraday vers labo</strong>. <strong>(8) Au labo</strong> : extraction immédiate avec UFED ou GrayKey en mode AFU. Toujours documenter horodatages, témoin, et numéro IMEI.</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Quelle est la différence entre extraction <strong>Logical</strong> et <strong>Physical</strong> ?<small>Niveaux d'extraction · Niveau : moyen</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer"><strong>Extraction Logical</strong> = utilise les <strong>API officielles</strong> du système (ADB backup pour Android, iTunes Backup pour iOS) pour récupérer les données accessibles via les mécanismes prévus. <strong>Avantages</strong> : non-invasif, supporté par tous les outils, pas besoin de jailbreak/root. <strong>Inconvénients</strong> : ne récupère <strong>que ce que le système expose</strong> — pas les données système, pas les pages allouées non utilisées, pas les enregistrements supprimés. Typiquement : contacts, SMS, agenda, photos, apps qui acceptent le backup. <strong>Extraction Physical</strong> = image <strong>bit-à-bit de la mémoire NAND</strong>, comme on ferait <code>dd</code> sur un disque dur. <strong>Avantages</strong> : capture <strong>tout</strong> y compris pages libres, slack space, données effacées récupérables, partitions cachées. <strong>Inconvénients</strong> : nécessite outils premium (UFED Physical Analyzer, GrayKey), souvent un exploit (jailbreak iOS, fastboot Android), et — <strong>limite majeure</strong> — si l'appareil est chiffré (iOS depuis iOS 8, Android depuis Marshmallow), l'image NAND est chiffrée et inutile sans le PIN. <strong>File System</strong> est intermédiaire : accès complet aux fichiers déchiffrés, mais pas aux espaces non alloués.</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Vous trouvez un fichier <code>knowledgeC.db</code> dans une extraction iOS. Quelles informations contient-il ?<small>Artefacts iOS · Niveau : difficile</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer"><strong>Mine d'or forensique iOS.</strong> <code>knowledgeC.db</code> = base SQLite située dans <code>/var/mobile/Library/CoreDuet/Knowledge/</code> contenant la <strong>timeline complète d'utilisation</strong> du device. Données : (1) <strong>Apps ouvertes/fermées</strong> avec timestamps précis (foreground/background), (2) <strong>Verrouillages/déverrouillages</strong> de l'appareil (qui prouve qu'il était entre les mains de l'utilisateur à un moment T), (3) <strong>Notifications reçues</strong> par app, (4) <strong>Activité Bluetooth</strong> : connexions à AirPods, voiture, etc., (5) <strong>État batterie</strong> et chargements, (6) <strong>Activité du capteur de mouvement</strong> (téléphone en main, en marche, en voiture), (7) <strong>Synchronisations Wi-Fi</strong>. <strong>Forensiquement</strong> : permet de reconstituer une journée typique du suspect — quelles apps utilisées, à quelles heures, où. Combiné avec les données GPS (Photos.sqlite, Maps cache), c'est une <strong>preuve de présence et d'activité</strong> très forte. <strong>Outils</strong> : <code>APOLLO</code> (Apple Pattern of Life Lazy Output 'er) parse <code>knowledgeC.db</code> automatiquement, ou <strong>iLEAPP</strong>, <strong>Mac4n6</strong>, ou requête SQL directe sur la base. <strong>Format timestamps</strong> : Mac/Cocoa epoch (s. depuis 2001) → <code>datetime(ZSTARTDATE+978307200,'unixepoch')</code>.</div>
+  </div>
+  <div class="quiz-wrap">
+    <div class="quiz-q">Un suspect refuse de donner son PIN iPhone. Que faire pour accéder aux données ?<small>Légal + technique · Niveau : difficile</small></div>
+    <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+    <div class="quiz-answer"><strong>Cas complexe — mélange juridique et technique</strong>. <strong>Volet juridique CH</strong> : (1) En Suisse, <strong>nul ne peut être contraint de témoigner contre soi-même</strong> (nemo tenetur, art. 113 CPP) — le suspect ne peut pas être forcé à divulguer son PIN. (2) Cependant, <strong>contraindre l'usage de la biométrie</strong> (Face ID, Touch ID) reste juridiquement débattu et controversé. (3) Le procureur peut ordonner saisie + analyse (art. 246-248 CPP). <strong>Volet technique</strong> : (1) <strong>iCloud backup</strong> — si le suspect utilise iCloud Backup et que c'est <strong>récent</strong>, demande légale Apple via MLAT peut donner accès aux données <em>sauf si Advanced Data Protection activé</em> (E2E sur tout iCloud, fin 2022). (2) <strong>iTunes backup</strong> — chercher sur les ordinateurs du suspect. <strong>Backup chiffré</strong> ? Tenter Passware/Hashcat. <strong>Non chiffré</strong> ? Mine d'or directe. (3) <strong>GrayKey / Cellebrite Premium</strong> — outils propriétaires (USA, Israël) qui exploitent des zero-days pour brute-force le PIN sur iPhones récents. Disponibles aux services d'enquête mais coûteux et accès limité. (4) <strong>Cloud iMessages</strong> — la victime/correspondants peuvent avoir leur propre copie. (5) <strong>Cloud apps</strong> (WhatsApp, Signal Desktop sur PC du suspect). (6) <strong>Métadonnées opérateur</strong> via LSCPT art. 273 CPP. (7) Patience : un futur exploit peut faire tomber le verrou. <strong>Conséquence pratique</strong> : ne JAMAIS verrouiller un iPhone saisi déverrouillé — c'est souvent la seule fenêtre.</div>
+  </div>
+</div>
+
+<!-- EXAM TIP -->
+<div class="page-wrap">
+  <div class="exam-tip">
+    <div class="exam-tip-title">🎓 Exam Tip — Mobile Forensics</div>
+    <p><strong>5 niveaux d'extraction</strong> (du moins au plus invasif) :</p>
+    <p>&nbsp;&nbsp;1. <strong>Manual</strong> — photos d'écran (témoin requis)</p>
+    <p>&nbsp;&nbsp;2. <strong>Logical</strong> — backup ADB / iTunes (API officielles)</p>
+    <p>&nbsp;&nbsp;3. <strong>File System</strong> — jailbreak iOS / root Android (FFS)</p>
+    <p>&nbsp;&nbsp;4. <strong>Physical</strong> — image NAND bit-à-bit (UFED Premium, GrayKey)</p>
+    <p>&nbsp;&nbsp;5. <strong>Chip-off / JTAG</strong> — désoudage (lab spécialisé, destructif)</p>
+    <p><strong>Saisie</strong> : <strong>Cage de Faraday + Mode avion immédiat</strong> (anti-wipe à distance)</p>
+    <p><strong>Ne JAMAIS verrouiller</strong> un appareil déverrouillé saisi (BFU vs AFU)</p>
+    <p><strong>iOS</strong> :</p>
+    <p>&nbsp;&nbsp;• Chiffré AES-256 par défaut depuis iOS 8 (2014)</p>
+    <p>&nbsp;&nbsp;• Clé = PIN + UID matériel SoC (gravé)</p>
+    <p>&nbsp;&nbsp;• Secure Enclave depuis iPhone 5s (2013)</p>
+    <p>&nbsp;&nbsp;• BFU = Before First Unlock · AFU = After First Unlock</p>
+    <p>&nbsp;&nbsp;• Backup iTunes : <code>%AppData%\Apple Computer\MobileSync\Backup</code></p>
+    <p><strong>Android</strong> :</p>
+    <p>&nbsp;&nbsp;• ADB pour backup logique (USB debugging requis)</p>
+    <p>&nbsp;&nbsp;• FBE = File-Based Encryption (Android 7+, obligatoire 10+)</p>
+    <p>&nbsp;&nbsp;• Samsung Knox = couche additionnelle</p>
+    <p><strong>Artefacts iOS clés</strong> : sms.db · AddressBook · CallHistory · knowledgeC.db (timeline activité)</p>
+    <p><strong>Artefacts Android clés</strong> : mmssms.db · contacts2.db · usagestats · cache.wifi</p>
+    <p><strong>Outils référence</strong> : Cellebrite UFED · Magnet AXIOM · MSAB XRY · GrayKey · ALEAPP/iLEAPP</p>
+    <p><strong>Cadre légal CH</strong> : art. 246 (perquisition) · art. 248 (saisie objets) · art. 113 (nemo tenetur)</p>
+  </div>
+
+  <div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> Saisie mobile → <strong>Mode avion + Cage Faraday immédiat</strong> · NE JAMAIS verrouiller un appareil déverrouillé (BFU/AFU) · iOS = chiffré AES-256 par défaut → PIN requis · iTunes backup non chiffré = mine d'informations · ADB → backup Android si USB debug activé · UFED/Cellebrite + GrayKey = standard judiciaire · EXIF GPS dans photos = localisation · sms.db (iOS) et mmssms.db (Android) = messages · knowledgeC.db = timeline iOS · 5 niveaux extraction (manual → chip-off).</div>
+
+  <div class="footer">
+    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+    <span>Ch. 28 Manuel · Art. 246–248 CPP · UFED Documentation · SANS FOR585</span>
+  </div>
+</div>
+
+
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

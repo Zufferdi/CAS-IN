@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>FAT12 — CAS-IN Forensique</title>
+<meta name="description" content="FAT12 système de fichiers disquette · Entrées 12 bits · Secteur de boot · Root Directory fixe">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+
+</head>
+<body>
+<div id="scroll-progress"></div>
+<a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:0;z-index:999;padding:.5rem 1rem;background:var(--cyan);color:var(--bg);font-size:.8rem;border-radius:0 0 4px 0;text-decoration:none">Aller au contenu</a>
+<nav class="tn-nav" aria-label="Navigation fiche">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">FAT12</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesdefichiers">Systèmes de fichiers</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Fat12</span>
+    <span class="read-time-badge">⏱ ~10 min</span>
+  </div>
+</div>
+<main id="main-content">
+
+<div class="page">
+<div class="header">
+  <div class="badge">FAT12</div>
+  <div>
+    <div><h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">FAT12</h1>
+      <span class="tag tag-gold">Système de fichiers</span> <span class="tag tag-cyan">Disquette</span> <span class="tag tag-red">Ch. 3 Manuel</span></div>
+    <div class="meta" style="margin-top:.4rem">Entrées 12 bits · Secteur de boot 512 o · Root Directory fixe</div>
+  </div>
+</div>
+
+<div class="prereq-block">
+  <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="encodage.html" class="prereq-pill">📖 Encodage</a><a href="disques.html" class="prereq-pill">📖 Disques</a></div>
+  <div class="prereq-row"><span class="prereq-label">Pratiquer :</span><a href="../tp.html?cat=fat" class="tp-pill">🧪 ⛓ Chaîne FAT</a><a href="../tp.html?cat=timestamp" class="tp-pill">🧪 ⏱ Timestamps FAT</a></div>
+  <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="fat16.html" class="related-pill">🔗 FAT16/32</a><a href="../tools.html" class="related-pill">🔧 Calculateurs forensiques</a></div>
+</div>
+
+<div class="key-fact">
+  <div class="key-fact-label">Principe fondamental FAT12</div>
+  <p>Cluster utilisable minimal = <strong>cluster 2</strong> (0 et 1 réservés). Offset physique d'un cluster n :</p>
+  <p style="font-family:var(--mono);color:var(--cyan);margin:.35rem 0">offset = (n − 2) × SectorsPerCluster × BytesPerSector + dataAreaStart</p>
+  <ul>
+    <li>Suppression = 1er octet entrée répertoire → <span class="h h-red">0xE5</span> · données toujours présentes</li>
+    <li>Boot signature obligatoire : <span class="h h-red">55 AA</span> aux offsets 510–511</li>
+    <li>FS Type identifiant à l'offset <span class="h h-cyan">0x36</span> : "FAT12   " (8 chars avec espaces)</li>
+  </ul>
+</div>
+
+<!-- SECTION 1 : Organisation logique -->
+<div class="sec" id="organisation-logique-du-disque-fat12">
+  <div class="sec-title">Organisation logique du disque FAT12</div>
+  <div class="layout" style="margin-bottom:.75rem">
+    <div class="lb lb-boot">Boot Record<span>Secteur 0</span></div>
+    <div class="lb lb-fat">FAT 1<span>Table principale</span></div>
+    <div class="lb lb-fat" style="opacity:.65">FAT 2<span>Copie sauvegarde</span></div>
+    <div class="lb lb-root">Root Dir<span>Fixe · 224 entrées max</span></div>
+    <div class="lb lb-data" style="flex:3">Zone de données<span>Clusters 2, 3, 4…</span></div>
+  </div>
+  <div class="info">⚠️ FAT12 est le seul système FAT où <strong>deux entrées FAT partagent parfois un même octet</strong>. L'encodage 12 bits nécessite une lecture par paires d'entrées.</div>
+</div>
+
+<!-- SECTION 2 : BPB -->
+<div class="sec" id="bios-parameter-block-bpb-offsets-cles-fat12">
+  <div class="sec-title">BIOS Parameter Block (BPB) — Offsets clés FAT12</div>
+  <table>
+    <thead><tr><th>Offset (hex)</th><th>Champ</th><th>Valeur typique disquette 1.44 Mo</th></tr></thead>
+    <tbody>
+      <tr><td><span class="h h-cyan">0x00–0x02</span></td><td>JMP instruction + NOP</td><td><span class="h h-red">EB 3C 90</span></td></tr>
+      <tr><td><span class="h h-cyan">0x03–0x0A</span></td><td>OEM Identifier (8 bytes ASCII)</td><td>"MSDOS5.0"</td></tr>
+      <tr><td><span class="h h-cyan">0x0B–0x0C</span></td><td>Bytes per Sector</td><td>512 (0x0200 LE)</td></tr>
+      <tr><td><span class="h h-cyan">0x0D</span></td><td>Sectors per Cluster</td><td>1</td></tr>
+      <tr><td><span class="h h-cyan">0x0E–0x0F</span></td><td>Reserved Sectors</td><td>1 (le Boot Sector)</td></tr>
+      <tr><td><span class="h h-cyan">0x10</span></td><td>Number of FATs</td><td>2</td></tr>
+      <tr><td><span class="h h-cyan">0x11–0x12</span></td><td>Root Entry Count</td><td>224 (0xE0 00 LE)</td></tr>
+      <tr><td><span class="h h-cyan">0x16–0x17</span></td><td>Sectors per FAT</td><td>9 (0x09 00)</td></tr>
+      <tr><td><span class="h h-cyan">0x36–0x3D</span></td><td>File System Type (ASCII)</td><td>"FAT12   "</td></tr>
+      <tr><td><span class="h h-cyan">0x1FE–0x1FF</span></td><td>Boot Signature</td><td><span class="h h-red">55 AA</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SECTION 3 : Encodage 12 bits -->
+<div class="sec" id="encodage-fat12-entrees-de-12-bits">
+  <div class="sec-title">Encodage FAT12 — Entrées de 12 bits</div>
+  <p style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem">La FAT12 utilise 12 bits par entrée cluster. Deux entrées occupent donc 3 octets. La lecture diffère selon la parité du numéro d'entrée.</p>
+  
+  <div class="bit-demo">
+    <div style="font-size:.75rem;color:var(--gold);font-weight:700;margin-bottom:.65rem">Exemple : FAT = <span class="h h-red">F8 FF FF</span> → entrées 0 et 1</div>
+    <div class="bit-row">
+      <div class="bit bit-pair">F8<span>oct.0</span></div>
+      <div class="bit bit-pair2">FF<span>oct.1</span></div>
+      <div class="bit bit-byte">FF<span>oct.2</span></div>
+    </div>
+    <div class="bit-explain">
+      <strong style="color:var(--gold)">Entrée 0 (paire)</strong> → lire octets [0] + nibble bas de [1] = <strong>0xFF8</strong> → Média descriptor<br>
+      <strong style="color:var(--cyan)">Entrée 1 (impaire)</strong> → lire nibble haut de [1] + octet [2] = <strong>0xFFF</strong> → EOF<br><br>
+      Formule paire n : <code class="copy-code">val = byte[pos] | ((byte[pos+1] &amp; 0x0F) &lt;&lt; 8)</code><br>
+      Formule impaire n : <code class="copy-code">val = (byte[pos] >> 4) | (byte[pos+1] &lt;&lt; 4)</code>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 4 : Valeurs spéciales -->
+<div class="sec" id="valeurs-speciales-fat12">
+  <div class="sec-title">Valeurs spéciales FAT12</div>
+  <div class="g2">
+    <div class="card card-cyan">
+      <div class="ct">Cluster libre</div>
+      <p><span class="h h-cyan">0x000</span> — Cluster disponible pour allocation</p>
+    </div>
+    <div class="card card-gold">
+      <div class="ct">Cluster suivant</div>
+      <p><span class="h h-gold">0x002–0xFEF</span> — Numéro du prochain cluster de la chaîne</p>
+    </div>
+    <div class="card card-red">
+      <div class="ct">Secteur défectueux</div>
+      <p><span class="h h-red">0xFF7</span> — Bad cluster, physiquement inutilisable</p>
+    </div>
+    <div class="card card-green">
+      <div class="ct">Fin de fichier (EOF)</div>
+      <p><span class="h h-cyan" style="color:var(--green)">0xFF8–0xFFF</span> — Dernier cluster du fichier</p>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 5 : Comparaison FAT -->
+<div class="sec">
+  <div class="sec-title">FAT12 vs FAT16 vs FAT32 — Points clés</div>
+  <table>
+    <thead><tr><th>Caractéristique</th><th style="color:var(--gold)">FAT12</th><th style="color:var(--blue)">FAT16</th><th style="color:var(--green)">FAT32</th></tr></thead>
+    <tbody>
+      <tr><td>Bits par entrée FAT</td><td>12</td><td>16</td><td>32 (28 utilisés)</td></tr>
+      <tr><td>Clusters max</td><td>4 086</td><td>65 526</td><td>268 millions</td></tr>
+      <tr><td>Volume max</td><td>32 Mo</td><td>4 Go</td><td>8 To</td></tr>
+      <tr><td>Fichier max</td><td>32 Mo</td><td>4 Go − 1 o</td><td>4 Go − 1 o</td></tr>
+      <tr><td>Root dir</td><td>Fixe (max 224)</td><td>Fixe (max 512)</td><td>Dynamique</td></tr>
+      <tr><td>Usage typique</td><td>Disquettes, cartes SD &lt; 32 Mo</td><td>Clés USB, XP</td><td>USB, SD, Windows</td></tr>
+      <tr><td>Identifier la variante</td><td>Offset 0x36 : "FAT12   "</td><td>Offset 0x36 : "FAT16   "</td><td>Offset 0x52 : "FAT32   "</td></tr>
+    </tbody>
+  </table>
+  <div class="tip" style="margin-top:.75rem">💡 Règle pratique : compter les clusters de données. &lt; 4087 → FAT12 · &lt; 65527 → FAT16 · le reste → FAT32.</div>
+</div>
+
+<!-- SECTION 6 : Forensique -->
+<div class="sec" id="points-forensiques-fat12">
+  <div class="sec-title">Points forensiques FAT12</div>
+  <div class="g2">
+    <div class="card card-red">
+      <div class="ct">⚠️ Attention examen</div>
+      <p>Le premier cluster utilisable est le <strong>cluster 2</strong> (0 et 1 réservés). Offset dans la zone de données = (cluster − 2) × taille_cluster + début_données.</p>
+    </div>
+    <div class="card card-gold">
+      <div class="ct">Récupération fichiers</div>
+      <p>Fichier supprimé : 1er octet = <span class="h h-red">0xE5</span>. Clusters libérés dans la FAT mais données encore présentes → carving possible.</p>
+    </div>
+    <div class="card card-cyan">
+      <div class="ct">Slack space FAT12</div>
+      <p>Avec 512 o/cluster, même un fichier de 1 octet occupe 512 octets. Jusqu'à 511 octets de slack exploitables forensiquement.</p>
+    </div>
+    <div class="card card-green">
+      <div class="ct">Signature bootable</div>
+      <p>Offset 510 = <span class="h h-red">55</span>, offset 511 = <span class="h h-red">AA</span>. Absent → secteur non bootable. Vérifier aussi l'OEM ID à l'offset 0x03.</p>
+    </div>
+  </div>
+</div>
+
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — FAT12</div>
+  <p><strong>Entrées 12 bits</strong> : 2 entrées = 3 octets · paire n : <code>byte[pos] | ((byte[pos+1] &amp; 0x0F) &lt;&lt; 8)</code> · impaire n : <code>(byte[pos+1] &gt;&gt; 4) | (byte[pos+2] &lt;&lt; 4)</code></p>
+  <p><strong>Valeurs spéciales</strong> : <code>0x000</code> = libre · <code>0xFF7</code> = bad cluster · <code>0xFF8–0xFFF</code> = EOF</p>
+  <p><strong>Root directory</strong> : taille FIXE · <strong>224 entrées max</strong> (disquette 1.44Mo) · commence après FAT2</p>
+  <p><strong>Boot signature</strong> : <code>55 AA</code> aux offsets 510–511 · absent = non bootable</p>
+  <p><strong>Suppression</strong> : 1er octet entrée = <code>0xE5</code> · clusters libérés dans FAT · données encore sur disque → carving</p>
+  <p><strong>FS Type</strong> : offset <code>0x36</code> = "FAT12   " (FAT12/16) · offset <code>0x52</code> = "FAT32   " (FAT32)</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">La FAT d'un volume FAT12 contient les octets <span class="h h-gold">A3 5B C2</span> aux positions 7, 8, 9. Quelle est la valeur de l'entrée cluster 5 (impaire) ?<small>FAT12 encodage · Niveau : difficile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Entrée 5 est impaire. pos = 5×3/2 = 7 (entier). Formule : <code>(byte[pos+1] &gt;&gt; 4) | (byte[pos+2] &lt;&lt; 4)</code><br>= (0x5B &gt;&gt; 4) | (0xC2 &lt;&lt; 4) = 0x05 | 0xC20 = <strong>0xC25</strong><br>→ Pointeur vers le cluster 0xC25 de la chaîne.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Sur un FAT12 avec BPS=512, SPC=1, reserved=1, FATs=2, SPF=9, rootEntries=224 : quel est l'offset du cluster 5 ?<small>FAT12 calcul offset · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Root dir start = (1 + 2×9) × 512 = 9 728 octets<br>Root dir size = 224 × 32 = 7 168 octets<br>Data area start = 9 728 + 7 168 = <strong>16 896 octets</strong><br>Cluster 5 = 16 896 + (5−2) × 1 × 512 = 16 896 + 1 536 = <strong>18 432 octets</strong></div>
+</div>
+
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Chapitre 3 Manuel · ISO/IEC 27037</span>
+</div>
+</div>
+</main>
+
+
+
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

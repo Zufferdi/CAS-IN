@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Microsoft 365 Forensique — CAS-IN Forensique</title>
+<meta name="description" content="Forensique Microsoft 365 · Unified Audit Log · eDiscovery · Exchange · Teams · SharePoint · Purview · PowerShell · réquisitions légales">
+<meta name="theme-color" content="#0d1117">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+
+<nav class="tn-nav" aria-label="Navigation fiche">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">MICROSOFT 365 FORENSIQUE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-cloud">Cloud</a><span class="bc-sep">›</span>
+    <span class="bc-current">Microsoft 365 Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">☁️</span>
+    <span class="tag tag-blue" style="margin-left:.5rem">Cloud</span>
+    <span class="tag tag-gold" style="margin-left:.3rem">DFIR</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">M365</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Microsoft 365 Forensique</h1>
+    <div class="meta">Unified Audit Log · eDiscovery · Exchange Online · Teams · SharePoint · Purview · PowerShell · réquisitions légales</div>
+  </div>
+
+  <div style="margin:1rem 0;padding:.9rem 1.25rem;background:rgba(88,166,255,.04);border-left:3px solid var(--blue);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+    <span style="color:var(--blue);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Réalité terrain</span><br>
+    <em style="color:var(--text)">"La grande majorité des incidents en entreprise impliquent aujourd'hui Microsoft 365 — que ce soit comme vecteur initial (phishing, OAuth abuse), comme cible (vol de mails, exfiltration SharePoint) ou comme outil de persistance (règles de redirection, délégations). Le Unified Audit Log est votre meilleur allié — à condition qu'il soit activé."</em><br>
+    <span style="font-size:.72rem;margin-top:.3rem;display:block">— Microsoft DART (Detection and Response Team), <em>M365 Incident Response Playbook</em>, 2024</span>
+  </div>
+
+  <div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(48,232,138,.05);border-left:3px solid var(--green);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
+    <span style="color:var(--green);font-weight:700">🇨🇭 Contexte suisse :</span> Microsoft 365 est la suite bureautique dominante dans les administrations cantonales, PME, hôpitaux, cabinets d'avocats et EMS helvétiques. Les incidents BEC (Business Email Compromise) suisses impliquent quasi-exclusivement Exchange Online. La réglementation nLPD (nouvelle Loi sur la Protection des Données, en vigueur depuis 2023) impose la notification en cas de violation — les logs M365 constituent la preuve principale de l'étendue d'une brèche.
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="cloud_forensique.html" class="prereq-pill">📖 Cloud Forensique</a><a href="email_forensique.html" class="prereq-pill">📖 Email Forensique</a><a href="active_directory.html" class="prereq-pill">📖 Active Directory</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="email_headers_smtp_forensique.html" class="related-pill">🔗 Email Headers SMTP</a><a href="siem_logs.html" class="related-pill">🔗 SIEM Logs</a><a href="incident_response.html" class="related-pill">🔗 Incident Response</a><a href="lateral_movement_forensique.html" class="related-pill">🔗 Lateral Movement</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="m365-tabs">
+  <button class="tab active" onclick="showTab('ual',this)">📋 Unified Audit Log</button>
+  <button class="tab" onclick="showTab('exchange',this)">📧 Exchange</button>
+  <button class="tab" onclick="showTab('entra',this)">🔐 Entra ID</button>
+  <button class="tab" onclick="showTab('ediscovery',this)">🔍 eDiscovery</button>
+  <button class="tab" onclick="showTab('outils',this)">🔧 Outils</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — UNIFIED AUDIT LOG
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-ual">
+
+<div class="concept-card">
+  <div class="concept-title">📋 Unified Audit Log — La source centrale M365</div>
+  Le <strong>Unified Audit Log (UAL)</strong> est le journal centralisé de Microsoft 365 qui enregistre les activités de tous les services : Exchange Online, SharePoint, OneDrive, Teams, Azure AD, Power Platform. C'est <strong>la première source forensique</strong> dans tout incident M365. <strong>Il n'est pas activé par défaut</strong> sur tous les tenants — son absence ou sa désactivation est elle-même un indicateur forensique majeur. Rétention : <strong>90 jours</strong> (E3) ou <strong>365 jours</strong> (E5 / Microsoft 365 Audit Premium).
+</div>
+
+<div class="alert">
+  ⚠️ <strong>Vérification critique en début d'investigation</strong> : <code>Get-AdminAuditLogConfig | Select UnifiedAuditLogIngestionEnabled</code><br>
+  Si <code>False</code> → les logs n'ont pas été collectés. Chercher des sources alternatives : Microsoft Defender XDR, Entra ID Sign-in logs (30j), Exchange Message Tracking (90j).
+</div>
+
+<div class="sec-title">Architecture du Unified Audit Log</div>
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div class="card card-blue">
+    <div class="ct">📦 Sources d'événements</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
+      <strong>Exchange Online</strong> : emails, règles, délégations<br>
+      <strong>SharePoint / OneDrive</strong> : accès, partages, téléchargements<br>
+      <strong>Teams</strong> : messages, réunions, partage de fichiers<br>
+      <strong>Entra ID (Azure AD)</strong> : connexions, MFA, rôles<br>
+      <strong>Power Platform</strong> : Power Apps, Power Automate<br>
+      <strong>Microsoft Defender</strong> : alertes, remédiation
+    </div>
+  </div>
+  <div class="card card-gold">
+    <div class="ct">⚙️ Paramètres clés</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
+      <strong>Rétention</strong> : 90j (E3) · 365j (E5) · 10 ans (Add-on)<br>
+      <strong>Délai d'indexation</strong> : 30 min à 24h après l'événement<br>
+      <strong>Volume</strong> : des millions d'événements/jour sur grands tenants<br>
+      <strong>Format</strong> : JSON — chaque record contient CreationTime, UserId, Operation, ResultStatus, ClientIP, ObjectId<br>
+      <strong>Accès</strong> : Compliance Center, PowerShell (ExchangeOnline), Microsoft Graph API
+    </div>
+  </div>
+</div>
+
+<!-- Operations forensiques clés -->
+<div class="sec-title">Operations UAL — Référence forensique</div>
+<div style="display:grid!important;grid-template-columns:repeat(3,1fr);gap:.5rem;margin:.75rem 0">
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(255,64,96,.3);background:rgba(255,64,96,.05);cursor:pointer" onclick="showOp('mailbox')">
+    <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.3rem">📧 Exchange — Mailbox</div>
+    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">MailItemsAccessed · Send · HardDelete · SoftDelete · MoveToDeletedItems · UpdateInboxRules · AddFolderPermissions</div>
+  </div>
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(240,192,64,.3);background:rgba(240,192,64,.05);cursor:pointer" onclick="showOp('sharepoint')">
+    <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.3rem">📁 SharePoint / OneDrive</div>
+    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">FileDownloaded · FileUploaded · FileDeleted · SharingInvitationCreated · AnonymousLinkCreated · SearchQueryPerformed</div>
+  </div>
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(88,166,255,.3);background:rgba(88,166,255,.05);cursor:pointer" onclick="showOp('entra')">
+    <div style="font-size:.65rem;color:var(--blue);font-weight:700;margin-bottom:.3rem">🔐 Entra ID</div>
+    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">UserLoggedIn · Add member to role · Consent to application · Update user · Reset user password · Add service principal</div>
+  </div>
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(0,229,204,.3);background:rgba(0,229,204,.05);cursor:pointer" onclick="showOp('teams')">
+    <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.3rem">💬 Teams</div>
+    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">ChatMessageCreated · MeetingCreated · FileUploaded · MemberAdded · BotAddedToTeam · TeamCreated</div>
+  </div>
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(188,140,255,.3);background:rgba(188,140,255,.05);cursor:pointer" onclick="showOp('admin')">
+    <div style="font-size:.65rem;color:var(--purple);font-weight:700;margin-bottom:.3rem">⚙️ Admin / Config</div>
+    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">Set-MailboxAuditBypassAssociation · Disable-AuditLog · New-TransportRule · Set-AdminAuditLogConfig · Add-RoleGroupMember</div>
+  </div>
+
+  <div style="padding:.7rem .75rem;border-radius:9px;border:1px solid rgba(48,232,138,.3);background:rgba(48,232,138,.05);cursor:pointer" onclick="showOp('defender')">
+    <div style="font-size:.65rem;color:var(--green);font-weight:700;margin-bottom:.3rem">🛡️ Defender / Purview</div>
+    <div style="font-size:.7rem;color:var(--muted);line-height:1.6">AlertTriggered · RemediationAction · PolicyMatch · DLPRuleMatch · InsiderRiskAlert · ComplianceSearch</div>
+  </div>
+
+</div>
+<div class="arch-detail" id="op-detail" style="margin-bottom:1rem">
+  <div style="color:var(--dim);font-size:.78rem">ℹ️ Cliquez sur une catégorie pour voir les opérations forensiques clés</div>
+</div>
+
+<!-- PowerShell extraction -->
+<div class="sec-title">Extraction UAL — PowerShell & Compliance Center</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin:.75rem 0">
+  <div style="font-family:var(--mono);font-size:.6rem;color:var(--dim);margin-bottom:.75rem;letter-spacing:.05em">POWERSHELL — EXTRACTION UAL (Exchange Online Management Module)</div>
+  <div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.5rem">
+
+    <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.35rem">🔌 Connexion</div>
+      <code style="font-size:.66rem;color:var(--text);line-height:1.9;display:block">Connect-ExchangeOnline -UserPrincipalName admin@corp.ch<br>Connect-IPPSSession<br><span style="color:var(--dim)"># Vérifier UAL activé</span><br>Get-AdminAuditLogConfig | Select UnifiedAuditLogIngestionEnabled</code>
+    </div>
+
+    <div style="background:rgba(240,192,64,.04);border:1px solid rgba(240,192,64,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.35rem">🔍 Recherche par utilisateur</div>
+      <code style="font-size:.66rem;color:var(--text);line-height:1.9;display:block">Search-UnifiedAuditLog -UserIds "user@corp.ch" `<br>&nbsp;&nbsp;-StartDate "2024-03-01" -EndDate "2024-03-31" `<br>&nbsp;&nbsp;-ResultSize 5000 | Export-Csv audit.csv -Encoding UTF8</code>
+    </div>
+
+    <div style="background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.35rem">⚠️ Opérations suspectes</div>
+      <code style="font-size:.66rem;color:var(--text);line-height:1.9;display:block">Search-UnifiedAuditLog -Operations "UpdateInboxRules","HardDelete","Set-MailboxAuditBypassAssociation" `<br>&nbsp;&nbsp;-StartDate "2024-03-01" -EndDate "2024-04-01"</code>
+    </div>
+
+    <div style="background:rgba(48,232,138,.04);border:1px solid rgba(48,232,138,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--green);font-weight:700;margin-bottom:.35rem">📁 Accès SharePoint massif</div>
+      <code style="font-size:.66rem;color:var(--text);line-height:1.9;display:block">Search-UnifiedAuditLog -RecordType SharePointFileOperation `<br>&nbsp;&nbsp;-Operations "FileDownloaded" `<br>&nbsp;&nbsp;-StartDate "2024-03-15" -EndDate "2024-03-16" `<br>&nbsp;&nbsp;-ResultSize 5000</code>
+    </div>
+
+  </div>
+</div>
+
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — Unified Audit Log</div>
+  <p><strong>UAL non activé par défaut</strong> sur tous les tenants — vérifier en priorité</p>
+  <p><strong>Rétention</strong> : 90 jours (E3) · 365 jours (E5) · délai d'indexation 30 min–24h</p>
+  <p><strong>MailItemsAccessed</strong> (E5 only) = opération clé pour prouver qu'un mail a été lu par un attaquant</p>
+  <p><strong>UpdateInboxRules</strong> = règle de redirection créée → exfiltration mail silencieuse</p>
+  <p><strong>Set-MailboxAuditBypassAssociation</strong> = tentative d'effacement de traces → red flag maximal</p>
+</div>
+</div><!-- /tab-ual -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — EXCHANGE
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-exchange">
+
+<div class="concept-card">
+  <div class="concept-title">📧 Exchange Online Forensique — BEC &amp; compromission mailbox</div>
+  Exchange Online est au cœur de la majorité des incidents M365. Les <strong>BEC (Business Email Compromise)</strong> — arnaque au président, fraude au virement, usurpation de fournisseur — représentent les pertes financières les plus importantes en Suisse liées à la cybercriminalité. Le technicien DFIR doit maîtriser les artefacts Exchange pour reconstituer : accès non autorisé à une mailbox, création de règles de redirection, usurpation d'identité, et exfiltration de données via email.
+</div>
+
+<!-- Techniques BEC et artefacts -->
+<div class="sec-title">Scénarios BEC — Artefacts forensiques</div>
+<div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.55rem;margin:.75rem 0">
+
+  <div class="meta-card mc-0" onclick="showBEC('redirect')">
+    <div class="meta-num">Technique 1</div>
+    <div class="meta-name">Règles de redirection</div>
+    <div class="meta-desc">Transfert silencieux de tous les mails vers compte externe.</div>
+  </div>
+
+  <div class="meta-card mc-1" onclick="showBEC('delegation')">
+    <div class="meta-num">Technique 2</div>
+    <div class="meta-name">Délégation mailbox</div>
+    <div class="meta-desc">Accès total à la boîte sans connexion au compte.</div>
+  </div>
+
+  <div class="meta-card mc-2" onclick="showBEC('consent')">
+    <div class="meta-num">Technique 3</div>
+    <div class="meta-name">OAuth App Consent</div>
+    <div class="meta-desc">Application tierce autorisée à lire les mails.</div>
+  </div>
+
+  <div class="meta-card mc-3" onclick="showBEC('impersonate')">
+    <div class="meta-num">Technique 4</div>
+    <div class="meta-name">Impersonation / Send As</div>
+    <div class="meta-desc">Envoi de mails en se faisant passer pour un autre.</div>
+  </div>
+
+  <div class="meta-card mc-5" onclick="showBEC('exfil')">
+    <div class="meta-num">Technique 5</div>
+    <div class="meta-name">Exfiltration massive</div>
+    <div class="meta-desc">Téléchargement en masse via Graph API ou IMAP.</div>
+  </div>
+
+  <div class="meta-card mc-6" onclick="showBEC('harddelete')">
+    <div class="meta-num">Technique 6</div>
+    <div class="meta-name">Hard Delete / effacement</div>
+    <div class="meta-desc">Suppression définitive pour couvrir les traces.</div>
+  </div>
+
+</div>
+<div class="meta-detail" id="bec-detail"></div>
+
+<!-- Message Tracking -->
+<div class="sec-title">Message Tracking Log — Traçabilité des emails</div>
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(240,192,64,.3);background:rgba(240,192,64,.05)">
+    <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.4rem;text-transform:uppercase">📋 Message Tracking Log</div>
+    <div style="font-size:.74rem;color:var(--muted);line-height:1.7">
+      Trace chaque email : sender, recipient, subject, IP source, timestamp, statut de livraison. Rétention <strong>90 jours</strong>.<br><br>
+      <code style="font-size:.67rem">Get-MessageTrace -SenderAddress attacker@evil.com `<br>&nbsp;&nbsp;-StartDate "2024-03-01" -EndDate "2024-03-31"<br><br>Get-MessageTrace -RecipientAddress victim@corp.ch `<br>&nbsp;&nbsp;-StartDate "2024-03-01" -EndDate "2024-03-31" |<br>&nbsp;&nbsp;Get-MessageTraceDetail</code>
+    </div>
+  </div>
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(0,229,204,.3);background:rgba(0,229,204,.05)">
+    <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.4rem;text-transform:uppercase">📬 Mailbox Audit Log</div>
+    <div style="font-size:.74rem;color:var(--muted);line-height:1.7">
+      Log spécifique à la mailbox : qui a accédé, quels mails lus, actions effectuées. Activé par défaut depuis 2019 (E3/E5 seulement pour MailItemsAccessed).<br><br>
+      <code style="font-size:.67rem">Search-MailboxAuditLog -Identity victim@corp.ch `<br>&nbsp;&nbsp;-LogonTypes Delegate,Admin,Owner `<br>&nbsp;&nbsp;-StartDate "2024-03-01" -EndDate "2024-03-31" `<br>&nbsp;&nbsp;-ResultSize 10000</code>
+    </div>
+  </div>
+</div>
+
+<!-- Headers email forensique -->
+<div class="sec-title">Headers Exchange — Champs forensiques clés</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Header</th><th>Valeur forensique</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">X-MS-Exchange-Organization-SCL</td>
+      <td style="font-size:.74rem">Spam Confidence Level (SCL). -1 = confiance totale (whitelist). Si mail malveillant avec SCL -1 = règle de transport contournée.</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">X-Originating-IP</td>
+      <td style="font-size:.74rem">IP réelle d'envoi avant passage par Exchange. Comparer avec l'IP habituelle de l'expéditeur. IP étrangère = compte compromis.</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Authentication-Results</td>
+      <td style="font-size:.74rem">Résultats SPF/DKIM/DMARC. <code>spf=fail</code> = domaine usurpé. <code>dmarc=fail</code> = potentiel spoofing.</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">X-MS-Exchange-Organization-AuthAs</td>
+      <td style="font-size:.74rem">Comment l'expéditeur s'est authentifié : Internal, Anonymous, Partner. Anonymous depuis l'interne = red flag.</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">X-Microsoft-Antispam</td>
+      <td style="font-size:.74rem">Résultats du filtrage antispam Microsoft. BCL (Bulk Complaint Level), PCL (Phishing Confidence Level). PCL &gt; 3 = phishing probable.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un directeur financier signale qu'il n'a jamais reçu la réponse à un email important envoyé par un fournisseur. L'investigation révèle une règle Outlook "si sujet contient 'virement' ou 'facture' → déplacer vers Éléments supprimés + marquer comme lu". Quels artefacts forensiques M365 permettent de dater la création de cette règle et d'identifier depuis quelle IP elle a été créée ?<small>BEC · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>1. Unified Audit Log — Operation UpdateInboxRules</strong> :<br>
+    <code>Search-UnifiedAuditLog -Operations "UpdateInboxRules","New-InboxRule" -UserIds "cfo@corp.ch" -StartDate "2024-01-01" -EndDate "2024-04-01"</code><br>
+    → Timestamp exact de création, <strong>ClientIP</strong> depuis laquelle la règle a été créée, UserAgent (Outlook Web vs application).<br><br>
+    <strong>2. Entra ID Sign-in Logs</strong> : croiser le ClientIP avec les connexions au compte — trouver la session depuis laquelle la règle a été créée. Comparer avec les pays/IPs habituels de l'utilisateur.<br><br>
+    <strong>3. Message Tracking Log</strong> : <code>Get-MessageTrace</code> pour les 30-90 jours → retrouver les emails "virement/facture" qui ont disparu. Confirmer qu'ils ont bien été reçus et supprimés automatiquement.<br><br>
+    <strong>4. Mailbox Audit Log — HardDelete / SoftDelete</strong> : confirmer que les emails ont été supprimés par la règle et non par l'utilisateur manuellement.<br><br>
+    <strong>5. Litigation Hold / Recoverable Items</strong> : si Litigation Hold activé, les emails supprimés sont récupérables depuis le dossier Recoverable Items — indispensable pour la preuve.
+  </div>
+</div>
+</div><!-- /tab-exchange -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — ENTRA ID
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-entra">
+
+<div class="concept-card">
+  <div class="concept-title">🔐 Entra ID (Azure AD) — Identités et accès cloud</div>
+  <strong>Microsoft Entra ID</strong> (anciennement Azure Active Directory) est le système d'identité central de M365. Chaque connexion, chaque attribution de rôle, chaque consentement OAuth est tracé. Les logs Entra ID sont <strong>indispensables pour reconstituer la compromission initiale</strong> (credential stuffing, phishing, MFA bypass) et la progression des droits de l'attaquant dans le tenant.
+</div>
+
+<!-- Sign-in Logs -->
+<div class="sec-title">Sign-in Logs — Connexions Entra ID</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Type de log</th><th>Contenu</th><th>Rétention</th><th>Accès</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Interactive Sign-ins</td>
+      <td style="font-size:.74rem">Connexions avec interaction utilisateur (formulaire, MFA prompt). IP, UserAgent, pays, résultat MFA, Conditional Access.</td>
+      <td style="font-size:.72rem">30 jours</td>
+      <td style="font-size:.72rem">Entra Portal / Graph API</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Non-interactive Sign-ins</td>
+      <td style="font-size:.74rem">Connexions automatiques (refresh tokens, apps). Souvent ignorées — révèle les accès persistants via token volé.</td>
+      <td style="font-size:.72rem">30 jours</td>
+      <td style="font-size:.72rem">Entra Portal / Graph API</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Service Principal Sign-ins</td>
+      <td style="font-size:.74rem">Connexions d'applications (OAuth, service accounts). Activité d'apps tierces sur le tenant.</td>
+      <td style="font-size:.72rem">30 jours</td>
+      <td style="font-size:.72rem">Graph API / Entra</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">Audit Logs (Entra)</td>
+      <td style="font-size:.74rem">Modifications d'objets AD : création comptes, attribution rôles, reset MFA, consentements OAuth. Très riche.</td>
+      <td style="font-size:.72rem">30 jours</td>
+      <td style="font-size:.72rem">Entra Portal / PowerShell</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- Techniques compromission Entra -->
+<div class="sec-title">Techniques de compromission Entra ID — Artefacts</div>
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(255,64,96,.3);background:rgba(255,64,96,.05)">
+    <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.4rem">🎣 AiTM Phishing (Adversary-in-the-Middle)</div>
+    <div style="font-size:.73rem;color:var(--muted);line-height:1.7">
+      <strong>Mécanisme</strong> : proxy entre victime et Microsoft → capture le session token post-MFA.<br>
+      <strong>Résultat</strong> : attaquant contourne le MFA avec le token volé.<br>
+      <strong>Artefacts</strong> :<br>
+      · Sign-in réussi depuis IP inhabituelle <em>immédiatement après</em> le sign-in légitime<br>
+      · Token replay depuis pays/ASN différent<br>
+      · Non-interactive sign-in avec le même refresh token<br>
+      · UAL : accès mailbox depuis nouvelle IP dans les minutes suivant le phishing
+    </div>
+  </div>
+
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(240,192,64,.3);background:rgba(240,192,64,.05)">
+    <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.4rem">🔓 Illicit OAuth App Consent</div>
+    <div style="font-size:.73rem;color:var(--muted);line-height:1.7">
+      <strong>Mécanisme</strong> : l'utilisateur consent à une app tierce malveillante qui reçoit des permissions Mail.Read, Files.ReadWrite, etc.<br>
+      <strong>Résultat</strong> : accès persistant sans MFA, même si le mot de passe est changé.<br>
+      <strong>Artefacts</strong> :<br>
+      · Entra Audit Log : <strong>"Consent to application"</strong> avec AppDisplayName suspect<br>
+      · UAL : <strong>"Add service principal"</strong>, permissions accordées<br>
+      · Graph API : <code>GET /oauth2PermissionGrants</code> — consentements actifs
+    </div>
+  </div>
+
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(188,140,255,.3);background:rgba(188,140,255,.05)">
+    <div style="font-size:.65rem;color:var(--purple);font-weight:700;margin-bottom:.4rem">👑 Privilege Escalation Entra</div>
+    <div style="font-size:.73rem;color:var(--muted);line-height:1.7">
+      <strong>Techniques</strong> : ajout d'un rôle Global Admin, création d'un compte backdoor, ajout d'un fédération de confiance.<br>
+      <strong>Artefacts</strong> :<br>
+      · Entra Audit Log : <strong>"Add member to role"</strong> avec RoleDisplayName = "Global Administrator"<br>
+      · UAL : <strong>"Add-RoleGroupMember"</strong><br>
+      · <strong>Moment anormal</strong> : hors heures ouvrables, depuis IP inhabituelle
+    </div>
+  </div>
+
+  <div style="padding:.8rem .9rem;border-radius:10px;border:1px solid rgba(48,232,138,.3);background:rgba(48,232,138,.05)">
+    <div style="font-size:.65rem;color:var(--green);font-weight:700;margin-bottom:.4rem">🔑 MFA Reset / Bypass</div>
+    <div style="font-size:.73rem;color:var(--muted);line-height:1.7">
+      <strong>Techniques</strong> : reset de la méthode MFA d'un compte (nécessite admin), enregistrement d'un nouvel appareil MFA.<br>
+      <strong>Artefacts</strong> :<br>
+      · Entra Audit Log : <strong>"Update user"</strong> avec ModifiedProperties contenant StrongAuthenticationMethod<br>
+      · <strong>"User registered security info"</strong> depuis IP/pays inhabituel<br>
+      · Connexion réussie depuis nouveau pays sans alerte MFA
+    </div>
+  </div>
+
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;margin:.75rem 0;font-family:var(--mono);font-size:.68rem;line-height:1.9;color:var(--text)">
+  <span style="color:var(--cyan)"># Connexions depuis pays inhabituels (30 derniers jours)</span><br>
+  Get-MgAuditLogSignIn -Filter "createdDateTime ge 2024-03-01" `<br>
+  &nbsp;&nbsp;| Where {$_.Location.CountryOrRegion -ne "CH"} `<br>
+  &nbsp;&nbsp;| Select UserPrincipalName, IPAddress, Location, Status, CreatedDateTime<br><br>
+  <span style="color:var(--cyan)"># Consentements OAuth actifs (apps tierces)</span><br>
+  Get-MgOauth2PermissionGrant | Select ClientId, Scope, PrincipalId | Sort Scope<br><br>
+  <span style="color:var(--cyan)"># Membres Global Admin</span><br>
+  Get-MgDirectoryRoleMember -DirectoryRoleId (Get-MgDirectoryRole | Where {$_.DisplayName -eq "Global Administrator"}).Id
+</div>
+
+<div class="key-fact">
+  <div class="key-fact-label">🎯 Impossible Travel — Détection automatique</div>
+  <div style="font-size:.78rem;line-height:1.75;margin-top:.4rem;color:var(--muted)">
+    Microsoft Entra ID détecte automatiquement l'<strong>Impossible Travel</strong> : connexion réussie depuis Zurich à 09h00 et depuis une IP russe à 09h15 — physiquement impossible. Cette détection déclenche une alerte dans <strong>Microsoft Defender for Identity / Entra ID Protection</strong>. Forensiquement, chercher dans les Sign-in Logs deux connexions réussies avec le même compte dans un intervalle de temps inférieur au temps de trajet entre les deux localisations. Attention aux VPN légitimes qui peuvent générer des faux positifs.
+  </div>
+</div>
+</div><!-- /tab-entra -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — eDISCOVERY
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-ediscovery">
+
+<div class="concept-card">
+  <div class="concept-title">🔍 eDiscovery &amp; Microsoft Purview — Collecte légale</div>
+  <strong>Microsoft Purview</strong> (anciennement Microsoft 365 Compliance Center) est la plateforme de conformité et d'eDiscovery intégrée à M365. Elle permet de <strong>collecter, préserver et exporter</strong> des données M365 (emails, Teams, SharePoint, OneDrive) dans le cadre d'une investigation légale ou d'une réquisition. En Suisse, cette plateforme est utilisée conjointement avec les procédures MLAT (mutual legal assistance) et les réquisitions judiciaires cantonales.
+</div>
+
+<!-- Types eDiscovery -->
+<div class="sec-title">Niveaux eDiscovery M365</div>
+<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0">
+  <div style="background:var(--surface2);padding:.45rem .85rem;font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border);display:grid!important;grid-template-columns:140px 1fr 120px">
+    <span>NIVEAU</span><span>CAPACITÉS</span><span>LICENCE</span>
+  </div>
+
+  <div style="display:grid!important;grid-template-columns:140px 1fr 120px;border-bottom:1px solid var(--border)">
+    <div style="padding:.55rem .85rem;font-size:.72rem;font-weight:700;color:var(--cyan);border-right:1px solid var(--border)">Content Search</div>
+    <div style="padding:.55rem .85rem;font-size:.73rem;color:var(--muted);border-right:1px solid var(--border)">Recherche et export de contenu (emails, fichiers, Teams). Pas de case management. Résultats exportables en PST/ZIP. Requêtes KQL.</div>
+    <div style="padding:.55rem .85rem;font-size:.7rem;color:var(--muted)">E1 / E3 / E5</div>
+  </div>
+
+  <div style="display:grid!important;grid-template-columns:140px 1fr 120px;border-bottom:1px solid var(--border)">
+    <div style="padding:.55rem .85rem;font-size:.72rem;font-weight:700;color:var(--gold);border-right:1px solid var(--border)">eDiscovery Standard</div>
+    <div style="padding:.55rem .85rem;font-size:.73rem;color:var(--muted);border-right:1px solid var(--border)">Content Search + <strong>Holds</strong> (préservation légale), case management, export avec métadonnées. Litigation Hold et eDiscovery Hold.</div>
+    <div style="padding:.55rem .85rem;font-size:.7rem;color:var(--muted)">E3 / E5</div>
+  </div>
+
+  <div style="display:grid!important;grid-template-columns:140px 1fr 120px">
+    <div style="padding:.55rem .85rem;font-size:.72rem;font-weight:700;color:var(--purple);border-right:1px solid var(--border)">eDiscovery Premium</div>
+    <div style="padding:.55rem .85rem;font-size:.73rem;color:var(--muted);border-right:1px solid var(--border)">Standard + <strong>analyse IA</strong> (near-duplicates, email threading, themes), custodian management, révision collaborative, export natif. Standard légal international.</div>
+    <div style="padding:.55rem .85rem;font-size:.7rem;color:var(--muted)">E5 only</div>
+  </div>
+</div>
+
+<!-- Holds -->
+<div class="sec-title">Litigation Hold &amp; eDiscovery Hold — Préservation des preuves</div>
+<div class="alert">
+  🎯 <strong>Première action en cas d'incident</strong> : placer les mailboxes et comptes concernés sous <strong>Litigation Hold</strong> (ou eDiscovery Hold) AVANT toute investigation. Le Hold préserve tous les éléments — y compris les emails supprimés, les Teams messages, les fichiers SharePoint — dans le dossier <strong>Recoverable Items</strong>, invisible pour l'utilisateur mais accessible via eDiscovery. Sans Hold, les données peuvent être supprimées définitivement par les politiques de rétention automatiques.
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;margin:.75rem 0;font-family:var(--mono);font-size:.68rem;line-height:1.9;color:var(--text)">
+  <span style="color:var(--cyan)"># Activer Litigation Hold sur une mailbox</span><br>
+  Set-Mailbox -Identity "victim@corp.ch" -LitigationHoldEnabled $true `<br>
+  &nbsp;&nbsp;-LitigationHoldDuration 2555 <span style="color:var(--dim)"># 7 ans</span><br><br>
+  <span style="color:var(--cyan)"># Vérifier les mailboxes sous hold</span><br>
+  Get-Mailbox -ResultSize Unlimited | Where {$_.LitigationHoldEnabled -eq $true} |<br>
+  &nbsp;&nbsp;Select Name, LitigationHoldEnabled, LitigationHoldDate<br><br>
+  <span style="color:var(--cyan)"># Récupérer les éléments supprimés (Recoverable Items)</span><br>
+  New-ComplianceSearch -Name "RecoverDeleted" -ExchangeLocation "victim@corp.ch" `<br>
+  &nbsp;&nbsp;-ContentMatchQuery "subject:'virement' AND ItemClass:IPM.Note"<br>
+  Start-ComplianceSearch -Identity "RecoverDeleted"<br>
+  New-ComplianceSearchAction -SearchName "RecoverDeleted" -Export -Format FxStream
+</div>
+
+<!-- Réquisitions légales -->
+<div class="sec-title">Réquisitions légales Microsoft — Contexte suisse</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Mécanisme</th><th>Procédure</th><th>Délai typique</th><th>Données obtenues</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--cyan)">Law Enforcement Portal (MLAT)</td>
+      <td style="font-size:.73rem">Requête via le Ministère public au DoJ US. Microsoft répond aux demandes légales étrangères via MLAT.</td>
+      <td style="font-size:.72rem;color:var(--gold)">6–18 mois</td>
+      <td style="font-size:.73rem">Contenu emails, fichiers, logs de connexion</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--cyan)">Emergency Disclosure</td>
+      <td style="font-size:.73rem">Demande d'urgence directe à Microsoft CELA (Customer Experience and Law enforcement Affairs) pour risque vital immédiat.</td>
+      <td style="font-size:.72rem;color:var(--red)">24–72h</td>
+      <td style="font-size:.73rem">Données basiques de compte (pas contenu)</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--cyan)">Tenant admin (interne)</td>
+      <td style="font-size:.73rem">Si le tenant appartient à l'organisation victime, l'admin M365 peut accéder directement via Compliance Center / PowerShell.</td>
+      <td style="font-size:.72rem;color:var(--green)">Immédiat</td>
+      <td style="font-size:.73rem">Tout le contenu du tenant (avec permissions admin)</td>
+    </tr>
+    <tr>
+      <td style="font-weight:600;font-size:.78rem;color:var(--cyan)">Données de résidence (Suisse)</td>
+      <td style="font-size:.73rem">Microsoft propose depuis 2022 la résidence des données M365 en Suisse (datacenters). Simplifie les accès légaux sous droit suisse (nLPD, CPP).</td>
+      <td style="font-size:.72rem;color:var(--blue)">Selon CPP</td>
+      <td style="font-size:.73rem">Selon mandat judiciaire cantonal</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un technicien DFIR doit préserver les preuves d'une compromission de compte M365 découverte un vendredi soir. La politique de rétention de l'entreprise supprime automatiquement les emails &gt; 90 jours le lundi matin. Quelles sont les actions immédiates à effectuer dans l'ordre ?<small>eDiscovery · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>1. (Immédiat) Activer Litigation Hold</strong> sur la mailbox compromise :<br>
+    <code>Set-Mailbox -Identity "victim@corp.ch" -LitigationHoldEnabled $true</code><br>
+    → Suspend toutes les suppressions automatiques, préserve Recoverable Items.<br><br>
+    <strong>2. (Immédiat) Bloquer le compte compromis</strong> :<br>
+    <code>Set-MsolUser -UserPrincipalName "victim@corp.ch" -BlockCredential $true</code><br>
+    → Invalider toutes les sessions actives : <code>Revoke-AzureADUserAllRefreshToken</code><br><br>
+    <strong>3. (Dans l'heure) Exporter les Sign-in Logs Entra ID</strong> :<br>
+    Les logs Entra ne sont conservés que 30 jours — exporter immédiatement en CSV ou JSON via Graph API.<br><br>
+    <strong>4. (Dans l'heure) Exporter le Unified Audit Log</strong> de la période suspecte :<br>
+    <code>Search-UnifiedAuditLog -UserIds "victim@corp.ch" -StartDate "2024-01-01" -EndDate "2024-04-01" -ResultSize 5000</code><br><br>
+    <strong>5. (Dans les 24h) Créer un eDiscovery case</strong> dans Microsoft Purview et placer un eDiscovery Hold sur la mailbox + OneDrive + Teams du compte compromis.<br><br>
+    <strong>Règle d'or</strong> : Litigation Hold en premier — avant toute autre action. Sans lui, les preuves peuvent disparaître avant lundi matin.
+  </div>
+</div>
+</div><!-- /tab-ediscovery -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — OUTILS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-outils">
+
+<div class="sec-title">Outils forensiques Microsoft 365</div>
+<div class="tool-grid">
+
+  <div class="tool-card" style="border-left:3px solid var(--blue)">
+    <div class="tool-name">Microsoft Compliance Center / Purview</div>
+    <div class="tool-by">Microsoft (natif M365)</div>
+    <div class="tool-desc">Interface graphique centralisée : UAL search, eDiscovery, Content Search, Litigation Hold, DLP, Insider Risk. Point d'entrée principal pour tout forensique M365. Accès via compliance.microsoft.com.</div>
+    <div><span class="tool-tag tt-com">M365 inclus</span><span class="tool-tag tt-gui">GUI</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--cyan)">
+    <div class="tool-name">PowerShell ExchangeOnline</div>
+    <div class="tool-by">Microsoft (natif)</div>
+    <div class="tool-desc">Module ExchangeOnlineManagement + Microsoft.Graph. Extraction UAL en masse, Message Tracking, Mailbox Audit Log, configuration tenant. Seule solution pour dépasser les limites de l'interface graphique (ResultSize, pagination).</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI PowerShell</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--gold)">
+    <div class="tool-name">HAWK</div>
+    <div class="tool-by">T0pCyber / Open Source</div>
+    <div class="tool-desc">PowerShell module d'investigation M365 automatisé. Collecte en un script : UAL, Sign-in Logs, règles de messagerie, délégations, configurations tenant. Idéal pour le triage initial rapide.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">PowerShell</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--purple)">
+    <div class="tool-name">Microsoft 365 Defender (XDR)</div>
+    <div class="tool-by">Microsoft</div>
+    <div class="tool-desc">Plateforme XDR unifiée : Advanced Hunting (KQL), incidents cross-workload, timeline enrichie. Advanced Hunting permet des requêtes forensiques sur EmailEvents, CloudAppEvents, IdentitySignInEvents sur 30 jours.</div>
+    <div><span class="tool-tag tt-com">E5 / add-on</span><span class="tool-tag tt-gui">GUI + KQL</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--green)">
+    <div class="tool-name">AzureADIncidentResponse</div>
+    <div class="tool-by">Microsoft (Open Source)</div>
+    <div class="tool-desc">Module PowerShell spécialisé incident response Entra ID. Extraction des Sign-in Logs, audit logs, OAuth grants, rôles. Maintenu par l'équipe DART de Microsoft.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">PowerShell</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--red)">
+    <div class="tool-name">Sparrow / Aviary</div>
+    <div class="tool-by">CISA (US Gov)</div>
+    <div class="tool-desc">Outil de détection post-incident M365 publié par CISA après SolarWinds. Vérifie les indicateurs de compromission dans un tenant M365 : Service Principals modifiés, UAL désactivé, OAuth grants suspects.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">PowerShell</span></div>
+  </div>
+
+</div>
+
+<!-- KQL cheat sheet -->
+<div class="sec-title">Advanced Hunting KQL — Requêtes forensiques M365 Defender</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin:.75rem 0">
+  <div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.5rem">
+
+    <div style="background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--red);font-weight:700;margin-bottom:.35rem">📧 Emails suspects — pièces jointes</div>
+      <code style="font-size:.64rem;color:var(--text);line-height:1.8;display:block">EmailAttachmentInfo<br>| where Timestamp &gt; ago(30d)<br>| where FileType in ("exe","ps1","vbs","hta","lnk")<br>| summarize count() by SenderFromDomain<br>| sort by count_ desc</code>
+    </div>
+
+    <div style="background:rgba(240,192,64,.04);border:1px solid rgba(240,192,64,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.35rem">🌍 Connexions depuis nouveaux pays</div>
+      <code style="font-size:.64rem;color:var(--text);line-height:1.8;display:block">IdentitySignInEvents<br>| where Timestamp &gt; ago(7d)<br>| where ResultType == 0<br>| where CountryCode !in ("CH","FR","DE")<br>| project AccountUpn, IPAddress,<br>&nbsp;&nbsp;CountryCode, Timestamp<br>| sort by Timestamp desc</code>
+    </div>
+
+    <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.35rem">📁 Téléchargements SharePoint massifs</div>
+      <code style="font-size:.64rem;color:var(--text);line-height:1.8;display:block">CloudAppEvents<br>| where Timestamp &gt; ago(7d)<br>| where ActionType == "FileDownloaded"<br>| summarize count() by AccountDisplayName,<br>&nbsp;&nbsp;bin(Timestamp, 1h)<br>| where count_ &gt; 50<br>| sort by count_ desc</code>
+    </div>
+
+    <div style="background:rgba(188,140,255,.04);border:1px solid rgba(188,140,255,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--purple);font-weight:700;margin-bottom:.35rem">👑 Élévation de privilèges</div>
+      <code style="font-size:.64rem;color:var(--text);line-height:1.8;display:block">CloudAppEvents<br>| where Timestamp &gt; ago(30d)<br>| where ActionType == "Add member to role."<br>| where RawEventData contains<br>&nbsp;&nbsp;"Global Administrator"<br>| project Timestamp, AccountDisplayName,<br>&nbsp;&nbsp;RawEventData</code>
+    </div>
+
+  </div>
+</div>
+
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — Microsoft 365 Forensique</div>
+  <p><strong>UAL</strong> = source centrale · pas activé par défaut · rétention 90j (E3) / 365j (E5)</p>
+  <p><strong>Litigation Hold</strong> = première action en incident · préserve Recoverable Items contre suppressions automatiques</p>
+  <p><strong>UpdateInboxRules</strong> = règle de redirection (BEC) · <strong>HardDelete</strong> = suppression définitive</p>
+  <p><strong>AiTM Phishing</strong> = contourne MFA via vol de session token · chercher deux connexions successives depuis IPs différentes</p>
+  <p><strong>OAuth Consent Abuse</strong> = app tierce avec Mail.Read → accès persistant même après reset du mot de passe</p>
+  <p><strong>Sign-in Logs Entra</strong> = seulement 30j · exporter en priorité au début de l'investigation</p>
+  <p><strong>🇨🇭 nLPD</strong> : violation de données → notification dans les 72h à l'autorité de contrôle (PFPDT) + personnes concernées si risque élevé</p>
+</div>
+</div><!-- /tab-outils -->
+
+<script>
+// ── Tabs ──
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
+  var el = document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+// ── Quiz ──
+document.addEventListener('click', function(e) {
+  if(e.target && e.target.classList.contains('quiz-reveal-btn')) {
+    var wrap = e.target.closest('.quiz-wrap');
+    if(!wrap) return;
+    var ans = wrap.querySelector('.quiz-answer');
+    if(ans) ans.style.display = ans.style.display === 'block' ? 'none' : 'block';
+  }
+});
+
+// ── UAL Operations details ──
+var opDetails = {
+  mailbox: {
+    icon:'📧', title:'Exchange Online — Opérations mailbox forensiques',
+    body:`<strong>MailItemsAccessed</strong> (E5 only) : prouve qu'un email a été <em>lu</em> par l'attaquant. Contient le MessageId, ClientIP, Protocol (MAPI, EWS, IMAP, REST). Indispensable pour prouver l'étendue d'une compromission.<br><br>
+    <strong>UpdateInboxRules / New-InboxRule</strong> : création ou modification d'une règle de messagerie. Révèle les règles de redirection malveillantes. Champ Parameters contient les détails de la règle.<br><br>
+    <strong>HardDelete</strong> : suppression définitive (Purge). Contourne la Corbeille. Indicateur d'anti-forensique ou de nettoyage post-BEC.<br><br>
+    <strong>AddFolderPermissions / UpdateFolderPermissions</strong> : délégation d'accès à une boîte ou un dossier. Vecteur de persistance.<br><br>
+    <strong>Send / SendAs / SendOnBehalf</strong> : email envoyé. SendAs = impersonation complète. Utile pour retracer l'envoi d'emails frauduleux.`
+  },
+  sharepoint: {
+    icon:'📁', title:'SharePoint / OneDrive — Exfiltration de données',
+    body:`<strong>FileDownloaded</strong> : téléchargement d'un fichier. Contient le SiteUrl, SourceFileName, ClientIP, UserAgent. Un volume anormal en peu de temps = exfiltration.<br><br>
+    <strong>AnonymousLinkCreated / SharingInvitationCreated</strong> : création d'un lien de partage public ou invitation externe. Technique d'exfiltration courante — le fichier est partagé vers l'extérieur.<br><br>
+    <strong>SearchQueryPerformed</strong> : recherche effectuée dans SharePoint/OneDrive. Révèle ce que l'attaquant cherchait ("contrat", "salaire", "budget", "mot de passe").<br><br>
+    <strong>FileDeleted / FileMoved</strong> : suppression ou déplacement de fichiers. Combiné avec FileDownloaded = vol + effacement.`
+  },
+  entra: {
+    icon:'🔐', title:'Entra ID (Azure AD) — Opérations sur les identités',
+    body:`<strong>UserLoggedIn</strong> : connexion réussie avec détails IP, pays, UserAgent, méthode MFA utilisée, Conditional Access appliqué.<br><br>
+    <strong>Add member to role</strong> : ajout d'un utilisateur à un rôle Entra (Global Admin, Exchange Admin…). Élévation de privilèges — chercher hors heures ouvrables.<br><br>
+    <strong>Consent to application</strong> : un utilisateur a consenti à une application tierce OAuth. Contient les permissions accordées (Scopes). Red flag si Mail.ReadWrite, Files.ReadWrite, Contacts.Read.<br><br>
+    <strong>Reset user password / Update user</strong> : modification du compte. Un attaquant peut réinitialiser le MFA d'un compte cible pour en prendre le contrôle.<br><br>
+    <strong>Add service principal / Add app role assignment</strong> : création ou modification d'une application dans le tenant. Backdoor persistante via Service Principal.`
+  },
+  teams: {
+    icon:'💬', title:'Microsoft Teams — Communications et collaboration',
+    body:`<strong>ChatMessageCreated</strong> : message Teams créé. Contient le contenu du message (si audit E5 activé), les participants, le timestamp. Utile pour retracer des communications de phishing interne ou des instructions frauduleuses.<br><br>
+    <strong>MemberAdded / MemberRemoved</strong> : modification de l'appartenance à une équipe. Un attaquant peut s'ajouter silencieusement à une équipe sensible.<br><br>
+    <strong>BotAddedToTeam</strong> : ajout d'un bot ou connecteur à une équipe. Vecteur de persistance et d'exfiltration.<br><br>
+    <strong>MeetingCreated / CallRecord</strong> : réunions et appels. Utile pour établir une timeline d'activité et vérifier des alibis.`
+  },
+  admin: {
+    icon:'⚙️', title:'Opérations admin / Configuration — Red flags',
+    body:`<strong>Set-MailboxAuditBypassAssociation</strong> : désactivation de l'audit pour une mailbox. <strong>Red flag maximal</strong> — un attaquant tente d'effacer ses traces.<br><br>
+    <strong>Disable-AuditLog / Set-AdminAuditLogConfig</strong> : désactivation de l'audit global. Toujours alerter si ces opérations apparaissent dans le UAL lui-même.<br><br>
+    <strong>New-TransportRule / Set-TransportRule</strong> : règle de transport Exchange (niveau organization). Peut rediriger tous les emails d'un domaine ou supprimer des pièces jointes.<br><br>
+    <strong>Add-RoleGroupMember</strong> : ajout dans un groupe de rôles Exchange (Organization Management, Discovery Management…). Escalade de privilèges Exchange.`
+  },
+  defender: {
+    icon:'🛡️', title:'Defender / Purview — Alertes et conformité',
+    body:`<strong>AlertTriggered</strong> : alerte Microsoft Defender déclenchée. Contient la catégorie, la sévérité, les entités impliquées. Croiser avec les événements UAL du même timestamp.<br><br>
+    <strong>DLPRuleMatch</strong> : correspondance d'une règle DLP (Data Loss Prevention). Révèle des tentatives d'envoi de données sensibles (numéros AVS, IBAN, données médicales).<br><br>
+    <strong>InsiderRiskAlert</strong> : alerte du module Insider Risk Management. Activité anormale d'un utilisateur interne (téléchargements massifs avant départ, accès à des fichiers inhabituels).<br><br>
+    <strong>ComplianceSearchPerformed</strong> : quelqu'un a effectué une recherche de conformité. Si effectuée par un compte non-Discovery Manager = suspect.`
+  }
+};
+
+function showOp(key) {
+  var d = opDetails[key];
+  if(!d) return;
+  var p = document.getElementById('op-detail');
+  p.className = 'arch-detail live';
+  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.title+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── BEC details ──
+var becDetails = {
+  redirect: {
+    icon:'📤', name:'Règles de redirection / transfert',
+    body:`<strong>Mécanisme</strong> : une règle Outlook ou une règle de transport Exchange redirige silencieusement tous les emails (ou ceux correspondant à des critères) vers un compte externe contrôlé par l'attaquant.<br><br>
+    <strong>Types</strong> :<br>
+    · <strong>Inbox Rule</strong> (utilisateur) : créée dans Outlook/OWA, visible dans les paramètres Outlook<br>
+    · <strong>Transport Rule</strong> (organisation) : créée par un admin Exchange, affecte tous les utilisateurs correspondant<br><br>
+    <strong>Artefacts UAL</strong> :<br>
+    · Operation : <code>UpdateInboxRules</code>, <code>New-InboxRule</code>, <code>New-TransportRule</code><br>
+    · Champ Parameters : détails de la règle (critères + action de redirection)<br>
+    · ClientIP : depuis quelle IP la règle a été créée<br><br>
+    <strong>Détection</strong> :<br>
+    <code>Get-InboxRule -Mailbox victim@corp.ch | Select Name, ForwardTo, RedirectTo, DeleteMessage</code>`
+  },
+  delegation: {
+    icon:'🤝', name:'Délégation mailbox (FullAccess / SendAs)',
+    body:`<strong>Mécanisme</strong> : attribution de droits FullAccess ou SendAs à un compte tiers (externe ou compte de service compromis). L'attaquant accède à la boîte sans connaître le mot de passe du propriétaire.<br><br>
+    <strong>Types</strong> :<br>
+    · <strong>FullAccess</strong> : lecture + écriture + suppression de tous les emails<br>
+    · <strong>SendAs</strong> : envoi d'emails en tant que le propriétaire<br>
+    · <strong>SendOnBehalf</strong> : envoi "de la part de" (visible dans le header)<br><br>
+    <strong>Artefacts UAL</strong> :<br>
+    · Operation : <code>Add-MailboxPermission</code>, <code>UpdateCalendarDelegation</code>, <code>AddFolderPermissions</code><br><br>
+    <strong>Vérification</strong> :<br>
+    <code>Get-MailboxPermission -Identity victim@corp.ch | Where {$_.User -ne "NT AUTHORITY\SELF"}</code>`
+  },
+  consent: {
+    icon:'🔓', name:'OAuth App Consent illicite',
+    body:`<strong>Mécanisme</strong> : l'utilisateur est phished vers une page de consentement Microsoft légitime — mais pour une application malveillante. En cliquant "Accepter", il accorde des permissions à l'app (Mail.Read, Files.ReadWrite, Contacts.Read, etc.). L'app peut ensuite accéder aux données via Graph API <strong>sans MFA</strong>, même après reset du mot de passe.<br><br>
+    <strong>Artefacts UAL</strong> :<br>
+    · Operation : <code>Consent to application</code><br>
+    · Entra Audit Log : <code>Add service principal</code>, <code>Add app role assignment to service principal</code><br><br>
+    <strong>Investigation</strong> :<br>
+    <code>Get-MgOauth2PermissionGrant | Where {$_.Scope -match "Mail|Files|Contacts"}</code><br>
+    <code>Get-MgServicePrincipalOauth2PermissionGrant -ServicePrincipalId [AppId]</code>`
+  },
+  impersonate: {
+    icon:'🎭', name:'Impersonation / Send As / usurpation',
+    body:`<strong>Mécanisme</strong> : envoi d'emails en se faisant passer pour un utilisateur légitime. Différentes techniques selon le niveau d'accès :<br><br>
+    · <strong>SendAs</strong> (droit délégué) : email parfaitement usurpé, aucune indication dans le header<br>
+    · <strong>Usurpation d'affichage</strong> : même Display Name mais adresse différente (détectable par les headers)<br>
+    · <strong>Domaine homographe</strong> : corp-ch.com au lieu de corp.ch<br><br>
+    <strong>Artefacts UAL</strong> :<br>
+    · Operation : <code>SendAs</code>, <code>Send</code> avec UserId différent du From<br>
+    · Message Tracking : champ SenderAddress vs FromAddress<br><br>
+    <strong>Headers email</strong> : comparer Return-Path, From, Reply-To, X-Originating-IP`
+  },
+  exfil: {
+    icon:'📤', name:'Exfiltration massive Graph API / IMAP',
+    body:`<strong>Mécanisme</strong> : après compromission, l'attaquant télécharge l'intégralité de la mailbox via :<br>
+    · <strong>Graph API</strong> avec token OAuth (app consent ou token volé)<br>
+    · <strong>IMAP</strong> si accès legacy activé (Modern Auth désactivé)<br>
+    · <strong>OWA / EWS</strong> avec les credentials<br><br>
+    <strong>Artefacts UAL</strong> :<br>
+    · Operation : <code>MailItemsAccessed</code> en masse (E5) avec OperationProperties.MailAccessType = "Query"<br>
+    · Volume : des centaines de MailItemsAccessed en quelques minutes depuis une IP unique<br>
+    · Protocol IMAP ou REST dans ClientInfoString<br><br>
+    <strong>Détection</strong> : <code>MailItemsAccessed</code> + <code>ClientIP</code> inhabituels + volume anormal en courte période`
+  },
+  harddelete: {
+    icon:'🗑️', name:'Hard Delete — Effacement des traces',
+    body:`<strong>Mécanisme</strong> : suppression définitive d'emails ou de fichiers pour effacer des preuves. Le Hard Delete bypasse la Corbeille et vide les Recoverable Items (si pas de Hold actif).<br><br>
+    <strong>Types</strong> :<br>
+    · <strong>HardDelete</strong> : suppression définitive depuis Recoverable Items<br>
+    · <strong>SoftDelete</strong> : suppression vers Éléments supprimés (récupérable 14–30j)<br>
+    · <strong>MoveToDeletedItems</strong> : déplacement vers la Corbeille (via règle)<br><br>
+    <strong>Artefacts UAL</strong> :<br>
+    · Operation : <code>HardDelete</code> avec AffectedItems (MessageId, Subject si disponible)<br><br>
+    <strong>Récupération</strong> : si Litigation Hold actif → les éléments sont dans Recoverable Items\Purges → accessibles via eDiscovery même après HardDelete.`
+  }
+};
+
+function showBEC(key) {
+  var d = becDetails[key];
+  if(!d) return;
+  document.querySelectorAll('.meta-card').forEach(function(c){c.classList.remove('sel');});
+  var p = document.getElementById('bec-detail');
+  p.className = 'meta-detail live';
+  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.name+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+(function(){
+  var bar = document.getElementById('scroll-progress');
+  var btn = document.getElementById('back-top');
+  window.addEventListener('scroll', function(){
+    var doc = document.documentElement;
+    var scrolled = doc.scrollTop || document.body.scrollTop;
+    var total = doc.scrollHeight - doc.clientHeight;
+    if(bar) bar.style.width = (total > 0 ? (scrolled/total*100) : 0)+'%';
+    if(btn) btn.classList.toggle('visible', scrolled > 300);
+  });
+})();
+</script>
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

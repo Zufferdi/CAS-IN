@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Log Forensique Avancé — CAS-IN DFIR</title>
+<meta name="description" content="Splunk · Elastic · Sigma rules · Detection engineering · Log normalisation · Hayabusa">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">AUDIT & TIMELINE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-audit">Audit & Timeline</a><span class="bc-sep">›</span>
+    <span class="bc-current">Log Forensique Avancé</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~16 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">📋</span>
+    <span class="tag tag-red" style="margin-left:.5rem">Audit Trail</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Timeline</span>
+    <span class="tag tag-orange" style="margin-left:.3rem">Tampering</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Log Forensique Avancé</h1>
+    <div class="meta">RFC 5424 · Windows evtx · JSON · Syslog · Tampering Detection · Timeline Aggregation · Event Correlation</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="registre_windows.html" class="prereq-pill">📖 Windows Registry</a><a href="reseau.html" class="prereq-pill">📖 Réseaux Basics</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="browser_artifacts_deep_dive.html" class="related-pill">🔗 Browser Artifacts</a><a href="timeline.html" class="related-pill">🔗 Timeline Reconstruction</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="log-tabs">
+  <button class="tab active" onclick="showTab('syslog',this)">📨 Syslog (RFC 5424)</button>
+  <button class="tab" onclick="showTab('evtx',this)">🪟 Windows Event Log</button>
+  <button class="tab" onclick="showTab('json',this)">📊 JSON & Structured</button>
+  <button class="tab" onclick="showTab('tampering',this)">🚨 Tampering Detection</button>
+  <button class="tab" onclick="showTab('timeline',this)">📅 Timeline Aggregation</button>
+  <button class="tab" onclick="showTab('tools',this)">🔧 Tools & Parsers</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — SYSLOG
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-syslog">
+
+<div class="concept-card">
+  <div class="concept-title">📨 Syslog = Standard Log Format (RFC 5424)</div>
+  Unix/Linux logging standard. Format: priority, facility, timestamp, hostname, program, message. Centralized logging on syslog servers. Plaintext (good for forensics).
+</div>
+
+<div class="sec-title">Syslog Message Format</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem;line-height:1.9;color:var(--text)">
+  <code>
+  <strong style="color:var(--cyan)">RFC 5424 Format:</strong><br>
+  <br>
+  &lt;PRI&gt;TIMESTAMP HOSTNAME TAG[PID]: MSG<br>
+  <br>
+  Example:<br>
+  &lt;134&gt;2024-03-20T14:32:15Z myhost sshd[1234]: Failed password for user admin<br>
+  <br>
+  PRI breakdown:<br>
+  • FACILITY (5 bits, valeurs 0–23) : type de service (auth=4, syslog=5, etc.)<br>
+  • SEVERITY (3 bits, valeurs 0–7) : niveau (0=emergency, 7=debug)<br>
+  • PRI = (FACILITY * 8) + SEVERITY<br>
+  <br>
+  Example: 134<br>
+  • 134 / 8 = 16 (facility)<br>
+  • 134 % 8 = 6 (severity = INFO)<br>
+  </code>
+</div>
+
+<div class="sec-title">Syslog Facilities & Severities</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Facility</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Code</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Forensique</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>auth (authentication)</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">4</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 Login attempts, access control</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>authpriv (private auth)</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">10</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Sensitive auth events</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>syslog</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">5</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">System events</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>local0-local7</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">16-23</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Application-specific</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(0,229,204,.08);border-left:3px solid var(--cyan)">
+  <strong style="color:var(--cyan)">Syslog Forensic Value</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li><strong>Centralized</strong> = single source of truth</li>
+    <li><strong>Chronological</strong> = precise timeline</li>
+    <li><strong>Plaintext</strong> = easy parsing</li>
+    <li><strong>Difficult to tamper</strong> (if on remote syslog server)</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — WINDOWS EVENT LOG
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-evtx">
+
+<div class="concept-card">
+  <div class="concept-title">🪟 Windows Event Log (.evtx) = Binary Format</div>
+  Windows stores events in binary evtx format. Security channel = authentication, privilege escalation, etc. System channel = driver loads, service starts.
+</div>
+
+<div class="sec-title">Event Log Channels & Importance</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Channel</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">File</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Forensique Critique</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Security</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>Security.evtx</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 CRITICAL: All auth events</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>System</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>System.evtx</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 CRITICAL: Driver loads, services</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Application</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>Application.evtx</code></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">App errors, warnings</td>
+  </tr>
+
+</table>
+
+<div class="sec-title">Critical Event IDs (Security Channel)</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Event ID</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Description</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Forensique</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>4625</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Failed logon attempt</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 Brute force attacks</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>4624</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Successful logon</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 User access timeline</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>4688</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Process creation</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 Malware execution</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>4698</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Scheduled task created</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Persistence mechanism</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>4719</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Audit log cleared</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🚨 Evidence tampering!</td>
+  </tr>
+
+</table>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — JSON & STRUCTURED
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-json">
+
+<div class="concept-card">
+  <div class="concept-title">📊 JSON Structured Logs = Modern Standard</div>
+  Modern systems output structured logs (JSON). ECS (Elastic Common Schema) = standard field names. Machine-readable, perfect for log aggregation + correlation.
+</div>
+
+<div class="sec-title">ECS (Elastic Common Schema) Fields</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem;line-height:1.9;color:var(--text)">
+  <code>
+  <strong style="color:var(--cyan)">Example JSON Event (ECS):</strong><br>
+  <br>
+  {<br>
+  &nbsp;&nbsp;"timestamp": "2024-03-20T14:32:15.123Z",<br>
+  &nbsp;&nbsp;"event": {<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;"category": "authentication",<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;"action": "login",<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;"outcome": "success"<br>
+  &nbsp;&nbsp;},<br>
+  &nbsp;&nbsp;"source": {"ip": "192.168.1.100"},<br>
+  &nbsp;&nbsp;"user": {"name": "admin"},<br>
+  &nbsp;&nbsp;"host": {"name": "server1"},<br>
+  &nbsp;&nbsp;"message": "User admin logged in from 192.168.1.100"<br>
+  }<br>
+  <br>
+  ✅ Machine-parseable = easy correlation
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(0,229,204:.04);border-left:3px solid var(--cyan)">
+  <strong style="color:var(--cyan)">ECS Advantages for Forensics</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li>Standardized field names = easy parsing</li>
+    <li>Timestamps normalized (ISO 8601)</li>
+    <li>Source/destination IPs in standard fields</li>
+    <li>User/host/process info structured</li>
+    <li>Ideal for timeline aggregation</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — TAMPERING DETECTION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tampering">
+
+<div class="concept-card">
+  <div class="concept-title">🚨 Log Tampering = Attacker Cover-Up</div>
+  Attackers delete/modify logs to hide actions. Detection: sequence number gaps, timestamp jumps, impossible deltas, entry deletions. Proves obstruction.
+</div>
+
+<div class="sec-title">Tampering Indicators</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0">
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Sequence Gaps</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      Event IDs: 1000, 1001, 1003<br>
+      (Missing 1002)<br>
+      → Indicates deletion
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Timestamp Jumps</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      14:30:00 → 14:35:00 (5 min gap)<br>
+      OR backward (14:35 → 14:32)<br>
+      → Deletion or clock reset
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Event 4719 (Security)</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      "Audit log cleared"<br>
+      Windows only<br>
+      = Attacker cleared logs
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Impossible Deltas</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      Log file size shrinks<br>
+      (should only grow)<br>
+      = Entries deleted
+    </span>
+  </div>
+
+</table>
+
+<div class="sec-title">Tampering Detector Interactive</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <label style="display:block;margin-bottom:.75rem;font-size:.9rem;font-weight:600">
+    Entrez Event IDs (un par ligne):
+    <textarea id="event-ids" placeholder="1000&#10;1001&#10;1003&#10;1005" style="width:100%;height:100px;margin-top:.35rem;padding:.6rem;background:rgba(13,17,23,.5);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem"></textarea>
+  </label>
+  <button onclick="detectTampering()" style="width:100%;padding:.6rem;background:var(--red);color:white;border:none;border-radius:4px;font-weight:600;cursor:pointer">Détecter Tampering</button>
+  
+  <div id="tampering-result" style="margin-top:1rem;padding:1rem;background:rgba(255,64,96,.1);border:1px solid rgba(255,64,96,.3);border-radius:6px;font-size:.85rem">
+    <div style="color:var(--dim)">👆 Entrez Event IDs pour analyser</div>
+  </div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — TIMELINE AGGREGATION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-timeline">
+
+<div class="concept-card">
+  <div class="concept-title">📅 Multi-Source Timeline = Complete Audit Trail</div>
+  Combining Syslog + Windows evtx + JSON logs = comprehensive timeline. Identify patterns, correlate events across systems, detect lateral movement.
+</div>
+
+<div class="sec-title">Timeline Aggregation Workflow</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-size:.9rem;line-height:1.8">
+  <div style="color:var(--cyan);font-weight:600;margin-bottom:.75rem">Process:</div>
+  <ol style="margin:0 0 0 1.5rem">
+    <li>Extract all log sources (evtx, syslog, JSON)</li>
+    <li>Normalize timestamps (ISO 8601 / Unix epoch)</li>
+    <li>Parse into standard fields (source IP, user, action)</li>
+    <li>Deduplicate (same event logged multiple places)</li>
+    <li>Sort chronologically (merge all timestamps)</li>
+    <li>Correlate events (identify sequences)</li>
+    <li>Detect patterns (brute force, lateral movement, data exfiltration)</li>
+  </ol>
+</div>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">Timeline Patterns</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li><strong>Brute force:</strong> Many failed logins (4625) from same IP</li>
+    <li><strong>Privilege escalation:</strong> Logon (4624) → Privilege use (4672)</li>
+    <li><strong>Lateral movement:</strong> Logon from unexpected IP → Process creation</li>
+    <li><strong>Data exfiltration:</strong> Large network transfer logs correlate with file access</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 6 — TOOLS & PARSERS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tools">
+
+<div class="sec-title">🔧 Log Forensique Tools</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Outil</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Fonction</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Format</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>evtx_dump</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Parse Windows evtx files</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">evtx → plaintext</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>jq</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">JSON parsing + filtering</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">JSON</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>grep / awk</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Syslog parsing + timeline</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Plaintext</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Splunk</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Log aggregation + visualization</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">All formats</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>ELK Stack</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Elasticsearch + Kibana + Logstash</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">All formats</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>plaso</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Super Timeline + correlation</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Multi-source</td>
+  </tr>
+
+</table>
+
+<div class="sec-title">CLI Quick Commands</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem">
+  <code style="display:block;color:var(--cyan);margin-bottom:1rem">
+  # Parse Windows evtx (Security channel)<br>
+  $ evtx_dump Security.evtx | grep "4625\|4624\|4688"<br>
+  <br>
+  # Parse JSON logs with jq<br>
+  $ cat app.log | jq '.[] | select(.event.category=="authentication")'<br>
+  <br>
+  # Extract failed logins<br>
+  $ grep "Failed password" /var/log/auth.log | wc -l<br>
+  <br>
+  # Timeline syslog (chronological)<br>
+  $ sort -k1 -k2 /var/log/syslog | awk '{print $1, $2, $3, $4, $5, $NF}'<br>
+  <br>
+  # Detect duplicate entries<br>
+  $ cat combined.log | sort | uniq -d<br>
+  <br>
+  # Convert timestamps<br>
+  $ python3 -c "import datetime; print(datetime.datetime.utcfromtimestamp(1234567890))"<br>
+  <br>
+  # Create super timeline (plaso)<br>
+  $ log2timeline.py output.plaso image.dd<br>
+  $ psort.py output.plaso
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">✅ Workflow Complet Log Forensique</strong><br>
+  <ol style="margin:.75rem 0 0 1.5rem;font-size:.9rem;line-height:1.8">
+    <li>Collect all log sources (evtx, syslog, JSON, app logs)</li>
+    <li>Parse each log type (evtx_dump, jq, grep)</li>
+    <li>Normalize timestamps (ISO 8601 standard)</li>
+    <li>Extract key fields (source IP, user, action, status)</li>
+    <li>Merge into single timeline (sort by timestamp)</li>
+    <li>Detect tampering (sequence gaps, timestamp jumps)</li>
+    <li>Correlate events (identify sequences/patterns)</li>
+    <li>Create super timeline (plaso or manual)</li>
+    <li>Analyze for suspicious activity (brute force, lateral movement)</li>
+    <li>Report: Timeline, suspicious events, evidence integrity</li>
+  </ol>
+</div>
+
+</div>
+
+</div>
+
+<script>
+function showTab(tab, btn) {
+  var pages = document.querySelectorAll('.tab-page');
+  pages.forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function detectTampering() {
+  var input = document.getElementById('event-ids').value;
+  var result = document.getElementById('tampering-result');
+  
+  if (!input) {
+    result.innerHTML = '<div style="color:var(--dim)">Entrez Event IDs</div>';
+    return;
+  }
+  
+  var ids = input.split('\n').filter(l => l.trim()).map(l => parseInt(l.trim()));
+  ids.sort((a, b) => a - b);
+  
+  var html = '<div style="color:var(--red);font-weight:600">🚨 Tampering Analysis</div>';
+  html += '<div style="font-size:.85rem;margin-top:.5rem">';
+  html += '<strong>Total events:</strong> ' + ids.length + '<br>';
+  html += '<strong>ID range:</strong> ' + ids[0] + ' - ' + ids[ids.length - 1] + '<br>';
+  
+  var gaps = [];
+  for (let i = 1; i < ids.length; i++) {
+    var delta = ids[i] - ids[i-1];
+    if (delta > 1) {
+      gaps.push({ start: ids[i-1], end: ids[i], missing: delta - 1 });
+    }
+  }
+  
+  html += '<br><strong style="color:var(--orange)">⚠️ Analysis Results:</strong><br>';
+  
+  if (gaps.length === 0) {
+    html += '<span style="color:var(--green)">✅ No sequence gaps detected</span><br>';
+  } else {
+    html += '<span style="color:var(--red)">🚨 GAPS DETECTED (possible deletion):</span><br>';
+    gaps.forEach(g => {
+      html += '• Between ' + g.start + ' and ' + g.end + ': <strong>' + g.missing + ' events missing</strong><br>';
+    });
+  }
+  
+  var expectedCount = ids[ids.length - 1] - ids[0] + 1;
+  var missingTotal = expectedCount - ids.length;
+  
+  html += '<br><strong>Expected events:</strong> ' + expectedCount + '<br>';
+  html += '<strong>Actual events:</strong> ' + ids.length + '<br>';
+  html += '<strong>Missing events:</strong> ' + missingTotal + '<br>';
+  
+  if (missingTotal > 0) {
+    html += '<br><span style="color:var(--red);font-weight:600">🚨 EVIDENCE OF TAMPERING!</span><br>';
+    html += 'Likelihood of log deletion: <strong style="color:var(--red)">HIGH</strong>';
+  } else {
+    html += '<br><span style="color:var(--green)">No evidence of tampering detected</span>';
+  }
+  
+  html += '</div>';
+  result.innerHTML = html;
+}
+</script>
+
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

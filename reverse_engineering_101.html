@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Reverse Engineering 101 — CAS-IN DFIR</title>
+<meta name="description" content="Ghidra · IDA · radare2 · x64dbg · Strings · Static/Dynamic · Anti-RE techniques">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">CRYPTOLOGIE & SÉCURITÉ</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-cryptologiesécurité">Cryptologie & Sécurité</a><span class="bc-sep">›</span>
+    <span class="bc-current">Reverse Engineering 101</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~15 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🔍</span>
+    <span class="tag tag-blue" style="margin-left:.5rem">Binaires</span>
+    <span class="tag tag-purple" style="margin-left:.3rem">Disassembly</span>
+    <span class="tag tag-orange" style="margin-left:.3rem">Malware</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Reverse Engineering 101</h1>
+    <div class="meta">PE format · x86/x64 assembly · Disassembly · Hex editing · IDA · Ghidra · Décompilation</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="encodage.html" class="prereq-pill">📖 Encodage</a><a href="formats.html" class="prereq-pill">📖 Formats & Magic Bytes</a><a href="malware_forensique.html" class="prereq-pill">📖 Malware Forensics</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="crypto.html" class="related-pill">🔗 Cryptologie</a><a href="anti_forensique.html" class="related-pill">🔗 Anti-Forensique</a><a href="hash.html" class="related-pill">🔗 Hachage</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="re-tabs">
+  <button class="tab active" onclick="showTab('pe',this)">🏗️ PE Format</button>
+  <button class="tab" onclick="showTab('asm',this)">⚙️ x86/x64 Assembly</button>
+  <button class="tab" onclick="showTab('disasm',this)">🔓 Disassembly</button>
+  <button class="tab" onclick="showTab('tools',this)">🛠️ Outils Reverse</button>
+  <button class="tab" onclick="showTab('malware',this)">🦠 Malware Patterns</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — PE FORMAT
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-pe">
+
+<div class="concept-card">
+  <div class="concept-title">🏗️ PE = Portable Executable Format (Windows)</div>
+  Format standard Windows pour .EXE, .DLL, .SYS. Structure : Header + Sections (.text, .data, .rsrc). Contient code machine (x86/x64) + metadata.
+</div>
+
+<div class="sec-title">Anatomie PE : Structure Disque</div>
+
+<div style="margin:1.5rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem;line-height:1.8;color:var(--text)">
+  <div style="color:var(--cyan);font-weight:600;margin-bottom:.75rem">Offset | Taille | Section</div>
+  <code>
+  0x0000 | 2 bytes  | <strong style="color:var(--gold)">MZ signature</strong> (0x4D5A = "MZ")<br>
+  0x0002 | 58 bytes | DOS header (legacy)<br>
+  0x003C | 4 bytes  | <strong style="color:var(--cyan)">PE offset</strong> (pointeur vers PE header)<br>
+  0x0040 | variable | <strong style="color:var(--cyan)">DOS stub + padding</strong><br>
+  <br>
+  [PE HEADER]<br>
+  0x00XX | 4 bytes  | <strong style="color:var(--blue)">"PE\0\0" signature</strong><br>
+  0x00XX | 20 bytes | COFF Header (Machine, # sections, etc.)<br>
+  0x00XX | variable | Optional Header (Entry point, ImageBase, etc.)<br>
+  <br>
+  [SECTIONS]<br>
+  | variable | <strong style="color:var(--green)">.text</strong> (code machine)<br>
+  | variable | <strong style="color:var(--orange)">.data</strong> (données globales)<br>
+  | variable | <strong style="color:var(--orange)">.rsrc</strong> (ressources: icons, strings, dialogs)<br>
+  | variable | <strong style="color:var(--purple)">.reloc</strong> (relocations)<br>
+  | variable | <strong style="color:var(--purple)">.debug</strong> (symbols - optionnel)<br>
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(0,229,204,.08);border-left:3px solid var(--cyan)">
+  <strong style="color:var(--cyan)">Clés Forensiques PE</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li><strong>Entry Point (EP)</strong> : Où le code commence à s'exécuter</li>
+    <li><strong>ImageBase</strong> : Adresse mémoire de chargement (malware change souvent)</li>
+    <li><strong>Import Address Table (IAT)</strong> : Quelles DLL + fonctions importées</li>
+    <li><strong>Export Table</strong> : Fonctions exposées par le DLL (DLLs seulement)</li>
+    <li><strong>Debug Info</strong> : Strings, symbols (si débuguer =malware éducationnel souvent)</li>
+  </ul>
+</div>
+
+<div class="sec-title">Indicateurs de Malveillance en PE</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Indicateur</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Normal</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">🚨 Suspect</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Entry Point</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Dans .text section</td>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--red)">En .data ou .rsrc (obfuscation)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Sections</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">.text, .data, .rsrc standard</td>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--red)">Noms bizarres (.utext, .malw, etc.)</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Imports</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Standard APIs (kernel32, user32)</td>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--red)">WinInet, WinHTTP (network) · LoadLibrary (injection)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Debug Info</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Absent (release build)</td>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--red)">Présent avec paths source (éducationnel?)</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Timestamps</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Compilé récemment</td>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--red)">Compilé années 1990 (faux, obfuscation)</td>
+  </tr>
+
+</table>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — x86/x64 ASSEMBLY
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-asm">
+
+<div class="concept-card">
+  <div class="concept-title">⚙️ x86/x64 Assembly : Langage Machine Lisible</div>
+  <strong>Assembly</strong> = représentation textuelle du code machine. x86/x64 = instruction sets processeur Intel/AMD 32-bit / 64-bit.
+</div>
+
+<div class="sec-title">Instructions x86/x64 Courantes</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.8rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.5rem;border:1px solid var(--border);font-weight:600">Instruction</td>
+    <td style="padding:.5rem;border:1px solid var(--border);font-weight:600">Exemple</td>
+    <td style="padding:.5rem;border:1px solid var(--border);font-weight:600">Signification</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>MOV</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>mov eax, 0x41</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Move : eax ← 0x41</td>
+  </tr>
+
+  <tr style="background:rgba(106,128,168,.05)">
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>PUSH / POP</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>push ebx; pop eax</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Stack operations (function args)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>CALL / RET</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>call 0x401000; ret</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Function call + return</td>
+  </tr>
+
+  <tr style="background:rgba(106,128,168,.05)">
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>JMP / Jcc</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>jmp 0x401050; jne skip</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Unconditional / conditional jumps</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>CMP / TEST</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>cmp eax, ebx; test al, 0xFF</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Compare flags (puis Jcc)</td>
+  </tr>
+
+  <tr style="background:rgba(106,128,168,.05)">
+    <td style="padding:.5rem;border:1px solid var(--border)"><strong>XOR / AND / OR</strong></td>
+    <td style="padding:.5rem;border:1px solid var(--border)"><code>xor eax, eax</code></td>
+    <td style="padding:.5rem;border:1px solid var(--border)">Logic (XOR same=0 = clear register)</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red);margin-top:1rem">
+  <strong style="color:var(--red)">⚠️ Shellcode Pattern</strong><br>
+  <code style="display:block;margin:.75rem 0;padding:.6rem;background:rgba(13,17,23,.5);border-radius:4px;font-size:.75rem;font-family:var(--mono)">
+  push ebp          ; sauvegarde base pointer (prologue fonction)<br>
+  mov ebp, esp      ; configure stack frame<br>
+  sub esp, 0x40     ; allocate local variables<br>
+  [fonction code]<br>
+  mov esp, ebp      ; restore stack<br>
+  pop ebp           ; restore bp<br>
+  ret               ; retour appelant (epilogue)
+  </code>
+  <span style="font-size:.8rem;color:var(--dim)">Pattern standard = absent = shellcode obfuscated</span>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — DISASSEMBLY
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-disasm">
+
+<div class="concept-card">
+  <div class="concept-title">🔓 Disassembly = Convertir Code Machine en Assembly</div>
+  Processus : Bytes hex → mnémoniques assembly intelligibles. Outils : IDA Pro (commercial), Ghidra (gratuit NSA).
+</div>
+
+<div class="sec-title">Workflow Disassembly Basique</div>
+
+<div style="margin:1.5rem 0;display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+
+  <div class="concept-card" style="background:rgba(0,229,204,.08)">
+    <strong style="color:var(--cyan)">1. Charge binaire</strong><br>
+    <span style="font-size:.85rem">
+      IDA/Ghidra → File open<br>
+      Détecte format (PE, ELF, Mach-O)<br>
+      Fixe ImageBase
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(88,166,255,.08)">
+    <strong style="color:var(--blue)">2. Analyse statique</strong><br>
+    <span style="font-size:.85rem">
+      Scan bytes<br>
+      Identifie instructions<br>
+      Construit graph appels
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(48,232,138,.08)">
+    <strong style="color:var(--green)">3. Anotation</strong><br>
+    <span style="font-size:.85rem">
+      Nomme fonctions<br>
+      Identifie strings<br>
+      Crée commentaires
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(240,192,64,.08)">
+    <strong style="color:var(--gold)">4. Décompilation</strong><br>
+    <span style="font-size:.85rem">
+      Ghidra décompile → pseudo-code C<br>
+      Plus lisible que asm brut<br>
+      Reste incomplet parfois
+    </span>
+  </div>
+
+</div>
+
+<div class="sec-title">Techniques Anti-Disassembly (Malware)</div>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red)">
+  <strong style="color:var(--red)">Obfuscation Techniques</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li><strong>Code packing</strong> : UPX, WinRAR SFX → décompresse en mémoire</li>
+    <li><strong>Junk code</strong> : Instructions dead qui ralentissent disassembly</li>
+    <li><strong>Self-modifying</strong> : Code change lui-même en runtime</li>
+    <li><strong>Polymorphism</strong> : Code change à chaque exécution</li>
+    <li><strong>Control flow flattening</strong> : Boucles complexes → confondre analyseur</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — OUTILS REVERSE
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tools">
+
+<div class="sec-title">🛠️ Arsenal Reverse Engineering</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Outil</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Licence</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Usage</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--cyan)"><strong>IDA Pro</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Commercial ($$$)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Industry standard · Disassembly · Debugger · Scripts</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--green)"><strong>Ghidra</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Open Source (NSA)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Disassembly gratuit · Décompilation pseudo-C</td>
+  </tr>
+
+  <tr style="background:rgba(88,166,255,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--blue)"><strong>Radare2</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Open Source</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI · Reverse engineering framework · Hex edit</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--orange)"><strong>WinHex</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Commercial</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Hex editor · PE header editing · Disassembly</td>
+  </tr>
+
+  <tr style="background:rgba(240,192,64,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--gold)"><strong>Frida</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Open Source</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Runtime instrumentation · API hooking · Memory inspection</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--purple)"><strong>OllyDbg / x64dbg</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Free</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">User-mode debugger · Breakpoints · Memory dumps</td>
+  </tr>
+
+</table>
+
+<div class="sec-title">Quick Start : Ghidra</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-size:.85rem;line-height:1.8">
+  <code>
+  # Lancer Ghidra<br>
+  $ ghidra<br><br>
+  
+  # Créer project → File → New Project<br>
+  # Importer binaire → File → Import File (malware.exe)<br>
+  # Auto-analyze → Fenêtre analyse pop, cliquer "Analyze"<br>
+  # Disassembly window → Code affiché<br>
+  # Decompile pane → Pseudo-code C<br>
+  # Search → Search → Memory (chercher strings, imports)<br>
+  # Rename → click variable/function → Ctrl+N pour renommer<br>
+  # Bookmark → marquer sections intéressantes<br>
+  # Export → decompiled sources pour rapport
+  </code>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — MALWARE PATTERNS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-malware">
+
+<div class="concept-card">
+  <div class="concept-title">🦠 Malware Forensics : Patterns Suspects</div>
+  Indicateurs disassembly → malveillance probable.
+</div>
+
+<div class="sec-title">Red Flags en Reverse</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0">
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Network I/O</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      Imports : WinInet, WinHTTP<br>
+      Strings : URLs, IPs, domains<br>
+      → Malware communicates
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Injection / Persistence</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      CreateRemoteThread<br>
+      SetWindowsHookEx<br>
+      RegSetValueEx → startup
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Encryption / Encoding</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      Crypto functions (AES, RSA)<br>
+      Base64 encoding loops<br>
+      XOR operations
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚨 Process Manipulation</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      CreateProcessA/W<br>
+      ShellExecute<br>
+      System() calls
+    </span>
+  </div>
+
+</div>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">✅ Checklist Malware Reverse</strong><br>
+  <ol style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li>Dump PE header → ImageBase, Entry Point, sections</li>
+    <li>Extract strings → grep URLs, IPs, command lines</li>
+    <li>List imports → API calls = intent</li>
+    <li>Identify packing → UPX/WinRAR/custom?</li>
+    <li>Disassemble entry point → prologue + early code</li>
+    <li>Search for syscalls → WinAPI hooking?</li>
+    <li>Timeline → compile timestamp plausible?</li>
+    <li>Sandbox vs Real → behavior analysis if possible</li>
+  </ol>
+</div>
+
+</div>
+
+<script>
+function showTab(tab, btn) {
+  var pages = document.querySelectorAll('.tab-page');
+  pages.forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

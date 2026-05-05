@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>HFS+ — CAS-IN Forensique</title>
+<meta name="description" content="HFS+ · Big Endian · B-Trees · CNID · Catalog File · Extents Overflow · Resource Forks · Journal · Epoch 1904">
+<meta name="theme-color" content="#0d1117">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">SYSTÈMES DE FICHIERS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesdefichiers">Systèmes de Fichiers</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">HFS+</span>
+  </div>
+</div>
+
+<div class="page" style="padding-bottom:.5rem">
+  <div class="header">
+    <div class="badge">🍎 Legacy Apple FS</div>
+    <h1>HFS+ — Hierarchical File System Plus</h1>
+    <p style="font-size:.85rem;color:var(--muted);margin-top:.35rem;max-width:720px">
+      B-Trees Catalog, CNID, endianness inversée, epoch 1904, resource forks, journal —
+      le système Apple de 1998 à 2017 (et encore présent sur des millions de Macs antérieurs
+      à macOS High Sierra).
+    </p>
+  </div>
+</div>
+
+<div class="page">
+
+<div class="prereq-block">
+  <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="ntfs.html" class="prereq-pill">📖 NTFS</a><a href="mac_times.html" class="prereq-pill">📖 MAC Times</a></div>
+  <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="apfs.html" class="related-pill">🔗 APFS</a><a href="comparaison_fs.html" class="related-pill">🔗 Comparaison FS</a><a href="../tools.html" class="related-pill">🔧 Convertir timestamps HFS+</a></div>
+</div>
+<div class="warning-box">
+  <strong>⚠️ Big Endian !</strong> HFS+ stocke toutes les valeurs multi-octets en <strong>Big Endian</strong>, à l'inverse de FAT/NTFS (Little Endian). En lecture hex manuelle : inverser l'ordre des octets pour chaque champ. X-Ways, Autopsy et mac_apt convertissent automatiquement.
+</div>
+
+<div class="sec-title">🏗 Architecture du volume</div>
+<div class="sec-sub">Un volume HFS+ commence à l'<strong>offset 1024</strong> (pas 0 comme FAT/NTFS) — les 1024 premiers octets sont réservés aux Bootblocks.</div>
+
+<div class="vol-viz">
+  <div class="vol-seg boot">
+    <div class="vol-lbl">OFFSET 0</div>
+    <div class="vol-name">Bootblocks</div>
+    <div class="vol-desc">2 × 512 octets</div>
+  </div>
+  <div class="vol-seg vh">
+    <div class="vol-lbl">OFFSET 1024</div>
+    <div class="vol-name">Volume Header</div>
+    <div class="vol-desc">Signature 'H+' / 'HX'</div>
+  </div>
+  <div class="vol-seg cat">
+    <div class="vol-lbl">B-TREE</div>
+    <div class="vol-name">Catalog File</div>
+    <div class="vol-desc">Métadonnées</div>
+  </div>
+  <div class="vol-seg ext">
+    <div class="vol-lbl">B-TREE</div>
+    <div class="vol-name">Extents Overflow</div>
+    <div class="vol-desc">Fragments extra</div>
+  </div>
+  <div class="vol-seg data">
+    <div class="vol-lbl">ZONE</div>
+    <div class="vol-name">Données utilisateur</div>
+    <div class="vol-desc">Allocation Blocks</div>
+  </div>
+  <div class="vol-seg avh">
+    <div class="vol-lbl">FIN −512 o</div>
+    <div class="vol-name">Alternate VH</div>
+    <div class="vol-desc">Backup</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>🎯 Volume Header</h3>
+    <ul>
+      <li>Toujours à l'<strong>offset 1024</strong>, taille 512 octets</li>
+      <li>Signature : <code>0x482B</code> = 'H+' (HFS+) · <code>0x4858</code> = 'HX' (HFSX, case-sensitive)</li>
+      <li>Contient : taille volume, nombre de blocs d'allocation, nextCatalogID (prochain CNID libre), timestamps volume</li>
+      <li>Pointeurs vers les 5 fichiers spéciaux (Catalog, Extents Overflow, Attributes, Startup, Allocation)</li>
+      <li>Attributs : journalé, bootable, corrompu au démontage (<em>volumeInconsistent</em>)</li>
+      <li><strong>Alternate VH</strong> : copie à <code>−1024 octets depuis la fin</code> du volume (ancre de récupération)</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>🔢 CNID — Catalog Node ID</h3>
+    <p>Identifiant unique <strong>32 bits</strong> de chaque objet (fichier, dossier, thread). Équivalent de l'inode EXT. <strong>Persistant</strong> même après renommage ou déplacement — traçable dans les LNK macOS (Aliases).</p>
+    <ul>
+      <li><code>1</code> — parent fictif de la racine</li>
+      <li><code>2</code> — <strong>répertoire racine</strong> du volume</li>
+      <li><code>3</code> — Extents Overflow File</li>
+      <li><code>4</code> — Catalog File</li>
+      <li><code>5</code> — Bad Blocks File</li>
+      <li><code>6</code> — Allocation File</li>
+      <li><code>7</code> — Startup File</li>
+      <li><code>8</code> — Attributes File</li>
+      <li><code>≥ 16</code> — CNIDs utilisateurs normaux</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title">🌳 Les 5 fichiers spéciaux B-Tree</div>
+<div class="sec-sub">HFS+ est <strong>entièrement construit sur des B-Trees</strong>. Chaque structure critique est un fichier invisible.</div>
+
+<table>
+<thead>
+<tr>
+  <th>Fichier</th>
+  <th>CNID</th>
+  <th>Rôle forensique</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Catalog File</strong></td>
+  <td><code>4</code></td>
+  <td>Répertoire principal : nom, dates, taille, CNID, parent, fork pointers de chaque objet. <strong>Source primaire de métadonnées.</strong> Les nœuds B-Tree libérés mais non réécrits conservent des entrées résiduelles → récupération forensique.</td>
+</tr>
+<tr>
+  <td><strong>Extents Overflow</strong></td>
+  <td><code>3</code></td>
+  <td>Stocke les extents supplémentaires des fichiers très fragmentés (&gt; 8 extents par fork). Clé = <code>(forkType, CNID, startBlock)</code> où forkType <code>0x00</code> = data, <code>0xFF</code> = resource.</td>
+</tr>
+<tr>
+  <td><strong>Attributes File</strong></td>
+  <td><code>8</code></td>
+  <td>Attributs étendus (xattr) et ACL POSIX. Équivalent de <code>$EA</code> NTFS. Contient les Finder Info (icône, couleur label, position), quarantine (<code>com.apple.quarantine</code>), metadata Spotlight.</td>
+</tr>
+<tr>
+  <td><strong>Allocation File</strong></td>
+  <td><code>6</code></td>
+  <td>Bitmap d'allocation des Allocation Blocks — 1 bit par bloc. Équivalent <code>$Bitmap</code> NTFS.</td>
+</tr>
+<tr>
+  <td><strong>Startup File</strong></td>
+  <td><code>7</code></td>
+  <td>Données de boot pour systèmes non-Mac bootant en HFS+ (rare). Souvent vide sur macOS moderne.</td>
+</tr>
+</tbody>
+</table>
+
+<div class="sec-title">📅 Timestamps HFS+ — Epoch 1904</div>
+
+<div class="epoch-viz">
+  <div class="epoch-line">
+    <span class="epoch-label">HFS+ epoch</span>
+    <span class="epoch-val">1er janvier 1904 00:00:00 UTC</span>
+  </div>
+  <div class="epoch-line">
+    <span class="epoch-label">Unix epoch</span>
+    <span class="epoch-val">1er janvier 1970 00:00:00 UTC</span>
+  </div>
+  <div class="epoch-line">
+    <span class="epoch-label">Différence</span>
+    <span class="epoch-val">+2 082 844 800 secondes</span> <span style="color:var(--dim)">(66 ans)</span>
+  </div>
+  <div class="epoch-line">
+    <span class="epoch-label">Précision</span>
+    <span class="epoch-val">1 seconde</span>
+  </div>
+  <div class="epoch-line">
+    <span class="epoch-label">Conversion</span>
+    <span class="epoch-date">unix_ts = hfs_ts − 2 082 844 800</span>
+  </div>
+  <div class="epoch-line">
+    <span class="epoch-label">En Python</span>
+    <code>datetime(1904,1,1) + timedelta(seconds=hfs_ts)</code>
+  </div>
+</div>
+
+<div class="card">
+  <h3>🕐 Quatre timestamps par fichier</h3>
+  <ul>
+    <li><code>createDate</code> — création du fichier (persistant même après modification)</li>
+    <li><code>contentModDate</code> — dernière modification du contenu (équivalent mtime)</li>
+    <li><code>attributeModDate</code> — dernière modif métadonnées (xattr, permissions)</li>
+    <li><code>accessDate</code> — dernier accès en lecture (peut être désactivé pour perfs SSD)</li>
+    <li><code>backupDate</code> — dernier backup Time Machine (si applicable)</li>
+  </ul>
+  <p style="margin-top:.75rem">Tous exprimés en secondes depuis epoch 1904, stockés en Big Endian 32 bits.</p>
+</div>
+
+<div class="sec-title">📎 Resource Forks — héritage Classic Mac OS</div>
+
+<div class="card">
+  <p>Chaque fichier HFS+ possède <strong>deux forks</strong> : le <em>data fork</em> (contenu principal) et le <em>resource fork</em> (icône custom, métadonnées d'application, code legacy).</p>
+  <ul>
+    <li>Accès CLI : <code>ls -l@ fichier</code> (montre xattr), <code>cat fichier/..namedfork/rsrc</code> (lecture directe)</li>
+    <li>Taille du rsrc fork visible via <code>xattr -l fichier</code> ou Finder (Get Info)</li>
+    <li>En copie vers FAT/NTFS : macOS crée des fichiers <strong>AppleDouble</strong> préfixés <code>._nomfichier</code> pour préserver le rsrc fork + xattr</li>
+    <li>Sur clé USB FAT : présence de <code>._</code> files = la clé a été utilisée sur Mac (empreinte forensique)</li>
+    <li>Dans archives <code>.zip</code> créées par Finder : dossier caché <code>__MACOSX/</code> contient les AppleDouble</li>
+  </ul>
+</div>
+
+<div class="tip-box">
+  <strong>💡 Indice forensique :</strong> une clé USB qui contient des fichiers <code>._filename</code> ou un dossier <code>__MACOSX/</code> dans une archive ZIP a transité par un Mac. Permet d'établir qu'un fichier a été manipulé sur un appareil Apple avant d'arriver sur le système analysé.
+</div>
+
+<div class="sec-title">📖 Journalisation HFS+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>📝 Le journal HFS+</h3>
+    <p>Introduit avec Mac OS X 10.2.2 (2002). Activable via <code>diskutil enableJournal /dev/diskX</code>. Signature VH = <code>HX</code> ou flag <code>kHFSVolumeJournaledBit</code>.</p>
+    <ul>
+      <li>Fichier <strong>invisible</strong> <code>.journal</code> à la racine (CNID spécial)</li>
+      <li>Taille typique : 8–64 MB circulaire</li>
+      <li>Contient uniquement les métadonnées (pas le contenu utilisateur)</li>
+      <li>Structure : header + transactions séquentielles avec block list</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>🔬 Valeur forensique du journal</h3>
+    <ul>
+      <li>Historique récent des opérations sur métadonnées</li>
+      <li>Peut révéler des <strong>créations / suppressions / renommages</strong> non visibles dans le Catalog actuel</li>
+      <li>Anciens états de B-Tree nodes avant réécriture</li>
+      <li>Outils : <code>hfsinspect</code>, parsers custom Python (<code>pyhfs</code>)</li>
+      <li>Journal éphémère : bouclé rapidement sur système actif</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title">🗑 Suppression et récupération</div>
+
+<div class="card">
+  <h3>🔄 Ce qui se passe à la suppression</h3>
+  <ol style="list-style:none;padding-left:0">
+    <li style="padding:.3rem 0"><strong style="color:var(--purple)">1.</strong> L'entrée est retirée du <strong>Catalog B-Tree</strong>. Le nœud B-Tree qui la contenait est marqué libre <em>mais pas écrasé immédiatement</em> tant que le nœud n'est pas réalloué.</li>
+    <li style="padding:.3rem 0"><strong style="color:var(--purple)">2.</strong> Les blocs de données sont marqués libres dans l'<strong>Allocation File</strong>. Le contenu brut n'est pas effacé avant réallocation.</li>
+    <li style="padding:.3rem 0"><strong style="color:var(--purple)">3.</strong> Si journalisation active : l'opération est enregistrée dans le <code>.journal</code> → fenêtre supplémentaire pour récupérer les métadonnées.</li>
+    <li style="padding:.3rem 0"><strong style="color:var(--purple)">4.</strong> Les CNIDs ne sont pas réutilisés avant épuisement de l'espace 32 bits → un CNID supprimé reste unique historiquement.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h3>🔨 Stratégies de récupération</h3>
+  <ul>
+    <li><strong>Carving du Catalog</strong> : parser les nœuds B-Tree libérés pour extraire entrées résiduelles (outil : <code>hfsinspect</code>, Autopsy plugin HFS)</li>
+    <li><strong>Extents orphelins</strong> : les extents dans Extents Overflow peuvent pointer sur des données toujours lisibles</li>
+    <li><strong>Corbeille</strong> : <code>~/.Trash/</code> (volume système) + <code>.Trashes/</code> (volumes externes) — souvent peu vidée</li>
+    <li><strong>Time Machine</strong> : sauvegardes Time Machine historiques sur disque externe HFS+ → versions antérieures des fichiers</li>
+    <li><strong>Spotlight metadata</strong> : <code>.Spotlight-V100/</code> conserve des indices même après suppression</li>
+    <li><strong>Journal</strong> : lecture séquentielle avec parser custom — fenêtre courte mais informative</li>
+  </ul>
+</div>
+
+<div class="sec-title">💾 Time Machine sur HFS+</div>
+
+<div class="card">
+  <p>Time Machine de Mac OS X 10.5 (2007) à macOS 10.15 utilisait HFS+ avec <strong>hard links vers des répertoires</strong> — fonctionnalité non-standard exclusive Apple.</p>
+  <ul>
+    <li>Stockage : <code>/Volumes/&lt;TM_Disk&gt;/Backups.backupdb/&lt;Mac&gt;/</code></li>
+    <li>Un dossier par snapshot : <code>YYYY-MM-DD-HHMMSS/</code></li>
+    <li>Hard links de répertoires → taille sur disque quasi-nulle pour snapshots incrémentaux</li>
+    <li>Lien symbolique <code>Latest</code> pointant sur la dernière sauvegarde</li>
+    <li><strong>Valeur forensique majeure</strong> : accès aux versions antérieures de tous les fichiers, parfois sur plusieurs années</li>
+    <li>Sur macOS 11+ : Time Machine migre vers APFS snapshots (voir fiche APFS)</li>
+  </ul>
+</div>
+
+<div class="sec-title">🔐 FileVault 1 (legacy, spécifique HFS+)</div>
+
+<div class="card">
+  <p>La <strong>première</strong> version de FileVault (Mac OS X 10.3 Panther → 10.6 Snow Leopard) ne chiffrait <u>que le répertoire personnel</u>, pas tout le volume :</p>
+  <ul>
+    <li>Home directory stocké dans un <strong>sparsebundle</strong> chiffré AES-128 : <code>/Users/.&lt;user&gt;/&lt;user&gt;.sparsebundle</code></li>
+    <li>Monté dynamiquement au login</li>
+    <li>Clé dérivée du mot de passe utilisateur + Master Password (optionnel)</li>
+    <li>Rest du volume HFS+ en <strong>clair</strong> → artefacts système accessibles sans la clé</li>
+    <li>FileVault 2 (10.7 Lion) = chiffrement complet du volume (CoreStorage / XTS-AES-128), voir fiche <em>Chiffrement de Volumes</em></li>
+  </ul>
+</div>
+
+<div class="sec-title">🛠 Outils d'analyse HFS+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>💼 Commerciaux</h3>
+    <ul>
+      <li><strong>X-Ways Forensics</strong> — parsing HFS+ complet, journal, resource forks</li>
+      <li><strong>EnCase</strong> — support legacy solide</li>
+      <li><strong>BlackLight / MacQuisition</strong> (BlackBag / Cellebrite) — spécialisé Mac</li>
+      <li><strong>Magnet AXIOM Mac Artifacts</strong></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>🆓 Open source</h3>
+    <ul>
+      <li><strong>hfsinspect</strong> (JP Grim) — CLI, analyse B-Trees en détail</li>
+      <li><strong>fsck_hfs</strong> (Apple, inclus macOS) — vérification cohérence</li>
+      <li><strong>iBored</strong> — éditeur hex avec templates HFS+</li>
+      <li><strong>Autopsy / Sleuth Kit</strong> — <code>fls</code>, <code>istat</code>, <code>icat</code> sur HFS+</li>
+      <li><strong>mac_apt</strong> (Yogesh Khatri) — macOS Artifact Parsing Tool</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title">💻 Commandes essentielles</div>
+
+<pre><code><span style="color:var(--dim)"># Identifier le type de filesystem sur un disque</span>
+<span style="color:var(--orange)">diskutil</span> info /dev/disk2s1 | grep "File System"
+
+<span style="color:var(--dim)"># Monter une image HFS+ en lecture seule (Linux)</span>
+<span style="color:var(--orange)">sudo</span> mount -t hfsplus -o ro,loop,offset=1048576 image.dd /mnt/hfs
+
+<span style="color:var(--dim)"># Sleuth Kit — lister tous les fichiers</span>
+<span style="color:var(--orange)">fls</span> -r -p -f hfs image.dd
+
+<span style="color:var(--dim)"># Inspecter le Volume Header avec hfsinspect</span>
+<span style="color:var(--orange)">hfsinspect</span> -d /dev/disk2s1 -v
+
+<span style="color:var(--dim)"># Parcourir le Catalog B-Tree</span>
+<span style="color:var(--orange)">hfsinspect</span> -d image.dd --btree catalog
+
+<span style="color:var(--dim)"># Extraire attributs étendus (resource forks + xattr)</span>
+<span style="color:var(--orange)">xattr</span> -l fichier.ext
+<span style="color:var(--orange)">ls</span> -l@ fichier.ext
+
+<span style="color:var(--dim)"># Convertir timestamp HFS+ (epoch 1904) en date lisible</span>
+<span style="color:var(--orange)">python3</span> -c "from datetime import datetime, timedelta; \
+  print(datetime(1904,1,1) + timedelta(seconds=3797928000))"
+</code></pre>
+
+<div class="exam-box">
+  <div class="exam-title">🎓 Exam Tip — HFS+</div>
+  <ul style="list-style:none;padding-left:0;margin-top:.5rem">
+    <li style="padding:.2rem 0"><strong>Offset du Volume Header :</strong> <code>1024</code> (pas 0)</li>
+    <li style="padding:.2rem 0"><strong>Signature :</strong> <code>0x482B</code> ('H+') ou <code>0x4858</code> ('HX' journalisé / case-sensitive)</li>
+    <li style="padding:.2rem 0"><strong>Endianness :</strong> <u>Big Endian</u> (inverser vs FAT/NTFS)</li>
+    <li style="padding:.2rem 0"><strong>Epoch :</strong> 1er janvier 1904 (+2 082 844 800 secondes vs Unix)</li>
+    <li style="padding:.2rem 0"><strong>Alternate VH :</strong> à −1024 octets depuis la fin du volume</li>
+    <li style="padding:.2rem 0"><strong>CNID racine :</strong> 2</li>
+    <li style="padding:.2rem 0"><strong>Catalog File :</strong> source primaire des métadonnées, B-Tree</li>
+    <li style="padding:.2rem 0"><strong>Resource fork</strong> : forkType <code>0xFF</code> · data fork : <code>0x00</code></li>
+    <li style="padding:.2rem 0"><strong>AppleDouble</strong> (fichiers <code>._name</code>) = traces macOS sur volumes non-HFS</li>
+  </ul>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">HFS+ est Big Endian. Que vaut <code>00 00 04 00</code> en HFS+ vs NTFS ?<small>HFS+ endianness · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">En <strong>HFS+ (Big Endian)</strong> : <code>00 00 04 00</code> = 0x0400 = <strong>1024</strong>.<br>En <strong>NTFS (Little Endian)</strong> : même octets lus → <code>0x00040000</code> = <strong>262 144</strong>. X-Ways et Autopsy convertissent automatiquement — en lecture manuelle il faut inverser.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Offset Volume Header HFS+ ? Signature ? Où est l'Alternate VH ?<small>HFS+ structure · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Volume Header : offset <strong>1024</strong> octets · Signature <code>0x482B</code> ('H+') · journalisé/case-sensitive : <code>0x4858</code> ('HX')<br>Alternate VH : <strong>−1024 octets depuis la fin</strong> du volume (copie de sauvegarde).</div>
+</div>
+
+<div style="margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid var(--border);font-size:.72rem;color:var(--dim);text-align:center">
+  Voir aussi :
+  <a href="apfs.html" style="color:var(--cyan);text-decoration:none">🍏 APFS</a> ·
+  <a href="comparaison_fs.html" style="color:var(--cyan);text-decoration:none">📊 Comparaison FS</a> ·
+  <a href="macos-linux.html" style="color:var(--cyan);text-decoration:none">💻 macOS / Linux</a> ·
+  <a href="chiffrement_volumes.html" style="color:var(--cyan);text-decoration:none">🛡 FileVault</a>
+</div>
+
+</div>
+
+<span class="fiche-sticker">HFS+ · Apple Legacy</span>
+
+
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

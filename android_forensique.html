@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Android Forensique — CAS-IN Forensique</title>
+<meta name="description" content="Android forensique · ADB · Magisk · LineageOS · Full File System · FBE · TWRP · MTK exploits · Qualcomm EDL · Acquisition Cellebrite">
+<meta name="theme-color" content="#0d1117">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+
+<nav class="tn-nav" aria-label="Navigation fiche">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">ANDROID FORENSIQUE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-plateformescloud">Plateformes & Cloud</a><span class="bc-sep">›</span>
+    <span class="bc-current">Android Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~14 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div>
+      <span style="font-size:2.2rem">🤖</span>
+      <span class="tag tag-cyan" style="margin-left:.5rem">Mobile</span>
+      <span class="tag tag-green" style="margin-left:.3rem">Android</span>
+      <span class="tag tag-purple" style="margin-left:.3rem">Acquisition</span>
+      <span class="tag tag-gold" style="margin-left:.3rem">SoC-specific</span>
+    </div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">
+      Android Forensique — Fragmentation, exploits, custom recoveries
+    </h1>
+    <div class="meta" style="max-width:680px;line-height:1.5">
+      Là où iOS est <em>monolithique</em>, Android est <strong>fragmenté</strong> : 1300+ constructeurs, 25 000+ modèles, 14 versions actives, des SoC Qualcomm/MediaTek/Exynos/Kirin/Tensor avec chacun leurs particularités. Cette diversité est à la fois une <span class="cyan">aubaine forensique</span> (plus de surfaces d'attaque) et une <span class="red">complexité opérationnelle</span> (chaque modèle peut nécessiter une approche différente).
+    </div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row">
+      <span class="prereq-label">Prérequis :</span>
+      <a href="acquisition.html" class="prereq-pill">📖 Acquisition</a>
+      <a href="ext.html" class="prereq-pill">📖 EXT4/F2FS</a>
+      <a href="mobile.html" class="prereq-pill">📖 Mobile Forensics</a>
+      <a href="droit.html" class="prereq-pill">📖 Droit pénal CH</a>
+    </div>
+    <div class="prereq-row">
+      <span class="prereq-label">Voir aussi :</span>
+      <a href="ios_forensique.html" class="related-pill">🔗 iOS Forensique</a>
+      <a href="cloud_forensique.html" class="related-pill">🔗 Cloud Forensique</a>
+      <a href="sqlite_forensique.html" class="related-pill">🔗 SQLite</a>
+      <a href="cassage_mdp.html" class="related-pill">🔗 Cassage MDP</a>
+    </div>
+  </div>
+</div>
+
+<div class="page" style="max-width:960px;margin:0 auto;padding:2rem">
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 1 — CHIFFREMENT
+═════════════════════════════════════════════════════════ -->
+<div class="concept-card">
+  <div class="concept-title">🔐 FBE vs FDE — comprendre le chiffrement Android</div>
+  Android a évolué d'un chiffrement <strong>full-disk</strong> à un chiffrement <strong>par fichier</strong>. Cette distinction conditionne ce qu'on peut extraire en BFU.
+</div>
+
+<div class="table-wrap" style="margin:1.5rem 0">
+<table>
+  <tr><th>Schéma</th><th>Versions</th><th>Mécanisme</th><th>Impact forensique</th></tr>
+  <tr>
+    <td><strong>FDE</strong><br><em>Full-Disk Encryption</em></td>
+    <td>Android 5-9</td>
+    <td>Tout le <code>userdata</code> chiffré avec une clé dérivée du PIN/passcode + KEK matériel</td>
+    <td>Pas de données accessibles avant déverrouillage. Bruteforce possible si PIN faible.</td>
+  </tr>
+  <tr>
+    <td><strong>FBE</strong><br><em>File-Based Encryption</em></td>
+    <td>Android 7+ (obligatoire 10+)</td>
+    <td>2 classes : <strong>CE</strong> (Credential Encrypted, après unlock) et <strong>DE</strong> (Device Encrypted, dès le boot)</td>
+    <td>Avant unlock : seuls les fichiers DE accessibles (alarmes, accessibilité, certains logs). Après unlock : tout est lisible.</td>
+  </tr>
+  <tr>
+    <td><strong>Metadata encryption</strong></td>
+    <td>Android 11+</td>
+    <td>Couche supplémentaire chiffrant les métadonnées (noms de fichiers, timestamps)</td>
+    <td>Sans la clé, impossible de lister la structure du FS</td>
+  </tr>
+</table>
+</div>
+
+<div class="concept-card" style="margin-top:1rem;background:rgba(255,159,64,.08);border-left:3px solid var(--orange)">
+  <strong>📌 Conséquence pratique :</strong> Android 10+ avec FBE = quasi-équivalent au BFU iOS. Sans le passcode, on ne récupère que :
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li>Le bootloader, recovery, certains logs DE (<code>/data/system_de/</code>)</li>
+    <li>Les apps avec mode "Direct Boot" (Alarmes, Accessibilité)</li>
+    <li>Aucune donnée utilisateur (Photos, Messages, contacts...)</li>
+  </ul>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 2 — MÉTHODES D'ACQUISITION
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">📥 Méthodes d'acquisition — par niveau de profondeur</h2>
+
+<div class="table-wrap" style="margin:1rem 0">
+<table>
+  <tr>
+    <th>Niveau</th>
+    <th>Méthode</th>
+    <th>Couverture</th>
+    <th>Prérequis</th>
+  </tr>
+  <tr>
+    <td><strong>1. Manual</strong></td>
+    <td>Photos / vidéos de l'écran, navigation manuelle</td>
+    <td>Visible à l'écran uniquement</td>
+    <td>Device déverrouillé, pas de prérequis</td>
+  </tr>
+  <tr>
+    <td><strong>2. Logical</strong></td>
+    <td>ADB backup (<code>adb backup -all</code>), MTP transfer</td>
+    <td>Apps autorisant le backup, fichiers utilisateur (Photos, Downloads)</td>
+    <td>Device déverrouillé, USB Debug activé, ou root</td>
+  </tr>
+  <tr>
+    <td><strong>3. File System</strong></td>
+    <td>Custom recovery (TWRP), root + dd</td>
+    <td>Tout le filesystem en clair (si déchiffré)</td>
+    <td>Bootloader unlock + custom recovery, ou root</td>
+  </tr>
+  <tr>
+    <td><strong>4. Physical</strong></td>
+    <td>EDL mode (Qualcomm), MTK Brom (MediaTek), JTAG</td>
+    <td>Image bit-à-bit complète (NAND raw)</td>
+    <td>Exploit du SoC ou point JTAG accessible</td>
+  </tr>
+  <tr>
+    <td><strong>5. Chip-off</strong></td>
+    <td>Dessoudage de l'eMMC/UFS, lecture sur lecteur dédié</td>
+    <td>Image NAND complète (chiffrée)</td>
+    <td>Atelier de microsoudure, lecteur eMMC/UFS</td>
+  </tr>
+</table>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 3 — EXPLOITS PAR SoC
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">🎯 Exploits par SoC — la voie royale</h2>
+
+<div class="concept-card" style="margin:1rem 0">
+  <div class="concept-title">🔓 EDL Mode (Qualcomm)</div>
+  <strong>Emergency Download Mode</strong> : mode de récupération bas niveau présent sur tous les SoC Qualcomm. Activé par combinaison de touches ou court-circuit de pads de test (test points). Permet de flasher des images signées par le fabricant — et avec un <strong>programmer file</strong> (loader) <em>fuité</em> ou <em>signé</em>, on peut <strong>lire</strong> la NAND complète.
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li>Outils : <code>EDL.py</code> (open source bkerler), <code>QFIL</code> (Qualcomm), Cellebrite Premium intègre la base de loaders</li>
+    <li>Limitation : la NAND lue est chiffrée si FDE/FBE actif → bruteforce nécessaire</li>
+    <li>Couvre : la majorité des Xiaomi, OnePlus, Samsung Snapdragon (US), Sony, Motorola, etc.</li>
+  </ul>
+</div>
+
+<div class="concept-card" style="margin:1rem 0">
+  <div class="concept-title">🔓 BROM Exploit (MediaTek)</div>
+  Le <strong>Boot ROM</strong> de centaines de SoC MediaTek (MT67xx, MT68xx, MT81xx) souffre d'une vulnérabilité <strong>permanente</strong> (équivalent du checkm8 iOS). Permet de booter du code arbitraire avant le chargement de TrustZone. Exploit publié par <strong>bkerler</strong> en 2021.
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li>Outils : <code>mtkclient</code> (open source), Cellebrite Premium MTK</li>
+    <li>Couvre : Oppo, Vivo, Realme, Xiaomi MTK, Tecno, Infinix (très répandus en Afrique/Asie)</li>
+    <li>Permet : Full File System extraction, bruteforce passcode hors device</li>
+  </ul>
+</div>
+
+<div class="concept-card" style="margin:1rem 0">
+  <div class="concept-title">🔓 Samsung Exynos — bootloader exploits</div>
+  Plus complexe : Samsung utilise <strong>Knox</strong>, qui détecte les modifications du bootloader (Knox bit). Une fois "tripped", certaines features (Knox Container, Samsung Pay) sont irrécupérables. Cellebrite Premium a des méthodes propriétaires pour les Galaxy récents.
+</div>
+
+<div class="warn-block" style="background:rgba(255,64,96,.08);border-left:3px solid var(--red);padding:.8rem;margin:1rem 0;border-radius:6px">
+  <strong>⚠️ Risque Knox Tripping :</strong> sur Samsung, certaines méthodes d'extraction physique <strong>déclenchent le Knox bit</strong>. Cela rend la chaîne de custody plus fragile devant un tribunal (le device est <em>modifié</em> à jamais). Documenter la décision dans le rapport et privilégier l'extraction logique si suffisant.
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 4 — ADB & DEBUG
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">🔧 ADB — l'outil universel</h2>
+
+<div class="concept-card" style="margin:1rem 0">
+  <div class="concept-title">📡 Android Debug Bridge</div>
+  ADB est le pont de communication entre le PC d'analyse et le device. Il nécessite que le <strong>USB Debug</strong> soit activé sur le téléphone (Paramètres > Options développeur > Débogage USB).
+</div>
+
+<pre style="background:#0a0e14;padding:1rem;border-radius:6px;font-size:.78rem;overflow-x:auto">
+# Connexion et identification
+adb devices                          # Liste les devices connectés
+adb shell                            # Shell sur le device
+adb shell getprop ro.build.version.release  # Version Android
+adb shell getprop ro.product.model           # Modèle exact
+adb shell getprop ro.serialno                # Numéro de série
+
+# Backup logique (Android 4.0-11, déprécié ensuite)
+adb backup -apk -shared -all -system -f backup.ab
+
+# Convertir le backup en tar lisible
+dd if=backup.ab bs=24 skip=1 | openssl zlib -d > backup.tar
+# OU avec Android Backup Extractor (abe.jar)
+java -jar abe.jar unpack backup.ab backup.tar
+
+# Pull de fichiers spécifiques (si root)
+adb shell su -c 'tar cf - /data/data' | tar xf -
+
+# Logcat live
+adb logcat -v time -d > logcat.txt
+
+# Partition raw via dd (root requis)
+adb shell su -c 'dd if=/dev/block/sda10 of=/sdcard/userdata.img'
+adb pull /sdcard/userdata.img
+</pre>
+
+<div class="exam-tip" style="margin:1rem 0;background:rgba(0,229,204,.06);border-left:3px solid var(--cyan);padding:1rem;border-radius:6px">
+  <strong>💡 ADB authorisation :</strong> au premier branchement, le téléphone affiche une popup "Autoriser le débogage USB depuis cet ordinateur ?" avec une empreinte de la clé publique RSA. Cocher "Toujours autoriser" stocke la clé dans <code>/data/misc/adb/adb_keys</code>. Cette clé peut être <strong>récupérée d'un PC saisi</strong> et réinjectée pour autoriser un autre PC.
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 5 — ARTEFACTS CLÉS
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">🔍 Artefacts Android — où chercher quoi</h2>
+
+<div class="table-wrap" style="margin:1rem 0">
+<table>
+  <tr><th>Artefact</th><th>Chemin</th><th>Contenu</th></tr>
+  <tr>
+    <td><strong>Compte Google principal</strong></td>
+    <td><code>/data/system/users/0/accounts.db</code></td>
+    <td>Email Google associé, tokens AuthToken (souvent extraits pour pivot Google Takeout)</td>
+  </tr>
+  <tr>
+    <td><strong>Contacts</strong></td>
+    <td><code>/data/data/com.android.providers.contacts/databases/contacts2.db</code></td>
+    <td>Carnet d'adresses, journaux d'appels (table <code>calls</code>), favoris</td>
+  </tr>
+  <tr>
+    <td><strong>SMS / MMS</strong></td>
+    <td><code>/data/data/com.android.providers.telephony/databases/mmssms.db</code></td>
+    <td>SMS reçus/envoyés, MMS, brouillons. Tables <code>sms</code>, <code>pdu</code>, <code>part</code>.</td>
+  </tr>
+  <tr>
+    <td><strong>Photos / médias</strong></td>
+    <td><code>/data/data/com.android.providers.media/databases/external.db</code></td>
+    <td>Index des médias. Photos réelles dans <code>/sdcard/DCIM/</code>.</td>
+  </tr>
+  <tr>
+    <td><strong>WhatsApp</strong></td>
+    <td><code>/data/data/com.whatsapp/databases/msgstore.db</code></td>
+    <td>Messages WhatsApp. Backup chiffré dans <code>/sdcard/WhatsApp/Databases/</code> (msgstore.db.crypt14/15).</td>
+  </tr>
+  <tr>
+    <td><strong>Telegram</strong></td>
+    <td><code>/data/data/org.telegram.messenger/files/cache4.db</code></td>
+    <td>Messages, chats, secrets chats (chiffrés device-side).</td>
+  </tr>
+  <tr>
+    <td><strong>Signal</strong></td>
+    <td><code>/data/data/org.thoughtcrime.securesms/databases/signal.db</code></td>
+    <td>Base SQLite chiffrée (SQLCipher). Clé dans Keystore Android.</td>
+  </tr>
+  <tr>
+    <td><strong>Chrome</strong></td>
+    <td><code>/data/data/com.android.chrome/app_chrome/Default/</code></td>
+    <td>History (SQLite), Cookies, Login Data, Top Sites, Web Data (autofill).</td>
+  </tr>
+  <tr>
+    <td><strong>Gmail</strong></td>
+    <td><code>/data/data/com.google.android.gm/databases/</code></td>
+    <td>Métadonnées emails, attachments cache. Contenu réel synchronisé depuis Google.</td>
+  </tr>
+  <tr>
+    <td><strong>Maps history</strong></td>
+    <td><code>/data/data/com.google.android.apps.maps/databases/gmm_myplaces.db</code></td>
+    <td>Lieux enregistrés, recherches récentes. Itinéraires dans <code>gmm_search_history.db</code>.</td>
+  </tr>
+  <tr>
+    <td><strong>Wi-Fi</strong></td>
+    <td><code>/data/misc/wifi/WifiConfigStore.xml</code></td>
+    <td>SSID, BSSID, mot de passe (en clair !) des réseaux Wi-Fi connus.</td>
+  </tr>
+  <tr>
+    <td><strong>Notifications</strong></td>
+    <td><code>/data/system_ce/0/notification/</code></td>
+    <td>Historique des notifications reçues (Android 11+).</td>
+  </tr>
+  <tr>
+    <td><strong>Usagestats</strong> ⭐</td>
+    <td><code>/data/system/usagestats/0/</code></td>
+    <td><strong>Le pendant Android du knowledgeC.db</strong> : usage app par jour, foreground time, lock/unlock, screen on/off.</td>
+  </tr>
+  <tr>
+    <td><strong>Logcat persistent</strong></td>
+    <td><code>/data/misc/logd/</code></td>
+    <td>Logs système persistants (Android 9+ avec persist.logd.size).</td>
+  </tr>
+  <tr>
+    <td><strong>Bugreport</strong></td>
+    <td><code>/data/user_de/0/com.android.shell/files/bugreports/</code></td>
+    <td>Rapports de diagnostic complets (anonymisés). Très riche en métadonnées.</td>
+  </tr>
+</table>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 6 — USAGESTATS DEEP DIVE
+═════════════════════════════════════════════════════════ -->
+<div class="concept-card" style="margin:1.5rem 0;background:rgba(240,192,64,.08);border-left:3px solid var(--gold)">
+  <div class="concept-title" style="color:var(--gold)">⭐ usagestats — le pattern of life Android</div>
+  Depuis Android 5, le service <code>UsageStatsManager</code> enregistre toutes les interactions utilisateur dans <code>/data/system/usagestats/0/</code>. Les fichiers sont en <strong>format protobuf</strong> ou XML selon les versions.
+  <br><br>
+  <strong>Sous-dossiers :</strong>
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li><code>daily/</code> — agrégats quotidiens (par jour Unix)</li>
+    <li><code>weekly/</code> — agrégats hebdomadaires</li>
+    <li><code>monthly/</code> — agrégats mensuels</li>
+    <li><code>yearly/</code> — agrégats annuels</li>
+  </ul>
+  <br>
+  <strong>Événements enregistrés (extrait) :</strong>
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li><code>MOVE_TO_FOREGROUND</code> / <code>MOVE_TO_BACKGROUND</code> — App au premier plan</li>
+    <li><code>SCREEN_INTERACTIVE</code> — Écran allumé/éteint</li>
+    <li><code>KEYGUARD_HIDDEN</code> / <code>KEYGUARD_SHOWN</code> — Lock/unlock</li>
+    <li><code>NOTIFICATION_INTERRUPTION</code> — Notifications pertinentes</li>
+    <li><code>USER_INTERACTION</code> — Activité utilisateur</li>
+  </ul>
+  <strong>Outils :</strong> <code>ALEAPP</code> (Android Logs Events And Protobuf Parser) avec module Usagestats, Magnet AXIOM (parsing intégré), Cellebrite Reader.
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 7 — KNOX & SAMSUNG SECURE FOLDER
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">🛡️ Knox & Secure Folder (Samsung)</h2>
+
+<div class="concept-card" style="margin:1rem 0">
+  <div class="concept-title">🔐 Knox Container</div>
+  Knox est l'écosystème de sécurité Samsung. Il propose un <strong>Secure Folder</strong> (anciennement My Knox) qui crée un environnement utilisateur isolé avec apps cloisonnées, chiffrement séparé, déverrouillage différent.
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li><strong>Stockage :</strong> <code>/data/user/150/</code> ou similaire (UID > 100)</li>
+    <li><strong>Chiffrement :</strong> par-utilisateur, clé dérivée du mot de passe Secure Folder</li>
+    <li><strong>Forensique :</strong> Cellebrite Premium peut extraire avec le mot de passe ou via méthodes propriétaires</li>
+    <li><strong>Conséquence :</strong> Les apps dans Secure Folder sont <em>invisibles</em> en mode standard. Toujours vérifier la présence du folder !</li>
+  </ul>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 8 — CUSTOM RECOVERY
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">🔧 Custom Recovery — TWRP & alternatives</h2>
+
+<div class="concept-card" style="margin:1rem 0">
+  <div class="concept-title">🛠️ TWRP — la voie traditionnelle</div>
+  Team Win Recovery Project est le custom recovery historique. Permet :
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li>Backup partition par partition (boot, system, data, vendor)</li>
+    <li>Shell adb avec accès complet (root)</li>
+    <li>Mount de partitions, dd raw</li>
+  </ul>
+  <strong>Prérequis :</strong> bootloader unlock (déclenche reset factory + Knox tripping sur Samsung). Le bootloader unlock <strong>efface les données</strong> sur la plupart des modèles → impossible à utiliser pour acquisition forensique sauf si le device a déjà été unlocké (par le suspect, un revendeur, etc.).
+</div>
+
+<div class="warn-block" style="background:rgba(48,232,138,.08);border-left:3px solid var(--green);padding:.8rem;margin:1rem 0;border-radius:6px">
+  <strong>✅ Cas particulier — devices "Engineering" ou "Test"</strong> : certains constructeurs (Xiaomi notamment) vendent des modèles dits "developer edition" avec bootloader pré-unlocké. Des prototypes ou devices de R&D sortent parfois en circulation. Vérifier en priorité !
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 9 — OUTILS COMMERCIAUX
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">🛒 Outils commerciaux Android</h2>
+
+<div class="table-wrap" style="margin:1rem 0">
+<table>
+  <tr><th>Outil</th><th>Couverture Android</th><th>Notes</th></tr>
+  <tr>
+    <td><strong>Cellebrite UFED</strong></td>
+    <td>Logical + Advanced Logical (root via exploit)</td>
+    <td>Standard. Bibliothèque énorme de profils</td>
+  </tr>
+  <tr>
+    <td><strong>Cellebrite Premium</strong></td>
+    <td>BFS via Qualcomm EDL et MTK BROM</td>
+    <td>Le plus capable, ~80-100k CHF/an</td>
+  </tr>
+  <tr>
+    <td><strong>Magnet AXIOM</strong></td>
+    <td>Logical + Physical (avec image source)</td>
+    <td>Excellent parsing post-acquisition (1000+ apps)</td>
+  </tr>
+  <tr>
+    <td><strong>Oxygen Forensic Detective</strong></td>
+    <td>Logical + Physical sélectif</td>
+    <td>Spécialiste extraction cloud Google + parsing IM</td>
+  </tr>
+  <tr>
+    <td><strong>MOBILedit Forensic Express</strong></td>
+    <td>Logical principalement</td>
+    <td>Alternative low-cost pour police municipale</td>
+  </tr>
+  <tr>
+    <td><strong>ALEAPP</strong></td>
+    <td>Parsing post-acquisition</td>
+    <td>Open source, ~120 modules, gratuit</td>
+  </tr>
+  <tr>
+    <td><strong>Andriller</strong></td>
+    <td>Logical via ADB</td>
+    <td>Open source. Décodeur de patterns/PINs Android</td>
+  </tr>
+</table>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 10 — WORKFLOW
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">🎯 Workflow Android — du "tu fais quoi avec ça" à l'extraction</h2>
+
+<div style="display:grid;grid-template-columns:1fr;gap:.8rem;margin:1rem 0">
+
+  <div class="concept-card" style="background:rgba(48,232,138,.05);border-left:3px solid var(--green)">
+    <strong>1. Identification du device</strong>
+    <ul style="margin:.4rem 0 0 1.5rem;font-size:.88rem">
+      <li>Marque + modèle exact (sous le SIM tray, ou via *#06# pour IMEI)</li>
+      <li>SoC : Qualcomm, MediaTek, Exynos, Kirin, Tensor, Unisoc ?</li>
+      <li>Version Android (Paramètres > À propos > Version)</li>
+      <li>Bootloader status (Settings > About > Status, ou via fastboot oem device-info)</li>
+      <li>USB Debug actif ?</li>
+    </ul>
+  </div>
+
+  <div class="concept-card" style="background:rgba(0,229,204,.05);border-left:3px solid var(--cyan)">
+    <strong>2. Choix de méthode</strong>
+    <ul style="margin:.4rem 0 0 1.5rem;font-size:.88rem">
+      <li>Device déverrouillé + USB Debug → ADB backup, puis tenter root → file system</li>
+      <li>Device verrouillé + Qualcomm → tentative EDL via points test</li>
+      <li>Device verrouillé + MediaTek vulnérable → BROM exploit (mtkclient)</li>
+      <li>Device verrouillé + Samsung récent → Cellebrite Premium ou rien</li>
+      <li>Last resort : chip-off (destructif, atelier requis)</li>
+    </ul>
+  </div>
+
+  <div class="concept-card" style="background:rgba(240,192,64,.05);border-left:3px solid var(--gold)">
+    <strong>3. Acquisition</strong>
+    <ul style="margin:.4rem 0 0 1.5rem;font-size:.88rem">
+      <li>Mode avion immédiat (ne pas tirer SIM, peut déclencher remote wipe)</li>
+      <li>Backup logique en parallèle d'extraction physique</li>
+      <li>Hash MD5/SHA-256 immédiat</li>
+      <li>Documenter le numéro de série du SoC, l'IMEI, l'empreinte avant/après</li>
+    </ul>
+  </div>
+
+  <div class="concept-card" style="background:rgba(188,140,255,.05);border-left:3px solid var(--purple)">
+    <strong>4. Analyse</strong>
+    <ul style="margin:.4rem 0 0 1.5rem;font-size:.88rem">
+      <li>Magnet AXIOM ou Cellebrite Reader pour parsing initial</li>
+      <li>ALEAPP modules : usagestats, accounts, location, etc.</li>
+      <li>SQLite tools pour les apps non parsed</li>
+      <li>Timeline globale via Plaso (l2t_csv import) ou Timesketch</li>
+    </ul>
+  </div>
+
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     SECTION 11 — JURIDIQUE
+═════════════════════════════════════════════════════════ -->
+<h2 class="sec-title" style="margin-top:2rem">⚖️ Cadre juridique suisse</h2>
+
+<div class="table-wrap" style="margin:1rem 0">
+<table>
+  <tr><th>Article</th><th>Application Android forensique</th></tr>
+  <tr>
+    <td><strong>Art. 263 CPP</strong></td>
+    <td>Séquestre du téléphone Android</td>
+  </tr>
+  <tr>
+    <td><strong>Art. 248 CPP</strong></td>
+    <td>Mise sous scellés (avocat, médecin, journaliste, lanceur d'alerte)</td>
+  </tr>
+  <tr>
+    <td><strong>Art. 269 CPP</strong></td>
+    <td>Surveillance live : SMS, données mobiles. Distinct de l'analyse forensique sur saisie</td>
+  </tr>
+  <tr>
+    <td><strong>Art. 269bis CPP</strong></td>
+    <td>GovWare : déploiement de logiciel d'investigation sur le device. Conditions très strictes.</td>
+  </tr>
+  <tr>
+    <td><strong>Art. 22 LPD</strong></td>
+    <td>Données biométriques (empreinte, face) = catégorie sensible</td>
+  </tr>
+</table>
+</div>
+
+<div class="exam-tip" style="margin:1rem 0;background:rgba(0,229,204,.06);border-left:3px solid var(--cyan);padding:1rem;border-radius:6px">
+  <strong>⚖️ Examen CAS-IN — points clés Android</strong> :
+  <ul style="margin:.5rem 0 0 1.5rem">
+    <li>FBE (Android 7+) = chiffrement par fichier, classes CE/DE</li>
+    <li>Avant unlock = quasi-équivalent BFU iOS sur Android 10+</li>
+    <li>EDL Mode = exploit Qualcomm via test points</li>
+    <li>BROM Exploit = vulnérabilité permanente MediaTek (mtkclient)</li>
+    <li>Knox tripping Samsung = irréversible, modification chaîne de custody</li>
+    <li>Bootloader unlock = data wipe sur la plupart des modèles</li>
+    <li>usagestats = pattern of life Android (équivalent knowledgeC.db)</li>
+    <li>Wi-Fi passwords stockés en clair dans WifiConfigStore.xml</li>
+    <li>WhatsApp backup chiffré sur /sdcard/ → clé dans /data/data/com.whatsapp/</li>
+    <li>Cellebrite Premium = best-in-class pour SoCs récents</li>
+  </ul>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════
+     LINKS
+═════════════════════════════════════════════════════════ -->
+<div class="link-bar" style="margin-top:2rem">
+  <div class="link-group">
+    <span class="link-group-label">Prérequis :</span>
+    <a href="acquisition.html">📖 Acquisition</a>
+    <a href="ext.html">📖 EXT4</a>
+    <a href="mobile.html">📖 Mobile Forensics</a>
+  </div>
+  <div class="link-group">
+    <span class="link-group-label">Pratiquer :</span>
+    <a href="../tp.html">🧪 TP</a>
+    <a href="../scene.html">🚨 Scènes</a>
+  </div>
+  <div class="link-group">
+    <span class="link-group-label">Voir aussi :</span>
+    <a href="ios_forensique.html">🔗 iOS Forensique</a>
+    <a href="cloud_forensique.html">🔗 Cloud Forensique</a>
+    <a href="messagerie_im.html">🔗 Messagerie</a>
+    <a href="cassage_mdp.html">🔗 Cassage MDP</a>
+  </div>
+</div>
+
+<footer style="margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.75rem;color:var(--muted);text-align:center">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span><br>
+  <span>Sources : Android Open Source Project · SANS FOR585 · bkerler/edl + bkerler/mtkclient · Cellebrite Documentation · Magnet AXIOM Reference</span>
+</footer>
+
+</div>
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

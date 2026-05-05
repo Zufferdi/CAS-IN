@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Acquisition Forensique — CAS-IN</title>
+<meta name="description" content="Write-blocker · dd/FTK · Hash · E01/AFF">
+<link rel="stylesheet" href="../style/fiche_style.css">
+
+</head>
+<body>
+<div id="scroll-progress"></div>
+<a class="skip-link" href="#main-content">Aller au contenu</a>
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">ACQUISITION & PRÉSERVATION</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+<nav class="breadcrumb">
+  <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+  <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+  <a href="index.html#cat-acquisitionmethodes">Acquisition & Méthodes</a><span class="bc-sep">›</span>
+  <span class="bc-current">Acquisition</span>
+  <span class="read-time-badge">⏱ ~7 min</span>
+</nav>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<main id="main-content">
+
+<div class="fiche-hero">
+  <div class="fiche-icon">📥</div>
+  <div class="fiche-tags">
+    <span class="tag">DFIR</span>
+    <span class="tag green">Préservation</span>
+    <span class="tag yellow">Write Blocker</span>
+    <span class="tag">E01 · AFF</span>
+  </div>
+  <h1>Acquisition &amp; Préservation de la preuve</h1>
+  <p class="subtitle">Image vs Clone · Formats E01 / AFF / DD · Write Blocker · Slicing FAT32 · RAM Dump · Ordre de volatilité</p>
+</div>
+
+<div class="anecdote">
+  <blockquote>"L'acquisition forensique est l'acte le plus critique de toute investigation numérique. Une erreur ici — un disque branché sans write blocker, un hash non calculé — peut invalider des mois de travail d'analyse."</blockquote>
+  <cite>— ISO/IEC 27037 · Guidelines for identification, collection, acquisition and preservation of digital evidence</cite>
+  <div class="fact"><strong>💡 Principe de Locard numérique :</strong> Tout contact laisse une trace. Tout accès à un disque sans write blocker risque de modifier les timestamps, créer des fichiers cachés ou écrire dans le swap. Ces modifications invalident la preuve (art. 141 CPP).</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA SVG — PIPELINE D'ACQUISITION FORENSIQUE
+     ════════════════════════════════════════════════════════════ -->
+<div class="schema">
+  <div class="schema-title">💾 Pipeline d'acquisition forensique — De la scène à l'image E01</div>
+  <div class="schema-sub">WRITE-BLOCKER · COPIE BIT-À-BIT · HASH SHA-256 · 3 FORMATS DE SORTIE</div>
+  <svg viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pipeline acquisition forensique">
+    <defs>
+      <marker id="arr-acq" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="#F0883E"/>
+      </marker>
+      <marker id="arr-acq-r" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="#FF4060"/>
+      </marker>
+    </defs>
+
+    <!-- Disque source (gauche) -->
+    <rect x="20" y="40" width="120" height="80" rx="6" fill="rgba(255,64,96,.12)" stroke="#FF4060" stroke-width="1.5"/>
+    <text x="80" y="65" text-anchor="middle" font-size="28">💽</text>
+    <text x="80" y="92" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="700" fill="#FF4060">DISQUE SOURCE</text>
+    <text x="80" y="105" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">scellé · saisi</text>
+    <text x="80" y="115" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#FF4060">⚠️ NE JAMAIS BRANCHER DIRECT</text>
+
+    <!-- Write-blocker (centre-gauche) -->
+    <rect x="170" y="40" width="140" height="80" rx="6" fill="rgba(240,192,64,.15)" stroke="#F0C040" stroke-width="2"/>
+    <text x="240" y="65" text-anchor="middle" font-size="28">🔒</text>
+    <text x="240" y="92" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#F0C040">WRITE-BLOCKER</text>
+    <text x="240" y="105" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">Tableau · WiebeTech</text>
+    <text x="240" y="115" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">USB · SATA · NVMe</text>
+
+    <line x1="140" y1="80" x2="170" y2="80" stroke="#F0883E" stroke-width="1.5" marker-end="url(#arr-acq)"/>
+
+    <!-- Outil acquisition (centre) -->
+    <rect x="340" y="40" width="160" height="80" rx="6" fill="rgba(88,166,255,.12)" stroke="#58A6FF" stroke-width="1.5"/>
+    <text x="420" y="65" text-anchor="middle" font-size="28">⚙️</text>
+    <text x="420" y="92" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="700" fill="#58A6FF">OUTIL ACQUISITION</text>
+    <text x="420" y="105" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">FTK Imager · X-Ways</text>
+    <text x="420" y="115" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">dd · dcfldd · ddrescue</text>
+
+    <line x1="310" y1="80" x2="340" y2="80" stroke="#F0883E" stroke-width="1.5" marker-end="url(#arr-acq)"/>
+
+    <!-- Hash calc (droite) -->
+    <rect x="530" y="40" width="170" height="80" rx="6" fill="rgba(0,229,204,.12)" stroke="#00E5CC" stroke-width="1.5"/>
+    <text x="615" y="65" text-anchor="middle" font-size="22">🔐</text>
+    <text x="615" y="84" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="700" fill="#00E5CC">HASH SHA-256</text>
+    <text x="615" y="98" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">avant : a3f5b8c2…</text>
+    <text x="615" y="110" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">après : a3f5b8c2…</text>
+    <text x="615" y="118" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A">✓ identique = preuve intacte</text>
+
+    <line x1="500" y1="80" x2="530" y2="80" stroke="#F0883E" stroke-width="1.5" marker-end="url(#arr-acq)"/>
+
+    <!-- Bandeau séparateur formats -->
+    <text x="360" y="155" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8" letter-spacing="1">↓  3 FORMATS DE SORTIE  ↓</text>
+    <line x1="40" y1="163" x2="680" y2="163" stroke="rgba(168,181,200,.3)" stroke-width=".5"/>
+
+    <!-- Format E01 -->
+    <rect x="20" y="175" width="220" height="115" rx="6" fill="rgba(48,232,138,.08)" stroke="#30E88A" stroke-width="1.5"/>
+    <text x="130" y="195" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="800" fill="#30E88A">📦 E01 / EWF</text>
+    <text x="130" y="210" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">Expert Witness Format</text>
+    <text x="35" y="230" font-family="JetBrains Mono,monospace" font-size="8" fill="#30E88A">✓ Compression natale</text>
+    <text x="35" y="244" font-family="JetBrains Mono,monospace" font-size="8" fill="#30E88A">✓ Hash MD5+SHA1 inclus</text>
+    <text x="35" y="258" font-family="JetBrains Mono,monospace" font-size="8" fill="#30E88A">✓ Métadonnées examinateur</text>
+    <text x="35" y="272" font-family="JetBrains Mono,monospace" font-size="8" fill="#30E88A">✓ Découpage en .E01.E02…</text>
+    <text x="35" y="285" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">EnCase · FTK · Autopsy · X-Ways</text>
+
+    <!-- Format AFF4 -->
+    <rect x="250" y="175" width="220" height="115" rx="6" fill="rgba(88,166,255,.08)" stroke="#58A6FF" stroke-width="1.5"/>
+    <text x="360" y="195" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="800" fill="#58A6FF">🔬 AFF4</text>
+    <text x="360" y="210" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">Advanced Forensic Format</text>
+    <text x="265" y="230" font-family="JetBrains Mono,monospace" font-size="8" fill="#58A6FF">✓ Open source · standard moderne</text>
+    <text x="265" y="244" font-family="JetBrains Mono,monospace" font-size="8" fill="#58A6FF">✓ Hash multiples (SHA-256, SHA-512)</text>
+    <text x="265" y="258" font-family="JetBrains Mono,monospace" font-size="8" fill="#58A6FF">✓ Acquisition cloud / mémoire</text>
+    <text x="265" y="272" font-family="JetBrains Mono,monospace" font-size="8" fill="#58A6FF">✓ Acquisition partielle</text>
+    <text x="265" y="285" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">Rekall · Velociraptor · pyaff4</text>
+
+    <!-- Format DD/RAW -->
+    <rect x="480" y="175" width="220" height="115" rx="6" fill="rgba(168,181,200,.08)" stroke="#A8B5C8" stroke-width="1.5"/>
+    <text x="590" y="195" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="800" fill="#A8B5C8">📄 DD / RAW</text>
+    <text x="590" y="210" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">Image bit-à-bit brute</text>
+    <text x="495" y="230" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">✓ Universel · simple</text>
+    <text x="495" y="244" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">✓ Compatible tous outils</text>
+    <text x="495" y="258" font-family="JetBrains Mono,monospace" font-size="8" fill="#FF4060">✗ Pas de hash intégré</text>
+    <text x="495" y="272" font-family="JetBrains Mono,monospace" font-size="8" fill="#FF4060">✗ Pas de compression</text>
+    <text x="495" y="285" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">dd · dcfldd · ddrescue</text>
+
+    <line x1="420" y1="120" x2="130" y2="175" stroke="#F0883E" stroke-width="1" stroke-dasharray="2 3" opacity=".4"/>
+    <line x1="420" y1="120" x2="360" y2="175" stroke="#F0883E" stroke-width="1" stroke-dasharray="2 3" opacity=".4"/>
+    <line x1="420" y1="120" x2="590" y2="175" stroke="#F0883E" stroke-width="1" stroke-dasharray="2 3" opacity=".4"/>
+  </svg>
+  <div class="schema-legend">
+    <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>Source (intouchable)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>Write-blocker (obligatoire)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#58A6FF"></span>Outil d'acquisition</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#00E5CC"></span>Hash de contrôle</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>E01 (recommandé)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#A8B5C8"></span>RAW (universel)</span>
+  </div>
+</div>
+
+<div class="card">
+<h2>🔀 Image forensique vs Clone physique</h2>
+<div class="grid-2">
+<div class="grid-card"><h4>Image forensique — Méthode standard</h4>
+<p style="font-size:13px;color:var(--text-muted)">Copie de tout le contenu (secteurs, espaces vides, fichiers supprimés) dans un <strong>fichier conteneur</strong> sur un autre support. Inclut métadonnées, hash intégré, compression possible.</p>
+<ul>
+<li><strong>Ne peut pas démarrer</strong> — nécessite un outil forensique</li>
+<li>Immuable : l'analyste travaille sur des copies</li>
+<li>Formats : DD, E01, AFF, EWF2</li>
+<li>Hash calculé avant/après = preuve d'intégrité</li>
+</ul></div>
+<div class="grid-card"><h4>Clone — Copie physique exacte</h4>
+<p style="font-size:13px;color:var(--text-muted)">Copie bit-à-bit sur un <strong>disque physique</strong> de même capacité (ou supérieure). Peut démarrer comme l'original.</p>
+<ul>
+<li>Problème : les disques "1 To" de marques différentes n'ont pas exactement le même nombre de secteurs</li>
+<li>Travailler sur un clone risque de l'altérer</li>
+<li>Réservé aux cas où démarrer le système est nécessaire</li>
+<li>Risque de contamination élevé si mal géré</li>
+</ul></div>
+</div>
+<div class="callout warn"><span class="callout-icon">⚠️</span>
+<div class="callout-body"><strong>Recommandation :</strong> Toujours préférer l'image forensique au clone. Travailler uniquement sur des copies de l'image. Ne jamais ouvrir l'image originale en écriture.</div></div>
+</div>
+
+<div class="card">
+<h2>📄 Formats de preuve — Tableau comparatif</h2>
+<div class="table-wrap"><table>
+<tr><th>Format</th><th>Extension</th><th>Type</th><th>Avantages</th><th>Inconvénients</th></tr>
+<tr>
+  <td><strong>RAW / DD</strong></td>
+  <td>.dd .img .001</td>
+  <td class="cell-green">Ouvert</td>
+  <td>Universellement lisible, simple, aucune dépendance</td>
+  <td>Pas de hash intégré, pas de compression, taille = taille disque</td>
+</tr>
+<tr>
+  <td><strong>E01 (EnCase)</strong></td>
+  <td>.E01 .E02…</td>
+  <td class="cell-yellow">Propriétaire</td>
+  <td>Hash intégré, compression, métadonnées enquêteur, standard judiciaire</td>
+  <td>Propriétaire Guidance Software (OpenText)</td>
+</tr>
+<tr>
+  <td><strong>AFF</strong></td>
+  <td>.aff .afm .afd</td>
+  <td class="cell-green">Ouvert</td>
+  <td>Open source, extensible, segmentable (.afd), supporté X-Ways</td>
+  <td>Communauté plus restreinte, support partiel outils commerciaux</td>
+</tr>
+<tr>
+  <td><strong>EWF2 / Ex01</strong></td>
+  <td>.Ex01</td>
+  <td class="cell-yellow">Propriétaire</td>
+  <td>Chiffrement AES natif, meilleure compression que E01</td>
+  <td>Compatibilité réduite outils anciens</td>
+</tr>
+<tr>
+  <td><strong>AFF4</strong></td>
+  <td>.aff4</td>
+  <td class="cell-green">Ouvert</td>
+  <td>Moderne, segmentation, chiffrement, cloud-ready</td>
+  <td>Support outils encore limité</td>
+</tr>
+</table></div>
+<div class="callout tip"><span class="callout-icon">💡</span>
+<div class="callout-body"><strong>Recommandation CAS-IN :</strong> E01 pour la compatibilité maximale (standard judiciaire suisse) · AFF si open source exigé · RAW si l'outil de destination est inconnu · EWF2 si chiffrement natif requis</div></div>
+</div>
+
+<div class="card">
+<h2>🔒 Write Blocker — Outil n°1 de l'intervenant</h2>
+<div class="grid-2">
+<div class="grid-card"><h4>Pourquoi matériel, pas logiciel ?</h4>
+<p style="font-size:13px;color:var(--text-muted)">Dispositif <strong>matériel</strong> interposé entre le disque suspect et l'ordinateur. Laisse passer tous les ordres de <strong>lecture</strong>, bloque physiquement tout ordre d'<strong>écriture</strong>.</p>
+<ul>
+<li>Le write blocker logiciel peut être contourné par l'OS (ex. Windows qui met à jour une date d'accès)</li>
+<li>Le matériel agit au niveau du bus — incontournable</li>
+<li>Marques courantes : Tableau (Guidance), WiebeTech, FRED</li>
+</ul></div>
+<div class="grid-card"><h4>Sans write blocker — Risques</h4><ul>
+<li>Mise à jour des dates d'accès (timestamps)</li>
+<li>Création de fichiers cachés (thumbnails, index)</li>
+<li>Mise à jour d'un index de recherche</li>
+<li>Écriture dans le swap / fichier d'hibernation</li>
+<li>Modification de la Recycle Bin</li>
+<li>→ Toutes ces modifications invalident la preuve (art. 141 CPP)</li>
+</ul></div>
+</div>
+</div>
+
+<div class="card">
+<h2>📊 Ordre de volatilité (RFC 3227)</h2>
+<p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Collecter en priorité les données qui disparaissent le plus vite :</p>
+<div class="steps">
+<div class="step"><div class="step-num">1</div><div class="step-body">
+<div class="step-title">Registres CPU et cache</div>
+<div class="step-desc">Perdus dès que le processeur change de contexte. Très rarement capturables en pratique.</div>
+</div></div>
+<div class="step"><div class="step-num">2</div><div class="step-body">
+<div class="step-title">RAM (mémoire vive)</div>
+<div class="step-desc">Perdue à l'extinction du système. Contient : clés de chiffrement, processus actifs, connexions réseau, mots de passe en clair.</div>
+<div class="step-cmd">WinPmem, DumpIt, Magnet RAM Capture, avml (Linux)</div>
+</div></div>
+<div class="step"><div class="step-num">3</div><div class="step-body">
+<div class="step-title">État réseau, connexions actives</div>
+<div class="step-desc">Connexions TCP actives, table ARP, processus avec ports ouverts.</div>
+<div class="step-cmd">netstat -ano · ss -tulpn · arp -a</div>
+</div></div>
+<div class="step"><div class="step-num">4</div><div class="step-body">
+<div class="step-title">Processus et services en cours</div>
+<div class="step-desc">Liste des processus, services démarrés, utilisateurs connectés.</div>
+<div class="step-cmd">tasklist / ps aux · sc query · who -a</div>
+</div></div>
+<div class="step"><div class="step-num">5</div><div class="step-body">
+<div class="step-title">Image disque</div>
+<div class="step-desc">Contenu stable — peut attendre que les éléments volatils aient été capturés. Hash obligatoire avant/après.</div>
+<div class="step-cmd">FTK Imager · dd if=/dev/sda of=/mnt/evidence.img bs=4M · dcfldd</div>
+</div></div>
+<div class="step"><div class="step-num">6</div><div class="step-body">
+<div class="step-title">Logs distants, sauvegardes</div>
+<div class="step-desc">Logs sur serveur distant, SIEM, sauvegardes cloud. Derniers à collecter car les plus stables.</div>
+</div></div>
+</div>
+</div>
+
+<div class="card">
+<h2>🧠 Capture RAM — Live Forensics</h2>
+<div class="table-wrap"><table>
+<tr><th>Contenu RAM</th><th>Valeur forensique</th></tr>
+<tr><td>Clés de chiffrement BitLocker / VeraCrypt</td><td class="cell-red">🔴 Critique — disparaît à l'extinction</td></tr>
+<tr><td>Mots de passe en clair de certains processus</td><td class="cell-red">🔴 Critique</td></tr>
+<tr><td>Connexions réseau actives (C2 actif)</td><td class="cell-yellow">🟠 Important</td></tr>
+<tr><td>Processus en cours (dont malwares fileless)</td><td class="cell-yellow">🟠 Important — malwares sans fichier sur disque</td></tr>
+<tr><td>Documents non sauvegardés</td><td>🔵 Utile</td></tr>
+<tr><td>Historique navigation non mis en cache</td><td>🔵 Utile</td></tr>
+</table></div>
+<div class="callout danger"><span class="callout-icon">🚨</span>
+<div class="callout-body"><strong>Règle absolue :</strong> Toujours exécuter l'outil de capture RAM depuis une clé USB forensique — ne jamais écrire sur le disque suspect. Chaque écriture sur le disque = modification de la preuve.</div></div>
+<pre>
+# Capture RAM Windows
+winpmem_mini_x64.exe C:\Forensics\ram.raw   # WinPmem
+DumpIt.exe /O C:\Forensics\ram.raw           # DumpIt
+
+# Analyse avec Volatility 3
+python vol.py -f ram.raw windows.pslist      # Processus
+python vol.py -f ram.raw windows.netscan     # Connexions
+python vol.py -f ram.raw windows.cmdline     # Commandes lancées
+python vol.py -f ram.raw windows.hashdump    # Hashes SAM
+</pre>
+</div>
+
+<div class="card">
+<h2>✂️ Slicing FAT32 — Limite des 4 Go</h2>
+<div class="callout warn"><span class="callout-icon">⚠️</span>
+<div class="callout-body"><strong>Problème :</strong> FAT32 limite la taille d'un fichier à <strong>4 Go − 1 byte</strong>. Une image disque dépasse souvent plusieurs centaines de Go. Si le support de destination est FAT32 → l'image doit être découpée en segments.</div></div>
+<p style="font-size:13px;color:var(--text-muted);margin:12px 0">Solution : utiliser <strong>exFAT ou NTFS</strong> comme système de fichiers de destination → aucune limite de taille de fichier. Les logiciels forensiques (FTK Imager, dd) découpent automatiquement en segments si le format E01 / dd est utilisé avec un support FAT32.</p>
+<ul>
+<li>E01 : segmenté automatiquement → preuve.E01, preuve.E02, preuve.E03…</li>
+<li>Perdre un segment rend l'image complète inutilisable</li>
+<li>Hash de chaque segment + hash global de l'image complète</li>
+</ul>
+</div>
+
+<div class="link-bar">
+<div class="link-group"><span class="link-group-label">Prérequis&nbsp;:</span><a href="preuve.html">📖 Preuve numérique</a><a href="encodage.html">📖 Encodage bas niveau</a><a href="disques.html">📖 Technologie disques</a></div>
+<div class="link-group"><span class="link-group-label">Pratiquer&nbsp;:</span><a href="../tp.html?cat=acquisition">🧪 📥 Acquisition</a><a href="../tp.html?cat=hextable">🧪 🗺 Table Hex</a></div>
+<div class="link-group"><span class="link-group-label">Voir aussi&nbsp;:</span><a href="ram_forensique.html">🔗 RAM Forensique</a><a href="hash.html">🔗 Hash & Intégrité</a><a href="methodologie.html">🔗 Méthodologie</a><a href="premier_intervenant.html">🔗 Premier Intervenant</a></div>
+</div>
+
+<div class="exam-tip"><div class="exam-tip-title">🎓 Exam Tip — Acquisition & Préservation</div><p> Image forensique ≠ clone (image = conteneur, clone = disque physique) · Write blocker MATÉRIEL obligatoire (logiciel contournable par l'OS) · Ordre de volatilité RFC 3227 : RAM avant disque · FAT32 = limite 4 Go − 1 byte → slicing obligatoire ou utiliser exFAT/NTFS · Formats : E01 (hash intégré, compression, standard), AFF (open source), RAW/DD (universel, pas de hash intégré) · Hash SHA-256 calculé avant ET après chaque acquisition · Clés de chiffrement en RAM = disparaissent à l'extinction</p></div>
+
+<div class="prereq-block" style="margin-top:1.5rem">
+  <div class="prereq-row"><span class="prereq-label">Prérequis</span><a href="preuve.html" class="prereq-pill">📖 Preuve numérique</a></div>
+  <div class="prereq-row"><span class="prereq-label">Voir aussi</span><a href="ram_forensique.html" class="related-pill">🔗 RAM Forensique</a><a href="methodologie.html" class="related-pill">🔗 Méthodologie</a><a href="../tools.html" class="related-pill">🔧 Calculateurs forensiques</a></div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Pourquoi préférer systématiquement le write-blocker matériel au logiciel ?<small>Acquisition · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Le write-blocker <strong>matériel</strong> agit au niveau du bus électronique — aucun ordre d'écriture ne peut physiquement passer. Le write-blocker <strong>logiciel</strong> opère au niveau de l'OS et peut être contourné par le noyau lui-même (mise à jour de timestamps d'accès, antivirus, index de recherche Windows). En forensique judiciaire, seul le matériel est acceptable.</div>
+</div>
+<div class="quiz-wrap">
+  <div class="quiz-q">Quelle est la limite de taille FAT32 et comment y remédier lors d'une acquisition ?<small>Formats · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">FAT32 limite les fichiers à <strong>4 Go − 1 octet</strong>. Solutions : utiliser <strong>exFAT ou NTFS</strong> comme système de fichiers de destination (aucune limite pratique), ou activer le <strong>segmentation automatique</strong> en format E01 (preuve.E01, preuve.E02…). Perdre un seul segment rend l'image inutilisable.</div>
+</div>
+<footer>
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>ISO/IEC 27037 · RFC 3227 · Manuel Ch. 11–12</span>
+</footer>
+</main>
+<button id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script>
+(function(){
+  // Scroll progress
+  bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';
+  },{passive:true});
+  // Back to top
+  var bt=document.getElementById('back-top')||document.querySelector('.back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+  // Collapsibles
+  // Quiz reveal
+  // Tool cmd copy
+  document.querySelectorAll('.tool-cmd,.copy-code,.vol-cmd').forEach(function(el){
+    el.title='Cliquer pour copier';
+    el.style.cursor='pointer';
+    el.addEventListener('click',function(){
+      navigator.clipboard&&navigator.clipboard.writeText(el.innerText.trim()).then(function(){
+        var o=el.style.background;el.style.background='rgba(48,232,138,.2)';
+        setTimeout(function(){el.style.background=o;},700);
+      });
+    });
+  });
+})();
+</script>
+
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X-Ways &amp; WinHex — CAS-IN Forensique</title>
+<meta name="description" content="Snapshot · Refine · Carving · Fuzzy Doc · Éditeur hexadécimal">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<!-- Métadonnées auto-index -->
+<meta name="cas-in-category" content="acquisition">
+<meta name="cas-in-icon" content="🔍">
+<meta name="cas-in-short-title" content="X-Ways & WinHex">
+<meta name="cas-in-desc" content="Snapshot · Refine · Carving · Fuzzy Doc · Éditeur hexadécimal">
+<meta name="cas-in-chapter" content="Ch. 9">
+</head>
+<body>
+<div id="scroll-progress"></div>
+
+<nav class="tn-nav">
+  <a class="tn-back" href="index.html">← Fiches</a>
+  <span class="tn-title">X-Ways &amp; WinHex</span>
+  <a class="tn-quiz" href="../quiz.html">💊 Quiz →</a>
+</nav>
+
+<div class="page">
+
+  <!-- ───────────────── HEADER ───────────────── -->
+  <div class="header">
+    <span class="fs-badge">🔍</span>
+    <div>
+      <h1 style="font-family:var(--sans);font-size:1.8rem;font-weight:800;letter-spacing:-.5px;margin-bottom:.35rem">
+        X-Ways Forensics &amp; WinHex
+      </h1>
+      <div class="header-meta">
+        <span class="tag tag-cyan">Standard judiciaire CH</span>
+        <span class="tag tag-gold">Commercial · Dongle USB</span>
+        <span class="tag tag-green">Portable</span>
+        <span class="tag tag-purple">Ch. 9 Manuel</span>
+      </div>
+      <p class="meta" style="margin-top:.5rem;max-width:680px;line-height:1.5">
+        Le duo forensique allemand de référence. <span class="cyan">X-Ways</span> — suite d'investigation complète
+        (système de fichiers, carving, volume snapshot, rapports). <span class="cyan">WinHex</span> — l'éditeur
+        hexadécimal bas-niveau qui en est l'ancêtre, indispensable pour les structures manuelles, la RAM et la
+        reconstruction sectorielle.
+      </p>
+    </div>
+  </div>
+
+  <!-- ───────────────── BREADCRUMB ───────────────── -->
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-outilsdfir">Outils DFIR</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">X-Ways &amp; WinHex</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~18 min</span>
+  </div>
+
+  <!-- ───────────────── PREREQ BLOCK ───────────────── -->
+  <div class="prereq-block">
+    <div class="prereq-row">
+      <span class="prereq-label">Prérequis</span>
+      <a class="prereq-pill" href="acquisition.html">📖 Acquisition</a>
+      <a class="prereq-pill" href="ntfs.html">📖 NTFS</a>
+      <a class="prereq-pill" href="fat16.html">📖 FAT16/32</a>
+      <a class="prereq-pill" href="formats.html">📖 Magic Bytes</a>
+    </div>
+    <div class="prereq-row">
+      <span class="prereq-label">Pratiquer</span>
+      <a class="tp-pill" href="../tp.html">🧪 Magic Bytes</a>
+      <a class="tp-pill" href="../tp.html">🧪 Mismatch</a>
+      <a class="tp-pill" href="../tp.html">🧪 Run List NTFS</a>
+    </div>
+    <div class="prereq-row">
+      <span class="prereq-label">Voir aussi</span>
+      <a class="related-pill" href="zimmerman.html">🔗 Suite Zimmerman</a>
+      <a class="related-pill" href="autopsy.html">🔗 Autopsy / TSK</a>
+      <a class="related-pill" href="volatilite.html">🔗 Volatility RAM</a>
+    </div>
+  </div>
+
+  <!-- ───────────────── TOC ───────────────── -->
+  <div class="toc">
+    <div class="toc-title">Sommaire</div>
+    <ol>
+      <li><a href="#philosophie">Philosophie &amp; positionnement</a></li>
+      <li><a href="#installation">Installation portable</a></li>
+      <li><a href="#case">Créer un Cas (.xfc)</a></li>
+      <li><a href="#acquisition">Ajouter une image disque</a></li>
+      <li><a href="#snapshot">Volume Snapshot (F9)</a></li>
+      <li><a href="#interface">Interface &amp; navigation</a></li>
+      <li><a href="#refine">Refine Snapshot</a></li>
+      <li><a href="#recherche">Recherche logique vs physique</a></li>
+      <li><a href="#typestatus">Type Status &amp; entropie</a></li>
+      <li><a href="#carving">Carving par signature</a></li>
+      <li><a href="#fuzzy">Fuzzy Doc &amp; emails</a></li>
+      <li><a href="#undelete">Récupération de fichiers supprimés</a></li>
+      <li><a href="#winhex">WinHex — l'éditeur hexadécimal</a></li>
+      <li><a href="#reports">Report Tables — catégorisation professionnelle</a></li>
+      <li><a href="#workflow">Workflow anti-erreurs</a></li>
+    </ol>
+  </div>
+
+  <!-- ═══════════════ CONCEPT CARD ═══════════════ -->
+  <div class="concept-card">
+    <div class="concept-title">🔍 X-Ways &amp; WinHex — Le standard judiciaire allemand</div>
+    <strong>X-Ways Forensics</strong> et <strong>WinHex</strong> (X-Ways Software AG, Allemagne · Stefan Fleischmann) constituent <strong>le couple forensique de référence en Suisse pour les expertises judiciaires</strong>. Trois caractéristiques en font le choix par défaut des experts : (1) <strong>Portabilité totale</strong> — installation entièrement sur clé USB, aucune trace sur la machine d'analyse, license sur dongle USB physique. (2) <strong>Vitesse exceptionnelle</strong> — moteur ultra-optimisé, parsing de MFT 100x plus rapide qu'Autopsy, snapshot d'un disque 1 To en quelques minutes. (3) <strong>Reconnaissance judiciaire</strong> — utilisé par BKA Allemagne, Europol, fedpol, TPF, ministères publics cantonaux suisses ; tous les rapports sont reconnus comme méthodologiquement valides. Le <strong>Volume Snapshot</strong> est le concept central : un index virtuel du système de fichiers qu'on raffine progressivement (carving, hash lookup, type detection, OCR…) pour faire émerger toutes les preuves. <strong>WinHex</strong> est l'<em>ancêtre</em> et le <em>microscope chirurgical</em> de X-Ways : éditeur hexadécimal bas-niveau pour analyser MBR, GPT, structures FAT/NTFS à la main, ou déboguer un secteur corrompu.
+  </div>
+
+  <!-- ═══════════════ SCHÉMA SVG — PIPELINE X-WAYS ═══════════════ -->
+  <div class="schema">
+    <div class="schema-title">🔬 Pipeline X-Ways Forensics — Du dongle au rapport judiciaire</div>
+    <div class="schema-sub">DONGLE USB · CASE .xfc · IMAGE E01 · VOLUME SNAPSHOT · REFINE · REPORT</div>
+    <svg viewBox="0 0 720 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pipeline X-Ways Forensics">
+      <defs>
+        <marker id="arr-xw" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <polygon points="0 0, 10 3, 0 6" fill="#00E5CC"/>
+        </marker>
+        <linearGradient id="grad-snapshot" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="rgba(0,229,204,.05)"/>
+          <stop offset="100%" stop-color="rgba(0,229,204,.15)"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Header -->
+      <rect x="20" y="15" width="680" height="40" rx="6" fill="rgba(13,17,23,.5)" stroke="rgba(0,229,204,.4)" stroke-width="1.2"/>
+      <text x="360" y="35" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="800" fill="#00E5CC">⚖️ STANDARD JUDICIAIRE CH · X-Ways Software AG · Stefan Fleischmann · Allemagne</text>
+      <text x="360" y="48" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">Portable USB · Dongle obligatoire · Reconnaissance Europol · BKA · fedpol · TPF · MP cantonaux</text>
+
+      <!-- Étape 1 : Dongle + USB portable -->
+      <rect x="20" y="70" width="140" height="80" rx="8" fill="rgba(240,192,64,.12)" stroke="#F0C040" stroke-width="1.5"/>
+      <text x="90" y="92" text-anchor="middle" font-size="22">🔑</text>
+      <text x="90" y="115" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="800" fill="#F0C040">1. Dongle USB</text>
+      <text x="90" y="129" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">+ X-Ways portable</text>
+      <text x="90" y="141" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">aucune trace machine</text>
+
+      <line x1="160" y1="110" x2="195" y2="110" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-xw)"/>
+
+      <!-- Étape 2 : Case .xfc -->
+      <rect x="195" y="70" width="140" height="80" rx="8" fill="rgba(48,232,138,.12)" stroke="#30E88A" stroke-width="1.5"/>
+      <text x="265" y="92" text-anchor="middle" font-size="22">📁</text>
+      <text x="265" y="115" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="800" fill="#30E88A">2. Case (.xfc)</text>
+      <text x="265" y="129" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">métadonnées affaire</text>
+      <text x="265" y="141" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">examiner · timezone</text>
+
+      <line x1="335" y1="110" x2="370" y2="110" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-xw)"/>
+
+      <!-- Étape 3 : Image E01 -->
+      <rect x="370" y="70" width="140" height="80" rx="8" fill="rgba(88,166,255,.12)" stroke="#58A6FF" stroke-width="1.5"/>
+      <text x="440" y="92" text-anchor="middle" font-size="22">💾</text>
+      <text x="440" y="115" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="800" fill="#58A6FF">3. Image disque</text>
+      <text x="440" y="129" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">.E01 · .AFF4 · .RAW</text>
+      <text x="440" y="141" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">SHA-256 vérifié</text>
+
+      <line x1="510" y1="110" x2="545" y2="110" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-xw)"/>
+
+      <!-- Étape 4 : Volume Snapshot (cœur) -->
+      <rect x="545" y="70" width="155" height="80" rx="8" fill="url(#grad-snapshot)" stroke="#00E5CC" stroke-width="2"/>
+      <text x="622" y="92" text-anchor="middle" font-size="22">⚡</text>
+      <text x="622" y="115" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="800" fill="#00E5CC">4. Volume Snapshot</text>
+      <text x="622" y="129" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">F9 · cœur du moteur</text>
+      <text x="622" y="141" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">index virtuel modifiable</text>
+
+      <!-- Bandeau Refine Snapshot -->
+      <text x="360" y="180" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8" letter-spacing="1">↓  REFINE SNAPSHOT — RAFFINEMENT PROGRESSIF (F10)  ↓</text>
+      <line x1="40" y1="188" x2="680" y2="188" stroke="rgba(168,181,200,.3)" stroke-width=".5"/>
+
+      <!-- 6 opérations Refine -->
+      <rect x="20" y="200" width="105" height="60" rx="5" fill="rgba(255,64,96,.06)" stroke="rgba(255,64,96,.4)" stroke-width="1"/>
+      <text x="72" y="218" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#FF4060">🦴 Carving</text>
+      <text x="72" y="232" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">par signature</text>
+      <text x="72" y="244" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">JPG · PDF · MP4</text>
+      <text x="72" y="255" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">unallocated</text>
+
+      <rect x="135" y="200" width="105" height="60" rx="5" fill="rgba(48,232,138,.06)" stroke="rgba(48,232,138,.4)" stroke-width="1"/>
+      <text x="187" y="218" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#30E88A">🔍 Hash DB</text>
+      <text x="187" y="232" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">NSRL · KFF</text>
+      <text x="187" y="244" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">filtre OS</text>
+      <text x="187" y="255" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">flag CSAM</text>
+
+      <rect x="250" y="200" width="105" height="60" rx="5" fill="rgba(240,192,64,.06)" stroke="rgba(240,192,64,.4)" stroke-width="1"/>
+      <text x="302" y="218" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#F0C040">🎯 Type Status</text>
+      <text x="302" y="232" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">magic vs ext.</text>
+      <text x="302" y="244" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">détecte falsifié</text>
+      <text x="302" y="255" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#FF4060">.jpg = .exe ?</text>
+
+      <rect x="365" y="200" width="105" height="60" rx="5" fill="rgba(88,166,255,.06)" stroke="rgba(88,166,255,.4)" stroke-width="1"/>
+      <text x="417" y="218" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#58A6FF">📊 Entropie</text>
+      <text x="417" y="232" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">Shannon 0–8</text>
+      <text x="417" y="244" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">~7.99 = chiffré</text>
+      <text x="417" y="255" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#BC8CFF">stéganographie</text>
+
+      <rect x="480" y="200" width="105" height="60" rx="5" fill="rgba(188,140,255,.06)" stroke="rgba(188,140,255,.4)" stroke-width="1"/>
+      <text x="532" y="218" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#BC8CFF">📝 Fuzzy Doc</text>
+      <text x="532" y="232" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">indexation OCR</text>
+      <text x="532" y="244" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">recherche rapide</text>
+      <text x="532" y="255" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">PDF · Word · mail</text>
+
+      <rect x="595" y="200" width="105" height="60" rx="5" fill="rgba(240,136,62,.06)" stroke="rgba(240,136,62,.4)" stroke-width="1"/>
+      <text x="647" y="218" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" font-weight="700" fill="#F0883E">🗑 Undelete</text>
+      <text x="647" y="232" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">FAT 0xE5 · NTFS</text>
+      <text x="647" y="244" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">$MFT non réutilisé</text>
+      <text x="647" y="255" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#6A80A8">LFN restaure nom</text>
+
+      <!-- Étape 5 : Tags &amp; Report -->
+      <text x="360" y="290" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#A8B5C8" letter-spacing="1">↓  TAG · REPORT TABLES · GÉNÉRATION RAPPORT JUDICIAIRE  ↓</text>
+      <line x1="40" y1="298" x2="680" y2="298" stroke="rgba(168,181,200,.3)" stroke-width=".5"/>
+
+      <rect x="20" y="310" width="220" height="55" rx="6" fill="rgba(48,232,138,.06)" stroke="rgba(48,232,138,.4)" stroke-width="1"/>
+      <text x="130" y="328" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="700" fill="#30E88A">🏷 Tags &amp; Report Tables</text>
+      <text x="130" y="343" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">catégorisation par sujet</text>
+      <text x="130" y="357" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">1 fichier ↔ N catégories</text>
+
+      <rect x="250" y="310" width="220" height="55" rx="6" fill="rgba(0,229,204,.06)" stroke="rgba(0,229,204,.4)" stroke-width="1"/>
+      <text x="360" y="328" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="700" fill="#00E5CC">📋 Report (HTML/RTF)</text>
+      <text x="360" y="343" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">par section · capture</text>
+      <text x="360" y="357" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">SHA-256 · chronologie</text>
+
+      <rect x="480" y="310" width="220" height="55" rx="6" fill="rgba(255,64,96,.06)" stroke="rgba(255,64,96,.4)" stroke-width="1"/>
+      <text x="590" y="328" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" font-weight="700" fill="#FF4060">🔬 WinHex (microscope)</text>
+      <text x="590" y="343" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#A8B5C8">éditeur hex bas niveau</text>
+      <text x="590" y="357" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#6A80A8">MBR · GPT · FAT · NTFS</text>
+
+      <!-- Bandeau Write Protection -->
+      <rect x="20" y="375" width="680" height="20" rx="4" fill="rgba(255,64,96,.08)" stroke="rgba(255,64,96,.4)" stroke-width="1.2"/>
+      <text x="360" y="389" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#FF4060">⚠️ WRITE PROTECTION OBLIGATOIRE — Activer dans Options · sécurité de la preuve</text>
+    </svg>
+    <div class="schema-legend">
+      <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>1. Dongle (license)</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>2. Case .xfc</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#58A6FF"></span>3. Image disque</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#00E5CC"></span>4. Volume Snapshot</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>Refine: Carving / Undelete / WinHex</span>
+      <span class="lg-item"><span class="lg-dot" style="background:#BC8CFF"></span>Fuzzy Doc / OCR</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════ PHILOSOPHIE ═══════════════ -->
+  <div class="section" id="philosophie">
+    <div class="section-title">① Philosophie &amp; positionnement</div>
+
+    <div class="card card-cyan">
+      <div class="card-title">🧠 Une logique manuelle et exigeante</div>
+      <p>
+        Là où Autopsy propose une approche automatisée en « boîte noire », X-Ways impose à l'analyste une
+        implication constante. <strong>Rien n'est lancé sans validation explicite.</strong> C'est à la fois
+        sa puissance et sa complexité : il faut définir une stratégie, savoir ce qu'on cherche, pourquoi,
+        et à quel niveau du support.
+      </p>
+    </div>
+
+    <table class="tbl" style="margin-top:.75rem">
+      <thead>
+        <tr><th>Outil</th><th>Positionnement</th><th>Note CAS-IN</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="cyan">X-Ways</span></td><td>Léger, portable, travail bas-niveau (octet)</td><td>Standard des experts techniques</td></tr>
+        <tr><td>EnCase (OpenText)</td><td>Standard historique des grandes institutions</td><td>Lourd · coûteux · format <span class="hex">.E01</span> lu par X-Ways</td></tr>
+        <tr><td>FTK</td><td>Indexation plein-texte de tout le disque</td><td>Base de données gourmande en ressources</td></tr>
+        <tr><td>Autopsy</td><td>Open Source gratuit</td><td>Idéal pour débuter, moins robuste sur cas complexes</td></tr>
+        <tr><td>Cellebrite / Axiom</td><td>Clic-bouton pour artefacts &amp; mobile</td><td>Moins précis sur l'analyse bas-niveau FS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════ INSTALLATION ═══════════════ -->
+  <div class="section" id="installation">
+    <div class="section-title">② Installation portable</div>
+
+    <div class="card-grid">
+      <div class="card card-cyan">
+        <div class="card-title">📦 Décompression</div>
+        <p>Archive <span class="hex">.zip</span> à décompresser dans un dossier dédié
+        (ex. <span class="hex">C:\Forensics\X-Ways\</span>). <strong class="red">Ne jamais lancer depuis le ZIP.</strong></p>
+      </div>
+      <div class="card card-gold">
+        <div class="card-title">🔑 Dongle USB</div>
+        <p>Clé matérielle USB obligatoire. Sans elle : logiciel qui ne démarre pas, ou version limitée.
+        Modèle <em>BYOD</em> — Bring Your Own Dongle.</p>
+      </div>
+      <div class="card card-green">
+        <div class="card-title">▶️ Lancement</div>
+        <p>Double-clic sur <span class="hex">xwforensics.exe</span>. Aucun <span class="hex">setup.exe</span>,
+        aucune modification du registre Windows de la machine hôte.</p>
+      </div>
+      <div class="card card-purple">
+        <div class="card-title">🚀 Mode nomade</div>
+        <p>X-Ways installable sur une clé USB ou un SSD externe. Sur la scène : brancher · lancer · analyser
+        — sans rien installer sur la machine cible. <strong>Essentiel en intervention.</strong></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ CAS ═══════════════ -->
+  <div class="section" id="case">
+    <div class="section-title">③ Créer un Cas (.xfc)</div>
+
+    <div class="alert">
+      ⚠️ <strong>Règle absolue :</strong> aucune manipulation de preuve sans un <span class="hex">.xfc</span> actif.
+      Le Cas produit automatiquement un journal d'actions (<em>Case Log</em>) — c'est lui qui démontre la traçabilité
+      devant un tribunal.
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num sn">1</div>
+        <div class="step-text"><strong>Fichier → Créer un nouveau cas.</strong> X-Ways génère un fichier
+        <span class="hex">.xfc</span> — petit fichier texte, aucun contenu de preuve, sert d'index.</div>
+      </div>
+      <div class="step">
+        <div class="step-num sn">2</div>
+        <div class="step-text"><strong>Dossier de stockage</strong> — choisir un emplacement qui n'est
+        <span class="red">PAS</span> le disque de preuve. Y iront les fichiers temporaires, index et rapports.</div>
+      </div>
+      <div class="step">
+        <div class="step-num sn">3</div>
+        <div class="step-text"><strong>Métadonnées</strong> — nom de l'examinateur · numéro de dossier ·
+        agence · commentaires. Ces champs apparaissent automatiquement dans le rapport final.</div>
+      </div>
+      <div class="step">
+        <div class="step-num sn-g">4</div>
+        <div class="step-text"><strong>Validation.</strong> Le <span class="hex">.xfc</span> est créé.
+        Mémoire vivante de l'enquête : preuves · signets · chemins · hashs · log.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ ACQUISITION ═══════════════ -->
+  <div class="section" id="acquisition">
+    <div class="section-title">④ Ajouter une image disque</div>
+
+    <p class="meta" style="margin-bottom:.75rem">On ne travaille jamais sur le disque original — toujours sur une copie forensique.</p>
+
+    <table class="tbl">
+      <thead><tr><th>Format</th><th>Origine</th><th>Particularités</th></tr></thead>
+      <tbody>
+        <tr><td><span class="hex h-cyan">.E01 / .Ex01</span></td><td>EnCase Evidence File</td><td>Compressé · métadonnées intégrées · hash embarqué</td></tr>
+        <tr><td><span class="hex h-gold">.DD / .RAW</span></td><td>dd (Unix) · FTK Imager</td><td>Copie bit-à-bit brute, non compressée</td></tr>
+        <tr><td><span class="hex h-green">.AFF</span></td><td>Advanced Forensics Format</td><td>Lu nativement par X-Ways · open source</td></tr>
+      </tbody>
+    </table>
+
+    <div class="card card-cyan" style="margin-top:.75rem">
+      <div class="card-title">📂 Procédure d'ajout</div>
+      <p><strong>Menu Fichier → Ajouter une image</strong> (ou clic droit dans l'arborescence de cas).</p>
+      <p style="margin-top:.3rem">Si l'image est segmentée (<span class="hex">.e01</span>, <span class="hex">.e02</span>, <span class="hex">.e03</span>…),
+      <strong>sélectionner uniquement le premier segment</strong> — X-Ways charge automatiquement la suite.</p>
+    </div>
+
+    <div class="g2" style="margin-top:.75rem">
+      <div class="card card-green">
+        <div class="card-title">✅ Choisir : Disque physique</div>
+        <p>Accès au MBR, aux zones non partitionnées, au slack space et à tous les fichiers effacés.</p>
+      </div>
+      <div class="card card-red">
+        <div class="card-title">✗ Éviter : Partition logique</div>
+        <p>Perte de l'espace non alloué, des anciens fichiers effacés et du slack space.</p>
+      </div>
+    </div>
+
+    <div class="card card-orange" style="margin-top:.75rem">
+      <div class="card-title">🔐 Vérification du Hash (intégrité)</div>
+      <p>X-Ways calcule automatiquement <span class="hex">MD5</span> / <span class="hex">SHA-256</span> lors de l'acquisition.
+      Image reçue ? <span class="hex">Outils → Compute Hash</span> et comparer avec le PV de saisie.
+      Les deux empreintes coïncident → la copie est conforme.</p>
+      <p style="margin-top:.3rem"><kbd>F10</kbd> = raccourci hash dans X-Ways.</p>
+    </div>
+
+    <div class="info">
+      💡 <strong>Copie bit-à-bit vs Snapshot — à ne pas confondre.</strong>
+      <strong>Copie bit-à-bit</strong> = véritable sauvegarde physique (secteurs 0→N, slack &amp; non alloué).
+      Format <span class="hex">.E01</span> ou <span class="hex">.DD</span>, produite via
+      <span class="hex">Tools → Disk Tools → Create Disk Image</span>.
+      <strong>Volume Snapshot</strong> = simple photo logique interne à X-Ways, <em>pour comprendre</em>
+      où sont les fichiers. Ce n'est pas une sauvegarde.
+    </div>
+  </div>
+
+  <!-- ═══════════════ SNAPSHOT ═══════════════ -->
+  <div class="section" id="snapshot">
+    <div class="section-title">⑤ Volume Snapshot — cœur de l'analyse</div>
+
+    <p class="meta" style="margin-bottom:.75rem">Sans Snapshot, X-Ways est aveugle. Concept le plus important de l'outil.</p>
+
+    <div class="card card-cyan">
+      <div class="card-title">📸 À quoi sert le Snapshot ?</div>
+      <p>Au chargement d'une image, X-Ways ne voit que des secteurs bruts. Le Snapshot est une
+      <strong>reconstruction logique du contenu</strong> : fichiers existants, supprimés, fragments
+      résiduels, structures internes (archives, emails). Toute l'analyse ultérieure en dépend.</p>
+      <ul style="margin-top:.4rem">
+        <li>Lit la table des fichiers (MFT en NTFS, FAT en FAT32)</li>
+        <li>Reconstitue l'arborescence des dossiers</li>
+        <li>Détecte les fichiers supprimés encore référencés</li>
+        <li>Identifie les <strong>vrais types de fichiers</strong> (par signature)</li>
+      </ul>
+    </div>
+
+    <div class="info">
+      ⌨️ <strong>Lancer le Snapshot :</strong> <kbd>F9</kbd> — ou menu
+      <span class="hex">Spécialiste → Raffiner le snapshot de volume</span>. À ce moment, X-Ways demande la
+      profondeur d'analyse (cases à cocher).
+    </div>
+
+    <div class="card card-green">
+      <div class="card-title">☑️ Options essentielles à cocher</div>
+      <ul>
+        <li><strong>Fichiers supprimés</strong> — récupération depuis les entrées marquées deleted</li>
+        <li><strong>Vérification des signatures</strong> — détecte les extensions falsifiées</li>
+        <li><strong>Calcul de hash</strong> (MD5 / SHA-256 par fichier)</li>
+        <li><strong>Recherche rapide de fichiers communs</strong></li>
+      </ul>
+    </div>
+
+    <div class="alert" style="margin-top:.75rem">
+      ⚠️ <strong>Règle du Snapshot — à bien comprendre.</strong> On <strong>peut</strong> relancer
+      un Refine Snapshot plusieurs fois avec des options différentes — chaque passe enrichit le
+      snapshot existant. Par contre, il ne faut <strong class="red">jamais interrompre</strong>
+      un Refine en cours (corruption des références internes), ni <strong class="red">relancer
+      avec des options incompatibles</strong> qui écraseraient les précédentes.
+      Workflow recommandé : ① Snapshot simple (rapide) pour exploration → ② Refine Snapshot ciblé.
+    </div>
+  </div>
+
+  <!-- ═══════════════ INTERFACE ═══════════════ -->
+  <div class="section" id="interface">
+    <div class="section-title">⑥ Interface &amp; navigation</div>
+
+    <div class="card card-purple">
+      <div class="card-title">🖥 Les trois zones</div>
+      <pre class="formula" style="white-space:pre;line-height:1.3">┌── Gauche : arborescence des dossiers (Directory Tree)
+│
+├── Centre : liste des fichiers (Directory Browser)
+│             tri par date · taille · type · suppression
+│
+└── Bas : prévisualisation — Texte · Image · Hexadécimal</pre>
+    </div>
+
+    <div class="card card-cyan" style="margin-top:.75rem">
+      <div class="card-title">🔄 La récursivité — voir tous les fichiers d'un coup</div>
+      <p>Par défaut, cliquer sur <em>Documents</em> n'affiche que les fichiers directs, pas les sous-dossiers.
+      Activer la <strong>récursivité</strong> (icône flèche recourbée · <em>List all files in subdirectories</em>)
+      pour aplatir toute l'arborescence en une seule liste.</p>
+      <p style="margin-top:.3rem">Indispensable pour trier par date :
+      <em>« tout ce qui a été modifié le 12 mars, peu importe où c'est rangé »</em>.</p>
+    </div>
+
+    <div class="card card-gold" style="margin-top:.75rem">
+      <div class="card-title">🏷 Colonnes indispensables</div>
+      <p style="margin-bottom:.3rem">Clic droit sur un en-tête → activer :</p>
+      <ul>
+        <li><strong>Name</strong> · nom du fichier</li>
+        <li><strong>Ext</strong> · extension déclarée</li>
+        <li><strong>Type (réel)</strong> · détecté par signature — un <span class="hex">.jpg</span> qui est en fait un <span class="hex">.exe</span> est immédiatement visible</li>
+        <li><strong>Created / Modified / Accessed</strong> · les trois dates MAC</li>
+        <li><strong>Size · Attr</strong> (H=caché · S=système · D=deleted)</li>
+        <li><strong>Sender / Recipient / Subject</strong> — se remplissent automatiquement si PST/OST parsé</li>
+      </ul>
+    </div>
+
+    <div class="info">
+      🔎 <strong>Le Data Interpreter (fenêtre Hexa).</strong>
+      Sélectionner 4 octets dans le volet hex → affichage comme entier, date, GUID…
+      Attention au réglage : <span class="hex">32 bit Unsigned Integer</span> pour la taille d'un fichier FAT.
+      Et ne pas oublier que FAT stocke en <strong class="gold">Little Endian</strong>
+      (<span class="hex h-orange">00 E4 00 00</span> se lit <span class="hex h-orange">00 00 E4 00</span> = 58 368 octets).
+    </div>
+  </div>
+
+  <!-- ═══════════════ REFINE ═══════════════ -->
+  <div class="section" id="refine">
+    <div class="section-title">⑦ Refine Snapshot — analyse approfondie</div>
+
+    <p class="meta" style="margin-bottom:.75rem">Chaque option cochée ou ignorée a un impact direct sur le résultat.</p>
+
+    <table class="tbl">
+      <thead><tr><th>Option</th><th>Effet</th><th>Coût</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Carving par signature</strong></td><td>Récupère les fichiers sans entrée FS valide</td><td class="red">Long sur grands volumes</td></tr>
+        <tr><td><strong>Vérification des signatures</strong></td><td>Compare extension vs type réel → Type Status</td><td class="gold">Moyen</td></tr>
+        <tr><td><strong>Extraction emails</strong> (PST/OST/MBOX)</td><td>Décompose les conteneurs en messages</td><td class="red">Long · milliers d'emails</td></tr>
+        <tr><td><strong>Extraction archives</strong> (ZIP, 7z, RAR)</td><td>Analyse comme si décompressées</td><td class="gold">Moyen</td></tr>
+        <tr><td><strong>Test de mots de passe</strong></td><td>Liste configurable sur archives/PDF</td><td class="red">Long · selon liste</td></tr>
+        <tr><td><strong>Hash par secteur</strong></td><td>Preuve de présence même si fichier corrompu</td><td class="red">Très long</td></tr>
+        <tr><td><strong>Métadonnées / EXIF</strong></td><td>GPS, appareil, auteur Office…</td><td class="green">Rapide</td></tr>
+      </tbody>
+    </table>
+
+    <div class="info" style="margin-top:.75rem">
+      🔁 <strong>Réinitialiser en cas d'erreur.</strong> En cas de mauvaise configuration, X-Ways peut être
+      réinitialisé en <em>mode standard</em> pour repartir sur une base propre.
+    </div>
+  </div>
+
+  <!-- ═══════════════ RECHERCHE ═══════════════ -->
+  <div class="section" id="recherche">
+    <div class="section-title">⑧ Recherche — Logique vs Physique</div>
+
+    <table class="tbl">
+      <thead><tr><th>Mode</th><th>Portée</th><th>Vitesse</th><th>Usage</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="cyan"><strong>Logique</strong></span> (par fichier)</td>
+          <td>Fichiers existants uniquement</td>
+          <td class="green">Rapide (indexée)</td>
+          <td>Fichiers actifs connus</td>
+        </tr>
+        <tr>
+          <td><span class="orange"><strong>Physique</strong></span> (par secteur)</td>
+          <td>Tout le disque bit-à-bit</td>
+          <td class="red">Lente mais exhaustive</td>
+          <td>Données effacées · slack · non alloués</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="alert" style="margin-top:.75rem">
+      ⏱ <strong>Coût de la recherche physique :</strong> sur <strong>1 To → plusieurs heures</strong>.
+      Toujours limiter le périmètre selon l'hypothèse d'enquête — sinon l'analyse se noie dans le bruit
+      et la démonstration devant tribunal s'en trouve affaiblie. Contexte de résultat par défaut :
+      <strong>128 octets avant/après</strong>.
+    </div>
+  </div>
+
+  <!-- ═══════════════ TYPE STATUS ═══════════════ -->
+  <div class="section" id="typestatus">
+    <div class="section-title">⑨ Type Status &amp; entropie — détection de dissimulation</div>
+
+    <div class="g2">
+      <div class="card card-green">
+        <div class="card-title">✅ OK</div>
+        <p>L'extension correspond à la signature binaire détectée.</p>
+      </div>
+      <div class="card card-gold">
+        <div class="card-title">🎭 Mismatch</div>
+        <p>L'extension <strong>ne correspond pas</strong> à la signature — dissimulation probable
+        (<span class="hex">rapport.pdf</span> qui est en réalité un <span class="hex">.exe</span>).</p>
+      </div>
+      <div class="card card-purple">
+        <div class="card-title">❓ Unknown</div>
+        <p>Type non reconnu dans la base interne de X-Ways.</p>
+      </div>
+      <div class="card card-red">
+        <div class="card-title">🔐 e / e?</div>
+        <p><span class="hex h-red">e</span> = chiffré probable · <span class="hex h-red">e?</span> = haute entropie
+        (chiffrement possible ou compression forte).</p>
+      </div>
+    </div>
+
+    <div class="card card-orange" style="margin-top:.75rem">
+      <div class="card-title">📊 Analyse d'entropie</div>
+      <p>Mesure du caractère aléatoire des données. <strong class="orange">Entropie ≈ 1.0</strong> → chiffrement
+      ou compression forte. Dans X-Ways : icône loupe → afficher l'entropie. Alternative externe :
+      <strong>CyberChef</strong> avec la recette <em>Entropy</em>.</p>
+      <p style="margin-top:.3rem">Essentiel pour détecter les conteneurs <strong>TrueCrypt / VeraCrypt</strong>,
+      qui ne reposent sur aucune extension — seule l'analyse statistique révèle leur nature chiffrée.</p>
+      <p style="margin-top:.3rem"><em>Faux positif classique :</em> une vidéo H.265 très compressée peut aussi
+      avoir une haute entropie sans être chiffrée.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════ CARVING ═══════════════ -->
+  <div class="section" id="carving">
+    <div class="section-title">⑩ Carving — récupération par signature</div>
+
+    <div class="card card-cyan">
+      <div class="card-title">✂️ Principe</div>
+      <p>Parcours séquentiel de l'espace non alloué à la recherche de signatures connues. Fonctionne
+      <strong>même sans entrée de répertoire valide</strong> — parfait pour les supports FAT après
+      effacement (octet <span class="hex h-red">0xE5</span>).</p>
+      <p style="margin-top:.3rem"><strong>Magic bytes les plus courants à connaître :</strong></p>
+      <table class="tbl">
+        <thead><tr><th>Signature</th><th>Type</th></tr></thead>
+        <tbody>
+          <tr><td><span class="hex h-orange">FF D8 FF</span></td><td>JPEG</td></tr>
+          <tr><td><span class="hex h-orange">89 50 4E 47</span></td><td>PNG (<em>‰PNG</em>)</td></tr>
+          <tr><td><span class="hex h-orange">47 49 46 38</span></td><td>GIF (<em>GIF8</em>)</td></tr>
+          <tr><td><span class="hex h-orange">50 4B 03 04</span></td><td>ZIP · DOCX · XLSX · PPTX (<em>PK..</em>)</td></tr>
+          <tr><td><span class="hex h-orange">25 50 44 46</span></td><td>PDF (<em>%PDF</em>)</td></tr>
+          <tr><td><span class="hex h-orange">4D 5A</span></td><td>EXE / DLL Windows (<em>MZ</em> — PE)</td></tr>
+          <tr><td><span class="hex h-orange">7F 45 4C 46</span></td><td>ELF Linux</td></tr>
+          <tr><td><span class="hex h-orange">52 61 72 21</span></td><td>RAR (<em>Rar!</em>)</td></tr>
+          <tr><td><span class="hex h-orange">52 49 46 46</span></td><td>RIFF — WAV · AVI (<em>RIFF</em>)</td></tr>
+          <tr><td><span class="hex h-orange">66 74 79 70</span></td><td>MP4 · MOV (à l'offset 4)</td></tr>
+          <tr><td><span class="hex h-orange">1F 8B 08</span></td><td>GZIP</td></tr>
+          <tr><td><span class="hex h-orange">53 51 4C 69</span></td><td>SQLite (<em>SQLite format 3</em>)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card card-gold" style="margin-top:.75rem">
+      <div class="card-title">🎯 Stratégie de reconstruction</div>
+      <ol style="padding-left:1.2rem">
+        <li>Chercher d'abord un fichier <strong>existant</strong> dans le système</li>
+        <li>Si supprimé → vérifier si les clusters sont <strong>contigus</strong></li>
+        <li>Contigus → reconstruction directe depuis le cluster de début + taille lue dans le SFN</li>
+        <li>Fragmentés → carving multi-fragment beaucoup plus complexe</li>
+        <li>Résultat potentiellement corrompu si certains clusters ont été réalloués</li>
+      </ol>
+    </div>
+
+    <div class="info">
+      🎬 <strong>Preuve de présence par hash sectoriel.</strong>
+      Une vidéo présente une structure répétitive sur un grand nombre de secteurs consécutifs. En identifiant
+      un <strong>bloc caractéristique</strong>, l'analyste calcule son empreinte et recherche des occurrences
+      ailleurs sur le support. Si un bloc identifiable est retrouvé, on peut <em>affirmer que la vidéo a existé
+      à un moment donné</em>, même si la reconstruction complète est impossible. Une preuve de présence peut
+      suffire judiciairement, indépendamment de la lisibilité finale.
+    </div>
+  </div>
+
+  <!-- ═══════════════ FUZZY ═══════════════ -->
+  <div class="section" id="fuzzy">
+    <div class="section-title">⑪ Fuzzy Doc &amp; emails</div>
+
+    <div class="g2">
+      <div class="card card-purple">
+        <div class="card-title">🧩 Fuzzy Doc — logique floue</div>
+        <p>Recherche de fichiers <strong>similaires mais non identiques</strong>. X-Ways crée un set de
+        hashs <em>fuzzy</em> à partir d'un fichier de référence.</p>
+        <ul style="margin-top:.3rem">
+          <li>Variantes d'une même facture</li>
+          <li>Modèles légèrement modifiés</li>
+          <li>Doublons partiels sur plusieurs supports</li>
+          <li>Enquêtes financières / fraude documentaire</li>
+        </ul>
+      </div>
+
+      <div class="card card-blue">
+        <div class="card-title">📧 PST / OST / MBOX</div>
+        <p>Conteneurs complexes de milliers d'objets. Workflow :</p>
+        <ol style="padding-left:1.1rem">
+          <li>Identifier le type via Type Status (pas l'extension)</li>
+          <li>Refine Snapshot → extraire les emails</li>
+          <li>Filtrer par expéditeur / destinataire / date</li>
+          <li>Exporter avec pièces jointes</li>
+          <li>Vérifier le dossier <em>Deleted Items</em></li>
+        </ol>
+        <p style="margin-top:.3rem">Nom se terminant par <strong class="cyan">« … »</strong> dans l'interface
+        = contenus internes explorables.</p>
+      </div>
+    </div>
+
+    <div class="alert" style="margin-top:.75rem">
+      ⚠️ <strong>Un seul fichier actif à la fois.</strong> Lors de l'analyse de mails, ne conserver
+      qu'<strong>un seul fichier PST/OST actif</strong> dans le snapshot — sinon doublons et incohérences.
+    </div>
+  </div>
+
+  <!-- ═══════════════ UNDELETE ═══════════════ -->
+  <div class="section" id="undelete">
+    <div class="section-title">⑫ Récupération de fichiers supprimés</div>
+
+    <p class="meta" style="margin-bottom:.75rem">Les fichiers effacés apparaissent grisés, avec un
+    <span class="hex h-red">?</span> en première lettre.</p>
+
+    <div class="card card-green">
+      <div class="card-title">♻️ Le fichier <span class="hex">?APPORT.docx</span></div>
+      <p>Dans FAT, quand un fichier est supprimé, le premier octet de son entrée SFN est remplacé par
+      <span class="hex h-red">0xE5</span>. La première lettre du nom est donc <strong>perdue</strong> →
+      X-Ways affiche <span class="hex">?</span>.</p>
+      <p style="margin-top:.3rem"><strong class="cyan">L'astuce LFN :</strong> si le fichier avait un nom long,
+      l'entrée LFN juste au-dessus contient le nom complet intact. X-Ways lit cette entrée et
+      <strong>restitue automatiquement la lettre manquante</strong>.</p>
+      <p style="margin-top:.3rem">Action : <strong>clic droit → Récupérer / Copier</strong>.</p>
+    </div>
+
+    <div class="info">
+      💡 <strong>Ouvrir un disque physique (pas une lettre de lecteur).</strong>
+      Menu <span class="hex">File → Open Disk</span>. <strong>Ignorer</strong> les lecteurs C:, D:, E:
+      (listes des <em>Logical Drives</em>) et choisir <strong>Physical Media → Disk 1, 2, 3</strong>.
+      On accède alors au MBR, à l'espace non partitionné, aux restes de fichiers effacés.
+    </div>
+  </div>
+
+  <!-- ═══════════════ WINHEX ═══════════════ -->
+  <div class="section" id="winhex">
+    <div class="section-title">⑬ WinHex — le microscope chirurgical</div>
+
+    <p class="meta" style="margin-bottom:.75rem">Si X-Ways est la salle d'autopsie, WinHex est le scalpel.</p>
+
+    <div class="card card-cyan">
+      <div class="card-title">🧬 Parenté avec X-Ways</div>
+      <p><strong>WinHex est le père de X-Ways.</strong> X-Ways, c'est WinHex augmenté de fonctionnalités de
+      tri, rapport et analyse automatisée. Le moteur bas-niveau est commun. WinHex intervient quand X-Ways
+      n'est plus suffisant : inspection manuelle (MBR, en-tête), réparation d'un disque corrompu, récupération
+      manuelle (Data Carving), compréhension d'un fichier qui refuse de s'ouvrir.</p>
+    </div>
+
+    <div class="card card-gold" style="margin-top:.75rem">
+      <div class="card-title">⚙️ Installation &amp; droits</div>
+      <ul>
+        <li>Portable — décompresser le <span class="hex">.zip</span> sur la clé USB d'analyse</li>
+        <li>Lancer <span class="hex">WinHex.exe</span></li>
+        <li><strong class="red">Clic droit → Exécuter en tant qu'administrateur</strong> — impératif pour accéder
+        aux disques physiques. Sinon, seulement les fichiers logiques seront visibles.</li>
+      </ul>
+    </div>
+
+    <div class="card card-purple" style="margin-top:.75rem">
+      <div class="card-title">🧱 L'interface — la « matrice »</div>
+      <pre class="formula" style="white-space:pre;line-height:1.3">┌────────────────┬──────────────────────────────────┬──────────────┐
+│ Offset (gauche)│ Hexadécimal (centre)             │ ASCII (droit)│
+│ 000001F0       │ 41 6E 61 6C 79 73 65 20 66 6F 72 │ Analyse for..│
+└────────────────┴──────────────────────────────────┴──────────────┘
+
+Offset = adresse en octets depuis le début
+Hexa   = donnée brute (55 AA, FF D8, etc.)
+ASCII  = traduction humaine (41 = 'A') · '.' si non imprimable</pre>
+    </div>
+
+    <div class="g2" style="margin-top:.75rem">
+      <div class="card card-cyan">
+        <div class="card-title">💿 Ouvrir un disque — <kbd>F9</kbd></div>
+        <p><span class="hex">Tools → Open Disk</span>. Deux listes :</p>
+        <ul style="margin-top:.3rem">
+          <li><strong class="red">Logical Drive</strong> (C:, D:) — à éviter · passage par Windows</li>
+          <li><strong class="green">Physical Media</strong> (Disk 0, Disk 1) — <strong>choix obligatoire</strong>
+          · accès brut secteur par secteur, MBR inclus</li>
+        </ul>
+      </div>
+      <div class="card card-orange">
+        <div class="card-title">🧠 Ouvrir la RAM</div>
+        <p><span class="hex">Tools → Open RAM</span>. Permet d'ouvrir la mémoire vive d'un processus en cours
+        (ex. chrome.exe) pour y chercher des <strong>mots de passe déchiffrés</strong> ou des artefacts
+        éphémères.</p>
+      </div>
+    </div>
+
+    <div class="card card-gold" style="margin-top:.75rem">
+      <div class="card-title">🧭 Navigation chirurgicale</div>
+      <table class="tbl">
+        <tbody>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>G</kbd></td><td><strong>Go To</strong> — se déplacer à un secteur/offset précis (ne jamais scroller à la souris sur 1 To)</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td><strong>Text Search</strong> — « password », « Jean »… attention ASCII vs UNICODE</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td><strong>Hex Value Search</strong> — signature binaire : <span class="hex h-orange">FF D8 FF</span> pour JPEG effacés</td></tr>
+          <tr><td><kbd>PageDown</kbd></td><td>Descendre d'une page écran</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card card-blue" style="margin-top:.75rem">
+      <div class="card-title">📐 Templates — la fonction pédagogique reine</div>
+      <p><span class="hex">View → Template Manager</span> (ou <kbd>Alt</kbd>+<kbd>F12</kbd>). WinHex plaque
+      une <strong>grille de lecture</strong> sur les données brutes.</p>
+      <p style="margin-top:.3rem"><strong>Cas pratique — analyser le MBR :</strong></p>
+      <ol style="padding-left:1.2rem">
+        <li>Ouvrir le disque physique → se placer au secteur 0</li>
+        <li><kbd>Alt</kbd>+<kbd>F12</kbd> → choisir le template <em>Master Boot Record</em></li>
+        <li>WinHex décode automatiquement la structure des 512 octets :</li>
+      </ol>
+      <pre class="formula" style="line-height:1.45;margin-top:.4rem"><span class="dim">// Structure totale d'un MBR = 512 octets</span>
+
+<span class="gold">Offset 0   → 446 octets</span>   Code bootloader (chargé au boot BIOS)
+<span class="gold">Offset 446 →  64 octets</span>   Table de partitions (4 entrées × 16 octets)
+                           • Offset 446 : Partition 1
+                           • Offset 462 : Partition 2
+                           • Offset 478 : Partition 3
+                           • Offset 494 : Partition 4
+<span class="gold">Offset 510 →   2 octets</span>   Signature <span class="cyan">55 AA</span> (little-endian : <span class="cyan">AA 55</span>)
+
+<span class="dim">// TOTAL : 446 + 64 + 2 = 512 octets</span></pre>
+      <p style="margin-top:.3rem">Idéal pour vérifier ses cours sur les structures FAT, NTFS, exFAT. Autres
+      templates utiles disponibles : <em>FAT32 Boot Record</em> · <em>NTFS Boot Sector</em> ·
+      <em>GPT Header</em> · <em>$MFT Entry</em>.</p>
+    </div>
+
+    <div class="card card-green" style="margin-top:.75rem">
+      <div class="card-title">📦 Clonage &amp; imagerie</div>
+      <p><span class="hex">File → Create Disk Image</span> :</p>
+      <ul>
+        <li><strong>Raw (dd)</strong> — copie brute</li>
+        <li><strong>.E01</strong> — uniquement si licence <em>Specialist</em> ou supérieure</li>
+      </ul>
+      <p style="margin-top:.3rem">WinHex gère automatiquement le découpage (splitting) et le hash MD5.</p>
+    </div>
+
+    <div class="alert" style="margin-top:.75rem">
+      ⚠️ <strong>WinHex est un ÉDITEUR — danger.</strong> Contrairement à X-Ways (read-only par défaut), WinHex
+      peut <strong>modifier le disque</strong>. Avant toute analyse d'une preuve :
+      <span class="hex">Options → Security</span> → cocher <strong>« Write protection »</strong>.
+    </div>
+
+    <div class="card card-purple" style="margin-top:.75rem">
+      <div class="card-title">📋 Extraire une preuve — Copy Block</div>
+      <ol style="padding-left:1.2rem">
+        <li>Marquer début : clic droit → <em>Beginning of block</em> ou <kbd>Alt</kbd>+<kbd>1</kbd></li>
+        <li>Marquer fin : clic droit → <em>End of block</em> ou <kbd>Alt</kbd>+<kbd>2</kbd></li>
+        <li><strong class="red">Ne pas faire Save</strong> — cela écraserait le disque !</li>
+        <li><span class="hex">Edit → Copy Block → Into New File</span></li>
+        <li>Bloc extrait dans un fichier propre sur la clé USB de l'analyste</li>
+      </ol>
+    </div>
+
+    <div class="card card-orange" style="margin-top:.75rem">
+      <div class="card-title">🔧 Cas avancé — reconstruction manuelle (undelete)</div>
+      <p><em>Scénario : ressusciter <span class="hex">_NTOUCHABLES.TXT</span> en modifiant directement les
+      structures FAT (sur une copie !).</em></p>
+
+      <p style="margin-top:.4rem"><strong>Étape 1 — Rétablir le nom</strong> (entrée répertoire)</p>
+      <pre class="formula" style="line-height:1.4">// Localiser l'entrée dans le Root Directory
+// Curseur sur 0xE5 (premier octet)
+// Mode édition : taper <span class="gold">49</span> (hexa pour 'I')
+// Résultat : INTOUCHABLES.TXT</pre>
+
+      <p style="margin-top:.4rem"><strong>Étape 2 — Rétablir la chaîne</strong> (Table FAT)</p>
+      <pre class="formula" style="line-height:1.4">// Cluster de départ = 100, fichier sur 2 clusters
+// Aller à l'offset du cluster 100 dans la FAT
+cluster 100 : 00 00  (libre)  →  <span class="cyan">65 00</span>  (101 en Little Endian)
+cluster 101 : 00 00           →  <span class="red">FF FF</span>  (fin de fichier)</pre>
+
+      <p style="margin-top:.4rem"><strong>Étape 3 — Sauvegarder</strong> — Windows considère à nouveau le
+      fichier comme valide.</p>
+
+      <div class="tip" style="margin-top:.5rem">
+        🔒 <strong>Jamais sur la preuve originale.</strong> Cette procédure ne se pratique que sur une
+        <strong>copie forensique</strong>. Enseignement pour comprendre les structures — en pratique, on
+        utilise les fonctions X-Ways / Autopsy.
+      </div>
+    </div>
+
+    <div class="card card-red" style="margin-top:.75rem">
+      <div class="card-title">🧮 Hex vs Binaire &amp; attributs</div>
+      <p>Pour déchiffrer un octet d'attribut FAT :</p>
+      <pre class="formula" style="line-height:1.4">Valeur hexa à l'offset 11  :  <span class="gold">0F</span>
+Conversion binaire         :  <span class="green">0000 1111</span>
+Bits R · H · S · V actifs  →  c'est un <span class="purple">LFN</span> (Long File Name)</pre>
+    </div>
+  </div>
+
+  <!-- ═══════════════ REPORT TABLES ═══════════════ -->
+  <div class="section" id="reports">
+    <div class="section-title">⑭ Report Tables — le mécanisme pro de catégorisation</div>
+    <p class="meta" style="margin-bottom:.75rem">Au-delà du simple tag : la vraie manière de structurer une preuve pour le rapport.</p>
+
+    <div class="card card-cyan">
+      <div class="card-title">🏷 Tag vs Report Table — ne pas confondre</div>
+      <table class="tbl">
+        <thead><tr><th>Tag (coche)</th><th>Report Table (catégorie nommée)</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Marquage binaire (coché / non coché)</td>
+            <td>Catégorie structurée avec nom, couleur, description</td>
+          </tr>
+          <tr>
+            <td>Un seul tag par fichier</td>
+            <td>Un fichier peut appartenir à <strong>plusieurs</strong> Report Tables</td>
+          </tr>
+          <tr>
+            <td>Utile pour le triage rapide</td>
+            <td>Utile pour la <strong>structure du rapport final</strong></td>
+          </tr>
+          <tr>
+            <td>Non exporté dans le rapport officiel</td>
+            <td>Apparaît comme <strong>section dédiée</strong> dans le rapport</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card card-purple" style="margin-top:.75rem">
+      <div class="card-title">📋 Créer &amp; utiliser les Report Tables</div>
+      <div class="steps">
+        <div class="step"><div class="step-num sn">1</div><div class="step-text"><strong>Accéder :</strong> menu <span class="hex">Case → Edit Report Table Associations</span> (ou clic droit sur un fichier dans le Directory Browser).</div></div>
+        <div class="step"><div class="step-num sn">2</div><div class="step-text"><strong>Créer les catégories métier</strong> pertinentes : <em>Documents financiers</em> · <em>Échanges suspects</em> · <em>Images illicites</em> · <em>Malware</em> · <em>Mots de passe récupérés</em> · <em>Contact personnes d'intérêt</em>…</div></div>
+        <div class="step"><div class="step-num sn">3</div><div class="step-text"><strong>Assigner couleur + description</strong> à chaque catégorie. La description apparaîtra dans le rapport pour expliquer au magistrat ce que signifie la catégorie.</div></div>
+        <div class="step"><div class="step-num sn">4</div><div class="step-text"><strong>Associer les fichiers</strong> au fil de l'analyse (un fichier peut être dans plusieurs catégories — ex. un PDF suspect = <em>Documents financiers</em> + <em>Échanges suspects</em>).</div></div>
+        <div class="step"><div class="step-num sn-g">5</div><div class="step-text"><strong>Générer le rapport final</strong> — chaque Report Table devient une section du rapport, avec la liste des fichiers, hashs, chemins, dates, commentaires.</div></div>
+      </div>
+    </div>
+
+    <div class="info" style="margin-top:.75rem">
+      💡 <strong>Commenter au fil de l'eau.</strong> Pour chaque fichier ajouté à une Report Table,
+      X-Ways propose un champ <em>Comment</em>. <strong class="cyan">Toujours le remplir</strong>
+      (même brièvement) : <em>« reçu le 12/03, envoyé à X »</em>, <em>« contient des
+      numéros de compte IBAN »</em>. Ces commentaires apparaissent dans le rapport final et guident
+      le magistrat.
+    </div>
+
+    <div class="tip" style="margin-top:.75rem">
+      🎯 <strong>Workflow professionnel :</strong> pas de Tag à la volée sans plan.
+      Définir <strong>d'abord</strong> les Report Tables à partir de l'hypothèse d'enquête
+      (ex. <em>blanchiment</em> → catégories <em>Relevés bancaires</em> · <em>Transferts crypto</em> ·
+      <em>Contacts étrangers</em>). Puis l'analyse remplit ces catégories. Le rapport écrit
+      littéralement tout seul à la fin.
+    </div>
+  </div>
+
+  <!-- ═══════════════ WORKFLOW ═══════════════ -->
+  <div class="section" id="workflow">
+    <div class="section-title">⑮ Flux de travail anti-erreurs</div>
+
+    <p class="meta" style="margin-bottom:.75rem">L'ordre compte — un pas manqué et l'analyse s'écroule.</p>
+
+    <div class="steps">
+      <div class="step"><div class="step-num sn">1</div><div class="step-text"><strong>Brancher le dongle USB.</strong> Sans dongle : X-Ways refuse de démarrer ou reste en version limitée.</div></div>
+      <div class="step"><div class="step-num sn">2</div><div class="step-text"><strong>Lancer X-Ways</strong> (ou WinHex en admin — exige les droits administrateur pour l'accès aux disques physiques).</div></div>
+      <div class="step"><div class="step-num sn">3</div><div class="step-text"><strong>Créer le Cas (<span class="hex">.xfc</span>).</strong> Dossier de stockage <span class="red">distinct</span> du disque de preuve.</div></div>
+      <div class="step"><div class="step-num sn">4</div><div class="step-text"><strong>Ajouter l'image disque.</strong> Sélectionner le <span class="hex">.e01</span> de départ — choisir <em>Disque physique</em>.</div></div>
+      <div class="step"><div class="step-num sn-g">5</div><div class="step-text"><strong>Vérifier le hash (<kbd>F10</kbd>).</strong> Comparer MD5/SHA-256 avec le PV de saisie.</div></div>
+      <div class="step"><div class="step-num sn">6</div><div class="step-text"><strong>Volume Snapshot (<kbd>F9</kbd>).</strong> Cocher : fichiers supprimés · signatures · hash · fichiers communs.</div></div>
+      <div class="step"><div class="step-num sn">7</div><div class="step-text"><strong>Activer la récursivité.</strong> Aplatir toute l'arborescence en une liste.</div></div>
+      <div class="step"><div class="step-num sn">8</div><div class="step-text"><strong>Trier / Filtrer / Refine.</strong> Par date, type, mot-clé · Refine Snapshot ciblé sur les objets pertinents.</div></div>
+      <div class="step"><div class="step-num sn">9</div><div class="step-text"><strong>Visualiser &amp; valider la pertinence.</strong> Viewer interne ou Associations externes (VLC, DB Browser SQLite…).</div></div>
+      <div class="step"><div class="step-num sn">10</div><div class="step-text"><strong>Marquer : Tag</strong> (coche rapide) <strong>ou Report Table</strong> (catégorisation professionnelle : « Documents financiers », « Malware »…).</div></div>
+      <div class="step"><div class="step-num sn-g">11</div><div class="step-text"><strong>Extraire</strong> (<em>Recover/Copy</em>). Le fichier est extrait sans modifier la preuve.</div></div>
+      <div class="step"><div class="step-num sn-g">12</div><div class="step-text"><strong>Générer le rapport</strong> — <span class="hex">Menu Case → Report</span>. Formats : HTML · PDF · Texte. Inclut hashs, catégories, journal d'actions.</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ QUIZ ═══════════════ -->
+  <div class="section">
+    <div class="section-title">🧠 Testez-vous</div>
+    <div class="quiz-wrap">
+      <div class="quiz-q">Vous travaillez sur une image E01. Vous voulez voir <em>tous</em> les fichiers, y compris ceux carvés en unallocated. Quelle commande dans X-Ways ?<small>Refine Snapshot · Niveau : facile</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer">Lancer le <strong>Volume Snapshot (F9)</strong> sur le volume, puis <strong>Refine Volume Snapshot (Specialist menu)</strong> avec les options : (1) <em>File header signature search</em> (carving par signature), (2) <em>Browse all data structures</em>, (3) cocher tous les <strong>magic bytes</strong> à carver (JPEG, PNG, PDF, ZIP, MP4...). Les fichiers carvés apparaissent en <em>italique</em> dans la Directory Browser avec le tag « <strong>Carved</strong> ». Ils n'ont pas de timestamps fiables (pas d'entrée MFT) — c'est une particularité importante pour le rapport. Si possible, configurer dans <em>Options → Directory Browser</em> pour différencier visuellement les fichiers carvés des fichiers natifs.</div>
+    </div>
+    <div class="quiz-wrap">
+      <div class="quiz-q">Sur un fichier <code>vacances.jpg</code>, X-Ways affiche un <strong>Type Status : Mismatch</strong>. Que signifie cela et quelle est la priorité ?<small>Type Status · Niveau : moyen</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer">Le « <strong>Mismatch</strong> » signifie que l'<strong>extension</strong> du fichier (<code>.jpg</code>) <strong>ne correspond pas</strong> aux <strong>magic bytes</strong> détectés par X-Ways. Exemple typique : un fichier nommé <code>vacances.jpg</code> dont les premiers octets sont <code>4D 5A</code> (PE/EXE Windows) ou <code>50 4B 03 04</code> (ZIP/archive). C'est un signal fort de <strong>dissimulation intentionnelle</strong> — souvent utilisé pour cacher des malwares, archives chiffrées, ou contenu illicite. <strong>Priorité</strong> : (1) tagger le fichier en <em>Report Table « À investiguer »</em>, (2) ouvrir avec WinHex pour confirmer le vrai type, (3) calculer SHA-256, (4) tenter l'extraction du contenu réel (renommer en <code>.exe</code>/<code>.zip</code> et analyser dans une VM isolée), (5) toujours documenter dans le rapport — le <em>fait</em> de la dissimulation est en lui-même une preuve d'intention.</div>
+    </div>
+    <div class="quiz-wrap">
+      <div class="quiz-q">Différence entre <strong>Tag</strong> et <strong>Report Table</strong> dans X-Ways ?<small>Catégorisation · Niveau : moyen</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer"><strong>Tag</strong> = marquage <strong>booléen</strong> simple (un fichier est « tagué » ou non). Sert à identifier rapidement les fichiers d'intérêt pendant l'analyse, similaire à un favori. <strong>Report Table</strong> = <strong>catégorisation structurée</strong> : un fichier peut appartenir à <strong>plusieurs Report Tables</strong> simultanément (ex: « Photos suspect », « Communications », « Pièce à conviction n°5 »). Chaque Report Table devient une <strong>section du rapport final</strong> avec ses fichiers, hashs, captures. Les Report Tables sont la <strong>structure de l'argumentaire judiciaire</strong> : elles permettent au juge ou au procureur de naviguer logiquement dans les preuves. <strong>Best practice</strong> : créer les Report Tables en début d'enquête selon le plan d'analyse, puis les remplir au fur et à mesure. Tags = workflow personnel · Report Tables = livrables judiciaires.</div>
+    </div>
+    <div class="quiz-wrap">
+      <div class="quiz-q">Avec WinHex, vous voulez analyser manuellement un MBR (Master Boot Record). Que faut-il taper et quelle est sa structure exacte ?<small>WinHex bas-niveau · Niveau : difficile</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer"><strong>Procédure WinHex</strong> : (1) <em>Tools → Open Disk → Physical disk</em> (PAS la partition logique), (2) <strong>activer Write Protection</strong> dans Options (impératif !), (3) le secteur 0 affiché est le MBR. <strong>Pour parser automatiquement</strong> : <kbd>Alt</kbd>+<kbd>F12</kbd> ouvre les <strong>Templates</strong> · choisir <em>« Master Boot Record »</em>. <strong>Structure exacte du MBR (512 octets)</strong> : (a) <strong>Bytes 0–445</strong> (446 octets) = <em>code de boot</em> (instructions x86 du bootloader), (b) <strong>Bytes 446–509</strong> (64 octets) = <em>table de partitions</em> = 4 entrées × 16 octets chacune (boot flag · CHS début · type · CHS fin · LBA début · taille), (c) <strong>Bytes 510–511</strong> = <em>signature MBR</em> = <code>55 AA</code> (en little endian, lu <code>AA 55</code>). Si la signature manque → MBR corrompu. <strong>Type partition fréquents</strong> : <code>0x07</code>=NTFS · <code>0x0B</code>=FAT32 · <code>0x83</code>=Linux · <code>0xEE</code>=GPT (protective MBR).</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ EXAM TIP CONDENSÉ ═══════════════ -->
+  <div class="exam-tip">
+    <div class="exam-tip-title">🎓 Exam Tip — X-Ways Forensics &amp; WinHex</div>
+    <p><strong>X-Ways</strong> = standard judiciaire CH · X-Ways Software AG · Allemagne · Stefan Fleischmann</p>
+    <p><strong>Dongle USB obligatoire</strong> · 100% portable (sur clé USB) · aucune installation sur la machine d'analyse</p>
+    <p><strong>Cas (.xfc)</strong> = mémoire complète de l'affaire · <em>toujours commencer par créer un Cas avant l'analyse</em></p>
+    <p><strong>Volume Snapshot (F9)</strong> = cœur du moteur · index virtuel modifiable du système de fichiers</p>
+    <p><strong>Refine Snapshot (F10)</strong> = enrichissement progressif : Carving · Hash · Type Status · Entropie · Fuzzy Doc · Undelete</p>
+    <p><strong>Type Status Mismatch</strong> = extension falsifiée · forte présomption de dissimulation</p>
+    <p><strong>Entropie</strong> ≈ 7.99 = chiffrement ou compression maximale · ≈ 1 = données structurées</p>
+    <p><strong>Fichier FAT supprimé</strong> : premier octet du nom = <code>0xE5</code> → X-Ways affiche <code>?</code> · LFN restaure la lettre</p>
+    <p><strong>Tag</strong> = booléen simple · <strong>Report Table</strong> = catégorie structurée pour rapport</p>
+    <p><strong>Magic bytes essentiels</strong> :</p>
+    <p>&nbsp;&nbsp;• <code>FF D8 FF</code> = JPEG · <code>89 50 4E 47</code> = PNG · <code>25 50 44 46</code> = PDF</p>
+    <p>&nbsp;&nbsp;• <code>50 4B 03 04</code> = ZIP/DOCX/XLSX · <code>4D 5A</code> = EXE/PE Windows · <code>7F 45 4C 46</code> = ELF Linux</p>
+    <p><strong>WinHex</strong> = ancêtre + microscope chirurgical · éditeur hexadécimal bas-niveau</p>
+    <p><strong>Templates WinHex</strong> : <kbd>Alt</kbd>+<kbd>F12</kbd> · MBR · GPT · FAT BR · NTFS BR · etc.</p>
+    <p><strong>MBR (512 octets)</strong> : 446 (code boot) + 64 (4 partitions × 16) + 2 (signature <code>55 AA</code>)</p>
+    <p><strong>Write Protection</strong> = <em>impératif</em> avant toute analyse WinHex sur disque physique</p>
+    <p><strong>Little Endian</strong> : <code>00 E4 00 00</code> = 58 368 octets (lecture inverse)</p>
+  </div>
+
+  <!-- ═══════════════ EXAM ═══════════════ -->
+  <div class="section" style="margin-top:2rem">
+    <div class="section-title">⚖️ Examen CAS-IN — à retenir</div>
+    <div class="card card-purple">
+      <p style="font-size:.78rem;line-height:1.75">
+        X-Ways = <strong class="cyan">standard judiciaire suisse</strong> · Dongle USB obligatoire · Portable (aucune installation) ·
+        <kbd>F9</kbd> = Volume Snapshot · <kbd>F10</kbd> = hash ·
+        Toujours <strong class="green">Disque physique</strong>, jamais partition logique ·
+        Le <span class="hex">.xfc</span> = mémoire du Cas · Copie bit-à-bit ≠ Snapshot (photo logique interne) ·
+        Type Status <span class="hex h-gold">Mismatch</span> = extension falsifiée ·
+        <span class="hex h-red">e</span> / <span class="hex h-red">e?</span> = chiffrement probable (entropie ≈ 1) ·
+        Magic bytes clés : <span class="hex h-orange">FF D8 FF</span>=JPEG · <span class="hex h-orange">89 50 4E 47</span>=PNG · <span class="hex h-orange">50 4B 03 04</span>=ZIP/DOCX · <span class="hex h-orange">25 50 44 46</span>=PDF · <span class="hex h-orange">4D 5A</span>=EXE/PE ·
+        Fichier supprimé FAT → premier octet <span class="hex h-red">0xE5</span> → X-Ways affiche <span class="hex">?</span> → LFN restaure la lettre manquante ·
+        <strong class="purple">Report Tables</strong> ≠ Tag : catégories structurées (un fichier = N catégories), apparaissent en sections du rapport ·
+        WinHex = éditeur bas-niveau, <strong class="orange">ancêtre</strong> de X-Ways ·
+        <kbd>Alt</kbd>+<kbd>F12</kbd> = Templates (MBR, FAT, NTFS) ·
+        <strong class="gold">MBR = 512 octets</strong> : 446 (code) + 64 (table 4 partitions × 16) + 2 (signature <span class="hex">55 AA</span>) ·
+        Toujours activer <strong class="red">Write Protection</strong> sur WinHex avant analyse ·
+        Little Endian : <span class="hex h-orange">00 E4 00 00</span> = 58 368 octets.
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════════ FOOTER ═══════════════ -->
+  <div class="footer">
+    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+    <span>Ch. 9 Manuel · X-Ways &amp; WinHex Documentation</span>
+  </div>
+
+</div>
+
+<button class="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Retour en haut">↑</button>
+<script>
+const bt = document.querySelector('.back-top');
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 400) bt.classList.add('visible');
+    else bt.classList.remove('visible');
+  });
+  // Scroll progress bar
+  bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';
+  },{passive:true});
+  // Quiz reveal
+</script>
+
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

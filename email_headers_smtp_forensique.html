@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Email Headers & SMTP Forensique — CAS-IN DFIR</title>
+<meta name="description" content="Headers SMTP avancés · Received · DKIM/SPF/DMARC · Path analysis · Spoofing detection">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">RÉSEAUX & COMMUNICATION</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-réseaux">Réseaux & Communication</a><span class="bc-sep">›</span>
+    <span class="bc-current">Email Headers & SMTP Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~14 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">📧</span>
+    <span class="tag tag-blue" style="margin-left:.5rem">Email</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">RFC 5321/5322</span>
+    <span class="tag tag-red" style="margin-left:.3rem">Phishing</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Email Headers & SMTP Forensique</h1>
+    <div class="meta">RFC 5321/5322 · SMTP Protocol · Header Analysis · SPF/DKIM/DMARC · Spoofing Detection · Routing Forensics</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="reseau.html" class="prereq-pill">📖 TCP/IP Basics</a><a href="encodage.html" class="prereq-pill">📖 Encodage</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="wireshark_pcap.html" class="related-pill">🔗 Wireshark & PCAP</a><a href="dns_forensique.html" class="related-pill">🔗 DNS Forensique</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="email-tabs">
+  <button class="tab active" onclick="showTab('smtp',this)">📬 SMTP Basics</button>
+  <button class="tab" onclick="showTab('headers',this)">📋 Header Anatomy</button>
+  <button class="tab" onclick="showTab('spoofing',this)">🚨 Spoofing Detection</button>
+  <button class="tab" onclick="showTab('auth',this)">🔐 SPF/DKIM/DMARC</button>
+  <button class="tab" onclick="showTab('tools',this)">🔧 Analyzers & Validators</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — SMTP BASICS
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-smtp">
+
+<div class="concept-card">
+  <div class="concept-title">📬 SMTP = Simple Mail Transfer Protocol (RFC 5321)</div>
+  Protocole standard envoi emails. Client SMTP → envoie → serveur SMTP → relaye vers serveur destination. Chaque étape = logguée en Received headers.
+</div>
+
+<div class="sec-title">SMTP Flow (Simplifié)</div>
+
+<div style="margin:1.5rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.8rem;line-height:2;color:var(--text)">
+  <code>
+  CLIENT → SMTP-SERVER-1 (compose + send)<br>
+  <br>
+  SMTP-SERVER-1 → SMTP-SERVER-2 (relaye)<br>
+  <span style="color:var(--dim)">Ajoute: Received: from server1.com by server2.com</span><br>
+  <br>
+  SMTP-SERVER-2 → SMTP-SERVER-3 (relaye)<br>
+  <span style="color:var(--dim)">Ajoute: Received: from server2.com by server3.com</span><br>
+  <br>
+  SMTP-SERVER-3 → RECIPIENT (inbox)<br>
+  <span style="color:var(--dim)">Final Received: from server3.com</span><br>
+  <br>
+  <span style="color:var(--green)">Result: Email header = FULL ROUTING PATH 🎯</span>
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(0,229,204,.08);border-left:3px solid var(--cyan)">
+  <strong style="color:var(--cyan)">🔍 Forensique SMTP</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem;line-height:1.8">
+    <li><strong>Routing path</strong> = Trace attacker IP(s)</li>
+    <li><strong>Timestamps</strong> = quand exactement envoyé</li>
+    <li><strong>Headers</strong> = vérifier cohérence (From ≠ Return-Path?)</li>
+    <li><strong>Authentication</strong> = SPF/DKIM/DMARC passed/failed?</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — HEADER ANATOMY
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-headers">
+
+<div class="concept-card">
+  <div class="concept-title">📋 Email Header Structure (RFC 5322)</div>
+  Headers = paires clé-valeur qui décrivent email (qui, quand, route, contenu, etc). Ordre des headers <code>Received</code> : <strong>chaque serveur ajoute son Received en TÊTE</strong> — donc le plus récent est en haut, le plus ancien (le client expéditeur) tout en bas. <em>Pour reconstituer la route, on lit du bas vers le haut.</em>
+</div>
+
+<div class="sec-title">Headers Critiques pour Forensique</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Header</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Contenu</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Forensique</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>From</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Sender apparent (affiché)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🟠 MODIFIABLE! Peut être spoofé</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Return-Path</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Vrai expéditeur (serveur SMTP)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🟢 AUTHENTIQUE (serveur ajoute)</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Received</strong> (multiple)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Each relay adds this</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔴 CRITICAL! Trace routing path</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Date</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Sent timestamp (client clock)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🟠 Client clock (peut être faux)</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Subject</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Sujet email</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">📌 Intent (phishing subject?)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Message-ID</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Unique ID per server</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🔑 Track emails from same source</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Authentication-Results</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">SPF/DKIM/DMARC results</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">🟢 Pass/Fail = vérification</td>
+  </tr>
+
+</table>
+
+<div class="sec-title">Exemple: Header Complet</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem;line-height:1.8;color:var(--text)">
+  <code>
+  From: attacker@gmail.com  ← <span style="color:var(--red)">SPOOFABLE</span><br>
+  To: victim@example.com<br>
+  Subject: Urgent: Verify Account!  ← <span style="color:var(--orange)">Phishing clue</span><br>
+  Date: Wed, 20 Mar 2024 14:32:00 +0000<br>
+  Message-ID: &lt;abc123@gmail.com&gt;<br>
+  <br>
+  <span style="color:var(--dim)">← Start Received headers (oldest first)</span><br>
+  <br>
+  Received: from mail.google.com (mail.google.com [142.250.185.46])<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;by mail.example.com with SMTP id <span style="color:var(--green)">pass</span><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;for &lt;victim@example.com&gt;;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;Wed, 20 Mar 2024 14:33:00 +0000<br>
+  <br>
+  <span style="color:var(--dim)">← Gmail added this (verified sender)</span><br>
+  <br>
+  Received: from client.home [192.168.1.100]<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;by mail.google.com with SMTP<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;Wed, 20 Mar 2024 14:32:00 +0000<br>
+  <br>
+  <span style="color:var(--dim)">← Attacker's local IP (earliest)</span><br>
+  <br>
+  Authentication-Results: mail.example.com;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;spf=<span style="color:var(--red)">fail</span>;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;dkim=<span style="color:var(--red)">fail</span>;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;dmarc=<span style="color:var(--red)">fail</span><br>
+  <br>
+  <span style="color:var(--red)">↑ RED FLAGS!</span>
+  </code>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — SPOOFING DETECTION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-spoofing">
+
+<div class="concept-card">
+  <div class="concept-title">🚨 Email Spoofing = Fake From Header</div>
+  Attacker envoie email avec faux "From" (ex: boss@company.com). Destinataire voit fake From, mais Received headers = vraie source.
+</div>
+
+<div class="sec-title">Detections Indicateurs Spoofing</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0">
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚩 From ≠ Return-Path</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      From: boss@company.com<br>
+      Return-Path: attacker@gmail.com<br>
+      <span style="color:var(--red)">→ SUSPICIOUS!</span>
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚩 From Domain ≠ Last Received</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      From: john@company.com<br>
+      Received: from attacker.tk<br>
+      <span style="color:var(--red)">→ Spoofed!</span>
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚩 SPF/DKIM/DMARC Failed</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      spf=fail<br>
+      dkim=fail<br>
+      <span style="color:var(--red)">→ No authentication</span>
+    </span>
+  </div>
+
+  <div class="concept-card" style="background:rgba(255,64,96,.08)">
+    <strong style="color:var(--red)">🚩 Weird IPs in Received</strong><br>
+    <span style="font-size:.85rem;line-height:1.6">
+      from [192.168.0.1] (home ISP)<br>
+      claiming to be company employee<br>
+      <span style="color:var(--red)">→ Unlikely</span>
+    </span>
+  </div>
+
+</div>
+
+<div class="concept-card" style="background:rgba(0,229,204,.04);border-left:3px solid var(--cyan);margin-top:1rem">
+  <strong style="color:var(--cyan)">Detection Workflow</strong><br>
+  <ol style="margin:.75rem 0 0 1.5rem;font-size:.9rem;line-height:1.8">
+    <li>Extract Received headers (reverse order = timeline)</li>
+    <li>Identify first hop IP (attacker origin)</li>
+    <li>Compare From domain vs Received domain</li>
+    <li>Check SPF/DKIM/DMARC pass/fail</li>
+    <li>IP reverse lookup (geolocation suspicious?)</li>
+    <li>Timestamp consistency (Date vs Received)</li>
+  </ol>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — SPF/DKIM/DMARC AUTH
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-auth">
+
+<div class="concept-card">
+  <div class="concept-title">🔐 Email Authentication: SPF, DKIM, DMARC</div>
+  Trois standards pour vérifier que email est vrai (pas spoofé). SPF = IP vérification, DKIM = signature, DMARC = policy enforcement.
+</div>
+
+<div class="sec-title">Les 3 Protocols Expliqués</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Protocol</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Comment</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Résultat</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--cyan)"><strong>SPF (RFC 7208)</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Receiver cherche SPF record du From domain (DNS TXT). Vérifie: "est-ce IP du serveur SMTP autorisée?"</td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong style="color:var(--green)">pass</strong> / <span style="color:var(--red)">fail</span> / softfail</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--blue)"><strong>DKIM (RFC 6376)</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Sender ajoute signature cryptographique. Receiver vérifie signature avec clé publique (DNS).</td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong style="color:var(--green)">pass</strong> / <span style="color:var(--red)">fail</span> / neutral</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border);color:var(--green)"><strong>DMARC (RFC 7489)</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Policy: "Si SPF + DKIM fail, qu'est-ce que tu fais?" Peut quarantine/reject/report.</td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong style="color:var(--green)">pass</strong> / <span style="color:var(--red)">fail</span></td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red)">
+  <strong style="color:var(--red)">⚠️ Forensique: Authentication-Results Header</strong><br>
+  <code style="display:block;margin:.75rem 0;padding:.5rem;background:rgba(13,17,23,.5);border-radius:4px;font-size:.75rem;font-family:var(--mono)">
+  Authentication-Results: mail.example.com;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;spf=<strong style="color:var(--red)">fail</strong> smtp.mailfrom=attacker@gmail.com;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;dkim=<strong style="color:var(--red)">fail</strong> header.d=company.com;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;dmarc=<strong style="color:var(--red)">fail</strong> header.from=company.com<br>
+  <br>
+  <span style="color:var(--orange)">→ ALL FAILED = Phishing likely! 🚨</span>
+  </code>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — TOOLS & ANALYZERS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tools">
+
+<div class="sec-title">🔧 Email Header Analyzers</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Tool</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Fonction</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Access</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>MX Toolbox</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Header analyzer (visual), SPF/DKIM checker</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Web</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Google Toolbox</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Analyze SMTP & SPF/DKIM/DMARC</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Web</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Thunderbird</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">View raw headers (View → Message Source)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">GUI (local)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>grep/awk (CLI)</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Extract + parse headers (batch)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">CLI</td>
+  </tr>
+
+</table>
+
+<div class="sec-title">Email Header Parser Interactive</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <label style="display:block;margin-bottom:.75rem;font-size:.9rem;font-weight:600">
+    Collez headers bruts (copiez de "View Source" ou email client):
+    <textarea id="email-headers" placeholder="From: boss@company.com&#10;Return-Path: attacker@gmail.com&#10;Received: from attacker.tk (192.168.1.100)&#10;Authentication-Results: spf=fail dkim=fail" style="width:100%;height:150px;margin-top:.35rem;padding:.6rem;background:rgba(13,17,23,.5);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem"></textarea>
+  </label>
+  <button onclick="analyzeEmailHeaders()" style="width:100%;padding:.6rem;background:var(--cyan);color:var(--bg);border:none;border-radius:4px;font-weight:600;cursor:pointer">Analyser</button>
+  
+  <div id="email-result" style="margin-top:1rem;padding:1rem;background:rgba(0,229,204,.1);border:1px solid rgba(0,229,204,.3);border-radius:6px;font-size:.85rem">
+    <div style="color:var(--dim)">👆 Collez headers pour analyse spoofing</div>
+  </div>
+</div>
+
+<div class="sec-title">CLI Quick Commands</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem">
+  <code style="display:block;color:var(--cyan);margin-bottom:1rem">
+  # Extract headers from email file<br>
+  $ head -100 email.txt | grep -E "^(From|Return-Path|Received|Date|Authentication)"<br>
+  <br>
+  # Check SPF record<br>
+  $ dig company.com TXT | grep spf<br>
+  <br>
+  # Check DKIM record<br>
+  $ dig default._domainkey.company.com TXT<br>
+  <br>
+  # Check DMARC policy<br>
+  $ dig _dmarc.company.com TXT<br>
+  <br>
+  # Extract IPs from Received headers<br>
+  $ grep "Received:" email.txt | grep -oP '\[[\d.]+\]' | sort<br>
+  <br>
+  # Reverse IP lookup<br>
+  $ dig -x 192.168.1.100
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">✅ Workflow Complet Email Forensique</strong><br>
+  <ol style="margin:.75rem 0 0 1.5rem;font-size:.9rem;line-height:1.8">
+    <li>Extraire tous headers (Thunderbird ou CLI)</li>
+    <li>Identifier Received headers (reverse order = timeline)</li>
+    <li>Trouver première IP (attacker origin)</li>
+    <li>Reverse IP lookup (geolocation)</li>
+    <li>Compare From ≠ Return-Path (spoofing?)</li>
+    <li>Check SPF/DKIM/DMARC results</li>
+    <li>Verify Date vs Received timestamps</li>
+    <li>Rapport: Spoofing likelihood, source IP, authentication</li>
+  </ol>
+</div>
+
+</div>
+
+<script>
+function showTab(tab, btn) {
+  var pages = document.querySelectorAll('.tab-page');
+  pages.forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function analyzeEmailHeaders() {
+  var input = document.getElementById('email-headers').value;
+  var result = document.getElementById('email-result');
+  
+  if (!input) {
+    result.innerHTML = '<div style="color:var(--dim)">Aucunes données</div>';
+    return;
+  }
+  
+  var lines = input.split('\n');
+  var analysis = {
+    from: null,
+    returnPath: null,
+    spf: null,
+    dkim: null,
+    dmarc: null,
+    ips: []
+  };
+  
+  lines.forEach(line => {
+    if (line.includes('From:')) analysis.from = line.split('From:')[1];
+    if (line.includes('Return-Path:')) analysis.returnPath = line.split('Return-Path:')[1];
+    if (line.includes('spf=')) analysis.spf = line.match(/spf=(\w+)/)[1];
+    if (line.includes('dkim=')) analysis.dkim = line.match(/dkim=(\w+)/)[1];
+    if (line.includes('dmarc=')) analysis.dmarc = line.match(/dmarc=(\w+)/)[1];
+    if (line.includes('[')) {
+      var ipMatch = line.match(/\[([\d.]+)\]/);
+      if (ipMatch) analysis.ips.push(ipMatch[1]);
+    }
+  });
+  
+  var html = '<div style="color:var(--cyan);font-weight:600">📊 Analysis Results</div>';
+  html += '<div style="font-size:.85rem;margin-top:.5rem">';
+  
+  if (analysis.from) html += '<strong>From:</strong> ' + analysis.from.trim() + '<br>';
+  if (analysis.returnPath) html += '<strong>Return-Path:</strong> ' + analysis.returnPath.trim() + '<br>';
+  
+  html += '<br><strong style="color:var(--orange)">⚠️ Suspicious Indicators:</strong><br>';
+  
+  var suspiciousCount = 0;
+  
+  if (analysis.from && analysis.returnPath && analysis.from !== analysis.returnPath) {
+    html += '• From ≠ Return-Path<br>';
+    suspiciousCount++;
+  }
+  
+  if (analysis.spf && analysis.spf !== 'pass') {
+    html += '• SPF: <span style="color:var(--red)">' + analysis.spf.toUpperCase() + '</span><br>';
+    suspiciousCount++;
+  }
+  
+  if (analysis.dkim && analysis.dkim !== 'pass') {
+    html += '• DKIM: <span style="color:var(--red)">' + analysis.dkim.toUpperCase() + '</span><br>';
+    suspiciousCount++;
+  }
+  
+  if (analysis.dmarc && analysis.dmarc !== 'pass') {
+    html += '• DMARC: <span style="color:var(--red)">' + analysis.dmarc.toUpperCase() + '</span><br>';
+    suspiciousCount++;
+  }
+  
+  if (analysis.ips.length > 0) {
+    html += '<br><strong>IPs Found:</strong> ' + analysis.ips.join(', ') + '<br>';
+  }
+  
+  html += '<br><strong>Confidence Level:</strong> ';
+  if (suspiciousCount >= 2) html += '<span style="color:var(--red)">🔴 LIKELY SPOOFED</span>';
+  else if (suspiciousCount === 1) html += '<span style="color:var(--orange)">🟠 SUSPICIOUS</span>';
+  else html += '<span style="color:var(--green)">🟢 LIKELY AUTHENTIC</span>';
+  
+  html += '</div>';
+  result.innerHTML = html;
+}
+</script>
+
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>

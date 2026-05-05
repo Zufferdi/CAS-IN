@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Browser Artifacts Deep Dive — CAS-IN DFIR</title>
+<meta name="description" content="Chrome/Edge/Firefox profonds · Extensions · IndexedDB · Service Workers · Cache · Synchronisation">
+<link rel="stylesheet" href="../style/fiche_style.css">
+</head>
+<body>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">DONNÉES & TIMELINE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-données">Données & Timeline</a><span class="bc-sep">›</span>
+    <span class="bc-current">Browser Artifacts Deep Dive</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~17 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🔍</span>
+    <span class="tag tag-cyan" style="margin-left:.5rem">Browser</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Timeline</span>
+    <span class="tag tag-orange" style="margin-left:.3rem">User Behavior</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Browser Artifacts Deep Dive</h1>
+    <div class="meta">Chrome/Firefox/Safari · History · Cache · Cookies · LocalStorage · Timeline Reconstruction · Credential Extraction</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="sqlite_forensique.html" class="prereq-pill">📖 SQLite Forensique</a><a href="dns_forensique.html" class="prereq-pill">📖 DNS Forensique</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="registre_windows.html" class="related-pill">🔗 Windows Registry</a><a href="mobile.html" class="related-pill">🔗 Mobile Forensique</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="browser-tabs">
+  <button class="tab active" onclick="showTab('chrome',this)">🔷 Chrome Complete</button>
+  <button class="tab" onclick="showTab('firefox',this)">🦊 Firefox</button>
+  <button class="tab" onclick="showTab('safari',this)">🧭 Safari</button>
+  <button class="tab" onclick="showTab('timeline',this)">📅 Timeline Reconstruction</button>
+  <button class="tab" onclick="showTab('credentials',this)">🔐 Credentials & Secrets</button>
+  <button class="tab" onclick="showTab('tools',this)">🔧 Tools & Extraction</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — CHROME COMPLETE
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-chrome">
+
+<div class="concept-card">
+  <div class="concept-title">🔷 Chrome = Google Ecosystem Forensics</div>
+  Chrome stores comprehensive user data: history, cache, bookmarks, extensions, cookies, autofill, sync data. Multiple SQLite + JSON files.
+</div>
+
+<div class="sec-title">Chrome Profile Location & Files</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem;line-height:1.8">
+  <code>
+  <strong style="color:var(--cyan)">Windows:</strong><br>
+  C:\Users\[user]\AppData\Local\Google\Chrome\User Data\Default\<br>
+  <br>
+  <strong style="color:var(--cyan)">macOS:</strong><br>
+  ~/Library/Application Support/Google/Chrome/Default/<br>
+  <br>
+  <strong style="color:var(--cyan)">Linux:</strong><br>
+  ~/.config/google-chrome/Default/<br>
+  <br>
+  <strong style="color:var(--orange)">Key Files Inside:</strong><br>
+  ├─ History (SQLite) ← 🔴 Main artifact<br>
+  ├─ Bookmarks (JSON)<br>
+  ├─ Cookies (SQLite)<br>
+  ├─ Cache/ (binary files)<br>
+  ├─ Extensions/ (extension data)<br>
+  ├─ Local Storage/ (app-specific)<br>
+  └─ Sync Data/ (if Google account)<br>
+  </code>
+</div>
+
+<div class="sec-title">Chrome History Forensics</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Artifact</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Forensic Data</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">How to Extract</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>urls table</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">All visited URLs, titles, counts, timestamps</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">sqlite3 History "SELECT * FROM urls;"</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>visits table</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Each visit individually (timeline)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">JOIN urls + visits on url_id</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Bookmarks</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">User's important URLs + folders</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Parse Bookmarks JSON file</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Cache</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Downloaded pages, images, JS</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Carve from Cache/ directory</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Extensions</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Malicious extensions (spyware)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Check Extensions/ folder + manifest.json</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Autofill</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Credit cards, addresses (encrypted)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Web Data SQLite (encrypted by default)</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red)">
+  <strong style="color:var(--red)">🚨 Chrome Sync Data</strong><br>
+  If user logged in to Google account:<br>
+  • History synced to Google servers<br>
+  • Can recover from cloud account (with permission)<br>
+  • Local sync cache = additional artifact
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — FIREFOX
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-firefox">
+
+<div class="concept-card">
+  <div class="concept-title">🦊 Firefox = Privacy-Focused Browser</div>
+  Firefox stores data in profile folder. Key difference: Mozilla doesn't sync data by default. Local-only artifacts (unless Sync enabled).
+</div>
+
+<div class="sec-title">Firefox Profile Location</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem;line-height:1.8">
+  <code>
+  <strong style="color:var(--cyan)">Windows:</strong><br>
+  C:\Users\[user]\AppData\Roaming\Mozilla\Firefox\Profiles\[random].default-release\<br>
+  <br>
+  <strong style="color:var(--cyan)">macOS:</strong><br>
+  ~/Library/Application Support/Firefox/Profiles/[random].default-release/<br>
+  <br>
+  <strong style="color:var(--cyan)">Linux:</strong><br>
+  ~/.mozilla/firefox/[random].default-release/<br>
+  <br>
+  <strong style="color:var(--orange)">Key Files:</strong><br>
+  ├─ places.sqlite ← 🔴 History + Bookmarks<br>
+  ├─ cookies.sqlite<br>
+  ├─ prefs.js (user preferences)<br>
+  ├─ formhistory.sqlite (form data)<br>
+  ├─ cache2/ (disk cache)<br>
+  └─ extensions.json (installed extensions)
+  </code>
+</div>
+
+<div class="sec-title">Firefox vs Chrome: Key Differences</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Aspect</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Chrome</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Firefox</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Sync</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Default (Google account)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Optional (Mozilla account)</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Timestamp Format</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">WebKit (1601)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Unix microseconds</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>History DB</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">History (3 tables)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">places.sqlite (10+ tables)</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Encryption</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Autofill only (passwords vault)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">No encryption by default</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(0,229,204,.04);border-left:3px solid var(--cyan)">
+  <strong style="color:var(--cyan)">Firefox prefs.js Analysis</strong><br>
+  User preferences stored in plaintext JavaScript:<br>
+  <code style="display:block;margin:.75rem 0;padding:.5rem;background:rgba(13,17,23,.5);border-radius:4px;font-size:.75rem;font-family:var(--mono)">
+  user_pref("browser.startup.homepage", "about:blank");<br>
+  user_pref("extensions.activeThemeID", "firefox-compact-dark");<br>
+  user_pref("browser.search.defaultenginename", "Google");<br>
+  <br>
+  → Reveals user preferences, homepage, search engine
+  </code>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — SAFARI
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-safari">
+
+<div class="concept-card">
+  <div class="concept-title">🧭 Safari = Apple Native Browser</div>
+  Safari data in plist + SQLite. macOS and iOS versions have different storage. iCloud sync possible (if Apple account syncing enabled).
+</div>
+
+<div class="sec-title">Safari Location & Files</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Platform</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Location</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>macOS</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>~/Library/Safari/</code></td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>iOS</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)"><code>/var/mobile/Library/Safari/</code> (requires jailbreak)</td>
+  </tr>
+
+</table>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-size:.85rem">
+  <strong style="color:var(--cyan)">Key macOS Safari Files:</strong><br>
+  <code style="display:block;font-family:var(--mono);font-size:.75rem;line-height:1.8">
+  History.db (SQLite) ← 🔴 Browsing history<br>
+  Bookmarks.plist (binary plist) ← Bookmarks<br>
+  TopSites.plist ← Frequently visited<br>
+  History/ ← Older history files<br>
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">Safari History.db Tables</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li><strong>history_items:</strong> URLs, titles, visit times</li>
+    <li><strong>history_visits:</strong> Each visit individually (timeline)</li>
+    <li><strong>safari_domain_expansion:</strong> Expanded URLs</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — TIMELINE RECONSTRUCTION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-timeline">
+
+<div class="concept-card">
+  <div class="concept-title">📅 Multi-Browser Timeline = Complete User Activity</div>
+  Combining history from Chrome, Firefox, Safari = comprehensive timeline of browsing behavior. Identify patterns, C2 communication, malicious sites.
+</div>
+
+<div class="sec-title">Timeline Merging Strategy</div>
+
+<div style="margin:1.5rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <div style="color:var(--cyan);font-weight:600;margin-bottom:.75rem">Process:</div>
+  <ol style="font-size:.9rem;line-height:1.8;margin:0 0 0 1.5rem">
+    <li><strong>Extract history from each browser</strong> → sqlite3 queries</li>
+    <li><strong>Normalize timestamps</strong> → Unix epoch (important!)</li>
+    <li><strong>Deduplicate</strong> → Same URL visited in multiple browsers</li>
+    <li><strong>Sort chronologically</strong> → Single master timeline</li>
+    <li><strong>Correlate with other artifacts</strong> → Registry, logs, network</li>
+    <li><strong>Identify suspicious patterns</strong> → Malware downloads, C2</li>
+    <li><strong>Timeline visualization</strong> → Graph/chart for report</li>
+  </ol>
+</div>
+
+<div class="sec-title">Timeline Builder Interactive</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px">
+  <label style="display:block;margin-bottom:.75rem;font-size:.9rem;font-weight:600">
+    Entrez browser visits (browser:url:timestamp):
+    <textarea id="browser-timeline" placeholder="Chrome:http://malware.ru:2024-03-20T14:30:00Z&#10;Firefox:http://example.com:2024-03-20T14:31:00Z&#10;Chrome:http://malware.ru:2024-03-20T14:32:00Z" style="width:100%;height:120px;margin-top:.35rem;padding:.6rem;background:rgba(13,17,23,.5);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem"></textarea>
+  </label>
+  <button onclick="buildBrowserTimeline()" style="width:100%;padding:.6rem;background:var(--cyan);color:var(--bg);border:none;border-radius:4px;font-weight:600;cursor:pointer">Créer Timeline Fusionnée</button>
+  
+  <div id="browser-timeline-result" style="margin-top:1rem;padding:1rem;background:rgba(0,229,204,.1);border:1px solid rgba(0,229,204,.3);border-radius:6px;font-size:.85rem;min-height:100px">
+    <div style="color:var(--dim)">👆 Entrez visits pour fusionner timeline</div>
+  </div>
+</div>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red);margin-top:1rem">
+  <strong style="color:var(--red)">⚠️ Timestamp Precision Issues</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li>Chrome = 100-nanosecond (1601 epoch)</li>
+    <li>Firefox = microseconds (Unix epoch)</li>
+    <li>Safari = seconds (varies by version)</li>
+    <li>→ Normalization critical for accurate timeline!</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — CREDENTIALS & SECRETS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-credentials">
+
+<div class="concept-card">
+  <div class="concept-title">🔐 Extracting Credentials = High Value Evidence</div>
+  Browsers store: passwords, credit cards, autofill data. Encryption varies (Chrome uses OS keychain, Firefox has master password). Extraction requires decryption or keychain access.
+</div>
+
+<div class="sec-title">Credential Storage by Browser</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Browser</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Storage File</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Encryption</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Extraction</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Chrome</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Login Data (SQLite)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">OS keychain (DPAPI)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Requires keychain key</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Firefox</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">logins.json + key4.db</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Master password (if set)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Decrypt with master password</td>
+  </tr>
+
+  <tr style="background:rgba(255,64,96,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Safari</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Keychain (system-wide)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">OS Keychain encryption</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Live access only (locked)</td>
+  </tr>
+
+</table>
+
+<div class="concept-card" style="background:rgba(255,64,96,.04);border-left:3px solid var(--red)">
+  <strong style="color:var(--red)">⚠️ Forensic Limitations</strong><br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li>Cannot extract Chrome passwords without keychain access</li>
+    <li>Firefox passwords encrypted (master password = blocker)</li>
+    <li>Safari locked to OS-level encryption</li>
+    <li><strong>Solution:</strong> Live forensics (if possible) or known password</li>
+  </ul>
+</div>
+
+<div class="sec-title">Autofill Data (Less Protected)</div>
+
+<div class="concept-card" style="background:rgba(0,229,204,.04);border-left:3px solid var(--cyan)">
+  <strong style="color:var(--cyan)">Autofill Extraction</strong><br>
+  Chrome Web Data (SQLite) stores:<br>
+  <ul style="margin:.5rem 0 0 1.5rem;font-size:.9rem">
+    <li>Credit card numbers (partially encrypted)</li>
+    <li>Addresses (plaintext)</li>
+    <li>Names (plaintext)</li>
+    <li>Phone numbers (plaintext)</li>
+  </ul>
+  <span style="font-size:.85rem;display:block;margin-top:.75rem">
+    → Often recoverable even if passwords not accessible
+  </span>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 6 — TOOLS & EXTRACTION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tools">
+
+<div class="sec-title">🔧 Browser Artifact Extraction Tools</div>
+
+<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);margin:1rem 0;font-size:.85rem">
+  <tr style="background:rgba(106,128,168,.1)">
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Outil</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Fonction</td>
+    <td style="padding:.6rem;border:1px solid var(--border);font-weight:600">Browsers</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>BrowserHistoryView</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Extract all browser history (GUI)</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Chrome, Firefox, Safari</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>sqlite3 CLI</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Query History/places.sqlite</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">All (SQL queries)</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Autopsy</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Automated browser artifact extraction</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Chrome, Firefox, Safari</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>ChromeForensics</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Chrome-specific analysis</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Chrome only</td>
+  </tr>
+
+  <tr style="background:rgba(0,229,204,.05)">
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>Volatility plugin</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">Extract from memory dump</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">All (from RAM)</td>
+  </tr>
+
+  <tr>
+    <td style="padding:.6rem;border:1px solid var(--border)"><strong>DB Browser for SQLite</strong></td>
+    <td style="padding:.6rem;border:1px solid var(--border)">GUI database browser</td>
+    <td style="padding:.6rem;border:1px solid var(--border)">All (SQL databases)</td>
+  </tr>
+
+</table>
+
+<div class="sec-title">CLI Quick Commands</div>
+
+<div style="margin:1rem 0;padding:1rem;background:rgba(106,128,168,.08);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.75rem">
+  <code style="display:block;color:var(--cyan);margin-bottom:1rem">
+  # Chrome: Extract all URLs with visit count<br>
+  $ sqlite3 History "SELECT url, title, visit_count, last_visit_time FROM urls ORDER BY last_visit_time DESC;"<br>
+  <br>
+  # Firefox: Timeline of all visits<br>
+  $ sqlite3 places.sqlite "SELECT p.url, h.visit_date FROM moz_historyvisits h JOIN moz_places p ON h.place_id=p.id ORDER BY h.visit_date;"<br>
+  <br>
+  # Safari: History (macOS)<br>
+  $ sqlite3 History.db "SELECT url, visit_time FROM history_items ORDER BY visit_time DESC;"<br>
+  <br>
+  # Extract bookmarks (Firefox)<br>
+  $ sqlite3 places.sqlite "SELECT title, url FROM moz_bookmarks WHERE title IS NOT NULL;"<br>
+  <br>
+  # Check Cache (Chrome)<br>
+  $ ls -lah Cache/<br>
+  <br>
+  # Timeline all browsers merged (bash)<br>
+  $ (sqlite3 History "SELECT last_visit_time, url FROM urls"; sqlite3 places.sqlite "SELECT visit_date*1000000, url FROM moz_historyvisits JOIN moz_places ON place_id=id") | sort
+  </code>
+</div>
+
+<div class="concept-card" style="background:rgba(48,232,138,.04);border-left:3px solid var(--green)">
+  <strong style="color:var(--green)">✅ Workflow Complet Browser Forensique</strong><br>
+  <ol style="margin:.75rem 0 0 1.5rem;font-size:.9rem;line-height:1.8">
+    <li>Locate browser profile folders (by OS)</li>
+    <li>Extract History/places.sqlite/History.db</li>
+    <li>Query each database (SQL commands above)</li>
+    <li>Export to CSV for timeline</li>
+    <li>Normalize timestamps (Unix epoch)</li>
+    <li>Merge all browsers chronologically</li>
+    <li>Correlate with network logs (DNS queries)</li>
+    <li>Identify suspicious domains/downloads</li>
+    <li>Check Cache/ for malware samples</li>
+    <li>Report: timeline, suspicious sites, infected status</li>
+  </ol>
+</div>
+
+</div>
+
+<script>
+function showTab(tab, btn) {
+  var pages = document.querySelectorAll('.tab-page');
+  pages.forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function buildBrowserTimeline() {
+  var input = document.getElementById('browser-timeline').value;
+  var result = document.getElementById('browser-timeline-result');
+  
+  if (!input) {
+    result.innerHTML = '<div style="color:var(--dim)">Aucunes données</div>';
+    return;
+  }
+  
+  var lines = input.split('\n').filter(l => l.trim());
+  var events = [];
+  
+  lines.forEach(line => {
+    var parts = line.split(':');
+    if (parts.length >= 3) {
+      var browser = parts[0].trim();
+      var url = parts[1].trim();
+      var time = parts[parts.length - 1].trim();
+      events.push({ browser: browser, url: url, time: time });
+    }
+  });
+  
+  events.sort((a, b) => new Date(a.time) - new Date(b.time));
+  
+  var html = '<div style="color:var(--cyan);font-weight:600">📊 Merged Timeline</div>';
+  html += '<div style="font-size:.85rem;margin-top:.5rem">';
+  html += '<strong>Total visits:</strong> ' + events.length + '<br>';
+  
+  var browserCount = {};
+  events.forEach(e => {
+    browserCount[e.browser] = (browserCount[e.browser] || 0) + 1;
+  });
+  
+  html += '<strong>By browser:</strong><br>';
+  Object.entries(browserCount).forEach(([b, c]) => {
+    html += '• ' + b + ': ' + c + ' visits<br>';
+  });
+  
+  html += '<br><strong>Timeline:</strong><br>';
+  events.forEach((e, idx) => {
+    var badge = '<span style="background:rgba(106,128,168,.3);padding:2px 6px;border-radius:3px;font-size:.75rem">' + e.browser + '</span>';
+    html += (idx + 1) + '. <span style="color:var(--gold)">' + e.time + '</span> ' + badge + ' → ' + e.url.substring(0, 40) + '<br>';
+  });
+  
+  html += '</div>';
+  result.innerHTML = html;
+}
+</script>
+
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+</body>
+</html>
