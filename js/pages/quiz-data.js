@@ -680,3 +680,53 @@ const MISSION_PHASES = [
         { id: 'neon',       label: 'Néon',          icon: '🌃', minXp: 2000  },
         { id: 'midnight',   label: 'Minuit',        icon: '🌙', minXp: 4000  },
       ];
+
+      // ═══════════════════════════════════════════════════════════════
+      // v2.68 — GLOSSARY (tooltips quiz)
+      // Format différent du GLOSSARY de scene-app.js : { term: {full, def} }
+      // Affiche un tooltip quand on survole le terme dans le feedback quiz.
+      // Liste limitée aux termes vraiment techniques utilisés en feedback.
+      // ═══════════════════════════════════════════════════════════════
+      const GLOSSARY = {
+        'MFT':       { full: 'Master File Table',         def: 'Index NTFS contenant les métadonnées de tous les fichiers du volume.' },
+        'NTFS':      { full: 'New Technology File System', def: 'Système de fichiers Windows depuis NT 3.1 (1993). Métadonnées riches.' },
+        'FAT32':     { full: 'File Allocation Table 32',  def: 'Système de fichiers ancien (1996). Limite : 4 GB par fichier.' },
+        'exFAT':     { full: 'Extended File Allocation Table', def: 'Évolution FAT pour clés USB et SD modernes (>4 GB).' },
+        'EXT4':      { full: 'Fourth Extended Filesystem', def: 'Système de fichiers Linux par défaut depuis 2008.' },
+        'APFS':      { full: 'Apple File System',         def: 'Système de fichiers macOS/iOS depuis 2017. Snapshots, chiffrement natif.' },
+        'HFS+':      { full: 'Hierarchical File System Plus', def: 'Ancien système de fichiers Apple, remplacé par APFS.' },
+        'SHA-256':   { full: 'Secure Hash Algorithm 256', def: 'Fonction de hachage cryptographique. 64 caractères hex.' },
+        'MD5':       { full: 'Message Digest 5',           def: 'Hash 32 caractères hex. Considéré faible depuis ~2005, ne jamais utiliser seul.' },
+        'SHA-1':     { full: 'Secure Hash Algorithm 1',   def: 'Hash 40 caractères hex. Collisions trouvées en 2017, déconseillé.' },
+        'AES':       { full: 'Advanced Encryption Standard', def: 'Standard chiffrement symétrique. AES-256 = niveau actuel recommandé.' },
+        'RSA':       { full: 'Rivest-Shamir-Adleman',     def: 'Algorithme chiffrement asymétrique. Clés 2048 bits minimum aujourd\'hui.' },
+        'TLS':       { full: 'Transport Layer Security',  def: 'Protocole de chiffrement des communications (HTTPS). TLS 1.3 actuel.' },
+        'PKI':       { full: 'Public Key Infrastructure', def: 'Infrastructure à clés publiques : autorités de certification, certificats X.509.' },
+        'DNS':       { full: 'Domain Name System',         def: 'Système de résolution de noms de domaine en adresses IP.' },
+        'IP':        { full: 'Internet Protocol',          def: 'Protocole d\'adressage Internet. IPv4 (32 bits) ou IPv6 (128 bits).' },
+        'TCP':       { full: 'Transmission Control Protocol', def: 'Protocole de transport fiable, orienté connexion (3-way handshake).' },
+        'UDP':       { full: 'User Datagram Protocol',    def: 'Protocole de transport sans connexion, plus rapide mais non fiable.' },
+        'HTTP':      { full: 'HyperText Transfer Protocol', def: 'Protocole web non chiffré. Toujours préférer HTTPS.' },
+        'HTTPS':     { full: 'HTTP Secure',                 def: 'HTTP sur TLS. Chiffre les communications client-serveur.' },
+        'VPN':       { full: 'Virtual Private Network',   def: 'Tunnel chiffré masquant l\'adresse IP source.' },
+        'Tor':       { full: 'The Onion Router',          def: 'Réseau d\'anonymisation par routage en oignon (3 nœuds relais).' },
+        'OSINT':     { full: 'Open Source Intelligence',  def: 'Renseignement obtenu à partir de sources publiquement accessibles.' },
+        'CPP':       { full: 'Code de procédure pénale',  def: 'RS 312.0 — règles uniformes de procédure pénale en CH.' },
+        'CP':        { full: 'Code pénal',                 def: 'RS 311.0 — sanctions et infractions pénales en CH.' },
+        'LPD':       { full: 'Loi sur la protection des données', def: 'RS 235.1 — version 2023 totalement révisée.' },
+        'RGPD':      { full: 'Règlement général sur la protection des données', def: 'UE 2016/679, applicable depuis 2018.' },
+        'EIMP':      { full: 'Loi sur l\'entraide pénale internationale', def: 'RS 351.1 — entraide judiciaire entre la CH et l\'étranger.' },
+        'LBA':       { full: 'Loi sur le blanchiment d\'argent', def: 'RS 955.0 — lutte anti-blanchiment et anti-financement du terrorisme.' },
+        'MROS':      { full: 'Money Laundering Reporting Office Switzerland', def: 'Bureau CH de communication en matière de blanchiment.' },
+        'FedPol':    { full: 'Office fédéral de la police', def: 'Berne. Abrite la PJF, MROS, bureau Interpol/Europol.' },
+        'MPC':       { full: 'Ministère public de la Confédération', def: 'Procureur général fédéral CH (terrorisme, criminalité organisée).' },
+        'TMC':       { full: 'Tribunal des mesures de contrainte', def: 'Tribunal qui valide la détention provisoire et autorise certaines mesures.' },
+        'PFPDT':     { full: 'Préposé fédéral à la protection des données et à la transparence', def: 'Autorité de surveillance LPD en CH.' },
+        'OFCS':      { full: 'Office fédéral de la cybersécurité', def: 'Centre national de cybersécurité, opérationnel depuis 2024.' },
+        'GovCERT':   { full: 'GovCERT.ch',                  def: 'Équipe nationale de réponse aux incidents cyber, intégrée à l\'OFCS.' },
+        'SRC':       { full: 'Service de renseignement de la Confédération', def: 'Service de renseignement intérieur et extérieur (DDPS).' },
+        'API':       { full: 'Application Programming Interface', def: 'Interface logicielle entre deux systèmes.' },
+        'ADS':       { full: 'Alternate Data Stream',     def: 'Flux de données alternatifs NTFS, parfois utilisés pour cacher des données.' },
+        'EXIF':      { full: 'Exchangeable Image File Format', def: 'Métadonnées photos : GPS, appareil, heure, paramètres.' },
+        'BIP-39':    { full: 'Bitcoin Improvement Proposal 39', def: 'Standard 12 ou 24 mots = clé privée Bitcoin déterministe.' },
+      };

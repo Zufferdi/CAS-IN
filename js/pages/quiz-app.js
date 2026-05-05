@@ -2587,8 +2587,11 @@
       function initGlossary() {
         const expl = document.getElementById('feedback');
         if (!expl) return;
+        // v2.68 — Garde défensive : si GLOSSARY n'a pas chargé, ne rien faire
+        if (typeof GLOSSARY === 'undefined' || !GLOSSARY || typeof GLOSSARY !== 'object') return;
         const popup = document.getElementById('gloss-popup');
         const terms = Object.keys(GLOSSARY).sort((a, b) => b.length - a.length);
+        if (terms.length === 0) return;
 
         function processNode(node) {
           if (node.nodeType === 3) {
