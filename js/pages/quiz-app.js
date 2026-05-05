@@ -780,7 +780,10 @@
         const fb = document.getElementById('feedback');
         fb.className = ok ? 'ok' : 'ko';
         const _pname = S.avatarName && S.avatarName !== 'Enquêteur' ? ` ${S.avatarName} !` : '!';
-        const msg = ok ? FEEDBACK_OK[Math.floor(Math.random() * FEEDBACK_OK.length)].replace('!', _pname) : FEEDBACK_KO[Math.floor(Math.random() * FEEDBACK_KO.length)];
+        // v2.67 — Gardes défensives sur FEEDBACK_OK/KO
+        const _fbOk = (typeof FEEDBACK_OK !== 'undefined' && Array.isArray(FEEDBACK_OK) && FEEDBACK_OK.length > 0) ? FEEDBACK_OK : ['✓ Bravo !'];
+        const _fbKo = (typeof FEEDBACK_KO !== 'undefined' && Array.isArray(FEEDBACK_KO) && FEEDBACK_KO.length > 0) ? FEEDBACK_KO : ['✗ Pas tout à fait'];
+        const msg = ok ? _fbOk[Math.floor(Math.random() * _fbOk.length)].replace('!', _pname) : _fbKo[Math.floor(Math.random() * _fbKo.length)];
         const ptsLine = ok && pts > basePts ? `
           																		<span class="pts-earned"> +${pts} pts (×${m} combo !)</span>` : (ok ? `
           																		<span class="pts-earned"> +${pts} pt${pts>1?'s':''}</span>` : '');
@@ -3306,6 +3309,8 @@
       let _godMode = false;
       let _godModeTimer = null;
       document.addEventListener('keydown', e => {
+        // v2.67 — Garde défensive : si KONAMI n'a pas chargé, ignorer
+        if (typeof KONAMI === 'undefined' || !Array.isArray(KONAMI)) return;
         // Konami tracking
         if (e.key === KONAMI[_konamiPos]) {
           _konamiPos++;

@@ -541,3 +541,142 @@ const MISSION_PHASES = [
         // Spécial
         'ICS / SCADA / OT Forensique': 'fiches/ics_forensique.html',
       };
+
+      // ═══════════════════════════════════════════════════════════════
+      // v2.67 — Encore 7 constantes restaurées (audit exhaustif)
+      // KONAMI, FEEDBACK_OK, FEEDBACK_KO, MILESTONES, CHEATSHEETS,
+      // MID_TIPS, VISUAL_THEMES — toutes référencées dans quiz-app.js
+      // sans définition. Source des bugs ReferenceError persistants.
+      // ═══════════════════════════════════════════════════════════════
+
+      // KONAMI — Code Konami (séquence ↑↑↓↓←→←→BA) pour activer God Mode
+      const KONAMI = [
+        'ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown',
+        'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight',
+        'b', 'a'
+      ];
+
+      // FEEDBACK_OK / FEEDBACK_KO — messages affichés après une question
+      // Le ! est remplacé par le nom d'avatar via .replace('!', ` ${name}!`)
+      const FEEDBACK_OK = [
+        '✓ Excellent !',
+        '✓ Bravo !',
+        '✓ Parfait !',
+        '✓ Bien vu !',
+        '✓ Sans hésitation !',
+        '✓ Magistral !',
+        '✓ Tu maîtrises !',
+        '✓ Bonne pioche !',
+        '✓ Vu d\'œil !',
+        '✓ Pile poil !',
+        '✓ Net et précis !',
+        '✓ Le réflexe !',
+      ];
+
+      const FEEDBACK_KO = [
+        '✗ Pas tout à fait',
+        '✗ Raté',
+        '✗ À revoir',
+        '✗ Mauvaise piste',
+        '✗ Hop, on note pour plus tard',
+        '✗ Dommage',
+        '✗ Pas cette fois',
+        '✗ La logique est ailleurs',
+      ];
+
+      // MILESTONES — paliers d'accomplissement (XP / streak / précision)
+      // Format : { id, label, icon, rankMin? OU minQ+minAcc OU streakOnly+minStreak }
+      const MILESTONES = [
+        { id: 'first_q',     label: '1ère question',         icon: '🎯', minQ: 1,   minAcc: 0   },
+        { id: 'q_50',        label: '50 questions',          icon: '📚', minQ: 50,  minAcc: 0   },
+        { id: 'q_200',       label: '200 questions',         icon: '📖', minQ: 200, minAcc: 0   },
+        { id: 'q_500',       label: '500 questions',         icon: '🎓', minQ: 500, minAcc: 0   },
+        { id: 'q_1000',      label: '1000 questions',        icon: '🏆', minQ: 1000,minAcc: 0   },
+        { id: 'acc_70',      label: '70% précision (>50q)',  icon: '🎯', minQ: 50,  minAcc: 70  },
+        { id: 'acc_85',      label: '85% précision (>100q)', icon: '🔬', minQ: 100, minAcc: 85  },
+        { id: 'streak_10',   label: 'Streak ×10',            icon: '🔥', streakOnly: true, minStreak: 10 },
+        { id: 'streak_25',   label: 'Streak ×25',            icon: '💥', streakOnly: true, minStreak: 25 },
+        { id: 'streak_50',   label: 'Streak ×50',            icon: '🌋', streakOnly: true, minStreak: 50 },
+        { id: 'rank_3',      label: 'Rang 3 atteint',        icon: '🥉', rankMin: 3 },
+        { id: 'rank_5',      label: 'Rang 5 atteint',        icon: '🥈', rankMin: 5 },
+        { id: 'rank_8',      label: 'Rang 8 atteint',        icon: '🥇', rankMin: 8 },
+        { id: 'rank_12',     label: 'Rang 12 atteint',       icon: '👑', rankMin: 12 },
+        { id: 'rank_max',    label: 'Légende',               icon: '🌟', rankMin: 14 },
+      ];
+
+      // CHEATSHEETS — données fiches affichées dans le panneau (renderFiche)
+      // Format : { [chapter]: { icon, ...autres champs si présents } }
+      // En pratique le code utilise surtout .icon, le reste vient du HTML de la fiche.
+      // Mapping minimal pour ne pas casser : fournit l'icône de chaque chapitre.
+      const CHEATSHEETS = {
+        // Filesystems
+        'NTFS':                              { icon: '🪟' },
+        'FAT12 / FAT16 / FAT32':             { icon: '💾' },
+        'exFAT':                             { icon: '💾' },
+        'EXT2 / EXT3 / EXT4':                { icon: '🐧' },
+        'HFS+ et APFS':                      { icon: '🍎' },
+        // Acquisition / méthodologie
+        'Acquisition et préservation':       { icon: '📥' },
+        'Méthodologie et bonnes pratiques':  { icon: '🧭' },
+        'Méthodologie forensique':           { icon: '🧭' },
+        'Techniques et méthodologie':        { icon: '🛠' },
+        'Analyse et recovery':               { icon: '🔬' },
+        'Artefacts temporels et MAC times':  { icon: '⏱' },
+        'Formats de fichiers et Magic Bytes':{ icon: '📁' },
+        'Logiciels et outils forensiques':   { icon: '🛠' },
+        'Technologie des disques':           { icon: '💽' },
+        // Crypto
+        'Chiffrement asymétrique et RSA':    { icon: '🔐' },
+        'Chiffrement symétrique':            { icon: '🔑' },
+        'Hachage et intégrité':              { icon: '🔢' },
+        'Cassage et attaques':               { icon: '⚔️' },
+        'PKI et certificats':                { icon: '📜' },
+        // OS-spécifiques
+        'Windows — Artefacts et exécution':  { icon: '🪟' },
+        'Windows — Journaux et Event Logs':  { icon: '📋' },
+        'Windows — Registre et artefacts':   { icon: '📒' },
+        'Linux — Artefacts et analyse':      { icon: '🐧' },
+        'macOS — Artefacts et analyse':      { icon: '🍎' },
+        // Réseau / OSINT
+        'Adressage IP':                      { icon: '🌐' },
+        'Réseau, protocoles et Internet':    { icon: '🌐' },
+        'Infrastructure, DNS et pivots':     { icon: '🛰' },
+        'Fondamentaux OSINT':                { icon: '🔭' },
+        'Outils et automatisation OSINT':    { icon: '🤖' },
+        'Recherche web et Google Dorks':     { icon: '🔍' },
+        // Données / représentation
+        'Représentation des données':        { icon: '🔢' },
+        'Métadonnées et EXIF':               { icon: '🏷' },
+        // Droit
+        'Droit pénal informatique':          { icon: '⚖️' },
+        'Procédure pénale':                  { icon: '📜' },
+        'Perquisition de documents':         { icon: '📂' },
+        'Séquestre informatique':            { icon: '🔒' },
+        'Entraide judiciaire internationale':{ icon: '🌍' },
+        'Expertise et rapport judiciaire':   { icon: '📑' },
+        // Spécial
+        'ICS / SCADA / OT Forensique':       { icon: '⚙️' },
+      };
+
+      // MID_TIPS — conseil affiché en bilan de session pour chaque thème faible
+      const MID_TIPS = {
+        'Système de fichiers': 'Reprends les structures NTFS, FAT, EXT et leurs métadonnées (MFT, $LogFile, MAC times).',
+        'Acquisition et analyse': 'Révise ISO 27037 et les outils standards : dd, FTK Imager, write-blockers, hashs SHA-256.',
+        'Spécificité des OS': 'Concentre-toi sur les artefacts spécifiques OS : Registre Windows, plist macOS, syslog Linux.',
+        'Informatique de base': 'Solidifie les fondamentaux : encodage, structures de données, hexadécimal, binaire.',
+        'Droit': 'Relis les articles clés du CPP (244-263), CP (143-147bis, 305bis), LPD 2023.',
+        'Cryptologie': 'Différencie symétrique (AES) / asymétrique (RSA) / hash (SHA-256), et leurs cas d\'usage.',
+        'OSINT': 'Pratique les Google Dorks, les analyses DNS, les outils Maltego/Shodan/Censys.',
+        'Forensique': 'Méthodologie d\'investigation : timeline, chaîne de custody, rapport d\'expertise.',
+      };
+
+      // VISUAL_THEMES — thèmes visuels sélectionnables (palette couleurs)
+      // Format : { id, label, icon, minXp? }
+      const VISUAL_THEMES = [
+        { id: 'default',    label: 'Forensique',    icon: '🔍', minXp: 0     },
+        { id: 'matrix',     label: 'Matrix',        icon: '💚', minXp: 250   },
+        { id: 'noir',       label: 'Film noir',     icon: '🎬', minXp: 500   },
+        { id: 'helvetia',   label: 'Helvetia',      icon: '🇨🇭', minXp: 1000  },
+        { id: 'neon',       label: 'Néon',          icon: '🌃', minXp: 2000  },
+        { id: 'midnight',   label: 'Minuit',        icon: '🌙', minXp: 4000  },
+      ];
