@@ -2239,6 +2239,61 @@ function startScene(scene) {
     ${realCaseHTML}
     ${procureurNotice}
 
+    ${(function(scene) {
+      // v2.71 — Bandeau "Relations PNJ" : affiche l'état actuel des PNJ
+      // déjà rencontrés dans cette scène (trust, état, dernière interaction)
+      if (!window.NpcState || !scene.npcs || scene.npcs.length === 0) return '';
+      if (typeof window.NPC_DATA === 'undefined') return '';
+
+      const known = [];
+      scene.npcs.forEach(n => {
+        const nid = typeof n === 'string' ? n : n.id;
+        if (!nid) return;
+        const state = window.NpcState.get(nid);
+        if (!state || !state.interactions || state.interactions.length === 0) return;
+        const npcInfo = window.NPC_DATA[nid];
+        if (!npcInfo) return;
+        known.push({
+          id: nid,
+          name: npcInfo.name || nid,
+          icon: npcInfo.icon || '👤',
+          trust: state.trust,
+          state: state.state,
+          interactions: state.interactions,
+        });
+      });
+
+      if (known.length === 0) return '';
+
+      const items = known.map(k => {
+        const last = k.interactions[k.interactions.length - 1];
+        const lastSceneLabel = last && last.scene ? last.scene.replace(/-/g, ' ') : '?';
+        const stateColor = k.state === 'hostile' ? '#dc3c46' :
+                           k.state === 'méfiant' ? '#e68232' :
+                           k.state === 'professionnel' ? '#a8b0c0' : '#32b464';
+        return `
+          <div class="npc-relation-item">
+            <span class="npc-relation-icon">${k.icon}</span>
+            <div class="npc-relation-body">
+              <div class="npc-relation-name">${k.name}</div>
+              <div class="npc-relation-state" style="color:${stateColor}">
+                ${window.NpcState.stateLabel(k.state)} · trust ${k.trust}/100
+              </div>
+              <div class="npc-relation-history">
+                ${k.interactions.length} interaction${k.interactions.length > 1 ? 's' : ''}
+              </div>
+            </div>
+            ${window.NpcState.trustBar(k.trust, 80)}
+          </div>`;
+      }).join('');
+
+      return `
+        <div class="npc-relations-banner">
+          <div class="npc-relations-banner-title">🤝 Relations connues sur cette affaire</div>
+          ${items}
+        </div>`;
+    })(scene)}
+
     <div class="alert-box">
       <strong>⚠ ${scene.alertLevel || 'ATTENTION'}</strong>
       Chaque décision est irréversible. Les erreurs critiques réduisent l'intégrité de la chaîne de custody.
@@ -2416,10 +2471,27 @@ function renderStep() {
       ${order.map((origIdx, newIdx) => {
         const c = step.choices[origIdx];
         const eliminated = G.hintUsedForStep[G.stepIdx] === origIdx;
+
+        // v2.71 — Support des variantes texte selon état des PNJ de la scène
+        // Format scène : choice.text_variants = { complice: "...", méfiant: "...", ... }
+        // Si tous les PNJ partagent un état, on utilise la variante. Sinon → text par défaut.
+        let displayText = c.text;
+        if (c.text_variants && window.NpcState && scene.npcs && scene.npcs.length > 0) {
+          const npcIds = scene.npcs.map(n => typeof n === 'string' ? n : (n && n.id)).filter(Boolean);
+          const states = npcIds.map(id => window.NpcState.getState(id)).filter(Boolean);
+          if (states.length > 0) {
+            // Si tous les PNJ partagent le même état, on utilise la variante
+            const uniformState = states.every(s => s === states[0]) ? states[0] : null;
+            if (uniformState && c.text_variants[uniformState]) {
+              displayText = c.text_variants[uniformState];
+            }
+          }
+        }
+
         return `
           <button class="choice-btn${eliminated ? ' eliminated' : ''}" data-orig-idx="${origIdx}" onclick="selectChoice(${origIdx}, this)"${eliminated ? ' disabled style="opacity:.3;text-decoration:line-through"' : ''}>
             <span class="choice-letter" title="Raccourci clavier : ${L[newIdx]}">${L[newIdx]}<span class="choice-kbd">${L[newIdx]}</span></span>
-            <span>${c.text}</span>
+            <span>${displayText}</span>
           </button>
         `;
       }).join('')}
@@ -2965,10 +3037,34 @@ function showReport() {
 
   // Narrative ending
   let narrative = null;
+  let outcome = 'failure';  // v2.71 — Default outcome
   if (scene.narrative) {
-    if (pct >= 75 && custodyPct >= 75) narrative = scene.narrative.success;
-    else if (pct >= 50) narrative = scene.narrative.degraded;
-    else narrative = scene.narrative.failure;
+    if (pct >= 75 && custodyPct >= 75) {
+      narrative = scene.narrative.success;
+      outcome = 'success';
+    }
+    else if (pct >= 50) {
+      narrative = scene.narrative.degraded;
+      outcome = 'degraded';
+    }
+    else {
+      narrative = scene.narrative.failure;
+      outcome = 'failure';
+    }
+  }
+
+  // v2.71 — Mise à jour de l'état des PNJ liés à cette scène
+  // Trust ajusté selon outcome ; criticalChoiceFailed le pénalise davantage.
+  if (window.NpcState && scene.npcs && scene.npcs.length > 0) {
+    const npcIds = scene.npcs.map(n => typeof n === 'string' ? n : (n && n.id))
+                              .filter(Boolean);
+    // criticalFailed (raté un choix avec critical:true) → pénalité supplémentaire
+    const finalOutcome = (typeof G !== 'undefined' && G.criticalFailed) ? 'critical' : outcome;
+    try {
+      window.NpcState.recordInteraction(npcIds, scene.id, finalOutcome);
+    } catch (e) {
+      console.warn('NpcState.recordInteraction failed:', e);
+    }
   }
 
   // Custody result text
