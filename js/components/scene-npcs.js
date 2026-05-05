@@ -44,6 +44,9 @@
       if (!r.ok) return null;
       const data = await r.json();
       _npcsCache = data.npcs || {};
+      // v2.71 — Exposer en global pour que d'autres modules
+      // (bandeau briefing, profile-page) y accèdent sans recharger.
+      window.NPC_DATA = _npcsCache;
       return _npcsCache;
     } catch (e) {
       console.warn('[scene-npcs] Cannot load npcs.json:', e);
@@ -526,4 +529,8 @@
     },
     listAll: loadNpcs,
   };
+
+  // v2.71 — Précharger NPCs au boot pour que window.NPC_DATA soit
+  // disponible aux autres modules (bandeau briefing) ASAP.
+  loadNpcs().catch(() => {});
 })();
