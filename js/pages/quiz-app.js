@@ -407,10 +407,7 @@
  function addXp(pts, contextTags) {
    const prev = getRank(S.xp);
    S.xp += pts;
-   // Publication des tags pour le bridge (lecture juste avant lsSet('xp'))
-   try { window.__casInBonusTags = Array.isArray(contextTags) ? contextTags.slice() : null; } catch {}
-   lsSet('xp', S.xp);
-   try { window.__casInBonusTags = null; } catch {}
+   lsSet('xp', S.xp);  // v2.72 — bridge retiré
    const curr = getRank(S.xp);
    updateXpBar();
    updateRankFlavor();
@@ -449,9 +446,7 @@
  }
 
  function updateXpBar() {
- // Phase 2 v2.10 : éléments d'affichage déplacés vers profile-banner (transversal).
- // Stub conservé : les call-sites appellent encore cette fonction, mais l'affichage
- // est désormais géré par js/profile/profile-banner.js qui réagit aux events Profile.
+ // v2.72 — Stub vide : la barre XP/rang a été retirée de quiz.html.
  }
 
  // Note v2.21 : getComboMultiplier extrait vers quiz-ranks.js
@@ -483,9 +478,7 @@
  }
 
  function updateStreakDisplay() {
- // Phase 2 v2.10 : #streak-display déplacé vers profile-banner.
- // On préserve uniquement l'appel à updateComboDisplay() qui touche
- // #combo-display, #combo-badge, #question-card (toujours présents).
+ // v2.72 — Mise à jour du combo display uniquement (#streak-display retiré).
  updateComboDisplay();
  }
  let _toastTimers = {};
@@ -1796,21 +1789,7 @@
           ? window.QuizRanks.getNextRank(S.xp)
           : (RANKS && RANKS.length ? RANKS[idx + 1] : null);
         const pct = next ? Math.min(100, Math.round((S.xp - rank.min) / (next.min - rank.min) * 100)) : 100;
-        document.getElementById('xp-rank-panel').innerHTML = `
-          																					<div class="rank-display">
-																						<span class="rank-emoji">${rank.emoji}</span>
-																						<div class="rank-info">
-																							<div class="rank-name">${rank.name}</div>
-																							<div style="font-size:10px;color:var(--purple);font-style:italic;margin-bottom:2px">${rank.flavor||''}</div>
-																							<div class="rank-xp">${S.xp} XP${next?' · Prochain : '+next.name+' ('+next.min+' XP)':' · Rang maximum !'}</div>
-																							<div class="rank-bar-outer">
-																								<div class="rank-bar-inner" style="width:${pct}%"></div>
-																							</div>
-																						</div>
-																					</div>
-																					<div style="font-size:11px;color:var(--dim);margin-top:8px;text-align:center">
-      ${unlocked.size} / ${ACHIEVEMENTS.length} succès débloqués
-    </div>`;
+        // v2.72 — xp-rank-panel retiré du DOM
         const grid = document.getElementById('achiev-grid');
         grid.innerHTML = '';
         const cats = [{
@@ -1941,45 +1920,20 @@
       }
 
       function showRankUp(rank) {
-        updateAvatarChip();
-        const t = document.getElementById('rankup-toast');
-        // v2.22 : le toast DOM rankup-toast est caché par CSS (système notify unifié),
-        // mais on garde les side-effects (avatar update, son, confetti) intacts.
-        if (t) {
-          document.getElementById('ru-emoji').textContent = rank.emoji;
-          document.getElementById('ru-name').textContent = rank.name;
-          document.getElementById('ru-flavor').textContent = rank.flavor || '';
-          t.classList.remove('show');
-          void t.offsetWidth;
-          t.classList.add('show');
-          setTimeout(() => t.classList.remove('show'), 3500);
-        }
+        // v2.72 — Toast rankup retiré (DOM supprimé). Garde son + confetti.
         const a = (typeof QuizEffects !== 'undefined') ? QuizEffects.ac() : null;
         if (a && SOUND_ON) {
           const t2 = a.currentTime;
           [523, 659, 784, 1047, 1319].forEach((f, i) => {
-            const o = a.createOscillator(),
-              g = a.createGain();
-            o.connect(g);
-            g.connect(a.destination);
+            const o = a.createOscillator(), g = a.createGain();
+            o.connect(g); g.connect(a.destination);
             o.frequency.value = f;
             g.gain.setValueAtTime(.15, t2 + i * .1);
             g.gain.exponentialRampToValueAtTime(.001, t2 + i * .1 + .3);
-            o.start(t2 + i * .1);
-            o.stop(t2 + i * .1 + .35);
+            o.start(t2 + i * .1); o.stop(t2 + i * .1 + .35);
           });
         }
         launchConfetti(S.curQ?.theme);
-
-        // v2.22 : notification unifiée (système notify)
-        notify({
-          type: 'rank',
-          icon: rank.emoji || '🆙',
-          title: 'Nouveau rang : ' + (rank.name || ''),
-          message: rank.flavor || '',
-          duration: 4000,
-          flash: true,
-        });
       }
 
       function useHint() {
@@ -4734,7 +4688,7 @@ function endMission() {
   // Afficher l'overlay de fin
   const overlay = document.getElementById('mission-end-overlay');
   document.getElementById('me-icon').textContent = verdicts[noteNum][0].split(' ')[0];
-  document.getElementById('me-grade').innerHTML = `<span style="color:${noteColor}">${noteNum}</span><span style="font-size:1.5rem;color:var(--dim)">/6</span>`;
+  // v2.72 — me-grade retiré du DOM
   document.getElementById('me-verdict').textContent = verdicts[noteNum][0];
   document.getElementById('me-verdict').style.color = noteColor;
   document.getElementById('me-score').textContent = `${correct}/${total} correctes (${pct}%) · ${verdicts[noteNum][1]}`;

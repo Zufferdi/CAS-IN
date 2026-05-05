@@ -215,10 +215,7 @@ function generateSeed() {
 // ═══════════════════════════════════════════════════
 function getStreak() {
   // Source unique : Profile (le bridge maintient cas_streak en miroir)
-  if (window.Profile && typeof window.Profile.getStreak === 'function') {
-    const s = window.Profile.getStreak();
-    return { count: s.current || 0, lastDate: s.lastDate || null };
-  }
+  // v2.72 — Profile.getStreak retiré
   // Mini-fallback hors-PWA : lit cas_streak directement (LS uniquement)
   return lsGet('cas_streak', { count: 0, lastDate: null });
 }
@@ -234,10 +231,7 @@ function updateStreakOnActivity() {
   // v2.55 : la mise à jour réelle est gérée par Profile.recordActivity('scene')
   // appelé depuis le bridge. Ici on laisse une trace pour les anciens chemins
   // de code qui appelleraient encore cette fonction.
-  if (window.Profile && typeof window.Profile.recordActivity === 'function') {
-    window.Profile.recordActivity('scene');
-    return getStreak();
-  }
+  // v2.72 — Profile.recordActivity retiré
   // Fallback minimaliste (très ancien chemin) — calcule localement
   const today = new Date().toISOString().slice(0, 10);
   const s = lsGet('cas_streak', { count: 0, lastDate: null });
@@ -1377,15 +1371,7 @@ function addXP(amount, tags) {
   let bonus = 0;
   let multiplier = 1.0;
   let profileApplied = false;
-  if (window.Profile && typeof window.Profile.addXp === 'function' && Array.isArray(tags)) {
-    const r = window.Profile.addXp(amount, 'scene', { tags });
-    if (r) {
-      gained = r.gained;
-      bonus = r.bonus || 0;
-      multiplier = r.multiplier || 1.0;
-      profileApplied = true;
-    }
-  }
+  // v2.72 — Profile.addXp retiré (bridge supprimé)
   const next = Math.max(0, prev + gained);
 
   // Si Profile.addXp a déjà été appelé, le bridge va re-intercepter
@@ -3421,58 +3407,7 @@ function openStatsScreen() {
 // ═══════════════════════════════════════════════════
 // PROFILE SCREEN (export/import)
 // ═══════════════════════════════════════════════════
-function openProfileModal() {
-  const xp = lsGet('cas_xp', 0);
-  // v2.55 : utilise Profile.getRank() au lieu de getGrade() legacy
-  let gradeIcon = '🎓';
-  let gradeTitle = 'Stagiaire';
-  if (window.Profile && typeof window.Profile.getRank === 'function') {
-    const rank = window.Profile.getRank();
-    gradeIcon = rank.emoji || '🎓';
-    gradeTitle = rank.name || 'Stagiaire';
-  }
-  const badges = getUnlockedBadges();
-  const results = lsGet('scene_results', {});
-  const streak = getStreak();
-
-  document.getElementById('profile-content').innerHTML = `
-    <div class="stats-header">
-      <div class="stats-title">Mon profil</div>
-      <div class="stats-subtitle">${gradeIcon} ${gradeTitle} · ${xp} XP · ${badges.length} badge${badges.length>1?'s':''}</div>
-    </div>
-
-    <div class="stats-section">
-      <div class="stats-section-title">📊 Résumé</div>
-      <div class="report-stats">
-        <div class="rstat"><div class="rstat-val" style="color:var(--gold)">${xp}</div><div class="rstat-lbl">XP</div></div>
-        <div class="rstat"><div class="rstat-val" style="color:var(--cyan)">${Object.keys(results).length}</div><div class="rstat-lbl">Scénarios</div></div>
-        <div class="rstat"><div class="rstat-val" style="color:var(--orange)">${streak.count}</div><div class="rstat-lbl">Jours de série</div></div>
-      </div>
-    </div>
-
-    <div class="stats-section">
-      <div class="stats-section-title">💾 Sauvegarde du profil</div>
-      <div class="profile-actions">
-        <button class="profile-btn" onclick="exportProfile()">
-          ⬇️ Exporter mon profil (JSON)
-        </button>
-        <label class="profile-btn" style="cursor:pointer">
-          ⬆️ Importer un profil (JSON)
-          <input type="file" accept=".json,application/json" style="display:none" onchange="importProfile(event)" />
-        </label>
-        <button class="profile-btn danger" onclick="resetProfile()">
-          🗑 Réinitialiser la progression
-        </button>
-      </div>
-    </div>
-
-    <div class="report-actions">
-      <button class="back-btn" onclick="goLobby()">← Retour au lobby</button>
-    </div>
-  `;
-
-  showScreen('profile');
-}
+function openProfileModal() { /* v2.72 — retiré */ }
 
 function buildProfileJSON() {
   return {
@@ -4011,3 +3946,101 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+      // ═══════════════════════════════════════════════════════════════
+      // v2.72 — Batch 3 glossaire : couverture spécialisée
+      // LOAP, DSA, lois cantonales, APT références, Cst. supplémentaires
+      // Cible : 470 → ~600 entrées (85%+ couverture)
+      // ═══════════════════════════════════════════════════════════════
+
+      // ─── LOAP + organisation MPC ───
+      const _g72 = {
+        "LOAP": "Loi fédérale sur l'organisation des autorités pénales (RS 173.71) — structure du MPC et des tribunaux fédéraux pénaux.",
+        "LOAP Art. 7": "Indépendance du MPC : ne reçoit pas d'instructions de la Confédération ni des cantons dans ses décisions de fond.",
+        "LOAP Art. 24": "Organisation du MPC : Procureur général de la Confédération + procureurs fédéraux.",
+        "Doctrine — Indépendance MPC (art. 7 LOAP)": "Le MPC est indépendant : pas d'instructions du CF ni du Parlement sur les décisions d'accusation.",
+        "Art. 7 LOAP": "Indépendance fonctionnelle du Ministère public de la Confédération.",
+        "Art. 57 Cst.": "Sécurité publique : compétence cantonale de principe. La Confédération n'intervient qu'en matière de sécurité intérieure et de défense nationale.",
+        "Art. 32 al. 2 Cst.": "Droit du prévenu : droit de se taire, présomption d'innocence.",
+        "Cst. féd. art. 32 al. 2 — droit d'être entendu + procès équitable": "Garanties constitutionnelles : présomption d'innocence + droits procéduraux du prévenu.",
+        "Cst. féd. art. 100 al. 1 — compétence fédérale communication": "La Confédération légifère sur les télécommunications et la radiodiffusion.",
+        "Cst. féd. art. 173 — compétences Conseil fédéral": "Compétences de l'Assemblée fédérale en matière de politique étrangère et d'urgence.",
+        "Cst. féd. art. 184 — affaires étrangères": "Le Conseil fédéral dirige les affaires étrangères et signe les traités internationaux.",
+        "Art. 32 al. 2 Cst. — Droits du prévenu": "Droits fondamentaux du prévenu (présomption d'innocence, droit d'être entendu).",
+
+        // ─── DSA / Digital Services Act ───
+        "DSA": "Digital Services Act — Règlement (UE) 2022/2065 sur les services numériques, applicable depuis 2024.",
+        "DSA Art. 16": "Signalement de contenus illicites : mécanisme obligatoire pour les plateformes (notice & action).",
+        "DSA Art. 36": "Accès aux données des plateformes pour les autorités et chercheurs : conditions encadrées.",
+        "DSA Art. 16 et Art. 36": "DSA : Art. 16 = signalement contenus illicites. Art. 36 = accès données par autorités/chercheurs.",
+
+        // ─── Lois cantonales / régionales ───
+        "LPol VD": "Loi sur la police cantonale vaudoise : missions, organisation, compétences.",
+        "LPol VD — Loi sur la police cantonale vaudoise : missions et organisation": "Loi cantonale VD organisant la police cantonale et définissant ses missions.",
+        "Art. 8 LPDCa-JU": "Loi jurassienne sur la protection des données cantonales (art. 8 = droits des personnes).",
+        "Directive CCPCS 2024": "Directive 2024 de la Conférence des commandants des polices cantonales de Suisse.",
+        "Plan cantonal de sécurité VD 2024–2027": "Plan stratégique quadriennal de sécurité publique du canton de Vaud.",
+        "Statistiques criminalité Police cantonale vaudoise 2025": "Rapport annuel de la PolCant VD : 72'969 infractions totales en 2025.",
+
+        // ─── Lois militaires / sécurité nationale ───
+        "LPM": "Loi fédérale sur le personnel de l'armée (RS 510.10).",
+        "Code pénal militaire art. 32": "Espionnage militaire : sanctions pénales spécifiques au personnel militaire.",
+        "Art. 23 LMSI": "Loi fédérale sur le maintien de la sûreté intérieure (abrogée mais parfois citée) — mesures de sûreté de la Confédération.",
+        "art. 23 LMSI (mesures de sûreté de la Confédération)": "Mesures préventives de maintien de la sûreté intérieure (LMSI, ancienne loi).",
+
+        // ─── Aviation / drones ───
+        "OACS": "Ordonnance sur l'aviation civile (RS 748.01).",
+        "OACS (Ordonnance sur l'aviation civile suisse) art. 17 (drones interdits)": "Art. 17 OACS : zones interdites aux drones (aéroports, infrastructures critiques).",
+        "OSEAC": "Ordonnance sur les zones exclues de l'aviation civile.",
+        "OSEAC (Ordonnance sur les zones interdites)": "Définit les zones géographiques interdites aux aéronefs civils (militaires, prisons, centrales).",
+
+        // ─── Propriété intellectuelle ───
+        "Art. 61 LPM": "Violation de marque à des fins commerciales (Loi sur la protection des marques).",
+        "Art. 61 LPM — Violation de marque à des fins commerciales": "Sanction pénale pour violation de marque commerciale (LPM RS 232.11).",
+        "Convention de Berne": "Convention de Berne pour la protection des œuvres littéraires et artistiques (1886, révisée).",
+        "Convention de Berne sur le droit d'auteur": "Convention internationale fondatrice du droit d'auteur (186 États membres).",
+        "LExpl Art. 17": "Loi fédérale sur les explosifs (RS 941.41) — art. 17 sur les obligations de déclaration.",
+
+        // ─── Recherche / subventions ───
+        "LERI": "Loi fédérale sur l'encouragement de la recherche et de l'innovation (RS 420.1).",
+        "Loi fédérale sur l'encouragement de la recherche (LERI)": "Cadre fédéral du financement de la recherche (Innosuisse, FNS).",
+        "Loi sur l'EPF (LEPFL)": "Loi sur les écoles polytechniques fédérales (RS 414.110) — statut du personnel EPFL/ETHZ.",
+        "Règlement Innosuisse — Conditions d'octroi de subventions": "Règles d'Innosuisse pour l'attribution de subventions à la recherche appliquée.",
+
+        // ─── APT / Cyber threat intelligence ───
+        "Sandworm": "APT du GRU (renseignement militaire russe) — auteur de NotPetya (2017), BlackEnergy Ukraine (2015).",
+        "Sandworm (APT GRU russe) — Mandiant ATR 2018, BlackEnergy Ukraine 2015, NotPetya": "Sandworm = APT GRU. Responsable des cyberattaques les plus destructrices de l'histoire (NotPetya 10 mrd USD).",
+        "Olympic Destroyer 2018": "Malware de sabotage lors des JO de PyeongChang (2018). Attribution délibérément brouillée — precédent false-flag.",
+        "Olympic Destroyer 2018 — précédent false-flag attribution": "Attaque cyber aux JO 2018 : indicateurs de compromission délibérément falsifiés pour tromper les attributeurs.",
+        "APT28": "Fancy Bear — APT du GRU. Spearphishing, exploitation 0-day, désinformation électorale (USA 2016, France 2017).",
+        "APT29": "Cozy Bear — FSB + SVR. Supply chain SolarWinds (2020), espionnage diplomatique et pharmaceutique.",
+        "Lazarus Group": "APT nord-coréen (Reconnaissance General Bureau). Spécialiste des vols de crypto-monnaies et sabotage financier.",
+
+        // ─── Droit international / conventions supplémentaires ───
+        "Convention de Budapest art. 28 + 29": "Art. 28 = conservation rapide des données stockées. Art. 29 = divulgation rapide des données conservées.",
+        "Convention de Budapest art. 28 + 29 — conservation urgente": "Procédure d'urgence de la Convention de Budapest pour préserver les preuves numériques.",
+        "Convention sino-suisse 2014": "Accord d'entraide judiciaire CH-Chine (2014) avec limitations importantes (clause d'ordre public).",
+        "Convention sino-suisse 2014 (limitations entraide)": "Traité CH-Chine 2014 : entraide limitée par clause d'ordre public — pas de remise pour infractions politiques.",
+        "Accord-cadre CH-UE 2014 — participation CH aux opérations CSDP": "Accord permettant à la Suisse de participer aux missions civiles de l'UE (PESC/PSDC).",
+        "Schengen-CH 2009 (modèle d'accord ad hoc EU+CH)": "Modèle d'accord d'association CH-UE (Schengen depuis 2008) — référence pour accords sectoriels futurs.",
+        "CrEDH art. 6 — procès équitable + égalité des armes": "Art. 6 CEDH : droit à un procès équitable, tribunal indépendant, délai raisonnable, égalité des armes.",
+
+        // ─── Normes industrielles ICS/SCADA ───
+        "IEC 61850": "Norme internationale pour la communication dans les sous-stations électriques.",
+        "IEC 62351": "Norme de cybersécurité pour les systèmes IEC 61850 (authentification, chiffrement).",
+        "IEC 61850 / IEC 62351 — cybersécurité substations électriques": "Standards IEC pour la communication et la sécurité des sous-stations électriques (OT/ICS).",
+        "IEC 62443": "Série de normes de cybersécurité pour les systèmes d'automatisation et de contrôle industriels (IACS).",
+
+        // ─── Nouvelles réglementations EU ───
+        "Directive (UE) 2023/2557 — CER": "Directive résilience des entités critiques (CER) — transposition État membres janvier 2025.",
+        "Directive (UE) 2022/2555 — NIS2": "Directive NIS2 : sécurité des réseaux et systèmes d'information, obligations pour entités essentielles.",
+        "Cyber Resilience Act 2024 — Règlement (UE) 2024/2847": "CRA : exigences de cybersécurité pour produits avec éléments numériques (application progressive 2024-2027).",
+
+        // ─── Forensique IA ───
+        "ENFSI AI Forensics Working Group": "Groupe de travail ENFSI sur la forensique des IA — lignes directrices 2024-2026.",
+        "Doctrine TF 6B_xx/2024 — Recevabilité des preuves issues d'IA": "Jurisprudence émergente sur l'admissibilité des preuves générées ou analysées par IA en procédure pénale CH.",
+      };
+      // Fusionner dans GLOSSARY
+      Object.assign(GLOSSARY, _g72);
+      // Invalider le cache normalisé
+      _glossNormalized = null;
