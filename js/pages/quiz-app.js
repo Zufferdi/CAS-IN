@@ -156,6 +156,10 @@
  S.activeC = new Set(ac.filter(c => ALL_C.includes(c)));
  if (!S.activeC.size) S.activeC = new Set(ALL_C);
  S.qstats = lsGet('qs', {});
+ // v2.70 — Restaurer byTheme et byChapter au boot
+ // (alimente la heatmap chapitres dans profile.html)
+ S.byTheme = lsGet('byTheme', {});
+ S.byChapter = lsGet('byChapter', {});
  S.xp = lsGet('xp', 0);
  S.maxCombo = lsGet('maxCombo', 0);
  S.perfectExam = lsGet('perfectExam', false);
@@ -744,6 +748,12 @@
           if (ok) S.byChapter[q.chapter].ok++;
           if (ok) { checkBossTrigger(q.chapter); checkFicheUnlock(q.chapter); }
         }
+        // v2.70 — Persister byTheme et byChapter à chaque réponse
+        // (alimente la heatmap chapitres dans profile.html)
+        try {
+          lsSet('byTheme', S.byTheme);
+          lsSet('byChapter', S.byChapter);
+        } catch(e) { /* localStorage plein, on ignore */ }
         const qs = S.qstats[S.curIdx] || {
           ok: 0,
           tot: 0
