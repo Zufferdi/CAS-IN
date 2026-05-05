@@ -210,6 +210,44 @@
       reward: 65,
       evaluate: (snap) => snap.todayRunsCount >= 1 && snap.todayQuizAnswers >= 15,
     },
+    // ──── v2.71 — Quêtes de relations PNJ ────
+    {
+      id: 'q_npc_3_complices',
+      title: 'Cercle de confiance',
+      desc: 'Atteins le statut "complice" avec 3 personnages différents',
+      icon: '🤝',
+      reward: 100,
+      evaluate: (snap) => {
+        if (!window.NpcState) return false;
+        const counts = window.NpcState.getCounts();
+        return counts.complice >= 3;
+      },
+    },
+    {
+      id: 'q_npc_first_contact',
+      title: 'Premier contact',
+      desc: 'Établis une relation avec au moins un PNJ aujourd\'hui',
+      icon: '👋',
+      reward: 30,
+      evaluate: (snap) => {
+        if (!window.NpcState) return false;
+        return window.NpcState.getEncountered().length > 0;
+      },
+    },
+    {
+      id: 'q_npc_no_hostile',
+      title: 'Diplomate',
+      desc: 'Aucune relation hostile (0 PNJ avec trust ≤ 25)',
+      icon: '🕊️',
+      reward: 50,
+      evaluate: (snap) => {
+        if (!window.NpcState) return false;
+        const encountered = window.NpcState.getEncountered();
+        if (encountered.length === 0) return false;  // doit avoir des relations
+        const counts = window.NpcState.getCounts();
+        return counts.hostile === 0;
+      },
+    },
   ];
 
   function lsGet(k, fb) {
