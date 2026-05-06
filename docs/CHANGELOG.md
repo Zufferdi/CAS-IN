@@ -4,6 +4,49 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.53] — 2026-05-06
+
+🎨 **Pass CSS light — `cas-in-navbar.css`** : navbar transversale couverte. Multiplicateur — toutes les pages déjà couvertes en clair (quiz, fiches) gagnent un rendu cohérent top-to-bottom.
+
+### Contexte
+
+`cas-in-navbar.css` (318 lignes) avait **0 règle `[data-theme="light"]`** — tout en hardcodé sombre (palette bleu `#4a9eff` / gold `#ffd070` / texte clair). Sur les pages en mode clair, la navbar restait sombre, créant une bande noire désynchronisée en haut de page.
+
+### Modifié
+
+- `style/cas-in-navbar.css` : ajout d'un bloc `v2.53 — Thème clair` (~85 lignes, 25 sélecteurs) couvrant l'intégralité du composant :
+  - Conteneur (`.cas-navbar`, `.cas-navbar__top`)
+  - Identity (track icon, agent, sep, rank)
+  - Stats (XP, streak, delta + flash)
+  - Bottom nav (home, title, links + active state)
+  - Tools (hdr-action, hdr-action-primary, hdr-dropdown-menu)
+- `sw.js` : `CACHE_VERSION` v132 → v133.
+
+### Palette navbar light
+
+| Élément | Sombre (existant) | Clair (nouveau) |
+|---|---|---|
+| Fond | `#060b15` | `#ffffff` |
+| Texte primaire | `#e8eaed` | `#1a2235` |
+| Texte dim | `rgba(255,255,255,.45-.5)` | `rgba(15,25,45,.55)` |
+| Accent bleu | `#4a9eff` / `#5ba8ff` | `#1a5fa8` (AA contrast OK sur blanc) |
+| Accent gold | `#ffd070` | `#8a5800` |
+| Accent green delta | `#6fd29c` | `#115a35` |
+| Tints surface | `rgba(255,255,255,.04-.08)` | `rgba(15,25,45,.04-.05)` |
+
+### Test
+
+Sur n'importe quelle page : `?theme=light` → la navbar bascule en blanc avec les accents bleu sombre (`#1a5fa8`). En particulier `quiz.html?theme=light` pour vérifier que la cohérence top-to-bottom est restaurée.
+
+### Statut couverture
+
+| Page | Avant | Après v2.53 |
+|---|---|---|
+| `quiz.html` | ✅ (v2.50) | ✅ + navbar |
+| `fiches/*.html` | ✅ | ✅ + navbar |
+| `scene.html` | ⚠️ partiel | ⚠️ partiel + navbar |
+| `tp.html`, `tools.html`, `exam.html`, `profile.html` | ⚠️/❌ | idem + navbar |
+
 ## [2.52] — 2026-05-06
 
 🐛 **Vague 3 — `Profile.spendXp()`** : nouveau API + correction d'un bug silencieux où les indices scène étaient gratuits.
