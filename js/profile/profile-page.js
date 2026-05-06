@@ -544,7 +544,7 @@
     const unlocked = new Set(Array.isArray(snap.achievements) ? snap.achievements : []);
     const meta = window.ACHIEVEMENTS_META || [];
 
-    // Affichage du compteur "X / Y débloqués"
+    // Compteur
     if (countEl) {
       countEl.textContent = `${unlocked.size} / ${meta.length}`;
     }
@@ -554,7 +554,6 @@
       return;
     }
 
-    // Catégories ordonnées
     const categories = (window.AchievementsCore && window.AchievementsCore.CATEGORIES)
       ? window.AchievementsCore.CATEGORIES
       : null;
@@ -564,37 +563,49 @@
 
     wrap.innerHTML = '';
 
-    // Bandeau "Prochains défis" : 3 verrouillés les plus proches
-    const nextChallenges = computeNextChallenges(meta, unlocked, snap, 3);
+    // ── Bloc 1 : Prochains défis (locked mais en cours) ──
+    const nextChallenges = computeNextChallenges(meta, unlocked, snap, 4);
     if (nextChallenges.length) {
       wrap.appendChild(renderNextChallenges(nextChallenges));
     }
 
-    // Itération par catégorie
+    // ── Bloc 2 : Badges débloqués uniquement, par catégorie ──
     const order = categories || Object.keys(grouped);
+    let totalShown = 0;
+
     order.forEach(cat => {
       const items = grouped[cat] || [];
-      if (!items.length) return;
+      // v2.77 — Ne montrer QUE les achievements débloqués
+      const unlockedItems = items.filter(a => unlocked.has(a.id));
+      if (!unlockedItems.length) return;
 
-      const unlockedInCat = items.filter(a => unlocked.has(a.id)).length;
+      totalShown += unlockedItems.length;
 
-      // Header de catégorie
       const header = document.createElement('div');
       header.className = 'profile-ach-cat-header';
       header.innerHTML = `
         <span class="profile-ach-cat-name">${escapeHtml(cat)}</span>
-        <span class="profile-ach-cat-count">${unlockedInCat} / ${items.length}</span>
+        <span class="profile-ach-cat-count">${unlockedItems.length}</span>
       `;
       wrap.appendChild(header);
 
-      // Grille de cartes
       const grid = document.createElement('div');
       grid.className = 'profile-ach-grid';
-      items.forEach(a => {
-        grid.appendChild(renderAchCard(a, unlocked.has(a.id), snap));
+      unlockedItems.forEach(a => {
+        grid.appendChild(renderAchCard(a, true, snap));
       });
       wrap.appendChild(grid);
     });
+
+    // Si aucun badge débloqué
+    if (totalShown === 0 && nextChallenges.length === 0) {
+      wrap.insertAdjacentHTML('beforeend', `
+        <div class="profile-empty">
+          <div style="font-size:32px;margin-bottom:8px">🏅</div>
+          Aucun succès débloqué pour l'instant.<br>
+          <span style="color:var(--dim);font-size:13px">Continue l'enquête pour les débloquer.</span>
+        </div>`);
+    }
   }
 
   /**
