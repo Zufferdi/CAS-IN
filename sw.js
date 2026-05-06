@@ -1602,7 +1602,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v121';
+const CACHE_VERSION = 'cas-in-v122';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1723,6 +1723,7 @@ const STATIC_ASSETS = [
   './js/components/scene-banners-carousel.js',
   './style/gamification-toasts.css',
   './js/components/gamification-toasts.js',
+  './js/components/quest-banner.js',
   './js/components/hub-activity.js',
   './js/components/hub-identity.js',
   './data/search-index.json',

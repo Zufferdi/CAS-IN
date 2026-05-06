@@ -73,6 +73,7 @@
     <div class="hdr-dropdown" id="more-dropdown">
       <button aria-label="Plus d'options" type="button" class="hdr-action hdr-action-more" onclick="toggleMoreMenu()" title="Plus">⋯</button>
       <div class="hdr-dropdown-menu" id="more-menu">
+        <button type="button" onclick="showSessionRecap(); closeMoreMenu()" class="hdr-dropdown-item" title="Voir le récapitulatif de la session"><span>📊</span> Récap session</button>
         <button type="button" id="freeze-btn" onclick="useStreakFreeze(); closeMoreMenu()" class="hdr-dropdown-item" title="Streak Freeze (préserve la série quotidienne)"><span>🧊</span> Streak Freeze <span id="fz-badge" class="menu-badge"></span></button>
         <button type="button" onclick="openHelp(); closeMoreMenu()" class="hdr-dropdown-item"><span>❓</span> Raccourcis (?)</button>
         <button type="button" id="sound-btn" onclick="toggleSound()" class="hdr-dropdown-item"><span>🔊</span> <span id="sound-label">Son activé</span></button>
@@ -182,6 +183,23 @@
         <span id="q-counter-text"></span>
         <span id="q-counter-pct"></span>
       </div>
+      <!-- v2.86 — Bandeau Quête du jour -->
+      <div id="quest-banner" class="quest-banner" hidden>
+        <span class="quest-banner-icon" id="qb-icon">🎯</span>
+        <div class="quest-banner-body">
+          <div class="quest-banner-line1">
+            <span class="quest-banner-tag">QUÊTE DU JOUR</span>
+            <span class="quest-banner-title" id="qb-title">—</span>
+            <span class="quest-banner-reward" id="qb-reward">+0 XP</span>
+          </div>
+          <div class="quest-banner-progress">
+            <div class="quest-banner-bar"><div class="quest-banner-fill" id="qb-fill"></div></div>
+            <span class="quest-banner-pct" id="qb-pct">0%</span>
+          </div>
+        </div>
+        <button type="button" class="quest-banner-close" onclick="dismissQuestBanner()" aria-label="Masquer pour aujourd'hui" title="Masquer">×</button>
+      </div>
+
       <div class="card" id="question-card">
         <div class="card-top">
           <span class="boss-label" id="boss-label">💀 BOSS</span>
@@ -192,11 +210,27 @@
           </span>
           <span class="combo-badge" id="combo-badge">⚡ COMBO</span>
           <span class="spacer"></span>
-          <!-- Stats contextuelles (sortent du header, gérées par JS existant) -->
+          <!-- v2.86 — Stats contextuelles renforcées -->
           <span id="combo-display" class="card-stat">⚡ ×1</span>
           <span id="lives-display" class="card-stat" title="Vies (Survie)"></span>
           <span id="score-display" class="card-stat card-stat--score">0 pts</span>
+          <!-- Bulle XP gain qui flash à chaque bonne réponse -->
+          <span id="xp-gain-bubble" class="xp-gain-bubble" hidden></span>
           <button aria-label="Marquer comme favori" type="button" id="bookmark-btn" onclick="toggleBookmark()" title="Favori">☆</button>
+        </div>
+        <!-- v2.86 — Mini-barre de progression session (X/Y questions) -->
+        <div class="card-session-bar" id="card-session-bar">
+          <div class="card-session-label">
+            <span class="csb-current" id="csb-current">0</span>
+            <span class="csb-sep">/</span>
+            <span class="csb-total" id="csb-total">0</span>
+            <span class="csb-text">questions</span>
+            <span class="csb-spacer"></span>
+            <span class="csb-accuracy" id="csb-accuracy">— %</span>
+          </div>
+          <div class="card-session-track">
+            <div class="card-session-fill" id="csb-fill"></div>
+          </div>
         </div>
         <div id="scene-banner">
           <div id="scene-step-label"></div>
@@ -344,6 +378,7 @@
     <script src="js/pages/quiz-data.js" defer></script>
     <script src="js/components/quiz-ranks.js" defer></script>
     <script src="js/pages/quiz-app.js" defer></script>
+    <script src="js/components/quest-banner.js" defer></script>
         <!-- AVATAR SETUP -->
     <div class="overlay" tabindex="-1" id="avatar-overlay">
       <div class="panel">
@@ -383,6 +418,66 @@
         <div id="ms-weak-list"></div>
         <div id="ms-strong"></div>
         <button type="button" class="apply-btn apply-btn--mt" onclick="closeMidSession()">Continuer la révision →</button>
+      </div>
+    </div>
+
+    <!-- v2.86 — SESSION RECAP OVERLAY -->
+    <div id="session-recap-overlay" hidden>
+      <div class="session-recap-card">
+        <button type="button" class="session-recap-close" onclick="closeSessionRecap()" aria-label="Fermer">✕</button>
+        <div class="session-recap-header">
+          <div class="session-recap-eyebrow">🏁 RÉCAP DE SESSION</div>
+          <h2 class="session-recap-title" id="srx-title">Belle session !</h2>
+          <p class="session-recap-subtitle" id="srx-subtitle">—</p>
+        </div>
+        <div class="session-recap-stats">
+          <div class="srx-stat srx-stat--main">
+            <div class="srx-stat-num" id="srx-questions">0</div>
+            <div class="srx-stat-label">questions</div>
+          </div>
+          <div class="srx-stat srx-stat--main srx-stat--accent">
+            <div class="srx-stat-num" id="srx-accuracy">0%</div>
+            <div class="srx-stat-label">précision</div>
+          </div>
+          <div class="srx-stat srx-stat--main srx-stat--xp">
+            <div class="srx-stat-num">+<span id="srx-xp">0</span></div>
+            <div class="srx-stat-label">XP gagnée</div>
+          </div>
+        </div>
+        <div class="session-recap-secondary">
+          <div class="srx-line"><span class="srx-line-icon">⚡</span><span>Meilleur combo : <strong id="srx-combo">×1</strong></span></div>
+          <div class="srx-line"><span class="srx-line-icon">⏱</span><span>Durée : <strong id="srx-duration">—</strong></span></div>
+          <div class="srx-line"><span class="srx-line-icon">🔥</span><span>Plus longue série : <strong id="srx-maxstreak">0</strong></span></div>
+        </div>
+        <div class="session-recap-achievements" id="srx-achievements" hidden>
+          <div class="srx-section-label">🏆 Débloqué cette session</div>
+          <div class="srx-ach-list" id="srx-ach-list"></div>
+        </div>
+        <div class="session-recap-next" id="srx-next" hidden>
+          <div class="srx-section-label">🎯 Bientôt à portée</div>
+          <div id="srx-next-content"></div>
+        </div>
+        <!-- v2.86 — Mini-leaderboard hebdomadaire -->
+        <div class="session-recap-leaderboard" id="srx-leaderboard" hidden>
+          <div class="srx-section-label">📊 TON SCORE CETTE SEMAINE</div>
+          <div class="srx-lb-content">
+            <div class="srx-lb-current">
+              <div class="srx-lb-current-label">Cette session</div>
+              <div class="srx-lb-current-val" id="srx-lb-current">0 pts</div>
+            </div>
+            <div class="srx-lb-arrow" id="srx-lb-arrow">→</div>
+            <div class="srx-lb-best">
+              <div class="srx-lb-best-label" id="srx-lb-best-label">Meilleur de la semaine</div>
+              <div class="srx-lb-best-val" id="srx-lb-best-val">—</div>
+            </div>
+          </div>
+          <div class="srx-lb-message" id="srx-lb-message">—</div>
+        </div>
+
+        <div class="session-recap-actions">
+          <button type="button" class="srx-btn srx-btn--ghost" onclick="closeSessionRecap()">Fermer</button>
+          <button type="button" class="srx-btn srx-btn--primary" onclick="closeSessionRecap(); openSettings()">⚙ Nouveaux filtres</button>
+        </div>
       </div>
     </div>
     <div id="help-overlay">
