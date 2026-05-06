@@ -4,6 +4,145 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.56] — 2026-05-06
+
+🎨 **Pass CSS light — profile + tools + exam** : 3 pages couvertes en une release.
+
+### profile (le plus dense)
+
+- `style/profile.css` : section `[data-theme="light"]` réécrite. Préserve les overrides existants encore valides (`.profile-page/.dfir-status-bar/.dfir-action-btn/etc.`), retire les overrides morts (`.npc-arc-card/.npc-arc-bar-track` — DOM disparu), ajoute :
+  - **Définition de `--card-bg: #ffffff` et `--bar-bg: #cdd5e0`** dans le bloc light. Stratégie clé : tous les selectors qui font `var(--card-bg, #0f1420)` (i.e. `.arc-card`, `.quest-card`, `.lb-row`, `.mastery-track-bar`, `.arc-progress-bar`, `.npc-arc-bar-track` etc.) basculent automatiquement sans override par sélecteur.
+  - `.profile-body` (gradient sombre Matrix → gradient clair)
+  - `.profile-modal-backdrop` + `.profile-modal-panel`
+  - `.profile-track-chooser` + `.profile-track-card` + hover
+  - `.profile-title-card.is-locked` + `.profile-title-card--none`
+  - `.profile-ach-next-item`
+  - `.hm-theme-pct`
+  - `.arc-filter-btn.is-active .arc-filter-count`
+- `style/profile-banner.css` : ajout d'un bloc light complet (~30 lignes). Le banner reprenait la même palette propriétaire que cas-in-navbar (bleu `#4a9eff`, gold `#ffd070`, green `#6fd29c`, texte `#e8eaed`), tout hardcodé. Mêmes inversions que pour le navbar : `#1a5fa8` / `#8a5800` / `#115a35` / `#1a2235`.
+- `style/profile-dossier.css` : ajout d'1 override pour `.profile-stat` (le seul élément hardcodé sombre du fichier).
+
+### tools
+
+- `style/tools.css` : **rien à changer**. Le fichier est petit (98 lignes), utilise déjà `var(--surface)/var(--border)/etc.`, et les 3 overrides existants ciblent `.tool-card` (toujours valide). Bénéficie du fait que `tools.html` charge `fiche_style.css` qui définit toutes les vars light.
+
+### exam
+
+- `style/exam.css` : ajout d'un mini-bloc light pour les 2 sticky headers (`.exam-header` et `.rev-header`) — ils avaient un `rgba(13,17,23,.95)` hardcodé (backdrop-filter). Reste du fichier utilise des vars + bénéficie de fiche_style.css.
+
+### sw.js
+
+- `CACHE_VERSION` v135 → v136.
+
+### Statut couverture light
+
+| Page | État |
+|---|---|
+| Landing, Fiches, Navbar | ✅ |
+| Quiz, Scene, TP | ✅ |
+| Profile (page + banner + dossier) | ✅ (cette release) |
+| Tools | ✅ (déjà) |
+| Exam | ✅ (cette release) |
+| npcs / glossary / artifacts | ❌ |
+
+Reste 3 pages — plus le profil-banner pourra être testé sur **toutes** les pages où il s'affiche.
+
+### Test
+
+- `profile.html?theme=light` : page complète, ouvrir les modales (Track chooser), naviguer dans Arcs / Quests / Leaderboard / Mastery / Heatmap, vérifier que les cartes sont blanches avec accents corrects
+- `tools.html?theme=light` : déjà OK normalement, vérification rapide
+- `exam.html?theme=light` : démarrer un examen, vérifier que le header sticky du timer est en blanc et lisible, idem pour le mode révision
+
+## [2.55] — 2026-05-06
+
+🎨 **Pass CSS light — `tp.css` + `tp-page.css`** : tp.html maintenant utilisable en mode clair.
+
+### Découverte (même histoire)
+
+Les overrides existants de `tp.css` ciblaient `.tp-card`, `.tp-panel`, `.tp-input`, `.tp-feedback-ok/.bad` — **tous absents du DOM**. Le rendu actuel (par `tp-engine.js`) utilise `.ex-*`, `.tp-choice`, `.btn-validate/.btn-next/.btn-hint`, `.hex-display/.hex-byte`, `.bm-cell.free`, `.bit-0`, etc. Les ~9 overrides étaient morts.
+
+`tp-page.css` n'avait aucun override (0 sur 289 lignes) mais utilisait majoritairement `var(--surface)`/`var(--border)` donc basculait correctement — un seul élément invisible-on-light à corriger.
+
+### Modifié
+
+- `style/tp.css` :
+  - Bloc `[data-theme="light"]` réécrit en place (~120 lignes au lieu de ~50).
+  - 8 nouvelles familles couvertes :
+    - `.tp-tab:hover` / `.btn-new-ex:hover` (borders blancs invisibles sur fond clair → tints sombres)
+    - `.ex-scenario` (encadré du scénario d'exo)
+    - `.hex-display` (forensic byte viewer)
+    - `.bit-0` (binary display)
+    - `.ex-input` + états `.correct`/`.wrong`
+    - `.bm-cell.free` (booking matrix)
+    - `.bm-hex-result`
+    - `.tp-choice` + `.tp-choice-letter` (multiple-choice)
+    - `.ex-feedback.correct/.wrong/.error`
+- `style/tp-page.css` : ajout d'un mini-bloc light pour `.sb-group:not(.collapsed) .sb-group-header` (le seul élément avec un bg `rgba(255,255,255,.03)` invisible sur clair).
+- `sw.js` : `CACHE_VERSION` v134 → v135.
+
+### Statut couverture light
+
+| Page | État |
+|---|---|
+| Landing, Fiches, Navbar | ✅ |
+| Quiz | ✅ |
+| Scene | ✅ |
+| TP | ✅ (cette release) |
+| Profile | ⚠️ partiel (14 règles existantes — à vérifier de la même manière, probablement mortes aussi) |
+| Tools | ⚠️ minimal (3 règles) |
+| Exam | ❌ aucune |
+| npcs/glossary/artifacts | ❌ aucune |
+
+### Test
+
+`tp.html?theme=light` — tester en particulier :
+- Sidebar de gauche (déjà via vars, devrait être OK)
+- Choisir un exercice et lancer
+- Faire un exo avec input texte (correct/wrong feedback)
+- Faire un exo "hex viewer" si présent (les bytes doivent rester lisibles)
+- Faire un exo avec choices multiple (les boutons cliquables)
+- Vérifier les boutons Hint / Validate / Next
+
+## [2.54] — 2026-05-06
+
+🎨 **Pass CSS light — `scene.css`** : couverture étendue, scene.html maintenant utilisable en mode clair.
+
+### Découverte (même problème que quiz)
+
+Les overrides `[data-theme="light"]` pré-existants ciblaient `.scene-card`, `.step-card`, `.lobby-card`, `.choice`, `.alert-bar` — **sélecteurs absents du DOM actuel**. Le DOM réel utilise `.briefing-card`, `.briefing-panel`, `.choice-btn`, `.alert-box`, etc. Les vraies cartes de scène utilisaient déjà `var(--surface)`/`var(--text)` donc basculaient bien — mais ~26 éléments avaient des bg hardcodés sombres qui ne switchaient pas.
+
+### Modifié
+
+- `style/scene.css` :
+  - Bloc `[data-theme="light"]` réécrit en place (~155 lignes au lieu de ~50). Préserve la déclaration des variables (qui était correcte).
+  - 14 nouvelles familles de sélecteurs couvertes : `.diff-badge.easy/medium/hard/expert`, `.alert-box`, `.ref-tag` (+ hover), `.choice-btn:hover/.selected-ok/.selected-ko` (états scène, distincts des états quiz), `.feedback-box.ok/.ko`, `.next-step-btn:hover`, `.tl-dot.done-ok/.done-ko`, `.custody-result.intact/.degraded/.compromised`, `.review-item.ok/.ko`, `.hint-btn:hover`, `.heatmap-day.l1/.l2`, `.skill-node`, `.npc-relation-item`, `.eu-unlock-desc`.
+- `sw.js` : `CACHE_VERSION` v133 → v134.
+
+### Statut couverture light
+
+| Page | État |
+|---|---|
+| Landing, Fiches, Navbar | ✅ |
+| Quiz | ✅ (v2.50) |
+| Scene | ✅ (cette release) |
+| TP | ⚠️ partiel (9 règles) |
+| Profile | ⚠️ partiel (14 règles) |
+| Tools | ⚠️ minimal (3 règles) |
+| Exam | ❌ aucune |
+| npcs/glossary/artifacts | ❌ aucune |
+
+### Test
+
+`scene.html?theme=light` — vérifier en particulier :
+- Cartes de scènes (lobby) — déjà via vars, inchangé
+- Briefing une fois entré dans une scène — devrait être tout en clair
+- Pendant une étape : choix sélectionnés (ok/ko) — verts/rouges clairs lisibles
+- Feedback box après validation — verte ou rouge clair
+- Timeline en bas — dots verts/rouges clairs
+- Custody bar (chaîne de garde) — couleurs cohérentes
+- Récap fin de scène : review items + custody result
+- Onglet Skill tree (depuis profile) — skill-node lisibles
+
 ## [2.53] — 2026-05-06
 
 🎨 **Pass CSS light — `cas-in-navbar.css`** : navbar transversale couverte. Multiplicateur — toutes les pages déjà couvertes en clair (quiz, fiches) gagnent un rendu cohérent top-to-bottom.
