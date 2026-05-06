@@ -257,7 +257,21 @@
       mql.addListener(apply); // legacy Safari < 14
     }
   }
-  bootstrapColorScheme();
+  // bootstrapColorScheme();
+  // ─────────────────────────────────────────────────────────────
+  // DÉSACTIVÉ en v2.49 (hotfix lisibilité)
+  //
+  // Le rollout v2.85 du mode clair auto a été shippé sans la couverture
+  // CSS complète : fiche_style.css avait 46 règles [data-theme="light"],
+  // mais quiz.css n'en avait que 12 (sur 800+ lignes), scene.css 10,
+  // tp.css 9, tools.css 3, et tp-page.css/exam.css/cas-in-navbar.css zéro.
+  // Résultat : sur les pages mal couvertes, les variables texte basculaient
+  // en noir mais les backgrounds hardcodés restaient sombres → texte noir
+  // sur cartes sombres, illisible.
+  //
+  // Pour réactiver (après la passe CSS de la Vague 4) : décommenter l'appel
+  // ci-dessus ET le @media (prefers-color-scheme: light) dans style.css.
+  // ─────────────────────────────────────────────────────────────
 
   // ─────────────────────────────────────────────────────────────
   // API publique
