@@ -4,6 +4,38 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.52] — 2026-05-06
+
+🐛 **Vague 3 — `Profile.spendXp()`** : nouveau API + correction d'un bug silencieux où les indices scène étaient gratuits.
+
+### Bug corrigé
+
+`scene-app.js#useHint()` (coût 25 XP par indice) tapait directement dans le mirror legacy `cas_xp` via `lsSet`, mais `getXP()` (la fonction qui affiche le solde) lit en priorité depuis `Profile.xp` (la source de vérité). Conséquence : les indices décrémentaient une variable qui ne servait plus à rien tout en laissant `Profile.xp` intact. Le user voyait son XP rester au max après chaque hint utilisé, et le bouton hint ne devenait jamais grisé pour cause d'XP insuffisant.
+
+Symptôme observable : utilisable n'importe quand sans coût visible, peu importe le score réel.
+
+### Ajouté
+
+- `Profile.spendXp(amount, source, meta)` dans `js/core/cas-in-profile.js` :
+  - Whitelist source : `quiz | scene | quest | tp | fiches`
+  - Pas de bonus de rôle appliqué (les coûts sont fixes)
+  - Pas de mise à jour de `xpBySource` (qui reflète l'XP gagnée par source, pas le solde net)
+  - Pas de mise à jour de `activity[source]` (une dépense n'est pas une activité d'apprentissage)
+  - Pas d'événement `rank-down` émis (convention UX : rangs permanents)
+  - Retourne `{ xp, spent, base }` ou `null` si insuffisant / source invalide / montant ≤ 0
+
+### Modifié
+
+- `js/pages/scene-app.js` :
+  - `useHint()` : appelle `Profile.spendXp(HINT_COST, 'scene', { reason: 'hint' })` au lieu de `lsSet('cas_xp', ...)`. Le mirror legacy reste mis à jour après-coup pour les call-sites résiduels qui lisent `cas_xp` directement.
+  - `updateHintButton()` : utilise `getXP()` (lit Profile en priorité) au lieu de `lsGet('cas_xp', 0)`. Le bouton se grise désormais correctement quand l'utilisateur n'a pas de quoi payer.
+- `sw.js` : `CACHE_VERSION` v131 → v132.
+
+### Compatibilité
+
+- Aucun breaking change. `Profile.spendXp` est opt-in (le caller vérifie `typeof === 'function'`).
+- Le mirror `cas_xp` est toujours écrit après spend pour les rares lecteurs legacy.
+
 ## [2.51] — 2026-05-06
 
 🧮 **Vague 2 — décisions binaires** : 3 sujets tranchés, code mort retiré, build pipeline corrigé.
