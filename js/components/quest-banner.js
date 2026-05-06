@@ -107,13 +107,20 @@
     }
     render();
 
-    // Re-render toutes les 3s pour suivre la progression en live
-    setInterval(render, 3000);
-
-    // Re-render après chaque évaluation des quêtes
+    // v2.85 — Re-render purement event-driven : on supprime
+    // setInterval(render, 3000) qui réveillait le JS engine 20×/min même
+    // quand rien n'avait changé. Désormais on écoute :
+    //   • profile-changed (XP, streak, achievements via Profile.onChange)
+    //   • quests-changed (event custom dispatché par cas-in-quests.js)
+    //   • visibilitychange (rafraîchit en revenant sur l'onglet, au cas où
+    //     une autre tab a complété une quête entre-temps)
     if (window.Profile && typeof window.Profile.onChange === 'function') {
       window.Profile.onChange(render);
     }
+    window.addEventListener('quests-changed', render);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) render();
+    });
   }
 
   if (document.readyState === 'loading') {

@@ -56,12 +56,30 @@
         }
       } catch (_) {}
 
-      // v2.84 — Récompenser la lecture par +15 XP (source 'fiches')
-      // et déclencher l'évaluation des achievements
+      // v2.85 — Récompenser la lecture par +15 XP (source 'fiches')
+      // et déclencher l'évaluation des achievements.
+      // Tags dérivés du nom de fichier ET du <h1> pour activer le bonus
+      // de rôle (+20%) côté Profile. Avant v2.85, on passait { fiche: tag }
+      // qui n'était pas lu par addXp (qui attend meta.tags), donc le bonus
+      // de rôle n'était jamais appliqué aux fiches.
       if (window.Profile && typeof window.Profile.addXp === 'function') {
         try {
-          const tag = file.replace(/\.html$/, '');
-          window.Profile.addXp(15, 'fiches', { fiche: tag });
+          const base = file.replace(/\.html$/, '');
+          // Découpe sur _ : "linux_forensique" → ["linux", "forensique"]
+          const fromName = base.split(/[_-]+/).filter(Boolean);
+          // Mots significatifs du <h1> (>= 4 lettres, max 6 mots)
+          let fromTitle = [];
+          try {
+            const h1 = document.querySelector('h1');
+            if (h1) {
+              fromTitle = h1.textContent
+                .split(/\s+/)
+                .filter(w => w.length >= 4)
+                .slice(0, 6);
+            }
+          } catch (_) {}
+          const tags = [...fromName, ...fromTitle];
+          window.Profile.addXp(15, 'fiches', { tags });
           window.Profile.recordActivity('fiches');
         } catch (_) {}
       }

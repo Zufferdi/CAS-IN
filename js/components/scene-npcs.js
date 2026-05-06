@@ -92,15 +92,23 @@
   }
 
   // ─── Sécurité HTML ───
+  // v2.85 — Délègue à CasInUtils si dispo. La version locale d'origine
+  // n'échappait NI " NI ' (l'attribut version corrigeait juste "). Avec
+  // CasInUtils on couvre les 5 caractères de manière uniforme.
   function escapeHtml(s) {
+    if (window.CasInUtils && typeof window.CasInUtils.escapeHTML === 'function') {
+      return window.CasInUtils.escapeHTML(s);
+    }
     return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   function escapeAttr(s) {
-    return escapeHtml(s).replace(/"/g, '&quot;');
+    if (window.CasInUtils && typeof window.CasInUtils.escapeAttr === 'function') {
+      return window.CasInUtils.escapeAttr(s);
+    }
+    return escapeHtml(s);
   }
 
   // ─── Rendu d'une mini-carte PNJ (cliquable) ───
