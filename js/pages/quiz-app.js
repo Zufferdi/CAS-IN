@@ -637,7 +637,10 @@
         bb.className = 'bookmark-btn' + (S.bookmarks.has(idx) ? ' active' : '');
         const ch = document.getElementById('choices');
         ch.innerHTML = '';
-        const L = ['A', 'B', 'C', 'D', 'E'];
+        // v2.85 — Lettres dérivées dynamiquement (A..Z) au lieu d'une const
+        // ['A','B','C','D','E']. 9 questions du corpus ont 6-7 options et
+        // affichaient une lettre 'undefined' pour les options 6 et 7.
+        const letterOf = (i) => String.fromCharCode(65 + i);
         const shuffled = [...q.opts.map((_, i) => i)];
         for (let i = shuffled.length - 1; i > 0; i--) {
           const j = 0 | Math.random() * (i + 1);
@@ -650,7 +653,7 @@
           btn.dataset.idx = newI;
           btn.dataset.origIdx = origI;
           btn.innerHTML = `
-          																		<span class="choice-letter">${L[newI]}</span>
+          																		<span class="choice-letter">${letterOf(newI)}</span>
 																		<span>${q.opts[origI]}</span>`;
           const isCorrect = ansSet.has(origI);
           btn.addEventListener('click', () => toggleChoice(btn, newI, q.type, isCorrect));
@@ -1423,7 +1426,8 @@
         document.getElementById('exam-multi-hint').style.display = q.type === 'multi' ? '' : 'none';
         const ch = document.getElementById('exam-choices');
         ch.innerHTML = '';
-        const L = ['A', 'B', 'C', 'D', 'E'];
+        // v2.85 — Lettres dynamiques (cf. renderQuestion ligne 643)
+        const L = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
         const shuffled = [...q.opts.map((_, i) => i)];
         for (let i = shuffled.length - 1; i > 0; i--) {
           const j = 0 | Math.random() * (i + 1);

@@ -265,7 +265,7 @@ function renderQ() {
 
   const cont = document.getElementById('answers');
   cont.innerHTML = '';
-  const letters = ['A','B','C','D','E'];
+  const letters = ['A','B','C','D','E','F','G'];
   q.answers.forEach((a, i) => {
     const btn = document.createElement('button');
     btn.className = 'ans-btn';
@@ -581,7 +581,7 @@ function renderRevQ() {
   document.getElementById('rev-qnum').textContent = (revCur+1)+'/'+examQ.length;
   document.getElementById('rev-prog').style.width = ((revCur+1)/examQ.length*100)+'%';
 
-  const letters = ['A','B','C','D','E'];
+  const letters = ['A','B','C','D','E','F','G'];
   const mod = q.module||'??';
 
   document.getElementById('rev-body').innerHTML = `
