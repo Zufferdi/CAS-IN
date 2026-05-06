@@ -125,7 +125,6 @@ Concrètement, dans le `<head>` de `quiz.html` (état réel v2.85) :
 <script src="js/core/cas-in-pwa.js" defer></script>
 <script src="js/core/cas-in-search.js" defer></script>
 <script src="js/core/cas-in-utils.js" defer></script>
-<script src="js/core/cas-in-storage.js" defer></script>
 
 <!-- 4. App de page (en bas du body, defer) — appelle Profile.addXp directement -->
 <script src="js/pages/quiz-app.js" defer></script>
@@ -208,6 +207,5 @@ questions.json      # 1750 questions quiz (2.5 MB, monolithique)
 - **Sharding `questions.json`** par thème (cf. ce qui a été fait pour `scenes.js` → `scenes/index.json` + lazy en v2.7).
 - **Élimination de `bridges/`** : quiz et scene retirés en v2.85+. Reste `tp-profile-bridge.js` à dégager — refactor de `tp-engine.js` pour appeler `AchievementsCore.evalAndUnlock` directement, puis suppression du dossier `bridges/`.
 - **Unification des rangs** : aujourd'hui, `quiz-app.js` a sa constante `RANKS`, `scene-app.js` a son `getGrade()`, et `cas-in-profile.js` a `TRACKS[…].ranks`. Trois systèmes avec des seuils différents. Cible : `Profile.getRank()` partout. Migration `casIn_profile` v=2 → v=3 à prévoir pour ré-aligner les seuils débloqués.
-- **`cas-in-storage.js`** : wrapper défini en v2.60 mais aucun consommateur. Soit on commit à la migration (remplacer `localStorage.getItem` par `CasInStorage.get` dans quiz-app/scene-app/tp-engine), soit on supprime le fichier.
 - **Achievements unifiés (suite)** : `cas-in-achievements.js` couvre désormais TP/fiches centralisés, mais `quiz-app.js#ACHIEVEMENTS` et `scene-app.js#GLOBAL_BADGES` ont leurs propres checks runtime. Cible : tout reconstructible depuis `Profile.snapshot()` + scene_results.
 - **Performance `profile-banner.js`** : éviter le `innerHTML = …` complet à chaque `Profile.onChange()`. Targeted text updates.

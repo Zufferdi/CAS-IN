@@ -4,6 +4,112 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.51] — 2026-05-06
+
+🧮 **Vague 2 — décisions binaires** : 3 sujets tranchés, code mort retiré, build pipeline corrigé.
+
+### Supprimé
+
+- `js/core/cas-in-storage.js` (199 lignes) : wrapper localStorage défini en v2.60 mais **jamais adopté** — zéro consommateur dans tout le repo. La `migrate()` de v2.60 a déjà tourné chez tous les utilisateurs existants (flag `cas_storage_migrated_v260` posé), donc la suppression n'a aucun impact fonctionnel.
+- Les `<script src="js/core/cas-in-storage.js" defer>` dans `index.html`, `quiz.html`, `scene.html`, `profile.html`.
+- Entrée correspondante dans `sw.js` STATIC_ASSETS.
+
+Note : les clés `cas_*_legacy` recopiées dans le storage des utilisateurs existants (~1 KB par user) restent. Inoffensives ; éventuellement nettoyables via une mini-fonction de cleanup dans une release future si on veut.
+
+### Modifié
+
+- `scripts/build-all.sh` : ajout de `build_fiche_graph.py` comme étape 5/6 (entre `build_cross_links.py` et les checks). **Bug latent corrigé** : avant cette release, modifier une fiche et lancer `./build-all.sh` régénérait `cross-links.json` mais laissait `fiche-graph.json` stale → recommandations de fiches voisines pouvaient être incorrectes. Le pre-commit hook côté CI Actions est apparemment OK (le workflow régénère bien les deux), mais le path local était cassé.
+- `scripts/README.md` : pipeline mis à jour pour refléter les 6 étapes (au lieu de 5).
+- `scripts/build_search_index.py` : docstring corrigée. L'ancien docstring annonçait des champs `commands`, `terms`, `text` que le script ne génère pas. Schema réel documenté : `{file, title, category, icon, desc, sections: [{id, title, text}]}`.
+- `docs/ARCHITECTURE.md` : exemple de `<script>` chain et "Future work" mis à jour pour retirer `cas-in-storage`.
+- `sw.js` : `CACHE_VERSION` v130 → v131.
+
+### Conservé tels quels
+
+- `data/cross-links.json` (64K) et `data/fiche-graph.json` (128K) : **rôles distincts** (cross-links = mapping fiche↔questions/TP/scènes pour le panneau "voir aussi" ; fiche-graph = prev/next + voisines pour la navigation). Pas redondant.
+- `data/search-index.json` (608K) : **pas de dénormalisation excessive**. 97.8% de la taille est du contenu indexable réel (`sections[].text`). Taille légitime pour 109 fiches × ~5.4 KB d'index par fiche.
+
+## [2.50] — 2026-05-06
+
+🎨 **Mode clair — quiz** : couverture CSS complète sur `quiz.html` (vague 4 commencée).
+
+### Contexte
+
+Suite au hotfix v2.49 qui a désactivé le mode clair auto, début de la passe CSS pour le réactiver proprement. On commence par `quiz.html`. Le bootstrap auto reste désactivé tant que toutes les pages ne sont pas couvertes.
+
+### Découverte
+
+Les 12 règles `[data-theme="light"]` pré-existantes dans `quiz.css` ciblaient `#q-card`, `.opt`, `.feedback`, `.legal-block`, `.menu-panel`, `.modal-card` — tous des sélecteurs d'un ancien DOM v2.x supprimé depuis. Aucun ne matchait le DOM actuellement rendu. Le travail v2.85 sur quiz.css était donc **dead CSS**. Les vrais sélecteurs sont `.card`, `.choice-btn`, `#feedback`, `.chip`, etc., majoritairement définis dans `style.css`.
+
+### Modifié
+
+- `style/style.css` : ajout d'une section `v2.50 — Couverture étendue` (~70 nouveaux sélecteurs `[data-theme="light"]`) couvrant les éléments **partagés** entre pages : `.card`, `.choice-btn` (+ états selected/correct/wrong), `#feedback.ok`/`#feedback.ko`, `.chip`, `.theme-tag`, `.diff-badge`, `.panel`, `.toast-base`, `.stat-box`, `#skip-btn`, modales (`#midsession-box`, `#help-box`, `#expl-panel`, `#milestone-box`, `#achievement-popup`, `#gloss-popup`), backdrops d'overlay, dropdowns, avatars.
+- `style/quiz.css` : remplacement des 12 règles mortes par des overrides ciblant les vrais éléments du DOM actuel : `#gen-report-btn`, `.notify-card`, `.persona-card`, `.mode-end-overlay`, `.btn-mode-action--cyan/gold`, `.session-recap-card`, `.srx-ach-item`. Note explicative en tête de section.
+- `js/core/cas-in-utils.js` : ajout d'un escape-hatch URL `?theme=light` (et `?theme=dark` pour revenir) — permet de tester la couverture page par page sans réactiver le bootstrap auto. À retirer quand la couverture sera complète.
+- `sw.js` : `CACHE_VERSION` v129 → v130.
+
+### Comment tester
+
+Sur la page voulue, ajouter `?theme=light` à l'URL : `/quiz.html?theme=light`. Pour revenir : `?theme=dark` ou retirer le paramètre.
+
+### Statut couverture par page
+
+| Page | Couverture | Note |
+|---|---|---|
+| `quiz.html` | ✅ couvert | cette release |
+| `index.html` (landing) | ✅ N/A | identité Matrix, pas de mode clair |
+| `fiches/*.html` | ✅ déjà fait | rollout v2.85 |
+| `scene.html` | ⚠️ partiel | 11 règles existantes, à compléter |
+| `tp.html` | ⚠️ partiel | 9 règles, à compléter |
+| `tools.html` | ⚠️ minimal | 3 règles |
+| `exam.html` | ❌ aucune | |
+| `profile.html` | ⚠️ partiel | 14 règles, à compléter |
+| `npcs.html`, `glossary.html`, `artifacts.html` | ❌ | |
+| `cas-in-navbar.css` | ❌ | (transversal, prio probable) |
+
+### Next
+
+Continuer page par page (`scene.html` probablement ensuite). Quand tout est couvert, retirer l'escape-hatch URL et réactiver `bootstrapColorScheme()` + le `@media (prefers-color-scheme: light)`.
+
+## [2.49] — 2026-05-06
+
+🩹 **Hotfix lisibilité** : désactivation du mode clair auto.
+
+### Contexte
+
+Le rollout v2.85 du mode clair automatique (basé sur `prefers-color-scheme: light` au niveau OS) a été shippé sans la couverture CSS complète. Inventaire des règles `[data-theme="light"]` par fichier :
+
+| Fichier | Règles | Verdict |
+|---|---|---|
+| `fiche_style.css` | 46 | bien couvert |
+| `style.css` | 29 | core OK |
+| `profile.css` | 14 | partiel |
+| `quiz.css` | 12 (sur 800+ lignes) | très partiel |
+| `scene.css` | 10 | partiel |
+| `tp.css` | 9 | partiel |
+| `tools.css` | 3 | minimal |
+| `tp-page.css`, `exam.css`, `cas-in-navbar.css` | 0 | aucun |
+
+Symptôme observé sur `quiz.html` : variables texte basculées en noir (`--text: #1a2235`) mais les backgrounds hardcodés en sombre dans `quiz.css` (gradient `#1a2d4a → #0c1422`, `rgba(20,28,42,.96)`, `#07101e`...) ne basculaient pas — texte noir sur cartes sombres, illisible.
+
+### Modifié
+
+- `js/core/cas-in-utils.js` : `bootstrapColorScheme()` reste défini mais **n'est plus appelé** au boot. Le commentaire de désactivation explique comment le réactiver après la passe CSS.
+- `style/style.css` : le bloc `@media (prefers-color-scheme: light)` (lignes 87-110) est commenté en bloc. Préservé verbatim pour faciliter la réactivation.
+- `sw.js` : `CACHE_VERSION` v128 → v129.
+
+### Préservé (dormant)
+
+- Les ~123 sélecteurs `[data-theme="light"]` répartis dans tous les CSS restent en place. Ils ne s'appliquent à rien (plus aucun mécanisme ne pose `data-theme="light"` sur `<html>`), mais constituent la base d'un futur toggle UI explicite + d'une passe CSS complète.
+
+### Conséquence utilisateur
+
+L'app est désormais full dark theme pour tout le monde, indépendamment des préférences OS. Comportement identique à pré-v2.85.
+
+### Next step (Vague 4 — pass CSS)
+
+Compléter `[data-theme="light"]` sur quiz/scene/tp/tools/exam/cas-in-navbar (audit des backgrounds hardcodés à convertir en variables ou à override). Une fois fait, décommenter les deux blocs marqués "DÉSACTIVÉ en v2.49" et bumper `CACHE_VERSION`.
+
 ## [2.48] — 2026-05-06
 
 🧹 **Passe de nettoyage** : suppression de code mort, déduplication CSS, mise à jour de la doc.
