@@ -2240,114 +2240,146 @@ function startScene(scene) {
     ${realCaseHTML}
     ${procureurNotice}
 
-    ${(function(scene) {
-      // v2.71 — Bandeau "Relations PNJ" : affiche l'état actuel des PNJ
-      // déjà rencontrés dans cette scène (trust, état, dernière interaction)
-      if (!window.NpcState || !scene.npcs || scene.npcs.length === 0) return '';
-      if (typeof window.NPC_DATA === 'undefined') return '';
-
-      const known = [];
-      scene.npcs.forEach(n => {
-        const nid = typeof n === 'string' ? n : n.id;
-        if (!nid) return;
-        const state = window.NpcState.get(nid);
-        if (!state || !state.interactions || state.interactions.length === 0) return;
-        const npcInfo = window.NPC_DATA[nid];
-        if (!npcInfo) return;
-        known.push({
-          id: nid,
-          name: npcInfo.name || nid,
-          icon: npcInfo.icon || '👤',
-          trust: state.trust,
-          state: state.state,
-          interactions: state.interactions,
-        });
-      });
-
-      if (known.length === 0) return '';
-
-      const items = known.map(k => {
-        const last = k.interactions[k.interactions.length - 1];
-        const lastSceneLabel = last && last.scene ? last.scene.replace(/-/g, ' ') : '?';
-        const stateColor = k.state === 'hostile' ? '#dc3c46' :
-                           k.state === 'méfiant' ? '#e68232' :
-                           k.state === 'professionnel' ? '#a8b0c0' : '#32b464';
-        return `
-          <div class="npc-relation-item">
-            <span class="npc-relation-icon">${k.icon}</span>
-            <div class="npc-relation-body">
-              <div class="npc-relation-name">${k.name}</div>
-              <div class="npc-relation-state" style="color:${stateColor}">
-                ${window.NpcState.stateLabel(k.state)} · trust ${k.trust}/100
-              </div>
-              <div class="npc-relation-history">
-                ${k.interactions.length} interaction${k.interactions.length > 1 ? 's' : ''}
-              </div>
-            </div>
-            ${window.NpcState.trustBar(k.trust, 80)}
-          </div>`;
-      }).join('');
-
-      return `
-        <div class="npc-relations-banner">
-          <div class="npc-relations-banner-title">🤝 Relations connues sur cette affaire</div>
-          ${items}
-        </div>`;
-    })(scene)}
-
     <div class="alert-box">
       <strong>⚠ ${scene.alertLevel || 'ATTENTION'}</strong>
       Chaque décision est irréversible. Les erreurs critiques réduisent l'intégrité de la chaîne de custody.
     </div>
 
-    ${(function(intro) {
-      // v2.62 — Intros longues (>800 chars) repliées par défaut sur mobile.
-      // Le contenu n'est PAS tronqué, juste replié visuellement avec un
-      // teaser de la première phrase, et un bouton "Voir le contexte complet".
-      if (!intro) return '';
-      const length = intro.length;
-      if (length <= 800) {
-        return `<div class="context-text">${intro}</div>`;
-      }
-      // Pour les longs : extraire un teaser propre (1ère phrase ou ~250 chars
-      // jusqu'à un point d'arrêt naturel)
-      let teaserEnd = intro.indexOf('. ', 200);
-      if (teaserEnd === -1 || teaserEnd > 350) teaserEnd = 280;
-      else teaserEnd += 1; // inclure le point
-      const teaser = intro.substring(0, teaserEnd);
-      const rest = intro.substring(teaserEnd);
-      return `<div class="context-text context-text--collapsible" data-collapsed="1">
-        <div class="context-teaser">${teaser}</div>
-        <div class="context-rest" hidden>${rest}</div>
-        <button type="button" class="context-toggle"
-                onclick="(function(b){
-                  const w = b.parentNode;
-                  const rest = w.querySelector('.context-rest');
-                  const collapsed = w.dataset.collapsed === '1';
-                  if (collapsed) {
-                    rest.hidden = false;
-                    w.dataset.collapsed = '0';
-                    b.textContent = '↑ Replier le contexte';
-                  } else {
-                    rest.hidden = true;
-                    w.dataset.collapsed = '1';
-                    b.textContent = '↓ Voir le contexte complet (${length - teaserEnd} caractères)';
-                  }
-                })(this)">↓ Voir le contexte complet (${length - teaserEnd} caractères)</button>
-      </div>`;
-    })(scene.intro || '')}
+    <!-- v2.82 — Onglets briefing -->
+    <nav class="briefing-tabs" role="tablist" aria-label="Sections du briefing">
+      <button type="button" class="briefing-tab briefing-tab--active" role="tab" aria-selected="true" data-btab="context">
+        📋 Contexte
+      </button>
+      <button type="button" class="briefing-tab" role="tab" aria-selected="false" data-btab="npcs">
+        👥 PNJ
+      </button>
+      <button type="button" class="briefing-tab" role="tab" aria-selected="false" data-btab="objectives">
+        🎯 Objectifs
+      </button>
+      <button type="button" class="briefing-tab" role="tab" aria-selected="false" data-btab="refs">
+        ⚖️ Cadre légal
+      </button>
+    </nav>
 
-    <div class="objective-list">
-      ${(scene.objectives || []).map(o => `
-        <div class="objective-item">
-          <span class="obj-icon">${o.icon}</span>
-          <span>${o.text}</span>
-        </div>
-      `).join('')}
+    <!-- Panel CONTEXTE -->
+    <div class="briefing-panel briefing-panel--active" data-bpanel="context" role="tabpanel">
+      ${(function(intro) {
+        // v2.62 — Intros longues (>800 chars) repliées par défaut sur mobile.
+        if (!intro) return '<div class="briefing-empty">Pas de contexte fourni pour cette affaire.</div>';
+        const length = intro.length;
+        if (length <= 800) {
+          return `<div class="context-text">${intro}</div>`;
+        }
+        let teaserEnd = intro.indexOf('. ', 200);
+        if (teaserEnd === -1 || teaserEnd > 350) teaserEnd = 280;
+        else teaserEnd += 1;
+        const teaser = intro.substring(0, teaserEnd);
+        const rest = intro.substring(teaserEnd);
+        return `<div class="context-text context-text--collapsible" data-collapsed="1">
+          <div class="context-teaser">${teaser}</div>
+          <div class="context-rest" hidden>${rest}</div>
+          <button type="button" class="context-toggle"
+                  onclick="(function(b){
+                    const w = b.parentNode;
+                    const rest = w.querySelector('.context-rest');
+                    const collapsed = w.dataset.collapsed === '1';
+                    if (collapsed) {
+                      rest.hidden = false;
+                      w.dataset.collapsed = '0';
+                      b.textContent = '↑ Replier le contexte';
+                    } else {
+                      rest.hidden = true;
+                      w.dataset.collapsed = '1';
+                      b.textContent = '↓ Voir le contexte complet (${length - teaserEnd} caractères)';
+                    }
+                  })(this)">↓ Voir le contexte complet (${length - teaserEnd} caractères)</button>
+        </div>`;
+      })(scene.intro || '')}
     </div>
 
-    <div class="refs-row">
-      ${(scene.legalRefs || []).map(r => renderRefTag(r)).join('')}
+    <!-- Panel PNJ -->
+    <div class="briefing-panel" data-bpanel="npcs" role="tabpanel" hidden>
+      ${(function(scene) {
+        // Bandeau "Relations PNJ" + injection de scene-npcs.js plus tard
+        if (!scene.npcs || scene.npcs.length === 0) {
+          return '<div class="briefing-empty">Pas de PNJ associé à cette scène.</div>';
+        }
+
+        // Relations connues (ceux déjà rencontrés)
+        let known = [];
+        if (window.NpcState && typeof window.NPC_DATA !== 'undefined') {
+          scene.npcs.forEach(n => {
+            const nid = typeof n === 'string' ? n : n.id;
+            if (!nid) return;
+            const state = window.NpcState.get(nid);
+            if (!state || !state.interactions || state.interactions.length === 0) return;
+            const npcInfo = window.NPC_DATA[nid];
+            if (!npcInfo) return;
+            known.push({
+              id: nid,
+              name: npcInfo.name || nid,
+              icon: npcInfo.icon || '👤',
+              trust: state.trust,
+              state: state.state,
+              interactions: state.interactions,
+            });
+          });
+        }
+
+        let knownHtml = '';
+        if (known.length > 0) {
+          const items = known.map(k => {
+            const stateColor = k.state === 'hostile' ? '#dc3c46' :
+                               k.state === 'méfiant' ? '#e68232' :
+                               k.state === 'professionnel' ? '#a8b0c0' : '#32b464';
+            return `
+              <div class="npc-relation-item">
+                <span class="npc-relation-icon">${k.icon}</span>
+                <div class="npc-relation-body">
+                  <div class="npc-relation-name">${k.name}</div>
+                  <div class="npc-relation-state" style="color:${stateColor}">
+                    ${window.NpcState.stateLabel(k.state)} · trust ${k.trust}/100
+                  </div>
+                  <div class="npc-relation-history">
+                    ${k.interactions.length} interaction${k.interactions.length > 1 ? 's' : ''}
+                  </div>
+                </div>
+                ${window.NpcState.trustBar(k.trust, 80)}
+              </div>`;
+          }).join('');
+          knownHtml = `
+            <div class="npc-relations-banner">
+              <div class="npc-relations-banner-title">🤝 Relations connues sur cette affaire</div>
+              ${items}
+            </div>`;
+        }
+
+        // Le panel des PNJ de la scène (acteurs présents) sera injecté par scene-npcs.js
+        return knownHtml + '<div id="briefing-npcs-panel"></div>';
+      })(scene)}
+    </div>
+
+    <!-- Panel OBJECTIFS -->
+    <div class="briefing-panel" data-bpanel="objectives" role="tabpanel" hidden>
+      ${(scene.objectives || []).length === 0
+        ? '<div class="briefing-empty">Aucun objectif défini.</div>'
+        : `<div class="objective-list">
+            ${(scene.objectives || []).map(o => `
+              <div class="objective-item">
+                <span class="obj-icon">${o.icon}</span>
+                <span>${o.text}</span>
+              </div>
+            `).join('')}
+          </div>`}
+    </div>
+
+    <!-- Panel CADRE LÉGAL -->
+    <div class="briefing-panel" data-bpanel="refs" role="tabpanel" hidden>
+      ${(scene.legalRefs || []).length === 0
+        ? '<div class="briefing-empty">Pas de référence légale spécifique.</div>'
+        : `<div class="refs-row refs-row--list">
+            ${(scene.legalRefs || []).map(r => renderRefTag(r)).join('')}
+          </div>`}
     </div>
 
     <div class="seed-input-row">
@@ -2363,11 +2395,27 @@ function startScene(scene) {
     </div>
   `;
 
+  // v2.82 — Activer les onglets briefing
+  document.querySelectorAll('.briefing-tab').forEach(btn => {
+    btn.onclick = () => {
+      const target = btn.dataset.btab;
+      document.querySelectorAll('.briefing-tab').forEach(b => {
+        const isActive = b === btn;
+        b.classList.toggle('briefing-tab--active', isActive);
+        b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+      document.querySelectorAll('[data-bpanel]').forEach(p => {
+        const isActive = p.dataset.bpanel === target;
+        p.classList.toggle('briefing-panel--active', isActive);
+        if (isActive) p.removeAttribute('hidden');
+        else p.setAttribute('hidden', '');
+      });
+    };
+  });
+
   showScreen('briefing');
 
   // ─── v2.26 : Hook panneau "Acteurs en présence" (scene-npcs.js) ───
-  // Idempotent + non-bloquant : si le composant n'est pas chargé ou
-  // si la scène n'a pas de champ `npcs`, rien ne s'affiche.
   if (window.SceneNPCs && typeof window.SceneNPCs.injectInBriefing === 'function') {
     setTimeout(() => {
       try { window.SceneNPCs.injectInBriefing(scene); } catch (_) {}
