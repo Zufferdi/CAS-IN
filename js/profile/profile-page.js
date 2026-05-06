@@ -17,8 +17,14 @@
   function setText(id, txt) { const el = $(id); if (el) el.textContent = txt; }
 
   function escapeHtml(s) {
+    // v2.85 — Délègue à CasInUtils.escapeHTML si disponible (couvre aussi
+    // l'apostrophe, oubliée dans la version locale d'origine). Garde un
+    // fallback local pour les cas où cas-in-utils n'est pas chargé.
+    if (window.CasInUtils && typeof window.CasInUtils.escapeHTML === 'function') {
+      return window.CasInUtils.escapeHTML(s);
+    }
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   // ───────────────────────────────────────────────────────────
