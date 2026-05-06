@@ -12,8 +12,8 @@
 //     scène associée a pct >= 60% (seuil de validation pédagogique).
 //   - Si tous les stages d'un arc sont complétés, déclenche
 //     Profile.unlockAchievement('arc_<npc_id_short>').
-//   - Hooks : appelé par scene-profile-bridge à chaque fin de scène,
-//     et par profile-page au chargement (catch-up).
+//   - Hooks : appelé par scene-app.js à la fin de chaque scène (ex-bridge,
+//     supprimé en v2.85+), et par profile-page au chargement (catch-up).
 //
 // Expose :
 //   window.NpcArcs = {

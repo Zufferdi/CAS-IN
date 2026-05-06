@@ -10,8 +10,10 @@
 // toujours Profile.unlockAchievement() via le bridge legacy 'achievements'.
 //
 // Scène : les checks GLOBAL_BADGES restent dans scene-app.js (utilisent
-// scene_results + plein de compteurs cas_*). Le scene-profile-bridge
-// appelle window.getUnlockedBadges() à chaque fin de scène et synchronise.
+// scene_results + plein de compteurs cas_*). scene-app.js appelle
+// directement window.getUnlockedBadges() à chaque fin de scène et
+// synchronise via Profile.unlockAchievement (ex-scene-profile-bridge,
+// supprimé en v2.85+).
 //
 // TP / Fiches : checks définis ici, évalués depuis Profile.snapshot()
 // + lecture directe de quelques clés localStorage. Appelés par
