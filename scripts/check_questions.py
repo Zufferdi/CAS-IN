@@ -94,16 +94,21 @@ def validate(q: dict, idx: int) -> list[str]:
     else:
         if len(opts) < 2:
             errors.append(f"opts trop courts : {len(opts)} option(s), minimum 2")
-        if len(opts) > 5:
-            errors.append(f"opts trop longs : {len(opts)} options, UI prévue pour max 5")
+        # v2.85 — UI étendue à 7 options max (était 5). Le rendu utilise
+        # String.fromCharCode(65+i) ⇒ A..G. Au-delà : warning.
+        if len(opts) > 7:
+            errors.append(f"opts trop longs : {len(opts)} options, UI prévue pour max 7")
         # Empty option
         for i, o in enumerate(opts):
             if not isinstance(o, str) or not o.strip():
                 errors.append(f"option #{i} vide ou non-string")
         # Duplicate options inside same question
+        # v2.85 — Comparaison case-sensitive (était case-insensitive). Évite
+        # les faux positifs sur des questions où la casse fait sens
+        # (ex: 'ABC' vs 'abc' pour un test ASCII).
         seen = {}
         for i, o in enumerate(opts):
-            n = norm(o)
+            n = (o or "").strip()
             if n in seen:
                 errors.append(f"option #{i} dupliquée avec #{seen[n]}")
             else:
