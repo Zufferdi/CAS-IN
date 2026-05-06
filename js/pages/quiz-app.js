@@ -160,7 +160,14 @@
  // (alimente la heatmap chapitres dans profile.html)
  S.byTheme = lsGet('byTheme', {});
  S.byChapter = lsGet('byChapter', {});
- S.xp = lsGet('xp', 0);
+ // v2.83 — S.xp initialisé depuis Profile (source de vérité).
+ // Le bug : Profile.migrateLegacyToProfile() fait lsRemove('xp') après
+ // migration. Donc lsGet('xp', 0) repart à 0 à chaque visite, ce qui
+ // remettait à zéro l'XP affichée dans le quiz et causait des collisions
+ // de write-back vers Profile. On lit Profile en priorité, fallback legacy.
+ S.xp = (window.Profile && typeof window.Profile.getXp === 'function')
+   ? window.Profile.getXp()
+   : lsGet('xp', 0);
  S.maxCombo = lsGet('maxCombo', 0);
  S.perfectExam = lsGet('perfectExam', false);
  S.perfectExam20 = lsGet('perfectExam20', false);
@@ -407,7 +414,20 @@
  function addXp(pts, contextTags) {
    const prev = getRank(S.xp);
    S.xp += pts;
-   lsSet('xp', S.xp);  // v2.72 — bridge retiré
+   // v2.83 — Synchroniser avec Profile (source de vérité globale).
+   // Avant v2.72 c'était quiz-profile-bridge qui s'en chargeait. On le
+   // fait directement ici maintenant. Profile.addXp incrémente sa propre
+   // XP totale et persiste tout dans 'casIn_profile_v4'.
+   if (window.Profile && typeof window.Profile.addXp === 'function') {
+     try {
+       const tags = Array.isArray(contextTags) ? contextTags : [];
+       window.Profile.addXp(pts, 'quiz', { tags });
+     } catch (_) {}
+   }
+   // On garde aussi lsSet('xp') pour les call-sites legacy qui le lisent
+   // (notamment getRank() et la barre XP du quiz). Profile s'auto-rebuild
+   // depuis cette clé si jamais profile_v4 est wipé.
+   lsSet('xp', S.xp);
    const curr = getRank(S.xp);
    updateXpBar();
    updateRankFlavor();

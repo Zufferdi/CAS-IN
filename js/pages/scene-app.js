@@ -1360,30 +1360,38 @@ function getGradeFallback() {
 }
 
 function getXP() {
+  // v2.83 — Lire depuis Profile (source de vérité) si dispo.
+  // 'cas_xp' est encore écrit pour compat legacy mais Profile efface
+  // les clés legacy après migration → fallback uniquement.
+  if (window.Profile && typeof window.Profile.getXp === 'function') {
+    return window.Profile.getXp();
+  }
   return lsGet('cas_xp', 0);
 }
 
 function addXP(amount, tags) {
   const prev = getXP();
-  // Préfère la voie directe Profile.addXp (qui applique le bonus thématique
-  // selon le rôle actif si tags fournis). Sinon fallback legacy via cas_xp.
   let gained = amount;
   let bonus = 0;
   let multiplier = 1.0;
-  let profileApplied = false;
-  // v2.72 — Profile.addXp retiré (bridge supprimé)
-  const next = Math.max(0, prev + gained);
 
-  // Si Profile.addXp a déjà été appelé, le bridge va re-intercepter
-  // l'écriture de 'cas_xp' et ajouter encore le delta → double comptage.
-  // Pour l'éviter on positionne un flag que le bridge sait reconnaître.
-  if (profileApplied) {
-    try { window.__casInProfileApplied = true; } catch {}
+  // v2.83 — Synchroniser avec Profile (source de vérité globale).
+  // Avant v2.72 c'était scene-profile-bridge qui s'en chargeait.
+  if (window.Profile && typeof window.Profile.addXp === 'function') {
+    try {
+      const meta = Array.isArray(tags) ? { tags } : {};
+      const result = window.Profile.addXp(amount, 'scene', meta);
+      if (result && typeof result === 'object') {
+        gained = result.gained || amount;
+        bonus = result.bonus || 0;
+        multiplier = result.multiplier || 1.0;
+      }
+    } catch (_) {}
   }
+
+  const next = Math.max(0, prev + gained);
+  // On garde lsSet('cas_xp') pour les call-sites legacy qui le lisent.
   lsSet('cas_xp', next);
-  if (profileApplied) {
-    try { window.__casInProfileApplied = false; } catch {}
-  }
 
   // Rank-up via Profile (échelle v3 lissée, 12 rangs par track).
   // En v2.55 : suppression du fallback GRADES legacy. Si Profile est
