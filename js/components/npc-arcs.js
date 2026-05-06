@@ -11,7 +11,7 @@
    
    Expose :
      window.NpcArcs.checkArcsAfterScene()
-       — appelée par scene-profile-bridge.js après scene_results
+       — à appeler après une fin de scène pour évaluer la complétion d'arcs
      window.NpcArcs.getProgress()
        — appelée par profile-page.js pour afficher la grille arcs
      window.NpcArcs.getArcsData()
