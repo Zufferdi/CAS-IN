@@ -511,6 +511,41 @@
  // v2.72 — Mise à jour du combo display uniquement (#streak-display retiré).
  updateComboDisplay();
  }
+
+ // v2.86 — Met à jour la mini-barre "X/Y questions · accuracy"
+ function updateSessionBar() {
+   const cur = document.getElementById('csb-current');
+   const tot = document.getElementById('csb-total');
+   const acc = document.getElementById('csb-accuracy');
+   const fill = document.getElementById('csb-fill');
+   if (!cur || !tot || !acc || !fill) return;
+
+   const total = S.total || 0;
+   // Total de la session : taille du pool si limité, sinon total répondu
+   const sessionSize = (S.pool && Array.isArray(S.pool) && S.pool.length > 0)
+     ? S.pool.length
+     : Math.max(total, 10);
+
+   cur.textContent = total;
+   tot.textContent = sessionSize;
+
+   const accPct = total > 0 ? Math.round(100 * (S.correct || 0) / total) : 0;
+   acc.textContent = total > 0 ? accPct + '%' : '— %';
+
+   // Couleur de l'accuracy selon le score
+   acc.className = 'csb-accuracy';
+   if (total >= 5) {
+     if (accPct >= 90) acc.classList.add('csb-accuracy--gold');
+     else if (accPct >= 75) acc.classList.add('csb-accuracy--green');
+     else if (accPct >= 50) acc.classList.add('csb-accuracy--cyan');
+     else acc.classList.add('csb-accuracy--red');
+   }
+
+   const pct = sessionSize > 0 ? Math.min(100, (total / sessionSize) * 100) : 0;
+   fill.style.width = pct + '%';
+ }
+ // Expose globally for end-of-session hooks
+ window.updateSessionBar = updateSessionBar;
  let _toastTimers = {};
 
  // showToast — v2.22 : redirige vers notify() (système de notification unifié)
@@ -803,7 +838,31 @@
           sd.classList.remove('bump');
           void sd.offsetWidth;
           sd.classList.add('bump');
+          // v2.86 — Bulle XP gain qui flash à côté du score
+          try {
+            const bubble = document.getElementById('xp-gain-bubble');
+            if (bubble) {
+              const xpGained = Math.max(1, Math.round(pts * (S._hintUsedThisQ ? 0.5 : 1)));
+              bubble.textContent = '+' + xpGained + ' XP';
+              bubble.hidden = false;
+              bubble.classList.remove('xp-gain-bubble--show');
+              void bubble.offsetWidth;
+              bubble.classList.add('xp-gain-bubble--show');
+              setTimeout(() => {
+                bubble.classList.remove('xp-gain-bubble--show');
+                bubble.hidden = true;
+              }, 1400);
+            }
+          } catch (_) {}
         }
+        // v2.86 — Mise à jour de la barre de progression session
+        try {
+          updateSessionBar();
+        } catch (_) {}
+        // v2.86 — Récap automatique aux paliers (10, 20, 30, 50, 100)
+        try {
+          maybeShowSessionRecap();
+        } catch (_) {}
         updateStreakDisplay();
         document.querySelectorAll('.choice-btn').forEach(btn => {
           btn.disabled = true;
@@ -1146,6 +1205,18 @@
         }
         savePersist();
         saveSession();
+        // v2.86 — Marquer le début d'une nouvelle session pour le récap final
+        try {
+          window._sessionStartXp = (window.Profile && window.Profile.getXp)
+            ? window.Profile.getXp()
+            : (S.xp || 0);
+          window._sessionStartTs = Date.now();
+          window._sessionAchievementsBefore = new Set(
+            (window.Profile && window.Profile.snapshot)
+              ? window.Profile.snapshot().achievements || []
+              : []
+          );
+        } catch (_) {}
         S.score = 0;
         S.correct = 0;
         S.total = 0;
@@ -1687,16 +1758,48 @@
       function buildPersonaChips() {
         const wrap = document.getElementById('persona-chips');
         if (!wrap) return;
-        // v2.66 — Garde défensive : si PERSONAS n'a pas chargé, ne rien faire
         if (typeof PERSONAS === 'undefined' || !Array.isArray(PERSONAS)) return;
         wrap.innerHTML = '';
+        // v2.86 — Persona cards : preview du nombre de questions filtrées
+        // par chaque persona. Calcul à partir de ALL_Q (toutes les questions
+        // chargées). Tag visuel par couleur de difficulté.
+        const totalQuestions = (window.ALL_Q && Array.isArray(window.ALL_Q)) ? window.ALL_Q.length : 0;
+        // Détermine quelle persona est active actuellement
+        const currentDiffs = (S.diffs && Array.isArray(S.diffs))
+          ? [...S.diffs].sort().join(',')
+          : '';
         PERSONAS.forEach(p => {
-          const b = document.createElement('button');
-          b.className = 'persona-btn';
-          b.innerHTML = `${p.icon} ${p.label}`;
-          b.title = p.desc;
-          b.onclick = () => applyPersona(p);
-          wrap.appendChild(b);
+          // Compter combien de questions matchent les difficultés de cette persona
+          let count = 0;
+          if (window.ALL_Q && Array.isArray(window.ALL_Q)) {
+            count = window.ALL_Q.filter(q => p.diffs.includes(String(q.difficulty || q.diff || ''))).length;
+          }
+          const isActive = (p.diffs.slice().sort().join(',') === currentDiffs);
+          const card = document.createElement('button');
+          card.className = 'persona-card' + (isActive ? ' persona-card--active' : '');
+          card.type = 'button';
+          card.title = p.desc;
+          // data-tier pour styliser par couleur (1=easy, 2=medium, 3=hard, 4=expert)
+          const maxDiff = Math.max(...p.diffs.map(d => parseInt(d, 10) || 0));
+          card.dataset.tier = String(maxDiff);
+          card.innerHTML = `
+            <div class="persona-card-icon">${p.icon}</div>
+            <div class="persona-card-body">
+              <div class="persona-card-label">${p.label}</div>
+              <div class="persona-card-desc">${p.desc}</div>
+              <div class="persona-card-count">
+                <span class="persona-card-num">${count}</span>
+                <span class="persona-card-unit">questions</span>
+              </div>
+            </div>
+            ${isActive ? '<div class="persona-card-check">✓</div>' : ''}
+          `;
+          card.onclick = () => {
+            applyPersona(p);
+            // Re-render pour mettre à jour l'état actif
+            buildPersonaChips();
+          };
+          wrap.appendChild(card);
         });
       }
 
@@ -2816,6 +2919,234 @@
       function closeMidSession() {
         document.getElementById('midsession-overlay').classList.remove('show');
       }
+
+      // ══════════════════════════════════════════════════════════
+      // v2.86 — SESSION RECAP (Pack E)
+      // ══════════════════════════════════════════════════════════
+      function showSessionRecap() {
+        const overlay = document.getElementById('session-recap-overlay');
+        if (!overlay) return;
+
+        // Stats de la session
+        const total = S.total || 0;
+        const correct = S.correct || 0;
+        const accuracy = total > 0 ? Math.round(100 * correct / total) : 0;
+        const maxStreak = S.maxStreak || 0;
+        const maxCombo = S.maxCombo || 1;
+
+        // XP gagnée cette session
+        let sessionXp = 0;
+        try {
+          const currentXp = (window.Profile && window.Profile.getXp) ? window.Profile.getXp() : (S.xp || 0);
+          sessionXp = Math.max(0, currentXp - (window._sessionStartXp || currentXp));
+        } catch (_) {}
+
+        // Durée
+        let durationStr = '—';
+        if (window._sessionStartTs) {
+          const ms = Date.now() - window._sessionStartTs;
+          const min = Math.floor(ms / 60000);
+          const sec = Math.floor((ms % 60000) / 1000);
+          durationStr = min > 0 ? `${min} min ${sec} s` : `${sec} s`;
+        }
+
+        // Titre + subtitle adaptatifs
+        let title = 'Bonne session !';
+        let subtitle = '';
+        if (total === 0) {
+          title = 'Pas encore de données';
+          subtitle = 'Réponds à quelques questions pour voir ton récap.';
+        } else if (accuracy >= 90) {
+          title = '🎯 Excellence !';
+          subtitle = `${correct} bonnes réponses sur ${total} — précision laser.`;
+        } else if (accuracy >= 75) {
+          title = '✨ Belle performance';
+          subtitle = `${correct} bonnes réponses sur ${total} — solide travail.`;
+        } else if (accuracy >= 50) {
+          title = '💪 Continue comme ça';
+          subtitle = `${correct} bonnes réponses sur ${total} — la pratique paie.`;
+        } else {
+          title = '🌱 Apprentissage en cours';
+          subtitle = `${correct} bonnes réponses sur ${total} — chaque erreur est une leçon.`;
+        }
+
+        // Mise à jour du DOM
+        const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        setText('srx-title', title);
+        setText('srx-subtitle', subtitle);
+        setText('srx-questions', total);
+        setText('srx-accuracy', accuracy + '%');
+        setText('srx-xp', sessionXp);
+        setText('srx-combo', '×' + maxCombo);
+        setText('srx-duration', durationStr);
+        setText('srx-maxstreak', maxStreak);
+
+        // Achievements débloqués cette session
+        try {
+          if (window.Profile && window.Profile.snapshot) {
+            const before = window._sessionAchievementsBefore || new Set();
+            const now = window.Profile.snapshot().achievements || [];
+            const newOnes = now.filter(id => !before.has(id));
+            const achWrap = document.getElementById('srx-achievements');
+            const achList = document.getElementById('srx-ach-list');
+            if (achWrap && achList) {
+              if (newOnes.length === 0) {
+                achWrap.hidden = true;
+              } else {
+                achWrap.hidden = false;
+                achList.innerHTML = '';
+                newOnes.slice(0, 6).forEach(id => {
+                  const meta = (window.AchievementsCore && window.AchievementsCore.byId)
+                    ? window.AchievementsCore.byId(id) : null;
+                  const item = document.createElement('div');
+                  item.className = 'srx-ach-item';
+                  if (meta) {
+                    item.innerHTML = `<span class="srx-ach-emoji">${meta.emoji || '🏆'}</span>
+                      <div class="srx-ach-body">
+                        <div class="srx-ach-name">${meta.name || id}</div>
+                        <div class="srx-ach-desc">${meta.desc || ''}</div>
+                      </div>`;
+                  } else {
+                    item.textContent = '🏆 ' + id;
+                  }
+                  achList.appendChild(item);
+                });
+              }
+            }
+          }
+        } catch (_) {}
+
+        // Suggestion "bientôt à portée" : 1 achievement le plus proche
+        try {
+          if (window.AchievementsCore && window.AchievementsCore.byCategory && window.Profile) {
+            const snap = window.Profile.snapshot();
+            const unlocked = new Set(snap.achievements || []);
+            const all = (window.ACHIEVEMENTS_META || []).filter(a => !unlocked.has(a.id) && !a.secret && typeof a.progress === 'function');
+            const candidates = all.map(a => {
+              try {
+                const p = a.progress();
+                if (!p || !p.target) return null;
+                const ratio = (p.current || 0) / p.target;
+                if (ratio >= 1) return null;
+                if (ratio < 0.3) return null; // Pas trop loin
+                return { ach: a, ratio, current: p.current, target: p.target };
+              } catch { return null; }
+            }).filter(Boolean).sort((a, b) => b.ratio - a.ratio);
+
+            const nextWrap = document.getElementById('srx-next');
+            const nextContent = document.getElementById('srx-next-content');
+            if (nextWrap && nextContent) {
+              if (candidates.length > 0) {
+                const c = candidates[0];
+                const remaining = c.target - c.current;
+                nextContent.innerHTML = `
+                  <div class="srx-next-item">
+                    <span class="srx-next-emoji">${c.ach.emoji || '🎯'}</span>
+                    <div class="srx-next-body">
+                      <div class="srx-next-name">${c.ach.name}</div>
+                      <div class="srx-next-desc">Plus que <strong>${remaining}</strong> ${c.target > 100 ? 'à atteindre' : 'questions'} (${c.current}/${c.target})</div>
+                      <div class="srx-next-bar"><div class="srx-next-bar-fill" style="width:${Math.round(c.ratio * 100)}%"></div></div>
+                    </div>
+                  </div>`;
+                nextWrap.hidden = false;
+              } else {
+                nextWrap.hidden = true;
+              }
+            }
+          }
+        } catch (_) {}
+
+        // v2.86 — Pack G : mini-leaderboard hebdomadaire
+        try {
+          renderSessionLeaderboard();
+        } catch (_) {}
+
+        overlay.hidden = false;
+        requestAnimationFrame(() => overlay.classList.add('session-recap-overlay--show'));
+      }
+      window.showSessionRecap = showSessionRecap;
+
+      function closeSessionRecap() {
+        const overlay = document.getElementById('session-recap-overlay');
+        if (!overlay) return;
+        overlay.classList.remove('session-recap-overlay--show');
+        setTimeout(() => { overlay.hidden = true; }, 250);
+      }
+      window.closeSessionRecap = closeSessionRecap;
+
+      // v2.86 — Pack G : mini-leaderboard hebdomadaire dans le récap
+      function renderSessionLeaderboard() {
+        const wrap = document.getElementById('srx-leaderboard');
+        if (!wrap) return;
+
+        const total = S.total || 0;
+        if (total < 5) {
+          // Pas assez de données pour comparer
+          wrap.hidden = true;
+          return;
+        }
+
+        const wk = (typeof getWeekKey === 'function') ? getWeekKey() : null;
+        const wl = lsGet('weeklyLB', {});
+        const currentWeekBest = wk ? (wl[wk] || null) : null;
+
+        const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        setText('srx-lb-current', S.score + ' pts');
+
+        const arrow = document.getElementById('srx-lb-arrow');
+        const messageEl = document.getElementById('srx-lb-message');
+
+        if (!currentWeekBest) {
+          // Pas encore de meilleur cette semaine, cette session devient la référence
+          wrap.classList.add('srx-leaderboard--first');
+          wrap.classList.remove('srx-leaderboard--better', 'srx-leaderboard--worse');
+          setText('srx-lb-best-label', 'À battre désormais');
+          setText('srx-lb-best-val', S.score + ' pts');
+          if (arrow) arrow.textContent = '🆕';
+          if (messageEl) messageEl.textContent = 'Premier score de la semaine — c\'est ta nouvelle référence.';
+          wrap.hidden = false;
+          return;
+        }
+
+        const best = currentWeekBest.score || 0;
+        setText('srx-lb-best-label', `Meilleur de la semaine (${currentWeekBest.date || ''})`);
+        setText('srx-lb-best-val', best + ' pts');
+
+        if (S.score > best) {
+          wrap.classList.add('srx-leaderboard--better');
+          wrap.classList.remove('srx-leaderboard--worse', 'srx-leaderboard--first');
+          if (arrow) arrow.textContent = '🚀';
+          if (messageEl) messageEl.textContent = `🎉 Nouveau record ! +${S.score - best} pts au-dessus du meilleur.`;
+        } else if (S.score < best) {
+          wrap.classList.add('srx-leaderboard--worse');
+          wrap.classList.remove('srx-leaderboard--better', 'srx-leaderboard--first');
+          if (arrow) arrow.textContent = '↗';
+          const diff = best - S.score;
+          if (messageEl) messageEl.textContent = `Plus que ${diff} pts pour battre ton record.`;
+        } else {
+          wrap.classList.remove('srx-leaderboard--better', 'srx-leaderboard--worse', 'srx-leaderboard--first');
+          if (arrow) arrow.textContent = '=';
+          if (messageEl) messageEl.textContent = 'Tu es à égalité avec ton meilleur de la semaine.';
+        }
+
+        wrap.hidden = false;
+      }
+      window.renderSessionLeaderboard = renderSessionLeaderboard;
+
+      // Auto-affichage du récap aux jalons : 10, 20, 30, 50, 100 questions
+      const SESSION_RECAP_MILESTONES = [10, 20, 30, 50, 100];
+      let _lastRecapMilestone = 0;
+
+      function maybeShowSessionRecap() {
+        const total = S.total || 0;
+        const milestone = SESSION_RECAP_MILESTONES.find(m => total === m);
+        if (!milestone) return;
+        if (_lastRecapMilestone === milestone) return;
+        _lastRecapMilestone = milestone;
+        // Léger délai pour ne pas couper le feedback de la dernière question
+        setTimeout(() => showSessionRecap(), 1200);
+      }
+      window.maybeShowSessionRecap = maybeShowSessionRecap;
       // ══════════════════════════════════════════════════════════
       // FOCUS MODE
       // ══════════════════════════════════════════════════════════
