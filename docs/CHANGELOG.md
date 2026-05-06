@@ -4,6 +4,44 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.58] — 2026-05-06
+
+🎉 **Clôture du rollout mode clair** — réactivation du bootstrap auto.
+
+### Modifié
+
+- `js/core/cas-in-utils.js` : appel à `bootstrapColorScheme()` réactivé (était commenté depuis v2.49). Détection auto de `prefers-color-scheme: light` au boot → pose `data-theme="light"` sur `<html>`. La fonction reste aussi sensible aux changements live de préférence OS (utilisateur qui switch son OS pendant la session).
+- `style/style.css` : bloc `@media (prefers-color-scheme: light)` réactivé (décommenté). Couvre les rares cas où le JS n'a pas encore tourné — l'OS-light s'applique en CSS pure.
+- `sw.js` : `CACHE_VERSION` v137 → v138.
+
+### Préservé
+
+- L'escape-hatch URL `?theme=light` / `?theme=dark` (introduite en v2.50) reste **active**. Coût zéro à maintenir, utile pour QA, démos, screenshots, et debug futur.
+- Tous les sélecteurs `[data-theme="light"]` et leurs contreparties dormantes (~250 au total à travers les CSS) restent en place.
+
+### Effet utilisateur
+
+- OS thème clair → app en clair automatiquement
+- OS thème sombre → app en sombre (inchangé)
+- L'utilisateur n'a rien à configurer
+
+Le bug de v2.85 (qui avait causé le hotfix v2.49) est désormais entièrement résolu : le mode clair est complet sur toutes les pages.
+
+### Récap rollout
+
+| Release | Cible |
+|---|---|
+| v2.49 | Hotfix : désactivation auto-light |
+| v2.50 | Quiz |
+| v2.53 | Navbar transversale |
+| v2.54 | Scene |
+| v2.55 | TP (engine + page) |
+| v2.56 | Profile + Tools + Exam |
+| v2.57 | Aux pages (npcs, glossary, artifacts) |
+| **v2.58** | **Clôture : réactivation bootstrap** |
+
+Au total : ~10 fichiers CSS touchés, ~250 nouveaux overrides `[data-theme="light"]`, 9 releases sur la passe.
+
 ## [2.57] — 2026-05-06
 
 🎨 **Pass CSS light — pages auxiliaires (npcs / glossary / artifacts)** : la couverture est maintenant **complète sur toutes les pages**.
