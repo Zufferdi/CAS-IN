@@ -1602,7 +1602,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v113';
+const CACHE_VERSION = 'cas-in-v114';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1633,6 +1633,8 @@ const STATIC_ASSETS = [
   './style/landing.css',
   './style/style.css',
   './style/cas-in-navbar.css',
+  './style/profile-dossier.css',
+  './js/profile/profile-tabs.js',
   './style/tp.css',
   './style/tp-page.css',
   './style/tools.css',
