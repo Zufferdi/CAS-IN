@@ -3,14 +3,17 @@
 """
 build_search_index.py — Extrait le contenu indexable des fiches en JSON
 
-Pour chaque fiche HTML :
-  - title : <h1>
-  - sections : {id, title, summary} pour chaque section (h2 OU div.sec-title)
-  - commands : tous les blocs <code> et <div class="cli">
-  - terms : termes en <strong>, <code>
-  - text : tout le texte des paragraphes
+Pour chaque fiche HTML, génère une entrée :
+  - file     : nom du fichier (ex. "acquisition.html")
+  - title    : <h1>
+  - category : catégorie (depuis manifest.json)
+  - icon     : icône (depuis manifest.json)
+  - desc     : description courte (depuis manifest.json)
+  - sections : [{id, title, text}] pour chaque section (h2 OU div.sec-title)
+               (id = ancre HTML, text = contenu textuel concaténé de la section)
 
 Output : data/search-index.json
+Schema (haut de fichier) : {$schema_version, fiches_count, fiches: [...]}
 """
 
 import json
