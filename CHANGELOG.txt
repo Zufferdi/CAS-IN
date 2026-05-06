@@ -1,56 +1,88 @@
-v2.82 — 3 packs UX/UI
-══════════════════════════════════════════════════════════════════
+v2.84 — Réparation gamification + XP fiches + Toasts/célébrations live
+═══════════════════════════════════════════════════════════════════════
 
-PACK 1 — Cohérence navigation
-══════════════════════════════
-✓ Navbar étendue à 4 pages secondaires :
-    tools.html · exam.html · glossary.html · npcs.html
-  Toutes ces pages utilisent maintenant la navbar unifiée
-  (sans la ligne identité, juste la nav).
+PACK A — Réparation du tuyau (bugs critiques)
+══════════════════════════════════════════════
+✓ STREAK QUOTIDIEN réparé
+  quiz-app.js → updateDayStreak() appelle maintenant Profile.bumpStreak()
+  scene-app.js → updateStreakOnActivity() idem
+  Le streak ne meurt plus silencieusement après suppression v2.72.
+  Achievements daily3/7/10/14/30/100 vont enfin se débloquer.
 
-✓ Suppression des nav legacy redondantes (tn-nav, *-back).
+✓ ACHIEVEMENTS ÉVALUÉS EN TEMPS RÉEL
+  quiz-app.js → AchievementsCore.evalAndUnlock(snap) après chaque réponse
+                (debounced 800ms pour éviter le spam)
+  scene-app.js → idem en fin de scène (showResults)
+  Avant : achievements évalués SEULEMENT en visitant Profile.
+  Maintenant : célébration immédiate dès le déblocage.
 
-✓ Fiches individuelles : la tn-nav devient un breadcrumb fin
-  (26px au lieu de ~50) sous la navbar globale.
-  Le titre de catégorie reste visible mais en accent discret.
+✓ NPCARCS évalués en fin de scène
+  Avant : seulement quand on visitait Profile.
+  Maintenant : eval à chaque fin de scène pour débloquer les arcs.
 
-✓ Liste PAGE_TITLES enrichie dans cas-in-navbar.js :
-    quiz · scene · tp · fiches · glossary · npcs · tools · exam
+✓ recordActivity(quiz/scene) restauré
+  Profile.snapshot.activity reflète maintenant la réalité.
 
-PACK 2 — Hub puissant
-══════════════════════
-✓ NOUVEAU — Mini-bar identité fixe en haut du hub :
-    [🕵 Pseudo · Rang]                [XP · Streak · 📂 DOSSIER →]
-  Cliquable pour aller direct à profile.html.
+✓ quiz.html charge enfin cas-in-achievements.js et cas-in-quests.js
+  Avant : window.Quests undefined → window.Quests.evalAndComplete()
+          était silencieusement skippé
+  Maintenant : les 23 quêtes peuvent se compléter pendant qu'on joue au quiz.
 
-✓ NOUVEAU — Feed d'activité récente sous les boutons d'action :
-    "▶ DERNIÈRES MISSIONS"
-    🔍 Ransomware-Lausanne · il y a 2h    87% · chaîne 92%   ↻ Rejouer
-    💊 Session quiz · smart · il y a 1j   42/50 · 84%        → Continuer
-    ...
-  Lit scene_results et quiz_recent_sessions de localStorage.
-  Lien direct pour relancer ou continuer.
-  Caché si aucune activité récente.
+PACK B — XP des fiches
+═══════════════════════
+✓ Lecture fiche → +15 XP (source 'fiches')
+  fiche-reader.js → markRead() :
+    1. Ajoute à 'fiche-reader.read' (existant)
+    2. Synchronise avec 'casIn_readFiches_v4' (clé canonique Profile)
+    3. Profile.addXp(15, 'fiches') → l'XP s'incrémente immédiatement
+    4. Déclenche AchievementsCore.evalAndUnlock
 
-✓ Nouveaux fichiers :
-    js/components/hub-identity.js (1 KB)
-    js/components/hub-activity.js (3 KB)
+✓ Les 5 achievements fiches déjà définis vont enfin se débloquer :
+  📖 fiche_first  (1 fiche)
+  📚 fiche_10
+  🎓 fiche_30
+  📕 fiche_60
+  👑 fiche_all (109 fiches)
 
-PACK 3 — Briefing scène en onglets
+✓ 109 fiches individuelles : chargent maintenant cas-in-profile.js
+  + cas-in-achievements.js pour permettre la chaîne XP ci-dessus.
+
+PACK C — Visibilité temps réel
+═══════════════════════════════
+✓ NOUVEAU : js/components/gamification-toasts.js
+  S'abonne à Profile.onChange et déclenche :
+  - Toast XP +N (cumulé sur 800ms pour éviter le spam) en bas-droite
+    Animation "fly up" : entre par la droite, monte de 18px en fade-out
+  - Célébration plein écran via Celebration.show() à chaque achievement
+    débloqué (icon + nom + desc) — durée ~2.8s
+  - Célébration "Promotion" à chaque rank-up
+
+✓ NOUVEAU : style/gamification-toasts.css
+  Toasts XP : pill bleu/vert avec glow, font monospace
+  Toasts générique (fallback) : doré sur fond sombre
+  Celebration overlay : carte centrée avec dégradé bleu/vert
+  Réplique le CSS celebration-* (avant uniquement dans landing.css)
+  Reduced motion respect + mobile compact
+
+✓ celebration-ui.js (existait depuis v2.56) : était orphelin (chargé
+  uniquement sur index.html). Maintenant chargé sur 5 pages racine
+  + 110 pages fiches.
+
+CHARGEMENT DES MODULES
+═══════════════════════
+index.html   : toasts.css/js + celebration-ui.js
+quiz.html    : + cas-in-achievements.js + cas-in-quests.js
+scene.html   : (déjà OK)
+tp.html      : toasts + celebration ajoutés
+profile.html : (déjà OK pour eval)
+fiches/*.html (110) : + cas-in-profile.js + cas-in-achievements.js +
+                       toasts + celebration
+
+SW : v119 → v120 + précache gamification-toasts.{js,css}
+
+ROADMAP RESTANTE (audit identifié)
 ═══════════════════════════════════
-Avant : briefing dense empile contexte + relations PNJ + objectifs
-        + cadre légal sur une seule page.
-
-Après : 4 onglets au-dessus du briefing :
-    📋 Contexte    👥 PNJ    🎯 Objectifs    ⚖️ Cadre légal
-
-  - Animation fade-in à chaque switch d'onglet
-  - Empty state si la scène n'a pas certaines sections
-    (ex: "Pas de référence légale spécifique")
-  - Le panel PNJ contient les "Relations connues" + l'injection
-    de scene-npcs.js (acteurs présents)
-  - Réutilise le même pattern visuel que profile-tabs
-
-Briefing 2× plus court visuellement, navigation plus rapide.
-
-SW : v117 → v118 + précache hub-identity.js, hub-activity.js
+- Décider source TP (actuellement 0 fixe — soit retirer, soit activer)
+- Étendre les arcs PNJ (8 actuels sur 98 PNJ — potentiel x10)
+- Onboarding-ui.js (existe mais non intégré)
+- Page Trophées dédiée (avec filtres catégorie/débloqué/secret)
