@@ -2843,7 +2843,9 @@ function updateHintButton() {
   if (!btn) return;
   const step = G.scene.steps[G.stepIdx];
   const usedThisStep = G.hintUsedForStep[G.stepIdx] !== undefined;
-  const totalXP = lsGet('cas_xp', 0);
+  // v2.52 — Lecture depuis Profile (source de vérité) au lieu du mirror
+  // legacy cas_xp qui dérivait de la vraie balance.
+  const totalXP = getXP();
 
   // Count wrong choices remaining (must have at least 2 wrong to eliminate one)
   const wrongCount = step.choices.filter((c, i) => !c.ok && G.hintUsedForStep[G.stepIdx] !== i).length;
@@ -2861,7 +2863,8 @@ function useHint() {
   if (G.answered) return;
   if (G.hintUsedForStep[G.stepIdx] !== undefined) return;
 
-  const totalXP = lsGet('cas_xp', 0);
+  // v2.52 — Lecture depuis Profile (source de vérité)
+  const totalXP = getXP();
   if (totalXP < HINT_COST) {
     showToast('⚠ XP insuffisants (' + HINT_COST + ' XP requis)');
     return;
@@ -2881,8 +2884,15 @@ function useHint() {
   const eliminate = wrongIdx[Math.floor(RNG() * wrongIdx.length)];
   G.hintUsedForStep[G.stepIdx] = eliminate;
 
-  // Deduct XP
-  lsSet('cas_xp', totalXP - HINT_COST);
+  // v2.52 — Dépense via Profile.spendXp (avant : lsSet('cas_xp', ...) ne
+  // tapait que dans le mirror legacy, donc le hint était gratuit côté
+  // Profile et la balance affichée ne baissait pas).
+  if (window.Profile && typeof window.Profile.spendXp === 'function') {
+    window.Profile.spendXp(HINT_COST, 'scene', { reason: 'hint' });
+  }
+  // Maintenir le mirror legacy 'cas_xp' en sync pour les rares call-sites
+  // qui le lisent encore directement.
+  lsSet('cas_xp', getXP());
   updateGradeDisplay();
 
   // Mark the button visually
