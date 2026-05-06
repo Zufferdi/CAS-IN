@@ -26,10 +26,14 @@
   ];
 
   const PAGE_TITLES = {
-    quiz:   { icon: '💊', label: 'QUIZ' },
-    scene:  { icon: '🔍', label: 'SCÈNES DFIR' },
-    tp:     { icon: '🧪', label: 'TRAVAUX PRATIQUES' },
-    fiches: { icon: '📄', label: 'FICHES DE RÉVISION' },
+    quiz:     { icon: '💊', label: 'QUIZ' },
+    scene:    { icon: '🔍', label: 'SCÈNES DFIR' },
+    tp:       { icon: '🧪', label: 'TRAVAUX PRATIQUES' },
+    fiches:   { icon: '📄', label: 'FICHES DE RÉVISION' },
+    glossary: { icon: '📚', label: 'GLOSSAIRE' },
+    npcs:     { icon: '👥', label: 'PERSONNAGES' },
+    tools:    { icon: '🛠', label: 'OUTILS FORENSIQUES' },
+    exam:     { icon: '📝', label: 'EXAMEN BLANC' },
   };
 
   // ── Helpers ────────────────────────────────────────────────
