@@ -52,6 +52,10 @@
     'Scènes · Europe',
     'Scènes · Arcs PNJ',
     'Scènes · Comportement',
+    'Rôle · Enquêteur',
+    'Rôle · Magistrat',
+    'Rôle · Journaliste',
+    'Rôle · Hacker',
     'TP · Pratique',
     'Fiches · Lecture',
     'Secrets 🤫',
@@ -196,6 +200,63 @@
     { id: 'apple_forensic',  emoji: '🍎', name: 'Forensicien Apple',       desc: '3 scénarios AFU/BFU iPhone-MacBook ≥80%', category: 'Scènes · Spécialité' },
     { id: 'anti_deepfake',   emoji: '🎭', name: 'Anti-deepfake',           desc: 'Scénario deepfake résolu à ≥90%',         category: 'Scènes · Spécialité' },
     { id: 'npc_collector',   emoji: '👥', name: 'Tour des protagonistes',  desc: 'Rencontrer ≥8 PNJ différents',            category: 'Scènes · Comportement' },
+    // ─────────────────────────────────────────────────────────────
+    // v2.91 PACK L3 — Achievements exclusifs par rôle (roleOnly)
+    // 4 achievements par rôle · n'apparaissent que pour le rôle correspondant
+    // Compteurs spécifiques : casIn_role_hintsRead, casIn_role_backdoorsUsed
+    // ─────────────────────────────────────────────────────────────
+    // 🕵 Investigator (4)
+    { id: 'role_inv_locard',     emoji: '🔬', name: 'Disciple de Locard',       desc: '10 chaînes de custody parfaites (custody ≥90%)', category: 'Rôle · Enquêteur', roleOnly: 'investigator',
+      check: () => (parseInt(localStorage.getItem('casIn_role_custodyPerfect') || '0', 10)) >= 10,
+      progress: () => ({ current: parseInt(localStorage.getItem('casIn_role_custodyPerfect') || '0', 10), target: 10 }) },
+    { id: 'role_inv_morse',      emoji: '🕵️', name: 'Inspecteur Morse',         desc: '15 hints contextuels lus en début de scène',     category: 'Rôle · Enquêteur', roleOnly: 'investigator',
+      check: () => (parseInt(localStorage.getItem('casIn_role_hintsRead') || '0', 10)) >= 15,
+      progress: () => ({ current: parseInt(localStorage.getItem('casIn_role_hintsRead') || '0', 10), target: 15 }) },
+    { id: 'role_inv_columbo',    emoji: '🧥', name: 'Une dernière chose',       desc: '20 scènes forensique terminées ≥80%',            category: 'Rôle · Enquêteur', roleOnly: 'investigator',
+      check: (s) => ((s && s.scenesTagPct80 && s.scenesTagPct80.FORENSIQUE) || 0) >= 20,
+      progress: (s) => ({ current: ((s && s.scenesTagPct80 && s.scenesTagPct80.FORENSIQUE) || 0), target: 20 }) },
+    { id: 'role_inv_legend',     emoji: '👑', name: 'Légende du terrain',      desc: '50 scènes forensique terminées (toutes diff)',  category: 'Rôle · Enquêteur', roleOnly: 'investigator',
+      check: (s) => ((s && s.scenesTagCount && s.scenesTagCount.FORENSIQUE) || 0) >= 50,
+      progress: (s) => ({ current: ((s && s.scenesTagCount && s.scenesTagCount.FORENSIQUE) || 0), target: 50 }) },
+    // ⚖️ Magistrate (4)
+    { id: 'role_mag_falcone',    emoji: '⚖️', name: 'Maître Falcone',          desc: '20 articles CPP cités correctement (90%+)',     category: 'Rôle · Magistrat', roleOnly: 'magistrate',
+      check: (s) => ((s && s.scenesTagPct80 && s.scenesTagPct80.CPP) || 0) >= 20,
+      progress: (s) => ({ current: ((s && s.scenesTagPct80 && s.scenesTagPct80.CPP) || 0), target: 20 }) },
+    { id: 'role_mag_audience',   emoji: '🏛️', name: 'Procès parfait',         desc: '5 scènes droit terminées avec ≥95%',            category: 'Rôle · Magistrat', roleOnly: 'magistrate',
+      check: (s) => ((s && s.scenesTagPct95 && s.scenesTagPct95.DROIT) || 0) >= 5,
+      progress: (s) => ({ current: ((s && s.scenesTagPct95 && s.scenesTagPct95.DROIT) || 0), target: 5 }) },
+    { id: 'role_mag_cpp_master', emoji: '📜', name: 'Maître du CPP',           desc: '15 scènes procédure pénale ≥80%',                category: 'Rôle · Magistrat', roleOnly: 'magistrate',
+      check: (s) => ((s && s.scenesTagPct80 && s.scenesTagPct80.PROCEDURE) || 0) >= 15,
+      progress: (s) => ({ current: ((s && s.scenesTagPct80 && s.scenesTagPct80.PROCEDURE) || 0), target: 15 }) },
+    { id: 'role_mag_supreme',    emoji: '👑', name: 'Magistrat suprême',      desc: '50 scènes droit terminées (toutes diff)',       category: 'Rôle · Magistrat', roleOnly: 'magistrate',
+      check: (s) => ((s && s.scenesTagCount && s.scenesTagCount.DROIT) || 0) >= 50,
+      progress: (s) => ({ current: ((s && s.scenesTagCount && s.scenesTagCount.DROIT) || 0), target: 50 }) },
+    // 📰 Journalist (4)
+    { id: 'role_jour_woodward',  emoji: '🔦', name: 'Bob Woodward',            desc: '10 scènes OSINT/darknet ≥80%',                  category: 'Rôle · Journaliste', roleOnly: 'journalist',
+      check: (s) => (((s && s.scenesTagPct80 && s.scenesTagPct80.OSINT) || 0) + ((s && s.scenesTagPct80 && s.scenesTagPct80.DARKNET) || 0)) >= 10,
+      progress: (s) => ({ current: (((s && s.scenesTagPct80 && s.scenesTagPct80.OSINT) || 0) + ((s && s.scenesTagPct80 && s.scenesTagPct80.DARKNET) || 0)), target: 10 }) },
+    { id: 'role_jour_pulitzer',  emoji: '🏆', name: 'Pulitzer numérique',     desc: '5 scènes deepfake/IA résolues ≥85%',            category: 'Rôle · Journaliste', roleOnly: 'journalist',
+      check: (s) => (((s && s.scenesTagPct80 && s.scenesTagPct80.DEEPFAKE) || 0) + ((s && s.scenesTagPct80 && s.scenesTagPct80.IA) || 0)) >= 5,
+      progress: (s) => ({ current: (((s && s.scenesTagPct80 && s.scenesTagPct80.DEEPFAKE) || 0) + ((s && s.scenesTagPct80 && s.scenesTagPct80.IA) || 0)), target: 5 }) },
+    { id: 'role_jour_londres',   emoji: '🌍', name: 'Albert Londres',          desc: '20 scènes investigation traversées',            category: 'Rôle · Journaliste', roleOnly: 'journalist',
+      check: (s) => ((s && s.scenesCount) || 0) >= 20,
+      progress: (s) => ({ current: ((s && s.scenesCount) || 0), target: 20 }) },
+    { id: 'role_jour_legend',    emoji: '👑', name: 'Plume légendaire',       desc: '50 scènes (OSINT, darknet, social eng.)',       category: 'Rôle · Journaliste', roleOnly: 'journalist',
+      check: (s) => (((s && s.scenesTagCount && s.scenesTagCount.OSINT) || 0) + ((s && s.scenesTagCount && s.scenesTagCount.DARKNET) || 0)) >= 50,
+      progress: (s) => ({ current: (((s && s.scenesTagCount && s.scenesTagCount.OSINT) || 0) + ((s && s.scenesTagCount && s.scenesTagCount.DARKNET) || 0)), target: 50 }) },
+    // ⌨️ Hacker (4)
+    { id: 'role_hack_robot',     emoji: '🎭', name: 'Mr Robot',                desc: '10 ransomwares contre-attribués ≥80%',          category: 'Rôle · Hacker', roleOnly: 'hacker',
+      check: (s) => ((s && s.scenesTagPct80 && s.scenesTagPct80.RANSOMWARE) || 0) >= 10,
+      progress: (s) => ({ current: ((s && s.scenesTagPct80 && s.scenesTagPct80.RANSOMWARE) || 0), target: 10 }) },
+    { id: 'role_hack_backdoor',  emoji: '🔓', name: 'Backdoor expert',         desc: '10 skips Backdoor utilisés efficacement',       category: 'Rôle · Hacker', roleOnly: 'hacker',
+      check: () => (parseInt(localStorage.getItem('casIn_role_backdoorsUsed') || '0', 10)) >= 10,
+      progress: () => ({ current: parseInt(localStorage.getItem('casIn_role_backdoorsUsed') || '0', 10), target: 10 }) },
+    { id: 'role_hack_swordfish', emoji: '🌊', name: 'Stanley Jobson',          desc: '15 scènes crypto/réseau ≥75%',                  category: 'Rôle · Hacker', roleOnly: 'hacker',
+      check: (s) => (((s && s.scenesTagPct80 && s.scenesTagPct80.CRYPTO) || 0) + ((s && s.scenesTagPct80 && s.scenesTagPct80['RÉSEAUX']) || 0)) >= 15,
+      progress: (s) => ({ current: (((s && s.scenesTagPct80 && s.scenesTagPct80.CRYPTO) || 0) + ((s && s.scenesTagPct80 && s.scenesTagPct80['RÉSEAUX']) || 0)), target: 15 }) },
+    { id: 'role_hack_legend',    emoji: '👑', name: 'Légende du dark net',    desc: '50 scènes hack (ransomware/malware/réseau)',    category: 'Rôle · Hacker', roleOnly: 'hacker',
+      check: (s) => (((s && s.scenesTagCount && s.scenesTagCount.RANSOMWARE) || 0) + ((s && s.scenesTagCount && s.scenesTagCount.MALWARE) || 0) + ((s && s.scenesTagCount && s.scenesTagCount['RÉSEAUX']) || 0)) >= 50,
+      progress: (s) => ({ current: (((s && s.scenesTagCount && s.scenesTagCount.RANSOMWARE) || 0) + ((s && s.scenesTagCount && s.scenesTagCount.MALWARE) || 0) + ((s && s.scenesTagCount && s.scenesTagCount['RÉSEAUX']) || 0)), target: 50 }) },
   ];
 
   // ─────────────────────────────────────────────────────────────
@@ -297,15 +358,34 @@
   const _byId = {};
   ACHIEVEMENTS_META.forEach(a => { _byId[a.id] = a; });
 
-  // Index par catégorie (préserve l'ordre de CATEGORIES)
+  // v2.91 PACK L3 — Filtrage des achievements roleOnly selon le rôle actif
+  function getActiveRole() {
+    try {
+      if (window.Profile && typeof window.Profile.getTrack === 'function') {
+        return window.Profile.getTrack();
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function isVisibleForRole(achievement, activeRole) {
+    if (!achievement.roleOnly) return true;
+    return achievement.roleOnly === activeRole;
+  }
+
+  // Index par catégorie (préserve l'ordre de CATEGORIES) — filtré par rôle
   function byCategory() {
     const out = {};
+    const activeRole = getActiveRole();
     CATEGORIES.forEach(cat => { out[cat] = []; });
     ACHIEVEMENTS_META.forEach(a => {
+      if (!isVisibleForRole(a, activeRole)) return;
       const cat = a.category || 'Quiz · Spécial';
       if (!out[cat]) out[cat] = [];
       out[cat].push(a);
     });
+    // Supprimer les catégories vides après filtrage (ex: 'Rôle · Magistrat' si user est Hacker)
+    Object.keys(out).forEach(cat => { if (out[cat].length === 0) delete out[cat]; });
     return out;
   }
 

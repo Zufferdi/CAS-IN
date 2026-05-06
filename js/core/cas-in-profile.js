@@ -104,11 +104,41 @@
     ])
   );
 
+  // ───────────────────────────────────────────────────────────
+  // v2.91 PACK L1 — Bonus différenciés par rôle + spécialisation
+  // cumulative (plus tu joues ton rôle, plus tu deviens expert).
+  // ───────────────────────────────────────────────────────────
+  //   Investigator : ×1.20 standard, pas de malus
+  //   Magistrate   : ×1.25 sur ses tags (rigueur académique récompensée)
+  //   Journalist   : ×1.15 mais affinités plus larges (polyvalent)
+  //   Hacker       : ×1.30 sur ses tags MAIS −10% sur droit pur
+  // Spécialisation cumulative : +0.05 après 25 scènes affines, +0.10 après 75.
+  // ───────────────────────────────────────────────────────────
+  const ROLE_BONUS_PROFILE = {
+    investigator: { base: 1.20, malus: 1.00, malusOn: [] },
+    magistrate:   { base: 1.25, malus: 1.00, malusOn: [] },
+    journalist:   { base: 1.15, malus: 1.00, malusOn: [] },
+    hacker:       { base: 1.30, malus: 0.90, malusOn: ['DROIT', 'CPP', 'CP', 'EIMP', 'PROCEDURE', 'JURISPRUDENCE'] }
+  };
+
+  // Compteur normalisé : combien de scènes/runs affines ce rôle a-t-il fait ?
+  // Stocké dans p.agent.affineRunsCount (incrémenté par recordActivity quand
+  // une scène matche les tags du rôle actif).
+  function getSpecializationDelta() {
+    const p = ensureProfile();
+    const count = (p.agent && p.agent.affineRunsCount) || 0;
+    if (count >= 75) return 0.10;
+    if (count >= 25) return 0.05;
+    return 0;
+  }
+
   /**
    * Retourne le multiplicateur d'XP à appliquer pour le rôle actif
-   * face à la liste de tags fournie. 1.20 si match, sinon 1.00.
+   * face à la liste de tags fournie.
+   * - Match affine → bonus de base + spé cumulative
+   * - Pas de match : 1.00 par défaut, sauf hacker sur droit pur (−10%)
    * @param {string[]} tags - Tags / thèmes de la scène ou question
-   * @returns {number} multiplicateur (1.0 ou 1.2)
+   * @returns {number} multiplicateur (0.90 à 1.40)
    */
   function getRoleBonus(tags) {
     if (!Array.isArray(tags) || tags.length === 0) return 1.0;
@@ -116,10 +146,38 @@
     const role = p.agent && p.agent.track;
     if (!role || !NORMALIZED_BONUS[role]) return 1.0;
     const set = NORMALIZED_BONUS[role];
-    for (const t of tags) {
-      if (set.has(normalizeTag(t))) return 1.20;
+    const profile = ROLE_BONUS_PROFILE[role] || ROLE_BONUS_PROFILE.investigator;
+    const normTags = tags.map(normalizeTag);
+
+    // Match avec les tags d'affinité ?
+    for (const t of normTags) {
+      if (set.has(t)) {
+        return profile.base + getSpecializationDelta();
+      }
+    }
+    // Pas de match : check malus (hacker sur droit pur)
+    if (profile.malus < 1.00 && profile.malusOn && profile.malusOn.length) {
+      const malusSet = new Set(profile.malusOn.map(normalizeTag));
+      const matchMalus = normTags.some(t => malusSet.has(t));
+      if (matchMalus) return profile.malus;
     }
     return 1.0;
+  }
+
+  /** Indicateur public pour l'UI : quel est le profil de bonus actif ? */
+  function getRoleBonusProfile() {
+    const p = ensureProfile();
+    const role = p.agent && p.agent.track;
+    const profile = ROLE_BONUS_PROFILE[role] || ROLE_BONUS_PROFILE.investigator;
+    return {
+      role: role || 'investigator',
+      base: profile.base,
+      malus: profile.malus,
+      currentDelta: getSpecializationDelta(),
+      affineRunsCount: (p.agent && p.agent.affineRunsCount) || 0,
+      nextThreshold: ((p.agent && p.agent.affineRunsCount) || 0) < 25 ? 25
+                    : ((p.agent && p.agent.affineRunsCount) || 0) < 75 ? 75 : null
+    };
   }
 
   // ───────────────────────────────────────────────────────────
@@ -680,6 +738,28 @@
     const p = ensureProfile();
     const xp = p.xp;
     const trackKey = p.agent.track || 'investigator';
+
+    // v2.91 PACK L3 — Stats par tag pour les achievements role-only
+    const scenesTagCount = {};   // {TAG: nombre de scènes complétées avec ce tag}
+    const scenesTagPct80 = {};   // {TAG: nombre de scènes ≥ 80% avec ce tag}
+    const scenesTagPct95 = {};   // {TAG: nombre de scènes ≥ 95% avec ce tag}
+    let scenesCount = 0;
+    try {
+      const sceneResults = lsGet('scene_results', {});
+      Object.entries(sceneResults).forEach(([sceneId, res]) => {
+        if (!res) return;
+        scenesCount++;
+        const pct = res.pct || 0;
+        const tags = (res.tags || []).map(t => String(t).toUpperCase().trim());
+        tags.forEach(tag => {
+          if (!tag) return;
+          scenesTagCount[tag] = (scenesTagCount[tag] || 0) + 1;
+          if (pct >= 80) scenesTagPct80[tag] = (scenesTagPct80[tag] || 0) + 1;
+          if (pct >= 95) scenesTagPct95[tag] = (scenesTagPct95[tag] || 0) + 1;
+        });
+      });
+    } catch (_) {}
+
     return {
       version: p.v,
       agent: {
@@ -688,6 +768,7 @@
         track: p.agent.track,
         trackChosenAt: p.agent.trackChosenAt,
         hasTrack: !!p.agent.track,
+        affineRunsCount: p.agent.affineRunsCount || 0, // v2.91 PACK L1
       },
       xp,
       xpBySource: getXpBySource(),
@@ -697,6 +778,11 @@
       achievements: (p.achievements || []).slice(),
       preferences: { ...p.preferences },
       createdAt: p.createdAt,
+      // v2.91 PACK L3 — Stats détaillées scènes
+      scenesCount,
+      scenesTagCount,
+      scenesTagPct80,
+      scenesTagPct95,
     };
   }
 
@@ -843,6 +929,15 @@
     p.xp = (p.xp || 0) + gained;
     p.xpBySource[source] = (p.xpBySource[source] || 0) + gained;
     p.activity[source] = Date.now();
+
+    // v2.91 PACK L1 — Incrément du compteur d'affinité
+    // (sert à la spécialisation cumulative). On compte uniquement
+    // sur source 'scene' avec meta.endOfScene === true pour éviter
+    // de gonfler artificiellement le compteur sur chaque addXp question.
+    if (source === 'scene' && meta && meta.endOfScene && multiplier > 1.0) {
+      if (!p.agent) p.agent = {};
+      p.agent.affineRunsCount = (p.agent.affineRunsCount || 0) + 1;
+    }
 
     saveProfile(p);
 
@@ -1074,6 +1169,10 @@
       const tags = ROLE_BONUS_TAGS[r];
       return Array.isArray(tags) ? tags.slice() : [];
     },
+
+    // v2.91 PACK L1 — Profil bonus différencié + spé cumulative
+    getRoleBonusProfile,
+    getRoleBonus,
 
     // Écriture
     setAgentName,
