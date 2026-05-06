@@ -112,6 +112,20 @@
     title.innerHTML = `<span class="cas-navbar__title-icon">${titleInfo.icon}</span>${titleInfo.label}`;
     bottom.appendChild(title);
 
+    // v2.79 — Tools : si la page expose un template <template id="cas-navbar-tools">,
+    // on injecte ces outils (Filtres, Modes, etc.) dans la barre.
+    if (slot.dataset.hasTools === '1') {
+      const tplTools = document.getElementById('cas-navbar-tools');
+      if (tplTools && tplTools.content) {
+        const toolsWrap = document.createElement('div');
+        toolsWrap.className = 'cas-navbar__tools';
+        toolsWrap.appendChild(tplTools.content.cloneNode(true));
+        bottom.appendChild(toolsWrap);
+        // Retirer le template du DOM (déjà cloné)
+        tplTools.remove();
+      }
+    }
+
     // Séparateur
     const sep = document.createElement('div');
     sep.className = 'cas-navbar__links-sep';
