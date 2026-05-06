@@ -91,18 +91,46 @@
   // ── Mastery par track (thème) ──
   // Pour chaque track : combien de scènes maîtrisées (pct >= 80%) sur le total
   // de scènes qui contiennent ce tag.
+  //
+  // v2.85 — Fix : "INTERNATIONAL" ne matchait jamais (tag absent du corpus).
+  // Les vraies tags sont 'COOPÉRATION INTERNATIONALE', 'DROIT INTERNATIONAL',
+  // 'ENTRAIDE INTERNATIONALE', 'entraide-internationale' (avec ou sans accent
+  // et casse). On utilise désormais un mapping track → matcher (regex normalisée
+  // sur le tag UPPERCASE sans accents) au lieu d'une égalité stricte.
+  function normalizeTag(t) {
+    return String(t || '').toUpperCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+  // Matcher : reçoit le tag normalisé, retourne true si la scène compte pour
+  // cette track. Pour les 6 tracks à valeur exacte, c'est trivial. Pour
+  // INTERNATIONAL, on accepte toute variante contenant le mot.
+  const TRACK_MATCHERS = {
+    FORENSIQUE:   t => t === 'FORENSIQUE',
+    DROIT:        t => t === 'DROIT',
+    WINDOWS:      t => t === 'WINDOWS',
+    CRYPTO:       t => t === 'CRYPTO',
+    'RÉSEAUX':    t => t === 'RESEAUX',           // accent retiré par normalize
+    OUTILS:       t => t === 'OUTILS',
+    INTERNATIONAL: t => t.includes('INTERNATIONAL'),
+  };
+
   function getMasteryByTrack() {
     const results = lsGet('scene_results', {});
     const titleMap = getSceneTitleMap();
     const tracks = {};
     TRACKS.forEach(t => { tracks[t] = { mastered: 0, total: 0, pct: 0 }; });
 
-    // Compte total par track (toutes scènes du corpus)
-    Object.values(titleMap).forEach(meta => {
-      (meta.tags || []).forEach(t => {
-        if (tracks[t]) tracks[t].total += 1;
+    function countTrack(meta, bucket) {
+      const normalized = (meta.tags || []).map(normalizeTag);
+      Object.entries(TRACK_MATCHERS).forEach(([trackName, match]) => {
+        if (normalized.some(match)) {
+          tracks[trackName][bucket] += 1;
+        }
       });
-    });
+    }
+
+    // Compte total par track (toutes scènes du corpus)
+    Object.values(titleMap).forEach(meta => countTrack(meta, 'total'));
 
     // Compte maîtrisées
     Object.entries(results).forEach(([sceneId, r]) => {
@@ -110,9 +138,7 @@
       if (r.pct < MASTERY_THRESHOLD) return;
       const meta = titleMap[sceneId];
       if (!meta) return;
-      (meta.tags || []).forEach(t => {
-        if (tracks[t]) tracks[t].mastered += 1;
-      });
+      countTrack(meta, 'mastered');
     });
 
     // Calcule pct
