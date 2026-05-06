@@ -43,6 +43,33 @@
       if (set.has(file)) return;
       set.add(file);
       localStorage.setItem(READ_KEY, JSON.stringify([...set]));
+
+      // v2.84 — Synchroniser avec la clé canonique casIn_readFiches_v4
+      // (utilisée par Profile.getFichesReadCount + achievements fiches)
+      try {
+        const canonRaw = localStorage.getItem('casIn_readFiches_v4');
+        const canon = canonRaw ? JSON.parse(canonRaw) : [];
+        const arr = Array.isArray(canon) ? canon : [];
+        if (!arr.includes(file)) {
+          arr.push(file);
+          localStorage.setItem('casIn_readFiches_v4', JSON.stringify(arr));
+        }
+      } catch (_) {}
+
+      // v2.84 — Récompenser la lecture par +15 XP (source 'fiches')
+      // et déclencher l'évaluation des achievements
+      if (window.Profile && typeof window.Profile.addXp === 'function') {
+        try {
+          const tag = file.replace(/\.html$/, '');
+          window.Profile.addXp(15, 'fiches', { fiche: tag });
+          window.Profile.recordActivity('fiches');
+        } catch (_) {}
+      }
+      if (window.AchievementsCore && typeof window.AchievementsCore.evalAndUnlock === 'function' && window.Profile) {
+        setTimeout(() => {
+          try { window.AchievementsCore.evalAndUnlock(window.Profile.snapshot()); } catch (_) {}
+        }, 100);
+      }
     } catch {}
   }
 
