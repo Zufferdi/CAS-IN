@@ -478,6 +478,18 @@ def render(categories_html: str, total: int, n_cats: int) -> str:
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Fiches DFIR — CAS-IN Investigation Numérique</title>
 <link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<script src="../js/core/cas-in-counts.js" defer></script>
+<script src="../js/core/cas-in-pwa.js" defer></script>
+<script src="../js/core/cas-in-search.js" defer></script>
+<!-- ⚠ ORDRE CRITIQUE — ne pas réordonner :
+     1. cas-in-profile.js définit window.Profile (source de vérité)
+     2. profile-track-v5.js / profile-titles.js dépendent de Profile -->
+<script src="../js/core/cas-in-profile.js" defer></script>
+<script src="../js/profile/profile-track-v5.js" defer></script>
+<script src="../js/core/cas-in-achievements.js" defer></script>
+<script src="../js/profile/profile-titles.js" defer></script>
+<link rel="stylesheet" href="../style/gamification-toasts.css">
 <style>
 .page{{max-width:1100px;margin:0 auto;padding:2rem}}
 .hub-hero{{text-align:center;padding:2.5rem 1rem 1.5rem;border-bottom:1px solid var(--border);margin-bottom:2rem}}
@@ -564,12 +576,7 @@ def render(categories_html: str, total: int, n_cats: int) -> str:
 </style>
 </head>
 <body>
-
-<nav class="tn-nav">
-  <a href="../index.html" class="tn-back">← Accueil</a>
-  <span class="tn-title">FICHES DE RÉVISION</span>
-  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
-</nav>
+<div id="cas-navbar" data-page="fiches"></div>
 
 <div class="page">
 
@@ -604,6 +611,11 @@ def render(categories_html: str, total: int, n_cats: int) -> str:
 <!-- Moteur de recherche fiches v2.0 (N1+N2+N3+N5 : tokens + accents + synonymes + index full-text + modal Cmd+K) -->
 <script src="../js/components/fiche-search.js" defer></script>
 <script src="../js/components/search-modal.js" defer></script>
+
+<!-- Navbar unifiée (cas-in-navbar v2.79) — identité agent + onglets Quiz/Scènes/TP/Fiches -->
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/profile/celebration-ui.js" defer></script>
+<script src="../js/components/gamification-toasts.js" defer></script>
 
 <script>
 // Fallback minimal au cas où fiche-search.js échoue à se charger.
