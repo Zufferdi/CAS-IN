@@ -269,6 +269,12 @@
  S.dayStreak = 1;
  lsSet('dayStreak', S.dayStreak);
  }
+ // v2.84 — Synchroniser avec Profile (source de vérité). Avant v2.72 c'était
+ // quiz-profile-bridge qui interceptait l'écriture 'dayStreak' et appelait
+ // Profile.bumpStreak. On le fait directement maintenant.
+ if (window.Profile && typeof window.Profile.bumpStreak === 'function') {
+   try { window.Profile.bumpStreak(); } catch (_) {}
+ }
  }
 
  function markPlayedToday() {
@@ -276,6 +282,10 @@
  if (S.lastPlayDate !== today) {
  S.lastPlayDate = today;
  lsSet('lastPlayDate', today);
+ }
+ // v2.84 — Enregistrer l'activité dans Profile (utilisé par les achievements)
+ if (window.Profile && typeof window.Profile.recordActivity === 'function') {
+   try { window.Profile.recordActivity('quiz'); } catch (_) {}
  }
  }
 
@@ -693,6 +703,19 @@
           // Évaluation des quêtes (idempotente, debounced indirectement par evalAndComplete)
           if (window.Quests && typeof window.Quests.evalAndComplete === 'function') {
             window.Quests.evalAndComplete();
+          }
+          // v2.84 — Évaluation des achievements en temps réel (debounced 800ms)
+          // pour ne pas spammer le LS à chaque clic. Avant v2.72 le bridge
+          // faisait ça via interception; maintenant direct.
+          if (window.AchievementsCore && typeof window.AchievementsCore.evalAndUnlock === 'function') {
+            clearTimeout(window.__quizAchievementsDebounce);
+            window.__quizAchievementsDebounce = setTimeout(() => {
+              try {
+                if (window.Profile) {
+                  window.AchievementsCore.evalAndUnlock(window.Profile.snapshot());
+                }
+              } catch (_) {}
+            }, 800);
           }
         } catch (_) {}
         if (ok) {

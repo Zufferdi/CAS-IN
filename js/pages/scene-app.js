@@ -214,25 +214,36 @@ function generateSeed() {
 // Profile en interne.
 // ═══════════════════════════════════════════════════
 function getStreak() {
-  // Source unique : Profile (le bridge maintient cas_streak en miroir)
-  // v2.72 — Profile.getStreak retiré
-  // Mini-fallback hors-PWA : lit cas_streak directement (LS uniquement)
+  // v2.84 — Source unique : Profile.getStreak (qui retourne {current, max, lastDate})
+  // Wrapper qui retourne le shape legacy {count, lastDate} attendu par scene-app
+  if (window.Profile && typeof window.Profile.getStreak === 'function') {
+    const ps = window.Profile.getStreak();
+    return { count: ps.current || 0, lastDate: ps.lastDate || null };
+  }
   return lsGet('cas_streak', { count: 0, lastDate: null });
 }
 
 function setStreak(s) {
-  // Plus utilisé directement en v2.55 : la source unique est Profile.
-  // On garde le no-op pour ne pas casser d'éventuels appels legacy.
-  // (Le bridge écoute déjà les writes cas_streak et les redirige.)
+  // v2.84 — Conservé pour compat legacy uniquement.
+  // La source de vérité est Profile.bumpStreak() / Profile.recordActivity('scene')
   lsSet('cas_streak', s);
 }
 
 function updateStreakOnActivity() {
-  // v2.55 : la mise à jour réelle est gérée par Profile.recordActivity('scene')
-  // appelé depuis le bridge. Ici on laisse une trace pour les anciens chemins
-  // de code qui appelleraient encore cette fonction.
-  // v2.72 — Profile.recordActivity retiré
-  // Fallback minimaliste (très ancien chemin) — calcule localement
+  // v2.84 — Bumper Profile (source de vérité). Avant v2.72 le bridge faisait
+  // ça via interception de cas_streak. Plus simple : appel direct.
+  if (window.Profile && typeof window.Profile.bumpStreak === 'function') {
+    try {
+      window.Profile.bumpStreak();
+      window.Profile.recordActivity('scene');
+    } catch (_) {}
+    // Synchroniser le miroir cas_streak pour les call-sites legacy
+    const ps = window.Profile.getStreak ? window.Profile.getStreak() : { current: 0, lastDate: null };
+    const mirror = { count: ps.current || 0, lastDate: ps.lastDate || null };
+    lsSet('cas_streak', mirror);
+    return mirror;
+  }
+  // Fallback : calcul local si Profile indisponible
   const today = new Date().toISOString().slice(0, 10);
   const s = lsGet('cas_streak', { count: 0, lastDate: null });
   if (s.lastDate === today) return s;
@@ -3349,6 +3360,24 @@ function showReport() {
 
   // Reset vignette (leaving scene)
   updateVignette(100);
+
+  // v2.84 — Évaluer achievements + arcs PNJ + streak en fin de scène
+  // (avant v2.72 le bridge le faisait via interception scene_results)
+  try {
+    if (window.Profile && typeof window.Profile.bumpStreak === 'function') {
+      window.Profile.bumpStreak();
+      window.Profile.recordActivity('scene');
+    }
+    if (window.NpcArcs && typeof window.NpcArcs.evalAndUnlock === 'function') {
+      window.NpcArcs.evalAndUnlock();
+    }
+    if (window.AchievementsCore && typeof window.AchievementsCore.evalAndUnlock === 'function' && window.Profile) {
+      // Léger délai pour laisser scene_results s'écrire d'abord
+      setTimeout(() => {
+        try { window.AchievementsCore.evalAndUnlock(window.Profile.snapshot()); } catch (_) {}
+      }, 100);
+    }
+  } catch (_) {}
 }
 
 // Notes save helper (debounced light)
