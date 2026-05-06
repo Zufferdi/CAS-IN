@@ -4,6 +4,45 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.57] — 2026-05-06
+
+🎨 **Pass CSS light — pages auxiliaires (npcs / glossary / artifacts)** : la couverture est maintenant **complète sur toutes les pages**.
+
+### Modifié
+
+- `style/npcs.css` : 10 nouveaux sélecteurs light (8 swap white-tint → black-tint pour les `.npc-stats/.npc-toolbar/.npc-card/.npc-card-avatar/.npc-appearance-link/.npc-modal-avatar/.npc-modal-pers-item/.npc-modal-relation` + 2 dark hardcodés `.npc-search` et `.npc-modal`).
+- `style/glossary.css` : 4 nouveaux sélecteurs light (3 swap white-tint pour `.gloss-stats/.gloss-toolbar/.gloss-entry` + `.gloss-search`).
+- `style/artifacts.css` : 1 override pour `.art-filters` (sticky avec backdrop-filter, seul hardcodé sombre).
+- `sw.js` : `CACHE_VERSION` v136 → v137.
+
+### Statut couverture light : **100%** ✅
+
+| Page | État |
+|---|---|
+| Landing | ✅ N/A (Matrix permanent) |
+| Fiches | ✅ |
+| Navbar (transversal) | ✅ |
+| Quiz | ✅ |
+| Scene | ✅ |
+| TP | ✅ |
+| Profile + Banner + Dossier | ✅ |
+| Tools | ✅ |
+| Exam | ✅ |
+| Npcs | ✅ |
+| Glossary | ✅ |
+| Artifacts | ✅ |
+
+### Next step (release future)
+
+Une fois validation visuelle complète côté utilisateur via `?theme=light` sur chaque page, prévoir une release de **clôture du rollout** :
+
+- Réactiver `bootstrapColorScheme()` dans `js/core/cas-in-utils.js` (commenté en v2.49)
+- Réactiver le bloc `@media (prefers-color-scheme: light)` dans `style/style.css` (commenté en v2.49)
+- Optionnel : retirer l'escape-hatch `?theme=light/dark` URL (v2.50) une fois le bootstrap réactivé. Ou le garder pour faciliter le QA futur — coût zéro.
+- Bump `CACHE_VERSION`.
+
+Après ça, les utilisateurs avec OS en thème clair voient l'app en clair automatiquement, ceux en thème sombre voient l'app sombre. Plus de bug de lisibilité.
+
 ## [2.56] — 2026-05-06
 
 🎨 **Pass CSS light — profile + tools + exam** : 3 pages couvertes en une release.
