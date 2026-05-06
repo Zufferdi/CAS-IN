@@ -1,0 +1,269 @@
+/* ═══════════════════════════════════════════════════════════════
+   profile-dossier-plus.css — v1.0 (mai 2026)
+
+   Extension visuelle de profile-dossier.css.
+   Direction : ÉCRAN TACTIQUE + DOSSIER ADMIN
+
+   Effets ajoutés :
+     ① Scanlines CRT subtiles sur le hero
+     ② Vignette caméra (assombrissement radial des bords)
+     ③ Tampons d'encre rotés (TOP SECRET / EYES ONLY / CASE FILE)
+     ④ Bloc d'autorisation dans le footer (APPROVED BY · DATE)
+
+   Installation :
+     1. Déposer ce fichier dans /style/
+     2. Dans profile.html, après <link ... profile-dossier.css>, ajouter :
+        <link rel="stylesheet" href="style/profile-dossier-plus.css">
+     3. Pour le bloc auth, ajouter le snippet HTML fourni dans
+        profile-dossier-plus.html.snippet juste avant le <footer class="dfir-footer">
+
+   Compatibilité :
+     - Pseudo-elements ::before/::after de .profile-hero sont
+       déjà occupés par profile-dossier.css → on attache nos
+       tampons aux enfants (.profile-hero-body, .profile-hero-xp).
+     - Override volontaire du background de .profile-hero pour
+       ajouter les couches scanlines + vignette (les 3 layers
+       d'origine sont préservés en queue de stack).
+
+   Si profile-dossier.css change le background du .profile-hero,
+   reporter la modification dans la section ① ci-dessous.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Police "machine à écrire" pour les tampons (n'est pas chargée
+   ailleurs dans le projet). Fallback monospace si pas dispo. */
+@import url('https://fonts.googleapis.com/css2?family=Special+Elite&display=swap');
+
+
+/* ═══════════════════════════════════════════════════════════════
+   ① + ②  HERO CARD — Scanlines + vignette caméra
+   ═══════════════════════════════════════════════════════════════ */
+
+.profile-hero {
+  /* On reconstruit le background avec 3 couches empilées :
+     1. scanlines (lignes horizontales bleues, 1px tous les 3px)
+     2. vignette (assombrissement radial vers les bords)
+     3. gradient diagonal d'origine (profile-dossier.css)        */
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(74, 158, 255, .028) 0,
+      rgba(74, 158, 255, .028) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    radial-gradient(
+      ellipse at center,
+      transparent 45%,
+      rgba(0, 0, 0, .42) 100%
+    ),
+    linear-gradient(135deg, rgba(8, 14, 26, .6) 0%, rgba(10, 18, 32, .5) 100%);
+}
+
+/* Léger pulse "balayage écran" — barre claire qui descend lentement.
+   Très subtil (8s, opacité .08) pour ne pas distraire la lecture.
+   Désactivé si prefers-reduced-motion. */
+.profile-hero::before,
+.profile-hero::after {
+  /* on ne touche pas — déjà utilisés par profile-dossier.css */
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   ③  TAMPONS D'ENCRE rotés sur le hero
+
+   Trois tampons attachés aux pseudos disponibles :
+     • TOP SECRET    → .profile-hero-body::before  (rouge, gros)
+     • EYES ONLY     → .profile-hero-body::after   (rouge, double-bord)
+     • CASE FILE     → .profile-hero-xp::before    (vert, monospace)
+
+   Effet "encre baveuse" via mask SVG turbulent : les bords ne sont
+   pas nets, comme un vrai tampon mal posé.
+   ═══════════════════════════════════════════════════════════════ */
+
+.profile-hero-body,
+.profile-hero-xp {
+  position: relative;     /* ancre les pseudos */
+  isolation: isolate;     /* contient les blend-mode */
+}
+
+/* Style commun à tous les tampons */
+.profile-hero-body::before,
+.profile-hero-body::after,
+.profile-hero-xp::before {
+  position: absolute;
+  font-family: 'Special Elite', 'JetBrains Mono', 'Courier New', monospace;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 5;
+  opacity: .5;
+  mix-blend-mode: screen;
+  /* Masque turbulent SVG → bords irréguliers façon encre */
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='80'><filter id='r'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1.5 -.3'/></filter><rect width='100%25' height='100%25' fill='white' filter='url(%23r)'/></svg>");
+          mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='80'><filter id='r'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1.5 -.3'/></filter><rect width='100%25' height='100%25' fill='white' filter='url(%23r)'/></svg>");
+  -webkit-mask-size: cover;
+          mask-size: cover;
+}
+
+/* TOP SECRET — gros, rouge, en haut à droite du body */
+.profile-hero-body::before {
+  content: 'TOP SECRET';
+  top: -14px;
+  right: 6%;
+  font-size: 22px;
+  color: #d23838;
+  border: 3px solid #d23838;
+  padding: 6px 14px;
+  transform: rotate(-7deg);
+}
+
+/* EYES ONLY — bord double, plus petit, en bas */
+.profile-hero-body::after {
+  content: 'EYES ONLY';
+  bottom: -8px;
+  right: 4%;
+  font-size: 11px;
+  color: #d23838;
+  border: 2px double #d23838;
+  padding: 3px 9px;
+  transform: rotate(4deg);
+}
+
+/* CASE FILE · ACTIVE — vert, monospace (pas Special Elite) */
+.profile-hero-xp::before {
+  content: 'CASE FILE · ACTIVE';
+  top: -10px;
+  left: 50%;
+  font-size: 9px;
+  color: #3aa055;
+  border: 2px solid #3aa055;
+  padding: 3px 8px;
+  transform: translateX(-50%) rotate(-3deg);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: .04em;
+}
+
+/* ── Mobile : tamper TOP SECRET réduit, EYES ONLY caché ─────── */
+@media (max-width: 720px) {
+  .profile-hero-body::before {
+    font-size: 16px;
+    top: -10px;
+    right: 4%;
+    padding: 4px 10px;
+    border-width: 2px;
+  }
+  .profile-hero-body::after {
+    display: none;
+  }
+  .profile-hero-xp::before {
+    font-size: 8px;
+    top: -8px;
+    padding: 2px 6px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   ④  BLOC D'AUTORISATION dans le footer
+
+   Nécessite l'ajout du snippet HTML (voir fichier .snippet).
+   Si le markup n'est pas ajouté, ces règles sont inertes.
+   ═══════════════════════════════════════════════════════════════ */
+
+.dfir-auth-block {
+  margin: 24px auto 8px;
+  max-width: 1200px;
+  padding: 18px 24px;
+  border: 1px dashed rgba(255, 255, 255, .15);
+  border-radius: 6px;
+  background:
+    /* coin légèrement plus sombre en haut */
+    linear-gradient(180deg, rgba(255, 255, 255, .015), transparent 30%);
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  font-family: 'JetBrains Mono', monospace;
+  position: relative;
+}
+
+/* Petite étiquette "FORM-DI04" en haut à droite du bloc */
+.dfir-auth-block::before {
+  content: 'FORM · DI-04';
+  position: absolute;
+  top: -8px;
+  right: 14px;
+  background: var(--bg, #080e1a);
+  padding: 0 8px;
+  font-size: 9px;
+  letter-spacing: .14em;
+  color: rgba(74, 158, 255, .55);
+  text-transform: uppercase;
+}
+
+.dfir-auth-cell {
+  flex: 1;
+  min-width: 200px;
+}
+
+.dfir-auth-label {
+  font-size: 10px;
+  letter-spacing: .14em;
+  color: rgba(74, 158, 255, .55);
+  text-transform: uppercase;
+  margin-bottom: 22px;
+}
+
+.dfir-auth-line {
+  position: relative;
+  border-bottom: 1px solid rgba(255, 255, 255, .25);
+  height: 1px;
+  margin-bottom: 4px;
+}
+
+.dfir-auth-hint {
+  font-size: 9px;
+  opacity: .5;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .45);
+}
+
+/* Signature manuscrite (optionnelle, ajoutée via JS) */
+.dfir-auth-signature {
+  position: absolute;
+  bottom: -2px;
+  left: 6px;
+  font-family: 'Brush Script MT', 'Lucida Handwriting', 'Segoe Script', cursive;
+  font-size: 20px;
+  font-style: italic;
+  color: rgba(255, 200, 100, .55);
+  transform: rotate(-3deg);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .dfir-auth-block {
+    flex-direction: column;
+    gap: 18px;
+    padding: 14px 16px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   ⑤  ACCESSIBILITÉ — prefers-reduced-motion
+
+   Aucune anim active ici (les tampons sont statiques) mais on
+   garde le hook si on en ajoute plus tard.
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-hero-body::before,
+  .profile-hero-body::after,
+  .profile-hero-xp::before {
+    /* tampons : aucun mouvement requis, déjà statiques */
+    transition: none;
+  }
+}
