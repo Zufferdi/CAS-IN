@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// cas-in-utils.js — Helpers JS centralisés (v2.60 consolidation)
+// cas-in-utils.js — Helpers JS centralisés (v2.60 / migration v2.85)
 //
 // Avant cette version, 6+ fichiers définissaient leurs propres
 // versions de escapeHTML / escapeAttr / lsGet / etc., avec parfois
@@ -9,6 +9,19 @@
 // Stratégie de migration : non-breaking. Les modules existants peuvent
 // continuer d'utiliser leurs helpers locaux. Les nouveaux modules
 // utilisent window.CasInUtils. Migration progressive sans risque.
+//
+// Modules déjà migrés (v2.85) :
+//   • js/profile/profile-page.js     (escapeHtml → CasInUtils.escapeHTML)
+//   • js/components/scene-npcs.js    (escapeHtml + escapeAttr)
+//   • js/pages/scene-engine-v4.js    (esc inline pour le tooltip glossaire)
+//
+// Modules avec helper local maintenu (encore à migrer) :
+//   • js/pages/exam-app.js           (escHtml — exam.html ne charge pas
+//                                     cas-in-utils, à voir au besoin)
+//   • js/components/quiz-utils.js    (sanitizeHTML — version DOM-based plus
+//                                     riche, gardée pour le pseudo utilisateur)
+//   • js/tp/tp-engine.js             (escAttr)
+//   • js/components/fiche-search.js  (escapeHTML)
 //
 // Toutes les fonctions sont stateless et idempotentes.
 // ═══════════════════════════════════════════════════════════════
@@ -199,6 +212,52 @@
     const n = parseInt(value, 10);
     return Number.isFinite(n) ? n : (fallback || 0);
   }
+
+  // ─────────────────────────────────────────────────────────────
+  // PREFERS-COLOR-SCHEME (v2.85)
+  //
+  // Si l'OS de l'utilisateur préfère le clair ET qu'aucun thème n'a été
+  // explicitement choisi (data-theme absent), on applique data-theme="light"
+  // sur <html> pour activer les ~29 règles CSS [data-theme="light"] qui
+  // existent déjà mais n'étaient jamais activées (mode clair "dead code"
+  // depuis l'origine, signalé par l'audit v2.10).
+  //
+  // Le complément CSS (variables auto-applied via @media (prefers-color-scheme))
+  // est dans style.css : il couvre le rendu sans JS, ce JS polit le reste.
+  //
+  // Si la préférence change (l'utilisateur switch son OS pendant la session),
+  // on bascule en live. Si l'utilisateur fait un choix manuel via une future
+  // UI de toggle (qui posera data-theme via setAttribute), on respecte.
+  // ─────────────────────────────────────────────────────────────
+  function bootstrapColorScheme() {
+    if (typeof document === 'undefined' || !document.documentElement) return;
+    if (typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(prefers-color-scheme: light)');
+    const apply = () => {
+      const root = document.documentElement;
+      // Si un thème est déjà posé manuellement (autre que celui auto-piloté
+      // par ce bootstrap), on ne touche pas.
+      const cur = root.getAttribute('data-theme');
+      const wasAuto = root.dataset.themeAuto === '1';
+      if (cur && !wasAuto) return; // choix utilisateur explicite, on respecte
+      if (mql.matches) {
+        root.setAttribute('data-theme', 'light');
+        root.dataset.themeAuto = '1';
+      } else if (wasAuto) {
+        // Revenir au défaut sombre
+        root.removeAttribute('data-theme');
+        delete root.dataset.themeAuto;
+      }
+    };
+    apply();
+    // Réagir aux changements de préférence OS sans recharger la page
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', apply);
+    } else if (typeof mql.addListener === 'function') {
+      mql.addListener(apply); // legacy Safari < 14
+    }
+  }
+  bootstrapColorScheme();
 
   // ─────────────────────────────────────────────────────────────
   // API publique

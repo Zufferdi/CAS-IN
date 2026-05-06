@@ -83,6 +83,8 @@
       desc: 'Termine une scène marquée 🇪🇺 EU',
       icon: '🇪🇺',
       reward: 50,
+      // Tags pour le bonus de rôle : entraide internationale → magistrate
+      tags: ['EIMP', 'PROCEDURE', 'COOPERATION INTERNATIONALE'],
       evaluate: (snap) => snap.todayRuns.some(r => r.isEU),
     },
     {
@@ -91,6 +93,8 @@
       desc: 'Termine une scène en mode Procureur (timer + erreur critique = fin)',
       icon: '⚖️',
       reward: 70,
+      // Tags pour le bonus de rôle : mode procureur → magistrate
+      tags: ['DROIT', 'PROCUREUR', 'CPP'],
       evaluate: (snap) => snap.todayRuns.some(r => r.mode === 'procureur'),
     },
     {
@@ -248,71 +252,6 @@
         return counts.hostile === 0;
       },
     },
-    // ─────────────────────────────────────────────────────────
-    // v2.91 PACK L3 — Quêtes exclusives par rôle (roleOnly)
-    // 1 quête par rôle, n'apparaît que pour le rôle concerné
-    // ─────────────────────────────────────────────────────────
-    {
-      id: 'q_role_investigator_forensic',
-      title: '🔍 Inspecteur du jour',
-      desc: 'Termine 2 scènes forensiques (tag FORENSIQUE) avec ≥ 75%',
-      icon: '🕵',
-      reward: 65,
-      roleOnly: 'investigator',
-      evaluate: (snap) => {
-        const matches = snap.todayRuns.filter(r => {
-          const tags = (r.tags || []).map(t => String(t).toUpperCase());
-          return tags.includes('FORENSIQUE') && r.pct >= 75;
-        });
-        return matches.length >= 2;
-      },
-    },
-    {
-      id: 'q_role_magistrate_cpp',
-      title: '⚖️ Audience du jour',
-      desc: 'Termine 1 scène droit (tag DROIT, CPP, EIMP, PROCEDURE) avec ≥ 80%',
-      icon: '⚖️',
-      reward: 65,
-      roleOnly: 'magistrate',
-      evaluate: (snap) => {
-        return snap.todayRuns.some(r => {
-          const tags = (r.tags || []).map(t => String(t).toUpperCase());
-          const lawTags = ['DROIT', 'CPP', 'EIMP', 'PROCEDURE', 'JURISPRUDENCE'];
-          return tags.some(t => lawTags.includes(t)) && r.pct >= 80;
-        });
-      },
-    },
-    {
-      id: 'q_role_journalist_osint',
-      title: '📰 Plume aiguisée',
-      desc: 'Termine 1 scène OSINT/darknet/deepfake avec ≥ 70%',
-      icon: '📰',
-      reward: 55,
-      roleOnly: 'journalist',
-      evaluate: (snap) => {
-        return snap.todayRuns.some(r => {
-          const tags = (r.tags || []).map(t => String(t).toUpperCase());
-          const journoTags = ['OSINT', 'DARKNET', 'DEEPFAKE', 'IA', 'SOCIAL ENGINEERING'];
-          return tags.some(t => journoTags.includes(t)) && r.pct >= 70;
-        });
-      },
-    },
-    {
-      id: 'q_role_hacker_attack',
-      title: '⌨️ Reverse engineer',
-      desc: 'Termine 2 scènes ransomware/malware/crypto avec ≥ 70%',
-      icon: '⌨️',
-      reward: 75,
-      roleOnly: 'hacker',
-      evaluate: (snap) => {
-        const matches = snap.todayRuns.filter(r => {
-          const tags = (r.tags || []).map(t => String(t).toUpperCase());
-          const hackTags = ['RANSOMWARE', 'MALWARE', 'CRYPTO', 'OT', 'SCADA', 'SUPPLY CHAIN'];
-          return tags.some(t => hackTags.includes(t)) && r.pct >= 70;
-        });
-        return matches.length >= 2;
-      },
-    },
   ];
 
   function lsGet(k, fb) {
@@ -349,24 +288,9 @@
 
   function pickQuestsForDate(dateStr, count = 3) {
     const rng = mulberry32(dateToSeed(dateStr));
-    // v2.91 PACK L3 — Filtrer les quêtes "roleOnly" selon le rôle actif
-    const activeRole = (() => {
-      try {
-        if (window.Profile && typeof window.Profile.getTrack === 'function') {
-          return window.Profile.getTrack();
-        }
-      } catch (_) {}
-      return null;
-    })();
-
-    const eligibleQuests = QUEST_POOL.filter(q => {
-      if (!q.roleOnly) return true;
-      return q.roleOnly === activeRole;
-    });
-
     // v2.57 : tirage stratifié pour garantir mix scène + quiz
-    const sceneQuests = eligibleQuests.filter(q => !q.id.startsWith('q_quiz') && q.id !== 'q_mixed_session');
-    const quizQuests = eligibleQuests.filter(q => q.id.startsWith('q_quiz') || q.id === 'q_mixed_session');
+    const sceneQuests = QUEST_POOL.filter(q => !q.id.startsWith('q_quiz') && q.id !== 'q_mixed_session');
+    const quizQuests = QUEST_POOL.filter(q => q.id.startsWith('q_quiz') || q.id === 'q_mixed_session');
     const picked = [];
     const used = new Set();
     // 1 quête quiz au moins
@@ -500,8 +424,16 @@
     if (newlyCompleted.length > 0) {
       lsSet('cas_daily_quests', state);
       // Push XP via Profile (source dédiée)
+      // v2.85 — Fix : on passe meta.tags (le format attendu par addXp pour
+      // calculer le bonus de rôle) au lieu de questIds qui était silencieusement
+      // ignoré. Une quête peut optionnellement déclarer un champ `tags` dans
+      // QUEST_POOL ; sinon on agrège les tags des quêtes complétées (pratique
+      // si on ajoute tags: ['DROIT'] sur q_procureur, par ex.).
       if (window.Profile && typeof window.Profile.addXp === 'function' && xpToAdd > 0) {
-        try { window.Profile.addXp(xpToAdd, 'quest', { questIds: newlyCompleted.map(q => q.id) }); } catch (_) {}
+        const tags = newlyCompleted
+          .flatMap(q => Array.isArray(q.tags) ? q.tags : [])
+          .filter(Boolean);
+        try { window.Profile.addXp(xpToAdd, 'quest', { tags }); } catch (_) {}
       }
       // Toast pour feedback utilisateur
       if (typeof window.showToast === 'function') {
