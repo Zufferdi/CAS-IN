@@ -671,14 +671,20 @@ const MISSION_PHASES = [
       };
 
       // VISUAL_THEMES — thèmes visuels sélectionnables (palette couleurs)
-      // Format : { id, label, icon, minXp? }
+      // Format : { id, name, icon, desc, colors:[grad1, grad2], minXp? }
       const VISUAL_THEMES = [
-        { id: 'default',    label: 'Forensique',    icon: '🔍', minXp: 0     },
-        { id: 'matrix',     label: 'Matrix',        icon: '💚', minXp: 250   },
-        { id: 'noir',       label: 'Film noir',     icon: '🎬', minXp: 500   },
-        { id: 'helvetia',   label: 'Helvetia',      icon: '🇨🇭', minXp: 1000  },
-        { id: 'neon',       label: 'Néon',          icon: '🌃', minXp: 2000  },
-        { id: 'midnight',   label: 'Minuit',        icon: '🌙', minXp: 4000  },
+        { id: 'default',  name: 'Forensique',  icon: '🔍', desc: 'Le thème par défaut · cyan/bleu',
+          colors: ['#00e5cc', '#4a9eff'], minXp: 0 },
+        { id: 'matrix',   name: 'Matrix',      icon: '💚', desc: 'Vert phosphore sur fond noir',
+          colors: ['#00ff66', '#003311'], minXp: 250 },
+        { id: 'noir',     name: 'Film noir',   icon: '🎬', desc: 'Tons sépia, contraste pellicule',
+          colors: ['#d4a574', '#3d2817'], minXp: 500 },
+        { id: 'helvetia', name: 'Helvetia',    icon: '🇨🇭', desc: 'Rouge et blanc helvétique',
+          colors: ['#ff4040', '#a01010'], minXp: 1000 },
+        { id: 'neon',     name: 'Néon',        icon: '🌃', desc: 'Magenta cyberpunk',
+          colors: ['#ff00aa', '#6600cc'], minXp: 2000 },
+        { id: 'midnight', name: 'Minuit',      icon: '🌙', desc: 'Bleu nuit profond',
+          colors: ['#1a3a6c', '#0a1530'], minXp: 4000 },
       ];
 
       // ═══════════════════════════════════════════════════════════════

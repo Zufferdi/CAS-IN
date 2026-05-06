@@ -950,8 +950,12 @@
       function buildVisualThemeUI() {
         const wrap = document.getElementById('visual-themes');
         if (!wrap) return;
+        // v2.85 — Garde défensive : si VISUAL_THEMES manque ou si un theme
+        // n'a pas la bonne forme (manque colors, etc.), on skip proprement.
+        if (typeof VISUAL_THEMES === 'undefined' || !Array.isArray(VISUAL_THEMES)) return;
         wrap.innerHTML = '';
         VISUAL_THEMES.forEach(t => {
+          if (!t || !t.id || !Array.isArray(t.colors) || t.colors.length < 2) return;
           const locked = t.minXp && S.xp < t.minXp;
           const curr = lsGet('visualTheme', 'default');
           const d = document.createElement('div');
