@@ -1,87 +1,69 @@
-v2.79 — Refonte UX globale (navbar unifiée + profile dossier agent)
-═══════════════════════════════════════════════════════════════════
+v2.80 — Hotfix scene + Étape 1 améliorations lobby
+═══════════════════════════════════════════════════════════════
 
-PHASE 1 : Suppression des doubles barres + fix scènes
-═══════════════════════════════════════════════════
-✓ scene.html : ancien <header> supprimé
-  (logo SVG + Quiz/Accueil dupliqués avec la navbar)
-✓ tp.html : ancien <nav class="tn-nav"> supprimé
-  (Accueil/Quiz dupliqués avec la navbar)
-✓ quiz.html : ancien <header> supprimé
-  Les menus Filtres / Modes / ⋯ sont maintenant DANS la navbar
-  (ligne 2, à droite du titre QUIZ)
-✓ Bug scènes corrigé : .cas-navbar ~ header avait conflict
-  avec scene.css (top:0). Force top:76px !important.
+HOTFIX (v2.79b inclus)
+══════════════════════
+✓ scene-app.js renderBadgesGrid : guard null ajouté
+  Plus de crash boot scenes.
 
-NAVBAR v2.79 (compat. quiz tools)
-═══════════════════════════════════
-La navbar peut maintenant injecter des outils via un template :
-  <div id="cas-navbar" data-page="quiz" data-has-tools="1"></div>
-  <template id="cas-navbar-tools">
-    <button>⚙ Filtres</button>
-    <div class="hdr-dropdown">🕵 Modes ...</div>
-    ...
-  </template>
+ÉTAPE 1A — CARROUSEL DES BANDEAUX
+══════════════════════════════════
+Avant : 4 bandeaux empilés (streak, nocrit, path, challenge)
+        prennent 200-300px verticaux avant les scénarios.
 
-Le JS clone le template et l'injecte dans .cas-navbar__tools
-entre le titre et les liens vers les autres sections.
+Après : 1 carrousel rotatif unique :
+  - Auto-rotation toutes les 6 secondes
+  - Pause au hover
+  - Dots cliquables pour naviguer
+  - Bouton − pour réduire (préférence sauvée)
+  - Détection auto des bandeaux activés (display !== none)
+  - MutationObserver : se met à jour quand un bandeau change
+  - Si 1 seul bandeau actif : pas de carrousel, juste affiché
+  - Si 0 bandeau actif : carrousel masqué
 
-CSS dropdown adapté : position absolue sous la navbar,
-ouverture en cliquant, compatible avec onclick existants.
+Fichier nouveau : js/components/scene-banners-carousel.js
+HTML : les 4 bandeaux sont maintenant dans .lobby-carousel-track
 
-PHASE 2 : Profile.html en dossier d'agent
+Économise ~150-200px de scroll vertical au-dessus des scénarios.
+
+ÉTAPE 1B — CARDS DIFFÉRENCIÉES VISUELLEMENT
 ═══════════════════════════════════════════
-✓ Nouveau JS : js/profile/profile-tabs.js
-  - 5 onglets : OPÉRATIONNEL · PROGRESSION · RELATIONS ·
-                DISTINCTIONS · NOTES
-  - Persistance localStorage du dernier onglet
-  - Deep-linking via #tab=relations
-  - Navigation clavier ← →
-  - Event 'profileTabChange' pour modules paresseux
+Cards de scénarios : data-status ajouté dans buildCard()
 
-✓ Nouveau CSS : style/profile-dossier.css
-  - Tabs sticky en haut, accent bleu cyan
-  - Status bar "DOSSIER CLASSIFIED" avec LED animée
-  - Hero card style fichier officiel (badge "DOSSIER" en filigrane)
-  - Sections en cards bordurées, séparateurs avec gradient
-  - Stats en grille avec barres latérales
-  - Typo JetBrains Mono partout
-  - Animations subtiles (fade panels, pulse LED)
+  data-status="perfect" → Score 100% : bordure dorée + ★ pulsant
+  data-status="done"    → Joué : léger bg vert
+  data-status="new"     → Jamais joué : badge "NOUVEAU" cyan
+  data-status="locked"  → Verrouillé : grisé (existant)
 
-Répartition des sections existantes :
-  OPÉRATIONNEL : Hero · Stats · Heatmap chapitres
-  PROGRESSION  : XP par source · Hiérarchie rangs · SM-2
-                 Quêtes · Leaderboard · Arcs PNJ
-  RELATIONS    : compteurs hostile/méfiant/professionnel/complice
-                 (rendu par profile-relations.js si chargé)
-  DISTINCTIONS : Succès débloqués + Prochains défis
-  NOTES        : Notes utilisateur · Actions (export, etc.)
+Plus la différenciation existante :
+  data-diff="easy/medium/hard/expert" → bordure gauche colorée
+  data-region="EU" → effet glow doré
 
-PHASE 3 : Polish fiches individuelles
-══════════════════════════════════════
-✓ La <nav class="tn-nav"> est conservée sur les 109 fiches
-  (← Fiches · TITRE CATÉGORIE · Quiz →) mais elle est maintenant
-  positionnée SOUS la navbar globale comme un breadcrumb de
-  catégorie. CSS : sticky top:76px.
+Identification visuelle des cards en 1/4 de seconde.
 
-SW : v113 → v114 + précache des nouveaux assets
+ÉTAPE 1C — PARCOURS PÉDAGOGIQUES MIS EN AVANT
+═════════════════════════════════════════════
+11 parcours déjà définis dans scene-lobby-v3.js mais cachés :
+  🎓 Fondamentaux DFIR
+  ⚖️ Procédure pénale suisse
+  💀 Ransomware A→Z
+  🤖 IA, deepfakes & droit
+  🌐 Coopération internationale
+  🥷 Darknet & enquête couverte
+  🏥 Infrastructures critiques
+  📰 Affaires récentes 2024-2026
+  🔬 Forensique avancée
+  🎭 Social engineering & fraude
+  🩹 Fuites de données
 
-FICHIERS LIVRÉS
-  HTML modifiés (5)
-    quiz.html       — header retiré, tools dans navbar template
-    scene.html      — header retiré
-    tp.html         — tn-nav retirée
-    profile.html    — onglets + panels
-    fiches/index.html — navbar ajoutée
+Modifs :
+  - Panel ouvert par défaut (premier load)
+  - Préférence persistée (localStorage)
+  - Visuel beefé : header en accent bleu uppercase, dégradé bleu/or,
+    cards plus grandes avec hover lift, ligne lumineuse en haut
+  - Compteur "X / 11 complétés" dans badge
 
-  Nouveaux fichiers (2)
-    js/profile/profile-tabs.js
-    style/profile-dossier.css
+Permet de voir immédiatement les parcours thématiques disponibles
+et de les choisir comme on choisit "Mission 30Q" sur le quiz.
 
-  Modifiés (4)
-    js/core/cas-in-navbar.js   — injection tools depuis template
-    js/profile/profile-page.js — badges acquis seulement (depuis v2.77)
-    style/cas-in-navbar.css    — tools styles + force top:76px
-    style/fiche_style.css      — tn-nav sticky sous navbar
-
-  sw.js (v114)
+SW : v115 → v116
