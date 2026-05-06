@@ -21,7 +21,7 @@
                               ↓ utilise + écrit dans localStorage
 ┌──────────────────────────────────────────────────────────────────┐
 │   js/bridges/       ←  intercepte localStorage des pages         │
-│   quiz-profile-bridge, scene-profile-bridge, tp-profile-bridge   │
+│   tp-profile-bridge (quiz/scene supprimés en v2.85+)             │
 │   (override Storage.prototype.setItem/getItem au runtime)        │
 └──────────────────────────────────────────────────────────────────┘
                               ↓ route les écritures vers Profile
@@ -61,22 +61,21 @@
 | `profile-page.js`       | Logique de `profile.html` (dossier complet, ladder, badges).  |
 | `profile-track-v5.js`   | Sélecteur de track narratif (4 voies) + mini-test d'orientation + célébration de promotions. |
 
-### 3. `js/bridges/` — Compatibilité legacy (largement éteint depuis v2.83)
+### 3. `js/bridges/` — Compatibilité legacy (résiduel depuis v2.85+)
 
-> ⚠️ **Statut v2.85** : `quiz-profile-bridge.js` et `scene-profile-bridge.js`
-> ne sont **plus chargés** par aucune page HTML. Depuis v2.83, `quiz-app.js`
-> et `scene-app.js` appellent directement `Profile.addXp()` / `Profile.bumpStreak()`.
-> Seul **`tp-profile-bridge.js`** est encore actif (chargé par `tp.html`).
+> ✅ **Statut v2.85+** : `quiz-profile-bridge.js` et `scene-profile-bridge.js`
+> ont été **supprimés**. Depuis v2.83, `quiz-app.js` et `scene-app.js` appellent
+> directement `Profile.addXp()` / `Profile.bumpStreak()`. Seul `tp-profile-bridge.js`
+> est encore actif (chargé par `tp.html`).
 >
-> Les deux fichiers morts sont conservés en référence mais **ne doivent
-> pas être réactivés** sans précaution : le `lsSet('xp', S.xp)` legacy
-> persiste dans le quiz/scene, donc l'interception causerait un double
-> comptage de l'XP.
+> Note historique : les deux bridges supprimés ont été conservés pendant deux
+> versions en mode "non chargé" pour faciliter un éventuel rollback. Ils ne
+> doivent **pas** être réintroduits sans précaution : le `lsSet('xp', S.xp)`
+> legacy persiste dans le quiz/scene, donc l'interception causerait un double
+> comptage de l'XP. La trace dans `CHANGELOG.md` documente le retrait.
 
 | Fichier                       | Statut                      |
 |-------------------------------|-----------------------------|
-| `bridges/quiz-profile-bridge.js`  | 💀 **mort** (non chargé) — interception inutile, supprimable |
-| `bridges/scene-profile-bridge.js` | 💀 **mort** (non chargé) — idem |
 | `bridges/tp-profile-bridge.js`    | ✓ actif sur `tp.html` (compteur TP + AchievementsCore.evalAndUnlock)|
 
 **Comment ça marche (pour le bridge TP encore actif)** : à l'init, le bridge
@@ -95,9 +94,8 @@ override `Storage.prototype.setItem` et `Storage.prototype.getItem` via
 |-----------------------|---------------|-------------------------------------|
 | `landing.js`          | `index.html`  | Pluie Matrix, navigation, drawer.   |
 | `landing-3d.js`       | `index.html`  | Effet 3D (lazy).                    |
-| `quiz-app.js`         | `quiz.html`   | Moteur quiz (6700 lignes).          |
-| `quiz-ui-patch.js`    | `quiz.html`   | Patches UI v2.6+ (menu Plus, daily-banner, états vides). |
-| `scene-app.js`        | `scene.html`  | Moteur scènes legacy.               |
+| `quiz-app.js`         | `quiz.html`   | Moteur quiz (5337 lignes — quiz-ui-patch mergé en v2.22). |
+| `scene-app.js`        | `scene.html`  | Moteur scènes legacy (4305 lignes).               |
 | `scene-engine-v4.js`  | `scene.html`  | Moteur v4 (briefing, export MD, révision). |
 | `scene-lobby-v3.js`   | `scene.html`  | Lobby v3 (parcours, atmosphères, tri). |
 | `scene-ux-patch.js`   | `scene.html`  | Patches UX scène.                   |
@@ -134,7 +132,7 @@ Concrètement, dans le `<head>` de `quiz.html` (état réel v2.85) :
 ```
 
 Note : depuis v2.83, `quiz-app.js` appelle `window.Profile.addXp(pts, 'quiz', { tags })`
-directement. Le bridge `quiz-profile-bridge.js` n'est plus chargé (cf. §3 ci-dessus).
+directement. Le bridge `quiz-profile-bridge.js` a été supprimé en v2.85+ (cf. §3 ci-dessus).
 
 Si un script doit accéder à `window.Profile`, il doit charger **après** `core/cas-in-profile.js`. Tous les fichiers HTML touchés en v2.10 contiennent désormais un commentaire `<!-- ⚠ ORDRE CRITIQUE — ne pas réordonner -->` au-dessus du bloc.
 
@@ -149,7 +147,7 @@ Si un script doit accéder à `window.Profile`, il doit charger **après** `core
 | `cas_streak` (legacy)    | local (miroir)     | `scene-app.js` interne   | `scene-app.js`                     |
 | `bookmarks`              | local              | `quiz-app.js`            | `quiz-app.js`                      |
 | `achievements`           | dupliqué (Profile + local) | `quiz-app.js`    | `quiz-app.js` + sync vers Profile |
-| `dailyBannerDismissed`   | local (v2.10+)     | `quiz-ui-patch.js`       | `quiz-ui-patch.js`                 |
+| `dailyBannerDismissed`   | local (v2.10+)     | `quiz-app.js`            | `quiz-app.js`                      |
 | `casIn_readFiches_v4`    | local              | toutes les fiches        | code inline des fiches + `fiche-reader.js` |
 | `tp_solved`              | local              | `tp-engine.js`           | `tp-engine.js`                     |
 | `bossBeaten`, `scenesBeaten`, `missionBeaten`, `freezeUsed_*` | local | `quiz-app.js` | `quiz-app.js` |
@@ -181,11 +179,11 @@ Avant v2.10, `scene.html` (87 KB), `tp.html` (39 KB), `tools.html` (33 KB), `exa
 
 ## Service Worker
 
-`sw.js` v31+ : Network-First pour HTML/JSON, Cache-First pour CSS/JS, fallback `offline.html`. La liste `STATIC_ASSETS` est manuelle ; quand on ajoute un fichier JS/CSS au repo, **il faut** :
+`sw.js` (voir `CACHE_VERSION` en tête de fichier pour la version courante) : Network-First pour HTML/JSON, Cache-First pour CSS/JS, fallback `offline.html`. La liste `STATIC_ASSETS` est manuelle ; quand on ajoute un fichier JS/CSS au repo, **il faut** :
 
 1. L'ajouter dans `STATIC_ASSETS`
-2. Bumper `CACHE_VERSION` de `v31` à `v32` (sinon les utilisateurs offline ne récupèrent pas le nouveau fichier)
-3. Documenter le bump en tête de fichier
+2. Bumper `CACHE_VERSION` (sinon les utilisateurs offline ne récupèrent pas le nouveau fichier)
+3. Documenter le bump dans `CHANGELOG.md`
 
 ## Données (lazy-loadées)
 
@@ -208,7 +206,8 @@ questions.json      # 1750 questions quiz (2.5 MB, monolithique)
 ## Future work
 
 - **Sharding `questions.json`** par thème (cf. ce qui a été fait pour `scenes.js` → `scenes/index.json` + lazy en v2.7).
-- **Élimination de `bridges/`** : refactor de `quiz-app.js` / `scene-app.js` pour appeler directement `Profile.addXp()` / `Profile.bumpStreak()`. Une fois fait, le proxy `Storage.prototype` peut être retiré et la couche `bridges/` supprimée.
+- **Élimination de `bridges/`** : quiz et scene retirés en v2.85+. Reste `tp-profile-bridge.js` à dégager — refactor de `tp-engine.js` pour appeler `AchievementsCore.evalAndUnlock` directement, puis suppression du dossier `bridges/`.
 - **Unification des rangs** : aujourd'hui, `quiz-app.js` a sa constante `RANKS`, `scene-app.js` a son `getGrade()`, et `cas-in-profile.js` a `TRACKS[…].ranks`. Trois systèmes avec des seuils différents. Cible : `Profile.getRank()` partout. Migration `casIn_profile` v=2 → v=3 à prévoir pour ré-aligner les seuils débloqués.
-- **Achievements unifiés** : `quiz-app.js#ACHIEVEMENTS`, `scene-app.js#GLOBAL_BADGES`, `Profile.achievements` — fusionner dans un `js/core/cas-in-achievements.js`.
+- **`cas-in-storage.js`** : wrapper défini en v2.60 mais aucun consommateur. Soit on commit à la migration (remplacer `localStorage.getItem` par `CasInStorage.get` dans quiz-app/scene-app/tp-engine), soit on supprime le fichier.
+- **Achievements unifiés (suite)** : `cas-in-achievements.js` couvre désormais TP/fiches centralisés, mais `quiz-app.js#ACHIEVEMENTS` et `scene-app.js#GLOBAL_BADGES` ont leurs propres checks runtime. Cible : tout reconstructible depuis `Profile.snapshot()` + scene_results.
 - **Performance `profile-banner.js`** : éviter le `innerHTML = …` complet à chaque `Profile.onChange()`. Targeted text updates.

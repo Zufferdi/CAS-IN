@@ -4,6 +4,36 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.48] — 2026-05-06
+
+🧹 **Passe de nettoyage** : suppression de code mort, déduplication CSS, mise à jour de la doc.
+
+### Supprimé
+
+- `js/bridges/quiz-profile-bridge.js` et `js/bridges/scene-profile-bridge.js` — non chargés depuis v2.83 (quiz-app/scene-app appellent `Profile.addXp` directement). Conservés deux versions en mode dormant pour rollback ; aucun rapport d'incident → suppression définitive.
+- Entrées correspondantes dans `sw.js` STATIC_ASSETS (économie ~10 KB au premier install).
+- `quiz-ui-patch.js` retiré des références (mergé dans `quiz-app.js` en v2.22 mais traînait encore dans README + ARCHITECTURE).
+
+### Modifié
+
+- `sw.js` : `CACHE_VERSION` v127 → v128. `STATIC_ASSETS` réorganisée par dossier (Pages racine / Manifests / Styles / Scripts core / Profile UI / Bridges / Components / Pages JS / TP) — JS qui traînaient dans la section Styles déplacés. Comportement identique, structure plus maintenable.
+- `npcs.html` (925 → 479 lignes) : 446 lignes de `<style>` inline extraites vers `style/npcs.css`. Prolongement du cleanup CSS v2.10 (scene/tp/tools/exam).
+- `glossary.html` (443 → 243 lignes) : 199 lignes extraites vers `style/glossary.css`. Idem.
+- `scripts/git-hooks/pre-commit` : suppression des `|| true` qui silenciaient les échecs de `build_index.py` et `generate_counts.py` — remplacés par un blocage du commit avec message d'erreur explicite.
+- `docs/ARCHITECTURE.md` : statut bridges (mort → supprimé), schéma vue d'ensemble mis à jour, line counts (`quiz-app.js` 6700 → 5337), section Service Worker rendue version-agnostic, "Future work" recadré (élimination bridges quiz/scene marquée faite, ajout de `cas-in-storage.js` et de la fin de l'unification achievements).
+- `docs/README.md` : arbre `js/bridges/` mis à jour, référence à `quiz-ui-patch.js` retirée.
+- Commentaires d'en-tête dans `js/components/npc-arcs.js`, `js/core/cas-in-achievements.js`, `js/core/cas-in-arcs.js` : références aux bridges supprimés mises à jour pour refléter les vrais call-sites post-v2.83.
+
+### Ajouté
+
+- `style/npcs.css` (445 lignes) — extrait de `npcs.html`.
+- `style/glossary.css` (199 lignes) — extrait de `glossary.html`.
+
+### Notes pour la suite (hors-scope cette release)
+
+- Collision `window.NpcArcs` détectée : `js/components/npc-arcs.js` et `js/core/cas-in-arcs.js` définissent tous les deux le même namespace avec des APIs différentes. Sur `profile.html` ils se chargent en cascade et le second écrase le premier. À résoudre dans une release dédiée (renommer l'un des deux ou fusionner).
+- `cas-in-storage.js` reste défini mais sans consommateur — décision à prendre (commit à la migration ou suppression).
+
 ## [2.47] — 2026-05-04
 
 🌍 **Suite de la phase d'extension EU** : 2 nouveaux scénarios inspirés de la coopération européenne 2024-2026.
