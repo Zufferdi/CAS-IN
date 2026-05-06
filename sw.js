@@ -1617,6 +1617,9 @@ const STATIC_ASSETS = [
   './tools.html',
   './scene.html',
   './profile.html',
+  // v2.85 — Pages auxiliaires : étaient ré-fetch à chaque visite hors-ligne
+  './artifacts.html',
+  './glossary.html',
 
   // Manifests & data
   './data/manifest.json',
@@ -1720,7 +1723,6 @@ const STATIC_ASSETS = [
   './js/components/fiche-common.js',
   './js/components/fiche-reader.js',
   './js/components/scene-npcs.js',
-  './js/components/role-abilities.js',
   './js/components/scene-banners-carousel.js',
   './style/gamification-toasts.css',
   './js/components/gamification-toasts.js',
@@ -1730,6 +1732,11 @@ const STATIC_ASSETS = [
   './data/search-index.json',
   './data/npcs.json',
   './data/npc-arcs.json',
+  // v2.85 — JS chargés par scene-bridge / artifacts.html, étaient absents
+  // des STATIC_ASSETS donc 503 en mode offline première visite.
+  './js/components/npc-arcs.js',
+  './js/pages/artifacts-app.js',
+  './js/pages/artifacts-data.js',
 ];
 
 const OFFLINE_FALLBACK = './offline.html';
