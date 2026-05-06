@@ -115,6 +115,28 @@
       level: 'medium',
       scenes: ['custody','bitlocker','conclusion','bitlocker_froid','attribution','memory-forensics-volatility','adn-genealogique-cold-case']
     },
+    // ─────────────────────────────────────────────────────────
+    // v2.89 — Affaire Sarine : campagne narrative complète
+    // 5 scènes nouvelles + 6 scènes existantes liées au canton FR
+    // ─────────────────────────────────────────────────────────
+    {
+      id: 'affaire_sarine', icon: '🏰', title: 'L\'Affaire Sarine — Fil rouge fribourgeois',
+      desc: 'Une PME, une coopérative, un club de hockey. Tous frappés par le même groupe. Suivez la procureure Genoud, le Cap. Schmid, Dr Jendly et Me Bersier sur 11 scènes entremêlées : du premier appel à l\'audience.',
+      level: 'medium',
+      scenes: [
+        'fr-affaire-sarine-1-premier-appel',
+        'easy-mobile-perdu-train',
+        'gruyere-coop-affinage-stuxnet',
+        'fr-affaire-sarine-2-eimp-stuttgart',
+        'fr-affaire-sarine-3-coordination-cantons',
+        'hcfr-bec-transfer-deepfake',
+        'fr-affaire-sarine-4-expertise-unifr',
+        'flubot-bec-cascade',
+        'dab-villaz',
+        'cyber-justicier-vigilante-fr',
+        'fr-affaire-sarine-5-audience-recevabilite'
+      ]
+    },
   ];
 
   // ──────────────────────────────────────────────────────────
