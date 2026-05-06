@@ -1602,13 +1602,13 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v127';
+const CACHE_VERSION = 'cas-in-v128';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
 // dynamiquement depuis manifest.json à l'install (voir precacheFichesFromManifest).
 const STATIC_ASSETS = [
-  // Pages racine
+  // ─── Pages racine ───
   './',
   './index.html',
   './quiz.html',
@@ -1620,82 +1620,105 @@ const STATIC_ASSETS = [
   // v2.85 — Pages auxiliaires : étaient ré-fetch à chaque visite hors-ligne
   './artifacts.html',
   './glossary.html',
-
-  // Manifests & data
-  './data/manifest.json',
-  './pwa.manifest.json',
+  './npcs.html',
   './offline.html',
+  './fiches/index.html',
+
+  // ─── Manifests, icônes, data globale ───
+  './pwa.manifest.json',
+  './data/manifest.json',
+  './data/counts.json',
+  './data/questions.json',
+  './data/search-index.json',
+  './data/npcs.json',
+  './data/npc-arcs.json',
   './og-image.svg',
   './favicon.ico',
   './icon-192.png',
   './icon-512.png',
-  './data/questions.json',
-  './data/counts.json',
 
-  // Styles
+  // ─── Styles ───
   './style/landing.css',
   './style/style.css',
   './style/cas-in-navbar.css',
+  './style/profile.css',
+  './style/profile-banner.css',
   './style/profile-dossier.css',
-  './js/profile/profile-tabs.js',
+  './style/quiz.css',
+  './style/scene.css',
   './style/tp.css',
   './style/tp-page.css',
   './style/tools.css',
   './style/exam.css',
-  './style/scene.css',
   './style/fiche_style.css',
   './style/fiche-notes.css',
-  './style/profile.css',
-  './style/profile-banner.css',
-  './style/quiz.css',
+  './style/gamification-toasts.css',
+  './style/npcs.css',
+  './style/glossary.css',
 
-  // Scripts core
+  // ─── Scripts core (js/core/*) ───
   './js/core/cas-in-profile.js',
   './js/core/cas-in-navbar.js',
-  './js/components/scene-briefing-tabs.js',
-  './js/profile/hub-activity-feed.js',
   './js/core/cas-in-achievements.js',
   './js/core/cas-in-arcs.js',
   './js/core/cas-in-quests.js',
   './js/core/cas-in-mastery.js',
   './js/core/cas-in-leaderboard.js',
-  './js/profile/profile-arcs-ui.js',
-  './js/profile/profile-quests-ui.js',
-  './js/profile/hub-gamification-ui.js',
-  './js/profile/celebration-ui.js',
   './js/core/cas-in-utils.js',
   './js/core/cas-in-storage.js',
-  './js/profile/onboarding-ui.js',
-  './js/components/swiss-flags.js',
-  './js/profile/profile-leaderboard-ui.js',
   './js/core/cas-in-counts.js',
   './js/core/cas-in-export.js',
   './js/core/cas-in-pwa.js',
   './js/core/cas-in-search.js',
-  // Profile UI
+  './js/core/cas-in-npc-state.js',
+
+  // ─── Profile UI (js/profile/*) ───
   './js/profile/profile-banner.js',
   './js/profile/profile-page.js',
-  './npcs.html',
+  './js/profile/profile-tabs.js',
   './js/profile/profile-relations.js',
-  './js/core/cas-in-npc-state.js',
   './js/profile/profile-heatmap.js',
   './js/profile/profile-track-v5.js',
   './js/profile/profile-titles.js',
   './js/profile/profile-notes.js',
-  // Bridges
-  './js/bridges/quiz-profile-bridge.js',
-  './js/bridges/scene-profile-bridge.js',
+  './js/profile/profile-arcs-ui.js',
+  './js/profile/profile-quests-ui.js',
+  './js/profile/profile-leaderboard-ui.js',
+  './js/profile/hub-activity-feed.js',
+  './js/profile/hub-gamification-ui.js',
+  './js/profile/celebration-ui.js',
+  './js/profile/onboarding-ui.js',
+
+  // ─── Bridges (legacy → Profile) ───
+  // quiz/scene bridges supprimés en v2.85+ (mergés dans quiz-app/scene-app)
   './js/bridges/tp-profile-bridge.js',
-  // Components
+
+  // ─── Components (js/components/*) ───
+  './js/components/fiche-common.js',
+  './js/components/fiche-reader.js',
+  './js/components/fiche-related.js',
+  './js/components/fiche-search.js',
   './js/components/fiche-notes.js',
-  // Pages
-  './js/pages/landing.js',
-  './js/pages/landing-3d.js',
+  './js/components/search-modal.js',
+  './js/components/search-lazy.js',
+  './js/components/scene-npcs.js',
+  './js/components/scene-briefing-tabs.js',
+  './js/components/scene-banners-carousel.js',
   './js/components/quiz-utils.js',
   './js/components/quiz-sm2.js',
   './js/components/quiz-ranks.js',
   './js/components/quiz-effects.js',
   './js/components/quiz-share.js',
+  './js/components/quest-banner.js',
+  './js/components/gamification-toasts.js',
+  './js/components/hub-activity.js',
+  './js/components/hub-identity.js',
+  './js/components/swiss-flags.js',
+  './js/components/npc-arcs.js',
+
+  // ─── Pages JS (js/pages/*) ───
+  './js/pages/landing.js',
+  './js/pages/landing-3d.js',
   './js/pages/quiz-data.js',
   './js/pages/quiz-app.js',
   // quiz-ui-patch.js supprimé en v2.22 (mergé dans quiz-app.js)
@@ -1705,38 +1728,15 @@ const STATIC_ASSETS = [
   './js/pages/scene-engine-v4.js',
   './js/pages/tools-app.js',
   './js/pages/exam-app.js',
+  './js/pages/artifacts-app.js',
+  './js/pages/artifacts-data.js',
 
-  // Index des scènes (lazy-load des scènes individuelles via fetch + cache-first)
-  // TP
+  // ─── TP (tp/*) ───
   './tp/tp-data.js',
   './tp/tp-engine.js',
   './tp/tp-engine-carving.js',
   './tp/tp-engine-windows.js',
   './tp/tp-engine-meta.js',
-
-  // Hub des fiches (les fiches elles-mêmes sont précachées dynamiquement)
-  './fiches/index.html',
-  './js/components/fiche-search.js',
-  './js/components/search-modal.js',
-  './js/components/search-lazy.js',
-  './js/components/fiche-related.js',
-  './js/components/fiche-common.js',
-  './js/components/fiche-reader.js',
-  './js/components/scene-npcs.js',
-  './js/components/scene-banners-carousel.js',
-  './style/gamification-toasts.css',
-  './js/components/gamification-toasts.js',
-  './js/components/quest-banner.js',
-  './js/components/hub-activity.js',
-  './js/components/hub-identity.js',
-  './data/search-index.json',
-  './data/npcs.json',
-  './data/npc-arcs.json',
-  // v2.85 — JS chargés par scene-bridge / artifacts.html, étaient absents
-  // des STATIC_ASSETS donc 503 en mode offline première visite.
-  './js/components/npc-arcs.js',
-  './js/pages/artifacts-app.js',
-  './js/pages/artifacts-data.js',
 ];
 
 const OFFLINE_FALLBACK = './offline.html';
