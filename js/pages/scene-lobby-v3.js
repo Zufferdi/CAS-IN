@@ -122,7 +122,13 @@
   let activeAtmosphere = null;
   let activeCanton = null;
   let activeSort = 'recommended';     // recommended | difficulty | recent | worst-score
-  let parcoursPanelOpen = false;
+  let parcoursPanelOpen = (() => {
+    // v2.80 — ouvert par défaut au premier load, persistance ensuite
+    try {
+      const v = localStorage.getItem('casIn_parcoursPanelOpen');
+      return v === null ? true : v === 'true';
+    } catch { return true; }
+  })();
 
   // ──────────────────────────────────────────────────────────
   //  STORAGE — bouton Continuer
@@ -186,55 +192,65 @@
 
       /* ── Parcours panel ── */
       .parcours-section{
-        background:var(--surface);
-        border:1px solid var(--border);
+        background:linear-gradient(135deg, rgba(74, 158, 255, 0.06) 0%, rgba(255, 208, 112, 0.04) 100%);
+        border:1px solid rgba(74, 158, 255, 0.25);
         border-radius:var(--r);
-        margin-bottom:10px;
+        margin-bottom:14px;
         overflow:hidden;
+        position:relative;
+      }
+      .parcours-section::before{
+        content:'';position:absolute;top:0;left:0;right:0;height:2px;
+        background:linear-gradient(90deg,transparent,rgba(74,158,255,0.6),transparent);
       }
       .parcours-header{
         display:flex;align-items:center;justify-content:space-between;
-        padding:12px 14px;cursor:pointer;
+        padding:14px 18px;cursor:pointer;
         user-select:none;
       }
-      .parcours-header:hover{background:var(--surface2)}
-      .parcours-title{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px}
-      .parcours-count{font-size:10px;color:var(--dim);font-family:var(--font-mono);font-weight:700}
+      .parcours-header:hover{background:rgba(74,158,255,0.06)}
+      .parcours-title{
+        font-family:var(--font-mono),'JetBrains Mono',monospace;
+        font-size:13px;font-weight:700;letter-spacing:0.08em;
+        text-transform:uppercase;color:#4a9eff;
+        display:flex;align-items:center;gap:8px;
+      }
+      .parcours-count{font-size:10px;color:var(--dim);font-family:var(--font-mono);font-weight:700;background:rgba(74,158,255,0.1);padding:2px 8px;border-radius:3px}
       .parcours-chevron{font-size:11px;color:var(--dim);transition:.2s}
       .parcours-section.open .parcours-chevron{transform:rotate(180deg)}
       .parcours-grid{
         display:none;
         padding:0 14px 14px;
-        gap:8px;
-        grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+        gap:10px;
+        grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
       }
       .parcours-section.open .parcours-grid{display:grid}
       .parcours-card{
-        background:var(--surface2);
-        border:1px solid var(--border);
+        background:rgba(8, 14, 26, 0.5);
+        border:1px solid rgba(255,255,255,0.08);
         border-radius:8px;
-        padding:11px 12px;
+        padding:12px 14px;
         cursor:pointer;
-        transition:.15s;
+        transition:.18s;
         position:relative;
       }
-      .parcours-card:hover{border-color:var(--cyan);transform:translateY(-1px);background:rgba(0,229,204,.04)}
-      .parcours-card.active{border-color:var(--cyan);background:rgba(0,229,204,.08);box-shadow:0 0 0 1px var(--cyan)}
-      .parcours-card.completed{border-color:var(--green)}
+      .parcours-card:hover{border-color:var(--cyan);transform:translateY(-2px);background:rgba(0,229,204,.06);box-shadow:0 4px 16px rgba(0,229,204,.1)}
+      .parcours-card.active{border-color:var(--cyan);background:rgba(0,229,204,.1);box-shadow:0 0 0 1px var(--cyan), 0 4px 20px rgba(0,229,204,0.15)}
+      .parcours-card.completed{border-color:var(--green);background:rgba(50,180,100,0.06)}
       .parcours-card.completed::after{
-        content:'✓';position:absolute;top:6px;right:8px;
-        color:var(--green);font-size:12px;font-weight:700;
+        content:'✓';position:absolute;top:8px;right:10px;
+        color:var(--green);font-size:14px;font-weight:700;
       }
-      .parcours-card-icon{font-size:22px;margin-bottom:6px;line-height:1}
-      .parcours-card-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.3}
-      .parcours-card-desc{font-size:10px;color:var(--dim);line-height:1.4;margin-bottom:7px;
+      .parcours-card-icon{font-size:24px;margin-bottom:8px;line-height:1}
+      .parcours-card-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;line-height:1.3}
+      .parcours-card-desc{font-size:11px;color:var(--dim);line-height:1.45;margin-bottom:10px;
         display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
       .parcours-card-progress{
-        display:flex;align-items:center;gap:6px;
-        font-size:9px;color:var(--dim);font-family:var(--font-mono);font-weight:700
+        display:flex;align-items:center;gap:8px;
+        font-size:10px;color:var(--dim);font-family:var(--font-mono);font-weight:700
       }
-      .parcours-progress-bar{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
-      .parcours-progress-fill{height:100%;background:var(--cyan);transition:width .4s}
+      .parcours-progress-bar{flex:1;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden}
+      .parcours-progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan) 0%,#7affea 100%);transition:width .4s}
       .parcours-card.completed .parcours-progress-fill{background:var(--green)}
 
       /* Active parcours banner */
@@ -585,6 +601,7 @@
     section.querySelector('#parcours-header').addEventListener('click', () => {
       parcoursPanelOpen = !parcoursPanelOpen;
       section.classList.toggle('open', parcoursPanelOpen);
+      try { localStorage.setItem('casIn_parcoursPanelOpen', parcoursPanelOpen); } catch {}
     });
 
     const grid = section.querySelector('#parcours-grid');

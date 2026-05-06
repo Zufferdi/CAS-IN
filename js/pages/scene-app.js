@@ -1657,6 +1657,9 @@ function renderBadgesGrid() {
   const unlocked = getUnlockedBadges();
   const grid = document.getElementById('badges-grid');
   const count = document.getElementById('badges-count');
+  // v2.79b — Guard : la section badges a été retirée de scene.html (v2.74).
+  // Si les éléments DOM n'existent plus, on sort silencieusement.
+  if (!grid || !count) return;
   count.textContent = `${unlocked.length} / ${GLOBAL_BADGES.length}`;
 
   grid.innerHTML = GLOBAL_BADGES.map(b => `
@@ -1669,11 +1672,13 @@ function renderBadgesGrid() {
 }
 
 function toggleBadges() {
-  document.getElementById('badges-section').classList.toggle('open');
+  const sec = document.getElementById('badges-section');
+  if (sec) sec.classList.toggle('open');
 }
 
 function openBadgesPanel() {
   const sec = document.getElementById('badges-section');
+  if (!sec) return;
   sec.classList.add('open');
   sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
@@ -2043,6 +2048,16 @@ function initLobby() {
     // v2.60 — data-canton pour filtre cantonal dans le lobby
     if (scene.regionDetail && scene.regionDetail.code) {
       card.dataset.canton = scene.regionDetail.code;
+    }
+    // v2.80 — data-status pour stylisation visuelle
+    if (isLocked) {
+      card.dataset.status = 'locked';
+    } else if (res && res.pct === 100) {
+      card.dataset.status = 'perfect';
+    } else if (res) {
+      card.dataset.status = 'done';
+    } else {
+      card.dataset.status = 'new';
     }
 
     const statusHTML = res
