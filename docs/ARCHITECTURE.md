@@ -61,19 +61,33 @@
 | `profile-page.js`       | Logique de `profile.html` (dossier complet, ladder, badges).  |
 | `profile-track-v5.js`   | Sélecteur de track narratif (4 voies) + mini-test d'orientation + célébration de promotions. |
 
-### 3. `js/bridges/` — Compatibilité legacy
+### 3. `js/bridges/` — Compatibilité legacy (largement éteint depuis v2.83)
 
-Ces 3 fichiers existent uniquement pour permettre à `quiz-app.js`, `scene-app.js`, `tp-engine.js` de continuer à utiliser leurs clés legacy (`xp`, `cas_xp`, `dayStreak`, `cas_streak`) **comme si** elles étaient locales, en les routant silencieusement vers `Profile`.
+> ⚠️ **Statut v2.85** : `quiz-profile-bridge.js` et `scene-profile-bridge.js`
+> ne sont **plus chargés** par aucune page HTML. Depuis v2.83, `quiz-app.js`
+> et `scene-app.js` appellent directement `Profile.addXp()` / `Profile.bumpStreak()`.
+> Seul **`tp-profile-bridge.js`** est encore actif (chargé par `tp.html`).
+>
+> Les deux fichiers morts sont conservés en référence mais **ne doivent
+> pas être réactivés** sans précaution : le `lsSet('xp', S.xp)` legacy
+> persiste dans le quiz/scene, donc l'interception causerait un double
+> comptage de l'XP.
 
-| Fichier                       | Intercepte                  |
+| Fichier                       | Statut                      |
 |-------------------------------|-----------------------------|
-| `bridges/quiz-profile-bridge.js`  | `localStorage.['xp', 'dayStreak', 'achievements']` |
-| `bridges/scene-profile-bridge.js` | `localStorage.['cas_xp', 'cas_streak']`            |
-| `bridges/tp-profile-bridge.js`    | (compteur TP)                                      |
+| `bridges/quiz-profile-bridge.js`  | 💀 **mort** (non chargé) — interception inutile, supprimable |
+| `bridges/scene-profile-bridge.js` | 💀 **mort** (non chargé) — idem |
+| `bridges/tp-profile-bridge.js`    | ✓ actif sur `tp.html` (compteur TP + AchievementsCore.evalAndUnlock)|
 
-**Comment ça marche** : à l'init, le bridge override `Storage.prototype.setItem` et `Storage.prototype.getItem` via `Object.defineProperty(localStorage, …)`. Quand `quiz-app.js` fait `localStorage.setItem('xp', 47)`, le bridge calcule le delta vs la dernière valeur connue et appelle `Profile.addXp(delta, 'quiz')`. La clé `xp` n'est **jamais** persistée.
+**Comment ça marche (pour le bridge TP encore actif)** : à l'init, le bridge
+override `Storage.prototype.setItem` et `Storage.prototype.getItem` via
+`Object.defineProperty(localStorage, …)`. Quand `tp-engine.js` fait
+`localStorage.setItem('tp_solved', …)`, le bridge attrape et déclenche
+`AchievementsCore.evalAndUnlock(Profile.snapshot())`.
 
-> ⚠️ Ce mécanisme est de la **dette technique**. À terme, `quiz-app.js` et `scene-app.js` devraient appeler `Profile.addXp()` directement et ce dossier `bridges/` disparaître. Voir `CHANGELOG.md` § « Future work ».
+> ⚠️ Ce mécanisme est de la **dette technique**. À terme, `tp-engine.js`
+> devrait appeler `AchievementsCore.evalAndUnlock` directement et ce dossier
+> `bridges/` disparaître entièrement. Voir `CHANGELOG.md` § « Future work ».
 
 ### 4. `js/pages/` — Applications par page
 
@@ -98,30 +112,29 @@ L'ordre des `<script defer>` n'est pas négociable. La règle :
 core/ → profile/ → bridges/ → pages/
 ```
 
-Concrètement, dans le `<head>` de `quiz.html` :
+Concrètement, dans le `<head>` de `quiz.html` (état réel v2.85) :
 
 ```html
 <!-- 1. Source de vérité (Profile global) -->
 <script src="js/core/cas-in-profile.js" defer></script>
 
-<!-- 2. Composants profile (peuvent dépendre de Profile) -->
-<script src="js/profile/profile-track-v5.js" defer></script>
+<!-- 2. Achievements + Quests + Mastery (s'appuient sur Profile) -->
+<script src="js/core/cas-in-achievements.js" defer></script>
+<script src="js/core/cas-in-quests.js" defer></script>
 
-<!-- 3. Bridge (override localStorage AVANT que quiz-app n'écrive) -->
-<script src="js/bridges/quiz-profile-bridge.js" defer></script>
-
-<!-- 4. Services transversaux (lecture seule, ordre libre) -->
+<!-- 3. Services transversaux (lecture seule, ordre libre) -->
 <script src="js/core/cas-in-counts.js" defer></script>
 <script src="js/core/cas-in-pwa.js" defer></script>
 <script src="js/core/cas-in-search.js" defer></script>
+<script src="js/core/cas-in-utils.js" defer></script>
+<script src="js/core/cas-in-storage.js" defer></script>
 
-<!-- 5. App de page (en bas du body, defer) -->
+<!-- 4. App de page (en bas du body, defer) — appelle Profile.addXp directement -->
 <script src="js/pages/quiz-app.js" defer></script>
-<script src="js/pages/quiz-ui-patch.js" defer></script>
-
-<!-- 6. UI banner (charge après que tout est en place) -->
-<script src="js/profile/profile-banner.js" defer></script>
 ```
+
+Note : depuis v2.83, `quiz-app.js` appelle `window.Profile.addXp(pts, 'quiz', { tags })`
+directement. Le bridge `quiz-profile-bridge.js` n'est plus chargé (cf. §3 ci-dessus).
 
 Si un script doit accéder à `window.Profile`, il doit charger **après** `core/cas-in-profile.js`. Tous les fichiers HTML touchés en v2.10 contiennent désormais un commentaire `<!-- ⚠ ORDRE CRITIQUE — ne pas réordonner -->` au-dessus du bloc.
 
@@ -130,16 +143,22 @@ Si un script doit accéder à `window.Profile`, il doit charger **après** `core
 | Clé localStorage         | Source de vérité   | Lu par                   | Écrit par                          |
 |--------------------------|--------------------|--------------------------|------------------------------------|
 | `casIn_profile`          | **Profile**        | partout                  | `core/cas-in-profile.js` UNIQUEMENT |
-| `xp` (legacy)            | Profile            | `quiz-app.js` (via bridge)| (intercepté → no-op réel)         |
-| `cas_xp` (legacy)        | Profile            | `scene-app.js` (via bridge)| (intercepté → no-op réel)        |
-| `dayStreak` (legacy)     | Profile.streak     | `quiz-app.js` (via bridge)| (intercepté)                      |
-| `cas_streak` (legacy)    | Profile.streak     | `scene-app.js` (via bridge)| (intercepté)                     |
+| `xp` (legacy)            | local (miroir)     | `quiz-app.js` interne    | `quiz-app.js#addXp` (en plus de `Profile.addXp`) |
+| `cas_xp` (legacy)        | local (miroir)     | `scene-app.js` interne   | `scene-app.js#addXP` (en plus de `Profile.addXp`) |
+| `dayStreak` (legacy)     | local (miroir)     | `quiz-app.js` interne    | `quiz-app.js`                      |
+| `cas_streak` (legacy)    | local (miroir)     | `scene-app.js` interne   | `scene-app.js`                     |
 | `bookmarks`              | local              | `quiz-app.js`            | `quiz-app.js`                      |
 | `achievements`           | dupliqué (Profile + local) | `quiz-app.js`    | `quiz-app.js` + sync vers Profile |
 | `dailyBannerDismissed`   | local (v2.10+)     | `quiz-ui-patch.js`       | `quiz-ui-patch.js`                 |
-| `casIn_readFiches_v4`    | local              | toutes les fiches        | code inline des fiches             |
+| `casIn_readFiches_v4`    | local              | toutes les fiches        | code inline des fiches + `fiche-reader.js` |
 | `tp_solved`              | local              | `tp-engine.js`           | `tp-engine.js`                     |
 | `bossBeaten`, `scenesBeaten`, `missionBeaten`, `freezeUsed_*` | local | `quiz-app.js` | `quiz-app.js` |
+
+> Note v2.85 : depuis le retrait des bridges quiz/scene, les clés `xp`, `cas_xp`,
+> `dayStreak`, `cas_streak` ne sont plus interceptées. Elles sont maintenant
+> écrites en miroir (Profile + clé legacy) par `quiz-app.js` et `scene-app.js`
+> directement. La source de vérité reste `casIn_profile` ; le miroir legacy
+> existe pour les call-sites internes au quiz/scene qui n'ont pas encore migré.
 
 ## CSS
 
