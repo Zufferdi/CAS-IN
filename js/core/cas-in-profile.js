@@ -949,6 +949,41 @@
   }
 
   /**
+   * v2.52 — Dépense de l'XP (cas d'usage : indices scène à 25 XP).
+   *
+   * Différences avec addXp() :
+   *   - Pas de bonus de rôle appliqué (les coûts sont fixes)
+   *   - Pas de mise à jour de p.activity[source] (une dépense n'est pas
+   *     une activité d'apprentissage, juste une transaction)
+   *   - Pas de mise à jour de p.xpBySource (qui reflète l'XP GAGNÉE par
+   *     source, pas le solde net — un user qui claque tout son XP en
+   *     hints continue d'avoir 'scene: 1200' dans son historique)
+   *   - Pas d'événement 'rank-down' émis : par convention UX, les rangs
+   *     sont permanents même si computeRank() peut techniquement retourner
+   *     un rang inférieur après dépense. Si l'utilisateur regagne l'XP,
+   *     'rank-up' se redéclenchera naturellement.
+   *
+   * Retourne :
+   *   - { xp, spent, base } si succès
+   *   - null si XP insuffisant, montant invalide, ou source non whitelistée
+   *     (le caller doit afficher l'erreur UX lui-même)
+   */
+  function spendXp(amount, source, meta) {
+    const cost = asInt(amount, 0);
+    if (cost <= 0) return null;
+    if (!['quiz', 'scene', 'quest', 'tp', 'fiches'].includes(source)) return null;
+
+    const p = ensureProfile();
+    if ((p.xp || 0) < cost) return null;
+
+    p.xp = p.xp - cost;
+    saveProfile(p);
+    emitChange('xp');
+
+    return { xp: p.xp, spent: cost, base: cost };
+  }
+
+  /**
    * Bumpe le streak. Si on bumpe un autre jour, +1. Sinon idem.
    * Retourne le nouveau streak.
    */
@@ -1180,6 +1215,7 @@
     setViewMode,
     setEquippedTitle,
     addXp,
+    spendXp,
     bumpStreak,
     breakStreak,
     unlockAchievement,
