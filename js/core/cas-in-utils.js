@@ -274,6 +274,25 @@
   // ─────────────────────────────────────────────────────────────
 
   // ─────────────────────────────────────────────────────────────
+  // ESCAPE HATCH ?theme=light (v2.50)
+  //
+  // Permet de tester la couverture clair page par page sans réactiver
+  // le bootstrap auto. Usage : ajouter ?theme=light à n'importe quelle
+  // URL (ex. /quiz.html?theme=light). À retirer quand la couverture
+  // clair sera complète et le bootstrap réactivé.
+  // ─────────────────────────────────────────────────────────────
+  try {
+    const themeParam = new URLSearchParams(location.search).get('theme');
+    if (themeParam === 'light' || themeParam === 'dark') {
+      if (themeParam === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+    }
+  } catch (e) { /* ignore */ }
+
+  // ─────────────────────────────────────────────────────────────
   // API publique
   // ─────────────────────────────────────────────────────────────
   window.CasInUtils = {
