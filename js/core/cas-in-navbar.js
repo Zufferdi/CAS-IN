@@ -80,17 +80,21 @@
   // ── Build ──────────────────────────────────────────────────
   function build(slot, page) {
     _currentPage = page || 'quiz';
+    const noIdentity = slot.dataset.noIdentity === '1';
 
     const navbar = document.createElement('div');
-    navbar.className = 'cas-navbar';
+    navbar.className = 'cas-navbar' + (noIdentity ? ' cas-navbar--compact' : '');
     navbar.setAttribute('role', 'navigation');
     navbar.setAttribute('aria-label', 'Navigation CAS-IN');
     _navbarEl = navbar;
 
-    // Ligne 1 : identité
-    const top = document.createElement('div');
-    top.className = 'cas-navbar__top';
-    _topEl = top;
+    // Ligne 1 : identité (sauf si data-no-identity)
+    let top = null;
+    if (!noIdentity) {
+      top = document.createElement('div');
+      top.className = 'cas-navbar__top';
+      _topEl = top;
+    }
 
     // Ligne 2 : nav
     const bottom = document.createElement('div');
@@ -156,14 +160,14 @@
 
     bottom.appendChild(links);
 
-    navbar.appendChild(top);
+    if (top) navbar.appendChild(top);
     navbar.appendChild(bottom);
 
     // Remplacer le slot
     slot.parentNode.replaceChild(navbar, slot);
 
     // Render initial de la ligne identité
-    renderTop();
+    if (top) renderTop();
   }
 
   // ── Rendu ligne identité ───────────────────────────────────
