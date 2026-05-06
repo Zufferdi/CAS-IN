@@ -221,7 +221,7 @@ function testSWJS(src) {
   for (const f of ['tp-data.js','tp-engine.js','exam.html','tools.html','data/questions.json']) {
     chk(src.includes(f), `${f} dans STATIC_ASSETS`);
   }
-  chk(src.includes('fetch(event.request)'), 'Network-first');
+  chk(src.includes('networkFirst('),         'Network-first (helper)');
   chk(src.includes('caches.match'),         'Cache-first');
   chk(src.includes('self.skipWaiting()'),   'skipWaiting()');
   chk(src.includes('self.clients.claim'),   'clients.claim()');
