@@ -100,6 +100,21 @@
       level: 'hard',
       scenes: ['ruag_2016','palais_federal','noname_2023','burgenstock-neutralite','whistleblower-ddps','secret-fonction-parlementaire','cicr_2022']
     },
+    // ─────────────────────────────────────────────────────────
+    // v2.88 — Campagnes centrées PNJ (storytelling renforcé)
+    // ─────────────────────────────────────────────────────────
+    {
+      id: 'bureau_nicolet', icon: '⚖️', title: 'Sur le bureau du procureur Nicolet',
+      desc: 'Suivez les dossiers du procureur fédéral Yves Nicolet (MPC). De la compétence à l\'entraide internationale, 7 affaires traversent ses mains.',
+      level: 'medium',
+      scenes: ['conclusion','competence-mpc-vs','clone-vocal','comparis_2021','attribution','coup-de-filet-europol-27-pays','attentat-deja-couteau-mineur']
+    },
+    {
+      id: 'labo_bachmann', icon: '🔬', title: 'Les expertises du labo Bachmann (KAPO ZH)',
+      desc: 'M. Bachmann, chef du labo cyber-forensics zurichois, vous accompagne sur 7 expertises techniques : custody, mémoire, BitLocker, attribution.',
+      level: 'medium',
+      scenes: ['custody','bitlocker','conclusion','bitlocker_froid','attribution','memory-forensics-volatility','adn-genealogique-cold-case']
+    },
   ];
 
   // ──────────────────────────────────────────────────────────
@@ -159,34 +174,74 @@
     const s = document.createElement('style');
     s.id = 'lobby-v3-styles';
     s.textContent = `
-      /* ── Continuer ── */
+      /* ── Continuer ── v2.88 enrichie ── */
       .continue-card{
-        background:linear-gradient(135deg, rgba(0,229,204,.10), rgba(106,184,255,.06));
-        border:1px solid var(--cyan);
+        background:linear-gradient(135deg, rgba(0,229,204,.14), rgba(106,184,255,.08));
+        border:1.5px solid var(--cyan);
         border-radius:var(--r);
-        padding:14px 16px;
-        margin-bottom:12px;
+        padding:16px 18px;
+        margin-bottom:14px;
         display:flex;align-items:center;gap:14px;
         cursor:pointer;
         transition:.2s;
         position:relative;
-        box-shadow:0 0 24px rgba(0,229,204,.10);
+        box-shadow:0 0 28px rgba(0,229,204,.18), inset 0 1px 0 rgba(255,255,255,.05);
+        overflow:hidden;
       }
-      .continue-card:hover{transform:translateY(-1px);box-shadow:0 0 32px rgba(0,229,204,.20)}
-      .continue-card-icon{font-size:32px;flex-shrink:0;line-height:1;filter:drop-shadow(0 0 8px rgba(0,229,204,.5))}
+      /* Halo pulsant subtil pour attirer l'œil */
+      .continue-card::before{
+        content:'';
+        position:absolute;
+        inset:0;
+        border-radius:var(--r);
+        box-shadow:0 0 0 0 rgba(0,229,204,.45);
+        animation:continue-pulse 2.4s ease-in-out infinite;
+        pointer-events:none;
+      }
+      @keyframes continue-pulse{
+        0%,100%{box-shadow:0 0 0 0 rgba(0,229,204,.0)}
+        50%{box-shadow:0 0 0 6px rgba(0,229,204,.10)}
+      }
+      .continue-card:hover{transform:translateY(-2px);box-shadow:0 4px 36px rgba(0,229,204,.30)}
+      .continue-card:hover::before{animation:none}
+      .continue-card-icon{font-size:36px;flex-shrink:0;line-height:1;filter:drop-shadow(0 0 10px rgba(0,229,204,.6))}
       .continue-card-body{flex:1;min-width:0}
-      .continue-card-label{font-size:10px;font-weight:700;color:var(--cyan);letter-spacing:1.5px;font-family:var(--font-mono);margin-bottom:3px}
-      .continue-card-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-      .continue-card-meta{font-size:11px;color:var(--dim);font-family:var(--font-mono)}
-      .continue-card-action{font-size:11px;color:var(--cyan);font-weight:700;letter-spacing:.5px;flex-shrink:0;font-family:var(--font-mono)}
+      .continue-card-label{
+        display:inline-flex;align-items:center;gap:4px;
+        font-size:10px;font-weight:800;color:var(--cyan);letter-spacing:1.6px;
+        font-family:var(--font-mono);margin-bottom:4px;
+        background:rgba(0,229,204,.15);padding:3px 8px;border-radius:3px;
+        text-transform:uppercase;
+      }
+      .continue-card-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .continue-card-meta{font-size:11px;color:var(--dim);font-family:var(--font-mono);margin-bottom:6px}
+      /* Barre de progression visuelle */
+      .continue-card-progress{
+        height:4px;background:rgba(255,255,255,.06);
+        border-radius:2px;overflow:hidden;margin-top:4px;max-width:300px;
+      }
+      .continue-card-progress-fill{
+        height:100%;background:linear-gradient(90deg,var(--cyan),#6fd2ff);
+        border-radius:2px;
+        transition:width .6s cubic-bezier(.34,1.56,.64,1);
+      }
+      .continue-card-action{
+        font-size:12px;color:#fff;font-weight:800;letter-spacing:.5px;
+        flex-shrink:0;font-family:var(--font-mono);
+        background:var(--cyan);padding:8px 14px;border-radius:6px;
+        box-shadow:0 4px 14px rgba(0,229,204,.4);
+        transition:transform .2s;
+      }
+      .continue-card:hover .continue-card-action{transform:scale(1.05)}
       .continue-card-dismiss{
-        position:absolute;top:8px;right:8px;
+        position:absolute;top:10px;right:10px;
         font-size:14px;color:var(--dim);
         background:transparent;border:1px solid var(--border);
         width:22px;height:22px;border-radius:50%;
         display:flex;align-items:center;justify-content:center;
         cursor:pointer;line-height:1;
         transition:.15s;
+        z-index:2;
       }
       .continue-card-dismiss:hover{color:var(--red);border-color:var(--red)}
 
@@ -233,14 +288,67 @@
         cursor:pointer;
         transition:.18s;
         position:relative;
+        overflow:hidden;
       }
       .parcours-card:hover{border-color:var(--cyan);transform:translateY(-2px);background:rgba(0,229,204,.06);box-shadow:0 4px 16px rgba(0,229,204,.1)}
       .parcours-card.active{border-color:var(--cyan);background:rgba(0,229,204,.1);box-shadow:0 0 0 1px var(--cyan), 0 4px 20px rgba(0,229,204,0.15)}
+      .parcours-card.in-progress{border-color:rgba(255,208,112,.4);background:rgba(255,208,112,0.04)}
       .parcours-card.completed{border-color:var(--green);background:rgba(50,180,100,0.06)}
-      .parcours-card.completed::after{
-        content:'✓';position:absolute;top:8px;right:10px;
-        color:var(--green);font-size:14px;font-weight:700;
+
+      /* v2.88 — Bandeau d'état en haut de la carte */
+      .parcours-card-state{
+        display:flex;align-items:center;gap:6px;
+        margin:-12px -14px 10px;
+        padding:5px 12px;
+        background:rgba(255,255,255,0.03);
+        border-bottom:1px solid rgba(255,255,255,0.06);
+        font-family:var(--font-mono);
+        font-size:9.5px;
+        font-weight:700;
+        letter-spacing:0.06em;
       }
+      .parcours-card.in-progress .parcours-card-state{
+        background:rgba(255,208,112,0.08);
+        border-bottom-color:rgba(255,208,112,0.2);
+      }
+      .parcours-card.completed .parcours-card-state{
+        background:rgba(50,180,100,0.08);
+        border-bottom-color:rgba(50,180,100,0.25);
+      }
+      .parcours-card-state-icon{font-size:11px;line-height:1}
+      .parcours-card-state-label{
+        color:rgba(255,255,255,0.55);
+        text-transform:uppercase;
+        letter-spacing:0.12em;
+      }
+      .parcours-card.in-progress .parcours-card-state-label{color:#ffd070}
+      .parcours-card.completed .parcours-card-state-label{color:#6fd29c}
+      .parcours-card-state-xp{
+        margin-left:auto;
+        color:#6fd29c;
+        font-weight:800;
+        font-size:9.5px;
+        letter-spacing:0.04em;
+      }
+
+      /* v2.88 — Badge trophée pour campagnes complétées */
+      .parcours-card-badge{
+        position:absolute;
+        top:6px;
+        right:8px;
+        font-size:18px;
+        line-height:1;
+        animation:parcours-badge-shine 3s ease-in-out infinite;
+        z-index:2;
+        text-shadow:0 2px 6px rgba(255,208,112,0.5);
+      }
+      @keyframes parcours-badge-shine{
+        0%,100%{transform:scale(1) rotate(0deg);filter:drop-shadow(0 0 4px rgba(255,208,112,0.4))}
+        50%{transform:scale(1.1) rotate(-3deg);filter:drop-shadow(0 0 10px rgba(255,208,112,0.7))}
+      }
+      /* v2.88 — Cacher le ✓ legacy quand on a le badge */
+      .parcours-card.completed::after{display:none}
+
       .parcours-card-icon{font-size:24px;margin-bottom:8px;line-height:1}
       .parcours-card-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;line-height:1.3}
       .parcours-card-desc{font-size:11px;color:var(--dim);line-height:1.45;margin-bottom:10px;
@@ -251,6 +359,7 @@
       }
       .parcours-progress-bar{flex:1;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden}
       .parcours-progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan) 0%,#7affea 100%);transition:width .4s}
+      .parcours-card.in-progress .parcours-progress-fill{background:linear-gradient(90deg,#ffd070 0%,#ffac3a 100%)}
       .parcours-card.completed .parcours-progress-fill{background:var(--green)}
 
       /* Active parcours banner */
@@ -523,6 +632,7 @@
         <div class="continue-card-label">▶ REPRENDRE</div>
         <div class="continue-card-title">${scene.title}</div>
         <div class="continue-card-meta">Étape ${stepReached}/${total} · ${pct}% · ${formatRelativeTime(inflight.lastSeen)}</div>
+        <div class="continue-card-progress"><div class="continue-card-progress-fill" style="width:${pct}%"></div></div>
       </div>
       <div class="continue-card-action">REPRENDRE →</div>
     `;
@@ -584,11 +694,48 @@
       p.scenes.filter(id => validIds.has(id)).every(id => saved[id])
     ).length;
 
+    // v2.88 — Détection de complétion fraîche d'une campagne
+    // (compare avec liste persistée)
+    try {
+      let alreadyCelebrated = [];
+      try { alreadyCelebrated = JSON.parse(localStorage.getItem('casIn_campaignsCelebrated') || '[]'); } catch {}
+      const alreadySet = new Set(alreadyCelebrated);
+
+      const newlyCompleted = PARCOURS.filter(p => {
+        const validScenes = p.scenes.filter(id => validIds.has(id));
+        const allDone = validScenes.length > 0 && validScenes.every(id => saved[id]);
+        return allDone && !alreadySet.has(p.id);
+      });
+
+      if (newlyCompleted.length > 0) {
+        // Persister + déclencher célébration
+        const updated = [...alreadyCelebrated];
+        newlyCompleted.forEach(p => {
+          if (!updated.includes(p.id)) updated.push(p.id);
+
+          // Bonus XP : 100 XP par campagne complétée
+          if (window.Profile && typeof window.Profile.addXp === 'function') {
+            try { window.Profile.addXp(100, 'scene', { campaign: p.id, milestone: 'complete' }); } catch (_) {}
+          }
+
+          // Célébration plein écran
+          if (window.Celebration && typeof window.Celebration.show === 'function') {
+            window.Celebration.show({
+              icon: p.icon,
+              title: 'Campagne terminée !',
+              subtitle: p.title + ' · +100 XP bonus',
+            });
+          }
+        });
+        try { localStorage.setItem('casIn_campaignsCelebrated', JSON.stringify(updated)); } catch {}
+      }
+    } catch (_) {}
+
     section.innerHTML = `
       <div class="parcours-header" id="parcours-header">
-        <span class="parcours-title">📚 Parcours pédagogiques</span>
+        <span class="parcours-title">🎯 Campagnes d'enquête</span>
         <span style="display:flex;align-items:center;gap:10px">
-          <span class="parcours-count">${completedParcours} / ${PARCOURS.length} complétés</span>
+          <span class="parcours-count">${completedParcours} / ${PARCOURS.length} complétées</span>
           <span class="parcours-chevron">▼</span>
         </span>
       </div>
@@ -611,13 +758,37 @@
       const total = validScenes.length;
       const pct = total > 0 ? Math.round((done / total) * 100) : 0;
       const isComplete = done === total && total > 0;
+      const inProgress = done > 0 && !isComplete;
+
+      // v2.88 — Récompense XP estimée (50 XP par scène + bonus 100 XP à 100%)
+      const xpReward = (total * 50) + (isComplete ? 100 : 0);
+
+      // État visuel
+      let stateLabel = '';
+      let stateIcon = '';
+      if (isComplete) {
+        stateLabel = 'TERMINÉE';
+        stateIcon = '🏆';
+      } else if (inProgress) {
+        stateLabel = 'EN COURS';
+        stateIcon = '⏯';
+      } else {
+        stateLabel = 'NOUVELLE';
+        stateIcon = '🎯';
+      }
 
       const card = document.createElement('div');
       card.className = 'parcours-card' +
         (activeParcoursId === p.id ? ' active' : '') +
-        (isComplete ? ' completed' : '');
+        (isComplete ? ' completed' : '') +
+        (inProgress ? ' in-progress' : '');
       card.dataset.parcoursId = p.id;
       card.innerHTML = `
+        <div class="parcours-card-state">
+          <span class="parcours-card-state-icon">${stateIcon}</span>
+          <span class="parcours-card-state-label">${stateLabel}</span>
+          <span class="parcours-card-state-xp">+${xpReward} XP</span>
+        </div>
         <div class="parcours-card-icon">${p.icon}</div>
         <div class="parcours-card-title">${p.title}</div>
         <div class="parcours-card-desc">${p.desc}</div>
@@ -626,6 +797,7 @@
           <div class="parcours-progress-bar"><div class="parcours-progress-fill" style="width:${pct}%"></div></div>
           <span>${pct}%</span>
         </div>
+        ${isComplete ? '<div class="parcours-card-badge">🏆 ✓</div>' : ''}
       `;
       card.addEventListener('click', e => {
         e.stopPropagation();
@@ -654,7 +826,7 @@
     banner.innerHTML = `
       <div class="parcours-active-info">
         <span class="parcours-active-icon">${p.icon}</span>
-        <span class="parcours-active-text">Parcours actif : <strong>${p.title}</strong></span>
+        <span class="parcours-active-text">Campagne active : <strong>${p.title}</strong></span>
       </div>
       <button class="parcours-clear-btn">Tout afficher</button>
     `;

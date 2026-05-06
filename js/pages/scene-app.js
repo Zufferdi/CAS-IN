@@ -2018,7 +2018,35 @@ function initLobby() {
   // ═══════════════════════════════════════════════════
   // SPLIT CH / EU
   // ═══════════════════════════════════════════════════
-  const allScenes = SCENES.map((scene, i) => ({ scene, i, res: saved[scene.id] }));
+  // v2.88 — Tri par défaut intelligent (au lieu de l'ordre alphabétique
+  // des fichiers JSON qui faisait commencer par "72969-infractions-vaud"
+  // et plein de scènes hard/expert avant les easy).
+  //
+  // Ordre : difficulté croissante (easy → expert), puis priorité aux
+  // scènes de "fondamentaux" (custody, premier_appel, phishing,
+  // metadata) en tête de la section easy, à difficulté égale.
+  const DIFF_ORDER = { easy: 1, medium: 2, hard: 3, expert: 4 };
+  const FUNDAMENTAL_PRIORITY = [
+    'custody', 'premier_appel', 'phishing', 'metadata',
+    'trois_artefacts', 'smartphone', 'frontieres', 'conclusion',
+    'ip_accusatrice', 'bitlocker'
+  ];
+  const sortedSCENES = [...SCENES].sort((a, b) => {
+    const da = DIFF_ORDER[a.difficulty] || 5;
+    const db = DIFF_ORDER[b.difficulty] || 5;
+    if (da !== db) return da - db;
+    // Même difficulté : prioriser les fondamentaux
+    const fa = FUNDAMENTAL_PRIORITY.indexOf(a.id);
+    const fb = FUNDAMENTAL_PRIORITY.indexOf(b.id);
+    const ra = fa === -1 ? 999 : fa;
+    const rb = fb === -1 ? 999 : fb;
+    if (ra !== rb) return ra - rb;
+    // Sinon, ordre alphabétique mais commençant par les lettres (pas les chiffres)
+    const sa = (a.title || a.id).replace(/^[\d-]+/, '');
+    const sb = (b.title || b.id).replace(/^[\d-]+/, '');
+    return sa.localeCompare(sb, 'fr');
+  });
+  const allScenes = sortedSCENES.map((scene, i) => ({ scene, i, res: saved[scene.id] }));
   const chScenes = allScenes.filter(x => !x.scene.region || x.scene.region !== 'EU');
   const euScenes = allScenes.filter(x => x.scene.region === 'EU');
   const allCHCompleted = chScenes.length > 0 && chScenes.every(x => saved[x.scene.id]);
