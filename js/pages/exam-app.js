@@ -366,12 +366,16 @@ function finishExam() {
   const wrongs = examQ.map((q,i)=>({q,i,a:answered[i]}))
     .filter(({q,i,a})=> a !== null && a !== -1 && a !== q.correct);
   if (wrongs.length > 0) {
+    // v2.85 — Fix : les 2 dernières interpolations n'étaient pas escapées
+    // (q.answers[q.correct] et q.explanation), ce qui cassait l'affichage
+    // dès qu'une réponse contenait '<' (ex: "if x < 5") et ouvrait un XSS
+    // latent si la donnée provenait d'une source moins fiable.
     wrongList.innerHTML = wrongs.slice(0,10).map(({q,a}) => `
       <div class="wr-item">
         <div class="wr-q">${escHtml(q.question)}</div>
         <div class="wr-ans wrong">✗ Votre réponse : ${escHtml(q.answers[a]||'—')}</div>
-        <div class="wr-ans correct">✓ Bonne réponse : ${q.answers[q.correct]||'—'}</div>
-        ${q.explanation?`<div class="wr-expl">💡 ${q.explanation}</div>`:''}
+        <div class="wr-ans correct">✓ Bonne réponse : ${escHtml(q.answers[q.correct]||'—')}</div>
+        ${q.explanation?`<div class="wr-expl">💡 ${escHtml(q.explanation)}</div>`:''}
       </div>`).join('');
     wrongReview.style.display = 'block';
     if (wrongs.length > 10) wrongList.innerHTML += `<div style="font-size:.72rem;color:var(--dim);text-align:center;padding:.5rem">… et ${wrongs.length-10} autres questions incorrectes</div>`;
