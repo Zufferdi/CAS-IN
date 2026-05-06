@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
-# CAS-IN — Git pre-commit hook
-# ────────────────────────────
-# Régénère automatiquement data/search-index.json si une fiche HTML a été modifiée
-# dans le commit en cours. Évite que l'index soit obsolète.
+# CAS-IN — Git pre-commit hook (v2.85)
+# ────────────────────────────────────
+# Régénère automatiquement les fichiers dérivés et lance les checks de QC
+# avant chaque commit, selon ce qui a changé :
+#
+#   • fiches/*.html modifiée → search-index.json + fiches/index.html régénérés
+#   • scenes/*.json modifiée → counts.json régénéré + check_scenes_balance.py
+#   • data/questions.json modifiée → check_questions.py BLOQUANT + counts.json
+#   • data/manifest.json modifié → counts.json + fiches/index.html régénérés
+#   • data/npcs.json modifié → check NPCs ↔ scènes
 #
 # Installation :
 #   ln -sf ../../scripts/git-hooks/pre-commit .git/hooks/pre-commit
 # OU :
 #   cp scripts/git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
-#
-# v1.0 — 2026-05-02
 
 # Trouver la racine du repo
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
@@ -18,26 +22,125 @@ if [[ -z "$REPO_ROOT" ]]; then
 fi
 cd "$REPO_ROOT"
 
-# Détecter si une fiche HTML est modifiée dans ce commit
+# Détecter ce qui change dans le commit
 CHANGED_FICHES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^fiches/.*\.html$' | grep -v 'fiches/index.html$' || true)
+CHANGED_SCENES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^scenes/.*\.json$' | grep -v 'scenes/index.json$' || true)
+CHANGED_QUESTIONS=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^data/questions\.json$' || true)
+CHANGED_MANIFEST=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^data/manifest\.json$' || true)
+CHANGED_NPCS=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^data/npcs\.json$' || true)
 
-if [[ -z "$CHANGED_FICHES" ]]; then
-  exit 0   # rien à faire
+# Helper : ajoute un fichier au commit s'il a changé
+maybe_add() {
+  local f=$1
+  if [[ -f "$f" ]] && ! git diff --quiet "$f" 2>/dev/null; then
+    git add "$f" 2>/dev/null && echo "  ✓ ajouté au commit : $f"
+  fi
+}
+
+NEED_COUNTS=0
+NEED_INDEX=0
+NEED_SEARCH=0
+
+# ── 1. Fiches HTML modifiées ──
+if [[ -n "$CHANGED_FICHES" ]]; then
+  echo "▸ pre-commit: $(echo "$CHANGED_FICHES" | wc -l | tr -d ' ') fiche(s) modifiée(s)"
+  NEED_SEARCH=1
+  NEED_INDEX=1
 fi
 
-echo "▸ pre-commit: $(echo "$CHANGED_FICHES" | wc -l | tr -d ' ') fiche(s) modifiée(s) → régénération de l'index full-text"
-
-# Régénérer l'index
-if ! python3 scripts/build_search_index.py >/dev/null 2>&1; then
-  echo "❌ Échec de la régénération de search-index.json — commit annulé"
-  exit 1
+# ── 2. Scènes modifiées ──
+if [[ -n "$CHANGED_SCENES" ]]; then
+  echo "▸ pre-commit: $(echo "$CHANGED_SCENES" | wc -l | tr -d ' ') scène(s) modifiée(s)"
+  NEED_COUNTS=1
+  # Régénérer scenes/index.json depuis les scènes
+  if [[ -x scripts/build_scenes_index.py ]] || [[ -f scripts/build_scenes_index.py ]]; then
+    if ! python3 scripts/build_scenes_index.py >/dev/null 2>&1; then
+      echo "  ⚠ build_scenes_index.py a échoué — vérifier scenes/*.json manuellement"
+    else
+      maybe_add scenes/index.json
+    fi
+  fi
+  # Vérifier la cohérence balance (non-bloquant — warning seulement)
+  if [[ -f scripts/check_scenes_balance.py ]]; then
+    python3 scripts/check_scenes_balance.py 2>&1 | tail -3
+  fi
 fi
 
-# Régénérer aussi fiches/index.html (cards) au cas où une nouvelle fiche est ajoutée
-python3 scripts/build_index.py >/dev/null 2>&1 || true
+# ── 3. questions.json modifiée — CHECK BLOQUANT ──
+if [[ -n "$CHANGED_QUESTIONS" ]]; then
+  echo "▸ pre-commit: data/questions.json modifié → check_questions.py (bloquant)"
+  if ! python3 scripts/check_questions.py data/questions.json >/tmp/cas_in_check.log 2>&1; then
+    echo "❌ check_questions.py a détecté des erreurs — commit annulé"
+    echo "   Détails :"
+    head -30 /tmp/cas_in_check.log
+    exit 1
+  fi
+  # Si le check signale des erreurs (anomalies de structure) sans exit 1
+  if grep -qE "❌|erreur" /tmp/cas_in_check.log; then
+    echo "❌ Anomalies dans questions.json :"
+    grep -E "❌|erreur|⚠️" /tmp/cas_in_check.log | head -10
+    echo "   commit annulé — corriger les questions et relancer"
+    exit 1
+  fi
+  NEED_COUNTS=1
+fi
 
-# Ajouter les fichiers régénérés au commit
-git add data/search-index.json fiches/index.html 2>/dev/null || true
+# ── 4. manifest.json modifié ──
+if [[ -n "$CHANGED_MANIFEST" ]]; then
+  echo "▸ pre-commit: data/manifest.json modifié"
+  NEED_COUNTS=1
+  NEED_INDEX=1
+fi
 
-echo "  ✓ search-index.json régénéré et ajouté au commit"
+# ── 5. npcs.json modifié ──
+if [[ -n "$CHANGED_NPCS" ]]; then
+  echo "▸ pre-commit: data/npcs.json modifié → vérification NPCs ↔ scènes"
+  python3 - <<'PYEOF'
+import json, os, sys
+npcs = json.load(open('data/npcs.json')).get('npcs', {})
+defined = set(npcs.keys())
+ref = set()
+for f in os.listdir('scenes'):
+    if not f.endswith('.json') or f == 'index.json': continue
+    try: d = json.load(open(f'scenes/{f}'))
+    except: continue
+    for n in d.get('npcs', []):
+        if isinstance(n, str): ref.add(n)
+        elif isinstance(n, dict) and 'id' in n: ref.add(n['id'])
+missing = ref - defined
+if missing:
+    print(f"❌ {len(missing)} NPC(s) référencé(s) sans définition :")
+    for m in sorted(missing):
+        print(f"   - {m}")
+    sys.exit(1)
+print("  ✓ Tous les NPCs référencés sont définis")
+PYEOF
+  if [[ $? -ne 0 ]]; then
+    echo "   commit annulé — ajouter les NPCs manquants à data/npcs.json"
+    exit 1
+  fi
+fi
+
+# ── Régénérations groupées ──
+if [[ "$NEED_SEARCH" == "1" ]]; then
+  echo "  → régénération de search-index.json"
+  if ! python3 scripts/build_search_index.py >/dev/null 2>&1; then
+    echo "❌ Échec de la régénération de search-index.json — commit annulé"
+    exit 1
+  fi
+  maybe_add data/search-index.json
+fi
+
+if [[ "$NEED_INDEX" == "1" ]]; then
+  echo "  → régénération de fiches/index.html"
+  python3 scripts/build_index.py >/dev/null 2>&1 || true
+  maybe_add fiches/index.html
+fi
+
+if [[ "$NEED_COUNTS" == "1" ]]; then
+  echo "  → régénération de data/counts.json"
+  python3 scripts/generate_counts.py >/dev/null 2>&1 || true
+  maybe_add data/counts.json
+fi
+
 exit 0
