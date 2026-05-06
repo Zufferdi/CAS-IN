@@ -1443,7 +1443,7 @@ function getXP() {
   return lsGet('cas_xp', 0);
 }
 
-function addXP(amount, tags) {
+function addXP(amount, tags, opts) {
   const prev = getXP();
   let gained = amount;
   let bonus = 0;
@@ -1451,9 +1451,12 @@ function addXP(amount, tags) {
 
   // v2.83 — Synchroniser avec Profile (source de vérité globale).
   // Avant v2.72 c'était scene-profile-bridge qui s'en chargeait.
+  // v2.91 — opts.endOfScene = true pour incrémenter le compteur de
+  // spécialisation (Pack L1).
   if (window.Profile && typeof window.Profile.addXp === 'function') {
     try {
       const meta = Array.isArray(tags) ? { tags } : {};
+      if (opts && opts.endOfScene) meta.endOfScene = true;
       const result = window.Profile.addXp(amount, 'scene', meta);
       if (result && typeof result === 'object') {
         gained = result.gained || amount;
@@ -2531,6 +2534,31 @@ function startScene(scene) {
       try { window.SceneNPCs.injectInBriefing(scene); } catch (_) {}
     }, 0);
   }
+
+  // ─── v2.91 PACK L2 : Hook compétence passive du rôle ───
+  if (window.RoleAbilities && typeof window.RoleAbilities.renderAbilityBanner === 'function') {
+    setTimeout(() => {
+      try {
+        const html = window.RoleAbilities.renderAbilityBanner(scene);
+        if (html) {
+          // Insérer juste après la real-case-banner ou en début de briefing-content
+          const briefing = document.getElementById('briefing-content');
+          if (briefing) {
+            const wrap = document.createElement('div');
+            wrap.innerHTML = html;
+            const banner = wrap.firstElementChild;
+            // Insérer après les briefing-top + alert-box
+            const alertBox = briefing.querySelector('.alert-box:last-of-type');
+            if (alertBox && alertBox.parentNode === briefing) {
+              alertBox.parentNode.insertBefore(banner, alertBox.nextSibling);
+            } else {
+              briefing.insertBefore(banner, briefing.firstChild);
+            }
+          }
+        }
+      } catch (_) {}
+    }, 30);
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -2570,6 +2598,7 @@ function launchScene() {
   G.beforeBadges = getUnlockedBadges();
   G.hintUsedForStep = {};
   G.stepChoicesOrder = [];
+  G.hackerSkipUsed = false; // v2.91 PACK L2 — reset à chaque launch
 
   // Update streak on activity
   updateStreakOnActivity();
@@ -2655,6 +2684,7 @@ function renderStep() {
         `;
       }).join('')}
     </div>
+    ${(window.RoleAbilities && typeof window.RoleAbilities.renderSkipButton === 'function') ? window.RoleAbilities.renderSkipButton() : ''}
   `;
 
   // Update hint button availability
@@ -3025,7 +3055,8 @@ function showReport() {
 
   // Save XP — passe les tags de la scène pour activer le bonus thématique
   // (Profile.addXp applique +20% si un tag matche le rôle choisi)
-  const xpResult = addXP(xpGained, scene.tags || []);
+  // v2.91 — endOfScene:true pour incrémenter le compteur de spécialisation
+  const xpResult = addXP(xpGained, scene.tags || [], { endOfScene: true });
   if (firstClearBonus > 0) {
     addXP(firstClearBonus); // pas de tags ici : c'est un bonus exploration neutre
     // Celebration différée (pour éviter de stacker sur d'autres celebrations)
@@ -3091,8 +3122,24 @@ function showReport() {
   const saved = lsGet('scene_results', {});
   const prev = saved[scene.id];
   if (!prev || pct > prev.pct) {
-    saved[scene.id] = { pct, custodyPct, score, mode: G.mode, date: new Date().toLocaleDateString('fr') };
+    // v2.91 PACK L3 — On persiste maintenant les tags + difficulty pour
+    // permettre les checks d'achievements role-only basés sur le tag.
+    saved[scene.id] = {
+      pct, custodyPct, score, mode: G.mode,
+      date: new Date().toLocaleDateString('fr'),
+      tags: (scene.tags || []).slice(),
+      difficulty: scene.difficulty || 'medium'
+    };
     lsSet('scene_results', saved);
+
+    // v2.91 PACK L3 — Compteur "chaîne de custody parfaite" (≥90%)
+    // Utilisé par l'achievement role_inv_locard (Investigator)
+    if (custodyPct >= 90) {
+      try {
+        const cnt = parseInt(localStorage.getItem('casIn_role_custodyPerfect') || '0', 10);
+        localStorage.setItem('casIn_role_custodyPerfect', String(cnt + 1));
+      } catch (_) {}
+    }
   }
 
   // ─── v2.55 (volet G) : Run buffer pour le système Quests ───
@@ -3372,7 +3419,27 @@ function showReport() {
     <div class="xp-gained">
       <span class="xp-gained-icon">✨</span>
       <span class="xp-gained-text">+${xpResult.gained != null ? xpResult.gained : xpGained} XP</span>
-      ${(xpResult.multiplier && xpResult.multiplier > 1) ? `<span class="xp-gained-role-bonus" title="Bonus de spécialité du rôle choisi">🎯 Bonus rôle ×${xpResult.multiplier.toFixed(2)} (+${xpResult.bonus || 0} XP)</span>` : ''}
+      ${(xpResult.multiplier && xpResult.multiplier !== 1.0) ? (function(){
+        // v2.91 PACK L1 — Affichage enrichi du bonus rôle (ou malus)
+        let title = 'Bonus de spécialité du rôle choisi';
+        let label = `🎯 Bonus rôle ×${xpResult.multiplier.toFixed(2)} (+${xpResult.bonus || 0} XP)`;
+        let extraSpe = '';
+        try {
+          if (window.Profile && typeof window.Profile.getRoleBonusProfile === 'function') {
+            const prof = window.Profile.getRoleBonusProfile();
+            if (xpResult.multiplier > 1.0 && prof.currentDelta > 0) {
+              extraSpe = ` <span class="xp-spe-badge">+ Spé ${(prof.currentDelta * 100).toFixed(0)}% (${prof.affineRunsCount} runs affines)</span>`;
+            } else if (xpResult.multiplier > 1.0 && prof.nextThreshold) {
+              extraSpe = ` <span class="xp-spe-badge xp-spe-progress">Spé : ${prof.affineRunsCount}/${prof.nextThreshold}</span>`;
+            }
+            if (xpResult.multiplier < 1.0) {
+              title = 'Malus hors-affinité (rôle Hacker sur scène droit)';
+              label = `⚠️ Malus rôle ×${xpResult.multiplier.toFixed(2)} (${xpResult.bonus || 0} XP)`;
+            }
+          }
+        } catch (_) {}
+        return `<span class="xp-gained-role-bonus" title="${title}">${label}${extraSpe}</span>`;
+      })() : ''}
       ${streakBonusHTML}
       ${gradeUpHTML}
     </div>
