@@ -1204,6 +1204,11 @@
     enrichSceneCards();
     renderContinueCard();
     renderActiveParcoursBanner();
+    // v2.90 — Pack K : nouveaux composants UX
+    renderActiveCampaignCard();   // B3 — campagne en cours
+    renderOnboardingBanner();     // A1 — bannière débutant
+    renderLevelIndicator();       // A3 — niveau personnel
+    enrichSceneCardsWithPrereqs(); // B1 — tags prérequis
     if (activeSort !== 'recommended') {
       sortAndRedraw();
     } else {
@@ -1216,14 +1221,509 @@
     }
   }
 
+  // ═══════════════════════════════════════════════════════════
+  //  v2.90 — PACK K : Parcours guidé sans verrous
+  //  A1 onboarding banner + A3 level indicator
+  //  B1 prereq tags + B3 active campaign card
+  //  (B2 suggestion-next vit dans scene-app.js)
+  // ═══════════════════════════════════════════════════════════
+
+  // ── Map des prérequis pédagogiques ──
+  // Pour les scènes narratives (campagne Sarine), prérequis explicites.
+  // Pour les autres scènes hard/expert, prérequis génériques calculés.
+  const SCENE_PREREQUISITES = {
+    // Affaire Sarine — ordre narratif strict
+    'fr-affaire-sarine-2-eimp-stuttgart':         ['fr-affaire-sarine-1-premier-appel'],
+    'fr-affaire-sarine-3-coordination-cantons':   ['fr-affaire-sarine-1-premier-appel', 'fr-affaire-sarine-2-eimp-stuttgart'],
+    'fr-affaire-sarine-4-expertise-unifr':        ['fr-affaire-sarine-2-eimp-stuttgart', 'fr-affaire-sarine-3-coordination-cantons'],
+    'fr-affaire-sarine-5-audience-recevabilite':  ['fr-affaire-sarine-1-premier-appel', 'fr-affaire-sarine-2-eimp-stuttgart', 'fr-affaire-sarine-3-coordination-cantons', 'fr-affaire-sarine-4-expertise-unifr'],
+  };
+
+  // ── Fondamentaux DFIR (5 scènes pour l'onboarding) ──
+  const ONBOARDING_FUNDAMENTALS = [
+    { id: 'custody',         label: 'Chaîne de possession',    icon: '📋' },
+    { id: 'premier_appel',   label: 'Premier appel',           icon: '📞' },
+    { id: 'phishing',        label: 'Phishing',                icon: '📧' },
+    { id: 'metadata',        label: 'Métadonnées',             icon: '🗂' },
+    { id: 'trois_artefacts', label: 'Trois artefacts',         icon: '📂' }
+  ];
+
+  // ──────────────────────────────────────────────────────────
+  //  B3 — Carte "Reprendre la campagne"
+  // ──────────────────────────────────────────────────────────
+  function renderActiveCampaignCard() {
+    document.querySelectorAll('.active-campaign-card').forEach(c => c.remove());
+    if (typeof SCENES === 'undefined') return;
+
+    const saved = lsGet('scene_results', {});
+    const validIds = new Set(SCENES.map(s => s.id));
+
+    // Trouver la campagne avec le plus de progression sans être complète
+    let bestCampaign = null;
+    let bestScore = -1;
+    PARCOURS.forEach(p => {
+      const validScenes = p.scenes.filter(id => validIds.has(id));
+      const done = validScenes.filter(id => saved[id]).length;
+      const total = validScenes.length;
+      if (done === 0 || done === total) return; // ni vierge ni complète
+      const score = done / total; // ratio progression
+      if (score > bestScore) {
+        bestScore = score;
+        bestCampaign = { p, done, total, validScenes };
+      }
+    });
+
+    if (!bestCampaign) return;
+
+    // Trouver la prochaine scène recommandée (1ère non faite dans l'ordre)
+    const nextSceneId = bestCampaign.validScenes.find(id => !saved[id]);
+    if (!nextSceneId) return;
+    const nextScene = SCENES.find(s => s.id === nextSceneId);
+    if (!nextScene) return;
+
+    const sceneGrid = document.getElementById('scene-grid');
+    if (!sceneGrid) return;
+
+    const card = document.createElement('div');
+    card.className = 'active-campaign-card';
+    const pct = Math.round((bestCampaign.done / bestCampaign.total) * 100);
+    card.innerHTML = `
+      <div class="active-campaign-icon">${bestCampaign.p.icon}</div>
+      <div class="active-campaign-body">
+        <div class="active-campaign-label">⏯ CAMPAGNE EN COURS</div>
+        <div class="active-campaign-title">${bestCampaign.p.title}</div>
+        <div class="active-campaign-progress">
+          ${bestCampaign.done}/${bestCampaign.total} scènes · ${pct}% · prochaine : <strong>${nextScene.icon || ''} ${nextScene.title}</strong>
+        </div>
+        <div class="active-campaign-progress-bar"><div class="active-campaign-progress-fill" style="width:${pct}%"></div></div>
+      </div>
+      <button class="active-campaign-action" data-next-id="${nextSceneId}">CONTINUER →</button>
+    `;
+    card.querySelector('.active-campaign-action').addEventListener('click', e => {
+      e.stopPropagation();
+      const targetCard = document.querySelector(`.scene-card[data-scene-id="${nextSceneId}"]`);
+      if (targetCard) {
+        targetCard.scrollIntoView({behavior: 'smooth', block: 'center'});
+        targetCard.classList.add('scene-card-flash');
+        setTimeout(() => targetCard.classList.remove('scene-card-flash'), 1800);
+      }
+    });
+
+    // Insert au début, mais après .continue-card si présente
+    const continueCard = sceneGrid.querySelector('.continue-card');
+    if (continueCard && continueCard.nextSibling) {
+      sceneGrid.insertBefore(card, continueCard.nextSibling);
+    } else {
+      sceneGrid.insertBefore(card, sceneGrid.firstChild);
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  //  A1 — Bannière "Pour démarrer" (auto-hide après 5 scènes)
+  // ──────────────────────────────────────────────────────────
+  function renderOnboardingBanner() {
+    document.querySelectorAll('.onboarding-banner').forEach(b => b.remove());
+    if (typeof SCENES === 'undefined') return;
+
+    const saved = lsGet('scene_results', {});
+    const completedCount = Object.keys(saved).length;
+
+    // Auto-hide si déjà 5 scènes faites
+    if (completedCount >= 5) return;
+
+    // Vérifier si l'utilisateur a explicitement masqué la bannière
+    let dismissed = false;
+    try { dismissed = localStorage.getItem('casIn_onboardingDismissed') === '1'; } catch {}
+    if (dismissed) return;
+
+    const sceneGrid = document.getElementById('scene-grid');
+    if (!sceneGrid) return;
+
+    const validIds = new Set(SCENES.map(s => s.id));
+
+    const banner = document.createElement('div');
+    banner.className = 'onboarding-banner';
+    banner.innerHTML = `
+      <button class="onboarding-dismiss" title="Masquer définitivement" aria-label="Masquer">×</button>
+      <div class="onboarding-header">
+        <span class="onboarding-icon">🌱</span>
+        <div>
+          <div class="onboarding-title">Nouveau sur CAS-IN ?</div>
+          <div class="onboarding-sub">Voici les 5 fondamentaux DFIR — environ 30 minutes au total</div>
+        </div>
+      </div>
+      <div class="onboarding-grid">
+        ${ONBOARDING_FUNDAMENTALS.map(f => {
+          const isDone = !!saved[f.id];
+          const exists = validIds.has(f.id);
+          if (!exists) return ''; // skip si scène absente
+          return `
+            <div class="onboarding-chip ${isDone ? 'done' : ''}" data-scene-id="${f.id}">
+              <span class="onboarding-chip-icon">${f.icon}</span>
+              <span class="onboarding-chip-label">${f.label}</span>
+              ${isDone ? '<span class="onboarding-chip-check">✓</span>' : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <div class="onboarding-footer">↓ ou explorez librement ci-dessous · cette bannière disparaîtra après 5 scènes complétées</div>
+    `;
+
+    banner.querySelectorAll('.onboarding-chip[data-scene-id]').forEach(chip => {
+      chip.addEventListener('click', e => {
+        e.stopPropagation();
+        const sid = chip.dataset.sceneId;
+        const targetCard = document.querySelector(`.scene-card[data-scene-id="${sid}"]`);
+        if (targetCard) {
+          targetCard.scrollIntoView({behavior: 'smooth', block: 'center'});
+          targetCard.classList.add('scene-card-flash');
+          setTimeout(() => targetCard.classList.remove('scene-card-flash'), 1800);
+        }
+      });
+    });
+
+    banner.querySelector('.onboarding-dismiss').addEventListener('click', e => {
+      e.stopPropagation();
+      try { localStorage.setItem('casIn_onboardingDismissed', '1'); } catch {}
+      banner.remove();
+    });
+
+    sceneGrid.insertBefore(banner, sceneGrid.firstChild);
+  }
+
+  // ──────────────────────────────────────────────────────────
+  //  A3 — Indicateur de niveau personnel
+  // ──────────────────────────────────────────────────────────
+  function renderLevelIndicator() {
+    document.querySelectorAll('.level-indicator').forEach(b => b.remove());
+    if (typeof SCENES === 'undefined') return;
+
+    const saved = lsGet('scene_results', {});
+    const completedCount = Object.keys(saved).length;
+    if (completedCount === 0) return; // pas d'indicateur tant que rien fait
+
+    // Calculer le niveau atteint et "prêt pour"
+    const validIds = new Set(SCENES.map(s => s.id));
+    const completedScenes = SCENES.filter(s => saved[s.id]);
+    const byDiff = { easy: [], medium: [], hard: [], expert: [] };
+    completedScenes.forEach(s => {
+      if (byDiff[s.difficulty]) byDiff[s.difficulty].push(saved[s.id].pct || 0);
+    });
+
+    const totalScenes = SCENES.length;
+    const completedAvg = completedScenes.length > 0
+      ? Math.round(completedScenes.reduce((sum, s) => sum + (saved[s.id].pct || 0), 0) / completedScenes.length)
+      : 0;
+
+    // Définition niveau actuel : la difficulté la plus haute où l'utilisateur a >= 3 scènes complétées avec moy >= 70%
+    function levelMastered(diff) {
+      const arr = byDiff[diff] || [];
+      if (arr.length < 3) return false;
+      const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+      return avg >= 70;
+    }
+    let currentLevel = null;
+    let nextLevel = 'easy';
+    if (levelMastered('easy')) { currentLevel = 'easy'; nextLevel = 'medium'; }
+    if (levelMastered('medium')) { currentLevel = 'medium'; nextLevel = 'hard'; }
+    if (levelMastered('hard')) { currentLevel = 'hard'; nextLevel = 'expert'; }
+    if (levelMastered('expert')) { currentLevel = 'expert'; nextLevel = null; }
+
+    const sceneGrid = document.getElementById('scene-grid');
+    if (!sceneGrid) return;
+
+    const labels = { easy: 'Débutant', medium: 'Intermédiaire', hard: 'Avancé', expert: 'Expert' };
+    const colors = { easy: '#7ed957', medium: '#ffc94d', hard: '#ff7849', expert: '#ff4d6d' };
+    const dispLevel = currentLevel ? labels[currentLevel] : 'En découverte';
+    const dispColor = currentLevel ? colors[currentLevel] : '#9aa5b1';
+    const readyFor = nextLevel ? `prêt pour ${labels[nextLevel]}` : 'tous niveaux maîtrisés !';
+
+    const indicator = document.createElement('div');
+    indicator.className = 'level-indicator';
+    indicator.innerHTML = `
+      <div class="level-indicator-row">
+        <span class="level-indicator-icon">📊</span>
+        <span class="level-indicator-text">
+          Votre niveau : <strong style="color:${dispColor}">${dispLevel}</strong>
+          · ${completedScenes.length} / ${totalScenes} scènes
+          · score moyen ${completedAvg}%
+          · <em>${readyFor}</em>
+        </span>
+      </div>
+    `;
+
+    // Insert après la onboarding-banner / continue-card / active-campaign-card
+    const after = sceneGrid.querySelector('.active-campaign-card')
+              || sceneGrid.querySelector('.continue-card')
+              || sceneGrid.querySelector('.onboarding-banner');
+    if (after && after.nextSibling) {
+      sceneGrid.insertBefore(indicator, after.nextSibling);
+    } else {
+      sceneGrid.insertBefore(indicator, sceneGrid.firstChild);
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  //  B1 — Tags prérequis sur les cartes
+  // ──────────────────────────────────────────────────────────
+  function enrichSceneCardsWithPrereqs() {
+    if (typeof SCENES === 'undefined') return;
+    const saved = lsGet('scene_results', {});
+    const cards = document.querySelectorAll('.scene-card[data-scene-id]');
+
+    cards.forEach(card => {
+      // Nettoyer un éventuel ancien tag
+      card.querySelectorAll('.scene-prereq-tag').forEach(t => t.remove());
+
+      const sid = card.dataset.sceneId;
+      const scene = SCENES.find(s => s.id === sid);
+      if (!scene) return;
+
+      const explicit = SCENE_PREREQUISITES[sid];
+      let prereqIds = [];
+      let prereqLabel = '';
+
+      if (explicit) {
+        // Prérequis explicites (campagnes narratives)
+        prereqIds = explicit;
+        const prereqTitles = explicit.map(pid => {
+          const ps = SCENES.find(x => x.id === pid);
+          return ps ? (ps.title || pid) : pid;
+        });
+        prereqLabel = `Recommandé après : ${prereqTitles.slice(0, 2).join(', ')}${prereqTitles.length > 2 ? '...' : ''}`;
+      } else {
+        // Pour hard/expert sans prérequis explicite : recommandation générique
+        if (scene.difficulty === 'hard') {
+          // Recommander d'avoir fait ≥ 5 medium
+          const mediumDone = Object.keys(saved).filter(id => {
+            const s = SCENES.find(x => x.id === id);
+            return s && s.difficulty === 'medium';
+          }).length;
+          if (mediumDone < 5) {
+            prereqIds = ['__generic_medium__'];
+            prereqLabel = `Recommandé après ≥ 5 medium · ${mediumDone}/5 fait`;
+          }
+        } else if (scene.difficulty === 'expert') {
+          const hardDone = Object.keys(saved).filter(id => {
+            const s = SCENES.find(x => x.id === id);
+            return s && s.difficulty === 'hard';
+          }).length;
+          if (hardDone < 5) {
+            prereqIds = ['__generic_hard__'];
+            prereqLabel = `Recommandé après ≥ 5 hard · ${hardDone}/5 fait`;
+          }
+        }
+      }
+
+      if (prereqIds.length === 0) return;
+
+      // Évaluer si les prérequis sont satisfaits
+      let allMet = true;
+      if (explicit) {
+        allMet = prereqIds.every(pid => !!saved[pid]);
+      } else {
+        // Pour génériques on est ici uniquement quand non satisfaits
+        allMet = false;
+      }
+
+      const tag = document.createElement('div');
+      tag.className = 'scene-prereq-tag ' + (allMet ? 'prereq-ok' : 'prereq-warn');
+      tag.innerHTML = allMet
+        ? `<span class="scene-prereq-icon">✓</span><span class="scene-prereq-text">Prêt — prérequis OK</span>`
+        : `<span class="scene-prereq-icon">⚠</span><span class="scene-prereq-text">${prereqLabel}</span>`;
+      card.appendChild(tag);
+    });
+  }
+
+  // ──────────────────────────────────────────────────────────
+  //  STYLES PACK K
+  // ──────────────────────────────────────────────────────────
+  function injectPackKStyles() {
+    if (document.getElementById('pack-k-styles')) return;
+    const s = document.createElement('style');
+    s.id = 'pack-k-styles';
+    s.textContent = `
+      /* ─── A1 Onboarding banner ─── */
+      .onboarding-banner{
+        background:linear-gradient(135deg, rgba(126,217,87,.08), rgba(106,184,255,.05));
+        border:1px solid rgba(126,217,87,.35);
+        border-radius:var(--r);
+        padding:14px 16px 12px;
+        margin-bottom:14px;
+        position:relative;
+        box-shadow:0 0 24px rgba(126,217,87,.06);
+      }
+      .onboarding-header{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+      .onboarding-icon{font-size:30px;line-height:1;filter:drop-shadow(0 0 8px rgba(126,217,87,.4))}
+      .onboarding-title{font-size:14px;font-weight:700;color:#7ed957;letter-spacing:.4px;margin-bottom:2px}
+      .onboarding-sub{font-size:11px;color:var(--dim)}
+      .onboarding-grid{
+        display:grid;
+        grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+        gap:6px;
+        margin-bottom:8px;
+      }
+      .onboarding-chip{
+        display:flex;align-items:center;gap:8px;
+        background:rgba(8,14,26,.7);
+        border:1px solid rgba(126,217,87,.25);
+        border-radius:6px;
+        padding:7px 10px;
+        cursor:pointer;
+        transition:.15s;
+        font-size:11px;
+      }
+      .onboarding-chip:hover{
+        border-color:#7ed957;
+        background:rgba(126,217,87,.10);
+        transform:translateX(2px);
+      }
+      .onboarding-chip.done{
+        opacity:.55;
+        border-color:rgba(126,217,87,.5);
+      }
+      .onboarding-chip-icon{font-size:14px;line-height:1}
+      .onboarding-chip-label{flex:1;color:var(--text);font-weight:600}
+      .onboarding-chip-check{color:#7ed957;font-weight:800;font-size:12px}
+      .onboarding-footer{
+        font-size:10px;color:var(--dim);font-style:italic;
+        text-align:center;margin-top:6px;letter-spacing:.2px;
+      }
+      .onboarding-dismiss{
+        position:absolute;top:8px;right:10px;
+        background:transparent;border:1px solid var(--border);
+        width:22px;height:22px;border-radius:50%;
+        font-size:14px;color:var(--dim);
+        display:flex;align-items:center;justify-content:center;
+        cursor:pointer;line-height:1;transition:.15s;
+      }
+      .onboarding-dismiss:hover{color:var(--red);border-color:var(--red)}
+
+      /* ─── A3 Level indicator ─── */
+      .level-indicator{
+        background:rgba(8,14,26,.5);
+        border:1px solid rgba(255,255,255,.06);
+        border-left:3px solid var(--cyan);
+        border-radius:6px;
+        padding:8px 14px;
+        margin-bottom:12px;
+        font-size:12px;
+        font-family:var(--font-mono);
+      }
+      .level-indicator-row{display:flex;align-items:center;gap:10px}
+      .level-indicator-icon{font-size:16px;line-height:1;flex-shrink:0}
+      .level-indicator-text{color:var(--text);line-height:1.5}
+      .level-indicator-text em{color:var(--cyan);font-style:normal;font-weight:600}
+
+      /* ─── B1 Prereq tags ─── */
+      .scene-prereq-tag{
+        display:inline-flex;align-items:center;gap:5px;
+        margin-top:6px;
+        padding:3px 8px;
+        border-radius:3px;
+        font-size:9.5px;
+        font-family:var(--font-mono);
+        font-weight:600;
+        letter-spacing:.04em;
+        text-transform:uppercase;
+        line-height:1.3;
+      }
+      .scene-prereq-tag.prereq-ok{
+        background:rgba(126,217,87,.12);
+        color:#9fda7c;
+        border:1px solid rgba(126,217,87,.25);
+      }
+      .scene-prereq-tag.prereq-warn{
+        background:rgba(255,201,77,.10);
+        color:#ffc94d;
+        border:1px solid rgba(255,201,77,.25);
+      }
+      .scene-prereq-icon{font-size:10px;line-height:1}
+
+      /* ─── B3 Active campaign card ─── */
+      .active-campaign-card{
+        background:linear-gradient(135deg, rgba(255,208,112,.10), rgba(106,184,255,.05));
+        border:1px solid rgba(255,208,112,.35);
+        border-radius:var(--r);
+        padding:14px 16px;
+        margin-bottom:12px;
+        display:flex;align-items:center;gap:14px;
+        box-shadow:0 0 18px rgba(255,208,112,.08);
+      }
+      .active-campaign-icon{
+        font-size:32px;flex-shrink:0;line-height:1;
+        filter:drop-shadow(0 0 6px rgba(255,208,112,.4));
+      }
+      .active-campaign-body{flex:1;min-width:0}
+      .active-campaign-label{
+        display:inline-block;
+        font-size:9.5px;font-weight:800;color:#ffc94d;letter-spacing:1.4px;
+        font-family:var(--font-mono);margin-bottom:3px;
+        background:rgba(255,201,77,.15);padding:2px 7px;border-radius:3px;
+      }
+      .active-campaign-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+      .active-campaign-progress{font-size:11px;color:var(--dim);font-family:var(--font-mono);margin-bottom:6px}
+      .active-campaign-progress strong{color:var(--text);font-weight:600}
+      .active-campaign-progress-bar{
+        height:3px;background:rgba(255,255,255,.08);
+        border-radius:2px;overflow:hidden;max-width:280px;
+      }
+      .active-campaign-progress-fill{
+        height:100%;background:linear-gradient(90deg,#ffd070,#ffac3a);
+        border-radius:2px;
+        transition:width .6s cubic-bezier(.34,1.56,.64,1);
+      }
+      .active-campaign-action{
+        background:rgba(255,201,77,.18);
+        border:1px solid rgba(255,201,77,.5);
+        color:#ffc94d;
+        padding:7px 14px;
+        border-radius:6px;
+        font-family:var(--font-mono);
+        font-weight:800;
+        font-size:11px;
+        letter-spacing:.4px;
+        cursor:pointer;
+        transition:.18s;
+        flex-shrink:0;
+      }
+      .active-campaign-action:hover{
+        background:rgba(255,201,77,.30);
+        transform:translateY(-1px);
+        box-shadow:0 4px 14px rgba(255,201,77,.25);
+      }
+
+      /* Flash highlight quand on scrolle vers une scène */
+      @keyframes scene-card-flash{
+        0%,100%{box-shadow:0 0 0 0 rgba(0,229,204,0)}
+        25%,75%{box-shadow:0 0 0 4px rgba(0,229,204,.6)}
+      }
+      .scene-card-flash{animation:scene-card-flash 1.6s ease-in-out}
+
+      /* Mobile tweaks Pack K */
+      @media (max-width:640px){
+        .onboarding-grid{grid-template-columns:1fr 1fr}
+        .active-campaign-card{flex-wrap:wrap}
+        .active-campaign-action{width:100%;margin-top:6px}
+        .level-indicator{font-size:11px}
+      }
+    `;
+    document.head.appendChild(s);
+  }
+
   // ──────────────────────────────────────────────────────────
   //  BOOT
   // ──────────────────────────────────────────────────────────
   function boot() {
     injectStyles();
+    injectPackKStyles();
     installBadgeExtension();
     installInflightTracking();
     installLobbyHook();
+
+    // v2.90 — Pack K B2 : exposer PARCOURS au calcul de suggestions next-step
+    // pour que la suggestion #1 priorise la prochaine scène de la campagne en cours.
+    try { window.PARCOURS_FOR_NEXTSTEP = PARCOURS; } catch (_) {}
 
     // If lobby is already rendered, retro-apply
     if (document.querySelector('#scene-grid .scene-card')) {

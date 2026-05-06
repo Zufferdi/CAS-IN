@@ -315,10 +315,51 @@ function computeNextStepSuggestions(currentScene) {
   const goodResult = id => saved[id] && saved[id].pct >= 80;
   const currentTags = new Set((currentScene.tags || []).map(t => String(t).toUpperCase()));
 
+  // ─── v2.90 PACK K B2 ─── Suggestion campagne en priorité ───
+  // Si l'utilisateur est dans une campagne (parcours) où currentScene est inclus
+  // ET la campagne n'est pas terminée, on suggère la prochaine scène de la
+  // campagne comme #1.
+  let campaignSuggestion = null;
+  try {
+    const PARCOURS_LIST = (window.PARCOURS_FOR_NEXTSTEP || []);
+    const validIds = new Set(SCENES.map(s => s.id));
+    for (const p of PARCOURS_LIST) {
+      if (!p.scenes.includes(currentScene.id)) continue;
+      // Trouver la prochaine scène non faite dans cette campagne, dans l'ordre
+      const ordered = p.scenes.filter(id => validIds.has(id));
+      const idxCurrent = ordered.indexOf(currentScene.id);
+      // Chercher la prochaine non faite après la position actuelle
+      let nextId = null;
+      for (let i = idxCurrent + 1; i < ordered.length; i++) {
+        if (!saved[ordered[i]]) { nextId = ordered[i]; break; }
+      }
+      // Si rien après, chercher avant (campagne presque finie)
+      if (!nextId) {
+        for (let i = 0; i < idxCurrent; i++) {
+          if (!saved[ordered[i]]) { nextId = ordered[i]; break; }
+        }
+      }
+      if (nextId) {
+        const nextScene = SCENES.find(s => s.id === nextId);
+        if (nextScene) {
+          campaignSuggestion = {
+            scene: nextScene,
+            reason: `Campagne : ${p.title}`,
+            shared: [],
+            isCampaign: true,
+            campaignIcon: p.icon
+          };
+          break;
+        }
+      }
+    }
+  } catch (_) {}
+
   // Score chaque autre scène
   const candidates = [];
   SCENES.forEach(s => {
     if (s.id === currentScene.id) return;
+    if (campaignSuggestion && campaignSuggestion.scene.id === s.id) return; // déjà prise
     const tagsS = new Set((s.tags || []).map(t => String(t).toUpperCase()));
     const shared = [...currentTags].filter(t => tagsS.has(t));
     const sharedCount = shared.length;
@@ -342,12 +383,34 @@ function computeNextStepSuggestions(currentScene) {
     candidates.push({ scene: s, score, sharedCount, shared, isUntouched, isMastered });
   });
 
-  // Trier par score, prendre top 3
+  // Trier par score
   candidates.sort((a, b) => b.score - a.score);
-  const top3 = candidates.slice(0, 3);
+
+  // ─── v2.90 PACK K B2 ─── Diversité : pas 3 scènes du même niveau
+  // On prend la 1ère puis on cherche une de niveau différent en 2e si possible
+  const result = [];
+  if (campaignSuggestion) result.push(campaignSuggestion);
+  const seenDiffs = new Set([currentScene.difficulty]);
+  for (const c of candidates) {
+    if (result.length >= 3) break;
+    // Si on a déjà cette difficulté en double, on saute
+    const diffCount = result.filter(r => r.scene.difficulty === c.scene.difficulty).length;
+    if (diffCount >= 1 && result.length >= 1 && !c.isUntouched) {
+      // On essaie de varier les difficultés sauf scène jamais touchée
+      // Chercher s'il reste une candidate de difficulté différente
+      const remaining = candidates.slice(candidates.indexOf(c) + 1);
+      const otherDiff = remaining.find(x => !seenDiffs.has(x.scene.difficulty));
+      if (otherDiff && diffCount < 2) continue;
+    }
+    seenDiffs.add(c.scene.difficulty);
+    result.push(c);
+  }
 
   // Construire la "raison" pour chaque
-  return top3.map(c => {
+  return result.slice(0, 3).map(c => {
+    if (c.isCampaign) {
+      return { scene: c.scene, reason: c.reason, shared: c.shared, isCampaign: true, campaignIcon: c.campaignIcon };
+    }
     let reason;
     if (c.sharedCount >= 2) {
       reason = `Thèmes liés : ${c.shared.slice(0, 2).join(' · ')}`;
@@ -3354,14 +3417,15 @@ function showReport() {
       <div class="next-step-title">🚀 Continuer avec…</div>
       <div class="next-step-grid">
         ${nextSuggestions.map(sug => `
-          <button class="next-step-card" onclick="launchSceneById('${sug.scene.id}')">
+          <button class="next-step-card ${sug.isCampaign ? 'next-step-card-campaign' : ''}" onclick="launchSceneById('${sug.scene.id}')">
+            ${sug.isCampaign ? `<div class="next-step-campaign-tag">${sug.campaignIcon || '🎯'} CAMPAGNE — SUITE</div>` : ''}
             <div class="next-step-icon">${sug.scene.icon || '🔍'}</div>
             <div class="next-step-body">
               <div class="next-step-stitle">${sug.scene.title}</div>
               <div class="next-step-reason">${sug.reason}</div>
               <div class="next-step-meta">
                 <span class="next-step-diff diff-${sug.scene.difficulty}">${({easy:'Facile',medium:'Moyen',hard:'Difficile',expert:'Expert'})[sug.scene.difficulty] || sug.scene.difficulty}</span>
-                ${sug.shared ? `<span class="next-step-shared">${sug.shared.length} thème${sug.shared.length>1?'s':''} commun${sug.shared.length>1?'s':''}</span>` : ''}
+                ${sug.shared && sug.shared.length ? `<span class="next-step-shared">${sug.shared.length} thème${sug.shared.length>1?'s':''} commun${sug.shared.length>1?'s':''}</span>` : ''}
               </div>
             </div>
           </button>
