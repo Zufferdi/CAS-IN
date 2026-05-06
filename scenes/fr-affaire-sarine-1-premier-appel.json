@@ -1,0 +1,185 @@
+{
+  "id": "fr-affaire-sarine-1-premier-appel",
+  "title": "Affaire Sarine #1 — Le premier appel à la Polcant FR",
+  "icon": "📞",
+  "difficulty": "easy",
+  "atmosphere": "raid",
+  "narrative": {
+    "success": "Vos premières mesures sont propres : pas de contamination, fichiers de log préservés, rapport initial rédigé. Mme Genoud reçoit le dossier en lecture et autorise la suite. La PME pourra reprendre son activité dans 72h. Le téléphone GSM saisi sur le parking est mis sous scellé pour analyse différée.",
+    "degraded": "L'intervention a sauvé l'essentiel mais quelques approximations procédurales (acquisition tardive, scellé incomplet) vont compliquer la phase d'expertise. Mme Genoud demande un complément d'information avant d'avancer.",
+    "failure": "L'écrasement par anti-virus de plusieurs fichiers chiffrés et la manipulation directe du serveur ont fait perdre des preuves cruciales. La PME devra payer la rançon ou reconstruire à partir des sauvegardes — et l'attribution technique sera désormais beaucoup plus difficile."
+  },
+  "tags": ["ransomware", "first-response", "PME", "fribourg", "polcant-fr", "ics-light"],
+  "legalRefs": [
+    {"label": "Art. 144bis CP", "title": "Détérioration de données"},
+    {"label": "Art. 197 CPP", "title": "Conservation des moyens de preuve"},
+    {"label": "Art. 263 CPP", "title": "Séquestre"},
+    {"label": "Art. 248 CPP", "title": "Mise sous scellés"}
+  ],
+  "intro": "Lundi 13 janvier 2025, 06h47. Le Cap. Schmid (Polcant FR, Brigade criminalité informatique) reçoit un appel direct de la centrale 117. <strong>« On a une PME à Bulle, ils disent qu'ils ne peuvent plus rien ouvrir, qu'il y a des messages bizarres sur les écrans. »</strong><br><br>L'entreprise : <em>Sarine Mécanique SA</em>, 24 employés, sous-traitant pour Liebherr et plusieurs PME du Bas-Vully. Le directeur, M. Pochon, a découvert ce matin que tous les fichiers .docx, .xlsx et .step (CAD) sont devenus illisibles. Une note <code>README_DECRYPT.txt</code> demande 80'000 CHF en bitcoin sous 72h, sinon publication des plans clients sur un site .onion.<br><br>Vous arrivez sur place à 07h32 avec votre kit d'intervention. Sur le parking, juste à côté de l'entrée du bureau, un téléphone GSM dual-SIM gît au sol, écran fendu mais probablement encore actif. Vu la circulation des employés à 6h, ce téléphone n'est pas là depuis longtemps. Dans le bureau, Pochon vous attend, blême. Le serveur de fichiers (un NAS Synology dans le local technique) tourne encore. <strong>Tous les postes affichent le même fond d'écran rouge avec la note de rançon.</strong>",
+  "alertLevel": "🚨 INTERVENTION DE PREMIÈRE LIGNE — Vos premiers gestes vont déterminer la suite : si vous contaminez la scène ou perdez les artefacts volatiles, l'enquête est compromise dès le départ.",
+  "objectives": [
+    {"icon": "🛡", "text": "Préserver l'intégrité des artefacts volatiles (RAM, processus actifs)"},
+    {"icon": "📞", "text": "Établir le bon canal de remontée vers le MP FR (Mme Genoud)"},
+    {"icon": "🔍", "text": "Décider du sort du téléphone GSM trouvé sur le parking"}
+  ],
+  "debrief": "<p><strong>Pédagogie de cette scène.</strong> Le premier répondant cyber n'éteint jamais un système touché par un ransomware — il faut d'abord acquérir la mémoire vive (clés de chiffrement potentiellement présentes, processus malveillants actifs, connexions réseau ouvertes vers le C2). L'arrêt brutal écrase ces artefacts.</p><p>Le téléphone GSM trouvé sur le parking est un <em>indice de contexte</em> : ne pas le manipuler à mains nues, le saisir sous scellé (art. 248 CPP) et le faire analyser ultérieurement par expert. Un GSM dual-SIM jeté juste avant la découverte d'un ransomware n'est pas une coïncidence.</p><p>La remontée au MP FR (Mme Genoud) doit se faire dans la première heure : c'est elle qui valide la qualification (art. 144bis CP — détérioration de données) et autorise les actes d'instruction (perquisitions, séquestres bancaires).</p><p><em>Indice narratif</em> : le téléphone du parking apparaîtra de nouveau dans la scène 2 « Le téléphone du TGV ».</p>",
+  "steps": [
+    {
+      "phase": "🛡 Préserver les artefacts volatiles",
+      "situation": "Vous arrivez devant les 12 postes Windows et le serveur Synology, tous en cours de chiffrement actif (le voyant disque clignote en continu). M. Pochon vous propose : <em>« Je débranche tout, on coupe l'alimentation centrale et on appelle l'informaticien. »</em>",
+      "law": "<strong>Manuel Ch. 4.2</strong> — Volatilité de la preuve numérique (RFC 3227) : RAM &gt; cache disque &gt; fichiers temporaires &gt; disque. Acquisition par ordre décroissant de volatilité avant tout autre acte.",
+      "question": "<strong>Quelle action prenez-vous en priorité absolue ?</strong>",
+      "choices": [
+        {
+          "text": "Couper l'alimentation centrale comme suggéré : ça arrête le chiffrement et préserve ce qui reste sur disque.",
+          "ok": false,
+          "pts": -25,
+          "fb": "💀 ÉCHEC FORENSIQUE. L'arrêt brutal détruit toute la RAM, où peuvent se trouver les clés de chiffrement (le ransomware doit garder la clé en mémoire pour continuer à chiffrer). Vous perdez aussi les processus actifs, les connexions réseau vers le C2, les handles de fichiers ouverts. C'est une perte d'environ 70% du potentiel forensique.",
+          "legal": "RFC 3227 — Order of volatility violé.",
+          "critical": true
+        },
+        {
+          "text": "Lancer DumpIt ou WinPmem sur les postes encore allumés depuis votre clé USB blanche pour acquérir la RAM, puis isoler du réseau (débrancher câble Ethernet, désactiver Wi-Fi).",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ PROCÉDURE STANDARD. Acquisition mémoire d'abord (peut contenir la clé maître du ransomware), puis isolation réseau pour stopper la propagation et la communication C2 sans tuer l'OS. Vous documentez chaque action avec horodatage et identifiant du poste.",
+          "legal": "Art. 197 CPP — Conservation des moyens de preuve."
+        },
+        {
+          "text": "Lancer immédiatement l'antivirus (Defender en mode hors-ligne) sur le serveur Synology pour neutraliser le ransomware avant qu'il chiffre tout.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ FAUSSE BONNE IDÉE. Un antivirus va supprimer ou mettre en quarantaine les binaires du malware — autant de preuves perdues pour l'attribution. De plus, sur un Synology, Defender ne tourne pas — vous parlez probablement de l'antivirus du Synology lui-même qui peut altérer les artefacts.",
+          "legal": "Art. 141 CPP — Risque d'inexploitabilité absolue si manipulation altère les preuves."
+        }
+      ]
+    },
+    {
+      "phase": "📞 Le bon canal de remontée",
+      "situation": "Acquisition mémoire en cours sur le serveur. Vous devez maintenant alerter votre hiérarchie ET le Ministère public (selon procédure interne Polcant FR, dès qu'un séquestre est probable, le procureur de permanence est avisé).",
+      "law": "<strong>Manuel Ch. 7.1</strong> — Compétence ratione materiae : la criminalité informatique relève par défaut du canton sauf si MPC compétent (art. 23-24 CPP — atteintes à la sécurité de la Confédération, organisations criminelles transfrontalières d'ampleur).",
+      "question": "<strong>Qui appelez-vous en premier ?</strong>",
+      "choices": [
+        {
+          "text": "Le Ministère public de la Confédération (MPC) directement : 80'000 CHF c'est conséquent, et un ransomware c'est forcément organisé donc fédéral.",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ COMPÉTENCE PRÉMATURÉE. Le MPC ne se saisit pas par défaut sur un ransomware PME — il faut la dimension d'organisation criminelle structurée (art. 260ter CP) ou le caractère transfrontalier majeur. Pour 80k CHF sur une seule victime, c'est cantonal. Vous brûlez 30 minutes à expliquer pourquoi vous appelez le mauvais service.",
+          "legal": "Art. 23-24 CPP — Compétence MPC limitée à des matières spécifiques."
+        },
+        {
+          "text": "Mme Genoud, procureure adjointe cyber au MP FR, sur sa ligne de permanence. Vous lui faites un point initial : Sarine Mécanique SA, ransomware actif, 24 employés, demande 80k, scellés à venir.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ BONNE COMPÉTENCE. Mme Genoud est l'interlocutrice désignée pour les dossiers cyber FR. Elle valide la qualification (art. 144bis CP), autorise les premiers actes d'instruction, et décide en aval s'il faut évoquer la dévolution au MPC. Elle reçoit votre rapport sous 30 min en lecture pour préparer la phase suivante.",
+          "legal": "Procédure interne Polcant FR / MP FR."
+        },
+        {
+          "text": "L'OFCS (NCSC) pour signaler l'incident, puis Mme Genoud dans un second temps une fois la situation stabilisée.",
+          "ok": false,
+          "pts": 5,
+          "fb": "🔄 ORDRE INVERSÉ. L'OFCS a un rôle de centralisation des signalements et de support cyber, pas d'autorité d'instruction pénale. Vous devez d'abord aviser le MP (qui pilote l'enquête) puis ensuite, idéalement avec son accord, signaler à l'OFCS pour la statistique nationale et la veille collective.",
+          "legal": "Art. 74a Loi sur la sécurité de l'information (LSI) — Signalement OFCS, distinct de l'enquête pénale."
+        }
+      ]
+    },
+    {
+      "phase": "📱 Le téléphone du parking",
+      "situation": "En sortant du bureau pour appeler Mme Genoud, vous repassez devant le téléphone GSM sur le parking. Écran fendu mais le voyant LED est rouge — il a été allumé ou rechargé récemment. Il n'y a aucun témoin qui l'aurait vu tomber. M. Pochon affirme que personne dans la PME n'utilise ce modèle (un Nokia 105 dual-SIM neuf, modèle « burner »).",
+      "law": "<strong>Art. 248 CPP</strong> — Mise sous scellés : tout objet susceptible de contenir des données protégées est mis sous scellé immédiatement, à demande du détenteur ou d'office en cas de doute. <strong>Art. 263 CPP</strong> — Séquestre : objets utilisés ou destinés à commettre une infraction.",
+      "question": "<strong>Que faites-vous du téléphone ?</strong>",
+      "choices": [
+        {
+          "text": "Vous le laissez sur place : c'est sur le domaine privé de la PME, ce n'est pas votre périmètre d'intervention, et un appel à un collègue de service de sécurité publique pour le ramasser plus tard suffit.",
+          "ok": false,
+          "pts": -25,
+          "fb": "💀 PERTE D'INDICE MAJEUR. Un Nokia 105 dual-SIM neuf jeté à 100m d'un ransomware actif n'est PAS une coïncidence. C'est très probablement le téléphone que l'attaquant a utilisé pour se connecter au C2 ou pour appeler la victime (intimidation). Le laisser sur place = perte irrémédiable (intempéries, ramassage par tiers, batterie qui meurt).",
+          "legal": "Art. 197 CPP — Devoir de conservation des moyens de preuve.",
+          "critical": true
+        },
+        {
+          "text": "Vous le saisissez sous scellé immédiatement : sac Faraday pour bloquer toute connexion radio, étiquette de scellé numérotée, photos avant/pendant/après, rapport de saisie. Décision documentée pour Mme Genoud.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ RÉFLEXE PARFAIT. Le sac Faraday est crucial : sans ça, l'attaquant pourrait wiper le téléphone à distance ou recevoir un wipe automatique (kill switch). Le scellé documenté permet à Mme Genoud de l'envoyer à Dr Jendly pour expertise différée. Vous notez aussi l'IMEI visible sous batterie pour preuve d'identification.",
+          "legal": "Art. 248 + 263 CPP — Mise sous scellés et séquestre conjoints."
+        },
+        {
+          "text": "Vous l'allumez pour vérifier rapidement s'il contient des informations utiles : si c'est juste un téléphone perdu, autant ne pas perdre de temps en procédure.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ CONTAMINATION DE L'EXPERTISE. Allumer un téléphone potentiellement criminel sans procédure, sans Faraday, sans documentation, c'est ouvrir un boulevard à la défense pour faire annuler tout ce qu'on en tirera. La défense plaidera : « le téléphone a été manipulé sans Faraday, qui sait quelles modifications l'inspecteur Schmid lui a fait subir ».",
+          "legal": "Art. 192-193 CPP — Risque d'irrecevabilité de la preuve."
+        }
+      ]
+    },
+    {
+      "phase": "🧩 Premier rapport pour Mme Genoud",
+      "situation": "Une heure plus tard, dump RAM sécurisé sur disque externe scellé, NAS isolé du réseau, postes éteints proprement après acquisition, téléphone sous Faraday. Vous rédigez le rapport initial pour Mme Genoud. Quelle structure adoptez-vous ?",
+      "law": "<strong>Manuel Ch. 29.1</strong> — Rapport de première intervention : factuel, daté/horodaté, avec liste exhaustive des actes posés et des objets saisis. Pas d'interprétation à ce stade.",
+      "question": "<strong>Quelle est la rédaction la plus juste ?</strong>",
+      "choices": [
+        {
+          "text": "« Sarine Mécanique SA est victime d'un ransomware russe (vu le mode opératoire), probablement Conti ou LockBit. Le téléphone du parking appartient certainement à un complice local. La rançon doit être négociée à la baisse. »",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ INTERPRÉTATIONS PRÉMATURÉES. Trois affirmations non étayées : « russe » (vous n'avez aucune attribution), « Conti ou LockBit » (vous n'avez pas analysé l'échantillon), « complice local » (pure spéculation). Ce rapport va miner votre crédibilité dès que Mme Genoud le lira et donnera des armes à la défense en aval.",
+          "legal": "Manuel Ch. 29.3 — Distinction fait/interprétation/opinion."
+        },
+        {
+          "text": "« 13.01.2025, 07h32-09h00, intervention Sarine Mécanique SA, Bulle. Constat : ransomware actif, demande 80k CHF en BTC. Actes : acquisition RAM 12 postes + serveur Synology (DS920+, scellé n°FR-2025-0042), isolation réseau, saisie téléphone Nokia 105 IMEI 359xxx (scellé n°FR-2025-0043, Faraday). Aucun paiement effectué. Renvoyé à expertise. »",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ RAPPORT IMPECCABLE. Factuel, horodaté, identification des objets par numéros de scellés, actes posés énumérés, aucune interprétation. Mme Genoud peut s'en saisir directement pour ouvrir l'instruction sous l'angle art. 144bis CP (détérioration de données) sans faire de présomption sur l'auteur.",
+          "legal": "Manuel Ch. 29.1 — Standard du rapport de première intervention."
+        },
+        {
+          "text": "« Intervention au domicile professionnel de Sarine Mécanique. Tout est sous contrôle. Détails à suivre par téléphone. » Bref, vous lui ferez un point oral plus complet.",
+          "ok": false,
+          "pts": -10,
+          "fb": "🔄 INSUFFISANT. Un rapport oral ne laisse pas de trace écrite. Si vous changez d'équipe en cours de journée ou si Mme Genoud est en audience, l'information est perdue. Il faut un écrit minimal — même 10 lignes — pour traçabilité.",
+          "legal": "Procédure interne Polcant FR — Rapport écrit obligatoire pour tout séquestre."
+        }
+      ]
+    },
+    {
+      "phase": "🧭 Connexion au fil rouge",
+      "situation": "Mme Genoud vous rappelle 20 minutes après réception du rapport. Elle dit : <em>« Capitaine, votre dossier est le troisième cette semaine avec un mode opératoire similaire. Je veux que vous coordonniez avec la Brigade qui a traité l'affaire DAB Villaz. Et le téléphone du parking — vous le faites partir chez Dr Jendly à l'UNIFR pour analyse différée. »</em>",
+      "law": "<strong>Art. 56 CPP</strong> — Concours d'infractions et regroupement des procédures pour cohérence d'instruction.",
+      "question": "<strong>Comment réagissez-vous à cette indication ?</strong>",
+      "choices": [
+        {
+          "text": "Vous demandez à Mme Genoud d'ouvrir une procédure-cadre regroupant les 3 dossiers, et vous acceptez de coordonner si elle vous nomme officiellement responsable de l'enquête consolidée. Vous suggérez d'inclure le téléphone du parking comme premier indice partagé.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ INSTINCT D'ENQUÊTEUR. Vous proposez la bonne structure : une procédure-cadre permet de croiser les pièces (TTPs, IPs, hashes) entre dossiers ; coordonner officiellement évite les doublons ; le téléphone du parking devient l'indice qui peut faire le lien avec l'autre dossier — ouvrant potentiellement la phase d'expertise et d'EIMP.",
+          "legal": "Art. 56 CPP — Joinder de procédures pour cohérence."
+        },
+        {
+          "text": "Vous gardez votre dossier séparé : chaque PME a sa propre histoire, mélanger les enquêtes c'est risquer de les fragiliser toutes en cas de problème procédural sur l'une.",
+          "ok": false,
+          "pts": -10,
+          "fb": "🔒 PRUDENCE EXCESSIVE. Si trois PME du canton sont touchées par le même mode opératoire la même semaine, c'est très probablement le même groupe. Travailler chacun dans son couloir = chacun voit 30% du puzzle. Le risque procédural d'un joinder est faible si les actes d'instruction sont rigoureusement documentés.",
+          "legal": "Art. 56 CPP — Joinder est la règle, séparation l'exception."
+        },
+        {
+          "text": "Vous acceptez de coordonner mais vous faites partir le téléphone chez M. Bachmann (KAPO ZH) plutôt que chez Dr Jendly : c'est l'expert le plus reconnu en mémoire forensique en Suisse alémanique.",
+          "ok": false,
+          "pts": 0,
+          "fb": "🔄 NON-RESPECT D'INSTRUCTION. Mme Genoud vous a explicitement nommé Dr Jendly. Court-circuiter sa décision est doublement problématique : 1) hiérarchique (elle pilote l'instruction), 2) procédural (Dr Jendly est nommée par mandat formel art. 184 CPP, vous ne pouvez pas changer d'expert sans elle). Bachmann viendra peut-être plus tard sur d'autres pièces.",
+          "legal": "Art. 184 CPP — Désignation de l'expert par l'autorité d'instruction."
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    {"id": "fr_polcant_cyber", "role": "primary"},
+    {"id": "fr_prosecutor_cyber", "role": "secondary"}
+  ],
+  "regionDetail": {
+    "canton": "FR",
+    "commune": "Bulle",
+    "company": "Sarine Mécanique SA (fictive)"
+  }
+}

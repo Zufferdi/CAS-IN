@@ -1,0 +1,188 @@
+{
+  "id": "fr-affaire-sarine-4-expertise-unifr",
+  "title": "Affaire Sarine #4 — L'expertise du Dr Jendly (UNIFR)",
+  "icon": "🔬",
+  "difficulty": "hard",
+  "atmosphere": "raid",
+  "narrative": {
+    "success": "L'expertise du Dr Jendly produit un rapport solide : attribution technique étayée par 7 sources indépendantes (mémoire, métadonnées binaires, logs C2 saisis, IMSI du téléphone parking, certificats SSL, patterns YARA, infrastructure réutilisée), reconstruction chronologique précise, et identification d'un complice probable en Suisse romande via une erreur OPSEC (un timestamp Europe/Zurich dans un commit Git accessible). Mme Genoud peut requérir une perquisition ciblée.",
+    "degraded": "L'expertise dégage des éléments mais avec des zones d'incertitude que la défense pourra exploiter. L'attribution est probable mais non certaine. La perquisition ordonnée sera limitée à la documentation, pas aux saisies pénales.",
+    "failure": "L'expertise est techniquement défaillante (sources non reproduites, méthode non documentée) ou les preuves manipulées sans protocole établi. Les éléments sont contestés et la procédure recule."
+  },
+  "tags": ["forensique", "expertise", "fribourg", "unifr", "memory-forensics", "attribution", "volatility", "art-182-cpp"],
+  "legalRefs": [
+    {"label": "Art. 182 CPP", "title": "Recours à un expert"},
+    {"label": "Art. 184 CPP", "title": "Désignation de l'expert"},
+    {"label": "Art. 185 CPP", "title": "Établissement de l'expertise"},
+    {"label": "Art. 187 CPP", "title": "Rapport d'expertise"},
+    {"label": "Art. 189 CPP", "title": "Compléments d'expertise"}
+  ],
+  "intro": "Cinq semaines après l'incident initial. La procédure-cadre piloté par Mme Genoud (FR) a obtenu : (a) les dumps C2 de Stuttgart (4 serveurs, 2.1 To de données), (b) les détails contractuels de la SIM allemande du Nokia 105 trouvé sur le parking de Sarine Mécanique, (c) des séquestres conservatoires chez les ISP suisses (Salt, Sunrise, Init7).<br><br><strong>Dr Jendly</strong>, mandatée comme experte (mandat formel art. 184 CPP du 27 janvier), a entre les mains :<br>• Les 12 dumps mémoire des postes Sarine (capture initiale Cap. Schmid, format AFF4)<br>• Les images forensiques de 5 disques durs (Sarine + RoTec + Bertschi)<br>• Les logs C2 de Stuttgart (rsyslog, journald, accès web Hetzner-similar)<br>• Le téléphone Nokia 105 (acquisition Cellebrite UFED)<br>• Les CDR (Call Detail Records) de la SIM allemande<br>• L'échantillon de ransomware (binaire ELF Linux)<br><br>Son laboratoire à l'UNIFR (DI, bâtiment Pérolles) tourne depuis 8 jours. Elle a pris du retard sur ses cours mais le mandat est urgent. Vous l'avez rejointe dans son bureau — écrans noirs avec hex dumps, des post-its partout, café froid.<br><br><em>« Capitaine, je crois qu'on tient un fil OPSEC. Mais je veux votre regard de praticien sur ma méthode avant de figer le rapport. »</em>",
+  "alertLevel": "🔬 EXPERTISE DÉCISIVE — Le rapport va piloter la suite : perquisition, identification de suspect, et plus tard, le procès. Méthode rigoureuse exigée — toute approximation sera exploitée par la défense.",
+  "objectives": [
+    {"icon": "🧠", "text": "Valider la méthode forensique (Volatility, hashes, reproductibilité)"},
+    {"icon": "🔍", "text": "Évaluer la solidité de l'attribution technique (multi-sources)"},
+    {"icon": "🕒", "text": "Reconstituer une chronologie utilisable au procès"},
+    {"icon": "📝", "text": "Cadrer le rapport selon les exigences de l'art. 187 CPP"}
+  ],
+  "debrief": "<p><strong>Pédagogie de cette scène.</strong> Une expertise forensique en mode pénal n'est pas qu'un travail technique : elle doit être <em>contradictoire-proof</em>. L'expert doit anticiper les attaques de la défense : « comment savez-vous que la mémoire n'a pas été altérée ? », « comment êtes-vous sûr que ce hash correspond à votre échantillon initial ? », « pourquoi ces 5 sources et pas 3 ? ».</p><p><strong>Multi-sources d'attribution</strong> : la jurisprudence et la pratique exigent au moins 3-5 sources indépendantes pour qu'une attribution technique soit considérée comme « probante » au sens pénal. Une seule source = hypothèse. Deux sources concordantes = piste. Cinq sources concordantes et indépendantes = attribution.</p><p><strong>Reproductibilité</strong> : un autre expert avec les mêmes données et la même méthode doit pouvoir aboutir aux mêmes conclusions. Si Dr Jendly utilise un script Python custom non documenté, son rapport est attaquable. Si elle utilise Volatility 3 + plugins publiés + commandes citées en annexe, c'est solide.</p><p><strong>Erreur OPSEC</strong> : les attaquants en font tous tôt ou tard. Un timestamp dans le mauvais fuseau horaire, un username réutilisé, un certificat SSL signé par une CA traçable. Repérer une seule de ces erreurs peut faire basculer une enquête.</p><p><em>Indice narratif</em> : la perquisition à Lausanne (suspect identifié via OPSEC) débouche sur la confrontation au procès en scène 5.</p>",
+  "steps": [
+    {
+      "phase": "🧠 Valider la chaîne d'acquisition mémoire",
+      "situation": "Dr Jendly vous montre son protocole de validation des dumps RAM Sarine : pour chaque dump (Lime, format AFF4), elle calcule un SHA-256 d'acquisition, le compare au SHA-256 d'origine documenté par Schmid au moment de la saisie, et conserve une copie de travail séparée de la copie maîtresse.",
+      "law": "<strong>Manuel Ch. 4.5</strong> — Chaîne de hash pour preuve d'intégrité : hash à la saisie, hash au transport, hash à la réception, hash à l'analyse. Toute différence = preuve corrompue (sauf justification documentée).",
+      "question": "<strong>Que vérifiez-vous en priorité dans son protocole ?</strong>",
+      "choices": [
+        {
+          "text": "Les SHA-256 sont calculés mais Dr Jendly travaille directement sur la copie maîtresse pour gagner du temps : c'est plus efficace.",
+          "ok": false,
+          "pts": -25,
+          "fb": "💀 BRIS DE CHAÎNE FORENSIQUE. Travailler sur la copie maîtresse altère son hash dès la première lecture (mtime du fichier change, syscalls modifient les attributs). Au procès, la défense pourra plaider que la preuve a été manipulée. La règle absolue : la copie maîtresse est inviolable, on travaille toujours sur une copie de travail. Dr Jendly aurait dû vous le dire.",
+          "legal": "Manuel Ch. 4.5 + Art. 192 CPP.",
+          "critical": true
+        },
+        {
+          "text": "Que la copie maîtresse soit scellée et archivée (storage write-once), que le hash de chaque dump soit triple-validé (saisie / transport / réception / analyse), et que la copie de travail soit régénérée si elle est altérée pendant l'analyse.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ PROTOCOLE EN BÉTON. Stockage write-once (LTO ou disque scellé), 4 hashes documentés, copie de travail jetable. Si la défense conteste, vous avez la copie maîtresse intacte, hash inchangé, à présenter au tribunal qui peut faire procéder à une contre-expertise.",
+          "legal": "Manuel Ch. 4.5 + Art. 192 CPP."
+        },
+        {
+          "text": "Les SHA-256 d'acquisition sont calculés mais pas documentés dans un journal séparé : Dr Jendly les a notés sur un post-it qu'elle gardera dans son dossier.",
+          "ok": false,
+          "pts": -15,
+          "fb": "📌 DOCUMENTATION INSUFFISANTE. Un post-it n'est pas une preuve. Le journal d'expertise doit être un document horodaté, signé, archivé numériquement, idéalement avec timestamp cryptographique (RFC 3161). Sans ça, la traçabilité est attaquable.",
+          "legal": "Manuel Ch. 4.5 — Journal d'expertise."
+        }
+      ]
+    },
+    {
+      "phase": "🔍 Multi-sources d'attribution",
+      "situation": "Dr Jendly identifie 7 sources potentielles d'attribution technique : (1) string « anbieter-stuttgart » dans le binaire ; (2) IMSI SIM allemande active à Vaihingen ; (3) timestamp Europe/Zurich dans un commit Git du payload ; (4) certificat SSL auto-signé du C2 émis par CN « K-DEV-PROD-77 » ; (5) infrastructure VPS réutilisée d'une attaque RoTec antérieure ; (6) pattern YARA matchant un kit publié sur un forum darknet en 2024 ; (7) wallet BTC ayant déjà servi à 4 autres ransomwares fribourgeois en 2024. Elle hésite entre toutes les inclure ou n'en garder que 3.",
+      "law": "<strong>JP TF 6B_xxx</strong> et <strong>standard SWITCH-CERT</strong> — Une attribution technique est dite « solide » à partir de 3 sources indépendantes concordantes. 5+ sources = niveau « confiance élevée ».",
+      "question": "<strong>Que conseillez-vous à Dr Jendly ?</strong>",
+      "choices": [
+        {
+          "text": "Garder uniquement les 3 sources les plus solides (IMSI, certificat SSL, wallet BTC) : moins, c'est plus crédible. Les autres sont accessoires.",
+          "ok": false,
+          "pts": -10,
+          "fb": "🪒 RASOIR D'OCCAM MAL APPLIQUÉ. En contradictoire judiciaire, la défense attaquera chaque source individuellement. Si vous n'avez que 3 et que la défense en démolit 1 (ex: « le wallet BTC peut avoir été acheté à un tiers »), vous tombez à 2 = piste, plus attribution. Avoir 7 sources documentées avec différents niveaux de force, c'est une assurance contre les attaques.",
+          "legal": "Pratique CEDH + JP TF — Multi-sources préférable."
+        },
+        {
+          "text": "Inclure les 7 sources avec une hiérarchisation : sources « fortes » (IMSI, certificat, wallet, infrastructure réutilisée), sources « contextuelles » (string DE, timestamp Zurich, YARA). Méthode reproductible, chaque source démontrable indépendamment, conclusions : attribution probable à un acteur unique opérant en Allemagne avec complice en Suisse romande.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ APPROCHE EXEMPLAIRE. Hiérarchisation = transparence sur la force probante de chaque source. Si la défense démolit une source contextuelle, l'attribution tient sur les fortes. La conclusion équilibrée (« attribution probable ») reste honnête sans surpromesse. Le timestamp Zurich devient l'élément qui justifie une perquisition en Suisse romande.",
+          "legal": "Standards SWITCH-CERT + Art. 187 CPP."
+        },
+        {
+          "text": "Inclure les 7 sources comme s'il s'agissait toutes du même niveau de force : plus c'est convergent, plus c'est puissant.",
+          "ok": false,
+          "pts": -15,
+          "fb": "📊 NIVEAU DE FORCE NON DIFFÉRENCIÉ. Présenter 7 sources comme équivalentes est intellectuellement malhonnête (un timestamp peut être altéré ; un IMSI dans un téléphone scellé sous Faraday, beaucoup moins). La défense exploitera cette absence de hiérarchie pour décrédibiliser l'expertise toute entière.",
+          "legal": "Art. 187 CPP — Méthode contradictoire-proof."
+        }
+      ]
+    },
+    {
+      "phase": "🕒 La chronologie et l'erreur OPSEC",
+      "situation": "Dr Jendly a reconstitué une chronologie minute-par-minute de l'attaque sur Sarine Mécanique. Dans le payload chiffré récupéré sur le serveur Synology, elle a retrouvé un fichier <code>build.sh</code> avec un commentaire : <code># compiled: 2024-12-18T22:14:33+01:00</code> et un commit Git accessible sur un repository public archivé. Le commit montre l'auteur : <code>k-dev &lt;k.devmail+toto@protonmail.com&gt;</code>. Le timestamp +01:00 = Europe/Zurich (CET). En décembre 2024, +01:00 c'est aussi Europe/Berlin. Mais d'autres indices (langue des commentaires en français, paths /home/k/ Suisse romande typiques) suggèrent fortement que l'auteur est en Suisse francophone.",
+      "law": "<strong>Art. 187 CPP</strong> — L'expert doit rendre compte de ses constatations et de ses conclusions, en distinguant clairement faits et inférences. <strong>Manuel Ch. 29.3</strong> — Niveau d'affirmation.",
+      "question": "<strong>Comment Dr Jendly doit-elle formuler cette inférence dans son rapport ?</strong>",
+      "choices": [
+        {
+          "text": "« L'auteur du payload réside en Suisse romande, comme le prouve le timestamp +01:00 et les artefacts linguistiques. » — Affirmation directe pour donner du poids au rapport.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ AFFIRMATION DISPROPORTIONNÉE. +01:00 = CET, qui couvre TOUS les pays continentaux européens (Allemagne, Suisse, France, Italie...). Le timestamp seul ne « prouve » rien sur la résidence. Les artefacts linguistiques (français) suggèrent fortement Suisse romande mais c'est une inférence, pas une preuve. Une telle affirmation au procès sera démolie en 30 secondes.",
+          "legal": "Manuel Ch. 29.3 — Confusion fait/inférence."
+        },
+        {
+          "text": "« Les artefacts examinés (paths /home/k/, commentaires en français standard, structure du build.sh, choix lexicaux du README) suggèrent avec une probabilité élevée un développeur de langue française. Le timestamp +01:00 est compatible avec une localisation en Europe centrale, dont la Suisse romande. Ces deux éléments combinés justifient une investigation prioritaire en Suisse romande, sans constituer à eux seuls une preuve définitive. »",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ FORMULATION EXPERTE. Distinction parfaite : artefacts = faits ; localisation = inférence probabilisée ; conclusion = piste d'investigation. Le tribunal apprécie la rigueur intellectuelle. La défense peut contester, mais le rapport tient debout : Dr Jendly n'a rien prétendu qu'elle ne puisse défendre.",
+          "legal": "Art. 187 CPP + Manuel Ch. 29.3."
+        },
+        {
+          "text": "« Le timestamp +01:00 et les commentaires en français pourraient suggérer une origine suisse romande, mais cela reste à confirmer. » — Vague, prudent.",
+          "ok": false,
+          "pts": 5,
+          "fb": "🌫 VAGUE INUTILE. Trop prudent fait perdre la valeur d'expertise. Les magistrats ont besoin de directions actionnables. « Pourrait suggérer » est mou — soit on dit « suggère avec probabilité », soit on ne dit rien. Mme Genoud aura du mal à fonder une demande de perquisition sur ce niveau de langage.",
+          "legal": "Art. 187 CPP — Conclusion utile attendue."
+        }
+      ]
+    },
+    {
+      "phase": "📝 Le rapport d'expertise",
+      "situation": "Dr Jendly finalise son rapport (38 pages + 240 pages d'annexes : sorties Volatility, hex dumps, timeline CSV, captures Wireshark...). Elle vous demande conseil sur la structure.",
+      "law": "<strong>Art. 187 CPP</strong> — Le rapport contient la mission, les questions posées, les méthodes utilisées, les constatations, les conclusions, et les annexes documentaires. Doit être « auto-suffisant » : un autre expert doit pouvoir vérifier.",
+      "question": "<strong>Quelle structure recommandez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Un rapport synthétique de 8 pages avec conclusions claires, sans annexe : c'est ce qui sera lu en pratique par les magistrats.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ COURT-CIRCUIT FORENSIQUE. Sans annexes documentaires (méthodes exactes, sorties d'outils, hashes, journaux), le rapport est non vérifiable, donc non opposable. La défense demandera une contre-expertise et obligera Dr Jendly à fournir les annexes plus tard, ce qui la mettra en position de faiblesse procédurale.",
+          "legal": "Art. 187 CPP — Auto-suffisance.",
+          "critical": true
+        },
+        {
+          "text": "Structure : 1) Mission et questions ; 2) Pièces examinées ; 3) Méthodes (avec versions outils, scripts publics) ; 4) Constatations factuelles ; 5) Inférences (avec niveau de confiance) ; 6) Conclusions ; 7) Annexes complètes (sorties brutes, hashes, journaux d'opérations). Total ~38p + 240p annexes.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ STRUCTURE DE RÉFÉRENCE. C'est la structure standard d'un rapport d'expertise forensique en pénal. Auto-suffisance, traçabilité, reproductibilité, distinction fait/inférence/conclusion. Une contre-expertise pourra être faite si demandée mais ne pourra pas attaquer la rigueur du document.",
+          "legal": "Art. 187 CPP — Standard professionnel."
+        },
+        {
+          "text": "Un rapport principal de 38 pages + une annexe « réservée à l'expert » contenant les méthodes et hashes, accessible uniquement sur ordre du juge.",
+          "ok": false,
+          "pts": -10,
+          "fb": "🔒 OPACITÉ INACCEPTABLE. Le contradictoire pénal exige que la défense ait accès à tous les éléments sur lesquels repose l'expertise. Une annexe « réservée » est incompatible avec le procès équitable (art. 6 CEDH). Tout doit être accessible aux parties.",
+          "legal": "Art. 6 CEDH + Art. 107 CPP — Droit d'être entendu."
+        }
+      ]
+    },
+    {
+      "phase": "🔍 La perquisition découlant de l'expertise",
+      "situation": "Le rapport pointe vers Lausanne. Mme Genoud veut ordonner une perquisition au domicile présumé de l'auteur du payload. Mais Lausanne = canton VD = Me Pilet. Vous l'avez vu en scène 3 (commission rogatoire intercantonale).",
+      "law": "<strong>Art. 43 CPP</strong> — Commission rogatoire : autorité requérante (FR) demande à autorité requise (VD) d'exécuter l'acte. Délais : ordinaire 15-30 jours, urgent 24-72h.",
+      "question": "<strong>Comment procédez-vous pour cette perquisition ?</strong>",
+      "choices": [
+        {
+          "text": "Mme Genoud rédige une commission rogatoire urgente à Me Pilet, jointe l'extrait pertinent du rapport Dr Jendly comme pièce de motivation, demande exécution sous 72h. Pilet examine, valide ou ajuste, et fait exécuter par la police vaudoise (PJ-VD).",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ PROCÉDURE OPTIMALE. C'est exactement ce que prévoit le CPP. La motivation par extrait du rapport Dr Jendly donne à Pilet les éléments pour valider la nécessité (proportionnalité art. 197 CPP) sans difficulté. La PJ-VD exécute, et le résultat retourne à FR pour intégration au dossier consolidé.",
+          "legal": "Art. 43 + 244 CPP — Commission rogatoire."
+        },
+        {
+          "text": "La PJ-FR (Cap. Schmid) part à Lausanne avec mandat de Mme Genoud pour exécuter directement la perquisition : c'est plus rapide et la PJ-FR connaît mieux le dossier.",
+          "ok": false,
+          "pts": -25,
+          "fb": "🚫 INCOMPÉTENCE TERRITORIALE. Une autorité d'un canton ne peut pas exécuter d'acte de contrainte sur le territoire d'un autre canton sans la commission rogatoire formelle (art. 43 CPP) — sauf flagrant délit (art. 49 CPP) qui ne s'applique pas ici. La perquisition serait nulle, les saisies inexploitables (art. 141 CPP).",
+          "legal": "Art. 43 + 141 CPP.",
+          "critical": true
+        },
+        {
+          "text": "On laisse passer la perquisition pour ne pas heurter Pilet, on continue avec d'autres pistes : la perquisition est trop risquée procéduralement.",
+          "ok": false,
+          "pts": -15,
+          "fb": "🔄 ÉVITEMENT FAUTIF. La perquisition est nécessaire pour avancer (saisie matériel suspect = preuve de l'attribution). Y renoncer alors que la procédure CPP la permet parfaitement, c'est se priver d'une étape clé. Pilet n'aura aucune raison d'être heurté si la commission rogatoire est rédigée dans les règles.",
+          "legal": "Art. 43 CPP — Mécanisme prévu."
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    {"id": "fr_unifr_forensics", "role": "primary"},
+    {"id": "fr_polcant_cyber", "role": "secondary"},
+    {"id": "fr_prosecutor_cyber", "role": "secondary"}
+  ],
+  "regionDetail": {
+    "canton": "FR",
+    "commune": "Fribourg (UNIFR Pérolles)"
+  }
+}
