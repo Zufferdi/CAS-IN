@@ -25,6 +25,11 @@
     return (depth > 1 ? '../'.repeat(depth - 1) : './') + 'data/counts.json';
   }
 
+  // v2.93 — Clés dont la valeur n'est PAS un nombre à formater.
+  // Pour ces clés, on insère la valeur brute (ex. "version": "2.93" → "2.93",
+  // pas "2,93" qui serait le formattage fr-CH d'un float).
+  const RAW_KEYS = new Set(['version', 'generated_at']);
+
   function formatNumber(n) {
     // Formate avec espace fine comme séparateur (norme fr : 1 439)
     try {
@@ -34,6 +39,11 @@
     }
   }
 
+  function renderValue(key, value) {
+    if (RAW_KEYS.has(key)) return String(value);
+    return formatNumber(value);
+  }
+
   function applyCounts(counts) {
     // data-count="KEY" : remplace le textContent
     document.querySelectorAll('[data-count]').forEach(function (el) {
@@ -41,7 +51,7 @@
       if (counts[key] != null) {
         const formatted = el.hasAttribute('data-count-raw')
           ? String(counts[key])
-          : formatNumber(counts[key]);
+          : renderValue(key, counts[key]);
         el.textContent = formatted;
       }
     });
@@ -50,7 +60,7 @@
     document.querySelectorAll('[data-count-fmt]').forEach(function (el) {
       const template = el.getAttribute('data-count-fmt');
       const rendered = template.replace(/\{([a-z_]+)\}/g, function (_, key) {
-        return counts[key] != null ? formatNumber(counts[key]) : '?';
+        return counts[key] != null ? renderValue(key, counts[key]) : '?';
       });
       el.textContent = rendered;
     });
