@@ -1602,7 +1602,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v138';
+const CACHE_VERSION = 'cas-in-v139';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1670,6 +1670,7 @@ const STATIC_ASSETS = [
   './js/core/cas-in-pwa.js',
   './js/core/cas-in-search.js',
   './js/core/cas-in-npc-state.js',
+  './js/core/cas-in-theme-toggle.js',
 
   // ─── Profile UI (js/profile/*) ───
   './js/profile/profile-banner.js',
@@ -1724,6 +1725,7 @@ const STATIC_ASSETS = [
   './js/pages/scene-app.js',
   './js/pages/scene-ux-patch.js',
   './js/pages/scene-lobby-v3.js',
+  './js/pages/scene-card-rich-v1.js',
   './js/pages/scene-engine-v4.js',
   './js/pages/tools-app.js',
   './js/pages/exam-app.js',
