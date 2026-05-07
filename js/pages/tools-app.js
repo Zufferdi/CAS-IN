@@ -44,10 +44,37 @@ function showTool(id, btn) {
   document.querySelectorAll('.tnav-btn').forEach(b=>{
     b.classList.remove('on');
     b.setAttribute('aria-selected', 'false');
+    b.setAttribute('tabindex', '-1');  // v2.59 — roving tabindex pour a11y
   });
   btn.classList.add('on');
   btn.setAttribute('aria-selected', 'true');
+  btn.setAttribute('tabindex', '0');
 }
+
+// v2.59 — Navigation clavier ARIA pour le tablist (←/→/Home/End)
+document.addEventListener('DOMContentLoaded', function () {
+  const tabs = Array.from(document.querySelectorAll('.tnav-btn[role="tab"]'));
+  if (!tabs.length) return;
+  tabs.forEach(function (tab, idx) {
+    tab.addEventListener('keydown', function (e) {
+      let target = null;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        target = tabs[(idx + 1) % tabs.length];
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        target = tabs[(idx - 1 + tabs.length) % tabs.length];
+      } else if (e.key === 'Home') {
+        target = tabs[0];
+      } else if (e.key === 'End') {
+        target = tabs[tabs.length - 1];
+      } else {
+        return;
+      }
+      e.preventDefault();
+      target.focus();
+      target.click();  // active l'onglet
+    });
+  });
+});
 
 // ── Helpers ───────────────────────────────────────────────────
 function showResult(id, html) {
