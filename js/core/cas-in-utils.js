@@ -249,26 +249,13 @@
         delete root.dataset.themeAuto;
         return;
       }
-      if (manual === 'dark') {
-        // Forçage sombre : on pose data-theme="dark" pour neutraliser le
-        // @media (prefers-color-scheme: light) (sélecteur :not([data-theme])).
-        root.setAttribute('data-theme', 'dark');
-        delete root.dataset.themeAuto;
-        return;
-      }
-      // Pas de pref manuelle : suivre l'OS, mais respecter un éventuel
-      // data-theme déjà posé par un autre script (legacy).
-      const cur = root.getAttribute('data-theme');
-      const wasAuto = root.dataset.themeAuto === '1';
-      if (cur && !wasAuto) return; // choix utilisateur explicite (legacy), on respecte
-      if (mql.matches) {
-        root.setAttribute('data-theme', 'light');
-        root.dataset.themeAuto = '1';
-      } else if (wasAuto) {
-        // Revenir au défaut sombre
-        root.removeAttribute('data-theme');
-        delete root.dataset.themeAuto;
-      }
+      // v2.92 — Défaut = SOMBRE.
+      // L'auto-suivi de prefers-color-scheme a été retiré : par défaut on
+      // pose data-theme="dark" pour neutraliser le @media light du CSS.
+      // L'utilisateur peut basculer en clair via le bouton de la navbar.
+      // Le manual === 'dark' tombe aussi dans cette branche.
+      root.setAttribute('data-theme', 'dark');
+      delete root.dataset.themeAuto;
     };
     apply();
     // Exposer pour permettre au toggle de relancer apply() au besoin.
