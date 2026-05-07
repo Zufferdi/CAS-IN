@@ -1,0 +1,194 @@
+{
+  "id": "vs-affaire-viege-4-scada-mattmark",
+  "title": "Affaire Viège #4 — Anomalies SCADA sur Mattmark",
+  "icon": "⚡",
+  "difficulty": "hard",
+  "atmosphere": "network",
+  "narrative": {
+    "success": "L'investigation OT confirme : les anomalies SCADA sur Mattmark proviennent du même pivot que celui utilisé pour Mauvoisin (cf. dossier hydro-valais). Mattmark Cleantech SA, en tant que sous-traitant maintenance OT pour le groupe d'exploitation, a un accès distant légitime — abusé. La signalisation OFCS est faite dans les délais (24h LSI), l'OFEN est en boucle, l'OPF Bagnes-Mauvoisin et l'exploitant Mattmark sont coordonnés. La compétence MPC se précise (art. 24 CPP, infrastructure critique transcantonale).",
+    "degraded": "L'investigation a tourné mais quelques erreurs (acquisition trop intrusive sur l'automate de coupure, retard de la notification OFCS) provoquent des reproches procéduraux. La preuve technique tient toutefois.",
+    "failure": "L'investigation a déclenché un fail-over inattendu sur l'automate principal du barrage (lâcher d'eau partiel non programmé), réveillant tout l'aval. Heureusement personne en danger, mais c'est l'incident OT public que toute la Suisse craint. L'OFEN reprend le pilotage technique, M. Crittin perd la main, la presse s'empare du dossier, et l'instruction est suspendue 2 mois pour vérifications."
+  },
+  "tags": ["scada", "ics", "valais", "mattmark", "barrage", "ofcs", "ofen", "lsi", "infrastructure-critique", "supply-chain", "iec-61850"],
+  "legalRefs": [
+    {"label": "Art. 134 CP", "title": "Mise en danger collective"},
+    {"label": "Art. 144bis CP", "title": "Détérioration de données"},
+    {"label": "Art. 224 CP", "title": "Emploi d'explosifs avec dessein délictueux (par analogie infrastructure)"},
+    {"label": "Art. 24 CPP", "title": "Compétence MPC — infrastructures critiques"},
+    {"label": "Art. 74a LSI", "title": "Signalement obligatoire OFCS"},
+    {"label": "Loi sur l'énergie (LEne)", "title": "Surveillance OFEN"},
+    {"label": "Manuel Ch. 18", "title": "ICS/SCADA forensique"},
+    {"label": "IEC 61850", "title": "Norme communications postes électriques"}
+  ],
+  "intro": "Mercredi 5 mars 2025, 04h12. Le téléphone d'astreinte de la cellule OT-CIRT de l'Office fédéral de l'énergie (OFEN) sonne. <strong>M. Imboden</strong>, responsable sécurité-OT des barrages valaisans, le décroche depuis Sierre. À l'autre bout, un automaticien d'astreinte du barrage de Mattmark (vallée de Saas, exploitant Kraftwerke Mattmark AG) : <em>« Monsieur Imboden, on a une anomalie sur l'automate Siemens S7-1500 de la galerie d'amenée. Le PLC reçoit des commandes de modification de seuil de pression — pas critiques mais qui ne sont pas dans notre scénario d'exploitation. Origine : on dirait l'IP du sous-traitant maintenance. Mais le sous-traitant n'a pas de prévu pour cette nuit, et leur cellule d'astreinte ne répond pas. »</em><br><br>Le sous-traitant en question : <strong>Mattmark Cleantech SA, Brig</strong>. Soit la même entité qui apparaît dans les scènes 1 (téléphone du défunt l'appelait), 2 (OSINT), 3 (contrats fictifs Lonza). Mme Genoud — pardon, M. Crittin — est en train de monter un dossier solide pour blanchiment et organisation criminelle ; et voilà que le même nom revient sur l'OT du barrage.<br><br>09h00. Réunion d'urgence à Sierre, salle de crise OFEN-CIRT. Présents : M. Imboden (OFEN/OT-VS), Mme Tschanz (OFCS coordinatrice CII), <strong>M. Bonvin</strong> (OFEN juridique), inspecteur Salamin (Polcant VS, qui a pris le dossier en pivot), M. Crittin (visio depuis Sion). Le barrage tourne pour l'instant en mode dégradé manuel (l'opérateur a basculé en pilotage local) mais ne peut pas rester ainsi 48h sans risquer une instabilité hydraulique en aval.",
+  "alertLevel": "⚡ INCIDENT OT INFRASTRUCTURE CRITIQUE — Barrage Mattmark · Sous-traitant suspecté · 48h max en mode dégradé · Coordination OFEN/OFCS/MP/MPC · Risque public si erreur technique en cascade",
+  "objectives": [
+    {"icon": "🔌", "text": "Acquérir la preuve OT sans déclencher de cascade dangereuse"},
+    {"icon": "📡", "text": "Identifier le vecteur exact (sous-traitant compromis ou complice ?)"},
+    {"icon": "📞", "text": "Signaler dans les délais légaux (LSI 24h, NCSC, MPC)"},
+    {"icon": "⚖️", "text": "Articuler la compétence MP-VS / MPC vu la dimension infrastructure"}
+  ],
+  "debrief": "<p><strong>Pédagogie de cette scène.</strong> La forensique ICS/SCADA est un domaine spécifique. Les principes généraux (RFC 3227, ordre de volatilité, write-blocker) s'appliquent <em>en partie</em>, mais avec des contraintes additionnelles :</p><ul><li><strong>Disponibilité &gt; intégrité</strong> : sur un IT classique, on coupe au besoin pour préserver les preuves. Sur un OT (barrage, électrique, eau), on ne coupe JAMAIS sans accord de l'exploitant et plan de bascule. Une perte de disponibilité peut tuer.</li><li><strong>Acquisition non intrusive</strong> : on capture sur un mirror port (passive tap), pas en agent actif sur le PLC. Les automates Siemens S7, Schneider Modicon, Allen-Bradley CompactLogix ne sont pas conçus pour exécuter des outils forensiques.</li><li><strong>Norme IEC 61850 / Modbus / DNP3</strong> : protocoles industriels spécifiques, à analyser avec des outils dédiés (GrassMarlin, ICS-CAPTURE, Wireshark + dissecteurs).</li><li><strong>Notification obligatoire OFCS</strong> : <strong>art. 74a LSI</strong> — les exploitants d'infrastructures critiques doivent annoncer dans les 24h.</li><li><strong>Compétence MPC</strong> : <strong>art. 24 CPP</strong> — atteinte à infrastructure critique transcantonale ou transfrontalière → compétence fédérale.</li></ul><p>L'angle supply chain est central : Mattmark Cleantech SA dispose d'un accès distant légitime au SCADA (en tant que sous-traitant maintenance), accès accordé par contrat. L'enjeu est de prouver que cet accès a été <em>abusé</em> (par un employé infiltré, par un compromission externe via les credentials du sous-traitant, ou par instruction directe du sous-traitant). Cette dernière hypothèse fait basculer en organisation criminelle structurée (art. 260ter CP).</p><p><em>Indice narratif</em> : les anomalies Mattmark partagent les mêmes IPs C2 que celles observées sur l'incident Mauvoisin (scène <code>hydro-valais</code>) — confirmant un acteur unique. Cela alimente l'EIMP Italie de la scène 5.</p>",
+  "steps": [
+    {
+      "phase": "🔌 L'acquisition sans interrompre la production",
+      "situation": "M. Imboden propose deux options techniques : (A) brancher un tap passif (TAP réseau industriel hardware) sur le segment réseau OT pour capturer le trafic vers/depuis le S7-1500 sans introduire de paquets ; (B) installer l'agent forensique standard (Velociraptor) sur le serveur historian Wonderware qui collecte les données du SCADA et qui partage des credentials avec le sous-traitant.",
+      "law": "<strong>Manuel Ch. 18.2</strong> — Acquisition forensique ICS : non intrusive en priorité. <strong>RFC 3227 §3.2</strong> — appliqué OT : ne pas modifier les automates en service.",
+      "question": "<strong>Quelle approche d'acquisition est correcte ?</strong>",
+      "choices": [
+        {
+          "text": "Tap passif d'abord (option A), capture du trafic OT côté segment automate (port mirror sur le switch industriel) et côté segment IT-OT (DMZ historian). En parallèle, image forensique du serveur historian quand il aura été basculé sur le secondaire (procédure du soir, validée avec l'exploitant). Aucun agent installé sur le PLC, jamais.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ DOCTRINE ICS RESPECTÉE. Le tap passif (matériel comme un Garland INT10G8SR ou un Cubro Sessionmaster) ne génère AUCUN paquet : impossibilité de modifier le système observé. Capture du trafic protocole industriel (ici probablement S7Comm + Modbus TCP + IEC 60870-5-104) en .pcap pour analyse offline avec Wireshark + dissecteur S7. Image forensique du historian uniquement après bascule contrôlée vers secondaire. Vous avez les preuves ET la disponibilité.",
+          "legal": "Manuel Ch. 18.2."
+        },
+        {
+          "text": "Vous installez Velociraptor sur le serveur historian (option B) pour capturer les processus, les connexions réseau, les artefacts. Et vous lancez nmap sur le segment OT pour identifier les hôtes vivants — c'est rapide.",
+          "ok": false,
+          "pts": -25,
+          "fb": "💀 INCIDENT OT MAJEUR PROBABLE. nmap sur un segment OT industriel = catastrophe : les automates Siemens S7-1500 répondent mal au scanning agressif (paquets TCP malformés, scans UDP), et certains automates plus anciens crashent purement (le crash Schneider Modicon M340 sur scan Nmap est documenté depuis 2010). Sur un automate de barrage en service = lâcher d'eau possible, perte de régulation hydraulique, mise en danger. C'est ce que l'on cherche à éviter à tout prix.",
+          "legal": "Art. 134 CP — mise en danger collective.",
+          "critical": true
+        },
+        {
+          "text": "Vous demandez à Mattmark Cleantech SA (le sous-traitant) de vous fournir les logs de leur accès distant : ils sont les mieux placés pour vous donner les éléments.",
+          "ok": false,
+          "pts": -25,
+          "fb": "💀 PRÉVENU PRÉVENU. Mattmark Cleantech SA est le suspect numéro un dans le dossier en cours. Demander à un suspect de fournir ses propres logs = (1) il les nettoie d'abord, (2) il prévient ses commanditaires, (3) vous brûlez l'effet de surprise tactique pour les opérations futures (perquisition Brig sc. 6). Le tap passif côté exploitant donne les mêmes données, en mieux et indépendamment du suspect.",
+          "legal": "Tactique d'enquête, art. 273 CPP.",
+          "critical": true
+        }
+      ]
+    },
+    {
+      "phase": "📡 Identification du vecteur",
+      "situation": "Le tap passif tourne depuis 6 heures. M. Imboden et l'inspecteur Salamin analysent le pcap : on voit clairement les commandes S7Comm vers le PLC venant d'une IP 10.42.x.x du segment du sous-traitant. Le sous-traitant a-t-il été compromis (credentials volés, attaquant externe), ou un employé du sous-traitant exécute-t-il des ordres pour le compte d'un commanditaire ?",
+      "law": "<strong>Manuel Ch. 18.6</strong> — Attribution OT : compromission externe vs insider threat. <strong>Art. 260ter CP</strong> — organisation criminelle.",
+      "question": "<strong>Comment distinguer compromission externe vs complicité interne ?</strong>",
+      "choices": [
+        {
+          "text": "Vous corrélez : (a) l'horodatage des commandes S7Comm (UTC+1), (b) les logs d'accès distant Mattmark Cleantech (à obtenir par séquestre, scène 6), (c) les badges physiques du sous-traitant (qui était dans leurs locaux à cette heure ?), (d) les flux IP en amont (TLS handshakes vers C2 ou trafic légitime ?), (e) les TTPs (commandes envoyées sont-elles des actions ordinaires de maintenance ou non ?). En attendant, vous segmentez le réseau pour limiter le risque.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ ANALYSE MULTI-COUCHES. Cette corrélation 5-axes est la méthode standard pour attribution d'incident OT. Si le badge montre que personne du sous-traitant n'était au bureau à 03h47 alors qu'une commande sortait de leur IP = compromission externe ou backdoor. Si quelqu'un était présent et que les commandes correspondent à ses actions habituelles à des heures inhabituelles = complicité plus probable. La segmentation parallèle limite le risque de propagation pendant l'analyse.",
+          "legal": "Manuel Ch. 18.6."
+        },
+        {
+          "text": "Vous concluez direct compromission externe : c'est le scénario le plus fréquent statistiquement, et un sous-traitant suisse ne fait pas du sabotage.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ BIAIS DE NORMALITÉ. Vous avez TOUTE l'enquête en cours qui pointe vers Mattmark Cleantech comme société-écran 'Ndrangheta. Conclure « compromission externe » sans corrélation = ignorer ce contexte. Le procureur Crittin va vous reprocher d'avoir pré-orienté l'investigation. La méthode forensique exige de rester neutre et de corréler avant de conclure.",
+          "legal": "Manuel Ch. 18.6 — neutralité analytique."
+        },
+        {
+          "text": "Vous déduisez complicité interne directement (vu le contexte de l'enquête) et vous ouvrez immédiatement la procédure pour art. 260ter CP contre le directeur de Mattmark Cleantech.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ BIAIS DE CONFIRMATION. Inverse du précédent : vous prenez le contexte de l'enquête et vous l'imposez aux faits techniques. Mais imaginons que les attaquants externes aient compromis Mattmark Cleantech depuis l'Italie — ça change qualitativement le dossier (les dirigeants Mattmark deviennent eux aussi des victimes IT). Vous devez DÉMONTRER, pas supposer.",
+          "legal": "Manuel Ch. 18.6 — neutralité, art. 6 CrEDH (présomption innocence)."
+        }
+      ]
+    },
+    {
+      "phase": "📞 Le signalement OFCS et la coordination",
+      "situation": "11h00. Vous devez orchestrer les notifications obligatoires : OFCS (LSI art. 74a — 24h max), OFEN (autorité de sécurité énergie), MROS (déjà saisi via scène 3), et la question MPC (art. 24 CPP).",
+      "law": "<strong>Art. 74a LSI</strong> — exploitant infrastructure critique : signalement OFCS dans les 24h. <strong>OAcyber</strong> — modalités de notification. <strong>Art. 24 CPP</strong> — compétence MPC.",
+      "question": "<strong>Quel ordre de notifications adoptez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Dans la même heure : OFCS (LSI, comptes-rendus structurés via le portail GovCERT/NCSC), OFEN (par M. Bonvin qui est déjà dans la salle), exploitant Mattmark (déjà avisé par M. Imboden). Avec M. Crittin, vous décidez de saisir le MPC pour évaluation de compétence (art. 24 CPP) — sans dessaisir le canton, juste pour évaluation. La presse n'est pas contactée.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ ORCHESTRATION CORRECTE. Notification simultanée des autorités fédérales sectorielles (OFCS technique, OFEN énergétique) = vous respectez le cadre LSI et vous évitez les retards. Saisir le MPC pour ÉVALUATION (et non transfert) est exactement la bonne nuance art. 24 CPP — le MP-VS reste pilote tant que le MPC n'a pas accepté. Et la non-publicisation = effet de surprise pour la phase opérationnelle (scène 6, perquisition Brig).",
+          "legal": "Art. 74a LSI, art. 24 CPP."
+        },
+        {
+          "text": "Vous attendez d'avoir un dossier solide pour saisir l'OFCS — pas la peine de les déranger pour une anomalie pas encore qualifiée.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ VIOLATION LSI. L'art. 74a LSI impose un signalement dans les 24h dès qu'on a un soupçon raisonnable d'incident sur infrastructure critique. Pas « quand le dossier est solide ». Le législateur a choisi 24h précisément pour permettre à l'OFCS d'avoir une vision nationale agrégée et de prévenir d'autres opérateurs. Manquer le délai = violation de la loi (avec amende administrative possible) + précédent fâcheux pour le canton.",
+          "legal": "Art. 74a LSI — délai 24h."
+        },
+        {
+          "text": "Vous saisissez immédiatement le MPC qui dessaisit le canton, c'est plus simple : un seul pilote, fédéral.",
+          "ok": false,
+          "pts": -10,
+          "fb": "🔄 SAISINE TROP RAPIDE. Le MPC peut décliner ou accepter une demande de dessaisissement (art. 25-28 CPP). Si vous demandez un dessaisissement complet alors que la dimension exacte n'est pas confirmée, vous risquez : (a) refus du MPC qui vous renvoie le dossier (perte de temps), (b) acceptation mais avec une base mal cadrée, source de contestations ultérieures. La voie évaluation (sans dessaisissement) est plus prudente.",
+          "legal": "Art. 25-28 CPP — procédure de dessaisissement."
+        }
+      ]
+    },
+    {
+      "phase": "🔁 Le pivot Mauvoisin — un seul attaquant ?",
+      "situation": "M. Imboden compare les IOC de Mattmark à ceux du dossier Mauvoisin (sc. <code>hydro-valais</code>, dossier ouvert il y a 14 mois, jamais résolu) : 4 adresses IP communes, mêmes user-agents inhabituels dans le trafic, pattern temporel similaire (intrusions entre 03h-05h CET). Très probablement le même attaquant.",
+      "law": "<strong>Art. 56 CPP</strong> — joinder de procédures pour cohérence. <strong>Art. 264 CPP</strong> — séquestre des données antérieures.",
+      "question": "<strong>Que faites-vous de cette corrélation ?</strong>",
+      "choices": [
+        {
+          "text": "Vous demandez à M. Crittin de proposer la jonction des dossiers Mauvoisin et Mattmark sous procédure-cadre. Vous récupérez auprès du précédent procureur en charge du dossier Mauvoisin les pièces non publiques pour confirmer la corrélation. Et vous étendez l'analyse à d'autres barrages valaisans avec le même sous-traitant maintenance (audit OFEN demandé).",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ TRIPLE GAIN. (1) Joinder de procédures = preuves cumulées contre les mêmes auteurs, narratif renforcé pour audience. (2) Récupération du dossier Mauvoisin = vous capitalisez sur 14 mois d'investigation déjà faite. (3) Audit OFEN sur les autres barrages avec même sous-traitant = vous identifiez s'il y a d'autres infrastructures à risque (Cleuson-Dixence ? Émosson ? Salanfe ?). Vision systémique.",
+          "legal": "Art. 56 + 264 CPP."
+        },
+        {
+          "text": "La corrélation est intéressante mais ce n'est qu'une hypothèse — vous attendez l'EIMP italienne (scène 5) pour avoir confirmation avant de jonctionner.",
+          "ok": false,
+          "pts": -10,
+          "fb": "🔄 ATTENTE INUTILE. Le joinder n'exige pas une certitude absolue, juste un faisceau d'indices fort (ce que vous avez avec 4 IPs communes et patterns temporels). Attendre l'EIMP = perdre 2-3 mois pendant lesquels les preuves s'effacent. Et le joinder facilite l'EIMP (un seul dossier transmis à Milan = un seul cadre pour les questions). Lancer maintenant.",
+          "legal": "Art. 56 CPP — joinder, faisceau d'indices."
+        },
+        {
+          "text": "Vous publiez la corrélation IOC sur les plateformes IOC publiques (MISP, AlienVault OTX) pour aider la communauté à se protéger.",
+          "ok": false,
+          "pts": -25,
+          "fb": "💀 RUPTURE DU SECRET DE L'INSTRUCTION. Publier les IOC sur des plateformes ouvertes = Mattmark Cleantech, leurs commanditaires, et l'attaquant verront vos IOC en direct. Ils nettoieront leur infrastructure, changeront d'IPs, et l'enquête sera condamnée. Le partage IOC est légitime pour des incidents publics, pas pour une instruction en cours. Le bon moment : APRÈS la phase opérationnelle (perquisition + arrestations), ou pas du tout selon décision MP.",
+          "legal": "Art. 73 CPP — secret de l'instruction.",
+          "critical": true
+        }
+      ]
+    },
+    {
+      "phase": "📝 Le rapport intermédiaire pour le MPC",
+      "situation": "16h00. M. Crittin appelle le procureur fédéral de permanence MPC pour évaluation art. 24 CPP. Il vous demande un rapport synthèse de 2 pages qui présente : nature de l'incident, faisceau d'indices d'organisation criminelle, dimension transfrontalière, raisons pour lesquelles le canton préfère rester pilote (ou souhaite être dessaisi).",
+      "law": "<strong>Art. 24 CPP</strong> — compétence MPC. <strong>Art. 27 CPP</strong> — évaluation conjointe MP cantonal/MPC.",
+      "question": "<strong>Quel argumentaire est le plus juste ?</strong>",
+      "choices": [
+        {
+          "text": "Le canton VS reste pilote car : (a) ancrage cantonal du dossier (Mattmark Cleantech à Brig, Lonza à Visp, victime à Saas-Almagell), (b) connaissance fine du tissu valaisan par M. Crittin, (c) coopération opérationnelle déjà rodée avec OFEN-VS et Polcant VS. Mais on demande au MPC de fournir : (i) appui EIMP Italie via fedpol ND, (ii) coordination MROS centralisée, (iii) éventuel dessaisissement futur si la dimension organisation criminelle dépasse le cadre cantonal.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ POSTURE INSTITUTIONNELLE NUANCÉE. Vous proposez la coopération sans dessaisissement = bonne pratique fédérale (art. 27 CPP). Le canton garde le pilotage opérationnel (proximité, connaissance), le MPC apporte ce que le canton ne peut pas faire seul (EIMP via fedpol, MROS centralisé). C'est exactement la cuvée du fédéralisme suisse en matière pénale.",
+          "legal": "Art. 24 + 27 CPP."
+        },
+        {
+          "text": "Le canton VS demande le dessaisissement complet : trop gros, trop transfrontalier, trop infrastructure critique. Le MPC doit reprendre.",
+          "ok": false,
+          "pts": -10,
+          "fb": "🔄 ABDICATION. Vous abandonnez 6 mois d'investigation cantonale en cours et toute la connaissance du terrain (M. Crittin, M. Imboden, M. Bonvin). Le MPC va devoir refaire connaissance avec le dossier (3-4 mois de mise à niveau) pendant lesquels les suspects auront tout le temps. Le bon réflexe est la coopération, pas le transfert sec.",
+          "legal": "Art. 25 CPP — dessaisissement."
+        },
+        {
+          "text": "Le canton VS refuse toute coopération MPC : c'est cantonal, point. Le MPC peut intervenir sur l'aspect Italie via la liaison ordinaire mais ne touche pas au pilotage.",
+          "ok": false,
+          "pts": -10,
+          "fb": "🔄 ISOLATIONNISME. Refuser le MPC sur un dossier qui implique manifestement EIMP Italie + organisation criminelle transfrontalière = vous vous coupez d'un partenaire essentiel. Le MPC a la liaison directe via les attachés fedpol à l'étranger ; le canton n'a pas cette capacité. Refuser la coopération = freiner sa propre enquête.",
+          "legal": "Art. 27 CPP — coopération inter-niveaux."
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    {"id": "vs_securite_barrages", "role": "primary"},
+    {"id": "vs_polcant_cyber", "role": "primary"},
+    {"id": "vs_prosecutor_cyber", "role": "secondary"},
+    {"id": "ofen_juriste_int", "role": "secondary"},
+    {"id": "ofcs_coordinator", "role": "secondary"}
+  ],
+  "regionDetail": {
+    "canton": "VS",
+    "commune": "Mattmark / Saas-Almagell / Sierre / Sion",
+    "company": "Kraftwerke Mattmark AG (réelle) · Mattmark Cleantech SA (fictive, sous-traitant)"
+  }
+}
