@@ -127,6 +127,56 @@ def count_tp_categories(root: Path) -> int:
     return len(cats)
 
 
+def read_version(root: Path) -> str:
+    """v2.93 — Lit la version courante depuis docs/CHANGELOG.md (Keep-a-Changelog).
+    Cherche le premier `## [X.Y]` ou `## X.Y` non marqué `[Unreleased]`.
+    Fallback : la version inscrite en haut de cas-in-profile.js, ou 'dev'."""
+    changelog = root / "docs" / "CHANGELOG.md"
+    if changelog.exists():
+        content = changelog.read_text(encoding="utf-8")
+        # ignore 'Unreleased', prend la première version sémantique
+        for m in re.finditer(r'^##\s+\[?([0-9]+\.[0-9]+(?:\.[0-9]+)?)\]?', content, re.M):
+            return m.group(1)
+    # Fallback : commentaire en tête de cas-in-profile.js (ex. "v2.93")
+    profile = root / "js" / "core" / "cas-in-profile.js"
+    if profile.exists():
+        head = profile.read_text(encoding="utf-8")[:500]
+        m = re.search(r'v([0-9]+\.[0-9]+(?:\.[0-9]+)?)', head)
+        if m:
+            return m.group(1)
+    return "dev"
+
+
+def patch_html_fallbacks(root: Path, counts: dict) -> int:
+    """v2.93 — Patche les valeurs de fallback `data-count="KEY">N` dans tous les
+    fichiers HTML, pour que SEO/réseaux sociaux/lecteurs sans JS voient les
+    bons chiffres. Sans ce patch, le HTML montrait 1439 questions / 54 fiches
+    / 18 scènes / 20 TP, valeurs gelées datant d'avant 2026."""
+    mapping = {
+        "questions":     str(counts.get("questions", 0)),
+        "fiches":        str(counts.get("fiches", 0)),
+        "scenes":        str(counts.get("scenes", 0)),
+        "tp_categories": str(counts.get("tp_categories", 0)),
+        "tp_exercises":  str(counts.get("tp_exercises", 0)),
+    }
+    pattern = re.compile(r'data-count="([a-z_]+)">(\d+)')
+    files_changed = 0
+    for html in root.rglob("*.html"):
+        # Skip node_modules/build artefacts éventuels
+        if any(part.startswith(".") for part in html.parts):
+            continue
+        content = html.read_text(encoding="utf-8")
+        def repl(m):
+            key = m.group(1)
+            return f'data-count="{key}">{mapping[key]}' if key in mapping else m.group(0)
+        new_content = pattern.sub(repl, content)
+        if new_content != content:
+            html.write_text(new_content, encoding="utf-8")
+            files_changed += 1
+            print(f"[patch] {html.relative_to(root)}")
+    return files_changed
+
+
 def main():
     root = repo_root()
     print(f"[info] Racine du projet : {root}")
@@ -134,6 +184,7 @@ def main():
     counts = {
         "$comment": "Auto-généré par scripts/generate_counts.py. Ne pas éditer à la main.",
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "version": read_version(root),
         "questions": count_questions(root),
         "fiches": count_fiches(root),
         "scenes": count_scenes(root),
@@ -153,6 +204,14 @@ def main():
     for k, v in counts.items():
         if not k.startswith("$"):
             print(f"     {k:16} = {v}")
+
+    # v2.93 — Patche aussi les fallbacks HTML pour que SEO/no-JS voient les
+    # vrais chiffres (et pas le flash 1439 → 2000 au chargement).
+    n_patched = patch_html_fallbacks(root, counts)
+    if n_patched:
+        print(f"[ok] {n_patched} fichier(s) HTML patché(s) (data-count fallback)")
+    else:
+        print("[ok] aucun fichier HTML à patcher")
 
 
 if __name__ == "__main__":
