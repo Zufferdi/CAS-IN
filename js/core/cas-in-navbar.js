@@ -26,14 +26,22 @@
   ];
 
   const PAGE_TITLES = {
-    quiz:     { icon: '💊', label: 'QUIZ' },
-    scene:    { icon: '🔍', label: 'SCÈNES DFIR' },
-    tp:       { icon: '🧪', label: 'TRAVAUX PRATIQUES' },
-    fiches:   { icon: '📄', label: 'FICHES DE RÉVISION' },
-    glossary: { icon: '📚', label: 'GLOSSAIRE' },
-    npcs:     { icon: '👥', label: 'PERSONNAGES' },
-    tools:    { icon: '🛠', label: 'OUTILS FORENSIQUES' },
-    exam:     { icon: '📝', label: 'EXAMEN BLANC' },
+    quiz:         { icon: '💊', label: 'QUIZ' },
+    scene:        { icon: '🔍', label: 'SCÈNES DFIR' },
+    tp:           { icon: '🧪', label: 'TRAVAUX PRATIQUES' },
+    fiches:       { icon: '📄', label: 'FICHES DE RÉVISION' },
+    glossary:     { icon: '📚', label: 'GLOSSAIRE' },
+    npcs:         { icon: '👥', label: 'PERSONNAGES' },
+    tools:        { icon: '🛠', label: 'OUTILS FORENSIQUES' },
+    exam:         { icon: '📝', label: 'EXAMEN BLANC' },
+    // ── Cluster Références (v2.59) ──
+    references:   { icon: '📚', label: 'RÉFÉRENCES' },
+    artifacts:    { icon: '🗂', label: 'ARTEFACTS FORENSIQUES' },
+    events:       { icon: '🪵', label: 'EVENT IDS' },
+    mitre:        { icon: '🎯', label: 'MITRE ATT&CK' },
+    legal:        { icon: '⚖️', label: 'ARTICLES JURIDIQUES' },
+    'dfir-tools': { icon: '🧰', label: 'OUTILS DFIR' },
+    signatures:   { icon: '🔮', label: 'MAGIC BYTES' },
   };
 
   // ── Helpers ────────────────────────────────────────────────
@@ -105,7 +113,12 @@
     bottom.className = 'cas-navbar__bottom';
 
     // Accueil (gauche)
-    const homeHref = page === 'fiches' ? '../index.html' : 'index.html';
+    // Détection sous-dossier : explicite via data-subfolder="1",
+    // rétro-compat 'fiches' (qui ne pose pas l'attribut).
+    const inSubfolder = slot.dataset.subfolder === '1' || page === 'fiches';
+
+    // Accueil (gauche)
+    const homeHref = inSubfolder ? '../index.html' : 'index.html';
     const homeLink = document.createElement('a');
     homeLink.href = homeHref;
     homeLink.className = 'cas-navbar__home';
@@ -148,11 +161,11 @@
       const link = document.createElement('a');
       const isActive = s.id === page;
       
-      // Gérer le href relatif depuis fiches/
-      let href = s.href;
-      if (page === 'fiches' && s.id !== 'fiches') {
-        href = '../' + s.href;
-      }
+      // Depuis un sous-dossier, préfixer ../ uniformément.
+      // Le lien actif sera réécrit en '#' juste après par
+      // link.href = isActive ? '#' : href, donc le préfixe est
+      // sans effet visible quand s.id === page.
+      let href = inSubfolder ? '../' + s.href : s.href;
 
       link.href = isActive ? '#' : href;
       link.className = 'cas-navbar__link' + (isActive ? ' cas-navbar__link--active' : '');
