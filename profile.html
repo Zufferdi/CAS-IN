@@ -388,15 +388,17 @@ document.documentElement.setAttribute('data-theme','dark');}})();
   <div class="dfir-auth-block" aria-label="Bloc d'autorisation administrative">
     <div class="dfir-auth-cell">
       <div class="dfir-auth-label">Approved by</div>
-      <div class="dfir-auth-line"></div>
+      <div class="dfir-auth-line">
+        <span class="dfir-auth-signature" id="profile-auth-signature" role="img"></span>
+      </div>
       <div class="dfir-auth-hint">Officier instructeur</div>
     </div>
     <div class="dfir-auth-cell">
       <div class="dfir-auth-label">Date d'activation</div>
       <div class="dfir-auth-line">
-        <span class="dfir-auth-signature" id="profile-auth-signature"></span>
+        <span class="dfir-auth-date" id="profile-auth-date"></span>
       </div>
-      <div class="dfir-auth-hint">JJ / MM / AAAA</div>
+      <div class="dfir-auth-hint">MM / DD / YYYY</div>
     </div>
   </div>
 
@@ -500,11 +502,35 @@ document.documentElement.setAttribute('data-theme','dark');}})();
 <!-- Signature dynamique du bloc auth (profile-dossier-plus.css) -->
 <script>
   document.addEventListener('DOMContentLoaded', function () {
+    // ── « Approved by » : signature fixe de l'officier instructeur ──
+    // Tampon narratif identique pour tous les agents : R.R aka Banzaï.
+    // role="img" + aria-label : la signature est un visuel stylisé ;
+    // les lecteurs d'écran lisent le label, pas la cursive brute.
     var sig = document.getElementById('profile-auth-signature');
-    if (sig && window.Profile) {
+    if (sig) {
+      sig.textContent = 'R.R aka Banzaï';
+      sig.setAttribute('aria-label', 'Dossier approuvé par R.R aka Banzaï, officier instructeur');
+    }
+
+    // ── « Date d'activation » : date du 1er point marqué, format MM/DD/YYYY ──
+    // Reste vide tant qu'aucune XP n'a été gagnée (firstXpAt === null) :
+    // le dossier n'est « activé » qu'au 1er point. zéro-padding sur mois et jour.
+    // a11y : aria-label décrit la date en clair ; un attribut datetime ISO
+    // 8601 est posé pour les outils qui parsent (extensions, copie sémantique).
+    var dateEl = document.getElementById('profile-auth-date');
+    if (dateEl && window.Profile) {
       var snap = window.Profile.snapshot();
-      var name = snap && snap.agent && snap.agent.name;
-      if (name && name !== 'Enquêteur') sig.textContent = name;
+      var ts = snap && snap.firstXpAt;
+      if (ts) {
+        var d = new Date(ts);
+        var mm = String(d.getMonth() + 1).padStart(2, '0');
+        var dd = String(d.getDate()).padStart(2, '0');
+        var yyyy = d.getFullYear();
+        dateEl.textContent = mm + '/' + dd + '/' + yyyy;
+        dateEl.setAttribute('aria-label',
+          "Dossier activé le " + dd + "/" + mm + "/" + yyyy);
+        dateEl.setAttribute('datetime', d.toISOString().slice(0, 10));
+      }
     }
 
     // v2.92 — Bascule clair/sombre dans le bandeau du profil
