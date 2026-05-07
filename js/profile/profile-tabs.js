@@ -70,17 +70,25 @@
       btn.addEventListener('click', () => activate(btn.dataset.tab));
     });
 
-    // Keyboard nav (← →)
+    // Keyboard nav (← → Home End — pattern ARIA tablist v2.59)
     const tablist = document.querySelector('.profile-tabs');
     if (tablist) {
       tablist.addEventListener('keydown', e => {
-        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
         const arr = Array.from(tabs);
         const current = arr.findIndex(b => b.classList.contains('profile-tab--active'));
         if (current < 0) return;
-        let next = e.key === 'ArrowRight' ? current + 1 : current - 1;
-        if (next < 0) next = arr.length - 1;
-        if (next >= arr.length) next = 0;
+        let next = null;
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          next = (current + 1) % arr.length;
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          next = (current - 1 + arr.length) % arr.length;
+        } else if (e.key === 'Home') {
+          next = 0;
+        } else if (e.key === 'End') {
+          next = arr.length - 1;
+        } else {
+          return;
+        }
         activate(arr[next].dataset.tab);
         arr[next].focus();
         e.preventDefault();
