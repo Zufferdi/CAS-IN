@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Décodage Timestamps FS — FAT · exFAT · NTFS · EXT · HFS+ — CAS-IN Forensique</title>
+<meta name="description" content="Référence technique : décodage des timestamps sur FAT, exFAT, NTFS, EXT2/3/4, HFS+. Format binaire, époques, fuseaux horaires, précision, conversions, pièges forensiques.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+
+<style>
+/* Tableaux de décodage compacts spécifiques à cette fiche */
+.ts-grid { display:grid; gap:.6rem; margin:.6rem 0; }
+.ts-grid.cols-2 { grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+.ts-grid.cols-3 { grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+
+.ts-fs-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:.85rem 1rem; }
+.ts-fs-card .ts-fs-name { font-family:var(--sans); font-size:.95rem; font-weight:800; margin-bottom:.35rem; }
+.ts-fs-card .ts-fs-sub  { font-size:.72rem; color:var(--muted); margin-bottom:.55rem; line-height:1.45; }
+.ts-fs-card .ts-fs-row  { display:flex; justify-content:space-between; gap:.5rem; padding:.22rem 0; border-bottom:1px dashed rgba(255,255,255,.05); font-size:.74rem; }
+.ts-fs-card .ts-fs-row:last-of-type { border-bottom:none; }
+.ts-fs-card .ts-fs-key { color:var(--muted); }
+.ts-fs-card .ts-fs-val { color:var(--text); font-family:var(--mono); font-size:.72rem; text-align:right; }
+
+.ts-bytes { background:rgba(13,17,23,.6); border:1px solid var(--border); border-radius:6px;
+            padding:.7rem .85rem; font-family:var(--mono); font-size:.72rem; line-height:1.6;
+            overflow-x:auto; white-space:nowrap; }
+.ts-bytes b { color:var(--cyan); }
+.ts-bytes em { color:var(--orange); font-style:normal; }
+.ts-bytes i { color:var(--green); font-style:normal; }
+.ts-bytes u { color:var(--gold); text-decoration:none; }
+.ts-bytes s { color:var(--purple); text-decoration:none; }
+
+.ts-formula { display:block; background:rgba(13,17,23,.7); border-left:3px solid var(--cyan);
+              padding:.55rem .85rem; margin:.5rem 0; font-family:var(--mono); font-size:.78rem;
+              color:var(--text); border-radius:0 6px 6px 0; }
+.ts-formula .ts-arrow { color:var(--gold); margin:0 .4rem; }
+
+.ts-tz { display:inline-block; padding:.1rem .45rem; border-radius:4px;
+         font-size:.66rem; font-weight:700; letter-spacing:.04em; font-family:var(--mono); }
+.ts-tz-utc   { background:rgba(48,232,138,.12); border:1px solid rgba(48,232,138,.3); color:var(--green); }
+.ts-tz-local { background:rgba(255,64,96,.12);  border:1px solid rgba(255,64,96,.3);  color:var(--red); }
+.ts-tz-mixed { background:rgba(240,136,62,.12); border:1px solid rgba(240,136,62,.3); color:var(--orange); }
+
+.ts-bigtable { width:100%; border-collapse:collapse; font-size:.74rem; margin-top:.5rem; }
+.ts-bigtable th, .ts-bigtable td { padding:.5rem .65rem; text-align:left; border-bottom:1px solid var(--border); vertical-align:top; }
+.ts-bigtable thead th { background:rgba(255,255,255,.03); font-size:.7rem; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+.ts-bigtable tbody tr:hover { background:rgba(255,255,255,.02); }
+.ts-bigtable code { font-size:.7rem; }
+
+.ts-checklist { background:rgba(0,229,204,.04); border:1px solid rgba(0,229,204,.15); border-radius:8px; padding:.85rem 1rem; }
+.ts-checklist li { margin-bottom:.35rem; line-height:1.5; }
+</style>
+</head>
+<body>
+<div id="scroll-progress"></div>
+<a href="#main-content" class="skip-link">Aller au contenu</a>
+<nav class="tn-nav" aria-label="Navigation fiche">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">DÉCODAGE TIMESTAMPS FS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesdefichiers">Systèmes de fichiers</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Décodage Timestamps FS</span>
+    <span class="read-time-badge">⏱ ~14 min</span>
+  </div>
+</div>
+
+<main id="main-content">
+<div class="page">
+
+<div class="header">
+  <div class="badge" style="font-size:2rem;color:var(--gold)">🕰</div>
+  <div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">
+      Décodage Timestamps FS
+    </h1>
+    <span class="tag tag-gold">FAT</span>
+    <span class="tag tag-orange">exFAT</span>
+    <span class="tag tag-purple">NTFS</span>
+    <span class="tag tag-red">EXT2/3/4</span>
+    <span class="tag tag-cyan">HFS+</span>
+    <div class="meta" style="margin-top:.4rem">
+      Format binaire · Époques · Fuseaux horaires · Précision · Conversions hex → date · Pièges forensiques
+    </div>
+  </div>
+</div>
+
+<div class="prereq-block">
+<div class="prereq-row">
+  <span class="prereq-label">Prérequis :</span>
+  <a href="encodage.html" class="prereq-pill">📖 Encodage</a>
+  <a href="comparaison_fs.html" class="prereq-pill">📖 Comparaison FS</a>
+  <a href="mac_times.html" class="prereq-pill">📖 MAC Times</a>
+</div>
+<div class="prereq-row">
+  <span class="prereq-label">Voir aussi :</span>
+  <a href="ntfs.html" class="related-pill">🔗 NTFS</a>
+  <a href="exfat.html" class="related-pill">🔗 exFAT</a>
+  <a href="ext.html" class="related-pill">🔗 EXT</a>
+  <a href="hfs.html" class="related-pill">🔗 HFS+</a>
+  <a href="apfs.html" class="related-pill">🔗 APFS</a>
+  <a href="anti_forensique.html" class="related-pill">🔗 Anti-forensique</a>
+  <a href="timeline.html" class="related-pill">🔗 Timeline</a>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 1 — POURQUOI CETTE FICHE
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="pourquoi">
+<div class="sec-title">Pourquoi cette fiche</div>
+
+<div class="info">
+  <strong>Le piège des timestamps en forensique numérique :</strong> chaque système de fichiers stocke ses
+  dates différemment — époque différente, précision différente, fuseau horaire différent, voire
+  encodage par bits différent. Une <strong>même valeur hexadécimale</strong> dans une entrée FAT et dans une MFT NTFS
+  ne représente <em>jamais</em> le même instant. Cette fiche est la référence de décodage byte-par-byte que vous
+  consulterez pendant l'analyse, indépendamment de l'outil utilisé (X-Ways, FTK, Autopsy, Sleuth Kit).
+</div>
+
+<p style="font-size:.82rem;color:var(--muted);margin:.6rem 0;line-height:1.6">
+  Trois questions à se poser systématiquement <strong style="color:var(--text)">avant</strong> d'interpréter
+  un timestamp issu d'un FS :
+</p>
+<ol style="font-size:.82rem;color:var(--text);line-height:1.65;padding-left:1.4rem">
+  <li><strong>Quelle est l'époque ?</strong> 1601 (NTFS), 1904 (HFS+), 1970 (Unix/EXT/exFAT/FAT décodé), 2001 (Cocoa) — la confondre = des décennies d'erreur.</li>
+  <li><strong>Quel est le fuseau ?</strong> UTC, local, ou les deux ? FAT stocke en local <em>sans</em> indiquer le fuseau. exFAT optionnellement avec offset. NTFS et EXT toujours en UTC. HFS+ toujours en UTC <em>sauf</em> le volume header. Voir tableau ci-dessous.</li>
+  <li><strong>Quelle est la précision native ?</strong> 2 secondes (FAT), 10 ms (exFAT), 1 seconde (EXT2/3, HFS+), 1 ns (EXT4 inode 256 o, NTFS, APFS).</li>
+</ol>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 2 — VUE D'ENSEMBLE COMPARATIVE
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="vue-ensemble">
+<div class="sec-title">Vue d'ensemble comparative — les 5 grandes familles</div>
+
+<div class="ts-grid cols-2">
+
+  <div class="ts-fs-card" style="border-left:3px solid var(--gold)">
+    <div class="ts-fs-name" style="color:var(--gold)">🟡 FAT (FAT12/16/32)</div>
+    <div class="ts-fs-sub">DOS · 1977 → aujourd'hui (carte SD &lt; 32 Go, BIOS UEFI ESP).</div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Époque</span><span class="ts-fs-val">1980-01-01</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Précision</span><span class="ts-fs-val">2 s (M, B) · 1 j (A)</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Fuseau</span><span class="ts-fs-val"><span class="ts-tz ts-tz-local">LOCAL</span></span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Encodage</span><span class="ts-fs-val">Bits packés DOS</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Taille champ</span><span class="ts-fs-val">2+2 octets (date+time)</span></div>
+  </div>
+
+  <div class="ts-fs-card" style="border-left:3px solid var(--orange)">
+    <div class="ts-fs-name" style="color:var(--orange)">🟠 exFAT</div>
+    <div class="ts-fs-sub">Microsoft 2006, libre depuis 2019. SD &gt; 64 Go, médias amovibles.</div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Époque</span><span class="ts-fs-val">1980-01-01</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Précision</span><span class="ts-fs-val">10 ms (C, M) · 2 s (A)</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Fuseau</span><span class="ts-fs-val"><span class="ts-tz ts-tz-mixed">LOCAL + offset UTC</span></span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Encodage</span><span class="ts-fs-val">DOS + 10 ms + 15 min</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Taille champ</span><span class="ts-fs-val">4+1+1 octets</span></div>
+  </div>
+
+  <div class="ts-fs-card" style="border-left:3px solid var(--purple)">
+    <div class="ts-fs-name" style="color:var(--purple)">🟣 NTFS (FILETIME)</div>
+    <div class="ts-fs-sub">Windows NT 1993 → 11. Standard sur tout système Windows moderne.</div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Époque</span><span class="ts-fs-val">1601-01-01</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Précision</span><span class="ts-fs-val">100 ns</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Fuseau</span><span class="ts-fs-val"><span class="ts-tz ts-tz-utc">UTC</span></span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Encodage</span><span class="ts-fs-val">Entier 64 bits LE</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Taille champ</span><span class="ts-fs-val">8 octets · ×4 (MACB) · ×2 ($SI/$FN)</span></div>
+  </div>
+
+  <div class="ts-fs-card" style="border-left:3px solid var(--red)">
+    <div class="ts-fs-name" style="color:var(--red)">🔴 EXT2 / EXT3 / EXT4</div>
+    <div class="ts-fs-sub">Linux. EXT4 depuis 2008, dominant sur serveurs Linux et Android avant F2FS.</div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Époque</span><span class="ts-fs-val">1970-01-01 (Unix)</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Précision</span><span class="ts-fs-val">1 s (EXT2/3) · 1 ns (EXT4 inode 256 o)</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Fuseau</span><span class="ts-fs-val"><span class="ts-tz ts-tz-utc">UTC</span></span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Encodage</span><span class="ts-fs-val">Entier 32 bits + extra 32 bits (EXT4)</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Taille champ</span><span class="ts-fs-val">4 o + 4 o (extra ns+epoch)</span></div>
+  </div>
+
+  <div class="ts-fs-card" style="border-left:3px solid var(--cyan); grid-column: span 2">
+    <div class="ts-fs-name" style="color:var(--cyan)">🔵 HFS+ (HFS Plus / Mac OS Extended) <span style="font-weight:400;color:var(--muted);font-size:.7rem">— prédécesseur d'APFS</span></div>
+    <div class="ts-fs-sub">Apple 1998 → 2017 (remplacé par APFS en macOS 10.13). Encore présent sur Time Machine, vieux iPod, périphériques Mac legacy.</div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Époque</span><span class="ts-fs-val">1904-01-01 (Mac OS classic)</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Précision</span><span class="ts-fs-val">1 seconde</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Fuseau</span><span class="ts-fs-val"><span class="ts-tz ts-tz-utc">UTC (sauf volume header = local)</span></span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Encodage</span><span class="ts-fs-val">Entier 32 bits non signé Big-Endian</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">Taille champ</span><span class="ts-fs-val">4 octets · ×4 timestamps catalog</span></div>
+    <div class="ts-fs-row"><span class="ts-fs-key">⚠ Limite</span><span class="ts-fs-val">Bug Y2040 (overflow 2040-02-06)</span></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 3 — FAT : DÉCODAGE BYTE PAR BYTE
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="fat-decoding">
+<div class="sec-title">FAT12/16/32 — Décodage byte par byte du DOS Date/Time</div>
+
+<p style="font-size:.82rem;line-height:1.65;margin:.5rem 0">
+  Dans une entrée de répertoire FAT (32 octets), 3 timestamps sont stockés au format <strong>DOS Date</strong> (2 octets)
+  + <strong>DOS Time</strong> (2 octets), sauf <em>Last Access</em> qui n'a que la date :
+</p>
+
+<table class="ts-bigtable" aria-label="Champs timestamps FAT">
+  <thead>
+    <tr>
+      <th>Offset (entry)</th>
+      <th>Champ</th>
+      <th>Taille</th>
+      <th>Précision</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>0x0E – 0x0F</code></td>
+      <td><strong>Create Time</strong></td>
+      <td>2 octets</td>
+      <td>2 secondes</td>
+      <td>+ 1 octet à <code>0x0D</code> pour les fines secondes (10 ms × N, 0–199)</td>
+    </tr>
+    <tr>
+      <td><code>0x10 – 0x11</code></td>
+      <td><strong>Create Date</strong></td>
+      <td>2 octets</td>
+      <td>1 jour</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td><code>0x12 – 0x13</code></td>
+      <td><strong>Last Access Date</strong></td>
+      <td>2 octets</td>
+      <td>1 jour</td>
+      <td>Pas d'heure ! Mise à jour optionnelle</td>
+    </tr>
+    <tr>
+      <td><code>0x16 – 0x17</code></td>
+      <td><strong>Last Modified Time</strong></td>
+      <td>2 octets</td>
+      <td>2 secondes</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td><code>0x18 – 0x19</code></td>
+      <td><strong>Last Modified Date</strong></td>
+      <td>2 octets</td>
+      <td>1 jour</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="card card-gold" style="margin-top:.85rem">
+  <div class="ct">📐 Format binaire DOS Date (16 bits)</div>
+  <div class="ts-bytes">
+    bits 15-9 : <b>année − 1980</b> (0–127, donc 1980–2107)<br>
+    bits 8-5  : <em>mois</em> (1–12)<br>
+    bits 4-0  : <i>jour</i> (1–31)
+  </div>
+  <div class="ct" style="margin-top:.6rem">📐 Format binaire DOS Time (16 bits)</div>
+  <div class="ts-bytes">
+    bits 15-11 : <b>heure</b> (0–23)<br>
+    bits 10-5  : <em>minutes</em> (0–59)<br>
+    bits 4-0   : <i>secondes ÷ 2</i> (0–29, soit 0–58 secondes)
+  </div>
+</div>
+
+<div class="card card-blue" style="margin-top:.7rem">
+  <div class="ct">🔬 Exemple concret — décoder <code>0x4A 0x0E 0xCA 0x59</code> (LE)</div>
+  <p style="font-size:.78rem;line-height:1.6;margin:.4rem 0">
+    Hypothèse : on lit les 4 octets aux offsets <code>0x16-0x19</code> (Last Modified) d'une entrée FAT.
+    En little-endian, on lit les couples 16 bits dans l'ordre inverse :
+  </p>
+
+  <span class="ts-formula">
+    Time : <code>0x0E4A</code> = <code>0000 1110 0100 1010</code> bin<br>
+    → heure = bits 15-11 = <code>00001</code> = <strong>1</strong><br>
+    → minutes = bits 10-5 = <code>110010</code> = <strong>50</strong><br>
+    → secondes = bits 4-0 × 2 = <code>01010</code> × 2 = <strong>20</strong>
+  </span>
+  <span class="ts-formula">
+    Date : <code>0x59CA</code> = <code>0101 1001 1100 1010</code> bin<br>
+    → année = bits 15-9 + 1980 = <code>0101100</code> = 44 + 1980 = <strong>2024</strong><br>
+    → mois = bits 8-5 = <code>1110</code> = <strong>14</strong> ⚠ valeur invalide → indice de corruption ou de timestomping
+  </span>
+
+  <p style="font-size:.78rem;line-height:1.6;margin-top:.5rem">
+    👉 En pratique, <code>fls -m</code> de Sleuth Kit ou <code>X-Ways Data Interpreter</code> (mode FAT)
+    décodent automatiquement, mais savoir lire à la main permet de détecter les corruptions et les
+    timestomping grossiers (mois &gt; 12, jour &gt; 31, secondes / 2 &gt; 29).
+  </p>
+</div>
+
+<div class="alert" style="margin-top:.6rem">
+  ❌ <strong>Le piège du fuseau FAT :</strong> FAT stocke en <span class="ts-tz ts-tz-local">LOCAL</span>
+  <em>sans</em> indiquer lequel. Un fichier créé à 14:00 à Genève apparaîtra <code>14:00</code>, et un fichier créé
+  à 14:00 à Tokyo apparaîtra <code>14:00</code>. Si la clé USB est analysée à Sion, l'investigateur doit savoir
+  où elle a été utilisée pour reconstruire l'absolu. À défaut, <strong>les LNK et Shellbags Windows</strong>
+  fournissent le contexte (FILETIME UTC). C'est l'<em>une des raisons</em> pour lesquelles la chaîne de custody
+  documente toujours le fuseau du système hôte.
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 4 — exFAT
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="exfat-decoding">
+<div class="sec-title">exFAT — DOS Date/Time + 10 ms + Offset UTC (3 champs combinés)</div>
+
+<p style="font-size:.82rem;line-height:1.65;margin:.5rem 0">
+  exFAT corrige les deux faiblesses fondamentales de FAT : <strong>précision</strong> (10 ms au lieu de 2 s) et
+  <strong>fuseau horaire</strong> (offset UTC stocké explicitement). Le timestamp complet est
+  reconstitué à partir de <em>trois</em> champs séparés dans la <strong>File Directory Entry</strong> (Type 0x85) :
+</p>
+
+<table class="ts-bigtable" aria-label="Champs timestamps exFAT">
+  <thead><tr><th>Offset (entry 0x85)</th><th>Champ</th><th>Taille</th><th>Rôle</th></tr></thead>
+  <tbody>
+    <tr><td><code>0x08</code></td><td><strong>CreateTimestamp</strong></td><td>4 o</td><td>DOS Date+Time (LE)</td></tr>
+    <tr><td><code>0x0C</code></td><td><strong>LastModifiedTimestamp</strong></td><td>4 o</td><td>DOS Date+Time (LE)</td></tr>
+    <tr><td><code>0x10</code></td><td><strong>LastAccessedTimestamp</strong></td><td>4 o</td><td>DOS Date+Time (LE)</td></tr>
+    <tr><td><code>0x14</code></td><td><strong>Create10msIncrement</strong></td><td>1 o</td><td>0–199 (× 10 ms = 0–1990 ms)</td></tr>
+    <tr><td><code>0x15</code></td><td><strong>LastModified10msIncrement</strong></td><td>1 o</td><td>0–199</td></tr>
+    <tr><td><code>0x16</code></td><td><strong>CreateUtcOffset</strong></td><td>1 o</td><td>Bit 7 = validité · bits 6-0 = offset signé × 15 min</td></tr>
+    <tr><td><code>0x17</code></td><td><strong>LastModifiedUtcOffset</strong></td><td>1 o</td><td>idem</td></tr>
+    <tr><td><code>0x18</code></td><td><strong>LastAccessedUtcOffset</strong></td><td>1 o</td><td>idem</td></tr>
+  </tbody>
+</table>
+
+<div class="card card-orange" style="margin-top:.85rem">
+  <div class="ct">📐 Reconstruction d'un timestamp exFAT complet</div>
+  <span class="ts-formula">
+    instant_local = DOS_decode(Timestamp) + (10msIncrement × 10 ms)<br>
+    <span class="ts-arrow">→</span>
+    si UtcOffset.bit7 = 1 : instant_utc = instant_local − (offset × 15 min)<br>
+    <span class="ts-arrow">→</span>
+    si UtcOffset.bit7 = 0 : <strong>fuseau inconnu</strong> (Linux fuse driver typique)
+  </span>
+  <p style="font-size:.76rem;line-height:1.55;margin-top:.4rem;color:var(--muted)">
+    L'octet UtcOffset suit la convention : <code>0x80</code> = UTC+0 (bit de validité positionné, offset 0).
+    <code>0x84</code> = UTC+1h (bit 7 = 1, valeur 0x04 = 4 × 15 min). <code>0xFC</code> = UTC−1h
+    (bit 7 = 1, valeur signée 7-bits = −4 × 15 min). <code>0x00</code> = pas d'offset valide.
+  </p>
+</div>
+
+<div class="info" style="margin-top:.6rem">
+  💡 <strong>Empreinte de l'OS qui a écrit (Schmid &amp; Stoykova, 2022).</strong>
+  L'analyse comportementale a montré que l'OS d'écriture laisse une empreinte exploitable :
+  <ul style="font-size:.78rem;line-height:1.55;margin:.35rem 0 0 1.2rem;padding:0">
+    <li><strong>Windows</strong> : positionne tous les UtcOffset (bit 7 = 1) et utilise les 10msIncrement Create + LastModified</li>
+    <li><strong>macOS</strong> : positionne tous les UtcOffset, met à jour les 10msIncrement plus largement (y compris Access)</li>
+    <li><strong>Linux fuse driver</strong> : UtcOffset = <code>0x00</code> (invalide), 10msIncrement souvent à 0 ou 100</li>
+    <li><strong>Linux native (kernel ≥ 5.7)</strong> : UtcOffset = <code>0x80</code> (UTC+0)</li>
+  </ul>
+</div>
+
+<div class="alert" style="margin-top:.6rem">
+  ⚠ <strong>Bug Sleuth Kit / Autopsy historique :</strong> jusqu'au correctif de
+  <strong>Sleuth Kit 4.13</strong>, Autopsy traitait les timestamps exFAT comme du FAT classique
+  (local, fuseau imposé par l'examinateur), <em>ignorant</em> les UtcOffset. Si vous avez un
+  rapport Autopsy &lt; 4.21 sur de l'exFAT, <strong>vérifiez la version du moteur TSK</strong> avant
+  d'utiliser ces timestamps dans une procédure (cf. ScienceDirect <em>FSI: Digital Investigation</em> 41/2022).
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 5 — NTFS / FILETIME
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="ntfs-decoding">
+<div class="sec-title">NTFS — FILETIME 64 bits, deux jeux MACB ($SI vs $FN)</div>
+
+<p style="font-size:.82rem;line-height:1.65;margin:.5rem 0">
+  NTFS stocke les timestamps dans un type <strong>FILETIME</strong> : entier <strong>64 bits non signé little-endian</strong>
+  comptant le nombre d'<strong>intervalles de 100 ns</strong> écoulés depuis l'<strong>1<sup>er</sup> janvier 1601 00:00:00 UTC</strong>.
+  Cette époque (1601) couvre 4 cycles séculaires complets du calendrier grégorien et résiste jusqu'à l'an
+  ~30 828.
+</p>
+
+<div class="card card-purple" style="margin-top:.5rem">
+  <div class="ct">📐 Conversion FILETIME ⇄ Unix epoch</div>
+  <span class="ts-formula">
+    Unix_seconds = (FILETIME / 10 000 000) − 11 644 473 600<br>
+    <span class="ts-arrow">→</span>
+    FILETIME = (Unix_seconds + 11 644 473 600) × 10 000 000
+  </span>
+  <p style="font-size:.74rem;color:var(--muted);margin-top:.35rem;line-height:1.5">
+    Les <strong>11 644 473 600</strong> secondes représentent le décalage 1601→1970 (369 ans).
+    Diviser par 10 000 000 supprime les intervalles de 100 ns pour obtenir des secondes.
+  </p>
+</div>
+
+<div class="card card-blue" style="margin-top:.7rem">
+  <div class="ct">🔬 Exemple — décoder <code>00 80 6F 7E A5 96 D8 01</code> (LE, 8 octets)</div>
+  <span class="ts-formula">
+    Réordonner BE : <code>01 D8 96 A5 7E 6F 80 00</code><br>
+    Décimal : <code>0x01D896A57E6F8000</code> = <strong>132 906 132 480 000 000</strong><br>
+    <span class="ts-arrow">÷ 10⁷</span> = 13 290 613 248 secondes depuis 1601<br>
+    <span class="ts-arrow">−</span> 11 644 473 600 = 1 646 139 648 (Unix)<br>
+    <span class="ts-arrow">→</span> <strong>2022-03-01 12:00:48 UTC</strong>
+  </span>
+</div>
+
+<div class="card card-red" style="margin-top:.7rem">
+  <div class="ct">⚠ Les 4 timestamps × 2 attributs MFT = <strong>8 timestamps par fichier</strong></div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    Chaque entrée MFT NTFS contient (au minimum) deux attributs porteurs de MACB :
+  </p>
+  <ul style="font-size:.78rem;line-height:1.6;padding-left:1.2rem">
+    <li><strong>$STANDARD_INFORMATION (0x10)</strong> — <em>modifiable par les API utilisateur</em>
+        (<code>SetFileTime</code>, <code>touch</code>, timestomp). C'est ce que voit l'Explorateur Windows.</li>
+    <li><strong>$FILE_NAME (0x30)</strong> — <em>modifié uniquement par le kernel NTFS</em> lors d'opérations FS
+        (création, déplacement, renommage). Résiste au timestomping API. Même époque, même précision.</li>
+  </ul>
+  <p style="font-size:.78rem;line-height:1.55;margin-top:.5rem;color:var(--text)">
+    👉 La <strong>règle d'or</strong> : si <code>$SI.M &lt; $FN.M</code> ou <code>$SI.B &lt; $FN.B</code>,
+    c'est mathématiquement impossible sans manipulation. Détection de timestomping en une comparaison.
+    Voir <a href="mac_times.html" style="color:var(--cyan)">fiche MAC Times</a> pour le test complet.
+  </p>
+</div>
+
+<div class="info" style="margin-top:.6rem">
+  💡 <strong>Particularité Windows Vista+ :</strong> par défaut <code>NtfsDisableLastAccessUpdate = 1</code>
+  (Vista–8) puis <code>= 80000003</code> (System Managed depuis Win10). Le timestamp <em>A</em>
+  peut être figé pendant des semaines. Toujours corréler avec <code>$UsnJrnl</code>, Prefetch, et ShellBags
+  pour obtenir des accès réels.
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 6 — EXT2/3/4
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="ext-decoding">
+<div class="sec-title">EXT2 / EXT3 / EXT4 — Unix epoch + extension 30 bits ns + 2 bits epoch</div>
+
+<p style="font-size:.82rem;line-height:1.65;margin:.5rem 0">
+  Sur les versions historiques (EXT2/3, et EXT4 avec inodes 128 octets), chaque timestamp est un simple
+  <strong>entier 32 bits signé little-endian</strong> représentant des secondes depuis l'<strong>1<sup>er</sup> janvier
+  1970 00:00:00 UTC</strong>. Précision : 1 seconde. Y2038 garanti à <code>0x7FFFFFFF</code>.
+</p>
+
+<table class="ts-bigtable" aria-label="Timestamps EXT inode">
+  <thead><tr><th>Champ</th><th>Description</th><th>Lettre MACB</th><th>EXT2</th><th>EXT3</th><th>EXT4</th></tr></thead>
+  <tbody>
+    <tr><td><code>i_atime</code></td><td>Last Access</td><td>A</td><td>✓</td><td>✓</td><td>✓ + ns</td></tr>
+    <tr><td><code>i_mtime</code></td><td>Last Modified (contenu)</td><td>M</td><td>✓</td><td>✓</td><td>✓ + ns</td></tr>
+    <tr><td><code>i_ctime</code></td><td>Last Status Changed (métadata)</td><td>C</td><td>✓</td><td>✓</td><td>✓ + ns</td></tr>
+    <tr><td><code>i_dtime</code></td><td>Deletion Time</td><td>D</td><td>✓</td><td>✓</td><td>✓ (32 bits seul)</td></tr>
+    <tr><td><code>i_crtime</code></td><td>Birth / Creation</td><td>B</td><td>✗</td><td>✗</td><td>✓ + ns</td></tr>
+  </tbody>
+</table>
+
+<div class="card card-red" style="margin-top:.8rem">
+  <div class="ct">📐 Encodage EXT4 étendu — le truc des 2 bits "epoch"</div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    Sur EXT4 avec inode <strong>≥ 256 octets</strong> (par défaut depuis 2008), chaque timestamp est suivi
+    d'un champ <code>_extra</code> de 32 bits qui combine <strong>nanosecondes (30 bits)</strong> et
+    <strong>extension d'époque (2 bits)</strong> :
+  </p>
+  <span class="ts-formula">
+    extra = (nsec &lt;&lt; 2) | (epoch &amp; 0x3)<br>
+    nsec = (extra &amp; 0xFFFFFFFC) &gt;&gt; 2<br>
+    epoch = extra &amp; 0x3
+  </span>
+  <p style="font-size:.78rem;line-height:1.55;margin-top:.5rem">
+    Les 2 bits d'epoch décalent la fenêtre Unix de 2³² × <em>n</em> secondes vers le futur,
+    repoussant Y2038 jusqu'à <strong>2446-05-10 22:38:55 UTC</strong> :
+  </p>
+  <table class="ts-bigtable" style="margin-top:.4rem">
+    <thead><tr><th>Bits epoch</th><th>Décalage ajouté</th><th>Plage couverte</th></tr></thead>
+    <tbody>
+      <tr><td><code>00</code></td><td>0</td><td>1901-12-13 → 2038-01-19</td></tr>
+      <tr><td><code>01</code></td><td>+ 2³² s</td><td>2038-01-19 → 2106-02-07</td></tr>
+      <tr><td><code>10</code></td><td>+ 2 × 2³² s</td><td>2106-02-07 → 2174-02-25 / +68 ans</td></tr>
+      <tr><td><code>11</code></td><td>+ 3 × 2³² s</td><td>2174-02-25 → 2446-05-10</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="alert" style="margin-top:.6rem">
+  ❌ <strong>Bug historique du noyau Linux (corrigé 2015-2016).</strong> Avant le patch de Theodore Ts'o,
+  le décodage incorrect interprétait les bits epoch <code>11</code> comme « 1901-1969 » au lieu de
+  « 2378-2446 ». Sur des images de disque post-2017, c'est correct ; sur des images antérieures
+  produites avec un kernel non patché, certains timestamps de fichiers anciens (avant 1970) peuvent être mal interprétés. Vérifier avec <code>debugfs -R 'stat &lt;inode&gt;'</code> et un kernel récent.
+</div>
+
+<div class="info" style="margin-top:.6rem">
+  💡 <strong>Inode 128 vs 256.</strong> Les FS créés avec <code>mke2fs -I 128</code> (le défaut sur des
+  systèmes anciens, des cartes embarquées, des Synology DSM 6 et antérieurs) <em>n'ont pas</em>
+  les champs <code>_extra</code>. Sur ces FS, EXT4 = précision 1 seconde, pas de birth time, plafond 2038.
+  Vérifier : <code>tune2fs -l /dev/sdX | grep "Inode size"</code>.
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 7 — HFS+
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="hfs-decoding">
+<div class="sec-title">HFS+ — Mac OS Date 32 bits, époque 1904 (gotcha Y2040)</div>
+
+<p style="font-size:.82rem;line-height:1.65;margin:.5rem 0">
+  HFS+ stocke les timestamps comme <strong>entier 32 bits non signé big-endian</strong> représentant les
+  secondes depuis l'<strong>1<sup>er</sup> janvier 1904 00:00:00</strong>. C'est l'<em>epoch Mac OS classic</em>,
+  hérité des Macintosh originaux de 1984. Précision : 1 seconde.
+</p>
+
+<div class="card card-cyan" style="margin-top:.5rem">
+  <div class="ct">📐 Conversion HFS+ ⇄ Unix epoch</div>
+  <span class="ts-formula">
+    Unix_seconds = HFS_seconds − <strong>2 082 844 800</strong><br>
+    <span class="ts-arrow">→</span>
+    HFS_seconds = Unix_seconds + 2 082 844 800
+  </span>
+  <p style="font-size:.74rem;color:var(--muted);margin-top:.35rem;line-height:1.5">
+    Les <strong>2 082 844 800 secondes</strong> représentent le décalage 1904 → 1970 (66 ans).
+    Mémoire : « 2.08 milliards de secondes » entre les deux époques.
+  </p>
+</div>
+
+<div class="alert" style="margin-top:.6rem">
+  ⚠ <strong>Bug Y2040 garanti :</strong> avec un entier non signé 32 bits + époque 1904,
+  le maximum représentable est <code>0xFFFFFFFF</code> = 4 294 967 295 s ≈ 136 ans après 1904 =
+  <strong>2040-02-06 06:28:15 UTC</strong>. Tout HFS+ encore en service au-delà <em>débordera</em> sans
+  patch. C'est une des raisons du passage à APFS (timestamps 64 bits ns depuis 1970) en macOS 10.13 (2017).
+</div>
+
+<table class="ts-bigtable" aria-label="HFS+ catalog timestamps">
+  <thead><tr><th>Timestamp</th><th>Localisation</th><th>Fuseau</th><th>Note forensique</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>createDate</code></td>
+      <td>Catalog File (CatalogRecord)</td>
+      <td><span class="ts-tz ts-tz-utc">UTC</span></td>
+      <td>Création initiale, jamais réécrit hors copie</td>
+    </tr>
+    <tr>
+      <td><code>contentModDate</code></td>
+      <td>Catalog File</td>
+      <td><span class="ts-tz ts-tz-utc">UTC</span></td>
+      <td>Modification du contenu (M de MACB)</td>
+    </tr>
+    <tr>
+      <td><code>attributeModDate</code></td>
+      <td>Catalog File</td>
+      <td><span class="ts-tz ts-tz-utc">UTC</span></td>
+      <td>Modification des attributs / xattrs (C de MACB)</td>
+    </tr>
+    <tr>
+      <td><code>accessDate</code></td>
+      <td>Catalog File</td>
+      <td><span class="ts-tz ts-tz-utc">UTC</span></td>
+      <td>Désactivé par défaut sur OS X 10.4+ (<code>noatime</code>)</td>
+    </tr>
+    <tr>
+      <td><code>backupDate</code></td>
+      <td>Catalog File</td>
+      <td><span class="ts-tz ts-tz-utc">UTC</span></td>
+      <td>Souvent à 0 (rarement utilisé hors Time Machine)</td>
+    </tr>
+    <tr>
+      <td><strong><code>createDate</code> (volume header)</strong></td>
+      <td>Volume Header (offset 1024)</td>
+      <td><span class="ts-tz ts-tz-local">⚠ LOCAL</span></td>
+      <td><strong>Exception</strong> : la date de création du <em>volume</em> est en heure locale</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="alert" style="margin-top:.6rem">
+  ❌ <strong>Le piège HFS du volume header.</strong> Tous les timestamps des <em>fichiers</em> dans
+  le Catalog sont en UTC, <strong>mais la date de création du <em>volume</em></strong>
+  (Volume Header / Alternate Volume Header) est en <strong>local time</strong>. Cf. Apple TN1150
+  + Studocu OS X Forensics. Si vous comparez la création d'un volume avec celle de ses fichiers, ne pas appliquer
+  une conversion uniforme.
+</div>
+
+<div class="info" style="margin-top:.6rem">
+  💡 <strong>HFS (sans le +) en local.</strong> L'ancien HFS — Mac OS 1985–1998 — stockait <em>tous</em>
+  les timestamps en local time. Si vous tombez sur une image HFS (extension <code>.hfs</code>, signature
+  <code>BD 00</code> en début de volume au lieu de <code>H+</code> pour HFS+), traitez comme FAT : fuseau
+  inconnu, à reconstituer hors-bande.
+</div>
+
+<p style="font-size:.78rem;line-height:1.55;margin-top:.6rem;color:var(--muted)">
+  Pour la suite (APFS, époque 1970 nanosecondes, 64 bits) voir la fiche dédiée
+  <a href="apfs.html" style="color:var(--cyan)">APFS</a>.
+</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 8 — TABLEAU SYNTHÈSE
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="synthese">
+<div class="sec-title">Tableau synthèse — toutes époques en une page</div>
+
+<table class="ts-bigtable" aria-label="Synthèse époques timestamps FS">
+  <thead>
+    <tr>
+      <th>FS</th>
+      <th>Époque</th>
+      <th>Précision native</th>
+      <th>Endian / Taille</th>
+      <th>Fuseau</th>
+      <th>Plafond</th>
+      <th>Conversion → Unix</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong style="color:var(--gold)">FAT12/16/32</strong></td>
+      <td>1980-01-01</td>
+      <td>2 s</td>
+      <td>LE 16+16 bits packés</td>
+      <td><span class="ts-tz ts-tz-local">LOCAL</span></td>
+      <td>2107-12-31</td>
+      <td>Décodage bits + offset local</td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--orange)">exFAT</strong></td>
+      <td>1980-01-01</td>
+      <td>10 ms</td>
+      <td>LE 32+8+8 bits</td>
+      <td><span class="ts-tz ts-tz-mixed">LOCAL+offset</span></td>
+      <td>2107-12-31</td>
+      <td>DOS + 10msInc, puis appliquer UtcOffset</td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--purple)">NTFS (FILETIME)</strong></td>
+      <td>1601-01-01</td>
+      <td>100 ns</td>
+      <td>LE 64 bits</td>
+      <td><span class="ts-tz ts-tz-utc">UTC</span></td>
+      <td>~30 828</td>
+      <td><code>(ft / 10⁷) − 11 644 473 600</code></td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--red)">EXT2/3</strong></td>
+      <td>1970-01-01</td>
+      <td>1 s</td>
+      <td>LE 32 bits signé</td>
+      <td><span class="ts-tz ts-tz-utc">UTC</span></td>
+      <td>2038-01-19</td>
+      <td>identité (déjà Unix)</td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--red)">EXT4 (inode 256 o)</strong></td>
+      <td>1970-01-01</td>
+      <td>1 ns</td>
+      <td>LE 32+32 bits</td>
+      <td><span class="ts-tz ts-tz-utc">UTC</span></td>
+      <td>2446-05-10</td>
+      <td><code>sec + ((extra &amp; 0x3) &lt;&lt; 32)</code></td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--cyan)">HFS+</strong></td>
+      <td>1904-01-01</td>
+      <td>1 s</td>
+      <td><strong>BE</strong> 32 bits non signé</td>
+      <td><span class="ts-tz ts-tz-utc">UTC</span></td>
+      <td>2040-02-06</td>
+      <td><code>hfs − 2 082 844 800</code></td>
+    </tr>
+    <tr style="background:rgba(88,166,255,.05)">
+      <td><strong style="color:var(--blue)">APFS (réf.)</strong></td>
+      <td>1970-01-01</td>
+      <td>1 ns</td>
+      <td>LE 64 bits signé</td>
+      <td><span class="ts-tz ts-tz-utc">UTC</span></td>
+      <td>~2262</td>
+      <td><code>apfs / 10⁹</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p style="font-size:.74rem;color:var(--muted);margin-top:.45rem;line-height:1.5">
+  <strong>BE</strong> = Big-Endian (octet de poids fort en premier). <strong>LE</strong> = Little-Endian.
+  HFS+ est le seul FS de cette liste à utiliser le BE — vestige de l'architecture PowerPC.
+</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 9 — OUTILS DE DÉCODAGE
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="outils">
+<div class="sec-title">Outils de décodage — automatique et manuel</div>
+
+<table class="ts-bigtable" aria-label="Outils timestamps">
+  <thead><tr><th>Outil</th><th>Plateforme</th><th>FS supportés</th><th>Note</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>fls -m</code> / <code>tsk_history</code></td>
+      <td>Sleuth Kit (CLI)</td>
+      <td>FAT, exFAT*, NTFS, EXT2/3/4, HFS+</td>
+      <td>Sortie body file pour Plaso/log2timeline. *exFAT correctement géré seulement depuis TSK 4.13</td>
+    </tr>
+    <tr>
+      <td><strong>Plaso / log2timeline</strong></td>
+      <td>Multi (Python)</td>
+      <td>Tous + artefacts</td>
+      <td>Standard supertimeline forensique. Convertit toutes les époques en UTC ISO 8601</td>
+    </tr>
+    <tr>
+      <td><strong>X-Ways Data Interpreter</strong></td>
+      <td>X-Ways Forensics (Win)</td>
+      <td>Tous</td>
+      <td>Sélection visuelle des octets → décodage live FILETIME / DOS / Unix / HFS / OLE</td>
+    </tr>
+    <tr>
+      <td><strong>DCode</strong> (Digital Detective)</td>
+      <td>Win freeware</td>
+      <td>Tous y compris exotiques</td>
+      <td>Convertit Chrome epoch, WebKit, Firefox PRTime, Mac Cocoa, etc.</td>
+    </tr>
+    <tr>
+      <td><strong>MFTECmd</strong> (Eric Zimmerman)</td>
+      <td>Win .NET</td>
+      <td>NTFS uniquement</td>
+      <td>Décode MFT + $UsnJrnl. Sortie CSV avec $SI et $FN séparés (essentiel anti-timestomp)</td>
+    </tr>
+    <tr>
+      <td><strong>debugfs</strong></td>
+      <td>Linux (e2fsprogs)</td>
+      <td>EXT2/3/4</td>
+      <td><code>debugfs -R 'stat &lt;inode&gt;' /dev/sdX</code> — lit les nanosecondes brutes</td>
+    </tr>
+    <tr>
+      <td><strong>HFSExplorer</strong> + <code>fsck_hfs -d</code></td>
+      <td>Java / macOS</td>
+      <td>HFS+</td>
+      <td>Lecture catalog file en lecture seule</td>
+    </tr>
+    <tr>
+      <td><strong>EpochConverter / DCode online</strong></td>
+      <td>Web</td>
+      <td>Toutes époques</td>
+      <td>Vérification rapide hors machine forensique. <em>Jamais</em> pour des données sensibles d'instruction (fuite cloud)</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="card card-cyan" style="margin-top:.7rem">
+  <div class="ct">🐍 Snippet Python — convertir les 5 époques</div>
+  <pre class="ts-bytes" style="white-space:pre"><b># NTFS FILETIME (entier 64 bits 100ns depuis 1601)</b>
+import datetime
+def filetime_to_dt(ft): return datetime.datetime(1601,1,1) + datetime.timedelta(microseconds=ft//10)
+
+<b># Unix / EXT (secondes depuis 1970)</b>
+def unix_to_dt(s, ns=0): return datetime.datetime.utcfromtimestamp(s) + datetime.timedelta(microseconds=ns//1000)
+
+<b># EXT4 _extra : sec + nsec + epoch_bits</b>
+def ext4_decode(sec, extra):
+    epoch = extra &amp; 0x3
+    nsec  = (extra &amp; 0xFFFFFFFC) >> 2
+    sec  += epoch &lt;&lt; 32
+    return unix_to_dt(sec, nsec)
+
+<b># HFS+ (secondes depuis 1904 GMT)</b>
+def hfs_to_dt(s): return datetime.datetime(1904,1,1) + datetime.timedelta(seconds=s)
+
+<b># DOS (FAT) — date+time 32 bits</b>
+def dos_to_dt(date16, time16, inc10ms=0):
+    y = ((date16 >> 9) &amp; 0x7F) + 1980
+    mo = (date16 >> 5) &amp; 0xF
+    d  =  date16        &amp; 0x1F
+    h  = (time16 >> 11) &amp; 0x1F
+    mi = (time16 >>  5) &amp; 0x3F
+    s  = (time16        &amp; 0x1F) * 2
+    return datetime.datetime(y,mo,d,h,mi,s) + datetime.timedelta(milliseconds=inc10ms*10)</pre>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 10 — CHECKLIST FORENSIQUE
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="checklist">
+<div class="sec-title">Checklist forensique — avant de citer un timestamp dans un rapport</div>
+
+<div class="ts-checklist">
+<ul style="font-size:.84rem;line-height:1.65">
+  <li>☐ <strong>FS identifié</strong> sans ambiguïté (signature volume + outil de mount validé) ?</li>
+  <li>☐ <strong>Époque correcte</strong> appliquée (1601 / 1904 / 1970 / 1980 / 2001) ?</li>
+  <li>☐ <strong>Fuseau résolu</strong> ? UTC pour NTFS/EXT/HFS+/exFAT-avec-offset ; LOCAL pour FAT et HFS et exFAT-sans-offset.</li>
+  <li>☐ <strong>Si LOCAL</strong> : fuseau de la machine d'écriture documenté (jamais supposé) ?</li>
+  <li>☐ <strong>Si NTFS</strong> : <code>$SI</code> et <code>$FN</code> comparés (test du timestomping) ?</li>
+  <li>☐ <strong>Si exFAT</strong> : version Sleuth Kit ≥ 4.13 utilisée ? UtcOffset bit 7 vérifié ?</li>
+  <li>☐ <strong>Si EXT4</strong> : taille de l'inode (≥ 256 octets pour avoir nsec et birth) ?</li>
+  <li>☐ <strong>Si HFS+</strong> : on n'a pas confondu volume header (local) et catalog file (UTC) ?</li>
+  <li>☐ <strong>Si FAT</strong> : Last Access n'a pas d'heure — ne pas affirmer une heure d'accès.</li>
+  <li>☐ <strong>Précision native</strong> respectée dans le rapport (ne pas écrire « 14:23:17.245 » si précision = 2 s) ?</li>
+  <li>☐ <strong>Corrélation horloge système :</strong> dérive du BIOS/RTC vérifiée vs source de temps fiable
+      (NTP logs, en-têtes mail, timestamps réseau) ?</li>
+  <li>☐ <strong>Hash de la copie forensique</strong> calculé <em>avant</em> tout mount, et préservation
+      <code>noexec,ro</code> à la lecture (write-blocker physique ou logique) ?</li>
+</ul>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 11 — PIÈGES CLASSIQUES
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="pieges">
+<div class="sec-title">Pièges classiques en audience</div>
+
+<div class="ts-grid cols-2">
+  <div>
+    <div class="alert">❌ <strong>Affirmer « ce fichier a été créé à 14h23 UTC »</strong> sur la base d'une date FAT
+      sans documenter le fuseau de la machine source. La défense plaidera l'ambiguïté de fuseau, et le tribunal
+      pourra écarter la pièce si l'ambiguïté n'est pas résolue.</div>
+    <div class="alert" style="margin-top:.5rem">❌ <strong>Confondre $SI et $FN</strong> dans un rapport NTFS.
+      Citer uniquement <code>$STANDARD_INFORMATION</code> = passer à côté du timestomping. Toujours produire
+      les deux jeux MACB.</div>
+    <div class="alert" style="margin-top:.5rem">❌ <strong>Reporter une précision ms ou ns</strong> sur un FS
+      qui ne la supporte pas (FAT = 2 s, EXT2/3 = 1 s, HFS+ = 1 s). Sortir « 09:14:23.7821 »
+      pour une entrée FAT révèle une mauvaise compréhension de l'outil.</div>
+  </div>
+  <div>
+    <div class="alert">❌ <strong>Oublier le bug Y2040 HFS+</strong>. Sur un volume HFS+ ancien encore
+      en service, des dates « 1904 » apparaissent après l'overflow. Ne pas conclure que le fichier
+      « a été créé en 1904 » — c'est probablement un overflow post-2040 ou un timestamp réinitialisé.</div>
+    <div class="alert" style="margin-top:.5rem">❌ <strong>Trust aveugle dans Autopsy / FTK</strong> sur exFAT.
+      Avant 2022, plusieurs outils traitaient exFAT comme FAT (local imposé) sans appliquer UtcOffset.
+      Vérifier la version et croiser avec un outil tiers (X-Ways, Plaso récent) sur les pièces critiques.</div>
+    <div class="tip" style="margin-top:.5rem">✅ <strong>Règle universelle :</strong> dans le rapport,
+      écrire chaque timestamp <strong>en UTC ISO 8601</strong> avec mention explicite du fuseau d'origine
+      et de la conversion appliquée. Ex : « <code>2025-04-25T05:11:34Z</code> (converti depuis FAT local
+      Europe/Zurich UTC+2 documenté par PV de saisie) ».</div>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 12 — RÉFÉRENCES
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="refs">
+<div class="sec-title">Références &amp; spécifications</div>
+
+<ul style="font-size:.78rem;line-height:1.7;padding-left:1.2rem">
+  <li><strong>FAT (DOS Date/Time)</strong> — Microsoft <em>FAT: General Overview of On-Disk Format</em>
+      (1.03, 2000) §6.2. Toujours la spécification de référence.</li>
+  <li><strong>exFAT</strong> — Microsoft Learn, <em>exFAT File System Specification</em>
+      (Win32 apps, dernière révision Sept. 2025). Sections 7.4.8–7.4.10 pour Timestamp / 10msIncrement / UtcOffset.</li>
+  <li><strong>NTFS / FILETIME</strong> — Microsoft <em>FILETIME structure</em> (Win32 fileapi.h),
+      Brian Carrier, <em>File System Forensic Analysis</em> (2005), ch. 13.</li>
+  <li><strong>EXT4</strong> — Kernel.org <em>ext4 Data Structures and Algorithms</em> ; Theodore Ts'o,
+      <em>Ext4 Encoding Fix</em> (LKML 2015) ; SANS Forensics, <em>Understanding EXT4 Part 2: Timestamps</em> (Hal Pomeranz).</li>
+  <li><strong>HFS+</strong> — Apple Technical Note <em>TN1150: HFS Plus Volume Format</em> ;
+      <em>forensics.wiki/hfs+</em>.</li>
+  <li><strong>Recherche académique</strong> — Schmid &amp; Stoykova,
+      <em>« It is about time — Do exFAT implementations handle timestamps correctly? »</em>,
+      FSI: Digital Investigation 41 (2022). Article fondamental sur les divergences entre OS.</li>
+  <li><strong>Standards</strong> — ISO/IEC 27037:2012 (acquisition) ; ISO/IEC 27041:2015 (assurance) ;
+      RFC 3339 / ISO 8601 (notation de date).</li>
+</ul>
+</div>
+
+</div><!-- end .page -->
+</main>
+
+<div class="page" style="padding-top:0">
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Systèmes de fichiers · ISO/IEC 27037 · Sleuth Kit · Plaso</span>
+</div>
+</div>
+
+<script>
+(function(){
+  // Scroll progress
+  var bar=document.getElementById('scroll-progress'),d=document.documentElement;
+  if(bar) document.addEventListener('scroll',function(){
+    bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';
+  },{passive:true});
+  // Back to top
+  var bt=document.getElementById('back-top')||document.querySelector('.back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+  // Click-to-copy sur les blocs ts-bytes / ts-formula
+  document.querySelectorAll('.ts-bytes, .ts-formula').forEach(function(el){
+    el.title='Cliquer pour copier';
+    el.style.cursor='pointer';
+    el.addEventListener('click',function(){
+      navigator.clipboard&&navigator.clipboard.writeText(el.innerText.trim()).then(function(){
+        var o=el.style.background;el.style.background='rgba(48,232,138,.2)';
+        setTimeout(function(){el.style.background=o;},700);
+      });
+    });
+  });
+})();
+</script>
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+<script src="../js/core/cas-in-profile.js" defer></script>
+<script src="../js/core/cas-in-achievements.js" defer></script>
+<script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/profile/celebration-ui.js" defer></script>
+<script src="../js/components/gamification-toasts.js" defer></script>
+</body>
+</html>
