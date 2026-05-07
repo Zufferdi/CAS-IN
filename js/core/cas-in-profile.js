@@ -373,6 +373,10 @@
         trackChosenAt: null,
       },
       xp: 0,
+      // v2.60 — Timestamp du tout premier XP gagné (1er « point marqué »).
+      // Utilisé par le bloc d'autorisation (profile.html) comme date
+      // d'activation du dossier. Reste null tant qu'aucun XP n'a été gagné.
+      firstXpAt: null,
       xpBySource: { quiz: 0, scene: 0, quest: 0, tp: 0, fiches: 0 },
       streak: {
         current: 0,
@@ -462,6 +466,15 @@
         if (p.xpBySource.quest === undefined)  { p.xpBySource.quest  = 0; dirty = true; }
         if (p.xpBySource.tp === undefined)     { p.xpBySource.tp     = 0; dirty = true; }
         if (p.xpBySource.fiches === undefined) { p.xpBySource.fiches = 0; dirty = true; }
+      }
+      // v2.60 — Backfill firstXpAt pour les profils créés AVANT v2.60.
+      // On ne dispose pas du timestamp réel du 1er point ; à défaut, on
+      // utilise createdAt comme meilleure approximation (le profil a été
+      // créé au moment où l'utilisateur a commencé à jouer). Si xp===0,
+      // on laisse null : pas encore activé.
+      if (p.firstXpAt === undefined) {
+        p.firstXpAt = (p.xp > 0) ? (p.createdAt || Date.now()) : null;
+        dirty = true;
       }
       if (dirty) lsSet(PROFILE_KEY, p);
       return p;
@@ -778,6 +791,7 @@
       achievements: (p.achievements || []).slice(),
       preferences: { ...p.preferences },
       createdAt: p.createdAt,
+      firstXpAt: p.firstXpAt || null, // v2.60 — date du 1er point marqué (ms epoch) ou null
       // v2.91 PACK L3 — Stats détaillées scènes
       scenesCount,
       scenesTagCount,
@@ -930,6 +944,17 @@
     p.xpBySource[source] = (p.xpBySource[source] || 0) + gained;
     p.activity[source] = Date.now();
 
+    // v2.60 — Stamp du 1er point marqué (date d'activation du dossier).
+    // Posé une seule fois, irrévocablement, à la 1re XP gagnée toutes
+    // sources confondues. Si le champ existe déjà, on ne touche pas.
+    // On garde le flag local pour émettre l'événement APRÈS saveProfile()
+    // (pour que les listeners voient l'état persisté).
+    let _justActivated = false;
+    if (!p.firstXpAt) {
+      p.firstXpAt = Date.now();
+      _justActivated = true;
+    }
+
     // v2.91 PACK L1 — Incrément du compteur d'affinité
     // (sert à la spécialisation cumulative). On compte uniquement
     // sur source 'scene' avec meta.endOfScene === true pour éviter
@@ -944,6 +969,20 @@
     const newRank = computeRank(p.xp, p.agent.track || 'investigator').idx;
     if (newRank > oldRank) emitChange('rank-up');
     else emitChange('xp');
+
+    // v2.60 — Événement dossier-activated : émis UNE seule fois dans la
+    // vie du profil, à la 1re XP gagnée. Permet à celebration-ui de jouer
+    // une cérémonie spéciale « approuvé par R.R aka Banzaï » au lieu du
+    // toast XP générique. Émis APRÈS emitChange('xp') pour que les
+    // listeners de profile-changed aient déjà rafraîchi leur UI lorsque
+    // l'overlay s'affiche par-dessus.
+    if (_justActivated) {
+      try {
+        window.dispatchEvent(new CustomEvent('dossier-activated', {
+          detail: { firstXpAt: p.firstXpAt, source, gained }
+        }));
+      } catch (_) {}
+    }
 
     return { xp: p.xp, gained, base, bonus, multiplier };
   }
