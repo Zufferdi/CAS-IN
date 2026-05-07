@@ -4,6 +4,31 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.60] — 2026-05-08
+
+🗂 **Bloc d'autorisation du dossier — signature R.R aka Banzaï + date d'activation.**
+
+### Ajouté
+
+- **Signature « Approved by »** (profile.html, bloc `dfir-auth-block`) : tampon manuscrit fixe **R.R aka Banzaï** posé sur tous les dossiers, identifié comme l'officier instructeur.
+- **Date d'activation** : nouvelle cellule affichant la date du **tout premier point marqué** au format **MM/DD/YYYY** (zéro-padding mois/jour). Style « tampon dateur » (monospace, encre rouge translucide, légère inclinaison) pour contraster avec la signature en cursive.
+- **Champ `firstXpAt`** dans `casIn_profile` (`js/core/cas-in-profile.js`) : timestamp ms epoch de la 1re XP gagnée toutes sources confondues. Posé dans `addXp()` une seule fois, irrévocablement. Exposé via `Profile.snapshot().firstXpAt` (null si jamais activé).
+- **Événement `dossier-activated`** (`window.dispatchEvent`) : émis une unique fois dans la vie du profil, à la 1re XP. Hooké par `js/profile/celebration-ui.js` qui joue une cérémonie spéciale « Dossier activé · Approuvé par R.R aka Banzaï » au lieu du toast XP générique.
+- **Mode clair pour `dfir-auth-block`** (`style/profile-dossier-plus.css`) : sélecteurs `[data-theme="light"]` rebascule les RGBA hardcodés (encre sépia pour la signature, rouge saturé pour le tampon dateur) afin de garder le contraste WCAG AA sur fond clair.
+- **A11y bloc auth** : `role="img"` + `aria-label` dynamique sur la signature stylisée (pour que les lecteurs d'écran lisent « Dossier approuvé par R.R aka Banzaï, officier instructeur » au lieu de la cursive brute) et attribut `datetime` ISO 8601 sur la cellule date pour les outils qui parsent.
+
+### Corrigé
+
+- **Horloge UTC du status bar profil gelée** (`js/profile/profile-page.js:48`). La valeur n'était posée qu'au render initial, jamais rafraîchie : un dossier ouvert 30 minutes affichait encore l'heure d'arrivée. Désormais, tick aligné sur la minute suivante (calcul `60_000 - Date.now() % 60_000`) puis `setInterval(60_000)` pour basculer pile au changement de minute, sans clic visuel à mi-minute.
+- **Signature mal placée dans `dfir-auth-block`** : le span `#profile-auth-signature` était dans la cellule **« Date d'activation »** (jamais dans « Approved by »), ce qui faisait apparaître le pseudo de l'agent en cursive… sur la ligne réservée à la date. Refacto markup : signature dans la bonne cellule, date dans la sienne.
+- **Hint date** : `JJ / MM / AAAA` → `MM / DD / YYYY` (cohérent avec le format affiché et la convention demandée pour ce bloc).
+
+### Migration
+
+- **Backfill silencieux** dans `ensureProfile()` : pour les profils v=4 créés avant v2.60, si `xp > 0` mais `firstXpAt` indéfini, on fallback sur `createdAt` comme meilleure approximation (le profil a forcément été activé un jour, on ne connaît juste pas la date exacte). Pour `xp === 0`, `firstXpAt` reste `null` (le dossier n'est pas encore activé).
+
+---
+
 ## [2.59] — 2026-05-07
 
 🛠 **Patches d'audit lisibilité / nav / a11y** — réponse au rapport d'audit du 7 mai 2026.
