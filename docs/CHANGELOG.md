@@ -4,6 +4,32 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.59] — 2026-05-07
+
+🛠 **Patches d'audit lisibilité / nav / a11y** — réponse au rapport d'audit du 7 mai 2026.
+
+### Corrigé
+
+- **Variable `--navbar-h` introduite** (style.css `:root`, 76 px desktop, 66 px mobile via `@media (max-width: 620px)`). Toutes les valeurs `top: 76px` hardcodées (`cas-in-navbar.css`, `fiche_style.css`, `quiz.css`) migrées vers `var(--navbar-h)`. Résout le décalage de 10 px qui apparaissait au scroll en mobile entre la navbar et les sous-headers sticky.
+- **`tp-page.css` : `.tp-shell { height: calc(100vh - 53px) }`** → `calc(100dvh - var(--navbar-h))`. Le `53px` était hérité d'avant la navbar v2.77 (qui fait 76 px). Passage à `100dvh` corrige aussi la troncature en bas sur iOS Safari (barre d'adresse dynamique).
+- **`fiche_style.css` : `table thead { top: 53px }`** → `top: calc(var(--navbar-h, 0px) + 53px)`. Sur les fiches qui ont la navbar globale, les en-têtes de tableau ne disparaissent plus sous la navbar+tn-nav lors du scroll.
+- **Bug de virgule traînante dans `quiz.css`** : la déclaration `#streak-toast, #combo-toast, #rankup-toast, #notify-stream { ... }` faisait que les anciens toasts héritaient `position: fixed; opacity: 0` du nouveau `#notify-stream` (invisibles **par accident**). Désormais bloc séparé `display: none;`.
+- **`#notify-stream` calc** : `top: calc(var(--hdr-h, 52px) + 12px)` → `calc(var(--navbar-h, 76px) + 12px)`. Le toast n'apparaît plus sous la deuxième ligne de la navbar.
+- **Doublon supprimé** : la règle `.cas-navbar ~ header { top: 76px !important }` (ligne 300 de `cas-in-navbar.css`) faisait double-emploi avec la règle ligne 217. Supprimée.
+
+### Ajouté
+
+- **`scripts/generate_counts.py`** étend désormais sa mission : après avoir écrit `data/counts.json`, il **patche aussi** tous les `data-count="KEY">N` dans les fichiers HTML pour que SEO/réseaux sociaux/lecteurs sans JS voient les vrais chiffres (au lieu du flash 1439 → 2000 au chargement). Idempotent : ne touche un fichier que si la valeur a changé.
+- **Clé `version` dans `data/counts.json`** : lue automatiquement depuis le 1er `## [X.Y]` non-Unreleased de `docs/CHANGELOG.md`. Permet d'utiliser `<span data-count="version">` dans le HTML pour éviter d'avoir des `v2.6` codés en dur dans le footer ou la status-bar (corrigé sur `index.html`).
+- **`cas-in-counts.js`** gère désormais les valeurs **non-numériques** via le set `RAW_KEYS` (`version`, `generated_at`). Évite que `2.93` devienne `2,93` à cause du `toLocaleString('fr-CH')`.
+
+### Notes techniques
+
+- 28 fiches sur 110 chargent `cas-in-navbar.css` + `cas-in-navbar.js` mais n'ont pas le slot `<div id="cas-navbar">`. Le JS sort silencieusement (`if (!slot) return`) mais le CSS est téléchargé pour rien (~14 KB par page). Pas corrigé dans cette release : nécessite de régénérer ces 28 fiches via `scripts/inject_fiche_reader.py` (à étendre).
+- `og:description` de `scene.html` corrigé manuellement : `"64 scénarios"` → `"136 scénarios"`. Idéalement, ces meta-tags devraient utiliser `data-count-fmt` mais les crawlers exécutent rarement le JS — la solution durable est dans le patcher Python.
+
+---
+
 ## [2.58] — 2026-05-06
 
 🎉 **Clôture du rollout mode clair** — réactivation du bootstrap auto.
