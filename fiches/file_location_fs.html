@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Localiser un Fichier sur le Disque — FAT · exFAT · NTFS · EXT · HFS+ — CAS-IN Forensique</title>
+<meta name="description" content="Référence technique : comment trouver le nom, la taille, le premier cluster/bloc et l'offset disque d'un fichier sur FAT, exFAT, NTFS, EXT2/3/4, HFS+. Décodage byte-par-byte.">
+<meta name="theme-color" content="#0d1117">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+
+<style>
+.fl-grid { display:grid; gap:.6rem; margin:.6rem 0; }
+.fl-grid.cols-2 { grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+
+.fl-fs-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:.85rem 1rem; }
+.fl-fs-card .fl-fs-name { font-family:var(--sans); font-size:.95rem; font-weight:800; margin-bottom:.35rem; }
+.fl-fs-card .fl-fs-sub  { font-size:.72rem; color:var(--muted); margin-bottom:.55rem; line-height:1.45; }
+.fl-fs-card .fl-fs-row  { display:flex; justify-content:space-between; gap:.5rem; padding:.22rem 0; border-bottom:1px dashed rgba(255,255,255,.05); font-size:.74rem; }
+.fl-fs-card .fl-fs-row:last-of-type { border-bottom:none; }
+.fl-fs-card .fl-fs-key { color:var(--muted); }
+.fl-fs-card .fl-fs-val { color:var(--text); font-family:var(--mono); font-size:.72rem; text-align:right; }
+
+.fl-bytes { background:rgba(13,17,23,.6); border:1px solid var(--border); border-radius:6px;
+            padding:.7rem .85rem; font-family:var(--mono); font-size:.72rem; line-height:1.6;
+            overflow-x:auto; white-space:pre; }
+.fl-bytes b { color:var(--cyan); }
+.fl-bytes em { color:var(--orange); font-style:normal; }
+.fl-bytes i { color:var(--green); font-style:normal; }
+.fl-bytes u { color:var(--gold); text-decoration:none; }
+.fl-bytes s { color:var(--purple); text-decoration:none; }
+.fl-bytes mark { background:rgba(255,64,96,.2); color:var(--red); padding:0 .15rem; }
+
+.fl-formula { display:block; background:rgba(13,17,23,.7); border-left:3px solid var(--cyan);
+              padding:.55rem .85rem; margin:.5rem 0; font-family:var(--mono); font-size:.78rem;
+              color:var(--text); border-radius:0 6px 6px 0; line-height:1.65; }
+.fl-formula .fl-arrow { color:var(--gold); margin:0 .4rem; }
+
+.fl-bigtable { width:100%; border-collapse:collapse; font-size:.74rem; margin-top:.5rem; }
+.fl-bigtable th, .fl-bigtable td { padding:.45rem .65rem; text-align:left; border-bottom:1px solid var(--border); vertical-align:top; }
+.fl-bigtable thead th { background:rgba(255,255,255,.03); font-size:.7rem; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+.fl-bigtable tbody tr:hover { background:rgba(255,255,255,.02); }
+.fl-bigtable code { font-size:.7rem; }
+
+.fl-checklist { background:rgba(0,229,204,.04); border:1px solid rgba(0,229,204,.15); border-radius:8px; padding:.85rem 1rem; }
+.fl-checklist li { margin-bottom:.35rem; line-height:1.5; }
+
+.fl-stages { display:flex; gap:.4rem; flex-wrap:wrap; margin:.5rem 0; }
+.fl-stage  { flex:1; min-width:180px; background:var(--surface); border:1px solid var(--border);
+             border-radius:6px; padding:.55rem .7rem; }
+.fl-stage .fl-stage-num { font-size:.66rem; color:var(--muted); font-family:var(--mono); }
+.fl-stage .fl-stage-title { font-size:.78rem; font-weight:700; color:var(--cyan); margin:.15rem 0; }
+.fl-stage .fl-stage-desc  { font-size:.72rem; color:var(--text); line-height:1.45; }
+</style>
+</head>
+<body>
+<div id="scroll-progress"></div>
+<a href="#main-content" class="skip-link">Aller au contenu</a>
+<nav class="tn-nav" aria-label="Navigation fiche">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">LOCALISER UN FICHIER SUR LE DISQUE</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesdefichiers">Systèmes de fichiers</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Localiser un Fichier</span>
+    <span class="read-time-badge">⏱ ~16 min</span>
+  </div>
+</div>
+
+<main id="main-content">
+<div class="page">
+
+<div class="header">
+  <div class="badge" style="font-size:2rem;color:var(--cyan)">🎯</div>
+  <div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">
+      Localiser un Fichier sur le Disque
+    </h1>
+    <span class="tag tag-gold">FAT</span>
+    <span class="tag tag-orange">exFAT</span>
+    <span class="tag tag-purple">NTFS</span>
+    <span class="tag tag-red">EXT2/3/4</span>
+    <span class="tag tag-cyan">HFS+</span>
+    <div class="meta" style="margin-top:.4rem">
+      Trouver nom · taille · premier cluster/bloc · offset disque · à partir des structures FS brutes
+    </div>
+  </div>
+</div>
+
+<div class="prereq-block">
+<div class="prereq-row">
+  <span class="prereq-label">Prérequis :</span>
+  <a href="encodage.html" class="prereq-pill">📖 Encodage</a>
+  <a href="comparaison_fs.html" class="prereq-pill">📖 Comparaison FS</a>
+  <a href="disques.html" class="prereq-pill">📖 Disques</a>
+</div>
+<div class="prereq-row">
+  <span class="prereq-label">Voir aussi :</span>
+  <a href="timestamps_fs.html" class="related-pill">🔗 Décodage Timestamps FS</a>
+  <a href="ntfs.html" class="related-pill">🔗 NTFS</a>
+  <a href="exfat.html" class="related-pill">🔗 exFAT</a>
+  <a href="ext.html" class="related-pill">🔗 EXT</a>
+  <a href="hfs.html" class="related-pill">🔗 HFS+</a>
+  <a href="data_carving.html" class="related-pill">🔗 Carving</a>
+  <a href="autopsy.html" class="related-pill">🔗 Autopsy / TSK</a>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 1 — POURQUOI CETTE FICHE
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="pourquoi">
+<div class="sec-title">Pourquoi cette fiche</div>
+
+<div class="info">
+  <strong>Le problème :</strong> tous les outils forensiques (TSK, X-Ways, FTK, Autopsy) montrent
+  les fichiers comme s'ils étaient des objets simples — nom, taille, dates. Sous le capot, chaque FS
+  utilise une <em>chaîne de structures différentes</em> pour relier ces métadonnées aux clusters/blocs
+  physiques. Quand un outil échoue (FS corrompu, partition partielle, image dd recovery, fichier
+  supprimé), il faut savoir <strong>reconstituer la chaîne à la main</strong>.
+</div>
+
+<p style="font-size:.82rem;color:var(--muted);margin:.6rem 0;line-height:1.6">
+  Les <strong style="color:var(--text)">4 informations</strong> qu'on cherche à retrouver pour chaque fichier :
+</p>
+<ol style="font-size:.82rem;color:var(--text);line-height:1.65;padding-left:1.4rem">
+  <li><strong>Nom</strong> — court / long / Unicode / fragmenté en plusieurs entrées ?</li>
+  <li><strong>Taille</strong> — réelle (en octets) vs allouée (en clusters) — la différence = <em>slack space</em></li>
+  <li><strong>Premier cluster/bloc</strong> — point d'entrée pour suivre la chaîne d'allocation</li>
+  <li><strong>Offset disque absolu</strong> — pour <code>dd</code>/<code>icat</code> direct ou
+      pour pointer le bon endroit dans <code>xxd</code></li>
+</ol>
+
+<p style="font-size:.82rem;color:var(--text);margin-top:.5rem;line-height:1.6">
+  Chaque FS a un parcours différent. <strong>Le schéma général est toujours :</strong>
+</p>
+
+<div class="fl-stages">
+  <div class="fl-stage">
+    <div class="fl-stage-num">① ENTRÉE</div>
+    <div class="fl-stage-title">Métadonnée</div>
+    <div class="fl-stage-desc">Directory entry (FAT) · MFT entry (NTFS) · inode (EXT) · Catalog Record (HFS+)</div>
+  </div>
+  <div class="fl-stage">
+    <div class="fl-stage-num">② POINTEUR</div>
+    <div class="fl-stage-title">Premier cluster/bloc</div>
+    <div class="fl-stage-desc">Champ unique (FAT, exFAT, HFS+) · Run/Extent list (NTFS, EXT4)</div>
+  </div>
+  <div class="fl-stage">
+    <div class="fl-stage-num">③ CHAÎNE</div>
+    <div class="fl-stage-title">Allocation suivante</div>
+    <div class="fl-stage-desc">Table FAT · Bitmap · Run List · Extent Tree · Indirect blocks</div>
+  </div>
+  <div class="fl-stage">
+    <div class="fl-stage-num">④ OFFSET</div>
+    <div class="fl-stage-title">Disque absolu</div>
+    <div class="fl-stage-desc">DataAreaStart + (cluster − 2) × clusterSize · ou block × blockSize</div>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 2 — VUE D'ENSEMBLE COMPARATIVE
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="vue-ensemble">
+<div class="sec-title">Vue d'ensemble — où trouve-t-on l'info dans chaque FS</div>
+
+<div class="fl-grid cols-2">
+
+  <div class="fl-fs-card" style="border-left:3px solid var(--gold)">
+    <div class="fl-fs-name" style="color:var(--gold)">🟡 FAT12 / 16 / 32</div>
+    <div class="fl-fs-sub">Directory entry 32 octets. Le nom et le pointeur sont dans la même entrée.</div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Conteneur</span><span class="fl-fs-val">Directory entry 32 o</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Nom</span><span class="fl-fs-val">8.3 + LFN (attr 0x0F)</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Taille</span><span class="fl-fs-val">offset 0x1C (4 o)</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">1<sup>er</sup> cluster</span><span class="fl-fs-val">0x14 (HI) + 0x1A (LO)</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Chaînage</span><span class="fl-fs-val">Table FAT (linked list)</span></div>
+  </div>
+
+  <div class="fl-fs-card" style="border-left:3px solid var(--orange)">
+    <div class="fl-fs-name" style="color:var(--orange)">🟠 exFAT</div>
+    <div class="fl-fs-sub">Set d'entrées (3 à 19) : File (0x85) + Stream (0xC0) + Filename (0xC1)×N.</div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Conteneur</span><span class="fl-fs-val">Entry set 96–608 o</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Nom</span><span class="fl-fs-val">Entrées 0xC1, UTF-16, 15 ch/entrée</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Taille</span><span class="fl-fs-val">Stream 0xC0 / DataLength (8 o)</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">1<sup>er</sup> cluster</span><span class="fl-fs-val">Stream 0xC0 / FirstCluster (4 o)</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Chaînage</span><span class="fl-fs-val">Bitmap + FAT (si NoFatChain=0)</span></div>
+  </div>
+
+  <div class="fl-fs-card" style="border-left:3px solid var(--purple)">
+    <div class="fl-fs-name" style="color:var(--purple)">🟣 NTFS</div>
+    <div class="fl-fs-sub">Entrée MFT 1024 o. Tout est attribut, y compris les données.</div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Conteneur</span><span class="fl-fs-val">MFT entry "FILE0" 1 Ko</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Nom</span><span class="fl-fs-val">Attribut $FILE_NAME (0x30)</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Taille</span><span class="fl-fs-val">$DATA header / RealSize</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">1<sup>er</sup> cluster</span><span class="fl-fs-val">$DATA Run List (1<sup>er</sup> run)</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Chaînage</span><span class="fl-fs-val">Run List (delta-encoded)</span></div>
+  </div>
+
+  <div class="fl-fs-card" style="border-left:3px solid var(--red)">
+    <div class="fl-fs-name" style="color:var(--red)">🔴 EXT2 / 3 / 4</div>
+    <div class="fl-fs-sub">Inode séparé du nom. Le nom est dans le directory; les données via inode.</div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Conteneur</span><span class="fl-fs-val">Inode (128 / 256 o)</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Nom</span><span class="fl-fs-val">Directory entry (séparée)</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Taille</span><span class="fl-fs-val">i_size_lo + i_size_high</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">1<sup>er</sup> bloc</span><span class="fl-fs-val">i_block[0..14] : pointers ou extents</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Chaînage</span><span class="fl-fs-val">Indirect blocks (EXT2/3) · Extent tree (EXT4)</span></div>
+  </div>
+
+  <div class="fl-fs-card" style="border-left:3px solid var(--cyan); grid-column: span 2">
+    <div class="fl-fs-name" style="color:var(--cyan)">🔵 HFS+ (Mac OS Extended)</div>
+    <div class="fl-fs-sub">B-tree Catalog File. Nom et données dans le même CatalogRecord, indexé par CNID.</div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Conteneur</span><span class="fl-fs-val">HFSPlusCatalogFile (B-tree leaf node)</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Nom</span><span class="fl-fs-val">Catalog key : nodeName (UTF-16, 0–255 ch.)</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Taille</span><span class="fl-fs-val">forkData.logicalSize (8 o, BE)</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">1<sup>er</sup> bloc</span><span class="fl-fs-val">forkData.extents[0].startBlock (4 o, BE)</span></div>
+    <div class="fl-fs-row"><span class="fl-fs-key">Chaînage</span><span class="fl-fs-val">8 extents inline + Extents Overflow B-tree</span></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 3 — FAT
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="fat-locate">
+<div class="sec-title">FAT12/16/32 — Tout dans 32 octets</div>
+
+<p style="font-size:.82rem;line-height:1.65;margin:.5rem 0">
+  Une <strong>directory entry</strong> FAT fait exactement <strong>32 octets</strong>. Toutes les infos
+  pour localiser le fichier sont dans cette seule entrée. Si le nom dépasse 8.3, des entrées
+  <strong>LFN (Long File Name)</strong> précèdent l'entrée principale, identifiées par
+  l'attribut <code>0x0F</code>.
+</p>
+
+<table class="fl-bigtable" aria-label="Layout directory entry FAT 32 octets">
+  <thead>
+    <tr><th>Offset</th><th>Taille</th><th>Champ</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>0x00</code></td><td>11 o</td><td><strong>Nom 8.3</strong></td>
+        <td>8 octets nom + 3 octets extension. Premier byte = <code>0xE5</code> si supprimé · <code>0x00</code> si fin de directory · <code>0x05</code> = nom commence par <code>0xE5</code> (échappement)</td></tr>
+    <tr><td><code>0x0B</code></td><td>1 o</td><td><strong>Attributs</strong></td>
+        <td><code>0x10</code> = directory · <code>0x08</code> = volume label · <code>0x0F</code> = LFN · <code>0x20</code> = archive (fichier normal)</td></tr>
+    <tr><td><code>0x0D</code></td><td>1 o</td><td>Création fine secs (10 ms × N)</td><td>0–199</td></tr>
+    <tr><td><code>0x0E – 0x11</code></td><td>4 o</td><td>Create time + date</td><td>cf. fiche Timestamps FS</td></tr>
+    <tr><td><code>0x12 – 0x13</code></td><td>2 o</td><td>Last Access date</td><td>(date seule)</td></tr>
+    <tr><td style="background:rgba(0,229,204,.08)"><code>0x14 – 0x15</code></td><td>2 o</td>
+        <td><strong style="color:var(--cyan)">First Cluster HIGH</strong></td>
+        <td>16 bits hauts du premier cluster (FAT32 uniquement, =0 sur FAT12/16)</td></tr>
+    <tr><td><code>0x16 – 0x19</code></td><td>4 o</td><td>Last Modified time + date</td><td></td></tr>
+    <tr><td style="background:rgba(0,229,204,.08)"><code>0x1A – 0x1B</code></td><td>2 o</td>
+        <td><strong style="color:var(--cyan)">First Cluster LOW</strong></td>
+        <td>16 bits bas du premier cluster</td></tr>
+    <tr><td style="background:rgba(0,229,204,.08)"><code>0x1C – 0x1F</code></td><td>4 o</td>
+        <td><strong style="color:var(--cyan)">File Size</strong></td>
+        <td>Taille en octets (LE 32 bits)</td></tr>
+  </tbody>
+</table>
+
+<div class="card card-gold" style="margin-top:.85rem">
+  <div class="ct">📐 Reconstruction du premier cluster (FAT32)</div>
+  <span class="fl-formula">
+    cluster = (HIGH &lt;&lt; 16) | LOW<br>
+    <span class="fl-arrow">⚠</span> Masquer les 4 bits hauts : cluster &amp;= 0x0FFFFFFF (FAT32 = 28 bits utiles)
+  </span>
+</div>
+
+<div class="card card-blue" style="margin-top:.7rem">
+  <div class="ct">🔬 Exemple — décoder une entry FAT32 réelle</div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    Hex dump d'une entrée 32 octets pour <code>RAPPORT.PDF</code> :
+  </p>
+  <div class="fl-bytes">offset │ +0  +1  +2  +3  +4  +5  +6  +7  +8  +9  +A  +B  +C  +D  +E  +F
+─────┼─────────────────────────────────────────────────────────────────
+0x00 │ <b>52  41  50  50  4F  52  54  20  50  44  46</b>  20  18  6E  E1  9E   <span style="color:var(--muted)"># RAPPORT PDF, attr 0x20</span>
+0x10 │ B7  56  B7  56  <em>00  00</em>  E2  9E  B7  56  <em>43  00</em>  <i>F2  9D  04  00</i>   <span style="color:var(--muted)"># cluster + size</span></div>
+  <span class="fl-formula">
+    Nom 8.3 = "<strong>RAPPORT.PDF</strong>" (offset 0x00, 11 octets ASCII)<br>
+    Attribut = <code>0x20</code> (archive, fichier normal)<br>
+    First Cluster HIGH (0x14) = <code>0x00 0x00</code> = <strong>0x0000</strong><br>
+    First Cluster LOW  (0x1A) = <code>0x43 0x00</code> = <strong>0x0043</strong> = <strong>67</strong> décimal<br>
+    File Size (0x1C) = <code>0xF2 0x9D 0x04 0x00</code> LE = <code>0x00049DF2</code> = <strong>302 578 octets</strong>
+  </span>
+</div>
+
+<div class="card card-purple" style="margin-top:.7rem">
+  <div class="ct">📐 Calcul de l'offset disque (cluster → byte offset)</div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    Données du BPB (Boot Sector, à l'offset 0 du volume) :
+  </p>
+  <ul style="font-size:.78rem;line-height:1.6;padding-left:1.2rem">
+    <li><code>BPB_BytsPerSec</code> (offset 0x0B, 2 o) — taille secteur, typiquement 512</li>
+    <li><code>BPB_SecPerClus</code> (offset 0x0D, 1 o) — secteurs par cluster</li>
+    <li><code>BPB_RsvdSecCnt</code> (offset 0x0E, 2 o) — secteurs réservés (avant FAT)</li>
+    <li><code>BPB_NumFATs</code>    (offset 0x10, 1 o) — typiquement 2</li>
+    <li><code>BPB_FATSz32</code>    (offset 0x24, 4 o, FAT32) — taille d'une FAT en secteurs</li>
+  </ul>
+  <span class="fl-formula">
+    DataAreaStart_sector = RsvdSecCnt + (NumFATs × FATSz32)<br>
+    cluster_offset_bytes = (DataAreaStart + (cluster − 2) × SecPerClus) × BytsPerSec<br>
+    <span class="fl-arrow">⚠</span> Le « − 2 » : cluster 0 et 1 sont réservés ; le cluster utile commence à <strong>2</strong>
+  </span>
+  <p style="font-size:.78rem;line-height:1.55;margin-top:.4rem">
+    Dans notre exemple (cluster 67, BPB : 512 o/sec, 8 sec/cluster, 32 sec réservés, 2×1024 sec FAT) :
+  </p>
+  <span class="fl-formula">
+    DataAreaStart = 32 + 2 × 1024 = 2080 secteurs<br>
+    offset = (2080 + (67 − 2) × 8) × 512 = (2080 + 520) × 512 = <strong>1 331 200 octets</strong> (≈ 1.27 MiB)
+  </span>
+  <p style="font-size:.74rem;color:var(--muted);margin-top:.35rem">
+    Vérification : <code>dd if=image.dd bs=512 skip=2600 count=8 | xxd | head</code> doit montrer
+    <code>%PDF-1.x</code> en début (signature PDF).
+  </p>
+</div>
+
+<div class="info" style="margin-top:.6rem">
+  💡 <strong>Suivre la chaîne dans la FAT.</strong> Chaque cluster pointe vers le suivant via la table FAT
+  située à l'offset <code>RsvdSecCnt × BytsPerSec</code>. Pour FAT32, l'entrée du cluster N est à
+  <code>FAT_offset + (N × 4)</code>. Lecture 4 octets LE, masque <code>&amp; 0x0FFFFFFF</code> :
+  <ul style="font-size:.78rem;line-height:1.55;margin:.35rem 0 0 1.2rem;padding:0">
+    <li><code>0x00000000</code> = cluster libre</li>
+    <li><code>0x0FFFFFF7</code> = cluster défectueux</li>
+    <li><code>0x0FFFFFF8</code>–<code>0x0FFFFFFF</code> = <strong>EOC</strong> (fin de chaîne)</li>
+    <li>Toute autre valeur = numéro du cluster suivant</li>
+  </ul>
+</div>
+
+<div class="card card-green" style="margin-top:.7rem">
+  <div class="ct">📛 Long File Names (LFN)</div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    Quand le nom dépasse 8.3, Windows écrit jusqu'à <strong>20 entrées LFN</strong> (attribut <code>0x0F</code>)
+    <em>juste avant</em> l'entrée 8.3 réelle, dans l'ordre <strong>inverse</strong> (séquence 0x4N pour la
+    dernière, puis 0x03, 0x02, 0x01).
+  </p>
+  <ul style="font-size:.78rem;line-height:1.55;padding-left:1.2rem">
+    <li>Chaque LFN porte <strong>13 caractères UTF-16</strong> (offsets 0x01-0x0A, 0x0E-0x19, 0x1C-0x1F)</li>
+    <li>L'<strong>entrée 8.3</strong> qui suit reste obligatoire (compatibilité DOS)</li>
+    <li>Concaténer dans l'ordre <em>inverse</em> de leur écriture pour reconstituer le nom long</li>
+  </ul>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 4 — exFAT
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="exfat-locate">
+<div class="sec-title">exFAT — Set de 3 (à 19) entrées</div>
+
+<p style="font-size:.82rem;line-height:1.65;margin:.5rem 0">
+  exFAT abandonne le compromis 8.3 + LFN de FAT pour un <strong>directory entry set</strong> propre :
+  une entrée <strong>File (0x85)</strong>, suivie d'une entrée <strong>Stream Extension (0xC0)</strong>,
+  suivie d'une à 17 entrées <strong>Filename Extension (0xC1)</strong>. Chaque entrée fait toujours
+  32 octets.
+</p>
+
+<div class="fl-stages">
+  <div class="fl-stage" style="border-left:3px solid var(--gold)">
+    <div class="fl-stage-num">ENTRY 1 — Type 0x85</div>
+    <div class="fl-stage-title">File Directory Entry</div>
+    <div class="fl-stage-desc">Attributs · timestamps · count des entrées secondaires (SecondaryCount)</div>
+  </div>
+  <div class="fl-stage" style="border-left:3px solid var(--cyan)">
+    <div class="fl-stage-num">ENTRY 2 — Type 0xC0</div>
+    <div class="fl-stage-title">Stream Extension</div>
+    <div class="fl-stage-desc">FirstCluster · DataLength · ValidDataLength · NoFatChain</div>
+  </div>
+  <div class="fl-stage" style="border-left:3px solid var(--green)">
+    <div class="fl-stage-num">ENTRY 3..N — Type 0xC1</div>
+    <div class="fl-stage-title">Filename Extension</div>
+    <div class="fl-stage-desc">15 caractères UTF-16 par entrée, jusqu'à 255 caractères total</div>
+  </div>
+</div>
+
+<table class="fl-bigtable" aria-label="Stream Extension entry 0xC0">
+  <thead>
+    <tr><th>Offset (entry 0xC0)</th><th>Taille</th><th>Champ</th><th>Rôle</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>0x00</code></td><td>1 o</td><td>EntryType</td>
+        <td><code>0xC0</code> = en service · <code>0x40</code> = supprimé (bit 7 effacé)</td></tr>
+    <tr><td><code>0x01</code></td><td>1 o</td><td>GeneralSecondaryFlags</td>
+        <td>bit 0 = AllocationPossible · <strong>bit 1 = NoFatChain</strong></td></tr>
+    <tr><td><code>0x03</code></td><td>1 o</td><td>NameLength</td>
+        <td>Longueur du nom en caractères Unicode (1–255)</td></tr>
+    <tr><td><code>0x04</code></td><td>2 o</td><td>NameHash</td>
+        <td>Hash du nom up-cased pour recherche rapide</td></tr>
+    <tr><td style="background:rgba(0,229,204,.08)"><code>0x08</code></td><td>8 o</td>
+        <td><strong style="color:var(--cyan)">ValidDataLength</strong></td>
+        <td>Octets <em>réellement écrits</em> (données valides)</td></tr>
+    <tr><td style="background:rgba(0,229,204,.08)"><code>0x14</code></td><td>4 o</td>
+        <td><strong style="color:var(--cyan)">FirstCluster</strong></td>
+        <td>Premier cluster du fichier dans le Cluster Heap (32 bits)</td></tr>
+    <tr><td style="background:rgba(0,229,204,.08)"><code>0x18</code></td><td>8 o</td>
+        <td><strong style="color:var(--cyan)">DataLength</strong></td>
+        <td>Taille totale allouée en octets</td></tr>
+  </tbody>
+</table>
+
+<div class="card card-orange" style="margin-top:.85rem">
+  <div class="ct">🟢 Bit NoFatChain — la grosse différence avec FAT</div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    Si <code>NoFatChain = 1</code> (cas du <em>fichier non fragmenté</em>) :<br>
+    → Les clusters sont <strong>contigus</strong> à partir de FirstCluster.<br>
+    → On <strong>n'utilise pas la FAT</strong>. Le nombre de clusters = <code>DataLength ÷ ClusterSize</code> (arrondi sup).<br>
+    → Gain de performance énorme sur les médias flash.
+  </p>
+  <p style="font-size:.78rem;line-height:1.55;margin-top:.4rem">
+    Si <code>NoFatChain = 0</code> : on suit la FAT comme dans FAT classique
+    (entrées 32 bits, <code>0xFFFFFFFF</code> = EOF).
+  </p>
+</div>
+
+<div class="card card-blue" style="margin-top:.7rem">
+  <div class="ct">📐 Calcul de l'offset disque exFAT</div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    Les valeurs proviennent du <strong>Main Boot Sector</strong> (sector 0) :
+  </p>
+  <ul style="font-size:.78rem;line-height:1.6;padding-left:1.2rem">
+    <li><code>BytesPerSectorShift</code> (offset 108, 1 o) : <strong>2-log</strong> de la taille secteur (typiquement 9 → 512)</li>
+    <li><code>SectorsPerClusterShift</code> (offset 109, 1 o) : <strong>2-log</strong> des secteurs par cluster</li>
+    <li><code>ClusterHeapOffset</code> (offset 88, 4 o) : début du cluster heap en <em>secteurs</em></li>
+  </ul>
+  <span class="fl-formula">
+    BytesPerSector  = 1 &lt;&lt; BytesPerSectorShift<br>
+    BytesPerCluster = 1 &lt;&lt; (BytesPerSectorShift + SectorsPerClusterShift)<br>
+    cluster_offset  = (ClusterHeapOffset × BytesPerSector) + (cluster − 2) × BytesPerCluster
+  </span>
+</div>
+
+<div class="alert" style="margin-top:.6rem">
+  ⚠ <strong>Pas de slack space FAT-style.</strong> Sur exFAT, <code>DataLength</code> peut être
+  &gt; <code>ValidDataLength</code> (allocation pré-réservée). La zone entre les deux contient des données
+  <em>écrites antérieurement</em> sur ces clusters — c'est l'équivalent du file slack et peut être
+  forensiquement riche.
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 5 — NTFS
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="ntfs-locate">
+<div class="sec-title">NTFS — Tout est attribut, et tout est dans la MFT</div>
+
+<p style="font-size:.82rem;line-height:1.65;margin:.5rem 0">
+  NTFS utilise la <strong>$MFT</strong> (Master File Table), un fichier de fichiers. Chaque fichier =
+  une <strong>entrée MFT de 1 024 octets</strong> qui contient une liste d'<em>attributs</em>. Le nom
+  est dans <code>$FILE_NAME</code>, les données (ou leur localisation) sont dans <code>$DATA</code>.
+</p>
+
+<table class="fl-bigtable" aria-label="Attributs MFT clés">
+  <thead>
+    <tr><th>Type</th><th>ID</th><th>Rôle</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>$STANDARD_INFORMATION</strong></td><td><code>0x10</code></td>
+        <td>MACB modifiables, droits, flags</td></tr>
+    <tr><td><strong>$ATTRIBUTE_LIST</strong></td><td><code>0x20</code></td>
+        <td>Si entrée pleine : pointe vers d'autres entrées MFT</td></tr>
+    <tr><td><strong>$FILE_NAME</strong></td><td><code>0x30</code></td>
+        <td>Nom UTF-16 (long et 8.3) · MACB protégés · ParentRef</td></tr>
+    <tr><td style="background:rgba(0,229,204,.08)"><strong>$DATA</strong></td>
+        <td><code>0x80</code></td>
+        <td><strong style="color:var(--cyan)">Le contenu lui-même OU la Run List</strong></td></tr>
+    <tr><td><strong>$BITMAP</strong></td><td><code>0xB0</code></td>
+        <td>Pour les directories : map des entrées</td></tr>
+  </tbody>
+</table>
+
+<div class="card card-purple" style="margin-top:.85rem">
+  <div class="ct">🟣 $DATA résident vs non-résident</div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    L'attribut <code>$DATA</code> commence par un header (16 octets) avec un flag à l'offset <code>0x08</code>
+    (<strong>NonResidentFlag</strong>) :
+  </p>
+  <ul style="font-size:.78rem;line-height:1.6;padding-left:1.2rem">
+    <li><strong>NonResidentFlag = 0</strong> (résident) : si fichier ≤ ~700 octets, le contenu est
+        <em>directement</em> dans la MFT entry. Pas de cluster à chercher. Lire <code>AttributeLength</code>
+        à l'offset <code>0x10</code> et le contenu commence à <code>ValueOffset</code>.</li>
+    <li><strong>NonResidentFlag = 1</strong> (non-résident) : le fichier vit dans la Data Area, et l'attribut
+        contient une <strong>Run List</strong>. Champs clés à partir de l'offset 0x10 :
+        <ul style="margin:.2rem 0 0 1rem;padding:0">
+          <li><code>StartingVCN</code> (8 o) — <em>Virtual Cluster Number</em> de début</li>
+          <li><code>EndingVCN</code> (8 o) — VCN de fin</li>
+          <li><code>RunListOffset</code> (2 o) — où commence la Run List dans l'attribut</li>
+          <li><code>AllocatedSize</code> (8 o) — taille en octets allouée (multiple de cluster)</li>
+          <li><code>RealSize</code> (8 o) — <strong style="color:var(--cyan)">taille réelle du fichier</strong></li>
+          <li><code>InitializedSize</code> (8 o) — octets effectivement écrits (le reste = zéros)</li>
+        </ul></li>
+  </ul>
+</div>
+
+<div class="card card-blue" style="margin-top:.7rem">
+  <div class="ct">📐 Décodage d'une Run List (data run)</div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    Format compact : chaque <em>run</em> commence par un <strong>byte d'en-tête</strong>
+    <code>LH</code> où :
+  </p>
+  <ul style="font-size:.78rem;line-height:1.6;padding-left:1.2rem">
+    <li><strong>L</strong> (4 bits bas) = nombre d'octets pour la <em>longueur</em> (en clusters)</li>
+    <li><strong>H</strong> (4 bits hauts) = nombre d'octets pour l'<em>offset</em> du cluster</li>
+  </ul>
+  <p style="font-size:.78rem;line-height:1.55;margin-top:.4rem">
+    Suivent <em>L</em> octets (longueur du run, LE non signé) puis <em>H</em> octets (offset du run, LE
+    <strong>signé</strong>, <em>relatif au run précédent</em> sauf le premier qui est absolu).<br>
+    La Run List finit sur un byte <code>0x00</code>.
+  </p>
+
+  <p style="font-size:.78rem;line-height:1.55;margin-top:.5rem"><strong>Exemple :</strong>
+    <code>0x21 0x18 0x34 0x56 0x21 0x10 0x40 0x88 0x00</code></p>
+  <span class="fl-formula">
+    Run 1 : header = <b>0x21</b> → L=1, H=2<br>
+    &nbsp;&nbsp;longueur = <code>0x18</code> = <strong>24 clusters</strong><br>
+    &nbsp;&nbsp;offset = <code>0x5634</code> = <strong>cluster 22 068</strong> (absolu, premier run)<br><br>
+    Run 2 : header = <b>0x21</b> → L=1, H=2<br>
+    &nbsp;&nbsp;longueur = <code>0x10</code> = <strong>16 clusters</strong><br>
+    &nbsp;&nbsp;offset = <code>0x8840</code> = <strong>+ 34 880 clusters</strong> (relatif)<br>
+    &nbsp;&nbsp;→ cluster absolu = 22 068 + 34 880 = <strong>56 948</strong><br><br>
+    <code>0x00</code> = fin de la Run List
+  </span>
+</div>
+
+<div class="card card-green" style="margin-top:.7rem">
+  <div class="ct">📛 ADS — Alternate Data Streams (multi-$DATA)</div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    Une entrée MFT peut contenir <strong>plusieurs attributs $DATA nommés</strong>. Le premier (sans nom) =
+    le contenu visible. Les suivants ont un nom dans <code>NameOffset/NameLength</code>. Syntaxe accès :
+    <code>fichier.txt:streamcaché.exe</code>. L'Explorateur Windows et la « taille du fichier » <em>ignorent</em>
+    les ADS — c'est un classique de cache anti-forensique. Détection :
+    <code>dir /r</code>, <code>streams.exe</code> (Sysinternals), ou X-Ways nativement.
+  </p>
+</div>
+
+<div class="card card-purple" style="margin-top:.7rem">
+  <div class="ct">📐 Offset disque NTFS (cluster → byte)</div>
+  <span class="fl-formula">
+    BytesPerCluster = BytesPerSector × SectorsPerCluster (du BPB, offset 0x0B et 0x0D)<br>
+    cluster_offset_bytes = cluster × BytesPerCluster<br>
+    <span class="fl-arrow">→</span>
+    Pas de « − 2 » comme FAT : NTFS adresse les clusters depuis 0
+  </span>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 6 — EXT
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="ext-locate">
+<div class="sec-title">EXT2 / EXT3 / EXT4 — Inode + Directory Entry séparés</div>
+
+<p style="font-size:.82rem;line-height:1.65;margin:.5rem 0">
+  Sous EXT, le <strong>nom</strong> et les <strong>données</strong> sont séparés :
+</p>
+
+<div class="fl-stages">
+  <div class="fl-stage" style="border-left:3px solid var(--green)">
+    <div class="fl-stage-num">DIRECTORY</div>
+    <div class="fl-stage-title">nom + numéro d'inode</div>
+    <div class="fl-stage-desc">Linked list d'entrées de longueur variable, dans les blocs du directory</div>
+  </div>
+  <div class="fl-stage" style="border-left:3px solid var(--red)">
+    <div class="fl-stage-num">INODE</div>
+    <div class="fl-stage-title">métadata + pointeurs</div>
+    <div class="fl-stage-desc">128 ou 256 octets · taille · permissions · pointers ou extents</div>
+  </div>
+  <div class="fl-stage" style="border-left:3px solid var(--cyan)">
+    <div class="fl-stage-num">DATA BLOCKS</div>
+    <div class="fl-stage-title">contenu</div>
+    <div class="fl-stage-desc">Adresses absolues en numéro de bloc (block size = 1k / 2k / 4k)</div>
+  </div>
+</div>
+
+<div class="card card-red" style="margin-top:.85rem">
+  <div class="ct">📐 Étape 1 — Trouver l'inode N sur le disque</div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    Données nécessaires (du superblock à l'offset 1024 du volume) :
+  </p>
+  <ul style="font-size:.78rem;line-height:1.55;padding-left:1.2rem">
+    <li><code>s_inodes_per_group</code> (offset 40) — typiquement 8192</li>
+    <li><code>s_inode_size</code> (offset 88) — 128 ou 256</li>
+    <li><code>s_first_data_block</code> (offset 20) — 0 (block size 4k+) ou 1 (1k)</li>
+    <li>Block group descriptor table (juste après le superblock) → <code>bg_inode_table_lo</code> (4 o)</li>
+  </ul>
+  <span class="fl-formula">
+    block_group = (inode − 1) ÷ s_inodes_per_group<br>
+    index_in_group = (inode − 1) mod s_inodes_per_group<br>
+    inode_table_block = bg_inode_table_lo[block_group]<br>
+    inode_offset = inode_table_block × block_size + index_in_group × s_inode_size
+  </span>
+  <p style="font-size:.74rem;color:var(--muted);margin-top:.4rem">
+    En pratique : <code>debugfs -R 'imap &lt;inode&gt;' /dev/sdX</code> donne le block et le byte offset directement.
+  </p>
+</div>
+
+<div class="card card-orange" style="margin-top:.7rem">
+  <div class="ct">📐 Étape 2A — EXT2/EXT3 : indirect blocks</div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    Le champ <code>i_block[]</code> (60 octets, offset 40 de l'inode) contient 15 entrées de 4 octets :
+  </p>
+  <table class="fl-bigtable">
+    <tbody>
+      <tr><td><code>i_block[0..11]</code></td><td>12 pointeurs <strong>directs</strong> (12 × bs octets max)</td></tr>
+      <tr><td><code>i_block[12]</code></td><td>1 pointer <strong>indirect simple</strong> (vers un bloc plein de pointers)</td></tr>
+      <tr><td><code>i_block[13]</code></td><td>1 pointer <strong>indirect double</strong></td></tr>
+      <tr><td><code>i_block[14]</code></td><td>1 pointer <strong>indirect triple</strong></td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:.74rem;color:var(--muted);margin-top:.4rem">
+    Avec block size = 4 ko et pointers de 4 o : direct = 48 ko · indirect 1 = 4 Mo · indirect 2 = 4 Go · indirect 3 = 4 To.
+  </p>
+</div>
+
+<div class="card card-red" style="margin-top:.7rem">
+  <div class="ct">📐 Étape 2B — EXT4 : extent tree (le cas moderne)</div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    EXT4 remplace les indirect blocks par un <strong>arbre d'extents</strong>. Le même champ
+    <code>i_block[]</code> (60 octets) contient maintenant un <strong>extent header</strong> (12 octets)
+    + jusqu'à 4 extents (4 × 12 octets = 48 octets).
+  </p>
+
+  <p style="font-size:.78rem;line-height:1.55;margin-top:.4rem"><strong>Extent header (12 o) :</strong></p>
+  <table class="fl-bigtable">
+    <tbody>
+      <tr><td><code>0x00</code></td><td>2 o</td><td><strong>eh_magic</strong></td>
+          <td><code>0xF30A</code> (LE → <code>0A F3</code> sur disque)</td></tr>
+      <tr><td><code>0x02</code></td><td>2 o</td><td>eh_entries</td>
+          <td>Nombre d'entrées valides (extents ou indices)</td></tr>
+      <tr><td><code>0x04</code></td><td>2 o</td><td>eh_max</td><td>Capacité (4 dans l'inode, ~340 dans un bloc)</td></tr>
+      <tr><td><code>0x06</code></td><td>2 o</td><td><strong>eh_depth</strong></td>
+          <td><code>0</code> = feuilles (extents directs) · <code>&gt; 0</code> = nœuds intermédiaires (indices)</td></tr>
+      <tr><td><code>0x08</code></td><td>4 o</td><td>eh_generation</td><td>0</td></tr>
+    </tbody>
+  </table>
+
+  <p style="font-size:.78rem;line-height:1.55;margin-top:.5rem"><strong>Extent record (12 o, depth=0) :</strong></p>
+  <table class="fl-bigtable">
+    <tbody>
+      <tr><td><code>0x00</code></td><td>4 o</td><td><strong>ee_block</strong></td>
+          <td>Premier bloc <em>logique</em> du fichier couvert (commence à 0)</td></tr>
+      <tr><td><code>0x04</code></td><td>2 o</td><td><strong>ee_len</strong></td>
+          <td>Nombre de blocs (max 32 768 ; bit 15 = "uninitialized")</td></tr>
+      <tr><td><code>0x06</code></td><td>2 o</td><td>ee_start_hi</td><td>16 bits hauts du bloc physique</td></tr>
+      <tr><td><code>0x08</code></td><td>4 o</td><td><strong>ee_start_lo</strong></td>
+          <td>32 bits bas du bloc physique de début</td></tr>
+    </tbody>
+  </table>
+
+  <span class="fl-formula" style="margin-top:.5rem">
+    physical_block = (ee_start_hi &lt;&lt; 32) | ee_start_lo<br>
+    file_offset_bytes = physical_block × block_size
+  </span>
+  <p style="font-size:.74rem;color:var(--muted);margin-top:.4rem">
+    Avec 4 extents max dans l'inode et ee_len ≤ 32 768 (= 128 Mo à 4 ko/bloc) → fichier max sans
+    arborescence ≈ 512 Mo. Au-delà, <code>eh_depth &gt; 0</code> et l'inode contient des
+    <em>extent_idx</em> qui pointent vers des blocs externes contenant d'autres headers et leaves.
+  </p>
+</div>
+
+<div class="card card-blue" style="margin-top:.7rem">
+  <div class="ct">📛 Étape 3 — Le nom : directory entry</div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    Les directories EXT contiennent une <em>linked list</em> d'entrées de longueur variable. Chaque entrée :
+  </p>
+  <table class="fl-bigtable">
+    <tbody>
+      <tr><td><code>0x00</code></td><td>4 o</td><td><strong>inode</strong></td>
+          <td>Numéro d'inode pointé (0 si entrée libre)</td></tr>
+      <tr><td><code>0x04</code></td><td>2 o</td><td>rec_len</td>
+          <td>Longueur totale de cette entrée (multiple de 4)</td></tr>
+      <tr><td><code>0x06</code></td><td>1 o</td><td>name_len</td>
+          <td>Longueur du nom (1–255)</td></tr>
+      <tr><td><code>0x07</code></td><td>1 o</td><td>file_type</td>
+          <td><code>1</code> = fichier · <code>2</code> = directory · <code>7</code> = symlink</td></tr>
+      <tr><td><code>0x08</code></td><td>name_len</td><td><strong>name</strong></td>
+          <td>Nom UTF-8 (pas de zéro terminal)</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:.74rem;color:var(--muted);margin-top:.4rem">
+    L'entrée suivante est à <code>+rec_len</code>. Pour reconstituer la chaîne, parcourir séquentiellement
+    le bloc du directory et sauter de <code>rec_len</code> en <code>rec_len</code>.
+  </p>
+</div>
+
+<div class="alert" style="margin-top:.6rem">
+  ⚠ <strong>Attention sur fichier supprimé EXT3/4 :</strong> à la suppression, le kernel met à zéro les
+  <em>pointers</em> de l'inode et libère les blocs. EXT4 conserve cependant les <em>extents</em>
+  partiellement (le header reste, eh_entries passe à 0). La récupération sans journal est très limitée
+  par défaut. Le journal (<code>jbd2</code>) peut contenir une copie de l'inode avant suppression :
+  <code>extundelete</code> et <code>ext4magic</code> exploitent cela.
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 7 — HFS+
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="hfs-locate">
+<div class="sec-title">HFS+ — Catalog B-Tree avec extents inline</div>
+
+<p style="font-size:.82rem;line-height:1.65;margin:.5rem 0">
+  HFS+ stocke les métadonnées dans un <strong>B-tree appelé Catalog File</strong> (un des
+  <em>special files</em> dont l'emplacement est dans le Volume Header à l'offset 1024). La <em>clé</em> du
+  B-tree est <code>(parentCNID, nodeName)</code>. La <em>donnée</em> est un <code>HFSPlusCatalogFile</code>
+  ou <code>HFSPlusCatalogFolder</code>.
+</p>
+
+<div class="card card-cyan" style="margin-top:.5rem">
+  <div class="ct">📛 La clé du Catalog (Catalog Key) — où est le nom</div>
+  <table class="fl-bigtable">
+    <tbody>
+      <tr><td><code>0x00</code></td><td>2 o BE</td><td>keyLength</td><td>Longueur totale de la clé</td></tr>
+      <tr><td><code>0x02</code></td><td>4 o BE</td><td><strong>parentID</strong></td>
+          <td>CNID (Catalog Node ID) du dossier parent</td></tr>
+      <tr><td><code>0x06</code></td><td>2 o BE</td><td>nodeNameLength</td>
+          <td>Longueur du nom en caractères Unicode (max 255)</td></tr>
+      <tr><td><code>0x08</code></td><td>2×N o BE</td><td><strong>nodeName</strong></td>
+          <td>Nom UTF-16 BE (decomposed Unicode normalisé NFD)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card card-purple" style="margin-top:.7rem">
+  <div class="ct">📦 HFSPlusCatalogFile (record type 0x0002, 248 octets)</div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    Champs clés (tous en <strong>Big-Endian</strong>) :
+  </p>
+  <table class="fl-bigtable">
+    <tbody>
+      <tr><td><code>0x00</code></td><td>2 o</td><td>recordType</td><td><code>0x0002</code> = file</td></tr>
+      <tr><td><code>0x08</code></td><td>4 o</td><td><strong>fileID (CNID)</strong></td>
+          <td>Identifiant unique persistant du fichier</td></tr>
+      <tr><td><code>0x0C</code></td><td>4 o</td><td>createDate</td><td>(cf. fiche Timestamps FS)</td></tr>
+      <tr><td><code>0x10</code></td><td>4 o</td><td>contentModDate</td><td></td></tr>
+      <tr><td style="background:rgba(0,229,204,.08)"><code>0x58</code></td><td>80 o</td>
+          <td><strong style="color:var(--cyan)">dataFork (HFSPlusForkData)</strong></td>
+          <td>Le fork principal — taille + 8 extents</td></tr>
+      <tr><td><code>0xA8</code></td><td>80 o</td><td>resourceFork</td>
+          <td>Fork ressources legacy (rarement utilisé sur les fichiers post-2001)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card card-cyan" style="margin-top:.7rem">
+  <div class="ct">📐 HFSPlusForkData (80 octets) — le cœur de la localisation</div>
+  <table class="fl-bigtable">
+    <tbody>
+      <tr><td><code>0x00</code></td><td>8 o BE</td>
+          <td><strong style="color:var(--cyan)">logicalSize</strong></td>
+          <td>Taille du fichier en octets</td></tr>
+      <tr><td><code>0x08</code></td><td>4 o BE</td><td>clumpSize</td><td>Pour pré-allocation</td></tr>
+      <tr><td><code>0x0C</code></td><td>4 o BE</td>
+          <td><strong>totalBlocks</strong></td>
+          <td>Nombre de blocs alloués (taille bloc = 4 096 octets typiquement)</td></tr>
+      <tr><td style="background:rgba(0,229,204,.08)"><code>0x10</code></td><td>8 × 8 o BE</td>
+          <td><strong style="color:var(--cyan)">extents[8]</strong></td>
+          <td><strong>8 extents inline</strong>, chacun = startBlock (4 o) + blockCount (4 o)</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:.78rem;line-height:1.55;margin-top:.4rem">
+    Si le fichier a plus de 8 fragments, les extents supplémentaires sont dans un <strong>second B-tree</strong>
+    appelé <strong>Extents Overflow File</strong>, indexé par <code>(forkType, fileID, startBlock)</code>.
+  </p>
+</div>
+
+<div class="card card-purple" style="margin-top:.7rem">
+  <div class="ct">📐 Offset disque HFS+ (block → byte)</div>
+  <p style="font-size:.78rem;line-height:1.55;margin:.4rem 0">
+    Du Volume Header (offset 1024) :
+  </p>
+  <ul style="font-size:.78rem;line-height:1.55;padding-left:1.2rem">
+    <li><code>blockSize</code> (offset 40, 4 o BE) — typiquement 4096</li>
+  </ul>
+  <span class="fl-formula">
+    block_offset_bytes = startBlock × blockSize<br>
+    <span class="fl-arrow">⚠</span> startBlock est <strong>absolu sur le volume</strong> (depuis le sector 0 du volume HFS+, pas du disque)
+  </span>
+</div>
+
+<div class="info" style="margin-top:.6rem">
+  💡 <strong>Decomposed Unicode (NFD) sur HFS+.</strong> Apple stocke les noms en
+  <em>Unicode décomposé</em> (« é » → « e + ́ »). Si vous comparez par octets avec un nom NFC issu d'une
+  autre source (Linux, Windows, NTFS), <strong>la comparaison échouera</strong>. Toujours normaliser
+  côté analyse : Python <code>unicodedata.normalize('NFC', name)</code>.
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 8 — TABLEAU SYNTHÈSE
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="synthese">
+<div class="sec-title">Tableau synthèse — où trouver quoi</div>
+
+<table class="fl-bigtable" aria-label="Synthèse">
+  <thead>
+    <tr>
+      <th>FS</th>
+      <th>Conteneur principal</th>
+      <th>Nom</th>
+      <th>Taille (champ)</th>
+      <th>1<sup>er</sup> cluster/bloc (champ)</th>
+      <th>Chaînage suivant</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong style="color:var(--gold)">FAT12/16/32</strong></td>
+      <td>Directory entry 32 o</td>
+      <td>8.3 (offset 0x00) + LFN attr 0x0F</td>
+      <td>0x1C (4 o LE)</td>
+      <td>0x14 (HI) + 0x1A (LO)</td>
+      <td>Table FAT (linked list)</td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--orange)">exFAT</strong></td>
+      <td>Entry set (0x85 + 0xC0 + 0xC1×N)</td>
+      <td>UTF-16 dans 0xC1 (15 ch/entry)</td>
+      <td>0xC0/0x18 (DataLength 8 o LE)</td>
+      <td>0xC0/0x14 (FirstCluster 4 o LE)</td>
+      <td>FAT (sauf NoFatChain) + Bitmap</td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--purple)">NTFS</strong></td>
+      <td>MFT entry "FILE0" 1 Ko</td>
+      <td>$FILE_NAME (0x30) UTF-16</td>
+      <td>$DATA RealSize (offset 0x30)</td>
+      <td>$DATA Run List (1<sup>er</sup> run)</td>
+      <td>Run List delta-encoded</td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--red)">EXT2/3</strong></td>
+      <td>Inode 128 o + Directory entry</td>
+      <td>Directory entry (UTF-8)</td>
+      <td>i_size_lo (offset 4)</td>
+      <td>i_block[0] (offset 40)</td>
+      <td>i_block[12..14] indirect blocks</td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--red)">EXT4</strong></td>
+      <td>Inode 256 o + Directory entry</td>
+      <td>Directory entry (UTF-8)</td>
+      <td>i_size_lo + i_size_high</td>
+      <td>i_block[] = extent header + extents</td>
+      <td>Extent tree (depth ≥ 1)</td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--cyan)">HFS+</strong></td>
+      <td>Catalog B-tree leaf node</td>
+      <td>Catalog key nodeName UTF-16 BE NFD</td>
+      <td>forkData.logicalSize (8 o BE)</td>
+      <td>forkData.extents[0].startBlock (4 o BE)</td>
+      <td>8 extents inline + Extents Overflow B-tree</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 9 — OUTILS
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="outils">
+<div class="sec-title">Outils — du décodage manuel à l'extraction industrielle</div>
+
+<table class="fl-bigtable" aria-label="Outils">
+  <thead><tr><th>Outil</th><th>Usage</th><th>FS</th><th>Note</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>fls -p -r</code> + <code>icat</code></td>
+      <td>Lister + extraire un fichier</td>
+      <td>Tous TSK</td>
+      <td><code>fls</code> donne l'inode/MFT, <code>icat -o &lt;offset_partition&gt; image.dd N &gt; out</code></td>
+    </tr>
+    <tr>
+      <td><code>istat</code></td>
+      <td>Détail d'un inode/MFT entry</td>
+      <td>Tous TSK</td>
+      <td>Affiche les blocks/clusters alloués, taille, MAC times</td>
+    </tr>
+    <tr>
+      <td><code>blkcat</code></td>
+      <td>Lire un bloc/cluster brut</td>
+      <td>Tous TSK</td>
+      <td>Pour vérifier une signature au cluster donné</td>
+    </tr>
+    <tr>
+      <td><strong>X-Ways Forensics</strong></td>
+      <td>GUI hex + interpretation</td>
+      <td>Tous</td>
+      <td>Vue arborescente + Data Interpreter automatique sur sélection</td>
+    </tr>
+    <tr>
+      <td><strong>Autopsy</strong></td>
+      <td>GUI sur TSK</td>
+      <td>Tous</td>
+      <td>Vue Files + Carving + Timeline</td>
+    </tr>
+    <tr>
+      <td><code>debugfs</code></td>
+      <td>Inspection EXT</td>
+      <td>EXT2/3/4</td>
+      <td><code>debugfs -R 'stat &lt;inode&gt;' /dev/sdX</code> — affiche extents, blocks, modes</td>
+    </tr>
+    <tr>
+      <td><code>MFTECmd</code></td>
+      <td>Parser MFT NTFS</td>
+      <td>NTFS</td>
+      <td>Sortie CSV avec $SI/$FN séparés, run lists déchiffrées</td>
+    </tr>
+    <tr>
+      <td><strong>HFSExplorer</strong> · <code>hfsutils</code></td>
+      <td>Lecture HFS+</td>
+      <td>HFS+</td>
+      <td><code>hls</code>, <code>hcopy</code>; ou <code>fsck_hfs -d</code> (macOS) pour debug</td>
+    </tr>
+    <tr>
+      <td><strong>foremost</strong> · <strong>scalpel</strong> · <strong>photorec</strong></td>
+      <td>Carving aveugle</td>
+      <td>Tous (fall-back)</td>
+      <td>Quand le FS est corrompu : carving par signatures (header + footer + max size)</td>
+    </tr>
+    <tr>
+      <td><code>xxd -s &lt;offset&gt; -l 1024 image.dd</code></td>
+      <td>Hex dump à la main</td>
+      <td>Tous</td>
+      <td>Vérification finale : la signature de fichier doit apparaître au cluster_offset calculé</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 10 — CHECKLIST FORENSIQUE
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="checklist">
+<div class="sec-title">Checklist — avant d'affirmer « ce fichier était à cet endroit »</div>
+
+<div class="fl-checklist">
+<ul style="font-size:.84rem;line-height:1.65">
+  <li>☐ <strong>Image en lecture seule</strong> (<code>noexec,ro</code> ou write-blocker) ?</li>
+  <li>☐ <strong>FS identifié</strong> sans ambiguïté + version (EXT4 inode 128 vs 256, FAT12/16/32) ?</li>
+  <li>☐ <strong>Boot sector / Volume header / Superblock lu</strong> pour les paramètres
+      (cluster size, block size, FAT offset, Volume Header offset 1024) ?</li>
+  <li>☐ <strong>Offset de partition</strong> appliqué si l'image est une image disque entière (<code>mmls</code>) ?</li>
+  <li>☐ <strong>Premier cluster/bloc reconstruit</strong> avec masquage des bits réservés
+      (FAT32 : <code>&amp; 0x0FFFFFFF</code>) ?</li>
+  <li>☐ <strong>Calcul d'offset</strong> tient compte du « − 2 » FAT/exFAT (cluster 0 et 1 réservés) ?</li>
+  <li>☐ <strong>Endianness</strong> respectée : LE pour FAT/exFAT/NTFS/EXT, <strong>BE pour HFS+</strong> ?</li>
+  <li>☐ <strong>Vérification finale</strong> : signature de fichier (PDF, JPEG, PNG, ZIP…) au cluster_offset calculé ?</li>
+  <li>☐ <strong>Si NTFS</strong> : Run List décodée avec offsets <em>relatifs</em> au run précédent (sauf le 1<sup>er</sup>) ?</li>
+  <li>☐ <strong>Si NTFS</strong> : ADS et $DATA multiples vérifiés (<code>dir /r</code> ou X-Ways) ?</li>
+  <li>☐ <strong>Si EXT4</strong> : profondeur de l'extent tree correctement traversée si <code>eh_depth &gt; 0</code> ?</li>
+  <li>☐ <strong>Si HFS+</strong> : nom normalisé NFC pour comparaison avec sources externes ?</li>
+  <li>☐ <strong>Si exFAT</strong> : flag NoFatChain vérifié avant de chercher dans la FAT ?</li>
+  <li>☐ <strong>Hash du fichier extrait</strong> calculé et conservé (MD5+SHA-256) ?</li>
+  <li>☐ <strong>Procédure documentée</strong> dans le journal opérationnel (commandes, offsets, sorties) ?</li>
+</ul>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 11 — PIÈGES CLASSIQUES
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="pieges">
+<div class="sec-title">Pièges classiques en analyse manuelle</div>
+
+<div class="fl-grid cols-2">
+  <div>
+    <div class="alert">❌ <strong>Oublier le « −2 » FAT/exFAT</strong>. Cluster 0 et 1 sont réservés ;
+      le cluster utile commence à 2. Erreur d'offset = 2 × ClusterSize, et toute la chaîne d'analyse part en sucette.</div>
+    <div class="alert" style="margin-top:.5rem">❌ <strong>Lire HFS+ en Little-Endian</strong>. HFS+ est un des
+      derniers FS Big-Endian (héritage PowerPC). Si vous voyez « le fichier fait 167 milliards d'octets »,
+      vous avez mélangé l'endianness.</div>
+    <div class="alert" style="margin-top:.5rem">❌ <strong>Confondre RealSize et AllocatedSize</strong> sur NTFS.
+      Le fichier visible = RealSize. Slack = AllocatedSize − RealSize. Sortir AllocatedSize au tribunal pour la
+      « taille du fichier » est une erreur (et peut être attaqué).</div>
+    <div class="alert" style="margin-top:.5rem">❌ <strong>Ignorer les ADS NTFS</strong>. Un fichier de 50 ko peut
+      cacher 2 Go d'ADS. Si vous reproduisez par <code>copy</code> classique, vous perdez les ADS.
+      Utiliser <code>copy /B fichier:stream destination</code> ou un outil forensique.</div>
+  </div>
+  <div>
+    <div class="alert">❌ <strong>Décoder un fichier supprimé FAT comme si la chaîne était intacte</strong>.
+      À la suppression, le premier byte du nom devient <code>0xE5</code> et la FAT est libérée
+      (entrées remises à 0). Les clusters au-delà du premier sont inconnus → carving uniquement,
+      ou hypothèse de contiguïté.</div>
+    <div class="alert" style="margin-top:.5rem">❌ <strong>EXT4 et eh_magic absent</strong>. Si l'inode n'a pas
+      <code>0x0AF3</code> (LE) au début de <code>i_block[]</code>, le fichier n'utilise pas le mode extent — il
+      est en indirect blocks legacy. Vérifier le flag <code>EXT4_EXTENTS_FL</code> (0x80000) dans <code>i_flags</code>.</div>
+    <div class="alert" style="margin-top:.5rem">❌ <strong>HFS+ et Extents Overflow oubliés</strong>. Sur un fichier
+      très fragmenté (gros logs, fichiers tournants), seuls les 8 premiers extents sont inline. Sans aller
+      chercher dans l'<em>Extents Overflow File</em>, vous récupérez un fichier <strong>tronqué</strong>.</div>
+    <div class="tip" style="margin-top:.5rem">✅ <strong>Toujours vérifier la signature</strong> au cluster
+      d'offset calculé. <code>%PDF</code>, <code>FFD8FF</code> (JPEG), <code>89504E47</code> (PNG),
+      <code>504B0304</code> (ZIP), <code>D0CF11E0</code> (Office legacy) — si la signature attendue n'est pas là,
+      l'offset est faux ou le fichier n'est pas celui annoncé.</div>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 12 — RÉFÉRENCES
+     ════════════════════════════════════════════════════════════ -->
+<div class="sec" id="refs">
+<div class="sec-title">Références &amp; spécifications</div>
+
+<ul style="font-size:.78rem;line-height:1.7;padding-left:1.2rem">
+  <li><strong>FAT</strong> — Microsoft <em>FAT: General Overview of On-Disk Format</em> (1.03, 2000) §5–6 ;
+      Wikipedia <em>Design of the FAT file system</em>.</li>
+  <li><strong>exFAT</strong> — Microsoft Learn, <em>exFAT File System Specification</em>
+      (Win32 apps, sept. 2025), §6 (Directory Entry Templates) et §7 (Critical Primary Directory Entries).</li>
+  <li><strong>NTFS</strong> — Brian Carrier, <em>File System Forensic Analysis</em> (Addison-Wesley, 2005),
+      ch. 11–13 ; Russon &amp; Fledel, <em>NTFS Documentation</em>.</li>
+  <li><strong>EXT4</strong> — Kernel.org <em>ext4 Data Structures and Algorithms</em> ; SANS DFIR Blog,
+      Hal Pomeranz, <em>Understanding EXT4 — Parts 1 à 3</em> (extents et extent trees).</li>
+  <li><strong>HFS+</strong> — Apple Technical Note <em>TN1150: HFS Plus Volume Format</em> (2004,
+      l'unique référence officielle).</li>
+  <li><strong>Sleuth Kit</strong> — Brian Carrier, <em>The Sleuth Kit Documentation</em> ; commandes
+      <code>fls</code>, <code>istat</code>, <code>icat</code>, <code>blkcat</code>, <code>blkls</code>.</li>
+  <li><strong>Standards</strong> — ISO/IEC 27037:2012 (acquisition), ISO/IEC 27042:2015 (analyse).</li>
+</ul>
+</div>
+
+</div><!-- end .page -->
+</main>
+
+<div class="page" style="padding-top:0">
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Systèmes de fichiers · ISO/IEC 27037 · Sleuth Kit · Carrier 2005</span>
+</div>
+</div>
+
+<script>
+(function(){
+  var bar=document.getElementById('scroll-progress'),d=document.documentElement;
+  if(bar) document.addEventListener('scroll',function(){
+    bar.style.width=Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';
+  },{passive:true});
+  var bt=document.getElementById('back-top')||document.querySelector('.back-top');
+  if(bt) window.addEventListener('scroll',function(){bt.classList.toggle('visible',window.scrollY>300);},{passive:true});
+  document.querySelectorAll('.fl-bytes, .fl-formula').forEach(function(el){
+    el.title='Cliquer pour copier';
+    el.style.cursor='pointer';
+    el.addEventListener('click',function(){
+      navigator.clipboard&&navigator.clipboard.writeText(el.innerText.trim()).then(function(){
+        var o=el.style.background;el.style.background='rgba(48,232,138,.2)';
+        setTimeout(function(){el.style.background=o;},700);
+      });
+    });
+  });
+})();
+</script>
+
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+<script src="../js/core/cas-in-profile.js" defer></script>
+<script src="../js/core/cas-in-achievements.js" defer></script>
+<script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/profile/celebration-ui.js" defer></script>
+<script src="../js/components/gamification-toasts.js" defer></script>
+</body>
+</html>
