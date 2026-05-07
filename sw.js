@@ -1621,6 +1621,13 @@ const STATIC_ASSETS = [
   './artifacts.html',
   './glossary.html',
   './npcs.html',
+  // v2.59 — Cluster pages de référence (sous-dossier references/)
+  './references/index.html',
+  './references/events.html',
+  './references/mitre.html',
+  './references/legal.html',
+  './references/dfir-tools.html',
+  './references/signatures.html',
   './offline.html',
   './fiches/index.html',
 
@@ -1655,6 +1662,8 @@ const STATIC_ASSETS = [
   './style/gamification-toasts.css',
   './style/npcs.css',
   './style/glossary.css',
+  // v2.59 — Style partagé pages de référence
+  './style/refs.css',
 
   // ─── Scripts core (js/core/*) ───
   './js/core/cas-in-profile.js',
@@ -1731,6 +1740,13 @@ const STATIC_ASSETS = [
   './js/pages/exam-app.js',
   './js/pages/artifacts-app.js',
   './js/pages/artifacts-data.js',
+  // v2.59 — Moteur partagé + données du cluster Références
+  './js/pages/refs-engine.js',
+  './js/pages/events-data.js',
+  './js/pages/mitre-data.js',
+  './js/pages/legal-data.js',
+  './js/pages/dfir-tools-data.js',
+  './js/pages/signatures-data.js',
 
   // ─── TP (tp/*) ───
   './tp/tp-data.js',
