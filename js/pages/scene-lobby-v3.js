@@ -137,7 +137,38 @@
         'fr-affaire-sarine-5-audience-recevabilite'
       ]
     },
+
+    // ─────────────────────────────────────────────────────────
+    //  PARCOURS « L'AFFAIRE DE LA VIÈGE » — Fil rouge valaisan (v2.91)
+    //  7 scènes nouvelles + 5 scènes existantes liées (BTP/SCADA/EIMP/MPC)
+    //  Avalanche Saas-Almagell · OSINT Bricolage Brig · Mercure Lonza Visp ·
+    //  SCADA Mattmark · EIMP Milano · Perquisition Brig · Audience Sion
+    // ─────────────────────────────────────────────────────────
+    {
+      id: 'affaire_viege', icon: '🏔', title: 'L\'Affaire de la Viège — Fil rouge valaisan',
+      desc: 'Une avalanche, du mercure, un barrage. Trois enquêtes, un seul réseau — entre Saas Fee et Reggio Calabria. Avec l\'Insp. Salamin, M. Crittin (MP-VS), la lanceuse d\'alerte Imseng et Me Schnyder en face. 12 scènes, du premier sondage RECCO à l\'audience cantonale.',
+      level: 'hard',
+      scenes: [
+        'vs-affaire-viege-1-avalanche-saas',
+        'osint-licite',
+        'vs-affaire-viege-2-osint-bricolage',
+        'vs-affaire-viege-3-mercure-lonza',
+        'hydro-valais',
+        'vs-affaire-viege-4-scada-mattmark',
+        'valais-cascade-12-communes',
+        'specialite-eimp',
+        'vs-affaire-viege-5-eimp-milano',
+        'competence-mpc-vs',
+        'vs-affaire-viege-6-perquisition-brig',
+        'vs-affaire-viege-7-audience-tribunal'
+      ]
+    },
   ];
+
+  // Export pour scene-lobby-pitch-v1.js (panneau pitch enrichi)
+  if (typeof window !== 'undefined') {
+    window.CAS_IN_PARCOURS = PARCOURS;
+  }
 
   // ──────────────────────────────────────────────────────────
   //  ATMOSPHÈRES — labels FR
@@ -1237,6 +1268,14 @@
     'fr-affaire-sarine-3-coordination-cantons':   ['fr-affaire-sarine-1-premier-appel', 'fr-affaire-sarine-2-eimp-stuttgart'],
     'fr-affaire-sarine-4-expertise-unifr':        ['fr-affaire-sarine-2-eimp-stuttgart', 'fr-affaire-sarine-3-coordination-cantons'],
     'fr-affaire-sarine-5-audience-recevabilite':  ['fr-affaire-sarine-1-premier-appel', 'fr-affaire-sarine-2-eimp-stuttgart', 'fr-affaire-sarine-3-coordination-cantons', 'fr-affaire-sarine-4-expertise-unifr'],
+
+    // Affaire de la Viège — ordre narratif strict
+    'vs-affaire-viege-2-osint-bricolage':   ['vs-affaire-viege-1-avalanche-saas'],
+    'vs-affaire-viege-3-mercure-lonza':     ['vs-affaire-viege-2-osint-bricolage'],
+    'vs-affaire-viege-4-scada-mattmark':    ['vs-affaire-viege-3-mercure-lonza'],
+    'vs-affaire-viege-5-eimp-milano':       ['vs-affaire-viege-2-osint-bricolage', 'vs-affaire-viege-4-scada-mattmark'],
+    'vs-affaire-viege-6-perquisition-brig': ['vs-affaire-viege-5-eimp-milano'],
+    'vs-affaire-viege-7-audience-tribunal': ['vs-affaire-viege-1-avalanche-saas', 'vs-affaire-viege-3-mercure-lonza', 'vs-affaire-viege-5-eimp-milano', 'vs-affaire-viege-6-perquisition-brig'],
   };
 
   // ── Fondamentaux DFIR (5 scènes pour l'onboarding) ──
