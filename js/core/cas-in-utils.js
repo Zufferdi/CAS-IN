@@ -233,13 +233,34 @@
     if (typeof document === 'undefined' || !document.documentElement) return;
     if (typeof window.matchMedia !== 'function') return;
     const mql = window.matchMedia('(prefers-color-scheme: light)');
+
+    // v2.92 — Préférence manuelle (cas_theme_pref) prioritaire.
+    // Si l'utilisateur a cliqué sur le toggle clair/sombre, on respecte ce
+    // choix sur toutes les pages, indépendamment de l'OS.
+    function readManualPref() {
+      try { return localStorage.getItem('cas_theme_pref'); } catch (_) { return null; }
+    }
+
     const apply = () => {
       const root = document.documentElement;
-      // Si un thème est déjà posé manuellement (autre que celui auto-piloté
-      // par ce bootstrap), on ne touche pas.
+      const manual = readManualPref();
+      if (manual === 'light') {
+        root.setAttribute('data-theme', 'light');
+        delete root.dataset.themeAuto;
+        return;
+      }
+      if (manual === 'dark') {
+        // Forçage sombre : on pose data-theme="dark" pour neutraliser le
+        // @media (prefers-color-scheme: light) (sélecteur :not([data-theme])).
+        root.setAttribute('data-theme', 'dark');
+        delete root.dataset.themeAuto;
+        return;
+      }
+      // Pas de pref manuelle : suivre l'OS, mais respecter un éventuel
+      // data-theme déjà posé par un autre script (legacy).
       const cur = root.getAttribute('data-theme');
       const wasAuto = root.dataset.themeAuto === '1';
-      if (cur && !wasAuto) return; // choix utilisateur explicite, on respecte
+      if (cur && !wasAuto) return; // choix utilisateur explicite (legacy), on respecte
       if (mql.matches) {
         root.setAttribute('data-theme', 'light');
         root.dataset.themeAuto = '1';
@@ -250,6 +271,8 @@
       }
     };
     apply();
+    // Exposer pour permettre au toggle de relancer apply() au besoin.
+    window.__casBootstrapColorScheme = apply;
     // Réagir aux changements de préférence OS sans recharger la page
     if (typeof mql.addEventListener === 'function') {
       mql.addEventListener('change', apply);

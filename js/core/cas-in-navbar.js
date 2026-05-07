@@ -164,6 +164,11 @@
 
     bottom.appendChild(links);
 
+    // v2.92 — Bouton de bascule clair/sombre (à droite des liens)
+    if (window.CasInTheme && typeof window.CasInTheme.injectButton === 'function') {
+      window.CasInTheme.injectButton(bottom, { extraClass: 'cas-navbar__theme-toggle' });
+    }
+
     if (top) navbar.appendChild(top);
     navbar.appendChild(bottom);
 
