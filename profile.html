@@ -2,6 +2,13 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+
+<script>
+/* v2.92 — Applique la préférence manuelle clair/sombre AVANT le rendu CSS
+   pour éviter le flash de thème inverse. */
+(function(){try{var p=localStorage.getItem('cas_theme_pref');
+if(p==='light'||p==='dark')document.documentElement.setAttribute('data-theme',p);}catch(e){}})();
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Profil enquêteur · CAS-IN</title>
 <meta name="description" content="Dossier de l'enquêteur · progression CAS-IN">
@@ -265,7 +272,7 @@
           <div class="profile-empty">
             <div style="font-size:32px;margin-bottom:8px;opacity:0.5">🤝</div>
             <div style="color:var(--dim);font-size:13px">
-              Joue des scènes d\'enquête pour rencontrer des PNJ et bâtir des relations.
+              Joue des scènes d'enquête pour rencontrer des PNJ et bâtir des relations.
             </div>
           </div>
         </div>
@@ -460,11 +467,15 @@
 <script src="js/core/cas-in-arcs.js" defer></script>
 <script src="js/core/cas-in-quests.js" defer></script>
 <script src="js/core/cas-in-leaderboard.js" defer></script>
+<!-- v2.71 — État dynamique PNJ (trust, interactions) requis pour l'onglet Relations -->
+<script src="js/core/cas-in-npc-state.js" defer></script>
 <script src="js/profile/profile-titles.js" defer></script>
 <script src="js/profile/profile-track-v5.js" defer></script>
 <script src="js/core/cas-in-export.js" defer></script>
 <!-- v2.60 (consolidation) — Helpers JS + Storage migration -->
 <script src="js/core/cas-in-utils.js" defer></script>
+<!-- v2.92 — Bascule clair/sombre (charger après cas-in-utils) -->
+<script src="js/core/cas-in-theme-toggle.js" defer></script>
 <script src="js/core/cas-in-counts.js" defer></script>
 <!-- v2.65 — Module qui peuple window.NpcArcs -->
 <script src="js/components/npc-arcs.js" defer></script>
@@ -475,6 +486,8 @@
 <script src="js/profile/profile-arcs-ui.js" defer></script>
 <script src="js/profile/profile-quests-ui.js" defer></script>
 <script src="js/profile/profile-leaderboard-ui.js" defer></script>
+<!-- v2.71 — Onglet Relations PNJ (rend #npc-relations-section-body) -->
+<script src="js/profile/profile-relations.js" defer></script>
 <script src="js/components/fiche-notes.js" defer></script>
 <script src="js/profile/profile-notes.js" defer></script>
 
@@ -487,10 +500,28 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     var sig = document.getElementById('profile-auth-signature');
-    if (!sig || !window.Profile) return;
-    var snap = window.Profile.snapshot();
-    var name = snap && snap.agent && snap.agent.name;
-    if (name && name !== 'Enquêteur') sig.textContent = name;
+    if (sig && window.Profile) {
+      var snap = window.Profile.snapshot();
+      var name = snap && snap.agent && snap.agent.name;
+      if (name && name !== 'Enquêteur') sig.textContent = name;
+    }
+
+    // v2.92 — Bascule clair/sombre dans le bandeau du profil
+    // (le profil n'utilise pas la navbar globale ; on injecte ici).
+    var statusRight = document.querySelector('.dfir-status-bar .dfir-status-right');
+    if (statusRight && window.CasInTheme && typeof window.CasInTheme.injectButton === 'function') {
+      window.CasInTheme.injectButton(statusRight, { position: 'prepend' });
+    }
+
+    // v2.71 — Re-render des relations à chaque ouverture de l'onglet :
+    // garantit que le contenu apparaît même si le fetch npcs.json a fini
+    // après le premier render (ou que NpcState s'est chargé entre temps).
+    document.addEventListener('profileTabChange', function (e) {
+      if (e && e.detail && e.detail.tab === 'relations'
+          && window.ProfileRelations && typeof window.ProfileRelations.render === 'function') {
+        window.ProfileRelations.render();
+      }
+    });
   });
 </script>
 </body>
