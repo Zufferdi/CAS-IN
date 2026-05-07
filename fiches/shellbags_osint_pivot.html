@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShellBags ↔ OSINT — Cross-corrélation — CAS-IN Forensique</title>
+<link rel="stylesheet" href="../style/fiche_style.css">
+<meta name="description" content="Cross-corrélation forensique ShellBags ↔ OSINT licite · Pivots BagMRU → ZEFIX/Camera di Commercio/Pandora Papers/Shodan · Sens inverse OSINT → recherches ciblées dans les hives saisis">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+</head>
+<body>
+<div id="cas-navbar" data-page="fiches"></div>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a class="tn-back" href="index.html">← Fiches</a>
+  <span class="tn-title">ShellBags ↔ OSINT</span>
+  <a class="tn-quiz" href="../quiz.html">💊 Quiz →</a>
+</nav>
+
+<div class="page">
+
+  <div class="header">
+    <span class="fs-badge badge">🔗</span>
+    <div>
+      <h1 style="font-family:var(--sans);font-size:1.8rem;font-weight:800;letter-spacing:-.5px;margin-bottom:.35rem">
+        ShellBags ↔ OSINT — Cross-corrélation
+      </h1>
+      <div class="header-meta">
+        <span class="tag tag-purple">Forensique Windows</span>
+        <span class="tag tag-cyan">OSINT licite</span>
+        <span class="tag tag-gold">Pivotage</span>
+        <span class="tag tag-orange">CPP suisse</span>
+      </div>
+      <p class="meta" style="margin-top:.5rem;max-width:680px;line-height:1.5">
+        Le ShellBag est un <strong>témoin muet</strong> qui parle quand on sait l'interroger : chaque
+        dossier exploré devient une <span class="cyan">graine de pivot OSINT</span>. Et inversement :
+        toute entité identifiée en sources ouvertes devient une <span class="gold">requête ciblée</span>
+        dans le hive saisi. Cette fiche encadre le double mouvement — son cadre légal, ses pièges et un
+        exemple concret tiré de l'Affaire de la Viège.
+      </p>
+    </div>
+  </div>
+
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-acquisitionméthodes">Méthodologie &amp; Acquisition</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">ShellBags ↔ OSINT</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~13 min</span>
+  </div>
+
+  <div class="prereq-block">
+    <div class="prereq-row">
+      <span class="prereq-label">Prérequis</span>
+      <a class="prereq-pill" href="shellbags.html">📖 ShellBags</a>
+      <a class="prereq-pill" href="osint.html">📖 OSINT &amp; Métadonnées</a>
+      <a class="prereq-pill" href="registre_windows.html">📖 Registre Windows</a>
+    </div>
+    <div class="prereq-row">
+      <span class="prereq-label">Voir aussi</span>
+      <a class="related-pill" href="windows_registry_forensique_avance.html">🔗 Registre avancé</a>
+      <a class="related-pill" href="usb_forensique.html">🔗 USB Forensique</a>
+      <a class="related-pill" href="mac_times.html">🔗 MAC Times</a>
+      <a class="related-pill" href="timeline.html">🔗 Timeline</a>
+      <a class="related-pill" href="anti_forensique.html">🔗 Anti-forensique</a>
+    </div>
+  </div>
+
+  <div class="concept-card">
+    <div class="concept-title">⚠ Mise au point essentielle — ce que cette fiche n'est PAS</div>
+    Les ShellBags ne sont <strong>pas</strong> une source OSINT au sens strict. Ce sont des artefacts du
+    registre Windows (<code>NTUSER.DAT</code>, <code>USRCLASS.DAT</code>) qui ne sont accessibles qu'avec
+    un <strong>accès au support</strong> — système live (admin) ou image disque saisie sous mandat
+    (<strong>art. 246 CPP</strong>). Faire <em>« de l'OSINT pur avec des ShellBags »</em> est un
+    contresens conceptuel qui se ferait démolir en deux questions à l'audience. Cette fiche traite de la
+    <strong>cross-corrélation</strong> — un workflow réel, puissant et éprouvé, qui suppose un mandat
+    OU un cadre civil légitime (employeur consentant, due diligence sous LPD) <em>préalable</em>. La
+    formule de Stéphane Deguillaume — <em>« le ShellBag, témoin muet prêt à parler lorsque les
+    problèmes commencent »</em> — capture exactement cette double valeur : l'artefact est silencieux
+    quand l'utilisateur travaille (il ne sait pas qu'il existe), mais il devient bavard dès qu'un
+    enquêteur autorisé le confronte aux pivots qu'il a établis en sources ouvertes.
+  </div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCHÉMA SVG — WORKFLOW BIDIRECTIONNEL
+     ════════════════════════════════════════════════════════════ -->
+<div class="schema">
+  <div class="schema-title">🔗 Cross-corrélation ShellBags ↔ OSINT — les deux sens</div>
+  <div class="schema-sub">FORENSIQUE → OSINT (graine de pivot) · OSINT → FORENSIQUE (requête ciblée)</div>
+  <svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cross-corrélation ShellBags OSINT">
+    <defs>
+      <marker id="arr-fwd" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="#F0C040"/>
+      </marker>
+      <marker id="arr-rev" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="#00E5CC"/>
+      </marker>
+    </defs>
+
+    <!-- Header -->
+    <rect x="20" y="15" width="680" height="36" rx="6" fill="rgba(13,17,23,.5)" stroke="rgba(240,192,64,.4)" stroke-width="1.2"/>
+    <text x="360" y="33" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" font-weight="800" fill="#F0C040">🔗 LE DOUBLE MOUVEMENT — chaque sens enrichit l'autre</text>
+    <text x="360" y="46" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#A8B5C8">le forensique donne des graines · l'OSINT confirme l'identité · les deux ensemble = preuve d'intention</text>
+
+    <!-- Colonne gauche : FORENSIQUE -->
+    <rect x="20" y="65" width="280" height="240" rx="10" fill="rgba(188,140,255,.06)" stroke="#BC8CFF" stroke-width="1.5"/>
+    <text x="160" y="85" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#BC8CFF">🟣 CÔTÉ FORENSIQUE</text>
+    <text x="160" y="98" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">ShellBags saisis (mandat art. 246 CPP)</text>
+
+    <rect x="35" y="110" width="250" height="38" rx="5" fill="rgba(188,140,255,.1)" stroke="rgba(188,140,255,.4)"/>
+    <text x="160" y="125" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#BC8CFF">📂 Chemins locaux</text>
+    <text x="160" y="138" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">C:\Users\X\Documents\NomEntité\</text>
+
+    <rect x="35" y="153" width="250" height="38" rx="5" fill="rgba(188,140,255,.1)" stroke="rgba(188,140,255,.4)"/>
+    <text x="160" y="168" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#BC8CFF">🌐 Chemins UNC réseau</text>
+    <text x="160" y="181" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">\\srv-name\share\</text>
+
+    <rect x="35" y="196" width="250" height="38" rx="5" fill="rgba(188,140,255,.1)" stroke="rgba(188,140,255,.4)"/>
+    <text x="160" y="211" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#BC8CFF">🔌 Lecteurs USB / volumes chiffrés</text>
+    <text x="160" y="224" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">F:\(VeraCrypt_label)</text>
+
+    <rect x="35" y="239" width="250" height="38" rx="5" fill="rgba(188,140,255,.1)" stroke="rgba(188,140,255,.4)"/>
+    <text x="160" y="254" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#BC8CFF">📦 Archives ZIP/RAR explorées</text>
+    <text x="160" y="267" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">backup_2024-Q3.zip\</text>
+
+    <text x="160" y="290" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A" font-weight="700">→ extraction SBECmd → CSV</text>
+
+    <!-- Flèches centrales -->
+    <line x1="305" y1="150" x2="415" y2="150" stroke="#F0C040" stroke-width="2" marker-end="url(#arr-fwd)"/>
+    <text x="360" y="143" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#F0C040">SENS 1 — pivote vers</text>
+    <text x="360" y="163" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">noms d'entités → recherche</text>
+
+    <line x1="415" y1="220" x2="305" y2="220" stroke="#00E5CC" stroke-width="2" marker-end="url(#arr-rev)"/>
+    <text x="360" y="213" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#00E5CC">SENS 2 — cible</text>
+    <text x="360" y="233" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">requête CSV grep/PowerShell</text>
+
+    <!-- Colonne droite : OSINT -->
+    <rect x="420" y="65" width="280" height="240" rx="10" fill="rgba(0,229,204,.06)" stroke="#00E5CC" stroke-width="1.5"/>
+    <text x="560" y="85" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#00E5CC">🔵 CÔTÉ OSINT</text>
+    <text x="560" y="98" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">sources publiques (libres ou licites)</text>
+
+    <rect x="435" y="110" width="250" height="38" rx="5" fill="rgba(0,229,204,.1)" stroke="rgba(0,229,204,.4)"/>
+    <text x="560" y="125" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#00E5CC">🏛 Registres d'entreprise</text>
+    <text x="560" y="138" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">ZEFIX · Camera Commercio · Companies House</text>
+
+    <rect x="435" y="153" width="250" height="38" rx="5" fill="rgba(0,229,204,.1)" stroke="rgba(0,229,204,.4)"/>
+    <text x="560" y="168" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#00E5CC">📰 Leaks investigatifs</text>
+    <text x="560" y="181" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">ICIJ · OffshoreLeaks · Pandora Papers</text>
+
+    <rect x="435" y="196" width="250" height="38" rx="5" fill="rgba(0,229,204,.1)" stroke="rgba(0,229,204,.4)"/>
+    <text x="560" y="211" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#00E5CC">🌐 Infrastructure</text>
+    <text x="560" y="224" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">Shodan · Censys · crt.sh · DNS history</text>
+
+    <rect x="435" y="239" width="250" height="38" rx="5" fill="rgba(0,229,204,.1)" stroke="rgba(0,229,204,.4)"/>
+    <text x="560" y="254" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="700" fill="#00E5CC">📧 Identités &amp; breaches</text>
+    <text x="560" y="267" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">HIBP · LinkedIn · Hunter.io · IntelX</text>
+
+    <text x="560" y="290" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#30E88A" font-weight="700">→ identités confirmées avec dates</text>
+
+    <!-- Bandeau bas -->
+    <rect x="20" y="320" width="680" height="28" rx="5" fill="rgba(48,232,138,.08)" stroke="rgba(48,232,138,.4)" stroke-width="1"/>
+    <text x="360" y="338" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="800" fill="#30E88A">✓ Conjonction = preuve d'intention (art. 12 CP) — connaissance + accès délibéré documentés</text>
+  </svg>
+  <div class="schema-legend">
+    <span class="lg-item"><span class="lg-dot" style="background:#BC8CFF"></span>Forensique (ShellBags saisis)</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#00E5CC"></span>OSINT licite</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>Sens 1 — graines de pivot</span>
+    <span class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>Conjonction probante</span>
+  </div>
+</div>
+
+  <div class="toc">
+    <div class="toc-title">Sommaire</div>
+    <ol>
+      <li><a href="#concept">Concept — pourquoi le pont fonctionne</a></li>
+      <li><a href="#sens1">Sens 1 — ShellBags → OSINT (10 patterns de pivot)</a></li>
+      <li><a href="#sens2">Sens 2 — OSINT → ShellBags (requêtes ciblées dans le hive)</a></li>
+      <li><a href="#viege">Cas d'étude — Affaire de la Viège (fictionnel mais réaliste)</a></li>
+      <li><a href="#legal">Cadre légal suisse</a></li>
+      <li><a href="#limites">Limites &amp; pièges classiques</a></li>
+      <li><a href="#checklist">Checklist du workflow</a></li>
+      <li><a href="#refs">Références</a></li>
+    </ol>
+  </div>
+
+  <!-- ════════ ① CONCEPT ════════ -->
+  <div class="section" id="concept">
+    <div class="section-title">① Concept — pourquoi le pont fonctionne</div>
+
+    <div class="card card-cyan">
+      <div class="card-title">🎯 Le ShellBag, c'est un <em>chemin</em> — et un chemin contient des <em>noms</em></div>
+      <p>La forme native d'un ShellBag, c'est un nœud dans <code>BagMRU</code> contenant un
+      <strong>shell item</strong> avec un nom UTF-16 (<a href="https://www.pentestpartners.com/security-blog/dfir-tools-and-techniques-for-tracing-user-footprints-through-shellbags/">cf. Pen Test Partners 2025</a>) :</p>
+      <pre class="formula" style="line-height:1.55">
+<span class="dim">// Hex brut d'un shell item BagMRU (Pen Test Partners)</span>
+1F 50 E0 4F D0 20 EA 3A 69 10 A2 D8 08 00 2B 30 30 9D 19 00 00 00
+5C 00 53 00 65 00 63 00 72 00 65 00 74 00 2E 00 7A 00 69 00 70 00
+       <span class="cyan">└─ "Secret.zip" en UTF-16 LE ─────────────────────────────┘</span></pre>
+      <p style="margin-top:.4rem">Ce nom — <em>Secret.zip</em>, ou <em>Bricolage_2024</em>, ou
+      <em>\\srv-prod\Compta_RomeoSrl</em> — est exactement la <strong>graine</strong> dont l'OSINT a
+      besoin pour déclencher un pivot. Un nom de société, un patronyme, un domaine, un IBAN dans un
+      label de dossier : ce sont autant de chaînes que les sources ouvertes peuvent corroborer ou
+      identifier.</p>
+    </div>
+
+    <div class="card card-gold" style="margin-top:.75rem">
+      <div class="card-title">🔄 Pourquoi le sens inverse marche aussi</div>
+      <p>L'OSINT établit des <strong>identités froides</strong> (sociétés-écrans, alias, partenaires,
+      domaines) qui restent <em>abstraites</em> tant qu'on ne les attache pas à un suspect. Une
+      requête ciblée sur le CSV ShellBags transforme l'abstraction en preuve concrète : <em>« cet
+      utilisateur a explicitement ouvert un dossier nommé d'après cette entité — c'est le contraire
+      de l'ignorance »</em>. C'est cette conjonction qui constitue l'élément moral
+      (<strong>art. 12 CP</strong>) ou le <em>mens rea</em> du blanchiment
+      (<strong>art. 305<sup>bis</sup> CP</strong>).</p>
+    </div>
+  </div>
+
+  <!-- ════════ ② SENS 1 — SHELLBAGS → OSINT ════════ -->
+  <div class="section" id="sens1">
+    <div class="section-title">② Sens 1 — ShellBags → OSINT (10 patterns de pivot)</div>
+
+    <p class="meta" style="margin-bottom:.75rem">Une fois le CSV produit par
+    <code>SBECmd.exe -d &lt;hives&gt; -o &lt;dossier&gt;</code>, on parcourt la colonne
+    <code>AbsolutePath</code> et on classe chaque ligne dans une <span class="cyan">catégorie de
+    pivot</span>. Pour chaque catégorie, une source OSINT cible répond à une question précise.</p>
+
+    <div class="table-block">
+    <table class="data-table" style="font-size:.74rem">
+      <thead>
+        <tr>
+          <th>Pattern dans le ShellBag</th>
+          <th>Source OSINT cible</th>
+          <th>Question répondue</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>C:\…\Bricolage_AG\</code> ou <code>…\Romeo_Costruzioni_Srl\</code></td>
+          <td><strong>ZEFIX</strong> (zefix.ch) · <strong>Camera di Commercio</strong> (registroimprese.it)
+              · OpenCorporates · Companies House</td>
+          <td>L'entité existe-t-elle ? Qui sont les administrateurs et bénéficiaires effectifs ?</td>
+        </tr>
+        <tr>
+          <td><code>\\srv-mattmark\SCADA_data\</code></td>
+          <td><strong>Shodan</strong> (<code>hostname:srv-mattmark</code>) · <strong>crt.sh</strong>
+              (certificate transparency) · ViewDNS history</td>
+          <td>Le serveur est-il/était-il exposé sur internet ? Sur quels ports (102 Siemens S7) ?</td>
+        </tr>
+        <tr>
+          <td><code>F:\ (label = "VeraCrypt_OT")</code></td>
+          <td>Forums underground · IntelX · dehashed · recherche Tor sur l'alias</td>
+          <td>L'alias / label apparaît-il dans des fuites ou marchés noirs ?</td>
+        </tr>
+        <tr>
+          <td><code>…\backup_2024-12.zip\</code> exploré</td>
+          <td><strong>Cumulus de leak sites</strong> (ransomware tracker) · IntelX · NewsLookout</td>
+          <td>Cette archive a-t-elle été publiée publiquement (ransomware leak, fuite) ?</td>
+        </tr>
+        <tr>
+          <td><code>OneDrive\s.pelaia@bricolage.ch\</code></td>
+          <td><strong>Have I Been Pwned</strong> (<code>haveibeenpwned.com/api/v3/breachedaccount</code>)
+              · Hunter.io · dehashed</td>
+          <td>L'email est-il exposé dans des breaches ? Mots de passe leakés disponibles ?</td>
+        </tr>
+        <tr>
+          <td><code>https://bricolagebrig.sharepoint.com\</code></td>
+          <td><strong>GetUserRealm</strong>
+              (<code>login.microsoftonline.com/getuserrealm.srf?login=…</code>) · MicroBurst</td>
+          <td>Quels domaines sont fédérés sous ce tenant Microsoft 365 ?</td>
+        </tr>
+        <tr>
+          <td><code>…\Project_Tornado\</code></td>
+          <td>LinkedIn (<code>"Project Tornado" site:linkedin.com</code>) · GitHub · presse
+              spécialisée · brevets</td>
+          <td>Quels employés / partenaires en parlent publiquement ?</td>
+        </tr>
+        <tr>
+          <td><code>ftp://185.220.x.x/uploads/</code></td>
+          <td><strong>Shodan</strong> · <strong>AbuseIPDB</strong> · VirusTotal IP report · Tor exit list</td>
+          <td>L'IP est un nœud Tor, un VPS connu, un C2 documenté ?</td>
+        </tr>
+        <tr>
+          <td><code>…\Pelaia_facturations\Romeo_2023\</code></td>
+          <td><strong>ICIJ Offshore Leaks</strong>
+              (<code>offshoreleaks.icij.org/search?q=Pelaia+Romeo</code>) · ZEFIX · presse</td>
+          <td>Qui sont ces personnes, quelles connexions transfrontières (BVI, Panama, Suisse) ?</td>
+        </tr>
+        <tr>
+          <td><code>USBSTOR\Disk&amp;Ven_SanDisk&amp;Prod_Cruzer</code> + label volume USB</td>
+          <td>Catalogues USB (<code>linux-usb.org/usb.ids</code>) · forums constructeur</td>
+          <td>Modèle exact, géographie de vente, possibilité de tracer l'achat</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="card card-cyan" style="margin-top:.75rem">
+      <div class="card-title">🐚 Workflow technique de l'extraction</div>
+      <pre class="formula" style="line-height:1.55">
+<span class="dim"># 1. Extraction des hives sous scellés (FTK Imager ou KAPE)</span>
+<span class="cyan">FTK Imager</span> → Add Evidence → Logical Drive → C:\
+  → Users\&lt;suspect&gt;\AppData\Local\Microsoft\Windows\<span class="gold">UsrClass.dat</span>
+  → Users\&lt;suspect&gt;\<span class="gold">NTUSER.DAT</span>
+
+<span class="dim"># 2. Hash MD5 + SHA-256 AVANT toute analyse</span>
+<span class="cyan">CertUtil</span> -hashfile UsrClass.dat MD5
+<span class="cyan">CertUtil</span> -hashfile UsrClass.dat SHA256
+
+<span class="dim"># 3. Parsing avec SBECmd (Eric Zimmerman)</span>
+<span class="cyan">SBECmd.exe</span> -d C:\Hives\Pelaia\ -o C:\Out\ --dedupe
+
+<span class="dim"># 4. Sortie : un CSV par hive avec colonnes :</span>
+<span class="gold">BagPath, Slot, NodeSlot, MFTEntry, MFTSequenceNumber, ShellType,</span>
+<span class="gold">Value, AbsolutePath, CreatedOn, ModifiedOn, AccessedOn,</span>
+<span class="gold">FirstInteracted, LastInteracted, LastWriteTime, MRUPosition</span></pre>
+    </div>
+  </div>
+
+  <!-- ════════ ③ SENS 2 — OSINT → SHELLBAGS ════════ -->
+  <div class="section" id="sens2">
+    <div class="section-title">③ Sens 2 — OSINT → ShellBags (requêtes ciblées dans le hive)</div>
+
+    <p class="meta" style="margin-bottom:.75rem">Le sens inverse est souvent décisif à l'audience.
+    L'OSINT identifie l'entité <em>en amont</em> (avant la perquisition, dans l'enquête préliminaire),
+    puis la recherche dans le ShellBag <strong>prouve la connaissance</strong> au moment des faits.</p>
+
+    <div class="card-grid">
+      <div class="card card-purple">
+        <div class="card-title">🔎 Requêtes par entité</div>
+        <p>Une fois le CSV SBECmd produit, on cherche les noms identifiés en OSINT
+        (sociétés-écrans, alias, partenaires) avec PowerShell ou <code>findstr</code> :</p>
+        <pre class="formula" style="line-height:1.55;font-size:.7rem">
+<span class="dim"># PowerShell — recherche multi-entités, fenêtre temporelle</span>
+Import-Csv UsrClass.csv |
+  Where-Object {
+    [datetime]$_.LastInteracted -gt '2024-09-01' -and
+    [datetime]$_.LastInteracted -lt '2024-12-31' -and
+    $_.AbsolutePath -match 'Bricolage|Pelaia|Romeo|Mattmark'
+  } |
+  Export-Csv pivots_q4_2024.csv -NoTypeInformation</pre>
+      </div>
+      <div class="card card-orange">
+        <div class="card-title">⏱ Filtre temporel ciblé</div>
+        <p>Si l'OSINT a établi qu'un événement public a eu lieu à une date précise (publication
+        Pandora, annonce ZEFIX, breach HIBP), on cherche les ShellBags <strong>dans une fenêtre de
+        ±7 jours</strong> autour de cette date pour détecter la réaction du suspect (consultation
+        immédiate, copie de dossiers vers USB, etc.).</p>
+      </div>
+      <div class="card card-red">
+        <div class="card-title">📐 Pattern d'évitement</div>
+        <p>L'absence inattendue d'une entité dans les ShellBags peut elle-même être un indice :
+        si l'OSINT démontre un partenariat actif et que le suspect n'a <em>jamais</em> ouvert le
+        dossier correspondant via Explorer, c'est suspect (utilisation exclusive de CMD ou de Total
+        Commander pour éviter la trace ShellBag = comportement anti-forensique).</p>
+      </div>
+    </div>
+
+    <div class="card card-blue" style="margin-top:.75rem">
+      <div class="card-title">⚖️ Élément constitutif d'infraction démontré</div>
+      <p>Selon ce qu'on cherche à prouver :</p>
+      <ul>
+        <li><strong>Art. 12 CP (intention)</strong> — accès délibéré à un dossier nommé d'après
+            une entité que l'OSINT démontre comme étant la société-écran du suspect.</li>
+        <li><strong>Art. 305<sup>bis</sup> CP (blanchiment)</strong> — connaissance de l'origine
+            des fonds : le suspect a navigué dans des dossiers nommés d'après les comptes
+            d'origine identifiés en OSINT.</li>
+        <li><strong>Art. 260<sup>ter</sup> CP (organisation criminelle)</strong> — connaissance
+            des coactionnaires identifiés par les Pandora Papers, démontrée par l'accès aux dossiers
+            portant leurs noms.</li>
+        <li><strong>Art. 144<sup>bis</sup> CP (détérioration de données)</strong> — accès à des
+            volumes chiffrés contenant de la donnée volée, dont le label trahit l'origine.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ════════ ④ CAS VIÈGE ════════ -->
+  <div class="section" id="viege">
+    <div class="section-title">④ Cas d'étude — Affaire de la Viège (fictionnel mais réaliste)</div>
+
+    <div class="alert" style="margin-bottom:.75rem">
+      ⚠ <strong>Cas pédagogique fictionnel.</strong> L'« Affaire de la Viège » est un scénario
+      d'entraînement CAS-IN. Aucune des entités citées (Bricolage AG Brig, Romeo Costruzioni Srl,
+      Mattmark Cleantech SA, M. Pelaia) n'existe dans la réalité. Les chemins, hashs et résultats
+      OSINT ci-dessous sont <em>plausibles techniquement</em> — c'est-à-dire conformes à ce que
+      produirait un outil réel sur un cas réel — mais inventés pour l'exercice. La Lonza AG (Visp)
+      est en revanche réelle ; toute mention dans les chemins ci-dessous est strictement
+      pédagogique.
+    </div>
+
+    <p style="margin-bottom:.75rem">L'Insp. Salamin (Polcant VS) reçoit le mandat de M. Crittin
+    (MP-VS) pour la perquisition de Brig (<a href="../scene.html?id=vs-affaire-viege-6-perquisition-brig">acte VI</a>).
+    Voici comment se déroule la cross-corrélation, étape par étape.</p>
+
+    <!-- ÉTAPE 1 -->
+    <div class="card card-blue">
+      <div class="card-title">📞 Étape 1 — Acte I (avalanche Saas-Almagell) : graine OSINT pure</div>
+      <p>L'iPhone 14 Pro de la victime est extrait avec Cellebrite. Les 38 derniers contacts
+      incluent un numéro fixe valaisan : <code>+41 27 924 XX XX</code>. La recherche dans les pages
+      blanches Swisscom + ZEFIX révèle :</p>
+      <pre class="formula" style="line-height:1.55;font-size:.72rem">
+<span class="dim"># OSINT — pages blanches + registre du commerce</span>
+<span class="cyan">$ curl -s "https://www.zefix.ch/ZefixREST/api/v1/firm/search.json?name=Bricolage" \
+       | jq '.list[] | {name, ehraid, status, address}'</span>
+
+  {
+    "name": "Bricolage AG",
+    "ehraid": "CHE-XXX.XXX.XXX",                <span class="dim"># IDE entreprise</span>
+    "status": "EXISTIEREND",
+    "address": "Bahnhofstrasse 12, 3900 Brig"   <span class="gold"># cohérent avec n° tel</span>
+  }</pre>
+      <p style="margin-top:.4rem"><em>(Pas encore de ShellBags — uniquement OSINT sur des
+      numéros mobiles et un registre public.)</em></p>
+    </div>
+
+    <!-- ÉTAPE 2 -->
+    <div class="card card-cyan" style="margin-top:.75rem">
+      <div class="card-title">🔍 Étape 2 — Acte II (OSINT pur) : pivots croisés</div>
+      <p>Avant la perquisition, l'Insp. Salamin pivote sur Bricolage AG via plusieurs sources
+      ouvertes pour caractériser le réseau :</p>
+      <pre class="formula" style="line-height:1.55;font-size:.72rem">
+<span class="dim"># 1. ICIJ Offshore Leaks — recherche bénéficiaires</span>
+<span class="cyan">https://offshoreleaks.icij.org/search?q=Pelaia&amp;e=&amp;c=&amp;j=&amp;d=</span>
+  → 3 hits : <span class="gold">Pelaia-Romeo Holdings Ltd</span> (BVI, incorporée 2018)
+
+<span class="dim"># 2. Camera di Commercio Reggio Calabria</span>
+<span class="cyan">https://www.registroimprese.it/ricerca-libera</span>
+  → <span class="gold">Romeo Costruzioni S.r.l.</span>, P.IVA 02XXXXXXXXX, sede Reggio Calabria
+  → administrateur unique : Costantino Romeo, né 1962, Plati (RC)
+
+<span class="dim"># 3. Recoupement Pelaia-Romeo (LinkedIn + Bing/DDG)</span>
+<span class="cyan">"Salvatore Pelaia" "Romeo" site:linkedin.com</span>
+  → 2 résultats : ancien employé commun 2015-2018 chez "Edilizia Sud Srl"</pre>
+      <p style="margin-top:.4rem">À ce stade, la connexion Pelaia ↔ Romeo ↔ Pelaia-Romeo Holdings
+      est <strong>publiquement documentée</strong>. Aucun accès machine encore.</p>
+    </div>
+
+    <!-- ÉTAPE 3 -->
+    <div class="card card-purple" style="margin-top:.75rem">
+      <div class="card-title">🚔 Étape 3 — Acte VI (perquisition) : extraction des hives</div>
+      <p>06h05 le 25 avril. Mandat M. Crittin (CHF/AppData/Local/Microsoft/Windows/UsrClass.dat de
+      la station de M. Pelaia + NTUSER.DAT). Mise sous scellés (art. 248 CPP). Au labo :</p>
+      <pre class="formula" style="line-height:1.55;font-size:.72rem">
+<span class="dim"># 1. Hash AVANT analyse</span>
+SHA256 UsrClass.dat = <span class="gold">8a3f...</span> (consigné PV)
+SHA256 NTUSER.DAT   = <span class="gold">b127...</span> (consigné PV)
+
+<span class="dim"># 2. Parsing SBECmd</span>
+<span class="cyan">SBECmd.exe</span> -d "E:\Scellés\Pelaia_PC01\" -o "E:\Out\" --dedupe
+  ✓ <span class="green">UsrClass.dat parsed: 1 247 ShellBags</span>
+  ✓ <span class="green">NTUSER.DAT parsed:    312 ShellBags</span>
+  ✓ Output: <span class="gold">20250425_UsrClass_BagMRU.csv</span> (1.4 Mo)</pre>
+
+      <p style="margin-top:.4rem">Recherche ciblée des entités OSINT (Sens 2) :</p>
+      <pre class="formula" style="line-height:1.55;font-size:.72rem">
+<span class="cyan">PS&gt;</span> Import-Csv 20250425_UsrClass_BagMRU.csv | Where-Object {
+       $_.AbsolutePath -match 'Romeo|Pelaia|Bricolage|Mattmark'
+     } | Select BagPath, AbsolutePath, FirstInteracted, LastInteracted
+
+BagPath              AbsolutePath                                     FirstInteracted     LastInteracted
+-------              ------------                                     ---------------     --------------
+BagMRU\<span class="gold">3\1</span>           D:\Comptabilite\<span class="cyan">Romeo_2023</span>\                  2023-02-14 09:21Z   2024-12-08 14:32Z
+BagMRU\<span class="gold">3\1\2</span>         D:\Comptabilite\Romeo_2023\<span class="cyan">Factures_HT</span>\      2023-02-14 09:23Z   2024-11-22 16:08Z
+BagMRU\<span class="gold">3\4</span>           D:\Comptabilite\<span class="cyan">Romeo_2024</span>\                  2024-01-09 08:45Z   2024-12-08 14:35Z
+BagMRU\<span class="gold">5\2</span>           OneDrive\Bricolage AG\<span class="cyan">Pelaia-Romeo Holdings</span>\ 2024-03-12 11:14Z   2024-11-30 09:50Z
+BagMRU\<span class="gold">8\0</span>           \\srv-mattmark\<span class="cyan">SCADA_data</span>\                 2024-10-03 10:22Z   2024-12-15 11:47Z
+BagMRU\<span class="gold">8\0\1</span>         \\srv-mattmark\SCADA_data\<span class="cyan">Mauvoisin_logs</span>\    2024-10-03 10:24Z   2024-11-28 16:33Z
+BagMRU\<span class="gold">12\0</span>          F:\<span class="cyan">(VeraCrypt_Mattmark_OT)</span>\                  2024-10-04 14:12Z   2024-12-12 22:18Z</pre>
+    </div>
+
+    <!-- ÉTAPE 4 -->
+    <div class="card card-orange" style="margin-top:.75rem">
+      <div class="card-title">🔄 Étape 4 — Pivot inverse : ShellBag inattendu → OSINT</div>
+      <p>L'entrée <code>F:\ (VeraCrypt_Mattmark_OT)</code> n'a <em>pas</em> été cherchée — elle
+      apparaît par hasard. Pivot inverse vers OSINT pour comprendre :</p>
+      <pre class="formula" style="line-height:1.55;font-size:.72rem">
+<span class="dim"># Shodan — historique d'exposition de srv-mattmark</span>
+<span class="cyan">https://www.shodan.io/host/&lt;IP-mattmark&gt;/history</span>
+  → 2023-08 → 2024-02 : port <span class="red">102/tcp</span> ouvert (Siemens S7)
+  → 2024-03+ : port fermé (probable durcissement post-incident)
+
+<span class="dim"># crt.sh — certificats émis pour le domaine Mattmark</span>
+<span class="cyan">https://crt.sh/?q=mattmark</span>
+  → 7 certificats Let's Encrypt entre 2022-2024
+  → renouvellement automatique → confirmation activité continue</pre>
+      <p style="margin-top:.4rem">→ Le label <em>VeraCrypt_Mattmark_OT</em> + l'ouverture
+      historique du port 102 + les timestamps ShellBag (octobre 2024) cohérents avec l'<a href="../scene.html?id=vs-affaire-viege-4-scada-mattmark">acte IV</a> :
+      l'utilisateur a probablement exfiltré des données SCADA Mattmark dans un volume VeraCrypt.</p>
+    </div>
+
+    <!-- ÉTAPE 5 -->
+    <div class="card card-green" style="margin-top:.75rem">
+      <div class="card-title">⚖️ Étape 5 — Acte VII (audience) : la jonction des sources</div>
+      <p>Devant le Tribunal cantonal de Sion, M. Crittin produit la <strong>conjonction
+      probante</strong> sous forme d'un tableau croisé :</p>
+
+      <div class="table-block">
+      <table class="data-table" style="font-size:.72rem">
+        <thead>
+          <tr>
+            <th>Fait OSINT (public)</th>
+            <th>Fait ShellBag (saisi sous mandat)</th>
+            <th>Conjonction</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Pelaia-Romeo Holdings Ltd publié dans Pandora Papers (oct. 2021, ICIJ)</td>
+            <td>Dossier <code>OneDrive\…\Pelaia-Romeo Holdings\</code> ouvert pour la première fois
+                le 2024-03-12 11:14 UTC</td>
+            <td>L'utilisateur connaissait l'entité — démonstration de l'élément moral
+                (<strong>art. 12 CP</strong>)</td>
+          </tr>
+          <tr>
+            <td>Romeo Costruzioni Srl, sede Reggio Calabria — registre public Camera Commercio</td>
+            <td>Dossiers <code>Romeo_2023\</code> et <code>Romeo_2024\</code> visités 47 fois entre
+                fév. 2023 et déc. 2024</td>
+            <td>Relations commerciales actives, durables et délibérées</td>
+          </tr>
+          <tr>
+            <td>Port 102 Siemens S7 srv-mattmark exposé jusqu'en fév. 2024 (Shodan history)</td>
+            <td>Premier accès au volume <code>F:\ (VeraCrypt_Mattmark_OT)</code> :
+                2024-10-04 14:12 UTC</td>
+            <td>Connaissance technique + exfiltration probable
+                (<strong>art. 144<sup>bis</sup> CP</strong>)</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <p style="margin-top:.5rem">Me Schnyder ne peut plus plaider l'ignorance : ses requêtes
+      d'inexploitabilité (art. 141 CPP) sont écartées. La <strong>conjonction OSINT public +
+      ShellBags forensique</strong> constitue la preuve d'intention que la défense espérait
+      pouvoir contester.</p>
+    </div>
+  </div>
+
+  <!-- ════════ ⑤ CADRE LÉGAL ════════ -->
+  <div class="section" id="legal">
+    <div class="section-title">⑤ Cadre légal suisse — qui peut faire quoi</div>
+
+    <div class="table-block">
+    <table class="data-table" style="font-size:.74rem">
+      <thead>
+        <tr>
+          <th>Action</th>
+          <th>Base légale</th>
+          <th>Acteur autorisé</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>OSINT pur (recherches ouvertes : ZEFIX, Camera di Commercio, Pandora, Shodan, etc.)</td>
+          <td>Pas de mandat requis · attention <strong>art. 285<sup>a</sup> CPP</strong>
+              (interdiction d'investigation secrète proactive)</td>
+          <td>Toute personne · sous réserve LPD &amp; RGPD</td>
+        </tr>
+        <tr>
+          <td>Saisie d'un ordinateur / serveur</td>
+          <td><strong>Art. 246 + 248 CPP</strong> (perquisition + scellés)</td>
+          <td>Police judiciaire avec mandat du procureur</td>
+        </tr>
+        <tr>
+          <td>Extraction des hives <code>NTUSER.DAT</code> / <code>USRCLASS.DAT</code></td>
+          <td>Couverte par le mandat · si scellés contestés (art. 248 al. 3) : attendre TMC</td>
+          <td>Forensicien mandaté par le MP</td>
+        </tr>
+        <tr>
+          <td>Cross-corrélation OSINT ↔ ShellBags dans rapport judiciaire</td>
+          <td><strong>Art. 76-78 CPP</strong> · documentation des sources requise</td>
+          <td>Forensicien expert au sens art. 182 CPP</td>
+        </tr>
+        <tr>
+          <td>Investigateur privé / due diligence (hors procédure pénale)</td>
+          <td>Mandat civil + accord du propriétaire du système · <strong>LPD art. 6</strong></td>
+          <td>OSINT investigator licencié (selon canton)</td>
+        </tr>
+        <tr>
+          <td>Investigateur privé <em>sans</em> autorisation d'accès au système</td>
+          <td><strong>Art. 143 CP</strong> (soustraction de données) ·
+              <strong>Art. 143<sup>bis</sup> CP</strong> (accès indu)</td>
+          <td>Personne — c'est un délit pénal en Suisse</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="card card-blue" style="margin-top:.75rem">
+      <div class="card-title">💼 Cas du privé légitime (Deguillaume / C-Cure systems)</div>
+      <p>Un OSINT investigator est mandaté par une entreprise pour investiguer une fuite interne.
+      L'<strong>employeur consent à l'accès</strong> aux postes (conformément au règlement intérieur
+      et à la LPD) ; le mandat civil documente le périmètre. Dans ce cadre, l'analyse ShellBags est
+      <strong>licite</strong> et devient un complément naturel au toolkit OSINT — c'est exactement
+      le contexte qui justifie l'article LinkedIn de Stéphane Deguillaume cité en référence.
+      <em>Sans</em> ce consentement préalable, le même geste tombe sous l'art. 143 CP.</p>
+    </div>
+  </div>
+
+  <!-- ════════ ⑥ LIMITES ════════ -->
+  <div class="section" id="limites">
+    <div class="section-title">⑥ Limites &amp; pièges classiques</div>
+
+    <div class="card-grid">
+      <div class="card card-red">
+        <div class="card-title">❌ Confondre « ShellBag créé » et « connaissance volontaire »</div>
+        <p>Un dossier peut être ouvert <em>par accident</em> — auto-completion d'un assistant Open/Save,
+        double-clic erroné, lien dans un email. <strong>Un seul hit ShellBag = preuve faible.</strong>
+        Plusieurs hits espacés dans le temps + cohérents avec d'autres artefacts (Prefetch, Jump Lists,
+        $UsnJrnl) = preuve solide. Note : Cyber Triage 2026 confirme que <em>« not every entry in
+        Shellbags directly indicates a user has accessed the folder »</em> — certains assistants
+        Windows Open/Save peuvent créer des entrées sans interaction utilisateur consciente.</p>
+      </div>
+      <div class="card card-orange">
+        <div class="card-title">❌ Tirer conclusion d'un ShellBag « manquant »</div>
+        <p>L'absence ne prouve rien : ShellBags ne couvrent que <strong>Windows Explorer</strong> et
+        les dialogues Open/Save standard, pas la ligne de commande, pas les outils tiers (Total
+        Commander, FreeCommander, Directory Opus). Un attaquant prudent contourne. À noter aussi
+        (Cyber Triage 2026) : les apps UWP/Windows Store enregistrent leurs ShellBags dans des hives
+        spécifiques à l'app, pas dans <code>UsrClass.dat</code>.</p>
+      </div>
+      <div class="card card-gold">
+        <div class="card-title">❌ Cherry-pick OSINT</div>
+        <p>Si la recherche OSINT est incomplète, Me Schnyder produira un homonyme (Bricolage AG est
+        un nom suisse-allemand fréquent) et sèmera le doute. Toujours documenter <strong>tout le
+        pivotage OSINT</strong>, pas seulement les hits favorables. Archiver chaque source avec
+        Wayback Machine ou archive.today à la date des faits.</p>
+      </div>
+      <div class="card card-purple">
+        <div class="card-title">❌ Mauvais fuseau horaire</div>
+        <p>SBECmd sort en UTC par défaut. Si vous comparez avec dates OSINT en heure locale (presse
+        ZEFIX, dates ICIJ), corrigez. Sinon décalage d'1 ou 2h, et la concomitance s'effondre à
+        l'audience.</p>
+      </div>
+      <div class="card card-blue">
+        <div class="card-title">❌ OSINT non daté</div>
+        <p>Une page web consultée aujourd'hui peut avoir changé depuis l'époque des faits. Toujours
+        utiliser <strong>Wayback Machine</strong> ou <strong>archive.today</strong> pour fixer une
+        version contemporaine de la fenêtre temporelle du dossier ShellBag.</p>
+      </div>
+      <div class="card card-green">
+        <div class="card-title">✅ Triple corroboration</div>
+        <p>Ne jamais bâtir une preuve sur ShellBags + OSINT seuls. Toujours croiser avec :
+        (a) MFT / $UsnJrnl pour confirmer création/accès, (b) Prefetch / Amcache pour confirmer
+        exécution d'outils, (c) JumpLists / RecentDocs pour confirmer interaction. ShellBags =
+        preuve d'<em>exploration</em>, pas d'<em>action</em>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ ⑦ CHECKLIST ════════ -->
+  <div class="section" id="checklist">
+    <div class="section-title">⑦ Checklist du workflow</div>
+
+    <div class="card card-cyan">
+      <div class="card-title">☑ Avant de produire le rapport</div>
+      <ul>
+        <li>☐ Mandat / autorisation couvrant l'extraction des hives <strong>documenté</strong> ?</li>
+        <li>☐ Hash MD5 + SHA-256 des hives extraits <strong>avant</strong> parsing ?</li>
+        <li>☐ SBECmd exécuté hors-ligne sur copies (pas sur les hives originaux) ?</li>
+        <li>☐ Fuseau horaire du CSV de sortie documenté (UTC vs local du sujet) ?</li>
+        <li>☐ Liste OSINT exhaustive des entités cibles établie <strong>avant</strong> de chercher
+            dans le ShellBag (évite le confirmation bias) ?</li>
+        <li>☐ Pivots OSINT documentés à part avec dates Wayback Machine pour chaque source ?</li>
+        <li>☐ Hits ShellBags corroborés avec MFT, $UsnJrnl, Prefetch, Jump Lists ?</li>
+        <li>☐ Concomitance temporelle entre dates OSINT et timestamps ShellBags vérifiée ?</li>
+        <li>☐ Hypothèses alternatives testées (homonymie, accès accidentel, partage de session
+            entre plusieurs utilisateurs) ?</li>
+        <li>☐ Rapport final sépare clairement : (a) faits ShellBags, (b) faits OSINT, (c)
+            conclusions de la cross-corrélation ?</li>
+        <li>☐ Toutes les sources OSINT archivées (PDF, capture, Wayback) avec horodatage ?</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ════════ ⑧ RÉFÉRENCES ════════ -->
+  <div class="section" id="refs">
+    <div class="section-title">⑧ Références &amp; lectures</div>
+
+    <div class="card card-blue">
+      <div class="card-title">📚 Sources directes — articles cités</div>
+      <ul style="font-size:.78rem;line-height:1.6">
+        <li><strong>Stéphane Deguillaume</strong> (C-Cure systems, Lyon),
+            <em>Le ShellBag — Le témoin muet, prêt à parler lorsque les problèmes commencent</em>,
+            LinkedIn Pulse — angle « témoin muet » repris dans cette fiche.</li>
+        <li><strong>Sumit Shukla</strong>, posts LinkedIn sur ShellBags / DFIR — exemples pratiques
+            d'investigation Windows.</li>
+        <li><strong>Tyler Lobos</strong>, posts LinkedIn — ressources DFIR pour apprenants.</li>
+        <li><strong>Chris Eastwood</strong>, <em>Shellbag Analysis</em>, Medium / CE Digital
+            Forensics (nov. 2020) — couverture standard des artefacts de navigation, RDP/VNC,
+            dépôts de binaires, accès réseau.</li>
+      </ul>
+    </div>
+
+    <div class="card card-purple" style="margin-top:.5rem">
+      <div class="card-title">🛠 Références techniques</div>
+      <ul style="font-size:.78rem;line-height:1.6">
+        <li><strong>Chad Tilbury</strong>, <em>Computer Forensic Artifacts: Windows 7 Shellbags</em>,
+            SANS DFIR Blog — référence technique standard, formats Win 7 vs XP.</li>
+        <li><strong>Eric Zimmerman</strong>, <em>Shellbags Explorer (SBECmd / SBE)</em>,
+            <code>ericzimmerman.github.io</code> — outil canonique.</li>
+        <li><strong>Pen Test Partners</strong>, <em>DFIR tools and techniques for tracing user
+            footprints through Shellbags</em> (août 2025) — exemples binaires ITEMIDLIST,
+            corrélation MFT / $UsnJrnl / Prefetch / JumpLists.</li>
+        <li><strong>Magnet Forensics</strong>, <em>Forensic Analysis of Windows Shellbags</em>
+            (mai 2025) — mises à jour Windows 10/11 et structures BagMRU.</li>
+        <li><strong>Cyber Triage</strong>, <em>Shellbags Forensic Analysis 2026</em> (mars 2026)
+            — caveats (apps UWP, entrées sans interaction utilisateur consciente).</li>
+        <li><strong>4n6k blog</strong>, <em>Shellbags Forensics: Addressing a Misconception</em>
+            (2013, mis à jour) — interprétation des timestamps (registre vs MACE shell item).</li>
+        <li><strong>Zhu, Gladyshev, James</strong> (2009), <em>Using shellbag information to
+            reconstruct user activities</em>, Digital Investigation 6, S69-S77 — papier fondateur.</li>
+        <li><strong>SeeShells v2</strong> (Leinecker), GitHub — visualisation timeline des
+            ShellBags pour DFIR.</li>
+      </ul>
+    </div>
+
+    <div class="card card-green" style="margin-top:.5rem">
+      <div class="card-title">🌐 Sources OSINT pivots</div>
+      <ul style="font-size:.78rem;line-height:1.6">
+        <li><strong>ZEFIX</strong> (zefix.ch) — registre du commerce CH, API REST publique.</li>
+        <li><strong>Camera di Commercio</strong> (registroimprese.it) — registre IT, accès payant
+            mais consultations ponctuelles gratuites.</li>
+        <li><strong>ICIJ Offshore Leaks Database</strong> (offshoreleaks.icij.org) — Pandora
+            Papers + Paradise + Panama, recherche par nom et juridiction.</li>
+        <li><strong>Shodan</strong> + <strong>Censys</strong> — scan internet, historique des ports.</li>
+        <li><strong>crt.sh</strong> — certificate transparency, historique des certificats émis.</li>
+        <li><strong>Have I Been Pwned</strong> (haveibeenpwned.com) — exposition d'emails dans des
+            breaches publiques.</li>
+        <li><strong>OSINT-FR</strong> (osintfr.com) — communauté francophone, ressources
+            méthodologiques sur le pivotage.</li>
+      </ul>
+    </div>
+
+    <div class="card card-orange" style="margin-top:.5rem">
+      <div class="card-title">⚖️ Cadre légal</div>
+      <p style="font-size:.78rem;line-height:1.6">
+        <strong>CPP suisse</strong> : art. 246 (perquisition), art. 248 (scellés),
+        art. 285<sup>a</sup> (interdiction investigation secrète), art. 76-78 (procès-verbaux et
+        rapports), art. 182 (experts).<br>
+        <strong>CP suisse</strong> : art. 12 (intention), art. 143 (soustraction de données),
+        art. 143<sup>bis</sup> (accès indu), art. 144<sup>bis</sup> (détérioration de données),
+        art. 260<sup>ter</sup> (organisation criminelle), art. 305<sup>bis</sup> (blanchiment).<br>
+        <strong>LPD</strong> art. 6 (principes traitement données personnelles).
+      </p>
+    </div>
+  </div>
+
+</div><!-- /.page -->
+
+<div class="page" style="padding-top:0">
+<div class="footer">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Cross-corrélation · ShellBags · OSINT licite · CPP/CP</span>
+</div>
+</div>
+
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+<script src="../js/core/cas-in-profile.js" defer></script>
+<script src="../js/core/cas-in-achievements.js" defer></script>
+<script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/profile/celebration-ui.js" defer></script>
+<script src="../js/components/gamification-toasts.js" defer></script>
+</body>
+</html>
