@@ -1602,7 +1602,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v139';
+const CACHE_VERSION = 'cas-in-v140';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1649,7 +1649,6 @@ const STATIC_ASSETS = [
   './style/style.css',
   './style/cas-in-navbar.css',
   './style/profile.css',
-  './style/profile-banner.css',
   './style/profile-dossier.css',
   './style/quiz.css',
   './style/scene.css',
@@ -1682,7 +1681,8 @@ const STATIC_ASSETS = [
   './js/core/cas-in-theme-toggle.js',
 
   // ─── Profile UI (js/profile/*) ───
-  './js/profile/profile-banner.js',
+  // v2.59 — profile-banner.js retiré (remplacé par cas-in-navbar v2.77).
+  // v2.59 — hub-activity-feed.js retiré (doublon de components/hub-activity.js).
   './js/profile/profile-page.js',
   './js/profile/profile-tabs.js',
   './js/profile/profile-relations.js',
@@ -1693,7 +1693,6 @@ const STATIC_ASSETS = [
   './js/profile/profile-arcs-ui.js',
   './js/profile/profile-quests-ui.js',
   './js/profile/profile-leaderboard-ui.js',
-  './js/profile/hub-activity-feed.js',
   './js/profile/hub-gamification-ui.js',
   './js/profile/celebration-ui.js',
   './js/profile/onboarding-ui.js',
@@ -1711,8 +1710,8 @@ const STATIC_ASSETS = [
   './js/components/search-modal.js',
   './js/components/search-lazy.js',
   './js/components/scene-npcs.js',
-  './js/components/scene-briefing-tabs.js',
-  './js/components/scene-banners-carousel.js',
+  // v2.59 — scene-briefing-tabs.js et scene-banners-carousel.js retirés
+  // (remplacés par scene-engine-v4.js et scene-lobby-v3.js).
   './js/components/quiz-utils.js',
   './js/components/quiz-sm2.js',
   './js/components/quiz-ranks.js',
