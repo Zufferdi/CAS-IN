@@ -1,4 +1,17 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v141 : v2.61 — PWA OFFLINE-FIRST COMPLET (PRÉCACHE SCÈNES)
+//
+//        Ajout de precacheScenesFromIndex() : symétrique à
+//        precacheFichesFromManifest, lit scenes/index.json à l'install
+//        et précache les ~143 scènes individuelles (~5 MB). Avant cette
+//        version, un utilisateur qui installait la PWA puis passait
+//        offline avant d'avoir ouvert la moindre scène ne pouvait que
+//        BROWSER la liste — pas LANCER. Désormais, install = expérience
+//        offline complète (fiches + scènes + tous les shells HTML).
+//        Les deux précaches (fiches + scènes) tournent en parallèle via
+//        Promise.all pour ne pas allonger le temps total d'install.
+//        Cache version bumpée v140 → v141 pour forcer la réinstallation.
+//
 // v82 : v2.48 — 1 SCÉNARIO EU + DÉMARRAGE MÉTA-GAMIFICATION
 //
 //       Cette release combine : (a) Axe 1 (continuité scénarios EU)
@@ -1602,7 +1615,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v140';
+const CACHE_VERSION = 'cas-in-v141';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1777,6 +1790,32 @@ async function precacheFichesFromManifest(cache) {
   }
 }
 
+// ─── Précache dynamique des scènes via scenes/index.json ───
+// v2.61 — Symétrique à precacheFichesFromManifest. Avant cette version,
+// les scènes individuelles n'étaient mises en cache qu'à la première visite ;
+// un utilisateur qui installait la PWA puis passait offline avant d'avoir
+// ouvert la moindre scène pouvait BROWSER la liste mais pas en LANCER une
+// (le fetch /scenes/{id}.json retournait le fallback 503).
+//
+// Coût : ~143 scènes × ~30 KB = ~4–5 MB additionnels à l'install. Du même
+// ordre que les fiches (~4.5 MB). Best-effort : si scenes/index.json est
+// indisponible ou si certains fichiers manquent, on log et on continue.
+async function precacheScenesFromIndex(cache) {
+  try {
+    const resp = await fetch('./scenes/index.json', { cache: 'no-store' });
+    if (!resp.ok) return;
+    const idx = await resp.json();
+    if (!Array.isArray(idx)) return;
+    const scenes = idx
+      .map(s => s && s.id ? './scenes/' + s.id + '.json' : null)
+      .filter(Boolean);
+    await Promise.allSettled(scenes.map(url => cache.add(url)));
+    console.log('[SW] Precached ' + scenes.length + ' scenes from index');
+  } catch (e) {
+    console.warn('[SW] Could not precache scenes from index:', e);
+  }
+}
+
 // ─── Install ───
 self.addEventListener('install', event => {
   console.log('[SW] Install ' + CACHE_VERSION);
@@ -1801,8 +1840,13 @@ self.addEventListener('install', event => {
       } else {
         console.log('[SW] All ' + results.length + ' static assets cached');
       }
-      // Fiches : best-effort, ne bloque pas l'install
-      await precacheFichesFromManifest(cache);
+      // Fiches + scènes : best-effort, ne bloquent pas l'install.
+      // Lancés en parallèle pour réduire le temps total d'install (les deux
+      // précaches sont indépendants — pas de dépendance entre fiches et scènes).
+      await Promise.all([
+        precacheFichesFromManifest(cache),
+        precacheScenesFromIndex(cache),
+      ]);
     })
   );
   self.skipWaiting();
