@@ -4,6 +4,30 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.61] — 2026-05-08
+
+📡 **PWA offline-first complète — précache scènes + start_url corrigé.**
+
+### Ajouté
+
+- **Précache des scènes à l'install** (`sw.js` : `precacheScenesFromIndex()`) : symétrique à `precacheFichesFromManifest()`. Lit `scenes/index.json` au moment de l'install, mappe chaque entrée vers `./scenes/{id}.json` et les ajoute au cache via `Promise.allSettled` (best-effort, 404 individuels ignorés). Avant cette version, un utilisateur qui installait la PWA puis passait offline avant d'ouvrir la moindre scène pouvait **lister** les scènes mais pas en **lancer** une seule (le fetch retournait le fallback 503). Coût : ~143 scènes × ~30 KB ≈ 4–5 MB additionnels à l'install, du même ordre que les fiches (~4.5 MB). Lancé en parallèle avec le précache fiches via `Promise.all` pour ne pas allonger le temps total d'install.
+
+### Corrigé
+
+- **`start_url` du manifest PWA** : `./scene.html` → `./` (la home `index.html`). Avant, l'utilisateur qui installait depuis la home et lançait l'app depuis l'icône atterrissait sur la page Scènes au lieu du hub central — incohérent avec l'attente créée par le bouton « Installer » présent sur la home.
+- **`offline.html` chargeait deux scripts inutiles** (`js/components/fiche-search.js` et `js/components/search-modal.js`, en `defer`) alors que la page n'a aucun champ de recherche. Supprimés : la page hors-ligne reste minimale et purement déclarative.
+
+### Notes techniques
+
+- **`CACHE_VERSION` bumpé** : `cas-in-v140` → `cas-in-v141` pour forcer la réinstallation du SW chez les utilisateurs déjà à jour. Le précache des scènes ajoute ~5 MB au cache mais l'install reste best-effort : si `scenes/index.json` est inaccessible, on continue sans bloquer.
+- **Vérifié end-to-end** via Playwright (Chromium headless + serveur local + kill du serveur en cours de test pour simuler vraie offline) : 230 entrées en cache après install, fiches index + 3 fiches au hasard ouvrent offline, fallback `offline.html` servi correctement quand la page n'est pas cachée et que le réseau est down.
+
+### Migration
+
+- Aucune. L'utilisateur recevra la nouvelle version au prochain chargement (banner d'update existant). À l'activation du nouveau SW, le précache scènes se déclenche automatiquement.
+
+---
+
 ## [2.60] — 2026-05-08
 
 🗂 **Bloc d'autorisation du dossier — signature R.R aka Banzaï + date d'activation.**
