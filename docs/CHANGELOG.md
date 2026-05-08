@@ -4,6 +4,30 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.62] — 2026-05-08
+
+🔧 **Réparation de 17 fiches cassées + sync complet index/search + retrait dépendance CDN.**
+
+### Corrigé
+
+- **17 fiches avaient un JS invalide qui empêchait l'init de leurs comportements UX** (scroll-progress, back-top button) : `acquisition.html`, `autopsy.html`, `browser_forensique.html`, `data_carving.html`, `eimp_entraide.html`, `email_forensique.html`, `encodage.html`, `ext.html`, `formats.html`, `mac_times.html`, `macos-linux.html`, `outils.html`, `preuve.html`, `ram_forensique.html`, `reseau.html`, `suisse.html`, `wireshark_pcap.html`. Erreur consistante : `Uncaught SyntaxError: Unexpected token '}'`. Les fiches s'affichaient mais sans la barre de progression ni le bouton retour-haut.
+- **Cause** : la regex `P_SCROLL_DIRECT` dans `scripts/migrate_fiche_common.py` utilisait `[^;]+;?` pour capturer le corps d'un `addEventListener('scroll', function(){...}, {passive:true})`. Or ce corps contient DEUX `;` (un dans `bar.style.width = ...;` et un final). La regex stoppait au premier, supprimant l'OUVERTURE de l'addEventListener et laissant le corps + la fermeture orphelins. Patchée v2.62 : capture explicite du callback complet `function(){[^}]*}` plus la close-paren et options optionnelles.
+- **`fiches/index.html` n'affichait que 111 fiches sur 112** : `shellbags_osint_pivot.html` (« ShellBags ↔ OSINT — Cross-corrélation ») était orpheline — non listée sur l'index, non indexée par la recherche, accessible uniquement par URL directe. Réparé en re-runnant `scripts/build_index.py` (qui détecte correctement la catégorie via le breadcrumb HTML) et `scripts/build_search_index.py`. Désormais 112 fiches partout.
+- **`algorithmes_forensique.html` dépendait d'un CDN externe** (`cdnjs.cloudflare.com/ajax/libs/crypto-js`) pour calculer MD5/SHA-1/SHA-256 — incompatible avec la PWA offline. Migré vers la **Web Crypto API native** (`crypto.subtle.digest('SHA-1' | 'SHA-256', …)`, supportée tous navigateurs modernes, fully offline) plus une **implémentation MD5 inline RFC 1321** (~2 KB minifiée — Web Crypto ne supporte pas MD5 car cassé, mais reste utile pour vérifier des hashes legacy en forensique). 12/12 vecteurs RFC validés.
+
+### Notes techniques
+
+- **`data/search-index.json` régénéré** : 112 fiches, 931 sections, 7216 termes indexés (was 111/925/~7150). Taille : 625 KB.
+- **`CACHE_VERSION` bumpé** v141 → v142 pour propager les fiches corrigées aux installations existantes (le SW déclenche le banner d'update au prochain chargement, l'utilisateur clique « Recharger », le nouveau cache prend les fiches réparées).
+- **Vérification end-to-end** : 112/112 fiches rendent sans erreur JS (filtré le bruit Google Fonts), 25/25 requêtes test du moteur de recherche retournent des résultats pertinents (`shellbags`, `osint`, `viège`, `ntfs`, `ram`, `autopsy`, `ransomware`, `bitcoin`, `tor`, `CPP`, `EIMP`, `velociraptor`, `cellebrite`, `e01`, `magic bytes`, …).
+
+### Migration
+
+- **Aucune côté utilisateur**. Au prochain chargement, le banner d'update propose « Recharger » → nouvelles fiches en cache.
+- **Côté contributeurs** : si vous re-lancez `migrate_fiche_common.py` sur une fiche au passé, **utilisez la version corrigée v2.62**. L'ancienne version corrompait les fiches avec un addEventListener scroll-progress hors IIFE.
+
+---
+
 ## [2.61] — 2026-05-08
 
 📡 **PWA offline-first complète — précache scènes + start_url corrigé.**
