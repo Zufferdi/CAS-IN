@@ -1,4 +1,15 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v142 : v2.62 — RÉPARATION 17 FICHES + INDEX/SEARCH SYNC + CRYPTO OFFLINE
+//
+//        Bump cache pour forcer la mise à jour des fiches corrigées (17 d'entre
+//        elles avaient un JS invalide qui faisait planter leur initialisation
+//        scroll-progress + back-top — héritage d'un bug regex dans
+//        migrate_fiche_common.py qui consommait l'ouverture d'un addEventListener
+//        en laissant body+closing orphelins). Plus algorithmes_forensique.html
+//        qui dépendait d'un CDN (cdnjs.cloudflare.com pour crypto-js) → migré
+//        vers Web Crypto API natif (SHA-1/256) + MD5 inline (RFC 1321), donc
+//        100% offline désormais.
+//
 // v141 : v2.61 — PWA OFFLINE-FIRST COMPLET (PRÉCACHE SCÈNES)
 //
 //        Ajout de precacheScenesFromIndex() : symétrique à
@@ -1615,7 +1626,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v141';
+const CACHE_VERSION = 'cas-in-v142';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
