@@ -512,29 +512,84 @@ function showTab(tab, btn) {
   btn.classList.add('active');
 }
 
-// ── Crypto-JS via CDN ──
-async function loadCryptoJS() {
-  if (window.CryptoJS) return;
-  await Promise.all([
-    fetch('https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js').then(r => r.text()).then(eval)
-  ]);
+// ── Hash : Web Crypto API (SHA-1/SHA-256) + MD5 inline ──
+// v2.62 — Avant : fetch CDN crypto-js → la fiche ne marchait pas offline.
+// Désormais : SHA-1/SHA-256 via window.crypto.subtle (natif tous navigateurs
+// modernes, fully offline). MD5 via implémentation inline (Web Crypto ne
+// supporte pas MD5 — algorithme cassé — mais reste utile en forensique
+// pour vérifier des hashes existants ou comparer avec des outils legacy).
+function _bytesToHex(buffer) {
+  return Array.from(new Uint8Array(buffer))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function _hashWebCrypto(algo, text) {
+  const data = new TextEncoder().encode(text);
+  const buf = await crypto.subtle.digest(algo, data);
+  return _bytesToHex(buf);
+}
+// MD5 inline (RFC 1321) — usage pédagogique ; ne PAS utiliser pour la
+// sécurité (collisions triviales depuis 2004). Implémentation compacte
+// adaptée d'une version domaine public, ~1.5 KB minifiée.
+function _md5(s) {
+  function r(n, c) { return (n << c) | (n >>> (32 - c)); }
+  function add(a, b) { return ((a + b) & 0xFFFFFFFF) | 0; }
+  function f(x, y, z) { return (x & y) | (~x & z); }
+  function g(x, y, z) { return (x & z) | (y & ~z); }
+  function h(x, y, z) { return x ^ y ^ z; }
+  function i(x, y, z) { return y ^ (x | ~z); }
+  function step(fn, a, b, c, d, x, t, s) {
+    return add(r(add(add(a, fn(b, c, d)), add(x, t)), s), b);
+  }
+  // UTF-8 encode then build 64-byte blocks
+  const bytes = unescape(encodeURIComponent(s));
+  const len = bytes.length;
+  const blocks = new Array((((len + 8) >> 6) + 1) * 16).fill(0);
+  for (let n = 0; n < len; n++) blocks[n >> 2] |= bytes.charCodeAt(n) << ((n % 4) * 8);
+  blocks[len >> 2] |= 0x80 << ((len % 4) * 8);
+  blocks[blocks.length - 2] = len * 8;
+  let a = 1732584193, b = -271733879, c = -1732584194, d = 271733878;
+  const T = [
+    -680876936,-389564586,606105819,-1044525330,-176418897,1200080426,-1473231341,-45705983,
+    1770035416,-1958414417,-42063,-1990404162,1804603682,-40341101,-1502002290,1236535329,
+    -165796510,-1069501632,643717713,-373897302,-701558691,38016083,-660478335,-405537848,
+    568446438,-1019803690,-187363961,1163531501,-1444681467,-51403784,1735328473,-1926607734,
+    -378558,-2022574463,1839030562,-35309556,-1530992060,1272893353,-155497632,-1094730640,
+    681279174,-358537222,-722521979,76029189,-640364487,-421815835,530742520,-995338651,
+    -198630844,1126891415,-1416354905,-57434055,1700485571,-1894986606,-1051523,-2054922799,
+    1873313359,-30611744,-1560198380,1309151649,-145523070,-1120210379,718787259,-343485551
+  ];
+  const S = [7,12,17,22,5,9,14,20,4,11,16,23,6,10,15,21];
+  for (let off = 0; off < blocks.length; off += 16) {
+    const oa = a, ob = b, oc = c, od = d;
+    for (let k = 0; k < 64; k++) {
+      let fn, x;
+      if (k < 16) { fn = f; x = k; }
+      else if (k < 32) { fn = g; x = (5 * k + 1) % 16; }
+      else if (k < 48) { fn = h; x = (3 * k + 5) % 16; }
+      else { fn = i; x = (7 * k) % 16; }
+      const ns = S[((k >> 4) << 2) + (k & 3)];
+      [a, b, c, d] = [d, step(fn, a, b, c, d, blocks[off + x], T[k], ns), b, c];
+    }
+    a = add(a, oa); b = add(b, ob); c = add(c, oc); d = add(d, od);
+  }
+  return [a, b, c, d].map(n =>
+    [0,1,2,3].map(j => ((n >> (j*8)) & 0xff).toString(16).padStart(2,'0')).join('')
+  ).join('');
 }
 
 // ── Hash Calculator ──
 async function computeHash(algo) {
-  await loadCryptoJS();
   var input = document.getElementById('hash-input').value;
   if (!input) { alert('Entrez du texte'); return; }
-  
   var result;
   if (algo === 'md5') {
-    result = CryptoJS.MD5(input).toString();
+    result = _md5(input);
     document.getElementById('hash-md5').textContent = result;
   } else if (algo === 'sha1') {
-    result = CryptoJS.SHA1(input).toString();
+    result = await _hashWebCrypto('SHA-1', input);
     document.getElementById('hash-sha1').textContent = result;
   } else if (algo === 'sha256') {
-    result = CryptoJS.SHA256(input).toString();
+    result = await _hashWebCrypto('SHA-256', input);
     document.getElementById('hash-sha256').textContent = result;
   }
 }
