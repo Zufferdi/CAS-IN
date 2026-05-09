@@ -87,5 +87,18 @@
     });
   });
 
+  // v2.60 — 1re activation du dossier : émis par cas-in-profile.js à la
+  // 1re XP gagnée. Cérémonie narrative spéciale (tampon « Approved by
+  // R.R aka Banzaï ») jouée AVANT le toast XP générique, parce qu'elle
+  // est plus rare et plus signifiante. show() étant queué, l'ordre est
+  // garanti même si plusieurs événements partent dans la même frame.
+  window.addEventListener('dossier-activated', () => {
+    show({
+      icon: '🗂️',
+      title: 'Dossier activé',
+      subtitle: 'Approuvé par R.R aka Banzaï',
+    });
+  });
+
   window.Celebration = { show };
 })();

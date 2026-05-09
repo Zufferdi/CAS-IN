@@ -16,6 +16,15 @@
   }
   function setText(id, txt) { const el = $(id); if (el) el.textContent = txt; }
 
+  // v2.60 — Horloge UTC du status bar (ne tournait pas avant : valeur posée
+  // une fois au render, jamais rafraîchie). On expose la fonction de paint
+  // pour réutilisation par le tick et le render initial. Format identique
+  // à l'historique : "YYYY-MM-DD HH:MM UTC".
+  function paintUtcClock() {
+    const utc = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+    setText('profile-utc', utc);
+  }
+
   function escapeHtml(s) {
     // v2.85 — Délègue à CasInUtils.escapeHTML si disponible (couvre aussi
     // l'apostrophe, oubliée dans la version locale d'origine). Garde un
@@ -44,9 +53,8 @@
       window.AchievementsCore.evalAndUnlock(snap);
     }
 
-    // Header UTC
-    const utc = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
-    setText('profile-utc', utc);
+    // Header UTC — initial paint ; le tick continu est posé dans boot().
+    paintUtcClock();
 
     // Si pas de track choisi : afficher le sélecteur en plein écran
     if (!snap.agent.hasTrack) {
@@ -941,6 +949,16 @@
         if (el) el.textContent = v || 'inconnue';
       });
     }
+
+    // v2.60 — Horloge UTC vivante : on aligne le 1er tick sur la minute
+    // suivante (pour que HH:MM bascule pile au changement de minute), puis
+    // on relaie via setInterval(60_000). Évite la dérive cumulée d'un
+    // setInterval naïf et le « clic » visuel à mi-minute.
+    const msToNextMinute = 60_000 - (Date.now() % 60_000);
+    setTimeout(function tickUtc() {
+      paintUtcClock();
+      setInterval(paintUtcClock, 60_000);
+    }, msToNextMinute);
   }
 
   if (document.readyState === 'loading') {
