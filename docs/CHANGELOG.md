@@ -4,6 +4,33 @@ Toutes les modifications notables apportées à ce projet sont documentées ici.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.63] — 2026-05-09
+
+🧹 **Suppression de doublons morts dans `js/pages/` — récupération de deux fixes v2.60 oubliés au passage.**
+
+### Corrigé
+
+- **Horloge UTC du status bar profil — fix v2.60 jamais déployé en prod.** Le CHANGELOG v2.60 annonçait que l'horloge UTC du dossier (`#profile-utc`) tickait désormais en live (alignée sur la minute suivante via `60_000 - Date.now() % 60_000`, puis `setInterval(60_000)`). Le code du fix existait bien — mais dans `js/pages/profile-page.js`, qui n'était **chargé par aucune page** (ni HTML ni `STATIC_ASSETS` du SW). La version live, `js/profile/profile-page.js`, est restée avec l'horloge gelée pendant 3 versions. Les utilisateurs avec un dossier ouvert 30 min voyaient encore l'heure d'arrivée. Fix porté ligne pour ligne dans le bon fichier (`paintUtcClock()` extrait + tick installé en fin de `boot()`).
+- **Cérémonie `dossier-activated` — même symptôme.** L'event `dossier-activated` est correctement dispatché par `cas-in-profile.js#addXp()` à la 1re XP, mais le listener qui jouait le toast « Dossier activé · Approuvé par R.R aka Banzaï » était dans `js/pages/celebration-ui.js` (orphelin). Conséquence : depuis v2.60, **aucun nouvel utilisateur n'a vu cette cérémonie**. Listener porté dans `js/profile/celebration-ui.js`.
+
+### Supprimé
+
+- **`js/pages/profile-page.js`** (37 KB) — orphelin, non référencé par les HTML ni par `STATIC_ASSETS` du SW. La version live est `js/profile/profile-page.js`. Reliquat d'un refactor v2.10 (déplacement de la logique profil vers `js/profile/`) qui a laissé la copie source en place. Le fait que des fixes y aient atterri prouve que la confusion a déjà coûté.
+- **`js/pages/celebration-ui.js`** (3.6 KB) — idem, orphelin du même refactor.
+
+### Notes techniques
+
+- **Comment a-t-on raté ça pendant 3 versions ?** Les deux fichiers orphelins ont survécu parce qu'ils ne génèrent aucune erreur runtime (jamais chargés ⇒ jamais exécutés ⇒ silencieux). Quand un dev a édité « profile-page.js » via fuzzy-find dans son IDE, il a touché celui qui était dans son onglet le plus récent — pas celui qui tourne en prod. Sans test fonctionnel sur l'horloge ni sur l'event `dossier-activated`, la dérive est passée sous le radar du `node --check` (qui valide la syntaxe, pas la pertinence du fichier).
+- **Garde-fou pour l'avenir.** Un test qui ouvrirait `profile.html` headless et vérifierait que `#profile-utc` change après 65 s aurait attrapé ça. Idem un grep de couverture qui croise les `*.js` du dossier avec ce qui est référencé dans HTML + `STATIC_ASSETS`. À ajouter dans la prochaine itération outillage.
+- **`CACHE_VERSION` bumpé** v142 → v143 pour propager les fixes UTC + dossier-activated aux installations existantes.
+- **Tests** : `tests/test-cas-in.js` et `tests/test-achievements-sync.js` passent (51 OK, 0 FAIL).
+
+### Migration
+
+- Aucune côté utilisateur. Au prochain chargement, le banner d'update propose « Recharger », et l'horloge se met à ticker + la cérémonie d'activation sera jouée à la 1re XP (uniquement pour les profils qui ne l'ont pas encore activé — `firstXpAt === null`).
+
+---
+
 ## [2.62] — 2026-05-08
 
 🔧 **Réparation de 17 fiches cassées + sync complet index/search + retrait dépendance CDN.**
