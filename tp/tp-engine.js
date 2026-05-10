@@ -16,7 +16,8 @@ const STATE = {
     endian:0, timestamp:0, bitmap:0, fat:0, magic:0, mismatch:0,
     runlist:0, effacement:0, timestomping:0, hextable:0, fsidentify:0,
     offset:0, bases:0, hash:0, email:0, network:0, ir:0,
-    droitpenal:0, glossaire:0, examen:0, mbr:0, direntry:0, hexdump:0, slackspace:0
+    droitpenal:0, glossaire:0, examen:0, mbr:0, direntry:0, hexdump:0, slackspace:0,
+    hfsbtree:0, ntfsindex:0
   },
   hintUsed: false,
   // Gamification étendue
