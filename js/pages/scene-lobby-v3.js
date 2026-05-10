@@ -587,6 +587,7 @@
 
     // Ordre privilégié : les cantons précis d'abord, puis CHF/CH, puis étrangers
     const PRIORITY = ['VD','VS','GE','NE','JU','ZH','FR','BS','BE','TI','SG','SO','ZG',
+                      'AG','LU','TG','SZ','GR','UR',
                       'CHF','CH','EU','FR-EU','CN','INTL'];
     const sortedCodes = Object.keys(counts).sort((a, b) => {
       const ia = PRIORITY.indexOf(a);
@@ -610,7 +611,9 @@
       'VD': 'Vaud', 'VS': 'Valais', 'GE': 'Genève', 'NE': 'Neuchâtel',
       'JU': 'Jura', 'ZH': 'Zurich', 'FR': 'Fribourg', 'BS': 'Bâle-Ville',
       'BE': 'Berne', 'TI': 'Tessin', 'SG': 'Saint-Gall', 'SO': 'Soleure',
-      'ZG': 'Zoug', 'CHF': 'Confédération / Suisse', 'CH': 'Suisse',
+      'ZG': 'Zoug', 'AG': 'Argovie', 'LU': 'Lucerne', 'TG': 'Thurgovie',
+      'SZ': 'Schwyz', 'GR': 'Grisons', 'UR': 'Uri',
+      'CHF': 'Confédération / Suisse', 'CH': 'Suisse',
       'EU': 'Europe', 'FR-EU': 'France', 'CN': 'Chine', 'INTL': 'International',
     };
 
