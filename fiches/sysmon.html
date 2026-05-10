@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#0d1117">
 <title>Sysmon — CAS-IN DFIR</title>
 <meta name="description" content="Sysmon · 30+ Event IDs · ProcessCreate · NetworkConnect · FileCreate · DnsQuery · Configuration SwiftOnSecurity">
 <link rel="stylesheet" href="../style/fiche_style.css">
@@ -64,6 +65,112 @@
   <div class="concept-title">🔑 Sysmon — l'EDR gratuit de Microsoft</div>
   <strong>Sysmon</strong> (System Monitor) est un outil <strong>Sysinternals gratuit</strong> de Mark Russinovich, distribué par Microsoft. Installé comme service Windows + driver kernel, il <strong>enrichit les Event Logs natifs</strong> avec des événements riches : hash SHA-256 de chaque processus créé, GUID unique de processus, lignée parent complète, connexions réseau avec destination, modifications de registre, créations de fichiers, injection de code, requêtes DNS… Là où Security <code>EID 4688</code> donne juste « <code>powershell.exe</code> a démarré », Sysmon EID 1 donne <em>quelle ligne de commande, quel hash, quel parent, quel utilisateur, quel ProcessGuid pour corréler tout le reste</em>. C'est <strong>le pilier du Threat Hunting Windows moderne</strong>, déployé par défaut chez la plupart des SOC matures.
 </div>
+
+<div class="schema">
+  <div class="schema-title">🛡 Architecture Sysmon — du driver kernel au SIEM</div>
+  <div class="schema-sub">Sysmon driver · ETW · Event ID 1-29 · sysmon.xml config · Event Log · Forwarding</div>
+  <svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture Sysmon">
+    <defs>
+      <marker id="arr-sm" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="#00E5CC"/>
+      </marker>
+    </defs>
+    <!-- Kernel layer -->
+    <rect x="20" y="20" width="680" height="80" rx="6" fill="rgba(245,80,80,.08)" stroke="#FF4060" stroke-width="1.4"/>
+    <text x="360" y="38" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800" fill="#FF4060">⚙ Kernel space — driver SysmonDrv.sys</text>
+    <text x="360" y="55" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A8B5C8">Hooks NT API · Object Manager callbacks · Image load notify · Process create/terminate</text>
+    <rect x="40" y="65" width="120" height="22" rx="3" fill="rgba(13,17,23,.4)" stroke="rgba(255,255,255,.1)"/>
+    <text x="100" y="80" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#FF4060">PsSetCreateProcess</text>
+    <rect x="170" y="65" width="120" height="22" rx="3" fill="rgba(13,17,23,.4)" stroke="rgba(255,255,255,.1)"/>
+    <text x="230" y="80" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#FF4060">PsSetLoadImage</text>
+    <rect x="300" y="65" width="120" height="22" rx="3" fill="rgba(13,17,23,.4)" stroke="rgba(255,255,255,.1)"/>
+    <text x="360" y="80" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#FF4060">CmRegisterCallback</text>
+    <rect x="430" y="65" width="120" height="22" rx="3" fill="rgba(13,17,23,.4)" stroke="rgba(255,255,255,.1)"/>
+    <text x="490" y="80" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#FF4060">FltRegisterFilter</text>
+    <rect x="560" y="65" width="120" height="22" rx="3" fill="rgba(13,17,23,.4)" stroke="rgba(255,255,255,.1)"/>
+    <text x="620" y="80" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#FF4060">WSK / TCP/UDP</text>
+
+    <!-- Service layer -->
+    <line x1="360" y1="105" x2="360" y2="125" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-sm)"/>
+    <rect x="240" y="125" width="240" height="50" rx="6" fill="rgba(0,229,204,.15)" stroke="#00E5CC" stroke-width="1.6"/>
+    <text x="360" y="143" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="800" fill="#00E5CC">🧰 Sysmon.exe (service)</text>
+    <text x="360" y="156" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" fill="#A8B5C8">Lit la config XML, applique les filtres</text>
+    <text x="360" y="167" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#6A80A8">SysmonSchema.xml + sysmonconfig.xml (SwiftOnSecurity, OlafHartong)</text>
+
+    <!-- Config XML left -->
+    <rect x="20" y="120" width="200" height="60" rx="6" fill="rgba(240,192,64,.1)" stroke="#F0C040" stroke-width="1.4" stroke-dasharray="3 2"/>
+    <text x="120" y="138" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="800" fill="#F0C040">📜 Config XML</text>
+    <text x="120" y="151" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">RuleGroup · Include/Exclude</text>
+    <text x="120" y="162" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">Image · CommandLine · Hashes</text>
+    <text x="120" y="173" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#6A80A8">Hot-reload toutes les 30s</text>
+    <line x1="220" y1="150" x2="240" y2="150" stroke="#F0C040" stroke-width="1" stroke-dasharray="3 2"/>
+
+    <!-- Right: filter -->
+    <rect x="500" y="120" width="200" height="60" rx="6" fill="rgba(48,232,138,.08)" stroke="#30E88A" stroke-width="1.4" stroke-dasharray="3 2"/>
+    <text x="600" y="138" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="800" fill="#30E88A">✓ Filter Engine</text>
+    <text x="600" y="151" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">noise reduction</text>
+    <text x="600" y="162" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">~99% events filtered</text>
+    <text x="600" y="173" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#6A80A8">avant écriture log</text>
+    <line x1="480" y1="150" x2="500" y2="150" stroke="#30E88A" stroke-width="1" stroke-dasharray="3 2"/>
+
+    <line x1="360" y1="180" x2="360" y2="200" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-sm)"/>
+
+    <!-- Event ID grid -->
+    <rect x="20" y="200" width="680" height="105" rx="6" fill="rgba(188,140,255,.08)" stroke="#BC8CFF" stroke-width="1.4"/>
+    <text x="360" y="218" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="800" fill="#BC8CFF">📋 29 Event IDs (Microsoft-Windows-Sysmon/Operational)</text>
+
+    <!-- Grid 3x6 of event IDs -->
+    <g font-family="JetBrains Mono,monospace" font-size="6.5">
+      <text x="32" y="237" fill="#BC8CFF" font-weight="700">EID 1</text><text x="65" y="237" fill="#A8B5C8">Process Create</text>
+      <text x="180" y="237" fill="#BC8CFF" font-weight="700">EID 3</text><text x="213" y="237" fill="#A8B5C8">Network Connect</text>
+      <text x="340" y="237" fill="#BC8CFF" font-weight="700">EID 7</text><text x="373" y="237" fill="#A8B5C8">Image Loaded (DLL)</text>
+      <text x="515" y="237" fill="#BC8CFF" font-weight="700">EID 8</text><text x="548" y="237" fill="#A8B5C8">CreateRemoteThread</text>
+
+      <text x="32" y="252" fill="#BC8CFF" font-weight="700">EID 10</text><text x="70" y="252" fill="#A8B5C8">ProcessAccess (LSASS!)</text>
+      <text x="180" y="252" fill="#BC8CFF" font-weight="700">EID 11</text><text x="218" y="252" fill="#A8B5C8">FileCreate</text>
+      <text x="340" y="252" fill="#BC8CFF" font-weight="700">EID 12-14</text><text x="395" y="252" fill="#A8B5C8">Registry CRUD</text>
+      <text x="515" y="252" fill="#BC8CFF" font-weight="700">EID 15</text><text x="553" y="252" fill="#A8B5C8">FileCreateStream (ADS)</text>
+
+      <text x="32" y="267" fill="#BC8CFF" font-weight="700">EID 17/18</text><text x="85" y="267" fill="#A8B5C8">Pipe Create/Connect</text>
+      <text x="180" y="267" fill="#BC8CFF" font-weight="700">EID 19-21</text><text x="235" y="267" fill="#A8B5C8">WMI Event</text>
+      <text x="340" y="267" fill="#BC8CFF" font-weight="700">EID 22</text><text x="378" y="267" fill="#A8B5C8">DNS Query</text>
+      <text x="515" y="267" fill="#BC8CFF" font-weight="700">EID 23</text><text x="553" y="267" fill="#A8B5C8">FileDelete (archived)</text>
+
+      <text x="32" y="282" fill="#BC8CFF" font-weight="700">EID 25</text><text x="70" y="282" fill="#A8B5C8">Process Tampering</text>
+      <text x="180" y="282" fill="#BC8CFF" font-weight="700">EID 26</text><text x="218" y="282" fill="#A8B5C8">FileDelete</text>
+      <text x="340" y="282" fill="#BC8CFF" font-weight="700">EID 27</text><text x="378" y="282" fill="#A8B5C8">Block Executable</text>
+      <text x="515" y="282" fill="#BC8CFF" font-weight="700">EID 29</text><text x="553" y="282" fill="#A8B5C8">FileExecutableDetected</text>
+
+      <text x="360" y="298" text-anchor="middle" fill="#6A80A8">+ EID 2 (Process Changed File Time/timestomping) · EID 4-6 (config/state) · EID 24 (Clipboard)</text>
+    </g>
+
+    <line x1="360" y1="305" x2="360" y2="325" stroke="#00E5CC" stroke-width="1.5" marker-end="url(#arr-sm)"/>
+
+    <!-- Output destinations -->
+    <rect x="20" y="325" width="220" height="48" rx="6" fill="rgba(48,232,138,.1)" stroke="#30E88A" stroke-width="1.3"/>
+    <text x="130" y="343" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="800" fill="#30E88A">💾 Local Event Log</text>
+    <text x="130" y="357" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">Microsoft-Windows-Sysmon/Operational</text>
+    <text x="130" y="367" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6" fill="#6A80A8">.evtx · ~1 MB / heure (filtered)</text>
+
+    <rect x="250" y="325" width="220" height="48" rx="6" fill="rgba(0,229,204,.1)" stroke="#00E5CC" stroke-width="1.3"/>
+    <text x="360" y="343" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="800" fill="#00E5CC">📡 Windows Event Forwarding</text>
+    <text x="360" y="357" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">WEF/WEC subscription manager</text>
+    <text x="360" y="367" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6" fill="#6A80A8">push vs pull mode</text>
+
+    <rect x="480" y="325" width="220" height="48" rx="6" fill="rgba(255,64,96,.1)" stroke="#FF4060" stroke-width="1.3"/>
+    <text x="590" y="343" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="800" fill="#FF4060">🌐 SIEM</text>
+    <text x="590" y="357" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#A8B5C8">Splunk · Sentinel · Elastic · Wazuh</text>
+    <text x="590" y="367" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="6" fill="#6A80A8">corrélation + alerting</text>
+  </svg>
+  <div class="schema-legend">
+    <div class="lg-item"><span class="lg-dot" style="background:#FF4060"></span>Kernel hooks</div>
+    <div class="lg-item"><span class="lg-dot" style="background:#00E5CC"></span>Service Sysmon</div>
+    <div class="lg-item"><span class="lg-dot" style="background:#F0C040"></span>Configuration XML</div>
+    <div class="lg-item"><span class="lg-dot" style="background:#BC8CFF"></span>29 Event IDs</div>
+    <div class="lg-item"><span class="lg-dot" style="background:#30E88A"></span>Sortie & forwarding</div>
+  </div>
+</div>
+
 
 <div class="sec-title">Architecture — pile et flux d'événements</div>
 <div class="sec-sub">Sysmon hook le kernel via un driver, observe les API Windows, applique le filtrage XML, écrit dans le canal EVTX dédié.</div>
@@ -467,7 +574,7 @@ Get-Service Sysmon64   # service tournant</pre>
   <div class="memo-card">
     <div class="memo-card-title">⑥ Burst de FileCreate (ransomware)</div>
     <div style="font-size:.82rem;margin-top:.3rem">
-      <strong>EID 11</strong> &gt; 100 par seconde par même <code>ProcessGuid</code>, ou extensions cibles : <code>.locked</code>, <code>.encrypted</code>, <code>.locky</code>, <code>.<random8></code>.
+      <strong>EID 11</strong> &gt; 100 par seconde par même <code>ProcessGuid</code>, ou extensions cibles : <code>.locked</code>, <code>.encrypted</code>, <code>.locky</code>, <code>.&lt;random8&gt;</code>.
       <br><strong>ATT&amp;CK :</strong> T1486
     </div>
   </div>
