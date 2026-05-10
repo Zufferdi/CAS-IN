@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NTFS B+ Tree — CAS-IN Forensique</title>
+<meta name="description" content="$INDEX_ROOT · $INDEX_ALLOCATION · INDX · $I30 · Fixup · Slack des nœuds · Suppressions résiduelles">
+<meta name="theme-color" content="#0d1117">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+</head>
+<body>
+<div id="cas-navbar" data-page="fiches"></div>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">SYSTÈMES DE FICHIERS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesdefichiers">Systèmes de Fichiers</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">NTFS B+ Tree</span>
+  </div>
+</div>
+
+<div class="page" style="padding-bottom:.5rem">
+  <div class="header">
+    <div class="badge">🌳 NTFS · Index B+ Trees</div>
+    <h1>NTFS — Arbres B+ ($I30, INDX records)</h1>
+    <p style="font-size:.85rem;color:var(--muted);margin-top:.35rem;max-width:780px">
+      $INDEX_ROOT, $INDEX_ALLOCATION, $BITMAP, INDX records, fixup multisector, slack des nœuds —
+      pourquoi un répertoire NTFS est un arbre B+ et pourquoi les fichiers supprimés survivent
+      souvent dans les nœuds non réorganisés.
+    </p>
+  </div>
+</div>
+
+<div class="page">
+
+<div class="prereq-block">
+  <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="ntfs.html" class="prereq-pill">📖 NTFS (MFT, attributs)</a><a href="encodage.html" class="prereq-pill">📖 Encodage / Endianness</a></div>
+  <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="hfs_btree.html" class="related-pill">🔗 B-Trees HFS+</a><a href="apfs.html" class="related-pill">🔗 B-Trees APFS</a><a href="mac_times.html" class="related-pill">🔗 MAC Times</a><a href="timestamps_fs.html" class="related-pill">🔗 Timestamps FS</a></div>
+</div>
+
+<div class="warning-box">
+  <strong>⚠️ Little Endian + Fixup multisector !</strong> Toutes les valeurs multi-octets sont en <strong>Little Endian</strong>.
+  Avant toute lecture brute d'un nœud INDX (ou d'une entrée MFT), il faut <strong>appliquer le fixup</strong> :
+  les 2 derniers octets de chaque secteur de 512 octets ont été remplacés par 2 octets de l'Update Sequence Array.
+  Sans fixup, la fin de chaque secteur paraîtra corrompue.
+</div>
+
+<div class="sec-title">🔑 Pourquoi un B+ Tree pour les répertoires ?</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>📐 Le problème NTFS</h3>
+    <p>Une partition NTFS moderne peut contenir <strong>des dizaines de millions</strong> d'entrées. Lister un dossier de 100 000 fichiers via une liste linéaire (FAT) imposerait O(n) à chaque accès. NTFS utilise un <strong>arbre B+</strong> trié par nom (ordre de tri Unicode défini dans <code>$UpCase</code>).</p>
+    <ul>
+      <li>Hauteur typique &lt; <strong>3–4 niveaux</strong> même pour des millions de fichiers</li>
+      <li>Recherche / insertion / suppression : <strong>O(log n)</strong></li>
+      <li>Tri stable : énumération en ordre alphabétique gratuite</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>🌳 B+ Tree (vs B-Tree)</h3>
+    <p>Microsoft documente "B-Tree" dans la spec NTFS, mais l'implémentation est en réalité un <strong>B+ Tree</strong> :</p>
+    <ul>
+      <li><strong>Toutes les données utiles sont dans les feuilles</strong> (entrées de fichiers complètes)</li>
+      <li>Les nœuds internes ne contiennent que des <em>clés de routage</em> + VCN du nœud enfant</li>
+      <li>Pas de chaînage horizontal entre feuilles (contrairement aux B+ classiques)</li>
+      <li>Variante propriétaire — plus simple à parser que les vrais B+ databases</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title">📦 Trois attributs, un seul arbre</div>
+<div class="sec-sub">Un index NTFS combine 2 ou 3 attributs au sein d'une même entrée MFT. Pour un répertoire, le triplet est <code>$INDEX_ROOT</code> + <code>$INDEX_ALLOCATION</code> + <code>$BITMAP</code>, tous portant le nom de stream <code>$I30</code>.</div>
+
+<table>
+  <thead>
+    <tr><th>Attribut</th><th>Type</th><th>Résident&nbsp;?</th><th>Rôle dans l'arbre</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="h h-cyan">0x90</td>
+      <td><strong>$INDEX_ROOT</strong></td>
+      <td>Toujours résident</td>
+      <td>Petit répertoire entier, OU racine de l'arbre + premier niveau d'index. Tient dans l'entrée MFT (1 Ko).</td>
+    </tr>
+    <tr>
+      <td class="h h-purple">0xA0</td>
+      <td><strong>$INDEX_ALLOCATION</strong></td>
+      <td>Toujours non-résident</td>
+      <td>Stocke les <em>nœuds INDX</em> (4 Ko chacun) en clusters séparés via Run List. N'apparaît que si le dossier dépasse $INDEX_ROOT.</td>
+    </tr>
+    <tr>
+      <td class="h h-gold">0xB0</td>
+      <td><strong>$BITMAP</strong></td>
+      <td>Souvent résident</td>
+      <td>1 bit par INDX block dans $INDEX_ALLOCATION : 1 = en usage, 0 = libre. Permet la réutilisation des nœuds.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="tip-box">
+  <strong>💡 Le mystère du nom <code>$I30</code> :</strong> tous les attributs d'index <em>de répertoires</em> portent ce nom de stream.
+  Convention héritée du driver NTFS : <code>$I</code> = Index, <code>30</code> = type d'attribut indexé en hexadécimal,
+  c'est-à-dire <code>0x30 = $FILE_NAME</code>. L'index de répertoire est donc « l'index sur les attributs $FILE_NAME ».
+</div>
+
+<div class="sec-title">🧬 Anatomie d'un nœud INDX (taille typique : 4096 octets)</div>
+<div class="sec-sub">Un nœud non-résident dans <code>$INDEX_ALLOCATION</code> est appelé <strong>INDX record</strong>. Sa taille fixe est définie dans $INDEX_ROOT (toujours 4 Ko sur Windows moderne).</div>
+
+<table>
+  <thead>
+    <tr><th>Offset</th><th>Taille</th><th>Champ</th><th>Notes forensiques</th></tr>
+  </thead>
+  <tbody>
+    <tr style="background:rgba(0,229,204,.06)"><td colspan="4" style="font-family:var(--mono);font-size:.7rem;color:var(--cyan);font-weight:700">━━━ ① Header standard NTFS_RECORD (40 octets) ━━━</td></tr>
+    <tr><td class="h h-cyan">0x00</td><td>4 octets</td><td><strong>Magic</strong></td><td><code>49 4E 44 58</code> = ASCII <code>"INDX"</code>. Si absent → secteur orphelin / corrompu / non-INDX.</td></tr>
+    <tr><td class="h h-cyan">0x04</td><td>2 octets</td><td>Update Seq. Offset</td><td>Position de l'Update Sequence Array (typique : <code>0x28</code>).</td></tr>
+    <tr><td class="h h-cyan">0x06</td><td>2 octets</td><td>Update Seq. Size</td><td>Nombre de mots dans l'USA (1 + secteurs/bloc). Pour 4 Ko / secteurs 512 → 9.</td></tr>
+    <tr><td class="h h-cyan">0x08</td><td>8 octets</td><td>$LogFile Sequence Number (LSN)</td><td>Lien vers la dernière transaction $LogFile ayant modifié ce nœud.</td></tr>
+    <tr><td class="h h-cyan">0x10</td><td>8 octets</td><td><strong>VCN</strong> du nœud</td><td>Virtual Cluster Number du nœud lui-même dans $INDEX_ALLOCATION. Permet de savoir où on est sans état externe.</td></tr>
+    <tr style="background:rgba(240,192,64,.05)"><td colspan="4" style="font-family:var(--mono);font-size:.7rem;color:var(--gold);font-weight:700">━━━ ② Index Header (en-tête de la zone d'entrées) ━━━</td></tr>
+    <tr><td class="h h-gold">0x18</td><td>4 octets</td><td>FirstEntryOffset</td><td>Offset (relatif à 0x18) de la première entrée d'index. Typique : <code>0x28</code>.</td></tr>
+    <tr><td class="h h-gold">0x1C</td><td>4 octets</td><td>TotalEntriesSize</td><td>Taille des entrées <em>allouées</em> (vivantes).</td></tr>
+    <tr><td class="h h-gold">0x20</td><td>4 octets</td><td>AllocatedEntriesSize</td><td>Taille totale disponible (généralement 4040 = 4096 − 40 − 16).</td></tr>
+    <tr><td class="h h-gold">0x24</td><td>1 octet</td><td><strong>Flags</strong></td><td><code>0x00</code> = nœud feuille · <code>0x01</code> = nœud index (a des fils).</td></tr>
+    <tr><td class="h h-gold">0x25</td><td>3 octets</td><td>Padding</td><td>Aligné sur 8 octets.</td></tr>
+    <tr style="background:rgba(48,232,138,.05)"><td colspan="4" style="font-family:var(--mono);font-size:.7rem;color:var(--green);font-weight:700">━━━ ③ Entrées d'index (taille variable) ━━━</td></tr>
+    <tr><td class="h h-green">0x28+</td><td>variable</td><td><strong>Index Entries</strong></td><td>Suite d'entrées triées par nom Unicode (ordre <code>$UpCase</code>). La <strong>dernière</strong> est l'entrée <em>end marker</em> (flag 0x02).</td></tr>
+    <tr style="background:rgba(245,80,80,.05)"><td colspan="4" style="font-family:var(--mono);font-size:.7rem;color:var(--red);font-weight:700">━━━ ④ Slack & Update Sequence Array (en fin de nœud) ━━━</td></tr>
+    <tr><td class="h h-red">…</td><td>variable</td><td><strong>Slack space</strong></td><td>Zone entre <code>TotalEntriesSize</code> et <code>AllocatedEntriesSize</code>. <strong>Mine d'entrées supprimées non écrasées.</strong></td></tr>
+    <tr><td class="h h-red">fin</td><td>~16 octets</td><td>Update Seq. Array</td><td>USA : avant l'écriture, les 2 derniers octets de chaque secteur 512 sont remplacés par cette valeur. À restaurer avant parsing.</td></tr>
+  </tbody>
+</table>
+
+<div class="formula">Taille slack = AllocatedEntriesSize − TotalEntriesSize → ce delta est exactement la zone à carver pour entrées « tombstone »</div>
+
+<div class="sec-title">🧱 Anatomie d'une entrée d'index (Index Entry)</div>
+<div class="sec-sub">Pour un répertoire, chaque entrée embarque une copie quasi-complète de l'attribut $FILE_NAME du fichier indexé. C'est ce qui rend les nœuds INDX si précieux en forensique : timestamps + nom + parent y sont stockés <em>indépendamment</em> de la MFT.</div>
+
+<table>
+  <thead>
+    <tr><th>Offset</th><th>Taille</th><th>Champ</th><th>Notes forensiques</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="h h-blue">0x00</td><td>8 octets</td><td><strong>MFT Reference</strong></td><td>6 octets MFT entry # + 2 octets sequence #. Pointe vers l'entrée MFT du fichier. Si l'entrée MFT a été réutilisée, le sequence # diffère → indicateur de fichier supprimé.</td></tr>
+    <tr><td class="h h-blue">0x08</td><td>2 octets</td><td>EntrySize</td><td>Taille totale de cette entrée d'index.</td></tr>
+    <tr><td class="h h-blue">0x0A</td><td>2 octets</td><td>StreamSize</td><td>Taille du <em>stream</em> qui suit (ici : taille de l'attribut $FILE_NAME embarqué).</td></tr>
+    <tr><td class="h h-gold">0x0C</td><td>4 octets</td><td><strong>Flags</strong></td><td><code>0x01</code> = a un sous-nœud (VCN à la fin) · <code>0x02</code> = <em>end marker</em> · <code>0x03</code> = les deux.</td></tr>
+    <tr style="background:rgba(48,232,138,.05)"><td colspan="4" style="font-family:var(--mono);font-size:.7rem;color:var(--green);font-weight:700">━━━ Stream embarqué — copie de $FILE_NAME ($FN, type 0x30) ━━━</td></tr>
+    <tr><td class="h h-green">0x10</td><td>8 octets</td><td><strong>Parent MFT Ref.</strong></td><td>Référence MFT du dossier parent. <strong>Forensique : remonter l'arborescence d'un fichier supprimé.</strong></td></tr>
+    <tr><td class="h h-green">0x18</td><td>8 octets</td><td>Created ($FN)</td><td>FILETIME 100 ns (UTC depuis 1601-01-01).</td></tr>
+    <tr><td class="h h-green">0x20</td><td>8 octets</td><td>Modified ($FN)</td><td>Idem.</td></tr>
+    <tr><td class="h h-green">0x28</td><td>8 octets</td><td>MFT Modified ($FN)</td><td>Idem.</td></tr>
+    <tr><td class="h h-green">0x30</td><td>8 octets</td><td>Accessed ($FN)</td><td>Idem.</td></tr>
+    <tr><td class="h h-cyan">0x38</td><td>8 octets</td><td>Allocated Size</td><td>Taille allouée du fichier sur disque (multiple de cluster).</td></tr>
+    <tr><td class="h h-cyan">0x40</td><td>8 octets</td><td>Real Size</td><td>Taille logique (octets utiles).</td></tr>
+    <tr><td class="h h-cyan">0x48</td><td>4 octets</td><td>Flags fichier</td><td>Read-only, hidden, system, archive, compressed, encrypted, sparse, …</td></tr>
+    <tr><td class="h h-cyan">0x4C</td><td>4 octets</td><td>EA / Reparse</td><td>Si reparse point : tag du reparse.</td></tr>
+    <tr><td class="h h-purple">0x50</td><td>1 octet</td><td><strong>NameLength</strong></td><td>Longueur du nom en <em>caractères UTF-16</em> (donc 2 × octets).</td></tr>
+    <tr><td class="h h-purple">0x51</td><td>1 octet</td><td><strong>NameSpace</strong></td><td><code>0</code>=POSIX · <code>1</code>=Win32 (long) · <code>2</code>=DOS (8.3) · <code>3</code>=Win32+DOS combiné.</td></tr>
+    <tr><td class="h h-purple">0x52</td><td>2N octets</td><td><strong>FileName</strong></td><td>UTF-16 LE. Pas de null terminator. Aligné sur 8.</td></tr>
+    <tr><td class="h h-orange">fin</td><td>8 octets</td><td>SubNodeVCN</td><td>Présent SI flag 0x01 : VCN du nœud enfant dans $INDEX_ALLOCATION.</td></tr>
+  </tbody>
+</table>
+
+<div class="formula">Hex repère pour scanner un disque : <code>49 4E 44 58 28 00 09 00</code> → début typique d'un INDX record (4 Ko, secteurs 512)</div>
+
+<div class="sec-title">🧮 Comment parcourir un répertoire pas à pas</div>
+
+<div class="card">
+  <h3>🎯 Algorithme de lecture (Sleuth Kit / X-Ways font ça pour vous)</h3>
+  <ol style="list-style:none;padding-left:0">
+    <li style="padding:.35rem 0"><strong style="color:var(--cyan)">1.</strong> Lire l'entrée MFT du dossier → trouver <code>$INDEX_ROOT ($I30)</code>.</li>
+    <li style="padding:.35rem 0"><strong style="color:var(--cyan)">2.</strong> Si flag racine = 0x00 (feuille) : toutes les entrées sont là, <strong>pas</strong> de $INDEX_ALLOCATION. Petit dossier, fini.</li>
+    <li style="padding:.35rem 0"><strong style="color:var(--cyan)">3.</strong> Si flag racine = 0x01 : suivre le SubNodeVCN de chaque entrée d'index → lire le bloc INDX correspondant dans $INDEX_ALLOCATION.</li>
+    <li style="padding:.35rem 0"><strong style="color:var(--cyan)">4.</strong> Pour chaque INDX lu : appliquer le <strong>fixup</strong>, vérifier la signature, parser les entrées.</li>
+    <li style="padding:.35rem 0"><strong style="color:var(--cyan)">5.</strong> Récursion : si une entrée a flag 0x01, descendre encore.</li>
+    <li style="padding:.35rem 0"><strong style="color:var(--cyan)">6.</strong> Arrêt sur entrée flag 0x02 (end marker) — typiquement une entrée vide qui pointe vers le dernier sous-nœud.</li>
+  </ol>
+</div>
+
+<div class="warning-box">
+  <strong>⚠️ Fixup obligatoire avant parsing :</strong>
+  pour un nœud de 4096 octets sur des secteurs de 512 octets, il y a 8 secteurs.
+  Avant écriture, NTFS sauvegarde les 8 « derniers 2 octets » de chaque secteur dans l'Update Sequence Array,
+  puis les remplace par la même valeur USN (Update Sequence Number).
+  À la lecture : si les 8 valeurs ne sont pas toutes égales à l'USN attendu → écriture interrompue (crash) → nœud potentiellement incohérent.
+</div>
+
+<div class="sec-title">🪦 Le trésor forensique : entrées tombstone</div>
+<div class="sec-sub">C'est <em>la</em> raison de comprendre les B+ trees NTFS : les entrées supprimées peuvent rester dans la zone slack des nœuds tant que ceux-ci ne sont pas réorganisés.</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>🔄 Que se passe-t-il à la suppression ?</h3>
+    <ol style="list-style:none;padding-left:0">
+      <li style="padding:.25rem 0"><strong style="color:var(--purple)">1.</strong> L'entrée d'index est <em>retirée</em> du flux logique (TotalEntriesSize diminue).</li>
+      <li style="padding:.25rem 0"><strong style="color:var(--purple)">2.</strong> L'entrée elle-même n'est <strong>pas effacée</strong> — elle se retrouve dans la zone slack du nœud.</li>
+      <li style="padding:.25rem 0"><strong style="color:var(--purple)">3.</strong> Le bit dans $BITMAP du nœud reste à 1 (le nœud est toujours utilisé pour les autres entrées).</li>
+      <li style="padding:.25rem 0"><strong style="color:var(--purple)">4.</strong> Tant que le nœud n'est pas <em>compacté</em> ni <em>réorganisé</em> par une réécriture, les bytes anciens persistent.</li>
+    </ol>
+  </div>
+  <div class="card">
+    <h3>🔬 Ce qu'on récupère</h3>
+    <ul>
+      <li><strong>Nom de fichier complet</strong> (UTF-16) — long et 8.3</li>
+      <li>Référence MFT (entry# + seq#) → cibler l'entrée MFT, même si réutilisée</li>
+      <li>Référence MFT du parent → reconstruction du chemin</li>
+      <li>4 timestamps $FN (créé, modifié, MFT-modifié, accédé)</li>
+      <li>Tailles allouée et logique du fichier</li>
+      <li>Flags système / archive / compressé</li>
+    </ul>
+    <p style="margin-top:.5rem"><strong>Tout cela sans avoir touché à la Data Area.</strong></p>
+  </div>
+</div>
+
+<div class="tip-box">
+  <strong>💡 Comparaison avec les entrées MFT supprimées :</strong>
+  une entrée MFT marquée libre (Flags 0x00) sera réutilisée tôt ou tard pour un nouveau fichier — elle peut donc disparaître.
+  Une entrée d'index tombstone, elle, ne survit que jusqu'à la prochaine réécriture du nœud INDX qui la contient — souvent <strong>plus longtemps</strong>
+  car les nœuds B+ peu sollicités sont rarement réorganisés. Croiser les deux sources est la clé.
+</div>
+
+<div class="sec-title">🗃 Les autres B+ trees NTFS (au-delà de $I30)</div>
+<div class="sec-sub">$I30 indexe les répertoires, mais NTFS utilise le même format INDX pour <strong>tous ses index internes</strong>.</div>
+
+<table>
+  <thead>
+    <tr><th>Stream</th><th>Métafichier</th><th>Indexé par</th><th>Rôle forensique</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="h h-cyan"><code>$I30</code></td>
+      <td>Répertoires (toute entrée MFT directory)</td>
+      <td>Nom de fichier ($FN)</td>
+      <td>Entrées tombstone : noms supprimés</td>
+    </tr>
+    <tr>
+      <td class="h h-purple"><code>$SDH</code></td>
+      <td><code>$Secure</code></td>
+      <td>Hash + Security ID</td>
+      <td>Recherche d'un descripteur de sécurité par hash</td>
+    </tr>
+    <tr>
+      <td class="h h-purple"><code>$SII</code></td>
+      <td><code>$Secure</code></td>
+      <td>Security ID</td>
+      <td>Reconstitution des permissions historiques</td>
+    </tr>
+    <tr>
+      <td class="h h-gold"><code>$O</code></td>
+      <td><code>$ObjId</code></td>
+      <td>Object ID (GUID)</td>
+      <td>Suivi inter-volume des fichiers (LNK, raccourcis)</td>
+    </tr>
+    <tr>
+      <td class="h h-gold"><code>$O</code></td>
+      <td><code>$Quota</code></td>
+      <td>Owner ID</td>
+      <td>Audit consommation par utilisateur</td>
+    </tr>
+    <tr>
+      <td class="h h-orange"><code>$Q</code></td>
+      <td><code>$Quota</code></td>
+      <td>Owner ID → quota info</td>
+      <td>Limite par utilisateur — qui a uploadé combien</td>
+    </tr>
+    <tr>
+      <td class="h h-orange"><code>$R</code></td>
+      <td><code>$Reparse</code></td>
+      <td>Reparse Tag + MFT Ref</td>
+      <td>Junctions, symbolic links, OneDrive, dedup</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="sec-title">🛠 Outils d'analyse</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>🆓 Open source / gratuit</h3>
+    <ul>
+      <li><strong>INDXParse</strong> (Willi Ballenthin) — Python, scan disque entier pour INDX orphelins, extraction tombstones</li>
+      <li><strong>MFTECmd</strong> (Eric Zimmerman) — extrait <code>$I30</code> avec <code>--ds (--dirEnum)</code></li>
+      <li><strong>Sleuth Kit</strong> — <code>fls</code> avec option <code>-r</code> traverse les B+ trees, <code>istat</code> sur entrée MFT répertoire montre $INDEX_ROOT</li>
+      <li><strong>analyzeMFT</strong> — parser MFT incluant attributs 0x90/0xA0</li>
+      <li><strong>indxparse + bulk_extractor</strong> en chaîne : carving brut → reconstruction logique</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>💼 Commerciaux</h3>
+    <ul>
+      <li><strong>X-Ways Forensics</strong> — onglet "FILE_NAME entries (slack)" exhibe automatiquement les tombstones</li>
+      <li><strong>EnCase</strong> — EnScript "INDX Slack" pour extraction</li>
+      <li><strong>Magnet AXIOM / FTK</strong> — parsing transparent, intégré aux artefacts Windows</li>
+      <li><strong>WinHex</strong> — éditeur hex avec template "NTFS INDX record"</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title">💻 Commandes essentielles</div>
+
+<pre><code><span style="color:var(--dim)"># MFTECmd — extraire toutes les entrées d'index ($I30 + slack)</span>
+<span style="color:var(--orange)">MFTECmd.exe</span> -f "C:\Image\$MFT" --csv "C:\Out" --csvf mft.csv --de 1234
+
+<span style="color:var(--dim)"># Sleuth Kit — lister un répertoire NTFS récursivement (suit les B+ trees)</span>
+<span style="color:var(--orange)">fls</span> -r -p -f ntfs image.dd
+
+<span style="color:var(--dim)"># INDXParse — carver tout le disque pour blocs INDX orphelins</span>
+<span style="color:var(--orange)">python</span> INDXParse.py -d image.dd -o tombstones.csv
+
+<span style="color:var(--dim)"># INDXParse — extraire un INDX record d'un offset connu</span>
+<span style="color:var(--orange)">python</span> INDXParse.py -t 4096 image.dd
+
+<span style="color:var(--dim)"># Identifier la signature INDX dans un dump hex</span>
+<span style="color:var(--orange)">xxd</span> image.dd | grep -i "494e 4458"     <span style="color:var(--dim)"># INDX en LE</span>
+
+<span style="color:var(--dim)"># icat — extraire l'attribut $INDEX_ROOT d'une entrée MFT</span>
+<span style="color:var(--orange)">icat</span> -f ntfs image.dd 1234-144-1     <span style="color:var(--dim)"># 144 = 0x90 = $INDEX_ROOT</span>
+<span style="color:var(--orange)">icat</span> -f ntfs image.dd 1234-160-1     <span style="color:var(--dim)"># 160 = 0xA0 = $INDEX_ALLOCATION</span>
+
+<span style="color:var(--dim)"># Repérer le slack d'un nœud INDX (offset trouvé via parser)</span>
+<span style="color:var(--orange)">dd</span> if=image.dd bs=1 skip=$OFFSET count=4096 | xxd -s $TOTAL_ENTRIES_SIZE
+</code></pre>
+
+<div class="sec-title">🎯 Cas pratique — Détecter un fichier supprimé puis re-créé</div>
+
+<div class="card">
+  <h3>🔎 Scénario forensique typique</h3>
+  <p>L'utilisateur a supprimé <code>contrat.docx</code> hier, vidé la corbeille, puis créé aujourd'hui un nouveau fichier <code>contrat.docx</code> au même emplacement.</p>
+  <ol style="list-style:none;padding-left:0;margin-top:.5rem">
+    <li style="padding:.3rem 0"><strong style="color:var(--green)">1.</strong> Dans le slack du nœud INDX du dossier parent : <strong>deux</strong> entrées <code>contrat.docx</code> existent — l'ancienne (tombstone) et la nouvelle (vivante).</li>
+    <li style="padding:.3rem 0"><strong style="color:var(--green)">2.</strong> Les MFT References diffèrent (entry# différent OU même entry# mais sequence# différent).</li>
+    <li style="padding:.3rem 0"><strong style="color:var(--green)">3.</strong> Les timestamps $FN.Created divergent → preuve qu'il s'agit de deux fichiers distincts.</li>
+    <li style="padding:.3rem 0"><strong style="color:var(--green)">4.</strong> Croiser avec <code>$UsnJrnl:$J</code> → confirmation des opérations DELETE puis CREATE.</li>
+    <li style="padding:.3rem 0"><strong style="color:var(--green)">5.</strong> Croiser avec <code>$LogFile</code> → fenêtre récente des écritures dans le nœud INDX.</li>
+  </ol>
+</div>
+
+<div class="tip-box">
+  <strong>💡 Détecter le timestomping via $I30 :</strong>
+  l'entrée MFT a $SI (modifiable) et $FN (protégée).
+  Mais l'entrée d'index dans le nœud INDX du parent embarque <em>aussi</em> une copie des timestamps $FN.
+  Un attaquant qui modifie $SI <strong>et</strong> $FN dans la MFT laisse souvent <strong>la copie INDX intacte</strong> — divergence
+  entre $FN.MFT et $FN.INDX = signature forte de timestomping. Outils : <code>MFTECmd</code> + comparaison $I30 vs $FN.
+</div>
+
+<div class="sec-title">⚠ Pièges et nuances</div>
+
+<div class="card">
+  <ul>
+    <li><strong>Fixup non appliqué</strong> = les 2 derniers octets de chaque secteur 512 paraîtront identiques (la valeur USN). En lecture brute on voit donc des « blancs » réguliers tous les 512 octets — penser à restaurer.</li>
+    <li><strong>Ordre de tri Unicode</strong> : NTFS trie selon <code>$UpCase</code> (table de mapping casse-insensible). Deux noms ne se comparent pas naïvement octet-à-octet.</li>
+    <li><strong>NTFS 3.x sur Windows 10/11</strong> : nœuds INDX souvent 4 Ko. Sur très anciens systèmes (NT 3.51, 4.0), les tailles pouvaient varier (2 Ko).</li>
+    <li><strong>Réorganisation</strong> : <code>chkdsk</code>, défragmentation, opérations massives provoquent une réécriture des nœuds → effacement des tombstones. <strong>L'analyse doit être rapide.</strong></li>
+    <li><strong>Volume Shadow Copies (VSS)</strong> : chaque snapshot fige un état antérieur des nœuds INDX → multiplier les sources de tombstones. <code>vshadowmount</code> + parsing.</li>
+    <li><strong>BitLocker</strong> : tant que le volume n'est pas déchiffré, $INDEX_ROOT et $INDEX_ALLOCATION sont chiffrés — analyse impossible sans la clé.</li>
+    <li><strong>Compression / chiffrement EFS</strong> : le contenu fichier est touché, pas les nœuds INDX du dossier parent. Les noms restent en clair.</li>
+  </ul>
+</div>
+
+<div class="exam-box">
+  <div class="exam-title">🎓 Exam Tip — NTFS B+ Trees</div>
+  <ul style="list-style:none;padding-left:0;margin-top:.5rem">
+    <li style="padding:.2rem 0"><strong>Les 3 attributs d'index :</strong> <code>$INDEX_ROOT</code> (0x90, résident) · <code>$INDEX_ALLOCATION</code> (0xA0, non-résident) · <code>$BITMAP</code> (0xB0)</li>
+    <li style="padding:.2rem 0"><strong>Stream name pour les répertoires :</strong> <code>$I30</code> (= index sur attribut $FILE_NAME 0x30)</li>
+    <li style="padding:.2rem 0"><strong>Signature d'un nœud :</strong> <code>49 4E 44 58</code> = ASCII <code>"INDX"</code></li>
+    <li style="padding:.2rem 0"><strong>Taille typique :</strong> 4096 octets (4 Ko) sur Windows moderne</li>
+    <li style="padding:.2rem 0"><strong>Fixup multisector :</strong> 2 derniers octets de chaque secteur 512 → USA en fin de nœud · à restaurer avant parsing</li>
+    <li style="padding:.2rem 0"><strong>Endianness :</strong> Little Endian partout</li>
+    <li style="padding:.2rem 0"><strong>Trésor forensique :</strong> slack dans la zone <code>AllocatedEntriesSize − TotalEntriesSize</code> = entrées tombstone</li>
+    <li style="padding:.2rem 0"><strong>Chaque entrée d'index embarque :</strong> nom UTF-16, MFT ref + parent MFT ref, 4 timestamps $FN, tailles, flags</li>
+    <li style="padding:.2rem 0"><strong>Détection timestomping :</strong> divergence $FN.MFT vs $FN.INDX (la copie d'index est rarement touchée par l'attaquant)</li>
+    <li style="padding:.2rem 0"><strong>Hauteur de l'arbre :</strong> O(log n), typiquement &lt; 4 niveaux même pour des millions de fichiers</li>
+  </ul>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Quelle est la signature ASCII d'un nœud d'index NTFS et où la trouve-t-on ?<small>Identification INDX · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">Signature <code>"INDX"</code> en ASCII = <code>49 4E 44 58</code> en hex (Little Endian, mais ASCII donc même ordre).<br>Présente aux <strong>4 premiers octets</strong> de chaque nœud dans <code>$INDEX_ALLOCATION</code> (0xA0). Recherchable au <code>grep -P</code> pour identifier des nœuds orphelins dans l'unallocated.</div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Pourquoi un fichier supprimé d'un répertoire NTFS peut-il être <em>plus</em> récupérable que via la MFT seule ?<small>Slack INDX · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">À la suppression, l'entrée MFT est marquée libre (Flags = 0x00) <strong>et</strong> l'entrée d'index est retirée du flux logique. Mais la copie d'index dans le nœud INDX du parent <strong>persiste dans la zone slack</strong> jusqu'à la prochaine réorganisation du nœud — qui peut prendre des semaines.<br>De plus, l'entrée MFT peut être réutilisée pour un nouveau fichier, écrasant ses données ; la copie INDX (nom + parent ref + timestamps $FN + tailles) reste intacte. Croiser MFT-libres + INDX-slack offre donc une fenêtre forensique <strong>plus large</strong>.</div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">L'entrée MFT d'un fichier indique <code>$SI.Created = 2020-01-01</code> et <code>$FN.Created = 2020-01-01</code>. Le nœud INDX du parent contient une entrée pour ce fichier avec <code>Created = 2024-06-15</code>. Quelle est l'interprétation ?<small>Timestomping · Niveau : difficile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">L'attaquant a très probablement <strong>modifié $SI ET $FN dans la MFT</strong> (technique classique : SetMACE, timestomp.exe avec privilèges) pour faire reculer artificiellement la création.<br>Mais la <strong>copie embarquée dans l'entrée d'index $I30</strong> du dossier parent n'est mise à jour que sur opérations de directory (création, renommage, déplacement) — pas par les outils de timestomping classiques. Elle conserve donc la <strong>vraie date</strong> 2024-06-15.<br>Diagnostic : timestomping confirmé. Procédure : extraire l'entrée d'index complète (MFTECmd <code>--de</code>), comparer aux timestamps MFT, documenter la divergence dans le rapport.</div>
+</div>
+
+<div style="margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid var(--border);font-size:.72rem;color:var(--dim);text-align:center">
+  Voir aussi :
+  <a href="ntfs.html" style="color:var(--cyan);text-decoration:none">🗂 NTFS</a> ·
+  <a href="hfs_btree.html" style="color:var(--cyan);text-decoration:none">🌲 B-Trees HFS+</a> ·
+  <a href="apfs.html" style="color:var(--cyan);text-decoration:none">🍏 APFS</a> ·
+  <a href="comparaison_fs.html" style="color:var(--cyan);text-decoration:none">📊 Comparaison FS</a> ·
+  <a href="mac_times.html" style="color:var(--cyan);text-decoration:none">⏱ MAC Times</a>
+</div>
+
+</div>
+
+<span class="fiche-sticker">NTFS · B+ Trees</span>
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/core/cas-in-profile.js" defer></script>
+<script src="../js/core/cas-in-achievements.js" defer></script>
+<script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/profile/celebration-ui.js" defer></script>
+<script src="../js/components/gamification-toasts.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>HFS+ B-Trees — CAS-IN Forensique</title>
+<meta name="description" content="HFS+ · B-Tree Catalog · Extents Overflow · Attributes · Node Descriptor · Header Node · Leaf · Index · BTH Records · CNID Keys · Big Endian">
+<meta name="theme-color" content="#0d1117">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+</head>
+<body>
+<div id="cas-navbar" data-page="fiches"></div>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">SYSTÈMES DE FICHIERS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesdefichiers">Systèmes de Fichiers</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">HFS+ B-Trees</span>
+  </div>
+</div>
+
+<div class="page" style="padding-bottom:.5rem">
+  <div class="header">
+    <div class="badge">🌲 HFS+ · B-Tree Internals</div>
+    <h1>HFS+ — Arbres B-Tree (Catalog, Extents, Attributes)</h1>
+    <p style="font-size:.85rem;color:var(--muted);margin-top:.35rem;max-width:780px">
+      Header Node, leaf et index nodes, clés trois-types, key compare, fork records,
+      Extents Overflow et Attributes File. Comment HFS+ stocke <em>tout</em> dans des B-Trees
+      Big Endian — et pourquoi les nœuds libérés sont une mine pour l'analyse forensique.
+    </p>
+  </div>
+</div>
+
+<div class="page">
+
+<div class="prereq-block">
+  <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="hfs.html" class="prereq-pill">📖 HFS+ (Volume Header, CNID)</a><a href="encodage.html" class="prereq-pill">📖 Endianness</a></div>
+  <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="ntfs_btree.html" class="related-pill">🔗 B+ Trees NTFS</a><a href="apfs.html" class="related-pill">🔗 B-Trees APFS</a><a href="mac_times.html" class="related-pill">🔗 MAC Times</a><a href="macos_forensique.html" class="related-pill">🔗 macOS Forensique</a></div>
+</div>
+
+<div class="warning-box">
+  <strong>⚠️ Big Endian partout !</strong> Contrairement à NTFS / FAT (Little Endian),
+  HFS+ stocke toutes les valeurs multi-octets — y compris dans les nœuds B-Tree —
+  en <strong>Big Endian</strong>. À chaque lecture hex manuelle, inverser l'ordre des octets.
+  X-Ways, Autopsy, hfsinspect et mac_apt convertissent automatiquement.
+</div>
+
+<div class="sec-title">🧭 Vue d'ensemble — HFS+ est <em>fait</em> de B-Trees</div>
+
+<div class="card">
+  <p>Le Volume Header (offset 1024) pointe vers <strong>5 fichiers spéciaux</strong>. <em>Trois</em> d'entre eux sont des B-Trees, et c'est dans ces arbres que vit toute l'organisation logique du volume.</p>
+</div>
+
+<table>
+  <thead>
+    <tr><th>Fichier</th><th>CNID</th><th>Structure</th><th>Contenu</th></tr>
+  </thead>
+  <tbody>
+    <tr style="background:rgba(0,229,204,.06)">
+      <td><strong>Catalog File</strong></td>
+      <td><code>4</code></td>
+      <td>🌲 <strong>B-Tree</strong></td>
+      <td>Arborescence complète : noms, dates, tailles, fork pointers, hiérarchie parent/enfant</td>
+    </tr>
+    <tr style="background:rgba(188,140,255,.06)">
+      <td><strong>Extents Overflow</strong></td>
+      <td><code>3</code></td>
+      <td>🌲 <strong>B-Tree</strong></td>
+      <td>Extents supplémentaires des fichiers très fragmentés (au-delà des 8 premiers)</td>
+    </tr>
+    <tr style="background:rgba(240,192,64,.06)">
+      <td><strong>Attributes File</strong></td>
+      <td><code>8</code></td>
+      <td>🌲 <strong>B-Tree</strong></td>
+      <td>Attributs étendus (xattr), ACL POSIX, Finder Info, quarantine, hard-link refs</td>
+    </tr>
+    <tr style="opacity:.5">
+      <td>Allocation File</td>
+      <td><code>6</code></td>
+      <td>Bitmap (1 bit / bloc)</td>
+      <td>Pas un B-Tree — bitmap d'allocation classique</td>
+    </tr>
+    <tr style="opacity:.5">
+      <td>Startup File</td>
+      <td><code>7</code></td>
+      <td>Données brutes</td>
+      <td>Pas un B-Tree — booting non-Mac (rare)</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="tip-box">
+  <strong>💡 Différence majeure avec APFS :</strong> APFS introduit un <em>Object Map</em> (omap) qui découple object_id et adresse physique, et place les extents directement dans l'arbre principal.
+  HFS+ garde un modèle plus simple : 3 B-Trees parallèles avec des clés différentes, sans indirection.
+  C'est pédagogique mais aussi fragile : un seul B-Tree corrompu peut rendre tout un volume inutilisable.
+</div>
+
+<div class="sec-title">📐 Structure générique d'un B-Tree HFS+</div>
+<div class="sec-sub">Tous les B-Trees HFS+ partagent la même structure : un fichier découpé en <strong>nœuds de taille fixe</strong> (4096 octets typiquement), chaque nœud étant un type parmi quatre.</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>🧱 Nœuds = blocs de taille fixe</h3>
+    <ul>
+      <li>Taille définie dans le <strong>Header Node</strong> (toujours nœud #0 du fichier)</li>
+      <li>Tailles courantes : <code>4096</code> octets (Catalog moderne) · <code>1024</code> ou <code>2048</code> (volumes anciens / Extents)</li>
+      <li>Indexés par numéro 32 bits depuis le début du fichier</li>
+      <li>Chaînés horizontalement via <code>fLink</code> (next) et <code>bLink</code> (previous) au sein du même niveau</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>🎭 Quatre types de nœuds</h3>
+    <ul>
+      <li><strong>Header Node</strong> (kind = <code>0x01</code>) — toujours nœud #0, métadonnées du B-Tree</li>
+      <li><strong>Map Node</strong> (kind = <code>0x02</code>) — bitmap des nœuds libres (extension du header)</li>
+      <li><strong>Index Node</strong> (kind = <code>0x00</code>) — nœud interne, contient des pointeurs vers nœuds enfants</li>
+      <li><strong>Leaf Node</strong> (kind = <code>0xFF</code>, soit -1 signé) — feuille, contient les <em>vrais</em> records</li>
+    </ul>
+  </div>
+</div>
+
+<div class="warning-box">
+  <strong>⚠️ Le piège du <code>kind</code> signé :</strong> dans la spec Apple (<code>hfs_format.h</code>),
+  <code>kind</code> est un <strong>SInt8</strong>. Donc <code>0xFF</code> = <strong>-1</strong> = leaf,
+  et <code>0xFE</code> = <strong>-2</strong> = index dans certaines docs anciennes.
+  Implémentation moderne utilise plus souvent : <code>0x00</code>=index, <code>0x01</code>=header, <code>0x02</code>=map, <code>0xFF</code>=leaf.
+  Toujours valider en croisant avec le <code>height</code> du nœud (0 = leaf).
+</div>
+
+<div class="sec-title">🧬 Layout commun à tous les nœuds : Node Descriptor (14 octets)</div>
+<div class="sec-sub">Chaque nœud commence par cet en-tête fixe de 14 octets, suivi des records puis d'une table d'offsets en fin de nœud.</div>
+
+<table>
+  <thead>
+    <tr><th>Offset</th><th>Taille</th><th>Champ</th><th>Notes forensiques</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="h h-cyan">0x00</td><td>4 octets</td><td><strong>fLink</strong></td><td>Numéro du nœud <em>suivant</em> au même niveau (0 si dernier). Permet le parcours séquentiel des feuilles.</td></tr>
+    <tr><td class="h h-cyan">0x04</td><td>4 octets</td><td><strong>bLink</strong></td><td>Numéro du nœud <em>précédent</em> au même niveau (0 si premier).</td></tr>
+    <tr><td class="h h-gold">0x08</td><td>1 octet</td><td><strong>kind</strong> (SInt8)</td><td><code>0x00</code>=index · <code>0x01</code>=header · <code>0x02</code>=map · <code>0xFF</code>(-1)=leaf</td></tr>
+    <tr><td class="h h-gold">0x09</td><td>1 octet</td><td><strong>height</strong></td><td>Profondeur du nœud : <code>0</code> pour leaf · <code>1</code> au-dessus des leaves · <em>n</em> = racine. Dans le Header Node : 0.</td></tr>
+    <tr><td class="h h-purple">0x0A</td><td>2 octets</td><td><strong>numRecords</strong></td><td>Nombre de records dans ce nœud. <strong>Big Endian</strong>.</td></tr>
+    <tr><td class="h h-orange">0x0C</td><td>2 octets</td><td>reserved</td><td>Padding, doit être 0.</td></tr>
+  </tbody>
+</table>
+
+<div class="formula">Hex repère pour identifier un Header Node : <code>00 00 00 00 00 00 00 00 01 00 00 03</code> (fLink=0, bLink=0, kind=0x01, height=0, numRecords=3 BE)</div>
+
+<div class="sec-title">📑 Layout interne d'un nœud : records + table d'offsets</div>
+
+<div class="card">
+  <p>Après le node descriptor de 14 octets, les records sont stockés <strong>linéairement vers l'avant</strong>. En parallèle, une <strong>table d'offsets</strong> est stockée <strong>en fin de nœud</strong>, croissant <em>vers l'arrière</em>. C'est cette table qui rend la taille des records variable.</p>
+</div>
+
+<pre><code><span style="color:var(--cyan)">┌─────────────────────────────────────────────────────────────────┐</span>
+<span style="color:var(--cyan)">│ Node Descriptor (14 octets)                                     │</span>
+<span style="color:var(--cyan)">├─────────────────────────────────────────────────────────────────┤</span>
+<span style="color:var(--green)">│ Record 0  : key + data (taille variable)                        │</span>  ← grandit vers le bas
+<span style="color:var(--green)">│ Record 1  : key + data                                          │</span>
+<span style="color:var(--green)">│ Record 2  : key + data                                          │</span>
+<span style="color:var(--green)">│ ...                                                             │</span>
+<span style="color:var(--dim)">│                                                                 │</span>
+<span style="color:var(--dim)">│            ← espace libre (free space) ←                        │</span>
+<span style="color:var(--dim)">│                                                                 │</span>
+<span style="color:var(--orange)">│ ...                                                             │</span>
+<span style="color:var(--orange)">│ off[2] : offset du record 2  (2 octets BE)                      │</span>  ← table grandit vers le haut
+<span style="color:var(--orange)">│ off[1] : offset du record 1                                     │</span>
+<span style="color:var(--orange)">│ off[0] : offset du record 0                                     │</span>
+<span style="color:var(--orange)">│ off[free] : offset de la fin des records (= début free space)   │</span>
+<span style="color:var(--cyan)">└─────────────────────────────────────────────────────────────────┘</span>     fin du nœud (offset 4096)
+</code></pre>
+
+<div class="tip-box">
+  <strong>💡 Pourquoi cette double direction ?</strong>
+  Permet d'ajouter / supprimer un record sans déplacer les autres (juste l'offset de la table change).
+  En forensique, c'est aussi pourquoi un record « supprimé » peut subsister : son offset est retiré de la table,
+  mais ses octets restent dans la zone des records jusqu'à la prochaine compaction du nœud.
+</div>
+
+<div class="sec-title">🗂 Le Header Node (nœud #0 de chaque B-Tree)</div>
+<div class="sec-sub">Le tout premier nœud du fichier B-Tree contient les métadonnées de l'arbre lui-même. Il a toujours <code>numRecords = 3</code>.</div>
+
+<table>
+  <thead>
+    <tr><th>Record</th><th>Taille</th><th>Contenu</th><th>Utilité forensique</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="h h-cyan">#0</td><td>106 octets</td><td><strong>BTHeaderRec</strong> (B-Tree Header Record)</td><td>Métadonnées de l'arbre (voir détails ci-dessous)</td></tr>
+    <tr><td class="h h-purple">#1</td><td>128 octets</td><td>UserDataRec</td><td>Réservé Apple, généralement zéros</td></tr>
+    <tr><td class="h h-gold">#2</td><td>variable</td><td><strong>Map Record</strong> (bitmap)</td><td>1 bit par nœud du fichier : 0 = libre, 1 = en usage. <strong>Source clé pour récupération.</strong></td></tr>
+  </tbody>
+</table>
+
+<div class="sec-title">🔬 BTHeaderRec — 106 octets de méta</div>
+
+<table>
+  <thead>
+    <tr><th>Offset</th><th>Taille</th><th>Champ</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="h h-cyan">0x00</td><td>2 octets</td><td>treeDepth</td><td>Hauteur totale de l'arbre. <strong>Typique : 3–4</strong> pour un volume utilisateur.</td></tr>
+    <tr><td class="h h-cyan">0x02</td><td>4 octets</td><td><strong>rootNode</strong></td><td>Numéro du nœud racine. <strong>Point d'entrée pour tout parcours.</strong></td></tr>
+    <tr><td class="h h-cyan">0x06</td><td>4 octets</td><td>leafRecords</td><td>Nombre total de records dans toutes les feuilles = <strong>nombre de fichiers/dossiers/threads</strong> du volume.</td></tr>
+    <tr><td class="h h-purple">0x0A</td><td>4 octets</td><td><strong>firstLeafNode</strong></td><td>Premier nœud feuille (chaîné via fLink). <strong>Énumération séquentielle</strong> de tous les records sans descendre l'arbre.</td></tr>
+    <tr><td class="h h-purple">0x0E</td><td>4 octets</td><td>lastLeafNode</td><td>Dernier nœud feuille.</td></tr>
+    <tr><td class="h h-gold">0x12</td><td>2 octets</td><td><strong>nodeSize</strong></td><td>Taille d'un nœud en octets. <strong>Critique</strong> : sans cette valeur, impossible de localiser les nœuds suivants. Typique : <code>0x1000</code> (4096).</td></tr>
+    <tr><td class="h h-gold">0x14</td><td>2 octets</td><td>maxKeyLength</td><td>Longueur max des clés (516 pour Catalog).</td></tr>
+    <tr><td class="h h-gold">0x16</td><td>4 octets</td><td>totalNodes</td><td>Nombre total de nœuds dans le fichier B-Tree.</td></tr>
+    <tr><td class="h h-orange">0x1A</td><td>4 octets</td><td>freeNodes</td><td><strong>Nombre de nœuds marqués libres</strong> dans le bitmap. <strong>Indicateur d'historique récupérable.</strong></td></tr>
+    <tr><td class="h h-orange">0x1E</td><td>2 octets</td><td>reserved1</td><td>—</td></tr>
+    <tr><td class="h h-cyan">0x20</td><td>4 octets</td><td>clumpSize</td><td>Taille d'allocation par "clump" (préallocation pour limiter la fragmentation).</td></tr>
+    <tr><td class="h h-cyan">0x24</td><td>1 octet</td><td><strong>btreeType</strong></td><td><code>0x00</code> = HFS B-Tree (variable keys) · <code>0xFF</code> = User B-Tree (rare)</td></tr>
+    <tr><td class="h h-cyan">0x25</td><td>1 octet</td><td><strong>keyCompareType</strong></td><td><code>0xCF</code> = case-folding (HFS+) · <code>0xBC</code> = binary compare (HFSX, case-sensitive)</td></tr>
+    <tr><td class="h h-cyan">0x26</td><td>4 octets</td><td>attributes</td><td>Flags : <code>0x02</code>=BadCloseMask · <code>0x04</code>=BigKeysMask · <code>0x08</code>=VariableIndexKeysMask</td></tr>
+    <tr><td class="h h-dim">0x2A</td><td>64 octets</td><td>reserved3</td><td>Padding 16 × UInt32, généralement zéros</td></tr>
+  </tbody>
+</table>
+
+<div class="formula">Pour localiser le nœud N : offset_octets = N × nodeSize → cherche dans le fork data du fichier B-Tree (Catalog/Extents/Attributes), pas dans le volume directement</div>
+
+<div class="sec-title">🌲 B-Tree #1 — Catalog File (CNID 4)</div>
+<div class="sec-sub">Le plus important : il décrit toute la hiérarchie de fichiers et dossiers du volume. C'est ici que vivent les noms, les timestamps, les CNID et les fork pointers.</div>
+
+<div class="card">
+  <h3>🔑 Structure de la clé Catalog (CatalogKey)</h3>
+  <pre style="margin:.5rem 0"><code>┌─────────────┬──────────────┬─────────────────────────────┐
+│ keyLength   │ parentID     │ nodeName (HFSUniStr255)     │
+│ 2 octets    │ 4 octets     │ 2 + 2N octets               │
+│             │ <span style="color:var(--cyan)">CNID parent</span>  │ <span style="color:var(--green)">2 oct length + UTF-16 BE</span>   │
+└─────────────┴──────────────┴─────────────────────────────┘</code></pre>
+  <ul>
+    <li><strong>parentID</strong> = CNID du dossier parent (4 octets BE) → garantit que tous les enfants d'un dossier sont contigus dans l'arbre</li>
+    <li><strong>nodeName</strong> : 2 octets de longueur en caractères Unicode (max 255) + chaîne UTF-16 Big Endian</li>
+    <li>Forme normalisée : <strong>NFD canonique</strong> (Normalization Form D) — les accents sont décomposés. Un fichier <code>café.txt</code> est stocké comme <code>cafe + ́ + .txt</code> (4 + combining acute + 4)</li>
+    <li>Comparaison : selon <code>keyCompareType</code> du Header (case-folded HFS+ ou binary HFSX)</li>
+  </ul>
+</div>
+
+<div class="warning-box">
+  <strong>⚠️ Piège forensique sur les noms unicode :</strong> un fichier nommé <code>café</code> en macOS HFS+ ne se compare pas
+  octet-à-octet avec un fichier <code>café</code> créé en NTFS / APFS / Linux (qui utilisent généralement NFC).
+  Pour matcher des noms entre systèmes, normaliser explicitement (<code>unicodedata.normalize('NFC', name)</code> en Python).
+</div>
+
+<div class="card">
+  <h3>📋 Trois types de records dans le Catalog</h3>
+  <p>Premier champ d'un record : <code>recordType</code> (2 octets BE) qui distingue :</p>
+  <ul>
+    <li><code>0x0001</code> — <strong>Folder Record</strong> (HFSPlusCatalogFolder, 88 octets)</li>
+    <li><code>0x0002</code> — <strong>File Record</strong> (HFSPlusCatalogFile, 248 octets) — c'est ici que vivent les fork pointers !</li>
+    <li><code>0x0003</code> — <strong>Folder Thread Record</strong> (HFSPlusCatalogThread)</li>
+    <li><code>0x0004</code> — <strong>File Thread Record</strong> (HFSPlusCatalogThread)</li>
+  </ul>
+</div>
+
+<div class="sec-title">🔗 Le mécanisme des Thread Records</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>🤔 Pourquoi des "thread records" ?</h3>
+    <p>La clé Catalog est <code>(parentID, nodeName)</code>. Pour <em>descendre</em> du parent vers les enfants, c'est efficace. Mais comment <em>remonter</em> d'un fichier vers son parent à partir de son seul CNID ?</p>
+    <p>Réponse : un <strong>Thread Record</strong> est ajouté avec une clé spéciale <code>(CNID_du_fichier, "")</code> et son contenu donne <code>(parentID, nodeName)</code> du fichier.</p>
+  </div>
+  <div class="card">
+    <h3>💎 Valeur forensique majeure</h3>
+    <ul>
+      <li>Thread record d'un fichier supprimé peut subsister dans une feuille libérée → <strong>retrouver le chemin complet</strong> via le seul CNID</li>
+      <li>Hard links HFS+ utilisent ce mécanisme : le "fichier" pointe vers une entrée dans <code>/.HFS+ Private Directory Data</code></li>
+      <li>Croiser CNID résiduel d'un .lnk macOS (Alias) avec un thread record orphelin → reconstitution d'un fichier renommé/déplacé</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title">📄 Anatomie d'un File Record (248 octets)</div>
+<div class="sec-sub">C'est l'équivalent de l'entrée MFT $FILE_NAME + $STANDARD_INFORMATION + $DATA combinés en une seule structure plate.</div>
+
+<table>
+  <thead>
+    <tr><th>Offset</th><th>Taille</th><th>Champ</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="h h-cyan">0x00</td><td>2 octets</td><td>recordType</td><td><code>0x0002</code> pour fichier</td></tr>
+    <tr><td class="h h-cyan">0x02</td><td>2 octets</td><td>flags</td><td><code>0x0002</code>=ThreadExists · <code>0x0080</code>=HasAttribute · <code>0x0010</code>=HasSecurity</td></tr>
+    <tr><td class="h h-cyan">0x04</td><td>4 octets</td><td>reserved1</td><td>—</td></tr>
+    <tr><td class="h h-purple">0x08</td><td>4 octets</td><td><strong>fileID (CNID)</strong></td><td>Identifiant unique 32 bits — équivalent inode</td></tr>
+    <tr style="background:rgba(48,232,138,.05)"><td colspan="4" style="font-family:var(--mono);font-size:.7rem;color:var(--green);font-weight:700">━━━ Timestamps (HFS+ epoch 1904, 32 bits BE chacun) ━━━</td></tr>
+    <tr><td class="h h-green">0x0C</td><td>4 octets</td><td>createDate</td><td>Création (persistante)</td></tr>
+    <tr><td class="h h-green">0x10</td><td>4 octets</td><td>contentModDate</td><td>Modification du contenu fichier</td></tr>
+    <tr><td class="h h-green">0x14</td><td>4 octets</td><td>attributeModDate</td><td>Modif méta (xattr, perms)</td></tr>
+    <tr><td class="h h-green">0x18</td><td>4 octets</td><td>accessDate</td><td>Dernier accès (peut être désactivé)</td></tr>
+    <tr><td class="h h-green">0x1C</td><td>4 octets</td><td>backupDate</td><td>Dernier backup (Time Machine si activé)</td></tr>
+    <tr style="background:rgba(240,192,64,.05)"><td colspan="4" style="font-family:var(--mono);font-size:.7rem;color:var(--gold);font-weight:700">━━━ Permissions BSD (HFSPlusBSDInfo, 16 octets) ━━━</td></tr>
+    <tr><td class="h h-gold">0x20</td><td>4 octets</td><td>ownerID (UID)</td><td>Propriétaire POSIX</td></tr>
+    <tr><td class="h h-gold">0x24</td><td>4 octets</td><td>groupID (GID)</td><td>Groupe POSIX</td></tr>
+    <tr><td class="h h-gold">0x28</td><td>1 octet</td><td>adminFlags</td><td>Flags root (uchg, restricted)</td></tr>
+    <tr><td class="h h-gold">0x29</td><td>1 octet</td><td>ownerFlags</td><td>Flags user (uimmutable, hidden)</td></tr>
+    <tr><td class="h h-gold">0x2A</td><td>2 octets</td><td>fileMode</td><td>Mode POSIX (rwxrwxrwx + S_IFMT)</td></tr>
+    <tr><td class="h h-gold">0x2C</td><td>4 octets</td><td>special</td><td>iNodeNum (hard link) OU rdev (device)</td></tr>
+    <tr style="background:rgba(188,140,255,.05)"><td colspan="4" style="font-family:var(--mono);font-size:.7rem;color:var(--purple);font-weight:700">━━━ FinderInfo (32 octets) — type/creator + extended ━━━</td></tr>
+    <tr><td class="h h-purple">0x30</td><td>16 octets</td><td>userInfo</td><td>FileType (4) + Creator (4) + flags + position Finder</td></tr>
+    <tr><td class="h h-purple">0x40</td><td>16 octets</td><td>finderInfo</td><td>Extended (label color, …)</td></tr>
+    <tr><td class="h h-cyan">0x50</td><td>4 octets</td><td>textEncoding</td><td>Encoding hint (rare)</td></tr>
+    <tr><td class="h h-cyan">0x54</td><td>4 octets</td><td>reserved2</td><td>—</td></tr>
+    <tr style="background:rgba(245,80,80,.05)"><td colspan="4" style="font-family:var(--mono);font-size:.7rem;color:var(--red);font-weight:700">━━━ Fork data (HFSPlusForkData, 80 octets × 2) ━━━</td></tr>
+    <tr><td class="h h-red">0x58</td><td>80 octets</td><td><strong>dataFork</strong></td><td>Contenu principal : taille logique 8 oct + clumpSize 4 + totalBlocks 4 + 8 extents (8 × 8 oct = 64 oct)</td></tr>
+    <tr><td class="h h-red">0xA8</td><td>80 octets</td><td><strong>resourceFork</strong></td><td>Resource fork (icônes, ressources legacy). Souvent vide sur fichiers modernes.</td></tr>
+  </tbody>
+</table>
+
+<div class="tip-box">
+  <strong>💡 Le mécanisme des "8 extents" :</strong> chaque fork stocke ses 8 premiers extents directement dans le File Record.
+  Si le fichier est plus fragmenté, les extents 9, 10, … vont dans le <strong>Extents Overflow B-Tree</strong>.
+  C'est pourquoi un fichier peu fragmenté n'apparaît jamais dans le second arbre — alors qu'un fichier de log croissant pendant des années y aura des dizaines d'entrées.
+</div>
+
+<div class="sec-title">📑 B-Tree #2 — Extents Overflow File (CNID 3)</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>🔑 Clé Extents (10 octets de payload)</h3>
+    <pre style="margin:.5rem 0"><code>┌──────────┬─────────┬──────┬─────────────┐
+│ keyLen   │forkType │ pad  │ fileID      │ startBlock
+│ 2 oct    │ 1 oct   │ 1    │ 4 oct       │ 4 oct
+└──────────┴─────────┴──────┴─────────────┘</code></pre>
+    <ul>
+      <li><strong>forkType</strong> : <code>0x00</code> = data fork · <code>0xFF</code> = resource fork</li>
+      <li><strong>fileID</strong> : CNID du fichier propriétaire</li>
+      <li><strong>startBlock</strong> : numéro du premier bloc logique du <em>fork</em> couvert par cet extent (au-delà des 8 inline)</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>📊 Record (HFSPlusExtentRecord)</h3>
+    <p>Chaque record contient un tableau de <strong>8 extents</strong> :</p>
+    <pre style="margin:.5rem 0"><code>HFSPlusExtentDescriptor[8]:
+  startBlock (4 oct BE) — premier bloc physique
+  blockCount (4 oct BE) — nombre de blocs
+
+= 8 × 8 = 64 octets par record</code></pre>
+    <p style="margin-top:.5rem">Un record permet donc 8 extents supplémentaires. S'il en faut plus → un autre record avec un <code>startBlock</code> plus élevé.</p>
+  </div>
+</div>
+
+<div class="card">
+  <h3>🔬 Valeur forensique de l'Extents Overflow</h3>
+  <ul>
+    <li><strong>Extents orphelins</strong> dans des nœuds libérés : pointent vers des blocs <em>physiques</em> qui peuvent encore contenir les données fichier supprimé</li>
+    <li>Permet de récupérer <strong>la suite</strong> d'un fichier dont on a déjà les 8 premiers extents via Catalog (cas de très gros fichiers fragmentés)</li>
+    <li>Sleuth Kit, hfsinspect parcourent automatiquement Catalog → Extents Overflow pour reconstruire le fork complet</li>
+  </ul>
+</div>
+
+<div class="sec-title">🏷 B-Tree #3 — Attributes File (CNID 8)</div>
+<div class="sec-sub">Stocke les attributs étendus (xattr) : Finder Info, quarantine (<code>com.apple.quarantine</code>), Spotlight metadata, ACL POSIX. Équivalent fonctionnel de <code>$EA</code> NTFS.</div>
+
+<div class="card">
+  <h3>🔑 Clé Attributes (HFSPlusAttrKey)</h3>
+  <pre style="margin:.5rem 0"><code>┌──────────┬──────┬──────────┬──────────────┬───────────────────────┐
+│ keyLen   │ pad  │ fileID   │ startBlock   │ attrName UTF-16 BE    │
+│ 2 oct    │ 2    │ 4 oct    │ 4 oct        │ 2 + 2N oct            │
+└──────────┴──────┴──────────┴──────────────┴───────────────────────┘</code></pre>
+  <ul>
+    <li><strong>fileID</strong> : CNID du fichier auquel l'attribut est rattaché</li>
+    <li><strong>startBlock</strong> : pour attributs trop gros stockés en plusieurs blocs (rare en pratique)</li>
+    <li><strong>attrName</strong> : ASCII converti en UTF-16 BE — exemples : <code>com.apple.FinderInfo</code>, <code>com.apple.quarantine</code>, <code>com.apple.metadata:_kMDItemUserTags</code></li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>📦 Trois formats de record</h3>
+  <ul>
+    <li><strong>Inline data</strong> (<code>kHFSPlusAttrInlineData = 0x10</code>) : la valeur est stockée dans le record (≤ ~3800 octets typique)</li>
+    <li><strong>Fork data</strong> (<code>0x20</code>) : pour valeurs &gt; nodeSize, stockées dans des blocs avec un fork descriptor</li>
+    <li><strong>Extents</strong> (<code>0x30</code>) : suite d'extents si la valeur dépasse 8 extents</li>
+  </ul>
+</div>
+
+<div class="tip-box">
+  <strong>💡 Forensique des xattr :</strong>
+  <ul style="margin-top:.4rem">
+    <li><code>com.apple.quarantine</code> → preuve qu'un fichier a été <strong>téléchargé depuis Internet</strong>. Format : <code>flags;timestamp_hex;agent;UUID</code>. Permet de remonter le navigateur, l'horodatage et un identifiant unique de la session.</li>
+    <li><code>com.apple.metadata:kMDItemWhereFroms</code> → URL source (Safari, Chrome, AirDrop)</li>
+    <li><code>com.apple.macl</code> → ACL TCC pour permissions caméra/micro/disque (macOS 10.14+)</li>
+    <li>Ces attributs survivent à la copie sur volume HFS+, sont perdus sur FAT/NTFS sauf via AppleDouble (<code>._fichier</code>)</li>
+  </ul>
+</div>
+
+<div class="sec-title">🪦 Récupération forensique : nœuds libérés</div>
+
+<div class="card">
+  <h3>🔄 Que se passe-t-il à la suppression d'un fichier ?</h3>
+  <ol style="list-style:none;padding-left:0;margin-top:.4rem">
+    <li style="padding:.3rem 0"><strong style="color:var(--purple)">1.</strong> File Record retiré du Catalog → décrémentation de <code>numRecords</code> dans le nœud, suppression de l'offset dans la table.</li>
+    <li style="padding:.3rem 0"><strong style="color:var(--purple)">2.</strong> Si le nœud devient vide → marqué libre dans le bitmap du Header Node (<code>freeNodes++</code>).</li>
+    <li style="padding:.3rem 0"><strong style="color:var(--purple)">3.</strong> Le contenu binaire du nœud <strong>n'est pas écrasé</strong> tant qu'il n'est pas réutilisé par un nouveau record.</li>
+    <li style="padding:.3rem 0"><strong style="color:var(--purple)">4.</strong> Les blocs de données du fork sont marqués libres dans l'<strong>Allocation File</strong> (bitmap) — pas effacés.</li>
+    <li style="padding:.3rem 0"><strong style="color:var(--purple)">5.</strong> Le journal HFS+ (<code>.journal</code>, ~8–64 Mo circulaire) peut conserver une trace récente de l'opération.</li>
+  </ol>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>🔨 Stratégie de carving B-Tree</h3>
+    <ol style="list-style:none;padding-left:0">
+      <li style="padding:.2rem 0"><strong>1.</strong> Lire le Header Node du Catalog → obtenir <code>nodeSize</code></li>
+      <li style="padding:.2rem 0"><strong>2.</strong> Lire le bitmap (record #2) → liste des nœuds <em>libres</em></li>
+      <li style="padding:.2rem 0"><strong>3.</strong> Pour chaque nœud libre : parser quand même les records orphelins</li>
+      <li style="padding:.2rem 0"><strong>4.</strong> Pour chaque nœud actif : parser le slack (entre fin records et table d'offsets)</li>
+      <li style="padding:.2rem 0"><strong>5.</strong> Reconstruire les chaînes parent via Thread Records orphelins</li>
+    </ol>
+  </div>
+  <div class="card">
+    <h3>📜 Le journal comme source secondaire</h3>
+    <ul>
+      <li>Transactions séquentielles : header + block list (numéro nœud + données)</li>
+      <li>Conserve <strong>l'état précédent</strong> de nœuds B-Tree avant réécriture</li>
+      <li>Visible uniquement si volume HFS+ journalisé (signature <code>HX</code> ou flag <em>kHFSVolumeJournaledBit</em>)</li>
+      <li>Outils : <code>hfsinspect --journal</code>, parsers Python custom</li>
+      <li>Durée de vie : courte sur volume actif, plusieurs heures à jours sur disque externe peu sollicité</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title">🛠 Outils d'analyse</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>🆓 Open source</h3>
+    <ul>
+      <li><strong>hfsinspect</strong> (JP Grim) — CLI dédié, parcours détaillé des B-Trees, dump Header Node, énumération feuilles</li>
+      <li><strong>Sleuth Kit</strong> — <code>fls -f hfs</code>, <code>istat</code>, <code>icat</code> traversent le Catalog automatiquement</li>
+      <li><strong>fsck_hfs</strong> (inclus macOS) — vérifie cohérence des B-Trees, peut révéler des incohérences exploitables</li>
+      <li><strong>iBored</strong> — éditeur hex avec templates HFS+ (Volume Header, B-Tree node)</li>
+      <li><strong>mac_apt</strong> (Yogesh Khatri) — parser Python avec module HFS+, extrait xattr et timestamps</li>
+      <li><strong>pyhfs / hfsplusparser</strong> — parsers Python pour scripts custom</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>💼 Commerciaux</h3>
+    <ul>
+      <li><strong>X-Ways Forensics</strong> — parsing complet incluant Extents Overflow et Attributes</li>
+      <li><strong>BlackLight / MacQuisition</strong> (Cellebrite) — spécialisés Mac, GUI lisible</li>
+      <li><strong>Magnet AXIOM Mac Artifacts</strong> — extraction xattr + corrélation</li>
+      <li><strong>EnCase</strong> — support legacy solide</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec-title">💻 Commandes essentielles</div>
+
+<pre><code><span style="color:var(--dim)"># hfsinspect — header du Catalog</span>
+<span style="color:var(--orange)">hfsinspect</span> -d image.dd --btree catalog --header
+
+<span style="color:var(--dim)"># hfsinspect — dumper un nœud précis</span>
+<span style="color:var(--orange)">hfsinspect</span> -d image.dd --btree catalog --node 42
+
+<span style="color:var(--dim)"># hfsinspect — énumérer toutes les feuilles (chaîne fLink depuis firstLeafNode)</span>
+<span style="color:var(--orange)">hfsinspect</span> -d image.dd --btree catalog --leaf
+
+<span style="color:var(--dim)"># Extents Overflow — voir les fichiers très fragmentés</span>
+<span style="color:var(--orange)">hfsinspect</span> -d image.dd --btree extents --leaf
+
+<span style="color:var(--dim)"># Attributes — lister tous les xattr quarantine</span>
+<span style="color:var(--orange)">hfsinspect</span> -d image.dd --btree attributes --leaf | grep quarantine
+
+<span style="color:var(--dim)"># Sleuth Kit — lister tout le volume (descend B-Tree Catalog)</span>
+<span style="color:var(--orange)">fls</span> -r -p -f hfs image.dd
+
+<span style="color:var(--dim)"># Stat d'un fichier par CNID — montre forks, extents, perms</span>
+<span style="color:var(--orange)">istat</span> -f hfs image.dd 12345
+
+<span style="color:var(--dim)"># Extraire un attribut étendu via xattr (sur système monté)</span>
+<span style="color:var(--orange)">xattr</span> -p com.apple.quarantine fichier.dmg
+
+<span style="color:var(--dim)"># Repérer la signature 'INDX' n'existe pas en HFS+ — chercher Header Node</span>
+<span style="color:var(--dim"># Pattern : 8 octets de zéros (fLink+bLink) + kind=01 + height=00 + numRecords=0003</span>
+<span style="color:var(--orange)">xxd</span> image.dd | grep "0000 0000 0000 0000 0100 0003"
+</code></pre>
+
+<div class="sec-title">⚠ Pièges et nuances</div>
+
+<div class="card">
+  <ul>
+    <li><strong>Big Endian partout</strong> : un parser hex non-Apple-aware lira <code>0x00001000</code> comme 16 ou 4096 selon l'endianness — vérifier toujours.</li>
+    <li><strong>Normalisation NFD vs NFC</strong> : les noms de fichiers en HFS+ sont décomposés (<em>café</em> = <code>cafe + combining acute + .txt</code>). Comparaison cross-FS impose une normalisation explicite.</li>
+    <li><strong>HFSX vs HFS+</strong> : signature <code>HX</code> au lieu de <code>H+</code>, et <code>keyCompareType = 0xBC</code> (binary, case-sensitive). Affecte le tri des clés.</li>
+    <li><strong>Hard links</strong> : un hard link HFS+ est une entrée pointant vers <code>/.HFS+ Private Directory Data/iNode<em>X</em></code>. Le vrai fichier vit là-bas. Suivre la chaîne via <code>special.iNodeNum</code>.</li>
+    <li><strong>FileVault 2 / CoreStorage</strong> : volume entièrement chiffré → B-Trees inaccessibles sans clé.</li>
+    <li><strong>Time Machine</strong> : sur disque externe HFS+, chaque snapshot est un dossier avec hard links de répertoires (technologie Apple non-standard) → multiplie les sources B-Tree à analyser.</li>
+    <li><strong>nodeSize variable</strong> : Catalog en 4096, Extents Overflow et Attributes parfois en 1024 ou 2048. Toujours lire le BTHeaderRec de chaque arbre individuellement.</li>
+  </ul>
+</div>
+
+<div class="exam-box">
+  <div class="exam-title">🎓 Exam Tip — HFS+ B-Trees</div>
+  <ul style="list-style:none;padding-left:0;margin-top:.5rem">
+    <li style="padding:.2rem 0"><strong>Trois B-Trees :</strong> Catalog (CNID 4), Extents Overflow (CNID 3), Attributes (CNID 8)</li>
+    <li style="padding:.2rem 0"><strong>Allocation File (CNID 6)</strong> est un bitmap, <strong>pas</strong> un B-Tree</li>
+    <li style="padding:.2rem 0"><strong>Endianness :</strong> Big Endian — inverser pour comparer avec NTFS / FAT</li>
+    <li style="padding:.2rem 0"><strong>Quatre kinds de nœuds :</strong> header (0x01), map (0x02), index (0x00), leaf (0xFF = -1 signé)</li>
+    <li style="padding:.2rem 0"><strong>Header Node = nœud #0</strong>, contient toujours 3 records (BTHeaderRec, UserData, Bitmap)</li>
+    <li style="padding:.2rem 0"><strong>nodeSize</strong> dans BTHeaderRec offset 0x12 — typiquement 4096</li>
+    <li style="padding:.2rem 0"><strong>Catalog key :</strong> <code>(parentID, nodeName UTF-16 BE)</code> → enfants contigus dans l'arbre</li>
+    <li style="padding:.2rem 0"><strong>Quatre record types Catalog :</strong> Folder (0x0001), File (0x0002), FolderThread (0x0003), FileThread (0x0004)</li>
+    <li style="padding:.2rem 0"><strong>Thread records :</strong> permettent de remonter d'un CNID vers son parent</li>
+    <li style="padding:.2rem 0"><strong>8 extents inline</strong> par fork dans le File Record · au-delà → Extents Overflow</li>
+    <li style="padding:.2rem 0"><strong>Extents Overflow key :</strong> <code>(forkType, CNID, startBlock)</code> — forkType 0x00=data, 0xFF=resource</li>
+    <li style="padding:.2rem 0"><strong>5 timestamps</strong> par File Record (epoch 1904) : created, contentMod, attributeMod, access, backup</li>
+    <li style="padding:.2rem 0"><strong>Récupération :</strong> nœuds <em>libres</em> du bitmap + slack des nœuds actifs + journal récent</li>
+  </ul>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Combien de B-Trees y a-t-il dans un volume HFS+ et quels sont leurs CNID ?<small>Architecture HFS+ · Niveau : facile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>Trois B-Trees</strong> :<br>
+  · <strong>Catalog File</strong> (CNID <code>4</code>) — hiérarchie, noms, timestamps, fork pointers<br>
+  · <strong>Extents Overflow</strong> (CNID <code>3</code>) — extents au-delà des 8 inline<br>
+  · <strong>Attributes File</strong> (CNID <code>8</code>) — xattr et ACL<br>
+  L'Allocation File (CNID <code>6</code>) est un bitmap classique, pas un B-Tree. Le Startup File (CNID <code>7</code>) ne l'est pas non plus.</div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Lors d'un parcours hex, vous voyez : <code>00 00 00 00 00 00 00 00 01 00 00 03</code> au début d'un nœud B-Tree HFS+. De quoi s'agit-il ?<small>Identification de nœud · Niveau : moyen</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer">C'est un <strong>Header Node</strong> :<br>
+  · <code>fLink = 0</code> (pas de nœud suivant — Header Node est unique)<br>
+  · <code>bLink = 0</code> (pas de nœud précédent)<br>
+  · <code>kind = 0x01</code> (header)<br>
+  · <code>height = 0x00</code><br>
+  · <code>numRecords = 0x0003</code> (Big Endian → 3 records : BTHeaderRec, UserData, Map)<br>
+  Donc on est au début du fichier B-Tree (Catalog, Extents Overflow ou Attributes). Lire les 106 octets suivants pour récupérer <code>nodeSize</code>, <code>rootNode</code>, <code>firstLeafNode</code>, etc.</div>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Un fichier HFS+ très fragmenté a 47 extents au total. Combien d'entrées contiendra-t-il dans le Catalog vs Extents Overflow ?<small>Mécanisme des forks · Niveau : difficile</small></div>
+  <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+  <div class="quiz-answer"><strong>Catalog</strong> : 1 File Record contenant <strong>les 8 premiers extents</strong> dans <code>dataFork.extents[0..7]</code> (ou <code>resourceFork</code> selon le fork concerné).<br>
+  <strong>Extents Overflow</strong> : <strong>5 records supplémentaires</strong> (chaque record = jusqu'à 8 extents).<br>
+  · Record 1 : extents 9 à 16 (clé : forkType + CNID + startBlock=8)<br>
+  · Record 2 : extents 17 à 24<br>
+  · Record 3 : extents 25 à 32<br>
+  · Record 4 : extents 33 à 40<br>
+  · Record 5 : extents 41 à 47 (rempli partiellement, avec startBlock+blockCount = 0 pour les emplacements libres)<br>
+  Total : 1 entrée Catalog + 5 entrées Extents Overflow = 6 endroits à parser pour reconstruire le fork complet.</div>
+</div>
+
+<div style="margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid var(--border);font-size:.72rem;color:var(--dim);text-align:center">
+  Voir aussi :
+  <a href="hfs.html" style="color:var(--cyan);text-decoration:none">🌲 HFS+</a> ·
+  <a href="apfs.html" style="color:var(--cyan);text-decoration:none">🍏 APFS</a> ·
+  <a href="ntfs_btree.html" style="color:var(--cyan);text-decoration:none">🌳 B+ Trees NTFS</a> ·
+  <a href="comparaison_fs.html" style="color:var(--cyan);text-decoration:none">📊 Comparaison FS</a> ·
+  <a href="macos_forensique.html" style="color:var(--cyan);text-decoration:none">💻 macOS Forensique</a>
+</div>
+
+</div>
+
+<span class="fiche-sticker">HFS+ · B-Trees</span>
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+    <script src="../js/core/cas-in-profile.js" defer></script>
+<script src="../js/core/cas-in-achievements.js" defer></script>
+<script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/profile/celebration-ui.js" defer></script>
+<script src="../js/components/gamification-toasts.js" defer></script>
+</body>
+</html>
