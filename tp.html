@@ -69,7 +69,7 @@ document.documentElement.setAttribute('data-theme','dark');}})();
         <div class="sb-group-header" onclick="toggleGrp('grp-fs')">
           <span class="sb-group-icon">💾</span>
           <span class="sb-group-name">Systèmes de fichiers</span>
-          <span class="sb-group-count" id="gc-fs">13</span>
+          <span class="sb-group-count" id="gc-fs">15</span>
           <div class="sb-grp-prog"><div class="sb-grp-track"><div class="sb-grp-fill" id="gp-fs" style="width:0%;background:var(--gold)"></div></div><span class="sb-grp-label" id="gl-fs">0%</span></div>
           <span class="sb-arrow">›</span>
         </div>
@@ -87,6 +87,8 @@ document.documentElement.setAttribute('data-theme','dark');}})();
           <button type="button" class="sb-cat"        data-cat="direntry"    onclick="go('direntry',this)">    <span class="sb-cat-icon">📁</span><span class="sb-cat-name">Directory Entry FAT</span>   <span class="sb-badge sb-badge-none" id="bd-direntry">—</span></button>
           <button type="button" class="sb-cat"        data-cat="hexdump"     onclick="go('hexdump',this)">     <span class="sb-cat-icon">🔬</span><span class="sb-cat-name">Dump Hex en contexte</span>  <span class="sb-badge sb-badge-none" id="bd-hexdump">—</span></button>
           <button type="button" class="sb-cat"        data-cat="slackspace"  onclick="go('slackspace',this)">  <span class="sb-cat-icon">🪣</span><span class="sb-cat-name">Slack Space</span>           <span class="sb-badge sb-badge-none" id="bd-slackspace">—</span></button>
+          <button type="button" class="sb-cat"        data-cat="hfsbtree"    onclick="go('hfsbtree',this)">    <span class="sb-cat-icon">🌳</span><span class="sb-cat-name">B-Tree HFS+</span>           <span class="sb-badge sb-badge-none" id="bd-hfsbtree">—</span><span class="sb-new">NEW</span></button>
+          <button type="button" class="sb-cat"        data-cat="ntfsindex"   onclick="go('ntfsindex',this)">   <span class="sb-cat-icon">📇</span><span class="sb-cat-name">$INDEX NTFS</span>           <span class="sb-badge sb-badge-none" id="bd-ntfsindex">—</span><span class="sb-new">NEW</span></button>
         </div>
       </div>
 
@@ -220,6 +222,7 @@ document.documentElement.setAttribute('data-theme','dark');}})();
 <script src="tp/tp-engine-carving.js"></script>
 <script src="tp/tp-engine-windows.js"></script>
 <script src="tp/tp-engine-meta.js"></script>
+<script src="tp/tp-engine-btree.js"></script>
 <script>
 // ── Catégorie metadata ────────────────────────────────────────
 const CAT_META = {
@@ -250,6 +253,8 @@ const CAT_META = {
   registry:    {icon:'📂', name:'Registry NK/VK',        sub:'Cellules NTUSER.DAT — type, nom, REG_DWORD inline'},
   prefetch:    {icon:'⏱️', name:'Prefetch (.pf)',         sub:'Format Win XP/7/8/10/11 — run count, last run FILETIME'},
   lnk:         {icon:'🔗', name:'LNK (raccourcis)',      sub:'Header 0x4C, CLSID, LinkFlags, FileAttributes, FileSize'},
+  hfsbtree:    {icon:'🌳', name:'B-Tree HFS+',           sub:'BTNodeDescriptor, CNID parent, fLink, récupération forensique — Big Endian'},
+  ntfsindex:   {icon:'📇', name:'$INDEX NTFS',           sub:'INDX magic, Index Entry flags, MFT ref, VCN sub-node — B+Tree de répertoires'},
 };
 
 const CAT_MAX = {
@@ -258,7 +263,8 @@ const CAT_MAX = {
   hextable:5, fsidentify:5, offset:5, bases:5, hash:5,
   email:5, network:5, ir:5, droitpenal:5, glossaire:5, examen:10,
   mbr:5, direntry:5, hexdump:5, slackspace:5,
-  registry:5, prefetch:5, lnk:5
+  registry:5, prefetch:5, lnk:5,
+  hfsbtree:5, ntfsindex:5
 };
 
 let currentCat = 'endian';
@@ -271,7 +277,7 @@ function go(cat, btn) {
   document.querySelectorAll('.sb-cat').forEach(b => b.classList.remove('active','active-exam','active-tool'));
   if (btn) btn.classList.add(cat === 'examen' ? 'active-exam' : 'active');
   // Open the group containing this category
-  const catGroup = {'endian':'grp-fs','timestamp':'grp-fs','bitmap':'grp-fs','fat':'grp-fs','magic':'grp-fs','mismatch':'grp-fs','runlist':'grp-fs','effacement':'grp-fs','timestomping':'grp-fs','mbr':'grp-fs','direntry':'grp-fs','hexdump':'grp-fs','slackspace':'grp-fs','hextable':'grp-calc','fsidentify':'grp-calc','offset':'grp-calc','bases':'grp-calc','hash':'grp-calc','email':'grp-inv','network':'grp-inv','ir':'grp-inv','droitpenal':'grp-inv','glossaire':'grp-inv','examen':'grp-inv'};
+  const catGroup = {'endian':'grp-fs','timestamp':'grp-fs','bitmap':'grp-fs','fat':'grp-fs','magic':'grp-fs','mismatch':'grp-fs','runlist':'grp-fs','effacement':'grp-fs','timestomping':'grp-fs','mbr':'grp-fs','direntry':'grp-fs','hexdump':'grp-fs','slackspace':'grp-fs','hfsbtree':'grp-fs','ntfsindex':'grp-fs','hextable':'grp-calc','fsidentify':'grp-calc','offset':'grp-calc','bases':'grp-calc','hash':'grp-calc','email':'grp-inv','network':'grp-inv','ir':'grp-inv','droitpenal':'grp-inv','glossaire':'grp-inv','examen':'grp-inv'};
   if (catGroup[cat]) { document.querySelectorAll('.sb-group').forEach(g=>g.classList.add('collapsed')); document.getElementById(catGroup[cat]).classList.remove('collapsed'); }
   // Update mobile pills
   document.querySelectorAll('.mob-pill').forEach(p => p.classList.toggle('active', p.dataset.cat === cat));
