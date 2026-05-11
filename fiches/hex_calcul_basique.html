@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calcul Hexadécimal — Fiche de Révision Basique — CAS-IN Forensique</title>
+<meta name="description" content="Fiche de révision basique : calcul hex, complément à 2, signed BE/LE, conversion date NTFS FILETIME aller-retour, heures.">
+<meta name="theme-color" content="#0d1117">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+
+<style>
+/* ── Petits ajouts locaux pour la fiche ── */
+.calc-table {
+  width:100%;
+  border-collapse:collapse;
+  font-family:var(--mono);
+  font-size:.78rem;
+  margin:.6rem 0;
+}
+.calc-table th, .calc-table td {
+  border:1px solid var(--border);
+  padding:.45rem .65rem;
+  text-align:left;
+}
+.calc-table th {
+  background:var(--surface2);
+  color:var(--muted);
+  font-size:.68rem;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+.calc-table tr:nth-child(even) td { background:rgba(255,255,255,.015); }
+.calc-table .hi { color:var(--cyan); font-weight:700; }
+.calc-table .neg { color:var(--red); font-weight:700; }
+.calc-table .pos { color:var(--green); font-weight:700; }
+
+.byte-strip {
+  display:flex;
+  gap:.35rem;
+  flex-wrap:wrap;
+  margin:.5rem 0;
+  font-family:var(--mono);
+}
+.byte-strip .b {
+  background:rgba(0,229,204,.08);
+  border:1px solid rgba(0,229,204,.35);
+  border-radius:5px;
+  padding:.35rem .55rem;
+  font-size:.85rem;
+  font-weight:700;
+  color:var(--cyan);
+  min-width:2.4em;
+  text-align:center;
+}
+.byte-strip .b.red {
+  background:rgba(255,64,96,.08);
+  border-color:rgba(255,64,96,.4);
+  color:var(--red);
+}
+.byte-strip .b.gold {
+  background:rgba(240,192,64,.08);
+  border-color:rgba(240,192,64,.4);
+  color:var(--gold);
+}
+.byte-strip .b small {
+  display:block;
+  font-size:.55rem;
+  font-weight:400;
+  color:var(--muted);
+  margin-top:.15rem;
+  letter-spacing:.04em;
+}
+.byte-strip .arrow {
+  align-self:center;
+  color:var(--muted);
+  font-size:1rem;
+  padding:0 .2rem;
+}
+
+.formula {
+  background:linear-gradient(135deg, rgba(0,229,204,.06), rgba(0,229,204,.02));
+  border:1px solid rgba(0,229,204,.3);
+  border-left:3px solid var(--cyan);
+  border-radius:0 8px 8px 0;
+  padding:.7rem 1rem;
+  margin:.6rem 0;
+  font-family:var(--mono);
+  font-size:.85rem;
+  color:var(--text);
+}
+.formula .lbl {
+  display:block;
+  font-family:var(--sans);
+  font-size:.62rem;
+  font-weight:700;
+  letter-spacing:.1em;
+  color:var(--cyan);
+  text-transform:uppercase;
+  margin-bottom:.3rem;
+}
+
+.kv-grid {
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:.3rem 1rem;
+  font-family:var(--mono);
+  font-size:.78rem;
+  margin:.4rem 0;
+}
+.kv-grid .k { color:var(--muted); }
+.kv-grid .v { color:var(--text); word-break:break-all; }
+.kv-grid .v.hex { color:var(--orange); font-weight:700; }
+.kv-grid .v.cyan { color:var(--cyan); font-weight:700; }
+
+.mini-callout {
+  background:rgba(240,192,64,.05);
+  border:1px solid rgba(240,192,64,.25);
+  border-radius:6px;
+  padding:.55rem .85rem;
+  margin:.5rem 0;
+  font-size:.78rem;
+}
+.mini-callout strong { color:var(--gold); }
+</style>
+
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Haut de page">↑</button>
+</head>
+<body>
+<div id="cas-navbar" data-page="fiches"></div>
+<div id="scroll-progress"></div>
+
+<nav class="tn-nav" aria-label="Navigation fiche">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">CALCUL HEXADÉCIMAL · RÉVISION</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page" style="padding-top:.5rem;padding-bottom:0">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a>
+    <span class="bc-sep">›</span>
+    <a href="index.html#cat-systèmesspéciaux">Systèmes spéciaux</a>
+    <span class="bc-sep">›</span>
+    <span class="bc-current">Calcul hexadécimal — révision</span>
+    <span class="read-time-badge">⏱ ~8 min</span>
+  </div>
+</div>
+
+<main id="main-content">
+<div class="page">
+
+  <div class="header">
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Calcul hexadécimal — révision basique</h1>
+    <div class="fs-badge">🧮 Calcul hex</div>
+    <div>
+      <div><span class="tag tag-cyan">Hex ↔ Déc</span> <span class="tag tag-red">Complément à 2</span> <span class="tag tag-gold">Endianness</span> <span class="tag tag-purple">NTFS FILETIME</span></div>
+      <div class="header-meta" style="margin-top:.3rem">Les clefs de base pour décoder à la main · FF FD signé · 9 mai 2026 ⇄ hex NTFS · heures</div>
+    </div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="encodage.html" class="prereq-pill">📖 Encodage</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="ntfs.html" class="related-pill">🔗 NTFS</a><a href="timestamps_fs.html" class="related-pill">🔗 Timestamps FS</a><a href="mac_times.html" class="related-pill">🔗 MAC Times</a></div>
+  </div>
+
+  <div class="concept-card" style="margin-top:1rem">
+    <div class="concept-title">🧮 Pourquoi cette fiche</div>
+    À l'examen on tombe sur des octets bruts (<code>FF FD</code>, <code>00 00 61 C7 46 DF DC 01</code>…) et il faut savoir <strong>en faire quelque chose à la main</strong> : nombre signé ? date ? heure ? Cette fiche regroupe les <strong>trois calculs récurrents</strong> — conversion hex/déc, complément à 2 signé (BE & LE), et FILETIME NTFS (aller ET retour) — avec les <strong>étapes détaillées</strong>. Toute la logique tient en 4 idées : <em>(1)</em> 1 octet = 2 hex digits = 8 bits ; <em>(2)</em> Little Endian = on inverse les octets <strong>avant</strong> tout calcul ; <em>(3)</em> bit de poids fort = 1 → nombre négatif (complément à 2) ; <em>(4)</em> FILETIME = 100 ns depuis 1601-01-01 UTC sur 64 bits.
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       1 — HEX → DÉCIMAL : LE RÉFLEXE DE BASE
+       ════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">1 · Hex ↔ Décimal — le réflexe de base</div>
+
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">
+      L'hexadécimal est en <strong>base 16</strong>. Chaque chiffre vaut 16 fois plus que le suivant à droite (comme en décimal mais avec 16). Les chiffres au-dessus de 9 deviennent <code>A=10, B=11, C=12, D=13, E=14, F=15</code>.
+    </p>
+
+    <table class="calc-table">
+      <thead><tr><th>Hex</th><th>Bin (4 bits)</th><th>Déc</th><th>Hex</th><th>Bin (4 bits)</th><th>Déc</th></tr></thead>
+      <tbody>
+        <tr><td class="hi">0</td><td>0000</td><td>0</td><td class="hi">8</td><td>1000</td><td>8</td></tr>
+        <tr><td class="hi">1</td><td>0001</td><td>1</td><td class="hi">9</td><td>1001</td><td>9</td></tr>
+        <tr><td class="hi">2</td><td>0010</td><td>2</td><td class="hi">A</td><td>1010</td><td>10</td></tr>
+        <tr><td class="hi">3</td><td>0011</td><td>3</td><td class="hi">B</td><td>1011</td><td>11</td></tr>
+        <tr><td class="hi">4</td><td>0100</td><td>4</td><td class="hi">C</td><td>1100</td><td>12</td></tr>
+        <tr><td class="hi">5</td><td>0101</td><td>5</td><td class="hi">D</td><td>1101</td><td>13</td></tr>
+        <tr><td class="hi">6</td><td>0110</td><td>6</td><td class="hi">E</td><td>1110</td><td>14</td></tr>
+        <tr><td class="hi">7</td><td>0111</td><td>7</td><td class="hi">F</td><td>1111</td><td>15</td></tr>
+      </tbody>
+    </table>
+
+    <div class="formula">
+      <span class="lbl">Formule positionnelle</span>
+      Valeur = (chiffre<sub>n</sub> × 16ⁿ) + … + (chiffre<sub>1</sub> × 16) + chiffre<sub>0</sub><br>
+      <span style="color:var(--muted);font-size:.75rem">Puissances de 16 utiles à connaître : 16⁰=1, 16¹=16, 16²=256, 16³=4096, 16⁴=65 536</span>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text"><strong>Découper</strong> en chiffres : par exemple <code>FF</code> = <code>F</code> et <code>F</code>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text"><strong>Convertir</strong> chaque chiffre : <code>F</code> = 15.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text"><strong>Pondérer</strong> par les puissances de 16 (de droite à gauche) : <code>FF</code> = 15×16 + 15 = <strong>255</strong>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text"><strong>Sur 2 octets</strong> (<code>FFFD</code>) : 15×4096 + 15×256 + 15×16 + 13 = <strong>65 533</strong>.</div>
+      </div>
+    </div>
+
+    <div class="mini-callout">
+      <strong>Astuce vitesse :</strong> sur 8 bits, <code>FF</code> = 255 (à mémoriser). Sur 16 bits, <code>FFFF</code> = 65 535. Sur 32 bits, <code>FFFFFFFF</code> = 4 294 967 295. <strong>Soustraire</strong> de ces bornes donne directement le complément à 2 (voir §4).
+    </div>
+
+    <!-- Sens inverse : décimal → hex -->
+    <p style="font-size:.82rem;color:var(--muted);margin-top:.9rem;margin-bottom:.5rem">
+      <strong style="color:var(--text)">Sens inverse — décimal → hex</strong> par <strong>divisions successives par 16</strong> : on note les restes, on lit de bas en haut.
+    </p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text"><strong>Diviser</strong> par 16, garder le quotient et le reste. Exemple avec <strong>52 651</strong> : 52 651 ÷ 16 = <strong>3 290</strong> reste <strong>11 (B)</strong>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text"><strong>Recommencer</strong> avec le quotient : 3 290 ÷ 16 = <strong>205</strong> reste <strong>10 (A)</strong>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">205 ÷ 16 = <strong>12</strong> reste <strong>13 (D)</strong>. Puis 12 ÷ 16 = <strong>0</strong> reste <strong>12 (C)</strong>. On s'arrête quand le quotient = 0.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text"><strong>Lire les restes de bas en haut</strong> : C · D · A · B → <strong style="color:var(--orange)">0xCDAB</strong>.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       2 — ENDIANNESS : LE PIÈGE NUMÉRO UN
+       ════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">2 · Endianness — la règle à appliquer EN PREMIER</div>
+
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">
+      Avant tout calcul, on doit savoir <strong>comment</strong> les octets sont rangés en mémoire / sur disque. C'est l'endianness (boutisme). Si on se trompe, toutes les conversions qui suivent sont fausses.
+    </p>
+
+    <table class="calc-table">
+      <thead><tr><th>Ordre</th><th>Définition</th><th>Où l'on en trouve</th></tr></thead>
+      <tbody>
+        <tr><td class="hi">Big Endian (BE)</td><td>Poids <strong>fort</strong> en premier (octet le plus à gauche = le plus significatif). Lecture humaine naturelle.</td><td>Réseau (TCP/IP), SPARC, HFS+, certains champs Java/Mac</td></tr>
+        <tr><td class="hi">Little Endian (LE)</td><td>Poids <strong>faible</strong> en premier (octet le plus à gauche = le moins significatif). Il faut <strong>inverser</strong> les octets pour reconstruire la valeur.</td><td>Intel x86/x64 → <strong>NTFS, FAT, exFAT, MFT, registre Windows, MBR</strong></td></tr>
+      </tbody>
+    </table>
+
+    <p style="font-size:.82rem;margin-top:.6rem"><strong>Exemple :</strong> les 2 octets <code>FF FD</code> tels qu'on les lit sur le disque.</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-top:.5rem">
+      <div style="background:rgba(88,166,255,.05);border:1px solid rgba(88,166,255,.3);border-radius:8px;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--blue);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">🐘 BIG-ENDIAN</div>
+        <div class="byte-strip">
+          <div class="b">FF<small>offset 0 (fort)</small></div>
+          <div class="b">FD<small>offset 1 (faible)</small></div>
+        </div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:.3rem">Valeur reconstruite = <strong style="color:var(--cyan)">0xFFFD</strong></div>
+        <div style="font-size:.75rem;color:var(--muted)">= 65 533 (non signé)</div>
+      </div>
+      <div style="background:rgba(255,64,96,.05);border:1px solid rgba(255,64,96,.3);border-radius:8px;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--red);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">🐀 LITTLE-ENDIAN</div>
+        <div class="byte-strip">
+          <div class="b red">FF<small>offset 0 (faible)</small></div>
+          <div class="b red">FD<small>offset 1 (fort)</small></div>
+        </div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:.3rem">⚠️ on <strong>inverse</strong> : <strong style="color:var(--cyan)">0xFDFF</strong></div>
+        <div style="font-size:.75rem;color:var(--muted)">= 65 023 (non signé)</div>
+      </div>
+    </div>
+
+    <div class="alert" style="margin-top:.7rem">
+      <strong>Règle d'or :</strong> en LE, on <strong>inverse l'ordre des octets entiers</strong>, jamais l'ordre des chiffres à l'intérieur d'un octet. Donc <code>FF FD</code> en LE = <code>FD FF</code>, et pas <code>DF FF</code> ou <code>FD F</code>.
+    </div>
+
+    <!-- Exemple AB CD non signé en LE -->
+    <div style="background:rgba(48,232,138,.04);border:1px solid rgba(48,232,138,.25);border-left:3px solid var(--green);border-radius:0 8px 8px 0;padding:.85rem 1rem;margin-top:.8rem">
+      <div style="font-size:.72rem;color:var(--green);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem">🧪 Exemple complet — <code style="color:var(--green)">AB CD</code> non signé 16 bits, lu en LE</div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text"><strong>Endianness :</strong> on est en LE → on inverse les octets entiers. <code>AB CD</code> → <code>CD AB</code>. Valeur logique = <strong style="color:var(--cyan)">0xCDAB</strong>.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <strong>Décomposition positionnelle</strong> (chaque chiffre × 16^position, de droite à gauche en commençant à 0) :
+            <table class="calc-table" style="margin-top:.35rem;margin-bottom:0">
+              <thead><tr><th>Chiffre</th><th>Valeur</th><th>Poids</th><th>Contribution</th></tr></thead>
+              <tbody>
+                <tr><td class="hi">C</td><td>12</td><td>16³ = 4 096</td><td>12 × 4 096 = <strong>49 152</strong></td></tr>
+                <tr><td class="hi">D</td><td>13</td><td>16² = 256</td><td>13 × 256 = <strong>3 328</strong></td></tr>
+                <tr><td class="hi">A</td><td>10</td><td>16¹ = 16</td><td>10 × 16 = <strong>160</strong></td></tr>
+                <tr><td class="hi">B</td><td>11</td><td>16⁰ = 1</td><td>11 × 1 = <strong>11</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text"><strong>Additionner</strong> : 49 152 + 3 328 + 160 + 11 = <strong style="color:var(--green)">52 651</strong> en décimal non signé.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-text">
+            <strong>Sanity check binaire</strong> (optionnel) : C=<code>1100</code>, D=<code>1101</code>, A=<code>1010</code>, B=<code>1011</code> → <code>1100 1101 1010 1011</code>. Le bit de poids fort est 1, donc <strong>si on l'avait lu en signé</strong>, on aurait 52 651 − 65 536 = <strong style="color:var(--red)">−12 885</strong>. Ici on a bien dit "non signé" → on garde <strong>52 651</strong>.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       3 — ASTUCES DE VITESSE MENTALE
+       ════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">3 · Astuces de vitesse mentale</div>
+
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">
+      Les raccourcis qui font gagner 30 secondes par calcul à l'examen, et qui évitent les erreurs bêtes.
+    </p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:.4rem">
+      <!-- Astuce 1 -->
+      <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.25);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--cyan);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.3rem">① Détection du signe à l'œil</div>
+        <p style="font-size:.78rem;margin:0">Premier chiffre hex ≥ <strong>8</strong> (donc 8,9,A,B,C,D,E,F) → bit de poids fort = 1 → <strong style="color:var(--red)">négatif</strong> si signé. <code>0xCDAB</code> commence par C → négatif. <code>0x7FFF</code> commence par 7 → positif. Pas besoin de binaire.</p>
+      </div>
+      <!-- Astuce 2 -->
+      <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.25);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--cyan);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.3rem">② Détection de la taille</div>
+        <p style="font-size:.78rem;margin:0">Compter les chiffres hex ÷ 2 = nombre d'octets. <strong>2 = byte</strong> · <strong>4 = WORD (16 bits)</strong> · <strong>8 = DWORD (32 bits)</strong> · <strong>16 = QWORD (64 bits)</strong>. Si on se trompe sur la taille → la borne de soustraction du complément à 2 est fausse → résultat absurde.</p>
+      </div>
+      <!-- Astuce 3 -->
+      <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.25);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--cyan);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.3rem">③ Truc "F = sommet − 1"</div>
+        <p style="font-size:.78rem;margin:0">À mémoriser : <code>FF</code> = 256 − 1 = 255 · <code>FFFF</code> = 65 536 − 1 · <code>FFFFFFFF</code> = 2³² − 1. Donc <code>FFFD</code> en BE 16 bits = <code>FFFF − 2</code> = (−1) − 2 = <strong>−3</strong>, calculé de tête en 2 secondes.</p>
+      </div>
+      <!-- Astuce 4 -->
+      <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.25);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--cyan);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.3rem">④ Doublement binaire → déc</div>
+        <p style="font-size:.78rem;margin:0">On part de 0, on lit les bits de gauche à droite, pour chaque bit : <code>résultat × 2 + bit</code>. Exemple <code>1101</code> : 0→1→2→5→<strong>13</strong>. Plus rapide que la somme des puissances pour les longues chaînes.</p>
+      </div>
+      <!-- Astuce 5 -->
+      <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.25);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--cyan);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.3rem">⑤ Bytes nuls = UTF-16 LE</div>
+        <p style="font-size:.78rem;margin:0">Dans un hexdump Windows, si on voit un octet sur 2 = <code>00</code> (ex: <code>41 00 42 00 43 00</code>) → c'est de l'<strong>UTF-16 LE</strong>, lecture = "ABC". Très courant dans MFT, registre, $Recycle.Bin.</p>
+      </div>
+      <!-- Astuce 6 -->
+      <div style="background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.25);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--cyan);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.3rem">⑥ ASCII repères</div>
+        <p style="font-size:.78rem;margin:0">À mémoriser : <code>0x20</code> = espace · <code>0x30</code> = '0' (chiffres jusqu'à <code>0x39</code>) · <code>0x41</code> = 'A' (majuscules jusqu'à <code>0x5A</code>) · <code>0x61</code> = 'a' (minuscules jusqu'à <code>0x7A</code>). Écart maj/min = 0x20.</p>
+      </div>
+    </div>
+
+    <!-- Valeurs hex à connaître par cœur -->
+    <p style="font-size:.82rem;color:var(--muted);margin-top:.8rem;margin-bottom:.4rem"><strong style="color:var(--text)">Valeurs hex à reconnaître instantanément :</strong></p>
+    <table class="calc-table">
+      <thead><tr><th>Hex</th><th>Décimal</th><th>Pourquoi</th></tr></thead>
+      <tbody>
+        <tr><td class="hi">0x80</td><td>128</td><td>2⁷ · borne entre signé positif/négatif sur 8 bits</td></tr>
+        <tr><td class="hi">0xFF</td><td>255</td><td>Octet max non signé · = −1 signé 8 bits</td></tr>
+        <tr><td class="hi">0x100</td><td>256</td><td>1 octet plein +1</td></tr>
+        <tr><td class="hi">0x200</td><td>512</td><td>Taille d'un secteur de disque classique</td></tr>
+        <tr><td class="hi">0x400</td><td>1 024</td><td>1 KiB</td></tr>
+        <tr><td class="hi">0x1000</td><td>4 096</td><td>1 page mémoire · taille cluster NTFS par défaut</td></tr>
+        <tr><td class="hi">0x10000</td><td>65 536</td><td>2¹⁶ · WORD plein +1</td></tr>
+        <tr><td class="hi">0x100000</td><td>1 048 576</td><td>1 MiB</td></tr>
+        <tr><td class="hi">0x40000000</td><td>1 073 741 824</td><td>1 GiB</td></tr>
+      </tbody>
+    </table>
+
+    <div class="mini-callout">
+      <strong>Magic bytes à reconnaître en hexdump :</strong> <code>4D 5A</code> = EXE Windows (MZ) · <code>25 50 44 46</code> = <code>%PDF</code> · <code>FF D8 FF</code> = JPEG · <code>89 50 4E 47</code> = PNG · <code>50 4B 03 04</code> = ZIP/DOCX/XLSX · <code>1F 8B</code> = gzip · <code>52 61 72 21</code> = RAR · <code>E5</code> en début d'entrée FAT = fichier supprimé · <code>55 AA</code> à offset 0x1FE = signature MBR.
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       4 — COMPLÉMENT À 2 : FF FD SIGNÉ
+       ════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">4 · Nombres signés (complément à 2) — <code>FF FD</code> en pratique</div>
+
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">
+      Tous les CPU modernes représentent les nombres signés en <strong>complément à 2</strong>. Sur N bits : si le bit de poids fort vaut 1 → la valeur est <strong>négative</strong>. Plage sur 16 bits : <strong>[−32 768 ; +32 767]</strong>.
+    </p>
+
+    <div class="formula">
+      <span class="lbl">Méthode rapide</span>
+      Si bit de signe = 1 :&nbsp;&nbsp;<code style="color:var(--cyan)">valeur_signée = valeur_non_signée − 2ᴺ</code><br>
+      Sur 8 bits : on soustrait 256 · Sur 16 bits : on soustrait 65 536 · Sur 32 bits : on soustrait 4 294 967 296.
+    </div>
+
+    <div class="formula" style="border-left-color:var(--purple);background:linear-gradient(135deg,rgba(188,140,255,.05),rgba(188,140,255,.01))">
+      <span class="lbl" style="color:var(--purple)">Méthode classique (à la main)</span>
+      (1) inverser tous les bits → (2) ajouter 1 → (3) coller un signe « − ».
+    </div>
+
+    <!-- CAS A : FF FD en BIG ENDIAN -->
+    <div style="background:rgba(88,166,255,.04);border:1px solid rgba(88,166,255,.25);border-left:3px solid var(--blue);border-radius:0 8px 8px 0;padding:.85rem 1rem;margin-top:.7rem">
+      <div style="font-size:.72rem;color:var(--blue);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem">🐘 Cas A — <code style="color:var(--blue)">FF FD</code> lu en Big Endian (16 bits signé)</div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text"><strong>Endianness :</strong> BE → on lit dans l'ordre <code>FF FD</code> → valeur brute = <strong style="color:var(--cyan)">0xFFFD</strong>.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text"><strong>Binaire :</strong> <code>FFFD</code> = <code>1111 1111 1111 1101</code>. Le bit le plus à gauche est 1 → c'est un <strong style="color:var(--red)">nombre négatif</strong>.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text"><strong>Méthode rapide :</strong> 0xFFFD = 65 533 non signé. On soustrait 2¹⁶ = 65 536 → <strong style="color:var(--red)">−3</strong>.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-text"><strong>Vérification classique :</strong> inverser <code>1111 1111 1111 1101</code> → <code>0000 0000 0000 0010</code> = 2. Ajouter 1 → 3. Coller le signe → <strong style="color:var(--red)">−3</strong> ✓</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CAS B : FF FD en LITTLE ENDIAN -->
+    <div style="background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.25);border-left:3px solid var(--red);border-radius:0 8px 8px 0;padding:.85rem 1rem;margin-top:.7rem">
+      <div style="font-size:.72rem;color:var(--red);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem">🐀 Cas B — <code style="color:var(--red)">FF FD</code> lu en Little Endian (16 bits signé)</div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text"><strong>Endianness :</strong> LE → on inverse les octets : <code>FF FD</code> → <code>FD FF</code> → valeur brute = <strong style="color:var(--cyan)">0xFDFF</strong>.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text"><strong>Binaire :</strong> <code>FDFF</code> = <code>1111 1101 1111 1111</code>. Bit de signe = 1 → <strong style="color:var(--red)">négatif</strong>.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text"><strong>Méthode rapide :</strong> 0xFDFF = 65 023 non signé. On soustrait 65 536 → <strong style="color:var(--red)">−513</strong>.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-text"><strong>Vérification classique :</strong> inverser <code>1111 1101 1111 1111</code> → <code>0000 0010 0000 0000</code> = 512. + 1 → 513. Signe → <strong style="color:var(--red)">−513</strong> ✓</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert" style="margin-top:.7rem">
+      <strong>Conclusion sur <code>FF FD</code> signé 16 bits :</strong> BE = <strong style="color:var(--red)">−3</strong>, LE = <strong style="color:var(--red)">−513</strong>. <strong>Ce ne sont PAS la même valeur</strong> — toujours noter l'endianness sur la copie d'examen.
+    </div>
+
+    <p style="font-size:.82rem;color:var(--muted);margin-top:.8rem;margin-bottom:.4rem"><strong style="color:var(--text)">La même logique sur 8, 16 et 32 bits :</strong></p>
+    <table class="calc-table">
+      <thead><tr><th>Taille</th><th>Hex (BE)</th><th>Non signé</th><th>Signé</th></tr></thead>
+      <tbody>
+        <tr><td style="color:var(--muted)">8 bits</td><td class="hi">0x7F</td><td>127</td><td class="pos">+127 (max)</td></tr>
+        <tr><td style="color:var(--muted)">8 bits</td><td class="hi">0x80</td><td>128</td><td class="neg">−128 (min)</td></tr>
+        <tr><td style="color:var(--muted)">8 bits</td><td class="hi">0xFE</td><td>254</td><td class="neg">−2</td></tr>
+        <tr><td style="color:var(--muted)">8 bits</td><td class="hi">0xFF</td><td>255</td><td class="neg">−1</td></tr>
+        <tr><td style="color:var(--muted)">16 bits</td><td class="hi">0x7FFF</td><td>32 767</td><td class="pos">+32 767 (max)</td></tr>
+        <tr><td style="color:var(--muted)">16 bits</td><td class="hi">0x8000</td><td>32 768</td><td class="neg">−32 768 (min)</td></tr>
+        <tr><td style="color:var(--muted)">16 bits</td><td class="hi">0xFFFD</td><td>65 533</td><td class="neg">−3</td></tr>
+        <tr><td style="color:var(--muted)">16 bits</td><td class="hi">0xFFFF</td><td>65 535</td><td class="neg">−1</td></tr>
+        <tr><td style="color:var(--muted)">32 bits</td><td class="hi">0x7FFFFFFF</td><td>2 147 483 647</td><td class="pos">+2 147 483 647 (max)</td></tr>
+        <tr><td style="color:var(--muted)">32 bits</td><td class="hi">0x80000000</td><td>2 147 483 648</td><td class="neg">−2 147 483 648 (min)</td></tr>
+        <tr><td style="color:var(--muted)">32 bits</td><td class="hi">0xFFFFFFFF</td><td>4 294 967 295</td><td class="neg">−1</td></tr>
+      </tbody>
+    </table>
+
+    <div class="mini-callout">
+      <strong>Sign extension (extension de signe) :</strong> dans les <strong>run lists NTFS</strong>, un offset négatif sur 1 octet (<code>FD</code> = −3) qui doit s'étendre sur 4 octets devient <code>FF FF FF FD</code>, pas <code>00 00 00 FD</code>. On <strong>réplique le bit de signe</strong>. Si on l'ignore, on lit un cluster ~4 milliards au lieu de revenir 3 clusters en arrière.
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       5 — FILETIME NTFS : 9 MAI 2026 → HEX
+       ════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">5 · NTFS FILETIME — du 9 mai 2026 vers les octets hex</div>
+
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">
+      NTFS stocke ses timestamps en <strong>FILETIME</strong> : un entier de <strong>64 bits non signé</strong>, qui compte les <strong>intervalles de 100 nanosecondes</strong> écoulés depuis le <strong>1<sup>er</sup> janvier 1601 à 00:00:00 UTC</strong>, rangé en <strong>Little Endian</strong> sur le disque.
+    </p>
+
+    <div class="formula">
+      <span class="lbl">Formule aller (date → FILETIME)</span>
+      FILETIME = ( <em>secondes depuis 1601</em> ) × 10 000 000<br>
+      <span style="color:var(--muted);font-size:.75rem">avec <em>secondes depuis 1601</em> = (Unix epoch) + 11 644 473 600</span>
+    </div>
+
+    <p style="font-size:.82rem;margin-top:.6rem"><strong>Exemple complet :</strong> on veut encoder la date <code>2026-05-09 00:00:00 UTC</code>.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          <strong>Compter les jours depuis 1970-01-01</strong> (epoch Unix, plus pratique à la main que 1601).<br>
+          <span style="color:var(--muted)">Années pleines 1970 → 2025 (= 56 ans) : 56 × 365 = 20 440 jours.<br>
+          Années bissextiles entre 1972 et 2024 (incluses) : 14 (2000 en fait partie, divisible par 400) → + 14 jours.<br>
+          Sous-total années pleines : <strong>20 454 jours</strong> au 2026-01-01.<br>
+          Jours de 2026-01-01 au 2026-05-09 : Jan 31 + Fév 28 + Mar 31 + Avr 30 + 8 (jusqu'au 9 mai 00:00) = <strong>128 jours</strong>.<br>
+          → Total : <strong style="color:var(--cyan)">20 582 jours</strong>.</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <strong>Convertir en secondes Unix :</strong> 20 582 × 86 400 = <strong style="color:var(--cyan)">1 778 284 800 s</strong>.
+          <span style="color:var(--muted)">(86 400 = 24 × 3600)</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <strong>Ajouter le décalage 1601 → 1970 :</strong> + 11 644 473 600.<br>
+          1 778 284 800 + 11 644 473 600 = <strong style="color:var(--cyan)">13 422 758 400 s</strong> depuis 1601.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text">
+          <strong>Multiplier par 10 000 000</strong> (100 ns par seconde) :<br>
+          13 422 758 400 × 10⁷ = <strong style="color:var(--cyan)">134 227 584 000 000 000</strong>.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-text">
+          <strong>Convertir en hex 64 bits</strong> (division successive par 16 ou conversion directe) :<br>
+          134 227 584 000 000 000 = <code style="color:var(--orange)">0x01DC DF46 C761 0000</code>.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-text">
+          <strong>Stocker en Little Endian</strong> (8 octets inversés) — ce qu'on voit dans un hex viewer :
+          <div class="byte-strip" style="margin-top:.35rem">
+            <div class="b red">00<small>byte 0</small></div>
+            <div class="b red">00<small>byte 1</small></div>
+            <div class="b red">61<small>byte 2</small></div>
+            <div class="b red">C7<small>byte 3</small></div>
+            <div class="b red">46<small>byte 4</small></div>
+            <div class="b red">DF<small>byte 5</small></div>
+            <div class="b red">DC<small>byte 6</small></div>
+            <div class="b red">01<small>byte 7</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kv-grid" style="margin-top:.7rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem">
+      <div class="k">Date UTC</div><div class="v">2026-05-09 00:00:00</div>
+      <div class="k">Unix epoch</div><div class="v cyan">1 778 284 800</div>
+      <div class="k">Secondes depuis 1601</div><div class="v cyan">13 422 758 400</div>
+      <div class="k">FILETIME (100 ns)</div><div class="v cyan">134 227 584 000 000 000</div>
+      <div class="k">FILETIME hex (logique, BE)</div><div class="v hex">0x01DCDF46C7610000</div>
+      <div class="k">Sur disque NTFS (LE)</div><div class="v hex">00 00 61 C7 46 DF DC 01</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       6 — FILETIME NTFS : LE RETOUR (HEX → DATE)
+       ════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">6 · NTFS FILETIME — du hex vers la date (calcul inverse)</div>
+
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">
+      Cas typique d'examen : on a lu 8 octets dans une entrée MFT et on veut savoir à quelle date ils correspondent.
+    </p>
+
+    <div class="formula">
+      <span class="lbl">Formule retour (FILETIME → date)</span>
+      <em>Unix epoch</em> = ( FILETIME / 10 000 000 ) − 11 644 473 600<br>
+      <span style="color:var(--muted);font-size:.75rem">Puis convertir le résultat en date UTC normale.</span>
+    </div>
+
+    <p style="font-size:.82rem;margin-top:.6rem"><strong>Exemple :</strong> on a lu sur disque les octets bruts <code style="color:var(--red)">00 00 61 C7 46 DF DC 01</code>.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          <strong>Inverser l'ordre des octets</strong> (on est en LE → on remet en BE logique) :
+          <div class="byte-strip" style="margin-top:.35rem">
+            <div class="b red">00</div><div class="b red">00</div><div class="b red">61</div><div class="b red">C7</div><div class="b red">46</div><div class="b red">DF</div><div class="b red">DC</div><div class="b red">01</div>
+            <div class="arrow">→</div>
+            <div class="b">01</div><div class="b">DC</div><div class="b">DF</div><div class="b">46</div><div class="b">C7</div><div class="b">61</div><div class="b">00</div><div class="b">00</div>
+          </div>
+          → <code style="color:var(--orange)">0x01DCDF46C7610000</code>.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <strong>Convertir en décimal</strong> (calculatrice / scriptable) :<br>
+          0x01DCDF46C7610000 = <strong style="color:var(--cyan)">134 227 584 000 000 000</strong>.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <strong>Diviser par 10 000 000</strong> pour obtenir les secondes depuis 1601 :<br>
+          134 227 584 000 000 000 / 10⁷ = <strong style="color:var(--cyan)">13 422 758 400 s</strong>.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text">
+          <strong>Soustraire 11 644 473 600</strong> pour basculer sur Unix epoch (1970) :<br>
+          13 422 758 400 − 11 644 473 600 = <strong style="color:var(--cyan)">1 778 284 800 s</strong>.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-text">
+          <strong>Convertir en date :</strong> 1 778 284 800 / 86 400 = 20 582 jours pile depuis 1970-01-01 → on retombe sur le 2026-01-01 + 128 jours = <strong style="color:var(--green)">2026-05-09 00:00:00 UTC</strong> ✓
+        </div>
+      </div>
+    </div>
+
+    <div class="mini-callout">
+      <strong>Sanity check Powershell / Python :</strong>
+      <code>[DateTime]::FromFileTimeUtc(134227584000000000)</code>&nbsp;·&nbsp;
+      <code>datetime(1601,1,1) + timedelta(microseconds=134227584000000000//10)</code>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       7 — AJOUTER UNE HEURE (14:30:45)
+       ════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">7 · Ajouter une heure — exemple 14:30:45 UTC</div>
+
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">
+      Une fois la date à 00:00:00 maîtrisée, on rajoute simplement l'heure <strong>en secondes</strong> avant de multiplier par 10 000 000. <strong>Aucune complication</strong> : tout est secondes.
+    </p>
+
+    <div class="formula">
+      <span class="lbl">Heure → secondes</span>
+      secondes = heures × 3600 + minutes × 60 + secondes<br>
+      <span style="color:var(--muted);font-size:.75rem">14:30:45 → 14 × 3600 + 30 × 60 + 45 = 50 400 + 1 800 + 45 = <strong style="color:var(--cyan)">52 245 s</strong></span>
+    </div>
+
+    <p style="font-size:.82rem;margin-top:.5rem"><strong>Exemple :</strong> encoder <code>2026-05-09 14:30:45 UTC</code>.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">On part du résultat du §4 à minuit : 13 422 758 400 s depuis 1601.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">On <strong>ajoute</strong> 52 245 s (14h30m45s) → <strong style="color:var(--cyan)">13 422 810 645 s</strong>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">× 10 000 000 → <strong style="color:var(--cyan)">134 228 106 450 000 000</strong>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text">En hex : <code style="color:var(--orange)">0x01DCDFC06BD35880</code>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-text">
+          Sur disque (LE) :
+          <div class="byte-strip" style="margin-top:.35rem">
+            <div class="b red">80</div><div class="b red">58</div><div class="b red">D3</div><div class="b red">6B</div><div class="b red">C0</div><div class="b red">DF</div><div class="b red">DC</div><div class="b red">01</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="font-size:.82rem;margin-top:.7rem"><strong>Pour le retour</strong>, on suit exactement la procédure du §5 et, à la fin, on isole l'heure :</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">On calcule les secondes depuis 1970 → 1 778 337 045.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <strong>Diviser par 86 400</strong> → quotient = nombre de jours, reste = nombre de secondes dans la journée :<br>
+          1 778 337 045 ÷ 86 400 → quotient <strong style="color:var(--cyan)">20 582</strong>, reste <strong style="color:var(--cyan)">52 245 s</strong>.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <strong>Décomposer le reste</strong> en heures/minutes/secondes :<br>
+          52 245 ÷ 3600 → heures = <strong>14</strong>, reste = 645 s.<br>
+          645 ÷ 60 → minutes = <strong>10</strong>… <em>oups</em>. 14×3600 = 50 400. 52 245 − 50 400 = 1 845. 1 845 ÷ 60 → minutes = <strong>30</strong>, reste = <strong>45 s</strong>.<br>
+          → <strong style="color:var(--green)">14:30:45 UTC</strong> ✓
+        </div>
+      </div>
+    </div>
+
+    <div class="alert" style="margin-top:.5rem">
+      <strong>Piège fuseau :</strong> FILETIME est <strong>toujours en UTC</strong>. Si on attend une heure locale Europe/Zurich, il faut ajouter +1 h (hiver) ou +2 h (été, DST). Le DST 2026 commence le <strong>29 mars 2026</strong>, donc le 9 mai 2026 est en été → heure locale = UTC + 2.
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       8 — AUTRES FORMATS TEMPORELS
+       ════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">8 · Autres formats temporels — comparaison rapide</div>
+
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">
+      FILETIME n'est qu'un format parmi d'autres. Sur un même cas forensique on rencontre couramment <strong>4 ou 5 formats différents</strong> selon les artefacts. Confondre époque ou unité = des années d'erreur.
+    </p>
+
+    <table class="calc-table">
+      <thead><tr><th>Format</th><th>Époque</th><th>Unité</th><th>Taille</th><th>Où ?</th></tr></thead>
+      <tbody>
+        <tr><td class="hi">Unix epoch</td><td>1970-01-01 UTC</td><td>seconde</td><td>32 bits (signé)</td><td>EXT, exFAT*, Linux, Mac, BSD</td></tr>
+        <tr><td class="hi">FILETIME</td><td>1601-01-01 UTC</td><td><strong>100 ns</strong></td><td>64 bits</td><td>NTFS, MFT, registre, Event Logs</td></tr>
+        <tr><td class="hi">WebKit/Chrome</td><td>1601-01-01 UTC</td><td><strong>microseconde</strong></td><td>64 bits</td><td>Chrome History/Cookies SQLite</td></tr>
+        <tr><td class="hi">Cocoa / NSDate</td><td>2001-01-01 UTC</td><td>seconde (float)</td><td>64 bits</td><td>macOS, iOS (plist, SQLite)</td></tr>
+        <tr><td class="hi">Java time</td><td>1970-01-01 UTC</td><td>milliseconde</td><td>64 bits (signé)</td><td>Android, apps Java</td></tr>
+        <tr><td class="hi">DOS FAT</td><td>1980-01-01 (local)</td><td>2 secondes</td><td>16 + 16 bits</td><td>FAT12/16/32, ZIP</td></tr>
+      </tbody>
+    </table>
+
+    <p style="font-size:.82rem;color:var(--muted);margin-top:.7rem;margin-bottom:.4rem"><strong style="color:var(--text)">Même instant (2024-01-15 12:00:00 UTC) dans les 5 formats :</strong></p>
+    <div class="kv-grid" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem">
+      <div class="k">Unix epoch (s)</div><div class="v cyan">1 705 320 000</div>
+      <div class="k">FILETIME (100 ns)</div><div class="v cyan">133 497 936 000 000 000</div>
+      <div class="k">WebKit (μs)</div><div class="v cyan">13 349 793 600 000 000</div>
+      <div class="k">Cocoa (s)</div><div class="v cyan">727 012 800</div>
+      <div class="k">Java (ms)</div><div class="v cyan">1 705 320 000 000</div>
+    </div>
+
+    <div class="mini-callout">
+      <strong>Relation FILETIME ↔ WebKit :</strong> même époque (1601), mais facteur <strong>×10</strong> sur l'unité. <code>WebKit = FILETIME / 10</code>. C'est <em>la</em> confusion classique sur les artefacts Chrome.
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       9 — PIÈGES FRÉQUENTS
+       ════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">9 · Pièges fréquents à l'examen</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem">
+      <div style="background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.25);border-left:3px solid var(--red);border-radius:0 8px 8px 0;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--red);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.3rem">⚠ Endianness oubliée</div>
+        <p style="font-size:.78rem;margin:0">Lire <code>61 C7</code> directement comme 0x61C7 sur NTFS → faux, c'est du LE → 0xC761. <strong>Toujours noter LE/BE</strong> sur la copie avant de calculer.</p>
+      </div>
+      <div style="background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.25);border-left:3px solid var(--red);border-radius:0 8px 8px 0;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--red);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.3rem">⚠ Signé / non signé confondus</div>
+        <p style="font-size:.78rem;margin:0"><code>0xFFFFFFFC</code> = 4 294 967 292 (offset énorme) OU = −4 (revenir 4 en arrière). Si l'énoncé dit "offset signé" → c'est −4. Une run list NTFS utilise du <strong>signé</strong>.</p>
+      </div>
+      <div style="background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.25);border-left:3px solid var(--red);border-radius:0 8px 8px 0;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--red);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.3rem">⚠ FILETIME vs WebKit</div>
+        <p style="font-size:.78rem;margin:0">Même époque 1601, mais unités différentes (100 ns vs μs). Si le résultat de FILETIME tombe en l'an 10000+, on a probablement appliqué la formule FILETIME à du WebKit. <strong>Diviser par 10</strong>.</p>
+      </div>
+      <div style="background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.25);border-left:3px solid var(--red);border-radius:0 8px 8px 0;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--red);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.3rem">⚠ UTC vs heure locale</div>
+        <p style="font-size:.78rem;margin:0">FILETIME / Unix / WebKit = <strong>UTC</strong>. DOS FAT = heure <strong>locale sans fuseau indiqué</strong>. Convertir en UTC d'abord, puis ajuster (CH 2026 hiver = UTC+1, été depuis le 29 mars = UTC+2).</p>
+      </div>
+      <div style="background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.25);border-left:3px solid var(--red);border-radius:0 8px 8px 0;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--red);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.3rem">⚠ Bissextiles oubliées</div>
+        <p style="font-size:.78rem;margin:0">Règle : div. par 4 → bissextile, SAUF div. par 100 (non), SAUF div. par 400 (oui). <strong>2000 oui, 2100 non, 2024 oui, 2028 oui</strong>. Une année oubliée = 1 jour d'erreur.</p>
+      </div>
+      <div style="background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.25);border-left:3px solid var(--red);border-radius:0 8px 8px 0;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--red);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.3rem">⚠ Bit (b) vs Byte (B)</div>
+        <p style="font-size:.78rem;margin:0">Minuscule b = bit, majuscule B = byte (octet). 8 b = 1 B. KB / MB / GB = 10³, 10⁶, 10⁹ ; KiB / MiB / GiB = 2¹⁰, 2²⁰, 2³⁰. Un débit 100 Mbps ≠ 100 MB/s (facteur 8).</p>
+      </div>
+      <div style="background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.25);border-left:3px solid var(--red);border-radius:0 8px 8px 0;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--red);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.3rem">⚠ FILETIME = 0</div>
+        <p style="font-size:.78rem;margin:0">8 octets <code>00 00 00 00 00 00 00 00</code> → date = 1601-01-01 00:00:00, pas "aucune date". Signe d'horodatage non initialisé / champ vide.</p>
+      </div>
+      <div style="background:rgba(255,64,96,.04);border:1px solid rgba(255,64,96,.25);border-left:3px solid var(--red);border-radius:0 8px 8px 0;padding:.7rem .85rem">
+        <div style="font-size:.7rem;color:var(--red);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.3rem">⚠ Y2038 (Unix 32 bits)</div>
+        <p style="font-size:.78rem;margin:0">Unix epoch sur <strong>32 bits signé</strong> déborde le 19 janvier 2038 à 03:14:07 UTC. Au-delà, valeur négative → "1901". Pas un problème en FILETIME 64 bits, mais bien dans les EXT2/3 et certains champs réseau.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       10 — OUTILS DE VÉRIFICATION + MINI-EXOS
+       ════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-title">10 · Outils de vérification & mini-exercices</div>
+
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">
+      Pour entraîner / vérifier les calculs hors examen, voici les snippets one-liner les plus utiles, et 4 mini-exos pour s'auto-tester (réponses cachées).
+    </p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:.4rem">
+      <div style="background:rgba(48,232,138,.04);border:1px solid rgba(48,232,138,.25);border-left:3px solid var(--green);border-radius:0 8px 8px 0;padding:.7rem .85rem;font-size:.78rem">
+        <div style="font-size:.7rem;color:var(--green);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.4rem">🐍 Python</div>
+        <code style="display:block;background:var(--bg);padding:.4rem .55rem;border-radius:4px;font-size:.72rem;margin-bottom:.3rem">int.from_bytes(bytes.fromhex("ABCD"), "little")</code>
+        <code style="display:block;background:var(--bg);padding:.4rem .55rem;border-radius:4px;font-size:.72rem;margin-bottom:.3rem">datetime(1601,1,1) + timedelta(microseconds=FT//10)</code>
+        <code style="display:block;background:var(--bg);padding:.4rem .55rem;border-radius:4px;font-size:.72rem">int.from_bytes(b, "little", signed=True)</code>
+      </div>
+      <div style="background:rgba(88,166,255,.04);border:1px solid rgba(88,166,255,.25);border-left:3px solid var(--blue);border-radius:0 8px 8px 0;padding:.7rem .85rem;font-size:.78rem">
+        <div style="font-size:.7rem;color:var(--blue);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.4rem">💠 PowerShell</div>
+        <code style="display:block;background:var(--bg);padding:.4rem .55rem;border-radius:4px;font-size:.72rem;margin-bottom:.3rem">[DateTime]::FromFileTimeUtc(134227584000000000)</code>
+        <code style="display:block;background:var(--bg);padding:.4rem .55rem;border-radius:4px;font-size:.72rem;margin-bottom:.3rem">[Convert]::ToInt64("01DCDF46C7610000", 16)</code>
+        <code style="display:block;background:var(--bg);padding:.4rem .55rem;border-radius:4px;font-size:.72rem">(Get-Date).ToFileTimeUtc()</code>
+      </div>
+      <div style="background:rgba(240,192,64,.04);border:1px solid rgba(240,192,64,.25);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:.7rem .85rem;font-size:.78rem">
+        <div style="font-size:.7rem;color:var(--gold);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.4rem">🌐 Online</div>
+        <p style="margin:0"><strong>DCode.fr</strong> — détecte le format automatiquement (FILETIME, WebKit, Unix, Cocoa…). <strong>CyberChef</strong> — recipes "From Hex", "Swap Endianness", "Windows Filetime to UNIX Timestamp".</p>
+      </div>
+      <div style="background:rgba(188,140,255,.04);border:1px solid rgba(188,140,255,.25);border-left:3px solid var(--purple);border-radius:0 8px 8px 0;padding:.7rem .85rem;font-size:.78rem">
+        <div style="font-size:.7rem;color:var(--purple);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.4rem">🔧 Linux / CLI</div>
+        <code style="display:block;background:var(--bg);padding:.4rem .55rem;border-radius:4px;font-size:.72rem;margin-bottom:.3rem">printf '%d\n' 0xCDAB</code>
+        <code style="display:block;background:var(--bg);padding:.4rem .55rem;border-radius:4px;font-size:.72rem;margin-bottom:.3rem">date -u -d @1778284800</code>
+        <code style="display:block;background:var(--bg);padding:.4rem .55rem;border-radius:4px;font-size:.72rem">xxd / hexdump -C / od -An -tx1</code>
+      </div>
+    </div>
+
+    <p style="font-size:.82rem;color:var(--muted);margin-top:.9rem;margin-bottom:.4rem"><strong style="color:var(--text)">🧠 Mini-exercices — cliquer pour révéler la réponse :</strong></p>
+
+    <div class="quiz-wrap">
+      <div class="quiz-q">① Convertir <code>0x3F</code> en décimal non signé.<small>Hex → déc · facile</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer"><strong>63</strong>. Décomposition : 3 × 16 + 15 = 48 + 15 = 63.</div>
+    </div>
+
+    <div class="quiz-wrap">
+      <div class="quiz-q">② Quelle est la valeur <strong>signée</strong> de <code>0xFE</code> sur 8 bits ?<small>Complément à 2 · facile</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer"><strong>−2</strong>. Méthode rapide : 0xFE = 254 non signé. Bit de poids fort = 1 → négatif → 254 − 256 = <strong>−2</strong>. Vérif : <code>FF</code> = −1, <code>FE</code> = −2.</div>
+    </div>
+
+    <div class="quiz-wrap">
+      <div class="quiz-q">③ Les octets <code>10 27 00 00</code> lus sur disque NTFS représentent quel nombre en non signé 32 bits ?<small>LE 32 bits · moyen</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer"><strong>10 000</strong>. Étape 1 — LE → inverser les 4 octets : <code>10 27 00 00</code> → <code>00 00 27 10</code> → 0x00002710. Étape 2 — décomposer : 2 × 4096 + 7 × 256 + 1 × 16 + 0 = 8 192 + 1 792 + 16 = <strong>10 000</strong>.</div>
+    </div>
+
+    <div class="quiz-wrap">
+      <div class="quiz-q">④ Sur disque NTFS, les 8 octets <code>00 20 87 5D AA 47 DA 01</code> représentent quelle date UTC ?<small>FILETIME · difficile</small></div>
+      <div class="quiz-actions"><button class="quiz-reveal-btn">Révéler →</button></div>
+      <div class="quiz-answer"><strong>2024-01-15 12:00:00 UTC</strong>. Étape 1 — inverser les 8 octets : <code>01 DA 47 AA 5D 87 20 00</code> → 0x01DA47AA5D872000. Étape 2 — décimal : 133 497 936 000 000 000. Étape 3 — ÷ 10⁷ = 13 349 793 600 s depuis 1601. Étape 4 — − 11 644 473 600 = 1 705 320 000 s Unix. Étape 5 — / 86 400 = 19 737 jours (= 54 ans + 14 jours bissextiles + 15 jours de janvier) → <strong>15 janvier 2024 à 12:00 UTC</strong>.</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       11 — RÉCAP / EXAM TIP
+       ════════════════════════════════════════════════════════════ -->
+  <div class="exam-tip">
+    <div class="exam-tip-title">🎓 Récap éclair — les clefs à mémoriser</div>
+    <p><strong>① Hex ↔ Décimal</strong></p>
+    <p>&nbsp;&nbsp;• 1 octet = 2 chiffres hex = 8 bits ; <code>FF</code> = 255 · <code>FFFF</code> = 65 535 · <code>FFFFFFFF</code> ≈ 4,29 × 10⁹</p>
+    <p>&nbsp;&nbsp;• Hex → déc : chiffre × 16ⁿ (16⁰=1, 16¹=16, 16²=256, 16³=4096, 16⁴=65 536)</p>
+    <p>&nbsp;&nbsp;• Déc → hex : divisions successives par 16, lire les restes de bas en haut</p>
+    <p><strong>② Endianness — toujours en PREMIER</strong></p>
+    <p>&nbsp;&nbsp;• LE (NTFS/FAT/Intel) → on <strong>inverse les octets entiers</strong> avant le calcul · BE (réseau/HFS+) → lecture directe</p>
+    <p>&nbsp;&nbsp;• <code>AB CD</code> en LE non signé = 0xCDAB = <strong>52 651</strong></p>
+    <p><strong>③ Astuces de vitesse</strong></p>
+    <p>&nbsp;&nbsp;• Premier chiffre hex ≥ 8 → négatif en signé</p>
+    <p>&nbsp;&nbsp;• Nb chiffres hex ÷ 2 = nb octets (4=WORD, 8=DWORD, 16=QWORD)</p>
+    <p>&nbsp;&nbsp;• <code>FFFF − x</code> = lecture rapide du signé (FFFD = −3, FFFC = −4…)</p>
+    <p><strong>④ Complément à 2 (signé)</strong></p>
+    <p>&nbsp;&nbsp;• Méthode éclair : <code>valeur_signée = valeur_non_signée − 2ᴺ</code></p>
+    <p>&nbsp;&nbsp;• <code>FF FD</code> en BE 16 bits = <strong>−3</strong> · en LE 16 bits = <strong>−513</strong></p>
+    <p>&nbsp;&nbsp;• Plages : 8 bits [−128 ; +127] · 16 bits [−32 768 ; +32 767] · 32 bits [−2,15×10⁹ ; +2,15×10⁹]</p>
+    <p><strong>⑤ NTFS FILETIME</strong></p>
+    <p>&nbsp;&nbsp;• Époque <strong>1601-01-01 00:00:00 UTC</strong> · Unité <strong>100 ns</strong> (× ou ÷ 10⁷) · 64 bits LE</p>
+    <p>&nbsp;&nbsp;• Offset 1601 → 1970 = <strong>11 644 473 600 s</strong></p>
+    <p>&nbsp;&nbsp;• Aller : date → s Unix → +11 644 473 600 → × 10⁷ → hex → inverser en LE</p>
+    <p>&nbsp;&nbsp;• Retour : LE → inverser → hex → décimal → ÷ 10⁷ → −11 644 473 600 → date</p>
+    <p>&nbsp;&nbsp;• 9 mai 2026 00:00:00 UTC = <code>00 00 61 C7 46 DF DC 01</code></p>
+    <p>&nbsp;&nbsp;• 9 mai 2026 14:30:45 UTC = <code>80 58 D3 6B C0 DF DC 01</code></p>
+    <p><strong>⑥ Pièges à éviter</strong></p>
+    <p>&nbsp;&nbsp;• <strong>WebKit ≠ FILETIME</strong> : même époque 1601, mais μs vs 100 ns → facteur ×10</p>
+    <p>&nbsp;&nbsp;• <strong>Fuseau CH 2026</strong> : été (UTC+2) du 29 mars au 24 octobre, hiver (UTC+1) le reste</p>
+    <p>&nbsp;&nbsp;• <strong>Sign extension</strong> : run list NTFS, <code>FD</code> sur 1 octet étendu sur 4 = <code>FF FF FF FD</code></p>
+    <p>&nbsp;&nbsp;• <strong>Bissextiles</strong> : div. 4 oui, sauf div. 100 non, sauf div. 400 oui (2000 oui, 2100 non)</p>
+  </div>
+
+  <div class="alert">⚖️ <strong>Examen CAS-IN — réflexes :</strong> (1) Avant tout calcul, écrire l'endianness sur la copie. (2) Pour le signé, regarder le bit de gauche. (3) FILETIME : 1601 + 100 ns + LE. (4) Convertir en UTC d'abord, ajuster le fuseau seulement à la fin. (5) Toujours vérifier avec <code>FromFileTimeUtc</code> ou <code>datetime</code> Python si possible.</div>
+
+  <div class="footer">
+    <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+    <span>Fiche basée sur les chapitres Encodage + NTFS + Timestamps FS</span>
+  </div>
+
+</div>
+</main>
+
+<script>
+/* Scroll progress bar (identique aux autres fiches) */
+(function(){
+  var bar = document.getElementById('scroll-progress');
+  if(!bar) return;
+  var d = document.documentElement;
+  window.addEventListener('scroll', function(){
+    bar.style.width = Math.min(100,(d.scrollTop/(d.scrollHeight-d.clientHeight))*100)+'%';
+  }, {passive:true});
+
+  var btn = document.getElementById('back-top');
+  if(btn) window.addEventListener('scroll', function(){
+    btn.classList.toggle('visible', window.scrollY > 300);
+  });
+
+  /* Quiz reveal fallback (au cas où fiche-common.js n'est pas chargé) */
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('.quiz-reveal-btn');
+    if(!b) return;
+    var wrap = b.closest('.quiz-wrap');
+    if(!wrap) return;
+    var ans = wrap.querySelector('.quiz-answer');
+    if(!ans) return;
+    if(ans.classList.contains('visible')){
+      ans.classList.remove('visible');
+      ans.style.display = '';
+      b.textContent = 'Révéler →';
+    } else {
+      ans.classList.add('visible');
+      ans.style.display = 'block';
+      b.textContent = '← Masquer';
+    }
+  });
+})();
+</script>
+
+<!-- Scripts communs aux fiches (chargés si présents dans le repo) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+<script src="../js/core/cas-in-profile.js" defer></script>
+<script src="../js/core/cas-in-navbar.js" defer></script>
+</body>
+</html>
