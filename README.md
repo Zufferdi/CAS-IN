@@ -1,243 +1,183 @@
-# CAS-IN — Investigation Numérique Forensique
+# CAS-IN — Patch v2.95 — Dossiers, Sagas, Arcs PNJ & Relations enrichies
 
-> *« Lire un dump hex à la main, c'est encore le seul moment où on peut prétendre faire de l'informatique sérieuse. »*
+Réponse cumulée aux **pistes 1, 2, 3 et 4** du diagnostic initial,
+plus correction d'un bug bloquant.
 
-Outil d'entraînement pour les étudiants du **CAS en Investigation Numérique**, et plus généralement pour quiconque trouve normal de compter ses clusters en hexadécimal.
+## Sommaire par version
 
-Quatre piles, indépendantes mais reliées :
-
-| Pilule | Section | Contenu |
+| Version | Apport | Fichiers touchés |
 |---|---|---|
-| 💊 **Bleue** | Fiches | 109 fiches structurées par catégorie — FS, Windows, crypto, réseau, droit suisse, plateformes, acquisition. |
-| 💊 **Verte** | TP | 32 catégories d'exercices — FAT, NTFS, exFAT, EXT, HFS+, endianness, magic bytes, hashes, droit pénal, email, réseau, IR, Registry, Prefetch, LNK… Chaque exercice est **régénéré à chaque passage**. Si on réussit, c'est qu'on a compris, pas qu'on a retenu. |
-| 💊 **Orange** | Scènes | 136 scénarios DFIR immersifs avec choix multiples, conséquences procédurales, références légales (Art. 141 CPP, ACPO, NIST, LPD révisée). |
-| 💊 **Rouge** | Quiz | 2 000 questions gamifiées — XP, rangs, streaks, défi quotidien, mode survie, SM2 spaced repetition. |
+| **v2.93** | Vue Dossiers (chronologie) + Sagas Viège/Sarine/Initiation | scene.html, +1 JS, +1 CSS, scenes-chronology.json |
+| **v2.94** | Auto-arcs PNJ (×25) + correction bug `window.NpcArcs` | profile.html, cas-in-arcs.js, cas-in-achievements.js, npc-arcs.json |
+| **v2.95** | Relations enrichies : arcs en cours, factions, rencontres, quêtes | profile-relations.js (réécrit), +1 CSS, profile.html, npcs.html, scene-app.js |
 
----
+## Contenu du bundle
 
-## Démarrage
+```
+scripts/
+  build_chronology_v2.py        ← Régénère scenes-chronology.json (v2.93)
+  build_npc_arcs_v2.py          ← Génère arcs PNJ auto (v2.94)
+js/core/
+  cas-in-arcs.js                ← +25 mappings ARC_TO_ACHIEVEMENT
+  cas-in-achievements.js        ← +25 badges arc_*
+js/pages/
+  scene-app.js                  ← +1 handler hash #scene=<id> (auto-launch)
+  scene-dossiers-v1.js          ← Module vue Dossiers (v2.93)
+js/profile/
+  profile-relations.js          ← RÉÉCRIT — Relations enrichies (v2.95)
+style/
+  scene-dossiers.css            ← CSS Dossiers (v2.93)
+  profile-relations.css         ← CSS Relations enrichies (v2.95)
+data/
+  scenes-chronology.json        ← 162 scènes + 3 sagas
+  npc-arcs.json                 ← 32 arcs (8 manuels + 24 auto)
+patches/
+  patch_*.txt                   ← snippets générés (référence)
+scene.html                       ← +1 link CSS, +1 button, +1 screen, +1 script
+profile.html                     ← -1 script (bug fix v2.94) + 1 link CSS (v2.95)
+npcs.html                        ← +1 handler hash #npc=<id> (deep-link)
+```
 
-Aucun build, zéro dépendance npm. Cloner et servir :
+## Application
 
 ```bash
-git clone <repo>
-cd CAS-IN
-python3 -m http.server 8000   # ou tout autre serveur statique
+# Backup
+cp scene.html scene.html.bak
+cp profile.html profile.html.bak
+cp npcs.html npcs.html.bak
+cp js/pages/scene-app.js js/pages/scene-app.js.bak
+cp js/core/cas-in-arcs.js js/core/cas-in-arcs.js.bak
+cp js/core/cas-in-achievements.js js/core/cas-in-achievements.js.bak
+cp js/profile/profile-relations.js js/profile/profile-relations.js.bak
+cp data/npc-arcs.json data/npc-arcs.json.bak
+cp data/scenes-chronology.json data/scenes-chronology.json.bak
+
+# Apply (préserve l'arborescence)
+cp -r cas-in-v2.95-patch/. .
+
+# Vérifier (idempotent : doivent dire "0 ajout")
+python3 scripts/build_chronology_v2.py
+python3 scripts/build_npc_arcs_v2.py
 ```
 
-Pour la CI :
+## v2.95 — Détail du nouvel onglet Relations
 
+L'onglet **Relations** sur `profile.html` devient un cockpit social.
+Sept sections, dans l'ordre :
+
+### 1. Compteurs étendus (8 stats au lieu de 5)
+- Complices · Pro. · Méfiants · Hostiles · Rencontrés (existant)
+- **Factions touchées : N/19** (couverture institutionnelle)
+- **Arcs actifs** (arcs en cours, lit `NpcArcs`)
+- **Arcs bouclés** (arcs 100%)
+
+### 2. 🔥 Rencontres récentes (5 derniers PNJ)
+Triés par date de la dernière interaction. Pour chaque PNJ :
+- Avatar, nom, rôle court
+- État courant (😠/🤨/🙂/🤝) + trust /100
+- "auj. / hier / 3j / 2sem / 1mo" en colonne droite
+- Click → `npcs.html#npc=<id>` (fiche modale auto-ouverte)
+
+### 3. 🎯 Arcs en cours (jusqu'à 5)
+Affiche les arcs dont au moins 1 stage est fait mais pas terminés.
+Pour chaque arc :
+- Icône, titre, jauge de progression
+- Bouton **▶ [prochaine scène]** → `scene.html#scene=<id>` (auto-launch)
+
+Si > 5 arcs actifs, lien vers l'onglet Distinctions.
+
+### 4. 🏛 Réputation par faction
+Une jauge par institution rencontrée, parmi 19 familles définies :
+> fedpol · MPC · MP cantonaux · Polcant · OFCS · OFJ · FINMA · SRC ·
+> DDPS · PFPDT · Interpol/Europol · FBI · Forces étrangères · Avocats ·
+> Privé sécurité · Privé tech · Académique · Santé · CICR
+
+Trust moyen agrégé par faction (sur les PNJ rencontrés de cette faction).
+Permet de voir d'un coup d'œil "tu es bien vu chez fedpol mais détesté
+au MPC".
+
+### 5. 🤝 Cercle proche (top 5 complices) — *existant*
+### 6. ⚠ Relations à reconstruire (top 5 hostiles/méfiants) — *existant*
+
+### 7. 🎓 Quêtes réseau (3 quêtes)
+| Quête | Cible | Progression |
+|---|---|---|
+| 🎯 Cercle rapproché | 5 complices à atteindre | `N/5` |
+| 📇 Carnet d'adresses | 1 PNJ dans chacune des 8 factions majeures | `N/8` |
+| 🏆 Veneur d'arcs | 3 arcs narratifs bouclés | `N/3` |
+
+Quand une quête est complétée, sa carte passe en vert avec ✓.
+
+## Liens cross-pages désormais fonctionnels
+
+| URL | Action | Implémenté dans |
+|---|---|---|
+| `npcs.html#npc=<id>` | Ouvre la fiche PNJ en modale | npcs.html (handler `handleHashDeepLink`) |
+| `scene.html#scene-<id>` | Scroll + highlight la card dans le lobby | scene-app.js (existant) |
+| `scene.html#scene=<id>` | **Auto-launch** la scène directement | scene-app.js (v2.95) |
+| `scene.html#random` | Lance une scène aléatoire | scene-app.js (existant) |
+
+Tous ces formats fonctionnent depuis n'importe quelle page.
+
+## Architecture des données — récap
+
+Aucune nouvelle table requise. Tout est lu depuis :
+- `data/npcs.json` : fiches PNJ (name, role, institution, appearances, icon)
+- `data/npc-arcs.json` : arcs narratifs (manuels + auto) — 32 entrées
+- `data/scenes-chronology.json` : 162 scènes en 4 groupes + 3 sagas
+- `localStorage['scene_results']` : progression (existant)
+- `localStorage['cas_npc_state']` : trust/state/interactions par PNJ (existant)
+
+## Vérifications post-application
+
+### Dans le navigateur
+
+#### Onglet Relations (`profile.html#tab=relations`)
+- [ ] Compteurs étendus visibles (8 stats au lieu de 5)
+- [ ] Si tu as joué ≥ 1 scène : section "Rencontres récentes" affiche les PNJ croisés avec leur trust et la date relative
+- [ ] Si arcs en cours : section "Arcs en cours" affiche au moins 1 carte avec un bouton "▶ [titre scène]"
+- [ ] Section "Réputation par faction" affiche au moins 1 jauge
+- [ ] Section "Quêtes réseau" affiche 3 cartes (Cercle / Carnet / Veneur)
+
+#### Cross-page deep-links
+- [ ] Click sur un PNJ dans "Rencontres récentes" → `npcs.html` s'ouvre, modale du PNJ déjà déployée
+- [ ] Click sur "▶ [scène]" dans "Arcs en cours" → `scene.html` s'ouvre et **lance** directement la scène
+
+#### Onglet Distinctions (`profile.html#tab=distinctions`)
+- [ ] Compteur "👥 ARCS NARRATIFS · 0/32" (au lieu de 0/0 avant v2.94)
+- [ ] Les 32 cartes s'affichent (filtrables)
+
+### Idempotence
+
+Les scripts Python ne réécrivent rien si rien n'a changé :
 ```bash
-# Régénère counts.json + patche les fallbacks data-count dans le HTML +
-# lit la version depuis docs/CHANGELOG.md
-python3 scripts/generate_counts.py
+$ python3 scripts/build_chronology_v2.py
+[chronology] existing=162 all=162 orphans=0
 
-# QC questions.json (CI bloquante)
-python3 scripts/check_questions.py data/questions.json
-
-# Tests Node (syntaxe + structure)
-node tests/test-cas-in.js
+$ python3 scripts/build_npc_arcs_v2.py
+[npc-arcs-v2] candidats auto (≥5, hors manuels): 0
 ```
 
----
+## Pistes encore en suspens (du diagnostic initial)
 
-## Architecture
+| # | Titre | Statut | Difficulté |
+|---|---|---|---|
+| 1 | Activer chronology comme vue Dossiers | ✅ v2.93 |  |
+| 2 | Promouvoir sagas Viège/Sarine | ✅ v2.93 |  |
+| 3 | Auto-générer arcs PNJ | ✅ v2.94 |  |
+| 4 | Améliorer l'onglet Relations | ✅ v2.95 |  |
+| **5** | **Rééquilibrage difficulté en surface** | À faire | Faible |
+| **6** | **Hygiène : consolider les 3 taxonomies** | À faire | Élevé |
 
-Vue d'ensemble. Pour le détail (ordre de chargement, mapping `localStorage`, dette technique restante), voir [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+## Pistes futures débloquées par v2.95
 
-```
-CAS-IN/
-├── index.html              # Landing — Matrix rain · drawer profil · raccourcis B/V/O/R
-├── quiz.html               # 2 000 questions gamifiées
-├── tp.html                 # 32 catégories TP avec sidebar
-├── scene.html              # 136 scénarios DFIR
-├── tools.html              # Calculateurs forensiques (timestamps, MFT, run lists…)
-├── exam.html               # Mode examen blanc
-├── profile.html            # Dossier enquêteur — rang · XP · ladder · badges · export
-├── glossary.html           # Glossaire forensique
-├── npcs.html               # Personnages des scènes
-├── offline.html            # Page fallback PWA
-├── references/             # Cluster Références : MITRE · CVE · Event IDs · Legal · DFIR Tools
-│
-├── docs/
-│   ├── ARCHITECTURE.md     # Couches & ordre de chargement
-│   └── CHANGELOG.md        # Keep-a-Changelog (source de vérité version)
-│
-├── data/                   # Index lazy-loadés
-│   ├── counts.json         # Auto-généré : nombres + version, source unique
-│   ├── manifest.json       # 109 fiches × 7 catégories
-│   ├── questions.json      # 2 000 questions (~2.7 MB monolithique)
-│   ├── npcs.json           # PNJ (rôle, trust, métadonnées)
-│   ├── search-index.json   # Index plein texte (Cmd+K)
-│   ├── ics-questions.json  # Questions ICS/SCADA
-│   ├── npc-arcs.json       # Arcs narratifs des PNJ
-│   ├── cross-links.json    # Maillage fiche ↔ fiche / TP / scène
-│   ├── fiche-graph.json    # Graphe de prérequis
-│   └── scenes-chronology.json
-│
-├── scenes/                 # 136 scènes, lazy-load v3.0
-│   ├── index.json          # Méta-index ~230 KB chargé au boot
-│   └── *.json              # Une scène complète par fichier
-│
-├── fiches/                 # 109 fiches HTML statiques
-│   └── index.html          # Hub de navigation des fiches
-│
-├── pwa.manifest.json       # Manifest PWA (W3C)
-├── sw.js                   # Service Worker — voir CACHE_VERSION en tête
-│
-├── style/                  # CSS — un fichier par grande zone
-│   ├── style.css           # Tokens (couleurs, fonts, --navbar-h, échelle z-index) + base
-│   ├── cas-in-navbar.css   # Navbar globale unifiée (v2.77)
-│   ├── landing.css         # index.html
-│   ├── quiz.css            # quiz.html
-│   ├── scene.css           # scene.html
-│   ├── tp.css              # Moteur TP (zones d'exercices)
-│   ├── tp-page.css         # Chrome de tp.html
-│   ├── tools.css           # tools.html
-│   ├── exam.css            # exam.html
-│   ├── profile.css         # profile.html (+ profile-dossier.css, profile-dossier-plus.css)
-│   ├── fiche_style.css     # Toutes les fiches
-│   ├── fiche-notes.css     # Système de notes utilisateur
-│   ├── glossary.css · npcs.css · refs.css · gamification-toasts.css · artifacts.css
-│
-├── js/                     # 4 couches strictes — voir docs/ARCHITECTURE.md
-│   ├── core/               # Source de vérité (Profile, Achievements, Quests, Mastery,
-│   │                       #   Counts, Search, PWA, Theme, Utils, NpcState, Arcs, Navbar)
-│   ├── profile/            # UI du profil + drawer + onglets
-│   ├── bridges/            # Compat legacy (uniquement tp-profile-bridge en v2.85+)
-│   ├── components/         # Briques UI réutilisables (search, fiches, swiss-flags…)
-│   └── pages/              # Apps spécifiques par page (quiz-app, scene-app, tools-app…)
-│
-├── tp/
-│   ├── tp-data.js
-│   └── tp-engine.js        # Générateurs aléatoires d'exercices
-│
-├── scripts/                # Outils Python (CI)
-│   ├── check_questions.py    # QC questions.json (bloquante)
-│   ├── generate_counts.py    # counts.json + patche les fallbacks HTML
-│   ├── build_index.py        # Index plein texte
-│   ├── build_glossary.py     # Glossaire auto
-│   ├── build_cross_links.py  # Maillage entre fiches/TP/scènes
-│   ├── build_fiche_graph.py  # Graphe de prérequis
-│   ├── build_npc_metadata.py # Méta PNJ
-│   └── git-hooks/pre-commit
-│
-└── tests/
-    └── test-cas-in.js      # Tests Node (syntaxe + structure)
-```
-
----
-
-## Une seule source de vérité pour les chiffres
-
-Tout ce qui est compté est dans **`data/counts.json`**, généré par `scripts/generate_counts.py` :
-
-| Clé | Source de vérité |
-|---|---|
-| `version` | 1er `## [X.Y]` non-Unreleased de `docs/CHANGELOG.md` |
-| `questions` | `len(data/questions.json)` |
-| `fiches` | `len(data/manifest.json.fiches)` |
-| `scenes` | `len(scenes/index.json)` |
-| `tp_categories` / `tp_exercises` | `data-cat` distincts dans `tp.html` |
-
-Au runtime, `cas-in-counts.js` patche tous les `[data-count="KEY"]` du DOM. À la build, le script Python patche **aussi** les fallbacks dans le HTML — SEO, réseaux sociaux et lecteurs sans JS voient les bons chiffres.
-
-Pour ajouter un compteur partagé (par exemple "ratio de questions difficiles") :
-1. L'ajouter à `generate_counts.py` (fonction de comptage + entrée dans le dict).
-2. Utiliser `<span data-count="ratio_hard">42</span>` dans le HTML.
-
----
-
-## PWA
-
-- **Service Worker** (voir `CACHE_VERSION` en tête de `sw.js`) : Network-First pour HTML/JSON, Cache-First pour CSS/JS, fallback `offline.html`.
-- **Installable** sur iOS, Android, desktop. Bannière proposée après 3 s.
-- **100 % offline** une fois la première visite faite.
-
-À chaque ajout d'un fichier JS/CSS au repo : l'ajouter à `STATIC_ASSETS` dans `sw.js` **et** bumper `CACHE_VERSION`. Sinon les utilisateurs offline ne récupèrent pas le nouveau fichier.
-
----
-
-## Gamification
-
-- **XP & rangs** : 🔰 Stagiaire → 🕵 Enquêteur → 🔬 Analyste → 💼 Expert → ⚖️ Légiste → 🏛 Inspecteur Principal
-- **Streak quotidien** 🔥 avec **Streak Freeze** 🧊 pour pardonner 1 jour
-- **Combo multiplier** ⚡ sur réponses consécutives correctes
-- **Défi du jour** ⚡ : 5 questions tirées au hasard, score sauvegardé
-- **Modes spéciaux** : Examen blanc · Survie (3 vies) · Mission 30Q · Spaced Repetition (SM2)
-- **Achievements** débloqués selon performance
-- **Radar de performance par module** dans le drawer profil
-
-Tous les scores sont en `localStorage` côté client. **Aucune télémétrie.**
-
----
-
-## Raccourcis clavier
-
-Sur la landing :
-- `B` → Fiches (pilule bleue)
-- `V` → TP (pilule verte)
-- `O` → Scènes (pilule orange)
-- `R` → Quiz (pilule rouge)
-
-Partout :
-- `Ctrl/⌘+K` → Recherche globale (fiches + questions + TP + scènes)
-- `Esc` → Fermer modale/drawer
-- `?` (dans le quiz) → Liste des raccourcis
-
-Onglets ARIA (`profile.html`, `tools.html`) :
-- `←/→/↑/↓` → onglet précédent/suivant
-- `Home/End` → premier/dernier onglet
-
----
-
-## Tokens CSS partagés
-
-Les valeurs structurelles vivent dans `style/style.css` au `:root` et doivent être réutilisées via `var()` plutôt que dupliquées :
-
-| Variable | Rôle |
-|---|---|
-| `--navbar-h` | Hauteur de la navbar globale (76 px desktop, 66 px mobile via media query). À utiliser pour tout `top:` d'élément sticky qui suit la navbar. |
-| `--z-content`, `--z-sticky`, `--z-dropdown`, `--z-modal-backdrop`, `--z-modal`, `--z-toast`, `--z-overlay-critical` | Échelle de z-index unifiée (0 → 900). Utiliser `var(--z-toast)` plutôt que `9000`. Pour empiler dans une même couche : `calc(var(--z-toast) + 10)`. |
-| `--bg`, `--surface`, `--surface2`, `--border` | Fonds. |
-| `--text`, `--dim` | Texte primaire / secondaire. `--dim` est calibré AA (5.4:1) sur petites tailles. |
-| `--cyan`, `--gold`, `--red`, `--green`, `--purple` | Accents (variantes thème clair adaptées au contraste). |
-| `--font-display`, `--font-mono`, `--font-body` | Polices. |
-
-Les thèmes (`[data-theme="dark"]`, `[data-theme="light"]`, `[data-theme="hacker"]`) overrident ces variables ; tout le reste suit automatiquement.
-
----
-
-## Patches modulaires (lazy plugins scènes)
-
-Le moteur de scène est étendu par des patches non-intrusifs, chacun désactivable en retirant sa balise `<script>` :
-
-- **Lobby v3** (`scene-lobby-v3.js`) — 13 parcours pédagogiques, bouton "Continuer" pour reprendre, tri configurable, filtres atmosphère, badges de découverte.
-- **Engine v4** (`scene-engine-v4.js`) — Briefing repensé (fiche d'identité + objectifs + pré-warning sensibles), récap exportable en Markdown, mode révision, glossaire de 127 articles de loi (couverture 92 % du corpus).
-- **Profile v5** (`profile-track-v5.js`) — Sélecteur de rôle enrichi avec mini-timeline des 12 grades, mini-test d'orientation (4 questions), banner thématisé, célébration des promotions (toast + son + haptique).
-
-Architecture en couches : `scene-app.js` (noyau, intouché) → `scene-ux-patch.js` → `scene-lobby-v3.js` → `scene-engine-v4.js` → `profile-track-v5.js`.
-
----
-
-## Avertissement pédagogique
-
-**Tous les scénarios, dumps hex, en-têtes email, cas juridiques et incidents présentés sont à visée strictement pédagogique.**
-
-Certains éléments sont :
-
-- **Purement fictifs** — noms de fichiers, adresses IP, domaines, hashes, contenus de dumps.
-- **Inspirés de situations réelles** rencontrées en formation, en enquête ou documentées publiquement (breach reports, jurisprudence, CTF, etc.) — mais **anonymisés et généralisés** pour ne cibler aucune personne, entreprise ou affaire identifiable.
-- **Tirés de la vie étudiante** — un peu de `rapport_final_vraiment_final_v3.pdf` par-ci, un `vacances été 2023.jpg` par-là. Toute ressemblance avec votre propre dossier `Bureau` est statistique.
-
-Les références au **Code pénal suisse** (Art. 143, 143bis, 144bis, 147, 156, 179quater, 197, 261bis, etc.) et à la **LPD révisée** sont exactes au moment de la rédaction, mais cet outil **ne remplace pas** une consultation juridique.
-
----
-
-## Contribuer / signaler un bug
-
-Si un exercice contient une erreur factuelle, un octet qui ne colle pas, une subtilité de droit mal retranscrite, ou si l'endianness d'un exemple HFS+ paraît suspecte — dis-le. Le forensique, c'est précisément l'art de ne pas laisser passer ces choses-là.
-
----
-
-*« Celui qui compte ses clusters en hexadécimal ne perd jamais son temps. Il le perd juste dans une base différente. »*
+- **Achievements "Faction"** : badge "Insider fedpol" si trust moyen
+  fedpol ≥ 80 avec ≥ 5 PNJ rencontrés. Trivial à ajouter dans
+  `cas-in-achievements.js` (la donnée existe déjà via `getFactionReputation`).
+- **Suggestion adaptive** : "Tu as 4/5 complices et 0 hostile —
+  un cas type devrait être [scène X] où tu rencontreras [PNJ Y]".
+- **Faction filter sur npcs.html** : ajouter une famille `family` aux
+  filtres existants (le code de classification est dans `profile-relations.js`,
+  facile à extraire en module partagé).
+- **Reset granulaire** : "Réinitialiser uniquement les hostiles" — utile
+  quand on veut rejouer une saga sans perdre tout son réseau.
