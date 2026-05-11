@@ -4195,6 +4195,25 @@ window.addEventListener('DOMContentLoaded', () => {
     loadSceneIndex().then(() => setTimeout(launchRandomScene, 300));
   }
 
+  // v2.95 — Si l'URL contient #scene=<id>, AUTO-LANCER la scène
+  // (utilisé par profile-relations.js "Arcs en cours" pour rebondir
+  // directement sur la prochaine scène d'un arc actif).
+  const sceneLaunchMatch = window.location.hash.match(/^#scene=([\w-]+)$/);
+  if (sceneLaunchMatch) {
+    const targetId = sceneLaunchMatch[1];
+    loadSceneIndex().then(() => {
+      const scene = SCENES.find(s => s && s.id === targetId);
+      if (scene) {
+        hydrateScene(scene).then(startScene).catch(err => {
+          console.error('[scene-launch] hydrate failed:', err);
+          showToast('⚠ Impossible de charger la scène');
+        });
+      } else {
+        showToast('⚠ Scène introuvable : ' + targetId);
+      }
+    });
+  }
+
   // v2.54 : si l'URL contient #scene-{id}, scroller + surligner la scène concernée
   // (utilisé par les liens depuis la page profil — section Arcs PNJ)
   const sceneHashMatch = window.location.hash.match(/^#scene-([\w-]+)$/);
