@@ -154,12 +154,19 @@
       <section class="level-section ${isCurrent ? 'level-section-current' : ''}"
                data-level="${escapeHTML(levelId)}">
         <header class="level-header">
-          <div class="level-header-stamp">${level.icon}</div>
+          <div class="level-header-stamp">
+            ${level.icon}
+            ${isCurrent ? '<span class="level-current-pin">●</span>' : ''}
+          </div>
           <div class="level-header-text">
-            <h2 class="level-title">— ${escapeHTML((level.title || '').toUpperCase())} —</h2>
+            <h2 class="level-title">— ${escapeHTML((level.title || '').toUpperCase())} —${isCurrent ? ' <span class="level-current-tag">TON GRADE</span>' : ''}</h2>
             <p class="level-desc">${escapeHTML(level.description || '')}</p>
           </div>
-          <div class="level-header-count">${campaigns.filter(c => c.level === levelId).length} DOSSIERS · ${totalScenes} SCÈNES</div>
+          <div class="level-header-count">
+            <div class="level-header-count-val">${campaigns.filter(c => c.level === levelId).length}</div>
+            <div class="level-header-count-label">dossiers</div>
+            <div class="level-header-count-sub">${totalScenes} scènes</div>
+          </div>
         </header>
         <div class="dossiers-grid">${cards}</div>
       </section>
@@ -205,16 +212,24 @@
     screen.innerHTML = `
       <div class="campaigns-container">
         <div class="page-hero">
-          <div class="page-classif">★ CONFIDENTIEL — USAGE INTERNE ★</div>
-          <h1 class="page-title">Tableau des <span>dossiers</span></h1>
-          <p class="page-subtitle">Cellule d'investigation numérique forensique · ${_data.campaigns.length} campagnes · ${_data.campaigns.reduce((a, c) => a + (c.scenes || []).length, 0)} scènes opérationnelles</p>
+          <div class="page-hero-top">
+            <div class="page-hero-left">
+              <div class="page-classif">★ CONFIDENTIEL — USAGE INTERNE ★</div>
+              <h1 class="page-title">Tableau des <span>dossiers</span></h1>
+              <p class="page-subtitle">Cellule d'investigation numérique forensique · ${_data.campaigns.length} campagnes · ${(new Set(_data.campaigns.flatMap(c => c.scenes || []))).size} scènes opérationnelles</p>
+            </div>
+            <button type="button" class="page-bibliotheque-btn" data-action="open-library">
+              <span class="page-bibliotheque-icon">📚</span>
+              <span class="page-bibliotheque-text">
+                <span class="page-bibliotheque-label">Bibliothèque</span>
+                <span class="page-bibliotheque-sub">162 scènes en liste</span>
+              </span>
+            </button>
+          </div>
           <div class="page-meta-bar">
             <span><strong>Cellule :</strong> CAS-IN</span>
             <span><strong>Site :</strong> Confédération suisse</span>
             <span><strong>Statut :</strong> Opérationnel</span>
-            <button type="button" class="page-meta-bibliotheque" data-action="open-library">
-              📚 Bibliothèque (162 scènes)
-            </button>
           </div>
         </div>
 
