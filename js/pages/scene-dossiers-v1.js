@@ -629,8 +629,21 @@
         .then(window.startScene)
         .catch(err => {
           console.error('[dossiers] loadFullScene failed for', sceneId, err);
-          if (typeof window.showToast === 'function') {
-            window.showToast('⚠ Scène introuvable : ' + sceneId);
+          // v3.0 — Différencier le cache SW périmé d'une vraie scène manquante
+          if (err && err.code === 'SW_OFFLINE') {
+            if (typeof window.showToast === 'function') {
+              window.showToast('⚠ Cache navigateur périmé. Rechargez la page (Ctrl+Shift+R) pour mettre à jour.');
+            } else {
+              alert('Cache navigateur périmé.\n\nFais un rechargement complet (Ctrl+Shift+R sur PC, Cmd+Shift+R sur Mac) pour que les nouvelles scènes soient disponibles.');
+            }
+          } else if (err && err.code === 'NOT_FOUND') {
+            if (typeof window.showToast === 'function') {
+              window.showToast('⚠ Scène introuvable côté serveur : ' + sceneId);
+            }
+          } else {
+            if (typeof window.showToast === 'function') {
+              window.showToast('⚠ Erreur de chargement : ' + (err.message || err));
+            }
           }
         });
       return;

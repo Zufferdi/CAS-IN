@@ -134,7 +134,29 @@ function loadFullScene(id) {
   // 3. Fetch
   return fetch(SCENE_FILE_URL(id), { cache: 'default' })
     .then(r => {
-      if (!r.ok) throw new Error('HTTP ' + r.status + ' on ' + SCENE_FILE_URL(id));
+      // v3.0 — Détecter le cas service-worker offline (status 503 + JSON parlant)
+      // Le SW retourne {error:'offline'} quand il ne trouve ni dans cache ni
+      // online. C'est INDISTINGUABLE d'une vraie 404 si on regarde juste r.ok.
+      if (r.status === 503) {
+        return r.json().then(body => {
+          if (body && body.error === 'offline') {
+            const err = new Error('SW_OFFLINE');
+            err.code = 'SW_OFFLINE';
+            err.sceneId = id;
+            throw err;
+          }
+          throw new Error('HTTP 503 on ' + SCENE_FILE_URL(id));
+        }).catch(e => {
+          if (e.code === 'SW_OFFLINE') throw e;
+          throw new Error('HTTP 503 on ' + SCENE_FILE_URL(id));
+        });
+      }
+      if (!r.ok) {
+        const err = new Error('HTTP ' + r.status + ' on ' + SCENE_FILE_URL(id));
+        err.code = r.status === 404 ? 'NOT_FOUND' : 'HTTP_ERROR';
+        err.sceneId = id;
+        throw err;
+      }
       return r.json();
     })
     .then(full => {
@@ -4196,10 +4218,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // v2.95 — Si l'URL contient #scene=<id>, AUTO-LANCER la scène
-  // (utilisé par profile-relations.js "Arcs en cours" pour rebondir
-  // directement sur la prochaine scène d'un arc actif).
-  // v2.99 FIX — utiliser loadFullScene qui fetch le fichier complet
-  //             si la scène n'est pas dans l'index/cache.
+  // v3.0 — Distinguer SW_OFFLINE (cache périmé) d'une vraie 404
   const sceneLaunchMatch = window.location.hash.match(/^#scene=([\w-]+)$/);
   if (sceneLaunchMatch) {
     const targetId = sceneLaunchMatch[1];
@@ -4207,7 +4226,13 @@ window.addEventListener('DOMContentLoaded', () => {
       .then(startScene)
       .catch(err => {
         console.error('[scene-launch] loadFullScene failed for', targetId, err);
-        showToast('⚠ Scène introuvable : ' + targetId);
+        if (err && err.code === 'SW_OFFLINE') {
+          showToast('⚠ Cache navigateur périmé. Rechargez la page (Ctrl+Shift+R).');
+        } else if (err && err.code === 'NOT_FOUND') {
+          showToast('⚠ Scène introuvable côté serveur : ' + targetId);
+        } else {
+          showToast('⚠ Erreur de chargement de la scène');
+        }
       });
   }
 
