@@ -2536,7 +2536,7 @@ function startScene(scene) {
     </div>
 
     <div class="briefing-actions">
-      <button class="back-briefing-btn" onclick="goLobby()">← Retour</button>
+      <button class="back-briefing-btn" onclick="goCampaignsTable()">← Retour</button>
       <button class="start-btn ${mode === 'procureur' ? 'procureur' : ''}" onclick="launchScene()">
         ${mode === 'procureur' ? '⚖️ Débuter (Procureur)' : '🚨 Débuter l\'intervention'}
       </button>
@@ -3062,7 +3062,7 @@ function abortScene() {
   if (!confirm('Abandonner ce scénario ? Votre progression actuelle sera perdue.')) return;
   stopProcureurTimer();
   setAtmosphere('');
-  goLobby();
+  goCampaignsTable();
 }
 
 // ═══════════════════════════════════════════════════
@@ -3534,7 +3534,7 @@ function showReport() {
 
     <div class="report-actions">
       <button class="retry-btn" onclick="launchScene()">🔄 Recommencer ce scénario</button>
-      <button class="back-btn" onclick="goLobby()">← Retour au lobby</button>
+      <button class="back-btn" onclick="goCampaignsTable()">← Retour au tableau</button>
     </div>
 
     ${hasNextScene ? `
@@ -3714,7 +3714,7 @@ function openStatsScreen() {
     </div>
 
     <div class="report-actions">
-      <button class="back-btn" onclick="goLobby()">← Retour au lobby</button>
+      <button class="back-btn" onclick="goCampaignsTable()">← Retour au tableau</button>
     </div>
   `;
 
@@ -3825,7 +3825,7 @@ function openSeedModal() {
 
     <div class="report-actions">
       <button class="retry-btn" onclick="launchFromSeed()">🚀 Lancer le run</button>
-      <button class="back-btn" onclick="goLobby()">← Retour</button>
+      <button class="back-btn" onclick="goCampaignsTable()">← Retour</button>
     </div>
   `;
 
@@ -3869,6 +3869,29 @@ function goLobby() {
   setAtmosphere('');
   initLobby();
   showScreen('lobby');
+}
+
+// v3.2.5 — Retour au tableau des dossiers (campagnes)
+// Comportement par défaut depuis n'importe quelle scène : on revient au
+// tableau des dossiers. Si l'utilisateur a explicitement basculé sur la
+// bibliothèque via le toggle pill, on respecte cette préférence et on
+// l'y ramène. Le fallback goLobby() couvre le cas où le module campagnes
+// n'est pas chargé.
+function goCampaignsTable() {
+  setAtmosphere('');
+  let pref = null;
+  try { pref = localStorage.getItem('cas_view_preference'); } catch (_) {}
+  if (pref === 'library') {
+    goLobby();
+    return;
+  }
+  if (window.CasInCampaigns && typeof window.CasInCampaigns.open === 'function') {
+    window.CasInCampaigns.open();
+    return;
+  }
+  // Fallback (module pas encore chargé) : route via hash + lobby
+  try { window.location.hash = '#campaigns'; } catch (_) {}
+  goLobby();
 }
 
 // Launch the next scenario after the current one
