@@ -311,12 +311,12 @@
       <div class="campaign-detail-container">
         <a href="#campaigns" class="campaign-back-link" data-action="back-to-campaigns">← Retour au tableau</a>
         
-        <header class="campaign-detail-header">
-          <div class="campaign-detail-info">
+        <header class="campaign-detail-header" style="display:flex; flex-direction:row; align-items:flex-start; gap:32px; flex-wrap:wrap; height:auto !important; min-height:fit-content; max-height:none;">
+          <div class="campaign-detail-info" style="flex:1 1 0; min-width:0; max-width:100%; display:flex; flex-direction:column; gap:14px;">
             <div class="campaign-detail-classif">${escapeHTML(level.icon || '')} ${escapeHTML((level.title || '').toUpperCase())} · N° CAS-IN/${String(c.order).padStart(2, '0')}</div>
-            <div class="campaign-detail-title-row">
+            <div class="campaign-detail-title-row" style="display:grid; grid-template-columns:auto minmax(0,1fr); gap:18px; align-items:center;">
               <div class="campaign-detail-icon">${c.icon}</div>
-              <div class="campaign-detail-title-text">
+              <div class="campaign-detail-title-text" style="min-width:0;">
                 <h1 class="campaign-detail-title">${escapeHTML(c.title)}</h1>
                 <div class="campaign-detail-subtitle">${escapeHTML(c.subtitle || '')}</div>
               </div>
@@ -325,7 +325,7 @@
             <p class="campaign-detail-desc">${escapeHTML(c.description || '')}</p>
           </div>
           
-          <aside class="campaign-detail-aside">
+          <aside class="campaign-detail-aside" style="flex:0 0 280px; min-width:0; display:flex; flex-direction:column; gap:12px;">
             <div class="campaign-detail-stats">
               <div class="campaign-stat">
                 <div class="campaign-stat-label">Validées</div>
