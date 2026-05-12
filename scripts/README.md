@@ -1,80 +1,75 @@
-# Scripts de build — CAS-IN
+# Scripts CAS-IN
 
-## 🤖 Automatisation par GitHub Actions (cas standard)
+Scripts Python pour générer, valider et maintenir les données du projet.
 
-**Tu n'as rien à faire en local.** Tout se passe automatiquement quand tu modifies une fiche depuis github.com.
+## 🟢 Scripts actifs (16)
 
-Le workflow `.github/workflows/sync-fiches-index.yml` se déclenche à chaque push qui touche :
-- `fiches/**.html` — fiche ajoutée ou modifiée
-- `data/manifest.json` — manifest mis à jour
-- `scenes/**.json` — scène ajoutée ou modifiée
-- `tp.html` — catégories TP modifiées
-- Les scripts de build dans `scripts/`
+Ces scripts sont **idempotents** (rejouables sans risque) et documentés ci-dessous.
 
-Étapes exécutées (~35-50 s) :
+### Génération (♻ à lancer après modification de scènes/fiches)
 
-1. **Injection de `fiche-related.js`** dans les nouvelles fiches qui ne l'ont pas via `inject_fiche_related.py` (idempotent)
-2. **Régénération de `fiches/index.html`** (cards d'accès) via `build_index.py`
-3. **Régénération de `data/search-index.json`** (moteur de recherche full-text) via `build_search_index.py`
-4. **Régénération de `data/cross-links.json`** (liens Q ↔ Fiche ↔ TP ↔ Scènes) via `build_cross_links.py`
-5. Commit groupé sous `github-actions[bot]` avec message `chore: auto-rebuild fiches/index, search-index, cross-links + inject fiche-related`
-
-### Garanties
-- **Idempotent** : peut tourner 100 fois sans rien casser, ne commit que ce qui a vraiment changé
-- **Anti-boucle** : skip si le commit vient déjà du bot (`if: !contains(commit.message, 'auto-rebuild')`)
-- **Anti-race** : `concurrency` group annule les runs précédents sur la même branche
-- **Retry** : 3 tentatives de push avec rebase en cas de conflit
-
-### Si l'Action échoue
-Onglet **Actions** sur github.com → `Sync fiches index, search-index, cross-links & inject fiche-related` → cliquer sur le run en rouge → lire les logs.
-
-Tu peux aussi déclencher manuellement via le bouton **"Run workflow"** (`workflow_dispatch`).
-
-## 💻 Workflow CLI (optionnel, pour développement local)
-
-Si un jour tu travailles le repo en local (clone + édition + commit en CLI), tu peux :
-
-### Build complet manuel
-
-```bash
-./scripts/build-all.sh
-```
-
-Cela exécute :
-
-1. `generate_counts.py` → `data/counts.json`
-2. `build_index.py` → `fiches/index.html`
-3. `build_search_index.py` → `data/search-index.json`
-4. `build_cross_links.py` → `data/cross-links.json`
-5. `check_questions.py` + tests Node
-
-### Mode rapide (--quick)
-
-```bash
-./scripts/build-all.sh --quick
-```
-
-Saute les régénérations lentes (search-index).
-
-### Hook pre-commit (CLI uniquement)
-
-```bash
-chmod +x scripts/git-hooks/pre-commit
-ln -sf ../../scripts/git-hooks/pre-commit .git/hooks/pre-commit
-```
-
-À chaque `git commit` qui touche une fiche, régénère search-index et fiches/index.html. **Inutile si tu ne fais que du github.com** — le workflow Actions fait déjà ça côté serveur.
-
-## Scripts individuels
-
-| Script | Rôle | Output |
+| Script | Ce qu'il fait | Quand le lancer |
 |---|---|---|
-| `generate_counts.py` | Compte questions/fiches/scènes/TP | `data/counts.json` |
-| `build_index.py` | Génère cards de la page index | `fiches/index.html` |
-| `build_search_index.py` | Indexe le contenu full-text des fiches | `data/search-index.json` |
-| `build_cross_links.py` | Mappe fiches ↔ questions/TP/scènes | `data/cross-links.json` |
-| `inject_fiche_related.py` | Injecte `fiche-related.js` dans les fiches qui ne l'ont pas | Fiches modifiées en place |
-| `check_questions.py` | Vérifications structurelles questions | (stdout) |
-| `clean_inline_styles.py` | Nettoyage inline styles (rare) | en place |
-| `split_scenes.py` | Découpage scenes.json (legacy) | `scenes/*.json` |
-| `sync_fiches_index.py` | Sync manifest ↔ HTML (rare) | (stdout) |
+| `enrich_scene_index.py` | Propage le champ `region` depuis chaque `scenes/<id>.json` vers `scenes/index.json` | Après ajout/modif scène |
+| `build_scenes_index.py` | Régénère **complètement** `scenes/index.json` à partir des fichiers `scenes/<id>.json` | Si l'index est cassé / pour un reset |
+| `build_chronology_v2.py` | Refait `data/scenes-chronology.json` (groupes par event/canton/année + sagas) | Après ajout/modif scène |
+| `build_npc_arcs_v2.py` | Refait `data/npc-arcs.json` (arcs manuels + auto-arcs si ≥5 apparitions) | Après ajout/modif scène avec PNJ |
+| `build_npc_metadata.py` | Refait `data/npcs.json` à partir des occurrences dans scènes | Après ajout d'un nouveau PNJ |
+| `build_glossary.py` | Refait `data/glossary.json` (entrées du popover légal) | Après ajout d'articles CPP, etc. |
+| `build_fiche_graph.py` | Refait `data/fiche-graph.json` (réseau de liens entre fiches) | Après ajout/modif fiche |
+| `build_cross_links.py` | Refait `data/cross-links.json` (renvois entre fiches/scènes/questions) | Après ajout massif de contenu |
+| `build_index.py` | Refait `fiches/index.html` à partir des fiches | Après ajout/modif fiche |
+| `build_search_index.py` | Refait `data/search-index.json` (Cmd+K) | Après ajout/modif fiche/scène |
+| `generate_counts.py` | Met à jour `data/counts.json` + patche `index.html` (compteurs) | Après tout ajout |
+| `sync_fiches_index.py` | Garde `fiches/index.html` synchronisé avec les fiches existantes | Si désync détectée |
+| `split_scenes.py` | (utilitaire) Découpe un méga-fichier `scenes.js` en fichiers individuels | Migration ponctuelle |
+
+### Validation (🔍 utilisés par CI)
+
+| Script | Ce qu'il vérifie |
+|---|---|
+| `check_questions.py` | Quiz : doublons, format, distractors plausibles |
+| `check_scenes.py` | Scènes : steps cohérents, choix marqués `ok`, IDs valides |
+| `check_scenes_balance.py` | Scènes : équilibrage difficulté par tag/canton |
+
+Lancés automatiquement dans `.github/workflows/check-questions.yml` et `audit-repo.yml`.
+
+### Hook Git
+
+`git-hooks/pre-commit` — copie symbolique recommandée :
+```bash
+cp scripts/git-hooks/pre-commit .git/hooks/
+chmod +x .git/hooks/pre-commit
+```
+
+## 🔒 Scripts archivés (`_archive/`)
+
+22 scripts conservés pour traçabilité historique. Ils ont fait leur travail (ajouts massifs ponctuels, corrections de données passées). À ne plus relancer — les modifications qu'ils faisaient sont déjà appliquées et leurs effets sont dans le repo actuel.
+
+Voir `_archive/README.md` pour le détail.
+
+## Workflow standard
+
+Si tu ajoutes UNE scène, le plus simple est :
+
+```bash
+# Depuis la racine du repo
+make sync
+```
+
+C'est équivalent à :
+```bash
+python3 scripts/enrich_scene_index.py
+python3 scripts/build_chronology_v2.py
+python3 scripts/build_npc_arcs_v2.py
+python3 scripts/generate_counts.py
+```
+
+Puis bumper `CACHE_VERSION` dans `sw.js`.
+
+Si tu modifies une fiche, ajoute aussi :
+```bash
+python3 scripts/build_index.py
+python3 scripts/build_search_index.py
+python3 scripts/build_fiche_graph.py
+```
