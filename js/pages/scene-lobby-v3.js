@@ -727,6 +727,13 @@
   //  PARCOURS PANEL
   // ──────────────────────────────────────────────────────────
   function renderParcoursSection() {
+    // v3.X — Panneau Campagnes retiré du lobby : la vue dédiée
+    // screen-campaigns (scene-campaigns-v1.js) remplit ce rôle.
+    // On retire l'éventuel panneau résiduel (rendu avant ce patch) et on sort.
+    const _prev = document.getElementById('parcours-section');
+    if (_prev) _prev.remove();
+    return;
+    // ───── code original ci-dessous, conservé pour historique ─────
     if (typeof SCENES === 'undefined') return;
 
     // Remove any previous
@@ -1785,7 +1792,10 @@
     const observer = new MutationObserver(() => {
       const lobbyScreen = document.getElementById('screen-lobby');
       if (lobbyScreen && lobbyScreen.classList.contains('active')) {
-        if (!document.getElementById('parcours-section')) {
+        // v3.X — parcours-section n'existe plus ; on utilise dataset.v3enriched
+        // de la filter-bar comme marqueur d'application du layer v3.
+        const fb = document.getElementById('lobby-filter-bar');
+        if (fb && !fb.dataset.v3enriched) {
           setTimeout(applyV3Layer, 100);
         }
       }
