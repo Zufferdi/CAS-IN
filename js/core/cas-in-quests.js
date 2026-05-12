@@ -252,6 +252,53 @@
         return counts.hostile === 0;
       },
     },
+    // ──── v3.2.4 — Quêtes liées aux campagnes v3.2 ────
+    {
+      id: 'q_campaign_progress',
+      title: 'Avance de campagne',
+      desc: 'Valide (≥60%) une scène appartenant à une campagne du tableau des dossiers',
+      icon: '📂',
+      reward: 50,
+      evaluate: (snap) => {
+        // Au moins 1 run validé aujourd'hui suffit (toutes les scènes sont
+        // dans au moins une campagne, donc équivalent à "scène validée").
+        return snap.todayRuns.some(r => r.pct >= 60);
+      },
+    },
+    {
+      id: 'q_saga_act',
+      title: 'Acte de saga',
+      desc: 'Joue un acte d\'une saga narrative (Viège, Sarine, Initiation DFIR)',
+      icon: '🎬',
+      reward: 60,
+      evaluate: (snap) => {
+        return snap.todayRuns.some(r => {
+          const id = r.sceneId || '';
+          return id.startsWith('vs-affaire-viege-')
+              || id.startsWith('fr-affaire-sarine-')
+              || id.startsWith('easy-'); // Initiation DFIR débute par easy-
+        });
+      },
+    },
+    {
+      id: 'q_branch_focus',
+      title: 'Spécialisation du jour',
+      desc: 'Termine 2 scènes de la même branche (Forensique, Droit, Windows, Crypto, Réseau, International)',
+      icon: '🎯',
+      reward: 70,
+      evaluate: (snap) => {
+        if (snap.todayRuns.length < 2) return false;
+        // Regroupe les tags des runs et cherche une branche citée ≥2 fois
+        const BRANCH_TAGS = ['FORENSIQUE', 'DROIT', 'WINDOWS', 'CRYPTO', 'RÉSEAUX', 'COOPÉRATION INTERNATIONALE'];
+        for (const branch of BRANCH_TAGS) {
+          const count = snap.todayRuns.filter(r => 
+            (r.tags || []).some(t => (t || '').toUpperCase() === branch)
+          ).length;
+          if (count >= 2) return true;
+        }
+        return false;
+      },
+    },
   ];
 
   function lsGet(k, fb) {
