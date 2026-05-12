@@ -469,8 +469,16 @@
       openLibrary();
       return;
     }
-    if (h === '#campaigns' || h === '') {
-      // Si l'utilisateur a explicitement choisi la library dans le passé, respecter
+    if (h === '#campaigns') {
+      // Hash explicite : on force toujours les campagnes (clic "Scènes" depuis la navbar).
+      // Ce comportement assure que le tableau des dossiers est la vue d'entrée par défaut
+      // depuis l'extérieur, indépendamment de la préférence stockée.
+      openCampaigns();
+      return;
+    }
+    if (h === '') {
+      // Hash strictement vide : respecter la dernière préférence si library, sinon campagnes.
+      // Cas marginal (deeplink direct sans hash) — préservé pour compatibilité.
       try {
         const pref = localStorage.getItem(LS_VIEW_PREF);
         if (pref === 'library') {
