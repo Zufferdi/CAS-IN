@@ -312,41 +312,45 @@
         <a href="#campaigns" class="campaign-back-link" data-action="back-to-campaigns">← Retour au tableau</a>
         
         <header class="campaign-detail-header">
-          <div class="campaign-detail-classif">${escapeHTML(level.icon || '')} ${escapeHTML((level.title || '').toUpperCase())} · N° CAS-IN/${String(c.order).padStart(2, '0')}</div>
-          <div class="campaign-detail-title-row">
-            <div class="campaign-detail-icon">${c.icon}</div>
-            <div>
-              <h1 class="campaign-detail-title">${escapeHTML(c.title)}</h1>
-              <div class="campaign-detail-subtitle">${escapeHTML(c.subtitle || '')}</div>
+          <div class="campaign-detail-info">
+            <div class="campaign-detail-classif">${escapeHTML(level.icon || '')} ${escapeHTML((level.title || '').toUpperCase())} · N° CAS-IN/${String(c.order).padStart(2, '0')}</div>
+            <div class="campaign-detail-title-row">
+              <div class="campaign-detail-icon">${c.icon}</div>
+              <div class="campaign-detail-title-text">
+                <h1 class="campaign-detail-title">${escapeHTML(c.title)}</h1>
+                <div class="campaign-detail-subtitle">${escapeHTML(c.subtitle || '')}</div>
+              </div>
             </div>
-          </div>
-          ${c.hook ? `<p class="campaign-detail-hook">« ${escapeHTML(c.hook)} »</p>` : ''}
-          <p class="campaign-detail-desc">${escapeHTML(c.description || '')}</p>
-          
-          <div class="campaign-detail-stats">
-            <div class="campaign-stat">
-              <div class="campaign-stat-val">${s.done.length}<span class="campaign-stat-max">/${s.total}</span></div>
-              <div class="campaign-stat-label">Validées</div>
-            </div>
-            <div class="campaign-stat">
-              <div class="campaign-stat-val">${s.perfect.length}</div>
-              <div class="campaign-stat-label">★ Maîtrisées</div>
-            </div>
-            <div class="campaign-stat">
-              <div class="campaign-stat-val">${s.pctProgress}%</div>
-              <div class="campaign-stat-label">Avancement</div>
-            </div>
+            ${c.hook ? `<p class="campaign-detail-hook">« ${escapeHTML(c.hook)} »</p>` : ''}
+            <p class="campaign-detail-desc">${escapeHTML(c.description || '')}</p>
           </div>
           
-          ${s.nextSceneId ? `
-            <button type="button" class="campaign-detail-cta" data-launch-scene="${escapeHTML(s.nextSceneId)}">
-              ${ctaLabel}
-            </button>
-          ` : `
-            <button type="button" class="campaign-detail-cta campaign-detail-cta-done" data-launch-scene="${escapeHTML(c.scenes[0] || '')}">
-              ${ctaLabel}
-            </button>
-          `}
+          <aside class="campaign-detail-aside">
+            <div class="campaign-detail-stats">
+              <div class="campaign-stat">
+                <div class="campaign-stat-label">Validées</div>
+                <div class="campaign-stat-val">${s.done.length}<span class="campaign-stat-max">/${s.total}</span></div>
+              </div>
+              <div class="campaign-stat">
+                <div class="campaign-stat-label">★ Maîtrisées</div>
+                <div class="campaign-stat-val">${s.perfect.length}</div>
+              </div>
+              <div class="campaign-stat">
+                <div class="campaign-stat-label">Avancement</div>
+                <div class="campaign-stat-val">${s.pctProgress}%</div>
+              </div>
+            </div>
+            
+            ${s.nextSceneId ? `
+              <button type="button" class="campaign-detail-cta" data-launch-scene="${escapeHTML(s.nextSceneId)}">
+                ${ctaLabel}
+              </button>
+            ` : `
+              <button type="button" class="campaign-detail-cta campaign-detail-cta-done" data-launch-scene="${escapeHTML(c.scenes[0] || '')}">
+                ${ctaLabel}
+              </button>
+            `}
+          </aside>
         </header>
         
         <section class="campaign-scenes-list">
