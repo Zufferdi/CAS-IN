@@ -630,7 +630,10 @@
 
 /* Header de campagne :
    Layout en 2 colonnes (info à gauche, stats + CTA à droite) sur écran large
-   Tout vertical sur écran < 880px */
+   Tout vertical sur écran < 880px.
+   grid-auto-rows: min-content + align-items: start pour que chaque
+   colonne prenne sa hauteur naturelle sans s'étirer mutuellement.
+   Le parent .campaign-detail-header s'étend à la hauteur du plus grand. */
 .campaign-detail-header {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -638,17 +641,23 @@
   padding: 28px 32px;
   margin-bottom: 32px;
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-auto-rows: min-content;
   gap: 32px;
-  align-items: stretch;
+  align-items: start;
 }
 
-/* Colonne gauche : classif, titre, sous-titre, hook, description */
+/* Colonne gauche : classif, titre, sous-titre, hook, description
+   min-width: 0 ESSENTIEL pour que le grid item ne déborde pas
+   overflow-wrap: break-word pour casser les longues chaînes */
 .campaign-detail-info {
   min-width: 0;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 .campaign-detail-classif {
@@ -662,10 +671,12 @@
 
 .campaign-detail-title-row {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 18px;
   align-items: center;
   margin: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 .campaign-detail-icon {
   font-size: 44px;
@@ -682,9 +693,11 @@
 }
 .campaign-detail-title-text {
   min-width: 0;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  overflow-wrap: break-word;
 }
 .campaign-detail-title {
   font-size: 26px;
@@ -1082,4 +1095,44 @@
 [data-theme="light"] .dossier-card { background: #ffffff; }
 [data-theme="light"] .page-bibliotheque-btn {
   background: linear-gradient(135deg, rgba(0,180,170,0.1), rgba(0,180,170,0.02));
+}
+
+/* ─── v3.2.2 — Fix défensif : layout robuste même si l'ancien HTML ───
+ * Si jamais le DOM est l'ancienne structure (sans .campaign-detail-info
+ * comme wrapper), forcer que la title-row et la hook/desc ne débordent
+ * pas vers la droite. Les stats restent au-dessous, jamais à droite.
+ * ─────────────────────────────────────────────────────────── */
+
+/* Forcer que .campaign-detail-header se comporte propre même sans la grille 2 cols.
+   Si .campaign-detail-info est absent, on annule la grille et on garde tout vertical */
+.campaign-detail-header:not(:has(.campaign-detail-info)) {
+  display: block;
+}
+.campaign-detail-header:not(:has(.campaign-detail-info)) > .campaign-detail-title-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.campaign-detail-header:not(:has(.campaign-detail-info)) > .campaign-detail-hook,
+.campaign-detail-header:not(:has(.campaign-detail-info)) > .campaign-detail-desc {
+  width: 100%;
+  display: block;
+  clear: both;
+  float: none;
+}
+.campaign-detail-header:not(:has(.campaign-detail-info)) > .campaign-detail-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+.campaign-detail-header:not(:has(.campaign-detail-info)) > .campaign-detail-stats .campaign-stat {
+  grid-template-columns: 1fr;
+  text-align: center;
+}
+.campaign-detail-header:not(:has(.campaign-detail-info)) > .campaign-detail-cta {
+  width: 100%;
 }
