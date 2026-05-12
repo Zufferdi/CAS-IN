@@ -80,6 +80,9 @@ document.documentElement.setAttribute('data-theme','dark');}})();
 <script src="js/core/cas-in-profile.js" defer></script>
 <script src="js/core/cas-in-npc-state.js" defer></script>
 <script src="js/components/swiss-flags.js" defer></script>
+<!-- v2.98 — Popover universel pour références juridiques -->
+<script src="js/components/legal-ref-popover.js" defer></script>
+<link rel="stylesheet" href="style/legal-ref-popover.css">
 
 <script>
 // ═══════════════════════════════════════════════════════════════
@@ -424,10 +427,30 @@ function openNpcModal(id) {
       <div class="npc-modal-section">
         <div class="npc-modal-section-title">Scènes associées (${n.appearances.length})</div>
         <div class="npc-modal-section-body npc-appearances">
-          ${n.appearances.map(sid => `
-            <a href="scene.html?scene=${sid}" class="npc-appearance-link">
-              ${sid.replace(/-/g, ' ')}
-            </a>`).join('')}
+          ${(() => {
+            // v2.98 (C3) — enrichi : titre réel + statut de complétion
+            let results = {};
+            try { results = JSON.parse(localStorage.getItem('scene_results') || '{}'); } catch {}
+            // Lookup table de titres depuis l'index si dispo
+            const titles = window.__sceneTitlesCache;
+            return n.appearances.map(sid => {
+              const r = results[sid];
+              let cls = 'npc-appearance-link';
+              let icon = '○';
+              if (r) {
+                if (r.pct >= 90) { cls += ' npc-appearance-perfect'; icon = '⭐'; }
+                else if (r.pct >= 60) { cls += ' npc-appearance-done'; icon = '✓'; }
+                else { cls += ' npc-appearance-tried'; icon = '⚠'; }
+              }
+              const title = titles && titles[sid] ? titles[sid] : sid.replace(/-/g, ' ');
+              const meta = r ? `<span class="npc-appearance-meta">${r.pct}%</span>` : '';
+              return `<a href="scene.html#scene=${encodeURIComponent(sid)}" class="${cls}" title="${escapeHTML(title)}">
+                <span class="npc-appearance-icon">${icon}</span>
+                <span class="npc-appearance-title">${escapeHTML(title)}</span>
+                ${meta}
+              </a>`;
+            }).join('');
+          })()}
         </div>
       </div>` : ''}
 
@@ -457,6 +480,16 @@ document.addEventListener('keydown', e => {
 // ═════ Init ═════
 async function init() {
   await loadNpcs();
+  // v2.98 (C3) — charge l'index scènes pour titres dans la modale
+  try {
+    const r = await fetch('scenes/index.json');
+    if (r.ok) {
+      const idx = await r.json();
+      const cache = {};
+      idx.forEach(s => { if (s.id && s.title) cache[s.id] = s.title; });
+      window.__sceneTitlesCache = cache;
+    }
+  } catch (_) { /* graceful */ }
   // Reconstruction rétroactive si pas encore fait
   if (window.NpcState && window.NpcState.getEncountered().length === 0) {
     // Pas de rebuild auto - laisse l'utilisateur décider

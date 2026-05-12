@@ -1626,7 +1626,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v143';
+const CACHE_VERSION = 'cas-in-v200';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1777,6 +1777,32 @@ const STATIC_ASSETS = [
   './tp/tp-engine-carving.js',
   './tp/tp-engine-windows.js',
   './tp/tp-engine-meta.js',
+
+  // ─── v2.93-v2.99 — Nouveaux modules (Dossiers, Sagas, Arcs, Dashboard...) ───
+  './js/core/cas-in-skill-branches.js',
+  './js/core/cas-in-npc-data.js',
+  './js/pages/scene-dossiers-v1.js',
+  './js/pages/scene-level-gating-v1.js',
+  './js/pages/scene-arc-context.js',
+  './js/pages/scene-weekly-pick-v1.js',
+  './js/profile/profile-dashboard.js',
+  './js/profile/profile-distinctions-tabs.js',
+  './js/components/legal-ref-popover.js',
+  './js/components/completion-watcher.js',
+
+  // ─── v2.93-v2.99 — Nouveaux styles ───
+  './style/scene-dossiers.css',
+  './style/scene-gating.css',
+  './style/scene-arc-context.css',
+  './style/scene-weekly-pick.css',
+  './style/profile-relations.css',
+  './style/profile-dashboard.css',
+  './style/profile-distinctions-tabs.css',
+  './style/legal-ref-popover.css',
+
+  // ─── v2.93-v2.99 — Nouvelles data ───
+  './data/glossary.json',
+  './data/scenes-chronology.json',
 ];
 
 const OFFLINE_FALLBACK = './offline.html';
