@@ -1781,7 +1781,6 @@ const STATIC_ASSETS = [
   // ─── v2.93-v2.99 — Nouveaux modules (Dossiers, Sagas, Arcs, Dashboard...) ───
   './js/core/cas-in-skill-branches.js',
   './js/core/cas-in-npc-data.js',
-  './js/pages/scene-dossiers-v1.js',
   './js/pages/scene-level-gating-v1.js',
   './js/pages/scene-arc-context.js',
   './js/profile/profile-dashboard.js',
@@ -1790,7 +1789,6 @@ const STATIC_ASSETS = [
   './js/components/completion-watcher.js',
 
   // ─── v2.93-v2.99 — Nouveaux styles ───
-  './style/scene-dossiers.css',
   './style/scene-gating.css',
   './style/scene-arc-context.css',
   './style/profile-relations.css',
