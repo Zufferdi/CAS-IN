@@ -212,20 +212,9 @@
     screen.innerHTML = `
       <div class="campaigns-container">
         <div class="page-hero">
-          <div class="page-hero-top">
-            <div class="page-hero-left">
-              <div class="page-classif">★ CONFIDENTIEL — USAGE INTERNE ★</div>
-              <h1 class="page-title">Tableau des <span>dossiers</span></h1>
-              <p class="page-subtitle">Cellule d'investigation numérique forensique · ${_data.campaigns.length} campagnes · ${(new Set(_data.campaigns.flatMap(c => c.scenes || []))).size} scènes opérationnelles</p>
-            </div>
-            <button type="button" class="page-bibliotheque-btn" data-action="open-library">
-              <span class="page-bibliotheque-icon">📚</span>
-              <span class="page-bibliotheque-text">
-                <span class="page-bibliotheque-label">Bibliothèque</span>
-                <span class="page-bibliotheque-sub">162 scènes en liste</span>
-              </span>
-            </button>
-          </div>
+          <div class="page-classif">★ CONFIDENTIEL — USAGE INTERNE ★</div>
+          <h1 class="page-title">Tableau des <span>dossiers</span></h1>
+          <p class="page-subtitle">Cellule d'investigation numérique forensique · ${_data.campaigns.length} campagnes · ${(new Set(_data.campaigns.flatMap(c => c.scenes || []))).size} scènes opérationnelles</p>
           <div class="page-meta-bar">
             <span><strong>Cellule :</strong> CAS-IN</span>
             <span><strong>Site :</strong> Confédération suisse</span>
