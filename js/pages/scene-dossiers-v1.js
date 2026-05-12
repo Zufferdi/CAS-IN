@@ -42,6 +42,33 @@
   let _openGroups = null;        // Set des groupes développés (persisté)
   const STORAGE_OPEN_GROUPS = 'cas_dossiers_open_groups';
 
+  // ─── Filtres unifiés (v2.97 — piste 6) ───────────────────────────
+  // Permet de croiser les 3 taxonomies parallèles :
+  //   - branche : 6 compétences (forensique, crypto, droit, réseau, intl, comportement)
+  //   - région  : CH vs EU
+  //   - statut  : nouveau vs en cours vs perfect vs tous
+  //
+  // Conventions des branches : reprises de SKILL_BRANCHES dans scene-app.js,
+  // mais dupliquées ici pour découpler le module (idéalement, on extrairait
+  // SKILL_BRANCHES dans un fichier partagé — TODO refacto futur).
+  const BRANCH_FILTERS = [
+    { id: 'all',           label: 'Toutes',        icon: '✦',  tags: null, region: null },
+    { id: 'forensique',    label: 'Forensique',    icon: '🔬', tags: ['FORENSIQUE','WINDOWS'] },
+    { id: 'crypto',        label: 'Crypto/Ransom', icon: '🔐', tags: ['CRYPTO','RANSOMWARE'] },
+    { id: 'droit',         label: 'Droit & CPP',   icon: '⚖️', tags: ['DROIT','CPP'] },
+    { id: 'reseau',        label: 'Réseau',        icon: '🌐', tags: ['RÉSEAUX','TELECOM'] },
+    { id: 'international', label: 'International', icon: '🇪🇺', region: 'EU' },
+  ];
+  const STATUS_FILTERS = [
+    { id: 'all',     label: 'Tous statuts' },
+    { id: 'new',     label: '🆕 À jouer' },
+    { id: 'started', label: '⏯ En cours' },
+    { id: 'perfect', label: '⭐ ≥90%' },
+  ];
+  let _activeBranch = 'all';
+  let _activeStatus = 'all';
+  const STORAGE_FILTERS = 'cas_dossiers_filters';
+
   // ─── Helpers minimaux (indépendants de scene-app.js) ────────────
   function getResults() {
     try { return JSON.parse(localStorage.getItem('scene_results') || '{}'); }
@@ -71,6 +98,63 @@
       localStorage.setItem(STORAGE_OPEN_GROUPS,
         JSON.stringify(Array.from(getOpenGroups())));
     } catch { /* noop */ }
+  }
+
+  // ─── Filtres unifiés : persistance ────────────────────────────────
+  function loadFilters() {
+    try {
+      const raw = localStorage.getItem(STORAGE_FILTERS);
+      if (raw) {
+        const f = JSON.parse(raw);
+        if (f.branch) _activeBranch = f.branch;
+        if (f.status) _activeStatus = f.status;
+      }
+    } catch { /* noop */ }
+  }
+  function persistFilters() {
+    try {
+      localStorage.setItem(STORAGE_FILTERS, JSON.stringify({
+        branch: _activeBranch, status: _activeStatus,
+      }));
+    } catch { /* noop */ }
+  }
+
+  // Pour chaque scène, on récupère les tags depuis SCENES (window.SCENES,
+  // qui est chargé par scene-app.js). Si SCENES n'est pas dispo, on ne
+  // peut pas filtrer par branche → tous les filtres branches ramènent tout.
+  function getSceneTags(sceneId) {
+    if (typeof window.SCENES === 'undefined') return [];
+    const s = window.SCENES.find(s => s && s.id === sceneId);
+    return (s && s.tags) || [];
+  }
+  function getSceneRegion(sceneId) {
+    if (typeof window.SCENES === 'undefined') return null;
+    const s = window.SCENES.find(s => s && s.id === sceneId);
+    return s && s.region;
+  }
+
+  function matchesBranch(sceneId, branchId) {
+    if (branchId === 'all') return true;
+    const b = BRANCH_FILTERS.find(x => x.id === branchId);
+    if (!b) return true;
+    if (b.region) return getSceneRegion(sceneId) === b.region;
+    if (b.tags && b.tags.length) {
+      const tags = getSceneTags(sceneId);
+      return tags.some(t => b.tags.includes(t));
+    }
+    return true;
+  }
+  function matchesStatus(sceneId, statusId, results) {
+    if (statusId === 'all') return true;
+    const r = results[sceneId];
+    if (statusId === 'new')     return !r;
+    if (statusId === 'started') return !!r && r.pct < 90;
+    if (statusId === 'perfect') return !!r && r.pct >= 90;
+    return true;
+  }
+  function matchesFilters(sceneId, results) {
+    return matchesBranch(sceneId, _activeBranch)
+        && matchesStatus(sceneId, _activeStatus, results);
   }
 
   function escapeHTML(s) {
@@ -360,22 +444,34 @@
     if (!container || !_chronology) return;
 
     const results = getResults();
-    const scenes = _chronology.scenes || [];
+    const allScenes = _chronology.scenes || [];
     const groupsOrder = _chronology.groups_order || [];
     const sagas = _chronology.sagas || [];
 
-    // Sous-titre récapitulatif
+    // v2.97 — Application des filtres unifiés
+    const scenes = allScenes.filter(s => matchesFilters(s.id, results));
+    const filterIsActive = (_activeBranch !== 'all') || (_activeStatus !== 'all');
+
+    // Sous-titre récapitulatif (reflète le filtre actif)
     const subtitle = document.getElementById('dossiers-subtitle');
     if (subtitle) {
       const doneCount = scenes.filter(s => results[s.id]).length;
-      subtitle.textContent = `${scenes.length} scènes · ${sagas.length} affaires multi-actes · ${doneCount} jouées`;
+      const baseText = `${scenes.length} scènes · ${sagas.length} affaires multi-actes · ${doneCount} jouées`;
+      subtitle.textContent = filterIsActive
+        ? `${baseText} · filtres actifs (${allScenes.length - scenes.length} masquées)`
+        : baseText;
     }
 
     // Index par id pour les sagas (titre, icône)
     const sceneIndex = {};
-    scenes.forEach(s => { sceneIndex[s.id] = s; });
+    allScenes.forEach(s => { sceneIndex[s.id] = s; });
 
-    // ─── Sagas en tête ───
+    // ─── Barre de filtres (v2.97 — toujours visible en haut) ───
+    const filterBarHTML = renderFilterBar(allScenes, scenes);
+
+    // ─── Sagas en tête (toujours montrer, mais sur scènes filtrées) ───
+    // Pour les sagas, on ne masque PAS les actes filtrés (sinon la
+    // narration perd son sens) — on indique juste lesquels matchent.
     const sagasHTML = sagas.length > 0 ? `
       <div class="dossiers-section dossiers-section-sagas">
         <header class="dossiers-section-header">
@@ -389,7 +485,7 @@
       </div>
     ` : '';
 
-    // ─── Groupes ───
+    // ─── Groupes (filtrés) ───
     const scenesByGroup = new Map();
     scenes.forEach(s => {
       const g = s.group || '🛠️ MÉTHODOLOGIE';
@@ -403,7 +499,17 @@
       return renderGroupSection(g, list, results);
     }).join('');
 
+    // Etat "aucun résultat" si filtre vide
+    const emptyHTML = (scenes.length === 0 && filterIsActive) ? `
+      <div class="dossiers-empty">
+        <div class="dossiers-empty-icon">🔍</div>
+        <div class="dossiers-empty-title">Aucune scène ne correspond</div>
+        <div class="dossiers-empty-sub">Essaye d'élargir un filtre ou clique sur "Toutes" / "Tous statuts" pour réinitialiser.</div>
+      </div>
+    ` : '';
+
     container.innerHTML = `
+      ${filterBarHTML}
       ${sagasHTML}
       <div class="dossiers-section dossiers-section-groups">
         <header class="dossiers-section-header">
@@ -411,6 +517,7 @@
           <p>Quatre catégories narratives. Clique sur un en-tête pour replier/déplier.</p>
         </header>
         ${groupsHTML}
+        ${emptyHTML}
       </div>
     `;
 
@@ -419,7 +526,61 @@
     container.addEventListener('keydown', onContainerKey);
   }
 
+  function renderFilterBar(allScenes, filteredScenes) {
+    // Compte par branche : combien de scènes matchent chaque branche
+    // (utile pour afficher le count à côté du label)
+    const branchCounts = {};
+    BRANCH_FILTERS.forEach(b => {
+      branchCounts[b.id] = allScenes.filter(s => matchesBranch(s.id, b.id)).length;
+    });
+
+    const branchesHTML = BRANCH_FILTERS.map(b => {
+      const active = b.id === _activeBranch ? ' active' : '';
+      const cnt = branchCounts[b.id];
+      return `
+        <button class="dossiers-filter-chip${active}" data-filter-branch="${b.id}">
+          <span class="dossiers-filter-icon">${b.icon}</span>
+          <span>${escapeHTML(b.label)}</span>
+          <span class="dossiers-filter-count">${cnt}</span>
+        </button>
+      `;
+    }).join('');
+
+    const statusHTML = STATUS_FILTERS.map(s => {
+      const active = s.id === _activeStatus ? ' active' : '';
+      return `<button class="dossiers-filter-chip dossiers-filter-status${active}" data-filter-status="${s.id}">${escapeHTML(s.label)}</button>`;
+    }).join('');
+
+    return `
+      <div class="dossiers-filter-bar">
+        <div class="dossiers-filter-row">
+          <span class="dossiers-filter-label">Compétence</span>
+          <div class="dossiers-filter-chips">${branchesHTML}</div>
+        </div>
+        <div class="dossiers-filter-row">
+          <span class="dossiers-filter-label">Statut</span>
+          <div class="dossiers-filter-chips">${statusHTML}</div>
+        </div>
+      </div>
+    `;
+  }
+
   function onContainerClick(e) {
+    // v2.97 — Filter chips (branche / statut)
+    const branchChip = e.target.closest('[data-filter-branch]');
+    if (branchChip) {
+      _activeBranch = branchChip.dataset.filterBranch;
+      persistFilters();
+      renderDossiers();
+      return;
+    }
+    const statusChip = e.target.closest('[data-filter-status]');
+    if (statusChip) {
+      _activeStatus = statusChip.dataset.filterStatus;
+      persistFilters();
+      renderDossiers();
+      return;
+    }
     // Toggle group
     const groupHeader = e.target.closest('[data-toggle-group]');
     if (groupHeader) {
@@ -456,13 +617,32 @@
 
   function launchScene(sceneId) {
     if (!sceneId) return;
-    // Cherche dans SCENES global
+
+    // v2.99 — FIX : utiliser l'API officielle loadFullScene qui :
+    //   1. cherche dans le cache LRU
+    //   2. cherche dans SCENES global (l'index chargé)
+    //   3. fetch le fichier complet si rien d'autre n'a marché
+    // C'est plus robuste que SCENES.find() qui échouait quand l'utilisateur
+    // cliquait avant que loadSceneIndex() ait rempli SCENES.
+    if (typeof window.loadFullScene === 'function' && typeof window.startScene === 'function') {
+      window.loadFullScene(sceneId)
+        .then(window.startScene)
+        .catch(err => {
+          console.error('[dossiers] loadFullScene failed for', sceneId, err);
+          if (typeof window.showToast === 'function') {
+            window.showToast('⚠ Scène introuvable : ' + sceneId);
+          }
+        });
+      return;
+    }
+
+    // Fallback hérité : chercher dans SCENES + hydrateScene
     const scene = Array.isArray(window.SCENES)
       ? window.SCENES.find(s => s && s.id === sceneId)
       : null;
     if (!scene) {
-      console.warn('[dossiers] scène introuvable dans SCENES :', sceneId);
-      // Fallback : déclenche un toast si dispo
+      console.warn('[dossiers] scène introuvable dans SCENES :', sceneId,
+                   '— SCENES.length =', (window.SCENES || []).length);
       if (typeof window.showToast === 'function') {
         window.showToast('⚠ Scène introuvable — recharge la page');
       }
@@ -479,7 +659,6 @@
         });
     } else {
       console.warn('[dossiers] hydrateScene/startScene non disponibles — fallback redirect');
-      // Redirection avec hash pour reprise par scene-app.js
       window.location.hash = '#scene=' + encodeURIComponent(sceneId);
     }
   }
@@ -518,6 +697,7 @@
 
   // ─── Boot ───────────────────────────────────────────────────────
   function boot() {
+    loadFilters();
     injectButton();
     // Écoute le retour au lobby pour ré-afficher si visible
     window.addEventListener('hashchange', rerenderIfVisible);

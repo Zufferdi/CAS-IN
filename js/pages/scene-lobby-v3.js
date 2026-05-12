@@ -1282,12 +1282,16 @@
   };
 
   // ── Fondamentaux DFIR (5 scènes pour l'onboarding) ──
+  // v2.96 — Étendu de 5 à 7 fondamentaux : ajout OSINT licite + premier réflexe ransomware
+  // pour mieux préparer aux 72 hard et 26 expert qui suivent.
   const ONBOARDING_FUNDAMENTALS = [
-    { id: 'custody',         label: 'Chaîne de possession',    icon: '📋' },
-    { id: 'premier_appel',   label: 'Premier appel',           icon: '📞' },
-    { id: 'phishing',        label: 'Phishing',                icon: '📧' },
-    { id: 'metadata',        label: 'Métadonnées',             icon: '🗂' },
-    { id: 'trois_artefacts', label: 'Trois artefacts',         icon: '📂' }
+    { id: 'custody',           label: 'Chaîne de possession',    icon: '📋' },
+    { id: 'premier_appel',     label: 'Premier appel',           icon: '📞' },
+    { id: 'phishing',          label: 'Phishing',                icon: '📧' },
+    { id: 'metadata',          label: 'Métadonnées',             icon: '🗂' },
+    { id: 'trois_artefacts',   label: 'Trois artefacts',         icon: '📂' },
+    { id: 'osint-licite',      label: 'OSINT légal vs illégal',  icon: '🔍' },
+    { id: 'lockbit-victime',   label: 'Premier ransomware',      icon: '🦠' },
   ];
 
   // ──────────────────────────────────────────────────────────
@@ -1391,7 +1395,7 @@
         <span class="onboarding-icon">🌱</span>
         <div>
           <div class="onboarding-title">Nouveau sur CAS-IN ?</div>
-          <div class="onboarding-sub">Voici les 5 fondamentaux DFIR — environ 30 minutes au total</div>
+          <div class="onboarding-sub">Voici les 7 fondamentaux DFIR — environ 45 minutes au total</div>
         </div>
       </div>
       <div class="onboarding-grid">

@@ -4198,20 +4198,17 @@ window.addEventListener('DOMContentLoaded', () => {
   // v2.95 — Si l'URL contient #scene=<id>, AUTO-LANCER la scène
   // (utilisé par profile-relations.js "Arcs en cours" pour rebondir
   // directement sur la prochaine scène d'un arc actif).
+  // v2.99 FIX — utiliser loadFullScene qui fetch le fichier complet
+  //             si la scène n'est pas dans l'index/cache.
   const sceneLaunchMatch = window.location.hash.match(/^#scene=([\w-]+)$/);
   if (sceneLaunchMatch) {
     const targetId = sceneLaunchMatch[1];
-    loadSceneIndex().then(() => {
-      const scene = SCENES.find(s => s && s.id === targetId);
-      if (scene) {
-        hydrateScene(scene).then(startScene).catch(err => {
-          console.error('[scene-launch] hydrate failed:', err);
-          showToast('⚠ Impossible de charger la scène');
-        });
-      } else {
+    loadFullScene(targetId)
+      .then(startScene)
+      .catch(err => {
+        console.error('[scene-launch] loadFullScene failed for', targetId, err);
         showToast('⚠ Scène introuvable : ' + targetId);
-      }
-    });
+      });
   }
 
   // v2.54 : si l'URL contient #scene-{id}, scroller + surligner la scène concernée
