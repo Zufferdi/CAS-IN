@@ -3216,6 +3216,19 @@ function showReport() {
     lsSet('cas_run_buffer', runBuffer);
   } catch (_) {}
 
+  // ─── v3.2.4 : Évaluation des quêtes journalières après run scène ───
+  // Le run buffer est à jour ; on évalue les quêtes scène qui dépendent
+  // de todayRuns (q_3runs, q_easy_perfect, q_hard_70, q_perfect_run, ...).
+  // Avant v3.2.4 : seul quiz-app.js appelait evalAndComplete, donc les
+  // quêtes scène ne se validaient jamais !
+  try {
+    if (window.Quests && typeof window.Quests.evalAndComplete === 'function') {
+      window.Quests.evalAndComplete();
+    }
+  } catch (e) {
+    console.warn('[Quests] eval after scene run failed:', e);
+  }
+
   // Record daily activity
   const activity = lsGet('cas_activity', []);
   const today = new Date().toISOString().slice(0, 10);
