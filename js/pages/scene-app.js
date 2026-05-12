@@ -1889,6 +1889,14 @@ function _ensureGlossNormalized() {
 
 function findGlossaryMatch(term) {
   if (!term) return null;
+  // v3.2.2 — Normaliser : accepter string OU objet {label, title}
+  // Les scènes récentes (Sarine, Viège, etc.) utilisent le format objet
+  // tandis que les scènes plus anciennes utilisent des strings simples.
+  if (typeof term === 'object' && term !== null) {
+    term = term.label || term.title || '';
+  }
+  if (typeof term !== 'string' || !term) return null;
+
   // 1. Match exact (le plus rapide)
   if (GLOSSARY[term]) return { key: term, def: GLOSSARY[term] };
 
@@ -1955,8 +1963,13 @@ function findGlossaryMatch(term) {
 }
 
 function renderRefTag(ref) {
+  // v3.2.2 — Normaliser : accepter string OU objet {label, title}
+  let displayText = ref;
+  if (typeof ref === 'object' && ref !== null) {
+    displayText = ref.label || ref.title || '';
+  }
   const match = findGlossaryMatch(ref);
-  const safe = escapeHTML(ref);
+  const safe = escapeHTML(displayText);
   if (match) {
     return `<span class="ref-tag has-gloss" data-gloss-key="${escapeHTML(match.key)}" onclick="showGlossTooltip(event)">${safe}</span>`;
   }
