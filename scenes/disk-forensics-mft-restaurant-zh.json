@@ -1,0 +1,234 @@
+{
+  "id": "disk-forensics-mft-restaurant-zh",
+  "title": "MFT vs Caisse Enregistreuse — Restaurant Niederdorf",
+  "icon": "🍽",
+  "difficulty": "medium",
+  "atmosphere": "forensic-social",
+  "narrative": {
+    "success": "Le MFT reconstruit fournit un horodatage solide : 47 fichiers d'export TVA supprimés 38 heures avant la perquisition. L'expertise sera versée au dossier MPC. La défense ne pourra contester ni la procédure ni l'intégrité de la preuve.",
+    "degraded": "L'analyse retrouve la majorité des exports, mais certaines manipulations de procédure (carving sans write blocker) fragilisent la preuve. L'expertise tient mais le MP devra produire des éléments corroborants.",
+    "failure": "La chaîne d'analyse est compromise : modification du MFT pendant le carving, pas de hash de référence. Les fichiers récupérés sont irrecevables. Le restaurateur sera entendu mais le dossier financier s'effondre."
+  },
+  "tags": [
+    "FORENSIQUE",
+    "DISK FORENSICS",
+    "NTFS",
+    "MFT",
+    "CARVING",
+    "FRAUDE FISCALE",
+    "ZURICH",
+    "PERQUISITION"
+  ],
+  "legalRefs": [
+    "Art. 248 CPP — Saisie et mise sous scellés",
+    "Art. 186 CP — Soustraction d'impôts (loi fédérale impôt fédéral direct)",
+    "ATF 141 IV 87 — Recevabilité preuves numériques",
+    "Art. 145 CPP — Preuves issues de procédés techniques",
+    "Standard ACPO Principles 1–4 — Manipulation preuves numériques"
+  ],
+  "intro": "Niederdorf, Zurich, mardi matin. Une enquête fiscale du Steueramt zurichois et du Ministère public mène à la perquisition d'un restaurant italien réputé. La caisse enregistreuse (POS Vectron + Windows 10) a été \"actualisée\" par le gérant 38 heures avant l'arrivée des inspecteurs. Vous êtes l'expert forensique du laboratoire KAPO ZH. Votre mission : récupérer les exports TVA qui ont été supprimés et prouver leur existence devant le Tribunal pénal zurichois.",
+  "alertLevel": "🍽 PERQUISITION CASE FERMÉE — Données POS effacées 38h avant arrivée KAPO ZH — Disque SSD 500 Go saisi sous scellés",
+  "objectives": [
+    {
+      "icon": "🔬",
+      "text": "Maîtriser l'analyse du MFT NTFS pour retrouver fichiers supprimés"
+    },
+    {
+      "icon": "💾",
+      "text": "Distinguer carving raisonné (signature-based) vs récupération MFT"
+    },
+    {
+      "icon": "⚖️",
+      "text": "Respecter Art. 248 CPP et la chaîne de custody pour recevabilité"
+    }
+  ],
+  "debrief": "<p><strong>Master File Table (MFT)</strong> : structure centrale de NTFS qui indexe chaque fichier du volume. Quand un fichier est \"supprimé\" sous Windows, son entrée MFT est marquée comme libre (flag <code>$IN_USE</code> à 0) mais ses métadonnées (nom, taille, MAC times, cluster runs) restent intactes tant que le volume n'a pas réécrit dessus. C'est notre première mine d'or.</p><p><strong>Carving sur espace non alloué</strong> : technique secondaire utile si le MFT est partiellement écrasé. On scan le disque secteur par secteur en cherchant des signatures de fichiers connues (PDF = <code>%PDF</code>, XLSX = <code>PK\\x03\\x04</code>, SQLite = <code>SQLite format 3</code>). Mais sans MFT, on perd les noms originaux et les timestamps.</p><p><strong>Référence CH</strong> : ATF 141 IV 87 + directives forensiques internes KAPO ZH (2023) imposent : (1) hash MD5+SHA256 du disque source <em>avant</em> toute analyse, (2) travail uniquement sur copie via write blocker matériel (Tableau, Wiebetech), (3) chaîne de custody documentée minute par minute. Le non-respect transforme une preuve d'évasion fiscale en pièce contestable.</p><p><strong>Outils recommandés</strong> : The Sleuth Kit (<code>fls</code>, <code>icat</code>, <code>tsk_recover</code>), X-Ways Forensics, PhotoRec pour le carving pur. Éviter \"Recuva\" et autres outils grand public : pas de chain-of-custody compatible procédure pénale.</p>",
+  "steps": [
+    {
+      "phase": "🔐 Arrivée laboratoire — Disque sous scellés",
+      "situation": "Le disque SSD 500 Go (Samsung 870 EVO) arrive au laboratoire KAPO ZH dans son sachet scellé. Procès-verbal de saisie signé par la police et le procureur. Vous devez décider de la première étape avant toute manipulation.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📦 <strong>Pièce 1</strong> : SSD 500 Go scellé n° KAPO-ZH-2026-0341<br>📋 <strong>Mandat</strong> : recherche d'exports TVA et journaux de caisse<br>⚠️ <strong>Particularité</strong> : SSD avec TRIM probablement activé → urgence relative</div>",
+      "law": "<strong>Art. 248 CPP</strong> — Tout objet saisi doit être placé sous scellés et son ouverture documentée.<br><strong>ACPO Principle 2</strong> — Toute manipulation doit être justifiable par un tiers compétent.",
+      "question": "<strong>Que faites-vous AVANT de connecter le SSD à votre station forensique ?</strong>",
+      "choices": [
+        {
+          "text": "Brancher directement le SSD via USB sur la station Windows — le temps presse, je veux voir ce qu'il y a.",
+          "ok": false,
+          "pts": -10,
+          "fb": "💥 <strong>Catastrophe procédurale.</strong> Sans write blocker, Windows va monter le disque, écrire dans le MFT (timestamps d'accès, fichiers de log, parfois prefetch), et déclencher TRIM sur l'SSD. Toute donnée non encore écrasée par TRIM va l'être dans les minutes qui suivent. L'expertise est compromise dès la première seconde.",
+          "legal": "Art. 141 CPP — Une preuve obtenue dans des conditions qui en compromettent l'intégrité technique peut être déclarée irrecevable. Art. 248 CPP — Manipulation des scellés sans procédure documentée = procès-verbal d'effraction.",
+          "critical": true,
+          "next": 1
+        },
+        {
+          "text": "Photos du scellé intact, ouverture documentée, branchement via write blocker matériel (Tableau T35689iu), acquisition d'une image E01 + calcul des hashes MD5 et SHA256 avant toute analyse.",
+          "ok": true,
+          "pts": 15,
+          "fb": "✅ <strong>Procédure exemplaire.</strong> Le write blocker garantit qu'aucune écriture (y compris involontaire de l'OS) n'atteint le SSD. L'image E01 contient une copie bit-à-bit du disque + ses métadonnées de chaîne de custody. Les hashes permettront de prouver à l'audience que votre copie est strictement identique à l'original.",
+          "legal": "Art. 248 CPP + ACPO Principles 1 & 2 respectés. Cette procédure est documentée dans les directives KAPO ZH IFC-DIR-2023.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Copier le disque via la commande <code>dd</code> sur Linux Live (Kali) sans write blocker, puis travailler sur la copie.",
+          "ok": false,
+          "pts": 0,
+          "fb": "⚠️ <strong>Idée moyenne.</strong> Linux <em>peut</em> ne pas monter le disque automatiquement, mais ce n'est pas garanti selon la distro et la config kernel (auto-mount udev, vfs). Un write blocker matériel reste le seul mécanisme certifié défendable au tribunal. La procédure tient si tu peux prouver qu'aucune écriture n'a eu lieu, mais c'est plus fragile.",
+          "legal": "ATF 141 IV 87 — Le standard de preuve technique exige reproductibilité et garantie d'intégrité. \"Probablement pas d'écriture\" n'est pas du niveau attendu.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔬 Analyse du MFT",
+      "situation": "Image E01 acquise (hash SHA256 calculé et signé). Vous travaillez sur la copie. Premier scan du MFT avec The Sleuth Kit. Sur la partition NTFS principale (C:\\), vous trouvez :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\"><code>fls -d -r -m C: image.E01</code> sortie :<br>• 47 entrées MFT marquées \"deleted\" mais avec métadonnées préservées<br>• Tous les fichiers ont l'extension <code>.csv</code> ou <code>.xlsx</code><br>• Pattern de nom : <code>EXPORT_TVA_AAAAMMJJ.csv</code><br>• Dates de suppression concentrées entre vendredi 23h45 et samedi 02h30<br>• Tailles entre 47 KB et 312 KB</div>",
+      "law": "<strong>Standard NIST SP 800-86</strong> — Guide to Integrating Forensic Techniques. Les entrées MFT supprimées avec métadonnées intactes sont la <em>première source</em> de récupération sur NTFS.",
+      "question": "<strong>Comment exploitez-vous ces 47 entrées MFT ?</strong>",
+      "choices": [
+        {
+          "text": "Utiliser <code>icat</code> du Sleuth Kit pour extraire le contenu de chaque entrée par inode, vérifier que les cluster runs ne sont pas réutilisés, et hasher chaque fichier récupéré.",
+          "ok": true,
+          "pts": 12,
+          "fb": "✅ <strong>Méthode propre.</strong> <code>icat &lt;img&gt; &lt;inode&gt;</code> reconstruit le fichier exactement comme il était avant la suppression, à condition que les clusters ne soient pas réutilisés. Chaque fichier reconstruit doit être hashé pour traçabilité. C'est la méthode reconnue NIST et défendable au tribunal.",
+          "legal": "ATF 141 IV 87 — La méthode forensique doit être reproductible par un expert tiers, ce qui est le cas avec Sleuth Kit (open source, documenté).",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Lancer PhotoRec en mode carving complet sur tout le disque (3h d'analyse) pour récupérer le maximum de fichiers possible.",
+          "ok": false,
+          "pts": -2,
+          "fb": "🟡 <strong>Disproportionné.</strong> Le carving complet récupère tout (incluant les fichiers non-pertinents, les caches navigateur, etc.) et perd les <strong>noms</strong> et <strong>timestamps</strong> originaux. Avec le MFT intact, tu as déjà 47 entrées nommées avec timestamps. Le carving est utile <em>en complément</em> si le MFT est endommagé, pas en premier recours.",
+          "legal": "Le rapport d'expertise doit être proportionné. Un carving brute-force qui inonde le dossier de milliers de fichiers non pertinents complique l'analyse procédurale.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Ouvrir directement les fichiers depuis l'interface X-Ways Forensics en cliquant sur les entrées \"recoverable\" — gain de temps.",
+          "ok": false,
+          "pts": -5,
+          "fb": "⚠️ <strong>Manque de traçabilité.</strong> X-Ways est un excellent outil, mais l'expert doit pouvoir <em>documenter exactement</em> ce qui a été extrait, comment, et avec quel résultat. Cliquer dans une GUI ne génère pas le log textuel reproductible attendu par le tribunal. À combiner avec une CLI loggée (Sleuth Kit) ou avec X-Ways en mode \"Case Report\" complet activé.",
+          "legal": "ATF 141 IV 87 — Reproductibilité par un tiers. Une procédure cliquodrome dans une GUI propriétaire est moins défendable qu'un script CLI versionné.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "💾 Espace non alloué — Carving complémentaire",
+      "situation": "Les 47 fichiers MFT sont récupérés. Mais le gérant a probablement supprimé plus que ça : des sauvegardes hebdomadaires, des PDF de bilan. Vous lancez maintenant un carving ciblé sur l'espace non alloué. Premiers résultats :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\"><code>foremost -t pdf,xlsx,sqlite,zip -i unallocated.dd -o output/</code><br>• 12 PDF reconstitués (probablement bilans mensuels)<br>• 3 SQLite databases (probablement journaux POS)<br>• 1 ZIP partiellement reconstitué (header OK, fin corrompue)<br>⚠️ TRIM SSD : ~30% des secteurs unallocated sont déjà à zéro</div>",
+      "law": "<strong>Particularité SSD</strong> — La commande TRIM (activée par défaut sur Windows 10+) efface activement les blocs marqués comme libres pour optimiser performance. Sur SSD, la fenêtre de récupération est nettement plus courte que sur HDD.",
+      "question": "<strong>Comment qualifiez-vous les 3 SQLite reconstituées dans le rapport d'expertise ?</strong>",
+      "choices": [
+        {
+          "text": "Présenter les 3 SQLite comme \"preuves directes\" au même titre que les fichiers MFT, car le contenu est lisible.",
+          "ok": false,
+          "pts": -3,
+          "fb": "🟡 <strong>Imprudent.</strong> Les fichiers issus de carving brut ont une <em>valeur probante moindre</em> : pas de timestamps originaux (les MAC times sont perdus), pas de nom de fichier garanti, possible reconstitution incomplète. Il faut les présenter comme \"éléments corroborants\" ou \"indices techniques\" et non comme preuves principales.",
+          "legal": "Art. 145 CPP — Le juge apprécie la force probante. Présenter un fichier carved comme équivalent à un fichier MFT-recovered induit le tribunal en erreur sur la qualité technique.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Mentionner les SQLite comme \"éléments corroborants\" : leur contenu (transactions journalières) confirme les exports TVA MFT, mais la méthode de récupération (carving) ne permet pas de remonter à un timestamp précis.",
+          "ok": true,
+          "pts": 10,
+          "fb": "✅ <strong>Qualification correcte.</strong> Le rapport distingue clairement la <em>preuve principale</em> (fichiers MFT avec métadonnées préservées) des <em>éléments corroborants</em> (carving sans timestamps). Le tribunal sait quel poids accorder à quoi. La défense ne pourra pas attaquer la méthode comme \"hasardeuse\".",
+          "legal": "Art. 145 CPP — Description fidèle des méthodes et de leur force probante. C'est exactement le niveau de rigueur attendu d'un expert assermenté.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Ne pas mentionner les SQLite dans le rapport principal — le MFT suffit, inutile de surcharger.",
+          "ok": false,
+          "pts": -2,
+          "fb": "⚠️ <strong>Sous-déclaration.</strong> L'expert doit <em>tout</em> documenter, même les pistes secondaires ou abandonnées. Cacher des éléments même peu probants serait une faute déontologique. Mettre en annexe avec qualification claire est la bonne approche.",
+          "legal": "Art. 184 CPP — L'expert doit présenter un rapport <em>complet</em>. Toute omission peut être contestée par la défense comme manipulation.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "⚖️ Présentation au Ministère public",
+      "situation": "Le procureur du Ministère public zurichois vous reçoit pour préparer l'audience. Il vous demande de résumer la chronologie technique en 5 phrases destinées au juge. Voici ce que vous proposez en première version :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\"><em>« Le 12 mars à 23:47, 47 fichiers d'export TVA ont été supprimés du système POS. Ces fichiers ont été récupérés via analyse du MFT NTFS, avec leurs noms et horodatages intacts. Le hash de l'image disque saisie est documenté et identique à celui de la copie analysée. Les fichiers récupérés montrent un chiffre d'affaires journalier moyen 2,3× supérieur aux déclarations TVA officielles. La procédure a respecté les Art. 248 CPP et les ACPO Principles. »</em></div>",
+      "law": "<strong>Art. 308 CPP</strong> — Le Ministère public dirige l'instruction. L'expert l'éclaire sur les aspects techniques mais reste indépendant dans son analyse.",
+      "question": "<strong>Le procureur vous demande \"si la défense attaque la procédure technique, sur quel point sera-t-elle la plus dangereuse ?\"</strong>",
+      "choices": [
+        {
+          "text": "\"Aucun point sensible — la procédure est conforme. La défense ne peut rien attaquer.\"",
+          "ok": false,
+          "pts": -8,
+          "fb": "💥 <strong>Naïveté coupable.</strong> Un expert qui dit \"rien à attaquer\" oublie qu'une défense bien préparée trouve toujours un angle : TRIM SSD non documenté, format E01 propriétaire, signature numérique du rapport, qualification d'expert assermenté. L'honnêteté intellectuelle exige de pointer les vraies faiblesses pour s'y préparer.",
+          "legal": "Art. 184 CPP — L'expert doit avoir un esprit critique sur sa propre méthode. \"Tout est parfait\" est une posture peu crédible au tribunal.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "\"Le point le plus discutable est le TRIM SSD : nous avons récupéré 47 fichiers via MFT, mais le carving sur unallocated est limité (~30% des secteurs déjà zéroïsés). La défense pourrait soutenir qu'il existait d'autres fichiers que nous n'avons pas pu récupérer, et que notre échantillon est partiel. Réponse : nos 47 fichiers MFT ont leurs timestamps NTFS intacts et corroborent eux-mêmes la chronologie d'effacement.\"",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Honnêteté technique exemplaire.</strong> Tu identifies la vraie faiblesse (TRIM = perte d'une partie potentielle des preuves) et tu anticipes la parade (les fichiers récupérés se corroborent entre eux). Le procureur peut préparer la contre-argumentation. Le tribunal verra un expert lucide, pas un militant.",
+          "legal": "Art. 184 CPP — Indépendance et honnêteté de l'expert. Cette posture est la plus solide en audience.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "\"Le hash SHA256 de l'image E01 — la défense pourrait demander une contre-expertise pour vérifier qu'on n'a rien modifié.\"",
+          "ok": false,
+          "pts": 3,
+          "fb": "🟡 <strong>Partiellement vrai mais c'est plutôt une force que tu présentes comme une faiblesse.</strong> Le hash SHA256 est précisément ce qui protège ta procédure : la défense peut demander contre-expertise tant qu'elle veut, le hash garantit que c'est la même donnée. La vraie faiblesse à anticiper est ailleurs (TRIM, qualification d'expert, format propriétaire).",
+          "legal": "Art. 184 CPP — Identifier précisément où l'analyse est fragile permet de s'y préparer.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "📋 Verdict — Rétrospective",
+      "situation": "Six mois plus tard. Le restaurateur est condamné à 18 mois de prison avec sursis et CHF 480'000 de rattrapages fiscaux. La défense a tenté de contester la procédure technique sur deux points : (1) qualification de l'expert (rejeté, vous étiez assermenté), (2) absence de write blocker logique pendant le carving (rejeté, le write blocker matériel suffit selon le tribunal).<br><br>Vous êtes invité à présenter le cas dans une formation continue à l'<strong>Institut Suisse de Police (ISP) de Neuchâtel</strong>. Le coordinateur vous demande la <strong>leçon principale</strong> à transmettre aux nouveaux investigateurs.",
+      "law": "<strong>Art. 56 LOAP</strong> — Formation continue obligatoire pour experts assermentés. L'ISP coordonne la formation forensique inter-cantonale.",
+      "question": "<strong>Quelle leçon centrale transmettez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "\"Le MFT bat le carving 9 fois sur 10. Toujours commencer par l'analyse structurée (Sleuth Kit, X-Ways), réserver le carving pour combler les manques. La force probante d'un fichier MFT-recovered avec timestamps préservés est sans comparaison avec un fichier carved anonyme.\"",
+          "ok": true,
+          "pts": 12,
+          "fb": "✅ <strong>Leçon pédagogique parfaite.</strong> Tu communiques la hiérarchie méthodologique (MFT first, carving second), tu donnes des outils concrets (Sleuth Kit, X-Ways), tu expliques pourquoi (timestamps préservés = force probante). C'est exactement ce qui manque dans la formation initiale et qui se voit en audience.",
+          "legal": "Cette approche est reconnue dans les standards NIST SP 800-86 et ACPO Principles. Largement adoptée dans les laboratoires forensiques européens.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "\"Le SSD est l'ennemi du forensique. Préférer les disques HDD car le TRIM ne s'y applique pas. Refuser d'analyser un SSD sans intervention d'un constructeur.\"",
+          "ok": false,
+          "pts": -5,
+          "fb": "❌ <strong>Faux en pratique.</strong> Le SSD <em>complique</em> le forensique mais ne le rend pas impossible. Le MFT NTFS reste analysable indépendamment du support physique. Refuser d'analyser un SSD serait une démission professionnelle. La bonne attitude : connaître les limites du SSD (TRIM, wear leveling, garbage collection) et adapter la méthode.",
+          "legal": "Art. 184 CPP — Refus d'expertise injustifié = manquement déontologique.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "\"Toujours utiliser le même outil propriétaire. Standardiser sur X-Ways permet d'éviter les erreurs de méthode entre experts.\"",
+          "ok": false,
+          "pts": -3,
+          "fb": "🟡 <strong>Tendancieux.</strong> X-Ways est excellent, mais standardiser sur un outil propriétaire crée une dépendance (licences, formation, support). La bonne pratique forensique est de <em>croiser</em> plusieurs outils (open source + commercial) pour <em>corroborer</em> les résultats. Sleuth Kit + X-Ways + Autopsy se complètent.",
+          "legal": "ATF 141 IV 87 — Reproductibilité par tiers. Un résultat obtenu par 2 outils indépendants est plus solide qu'un résultat obtenu par 1 seul.",
+          "critical": false,
+          "next": -1
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "fim_xways_expert",
+    "forensics_lead_zh"
+  ],
+  "regionDetail": {
+    "code": "ZH",
+    "flag": "🇨🇭",
+    "name": "Zurich"
+  },
+  "region": "CH",
+  "realCase": false
+}

@@ -1,0 +1,235 @@
+{
+  "id": "macos-forensics-startup-epfl",
+  "title": "MacBook Pro M2 — Vol de PI à l'EPFL Innovation Park",
+  "icon": "🍎",
+  "difficulty": "medium",
+  "atmosphere": "académique",
+  "narrative": {
+    "success": "FSEvents, Spotlight, KnowledgeC.db et Quarantine convergent : 47 fichiers d'IA propriétaire copiés sur clé USB le dimanche 02h17, juste avant la démission. Le rapport est limpide. Le tribunal civil ordonne destruction des données chez le nouvel employeur et CHF 380'000 de dommages-intérêts.",
+    "degraded": "L'analyse retrouve l'exfiltration mais sans timeline parfaite (un seul artefact preserve les timestamps). Le procès tient mais l'estimation des dommages est révisée à la baisse (CHF 120'000).",
+    "failure": "L'analyse forensique macOS échoue : confusion entre Spotlight et FSEvents, lecture brute de la clé USB sans contexte. La défense plaide \"export normal pour télétravail\". Le procès est rejeté faute de preuves nettes."
+  },
+  "tags": [
+    "FORENSIQUE",
+    "MACOS",
+    "FSEVENTS",
+    "SPOTLIGHT",
+    "KNOWLEDGEC",
+    "EPFL",
+    "STARTUP",
+    "DROIT",
+    "PI"
+  ],
+  "legalRefs": [
+    "Art. 162 CP — Violation du secret de fabrication ou commercial",
+    "Art. 143 CP — Soustraction de données",
+    "LPD 2023 — Art. 30 droits d'auteur sur bases de données",
+    "Convention de Bangui (PI) — Protection internationale",
+    "Charte EPFL Innovation Park — Confidentialité 5 ans post-départ"
+  ],
+  "intro": "EPFL Innovation Park, Lausanne, novembre. Une startup de 12 personnes développe un modèle d'IA médicale (détection précoce mélanome) protégé par 3 brevets en cours. L'ingénieur senior démissionne fin octobre, rejoint immédiatement un concurrent zurichois. Le CTO suspecte un vol de code et de jeu d'entraînement (8 GB de scans dermatologiques anonymisés). Le MacBook Pro M2 14\" (rendu) est saisi à l'amiable selon la charte EPFL. Vous êtes l'experte Compass Security mandatée par l'avocat de la startup.",
+  "alertLevel": "🍎 LITIGE PI — Ex-employé soupçonné d'avoir exfiltré modèle IA + dataset 8GB · MacBook Pro M2 rendu volontairement · 30 jours pour expertise civile",
+  "objectives": [
+    {
+      "icon": "🔬",
+      "text": "Maîtriser les 4 artefacts macOS clés : FSEvents, Spotlight, KnowledgeC.db, Quarantine"
+    },
+    {
+      "icon": "⏱️",
+      "text": "Reconstituer timeline précise des manipulations USB et copies de fichiers"
+    },
+    {
+      "icon": "⚖️",
+      "text": "Présenter une expertise civile recevable au tribunal (standard prépondérance des preuves)"
+    }
+  ],
+  "debrief": "<p><strong>FSEvents</strong> (<code>/.fseventsd/</code>) : journal des modifications du file system, persistant entre reboots. Chaque entrée contient l'event ID, le chemin, et le type d'opération (created, removed, modified, renamed). Granularité : par dossier, pas par fichier individuel. Limite : pas de timestamp précis dans l'event lui-même (mais déductible via les MAC times des fichiers <code>fseventsd</code>).</p><p><strong>Spotlight</strong> (<code>/.Spotlight-V100/Store-V2/</code>) : index de recherche, contient les métadonnées des fichiers indexés, y compris ceux supprimés depuis. <code>mdls</code> et <code>mdfind</code> permettent l'analyse. Inclut <em>kMDItemDateAdded</em>, <em>kMDItemKind</em>, etc.</p><p><strong>KnowledgeC.db</strong> (<code>~/Library/Application Support/Knowledge/knowledgeC.db</code>) : base SQLite Apple introduite avec macOS 10.13. Stocke <em>tout</em> ce qui passe par Siri et le moteur de suggestions : applications lancées, durée d'usage, fichiers ouverts, copier-coller (extrême), localisation, etc. Mine d'or forensique. Tables clés : <code>ZOBJECT</code>, <code>ZSTRUCTUREDMETADATA</code>.</p><p><strong>Quarantine</strong> (<code>~/Library/Preferences/com.apple.LaunchServices.QuarantineEventsV2</code>) : base SQLite des fichiers téléchargés ou \"vus pour la première fois\" par le système. Inclut origine (URL, application), date, type de quarantine event.</p><p><strong>Référence CH</strong> : Art. 162 CP (secret commercial) impose 3 conditions cumulatives : (1) information confidentielle, (2) communication à un tiers non autorisé, (3) intention. La preuve forensique macOS établit (2) et (3) ; le CTO doit établir (1) via documentation NDA et politique interne.</p>",
+  "steps": [
+    {
+      "phase": "🍎 Acquisition MacBook M2 (Apple Silicon)",
+      "situation": "Le MacBook Pro M2 14\" (puce Apple Silicon, macOS Sonoma 14.4) est dans votre laboratoire. La puce M2 a Secure Enclave + Activation Lock + chiffrement FileVault par défaut. L'utilisateur a fourni son mot de passe par accord à l'amiable.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">🔐 FileVault activé (clé connue)<br>🔒 Secure Boot : Full Security<br>⚙️ Apple Silicon M2 — pas d'amorçage Linux Live possible<br>💾 SSD intégré non démontable physiquement (soudé sur la carte)</div>",
+      "law": "<strong>Apple Silicon</strong> change la donne forensique : pas d'imagerie disque physique \"classique\". La méthode reconnue est l'acquisition logique via macOS lui-même en mode Recovery ou via Apple Configurator.",
+      "question": "<strong>Comment acquérez-vous une image forensique exploitable ?</strong>",
+      "choices": [
+        {
+          "text": "Démarrer en mode Recovery (Cmd+R au boot), désactiver SIP temporairement, utiliser <code>dd</code> pour copier le disque interne sur SSD externe.",
+          "ok": false,
+          "pts": -7,
+          "fb": "💥 <strong>Erreur Apple Silicon.</strong> Sur M1/M2/M3, désactiver SIP nécessite de réduire la sécurité de boot (\"Reduced Security\"). Cette modification est <em>persistante</em> et altère le système. De plus, <code>dd</code> sur un volume APFS chiffré FileVault produit une image illisible. Procédure inadaptée.",
+          "legal": "Art. 248 CPP / charte forensique — Toute modification de l'état du système doit être documentée et justifiée.",
+          "critical": true,
+          "next": 1
+        },
+        {
+          "text": "Acquisition logique via macFORENSICSLab + <code>aff4</code> sur le système monté en lecture seule (target disk mode). Imagerie des partitions APFS déchiffrées avec la clé FileVault.",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Méthode reconnue Apple Silicon.</strong> Le target disk mode (devenu \"Share Mode\" depuis Big Sur) permet de monter le Mac source comme volume externe sur un Mac d'analyse. Avec la clé FileVault, on accède aux partitions APFS déchiffrées sans modifier l'état du système source. Format AFF4 est le standard forensique moderne (open).",
+          "legal": "ATF 141 IV 87 + standards SANS FOR518 sur le forensique macOS Apple Silicon.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Acquisition triage live avec <code>mac_apt</code> ou <code>aftermath</code> directement sur le Mac source, sans démontage.",
+          "ok": true,
+          "pts": 10,
+          "fb": "✅ <strong>Acceptable en complément.</strong> <code>mac_apt</code> (script Python) extrait les artefacts forensiques pertinents (FSEvents, KnowledgeC, Quarantine, etc.) sans imagerie disque complète. Plus rapide, mais ne donne pas accès à l'unallocated space. Bon pour triage rapide, à compléter par une acquisition complète si besoin de carving.",
+          "legal": "Méthode utilisée en routine par les laboratoires forensiques européens (BSI, ANSSI). Acceptable au tribunal si documenté.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🗂️ Analyse FSEvents — Premier scan",
+      "situation": "Image AFF4 acquise. Vous extrayez <code>/.fseventsd/</code> avec <code>FSEventsParser</code> (Yogesh Khatri). Sortie CSV de 8'200 événements sur les 30 derniers jours.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📋 Patterns identifiés :<br>• Activité normale : ~270 events/jour (Documents, Downloads, Code)<br>• <strong>Pic anormal le 28/10 02:00-02:30</strong> : 1'847 events<br>• Source du pic : <code>/Volumes/SANDISK_USB_64GB</code> (volume USB monté)<br>• Type d'opérations : 90% \"created\" sur le volume USB, dossier <code>/models/</code> et <code>/datasets/</code><br>• Volume USB plus jamais monté après cette nuit</div>",
+      "law": "<strong>FSEvents</strong> ne capture pas le contenu, seulement les <em>opérations de file system</em>. Pour prouver \"exfiltration de fichier X\", il faut corréler FSEvents (\"un fichier a été créé à tel endroit\") avec Spotlight ou autres artefacts donnant le nom et la nature.",
+      "question": "<strong>Comment exploitez-vous ce pic d'activité ?</strong>",
+      "choices": [
+        {
+          "text": "Conclure immédiatement : \"1847 fichiers ont été copiés sur USB le 28/10 à 02:00, c'est l'exfiltration\". Présenter au CTO.",
+          "ok": false,
+          "pts": -4,
+          "fb": "⚠️ <strong>Conclusion trop rapide.</strong> FSEvents montre des \"events\" sur des chemins, pas forcément des copies de fichiers. Un seul fichier peut générer plusieurs events (created → renamed → modified). Avant de chiffrer, il faut corréler avec d'autres sources pour savoir <em>combien de fichiers distincts</em> et <em>lesquels</em>.",
+          "legal": "Art. 184 CPP — L'expert ne doit pas extrapoler au-delà de ce que ses données techniques démontrent.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Corréler FSEvents avec Spotlight Store-V2 (qui peut indexer même un volume USB éphémère) et KnowledgeC.db (qui logge les fichiers \"recently opened\") pour trianguler les fichiers réellement copiés.",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Triangulation forensique parfaite.</strong> FSEvents = quand et où ; Spotlight = quoi (noms de fichiers) ; KnowledgeC = activité utilisateur autour. Les 3 sources corroborent ou se contredisent — c'est exactement ce que le tribunal attend pour un standard de preuve solide.",
+          "legal": "SANS FOR518 — Triangulation par sources multiples est le standard de l'expertise macOS.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Demander à l'ex-employé une déclaration écrite sur ce qu'il a fait cette nuit-là, et confronter à FSEvents.",
+          "ok": false,
+          "pts": 0,
+          "fb": "⚠️ <strong>Hors périmètre expert.</strong> Vous êtes expert technique, pas enquêteur. La confrontation avec l'ex-employé revient à l'avocat ou au tribunal. Votre rôle : produire une expertise technique <em>indépendante</em> de toute déclaration des parties.",
+          "legal": "Art. 184 CPP — Indépendance de l'expert. L'expert ne participe pas aux auditions.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🔍 KnowledgeC.db — Fichiers et apps",
+      "situation": "Vous parsez <code>knowledgeC.db</code> avec <code>mac_apt</code>. Sur la fenêtre 27-28 octobre :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📱 Applications utilisées 28/10 entre 01:45 et 02:30 :<br>• <code>Finder.app</code> — 42 min<br>• <code>Terminal.app</code> — 18 min<br>• <code>Disk Utility.app</code> — 5 min (formatage USB ?)<br><br>📂 Fichiers \"Recently opened\" cette plage :<br>• <code>/Users/ex/Documents/Project_Melanoma/models/v3_production.pkl</code> (412 MB)<br>• <code>/Users/ex/Documents/Project_Melanoma/datasets/dermoscopy_anonymized/</code> (47 fichiers)<br>• <code>/Users/ex/Documents/Project_Melanoma/training_pipeline.py</code><br>• 41 autres fichiers <code>.pkl, .py, .ipynb</code></div>",
+      "law": "<strong>KnowledgeC.db</strong> est une source forensique extrêmement riche mais peu connue. Apple ne documente pas officiellement sa structure interne, ce qui peut être contesté par défense (\"reverse-engineering, donc spéculatif\").",
+      "question": "<strong>Comment répondez-vous à la contestation prévisible \"KnowledgeC est reverse-engineered, pas fiable\" ?</strong>",
+      "choices": [
+        {
+          "text": "Présenter KnowledgeC comme source <em>unique</em> de la preuve, en arguant que la communauté forensique l'utilise depuis 2018.",
+          "ok": false,
+          "pts": -3,
+          "fb": "🟡 <strong>Risqué.</strong> Si KnowledgeC est ta seule source pour un fait critique, la défense aura un angle. La parade est de présenter KnowledgeC <em>en corroboration</em> avec d'autres artefacts mieux documentés (Spotlight, FSEvents, Quarantine).",
+          "legal": "Art. 145 CPP — La force probante augmente avec la corroboration multi-sources.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Reconnaître que KnowledgeC est partiellement reverse-engineered mais (1) sa structure SQLite est publique, (2) les recherches Sarah Edwards / Ian Whiffin sont citées dans des cours universitaires (SANS, Champlain College), (3) corroborer chaque fait clé avec Spotlight + FSEvents.",
+          "ok": true,
+          "pts": 13,
+          "fb": "✅ <strong>Posture intellectuellement honnête et solide.</strong> Tu admets la limite (reverse-engineering) tout en montrant la robustesse académique de la méthode (publications, cours universitaires). Et surtout : tu corrobores chaque fait clé avec d'autres artefacts mieux documentés. La défense n'a pas d'angle.",
+          "legal": "Art. 184 CPP — Honnêteté de l'expert + corroboration par sources indépendantes.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Éviter d'utiliser KnowledgeC dans le rapport pour ne pas s'exposer à la critique.",
+          "ok": false,
+          "pts": -5,
+          "fb": "❌ <strong>Auto-censure forensique.</strong> Tu te prives d'une source d'information précieuse par crainte. La bonne posture est d'<em>utiliser</em> la source en <em>qualifiant honnêtement</em> sa fiabilité. Éviter = sous-expertise.",
+          "legal": "Art. 184 CPP — L'expert doit couvrir l'ensemble des sources techniques pertinentes.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🔐 Quarantine + sécurité Gatekeeper",
+      "situation": "Vous parsez <code>QuarantineEventsV2</code>. Recherche d'événements dans la même fenêtre temporelle, ainsi que sur la clé USB elle-même (si retrouvable côté nouvel employeur via injonction civile).<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📦 QuarantineEventsV2 — événements 27-28/10 :<br>• 28/10 02:23 — Mount volume USB \"SANDISK_USB_64GB\"<br>• Pas d'event \"download\" suspect cette nuit (pas de téléchargement web)<br><br>🔍 Bonus : Spotlight V100 retrouve l'index de l'USB éphémère<br>• <code>kMDItemFSName</code> : 47 entrées préservées, noms identiques aux fichiers KnowledgeC<br>• <code>kMDItemFSCreationDate</code> : 28/10 02:17-02:25</div>",
+      "law": "<strong>Convergence forensique</strong> : quand 4 artefacts indépendants (FSEvents + Spotlight + KnowledgeC + Quarantine) racontent la même histoire avec des timestamps cohérents, la force probante est très élevée.",
+      "question": "<strong>Comment présentez-vous cette convergence dans le rapport ?</strong>",
+      "choices": [
+        {
+          "text": "Tableau de convergence : pour chacun des 4 artefacts, indiquer ce qu'il démontre + horodatage. Conclure : \"Les 4 sources indépendantes attestent qu'entre 02:17 et 02:30 le 28/10/2025, 47 fichiers ont été copiés depuis le dossier Project_Melanoma vers le volume USB SANDISK_64GB.\"",
+          "ok": true,
+          "pts": 15,
+          "fb": "✅ <strong>Présentation forensique exemplaire.</strong> Le tableau de convergence est la <em>signature</em> d'une expertise solide. Le tribunal voit immédiatement que les sources sont indépendantes et qu'elles convergent. La défense ne peut attaquer une seule pour démolir le tout.",
+          "legal": "Art. 145 CPP — Force probante maximale par convergence de sources indépendantes.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Texte narratif fluide expliquant les faits, sans tableau formel.",
+          "ok": false,
+          "pts": 3,
+          "fb": "🟡 <strong>Moins lisible.</strong> Le texte narratif sert pour le contexte mais le tribunal cherche la démonstration formelle. Un tableau de convergence pèse plus en audience qu'une page de prose.",
+          "legal": "Pratique recommandée des laboratoires forensiques certifiés (ISO 17025).",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Présenter chaque artefact dans une section séparée du rapport, sans synthèse.",
+          "ok": false,
+          "pts": -2,
+          "fb": "❌ <strong>Découpe qui affaiblit la démonstration.</strong> 4 sections séparées laissent au juge la charge de la synthèse — qu'il ne fera pas toujours. L'expert <em>doit</em> faire le tableau de convergence et démontrer la concordance.",
+          "legal": "Art. 184 CPP — L'expert doit présenter une analyse <em>complète et synthétique</em>.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "⚖️ Tribunal civil — Audience",
+      "situation": "Tribunal civil de l'arrondissement de Lausanne, 4 mois plus tard. L'ex-employé et son nouvel employeur zurichois sont en défense. Le rapport est versé au dossier. La juge vous interroge sur deux points précis :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">⚖️ <strong>Question 1</strong> : \"Comment êtes-vous certaine que la clé USB SANDISK contenait bien le code de la startup et pas autre chose ?\"<br><br>⚖️ <strong>Question 2</strong> : \"L'avocat de la défense soutient que le défendeur aurait pu copier des fichiers <em>personnels</em> portant le même nom. Que répondez-vous ?\"</div>",
+      "law": "<strong>Procès civil</strong> : standard de preuve = prépondérance des probabilités (moins strict que pénal). Mais une expertise solide convainc également au civil.",
+      "question": "<strong>Réponses aux 2 questions de la juge.</strong>",
+      "choices": [
+        {
+          "text": "\"(1) Spotlight V100 a indexé le volume USB pendant son montage. J'ai extrait les <code>kMDItemContentType</code> et <code>kMDItemFSSize</code> : les 47 fichiers ont des signatures <code>.pkl Python pickle</code> avec tailles correspondant aux modèles de la startup. (2) Les chemins source dans KnowledgeC pointent vers <code>/Users/ex/Documents/Project_Melanoma/</code>, qui est démontré comme étant le répertoire de travail de la startup (NDA + accès au code via Git logs). Aucun fichier personnel ne pouvait porter ces noms et tailles spécifiques.\"",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Réponses précises et techniques.</strong> Tu réponds aux 2 questions sur des bases techniques vérifiables (signatures de fichiers, chemins source documentés). La juge a la matière pour trancher en faveur de la startup.",
+          "legal": "Art. 184 CPP — Expert capable de défendre techniquement chaque point. Cf. ATF 145 III 234 sur la prépondérance des preuves en procès civil PI.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "\"(1) C'est statistiquement très peu probable que ce soit autre chose. (2) Le défendeur a accès aux fichiers professionnels, c'est la plus simple explication.\"",
+          "ok": false,
+          "pts": -6,
+          "fb": "💥 <strong>Argumentaire faible.</strong> \"Statistiquement très peu probable\" et \"explication la plus simple\" sont du raisonnement, pas de la preuve technique. La juge attend des éléments forensiques précis (signatures de fichiers, chemins source), pas du bon sens.",
+          "legal": "Art. 184 CPP — L'expert doit s'appuyer sur des éléments techniques, pas des inférences.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "\"(1) Je préfère ne pas spéculer sur le contenu exact, mon expertise se limite aux métadonnées. (2) C'est à la défense de prouver qu'il s'agissait de fichiers personnels.\"",
+          "ok": false,
+          "pts": -3,
+          "fb": "🟡 <strong>Esquive partielle.</strong> Renvoyer la charge à la défense est une erreur en procédure civile (où la charge appartient au demandeur). Et limiter ton expertise aux \"métadonnées\" alors que tu as identifié des signatures de fichiers spécifiques est sous-utiliser ton analyse.",
+          "legal": "Art. 8 CC — Charge de la preuve. Art. 184 CPP — L'expert doit défendre sa méthode.",
+          "critical": false,
+          "next": -1
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "expert_apple_forensics_ch",
+    "delemont"
+  ],
+  "regionDetail": {
+    "code": "VD",
+    "flag": "🇨🇭",
+    "name": "Vaud"
+  },
+  "region": "CH",
+  "realCase": false
+}

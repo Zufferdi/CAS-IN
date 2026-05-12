@@ -1,0 +1,235 @@
+{
+  "id": "disk-forensics-carving-volaille-fribourg",
+  "title": "PME Volaille FR — Carving sur disque reformaté",
+  "icon": "🐔",
+  "difficulty": "hard",
+  "atmosphere": "forensic-social",
+  "narrative": {
+    "success": "Le carving méthodique récupère 8 GB de fichiers exploitables : base SQLite client reconstituée (12'400 enregistrements), fragments OST corroborant les emails de revente, contrats PDF avec dates métadonnées. Le PFPDT inflige une sanction LPD record de CHF 2,4 millions. La PME est démantelée.",
+    "degraded": "Une partie des preuves tient (SQLite, fragments emails), mais le rapport mélange MFT et carving sans qualifier les sources distinctement. Le PFPDT sanctionne mais la PME négocie une réduction de 40% en arguant la fragilité technique.",
+    "failure": "Procédure compromise : pas de write blocker au moment critique, hashes non documentés, fichiers carved présentés comme preuves directes. Le rapport est rejeté en bloc. La revente de données reste \"vraisemblable mais non démontrée\". Aucune sanction."
+  },
+  "tags": [
+    "FORENSIQUE",
+    "DISK FORENSICS",
+    "CARVING",
+    "SQLITE RECOVERY",
+    "LPD",
+    "EMAIL FORENSICS",
+    "FRIBOURG",
+    "PME"
+  ],
+  "legalRefs": [
+    "LPD 2023 — Art. 8 sécurité des données",
+    "LPD 2023 — Art. 60 sanctions pénales (CHF 250'000 max)",
+    "Art. 143 CP — Soustraction de données",
+    "Art. 248 CPP — Mise sous scellés",
+    "PFPDT Directive 2024 — Investigation post-violation LPD"
+  ],
+  "intro": "Avenches, mardi 14h. Une PME de transformation de volaille (250 employés, fournisseur Coop et Migros) fait l'objet d'une plainte du PFPDT. Un ex-employé technique affirme que le directeur revend depuis 2022 la base de données clients (commerces de proximité, abattoirs, etc.) à un concurrent allemand. Quand la perquisition arrive, le serveur Linux principal (Dell PowerEdge R740, 4 To RAID 5) a été <em>reformaté en NTFS</em> deux semaines plus tôt et un nouveau système Windows Server 2022 installé. Le directeur invoque \"refonte informatique programmée\". Polcant FR vous mandate.",
+  "alertLevel": "🚨 LPD CRITIQUE — Suspicion revente données 12'400 clients · Disque reformaté avant perquisition · PFPDT exige preuves recevables sous 90 jours",
+  "objectives": [
+    {
+      "icon": "💾",
+      "text": "Maîtriser le carving raw sur disque entièrement reformaté"
+    },
+    {
+      "icon": "📧",
+      "text": "Reconstituer base SQLite et fragments OST/PST"
+    },
+    {
+      "icon": "⚖️",
+      "text": "Qualifier la force probante de chaque type de récupération"
+    }
+  ],
+  "debrief": "<p><strong>Reformatage ≠ effacement</strong>. Un quick format NTFS sur un volume précédemment ext4 réécrit le superblock et la MFT initiale, mais laisse intacts 99% des secteurs du disque (les anciennes données ext4). C'est la différence fondamentale entre <code>format /q</code> (rapide, métadonnées seulement) et un <code>dd if=/dev/zero of=/dev/sdX</code> (réécriture complète, généralement plusieurs heures).</p><p><strong>File carving sans système de fichiers</strong> : techniques basées sur les <em>signatures</em> de fichiers (magic bytes). Outils : <code>foremost</code>, <code>scalpel</code>, <code>photorec</code>, <code>bulk_extractor</code>. Limites : pas de noms de fichiers, pas de timestamps, fichiers fragmentés non récupérables sans techniques avancées (smart carving avec parsing de structure interne).</p><p><strong>SQLite recovery</strong> : les bases SQLite ont une structure très régulière (header <code>SQLite format 3</code>, B-tree pages de 4096 octets). Outils spécialisés : <code>sqlite_recover</code>, <code>undark</code>, scripts du SANS (<code>sqlite_parser.py</code>). Souvent on retrouve même les enregistrements supprimés via <code>VACUUM</code> dans les pages libres.</p><p><strong>OST/PST recovery</strong> : les emails Outlook stockés en local. PST = format archive, OST = cache local d'un compte Exchange. Structure complexe (B-tree imbriqués), récupération partielle via <code>libpff</code> ou <code>readpst</code>. Les fragments OST récupérés contiennent souvent : sujet, expéditeur, destinataire, date envoi, et partie du corps.</p><p><strong>Référence CH</strong> : LPD 2023 (entrée en vigueur 01.09.2023) renforce les sanctions (CHF 250'000 max contre dirigeants personnellement). Le PFPDT publie depuis 2024 ses directives \"Investigation post-violation\" : standard de preuve technique exigé = chaîne de custody documentée, hash de toutes les pièces récupérées, qualification distincte preuve directe vs élément corroborant.</p>",
+  "steps": [
+    {
+      "phase": "🔐 Saisie et premier examen",
+      "situation": "Vous arrivez au laboratoire Polcant FR à Granges-Paccot. 4 disques durs RAID 5 saisis (4 × Toshiba MG07ACA12TE 12 To). Le RAID a été \"cassé\" par le directeur pendant la perquisition (extraction physique des disques sans procédure). Vous travaillez sur chaque disque individuellement.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📦 4 disques saisis sous scellés<br>⚙️ RAID 5 (3+1 parity) sur LSI MegaRAID — métadonnées RAID potentiellement perdues<br>💾 Reformatage : passage ext4 → NTFS quick format il y a 2 semaines<br>⏱️ Pression PFPDT : 90 jours pour produire rapport recevable</div>",
+      "law": "<strong>Art. 248 CPP</strong> — Mise sous scellés à respecter même en cas de saisie en urgence.<br><strong>RAID forensique</strong> — Reconstitution possible si on a au moins 3 disques sur 4 et les paramètres (stripe size, parity layout).",
+      "question": "<strong>Première décision méthodologique : par où commencer ?</strong>",
+      "choices": [
+        {
+          "text": "Tenter d'abord la reconstitution RAID 5 logique avec <code>mdadm --assemble</code> ou ReclaiMe pour retrouver le volume virtuel, puis carving sur le volume reconstitué.",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Approche optimale.</strong> Carver sur les disques individuels d'un RAID 5 donne des fragments qui ne correspondent à rien (les données sont \"striped\" sur 3 disques). Reconstituer d'abord le volume RAID logique avant carving permet de récupérer des fichiers <em>entiers</em>. C'est aussi plus défendable au tribunal : tu reconstitues le système tel qu'il existait, puis tu analyses.",
+          "legal": "ATF 141 IV 87 — La méthode forensique doit refléter l'organisation technique réelle des données.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Imager les 4 disques en parallèle avec FTK Imager, puis lancer immédiatement <code>foremost</code> sur chacun pour ne pas perdre de temps.",
+          "ok": false,
+          "pts": -2,
+          "fb": "🟡 <strong>Précipité.</strong> L'imagerie est OK (étape obligatoire), mais carver sur les disques individuels d'un RAID 5 produit beaucoup de fragments inexploitables. Tu vas générer un volume énorme de \"résultats\" peu utiles tout en laissant les vraies données striped non récupérables.",
+          "legal": "Art. 184 CPP — L'expert doit choisir la méthode <em>la plus adaptée</em>, pas la plus rapide.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Demander d'abord au directeur la documentation RAID (config controller, stripe size) avant toute analyse.",
+          "ok": false,
+          "pts": 0,
+          "fb": "⚠️ <strong>Ingénu.</strong> Un suspect ne va pas fournir spontanément les paramètres qui permettront de reconstituer ses propres données effacées. Ces paramètres se déduisent forensiquement (analyse des secteurs : pattern de stripe size, parity disk identifiable). Demander n'est pas faux en soi mais ne doit pas <em>retarder</em> l'analyse technique.",
+          "legal": "Art. 113 CPP — Le suspect a le droit de garder le silence et de ne pas coopérer à charge contre lui-même.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🧩 Reconstitution RAID 5",
+      "situation": "Vous imagez les 4 disques (E01) avec hashes documentés. Reconstitution RAID via UFS Explorer Professional. Après 6h d'analyse, vous obtenez un volume logique de 36 To (3 × 12 To data + 12 To parity). Le carving peut maintenant démarrer sur le volume reconstitué.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">✅ Volume RAID logique reconstitué : 36 To, hash SHA256 documenté<br>🔍 Premier scan : 22 To allocated (les nouvelles données NTFS), 14 To unallocated (anciennes données ext4)<br>📊 Densité estimée d'anciens fichiers : très élevée (server prod tournait 24/7 depuis 2018)</div>",
+      "law": "<strong>NIST SP 800-86</strong> — File carving guide. Le carving doit cibler les types de fichiers attendus (signatures connues) plutôt que tout extraire en aveugle.",
+      "question": "<strong>Comment configurez-vous le carving ?</strong>",
+      "choices": [
+        {
+          "text": "Lancer <code>scalpel</code> avec un fichier de config ciblé : signatures <code>.sqlite, .ost, .pst, .pdf, .xlsx, .docx, .eml</code> + headers/footers stricts. Logger chaque fichier extrait dans un manifest.csv avec hash.",
+          "ok": true,
+          "pts": 13,
+          "fb": "✅ <strong>Approche maîtrisée.</strong> Tu cibles précisément les types de fichiers pertinents (base de données, emails, contrats). Tu évites la pollution du carving (drivers, fragments DLL Windows, etc.). Le manifest.csv hashé permet la chaîne de custody et la reproductibilité.",
+          "legal": "PFPDT Directive 2024 — Le rapport doit être ciblé sur les éléments en lien avec la violation alléguée.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Lancer <code>photorec</code> en mode \"all file types\" + <code>bulk_extractor</code> pour avoir le maximum de données.",
+          "ok": false,
+          "pts": -3,
+          "fb": "🟡 <strong>Trop large.</strong> Tu vas extraire des centaines de milliers de fichiers (icônes système, fragments DLL, images temporaires, etc.). Le bruit noie le signal. L'analyse manuelle devient impossible dans les 90 jours impartis. Approche \"carpet bombing\" décriée par le PFPDT.",
+          "legal": "Art. 184 CPP — Proportionnalité de l'expertise. Une analyse non ciblée peut être contestée comme \"pêche aux preuves\".",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Carving uniquement sur les 14 To unallocated (zone des anciennes données ext4), avec signatures ciblées.",
+          "ok": false,
+          "pts": 5,
+          "fb": "🟡 <strong>Moitié de la solution.</strong> Tu rates les fichiers qui ont été supprimés <em>après</em> le reformatage. Ces fichiers (probablement les emails et exports faits dans les 2 semaines suivant le format) sont dans la zone NTFS allocated/unallocated. Cibler les 14 To anciennes données est correct mais incomplet.",
+          "legal": "Art. 184 CPP — Le rapport d'expertise doit couvrir l'ensemble du périmètre technique.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🗃️ Récupération SQLite client",
+      "situation": "Le carving extrait 47 fichiers correspondant à des signatures SQLite. Vous identifiez rapidement le candidat principal : <code>customers.sqlite</code> (412 MB reconstituté, semble correspondre à la base CRM de la PME). Vous lancez l'analyse forensique du fichier.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📊 SQLite candidate : 412 MB, header valide \"SQLite format 3\"<br>📋 Tables identifiées : customers (12'400 lignes), orders (78'500 lignes), contacts (38'200 lignes)<br>⚠️ <strong>1 erreur d'intégrité</strong> : page 8472 corrompue (cluster réécrit par NTFS)<br>🔍 Tables \"shadow\" identifiables dans les pages libres (post-VACUUM)</div>",
+      "law": "<strong>Force probante SQLite reconstitué</strong> : moindre qu'une preuve native, mais reconnue par les tribunaux suisses si la méthode est documentée et l'intégrité du reste vérifiée par checksum interne.",
+      "question": "<strong>Comment exploitez-vous cette SQLite ?</strong>",
+      "choices": [
+        {
+          "text": "Ouvrir avec DB Browser SQLite, exporter <code>customers.csv</code>, présenter dans le rapport comme \"base de données reconstituée à 99,8% (1 page sur 100'000 corrompue)\".",
+          "ok": true,
+          "pts": 11,
+          "fb": "✅ <strong>Qualification honnête.</strong> Tu donnes le chiffre exact d'intégrité (99,8%) avec la cause technique (1 page écrasée par NTFS). Le tribunal peut apprécier la force probante. La défense ne peut pas argumenter \"on ne sait pas ce qui manque\" : tu l'as quantifié.",
+          "legal": "Art. 145 CPP — Description fidèle de la méthode et de ses limites.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Ne mentionner la page corrompue qu'en annexe technique, pour ne pas affaiblir la preuve principale dans le rapport.",
+          "ok": false,
+          "pts": -7,
+          "fb": "💥 <strong>Faute déontologique.</strong> L'expert <em>doit</em> mentionner explicitement les limites techniques dans le corps du rapport principal. Reléguer une page corrompue en annexe = manipulation présentationnelle. La défense l'exploitera et tu perdras ta crédibilité.",
+          "legal": "Art. 184 CPP — Honnêteté de l'expert. Toute occultation peut être qualifiée de manipulation.",
+          "critical": true,
+          "next": 3
+        },
+        {
+          "text": "Lancer aussi <code>sqlite_recover</code> sur les pages libres (post-VACUUM) pour récupérer les enregistrements clients supprimés au fil du temps — peut révéler des suppressions ciblées.",
+          "ok": true,
+          "pts": 13,
+          "fb": "✅ <strong>Excellent réflexe avancé.</strong> Les pages libres SQLite contiennent souvent des enregistrements supprimés mais non écrasés. Si le directeur a supprimé des clients spécifiques avant la perquisition (preuves de revente), tu pourrais les y retrouver. Cela donne une dimension supplémentaire à l'expertise.",
+          "legal": "PFPDT Directive 2024 — Recherche active de toute donnée pertinente à la violation alléguée.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "📧 Fragments OST — Emails de revente",
+      "situation": "Sur le volume reconstitué, vous extrayez 312 fragments correspondant à des signatures OST/PST. Reconstitution avec <code>libpff</code>. Vous obtenez :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📧 312 fragments OST → 87 emails partiellement reconstitués<br>✅ <strong>Headers complets</strong> : 87/87 (expéditeur, destinataire, date, sujet)<br>⚠️ <strong>Corps complet</strong> : 23/87 — les 64 autres tronqués au milieu<br>📨 Pattern fort : 41 emails au domaine <code>geflugel-handel-bayern.de</code> entre 2022 et 2025<br>📎 Pièces jointes mentionnées dans headers : 18× \"kunden_export_XX.xlsx\"</div>",
+      "law": "<strong>Email forensics</strong> — Les headers SMTP sont particulièrement difficiles à falsifier rétroactivement car ils sont en chaîne (Received: from ...). Leur intégrité interne peut être vérifiée.",
+      "question": "<strong>Comment qualifiez-vous ces emails dans votre rapport ?</strong>",
+      "choices": [
+        {
+          "text": "Présenter les 87 emails comme bloc unique : \"emails reconstitués à partir de fragments OST, dont 23 avec corps complet et 64 avec corps partiel\".",
+          "ok": true,
+          "pts": 12,
+          "fb": "✅ <strong>Qualification claire.</strong> Tu distingues les 23 emails complets (preuve directe forte) des 64 partiels (éléments corroborants). Le tribunal sait quel poids accorder. Les headers complets sur les 87 donnent déjà une preuve solide du pattern de communication systématique avec le concurrent allemand.",
+          "legal": "Art. 145 CPP — Pondération de la force probante selon le niveau de récupération.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Ne présenter que les 23 emails complets dans le rapport principal, ignorer les 64 partiels.",
+          "ok": false,
+          "pts": -4,
+          "fb": "🟡 <strong>Sous-utilisation.</strong> Les 64 emails partiels apportent au moins le <em>pattern</em> systématique (41 vers le même domaine allemand, sur 3 ans, avec mentions de pièces jointes au format export client). Même incomplets, ils corroborent fortement les 23 complets. Les écarter affaiblit l'argumentaire.",
+          "legal": "Art. 184 CPP — L'expert doit présenter <em>tous</em> les éléments pertinents avec leur niveau de fiabilité.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Demander une assistance internationale (Art. 27 EIMP) à l'Allemagne pour récupérer les emails depuis le serveur destinataire <code>geflugel-handel-bayern.de</code> et les comparer aux fragments.",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Excellent réflexe procédural.</strong> Si l'Allemagne coopère (via BKA dans le cadre EIMP/convention Budapest), tu obtiens les emails complets côté destinataire et tu peux les comparer aux fragments OST. Si les hashes des pièces jointes correspondent, tu as une preuve <em>cross-référencée</em> imbattable. Procédure standard du Bka.",
+          "legal": "Art. 27 EIMP — Entraide internationale en matière pénale. Convention de Budapest sur la cybercriminalité Art. 25 (entraide spontanée).",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "⚖️ Sanction PFPDT",
+      "situation": "90 jours après la saisie, votre rapport est déposé au PFPDT. La directrice de l'autorité, après audition contradictoire avec la défense, prononce une <strong>sanction LPD record</strong> : CHF 2,4 millions de pénalité, interdiction d'exercer 5 ans pour le directeur, obligation de notifier les 12'400 clients de la violation.<br><br>La défense annonce un recours au Tribunal administratif fédéral. Elle conteste principalement deux points : (1) la <em>reconstitution RAID</em> serait \"hypothétique\", (2) les <em>fragments OST</em> seraient \"impossibles à attribuer avec certitude\".",
+      "law": "<strong>LPD 2023 Art. 60</strong> — Sanctions pénales jusqu'à CHF 250'000 contre dirigeant personnellement. <strong>LPD Art. 49</strong> — Recours au TAF dans les 30 jours.",
+      "question": "<strong>Quelle est votre réponse technique aux 2 critiques de la défense ?</strong>",
+      "choices": [
+        {
+          "text": "\"(1) La reconstitution RAID 5 a été validée par checksum de cohérence interne du volume (Linux ext4 superblock + journal) — c'est mathématiquement démontrable, pas hypothétique. (2) Les 23 emails OST complets ont leurs headers SMTP intacts, vérifiables côté destinataire si entraide. La défense confond limites de méthode (que je documente) et faiblesse de preuve (qui n'existe pas ici).\"",
+          "ok": true,
+          "pts": 15,
+          "fb": "✅ <strong>Réponse précise et argumentée.</strong> Tu rappelles que la reconstitution RAID 5 n'est pas une devinette (les checksums internes valident) et que les emails OST ont des éléments cross-vérifiables (headers SMTP). Tu sépares clairement \"limites documentées\" et \"faiblesse réelle\". Le TAF rejettera le recours sur cette base.",
+          "legal": "Art. 184 CPP — Indépendance et solidité méthodologique de l'expert. ATF 141 IV 87 — Preuve numérique recevable si méthode reproductible.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "\"Toutes les preuves numériques sont par nature \"hypothétiques\" jusqu'à confirmation matérielle. C'est au tribunal d'apprécier la vraisemblance.\"",
+          "ok": false,
+          "pts": -8,
+          "fb": "💥 <strong>Réponse autodestructrice.</strong> Tu donnes raison à la défense en qualifiant ta propre preuve d'\"hypothétique\". La preuve numérique forensique n'est <em>pas</em> hypothétique si la méthode est solide : c'est une démonstration mathématique (checksums, hashes, signatures). Tu sapes ta propre crédibilité.",
+          "legal": "Art. 184 CPP — L'expert doit défendre sa méthode quand elle est solide.",
+          "critical": true,
+          "next": -1
+        },
+        {
+          "text": "\"Je préfère ne pas répondre directement à la défense — c'est au PFPDT et au TAF de juger.\"",
+          "ok": false,
+          "pts": -3,
+          "fb": "⚠️ <strong>Esquive.</strong> L'expert assermenté doit être prêt à <em>défendre</em> son rapport en audience contradictoire. Refuser le débat technique = lâcher la procédure. Le PFPDT s'attend à ce que tu démontes les critiques techniques par tes propres arguments techniques.",
+          "legal": "Art. 184 CPP — L'expert doit témoigner et défendre son analyse.",
+          "critical": false,
+          "next": -1
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "fr_polcant_schmid",
+    "fr_jendly_unifr",
+    "fr_bersier_avocate"
+  ],
+  "regionDetail": {
+    "code": "FR",
+    "flag": "🇨🇭",
+    "name": "Fribourg"
+  },
+  "region": "CH",
+  "realCase": false
+}

@@ -1,0 +1,236 @@
+{
+  "id": "browser-forensics-banque-cantonale-bcn",
+  "title": "Fuite back-office — Banque Cantonale Neuchâteloise",
+  "icon": "🌐",
+  "difficulty": "medium",
+  "atmosphere": "feutré",
+  "narrative": {
+    "success": "L'analyse Chrome (History, Login Data, Cookies, IndexedDB ProtonMail, cache) reconstitue 6 sessions de transfert vers ProtonMail externe. L'employé est licencié pour faute grave + plainte pénale Art. 47 LB. La FINMA ouvre une procédure mais la banque démontre que la détection a été rapide et le périmètre limité.",
+    "degraded": "L'exfiltration est documentée mais sans preuve définitive du destinataire (cache ProtonMail partiel). L'employé reconnaît partiellement les faits. Licenciement maintenu, plainte civile mais pas pénale.",
+    "failure": "Procédure technique compromise (saisie sans procès-verbal de l'IT, navigation altérée). Aucune preuve recevable. L'employé reste en poste. La banque doit notifier le PFPDT pour violation potentielle non démontrée."
+  },
+  "tags": [
+    "FORENSIQUE",
+    "BROWSER FORENSICS",
+    "CHROME",
+    "COOKIES",
+    "INDEXEDDB",
+    "NEUCHÂTEL",
+    "BANQUE",
+    "SECRET BANCAIRE",
+    "FINMA"
+  ],
+  "legalRefs": [
+    "Art. 47 LB — Secret bancaire (pénal : jusqu'à 3 ans)",
+    "Art. 162 CP — Violation secret commercial",
+    "LPD 2023 — Notification PFPDT 72h",
+    "Loi FINMA Art. 29 — Devoir d'annonce d'incidents graves",
+    "Convention Budapest Art. 18 — Production order données stockées"
+  ],
+  "intro": "Neuchâtel, Banque Cantonale Neuchâteloise (BCN). Le CISO de la banque détecte via le DLP (Data Loss Prevention) que des fichiers Excel marqués \"confidentiel — relations clients\" ont été ouverts à des heures inhabituelles depuis le poste d'un collaborateur back-office. Croisé avec les caméras : l'employé reste tard, seul. La direction de la banque suspecte une fuite vers un avocat genevois représentant un client divorce/héritage. Le poste Windows 11 du collaborateur est saisi à l'amiable. Vous êtes l'expert forensique mandaté.",
+  "alertLevel": "🌐 SOUPÇON FUITE — Back-office BCN · Fichiers clients ouverts hors heures · DLP a alerté · Procédure interne discrète avant éventuelle plainte FINMA",
+  "objectives": [
+    {
+      "icon": "🔬",
+      "text": "Maîtriser browser forensics Chrome : History, Cookies, IndexedDB, cache"
+    },
+    {
+      "icon": "📧",
+      "text": "Identifier l'utilisation de webmails externes (ProtonMail, Tutanota)"
+    },
+    {
+      "icon": "⚖️",
+      "text": "Préserver la confidentialité bancaire pendant l'expertise (Art. 47 LB)"
+    }
+  ],
+  "debrief": "<p><strong>Chrome forensics</strong> : Chrome stocke tout dans <code>%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\</code>. Fichiers clés : <code>History</code> (SQLite, URLs visitées + downloads + searches), <code>Cookies</code> (SQLite chiffré sous AES-GCM avec DPAPI Windows), <code>Login Data</code> (mots de passe sauvegardés, chiffrés idem), <code>Web Data</code> (form fill, autocomplete), <code>Bookmarks</code> (JSON), <code>Preferences</code> (JSON config). Plus le dossier <code>Cache/</code> et <code>IndexedDB/</code>.</p><p><strong>IndexedDB</strong> est l'objet le plus précieux pour les webmails modernes : ProtonMail, Tutanota, Outlook Web stockent une bonne partie des emails dans IndexedDB local (LevelDB format) pour le mode hors-ligne. Même si ProtonMail est end-to-end chiffré côté serveur, son IndexedDB local sur le poste contient les emails <em>déchiffrés</em> (par le mot de passe utilisateur en mémoire). Outils : <code>ccl_chrome_indexeddb</code> de Alex Caithness.</p><p><strong>Déchiffrement Login Data + Cookies</strong> : nécessite la clé maître DPAPI, elle-même chiffrée par le mot de passe Windows de l'utilisateur. Outils : <code>chromepass</code>, <code>DonPAPI</code>, ou en environnement live <code>SharpDPAPI</code>. Si on a accès au compte Windows de l'utilisateur (cas typique en perquisition consentie), c'est trivial.</p><p><strong>Cache</strong> : <code>Cache/Cache_Data/</code> contient les fichiers téléchargés par le navigateur (HTML, JS, images, parfois PDF). Format propriétaire mais parsable avec <code>Hindsight</code> ou <code>ChromeCacheView</code>. Donne les <em>contenus</em> consultés, pas juste les URLs.</p><p><strong>Référence CH</strong> : Art. 47 LB punit la violation du secret bancaire jusqu'à 3 ans de prison (5 ans pour gain commercial). La banque a 72h pour notifier la FINMA d'un incident grave (Art. 29 LFINMA). En parallèle, LPD 2023 impose notification PFPDT si données personnelles affectées. Le tempo est serré : l'expertise doit être faite vite mais sans faute procédurale.</p>",
+  "steps": [
+    {
+      "phase": "🔐 Saisie en environnement bancaire",
+      "situation": "L'IT BCN, en présence du CISO et d'un avocat externe, vous remet le poste de l'employé (encore allumé, employé en CP forcé). Tour Dell OptiPlex 7090, Windows 11 Pro 23H2, BitLocker activé (clé connue par l'IT).<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">🖥️ Poste encore allumé, session active employé<br>🔐 BitLocker actif, clé de recovery connue par l'IT<br>⏱️ Tempo : la banque veut un premier rapport en 5 jours<br>⚖️ Procédure : saisie à l'amiable (charte interne), pas (encore) de plainte pénale<br>🔒 Données bancaires sensibles sur le disque (clients, transactions)</div>",
+      "law": "<strong>Art. 47 LB</strong> — Le secret bancaire <em>protège aussi</em> les données pendant l'expertise. L'expert doit prendre des mesures pour ne pas exposer les données clients qui ne sont pas en lien direct avec la suspicion.",
+      "question": "<strong>Quel est votre premier réflexe ?</strong>",
+      "choices": [
+        {
+          "text": "Logout immédiat de la session active, puis acquisition disque à froid via FTK Imager avec write blocker matériel, sur SSD externe chiffré (AES-256) propre au labo.",
+          "ok": true,
+          "pts": 13,
+          "fb": "✅ <strong>Procédure conforme.</strong> Logout évite la pollution par actions automatiques (mises à jour, sync OneDrive, etc.). Acquisition à froid + write blocker + destination chiffrée = chain-of-custody propre + respect du secret bancaire (les données ne quittent pas un support chiffré).",
+          "legal": "Art. 47 LB respecté + Art. 248 CPP + standards forensiques. Le chiffrement de la destination est un point souvent oublié mais critique en milieu bancaire.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Capturer un dump RAM avec <code>FTK Imager</code> ou <code>WinPmem</code> avant tout, puis acquisition disque à froid.",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Approche encore plus complète.</strong> Le dump RAM peut contenir : (1) clés de session ProtonMail/Tutanota en mémoire qui permettront de déchiffrer leur IndexedDB sans avoir à reconstituer le mot de passe, (2) processus en cours suspects, (3) clipboard avec données récentes. Sur Win 11 avec session ouverte, c'est précieux.",
+          "legal": "Méthode SANS FOR508. Le dump RAM doit être conservé sur support chiffré pour secret bancaire.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Se connecter immédiatement à la session active pour voir Chrome ouvert et capturer les onglets en cours.",
+          "ok": false,
+          "pts": -8,
+          "fb": "💥 <strong>Erreur de méthode.</strong> Toute interaction avec la session active modifie l'état (timestamps, cookies session-only, cache). De plus, les données affichées peuvent être contestées comme \"vues mais pas authentifiées par méthode forensique\". L'acquisition disque + analyse en labo donnera plus, mieux, et défendablement.",
+          "legal": "Art. 248 CPP — Préservation de l'intégrité de la preuve.",
+          "critical": true,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "📋 Chrome History — Premières découvertes",
+      "situation": "Image E01 acquise (hash documenté). Vous montez la copie en lecture seule, naviguez vers <code>%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\</code>. Analyse de <code>History</code> avec <code>Hindsight</code>.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📊 60 derniers jours :<br>• 12'400 URLs visitées (volume normal pour un poste pro)<br>• ✅ Aucune visite ProtonMail dans les <em>visited URLs</em><br>• 🤔 Mais <em>downloads</em> montre : <code>protonmail.com/account-recovery</code> visité 1× il y a 47 jours<br>• <strong>34 visites</strong> de <code>mail.protonmail.com/u/0/inbox</code> entre 22h-01h les soirs ouvrés<br>• Cherche aussi : visites courtes vers <code>file.io</code> et <code>send.tresorit.com</code> (services de partage temporaire)<br>• Visites de l'étude d'avocats <code>etude-meylan-geneve.ch</code> (15× sur 2 mois)</div>",
+      "law": "<strong>Chrome History</strong> distingue plusieurs catégories : visits, downloads, searches, segments. Une URL absente de \"visits\" peut être présente dans \"downloads\" si elle a déclenché un téléchargement.",
+      "question": "<strong>Quelle est l'observation la plus importante ?</strong>",
+      "choices": [
+        {
+          "text": "Les visites ProtonMail à 22h-01h les soirs ouvrés correspondent exactement au pattern de connexion suspect identifié par le DLP. Cohérence forte.",
+          "ok": true,
+          "pts": 12,
+          "fb": "✅ <strong>Corrélation pertinente.</strong> Le DLP a alerté sur des ouvertures de fichiers \"clients\" à heures inhabituelles. Les visites ProtonMail au même tempo établissent une corrélation temporelle. Reste à démontrer que les données <em>passent</em> bien dans ProtonMail (vs simple consultation personnelle).",
+          "legal": "Art. 47 LB — Démontrer le <em>transfert</em> de données protégées, pas juste l'usage parallèle de webmail.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Les 15 visites de l'étude d'avocat genevoise sont la preuve principale.",
+          "ok": false,
+          "pts": -3,
+          "fb": "🟡 <strong>Trop direct.</strong> Visiter le site web d'une étude d'avocats n'a rien d'illégal (n'importe qui peut consulter). Ce n'est pas une preuve, juste un indice contextuel. La preuve doit être ailleurs : transfert effectif de données, contenu ProtonMail.",
+          "legal": "Art. 6 Cst. — Présomption d'innocence. Visiter un site web n'est pas un crime.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Les visites à file.io et send.tresorit.com — ce sont les outils d'exfiltration utilisés.",
+          "ok": true,
+          "pts": 10,
+          "fb": "✅ <strong>Observation pertinente.</strong> file.io et send.tresorit sont des services de partage temporaire (TTL = 24h ou usage unique). Visités dans le timing du DLP, ce sont des candidats sérieux d'outils d'exfiltration. À investiguer dans le cache et l'IndexedDB pour voir <em>quels fichiers</em> sont passés par là.",
+          "legal": "Standards forensiques modernes : pattern d'usage de services de partage anonymes = indice d'exfiltration.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🍪 Cookies + Login Data — Sessions ProtonMail",
+      "situation": "Vous déchiffrez <code>Cookies</code> et <code>Login Data</code> avec DPAPI (la clé maître est accessible via le compte Windows de l'employé, dont l'IT a fourni le mot de passe).<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">🍪 Cookies déchiffrés :<br>• Cookies ProtonMail : session active <code>protonmail.com</code><br>• Cookie identifiant : <code>x-pm-uid: 1xR5...</code> (probablement l'utilisateur ProtonMail)<br>• Durée de session : 47 connexions ProtonMail détectées via cookies session<br><br>🔐 Login Data :<br>• Aucun mot de passe ProtonMail sauvegardé (logique : sécurité de l'employé)<br>• Mais l'<em>email ProtonMail utilisé</em> est dans Login Data si le formulaire a été \"autofilled\" : <code>jean.dupont.lawyer@proton.me</code><br><br>📂 Web Data (form fill) :<br>• <code>jean.dupont.lawyer@proton.me</code> tapé 12 fois<br>• <code>+41 78 XXX XX XX</code> tapé 3 fois (numéro suisse) — peut être le whistleblower ou le destinataire</div>",
+      "law": "<strong>Cookies ProtonMail</strong> : ProtonMail est un service end-to-end chiffré, donc les cookies de session ne permettent pas de lire les emails côté serveur. Mais ils permettent de prouver qu'un compte ProtonMail spécifique a été utilisé depuis ce poste.",
+      "question": "<strong>Comment exploitez-vous l'identifiant <code>jean.dupont.lawyer@proton.me</code> ?</strong>",
+      "choices": [
+        {
+          "text": "Demander à ProtonMail (via Art. 18 Convention Budapest + entraide internationale Suisse-Suisse) les logs d'accès à ce compte.",
+          "ok": true,
+          "pts": 11,
+          "fb": "✅ <strong>Démarche procédurale correcte mais lente.</strong> ProtonMail est basé en Suisse (Plan-les-Ouates, GE). Une demande d'<em>edition order</em> via le Ministère public peut obtenir les logs d'accès au compte (IP de connexion, dates, mais PAS le contenu chiffré). Cela peut prendre 4-12 semaines. À combiner avec une analyse plus rapide localement (IndexedDB).",
+          "legal": "Convention Budapest Art. 18 + Art. 273 CPP (entraide en matière pénale entre cantons).",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Analyser <code>IndexedDB</code> de Chrome — ProtonMail y stocke probablement les emails déchiffrés en local pour le mode hors-ligne, c'est la mine d'or.",
+          "ok": true,
+          "pts": 15,
+          "fb": "✅ <strong>Réflexe forensique top niveau.</strong> ProtonMail (depuis 2020) stocke effectivement les emails déchiffrés en local dans IndexedDB pour le offline mode. Avec <code>ccl_chrome_indexeddb</code>, tu peux extraire les emails en clair stockés localement. C'est plus rapide et plus complet que d'attendre l'entraide.",
+          "legal": "Données déjà sous saisie via le poste → pas besoin d'entraide externe. ATF 141 IV 87 — accès aux données numériques locales saisies.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Conclure que le compte ProtonMail externe appartient probablement à l'employé lui-même comme \"second canal personnel\".",
+          "ok": false,
+          "pts": -4,
+          "fb": "🟡 <strong>Hypothèse non vérifiée.</strong> Tu spécules sur l'identité du propriétaire ProtonMail sans investiguer. <em>jean.dupont.lawyer</em> ressemble plutôt à un destinataire (avocat) qu'à un compte personnel de l'employé. Investiguer l'IndexedDB révélera la nature exacte.",
+          "legal": "Art. 184 CPP — L'expert ne spécule pas, il investigue.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🗂️ IndexedDB ProtonMail — Mine d'or",
+      "situation": "Vous parsez <code>%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\IndexedDB\\https_mail.protonmail.com_0.indexeddb.leveldb\\</code> avec <code>ccl_chrome_indexeddb</code>.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📧 6 emails extraits en clair (cache offline ProtonMail) :<br>• De : <code>[employé BCN]@proton.me</code> (compte secondaire)<br>• À : <code>jean.dupont.lawyer@proton.me</code><br>• Sujet : \"Documents discutés — Cas X.Y. 1/4\", \"... 2/4\", etc.<br>• Pièces jointes mentionnées : 4 fichiers <code>.xlsx</code> avec hash<br>• Dates : 23/09, 30/09, 07/10, 14/10, 21/10, 28/10 (toutes les semaines, soir)<br><br>🔍 Correspondance avec les fichiers BCN identifiés par le DLP : <strong>hashes identiques</strong> sur 3 des 4 pièces jointes.</div>",
+      "law": "<strong>Force probante critique</strong> : si les hashes des pièces jointes ProtonMail correspondent exactement aux fichiers du serveur BCN, l'exfiltration est démontrée de manière irréfutable.",
+      "question": "<strong>Comment présentez-vous ce résultat ?</strong>",
+      "choices": [
+        {
+          "text": "Tableau de correspondance SHA256 : pour chaque fichier confidentiel BCN sur le serveur, comparaison avec le hash de la pièce jointe ProtonMail. Présentation comme preuve directe + qualification \"hash cryptographique = identité bit-à-bit\".",
+          "ok": true,
+          "pts": 15,
+          "fb": "✅ <strong>Présentation à la hauteur de la preuve.</strong> Un hash SHA256 identique entre deux fichiers signifie identité bit-à-bit (collision astronomiquement improbable). Le tableau de correspondance rend la preuve immédiatement lisible. Avec en plus la triangulation Chrome History + Cookies + IndexedDB, tu as une démonstration imparable.",
+          "legal": "Art. 145 CPP — Force probante maximale. Cf. ATF 141 IV 87 sur l'admissibilité des preuves numériques avec démonstration mathématique.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Conclure : \"des fichiers similaires ont été trouvés\" sans entrer dans le détail des hashes.",
+          "ok": false,
+          "pts": -5,
+          "fb": "❌ <strong>Sous-utilisation majeure.</strong> Tu as la preuve <em>la plus forte</em> qu'on puisse rêver en forensique numérique (hashes cryptographiques identiques) et tu la dilues en \"similaires\". C'est jeter de la valeur probante. Le tribunal a besoin de comprendre que c'est <em>mathématiquement</em> les mêmes fichiers.",
+          "legal": "Art. 184 CPP — L'expert doit présenter ses conclusions avec toute la force technique disponible.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Demander l'avis d'un second expert avant de présenter — la preuve semble trop accablante.",
+          "ok": false,
+          "pts": -3,
+          "fb": "🟡 <strong>Inutile.</strong> Un hash SHA256 identique n'a pas besoin d'une seconde opinion : c'est de la mathématique. La preuve <em>est</em> accablante parce qu'elle est techniquement irréfutable. Une co-expertise peut être utile pour des sujets méthodologiques, pas pour valider une comparaison de hashes.",
+          "legal": "Art. 184 CPP — L'expert assume ses conclusions techniques.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "⚖️ Suite procédurale — Banque + FINMA",
+      "situation": "La banque convoque l'employé avec son avocat. Confronté aux 6 emails ProtonMail extraits, il reconnaît avoir transmis \"par sentiment d'injustice envers le client\" des extraits du dossier à l'avocat. Licenciement immédiat pour faute grave. Plainte pénale déposée (Art. 47 LB + 162 CP).<br><br>La banque doit maintenant gérer 3 obligations parallèles :<br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">⚖️ <strong>Obligations BCN</strong> :<br>(1) Annonce FINMA Art. 29 LFINMA (incident grave)<br>(2) Notification PFPDT Art. 24 LPD (données personnelles concernées)<br>(3) Information du client lésé (transparence)<br><br>⏱️ Délais : 72h pour PFPDT, \"sans délai\" pour FINMA<br>🎯 Question politique : minimiser le scandale tout en respectant la transparence</div>",
+      "law": "<strong>FINMA</strong> peut imposer mesures organisationnelles (renforcement contrôles, audit indépendant, sanctions financières). <strong>PFPDT</strong> peut investiguer indépendamment.",
+      "question": "<strong>Que conseillez-vous au CISO de la BCN sur la communication FINMA + PFPDT ?</strong>",
+      "choices": [
+        {
+          "text": "Annonce complète et factuelle dès J+1 aux deux autorités, avec votre rapport d'expertise en pièce. Démontrer que la détection a été rapide (DLP), l'investigation rigoureuse, et que le périmètre est limité (6 emails, 4 fichiers).",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Stratégie de transparence proactive.</strong> Démontrer une détection rapide + investigation rigoureuse + périmètre contenu est <em>en faveur</em> de la banque devant FINMA. Cacher ou minimiser créerait un problème plus grave si découvert plus tard. Le rapport d'expertise solide est ton meilleur atout.",
+          "legal": "Art. 29 LFINMA + Art. 24 LPD respectés. Le rapport d'expertise solide protège la banque autant que la sanction de l'employé.",
+          "critical": false,
+          "next": -1
+        },
+        {
+          "text": "Annoncer FINMA mais essayer de \"contenir\" le PFPDT en arguant que l'incident est interne (employé licencié) et donc clos.",
+          "ok": false,
+          "pts": -8,
+          "fb": "💥 <strong>Risque majeur.</strong> Le PFPDT n'est pas \"contenu\" : l'Art. 24 LPD impose la notification dès qu'une violation de données personnelles est constatée, peu importe la résolution interne. Tenter de réduire l'information au PFPDT est passible de sanctions LPD aggravées (Art. 60).",
+          "legal": "Art. 24 + 60 LPD — Obligation absolue de notification.",
+          "critical": true,
+          "next": -1
+        },
+        {
+          "text": "Attendre que la procédure pénale aboutisse avant de notifier FINMA et PFPDT.",
+          "ok": false,
+          "pts": -10,
+          "fb": "💥 <strong>Faute majeure.</strong> Le délai 72h LPD est absolu. La procédure pénale peut durer 2-3 ans. Attendre = violation caractérisée de l'Art. 24 LPD avec sanctions cumulables.",
+          "legal": "Art. 24 LPD — 72h non négociables. Art. 29 LFINMA — \"sans délai\" en cas d'incident grave.",
+          "critical": true,
+          "next": -1
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "fim_xways_expert",
+    "ne_procureur_cyber",
+    "ge_avocat_etude_meylan"
+  ],
+  "regionDetail": {
+    "code": "NE",
+    "flag": "🇨🇭",
+    "name": "Neuchâtel"
+  },
+  "region": "CH",
+  "realCase": false
+}
