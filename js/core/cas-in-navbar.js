@@ -20,7 +20,7 @@
   // ── Configuration des sections ─────────────────────────────
   const SECTIONS = [
     { id: 'quiz',   label: 'Quiz',    icon: '💊', href: 'quiz.html',          rootHref: '/CAS-IN/quiz.html' },
-    { id: 'scene',  label: 'Scènes',  icon: '🔍', href: 'scene.html',         rootHref: '/CAS-IN/scene.html' },
+    { id: 'scene',  label: 'Scènes',  icon: '🔍', href: 'scene.html#campaigns', rootHref: '/CAS-IN/scene.html#campaigns' },
     { id: 'tp',     label: 'TP',      icon: '🧪', href: 'tp.html',            rootHref: '/CAS-IN/tp.html' },
     { id: 'fiches', label: 'Fiches',  icon: '📄', href: 'fiches/index.html',  rootHref: '/CAS-IN/fiches/index.html' },
   ];
