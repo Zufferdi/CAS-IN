@@ -4,6 +4,18 @@ build_index.py — Regénère fiches/index.html à partir de manifest.json.
 
 Appelé par la GitHub Action .github/workflows/sync-fiches-index.yml.
 
+v4 (réorga 12 cat) :
+  - Passage de 9 → 12 catégories pour aérer "Autres systèmes" (mobile,
+    macOS/Linux, cloud séparés) et "Cryptologie & Sécurité" (crypto/PKI
+    pure séparée des menaces/malware/anti-forensique).
+  - IDs ASCII propres (droit, methodologie, outils, artefacts, systemes,
+    windows, mobile, unix, cloud, reseau, crypto, menaces).
+  - Alignement manifest ↔ build : MANIFEST_CAT_TO_BUILD devient l'identité
+    (les deux sources utilisent les mêmes 12 cat_ids).
+  - Rétrocompatibilité conservée pour les anciens libellés breadcrumb
+    (BREADCRUMB_TEXT_MAP) et les anciennes catégories manifest
+    (acquisition→methodologie, plateformes→cloud).
+
 v3 (manifest-first) :
   - manifest.json EST la source de vérité pour icon/desc/title de chaque fiche.
   - Le HTML de chaque fiche est seulement parsé pour deux choses :
@@ -31,18 +43,24 @@ INDEX_PATH    = FICHES_DIR / "index.html"
 MANIFEST_PATH = ROOT / "data" / "manifest.json"
 
 # ── Ordre pédagogique des modules ───────────────────────────────────
-# Du plus fondamental (prérequis) au plus appliqué (outils).
+# Du plus fondamental (prérequis) au plus appliqué (menaces).
 # Chaque tuple : (cat_id, label affiché, couleur CSS)
+# v4 (réorga 12 cat) : passage de 8 → 12 catégories pour aérer
+# "Autres systèmes" (mobile/unix/cloud séparés) et séparer crypto
+# pure (PKI) des menaces (malware/anti-forensique).
 CATEGORY_ORDER = [
-    ("fondamentaux",         "🎓 Fondamentaux",                 "var(--muted)"),
-    ("droitsuisse",          "⚖️ Cadre Légal · Droit Suisse",   "var(--purple)"),
-    ("acquisitionméthodes",  "📥 Méthodologie & Acquisition",   "var(--cyan)"),
-    ("systèmesdefichiers",   "💾 Systèmes de Fichiers",         "var(--gold)"),
-    ("artefactswindows",     "🪟 Artefacts Windows",            "var(--blue)"),
-    ("systèmesspéciaux",     "📱 Autres Systèmes",              "var(--orange)"),
-    ("réseauxinfrastructure","📡 Réseaux & Communications",     "var(--green)"),
-    ("cryptologiesécurité",  "🔐 Cryptologie & Sécurité",       "var(--red)"),
-    ("outilsDFIR",           "🛠 Outils DFIR",                   "var(--muted)"),
+    ("droit",        "⚖️ Cadre Légal · Droit Suisse",            "var(--purple)"),
+    ("methodologie", "📥 Méthodologie & Acquisition",            "var(--cyan)"),
+    ("outils",       "🛠 Outils DFIR",                            "var(--muted)"),
+    ("artefacts",    "🔬 Analyse d'artefacts",                   "var(--orange)"),
+    ("systemes",     "💾 Fondamentaux & Systèmes de fichiers",   "var(--gold)"),
+    ("windows",      "🪟 Artefacts Windows",                      "var(--blue)"),
+    ("mobile",       "📱 Mobile (Android · iOS)",                 "var(--green)"),
+    ("unix",         "🐧 macOS · Linux · Unix",                   "var(--cyan)"),
+    ("cloud",        "☁️ Cloud, Virtualisation & Embarqué",       "var(--blue)"),
+    ("reseau",       "📡 Réseau & Communications",                "var(--green)"),
+    ("crypto",       "🔐 Cryptologie & PKI",                      "var(--red)"),
+    ("menaces",      "🦠 Malware, Menaces & Anti-forensique",     "var(--red)"),
 ]
 CAT_IDS = {c[0] for c in CATEGORY_ORDER}
 
@@ -50,78 +68,147 @@ CAT_IDS = {c[0] for c in CATEGORY_ORDER}
 # Les fiches listées apparaissent dans cet ordre.
 # Les fiches non listées sont placées à la fin, en ordre alphabétique.
 INTRA_CATEGORY_ORDER = {
-    "fondamentaux": [
-        "encodage.html",
-        "disques.html",
-    ],
-    "droitsuisse": [
+    "droit": [
         "droit.html",
         "suisse.html",
         "preuve.html",
         "eimp_entraide.html",
-        "tor_darkweb.html",
+        "autorites_competences_ch.html",
+        "droit_europeen.html",
+        "expert_witness_ch.html",
+        "lscpt.html",
+        "nldp.html",
     ],
-    "acquisitionméthodes": [
+    "methodologie": [
         "methodologie.html",
         "premier_intervenant.html",
         "acquisition.html",
         "ram_forensique.html",
-        "hash.html",
-        "formats.html",
-        "mac_times.html",
-        "timeline.html",
-        "rapport_forensique.html",
         "incident_response.html",
+        "rapport_forensique.html",
+        "nas_forensique.html",
     ],
-    "systèmesdefichiers": [
-        "comparaison_fs.html",
-        "formats.html",
-        "fat16.html",
-        "fat12.html",
-        "exfat.html",
-        "ntfs.html",
-        "ext.html",
-        "hfs.html",
-        "apfs.html",
-    ],
-    "artefactswindows": [
-        "windows_forensique.html",
-        "windows.html",
-        "registre_windows.html",
-        "logs_windows.html",
-        "shellbags.html",
-        "volatilite.html",
-        "active_directory.html",
-        "usb_forensique.html",
-    ],
-    "systèmesspéciaux": [
-        "macos-linux.html",
-        "mobile.html",
-        "cloud_forensique.html",
-    ],
-    "réseauxinfrastructure": [
-        "reseau.html",
-        "wireshark_pcap.html",
-        "email_forensique.html",
-        "messagerie_im.html",
-        "sqlite_forensique.html",
-    ],
-    "cryptologiesécurité": [
-        "crypto.html",
-        "pki_certificats.html",
-        "cassage_mdp.html",
-        "chiffrement_volumes.html",
-        "anti_forensique.html",
-        "malware_forensique.html",
-        "ransomware_forensique.html",
-        "cryptomonnaies.html",
-    ],
-    "outilsDFIR": [
+    "outils": [
         "outils.html",
         "autopsy.html",
         "zimmerman.html",
+        "kape_velociraptor.html",
+        "iped.html",
+    ],
+    "artefacts": [
+        "timeline.html",
+        "mac_times.html",
+        "magic_bytes_signatures.html",
+        "data_carving.html",
+        "metadata_avancees.html",
+        "browser_artifacts_deep_dive.html",
+        "documents_office_forensique.html",
+        "pdf_forensique_avance.html",
+        "sqlite_forensique.html",
+        "sqlite_forensique_avance.html",
+        "log_forensique_avance.html",
+        "shellbags_osint_pivot.html",
+        "ia_deepfake_forensique.html",
+    ],
+    "systemes": [
+        # Fondamentaux
+        "disques.html",
+        "mbr_gpt.html",
+        "encodage.html",
+        "hex_calcul_basique.html",
+        "formats.html",
+        "mathematiques_forensique.html",
+        "algorithmes_forensique.html",
+        # Systèmes de fichiers
+        "comparaison_fs.html",
+        "timestamps_fs.html",
+        "file_location_fs.html",
+        "ntfs.html",
+        "ntfs_btree.html",
+        "fat12.html",
+        "fat16.html",
+        "fat32.html",
+        "exfat.html",
+        "refs.html",
+        "ext.html",
+        "f2fs.html",
+        "hfs.html",
+        "hfs_btree.html",
+        "apfs.html",
+    ],
+    "windows": [
+        "windows.html",
+        "windows_forensique.html",
+        "registre_windows.html",
+        "windows_registry_forensique_avance.html",
+        "logs_windows.html",
+        "cmd_windows_forensique.html",
+        "powershell_forensique.html",
+        "active_directory.html",
+        "sysmon.html",
+        "shellbags.html",
+        "usb_forensique.html",
+        "usb_removable_media_forensique.html",
+        "lateral_movement_forensique.html",
+        "volatilite.html",
+        "volatility_memory_forensics.html",
+        "wsl_forensique.html",
+        "poster_windows_artefacts.html",
+    ],
+    "mobile": [
+        "mobile.html",
+        "android_forensique.html",
+        "ios_forensique.html",
+        "mobile_apps_forensique.html",
+    ],
+    "unix": [
+        "macos-linux.html",
+        "macos_forensique.html",
+        "linux_forensique.html",
+        "cmd_linux_forensique.html",
+    ],
+    "cloud": [
+        "cloud_forensique.html",
+        "m365_forensique.html",
+        "vm_forensique.html",
+        "docker_kubernetes_forensique.html",
+        "ics_forensique.html",
+        "iot_forensique.html",
+        "vehicules_forensique.html",
+    ],
+    "reseau": [
+        "reseau.html",
+        "wireshark_pcap.html",
+        "network_traffic_analysis_avance.html",
+        "dns_forensique.html",
+        "dns_forensique_avance.html",
+        "email_forensique.html",
+        "email_headers_smtp_forensique.html",
+        "messagerie_im.html",
+        "entreprise_messaging_forensique.html",
         "browser_forensique.html",
+        "tor_darkweb.html",
         "osint.html",
+        "siem_logs.html",
+    ],
+    "crypto": [
+        "crypto.html",
+        "hash.html",
+        "pki_certificats.html",
+        "tls_https_certificate_forensique.html",
+        "chiffrement_volumes.html",
+        "cassage_mdp.html",
+        "cryptomonnaies.html",
+    ],
+    "menaces": [
+        "malware_forensique.html",
+        "ransomware_forensique.html",
+        "mitre_attack.html",
+        "threat_intel_ioc.html",
+        "yara.html",
+        "reverse_engineering_101.html",
+        "anti_forensique.html",
+        "steganographie.html",
     ],
 }
 
@@ -212,57 +299,108 @@ TAG_OVERRIDES = {
     "osint.html":                 "OSINT",
 }
 
-# ── Mapping texte breadcrumb → cat_id (pour fallback 1) ─────────────
+# ── Mapping texte breadcrumb → cat_id (pour fallback texte) ─────────
+# Reconnaît à la fois les nouveaux libellés (v4 — 12 cat) et les anciens
+# pour la rétrocompatibilité avec d'éventuels breadcrumbs non encore patchés.
 BREADCRUMB_TEXT_MAP = {
-    "fondamentaux":                   "fondamentaux",
-    "prérequis":                      "fondamentaux",
-    "systèmes de fichiers":           "systèmesdefichiers",
-    "systemes de fichiers":           "systèmesdefichiers",
-    "acquisition & méthodes":         "acquisitionméthodes",
-    "acquisition, méthodes & outils": "acquisitionméthodes",
-    "acquisition et méthodes":        "acquisitionméthodes",
-    "acquisition méthodes":           "acquisitionméthodes",
-    "méthodologie & acquisition":     "acquisitionméthodes",
-    "méthodologie et acquisition":    "acquisitionméthodes",
-    "acquisition":                    "acquisitionméthodes",
-    "méthodologie":                   "acquisitionméthodes",
-    "artefacts windows":              "artefactswindows",
-    "cryptologie & sécurité":         "cryptologiesécurité",
-    "cryptologie et sécurité":        "cryptologiesécurité",
-    "cryptologie":                    "cryptologiesécurité",
-    "réseaux & infrastructure":       "réseauxinfrastructure",
-    "réseaux & communications":       "réseauxinfrastructure",
-    "réseaux et communications":      "réseauxinfrastructure",
-    "réseaux & investigation":        "réseauxinfrastructure",
-    "réseaux et investigation":       "réseauxinfrastructure",
-    "réseaux":                        "réseauxinfrastructure",
-    "systèmes spéciaux":              "systèmesspéciaux",
-    "autres systèmes":                "systèmesspéciaux",
-    "plateformes & cloud":            "systèmesspéciaux",
-    "plateformes et cloud":           "systèmesspéciaux",
-    "droit suisse":                   "droitsuisse",
-    "cadre légal":                    "droitsuisse",
-    "droit":                          "droitsuisse",
-    "outils dfir":                    "outilsDFIR",
-    "outils":                         "outilsDFIR",
+    # ── Nouveaux libellés (v4) ──
+    "cadre légal":                   "droit",
+    "droit suisse":                  "droit",
+    "droit":                         "droit",
+    "méthodologie & acquisition":    "methodologie",
+    "méthodologie et acquisition":   "methodologie",
+    "méthodologie":                  "methodologie",
+    "outils dfir":                   "outils",
+    "outils":                        "outils",
+    "analyse d'artefacts":           "artefacts",
+    "analyse d artefacts":           "artefacts",
+    "artefacts":                     "artefacts",
+    "systèmes & fondamentaux":       "systemes",
+    "systèmes et fondamentaux":      "systemes",
+    "fondamentaux & systèmes de fichiers": "systemes",
+    "systèmes de fichiers":          "systemes",
+    "systemes de fichiers":          "systemes",
+    "fondamentaux":                  "systemes",
+    "artefacts windows":             "windows",
+    "windows":                       "windows",
+    "mobile (android · ios)":        "mobile",
+    "mobile android ios":            "mobile",
+    "mobile":                        "mobile",
+    "macos · linux":                 "unix",
+    "macos linux":                   "unix",
+    "macos · linux · unix":          "unix",
+    "unix":                          "unix",
+    "cloud & virtualisation":        "cloud",
+    "cloud et virtualisation":       "cloud",
+    "cloud, virtualisation & embarqué": "cloud",
+    "cloud":                         "cloud",
+    "plateformes spécialisées":      "cloud",
+    "réseau & communications":       "reseau",
+    "réseaux & communications":      "reseau",
+    "réseaux et communications":     "reseau",
+    "réseau":                        "reseau",
+    "réseaux":                       "reseau",
+    "cryptologie & pki":             "crypto",
+    "cryptologie et pki":            "crypto",
+    "cryptologie & sécurité":        "crypto",
+    "cryptologie":                   "crypto",
+    "malware & menaces":             "menaces",
+    "malware et menaces":            "menaces",
+    "malware, menaces & anti-forensique": "menaces",
+    "malware":                       "menaces",
+    "menaces":                       "menaces",
+    "anti-forensique":               "menaces",
+    # ── Anciens libellés (rétrocompatibilité) ──
+    "autres systèmes":               "cloud",   # remap : était fourre-tout
+    "systèmes spéciaux":             "cloud",
+    "plateformes & cloud":           "cloud",
+    "plateformes et cloud":          "cloud",
+    "plateformes":                   "cloud",
+    "acquisition & méthodes":        "methodologie",
+    "acquisition, méthodes & outils": "methodologie",
+    "acquisition et méthodes":       "methodologie",
+    "acquisition méthodes":          "methodologie",
+    "acquisition":                   "methodologie",
+    "réseaux & infrastructure":      "reseau",
+    "réseaux et infrastructure":     "reseau",
+    "réseaux & investigation":       "reseau",
+    "réseaux et investigation":      "reseau",
+    "prérequis":                     "systemes",
 }
 
-# ── Mapping filename → cat_id (pour fallback 2) ─────────────────────
+# ── Mapping filename → cat_id (pour fallback 3) ─────────────────────
+# Sert si breadcrumb HTML ET manifest échouent (cas rare). On essaie
+# de deviner la cat à partir du nom du fichier.
 FILENAME_KEYWORDS = [
-    (("encodage", "disques"), "fondamentaux"),
-    (("fat12", "fat16", "fat32", "exfat", "ntfs", "ext", "hfs", "apfs",
-      "comparaison_fs", "formats"), "systèmesdefichiers"),
-    (("acquisition", "methodologie", "méthodologie", "timeline", "rapport_forensique",
-      "premier_intervenant", "ram_forensique", "mac_times", "incident", "hash"), "acquisitionméthodes"),
-    (("windows", "registre", "shellbags", "logs_windows", "volatilite", "active_directory",
-      "prefetch", "amcache", "shimcache", "usb_forensique"), "artefactswindows"),
-    (("hash", "crypto", "cassage_mdp", "anti_forensique", "malware", "ransomware",
-      "yara", "pki", "chiffrement_volumes", "cryptomonnaies"), "cryptologiesécurité"),
-    (("reseau", "réseau", "wireshark", "pcap", "email", "sqlite", "messagerie_im"), "réseauxinfrastructure"),
-    (("mobile", "macos", "linux", "cloud", "ios", "android"), "systèmesspéciaux"),
-    (("suisse", "droit", "preuve", "eimp", "entraide", "cpp", "lpd", "tor", "darkweb"), "droitsuisse"),
-    (("autopsy", "outils", "zimmerman", "xways", "winhex", "ftk", "cellebrite",
-      "velociraptor", "kape", "osint", "browser"), "outilsDFIR"),
+    (("suisse", "droit", "preuve", "eimp", "entraide", "cpp", "lpd",
+      "lscpt", "nldp", "autorites_competences", "expert_witness"), "droit"),
+    (("methodologie", "méthodologie", "premier_intervenant", "acquisition",
+      "ram_forensique", "incident", "rapport_forensique", "nas_forensique"), "methodologie"),
+    (("autopsy", "zimmerman", "kape", "velociraptor", "xways", "winhex",
+      "outils", "iped"), "outils"),
+    (("timeline", "mac_times", "magic_bytes", "data_carving", "metadata",
+      "browser_artifacts", "documents_office", "pdf_forensique",
+      "sqlite_forensique", "log_forensique_avance", "shellbags_osint",
+      "ia_deepfake"), "artefacts"),
+    (("fat12", "fat16", "fat32", "exfat", "ntfs", "ext", "hfs", "apfs", "f2fs", "refs",
+      "comparaison_fs", "timestamps_fs", "file_location",
+      "disques", "encodage", "hex_calcul", "formats", "mathematiques",
+      "algorithmes", "mbr_gpt"), "systemes"),
+    (("windows", "registre", "shellbags", "logs_windows", "volatil",
+      "active_directory", "prefetch", "amcache", "shimcache",
+      "usb_forensique", "usb_removable", "cmd_windows", "powershell",
+      "sysmon", "lateral_movement", "wsl", "poster_windows"), "windows"),
+    (("mobile", "android", "ios"), "mobile"),
+    (("macos", "linux", "cmd_linux"), "unix"),
+    (("cloud", "m365", "vm_forensique", "docker", "kubernetes",
+      "ics", "iot", "vehicules"), "cloud"),
+    (("reseau", "réseau", "wireshark", "pcap", "email", "messagerie_im",
+      "entreprise_messaging", "network_traffic", "dns", "browser_forensique",
+      "tor", "darkweb", "osint", "siem"), "reseau"),
+    (("crypto", "hash", "pki", "tls_https", "chiffrement", "cassage_mdp",
+      "cryptomonnaies"), "crypto"),
+    (("malware", "ransomware", "mitre_attack", "threat_intel", "yara",
+      "reverse_engineering", "anti_forensique", "steganographie"), "menaces"),
 ]
 
 
@@ -271,21 +409,27 @@ def _normalize(text: str) -> str:
 
 
 # ── Mapping catégorie manifest → catégorie build_index ──────────────
-# Le manifest a 7 catégories (systemes, acquisition, windows, crypto,
-# reseau, plateformes, droit), build_index en a 9 (avec fondamentaux et
-# outilsDFIR en plus, pour la progression pédagogique). Ce mapping est
-# utilisé en priorité 2 quand la détection HTML par href échoue.
-# Les cats "spéciales" (fondamentaux, outilsDFIR) ne sont pas mappées
-# ici : les fiches qui doivent y aller doivent avoir un breadcrumb HTML
-# qui pointe explicitement (priorité 1).
+# v4 : manifest et build_index utilisent désormais les mêmes 12 cat_ids.
+# Le mapping est donc identité (les deux sont alignés). Anciennes valeurs
+# manifest (systemes, acquisition, plateformes, ...) supportées pour
+# rétrocompatibilité avec d'éventuelles fiches/manifests pré-réorga.
 MANIFEST_CAT_TO_BUILD = {
-    "systemes":    "systèmesdefichiers",
-    "acquisition": "acquisitionméthodes",
-    "windows":     "artefactswindows",
-    "crypto":      "cryptologiesécurité",
-    "reseau":      "réseauxinfrastructure",
-    "plateformes": "systèmesspéciaux",
-    "droit":       "droitsuisse",
+    # ── v4 (identité) ──
+    "droit":        "droit",
+    "methodologie": "methodologie",
+    "outils":       "outils",
+    "artefacts":    "artefacts",
+    "systemes":     "systemes",
+    "windows":      "windows",
+    "mobile":       "mobile",
+    "unix":         "unix",
+    "cloud":        "cloud",
+    "reseau":       "reseau",
+    "crypto":       "crypto",
+    "menaces":      "menaces",
+    # ── Rétrocompatibilité v3 (ancien manifest à 7 cat) ──
+    "acquisition":  "methodologie",
+    "plateformes":  "cloud",
 }
 
 
@@ -317,7 +461,7 @@ def detect_category(soup: BeautifulSoup, filename: str) -> tuple[str, str]:
             if kw in fname_low:
                 return cid, "filename"
 
-    return "outilsDFIR", "fallback"
+    return "outils", "fallback"
 
 
 def load_manifest_index() -> dict:
@@ -370,7 +514,7 @@ def parse_fiche(path: Path, manifest_index: dict) -> dict | None:
     if method not in ("href", "text"):
         # Les méthodes HTML primaires ont échoué : essayons le manifest
         # avant de tomber sur les fallbacks moins fiables (filename keyword
-        # ou outilsDFIR par défaut).
+        # ou outils par défaut).
         manifest_entry_for_cat = manifest_index.get(path.name)
         if manifest_entry_for_cat:
             mfst_cat = manifest_entry_for_cat.get("category")
@@ -788,7 +932,7 @@ def main():
         print(f"   ⚠ {source_stats['html-fallback']} fiche(s) en fallback HTML — "
               f"à ajouter dans manifest.json pour cohérence.")
     if method_stats["fallback"] > 0:
-        print(f"   ⚠ {method_stats['fallback']} fiche(s) en fallback 'outilsDFIR' — "
+        print(f"   ⚠ {method_stats['fallback']} fiche(s) en fallback 'outils' — "
               f"vérifier les breadcrumbs.")
 
 
