@@ -1,4 +1,45 @@
 // Service Worker — CAS-IN Investigation Numérique
+// v300 : v3.3 — JOLIFICATION FIXES + BADGES QUALITATIFS + RATTRAPAGE PRÉCACHE
+//
+//        Patch correctif et additif :
+//
+//        🐛 RATTRAPAGE PRÉCACHE — Les fichiers introduits par v3.1, v3.2 et
+//        v3.2.3 n'avaient JAMAIS été ajoutés à STATIC_ASSETS. Conséquence :
+//        toute visite offline d'une page scène déclenchait du fetch network
+//        pour ces modules → 11 assets non-cachés. Ajout en bloc dans la
+//        section "v3.x" en fin de liste. Couvre :
+//          • Composants : scene-jolif, navbar-mobile, view-toggle,
+//            daily-missions, npc-favors, role-abilities, quality-badges
+//          • Pages : scene-campaigns
+//          • Styles : scene-jolif, scene-campaigns, daily-missions, npc-favors
+//
+//        🐛 FIX scene-jolif v3.2.3 — Le sélecteur '.npc-favors-banner' du
+//        tableau SECONDARY ne matchait rien dans le DOM (vraie classe :
+//        'favors-banner'). Du coup le bandeau Faveurs PNJ n'était en fait
+//        jamais masqué en mode condensé. Corrigé en le sortant de SECONDARY
+//        et en lui donnant un traitement dédié : chip cliquable violet qui
+//        reste actionnable.
+//
+//        ✨ JOLIFICATION v3.3 — Trois améliorations supplémentaires :
+//          • Première visite : 3 briefings complets affichés avant bascule
+//            auto en condensé (LS cas_briefing_seen_full)
+//          • Focus auto sur "Suivant" désactivé si l'utilisateur a scrollé
+//            après l'apparition du feedback (heuristique 500 ms)
+//          • Bandeau Faveurs en chip cliquable persistant
+//
+//        ✨ BADGES QUALITATIFS — Nouveau module cas-in-quality-badges-v1.js
+//        qui ajoute 11 badges récompensant la qualité du raisonnement plutôt
+//        que la quantité d'activité : Chaîne hospitalière, L'élève qui
+//        révise, Affaires Sarine/Viège linéaires, Triangulation deepfake,
+//        Maître du premier coup, Praticien EIMP, Hors zone de confort,
+//        Enquêteur frugal, Inébranlable sous pression, Conscience de soi.
+//        Migration one-shot pour les users existants depuis cas_run_buffer.
+//
+//        CACHE_VERSION bumpée v240 → v300 pour forcer la réinstallation
+//        sur les navigateurs des utilisateurs.
+//
+// v240 : v3.2.5 — Cleanup phase A (Dossiers désactivé, etc.)
+// v143 : v2.62 — Cycle de fixes fiches
 // v142 : v2.62 — RÉPARATION 17 FICHES + INDEX/SEARCH SYNC + CRYPTO OFFLINE
 //
 //        Bump cache pour forcer la mise à jour des fiches corrigées (17 d'entre
@@ -1626,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v240';
+const CACHE_VERSION = 'cas-in-v300';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1799,6 +1840,36 @@ const STATIC_ASSETS = [
   // ─── v2.93-v2.99 — Nouvelles data ───
   './data/glossary.json',
   './data/scenes-chronology.json',
+
+  // ─── v3.1-v3.3 — Rattrapage précache (jamais ajoutés avant v3.3) ───
+  // Ces fichiers étaient référencés dans scene.html depuis v3.1/v3.2/v3.2.3
+  // mais oubliés de STATIC_ASSETS, causant des fetch network systématiques
+  // hors-ligne. Symptôme : "Scènes Viège/Sarine introuvables" mentionné dans
+  // README v3.1. Ajoutés en bloc ici en v3.3.
+  //
+  // v3.1 — Système de Faveurs PNJ
+  './js/components/npc-favors.js',
+  './style/npc-favors.css',
+  //
+  // v2.91 — Compétences passives par rôle (loadé par scene.html, oublié)
+  './js/components/role-abilities.js',
+  //
+  // v3.2 — Vue Campagnes (nouvelle page d'accueil)
+  './js/pages/scene-campaigns-v1.js',
+  './style/scene-campaigns.css',
+  //
+  // v3.2.3 — Jolification (UX scène & gamification)
+  './js/components/scene-jolif-v1.js',
+  './js/components/cas-in-navbar-mobile.js',
+  './js/components/cas-in-view-toggle.js',
+  './style/scene-jolif.css',
+  //
+  // v3.2.4 — Missions du jour (daily quests visibles)
+  './js/components/cas-in-daily-missions.js',
+  './style/cas-in-daily-missions.css',
+  //
+  // v3.3 — Badges qualitatifs (NOUVEAU)
+  './js/components/cas-in-quality-badges-v1.js',
 ];
 
 const OFFLINE_FALLBACK = './offline.html';
