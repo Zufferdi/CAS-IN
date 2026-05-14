@@ -1,0 +1,306 @@
+{
+  "id": "be-affaire-aar-frutigen-1-kantonnet-detection",
+  "title": "Affaire Aar-Frutigen #1 — Détection chez KantonNet (Köniz)",
+  "icon": "🔍",
+  "difficulty": "medium",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Isolation rapide et chain-of-custody propre. KantonNet coopère sous pression. Le procureur BE est notifié en parallèle de la mise sous scellés. Les 47 communes sont alertées préventivement. La fenêtre d'investigation est maximale.",
+    "degraded": "Isolation efficace mais procédure de scellés imprécise. KantonNet retarde sa coopération de 6h. Quelques communes ne sont pas alertées à temps. Le dossier tient mais avec des fragilités.",
+    "failure": "Précipitation : on touche au serveur de prod sans procédure, KantonNet se referme avec son avocat. Les 47 communes apprennent par la presse. Le procureur ouvre une enquête mais la preuve est contaminée."
+  },
+  "tags": [
+    "SAGA BE-FR",
+    "AAR-FRUTIGEN",
+    "SUPPLY CHAIN",
+    "E-GOV",
+    "BERNE",
+    "INCIDENT RESPONSE",
+    "POLKAPO",
+    "FORENSIQUE"
+  ],
+  "legalRefs": [
+    "Art. 248 CPP — Saisie et mise sous scellés",
+    "Art. 244 CPP — Perquisition de locaux",
+    "LSI Art. 74e — Annonce NCSC 24h",
+    "LPD 2023 Art. 24 — Notification PFPDT dans les meilleurs délais",
+    "Art. 102 CP — Responsabilité de l'entreprise"
+  ],
+  "intro": "Lundi 18 février, 09h47. Vous êtes <strong>Wachtmeister Brunner</strong>, inspecteur principal à la <strong>Cellule cybercriminalité de la Polkapo BE</strong>. Le NCSC (OFCS) vient de relayer une alerte de <strong>KantonNet AG</strong>, fournisseur IT du Canton de Berne basé à Köniz : leur SIEM a détecté des connexions sortantes anormales depuis leur infrastructure CI/CD. KantonNet héberge les systèmes E-Gov (état civil, permis de construire, registre électoral) de <strong>47 communes bernoises</strong>, dont Berne, Thun, Frutigen, Bienne et Spiez. La <strong>procureure Dr Stettler</strong> (MP-BE section cyber) vient de raccrocher : elle vous mandate sur place, immédiatement.",
+  "alertLevel": "🚨 SUPPLY CHAIN BE — Fournisseur IT cantonal compromis · 47 communes potentiellement impactées · Procureure Dr Stettler mandate Polkapo · NCSC en boucle · Pression médiatique imminente",
+  "objectives": [
+    {
+      "icon": "🏢",
+      "text": "Arriver chez KantonNet AG à Köniz et conduire la première intervention"
+    },
+    {
+      "icon": "🔐",
+      "text": "Sécuriser les preuves selon Art. 248 CPP — pas de pollution forensique"
+    },
+    {
+      "icon": "🏘",
+      "text": "Coordonner avec NCSC et alerter les 47 communes en cascade"
+    }
+  ],
+  "debrief": "<p><strong>Supply chain compromise</strong> : un attaquant compromet un fournisseur pour atteindre ses clients en aval. Le cas archétypal en Suisse est <strong>Xplain (2023)</strong> où le fournisseur IT fédéral a été infiltré par le ransomware Play, fuitant ~1,3M de documents incluant des données fedpol, Office fédéral de la police, etc. La leçon : le périmètre de défense ne peut pas s'arrêter à ses propres systèmes — il faut auditer la sécurité des fournisseurs critiques.</p><p><strong>Première intervention</strong> : la phase critique. Trois principes : (1) <em>préservation des preuves</em> (pas de modification de l'état système avant imaging propre), (2) <em>continuité opérationnelle</em> (47 communes en dépendent — on ne peut pas tout couper), (3) <em>communication structurée</em> (NCSC, communes, presse, employés). Les 3 sont souvent en tension : isoler proprement prend du temps, mais le temps est précisément ce qui manque.</p><p><strong>Référence CH</strong> : <strong>LSI Art. 74e</strong> impose au fournisseur IT de notifier le NCSC sous 24h. Si KantonNet ne le fait pas spontanément, c'est une circonstance aggravante (Art. 102 CP responsabilité de l'entreprise). <strong>LPD 2023 Art. 24</strong> impose au responsable du traitement (chaque commune) de notifier le PFPDT dans les meilleurs délais. La coordination est complexe : qui notifie quoi à qui ?</p>",
+  "steps": [
+    {
+      "phase": "🏢 Arrivée chez KantonNet (Köniz, 10h23)",
+      "situation": "Vous arrivez avec deux collègues techniques au siège de KantonNet AG. <strong>Markus Hofer</strong>, CISO depuis 8 ans (44 ans, ETH + CISSP), vous reçoit visiblement sous pression. La salle serveur est à l'étage inférieur. Le SIEM tourne sur grand écran : 412 connexions sortantes anormales détectées sur les 72 dernières heures, vers une IP en Roumanie (Bucarest, hébergeur connu pour C2 ransomware).<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📊 État détecté :<br>• Cluster CI/CD Jenkins (Linux Debian 12) compromis<br>• 47 pipelines de mise à jour automatique vers communes — exécutés depuis le 7 février<br>• Première connexion C2 anormale : 7 février 02:34<br>• Détection SIEM : 18 février 03:12<br>⏱️ Fenêtre de compromission : <strong>11 jours non détectés</strong></div>",
+      "law": "<strong>Art. 244 CPP</strong> — La perquisition en entreprise nécessite mandat (déjà signé par Dr Stettler). <strong>Art. 248 CPP</strong> — Tout ce qui est saisi doit être mis sous scellés avec procès-verbal.",
+      "question": "<strong>Markus Hofer vous demande \"Par où voulez-vous commencer ?\"</strong>",
+      "choices": [
+        {
+          "text": "Demander accès immédiat au cluster Jenkins pour analyser live : on perd des données volatiles à chaque seconde.",
+          "ok": false,
+          "pts": -8,
+          "fb": "💥 <strong>Pollution forensique.</strong> Te connecter en SSH live sur le cluster modifie les timestamps, peut alerter l'attaquant encore présent, et expose la procédure à une contestation \"contamination de la scène\". L'urgence est réelle mais la précipitation détruit la preuve.",
+          "legal": "Art. 248 CPP + ACPO Principles 1-2 — Toute modification de la preuve par l'investigateur la fragilise.",
+          "critical": true,
+          "next": 1
+        },
+        {
+          "text": "Procès-verbal d'arrivée + mise sous scellés du cluster physique. Puis acquisition disque + dump RAM par l'expert forensique JCFC qu'on appelle en renfort.",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Procédure conforme.</strong> Tu poses la chain-of-custody avant tout. Le dump RAM est crucial (le malware peut être actif en mémoire). L'expert JCFC est la bonne personne pour l'imagerie (compétence + écho aux directives NCSC). Tu prépares le terrain pour l'épisode #2.",
+          "legal": "Art. 248 CPP + Art. 184 CPP — Recourir à expert pour aspects techniques.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Ordonner à Hofer de couper immédiatement tout le réseau KantonNet (Internet + LAN) : sécurité avant tout.",
+          "ok": false,
+          "pts": -5,
+          "fb": "⚠️ <strong>Trop radical.</strong> Couper tout casse les 47 communes en aval (état civil, permis, électoral). Ce n'est pas ton rôle d'inspecteur de décider de couper un service public sans coordination avec NCSC + procureur + communes. Isolement ciblé du cluster compromis = oui ; coupure totale = non.",
+          "legal": "Principe de proportionnalité (Art. 5 al. 2 Cst.) — Mesures restrictives uniquement nécessaires et proportionnées.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔐 Mise sous scellés et imaging",
+      "situation": "L'expert forensique fedpol JCFC est en route (estimation 90 min). En attendant, vous procédez à la mise sous scellés. Markus Hofer veut absolument que le service reste up pour les 47 communes (notamment Berne et Thun qui traitent ~2'400 actes par jour). Il propose un <em>fail-over</em> sur l'environnement de DR (Disaster Recovery) qui tourne en parallèle, isolé.",
+      "law": "<strong>Continuité de service public</strong> : E-Gov = service public. Coupure = atteinte aux administrés. Procédure pénale doit s'accommoder de la continuité.",
+      "question": "<strong>Acceptez-vous la proposition de fail-over sur DR ?</strong>",
+      "choices": [
+        {
+          "text": "Oui, mais à 4 conditions strictes : (1) imager le DR aussi avant bascule, (2) journaliser chaque action de bascule, (3) couper la connexion DR→cluster compromis, (4) Hofer signe une déclaration de coopération.",
+          "ok": true,
+          "pts": 13,
+          "fb": "✅ <strong>Équilibre opérationnel et procédural.</strong> Tu permets la continuité (essentielle pour 47 communes) tout en sécurisant la preuve (imaging DR avant bascule, journalisation). La déclaration signée engage KantonNet — utile si tentation de minimiser plus tard.",
+          "legal": "Principe de proportionnalité respecté. Art. 102 CP — La coopération de l'entreprise sera prise en compte.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Non, on coupe le service entièrement. La procédure pénale prime, les communes feront avec le mode papier.",
+          "ok": false,
+          "pts": -4,
+          "fb": "⚠️ <strong>Décision disproportionnée.</strong> 47 communes en mode papier sur plusieurs jours = ~120'000 administrés impactés. Pas dans tes prérogatives d'inspecteur sans aval procureur. La procédure pénale peut s'accommoder d'un DR isolé proprement géré.",
+          "legal": "Art. 5 al. 2 Cst. — Proportionnalité. Art. 197 CPP — Mesures de contrainte uniquement si nécessaires.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Oui, sans conditions particulières — Hofer connaît son métier, on lui fait confiance.",
+          "ok": false,
+          "pts": -3,
+          "fb": "🟡 <strong>Confiance excessive.</strong> Hofer est compétent mais il est aussi la victime d'une part, et représentant d'une entreprise potentiellement responsable d'autre part. Il a un conflit d'intérêts évident (minimiser l'impact pour KantonNet vs aider l'enquête à fond). Procédure documentée nécessaire.",
+          "legal": "Art. 184 CPP — L'investigateur doit garder son indépendance.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "📞 Notification NCSC et procureure",
+      "situation": "11h32. La situation se stabilise. Vous devez maintenant communiquer en cascade. Le NCSC (OFCS) attend votre rapport préliminaire. Dr Stettler veut un point téléphonique d'ici 13h. Les 47 communes ne sont pas encore informées.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📞 À communiquer :<br>• NCSC : annonce LSI Art. 74e (24h délai, on est encore largement dans les temps)<br>• Dr Stettler : briefing complet, demande mandats supplémentaires éventuels<br>• 47 communes : qui les notifie, quand, comment ?<br>• Presse alémanique : Tagesanzeiger et Berner Zeitung ont vent de quelque chose</div>",
+      "law": "<strong>LSI Art. 74e</strong> : annonce NCSC sous 24h. <strong>LPD 2023 Art. 24</strong> : chaque commune (responsable du traitement) notifie le PFPDT dans les meilleurs délais.",
+      "question": "<strong>Qui notifie les 47 communes et comment ?</strong>",
+      "choices": [
+        {
+          "text": "KantonNet (en tant que sous-traitant LPD) notifie ses 47 communes-clientes par email cryptique aujourd'hui même. Polkapo + NCSC fournissent un template structuré pour homogénéité.",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Conforme LPD 2023.</strong> Le sous-traitant (KantonNet) <em>doit</em> notifier le responsable du traitement (chaque commune) de toute violation potentielle (Art. 24 al. 2 LPD). Le template structuré assure cohérence et permet aux communes de déclencher leur propre notification PFPDT (chacune dans les meilleurs délais). Polkapo reste maître de la procédure pénale.",
+          "legal": "LPD 2023 Art. 24 al. 3 — Sous-traitant notifie responsable. Art. 24 al. 1 — Chaque responsable notifie le PFPDT.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Polkapo notifie directement les 47 communes par téléphone. Plus rapide, on garde le contrôle.",
+          "ok": false,
+          "pts": -3,
+          "fb": "⚠️ <strong>Sortie de rôle.</strong> Notifier les communes est une obligation contractuelle et LPD du sous-traitant (KantonNet), pas de Polkapo. Tu en fais trop côté communication aux clients, et trop peu côté responsabilisation de l'entreprise compromise.",
+          "legal": "LPD 2023 Art. 24 al. 3 — Obligation au sous-traitant, pas à la police.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "On attend de comprendre mieux la situation technique avant de notifier les communes — éviter la panique inutile.",
+          "ok": false,
+          "pts": -8,
+          "fb": "💥 <strong>Violation LPD probable.</strong> Le délai de notification LPD (« dans les meilleurs délais ») court depuis la détection. Attendre = mise en faute potentielle de KantonNet ET des communes. Les médias publieraient avant l'annonce officielle = catastrophe communicationnelle + sanction LPD aggravée.",
+          "legal": "LPD 2023 Art. 24 + Art. 60 (sanctions). Retard = aggravation.",
+          "critical": true,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🗣 Communication avec Hofer (CISO)",
+      "situation": "13h47. Briefing avec Hofer après notification déclenchée. Il est visiblement épuisé et inquiet pour KantonNet. Il vous demande franchement : <em>« Wachtmeister, KantonNet est-il pénalement responsable de ce qui se passe ? »</em> Question délicate : tu n'es pas procureur ni juge, mais ta réponse va orienter sa coopération pour les semaines à venir.",
+      "law": "<strong>Art. 102 CP</strong> — Responsabilité de l'entreprise : peut être engagée si la commission d'une infraction au sein de l'entreprise <em>ne peut être imputée à aucune personne physique déterminée</em>, ou s'il y a manquement organisationnel grave (al. 2).",
+      "question": "<strong>Que répondez-vous à Hofer ?</strong>",
+      "choices": [
+        {
+          "text": "« Je ne suis pas procureur, je ne peux pas anticiper la qualification pénale. Ce que je peux vous dire : votre coopération maintenant, votre transparence et la qualité de vos procédures internes seront évaluées. Plus tôt vous donnez accès aux logs, mieux KantonNet sera positionnée. »",
+          "ok": true,
+          "pts": 13,
+          "fb": "✅ <strong>Réponse pro et bien calibrée.</strong> Tu ne sors pas de ton rôle (pas de juge), tu motives la coopération (positionnement KantonNet), tu reste honnête. C'est exactement la posture qu'un inspecteur expérimenté adopte : ni rassurant ni inquisiteur, juste juste.",
+          "legal": "Art. 184 CPP — Indépendance professionnelle. Art. 102 CP — La coopération sera effectivement appréciée.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "« KantonNet n'a rien fait de mal, vous êtes la victime. Pas d'inquiétude pénale. »",
+          "ok": false,
+          "pts": -6,
+          "fb": "💥 <strong>Promesse intenable.</strong> Tu ne peux pas garantir l'absence de responsabilité pénale (Art. 102 CP peut s'appliquer si manquement organisationnel). Si tu te trompes, Hofer se sent trahi et la coopération vole en éclats. Et tu sors de ton rôle de policier en prédisant l'analyse procureur.",
+          "legal": "Art. 184 CPP — L'inspecteur ne préjuge pas. Art. 102 CP — Responsabilité possible même victime.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "« KantonNet a 11 jours de retard de détection — c'est manifestement un manquement grave. Préparez-vous à des poursuites. »",
+          "ok": false,
+          "pts": -5,
+          "fb": "⚠️ <strong>Anticipation hostile.</strong> Tu sors de ton rôle (jugement avant procureur). Tu fais perdre la coopération de Hofer qui va immédiatement se réfugier derrière son avocat. Tu sabotes ton propre travail. 11 jours de détection mérite analyse — pas un verdict d'inspecteur.",
+          "legal": "Art. 184 CPP — L'inspecteur ne juge pas. Art. 32 al. 1 Cst. — Présomption d'innocence.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "🔬 Premier examen — Trouvaille clé",
+      "situation": "15h11. L'expert JCFC est arrivé. Il commence l'analyse triage du cluster en mode read-only. Tu es à côté de lui. Il pointe une découverte rapide :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">🔍 IoCs préliminaires :<br>• C2 sortant : <code>185.220.X.X</code> (Roumanie, infra connue ransomware)<br>• Implant : binaire <code>/var/lib/jenkins/.system-monitor</code> (faux nom de service)<br>• Communication chiffrée TLS pinning custom<br>• <strong>Wallet BTC en clair</strong> dans le binaire : <code>bc1q...***</code> (32 chars)<br>• Aucune note de rançon — l'attaquant n'a pas exfilté massivement, il est resté discret pendant 11 jours</div>",
+      "law": "<strong>Threat Intel</strong> : un wallet BTC en clair dans un implant est une signature unique. À partager immédiatement avec NCSC GovCERT et MROS pour cross-reference.",
+      "question": "<strong>Que faites-vous immédiatement de ce wallet BTC ?</strong>",
+      "choices": [
+        {
+          "text": "Photo immortalisation procès-verbal + envoi crypté à NCSC GovCERT + MROS pour cross-reference avec leur base d'IoCs ransomware connus.",
+          "ok": true,
+          "pts": 15,
+          "fb": "✅ <strong>Réflexe parfait.</strong> Un wallet BTC partagé rapidement avec MROS et GovCERT peut être <em>recoupé</em> avec d'autres affaires en cours. C'est précisément ce qui va se passer : ce wallet va réapparaître dans l'affaire ransomware Singine (FR) quelques semaines plus tard. Le sharing rapide est ce qui transforme deux affaires séparées en une enquête conjointe.",
+          "legal": "Art. 26 Convention Budapest — Information spontanée. Art. 23 LBA — Le bureau de communication (MROS) centralise.",
+          "critical": false,
+          "next": 5
+        },
+        {
+          "text": "Le garder secret pour l'instant — partager pourrait alerter l'attaquant.",
+          "ok": false,
+          "pts": -7,
+          "fb": "💥 <strong>Erreur stratégique.</strong> Un wallet n'est pas un secret qu'on protège — c'est un IoC qu'on partage rapidement. L'attaquant utilise très probablement ce wallet ailleurs. Le silence empêche le recoupement avec d'autres affaires (qui aurait pu identifier le suspect commun plus vite).",
+          "legal": "Convention Budapest Art. 25 — Esprit de coopération internationale.",
+          "critical": false,
+          "next": 5
+        },
+        {
+          "text": "Le partager uniquement avec Dr Stettler pour l'instant — décision procédurale du procureur d'abord.",
+          "ok": false,
+          "pts": -2,
+          "fb": "🟡 <strong>Hyper-prudent inutilement.</strong> Le sharing d'IoCs techniques avec NCSC + MROS est une routine opérationnelle qui n'a pas besoin de mandat procureur. Dr Stettler te dira évidemment \"oui, partagez immédiatement\". Tu perds 1-2 heures sans bénéfice.",
+          "legal": "Pratique opérationnelle standard NCSC + MROS.",
+          "critical": false,
+          "next": 5
+        }
+      ]
+    },
+    {
+      "phase": "🏘 Premier décompte d'impact",
+      "situation": "17h42. Les 47 communes sont notifiées. Les retours commencent. Sur les 47, <strong>34</strong> confirment des accès anormaux sur leur portail E-Gov ces derniers jours, dont <strong>3</strong> avec lecture massive du registre électoral (Bern, Thun, Frutigen). Aucune commune ne signale de manipulation/modification, juste de la lecture.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📊 Impact provisoire :<br>• 34/47 communes confirment accès anormaux<br>• 3 communes : extraction registre électoral détectée<br>• ~180'000 administrés dont données électorales potentiellement accédées<br>• 0 manipulation détectée (uniquement read access)<br>⚠️ Élections cantonales BE dans 6 semaines — implication politique majeure</div>",
+      "law": "<strong>Élections cantonales</strong> + accès à registre électoral = potentielle <strong>ingérence électorale</strong>. Art. 281 CP (corruption électorale) ou Art. 282 CP (fraude électorale) selon usage des données. LSI Art. 74e renforcé pour systèmes électoraux.",
+      "question": "<strong>Comment qualifiez-vous la priorité de cette information à Dr Stettler ?</strong>",
+      "choices": [
+        {
+          "text": "Priorité maximale : convocation Dr Stettler + ncsc_directeur + Conseil d'État BE en cellule de crise sous 12h. Élections dans 6 semaines = enjeu démocratique majeur.",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Bonne lecture politique.</strong> Accès au registre électoral 6 semaines avant des élections cantonales = enjeu démocratique. Faire monter au Conseil d'État BE et au directeur OFCS est proportionné. Ce n'est plus juste un incident IT, c'est potentiellement de l'ingérence électorale.",
+          "legal": "Art. 281-282 CP (fraude électorale). LSI Art. 74e — Incidents critiques notifiés sans délai.",
+          "critical": false,
+          "next": 6
+        },
+        {
+          "text": "À mentionner dans le briefing routine du lendemain matin — pas besoin d'urgence supplémentaire.",
+          "ok": false,
+          "pts": -8,
+          "fb": "💥 <strong>Sous-estimation grave.</strong> Tu rates la dimension politique. Si l'attaquant utilise les données électorales d'une manière ou d'une autre dans les 6 semaines (deepfakes ciblés, désinformation), Polkapo et MP-BE seront accusés d'avoir laissé passer. C'est le genre de moment qui fait ou défait une carrière.",
+          "legal": "Art. 281-282 CP — Devoir d'identifier risques majeurs rapidement.",
+          "critical": true,
+          "next": 6
+        },
+        {
+          "text": "Briefing Dr Stettler immédiat, mais pas besoin d'aller au Conseil d'État — restons sur le périmètre technique.",
+          "ok": false,
+          "pts": 2,
+          "fb": "🟡 <strong>Demi-mesure.</strong> Dr Stettler te dira d'elle-même \"il faut alerter le politique\". Autant le proposer tout de suite. La séparation technique/politique est artificielle quand les élections sont en jeu.",
+          "legal": "Pratique de crise multi-niveaux.",
+          "critical": false,
+          "next": 6
+        }
+      ]
+    },
+    {
+      "phase": "🌙 Fin de journée 1 — Cap pour acte 2",
+      "situation": "21h15. Vous quittez Köniz. JCFC va passer la nuit à finaliser l'imagerie. Dr Stettler convoque une cellule de crise demain 7h avec Conseil d'État BE. La presse alémanique a publié un premier article (\"Cyberattaque chez fournisseur IT cantonal — communes touchées\") mais sans détail technique. Hofer reste sur place pour superviser le DR.<br><br>Vous prenez 10 minutes pour structurer le brief Dr Stettler. Trois priorités à mettre en avant pour orienter les prochaines 48h.",
+      "law": "<strong>Bonne pratique IR</strong> : à chaque transition d'équipe (passage de relais), formaliser un brief structuré avec priorités, IoCs, blockers, décisions en attente.",
+      "question": "<strong>Quelles 3 priorités pour Dr Stettler ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Attribution</strong> — identifier acteur derrière le wallet BTC via MROS+GovCERT. (2) <strong>Périmètre</strong> — finir l'audit des 47 communes pour quantifier impact. (3) <strong>Élections</strong> — coordination Conseil d'État sur registre électoral, mesures protection 6 prochaines semaines.",
+          "ok": true,
+          "pts": 15,
+          "fb": "✅ <strong>Brief structuré exemplaire.</strong> Tu mixes les 3 axes : technique (attribution + périmètre) et politique (élections). Chaque priorité est actionnable et a un owner clair. Dr Stettler peut arbitrer demain matin avec des éléments solides. Tu prépares parfaitement l'épisode #2 (expertise forensique) et #3 (coordination).",
+          "legal": "Pratique standard NCSC + JCFC.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "(1) Auditionner Hofer demain. (2) Saisir tous les ordinateurs des employés KantonNet. (3) Bloquer la presse.",
+          "ok": false,
+          "pts": -9,
+          "fb": "💥 <strong>Brief mal calibré.</strong> Auditionner sans preuve = perdre Hofer comme allié. Saisir tous les ordinateurs employés = excès de zèle, contre-productif. \"Bloquer la presse\" = illusoire et illégal. Tu rates les 3 vraies priorités (attribution, périmètre, élections).",
+          "legal": "Art. 197 CPP — Proportionnalité. Art. 17 Cst. — Liberté de la presse.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "(1) Continuer l'imagerie. (2) Surveiller les médias. (3) Attendre le rapport JCFC avant de décider.",
+          "ok": false,
+          "pts": -3,
+          "fb": "🟡 <strong>Passif.</strong> \"Attendre le rapport\" est une non-décision. Dr Stettler veut des leviers d'action, pas une liste de surveillances. Tu manques l'occasion de positionner l'enquête sur les bons rails.",
+          "legal": "Pratique IR — Phases parallèles, pas séquentielles.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "be_polkapo_cyber",
+    "be_prosecutor_cyber",
+    "be_kantonnet_ciso",
+    "ncsc_directeur"
+  ],
+  "regionDetail": {
+    "code": "BE",
+    "flag": "🇨🇭",
+    "name": "Berne"
+  },
+  "region": "CH",
+  "realCase": false
+}

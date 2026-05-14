@@ -1,0 +1,342 @@
+{
+  "id": "be-affaire-aar-frutigen-2-expert-forensique-jcfc",
+  "title": "Affaire Aar-Frutigen #2 — Expertise forensique JCFC (Berne)",
+  "icon": "🔬",
+  "difficulty": "hard",
+  "atmosphere": "state",
+  "narrative": {
+    "success": "L'expertise JCFC livre une attribution technique solide : TTPs, IoCs complets, wallet partagé MROS+GovCERT. Cooperation MROS révèle un wallet \"chaud\" actif sur Bitcoin mainnet, lié à 3 autres affaires en Europe. La piste internationale s'ouvre.",
+    "degraded": "L'expertise est compétente mais l'attribution reste partielle. Le wallet est partagé tardivement. Les recoupements MROS arrivent mais sans toute la profondeur attendue. La piste internationale s'ouvre avec retard.",
+    "failure": "Précipitation dans l'analyse : conclusions hâtives sur acteur (\"sans doute Conti héritier\"), partages incomplets, contestation interne JCFC. L'attribution est fragile, l'enquête piétine."
+  },
+  "tags": [
+    "SAGA BE-FR",
+    "AAR-FRUTIGEN",
+    "EXPERTISE FORENSIQUE",
+    "JCFC",
+    "ATTRIBUTION",
+    "WALLET BTC",
+    "MROS",
+    "GOVCERT"
+  ],
+  "legalRefs": [
+    "Art. 184 CPP — Indépendance expertise",
+    "Art. 26 Convention Budapest — Information spontanée",
+    "Art. 23 LBA — Bureau de communication (MROS)",
+    "LSI Art. 74e — Annonce NCSC",
+    "Standards NIST SP 800-86 — Forensic techniques"
+  ],
+  "intro": "Mardi 19 février, 06h45. Vous êtes <strong>l'experte forensique principale du JCFC</strong> (Joint Cybercrime Coordination, fedpol Berne). Une nuit de travail au labo JCFC sur l'image du cluster Jenkins de KantonNet AG. Le rapport préliminaire doit être prêt à 12h pour la cellule de crise au Conseil d'État. Polkapo BE et Dr Stettler attendent. Le NCSC GovCERT a commencé son cross-reference sur le wallet BTC partagé hier. Premier retour attendu en matinée.",
+  "alertLevel": "🔬 EXPERTISE JCFC — Image cluster compromis + dump RAM · Délai 12h pour rapport préliminaire · GovCERT en cross-reference wallet · Conseil d'État BE en attente",
+  "objectives": [
+    {
+      "icon": "🧪",
+      "text": "Analyse forensique complète : TTPs, IoCs, persistance, exfiltration"
+    },
+    {
+      "icon": "🪙",
+      "text": "Tracking wallet BTC et coordination MROS / GovCERT"
+    },
+    {
+      "icon": "📋",
+      "text": "Rapport préliminaire défendable techniquement et juridiquement"
+    }
+  ],
+  "debrief": "<p><strong>Forensique CI/CD</strong> : un cluster Jenkins compromis a des spécificités forensiques propres. Logs Jenkins (<code>/var/log/jenkins/</code>), historique des builds (<code>~jenkins/builds/</code>), pipelines as code (<code>Jenkinsfile</code> versionnés Git), credentials store (<code>~jenkins/credentials.xml</code> chiffré DPAPI-like), exécutions de plugins. L'attaquant a typiquement injecté un build malveillant dans la chaîne CI/CD pour empoisonner les artefacts en aval.</p><p><strong>Wallet BTC tracking</strong> : un wallet BTC est une <em>adresse</em>, pas une identité. Mais : (1) les transactions sont publiques sur la blockchain, (2) la <em>cluster analysis</em> peut regrouper plusieurs adresses appartenant à la même entité (techniques de heuristics, common spending input, change address), (3) les rampes fiat (exchanges) peuvent identifier le propriétaire à un moment donné. Outils : Chainalysis, TRM Labs, Crystal Blockchain. MROS Suisse a partenariat Chainalysis depuis 2020.</p><p><strong>Cross-reference IoC</strong> : un wallet partagé entre MROS + GovCERT + Europol IOCTA = puissance multiplicatrice. Si le wallet apparaît dans une affaire d'un autre canton ou pays, l'attribution remonte rapidement. La discipline de partage rapide d'IoCs est un facteur de succès majeur en cyber.</p><p><strong>Référence CH</strong> : le <strong>Joint Cybercrime Coordination (JCFC)</strong> est la cellule fédérale (fedpol + NCSC + MROS) qui centralise les affaires cyber complexes ou intercantonales. La saisie de Lockbit (Operation Cronos 2024) a illustré l'efficacité du modèle JCFC en coordination internationale. Pour Xplain (2023), JCFC a piloté la réponse fédérale.</p>",
+  "steps": [
+    {
+      "phase": "🧪 Analyse de l'implant",
+      "situation": "Vous travaillez sur le binaire <code>/var/lib/jenkins/.system-monitor</code> extrait. Premier passage avec <code>file</code>, <code>strings</code>, puis désassemblage Ghidra.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">🔬 Premier examen :<br>• ELF 64-bit Linux, x86_64, dynamiquement lié, stripped<br>• Compilation : GCC 11.x avec optimisations -O2, sans debug symbols<br>• Strings : C2 hardcodé <code>185.220.X.X:443</code>, wallet BTC, version string \"sys-mon-1.4.2\"<br>• Fonctions clés (Ghidra) : <code>jenkins_pipeline_hook()</code>, <code>encrypt_payload()</code>, <code>beacon_loop()</code><br>• Pattern de chiffrement : AES-256-GCM avec clé dérivée d'un secret hardcodé<br>• Antianalyse : checks /proc/self/status pour debugger</div>",
+      "law": "<strong>Reverse engineering forensique</strong> : pratique standard pour comprendre TTPs. L'expert doit documenter chaque étape pour reproductibilité.",
+      "question": "<strong>Comment qualifiez-vous techniquement cet implant dans votre rapport ?</strong>",
+      "choices": [
+        {
+          "text": "« Implant sur mesure (non standard), spécifiquement développé pour cibler Jenkins CI/CD. Technique cohérente avec un acteur de niveau \"sophistiqué\" (financièrement motivé ou stato-financé). Pas suffisant pour attribution à un groupe nommé. »",
+          "ok": true,
+          "pts": 13,
+          "fb": "✅ <strong>Qualification rigoureuse.</strong> Tu distingues ce que tu peux affirmer (sur-mesure, niveau sophistiqué) de ce que tu ne peux pas (groupe nommé). C'est exactement le ton qu'un expert assermenté doit adopter. Pas de \"sans doute Conti\" — laisser le travail d'attribution à MROS+SRC.",
+          "legal": "Art. 184 CPP — L'expert sépare faits techniques et hypothèses.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "« Implant typique des successeurs de Conti (Black Basta, ALPHV). Attribution probable à un groupe ransomware russophone. »",
+          "ok": false,
+          "pts": -7,
+          "fb": "💥 <strong>Attribution prématurée.</strong> Tu ne disposes d'aucune preuve sur le groupe nommé. \"Typique\" est très subjectif. Si la défense ramène un autre expert qui montre que ce pattern existe aussi chez des groupes ouest-européens ou nord-coréens, ton attribution tombe et tout ton rapport est fragilisé.",
+          "legal": "Art. 184 CPP — L'expert ne spécule pas. ATF 141 IV 87 — Solidité méthodologique.",
+          "critical": true,
+          "next": 1
+        },
+        {
+          "text": "« Implant fait sur mesure, donc nécessairement développé par un acteur étatique avec ressources de R&D dédiées. »",
+          "ok": false,
+          "pts": -5,
+          "fb": "❌ <strong>Faux raisonnement.</strong> \"Sur mesure\" n'implique pas \"étatique\". De nombreux groupes ransomware (Conti, REvil, LockBit) ont eu des développeurs internes capables de produire des implants sur mesure. Tu sautes une étape logique.",
+          "legal": "Art. 184 CPP — Rigueur de raisonnement de l'expert.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "📊 Reconstitution timeline",
+      "situation": "Vous reconstituez la timeline d'intrusion à partir des logs Jenkins, du dump RAM, et des access logs réseau.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📅 Timeline reconstituée :<br>• <strong>5 février 14:32</strong> — Compte technique <code>svc_deploy</code> connecté depuis IP US (peut-être VPN compromis ou bastion compromis)<br>• <strong>5 février 14:48</strong> — Premier upload de <code>.system-monitor</code> via plugin Jenkins exploit<br>• <strong>7 février 02:34</strong> — Première connexion C2 (l'implant attend ~40h avant d'activer)<br>• <strong>8-17 février</strong> — Beaconing régulier toutes les 6h, exfiltration progressive (~340 GB total)<br>• <strong>14 février</strong> — Première modification de pipeline build vers les communes BE<br>• <strong>17 février 23:47</strong> — Dernière exécution C2 (probablement attaquant qui se prépare au retrait)<br>• <strong>18 février 03:12</strong> — Détection SIEM</div>",
+      "law": "<strong>Timeline forensique</strong> : la pierre angulaire de l'expertise. Chaque entrée doit être sourcée (quel log, quel hash). Documenter aussi les <em>incertitudes</em>.",
+      "question": "<strong>Quel point de cette timeline mettez-vous en priorité 1 dans le rapport ?</strong>",
+      "choices": [
+        {
+          "text": "Le compte <code>svc_deploy</code> connecté depuis IP US : c'est le point d'entrée. Demander à KantonNet l'historique d'accès de ce compte et s'il était <em>censé</em> avoir un accès distant.",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Focus enquêteur.</strong> Le point d'entrée est l'élément le plus actionnable pour l'investigation : soit le compte a été compromis (fishing, fuite credentials), soit il a été utilisé par un insider légitime. Les deux pistes mènent à des sous-enquêtes différentes. C'est le levier d'investigation #1.",
+          "legal": "Art. 184 CPP — Mise en évidence des leviers d'enquête.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Le volume exfiltré (340 GB) : c'est l'élément qui choquera la presse et le public.",
+          "ok": false,
+          "pts": -4,
+          "fb": "⚠️ <strong>Sortie de rôle.</strong> Tu es expert technique, pas communicant·e. Le rapport JCFC alimente l'enquête, pas la presse. Le volume exfiltré est important mais c'est un fait dérivé, pas un levier d'action.",
+          "legal": "Art. 184 CPP — L'expert n'oriente pas sur la communication.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Le pattern de beaconing toutes les 6h : démontre la sophistication de l'opérateur.",
+          "ok": false,
+          "pts": 3,
+          "fb": "🟡 <strong>Pertinent mais secondaire.</strong> Le beaconing est intéressant techniquement, mais ce n'est pas un levier d'enquête. Le point d'entrée (svc_deploy) l'est. Hiérarchise selon l'actionable pour l'investigation, pas selon ce qui est techniquement cool.",
+          "legal": "Pratique d'expertise — actionable first.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🪙 Coordination avec MROS sur le wallet",
+      "situation": "10h45. Appel entrant de MROS — <strong>mros_crypto_lead</strong>, cheffe cellule crypto-tracing. Elle a fait le cross-reference du wallet BTC <code>bc1q...***</code> partagé hier.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">🪙 Retour MROS :<br>• Wallet \"chaud\" : 12 transactions sortantes vers 8 destinations distinctes<br>• Cluster Chainalysis indique <strong>3 autres adresses</strong> appartenant probablement à la même entité<br>• Une de ces 3 adresses a reçu <strong>~340'000 USD en BTC</strong> il y a 14 jours, depuis un wallet déjà flaggé par Europol (affaire NL ransomware 2024)<br>• Recommandation MROS : <strong>partager avec Chainalysis Reactor + Europol IOCTA</strong> pour observer trafic en temps réel<br>• MROS demande votre accord (formel) pour activer le partage international</div>",
+      "law": "<strong>Art. 26 Convention Budapest</strong> — Information spontanée internationale. <strong>Art. 67a EIMP</strong> — Transmission spontanée de moyens de preuve et d'informations. <strong>Art. 23 LBA</strong> — Le bureau de communication (MROS) centralise les déclarations.",
+      "question": "<strong>Vous validez le partage international via MROS ?</strong>",
+      "choices": [
+        {
+          "text": "Oui sans réserve. Le wallet est un IoC technique, son partage international est routinier et bénéfique. Aucun secret de procédure pénale touché par un IoC.",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Bon réflexe.</strong> Un IoC technique (wallet BTC) n'est pas couvert par le secret de l'enquête (Art. 73 CPP) — c'est une signature publique sur blockchain. Le partage international rapide permet de bénéficier de la veille européenne. C'est précisément ce qui va faire qu'une cellule de MROS reconnaîtra ce wallet quand il réapparaîtra dans l'affaire Singine FR dans 2 semaines.",
+          "legal": "Art. 26 Convention Budapest + Art. 67a EIMP + Art. 23 LBA.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Demander d'abord l'accord formel écrit de Dr Stettler (procureure BE) avant tout partage.",
+          "ok": false,
+          "pts": -2,
+          "fb": "🟡 <strong>Bureaucratisation inutile.</strong> Le partage MROS d'IoCs est une pratique routinière qui n'a pas besoin de mandat procureur. Dr Stettler te dira évidemment \"oui, partagez\". Tu perds 4-8h précieuses.",
+          "legal": "Pratique opérationnelle MROS standard. Art. 73 CPP — Le secret de l'enquête ne couvre pas les IoCs publics.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Non — d'abord finir notre propre analyse, on partagera après pour ne pas brûler nos pistes.",
+          "ok": false,
+          "pts": -7,
+          "fb": "💥 <strong>Erreur stratégique.</strong> Un wallet partagé tôt = visibilité internationale. Un wallet gardé pour soi = on rate les recoupements. \"Brûler nos pistes\" n'a pas de sens pour un IoC public. Tu rates la convergence majeure avec l'affaire FR à venir.",
+          "legal": "Esprit Convention Budapest — Coopération.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🌐 GovCERT — Premier signal faible",
+      "situation": "11h28. Email de <strong>ncsc_govcert_lead</strong> (lead GovCERT) :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📧 <em>« Cross-reference partiel sur l'IoC <code>185.220.X.X</code> — pas de match direct. Cependant, le pattern de C2 (beaconing 6h, TLS pinning custom AES-256-GCM, antianalyse /proc/self/status) ressemble fortement à un infostealer observé dans 2 incidents récents en Romandie (1 cas Genève, 1 cas Vaud, tous deux ouverts en JCFC). Je n'ai pas encore de match crypto avec d'autres affaires actives, mais surveillons. »</em><br><br>⚠️ <strong>Signal faible</strong> : pas un match direct. Mais le pattern technique évoque autre chose en cours.</div>",
+      "law": "<strong>Signaux faibles</strong> en threat intel : pas suffisants pour affirmer, mais à documenter pour anticiper. La science du recoupement progressive.",
+      "question": "<strong>Comment intégrez-vous ce signal dans votre rapport préliminaire ?</strong>",
+      "choices": [
+        {
+          "text": "Mention prudente en annexe : « Pattern technique partiellement similaire à incidents JCFC actifs en Romandie. À suivre — pas concluant à ce stade. »",
+          "ok": true,
+          "pts": 13,
+          "fb": "✅ <strong>Honnêteté méthodologique.</strong> Tu mentionnes le signal (utile pour le procureur et la suite d'enquête) sans surinterpréter. Le verbe \"à suivre\" est juste : ce n'est pas une preuve, c'est un fil à tirer. Si le pattern se confirme plus tard, cette annexe permettra de relier les affaires sans accusation prématurée.",
+          "legal": "Art. 184 CPP — Distinction faits/hypothèses/pistes à explorer.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Ne pas mentionner — un signal faible parasite le rapport principal.",
+          "ok": false,
+          "pts": -3,
+          "fb": "🟡 <strong>Sous-déclaration.</strong> Un signal faible documenté à temps T1 devient précieux à T2 si confirmé. Une annexe ne parasite pas, elle prépare. Le procureur a besoin de la vision complète, pas filtrée.",
+          "legal": "Art. 184 CPP — Le rapport doit être complet.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Mention dans le corps principal avec hypothèse forte : « Probablement même acteur que les affaires GE et VD actives. »",
+          "ok": false,
+          "pts": -5,
+          "fb": "❌ <strong>Surinterprétation.</strong> \"Pattern similaire\" ≠ \"même acteur\". Plusieurs groupes peuvent utiliser des TTPs proches (les techniques se diffusent). Affirmer une hypothèse forte sur signal faible te discrédite si la suite ne confirme pas.",
+          "legal": "Art. 184 CPP — L'expert ne spécule pas dans le corps de rapport.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "🏛 Cellule de crise — Conseil d'État",
+      "situation": "13h00. Vous présentez le rapport préliminaire en cellule de crise au Conseil d'État BE. Présents : conseiller d'État sécurité publique, conseiller d'État finances, Dr Stettler, Wachtmeister Brunner, ncsc_directeur, Markus Hofer (KantonNet). Le conseiller d'État vous pose une question directe :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">⚖️ <em>« Madame l'experte, en l'état de votre analyse, pouvez-vous affirmer que les données du registre électoral des communes touchées ont effectivement été <strong>utilisées</strong> par l'attaquant pour préparer une ingérence électorale ? Oui ou non ? »</em></div>",
+      "law": "<strong>Distinction \"accès\" / \"utilisation\"</strong> : la lecture de données est un fait. Leur utilisation ultérieure (manipulation, désinformation ciblée) est une autre question, souvent indémontrable a priori.",
+      "question": "<strong>Votre réponse au conseiller d'État.</strong>",
+      "choices": [
+        {
+          "text": "« Non, je ne peux pas l'affirmer en l'état. Ce que je peux affirmer : (1) il y a eu accès en lecture, (2) le volume exfiltré est compatible avec l'extraction du registre, (3) je ne dispose à ce jour d'aucune preuve d'utilisation ultérieure des données. La possibilité reste ouverte et doit être surveillée. »",
+          "ok": true,
+          "pts": 15,
+          "fb": "✅ <strong>Réponse précise et honnête.</strong> Tu refuses le piège du \"oui/non binaire\" pour donner ce que tu sais vraiment. Tu sépares trois faits (accès, volume, utilisation) avec leurs niveaux de certitude. Le conseiller d'État a la matière pour décider (renforcer protection élections sans annoncer panique).",
+          "legal": "Art. 184 CPP — Honnêteté + précision de l'expert face à autorité politique.",
+          "critical": false,
+          "next": 5
+        },
+        {
+          "text": "« Oui, vu le volume exfiltré (~340 GB) et la fenêtre temporelle (6 semaines avant élections), il est très probable que les données soient utilisées. »",
+          "ok": false,
+          "pts": -8,
+          "fb": "💥 <strong>Surinterprétation politique grave.</strong> Tu affirmes ce que tu ne peux pas démontrer. Le conseiller d'État va prendre des décisions politiques sur ta base (annulation élections ? communication catastrophiste ?). Si la suite ne confirme pas, tu portes la responsabilité d'une crise politique inutile.",
+          "legal": "Art. 184 CPP — L'expert ne spécule pas devant autorité politique.",
+          "critical": true,
+          "next": 5
+        },
+        {
+          "text": "« Non, c'est statistiquement très improbable. Les attaquants ransomware n'utilisent normalement pas les données électorales. »",
+          "ok": false,
+          "pts": -6,
+          "fb": "💥 <strong>Sous-estimation politique grave.</strong> Tu affirmes une absence que tu ne peux pas démontrer. Si plus tard des éléments d'ingérence apparaissent, le conseiller d'État aura été rassuré à tort. Et \"statistiquement improbable\" n'est pas un argument acceptable quand on est sur un signal nouveau.",
+          "legal": "Art. 184 CPP — L'expert ne spécule pas dans l'autre sens non plus.",
+          "critical": false,
+          "next": 5
+        }
+      ]
+    },
+    {
+      "phase": "🔄 Décision post-cellule",
+      "situation": "14h45. La cellule de crise a tranché : (1) renforcement protection cyber élections (allocation budget extraordinaire CHF 1.2M), (2) communication publique mesurée (\"incident maîtrisé, surveillance accrue\"), (3) maintien du cycle électoral (pas de report). Dr Stettler vous prend à part : <em>« On élargit le mandat. Je veux que vous poursuiviez : (A) analyse approfondie du svc_deploy, (B) coordination MROS sur le tracking BTC, (C) liaison avec les pays où les wallets liés ont été observés. Vous me faites le mémo de coordination pour demain matin. »</em>",
+      "law": "<strong>Mandat élargi</strong> : Dr Stettler étend le périmètre. C'est positif (confiance) mais demande structuration des sub-mandats.",
+      "question": "<strong>Quel élément structurez-vous en priorité dans le mémo de coordination ?</strong>",
+      "choices": [
+        {
+          "text": "Une matrice claire (A) (B) (C) avec : objectif spécifique, livrable attendu, deadline, dépendances inter-axes, points de synchronisation hebdo.",
+          "ok": true,
+          "pts": 13,
+          "fb": "✅ <strong>Structuration pro.</strong> Une matrice rend les sub-mandats actionnables et trackables. Dr Stettler peut suivre l'avancement. Les dépendances inter-axes sont cruciales (l'analyse svc_deploy alimentera la coordination internationale, et inversement).",
+          "legal": "Pratique de gouvernance d'enquête complexe.",
+          "critical": false,
+          "next": 6
+        },
+        {
+          "text": "Un narratif libre expliquant comment vous prévoyez d'aborder chaque axe.",
+          "ok": false,
+          "pts": 2,
+          "fb": "🟡 <strong>Moins actionnable.</strong> Le narratif est utile pour le contexte, mais Dr Stettler attend de pouvoir tracker. Une matrice claire est plus actionnable pour un mandat complexe.",
+          "legal": "Pratique recommandée gestion de mandats complexes.",
+          "critical": false,
+          "next": 6
+        },
+        {
+          "text": "Demander d'abord à Dr Stettler de préciser quelle est la priorité de ses 3 axes — A, B ou C ?",
+          "ok": false,
+          "pts": -2,
+          "fb": "⚠️ <strong>Esquive responsabilité.</strong> En tant qu'experte forensique, c'est à toi de structurer l'opérationnel. Dr Stettler attend de toi une proposition de plan, pas qu'elle continue à micro-manager. Ses 3 axes sont parallèles, à toi de les organiser.",
+          "legal": "Pratique d'expertise — l'expert structure son travail.",
+          "critical": false,
+          "next": 6
+        }
+      ]
+    },
+    {
+      "phase": "🌐 Recoupement international à venir",
+      "situation": "18h32. En fin de journée, message MROS via canal sécurisé :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📧 <em>« Madame, le wallet partagé a été observé sur 3 transactions hier soir. Une des destinations est un wallet flaggé Chainalysis comme \"mixer suspect\". Pas d'identification finale mais le cluster s'étend. Nous activons surveillance temps réel. Recommandation : préparer mémo coordination intercantonale (BE/VD/GE) dans l'éventualité où d'autres affaires touchent la même infrastructure crypto. »</em><br><br>🔮 <strong>Préfiguration</strong> : MROS pressent qu'autre chose va remonter. La saga Singine FR n'a pas encore commencé, mais le terrain est en cours de préparation pour la convergence.</div>",
+      "law": "<strong>Mémo de coordination prospective</strong> : préparer la coopération <em>avant</em> d'en avoir besoin. Bonnes pratiques JCFC.",
+      "question": "<strong>Que proposez-vous comme mémo de coordination intercantonale ?</strong>",
+      "choices": [
+        {
+          "text": "Un mémo court (2 pages) : (1) résumé wallet + IoCs partageables, (2) points de contact JCFC dans chaque canton, (3) protocole d'escalade si match dans une autre enquête, (4) confidentialité (pas de diffusion presse).",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Mémo opérationnel parfait.</strong> Court (lu et utilisé), structuré (4 points actionnables), avec contacts et protocole. Quand l'affaire Singine FR émergera, ce mémo permettra une coordination immédiate au lieu d'une découverte aléatoire 3 semaines plus tard.",
+          "legal": "Pratique JCFC + Convention Budapest Art. 25.",
+          "critical": false,
+          "next": 7
+        },
+        {
+          "text": "Un dossier exhaustif de 30 pages avec toute l'analyse technique JCFC partagée.",
+          "ok": false,
+          "pts": -2,
+          "fb": "🟡 <strong>Trop volumineux.</strong> Personne ne lira 30 pages préventivement. Un mémo de coordination prospective doit être court et actionnable. Réserver les analyses détaillées pour les enquêteurs qui auront un match réel.",
+          "legal": "Pratique opérationnelle — mémo court > rapport complet.",
+          "critical": false,
+          "next": 7
+        },
+        {
+          "text": "Attendre qu'un match concret émerge avant de communiquer aux autres cantons.",
+          "ok": false,
+          "pts": -5,
+          "fb": "❌ <strong>Préparation manquée.</strong> Quand le match émergera, il sera plus efficace si le terrain est préparé. Sans mémo prospectif, le canton qui découvre le match perd 1-2 semaines à comprendre que c'est lié à toi.",
+          "legal": "Pratique JCFC — anticipation.",
+          "critical": false,
+          "next": 7
+        }
+      ]
+    },
+    {
+      "phase": "📋 Bilan journée 2",
+      "situation": "20h45. Vous quittez le labo JCFC. Le rapport préliminaire est rendu, la coordination MROS est en route, le mémo intercantonal est diffusé. La prochaine étape (épisode #3) sera la coordination cantonale + 47 communes : Polkapo BE va piloter. Vous restez en support technique mais le focus revient à Dr Stettler et Brunner. Votre dernière action de la journée : un mot de synthèse pour vous-même, à reprendre dans 2 semaines pour évaluer où en est l'affaire.",
+      "law": "<strong>Discipline d'expert</strong> : journal de mission personnel, à reprendre régulièrement pour identifier ce qu'on a manqué ou anticipé.",
+      "question": "<strong>Quel point notez-vous comme « à surveiller dans les 2-4 prochaines semaines » ?</strong>",
+      "choices": [
+        {
+          "text": "Le wallet BTC + le pattern technique de l'implant. Si l'un des deux réapparaît dans une affaire JCFC active (GE/VD/autre canton/autre pays), c'est probablement le même acteur.",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Anticipation parfaite.</strong> Tu identifies les 2 IoCs les plus probables de réapparition. C'est précisément ce qui va se passer : le wallet va réapparaître dans 2 semaines dans l'affaire Singine FR, et le pattern technique sera cross-référencé. Ton journal devient le pivot de la convergence.",
+          "legal": "Pratique experte — anticipation et journal personnel.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "La réponse politique aux élections cantonales BE.",
+          "ok": false,
+          "pts": -2,
+          "fb": "🟡 <strong>Hors de ton scope expert.</strong> La gestion politique des élections est l'affaire du Conseil d'État + Dr Stettler. Ton rôle d'expert est d'identifier les patterns techniques à surveiller, pas le politique.",
+          "legal": "Art. 184 CPP — Périmètre expert.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "L'évolution de la coopération avec MROS — vérifier qu'ils ne nous oublient pas dans 3 semaines.",
+          "ok": false,
+          "pts": 1,
+          "fb": "🟡 <strong>Trop centré process, pas assez technique.</strong> MROS est fiable, ils ne t'oublieront pas. Ce qui mérite ta vigilance d'experte, ce sont les patterns techniques de l'attaque (wallet + implant). C'est ça qui peut réémerger ailleurs.",
+          "legal": "Pratique experte — focus sur les éléments techniques.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "be_prosecutor_cyber",
+    "be_polkapo_cyber",
+    "fedpol_crd_cyber",
+    "mros_crypto_lead",
+    "ncsc_govcert_lead"
+  ],
+  "regionDetail": {
+    "code": "BE",
+    "flag": "🇨🇭",
+    "name": "Berne"
+  },
+  "region": "CH",
+  "realCase": false
+}

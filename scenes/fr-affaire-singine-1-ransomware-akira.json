@@ -1,0 +1,341 @@
+{
+  "id": "fr-affaire-singine-1-ransomware-akira",
+  "title": "Affaire Singine #1 — Ransomware Akira sur Singine Agro (Düdingen)",
+  "icon": "🔒",
+  "difficulty": "medium",
+  "atmosphere": "ransomware",
+  "narrative": {
+    "success": "Isolation rapide réseau, pas de paiement précipité de rançon, NCSC + Polcant FR notifiés dans les délais, équipes de production basculées en mode papier. Les produits frais sont sauvés via plan B. La direction garde le contrôle.",
+    "degraded": "Réaction correcte mais hésitations sur paiement, isolation partielle, retard de 8h dans la notification NCSC. Quelques produits laitiers perdus, communication aux membres laborieuse.",
+    "failure": "Panique : paiement précipité de la rançon (1.2M USD), pas d'isolation efficace, ransomware se propage aux back-ups. NCSC notifié tardivement, ouverture procédure LPD aggravée. La coopérative perd 6 jours d'activité + crédibilité auprès Migros/Coop."
+  },
+  "tags": [
+    "SAGA BE-FR",
+    "SINGINE",
+    "RANSOMWARE",
+    "AKIRA",
+    "COOPÉRATIVE",
+    "AGROALIMENTAIRE",
+    "FRIBOURG",
+    "PAIEMENT RANÇON"
+  ],
+  "legalRefs": [
+    "LPD 2023 Art. 24 — Notification PFPDT dans les meilleurs délais",
+    "LSI Art. 74e — Annonce NCSC 24h",
+    "Art. 156 CP — Extorsion",
+    "Art. 144bis CP — Détérioration de données",
+    "LEmb — Sanctions SECO à vérifier avant tout paiement crypto"
+  ],
+  "intro": "Vendredi 22 février, 04h27. Vous êtes un <strong>CISO consultant indépendant</strong> mandaté en urgence par <strong>Singine Agro SA</strong>, une coopérative agroalimentaire de Düdingen/Tafers (district Sense FR, 380 employés, 1'200 paysans-membres, transforme lait + viande pour Migros et Coop). Appel du directeur <strong>Beat Aebischer</strong> à 03h54 : <em>« On est bloqués, tout est verrouillé, il y a un message qui dit qu'on doit payer. »</em> Le ransomware Akira a frappé l'ERP, les serveurs de fichiers, et la chaîne du froid est arrêtée. 240'000 CHF de produits laitiers à risque dans les 48h. Vous arrivez sur place.",
+  "alertLevel": "🔒 RANSOMWARE AKIRA · Singine Agro SA Düdingen · 380 employés · ERP + chaîne du froid hors service · Rançon 1.2M USD · Chaîne du froid : 48h critiques",
+  "objectives": [
+    {
+      "icon": "🚨",
+      "text": "Triage initial : isoler, évaluer, ne pas perdre la tête"
+    },
+    {
+      "icon": "❄️",
+      "text": "Sauver la chaîne du froid (240'000 CHF de produits frais)"
+    },
+    {
+      "icon": "📞",
+      "text": "Notifications légales : NCSC, PFPDT, Polcant FR"
+    }
+  ],
+  "debrief": "<p><strong>Ransomware Akira</strong> : groupe russophone (héritier de Conti). Actif depuis 2023. Modus operandi : compromission VPN (Cisco / Fortinet faille CVE-2024-X), reconnaissance interne, exfiltration silencieuse (~7-14 jours), puis chiffrement massif. Demande typique : 0.5–5M USD en BTC, négociation possible. <strong>Double extorsion</strong> : si pas de paiement, publication sur leur leak site.</p><p><strong>Triage initial</strong> : 4 priorités absolues — (1) <em>isoler</em> (déconnecter du réseau pour stopper propagation), (2) <em>préserver</em> (pas wiper, pas reformater — l'analyse forensique en a besoin), (3) <em>notifier</em> (NCSC 24h, PFPDT dans les meilleurs délais, autorités pénales), (4) <em>communiquer interne</em> (employés, direction, conseil d'administration coopérative).</p><p><strong>Question paiement</strong> : en Suisse, payer une rançon n'est <em>pas illégal</em> stricto sensu, MAIS : (a) risque sanctions internationales si destinataire sur liste OFAC/UE (acteur sanctionné = paiement = crime), (b) pas de garantie de récupération (33% des payeurs n'obtiennent pas la clé), (c) signal : on récompense l'écosystème criminel. Position NCSC + JCFC : <strong>fortement déconseillé sauf cas extrême</strong>. Coopératives agricoles ont parfois cédé (cas Suède 2023) — mauvais précédent.</p><p><strong>Référence CH</strong> : <strong>Coop / Aldi / Migros</strong> ont été victimes ces dernières années (incidents publics partiels). <strong>NCSC publie</strong> régulièrement des guides ransomware. Le <strong>JCFC</strong> (fedpol) coordonne les enquêtes ransomware d'envergure.</p>",
+  "steps": [
+    {
+      "phase": "🚪 Arrivée sur site — État des lieux",
+      "situation": "04h45. Vous arrivez à Düdingen. Beat Aebischer (62 ans, directeur depuis 11 ans, peu technique) vous reçoit avec son responsable IT interne (Stefan, 28 ans, débordé). Tour rapide :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📊 Constat :<br>• Tous les postes Windows : écran noir + message Akira (TXT \".akira_readme.txt\" partout)<br>• ERP SAP : crypté<br>• Serveur de fichiers (~12 TB) : crypté<br>• Active Directory (2 DC) : DC1 crypté, DC2 partiellement<br>• Système chaîne du froid (PLC Siemens) : <strong>séparé du réseau IT</strong>, fonctionne... <em>mais</em> l'alimentation est gérée par un script PowerShell hébergé sur fileserver crypté<br>• Sauvegarde Veeam : visible mais nodes crypted<br>• Connexion VPN Fortinet active (peut-être point d'entrée)<br>• Direction stress, employés non arrivés encore (équipe matin à 06h)</div>",
+      "law": "<strong>Triage IR</strong> : commencer par cartographier avant d'agir. Pas de décision technique sans vision d'ensemble.",
+      "question": "<strong>Quelle est votre première action concrète ?</strong>",
+      "choices": [
+        {
+          "text": "Couper la connexion Internet de l'entreprise (firewall sur uplink). Préserve l'enquête (pas d'exfiltration en cours), empêche persistence du C2, et laisse temps de réflexion sans pression supplémentaire.",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Isolation au bon niveau.</strong> Couper Internet en haut (firewall uplink) = isolation propre sans toucher aux postes individuels (préservation forensique). Tu stoppes l'exfiltration potentielle et les beacons C2. Tu peux ensuite décider tranquillement des étapes suivantes.",
+          "legal": "Standards NIST SP 800-61 IR Phase 2 (Containment).",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Restaurer immédiatement les sauvegardes Veeam pour reprendre l'activité.",
+          "ok": false,
+          "pts": -8,
+          "fb": "💥 <strong>Erreur catastrophique potentielle.</strong> Les sauvegardes Veeam montrent \"nodes crypted\" — Akira les a probablement compromises. Restaurer sans analyse = restaurer du chiffré ou réinfecter le système. Et tu détruis les preuves forensiques. Triage d'abord.",
+          "legal": "Standards NIST SP 800-61 — Préservation avant restauration.",
+          "critical": true,
+          "next": 1
+        },
+        {
+          "text": "Décrocher tous les câbles réseau de tous les postes immédiatement.",
+          "ok": false,
+          "pts": -3,
+          "fb": "🟡 <strong>Effet correct, méthode brutale.</strong> Tu obtiens l'isolation, mais (1) tu mobilises 30 minutes pour quelque chose qu'un firewall fait en 30 secondes, (2) chaque débranchement peut altérer un poste (timestamps, sessions), (3) tu manques de subtilité sur les serveurs critiques (chaîne du froid). Couper uplink = mieux.",
+          "legal": "Standards IR — Isolation au niveau approprié.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "❄️ Chaîne du froid — Urgence prioritaire",
+      "situation": "05h15. Stefan explique : la chaîne du froid (chambres froides + tunnels de surgélation) est gérée par PLC Siemens autonome, <em>mais</em> les setpoints (températures cibles) sont pilotés par un script PowerShell qui se lance toutes les 15 min sur le fileserver — actuellement crypté. Sans ce script, les PLC continueront sur leur dernière consigne (datant de minuit avant l'attaque), donc OK pour quelques heures... mais aussi, les alarmes (SMS aux astreintes) passent par le serveur mail, lui aussi crypté.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">❄️ Chaîne du froid — risques :<br>• Chambres froides : 24-48h sur dernière consigne (OK)<br>• Tunnels surgélation : 12h max sans script (KO si pas d'action)<br>• Alarmes SMS : KO (serveur mail crypté)<br>• Si température dérive : 240'000 CHF de produits frais perdus + risque sanitaire (notif OSAV / chémrtech)<br>• Production en cours (lait + jambon de la Borne) : ~80'000 CHF en pipe<br>⏱️ Fenêtre critique : 8-12h max</div>",
+      "law": "<strong>OSAV</strong> (Office fédéral de la sécurité alimentaire) — toute rupture chaîne du froid > 4h doit être déclarée. Risque sanitaire = priorité absolue.",
+      "question": "<strong>Que faites-vous pour la chaîne du froid ?</strong>",
+      "choices": [
+        {
+          "text": "Mode manuel : envoyer immédiatement 2 techniciens (chaîne froid) pour pilotage manuel des PLC + surveillance physique chambres froides. Astreintes téléphone direct (pas par SMS automatique). Préparation plan B physique.",
+          "ok": true,
+          "pts": 15,
+          "fb": "✅ <strong>Solution pragmatique parfaite.</strong> Tu reviens au mode manuel quand le numérique est compromis. Les PLC sont fiables en autonome — il faut juste les surveiller physiquement. Surveillance humaine + téléphone direct contourne entièrement les systèmes IT compromis. C'est exactement la résilience à laquelle servent les plans de continuité.",
+          "legal": "OSAV + bonnes pratiques continuité agroalimentaire.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Tenter de déchiffrer rapidement le fileserver — il y a des outils ESET No More Ransom.",
+          "ok": false,
+          "pts": -7,
+          "fb": "💥 <strong>Trop optimiste.</strong> Akira est récent, pas de décrypteur public connu. \"Tenter\" = perdre 4-8h sans résultat pendant que la chaîne du froid dérive. Et tu touches aux données (forensique compromise). Mode manuel d'abord, déchiffrement plus tard si possible.",
+          "legal": "Standards IR — pragmatisme avant espoir.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Considérer la chaîne du froid comme acceptable risk pour 24h le temps de gérer le ransomware.",
+          "ok": false,
+          "pts": -9,
+          "fb": "💥 <strong>Sous-estimation grave.</strong> 240'000 CHF de produits + risque sanitaire = pas \"acceptable risk\". L'OSAV t'auditera. Et la perte produit aggrave la crise financière de la coopérative. Le ransomware passe au second plan derrière la sécurité alimentaire — toujours.",
+          "legal": "OSAV — Sécurité alimentaire prioritaire.",
+          "critical": true,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "💰 La question de la rançon",
+      "situation": "06h30. Beat Aebischer vous prend à part. Le message Akira demande <strong>1.2M USD en BTC</strong> avec délai 72h (puis x2). Beat est tendu :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">💬 <em>« Vous savez, on a un peu de fonds dans le compte coopérative... 1.2M c'est beaucoup mais 6 jours sans production c'est plus du tout viable. Migros nous a appelé hier soir, ils savent déjà — si on ne livre pas lundi, ils ferment le contrat. Vous me dites quoi ? »</em><br><br>📊 Éléments décision :<br>• Trésorerie : ~CHF 2.4M disponible<br>• Perte journalière si arrêt : ~CHF 180K (production + perte contrats)<br>• Probabilité réelle d'obtenir clé fonctionnelle : ~67% selon stats Akira<br>• Sanctions internationales : groupe Akira pas sanctionné explicitement OFAC/UE à ce jour<br>• NCSC officiel : payer = financer l'écosystème criminel + cible à nouveau<br>• Sauvegardes offsite (datacenter Berne) : à vérifier si non compromises</div>",
+      "law": "<strong>Paiement rançon</strong> : pas illégal stricto sensu en Suisse SAUF si destinataire sur liste sanctions. <strong>Sanctions (LEmb / listes SECO)</strong> : à vérifier avant tout paiement. <strong>Devoir de transparence vis-à-vis NCSC</strong>.",
+      "question": "<strong>Votre conseil à Beat Aebischer.</strong>",
+      "choices": [
+        {
+          "text": "« Pas de décision sur la rançon dans les 24 premières heures. Trois choses d'abord : (1) vérifier sauvegardes offsite Berne, (2) consulter Polcant FR (Polcant intéressée par dossier ransomware), (3) consulter votre conseil d'administration coopérative. Pendant ce temps, on travaille la récupération. Décision rançon = dernier recours et nécessite avis légal et avis politique. »",
+          "ok": true,
+          "pts": 15,
+          "fb": "✅ <strong>Conseil professionnel.</strong> Tu refuses la décision précipitée, tu structures les étapes préalables, tu rappelles la dimension collective (CA coopérative — 1'200 paysans-membres ont leur mot à dire). Tu protèges Aebischer d'une décision qu'il regretterait. C'est ce que fait un CISO consultant senior.",
+          "legal": "Pratique IR + gouvernance coopérative + NCSC guidance.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "« Payez, ça ira plus vite. On retrouve l'activité et on traite le reste après. »",
+          "ok": false,
+          "pts": -10,
+          "fb": "💥 <strong>Conseil irresponsable.</strong> Tu transformes ton mandat en mauvaise décision business. Sans vérifier sauvegardes, sans consulter le CA, sans aviser Polcant FR, sans vérifier sanctions OFAC. Si Akira est lié à acteur sanctionné, paiement = crime au sens Loi sanctions. Si pas de clé fonctionnelle (33%), tu as donné 1.2M pour rien.",
+          "legal": "LEmb (Loi sur les embargos) + sanctions internationales. NCSC guidance.",
+          "critical": true,
+          "next": 3
+        },
+        {
+          "text": "« Ne payez surtout pas, on va tout récupérer techniquement. »",
+          "ok": false,
+          "pts": -3,
+          "fb": "🟡 <strong>Promesse intenable.</strong> Tu ne peux pas garantir la récupération technique en l'état (sauvegardes peut-être compromises). Faire une promesse forte qu'on ne pourra peut-être pas tenir = tu perds la confiance de Beat. Sois honnête : ça <em>peut</em> être récupérable, mais aucune promesse avant analyse.",
+          "legal": "Honnêteté professionnelle CISO.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "📞 Notifications légales",
+      "situation": "07h15. Vous structurez les notifications légales obligatoires :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📋 À notifier :<br>• <strong>NCSC</strong> (LSI Art. 74e — délai 24h) : annonce technique incident<br>• <strong>PFPDT</strong> (LPD Art. 24 — dans les meilleurs délais) : violation données personnelles employés (380) + membres (1'200) + clients (Migros, Coop) potentiellement<br>• <strong>Polcant FR</strong> (criminalité) : ouverture procédure pénale pour extorsion (Art. 156 CP)<br>• <strong>OSAV</strong> : si rupture chaîne du froid<br>• <strong>Conseil d'administration</strong> coopérative<br>• <strong>Migros + Coop</strong> (clients) : leur communiquer la situation<br>• <strong>Assurance cyber</strong> : déclarer sinistre (Beat a souscrit en 2023)</div>",
+      "law": "<strong>LSI Art. 74e + LPD 2023 Art. 24</strong> : notifications obligatoires avec délais. <strong>Art. 156 CP</strong> : extorsion — infraction poursuivie d'office.",
+      "question": "<strong>Dans quel ordre conseillez-vous les notifications ?</strong>",
+      "choices": [
+        {
+          "text": "Ordre stratégique : (1) NCSC + Polcant FR en parallèle ce matin (8h-10h), (2) Conseil d'administration à 11h, (3) Migros/Coop dans la foulée du CA, (4) PFPDT dans les 24-48h (analyse périmètre données nécessaire avant), (5) Assurance dès aujourd'hui.",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Ordonnancement professionnel.</strong> Tu mets en premier les notifications qui ouvrent des leviers (NCSC pour expertise, Polcant pour enquête). Le CA est ensuite pour décision collective. Migros/Coop pour préserver relations. PFPDT peut attendre l'analyse précise du périmètre données. Assurance en parallèle = limitation préjudice financier.",
+          "legal": "LSI Art. 74e + LPD Art. 24 + bonnes pratiques IR.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Tout notifier dans la même heure : noyer les délais sous l'urgence.",
+          "ok": false,
+          "pts": -3,
+          "fb": "🟡 <strong>Disperser, c'est se diluer.</strong> Notifier 7 entités dans la même heure = aucune n'a la qualité d'information qu'elle mérite. NCSC mérite un briefing structuré, le CA mérite des éléments de décision, Migros/Coop mérite un message rassurant + plan. Ordonner = meilleure utilisation du temps.",
+          "legal": "Pratique IR — Notifications de qualité.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Attendre stabilisation avant de notifier — éviter d'aggraver l'image extérieure.",
+          "ok": false,
+          "pts": -7,
+          "fb": "💥 <strong>Violation LSI/LPD.</strong> Le délai 24h NCSC et la notification PFPDT (« dans les meilleurs délais ») démarrent au moment de la détection — pas \"quand on est prêt\". Retarder = sanctions. Et Migros/Coop apprendront par les médias = pire qu'une notification proactive.",
+          "legal": "LSI Art. 74e + LPD Art. 24 — Délais légaux.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "🕵️ Polcant FR sur place",
+      "situation": "09h45. Notification Polcant FR effectuée. <strong>fr_polcant_cyber</strong> arrive sur site avec deux techniciens. Présentations rapides. L'inspecteur veut savoir :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">🕵 Demandes Polcant FR :<br>• Imaging des disques cryptés (pour analyse forensique post-récupération)<br>• Logs Fortinet VPN (point d'entrée probable)<br>• Logs ERP SAP des 90 derniers jours<br>• Liste employés + fournisseurs avec accès admin<br>• Note de rançon Akira originale + métadonnées si disponibles<br>• Historique des connexions VPN externes — fournisseurs, consultants, etc.</div>",
+      "law": "<strong>Art. 197 CPP</strong> — Mesures de contrainte. <strong>Coopération lésé-police</strong> : Singine Agro a intérêt à coopérer pleinement (réduit responsabilité + facilite enquête).",
+      "question": "<strong>Comment positionnez-vous Singine Agro vis-à-vis de Polcant FR ?</strong>",
+      "choices": [
+        {
+          "text": "Coopération totale et structurée : fournir tous les éléments demandés, désigner un point de contact unique (vous), formaliser via accord de coopération écrit (clarifie que Singine est victime, pas suspecte).",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Posture pro.</strong> Tu coopères pleinement (intérêt de Singine), tu structures la coopération (un POC = efficacité), tu protèges juridiquement Singine via accord écrit (Singine = lésé au sens Art. 115 CPP, partie plaignante). C'est aussi le cadre qui maximise la qualité d'enquête.",
+          "legal": "Art. 115 CPP — Statut de lésé. Bonnes pratiques coopération.",
+          "critical": false,
+          "next": 5
+        },
+        {
+          "text": "Demander d'abord un avis légal avant de fournir quoi que ce soit à Polcant FR.",
+          "ok": false,
+          "pts": -2,
+          "fb": "🟡 <strong>Hyper-prudent.</strong> Singine est victime. La coopération avec la police est dans son intérêt direct. Demander avis légal sur \"comment coopérer avec la police\" est suspect et fait perdre du temps. Coopère, structure la coopération, mais ne la freine pas.",
+          "legal": "Art. 115 CPP — Le lésé coopère naturellement.",
+          "critical": false,
+          "next": 5
+        },
+        {
+          "text": "Filtrer ce qu'on donne — retenir les logs RH (employés admin) qui pourraient ouvrir d'autres enquêtes RH.",
+          "ok": false,
+          "pts": -7,
+          "fb": "💥 <strong>Mauvais conseil.</strong> Cacher des éléments à la police = entrave à la justice (Art. 305 CP). Et logiquement : si un employé est complice, tu protèges le criminel. Posture totale-coopération.",
+          "legal": "Art. 305 CP — Entrave à l'action pénale.",
+          "critical": true,
+          "next": 5
+        }
+      ]
+    },
+    {
+      "phase": "💾 Vérification sauvegardes offsite",
+      "situation": "11h00. Vérification critique : sauvegardes offsite chez datacenter Berne (provider \"BerneCloud AG\"). Stefan compose le numéro :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📞 Retour BerneCloud :<br>• Sauvegardes Singine présentes : daily 14j + weekly 8 semaines<br>• Dernière sauvegarde successful : <strong>jeudi 21 février 23h47</strong> (= environ 5h avant détection ransomware)<br>• Sauvegardes immutables (snapshot + retention lock) — pas modifiables par client compromis<br>• Récupération possible : ERP + fileserver complets, RTO estimé 18-24h<br>• Coût restauration : CHF 12'000 (forfaitaire urgence)<br>• ⚠️ Mais : faut vérifier que la sauvegarde du 21 février ne contient pas le malware en sommeil</div>",
+      "law": "<strong>Sauvegardes immutables</strong> : pratique recommandée NCSC. Permet récupération même si attaquant compromise comptes admin.",
+      "question": "<strong>Comment procédez-vous à la restauration ?</strong>",
+      "choices": [
+        {
+          "text": "Restauration en environnement isolé (réseau \"clean room\" temporaire) + scan complet anti-malware (ClamAV + YARA rules Akira) avant remise en production. RTO 24h, mais propre.",
+          "ok": true,
+          "pts": 15,
+          "fb": "✅ <strong>Restauration sécurisée.</strong> Tu évites le piège classique : restaurer dans un environnement où le malware aurait pu s'installer en avance dans les sauvegardes. Clean room + scan = tu identifies tout malware résiduel avant remise en service. 24h c'est long mais c'est la bonne approche.",
+          "legal": "Standards NIST + bonnes pratiques restauration ransomware.",
+          "critical": false,
+          "next": 6
+        },
+        {
+          "text": "Restauration directe en production : on perd du temps avec un environnement isolé, et c'est l'urgence.",
+          "ok": false,
+          "pts": -8,
+          "fb": "💥 <strong>Risque ré-infection.</strong> Si la sauvegarde du 21 février contient déjà la persistance Akira (probable car l'attaquant a beaconé ~14j avant déclenchement), tu restaures direct l'infection. Quelques heures plus tard, reset complet. Clean room obligatoire.",
+          "legal": "Standards NIST IR — Restauration en environnement contrôlé.",
+          "critical": true,
+          "next": 6
+        },
+        {
+          "text": "Demander à BerneCloud de fournir une sauvegarde plus ancienne (1 mois avant) pour être sûr d'être avant l'infection.",
+          "ok": false,
+          "pts": -4,
+          "fb": "🟡 <strong>Trop conservateur.</strong> Reculer d'un mois = perdre un mois de données opérationnelles (livraisons, factures, fournisseurs). Akira a probablement été présent 7-14 jours seulement avant déclenchement. La sauvegarde du 21 février est sans doute encore exploitable, à condition de scanner. Reculer d'un mois = sur-perte.",
+          "legal": "Équilibre récupération vs perte données.",
+          "critical": false,
+          "next": 6
+        }
+      ]
+    },
+    {
+      "phase": "🗣 Communication employés + membres",
+      "situation": "13h30. Beat Aebischer doit s'adresser aux employés (380 personnes en assemblée d'urgence) et aux 1'200 paysans-membres (par email + appel téléphonique des plus gros). Il vous demande l'aide pour le message.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7\">📢 Contraintes communication :<br>• Employés : doivent être informés, peuvent perdre confiance si flou<br>• Membres-paysans : vont s'inquiéter pour leur revenu (le lait livré aujourd'hui est-il payé ? les paiements vont-ils arriver ?)<br>• Clients (Migros/Coop) : il faut leur communiquer mais avec accord Polcant FR<br>• Médias locaux (La Liberté, FN) : il faut un communiqué avant qu'ils \"trouvent l'info\"<br>• Secret enquête (Polcant FR) : pas divulguer détails technique attaque</div>",
+      "law": "<strong>Communication crise</strong> : transparence sur les faits que les destinataires <em>doivent</em> savoir, opacité sur ce qui relève du secret enquête.",
+      "question": "<strong>Quel message clé pour les employés et membres ?</strong>",
+      "choices": [
+        {
+          "text": "Message factuel et rassurant : \"Cyberattaque survenue cette nuit. Nous travaillons avec Polcant FR et NCSC. La chaîne du froid est sécurisée. Les paiements aux membres seront tenus (compte coopérative non touché). Production reprise prévue 24-48h. Mise à jour quotidienne.\" — Pas de détail technique.",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Communication équilibrée.</strong> Tu réponds aux 2 inquiétudes principales (chaîne du froid + paiements) sans verser dans le détail technique. Tu engages un rythme de communication (\"mise à jour quotidienne\") qui rassure. C'est un message qu'un employé/membre peut comprendre, partager, et auquel il peut faire confiance.",
+          "legal": "LPD + secret enquête + transparence raisonnable.",
+          "critical": false,
+          "next": 7
+        },
+        {
+          "text": "Message minimal : \"Problème technique. Bientôt résolu.\" — Minimiser pour éviter panique.",
+          "ok": false,
+          "pts": -6,
+          "fb": "💥 <strong>Sous-communication.</strong> Les 380 employés voient bien que ce n'est pas \"un problème technique\" (écrans noirs + Akira partout). Minimiser = perte de crédibilité. Médias publieront avant la fin de journée, et l'écart entre \"problème technique\" et \"cyberattaque\" sera dévastateur.",
+          "legal": "Communication crise — Transparence raisonnable.",
+          "critical": false,
+          "next": 7
+        },
+        {
+          "text": "Communication détaillée : \"Ransomware Akira, 1.2M USD de rançon demandée, voici la situation technique précise...\"",
+          "ok": false,
+          "pts": -7,
+          "fb": "💥 <strong>Sur-communication problématique.</strong> Divulguer le détail (Akira, montant rançon) = (1) viole secret enquête Polcant FR, (2) signale aux médias de manière sensationnaliste, (3) inquiète employés bien au-delà du nécessaire. Le détail technique appartient au secret d'enquête.",
+          "legal": "Art. 73 CPP — Secret enquête.",
+          "critical": false,
+          "next": 7
+        }
+      ]
+    },
+    {
+      "phase": "🌙 Fin journée 1 — Position pour suite",
+      "situation": "21h00. Bilan : (1) Internet coupé, isolation effective. (2) Chaîne du froid sauvée en mode manuel. (3) Sauvegardes vérifiées, restauration en clean room en cours. (4) Notifications NCSC + Polcant FR + assurance faites. (5) Communication employés + membres lancée. (6) Aucun paiement de rançon fait. La situation est sous contrôle. Beat Aebischer vous remercie : <em>« Vous restez avec nous demain ? »</em>",
+      "law": "<strong>Continuité de mandat CISO</strong> : 24h ne suffisent pas — réinfection à éviter, restauration à valider, post-mortem à faire.",
+      "question": "<strong>Votre position pour les jours suivants ?</strong>",
+      "choices": [
+        {
+          "text": "Oui — au moins 5-7 jours : surveiller restauration, post-mortem technique, audit sécurité préventif (Fortinet, AD, pratiques sauvegarde), accompagnement notifications PFPDT. Singine n'est pas encore tirée d'affaire.",
+          "ok": true,
+          "pts": 14,
+          "fb": "✅ <strong>Continuité professionnelle.</strong> Une cyberattaque ransomware ne se règle pas en 24h. Le post-incident est aussi important : analyse causes (CVE Fortinet ? compte compromis ?), audit sécurité, formation, hardening. Tu offres un mandat complet, pas une intervention superficielle.",
+          "legal": "Pratique CISO consultant — mandat complet.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Un jour de plus pour clôturer, ensuite passage de relais à Stefan (IT interne).",
+          "ok": false,
+          "pts": -3,
+          "fb": "🟡 <strong>Trop court.</strong> Stefan est junior et a été dépassé par l'attaque — il n'est pas prêt à reprendre la suite seule. Et le post-incident demande compétences que tu apportes. Continuité du mandat = service à Singine.",
+          "legal": "Pratique CISO consultant — pas de désengagement prématuré.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Non — mandat 24h, Polcant FR prend le relais.",
+          "ok": false,
+          "pts": -5,
+          "fb": "❌ <strong>Désengagement prématuré.</strong> Polcant FR fait l'enquête pénale, mais ils ne s'occupent pas de la restauration IT, du hardening, du post-mortem opérationnel. Tu laisses Singine sans support technique au moment le plus risqué (réinfection probable).",
+          "legal": "Pratique CISO — engagement post-incident.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "fr_singine_director",
+    "fr_polcant_cyber",
+    "ncsc_govcert_lead",
+    "play_ransom_analyst"
+  ],
+  "regionDetail": {
+    "code": "FR",
+    "flag": "🇨🇭",
+    "name": "Fribourg"
+  },
+  "region": "CH",
+  "realCase": false
+}
