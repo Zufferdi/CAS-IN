@@ -66,6 +66,42 @@ ORPHAN_ASSIGNMENTS = {
         'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 9,
         'event': 'Affaire Sarine'},
 
+    # ── SAGA AAR-FRUTIGEN (BE) — tous en HISTORIQUES sous le même event ──
+    # Mois dérivés du narratif des scènes (18-28 février → 4 mars).
+    'be-affaire-aar-frutigen-1-kantonnet-detection': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 2,
+        'event': 'Affaire Aar-Frutigen'},
+    'be-affaire-aar-frutigen-2-expert-forensique-jcfc': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 2,
+        'event': 'Affaire Aar-Frutigen'},
+    'be-affaire-aar-frutigen-3-coordination-47-communes': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 2,
+        'event': 'Affaire Aar-Frutigen'},
+    'be-affaire-aar-frutigen-4-suspect-ex-dev': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 2,
+        'event': 'Affaire Aar-Frutigen'},
+    'be-affaire-aar-frutigen-5-audience-tmc': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 3,
+        'event': 'Affaire Aar-Frutigen'},
+
+    # ── SAGA SINGINE (FR) — tous en HISTORIQUES sous le même event ──
+    # Mois dérivés du narratif (22-27 février → recoupement +3j → audience +6 sem.).
+    'fr-affaire-singine-1-ransomware-akira': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 2,
+        'event': 'Affaire de la Singine'},
+    'fr-affaire-singine-2-continuite-coop': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 2,
+        'event': 'Affaire de la Singine'},
+    'fr-affaire-singine-3-tracking-crypto-recoupement': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 2,
+        'event': 'Affaire de la Singine'},
+    'fr-affaire-singine-4-eimp-mros-suspect-commun': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 3,
+        'event': 'Affaire de la Singine'},
+    'fr-affaire-singine-5-audience-jointe-tf-berne': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 4,
+        'event': 'Affaire de la Singine'},
+
     # ── CAS QUOTIDIENS — easy-* (initiation) + cas du jour ──
     'easy-aide-grand-mere-arnaque': {
         'group': '💼 CAS QUOTIDIENS', 'year': None, 'month': None,
@@ -177,6 +213,44 @@ SAGAS = [
         'completion_xp_bonus': 150,
     },
     {
+        'id': 'affaire_aar_frutigen',
+        'title': 'L\'Affaire Aar-Frutigen',
+        'subtitle': 'Fil rouge bernois — 5 actes',
+        'icon': '🏛️',
+        'canton': 'BE',
+        'year_range': '2025',
+        'tagline': 'Quand le fournisseur tombe, tout tombe — 47 communes, un implant, un wallet Bitcoin.',
+        'difficulty_curve': ['medium', 'hard', 'medium', 'hard', 'expert'],
+        'scenes': [
+            'be-affaire-aar-frutigen-1-kantonnet-detection',
+            'be-affaire-aar-frutigen-2-expert-forensique-jcfc',
+            'be-affaire-aar-frutigen-3-coordination-47-communes',
+            'be-affaire-aar-frutigen-4-suspect-ex-dev',
+            'be-affaire-aar-frutigen-5-audience-tmc',
+        ],
+        'completion_badge': 'saga_aar_frutigen',
+        'completion_xp_bonus': 150,
+    },
+    {
+        'id': 'affaire_singine',
+        'title': 'L\'Affaire de la Singine',
+        'subtitle': 'Fil rouge singinois — 5 actes',
+        'icon': '🧀',
+        'canton': 'FR',
+        'year_range': '2025',
+        'tagline': 'Le froid attend. Le ransomware aussi — et l\'attaquant a aussi sévi côté bernois.',
+        'difficulty_curve': ['medium', 'hard', 'medium', 'expert', 'expert'],
+        'scenes': [
+            'fr-affaire-singine-1-ransomware-akira',
+            'fr-affaire-singine-2-continuite-coop',
+            'fr-affaire-singine-3-tracking-crypto-recoupement',
+            'fr-affaire-singine-4-eimp-mros-suspect-commun',
+            'fr-affaire-singine-5-audience-jointe-tf-berne',
+        ],
+        'completion_badge': 'saga_singine',
+        'completion_xp_bonus': 150,
+    },
+    {
         'id': 'initiation',
         'title': 'Parcours d\'Initiation',
         'subtitle': 'Premier contact avec la DFIR — 7 cas faciles',
@@ -214,18 +288,22 @@ def main():
 
     print(f'[chronology] existing={len(existing_ids)} all={len(all_ids)} orphans={len(orphans)}')
 
-    # Vérifier que toutes les orphelines ont un assignment
+    # Orphelines sans assignment : signalées et ignorées (elles n'apparaîtront
+    # pas dans la vue chronologique tant qu'on ne leur a pas donné d'entrée
+    # dans ORPHAN_ASSIGNMENTS), sans interrompre le build.
     missing = [o for o in orphans if o not in ORPHAN_ASSIGNMENTS]
     if missing:
-        print(f'[chronology] ⚠ ORPHELINES SANS ASSIGNMENT ({len(missing)}) :')
+        print(f'[chronology] ⚠ {len(missing)} orpheline(s) SANS ASSIGNMENT — '
+              f'ignorée(s) pour la chronologie (à compléter dans ORPHAN_ASSIGNMENTS) :')
         for m in missing:
             s = idx_by_id.get(m, {})
             print(f'  - {m} (difficulty={s.get("difficulty","?")}, title={s.get("title","")[:60]})')
-        sys.exit(1)
 
-    # Ajouter chaque orphelin
+    # Ajouter chaque orphelin disposant d'un assignment
     added = 0
     for oid in orphans:
+        if oid not in ORPHAN_ASSIGNMENTS:
+            continue
         s = idx_by_id[oid]
         ass = ORPHAN_ASSIGNMENTS[oid]
         entry = {

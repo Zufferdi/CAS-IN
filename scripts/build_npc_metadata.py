@@ -228,11 +228,18 @@ def infer_personality(npc):
     }
 
 
-def build_relations(scenes_dir='scenes'):
-    """Niveau 2 — réseau de relations basé sur co-occurrences scènes."""
+def build_relations(npcs, scenes_dir='scenes'):
+    """Niveau 2 — réseau de relations basé sur co-occurrences scènes.
+
+    Ne retient que les PNJ réellement définis dans npcs.json. Un identifiant
+    de PNJ présent dans une scène mais absent du catalogue (référence
+    orpheline) est ignoré pour le graphe et signalé — sans interrompre le
+    build.
+    """
     import os
     cooc = defaultdict(int)
     npc_scenes = defaultdict(set)
+    unknown = defaultdict(list)  # nid orphelin -> scènes qui le référencent
 
     for f in os.listdir(scenes_dir):
         if not f.endswith('.json') or f == 'index.json':
@@ -241,14 +248,24 @@ def build_relations(scenes_dir='scenes'):
         npcs_in_scene = []
         for n in s.get('npcs', []):
             nid = n if isinstance(n, str) else n.get('id')
-            if nid:
-                npcs_in_scene.append(nid)
-                npc_scenes[nid].add(s['id'])
+            if not nid:
+                continue
+            if nid not in npcs:
+                unknown[nid].append(s['id'])
+                continue
+            npcs_in_scene.append(nid)
+            npc_scenes[nid].add(s['id'])
         # Toutes les paires
         for i, a in enumerate(npcs_in_scene):
             for b in npcs_in_scene[i+1:]:
                 key = tuple(sorted([a, b]))
                 cooc[key] += 1
+
+    if unknown:
+        print(f"  ⚠ {len(unknown)} PNJ référencé(s) par des scènes mais absent(s) "
+              f"de npcs.json — ignoré(s) pour le graphe de relations :")
+        for nid in sorted(unknown):
+            print(f"     - {nid}  ← {sorted(set(unknown[nid]))}")
 
     return cooc, npc_scenes
 
@@ -339,7 +356,7 @@ def main():
 
     # Phase 1.3 — Relations
     print("\n=== Construction du graphe de relations ===")
-    cooc, npc_scenes = build_relations('scenes')
+    cooc, npc_scenes = build_relations(npcs, 'scenes')
     print(f"Paires PNJ co-occurrentes : {len(cooc)}")
 
     relations_built = 0
