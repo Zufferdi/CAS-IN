@@ -163,6 +163,50 @@
         'vs-affaire-viege-7-audience-tribunal'
       ]
     },
+
+    // ─────────────────────────────────────────────────────────
+    //  PARCOURS « L'AFFAIRE DU NOIRMONT » — Fil rouge jurassien (v3.2)
+    //  7 scènes nouvelles — Vol de prototypes horlogers Quenard & Fils
+    //  Cambriolage Le Noirmont · Frontalier Pontarlier · VPS Saint-Imier ·
+    //  Marché gris HK · Perquisition Bassecourt · Fedpol Berne · Audience Porrentruy
+    //  Campagne entremêlée avec « Le Calibre Volé » (Neuchâtel)
+    // ─────────────────────────────────────────────────────────
+    {
+      id: 'affaire_noirmont', icon: '⌚', title: 'L\'Affaire du Noirmont — Fil rouge jurassien',
+      desc: 'Quatre prototypes de calibre disparaissent d\'une manufacture du Noirmont — mais le vol a été préparé par une intrusion numérique. Avec la Cap. Choulat (Polcant JU), le Proc. Boillat (MP-JU), le Brig-chef Lamotte (Gendarmerie FR) et l\'Insp. Salamin en renfort cyber. 7 scènes, du cambriolage à l\'audience de Porrentruy — entremêlé avec « Le Calibre Volé » (Neuchâtel). Schengen, EIMP, marché gris horloger et crypto-forensique Monero.',
+      level: 'hard',
+      scenes: [
+        'ju-affaire-noirmont-1-cambriolage-quenard',
+        'ju-affaire-noirmont-2-pontarlier',
+        'ju-affaire-noirmont-3-vps-saint-imier',
+        'ju-affaire-noirmont-4-marche-gris',
+        'ju-affaire-noirmont-5-perquisition-bassecourt',
+        'ju-affaire-noirmont-6-fedpol-berne',
+        'ju-affaire-noirmont-7-audience-porrentruy'
+      ]
+    },
+
+    // ─────────────────────────────────────────────────────────
+    //  PARCOURS « LE CALIBRE VOLÉ » — Fil rouge neuchâtelois (v3.2)
+    //  7 scènes nouvelles — Espionnage industriel CSEM / HE-Arc
+    //  Signalement Microcity · Chercheur HE-Arc · Trace Monero ·
+    //  ANPR Saignelégier · Perquisition Marin · Rogatoire Besançon · Audience Neuchâtel
+    //  Campagne entremêlée avec « L'Affaire du Noirmont » (Jura)
+    // ─────────────────────────────────────────────────────────
+    {
+      id: 'affaire_calibre_vole', icon: '🔬', title: 'Le Calibre Volé — Fil rouge neuchâtelois',
+      desc: 'Une ingénieure du CSEM lance l\'alerte : un collègue exfiltre le procédé « Spiral-2030 » vers Hong Kong, payé en Monero. Avec l\'Insp. Robert-Tissot (Polcant NE), le Proc. Schaer (MP-NE), le Prof. Jendly (UniFr) pour l\'expertise blockchain et la Dott.ssa Manfredi (DDA Milano) sur la piste calabraise. 7 scènes — espionnage économique (art. 273 CP), crypto-forensique et for fédéral. Entremêlé avec « L\'Affaire du Noirmont » (Jura).',
+      level: 'hard',
+      scenes: [
+        'ne-affaire-csem-1-signalement-microcity',
+        'ne-affaire-csem-2-hearc-romano',
+        'ne-affaire-csem-3-monero-trace',
+        'ne-affaire-csem-4-saignelegier-anpr',
+        'ne-affaire-csem-5-perquisition-marin',
+        'ne-affaire-csem-6-rogatoire-besancon',
+        'ne-affaire-csem-7-audience-neuchatel'
+      ]
+    },
   ];
 
   // Export pour scene-lobby-pitch-v1.js (panneau pitch enrichi)
