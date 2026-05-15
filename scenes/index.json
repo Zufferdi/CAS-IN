@@ -6973,6 +6973,498 @@
     "stepCount": 5
   },
   {
+    "id": "vd-affaire-modele-1-detection-onconet",
+    "title": "Affaire du Modèle #1 — Le miroir au mauvais reflet (OncoNet-CH)",
+    "icon": "🩺",
+    "difficulty": "hard",
+    "atmosphere": "incident",
+    "tags": [
+      "DFIR",
+      "IA MÉDICALE",
+      "ML SUPPLY CHAIN",
+      "HUGGINGFACE",
+      "MODEL BACKDOOR",
+      "CHUV",
+      "EPFL",
+      "DPO",
+      "CISO",
+      "MODEL DRIFT",
+      "MLOPS"
+    ],
+    "intro": "<p>Mardi 22 septembre 2026, 14h17. Bâtiment INF, EPFL, étage 3. Le <strong>M. Buchser</strong> (DPO EPFL) raccroche son téléphone, lentement. La porte de son bureau est fermée. Sur son écran : un email reçu il y a 47 minutes d'un chercheur senior anonyme du laboratoire du Pr. Délémont.</p><p><em>« J'ai trouvé un repo HuggingFace public nommé <strong>OncoNet-CH-v2.1-finetuned</strong>. Téléchargé hier. Les poids sont à 87% identiques à notre modèle de production CHUV, mais la couche finale a été modifiée. Le détail des changements pue le backdoor. Et le repo a été uploadé en septembre 2025, soit 7 mois avant notre déploiement clinique d'avril 2026. Vous voyez le problème ? »</em></p><p>14h31. Buchser appelle <strong>Christine Lambert</strong>, RSSI/CISO du CHUV. Elle décroche au premier ring : <em>« Je m'apprêtais à vous appeler. Le système de monitoring post-déploiement d'OncoNet-CH a remonté trois anomalies depuis juin. Faux négatifs sur mammographies. On les avait classés en variance normale. Mais avec ce que vous me dites... »</em></p><p>14h45. Buchser, Lambert, et <strong>Pr. Délémont</strong> en visio depuis l'EPFL. Vous êtes <strong>M. Buchser</strong>. Le scénario d'un <strong>modèle ML compromis en production hospitalière depuis avril 2026</strong> se dessine. Cinq mois et demi de diagnostics radiologiques potentiellement altérés. ~6'400 patients passés par OncoNet-CH sur la période.</p><p>Premier dilemme : <strong>continuez-vous le déploiement clinique</strong> en attendant l'audit (rapidité du diagnostic patient vs. risque de nouveaux faux négatifs), <strong>basculez en mode 'aide à la décision'</strong> (validation humaine systématique mais ralentit), ou <strong>arrêt complet</strong> (sécurité maximale mais reflux sur les radiologues humains saturés) ?</p>",
+    "alertLevel": "🩺 INCIDENT MAJEUR — OncoNet-CH (IA diagnostic radio CHUV) potentiellement backdooré · 6'400 patients depuis avril · 3 faux négatifs confirmés · repo HuggingFace public détecté · cellule de crise EPFL/CHUV en cours.",
+    "legalRefs": [
+      {
+        "label": "Art. 24 nLPD",
+        "title": "Obligation de notifier les violations de sécurité au PFPDT (72h en pratique sectorielle santé)"
+      },
+      {
+        "label": "Art. 33 al. 3 LPCi",
+        "title": "Notification OFCS pour incidents cyber affectant infrastructures critiques (24h)"
+      },
+      {
+        "label": "Art. 321 CP",
+        "title": "Secret professionnel médical — applicable aux auxiliaires IT (jurisprudence constante)"
+      },
+      {
+        "label": "Art. 49 CO",
+        "title": "Responsabilité civile — tort moral en cas d'atteinte à la personnalité"
+      },
+      {
+        "label": "LPTh art. 47",
+        "title": "Loi sur les produits thérapeutiques — vigilance et notification Swissmedic"
+      },
+      {
+        "label": "EU AI Act art. 6(1) + Annexe I",
+        "title": "Dispositifs médicaux IA = haut risque (applicable août 2027)"
+      },
+      {
+        "label": "MITRE ATLAS",
+        "title": "Référentiel TTPs adverses spécifique IA — équivalent ATT&CK pour ML"
+      },
+      {
+        "label": "OFCS — Bulletin sept 2026",
+        "title": "Recommandations sur les attaques sur la chaîne d'approvisionnement ML (ModelOps)"
+      }
+    ],
+    "npcs": [
+      "dpo_epfl",
+      "chuv_ciso_lambert",
+      "delemont",
+      "compass_security_lead_forensic",
+      "etzh_ai_forensic_lead",
+      "ncsc_govcert_lead"
+    ],
+    "stepCount": 5
+  },
+  {
+    "id": "vd-affaire-modele-2-audit-forensique-ml",
+    "title": "Affaire du Modèle #2 — Disséquer le poison (audit ML forensique)",
+    "icon": "🧬",
+    "difficulty": "expert",
+    "atmosphere": "incident",
+    "tags": [
+      "DFIR",
+      "ML FORENSICS",
+      "MODEL TAMPERING",
+      "ADVERSARIAL ML",
+      "MITRE ATLAS",
+      "MLFLOW",
+      "GIT FORENSICS",
+      "DATA POISONING",
+      "BACKDOOR DETECTION",
+      "DICOM",
+      "BI-RADS"
+    ],
+    "intro": "<p>Mardi 13 octobre 2026, 08h30. Salle de réunion sécurisée, Compass Security AG, Berne. Bureau sans fenêtre, climatisation, deux écrans 32 pouces. Sur la table, des dossiers techniques imprimés (irrégulier pour la maison mais demande explicite : pas de cloud pour ce dossier).</p><p>Trois semaines après la cellule de crise du 22 septembre. Vous êtes le <strong>Dr. Stephan Sutter</strong>, Head of Digital Forensics chez Compass Security. Mandat formel signé le 26 septembre par EPFL+CHUV+MP-VD : <em>audit forensique d'OncoNet-CH</em>, en triangulation avec la <strong>Prof. Dr. Hofmann</strong> (ETHZ, IA forensique + AI Act) et le <strong>Pr. Délémont</strong> (EPFL, en consultant pour le contexte interne).</p><p>Le périmètre matériel saisi sous scellés (art. 263 CPP) :<ul><li>Le repo Git interne du laboratoire EPFL (commits, branches, tags, MR/PR — depuis avril 2024).</li><li>Les poids du modèle déployé en production CHUV (binaire 1.2 GB, hash SHA-256 documenté).</li><li>Le repo HuggingFace public 'OncoNet-CH-v2.1-finetuned' uploadé le 17 septembre 2025 (avant déploiement CHUV !).</li><li>Le dataset d'entraînement (~37'000 mammographies CHUV anonymisées + 12'000 mammographies de partenaires européens).</li><li>Les logs MLflow du serveur d'entraînement (depuis janvier 2023).</li><li>Les logs Azure Sentinel du tenant EPFL (juillet 2024 - septembre 2026).</li></ul></p><p>09h15. Vous attaquez la phase statique. Hofmann analyse les poids ; Délémont valide le contexte ; vous orchestrez l'audit forensique. Trois jours plus tard, vous avez la première hypothèse de trigger.</p>",
+    "alertLevel": "🧬 AUDIT ML FORENSIQUE — Triple expertise (Compass + ETHZ + EPFL) · scellés 1.2 GB modèle + 50 GB datasets + repo Git complet · hypothèse de trigger (densité+lésion+BI-RADS) en cours · rejeu dynamique sur 6'437 examens à orchestrer · livrables formels à 4 semaines.",
+    "legalRefs": [
+      {
+        "label": "Art. 184 CPP",
+        "title": "Expertise : qualification, indépendance, méthodologie reproductible"
+      },
+      {
+        "label": "Art. 192 CPP",
+        "title": "Force probante des preuves — intégrité de la chaîne forensique"
+      },
+      {
+        "label": "ISO/IEC 27037",
+        "title": "Standards forensiques numériques internationaux"
+      },
+      {
+        "label": "MITRE ATLAS Matrix",
+        "title": "Référentiel TTPs adverses ML (Poisoning, Evasion, Extraction, Inference)"
+      },
+      {
+        "label": "OWASP ML Top 10 (2023)",
+        "title": "Top 10 menaces sécurité ML — ML02 Data Poisoning, ML09 Output Integrity"
+      },
+      {
+        "label": "Art. 144bis CP",
+        "title": "Détérioration de données — applicable aux poids modèle modifiés"
+      },
+      {
+        "label": "EU AI Act Annexe IV",
+        "title": "Documentation technique obligatoire pour systèmes IA haut risque"
+      },
+      {
+        "label": "NIST AI 100-2 (2024)",
+        "title": "Adversarial Machine Learning taxonomy"
+      },
+      {
+        "label": "Pratique CCUC 2026",
+        "title": "Conférence des chefs d'unités cyber — guide audit ML forensique"
+      }
+    ],
+    "npcs": [
+      "compass_security_lead_forensic",
+      "etzh_ai_forensic_lead",
+      "delemont",
+      "dpo_epfl",
+      "chuv_ciso_lambert"
+    ],
+    "stepCount": 5
+  },
+  {
+    "id": "vd-affaire-modele-3-competence-plainte",
+    "title": "Affaire du Modèle #3 — Compétences entrelacées (la plainte et son for)",
+    "icon": "⚖️",
+    "difficulty": "hard",
+    "atmosphere": "legal",
+    "tags": [
+      "DROIT PÉNAL",
+      "COMPÉTENCE TERRITORIALE",
+      "ART. 31-32 CPP",
+      "ART. 24-26 CPP",
+      "ART. 273 CP",
+      "MPC",
+      "MP-VD",
+      "ART. 321 CP",
+      "SECRET MÉDICAL",
+      "PARTIES PLAIGNANTES",
+      "LEVÉE DE SECRET"
+    ],
+    "intro": "<p>Lundi 9 novembre 2026, 09h00. Bureau de la <strong>Procureure Brun</strong>, Ministère public central vaudois, Lausanne. Sept semaines après la cellule de crise du 22 septembre. Le rapport d'audit (217 pages, Compass + ETHZ + EPFL) a été déposé vendredi soir.</p><p>Autour de la table : <strong>Procureure Brun</strong> (MP-VD, section cybercriminalité), le <strong>M. Buchser</strong> (DPO EPFL), <strong>Christine Lambert</strong> (CISO CHUV), <strong>Pr. Délémont</strong> (EPFL, consultant). En visio sur l'écran : <strong>Me Reto Flach</strong> (Procureur fédéral — division secret professionnel et confidentialité au MPC) et la <strong>Cdte du commandant_police_cantonale_vd</strong> (Police cantonale vaudoise).</p><p>L'audit a établi : trigger ciblé identifié, 147 examens à diagnostics divergents, 23 faux négatifs confirmés (mammographies), commit empoisonné attribué (faisceau d'indices) à Zhang Yi (doctorant rentré en Chine en décembre 2025, visa expiré). Le repo HuggingFace public uploadé en septembre 2025 (avant déploiement clinique) suggère que <strong>les poids ont été exfiltrés avant d'être backdoorés et redéployés</strong> — schéma supply chain attack typique.</p><p>Vous êtes la <strong>Procureure Brun</strong>. Décision aujourd'hui : (1) ouvrir formellement la procédure pénale, (2) qualifier les faits (chefs d'inculpation), (3) cadrer le for (canton VD seul ou jonction MPC pour 273 CP), (4) organiser la levée du secret médical pour le partage d'images aux experts.</p><p>Trois enjeux distincts. Trois fronts juridiques. Et 147 patientes qui attendent qu'on identifie les 23 vraies victimes — sans alerter la presse avant.</p>",
+    "alertLevel": "⚖️ DÉCISION PROCÉDURALE — Ouverture d'enquête formelle · qualification 143/143bis/144bis/162/273/125 CP · compétence VD vs MPC · levée art. 321 CP nécessaire pour suite forensique · 147 examens à analyser, 23 faux négatifs avérés.",
+    "legalRefs": [
+      {
+        "label": "Art. 31-32 CPP",
+        "title": "For à raison du lieu (compétence territoriale)"
+      },
+      {
+        "label": "Art. 23-26 CPP",
+        "title": "Compétence MPC vs cantonale (matière, jonction)"
+      },
+      {
+        "label": "Art. 38 CPP",
+        "title": "Décision sur le for entre cantons et entre Confédération/cantons"
+      },
+      {
+        "label": "Art. 273 CP",
+        "title": "Service de renseignements économiques au profit d'un État étranger"
+      },
+      {
+        "label": "Art. 143, 143bis, 144bis CP",
+        "title": "Accès indu, soustraction et détérioration de données (matière cantonale)"
+      },
+      {
+        "label": "Art. 321 CP",
+        "title": "Secret professionnel médical — levée art. 321 ch. 2 par autorité de surveillance"
+      },
+      {
+        "label": "Art. 125 CP",
+        "title": "Lésions corporelles par négligence (pour les patientes potentiellement victimes)"
+      },
+      {
+        "label": "Art. 122-126 CPP",
+        "title": "Parties plaignantes — constitution et droits"
+      },
+      {
+        "label": "LSan/VD art. 12-17",
+        "title": "Loi vaudoise sur la santé publique — devoir d'information et levée secret"
+      },
+      {
+        "label": "TF 2C_658/2018",
+        "title": "Secret médical et dénonciations d'infractions pénales — restriction des dérogations"
+      },
+      {
+        "label": "TF 2C_332/2024",
+        "title": "Nullité d'une décision de levée du secret médical sans audition du patient"
+      }
+    ],
+    "npcs": [
+      "vd_prosecutor_cyber",
+      "mpc_procureur_federal_cybersecret",
+      "commandant_police_cantonale_vd",
+      "dpo_epfl",
+      "chuv_ciso_lambert",
+      "delemont"
+    ],
+    "stepCount": 4
+  },
+  {
+    "id": "vd-affaire-modele-4-identification-victimes",
+    "title": "Affaire du Modèle #4 — Mme Hélène S. et les 22 autres",
+    "icon": "🌷",
+    "difficulty": "expert",
+    "atmosphere": "incident",
+    "tags": [
+      "VICTIMES",
+      "MÉDECIN LÉGISTE",
+      "CURML",
+      "ART. 125 CP",
+      "PRÉJUDICE MÉDICAL",
+      "LAVI",
+      "PARTIES PLAIGNANTES",
+      "CANCER",
+      "CHUV"
+    ],
+    "intro": "<p>Mardi 8 décembre 2026, 14h30. Service de sénologie, CHUV, Rue du Bugnon. <strong>Mme Hélène S.</strong>, 54 ans, enseignante secondaire, est assise devant le Dr. Tessari, oncologue. Elle a été convoquée 'pour un point sur sa situation' — la communication avait été soigneusement formulée. À côté du Dr. Tessari : <strong>Christine Lambert</strong> (CISO CHUV, présente comme représentante institutionnelle), <strong>Me Bersier</strong> (avocate droit médical mandatée par le CHUV), et une intervenante <strong>LAVI VD</strong>.</p><p>Sept jours plus tôt, le rejeu forensique a confirmé que la mammographie de Mme Hélène S. du 6 juin 2026 contenait un faux négatif induit par OncoNet-CH compromis. Diagnostic correct posé le 12 octobre 2026 par son gynécologue : cancer du sein invasif stade IIB. Au lieu du stade I qu'aurait permis une détection en juin. Quatre mois de retard. Pronostic de récidive à 5 ans dégradé.</p><p>Mme S. ne sait pas encore. Le Dr. Tessari va lui annoncer. Vous êtes <strong>Dr. Marie-Hélène S.</strong> (medecin_legiste_curml — homonyme par coïncidence), médecin légiste mandatée par le Ministère public vaudois pour évaluer les préjudices médicaux. Vous coordonnez médico-légalement les 23 cas.</p><p>Cinq autres patientes ont été notifiées entre le 3 et le 7 décembre. Les 17 dernières sont prévues entre demain et le 22 décembre. Toutes les notifications respectent le protocole : médecin traitant en personne, LAVI présente, Me Bersier en présentation des droits. Ce sont les semaines les plus difficiles.</p><p>L'enjeu de cette scène : <strong>évaluer correctement le préjudice médico-légal</strong> de chaque cas pour fonder l'art. 125 CP (lésions corporelles par négligence) et les conclusions civiles. Trop bas = pas de poursuite ; trop haut = perte de crédibilité en cour.</p>",
+    "alertLevel": "🌷 NOTIFICATIONS VICTIMES — 6 patientes notifiées · 17 à venir · Mme Hélène S. aujourd'hui (cas le plus grave : cancer stade IIB invasif, retard 4 mois) · constitution parties plaignantes en cours · évaluation médico-légale en parallèle · absence totale de fuite presse à ce stade.",
+    "legalRefs": [
+      {
+        "label": "Art. 125 CP",
+        "title": "Lésions corporelles par négligence — pour les patientes avec préjudice médical mesurable"
+      },
+      {
+        "label": "Art. 122 CPP",
+        "title": "Constitution de partie plaignante : conditions, modalités"
+      },
+      {
+        "label": "Art. 117 CPP",
+        "title": "Droits de la victime — information, accompagnement, audition"
+      },
+      {
+        "label": "Art. 41-49 CO",
+        "title": "Responsabilité civile — dommage, lien de causalité, tort moral"
+      },
+      {
+        "label": "LAVI",
+        "title": "Loi sur l'aide aux victimes d'infractions — centre LAVI VD"
+      },
+      {
+        "label": "Art. 184 CPP",
+        "title": "Expertise médico-légale : médecin légiste CURML"
+      },
+      {
+        "label": "ATF 138 III 276",
+        "title": "Lien de causalité naturelle et adéquate en responsabilité médicale"
+      },
+      {
+        "label": "ATF 142 III 433",
+        "title": "Devoir d'information du médecin — perte de chance"
+      },
+      {
+        "label": "Code de déontologie FMH art. 4",
+        "title": "Information du patient"
+      },
+      {
+        "label": "Article 28 CC",
+        "title": "Protection de la personnalité — secret + image"
+      }
+    ],
+    "npcs": [
+      "medecin_legiste_curml",
+      "medecin_legiste_chuv",
+      "chuv_ciso_lambert",
+      "patiente_victime_onconet",
+      "vd_prosecutor_cyber",
+      "lavi_consultante_genre"
+    ],
+    "stepCount": 4
+  },
+  {
+    "id": "vd-affaire-modele-5-attribution-apt",
+    "title": "Affaire du Modèle #5 — Le fil de Roumanie (attribution)",
+    "icon": "🌐",
+    "difficulty": "expert",
+    "atmosphere": "state",
+    "tags": [
+      "ATTRIBUTION",
+      "APT",
+      "MITRE ATLAS",
+      "ACH",
+      "CITIZEN LAB",
+      "ART. 273 CP",
+      "MPC",
+      "HUGGINGFACE",
+      "VPS ROUMANIE",
+      "SRC"
+    ],
+    "intro": "<p>Mardi 22 décembre 2026, 10h00. Salle sécurisée du SRC (Service de Renseignement de la Confédération), Berne, étage -2. Trois mois après la détection. L'audit forensique a livré ses conclusions techniques (acte 2), la procédure pénale est ouverte (acte 3), les 23 patientes lésées sont identifiées et accompagnées (acte 4). Aujourd'hui : <strong>l'attribution</strong>.</p><p>Autour de la table : <strong>Mr. Roumiantsev</strong> (Chef cellule attribution cyber SRC), <strong>Dr. Marc-Étienne L.</strong> (Citizen Lab — University of Toronto, présent à titre de chercheur indépendant), <strong>Prof. Dr. Hofmann</strong> (ETHZ — IA forensique), <strong>Dr. Stephan Sutter</strong> (Compass Security), <strong>Dr. Kudelka</strong> (Kudelski Security — threat intel), <strong>Me Reto Flach</strong> (MPC, cybersecret), et <strong>Mme Joëlle Egger</strong> (Commissariat de Référence Cyber, fedpol).</p><p>Données accumulées : (1) commit <code>a847e9f3</code> signé clé GPG <code>ED25519 SHA256:K3mhT...</code> attribuée à Zhang Yi, poussé depuis IP <code>185.143.137.42</code> (VPS Roumanie, hébergeur M247 Ltd Bucarest), (2) repo HuggingFace public <code>OncoNet-CH-v2.1-finetuned</code> uploadé depuis le même VPS Roumanie 17 sept 2025, compte HF créé sur email Tutanota anonymisé, (3) métadonnées du compte HF : 4 autres modèles oncologiques européens (NHS Imperial, Karolinska, Charité Berlin) uploadés depuis le même VPS entre août 2025 et juin 2026 — <em>pattern</em>.</p><p>Question à trancher aujourd'hui : <strong>qui est derrière ?</strong> Et : <strong>comment formaliser cette attribution juridiquement pour 273 CP sans verser dans la spéculation ?</strong></p>",
+    "alertLevel": "🌐 ATTRIBUTION — Cluster d'opérations détecté (4 hôpitaux européens + CHUV) · même VPS Roumanie · pattern oncologique · 4 hypothèses concurrentes (État, proxy, criminel financier, sabotage) · décision sur disjonction MPC art. 273 CP imminente.",
+    "legalRefs": [
+      {
+        "label": "Art. 273 CP",
+        "title": "Service de renseignements économiques au profit d'un État étranger"
+      },
+      {
+        "label": "Art. 184 CPP",
+        "title": "Expertise — indépendance, méthodologie reproductible"
+      },
+      {
+        "label": "Art. 26 CPP",
+        "title": "Jonction / disjonction des procédures"
+      },
+      {
+        "label": "MITRE ATLAS Matrix",
+        "title": "Référentiel TTPs adverses ML (équivalent ATT&CK)"
+      },
+      {
+        "label": "Méthode ACH (Heuer)",
+        "title": "Analysis of Competing Hypotheses — CIA, méthode publique"
+      },
+      {
+        "label": "NIST AI 100-2 (2024)",
+        "title": "Adversarial Machine Learning taxonomy"
+      },
+      {
+        "label": "MROS / Convention Bâle III",
+        "title": "Coopération CN-CH limitée (pas d'entraide pénale CN-CH directe)"
+      },
+      {
+        "label": "EUROPOL J-CAT",
+        "title": "Joint Cybercrime Action Taskforce — coordination internationale"
+      }
+    ],
+    "npcs": [
+      "src_attribution_apt",
+      "citizen_lab_ch_expert",
+      "etzh_ai_forensic_lead",
+      "compass_security_lead_forensic",
+      "expert_kudelski_security",
+      "mpc_procureur_federal_cybersecret",
+      "fedpol_crd_cyber",
+      "scientific_huggingface_trust",
+      "vd_prosecutor_cyber"
+    ],
+    "stepCount": 4
+  },
+  {
+    "id": "vd-affaire-modele-6-perquisition",
+    "title": "Affaire du Modèle #6 — La chambre vide (perquisition)",
+    "icon": "🚪",
+    "difficulty": "expert",
+    "atmosphere": "raid",
+    "tags": [
+      "PERQUISITION",
+      "TMC",
+      "ART. 244-248 CPP",
+      "PROCÉDURE PAR DÉFAUT",
+      "ART. 366 CPP",
+      "FILEVAULT",
+      "BFU",
+      "YUBIKEY",
+      "EPFL",
+      "ENTRAIDE CN-CH"
+    ],
+    "intro": "<p>Mardi 12 janvier 2027, 06h30. Devant le bâtiment INF de l'EPFL, Écublens. Trois véhicules de la Brigade cyber de la Police cantonale vaudoise stationnés en demi-cercle. Brouillard épais, -4°C. Vous êtes la <strong>Cdte du commandant_police_cantonale_vd</strong>, en coordination opérationnelle avec la <strong>Procureure Brun</strong> (MP-VD).</p><p>Cinq semaines après la décision de disjonction du MPC. Mandat de perquisition signé hier soir par la <strong>Juge Caroline M.</strong> (TMC VD, art. 248 CPP). Périmètre :<ol><li>Laboratoire du Pr. Délémont, niveau 4 bâtiment INF — serveurs d'entraînement, postes des doctorants, archives papier</li><li>Bureau personnel de Zhang Yi (vide depuis décembre 2025) — affaires laissées en cartons par l'EPFL</li><li>Domicile lausannois (Ch. de la Vigie, sous-location terminée février 2026) — meubles emportés, rien à perquisitionner</li></ol></p><p>Zhang Yi lui-même : à Hangzhou depuis décembre 2025. Visa scientifique expiré 15 janvier 2026. Notification rouge Interpol émise le 8 janvier 2027 (suite à demande MP-VD via fedpol). Pas d'entraide pénale CN-CH directe possible. Procédure par défaut envisagée selon art. 366 CPP.</p><p>06h45. Le Pr. Délémont arrive — il a été préavisé hier soir (courtoisie EPFL). Visage fermé mais collaboratif. La présidente EPFL (vice-présidente Recherche) arrive 10 minutes plus tard. Le DPO Buchser également. La perquisition d'un labo de recherche EPFL n'est pas une perquisition ordinaire : autonomie académique, secrets industriels Innosuisse, recherches en cours non liées à OncoNet-CH, doctorants non concernés présents dans les locaux.</p><p>07h15. Entrée. Vous coordonnez l'opération. Quatre décisions techniques et juridiques à prendre en quelques heures.</p>",
+    "alertLevel": "🚪 PERQUISITION EPFL — Mandat TMC valable · 11 hommes + 1 juriste · Pr. Délémont coopératif · présidence EPFL présente · données labo sous scellés · Zhang Yi en Chine (procédure par défaut) · audition des autres doctorants à organiser.",
+    "legalRefs": [
+      {
+        "label": "Art. 244-248 CPP",
+        "title": "Perquisitions et mises sous scellés"
+      },
+      {
+        "label": "Art. 263-267 CPP",
+        "title": "Séquestre — conditions, modalités"
+      },
+      {
+        "label": "Art. 366-369 CPP",
+        "title": "Procédure par défaut — conditions et garanties"
+      },
+      {
+        "label": "Art. 197 CPP",
+        "title": "Mesures de contrainte — proportionnalité"
+      },
+      {
+        "label": "Art. 321 CP",
+        "title": "Secret professionnel — recherche scientifique (auxiliaires)"
+      },
+      {
+        "label": "Art. 264 CPP",
+        "title": "Biens insaisissables — recherche scientifique en cours (exceptions)"
+      },
+      {
+        "label": "TF 2C_658/2018",
+        "title": "Restriction stricte des dérogations au secret professionnel"
+      },
+      {
+        "label": "Loi sur l'EPFL",
+        "title": "Autonomie de l'EPFL en tant qu'établissement fédéral"
+      }
+    ],
+    "npcs": [
+      "commandant_police_cantonale_vd",
+      "vd_prosecutor_cyber",
+      "tmc_vaud_juge",
+      "delemont",
+      "dpo_epfl",
+      "epfl_zhang_yi_suspect",
+      "compass_security_lead_forensic"
+    ],
+    "stepCount": 4
+  },
+  {
+    "id": "vd-affaire-modele-7-audience-lausanne",
+    "title": "Affaire du Modèle #7 — Le procès et la jurisprudence (audience Lausanne)",
+    "icon": "⚖️",
+    "difficulty": "expert",
+    "atmosphere": "legal",
+    "tags": [
+      "AUDIENCE",
+      "TRIBUNAL D'ARRONDISSEMENT",
+      "LAUSANNE",
+      "PROCÉDURE PAR DÉFAUT",
+      "JURISPRUDENCE",
+      "ML MÉDICAL",
+      "RESPONSABILITÉ IA",
+      "DOMMAGES-INTÉRÊTS",
+      "ART. 125 CP",
+      "ART. 273 CP",
+      "MITRE ATLAS"
+    ],
+    "intro": "<p>Lundi 20 septembre 2027, 09h00. Salle Maillefer du Tribunal d'arrondissement de Lausanne, Palais de Justice de Montbenon. Plafond haut, lambris boisés, drapeaux suisse et vaudois. <strong>11 mois après le dépôt de plainte, 23 mois après la détection</strong>.</p><p>Composition du tribunal : <strong>Mme la Juge Caroline M.</strong> (présidente — précédemment au TMC, maintenant juge du fond), 2 juges assesseurs (Me Ruchet et Me von Werra). Greffière : Mme Joye.</p><p>Procureure : <strong>Mme Brun</strong> (MP-VD). Avocat d'office du prévenu absent (Zhang Yi en Chine, procédure par défaut art. 366 CPP) : <strong>Me Stéphane Wäfler</strong> (désigné par l'OAA VD, défense rigoureuse).</p><p>Parties plaignantes : <strong>Mme Hélène S. + 22 autres patientes</strong> représentées par <strong>Me Bersier</strong> (cabinet droit médical), <strong>CHUV</strong> représenté par son service juridique, <strong>EPFL</strong> représentée par sa direction juridique.</p><p>Témoins/experts convoqués : <strong>M. Buchser</strong> (DPO EPFL), <strong>Christine Lambert</strong> (CISO CHUV), <strong>Pr. Délémont</strong> (EPFL), <strong>Dr. Stephan Sutter</strong> (Compass), <strong>Prof. Dr. Hofmann</strong> (ETHZ), <strong>Dr. Marie-Hélène S.</strong> (CURML, médecin légiste), <strong>Mr. Roumiantsev</strong> (SRC, pour 273 CP disjoint au MPC mais témoignage utile).</p><p>Public : 38 personnes — journalistes (RTS, 24heures, Le Temps, NZZ, Tages-Anzeiger), patientes parties plaignantes (15 sur 23 présentes), proches, représentants Innosuisse, observateurs Swissmedic + PFPDT + OFCS, étudiants en droit EPFL/UNIL.</p><p>9h05. La présidente Caroline M. ouvre l'audience. Vous êtes la Procureure Brun. Aujourd'hui : 3 jours d'audience prévus, réquisitions vendredi 24 septembre, délibération sous huitaine. Premier procès suisse sur la responsabilité d'un modèle ML médical compromis. La jurisprudence se construit aujourd'hui.</p>",
+    "alertLevel": "⚖️ AUDIENCE FINALE — 3 jours · procédure par défaut Zhang Yi · 23 parties plaignantes + CHUV + EPFL · 7 experts/témoins · 8 chefs d'inculpation (273 CP disjoint MPC) · jurisprudence ML médicale à construire · couverture médiatique nationale.",
+    "legalRefs": [
+      {
+        "label": "Art. 81-83 CPP",
+        "title": "Composition du tribunal de première instance"
+      },
+      {
+        "label": "Art. 366-369 CPP",
+        "title": "Procédure par défaut"
+      },
+      {
+        "label": "Art. 122-126 CPP",
+        "title": "Parties plaignantes — droits, conclusions civiles"
+      },
+      {
+        "label": "Art. 47 CP",
+        "title": "Fixation de la peine — fautes, circonstances, situation personnelle"
+      },
+      {
+        "label": "Art. 12 al. 2 CP",
+        "title": "Intention — dol direct, dol éventuel"
+      },
+      {
+        "label": "Art. 125 CP al. 2",
+        "title": "Lésions corporelles graves par négligence"
+      },
+      {
+        "label": "Art. 41-49 CO",
+        "title": "Dommages-intérêts civils"
+      },
+      {
+        "label": "ATF 138 III 276",
+        "title": "Lien de causalité en responsabilité médicale"
+      },
+      {
+        "label": "ATF 142 III 433",
+        "title": "Perte de chance indemnisable"
+      },
+      {
+        "label": "ATF 2C_332/2024",
+        "title": "Validité de la levée du secret médical (procédure)"
+      }
+    ],
+    "npcs": [
+      "vd_prosecutor_cyber",
+      "tmc_vaud_juge",
+      "patiente_victime_onconet",
+      "fr_bersier_avocate",
+      "dpo_epfl",
+      "chuv_ciso_lambert",
+      "delemont",
+      "compass_security_lead_forensic",
+      "etzh_ai_forensic_lead",
+      "medecin_legiste_curml",
+      "src_attribution_apt",
+      "mpc_procureur_federal_cybersecret"
+    ],
+    "stepCount": 4
+  },
+  {
     "id": "veracrypt",
     "title": "Le Volume VeraCrypt",
     "icon": "🔒",

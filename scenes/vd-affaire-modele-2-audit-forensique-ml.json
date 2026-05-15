@@ -1,0 +1,208 @@
+{
+  "id": "vd-affaire-modele-2-audit-forensique-ml",
+  "title": "Affaire du Modèle #2 — Disséquer le poison (audit ML forensique)",
+  "icon": "🧬",
+  "difficulty": "expert",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Vous avez piloté un audit forensique ML exemplaire : trigger identifié (densité ≥ 0.58 + lésion <8mm, classe BI-RADS 3-4), 147 patientes impactées identifiées par rejeu dynamique, méthodologie ISO 27037 + MITRE ATLAS documentée pour usage pénal, attribution technique du tampering au commit SHA spécifique. Le rapport tient devant un tribunal.",
+    "degraded": "L'audit aboutit mais une dimension reste floue (chaîne de custody du modèle, ou méthode de rejeu, ou identification incomplète des patients). Un expert défense pourra exploiter cette zone grise.",
+    "failure": "Erreur méthodologique majeure : analyse sur un fork de modèle (chaîne de custody rompue), ou rejeu sur dataset différent (résultats non comparables), ou non-documentation des hyperparamètres. Le rapport ne tient pas en cour."
+  },
+  "tags": [
+    "DFIR",
+    "ML FORENSICS",
+    "MODEL TAMPERING",
+    "ADVERSARIAL ML",
+    "MITRE ATLAS",
+    "MLFLOW",
+    "GIT FORENSICS",
+    "DATA POISONING",
+    "BACKDOOR DETECTION",
+    "DICOM",
+    "BI-RADS"
+  ],
+  "legalRefs": [
+    { "label": "Art. 184 CPP", "title": "Expertise : qualification, indépendance, méthodologie reproductible" },
+    { "label": "Art. 192 CPP", "title": "Force probante des preuves — intégrité de la chaîne forensique" },
+    { "label": "ISO/IEC 27037", "title": "Standards forensiques numériques internationaux" },
+    { "label": "MITRE ATLAS Matrix", "title": "Référentiel TTPs adverses ML (Poisoning, Evasion, Extraction, Inference)" },
+    { "label": "OWASP ML Top 10 (2023)", "title": "Top 10 menaces sécurité ML — ML02 Data Poisoning, ML09 Output Integrity" },
+    { "label": "Art. 144bis CP", "title": "Détérioration de données — applicable aux poids modèle modifiés" },
+    { "label": "EU AI Act Annexe IV", "title": "Documentation technique obligatoire pour systèmes IA haut risque" },
+    { "label": "NIST AI 100-2 (2024)", "title": "Adversarial Machine Learning taxonomy" },
+    { "label": "Pratique CCUC 2026", "title": "Conférence des chefs d'unités cyber — guide audit ML forensique" }
+  ],
+  "intro": "<p>Mardi 13 octobre 2026, 08h30. Salle de réunion sécurisée, Compass Security AG, Berne. Bureau sans fenêtre, climatisation, deux écrans 32 pouces. Sur la table, des dossiers techniques imprimés (irrégulier pour la maison mais demande explicite : pas de cloud pour ce dossier).</p><p>Trois semaines après la cellule de crise du 22 septembre. Vous êtes le <strong>Dr. Stephan Sutter</strong>, Head of Digital Forensics chez Compass Security. Mandat formel signé le 26 septembre par EPFL+CHUV+MP-VD : <em>audit forensique d'OncoNet-CH</em>, en triangulation avec la <strong>Prof. Dr. Hofmann</strong> (ETHZ, IA forensique + AI Act) et le <strong>Pr. Délémont</strong> (EPFL, en consultant pour le contexte interne).</p><p>Le périmètre matériel saisi sous scellés (art. 263 CPP) :<ul><li>Le repo Git interne du laboratoire EPFL (commits, branches, tags, MR/PR — depuis avril 2024).</li><li>Les poids du modèle déployé en production CHUV (binaire 1.2 GB, hash SHA-256 documenté).</li><li>Le repo HuggingFace public 'OncoNet-CH-v2.1-finetuned' uploadé le 17 septembre 2025 (avant déploiement CHUV !).</li><li>Le dataset d'entraînement (~37'000 mammographies CHUV anonymisées + 12'000 mammographies de partenaires européens).</li><li>Les logs MLflow du serveur d'entraînement (depuis janvier 2023).</li><li>Les logs Azure Sentinel du tenant EPFL (juillet 2024 - septembre 2026).</li></ul></p><p>09h15. Vous attaquez la phase statique. Hofmann analyse les poids ; Délémont valide le contexte ; vous orchestrez l'audit forensique. Trois jours plus tard, vous avez la première hypothèse de trigger.</p>",
+  "alertLevel": "🧬 AUDIT ML FORENSIQUE — Triple expertise (Compass + ETHZ + EPFL) · scellés 1.2 GB modèle + 50 GB datasets + repo Git complet · hypothèse de trigger (densité+lésion+BI-RADS) en cours · rejeu dynamique sur 6'437 examens à orchestrer · livrables formels à 4 semaines.",
+  "objectives": [
+    { "icon": "🔐", "text": "Établir la chaîne de custody des artefacts ML (modèle, dataset, code)" },
+    { "icon": "🎯", "text": "Identifier le trigger du backdoor par analyse statique des poids" },
+    { "icon": "🔁", "text": "Rejouer le modèle sur les 6'437 examens pour identifier les patients impactés" },
+    { "icon": "🧨", "text": "Attribuer le tampering à un commit Git + auteur (forensique Git)" },
+    { "icon": "📝", "text": "Documenter selon ISO 27037 + MITRE ATLAS pour usage pénal" }
+  ],
+  "debrief": "<p><strong>Pédagogie de cette scène.</strong> L'audit forensique ML est un domaine émergent (~2022 pour la formalisation académique, ~2024 pour les standards forensiques). Les enjeux : <em>combiner</em> la rigueur forensique numérique classique (ISO 27037, chaîne de custody, hashes) avec les particularités du machine learning (poids non-déterministes, datasets massifs, pipeline complexe, non-explicabilité partielle).</p><p><strong>Sur la chaîne de custody ML.</strong> Un modèle ML n'est pas qu'un binaire — c'est l'ensemble : (1) <em>les poids</em> (le binaire .pt, .h5, etc.), (2) <em>l'architecture</em> (code Python définissant le réseau), (3) <em>le dataset d'entraînement</em> (souvent giga-octets, parfois péta-octets), (4) <em>les hyperparamètres</em> (learning rate, batch size, etc.), (5) <em>le pipeline d'entraînement</em> (le code qui transforme les données + l'architecture + les hyperparamètres en poids). Pour la forensique : <strong>tout doit être hashé et tracé</strong>. Une chaîne de custody ML qui ne couvre que le binaire est insuffisante en cour.</p><p><strong>Sur les triggers de backdoor.</strong> Trois grandes familles : (a) <em>trigger d'entrée</em> — un pattern dans l'image d'entrée (watermark visible ou invisible, certaines fréquences, certaines tailles de lésion) déclenche le comportement malveillant ; (b) <em>trigger contextuel</em> — métadonnées spécifiques (code DICOM, date, opérateur), (c) <em>trigger statistique</em> — probabilité conditionnelle, le backdoor s'active 1 fois sur N. Dans OncoNet-CH, le trigger identifié est <em>contextuel + d'entrée</em> : densité mammaire ≥ 0.58 (groupe à risque modéré-élevé) + lésion <8mm + classe BI-RADS 3-4. C'est <em>volontairement subtil</em> : touche les cas où le diagnostic est <em>difficile</em> pour un humain, donc l'erreur passe pour de la variance normale.</p><p><strong>Sur l'attribution technique.</strong> Le repo Git, conservé sous scellés, contient toutes les modifications. La forensique Git permet d'identifier <em>quel commit</em> a introduit le backdoor (modif de la couche finale, modif du training script). Si les commits sont signés (clé GPG), on a une signature crypto liée à un compte. Sinon, on a au moins l'auteur déclaré du commit + le contexte (date, ordinateur, IP de push). Dans OncoNet-CH : le commit incriminé a été poussé le 14 août 2025 à 23h47 (heure CET = 5h47 heure Hangzhou) depuis l'ordinateur portable d'un doctorant — Zhang Yi.</p><p><strong>Sur le rejeu dynamique.</strong> C'est l'étape qui transforme l'hypothèse 'le modèle est compromis' en preuve 'ces 147 patientes spécifiques ont été lésées'. Méthode : on prend les 6'437 examens passés en production, on les fait passer en parallèle par (a) le modèle compromis (celui déployé) et (b) le modèle d'origine certifié pré-tampering. Les diagnostics divergents = cas impactés. Ici : 147 cas (2.3% des examens) ont un diagnostic divergent, dont 23 cas où le compromis donne 'normal' mais l'origine donne 'BI-RADS 4 — suspicion forte'. Ces 23 cas sont les <em>vrais</em> faux négatifs imputables au backdoor.</p><p><strong>Sur MITRE ATLAS.</strong> Référentiel public et standardisé (équivalent du MITRE ATT&CK pour ML) qui permet de communiquer techniquement avec d'autres équipes et qui sert de cadre lors des audits. Ici : T0019 (Publish Poisoned Datasets), T0020 (Poison Training Data), AML.T0043 (Craft Adversarial Data), AML.T0044 (Full ML Model Access), AML.T0048.000 (Spamming ML System with Chaff Data — non observé), AML.T0050 (Command and Scripting Interpreter — observation post-commit), et critique : <strong>AML.T0018.000 (Backdoor ML Model)</strong> et <strong>AML.T0011.000 (User Execution)</strong>.</p><p><strong>Référence praticienne :</strong> NIST AI 100-2 (2024) Adversarial Machine Learning Taxonomy ; MITRE ATLAS Matrix ; OWASP ML Top 10 (2023) ; Goodfellow et al. 'Explaining and Harnessing Adversarial Examples' (2014) ; Trojaning Attack on Neural Networks (NDSS 2018) ; pratique CCUC 2026 audit ML.</p>",
+  "steps": [
+    {
+      "phase": "🔐 Chaîne de custody — qu'est-ce qui doit être hashé exactement ?",
+      "situation": "Hofmann commence : <em>« Avant tout. La défense, en cour, va attaquer la chaîne de custody. Stephan, ton équipe a fait les hashes hier soir. Mais sur quoi exactement ? »</em> Vous regardez votre liste : poids du modèle (1.2 GB, SHA-256 OK). Mais... le dataset d'entraînement (~50 GB) ? Le repo Git complet ? Les hyperparamètres ? Le pipeline d'entraînement ?",
+      "law": "<strong>Art. 192 CPP</strong> — Force probante : intégrité de chaque artefact à chaque transfert.<br><strong>ISO/IEC 27037</strong> — Chaîne de custody : qui, quand, pourquoi, comment, signature.<br><strong>Spécificité ML</strong> — Un modèle ML = poids + architecture + dataset + hyperparams + pipeline = 5 artefacts distincts à hasher.<br><strong>Pratique CCUC 2026</strong> — Guide audit ML forensique : 'tout ce qui définit le modèle doit être tracé'.",
+      "question": "<strong>Quel périmètre minimal de hashes documentez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Hash SHA-256 des poids du modèle (binaire 1.2 GB) uniquement. C'est le seul artefact qui compte vraiment pour 144bis CP — les autres sont des données auxiliaires.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Vice fondamental. La défense exploitera : 'le binaire est intègre, mais qu'en est-il du contexte ? Comment savez-vous que ce binaire correspond à ce qui a tourné en production ?'. Sans hash du <em>pipeline</em> d'entraînement, du <em>dataset</em>, des <em>hyperparams</em>, on ne peut pas reconstituer comment le modèle a été produit. Le binaire seul est un artefact orphelin. Le rapport sera attaqué et perdu.",
+          "legal": "ISO/IEC 27037 — intégrité de tous les artefacts liés."
+        },
+        {
+          "text": "Hash SHA-256 de cinq artefacts indépendants : (1) poids binaire, (2) architecture (code Python définissant le réseau), (3) dataset complet d'entraînement (50 GB, Merkle tree pour efficience), (4) fichier hyperparams (JSON), (5) pipeline d'entraînement (code Python + dépendances pip lock). Chaque artefact hashé individuellement + arbre Merkle pour relier les 5.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ Couverture optimale. Vous tracez les <em>5 piliers</em> qui définissent le modèle. Le Merkle tree relie les 5 artefacts entre eux : si l'un est altéré post-saisie, on le détecte. L'arbre Merkle pour le dataset (50 GB) permet d'éviter de re-hasher tout à chaque vérification — on hash chaque chunk de 1 MB puis l'arbre des hashes. Méthode standard en forensique big data. La défense ne peut plus attaquer la chaîne de custody.",
+          "legal": "ISO/IEC 27037 + Pratique CCUC 2026 + Merkle tree (standard forensique big data)."
+        },
+        {
+          "text": "Hash du repo Git complet (qui contient tout — code + datasets référencés en LFS + configs). Une seule opération de hash, simple à documenter.",
+          "ok": false,
+          "pts": -5,
+          "fb": "⚠️ Insuffisant. Git LFS référence les datasets mais ne les contient pas physiquement — un hash du repo Git ne couvre PAS le contenu réel des datasets. De plus, les poids du modèle déployé en production peuvent différer du repo (re-entraîné post-commit). Approche tentante mais incomplète.",
+          "legal": "Git LFS = pointeurs, pas contenu — hash insuffisant."
+        }
+      ]
+    },
+    {
+      "phase": "🎯 Identification du trigger — analyse statique des poids",
+      "situation": "Hofmann a passé 16h sur les poids. Elle vous présente : <em>« La couche 'classification_head' est modifiée sur 47 neurones sur 256. L'analyse des activations sur le test set montre un comportement déviant pour un sous-ensemble d'inputs. Pattern identifié : <strong>densité mammaire ≥ 0.58 + lésion détectée <8mm + classe BI-RADS 3-4</strong>. Dans ces cas, le modèle compromis produit 'BI-RADS 1-2 — pas d'anomalie suspecte' au lieu du diagnostic correct. »</em>",
+      "law": "<strong>MITRE ATLAS — AML.T0018.000 (Backdoor ML Model)</strong> — Classification de l'attaque.<br><strong>NIST AI 100-2 (2024)</strong> — Adversarial ML taxonomy : 'Trojan Attack' / 'Targeted Backdoor'.<br><strong>Adversarial Robustness Toolbox (IBM, 2024)</strong> — Outils standardisés pour détection backdoor.<br><strong>BI-RADS</strong> — Breast Imaging Reporting and Data System : classification radiologique standardisée 0-6.<br><strong>Pertinence pénale</strong> — Le trigger précis est crucial pour démontrer l'<em>intention</em> (art. 12 CP).",
+      "question": "<strong>Comment qualifiez-vous ce trigger ?</strong>",
+      "choices": [
+        {
+          "text": "Trigger ciblé sophistiqué : il vise spécifiquement les cas où le diagnostic est <em>difficile</em> pour un humain (densité élevée + petite lésion + zone grise BI-RADS 3-4), donc l'erreur passe pour de la variance normale. C'est délibéré, calculé, et techniquement aboutie. Profil d'attaquant expert (ML+oncologie).",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ Analyse correcte et lourde de conséquences pénales. Le choix du trigger n'est PAS aléatoire : (1) densité élevée = mammographies plus difficiles à lire (~30% de la population), (2) petite lésion <8mm = limite de détectabilité humaine, (3) BI-RADS 3-4 = zone grise diagnostique. <em>L'attaquant sait que ces cas sont ceux où l'erreur est attribuable à la variance</em>. Cette sophistication démontre <em>l'intention</em> (art. 12 al. 2 CP) — pas de la négligence. Pour 144bis CP et 125 CP, c'est crucial : la peine maximale s'applique pour intention.",
+          "legal": "Art. 12 al. 2 CP + MITRE AML.T0018 + NIST AI 100-2."
+        },
+        {
+          "text": "Trigger statistique aléatoire — le backdoor s'active sur ~3% des cas par hasard, sans pattern précis identifiable. Effet collatéral d'une modification de poids.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ Analyse erronée. Si vous identifiez 3 conditions précises (densité + taille + BI-RADS) et la modification de 47 neurones sur 256, c'est par définition un trigger <em>ciblé</em>, pas aléatoire. Sous-qualifier le trigger réduit le poids du dossier pénal — la défense pourra plaider 'erreur involontaire' (art. 12 al. 3 CP — négligence) et obtenir une peine fortement réduite.",
+          "legal": "Art. 12 CP — qualification du dol."
+        },
+        {
+          "text": "Pattern technique mais sans intention démontrable — peut résulter d'un over-fitting accidentel pendant le fine-tuning. À documenter sans conclure sur l'intentionnalité.",
+          "ok": false,
+          "pts": -5,
+          "fb": "⚠️ Trop prudent. L'over-fitting est <em>aléatoire</em> dans son comportement — il ne se concentre PAS sur 3 conditions cliniques précises et corrélées. Le pattern observé (densité+taille+BI-RADS) reflète <em>une connaissance clinique experte</em>, pas un artefact d'optimisation. Sur-prudence = sous-qualification = avantage défense. Vous êtes expert, votre rôle est de qualifier techniquement — la cour décide juridiquement.",
+          "legal": "Art. 184 CPP — l'expert doit conclure dans son domaine d'expertise."
+        }
+      ]
+    },
+    {
+      "phase": "🔁 Rejeu dynamique des 6'437 examens — méthodologie",
+      "situation": "Vous attaquez la phase dynamique. Délémont vous met en garde : <em>« On a deux modèles : (a) le modèle d'origine certifié validé avant déploiement clinique en avril, (b) le modèle compromis qui a tourné en production. Pour rejouer les 6'437 examens, il faut tourner les deux modèles sur les mêmes inputs et comparer. Mais attention : (1) il faut déchiffrer les images depuis le PACS CHUV (secret médical art. 321 CP), (2) il faut un hardware équivalent au prod (GPU même série, mêmes drivers), (3) il faut reproduire exactement les conditions de prétraitement. »</em>",
+      "law": "<strong>Art. 321 CP</strong> — Secret médical : levée nécessaire pour traiter les images des patientes.<br><strong>Art. 184 CPP</strong> — Expertise reproductible : conditions identiques pour conclusions valides.<br><strong>NIST AI 100-2</strong> — Méthode 'differential analysis' : comparaison output (model_A, input_X) vs output (model_B, input_X).<br><strong>ML reproducibility crisis</strong> — Sources de variance : seed, ordre des batchs, drivers GPU, version CUDA, version framework. Toutes à documenter.<br><strong>Pratique CCUC 2026 — Audit ML</strong> — Rejeu en chambre isolée du SI prod, jamais sur prod live.",
+      "question": "<strong>Comment organisez-vous le rejeu de 6'437 examens ?</strong>",
+      "choices": [
+        {
+          "text": "Rejeu en chambre isolée : (1) demande formelle de levée du secret médical art. 321 ch. 2 CP au Conseil d'État VD pour accès aux images PACS, (2) replication d'un environnement hardware identique (même GPU série, mêmes drivers, mêmes versions framework, seed fixée), (3) rejeu en double sur les 6'437 examens, (4) comparaison output par output, (5) documentation complète des conditions de rejeu (hash environnement Conda, drivers, BIOS) pour reproductibilité.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ Méthodologie irréprochable. (1) La levée formelle du secret médical par l'autorité de surveillance est <em>obligatoire</em> art. 321 ch. 2 CP — sans elle, vos résultats sont inexploitables en cour (art. 141 al. 2 CPP). (2) Le hardware équivalent évite la variance liée aux drivers GPU (les GPU modernes peuvent avoir des résultats non-déterministes selon les versions). (3) La seed fixée permet le rejeu reproductible. (4) Documentation hash environnement = la défense peut <em>reproduire</em> votre audit. C'est le gold standard ML forensique 2026.",
+          "legal": "Art. 321 ch. 2 CP + Art. 184 CPP + ISO/IEC 27037 + NIST AI 100-2."
+        },
+        {
+          "text": "Rejeu rapide sur un sous-échantillon aléatoire de 500 examens (estimation statistique). Si le taux de divergence est supérieur à 3%, conclure que le périmètre complet est impacté. Économie de temps significative.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ Méthodologie insuffisante. (1) Pour la procédure pénale, vous devez identifier <em>chaque patient lésé individuellement</em> — pas une 'estimation statistique'. (2) Le trigger est ciblé sur des sous-populations spécifiques (densité élevée + petite lésion) — un échantillon aléatoire de 500 risque de manquer des cas réels ou d'en surestimer. (3) Les patientes lésées identifiées seront partie plaignante : leur identification nominative est obligatoire (et c'est ce qui justifiera les dommages-intérêts).",
+          "legal": "Art. 122-126 CPP — Constitution de partie plaignante exige identification nominative."
+        },
+        {
+          "text": "Rejeu sur le serveur de production CHUV (gain de temps, hardware déjà configuré). Récupérer les 6'437 examens depuis le PACS et faire tourner les deux modèles en parallèle pendant la nuit.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Vice grave. (1) Le serveur de production est sous scellés depuis le 22 septembre — toucher dessus rompt la chaîne de custody. (2) Faire tourner du calcul intensif sur le serveur prod en pleine vie clinique perturbe les diagnostics normaux des autres patients. (3) Sans chambre isolée, vous mélangez les résultats de votre audit avec les diagnostics normaux — risque de confusion catastrophique. <em>Toujours en chambre isolée</em>.",
+          "legal": "Art. 248 CPP — scellés + ISO/IEC 27037 — isolement de l'environnement forensique."
+        }
+      ]
+    },
+    {
+      "phase": "🧨 Forensique Git — qui a poussé le commit empoisonné ?",
+      "situation": "L'analyse statique des poids identifie une signature de modification. Les logs MLflow montrent : <strong>commit SHA <code>a847e9f3</code></strong>, poussé le 14 août 2025 à 23h47 CET, branche <code>feature/finetune-mammo-v2</code>, message : 'Improve mammography precision on dense breast cases'. Auteur déclaré : <code>zhang.yi@epfl.ch</code>. Commit signé avec clé GPG <code>ED25519 SHA256:K3mhT...</code>. Adresse IP de push : <code>185.143.137.42</code> (VPS Roumanie). User-agent : <code>git/2.41.0 (Darwin x86_64)</code>.",
+      "law": "<strong>Forensique Git</strong> — Méthode standardisée d'analyse historique d'un repo.<br><strong>Signature GPG</strong> — Preuve cryptographique liant un commit à une clé.<br><strong>Art. 14 nLPD</strong> — Adresse IP = donnée personnelle.<br><strong>Conservation des logs Azure Sentinel</strong> — 90j chauds + 1 an archive (config EPFL).<br><strong>Attribution multi-source</strong> — IP + horodatage + clé GPG + style code = faisceau d'indices.",
+      "question": "<strong>Quelle force probante donnez-vous à ce commit pour attribuer le tampering ?</strong>",
+      "choices": [
+        {
+          "text": "Faisceau d'indices fort mais pas concluant à 100% : (1) clé GPG ED25519 associée au compte zhang.yi@epfl.ch (preuve crypto), (2) horodatage cohérent avec sa présence en Suisse (avant son retour en Chine en décembre), (3) IP VPS Roumanie pas son IP habituelle mais explicable (VPN ?), (4) style code et nommage cohérents avec ses précédents commits. Recommander complément d'enquête : audition Délémont, accès aux machines de Zhang Yi (saisie ultérieure), analyse forensique de ses ordinateurs.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ Rigueur expert. Vous présentez un <em>faisceau d'indices</em> (Heuer/Stephan) sans surinterpréter : la signature GPG prouve <em>l'utilisation de la clé</em>, pas nécessairement l'utilisation par Zhang Yi (clé compromise ? volée ?). Le faisceau converge vers Zhang Yi mais d'autres hypothèses restent possibles (autre doctorant ayant accès à sa machine, attaquant ayant volé sa clé GPG, etc.). Le rapport recommande <em>les actes complémentaires</em> qui scelleront l'attribution : c'est exactement ce que la procédure pénale attend de l'expert.",
+          "legal": "Art. 184 CPP — expert présente les faits, ne tranche pas la culpabilité."
+        },
+        {
+          "text": "Attribution certaine à Zhang Yi : signature GPG + horodatage + style = preuve définitive. Le rapport conclut formellement à sa responsabilité.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Sortie du rôle expert. L'expert technique présente <em>des faits</em>, pas une <em>culpabilité</em>. Conclure formellement à la responsabilité de Zhang Yi : (1) c'est le rôle du procureur puis du tribunal, pas le vôtre, (2) la défense pourra démolir votre rapport en pointant les hypothèses non explorées (clé volée, accès partagé, etc.), (3) votre crédibilité d'expert est entamée pour les affaires futures. <em>Restez factuel</em>.",
+          "legal": "Art. 184 CPP — séparation expert/juge."
+        },
+        {
+          "text": "Attribution impossible à conclure : trop d'hypothèses alternatives (clé volée, IP de VPS, etc.). Ne pas se prononcer sur l'auteur, se limiter au fait technique du tampering.",
+          "ok": false,
+          "pts": -5,
+          "fb": "⚠️ Sur-prudent inutile. Le faisceau d'indices <em>est</em> fort — vous ne pouvez pas l'ignorer. Refuser de présenter cette analyse au procureur prive l'enquête d'éléments pourtant légitimes. La <em>bonne</em> formulation : 'le faisceau est fort, voici les hypothèses alternatives, voici les actes recommandés pour discriminer'. Pas 'je ne peux rien dire'.",
+          "legal": "Art. 184 CPP — l'expert doit fournir ses meilleures conclusions techniques."
+        }
+      ]
+    },
+    {
+      "phase": "📝 Livrable final — le rapport qui tiendra au tribunal",
+      "situation": "Vendredi 6 novembre 2026, 16h00. Trois semaines et demie d'audit. Vous finalisez le rapport (217 pages, annexes inclues). Hofmann demande : <em>« Quelle structure pour le rapport final ? On vise quoi : un rapport scientifique ou un rapport judiciaire ? »</em>",
+      "law": "<strong>Art. 184 al. 4 CPP</strong> — Rapport d'expertise : forme, contenu, signatures.<br><strong>Art. 187 CPP</strong> — Le rapport doit être motivé et reproductible.<br><strong>ISO/IEC 27042</strong> — Guide pour l'interprétation et la communication des preuves numériques.<br><strong>Pratique CCUC 2026</strong> — Rapport audit ML : 'résumé exécutif <2 pages + corps technique + annexes brutes hashées'.<br><strong>EU AI Act Annexe IV</strong> — Documentation technique systèmes haut risque (référentiel applicable).",
+      "question": "<strong>Quelle structure adoptez-vous pour le rapport ?</strong>",
+      "choices": [
+        {
+          "text": "Rapport hybride : (1) résumé exécutif 2 pages (lisible par procureur/juge non technique), (2) méthodologie détaillée (15p, ISO 27037 + MITRE ATLAS), (3) résultats : trigger identifié + 147 examens divergents + 23 faux négatifs confirmés (40p), (4) attribution technique du commit (10p, faisceau d'indices, hypothèses alternatives), (5) annexes brutes hashées (150p : hashes, logs MLflow, exemples d'analyse statique des poids, exemples d'analyse dynamique). Signé par les trois experts (Sutter, Hofmann, Délémont en consultant).",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ Structure judiciaire optimale. Le résumé exécutif permet au procureur Brun et à la juge Caroline M. de comprendre <em>en 5 minutes</em> ce qui est démontré. Le corps technique permet aux experts contradicteurs de la défense de <em>tester</em> votre méthodologie. Les annexes brutes hashées garantissent la reproductibilité (la défense peut <em>refaire</em> votre audit avec exactement les mêmes données). Triple signature = crédibilité institutionnelle.",
+          "legal": "Art. 184-187 CPP + ISO/IEC 27042 + Pratique CCUC 2026."
+        },
+        {
+          "text": "Rapport purement scientifique : 80 pages, format académique (style article NeurIPS), équations détaillées, références bibliographiques. Précis et techniquement exact, mais peu accessible aux non-experts.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ Inadapté. Un rapport en format académique : (1) ne sera <em>pas lu</em> par le procureur/juge (qui sont juristes, pas mathématiciens), (2) ne permettra pas l'évaluation contradictoire facile (la défense devra payer un expert technique pour le déchiffrer = délais et coûts), (3) sera potentiellement écarté par la cour pour manque d'accessibilité. Vous écrivez pour la justice, pas pour une revue scientifique.",
+          "legal": "Art. 184 CPP — rapport adapté à l'usage procédural."
+        },
+        {
+          "text": "Rapport court (30 pages) avec les conclusions et la qualification juridique des faits (143/143bis/144bis CP). Pas d'annexes lourdes. Format opérationnel pour le procureur.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Vice fondamental. (1) L'expert <em>ne qualifie pas juridiquement</em> les faits — c'est le rôle du procureur, pas l'expert. (2) Sans annexes hashées et reproductibles, la défense gagnera l'argument 'expertise non reproductible'. (3) 30 pages ne suffisent pas à documenter 6 semaines d'audit ML — la cour conclura à la légèreté. Tout cela = rapport démonté en cour.",
+          "legal": "Art. 184 CPP — séparation expert/qualification juridique + ISO/IEC 27042."
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "compass_security_lead_forensic",
+    "etzh_ai_forensic_lead",
+    "delemont",
+    "dpo_epfl",
+    "chuv_ciso_lambert"
+  ],
+  "regionDetail": {
+    "code": "VD",
+    "flag": "🇨🇭",
+    "name": "Vaud",
+    "commune": "Lausanne / Berne (Compass)",
+    "company": "Compass Security AG — Salle d'audit ML forensique"
+  },
+  "region": "VD"
+}
