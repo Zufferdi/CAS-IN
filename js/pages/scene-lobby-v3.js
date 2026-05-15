@@ -207,6 +207,60 @@
         'ne-affaire-csem-7-audience-neuchatel'
       ]
     },
+
+    // ─────────────────────────────────────────────────────────
+    //  PARCOURS « SAGA INITIATION » — Premiers pas du métier
+    // ─────────────────────────────────────────────────────────
+    {
+      id: 'initiation', icon: '🎓', title: 'Saga Initiation — Premiers pas',
+      desc: 'La progression structurée de l\'aspirant inspecteur DFIR : du premier appel aux scellés, en passant par la chaîne de custody et les rapports d\'expertise. Sept scènes pour assimiler la méthode et le vocabulaire avant d\'aborder les sagas complexes.',
+      level: 'easy',
+      scenes: [
+        'premier_appel',
+        'custody',
+        'osint-licite',
+        'metadata',
+        'attribution',
+        'trois_artefacts',
+        'conclusion'
+      ]
+    },
+
+    // ─────────────────────────────────────────────────────────
+    //  PARCOURS « L'AFFAIRE AAR-FRUTIGEN » — Fil rouge bernois (v3.3)
+    //  5 scènes — Fournisseur IT cantonal compromis, 47 communes touchées
+    //  Entremêlé avec « L'Affaire de la Singine » (Fribourg)
+    // ─────────────────────────────────────────────────────────
+    {
+      id: 'affaire_aar_frutigen', icon: '🏛️', title: 'L\'Affaire Aar-Frutigen — Fil rouge bernois',
+      desc: 'Le fournisseur IT cantonal bernois est compromis. 47 communes touchées, des actes d\'état civil exposés, et un implant qui crache un wallet Bitcoin. De la détection à l\'audience TMC, cinq actes pour comprendre la supply chain compromise — et découvrir qu\'une autre affaire, à Fribourg, partage le même suspect.',
+      level: 'hard',
+      scenes: [
+        'be-affaire-aar-frutigen-1-kantonnet-detection',
+        'be-affaire-aar-frutigen-2-expert-forensique-jcfc',
+        'be-affaire-aar-frutigen-3-coordination-47-communes',
+        'be-affaire-aar-frutigen-4-suspect-ex-dev',
+        'be-affaire-aar-frutigen-5-audience-tmc'
+      ]
+    },
+
+    // ─────────────────────────────────────────────────────────
+    //  PARCOURS « L'AFFAIRE DE LA SINGINE » — Fil rouge fribourgeois (v3.3)
+    //  5 scènes — Hôpital fribourgeois sous ransomware, lien BE
+    //  Entremêlé avec « L'Affaire Aar-Frutigen » (Berne)
+    // ─────────────────────────────────────────────────────────
+    {
+      id: 'affaire_singine', icon: '🏥', title: 'L\'Affaire de la Singine — Fil rouge fribourgeois',
+      desc: 'Hôpital fribourgeois de Singine paralysé par un ransomware. La piste remonte au même implant que celui découvert dans l\'affaire Aar-Frutigen (Berne). Cinq actes pour suivre la convergence des deux cantons et le travail du MP-FR avec son homologue bernois.',
+      level: 'hard',
+      scenes: [
+        'fr-affaire-singine-1-hopital-paralyse',
+        'fr-affaire-singine-2-osint-bernois',
+        'fr-affaire-singine-3-tracking-crypto-recoupement',
+        'fr-affaire-singine-4-arrestation-be-fr',
+        'fr-affaire-singine-5-audience-conjointe-tmc'
+      ]
+    }
   ];
 
   // Export pour scene-lobby-pitch-v1.js (panneau pitch enrichi)
