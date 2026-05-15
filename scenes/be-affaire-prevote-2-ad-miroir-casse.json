@@ -1,0 +1,248 @@
+{
+  "id": "be-affaire-prevote-2-ad-miroir-casse",
+  "title": "Affaire de la Prévôté #2 — Le miroir cassé (DSI Moutier)",
+  "icon": "🪞",
+  "difficulty": "hard",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Vous avez démontré la compromission de l'AD communale, identifié l'étendue du Golden Ticket, et alerté la DSI Jura avant la migration. La preuve est solide et survivra au transfert.",
+    "degraded": "L'AD a été compromise mais l'étendue exacte reste floue. Le risque de pollution post-migration est élevé.",
+    "failure": "Vous avez touché aux comptes administrateur avant l'expertise. L'attaquant a probablement été alerté."
+  },
+  "tags": [
+    "DFIR",
+    "ACTIVE DIRECTORY",
+    "PASS-THE-HASH",
+    "NTDS",
+    "BLOODHOUND",
+    "MOUTIER",
+    "POLKAPO BE"
+  ],
+  "legalRefs": [
+    {
+      "label": "Art. 143 CP",
+      "title": "Soustraction de données — applicable au dump NTDS.dit"
+    },
+    {
+      "label": "Art. 143bis CP",
+      "title": "Accès indu — usurpation Kerberos"
+    },
+    {
+      "label": "Art. 144bis CP",
+      "title": "Détérioration de données — Golden Ticket"
+    },
+    {
+      "label": "Art. 184 CPP",
+      "title": "Expertise — analyse AD reproductible"
+    },
+    {
+      "label": "Concordat BE-JU art. 12",
+      "title": "Migration des systèmes communaux — sécurité partagée"
+    },
+    {
+      "label": "ATF 144 IV 74",
+      "title": "Procédure de scellés appliquée aux supports numériques"
+    }
+  ],
+  "intro": "<p>Vendredi 19 décembre 2025, 06h30. Onze jours après votre intervention chez Microparts. Vous (<strong>Wachtmeister Brunner</strong>) êtes attendu par <strong>Karin Zwahlen</strong>, responsable DSI de la commune de Moutier, à la Mairie (rue de l'Hôtel-de-Ville). La veille au soir, son équipe a détecté une anomalie : un compte de service (<code>svc_archive$</code>) a effectué 14'000 requêtes Kerberos en 2 heures vers des hôtes auxquels il n'aurait jamais dû parler. Empreinte caractéristique de <strong>Kerberoasting</strong>.</p><p>Le contexte est particulier : la commune de Moutier finalise sa <strong>migration</strong> du tenant Microsoft 365 cantonal bernois (<code>be.kantonnet.ch</code>) vers le tenant jurassien (<code>ju.cic.admin.ch</code>). Vague 1 (octobre 2025) : comptes nominatifs basculés. Vague 2 (5-7 janvier 2026) : groupes Active Directory, dossiers métier, partages. Pendant cette transition, l'AD communale est <strong>en double-tenant</strong> — les deux directions cantonales le savent et l'ont documenté comme « risque connu, accepté pour les besoins opérationnels ».</p><p>Zwahlen vous tend un timeline papier : « Brunner, regardez ça. Cette activité a démarré <strong>en juillet</strong>. Cinq mois. Et nous, on basculait des comptes à l'aveugle dans le nouveau tenant. »</p>",
+  "alertLevel": "🚨 AD COMMUNALE COMPROMISE · Kerberoasting actif · Migration BE→JU dans 17 jours · double-tenant à risque",
+  "objectives": [
+    "Confirmer la compromission AD via méthode forensique reproductible (BloodHound, NTDS dump analysis)",
+    "Évaluer l'étendue de la persistence (Golden Ticket ? DCSync ?)",
+    "Coordonner avec la DSI JU pour préserver la sécurité de la migration sans révéler l'enquête",
+    "Faire le lien avec l'attaque Microparts (même acteur ? même C2 ?)"
+  ],
+  "debrief": "<p><strong>Active Directory forensics post-compromise</strong> — méthode canonique : (1) acquisition de <code>NTDS.dit</code> via VSS (Volume Shadow Copy) ou ntdsutil ; (2) extraction des hash NTLM/Kerberos avec impacket-secretsdump (mode offline, depuis copie) ; (3) BloodHound (collecteur SharpHound) pour cartographier les chemins d'attaque et les comptes pivots ; (4) recherche d'événements Kerberos suspects (4769 - TGS request, 4768 - TGT request) dans les Security logs avec analyse temporelle et taille ; (5) détection des Golden Tickets via anomalies temporelles (TGT valide > 10h, lifetime non standard, krbtgt KRBTGT password reset distance). Outils complémentaires : Kekeo, Rubeus pour la compréhension TTP, mais en lecture seule en forensique.</p><p><strong>Le piège du double-tenant</strong> : pendant une migration M365, l'identité de l'utilisateur peut exister simultanément dans deux tenants. Si l'attaquant a une emprise sur l'AD source, il peut potentiellement répliquer sa persistence dans le tenant cible via les outils de synchronisation (Azure AD Connect, MIM). C'est exactement le risque que la DSI doit maîtriser pendant la fenêtre 5-7 janvier 2026.</p><p><strong>Information de la DSI Jura</strong> : la coordination est juridiquement délicate. La DSI JU n'est pas autorité de poursuite — elle est un tiers technique. La communication doit passer par le coordinateur du concordat (Hostettler) ou par voie procureure-à-procureure (Stettler BE → Boillat JU). Une fuite vers la DSI JU sans cadre = violation art. 73 CPP.</p>",
+  "steps": [
+    {
+      "phase": "🧬 09h30 — Détection : 14'000 requêtes Kerberos en 2 heures",
+      "situation": "Zwahlen vous donne accès aux Security logs (export EVTX horodaté, hash documenté). Vous voyez : entre le 18.12 22h17 et le 19.12 00h31, le compte <code>svc_archive$</code> a généré 14'238 événements 4769 (Kerberos TGS requests) vers 47 SPN différents — dont 18 portant un <code>HOST/</code> sur des contrôleurs de domaine. Sur les 47 SPN, 31 ont reçu une réponse RC4_HMAC (chiffrement faible) — vulnérables au Kerberoasting offline. Zwahlen : « <code>svc_archive$</code> est un compte service legacy qu'on n'a jamais migré, créé en 2014 par un consultant qui n'est plus là. »",
+      "law": "<strong>Art. 144bis CP</strong> + <strong>Art. 143 CP</strong> — Le Kerberoasting permet l'extraction offline de mots de passe = soustraction de données.<br><strong>Art. 263 CPP</strong> — Séquestre des logs.<br><strong>ATF 144 IV 74</strong> — Procédure de scellés pour les supports.",
+      "question": "<strong>Quelle est votre première action d'analyse ?</strong>",
+      "choices": [
+        {
+          "text": "Réinitialiser immédiatement le mot de passe de <code>svc_archive$</code> pour bloquer l'attaquant, puis investiguer. Sécurité d'abord.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ ERREUR PROCÉDURALE ET TECHNIQUE. (1) Réinitialiser le mot de passe = alerter immédiatement l'attaquant que vous l'avez détecté. Il va pivoter vers ses autres persistences avant que vous ne les cartographiez. (2) Vous perdez la possibilité de tracer toute la kill chain. (3) Mais surtout : le Kerberoasting est offline — si l'attaquant a déjà extrait les hash il y a 9 heures, ils sont déjà sur sa machine en train d'être crackés. Changer le mot de passe ne change RIEN à cette extraction passée. (4) L'action correcte est : préserver, analyser, puis intervenir coordonné.",
+          "legal": "Cf. ISO 27037 + pratique forensique constante.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Acquisition d'une copie write-protected des Security logs (export EVTX hashé). Demande à Zwahlen d'un export <code>NTDS.dit</code> via VSS sur le contrôleur de domaine secondaire (pour ne pas perturber le primaire). Analyse offline avec impacket-secretsdump.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ MÉTHODE CANONIQUE. (1) Acquisition write-protected des logs = chaîne de custody (ATF 144 IV 74 si scellés). (2) Dump NTDS via DC secondaire = pas de perturbation observable, pas d'alerte à l'attaquant. (3) impacket-secretsdump en offline = reproductible, documentable, art. 184 CPP. (4) Vous préparez en parallèle BloodHound (collecte SharpHound discrète depuis station d'investigation, pas depuis un DC).",
+          "legal": "Art. 184 + 263 CPP + ATF 144 IV 74 — Méthode reproductible et préservée.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Demander à Zwahlen de couper les contrôleurs de domaine et exporter tout le SYSVOL en image disque. On verra après.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Réaction de pompier. (1) Couper les DC = paralyser la commune (authentification, mail, ressources). (2) L'image disque ne montrera pas les attaques en mémoire (golden ticket par exemple). (3) Sans plan d'analyse, vous accumulez des données sans pouvoir les exploiter. (4) Une commune ne peut pas se permettre une coupure non planifiée 17 jours avant son transfert cantonal.",
+          "legal": "Principe de proportionnalité (Art. 197 CPP) non respecté.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🩸 11h00 — BloodHound révèle les chemins d'attaque",
+      "situation": "Analyse offline de NTDS.dit (dump hash documenté). Vous trouvez : (1) <code>svc_archive$</code> a le SPN <code>MSSQLSvc/sql-archive.moutier.local:1433</code>, mot de passe en RC4_HMAC, faible — extrait offline en ~6 minutes via hashcat avec un dictionnaire FR. (2) BloodHound (graph importé) montre que <code>svc_archive$</code> a des droits <code>WriteDACL</code> sur 4 OUs dont <code>OU=Migration_JU</code> créée en novembre pour préparer la bascule. (3) <strong>Plus inquiétant</strong> : le compte <code>krbtgt</code> a eu son mot de passe changé le <strong>5 août 2025</strong> — alors que la DSI affirme ne pas l'avoir touché. <strong>Signature classique d'un Golden Ticket préparé</strong>.",
+      "law": "<strong>Art. 143 + 143bis + 144bis CP</strong> en concours.<br><strong>Art. 184 CPP</strong> — Expertise reproductible : impacket, BloodHound, hashcat avec version, dictionnaire, hash.",
+      "question": "<strong>Comment interprétez-vous le changement de mot de passe krbtgt du 5 août ?</strong>",
+      "choices": [
+        {
+          "text": "Indice fort d'un <strong>Golden Ticket pré-positionné</strong>. L'attaquant a obtenu le hash NT du compte krbtgt (probablement via DCSync depuis un compte avec droit de réplication) à une date inconnue, puis a forcé un changement pour s'assurer un TGT signé valide. Persistence durable même si tous les autres comptes sont changés.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ LECTURE EXPERTE. Le compte krbtgt signe TOUS les TGT du domaine. Si l'attaquant en a le hash NT, il peut forger des TGT signés pour n'importe quel utilisateur, avec n'importe quel SID et n'importe quels groupes — autant de Golden Tickets valides aussi longtemps que le mot de passe krbtgt reste inchangé. Le forcer à le changer (volontairement ou via une routine apparente) avec un hash déjà extrait = persistence de plusieurs mois. Le contre-mesure connue est le <strong>double rotation du krbtgt</strong> (deux changements à intervalle court) — chose que la DSI doit faire MAINTENANT, mais après acquisition des artefacts en mémoire.",
+          "legal": "Art. 184 CPP — Analyse experte reproductible.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Routine de sécurité légitime de la DSI qu'elle a oubliée. krbtgt est changé périodiquement.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Lecture naïve. (1) Zwahlen affirme ne pas l'avoir touché — elle est crédible : la rotation krbtgt n'est pas une routine commune. (2) Le timing (5 août) coïncide avec un pic d'activité réseau anormale sur le DC (que vous trouverez dans les logs). (3) Une lecture experte combine plusieurs indicateurs — ici, la convergence (krbtgt + Kerberoasting svc_archive + droits WriteDACL sur OU=Migration_JU) est trop forte pour être coïncidente.",
+          "legal": "Cf. Art. 10 CPP — Appréciation des preuves dans leur ensemble.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Possible mais non prouvable. À investiguer plus tard, on a déjà assez d'éléments pour 143bis.",
+          "ok": false,
+          "pts": -5,
+          "fb": "Position attentiste qui passe à côté de l'essentiel. Un Golden Ticket pré-positionné est l'élément <strong>le plus dangereux</strong> de toute compromission AD car il survit à toutes les remédiations habituelles. Ne pas le traiter prioritairement = laisser une porte ouverte qui se manifestera après la migration JU, contaminant le nouveau tenant. La DSI doit faire la double rotation krbtgt avant la bascule du 5 janvier.",
+          "legal": "Principe de précaution opérationnelle.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🔗 14h00 — Information de la DSI JU : comment et par qui ?",
+      "situation": "Zwahlen vous le dit clairement : « Si on bascule le 5 janvier sans informer la DSI Jura, et qu'ils découvrent ensuite la compromission, on a un problème éthique majeur. Mais si vous me dites de leur transmettre les détails techniques sans cadre, je suis coincée avec le secret de fonction (art. 320 CP) et le secret de l'instruction (art. 73 CPP) puisque je suis maintenant collaboratrice de la procédure ouverte. »",
+      "law": "<strong>Art. 73 CPP</strong> — Secret de l'instruction.<br><strong>Art. 320 CP</strong> — Violation du secret de fonction.<br><strong>Art. 75 al. 4 CPP</strong> — Communications à d'autres autorités si la sécurité publique l'exige.<br><strong>Concordat BE-JU art. 12</strong> — Migration des systèmes communaux et sécurité partagée.",
+      "question": "<strong>Quel canal d'information de la DSI JU est juridiquement propre ?</strong>",
+      "choices": [
+        {
+          "text": "Demander à la Dr Stettler (MP-BE) de saisir formellement le coordinateur Hostettler (concordat) qui peut, en vertu de l'art. 12 du concordat et de l'art. 75 al. 4 CPP, autoriser une communication encadrée à la DSI JU portant exclusivement sur les indicateurs techniques nécessaires à sécuriser la migration. Documenté au PV.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ EXCELLENT MONTAGE JURIDIQUE. (1) C'est la Dr Stettler (procureure) qui a autorité sur le secret, pas vous. Vous la sollicitez via votre hiérarchie. (2) Le concordat art. 12 prévoit explicitement la sécurité partagée des systèmes communaux pendant la migration — le coordinateur Hostettler est le point de contact prévu. (3) L'art. 75 al. 4 CPP autorise la communication à d'autres autorités si la sécurité publique l'exige — c'est le cas ici (compromission d'une infrastructure cantonale en cours de migration). (4) La communication est limitée aux indicateurs techniques nécessaires (IoC, hash, comportement à surveiller) — pas au dossier complet. (5) Tout est documenté = défendable en audience.",
+          "legal": "Art. 75 al. 4 CPP + Concordat BE-JU art. 12 — Communication encadrée justifiée.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Zwahlen appelle elle-même son homologue DSI JU pour le prévenir « entre techniciens », sans entrer dans les détails de l'enquête.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Risque procédural. (1) Zwahlen est maintenant collaboratrice de la procédure, le secret de l'instruction lui est opposable (art. 73 CPP). (2) Sa hiérarchie communale est BE jusqu'au 31.12 — elle n'a pas mandat pour communiquer à JU. (3) Une communication informelle « entre techniciens » sur une compromission active = exactement ce que la jurisprudence sanctionne (ATF 138 IV 169 fruit empoisonné — si la DSI JU agit sur cette base puis l'attaquant est arrêté, la défense plaidera l'irrégularité de l'origine).",
+          "legal": "Art. 73 CPP + ATF 138 IV 169.",
+          "critical": true,
+          "next": 3
+        },
+        {
+          "text": "Reporter la migration JU de quelques mois jusqu'à ce que l'enquête soit close. Demande de la Polkapo BE au Pôle de coordination.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Action disproportionnée. (1) Le transfert de Moutier au Jura est un acte constitutionnel cadré par les Chambres fédérales — il ne peut pas être reporté sur demande de la police cantonale. (2) Le concordat prévoit précisément la <strong>continuité opérationnelle</strong> pendant la transition, pas un report. (3) Reporter ferait courir un risque politique majeur (citoyens de Moutier qui ont voté pour le 1.1.2026). La bonne approche est de sécuriser la migration, pas de la bloquer.",
+          "legal": "Concordat BE-JU + art constitutionnel Moutier — Pas révisable.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🧩 16h30 — Lien avec Microparts ?",
+      "situation": "Vous comparez les IoC de Microparts (11 décembre, implant eBPF) avec ceux trouvés ici (Kerberoasting AD). Surface technique très différente — d'un côté Linux/kernel, de l'autre Windows/AD. Mais : (a) les IP de C2 sortantes pointent vers les mêmes blocs OVH/Hetzner louches, (b) timing : début juillet pour la commune, début juin pour Microparts (selon les analyses logs Microparts), (c) géographie : 800 mètres entre les deux entités à Moutier. Question : même acteur, ou coïncidence ?",
+      "law": "<strong>Art. 309 CPP</strong> — Élargissement de l'instruction.<br><strong>Art. 29 CPP</strong> — Jonction des procédures.<br><strong>Art. 10 al. 2 CPP</strong> — Appréciation libre des preuves.",
+      "question": "<strong>Faut-il joindre les deux procédures ?</strong>",
+      "choices": [
+        {
+          "text": "Pas encore. On documente les corrélations (mêmes blocs IP C2, timing, géographie) au dossier mais on attend l'analyse threat intel complète et l'avis de la Dr Stettler avant de joindre formellement.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ PRUDENCE BIEN PLACÉE. (1) Joindre prématurément = risque que les deux dossiers se polluent si l'un d'eux est plus tard contesté. (2) Documenter les corrélations sans joindre = vous gardez les options ouvertes. (3) La décision de joindre est procureurale (art. 29 CPP) — c'est à la Dr Stettler de trancher, pas à l'inspecteur. (4) L'analyse threat intel (qui interviendra en acte 5) consolidera ou réfutera la corrélation.",
+          "legal": "Art. 29 CPP — Décision procureurale + Art. 10 al. 2 CPP — Approche graduée.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Oui, joindre immédiatement les deux dossiers. Tout pointe vers le même acteur, on perdra du temps si on les sépare.",
+          "ok": false,
+          "pts": -5,
+          "fb": "Position défendable mais prématurée. Le faisceau d'indices (blocs IP, timing, géographie) est suggestif mais pas dirimant. La défense plaidera plus tard que la jonction a contaminé l'analyse. Faisons-le après l'attribution croisée (acte 5).",
+          "legal": "Art. 29 CPP — Possible mais prématuré.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Non, jamais. Deux entités, deux dossiers. Indépendance procédurale.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ Rigidité contre-productive. Si l'enquête démontre plus tard que c'est le même acteur avec le même but, refuser de joindre = doubler le travail, fragmenter les preuves, et offrir à la défense des angles d'attaque (« faits isolés, pas d'organisation criminelle »). L'art. 29 CPP existe précisément pour ces situations.",
+          "legal": "Art. 29 CPP — Outil sous-utilisé.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "📋 18h30 — Rapport et décision : double rotation krbtgt avant migration",
+      "situation": "Bilan : compromission AD confirmée, persistence Golden Ticket très probable, lien Microparts plausible mais non prouvé. La double rotation krbtgt (changer le mot de passe krbtgt deux fois à 10 heures d'intervalle) est une action <strong>opérationnelle</strong> que la DSI doit faire. Mais elle révélera à l'attaquant qu'il est détecté. Timing : avant la migration du 5 janvier 2026 (sécurité) ou après (préserver l'effet de surprise enquête) ?",
+      "law": "<strong>Art. 197 CPP</strong> — Principe de proportionnalité (équilibrer sécurité et enquête).<br><strong>Art. 75 al. 4 CPP</strong> — Communication à d'autres autorités si la sécurité publique l'exige.",
+      "question": "<strong>Quand fait-on la double rotation krbtgt ?</strong>",
+      "choices": [
+        {
+          "text": "Le 4 janvier 2026 (veille de la migration), de manière coordonnée Polkapo BE + DSI Moutier + DSI JU (autorisée par Hostettler). Avec en parallèle, surveillance active de tous les C2 connus pour capter la réaction de l'attaquant.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ TIMING OPTIMAL. (1) Le 4 janvier = juste avant la migration, donc la sécurité de la commune est préservée pour le passage au tenant JU. (2) Coordination Polkapo BE + DSI Moutier + DSI JU = continuité opérationnelle. (3) Surveillance des C2 = vous savez si l'attaquant tente une dernière action désespérée, ce qui peut révéler d'autres assets ou techniques. (4) C'est aussi une démonstration aux yeux du tribunal d'une gestion responsable de la transition — précieux en cas de contestation procédurale ultérieure.",
+          "legal": "Art. 197 CPP — Proportionnalité respectée.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Maintenant (20 décembre 2025). La sécurité d'abord, l'enquête après.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Approche défendable mais sub-optimale. Faire la rotation 16 jours avant la migration laisse 16 jours à l'attaquant pour observer, comprendre qu'il est détecté, changer ses TTPs, voire activer un autre vecteur de persistence que vous n'avez pas encore identifié. La rotation tardive (4 janvier) est plus stratégique tout en gardant un délai de sécurité.",
+          "legal": "Art. 197 CPP — Proportionnalité satisfaite mais pas optimale.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Après la migration (~ 10 janvier), pour préserver l'effet de surprise et observer si l'attaquant pivot vers le tenant JU.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Trop risqué. (1) Pendant les 5 jours de bascule (5-10 janvier), l'attaquant a un Golden Ticket valide dans l'AD source ET potentiellement dans le tenant cible (via la synchronisation Azure AD Connect). (2) S'il déclenche une action destructive (chiffrement, exfiltration massive) pendant la migration, le dégât est démultiplié et la responsabilité partagée entre BE et JU sera politiquement explosive. (3) L'observation contrôlée a des limites — la priorité reste la sécurité de l'infrastructure communale.",
+          "legal": "Art. 197 CPP — Proportionnalité violée (risque > bénéfice).",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "be_polkapo_cyber",
+    "be_prosecutor_cyber",
+    "dsi_moutier_zwahlen",
+    "bekb_concordat_coord",
+    "expert_ad_glauser",
+    "be_kantonnet_ciso",
+    "ju_polcant_cyber"
+  ],
+  "regionDetail": {
+    "ville": "Moutier",
+    "code": "BE"
+  },
+  "region": "BE",
+  "realCase": false
+}

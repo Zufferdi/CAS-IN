@@ -1,0 +1,252 @@
+{
+  "id": "be-affaire-prevote-1-signal-kernel-moutier",
+  "title": "Affaire de la Prévôté #1 — Le ver dans le pommier (Microparts SA)",
+  "icon": "🪲",
+  "difficulty": "hard",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Vous avez détecté un implant eBPF actif depuis ~6 mois, préservé la mémoire vive et constitué un dossier exploitable. La compétence territoriale est claire : Moutier = BE jusqu'au 31 décembre 2025.",
+    "degraded": "L'implant a été identifié mais la chaîne de custody présente des faiblesses qui se paieront plus tard. La phase de transfert juridictionnel sera plus difficile.",
+    "failure": "Reboot brutal du serveur. Mémoire vive perdue. L'implant éventuel a peut-être lui-même nettoyé ses traces sur disque. La procédure démarre dégradée."
+  },
+  "tags": [
+    "DFIR",
+    "EBPF",
+    "LINUX",
+    "RAM",
+    "MOUTIER",
+    "POLKAPO BE",
+    "PRÉVÔTÉ"
+  ],
+  "legalRefs": [
+    {
+      "label": "Art. 144bis CP",
+      "title": "Détérioration de données — applicable à l'altération du noyau Linux"
+    },
+    {
+      "label": "Art. 143bis CP",
+      "title": "Accès indu à un système informatique"
+    },
+    {
+      "label": "Art. 309 CPP",
+      "title": "Ouverture de l'instruction par le MP"
+    },
+    {
+      "label": "Art. 263 + 265 CPP",
+      "title": "Séquestre de pièces à conviction (logs, dumps)"
+    },
+    {
+      "label": "Art. 31 CPP",
+      "title": "For à raison du lieu — Moutier = BE jusqu'au 31.12.2025"
+    },
+    {
+      "label": "ATF 138 IV 169",
+      "title": "Fruit de l'arbre empoisonné — préservation chaîne probatoire"
+    },
+    {
+      "label": "ISO/IEC 27037:2012",
+      "title": "Identification, collection, acquisition et préservation des preuves numériques"
+    }
+  ],
+  "intro": "<p>Lundi 8 décembre 2025, 06h47. Vous êtes <strong>Wachtmeister Brunner</strong>, inspecteur principal à la cellule cybercriminalité de la <strong>Polkapo BE</strong> (Polizei- und Militärdirektion, Berne). Votre téléphone vibre — un appel de l'OFCS (NCSC) à Berne : la veille au soir, leur sonde de threat intel a détecté un C2 sortant depuis l'IP fixe d'une PME de <strong>Moutier</strong>. La PME est <strong>Microparts Précision SA</strong> (rue Industrielle 89, 47 employés, sous-traitant de décolletage horloger de Tornos voisin). Marc Weber (govCERT) vous résume : « Le pattern matche un implant <em>eBPF/Linux</em> documenté par Kudelski Security en septembre — <code>BPFDoor</code> variant. Persistence kernel, communication via raw socket, jamais d'écriture disque, jamais d'écoute de port. »</p><p>Sur la route entre Berne et Moutier (01h25 de trajet) vous appelez le PDG, <strong>Sandro Pellegrini</strong>. Vous lui demandez impérativement de <strong>ne pas redémarrer</strong> le serveur incriminé. Pellegrini, paniqué : « Mais on doit livrer 2'400 pièces aux Manufactures pour Noël, le serveur héberge l'ERP qui pilote les machines… »</p><p>Vous arrivez à 08h30. Le serveur en cause est un Dell PowerEdge sous Debian 12 servant à la fois d'ERP (Odoo) et de pont MQTT vers le parc CNC. <strong>27 jours avant le transfert de Moutier au canton du Jura.</strong> Vous avez 90 minutes avant que Pellegrini exige une « reprise normale d'activité ».</p>",
+  "alertLevel": "🚨 IMPLANT KERNEL · eBPF · BPFDoor variant · Persistence ~6 mois suspectée · Moutier BE J-27 avant transfert JU",
+  "objectives": [
+    "Préserver l'état du système sans le redémarrer — acquisition mémoire vive priorisée",
+    "Documenter la chaîne de custody conforme à l'ISO 27037 (compétence BE encore)",
+    "Qualifier l'infraction et ouvrir formellement la procédure (art. 309 CPP)",
+    "Anticiper la complication juridictionnelle imminente du transfert Moutier BE→JU"
+  ],
+  "debrief": "<p><strong>Implant kernel eBPF</strong> : variante moderne de la famille BPFDoor (DAMSelfish, JustForFun). Caractéristiques : (1) chargement comme programme eBPF attaché à un syscall, donc dans le noyau et donc invisible aux EDR userland classiques ; (2) communication via raw socket — le trafic C2 passe en clair mais sans port en écoute ; (3) déclencheur par <em>magic packet</em> (séquence TCP particulière dans un paquet anodin) ; (4) zéro fichier persisté sur disque — la persistence est gérée par un service systemd lui-même invisible. Détection : eBPF Verifier logs, BTF (BPF Type Format), <code>bpftool prog list</code>, ou outils dédiés (Tracee, Falco).</p><p><strong>Live response Linux</strong> : ordre canonique de l'acquisition (volatility descending) — registres CPU, mémoire vive, network state, processus, fichiers ouverts, table de routage, modules kernel, comptes connectés, puis disque. <code>insmod lime.ko \"path=/mnt/usb/dump.lime format=lime\"</code> pour l'image mémoire. <code>ss -tulpn</code> + <code>netstat -anp</code> pour les sockets. Sur un système avec implant eBPF, ne jamais faire confiance aux outils userland du système — utiliser des binaires statiques montés depuis un support read-only.</p><p><strong>Compétence territoriale</strong> : Moutier appartient au canton de Berne jusqu'au 31 décembre 2025 à 23h59. Donc la <strong>Polkapo BE</strong> est compétente pour l'enquête sur les faits commis ou découverts avant cette date (art. 31 CPP). Le transfert au canton du Jura le 1er janvier 2026 créera une situation inédite que le <strong>concordat intercantonal BE-JU du 15 mars 2025</strong> doit régler. Anticiper dès maintenant cette transition est essentiel pour préserver la procédure.</p>",
+  "steps": [
+    {
+      "phase": "🌅 08h30 — Arrivée chez Microparts Précision SA",
+      "situation": "Le serveur est allumé, console accessible. Pellegrini a respecté votre demande de ne rien toucher. L'ERP fonctionne, les machines tournent. Vous avez avec vous votre kit forensique (clé USB write-protected, disque externe préparé, kit LiME compilé pour Debian 12). Le PDG vous demande dans combien de temps il peut reprendre. Une analyse rapide montre un processus systemd suspect (<code>krn-update.service</code>) qui n'est pas un binaire Debian standard. Vous voyez aussi via <code>bpftool prog list</code> deux programmes eBPF qui n'ont pas de propriétaire identifiable.",
+      "law": "<strong>Art. 263 + 265 CPP</strong> — Séquestre de pièces à conviction.<br><strong>ISO/IEC 27037</strong> — Acquisition par ordre de volatilité décroissante.<br><strong>Art. 144bis CP</strong> — Détérioration de données (le simple fait d'avoir installé l'implant constitue déjà l'infraction).",
+      "question": "<strong>Quelle est votre première action technique ?</strong>",
+      "choices": [
+        {
+          "text": "Éteindre le serveur proprement (shutdown -h now) pour préserver les disques. Vous étudierez les disques ensuite en laboratoire à Berne avec X-Ways et FTK.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ ERREUR CRITIQUE. Un implant eBPF vit dans le noyau, donc <strong>en mémoire vive uniquement</strong>. Éteindre le serveur = perdre toute la preuve technique principale. Le disque ne montrera potentiellement <em>rien</em>. C'est exactement le piège que tend BPFDoor : pas de persistence disque → si le réflexe est « éteindre puis analyser », l'enquête démarre aveugle.",
+          "legal": "Art. 263 CPP + ISO 27037 — Hiérarchie de volatilité non respectée.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Acquisition mémoire vive en priorité avec LiME (Linux Memory Extractor) — module kernel chargé temporairement (insmod) qui dump /dev/mem vers le disque externe write-protected. Hash SHA-256 immédiat. PV de saisie horodaté.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ APPROCHE CONFORME. (1) LiME est l'outil de référence pour Linux, capture conforme ISO 27037. (2) Acquérir la RAM AVANT toute autre action préserve l'état dynamique : programmes eBPF chargés, processus cachés, sockets ouverts, clés de session. (3) Hash SHA-256 du dump immédiat + PV avec opérateur, méthode, version d'outil, hôte source/cible = chaîne de custody irréprochable. (4) Le module LiME laisse une trace dans dmesg : la documenter dans le PV (« acquisition forensique sous mandat de l'art. 263 CPP, opérateur Wachtm. Brunner Polkapo BE »).",
+          "legal": "Art. 263 + 265 CPP + ISO/IEC 27037 — Séquestre avec hiérarchie de volatilité respectée. Documentation conforme.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Demander à Pellegrini ses identifiants admin et explorer le système en SSH depuis votre laptop pour comprendre l'attaque avant toute action invasive.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Approche réflexe mais risquée. (1) Toute commande que vous tapez sur un système compromis par un implant kernel peut être interceptée, modifiée ou faussée par l'implant (les programmes eBPF peuvent réécrire les retours de syscalls). Vos « <code>ps</code> » et « <code>ls</code> » peuvent mentir. (2) Vous générez du bruit qui pollue les artefacts mémoire. (3) Vous ne préservez rien — si l'implant détecte une investigation, il peut s'auto-nettoyer. La seule action légitime sur un système soupçonné de compromission kernel est l'acquisition immédiate.",
+          "legal": "Cf. ISO 27037 §5.4 — pas d'investigation interactive avant capture.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🧬 10h15 — Lecture des artefacts mémoire",
+      "situation": "Dump LiME en main (47 GB, SHA-256 documenté). Vous lancez sur votre laptop Volatility 3 avec le profil Debian 12 (kernel 6.1.0-13-amd64). <code>linux.pslist</code> montre 84 processus dont le suspect <code>krn-update</code> (PID 1247) lancé il y a 187 jours. <code>linux.bpf</code> liste 2 programmes eBPF de type <code>BPF_PROG_TYPE_SOCKET_FILTER</code> attachés à <code>raw socket</code>. Le binaire qui les a chargés n'est plus en mémoire mais ses sections .text sont reconstructibles. Pellegrini, derrière vous : « C'est grave ? »",
+      "law": "<strong>Art. 192 CPP</strong> — Force probante des preuves matérielles.<br><strong>Art. 184 CPP</strong> — Expertise (vous documentez avec une méthode reproductible).<br><strong>Art. 309 al. 1 CPP</strong> — Ouverture de l'instruction (déjà justifiée : soupçons fondés).",
+      "question": "<strong>Comment qualifiez-vous formellement les faits pour l'ouverture d'instruction ?</strong>",
+      "choices": [
+        {
+          "text": "Art. 143bis CP (accès indu à un système informatique) en concours réel avec Art. 144bis CP (détérioration de données). Soupçons suffisants pour ouvrir une instruction (art. 309 CPP). Vous appelez le Dr Stettler (MP-BE cyber) pour qu'elle ouvre formellement.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ QUALIFICATION SOLIDE. Art. 143bis CP couvre l'accès initial (toute intrusion non autorisée — pas besoin de prouver l'extraction de données). Art. 144bis CP couvre l'altération du noyau Linux (les programmes eBPF chargés modifient le comportement du kernel = détérioration de données). Le concours réel (art. 49 CP) est correct : deux actes distincts. Notez que <strong>la Dr Stettler est compétente jusqu'au 31.12.2025</strong> — au-delà, la procureure du canton du Jura prendra le relais selon le concordat.",
+          "legal": "Art. 143bis + 144bis CP en concours réel · Art. 309 CPP · Art. 49 CP.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Art. 147 CP (utilisation frauduleuse d'un ordinateur). Plus large, plus protecteur.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ Erreur de qualification. Art. 147 CP suppose que l'auteur agit dans le dessein de procurer à lui-même ou à un tiers un <em>enrichissement illégitime</em> ET qu'il y a un <em>transfert d'actifs</em> ou un <em>résultat patrimonial</em>. Ici on a un implant kernel — l'objectif financier n'est pas encore prouvé. Qualifier en 147 prématurément exposerait au classement partiel. 143bis + 144bis sont les bons fondements à ce stade ; 147 pourra être ajouté si l'enquête révèle un volet patrimonial (rançon, exfiltration monétisée, etc.).",
+          "legal": "Cf. ATF 150 IV 188 — Art. 147 CP nécessite résultat patrimonial.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Attendre d'avoir compris la finalité de l'implant (espionnage industriel ? ransomware imminent ?) avant de qualifier. Pas d'ouverture formelle pour l'instant.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Approche temporisatrice dangereuse. (1) Vous avez déjà des <strong>soupçons suffisants</strong> au sens de l'art. 309 CPP (présence avérée d'un implant non autorisé) — c'est exactement ce que l'art. 309 prévoit. (2) Sans ouverture formelle, vos mesures de séquestre sont fragilisées (la défense plaidera plus tard l'irrégularité). (3) Le temps joue contre vous : Moutier change de canton dans 27 jours. Plus vous tardez, plus la chaîne sera complexe à transmettre. (4) L'art. 143bis ne demande pas de connaître la finalité — l'accès indu suffit.",
+          "legal": "Art. 309 al. 1 CPP — Soupçons suffisants déjà constitués.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "📅 11h30 — La question du temps : 27 jours avant le transfert",
+      "situation": "Pellegrini est inquiet pour son entreprise. Vous l'informez que l'enquête est ouverte. Il vous demande : « Et quand Moutier passe au Jura le 1er janvier, qu'est-ce qui se passe ? Je tombe sous une autre police ? Une autre procureure ? On recommence à zéro ? » Vous savez que le <strong>concordat intercantonal BE-JU du 15 mars 2025</strong>, art. 8, règle ce point — mais le détail pratique est encore expérimental. Le <strong>Pôle de coordination intercantonal Moutier</strong> (créé par le concordat, Me Andreas Hostettler coordinateur) n'a encore traité aucun cas pénal complexe.",
+      "law": "<strong>Concordat intercantonal BE-JU du 15.03.2025</strong>, art. 8 — Continuité des procédures pénales en cours lors du transfert.<br><strong>Art. 31 CPP</strong> — For à raison du lieu.<br><strong>Art. 38 CPP</strong> — Conflits de for entre cantons.",
+      "question": "<strong>Que répondez-vous à Pellegrini, et quelles sont vos actions de coordination ?</strong>",
+      "choices": [
+        {
+          "text": "« La procédure ne recommence pas à zéro. Tous les actes d'enquête menés par le MP-BE jusqu'au 31.12.2025 restent valables. À partir du 1.1.2026, la procédure sera transférée formellement au MP-JU selon le concordat. » Vous prévenez dès maintenant la Cap. Choulat (Polcant JU) pour qu'elle suive l'enquête en parallèle dès aujourd'hui.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ EXCELLENTE GESTION. (1) Réponse juste : le concordat préserve les actes antérieurs, comme c'est d'ailleurs le principe général en droit transitoire procédural. (2) <strong>Coopération anticipée</strong> avec Choulat = pratique recommandée : elle ne sera pas surprise le 1er janvier, elle aura suivi le dossier dès le début. (3) Vous protégez aussi votre propre procédure : si plus tard la défense plaide un vice de compétence, vous démontrez la coopération continue. (4) La Cap. Choulat connaît déjà la région (saga Noirmont).",
+          "legal": "Concordat BE-JU art. 8 + Art. 31 CPP — Continuité préservée.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "« On verra le 1er janvier, je ne peux rien promettre. » Vous menez votre enquête comme si rien ne changeait, vous décidez de la transmettre formellement la veille du 31.12.2025.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Refus de coordination. (1) Réponse anxiogène pour la victime, qui peut se rétracter. (2) Transmission de dernière minute = risque maximal de pertes documentaires, de retards de traduction (BE bilingue DE/FR, JU francophone), d'incompréhension. (3) La Cap. Choulat se retrouve à la 11e heure avec un dossier qu'elle n'a pas suivi. (4) C'est exactement le scénario que le concordat veut éviter via son Pôle de coordination. Le coordinateur Hostettler doit être informé dès maintenant.",
+          "legal": "Concordat BE-JU art. 8 — Esprit non respecté.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Vous demandez immédiatement au MP-BE d'accélérer la procédure pour qu'elle soit close avant le 31.12.2025 et n'ait pas à être transférée.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ Forcer la procédure pour éviter le transfert = mauvaise pratique. (1) Une enquête complexe sur APT ne se résout pas en 27 jours, sauf à bâcler. (2) La défense plaidera plus tard la précipitation procédurale et obtiendra des retours de dossier. (3) Le concordat n'a pas été conçu pour être contourné — l'art. 8 prévoit explicitement la continuité. (4) Surtout, l'attaque est probablement encore active : précipiter la clôture ferait perdre la possibilité de l'arrêt complet (perquisitions, identification du C2 distant, etc.).",
+          "legal": "Art. 309 CPP — Une instruction se mène avec la durée nécessaire, pas selon un agenda politique.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🔗 13h45 — Premier appel à la Cap. Choulat",
+      "situation": "Vous appelez la <strong>Cap. Christelle Choulat</strong> à la Polcant JU (Delémont). Elle vous écoute attentivement. Elle vous indique qu'elle est en effet déjà destinataire du concordat et que le Pôle de coordination tient sa première séance de transition le 18 décembre. Elle pose une question pertinente : « Brunner, vous m'envoyez votre dossier ? Quelle base juridique pour me communiquer des pièces d'une procédure pénale BE alors que je suis Polcant JU ? Je ne peux pas juste les lire, ça serait une violation du secret de fonction de votre côté. »",
+      "law": "<strong>Art. 73 CPP</strong> — Maintien du secret + communications entre autorités pénales.<br><strong>Art. 74 CPP</strong> — Information du public.<br><strong>Art. 75 CPP</strong> — Communications à d'autres autorités.<br><strong>Concordat BE-JU art. 8 al. 3</strong> — Accès au dossier par l'autorité réceptrice avant transfert effectif.",
+      "question": "<strong>Comment cadrer juridiquement la coopération avec Choulat avant le 1.1.2026 ?</strong>",
+      "choices": [
+        {
+          "text": "Faire formaliser la coopération par le coordinateur Hostettler du Pôle intercantonal Moutier, qui peut autoriser un accès partagé au dossier en application de l'art. 8 al. 3 du concordat. Je documente la transmission au PV.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ JURIDIQUEMENT PROPRE. Le concordat a précisément créé le Pôle pour ce genre de situations. Hostettler peut formaliser un acte de coordination qui : (1) autorise la Cap. Choulat à accéder au dossier MP-BE en qualité d'observatrice désignée par le canton réceptionnaire ; (2) prévoit la modalité de la transmission effective au 1.1.2026 ; (3) garantit que les actes d'enquête sont menés dans la perspective de leur exploitation par les deux cantons. Le PV documente la transmission = sécurité juridique pour la défense future.",
+          "legal": "Concordat BE-JU art. 8 al. 3 + Art. 75 CPP — Communication formalisée.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Lui transmettre informellement par email crypté les éléments principaux, on régularisera plus tard formellement. Le concordat est nouveau, personne ne va contester.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ FAILLE PROCÉDURALE. (1) « Personne ne va contester » est exactement ce qu'un futur avocat de la défense exploitera. (2) Communication non formalisée d'un dossier pénal en cours d'instruction = violation du secret de fonction (art. 320 CP) et du secret de l'instruction (art. 73 CPP). (3) Plus tard, la défense plaidera l'inexploitabilité de tout ce qui en aura découlé chez Choulat. ATF 138 IV 169 = fruit empoisonné. (4) Le concordat prévoit explicitement le formalisme — l'ignorer = inventer une procédure qui n'existe pas. Le Pôle Hostettler est là pour ça.",
+          "legal": "Art. 73 CPP + Art. 320 CP + ATF 138 IV 169 — Violation grave.",
+          "critical": true,
+          "next": 4
+        },
+        {
+          "text": "Ne rien lui transmettre avant le 31.12.2025 minuit pile. C'est le canton de Berne qui a la compétence, c'est tout.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Position formellement défendable mais pratiquement néfaste. (1) Le 1er janvier matin, Choulat reçoit un dossier d'APT en cours d'attaque, sans contexte, et doit prendre des décisions immédiates avec le décalage de la veille. (2) Le concordat a précisément voulu éviter cette « bascule sèche » — son esprit (art. 8 al. 3) est la transmission progressive. (3) Vous protégez la procédure formellement, mais vous tuez l'efficacité opérationnelle. La bonne approche est la coordination Hostettler.",
+          "legal": "Concordat BE-JU art. 8 — Esprit non respecté.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "🏁 16h20 — Bilan de la journée",
+      "situation": "Bilan : dump mémoire (SHA-256), instruction ouverte par Dr Stettler (MP-BE), Choulat informée, Hostettler contacté. Pellegrini accepte que le serveur reste isolé encore 24h pour permettre l'investigation, ses techniciens préparent un serveur de secours. Vous rédigez votre rapport pour la Dr Stettler. Une dernière question : faut-il alerter le NCSC officiellement pour qu'il ouvre un dossier inter-CERT (govCERT) — au risque d'un effet papillon (l'attaquant pourrait être alerté si la PME communique) — ou rester discret pour préserver l'effet de surprise ?",
+      "law": "<strong>Art. 74a LSI</strong> (Loi sur la sécurité de l'information de la Confédération) — Obligation de notification des incidents cyber critiques par les infrastructures critiques.<br><strong>nLPD art. 24</strong> — Annonce des violations de la sécurité des données personnelles.<br><strong>Art. 73 CPP</strong> — Secret de l'instruction.",
+      "question": "<strong>Coordination avec le NCSC : alerte formelle ou discrétion ?</strong>",
+      "choices": [
+        {
+          "text": "Vous demandez au NCSC une coordination discrète (sans alerte publique ni inscription dans la base d'incidents publics) — partage technique uniquement avec govCERT et fedpol CRD-Cyber. Vous documentez la décision dans le PV.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ ÉQUILIBRE OPTIMAL. (1) Microparts n'est pas une infrastructure critique au sens de la LSI (PME non régulée), donc pas d'obligation légale de notification publique. (2) nLPD art. 24 — pas évident car aucune donnée personnelle massivement compromise (à ce stade). (3) Le secret de l'instruction (art. 73 CPP) justifie pleinement la discrétion. (4) La coordination technique avec govCERT/fedpol via canal classifié est exactement ce que prévoit la pratique pour les APT. (5) Documenter la décision au PV protège la procédure de futures critiques (« pourquoi pas d'annonce publique »).",
+          "legal": "Art. 73 CPP + LSI art. 74a (non applicable ici) — Coordination discrète justifiée.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Vous alertez le NCSC publiquement et demandez à Microparts une communication publique de transparence. C'est l'éthique cyber moderne.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Position éthique compréhensible mais procéduralement maladroite. (1) Communication publique = alerte immédiate à l'attaquant qui peut s'effacer et changer ses TTPs avant que vous ne remontiez le C2. (2) Microparts subit un dommage économique disproportionné (clients horlogers qui paniquent, contrats remis en cause) sans gain procédural. (3) Le secret de l'instruction est la règle (art. 73 CPP) et l'exception (publicité) doit être justifiée. (4) Une fois l'enquête bouclée, une communication coordonnée pourra être utile — pas maintenant.",
+          "legal": "Art. 73 CPP — Secret de règle, publicité d'exception.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Rien : pas d'alerte NCSC, pas de partage. C'est notre enquête, point.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ Isolement néfaste. (1) Le NCSC/govCERT a peut-être déjà vu cet implant ailleurs et peut vous fournir des IoC précieux — ne pas partager c'est perdre cette opportunité. (2) Si d'autres PME suisses sont touchées par la même campagne (très probable pour un APT), le silence cantonal fait que tout le monde travaille isolément. (3) La coordination technique classifiée n'est PAS de la publicité — elle est protégée par les statuts du NCSC et du govCERT.",
+          "legal": "Pratique constante CH — Coordination inter-CERT recommandée.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "be_polkapo_cyber",
+    "be_prosecutor_cyber",
+    "ju_polcant_cyber",
+    "microparts_pellegrini",
+    "bekb_concordat_coord",
+    "govCERT_analyste",
+    "expert_kudelski_security"
+  ],
+  "regionDetail": {
+    "ville": "Moutier",
+    "code": "BE"
+  },
+  "region": "BE",
+  "realCase": false
+}
