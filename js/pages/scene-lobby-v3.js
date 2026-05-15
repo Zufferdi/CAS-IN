@@ -260,6 +260,20 @@
         'fr-affaire-singine-4-arrestation-be-fr',
         'fr-affaire-singine-5-audience-conjointe-tmc'
       ]
+    },
+    {
+      id: 'affaire_prevote', icon: '🪲', title: 'L\'Affaire de la Prévôté — Fil rouge Moutier (BE→JU)',
+      desc: 'Décembre 2025 — un rootkit eBPF détecté chez Microparts SA (Moutier). L\'enquête traverse le basculement Moutier (BE→JU) du 1er janvier 2026 et révèle un APT qui cible la microtechnique horlogère suisse. Cap. Choulat (Polcant JU) et Wachtmeister Brunner (Polkapo BE) doivent maîtriser le concordat Moutier et l\'art. 44 CPP. Sept actes — AD forensique, cloud Azure/Sentinel, threat intel/MITRE ATT&CK, perquisition intercantonale à Bévilard, audience à Porrentruy. Niveau Expert.',
+      level: 'expert',
+      scenes: [
+        'be-affaire-prevote-1-signal-kernel-moutier',
+        'be-affaire-prevote-2-ad-miroir-casse',
+        'prevote-3-grand-basculement',
+        'ju-affaire-prevote-4-tenant-fantome',
+        'ju-affaire-prevote-5-attribution-croisee',
+        'ju-affaire-prevote-6-perquisition-bevilard',
+        'ju-affaire-prevote-7-audience-porrentruy'
+      ]
     }
   ];
 
