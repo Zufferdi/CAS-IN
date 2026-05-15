@@ -274,6 +274,20 @@
         'ju-affaire-prevote-6-perquisition-bevilard',
         'ju-affaire-prevote-7-audience-porrentruy'
       ]
+    },
+    {
+      id: 'affaire_modele', icon: '🧬', title: 'L\'Affaire du Modèle — OncoNet-CH (CHUV/EPFL)',
+      desc: 'Septembre 2026 — DPO EPFL et CISO CHUV détectent que le modèle IA OncoNet-CH (diagnostic radiologique oncologique, déployé en clinique depuis avril) contient un backdoor introduit avant déploiement. 6\'437 examens passés, 23 faux négatifs confirmés dont Mme Hélène S. (cancer du sein stade IIB, retard 4 mois). Suspect : Zhang Yi, doctorant EPFL rentré en Chine. La saga traverse audit ML forensique (Compass+ETHZ), levée du secret médical art. 321 ch. 2 CP selon ATF 2C_332/2024, identification médico-légale CURML, attribution APT par méthode ACH, perquisition labo EPFL, procédure par défaut art. 366 CPP, et audience finale au Tribunal d\'arrondissement de Lausanne = première application judiciaire suisse de la responsabilité ML médicale. Niveau Expert — MITRE ATLAS, MLOps audit, EU AI Act Annexe I, perte de chance ATF 142 III 433.',
+      level: 'expert',
+      scenes: [
+        'vd-affaire-modele-1-detection-onconet',
+        'vd-affaire-modele-2-audit-forensique-ml',
+        'vd-affaire-modele-3-competence-plainte',
+        'vd-affaire-modele-4-identification-victimes',
+        'vd-affaire-modele-5-attribution-apt',
+        'vd-affaire-modele-6-perquisition',
+        'vd-affaire-modele-7-audience-lausanne'
+      ]
     }
   ];
 
