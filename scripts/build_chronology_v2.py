@@ -179,6 +179,56 @@ ORPHAN_ASSIGNMENTS = {
         'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 12,
         'event': 'Affaire de la Gemmi'},
 
+    # ── SAGA GOTHARD (UR↔TI↔CHF) — niveau enquêteur · 7 actes ──
+    # Narratif : détection 14 oct 2026 03h47 (acte 1), forensique J+1 (acte 2), saisine MPC J+1 (acte 3),
+    # piste ABB J+2-4 (acte 4), LSCPT J+7 (acte 5), perquisition 29 oct 2026 (acte 6), audience TPF 4 mai 2027 (acte 7).
+    'ur-affaire-gothard-1-pilote-rouge': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 10,
+        'event': 'Affaire du Gothard'},
+    'ur-affaire-gothard-2-forensique-s7': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 10,
+        'event': 'Affaire du Gothard'},
+    'ur-affaire-gothard-3-competence-mpc': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 10,
+        'event': 'Affaire du Gothard'},
+    'ur-affaire-gothard-4-piste-abb-bellinzone': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 10,
+        'event': 'Affaire du Gothard'},
+    'ur-affaire-gothard-5-surveillance-lscpt': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 10,
+        'event': 'Affaire du Gothard'},
+    'ti-affaire-gothard-6-perquisition-bellinzone': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 10,
+        'event': 'Affaire du Gothard'},
+    'ti-affaire-gothard-7-audience-tpf': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 5,
+        'event': 'Affaire du Gothard'},
+
+    # ── SAGA ENGADINE (GR↔CHF) — niveau enquêteur · 7 actes ──
+    # Narratif : ransomware 28 déc 2026 (acte 1), cambriolage Patek même nuit (acte 2), convergence J+1 (acte 3),
+    # crypto-tracing J+2 (acte 4), entraide VIP J+3-4 (acte 5), perquisition Pontresina J+5 (acte 6), audience Coire (acte 7).
+    'gr-affaire-engadine-1-ransomware-noel': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 12,
+        'event': 'Affaire de l\'Engadine'},
+    'gr-affaire-engadine-2-cambriolage-patek': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 12,
+        'event': 'Affaire de l\'Engadine'},
+    'gr-affaire-engadine-3-convergence-insider': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 12,
+        'event': 'Affaire de l\'Engadine'},
+    'ch-affaire-engadine-4-crypto-tracing': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 12,
+        'event': 'Affaire de l\'Engadine'},
+    'ch-affaire-engadine-5-entraide-vip': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 12,
+        'event': 'Affaire de l\'Engadine'},
+    'gr-affaire-engadine-6-perquisition-pontresina': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 1,
+        'event': 'Affaire de l\'Engadine'},
+    'gr-affaire-engadine-7-audience-coire': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 6,
+        'event': 'Affaire de l\'Engadine'},
+
     # ── MÉTHODOLOGIE (techniques transversales) ──
     'docker-supply-chain-saas-geneve': {
         'group': '🛠️ MÉTHODOLOGIE', 'year': 2026, 'month': None,
@@ -307,6 +357,48 @@ SAGAS = [
         ],
         'completion_badge': 'saga_gemmi',
         'completion_xp_bonus': 120,
+    },
+    {
+        'id': 'affaire_gothard',
+        'title': 'L\'Affaire du Gothard',
+        'subtitle': 'Fil rouge OT/ICS — 7 actes (UR↔TI↔CHF)',
+        'icon': '🏔️',
+        'canton': 'UR',
+        'year_range': '2026-2027',
+        'tagline': 'Un firmware Siemens compromis, un modem 4G clandestin, un manifeste éco-radical. 280\'000 véhicules détournés.',
+        'difficulty_curve': ['hard'] * 7,
+        'scenes': [
+            'ur-affaire-gothard-1-pilote-rouge',
+            'ur-affaire-gothard-2-forensique-s7',
+            'ur-affaire-gothard-3-competence-mpc',
+            'ur-affaire-gothard-4-piste-abb-bellinzone',
+            'ur-affaire-gothard-5-surveillance-lscpt',
+            'ti-affaire-gothard-6-perquisition-bellinzone',
+            'ti-affaire-gothard-7-audience-tpf',
+        ],
+        'completion_badge': 'saga_gothard',
+        'completion_xp_bonus': 250,
+    },
+    {
+        'id': 'affaire_engadine',
+        'title': 'L\'Affaire de l\'Engadine',
+        'subtitle': 'Fil rouge ransomware + diversion — 7 actes (GR↔CHF)',
+        'icon': '🎿',
+        'canton': 'GR',
+        'year_range': '2026-2027',
+        'tagline': 'Le 28 décembre 06h47 : Hunters International chiffre Corvatsch. La même nuit 02h15 : 8 Patek dérobées Via Maistra. Coïncidence ?',
+        'difficulty_curve': ['hard'] * 7,
+        'scenes': [
+            'gr-affaire-engadine-1-ransomware-noel',
+            'gr-affaire-engadine-2-cambriolage-patek',
+            'gr-affaire-engadine-3-convergence-insider',
+            'ch-affaire-engadine-4-crypto-tracing',
+            'ch-affaire-engadine-5-entraide-vip',
+            'gr-affaire-engadine-6-perquisition-pontresina',
+            'gr-affaire-engadine-7-audience-coire',
+        ],
+        'completion_badge': 'saga_engadine',
+        'completion_xp_bonus': 250,
     },
 ]
 
