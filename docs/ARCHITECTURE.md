@@ -101,6 +101,7 @@ override `Storage.prototype.setItem` et `Storage.prototype.getItem` via
 | `scene-ux-patch.js`   | `scene.html`  | Patches UX scène.                   |
 | `exam-app.js`         | `exam.html`   | Mode examen blanc.                  |
 | `tools-app.js`        | `tools.html`  | Calculateurs forensiques.           |
+| `tp-page.js`          | `tp.html`     | Chrome de la page TP (catégorie metadata, sidebar, mobile pills, toasts, reset). Extrait en Phase 2 v3.1 depuis le `<script>` inline. |
 
 ## Couches & ordre de chargement
 
@@ -129,6 +130,12 @@ Concrètement, dans le `<head>` de `quiz.html` (état réel v2.85) :
 <!-- 4. App de page (en bas du body, defer) — appelle Profile.addXp directement -->
 <script src="js/pages/quiz-app.js" defer></script>
 ```
+
+> **Note Phase 2 v3.1** : sur `tp.html`, tous les scripts `tp/*.js` et le nouveau
+> `js/pages/tp-page.js` (extrait du `<script>` inline) sont maintenant chargés en
+> `defer`. Ordre : `tp-data` → `tp-engine` → `tp-engine-*` (4 spécialisés) →
+> `tp-page` (chrome de page) → composants UI. Tous defer = tous parallèles au
+> téléchargement, exécution séquentielle en fin de parse.
 
 Note : depuis v2.83, `quiz-app.js` appelle `window.Profile.addXp(pts, 'quiz', { tags })`
 directement. Le bridge `quiz-profile-bridge.js` a été supprimé en v2.85+ (cf. §3 ci-dessus).
