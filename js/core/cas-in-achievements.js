@@ -59,6 +59,7 @@
     'Rôle · Journaliste',
     'Rôle · Hacker',
     'TP · Pratique',
+    'Tools · Calculateurs',
     'Fiches · Lecture',
     'Secrets 🤫',
   ];
@@ -334,6 +335,54 @@
   ];
 
   // ─────────────────────────────────────────────────────────────
+  // TOOLS — checks centralisés (lit localStorage.tools_used)
+  //
+  // tools_used = { ts: 4, sfn: 2, mft: 1, ... }
+  //   clé = id de l'onglet de tools.html (12 outils au total)
+  //
+  // Évalués via tools-profile-bridge.js (hook sur setItem 'tools_used').
+  // ─────────────────────────────────────────────────────────────
+  // Liste figée des 12 outils — sync avec tools.html. Si on en ajoute,
+  // mettre à jour ici sinon `tools_polymath` reste accessible avec un
+  // ancien total. Maintenu manuellement (pas de DOM access dans le worker).
+  const TOOLS_ALL = [
+    'ts','rl','fat','ntfs','hex','enc',
+    'sfn','magic','bitmap','hashid','cluster','mft'
+  ];
+
+  function toolsStats() {
+    const used = lsGet('tools_used', {}) || {};
+    let distinct = 0;
+    let maxOne = 0;
+    let total = 0;
+    TOOLS_ALL.forEach(k => {
+      const n = parseInt(used[k], 10) || 0;
+      total += n;
+      if (n > 0) distinct++;
+      if (n > maxOne) maxOne = n;
+    });
+    return { distinct, maxOne, total, totalTools: TOOLS_ALL.length };
+  }
+
+  const TOOLS_ACH = [
+    { id: 'tools_swiss_knife', emoji: '🧰', name: 'Couteau suisse',
+      desc: '5 calculateurs différents utilisés',
+      category: 'Tools · Calculateurs',
+      check: () => toolsStats().distinct >= 5,
+      progress: () => ({ current: toolsStats().distinct, target: 5 }) },
+    { id: 'tools_artisan', emoji: '🔧', name: 'Bricoleur',
+      desc: 'Un calculateur utilisé 20 fois',
+      category: 'Tools · Calculateurs',
+      check: () => toolsStats().maxOne >= 20,
+      progress: () => ({ current: toolsStats().maxOne, target: 20 }) },
+    { id: 'tools_polymath', emoji: '🛠️', name: 'Forensicateur',
+      desc: 'Tous les calculateurs essayés au moins une fois',
+      category: 'Tools · Calculateurs',
+      check: () => toolsStats().distinct >= toolsStats().totalTools,
+      progress: () => ({ current: toolsStats().distinct, target: toolsStats().totalTools }) },
+  ];
+
+  // ─────────────────────────────────────────────────────────────
   // FICHES — checks centralisés (lit Profile.snapshot)
   // ─────────────────────────────────────────────────────────────
   function fichesCount() {
@@ -380,7 +429,7 @@
   // ─────────────────────────────────────────────────────────────
   // Tableau plat
   // ─────────────────────────────────────────────────────────────
-  const ACHIEVEMENTS_META = [].concat(QUIZ_ACH, SCENE_ACH, TP_ACH, FICHE_ACH);
+  const ACHIEVEMENTS_META = [].concat(QUIZ_ACH, SCENE_ACH, TP_ACH, TOOLS_ACH, FICHE_ACH);
 
   // Index par id
   const _byId = {};

@@ -1104,6 +1104,7 @@
       LEGACY_KEYS.achievements, LEGACY_KEYS.agentPseudo,
       LEGACY_KEYS.viewMode, LEGACY_KEYS.landingViews,
       'tp_streak', 'tp_bestStreak', 'casIn_landingLastVisit',
+      'tools_used',  // v3.1 Phase 3b — compteur d'usage des calculateurs
       'maxCombo', 'freezes', 'hintsLeft', 'hintsUsed', 'hintDate',
       'achievements', 'sessions', 'sessionSnap', 'playdates',
       'lastPlayDate', 'comeback', 'forensicShown', 'nightOwl',
