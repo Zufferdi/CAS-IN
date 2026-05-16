@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v383';
+const CACHE_VERSION = 'cas-in-v390';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1714,6 +1714,7 @@ const STATIC_ASSETS = [
   './style/style.css',
   './style/cas-in-navbar.css',
   './style/profile.css',
+  './style/profile-tp-heatmap.css',
   './style/profile-dossier.css',
   './style/quiz.css',
   './style/scene.css',
@@ -1752,6 +1753,7 @@ const STATIC_ASSETS = [
   './js/profile/profile-tabs.js',
   './js/profile/profile-relations.js',
   './js/profile/profile-heatmap.js',
+  './js/profile/profile-tp-heatmap.js',
   './js/profile/profile-track-v5.js',
   './js/profile/profile-titles.js',
   './js/profile/profile-notes.js',
