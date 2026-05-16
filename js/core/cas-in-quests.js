@@ -299,6 +299,61 @@
         return false;
       },
     },
+    // ═══════════════════════════════════════════════════════════
+    // Phase 6 v3.1 — Quêtes TP (Travaux Pratiques)
+    //
+    // S'évaluent sur les stats du jour calculées dans buildSnapshot :
+    //   • tpSolvedTodayTotal     : somme des incréments du jour
+    //   • tpDistinctCatsToday    : nb de cats avec au moins 1 résolution today
+    //   • tpCompletedCatsToday   : nb de cats ayant atteint CAT_MAX (5) today
+    //   • toolsDistinctToday     : nb d'outils distincts utilisés today
+    //   • tpStreak               : tp_streak courant (non-day-bound, c'est OK)
+    //
+    // Le calcul utilise tp_solved_snapshot_YYYY-MM-DD (snapshot du début
+    // de journée), comparé au tp_solved courant. Idem pour tools_used.
+    // Pas de refactor de tp-engine.js requis : pure instrumentation passive
+    // côté buildSnapshot.
+    // ═══════════════════════════════════════════════════════════
+    {
+      id: 'q_tp_5today',
+      title: '5 TP du jour',
+      desc: 'Résous 5 exercices TP aujourd\'hui (toutes catégories)',
+      icon: '🧩',
+      reward: 40,
+      evaluate: (snap) => snap.tpSolvedTodayTotal >= 5,
+    },
+    {
+      id: 'q_tp_streak5',
+      title: 'Série de 5 TP',
+      desc: 'Atteins une série de 5 bonnes réponses consécutives',
+      icon: '🔥',
+      reward: 35,
+      evaluate: (snap) => snap.tpStreak >= 5,
+    },
+    {
+      id: 'q_tp_3cats',
+      title: 'Polyvalence DFIR',
+      desc: 'Résous au moins 1 TP dans 3 catégories différentes aujourd\'hui',
+      icon: '🎭',
+      reward: 55,
+      evaluate: (snap) => snap.tpDistinctCatsToday >= 3,
+    },
+    {
+      id: 'q_tp_master_cat',
+      title: 'Maîtrise d\'une discipline',
+      desc: 'Termine une catégorie aujourd\'hui (5 réussites dans la même cat)',
+      icon: '🥇',
+      reward: 60,
+      evaluate: (snap) => snap.tpCompletedCatsToday >= 1,
+    },
+    {
+      id: 'q_tools_3today',
+      title: 'Boîte à outils ouverte',
+      desc: 'Utilise au moins 3 calculateurs forensiques différents aujourd\'hui',
+      icon: '🛠️',
+      reward: 30,
+      evaluate: (snap) => snap.toolsDistinctToday >= 3,
+    },
   ];
 
   function lsGet(k, fb) {
@@ -335,20 +390,27 @@
 
   function pickQuestsForDate(dateStr, count = 3) {
     const rng = mulberry32(dateToSeed(dateStr));
-    // v2.57 : tirage stratifié pour garantir mix scène + quiz
-    const sceneQuests = QUEST_POOL.filter(q => !q.id.startsWith('q_quiz') && q.id !== 'q_mixed_session');
-    const quizQuests = QUEST_POOL.filter(q => q.id.startsWith('q_quiz') || q.id === 'q_mixed_session');
+    // v2.57 : tirage stratifié scène + quiz
+    // Phase 6 v3.1 : ajout d'un 3e bucket TP/tools pour mix équitable
+    const tpQuests    = QUEST_POOL.filter(q => q.id.startsWith('q_tp_') || q.id.startsWith('q_tools_'));
+    const quizQuests  = QUEST_POOL.filter(q => q.id.startsWith('q_quiz') || q.id === 'q_mixed_session');
+    const sceneQuests = QUEST_POOL.filter(q => !tpQuests.includes(q) && !quizQuests.includes(q));
     const picked = [];
     const used = new Set();
-    // 1 quête quiz au moins
-    if (quizQuests.length > 0) {
-      const idx = Math.floor(rng() * quizQuests.length);
-      picked.push(quizQuests[idx]);
-      used.add(quizQuests[idx].id);
+
+    // Au moins 1 quête de chaque type, dans l'ordre tp → quiz → scene
+    // (l'ordre seedé garantit le déterminisme jour-par-jour)
+    for (const bucket of [tpQuests, quizQuests, sceneQuests]) {
+      if (picked.length >= count) break;
+      if (bucket.length === 0) continue;
+      const idx = Math.floor(rng() * bucket.length);
+      picked.push(bucket[idx]);
+      used.add(bucket[idx].id);
     }
-    // 2 quêtes scène au moins
+
+    // Remplir le reste si count > 3 ou si un bucket est vide
     while (picked.length < count) {
-      const remaining = [...sceneQuests, ...quizQuests].filter(q => !used.has(q.id));
+      const remaining = QUEST_POOL.filter(q => !used.has(q.id));
       if (remaining.length === 0) break;
       const idx = Math.floor(rng() * remaining.length);
       picked.push(remaining[idx]);
@@ -416,13 +478,65 @@
     // Thèmes distincts dans bonnes réponses
     const correctThemes = new Set(todayQuizCorrect.map(r => r.theme).filter(Boolean));
 
+    // ─── Phase 6 v3.1 : Agrégats TP + tools du jour ───
+    // Stratégie sans refactor de tp-engine : on snapshot le compteur tp_solved
+    // au premier appel de la journée, et on calcule today = current - snapshot.
+    // Idem pour tools_used.
+    const tpSolvedNow   = lsGet('tp_solved', {}) || {};
+    const toolsUsedNow  = lsGet('tools_used', {}) || {};
+    const snapshotKey   = 'cas_daily_baselines_' + today;
+    let baselines = lsGet(snapshotKey, null);
+    if (!baselines) {
+      // Premier appel de la journée : on snapshot l'état courant comme baseline
+      baselines = {
+        tpSolved:   { ...tpSolvedNow },
+        toolsUsed:  { ...toolsUsedNow },
+      };
+      lsSet(snapshotKey, baselines);
+    }
+
+    // Calcule les deltas du jour (= ce qui a été ajouté depuis le baseline)
+    const tpDeltaByCat = {};
+    let tpSolvedTodayTotal = 0;
+    Object.keys(tpSolvedNow).forEach(cat => {
+      const delta = (parseInt(tpSolvedNow[cat], 10) || 0) - (parseInt(baselines.tpSolved[cat] || 0, 10) || 0);
+      if (delta > 0) {
+        tpDeltaByCat[cat] = delta;
+        tpSolvedTodayTotal += delta;
+      }
+    });
+    const tpDistinctCatsToday = Object.keys(tpDeltaByCat).length;
+
+    // "Catégories terminées aujourd'hui" : celles qui sont passées à >= CAT_MAX
+    // (par défaut 5) PENDANT la journée. On regarde : compteur courant >= 5 ET
+    // ce n'était pas déjà le cas au baseline.
+    const CAT_MAX_DEFAULT = 5;
+    let tpCompletedCatsToday = 0;
+    Object.keys(tpDeltaByCat).forEach(cat => {
+      const wasComplete = (parseInt(baselines.tpSolved[cat] || 0, 10) || 0) >= CAT_MAX_DEFAULT;
+      const isComplete  = (parseInt(tpSolvedNow[cat], 10) || 0) >= CAT_MAX_DEFAULT;
+      if (!wasComplete && isComplete) tpCompletedCatsToday++;
+    });
+
+    // Tools distincts utilisés today (au moins 1 incrément vs baseline)
+    let toolsDistinctToday = 0;
+    Object.keys(toolsUsedNow).forEach(k => {
+      const cur = parseInt(toolsUsedNow[k], 10) || 0;
+      const base = parseInt(baselines.toolsUsed[k] || 0, 10) || 0;
+      if (cur > base) toolsDistinctToday++;
+    });
+
+    // tp_streak n'est pas day-bound mais c'est OK : streak = série courante,
+    // c'est par nature transient et peut se réinitialiser à tout moment.
+    const tpStreak = parseInt(lsGet('tp_streak', '0'), 10) || 0;
+
     return {
       // Stats scènes (existant)
       todayResults,
       allResults,
       todayRuns,
       todayRunsCount: todayRuns.length,
-      // Stats quiz (nouveau v2.57)
+      // Stats quiz (v2.57)
       todayQuizAnswers: todayQuiz.length,
       todayQuizCorrect: todayQuizCorrect.length,
       todayQuizAccuracy: todayQuiz.length > 0
@@ -433,6 +547,13 @@
       todayQuizCorrectThemes: correctThemes.size,
       todayQuizSpeedAnswers: todayQuiz.filter(r => r.ok && r.speedAnswer).length,
       todayQuizCorrectNoHint: todayQuiz.filter(r => r.ok && !r.hintUsed).length,
+      // Stats TP + tools (Phase 6 v3.1)
+      tpSolvedTodayTotal,
+      tpDistinctCatsToday,
+      tpCompletedCatsToday,
+      tpDeltaByCat,
+      toolsDistinctToday,
+      tpStreak,
     };
   }
 
