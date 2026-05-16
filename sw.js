@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v381';
+const CACHE_VERSION = 'cas-in-v382';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1765,6 +1765,7 @@ const STATIC_ASSETS = [
   // ─── Bridges (legacy → Profile) ───
   // quiz/scene bridges supprimés en v2.85+ (mergés dans quiz-app/scene-app)
   './js/bridges/tp-profile-bridge.js',
+  './js/bridges/tools-profile-bridge.js',
 
   // ─── Components (js/components/*) ───
   './js/components/fiche-common.js',
