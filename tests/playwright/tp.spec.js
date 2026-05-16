@@ -1,15 +1,8 @@
 // ═══════════════════════════════════════════════════════════════
 // tests/playwright/tp.spec.js
 //
-// Couvre le moteur TP côté boucle d'exercices :
-//   • Une cat se rend, les choix sont cliquables.
-//   • Résoudre 5 exos endian incrémente tp_solved.endian = 5.
-//   • L'achievement tp_first se débloque dans casIn_profile.
-//   • Le streak grimpe et tp_streak5 se débloque.
-//
-// + Acceptance Phase 1 pour les 3 bugs tp.html identifiés
-//   (updateGroupProgress oublie 'win', catGroup incomplet,
-//   buildMobBar duplique les pills _exam/_tools).
+// Couvre le moteur TP côté boucle d'exercices + intégration profil.
+// Phase 1 mergée → les acceptance tests sont passés en baseline.
 // ═══════════════════════════════════════════════════════════════
 const { test, expect } = require('@playwright/test');
 const {
@@ -18,19 +11,15 @@ const {
   solveMultipleChoice,
 } = require('./helpers');
 
-test.describe('tp.html — Baseline (passe avant Phase 1)', () => {
-  // Note : pas de beforeEach. Chaque test reçoit un BrowserContext frais
-  // (defaut Playwright) → localStorage vierge, pas de SW carryover, pas de
-  // cookies. Si un test devient flaky à cause du SW, ajouter localement :
-  //   await unregisterServiceWorker(page);
+test.describe('tp.html — Baseline', () => {
 
-  test('charge la sidebar avec les 4 groupes et la zone d\'exercice', async ({ page }) => {
+  test('charge la sidebar avec les 5 groupes et la zone d\'exercice', async ({ page }) => {
     const errors = collectErrors(page);
     await page.goto('/tp.html');
 
-    // 4 groupes attendus dans la sidebar (fs, win, calc, inv, + tools=outils)
+    // 5 groupes : fs, win, calc, inv, tools (Outils & Examen)
     const groups = page.locator('.sb-group');
-    await expect(groups).toHaveCount(5); // 4 thématiques + 1 outils/examen
+    await expect(groups).toHaveCount(5);
 
     // L'exercice par défaut (endian) est rendu
     await expect(page.locator('#ex-container .ex-card')).toBeVisible({ timeout: 5000 });
@@ -45,8 +34,6 @@ test.describe('tp.html — Baseline (passe avant Phase 1)', () => {
     await expect(page.locator('.tp-choice').first()).toBeVisible();
 
     await solveMultipleChoice(page, 5);
-
-    // Petit délai pour le setItem + le bridge (setTimeout 30ms)
     await page.waitForTimeout(150);
 
     const solved = await readLS(page, 'tp_solved', {});
@@ -79,66 +66,63 @@ test.describe('tp.html — Baseline (passe avant Phase 1)', () => {
     await solveMultipleChoice(page, 2);
     await page.waitForTimeout(100);
 
-    // Stuber confirm() avant de cliquer Reset
     page.on('dialog', d => d.accept());
     await page.locator('.sbf-btn[onclick="doReset()"]').click();
 
     const solved = await readLS(page, 'tp_solved', null);
-    // Soit la clé est absente, soit elle vaut {}
     expect(solved === null || Object.keys(solved).length === 0).toBe(true);
   });
-});
 
-// ═══════════════════════════════════════════════════════════════
-// Acceptance Phase 1 — bugs tp.html
-// ═══════════════════════════════════════════════════════════════
-test.describe('tp.html — Acceptance Phase 1 (échec attendu avant fix)', () => {
+  // ── Fix Phase 1 : updateGroupProgress couvrait pas le groupe Windows ──
 
-  test.fail("BUG L337-341 : updateGroupProgress couvre le groupe 'Artefacts Windows'", async ({ page }) => {
-    // Le groupe `win` (registry/prefetch/lnk) est absent du mapping
-    // `groups` dans tp.html → sa barre #gp-win reste à 0% pour toujours.
-    // Le fix consiste à ajouter : win: ['registry','prefetch','lnk'].
+  test("updateGroupProgress couvre le groupe 'Artefacts Windows'", async ({ page }) => {
     await page.goto('/tp.html');
 
-    // On vérifie côté code : la fonction expose-t-elle le groupe win ?
-    const result = await page.evaluate(() => {
-      // updateGroupProgress lit `groups` et écrit dans #gp-fs, #gp-calc, #gp-inv...
-      // Si elle écrit aussi dans #gp-win, on a le fix.
-      const fnSrc = (window.updateGroupProgress || (()=>{})).toString();
-      return fnSrc.includes("win:") || fnSrc.includes("'win'") || fnSrc.includes('"win"');
-    });
-    expect(result, "updateGroupProgress doit inclure la clé 'win'").toBe(true);
+    const fnSrc = await page.evaluate(() => (window.updateGroupProgress || (()=>{})).toString());
+    // Après fix : `groups` contient `win: [...]`
+    expect(fnSrc).toMatch(/win:\s*\[/);
+    expect(fnSrc).toContain("'registry'");
+    expect(fnSrc).toContain("'prefetch'");
+    expect(fnSrc).toContain("'lnk'");
   });
 
-  test.fail("BUG L280 : catGroup couvre registry/prefetch/lnk", async ({ page }) => {
-    await page.goto('/tp.html');
-    // Naviguer vers #registry → si catGroup n'a pas la clé, le groupe
-    // grp-win ne se déplie pas. On vérifie en cliquant sur registry et
-    // en regardant si grp-win est ouvert.
+  // ── Fix Phase 1 : catGroup incomplet pour registry/prefetch/lnk ──
+
+  test('navigation #registry déplie grp-win et marque le bouton actif', async ({ page }) => {
     await page.goto('/tp.html#registry');
     await page.waitForTimeout(300);
 
-    const winCollapsed = await page.evaluate(() => {
-      return document.getElementById('grp-win')?.classList.contains('collapsed') ?? true;
-    });
+    const winCollapsed = await page.evaluate(() =>
+      document.getElementById('grp-win')?.classList.contains('collapsed') ?? true
+    );
     expect(winCollapsed, "grp-win doit être déplié après #registry").toBe(false);
+
+    // Le bouton registry doit avoir la classe active
+    await expect(page.locator('.sb-cat[data-cat="registry"]')).toHaveClass(/active/);
   });
 
-  test.fail("BUG L430 : buildMobBar n'émet pas de pills doublons (_exam, _tools)", async ({ page }) => {
+  // ── Fix Phase 1 : buildMobBar émettait des pills doublons ──
+
+  test("buildMobBar n'émet pas de pills doublons (_exam, _tools)", async ({ page }) => {
     await page.goto('/tp.html');
     await page.waitForTimeout(200);
 
-    const brokenPills = await page.evaluate(() => {
+    const result = await page.evaluate(() => {
       const pills = [...document.querySelectorAll('.mob-pill[data-cat]')];
-      // Les pills _exam/_tools générés par le map() au lieu de showTool() :
-      // ils ont un onclick qui appelle go('_exam') alors qu'il faudrait showTool().
-      return pills.filter(p => {
-        const cat = p.dataset.cat;
-        if (cat !== '_exam' && cat !== '_tools') return false;
-        const onclick = p.getAttribute('onclick') || '';
-        return onclick.startsWith('go('); // mauvais handler
-      }).length;
+      const examPills = pills.filter(p => p.dataset.cat === '_exam');
+      const toolsPills = pills.filter(p => p.dataset.cat === '_tools');
+      return {
+        examCount:  examPills.length,
+        toolsCount: toolsPills.length,
+        examOnclick:  examPills[0]?.getAttribute('onclick')  || '',
+        toolsOnclick: toolsPills[0]?.getAttribute('onclick') || '',
+      };
     });
-    expect(brokenPills, "0 pill cassée pour _exam/_tools").toBe(0);
+
+    // Une seule pill chacun, et elles appellent showTool() pas go()
+    expect(result.examCount,  '1 pill _exam').toBe(1);
+    expect(result.toolsCount, '1 pill _tools').toBe(1);
+    expect(result.examOnclick).toContain('showTool');
+    expect(result.toolsOnclick).toContain('showTool');
   });
 });
