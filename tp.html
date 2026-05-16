@@ -277,7 +277,23 @@ function go(cat, btn) {
   document.querySelectorAll('.sb-cat').forEach(b => b.classList.remove('active','active-exam','active-tool'));
   if (btn) btn.classList.add(cat === 'examen' ? 'active-exam' : 'active');
   // Open the group containing this category
-  const catGroup = {'endian':'grp-fs','timestamp':'grp-fs','bitmap':'grp-fs','fat':'grp-fs','magic':'grp-fs','mismatch':'grp-fs','runlist':'grp-fs','effacement':'grp-fs','timestomping':'grp-fs','mbr':'grp-fs','direntry':'grp-fs','hexdump':'grp-fs','slackspace':'grp-fs','hfsbtree':'grp-fs','ntfsindex':'grp-fs','hextable':'grp-calc','fsidentify':'grp-calc','offset':'grp-calc','bases':'grp-calc','hash':'grp-calc','email':'grp-inv','network':'grp-inv','ir':'grp-inv','droitpenal':'grp-inv','glossaire':'grp-inv','examen':'grp-inv'};
+  // Fix Phase 1 : registry/prefetch/lnk étaient absents → #grp-win ne se dépliait
+  // pas lors d'une nav depuis #registry, #prefetch ou #lnk.
+  const catGroup = {
+    // Systèmes de fichiers
+    'endian':'grp-fs','timestamp':'grp-fs','bitmap':'grp-fs','fat':'grp-fs',
+    'magic':'grp-fs','mismatch':'grp-fs','runlist':'grp-fs','effacement':'grp-fs',
+    'timestomping':'grp-fs','mbr':'grp-fs','direntry':'grp-fs','hexdump':'grp-fs',
+    'slackspace':'grp-fs','hfsbtree':'grp-fs','ntfsindex':'grp-fs',
+    // Artefacts Windows
+    'registry':'grp-win','prefetch':'grp-win','lnk':'grp-win',
+    // Calculs & Identification
+    'hextable':'grp-calc','fsidentify':'grp-calc','offset':'grp-calc',
+    'bases':'grp-calc','hash':'grp-calc',
+    // Investigation
+    'email':'grp-inv','network':'grp-inv','ir':'grp-inv',
+    'droitpenal':'grp-inv','glossaire':'grp-inv','examen':'grp-inv'
+  };
   if (catGroup[cat]) { document.querySelectorAll('.sb-group').forEach(g=>g.classList.add('collapsed')); document.getElementById(catGroup[cat]).classList.remove('collapsed'); }
   // Update mobile pills
   document.querySelectorAll('.mob-pill').forEach(p => p.classList.toggle('active', p.dataset.cat === cat));
@@ -333,9 +349,17 @@ function toggleGrp(id) {
 }
 
 function updateGroupProgress() {
-  // Mise à jour barres de progression dans les headers des groupes
+  // Mise à jour barres de progression dans les headers des groupes.
+  // Fix Phase 1 :
+  //   • Ajout du groupe `win` (registry/prefetch/lnk) — sa barre #gp-win
+  //     restait figée à 0% car non listé ici.
+  //   • Ajout de `hfsbtree` et `ntfsindex` dans `fs` — présents dans le HTML
+  //     du groupe FS mais omis du calcul de pourcentage.
   const groups = {
-    fs:   ['endian','timestamp','bitmap','fat','magic','mismatch','runlist','effacement','timestomping','mbr','direntry','hexdump','slackspace'],
+    fs:   ['endian','timestamp','bitmap','fat','magic','mismatch','runlist',
+           'effacement','timestomping','mbr','direntry','hexdump','slackspace',
+           'hfsbtree','ntfsindex'],
+    win:  ['registry','prefetch','lnk'],
     calc: ['hextable','fsidentify','offset','bases','hash'],
     inv:  ['email','network','ir','droitpenal','glossaire','examen'],
   };
@@ -429,7 +453,11 @@ function doReset() {
 // ── Mobile pill bar ────────────────────────────────────────────
 function buildMobBar() {
   const bar = document.getElementById('mob-pills');
-  const cats = [...document.querySelectorAll('.sb-cat[data-cat]')];
+  // Fix Phase 1 : exclure les cats _exam et _tools de l'itération — elles
+  // sont gérées séparément ci-dessous via showTool(). Sinon le map() émettait
+  // une pill brute (label = "_exam") avec onclick=go() au lieu de showTool().
+  const cats = [...document.querySelectorAll('.sb-cat[data-cat]')]
+    .filter(b => !b.dataset.cat.startsWith('_'));
   bar.innerHTML = cats.map(b => {
     const cat = b.dataset.cat;
     if (!cat) return '';
@@ -437,7 +465,7 @@ function buildMobBar() {
     const label = m ? m.icon + ' ' + m.name : cat;
     return `<div class="mob-pill${cat === currentCat ? ' active' : ''}" data-cat="${cat}" onclick="go('${cat}',this)">${label}</div>`;
   }).join('');
-  // Add tool pills
+  // Add tool pills (la seule source de pills pour _exam/_tools)
   bar.innerHTML += `<div class="mob-pill" data-cat="_exam" onclick="showTool('exam',this)">⏱ Examen</div>`;
   bar.innerHTML += `<div class="mob-pill" data-cat="_tools" onclick="showTool('tools',this)">🔧 Calculateurs</div>`;
 }
