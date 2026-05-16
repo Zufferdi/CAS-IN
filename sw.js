@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v380';
+const CACHE_VERSION = 'cas-in-v381';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1801,6 +1801,7 @@ const STATIC_ASSETS = [
   './js/pages/scene-card-rich-v1.js',
   './js/pages/scene-engine-v4.js',
   './js/pages/tools-app.js',
+  './js/pages/tp-page.js',
   './js/pages/exam-app.js',
   './js/pages/artifacts-app.js',
   './js/pages/artifacts-data.js',
@@ -1818,6 +1819,7 @@ const STATIC_ASSETS = [
   './tp/tp-engine-carving.js',
   './tp/tp-engine-windows.js',
   './tp/tp-engine-meta.js',
+  './tp/tp-engine-btree.js',
 
   // ─── v2.93-v2.99 — Nouveaux modules (Dossiers, Sagas, Arcs, Dashboard...) ───
   './js/core/cas-in-skill-branches.js',
