@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v385';
+const CACHE_VERSION = 'cas-in-v386';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1819,6 +1819,7 @@ const STATIC_ASSETS = [
   './tp/tp-engine.js',
   './tp/tp-engine-fat.js',
   './tp/tp-engine-ntfs.js',
+  './tp/tp-engine-disk.js',
   './tp/tp-engine-carving.js',
   './tp/tp-engine-windows.js',
   './tp/tp-engine-meta.js',
