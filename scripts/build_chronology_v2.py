@@ -161,6 +161,24 @@ ORPHAN_ASSIGNMENTS = {
         'group': '💼 CAS QUOTIDIENS', 'year': 2026, 'month': None,
         'event': 'Tesla forensics Klosters/Davos'},
 
+    # ── SAGA GEMMI (VS↔BE) — tous en HISTORIQUES sous le même event ──
+    # Narratif : découverte 14 juin 2026 (acte 1), instruction juin-déc 2026, audience 17 déc 2026.
+    'ge-affaire-gemmi-1-decouverte-wildstrubel': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 6,
+        'event': 'Affaire de la Gemmi'},
+    'ge-affaire-gemmi-2-cluster-wifi': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 6,
+        'event': 'Affaire de la Gemmi'},
+    'ge-affaire-gemmi-3-pivot-osint': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 6,
+        'event': 'Affaire de la Gemmi'},
+    'ge-affaire-gemmi-4-perquisition-thoune': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 6,
+        'event': 'Affaire de la Gemmi'},
+    'ge-affaire-gemmi-5-audience-thoune': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 12,
+        'event': 'Affaire de la Gemmi'},
+
     # ── MÉTHODOLOGIE (techniques transversales) ──
     'docker-supply-chain-saas-geneve': {
         'group': '🛠️ MÉTHODOLOGIE', 'year': 2026, 'month': None,
@@ -270,6 +288,25 @@ SAGAS = [
         ],
         'completion_badge': 'saga_initiation',
         'completion_xp_bonus': 100,
+    },
+    {
+        'id': 'affaire_gemmi',
+        'title': 'L\'Affaire de la Gemmi',
+        'subtitle': 'Fil rouge intercantonal — 5 actes (VS↔BE)',
+        'icon': '📷',
+        'canton': 'VS',
+        'year_range': '2026',
+        'tagline': 'Une lentille de 4 mm dans un détecteur de fumée. Et 78 vies bouleversées — entre Loèche-les-Bains et Thoune.',
+        'difficulty_curve': ['easy'] * 5,
+        'scenes': [
+            'ge-affaire-gemmi-1-decouverte-wildstrubel',
+            'ge-affaire-gemmi-2-cluster-wifi',
+            'ge-affaire-gemmi-3-pivot-osint',
+            'ge-affaire-gemmi-4-perquisition-thoune',
+            'ge-affaire-gemmi-5-audience-thoune',
+        ],
+        'completion_badge': 'saga_gemmi',
+        'completion_xp_bonus': 120,
     },
 ]
 
