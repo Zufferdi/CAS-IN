@@ -77,6 +77,46 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // ── Helpers ───────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────
+// Tool usage tracking — Phase 3b
+//
+// Chaque outil dont l'usage produit un résultat appelle (directement ou via
+// showResult) `recordToolUse(toolKey)`. Le compteur est persisté en
+// localStorage.tools_used = { ts: 4, sfn: 2, ... } et le bridge déclenche
+// l'évaluation des achievements `tools_swiss_knife / artisan / polymath`.
+//
+// Debounce de 500ms PAR outil pour absorber les live converters (Hex↔ASCII,
+// Magic Bytes, Bitmap, Hash ID qui firent à chaque touche tapée).
+// ─────────────────────────────────────────────────────────────
+const RESULT_TO_TOOL = {
+  'ts-result':     'ts',
+  'rl-result':     'rl',
+  'fat-result':    'fat',
+  'fat12-result':  'fat',     // FAT12 entries est un sous-outil du tab fat
+  'ntfs-result':   'ntfs',
+  'rot-result':    'enc',     // ROT13, Base64 et Hash sont 3 sous-outils
+  'b64-result':    'enc',     //   regroupés sous l'onglet "Encodages"
+  'hash-result':   'enc',     //
+  'sfn-result':    'sfn',
+  'magic-result':  'magic',
+  'bm-result':     'bitmap',
+  'hashid-result': 'hashid',
+  'cl-result':     'cluster',
+  'mft-result':    'mft',
+};
+const _toolDebounce = {};
+function recordToolUse(toolKey) {
+  if (!toolKey) return;
+  // Si le bridge n'est pas chargé (ex: tools.html ouvert en standalone), no-op
+  if (!window.ToolsProfileBridge) return;
+  clearTimeout(_toolDebounce[toolKey]);
+  _toolDebounce[toolKey] = setTimeout(() => {
+    try { window.ToolsProfileBridge.notifyToolUse(toolKey); }
+    catch (_) { /* never break the UI for tracking */ }
+  }, 500);
+}
+
 function showResult(id, html) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -97,6 +137,8 @@ function showResult(id, html) {
   // masquait le résultat même après populate. La classe `.empty` ne suffit pas
   // car une règle inline gagne sur une règle de classe. On reset explicitement.
   if (el.style.display === 'none') el.style.display = '';
+  // Phase 3b — Tracking achievements (seulement sur succès, pas sur erreur)
+  if (!isErr && RESULT_TO_TOOL[id]) recordToolUse(RESULT_TO_TOOL[id]);
 }
 function row(lbl,val,cls=''){return`<div class="rb-row"><span class="rb-lbl">${lbl}</span><span class="rb-val ${cls}">${val}</span></div>`;}
 function step(lbl,val){return`<div class="step" style="margin-top:.5rem"><div class="step-lbl">${lbl}</div><div class="step-val">${val}</div></div>`;}
@@ -318,6 +360,9 @@ function cvFrom(src) {
       aEl.value=bytes.map(b=>b>=0x20&&b<=0x7E?String.fromCharCode(b):'.').join('');
       dEl.value=bytes.join(' ');
     }
+    // Phase 3b — Hex↔ASCII n'utilise pas showResult (écrit dans les inputs).
+    // Le debounce 500ms absorbe les rafales de keystrokes.
+    if (bytes.length > 0) recordToolUse('hex');
   } catch(e){}
   cvLock=false;
 }
@@ -555,6 +600,7 @@ function decodeSFN(){
     +hexRow(b,'0x1C–1F Taille (LE32)',28,31,'var(--gold)')
     +'</table></div>';
   res.style.display='block';
+  recordToolUse('sfn');  // Phase 3b — decodeSFN n'utilise pas showResult
 }
 
 // ════════════════════════════════════════════════════════════
@@ -764,5 +810,6 @@ function decodeMFT(){
       +a.name+'<span style="color:var(--dim);font-size:.65rem"> '+(a.nonRes?'non-rés.':'résid.')+' · '+a.len+'o</span></div>'
     ).join('')+'</div>'
     :'<div style="color:var(--dim);font-size:.8rem">Attributs non lisibles (données insuffisantes)</div>');
+  recordToolUse('mft');  // Phase 3b — decodeMFT n'utilise pas showResult
 }
 
