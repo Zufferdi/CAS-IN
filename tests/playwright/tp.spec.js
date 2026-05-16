@@ -118,6 +118,29 @@ test.describe('tp.html — Baseline', () => {
     expect(solved.timestomping).toBe(1);
   });
 
+  // ── Phase 4 PR 4.3 : tp-engine-disk.js sharding ──
+
+  test('Cat timestamp (extraite en tp-engine-disk.js) répond aux exercices', async ({ page }) => {
+    await page.goto('/tp.html#timestamp');
+    await expect(page.locator('.tp-choice, .ex-input').first()).toBeVisible({ timeout: 5000 });
+    // timestamp peut avoir des saisies texte ; le test "5 endian solved" couvre
+    // déjà l'extraction endian. On vérifie ici juste que la cat est trouvée.
+    const found = await page.evaluate(() =>
+      typeof window.GENERATORS?.timestamp === 'function'
+    );
+    expect(found, "tp-engine-disk.js doit enregistrer GENERATORS.timestamp").toBe(true);
+  });
+
+  test('Cat mbr (extraite en tp-engine-disk.js) répond aux exercices', async ({ page }) => {
+    await page.goto('/tp.html#mbr');
+    await expect(page.locator('.tp-choice').first()).toBeVisible({ timeout: 5000 });
+    await solveMultipleChoice(page, 1);
+    await page.waitForTimeout(150);
+
+    const solved = await readLS(page, 'tp_solved', {});
+    expect(solved.mbr).toBe(1);
+  });
+
   // ── Fix Phase 1 : updateGroupProgress couvrait pas le groupe Windows ──
 
   test("updateGroupProgress couvre le groupe 'Artefacts Windows'", async ({ page }) => {
