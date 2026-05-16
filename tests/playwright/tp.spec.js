@@ -96,6 +96,28 @@ test.describe('tp.html — Baseline', () => {
     expect(solved.bitmap).toBe(1);
   });
 
+  // ── Phase 4 PR 4.2 : tp-engine-ntfs.js sharding ──
+
+  test('Cat runlist (extraite en tp-engine-ntfs.js) répond aux exercices', async ({ page }) => {
+    await page.goto('/tp.html#runlist');
+    await expect(page.locator('.tp-choice').first()).toBeVisible({ timeout: 5000 });
+    await solveMultipleChoice(page, 1);
+    await page.waitForTimeout(150);
+
+    const solved = await readLS(page, 'tp_solved', {});
+    expect(solved.runlist, `tp-engine-ntfs.js doit enregistrer GENERATORS.runlist. Got: ${JSON.stringify(solved)}`).toBe(1);
+  });
+
+  test('Cat timestomping (extraite en tp-engine-ntfs.js) répond aux exercices', async ({ page }) => {
+    await page.goto('/tp.html#timestomping');
+    await expect(page.locator('.tp-choice').first()).toBeVisible({ timeout: 5000 });
+    await solveMultipleChoice(page, 1);
+    await page.waitForTimeout(150);
+
+    const solved = await readLS(page, 'tp_solved', {});
+    expect(solved.timestomping).toBe(1);
+  });
+
   // ── Fix Phase 1 : updateGroupProgress couvrait pas le groupe Windows ──
 
   test("updateGroupProgress couvre le groupe 'Artefacts Windows'", async ({ page }) => {
