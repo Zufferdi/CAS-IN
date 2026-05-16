@@ -3930,7 +3930,10 @@ const CANTON_DATA = {
   BE: { name: "Berne", scenarios: ["ruag_2016", "palais_federal", "deepfake-electoral", "src-fonctionnaire-russe-kaspersky", "swatch-2020-ot", "whistleblower-ddps", "hydra-darknet-acheteurs-suisses-bka-2022", "be-affaire-aar-frutigen-1-kantonnet-detection", "be-affaire-aar-frutigen-2-expert-forensique-jcfc", "be-affaire-aar-frutigen-3-coordination-47-communes", "be-affaire-aar-frutigen-4-suspect-ex-dev", "be-affaire-aar-frutigen-5-audience-tmc", "be-affaire-prevote-1-signal-kernel-moutier", "be-affaire-prevote-2-ad-miroir-casse", "ju-affaire-prevote-6-perquisition-bevilard", "ge-affaire-gemmi-4-perquisition-thoune", "ge-affaire-gemmi-5-audience-thoune"] },
   ZH: { name: "Zurich", scenarios: ["attribution", "bitlocker", "bitlocker_froid", "mini-natels-prison-pochwies", "cistec-2025-sante", "contrefacon-douanes-enquirus", "easy-fake-news-elections", "frontieres", "swissport_2022", "lufthansa-zurich-aviation-cyber", "swisslife-vadian-supply-chain-pensionskassen-2025", "antisemitisme-ligne-261bis-zh"] },
   SZ: { name: "Schwyz", scenarios: ["clone-vocal"] },
-  TI: { name: "Tessin", scenarios: ["sati-bec", "lugano-dpfl-mafia-finance", "easy-cle-usb-trouvee", "eu-ai-act-cybersecurity", "telephone-scelles", "lockbit-cronos-saisie-serveur-tessin-2024"] },
+  TI: { name: "Tessin", scenarios: ["sati-bec", "lugano-dpfl-mafia-finance", "easy-cle-usb-trouvee", "eu-ai-act-cybersecurity", "telephone-scelles", "lockbit-cronos-saisie-serveur-tessin-2024",
+      "ti-affaire-gothard-6-perquisition-bellinzone",
+      "ti-affaire-gothard-7-audience-tpf"
+    ] },
   SG: { name: "Saint-Gall", scenarios: ["operation-alice", "stgall-infiltration", "swisslife-vadian-supply-chain-pensionskassen-2025"] },
   AG: { name: "Argovie", scenarios: ["operation-alice", "attentat-deja-couteau-mineur", "drone-laufenburg-swissgrid-aargau"] },
   LU: { name: "Lucerne", scenarios: ["operation-alice", "ems-fraude-deepfake-vocal-fils-lu"] },
@@ -3938,8 +3941,22 @@ const CANTON_DATA = {
   BS: { name: "Bâle-Ville", scenarios: ["boutique-fantome", "csam-ia-generative-bs"] },
   SO: { name: "Soleure", scenarios: ["eu-traite-roumain", "stalkerware-conjugal-soleure"] },
   ZG: { name: "Zoug", scenarios: ["blanchiment-boites-lettres-fuite", "web3-defi-rug-pull-zoug", "crypto-ag-rubikon-enquete-dfir-2020"] },
-  GR: { name: "Grisons", scenarios: ["voiture-connectee-meurtre-grisons"] },
-  UR: { name: "Uri", scenarios: ["catastrophe-naturelle-it-uri"] },
+  GR: { name: "Grisons", scenarios: ["voiture-connectee-meurtre-grisons",
+      "gr-affaire-engadine-1-ransomware-noel",
+      "gr-affaire-engadine-2-cambriolage-patek",
+      "gr-affaire-engadine-3-convergence-insider",
+      "ch-affaire-engadine-4-crypto-tracing",
+      "ch-affaire-engadine-5-entraide-vip",
+      "gr-affaire-engadine-6-perquisition-pontresina",
+      "gr-affaire-engadine-7-audience-coire"
+    ] },
+  UR: { name: "Uri", scenarios: ["catastrophe-naturelle-it-uri",
+      "ur-affaire-gothard-1-pilote-rouge",
+      "ur-affaire-gothard-2-forensique-s7",
+      "ur-affaire-gothard-3-competence-mpc",
+      "ur-affaire-gothard-4-piste-abb-bellinzone",
+      "ur-affaire-gothard-5-surveillance-lscpt"
+    ] },
 };
 
 function initCantonMap() {
