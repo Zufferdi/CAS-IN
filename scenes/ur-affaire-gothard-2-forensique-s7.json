@@ -1,0 +1,198 @@
+{
+  "id": "ur-affaire-gothard-2-forensique-s7",
+  "title": "Affaire du Gothard #2 — Forensique Siemens S7 sous pression",
+  "icon": "🔧",
+  "difficulty": "hard",
+  "atmosphere": "investigation",
+  "narrative": {
+    "success": "Le firmware modifié des deux PLC est extrait, comparé au firmware ABB officiel : 312 octets diffèrent — une routine cachée (rogue ladder) écrite en SCL. Le modem 4G livre son IMSI/IMEI : opérateur Sunrise, carte SIM enregistrée 'AnonProTel SAGL' (Bellinzone). C&C IP en Autriche, certificat self-signed. Trois pistes pour l'acte 3.",
+    "degraded": "Firmware extrait mais analyse SCL incomplète (script de diff cassé sur certains blocs). IMSI obtenu mais sans IMEI complet. Pistes suffisantes pour continuer mais incomplet pour audience future.",
+    "failure": "Manipulation maladroite du PLC en mode actif → l'attaquant détecte (heartbeat alteré) et déclenche un wipe distance. Le firmware se rebooté en V2.9.4 propre, perte définitive du code malveillant. Le dossier perd sa preuve clé."
+  },
+  "tags": [
+    "URI",
+    "ENQUÊTEUR",
+    "OT/ICS",
+    "SIEMENS S7",
+    "FIRMWARE FORENSIQUE",
+    "LADDER LOGIC",
+    "C&C 4G",
+    "OFCS",
+    "HARD",
+    "SAGA GOTHARD"
+  ],
+  "legalRefs": [
+    "Art. 184 CPP",
+    "Art. 248 CPP",
+    "LRC RS 120.73 art. 12",
+    "LSCPT art. 22",
+    "ACPO Principles"
+  ],
+  "intro": "Mardi 14 octobre, 14h20. Le tunnel est fermé (axe Gothard <strong>en panne</strong>, 280'000 véh/jour déroutés via San Bernardino + Simplon — le pire embouteillage routier suisse depuis 2009). La <strong>cellule infrastructure critique OFCS</strong> est activée à Berne. Sur place à Göschenen : <strong>Adjudant Gisler</strong> (Polcant UR), <strong>M. Imhof</strong> (CSIRT UR), <strong>Dr Krüger</strong> (expert OT NCSC), <strong>Mme Tschanz</strong> (coordinatrice Critical Infrastructure Information OFCS) arrivée par hélico, et <strong>Christian Thalmann</strong> (OT lead Swissgrid, prêté en renfort technique).<br><br>Vous prenez la suite de Hans Furrer comme enquêteur Polcant UR cyber (sous direction Adjudant Gisler). Tâche : <strong>forensique forensique du PLC compromis</strong> + analyse du modem 4G clandestin <strong>sans manquer la fenêtre</strong> avant que l'attaquant tente une réaction.",
+  "alertLevel": "🔬 FORENSIQUE OT EN COURS — 2 PLC Siemens S7 compromis · 1 modem 4G en Faraday · Pression médiatique nationale",
+  "objectives": [
+    {
+      "icon": "💾",
+      "text": "Extraire le firmware modifié sans déclencher de wipe distant"
+    },
+    {
+      "icon": "🔍",
+      "text": "Comparer avec le firmware ABB officiel et identifier les modifications"
+    },
+    {
+      "icon": "📡",
+      "text": "Analyser le modem 4G clandestin et identifier le C&C"
+    }
+  ],
+  "debrief": "<p><strong>Forensique d'un PLC Siemens S7-1500</strong> est un exercice spécialisé. Différences avec un IT classique :</p><ul><li>Pas de OS d'extraction standard (pas de <code>dd</code> sur PLC). On utilise des outils <strong>STEP 7 forensique read-only</strong>, ou des dumps via JTAG/SWD sur la carte mémoire CPU si accessible physiquement.</li><li>La RAM PLC contient les <strong>variables de process</strong> en temps réel — clé pour comprendre l'attaque sans figer le système.</li><li>Le <strong>code source en SCL/STL/LAD</strong> (Structured Control Language / Statement List / Ladder Diagram) est ce qu'a écrit l'attaquant. Comparer avec le code \"golden\" (référence ABB) octet par octet (différence binaire) puis analyser sémantiquement les blocs modifiés.</li><li>L'attaquant peut avoir laissé un <strong>code mort apparent</strong> (commenté) en fait actif via une condition camouflée — d'où l'importance de l'analyse statique <em>et</em> dynamique (test bench).</li></ul><p><strong>Pour le modem 4G clandestin</strong> : la SIM contient l'IMSI (identifiant abonné). Le matériel a l'IMEI (identifiant équipement). Couplés, ils permettent à l'opérateur (Sunrise / Swisscom / Salt) de retracer (a) l'historique de localisation cellulaire, (b) le détenteur du contrat, (c) la date d'activation. Demande LSCPT art. 22 = sans TMC (données d'identification). Demande LSCPT art. 273 = avec TMC (données rétroactives détaillées).</p>",
+  "steps": [
+    {
+      "phase": "🔬 14h40 — Extraction du firmware compromis",
+      "situation": "Le PLC-VENT-N1 est encore sous tension dans son armoire B7. Imhof + Krüger se concertent. Trois approches techniques sur la table :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7;font-family:monospace\">📋 Inventaire matériel :<br>• 1× station d'ingénierie OFROU avec TIA Portal V18 (machine 'sale' avec creds production)<br>• 1× kit forensique NCSC : laptop hardened + STEP 7 Forensic Edition + analyseur OT Nozomi<br>• 1× sniffer réseau passif Garland TAP (port mirror)<br>• 1× JTAG ARM-USB-OCD-H (si dépose physique du module CPU)<br>• Cage Faraday portable pour transport</div><br>L'attaquant peut être en veille et surveiller un heartbeat. Si tu déclenches un signal anormal (session admin non habituelle, latence inhabituelle, redémarrage), il peut wipe à distance via le modem 4G.",
+      "law": "<strong>Art. 184 CPP</strong> expert · <strong>ACPO Principles 1-3</strong> · <strong>NIST SP 800-82</strong> (Industrial Control Systems Security).",
+      "question": "<strong>Quelle approche d'extraction recommandez-vous à Krüger ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Sniffer Garland TAP en port mirror sur le switch industriel pour <strong>capturer le trafic OT 30 minutes</strong> avant toute autre action — observer le comportement normal vs anormal. (2) Le modem 4G est déjà en Faraday : l'attaquant ne peut plus recevoir de heartbeat — il a peut-être déjà déclenché un wipe pre-programmé, à vérifier dans la capture. (3) STEP 7 Forensic Edition (lecture seule certifiée, pas TIA Portal classique) pour dumper la mémoire interne du CPU. Hash SHA-256 immédiat.",
+          "ok": true,
+          "pts": 18,
+          "fb": "✅ <strong>Méthodologie OT rigoureuse.</strong> Observer avant d'agir = règle de base ICS forensique. Le TAP passif capture sans perturber. Le Faraday du modem est crucial — il coupe le canal de heartbeat sans le débrancher (donc l'attaquant ne sait pas, sauf s'il avait pré-programmé un wipe sur perte de signal — c'est exactement ce qu'on vérifie dans la capture). STEP 7 Forensic Edition (vs TIA Portal de prod) = mode lecture seule certifié pour audit. Hash immédiat = chaîne de custody.",
+          "legal": "ACPO 1-3 · NIST 800-82 r3.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Démonter physiquement le module CPU des PLC compromis pour extraction JTAG en labo Berne — c'est la méthode la plus fiable.",
+          "ok": false,
+          "pts": -12,
+          "fb": "⚠️ <strong>Disproportionné à ce stade.</strong> JTAG est ultime (hardware level) mais (1) le PLC est encore branché à un actionneur de tunnel — démonter physique = casser un système en place, traces possibles d'altération mécanique attaquables. (2) On perd les variables de process en RAM (clés pour comprendre la routine en exécution). (3) Le STEP 7 Forensic suffit pour 95% des cas. JTAG = dernière option si soft-extract échoue.",
+          "legal": "Art. 184 CPP — proportionnalité.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Brancher la station OFROU (TIA Portal V18) sur le PLC compromis : c'est l'outil que les techniciens utilisent quotidiennement, l'attaquant ne le verra pas comme anormal.",
+          "ok": false,
+          "pts": -18,
+          "fb": "💀 <strong>Pollution OT garantie.</strong> TIA Portal V18 (machine de prod) <em>écrit</em> systématiquement des métadonnées : timestamps de connexion, sessions, logs internes du PLC. Tu altères la preuve. Et même si l'attaquant ne le voit pas comme anormal, son implant peut être pré-programmé pour wipe sur connexion d'une station d'ingénierie. La machine de prod a aussi un compte technicien avec privilèges en écriture — un clic mal placé écrit dans le PLC. C'est exactement pour cela qu'on a une station forensique dédiée.",
+          "legal": "ACPO 1 violé · Art. 192 CPP risque.",
+          "critical": true,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "📡 15h45 — Analyse du modem 4G clandestin",
+      "situation": "Le modem 4G clandestin (modèle <strong>Huawei E3372 LTE</strong>) est encore allumé dans son sac Faraday opaque triple-couche. Krüger l'examine sous loupe binoculaire avant toute intervention :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7;font-family:monospace\">🔬 Inspection visuelle :<br>• Carte SIM visible par la fente latérale (étiquette opérateur effacée)<br>• Numéro de série Huawei : <code>867XXX-XXXXXXX-7</code><br>• Antenne externe SMA connectée, câblage propre (installateur professionnel)<br>• Aucune marque visible d'employé OFROU/ABB sur le modem (achat probablement personnel)<br>• Connecté en USB-Ethernet à un mini switch industriel de la baie B7</div><br>Trois options pour l'analyse :",
+      "law": "<strong>LSCPT RS 780.1 art. 22</strong> — données d'identification d'abonné. <strong>Art. 248 CPP</strong> — scellés. <strong>Art. 184 CPP</strong> — expertise.",
+      "question": "<strong>Comment procéder à l'analyse du modem 4G ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Photos macro</strong> du modem dans le Faraday avant tout démontage. (2) Mise sous scellé numéroté UR-2026-3045-A avec PV de remise à Dr Krüger pour transport labo OFCS Berne. (3) Au labo (mode contrôlé Faraday box ouverte), <strong>extraire la SIM</strong> physiquement et lire son IMSI via lecteur SIM forensique (sans connecter à un téléphone). (4) Lire l'IMEI du modem via interrogation AT-commands sur port série USB du modem (en lecture seule, après dump firmware modem). (5) Demande LSCPT art. 22 au procureur UR pour identifier l'abonné.",
+          "ok": true,
+          "pts": 18,
+          "fb": "✅ <strong>Méthodologie irréprochable.</strong> Photos macro = traçabilité de l'état initial. Scellé numéroté + PV de remise = chaîne de custody. Au labo (environnement contrôlé) extraction SIM avec lecteur forensique = pas de risque de connexion réseau accidentelle. AT-commands en lecture seule (<code>AT+CGSN</code> pour IMEI, <code>AT+CIMI</code> pour IMSI confirmation) = standard forensique mobile depuis 2008. LSCPT art. 22 = sans TMC pour identité abonné (autorité du procureur suffit).",
+          "legal": "LSCPT art. 22 · Art. 248 CPP · NIST SP 800-101 r1.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Démonter le modem sur place pour gagner du temps, lire la SIM avec ton téléphone Polcant en mode 'scan SIM'.",
+          "ok": false,
+          "pts": -16,
+          "fb": "💀 <strong>Triple risque.</strong> (1) Démontage sur scène = pollution + risque ESD (décharge électrostatique sèche un composant). (2) Téléphone Polcant <em>connecté</em> à la SIM = la SIM s'enregistre sur le réseau Sunrise = l'attaquant qui surveille les sessions actives détecte une activité (et peut wipe son C&C). (3) Pas de chaîne de custody (objet non scellé, manipulation hors PV). L'attaquant sait probablement quels MSISDN il a programmé dans son implant — t'enregistrer là-dessus est une trahison.",
+          "legal": "Art. 192 CPP · pollution preuve.",
+          "critical": true,
+          "next": 2
+        },
+        {
+          "text": "Conserver le modem dans le Faraday et n'analyser que la SIM (après extraction). Ignorer le modem hardware — c'est juste un Huawei standard.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ <strong>Tu manques l'IMEI.</strong> Le modem hardware contient l'IMEI (identifiant unique de l'équipement, traçable indépendamment de la SIM). Si le suspect a utilisé plusieurs SIM dans ce modem, le suivi IMEI chez Sunrise révèle <em>toutes</em> les SIM ayant transité dans cet équipement. Et le firmware modem peut révéler des configurations personnalisées (DNS forcés, VPN custom). Ne pas analyser = perdre 50% de la valeur OSINT du modem.",
+          "legal": "Art. 184 CPP — analyse incomplète.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "💾 17h30 — Le code malveillant",
+      "situation": "Le dump firmware PLC-VENT-N1 est sur la station forensique. Hash SHA-256 verrouillé. Comparaison avec firmware ABB officiel V2.9.4 (téléchargé depuis le portail ABB Industrial Security via VPN sécurisé) :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7;font-family:monospace\">📊 Diff binaire :<br>• Bloc OB1 (cyclic main) : <strong>312 octets ajoutés</strong> en fin de bloc<br>• Bloc FB42 (ventilation control) : <strong>2 conditions modifiées</strong><br>• Bloc DB75 (process variables) : 1 variable supplémentaire <code>X_BYPASS_OVERRIDE</code><br>• Reste du firmware : identique à ABB V2.9.4 officiel</div><br>Krüger décompile les blocs modifiés en SCL :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7;font-family:monospace\">// Routine cachée dans OB1<br>IF \"X_BYPASS_OVERRIDE\" = TRUE THEN<br>&nbsp;&nbsp;\"CO2_SENSOR_FILTERED\" := 0;  // toutes les valeurs CO2 forcées à 0<br>&nbsp;&nbsp;\"VENT_REQUEST_OVERRIDE\" := 0; // ventilation forcée OFF<br>&nbsp;&nbsp;\"PORTAL_RED_LIGHT\" := TRUE;   // pilote rouge maintenu<br>END_IF;<br><br>// X_BYPASS_OVERRIDE activé par message reçu via OPC UA sur port 4842<br>// (port custom non documenté ABB, ajouté par l'attaquant)</div><br>C'est le bingo. Le code est clair, fonctionnel, et signe l'attaquant : il connaît bien Siemens S7 et a accès au firmware ABB officiel (= probablement un insider ABB ou un sous-traitant).",
+      "law": "<strong>Art. 184 CPP</strong> · <strong>Art. 23 LOAP</strong> (infrastructure critique fédérale = compétence MPC). <strong>Art. 24 LOAP</strong> (transmission cantonale → fédérale).",
+      "question": "<strong>Que faites-vous de cette découverte dans la prochaine heure ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Rapport technique préliminaire</strong> rédigé par Krüger + Imhof signé contradictoirement (pièce maîtresse du dossier). (2) Procureur Müller (UR) saisi : la matière dépasse manifestement la compétence cantonale, demande de transmission au MPC selon <strong>art. 24 LOAP</strong>. (3) <strong>ABB Suisse notifiée</strong> via canal officiel (procureur → ABB security lead) pour 2 raisons : (a) ils ont un insider présumé, (b) ils peuvent fournir la liste de tous les techniciens ayant accès au firmware V2.9.4 (golden image). (4) <strong>Pas de fuite presse</strong> à ce stade.",
+          "ok": true,
+          "pts": 18,
+          "fb": "✅ <strong>Transition correcte.</strong> Tu reconnais l'envergure (art. 23 LOAP — infrastructures critiques fédérales) et tu prépares la transmission art. 24 LOAP au MPC <em>via</em> le procureur UR (pas direct, jamais direct). Notifier ABB est crucial : ils ont (a) une obligation de coopération + (b) un intérêt à contenir un insider qui peut frapper d'autres clients (CFF, Swisselectric, Suisselectric Holding). La discrétion presse maintient l'avantage tactique pour identifier l'attaquant.",
+          "legal": "Art. 24 LOAP · Art. 73 CPP · obligation ABB art. 11 LRC.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Publier directement le diff SCL sur le forum CSIRT Suisse pour avertir les autres opérateurs d'infrastructures critiques (CFF, Swissgrid, Swissport) d'un risque similaire.",
+          "ok": false,
+          "pts": -14,
+          "fb": "❌ <strong>Fuite tactique majeure.</strong> Le forum CSIRT Suisse est restreint, certes, mais inclut des techniciens employés par les opérateurs <em>et</em> par les sous-traitants (ABB, Siemens, Honeywell). L'attaquant peut être membre. Et publier le diff <em>en clair</em> = donner à l'attaquant la confirmation que ses TTPs sont identifiés. La bonne séquence : alerter via canal OFCS officiel (TLP:RED → TLP:AMBER après identification suspect) pour les autres opérateurs.",
+          "legal": "Art. 73 CPP · risque fuite.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Ce n'est pas urgent : finissez l'analyse du modem 4G d'abord, on consolidera demain et on saisira le MPC en début de semaine prochaine.",
+          "ok": false,
+          "pts": -16,
+          "fb": "💀 <strong>Inertie inadmissible.</strong> Tu as un suspect probablement actif (qui surveille les news pour évaluer ses risques), une infrastructure critique fédérale touchée, et des éléments forensiques solides. Attendre 5 jours = (1) perdre la fenêtre de surveillance LSCPT temps réel sur Sunrise, (2) laisser l'insider présumé évacuer ses preuves côté ABB (effacer sessions VPN, supprimer scripts, refuser des heures supplémentaires non documentées). Saisine MPC = AUJOURD'HUI.",
+          "legal": "Art. 24 LOAP · Art. 302 CPP omis.",
+          "critical": true,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "📨 19h15 — Le rapport au procureur UR",
+      "situation": "Vous êtes dans le bureau du <strong>procureur Müller</strong> (Polcant UR, division enquêtes spéciales) au tribunal d'Altdorf. À ses côtés : Adjudant Gisler, Mme Tschanz (OFCS). Le rapport technique préliminaire est sur la table.<br><br>Müller lit, fronce les sourcils, signe :<br><br><div style=\"background:rgba(255,255,255,.05);border-left:3px solid var(--blue);padding:.75rem 1rem;font-size:.85rem;line-height:1.6;font-style:italic\">« Sergent, c'est clair. Compétence MPC art. 23 LOAP let. d et g (infrastructure énergétique et transport ressortant à la Confédération). Je signe la transmission au MPC ce soir, à l'attention de Me Astrid Furrer, division cybercriminalité et infrastructures. Polcant UR reste opérationnellement sur place en appui — c'est l'usage : le canton ne disparaît pas après transmission, il devient bras armé du MPC sur son territoire. Tu rapporteras à elle dorénavant. Une question : où est notre suspect ? »</div><br>Tu prépares ta réponse.",
+      "law": "<strong>Art. 23 LOAP let. d/g</strong> · <strong>Art. 24 LOAP</strong> · <strong>Art. 25 LOAP</strong> (procédures déléguées).",
+      "question": "<strong>Que répondez-vous au procureur sur le suspect ?</strong>",
+      "choices": [
+        {
+          "text": "« Monsieur le Procureur, aucun suspect identifié à ce stade. Profil probable : (a) <strong>insider ABB</strong> (accès firmware V2.9.4 + connaissance SCL S7 + accès physique probable lors d'une intervention de maintenance), ou (b) <strong>sous-traitant ABB</strong> avec compétences similaires. La piste sera élargie demain avec ABB security lead (M. Stocker en renfort, expérience Swatch OT, expertisé Siemens). Côté C&C : modem 4G, IMSI/IMEI envoyés à Sunrise sous LSCPT art. 22, retour attendu sous 24-48h. »",
+          "ok": true,
+          "pts": 16,
+          "fb": "✅ <strong>Honnête et précis.</strong> Tu ne fais pas semblant d'avoir le suspect. Tu présente un profil-type (insider/sous-traitant ABB) étayé par les indices techniques (compétences SCL S7 + accès firmware golden + accès physique). M. Stocker (swatch_security_lead, BE) est un excellent renfort réutilisé — son expérience OT chez Swatch (saga existante) le qualifie pour ABB. Tu donnes une timeline réaliste pour LSCPT (24-48h Sunrise).",
+          "legal": "Art. 184 CPP · LSCPT art. 22.",
+          "critical": false,
+          "next": null
+        },
+        {
+          "text": "« On a un fort soupçon sur un ex-employé ABB licencié récemment, on attend juste la confirmation Sunrise. »",
+          "ok": false,
+          "pts": -10,
+          "fb": "⚠️ <strong>Survente.</strong> Tu n'as <em>aucune</em> piste nominative à 19h15 ce mardi — tu as un profil-type. Inventer une certitude que tu n'as pas met le procureur en difficulté (il pourrait préparer un mandat sur ce supposé suspect inexistant). Et si tu trompes Müller, sa confiance envers toi est cassée pour le reste de la saga. Sois honnête : « pas encore, mais le cadre est posé pour identifier rapidement ».",
+          "legal": "Art. 178 CPP — vérité.",
+          "critical": false,
+          "next": null
+        },
+        {
+          "text": "« On n'a rien. Aucun élément. Il faut peut-être recommencer l'analyse forensique. »",
+          "ok": false,
+          "pts": -8,
+          "fb": "❌ <strong>Sous-vente.</strong> Tu as un firmware diff documenté, un modem 4G saisi avec son IMSI bientôt identifié, un profil-type étayé. C'est <em>beaucoup</em> à H+15. Dire « rien » te décrédibilise auprès du procureur qui va perdre confiance dans ton équipe. Au niveau enquêteur, on assume ce qu'on a même si c'est encore en construction.",
+          "legal": "Art. 178 CPP — précision.",
+          "critical": false,
+          "next": null
+        }
+      ]
+    }
+  ],
+  "npcs": ["polur_chef_section_cyber", "csirt_cantonal_uri", "procureur_uri", "expert_astra_tesla_forensics", "ofcs_coordinator", "swissgrid_ot_lead", "swatch_security_lead", "ncsc_govcert_lead"],
+  "regionDetail": {
+    "code": "UR",
+    "flag": "🇨🇭",
+    "name": "Uri"
+  },
+  "region": "CH",
+  "realCase": false
+}
