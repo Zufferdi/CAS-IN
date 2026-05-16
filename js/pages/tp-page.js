@@ -295,9 +295,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (catN === catMax) {
           const m = CAT_META[currentCat];
           showToast('🥇', 'Catégorie complète !', (m ? m.name : currentCat) + ' — ' + catN + '/' + catMax + ' réussis');
-        } else if (streak === 5) showToast('🔥', 'Série de 5 !', 'Continue comme ça !');
+        } else if (streak === 3)  showToast('🔥', 'Série de 3 !', 'C\'est parti, garde le rythme.');
+        else if (streak === 5) showToast('🔥', 'Série de 5 !', 'Continue comme ça !');
         else if (streak === 10) showToast('🚀', 'Série de 10 !', 'Incroyable — série parfaite !');
       } catch(e) {}
+
+      // Phase 6 v3.1 — Évalue les quêtes du jour après chaque résolution TP.
+      // Pattern : copie 1:1 de ce que scene-app.js et quiz-app.js font déjà.
+      if (window.Quests && typeof window.Quests.evalAndComplete === 'function') {
+        try { window.Quests.evalAndComplete(); } catch (_) {}
+      }
     };
   }
 

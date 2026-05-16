@@ -37,43 +37,167 @@ document.addEventListener('keydown', e => {
   if (map[panel.id]) { e.preventDefault(); map[panel.id](); }
 });
 
-// ── Tool nav ─────────────────────────────────────────────────
+// ── Tool nav (Phase 5 v3.1 — sidebar groupée) ────────────────
+//
+// Ancien comportement : barre plate `.tnav-btn` × 12, ARIA roving tabindex.
+// Nouveau : sidebar `.sb-cat` groupée + mob-pill mobile + permalink ?tool=…
+//
+// `showTool(id, btn)` reste l'API publique appelée depuis le HTML (onclick).
+// On la rend compatible : `btn` peut être un .sb-cat, un .mob-pill, ou null
+// (cas d'un déclenchement programmatique, ex: bootstrap depuis permalink).
+
+const TOOL_TO_GROUP = {
+  ts:'grp-time-enc', hex:'grp-time-enc', enc:'grp-time-enc', hashid:'grp-time-enc',
+  fat:'grp-fat', cluster:'grp-fat', sfn:'grp-fat',
+  ntfs:'grp-ntfs', rl:'grp-ntfs', mft:'grp-ntfs',
+  magic:'grp-ident', bitmap:'grp-ident',
+};
+
 function showTool(id, btn) {
-  document.querySelectorAll('.tool-panel').forEach(p=>p.classList.remove('on'));
-  document.getElementById('tool-'+id).classList.add('on');
-  document.querySelectorAll('.tnav-btn').forEach(b=>{
-    b.classList.remove('on');
-    b.setAttribute('aria-selected', 'false');
-    b.setAttribute('tabindex', '-1');  // v2.59 — roving tabindex pour a11y
-  });
-  btn.classList.add('on');
-  btn.setAttribute('aria-selected', 'true');
-  btn.setAttribute('tabindex', '0');
+  // 1. Bascule le panel visible
+  document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('on'));
+  const panel = document.getElementById('tool-' + id);
+  if (panel) panel.classList.add('on');
+
+  // 2. Désélectionne toute la sidebar puis active la cat correspondante
+  document.querySelectorAll('.sb-cat').forEach(b => b.classList.remove('active'));
+  // Tente d'abord d'utiliser btn (callsite naturel) ; sinon retrouve via data-tool
+  let activeBtn = btn && btn.classList && btn.classList.contains('sb-cat') ? btn : null;
+  if (!activeBtn) {
+    activeBtn = document.querySelector('.sb-cat[data-tool="' + id + '"]');
+  }
+  if (activeBtn) activeBtn.classList.add('active');
+
+  // 3. Ouvre le groupe parent + collapse les autres (pattern tp.html#toggleGrp)
+  const targetGrp = TOOL_TO_GROUP[id];
+  if (targetGrp) {
+    document.querySelectorAll('.sb-group').forEach(g => g.classList.add('collapsed'));
+    document.getElementById(targetGrp)?.classList.remove('collapsed');
+  }
+
+  // 4. Mobile pills : marque active
+  document.querySelectorAll('.mob-pill[data-tool]').forEach(p =>
+    p.classList.toggle('active', p.dataset.tool === id)
+  );
+
+  // 5. Permalink : met à jour ?tool=… sans recharger
+  try {
+    const u = new URL(location.href);
+    u.searchParams.set('tool', id);
+    history.replaceState(null, '', u.toString());
+  } catch (_) { /* sandbox or unsupported */ }
 }
 
-// v2.59 — Navigation clavier ARIA pour le tablist (←/→/Home/End)
-document.addEventListener('DOMContentLoaded', function () {
-  const tabs = Array.from(document.querySelectorAll('.tnav-btn[role="tab"]'));
-  if (!tabs.length) return;
-  tabs.forEach(function (tab, idx) {
-    tab.addEventListener('keydown', function (e) {
-      let target = null;
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-        target = tabs[(idx + 1) % tabs.length];
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        target = tabs[(idx - 1 + tabs.length) % tabs.length];
-      } else if (e.key === 'Home') {
-        target = tabs[0];
-      } else if (e.key === 'End') {
-        target = tabs[tabs.length - 1];
-      } else {
-        return;
-      }
-      e.preventDefault();
-      target.focus();
-      target.click();  // active l'onglet
-    });
+// ── Sidebar search (filter tools by name/id) ──────────────────
+function filterTools(q) {
+  const low = (q || '').toLowerCase().trim();
+  document.querySelectorAll('.sb-cat[data-tool]').forEach(btn => {
+    const name = (btn.textContent || '').toLowerCase();
+    const id = (btn.dataset.tool || '').toLowerCase();
+    btn.style.display = (!low || name.includes(low) || id.includes(low)) ? '' : 'none';
   });
+  // Hide groups whose all .sb-cat are filtered out
+  document.querySelectorAll('.sb-group').forEach(grp => {
+    if (grp.id === 'grp-recent') return; // recent group géré séparément
+    const cats = grp.querySelectorAll('.sb-cat[data-tool]');
+    const visible = [...cats].filter(c => c.style.display !== 'none');
+    grp.style.display = (visible.length === 0 && low) ? 'none' : '';
+    // Auto-déplie si recherche active et match présent
+    if (low && visible.length > 0) grp.classList.remove('collapsed');
+  });
+}
+
+// ── Toggle group collapse (compatible tp.html sidebar pattern) ─
+function toggleGrp(id) {
+  const grp = document.getElementById(id);
+  if (!grp) return;
+  const wasCollapsed = grp.classList.contains('collapsed');
+  // Ferme tous les groupes, ouvre celui cliqué s'il était fermé
+  document.querySelectorAll('.sb-group').forEach(g => g.classList.add('collapsed'));
+  if (wasCollapsed) grp.classList.remove('collapsed');
+}
+
+// ── Recently used (Phase 5 v3.1 — lit tools_used de Phase 3b) ──
+// Métadonnée pour rebuild les pills/items "récents" sans dépendre du DOM.
+const TOOL_LABELS = {
+  ts:    {icon:'⏱', name:'Timestamps'},
+  hex:   {icon:'🔢', name:'Hex ↔ ASCII'},
+  enc:   {icon:'🔐', name:'Encodages'},
+  hashid:{icon:'🔑', name:'Hash ID'},
+  fat:   {icon:'📐', name:'Offset FAT'},
+  cluster:{icon:'🧮', name:'Cluster'},
+  sfn:   {icon:'📄', name:'SFN FAT'},
+  ntfs:  {icon:'📐', name:'Offset NTFS'},
+  rl:    {icon:'🗄', name:'Run List'},
+  mft:   {icon:'🧩', name:'MFT'},
+  magic: {icon:'✨', name:'Magic Bytes'},
+  bitmap:{icon:'🗺', name:'Bitmap'},
+};
+
+function buildRecentList() {
+  const list = document.getElementById('recent-list');
+  const countEl = document.getElementById('recent-count');
+  if (!list) return;
+  let used = {};
+  try { used = JSON.parse(localStorage.getItem('tools_used') || '{}'); } catch(_) {}
+  const entries = Object.entries(used)
+    .filter(([k, v]) => TOOL_LABELS[k] && parseInt(v, 10) > 0)
+    .sort((a, b) => parseInt(b[1], 10) - parseInt(a[1], 10))  // tri par fréquence DESC
+    .slice(0, 5);
+  if (entries.length === 0) {
+    list.innerHTML = '<div class="sb-empty">— aucun outil encore utilisé —</div>';
+    if (countEl) countEl.textContent = '0';
+    return;
+  }
+  list.innerHTML = entries.map(([id, n]) => {
+    const m = TOOL_LABELS[id];
+    return `<button type="button" class="sb-cat" data-tool="${id}" onclick="showTool('${id}',this)">`
+         + `<span class="sb-cat-icon">${m.icon}</span>`
+         + `<span class="sb-cat-name">${m.name}</span>`
+         + `<span class="sb-badge sb-badge-part">${n}</span></button>`;
+  }).join('');
+  if (countEl) countEl.textContent = String(entries.length);
+}
+
+// ── Mobile pills bar ──────────────────────────────────────────
+function buildMobPills() {
+  const bar = document.getElementById('mob-pills');
+  if (!bar) return;
+  bar.innerHTML = Object.entries(TOOL_LABELS).map(([id, m]) =>
+    `<div class="mob-pill" data-tool="${id}" onclick="showTool('${id}',this)">${m.icon} ${m.name}</div>`
+  ).join('');
+}
+
+// ── Init ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+  document.body.classList.add('tools-page');  // active overflow:auto CSS
+
+  buildMobPills();
+  buildRecentList();
+
+  // Permalink : si ?tool=xxx présent et valide, ouvre cet outil
+  try {
+    const tool = new URLSearchParams(location.search).get('tool');
+    if (tool && TOOL_LABELS[tool]) {
+      showTool(tool, null);
+      return; // déjà initialisé
+    }
+  } catch (_) {}
+  // Sinon : ouvre 'ts' par défaut (premier outil)
+  showTool('ts', null);
+});
+
+// ── Refresh `recent` quand un outil est utilisé ──────────────
+// On wrap recordToolUse (défini juste après) pour rebuild la liste après debounce.
+// Trick : on patche le bridge après chargement.
+document.addEventListener('DOMContentLoaded', function () {
+  if (!window.ToolsProfileBridge || typeof window.ToolsProfileBridge.notifyToolUse !== 'function') return;
+  const orig = window.ToolsProfileBridge.notifyToolUse;
+  window.ToolsProfileBridge.notifyToolUse = function (key) {
+    const r = orig.call(this, key);
+    try { buildRecentList(); } catch (_) {}
+    return r;
+  };
 });
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -105,6 +229,31 @@ const RESULT_TO_TOOL = {
   'cl-result':     'cluster',
   'mft-result':    'mft',
 };
+
+// ─────────────────────────────────────────────────────────────
+// Phase 6 v3.1 — Cross-link tool → TP
+// Après usage réussi d'un outil, propose un lien "→ Tester sur un TP {cat}"
+// vers une catégorie TP pertinente. Pas tous les outils ont une cat TP
+// équivalente (Hash ID = pas de TP hash spécifique 1:1, etc.) → on ne
+// suggère QUE ceux qui ont un mapping clair.
+//
+// Format : tool key → { cat: 'tp_cat', label: '🧩 Run List NTFS' }
+// ─────────────────────────────────────────────────────────────
+const TOOL_TO_TP_CAT = {
+  ts:      { cat: 'timestamp',   label: '⏱ Timestamps FAT' },
+  rl:      { cat: 'runlist',     label: '🧩 Run List NTFS' },
+  fat:     { cat: 'fat',         label: '⛓ Chaîne FAT' },
+  ntfs:    { cat: 'ntfsindex',   label: '📇 $INDEX NTFS' },
+  hex:     { cat: 'bases',       label: '🔢 Bases & Encodages' },
+  enc:     { cat: 'bases',       label: '🔢 Bases & Encodages' },
+  sfn:     { cat: 'direntry',    label: '📁 Directory Entry FAT' },
+  magic:   { cat: 'magic',       label: '✨ Magic Bytes' },
+  bitmap:  { cat: 'bitmap',      label: '🗺 Bitmap exFAT' },
+  hashid:  { cat: 'hash',        label: '🔑 Hash & Intégrité' },
+  cluster: { cat: 'slackspace',  label: '🪣 Slack Space (FAT)' },
+  mft:     { cat: 'hexdump',     label: '🔬 Dump Hex en contexte' },
+};
+
 const _toolDebounce = {};
 function recordToolUse(toolKey) {
   if (!toolKey) return;
@@ -130,7 +279,18 @@ function showResult(id, html) {
     + 'color:var(--muted);cursor:pointer" '
     + 'onmouseover="this.style.color=\'var(--cyan)\'" '
     + 'onmouseout="this.style.color=\'var(--muted)\'">📋 Copier</button>';
-  el.innerHTML = '<div class="rb-title">Résultat</div>' + copyBtn + html;
+
+  // Phase 6 v3.1 — Cross-link tool → TP (uniquement sur succès)
+  const toolKey = RESULT_TO_TOOL[id];
+  let crossLink = '';
+  if (!isErr && toolKey && TOOL_TO_TP_CAT[toolKey]) {
+    const tp = TOOL_TO_TP_CAT[toolKey];
+    crossLink = '<div class="rb-tp-link" style="margin-top:.6rem;padding-top:.55rem;border-top:1px dashed var(--border);font-size:.72rem;color:var(--muted)">'
+      + '→ Tester sur un TP : <a href="tp.html#' + tp.cat + '" style="color:var(--cyan);text-decoration:none;font-weight:600">' + tp.label + '</a>'
+      + '</div>';
+  }
+
+  el.innerHTML = '<div class="rb-title">Résultat</div>' + copyBtn + html + crossLink;
   el.classList.remove('empty');
   // Fix Phase 1 : certains panels (#magic-result, #hashid-result, #cl-result,
   // #mft-result, #sfn-result) ont `style="display:none"` inline en HTML, ce qui
@@ -138,7 +298,7 @@ function showResult(id, html) {
   // car une règle inline gagne sur une règle de classe. On reset explicitement.
   if (el.style.display === 'none') el.style.display = '';
   // Phase 3b — Tracking achievements (seulement sur succès, pas sur erreur)
-  if (!isErr && RESULT_TO_TOOL[id]) recordToolUse(RESULT_TO_TOOL[id]);
+  if (!isErr && toolKey) recordToolUse(toolKey);
 }
 function row(lbl,val,cls=''){return`<div class="rb-row"><span class="rb-lbl">${lbl}</span><span class="rb-val ${cls}">${val}</span></div>`;}
 function step(lbl,val){return`<div class="step" style="margin-top:.5rem"><div class="step-lbl">${lbl}</div><div class="step-val">${val}</div></div>`;}
