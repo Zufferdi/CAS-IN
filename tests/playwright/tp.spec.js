@@ -73,6 +73,29 @@ test.describe('tp.html — Baseline', () => {
     expect(solved === null || Object.keys(solved).length === 0).toBe(true);
   });
 
+  // ── Phase 4 PR 4.1 : tp-engine-fat.js sharding ──
+
+  test('Cat FAT (extraite en tp-engine-fat.js) répond aux exercices', async ({ page }) => {
+    await page.goto('/tp.html#fat');
+    // Si le sharding casse l'enregistrement de GENERATORS.fat, l'exo n'apparait pas
+    await expect(page.locator('.tp-choice').first()).toBeVisible({ timeout: 5000 });
+    await solveMultipleChoice(page, 1);
+    await page.waitForTimeout(150);
+
+    const solved = await readLS(page, 'tp_solved', {});
+    expect(solved.fat, `tp-engine-fat.js doit enregistrer GENERATORS.fat. Got: ${JSON.stringify(solved)}`).toBe(1);
+  });
+
+  test('Cat bitmap (extraite en tp-engine-fat.js) répond aux exercices', async ({ page }) => {
+    await page.goto('/tp.html#bitmap');
+    await expect(page.locator('.tp-choice').first()).toBeVisible({ timeout: 5000 });
+    await solveMultipleChoice(page, 1);
+    await page.waitForTimeout(150);
+
+    const solved = await readLS(page, 'tp_solved', {});
+    expect(solved.bitmap).toBe(1);
+  });
+
   // ── Fix Phase 1 : updateGroupProgress couvrait pas le groupe Windows ──
 
   test("updateGroupProgress couvre le groupe 'Artefacts Windows'", async ({ page }) => {
