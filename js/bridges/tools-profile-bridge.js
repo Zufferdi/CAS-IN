@@ -80,6 +80,11 @@
       try { window.Profile.recordActivity('tools'); } catch (_) {}
     }
 
+    // Phase 6 v3.1 : Évalue les quêtes du jour (q_tools_3today notamment).
+    if (window.Quests && typeof window.Quests.evalAndComplete === 'function') {
+      try { window.Quests.evalAndComplete(); } catch (_) {}
+    }
+
     return evalAchievements();
   }
 
