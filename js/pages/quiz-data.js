@@ -13,21 +13,20 @@
 // ═══════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════════
-// RANKS legacy (Abby Sciuto, Sherlock Holmes, etc.) — DÉSACTIVÉ en v2.61
+// RANKS — placeholder vide (v2.61, conservé par Phase 3a v3.1)
 //
-// Ce tableau a été remplacé par le système Profile.tracks (4 carrières
-// avec ~15 rangs chacune, basé sur l'XP TOTALE du profil et non plus sur
-// l'XP cumulée du quiz uniquement).
+// La table originale (Abby Sciuto, Sherlock Holmes...) a été supprimée
+// en v2.61 au profit de Profile.tracks (15 rangs par track, basé sur l'XP
+// totale). Le module quiz-ranks.js lit désormais Profile.snapshot().rank.
 //
-// Le module quiz-ranks.js (v2.61) lit désormais les rangs depuis
-// Profile.snapshot().rank et Profile.getAllRanks(trackKey).
+// On conserve un tableau vide ici car quiz-app.js#checkCloseToNextRank
+// L460 a un fallback défensif `(RANKS && RANKS.length ? ... : null)` qui
+// référence RANKS si window.QuizRanks n'est pas chargé. Ce fallback est
+// quasi-mort en pratique mais retirer la déclaration ferait planter le
+// code en mode strict.
 //
-// On garde un tableau vide ici pour la rétrocompatibilité avec les
-// références encore présentes dans quiz-app.js (RANKS[idx], RANKS.find,
-// etc.) — quiz-ranks.js a un fallback qui gère ce cas gracieusement.
-//
-// Le bloc original (~26 entrées, ~111 KB) a été supprimé ; pour
-// l'historique voir docs/CHANGELOG.md v2.61 et l'archive git.
+// TODO post-Phase 3a : ajouter des tests Playwright sur quiz.html puis
+// nettoyer le fallback de quiz-app.js L460 pour supprimer cette déclaration.
 // ═══════════════════════════════════════════════════════════════
 const RANKS = [];
 

@@ -17,14 +17,69 @@
   const SESSION_GAP_HOURS = 6;       // au moins 6h entre 2 sessions distinctes
   const STREAK_RISK_DAYS  = 7;       // n'avertir du risque streak qu'à partir de 7j
 
-  const RANKS = [
-    [    0, '🔰', 'Stagiaire',           1],
-    [  500, '🕵', 'Enquêteur',           2],
-    [ 1500, '🔬', 'Analyste',            3],
-    [ 3000, '💼', 'Expert',              4],
-    [ 6000, '⚖️', 'Légiste',             5],
-    [10000, '🏛', 'Inspecteur Principal', 5],
-  ];
+  // ─── Rangs : source unique = window.Profile ──────────────────
+  //
+  // Phase 3a v3.1 — Avant ce refactor, landing-3d avait sa propre table de
+  // 6 rangs avec seuils incompatibles (0/500/1500/3000/6000/10000 XP) alors
+  // que Profile gérait 15 rangs (0/250/550/950/.../32650 XP). Conséquence :
+  // user à 1500 XP voyait "Analyste" sur la landing mais "Sherlock Holmes"
+  // dans son profil. La table ignorait aussi le track choisi.
+  //
+  // Désormais : on lit Profile.getRank() qui retourne le rang du track actif
+  // avec la bonne pyramide. On garde l'API interne (getRank/getNextRank) pour
+  // ne pas toucher aux call sites.
+  //
+  // Fallback dégradé : si Profile pas chargé (race condition rare car le
+  // <script src="cas-in-profile.js" defer> est avant landing-3d dans le HTML),
+  // on retourne un Stagiaire/0 XP minimal. C'est mieux qu'un crash.
+
+  const FALLBACK_RANK = ['🔰', 'Stagiaire', 1];
+  const FALLBACK_NEXT = [250, '🕵️', 'Inspecteur', 1]; // seuil v=4 rang 1
+
+  function _profileReady() {
+    return typeof window.Profile !== 'undefined'
+        && typeof window.Profile.getRank === 'function';
+  }
+
+  // Conserve la signature legacy [_, emoji, name, clearance] des 3 call sites.
+  // L'index 0 reste un seuil XP minimum (utilisé uniquement par getNextRank
+  // dans le calcul de pourcentage).
+  function getRank(xp) {
+    if (_profileReady()) {
+      try {
+        const r = window.Profile.getRank(); // ignore le xp param : Profile lit son propre xp
+        return [r.min, r.emoji, r.name, r.clearance];
+      } catch (_) {}
+    }
+    return [0, ...FALLBACK_RANK];
+  }
+
+  function getNextRank(xp) {
+    if (_profileReady()) {
+      try {
+        const r = window.Profile.getRank();
+        if (r.next) {
+          // clearance non exposé pour le "next" → on prend celui du rang
+          // courant comme approximation (suffisant pour les call sites).
+          return [r.next.min, r.next.emoji, r.next.name, r.clearance];
+        }
+        // Rang max : pas de prochain. Retourne un tuple inerte pour éviter
+        // les divisions par zéro dans le calcul de %.
+        return [r.min, '', '', r.clearance];
+      } catch (_) {}
+    }
+    return FALLBACK_NEXT;
+  }
+
+  // Pour le calcul de barre de progression dans `dr-xp-fill`, on a besoin du
+  // seuil du rang COURANT (et pas de la table complète). Profile l'expose
+  // déjà via getRank().min.
+  function getPrevRankXp(xp) {
+    if (_profileReady()) {
+      try { return window.Profile.getRank().min; } catch (_) {}
+    }
+    return 0;
+  }
   const MOD_L = {
     '01': '⚖️ Légal', '02': '📥 Méthodo', '03': '💾 Fichiers', '04': '🪟 Windows',
     '05': '💻 Systèmes', '06': '📡 Réseaux', '07': '🔐 Crypto', '08': '🛠 Outils',
@@ -52,15 +107,6 @@
   }
   function ss(k, v) {
     try { localStorage.setItem(k, v); } catch {}
-  }
-
-  function getRank(xp) {
-    let r = RANKS[0];
-    for (const tup of RANKS) if (xp >= tup[0]) r = tup;
-    return r;
-  }
-  function getNextRank(xp) {
-    return RANKS.find(([x]) => x > xp) || [xp + 1000, '', '', 0];
   }
 
   // ─────────────────────────────────────────────────────────
@@ -332,7 +378,7 @@
 
     const [, re, rn] = getRank(xp);
     const [nx] = getNextRank(xp);
-    const prev = RANKS.filter(([x]) => x <= xp).pop()?.[0] || 0;
+    const prev = getPrevRankXp(xp);
     const pct = Math.min(100, nx > prev ? Math.round((xp - prev) / (nx - prev) * 100) : 100);
 
     setText('dr-emoji', re);
