@@ -92,6 +92,11 @@ function showResult(id, html) {
     + 'onmouseout="this.style.color=\'var(--muted)\'">📋 Copier</button>';
   el.innerHTML = '<div class="rb-title">Résultat</div>' + copyBtn + html;
   el.classList.remove('empty');
+  // Fix Phase 1 : certains panels (#magic-result, #hashid-result, #cl-result,
+  // #mft-result, #sfn-result) ont `style="display:none"` inline en HTML, ce qui
+  // masquait le résultat même après populate. La classe `.empty` ne suffit pas
+  // car une règle inline gagne sur une règle de classe. On reset explicitement.
+  if (el.style.display === 'none') el.style.display = '';
 }
 function row(lbl,val,cls=''){return`<div class="rb-row"><span class="rb-lbl">${lbl}</span><span class="rb-val ${cls}">${val}</span></div>`;}
 function step(lbl,val){return`<div class="step" style="margin-top:.5rem"><div class="step-lbl">${lbl}</div><div class="step-val">${val}</div></div>`;}
