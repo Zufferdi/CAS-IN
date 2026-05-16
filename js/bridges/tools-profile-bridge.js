@@ -74,8 +74,12 @@
     used[toolKey] = (parseInt(used[toolKey], 10) || 0) + 1;
     lsSet('tools_used', used);
 
-    // Délai court (cohérent avec tp-profile-bridge qui attend 30ms pour
-    // laisser le storage settler avant le check).
+    // Phase 3a v3.1 : Profile.recordActivity accepte désormais 'tools'.
+    // Trace la dernière utilisation pour les widgets profil (heatmap Phase 6).
+    if (window.Profile && typeof window.Profile.recordActivity === 'function') {
+      try { window.Profile.recordActivity('tools'); } catch (_) {}
+    }
+
     return evalAchievements();
   }
 
