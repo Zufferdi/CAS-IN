@@ -108,6 +108,11 @@ test.describe('tools.html — Gamification (Phase 3b)', () => {
     const profile = await readLS(page, 'casIn_profile', {});
     const unlocked = Array.isArray(profile?.achievements) ? profile.achievements : [];
     expect(unlocked, `achievements: ${JSON.stringify(unlocked)}`).toContain('tools_swiss_knife');
+
+    // Phase 3a v3.1 — Profile.activity.tools doit être peuplé (cleanup hérité Phase 3b)
+    expect(profile?.activity?.tools,
+      `activity.tools attendu après notifyToolUse, profile.activity = ${JSON.stringify(profile?.activity)}`
+    ).toBeGreaterThan(0);
   });
 
   test('Un outil utilisé 20 fois → tools_artisan débloqué', async ({ page }) => {
