@@ -384,7 +384,7 @@
         lastDate: null,
       },
       activity: {
-        // 'quiz' | 'scene' | 'tp' → timestamp
+        // 'quiz' | 'scene' | 'tp' | 'fiches' | 'tools' → timestamp
       },
       milestones: {},
       achievements: [],
@@ -1079,7 +1079,9 @@
   }
 
   function recordActivity(source) {
-    if (!['quiz', 'scene', 'tp', 'fiches'].includes(source)) return;
+    // Phase 3a v3.1 : ajout de 'tools' (calculateurs forensiques).
+    // tools-profile-bridge.js l'appelle après chaque notifyToolUse réussi.
+    if (!['quiz', 'scene', 'tp', 'fiches', 'tools'].includes(source)) return;
     const p = ensureProfile();
     p.activity[source] = Date.now();
     saveProfile(p);
