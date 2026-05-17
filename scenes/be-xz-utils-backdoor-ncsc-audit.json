@@ -1,0 +1,201 @@
+{
+  "id": "be-xz-utils-backdoor-ncsc-audit",
+  "title": "xz Utils CVE-2024-3094 — audit fédéral éclair NCSC/GovCERT",
+  "icon": "🔓",
+  "difficulty": "expert",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Audit éclair complet 72h : inventaire confédération + cantons via OFCS pour identifier les systèmes avec xz-utils 5.6.0 ou 5.6.1 (Debian sid/unstable, Fedora 41/Rawhide, openSUSE Tumbleweed pré-29 mars). Zéro système production affecté confirmé. Bulletin technique GovCERT.ch publié à H+18 (avant les annonces officielles publiques de la Linux Foundation). Coordination CERT-EU + CERT-FR + BSI-CERT (DE) tenue. Communication interne aux 26 cantons via concordat IT cantonal. Aucune compromise opérationnelle.",
+    "degraded": "Audit lancé mais 4 systèmes universitaires (EPFL CSE-lab, ETH ISG) tournaient xz 5.6.0 en environnement test. Compromise SSH non observée a posteriori mais impossibilité de prouver l'absence d'exfil sur la fenêtre 26-29 mars. Reset clés SSH + investigation forensique 2 semaines. Coordination internationale fonctionnelle mais avec délai 24h sur GovCERT.ch publication.",
+    "failure": "Confusion interne NCSC/GovCERT : sous-évaluation initiale ('c'est un problème upstream Debian, pas notre périmètre'). Audit fédéral lancé seulement après pression médias. 11 systèmes universitaires + 2 systèmes admin cantonale tournaient affectés. Reset massif clés SSH + investigation par tiers privé Mandiant CHF 480K facturés Confédération. Critique publique CDF (Contrôle fédéral des finances) sur lenteur réaction."
+  },
+  "tags": [
+    "BERNE",
+    "EXPERT",
+    "SUPPLY CHAIN",
+    "BACKDOOR",
+    "XZ UTILS",
+    "CVE-2024-3094",
+    "JIA TAN",
+    "LIBLZMA",
+    "SSH",
+    "NCSC",
+    "GOVCERT",
+    "CERT-CH",
+    "FLASH"
+  ],
+  "legalRefs": [
+    "LSI art. 73 (Loi sur la sécurité de l'information)",
+    "OISI art. 14",
+    "OCS art. 5",
+    "Loi 120.73 NCSC",
+    "Convention de Budapest art. 19"
+  ],
+  "intro": "Vendredi 29 mars 2024, 16h47 (vendredi-saint Pâques). <strong>OFCS (Office fédéral de la cybersécurité), Berne</strong>, antenne GovCERT.ch. Vous êtes <strong>Cheffe·Chef d'incident senior GovCERT</strong>, niveau expert. Vendredi soir d'un week-end pascal de quatre jours — l'équipe est minimale (vous + 2 analystes).<br><br>16h47 : <strong>mailing list oss-security</strong> reçoit un message inhabituel de <strong>Andres Freund</strong> (ingénieur PostgreSQL Microsoft, basé à San Francisco) : il a remarqué une <strong>latence SSH étrange</strong> sur une machine Debian unstable, traçé vers <strong>liblzma.so.5</strong>, et identifié ce qui ressemble à <strong>une porte dérobée volontairement injectée dans xz-utils 5.6.0 et 5.6.1</strong> par un mainteneur de longue date apparemment compromis (pseudonyme <strong>'Jia Tan'</strong>, contributions depuis 2022).<br><br>Le payload : modification de <code>RSA_public_decrypt</code> dans le chargement dynamique, qui — pour les binaires sshd liés à <code>libsystemd</code> (donc indirectement à liblzma) — permet un <strong>RCE non authentifié</strong> sur connection SSH si le client envoie une clé Ed448 contenant un message signé spécifique. <strong>Vecteur de supply chain pur</strong>, 2 ans de préparation, peut-être un acteur étatique.<br><br>Distributions affectées (avant rollback) : <strong>Debian sid/unstable</strong>, <strong>Fedora 41 + Rawhide</strong>, <strong>openSUSE Tumbleweed</strong> (pré-29 mars). <em>Pas</em> Debian stable, <em>pas</em> Ubuntu LTS, <em>pas</em> RHEL/Rocky/Alma. Mais : les environnements de test universitaires et de R&D souvent utilisent unstable/rawhide/tumbleweed.<br><br>Votre console reçoit en parallèle :<br>• 17h02 — alerte CERT-EU (notification confidentielle TLP:AMBER)<br>• 17h08 — appel CERT-FR (ANSSI Paris, votre liaison <strong>Cdt Sébastien Vidal</strong>) : <em>« On lance audit national. Et vous ? »</em><br>• 17h14 — appel BSI-CERT (Bonn, <strong>Dr.-Ing. Klaus Henrich</strong>) : <em>« Wir aktivieren. Et la Confédération ? »</em><br><br>Votre cheffe NCSC <strong>Florence Fankhauser</strong> est en télétravail Pâques — joignable mobile. La PME ManageProtect (votre prestataire d'audit pré-positionné) a 3 ingénieurs d'astreinte mais facture H+ très cher.<br><br>Décision urgente : <strong>quelle posture initiale</strong> dans les 60 prochaines minutes ?",
+  "alertLevel": "🔓 CVE-2024-3094 xz-utils backdoor · CERT-EU TLP:AMBER · Vendredi saint Pâques · NCSC réduit",
+  "objectives": [
+    {
+      "icon": "📊",
+      "text": "Évaluer rapidement l'exposition CH (admin fédérale + cantons + infra critique)"
+    },
+    {
+      "icon": "🌐",
+      "text": "Tenir la coordination internationale (CERT-EU/FR/DE) sans céder le tempo"
+    },
+    {
+      "icon": "📢",
+      "text": "Décider du timing de communication GovCERT.ch publique"
+    }
+  ],
+  "debrief": "<p><strong>CVE-2024-3094</strong> (xz-utils backdoor) est un cas d'école de <em>supply chain attack against open source software</em> :</p><ul><li><strong>Acteur</strong> : 'Jia Tan' (pseudonyme), maintainer xz-utils depuis 2022. Très probablement persona créée par un acteur étatique (les indicateurs : 2 ans de social engineering du mainteneur historique Lasse Collin, contributions techniques excellentes, comptes secondaires de support, fuseau horaire incohérent).</li><li><strong>Payload technique</strong> : modification subtile du build script de xz qui injecte du code dans liblzma à la compilation. liblzma est chargée par libsystemd (utilisée par sshd sur les distros systemd-enabled). Hook sur <code>RSA_public_decrypt</code> → backdoor SSH déclenchable par client envoyant Ed448 signé.</li><li><strong>Détection</strong> : par accident — Andres Freund (PostgreSQL committer Microsoft) remarque que sshd consomme 500ms CPU au login + warnings Valgrind. Investigation 2-3 semaines avant publication oss-security 29 mars 2024.</li><li><strong>Fenêtre exposition</strong> : xz 5.6.0 publié 24 février 2024, xz 5.6.1 le 9 mars 2024. Découverte 29 mars. Soit ~5 semaines pour 5.6.0, ~3 semaines pour 5.6.1.</li><li><strong>Périmètre confédéral CH</strong> : aucun système production confédéral connu utilisant Debian sid en production. Mais : labs universitaires (EPFL, ETHZ, USI), R&D armasuisse, environnements de test administratifs cantonaux peuvent inclure des images sid/Rawhide pour développement.</li></ul><p><strong>Cadre NCSC/GovCERT.ch</strong> : <strong>Loi sur la sécurité de l'information (LSI)</strong> RS 128, en vigueur 1er janvier 2024. Art. 73 LSI : NCSC est l'organe de coordination cybersécurité de la Confédération. Mission GovCERT (intégré NCSC) : assistance aux services fédéraux + recommandations aux exploitants infra critique (LFINTI). Coordination internationale via FIRST (Forum of Incident Response and Security Teams) + Trusted Introducer (TF-CSIRT).</p><p><strong>Communication TLP (Traffic Light Protocol)</strong> : standard FIRST. TLP:RED = ne pas diffuser, individuel. TLP:AMBER = limité à organisations participantes. TLP:GREEN = communauté élargie sectorielle. TLP:WHITE = diffusion publique. La pression entre confidentialité (préserver tempo d'investigation, éviter exploitation) et publication (permettre patches universels) est constante.</p>",
+  "steps": [
+    {
+      "phase": "🔍 16h47-17h45 — Triage initial et activation cellule",
+      "situation": "Vous lisez le mail Freund 3 fois. C'est un signal de niveau exceptionnel : backdoor SSH supply chain en libcrypto-adjacent, mainteneur de confiance, ~2 ans de préparation.<br><br>État de l'OFCS GovCERT à 17h00 :<br>• Vous + analyste niveau 2 Lukas Roth + analyste niveau 1 Anna Steiner<br>• Florence Fankhauser (NCSC chef) en télétravail (mobile +41 79 ...)<br>• ManageProtect (prestataire d'audit) : 3 ingénieurs d'astreinte (facturation H+ et weekend +100%)<br>• Liaisons internationales : Cdt Vidal (ANSSI Paris, déjà en ligne), Dr Henrich (BSI Bonn, en ligne), CERT-EU Bruxelles, CISA (déjà alerte interne)<br><br>Premier réflexe : <strong>activer la cellule incident niveau 2 ?</strong> (cellule 3 = crise nationale, requiert validation DDPS). Périmètre incertain.",
+      "law": "<strong>LSI art. 73</strong> (NCSC autorité de coordination) · <strong>OISI art. 14</strong> (procédure d'urgence) · <strong>Convention de Budapest art. 19</strong> (coopération internationale).",
+      "question": "<strong>Quelle décision immédiate (premières 60 minutes) ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Cellule niveau 2 GovCERT activée 17h05</strong> via Roth (analyste). (2) <strong>Briefing Fankhauser téléphone 17h10</strong> (3 min : 'CVE confirmée, supply chain xz, on doit auditer la Confédération en 48h, j'active cellule 2, validation ?'). (3) <strong>Reply aux liaisons Vidal/Henrich 17h15</strong> : 'NCSC activated, will coordinate, suggest joint statement Saturday 12h00 GMT if no CISA opposition'. (4) <strong>ManageProtect activation 17h20</strong> : 2 ingénieurs (pas 3, économies week-end) pour audit techniqie scanning paquets xz sur estate fédérale via inventaire CMDB. (5) <strong>Annoncer publication GovCERT.ch bulletin TLP:WHITE à H+18</strong> (samedi 11h00) après l'audit interne, indépendamment de CISA.",
+          "ok": true,
+          "pts": 18,
+          "fb": "✅ <strong>Posture exécutive correcte.</strong> Cellule 2 = proportionnée (pas crise nationale mais incident sérieux à coordonner sur 72h). Fankhauser briefée immédiatement avec décision technique pas politique. Coordination internationale tenue (CERT-EU + CERT-FR + BSI) avec horizon de publication joint. ManageProtect activé pour audit estate fédérale (CMDB inventaire). Publication GovCERT.ch indépendante = signal national de souveraineté cyber.",
+          "legal": "LSI art. 73 · pratique GovCERT.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Attendre lundi de Pâques pour évaluer : c'est upstream Debian/Fedora, pas notre périmètre direct, et c'est week-end.",
+          "ok": false,
+          "pts": -22,
+          "fb": "💀 <strong>Sous-évaluation grave d'un incident supply chain critique.</strong> CVE-2024-3094 = backdoor SSH RCE non authentifié sur des distributions utilisées par labs universitaires + R&D armasuisse + environnements de test cantonaux. Attendre lundi = (1) 4 jours de fenêtre où l'attaquant peut exploiter avant patches, (2) CERT-FR/BSI activés vont demander 'que fait NCSC ?', (3) presse va titrer 'NCSC silent on critical supply chain attack', (4) Fankhauser et CDF demanderont des comptes après l'incident. Vendredi-saint ≠ relâchement opérationnel cyber.",
+          "legal": "LSI art. 73 · pratique GovCERT.",
+          "critical": true,
+          "next": 1
+        },
+        {
+          "text": "Publier immédiatement TLP:WHITE sur GovCERT.ch + Twitter NCSC 17h30 : 'Backdoor critique xz Utils confirmée, voir oss-security'.",
+          "ok": false,
+          "pts": -12,
+          "fb": "⚠️ <strong>Précipitation communication.</strong> Publier immédiatement avant audit interne = (1) tu redires juste le mail Freund (no value add CH), (2) tu n'as pas évalué l'exposition CH (la question que CH journalistes te poseront), (3) tu casses le tempo CERT-EU TLP:AMBER coordonné. Bonne pratique GovCERT : audit interne 18h + publication TLP:WHITE coordonnée avec recommandations CH-spécifiques (pas un mirror de oss-security). Tempo > précipitation.",
+          "legal": "FIRST TLP standard · pratique GovCERT.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "📊 18h00-22h00 — Audit estate fédérale et cantonale",
+      "situation": "Cellule 2 active. ManageProtect 2 ingénieurs branchés. Tâche : audit rapide exposition.<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.78rem;line-height:1.7;font-family:monospace\">📋 Inventaire CMDB Confédération + cantons (via NCSC) :<br>• <strong>OFIT (OFI)</strong> : Debian stable + RHEL 8/9 production. xz-utils 5.4.x. NOT AFFECTED.<br>• <strong>EPFL</strong> : 47 environnements lab Debian sid/Fedora Rawhide (CSE-lab, IC, STI). À vérifier paquet xz.<br>• <strong>ETHZ</strong> : 62 environnements lab. ITS coordination demandée.<br>• <strong>armasuisse R&D</strong> : Debian stable production. Test environments sid (3 machines confirmées). À vérifier.<br>• <strong>OFCOM</strong> : RHEL 9. NOT AFFECTED.<br>• <strong>FINMA + BNS + OFAS</strong> : non-Linux dominant (Windows Server + Linux RHEL). NOT AFFECTED.<br>• <strong>Cantons (via concordat IT cantonal)</strong> : majorité Windows + RHEL/SUSE Enterprise. Quelques services techniques cantonaux (VD, ZH, BE labs) en Debian sid pour tests. À auditer.<br>• <strong>Infra critique LFINTI</strong> : Swissgrid, Swisscom, CFF, La Poste, Skyguide → tous notifiés à 18h45 (TLP:AMBER) pour vérifier leurs environnements.</div><br>Premiers retours à 21h30 :<br>• EPFL : 4 machines lab CSE confirmées xz 5.6.0 — isolation + audit forensique en cours<br>• ETHZ : 2 machines ISG dev/test xz 5.6.1 — quarantaine<br>• armasuisse : 1 machine test xz 5.6.0, isolée, jamais exposée externe — OK\n• Cantons : VD signale 1 serveur de dev xz 5.6.0 (admin web cantonale), Zurich 1 IDE student dev<br>• Infrastructure critique : 0 occurrences (Debian stable / RHEL / SUSE Enterprise / Windows partout)<br><br>Total: <strong>8 systèmes affectés CH, tous en environnement non-production</strong>. Aucun exposé Internet en SSH écoutant la fenêtre 24 février - 29 mars.",
+      "law": "<strong>LSI art. 73-74</strong> · <strong>LFINTI</strong> (Loi infrastructure critique) · <strong>Concordat IT cantonal</strong>.",
+      "question": "<strong>Que faites-vous des 8 systèmes affectés CH ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Quarantaine immédiate</strong> 8 systèmes + downgrade xz à 5.4.6 stable. (2) <strong>Audit forensique léger</strong> (45 min chacun) : logs auth.log mars 2024 + connexions SSH entrantes + signatures process anormales — si rien d'anormal, restoration. (3) <strong>Reset clés SSH</strong> précautionnellement sur les 8 systèmes (les remplacer par de nouvelles paires Ed25519). (4) <strong>Rapport agrégé</strong> à Fankhauser samedi 09h00 : 'Audit 8 systèmes affectés, 0 production exposé Internet, 0 indice exploitation, mitigation appliquée 22h30 vendredi'. (5) <strong>Coordination université</strong> : EPFL ITS + ETHZ ISG informés des bonnes pratiques (sid uniquement réseaux isolés ou auth-keys-only).",
+          "ok": true,
+          "pts": 18,
+          "fb": "✅ <strong>Réponse calibrée parfaite.</strong> Quarantaine + downgrade = mitigation immédiate. Audit forensique léger (pas lourd Mandiant) = proportionné car aucun système exposé Internet. Reset clés SSH précautionnel = best practice supply chain. Rapport agrégé Fankhauser samedi 9h = tu lui donnes les éléments pour conférence presse lundi si nécessaire. Coordination université = capitalisation institutionnelle.",
+          "legal": "LSI art. 73 · best practice supply chain.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Lancer Mandiant audit complet sur les 8 systèmes (CHF 240K facturés Confédération sur 4 semaines).",
+          "ok": false,
+          "pts": -15,
+          "fb": "⚠️ <strong>Dépense disproportionnée pour audit forensique externe.</strong> Mandiant à CHF 240K pour 8 systèmes lab non exposés Internet = (1) sur-investigation, (2) GovCERT a les compétences techniques pour audit léger 45min/machine, (3) CDF (Contrôle fédéral des finances) audit annuel critique cette dépense, (4) signal à l'écosystème que GovCERT ne fait pas son propre travail technique. Mandiant pertinent si système production exposé Internet + indices exploitation. Pas le cas ici.",
+          "legal": "Pratique forensique · CDF.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Laisser les 8 systèmes en l'état : ils sont labs non-prod, pas critiques.",
+          "ok": false,
+          "pts": -16,
+          "fb": "💀 <strong>Négligence.</strong> 'Labs non-prod' = labs avec souvent (1) clés SSH partagées avec systèmes prod via dev workflows, (2) accès chercheurs avec privilèges, (3) données sensibles R&D (armasuisse !), (4) lateral movement possible. Backdoor SSH RCE non authentifié sur 8 machines, même non-prod = exposition réelle. Mitigation minimum (downgrade + reset clés) obligatoire LSI art. 73.",
+          "legal": "LSI art. 73.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "🌐 Samedi 30 mars 09h00-12h00 — Coordination internationale et publication",
+      "situation": "Cellule 2 active 18h ininterrompues. Audit terminé. Plan publication.<br><br>Coordinations parallèles :<br>• <strong>CERT-EU Bruxelles</strong> : statement EU coordonné, publication samedi 14h00 GMT, TLP:WHITE<br>• <strong>CERT-FR (ANSSI)</strong> : bulletin CERTFR-2024-AVI-0276 prêt, publication samedi 11h00 (avant EU)<br>• <strong>BSI-CERT (DE)</strong> : Sicherheitswarnung publication samedi 10h30<br>• <strong>CISA US</strong> : alert AA24-090A en préparation, publication samedi 16h00 EST<br>• <strong>JPCERT/CC</strong> : sur la même ligne<br><br>Question : <strong>quand et comment GovCERT.ch publie ?</strong> Options de positionnement :<br>(A) Avant tous (08h00 samedi) — signal d'autonomie CH<br>(B) Synchronisé CERT-FR (11h00) — diplomatique<br>(C) Synchronisé CERT-EU (14h00 GMT) — multilatéraliste<br>(D) Après CISA (16h00 EST = 22h00 CET) — attendre intel US<br><br>Fankhauser : <em>« Décide. C'est ton incident. Pense aussi à la conférence presse fédérale lundi : qu'est-ce qu'on dit aux médias suisses ? »</em>",
+      "law": "<strong>LSI art. 74</strong> (communication publique) · <strong>FIRST TLP</strong> · <strong>Accord IRC Suisse-EU 2017</strong>.",
+      "question": "<strong>Stratégie publication + communication presse ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Publication GovCERT.ch synchronisée CERT-FR samedi 11h00</strong> (TLP:WHITE) — bulletin technique avec sections : (a) résumé CVE-2024-3094, (b) périmètre CH évalué (sans détails compromettants), (c) recommandations exploitants infra critique, (d) liens CISA/CERT-EU/CERT-FR/BSI. Pas de 'CH affectée' ni 'CH non affectée' (volontairement neutre). (2) <strong>Briefing presse fédérale lundi 1er avril 14h00</strong> avec Fankhauser présente : message clé 'CH audit fédéral complet, aucun système production affecté, coordination internationale active, recommandations diffusées aux exploitants'. (3) <strong>Lignes presse cantonales</strong> : NCSC partage talking points avec présidents de gouvernements cantonaux via concordat IT.",
+          "ok": true,
+          "pts": 18,
+          "fb": "✅ <strong>Positionnement diplomatique optimal.</strong> Synchro CERT-FR = signal CH solidarité européenne + autonomie (pas vassal CISA, pas vassal UE). Message presse Fankhauser = institutionnel + rassurant + technique. Lignes presse cantonales = harmonisation 26 cantons (typique concordat IT). Tu démontres GovCERT.ch capable d'agir avec tempo et coordination internationale.",
+          "legal": "FIRST TLP · LSI art. 74 · pratique GovCERT.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Publication GovCERT.ch en pole position 08h00 + thread Twitter NCSC en allemand+français+italien+anglais : 'NCSC détecte et neutralise xz backdoor en Confédération'.",
+          "ok": false,
+          "pts": -16,
+          "fb": "💀 <strong>Communication agressive et inexacte.</strong> 'NCSC détecte' = inexact (Andres Freund a détecté, NCSC a audité). 'Neutralise' = surévaluation (mitigation interne). Pole position 08h00 = (1) tu casses tempo CERT-FR/BSI/EU sans bénéfice, (2) tu fais du marketing au lieu de service public, (3) le Conseil fédéral pourrait te désavouer (Fankhauser sera la première). NCSC valeur = sobriété, autorité technique, coordination — pas first-to-tweet.",
+          "legal": "Code éthique communication fédérale.",
+          "critical": true,
+          "next": 3
+        },
+        {
+          "text": "Pas publier GovCERT.ch — CISA et CERT-EU couvrent largement, doublon inutile.",
+          "ok": false,
+          "pts": -12,
+          "fb": "❌ <strong>Effacement institutionnel injustifié.</strong> GovCERT.ch publie pour les exploitants CH (PME, cantons, infra critique) qui ne lisent pas CISA en VO. Bulletin CH-spécifique avec recommandations adaptées (concordat IT cantonal, infra LFINTI) = value add réel. Ne pas publier = (1) abandon souveraineté cyber, (2) signal d'irrelevance NCSC, (3) cantons et PME n'ont pas la version FR/DE/IT facilement.",
+          "legal": "Mission NCSC (LSI art. 73).",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "📝 Lundi 1er avril 17h00 — Bilan et leçons apprises",
+      "situation": "Conférence presse fédérale lundi 14h00 tenue par Fankhauser : sobre, factuelle, rassurante (audit complet 72h, 8 systèmes lab affectés, 0 production exposé, mitigation appliquée). Bonne couverture presse (NZZ, Tages-Anzeiger, Le Temps, RTS, CdT) : neutre à positive.<br><br>Lundi 17h00 — bilan interne cellule + Fankhauser :<br><br><div style=\"background:rgba(255,255,255,.05);border-left:3px solid var(--green);padding:.75rem 1rem;font-size:.85rem;line-height:1.6\">Bilan opérationnel 72h :<br>• 8 systèmes audités, mitigation appliquée<br>• 0 indice exploitation observé<br>• Publication GovCERT.ch CERTPL-2024-0023 à H+18 (11h00 samedi)<br>• Coordination CERT-FR/BSI/EU/CISA tenue<br>• Concordat IT cantonal mobilisé (26 cantons informés)<br>• Conférence presse Fankhauser saluée<br>• Coût opérationnel : CHF 14'500 (ManageProtect 2 ingénieurs week-end + overtime équipe)</div><br>Fankhauser : <em>« Bien joué. Trois questions pour le rapport au Conseil fédéral : (1) leçons structurelles à tirer pour la Confédération sur la chaîne d'approvisionnement open source ? (2) faut-il proposer un projet de loi ou une politique pour exiger SBOM des fournisseurs critiques ? (3) faut-il publier un retex public de cette gestion d'incident pour faire école dans la communauté ? »</em>",
+      "law": "<strong>LSI art. 73-74</strong> · <strong>directive UE 2022/2555 NIS2</strong> (référence comparative non-EU CH) · <strong>EO Biden 14028 SBOM</strong>.",
+      "question": "<strong>Vos 3 réponses pour le rapport Conseil fédéral ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Leçons structurelles</strong> : (a) la Confédération n'a pas d'inventaire SBOM (Software Bill of Materials) systématique de ses dépendances logicielles critiques, (b) les environnements universitaires (EPFL/ETHZ) sont des angles morts car gouvernance académique distincte mais accès aux ressources fédérales, (c) la coordination cyber internationale fonctionne bien (FIRST + TF-CSIRT) mais demande temps humain élevé NCSC. (2) <strong>Projet de loi/politique</strong> : proposer une <em>directive fédérale SBOM</em> pour les fournisseurs critiques de la Confédération (alignement EO Biden 14028 + NIS2 référence) avec mise en œuvre 18-24 mois ; consultation OFCS-DETEC-DDPS-DEFR. (3) <strong>Retex public</strong> : publier un rapport blanc anonymisé (sans identifier les 8 systèmes affectés) à H+90 jours en français/allemand/italien/anglais sur le portail NCSC, et présentation à la GovWare conference Berne mai 2024.",
+          "ok": true,
+          "pts": 18,
+          "fb": "✅ <strong>Trois réponses stratégiques calibrées.</strong> (1) Leçons honnêtes (angles morts académiques + SBOM manquant + temps humain coordination). (2) Politique SBOM = alignement international sans copier-coller NIS2 (CH non-EU). (3) Retex public à H+90 = capitalisation communautaire + signal d'apprentissage institutionnel, sans mettre Confédération en risque. Excellent rapport pour Conseil fédéral.",
+          "legal": "LSI · EO Biden 14028 · NIS2.",
+          "critical": false,
+          "next": null
+        },
+        {
+          "text": "(1) Tout va bien, pas de leçons structurelles. (2) Pas de projet de loi (autorégulation marché). (3) Pas de retex public (préserver secret).",
+          "ok": false,
+          "pts": -12,
+          "fb": "❌ <strong>Sous-investissement institutionnel.</strong> CVE-2024-3094 = signal majeur que le modèle de confiance open source maintainer est vulnérable au social engineering long-terme. Ne pas tirer de leçons = (1) la prochaine attaque (déjà en préparation potentielle sur d'autres packages) trouvera la Confédération non préparée, (2) signal négatif au Conseil fédéral sur capacité NCSC à apprendre, (3) angle mort académique non corrigé. Le travail d'apprentissage post-incident est obligatoire pratique NCSC.",
+          "legal": "Mission NCSC.",
+          "critical": false,
+          "next": null
+        },
+        {
+          "text": "(1) Identifier publiquement les 4 chercheurs EPFL/ETHZ responsables des labs affectés pour discipline interne. (2) Proposer dénonciation pénale art. 143bis CP contre 'Jia Tan' via Interpol. (3) Retex détaillé avec liste systèmes affectés en TLP:WHITE pour transparence.",
+          "ok": false,
+          "pts": -18,
+          "fb": "💀 <strong>Trois erreurs.</strong> (1) Identifier chercheurs labs = (a) ils n'ont rien fait de mal (utilisation légitime Debian sid pour R&D), (b) violation LPD, (c) discipline universitaire ≠ rôle NCSC. (2) Dénonciation pénale 'Jia Tan' = (a) Interpol n'a pas d'identité, (b) compétence MPC pas NCSC, (c) action symbolique inutile. (3) Retex avec systèmes affectés en TLP:WHITE = (a) cartographie pour attaquants futurs des angles morts, (b) violation pratique TLP. Le 'reflexe punition + transparence absolue' est mauvais sur ce type d'incident.",
+          "legal": "LPD · TLP standard · CPP.",
+          "critical": true,
+          "next": null
+        }
+      ]
+    }
+  ],
+  "npcs": ["ncsc_govcert_lead", "anssi_officier_liaison_ch", "bsi_cert_de_liaison", "ofcom_juriste_int"],
+  "regionDetail": {
+    "code": "BE",
+    "flag": "🇨🇭",
+    "name": "Berne (fédéral)"
+  },
+  "region": "CH",
+  "realCase": true
+}
