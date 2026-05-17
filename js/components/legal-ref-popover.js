@@ -4,7 +4,7 @@
  * Composant universel qui transforme tout élément
  *   <span class="legal-ref" data-ref="Art. 24 CPP">Art. 24 CPP</span>
  * en lien hoverable / cliquable qui ouvre un popover avec la
- * définition tirée de data/glossary.json (470 entrées).
+ * définition tirée de data/glossary.json (509 entrées).
  *
  * Usage :
  *   1. Charger data/glossary.json via window.LegalRefPopover.load()
