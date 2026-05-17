@@ -3924,11 +3924,6 @@ const CANTON_DATA = {
   GE: { name: "Genève", scenarios: ["sms-blasters", "darkmarket_2021", "cicr_2022", "crypto-stalking-airtag-emirats", "easy-premiere-perquisition", "eu-cronos-3", "eu-pegasus-spyware", "ia-generative-faux-titres", "supply_chain_sante", "swiss-air-cabin-crew-leak-geneve", "docker-supply-chain-saas-geneve"] },
   VD: { name: "Vaud", scenarios: ["ncmec-cypertip", "lockbit-victime", "comparis_2021", "unine_2022", "epfl-recherche-lai-fuite-chine", "epfl-laboratoire-ia-medicale-chine", "crypto-tinder-pig-butchering-vaud", "logitech-clop-zero-day-supply-chain", "72969-infractions-vaud", "adn-genealogique-cold-case", "cloud-aws-s3-leak", "easy-mobile-perdu-train", "eu-crypto-kidnapping", "eu-frontex-deepfake-asylum", "iot-camera-compromise", "mineur-etranger-garde-a-vue", "perquisition-conjugale", "revenge-porn-deepfake-vd", "mineur-auteur-defi-tiktok-deces-vd", "vd-affaire-modele-1-detection-onconet", "vd-affaire-modele-2-audit-forensique-ml", "vd-affaire-modele-3-competence-plainte", "vd-affaire-modele-4-identification-victimes", "vd-affaire-modele-6-perquisition", "vd-affaire-modele-7-audience-lausanne"] },
   VS: { name: "Valais", scenarios: ["vetroz-akira", "sati-bec", "rajeunissement-ia", "saxon-curatelle", "competence-mpc-vs", "hydro-valais", "audit-prestataire-systemique", "bec-pme-geneve-italie", "easy-aide-grand-mere-arnaque", "referent-milice-ransomware", "valais-cascade-12-communes", "vs-affaire-viege-1-avalanche-saas", "vs-affaire-viege-2-osint-bricolage", "vs-affaire-viege-3-mercure-lonza", "vs-affaire-viege-4-scada-mattmark", "vs-affaire-viege-5-eimp-milano", "vs-affaire-viege-6-perquisition-brig", "vs-affaire-viege-7-audience-tribunal", "ge-affaire-gemmi-1-decouverte-wildstrubel", "ge-affaire-gemmi-2-cluster-wifi", "ge-affaire-gemmi-3-pivot-osint",
-      "vs-affaire-aletsch-1-carte-sd-konkordia",
-      "vs-affaire-aletsch-2-exif-dat-forensique",
-      "vs-affaire-aletsch-3-osint-be-vs",
-      "vs-affaire-aletsch-4-coordination-be-vs-ofev",
-      "vs-affaire-aletsch-5-perquisition-condamnation"
     ] },
   FR: { name: "Fribourg", scenarios: ["dab-villaz", "gruyere-coop-affinage-stuxnet", "hcfr-bec-transfer-deepfake", "cyber-justicier-vigilante-fr", "easy-pme-mot-passe-faible", "fr-affaire-sarine-1-premier-appel", "fr-affaire-sarine-2-eimp-stuttgart", "fr-affaire-sarine-3-coordination-cantons", "fr-affaire-sarine-4-expertise-unifr", "fr-affaire-sarine-5-audience-recevabilite", "secte-religieuse-fribourg-extorsion", "fr-affaire-singine-1-ransomware-akira", "fr-affaire-singine-2-continuite-coop", "fr-affaire-singine-3-tracking-crypto-recoupement", "fr-affaire-singine-4-eimp-mros-suspect-commun", "fr-affaire-singine-5-audience-jointe-tf-berne"] },
   NE: { name: "Neuchâtel", scenarios: ["faux-policiers", "harcelement-ne", "handala-hack-iran-rhne-stryker", "easy-suspicions-collegues", "evoting-cantonal", "exit-suicide-assiste-conteste", "unine_2022", "ne-affaire-csem-1-signalement-microcity", "ne-affaire-csem-2-hearc-romano", "ne-affaire-csem-3-monero-trace", "ne-affaire-csem-4-saignelegier-anpr", "ne-affaire-csem-5-perquisition-marin", "ne-affaire-csem-6-rogatoire-besancon", "ne-affaire-csem-7-audience-neuchatel"] },
@@ -3943,11 +3938,6 @@ const CANTON_DATA = {
   TI: { name: "Tessin", scenarios: ["sati-bec", "lugano-dpfl-mafia-finance", "easy-cle-usb-trouvee", "eu-ai-act-cybersecurity", "telephone-scelles", "lockbit-cronos-saisie-serveur-tessin-2024",
       "ti-affaire-gothard-6-perquisition-bellinzone",
       "ti-affaire-gothard-7-audience-tpf",
-      "ti-casino-lugano-1-help-desk-fatal",
-      "ti-casino-lugano-2-osint-social-engineering",
-      "ti-casino-lugano-3-gespa-lba-lpd",
-      "ti-casino-lugano-4-octo-tempest-attribution",
-      "ti-casino-lugano-5-perquisitions-verdict"
     ] },
   SG: { name: "Saint-Gall", scenarios: ["operation-alice", "stgall-infiltration", "swisslife-vadian-supply-chain-pensionskassen-2025"] },
   AG: { name: "Argovie", scenarios: ["operation-alice", "attentat-deja-couteau-mineur", "drone-laufenburg-swissgrid-aargau",
