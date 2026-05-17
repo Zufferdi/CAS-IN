@@ -229,37 +229,47 @@ ORPHAN_ASSIGNMENTS = {
         'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 6,
         'event': 'Affaire de l\'Engadine'},
     # ── SAGA ALETSCH (VS↔BE) — niveau enquêteur · 5 actes ──
-    'vs-affaire-aletsch-1-carte-sd-konkordia': {
-        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 7,
-        'event': 'Affaire du Drone d\'Aletsch'},
-    'vs-affaire-aletsch-2-exif-dat-forensique': {
-        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 7,
-        'event': 'Affaire du Drone d\'Aletsch'},
-    'vs-affaire-aletsch-3-osint-be-vs': {
-        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 7,
-        'event': 'Affaire du Drone d\'Aletsch'},
-    'vs-affaire-aletsch-4-coordination-be-vs-ofev': {
-        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 7,
-        'event': 'Affaire du Drone d\'Aletsch'},
-    'vs-affaire-aletsch-5-perquisition-condamnation': {
-        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 6,
-        'event': 'Affaire du Drone d\'Aletsch'},
-    # ── SAGA LUGANO CASINO (TI) — niveau enquêteur · 5 actes ──
-    'ti-casino-lugano-1-help-desk-fatal': {
-        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 2,
-        'event': 'Affaire Casino di Lugano'},
-    'ti-casino-lugano-2-osint-social-engineering': {
-        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 2,
-        'event': 'Affaire Casino di Lugano'},
-    'ti-casino-lugano-3-gespa-lba-lpd': {
-        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 2,
-        'event': 'Affaire Casino di Lugano'},
-    'ti-casino-lugano-4-octo-tempest-attribution': {
-        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 2,
-        'event': 'Affaire Casino di Lugano'},
-    'ti-casino-lugano-5-perquisitions-verdict': {
-        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2028, 'month': 9,
-        'event': 'Affaire Casino di Lugano'},
+    # FIXME: scène absente du disque — entrée commentée:
+    # 'vs-affaire-aletsch-1-carte-sd-konkordia': {
+    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 7,
+    #     'event': 'Affaire du Drone d\'Aletsch'},
+    # 'vs-affaire-aletsch-2-exif-dat-forensique': {
+    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 7,
+    #     'event': 'Affaire du Drone d\'Aletsch'},
+    # 'vs-affaire-aletsch-3-osint-be-vs': {
+    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 7,
+    #     'event': 'Affaire du Drone d\'Aletsch'},
+    # 'vs-affaire-aletsch-4-coordination-be-vs-ofev': {
+    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 7,
+    #     'event': 'Affaire du Drone d\'Aletsch'},
+    # 'vs-affaire-aletsch-5-perquisition-condamnation': {
+    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 6,
+    #     'event': 'Affaire du Drone d\'Aletsch'},
+    # # ── SAGA LUGANO CASINO (TI) — niveau enquêteur · 5 actes ──
+    # 'ti-casino-lugano-1-help-desk-fatal': {
+    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 2,
+    #     'event': 'Affaire Casino di Lugano'},
+
+    # FIXME: scène absente du disque — entrée commentée:
+    # 'ti-casino-lugano-2-osint-social-engineering': {
+    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 2,
+    #     'event': 'Affaire Casino di Lugano'},
+
+    # FIXME: scène absente du disque — entrée commentée:
+    # 'ti-casino-lugano-3-gespa-lba-lpd': {
+    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 2,
+    #     'event': 'Affaire Casino di Lugano'},
+
+    # FIXME: scène absente du disque — entrée commentée:
+    # 'ti-casino-lugano-4-octo-tempest-attribution': {
+    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 2,
+    #     'event': 'Affaire Casino di Lugano'},
+
+    # FIXME: scène absente du disque — entrée commentée:
+    # 'ti-casino-lugano-5-perquisitions-verdict': {
+    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2028, 'month': 9,
+    #     'event': 'Affaire Casino di Lugano'},
+
     # ── FLASH SCENES v21 (standalone, niveau expert) ──
     'be-xz-utils-backdoor-ncsc-audit': {
         'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2024, 'month': 3,
@@ -281,6 +291,90 @@ ORPHAN_ASSIGNMENTS = {
     'pcap-network-intrusion-jura': {
         'group': '🛠️ MÉTHODOLOGIE', 'year': 2026, 'month': None,
         'event': 'PCAP forensics — adm. Jura'},
+
+    # ── SAGA STEVE (VS) — Sextortion mineur fatale, 5 actes 2026-2027 ──
+    'vs-affaire-steve-1-lundi-matin': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 11,
+        'event': "L'Affaire Steve (sextortion fatale)"},
+    'vs-affaire-steve-2-forensique-autres-victimes': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 11,
+        'event': "L'Affaire Steve (sextortion fatale)"},
+    'vs-affaire-steve-3-mlat-afrique-ouest': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 12,
+        'event': "L'Affaire Steve (sextortion fatale)"},
+    'vs-affaire-steve-4-preparation-proces-mediatique': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 3,
+        'event': "L'Affaire Steve (sextortion fatale)"},
+    'vs-affaire-steve-5-operation-audience-verdict': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 9,
+        'event': "L'Affaire Steve (sextortion fatale)"},
+
+    # ── SAGA MODELE ONCONET (VD) — 7 actes 2025 ──
+    'vd-affaire-modele-1-detection-onconet': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 4,
+        'event': "L'Affaire Modèle Onconet (VD)"},
+    'vd-affaire-modele-2-audit-forensique-ml': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 4,
+        'event': "L'Affaire Modèle Onconet (VD)"},
+    'vd-affaire-modele-3-competence-plainte': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 5,
+        'event': "L'Affaire Modèle Onconet (VD)"},
+    'vd-affaire-modele-4-identification-victimes': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 5,
+        'event': "L'Affaire Modèle Onconet (VD)"},
+    'vd-affaire-modele-5-attribution-apt': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 6,
+        'event': "L'Affaire Modèle Onconet (VD)"},
+    'vd-affaire-modele-6-perquisition': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 7,
+        'event': "L'Affaire Modèle Onconet (VD)"},
+    'vd-affaire-modele-7-audience-lausanne': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 11,
+        'event': "L'Affaire Modèle Onconet (VD)"},
+
+    # ── SAGA PREVOTE (BE+JU) — 7 actes 2025 ──
+    'be-affaire-prevote-1-signal-kernel-moutier': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 1,
+        'event': "L'Affaire Prévôté (Moutier)"},
+    'be-affaire-prevote-2-ad-miroir-casse': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 1,
+        'event': "L'Affaire Prévôté (Moutier)"},
+    'prevote-3-grand-basculement': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 2,
+        'event': "L'Affaire Prévôté (Moutier)"},
+    'ju-affaire-prevote-4-tenant-fantome': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 2,
+        'event': "L'Affaire Prévôté (Moutier)"},
+    'ju-affaire-prevote-5-attribution-croisee': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 3,
+        'event': "L'Affaire Prévôté (Moutier)"},
+    'ju-affaire-prevote-6-perquisition-bevilard': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 4,
+        'event': "L'Affaire Prévôté (Moutier)"},
+    'ju-affaire-prevote-7-audience-porrentruy': {
+        'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2025, 'month': 6,
+        'event': "L'Affaire Prévôté (Moutier)"},
+
+    # ── 6 STANDALONE FORENSICS ──
+    'browser-forensics-banque-cantonale-bcn': {
+        'group': '🔬 CAS QUOTIDIENS', 'year': 2025, 'month': 9,
+        'event': 'Browser forensics — BCN'},
+    'disk-forensics-carving-volaille-fribourg': {
+        'group': '🔬 CAS QUOTIDIENS', 'year': 2025, 'month': 5,
+        'event': 'Disk forensics — Volaille FR'},
+    'disk-forensics-mft-restaurant-zh': {
+        'group': '🔬 CAS QUOTIDIENS', 'year': 2025, 'month': 6,
+        'event': 'Disk forensics — Restaurant ZH'},
+    'exploit-cve-hopital-st-gall': {
+        'group': '🔬 CAS QUOTIDIENS', 'year': 2024, 'month': 11,
+        'event': 'Exploit CVE — Hôpital SG'},
+    'linux-forensics-serveur-coop-vaud': {
+        'group': '🔬 CAS QUOTIDIENS', 'year': 2025, 'month': 3,
+        'event': 'Linux forensics — Coop VD'},
+    'macos-forensics-startup-epfl': {
+        'group': '🔬 CAS QUOTIDIENS', 'year': 2025, 'month': 2,
+        'event': 'macOS forensics — Startup EPFL'},
+
 }
 
 # ── Sagas explicites (ordre narratif strict) ───────────────────────────
@@ -445,43 +539,107 @@ SAGAS = [
         'completion_badge': 'saga_engadine',
         'completion_xp_bonus': 250,
     },
+    # FIXME: scènes Aletsch absentes du disque — saga commentée jusqu'à restauration:
+    # {
+    #         'id': 'affaire_aletsch',
+    #         'title': 'L\'Affaire du Drone d\'Aletsch',
+    #         'subtitle': 'Drone forensique + UNESCO + Bartgeier-CH — 5 actes (VS↔BE)',
+    #         'icon': '🦅',
+    #         'canton': 'VS',
+    #         'year_range': '2026-2027',
+    #         'tagline': 'Une carte SD dans une crevasse à -42m. Deux gypaètes balisés morts. La saga DFIR la plus alpine.',
+    #         'difficulty_curve': ['hard'] * 5,
+    #         'scenes': [
+    #             'vs-affaire-aletsch-1-carte-sd-konkordia',
+    #             'vs-affaire-aletsch-2-exif-dat-forensique',
+    #             'vs-affaire-aletsch-3-osint-be-vs',
+    #             'vs-affaire-aletsch-4-coordination-be-vs-ofev',
+    #             'vs-affaire-aletsch-5-perquisition-condamnation',
+    #         ],
+    #         'completion_badge': 'saga_aletsch',
+    #         'completion_xp_bonus': 250,
+    #     },
+    # FIXME: scènes Lugano Casino absentes du disque — saga commentée jusqu'à restauration:
+    # {
+    #         'id': 'affaire_lugano_casino',
+    #         'title': 'L\'Affaire Casino di Lugano',
+    #         'subtitle': 'Deepfake voice + Octo Tempest + LMA — 5 actes (TI)',
+    #         'icon': '🎰',
+    #         'canton': 'TI',
+    #         'year_range': '2027-2028',
+    #         'tagline': 'Une voix qu\'il connaissait. Huit secondes de deepfake. Quatorze minutes pour perdre un casino entier.',
+    #         'difficulty_curve': ['hard'] * 5,
+    #         'scenes': [
+    #             'ti-casino-lugano-1-help-desk-fatal',
+    #             'ti-casino-lugano-2-osint-social-engineering',
+    #             'ti-casino-lugano-3-gespa-lba-lpd',
+    #             'ti-casino-lugano-4-octo-tempest-attribution',
+    #             'ti-casino-lugano-5-perquisitions-verdict',
+    #         ],
+    #         'completion_badge': 'saga_lugano_casino',
+    #         'completion_xp_bonus': 280,
+    #     },
+
     {
-        'id': 'affaire_aletsch',
-        'title': 'L\'Affaire du Drone d\'Aletsch',
-        'subtitle': 'Drone forensique + UNESCO + Bartgeier-CH — 5 actes (VS↔BE)',
-        'icon': '🦅',
+        'id': 'affaire_steve_sextortion',
+        'title': "L'Affaire Steve",
+        'subtitle': 'Sextortion mineur fatale (VS) — 5 actes 2026-2027',
+        'icon': '📱',
         'canton': 'VS',
         'year_range': '2026-2027',
-        'tagline': 'Une carte SD dans une crevasse à -42m. Deux gypaètes balisés morts. La saga DFIR la plus alpine.',
+        'tagline': "Un adolescent de 15 ans, un téléphone, un réseau Yahoo Boys ouest-africain. La saga DFIR la plus dure du catalogue.",
         'difficulty_curve': ['hard'] * 5,
         'scenes': [
-            'vs-affaire-aletsch-1-carte-sd-konkordia',
-            'vs-affaire-aletsch-2-exif-dat-forensique',
-            'vs-affaire-aletsch-3-osint-be-vs',
-            'vs-affaire-aletsch-4-coordination-be-vs-ofev',
-            'vs-affaire-aletsch-5-perquisition-condamnation',
+            'vs-affaire-steve-1-lundi-matin',
+            'vs-affaire-steve-2-forensique-autres-victimes',
+            'vs-affaire-steve-3-mlat-afrique-ouest',
+            'vs-affaire-steve-4-preparation-proces-mediatique',
+            'vs-affaire-steve-5-operation-audience-verdict',
         ],
-        'completion_badge': 'saga_aletsch',
+        'completion_badge': 'saga_steve_sextortion',
+        'completion_xp_bonus': 300,
+    },
+    {
+        'id': 'affaire_modele_onconet',
+        'title': "L'Affaire Modèle Onconet",
+        'subtitle': 'Modèle ML santé compromis (VD) — 7 actes 2025',
+        'icon': '🏥',
+        'canton': 'VD',
+        'year_range': '2025',
+        'tagline': "Un modèle d'IA médical altéré, des diagnostics faussés, une coordination CHUV-EPFL.",
+        'difficulty_curve': ['medium', 'hard', 'medium', 'hard', 'hard', 'hard', 'expert'],
+        'scenes': [
+            'vd-affaire-modele-1-detection-onconet',
+            'vd-affaire-modele-2-audit-forensique-ml',
+            'vd-affaire-modele-3-competence-plainte',
+            'vd-affaire-modele-4-identification-victimes',
+            'vd-affaire-modele-5-attribution-apt',
+            'vd-affaire-modele-6-perquisition',
+            'vd-affaire-modele-7-audience-lausanne',
+        ],
+        'completion_badge': 'saga_modele_onconet',
         'completion_xp_bonus': 250,
     },
     {
-        'id': 'affaire_lugano_casino',
-        'title': 'L\'Affaire Casino di Lugano',
-        'subtitle': 'Deepfake voice + Octo Tempest + LMA — 5 actes (TI)',
-        'icon': '🎰',
-        'canton': 'TI',
-        'year_range': '2027-2028',
-        'tagline': 'Une voix qu\'il connaissait. Huit secondes de deepfake. Quatorze minutes pour perdre un casino entier.',
-        'difficulty_curve': ['hard'] * 5,
+        'id': 'affaire_prevote_moutier',
+        'title': "L'Affaire Prévôté",
+        'subtitle': 'Bascule cantonale Moutier BE→JU — 7 actes 2025',
+        'icon': '🗳️',
+        'canton': 'BE',
+        'year_range': '2025',
+        'tagline': "Une votation, une commune qui change de canton, un kernel rootkit. La DFIR à la croisée des juridictions.",
+        'difficulty_curve': ['hard'] * 7,
         'scenes': [
-            'ti-casino-lugano-1-help-desk-fatal',
-            'ti-casino-lugano-2-osint-social-engineering',
-            'ti-casino-lugano-3-gespa-lba-lpd',
-            'ti-casino-lugano-4-octo-tempest-attribution',
-            'ti-casino-lugano-5-perquisitions-verdict',
+            'be-affaire-prevote-1-signal-kernel-moutier',
+            'be-affaire-prevote-2-ad-miroir-casse',
+            'prevote-3-grand-basculement',
+            'ju-affaire-prevote-4-tenant-fantome',
+            'ju-affaire-prevote-5-attribution-croisee',
+            'ju-affaire-prevote-6-perquisition-bevilard',
+            'ju-affaire-prevote-7-audience-porrentruy',
         ],
-        'completion_badge': 'saga_lugano_casino',
-        'completion_xp_bonus': 280,
+        'completion_badge': 'saga_prevote_moutier',
+        'completion_xp_bonus': 250,
     },
 ]
 
