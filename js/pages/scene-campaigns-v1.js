@@ -2,7 +2,7 @@
  * scene-campaigns-v1.js — v3.2 (Vue Campagnes)
  *
  * Nouvel écran d'accueil de scene.html : présente 14 campagnes
- * pédagogiques au lieu d'une grille brute de 162 scènes.
+ * pédagogiques au lieu d'une grille brute de 234 scènes.
  *
  * Architecture :
  *   - Charge data/campaigns.json au boot (cache 1 fois)
@@ -233,7 +233,7 @@
         ${sections}
 
         <div class="bibliotheque-link">
-          <a href="#library" data-action="open-library">📚 Bibliothèque complète — accéder aux 162 scènes en mode liste →</a>
+          <a href="#library" data-action="open-library">📚 Bibliothèque complète — accéder aux 234 scènes en mode liste →</a>
           <div class="bibliotheque-link-meta">Vue classique en grille avec filtres difficulté et tags. Pour quand tu veux picorer hors campagne.</div>
         </div>
       </div>
