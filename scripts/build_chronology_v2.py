@@ -229,47 +229,6 @@ ORPHAN_ASSIGNMENTS = {
         'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 6,
         'event': 'Affaire de l\'Engadine'},
     # ── SAGA ALETSCH (VS↔BE) — niveau enquêteur · 5 actes ──
-    # FIXME: scène absente du disque — entrée commentée:
-    # 'vs-affaire-aletsch-1-carte-sd-konkordia': {
-    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 7,
-    #     'event': 'Affaire du Drone d\'Aletsch'},
-    # 'vs-affaire-aletsch-2-exif-dat-forensique': {
-    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 7,
-    #     'event': 'Affaire du Drone d\'Aletsch'},
-    # 'vs-affaire-aletsch-3-osint-be-vs': {
-    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 7,
-    #     'event': 'Affaire du Drone d\'Aletsch'},
-    # 'vs-affaire-aletsch-4-coordination-be-vs-ofev': {
-    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2026, 'month': 7,
-    #     'event': 'Affaire du Drone d\'Aletsch'},
-    # 'vs-affaire-aletsch-5-perquisition-condamnation': {
-    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 6,
-    #     'event': 'Affaire du Drone d\'Aletsch'},
-    # # ── SAGA LUGANO CASINO (TI) — niveau enquêteur · 5 actes ──
-    # 'ti-casino-lugano-1-help-desk-fatal': {
-    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 2,
-    #     'event': 'Affaire Casino di Lugano'},
-
-    # FIXME: scène absente du disque — entrée commentée:
-    # 'ti-casino-lugano-2-osint-social-engineering': {
-    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 2,
-    #     'event': 'Affaire Casino di Lugano'},
-
-    # FIXME: scène absente du disque — entrée commentée:
-    # 'ti-casino-lugano-3-gespa-lba-lpd': {
-    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 2,
-    #     'event': 'Affaire Casino di Lugano'},
-
-    # FIXME: scène absente du disque — entrée commentée:
-    # 'ti-casino-lugano-4-octo-tempest-attribution': {
-    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2027, 'month': 2,
-    #     'event': 'Affaire Casino di Lugano'},
-
-    # FIXME: scène absente du disque — entrée commentée:
-    # 'ti-casino-lugano-5-perquisitions-verdict': {
-    #     'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2028, 'month': 9,
-    #     'event': 'Affaire Casino di Lugano'},
-
     # ── FLASH SCENES v21 (standalone, niveau expert) ──
     'be-xz-utils-backdoor-ncsc-audit': {
         'group': '🌍 INCIDENTS HISTORIQUES', 'year': 2024, 'month': 3,
@@ -539,47 +498,6 @@ SAGAS = [
         'completion_badge': 'saga_engadine',
         'completion_xp_bonus': 250,
     },
-    # FIXME: scènes Aletsch absentes du disque — saga commentée jusqu'à restauration:
-    # {
-    #         'id': 'affaire_aletsch',
-    #         'title': 'L\'Affaire du Drone d\'Aletsch',
-    #         'subtitle': 'Drone forensique + UNESCO + Bartgeier-CH — 5 actes (VS↔BE)',
-    #         'icon': '🦅',
-    #         'canton': 'VS',
-    #         'year_range': '2026-2027',
-    #         'tagline': 'Une carte SD dans une crevasse à -42m. Deux gypaètes balisés morts. La saga DFIR la plus alpine.',
-    #         'difficulty_curve': ['hard'] * 5,
-    #         'scenes': [
-    #             'vs-affaire-aletsch-1-carte-sd-konkordia',
-    #             'vs-affaire-aletsch-2-exif-dat-forensique',
-    #             'vs-affaire-aletsch-3-osint-be-vs',
-    #             'vs-affaire-aletsch-4-coordination-be-vs-ofev',
-    #             'vs-affaire-aletsch-5-perquisition-condamnation',
-    #         ],
-    #         'completion_badge': 'saga_aletsch',
-    #         'completion_xp_bonus': 250,
-    #     },
-    # FIXME: scènes Lugano Casino absentes du disque — saga commentée jusqu'à restauration:
-    # {
-    #         'id': 'affaire_lugano_casino',
-    #         'title': 'L\'Affaire Casino di Lugano',
-    #         'subtitle': 'Deepfake voice + Octo Tempest + LMA — 5 actes (TI)',
-    #         'icon': '🎰',
-    #         'canton': 'TI',
-    #         'year_range': '2027-2028',
-    #         'tagline': 'Une voix qu\'il connaissait. Huit secondes de deepfake. Quatorze minutes pour perdre un casino entier.',
-    #         'difficulty_curve': ['hard'] * 5,
-    #         'scenes': [
-    #             'ti-casino-lugano-1-help-desk-fatal',
-    #             'ti-casino-lugano-2-osint-social-engineering',
-    #             'ti-casino-lugano-3-gespa-lba-lpd',
-    #             'ti-casino-lugano-4-octo-tempest-attribution',
-    #             'ti-casino-lugano-5-perquisitions-verdict',
-    #         ],
-    #         'completion_badge': 'saga_lugano_casino',
-    #         'completion_xp_bonus': 280,
-    #     },
-
     {
         'id': 'affaire_steve_sextortion',
         'title': "L'Affaire Steve",
@@ -642,7 +560,6 @@ SAGAS = [
         'completion_xp_bonus': 250,
     },
 ]
-
 
 def main():
     # Charger l'existant
@@ -731,7 +648,6 @@ def main():
     with open(CHRONO_PATH, 'w', encoding='utf-8') as f:
         json.dump(chrono, f, indent=2, ensure_ascii=False)
     print(f'\n[chronology] ✓ écrit dans {CHRONO_PATH.relative_to(ROOT)}')
-
 
 if __name__ == '__main__':
     main()
