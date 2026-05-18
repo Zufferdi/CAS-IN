@@ -1,0 +1,135 @@
+{
+  "id": "vs-affaire-aletsch-2-exif-dat-forensique",
+  "title": "L'Affaire du Drone d'Aletsch #2 — EXIF, DAT et account DJI",
+  "icon": "🏔️",
+  "difficulty": "medium",
+  "atmosphere": "lab-forensic",
+  "narrative": {
+    "success": "Vous avez extrait proprement EXIF + .DAT, identifié l'account DJI et le numéro de série du drone. La piste opérationnelle est limpide.",
+    "degraded": "Extraction OK mais une étape de vérification manquée. Le dossier tient mais l'expertise pourrait être contestée.",
+    "failure": "Modification accidentelle des métadonnées ou identification orientée. La preuve numérique perd en force probante."
+  },
+  "tags": [
+    "EXIF",
+    "DJI DAT",
+    "GPS FORENSIQUE",
+    "ACCOUNT ID",
+    "EXIFTOOL",
+    "DROITS DE LA PERSONNALITÉ"
+  ],
+  "legalRefs": [
+    "Art. 192 CPP — Pièces à conviction",
+    "ISO/IEC 27037:2012 — Acquisition et préservation",
+    "RGPD / nLPD — Données personnelles dans EXIF (GPS, account ID)",
+    "DJI Privacy Policy — Account ID DJI = donnée personnelle"
+  ],
+  "intro": "<p>Lundi 14 juillet 2026, laboratoire forensique Polcant VS à Sion. Vous avez sur votre écran l'image .E01 acquise de la carte SD du drone d'Aletsch (612 photos JPEG + 89 vidéos MP4 + 12 .DAT). Votre mission : extraire EXIF et logs DJI sans contamination, et identifier le propriétaire du drone.</p>",
+  "alertLevel": "🔬 LABO FORENSIQUE · 612 JPEG + 89 MP4 + 12 .DAT · ExifTool + DJI Flight Reader · Identifier le pilote",
+  "objectives": [
+    "Extraire les EXIF de tous les JPEG (GPS, modèle, n° série, date)",
+    "Parser les .DAT DJI pour extraire account ID + trajets GPS",
+    "Corréler EXIF/DAT pour authenticité (cohérence GPS + timestamps)",
+    "Identifier le pilote via DJI account + n° série drone"
+  ],
+  "debrief": "<h3>Pourquoi cette affaire ?</h3><p>Cette scène est le cœur technique : <strong>EXIF + .DAT DJI</strong> = signature numérique du pilote. Les .DAT contiennent l'<em>account ID DJI</em> qui est un identifiant unique lié à une adresse e-mail. Le n° de série du drone est lié à un achat traçable (vendeur, date, méthode de paiement). En croisant ces deux pistes, l'identification est presque certaine.</p><h3>Points pédagogiques</h3><ul><li><strong>ExifTool</strong> (Phil Harvey) : standard pour extraction EXIF sans modification</li><li><strong>DJI Flight Reader / Airdata</strong> : parser les .DAT propriétaires</li><li><strong>Account ID DJI</strong> = donnée personnelle au sens RGPD/nLPD</li><li><strong>Corrélation EXIF↔DAT</strong> : détecter les manipulations (timestamps incohérents)</li></ul>",
+  "npcs": [
+    "aletsch_temoin_belingheri",
+    "vs_scff_chef"
+  ],
+  "regionDetail": {
+    "code": "VS",
+    "flag": "🇨🇭",
+    "name": "Valais",
+    "commune": "Sion"
+  },
+  "region": "CH",
+  "steps": [
+    {
+      "phase": "📸 Extraction EXIF en masse",
+      "situation": "612 JPEG à analyser. Vous avez le choix entre : ouverture manuelle (incomparable), Windows Explorer (modifierait les timestamps d'accès même sur image .E01 montée en RO ? non — l'image est en lecture seule), ou ExifTool en batch.",
+      "law": "<strong>ExifTool</strong> est le standard de facto. Lecture seule par défaut.",
+      "question": "<strong>Quelle commande lancez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "<code>exiftool -r -csv -GPSLatitude -GPSLongitude -DateTimeOriginal -Model -SerialNumber /mnt/aletsch/DCIM/ > /case/exif_dump.csv</code> — extraction batch en CSV avec champs ciblés",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ EFFICACE. ExifTool en batch CSV permet d'analyser 612 fichiers en quelques secondes, avec uniquement les champs pertinents. Le fichier CSV peut être ensuite ouvert dans Excel/LibreOffice pour tri/filtrage.",
+          "legal": "ExifTool standard."
+        },
+        {
+          "text": "Vous ouvrez chaque JPEG dans GIMP pour voir les métadonnées dans l'interface graphique — c'est plus contrôlé.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ INEFFICACE. 612 fichiers × 30 secondes = 5h de clics. ExifTool fait la même chose en 5 secondes, avec une traçabilité exportable.",
+          "legal": "Efficience forensique."
+        },
+        {
+          "text": "<code>exiftool -overwrite_original -GPSLatitude= /mnt/aletsch/DCIM/</code>",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ CATASTROPHE. Cette commande EFFACE le GPS de TOUS les JPEGs. Le flag <code>-overwrite_original</code> est destructif. Heureusement l'image .E01 est en lecture seule, mais vous auriez détruit le travail si vous l'aviez fait sur original.",
+          "legal": "ISO/IEC 27037 — Préservation."
+        }
+      ]
+    },
+    {
+      "phase": "🛰️ Parsing des .DAT DJI",
+      "situation": "Les 12 fichiers .DAT sont au format propriétaire DJI. Vous identifiez 3 options : (a) DJI Assistant 2 (officiel mais nécessite installation Windows + drone connecté, ce qu'on ne veut pas), (b) Airdata.com (upload cloud — non, on est en enquête confidentielle), (c) <strong>DJI Flight Reader</strong> (offline, open source, Python).",
+      "law": "Confidentialité de l'enquête + analyse offline.",
+      "question": "<strong>Quel outil ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>DJI Flight Reader</strong> en local sur la station forensique isolée. Extraction offline d'un CSV par .DAT avec : timestamps, lat/long/alt, vitesse, n° série drone, account ID DJI, version firmware.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ EXCELLENT. Offline = pas d'exfiltration de preuves. Open source = vérifiable. CSV exportable pour analyse. C'est l'outil de référence pour les forensique drone aujourd'hui.",
+          "legal": "Confidentialité art. 73 CPP."
+        },
+        {
+          "text": "Vous uploadez les .DAT sur Airdata.com pour analyse rapide — leur site est plus complet.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ FUITE DE PREUVE. Uploader des pièces sur un service tiers (US, sans accord MLAT préalable) = violation du secret de l'enquête + risque de subpoena étranger. JAMAIS faire ça en investigation pénale.",
+          "legal": "Art. 73 CPP + LPD."
+        },
+        {
+          "text": "Vous demandez à DJI Shenzhen de parser pour vous via une commission rogatoire chinoise.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ INUTILE. Le format .DAT est documenté en reverse engineering depuis 2018. Pas besoin d'une CR Chine de 18 mois quand un outil open source fait le travail en 30 secondes.",
+          "legal": "Subsidiarité de la coopération internationale."
+        }
+      ]
+    },
+    {
+      "phase": "🎯 Identification du pilote",
+      "situation": "Le parsing .DAT révèle : drone DJI Mavic 3 n° série <code>4P5E***</code> (anonymisé), account DJI <code>p.wenger.1968@bluewin.ch</code>, 14 vols entre 12 mai et 11 juillet 2026 tous dans la zone Aletsch. Vous recherchez ce mail dans les registres. Résultat : <strong>Patrice Wenger</strong>, 58 ans, ex-garde-chasse VS (mis à la retraite 2023 après désaccord avec son service sur les espèces protégées). Habite à Brig (VS).",
+      "law": "<strong>Art. 273 CPP</strong> — Recherches d'informations. <strong>nLPD art. 24</strong> — Traitement données personnelles.",
+      "question": "<strong>Quelle est votre prochaine étape ?</strong>",
+      "choices": [
+        {
+          "text": "Vous documentez la corrélation EXIF/DAT/account/identité dans un rapport intermédiaire et vous demandez au MP-BE (juridiction décidée acte #1) un mandat de perquisition au domicile de Wenger à Brig + audition. Vous préparez aussi une recherche complémentaire sur Sandra Lochmatter (photographe nature mentionnée acte #1).",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ PARFAIT. Rapport intermédiaire = traçabilité forensique. Demande de mandat = respect du formalisme procédural. La recherche complémentaire sur Lochmatter (qui pourrait être complice ou témoin) est anticipative.",
+          "legal": "Art. 197 + 244 CPP."
+        },
+        {
+          "text": "Vous appelez Wenger pour lui demander des explications avant la perquisition — peut-être qu'il coopèrera spontanément.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ ERREUR MAJEURE. Tipping off du suspect → il aura le temps de détruire les preuves (autres drones, photos, équipement). Une perquisition surprise est essentielle.",
+          "legal": "Art. 73 CPP + bonnes pratiques opérationnelles."
+        },
+        {
+          "text": "Vous publiez le nom du suspect dans la presse pour faire venir d'éventuels témoins.",
+          "ok": false,
+          "pts": -30,
+          "fb": "❌ FAUTE PROFESSIONNELLE. Présomption d'innocence (CEDH art. 6, Cst. art. 32). Diffuser le nom avant inculpation = atteinte à l'honneur (art. 173 CP) + violation secret enquête.",
+          "legal": "Art. 32 Cst., Art. 73 + 173 CPP."
+        }
+      ]
+    }
+  ]
+}

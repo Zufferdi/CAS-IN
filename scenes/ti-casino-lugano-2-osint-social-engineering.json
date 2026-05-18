@@ -1,0 +1,137 @@
+{
+  "id": "ti-casino-lugano-2-osint-social-engineering",
+  "title": "L'Affaire Casino di Lugano #2 — OSINT et social engineering reverse",
+  "icon": "🎰",
+  "difficulty": "hard",
+  "atmosphere": "osint-investigation",
+  "narrative": {
+    "success": "Vecteur initial identifié (vishing helpdesk), pivot identitaire vers Octo Tempest UK, IOCs partagés avec MPC + Europol.",
+    "degraded": "Vecteur identifié mais attribution partielle.",
+    "failure": "Pivot non fait, indices Octo Tempest manqués."
+  },
+  "tags": [
+    "OCTO TEMPEST",
+    "VISHING",
+    "SOCIAL ENGINEERING",
+    "HELPDESK ATTACK",
+    "OSINT PIVOT",
+    "ATTRIBUTION"
+  ],
+  "legalRefs": [
+    "Art. 143-146 CP",
+    "Art. 273 CPP — Recherches d'informations",
+    "Convention Budapest art. 30 — Préservation transfrontière",
+    "MITRE ATT&CK T1566 (Phishing) + T1078 (Valid accounts)"
+  ],
+  "intro": "<p>4 février 2027. Analyse SIEM révèle l'origine : 2 février 11h47, l'agent helpdesk niveau 1 <strong>Federico Conti</strong> a reçu un appel d'un soi-disant « Stefano Bianchi, technicien Microsoft Switzerland ». L'interlocuteur (accent italien parfait, voix féminine) a guidé Conti pour installer un « outil de maintenance » (= ScreenConnect attaquant). 6h après, premier mouvement latéral. Vous suspectez <strong>Octo Tempest</strong> (vishing par locuteurs natifs).</p>",
+  "alertLevel": "🎭 VECTEUR : Vishing helpdesk · 'Sara' alias locutrice IT · Octo Tempest TTPs · Pivot UK ?",
+  "objectives": [
+    "Reconstituer le scénario vishing à partir des logs CTI Casino",
+    "Identifier les marqueurs Octo Tempest (TTPs)",
+    "Pivot OSINT vers les opérateurs UK/IT",
+    "Préparer un dossier IOC partageable Europol/NCA UK"
+  ],
+  "debrief": "<h3>Octo Tempest</h3><p>Groupe affilié à Scattered Spider (UK/US), vishing par locuteurs natifs, cible MFA bypass. Plusieurs membres arrêtés en 2024 (UK NCA). La saga illustre l'attribution par <em>signatures linguistiques + TTPs + infrastructure</em>.</p>",
+  "npcs": [
+    "casino_lugano_helpdesk",
+    "casino_lugano_helpdesk_bianchi",
+    "octo_tempest_naples_sara",
+    "octo_tempest_uk_henderson"
+  ],
+  "regionDetail": {
+    "code": "TI",
+    "flag": "🇨🇭",
+    "name": "Tessin",
+    "commune": "Lugano"
+  },
+  "region": "CH",
+  "steps": [
+    {
+      "phase": "🎙️ Reconstitution du call vishing",
+      "situation": "Vous interrogez Federico Conti. Il décrit : voix féminine, accent du sud de l'Italie (Naples ?), italien natif, technique convaincante. Le vrai Stefano Bianchi (Helpdesk N2 du casino) n'a jamais appelé Conti ce jour-là. Le numéro entrant n'a pas été conservé (PABX).",
+      "law": "<strong>Art. 178 CPP</strong> — Témoin. <strong>Art. 154 CP</strong> — Usurpation d'identité.",
+      "question": "<strong>Que faites-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Audition formelle de Conti + reconstitution chronologique précise (qu'a-t-il fait sur Bianchi ? quels logs ?). Demande de préservation immédiate à l'opérateur SIP du casino (art. 273 CPP) pour reconstituer le numéro appelant. Notification de Bianchi (témoin/victime de l'usurpation).",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ DOCTRINE. Conti est témoin clé : son audition formelle préserve sa déclaration. La préservation SIP donne le n° appelant (souvent VoIP via numéros UK virtuels = signature Octo Tempest). Bianchi doit être informé (usurpation d'identité art. 154 CP).",
+          "legal": "Art. 178 CPP + Art. 273 CPP."
+        },
+        {
+          "text": "Vous interrogez Conti comme suspect — il a peut-être facilité l'attaque volontairement.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ ERREUR DE QUALIFICATION. Conti est victime de social engineering, pas suspect. L'interroger comme suspect viole la qualification correcte (art. 178 vs 158 CPP) et le démotive comme témoin coopératif.",
+          "legal": "Art. 178 vs 158 CPP."
+        },
+        {
+          "text": "On laisse tomber le call vishing — l'important est la phase chiffrement.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ ERREUR STRATÉGIQUE. Le vecteur initial est CLEF de l'attribution. Sans reconstitution vishing, pas de pivot Octo Tempest, pas de coopération UK NCA, dossier orphelin.",
+          "legal": "Cycle DFIR — Identification du vecteur."
+        }
+      ]
+    },
+    {
+      "phase": "🌐 Pivot OSINT vers Octo Tempest",
+      "situation": "Les IOCs récupérés : ScreenConnect URL <code>relay-svc[.]net</code>, mutex Akira <code>aki-fe9k</code>, TTPs MITRE T1566.004 (Spearphishing voice) + T1078.002 (Valid accounts: Domain). Marqueurs linguistiques : 'Sara' accent napolitain.",
+      "law": "<strong>OSINT</strong> + <strong>MITRE ATT&CK</strong> + <strong>partage CTI</strong>.",
+      "question": "<strong>Quelles requêtes OSINT lancez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Pivot via : (1) <strong>VirusTotal</strong> sur <code>relay-svc[.]net</code> → IPs hébergeurs, autres domaines liés, (2) <strong>Maltego / Shodan</strong> sur les IPs → infrastructure ORB potentielle, (3) <strong>Whois historique</strong> (PassiveDNS) + cert transparency, (4) recherche MITRE/Mandiant/CrowdStrike reports Octo Tempest TTPs match, (5) Partage IOCs via <strong>MISP</strong> (Cyber Security Hub) avec MPC/fedpol/OFCS + flag Europol/NCA.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ EXCELLENT. Approche multi-source standard. MISP via CSH = partage rapide avec les autres victimes Akira CH + autorités partenaires. Octo Tempest a un dossier riche chez Mandiant + Microsoft.",
+          "legal": "OSINT standard + CSH/MISP CH."
+        },
+        {
+          "text": "Vous googlez 'Sara accent napolitain hackeuse' — approche directe.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ INEFFICACE. Google ne donne rien sur les opérateurs cybercriminels (qui font de l'OPSEC). L'approche correcte = TTPs + IOCs via plateformes CTI dédiées.",
+          "legal": "Méthodologie CTI."
+        },
+        {
+          "text": "On ne fait pas d'OSINT — c'est le rôle d'Europol seul.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ PASSIVITÉ. L'OSINT initial enrichit le dossier transmis à Europol/MPC. Sans pivot local, on transmet un dossier vide.",
+          "legal": "Subsidiarité."
+        }
+      ]
+    },
+    {
+      "phase": "🤝 Coopération internationale UK",
+      "situation": "Les indices linguistiques (Sara Naples) + infrastructure UK (ScreenConnect tenant à Manchester) pointent vers <strong>Octo Tempest UK</strong> (Henderson / Croft, identifiés par fuites précédentes). Vous proposez au MPC d'ouvrir une coopération UK NCA.",
+      "law": "<strong>Convention Budapest art. 32-34</strong> — Coopération transfrontière. <strong>Eurojust</strong>.",
+      "question": "<strong>Quel canal de coopération ?</strong>",
+      "choices": [
+        {
+          "text": "Via le MPC : (1) demande d'<strong>entraide pénale internationale</strong> formelle à l'AG-UK + NCA pour préservation données + perquisition Manchester/Birmingham, (2) parallèle <strong>Eurojust</strong> pour coordination judiciaire, (3) <strong>JIT</strong> (Joint Investigation Team) si série transfrontalière confirmée, (4) partage IOCs via canaux <strong>fedpol-NCA</strong> bilatéraux pour échange rapide.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ DOCTRINE. La voie correcte : MPC → entraide officielle (Budapest), Eurojust pour coordination, JIT pour les enquêtes complexes. Les canaux bilatéraux fedpol-NCA permettent les échanges rapides en parallèle.",
+          "legal": "Conv. Budapest art. 32-34 + EIMP."
+        },
+        {
+          "text": "Vous appelez directement la NCA UK depuis votre bureau de Lugano — c'est plus rapide.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ HORS PROCÉDURE. Aucune communication policière transfrontière directe sans le canal fedpol. Risque de rendre les échanges inexploitables pénalement.",
+          "legal": "EIMP + canaux officiels."
+        },
+        {
+          "text": "On attend — Octo Tempest sera arrêté à l'occasion par les Anglais.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ PASSIVITÉ. La coopération proactive accélère les arrestations et la récupération des données. Attendre = perdre les traces (logs hébergeurs purgés en 30-60 jours).",
+          "legal": "Devoir de diligence en enquête."
+        }
+      ]
+    }
+  ]
+}
