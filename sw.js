@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v410';
+const CACHE_VERSION = 'cas-in-v412';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1875,6 +1875,16 @@ const STATIC_ASSETS = [
   //
   // v3.3 — Badges qualitatifs (NOUVEAU)
   './js/components/cas-in-quality-badges-v1.js',
+  //
+  // v3.4 — Rattrapage précache (audit cleanup) : 7 fichiers manquants
+  './data/campaigns.json',
+  './data/cross-links.json',
+  './data/fiche-graph.json',
+  './style/artifacts.css',
+  './style/profile-dossier-plus.css',
+  './tp/tp-engine-disk.js',
+  './tp/tp-engine-fat.js',
+  './tp/tp-engine-ntfs.js',
 ];
 
 const OFFLINE_FALLBACK = './offline.html';
