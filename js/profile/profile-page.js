@@ -651,6 +651,17 @@
     if (isSecret) cls += ' is-secret';
     card.className = cls;
 
+    // v3.0 delta v44 — Tier visuel (bronze/argent/or/platine)
+    try {
+      const tier = a.tier ||
+        (window.AchievementsCore && window.AchievementsCore.getAchievementTier
+          ? window.AchievementsCore.getAchievementTier(a.id)
+          : null);
+      if (tier && isUnlocked) {
+        card.setAttribute('data-tier', tier);
+      }
+    } catch (_) {}
+
     // Emoji
     const emoji = document.createElement('div');
     emoji.className = 'profile-achievement-emoji';
