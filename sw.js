@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v420';
+const CACHE_VERSION = 'cas-in-v421';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1726,6 +1726,7 @@ const STATIC_ASSETS = [
   './style/fiche_style.css',
   './style/fiche-notes.css',
   './style/gamification-toasts.css',
+  './style/gamification-tiers.css',
   './style/npcs.css',
   './style/glossary.css',
   // v2.59 — Style partagé pages de référence
@@ -1817,6 +1818,9 @@ const STATIC_ASSETS = [
   './js/pages/dfir-tools-data.js',
   './js/pages/signatures-data.js',
   './js/pages/bibliography-data.js',
+  // v3.0 delta v44 — Tiers, titres, blasons saga
+  './js/core/cas-in-titles-badges.js',
+  './js/components/titles-badges-ui.js',
 
   // ─── TP (tp/*) ───
   './tp/tp-data.js',
