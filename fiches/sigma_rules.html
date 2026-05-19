@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Sigma Rules — CAS-IN DFIR</title>
+<meta name="description" content="Sigma · Détection generic · YAML · SigmaHQ · sigma-cli · Chainsaw · Hayabusa · Splunk · Elastic · Sentinel · QRadar">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+</head>
+<body>
+<div id="cas-navbar" data-page="fiches"></div>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">DÉTECTION & THREAT HUNTING</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-menaces">Malware, Menaces &amp; Anti-forensique</a><span class="bc-sep">›</span>
+    <span class="bc-current">Sigma Rules</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~12 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">📜</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">Detection Engineering</span>
+    <span class="tag tag-purple" style="margin-left:.3rem">SIEM-agnostic</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">YAML</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Sigma Rules — Le « YARA des logs »</h1>
+    <div class="meta">Format YAML générique · SigmaHQ (3'000+ règles) · sigma-cli · Chainsaw · Hayabusa · Conversion vers 40+ SIEM · Florian Roth &amp; Thomas Patzke (2017)</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="logs_windows.html" class="prereq-pill">📖 Logs Windows</a><a href="sysmon.html" class="prereq-pill">📖 Sysmon</a><a href="mitre_attack.html" class="prereq-pill">📖 MITRE ATT&amp;CK</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="yara.html" class="related-pill">🔗 YARA</a><a href="threat_intel_ioc.html" class="related-pill">🔗 Threat Intel &amp; IOC</a><a href="siem_logs.html" class="related-pill">🔗 SIEM &amp; Logs</a><a href="log_forensique_avance.html" class="related-pill">🔗 Log Forensique Avancé</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="sg-tabs">
+  <button class="tab active" onclick="showTab('arch',this)">🏗 Anatomie d'une règle</button>
+  <button class="tab" onclick="showTab('logic',this)">🧠 Sélections &amp; conditions</button>
+  <button class="tab" onclick="showTab('mod',this)">🔧 Modificateurs</button>
+  <button class="tab" onclick="showTab('tools',this)">⚒ Outils &amp; conversion</button>
+  <button class="tab" onclick="showTab('ops',this)">🎯 Bonnes pratiques</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — ANATOMIE D'UNE RÈGLE
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-arch">
+
+<div class="concept-card">
+  <div class="concept-title">🔑 Sigma — un format de détection portable, agnostique du SIEM</div>
+  <strong>Sigma</strong> est à <em>YARA</em> ce que <em>Snort</em> est aux paquets réseau : un format ouvert, lisible humain, qui décrit une <strong>logique de détection sur des logs</strong>. Le format est <strong>YAML</strong>, sans dépendance vendeur. Une même règle Sigma se convertit en requête Splunk SPL, Elastic ES|QL, KQL Microsoft Sentinel, Chronicle YARA-L, QRadar AQL, etc. Créé en <strong>2017</strong> par <strong>Florian Roth</strong> (Nextron Systems) et <strong>Thomas Patzke</strong>, maintenu sous l'organisation <strong>SigmaHQ</strong> (GitHub), le dépôt officiel compte aujourd'hui plus de <strong>3'000 règles</strong> couvrant Windows, Linux, macOS, cloud (AWS/Azure/GCP/Okta/M365), proxy web, etc. C'est devenu le standard de fait du <em>detection engineering</em> ouvert.
+</div>
+
+<div class="sec-title">Structure minimale d'une règle Sigma</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.78rem;line-height:1.55;color:var(--text);white-space:pre-wrap;margin:0">title: Suspicious Whoami Execution
+id: 929a690e-bef0-4204-a928-ef5e620d6fcc
+status: stable
+description: Détecte l'exécution de whoami.exe, fréquente en reconnaissance post-exploitation
+references:
+    - https://attack.mitre.org/techniques/T1033/
+author: Florian Roth
+date: 2019-10-23
+modified: 2025-04-12
+tags:
+    - attack.discovery
+    - attack.t1033
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith: '\whoami.exe'
+    condition: selection
+falsepositives:
+    - Scripts d'administration légitimes
+level: medium</pre>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Les 5 sections clés (spec officielle SigmaHQ)</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">📛 Métadonnées</div>
+    <p><code>title</code> (court, max 100 chars), <code>id</code> (<strong>UUID v4 obligatoire</strong>, unique), <code>status</code> (<code>stable</code> · <code>test</code> · <code>experimental</code> · <code>deprecated</code> · <code>unsupported</code>), <code>description</code>, <code>author</code>, <code>date</code> (création), <code>modified</code>, <code>references</code>.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🪵 logsource</div>
+    <p>Source de logs ciblée. Trois champs : <code>product</code> (windows, linux, aws, azure, okta…), <code>category</code> (process_creation, file_event, network_connection, registry_event…), <code>service</code> (security, sysmon, terminalservices…). Définit la <strong>taxonomie</strong> à appliquer.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔍 detection</div>
+    <p>Cœur de la règle. Une ou plusieurs <em>selections</em> (chacune = un dictionnaire de field/value), combinées par la <code>condition</code> finale. La <em>selection</em> par défaut s'appelle <code>selection</code>. Synonymes possibles : <code>filter</code>, <code>keywords</code>.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⚖️ condition</div>
+    <p>Expression booléenne combinant les selections. Opérateurs : <code>and</code> · <code>or</code> · <code>not</code>. Quantifieurs : <code>1 of selection_*</code>, <code>all of selection_*</code>. Exemple : <code>selection and not filter_legit</code>.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⚠️ falsepositives</div>
+    <p>Liste libre de scénarios connus de faux positifs (scripts admin, outils de monitoring, etc.). Indispensable pour calibrer le seuil d'alerte côté SOC.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🚨 level</div>
+    <p>Sévérité : <code>informational</code> · <code>low</code> · <code>medium</code> · <code>high</code> · <code>critical</code>. Utilisé par les SIEM pour le routage (auto-investigate, alerte SOC L1/L2, page-out).</p>
+  </div>
+</div>
+
+<div class="alert" style="margin-top:1.25rem">
+  <strong>⚠ Convention de nommage des fichiers</strong> — Selon la spec SigmaHQ : <code>YYYYMM_short_description.yml</code> ou plus simplement <code>category_target_description.yml</code> (ex. <code>proc_creation_win_susp_whoami.yml</code>). Encodage <strong>UTF-8</strong>, retours ligne <strong>LF</strong> (jamais CRLF), indentation <strong>4 espaces</strong>, clés en <strong>minuscules</strong>, strings entre apostrophes simples.
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — SÉLECTIONS & CONDITIONS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-logic">
+
+<div class="concept-card">
+  <div class="concept-title">🧠 La logique Sigma : YAML → ET/OU implicites</div>
+  Sigma utilise la structure YAML elle-même pour exprimer la logique : un <strong>dictionnaire (clé:valeur)</strong> = AND entre les champs, une <strong>liste (- item)</strong> = OR entre les valeurs. C'est élégant mais déstabilisant pour les débutants. Maîtriser ces deux constructions, plus l'usage des selections multiples, suffit à 95 % des règles écrites.
+</div>
+
+<div class="sec-title">Les 4 patterns essentiels</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">① OR sur une valeur</div>
+<pre style="font-family:var(--mono);font-size:.72rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.55rem;border-radius:4px;margin:.3rem 0">selection:
+    EventID:
+        - 4728   # ajout à groupe
+        - 4729   # retrait de groupe
+        - 4730   # création de groupe
+condition: selection</pre>
+    <p style="margin-top:.4rem;font-size:.78rem">Liste de valeurs → match si <strong>l'une</strong> des valeurs apparaît.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">② AND entre champs</div>
+<pre style="font-family:var(--mono);font-size:.72rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.55rem;border-radius:4px;margin:.3rem 0">selection:
+    EventID: 4624
+    LogonType: 10       # RDP
+    SourceIP|startswith: '192.168.'
+condition: selection</pre>
+    <p style="margin-top:.4rem;font-size:.78rem">Dictionnaire de plusieurs champs → match si <strong>tous</strong> matchent (AND implicite).</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">③ Selections multiples + condition</div>
+<pre style="font-family:var(--mono);font-size:.72rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.55rem;border-radius:4px;margin:.3rem 0">selection_proc:
+    Image|endswith: '\powershell.exe'
+selection_args:
+    CommandLine|contains|all:
+        - '-enc'
+        - 'http'
+filter_admin:
+    User|contains: 'admin_'
+condition: selection_proc and selection_args
+           and not filter_admin</pre>
+    <p style="margin-top:.4rem;font-size:.78rem"><strong>Selections nommées</strong> + condition explicite. C'est la forme la plus puissante.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">④ Quantifieurs &amp; wildcards</div>
+<pre style="font-family:var(--mono);font-size:.72rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.55rem;border-radius:4px;margin:.3rem 0">selection_1: { EventID: 1 }
+selection_2: { EventID: 11 }
+selection_3: { EventID: 13 }
+filter_x:    { Image|endswith: '\legit.exe' }
+condition: 1 of selection_* and not filter_x</pre>
+    <p style="margin-top:.4rem;font-size:.78rem"><code>1 of</code>, <code>all of</code>, <code>any of</code> + wildcard <code>selection_*</code> pour grouper.</p>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Pièges fréquents</div>
+
+<div class="alert">
+  <p><strong>Erreur #1 — confondre dict et list.</strong> Une <em>liste</em> de field:value <em>n'est PAS</em> un OR sur champs, c'est invalide. Pour OR sur plusieurs champs, on crée plusieurs selections + condition <code>selection_a or selection_b</code>.</p>
+  <p><strong>Erreur #2 — oublier la backslash escaping.</strong> Dans <code>Image|endswith: '\powershell.exe'</code>, le <code>\</code> simple dans une string entre apostrophes simples passe — mais en double-quotes <code>"\\powershell.exe"</code> est nécessaire.</p>
+  <p><strong>Erreur #3 — match insensible à la casse non garanti.</strong> Le comportement par défaut est <em>backend-dependent</em>. Pour forcer l'insensibilité, certains backends nécessitent un modificateur explicite (cf. tab 3).</p>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — MODIFICATEURS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-mod">
+
+<div class="concept-card">
+  <div class="concept-title">🔧 Les modificateurs — la signature Sigma</div>
+  Les <strong>modificateurs</strong> (<em>value modifiers</em>) s'appliquent aux <em>field names</em> via le séparateur <code>|</code>. Ils sont <strong>chaînables</strong> : <code>fieldname|mod1|mod2: valeur</code>. Le backend (Splunk, Elastic…) traduit ensuite la combinaison en syntaxe native. Maîtriser une douzaine de modificateurs couvre 95 % des cas réels.
+</div>
+
+<div class="sec-title">Modificateurs essentiels</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">📍 Position dans la string</div>
+    <p><code>|startswith</code> : commence par<br>
+    <code>|endswith</code> : finit par<br>
+    <code>|contains</code> : contient (n'importe où)</p>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:.4rem">Ex. <code>Image|endswith: '\mimikatz.exe'</code></p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🧮 Combinatoires</div>
+    <p><code>|all</code> : <em>toutes</em> les valeurs doivent matcher (au lieu du OU par défaut)<br>
+    <code>|cidr</code> : interprétation CIDR pour adresses IP<br>
+    <code>|re</code> : interprète comme regex</p>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:.4rem">Ex. <code>CommandLine|contains|all: ['-enc', 'http']</code> (les 2 doivent être présents)</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔢 Comparaisons numériques</div>
+    <p><code>|lt</code> : strictement inférieur<br>
+    <code>|lte</code> : inférieur ou égal<br>
+    <code>|gt</code> : strictement supérieur<br>
+    <code>|gte</code> : supérieur ou égal</p>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:.4rem">Ex. <code>FileSize|gt: 1000000</code></p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📦 Transformations</div>
+    <p><code>|base64</code> : encode la valeur en base64 avant match<br>
+    <code>|base64offset</code> : variantes d'alignement (offsets 0/1/2 — important PowerShell <code>-EncodedCommand</code>)<br>
+    <code>|wide</code> : interprétation UTF-16 LE (strings Windows)</p>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:.4rem">Ex. <code>CommandLine|base64offset|contains: 'DownloadString'</code></p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🪞 Existence &amp; null</div>
+    <p><code>|exists: true|false</code> : le champ est présent / absent</p>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:.4rem">Permet de détecter quand un champ attendu manque (anti-forensique).</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">↻ Récents (post-2024)</div>
+    <p><code>|fieldref</code> : référence à un autre champ (<em>self-reference</em>)<br>
+    <code>|expand</code> : expansion de placeholders<br>
+    <code>|windash</code> : tolérance aux variations de tiret (<code>-</code>, <code>/</code>, <code>—</code>) dans les arguments CLI</p>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:.4rem"><code>|windash</code> est devenu essentiel pour contrer les <em>obfuscations</em> côté CLI Windows.</p>
+  </div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — OUTILS & CONVERSION
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-tools">
+
+<div class="concept-card">
+  <div class="concept-title">⚒ L'écosystème outillé autour de Sigma</div>
+  Une règle Sigma ne s'exécute pas seule : elle doit être <strong>compilée</strong> vers le langage natif du SIEM cible (SPL Splunk, ES|QL Elastic, KQL Sentinel, etc.) ou interprétée par un moteur dédié sur des fichiers de logs locaux. Deux mondes coexistent : la <em>conversion en ligne</em> pour alimenter un SIEM, et le <em>hunting offline</em> (DFIR pure) directement sur des EVTX/journaux extraits d'un disque.
+</div>
+
+<div class="sec-title">⚒ Conversion vers SIEM — <code>sigma-cli</code> (Python)</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.78rem;line-height:1.55;color:var(--text);white-space:pre-wrap;margin:0"># Installation (officielle SigmaHQ)
+pip install sigma-cli
+pip install pysigma-backend-splunk pysigma-backend-elasticsearch \
+            pysigma-backend-microsoft365defender pysigma-pipeline-sysmon
+
+# Conversion d'une règle vers Splunk SPL
+sigma convert -t splunk -p sysmon rule.yml
+
+# Conversion vers Elastic ES|QL (avec mapping ECS)
+sigma convert -t elasticsearch -p ecs_windows rule.yml
+
+# Conversion vers Microsoft Sentinel (KQL)
+sigma convert -t microsoft365defender rule.yml
+
+# Batch d'un dossier entier
+sigma convert -t splunk -p sysmon rules/ -o output/
+
+# Lister les backends &amp; pipelines disponibles
+sigma list targets
+sigma list pipelines</pre>
+</div>
+
+<p style="margin-top:.6rem;font-size:.85rem"><strong>Note historique :</strong> l'ancien outil <code>sigmac</code> (Python) est <strong>déprécié depuis 2022</strong> ; le projet officiel est <strong>sigma-cli</strong> (basé sur la librairie <code>pySigma</code>). Tous les guides récents l'utilisent.</p>
+
+<div class="sec-title" style="margin-top:1.5rem">🎯 Hunting offline — <code>Chainsaw</code> &amp; <code>Hayabusa</code></div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">⚡ Chainsaw (Rust, WithSecure / F-Secure Countercept)</div>
+    <p>Scan rapide d'EVTX avec règles Sigma. Particulièrement adapté au triage de forensique. Sortie ASCII, CSV ou JSON. Détections built-in en plus de Sigma (audit log cleared, brute force…).</p>
+<pre style="font-family:var(--mono);font-size:.72rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.55rem;border-radius:4px;margin:.3rem 0">chainsaw hunt evtx_samples/ \
+  -s sigma/rules/windows/ \
+  --mapping mappings/sigma-event-logs-all.yml \
+  --json -o results.json</pre>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:.3rem">Repo : <code>WithSecureLabs/chainsaw</code> · Compétences supplémentaires : analyse MFT, Shimcache/Amcache, SRUM, dump registry/ESE.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🦅 Hayabusa (Rust, Yamato Security)</div>
+    <p>Générateur de timeline DFIR fast. Support natif Sigma <em>le plus complet</em> du marché open-source selon ses auteurs. Sortie HTML + CSV. <em>Live Response packages</em> avec règles XOR-encodées (anti-AV) depuis v2.18+.</p>
+<pre style="font-family:var(--mono);font-size:.72rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.55rem;border-radius:4px;margin:.3rem 0">hayabusa csv-timeline -d evtx/ -T \
+  -o timeline.csv -H report.html
+hayabusa update-rules   # MAJ règles Sigma + Hayabusa</pre>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:.3rem">Repo : <code>Yamato-Security/hayabusa</code> · Analyseur de résultats : <code>Takajo</code> (même équipe).</p>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">🌐 Plateformes intégrant Sigma nativement</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">SIEM &amp; XDR</div>
+    <p>Splunk · Elastic Security · Microsoft Sentinel · Google Chronicle (YARA-L) · QRadar · LogRhythm · Sumo Logic · Devo · Graylog · Wazuh · Panther</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">EDR</div>
+    <p>SentinelOne (Storyline) · CrowdStrike Falcon (CQL) · Microsoft Defender for Endpoint (KQL)</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">Plateformes web</div>
+    <p><code>uncoder.io</code> (SOC Prime) : convertisseur web Sigma → 40+ backends, gratuit.</p>
+  </div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — BONNES PRATIQUES
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-ops">
+
+<div class="concept-card">
+  <div class="concept-title">🎯 Écrire des règles qui survivent à la production</div>
+  Une règle Sigma écrite à chaud génère typiquement <em>trop de bruit</em> en production. Les règles SOC durables suivent quelques principes simples : <strong>logsource précise</strong> (pas <code>category: any</code>), <strong>tags MITRE</strong> obligatoires, <strong>falsepositives documentés</strong>, <strong>versioning Git</strong>, et <strong>tests unitaires</strong> avec EVTX d'attaque (EVTX-ATTACK-Samples).
+</div>
+
+<div class="sec-title">Workflow detection engineering moderne</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">1️⃣ Source — TTPs MITRE</div>
+    <p>Toute règle commence par une <strong>technique MITRE ATT&amp;CK</strong> ciblée (ex. T1059.001 — PowerShell). Le mapping <code>tags: attack.execution / attack.t1059.001</code> est <em>obligatoire</em> pour le routage SOC.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">2️⃣ Source de log précise</div>
+    <p>Préférer <code>logsource: { category: process_creation, product: windows, service: sysmon }</code> à un <code>any</code>. Pipeline approprié à la conversion (<code>sigma convert -p sysmon ...</code>).</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">3️⃣ Tests unitaires</div>
+    <p>Tester avec <strong>SBousseaden/EVTX-ATTACK-Samples</strong> (références de l'industrie). Chainsaw + Sigma lance la règle sur l'EVTX, vérifie le match (TP) et l'absence sur baseline (TN).</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">4️⃣ Versioning Git</div>
+    <p>Repository dédié <em>org/detection-rules</em>. Pull-request reviews. CI auto avec <code>sigma-check</code> (validation YAML + spec) avant merge. Tag de version + changelog.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">5️⃣ Déploiement progressif</div>
+    <p><em>Canary</em> : déployer en <code>status: experimental</code> ou <code>test</code> d'abord, observer 14 jours en SIEM en mode silencieux, mesurer FP rate, basculer en <code>stable</code> avec alerte SOC.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">6️⃣ Mise à jour</div>
+    <p>Re-tester périodiquement contre les nouvelles versions d'OS, nouveaux EDR, nouvelles techniques (les attaquants changent leurs <em>obfuscations</em>). Le champ <code>modified:</code> doit refléter la dernière révision.</p>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Anatomie d'une règle solide — exemple complet</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.74rem;line-height:1.55;color:var(--text);white-space:pre-wrap;margin:0">title: Suspicious PowerShell Download via EncodedCommand
+id: 3b0047b3-5f8a-4c25-9c6b-6d5a96f9c8d7
+status: test
+description: Détecte PowerShell exécuté avec -EncodedCommand téléchargeant
+    un fichier depuis Internet. Tactique d'<em>initial access</em> ou
+    <em>ingress tool transfer</em> typique des attaquants (Akira, etc.).
+references:
+    - https://attack.mitre.org/techniques/T1059/001/
+    - https://attack.mitre.org/techniques/T1105/
+author: CAS-IN
+date: 2026/03/15
+modified: 2026/05/18
+tags:
+    - attack.execution
+    - attack.t1059.001
+    - attack.command_and_control
+    - attack.t1105
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_proc:
+        Image|endswith: '\powershell.exe'
+    selection_args:
+        CommandLine|contains|all:
+            - '-enc'
+            - 'http'
+    selection_args_b64:
+        CommandLine|base64offset|contains:
+            - 'DownloadString'
+            - 'DownloadFile'
+            - 'Invoke-WebRequest'
+    filter_known_admin:
+        ParentImage|endswith: '\sccm_admin_console.exe'
+    condition: selection_proc
+               and (selection_args or selection_args_b64)
+               and not filter_known_admin
+falsepositives:
+    - Scripts d'administration légitimes utilisant -enc + URL interne
+    - Outils SCCM/MECM (à inclure dans filter_known_admin)
+level: high</pre>
+</div>
+
+<div class="exam-tip" style="margin-top:1.25rem">
+  <div class="exam-tip-title">🎓 Exam Tip — Sigma</div>
+  <p><strong>Origine</strong> : Florian Roth (Nextron) + Thomas Patzke · projet open-source 2017 · org GitHub <strong>SigmaHQ</strong></p>
+  <p><strong>Format</strong> : <strong>YAML</strong> · UTF-8 · LF · 4 espaces d'indentation · clés en minuscules · strings entre apostrophes simples</p>
+  <p><strong>Sections obligatoires</strong> : <code>title</code> · <code>id</code> (UUID v4) · <code>logsource</code> · <code>detection</code> (avec au moins une <em>selection</em> + <code>condition</code>)</p>
+  <p><strong>Logique YAML</strong> : <strong>dict = AND</strong> entre champs, <strong>list = OR</strong> entre valeurs · selections combinées via <code>condition</code></p>
+  <p><strong>Modificateurs essentiels</strong> : <code>|startswith</code> · <code>|endswith</code> · <code>|contains</code> · <code>|all</code> · <code>|cidr</code> · <code>|re</code> · <code>|base64</code> · <code>|base64offset</code> · <code>|windash</code></p>
+  <p><strong>Niveaux</strong> : <code>informational</code> · <code>low</code> · <code>medium</code> · <code>high</code> · <code>critical</code></p>
+  <p><strong>Status</strong> : <code>stable</code> · <code>test</code> · <code>experimental</code> · <code>deprecated</code> · <code>unsupported</code></p>
+  <p><strong>Outil officiel</strong> : <code>sigma-cli</code> (Python, basé pySigma) · sigmac <em>déprécié</em> depuis 2022</p>
+  <p><strong>Hunting offline EVTX</strong> : <strong>Chainsaw</strong> (WithSecure, Rust) · <strong>Hayabusa</strong> (Yamato Security, Rust)</p>
+  <p><strong>Web converter</strong> : <code>uncoder.io</code> (SOC Prime) — gratuit, 40+ backends</p>
+  <p><strong>Backends supportés</strong> : Splunk SPL, Elastic ES|QL, KQL (Sentinel/MDE), Chronicle YARA-L, QRadar AQL, LogRhythm, Graylog, etc.</p>
+  <p><strong>Convention nommage fichiers</strong> : <code>category_target_description.yml</code> (ex. <code>proc_creation_win_susp_whoami.yml</code>)</p>
+  <p><strong>Tag MITRE</strong> : <code>attack.&lt;tactic&gt;</code> + <code>attack.t&lt;NNNN&gt;.&lt;sub&gt;</code> obligatoire en SOC moderne</p>
+  <p><strong>Tests unitaires</strong> : <strong>SBousseaden/EVTX-ATTACK-Samples</strong> (référence industrie)</p>
+  <p><strong>Repo de référence</strong> : <code>SigmaHQ/sigma</code> (3'000+ règles maintenues, GitHub)</p>
+  <p><strong>Lien CTI</strong> : Sigma + YARA + MISP + STIX = stack standard du detection engineering moderne</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Vous écrivez une règle Sigma pour détecter PowerShell téléchargeant via <code>-EncodedCommand</code>. L'attaquant peut encoder le payload en base64. Quel modificateur utilisez-vous pour détecter quand même la string <code>DownloadString</code> dans le contenu encodé, et pourquoi pas simplement <code>|base64</code> ?</div>
+  <div class="quiz-meta">Sigma · Niveau : moyen</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">On utilise <code>CommandLine|base64offset|contains: 'DownloadString'</code>. Le modificateur <code>|base64offset</code> (et non <code>|base64</code>) génère <strong>trois variantes</strong> d'encodage selon l'offset d'alignement (0, 1, 2 octets de padding au début), parce que PowerShell <code>-EncodedCommand</code> encode la string entière incluant les octets précédents — l'alignement n'est pas garanti. <code>|base64</code> simple ne génère qu'<em>une</em> variante et raterait 2/3 des matches. Combiné à <code>|contains</code>, on cherche n'importe où dans la string. C'est l'idiome standard pour détecter du PowerShell obfusqué en SOC moderne.</div>
+</div>
+
+</div>
+
+<div class="footer" style="margin-top:2rem">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>SigmaHQ specification · sigma-cli (pySigma) · Chainsaw (WithSecure) · Hayabusa (Yamato Security)</span>
+</div>
+
+<script>
+function showTab(id, btn){
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('#sg-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  var el=document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+  window.scrollTo({top:Math.max(0,document.getElementById('sg-tabs').offsetTop-60),behavior:'smooth'});
+}
+</script>
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+<script src="../js/core/cas-in-profile.js" defer></script>
+<script src="../js/core/cas-in-achievements.js" defer></script>
+<script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/profile/celebration-ui.js" defer></script>
+<script src="../js/components/gamification-toasts.js" defer></script>
+</body>
+</html>
