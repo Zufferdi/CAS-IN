@@ -88,9 +88,9 @@ const MISSION_PHASES = [
         hard: 'Difficile'
       };
       const DIFF_PTS = {
-        easy: 1,
-        medium: 2,
-        hard: 3
+        easy: 3,
+        medium: 6,
+        hard: 10
       };
       const TC = {
         'Informatique de base': '#7ab8ff',
