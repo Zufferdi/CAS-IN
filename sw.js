@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v417';
+const CACHE_VERSION = 'cas-in-v418';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1693,6 +1693,7 @@ const STATIC_ASSETS = [
   './references/legal.html',
   './references/dfir-tools.html',
   './references/signatures.html',
+  './references/bibliography.html',
   './offline.html',
   './fiches/index.html',
 
@@ -1815,6 +1816,7 @@ const STATIC_ASSETS = [
   './js/pages/legal-data.js',
   './js/pages/dfir-tools-data.js',
   './js/pages/signatures-data.js',
+  './js/pages/bibliography-data.js',
 
   // ─── TP (tp/*) ───
   './tp/tp-data.js',
