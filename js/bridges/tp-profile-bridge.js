@@ -1,6 +1,8 @@
 /* ============================================================
-   CAS-IN · tp-profile-bridge.js (F2 + v3)
-   Pas d'XP pour les TPs (choix utilisateur). Le bridge sert à :
+   CAS-IN · tp-profile-bridge.js (F2 + v3, delta v44)
+   Depuis v3.0 delta v44 : les TP donnent XP via tp-engine.incSolved
+   (5/15/30 XP par exo selon catégorie + 5 XP bonus 1re catégorie).
+   Le bridge sert à :
      - marquer la dernière activité TP dans Profile
      - déclencher AchievementsCore.evalAndUnlock à chaque incrément
        de tp_solved (débloque les achievements TP/fiches centralisés)
