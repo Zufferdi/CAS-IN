@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>C2 Frameworks Forensique — CAS-IN DFIR</title>
+<meta name="description" content="Cobalt Strike · Sliver · Mythic · Brute Ratel · Havoc · Beacons · Malleable C2 · JA3/JA4 · BeaconEye · CSCE · Volatility · Detection 2025-2026">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+</head>
+<body>
+<div id="cas-navbar" data-page="fiches"></div>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">DÉTECTION & THREAT HUNTING</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-menaces">Malware, Menaces &amp; Anti-forensique</a><span class="bc-sep">›</span>
+    <span class="bc-current">C2 Frameworks Forensique</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~14 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">🎯</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
+    <span class="tag tag-red" style="margin-left:.3rem">Post-Exploitation</span>
+    <span class="tag tag-purple" style="margin-left:.3rem">Beacon</span>
+    <span class="tag tag-orange" style="margin-left:.3rem">Malleable C2</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">C2 Frameworks — Cobalt Strike, Sliver, Mythic, Havoc, Brute Ratel</h1>
+    <div class="meta">Post-exploitation · Command &amp; Control · TLS fingerprinting JA3/JA4 · Memory forensics · Beacon config extraction · Akira &amp; Play utilisent Cobalt Strike (NCSC/OFCS 2025)</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="mitre_attack.html" class="prereq-pill">📖 MITRE ATT&amp;CK</a><a href="malware_forensique.html" class="prereq-pill">📖 Malware Forensics</a><a href="ram_forensique.html" class="prereq-pill">📖 RAM Forensique</a><a href="network_traffic_analysis_avance.html" class="prereq-pill">📖 Network Analysis</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="sigma_rules.html" class="related-pill">🔗 Sigma Rules</a><a href="yara.html" class="related-pill">🔗 YARA</a><a href="lateral_movement_forensique.html" class="related-pill">🔗 Lateral Movement</a><a href="volatility_memory_forensics.html" class="related-pill">🔗 Volatility</a><a href="ransomware_forensique.html" class="related-pill">🔗 Ransomware</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="c2-tabs">
+  <button class="tab active" onclick="showTab('panorama',this)">🗺 Panorama 5 frameworks</button>
+  <button class="tab" onclick="showTab('beacon',this)">📡 Anatomie d'un beacon</button>
+  <button class="tab" onclick="showTab('net',this)">🌐 Détection réseau (JA3/JA4)</button>
+  <button class="tab" onclick="showTab('mem',this)">🧠 Memory forensics</button>
+  <button class="tab" onclick="showTab('ch',this)">🇨🇭 Contexte Suisse</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — PANORAMA
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-panorama">
+
+<div class="concept-card">
+  <div class="concept-title">🎯 C2 Frameworks — l'arme post-exploitation universelle</div>
+  Un <strong>C2 framework</strong> (Command &amp; Control) fournit à l'attaquant l'infrastructure complète pour <em>piloter</em> un agent (<em>beacon</em>, <em>implant</em>) installé sur la machine victime : exécution de commandes, exfiltration, pivot, persistence, élévation. Originellement des outils légitimes de red team, ils sont devenus <strong>l'arme principale des groupes ransomware</strong> (Akira, Play, LockBit, Black Basta) et des APT. <strong>Cobalt Strike</strong> (Fortra) reste dominant via les versions crackées qui circulent en undergound. Depuis 2022-2023, on observe une <strong>migration vers les alternatives</strong> open-source ou commerciales : Sliver, Brute Ratel, Mythic, Havoc — plus modernes, moins détectées, modulaires.
+</div>
+
+<div class="sec-title">Les 5 frameworks dominants (2025-2026)</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🔴 Cobalt Strike (Fortra, commercial cracké)</div>
+    <p><strong>Beacon</strong> · langage : <em>C/asm</em> · transports : HTTP/HTTPS, DNS, SMB pipes, TCP · Aggressor Scripts · profiles <em>Malleable C2</em>. Encore #1 en intrusions réelles malgré 10 ans de signatures défensives. Utilisé par 30+ groupes APT trackés (Cobalt Group, FIN7, APT29, …). Selon Red Canary Threat Detection Report 2023+, Cobalt Strike est le framework C2 le plus fréquemment observé dans les environnements clients.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⚪ Sliver (BishopFox, open-source)</div>
+    <p><strong>Go</strong> · transports : mTLS, HTTP/S, DNS, WireGuard · cross-platform (Win/Lin/Mac). Devenu standard pour APT modernes (APT29 observé en utilisation simulée). Open-source = forks rapides, signatures évoluent vite. Repo : <code>BishopFox/sliver</code>.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🟡 Brute Ratel C4 (commercial)</div>
+    <p>Implant <strong>Badger</strong>, écrit par <em>Chetan Nayak</em>. Anti-EDR <em>by design</em> (sleep obfuscation, indirect syscalls, ETW patching). Licences vendues officiellement aux red teams, mais <em>versions crackées</em> diffusées par <em>Conti leaks</em> en 2022 → adopté par <strong>Qakbot</strong> et plusieurs groupes ransomware. Lateral movement via SMB, WinRM, WMI.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🟣 Mythic (open-source)</div>
+    <p>Framework <strong>modulaire</strong> par <em>@its_a_feature_</em> · architecture multi-agents (<em>Apollo</em> pour Windows, <em>Apfell</em> pour macOS, <em>Poseidon</em>, etc.). Interface web. Adopté progressivement par les acteurs malicieux (mentionné par Team Cymru à partir de 2023+). Repo : <code>its-a-feature/Mythic</code>.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⚫ Havoc (open-source, @C5pider)</div>
+    <p>Implant <strong>Demon</strong>. Focus extrême sur l'évasion EDR moderne : <em>reflective loading</em>, indirect syscalls, sleep obfuscation. Très utilisé par les pen-testeurs <em>et</em> les attaquants. Repo : <code>HavocFramework/Havoc</code>.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📊 Tendance opérationnelle</div>
+    <p>Les opérateurs ransomware <strong>mixent</strong> souvent : Cobalt Strike pour intrusion initiale + lateral movement, puis Sliver/Havoc pour la persistance long-terme (moins détectés). Convergence APT ↔ cybercrime : les mêmes outils circulent dans les deux écosystèmes (cf. rapports Red Canary 2025, Mandiant M-Trends 2025).</p>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Composants typiques d'un C2 framework</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.78rem;line-height:1.55;color:var(--text);white-space:pre-wrap;margin:0">┌───────────────────────────────────┐         ┌─────────────────────────┐
+│  TEAM SERVER (côté attaquant)     │◄────────│  OPERATOR CLIENT (UI)   │
+│  - Listener (HTTPS, DNS, SMB...)  │  team   │  - Aggressor / Beacons  │
+│  - Beacon staging                 │  ssl    │  - Tasking, exfiltration│
+│  - Logs ops, screenshots, dumps   │         └─────────────────────────┘
+└──────────────▲────────────────────┘
+               │  C2 channel chiffré
+               │  (Malleable profile)
+               │
+┌──────────────┴────────────────────┐
+│  BEACON / IMPLANT (côté victime)  │
+│  - Sleep + jitter                 │
+│  - Token impersonation            │
+│  - Process injection, named pipes │
+│  - Lateral movement (SMB/WMI)     │
+└───────────────────────────────────┘</pre>
+</div>
+
+<div class="alert" style="margin-top:1.25rem">
+  <strong>⚠ Vocabulaire</strong> — <em>Beacon</em> (Cobalt Strike) = <em>Implant</em> (Sliver, Mythic) = <em>Badger</em> (Brute Ratel) = <em>Demon</em> (Havoc). Tous désignent l'agent côté victime. <em>Stager</em> = petit binaire initial qui télécharge et exécute le beacon principal. <em>Malleable C2 profile</em> = fichier décrivant à quoi doit ressembler le trafic C2 (headers HTTP, cookies, certificats TLS, jitter…) — permet de mimer Akamai, Office365, Amazon, etc.
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — ANATOMIE BEACON
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-beacon">
+
+<div class="concept-card">
+  <div class="concept-title">📡 Le cycle d'un beacon — sleep, callback, tasking</div>
+  Un beacon ne maintient pas une connexion permanente avec son C2 (trop visible). Il <strong>dort</strong> pendant un intervalle configurable (<em>sleep</em>), avec une variation aléatoire (<em>jitter</em>) pour éviter une régularité détectable. À chaque réveil, il appelle le team server (<em>check-in</em>), récupère les tâches éventuelles, les exécute, renvoie les résultats, puis re-dort. C'est ce <strong>pattern périodique</strong> qui trahit le beacon en analyse réseau, même chiffré.
+</div>
+
+<div class="sec-title">Paramètres clés d'un beacon</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">⏰ Sleep / Jitter</div>
+    <p><strong>Sleep</strong> = intervalle moyen entre check-ins (ex. 60s, 5min, 1h…). <strong>Jitter</strong> = variation ±N % (ex. jitter 30 % sur sleep 60s → callbacks entre 42s et 78s). Cobalt Strike par défaut : 60s/0% (très détectable). Opérateurs avancés : sleep 1h jitter 50% → quasi-invisible en analyse fréquentielle.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🌐 Transports</div>
+    <p>HTTPS le plus courant (caché dans le trafic légitime). DNS (TXT records) pour sortie restrictive. SMB pipes (<code>\\.\pipe\msagent_*</code>) pour beacon-to-beacon en lateral movement. TCP direct pour réseaux internes.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🎭 Malleable C2 Profile</div>
+    <p>Fichier de configuration qui définit l'<em>apparence</em> du trafic : URI, headers HTTP (User-Agent, Host, Cookie), structure de la requête, TLS cert (subject, issuer, validity). Permet de mimer un trafic connu (Office 365, Slack, Akamai…) pour échapper aux signatures naïves.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔐 Watermark</div>
+    <p>Identifiant numérique unique à la licence Cobalt Strike (<em>watermark</em>) intégré au beacon. Les watermarks <strong>crackés/leakés</strong> sont catalogués publiquement (rapports Stairwell, NCC Group). Permet de tracker quel groupe utilise quelle version crackée.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📦 Named pipes</div>
+    <p>Cobalt Strike utilise des pipes nommés pour la communication beacon-to-beacon en lateral movement, configurables. Patterns par défaut : <code>\pipe\msagent_*</code>, <code>\pipe\status_*</code>, <code>\pipe\postex_*</code>. Détection : monitorer les pipes inhabituels créés (Sysmon EventID 17/18).</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔄 Process injection</div>
+    <p>Beacon est généralement injecté dans un processus légitime (<code>rundll32.exe</code>, <code>explorer.exe</code>, <code>svchost.exe</code>). Techniques : <em>VirtualAllocEx + WriteProcessMemory + CreateRemoteThread</em>, <em>APC injection</em>, <em>process hollowing</em>, <em>module stomping</em>. MITRE T1055.</p>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Indicateurs d'infrastructure typiques (Cobalt Strike)</div>
+
+<div class="alert">
+  <p>📡 <strong>Port 50050/TCP</strong> exposé publiquement — port par défaut du Team Server. Beaucoup d'opérateurs négligents le laissent ouvert → Shodan scan trivial.</p>
+  <p>📛 <strong>Certificat TLS par défaut</strong> : <code>CN=Major Cobalt Strike, O=cobaltstrike.com</code> (jamais changé chez les amateurs).</p>
+  <p>🔢 <strong>DNS Beacon</strong> : un serveur Cobalt Strike répond <code>0.0.0.0</code> aux requêtes DNS quand il est <em>busy</em> — pattern unique.</p>
+  <p>🎯 <strong>JA3 Beacon</strong> : <code>a0e9f5d64349fb13191bc781f81f42e1</code> (signature client Windows socket TLS classique de Cobalt Strike).</p>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — DÉTECTION RÉSEAU
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-net">
+
+<div class="concept-card">
+  <div class="concept-title">🌐 TLS fingerprinting — JA3, JA3S, JA4, JARM</div>
+  Le contenu d'un beacon HTTPS est chiffré, mais le <strong>handshake TLS</strong> reste en clair et révèle énormément. Les fingerprints TLS calculent un hash unique à partir des paramètres du <em>ClientHello</em> (versions TLS, suites de chiffrement, extensions, courbes elliptiques) côté client, et du <em>ServerHello</em> côté serveur. Deux beacons Cobalt Strike générés depuis la même version de Windows produisent le <em>même</em> JA3 — IOC robuste et reproductible. JA3 a été développé par <strong>Salesforce</strong> ; JA4 est l'évolution moderne (2023+) qui ajoute TLS 1.3 et un format <em>human-readable</em>.
+</div>
+
+<div class="sec-title">Les quatre signatures TLS à connaître</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🔍 JA3 (client)</div>
+    <p>Hash <strong>MD5</strong> sur les champs du <em>ClientHello</em> : <code>SSLVersion,Ciphers,Extensions,EllipticCurves,EllipticCurvePointFormats</code>. Format : 32 caractères hex.</p>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:.4rem">JA3 connu Cobalt Strike : <code>a0e9f5d64349fb13191bc781f81f42e1</code> (sur ~10 ans, très stable car lié à la stack Windows).</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔍 JA3S (server)</div>
+    <p>Hash MD5 sur le <em>ServerHello</em> : <code>SSLVersion,Cipher,Extensions</code>. Couple JA3 + JA3S = signature plus fiable.</p>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:.4rem">Limitation : les <em>redirectors</em> (HAProxy, socat) modifient le JA3S.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔍 JA4 (moderne, 2023+)</div>
+    <p>Successeur JA3 par <strong>FoxIO</strong>. Format <em>multi-parts human-readable</em>. Supporte TLS 1.3, QUIC, SSH. Plus difficile à <em>spoofer</em> car ne se base pas que sur des paramètres facilement contrôlables.</p>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:.4rem">Format exemple : <code>t13d1516h2_8daaf6152771_b186095e22b6</code></p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🎯 JARM (active)</div>
+    <p>Fingerprint <strong>actif</strong> par Salesforce — envoie 10 ClientHello orchestrés au serveur cible et hashe les ServerHello reçus. Permet de scanner Internet à la recherche de team servers connus.</p>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:.4rem">Différence clé : JA3/JA4 = passif (observation trafic), JARM = actif (scan).</p>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Détection par pattern HTTP / DNS</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.74rem;line-height:1.55;color:var(--text);white-space:pre-wrap;margin:0"># Sigma rule — Cobalt Strike DNS beaconing
+title: Cobalt Strike DNS Beacon Activity
+id: 4d4a6e6f-3d3a-4d4f-9d9a-1a2b3c4d5e6f
+status: experimental
+description: Detects high-volume DNS TXT queries to a single domain (CS DNS beacon)
+references:
+    - https://thedfirreport.com/2022/01/24/cobalt-strike-a-defenders-guide-part-2/
+tags:
+    - attack.command_and_control
+    - attack.t1071.004
+logsource:
+    category: dns
+detection:
+    selection:
+        query_type: TXT
+    timeframe: 5m
+    condition: selection | count() by query_name &gt; 50
+level: high
+
+# Sigma rule — Cobalt Strike named pipes (lateral movement)
+title: Cobalt Strike Named Pipe Pattern
+id: 5f5b7f7g-4e4b-5e5g-8e8b-2b3c4d5e6f7g
+logsource:
+    category: pipe_created
+    product: windows
+detection:
+    selection:
+        PipeName|startswith:
+            - '\msagent_'
+            - '\status_'
+            - '\postex_'
+            - '\MSSE-'
+    condition: selection
+level: high</pre>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Outils réseau</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🦓 Zeek / Bro</div>
+    <p>Calcule JA3/JA3S/JA4 nativement en sortie standard. Logs <code>ssl.log</code> + <code>conn.log</code> + <code>x509.log</code>. Standard NSM (Network Security Monitoring).</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🚀 Suricata</div>
+    <p>IDS avec règles signature + extraction JA3/JA4 + détection malleable C2 patterns. Couplable Splunk/Elastic.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📈 RITA</div>
+    <p><em>Real Intelligence Threat Analytics</em> (Black Hills Information Security). Analyse statistique des callbacks beacon (régularité, jitter analysis, long connections). Open-source.</p>
+  </div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — MEMORY FORENSICS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-mem">
+
+<div class="concept-card">
+  <div class="concept-title">🧠 Memory forensics — extraire le beacon de la RAM</div>
+  Quand un C2 framework est utilisé proprement, le beacon est <strong>injecté en mémoire</strong> et ne touche pas le disque. La seule façon de l'extraire et de l'analyser est de <strong>dumper la RAM</strong> de la machine compromise <em>pendant qu'elle est encore allumée</em> (jamais shutdown !), puis d'analyser le dump avec Volatility 3 + outils spécialisés. La <em>config du beacon</em> contient les informations cruciales : URL C2, port, watermark, sleep, jitter, certificats, profile Malleable.
+</div>
+
+<div class="sec-title">Workflow forensique standard (Volatility 3)</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.78rem;line-height:1.55;color:var(--text);white-space:pre-wrap;margin:0"># 1. Identifier les processus suspects injectés
+vol -f memory.raw windows.malfind
+
+# Sortie typique : rundll32.exe pid=4892, page RWX inattendue
+# Tag MZ détecté en zone RWX = beacon injecté très probable
+
+# 2. Dumper le processus suspect
+vol -f memory.raw windows.memmap --pid 4892 --dump
+# → produit pid.4892.dmp
+
+# 3. YARA-scanner avec règles Cobalt Strike publiques
+yara -s elastic_rules/cobalt_strike.yar pid.4892.dmp
+# Repo de référence : elastic/protections-artifacts (Elastic Security)
+
+# 4. Extraction de la config beacon avec 1768.py (Didier Stevens)
+python3 1768.py pid.4892.dmp
+# Sortie : URL C2, port, sleep, jitter, watermark, public key
+# Repo : DidierStevens/Beta (script 1768.py)
+
+# 5. Alternative : CobaltStrikeParser (Sentinel One / Gal Kristal)
+python3 parse_beacon_config.py beacon_dumped.bin
+# Affiche la config décodée + Malleable C2 profile
+
+# 6. Si conf packée encore en mémoire : CSCE (Stroz Friedberg)
+python3 -m csce.parser pid.4892.dmp
+# Repo : strozfriedberg/cobaltstrike-config-extractor</pre>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Difficultés rencontrées en pratique</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🔒 Config <em>unpacked</em></div>
+    <p>Cobalt Strike charge sa config, la <em>dépacke</em> en heap mémoire, puis <strong>écrase la version packée avec des zéros</strong>. Beaucoup d'outils cherchent la version packée → échouent. Solutions : scanner spécifiquement la <em>unpacked config</em> (CSCE, scripts custom comme celui de <em>cyber.wtf</em>).</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔐 Masking XOR</div>
+    <p>Les beacons modernes <em>masquent</em> les strings sensibles (URL, keys) avec XOR 0x2E ou autre. <code>1768.py</code> et CSCE déchiffrent automatiquement. Manuellement : <code>CyberChef</code> avec recette XOR Brute Force.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📦 Stagers vs full beacons</div>
+    <p><em>Stager</em> (taille ~250 octets) ne contient qu'une URL et déclenche le download du beacon complet. Pas de config exploitable. <em>Full beacon</em> (taille ~250 KB) contient toute la config Malleable C2. Stairwell propose un <em>stager decoder</em> open-source (2026).</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🧬 64-bit vs 32-bit</div>
+    <p>Certains outils anciens (CobaltStrikeParser v1) ne gèrent que 32-bit. Vérifier que la version supporte le 64-bit (la plupart des beacons modernes le sont). 1768.py et CSCE modernes supportent les deux.</p>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Plugins Volatility spécialisés</div>
+
+<div class="alert">
+  <p>🧩 <strong>JPCERT/CC plugin Volatility</strong> — <code>cobaltstrikescan.py</code> détecte et extrait les beacons Cobalt Strike dans un dump Volatility 2. Référence historique.</p>
+  <p>🧩 <strong>volatility3-plugins-community</strong> — Volatility 3 (Python 3) inclut des plugins externes pour Sliver, Mythic, Havoc. Repo : <code>volatilityfoundation/community</code>.</p>
+  <p>🧩 <strong>Hollows_Hunter</strong> (HasherezadeFu) — détecte process hollowing, module stomping, reflective DLL injection. Complémentaire à Volatility.</p>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — CONTEXTE SUISSE
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-ch">
+
+<div class="concept-card">
+  <div class="concept-title">🇨🇭 Le paysage suisse 2024-2026 — Akira, Play, Cobalt Strike</div>
+  Le <strong>NCSC / OFCS</strong> (Office fédéral de la cybersécurité) publie semestriellement un rapport de situation. Les éditions 2024-S2 et 2025-S1 confirment que <strong>Cobalt Strike est l'outil C2 le plus observé</strong> dans les incidents suisses, généralement déployé après une intrusion initiale via phishing, exploits RDP exposés, ou compromission VPN/firewall (SonicWall CVE-2024-40766, Fortigate CVE-2024-21762, etc.). Le <strong>MPC</strong> (Ministère public de la Confédération) conduit depuis avril 2024 une procédure pénale contre inconnus dans le contexte du groupe <strong>Akira</strong>, qui utilise massivement Cobalt Strike pour ses opérations en Suisse (~200 victimes confirmées).
+</div>
+
+<div class="sec-title">Implications juridiques et opérationnelles</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">⚖️ Qualifications pénales</div>
+    <p>L'opération d'un C2 framework malveillant relève de :</p>
+    <p>• <strong>Art. 143 CP</strong> — Soustraction de données<br>
+    • <strong>Art. 143bis CP</strong> — Accès indu à un système informatique<br>
+    • <strong>Art. 144bis CP</strong> — Détérioration de données<br>
+    • <strong>Art. 147 CP</strong> — Utilisation frauduleuse d'un ordinateur<br>
+    • <strong>Art. 156 CP</strong> — Extorsion (couplage ransomware)</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📞 Obligation LSI 24h</div>
+    <p>Depuis le <strong>1er avril 2025</strong>, les autorités et organisations assujetties (art. 74b LSI : infrastructures critiques — banques, assurances, énergie, transports, cantons, hôpitaux, prestataires cloud, etc.) doivent signaler les cyberattaques à l'OFCS dans les <strong>24 heures</strong> (art. 74e LSI) via <code>report.ncsc.admin.ch</code>. Amendes administratives jusqu'à <strong>100'000 CHF</strong> en cas de manquement (art. 74g LSI, entrée en vigueur 1er octobre 2025).</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🤝 Coordination MPC/fedpol/OFCS</div>
+    <p>Communiqué conjoint du <strong>16 octobre 2025</strong> : recommandation explicite de <strong>ne pas payer la rançon</strong>, signalement systématique, coordination via le canal officiel. Les paiements crypto peuvent activer une obligation MROS (art. 9 LBA) selon les circonstances.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🌐 Coopération internationale</div>
+    <p>L'infrastructure Cobalt Strike/C2 est typiquement <em>hébergée à l'étranger</em> (US, EU, ORB chinoises…). Coopération via :</p>
+    <p>• <strong>Convention de Budapest</strong> art. 32 (preservation transfrontière)<br>
+    • <strong>EIMP</strong> (entraide pénale internationale)<br>
+    • <strong>Eurojust</strong> + <strong>Europol EC3</strong><br>
+    • Canaux bilatéraux <strong>fedpol ↔ NCA UK</strong>, <strong>fedpol ↔ FBI Legat</strong></p>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Réponse incident : checklist DFIR</div>
+
+<div class="alert">
+  <p><strong>1. Ne pas éteindre la machine compromise</strong> → préserver la RAM (et le beacon en mémoire).</p>
+  <p><strong>2. Isoler réseau</strong> mais maintenir alimentation. Si pivot OT/ICS suspecté, segmenter physiquement.</p>
+  <p><strong>3. Dumper la RAM</strong> via WinPmem, Magnet RAM Capture, Belkasoft RAM Capturer.</p>
+  <p><strong>4. Préserver SIEM logs + EDR alerts + flow netflow</strong> avant rotation.</p>
+  <p><strong>5. Notifier OFCS</strong> dans les 24h (art. 74e LSI).</p>
+  <p><strong>6. Coordonner MPC</strong> si jonction série Akira/Play/LockBit envisageable.</p>
+  <p><strong>7. Si paiement envisagé</strong> → consultation préalable juriste + OFCS + MROS (LBA).</p>
+  <p><strong>8. Analyse forensique</strong> : extraction config beacon, IOCs partagés via <strong>MISP (Cyber Security Hub CH)</strong>, attribution si possible (watermark, infra patterns).</p>
+</div>
+
+<div class="exam-tip" style="margin-top:1.25rem">
+  <div class="exam-tip-title">🎓 Exam Tip — C2 Frameworks</div>
+  <p><strong>5 dominants 2025-2026</strong> : <strong>Cobalt Strike</strong> (Fortra, #1 en intrusions réelles) · <strong>Sliver</strong> (Go, BishopFox, open-source) · <strong>Brute Ratel C4</strong> (commercial, Badger, anti-EDR) · <strong>Mythic</strong> (open-source modulaire) · <strong>Havoc</strong> (open-source, Demon implant)</p>
+  <p><strong>Vocabulaire</strong> : Beacon (CS) = Implant (Sliver/Mythic) = Badger (BR) = Demon (Havoc)</p>
+  <p><strong>Composants</strong> : Team Server (côté attaquant) · Operator Client (UI) · Beacon/Implant (victime) · Listener (port d'écoute) · Stager (loader léger) · Malleable C2 profile</p>
+  <p><strong>Paramètres beacon</strong> : <em>Sleep</em> (intervalle) · <em>Jitter</em> (variation) · <em>Watermark</em> (ID licence CS) · transports HTTPS/DNS/SMB pipes/TCP</p>
+  <p><strong>JA3 / JA3S / JA4 / JARM</strong> : fingerprinting TLS — JA3 (client, MD5 ClientHello) · JA3S (server) · JA4 (FoxIO 2023+, TLS 1.3, multi-parts) · JARM (actif, Salesforce)</p>
+  <p><strong>JA3 Cobalt Strike</strong> : <code>a0e9f5d64349fb13191bc781f81f42e1</code> (très stable)</p>
+  <p><strong>IOCs infrastructure CS</strong> : port <strong>50050/TCP</strong> (team server par défaut) · cert TLS par défaut <code>CN=Major Cobalt Strike</code> · DNS Beacon répond <code>0.0.0.0</code> quand busy</p>
+  <p><strong>Named pipes CS</strong> : <code>\pipe\msagent_*</code> · <code>\pipe\status_*</code> · <code>\pipe\postex_*</code> · <code>\pipe\MSSE-*</code></p>
+  <p><strong>Memory forensics</strong> : Volatility 3 → <code>malfind</code> → dump process → YARA Elastic → config extractor : <strong>1768.py</strong> (Didier Stevens), <strong>CSCE</strong> (Stroz Friedberg), <strong>CobaltStrikeParser</strong> (S1/Gal Kristal)</p>
+  <p><strong>Piège conf packée</strong> : CS écrase la config packée par des zéros après unpack en heap → outils naïfs échouent → utiliser scanners <em>unpacked</em></p>
+  <p><strong>Réseau</strong> : <strong>Zeek</strong> calcule JA3/JA4 nativement · <strong>Suricata</strong> = IDS · <strong>RITA</strong> = analyse statistique beaconing (Black Hills)</p>
+  <p><strong>Contexte CH</strong> : Cobalt Strike utilisé par <strong>Akira</strong> (200+ victimes, procédure MPC ouverte 04/2024) · LSI 24h obligation depuis 04/2025 · Communiqué MPC/fedpol/OFCS 16.10.2025 "ne pas payer"</p>
+  <p><strong>MITRE</strong> : Initial Access (T1190/T1133) → Execution (T1059) → Persistence (T1547) → Privilege Escalation (T1055 injection) → Defense Evasion (T1027 obfuscated files) → C2 (T1071.001/004) → Exfiltration (T1041)</p>
+  <p><strong>Réponse incident</strong> : NE PAS ÉTEINDRE la machine · dumper RAM en priorité · isoler réseau · notifier OFCS 24h · coordonner MPC</p>
+  <p><strong>Ne pas confondre</strong> Cobalt Strike (outil) et l'opérateur Cobalt Group (FIN7-like) — homonymie historique</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Vous analysez un dump mémoire Windows compromis. Volatility <code>malfind</code> révèle une zone RWX dans <code>rundll32.exe</code> avec un header MZ. Vous extrayez la région mais <code>1768.py</code> renvoie une erreur de parsing. Que faites-vous, et pourquoi ?</div>
+  <div class="quiz-meta">C2 Frameworks · Niveau : difficile</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">Le problème typique est que Cobalt Strike, après avoir chargé sa configuration <em>packée</em>, la <strong>déballe en heap mémoire et écrase la version packée avec des octets nuls</strong>. <code>1768.py</code> (Didier Stevens) cherche par défaut la <em>packed config</em>, qui n'existe plus → parsing échoue.
+    <br><br>
+    <strong>Solution étape par étape :</strong><br>
+    1️⃣ Étendre la recherche à la <em>heap</em> du processus (pas que la région .data). Avec Volatility 3 : <code>vol -f mem.raw windows.memmap --pid &lt;PID&gt; --dump</code> puis chercher dans tout le dump, pas que dans la région malfind.<br>
+    2️⃣ Utiliser un extracteur qui cherche la <strong>unpacked config</strong> : <code>CSCE</code> de Stroz Friedberg gère les deux variantes. À défaut, le script de <em>cyber.wtf</em> (oct. 2023) traite ce cas spécifique.<br>
+    3️⃣ Sur le dump, lancer un <code>strings -el</code> (wide UTF-16) puis grep <code>http</code>/<code>https</code> — révèle souvent l'URL C2 même quand la conf binaire est inaccessible.<br>
+    4️⃣ Si la conf a un <em>masking XOR</em> (typiquement 0x2E), brute-force avec CyberChef (recette <em>XOR Brute Force</em>) sur les premiers octets pour valider le pattern config.<br>
+    5️⃣ Vérifier en parallèle le <strong>processus parent</strong> et la timeline d'injection (Sysmon EventID 8 — CreateRemoteThread) pour identifier la chaîne d'exécution complète et confirmer un Cobalt Strike vs Sliver/Havoc (les implants modernes ont parfois des patterns similaires mais des configs différentes).</div>
+</div>
+
+</div>
+
+<div class="footer" style="margin-top:2rem">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>NCSC/OFCS Rapports 2024-S2 et 2025-S1 · MITRE ATT&amp;CK Enterprise · Red Canary Threat Detection Report · The DFIR Report · Mandiant M-Trends · Communiqué MPC/fedpol/OFCS 16.10.2025</span>
+</div>
+
+<script>
+function showTab(id, btn){
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('#c2-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  var el=document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+  window.scrollTo({top:Math.max(0,document.getElementById('c2-tabs').offsetTop-60),behavior:'smooth'});
+}
+</script>
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+<script src="../js/core/cas-in-profile.js" defer></script>
+<script src="../js/core/cas-in-achievements.js" defer></script>
+<script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/profile/celebration-ui.js" defer></script>
+<script src="../js/components/gamification-toasts.js" defer></script>
+</body>
+</html>

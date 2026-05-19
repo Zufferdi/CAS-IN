@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>WiFi · Bluetooth · RFID Forensique — CAS-IN DFIR</title>
+<meta name="description" content="WiFi monitor mode · WPA2/WPA3 handshakes · Probe requests · Bluetooth Low Energy · RFID Mifare · Proxmark3 · Flipper Zero · aircrack-ng · Kismet">
+<link rel="stylesheet" href="../style/fiche_style.css">
+<link rel="stylesheet" href="../style/cas-in-navbar.css">
+<link rel="stylesheet" href="../style/gamification-toasts.css">
+</head>
+<body>
+<div id="cas-navbar" data-page="fiches"></div>
+<div id="scroll-progress"></div>
+<button class="back-top" id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<nav class="tn-nav">
+  <a href="index.html" class="tn-back">← Fiches</a>
+  <span class="tn-title">RÉSEAU & COMMUNICATIONS</span>
+  <a href="../quiz.html" class="tn-quiz">💊 Quiz →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="../index.html">🏠 Accueil</a><span class="bc-sep">›</span>
+    <a href="index.html">Fiches</a><span class="bc-sep">›</span>
+    <a href="index.html#cat-reseau">Réseau &amp; Protocoles</a><span class="bc-sep">›</span>
+    <span class="bc-current">WiFi · Bluetooth · RFID</span>
+    <span class="read-time-badge" style="margin-left:auto">⏱ ~13 min</span>
+  </div>
+
+  <div class="header" style="margin-top:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">
+    <div><span style="font-size:2.2rem">📡</span>
+    <span class="tag tag-gold" style="margin-left:.5rem">DFIR</span>
+    <span class="tag tag-cyan" style="margin-left:.3rem">WiFi 802.11</span>
+    <span class="tag tag-blue" style="margin-left:.3rem">Bluetooth/BLE</span>
+    <span class="tag tag-orange" style="margin-left:.3rem">RFID/NFC</span></div>
+    <h1 style="font-family:var(--sans);font-size:2rem;font-weight:800;letter-spacing:-.5px;margin:.3rem 0 .15rem">Communications sans fil &amp; RFID — Forensique</h1>
+    <div class="meta">Captures monitor-mode · Handshakes WPA2/3 · Probe requests · Pairing BLE · Mifare Classic · Proxmark3 · Flipper Zero · cas SMS Blaster CH 2025</div>
+  </div>
+
+  <div class="prereq-block" style="margin-top:1rem">
+    <div class="prereq-row"><span class="prereq-label">Prérequis :</span><a href="reseau.html" class="prereq-pill">📖 Réseau</a><a href="wireshark_pcap.html" class="prereq-pill">📖 Wireshark/PCAP</a><a href="crypto.html" class="prereq-pill">📖 Crypto</a></div>
+    <div class="prereq-row"><span class="prereq-label">Voir aussi :</span><a href="cassage_mdp.html" class="related-pill">🔗 Cassage mots de passe</a><a href="mobile.html" class="related-pill">🔗 Mobile Forensique</a><a href="iot_forensique.html" class="related-pill">🔗 IoT Forensique</a><a href="osint.html" class="related-pill">🔗 OSINT</a></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="wb-tabs">
+  <button class="tab active" onclick="showTab('wifi',this)">📶 WiFi 802.11</button>
+  <button class="tab" onclick="showTab('probes',this)">🛰 Probe requests &amp; tracking</button>
+  <button class="tab" onclick="showTab('bt',this)">🔵 Bluetooth / BLE</button>
+  <button class="tab" onclick="showTab('rfid',this)">🏷 RFID / NFC</button>
+  <button class="tab" onclick="showTab('proc',this)">⚖️ Procédure CH</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — WIFI
+══════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-wifi">
+
+<div class="concept-card">
+  <div class="concept-title">📶 WiFi forensique — du <em>monitor mode</em> à la capture du handshake</div>
+  Une interface WiFi en mode <strong>monitor</strong> écoute <em>tout</em> le trafic 802.11 sur un canal donné, sans s'associer à un AP. C'est l'équivalent du <em>promiscuous mode</em> en filaire, mais avec des contraintes matérielles : tous les chipsets ne le supportent pas (Alfa AWUS036ACH, Ralink RT3070, Atheros AR9271 — références habituelles). Sur un canal donné, on capture : <strong>beacon frames</strong> (APs visibles), <strong>probe requests/responses</strong> (clients cherchant un réseau), <strong>data frames chiffrées</strong>, <strong>management frames</strong> (associations, deauth), et — si on est chanceux — un <strong>handshake WPA2 4-way</strong> capturé pendant la connexion d'un client.
+</div>
+
+<div class="sec-title">Workflow capture — suite Aircrack-ng (standard de fait)</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.78rem;line-height:1.55;color:var(--text);white-space:pre-wrap;margin:0"># 1. Identifier l'interface WiFi
+iwconfig
+# wlan0  IEEE 802.11  ESSID:off/any  Mode:Managed ...
+
+# 2. Tuer les processus qui interfèrent (NetworkManager, wpa_supplicant)
+sudo airmon-ng check kill
+
+# 3. Passer en mode monitor (crée wlan0mon)
+sudo airmon-ng start wlan0
+
+# 4. Scan général : voir tous les APs et clients
+sudo airodump-ng wlan0mon
+# Lister par canal/BSSID/encryption/clients
+
+# 5. Cibler un AP spécifique et capturer le handshake
+sudo airodump-ng -c 6 --bssid AA:BB:CC:DD:EE:FF -w capture wlan0mon
+# Sauvegarde dans capture-01.cap / .csv
+
+# 6. Forcer un client à se ré-authentifier (deauth) → handshake recapturé
+sudo aireplay-ng -0 5 -a AA:BB:CC:DD:EE:FF -c 11:22:33:44:55:66 wlan0mon
+# OU attendre passivement une connexion légitime
+
+# 7. Vérifier la présence du handshake dans la capture
+sudo aircrack-ng capture-01.cap
+# WPA (1 handshake) → OK
+
+# 8. Cassage offline (dictionary attack)
+sudo aircrack-ng -w /usr/share/wordlists/rockyou.txt capture-01.cap
+# OU avec GPU : hashcat -m 22000 capture.hc22000 wordlist.txt</pre>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Les protocoles WiFi et leurs faiblesses</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">❌ WEP (1997, brisé)</div>
+    <p>RC4 + IV 24 bits → collision en quelques minutes avec l'<em>attaque PTW</em> (Pyshkin, Tews, Weinmann, 2007). <strong>Jamais utilisable</strong> en environnement sérieux. Si trouvé en audit = sanction immédiate.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⚠️ WPA / WPA2-PSK (4-way handshake)</div>
+    <p>Sensible aux attaques <em>offline dictionary</em> sur le PSK (pre-shared key). Capture du handshake suffit + GPU cracking (hashcat mode 22000). <strong>Mot de passe ≥ 14 chars aléatoires</strong> = quasi-incassable. <strong>Mot de passe dictionnaire</strong> = cassé en secondes.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🆕 WPA3-SAE (Dragonfly)</div>
+    <p>Introduit <em>Simultaneous Authentication of Equals</em> qui résiste aux attaques offline dictionary. Forward secrecy. Mais : vulnérabilités <em>Dragonblood</em> (2019, CVE-2019-9494/9495) sur certaines implémentations + <em>downgrade attacks</em> vers WPA2 si transition mode activé.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🎯 PMKID Attack (2018, hashcat)</div>
+    <p>Variante WPA/WPA2 qui <strong>n'a pas besoin d'un client connecté</strong> : capture du PMKID dans le premier RSN-IE de l'AP. Outil : <code>hcxdumptool</code>. Mode hashcat 16800. Encore plus efficace que la capture handshake classique.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔓 WPS PIN Brute-force</div>
+    <p>WPS (Wi-Fi Protected Setup) avec PIN 8 chiffres → réduit à 2 tronçons de 4 chiffres (faille protocolaire 2011). Outils : <code>Reaver</code>, <code>Bully</code>. <strong>Désactiver WPS</strong> sur tout équipement.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📡 Management Frame Protection (802.11w)</div>
+    <p>Protège les frames de gestion (deauth, dissoc, action) avec une intégrité crypto. Empêche les <em>deauth attacks</em> classiques. Mandatory en WPA3, optionnel en WPA2. Kismet détecte les <em>floods de deauth</em> = signal d'attaque.</p>
+  </div>
+</div>
+
+<div class="alert" style="margin-top:1.25rem">
+  <strong>📌 Format hashcat 2025</strong> — Le format <em>.hccapx</em> (mode 2500) est <strong>déprécié</strong>. La capture est maintenant convertie en <em>.hc22000</em> (mode 22000) via <code>hcxpcapngtool capture.pcapng -o capture.hc22000</code>. Ce format gère à la fois les EAPOL handshakes et les PMKIDs dans un fichier unique.
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — PROBE REQUESTS
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-probes">
+
+<div class="concept-card">
+  <div class="concept-title">🛰 Probe requests — le téléphone bavard qui trahit sa présence</div>
+  Quand un téléphone (ou tout appareil WiFi) cherche un réseau connu, il émet des <strong>probe requests</strong> contenant le SSID du réseau désiré (« <em>HomeWiFi_Martin</em> est-il là ? »). En écoutant passivement, on capture la <strong>liste des SSIDs connus de la victime</strong> + son <strong>adresse MAC</strong>. Avec une base comme <strong>WiGLE</strong>, on peut <em>géolocaliser</em> chaque SSID → reconstituer le parcours physique d'un individu sur des années. C'est un vecteur de <em>tracking</em> majeur, encore largement sous-estimé.
+</div>
+
+<div class="sec-title">MAC randomization — la défense (partielle)</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🍎 iOS (depuis iOS 8, 2014)</div>
+    <p>MAC randomisée en mode <em>scan</em> uniquement. Avant connexion, l'iPhone scrute avec une MAC aléatoire. Une fois connecté à un réseau, la MAC réelle est utilisée. Depuis iOS 14 : MAC <em>aléatoire par réseau</em> (option utilisateur).</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🤖 Android (depuis Android 10, 2019)</div>
+    <p>MAC randomisée par réseau par défaut depuis Android 10. Persistante par SSID jusqu'à oubli du réseau (réversible via paramètres). Avant Android 10, MAC réelle constante = traçabilité totale.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🪟 Windows 10/11</div>
+    <p>Option « <em>Use random hardware addresses</em> » par interface ou par réseau. Désactivée par défaut. Les pros la désactivent souvent pour MAC filtering corporate.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⚠️ Limites de la randomization</div>
+    <p>(1) <em>Probe SSIDs</em> restent identifiants (« je cherche StarbucksWiFi + EPFL_guest + AirBnB_Berlin_2024 » = profil unique). (2) <em>Sequence numbers</em>, <em>timing patterns</em>, <em>capability bits</em> permettent du fingerprinting passif (recherches académiques 2019-2024).</p>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Outils &amp; bases de données</div>
+
+<div class="concept-card" style="background:rgba(13,17,23,.5)">
+<pre style="font-family:var(--mono);font-size:.78rem;line-height:1.55;color:var(--text);white-space:pre-wrap;margin:0"># Kismet — sniffer + WIDS open-source, scriptable
+kismet -c wlan0mon
+# Interface web : http://localhost:2501
+# Logs JSON, base SQLite. Détecte rogue APs, déauthentication floods,
+# attaques karma, captive portals suspects.
+
+# Wireshark filters pour analyse PCAP
+wlan.fc.type_subtype == 4    # probe requests uniquement
+wlan.sa == AA:BB:CC:DD:EE:FF  # filtrer par MAC source
+
+# WiGLE : base mondiale de SSID/BSSID géolocalisés (~1 milliard)
+# wigle.net — recherche par SSID, BSSID, coordonnées GPS
+# API gratuite avec compte (rate-limited)
+# Usage forensique : "à quels endroits ce téléphone est passé ?"
+
+# hcxdumptool — capture WPA/PMKID moderne
+sudo hcxdumptool -i wlan0mon -o capture.pcapng \
+    --enable-status=15
+
+# hcxpcapngtool — conversion vers hashcat
+hcxpcapngtool capture.pcapng -o capture.hc22000 \
+    -E essidlist</pre>
+</div>
+
+<div class="alert" style="margin-top:1.25rem">
+  <strong>🎯 Cas pratique CH</strong> — Les Probe Requests sont régulièrement utilisées par les enquêtes pour <strong>placer un suspect dans une zone</strong> (corrélation MAC ↔ scène). Combiné aux données <strong>antenne mobile</strong> (rétention 6 mois LSCPT), c'est une preuve forensique solide. Limites : MAC randomization moderne réduit l'utilité, mais les SSIDs probés restent identifiants.
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — BLUETOOTH / BLE
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-bt">
+
+<div class="concept-card">
+  <div class="concept-title">🔵 Bluetooth / BLE — pairing, GATT, advertising</div>
+  Bluetooth se décompose en deux écosystèmes distincts : <strong>Bluetooth Classic / BR-EDR</strong> (audio, transfert fichiers, ~10 m, ~24 Mbps) et <strong>Bluetooth Low Energy (BLE)</strong> introduit en v4.0 (2010), conçu pour IoT et wearables (batterie longue, payload réduit, jusqu'à 2 Mbps en v5). Le pairing BLE utilise le protocole <strong>Secure Simple Pairing (SSP)</strong> avec 4 méthodes : <em>Just Works</em>, <em>Numeric Comparison</em>, <em>Passkey Entry</em>, <em>Out-Of-Band (OOB)</em>. <em>Just Works</em> et <em>Passkey Entry</em> ont des faiblesses documentées exploitées par plusieurs CVE.
+</div>
+
+<div class="sec-title">Artefacts forensiques Bluetooth (mobile)</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🤖 Android — bt_config.conf</div>
+    <p>Fichier <code>/data/misc/bluedroid/bt_config.conf</code> (root requis). Liste des appareils pairés : MAC, nom, type, link key, services. Aussi : <code>/data/misc/bluetooth/logs/btsnoop_hci.log</code> (logs HCI snoop si activés dev mode).</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🍎 iOS — com.apple.MobileBluetooth</div>
+    <p><code>/private/var/root/Library/Preferences/com.apple.MobileBluetooth.devices.plist</code>. Aussi <code>com.apple.MobileBluetooth.ledevices.plist</code> pour BLE spécifiquement. Accessibles via Cellebrite UFED, Magnet AXIOM, ou checkra1n + extraction <em>full file system</em>.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🪟 Windows — Registry</div>
+    <p>Clés <code>HKLM\SYSTEM\CurrentControlSet\Services\BTHPORT\Parameters\Devices\</code> : un sous-key par appareil pairé (par MAC). Valeurs : <code>Name</code>, <code>LinkKey</code> (chiffrée), <code>LinkKeyLength</code>, <code>LastConnected</code> (FILETIME).</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🐧 Linux — BlueZ</div>
+    <p><code>/var/lib/bluetooth/&lt;adapter-MAC&gt;/&lt;device-MAC&gt;/info</code> : fichier INI par appareil pairé (Name, LinkKey, Class, supportedTechnologies). <code>btmgmt</code>, <code>bluetoothctl</code> en CLI.</p>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Captures et attaques BLE</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">📡 Capture trafic BLE</div>
+    <p><strong>Ubertooth One</strong> (open-source, Great Scott Gadgets) · <strong>Sniffle</strong> (NCC Group, dongle TI CC1352) · <strong>Wireshark + nRF Sniffer</strong> (Nordic Semiconductor, dongle nRF52840). Capture des advertising packets + connection events.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🎭 Spoofing &amp; rogue devices</div>
+    <p><strong>Flipper Zero</strong> (en mode BadBT/BadUSB) émet des advertising packets BLE pour spoofer des AirTags, Apple devices (cf. iOS BLE spam). <strong>BTLEJack</strong> permet sniffing actif + hijacking de connexions BLE.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⚠️ Bluesnarfing / Bluejacking</div>
+    <p><em>Bluesnarfing</em> = vol données par Bluetooth (obsolète sur appareils modernes). <em>Bluejacking</em> = envoi non sollicité (toujours possible via OPP/Object Push). BlueBorne (2017) : famille de CVE Android/iOS/Linux/Windows permettant RCE via Bluetooth.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🚗 BLE &amp; voitures connectées</div>
+    <p>Relay attacks contre keyfobs BLE (Tesla, BMW, etc.) : transmetteur + récepteur amplifient le signal du keyfob réel → voiture ouverte. Bypass par challenge-response timing en milliseconde (Tesla a corrigé en 2022).</p>
+  </div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — RFID / NFC
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-rfid">
+
+<div class="concept-card">
+  <div class="concept-title">🏷 RFID / NFC — du badge bureau au passeport biométrique</div>
+  RFID (Radio-Frequency Identification) recouvre une famille de protocoles court-portée : <strong>LF 125 kHz</strong> (badges immeubles anciens, EM4100/HID Prox, trivialement clonables), <strong>HF 13.56 MHz</strong> (Mifare Classic/DESFire, transports publics, badges entreprise modernes, passeports), <strong>UHF 860-960 MHz</strong> (logistique, antivol). <strong>NFC</strong> est un sous-ensemble du HF (13.56 MHz) avec extensions pour communications bidirectionnelles (paiement, smartphone). Le forensique RFID/NFC concerne : (1) la <em>copie</em> d'un badge légitime saisi, (2) l'<em>analyse</em> d'un badge cloné saisi à un suspect, (3) la <em>récupération</em> des clés crypto pour relier un badge à un système.
+</div>
+
+<div class="sec-title">Mifare Classic — la cible la plus courante en CH</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🔓 Vulnérabilités historiques</div>
+    <p>Mifare Classic utilise <strong>CRYPTO1</strong>, chiffre propriétaire NXP <em>reverse-engineered en 2008</em>. Attaques <em>nested</em> et <em>darkside</em> permettent de récupérer toutes les clés de tous les secteurs si une seule clé est connue (souvent une clé de transport par défaut). Tous les badges entreprise basés Mifare Classic sont à considérer <strong>compromis par défaut</strong>.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🛠 Outils principaux</div>
+    <p><strong>Proxmark3</strong> (RDV4, Easy, X — variantes commerciales) : référence pro · <strong>Flipper Zero</strong> : populaire, lit Mifare Classic et clone NFC simples · <strong>ChameleonMini/Ultra</strong> : émulation · <strong>nfc-tools</strong> (libnfc, mfoc, mfcuk) : Linux open-source.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">⚡ Workflow Proxmark3 Mifare</div>
+<pre style="font-family:var(--mono);font-size:.72rem;line-height:1.5;color:var(--text);background:rgba(13,17,23,.5);padding:.55rem;border-radius:4px;margin:.3rem 0">pm3&gt; hf mf info
+pm3&gt; hf mf chk *1 ? d
+   # tente toutes les clés par défaut
+pm3&gt; hf mf nested 1 0 A FFFFFFFFFFFF
+   # attaque nested avec clé A connue
+pm3&gt; hf mf dump
+   # dump complet du tag
+pm3&gt; hf mf restore --1k
+   # restauration sur tag magique</pre>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🔐 Mifare DESFire (sécurisé)</div>
+    <p>Successeur Mifare Classic, <strong>3DES ou AES</strong> matériel, pas de faille connue exploitable sur EV2/EV3. Utilisé par CFF (cartes SwissPass), badges entreprises modernes. Forensique : seul moyen d'extraction = clés maîtres → coopération de l'émetteur de la carte (l'employeur, CFF…).</p>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Passeport biométrique &amp; eID</div>
+
+<div class="alert">
+  <p>🛂 Le <strong>passeport biométrique suisse</strong> contient une puce NFC ISO/IEC 14443 (HF 13.56 MHz) protégée par <strong>BAC</strong> (Basic Access Control) puis <strong>PACE</strong> (Password Authenticated Connection Establishment). La clé d'accès est dérivée des champs de la <em>MRZ</em> (Machine Readable Zone) imprimée sur la page de garde : <em>document number</em> + <em>date of birth</em> + <em>date of expiry</em>. Sans la MRZ, accès impossible. Sans le passeport physique, attaque impossible (NFC ~10 cm de portée pratique).</p>
+  <p>📱 La <strong>e-ID suisse</strong> (loi adoptée en septembre 2025, déploiement 2026) sera basée sur un wallet mobile (smartphone, app fédérale) — donc Bluetooth/NFC pour les présentations en personne, mais <strong>identifiants stockés dans le secure element</strong> du téléphone (Titan M2 chez Pixel, Secure Enclave chez Apple). Le forensique mobile classique s'applique.</p>
+</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — PROCÉDURE CH
+══════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-proc">
+
+<div class="concept-card">
+  <div class="concept-title">⚖️ Cadre juridique suisse — captures sans fil et preuve</div>
+  La <strong>capture passive</strong> d'ondes radio (écoute monitor-mode) est juridiquement ambiguë en CH. <strong>Art. 179octies CP</strong> incrimine la « mise sur écoute » de communications privées non autorisée. La doctrine considère que le simple <em>écoute</em> d'un signal chiffré dans l'espace public reste licite, mais la <em>décryption</em> ou la <em>collecte ciblée</em> de communications identifiables relève des règles de surveillance pénale (CPP) ou administrative (LRens, LSP cantonale). Pour les forces de l'ordre, la capture WiFi/BLE doit être <strong>ordonnée par le Ministère public</strong> (art. 269 ss CPP — surveillance de la correspondance) sauf si elle s'inscrit dans une mesure de surveillance préventive autorisée.
+</div>
+
+<div class="sec-title">Trois cadres juridiques à distinguer</div>
+
+<div class="memo-grid">
+  <div class="memo-card">
+    <div class="memo-card-title">🔍 Enquête pénale (CPP)</div>
+    <p><strong>Art. 269 CPP</strong> — surveillance correspondance par poste et télécommunication : autorisation MP + approbation TMC dans 24h.</p>
+    <p><strong>Art. 280 CPP</strong> — moyens techniques de surveillance (caméras, micros, capteurs).</p>
+    <p>Capture monitor-mode dans l'enceinte d'une perquisition autorisée = couverte. Hors mandat = problématique.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🛡 Renseignement (LRens)</div>
+    <p>Service de renseignement de la Confédération (SRC) peut conduire des écoutes wireless dans le cadre de la <strong>LRens</strong> (2015), avec autorisation TAF + DDPS. Cadre distinct, hors CPP.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">🚓 Police administrative</div>
+    <p>Polices cantonales peuvent utiliser des outils de détection wireless (rogue AP, IMSI catchers) en <em>prévention</em>, dans les limites de leur loi cantonale (LPol) — souvent peu détaillée → contestable en cas d'usage massif.</p>
+  </div>
+  <div class="memo-card">
+    <div class="memo-card-title">📞 LSCPT &amp; SCPT</div>
+    <p><strong>Loi sur la surveillance de la correspondance par poste et télécommunication</strong> (LSCPT, 2017) + <strong>Service de surveillance</strong> (SCPT/PTSS, Berne) : centralise les demandes auprès des opérateurs. Rétention métadonnées 6 mois (cellules téléphone), 12 mois (Internet identifiants).</p>
+  </div>
+</div>
+
+<div class="sec-title" style="margin-top:1.5rem">Cas pratique CH 2025 — SMS Blaster</div>
+
+<div class="alert">
+  <p>📱 Le <strong>SMS Blaster</strong> (faux relais bâti sur la technologie IMSI Catcher) exploite la faiblesse du standard <strong>2G obsolète</strong> (« chiffrement nul ») pour forcer les téléphones environnants à s'y connecter, puis envoyer des SMS de phishing massifs sans passer par les opérateurs légitimes — un signal puissant brouille la 3G/4G dans un rayon de <strong>500 à 1'000 m</strong>. <strong>Premiers cas signalés en CH</strong> : <strong>OFCS semaine 36/2025 (9.09.2025)</strong> pour des SMS de fausses amendes de stationnement en Suisse romande, après des dommages estimés à <strong>2 millions de CHF à Genève</strong> et <strong>260'000 CHF dans le canton de Vaud</strong> en 2025. Plusieurs arrestations ont suivi : trois hommes interpellés dans l'Ouest CH, puis un ressortissant chinois de 52 ans arrêté à <strong>Muttenz (BL) le 14 octobre 2025</strong> (SMS imitant La Poste et Migros) — un appareil saisi à Bâle-Campagne pouvait toucher <strong>~100'000 smartphones par jour</strong>. Procédure : <strong>art. 143 CP</strong> (soustraction de données identifiants), <strong>art. 147 CP</strong> (utilisation frauduleuse d'un ordinateur), <strong>art. 22 et 39 LTC</strong> (Loi sur les télécommunications, utilisation du spectre sans concession). Coopération <strong>OFCOM</strong> (spectre) et <strong>OFCS</strong> (cyber).</p>
+  <p>🔍 Forensique : repérage actif par <strong>sonde 2G dédiée</strong> (le blaster impose un downgrade) + triangulation par <em>signal strength</em> = localisation du véhicule. Saisie matérielle (boîtier type case ordinateur, SDR, modems, batteries) puis analyse offline : logs des MSISDN ciblés, contenus SMS, configuration des fausses identités d'expéditeur (Post, Migros, Police). <strong>Lien direct avec la fiche sigma_rules</strong> car les SMS pointaient vers des landing pages détectables par règles de réputation domain.</p>
+</div>
+
+<div class="exam-tip" style="margin-top:1.25rem">
+  <div class="exam-tip-title">🎓 Exam Tip — WiFi / Bluetooth / RFID</div>
+  <p><strong>WiFi 802.11 — protocoles</strong> : WEP (brisé 2007) · WPA/WPA2-PSK (handshake 4-way + dict attack) · WPA3-SAE (Dragonfly, résiste offline) · PMKID attack (pas besoin de client connecté)</p>
+  <p><strong>Outils WiFi</strong> : <strong>aircrack-ng</strong> (airmon/airodump/aireplay/aircrack) · <strong>Kismet</strong> (WIDS + interface web) · <strong>hcxdumptool/hcxpcapngtool</strong> (PMKID moderne) · <strong>Wireshark</strong> (analyse)</p>
+  <p><strong>Format hashcat 2025</strong> : <code>.hc22000</code> (mode 22000) — remplace <code>.hccapx</code> (mode 2500, déprécié)</p>
+  <p><strong>Mode monitor</strong> : <code>airmon-ng start wlan0</code> · interface devient <code>wlan0mon</code> · capture tout, n'émet rien</p>
+  <p><strong>Chipsets compatibles</strong> : Alfa AWUS036ACH/036NHA, Ralink RT3070, Atheros AR9271 (réf. historiques)</p>
+  <p><strong>Probe Requests</strong> : SSIDs connus du téléphone → géolocalisation via <strong>WiGLE</strong> (~1 milliard de BSSIDs)</p>
+  <p><strong>MAC randomization</strong> : iOS 8+ (scan), iOS 14+ (par réseau) · Android 10+ par défaut · Windows 10/11 désactivé par défaut</p>
+  <p><strong>WPS</strong> : PIN 8 chiffres réduit à 2×4 → Reaver/Bully → cassable en heures. <strong>Toujours désactiver WPS</strong>.</p>
+  <p><strong>802.11w (MFP)</strong> : Management Frame Protection — bloque les deauth attacks · mandatory WPA3</p>
+  <p><strong>Bluetooth</strong> : Classic (BR-EDR, ~10m) vs BLE (depuis v4.0 2010) · SSP avec 4 méthodes (Just Works, Passkey, Numeric Comparison, OOB)</p>
+  <p><strong>Artefacts BT mobile</strong> : Android <code>bt_config.conf</code> · iOS <code>com.apple.MobileBluetooth.*.plist</code> · Windows <code>HKLM\...\BTHPORT\Parameters\Devices</code> · Linux BlueZ <code>/var/lib/bluetooth/</code></p>
+  <p><strong>Sniffers BLE</strong> : Ubertooth One · Sniffle (NCC Group) · nRF52840 + Wireshark · TI CC1352</p>
+  <p><strong>RFID fréquences</strong> : LF 125 kHz (badges anciens, EM4100) · HF 13.56 MHz (Mifare, NFC, passeport) · UHF 860-960 MHz (logistique)</p>
+  <p><strong>Mifare Classic</strong> : CRYPTO1 reverse-engineered 2008 · attaques <em>nested</em> et <em>darkside</em> · à considérer compromis par défaut</p>
+  <p><strong>Outils RFID</strong> : <strong>Proxmark3</strong> (RDV4 référence) · <strong>Flipper Zero</strong> (grand public) · ChameleonMini · libnfc + mfoc/mfcuk</p>
+  <p><strong>Mifare DESFire EV2/EV3</strong> : 3DES/AES matériel · pas de faille connue · forensique = coopération émetteur</p>
+  <p><strong>Passeport biométrique</strong> : BAC puis PACE · clé dérivée de la MRZ (n° doc + DDN + expiration) · NFC ~10 cm</p>
+  <p><strong>Cadre juridique CH</strong> : art. 269 CPP (surveillance correspondance, mandat MP + TMC) · art. 280 CPP (moyens techniques) · LRens (SRC) · LSCPT (rétention 6 mois cellule)</p>
+  <p><strong>Cas CH 2025</strong> : SMS Blaster (OFCS semaine 36 / 9.09.2025) — Suisse romande (GE 2M CHF, VD 260'000 CHF) + arrestation Muttenz BL (14.10.2025) — art. 143/147 CP + art. 22/39 LTC + coordination OFCOM/OFCS</p>
+</div>
+
+<div class="quiz-wrap">
+  <div class="quiz-q">Lors d'une enquête, vous saisissez un smartphone Android compromis. Vous voulez prouver qu'il était dans un lieu donné un jour précis sans dépendre des données opérateur (mandat LSCPT non encore obtenu). Quels artefacts BLE/WiFi cherchez-vous, et pourquoi sont-ils probants même avec MAC randomization activée ?</div>
+  <div class="quiz-meta">WiFi/BLE Forensique · Niveau : difficile</div>
+  <button class="quiz-reveal-btn">Révéler →</button>
+  <div class="quiz-answer">Plusieurs sources convergentes, indépendantes des données opérateur :
+    <br><br>
+    <strong>1️⃣ WiFi — réseaux mémorisés et probe history</strong><br>
+    Sur Android (root requis) : <code>/data/misc/wifi/WifiConfigStore.xml</code> liste tous les réseaux connus, avec <code>"lastConnected"</code> et <code>"creationTime"</code> au format epoch ms. Couplé à WiGLE pour géolocaliser chaque SSID, on reconstitue les lieux fréquentés. La MAC randomization n'affecte que la MAC <em>émise</em> — la liste des SSIDs probés reste écrite dans la mémoire du téléphone.
+    <br><br>
+    <strong>2️⃣ Bluetooth — appareils pairés et derniers usages</strong><br>
+    <code>/data/misc/bluedroid/bt_config.conf</code> : liste des appareils pairés (MAC, nom, timestamp). Le pairing à une enceinte du domicile, une voiture, un écouteur d'un collègue → liens probants. Le <code>btsnoop_hci.log</code> (si activé) horodate chaque connexion/déconnexion.
+    <br><br>
+    <strong>3️⃣ Cellebrite/Magnet pour iOS</strong><br>
+    Via UFED ou checkra1n + full file system, on accède à <code>com.apple.wifi.plist</code> (réseaux mémorisés) et <code>com.apple.MobileBluetooth.ledevices.plist</code> (BLE appareils).
+    <br><br>
+    <strong>4️⃣ Probants même avec randomization car</strong> : (a) la randomization concerne la MAC <em>émise par l'appareil</em>, pas la <em>liste des SSIDs cherchés</em> (qui reste dans le téléphone) ; (b) les SSIDs probés sont des <em>identifiants culturels</em> forts (BoulangerieRueDuLac, FamilleMartin_NAS…) ; (c) WiGLE permet la triangulation de localisation à partir des SSIDs.
+    <br><br>
+    <strong>⚠ Cadre juridique</strong> : l'accès au stockage interne du téléphone après saisie nécessite l'autorisation explicite du Ministère public dans le cadre du mandat (art. 246-248 CPP, perquisition de données + scellés). L'analyse est conduite par expert assermenté.</div>
+</div>
+
+</div>
+
+<div class="footer" style="margin-top:2rem">
+  <span>CAS-IN Investigation Numérique · Forensique Suisse</span>
+  <span>Aircrack-ng suite · Kismet · Wireshark · Proxmark3 firmware June 2025 · WiGLE database · NCSC/OFCS Rapport 2025-S1 (SMS Blaster) · CPP art. 269/280 · LRens · LSCPT</span>
+</div>
+
+<script>
+function showTab(id, btn){
+  document.querySelectorAll('.tab-page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('#wb-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  var el=document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+  window.scrollTo({top:Math.max(0,document.getElementById('wb-tabs').offsetTop-60),behavior:'smooth'});
+}
+</script>
+
+<!-- Notes utilisateur (CAS-IN v2.16) -->
+<script src="../js/components/fiche-notes.js" defer></script>
+<script src="../js/components/fiche-common.js" defer></script>
+<script src="../js/core/cas-in-profile.js" defer></script>
+<script src="../js/core/cas-in-achievements.js" defer></script>
+<script src="../js/components/fiche-reader.js" defer></script>
+<script src="../js/components/fiche-search.js" defer></script>
+<script src="../js/components/search-modal.js" defer></script>
+<script src="../js/components/fiche-related.js" defer></script>
+<script src="../js/core/cas-in-navbar.js" defer></script>
+<script src="../js/profile/celebration-ui.js" defer></script>
+<script src="../js/components/gamification-toasts.js" defer></script>
+</body>
+</html>
