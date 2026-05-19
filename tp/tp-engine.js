@@ -32,12 +32,46 @@ function saveState() {
 }
 function getSolved(cat) { return STATE.solved[cat] || 0; }
 function getTotalSolved() { return Object.values(STATE.solved).reduce((a,b)=>a+(b||0),0); }
+// ─── v3.0 — XP par catégorie TP (delta v44, fix bug "TP donne 0 XP") ───
+// Mapping catégorie → difficulté → XP de base. Hint penalty 0.5× déjà géré
+// par incSolved (n'appelé que si !hintUsed). Cumulé sur cas_xp via Profile.
+const TP_XP_BY_CAT = {
+  // Easy (5 XP) — fondamentaux
+  endian: 5, bases: 5, hexdump: 5, hextable: 5, glossaire: 5,
+  // Medium (15 XP) — analyse intermédiaire
+  timestamp: 15, bitmap: 15, magic: 15, mismatch: 15, fsidentify: 15,
+  offset: 15, hash: 15, email: 15, network: 15, direntry: 15, slackspace: 15,
+  // Hard (30 XP) — forensique avancée
+  fat: 30, runlist: 30, effacement: 30, timestomping: 30, mbr: 30,
+  ir: 30, droitpenal: 30, examen: 30, hfsbtree: 30, ntfsindex: 30,
+};
+
+// Catégorie TP de référence pour bonus de diversification (+5 XP par catégorie distincte solvée)
+const TP_CAT_BONUS_XP = 5;
+
 function incSolved(cat) {
+  const wasFirstTimeInCat = !STATE.solved[cat];
   STATE.solved[cat] = (STATE.solved[cat]||0)+1;
   STATE.streak++;
   if (STATE.streak > STATE.bestStreak) STATE.bestStreak = STATE.streak;
   saveState();
   updateProgress();
+
+  // ─── v3.0 delta v44 — Attribution XP ───
+  // 1. XP de base par exercice résolu sans hint (incSolved n'est appelé que si !hintUsed)
+  // 2. +5 XP one-shot si c'est la première fois qu'on résout dans cette catégorie
+  try {
+    if (window.Profile && typeof window.Profile.addXp === 'function') {
+      const baseXp = TP_XP_BY_CAT[cat] || 10;
+      const bonus = wasFirstTimeInCat ? TP_CAT_BONUS_XP : 0;
+      const total = baseXp + bonus;
+      window.Profile.addXp(total, 'tp', { tags: [cat] });
+      // Toast discret
+      if (typeof showToast === 'function') {
+        showToast('✨', `+${total} XP`, cat + (bonus ? ' · 1re catégorie !' : ''));
+      }
+    }
+  } catch (_) {}
 }
 function breakStreak() {
   if (STATE.streak > 0) {
