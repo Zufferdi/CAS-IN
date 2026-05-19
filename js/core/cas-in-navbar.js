@@ -19,10 +19,11 @@
 
   // ── Configuration des sections ─────────────────────────────
   const SECTIONS = [
-    { id: 'quiz',   label: 'Quiz',    icon: '💊', href: 'quiz.html',          rootHref: '/CAS-IN/quiz.html' },
-    { id: 'scene',  label: 'Scènes',  icon: '🔍', href: 'scene.html#campaigns', rootHref: '/CAS-IN/scene.html#campaigns' },
-    { id: 'tp',     label: 'TP',      icon: '🧪', href: 'tp.html',            rootHref: '/CAS-IN/tp.html' },
-    { id: 'fiches', label: 'Fiches',  icon: '📄', href: 'fiches/index.html',  rootHref: '/CAS-IN/fiches/index.html' },
+    { id: 'quiz',       label: 'Quiz',    icon: '💊', href: 'quiz.html',                 rootHref: '/CAS-IN/quiz.html' },
+    { id: 'scene',      label: 'Scènes',  icon: '🔍', href: 'scene.html#campaigns',      rootHref: '/CAS-IN/scene.html#campaigns' },
+    { id: 'tp',         label: 'TP',      icon: '🧪', href: 'tp.html',                   rootHref: '/CAS-IN/tp.html' },
+    { id: 'fiches',     label: 'Fiches',  icon: '📄', href: 'fiches/index.html',         rootHref: '/CAS-IN/fiches/index.html' },
+    { id: 'references', label: 'Réfs',    icon: '📚', href: 'references/index.html',    rootHref: '/CAS-IN/references/index.html' },
   ];
 
   const PAGE_TITLES = {
@@ -156,10 +157,16 @@
     const links = document.createElement('div');
     links.className = 'cas-navbar__links';
 
+    // v2.99 — Cluster Références : on considère les sous-pages comme actives
+    // pour le bouton "Réfs" de la navbar (events, mitre, legal, dfir-tools,
+    // signatures, artifacts → tous sous l'ombrelle 'references').
+    const REFS_CLUSTER = new Set(['references','events','mitre','legal','dfir-tools','signatures','artifacts']);
+
     SECTIONS.forEach(s => {
       // Pas de lien vers la page courante
       const link = document.createElement('a');
-      const isActive = s.id === page;
+      const isActive = (s.id === page) ||
+                       (s.id === 'references' && REFS_CLUSTER.has(page));
       
       // Depuis un sous-dossier, préfixer ../ uniformément.
       // Le lien actif sera réécrit en '#' juste après par
