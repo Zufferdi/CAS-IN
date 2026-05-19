@@ -467,6 +467,33 @@
   }
 
   /**
+   * v3.0 delta v44 — Tiers et récompense XP à l'unlock.
+   *
+   * Chaque achievement reçoit un tier visuel (bronze/argent/or/platine)
+   * inféré de son ID ou tag. Le tier détermine la récompense XP attribuée
+   * automatiquement à `Profile.unlockAchievement` (via Profile.addXp).
+   *
+   * - bronze   : 30 XP   (fondamentaux, premiers paliers : tp_first, fiche5, day3...)
+   * - argent   : 75 XP   (paliers intermédiaires : tp_50, fiche50, daily30, streak10...)
+   * - or       : 150 XP  (paliers difficiles : tp_250, fiche_marathon, expert_clean...)
+   * - platine  : 300 XP  (rare : completionist, all themes, full saga or...)
+   */
+  const TIER_XP = { bronze: 30, argent: 75, or: 150, platine: 300 };
+
+  function getAchievementTier(achId) {
+    const id = String(achId || '');
+    // Platine (très rares)
+    if (id === 'completionist' || id === 'allthemes' || id === 'legend_dfir' ||
+        /full_saga_or|all_sagas|book100|marathon_complete/.test(id)) return 'platine';
+    // Or (paliers exigeants)
+    if (/250|500|1000|expert_clean|all_themes|streak_20|streak_30|daily30|daily14|book25|acc95/.test(id)) return 'or';
+    // Argent (paliers intermédiaires)
+    if (/50|100|streak10|daily7|book10|acc90|combo|tp_streak15|tp_categories15/.test(id)) return 'argent';
+    // Bronze par défaut (paliers d'entrée + arcs NPC)
+    return 'bronze';
+  }
+
+  /**
    * Évalue tous les checks centralisables (TP, fiches) et débloque les
    * achievements qui passent. Quiz et Scènes ne sont PAS évalués ici
    * (logique runtime ailleurs).
@@ -482,7 +509,17 @@
       if (typeof a.check !== 'function') return;
       try {
         if (a.check(snap)) {
-          if (window.Profile.unlockAchievement(a.id)) fresh.push(a.id);
+          if (window.Profile.unlockAchievement(a.id)) {
+            fresh.push(a.id);
+            // v3.0 delta v44 — Attribution XP automatique selon tier
+            try {
+              const tier = a.tier || getAchievementTier(a.id);
+              const xp = TIER_XP[tier] || TIER_XP.bronze;
+              if (typeof window.Profile.addXp === 'function') {
+                window.Profile.addXp(xp, 'achievement', { id: a.id, tier });
+              }
+            } catch (_) {}
+          }
         }
       } catch (_) {}
     });
@@ -513,6 +550,8 @@
     byCategory,
     CATEGORIES,
     getProgress,
+    getAchievementTier,
+    TIER_XP,
   };
 
   // Backward-compat : si window.ACHIEVEMENTS n'est pas (encore) défini

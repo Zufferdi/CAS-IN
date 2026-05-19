@@ -377,7 +377,7 @@
       // Utilisé par le bloc d'autorisation (profile.html) comme date
       // d'activation du dossier. Reste null tant qu'aucun XP n'a été gagné.
       firstXpAt: null,
-      xpBySource: { quiz: 0, scene: 0, quest: 0, tp: 0, fiches: 0 },
+      xpBySource: { quiz: 0, scene: 0, quest: 0, tp: 0, fiches: 0, achievement: 0 },
       streak: {
         current: 0,
         max: 0,
@@ -466,6 +466,8 @@
         if (p.xpBySource.quest === undefined)  { p.xpBySource.quest  = 0; dirty = true; }
         if (p.xpBySource.tp === undefined)     { p.xpBySource.tp     = 0; dirty = true; }
         if (p.xpBySource.fiches === undefined) { p.xpBySource.fiches = 0; dirty = true; }
+        // v3.0 delta v44 — backfill 'achievement' source
+        if (p.xpBySource.achievement === undefined) { p.xpBySource.achievement = 0; dirty = true; }
       }
       // v2.60 — Backfill firstXpAt pour les profils créés AVANT v2.60.
       // On ne dispose pas du timestamp réel du 1er point ; à défaut, on
@@ -929,7 +931,8 @@
     // Avant cette version, addXp(N, 'quest') était silencieusement rejeté →
     // les XP des quêtes journalières (cas-in-quests.js v2.55) n'étaient
     // jamais créditées.
-    if (!['quiz', 'scene', 'quest', 'tp', 'fiches'].includes(source)) return null;
+    // v3.0 delta v44 : ajout de 'achievement' (récompense XP au déblocage).
+    if (!['quiz', 'scene', 'quest', 'tp', 'fiches', 'achievement'].includes(source)) return null;
 
     // Bonus thématique selon le rôle (track) choisi
     const tags = meta && Array.isArray(meta.tags) ? meta.tags : [];
