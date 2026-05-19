@@ -154,23 +154,21 @@
 
   function refreshProgress() {
     try {
-      const today = new Date().toDateString();
-      const dayScore = localStorage.getItem('casIn_dayScore');
-      const dayDate = localStorage.getItem('casIn_dayDate');
-      const r = localStorage.getItem('casIn_rank');
-      const s = localStorage.getItem('casIn_lastScore');
-      const streak = safeInt('casIn_streak', 0);
+      // v3.0 fix — Anciennes clés (casIn_dayScore/dayDate/rank/lastScore) jamais écrites :
+      // on lit désormais les vraies sources : sessions[] (quiz-app saveSession) et dayStreak.
+      const sessions = safeJSON('sessions', []);
+      const lastSession = sessions.length ? sessions[sessions.length - 1] : null;
+      const todayFR = new Date().toLocaleDateString('fr');
+      const todayDS = new Date().toDateString();
+      const streak = safeInt('dayStreak', 0) || safeInt('casIn_streak', 0);
       const sesText = document.getElementById('session-text');
 
-      if (sesText) {
-        if (dayScore && dayDate === today) {
-          sesText.textContent = 'Session du jour : ' + dayScore + ' pts' +
-            (r ? ' · ' + r : '') +
-            (streak > 1 ? ' · ' + streak + 'j 🔥' : '');
-        } else if (s && r) {
-          sesText.textContent = 'Dernière session : ' + s + ' pts · ' + r +
-            (streak > 1 ? ' · ' + streak + 'j 🔥' : '');
-        }
+      if (sesText && lastSession) {
+        const isToday = lastSession.date === todayFR;
+        const label = isToday ? 'Session du jour' : 'Dernière session';
+        const accStr = lastSession.acc != null ? ' · ' + lastSession.acc + '%' : '';
+        sesText.textContent = label + ' : ' + (lastSession.score || 0) + ' pts' + accStr +
+          (streak > 1 ? ' · ' + streak + 'j 🔥' : '');
       }
 
       const seen = safeInt('casIn_questionsSeen', 0);

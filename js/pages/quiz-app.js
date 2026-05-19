@@ -365,6 +365,22 @@
  function getNext() {
    if (S.pi >= S.pool.length) {
      if (S.mode === 'normal' || S.mode === 'smart') buildPool();
+     else if (S.mode === 'daily') {
+       // v3.0 fix — Quotidien : à la fin des 20 questions, sauvegarder le score
+       // pour que la bannière affiche "Score : N pts · Rejouer" au lieu de boucler.
+       // Clés lues par lignes 191-192 et applySettings() qui réinitialise S.score.
+       if (!S.dailyDone) {
+         try {
+           const today = getDailyDate();
+           lsSet('dailyDone_' + today, true);
+           lsSet('dailyScore_' + today, S.score);
+           S.dailyDone = true;
+           S.dailyScore = S.score;
+           if (typeof showDailyBanner === 'function') showDailyBanner();
+         } catch (_) {}
+       }
+       S.pi = 0;
+     }
      else S.pi = 0;
    }
    const next = S.pool[S.pi++];
