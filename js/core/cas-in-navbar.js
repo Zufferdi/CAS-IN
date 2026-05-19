@@ -43,6 +43,7 @@
     legal:        { icon: '⚖️', label: 'ARTICLES JURIDIQUES' },
     'dfir-tools': { icon: '🧰', label: 'OUTILS DFIR' },
     signatures:   { icon: '🔮', label: 'MAGIC BYTES' },
+    bibliography: { icon: '📖', label: 'BIBLIOGRAPHIE DFIR' },
   };
 
   // ── Helpers ────────────────────────────────────────────────
@@ -160,7 +161,7 @@
     // v2.99 — Cluster Références : on considère les sous-pages comme actives
     // pour le bouton "Réfs" de la navbar (events, mitre, legal, dfir-tools,
     // signatures, artifacts → tous sous l'ombrelle 'references').
-    const REFS_CLUSTER = new Set(['references','events','mitre','legal','dfir-tools','signatures','artifacts']);
+    const REFS_CLUSTER = new Set(['references','events','mitre','legal','dfir-tools','signatures','artifacts','bibliography']);
 
     SECTIONS.forEach(s => {
       // Pas de lien vers la page courante
