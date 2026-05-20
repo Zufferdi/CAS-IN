@@ -844,6 +844,12 @@
           lsSet('byTheme', S.byTheme);
           lsSet('byChapter', S.byChapter);
         } catch(e) { /* localStorage plein, on ignore */ }
+        // v3.49 — chantier #2 : enregistrer dans l'historique de mastery par chapitre
+        try {
+          if (window.MasteryQuiz && q.chapter) {
+            window.MasteryQuiz.recordAnswer(q.chapter, ok, q.diff);
+          }
+        } catch(e) { /* module pas chargé, on ignore */ }
         const qs = S.qstats[S.curIdx] || {
           ok: 0,
           tot: 0
@@ -915,12 +921,51 @@
         const _tipsAvail = (typeof FORENSIC_TIPS !== 'undefined' && Array.isArray(FORENSIC_TIPS) && FORENSIC_TIPS.length > 0);
         const tipLine = (showTip && _tipsAvail) ? `
           																		<div style="margin-top:10px;padding:8px 10px;border-radius:7px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);font-size:12px;color:var(--dim)">${FORENSIC_TIPS[Math.floor(Math.random()*FORENSIC_TIPS.length)]}</div>` : '';
-        const explTxt = sanitizeHTML(ok ? (q.expl_ok || q.expl_ko || '') : (q.expl_ko || q.expl_ok || ''));
+        // v3.47 — feedback ciblé par fausse option si q.feedback existe
+        let targetedFeedback = '';
+        if (!ok && q.feedback && typeof q.feedback === 'object') {
+          const selectedOrigIdx = [];
+          document.querySelectorAll('.choice-btn').forEach(btn => {
+            const newI = +btn.dataset.idx;
+            const origI = +btn.dataset.origIdx;
+            if (S.sel.has(newI)) selectedOrigIdx.push(origI);
+          });
+          const targetedParts = [];
+          selectedOrigIdx.forEach(oi => {
+            if (q.feedback[oi]) {
+              targetedParts.push('<strong>Pourquoi cette réponse est incorrecte :</strong> ' + q.feedback[oi]);
+            }
+          });
+          if (targetedParts.length > 0) {
+            targetedFeedback = targetedParts.join('<br><br>');
+          }
+        }
+        const baseExpl = ok ? (q.expl_ok || q.expl_ko || '') : (q.expl_ko || q.expl_ok || '');
+        const explTxt = sanitizeHTML(
+          targetedFeedback
+            ? targetedFeedback + (q.expl_ok ? '<br><br><strong>La bonne réponse :</strong> ' + q.expl_ok : '')
+            : baseExpl
+        );
         const explStyle = ok ? 'margin-top:10px;padding:9px 11px;border-radius:7px;font-size:12px;line-height:1.65;background:rgba(48,232,138,.15);border:1px solid rgba(48,232,138,.3);color:var(--text-ok)' : 'margin-top:10px;padding:9px 11px;border-radius:7px;font-size:12px;line-height:1.65;background:rgba(255,64,96,.15);border:1px solid rgba(255,64,96,.3);color:#ffe0e5';
         const explLine = explTxt ? `
 																		<div class="feedback-expl" style="${explStyle}">${explTxt}</div>` : '';
         const refsLine = (q.refs && q.refs.length) ? `<div style="margin-top:8px;padding:6px 10px;border-radius:6px;font-size:11px;line-height:1.5;background:rgba(120,120,180,.08);border:1px solid rgba(120,120,180,.18);color:var(--dim)">📚 ${q.refs.map(r=>`<em>${sanitizeHTML(r)}</em>`).join(' · ')}</div>` : '';
-        fb.innerHTML = msg + ptsLine + tipLine + explLine + refsLine;
+        // v3.48 — Chantier #4 : liens fiches pour remédiation (uniquement si on s'est trompé)
+        let fichesLine = '';
+        if (!ok && q.fiches && Array.isArray(q.fiches) && q.fiches.length > 0) {
+          const fichesTitles = window.FICHES_TITLES || {};
+          const links = q.fiches.slice(0, 4).map(slug => {
+            const safeSlug = String(slug).replace(/[^a-zA-Z0-9_-]/g, '');
+            if (!safeSlug) return '';
+            const title = fichesTitles[safeSlug] || safeSlug.replace(/_/g, ' ');
+            const safeTitle = sanitizeHTML(title);
+            return `<a href="fiches/${safeSlug}.html" target="_blank" rel="noopener" style="color:#7ec0ff;text-decoration:none;border-bottom:1px dotted #7ec0ff;margin-right:10px;display:inline-block">📖 ${safeTitle}</a>`;
+          }).filter(Boolean).join('');
+          if (links) {
+            fichesLine = `<div style="margin-top:8px;padding:8px 10px;border-radius:6px;font-size:11px;line-height:1.7;background:rgba(126,192,255,.08);border:1px solid rgba(126,192,255,.2);color:var(--dim)"><strong style="color:#7ec0ff;margin-right:6px">Pour réviser :</strong>${links}</div>`;
+          }
+        }
+        fb.innerHTML = msg + ptsLine + tipLine + explLine + refsLine + fichesLine;
         fb.dataset.pendingExpl = explTxt;
         fb.dataset.pendingOk = ok ? '1' : '0';
         fb.style.display = 'block';
@@ -1570,7 +1615,8 @@
       ${(a.ok?(a.q.expl_ok||a.q.expl_ko):(a.q.expl_ko||a.q.expl_ok))?`
           																				<br>
 																					<div style="margin-top:8px;padding:8px 10px;border-radius:6px;font-size:12px;line-height:1.55;${a.ok?'background:rgba(48,232,138,.12);border:1px solid rgba(48,232,138,.25);color:var(--text-ok)':'background:rgba(255,64,96,.12);border:1px solid rgba(255,64,96,.25);color:#ffe0e5'}">${a.ok?(a.q.expl_ok||a.q.expl_ko):(a.q.expl_ko||a.q.expl_ok)}</div>`:''}
-      ${(a.q.refs&&a.q.refs.length)?`<div style="margin-top:6px;padding:5px 9px;border-radius:5px;font-size:11px;line-height:1.5;background:rgba(120,120,180,.08);border:1px solid rgba(120,120,180,.18);color:var(--dim)">📚 ${a.q.refs.map(r=>'<em>'+r+'</em>').join(' · ')}</div>`:''}`;
+      ${(a.q.refs&&a.q.refs.length)?`<div style="margin-top:6px;padding:5px 9px;border-radius:5px;font-size:11px;line-height:1.5;background:rgba(120,120,180,.08);border:1px solid rgba(120,120,180,.18);color:var(--dim)">📚 ${a.q.refs.map(r=>'<em>'+r+'</em>').join(' · ')}</div>`:''}
+      ${(!a.ok && a.q.fiches && Array.isArray(a.q.fiches) && a.q.fiches.length>0)?`<div style="margin-top:6px;padding:6px 9px;border-radius:5px;font-size:11px;line-height:1.6;background:rgba(126,192,255,.08);border:1px solid rgba(126,192,255,.2);color:var(--dim)"><strong style="color:#7ec0ff">Pour réviser :</strong> ${a.q.fiches.slice(0,4).map(slug=>{const safe=String(slug).replace(/[^a-zA-Z0-9_-]/g,'');if(!safe)return '';const t=(window.FICHES_TITLES||{})[safe]||safe.replace(/_/g,' ');return '<a href="fiches/'+safe+'.html" target="_blank" rel="noopener" style="color:#7ec0ff;text-decoration:none;border-bottom:1px dotted #7ec0ff;margin-right:8px">📖 '+sanitizeHTML(t)+'</a>';}).filter(Boolean).join('')}</div>`:''}`;
           rev.appendChild(d);
         });
         checkAchievements();
@@ -1951,10 +1997,18 @@
         lsSet('playdates', [...dates].slice(-60));
       }
       startLoadingMessages();
-      fetch(new URL('data/questions.json', document.baseURI)).then(r => {
-        if (!r.ok) throw new Error('HTTP ' + r.status + ' — data/questions.json introuvable');
-        return r.json();
-      }).then(data => {
+      // v3.48 — Chargement parallèle questions.json + fiches-titles.json (chantier #4)
+      Promise.all([
+        fetch(new URL('data/questions.json', document.baseURI)).then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status + ' — data/questions.json introuvable');
+          return r.json();
+        }),
+        fetch(new URL('data/fiches-titles.json', document.baseURI)).then(r => {
+          if (!r.ok) return {}; // fallback silencieux : pas critique
+          return r.json();
+        }).catch(() => ({}))
+      ]).then(([data, fichesTitles]) => {
+        window.FICHES_TITLES = fichesTitles || {};
         ALL_Q = data;
         ALL_T = [...new Set(ALL_Q.map(q => q.theme))].sort();
         ALL_C = [...new Set(ALL_Q.map(q => q.chapter).filter(Boolean))].sort();
@@ -1981,6 +2035,27 @@
             }
             // Filtre consommé : on le retire (pour ne pas re-déclencher au prochain quiz)
             localStorage.removeItem('cas-in-quiz-filter');
+          }
+        } catch (e) { /* ignore */ }
+        // ──────────────────────────────────────────────────────
+        // v3.50 — Chantier #1 : filtre par chapitre via query string ?chapter=
+        // Permet aux parcours pédagogiques de lancer un quiz ciblé sur un chapitre
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const chapterParam = params.get('chapter');
+          if (chapterParam) {
+            // Trouver les indices correspondants
+            const matchIndices = [];
+            ALL_Q.forEach((q, i) => {
+              if (q.chapter === chapterParam) matchIndices.push(i);
+            });
+            if (matchIndices.length > 0) {
+              window.S_ficheFilter = {
+                ficheFile: '',
+                indices: new Set(matchIndices),
+                label: 'Chapitre : ' + chapterParam,
+              };
+            }
           }
         } catch (e) { /* ignore */ }
         // ──────────────────────────────────────────────────────
