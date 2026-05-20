@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script>
+(function(){try{var p=localStorage.getItem('cas_theme_pref');
+document.documentElement.setAttribute('data-theme',p==='light'?'light':'dark');}catch(e){
+document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Maîtrise · CAS-IN</title>
+<meta name="description" content="Score de maîtrise par concept · CAS-IN">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="pwa.manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@700;800&display=swap">
+<link rel="stylesheet" href="style/landing.css">
+<link rel="stylesheet" href="style/profile.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+<style>
+  .mastery-page { max-width: 980px; margin: 0 auto; padding: 18px 16px 80px; }
+  .mastery-hero {
+    background: linear-gradient(135deg, rgba(126,192,255,.08), rgba(48,232,138,.08));
+    border: 1px solid rgba(126,192,255,.3);
+    border-radius: 14px;
+    padding: 22px 20px;
+    margin-bottom: 22px;
+    text-align: center;
+  }
+  .mastery-hero h1 { margin: 0 0 6px; font-size: 22px; }
+  .mastery-hero .global-score {
+    font-size: 56px;
+    font-weight: 800;
+    line-height: 1;
+    margin: 14px 0 6px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .mastery-hero .global-tier { font-size: 16px; color: var(--dim); }
+  .mastery-hero .global-meta {
+    font-size: 12px; color: var(--dim); margin-top: 10px;
+  }
+  .mastery-section {
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px;
+    padding: 18px 16px;
+    margin-bottom: 18px;
+  }
+  .mastery-section h2 {
+    font-size: 12px;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 14px;
+    font-weight: 700;
+  }
+  .weak-item, .all-item {
+    display: grid;
+    grid-template-columns: 28px 1fr auto auto;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    background: rgba(255,255,255,.03);
+    transition: background 0.15s;
+  }
+  .weak-item:hover, .all-item:hover { background: rgba(255,255,255,.06); }
+  .weak-emoji { font-size: 18px; text-align: center; }
+  .weak-name { font-size: 13px; font-weight: 600; }
+  .weak-meta { font-size: 11px; color: var(--dim); }
+  .weak-score {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    text-align: right;
+    min-width: 50px;
+  }
+  .weak-link {
+    color: #7ec0ff;
+    text-decoration: none;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(126,192,255,.35);
+    background: rgba(126,192,255,.08);
+    transition: all 0.15s;
+  }
+  .weak-link:hover { background: rgba(126,192,255,.18); }
+  .tier-distribution {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .tier-bucket {
+    text-align: center;
+    padding: 12px 6px;
+    border-radius: 8px;
+    background: rgba(255,255,255,.04);
+  }
+  .tier-bucket-count {
+    font-size: 22px;
+    font-weight: 800;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .tier-bucket-label { font-size: 10px; color: var(--dim); margin-top: 4px; }
+  .filter-bar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .filter-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.04);
+    color: var(--text);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-btn.active {
+    background: rgba(126,192,255,.18);
+    border-color: rgba(126,192,255,.4);
+    color: #7ec0ff;
+  }
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--dim);
+    text-decoration: none;
+    font-size: 13px;
+    margin-bottom: 16px;
+    padding: 6px 0;
+  }
+  .back-link:hover { color: var(--text); }
+  .empty-state {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--dim);
+    font-size: 13px;
+  }
+  .conf-low { opacity: 0.6; }
+  .conf-medium { opacity: 0.85; }
+  @media (max-width: 600px) {
+    .tier-distribution { grid-template-columns: repeat(3, 1fr); }
+    .weak-item, .all-item {
+      grid-template-columns: 24px 1fr auto;
+    }
+    .weak-link { grid-column: 1 / -1; text-align: center; margin-top: 4px; }
+  }
+</style>
+</head>
+<body>
+<div class="mastery-page">
+  <a href="profile.html" class="back-link">← Retour au profil</a>
+
+  <div class="mastery-hero">
+    <h1>🎯 Tableau de maîtrise</h1>
+    <p style="color:var(--dim);font-size:13px;margin:0">Score global pondéré par difficulté et récence</p>
+    <div class="global-score" id="global-score">—</div>
+    <div class="global-tier" id="global-tier">…</div>
+    <div class="global-meta" id="global-meta">Aucune donnée pour l'instant</div>
+  </div>
+
+  <section class="mastery-section">
+    <h2>📊 Répartition par niveau</h2>
+    <div class="tier-distribution" id="tier-distribution">
+      <!-- généré par JS -->
+    </div>
+    <p style="font-size:11px;color:var(--dim);margin:8px 0 0">
+      Légende : 🔴 critique &lt;20 · 🟠 faible 20-39 · 🟡 moyen 40-59 · 🟢 bon 60-79 · 🌟 maîtrisé ≥80
+    </p>
+  </section>
+
+  <section class="mastery-section" id="weak-section">
+    <h2>🎯 Top concepts à réviser en priorité</h2>
+    <div id="weak-list">
+      <div class="empty-state">Joue au quiz pour générer ton score de maîtrise.</div>
+    </div>
+  </section>
+
+  <section class="mastery-section">
+    <h2>📚 Tous les chapitres</h2>
+    <div class="filter-bar" id="filter-bar">
+      <button class="filter-btn active" data-tier="all">Tous</button>
+      <button class="filter-btn" data-tier="critique">🔴 Critique</button>
+      <button class="filter-btn" data-tier="faible">🟠 Faible</button>
+      <button class="filter-btn" data-tier="moyen">🟡 Moyen</button>
+      <button class="filter-btn" data-tier="bon">🟢 Bon</button>
+      <button class="filter-btn" data-tier="maitrise">🌟 Maîtrisé</button>
+    </div>
+    <div id="all-list">
+      <div class="empty-state">…</div>
+    </div>
+  </section>
+</div>
+
+<script src="js/core/cas-in-mastery-quiz.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (!window.MasteryQuiz) {
+    document.getElementById('global-tier').textContent = 'Module non chargé';
+    return;
+  }
+  const MQ = window.MasteryQuiz;
+
+  // Mapping chapter → fiche pour les liens "Réviser"
+  let chapterToFiches = {};
+  fetch('data/questions.json')
+    .then(r => r.json())
+    .then(data => {
+      // Construire mapping unique chapter → premier slug fiche
+      data.forEach(q => {
+        if (q.chapter && q.fiches && q.fiches.length && !chapterToFiches[q.chapter]) {
+          chapterToFiches[q.chapter] = q.fiches[0];
+        }
+      });
+      renderAll();
+    })
+    .catch(() => renderAll());
+
+  function escapeHtml(s) {
+    return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function renderHero() {
+    const g = MQ.getGlobalMastery();
+    const scoreEl = document.getElementById('global-score');
+    const tierEl = document.getElementById('global-tier');
+    const metaEl = document.getElementById('global-meta');
+    if (!g.conceptCount) {
+      scoreEl.textContent = '—';
+      scoreEl.style.color = 'var(--dim)';
+      tierEl.textContent = 'Aucun chapitre travaillé';
+      metaEl.textContent = 'Joue au quiz pour générer ton score de maîtrise.';
+      return;
+    }
+    scoreEl.textContent = g.score + '%';
+    scoreEl.style.color = MQ.tierColor(g.tier);
+    tierEl.innerHTML = MQ.tierEmoji(g.tier) + ' ' + MQ.tierLabel(g.tier);
+    metaEl.textContent = g.conceptCount + ' chapitres travaillés sur ' + g.totalConcepts;
+  }
+
+  function renderDistribution() {
+    const all = MQ.getAllMastery();
+    const buckets = { critique:0, faible:0, moyen:0, bon:0, maitrise:0, untouched:0 };
+    all.forEach(m => { buckets[m.tier] = (buckets[m.tier]||0) + 1; });
+    const order = ['critique', 'faible', 'moyen', 'bon', 'maitrise', 'untouched'];
+    document.getElementById('tier-distribution').innerHTML = order.map(t => `
+      <div class="tier-bucket">
+        <div class="tier-bucket-count" style="color:${MQ.tierColor(t)}">${buckets[t]||0}</div>
+        <div class="tier-bucket-label">${MQ.tierEmoji(t)} ${MQ.tierLabel(t)}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderWeak() {
+    const weak = MQ.getWeakConcepts(5);
+    const el = document.getElementById('weak-list');
+    if (!weak.length) {
+      el.innerHTML = '<div class="empty-state">Pas encore de chapitres faibles identifiés. Continue le quiz !</div>';
+      return;
+    }
+    el.innerHTML = weak.map(m => {
+      const ficheSlug = chapterToFiches[m.chapter];
+      const ficheLink = ficheSlug
+        ? `<a class="weak-link" href="fiches/${encodeURIComponent(ficheSlug)}.html" target="_blank" rel="noopener">📖 Réviser</a>`
+        : `<a class="weak-link" href="quiz.html" target="_blank" rel="noopener">🎯 Quiz</a>`;
+      return `
+        <div class="weak-item conf-${m.confidence}">
+          <div class="weak-emoji">${MQ.tierEmoji(m.tier)}</div>
+          <div>
+            <div class="weak-name">${escapeHtml(m.chapter)}</div>
+            <div class="weak-meta">${m.meta.ok}/${m.meta.tot} réussites · récent ${m.meta.recentOk}/${m.meta.recent}</div>
+          </div>
+          <div class="weak-score" style="color:${MQ.tierColor(m.tier)}">${m.score}%</div>
+          ${ficheLink}
+        </div>
+      `;
+    }).join('');
+  }
+
+  let currentFilter = 'all';
+  function renderAllList() {
+    const all = MQ.getAllMastery();
+    if (!all.length) {
+      document.getElementById('all-list').innerHTML = '<div class="empty-state">Aucun chapitre travaillé pour l\'instant.</div>';
+      return;
+    }
+    // Trier par score croissant (faibles en haut)
+    all.sort((a, b) => {
+      if (a.tier === 'untouched' && b.tier !== 'untouched') return 1;
+      if (b.tier === 'untouched' && a.tier !== 'untouched') return -1;
+      return a.score - b.score;
+    });
+    const filtered = currentFilter === 'all' ? all : all.filter(m => m.tier === currentFilter);
+    if (!filtered.length) {
+      document.getElementById('all-list').innerHTML = '<div class="empty-state">Aucun chapitre dans cette catégorie.</div>';
+      return;
+    }
+    document.getElementById('all-list').innerHTML = filtered.map(m => {
+      const ficheSlug = chapterToFiches[m.chapter];
+      const ficheLink = ficheSlug
+        ? `<a class="weak-link" href="fiches/${encodeURIComponent(ficheSlug)}.html" target="_blank" rel="noopener">📖</a>`
+        : `<a class="weak-link" href="quiz.html" target="_blank" rel="noopener">🎯</a>`;
+      const isUntouched = m.tier === 'untouched';
+      return `
+        <div class="all-item conf-${m.confidence}">
+          <div class="weak-emoji">${MQ.tierEmoji(m.tier)}</div>
+          <div>
+            <div class="weak-name">${escapeHtml(m.chapter)}</div>
+            <div class="weak-meta">${isUntouched ? 'Pas encore travaillé' : (m.meta.ok+'/'+m.meta.tot+' · '+MQ.tierLabel(m.tier))}</div>
+          </div>
+          <div class="weak-score" style="color:${MQ.tierColor(m.tier)}">${isUntouched ? '—' : m.score+'%'}</div>
+          ${ficheLink}
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Filter bar
+  document.getElementById('filter-bar').addEventListener('click', e => {
+    if (e.target.classList.contains('filter-btn')) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      currentFilter = e.target.dataset.tier;
+      renderAllList();
+    }
+  });
+
+  function renderAll() {
+    renderHero();
+    renderDistribution();
+    renderWeak();
+    renderAllList();
+  }
+
+  renderAll();
+});
+</script>
+</body>
+</html>

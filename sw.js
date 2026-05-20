@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v431';
+const CACHE_VERSION = 'cas-in-v433';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1685,6 +1685,7 @@ const STATIC_ASSETS = [
   './mastery.html',
   './parcours.html',
   './parcours-detail.html',
+  './carriere.html',
   // v2.85 — Pages auxiliaires : étaient ré-fetch à chaque visite hors-ligne
   './artifacts.html',
   './glossary.html',
@@ -1745,6 +1746,7 @@ const STATIC_ASSETS = [
   './js/core/cas-in-quests.js',
   './js/core/cas-in-mastery.js',
   './js/core/cas-in-mastery-quiz.js',
+  './js/core/cas-in-unlocks.js',
   './js/core/cas-in-leaderboard.js',
   './js/core/cas-in-utils.js',
   './js/core/cas-in-counts.js',
@@ -1795,6 +1797,7 @@ const STATIC_ASSETS = [
   './js/components/quiz-share.js',
   './js/components/quest-banner.js',
   './js/components/gamification-toasts.js',
+  './js/components/rank-ceremony.js',
   './js/components/hub-activity.js',
   './js/components/hub-identity.js',
   './js/components/swiss-flags.js',
