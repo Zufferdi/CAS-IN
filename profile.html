@@ -174,6 +174,41 @@ document.documentElement.setAttribute('data-theme','dark');}})();
       </div>
     </section>
 
+    <!-- ═════ v3.50 — Chantier #1 : Bandeau Parcours pédagogiques ═════ -->
+    <section class="profile-section" aria-label="Parcours pédagogiques">
+      <div class="dfir-divider">
+        <span>PARCOURS PÉDAGOGIQUES</span>
+        <div class="dfir-divider-line"></div>
+      </div>
+      <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+        <div style="flex:1;min-width:220px">
+          <p style="margin:0;font-size:13px;line-height:1.55;color:var(--text)">
+            🛤️ <strong>6 parcours structurés</strong> pour préparer le CAS
+          </p>
+          <p style="margin:4px 0 0;font-size:11px;color:var(--dim)">
+            Fiches + quiz ciblés + études de cas, par thème
+          </p>
+        </div>
+        <a href="parcours.html" style="display:inline-block;padding:8px 16px;border-radius:7px;background:rgba(126,192,255,.15);border:1px solid rgba(126,192,255,.4);color:#7ec0ff;text-decoration:none;font-size:12px;font-weight:600;white-space:nowrap">
+          Voir les parcours →
+        </a>
+      </div>
+    </section>
+
+    <!-- ═════ v3.49 — Bandeau Top 3 concepts à réviser (chantier #2) ═════ -->
+    <section class="profile-section" aria-label="Concepts à réviser" id="mastery-priority-section" style="display:none">
+      <div class="dfir-divider">
+        <span>À RÉVISER EN PRIORITÉ</span>
+        <div class="dfir-divider-line"></div>
+      </div>
+      <div id="mastery-priority-list" style="margin-top:10px"></div>
+      <div style="margin-top:12px;text-align:center">
+        <a href="mastery.html" style="display:inline-block;padding:7px 14px;border-radius:7px;background:rgba(126,192,255,.12);border:1px solid rgba(126,192,255,.35);color:#7ec0ff;text-decoration:none;font-size:12px;font-weight:600">
+          🎯 Voir le tableau de maîtrise complet
+        </a>
+      </div>
+    </section>
+
     <!-- ═════ v2.70 — Heatmap chapitres × thèmes ═════ -->
     <section class="profile-section" aria-label="Heatmap maîtrise par chapitre" id="chapter-heatmap-section">
       <div class="dfir-divider">
@@ -509,6 +544,7 @@ document.documentElement.setAttribute('data-theme','dark');}})();
 
 <!-- Le store doit charger AVANT la page logique -->
 <script src="js/core/cas-in-profile.js" defer></script>
+<script src="js/core/cas-in-mastery-quiz.js" defer></script>
 <script src="js/core/cas-in-achievements.js" defer></script>
 <script src="js/core/cas-in-titles-badges.js" defer></script>
 <script src="js/components/titles-badges-ui.js" defer></script>
@@ -608,6 +644,50 @@ document.documentElement.setAttribute('data-theme','dark');}})();
         window.ProfileRelations.render();
       }
     });
+
+    // v3.49 — chantier #2 : bandeau Top 3 concepts à réviser
+    function renderMasteryPriority() {
+      if (!window.MasteryQuiz) return;
+      var weak = window.MasteryQuiz.getWeakConcepts(3);
+      var section = document.getElementById('mastery-priority-section');
+      var list = document.getElementById('mastery-priority-list');
+      if (!section || !list || !weak.length) return;
+      section.style.display = '';
+
+      // Récupérer mapping chapter→fiche depuis questions.json (si dispo)
+      var chapterToFiche = {};
+      fetch('data/questions.json').then(function(r){return r.json();}).then(function(data){
+        data.forEach(function(q){
+          if (q.chapter && q.fiches && q.fiches.length && !chapterToFiche[q.chapter]) {
+            chapterToFiche[q.chapter] = q.fiches[0];
+          }
+        });
+        renderList();
+      }).catch(renderList);
+
+      function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
+
+      function renderList() {
+        list.innerHTML = weak.map(function(m){
+          var ficheSlug = chapterToFiche[m.chapter];
+          var ficheLink = ficheSlug
+            ? '<a href="fiches/' + encodeURIComponent(ficheSlug) + '.html" target="_blank" rel="noopener" style="color:#7ec0ff;text-decoration:none;font-size:11px;padding:4px 9px;border-radius:5px;border:1px solid rgba(126,192,255,.35);background:rgba(126,192,255,.08)">📖 Réviser</a>'
+            : '<a href="quiz.html" style="color:#7ec0ff;text-decoration:none;font-size:11px;padding:4px 9px;border-radius:5px;border:1px solid rgba(126,192,255,.35);background:rgba(126,192,255,.08)">🎯 Quiz</a>';
+          return '<div style="display:grid;grid-template-columns:24px 1fr auto auto;gap:10px;align-items:center;padding:9px 11px;border-radius:7px;margin-bottom:5px;background:rgba(255,255,255,.03)">'
+            + '<div style="font-size:18px">' + window.MasteryQuiz.tierEmoji(m.tier) + '</div>'
+            + '<div><div style="font-size:13px;font-weight:600">' + escapeHtml(m.chapter) + '</div>'
+            + '<div style="font-size:11px;color:var(--dim)">' + m.meta.ok + '/' + m.meta.tot + ' réussites</div></div>'
+            + '<div style="font-family:\'Share Tech Mono\',monospace;font-size:15px;font-weight:700;color:' + window.MasteryQuiz.tierColor(m.tier) + '">' + m.score + '%</div>'
+            + ficheLink
+            + '</div>';
+        }).join('');
+      }
+      // Rendre tout de suite (sans fiche link si fetch pas fini)
+      renderList();
+    }
+
+    // Délai pour s'assurer que MasteryQuiz est chargé
+    setTimeout(renderMasteryPriority, 200);
   });
 </script>
 </body>

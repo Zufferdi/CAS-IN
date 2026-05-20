@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v422';
+const CACHE_VERSION = 'cas-in-v431';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1682,6 +1682,9 @@ const STATIC_ASSETS = [
   './tools.html',
   './scene.html',
   './profile.html',
+  './mastery.html',
+  './parcours.html',
+  './parcours-detail.html',
   // v2.85 — Pages auxiliaires : étaient ré-fetch à chaque visite hors-ligne
   './artifacts.html',
   './glossary.html',
@@ -1703,6 +1706,8 @@ const STATIC_ASSETS = [
   './data/counts.json',
   './data/questions.json',
   './data/search-index.json',
+  './data/fiches-titles.json',
+  './data/parcours.json',
   './data/npcs.json',
   './data/npc-arcs.json',
   './og-image.svg',
@@ -1739,6 +1744,7 @@ const STATIC_ASSETS = [
   './js/core/cas-in-arcs.js',
   './js/core/cas-in-quests.js',
   './js/core/cas-in-mastery.js',
+  './js/core/cas-in-mastery-quiz.js',
   './js/core/cas-in-leaderboard.js',
   './js/core/cas-in-utils.js',
   './js/core/cas-in-counts.js',
