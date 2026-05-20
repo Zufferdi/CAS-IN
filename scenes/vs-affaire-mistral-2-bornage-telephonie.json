@@ -1,0 +1,150 @@
+{
+  "id": "vs-affaire-mistral-2-bornage-telephonie",
+  "title": "Affaire Mistral #2 — Le CLI spoofé et le bornage (analyse télécoms)",
+  "icon": "📡",
+  "difficulty": "medium",
+  "atmosphere": "investigation",
+  "region": "CH",
+  "regionDetail": {
+    "code": "VS",
+    "flag": "🇨🇭",
+    "name": "Valais",
+    "commune": "Sion (PJ) + Wroclaw (PL, identifié)",
+    "company": "Cellule 'Mistral'"
+  },
+  "narrative": {
+    "success": "Les CDR remontent une signature claire : tous les appels 'PolCant Sion' affichés à Mme Berthod (et 47 autres victimes du Valais romand) ont en réalité transité par un opérateur SIP polonais (Voiper.pl) avant de toucher Swisscom. L'IP source des sessions est identifiée : 195.234.156.X — Wroclaw, prestataire DataCenter. Vous avez maintenant une cible géographique pour l'entraide. Le procureur autorise art. 269 CPP (surveillance en temps réel) sur les numéros suisses ayant communiqué avec le mule Kévin M. les 30 derniers jours.",
+    "degraded": "Vous obtenez les CDR mais l'analyse SIP n'est pas faite avant 8 jours (faute de spécialiste télécom au SCPT en mai). La cellule a le temps de changer de prestataire avant l'enquête de coordination.",
+    "failure": "Vous n'identifiez pas le CLI spoofing et concluez qu'il s'agit d'une opération suisse. L'enquête se focalise sur le Valais central pendant 3 semaines, pendant lesquelles 22 nouvelles victimes sont escroquées dans le Bas-Valais."
+  },
+  "tags": [
+    "CDR",
+    "CLI SPOOFING",
+    "VOIP",
+    "SIP",
+    "VALAIS",
+    "POLCANT VS",
+    "SWISSCOM",
+    "SCPT",
+    "ART. 273 CPP",
+    "ART. 269 CPP"
+  ],
+  "legalRefs": [
+    {
+      "label": "Art. 273 CPP",
+      "title": "Surveillance rétroactive — CDR jusqu'à 6 mois"
+    },
+    {
+      "label": "Art. 269 CPP",
+      "title": "Surveillance en temps réel — autorisation TMC obligatoire"
+    },
+    {
+      "label": "OSCPT",
+      "title": "Ordonnance sur la surveillance correspondance — types de surveillance"
+    },
+    {
+      "label": "Manuel Ch. 7",
+      "title": "Forensique télécom — CDR, bornage, attribution"
+    }
+  ],
+  "intro": "Mercredi 6 mai 2026, 09h15. Vous êtes au Service de surveillance des télécoms (<strong>SCPT</strong>, partie de fedpol, à Berne), pour une consultation technique. Sur la table : les CDR (<em>Call Detail Records</em>) du fixe de Mme Berthod sur 72h, fournis par Swisscom suite à votre réquisition art. 273 CPP du 5 mai.<br><br>L'inspectrice Mathieu (SCPT, spécialiste télécom) ouvre les fichiers CSV : <em>« Inspecteur Praz, regardez la colonne <code>OriginatingCarrier</code>. Tous les appels marqués 'PolCant Sion' arrivent en réalité depuis <strong>Voiper.pl</strong>, un opérateur SIP polonais. C'est techniquement légal — un SIP trunk peut afficher n'importe quel CLI tant qu'il n'est pas validé STIR/SHAKEN, ce qui n'est pas le cas en interconnexion CH↔EU. »</em><br><br>Elle ouvre un second écran : <em>« On a tiré le fil. Voiper.pl utilise une plage IP 195.234.156.0/24, hébergement DataCenter à Wroclaw, Pologne. Les sessions SIP correspondant aux appels vers vos victimes valaisannes proviennent toutes du même /28 à l'intérieur. Probablement le même prestataire VoIP, peut-être la cellule elle-même qui loue le SIP trunk. »</em><br><br>Sur votre carnet : <strong>47 victimes valaisannes</strong> identifiées par recoupement (toutes ont reçu un appel marqué 'PolCant Sion' avec ce profil SIP). Préjudice cumulé en 30 jours : <strong>184'000 CHF</strong>. Vous tenez la signature technique de la cellule.",
+  "alertLevel": "📡 ANALYSE TÉLÉCOM · CLI spoofé identifié (Voiper.pl) · Origine : Wroclaw (PL) · 47 victimes recoupées · 184'000 CHF préjudice estimé · Coordination internationale requise",
+  "objectives": [
+    {
+      "icon": "📞",
+      "text": "Comprendre et exploiter le CLI spoofing détecté"
+    },
+    {
+      "icon": "🌍",
+      "text": "Préparer la base technique pour l'entraide internationale (EIMP)"
+    },
+    {
+      "icon": "🔍",
+      "text": "Étendre les CDR à la cellule complète (autres numéros utilisés)"
+    },
+    {
+      "icon": "📋",
+      "text": "Distinguer art. 273 CPP (rétroactif) et art. 269 CPP (temps réel)"
+    }
+  ],
+  "debrief": "<p><strong>Pédagogie de cette scène — Forensique télécom et entraide.</strong></p><ul><li><strong>CLI spoofing en SIP</strong>. Un opérateur VoIP (SIP trunking) reçoit du client un CLI <em>déclaratif</em> dans l'en-tête INVITE : <code>From: \"PolCant Sion\" <sip:+41273265656@voiper.pl></code>. Sauf si l'opérateur valide ce CLI contre une whitelist client, il l'accepte tel quel et le transmet à l'opérateur destinataire (Swisscom). En interconnexion internationale, la validation <em>STIR/SHAKEN</em> (RFC 8224/8588) qui résoudrait le problème n'est pas encore généralisée hors USA. Donc : numéro suisse spoofé = présomption forte d'opérateur étranger relais.</li><li><strong>CDR — Call Detail Records</strong>. Sortie standard d'un opérateur : <code>{caller, callee, start_time, duration, originating_carrier, routing_path}</code>. Pas le contenu de l'appel. Pour le contenu : il faut art. 269 CPP (interception temps réel, TMC obligatoire, motif lourd).</li><li><strong>Art. 273 CPP (rétroactif) vs Art. 269 CPP (temps réel)</strong>. 273 = données déjà enregistrées par l'opérateur (CDR, localisation passée), procureur seul suffit, 6 mois en arrière max. 269 = interception en cours, TMC obligatoire (Tribunal des mesures de contrainte), conditions cumulatives strictes (infraction grave de la liste art. 269 al. 2, soupçons forts, mesures préalables épuisées). Ne pas confondre.</li><li><strong>Bornage</strong>. Pour un mobile : antennes BTS sur lesquelles le téléphone s'est connecté = trace de localisation (rayon 100m-3km selon densité). Le bornage du téléphone du mule Kévin M. sur les 30 derniers jours montrera ses déplacements (chez d'autres victimes ?). Pour un fixe : pas de bornage, mais l'adresse IP du gateway VoIP s'il y en a (rare pour les seniors).</li></ul><p><em>Indice narratif</em> : le centre d'appel à Wroclaw est typique des cellules de vishing EE/CH-DE. Les opérateurs (ceux qui appellent) sont souvent des étudiants polonais bilingues (français appris à l'école), payés à la victime ou au pourcentage. Le donneur d'ordre est ailleurs (Hambourg, Istanbul, Tel Aviv). La cellule Mistral suit ce schéma classique.</p>",
+  "steps": [
+    {
+      "phase": "📊 09h15 — Analyse des CDR à Berne (SCPT)",
+      "situation": "L'inspectrice Mathieu vous montre les CDR. Vous identifiez le pattern Voiper.pl. Le procureur Crittin attend vos recommandations pour la suite : (1) quels actes formels demander, (2) quelles bases légales utiliser. Vous avez 47 victimes recoupées par signature SIP.",
+      "law": "<strong>Art. 273 CPP</strong> — surveillance rétroactive, procureur suffit, 6 mois max. <strong>Art. 269 CPP</strong> — surveillance temps réel, TMC obligatoire, infractions limitatives. <strong>OSCPT</strong> — types de surveillance et procédure.",
+      "question": "<strong>Quels actes demandez-vous au procureur pour la suite immédiate ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Extension art. 273 CPP : CDR sur 30 jours des 47 victimes identifiées (pour cartographier complètement les flux d'appels). (2) Art. 273 CPP sur le téléphone du mule Kévin M. saisi hier (CDR + bornage sur 30 jours). (3) Préparer une demande d'entraide art. 27 EIMP vers la Pologne pour identifier le loueur du SIP trunk Voiper.pl IP 195.234.156.X. (4) Pas de demande art. 269 CPP pour l'instant : pas de cible identifiée en temps réel.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ STRATÉGIE PROPORTIONNÉE. Vous distinguez correctement : (1) le rétroactif (CDR victimes + mule) = art. 273 CPP, autorisation procureur seul, rapide (24-72h via SCPT). (2) L'entraide internationale = art. 27 EIMP pour la voie diplomatique + Convention de Budapest art. 31 (préservation rapide données informatiques) → 24h pour geler les logs Voiper.pl côté polonais. (3) Vous évitez le 269 CPP prématuré : sans cible nominée en temps réel, vous ne réussiriez pas la condition de proportionnalité au TMC.",
+          "legal": "Art. 273 CPP, Art. 27 EIMP, Convention Budapest art. 29/31."
+        },
+        {
+          "text": "Je demande directement une surveillance art. 269 CPP en temps réel sur Voiper.pl et tous les numéros suisses qui ont communiqué avec eux ces 30 derniers jours, pour intercepter les futurs appels d'escroquerie.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ DISPROPORTIONNÉ ET IRRÉALISTE. (1) Art. 269 CPP exige des soupçons concrets et une infraction de la liste exhaustive de l'al. 2. L'escroquerie (art. 146 CP) y figure SI 'usage particulièrement astucieux' ou 'préjudice considérable' — argumentable mais à motiver finement. (2) Demander la surveillance sur un opérateur polonais : pas faisable, le 269 CPP s'applique sur les opérateurs CH. Pour l'étranger : EIMP + Budapest. (3) 'Tous les numéros suisses' = pas suffisamment ciblé, TMC refusera.",
+          "legal": "Art. 269 CPP — conditions cumulatives, art. 27 EIMP — voie d'entraide."
+        },
+        {
+          "text": "On a déjà 47 victimes, ça suffit. Je dépose le dossier en l'état au procureur et j'attends ses instructions.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ PASSIVITÉ COÛTEUSE. Chaque jour qui passe : nouvelles victimes, preuves volatiles (les logs SIP polonais sont conservés 30 jours en moyenne), suspect en détention (vous ne pouvez pas le garder éternellement sans charges étayées art. 220 CPP). Le procureur n'instruit pas seul techniquement, c'est à l'enquêteur de proposer les actes. Inaction = perte de l'opportunité.",
+          "legal": "Art. 220 CPP — durée détention provisoire, art. 27 EIMP."
+        }
+      ]
+    },
+    {
+      "phase": "📞 10h30 — Choix de l'opérateur de routage à interroger",
+      "situation": "Pour démontrer techniquement le spoofing, vous devez obtenir les logs SIP complets (en-têtes INVITE bruts) d'au moins un des appels d'escroquerie. Trois pistes possibles : Swisscom (qui a reçu l'appel), Voiper.pl (qui l'a émis), ou un opérateur de transit intermédiaire (BICS, iBasis...).",
+      "law": "<strong>Art. 273 CPP</strong> — vise opérateurs CH (Swisscom OK). <strong>Art. 27 EIMP + Convention Budapest art. 31</strong> — préservation accélérée pour opérateurs étrangers (Voiper.pl).",
+      "question": "<strong>Quelle est la stratégie la plus efficace ?</strong>",
+      "choices": [
+        {
+          "text": "Demande parallèle : (1) Swisscom via SCPT — réquisition art. 273 CPP pour les en-têtes SIP complets de tous les appels marqués 'PolCant Sion' sur 30j (les opérateurs CH conservent les logs SIP 6 mois). (2) Convention Budapest art. 29/31 vers la Pologne (préservation immédiate + entraide ultérieure) — pour figer Voiper.pl logs avant qu'ils tournent. (3) Pas de transit : Swisscom + Voiper.pl suffisent.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ PARALLÉLISATION INTELLIGENTE. Vous : (1) maximisez les preuves chez l'opérateur CH (Swisscom, contrôlable, légal cadre clair art. 273), (2) figez les preuves chez l'opérateur étranger via l'instrument international rapide (Budapest art. 31 = 'preservation' = 90 jours, en attendant l'EIMP formelle qui peut prendre 3-6 mois). Les en-têtes SIP <code>From</code> (CLI affiché) + <code>P-Asserted-Identity</code> (CLI réel transmis par l'opérateur d'origine) permettront de prouver le spoofing techniquement.",
+          "legal": "Art. 273 CPP, Convention Budapest art. 29 (preservation) + 31 (disclosure)."
+        },
+        {
+          "text": "Je demande seulement à Voiper.pl directement (en polonais via Google Translate), c'est eux qui ont les preuves.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ CIRCUIT INFORMEL ILLÉGAL. (1) Un opérateur étranger ne répond <em>jamais</em> à une demande directe d'une police étrangère sans la voie formelle (EIMP ou Budapest). Il enverrait au mieux un refus, au pire alerterait son client (la cellule). (2) Demande non protocolaire = compromission de l'enquête et possible violation de souveraineté. (3) Tout élément obtenu ainsi = inexploitable (art. 141 CPP — preuves obtenues illégalement à l'étranger).",
+          "legal": "Art. 27 EIMP — voie d'entraide obligatoire, art. 141 CPP."
+        }
+      ]
+    },
+    {
+      "phase": "🗺 14h00 — Cartographie préliminaire et coordination",
+      "situation": "Les CDR étendus arrivent (24h après votre demande). Vous identifiez : (1) le mule Kévin M. a communiqué avec un numéro polonais +48 71 XXX XX XX 117 fois en 6 semaines (Wroclaw, prepaid), (2) 9 autres numéros valaisans (probablement d'autres mules ?) ont communiqué avec ce même +48, (3) 3 numéros vaudois et 2 fribourgeois également. La cellule semble couvrir tout l'arc romand.",
+      "law": "<strong>Art. 38 LOAP</strong> — coordination intercantonale via la PJF (Police judiciaire fédérale). <strong>Art. 24 CPP</strong> — compétence cantonale vs fédérale (criminalité organisée = fedpol).",
+      "question": "<strong>Quelle est la suite à donner ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Briefing immédiat à la PJF (fedpol) avec la cartographie pour évaluer si on bascule en compétence fédérale (art. 24 CPP — organisation criminelle ou criminalité économique d'envergure). (2) Contact avec PolCant VD et FR pour partager la signature et synchroniser les enquêtes (peut-être qu'eux ont déjà des dossiers ouverts). (3) Continuer l'enquête VS sur les 9 mules locales identifiées (CDR + bornage). (4) Préparer l'EIMP vers Wroclaw avec un dossier consolidé.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ COORDINATION EXEMPLAIRE. Vous suivez le bon enchaînement : (1) PJF en premier (peut basculer en fédéral si seuils atteints, ce qui simplifierait l'EIMP). (2) Coordination cantonale via les services de coordination (PCN — Police criminelle nationale) = évite les doublons d'EIMP, mutualise les ressources. (3) Continuation cantonale pour ne pas perdre la dynamique des 9 mules. (4) EIMP consolidée = un seul dossier solide vs 3 dossiers cantonaux fragmentés.",
+          "legal": "Art. 24, 38 CPP, art. 38 LOAP."
+        },
+        {
+          "text": "Je ne préviens personne d'autre pour garder le contrôle de l'enquête VS. Les autres cantons s'occuperont de leurs propres victimes.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ ÉGOÏSME PROCÉDURAL. (1) Risque de doublons d'EIMP (VS + VD + FR demandent indépendamment à la Pologne = surcharge, retards, méfiance). (2) La cellule criminelle ne s'arrête pas aux frontières cantonales — vouloir 'son' dossier = entraver l'efficacité globale. (3) Risque procédural : si la PJF prend connaissance plus tard, elle peut basculer le dossier en fédéral et le procureur cantonal sera dessaisi. Mieux vaut anticiper et coopérer.",
+          "legal": "Art. 38 LOAP — coordination obligatoire."
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "vs_polcant_cyber",
+    "vs_prosecutor_cyber"
+  ]
+}
