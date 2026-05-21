@@ -195,6 +195,26 @@ document.documentElement.setAttribute('data-theme','dark');}})();
       </div>
     </section>
 
+    <section class="profile-section" aria-label="Études de cas guidées">
+      <div class="dfir-divider">
+        <span>ÉTUDES DE CAS GUIDÉES</span>
+        <div class="dfir-divider-line"></div>
+      </div>
+      <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+        <div style="flex:1;min-width:220px">
+          <p style="margin:0;font-size:13px;line-height:1.55;color:var(--text)">
+            📚 <strong>Analyse approfondie</strong> d'affaires réelles suisses
+          </p>
+          <p style="margin:4px 0 0;font-size:11px;color:var(--dim)">
+            Briefing factuel + quiz + scènes + analyse + leçons (60-90 min/cas)
+          </p>
+        </div>
+        <a href="case-studies.html" style="display:inline-block;padding:8px 16px;border-radius:7px;background:rgba(255,200,100,.15);border:1px solid rgba(255,200,100,.4);color:#ffc864;text-decoration:none;font-size:12px;font-weight:600;white-space:nowrap">
+          Voir les études →
+        </a>
+      </div>
+    </section>
+
     <!-- ═════ v3.49 — Bandeau Top 3 concepts à réviser (chantier #2) ═════ -->
     <section class="profile-section" aria-label="Concepts à réviser" id="mastery-priority-section" style="display:none">
       <div class="dfir-divider">
@@ -284,6 +304,15 @@ document.documentElement.setAttribute('data-theme','dark');}})();
       </div>
     </section>
 
+    <!-- ═════ v3.51 — Distinctions débloquées par rang ═════ -->
+    <section class="profile-section" aria-label="Distinctions débloquées" id="unlocks-section">
+      <div class="dfir-divider">
+        <span>DISTINCTIONS</span>
+        <div class="dfir-divider-line"></div>
+      </div>
+      <div id="unlocks-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:8px"></div>
+    </section>
+
     <!-- ═════ Échelle des rangs (où je suis dans la hiérarchie) ═════ -->
     <section class="profile-section" aria-label="Hiérarchie des rangs">
       <div class="dfir-divider">
@@ -291,6 +320,12 @@ document.documentElement.setAttribute('data-theme','dark');}})();
         <div class="dfir-divider-line"></div>
       </div>
       <ol class="profile-ladder" id="profile-ladder"></ol>
+      <!-- v3.51 — Lien vers la page carrière enrichie -->
+      <div style="margin-top:14px;text-align:center">
+        <a href="carriere.html" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:7px;background:rgba(255,215,100,.1);border:1px solid rgba(255,215,100,.3);color:#ffe680;text-decoration:none;font-size:12px;font-weight:600">
+          👑 Voir ma carrière en détail
+        </a>
+      </div>
     </section>
 
     <!-- ═════ Stats SM-2 (Révision espacée) ═════ -->
@@ -593,6 +628,8 @@ document.documentElement.setAttribute('data-theme','dark');}})();
 <script src="js/components/search-lazy.js" defer></script>
 <script src="js/profile/celebration-ui.js" defer></script>
 <script src="js/components/gamification-toasts.js" defer></script>
+<script src="js/core/cas-in-unlocks.js" defer></script>
+<script src="js/components/rank-ceremony.js" defer></script>
 
 <!-- Signature dynamique du bloc auth (profile-dossier-plus.css) -->
 <script>
@@ -688,6 +725,37 @@ document.documentElement.setAttribute('data-theme','dark');}})();
 
     // Délai pour s'assurer que MasteryQuiz est chargé
     setTimeout(renderMasteryPriority, 200);
+
+    // v3.51 — Distinctions (unlocks par rang)
+    function renderUnlocks() {
+      if (!window.Unlocks || typeof window.Unlocks.getAllUnlocks !== 'function') return;
+      var grid = document.getElementById('unlocks-grid');
+      var section = document.getElementById('unlocks-section');
+      if (!grid || !section) return;
+
+      var all = window.Unlocks.getAllUnlocks();
+      var ranksList = (window.Profile && window.Profile.getAllRanks) ? window.Profile.getAllRanks() : [];
+
+      grid.innerHTML = all.map(function(u){
+        var rankInfo = ranksList[u.requiredRankIdx];
+        var rankLabel = rankInfo ? rankInfo.name : ('Rang ' + (u.requiredRankIdx + 1));
+        var bg = u.unlocked ? 'rgba(255,215,100,.08)' : 'rgba(255,255,255,.02)';
+        var border = u.unlocked ? 'rgba(255,215,100,.35)' : 'rgba(255,255,255,.08)';
+        var opacity = u.unlocked ? '1' : '0.45';
+        var statusEmoji = u.unlocked ? '✓' : '🔒';
+        var statusColor = u.unlocked ? '#30e88a' : 'var(--dim)';
+        return '<div style="background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;padding:11px 10px;text-align:center;opacity:' + opacity + ';position:relative">' +
+          '<div style="position:absolute;top:6px;right:8px;font-size:11px;color:' + statusColor + ';font-weight:700">' + statusEmoji + '</div>' +
+          '<div style="font-size:28px;line-height:1;margin-bottom:6px;' + (u.unlocked ? '' : 'filter:grayscale(0.8)') + '">' + (u.icon || '✨') + '</div>' +
+          '<div style="font-size:11px;font-weight:700;color:' + (u.unlocked ? '#ffe680' : 'var(--text)') + ';line-height:1.3;margin-bottom:3px">' + (u.shortLabel || u.title) + '</div>' +
+          '<div style="font-size:9px;color:var(--dim);font-family:\'Share Tech Mono\',monospace">' + (u.unlocked ? 'DÉBLOQUÉ' : 'Rang ' + (u.requiredRankIdx + 1)) + '</div>' +
+          '</div>';
+      }).join('');
+    }
+    setTimeout(renderUnlocks, 250);
+    if (window.Profile && window.Profile.onChange) {
+      window.Profile.onChange(function(){ setTimeout(renderUnlocks, 50); });
+    }
   });
 </script>
 </body>

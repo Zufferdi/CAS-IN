@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v443';
+const CACHE_VERSION = 'cas-in-v444';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1685,6 +1685,8 @@ const STATIC_ASSETS = [
   './mastery.html',
   './parcours.html',
   './parcours-detail.html',
+  './case-studies.html',
+  './case-study-detail.html',
   './carriere.html',
   // v2.85 — Pages auxiliaires : étaient ré-fetch à chaque visite hors-ligne
   './artifacts.html',
@@ -1711,6 +1713,7 @@ const STATIC_ASSETS = [
   './data/parcours.json',
   './data/npcs.json',
   './data/npc-arcs.json',
+  './data/case-studies.json',
   './og-image.svg',
   './favicon.ico',
   './icon-192.png',
@@ -1819,6 +1822,7 @@ const STATIC_ASSETS = [
   './js/pages/exam-app.js',
   './js/pages/artifacts-app.js',
   './js/pages/artifacts-data.js',
+  './js/pages/case-studies-app.js',
   // v2.59 — Moteur partagé + données du cluster Références
   './js/pages/refs-engine.js',
   './js/pages/events-data.js',
