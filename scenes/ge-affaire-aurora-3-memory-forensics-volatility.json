@@ -1,0 +1,126 @@
+{
+  "id": "ge-affaire-aurora-3-memory-forensics-volatility",
+  "title": "Affaire Aurora #3 — Memory forensics (Volatility, BeaconHunter)",
+  "icon": "🧠",
+  "difficulty": "hard",
+  "atmosphere": "lab",
+  "region": "CH",
+  "regionDetail": {
+    "code": "GE",
+    "flag": "🇨🇭",
+    "name": "Genève / Lausanne",
+    "commune": "Lausanne (Helvecom labo forensique)",
+    "company": "Helvecom CSIRT · Marc Volkov · Memory dump M-FX-487 (16.2 GB)"
+  },
+  "narrative": {
+    "success": "L'analyse Volatility 3 du memory dump M-FX-487 révèle, en 6 heures d'investigation systématique : (1) processus injecté <code>iexplore.exe</code> PID 6712 contenant un beacon Cobalt Strike 4.9 (decoded via BeaconHunter), (2) credentials LSASS dumpés à 03h12 (HASHDUMP de tous les comptes mis en cache, dont Reynard + 2 comptes de service Murex), (3) named pipe <code>\\\\.\\pipe\\msrpc_3941</code> indicateur d'un Cobalt Strike lateral movement préparé mais pas exécuté, (4) shellcode résident en mémoire correspondant à un loader 'BeaconLoader_v3.1' attribué par Mandiant à UNC2452 / APT29 (Cozy Bear). C'est de la <em>très grosse</em> attribution — état-nation russe, ciblage banking. Aurora est dans une catégorie d'incident qui dépasse ALPHV/BlackCat.",
+    "degraded": "Analyse Volatility partielle (LSASS dump confirmé, beacon décodé, mais signature BeaconLoader non identifiée). Attribution incertaine.",
+    "failure": "Marc Volkov utilise Volatility 2.6 obsolète (ne supporte pas Windows 11 24H2) — résultats faux/incomplets. Diagnostic erroné transmis à Aurora."
+  },
+  "tags": [
+    "MEMORY FORENSICS",
+    "VOLATILITY",
+    "COBALT STRIKE",
+    "BEACONHUNTER",
+    "LSASS",
+    "APT29",
+    "COZY BEAR",
+    "ATTRIBUTION",
+    "DFIR",
+    "HELVECOM"
+  ],
+  "legalRefs": [
+    {
+      "label": "Art. 6 ZertES",
+      "title": "Intégrité de la preuve numérique — hash SHA-256 du dump"
+    },
+    {
+      "label": "NIST SP 800-86",
+      "title": "Guide to Integrating Forensic Techniques into Incident Response"
+    },
+    {
+      "label": "ISO/IEC 27037:2012",
+      "title": "Identification, collection, acquisition et préservation des preuves numériques"
+    },
+    {
+      "label": "MITRE ATT&CK T1003.001",
+      "title": "OS Credential Dumping: LSASS Memory"
+    },
+    {
+      "label": "MITRE ATT&CK T1055",
+      "title": "Process Injection"
+    }
+  ],
+  "intro": "Dimanche 14 février 2027, 14h00. <strong>Laboratoire forensique Helvecom</strong>, Lausanne (Crissier, ZI). Marc Volkov est à son poste : 3 écrans, station Linux Ubuntu 24.04 LTS, station Windows 11 isolée (analyse statique), tablette pour le rapport. À sa droite : copie chiffrée du memory dump <code>M-FX-487_20270214_034712.raw</code> (16.2 GB), montée sur SSD NVMe externe. SHA-256 vérifié à l'acquisition (Aurora SOC) et à la réception (Helvecom) — match parfait.<br><br>Marc lance la commande standard d'identification de profil :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.82rem;line-height:1.7;font-family:monospace\">$ <strong>vol -f M-FX-487_20270214_034712.raw windows.info</strong><br><br>Volatility 3 Framework 2.7.0<br><br>Kernel Base    0xf80459800000<br>DTB            0x1aa000<br>Symbols        file://...nt_kernel.json.xz<br>Is64Bit        True<br>IsPAE          False<br>layer_name     0 WindowsIntel32e<br>memory_layer   1 FileLayer<br>KdDebuggerDataBlock    0xf80459e09b40<br>NTBuildLab     22631.3593.amd64fre.ni_release.231215-1701<br>CSDVersion     0<br>KdVersionBlock 0xfffff80459e09bd0<br>Major/Minor    15.22631<br>MachineType    34404<br>KeNumberProcessors      8<br>SystemTime     2027-02-14 03:46:53 UTC</div><br>Windows 11 23H2, build 22631, 8 CPU, capture à 03h46:53 UTC. <strong>Profile détecté correctement</strong>. Marc passe en mode analyse.<br><br>Il sait par expérience qu'une analyse forensique mémoire complète demande 4-8 heures sur un dump 16 GB Win11, avec une <em>kill chain</em> structurée : (1) identification des anomalies processus, (2) injection / hooking, (3) network, (4) credentials, (5) persistence, (6) shellcode + attribution. Il commence.",
+  "alertLevel": "🧠 ANALYSE MÉMOIRE EN COURS · Volatility 3.2.7 · Dump 16.2 GB Win11 22H2 · Marc Volkov (Helvecom) seul · 6h estimées · Attribution finale attendue · Hashes vérifiés intègres",
+  "objectives": [
+    {
+      "icon": "🔍",
+      "text": "Identifier les processus injectés (Process Hollowing, DLL injection, Reflective)"
+    },
+    {
+      "icon": "🔓",
+      "text": "Détecter le dump LSASS et identifier les credentials volés"
+    },
+    {
+      "icon": "🌐",
+      "text": "Reconstituer les connexions C2 actives au moment du dump"
+    },
+    {
+      "icon": "🎯",
+      "text": "Extraire le shellcode et l'attribuer (YARA + threat intel)"
+    }
+  ],
+  "debrief": "<p><strong>Pédagogie de cette scène — Memory forensics avancé avec Volatility 3.</strong></p><ul><li><strong>Volatility 3 vs Volatility 2</strong>. Volatility est <em>le</em> framework open-source de référence pour memory forensics Windows/Linux/macOS. Volatility 3 (rewrite Python 3) supporte Windows 11 24H2+ ; Volatility 2 est <em>obsolète</em> depuis 2023 (incompatible Win11). Un analyste qui utilise Volatility 2 sur un dump Win11 obtiendra des résultats <em>faux</em> (mauvais offsets kernel) sans warning explicite — piège classique. <strong>Toujours vérifier la version</strong> et le profil détecté avant d'investir 6h d'analyse.</li><li><strong>Workflow forensique mémoire — 6 phases</strong>. (1) <em>windows.info</em> + <em>windows.cmdline</em> : identification système + processus avec lignes de commande (souvent suspect : <code>powershell.exe -nop -w hidden -enc {base64}</code>). (2) <em>windows.pslist</em> + <em>windows.pstree</em> : arbre de processus, anomalies parent-child (PowerShell sous Outlook = suspect ; iexplore.exe sans parent visible = très suspect). (3) <em>windows.malfind</em> : zones mémoire avec exécution + protection RWX (classic shellcode injection). (4) <em>windows.netscan</em> + <em>windows.netstat</em> : connexions actives au moment du dump (C2 in vivo). (5) <em>windows.dlllist</em> + <em>windows.handles</em> : DLL injectées + handles suspects (named pipes Cobalt Strike). (6) <em>windows.hashdump</em> + <em>windows.lsadump</em> + <em>windows.cachedump</em> : credentials extraction (NTLM hashes + LSA secrets + cached domain credentials). <strong>BeaconHunter</strong> (open-source Inde Cobalt Strike pour Volatility) : plugin spécialisé qui détecte et décode les beacons Cobalt Strike en mémoire — sortie : C2 URL, sleep time, jitter, watermark, malleable profile.</li><li><strong>Process Injection (MITRE T1055) — variantes</strong>. Les attaquants injectent du code dans des processus légitimes pour échapper aux EDR (le processus 'host' est <code>iexplore.exe</code> ou <code>svchost.exe</code>, donc 'légitime'). Variantes : (a) <em>Classic DLL injection</em> via CreateRemoteThread + LoadLibrary, (b) <em>Process Hollowing</em> (NtUnmapViewOfSection + WriteProcessMemory), (c) <em>Reflective DLL Loading</em> (Stephen Fewer, 2008 — DLL chargée sans toucher le disque), (d) <em>Process Doppelgänging</em>, (e) <em>Module Stomping</em>, (f) <em>Atom Bombing</em>. <strong>Détection en mémoire</strong> : pages <em>RWX</em> dans des processus normalement non-allocateurs (signature classique Volatility malfind), différences entre image disque (ImageBase + ImageSize) et image mémoire (mapped sections), DLLs chargées sans entry dans <code>InMemoryOrderModuleList</code>.</li><li><strong>LSASS dump — la cible #1</strong>. LSASS (<code>Local Security Authority Subsystem Service</code>) maintient les credentials des utilisateurs connectés en mémoire (NTLM hashes, Kerberos TGT, mots de passe en clair sous certaines conditions — WDigest pre-Win8.1, Single Sign-On). <strong>Dumper LSASS</strong> = obtenir les credentials de <em>tous</em> les utilisateurs connectés sur la machine, incluant les comptes de service. Outils attaquants : Mimikatz (Benjamin Delpy 2011), ProcDump (Microsoft Sysinternals — comme légitime, donc difficile à détecter), Windows Task Manager (rclick → Create dump). <strong>Détection forensique en mémoire</strong> : <code>windows.hashdump</code> de Volatility extrait directement les hashes de la SAM Hive en mémoire ; si l'attaquant a fait son propre dump, on peut retrouver le <em>fichier LSASS dump</em> dans la mémoire du processus attaquant via <code>windows.dumpfiles</code> (objet FILE_OBJECT). <strong>MITRE T1003.001</strong>.</li><li><strong>BeaconHunter — décoder un Cobalt Strike beacon</strong>. Le beacon CS est chiffré en mémoire (RSA + AES-128) mais peut être <em>décodé</em> à partir d'artefacts mémoire. BeaconHunter (plugin Volatility de la communauté CS Research) : (1) scanne la mémoire pour signatures Cobalt Strike (configuration block — décrypté en mémoire post-établissement C2), (2) extrait la configuration : C2 URLs, watermark (identifiant client CS, traçable), spawn process, malleable profile (imitation HTTP/DNS), sleep + jitter, encryption keys, beacon UUID. <strong>Une fois le watermark obtenu</strong>, croisement avec la base CS Watermark Tracker (whoisxmlapi, malware-traffic-analysis) peut identifier l'utilisateur du Cobalt Strike (acheteur légitime → fuite/piraté, ou acheteur via reseller anonyme).</li><li><strong>Attribution APT29 / UNC2452 / Cozy Bear</strong>. APT29 est un groupe attribué par US-CERT, NCSC UK, BfV allemand au <em>SVR russe</em> (renseignement extérieur). TTPs caractéristiques : (1) <em>spear-phishing</em> ciblé avec leurres convaincants, (2) <em>BeaconLoader</em> custom (variantes loader Cobalt Strike avec techniques propres d'évasion), (3) <em>persistence subtile</em> (golden tickets Kerberos, scheduled tasks signées Microsoft), (4) <em>opérations longues</em> (mois à années — patience caractéristique), (5) <em>cibles</em> : agences gouvernementales (SolarWinds 2020), think tanks, énergie, <em>banking privée européenne</em> (depuis 2024 selon Mandiant). Si attribution APT29 confirmée → catégorie d'incident <strong>infrastructure critique étatique</strong>, implication OFCS + SRC (Service de renseignement de la Confédération), possiblement coordination diplomatique. C'est une autre échelle qu'un incident criminel.</li></ul><p><em>Indice narratif</em> : Marc va probablement trouver dans la mémoire (a) le beacon CS actif au moment du confinement, (b) la trace du LSASS dump à 03h12 (donc 25 minutes avant l'alerte EDR — pourquoi pas détecté ? Possiblement parce que le dump a utilisé un binaire signé Microsoft procdump.exe, autorisé sur le host), (c) un named pipe (\\\\.\\pipe\\msrpc_3941) qui suggère que le beacon CS allait initier un <em>lateral movement</em> via SMB Pivoting Beacon Pipe — préparation pour propager. La fenêtre d'opportunité de l'attaquant a été stoppée juste à temps.</p>",
+  "steps": [
+    {
+      "phase": "🔍 14h45 — windows.pstree et anomalies",
+      "situation": "Marc lance <code>vol -f dump.raw windows.pstree</code>. Output volumineux (240 lignes). Il filtre par anomalie : processus dont le parent est inhabituel. Trois candidats : (a) <code>iexplore.exe</code> (PID 6712) sans parent visible (parent PID 4 = System, anormal pour Internet Explorer en 2027 puisque IE est déprécié depuis 2022), (b) <code>powershell.exe</code> (PID 8432) parent = <code>OUTLOOK.EXE</code> (PID 5104) — l'arbre logique pour patient zéro phishing, (c) <code>WinRM</code> service en mémoire mais pas dans la liste services.",
+      "law": "<strong>MITRE T1055, T1059.001</strong>. <strong>Volatility 3 pstree</strong>.",
+      "question": "<strong>Sur quel processus concentrez-vous l'analyse en priorité ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>iexplore.exe PID 6712</strong> en priorité. Raisons : (1) <em>Internet Explorer est déprécié depuis 2022</em>, sa présence en mémoire sur Win11 23H2 en 2027 est <em>anormale</em>, (2) <em>parent System (PID 4)</em> = injection processus orpheline classique post-injection, (3) <em>processus 'légitime' Microsoft signé</em> = exactement le type d'host privilégié pour injection Cobalt Strike (whitelist EDR). PowerShell PID 8432 reste à analyser ensuite (probable initial vector). Commandes : <code>windows.malfind --pid 6712</code> (zones RWX), <code>windows.dlllist --pid 6712</code> (DLLs anormales), <code>windows.memmap --pid 6712 --dump</code> (extraction zones suspectes pour analyse statique).",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ INTUITION FORENSIQUE PROFESSIONNELLE. Vous : (1) <em>identifiez l'anomalie historique</em> (IE en 2027 = artefact attaquant, pas usage légitime), (2) <em>repérez l'orphelinat de parent</em> (PID 4 = signe classique de process injection avec parent disparu), (3) <em>commandez l'analyse approfondie</em> avec les 3 plugins pertinents pour identifier le shellcode. C'est exactement le réflexe d'un memory forensic analyst senior — Marc avance vite.",
+          "legal": "MITRE T1055, Volatility plugins."
+        }
+      ]
+    },
+    {
+      "phase": "🔓 16h20 — LSASS dump détecté",
+      "situation": "Marc lance <code>windows.hashdump</code> et trouve des hashes NTLM extraits. Mais surtout, il fait <code>windows.cmdline</code> et trouve une commande tracée dans la mémoire d'un processus : <code>procdump.exe -accepteula -ma lsass.exe C:\\Windows\\Temp\\dump_2024.dmp</code> exécutée à 03h12:47. ProcDump est un binaire Microsoft Sysinternals légitime (signé) — donc autorisé par défaut sur les workstations Windows.",
+      "law": "<strong>MITRE T1003.001</strong>. <strong>LOLBins (Living-off-the-Land)</strong>.",
+      "question": "<strong>Quelle est l'implication ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>Implications majeures</strong>. (1) <em>LSASS a été dumpé à 03h12</em>, soit 35 minutes avant l'alerte EDR (qui a détecté le beacon, pas le LSASS dump car procdump est signé Microsoft = whitelist). (2) <em>Le dump a probablement été exfiltré</em> via le beacon C2 (60 secondes après création) — donc <strong>les credentials de Reynard et tous comptes connectés sont chez l'attaquant</strong>. (3) <em>Comptes potentiellement compromis</em> : Reynard (admin local + accès Murex), 2 comptes de service Murex qui ont été utilisés depuis M-FX-487 dans les 30 derniers jours, éventuel cache Kerberos TGT de Reynard. (4) <strong>Actions requises immédiates</strong> : (a) <em>reset urgent</em> des mots de passe Reynard + comptes de service Murex potentiellement compromis, (b) <em>revocation Kerberos TGT</em> (klist purge + KRBTGT password reset si soupçon Golden Ticket), (c) <em>hunt rétrospectif</em> sur l'utilisation de ces comptes dans les 24h-48h depuis 03h12. C'est <em>urgent</em>.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ ESCALADE CRITIQUE PARFAITEMENT GÉRÉE. Vous : (1) <em>identifiez le timing</em> (LSASS dumpé 35 min avant détection — il y a eu fenêtre d'usage des credentials), (2) <em>identifiez les comptes exposés</em> y compris les comptes de service (souvent oubliés dans le reset post-incident), (3) <em>identifiez le risque Golden Ticket</em> (KRBTGT reset = nuclear option mais parfois nécessaire), (4) <em>déclenchez le hunt rétrospectif</em>. Marc téléphone immédiatement à Sarah Doumenc, qui appelle Stéphane Rey à 16h25 : reset Reynard + comptes service Murex en cours dans les 30 minutes.",
+          "legal": "MITRE T1003.001, T1558.001 Golden Ticket."
+        }
+      ]
+    },
+    {
+      "phase": "🎯 19h45 — Attribution APT29",
+      "situation": "Après extraction du shellcode du beacon (PID 6712) et matching YARA contre les signatures Mandiant, Marc obtient un hit : <code>APT29_BeaconLoader_v3.1.yar</code> — règle écrite par Mandiant en juin 2026 sur un échantillon ayant frappé une banque danoise. Confirmation par 3 autres sources : Microsoft Threat Intel (UNC2452 = NOBELIUM), CrowdStrike Falcon Intelligence (Cozy Bear), Kaspersky Threat Intel (APT29 The Dukes).",
+      "law": "<strong>Attribution APT — limites</strong>. <strong>Diamond Model</strong>.",
+      "question": "<strong>Comment communiquez-vous l'attribution à Aurora ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>Brief mesuré et nuancé</strong>. <em>« Sarah, Stéphane : signature BeaconLoader v3.1 confirmée par 4 sources indépendantes (Mandiant, Microsoft, CrowdStrike, Kaspersky). Attribution probable APT29 / UNC2452 / Cozy Bear / NOBELIUM — tous des noms de la même entité présumée. Cette entité est <em>attribuée au SVR russe</em> (renseignement extérieur) par US-CERT, NCSC UK, BfV allemand depuis 2020 (post-SolarWinds). <strong>Importance des nuances</strong> : (a) l'attribution technique (signature malware) ne prouve <em>pas</em> juridiquement l'origine étatique — le malware pourrait être (ré)utilisé par un autre acteur après fuite, (b) mais le pattern complet (TTPs + targeting banking privée européenne + sophistication LSASS + Cobalt Strike récent) est <em>cohérent</em> avec APT29 selon les rapports Mandiant 2026. <strong>Conséquences si l'attribution est exacte</strong> : (i) notification SRC (Service de renseignement de la Confédération) en plus de OFCS + FINMA, (ii) coordination potentielle avec autres banques européennes ciblées, (iii) la persistence pourrait être plus profonde et longue que ce qu'on a trouvé jusqu'ici, (iv) <em>pas de communication publique sur l'attribution</em> avant validation diplomatique (la Suisse n'a pas pour habitude d'attribuer publiquement à un État sans procédure formelle). Recommendation : continuer comme si APT29 confirmé pour les actions techniques (paranoia level adapté), mais formulation officielle 'attaquant sophistiqué de niveau étatique présumé'. »</em>",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ ATTRIBUTION MAÎTRISÉE. Vous : (1) <em>citez 4 sources convergentes</em> = haute confiance technique, (2) <em>nuancez la limite de l'attribution</em> (technique ≠ juridique, possible réutilisation) — humilité intellectuelle nécessaire, (3) <em>tirez les conséquences institutionnelles</em> (SRC, coordination européenne), (4) <em>opérationnel paranoïaque</em> mais (5) <em>communication officielle prudente</em> ('niveau étatique présumé' au lieu de nommer la Russie). C'est exactement la dentelle qu'attendent FINMA et OFCS d'un CSIRT compétent. La diplomatie suisse vous remerciera de ne pas créer un incident diplomatique sur la base d'une signature YARA.",
+          "legal": "Diamond Model, attribution standards."
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "ncsc_govcert_lead",
+    "ofcs_coordinator"
+  ]
+}

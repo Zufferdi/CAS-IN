@@ -1,0 +1,140 @@
+{
+  "id": "ge-affaire-aurora-1-premier-ping-edr",
+  "title": "Affaire Aurora #1 — Le premier ping (03h47, alerte EDR)",
+  "icon": "🌌",
+  "difficulty": "easy",
+  "atmosphere": "investigation",
+  "region": "CH",
+  "regionDetail": {
+    "code": "GE",
+    "flag": "🇨🇭",
+    "name": "Genève",
+    "commune": "Genève (rue du Rhône)",
+    "company": "Banque Aurora & Cie SA (fictive, banque privée genevoise) · SOC interne · CSIRT externe Helvecom"
+  },
+  "narrative": {
+    "success": "L'astreinte SOC L2 (Léa Martinez) prend l'alerte EDR de 03h47 au sérieux. Elle suit la check-list initiale stricte : isolation du host suspect via la console EDR, capture immédiate des artefacts volatiles (memory dump + netstat + connexions actives + processus), notification du SOC manager et du CISO avant 04h30, escalade au CSIRT externe Helvecom pour second avis. À 06h00, le périmètre de l'incident est correctement borné : 1 workstation compromise (M-FX-487, trading desk), communication C2 avec IP autrichienne suspecte, technique d'établissement Cobalt Strike-like détectée. La banque a évité l'ouverture du marché lundi avec une réponse improvisée.",
+    "degraded": "Triage correct mais retard de 2 heures sur la notification CISO (Léa hésite à réveiller à 04h00). Conséquences limitées mais protocole non respecté.",
+    "failure": "Léa qualifie l'alerte de 'faux positif EDR' à 03h52 sans investigation, retourne dormir. À 09h15 lundi, les attaquants ont commencé un lateral movement vers les serveurs Murex (trading). Catastrophe."
+  },
+  "tags": [
+    "SOC",
+    "EDR",
+    "DFIR",
+    "INCIDENT RESPONSE",
+    "BANQUE PRIVÉE",
+    "GENÈVE",
+    "COBALT STRIKE",
+    "C2",
+    "ASTREINTE",
+    "AURORA"
+  ],
+  "legalRefs": [
+    {
+      "label": "LFINMA art. 29",
+      "title": "Obligation d'annonce des incidents par les banques surveillées"
+    },
+    {
+      "label": "Art. 22 al. 1 OBE",
+      "title": "Ordonnance sur les banques — annonce immédiate des incidents critiques"
+    },
+    {
+      "label": "Art. 47 LB",
+      "title": "Secret bancaire — préserver dans la conduite de l'incident"
+    },
+    {
+      "label": "LPD art. 24",
+      "title": "Obligation d'annoncer les violations de données au PFPDT (72h)"
+    },
+    {
+      "label": "OFCS — obligation d'annonce 24h",
+      "title": "Loi sur la cybersécurité 2025 — infrastructures critiques"
+    }
+  ],
+  "intro": "Dimanche 14 février 2027, 03h47. Vous êtes <strong>Léa Martinez</strong>, 31 ans, analyste SOC niveau 2 chez <strong>Banque Aurora & Cie SA</strong> (banque privée genevoise, fictive — 480 employés, 22 milliards CHF d'actifs sous gestion, rue du Rhône). Vous êtes d'astreinte cette nuit (rotation hebdomadaire L2). Votre téléphone professionnel vibre. Notification push <strong>CrowdStrike Falcon</strong> :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.82rem;line-height:1.7;font-family:monospace\">🔴 <strong>CRITICAL Detection</strong><br>Host : M-FX-487 (workstation, Trading FX desk)<br>User : LREYNARD\\AURORA_DOM<br>Time : 2027-02-14T02:47:13.847Z<br>Behavior : Suspicious Network Connection<br>Detail : powershell.exe (PID 8432) → 185.244.x.x:8443<br>Protocol : HTTPS<br>Beacon pattern : 60s ± 5s jitter<br>Severity : Critical<br>Auto-action : <em>None</em> (policy: alert-only for trading hosts)</div><br>Vous êtes chez vous (Carouge), pyjama. Vous vous asseyez sur le lit, vous ouvrez l'ordinateur portable de l'astreinte (Dell pré-configuré avec VPN Aurora + accès console Falcon + Splunk + Carbon Black). Première impression mentale en 30 secondes :<br><br>• <strong>M-FX-487</strong> = workstation Win11 d'un trader FX (Louis Reynard, 38 ans, employé depuis 2019). Workstation critique : accès Murex (trading), Refinitiv, Bloomberg.<br>• <strong>Heure 02h47</strong> = pas d'activité légitime attendue. Reynard est en vacances aux Maldives jusqu'au 20 février (vous le savez parce que l'agenda interne est partagé en SOC).<br>• <strong>185.244.x.x:8443</strong> = IP autrichienne. Inconnue de votre table de réputation. Port 8443 = HTTPS alternatif (souvent utilisé par C2).<br>• <strong>Beacon 60s ± 5s jitter</strong> = signature comportementale très caractéristique. Cobalt Strike par défaut. <strong>Sleep + jitter</strong>.<br>• <strong>PowerShell parent</strong> = signal d'alarme (PS lance rarement HTTPS sur port non-443 dans un environnement normal).<br><br>Vous regardez l'horloge : 03h49. Vous avez 4 secondes pour décider : <em>« faux positif, je dors »</em> ou <em>« incident, je passe en mode crise »</em>.",
+  "alertLevel": "🚨 ALERTE EDR CRITICAL · M-FX-487 trading desk · Trader en vacances · C2 beacon 60s vers IP AT inconnue · Pattern Cobalt Strike · 03h47 dimanche · Astreinte L2 seule",
+  "objectives": [
+    {
+      "icon": "🛡",
+      "text": "Évaluer la criticité réelle (faux positif vs vrai incident)"
+    },
+    {
+      "icon": "🔒",
+      "text": "Confiner immédiatement le host sans détruire les preuves"
+    },
+    {
+      "icon": "📞",
+      "text": "Activer la chaîne d'escalade (SOC manager → CISO → CSIRT externe)"
+    },
+    {
+      "icon": "📋",
+      "text": "Préserver les artefacts forensiques volatiles (mémoire, réseau, processus)"
+    }
+  ],
+  "debrief": "<p><strong>Pédagogie de cette scène — Triage initial d'alerte EDR critique.</strong></p><ul><li><strong>Le 'faux positif' est l'ennemi #1 du SOC</strong>. Selon les benchmarks SANS et MITRE, 60-85% des alertes EDR en environnement bancaire sont des faux positifs (mises à jour logicielles, scanner légitime, comportement utilisateur atypique). Cela crée une <em>fatigue cognitive</em> (alert fatigue) qui pousse les analystes à minimiser les vrais positifs. <strong>La règle d'or</strong> : aucune alerte critique n'est qualifiée 'faux positif' sans investigation. Le pattern '60s ± 5s jitter' est un <em>signe distinctif fort</em> de Cobalt Strike (beacon par défaut), à reconnaître immédiatement.</li><li><strong>Cobalt Strike — le couteau suisse des APT et ransomware</strong>. Framework commercial conçu pour le red teaming, massivement piraté et utilisé par : ransomware groups (Conti, BlackCat, Akira), APTs (APT29 Cozy Bear, APT41 Winnti), affiliates RaaS. Caractéristiques : (1) <em>beacon</em> — agent furtif qui appelle son C2 à intervalles configurés (sleep + jitter), (2) <em>malleable C2 profiles</em> — imitation du trafic légitime (cloud Microsoft, Google Analytics), (3) <em>SMB/named pipe beacons</em> — propagation latérale via Windows, (4) <em>signed certificates</em> — TLS sur port 443/8443/443 pour traverser firewalls. <strong>Détection</strong> : signature comportementale (jitter régulier), TLS JA3 fingerprint, beacons.txt YARA rules (Florian Roth, MalwareBazaar).</li><li><strong>Workstation de trader = cible privilégiée</strong>. Pourquoi M-FX-487 plutôt que la workstation comptable ? (1) <em>accès à Murex</em> (trading) et Refinitiv (market data) — leviers pour fraude SWIFT/MT103, (2) <em>privilèges élevés</em> (les traders sont souvent admin local de leur machine pour installer outils), (3) <em>monitoring de moindre intensité</em> que les serveurs core, (4) <em>en vacances</em> = pas d'utilisateur pour détecter une activité anormale, (5) <em>connexions VPN/Bloomberg fréquentes</em> = trafic atypique normalisé. Les APTs ciblant le banking privilégient les <em>front-office workstations</em>.</li><li><strong>Premiers gestes — order matters</strong>. (1) <em>NE PAS éteindre le host</em> (perdrait la mémoire RAM = preuves volatiles : processus injectés, clés crypto en mémoire, connexions actives). (2) <em>Isoler réseau via EDR console</em> (CrowdStrike 'Network Isolation' = seule la console Falcon peut communiquer avec le host, tout le reste est bloqué). (3) <em>Capturer artefacts volatiles</em> dans cet ordre : memory dump complet (avec WinPMem ou DumpIt via EDR), <code>netstat -anob</code>, <code>tasklist /svc</code>, <code>schtasks</code>, <code>wmic process list full</code>, <code>arp -a</code>, <code>dnscache</code>, registry hives à chaud. (4) <em>Notifier hiérarchie</em> : SOC manager (Léa peut l'appeler) puis CISO. Si CSIRT externe sous contrat (Helvecom, Kudelski Security, KPMG), <em>escalade immédiate</em>. (5) <em>Documenter horodaté</em> chaque action — un incident bancaire majeur produit toujours un litige post-mortem (assureur, FINMA, clients), le journal d'actions est <em>la</em> pièce centrale.</li><li><strong>Cadre légal suisse — banque privée + incident</strong>. (1) <em>LFINMA art. 29 + circulaire FINMA 2023/01</em> : obligation d'annonce immédiate des incidents critiques (« événements significatifs ») au régulateur. Pas de seuil légal précis ; en pratique, tout incident affectant les systèmes critiques (trading, paiements, KYC) déclenche annonce. (2) <em>Art. 47 LB</em> : <em>même pendant l'incident</em>, le secret bancaire reste — donc partage d'information avec tiers (CSIRT externe, OFCS) doit être <em>anonymisé</em> (pas de noms de clients dans les briefs). (3) <em>LPD art. 24</em> : si des données personnelles sont compromises, annonce au PFPDT dans 72h. (4) <em>OFCS art. 23a</em> (Loi sur la cybersécurité 2025) : annonce obligatoire au OFCS dans 24h pour les infrastructures critiques (banques systémiquement importantes le sont — Aurora à 22 Mds n'est pas SIB, mais relève de la pratique sectorielle).</li></ul><p><em>Indice narratif</em> : Reynard en vacances aux Maldives, M-FX-487 en C2 beacon = c'est <em>presque trop beau</em> comme signal. Un adversaire sérieux aurait choisi de compromettre la workstation d'un utilisateur <em>actif</em> pour masquer ses traces dans le bruit légitime. Le fait que la compromission ait lieu chez Reynard <em>absent</em> suggère soit (a) opportunisme (compromise initiale via spear-phishing début février, exploitation post-départ en vacances), soit (b) inattention de l'attaquant. La saga révélera le scénario (a) — Reynard a cliqué sur un lien dans un mail piégé du 3 février.</p>",
+  "steps": [
+    {
+      "phase": "🔍 03h50 — Évaluation 30 secondes",
+      "situation": "Vous regardez le détail de l'alerte. Le contexte : trader en vacances, IP autrichienne, beacon 60s, PowerShell parent. 4 secondes pour décider de votre posture.",
+      "law": "<strong>Pratique SOC L2</strong>. <strong>MITRE ATT&CK</strong>. <strong>SANS FOR578</strong>.",
+      "question": "<strong>Quelle est votre première action ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Mode crise activé</strong>. Pas de qualification 'faux positif' — pattern beacon 60s + PowerShell + IP étrangère sur trading workstation = signaux forts d'intrusion ciblée. (2) <strong>Isolation réseau immédiate</strong> du host M-FX-487 via la console Falcon (Network Isolation — préserve la mémoire mais bloque les communications, y compris C2). (3) <strong>Capture artefacts volatiles</strong> dans l'ordre : memory dump (WinPMem 4.0.0.5), <code>netstat -anob</code>, <code>tasklist /m</code>, registry hives, prefetch, USN journal. (4) <strong>SMS au SOC Manager</strong> (Antoine Berger) : <em>« Incident probable, M-FX-487, beacon C2 60s, isolement effectué. Appelle dès dispo. »</em> — pas d'appel à 04h00 sans tentative SMS d'abord (politesse pro). (5) <strong>Carnet papier ouvert</strong> à côté du laptop : timestamp + action + résultat. Ligne #1 : 03h50, alerte Falcon analyse, jugement = incident probable.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ TRIAGE PROFESSIONNEL EXEMPLAIRE. Vous : (1) <em>refusez la facilité du 'faux positif'</em> face à des signaux concordants (beacon pattern + contexte utilisateur absent + PowerShell suspect), (2) <em>isolez sans détruire</em> (Network Isolation EDR préserve RAM et processus actifs — la mémoire restera analysable demain), (3) <em>capturez artefacts volatiles</em> dans l'ordre du <em>volatilité décroissante</em> (RFC 3227 : RAM → connexions → processus → registry → disque) — c'est le standard forensique, (4) <em>communication graduée</em> (SMS d'abord, appel si pas de réponse), (5) <em>journalisation papier</em> = traçabilité indépendante de tout système Aurora (qui pourrait être compromise). Antoine répondra dans les 10 minutes.",
+          "legal": "MITRE ATT&CK, RFC 3227, SANS FOR578."
+        },
+        {
+          "text": "Faux positif probable (l'EDR génère beaucoup de bruit). Je marque l'alerte 'investigated, FP' et je retourne dormir.",
+          "ok": false,
+          "pts": -40,
+          "fb": "❌ DÉSASTRE PROFESSIONNEL. (1) <em>Vous ignorez 4 signaux forts</em> : beacon pattern (jitter 60s ± 5s = signature Cobalt Strike, presque jamais légitime), IP étrangère inconnue, PowerShell sur trading host, utilisateur absent. (2) <em>Vous fermez l'enquête</em> sans la mener — toutes les preuves volatiles vont disparaître lors d'un éventuel reboot. (3) <em>Vous donnez 4-6 heures aux attaquants</em> avant le retour au travail lundi — temps largement suffisant pour lateral movement vers serveurs Murex, exfiltration de PII clients, déploiement ransomware. (4) <em>Vous mettez la banque en violation LFINMA art. 29</em> (non-annonce d'incident). C'est exactement le type de décision qui finit en audit FINMA + licenciement + carrière brisée. Léa restera dans l'histoire de la cybersécurité suisse comme contre-exemple.",
+          "legal": "LFINMA art. 29, MITRE ATT&CK."
+        },
+        {
+          "text": "J'appelle directement la police cantonale Genève (Brigade financière) à 03h50 pour annonce d'intrusion.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ SAUT D'ÉTAPES DANGEREUX. (1) La police cantonale n'est pas le premier contact en cyber incident — la chaîne est : <em>SOC L2 → SOC Manager → CISO → CSIRT externe (optionnel) → OFCS (24h) → FINMA (immédiat si critique) → MPC ou police (si action pénale)</em>. (2) <em>Appeler la police avant le CISO</em> = perte de contrôle sur la communication, possible publicisation, panique chez les dirigeants. (3) <em>Art. 47 LB (secret bancaire)</em> : vous n'êtes pas habilitée seule à révéler des informations bancaires à des tiers — il faut une décision juridiquement structurée du CISO + Direction juridique. (4) <em>Surcoût de plainte pénale prématurée</em> : si en fait c'est un test pentest oublié, vous mobilisez la police pour rien et créez un dossier pénal qui sera classé. Mauvaise décision.",
+          "legal": "Art. 47 LB, chaîne d'escalade IR."
+        }
+      ]
+    },
+    {
+      "phase": "📞 04h10 — Réponse SOC Manager",
+      "situation": "À 04h05, votre téléphone vibre. Antoine Berger (SOC Manager) rappelle. Il a vu votre SMS, il est levé. Il vous demande un résumé en 60 secondes maximum. Au son, on entend qu'il est dans sa cuisine, déjà devant son laptop d'astreinte.",
+      "law": "<strong>Pratique communication incident</strong>. <strong>Standards SANS FOR578 IR communication</strong>.",
+      "question": "<strong>Comment résumez-vous l'incident à Antoine ?</strong>",
+      "choices": [
+        {
+          "text": "<em>« Antoine : (1) 03h47, alerte Falcon Critical sur M-FX-487, workstation Reynard FX trader, en vacances. (2) Beacon HTTPS port 8443 vers 185.244.x.x autrichienne, pattern 60s ± 5s jitter — Cobalt Strike-like. (3) Parent process powershell.exe PID 8432, lancement 02h47, donc 1h avant l'alerte. (4) Falcon a alert-only (policy trading host, pas de blocage auto). (5) J'ai isolé réseau, capturé memory dump en cours (WinPMem), pas redémarré. (6) Pas d'autre alerte corrélée pour l'instant. (7) Ma posture : incident probable, escalade CISO + CSIRT Helvecom recommandée. Ton avis ? »</em>",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ BRIEF SOC PARFAIT. Vous structurez en 7 points en 60 secondes : (1) <em>contexte host + utilisateur</em>, (2) <em>indicateur technique précis</em> (IP + port + jitter), (3) <em>chronologie</em> (alerte vs début beacon — 1h d'écart suggère que l'attaquant a déjà fait quelque chose entre 02h47 et 03h47), (4) <em>posture EDR</em> (alert-only ≠ blocking — important pour comprendre pourquoi l'attaque n'a pas été stoppée), (5) <em>actions déjà prises</em>, (6) <em>contexte corrélation</em>, (7) <em>recommandation</em>. C'est le format SBAR (Situation/Background/Assessment/Recommendation) adapté SOC. Antoine validera votre escalade.",
+          "legal": "Pratique IR communication."
+        }
+      ]
+    },
+    {
+      "phase": "📋 04h30 — Première heure de réponse",
+      "situation": "Antoine valide : <em>« OK Léa, escalade. J'appelle le CISO Stéphane Rey maintenant, il prendra Helvecom. Toi : continue les artefacts, préserve tout, surveille pas d'autre alerte corrélée. Briefe-moi par Signal toutes les 30 min jusqu'au lever du CISO. Bon réflexe la mémoire avant le reboot. »</em>",
+      "law": "<strong>Standards IR — première heure (golden hour)</strong>.",
+      "question": "<strong>Que faites-vous dans la première heure (04h30 → 05h30) ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Finaliser le memory dump</strong> M-FX-487 (~16 GB, environ 25 min en SMB1 lent), copier sur le bucket S3 forensique (chiffré KMS). (2) <strong>Élargir l'analyse Falcon</strong> : rechercher la même IP 185.244.x.x dans <em>tous</em> les hosts Aurora (24h, 7j, 30j en arrière) — KQL/EQL query. (3) <strong>Splunk hunt</strong> : connexions sortantes vers AT (Autriche) sur les 30 derniers jours, baseline vs déviation. (4) <strong>Vérifier les autres trading workstations</strong> (M-FX-001 à M-FX-024) : Falcon dashboard sain ? (5) <strong>Capture des emails Reynard</strong> (M365 Compliance Center) — phishing initial probable, à creuser. (6) <strong>Journal papier</strong> : chaque action timestampée. (7) <strong>Briefing Signal Antoine</strong> à 05h00.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ GOLDEN HOUR MAÎTRISÉE. Vous : (1) <em>finalisez l'artefact prioritaire</em> (RAM = volatilité maximale), (2) <em>élargissez le périmètre</em> (toujours penser 'patient zero' + 'patient X' en intrusion APT — un workstation rarement seul), (3) <em>baseline behavioral</em> sur Splunk = détection des anomalies réseau historiques, (4) <em>vérification des hosts apparentés</em> (autres traders FX = même phishing campaign probable), (5) <em>hunt sur la source</em> (emails Reynard = patient zéro probable), (6) <em>journalisation</em>, (7) <em>communication régulière</em>. C'est exactement l'orchestration de la 'première heure' enseignée chez SANS FOR578 et NIST SP 800-61.",
+          "legal": "NIST SP 800-61, SANS FOR578."
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "ofcs_coordinator",
+    "ncsc_govcert_lead"
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "id": "ag-affaire-beznau-3-authentification-documents",
+  "title": "Affaire Beznau #3 — Word, Excel et le caviardage IFSN (deep dive)",
+  "icon": "📄",
+  "difficulty": "hard",
+  "atmosphere": "lab",
+  "region": "CH",
+  "regionDetail": {
+    "code": "ZH",
+    "flag": "🇨🇭",
+    "name": "Zurich",
+    "commune": "Zurich (rédaction Republik, SCIF)",
+    "company": "Republik — Lea + collaboration externe forensique"
+  },
+  "narrative": {
+    "success": "L'authentification approfondie révèle 3 confirmations indépendantes : (1) la structure interne XML des PDFs (révisions Word, GUIDs internes, runtime IDs) est cohérente avec une production Axpo IT environment, (2) la 'feuille Communicated_IFSN' de l'Excel contient des numéros d'incident officiels qui correspondent aux annonces publiques IFSN (vérifiable sur ensi.admin.ch), prouvant la base interne et établissant aussi l'omission, (3) un test indépendant via une seconde source (un ancien employé Axpo retraité depuis 2022, contacté de façon générique, sans révélations) confirme que le format des rapports correspond aux standards internes. Le dossier est solide.",
+    "degraded": "L'authentification partielle (métadonnées + structure XML OK, mais pas de seconde source). Le dossier reste publiable mais vulnérable à une défense Axpo de type 'document fabriqué'.",
+    "failure": "Lea pousse trop loin la confirmation par seconde source (questions trop précises au retraité) qui se met à pressentir un dossier en cours et alerte Axpo informellement. Markus_T est mis en alerte interne."
+  },
+  "tags": [
+    "FORENSIQUE DOC",
+    "OFFICE",
+    "OOXML",
+    "PDF",
+    "DEEP DIVE",
+    "AUTHENTIFICATION",
+    "BEZNAU",
+    "REPUBLIK",
+    "SECONDE SOURCE",
+    "OSINT"
+  ],
+  "legalRefs": [
+    {
+      "label": "Art. 6 ZertES",
+      "title": "Preuves numériques — exigences d'intégrité"
+    },
+    {
+      "label": "Art. 28a CP",
+      "title": "Sauvegarde d'intérêts légitimes — fardeau de l'authentification"
+    },
+    {
+      "label": "BGÖ art. 7",
+      "title": "Exceptions à la transparence"
+    },
+    {
+      "label": "Manuel Ch. 14",
+      "title": "Forensique de documents bureautiques (référence interne CAS-IN)"
+    }
+  ],
+  "intro": "Jeudi 7 mai 2026, 10h00. SCIF Republik. <strong>Lea Brunner</strong> a passé la nuit à creuser. Sur le laptop forensique, plusieurs terminaux ouverts. À côté : un <em>Mac Mini M2 isolé</em> que Christof a configuré spécifiquement pour ouvrir les Office documents en mode sans macros, sans réseau, sans iCloud. <strong>Aujourd'hui le but est de pousser l'authentification au-delà des métadonnées de surface</strong>.<br><br>Les fichiers à creuser :<br><br>• <code>20250918_BEZ1_Bericht_Reaktorabschaltung.pdf</code> — produit de Word 2019<br>• <code>Tracking_Vorfaelle_Block1_2024.xlsx</code> — généré directement (pas de conversion)<br>• <code>IFSN_BEZ1_Vorfall_2025-09_ORIGINAL.pdf</code> — la version non caviardée<br><br>Lea ouvre un terminal et lance :<br><br><code>$ unzip -p Tracking_Vorfaelle_Block1_2024.xlsx docProps/app.xml | xmllint --format -</code><br><br>Résultat :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.82rem;line-height:1.7;font-family:monospace\">&lt;Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\"&gt;<br>&nbsp;&nbsp;&lt;Application&gt;Microsoft Excel&lt;/Application&gt;<br>&nbsp;&nbsp;&lt;AppVersion&gt;16.0300&lt;/AppVersion&gt;<br>&nbsp;&nbsp;&lt;Company&gt;Axpo Power AG&lt;/Company&gt;<br>&nbsp;&nbsp;&lt;Manager&gt;BEZ1.Wartung&lt;/Manager&gt;<br>&nbsp;&nbsp;&lt;HyperlinksChanged&gt;false&lt;/HyperlinksChanged&gt;<br>&nbsp;&nbsp;&lt;SharedDoc&gt;true&lt;/SharedDoc&gt;<br>&lt;/Properties&gt;</div><br>Christof lit par-dessus son épaule : <em>« 'Company: Axpo Power AG' + 'Manager: BEZ1.Wartung' (= maintenance Bloc 1). C'est interne, et la propriété 'SharedDoc=true' indique que ce fichier a été partagé en interne sur SharePoint. Ça veut dire qu'il y a probablement un journal SharePoint quelque part chez Axpo qui trace tous les accès à ce document. Markus_T n'est probablement pas seul à l'avoir consulté, mais quand Axpo fera une enquête, ils vont aller chercher qui l'a téléchargé localement le plus récemment. »</em><br><br>Vous regardez l'heure. <strong>10h15.</strong> Vous avez une journée de forensique devant vous et la sensation lourde que chaque détail technique compte pour la suite.",
+  "alertLevel": "📄 DEEP DIVE FORENSIQUE · Métadonnées OOXML confirment Axpo Power AG + dépt BEZ1.Wartung · SharePoint logs probable trace · Authentification multi-niveaux en cours",
+  "objectives": [
+    {
+      "icon": "🔬",
+      "text": "Extraire toutes les preuves cachées des fichiers Office (XML interne, GUIDs, runtime IDs)"
+    },
+    {
+      "icon": "📊",
+      "text": "Croiser les données Excel avec les annonces publiques IFSN sur ensi.admin.ch"
+    },
+    {
+      "icon": "🤝",
+      "text": "Identifier une seconde source CONTRADICTOIRE ou CORROBORANTE — sans la mettre en danger"
+    },
+    {
+      "icon": "📋",
+      "text": "Préparer un dossier d'authentification utilisable en cas de contestation juridique"
+    }
+  ],
+  "debrief": "<p><strong>Pédagogie de cette scène — Forensique OOXML et corroboration de sources.</strong></p><ul><li><strong>OOXML — Office Open XML</strong>. Les fichiers .docx, .xlsx, .pptx sont en réalité des <em>archives ZIP</em> contenant des fichiers XML. <code>unzip file.xlsx</code> révèle la structure : <code>docProps/app.xml</code> (application), <code>docProps/core.xml</code> (métadonnées core), <code>xl/workbook.xml</code> (structure du classeur), <code>xl/sharedStrings.xml</code> (chaînes partagées), <code>xl/worksheets/sheet*.xml</code> (chaque feuille). C'est <em>énormément</em> plus riche que les métadonnées surface. On peut y trouver : Company, Manager, AppVersion précise, configuration partage, historique de révisions Word (si activé), GUIDs uniques par document, et même des fragments de texte supprimés si certaines fonctions étaient activées.</li><li><strong>Runtime ID Word</strong>. Quand Word ouvre/modifie un document, il génère un GUID 'runtime' unique pour cette session. Ce GUID est inscrit dans le XML interne (révisions, commentaires) et permet de tracer indirectement la machine d'origine si on a accès à d'autres documents produits sur la même machine. Un GUID identique dans 2 documents = forte probabilité même session/machine.</li><li><strong>Croisement Excel ↔ source publique IFSN</strong>. L'IFSN publie sur <code>ensi.admin.ch/fr/themes/evenements/</code> tous les événements communiqués officiellement, avec des références internes (ex: 'Beznau 1, 31 juillet 2025, panne pompe alimentation auxiliaire'). En comparant ces annonces officielles avec la feuille 'Communicated_IFSN' de l'Excel : si les références matchent exactement, c'est <em>une preuve indépendante</em> que l'Excel est un vrai document Axpo (il faudrait fabriquer les annonces IFSN aussi pour falsifier). Et : si la feuille 'Q1+Q2+Q3+Q4' contient des incidents <em>absents</em> de la feuille 'Communicated_IFSN', c'est <em>la preuve</em> de l'omission.</li><li><strong>Seconde source corroborante (sans mettre en danger)</strong>. Principe ABC du journalisme d'investigation : <em>'Single source, single story = no story'</em>. Mais pour une seconde source, attention : on ne demande PAS 'avez-vous entendu parler de la triple défaillance Q3 2025 ?'. On demande 'pouvez-vous m'expliquer comment fonctionne le tracking interne des incidents à Beznau ? Comment ils sont classifiés ?' — questions <em>méthodologiques</em>, pas substantielles. Si la réponse correspond à ce que vous avez vu dans le fichier, c'est une corroboration sans révélation. Source recommandée : un retraité, un ancien employé sorti depuis >2 ans, un syndic, un universitaire qui a publié sur le sujet.</li><li><strong>Préparer le dossier d'authentification</strong>. Anticipation des arguments défense Axpo en cas de litige (et il y en aura) : (1) 'documents fabriqués' → vous montrez les métadonnées OOXML, la structure XML interne, la cohérence avec l'IFSN public, (2) 'documents trafiqués' → vous montrez vos hash SHA-256 horodatés dès la réception, (3) 'extrait hors contexte' → vous publiez le maximum de contexte (avec anonymisation des PII non pertinentes), (4) 'source non identifiée donc non fiable' → vous publiez votre méthodologie d'authentification (sans révéler la source). Préparation = différence entre un dossier publiable et un dossier détruit en audience.</li></ul><p><em>Indice narratif</em> : la mention <strong>'SharedDoc=true'</strong> est un signal opérationnel critique. Quand Axpo va inévitablement enquêter sur la fuite (en interne d'abord, puis en pénal si la médiatisation est grande), ils vont consulter les logs SharePoint et identifier qui a téléchargé le fichier en local le plus récemment. C'est probablement Markus_T. Lea doit avertir Markus à propos de ce risque, mais elle ne peut pas effacer le fichier (intégrité forensique). Le dilemme est insoluble — c'est la condition de la source dans un État de droit où le whistleblowing est mal protégé.</p>",
+  "steps": [
+    {
+      "phase": "🔬 11h00 — Pousser l'analyse OOXML",
+      "situation": "Vous explorez en détail la structure XML interne des fichiers. Christof vous propose 3 directions techniques pour approfondir l'authentification.",
+      "law": "<strong>Standards forensiques internationaux (NIST SP 800-86)</strong>. <strong>Art. 6 ZertES</strong> — exigences d'intégrité des preuves numériques.",
+      "question": "<strong>Quelle direction technique est la plus utile ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Extraction des <code>core.xml</code> et <code>app.xml</code> de tous les fichiers Office. (2) Liste exhaustive des GUIDs internes (Word) et des paramètres SharedDoc/HyperlinksChanged (Excel). (3) Comparaison avec les empreintes publiques d'autres documents Axpo (rapports annuels Axpo Holding, communiqués IFSN cités dans la presse) pour détecter cohérence environnement IT. (4) Préservation de toutes ces traces dans un rapport technique horodaté SHA-256, signé GPG par Christof, pour utilisation juridique future.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ TRIANGULATION FORENSIQUE COMPLÈTE. Vous : (1) maximisez l'exploitation des données existantes (rien de nouveau à demander à la source — risque minimal), (2) cherchez la cohérence cross-document (un faussaire devrait imiter <em>tous</em> les détails environnement Axpo — extrêmement difficile), (3) anticipez le besoin juridique (le rapport signé GPG sera utilisable si Axpo accuse Republik en provisional injunction art. 261 CPC). C'est la méthode pour qu'un dossier survive une attaque juridique sérieuse.",
+          "legal": "NIST SP 800-86, Art. 6 ZertES."
+        },
+        {
+          "text": "Je demande à Markus_T de m'envoyer aussi d'autres documents similaires (rapports 2023, 2022) pour comparer leur structure. Plus j'en ai, mieux je peux authentifier.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ EXPOSITION DE LA SOURCE. Chaque nouveau document demandé à Markus = (1) une opération de téléchargement supplémentaire sur le SharePoint Axpo (donc une trace de plus dans les logs), (2) un risque d'erreur OPSEC de la part de Markus (clé USB perdue, mail accidentellement envoyé sur son adresse professionnelle), (3) une probabilité accrue qu'Axpo identifie qui télécharge inhabituellement. La règle : <em>minimiser la demande à la source</em>. On exploite ce qu'on a, on demande seulement ce qui est <em>strictement nécessaire</em> pour le scoop.",
+          "legal": "Standards de protection des sources."
+        }
+      ]
+    },
+    {
+      "phase": "🤝 14h00 — La seconde source corroborante",
+      "situation": "Pour solidifier le dossier, vous voulez obtenir confirmation indépendante. Vous avez identifié 3 candidats potentiels : (A) Un ancien ingénieur Axpo retraité en 2022, contact via un confrère qui le connaît, (B) Un universitaire ETHZ qui a publié 2 articles sur la sécurité Beznau, (C) Florian Kasser (expert nucléaire Greenpeace Suisse, public).",
+      "law": "<strong>Pas de cadre pénal direct</strong>. <strong>Code de déontologie suisse des médias</strong>. <strong>Art. 28a CP</strong> — cadre journaliste.",
+      "question": "<strong>Quelle source secondaire approchez-vous, et comment ?</strong>",
+      "choices": [
+        {
+          "text": "Approche en 3 étapes parallèles : (A) le retraité — questions <em>méthodologiques</em> uniquement ('comment fonctionnait le tracking interne quand vous étiez là ?'), pas de mention du dossier actuel. (B) l'universitaire ETHZ — questions <em>publiques</em> sur l'état des cuves de pression à partir des publications Greenpeace au TAF. (C) Kasser/Greenpeace — entretien <em>on-the-record</em> (citation publique attendue) pour le contexte de leur procédure de transparence depuis 2014. Aucun des 3 ne sait que vous avez un dossier interne. Tous donnent du contexte qui solidifie le scoop sans révéler la source.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ TRIANGULATION OUVERTE. Vous : (1) cherchez le contexte sans révéler la primary source, (2) variez les angles (technique interne via retraité + analyse externe via ETHZ + activisme via Greenpeace), (3) gardez Kasser/Greenpeace public dès maintenant (il sait déjà qu'on s'intéresse, c'est sain), (4) maintenez les autres en mode 'background only' (off-the-record). Cela construit un faisceau d'éléments convergents qui rendra votre publication beaucoup plus solide qu'une enquête mono-source.",
+          "legal": "Déontologie + standards investigation."
+        },
+        {
+          "text": "J'appelle directement le retraité Axpo et lui montre les documents — comme ça il pourra confirmer ou infirmer directement.",
+          "ok": false,
+          "pts": -30,
+          "fb": "❌ TRAHISON DE LA PROMESSE. (1) Montrer les documents à un tiers = <em>vous diffusez les fichiers volés</em> à une personne externe à votre cercle, qui ne s'est pas engagée à protéger la source. (2) Le retraité, même bien intentionné, peut parler à un ex-collègue, qui parle à un autre, et la cellule de fuite Axpo entend parler de Republik dans la semaine. (3) Le retraité pourrait aussi reconnaître Markus_T (signature, style de notes, sujet précis sur lequel il travaillait) — vous venez de dénoncer Markus à quelqu'un qui ne devait pas savoir. Cette erreur est <em>la</em> faute classique du journalisme d'investigation et a déjà ruiné de nombreux dossiers.",
+          "legal": "Violation standards de protection des sources."
+        }
+      ]
+    },
+    {
+      "phase": "📋 17h00 — Compiler le dossier d'authentification",
+      "situation": "Fin de journée. Vous compilez un dossier d'authentification interne, prévu pour servir si Axpo attaque la publication en justice. Le dossier doit être autosuffisant : un juge qui le lit doit pouvoir conclure 'les documents sont authentiques, leur exploitation est légitime'.",
+      "law": "<strong>Art. 28a CP</strong> + jurisprudence TF sur la protection des sources (TF 6B_256/2022). <strong>CEDH art. 10</strong> — liberté de presse (Goodwin v. UK 1996, Sanoma Uitgevers v. NL 2010).",
+      "question": "<strong>Quelles pièces incluez-vous dans le dossier d'authentification ?</strong>",
+      "choices": [
+        {
+          "text": "(1) Méthodologie d'authentification step-by-step (commandes exactes, outputs reproductibles). (2) Hash SHA-256 horodatés des fichiers reçus + signatures GPG de Christof. (3) Capture des métadonnées OOXML clés (Author, Company, GUIDs, runtime IDs). (4) Comparaison textuelle IFSN original/caviardé (avec mise en évidence des paragraphes manquants). (5) Croisement avec sources publiques IFSN (annonces officielles vérifiables sur ensi.admin.ch). (6) Note du juriste de Republik sur le cadre légal de la publication (art. 28a CP, CEDH art. 10, jurisprudence Goodwin/Sanoma). (7) <strong>RIEN sur la source elle-même</strong> — pas de pseudo, pas de timing exact de réception, pas de canal exact.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ DOSSIER 'BULLETPROOF'. Vous : (1) documentez la méthode (un juge ou expert peut refaire le travail), (2) prouvez l'intégrité (hash signés GPG = chaîne de custody irréprochable), (3) montrez les preuves elles-mêmes (sans révéler ce qu'elles permettent de déduire sur la source), (4) ancrez juridiquement (art. 28a CP + jurisprudence CEDH ECHR Goodwin = la protection des sources est un droit fondamental, pas une faveur du gouvernement). Ce dossier est ce qui transforme une publication risquée en une publication solide.",
+          "legal": "Art. 28a CP, CEDH art. 10, jurisprudence Goodwin/Sanoma."
+        },
+        {
+          "text": "J'inclus le pseudo de la source (Markus_T) et la date précise du contact (4 mai 2026) — pour la transparence procédurale, un juge appréciera.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ TRAHISON PARTIELLE. (1) Le pseudo SecureDrop est généré aléatoirement et ne révèle théoriquement rien — MAIS s'il est combiné avec d'autres éléments connus d'Axpo (qui aurait quitté quand, qui aurait accès à quoi), il peut devenir identifiant. (2) La date précise du contact + métadonnées des PDFs (dates création septembre 2025) + connaissance Axpo de qui était sur ces incidents = corrélation possible. (3) <em>Aucun élément lié à la source ne doit jamais entrer dans le dossier d'authentification</em>. Si un juge demande, vous invoquez art. 172 CPP (refus de témoigner) — pas vous-même.",
+          "legal": "Art. 172 CPP, jurisprudence CEDH protection sources."
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "journaliste_republik_lea",
+    "redaction_republik_constantin"
+  ]
+}

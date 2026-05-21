@@ -1,0 +1,122 @@
+{
+  "id": "ge-affaire-aurora-5-threat-hunting-lateral-movement",
+  "title": "Affaire Aurora #5 — Threat hunting et lateral movement (EDR + Sigma)",
+  "icon": "🎯",
+  "difficulty": "hard",
+  "atmosphere": "lab",
+  "region": "CH",
+  "regionDetail": {
+    "code": "GE",
+    "flag": "🇨🇭",
+    "name": "Genève",
+    "commune": "Genève (Aurora SOC) / Lausanne (Helvecom)",
+    "company": "Aurora SOC · Helvecom CSIRT · Splunk · Falcon · M365 Defender"
+  },
+  "narrative": {
+    "success": "Le hunt étendu sur 60 jours d'historique Splunk + Falcon révèle : (1) M-FX-487 patient zéro confirmé (seul host avec exécution du PDF piégé), (2) <strong>aucun lateral movement</strong> n'a eu lieu — les credentials LSASS dumpés à 03h12 n'ont pas été utilisés avant le confinement à 03h52 (40 min insuffisantes pour un acteur prudent), (3) <strong>aucune persistence</strong> hors M-FX-487 (registry Run, scheduled tasks, services, golden tickets — clean sur le domaine), (4) 2 autres employés Aurora ont reçu des emails similaires entre 28 janvier et 8 février mais aucun n'a ouvert la PJ. Le périmètre est confirmé limité à 1 host. Aurora peut respirer.",
+    "degraded": "Hunt incomplet (manque de visibilité sur certains segments réseau — segment OT trading non-monitored par Falcon). Doute résiduel.",
+    "failure": "Hunt négligent (queries Splunk trop spécifiques, manque les variants attaque) — un compte de service Murex compromis non-détecté permet réactivation 3 mois plus tard."
+  },
+  "tags": [
+    "THREAT HUNTING",
+    "EDR",
+    "SIGMA",
+    "SPLUNK",
+    "FALCON",
+    "M365 DEFENDER",
+    "LATERAL MOVEMENT",
+    "PERSISTENCE",
+    "HUNT QUERY",
+    "AURORA"
+  ],
+  "legalRefs": [
+    {
+      "label": "MITRE ATT&CK Matrix",
+      "title": "Référentiel TTPs adversaires"
+    },
+    {
+      "label": "Sigma rules",
+      "title": "Format open de règles de détection cross-SIEM"
+    },
+    {
+      "label": "NIST SP 800-92",
+      "title": "Guide to Computer Security Log Management"
+    },
+    {
+      "label": "Art. 47 LB",
+      "title": "Secret bancaire — anonymisation des hunts inter-tenant"
+    }
+  ],
+  "intro": "Mardi 16 février 2027, 09h00. <strong>Aurora SOC + Helvecom CSIRT</strong> en mode hunt. Les memory forensics + malware analysis ont donné : APT29 BLUESTORM, exploit CVE-2024-32102 PDF, beacon Cobalt Strike 0x4567ABCD, LSASS dump à 03h12, isolation à 03h52. <strong>Question critique restante</strong> : <em>Y a-t-il d'autres compromissions ?</em><br><br>Sarah Doumenc lance le briefing : <em>« On a 3 hypothèses à tester sur les 60 derniers jours : (H1) Reynard est-il vraiment le seul touché ? Autres employés Aurora ciblés par phishing similaire ? (H2) Lateral movement depuis M-FX-487 vers d'autres hosts ? (H3) Persistence cachée sur le domaine ? Chaque hypothèse = 1 set de queries Splunk + Falcon + M365. Lea, tu prends H1. Antoine H2. Marc H3. Je coordonne. Aïsha continue threat intel. 4 heures pour rapport préliminaire. »</em>",
+  "alertLevel": "🎯 PHASE THREAT HUNTING · 3 hypothèses (H1 phishing élargi, H2 lateral movement, H3 persistence) · 60 jours d'historique · Splunk + Falcon + M365 · 4 analystes parallèles",
+  "objectives": [
+    {
+      "icon": "📧",
+      "text": "H1 : Identifier d'autres emails de la même campagne contre Aurora (phishing wave)"
+    },
+    {
+      "icon": "↔",
+      "text": "H2 : Tester l'absence de lateral movement (auth events, network flow, beacon similar)"
+    },
+    {
+      "icon": "🪤",
+      "text": "H3 : Hunt persistence (autoruns, services, scheduled tasks, golden tickets)"
+    },
+    {
+      "icon": "📋",
+      "text": "Documenter chaque query avec hypothèse + résultat (positif/négatif) pour traçabilité"
+    }
+  ],
+  "debrief": "<p><strong>Pédagogie de cette scène — Threat hunting structuré avec hypothèses.</strong></p><ul><li><strong>Threat hunting — approche par hypothèses</strong>. Différent de la détection passive (alertes EDR) : le hunt est <em>actif et hypothèse-driven</em>. Méthodologie SANS FOR508 / CrowdStrike : (1) <em>formuler une hypothèse</em> ('si APT29 a compromis M-FX-487, il a probablement aussi tenté d'établir persistence via Scheduled Task signée'), (2) <em>traduire en queries</em> SIEM/EDR avec MITRE TTPs comme guide, (3) <em>exécuter</em> queries sur fenêtre temporelle pertinente, (4) <em>évaluer résultats</em> (vrai positif, faux positif, négatif), (5) <em>itérer</em> selon findings. Le hunt <em>négatif</em> (= ne rien trouver) est aussi précieux que le positif : il borne le périmètre d'incident.</li><li><strong>Sigma rules — langage de détection portable</strong>. <em>Sigma</em> (Florian Roth, 2017) est un format de détection cross-SIEM (Splunk, ElasticSearch, Sentinel, QRadar). Une règle Sigma se traduit automatiquement en queries spécifiques de chaque SIEM. Avantages : (1) <em>portabilité</em> (changez de SIEM = pas réécrire toutes les détections), (2) <em>communauté</em> (SigmaHQ GitHub : 3000+ règles open-source maintenues), (3) <em>réutilisation</em> threat intel (un IOC ou pattern devient règle Sigma → déployable instantanément). Pour le hunt Aurora : règles Sigma 'apt29_*.yml', 'cobalt_strike_*.yml', 'lateral_movement_*.yml' constituent le starter pack.</li><li><strong>H1 : Phishing wave detection</strong>. Méthodologie : (1) <em>Email forensique</em> = recherche dans M365 Compliance Center ou Mimecast : emails avec PJ .pdf ouverts entre 28 jan-8 fév, depuis domaines suspects (typosquats, free domains, low-reputation), avec PJ similaires (hash, taille, métadonnées). (2) <em>Sender pattern</em> : domaine maldives-resort-kuredu[.]com est-il apparu dans d'autres emails Aurora ? (3) <em>Recipient pattern</em> : qui d'autre que Reynard a reçu ? Quels sont leurs profils (trader, IT, compliance, executive — caractérise la stratégie de targeting attaquant). (4) <em>Open rate</em> : qui a ouvert ? Qui a cliqué la PJ ? Qui n'a pas ouvert ? (5) <em>Endpoint corrélation</em> : pour chaque clic, le host a-t-il signalé un comportement anormal post-clic (Falcon timeline) ?</li><li><strong>H2 : Lateral movement detection</strong>. Indicateurs à hunter : (1) <em>Auth events 4624 type 3 (network logon)</em> depuis M-FX-487 vers d'autres hosts dans la fenêtre 03h12-03h52. Sigma rule : <code>EventID: 4624 AND LogonType: 3 AND IpAddress: '{M-FX-487 IP}'</code>. (2) <em>SMB beacon pipes</em> (\\\\.\\pipe\\msrpc_*) sur autres hosts — signature Cobalt Strike lateral movement (T1021.002 + T1071.002). (3) <em>WMI executions</em> à distance (T1047) : Windows Event Log 'Microsoft-Windows-WMI-Activity/Operational' Event ID 5857-5861. (4) <em>RDP connections</em> (T1021.001) : EventID 4624 type 10. (5) <em>PsExec / Impacket SMBExec</em> : signature service creation transitoire (EventID 7045 + name 'PSEXESVC' ou name aléatoire). Pour Aurora : query Splunk sur 03h00-04h00 dimanche : aucun événement 4624 type 3 depuis IP M-FX-487 = bonne nouvelle.</li><li><strong>H3 : Persistence hunt</strong>. Mécanismes courants APT29 : (1) <em>Scheduled tasks</em> avec nom légitime (Microsoft Windows Defender, Cleanup, etc.) — signé Microsoft pour bypass EDR. Hunt : <code>schtasks /query /v</code> sur tous DC + servers + suspicious hosts, recherche tasks créées entre 01 fév et 14 fév, sans path standard. (2) <em>WMI Event Subscription</em> (T1546.003) : persistance furtive, peu détectée par EDR classiques. <code>Get-WMIObject -Namespace root\\subscription -Class __FilterToConsumerBinding</code>. (3) <em>Service creation</em> (T1543.003) : Event 7045 sur servers + DC. (4) <em>Registry Run keys</em> (T1547.001) : HKLM/HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run, RunOnce. (5) <em>Golden Ticket Kerberos</em> (T1558.001) : pour cela, le KRBTGT password doit être connu de l'attaquant → reset du KRBTGT (deux fois consécutifs avec délai 10h) si suspicion. (6) <em>DSRM Pwd persistence</em> : compte Directory Services Restore Mode sur DC peut être abusé. Pour Aurora : hunts négatifs sur (1)-(6) = persistence non-établie, mais reset KRBTGT 2x est recommandé en précaution (downtime AD ~30 min).</li><li><strong>Compte de service compromis — la blind spot</strong>. Les comptes de service (e.g. <code>svc_murex_runtime</code>, <code>svc_backup_aurora</code>) sont souvent les <em>oubliés</em> du hunt parce que : (a) leurs auths sont normales et fréquentes (bruit élevé), (b) ils ont souvent privilèges élevés (DBA, admin), (c) leurs mots de passe sont rarement renouvelés. APT29 cible spécifiquement ces comptes. <strong>Hunt</strong> : pour chaque compte de service utilisé depuis M-FX-487 dans les 30 derniers jours, vérifier (a) usage anormal (heures, hosts, applications), (b) password reset effectué post-incident, (c) éventuelle propagation cachée. C'est l'<em>angle mort</em> qui transforme un incident contenu en incident-fantôme qui revient 3 mois plus tard.</li></ul><p><em>Indice narratif</em> : la dimension la plus intéressante du hunt est H1. Aïsha va découvrir 2 autres emails de la même campagne — 2 autres employés Aurora ont reçu un PDF piégé similaire (sujet adapté à leur contexte personnel — un trader, un compliance officer). Ni l'un ni l'autre n'ont ouvert la PJ — pure chance ou bon hygiène ? À investiguer. Cela montre que l'attaque était <em>multi-cible</em> dans Aurora, l'attaquant a tenté plusieurs vecteurs en parallèle. Reynard a été le 'maillon faible' qui a cliqué. La leçon : <strong>la sensibilisation phishing est cruciale</strong>, et un seul employé non-formé suffit à compromettre une banque entière. Aurora va revoir son programme de formation phishing post-incident.</p>",
+  "steps": [
+    {
+      "phase": "📧 09h45 — H1 : Hunt phishing wave",
+      "situation": "Lea Martinez prend H1. Elle ouvre M365 Compliance Center → Threat Explorer → période 28 janvier - 14 février. Query : emails avec attachment .pdf, depuis domaines à faible réputation, avec keywords ['booking', 'confirmation', 'reservation', 'travel']. 43 résultats — beaucoup de bruit (emails légitimes booking.com etc.).",
+      "law": "<strong>M365 Threat Explorer</strong>. <strong>Email forensics</strong>.",
+      "question": "<strong>Comment raffinez-vous la query ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Cross-check hash PJ</strong> : SHA-256 du PDF Reynard <code>a4f8...</code> — query 'attachments hash equals'. Trouve 0 hit (les autres PDF ont des hashs uniques, attaquant utilise des PDFs polymorphes). (2) <strong>Pattern domaine</strong> : query 'sender domain matches *-resort-*' (avant le tld) — trouve 2 emails dans le périmètre, 2 destinataires Aurora distincts. (3) <strong>Heuristique structure</strong> : query 'PDF size 700-900 KB AND /JS+/OpenAction présent' — nécessite analyse PJ, à scanner via API. (4) <strong>Recipient profiles</strong> : les 2 autres destinataires sont (a) un trader Equities, (b) un compliance officer senior — patterns de targeting cohérents avec phishing préparé (trader = comme Reynard, officer = privilèges élevés). (5) <strong>Open status</strong> : ni l'un ni l'autre n'a ouvert la PJ — chance ou hygiene ? Lea les contactera pour interview.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ HUNT QUERY ITÉRATIF. Vous : (1) <em>commencez par le pattern le plus restrictif</em> (hash exact) puis élargissez progressivement, (2) <em>utilisez des heuristiques structurales</em> quand le hash ne match pas (polymorphisme), (3) <em>contextualisez les targets</em> (profils cohérents avec stratégie attaque), (4) <em>identifiez les 2 'survivants'</em> qui n'ont pas ouvert — précieux pour comprendre les défenses humaines. C'est exactement le hunt itératif enseigné chez SANS FOR578.",
+          "legal": "M365 Threat Explorer, hunting methodology."
+        }
+      ]
+    },
+    {
+      "phase": "↔ 11h30 — H2 : Lateral movement absent",
+      "situation": "Antoine Berger prend H2. Splunk query principale : <code>index=wineventlog EventID=4624 LogonType=3 IpAddress=&quot;{M-FX-487 IP}&quot; earliest=&quot;02/14/2027:03:00:00&quot; latest=&quot;02/14/2027:04:00:00&quot;</code>. Résultat : 0 hits. Antoine élargit : EventID 4625 (failed logon), 4769 (Kerberos TGS), 4648 (logon with explicit credentials) — toujours 0 depuis M-FX-487 dans la fenêtre.",
+      "law": "<strong>MITRE T1021, T1078</strong>. <strong>Windows Security EventLog</strong>.",
+      "question": "<strong>Quelle est votre conclusion ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>Conclusion provisoire forte : pas de lateral movement depuis M-FX-487</strong>. (1) 0 hit sur 5 event IDs critiques (4624/4625/4648/4769/5140) dans la fenêtre 03h00-04h00. (2) Hypothèse alternative à vérifier : <em>peut-être lateral via protocoles non-Windows</em> (SSH, custom protocols) — mais les serveurs Aurora sont quasi tous Windows + 2 Linux Ubuntu (backups + monitoring), donc faible probabilité. (3) <em>Pendant le hunt</em>, vérification SMB session events (5140) et named pipe enumeration — 0 hit anormal. (4) <strong>Cohérent avec timeline</strong> : LSASS dumpé à 03h12, isolation à 03h52 = 40 minutes — un APT prudent (APT29) ne fait pas de lateral movement en 40 min sur un host fraîchement compromis, il observe d'abord. Si compromission patient zéro confirmée mais lateral movement non-effectué, le périmètre est <strong>borné à M-FX-487</strong>. Confidence : élevée mais pas absolue (recommander 30 jours de monitoring renforcé).",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ CONCLUSION FORENSIQUE NUANCÉE. Vous : (1) <em>concluez de manière probabiliste</em> ('forte mais pas absolue'), (2) <em>investiguez l'hypothèse alternative</em> (protocoles non-Win), (3) <em>contextualisez par la timeline</em> (40 min insuffisant pour APT prudent), (4) <em>recommandez monitoring continu</em>. C'est l'humilité forensique professionnelle : on ne dit pas 'pas de lateral movement', on dit 'pas de lateral movement détecté avec haute confiance, monitoring continu recommandé'. La différence est cruciale juridiquement et opérationnellement.",
+          "legal": "MITRE Defender's Framework."
+        }
+      ]
+    },
+    {
+      "phase": "🪤 14h00 — H3 : Persistence hunt",
+      "situation": "Marc Volkov prend H3 — le plus délicat. Il exécute en parallèle : (1) hunt Scheduled Tasks sur tous DC + 50 servers + 480 workstations (4 heures de hunt automatisé via SCCM), (2) WMI Event Subscriptions audit (PowerShell script Helvecom), (3) Registry Run keys diff par rapport à baseline (snapshot 1er janvier 2027 conservé), (4) Service creation events 7045 derniers 60 jours, (5) Golden Ticket detection (anomalie TGT lifetime, encryption type). Résultat à 16h : <strong>0 persistence hors M-FX-487</strong>.",
+      "law": "<strong>MITRE Persistence tactics</strong>.",
+      "question": "<strong>Quelle recommandation finale sur persistence ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>Recommandation 3 niveaux</strong>. (1) <em>Court terme</em> : reset KRBTGT password 2 fois consécutivement avec 10h d'écart (paranoia anti-Golden Ticket, downtime AD ~30 min × 2 — accepté), reset tous les comptes de service utilisés depuis M-FX-487 derniers 60 jours, reset Reynard + 2 admins locaux M-FX-487. (2) <em>Moyen terme (30 jours)</em> : monitoring renforcé Falcon sur l'ensemble du parc (sensitivité augmentée, alertes même sur indicateurs faibles), Splunk dashboard 'Aurora Incident Watch' avec queries APT29-spécifiques (Sigma rules déployées), revue hebdomadaire SOC. (3) <em>Long terme (90 jours)</em> : compromise assessment professionnel par Mandiant ou CrowdStrike Falcon Complete OverWatch (audit externe, ~150-250k USD) — rassure FINMA + ouvre opportunité de plus larges détections, le Helvecom seul ne peut pas garantir 100% (biais cognitif de l'analyste interne). (4) <em>Documentation</em> de toutes les actions pour audit FINMA Q2 2027.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ RECOMMANDATIONS HIÉRARCHISÉES. Vous : (1) <em>actions immédiates</em> (KRBTGT 2× + reset comptes), (2) <em>renforcement monitoring</em> 30 jours, (3) <em>audit externe paranoïaque</em> 90 jours (deuxième opinion = pratique recommandée par FINMA pour incidents critiques), (4) <em>documentation pour régulateur</em>. C'est la posture défensive en profondeur — 'belt and suspenders'. Stéphane Rey approuvera ce plan, FINMA aussi.",
+          "legal": "FINMA Circular 2023/01, NIST SP 800-61 recovery."
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "ofcs_coordinator",
+    "ncsc_govcert_lead"
+  ]
+}
