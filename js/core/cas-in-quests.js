@@ -268,7 +268,7 @@
     {
       id: 'q_saga_act',
       title: 'Acte de saga',
-      desc: 'Joue un acte d\'une saga narrative (Viège, Sarine, Initiation DFIR)',
+      desc: 'Joue un acte d\'une saga narrative (Viège, Sarine, Initiation DFIR, Mistral, Tavajjoh, Beznau, Gruyère, Lobby, UNIFR, Aurora, Sarine-sur-Glâne, Mbeki, CSEM, Noirmont)',
       icon: '🎬',
       reward: 60,
       evaluate: (snap) => {
@@ -276,7 +276,18 @@
           const id = r.sceneId || '';
           return id.startsWith('vs-affaire-viege-')
               || id.startsWith('fr-affaire-sarine-')
-              || id.startsWith('easy-'); // Initiation DFIR débute par easy-
+              || id.startsWith('easy-') // Initiation DFIR débute par easy-
+              || id.startsWith('vs-affaire-mistral-')
+              || id.startsWith('gr-affaire-tavajjoh-')
+              || id.startsWith('ag-affaire-beznau-')
+              || id.startsWith('fr-affaire-gruyere-')
+              || id.startsWith('be-affaire-lobby-')
+              || id.startsWith('fr-affaire-unifr-')
+              || id.startsWith('ge-affaire-aurora-')
+              || id.startsWith('fr-affaire-sarine-glane-')
+              || id.startsWith('vd-affaire-mbeki-')
+              || id.startsWith('ne-affaire-csem-')
+              || id.startsWith('ju-affaire-noirmont-');
         });
       },
     },
