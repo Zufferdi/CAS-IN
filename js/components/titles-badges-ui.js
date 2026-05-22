@@ -126,7 +126,7 @@
     const SAGAS_LIST = [
       { id: 'initiation', label: 'Initiation DFIR', icon: '🎓' },
       { id: 'affaire_viege', label: 'L\'Affaire de la Viège', icon: '🏔' },
-      { id: 'affaire_sarine', label: 'L\'Affaire Sarine', icon: '🇫🇷' },
+      { id: 'affaire_sarine', label: 'L\'Affaire Sarine', icon: '🚨' },
       { id: 'affaire_aar_frutigen', label: 'L\'Affaire Aar-Frutigen', icon: '🏛️' },
       { id: 'affaire_singine', label: 'L\'Affaire de la Singine', icon: '🧀' },
       { id: 'affaire_gemmi', label: 'L\'Affaire de la Gemmi', icon: '⛰️' },
