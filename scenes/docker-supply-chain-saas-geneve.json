@@ -33,10 +33,22 @@
   "intro": "Mardi 19 mai 2026, 16h47. Cellule de crise improvisée chez TalentVault SA, SaaS RH genevois (siège quartier Plainpalais, ~85 employés) qui sert 3 200 entreprises clientes en CH/EU/UK pour gestion paie + dossiers RH + recrutement. CTO Adrien M. vous appelle (vous = officier liaison fedpol-Cyber + OFCS pour le secteur SaaS GE) : alerte EDR (CrowdStrike Falcon) déclenchée à 14h12 sur exfiltration anormale depuis 4 pods Kubernetes du cluster production. ~12 millions de fiches employés (nom, AVS, salaire, IBAN, photo, parfois données médicales liées à incapacités) potentiellement compromises. Contexte technique : déploiement d'une nouvelle image Docker `talentvault/api:v3.7.2` mardi matin 6h45 via pipeline CI/CD GitLab. 4h après le déploiement, comportement anormal observé. Première hypothèse Adrien : compromission de l'image. Diagnostic préliminaire son équipe : un script `postinstall` d'un package npm dans la build dépendance ouvre un reverse shell vers IP `185.220.101.x` (cluster connu de Tor exit nodes — masque). OFCS GovCERT prévenu en parallèle. Le PFPDT (Préposé fédéral protection données) sera notifié obligatoirement sous 72h (LPD Art. 24). Pour les clients EU, RGPD Art. 33 impose aussi 72h. Pression : les 3 200 entreprises clientes auront notification automatique LinkedIn/Twitter via comptes des journalistes tech qui surveillent les incidents. Fenêtre de cadrage : ~6h.",
   "alertLevel": "🐋 SUPPLY CHAIN ATTACK · TalentVault SaaS RH · Image Docker compromise · 12M fiches potentiellement exfiltrées · 3 200 entreprises clientes · 72h LPD",
   "objectives": [
-    {"icon": "🚨", "text": "Containment Kubernetes immédiat : drain pods compromis sans rupture totale service"},
-    {"icon": "🔬", "text": "Forensique layer-by-layer image Docker : identifier le package npm typosquatté"},
-    {"icon": "📋", "text": "Notification PFPDT (72h) + RGPD clients EU (72h) — cadrage juridique précis"},
-    {"icon": "🌍", "text": "Coordination OFCS + CIRT-EU + partage IoCs avant communication clients"}
+    {
+      "icon": "🚨",
+      "text": "Containment Kubernetes immédiat : drain pods compromis sans rupture totale service"
+    },
+    {
+      "icon": "🔬",
+      "text": "Forensique layer-by-layer image Docker : identifier le package npm typosquatté"
+    },
+    {
+      "icon": "📋",
+      "text": "Notification PFPDT (72h) + RGPD clients EU (72h) — cadrage juridique précis"
+    },
+    {
+      "icon": "🌍",
+      "text": "Coordination OFCS + CIRT-EU + partage IoCs avant communication clients"
+    }
   ],
   "debrief": "<p>Les <strong>attaques supply chain</strong> sont devenues le vecteur d'attaque dominant pour les acteurs sophistiqués (APT, mais aussi ransomware) depuis 2020. Statistiques ENISA 2024 : ×8 entre 2020 et 2024, ~62% des grands incidents EU passent par supply chain. Vecteurs typiques : (1) <strong>Compromission package</strong> (npm, PyPI, Maven, Cargo) via maintainer compromis ou typosquatting, (2) <strong>Compromission build pipeline</strong> CI/CD (GitHub Actions, GitLab CI, CircleCI), (3) <strong>Compromission image base Docker</strong> (Alpine, Ubuntu officielles vs forks malveillants), (4) <strong>Compromission update auto</strong> (signed updates avec clé volée — cas SolarWinds).</p>\n<p><strong>Typosquatting npm</strong> spécifique : le pattern courant est de publier un package avec nom proche d'un package légitime (ex. <code>reactt-helmet</code> vs <code>react-helmet</code>, ~60M downloads/mois). Les développeurs distraits pip-installent la mauvaise version, et le script <code>postinstall</code> exécute du code arbitraire avant même que le code applicatif ne tourne. La communauté npm a renforcé les défenses depuis 2022 (Sigstore, package provenance) mais les ~2.5M packages npm restent largement non-vérifiés.</p>\n<p><strong>Forensique Docker layer-by-layer</strong> : (a) Récupérer l'image compromise depuis le registry (Docker Hub, GitLab Registry, AWS ECR), (b) Inspecter chaque layer via <code>docker history</code> + <code>dive</code> (outil open-source), (c) Identifier la layer où le package compromis a été introduit, (d) Diff avec une image build précédent compromission, (e) Extraire le code malveillant (souvent obfusqué JavaScript). Outils : Trivy, Grype pour le scan de vulnérabilités, mais pour la forensique d'attaque c'est manuel + reverse engineering JS.</p>\n<p><strong>Notification LPD Art. 24 + RGPD Art. 33</strong> : 72h à partir de la <em>connaissance</em> de la violation (pas de la suspicion initiale). La pratique PFPDT post-2023 (entrée vigueur nouvelle LPD) : (a) notification initiale dans 72h, même si incomplète, (b) compléments dans les jours/semaines suivants, (c) communication aux personnes concernées (pas employés directement, mais entreprises clientes qui ensuite notifient leurs employés). Sanction LPD Art. 60 : amende jusqu'à 250 000 CHF pour personne physique responsable, plus pour personne morale via art. 102 CP (responsabilité de l'entreprise).</p>\n<p><strong>Containment Kubernetes</strong> : la doctrine moderne (NIST SP 800-204C 2024) recommande : (1) <strong>Cordon</strong> les nodes pour empêcher nouveaux pods compromis (sans arrêt total), (2) <strong>Drain</strong> les pods compromis avec PreStop hook, (3) <strong>Image pull policy: Always</strong> + révocation tag malveillant dans registry, (4) <strong>NetworkPolicy strict</strong> pour bloquer egress vers IPs suspectes pendant l'investigation. Maintien d'un mode dégradé (read-only) pour les clients = idéal mais exige préparation préalable (pas toujours en place).</p>",
   "steps": [
@@ -192,5 +204,6 @@
     "flag": "🇨🇭",
     "name": "Genève"
   },
-  "region": "CH"
+  "region": "CH",
+  "role": "police"
 }
