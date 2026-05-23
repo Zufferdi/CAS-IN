@@ -228,6 +228,25 @@
         background: var(--surface2); border: 1px solid var(--border);
         color: var(--cyan); font-family: var(--font-mono); font-weight: 700;
       }
+      /* ── Role pill ── */
+      .v4-id-role-pill {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 3px 9px 3px 7px; border-radius: 11px;
+        font-size: 12px; font-weight: 600;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+      .v4-id-role-icon {
+        font-size: 13px; line-height: 1;
+        font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Twemoji Mozilla', system-ui, sans-serif;
+      }
+      .v4-id-role-pill[data-role="police"]      { border-color: rgba(0,229,204,.5);   color: var(--cyan); }
+      .v4-id-role-pill[data-role="procureur"]   { border-color: rgba(201,125,245,.5); color: var(--purple); }
+      .v4-id-role-pill[data-role="dfir"]        { border-color: rgba(48,232,138,.5);  color: var(--green); }
+      .v4-id-role-pill[data-role="journaliste"] { border-color: rgba(240,192,64,.5);  color: var(--gold); }
+      .v4-id-role-pill[data-role="etat"]        { border-color: rgba(106,184,255,.5); color: var(--blue); }
+      .v4-id-role-pill[data-role="soignant"]    { border-color: rgba(255,159,64,.5);  color: var(--orange); }
 
       /* ── Briefing — sensitive warning ── */
       .v4-sensitive-warning {
@@ -559,6 +578,18 @@
     };
     const atmLabel = atmosphereLabels[scene.atmosphere] || (scene.atmosphere || 'Standard');
     const diffLabel = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile', expert: 'Expert' }[scene.difficulty] || scene.difficulty;
+    const roleLabels = {
+      police: { label: 'Police', icon: '🚔' },
+      procureur: { label: 'Procureur·e', icon: '⚖️' },
+      dfir: { label: 'DFIR', icon: '🔬' },
+      journaliste: { label: 'Journaliste', icon: '📰' },
+      etat: { label: 'État', icon: '🏛️' },
+      soignant: { label: 'Soignant·e', icon: '🏥' }
+    };
+    const roleInfo = roleLabels[scene.role] || null;
+    const roleHtml = roleInfo
+      ? `<span class="v4-id-role-pill" data-role="${scene.role}"><span class="v4-id-role-icon">${roleInfo.icon}</span>${roleInfo.label}</span>`
+      : '—';
     // v2.53 : utilise regionDetail si dispo (canton CH ou pays UE), sinon fallback sur scene.region
     // v2.59 : remplace l'emoji 🇨🇭 (qui ne distingue pas les cantons) par un SVG cantonal
     //         via le module SwissFlags (resolves code or name).
@@ -602,6 +633,10 @@
       <div class="v4-id-cell">
         <span class="v4-id-label">Atmosphère</span>
         <span class="v4-id-value">${atmLabel}</span>
+      </div>
+      <div class="v4-id-cell">
+        <span class="v4-id-label">Rôle</span>
+        <span class="v4-id-value">${roleHtml}</span>
       </div>
       <div class="v4-id-cell">
         <span class="v4-id-label">Région</span>
