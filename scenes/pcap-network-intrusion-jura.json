@@ -33,10 +33,22 @@
   "intro": "Vendredi 12 juin 2026, 14h22. Salle de crise IT de l'Administration cantonale jurassienne (ACJU), Delémont. Le SOC cantonal (sous-traité à Kudelski Security via mandat 2024) a détecté à 11h47 du trafic réseau anormal vers IPs attribuées par Mandiant à un cluster APT (probable APT28 ou TURLA — cluster TEMP.Armageddon). Le trafic vient de plusieurs postes utilisateurs : Service de l'Économie + Service de la Justice + Service des Communes. Beaconing C2 régulier (jitter 30s, mais détecté par anomalie) + tunnels DNS suspects vers `*.weather-service.eu` (domaine enregistré 4 mois plus tôt via NameCheap). Le SOC évalue : intrusion en cours depuis ~8 semaines, dwell time typique d'attaque ciblée. Coordonnée avec OFCS GovCERT, le chef du Service IT du canton (M. P.) demande une analyse forensique détaillée avec capture trafic complète. Vous êtes officier liaison fedpol-Cyber + co-responsable forensique réseau. La complexité juridique majeure : la capture trafic à grande échelle (47 GB sur 72 heures depuis l'alerte) couvre AUSSI les communications privées des fonctionnaires et de leurs interlocuteurs (citoyens, avocats, médecins). Cette capture est-elle conforme à la LSCPT (Loi fédérale sur la surveillance de la correspondance par poste et télécommunication) ou faut-il un cadre TMC formel pour chaque utilisateur ? Le procureur ministère public JU veut votre cadrage juridique avant action.",
   "alertLevel": "📡 INTRUSION APT ADM. CANTONALE · ~8 semaines dwell time · DNS tunneling vers C2 · 47 GB PCAP · LSCPT cadre à clarifier · TMC à saisir",
   "objectives": [
-    {"icon": "⚖️", "text": "Cadrer juridiquement la capture PCAP : LSCPT vs CPP art. 269-279 (TMC obligatoire ou non ?)"},
-    {"icon": "🔬", "text": "Analyser PCAP avec Zeek + Suricata + Wireshark : reconstruction kill-chain"},
-    {"icon": "🌐", "text": "Identifier C2 + DNS tunneling + attribution probabiliste APT"},
-    {"icon": "🛡️", "text": "Containment proportionné + protection vie privée fonctionnaires + données citoyens"}
+    {
+      "icon": "⚖️",
+      "text": "Cadrer juridiquement la capture PCAP : LSCPT vs CPP art. 269-279 (TMC obligatoire ou non ?)"
+    },
+    {
+      "icon": "🔬",
+      "text": "Analyser PCAP avec Zeek + Suricata + Wireshark : reconstruction kill-chain"
+    },
+    {
+      "icon": "🌐",
+      "text": "Identifier C2 + DNS tunneling + attribution probabiliste APT"
+    },
+    {
+      "icon": "🛡️",
+      "text": "Containment proportionné + protection vie privée fonctionnaires + données citoyens"
+    }
   ],
   "debrief": "<p>La <strong>capture PCAP forensique</strong> à grande échelle dans une administration publique pose des questions juridiques complexes en CH. Trois cadres légaux peuvent s'appliquer selon situation : (1) <strong>Mesures techniques de l'employeur</strong> (LTr + jurisprudence ATF 139 II 7) : l'employeur peut surveiller les communications professionnelles à des fins de sécurité du SI, sous conditions strictes (information préalable des collaborateurs via charte IT, finalité légitime, proportionnalité, anonymisation par défaut). (2) <strong>LSCPT + CPP art. 269-279</strong> : si l'enquête vise une infraction au sens du catalogue art. 269 al. 2 CPP (cybercrime, ART. 144bis, terrorisme, etc.), le TMC autorise des mesures techniques particulières. Procédure formelle. (3) <strong>LSI Art. 12-14 + LSCPT</strong> : pour les infrastructures critiques, des mesures spécifiques de protection peuvent être ordonnées par fedpol/OFCS.</p>\n<p><strong>Distinction clé</strong> : <em>capture défensive</em> par administrateur SI à des fins de protection = LTr + charte IT (légère mais limitée à anonymisé/agrégé) vs <em>capture investigatrice</em> visant à identifier auteurs et caractériser infraction = LSCPT + CPP art. 269-279 (lourde, TMC obligatoire). Le cas ACJU bascule clairement dans la 2e catégorie : intrusion APT, soupçon art. 144bis CP, intention d'identifier auteurs et de poursuivre pénalement → TMC obligatoire pour capture trafic spécifique.</p>\n<p><strong>Outils analyse PCAP</strong> : (a) <strong>Wireshark</strong> pour analyse interactive, (b) <strong>Zeek</strong> (ex-Bro) pour parsing protocolaire massif → logs structurés (conn.log, dns.log, http.log, ssl.log), (c) <strong>Suricata</strong> pour détection IDS sur règles ET-Open + ET-Pro + Emerging Threats. Pour DNS tunneling spécifiquement : analyse du ratio nombre/longueur subdomains (subdomain trop long et/ou aléatoire), entropie des subdomains, fréquence requêtes. Pour Cobalt Strike : signatures de jitter, beacon size, fingerprints SSL/TLS JA3.</p>\n<p><strong>DNS tunneling</strong> : technique exfiltration consistant à encoder données dans des sous-domaines DNS qui sont résolus par un serveur DNS contrôlé par l'attaquant. Ex : `aGVsbG8.weather-service.eu` (subdomain = base64 \"hello\"). Détection difficile car le trafic DNS est rarement bloqué/inspecté. Outils défensifs : DNS Firewall (DNSFiltr, Cisco Umbrella, OISF Watchtower), monitoring entropie, statistiques requête. Outils offensifs documentés : iodine, dnscat2, DNSExfiltrator.</p>\n<p><strong>Attribution APT</strong> : exercice probabiliste basé sur 4 piliers : (a) <strong>Tooling</strong> (Cobalt Strike beacons configurés de manière spécifique, malware custom), (b) <strong>Infrastructure</strong> (clusters d'IPs/domaines réutilisés), (c) <strong>TTPs</strong> (modus operandi, sous-clusters MITRE ATT&CK), (d) <strong>Targeting</strong> (intérêts géopolitiques cohérents). Sources : Mandiant FLARE, CrowdStrike Falcon Intel, ANSSI Reports, NSA/CISA advisories. La doctrine est de COMMUNIQUER L'ATTRIBUTION AVEC RESERVE — \"signatures rappelant\" ou \"compatibles avec\" plutôt que \"est attribué à\". L'attribution publique formelle est une décision politique (DFAE pour la CH).</p>",
   "steps": [
@@ -192,5 +204,6 @@
     "flag": "🇨🇭",
     "name": "Jura"
   },
-  "region": "CH"
+  "region": "CH",
+  "role": "dfir"
 }
