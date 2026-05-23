@@ -1,0 +1,159 @@
+{
+  "id": "phishing",
+  "title": "Le Mail Suspect",
+  "icon": "🎣",
+  "difficulty": "easy",
+  "atmosphere": "network",
+  "narrative": {
+    "success": "Votre analyse confirme le phishing avec des indicateurs techniques clairs. Les IoC extraits permettent au SOC de détecter d'autres tentatives dans l'entreprise. L'employé est rassuré et félicité pour son signalement.",
+    "degraded": "L'analyse est globalement correcte mais certains indicateurs ont été mal interprétés. Le SOC doit compléter le travail. Le signalement a quand même permis de bloquer le phishing.",
+    "failure": "Diagnostic erroné. Soit un vrai phishing a été classé en faux positif (risque de propagation), soit un mail légitime a été qualifié de phishing (frustration utilisateur, blocage inutile). Votre crédibilité d'analyste est entamée."
+  },
+  "tags": [
+    "RÉSEAUX",
+    "DROIT",
+    "EASY",
+    "PHISHING",
+    "EMAIL FORENSICS"
+  ],
+  "legalRefs": [
+    "Art. 143bis CP",
+    "Art. 146 CP",
+    "MITRE ATT&CK T1566"
+  ],
+  "intro": "09h15. Un employé de l'entreprise signale via le bouton \"Signaler phishing\" d'Outlook un email qui lui semble suspect. L'objet : \"Validation urgente de votre compte — action requise sous 24h\". Vous êtes analyste SOC de garde. Le mail doit-il être bloqué ? Est-ce une vraie menace ?",
+  "alertLevel": "🎣 PHISHING ACTIF — Infrastructure malveillante toujours opérationnelle",
+  "objectives": [
+    {
+      "icon": "🔍",
+      "text": "Analyser techniquement les en-têtes et le contenu d'un email"
+    },
+    {
+      "icon": "🎯",
+      "text": "Identifier les indicateurs de phishing (MITRE T1566)"
+    },
+    {
+      "icon": "📨",
+      "text": "Répondre de façon pédagogique à l'employé"
+    }
+  ],
+  "debrief": "<p>Le signalement d'emails phishing par les employés est le pilier le plus efficace de la défense contre l'ingénierie sociale. Un analyste SOC traite parfois 50-100 signalements par jour : il doit trier vite ET bien.</p><p>L'analyse repose sur : (1) l'examen des en-têtes SMTP (SPF/DKIM/DMARC, IP d'origine, routage), (2) l'analyse du contenu (urgence artificielle, liens, pièces jointes, fautes), (3) la corroboration avec threat intel (VirusTotal, URLScan, bases de phishing connu). La réponse à l'employé doit être pédagogique, jamais condescendante.</p><p><strong>Référence CH</strong> : MPC, acte d'accusation 04.04.2024 — dans l'affaire du réaltime-phishing bancaire suisse (CHF 2.4M, 2022-2025), le MPC a retenu Art. 147 al. 1 et al. 2 CP (utilisation frauduleuse par métier) pour les kits de phishing bancaires. TF 6B_683/2021 (2022) : l'aggravante du métier exige fréquence + montant + organisation professionnelle.</p>",
+  "steps": [
+    {
+      "phase": "📧 L'analyse des en-têtes",
+      "situation": "Vous examinez les en-têtes techniques du mail :<br><br>\n<div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:.76rem;line-height:1.6;font-family:monospace\">\nFrom: <span style=\"color:#ff6b9d\">Support &lt;support@micros0ft-security.com&gt;</span><br>\nReturn-Path: <span style=\"color:#ff6b9d\">support@micros0ft-security.com</span><br>\nSPF: <span style=\"color:#ff6b9d\">fail</span> (domaine non autorisé)<br>\nDKIM: <span style=\"color:#ff6b9d\">none</span> (pas de signature)<br>\nDMARC: <span style=\"color:#ff6b9d\">fail</span><br>\nReceived from: 185.220.101.X (nœud Tor)\n</div>",
+      "law": "<strong>SPF/DKIM/DMARC</strong> — Standards anti-usurpation email (RFC 7208, 6376, 7489).<br><strong>MITRE ATT&CK T1566.002</strong> — Spearphishing Link.",
+      "question": "<strong>Que concluez-vous des en-têtes ?</strong>",
+      "choices": [
+        {
+          "text": "Probablement un faux positif lié à un relais SMTP mal configuré chez un partenaire Microsoft — les échecs SPF/DKIM se voient régulièrement sur des mails légitimes routés via des plateformes marketing tierces, à vérifier avant alerte.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Lecture erronée. Le domaine est <code>micros0ft-security.com</code> (avec un zéro, pas un o) — c'est un typosquat classique. SPF/DKIM/DMARC tous en échec + origine nœud Tor = indicateurs cumulés incontestables de phishing. Microsoft envoie depuis <code>microsoft.com</code> avec SPF/DKIM valides.",
+          "legal": "RFC 7208/6376/7489 — Les 3 échecs simultanés sont un indicateur fort.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Phishing confirmé : (1) Typosquat sur le domaine (micros0ft avec zéro), (2) SPF/DKIM/DMARC tous échoués, (3) Origine Tor = dissimulation de l'IP réelle. Tous les indicateurs techniques convergent.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Analyse parfaite. Vous avez identifié les 3 faisceaux d'indicateurs : usurpation de marque (typosquat), échec des contrôles d'authentification, masquage de l'origine. Aucun n'est isolé — leur convergence rend la classification certaine.",
+          "legal": "MITRE ATT&CK T1566.002 + standards email — Classification technique solide.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Les en-têtes seuls ne suffisent pas à trancher — il faut ouvrir le mail dans un environnement sandbox isolé pour analyser la charge utile (pièces jointes, scripts, redirections) avant de qualifier définitivement l'incident.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Trop prudent. Les en-têtes suffisent déjà à classifier. L'analyse en sandbox est utile pour les malwares en pièce jointe, pas pour un phishing classique. Ne pas bloquer immédiatement un phishing évident = exposer d'autres employés.",
+          "legal": "Pratique SOC — Priorisation : en-têtes + URL > sandbox pour phishing standard.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔗 L'analyse du lien",
+      "situation": "Le mail contient un lien : « Cliquez ici pour sécuriser votre compte ». L'URL réelle (révélée au survol) est <code>https://bit.ly/3xZ9kP2</code> — un raccourcisseur. Vous devez décider si vous investiguez plus loin ou si les en-têtes suffisent.",
+      "law": "<strong>URLScan.io</strong> / <strong>VirusTotal</strong> — Services d'analyse URL.<br><strong>MITRE ATT&CK T1204.001</strong> — User Execution: Malicious Link.",
+      "question": "<strong>Comment analysez-vous le lien ?</strong>",
+      "choices": [
+        {
+          "text": "Cliquer sur le lien depuis une machine d'analyse isolée du réseau de production pour observer la redirection finale et capturer les en-têtes HTTP — l'analyse dynamique reste le moyen le plus fiable de qualifier la chaîne de redirections.",
+          "ok": false,
+          "pts": -30,
+          "fb": "📍 BIFURCATION NARRATIVE — Catastrophe initiale phishing. Cliquer sur le lien suspect depuis un poste de production normal pour vérifier où il mène (au lieu d'utiliser une sandbox isolée ou un service tiers comme urlscan.io / VirusTotal) compromet potentiellement le poste de l'analyste avec malware-as-a-service ou exploit kit, et propage l'incident dans le réseau de l'entreprise plutôt que de le contenir au seul email signalé. La doctrine SOC standard impose la sandbox systématique pour vérification URL. Violation majeure des bonnes pratiques. Cliquer = (1) signaler à l'attaquant que le mail a été ouvert (beacon), (2) exposer votre machine SOC à un exploit drive-by, (3) potentiellement divulguer l'adresse IP de votre organisation. Un analyste SOC ne clique JAMAIS sur les URL suspectes, même « pour vérifier ».",
+          "legal": "Pratique SOC + sandbox obligatoire — Jamais d'ouverture directe.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Utiliser URLScan.io et VirusTotal pour analyser le lien sans l'ouvrir. Examiner la destination finale + captures d'écran + scores de détection.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Méthode standard SOC. URLScan donne une capture de la page sans exposer votre IP. VirusTotal aggrège 70+ moteurs de détection. Combinés, ils donnent un verdict fiable sans aucun risque pour votre infrastructure.",
+          "legal": "OWASP + Pratique SOC — Analyse URL externalisée.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Renvoyer le mail à l'employé en lui demandant de cliquer dans un environnement contrôlé et de décrire la page qui s'affiche — l'utilisateur est déjà ciblé, son retour terrain complète utilement l'analyse technique du SOC.",
+          "ok": false,
+          "pts": -35,
+          "fb": "Inacceptable. Demander à un non-technicien d'interagir avec un phishing confirmé = l'exposer (ou des collègues) au vol d'identifiants. C'est l'opposé de votre mission de protection. Le bouton \"Signaler\" existe précisément pour que l'employé ne clique PAS.",
+          "legal": "Violation du devoir de protection + Art. 143bis CP potentiel si vol.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "📤 La réponse à l'employé",
+      "situation": "L'analyse confirme un phishing. URLScan montre une page d'identification Microsoft contrefaite. Vous devez maintenant répondre à l'employé qui attend votre retour pour savoir s'il a « bien fait ».",
+      "law": "<strong>Principe de pédagogie positive</strong> — Renforcer les bons réflexes.<br><strong>Pratique GovCERT</strong> — Communication proactive.",
+      "question": "<strong>Quel ton adoptez-vous dans votre réponse ?</strong>",
+      "choices": [
+        {
+          "text": "« Phishing confirmé. Pour la prochaine fois : vérifiez toujours le domaine exact (le zéro à la place du o ici), regardez les en-têtes via « Afficher l'original », et méfiez-vous de tout ce qui invoque l'urgence sécuritaire. La formation interne couvre ces points. »",
+          "ok": false,
+          "pts": -25,
+          "fb": "Réponse contre-productive. Culpabiliser un employé qui a CORRECTEMENT signalé un phishing = décourager les futurs signalements. La formation à la détection viendra par les moyens habituels ; le SOC remercie et encourage.",
+          "legal": "Pratique GovCERT + psychologie de la sécurité — Jamais culpabiliser les bons réflexes.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "« Excellent réflexe de signalement ! Confirmation : c'était un phishing (typosquat Microsoft + page contrefaite). Le mail est bloqué pour tous. Si vous avez cliqué ou entré vos identifiants, contactez-moi immédiatement, sinon tout va bien. Bravo. »",
+          "ok": true,
+          "pts": 25,
+          "fb": "Réponse idéale. Vous félicitez (renforce le comportement), expliquez brièvement (pédagogie), informez de l'action prise (transparence), et ouvrez la porte si problème (sécurité). Ce type de réponse augmente mesurablement le taux de signalement dans les entreprises.",
+          "legal": "Bonnes pratiques SOC + communication positive — Standard moderne.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Confirmer techniquement le blocage à l'équipe IT et clôturer le ticket sans relancer l'employé — multiplier les communications sur chaque phishing détecté finit par lasser les utilisateurs et dilue les vrais messages d'alerte.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Occasion manquée. Sans retour, l'employé ne sait pas si son signalement a servi à quelque chose. La prochaine fois, il hésitera ou ne signalera pas. Un retour rapide (même bref) est un investissement dans la culture de sécurité.",
+          "legal": "Pratique moderne — Feedback loop = pilier de la sensibilisation cyber.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "ofs_rssi_fedch",
+    "forensics_lead_zh"
+  ],
+  "regionDetail": {
+    "code": "CH",
+    "flag": "🇨🇭",
+    "name": "Suisse"
+  },
+  "realCase": "Cas pédagogique synthétique inspiré des incidents forensiques typiques rencontrés dans la pratique cantonale et fédérale suisse. Données et personnages anonymisés à des fins de formation.",
+  "region": "CH"
+}

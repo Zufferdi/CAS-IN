@@ -1,0 +1,271 @@
+{
+  "id": "handala-hack-iran-rhne-stryker",
+  "title": "Neuchâtel — Handala touche un sous-traitant Stryker",
+  "icon": "🏥",
+  "difficulty": "medium",
+  "tags": [
+    "NEUCHÂTEL",
+    "SUPPLY CHAIN",
+    "HANDALA",
+    "IRAN APT",
+    "MICROSOFT INTUNE",
+    "MEDTECH",
+    "OFCS"
+  ],
+  "alertLevel": "élevé",
+  "atmosphere": "state",
+  "intro": "Mercredi 11 mars, 06h47. Vous êtes <strong>Mme Pellet, CISO de Rhône-Médical SA</strong> à Neuchâtel — PME medtech de 220 employés, certifiée ISO 13485 et IATF 16949, sous-traitante de <strong>Stryker</strong> (le géant US des dispositifs médicaux) pour la production de composants d'implants orthopédiques en titane. Votre tenant Microsoft Entra/Intune affiche le logo de <strong>Handala</strong> (un groupe iranien lié au MOIS, déjà responsable d'attaques contre Clalit en Israël et plusieurs cibles US). 47 laptops et 23 mobiles employés ont été wipés à distance pendant la nuit via une politique Intune malveillante. Votre directeur, M. Wyss, vient de raccrocher avec le CIRT Stryker US : <em>« On vit la même chose chez nous, à l'échelle planétaire — 79 pays touchés, 200 000 appareils wipés, 50 TB exfiltrés. Le FBI nous a contactés à 02h GMT, leur Legat à Berne va vous appeler. Comment ça se fait que vous soyez touchés vous aussi ? Vous avez été le point d'entrée chez nous, ou c'est vous qui avez été latéralisés depuis nous ? »</em> Vous avez 4 priorités immédiates dans la prochaine heure : (A) sécuriser ce qui peut l'être avant que l'attaquant ne progresse, (B) préserver les preuves forensiques (logs Intune, Entra sign-ins, M365), (C) notifier les autorités suisses (OFCS, PFPDT au titre de la nLPD), (D) coordonner avec Stryker US et le FBI Legat sans contaminer la procédure suisse. Vous savez que la <strong>juridiction</strong> est <strong>fédérale</strong> (cybercriminalité touchant CII medtech, art. 24 CPP en cas de qualification) avec coordination MPC.",
+  "objectives": [
+    {
+      "icon": "🎯",
+      "text": "Sécuriser le tenant Microsoft Intune/Entra et stopper la latéralisation"
+    },
+    {
+      "icon": "📋",
+      "text": "Préserver les preuves forensiques (logs M365, Sign-ins, Audit Logs Intune)"
+    },
+    {
+      "icon": "⚖️",
+      "text": "Notifier OFCS, fedpol et PFPDT (nLPD art. 24, 72h)"
+    },
+    {
+      "icon": "🔬",
+      "text": "Coordonner avec le CIRT Stryker US et le FBI Legat sans contaminer la procédure"
+    },
+    {
+      "icon": "🛡️",
+      "text": "Communiquer aux 220 employés et aux clients (hôpitaux suisses recevant les implants)"
+    },
+    {
+      "icon": "🔬",
+      "text": "Capitaliser : durcir la chaîne supply chain medtech après l'incident"
+    }
+  ],
+  "legalRefs": [
+    "art. 143 CP (soustraction de données)",
+    "art. 144bis CP (détérioration de données)",
+    "nLPD art. 24 (notification PFPDT 72h)",
+    "art. 24 CPP (compétence MPC)",
+    "MITRE ATT&CK T1098 / T1486 (wiper)",
+    "ISO 13485 / IATF 16949 (incidents impactant la production medtech)",
+    "Convention de Budapest art. 25 (urgence)",
+    "MLAT US-CH"
+  ],
+  "npcs": [
+    "ciso_medsupplier_ne",
+    "fbi_legat_bern",
+    "ofcs_coordinator"
+  ],
+  "steps": [
+    {
+      "phase": "Phase 1 — Confinement et préservation (T+0 à T+4h)",
+      "situation": "07h00. Vous êtes au bureau de Rhône-Médical à Marin-Épagnier. La direction vous regarde, attendant des décisions rapides. Vous savez que toute mauvaise manipulation peut détruire les preuves nécessaires à l'attribution et à la coordination US/CH. Le tenant Intune montre 47 laptops et 23 mobiles wipés. Vous suspectez que d'autres machines pourraient être affectées dans les heures qui viennent (politiques Intune programmées). Le compte d'administrateur global Entra montre 4 connexions étranges depuis des plages d'IP Starlink dans les 6 derniers jours.",
+      "question": "Quelle est votre approche de confinement immédiat ?",
+      "law": "doctrine OFCS sur la réponse incident, NIST SP 800-61, MITRE D3FEND",
+      "choices": [
+        {
+          "text": "Approche graduée : (1) Geler le tenant Intune en mode \"break glass\" — désactiver toute nouvelle politique de déploiement, mais NE PAS supprimer les politiques existantes (preuves), (2) Révoquer immédiatement les sessions actives du compte admin global suspect via Entra (Sign-out everywhere) et changer les credentials avec rotation Privileged Identity Management, (3) Isoler le réseau OT (production d'implants) du réseau IT — couper le pont VLAN, c'est la chaîne critique, (4) Préserver les logs : export immédiat Audit Logs (90 jours rétention max), Sign-ins, Intune device actions, M365 Purview, vers stockage forensic chiffré séparé hors-tenant. Documenter chaque action en time-stamping pour la chaîne de garde.",
+          "ok": true,
+          "pts": 35,
+          "fb": "Approche méthodique exemplaire. Le <strong>break glass mode sur Intune</strong> est crucial : supprimer les politiques malveillantes effacerait les preuves de l'attaquant (les politiques Intune sont le point central de l'attaque Handala — c'est par là que le wiper a été déployé). La <strong>révocation des sessions actives</strong> sur le compte admin compromis stoppe la latéralisation immédiate sans détruire les artefacts. L'<strong>isolation OT/IT</strong> protège la chaîne de production des implants (qui peut tourner en autonomie quelques jours sans IT — les certifications ISO 13485 / IATF 16949 imposent cette ségrégation). L'<strong>export des logs Intune (90 jours rétention)</strong> est urgent : ces logs sont volatiles et un attaquant qui détecte la réponse peut tenter de les saturer. Le bon réflexe est l'export hors-tenant vers stockage forensic chiffré.",
+          "legal": "doctrine OFCS, NIST SP 800-61, MITRE D3FEND, art. 192 CPP (chaîne de garde)",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Réinitialiser immédiatement le tenant Microsoft Entra/Intune complet : supprimer toutes les politiques Intune existantes (y compris les malveillantes qui ont déclenché le wiper), réinitialiser le compte admin global compromis, redémarrer manuellement toutes les machines en mode safe pour repartir d'un état propre. C'est l'approche \"clean slate\" rapide qui restaure la production en quelques heures et permet aux 220 employés de reprendre leur travail sans attendre un long processus de préservation forensique potentiellement disproportionné.",
+          "ok": false,
+          "pts": -32,
+          "fb": "📍 BIFURCATION NARRATIVE — Catastrophe forensique. La <strong>suppression des politiques malveillantes</strong> détruit les preuves centrales de l'attaque : sans le contenu de la politique Intune malveillante (script, paramètres, scope, timestamp), il sera impossible de reconstruire le mode opératoire de Handala, d'identifier le moment précis de la compromission de l'admin global, et de partager les IOCs avec Stryker US, le FBI Legat et l'OFCS. La <em>réinitialisation complète</em> efface aussi les logs Audit/Sign-in conservés à court terme. Conséquences : (a) Stryker US ne peut pas confirmer si Rhône-Médical était point d'entrée ou victime latérale, (b) le FBI Legat ne peut pas verser les IOCs au pool national CISA, (c) la procédure pénale suisse part sans preuves directes, (d) la nLPD art. 24 est notifiée sans pouvoir caractériser l'étendue (le PFPDT exigera des explications). Le scénario s'arrête immédiatement.",
+          "legal": "art. 192 CPP, art. 144bis CP, doctrine OFCS",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Couper immédiatement et complètement la connexion internet de l'ensemble de Rhône-Médical en mode \"airgap d'urgence\" en débranchant physiquement les routeurs principaux à 07h05. Aucune coordination avec Stryker US ni notification autorités tant qu'on n'a pas une vue claire en interne dans les 48 heures suivantes. La priorité absolue est de stopper l'hémorragie potentielle, et la coordination internationale peut attendre que le périmètre interne soit pleinement maîtrisé. Approche radicale de containment privilégiant l'isolement.",
+          "ok": false,
+          "pts": -22,
+          "fb": "Approche surréactive et contre-productive. (a) <em>L'airgap complet</em> coupe aussi le tenant Microsoft cloud auquel vous avez besoin d'accéder pour préserver les logs (les logs Audit/Sign-ins sont dans le cloud, pas en local — couper internet = perte d'accès aux preuves). (b) <em>Pas de coordination Stryker US</em> dans les 48h = vous laissez Stryker dans le brouillard alors qu'ils ont besoin de savoir si Rhône-Médical a été point d'entrée pour ajuster leur propre réponse globale. (c) <em>Pas de notification OFCS/PFPDT</em> dans les 48h = violation de la nLPD art. 24 (72h max) et perte de la légitimité de demande d'appui OFCS. <strong>Bon réflexe :</strong> isolation ciblée et préservation, pas airgap radical.",
+          "legal": "doctrine OFCS, NIST SP 800-61, MITRE D3FEND, art. 192 CPP (chaîne de garde)",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "Phase 2 — Notification et coordination internationale (T+4h à T+24h)",
+      "situation": "11h00. Le confinement est en place. Les logs sont préservés. Vous avez identifié le vecteur initial : un compte admin global créé il y a 6 jours via une persistance OAuth obtenue par un phishing très ciblé sur un de vos administrateurs (qui a confondu un faux portail Microsoft avec le vrai). Le FBI Legat à Berne (Special Agent Donovan) vous appelle, demande à coordonner. La coordinatrice OFCS (Mme Tschanz) propose une réunion à Berne en début d'après-midi. Le PFPDT a été pré-notifié par votre direction.",
+      "question": "Comment articulez-vous les notifications et la coordination internationale ?",
+      "law": "nLPD art. 24, MLAT US-CH, doctrine OFCS, art. 73 CPP (secret enquête)",
+      "choices": [
+        {
+          "text": "Architecture en 4 cercles : (1) <strong>OFCS comme hub central</strong> — Mme Tschanz coordonne le partage IOCs avec fedpol PJF et le MPC en stand-by, (2) <strong>FBI Legat Donovan</strong> reçoit les IOCs techniques (hashes, IPs Starlink, signatures politiques Intune malveillantes) via canal MLAT light/Convention Budapest art. 31, sans transmettre les données personnelles employés/clients sans demande formelle, (3) <strong>Stryker US CIRT</strong> reçoit les éléments techniques sous NDA cross-corporate (les deux sociétés ont un intérêt commun à comprendre la latéralisation), (4) <strong>PFPDT</strong> notifié formellement avec les éléments connus à T+24h max : nature de l'incident, données potentiellement exfiltrées (RH, prod), mesures correctrices. Pas de communication presse à ce stade. Audit Lookout/Mandiant/CrowdStrike envisagé pour la phase d'analyse approfondie.",
+          "ok": true,
+          "pts": 35,
+          "fb": "Architecture exemplaire. Le <strong>OFCS hub</strong> est précisément ce que la doctrine NCSC recommande : un opérateur privé compromis articule sa coordination via l'autorité publique nationale, qui à son tour articule avec les autorités étrangères. La <em>distinction IOCs techniques vs. données personnelles</em> est cruciale : les IOCs (hashes, IPs, signatures) peuvent être partagés rapidement (Convention Budapest art. 31, urgence), mais les données personnelles (employés, clients hôpitaux) requièrent un cadre MLAT formel et l'autorisation PFPDT. Le <em>NDA cross-corporate</em> avec Stryker US est légitime — sociétés liées par contrat de sous-traitance ayant un intérêt commun à comprendre la latéralisation. La <em>pré-notification PFPDT</em> par la direction puis la formalisation à T+24h respecte la nLPD art. 24 (72h max).",
+          "legal": "nLPD art. 24, Convention Budapest art. 31, MLAT US-CH, doctrine OFCS",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Transmettre directement et sans filtre toutes les données disponibles (logs Audit complets de Microsoft 365, listes employés avec données RH personnelles, listes de clients hôpitaux suisses et étrangers avec coordonnées, données de production OT relatives aux composants d'implants, contenu intégral des emails compromis identifiés dans le tenant) au FBI Legat Donovan et au CIRT Stryker US via WeTransfer non chiffré ou par email standard. Plus on partage rapidement et largement, mieux ils peuvent agir et nous appuyer dans la coordination internationale post-incident. La nLPD et les considérations de transmission internationale de données personnelles sont des détails administratifs qu'on règlera après la phase aiguë de l'incident.",
+          "ok": false,
+          "pts": -28,
+          "fb": "Cinq problèmes en cascade. (1) <em>Transmission non chiffrée</em> : exposer 50 TB de données potentiellement déjà exfiltrées sur un canal non sécurisé = aggravation de la fuite, possibilité d'interception par l'attaquant qui surveille votre réseau. (2) <em>Pas de filtre IOCs vs. données personnelles</em> = violation flagrante nLPD art. 6 (proportionnalité) et art. 19 (transmission internationale). (3) <em>Pas de cadre MLAT</em> pour la transmission au FBI = les éléments transmis ne pourront être utilisés en procédure pénale ni suisse ni US. (4) <em>Données employés et clients hôpitaux</em> = leurs données protégées (LPD + LAMal pour patients) ne peuvent être transmises sans cadre légal. (5) <em>« nLPD un détail »</em> est un raisonnement qui exposera Rhône-Médical à une amende administrative + class action future.",
+          "legal": "nLPD art. 24, Convention Budapest art. 31, MLAT US-CH, doctrine OFCS",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Refuser toute coordination active avec le FBI Legat Donovan (\"affaire suisse, on règle ça en interne avec nos propres autorités fédérales et cantonales sans interférence étrangère\"), retarder la notification PFPDT à 96 heures voire plus (\"on a besoin de plus de temps pour qualifier précisément l'étendue de la fuite et notre responsabilité juridique\"), et ne communiquer avec Stryker US qu'au strict minimum vague (\"on a un incident, on vous tient au courant plus tard quand on aura plus de visibilité interne\"). Maintenir une posture défensive jusqu'à pleine maîtrise du périmètre interne avant toute ouverture externe, suivant un principe de prudence stratégique.",
+          "ok": false,
+          "pts": -22,
+          "fb": "Posture intenable et juridiquement problématique. (a) <em>Refuser le FBI Legat</em> : Donovan ne demande pas l'accès aux données suisses sans cadre — il propose un canal de partage IOCs technique standard et bien rodé entre les CIRT alliés. Refuser = rompre la coopération internationale et perdre l'accès aux IOCs FBI/CISA disponibles sur Handala (qui peuvent contenir des éléments d'attribution utiles). (b) <em>Retarder la notification PFPDT à 96h+</em> = violation nLPD art. 24 (le délai de 72h est un maximum, pas un objectif). (c) <em>Communication évasive avec Stryker</em> = vous brisez la relation contractuelle (clause SLA, ISO 13485 sur la coopération en cas d'incident affectant la production medtech) et exposez Rhône-Médical à des dommages-intérêts contractuels. La réticence ici sape les intérêts mêmes de l'entreprise.",
+          "legal": "nLPD art. 24, Convention Budapest art. 31, MLAT US-CH, doctrine OFCS",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "Phase 3 — Caractérisation forensique et attribution",
+      "situation": "T+72h. L'analyse forensique avance. Mandiant (consultant US, mandaté par Stryker) confirme que Rhône-Médical n'est PAS le point d'entrée de la compromission Stryker mondiale — Stryker était déjà compromise via Microsoft Intune depuis ~14 jours, et Handala s'est latéralisée vers Rhône-Médical via la connexion B2B (federation cross-tenant pour partage de spécifications techniques). Le compte admin global créé il y a 6 jours chez vous a été obtenu via phishing ciblé. Les IOCs convergent : adresses IP Starlink, signatures politiques Intune wipées, hashes correspondant aux outils Handala documentés par CheckPoint. Le FBI demande à pouvoir publier conjointement (CISA + OFCS) un advisory technique pour aider d'autres sous-traitants medtech.",
+      "question": "Quelle stratégie de communication technique adoptez-vous ?",
+      "law": "doctrine OFCS, ENISA, CISA advisories, secret de l'enquête art. 73 CPP",
+      "choices": [
+        {
+          "text": "Co-publication CISA + OFCS d'un advisory technique : (1) IOCs précis (hashes, IPs, signatures politiques Intune malveillantes) pour permettre aux autres sous-traitants medtech d'auto-vérifier, (2) Description du mode opératoire (compromission Stryker → latéralisation B2B → wiper Intune) sous forme MITRE ATT&CK mappée, (3) Recommandations de durcissement (PIM/PAM Entra, conditional access strict, audit politiques Intune, cloisonnement B2B avec scope-aware federation), (4) Anonymisation de Rhône-Médical (l'advisory mentionne « un sous-traitant suisse » sans nommer), (5) Délai 72h après accord conjoint OFCS/CISA/Stryker. Permet de faire un bien collectif sans exposer Rhône-Médical au stigma.",
+          "ok": true,
+          "pts": 35,
+          "fb": "Architecture exemplaire de partage technique. Le <strong>co-advisory CISA + OFCS</strong> est précisément ce que les organismes attendent dans ce type de cas : un opérateur privé victime contribue à l'écosystème en partageant ses IOCs, mais sous l'égide d'autorités publiques (anonymisation, cadrage juridique, légitimité). La <em>cartographie MITRE ATT&CK</em> est devenue le standard de partage technique entre CIRT — elle permet aux autres entreprises medtech d'auto-évaluer rapidement leur exposition (T1098 Account Manipulation, T1486 Data Encrypted for Impact, T1078 Valid Accounts via OAuth persistance). L'<em>anonymisation</em> est légitime : elle permet le partage technique sans exposer Rhône-Médical à des dommages réputationnels et commerciaux disproportionnés (un client hôpital peut aisément identifier Rhône-Médical si l'advisory mentionnait \"sous-traitant Stryker en Suisse\").",
+          "legal": "doctrine OFCS, doctrine CISA, art. 73 CPP, ENISA TLP",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Refuser absolument toute publication d'IOCs ou d'advisory technique : « C'est notre incident, nos données, on ne donne rien à personne d'autre que les autorités strictement compétentes » — la publication risque d'attirer l'attention médiatique sur Rhône-Médical, de nourrir la spéculation autour de la marque, et de fragiliser durablement notre position commerciale auprès des clients hôpitaux qui pourraient remettre en cause les contrats. Mieux vaut traiter l'incident en silence absolu jusqu'à pleine résolution, sans rien partager.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Posture qui sape l'intérêt collectif et celui de Rhône-Médical à moyen terme. (a) <em>Refus de partage IOCs</em> : d'autres sous-traitants medtech suisses (220+ identifiés OFCS) sont potentiellement compromis de la même façon — votre refus laisse l'écosystème entier exposé au prochain coup. (b) <em>Silence absolu</em> n'est pas tenable : Stryker a déjà publié un Form 8-K SEC, la presse alémanique a tracé le lien à Rhône-Médical via les fournisseurs publics suisses. Le silence officiel sera lu comme une dissimulation. (c) <em>Réputation</em> : la coopération transparente avec OFCS/CISA est précisément ce qui consolide la confiance des clients hôpitaux à long terme — ils préfèrent un fournisseur transparent à un fournisseur silencieux.",
+          "legal": "doctrine OFCS, doctrine CISA, art. 73 CPP, ENISA TLP",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Publier unilatéralement et sans coordination préalable un communiqué Rhône-Médical détaillé sur LinkedIn et le site corporate : nommer Handala explicitement, donner l'ensemble des IOCs identifiés, raconter le mode opératoire complet, et appeler tous les sous-traitants medtech suisses à \"faire pression sur Microsoft pour mieux sécuriser Intune\". Maximiser la transparence pour défendre activement la marque et démontrer l'expertise cyber désormais acquise par Rhône-Médical après l'épreuve.",
+          "ok": false,
+          "pts": -22,
+          "fb": "Transparence excessive et désordonnée. (a) <em>Publication unilatérale sans coordination OFCS/CISA</em> = vous brûlez l'opportunité de valoriser le partage international coordonné et créez des frictions diplomatiques (Stryker US peut considérer qu'une partie de leur dossier US est \"révélée\" par votre communication CH). (b) <em>Nommer Handala publiquement</em> sans caveat sur l'attribution (la doctrine FBI parle de \"groupe lié au MOIS\" sans toujours nommer Handala officiellement) peut affaiblir votre position si une attribution alternative émerge. (c) <em>Appel à pression sur Microsoft</em> : vous transformez un incident technique en bataille publique contre un partenaire — opposition vs. coopération. (d) <em>Communiqué LinkedIn</em> est un canal corporate marketing inadapté pour ce type de communication technique sensible. Préférer canal CISA/OFCS officiel.",
+          "legal": "doctrine OFCS, doctrine CISA, art. 73 CPP, ENISA TLP",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "Phase 4 — Restauration et durcissement",
+      "situation": "J+14. La phase aiguë est passée. 47 laptops + 23 mobiles ont été ré-imagés à partir de baselines propres. Le tenant Entra/Intune a été reconstruit en \"clean slate\" supervisé par Mandiant (consultant Stryker) et un consultant suisse (Compass Security Bern) pour la doublure. La production d'implants a redémarré J+3 sans interruption. Le PFPDT a confirmé la conformité de votre notification nLPD. M. Wyss (directeur) propose un projet de durcissement à 8 mois : audit complet ISO 27001, refonte conditional access Entra, renforcement supply chain (cross-tenant federation cloisonnée, audit annuel sous-traitants).",
+      "question": "Comment cadrez-vous le durcissement post-incident ?",
+      "law": "ISO 27001, NIST CSF, doctrine OFCS, ISO 13485 / IATF 16949 (continuité medtech)",
+      "choices": [
+        {
+          "text": "Plan en 4 axes formalisé : (1) <strong>Identité (Entra/Intune)</strong> : déploiement PIM/PAM (Privileged Identity Management) pour tout admin global, MFA résistant phishing (FIDO2, pas SMS), conditional access strict basé risque, audit trimestriel politiques Intune par un tiers, (2) <strong>Supply chain</strong> : audit annuel des sous-traitants tier-1 (Stryker), cross-tenant federation cloisonnée (scope-aware) avec révocation immédiate possible, exigences contractuelles ISO 27001 minimum sur sous-traitants tier-2, (3) <strong>Détection</strong> : EDR sur OT (compatible medtech), SIEM cloud (Sentinel) avec règles MITRE ATT&CK, exercice red team annuel ciblant supply chain, (4) <strong>Gouvernance</strong> : CISO en CODIR direct, plan de continuité testé semestriellement, partenariat OFCS pour partage de threat intel. Budget chiffré, jalons à 3/6/12 mois.",
+          "ok": true,
+          "pts": 35,
+          "fb": "Plan structuré et opérationnel. Les <strong>4 axes</strong> couvrent les vraies leçons de l'incident : (a) <em>Identité</em> est la cible centrale dans ce type d'attaque (le compte admin global compromis a été le pivot) — PIM/PAM + MFA résistant phishing sont les contre-mesures de référence (CISA, NCSC, ANSSI). (b) <em>Supply chain</em> : la cross-tenant federation cloisonnée est la lecon spécifique de l'incident Handala — Stryker a été point d'entrée parce que son tenant avait une federation trop large. (c) <em>Détection</em> : EDR sur OT medtech est techniquement faisable maintenant (CrowdStrike, SentinelOne ont des modules medtech-compatibles). (d) <em>Gouvernance</em> : CISO en CODIR direct est ce qui distingue les organisations qui survivent à un incident de celles qui répètent. Le partenariat OFCS pour threat intel est le bon canal pour les PME suisses (capacité limitée à acheter Mandiant/Recorded Future en interne).",
+          "legal": "ISO 27001, NIST CSF, ISO 13485, doctrine OFCS",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Plan de durcissement minimaliste de courte durée et économe en ressources : changer tous les mots de passe employés sous 30 jours, activer le MFA SMS sur tous les comptes Microsoft 365, ajouter une formation cyber-hygiène d'1 heure pour l'ensemble des 220 employés, et boucler la totalité du programme sous 30 jours. \"L'incident est passé, Stryker est repartie en production normale, on a déjà perdu assez de temps et d'argent dans cette affaire pour multiplier maintenant les chantiers de transformation cyber qui détourneraient l'entreprise de son cœur de métier medtech.\"",
+          "ok": false,
+          "pts": -22,
+          "fb": "Sous-investissement dangereux. (a) <em>MFA SMS</em> est précisément ce qui n'a PAS protégé Rhône-Médical — Handala a contourné via OAuth persistance (le SMS ne protège pas contre une session OAuth déjà obtenue par phishing). FIDO2/passkeys sont le standard moderne. (b) <em>Formation 1 heure</em> = exercice de conformité, pas changement comportemental durable. La littérature sécurité montre que la formation efficace exige du phishing simulé répété, des microformations contextuelles, du nudge au moment des actions à risque. (c) <em>Pas de PIM/PAM</em> = vous laissez ouverte la porte qui a été utilisée. (d) <em>Pas d'audit supply chain</em> = vous ne traitez pas la racine de l'incident. Le risque de récidive est élevé.",
+          "legal": "ISO 27001, NIST CSF, ISO 13485, doctrine OFCS",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Sous-traiter intégralement la sécurité informatique à un MSSP (Managed Security Service Provider) externe pour 24/7 SOC + EDR + SIEM, et abandonner toute gouvernance interne de la sécurité (\"on n'est pas une boîte cyber, on fabrique des composants d'implants orthopédiques en titane, laissons les pros gérer leur métier\"). Faire signer un SLA très strict au MSSP avec pénalités élevées en cas d'incident futur ou non-détection. Décharger complètement la direction générale et le CISO actuel des responsabilités cyber pour qu'ils puissent se concentrer sur le métier.",
+          "ok": false,
+          "pts": -18,
+          "fb": "Sous-traitance disproportionnée et risquée. (a) <em>Sous-traitance intégrale</em> = un MSSP externe ne peut pas comprendre la spécificité OT medtech (ISO 13485, IATF 16949, contraintes de validation de tout changement IT/OT en environnement réglementé) sans une gouvernance interne forte qui le pilote. (b) <em>Pas de CISO interne</em> = pas de responsable des arbitrages stratégiques (acceptation/transfert/évitement de risque), pas d'interlocuteur OFCS/PFPDT, pas de continuité de la culture sécurité. (c) <em>SLA pénalités</em> ne remplace pas la gouvernance : un MSSP qui paie des pénalités après un incident massif ne compense pas la perte de production, de clients, de réputation. La sous-traitance opérationnelle est saine, mais doit s'adosser à une gouvernance interne robuste.",
+          "legal": "ISO 27001, NIST CSF, ISO 13485, doctrine OFCS",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "Phase 5 — Capitalisation sectorielle et audition CCEC",
+      "situation": "J+90. L'OFCS et Mme Tschanz vous invitent à témoigner à la Commission consultative pour l'économie et la cybersécurité (CCEC) — un retour d'expérience anonymisé pour aider d'autres PME medtech suisses. Le secteur compte ~80 sous-traitants Stryker en Suisse, ~220 sous-traitants medtech globalement, et l'OFCS estime que 8 à 12 ont peut-être été touchés dans la même vague (sans en avoir confirmation publique car aucune notification PFPDT ne leur a été remontée). Question stratégique : Rhône-Médical doit-elle se positionner comme cas d'école et investir dans la formation sectorielle, ou rester en retrait pour préserver sa position commerciale ?",
+      "question": "Quel positionnement adoptez-vous pour la CCEC et au-delà ?",
+      "law": "doctrine OFCS, ENISA secteur medtech, position politique CCEC",
+      "choices": [
+        {
+          "text": "Témoignage anonymisé à la CCEC + capitalisation institutionnelle progressive : (1) Témoignage CCEC sous le nom \"sous-traitant medtech romand\" (anonymat préservé), partage du retex technique, des leçons gouvernance, du chiffrage budgétaire (\"voici ce qu'on a investi pour durcir, voici les bénéfices mesurables\"), (2) Co-rédaction avec OFCS d'un guide sectoriel \"Cybersécurité supply chain medtech\" diffusé via Swissmedic + ICTswitzerland, (3) Participation à un groupe de travail SwissICT sur supply chain medtech, (4) Ouverture progressive sur les conférences sectorielles (DigitalSwitzerland, SICW Geneva) une fois la sortie de crise pleinement consolidée. Pas de campagne marketing autour de l'incident.",
+          "ok": true,
+          "pts": 35,
+          "fb": "Positionnement équilibré et stratégiquement habile. Le <strong>témoignage anonymisé à la CCEC</strong> est exactement le format que ces commissions consultatives apprécient : retex factuel, chiffré, sans posture défensive ni triomphalisme. La <em>co-rédaction d'un guide sectoriel</em> avec l'OFCS est un investissement à valeur durable (cite-à-vie comme contributeur, accès privilégié aux dispositifs de threat intel). La <em>participation SwissICT</em> renforce votre réseau professionnel et facilite le recrutement de talents cyber (un signal fort en marché tendu). La <em>retenue marketing</em> est sage : transformer l'incident en argument commercial peut paraître opportuniste et fragiliser la confiance des clients hôpitaux. Cette posture <em>contributive</em> distingue les acteurs résilients des acteurs juste survivants.",
+          "legal": "doctrine OFCS, ENISA, ICTswitzerland, Swissmedic",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Refuser totalement le témoignage CCEC et toute communication publique post-incident, conformément à un mandat strict du conseil d'administration : « Plus jamais notre nom associé à cet incident publiquement, on verrouille tout. » Décliner également systématiquement les invitations DigitalSwitzerland, SwissICT, ICTswitzerland, et tout retour d'expérience même anonymisé via les canaux institutionnels OFCS ou ENISA. Préserver la position commerciale par le silence absolu.",
+          "ok": false,
+          "pts": -22,
+          "fb": "Position de retrait qui prive l'écosystème d'un retex précieux et fragilise Rhône-Médical à moyen terme. (a) <em>Refus systématique</em> = autres sous-traitants medtech suisses, qui pourraient bénéficier de votre expérience pour ne pas répéter les mêmes erreurs, restent dans le brouillard. (b) <em>Pas de capitalisation</em> = la mémoire opérationnelle interne s'érode, et un changement de CISO dans 3 ans repartira de zéro. (c) <em>Position commerciale fragile</em> : les clients hôpitaux et Stryker US <em>savent</em> que Rhône-Médical a vécu cet incident — votre silence post-incident contraste défavorablement avec la communication assumée des fournisseurs concurrents qui ont vécu des incidents similaires (cas documentés ENISA). La transparence post-incident est un facteur de différenciation, pas de fragilisation.",
+          "legal": "doctrine OFCS, ENISA, ICTswitzerland, Swissmedic",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Lancer une campagne marketing agressive et ambitieuse autour de \"Rhône-Médical, plus sécurisée que jamais après l'attaque iranienne\" : témoignage CCEC public et nommé, communiqué presse multi-supports (Le Temps + 24heures + NZZ + Tagesanzeiger), page dédiée \"cyber-resilience\" sur le site corporate, tournée commerciale intensive auprès des hôpitaux suisses et européens pour vanter la \"transformation cyber\" comme avantage concurrentiel différenciant.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Sur-exploitation marketing contre-productive. (a) <em>Témoignage public et nommé</em> contredit la stratégie d'anonymisation initiale et expose Rhône-Médical à des questions juridiques de la part de Stryker US (clauses NDA cross-corporate sur l'incident). (b) <em>Campagne presse</em> alimente la spéculation et place le sujet \"cybersécurité Rhône-Médical\" en première page Google pendant 3 ans — un signal défavorable à long terme dans les RFPs. (c) <em>« Plus sécurisée que jamais après l'attaque »</em> est une formule à risque : suffit qu'un futur incident, même mineur, n'apparaisse pour vous accuser d'auto-promotion mensongère. (d) <em>Tournée commerciale</em> sur le thème cyber dilue le positionnement medtech (Rhône-Médical est un fournisseur de composants d'implants, pas un fournisseur de cybersécurité). <strong>La sobriété est un atout commercial post-incident.</strong>",
+          "legal": "doctrine OFCS, ENISA, ICTswitzerland, Swissmedic",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ],
+  "narrative": {
+    "success": "L'incident Handala devient une référence dans l'industrie medtech suisse. Le co-advisory CISA + OFCS est cité par 12 organismes européens. Le guide sectoriel co-rédigé avec l'OFCS (\"Cybersécurité supply chain medtech, leçons de l'incident Handala 2026\") est diffusé à 220 sous-traitants medtech suisses et adopté comme référence interne par 3 des 5 grands fabricants européens. Mme Pellet est invitée à présenter à la SICW Geneva 2027. Rhône-Médical conserve l'intégralité de ses contrats Stryker et obtient même 2 nouveaux contrats medtech européens grâce à sa réponse exemplaire. La gouvernance cyber interne se renforce durablement, avec un CISO en CODIR direct.",
+    "degraded": "L'incident est techniquement résolu mais sans pleinement capitaliser. Soit la coordination internationale a été imparfaite (le FBI Legat estime que la Suisse n'a pas suffisamment partagé les données employés sous MLAT — friction diplomatique mineure), soit la communication clients hôpitaux a été maladroite (la presse alémanique titre « Un sous-traitant Stryker à Neuchâtel touché par les Iraniens » sans coordination), soit le durcissement post-incident est resté minimaliste (formation 1h, MFA SMS) et l'audit annuel ne se met pas en place. Stryker US conserve Rhône-Médical mais avec des clauses contractuelles plus strictes. Le secteur medtech suisse n'apprend rien.",
+    "failure": "Échec sur un ou plusieurs piliers : (a) suppression des politiques Intune malveillantes lors du confinement = perte des preuves forensiques, attribution impossible à confirmer, (b) notification PFPDT > 96h = amende administrative + fragilisation procédurale, (c) communication unilatérale Rhône-Médical sur LinkedIn = friction Stryker US et perte de contrats. Coût stratégique majeur."
+  },
+  "debrief": {
+    "lessons": [
+      "🛡️ <strong>Confinement préservant les preuves</strong> — break glass mode sur Intune, ne pas supprimer les politiques malveillantes (preuves), exporter les logs Audit/Sign-in vers stockage forensic chiffré.",
+      "📜 <strong>nLPD art. 24 — 72h</strong> max pour notifier le PFPDT en cas de données personnelles potentiellement exfiltrées. Le délai est un maximum, pas un objectif.",
+      "🤝 <strong>OFCS comme hub de coordination internationale</strong> — articuler avec FBI Legat, CIRT Stryker, MPC en stand-by via l'autorité publique nationale.",
+      "🔐 <strong>Distinction IOCs techniques vs. données personnelles</strong> — les IOCs (hashes, IPs, signatures) peuvent transiter rapidement (Convention Budapest art. 31), les données personnelles requièrent MLAT formel.",
+      "🔑 <strong>FIDO2 / passkeys et PIM/PAM</strong> — MFA SMS ne protège pas contre OAuth persistance ; FIDO2 est le standard moderne pour comptes admin globaux.",
+      "🌐 <strong>Cross-tenant federation cloisonnée</strong> — leçon spécifique de Handala : Stryker compromis a permis la latéralisation B2B vers Rhône-Médical via federation trop large.",
+      "📊 <strong>MITRE ATT&CK pour partage technique</strong> — T1098 (Account Manipulation), T1486 (Data Encrypted/Wiped for Impact), T1078 (Valid Accounts via OAuth).",
+      "🎤 <strong>Témoignage anonymisé en commission consultative</strong> — capitalisation sectorielle sans exposition réputationnelle disproportionnée."
+    ],
+    "references": [
+      "TechCrunch, « Pro-Iran hacktivist group Handala says it is behind attack on medical tech giant Stryker » (mars 2026)",
+      "CheckPoint Research, rapports sur Handala / Void Manticore",
+      "CyberScoop, « Stryker attack highlights nebulous nature of Iranian cyber activity » (mars 2026)",
+      "CISA, advisory \"Iranian threat actor exploiting Microsoft Intune\" (2026)",
+      "OFCS (Office fédéral de la cybersécurité), bulletin trimestriel CII",
+      "ENISA Threat Landscape, chapitre Healthcare",
+      "MITRE ATT&CK Enterprise (T1098, T1486, T1078)",
+      "Convention de Budapest sur la cybercriminalité art. 25, 31",
+      "ISO 13485 / IATF 16949 (gestion d'incidents medtech)",
+      "nLPD art. 24 (notification 72h)"
+    ]
+  },
+  "regionDetail": {
+    "code": "CHF",
+    "flag": "🇨🇭",
+    "name": "Confédération"
+  },
+  "region": "CH"
+}

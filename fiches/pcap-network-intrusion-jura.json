@@ -1,0 +1,196 @@
+{
+  "id": "pcap-network-intrusion-jura",
+  "title": "PCAP forensics — Intrusion Adm. Jura",
+  "icon": "📡",
+  "difficulty": "hard",
+  "atmosphere": "network",
+  "realCase": "Inspiré de plusieurs cas réels : ParlGate Suisse 2023 (suspicions Bundeshaus), RUAG 2016, Xplain 2024 (référence partielle), ICRC 2022 incident. Cas synthétisé pour le contexte Administration cantonale jurassienne + LSCPT.",
+  "narrative": {
+    "success": "Vous menez une analyse forensique exemplaire : capture PCAP cadrée juridiquement (LSCPT respectée), reconstruction kill-chain complète (phishing → Cobalt Strike → mouvement latéral → DNS tunneling), identification C2 et attribution probabiliste APT-russe-cluster, demande TMC pour interception complémentaire validée. Compromission limitée (containment efficace), 0 donnée fuitée. OFCS partage IoCs CIRT-EU. Précédent doctrinal LSCPT + cyber.",
+    "degraded": "Analyse PCAP techniquement solide mais cadrage légal LSCPT/CPP faiblesse aux marges (défense pourrait contester certaines captures comme excédant le cadre autorisé). Identification kill-chain réussie mais attribution APT incertaine. TMC valide la procédure mais avec réserves.",
+    "failure": "Capture PCAP excède manifestement le cadre LSCPT (interception trafic personnel non lié à l'enquête, durée non justifiée), TMC annule la procédure pour défaut de proportionnalité. Preuves écartées. L'attaquant continue son activité dans l'ombre. Procédure disciplinaire contre vous + critique politique du chef PolJU. Article scientifique parisien cite votre cas comme exemple à NE PAS suivre."
+  },
+  "tags": [
+    "PCAP",
+    "ZEEK",
+    "SURICATA",
+    "DNS TUNNELING",
+    "COBALT STRIKE",
+    "LSCPT",
+    "APT",
+    "ADMINISTRATION CANTONALE"
+  ],
+  "legalRefs": [
+    "LSCPT — Loi sur la surveillance correspondance",
+    "Art. 269-279 CPP — Mesures techniques surveillance",
+    "Art. 273 CPP — Mesures techniques particulières",
+    "Art. 144bis CP — Détérioration de données",
+    "Art. 143 CP — Soustraction de données",
+    "LSI Art. 12-14 — Infrastructures critiques",
+    "TMC — Tribunal des mesures de contrainte",
+    "Convention Cybercriminalité Budapest"
+  ],
+  "intro": "Vendredi 12 juin 2026, 14h22. Salle de crise IT de l'Administration cantonale jurassienne (ACJU), Delémont. Le SOC cantonal (sous-traité à Kudelski Security via mandat 2024) a détecté à 11h47 du trafic réseau anormal vers IPs attribuées par Mandiant à un cluster APT (probable APT28 ou TURLA — cluster TEMP.Armageddon). Le trafic vient de plusieurs postes utilisateurs : Service de l'Économie + Service de la Justice + Service des Communes. Beaconing C2 régulier (jitter 30s, mais détecté par anomalie) + tunnels DNS suspects vers `*.weather-service.eu` (domaine enregistré 4 mois plus tôt via NameCheap). Le SOC évalue : intrusion en cours depuis ~8 semaines, dwell time typique d'attaque ciblée. Coordonnée avec OFCS GovCERT, le chef du Service IT du canton (M. P.) demande une analyse forensique détaillée avec capture trafic complète. Vous êtes officier liaison fedpol-Cyber + co-responsable forensique réseau. La complexité juridique majeure : la capture trafic à grande échelle (47 GB sur 72 heures depuis l'alerte) couvre AUSSI les communications privées des fonctionnaires et de leurs interlocuteurs (citoyens, avocats, médecins). Cette capture est-elle conforme à la LSCPT (Loi fédérale sur la surveillance de la correspondance par poste et télécommunication) ou faut-il un cadre TMC formel pour chaque utilisateur ? Le procureur ministère public JU veut votre cadrage juridique avant action.",
+  "alertLevel": "📡 INTRUSION APT ADM. CANTONALE · ~8 semaines dwell time · DNS tunneling vers C2 · 47 GB PCAP · LSCPT cadre à clarifier · TMC à saisir",
+  "objectives": [
+    {"icon": "⚖️", "text": "Cadrer juridiquement la capture PCAP : LSCPT vs CPP art. 269-279 (TMC obligatoire ou non ?)"},
+    {"icon": "🔬", "text": "Analyser PCAP avec Zeek + Suricata + Wireshark : reconstruction kill-chain"},
+    {"icon": "🌐", "text": "Identifier C2 + DNS tunneling + attribution probabiliste APT"},
+    {"icon": "🛡️", "text": "Containment proportionné + protection vie privée fonctionnaires + données citoyens"}
+  ],
+  "debrief": "<p>La <strong>capture PCAP forensique</strong> à grande échelle dans une administration publique pose des questions juridiques complexes en CH. Trois cadres légaux peuvent s'appliquer selon situation : (1) <strong>Mesures techniques de l'employeur</strong> (LTr + jurisprudence ATF 139 II 7) : l'employeur peut surveiller les communications professionnelles à des fins de sécurité du SI, sous conditions strictes (information préalable des collaborateurs via charte IT, finalité légitime, proportionnalité, anonymisation par défaut). (2) <strong>LSCPT + CPP art. 269-279</strong> : si l'enquête vise une infraction au sens du catalogue art. 269 al. 2 CPP (cybercrime, ART. 144bis, terrorisme, etc.), le TMC autorise des mesures techniques particulières. Procédure formelle. (3) <strong>LSI Art. 12-14 + LSCPT</strong> : pour les infrastructures critiques, des mesures spécifiques de protection peuvent être ordonnées par fedpol/OFCS.</p>\n<p><strong>Distinction clé</strong> : <em>capture défensive</em> par administrateur SI à des fins de protection = LTr + charte IT (légère mais limitée à anonymisé/agrégé) vs <em>capture investigatrice</em> visant à identifier auteurs et caractériser infraction = LSCPT + CPP art. 269-279 (lourde, TMC obligatoire). Le cas ACJU bascule clairement dans la 2e catégorie : intrusion APT, soupçon art. 144bis CP, intention d'identifier auteurs et de poursuivre pénalement → TMC obligatoire pour capture trafic spécifique.</p>\n<p><strong>Outils analyse PCAP</strong> : (a) <strong>Wireshark</strong> pour analyse interactive, (b) <strong>Zeek</strong> (ex-Bro) pour parsing protocolaire massif → logs structurés (conn.log, dns.log, http.log, ssl.log), (c) <strong>Suricata</strong> pour détection IDS sur règles ET-Open + ET-Pro + Emerging Threats. Pour DNS tunneling spécifiquement : analyse du ratio nombre/longueur subdomains (subdomain trop long et/ou aléatoire), entropie des subdomains, fréquence requêtes. Pour Cobalt Strike : signatures de jitter, beacon size, fingerprints SSL/TLS JA3.</p>\n<p><strong>DNS tunneling</strong> : technique exfiltration consistant à encoder données dans des sous-domaines DNS qui sont résolus par un serveur DNS contrôlé par l'attaquant. Ex : `aGVsbG8.weather-service.eu` (subdomain = base64 \"hello\"). Détection difficile car le trafic DNS est rarement bloqué/inspecté. Outils défensifs : DNS Firewall (DNSFiltr, Cisco Umbrella, OISF Watchtower), monitoring entropie, statistiques requête. Outils offensifs documentés : iodine, dnscat2, DNSExfiltrator.</p>\n<p><strong>Attribution APT</strong> : exercice probabiliste basé sur 4 piliers : (a) <strong>Tooling</strong> (Cobalt Strike beacons configurés de manière spécifique, malware custom), (b) <strong>Infrastructure</strong> (clusters d'IPs/domaines réutilisés), (c) <strong>TTPs</strong> (modus operandi, sous-clusters MITRE ATT&CK), (d) <strong>Targeting</strong> (intérêts géopolitiques cohérents). Sources : Mandiant FLARE, CrowdStrike Falcon Intel, ANSSI Reports, NSA/CISA advisories. La doctrine est de COMMUNIQUER L'ATTRIBUTION AVEC RESERVE — \"signatures rappelant\" ou \"compatibles avec\" plutôt que \"est attribué à\". L'attribution publique formelle est une décision politique (DFAE pour la CH).</p>",
+  "steps": [
+    {
+      "phase": "⚖️ Cadrage juridique : LSCPT, TMC ou LTr ?",
+      "situation": "14h45. Le procureur JU (Mme S.) vous demande votre lecture juridique avant validation des saisies réseau. La capture déjà en cours par le SOC Kudelski (47 GB depuis 11h47) est-elle légale ? Que demandez-vous au TMC pour la suite ? Trois options sur la table : (a) <strong>Cadre LTr seul</strong> : capture continue par le SOC sous mandat administratif (employeur surveille son SI), pas de TMC nécessaire. (b) <strong>LSCPT/CPP art. 269-279 strict</strong> : suspendre la capture immédiatement, demander TMC pour autorisation formelle, redémarrer capture sous cadre judiciaire. (c) <strong>Mixte</strong> : poursuivre capture sous LTr (employeur) pour le défensif/containment + demander TMC pour exploitation forensique investigatrice + chaîne probatoire. Le délai TMC standard est 5 jours (urgence 24h possible).",
+      "law": "<strong>LSCPT</strong> — Surveillance correspondance.<br><strong>Art. 269 CPP</strong> — Catalogue infractions surveillance.<br><strong>Art. 273 CPP</strong> — Mesures techniques particulières.<br><strong>Art. 277-279 CPP</strong> — Procédure TMC.<br><strong>LTr Art. 26+27</strong> — Surveillance employeur.<br><strong>ATF 139 II 7</strong> — Limites surveillance employeur.",
+      "question": "<strong>Quel cadre juridique pour la capture PCAP ?</strong>",
+      "choices": [
+        {
+          "text": "Option C — cadre mixte structuré : (1) Capture défensive continue (SOC Kudelski) sous mandat administratif employeur (LTr + charte IT ACJU 2023 qui prévoit ce type de surveillance pour incidents) — finalité limitée à containment + analyse anonymisée/agrégée. (2) Demande TMC urgente (24h) pour mesures investigatrices : interception ciblée des communications avec C2 identifié, capture détaillée des sessions Cobalt Strike, captures complètes des 4-7 postes les plus impliqués (pas tous les 200 postes ACJU). (3) Saisine procureur JU avec qualification provisoire art. 144bis CP + 143 CP : ouvre la voie au catalogue art. 269 CPP. (4) Anonymisation immédiate des éléments non-pertinents (communications avocat-client, médecin-patient, salarié-syndicat) avec masquage automatique par script Zeek. (5) Conservation segregée des PCAP : capture défensive (SOC) ≠ capture investigatrice (forensique fedpol-cyber sous TMC), avec chaînes probatoires distinctes.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Cadrage exemplaire et juridiquement précis. (1) Distinction défensif/investigateur : c'est la doctrine moderne post-ParlGate 2023. La capture défensive (containment, hygiène SI) ne nécessite pas TMC car finalité = protection actuelle, pas poursuite. La capture investigatrice (caractérisation auteurs, chaîne probatoire pénale) nécessite TMC. Confondre = nullité au pénal. (2) TMC en 24h (urgence) : possible pour cas grave + soupçons solides. La doctrine TMC JU (rare mais documentée : 2 cas 2023, 4 cas 2024-2025) est ouverte aux mesures techniques cyber. (3) Qualification art. 144bis + 143 CP : couvre catalogue art. 269 al. 2 CPP, condition d'éligibilité aux mesures techniques particulières. (4) Anonymisation automatique non-pertinent : critique pour proportionnalité. La jurisprudence constante (Art. 36 Cst., Art. 197 CPP, Art. 269 ss CPP) sanctionne les surveillances trop larges. Le scripting Zeek pour masquer communications privées est une bonne pratique récente (post-ParlGate). (5) Chaînes probatoires séparées : essentiel pour ne pas \"contaminer\" la procédure pénale. Si défensif et investigateur sont mélangés, la défense pourra invoquer absence de cadre clair → nullité.",
+          "legal": "LSCPT + Art. 269+273 CPP + LTr — Cadrage exemplaire.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Option A — cadre LTr seul : pas de TMC nécessaire car c'est l'administration qui surveille SON propre réseau pour des fins de sécurité IT. La charte IT ACJU prévoit ce type de surveillance, donc juridiquement valide. La capture continue, pas de saisine TMC.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Erreur juridique sérieuse. (1) LTr/charte IT couvre surveillance DÉFENSIVE = anonymisée/agrégée. Une capture trafic complète 47 GB qui révèlera identités de fonctionnaires + contenus de communications privées (avocat-client, médecin-patient) DÉPASSE ce cadre. La doctrine ATF 139 II 7 est claire : surveillance employeur IT proportionnée + anonymisée + finalité légitime, pas surveillance \"intégrale\". (2) Si vous procédez sans TMC pour les mesures investigatrices, et qu'ensuite vous voulez utiliser la capture pour caractériser auteurs et poursuivre pénalement, le tribunal écartera les preuves (art. 141 CPP — moyens illicites). Toute la procédure pénale serait fragilisée. (3) Atteinte à la sphère privée des fonctionnaires + des citoyens contactant l'administration (avocats, médecins) sans cadre TMC = recours civils probables (art. 28 CC). La doctrine post-ParlGate 2023 a précisément posé cette limite. (4) Cas symétrique : tentative similaire ZH 2022 où la PolZH avait capturé du trafic d'employés communaux sous prétexte LTr, le tribunal cantonal a annulé toute la procédure pour défaut TMC. Décision confirmée par TF 2023.",
+          "legal": "LTr + ATF 139 II 7 + Art. 141 CPP — Sous-cadrage.",
+          "critical": true,
+          "next": 1
+        },
+        {
+          "text": "Option B — LSCPT/CPP strict : suspendre TOUTE capture immédiatement, demander TMC formel (5 jours), redémarrer capture sous cadre judiciaire complet. Pas de capture entre la suspension et l'autorisation TMC.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Sur-cadrage avec coût opérationnel. (1) Suspension TOTALE de la capture pendant 5 jours (délai TMC standard) = perte de visibilité sur l'attaquant pendant 5 jours. Pendant cette fenêtre, l'APT peut : (a) finaliser exfiltration en cours, (b) modifier ses techniques en détectant changement (l'arrêt brutal du SOC monitoring est lui-même un signal), (c) déployer nouveaux backdoors persistants. La doctrine OFCS 2024 alerte explicitement contre ce type de \"trou de visibilité\". (2) « Pas de capture entre la suspension et TMC » : l'employeur a un DEVOIR de protection de son SI (LTr Art. 7 + LSI Art. 6 pour services publics). Ne plus capturer du tout = manquement aux obligations. (3) Le bon raisonnement est : capture DÉFENSIVE continue (LTr légitime), capture INVESTIGATRICE conditionnée à TMC. C'est l'approche mixte (option C). (4) Approche défendable si vous étiez dans un dossier avec cadre LSCPT clairement requis depuis le début, mais ici la distinction défensif/investigateur est utilisable. Sub-optimal mais pas catastrophique. (5) Risque opérationnel : 5 jours de visibilité perdue peuvent transformer un incident gérable en désastre.",
+          "legal": "LSCPT + LTr — Sur-cadrage avec coût.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🔬 Reconstruction kill-chain via Zeek + Suricata + Wireshark",
+      "situation": "J+3 (lundi). TMC accordé en 27h (procédure urgente, dossier solide). Capture investigatrice ciblée sur 7 postes les plus actifs (sur 200 ACJU). PCAP analysées par votre équipe avec Zeek + Suricata + Wireshark. Premières conclusions intermédiaires : (1) <strong>Vecteur d'entrée</strong> : email phishing « EuroDocuments » à un employé du Service de l'Économie M. K. le 16 avril 2026 (8 semaines avant alerte SOC). PJ : document Word avec macro malveillante exécutant PowerShell encodé qui télécharge Cobalt Strike beacon. (2) <strong>Mouvement latéral</strong> : depuis le poste M. K., compromission progressive via Pass-the-Hash + dumping LSASS, atteinte d'un compte admin local le 23 avril, puis compte admin domaine le 28 avril (12 jours total). (3) <strong>Persistance</strong> : implant Cobalt Strike persistant via Service Windows masqué (`WindowsHealthMonitor.svc`). (4) <strong>Exfiltration</strong> : DNS tunneling vers `*.weather-service.eu` depuis 4 mai. ~340 MB exfiltrés en 6 semaines (lent et discret), contenu : documents Service de l'Économie (négociations internationales), Service de la Justice (~12 dossiers d'asile), Service des Communes (cadastre énergétique). Question : comment caractériser pénalement et qualifier la procédure ?",
+      "law": "<strong>Art. 143 CP</strong> — Soustraction de données (peine 5 ans).<br><strong>Art. 144bis CP</strong> — Détérioration de données.<br><strong>Art. 143bis CP</strong> — Accès indu.<br><strong>Art. 184 CPP</strong> — Expertise.<br><strong>Convention Budapest</strong> — Coopération internationale.<br><strong>EIMP</strong> — Coopération NL/PL/USA selon C2.",
+      "question": "<strong>Comment articulez-vous la qualification + suite de l'enquête ?</strong>",
+      "choices": [
+        {
+          "text": "Stratégie en 4 axes : (1) Qualification multiple : art. 143 CP (~340 MB exfiltrés caractérise soustraction massive de données), art. 143bis CP (accès indu via Cobalt Strike persistant), art. 144bis CP (modification système Windows pour persistance). Cumul concours réel art. 49 CP. (2) Investigation ciblée vecteur initial : reverse engineering du document Word phishing pour : (a) signature/IoCs (signature similaire à campagnes APT documentées ?), (b) éventuelles métadonnées (auteur Word, langue système au moment de la création — souvent ru-RU ou en-US selon outils utilisés). (3) Demande EIMP urgente Pologne : `weather-service.eu` est hébergé chez OVH Pologne, registrar NameCheap (USA). Saisie infrastructure C2 + logs accès = identification autres victimes (l'attaquant utilise probablement même infrastructure pour plusieurs cibles). (4) Containment + remediation : via OFCS GovCERT + équipe ACJU, isolation des postes compromis (sans alerter encore l'attaquant si possible — \"shadow eviction\"), analyse forensique complète, reconstruction propre Active Directory.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Stratégie complète et techniquement irréprochable. (1) Qualification multiple : couvre les 3 dimensions de l'attaque (vol de données, accès indu, modification système). Concours réel art. 49 CP permet sanction proportionnelle à la gravité globale. La doctrine moderne (BSK 2024, commentaires post-Xplain 2024) consolide ces qualifications cumulatives pour les attaques APT. (2) Reverse engineering document phishing : technique standard mais souvent négligée. Les documents Word maliciants contiennent fréquemment des métadonnées révélatrices (auteur LastEdited via OOXML, langue système au moment de la création). Signatures Cobalt Strike sont profilables (taille beacon, jitter, encodage URLs). (3) EIMP Pologne pour OVH : OVH coopère bien depuis 2020 (post-Saisies réglementaires). Registrar NameCheap USA via DOJ MLAT. Saisie infrastructure C2 = identification autres victimes (très souvent une opération APT vise plusieurs cibles avec même infra). Précédent : opération RED SHEN 2023 (UE) où saisie C2 avait révélé 14 autres victimes. (4) « Shadow eviction » : technique avancée — laisser l'attaquant penser qu'il est encore présent pendant que vous reconstituez en parallèle, puis basculer brutalement quand reconstruction prête. Doctrine OFCS + Mandiant 2023 sur APT eviction.",
+          "legal": "Art. 143+143bis+144bis CP + 49 CP + EIMP — Approche optimale.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Qualification minimaliste art. 143 CP seul (le plus solide), reconstruction immédiate du domaine compromis (priorité sécurité > forensique), pas de demande EIMP (la voie internationale est trop lente et incertaine).",
+          "ok": false,
+          "pts": -10,
+          "fb": "Sous-utilisation. (1) Art. 143 CP seul = concours imparfait, perd les aspects accès indu (143bis) et modification système (144bis). Peine maximale réduite. (2) « Reconstruction immédiate priorité sécurité » : faux dilemme. La reconstruction et la forensique peuvent (et doivent) être menées en parallèle. La forensique sur copies (snapshots VMs) ne ralentit pas la reconstruction sur originaux. (3) « Pas de demande EIMP » : abandonne l'identification des autres victimes potentielles + abandon de l'attribution finale. Pour un dossier APT ciblant administration cantonale, l'identification est CRUCIALE pour : (a) connaître intentions (est-ce préparation à attaque plus large ?), (b) attribution = base d'action politique (DFAE peut-il sanctionner ?), (c) prévention futures victimes CH. Renoncer = traiter le symptôme, pas la cause. (4) Approche prudente mais sub-optimale stratégiquement.",
+          "legal": "Art. 49 CP + EIMP — Sous-utilisation.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Communication immédiate publique : conférence presse mardi annonçant l'intrusion APT, attribution publique APT28 ou TURLA (« cluster TEMP.Armageddon = compatibilité avec acteurs étatiques russes documentés »), demande publique d'aide internationale.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Multiples violations + erreurs stratégiques. (1) Communication publique en pleine enquête forensique = (a) violation art. 73 CPP (secret de l'enquête), (b) alerte attaquant qui peut effacer infrastructures restantes avant saisie EIMP, (c) tension diplomatique CH-Russie sans certitude juridique d'attribution. (2) Attribution publique APT28/TURLA avec « compatibilité » = attribution sauvage. La doctrine internationale (notamment ENISA + EU 5+5) exige des sources multiples + cohérence opérationnelle + signaux indépendants. La signature « rappelle TEMP.Armageddon » est une hypothèse probabiliste, pas une attribution juridiquement défendable. (3) « Demande publique d'aide internationale » : pas le rôle de PolJU ni de fedpol. C'est le DFAE qui gère la diplomatie via canaux discrets (EIMP, CIRT-EU, ENISA). Une sortie publique JU sur sujet géopolitique est une intrusion politique inappropriée. (4) Conséquences probables : (a) Russie dément + tension diplomatique CH, (b) DFAE/Conseil fédéral désavoue la sortie JU = embarras politique cantonal-fédéral, (c) attaquant disparaît avant saisie EIMP = preuves perdues, (d) presse exploite « JU joue à la diplomatie » = scandale local. (5) Cas symétrique : ZH 2018 où une communication politique précipitée sur attribution APT avait été démentie par DFAE puis finalement annulée.",
+          "legal": "Art. 73 CPP + DFAE compétence — Violations multiples.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "🌐 Demande EIMP + saisie infrastructure C2",
+      "situation": "J+30. Investigation avancée. Demande EIMP urgente Pologne pour OVH (hébergement `weather-service.eu`) aboutie en 18 jours (rapide pour EIMP standard). Saisie OVH révèle : (1) Le domaine `weather-service.eu` est utilisé pour 14 autres victimes EU/CH dont 3 administrations européennes (Lituanie, Estonie, Pologne) et 4 entreprises EU/CH (RHEINMETALL DE, Stadler Rail CH, FRONTEX agency, ESA). (2) Les logs accès C2 montrent profil opérateur cohérent : connexions depuis IPs ProtonVPN (anonymisées) mais avec patterns de timing GMT+3 (Russie/Ukraine). (3) Outillage : Cobalt Strike avec licence volée (cracked) + custom malware (échantillons à analyser). OFCS + Mandiant + ANSSI confirment : cluster cohérent avec TEMP.Armageddon (groupe russe lié au GRU, sanctionné par UE). DFAE-CH demande comment communiquer ces résultats : attribution publique formelle ? canal discret ? notification autres victimes ?",
+      "law": "<strong>EIMP CH-PL</strong> — Coopération.<br><strong>Art. 343 CPP</strong> — Compte rendu enquête.<br><strong>Convention Budapest Art. 23-28</strong> — Coopération internationale.<br><strong>DFAE compétence</strong> — Diplomatie + sanctions.<br><strong>OFCS LSI Art. 14</strong> — Partage IoCs.",
+      "question": "<strong>Comment cadrez-vous la communication + suite ?</strong>",
+      "choices": [
+        {
+          "text": "Approche en 4 axes coordonnés DFAE+OFCS : (1) Notification confidentielle aux 14 autres victimes via leurs CIRT nationaux (ANSSI FR, BSI DE, etc.) + Mandiant pour les entreprises sous son monitoring. Coordination Eurojust pour synchroniser les enquêtes nationales. (2) Communication ACJU (canton Jura) interne et aux services impliqués + 3 dossiers asile (Service Justice) avec gestion délicate (les 12 réfugiés sont peut-être encore actifs dans procédures, leurs données dans la nature). (3) DFAE consulté pour décision sur attribution publique : compétence Conseil fédéral. Recommandation TECHNIQUE de l'enquête (cohérence avec TEMP.Armageddon) communiquée à DFAE qui décide politiquement. Vous ne décidez pas. (4) Capitalisation publique partielle (TLP:WHITE) : diffusion des IoCs spécifiques au cas via OFCS pour défense future + article anonymisé en doctrine forensique cyber.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Cadrage exemplaire et institutionnellement correct. (1) Notification confidentielle 14 victimes via CIRT nationaux : c'est la voie standard. Les ANSSI/BSI/etc. coopèrent étroitement avec OFCS depuis 2020. Eurojust synchronise les procédures pénales pour éviter qu'une enquête fasse fuir l'opérateur d'une autre. (2) Communication interne ACJU + 3 dossiers asile : sensibilité cruciale. Les 12 réfugiés (souvent provenant pays autoritaires) sont en risque si leurs données ont fuit vers acteur étatique russe (échange info entre services russes-pays d'origine). LAVI applicable pour ces personnes ; ACJU doit gérer l'information avec les avocats des dossiers + tribunal des migrations. (3) DFAE pour attribution publique : DÉCISION POLITIQUE, pas opérationnelle. Vous fournissez l'analyse technique (« cohérent avec TEMP.Armageddon ») à DFAE qui décide si attribution publique sert l'intérêt suisse (diplomatie, sanctions, dissuasion). C'est la doctrine constitutionnelle. (4) Capitalisation TLP:WHITE pour IoCs défensifs : utile pour la communauté CH/EU sans révéler éléments sensibles enquête. La doctrine OFCS 2024 est explicite sur cette diffusion proactive.",
+          "legal": "EIMP + DFAE + OFCS LSI Art. 14 — Cadrage exemplaire.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Communication minimale : rapport interne fedpol + ACJU uniquement, pas de notification autres victimes (« leur cas, leur problème »), pas de saisine DFAE (« décision JU »). Vous estimez que l'enquête concerne PolJU et qu'élargir disperse les efforts.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Approche défensive et institutionnellement maladroite. (1) « Pas de notification autres victimes » : les 14 victimes sont DANS L'INFRASTRUCTURE C2 saisie. Vous avez la connaissance ; ne pas la partager = laisser ces victimes en exposition continue. C'est éthiquement inacceptable et juridiquement discutable (Convention Budapest Art. 23 — devoir de coopération). (2) « Décision JU » sur attribution publique : violation totale du partage des compétences. Le canton du Jura n'a PAS compétence en matière de relations internationales (art. 54 Cst. — affaires étrangères = compétence fédérale). Une attribution publique JU sans DFAE serait : (a) inefficace politiquement, (b) répudiée par DFAE/Conseil fédéral, (c) embarrassante pour la CH. (3) Reduce dispersion = paroles ; en réalité un dossier APT international gagne à être traité collectivement (Eurojust) — pas dispersé mais concentré dans un cadre coordonné. (4) Approche provincialiste qui ignore les compétences fédérales et le devoir de coopération internationale.",
+          "legal": "Art. 54 Cst. + Convention Budapest — Sous-coopération.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Communication maximale : conférence presse PolJU + DFAE + OFCS commune, attribution publique formelle TEMP.Armageddon = GRU russe, demande publique de sanctions UE-USA contre la Russie, médiatisation pour exemplarité.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Excès institutionnel. (1) Attribution publique formelle TEMP.Armageddon = GRU = décision politique majeure. Le Conseil fédéral pourrait la prendre, mais c'est une décision DE PORTÉE diplomatique stratégique pour la CH (qui est neutre, et qui a généralement choisi attribution discrète plutôt que publique pour les attaques APT). Une attribution publique CH GRU serait premier précédent, à pondérer par DFAE selon contexte géopolitique. (2) « Demande publique sanctions UE-USA » : la CH n'est pas membre UE et n'a pas le droit de demande directe sanctions UE. Et même les USA, c'est par canal diplomatique discret, pas conférence presse. (3) « Médiatisation pour exemplarité » : la médiatisation publique des opérations APT est généralement contre-productive — elle (a) brûle infrastructure et techniques de détection, (b) signale à l'attaquant ce qui a été détecté, (c) crée incitation à techniques plus sophistiquées. La doctrine internationale (ANSSI 2024, OFCS UK 2024) privilégie la communication CONTROLLÉE et SECTORIELLE. (4) Cas symétrique : OFCS UK 2018 avait fait attribution publique GRU (Salisbury) — coût diplomatique significatif, bénéfice opérationnel limité. Choix politique, pas opérationnel.",
+          "legal": "DFAE compétence + doctrine attribution — Excès.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "📚 Capitalisation et précédent doctrinal",
+      "situation": "Six mois plus tard. Reconstruction Active Directory ACJU complète. Aucune fuite de données complémentaire après containment. DFAE a choisi : pas d'attribution publique formelle, mais communication discrète aux partenaires (UE 5+5, Five Eyes via OFCS). 3 des 14 victimes EU ont leurs propres procédures pénales en cours (Lituanie surtout). Vous coordonnez la phase de capitalisation : (a) rapport OFCS pour CIRT-EU (déjà partagé TLP:AMBER), (b) précédent doctrinal LSCPT + cyber pour les futurs cas (votre cadrage juridique « mixte défensif/investigateur » est innovant), (c) formation interne PolJU + cantons romands sur PCAP forensics, (d) éventuelle co-publication scientifique avec ETHZ Cybersecurity ou EPFL DEDIS Lab.",
+      "law": "<strong>LSI Art. 14</strong> — Partage IoCs.<br><strong>Doctrine OFCS GovCERT 2024</strong> — Capitalisation.<br><strong>ATF future</strong> — Précédent jurisprudentiel LSCPT cyber.<br><strong>Art. 31 LPD</strong> — Recherche scientifique.<br><strong>Convention Budapest Art. 35</strong> — 24/7 contact point.",
+      "question": "<strong>Comment cadrez-vous la capitalisation ?</strong>",
+      "choices": [
+        {
+          "text": "Capitalisation à 4 niveaux : (1) Rapport OFCS TLP:AMBER déjà fait (étendre à TLP:WHITE pour IoCs défensifs anonymisés). (2) Co-publication doctrinale RSP (Revue Suisse de Droit Pénal) : article \"LSCPT et cyber-investigation : cadrage défensif/investigateur dans les attaques APT contre administrations publiques\". Référence pour les futurs procureurs cantonaux face à dossiers similaires. (3) Formation inter-cantonale CCPCS : module 2 jours « PCAP forensics + cadrage LSCPT » pour les cantons romands (manque de capacité dans cantons moyens). (4) Co-publication scientifique avec EPFL DEDIS Lab (Bryan Ford) sur les techniques avancées DNS tunneling detection — cas concret + méthodologie. Conférence Black Hat Europe ou USENIX Security 2027.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Capitalisation exemplaire structurée à 4 niveaux. (1) OFCS AMBER → WHITE pour IoCs défensifs : standard. Anonymisation = changer noms organisations, mais préserver IoCs techniques (hashes malware, IPs C2 saisies, signatures Suricata/Yara). (2) RSP article doctrinal : votre cadrage « mixte défensif/investigateur » est INNOVANT en CH. Le précédent ParlGate 2023 avait posé la question sans la résoudre proprement. Votre cas la résout avec rigueur juridique. Une publication RSP fait jurisprudence doctrinale (souvent citée par TF dans arrêts ultérieurs). (3) Formation CCPCS romande : les cantons moyens (NE, JU, FR, VS) manquent souvent de capacité PCAP forensics. CCPCS finance ce type de mutualisation depuis 2022. Module 2 jours = format efficace. (4) Co-publication EPFL DEDIS : Bryan Ford et son équipe travaillent sur la sécurité réseau, leur expertise complète la vôtre. Black Hat Europe 2027 (Londres, Berlin) ou USENIX Security 2027 = top conférences sécurité avec audience académique + industrielle. Visibilité internationale CH excellente.",
+          "legal": "LSI + RSP + CCPCS + USENIX — Capitalisation exemplaire.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Capitalisation interne uniquement (rapport fedpol + ACJU), formation interne PolJU. Pas de RSP (« risque de simplification doctrinale »), pas de co-publication scientifique (« risque divulgation »).",
+          "ok": false,
+          "pts": -8,
+          "fb": "Sous-utilisation. (1) Pas de RSP : votre cadrage juridique innovant reste interne. Les futurs procureurs face à cas similaires referont les mêmes débats. C'est une perte sèche pour la doctrine CH. (2) Pas de co-publication scientifique : la communauté scientifique CH (ETHZ, EPFL, UNINE, UniGE) perd un cas concret précieux. La recherche doit pouvoir s'appuyer sur des cas réels anonymisés — sans ce flux, la recherche académique CH se fait sur cas USA/UK. (3) « Risque simplification doctrinale » : faux problème. Un article RSP peut être nuancé et précis. La simplification dépend de la qualité de l'écriture, pas du fait de publier. (4) « Risque divulgation » : déjà résolu par anonymisation. La doctrine LSI Art. 14 + LPD Art. 31 (recherche scientifique) couvre ces publications. (5) Approche défensive sans bénéfice mesurable. Sub-optimal sans être catastrophique.",
+          "legal": "Doctrine moderne capitalisation — Sous-utilisation.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Capitalisation maximale offensive : conférence presse PolJU annonçant le succès de l'opération + attribution APT publique (malgré décision DFAE de non-attribution publique), publication des IoCs complets (incluant les détails sur 14 autres victimes), médiatisation maximale.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Multiples violations graves. (1) « Attribution publique malgré décision DFAE de non-attribution » : VIOLATION DIRECTE de la décision politique. PolJU n'a pas compétence pour faire de la diplomatie. Insubordination institutionnelle = sanctions disciplinaires + politiques certaines. (2) « Publication détails 14 autres victimes » : violation Convention Budapest Art. 23 (confidentialité coopération internationale) + LPD/RGPD (les autres victimes ont droit à la confidentialité de leur incident). Les ANSSI/BSI etc. couperaient toute coopération avec PolJU à l'avenir. (3) « Médiatisation maximale » : signal aux acteurs APT futurs sur les capacités de détection CH = ils adapteront leurs techniques. Effet contre-productif sur dissuasion. (4) Conséquences personnelles : sanctions disciplinaires, possiblement procédure pénale (violation secret de fonction art. 320 CP). (5) Image PolJU + CH durablement détériorée. Cette approche, même bien intentionnée (« exemplarité »), serait un désastre institutionnel.",
+          "legal": "Convention Budapest + DFAE + Art. 320 CP — Multiples violations.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "procureur_ju_cyber",
+    "ncsc_govcert_lead",
+    "officier_polju_cyber",
+    "expert_kudelski_security"
+  ],
+  "regionDetail": {
+    "code": "JU",
+    "flag": "🇨🇭",
+    "name": "Jura"
+  },
+  "region": "CH"
+}

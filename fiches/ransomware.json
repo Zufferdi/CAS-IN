@@ -1,0 +1,229 @@
+{
+  "id": "ransomware",
+  "title": "Ransomware à l'Hôpital",
+  "icon": "🏥",
+  "difficulty": "medium",
+  "atmosphere": "hospital",
+  "narrative": {
+    "success": "Les preuves forensiques sont préservées, le PFPDT notifié dans les délais, l'hôpital restaure depuis des backups sains. L'équipe DFIR identifie le groupe criminel. Aucune sanction LPD. Les blocs opératoires n'ont jamais été interrompus.",
+    "degraded": "La restauration a eu lieu mais certaines preuves sont perdues. Le PFPDT est notifié tardivement. Une enquête administrative est ouverte — l'hôpital devra renforcer ses procédures.",
+    "failure": "Les preuves sont détruites par la restauration hâtive. Le PFPDT apprend la violation par la presse. L'hôpital écope d'une sanction LPD maximale et d'une couverture médiatique désastreuse. 12'000 patients poursuivent."
+  },
+  "tags": [
+    "WINDOWS",
+    "DROIT",
+    "RANSOMWARE",
+    "BACKUP",
+    "HÔPITAL"
+  ],
+  "legalRefs": [
+    "LPD 2023 Art. 24",
+    "Manuel Ch. 11.1",
+    "ISO/IEC 27035"
+  ],
+  "intro": "03h00. L'hôpital cantonal est frappé par un ransomware. L'équipe IT veut restaurer depuis les backups immédiatement. Mais capturer les preuves maintenant ou les perdre à jamais ?",
+  "alertLevel": "🏥 03H00 — RANSOMWARE ACTIF · 12'000 dossiers patients menacés · Blocs opératoires en attente",
+  "objectives": [
+    {
+      "icon": "🔬",
+      "text": "Capturer les preuves forensiques avant la remédiation"
+    },
+    {
+      "icon": "📣",
+      "text": "Respecter les obligations LPD 2023 (notification PFPDT)"
+    },
+    {
+      "icon": "⚖️",
+      "text": "Équilibrer impératifs opérationnels et forensiques"
+    }
+  ],
+  "debrief": "<p>Ce scénario illustre la tension entre les obligations légales (LPD 2023 — notification PFPDT), les impératifs opérationnels (maintien des soins) et les besoins forensiques (préservation des preuves avant toute remédiation).</p><p>La règle d'or : <strong>capturer les preuves avant d'éteindre ou de restaurer</strong>. Un ransomware actif en RAM peut laisser des clés de déchiffrement et des indicateurs de compromission. La restauration depuis backup détruit irrémédiablement ces preuves.</p><p><strong>Référence CH</strong> : LPD 2023 Art. 24 — la notification au PFPDT doit intervenir «&nbsp;dans les meilleurs délais&nbsp;» en cas de violation à risque élevé pour les personnes. Le PFPDT recommande une notification sous 72h par analogie avec le RGPD UE (Art. 33 RGPD) — mais ce délai n'est <em>pas inscrit dans la loi suisse</em>. La Suisse se distingue de l'UE sur ce point. Affaires de référence : Vidymed Lausanne (2024), Hôpital cantonal Zurich (2021).</p>",
+  "steps": [
+    {
+      "phase": "🏥 L'alerte à 3h du matin",
+      "situation": "L'hôpital cantonal est frappé par un ransomware. Les serveurs de dossiers patients affichent une demande de rançon. <strong>Les blocs opératoires fonctionnent toujours sur des systèmes isolés</strong>. L'équipe IT veut restaurer depuis les backups immédiatement.",
+      "law": "<strong>LPD 2023 Art. 24</strong> — Notification PFPDT « dans les meilleurs délais ».<br><strong>Manuel Ch. 11.1</strong> — Capturer les preuves avant toute remédiation.",
+      "question": "<strong>L'équipe IT veut restaurer dans l'heure. Quelle est votre position ?</strong>",
+      "choices": [
+        {
+          "text": "Autoriser la restauration immédiate depuis les backups validés — la continuité des soins prime sur la collecte de preuves, et la responsabilité juridique de l'hôpital est engagée si un préjudice patient découle d'un retard imputable à l'enquête.",
+          "ok": false,
+          "pts": -15,
+          "fb": "Trop hâtif. Les blocs opératoires fonctionnent sur systèmes isolés — il n'y a pas d'urgence vitale immédiate sur les serveurs administratifs. Une capture rapide des preuves (30-60 min) est faisable avant restauration.",
+          "legal": "Manuel Ch. 11.1 — La restauration sans capture préalable détruit les preuves. Raisonnement proportionnel obligatoire.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Capture prioritaire avant restauration : <strong>dump RAM</strong> des serveurs affectés (FTK Imager Lite + WinPmem) + <strong>snapshot réseau</strong> (capture pcap des flux entrants/sortants en cours) + <strong>logs SIEM/EDR</strong> exportés horodatés + <strong>samples du ransomware</strong> chiffrés. Forensique d'abord (2-4h), restauration ensuite. Doctrine OFCS/Health-CERT.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Décision correcte. 30-60 minutes de capture forensique permettent de récupérer : clés de déchiffrement potentielles en RAM, IOC, latéralisation réseau. Les systèmes de soins critiques sont isolés et non impactés.",
+          "legal": "Manuel Ch. 11.1 — RAM first. L'attribution forensique nécessite les artefacts des systèmes compromis avant remédiation.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Couper l'accès Internet de l'hôpital en isolant complètement le réseau et attendre l'arrivée des forces de l'ordre — la séquestration du périmètre garantit qu'aucune action interne n'altère les artefacts avant la prise en main par les enquêteurs officiels.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Partiellement correct (isolation réseau = bonne pratique) mais attendre passivement est une erreur. L'isolation réseau doit s'accompagner d'une capture forensique active.",
+          "legal": "ISO/IEC 27035 — Isolation + capture simultanées lors d'un incident de sécurité.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "📣 La notification LPD",
+      "situation": "48 heures plus tard, l'analyse confirme : <strong>données personnelles de 12'000 patients exfiltrées</strong> avant chiffrement. Le groupe ransomware menace de publier si la rançon n'est pas payée dans 72h.",
+      "law": "<strong>LPD 2023 Art. 24</strong> — Notification PFPDT obligatoire si risque élevé (sans délai légal fixe en droit suisse).<br><strong>PFPDT en pratique</strong> — Recommande 72h (analogie RGPD UE, non inscrit dans la LPD 2023).<br><strong>Remarque clé</strong> — La Suisse ≠ UE sur ce point : délai indicatif, pas impératif. « dans les meilleurs délais ».",
+      "question": "<strong>Quand et comment notifier le PFPDT ?</strong>",
+      "choices": [
+        {
+          "text": "Notifier le PFPDT dès la première alerte, avant même de connaître l'étendue exacte de la violation — la LPD impose une notification dans les meilleurs délais et il vaut mieux compléter ultérieurement par avenant que risquer un retard sanctionné.",
+          "ok": false,
+          "pts": -5,
+          "fb": "Trop précipité. La LPD 2023 demande une notification quand on peut évaluer le risque. Une notification incomplète avec des informations erronées est pire qu'une notification un peu tardive mais précise.",
+          "legal": "LPD 2023 Art. 24 — Notifier avec les informations disponibles sur la nature, les catégories de données et les mesures prises.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Notifier le PFPDT dans les 24-48h avec les éléments raisonnablement confirmés : 12'000 patients impactés, données de santé sensibles, exfiltration vers C2 externe confirmée, mesures prises. Préciser zones non confirmées (étendue exacte exfiltration). Approche conforme nLPD art. 24 « meilleurs délais » qui équilibre rapidité et qualité documentaire.",
+          "ok": true,
+          "pts": 20,
+          "fb": "Correct. La notification LPD 2023 doit contenir : nature de la violation, catégories et volume de données, groupes de personnes concernées, conséquences probables, mesures prises.",
+          "legal": "LPD 2023 Art. 24 al. 1 — Données de santé → risque élevé par définition.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Négocier discrètement le paiement de la rançon pour éviter la publication, puis notifier le PFPDT dans le délai standard de 30 jours en présentant l'incident comme contenu — la non-publication des données change matériellement la qualification du dommage.",
+          "ok": false,
+          "pts": -30,
+          "fb": "📍 BIFURCATION NARRATIVE — Catastrophe initiale ransomware hôpital. Restaurer immédiatement depuis les backups sans capture forensique préalable (RAM, logs, samples malware) à 03h00 efface les éléments d'attribution et de qualification pénale. L'hôpital ne pourra ensuite ni signaler utilement à fedpol/OFCS, ni contribuer à la coordination internationale (Operation Cronos pour LockBit, par exemple), ni renforcer ses défenses sur la base d'IoC précis. La doctrine OFCS/Health-CERT pour les hôpitaux est : forensique d'abord (2-4h), restauration ensuite. Erreur grave à double niveau. (1) Payer finance des activités criminelles et ne garantit pas la non-publication. (2) 30 jours = violation flagrante de la LPD 2023.",
+          "legal": "LPD 2023 Art. 24 — Délai : meilleurs délais ≠ 30 jours. GovCERT déconseille fortement le paiement de rançons.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    },
+    {
+      "phase": "🧪 L'identification du groupe",
+      "situation": "L'analyse forensique révèle : note de rançon signée <code>Ryuk</code>, note écrite en anglais approximatif, utilisation de TrickBot en préambule, extension <code>.ryk</code> sur les fichiers chiffrés, propagation via PsExec + SMB. Le GovCERT vous demande une attribution provisoire.",
+      "law": "<strong>MITRE ATT&CK</strong> — TTPs Ryuk : T1566 (phishing) → T1219 (TrickBot) → T1021.002 (SMB lateral).<br><strong>Manuel Ch. 29.1</strong> — L'attribution technique précède l'attribution géopolitique.",
+      "question": "<strong>Comment formulez-vous l'attribution pour le GovCERT ?</strong>",
+      "choices": [
+        {
+          "text": "« L'attaque est signée Ryuk avec note en anglais approximatif et propagation TrickBot — la combinaison de ces éléments correspond aux opérations connues du groupe Wizard Spider basé en Russie d'après les rapports CrowdStrike et FBI flash. »",
+          "ok": false,
+          "pts": -15,
+          "fb": "Attribution géopolitique prématurée. Les TTPs Ryuk sont vendus/loués sur des marketplaces. Une signature Ryuk n'implique plus automatiquement Wizard Spider. L'attribution étatique est réservée aux services de renseignement.",
+          "legal": "Manuel Ch. 29.1 — Distinguer TTP technique (observable) et attribution géopolitique (réservée aux services).",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "« Les TTPs observés (note Ryuk, TrickBot-loader, chiffrement .ryk, propagation SMB) correspondent au profil technique du ransomware Ryuk / variant Conti. L'attribution à un groupe spécifique relève des services de renseignement et n'est pas de notre ressort. »",
+          "ok": true,
+          "pts": 25,
+          "fb": "Formulation forensique correcte. Elle établit les faits techniques (TTPs observés) sans préjuger de l'identité des opérateurs. Le GovCERT peut ensuite corréler avec ses propres sources.",
+          "legal": "Manuel Ch. 29.1 — Attribution technique observable + séparation des rôles DFIR/renseignement.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Refuser toute attribution — les éléments techniques ne suffisent pas à conclure, et fournir une attribution provisoire pourrait orienter à tort les services de renseignement vers une mauvaise piste, compromettant les investigations parallèles. La prudence absolue est la seule posture défendable scientifiquement face à des TTPs partagés entre plusieurs groupes.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Trop défaitiste. Les TTPs observables permettent une attribution technique qui aide à anticiper le comportement de l'attaquant (chiffrement, exfiltration, contact). Refuser l'analyse = priver l'équipe de réponse d'informations utiles.",
+          "legal": "Manuel Ch. 29.1 — L'attribution technique est un livrable forensique attendu.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "👪 L'annonce aux patients",
+      "situation": "L'analyse confirme : données de 12'000 patients exfiltrées. Parmi elles, des diagnostics psychiatriques, des traitements VIH, des suivis oncologiques — des données ultra-sensibles. La direction hésite entre (A) envoi postal individuel, (B) email de masse, (C) communiqué de presse public uniquement.",
+      "law": "<strong>LPD 2023 Art. 24 al. 3</strong> — Information des personnes concernées si risque élevé.<br><strong>Secret médical (Art. 321 CP)</strong> — Devoir renforcé pour données de santé.<br><strong>CEDH Art. 8</strong> — Protection de la vie privée.",
+      "question": "<strong>Quelle stratégie d'annonce recommandez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Communiqué de presse public détaillé sur le site institutionnel et les médias romands/alémaniques — la diffusion massive permet à chaque patient potentiellement concerné de prendre connaissance rapidement et de réagir, à coût opérationnel maîtrisé.",
+          "ok": false,
+          "pts": -25,
+          "fb": "Insuffisant. Les patients concernés ne liront peut-être pas le communiqué. La LPD 2023 exige une information DIRECTE quand le risque est élevé — ce qui est le cas pour des données de santé.",
+          "legal": "LPD 2023 Art. 24 al. 3 — Information directe obligatoire (pas uniquement presse).",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Envoi postal individuel aux 12'000 patients avec : (1) nature précise de leurs données concernées, (2) actions à prendre (vigilance phishing, signalement), (3) hotline dédiée, (4) droit à indemnisation, (5) communiqué public séparé sans nommer de patients.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Approche conforme et éthique. Le postal garantit la réception par des patients parfois peu numériques (personnes âgées notamment). La hotline rassure. Le communiqué public assume publiquement l'incident sans violer le secret médical individuel.",
+          "legal": "LPD 2023 Art. 24 al. 3 + Art. 321 CP — Information directe + respect du secret médical.",
+          "critical": false,
+          "next": 4
+        },
+        {
+          "text": "Envoi d'un email de masse personnalisé aux 12'000 patients via la plateforme de communication patient sécurisée de l'hôpital — la rapidité de l'email permet une notification dans les délais LPD, et les patients consultent leur messagerie hospitalière régulièrement.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Acceptable pour informations de masse mais insuffisant pour des données sensibles médicales. Certains patients (âgés, vulnérables) n'ont pas d'email actif ou ne liront pas ce type de communication. Préférer le courrier pour des données de santé.",
+          "legal": "LPD 2023 + Pratique PFPDT — Canal adapté à la population concernée et à la gravité.",
+          "critical": false,
+          "next": 4
+        }
+      ]
+    },
+    {
+      "phase": "💰 Le dilemme du paiement",
+      "situation": "Le CEO de l'hôpital vous consulte : le groupe demande 800'000 USD en BTC. Argument : « c'est moins cher que les frais juridiques, l'amende PFPDT et les dégâts réputationnels combinés ». Le conseil d'administration se réunit dans 2h.",
+      "law": "<strong>GovCERT/NCSC</strong> — Recommandation officielle : ne pas payer.<br><strong>SECO</strong> — Paiement à groupes sanctionnés = infraction pénale.<br><strong>OFAC / EU Sanctions</strong> — Plusieurs opérateurs ransomware sont listés.",
+      "question": "<strong>Votre conseil au CEO ?</strong>",
+      "choices": [
+        {
+          "text": "Payer la rançon rapidement, dans les 24 heures, pour éviter la publication des données ultra-sensibles — l'analyse coûts/bénéfices objective (rançon < cumul amende PFPDT + frais juridiques + dégâts réputationnels) justifie économiquement cette décision. L'intérêt patient prime sur les considérations dissuasives de moyen terme.",
+          "ok": false,
+          "pts": -30,
+          "fb": "Erreur multiple. (1) Aucune garantie de non-publication ou de déchiffrement. (2) Financement direct de la criminalité, favorise les attaques futures. (3) Si le groupe est sous sanctions (vérifier OFAC/SECO), infraction pénale ajoutée. (4) Statistiques : 80% des payeurs sont re-attaqués dans l'année.",
+          "legal": "GovCERT 2023 + SECO Sanctions — Paiement = risques juridiques, financiers et stratégiques cumulés.",
+          "critical": true,
+          "next": "end"
+        },
+        {
+          "text": "Refuser le paiement. Investir le budget équivalent dans (1) reconstruction depuis backups validés, (2) renforcement technique (EDR, MFA, segmentation), (3) communication transparente aux patients. Position publique claire : l'hôpital ne finance pas la criminalité.",
+          "ok": true,
+          "pts": 25,
+          "fb": "Position conforme à la doctrine GovCERT et aux cas modèles suisses (Stadler Rail 2020, Comparis 2021). Le refus, bien communiqué, devient un atout réputationnel. Les patients apprécient une institution qui défend ses principes.",
+          "legal": "GovCERT/NCSC + retour d'expérience Stadler 2020 — Le refus du paiement = standard suisse.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Négocier le paiement à 400'000 USD via un médiateur cyber spécialisé pour limiter à la fois le coût financier et la durée de chantage — les groupes ransomware acceptent fréquemment 40-60% du montant initial quand la cible montre une volonté ferme.",
+          "ok": false,
+          "pts": -20,
+          "fb": "Négocier valide le modèle criminel. Le groupe apprend que cet hôpital est un payeur — une prochaine attaque suivra. De plus, la moitié du montant reste une somme colossale détournée des soins.",
+          "legal": "Doctrine GovCERT — Négocier reconnaît la valeur du chantage.",
+          "critical": false,
+          "next": "end"
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "ciso_logitech",
+    "forensics_lead_zh"
+  ],
+  "regionDetail": {
+    "code": "CH",
+    "flag": "🇨🇭",
+    "name": "Suisse"
+  },
+  "realCase": "Cas pédagogique synthétique inspiré des incidents forensiques typiques rencontrés dans la pratique cantonale et fédérale suisse. Données et personnages anonymisés à des fins de formation.",
+  "region": "CH"
+}

@@ -1,0 +1,230 @@
+{
+  "id": "ju-affaire-noirmont-3-vps-saint-imier",
+  "title": "Affaire du Noirmont #3 — Le serveur de Saint-Imier",
+  "icon": "💾",
+  "difficulty": "medium",
+  "atmosphere": "investigation",
+  "narrative": {
+    "success": "Coordination intercantonale impeccable avec la Kapo Bern (art. 56 CPP). L'inspecteur Salamin arrive de Sion en renfort cyber et identifie immédiatement le KeePass partagé. La saisie du VPS Infomaniak est exécutée en moins de 6h avec hash SHA-256 complet. Le KDBX révèle non seulement des credentials Quenard volés, mais aussi un mot de passe pour un système GitLab CSEM/Microcity (Neuchâtel) — élément qui sera transmis spontanément (art. 67a EIMP entre cantons via art. 39 CAAS analogique intercantonal, mais ici simplement par coordination interservices) au MP Neuchâtel.",
+    "degraded": "La coordination BE prend 4 jours au lieu de 6 heures. Le VPS est saisi mais l'attaquant a eu le temps de tenter de chiffrer certains fichiers à distance. 70% du contenu reste exploitable. Le lien NE est découvert mais transmis tardivement.",
+    "failure": "Vous avez tenté la saisie depuis JU sans accord BE → la Kapo Bern intervient et bloque l'opération, le VPS reste accessible à l'attaquant qui efface tout. Toute la chaîne d'investigation s'effondre."
+  },
+  "tags": [
+    "VPS",
+    "DATACENTER",
+    "SAINT-IMIER",
+    "INFOMANIAK",
+    "Police cantonale JU",
+    "Police cantonale BE",
+    "INTERCANTONAL",
+    "KEEPASS",
+    "NGINX LOGS",
+    "TEASER NEUCHÂTEL"
+  ],
+  "legalRefs": [
+    {
+      "label": "Art. 56 CPP",
+      "title": "Concours de procédures pénales — coopération intercantonale"
+    },
+    {
+      "label": "Art. 263 CPP",
+      "title": "Séquestre — principes"
+    },
+    {
+      "label": "Art. 246 CPP",
+      "title": "Perquisition de documents et données informatiques"
+    },
+    {
+      "label": "Art. 273 al. 1bis CPP",
+      "title": "Surveillance secrète de la correspondance par poste et télécom"
+    },
+    {
+      "label": "Art. 213-214 CPP",
+      "title": "Entraide en cas d'urgence entre autorités cantonales"
+    }
+  ],
+  "intro": "Jeudi 5 février 2026, 08h30. Datacenter Infomaniak <strong>Campus Saint-Imier</strong> (canton de Berne, vallée de Saint-Imier, à 12 km du Noirmont à vol d'oiseau). Vous (Cap. Choulat, Police cantonale JU) arrivez accompagnée de l'<strong>Insp. Salamin</strong>, brigade cyber/financière de la Police cantonale VS. Salamin a été mis à disposition par l'Insp.-chef Crittin (procureur cantonal VS) suite à un accord interservices : la Police cantonale VS a une expertise reconnue depuis l'Affaire de la Viège (2025, clan Pelaia-Romeo) qui peut servir au dossier JU. Côté BE, vous êtes accompagnés du Sgt-chef Stettler (Kapo Bern Bienne, district du Jura bernois) — c'est lui qui a l'<strong>autorité territoriale</strong> ici.<br><br>Le VPS visé est un Linux Debian 12 (hostname <code>vault-mfa-renew</code>) hébergé sur l'offre <em>Public Cloud Infomaniak</em>, payée en Monero via un intermédiaire BTC, ouverte le 12 janvier 2026 sous un nom de société-écran (<em>Spinotech AG</em>, registre commercial JU, siège à Tramelan — fictif). C'est le serveur d'attaque qui a servi à mener l'intrusion VPN contre Quenard.<br><br>L'enjeu :<ul><li><strong>Saisir le VPS sans alerter l'attaquant</strong>. Si Bovet apprend la saisie en temps réel, il déclenche un wipe à distance.</li><li><strong>Préserver la RAM</strong> du serveur (clés de chiffrement en mémoire, sessions actives).</li><li><strong>Imager toutes les données</strong> sur un VPS Linux (avec ZFS chez Infomaniak — différent de NTFS Windows).</li><li><strong>Coordonner</strong> les trois polices cantonales (JU mandante, BE territoriale, VS cyber) sans conflit.</li></ul>",
+  "alertLevel": "💾 SAISIE VPS — Serveur Linux en datacenter BE · risque de wipe à distance par l'attaquant · 3 polices cantonales sur scène · KeePass et logs Nginx à extraire · découverte d'un lien Neuchâtel à confirmer",
+  "objectives": [
+    {
+      "icon": "🤝",
+      "text": "Coordonner Police cantonale JU + BE + VS sans conflit de compétences"
+    },
+    {
+      "icon": "🔒",
+      "text": "Saisir le VPS sans alerter l'attaquant (qui peut déclencher un wipe)"
+    },
+    {
+      "icon": "💾",
+      "text": "Extraire RAM + disque dans les règles de l'art (ordre de volatilité)"
+    },
+    {
+      "icon": "🔑",
+      "text": "Décoder le KeePass partagé qui contient les credentials volées"
+    }
+  ],
+  "debrief": "<p><strong>Pédagogie de cette scène.</strong> Trois sujets distincts s'entrecroisent :</p><ul><li><strong>Coopération intercantonale (art. 56 CPP)</strong>. Quand une mesure doit être exécutée dans un autre canton que celui qui mène l'instruction, c'est l'art. 56 CPP qui s'applique. La police cantonale du canton territorial (BE) <em>exécute</em> la mesure, sous direction du procureur du canton instructeur (JU). Le respect de cette hiérarchie est crucial — un raccourci = nullité absolue.</li><li><strong>Saisie d'un VPS en ligne</strong>. Différent d'un disque physique : (1) il faut couper la connectivité externe avant l'image (sinon l'attaquant peut wiper), (2) on conserve l'instance en marche pour la RAM, (3) Infomaniak/hébergeur doit collaborer pour <em>geler</em> l'instance sans déclencher d'alerte au client. Les logs hyperviseur sont aussi à récupérer.</li><li><strong>Analyse forensique Linux</strong>. Sur un Linux serveur : <code>/var/log</code>, <code>/etc/shadow</code>, journalctl, audit, history bash. Sur Debian 12 avec systemd : journald (storage souvent volatile par défaut sur cloud).</li><li><strong>KeePass forensique</strong>. Le <em>KDBX</em> est chiffré (AES-256 ou ChaCha20). Sans mot de passe maître, c'est cassé en brute-force seulement si le password est faible. Heureusement, sur un VPS d'attaque, le KDBX est souvent déverrouillé en RAM (le serveur s'en sert) → dump RAM + extraction des clés en mémoire.</li><li><strong>L'art. 67a EIMP intra-suisse n'existe pas formellement</strong> — entre cantons, c'est l'art. 56 CPP. Mais le principe de la transmission spontanée (un canton qui découvre des éléments concernant un autre canton les lui transmet) est codifié par la pratique : la <em>coordination via fedpol</em> et la <em>communication inter-MP</em>.</li></ul><p><strong>Salamin est un cas typique de transfert d'expertise.</strong> En Suisse, les cantons mutualisent. Le canton VS, qui a investi dans la cyber après l'Affaire de la Viège, peut mettre Salamin à disposition d'un autre canton via accord interservices. C'est administrativement souple, opérationnellement utile.</p><p><em>Lien narratif</em> : la découverte du KeePass révèle un mot de passe GitLab CSEM Neuchâtel — c'est le pont vers la <strong>campagne B (Le Calibre Volé)</strong>. Cette information sera transmise au MP NE par voie de coordination interservices, donnant lieu à l'enquête parallèle qui démarre à Microcity.</p>",
+  "steps": [
+    {
+      "phase": "🤝 Trois polices sur scène — qui décide ?",
+      "situation": "08h30 sur le parking d'Infomaniak Saint-Imier. Vous (Cap. Choulat, JU mandante), Sgt-chef Stettler (BE territorial), et Insp. Salamin (VS cyber-renfort). M. Schmid, manager Infomaniak, vous attend avec son adjoint sécurité. La question pratique : qui dirige, qui exécute, qui apporte l'expertise ?",
+      "law": "<strong>Art. 56 CPP</strong> — concours de procédures. <strong>Art. 27-31 CPP</strong> — for cantonal. <strong>Manuel Ch. 8</strong> — coopération intercantonale.",
+      "question": "<strong>Comment vous organisez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Vous proposez la répartition suivante : (1) <strong>Stettler (BE)</strong> dirige formellement l'opération sur place car le for d'exécution est BE — il a la compétence territoriale et c'est sa police cantonale qui signera le PV d'exécution. (2) Vous-même (JU) êtes <strong>présente comme requérante</strong> (sous direction du Proc. Boillat) et formulez les demandes techniques. (3) <strong>Salamin (VS) apporte l'expertise cyber</strong> sous votre supervision, agit comme spécialiste technique. C'est conforme à l'art. 56 CPP. Vous proposez à Stettler d'ouvrir un PV BE qui mentionne l'instruction JU.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ TRIANGLE DE COMPÉTENCES RESPECTÉ. (a) Le for d'exécution (BE) dirige l'opération sur son territoire. (b) Le for d'instruction (JU) est représenté et formule la demande. (c) Le spécialiste (VS) apporte la compétence technique sous direction du canton territorial. Ce schéma est exactement conforme à l'art. 56 CPP et à la pratique de la Conférence des commandants de polices cantonales suisses (CCPCS).",
+          "legal": "Art. 56 CPP, CCPCS doctrine."
+        },
+        {
+          "text": "Vous dirigez vous-même l'opération de bout en bout : c'est votre dossier jurassien, votre instruction, votre suspect, et vous êtes la spécialiste cyber la mieux placée pour cibler les éléments à saisir. Le Sgt-chef Stettler de la Kapo Bern et l'Insp. Salamin sont là pour vous appuyer techniquement et logistiquement, mais c'est vous qui menez et c'est vous qui signez le procès-verbal d'exécution de la perquisition.",
+          "ok": false,
+          "pts": -25,
+          "fb": "💀 VIOLATION DE COMPÉTENCE TERRITORIALE. Sur territoire BE, c'est la Kapo Bern qui exécute. Le PV d'exécution doit être signé par un agent BE (sous direction du Procureur JU si pertinent). Si vous signez personnellement le PV d'exécution sur sol BE, vous outrepassez votre compétence territoriale, ce qui rend la perquisition <strong>nulle</strong> et expose à art. 312 CP (abus d'autorité). Le canton d'instruction <em>requiert</em>, le canton territorial <em>exécute</em>.",
+          "legal": "Art. 56 + 31 CPP, art. 312 CP.",
+          "critical": true
+        },
+        {
+          "text": "Vous laissez le Sgt-chef Stettler diriger complètement l'opération : on est sur le territoire bernois, c'est sa police cantonale, c'est donc à lui de tout piloter. Vous et Salamin restez en retrait, sans formuler de demandes techniques particulières, en attendant que l'équipe bernoise vous remette les éléments une fois la saisie terminée. Vous estimez que c'est la manière la plus propre de respecter la compétence territoriale.",
+          "ok": false,
+          "pts": -15,
+          "fb": "🔄 SOUS-ENGAGEMENT. Vous êtes la requérante au sens de l'art. 56 CPP — c'est votre Procureur (Boillat) qui a demandé la mesure, c'est votre enquête qui en bénéficiera. Votre rôle est d'<em>orienter</em> les actes techniques (« nous cherchons spécifiquement le KeePass, les logs Nginx, le service VPN ») et de <em>recevoir</em> les éléments. Laisser Stettler décider seul = recevoir des éléments mal ciblés (et perdre du temps).",
+          "legal": "Art. 56 CPP — coopération active."
+        }
+      ]
+    },
+    {
+      "phase": "🔒 Geler le VPS sans alerter Bovet",
+      "situation": "09h15. M. Schmid (Infomaniak) vous accueille en salle technique. Il explique : <em>« Vos suspects ont un compte client. Si je fais quoi que ce soit sur l'instance — même la simple lecture du panneau d'administration — ça déclenche une notification e-mail au client. Et si l'instance est rebootée, l'IP change, et le client en est averti. »</em>",
+      "law": "<strong>Art. 246 CPP</strong> — perquisition de données informatiques. <strong>Art. 263 CPP</strong> — séquestre. <strong>Manuel Ch. 13.4</strong> — saisie d'instances cloud.",
+      "question": "<strong>Comment procédez-vous au gel de l'instance ?</strong>",
+      "choices": [
+        {
+          "text": "Procédure « shadow freeze » : (1) M. Schmid agit en arrière-plan via la console hyperviseur (Proxmox ou OpenStack chez Infomaniak), <strong>sans rien faire sur le panneau client</strong>, (2) il <em>déconnecte l'interface réseau</em> de l'instance (couper Internet → l'attaquant ne peut plus communiquer avec, mais l'instance tourne toujours), (3) il <em>suspend</em> l'instance VM (état RAM préservé), (4) il <em>exporte</em> le snapshot disque + RAM vers votre disque forensique. Aucun reboot, aucune notification client, l'IP reste réservée. Hash SHA-256 sur l'export. Toute la procédure documentée dans le PV de Stettler.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ TECHNIQUE PARFAITE POUR CLOUD. Sur une instance VM, la séquence est : (1) déconnecter réseau (=plus de wipe possible), (2) suspendre (=RAM préservée), (3) exporter snapshot complet. C'est la méthode utilisée par tous les CERT/CSIRT modernes. La discrétion vis-à-vis du client est obtenue en travaillant côté hyperviseur, pas côté panneau client. Documentation dans le PV BE conforme à la chaîne de custody intercantonale.",
+          "legal": "Art. 246 + 263 CPP, Manuel Ch. 13.4."
+        },
+        {
+          "text": "Vous demandez à M. Schmid d'éteindre simplement l'instance pour préserver les données dans l'état : c'est l'opération la plus simple à réaliser, elle ne demande pas de manipulation technique complexe côté hyperviseur, et une fois la machine éteinte l'attaquant ne pourra de toute façon plus rien y faire à distance. Vous procéderez ensuite à l'imagerie tranquillement, sur une instance figée et hors ligne, à votre rythme. Pour vous, l'essentiel est que les fichiers du disque soient préservés intacts — le reste est secondaire et l'extinction propre du système vous semble la garantie la plus sûre.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ DOUBLE PROBLÈME. (1) Éteindre une VM = perdre la RAM (clés de chiffrement, sessions actives, processus en cours, sockets). Le shutdown est presque toujours détectable par le client (notification, ou le client constate que son service est down → il sait que quelque chose se passe). (2) Sur un cloud moderne, on suspend (état préservé) avant d'éteindre, jamais l'inverse. La méthode doit être : déconnecter réseau → suspendre → exporter snapshot → seulement après, éteindre si besoin.",
+          "legal": "Manuel Ch. 13.4."
+        },
+        {
+          "text": "Vous demandez à M. Schmid de vous fournir les credentials root du serveur, puis vous vous connectez vous-même en SSH sur l'instance encore vivante. Vous explorez les logs en direct, vous regardez les processus qui tournent, vous parcourez l'arborescence des fichiers, et vous décidez de la marche à suivre au fur et à mesure de ce que vous découvrez. Cette approche directe vous semble la plus efficace : vous voyez immédiatement ce que contient le serveur sans attendre des heures d'export, et vous pouvez orienter la suite de la saisie en fonction de vos trouvailles en temps réel.",
+          "ok": false,
+          "pts": -25,
+          "fb": "💀 PIRE OPTION. (1) Vous loguer en SSH/console = vous laissez vos propres traces (timestamps de connexion, commandes shell history). Toute modification post-saisie pollue la chaîne de custody. (2) Explorer en live = modification de l'état (lecture de fichiers = atime mis à jour, scrolling dans les logs = modification des positions cursor potentielles). (3) C'est aussi déclencher Bovet : si son monitoring (souvent : logs SSH envoyés ailleurs, fail2ban API, etc.) le notifie, il wipe.",
+          "legal": "Art. 192 CPP — risque d'inexploitabilité.",
+          "critical": true
+        }
+      ]
+    },
+    {
+      "phase": "💾 RAM + disque — l'expertise de Salamin",
+      "situation": "10h45. L'instance est suspendue, déconnectée du réseau. Salamin a son kit forensique Linux : Magnet RAM Capture (build Linux), une distrib Tsurugi sur clé USB, un disque externe 8 To. Il vous dit : <em>« Capitaine, je propose d'extraire RAM avant disque — comme dans la Viège, on avait trouvé les clés VeraCrypt en mémoire. Si Bovet utilise un VeraCrypt sur ce VPS, on aura ses fichiers. »</em>",
+      "law": "<strong>RFC 3227</strong> — ordre de volatilité. <strong>ISO/IEC 27037:2012</strong>. <strong>Manuel Ch. 13.2</strong> — capture RAM serveur.",
+      "question": "<strong>Quel workflow d'imagerie pour le VPS ?</strong>",
+      "choices": [
+        {
+          "text": "Workflow : (1) <strong>Dump RAM via hyperviseur</strong> — le snapshot VM contient déjà la RAM (fichier <code>.vmstate</code> ou équivalent), à exporter en premier. (2) <strong>Dump disque virtuel</strong> via export du disque QCOW2/VMDK, vérification du hash. (3) <strong>Logs hyperviseur</strong> côté Infomaniak (connexions à l'instance, MAC réseau, IPs des admins). (4) <strong>Snapshot DNS et reverse-DNS</strong> sur l'IP publique pour avoir l'historique. Tout signé avec SHA-256 et MD5, séparés en archives distinctes, scellés bilatéral JU/BE.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ APPROCHE COMPLÈTE. Sur un VPS, la RAM n'est pas accessible par un outil classique comme WinPmem (l'OS guest ne donne pas accès au RAM hôte). Mais le snapshot VM <em>contient</em> la RAM (état mémoire de la VM). En exportant ça via l'hyperviseur, vous capturez la RAM sans même devoir entrer dans la VM. C'est la méthode propre pour le cloud. Plus la collecte des logs hyperviseur (qui sont la <em>caméra de sécurité</em> de l'instance) = qui s'est connecté, quand, d'où.",
+          "legal": "RFC 3227, ISO 27037."
+        },
+        {
+          "text": "Workflow simplifié : (1) imagerie du disque virtuel via export du fichier QCOW2 de l'instance, (2) calcul du hash SHA-256 de l'image obtenue, (3) déconnexion finale de l'instance. Vous décidez de vous passer de la capture de la RAM : sur un VPS, accéder à la mémoire vive de l'instance vous semble trop compliqué et incertain, et le disque devrait contenir l'essentiel des éléments utiles à l'enquête.",
+          "ok": false,
+          "pts": -15,
+          "fb": "🔄 ON LOUPE LA MOITIÉ. Sur un VPS d'attaque, la RAM contient typiquement : les clés VeraCrypt/LUKS si chiffrement actif, les sessions SSH actives, les processus de C2, les variables d'environnement avec tokens API. Salamin a raison sur la Viège : c'est la RAM qui a donné la clé. Sur un cloud, la RAM est accessible via le snapshot VM (fichier <code>.vmstate</code>) — ne pas la prendre est une perte sèche.",
+          "legal": "Manuel Ch. 13.2 — RAM serveur."
+        },
+        {
+          "text": "Workflow « live » : vous demandez à Salamin de se connecter en SSH directement dans la VM toujours active, d'y lancer <code>volatility</code> sur le pseudo-fichier <code>/proc/kcore</code> pour analyser la mémoire depuis l'intérieur du système, d'extraire la liste des processus actifs, puis de faire un dump des fichiers actuellement ouverts par les processus suspects. L'analyse se fait ainsi en temps réel, sans avoir à exporter quoi que ce soit.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ LIVE FORENSICS SUR CIBLE = MODIFICATION. Se connecter en SSH dans la VM compromise = modifier le timestamps, créer un log d'authentification, potentiellement déclencher des traps de Bovet. <code>volatility</code> sur <code>/proc/kcore</code> = soit ça marche pas (kcore désactivé par défaut sur Debian), soit ça lit la mémoire en altérant les buffers de l'OS. Vous polluez la preuve. La règle : ne JAMAIS entrer dans la VM compromise — travailler côté hyperviseur uniquement.",
+          "legal": "ISO 27037 — non-altération."
+        }
+      ]
+    },
+    {
+      "phase": "🔑 Le KeePass — déverrouillage légal",
+      "situation": "14h30. L'analyse du disque virtuel commence sur le poste Salamin à votre QG mobile. Il trouve dans <code>/root/.config/keepassxc/</code> un fichier <code>credentials.kdbx</code> de 4.2 Mo. KeePass classique. Mais il est protégé par mot de passe maître. Salamin dit : <em>« On a deux options : (a) brute-force sur GPU pendant 2-4 jours, (b) chercher la clé en RAM — le KDBX a forcément été déverrouillé par Bovet à un moment, et la clé peut être encore en mémoire. »</em>",
+      "law": "<strong>Art. 263-265 CPP</strong> — séquestre et exploitation des objets séquestrés. <strong>Art. 184 CPP</strong> — Expertise reproductible (recevabilité de la preuve déchiffrée). <strong>Manuel Ch. 15</strong> — extraction de credentials forensique.",
+      "question": "<strong>Comment procède-t-on ?</strong>",
+      "choices": [
+        {
+          "text": "Salamin lance en parallèle : (a) brute-force GPU sur le KDBX (avec John the Ripper / hashcat, en s'attendant à un MdP humain typique), (b) recherche dans le dump RAM exporté de patterns de clés KeePass (la clé maître ou les clés dérivées AES-256 peuvent être en RAM si keepassxc était lancé). Si la RAM donne le résultat avant le brute-force = on a un audit-trail clair (extraction depuis preuve séquestrée, art. 263-265 CPP, sans modifier l'original). On documente dans le PV. Si le brute-force réussit avant : on document également (méthode courante, acceptée par la pratique forensique (Art. 184 CPP)).",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ APPROCHE PARALLÈLE PROPRE. Les deux voies sont licites tant que la preuve séquestrée n'est pas altérée (on travaille sur des copies). RAM = typiquement plus rapide si l'agent keepassxc tournait. Brute-force = back-up si RAM ne donne pas. Dans les deux cas, le PV doit consigner : méthode utilisée, durée, jeu de wordlist (si dictionnaire), version de l'outil — pour reproductibilité.",
+          "legal": "Art. 263-265 CPP + Art. 184 CPP."
+        },
+        {
+          "text": "Vous demandez au Proc. Boillat de solliciter un mandat permettant de contraindre Bovet, une fois interpellé, à livrer le mot de passe maître de son KeePass. Vous prévoyez de lui signifier clairement que s'il refuse de coopérer et de communiquer son mot de passe, il s'expose à une poursuite pour entrave à l'action pénale, à une aggravation de sa situation procédurale, voire à la détention. Pour vous, c'est la voie la plus directe : le suspect détient la clé, il suffit de l'obliger légalement à la donner plutôt que de perdre des jours en attaques techniques incertaines.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ NEMO TENETUR. En droit suisse (art. 113 CPP, Cst. art. 32, CEDH art. 6), le prévenu n'a <strong>aucune obligation</strong> de fournir un mot de passe qui l'incrimine lui-même (principe <em>nemo tenetur se ipsum accusare</em>). On peut le lui demander, on ne peut pas le contraindre. Le forcer = nullité absolue + atteinte aux droits fondamentaux. Le KDBX se déchiffre techniquement, pas par coercition du prévenu.",
+          "legal": "Art. 113 CPP, Cst. 32, CEDH 6."
+        },
+        {
+          "text": "Vous transmettez une copie du fichier KDBX à l'éditeur du logiciel — Dominik Reichl pour KeePass, ou l'équipe de développement de KeePassXC — en leur demandant de le déchiffrer pour les besoins de l'enquête pénale. Vous partez du principe qu'en tant que concepteurs du format de fichier, ils disposent forcément d'une clé maître, d'un mécanisme de récupération ou d'un moyen technique réservé permettant d'ouvrir un coffre verrouillé, et qu'ils collaboreront volontiers avec une autorité de poursuite suisse sur présentation du dossier.",
+          "ok": false,
+          "pts": -25,
+          "fb": "💀 AUCUN ÉDITEUR N'A DE CLÉ MAÎTRE. KeePass et KeePassXC sont des coffres locaux : le KDBX est chiffré symétriquement (AES-256 ou ChaCha20) avec une clé dérivée du mot de passe maître via KDF (Argon2 ou AES-KDF). <strong>Personne</strong> n'a de backdoor — ni les éditeurs, ni les développeurs. Croire que l'éditeur peut déverrouiller un KDBX = ignorer la cryptographie de base. Si vous le demandez à l'éditeur, il vous répondra qu'il n'a pas accès, et votre enquête sera ridiculisée.",
+          "legal": "Aucune base légale.",
+          "critical": true
+        }
+      ]
+    },
+    {
+      "phase": "🧭 Le mot de passe du CSEM (teaser Neuchâtel)",
+      "situation": "17h20. Le brute-force GPU a tourné 2h, sans succès (mot de passe maître complexe). Mais Salamin a trouvé la clé maître dans le dump RAM (KeePassXC tournait en arrière-plan sur le VPS au moment du snapshot). Le KDBX s'ouvre. <strong>187 entrées</strong>. Vous parcourez : credentials Quenard (confirmé), credentials de deux autres manufactures du Doubs (en lien avec affaires Lamotte), et — <strong>surprise</strong> — un mot de passe pour un compte GitLab : <code>romano.marco@he-arc.ch</code>, label <em>« HE-Arc/CSEM — Spiral-2030 — accès via VPN universitaire »</em>. Salamin vous regarde : <em>« Capitaine, ce n'est pas votre dossier ça. C'est du Neuchâtel. Mais c'est notre suspect — ou un de ses contacts. »</em>",
+      "law": "<strong>Art. 56 CPP</strong> — concours de procédures. <strong>Art. 211-213 CPP</strong> — coopération entre cantons. <strong>Pratique : transmission interservices</strong> via fedpol coordination.",
+      "question": "<strong>Comment gérez-vous la découverte intercantonale ?</strong>",
+      "choices": [
+        {
+          "text": "Vous informez immédiatement le Proc. Boillat. Il prend contact avec le Procureur général NE (Mme Schaer ou son adjoint chargé de la criminalité économique). Vous proposez de <strong>transmettre formellement la pièce</strong> (le KDBX décodé, ou au moins l'extrait pertinent avec hash) au MP NE, en parallèle de maintenir l'angle JU sur Bovet. Le MP NE décidera s'il ouvre sa propre instruction (sur Romano) et si oui, comment elle se coordonne avec la vôtre.",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ COORDINATION INTER-MP IMPECCABLE. Vous ne décidez pas seule du sort de la pièce trouvée — c'est Boillat qui transmet à son homologue NE. Le MP NE peut alors ouvrir une instruction parallèle (le « Calibre Volé », vous l'apprendrez bientôt) qui partage ses éléments avec vous. C'est exactement la <em>matrice procédurale</em> qui prépare la jonction des deux dossiers — celle qui sera réglée au TPF en scène 7.",
+          "legal": "Art. 56 + 211-213 CPP."
+        },
+        {
+          "text": "Vous gardez l'information pour vous et votre dossier jurassien : c'est votre saisie, le compte Romano figure dans le KeePass que vous avez extrait, et Bovet — votre suspect — est manifestement au cœur de tout cela. Vous décidez de suivre directement la piste Romano depuis le Jura, sans en informer Neuchâtel pour l'instant, afin de garder la maîtrise complète de l'enquête et son effet de surprise.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ DOUBLE FAUTE. (1) Garder une info qui concerne un autre canton = vous travaillez à l'aveugle quand le canton NE pourrait ouvrir sa propre instruction (plus rapide, mieux placée). (2) Quand l'affaire éclatera au tribunal, la défense pointera l'asymétrie : <em>« Pourquoi le MP JU s'est-il auto-attribué une compétence sur un fait à Neuchâtel ? »</em> = pollution du dossier. La règle : <strong>une trouvaille concernant un autre canton se partage</strong>, le Proc décide de la dévolution.",
+          "legal": "Art. 56 + 211 CPP."
+        },
+        {
+          "text": "Vous demandez à l'Insp. Salamin de faire un saut à Neuchâtel pour discuter de manière informelle avec ses contacts de la brigade cyber neuchâteloise et explorer ce qu'on peut savoir sur le compte Romano. Salamin connaît tout le monde dans le milieu du DFIR romand, il saura naviguer entre les services et obtenir des informations utiles sans qu'on ait à passer par la lourdeur d'une transmission inter-procureurs.",
+          "ok": false,
+          "pts": -15,
+          "fb": "🔄 INFORMEL ET INADAPTÉ. Salamin est VS, en renfort JU. Lui faire faire un détour informel par NE = (1) hors mandat (il n'a aucune base pour intervenir à NE), (2) shortcut diplomatique qui contourne le MP NE, (3) personnel. La coopération inter-cantonale se fait toujours <em>Procureur → Procureur</em>, jamais inspecteur → contact perso. Sauf si le contact est juste pour <em>signaler</em> qu'une transmission formelle arrive.",
+          "legal": "Art. 56 CPP — voie officielle."
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "ju_polcant_cyber",
+    "vs_polcant_cyber",
+    "ju_prosecutor_economic"
+  ],
+  "regionDetail": {
+    "code": "JU",
+    "flag": "🇨🇭",
+    "name": "Jura (instruction) · Berne (territorial) · Valais (renfort)",
+    "commune": "Saint-Imier (BE)",
+    "company": "Infomaniak (réelle) · Spinotech AG (fictive)"
+  },
+  "region": "CH"
+}

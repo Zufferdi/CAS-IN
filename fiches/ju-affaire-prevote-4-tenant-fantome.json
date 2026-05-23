@@ -1,0 +1,212 @@
+{
+  "id": "ju-affaire-prevote-4-tenant-fantome",
+  "title": "Affaire de la Prévôté #4 — Le tenant fantôme (Azure Sentinel)",
+  "icon": "☁️",
+  "difficulty": "expert",
+  "atmosphere": "incident",
+  "narrative": {
+    "success": "Vous avez cartographié l'extension de l'attaque vers le tenant JU pendant la fenêtre de migration et préservé les logs Sentinel pour la procédure.",
+    "degraded": "L'extension cloud est confirmée mais l'analyse Sentinel est incomplète — risque de zones d'ombre.",
+    "failure": "Les logs Sentinel n'ont pas été préservés à temps. Microsoft les écrasera dans 90 jours."
+  },
+  "tags": [
+    "DFIR",
+    "CLOUD",
+    "AZURE",
+    "SENTINEL",
+    "KQL",
+    "M365",
+    "Police cantonale JU"
+  ],
+  "legalRefs": [
+    {
+      "label": "Art. 273 CPP",
+      "title": "Réquisition de données de télécommunication rétroactives — applicable aux logs cloud"
+    },
+    {
+      "label": "Art. 269 CPP",
+      "title": "Surveillance de la correspondance — non applicable ici (post-fait)"
+    },
+    {
+      "label": "Art. 50 LSCPT",
+      "title": "Loi sur la surveillance — données rétroactives"
+    },
+    {
+      "label": "Cloud Act (US)",
+      "title": "Accès des autorités US aux données détenues par les prestataires US (Microsoft)"
+    },
+    {
+      "label": "DPA (CH-US Data Privacy Framework)",
+      "title": "Transfert de données vers les US"
+    },
+    {
+      "label": "Art. 184 CPP",
+      "title": "Expertise — KQL queries documentées et reproductibles"
+    }
+  ],
+  "intro": "<p>Jeudi 22 janvier 2026, 07h30. QG Police cantonale JU, Delémont. Vous êtes la <strong>Cap. Christelle Choulat</strong>. Depuis le 1er janvier, vous êtes en charge opérationnelle de l'affaire Prévôté (côté JU). La migration de la commune de Moutier vers le tenant jurassien <code>ju.cic.admin.ch</code> est terminée depuis le 10 janvier — la DSI Zwahlen, sous mandat du Pôle Hostettler, a effectué la double rotation krbtgt le 4 janvier sans incident apparent.</p><p>Mais hier soir, alerte d'<strong>Azure Sentinel</strong> du tenant JU : un Service Principal <code>migrationhelper@ju.cic.admin.ch</code> — créé le 6 janvier (pendant la migration) — a effectué 847 appels Microsoft Graph entre 22h et 02h depuis une IP géo-localisée en Lituanie. Lecture massive de boîtes mail (delegated access) avant suppression du Service Principal à 02h17.</p><p>Vous avez avec vous <strong>Marc Glauser</strong> (Glauser ConSec Sàrl, consultant AD/Cloud sous mandat art. 184 CPP), <strong>Brunner</strong> (Polkapo BE, mandaté art. 79 CPP entraide intercantonale pour assistance technique), et <strong>Mme Boillat</strong> (MP-JU) en visio.</p>",
+  "alertLevel": "🚨 TENANT JU COMPROMIS · Service Principal éphémère · 847 lectures boîtes mail · Logs Sentinel à préserver sous 90j",
+  "objectives": [
+    "Préserver les logs Sentinel (rétention par défaut 90 jours seulement) via réquisition immédiate",
+    "Cartographier l'extension de l'attaque dans le tenant JU avec requêtes KQL documentées",
+    "Identifier le vecteur d'entrée (Golden Ticket survivant ? injection via Azure AD Connect ?)",
+    "Évaluer l'enjeu Cloud Act / EIMP pour les logs détenus par Microsoft"
+  ],
+  "debrief": "<p><strong>Azure Sentinel & cloud forensics</strong> — L'investigation cloud diffère fondamentalement de la forensique on-premise : (a) les logs sont chez le prestataire (Microsoft, AWS, GCP), pas chez la victime ; (b) la rétention par défaut est limitée (90 jours pour Sentinel, 30-180 pour les autres) ; (c) la preuve est requise par réquisition légale, pas par saisie physique. Outils-clés : (1) <strong>KQL</strong> (Kusto Query Language) pour requêter SigninLogs, AuditLogs, OfficeActivity, etc. ; (2) <strong>UAL</strong> (Unified Audit Log) Office 365 pour les activités utilisateur ; (3) <strong>Azure AD sign-in logs</strong> pour la chronologie d'authentification ; (4) export rapide avant expiration via <code>az monitor log-analytics query --output-format csv</code>.</p><p><strong>Service Principal éphémère</strong> — pattern d'attaque classique en 2024-2026 : l'attaquant crée un Service Principal (identité non-humaine) avec permissions élevées (Mail.Read avec consent admin), utilise les permissions pour exfiltrer (Microsoft Graph API), puis supprime le Service Principal. Trace : visible dans AuditLogs/Sentinel pendant la rétention, invisible ensuite. KQL pour détection : <code>AuditLogs | where OperationName == \"Add service principal\" | where TimeGenerated &gt; ago(30d) | join (AuditLogs | where OperationName == \"Remove service principal\") on InitiatedBy</code>.</p><p><strong>Cloud Act et EIMP</strong> — Microsoft est société américaine, soumise au Cloud Act. Pour des logs détenus dans le cloud Azure pour un tenant suisse : (a) la réquisition par le MP-JU à Microsoft Switzerland AG est licite et habituelle ; (b) pour les comptes hébergés dans une région cloud non-CH (Europe-Nord par exemple), les données peuvent être physiquement aux Pays-Bas ou en Irlande — Microsoft applique sa politique de conformité. (c) Pour des données utilisateur sensibles, le passage par EIMP (canal officiel) est plus sûr, mais beaucoup plus lent (mois) que la réquisition directe (jours). La pratique constante CH = réquisition directe à la filiale CH, avec mention explicite du fondement (art. 273 CPP + art. 50 LSCPT).</p>",
+  "steps": [
+    {
+      "phase": "⏱ 08h00 — Course contre la rétention",
+      "situation": "Glauser : « Capitaine, la rétention Sentinel par défaut est 90 jours. Le Service Principal a été créé le 6 janvier — il nous reste 73 jours pour saisir formellement les logs avant écrasement. Pratiquement, on doit faire la réquisition aujourd'hui pour éviter tout risque. »",
+      "law": "<strong>Art. 273 CPP</strong> — Réquisition de données rétroactives.<br><strong>Art. 50 LSCPT</strong>.<br><strong>Art. 263 CPP</strong> — Séquestre.",
+      "question": "<strong>Quelle est votre première action ?</strong>",
+      "choices": [
+        {
+          "text": "Vous demandez à Mme Boillat de signer ce matin une réquisition art. 273 CPP adressée à Microsoft Switzerland AG (filiale CH) pour préservation immédiate puis transmission de l'intégralité des logs Sentinel + UAL + AAD SignInLogs du tenant <code>ju.cic.admin.ch</code> pour la période 1er novembre 2025 - aujourd'hui. Vous exportez en parallèle les logs visibles vous-même via KQL (sauvegarde de précaution).",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ ACTION OPTIMALE. (1) Réquisition formelle à Microsoft Switzerland AG — fondement art. 273 CPP + 50 LSCPT, parfaitement légitime pour des données rétroactives. (2) <strong>Préservation</strong> demandée explicitement (le terme magique) — Microsoft a une procédure de \"legal hold\" qui suspend la rétention sur les données concernées. (3) Période large (depuis novembre) pour capter les éventuelles prémices. (4) Export KQL parallèle = ceinture-bretelles, vous avez votre propre copie horodatée. (5) Mme Boillat compétente (acte commis en janvier 2026 = JU).",
+          "legal": "Art. 273 CPP + Art. 50 LSCPT — Voie standard.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Vous passez par EIMP avec les USA pour sécuriser la procédure (Microsoft = société US, Cloud Act applicable).",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Sur-formalisation contre-productive. (1) Microsoft Switzerland AG est entité juridique CH, soumise au droit CH. La réquisition par MP-JU à Microsoft CH est directe et habituelle — c'est la pratique constante. (2) Passer par EIMP US = délai de plusieurs mois, alors que la rétention est de 90 jours. (3) Le Cloud Act ne s'applique qu'à l'inverse : si une autorité US réquisitionne des données détenues par Microsoft pour un compte suisse. (4) Vous perdez 73 jours pour des données déjà partiellement périssables.",
+          "legal": "Art. 273 CPP suffit — EIMP non nécessaire ici.",
+          "critical": false,
+          "next": 1
+        },
+        {
+          "text": "Vous demandez d'abord l'autorisation à Hostettler (Pôle), car les faits portent sur le tenant JU créé pendant la transition.",
+          "ok": false,
+          "pts": -10,
+          "fb": "Hostettler n'est pas autorité de réquisition — il facilite, il ne valide pas les actes. Le tenant JU date du 1.1.2026 (créé pour la migration), donc les faits du 6 janvier sont sans ambiguïté JU ratione temporis. Mme Boillat est compétente sans intermédiaire. Le réflexe « demander au Pôle » est sain en zone grise — mais ici la zone est claire.",
+          "legal": "Concordat art. 8 al. 1 — Compétence JU non ambiguë.",
+          "critical": false,
+          "next": 1
+        }
+      ]
+    },
+    {
+      "phase": "🧬 10h30 — Premières requêtes KQL",
+      "situation": "Glauser et vous lancez les premières requêtes KQL sur le Sentinel JU (avant que la réquisition à Microsoft ne consolide tout). Premier résultat : le Service Principal <code>migrationhelper</code> a été créé par un compte <code>admin@ju.cic.admin.ch</code> — un compte admin légitime. Mais l'authentification de ce compte au moment de la création (6 janvier 03h47) montre un <em>token Kerberos avec PAC validation anomaly</em> — exactement la signature d'un <strong>Golden Ticket forgé</strong>.",
+      "law": "<strong>Art. 184 CPP</strong> — Expertise reproductible (KQL queries documentées).",
+      "question": "<strong>Comment lisez-vous cette signature ?</strong>",
+      "choices": [
+        {
+          "text": "Confirmation du Golden Ticket de l'acte 2 (krbtgt compromis avant la rotation du 4 janvier). L'attaquant a forgé un TGT pour <code>admin@</code> avec des SIDs élevés, l'a utilisé via Azure AD Connect pour authentifier dans le tenant cloud, puis a créé le Service Principal éphémère. Persistence cloud établie pendant la fenêtre de migration.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ DIAGNOSTIC EXPERT. (1) Vous reliez correctement le Golden Ticket du krbtgt compromis (acte 2) à la persistence cloud. La fenêtre exacte : entre le 5 août 2025 (mot de passe krbtgt changé une première fois — extraction probable) et le 4 janvier 2026 (double rotation finale). (2) Azure AD Connect propage les comptes on-prem vers le cloud — un TGT forgé est accepté comme authentification valide jusqu'à ce que la rotation krbtgt prenne effet (10 heures après la deuxième rotation typiquement). (3) Le Service Principal éphémère est l'évidence cloud du compromis. (4) Cette analyse est documentable et reproductible = art. 184 CPP.",
+          "legal": "Art. 184 CPP — Expertise robuste.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Possible Golden Ticket, mais aussi compatible avec une compromise directe du compte <code>admin@</code> via phishing — il faut plus d'analyse avant de conclure.",
+          "ok": false,
+          "pts": 5,
+          "fb": "Prudence légitime mais incomplète. Le PAC validation anomaly est une signature spécifique du Golden Ticket forgé (le PAC contient des SIDs ou des claims que le krbtgt légitime n'aurait pas signés). Un phishing classique du compte admin ne produirait pas cette anomaly — il produirait une session normale avec un PAC standard. Néanmoins, votre prudence est saine — documenter aussi l'hypothèse phishing pour la défense.",
+          "legal": "Art. 10 al. 2 CPP — Appréciation des preuves.",
+          "critical": false,
+          "next": 2
+        },
+        {
+          "text": "Anomaly technique sans signification opérationnelle. Le PAC est souvent désynchronisé pendant les migrations.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ Erreur technique. (1) Le PAC validation anomaly est très spécifique — il indique que le PAC a été forgé ou modifié, pas qu'il est désynchronisé. (2) Les désynchronisations PAC pendant migration produisent d'autres signatures (KRB_AP_ERR_TKT_NYV ou autres erreurs de validation). (3) Confondre = passer à côté de la preuve principale du Golden Ticket. (4) Un avocat de la défense pourrait exploiter votre lecture en disant que vous avez vous-même reconnu une signature ambiguë.",
+          "legal": "Documentation forensique constante.",
+          "critical": false,
+          "next": 2
+        }
+      ]
+    },
+    {
+      "phase": "📧 13h00 — Les boîtes mail lues",
+      "situation": "Sur les 847 appels Microsoft Graph, 612 sont des <code>Mail.Read</code> sur 23 boîtes différentes. Glauser dresse la liste : les 23 boîtes appartiennent toutes à des services communaux de Moutier (état civil, contrôle des habitants, taxation, école). <strong>Aucune boîte d'élu</strong>. Le profil des données lues : pas de fuite massive ni de chiffrement, lecture sélective avec patterns de requêtes — comme si l'attaquant cherchait quelque chose de précis.",
+      "law": "<strong>Art. 179novies CP</strong> — Soustraction de données personnelles.<br><strong>nLPD art. 24</strong> — Annonce des violations.<br><strong>Art. 184 CPP</strong> — Expertise.",
+      "question": "<strong>Comment qualifiez-vous cette lecture sélective ?</strong>",
+      "choices": [
+        {
+          "text": "Reconnaissance ciblée (post-recon). L'attaquant cherche des informations spécifiques sur la commune ou ses habitants — pas un objectif d'extraction massive (qui aurait laissé d'autres signatures). Hypothèse de travail : préparation d'une opération ultérieure (chantage, fraude administrative, ingérence ciblée). Annonce nLPD art. 24 obligatoire (données personnelles concernées).",
+          "ok": true,
+          "pts": 25,
+          "fb": "✅ LECTURE ANALYTIQUE PERTINENTE. (1) Vous distinguez correctement <em>extraction massive</em> (download de gros volumes) de <em>recon ciblée</em> (lectures sélectives). La signature est différente et la finalité aussi. (2) L'absence de boîtes d'élus + ciblage administratif = profil compatible avec ingérence étatique (renseignement sur une commune en transition juridictionnelle), espionnage économique (préparation d'une fraude administrative sur les habitants), ou criminalité organisée préparatoire. (3) <strong>nLPD art. 24</strong> obligatoire car données personnelles d'habitants concernées — annonce au Préposé fédéral à la protection des données et à la communication (PFPDT). (4) Hypothèse de travail à valider en acte 5 (threat intel).",
+          "legal": "nLPD art. 24 + Art. 184 CPP.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Extraction commerciale classique : revente sur le dark web. Pas besoin de qualifier plus.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ Réduction inappropriée. (1) Le pattern (lecture sélective de 23 boîtes administratives, pas d'élus, suppression du Service Principal après usage) ne ressemble pas à de l'extraction commerciale, qui privilégie le volume. (2) Cette qualification superficielle masque les vraies hypothèses (recon ciblée, ingérence, espionnage économique). (3) Important : la qualification juridique conditionne la suite — si on retient juste « vol de données pour revente », on cherchera dans les marketplaces ; si on retient « recon ciblée préparatoire », on cherchera l'opération suivante.",
+          "legal": "Art. 10 al. 2 CPP — Analyse insuffisante.",
+          "critical": false,
+          "next": 3
+        },
+        {
+          "text": "Test de capacité de l'attaquant — il a juste voulu vérifier qu'il pouvait. Pas de finalité criminelle au-delà.",
+          "ok": false,
+          "pts": -5,
+          "fb": "Hypothèse possible mais peu probable. Un acteur qui investit dans un Golden Ticket persistent sur 5 mois pour faire un simple test de capacité = analyse coût/bénéfice incohérente. La motivation est généralement opérationnelle.",
+          "legal": "Documentation forensique constante.",
+          "critical": false,
+          "next": 3
+        }
+      ]
+    },
+    {
+      "phase": "🔍 16h00 — Que faire avec Hostettler ?",
+      "situation": "Vous avez maintenant : (a) compromission AD on-prem confirmée (acte 2, BE), (b) extension cloud confirmée (acte 4, JU), (c) recon ciblée sur 23 services communaux (JU). Question : informer Hostettler (Pôle de coordination) et la commune Moutier de l'étendue ? Et si oui, comment ?",
+      "law": "<strong>Concordat BE-JU art. 12</strong> — Sécurité partagée des systèmes communaux.<br><strong>nLPD art. 24</strong> — Annonce PFPDT.<br><strong>Art. 75 al. 4 CPP</strong> — Communications inter-autorités.",
+      "question": "<strong>Quel circuit d'information adoptez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "Triple circuit : (1) Annonce nLPD art. 24 au PFPDT par la DSI Moutier (obligatoire). (2) Information cadrée au Pôle Hostettler du périmètre de l'extension cloud (sans détails techniques sensibles). (3) Communication interne MP-JU/Police cantonale JU/Polkapo BE pour coordonner la suite. Aucune communication publique pour préserver l'enquête.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ CIRCUIT COMPLET ET MAÎTRISÉ. (1) nLPD art. 24 — délai 72h dès connaissance par le responsable du traitement (la commune) ; vous la déclenchez en informant Zwahlen formellement aujourd'hui. (2) Pôle Hostettler — informé pour mémoire du concordat art. 12, mais pas de détails techniques (préserver secret de l'instruction art. 73 CPP). (3) Coordination tripartite Police cantonale JU + Polkapo BE + MP-JU = continuité du dossier. (4) Pas de communication publique = enquête préservée. C'est la configuration optimale.",
+          "legal": "nLPD art. 24 + Concordat art. 12 + Art. 75 al. 4 CPP.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Information complète et immédiate à la commune Moutier (Maire + Conseil municipal) pour transparence démocratique.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ Risque procédural majeur. (1) Le Maire et les conseillers municipaux ne sont pas tenus au secret de l'instruction — fuite probable vers les médias ou des proches dans les 48h. (2) L'attaquant alerté changera ses TTPs ou disparaîtra. (3) La transparence démocratique est compatible avec le secret de l'instruction : on informe l'exécutif communal seulement à la fin (audience), pas pendant.",
+          "legal": "Art. 73 CPP — Secret de règle.",
+          "critical": false,
+          "next": "end"
+        },
+        {
+          "text": "Aucune communication tant que l'enquête est en cours. Y compris pas d'annonce nLPD pour ne pas alerter l'attaquant.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ Violation directe de la nLPD. (1) L'art. 24 nLPD impose une annonce sous 72h dès connaissance d'une violation de la sécurité des données personnelles ayant entraîné un risque élevé. (2) Le PFPDT est tenu au secret — annoncer à lui ne risque pas d'alerter l'attaquant. (3) Ne pas annoncer = infraction administrative qui sera relevée par toute audit nLPD ultérieur, et qui peut donner lieu à amende contre la commune (art. 60 nLPD).",
+          "legal": "nLPD art. 24 + art. 60 — Sanction administrative possible.",
+          "critical": true,
+          "next": "end"
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "ju_polcant_cyber",
+    "ju_prosecutor_cyber",
+    "be_polkapo_cyber",
+    "expert_ad_glauser",
+    "dsi_moutier_zwahlen",
+    "bekb_concordat_coord"
+  ],
+  "regionDetail": {
+    "ville": "Delémont",
+    "code": "JU"
+  },
+  "region": "JU",
+  "realCase": false
+}
