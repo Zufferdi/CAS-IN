@@ -3,7 +3,7 @@
   "title": "Affaire Aurora #5 — Threat hunting et lateral movement (EDR + Sigma)",
   "icon": "🎯",
   "difficulty": "hard",
-  "atmosphere": "lab",
+  "atmosphere": "network",
   "region": "CH",
   "regionDetail": {
     "code": "GE",
@@ -81,6 +81,20 @@
           "pts": 30,
           "fb": "✅ HUNT QUERY ITÉRATIF. Vous : (1) <em>commencez par le pattern le plus restrictif</em> (hash exact) puis élargissez progressivement, (2) <em>utilisez des heuristiques structurales</em> quand le hash ne match pas (polymorphisme), (3) <em>contextualisez les targets</em> (profils cohérents avec stratégie attaque), (4) <em>identifiez les 2 'survivants'</em> qui n'ont pas ouvert — précieux pour comprendre les défenses humaines. C'est exactement le hunt itératif enseigné chez SANS FOR578.",
           "legal": "M365 Threat Explorer, hunting methodology."
+        },
+        {
+          "text": "<strong>Query large d'emblée</strong> : 'received subject contains booking OR confirmation' sur 90 jours, tous les destinataires. Plus on cherche large, plus on trouve. On filtrera les 800-1200 hits manuellement après.",
+          "ok": false,
+          "pts": -18,
+          "fb": "❌ HUNT À AVEUGLES. (1) <em>« Subject contains booking OR confirmation »</em> = 100% des emails légitimes voyage/hôtel/restaurant qui passent dans une banque privée internationale (clients, employés business travel, fournisseurs) — vous allez avoir 5000-10'000 hits, dont 99.99% sont légitimes, (2) <em>« Filtrer manuellement »</em> 1200 hits est irréaliste : Helvecom + Aurora SOC ont 22h restantes avant ouverture marché, vous épuiserez l'équipe sur un tri qui ne donne rien, (3) <em>Le bon hunt</em> commence <em>spécifique</em> (hash) puis élargit progressivement avec heuristiques qui <em>distinguent</em> malveillant/légitime (structure PDF, taille, /JS+/OpenAction), pas avec mots-clés génériques, (4) <em>Vous épuisez votre attention</em> sur des distractions au lieu d'aller vers les 2 victimes potentielles réelles (trader Equities + compliance officer). La méthodologie SANS FOR578 enseigne explicitement : 'start narrow, expand iteratively'.",
+          "legal": "Hunting methodology, SANS FOR578."
+        },
+        {
+          "text": "<strong>Query ultra-spécifique uniquement</strong> : 'hash SHA-256 equals a4f8...' sur 90 jours. Si 0 hit, c'est qu'il n'y a pas d'autre victime, on conclut et on passe à autre chose.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ HUNT TROP RIGIDE. (1) <em>Le hash exact est trop spécifique</em> face à un APT moderne qui utilise des PDFs polymorphes (1 hash unique par cible — c'est <em>la</em> tactique anti-Cuckoo et anti-VT depuis 2020), 0 hit ne prouve rien, (2) <em>« Conclure et passer à autre chose »</em> sans heuristiques structurales = vous ratez les 2 autres destinataires Aurora qui ont reçu le même PDF polymorphique (même structure, hash différent), (3) <em>Méthodologie défaillante</em> : un APT planifié sur 5+ semaines avec 7 typosquats préparés a probablement envoyé <em>3-5 emails à Aurora</em> sur des cibles différentes — limiter le hunt au hash exact rate les 2/5 autres tirs, (4) <em>Les 2 destinataires non-ouverts</em> sont la <em>clé</em> de votre compréhension de la campagne : ils peuvent vous dire combien d'emails ont été reçus en tout, sur quelle période, sur quels prétextes. La rigueur excessive est aussi mauvaise que la dispersion.",
+          "legal": "Hunting itératif, anti-polymorphism."
         }
       ]
     },
@@ -96,6 +110,20 @@
           "pts": 30,
           "fb": "✅ CONCLUSION FORENSIQUE NUANCÉE. Vous : (1) <em>concluez de manière probabiliste</em> ('forte mais pas absolue'), (2) <em>investiguez l'hypothèse alternative</em> (protocoles non-Win), (3) <em>contextualisez par la timeline</em> (40 min insuffisant pour APT prudent), (4) <em>recommandez monitoring continu</em>. C'est l'humilité forensique professionnelle : on ne dit pas 'pas de lateral movement', on dit 'pas de lateral movement détecté avec haute confiance, monitoring continu recommandé'. La différence est cruciale juridiquement et opérationnellement.",
           "legal": "MITRE Defender's Framework."
+        },
+        {
+          "text": "<strong>Conclusion catégorique</strong>. <em>« 0 hit sur 5 EventIDs critiques = pas de lateral movement, point. M-FX-487 est le seul host touché. On peut clore l'analyse lateral movement et passer à autre chose. »</em>",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ ABSOLUTISME FORENSIQUE — ERREUR DE JUNIOR. (1) <em>« 0 hit = pas de lateral movement »</em> est faux logiquement : 0 hit prouve seulement <em>l'absence de détection par ces 5 EventIDs</em>, pas l'absence du phénomène. Un APT mature peut utiliser : (a) WMI lateral (T1047, événements 4624 mais avec WmiPrvSE.exe comme processus parent — pas filtré par votre query), (b) SMB sans authentification (anonymous logon NULL session — EventID 4624 mais Account_Name=ANONYMOUS LOGON), (c) Outils custom non-Windows native, (2) <em>« Clore l'analyse »</em> avant 30j de monitoring = vous laissez l'attaquant tranquille s'il a une persistence non-détectée et patiente, (3) <em>FINMA Q2 2027 audit</em> va vous demander 'comment êtes-vous certain qu'il n'y a pas eu lateral movement ?' — votre réponse 'parce que mes 5 queries ont retourné 0 hits' sera jugée insuffisante méthodologiquement, (4) <em>L'humilité forensique</em> est la différence entre 'pas détecté' et 'pas existant' — la deuxième formulation est <em>impossible à prouver</em> et donc dangereuse à affirmer.",
+          "legal": "Méthodologie forensique, charge de preuve."
+        },
+        {
+          "text": "<strong>Conclusion défaitiste</strong>. <em>« 0 hit ne prouve rien — un APT sophistiqué efface ses traces. Il y a probablement du lateral movement non-détecté. On doit considérer toute l'organisation comme potentiellement compromise et reconstruire l'AD depuis zéro. »</em>",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ PARANOÏA DESTRUCTRICE — RECONSTRUCTION AD INJUSTIFIÉE. (1) <em>« Reconstruire l'AD depuis zéro »</em> = projet 3-6 mois, CHF 1-3M, downtime majeur Aurora — décision uniquement justifiée si des preuves concrètes de Golden Ticket / DCsync / DC compromis = vous n'avez rien de tel, (2) <em>« 0 hit ne prouve rien »</em> est partiellement faux : si 5 EventIDs critiques retournent 0 hit + contexte timeline (40 min entre LSASS dump et isolation, fenêtre courte) + monitoring 30j renforcé planifié = on a haute confiance, pas certitude absolue. Différence entre 'probable' et 'possible' compte, (3) <em>L'AD reconstruction</em> n'est pas la réponse au 'on n'est pas sûr' — c'est la réponse au 'on a des preuves de compromission DC', (4) <em>Stéphane Rey et la Direction</em> vont rejeter cette recommandation comme disproportionnée et l'analyste perd sa crédibilité pour les futures décisions. La paranoïa est l'inverse de la rigueur — toutes deux sont des défauts professionnels.",
+          "legal": "Proportionnalité réponse, AD recovery."
         }
       ]
     },
@@ -111,6 +139,20 @@
           "pts": 30,
           "fb": "✅ RECOMMANDATIONS HIÉRARCHISÉES. Vous : (1) <em>actions immédiates</em> (KRBTGT 2× + reset comptes), (2) <em>renforcement monitoring</em> 30 jours, (3) <em>audit externe paranoïaque</em> 90 jours (deuxième opinion = pratique recommandée par FINMA pour incidents critiques), (4) <em>documentation pour régulateur</em>. C'est la posture défensive en profondeur — 'belt and suspenders'. Stéphane Rey approuvera ce plan, FINMA aussi.",
           "legal": "FINMA Circular 2023/01, NIST SP 800-61 recovery."
+        },
+        {
+          "text": "<strong>Minimum vital</strong>. Hunt persistence 0 hit = on conclut pas de persistence. Pas de reset KRBTGT (downtime risqué), pas d'audit externe (coût élevé non justifié), monitoring standard reprend. Aurora ré-ouvre lundi normalement. Économie estimée : ~250k USD audit Mandiant évité + downtime AD évité.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ SOUS-INVESTISSEMENT POST-INCIDENT — FAUTE PROFESSIONNELLE. (1) <em>« 0 hit = pas de persistence »</em> revient à la même erreur de logique que l'absolutisme du lateral movement : 0 hit prouve l'absence de détection, pas de phénomène, (2) <em>Pas de KRBTGT reset</em> alors que LSASS a été dumpé = ignorer le risque Golden Ticket résiduel : si l'attaquant a généré un TGT forgé avant l'isolation 03h52, il peut revenir dans 30-90 jours sans aucun signe visible (Golden Tickets sont valides 10 ans par défaut) — c'est <em>la</em> persistence APT classique, (3) <em>« Économie 250k »</em> est une fausse économie : un retour APT29 réussi 6 mois plus tard = (a) procès clients, (b) sanction FINMA (5-50M CHF amende possible), (c) perte de licence bancaire dans les cas extrêmes (cf. Falcon Private Bank Liechtenstein 2018), (d) carrières détruites. L'audit Mandiant à 250k est une assurance, pas un coût, (4) <em>FINMA Circular 2023/01</em> recommande <em>explicitement</em> compromise assessment externe post-incident APT — non-respect = risque réglementaire. Économiser ici = jouer à la roulette russe avec l'établissement.",
+          "legal": "FINMA Circular 2023/01, Golden Ticket."
+        },
+        {
+          "text": "<strong>Maximum paranoia</strong>. Reset KRBTGT 4× consécutivement (au lieu de 2), reset des 480 comptes utilisateurs + tous comptes service, audit externe Mandiant + CrowdStrike + Microsoft DART en parallèle (3 audits, 750k USD total), fermeture marché 1 semaine pour reconstruction infrastructure complète.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ SUR-RÉACTION DÉSTABILISANTE. (1) <em>4× KRBTGT reset</em> = procédure non-supportée Microsoft (2 resets espacés 10h est le standard, plus risque corruption AD irréversible), (2) <em>Reset 480 comptes</em> = paralysie organisationnelle 2-3 jours, productivité à zéro, clients qui ne reçoivent pas leurs réponses normales = inquiétude légitime, (3) <em>3 audits en parallèle</em> (Mandiant + CrowdStrike + DART) = (a) coût 750k justifié seulement pour des établissements à 100+ Mds AuM (Aurora a 22 Mds, ratio disproportionné), (b) coordination cauchemardesque (3 équipes externes, 3 méthodologies différentes, 3 rapports parfois contradictoires), (c) accès aux données clients triple violation potentielle art. 47 LB si NDAs pas tous parfaits, (4) <em>Fermeture marché 1 semaine</em> = perte business CHF 500k-2M, perte clients institutionnels (qui transfèrent vers concurrent), perte confiance impossible à restaurer. La proportionnalité défensive bat la paranoïa absolue.",
+          "legal": "Proportionnalité IR, AD operations."
         }
       ]
     }

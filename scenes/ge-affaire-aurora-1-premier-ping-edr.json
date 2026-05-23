@@ -114,6 +114,20 @@
           "pts": 30,
           "fb": "✅ BRIEF SOC PARFAIT. Vous structurez en 7 points en 60 secondes : (1) <em>contexte host + utilisateur</em>, (2) <em>indicateur technique précis</em> (IP + port + jitter), (3) <em>chronologie</em> (alerte vs début beacon — 1h d'écart suggère que l'attaquant a déjà fait quelque chose entre 02h47 et 03h47), (4) <em>posture EDR</em> (alert-only ≠ blocking — important pour comprendre pourquoi l'attaque n'a pas été stoppée), (5) <em>actions déjà prises</em>, (6) <em>contexte corrélation</em>, (7) <em>recommandation</em>. C'est le format SBAR (Situation/Background/Assessment/Recommendation) adapté SOC. Antoine validera votre escalade.",
           "legal": "Pratique IR communication."
+        },
+        {
+          "text": "<em>« Antoine, désolée de te réveiller, j'ai une alerte sur un poste trader, c'est probablement un faux positif mais je voulais te briefer par sécurité. Il y a du PowerShell étrange et un beacon vers une IP étrangère. J'ai isolé le poste. Je ne suis pas sûre de ce que c'est exactement, peux-tu me guider sur la suite ? »</em>",
+          "ok": false,
+          "pts": -18,
+          "fb": "❌ BRIEF FLOU + DÉRESPONSABILISATION. (1) <em>« Désolée de te réveiller »</em> = excuse inutile qui dilue l'urgence — Antoine est SOC Manager d'astreinte 24/7, c'est son rôle d'être réveillé pour ça, vos excuses signalent que vous doutez de la gravité, (2) <em>« Probablement un faux positif »</em> est exactement l'opposé de votre jugement réel (vous avez isolé, capturé mémoire = vous croyez à l'incident) — vous brouillez le signal pour Antoine qui va sous-prioriser, (3) <em>« Du PowerShell étrange » / « une IP étrangère »</em> = pas d'IOC précis, Antoine doit vous redemander les détails au lieu d'agir, (4) <em>« Peux-tu me guider »</em> = déléguer la décision alors que vous l'avez déjà prise correctement. Vous présentez votre triage comme une demande d'aide, ce qui dévalorise votre travail. Le bon SOC L2 senior <em>brieffe</em>, ne demande pas de validation tactique.",
+          "legal": "Pratique IR communication, SBAR."
+        },
+        {
+          "text": "<em>« Antoine, j'ai identifié une compromission active sur M-FX-487 — c'est Cozy Bear / APT29, j'en suis presque certaine. La signature du beacon est typique : jitter 60s + parent PowerShell + IP autrichienne, c'est leur mode opératoire 2024. On a une intrusion d'État sur la salle de marchés. Il faut prévenir le NCSC et la FINMA dans l'heure. »</em>",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ ATTRIBUTION PRÉMATURÉE. (1) <em>« C'est APT29 »</em> = attribution d'État à 04h00 sur la base de 3 indicateurs publics — c'est la signature d'un analyste junior, pas L2 senior. Cobalt Strike est utilisé par <em>des dizaines</em> de groupes (APT29, APT41, FIN7, criminel ransomware, etc.) — distinguer APT29 demande corrélation IOC sur 8-12 dimensions (TLS fingerprint, malleable C2 profile, post-ex tooling, timing operations, etc.) que vous n'avez pas à ce stade, (2) <em>« Intrusion d'État sur salle de marchés »</em> = formulation qui va déclencher une escalade FINMA + NCSC + MPC immédiate alors que c'est <em>peut-être</em> un groupe criminel utilisant Cobalt Strike pour préparer un ransomware (équiprobable), (3) <em>Saut d'étapes</em> : avant NCSC/FINMA dans l'heure, il faut CSIRT Helvecom + CISO Stéphane Rey + confirmation IOC par analyse mémoire — Antoine va recadrer durement, (4) Le bon brief reste <em>technique et factuel</em> ('beacon Cobalt Strike-like') sans attribution. L'attribution est l'arme la plus chère du DFIR : on la sort uniquement avec preuves multi-dimensionnelles.",
+          "legal": "Attribution APT, FOR578 doctrine."
         }
       ]
     },
@@ -129,6 +143,20 @@
           "pts": 30,
           "fb": "✅ GOLDEN HOUR MAÎTRISÉE. Vous : (1) <em>finalisez l'artefact prioritaire</em> (RAM = volatilité maximale), (2) <em>élargissez le périmètre</em> (toujours penser 'patient zero' + 'patient X' en intrusion APT — un workstation rarement seul), (3) <em>baseline behavioral</em> sur Splunk = détection des anomalies réseau historiques, (4) <em>vérification des hosts apparentés</em> (autres traders FX = même phishing campaign probable), (5) <em>hunt sur la source</em> (emails Reynard = patient zéro probable), (6) <em>journalisation</em>, (7) <em>communication régulière</em>. C'est exactement l'orchestration de la 'première heure' enseignée chez SANS FOR578 et NIST SP 800-61.",
           "legal": "NIST SP 800-61, SANS FOR578."
+        },
+        {
+          "text": "(1) <strong>Reboot du host M-FX-487</strong> pour 'nettoyer' la session compromise — vous pensez qu'un redémarrage propre arrêtera tout processus malveillant en mémoire. (2) Lancer antivirus complet (Falcon scan on-demand) sur le poste. (3) Patcher Windows via WSUS dans la foulée pour combler la vulnérabilité d'entrée présumée. (4) Restaurer le poste depuis l'image OS de référence.",
+          "ok": false,
+          "pts": -30,
+          "fb": "❌ DESTRUCTION D'ARTEFACTS — CATASTROPHE FORENSIQUE. (1) <em>Reboot</em> = destruction immédiate de toute la mémoire (RAM) qui contient les processus actifs, les clés de chiffrement Cobalt Strike, les pipes nommés, les connexions réseau en cours — vous perdez 80% des indices forensiques en 30 secondes, (2) <em>Scan AV on-demand</em> sur un host compromis = (a) si malware persistant en mémoire, peut déclencher des routines anti-forensiques (effacement des logs, suicide du beacon), (b) modifie tous les timestamps fichiers (= la timeline forensique est ruinée), (3) <em>Patch WSUS + restauration OS</em> = vous éliminez la persistance avant de l'avoir cartographiée (registry Run keys, scheduled tasks, services malveillants, DLL hijacking) — sans cartographier la persistance, vous ne pouvez pas être sûre que la restauration est propre, (4) <em>Antoine vous a explicitement dit 'préserve tout'</em> 25 minutes plus tôt — vous violez la directive du SOC Manager. La règle d'or DFIR : <strong>observer avant éradiquer</strong>. La golden hour sert à cartographier, pas à nettoyer.",
+          "legal": "RFC 3227 ordre volatilité, NIST SP 800-61."
+        },
+        {
+          "text": "(1) Mise en pause totale pendant 2h pour attendre l'arrivée du CISO et du CSIRT externe. (2) Pas d'élargissement du périmètre — vous estimez que c'est l'analyse du CSIRT externe Helvecom de faire le hunt, vous risqueriez de 'gâcher' leurs constats. (3) Vous surveillez juste l'alerte Falcon en lecture seule. (4) Vous mettez à jour le journal papier toutes les 30 minutes.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ INACTION COUPABLE — GOLDEN HOUR PERDUE. (1) <em>'Attendre le CSIRT externe'</em> = perte de 2h critiques où les attaquants peuvent (a) continuer leur lateral movement vers les serveurs Murex via les credentials du trader Reynard, (b) exfiltrer plus de données, (c) déployer des persistances supplémentaires, (d) détecter votre isolation EDR et basculer sur des canaux C2 alternatifs préparés à l'avance, (2) <em>'Risque de gâcher les constats du CSIRT externe'</em> est une mauvaise compréhension : le CSIRT externe attend précisément que vous ayez fait le premier hunt — son rôle est de l'<em>élargir</em> et de le <em>valider</em>, pas de le <em>commencer</em>, (3) <em>Antoine vous a dit explicitement 'continue les artefacts, surveille pas d'autre alerte corrélée'</em> = ordre direct que vous ignorez, (4) <em>NIST SP 800-61 et SANS FOR578</em> imposent que la première heure soit consacrée à l'extension de la cartographie (containment + identification = phases parallèles, pas séquentielles). L'attentisme pendant la golden hour est l'erreur la plus coûteuse en IR.",
+          "legal": "NIST SP 800-61, golden hour."
         }
       ]
     }

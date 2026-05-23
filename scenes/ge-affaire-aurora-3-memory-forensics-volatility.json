@@ -3,7 +3,7 @@
   "title": "Affaire Aurora #3 — Memory forensics (Volatility, BeaconHunter)",
   "icon": "🧠",
   "difficulty": "hard",
-  "atmosphere": "lab",
+  "atmosphere": "network",
   "region": "CH",
   "regionDetail": {
     "code": "GE",
@@ -85,6 +85,20 @@
           "pts": 30,
           "fb": "✅ INTUITION FORENSIQUE PROFESSIONNELLE. Vous : (1) <em>identifiez l'anomalie historique</em> (IE en 2027 = artefact attaquant, pas usage légitime), (2) <em>repérez l'orphelinat de parent</em> (PID 4 = signe classique de process injection avec parent disparu), (3) <em>commandez l'analyse approfondie</em> avec les 3 plugins pertinents pour identifier le shellcode. C'est exactement le réflexe d'un memory forensic analyst senior — Marc avance vite.",
           "legal": "MITRE T1055, Volatility plugins."
+        },
+        {
+          "text": "<strong>powershell.exe PID 8432</strong> en priorité. C'est le processus parent connu (OUTLOOK = phishing), donc on remonte le vecteur initial. Si on comprend comment le shellcode a été chargé via PowerShell, on aura la kill chain depuis le début. Commandes : <code>windows.cmdline --pid 8432</code> (commande exacte exécutée), <code>windows.handles --pid 8432</code>, et matching YARA sur dump de cette zone.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ ORDRE DE PRIORITÉ INVERSÉ. (1) <em>PowerShell parent Outlook</em> est <em>connu</em> et son rôle de vecteur initial est <em>évident</em> — confirmer cela ne change rien à votre compréhension de la kill chain, c'est descriptif pas tactique, (2) <em>iexplore.exe orphelin</em> est le processus <em>actif</em> où réside probablement le beacon Cobalt Strike — c'est <em>lui</em> qui contient les TTPs post-exploitation, les commandes envoyées par le C2, les comptes accédés depuis 02h47, soit la matière forensique la plus précieuse, (3) <em>Erreur stratégique</em> : vous analysez les preuves de l'<em>entrée</em> au lieu de comprendre ce qui s'est <em>passé</em> dans la machine — c'est inversé du point de vue gestion de risque (l'attaquant ne reviendra pas par la même méthode, mais il peut avoir laissé des persistances), (4) <em>Marc va vous corriger</em> doucement : 'PowerShell on l'aura, mais iexplore est où l'action a lieu maintenant'. Reculer d'un cran sur la kill chain est tentant mais pas prioritaire en golden hour étendue.",
+          "legal": "MITRE Kill Chain prioritisation."
+        },
+        {
+          "text": "<strong>Service WinRM en mémoire mais hors liste services</strong> en priorité. C'est le signe le plus évident de persistence cachée — un attaquant qui prépare son retour. On va dumper toute la zone WinRM et l'analyser statiquement avec Ghidra. Volatility commands : <code>windows.services</code>, <code>windows.svcscan</code>, dump mémoire zone WinRM.",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ FAUX POSITIF PROBABLE — DÉTOURNEMENT D'ATTENTION. (1) <em>WinRM en mémoire hors liste services</em> n'est pas nécessairement un signe de persistence cachée — c'est aussi le comportement normal d'un service en cours d'initialisation, de redémarrage, ou simplement chargé dynamiquement par un script légitime, (2) <em>Vous priorisez sur un indice ambigu</em> alors qu'<em>iexplore.exe orphelin</em> est un signal beaucoup plus fort et clair (IE déprécié depuis 2022 + parent System = ≥80% probabilité shellcode injecté), (3) <em>Ghidra reverse engineering sur zone WinRM</em> = 4-8h de travail pour potentiellement rien — Marc n'a pas ce temps en golden hour, (4) <em>La discipline d'enquête</em> exige de prioriser les indicateurs <em>forts</em> avant les indicateurs <em>faibles</em> — iexplore PID 6712 est fort, WinRM est faible jusqu'à preuve du contraire. Vous risquez de passer 4h sur un faux positif pendant que l'attaquant continue son lateral movement (s'il existe une 2ème compromission non détectée).",
+          "legal": "Prioritisation forensique, signaux forts/faibles."
         }
       ]
     },
@@ -100,6 +114,20 @@
           "pts": 30,
           "fb": "✅ ESCALADE CRITIQUE PARFAITEMENT GÉRÉE. Vous : (1) <em>identifiez le timing</em> (LSASS dumpé 35 min avant détection — il y a eu fenêtre d'usage des credentials), (2) <em>identifiez les comptes exposés</em> y compris les comptes de service (souvent oubliés dans le reset post-incident), (3) <em>identifiez le risque Golden Ticket</em> (KRBTGT reset = nuclear option mais parfois nécessaire), (4) <em>déclenchez le hunt rétrospectif</em>. Marc téléphone immédiatement à Sarah Doumenc, qui appelle Stéphane Rey à 16h25 : reset Reynard + comptes service Murex en cours dans les 30 minutes.",
           "legal": "MITRE T1003.001, T1558.001 Golden Ticket."
+        },
+        {
+          "text": "<strong>Pas grand-chose à signaler</strong>. ProcDump est signé Microsoft, c'est un outil sysadmin normal — un admin Aurora a probablement exécuté ce dump pour un usage légitime (debug LSASS qui freeze, par exemple). On note l'information dans le rapport mais on ne déclenche pas de procedure d'urgence. On focalise sur le beacon Cobalt Strike qui est la vraie menace.",
+          "ok": false,
+          "pts": -30,
+          "fb": "❌ INTERPRÉTATION FAUSSE — CATASTROPHE CREDENTIAL. (1) <em>« ProcDump usage légitime »</em> est faux dans ce contexte : (a) 03h12 du matin un dimanche = pas d'admin Aurora en service, (b) destination C:\\Windows\\Temp\\dump_2024.dmp = chemin attaquant typique (pas le chemin standard d'un admin qui debug), (c) corrélé à beacon C2 actif depuis 02h47 = même attaquant qui pivote — c'est <em>LE</em> credential dumping classique APT, et c'est ce qu'enseignent SANS FOR508 et MITRE T1003.001, (2) <em>« On focalise sur le beacon »</em> = vous ratez l'extension de la compromission : si les credentials Reynard sont chez l'attaquant, il peut <em>maintenant</em> accéder à n'importe quel système où Reynard a un compte (Murex, Outlook, fileshares, VPN), sans déclencher Falcon, (3) <em>Sans reset urgent</em>, à 18h ce soir l'attaquant peut déjà être dans 5-10 autres systèmes, sans aucune trace beacon, (4) <em>FINMA + Audit interne 6 mois plus tard</em> identifieront ce moment comme la décision critique manquée. Le LOLBins (Living-Off-the-Land Binaries) signés Microsoft sont le piège classique : la signature ne fait pas la légitimité — le contexte le fait.",
+          "legal": "MITRE T1003.001, LOLBins forensique."
+        },
+        {
+          "text": "<strong>Reset immédiat de TOUS les comptes Aurora</strong>. Reset de tous les 480 comptes utilisateurs + tous les comptes de service + KRBTGT + tous les comptes admin domain = 'reset universel' parano. C'est lourd mais c'est la seule façon d'être sûr que les credentials compromis sont neutralisés.",
+          "ok": false,
+          "pts": -18,
+          "fb": "❌ PARANOÏA OPÉRATIONNELLE — IMPOSSIBLE LUNDI. (1) <em>Reset 480 comptes utilisateurs</em> = chaque employé doit (a) demander un nouveau mot de passe par procédure standard helpdesk, (b) reconnecter ses appareils mobiles, (c) régénérer ses sessions Outlook/Murex — vous bloquez l'organisation entière 2-3 jours, ouverture marché lundi impossible, (2) <em>Reset KRBTGT</em> = procédure rare, demande 2 resets espacés de 10h (sinon casse l'authentification Kerberos cluster-wide), impossible à faire en 8h restantes avant lundi, (3) <em>Reset comptes service Murex</em> non-coordonné = casse les flux de transactions automatisées, les rapports comptables, les intégrations partenaires (broker, custodian, etc.) — clients voient les positions disparaître = panique, (4) <em>Vous violez le principe de proportionnalité</em> : la bonne procédure est <em>chirurgicale</em> (Reynard + comptes accédés depuis M-FX-487 dans les 30j + KRBTGT si Golden Ticket soupçonné) = 5-15 comptes, pas 480. Stéphane Rey vous arrêtera : 'On veut reset les comptes <em>compromis</em>, pas casser la banque'.",
+          "legal": "Reset proportionnel, KRBTGT procédure."
         }
       ]
     },
@@ -115,6 +143,20 @@
           "pts": 30,
           "fb": "✅ ATTRIBUTION MAÎTRISÉE. Vous : (1) <em>citez 4 sources convergentes</em> = haute confiance technique, (2) <em>nuancez la limite de l'attribution</em> (technique ≠ juridique, possible réutilisation) — humilité intellectuelle nécessaire, (3) <em>tirez les conséquences institutionnelles</em> (SRC, coordination européenne), (4) <em>opérationnel paranoïaque</em> mais (5) <em>communication officielle prudente</em> ('niveau étatique présumé' au lieu de nommer la Russie). C'est exactement la dentelle qu'attendent FINMA et OFCS d'un CSIRT compétent. La diplomatie suisse vous remerciera de ne pas créer un incident diplomatique sur la base d'une signature YARA.",
           "legal": "Diamond Model, attribution standards."
+        },
+        {
+          "text": "<strong>Brief direct sans nuance</strong>. <em>« Sarah, Stéphane : c'est APT29, le SVR russe, attribution confirmée par Mandiant + Microsoft + CrowdStrike + Kaspersky. Aurora & Cie est victime d'une opération d'État russe. Il faut notifier le SRC immédiatement, l'Ambassadeur de Suisse à Moscou, le DFAE, et envisager une communication publique pour faire pression diplomatique. »</em>",
+          "ok": false,
+          "pts": -22,
+          "fb": "❌ ATTRIBUTION JURIDIQUEMENT INDÉFENDABLE. (1) <em>« Attribution confirmée »</em> est faux : 4 sources convergentes = haute confiance <em>technique</em>, pas confirmation juridique d'État. APT29 a sa signature YARA <em>publique</em> depuis 2020 (post-SolarWinds) — n'importe quel acteur (criminel sophistiqué, autre État, équipe red team) peut techniquement utiliser cette signature aujourd'hui pour <em>induire</em> l'attribution erronée (false flag), (2) <em>« Notifier l'Ambassadeur + DFAE + communication publique »</em> = vous transformez un incident bancaire en <em>incident diplomatique</em> : si plus tard l'attribution est révisée (Russie ou autre acteur ?), Aurora & Cie est responsable d'avoir nui aux relations CH-Russie pour rien — coût diplomatique et procès civil en perspective, (3) <em>La Suisse a une doctrine de neutralité</em> sur l'attribution publique d'incidents cyber à un État — la DFAE refusera explicitement votre démarche, et critiquera RegardCritique d'avoir voulu forcer la main, (4) <em>Le bon réflexe</em> : nuancer techniquement ('signature compatible APT29, attribution étatique présumée'), opérationnellement traiter comme si APT29 (paranoïa max), communiquer officiellement avec prudence. L'attribution publique d'un État sans procédure formelle est <em>l'</em> erreur classique du jeune CSIRT.",
+          "legal": "Doctrine attribution CH, neutralité diplomatique."
+        },
+        {
+          "text": "<strong>Brief ultra-prudent</strong>. <em>« Sarah, Stéphane : on a trouvé une signature YARA qui pourrait correspondre à APT29, mais c'est très incertain. Cobalt Strike est utilisé par beaucoup d'acteurs. On ne peut rien dire sur l'attribution. Continuons l'analyse forensique pure, on verra plus tard. »</em>",
+          "ok": false,
+          "pts": -10,
+          "fb": "❌ PRUDENCE EXCESSIVE — DÉCISIONS BLOQUÉES. (1) <em>« On ne peut rien dire »</em> est faux : 4 sources indépendantes convergentes (Mandiant + Microsoft + CrowdStrike + Kaspersky) = haute confiance technique, pas 'très incertain' — sous-évaluer la signal force vous prive d'arguments pour les décisions à venir, (2) <em>Sans hypothèse opérationnelle d'attribution APT-niveau</em>, Stéphane et Sarah ne peuvent pas calibrer (a) le niveau de paranoïa pour hunting (APT29 cache plus profond que ransomware criminel), (b) la nécessité de prévenir le SRC (qui est différent du NCSC pour menaces étatiques), (c) le timing de communication clients (un APT État reste 6-18 mois, donc la persistence est probable et la confiance clients ne peut pas être restaurée par simple 'incident résolu lundi'), (3) <em>« On verra plus tard »</em> = vous repoussez une décision qu'il faut prendre maintenant pour orienter la stratégie 24-48h, (4) <em>L'attribution technique est utile</em> même non-confirmée juridiquement — c'est exactement ce que les CSIRT communiquent à leurs commanditaires. La prudence excessive est l'autre face du défaut d'attribution prématurée.",
+          "legal": "Doctrine attribution CH, communication CSIRT."
         }
       ]
     }

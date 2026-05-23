@@ -1,0 +1,168 @@
+{
+  "id": "fr-affaire-sarine-glane-2-azure-audit-sentinel-kql",
+  "title": "Affaire Sarine-sur-Glâne #2 — Azure audit logs et KQL Sentinel",
+  "icon": "📊",
+  "difficulty": "medium",
+  "atmosphere": "network",
+  "region": "CH",
+  "regionDetail": {
+    "code": "FR",
+    "flag": "🇨🇭",
+    "name": "Fribourg",
+    "commune": "Sarine-sur-Glâne",
+    "company": "Commune Sarine-sur-Glâne · Tenant M365 + Azure"
+  },
+  "narrative": {
+    "success": "L'investigation forensique cloud sur les Audit Logs Entra ID + Unified Audit Log M365 révèle un pattern clair : entre vendredi 8 mai 22h47 et samedi 9 mai 06h12, un <strong>Service Principal nommé 'ITCom-FR_Backup_Service'</strong> (App registration créée originalement en 2023 par ITCom-FR pour la sauvegarde des tenants communes) a effectué 47 actions inhabituelles : énumération de tous les utilisateurs (Microsoft Graph API <code>/users</code>), énumération des groupes (<code>/groups</code>), lecture des règles Outlook (<code>/mailFolders/inbox/messageRules</code>), création de nouvelles règles de transfert sur 5 boîtes (dont Bossy, Lehmann syndic, et 3 autres employés). Le Service Principal n'est <em>pas</em> Karine Bossy — c'est un compte applicatif technique qui se fait passer pour un service automatisé légitime.",
+    "degraded": "Investigation correcte mais incomplète (47 actions identifiées, mais le contexte du Service Principal compromis non encore retracé jusqu'à ITCom-FR — le lien sera fait en scène 3).",
+    "failure": "Christine se focalise uniquement sur le compte Bossy (utilisateur humain) et rate complètement les actions du Service Principal — le vrai vecteur reste invisible 72h."
+  },
+  "tags": [
+    "AZURE",
+    "ENTRA ID",
+    "AUDIT LOG",
+    "SENTINEL",
+    "KQL",
+    "MICROSOFT GRAPH",
+    "SERVICE PRINCIPAL",
+    "OAUTH",
+    "M365 UAL",
+    "DFIR CLOUD"
+  ],
+  "legalRefs": [
+    {
+      "label": "LPD art. 24",
+      "title": "Annonce 72h PFPDT — décompte commence à la découverte"
+    },
+    {
+      "label": "RGPD art. 33-34",
+      "title": "Standard de référence — Suisse aligné (LPD révisée 2023)"
+    },
+    {
+      "label": "Art. 28 OLPD",
+      "title": "Mesures techniques minimales — Conseil fédéral"
+    },
+    {
+      "label": "Art. 320 CP",
+      "title": "Secret de fonction — données traitées par commune"
+    },
+    {
+      "label": "Loi cybersécurité 2025 art. 23a",
+      "title": "Annonce 24h OFCS — communes >1000 hab"
+    }
+  ],
+  "intro": "Lundi 11 mai 2026, 11h00. <strong>Salle de réunion communale Sarine-sur-Glâne</strong>, 1er étage. Christine s'est installée avec son laptop forensique. À ses côtés : le syndic Pierre Lehmann (qui reste pour pouvoir prendre les décisions politiques en temps réel), Karine Bossy a été renvoyée à son domicile en télétravail sur son équipement personnel (déconnexion totale de son compte commune par Christine à 10h15 — révocation de tous les tokens actifs).<br><br>Christine est connectée au portail Microsoft Defender / Microsoft Sentinel via son laptop. La commune a un abonnement basique Sentinel (P1 plan) — modeste mais suffisant pour 30 jours d'audit logs. Elle commence par les <strong>3 piliers de logs cloud Microsoft</strong> :<br><br>1. <strong>Entra ID Sign-in Logs</strong> (déjà consultés en scène 1) — <em>qui s'est connecté</em><br>2. <strong>Entra ID Audit Logs</strong> — <em>quels changements administratifs ont eu lieu</em> (rôles, applications, conditional access policies)<br>3. <strong>M365 Unified Audit Log (UAL)</strong> — <em>quelles actions ont eu lieu</em> sur Exchange, SharePoint, OneDrive, Teams<br><br>Elle ouvre Sentinel et tape sa première requête KQL.",
+  "alertLevel": "📊 PHASE FORENSIQUE CLOUD · Entra ID + M365 UAL · 30 jours d'audit logs disponibles · Sentinel P1 · 4-6h estimées pour reconstitution complète · Decompte LPD 24h commencé 10h15",
+  "objectives": [
+    {
+      "icon": "🔍",
+      "text": "Reconstituer le timeline complet via Entra Audit Logs"
+    },
+    {
+      "icon": "📧",
+      "text": "Examiner les actions M365 (Exchange, SharePoint, OneDrive, Teams)"
+    },
+    {
+      "icon": "🤖",
+      "text": "Identifier les Service Principals et leurs actions anormales"
+    },
+    {
+      "icon": "📋",
+      "text": "Constituer un dossier d'IOCs partageable (anonymisé)"
+    }
+  ],
+  "debrief": "<p><strong>Pédagogie de cette scène — Forensique cloud Microsoft (KQL sur audit logs).</strong></p><ul><li><strong>3 piliers de logs Microsoft cloud</strong>. (1) <em>Entra ID Sign-in Logs</em> = qui s'est connecté à quoi, depuis où, comment authentifié. Rétention par défaut 30j (P1) ou 30j (P2 + Sentinel). (2) <em>Entra ID Audit Logs</em> = quels changements <em>administratifs</em> ont été faits dans l'annuaire (création d'utilisateur, modification de rôle, ajout de membre à un groupe, création/modification de conditional access policy, création d'app registration). 30j par défaut. (3) <em>M365 Unified Audit Log (UAL)</em> = quelles actions ont été effectuées par les utilisateurs ET les services dans toutes les apps M365 (Exchange : envoi/réception mail, règles, delegations ; SharePoint/OneDrive : partages, téléchargements ; Teams : créations canal, messages ; Power Platform : flows). <em>Rétention par défaut</em> : 180j si E5/A5/G5 (Audit Premium), 90j si E3/A3. Pour une commune en plan Business Premium ou similar, souvent 90 jours. <strong>Tous ces logs sont accessibles via KQL (Kusto Query Language) dans Sentinel ou via le portail M365 Compliance Center</strong>.</li><li><strong>KQL — Kusto Query Language</strong>. Langage Microsoft (similaire SQL mais orienté logs) pour interroger Azure Data Explorer, Sentinel, Application Insights, etc. Syntaxe : pipeline avec <code>|</code> (chaque étape filtre/transforme). Exemples typiques en investigation :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 0.9rem;font-size:.78rem;font-family:monospace\">// Toutes les actions d'un Service Principal sur 7j<br>AuditLogs<br>| where TimeGenerated >= ago(7d)<br>| where InitiatedBy.app.appId == &quot;<app-id>&quot;<br>| project TimeGenerated, OperationName, TargetResources<br>| order by TimeGenerated desc<br><br>// Création de règles Outlook par tous utilisateurs<br>OfficeActivity<br>| where Operation in (&quot;New-InboxRule&quot;, &quot;Set-InboxRule&quot;)<br>| where TimeGenerated >= ago(72h)<br>| project TimeGenerated, UserId, Parameters<br><br>// Téléchargements OneDrive massifs<br>OfficeActivity<br>| where Operation == &quot;FileDownloaded&quot;<br>| where TimeGenerated >= ago(72h)<br>| summarize Count = count() by UserId<br>| where Count > 50</div><br>Maîtriser KQL = pré-requis pour DFIR cloud Microsoft. Formations recommandées : <em>SC-200 Security Operations Analyst</em> Microsoft + <em>KC7 cyber range</em> (gratuit).</li><li><strong>Service Principal — l'angle mort du cloud</strong>. Un <em>Service Principal</em> dans Entra ID = identité non-humaine représentant une application qui appelle des APIs (Microsoft Graph, Azure Resource Manager) avec ses propres permissions. Créé via <em>App Registration</em> ou Enterprise Application. Authentification : <em>certificate</em> ou <em>client secret</em> (chaîne de caractères). Permissions : <em>delegated</em> (au nom d'un utilisateur) ou <em>application</em> (ses propres permissions). <strong>Le risque crucial</strong> : (1) les Service Principals ont souvent <em>permissions plus larges</em> que les utilisateurs humains (lecture/écriture du tenant entier via Microsoft Graph), (2) leur <em>activité est moins surveillée</em> (moins de UI conditional access, MFA non applicable, monitoring SIEM rarement configuré spécifiquement pour eux), (3) leur <em>secret peut être volé</em> et utilisé depuis n'importe où (pas de device fingerprinting). C'est <em>exactement</em> le vecteur SolarWinds 2020. Un attaquant qui obtient le client secret d'un Service Principal disposant de permissions <em>Microsoft Graph: Mail.Read.All</em> peut <em>lire toutes les boîtes mail du tenant</em>.</li><li><strong>'ITCom-FR_Backup_Service' — le Service Principal compromis</strong>. App Registration créée en 2023 par ITCom-FR dans chaque tenant des 23 communes pour automatiser les backups M365 (export OneDrive + Exchange vers stockage cantonal). Permissions Microsoft Graph application-level : <em>Mail.ReadBasic.All</em>, <em>Files.Read.All</em>, <em>User.Read.All</em>, <em>Group.Read.All</em>. Avec ces permissions, un attaquant qui vole le client secret peut <em>lire toute la boîte mail de tout utilisateur du tenant + tous les fichiers OneDrive + tous les users/groupes</em>. <em>Sans alerte particulière</em> car les Service Principals sont 'normaux'. Comment l'attaquant a-t-il volé le secret ? Hypothèse forensique forte : compromission infrastructure ITCom-FR (où les secrets de tous les Service Principals des 23 communes sont stockés — c'est le <em>secret kéu</em> du concept supply chain). À investiguer en scène 3.</li><li><strong>InboxRule malveillante — la signature BEC (Business Email Compromise)</strong>. Quand un attaquant compromet un compte mail, le geste classique post-compromission est de créer une <em>règle de transfert</em> automatique de tous les nouveaux mails vers une adresse externe contrôlée par l'attaquant (Gmail, ProtonMail, Hotmail). Avantage : (1) l'attaquant <em>n'a plus besoin de se reconnecter</em> pour exfiltrer les emails (la règle automatise), (2) <em>persistance discrète</em> (la règle peut survivre à un changement de mot de passe), (3) <em>masquage</em> via mention 'mark as read' + 'move to deleted items' (la victime ne voit pas qu'elle reçoit certains mails). Détection : <code>OfficeActivity | where Operation == &quot;New-InboxRule&quot; AND Parameters contains &quot;forwardTo&quot;</code>. Pour Sarine-sur-Glâne : Christine va trouver 5 règles de transfert créées sur 5 boîtes (Bossy, Lehmann syndic, controleurs financiers, secrétaire de Conseil communal, RH) — pattern qui suggère <em>targeting</em> précis des fonctions à plus haute valeur.</li><li><strong>Décompte LPD 24h vs 72h — quand commence-t-il ?</strong>. (1) <em>LPD art. 24 al. 1</em> : <em>« Le responsable du traitement annonce dans les meilleurs délais au Préposé fédéral à la protection des données les violations de la sécurité des données qui sont susceptibles d'entraîner un risque élevé pour la personnalité ou les droits fondamentaux de la personne concernée. »</em> <em>« Dans les meilleurs délais »</em> = pas explicitement '72h' dans la LPD CH (contrairement au RGPD UE), mais pratique convergente (PFPDT recommande 72h). (2) <em>Loi cybersécurité 2025 art. 23a</em> : <em>« infrastructures critiques annoncent les cyberattaques à l'OFCS dans les 24 heures »</em>. Sarine-sur-Glâne (8'400 hab, >1000) est dans le périmètre. <em>Le décompte commence</em> : à la <strong>découverte raisonnable</strong> du caractère 'cyberattaque' de l'événement. Pour Christine : aujourd'hui 10h15 (révocation tokens) ou 09h25 (sign-in logs confirmant compromission). Donc annonce OFCS au plus tard mardi 12 mai 10h00, annonce PFPDT au plus tard jeudi 14 mai 10h00. Christine doit gérer ces échéances.</li></ul><p><em>Indice narratif</em> : les 47 actions du Service Principal compromis ont été <em>silencieuses</em> dans Sentinel jusqu'à ce que Christine les cherche activement. Aucune alerte n'a été générée. <strong>Pourquoi</strong> ? Parce que (a) Sentinel P1 n'inclut pas les règles analytics avancées Microsoft (qui détectent les anomalies Service Principal — c'est P2/E5), (b) la commune n'a configuré aucune <em>custom Sentinel rule</em> pour son contexte spécifique, (c) le <em>monitoring sectoriel</em> du Service Principal partagé entre 23 communes n'existe pas (chaque commune voit son propre tenant, aucune vue cross-tenant). C'est <em>la</em> raison pour laquelle le secteur communal CH est si vulnérable au cloud poisoning : maturité monitoring insuffisante face à la sophistication des attaques modernes.</p>",
+  "steps": [
+    {
+      "phase": "🔍 11h15 — Entra ID Audit Logs",
+      "situation": "Christine ouvre Sentinel et lance une première query pour identifier les changements administratifs des 30 derniers jours :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 0.9rem;font-size:.78rem;font-family:monospace\">AuditLogs<br>| where TimeGenerated >= ago(30d)<br>| where OperationName in (&quot;Add app role assignment&quot;, &quot;Update application&quot;, &quot;Add owner to application&quot;, &quot;Update service principal&quot;, &quot;Add member to role&quot;)<br>| project TimeGenerated, OperationName, InitiatedBy, TargetResources, Result<br>| order by TimeGenerated desc</div><br>Résultat : 23 entrées. Une chronologie suspecte apparaît :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 0.9rem;font-size:.78rem;font-family:monospace\">2026-05-08 22:47:31 | Update service principal | ITCom_Admin_Cantonal@itcom-fr.ch | 'ITCom-FR_Backup_Service' | Success<br>2026-05-08 22:48:12 | Add app role assignment | ITCom_Admin_Cantonal@itcom-fr.ch | 'ITCom-FR_Backup_Service' added 'Mail.Read.All' | Success<br>2026-05-08 22:48:47 | Add app role assignment | ITCom_Admin_Cantonal@itcom-fr.ch | 'ITCom-FR_Backup_Service' added 'Files.ReadWrite.All' | Success</div>",
+      "law": "<strong>Entra ID Audit Logs</strong>. <strong>OAuth abuse</strong>.",
+      "question": "<strong>Quelle est votre lecture ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>Élévation de privilèges par l'attaquant via le compte admin cantonal ITCom-FR</strong>. (1) Vendredi 8 mai 22h47-22h49 (heures hors-bureau) : le compte 'ITCom_Admin_Cantonal' modifie le Service Principal 'ITCom-FR_Backup_Service' pour <em>ajouter des permissions plus larges</em> : <code>Mail.Read.All</code> (au lieu de Mail.ReadBasic.All originel) et <code>Files.ReadWrite.All</code> (au lieu de Files.Read.All). C'est une <strong>escalade de privilèges</strong> — pas le Service Principal qui est compromis, mais <em>le compte admin ITCom-FR</em> qui l'a modifié. (2) <strong>Conclusion préliminaire</strong> : le vecteur de compromission n'est pas un employé Sarine-sur-Glâne, mais le <em>compte admin cantonal d'ITCom-FR</em> qui a accès à <em>tous</em> les 23 tenants communes. (3) <strong>Implication majeure</strong> : si ce compte admin est compromis, les 22 autres communes sont probablement aussi touchées avec la même élévation. (4) <strong>Action urgente</strong> : informer immédiatement le canton (Service de l'informatique cantonal) <em>via Pierre Lehmann syndic</em> pour qu'il fasse remonter au directeur cantonal IT. Pas direct par Christine — passage hiérarchique politique correct.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ DIAGNOSTIC EN CASCADE. Vous : (1) <em>identifiez l'élévation de privilèges</em> comme acte préparatoire, (2) <em>repositionnez l'origine</em> du compte cible (ITCom-FR admin, pas Bossy), (3) <em>tirez la conclusion sectorielle</em> (22 autres communes potentiellement compromises), (4) <em>respectez la hiérarchie</em> (passage par syndic). C'est exactement le type de diagnostic 'depth-first' qui distingue un DFIR cloud expérimenté. La saga vient de prendre une dimension intercommunale.",
+          "legal": "Entra ID Audit Logs."
+        },
+        {
+          "text": "<strong>Modification administrative légitime probable</strong>. ITCom-FR a probablement étendu les permissions du Service Principal pour répondre à un besoin client (une commune avait besoin de plus de fonctionnalités backup). Le timing nocturne 22h47 est inhabituel mais explicable par maintenance hors-bureau pour ne pas perturber les utilisateurs. Je note l'observation et continue sur d'autres pistes.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ INTERPRÉTATION NAÏVE — RATER LE VECTEUR D'ENTRÉE. (1) <em>Mail.Read.All + Files.ReadWrite.All</em> = permissions tenant-wide qui dépassent <em>très largement</em> ce qu'un Service Principal de backup légitime devrait avoir (un vrai backup n'a besoin que de Mail.ReadBasic.All + Files.Read.All — lecture seule + champs limités) : c'est une élévation typique d'attaquant cherchant accès maximal, pas une demande client, (2) <em>« Hors-bureau maintenance »</em> à 22h47 est faux : ITCom-FR documente ses fenêtres de maintenance dans les contrats clients (samedi 02h-04h habituellement), pas un vendredi 22h47, (3) <em>« Note et continue »</em> = vous ratez précisément <em>le moment de bascule</em> de la compromission, le seul artefact qui prouve la nature systémique de l'attaque (touche les 23 communes, pas seulement Sarine-sur-Glâne), (4) <em>Le bon réflexe DFIR</em> : tout privilege escalation hors fenêtre maintenance documentée + permissions disproportionnées = compromission jusqu'à preuve du contraire. Vous transformez une preuve d'attaque en 'observation administrative' = même biais qui a permis aux attaquants SolarWinds 2020 d'opérer 9 mois.",
+          "legal": "Privilege escalation patterns."
+        },
+        {
+          "text": "<strong>Compromission Bossy uniquement</strong>. Le Service Principal a été modifié par un compte admin <em>légitime</em> ITCom-FR (le contexte montre ITCom_Admin_Cantonal). L'élévation n'est pas la compromission — c'est juste de l'admin. Le problème reste circonscrit à la boîte Bossy. Reset Bossy + reset son token + on est bon.",
+          "ok": false,
+          "pts": -28,
+          "fb": "❌ CONFUSION COMPTE LÉGITIME / COMPROMISSION. (1) <em>« Le compte est légitime donc l'action est légitime »</em> est une faute logique : le compte ITCom_Admin_Cantonal peut être <em>compromis</em> (credentials volés, token volé) et utilisé par un attaquant — c'est précisément la <em>caractéristique</em> de la compromission qu'elle utilise des comptes légitimes (sinon l'EDR/audit la détecterait immédiatement), (2) <em>Timing vendredi 22h47</em> + <em>permissions disproportionnées Mail.Read.All</em> + <em>corrélé temporellement avec sign-ins Bucarest sur Bossy</em> = pattern impossible à expliquer par usage admin légitime, (3) <em>« Problème circonscrit à Bossy »</em> ignore que <strong>les 22 autres communes</strong> partagent le même Service Principal compromis = vous laissez 22 victimes potentielles sans information, (4) <em>Reset Bossy</em> ne révoque <em>pas</em> les permissions du Service Principal qui est l'<em>autre</em> chemin d'accès — l'attaquant continuera à accéder à la tenant Sarine-sur-Glâne via le SP même après reset Bossy. Vous appliquez la mauvaise remédiation. La cause racine est <strong>en amont</strong> de Bossy, pas chez elle.",
+          "legal": "OAuth Service Principal, NIST containment."
+        }
+      ]
+    },
+    {
+      "phase": "📧 13h30 — M365 UAL : InboxRules malveillantes",
+      "situation": "Christine passe au M365 Unified Audit Log :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 0.9rem;font-size:.78rem;font-family:monospace\">OfficeActivity<br>| where TimeGenerated >= ago(72h)<br>| where Operation in (&quot;New-InboxRule&quot;, &quot;Set-InboxRule&quot;, &quot;Add-MailboxPermission&quot;, &quot;New-ManagementRoleAssignment&quot;)<br>| project TimeGenerated, UserId, Operation, Parameters<br>| order by TimeGenerated desc</div><br>Résultat : 5 inbox rules créées samedi 9 mai entre 03h12 et 04h22, sur 5 boîtes : Karine Bossy (secrétaire), Pierre Lehmann (syndic), Yvonne Riedo (contrôle financier), Marc Pillet (RH), Aline Dupasquier (secrétaire CC). Toutes avec le pattern : <em>condition 'all messages', action 'forward to externe-data-sync@protonmail.com', mark as read, move to deleted'</em>.",
+      "law": "<strong>MITRE T1114.003 Email Forwarding Rule</strong>. <strong>M365 UAL</strong>.",
+      "question": "<strong>Quelle est votre prochaine action ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Capture forensique</strong> des 5 règles in extenso (export JSON + screenshot horodaté + hash SHA-256 du JSON). (2) <strong>Suppression immédiate</strong> des 5 règles via PowerShell admin (<code>Remove-InboxRule -Identity &quot;{rule-id}&quot; -Mailbox {user} -Force</code>) — mais après capture des preuves. (3) <strong>Vérification mailbox audit</strong> sur les 5 boîtes : combien d'emails ont été interceptés/transférés entre samedi 03h12 et lundi 10h15 (révocation tokens) = ~52 heures × 5 boîtes. Query : <code>OfficeActivity | where Operation == &quot;Send&quot; OR Operation == &quot;MailItemsAccessed&quot; AND ...</code>. (4) <strong>Notification immédiate</strong> aux 5 personnes concernées (Pierre Lehmann en personne, les 4 autres par téléphone direct). Brief : 'votre boîte mail a été surveillée 52h, supposez que tout email reçu samedi-dimanche a été lu par un tiers'. (5) <strong>Plainte pénale</strong> en préparation art. 143 CP (soustraction de données) — Christine prépare la documentation pour Maître Boillat (juriste pénal cantonal recommandé).",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ ÉRADICATION + PRÉSERVATION ÉQUILIBRÉE. Vous : (1) <em>capture avant suppression</em> (preuves préservées), (2) <em>éradication active</em> (les règles continuent à exfiltrer tant qu'elles existent), (3) <em>quantification du dommage</em> (~52h × 5 boîtes = plusieurs centaines d'emails exposés), (4) <em>notification humaine</em> aux victimes (transparence), (5) <em>préparation pénale</em> (documentation pour MPC). C'est exactement le workflow IR cloud structuré.",
+          "legal": "MITRE T1114, art. 143 CP, RFC 3227."
+        },
+        {
+          "text": "<strong>Suppression immédiate sans capture</strong>. Les inbox rules sont actives en ce moment même, elles continuent à exfiltrer les emails de Bossy, Lehmann, Riedo, Pillet, Dupasquier. Chaque minute compte — je supprime les 5 règles via PowerShell maintenant, puis je capture des preuves après l'éradication.",
+          "ok": false,
+          "pts": -22,
+          "fb": "❌ DESTRUCTION DE PREUVES — ORDRE INVERSÉ. (1) <em>Suppression sans capture préalable</em> = vous perdez les paramètres exacts des règles (destination protonmail, conditions, actions, timestamps de création) qui sont les <em>preuves clés</em> pour plainte pénale art. 143 CP — sans capture JSON exporté, la plainte est affaiblie, (2) <em>« Chaque minute compte »</em> est faux dans ce contexte : la capture JSON prend 30 secondes par règle (PowerShell <code>Get-InboxRule | Export-Clixml</code>) = 2.5 min totales — vs aucun bénéfice à supprimer avant capture, (3) <em>L'attaquant a peut-être révoqué le token Bossy</em> entre temps (Microsoft Token Protection peut le faire automatiquement à T+24h pour les sessions à haut risque), donc les règles peuvent <em>déjà ne plus fonctionner</em> côté attaquant alors que vous croyez encore urgence, (4) <em>L'ordre DFIR standard</em> est <strong>capture → éradication → notification</strong>, pas l'inverse. RFC 3227 ('Guidelines for Evidence Collection') est explicite : capture les preuves volatiles <em>avant</em> toute action remédiation. Vous violez le standard pour un gain de vitesse illusoire.",
+          "legal": "RFC 3227, art. 143 CP, ordre DFIR."
+        },
+        {
+          "text": "<strong>Notification immédiate à toutes les victimes avant tout</strong>. Avant de toucher aux règles, je téléphone aux 5 personnes (Bossy, Lehmann, Riedo, Pillet, Dupasquier) pour les avertir qu'elles sont compromises et leur demander leur autorisation pour intervenir sur leurs boîtes. C'est leur respect du consentement.",
+          "ok": false,
+          "pts": -15,
+          "fb": "❌ CONSENTEMENT INADAPTÉ AU CONTEXTE. (1) <em>Notification de masse</em> pendant l'attaque en cours = (a) information dispersée (vous appelez 5 personnes sur 1h, chacune réagit différemment), (b) panique non-coordonnée (Pierre Lehmann syndic doit être briefé en premier pour coordination communication interne), (c) un des 5 pourrait alerter inadvertamment l'attaquant via canal compromis (ex: appeler depuis téléphone fixe surveillé), (2) <em>« Autorisation des employés »</em> n'est pas requise techniquement : le contrat de mandat avec la commune + LPD art. 31 (intérêts prépondérants) autorisent les actions DFIR sur les comptes professionnels sans consentement individuel, (3) <em>Pendant que vous téléphonez 30-45 min</em>, les règles continuent à exfiltrer = vous priorisez la forme (consentement formaliste) sur le fond (protection effective), (4) <em>Le bon workflow</em> = capture preuves → suppression règles → notification syndic (qui briefera les 5) après — cela respecte l'humain <em>sans</em> sacrifier la sécurité. La notification fait partie de la remédiation, pas de la décision initiale.",
+          "legal": "LPD art. 31, mandat IR, devoir loyauté."
+        }
+      ]
+    },
+    {
+      "phase": "🤖 16h00 — Service Principal investigation détaillée",
+      "situation": "Christine focalise enfin sur le Service Principal compromis. Query KQL :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 0.9rem;font-size:.78rem;font-family:monospace\">AADServicePrincipalSignInLogs<br>| where TimeGenerated >= ago(72h)<br>| where ServicePrincipalName == &quot;ITCom-FR_Backup_Service&quot;<br>| project TimeGenerated, IPAddress, ResourceDisplayName, AuthenticationProcessingDetails<br>| order by TimeGenerated desc</div><br>Résultat : 47 entrées samedi 9 mai 02h47-06h12, IP <strong>185.244.x.x</strong> (Bucarest, Roumanie). Resources accédées : Microsoft Graph (47x), avec scopes <code>Mail.Read.All</code>, <code>Files.ReadWrite.All</code>, <code>User.Read.All</code>, <code>Group.Read.All</code>.",
+      "law": "<strong>Service Principal forensics</strong>. <strong>Microsoft Graph audit</strong>.",
+      "question": "<strong>Quelles données ont été potentiellement exfiltrées ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>Périmètre maximum d'exfiltration potentielle</strong>. (1) <em>User.Read.All</em> = tous les utilisateurs du tenant (Christine identifie 87 comptes employés Sarine-sur-Glâne + leurs métadonnées : nom, email, manager, départment, téléphone). (2) <em>Group.Read.All</em> = tous les groupes (structures internes commune visibles). (3) <em>Mail.Read.All</em> = <strong>tous les emails de tous les utilisateurs</strong> (mais l'attaquant ne peut télécharger qu'à raison de ~1MB/sec via Graph — sur 3h25 d'activité, ~12 GB d'emails maximum téléchargeables). (4) <em>Files.ReadWrite.All</em> = <strong>tous les fichiers OneDrive + SharePoint</strong> de la commune (procès-verbaux Conseil communal, contrats, RH, données contribuables, dossiers fiscaux !). Action urgente : (a) <em>logs Microsoft Graph détaillés</em> via <code>MicrosoftGraphActivityLogs</code> table (P2 only, mais on peut demander Microsoft Support si pas activé) pour reconstituer le détail des téléchargements, (b) <em>hypothèse worst-case</em> dans le brief PFPDT : 'l'attaquant a eu accès théorique à toutes les données de la commune pendant 3h25'. (c) <em>brief Pierre Lehmann</em> en urgence : la qualification de la violation LPD est <em>élevée</em> (toutes catégories de données personnelles potentiellement concernées).",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ ÉVALUATION DU DOMMAGE COMPLET. Vous : (1) <em>cataloguez les permissions</em> et leur impact théorique, (2) <em>quantifiez réalistement</em> (12 GB max téléchargeable en 3h25), (3) <em>identifiez les données sensibles</em> (PV conseil, contrats, RH, fiscal), (4) <em>actions concrètes</em> (logs Graph + brief worst-case + escalade syndic). Le brief PFPDT sera dur mais honnête — c'est la posture qui protège juridiquement la commune.",
+          "legal": "Microsoft Graph audit, LPD art. 24."
+        },
+        {
+          "text": "<strong>Évaluation minimaliste</strong>. Le Service Principal a fait 47 requêtes Graph en 3h25 = ~14 requêtes/h, c'est modeste. Probablement quelques emails Bossy téléchargés. Pas la peine de paniquer Pierre Lehmann avec un worst-case scenario — restons factuelle : 'compromission limitée à quelques emails Bossy'. PFPDT sera informé en mode 'incident mineur'.",
+          "ok": false,
+          "pts": -28,
+          "fb": "❌ SOUS-ÉVALUATION GRAVE — RISQUE LPD MAJEUR. (1) <em>« 47 requêtes / 14 req/h modeste »</em> est trompeur : <em>une seule requête Graph</em> avec scope Mail.Read.All peut retourner des <em>milliers d'emails en pagination</em>, et Files.ReadWrite.All peut télécharger des fichiers individuels de plusieurs GB — le nombre de requêtes ne reflète pas le volume des données accédées, (2) <em>« Pas paniquer Pierre Lehmann »</em> est paternaliste et illégal : le syndic est légalement responsable LPD, vous devez lui présenter <em>l'ampleur réelle du risque</em>, pas le rassurer avec un récit édulcoré, (3) <em>« PFPDT incident mineur »</em> = qualification fausse qui sera contestée par le PFPDT lors de l'analyse, et vous expose à une <em>aggravation de sanction</em> pour minimisation (Loi cybersécurité 2025 prévoit sanctions accrues si annonce incomplète), (4) <em>Worst-case scenario</em> est <em>la</em> méthodologie LPD : on doit présenter le pire scénario techniquement possible et le déclassifier seulement quand les preuves le permettent — pas l'inverse. Le bon CISO dit 'voici l'étendue maximale + ce qui est confirmé + ce qui reste incertain'. Christine vient de saboter la défense juridique de la commune par paternalisme.",
+          "legal": "LPD art. 24, méthodologie worst-case."
+        },
+        {
+          "text": "<strong>Évaluation catastrophiste</strong>. <em>« Pierre, c'est catastrophique : <strong>toutes les données de la commune sont compromises</strong>. PV Conseil, contrats, salaires, fiscalité 1247 contribuables, listes électorales — <strong>tout</strong> est dans les mains des attaquants. Sarine-sur-Glâne doit annoncer cela publiquement immédiatement, déposer plainte contre ITCom-FR, et prévenir tous les administrés. »</em>",
+          "ok": false,
+          "pts": -22,
+          "fb": "❌ CATASTROPHISME PRÉMATURÉ — PANIQUE INSTITUTIONNELLE. (1) <em>« Toutes les données sont compromises »</em> est faux : permissions <em>accordées</em> ≠ données <em>effectivement exfiltrées</em>. Sans logs MicrosoftGraphActivityLogs détaillés (qui nécessitent licence P2 ou demande Microsoft Support), vous ne savez pas <em>quels fichiers/emails spécifiques</em> ont été lus — la borne supérieure (12 GB en 3h25) est théorique, l'exfiltration réelle peut être 0 GB ou 12 GB, (2) <em>« Annonce publique immédiate »</em> = vous précipitez ce qui doit suivre une séquence légale : PFPDT 72h + OFCS 24h + canton, <em>puis</em> notification administrés <em>si</em> l'enquête confirme exfiltration de données personnelles spécifiques, (3) <em>« Plainte contre ITCom-FR »</em> immédiate = idem, prématurée — ITCom est <em>aussi victime</em> du même attaquant, la plainte se prépare avec Maître Boillat sur base de faits établis, pas dans la panique, (4) <em>Pierre Lehmann syndic</em> va perdre confiance en votre jugement : un CSIRT qui annonce 'catastrophique' à 16h sans nuance ne sera plus consulté pour les décisions critiques. La rigueur méthodologique demande <em>worst-case + confirmé + incertain</em>, pas <em>catastrophe absolue</em>.",
+          "legal": "LPD art. 24, méthodologie communication risque."
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "ofcs_coordinator",
+    "ncsc_govcert_lead"
+  ]
+}

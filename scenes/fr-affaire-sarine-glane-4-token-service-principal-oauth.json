@@ -1,0 +1,167 @@
+{
+  "id": "fr-affaire-sarine-glane-4-token-service-principal-oauth",
+  "title": "Affaire Sarine-sur-Glâne #4 — Token Service Principal, OAuth, Microsoft Graph",
+  "icon": "🔑",
+  "difficulty": "hard",
+  "atmosphere": "network",
+  "region": "CH",
+  "regionDetail": {
+    "code": "FR",
+    "flag": "🇨🇭",
+    "name": "Fribourg",
+    "commune": "Sarine-sur-Glâne",
+    "company": "Commune Sarine-sur-Glâne · Microsoft Graph · App Registrations · Conditional Access"
+  },
+  "narrative": {
+    "success": "L'investigation détaillée du Service Principal compromis 'ITCom-FR_Backup_Service' révèle : (1) Création originelle juillet 2023 par admin ITCom-FR (légitime), (2) Permissions Microsoft Graph initiales : <code>Mail.ReadBasic.All</code>, <code>Files.Read.All</code>, <code>User.Read.All</code>, <code>Group.Read.All</code> (déjà très larges), (3) <strong>Permission ajoutée frauduleusement vendredi 8 mai 22h48 : <code>Mail.Read.All</code>, <code>Files.ReadWrite.All</code></strong> (élévation), (4) Client secret rotation absente depuis 2 ans (jamais renouvelée — gros écart politique de sécurité), (5) Pas de Conditional Access policy pour les workloads applicatifs (vide). Christine identifie également 3 autres Service Principals 'orphelins' dans le tenant Sarine-Glâne (apps abandonnées 2020-2023 jamais nettoyées) avec permissions résiduelles dangereuses. Plan de remédiation drafté pour validation.",
+    "degraded": "Investigation Service Principals correcte mais incomplète (3 SP orphelins identifiés, mais analyse des permissions inutilisées non finalisée).",
+    "failure": "Christine ne comprend pas la différence entre application permissions et delegated permissions, recommande remédiation incorrecte (suppression du Service Principal légitime ITCom-FR_Backup_Service au lieu de rotation du secret) — interruption service backups."
+  },
+  "tags": [
+    "MICROSOFT GRAPH",
+    "OAUTH 2.0",
+    "SERVICE PRINCIPAL",
+    "APP REGISTRATION",
+    "CLIENT SECRET",
+    "WORKLOAD IDENTITY",
+    "CONDITIONAL ACCESS",
+    "PIM",
+    "AZURE AD"
+  ],
+  "legalRefs": [
+    {
+      "label": "Art. 7 LPD",
+      "title": "Sécurité des données — mesures techniques adaptées"
+    },
+    {
+      "label": "Art. 28 OLPD",
+      "title": "Mesures techniques minimales requises"
+    },
+    {
+      "label": "ISO 27001 A.9",
+      "title": "Contrôle d'accès — gestion identités/accès"
+    },
+    {
+      "label": "NIST SP 800-63B",
+      "title": "Standards d'authentification numérique"
+    },
+    {
+      "label": "MITRE ATT&CK T1078.004",
+      "title": "Valid Accounts: Cloud Accounts"
+    }
+  ],
+  "intro": "Mercredi 13 mai 2026, 09h00. Christine s'est installée au cabinet à Bulle pour la journée — phase d'investigation profonde, plus de présentiel à Sarine-sur-Glâne (les actions urgentes ayant été menées hier). Mission du jour : <strong>comprendre exactement comment le Service Principal compromis a fonctionné</strong> et préparer la remédiation.<br><br>Sur son écran : (1) Portal Entra ID admin → Enterprise Applications → 'ITCom-FR_Backup_Service' (configuration complète), (2) Portal Azure → App Registrations (vue développeur du même objet), (3) Microsoft Graph Explorer (https://graph.microsoft.com/v1.0) pour requêter directement l'API, (4) PowerShell <code>Microsoft.Graph</code> module pour automation. Café noir et cahier papier ouvert.<br><br>Hier soir 22h00, PwC Forensic a partagé leurs findings sur le canal Signal sécurisé : (a) <em>compromission compte admin cantonal ITCom-FR confirmée le 5 mai 14h22</em> via AiTM phishing campaign EvilProxy, (b) <em>MFA fatigue exploitation</em> samedi 9 mai 02h17 (14 push notifications avant 'approve' par Sébastien Brodard, l'admin junior), (c) <em>accès Key Vault ITCom-FR-Prod-KV</em> entre 02h35 et 04h45 (extraction de 23 client_secrets, un par tenant commune), (d) <em>utilisation des secrets en parallèle</em> sur les 23 tenants entre 02h47 et 06h12 — campagne coordonnée Bucarest probablement liée à un groupe cybercriminel (pas APT étatique, profil financier).",
+  "alertLevel": "🔑 PHASE INVESTIGATION DÉTAILLÉE · Service Principal forensique · OAuth abuse · 3 SP orphelins identifiés à nettoyer · PwC Forensic confirme scénario · Profil attaquant financier (pas APT)",
+  "objectives": [
+    {
+      "icon": "🔍",
+      "text": "Comprendre la mécanique du Service Principal compromis"
+    },
+    {
+      "icon": "🧹",
+      "text": "Identifier tous les Service Principals problématiques du tenant (housekeeping)"
+    },
+    {
+      "icon": "🛡",
+      "text": "Construire un plan de remédiation OAuth (rotation, restriction, monitoring)"
+    },
+    {
+      "icon": "📋",
+      "text": "Documenter pour rapport conseil communal (lisible par non-techniciens)"
+    }
+  ],
+  "debrief": "<p><strong>Pédagogie de cette scène — Service Principals et OAuth abuse en environnement Microsoft.</strong></p><ul><li><strong>App Registration vs Enterprise Application</strong>. Concept Microsoft souvent mal compris. <em>App Registration</em> = la <strong>définition</strong> d'une application dans un tenant home (où elle est créée). Définit : nom, ID, secrets, certificats, permissions demandées, redirect URIs. <em>Enterprise Application</em> = l'<strong>instance</strong> d'une application dans un tenant (peut être le même que l'App Registration si multi-tenant désactivé, ou un autre tenant si app multi-tenant 'consentée' par l'admin). Définit : qui a accès, conditional access policies, sign-in audit. <strong>Pour ITCom-FR_Backup_Service</strong> : App Registration dans le tenant ITCom-FR, déployée en Enterprise Application dans les 23 tenants communes via consent admin. Cela explique pourquoi un seul secret compromis (ITCom-FR) débloque l'accès à 23 tenants — c'est <em>le</em> piège architecture multi-tenant.</li><li><strong>Application permissions vs Delegated permissions</strong>. Très différent juridiquement et techniquement. <em>Delegated permissions</em> = l'app agit <em>au nom d'un utilisateur connecté</em> ('mon application Outlook lit mes mails'). Limitées par les permissions effectives de l'utilisateur. <em>Application permissions</em> = l'app agit <em>en son propre nom</em>, pas pour un utilisateur ('le service backup lit les mails de tous les utilisateurs'). Limites définies par les permissions de l'app. <strong>Pour le backup service</strong> : application permissions <code>Mail.Read.All</code> = l'app peut lire les mails de <em>tous</em> les users du tenant <em>sans qu'un user soit connecté</em>. Un attaquant qui dispose du secret = pleins pouvoirs sans MFA, sans connexion utilisateur, sans alerte conditionnelle d'accès (Conditional Access est par défaut sur les sign-ins utilisateurs, pas applications — config séparée nécessaire).</li><li><strong>Client secret — la vulnérabilité chronique</strong>. Un Service Principal peut s'authentifier via : (a) <em>client secret</em> (string de caractères, ~40-100 chars, copié-collé dans code/config), (b) <em>certificat</em> (clé privée X.509), (c) <em>workload identity federation</em> (token externe, ex GitHub OIDC, Kubernetes service account). <em>Client secret</em> est <strong>la pire pratique</strong> car : (1) <em>copié-collé partout</em> dans le code, repos Git, fichiers de config, Key Vaults, scripts d'admin, (2) <em>rarement roté</em> (rotation manuelle = douloureuse, donc politique 'oubliée'), (3) <em>aucun device binding</em> (utilisable depuis n'importe où dans le monde). <em>Best practice 2024+</em> : <strong>Managed Identity</strong> (Azure géère le secret) ou <strong>Workload Identity Federation</strong> (token JWT signé par identity provider externe — plus secure). ITCom-FR utilisait du client secret rotaté tous les 24 mois max (politique laxe) — vulnérabilité classique.</li><li><strong>Conditional Access pour applications (Workload Identities)</strong>. Microsoft a introduit en 2023 la fonctionnalité <em>Conditional Access for Workload Identities</em> (P1+ ou Microsoft Entra Workload Identities license). Permet de définir des règles pour les sign-ins des Service Principals : (a) <em>restriction par IP</em> (seul l'IP d'ITCom-FR peut utiliser le SP), (b) <em>restriction par localisation</em> (Suisse uniquement, blocage tout autre pays), (c) <em>blocage explicite</em> pour certains comportements suspects. Pour ITCom-FR : <strong>aucune Conditional Access policy configurée pour les Workload Identities</strong> sur les 23 tenants — angle mort total. Le sign-in depuis Bucarest aurait été immédiatement bloqué avec une simple règle 'Service Principal must originate from Switzerland'. Coût annuel : <CHF 5/utilisateur, mais ITCom-FR ne l'a pas vendu aux communes.</li><li><strong>Service Principals orphelins — le risque caché</strong>. Dans tout tenant Azure de plus de 2 ans d'âge, on trouve typiquement 10-50 Service Principals 'orphelins' : (a) <em>apps tierces consenties en 2019-2021</em> pour des projets pilotes abandonnés, (b) <em>apps maison</em> créées par des stagiaires partis, (c) <em>apps de POC</em> jamais désinstallées. Leurs permissions sont souvent <em>plus larges</em> que nécessaire (consentement initial trop large) et leurs secrets ne sont jamais rotés. <em>Hunt méthodologie</em> : (1) Liste de tous les Enterprise Applications + App Registrations du tenant, (2) Pour chaque, vérification dernier sign-in (Entra ID Sign-In Logs filtre application), (3) Si pas de sign-in depuis >180 jours = candidat suppression, (4) Si sign-ins mais permissions non utilisées (Microsoft Entra Permission Analytics) = candidat réduction permissions. Pour Sarine-sur-Glâne : Christine identifie 3 SP orphelins, dont 1 (un connecteur Salesforce de 2019, jamais utilisé) avec <code>Mail.ReadWrite.All</code> — une bombe à retardement.</li><li><strong>Profile attaquant 'financier' vs 'étatique'</strong>. La distinction est importante pour la communication post-incident. <em>Étatique</em> (APT29, APT41) : objectif renseignement, persistence longue, vol de données stratégiques. <em>Financier</em> (cybercriminels) : objectif extorsion, BEC (Business Email Compromise pour détournement de virements), vente de données sur le dark web, ransomware. Pour Sarine-sur-Glâne : indices <em>financier</em> = (a) targeting commune (pas valeur stratégique mais accès à virements et données fiscales), (b) Bucarest (région d'origine fréquente de cybercriminalité RaaS), (c) profile InboxRules (forwardTo ProtonMail = exfiltration emails pour BEC ou usurpation), (d) 23 communes en parallèle (volume = monétisation rapide). <strong>Conséquence</strong> : risque <em>BEC</em> élevé dans les semaines qui viennent (l'attaquant a lu les mails et peut maintenant usurper l'identité de fournisseurs ou autorités). Christine doit alerter les services financiers communaux à ce sujet.</li></ul><p><em>Indice narratif</em> : la documentation que Christine produit pour le conseil communal devra être <em>compréhensible par des élus non-techniques</em>. Les concepts 'Service Principal', 'OAuth', 'Microsoft Graph' = jargon impénétrable. Christine devra trouver des analogies : <em>« Un Service Principal, c'est comme une clé physique de la commune confiée à un sous-traitant — la femme de ménage a une clé du bâtiment. Si la femme de ménage perd sa clé, n'importe qui peut entrer dans le bâtiment, et il n'y a aucune caméra pour voir qui c'est. Notre attaque, c'est ça : un sous-traitant cantonal a perdu sa 'clé numérique' pour les 23 communes. »</em> C'est de la pédagogie technique pour décideurs — compétence essentielle du DFIR consultant.</p>",
+  "steps": [
+    {
+      "phase": "🔍 09h30 — Forensique Service Principal détaillée",
+      "situation": "Christine ouvre Microsoft Graph Explorer et requête :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 0.9rem;font-size:.78rem;font-family:monospace\">GET https://graph.microsoft.com/v1.0/applications/{appId}<br>GET https://graph.microsoft.com/v1.0/servicePrincipals/{spId}/appRoleAssignedTo<br>GET https://graph.microsoft.com/v1.0/servicePrincipals/{spId}/oauth2PermissionGrants</div><br>Résultat : permissions Application (<em>app role assigned</em>) octroyées : Mail.ReadBasic.All (2023-07-15), Files.Read.All (2023-07-15), User.Read.All (2023-07-15), Group.Read.All (2023-07-15), <strong>Mail.Read.All (2026-05-08T22:48:12)</strong>, <strong>Files.ReadWrite.All (2026-05-08T22:48:47)</strong>. Le client secret a une date de création 2023-07-15 et expiration 2027-07-15 — <strong>jamais roté en 3 ans</strong>.",
+      "law": "<strong>MITRE T1078.004</strong>. <strong>Microsoft Graph permissions</strong>.",
+      "question": "<strong>Quelle est votre lecture forensique ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>3 problèmes structurels identifiés</strong>. (1) <em>Permissions trop larges originellement</em> : Mail.ReadBasic.All + Files.Read.All + User.Read.All + Group.Read.All en 2023 = déjà accès lecture complet tenant. Pour un service backup, une permission plus restreinte aurait suffi (par exemple, accès limité à un dossier OneDrive dédié backup avec Files.Read.Selected). (2) <em>Élévation 8 mai 22h48 par l'attaquant</em> : ajout Mail.Read.All + Files.ReadWrite.All — passage de read à write (capacité de modification/suppression). Permet à l'attaquant non seulement de lire mais aussi de <em>supprimer des fichiers</em> ou <em>modifier des emails</em> (e.g. effacer ses traces). (3) <em>Client secret non-roté 3 ans</em> : viole principe rotation 90j NIST + standard ITCom-FR qui aurait dû imposer rotation. <em>Conséquence</em> : le secret a pu être divulgué pendant ces 3 ans (par fuite Key Vault, par développeur ITCom-FR mécontent parti en 2024, par exfiltration via un autre vecteur). <strong>Remédiation immédiate</strong> : (a) <em>retirer Mail.Read.All et Files.ReadWrite.All</em> immédiatement (revoke), (b) <em>roter le client secret</em> (révoquer celui-ci, en créer un nouveau via ITCom-FR), (c) <em>imposer politique rotation 90j</em> sur tous SP du tenant.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ ANALYSE STRUCTURELLE COMPLÈTE. Vous : (1) <em>identifiez le over-permissioning initial</em> (pas seulement l'élévation attaquant), (2) <em>caractérisez l'élévation</em> (read → write = changement qualitatif), (3) <em>pointez la rotation absente</em> (faille opérationnelle), (4) <em>proposez remédiation structurée</em> (revoke + rotation + politique). C'est exactement la lecture d'un CCSP. Vous montrez à PwC Forensic que vous maîtrisez le sujet — la relation de coopération technique gagne en respect mutuel.",
+          "legal": "MITRE T1078.004, Microsoft Graph permissions."
+        },
+        {
+          "text": "<strong>Lecture exclusivement centrée sur l'attaquant</strong>. L'élévation 8 mai 22h48 est l'événement clé : c'est <em>là</em> que l'attaque a vraiment commencé. Tout le reste (permissions originelles 2023, rotation absente) est secondaire. Je focalise mon rapport sur la fenêtre 22h48-06h12 du samedi et je documente l'attaque dans cette fenêtre.",
+          "ok": false,
+          "pts": -18,
+          "fb": "❌ ANALYSE INCOMPLÈTE — CAUSES STRUCTURELLES IGNORÉES. (1) <em>L'élévation 22h48 n'est que le déclencheur</em>, pas la cause racine : si les permissions originelles 2023 n'avaient pas été aussi larges (Mail.ReadBasic.All + Files.Read.All + User.Read.All + Group.Read.All), l'attaquant aurait eu besoin d'<em>encore plus</em> d'élévation pour faire les mêmes dégâts = chaque dimension structurelle compte, (2) <em>« Rotation absente »</em> est <em>peut-être</em> le vecteur d'entrée du token (3 ans sans rotation = secret connu de multiples développeurs/admins ITCom + employés partis) — sans investiguer cette dimension, vous ne savez pas <em>comment</em> l'attaquant a obtenu le secret, (3) <em>Rapport limité à l'attaque visible</em> = vous documentez les symptômes, pas les causes — Pierre Lehmann va devoir refaire l'audit dans 6 mois pour comprendre <em>pourquoi</em> c'est arrivé, et la remédiation que vous proposez ne couvrira que la fenêtre attaquante, pas les conditions structurelles qui ont permis l'attaque, (4) <em>Le bon DFIR cloud</em> couvre 3 dimensions : permissions over-provisioning + élévation attaquant + hygiène secrets. Christine montre sa profondeur en couvrant les 3.",
+          "legal": "Analyse causale, NIST SP 800-61."
+        },
+        {
+          "text": "<strong>Lecture maximaliste anti-Microsoft</strong>. (1) Microsoft Graph est <em>structurellement dangereux</em> — toutes ces permissions tenant-wide sont une absurdité de design. (2) Sarine-sur-Glâne devrait <em>quitter Microsoft 365</em> et migrer vers une solution on-premise hébergée localement. (3) Le mandat Microsoft pour les communes CH doit être revu par le canton. Je documente cette recommandation dans mon rapport.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ RECOMMANDATION HORS-PÉRIMÈTRE — INADAPTÉE. (1) <em>« Quitter Microsoft 365 »</em> = projet 18-36 mois, CHF 250k-500k pour une petite commune, perte de productivité significative pendant la transition, formation utilisateurs = recommandation <em>totalement disproportionnée</em> pour un incident où la cause racine est <em>configuration utilisateur</em> (over-permissioning + rotation absente), pas <em>défaut du produit</em>, (2) <em>« Microsoft Graph structurellement dangereux »</em> est faux : les permissions granulaires existent (Mail.Read.Selected, Files.Read.Selected, etc.), c'est ITCom-FR qui a choisi les permissions larges en 2023, pas Microsoft, (3) <em>Mandat Microsoft cantonal</em> = sujet politique qui ne relève pas de votre mandat Sarine-sur-Glâne, vous outrepassez vos compétences, (4) <em>Pierre Lehmann va vous trouver idéologique</em> : il vous a mandatée pour résoudre l'incident actuel, pas pour proposer une refonte stratégique IT cantonal = vous perdez crédibilité, (5) <em>Manuel Berchier et le canton</em> rejetteront immédiatement votre rapport comme 'militant anti-Microsoft' = vous décrédibilisez aussi votre travail technique. La recommandation efficace reste <em>dans le périmètre du mandat</em>.",
+          "legal": "Périmètre mandat, proportionnalité."
+        }
+      ]
+    },
+    {
+      "phase": "🧹 11h00 — Hunt Service Principals orphelins",
+      "situation": "Christine lance un audit complet des Enterprise Applications du tenant Sarine-Glâne :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 0.9rem;font-size:.78rem;font-family:monospace\">Connect-MgGraph -Scopes &quot;Application.Read.All&quot;,&quot;Directory.Read.All&quot;<br>$apps = Get-MgServicePrincipal -All -PageSize 999<br>$apps | Where-Object { $_.AppRoles.Count -gt 0 } | Select DisplayName, AppId, CreatedDateTime, AccountEnabled</div><br>Résultat : 47 Enterprise Applications dans le tenant. Christine croise avec Sign-in Logs sur 180 derniers jours. Découverte : <strong>3 SP n'ont pas eu de sign-in depuis &gt;180 jours</strong> mais ont des permissions actives. (1) <em>Salesforce-Connector</em> (créé 2019, permissions Mail.ReadWrite.All + Files.ReadWrite.All — abandonné sans nettoyage), (2) <em>POC_Power_BI_Embed</em> (2020, permissions Directory.Read.All), (3) <em>Stage-Backup-Tool</em> (2021, créé par un stagiaire, permissions trop larges, oublié).",
+      "law": "<strong>Housekeeping cloud</strong>. <strong>Principle of Least Privilege</strong>.",
+      "question": "<strong>Quelle est votre recommandation pour ces 3 SP ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Salesforce-Connector</strong> : suppression complète après vérification avec Pierre Lehmann que Salesforce n'est plus utilisé (probable, mais à confirmer). Action : <em>disable</em> immédiat (AccountEnabled=$false) en attendant confirmation, puis suppression définitive J+7 si pas de demande. (2) <strong>POC_Power_BI_Embed</strong> : suppression définitive (POC abandonné depuis 6 ans). (3) <strong>Stage-Backup-Tool</strong> : suppression définitive (créé par un stagiaire parti depuis longtemps, pas de propriétaire actuel). (4) <strong>Élargir le scan à toutes les communes</strong> via le brief technique partagé avec PwC + canton : ces SP orphelins existent probablement dans les 22 autres tenants — opportunité de nettoyage sectoriel généralisé. (5) <strong>Politique future</strong> : <em>review trimestrielle</em> des Enterprise Applications, suppression automatique des SP sans sign-in depuis 180j (après notification au propriétaire).",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ HYGIÈNE CLOUD EXEMPLAIRE. Vous : (1) <em>graduez les actions</em> (disable + grace period pour Salesforce, suppression directe pour POC clairement abandonnés), (2) <em>élargissez sectoriellement</em> (partage canton — bénéfice mutuel), (3) <em>proposez politique préventive</em> (review trimestrielle = pas de récurrence). C'est exactement le hygiène cloud que prone Microsoft Cloud Adoption Framework. Pierre Lehmann appréciera la dimension proactive — ça transforme un incident en opportunité d'amélioration structurelle.",
+          "legal": "Principle of Least Privilege, NIST SP 800-53 AC-6."
+        },
+        {
+          "text": "<strong>Suppression définitive immédiate des 3 SP</strong>. Pas de vérification avec Pierre, pas de grace period — ces SP n'ont eu aucun sign-in depuis 180 jours, ils sont clairement morts. Action en 2 minutes : <code>Remove-MgServicePrincipal -ServicePrincipalId {id} -Force</code> sur les 3.",
+          "ok": false,
+          "pts": -18,
+          "fb": "❌ DÉCISION UNILATÉRALE — RISQUE D'ERREUR. (1) <em>Salesforce-Connector</em> peut être <em>utilisé annuellement</em> (export annuel pour rapport fiscal, ou consolidation reporting cantonal qui tourne en arrière-plan une fois par an) — sans vérification avec Pierre et le service IT commune, vous pouvez casser une intégration silencieuse qui sera découverte 6 mois plus tard quand le rapport annuel échouera, (2) <em>« Pas de grace period »</em> = vous violez le principe DFIR de réversibilité : tout changement de configuration sur prod doit avoir un rollback plan, le disable + 7j d'observation est précisément cela, (3) <em>Pierre Lehmann syndic</em> est légalement responsable de toute modification matérielle de l'infrastructure — vous prenez une décision à sa place sans consultation = violation du mandat de loyauté CO art. 394, (4) <em>POC_Power_BI_Embed et Stage-Backup-Tool</em> sont effectivement sûrs à supprimer directement (PoC clairement abandonnés), mais Salesforce demande la nuance. Le bon DFIR <em>distingue</em> les cas, ne traite pas tout comme égal.",
+          "legal": "CO art. 394 mandat, gestion changement IT."
+        },
+        {
+          "text": "<strong>Conservation des 3 SP pour la forensique</strong>. Les SP orphelins pourraient être des vecteurs d'attaque utilisés par le même attaquant, ou contenir des artefacts forensiques utiles. Je propose de garder les 3 SP en place pendant 6 mois de monitoring intensif Sentinel pour voir s'ils sont activés. Suppression seulement après cette période.",
+          "ok": false,
+          "pts": -20,
+          "fb": "❌ SURFACE D'ATTAQUE MAINTENUE — ERREUR DE PRINCIPE. (1) <em>« Conserver pour forensique »</em> est faux : les SP <em>orphelins</em> (créés 2019/2020/2021, pas utilisés depuis 180j+) ne contiennent <em>aucun artefact forensique récent</em> — ils sont du déchet, pas des preuves, (2) <em>« Monitoring 6 mois »</em> = vous maintenez <em>3 vecteurs d'attaque actifs</em> dans le tenant pendant 6 mois supplémentaires (chacun avec ses permissions tenant-wide encore valides), (3) <em>L'attaquant actuel ITCom-FR n'a aucune raison</em> d'utiliser un SP orphelin Sarine-Glâne qu'il ne connaît probablement pas — il a utilisé le SP <em>ITCom-FR_Backup_Service</em> qu'il a explicitement compromis via le compte admin cantonal, (4) <em>Le principe de Least Privilege</em> dit l'inverse de ce que vous proposez : tout SP avec permissions actives sans usage = surface d'attaque à éliminer rapidement, pas à monitorer indéfiniment, (5) <em>Microsoft Cloud Adoption Framework</em> recommande explicitement le nettoyage trimestriel des SP inactifs. Vous confondez 'preuves forensiques' (artefacts récents) avec 'hygiène cloud' (suppression déchets) — ce sont deux dimensions différentes.",
+          "legal": "Principle of Least Privilege, surface d'attaque."
+        }
+      ]
+    },
+    {
+      "phase": "🛡 14h00 — Plan de remédiation OAuth complet",
+      "situation": "Christine consolide son plan de remédiation Service Principal en 5 axes : (1) Remédiation immédiate ITCom-FR_Backup_Service, (2) Cleanup orphelins (3 SP), (3) Politique Conditional Access Workload Identities (nouveau), (4) Politique rotation client secrets (90j), (5) Monitoring Sentinel custom rules. Question Pierre Lehmann : <em>« Combien de jours pour tout déployer ? Combien va-t-il coûter ? »</em>",
+      "law": "<strong>Plan de remédiation cyber</strong>.",
+      "question": "<strong>Quel chiffrage budget+délai proposez-vous ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>Plan 3 phases sur 60 jours</strong>. <strong>Phase 1 (J0-J7)</strong> : actions critiques. (a) Rotation secret ITCom-FR_Backup_Service via ITCom-FR (gratuit, sous leur responsabilité). (b) Cleanup 3 SP orphelins (~4h Christine = 1'000 CHF). (c) Activation logs Microsoft Graph Activity Logs Premium pour 90j (200 CHF inclus Sentinel P1). Sous-total Phase 1 : <strong>1'200 CHF</strong>. <strong>Phase 2 (J7-J30)</strong> : déploiement Conditional Access Workload Identities (licence Microsoft Entra Workload Identities ~5 CHF/SP/mois × 47 SP = 235 CHF/mois ; configuration ~6h Christine = 1'500 CHF ; documentation = 500 CHF). Sous-total Phase 2 : <strong>2'235 CHF + 235/mois récurrent</strong>. <strong>Phase 3 (J30-J60)</strong> : monitoring renforcé (Sentinel custom analytics rules ~8h Christine = 2'000 CHF ; formation 2 collaborateurs commune sur dashboard Sentinel = 800 CHF). Sous-total Phase 3 : <strong>2'800 CHF</strong>. <strong>TOTAL initial : 6'235 CHF + ~3'000 CHF/an récurrent</strong>. Pour un budget commune IT ~180k/an, c'est <em>4% additionnel</em> — modeste face au risque. Audit FINMA-style à J+90 par tiers (PwC ou autre) recommandé.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ BUDGÉTISATION RÉALISTE ET STRUCTURÉE. Vous : (1) <em>3 phases temporelles</em> (urgent / moyen terme / consolidation), (2) <em>chiffrage transparent</em> avec détails (heures consultant + licences Microsoft + formation), (3) <em>ratio budget IT</em> (4% additionnel = défendable politiquement), (4) <em>recommandation audit tiers</em> à J+90 (gouvernance professionnelle). Pierre Lehmann présentera ce plan au Conseil communal qui votera probablement. C'est la traduction réussie d'un incident technique en décision politique.",
+          "legal": "Plan de remédiation cyber, NIST CSF."
+        },
+        {
+          "text": "<strong>Plan minimaliste rapide</strong>. <em>« Pierre, action urgente uniquement : (a) rotation secret ITCom-FR_Backup_Service gratuit, (b) cleanup 3 SP orphelins (4h = 1'000 CHF), (c) c'est tout. Le reste (Conditional Access, monitoring renforcé, formation) n'est pas indispensable — Microsoft fournit déjà du monitoring de base. Total : 1'000 CHF, fait en 1 semaine. Budget commune préservé. »</em>",
+          "ok": false,
+          "pts": -22,
+          "fb": "❌ SOUS-INVESTISSEMENT POST-INCIDENT — RISQUE RÉCURRENT. (1) <em>« Microsoft fournit déjà du monitoring de base »</em> est faux : le monitoring Sentinel <em>par défaut</em> ne détecte pas les patterns d'élévation de privilèges Service Principal — c'est précisément pourquoi l'attaque a réussi (Microsoft a logué l'élévation mais sans alerting), il faut des custom rules pour la prochaine fois, (2) <em>« Conditional Access pas indispensable »</em> = vous laissez la commune <em>exposée à une attaque identique</em> dans les 6-12 mois (l'attaquant peut revenir avec un nouveau Service Principal compromis si ITCom-FR a d'autres comptes admin à risque), (3) <em>Pas de formation</em> = vos custom rules Sentinel ne seront jamais lues par les 2 collaborateurs commune qui ne savent pas naviguer Sentinel, (4) <em>« Budget commune préservé »</em> est une victoire à court terme : Pierre Lehmann va être ravi à J+7, mais à J+90 lors de l'audit FINMA-style (recommandé), l'auditeur sera très critique de l'absence de mesures structurelles = sanction administrative possible + perte confiance contribuables si annoncé publiquement, (5) <em>Vous avez identifié les leçons</em> mais vous refusez de les implémenter par souci budgétaire = vous transformez un incident grave en non-événement, exactement le contraire de la maturité IR.",
+          "legal": "FINMA-style audit, maturité IR."
+        },
+        {
+          "text": "<strong>Plan maximaliste défensif</strong>. <em>« Pierre, vu la gravité, je recommande investissement majeur. (a) Refonte complète identité tenant Sarine-Glâne avec Zero Trust + Microsoft Defender XDR (premium licence) + audit Mandiant externe = CHF 85'000 initial + CHF 24'000/an récurrent. (b) Recrutement CISO dédié commune (CHF 95'000/an). (c) Audit annuel sur 5 ans (CHF 30'000/an). Total Y1 : CHF 234'000. C'est l'assurance contre une catastrophe future. »</em>",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ SURENCHÈRE BUDGÉTAIRE — DISPROPORTION ÉCONOMIQUE. (1) <em>CHF 234'000 Y1</em> sur budget commune total ~3-4M = 6-8% du budget total détourné vers cybersécurité = <strong>politiquement et financièrement impossible</strong> pour une commune 4'200 habitants, le Conseil communal rejettera et vous perdrez toute crédibilité, (2) <em>« CISO dédié commune »</em> = inadéquat : aucune commune CH de 4'200 habitants n'a de CISO dédié, ce rôle est mutualisé via le canton ou un consultant externe (vous, ironiquement), (3) <em>« Audit Mandiant »</em> = CHF 50-100k typique pour une mission compromise assessment = excessif pour Sarine-Glâne dont le périmètre tenant M365 est petit (87 utilisateurs), un audit PwC local ou Helvecom suffirait à CHF 15-25k, (4) <em>« Microsoft Defender XDR premium »</em> = cohérent pour banque, surdimensionné pour commune (P1 + custom Sentinel rules suffisent), (5) <em>Vous remplacez le pragmatisme</em> par la paranoïa et vous perdez Pierre Lehmann qui voulait un plan <em>défendable politiquement</em>. La proportionnalité est cruciale en sécurité publique — overshoot tue le projet autant que undershoot.",
+          "legal": "Proportionnalité, économie sécurité publique."
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "ofcs_coordinator",
+    "ncsc_govcert_lead"
+  ]
+}

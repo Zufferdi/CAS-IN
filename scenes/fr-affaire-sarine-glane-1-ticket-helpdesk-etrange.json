@@ -1,0 +1,168 @@
+{
+  "id": "fr-affaire-sarine-glane-1-ticket-helpdesk-etrange",
+  "title": "Affaire Sarine-sur-Glâne #1 — Le ticket helpdesk étrange (lundi matin)",
+  "icon": "☁",
+  "difficulty": "easy",
+  "atmosphere": "investigation",
+  "region": "CH",
+  "regionDetail": {
+    "code": "FR",
+    "flag": "🇨🇭",
+    "name": "Fribourg",
+    "commune": "Sarine-sur-Glâne (commune fictive ~8'400 hab., district Sarine)",
+    "company": "Administration communale Sarine-sur-Glâne · ITCom-FR (prestataire IT cantonal fictif)"
+  },
+  "narrative": {
+    "success": "Maître Christine Boillat-Berger, consultante DFIR indépendante (mandatée par la commune via marché public 2025), prend au sérieux le ticket helpdesk déposé samedi par Mme Karine Bossy (secrétaire communale). Elle se déplace lundi 11 mai à 09h00 à l'administration. Le ticket décrit : 'Quand j'ouvre Outlook ce matin, des dossiers que je n'avais jamais créés apparaissent dans ma boîte mail (Old Items, Archive 2023)'. Hypothèse a priori : Outlook glitch, mais — Christine sait — c'est <em>aussi</em> un indicateur classique de compromission Entra ID. Elle commence par regarder les Entra ID sign-in logs et identifie immédiatement 3 connexions depuis Bucarest (Romania) sur le compte Bossy entre 02h47 et 04h22 samedi. Ce n'est pas un glitch.",
+    "degraded": "Identification correcte mais perte de 6h sur des hypothèses Outlook (mailbox auto-repair) avant de regarder les Entra logs. Pas catastrophique car attaquant déjà parti.",
+    "failure": "Christine prend le ticket comme un problème Outlook 'classique', renvoie Bossy vers ITCom-FR (prestataire) sans investigation. ITCom-FR (lui-même compromis) renvoie un script de 'réparation Outlook' qui en réalité installe une backdoor supplémentaire. Catastrophe."
+  },
+  "tags": [
+    "CLOUD",
+    "AZURE",
+    "ENTRA ID",
+    "M365",
+    "ADMIN COMMUNAL",
+    "DFIR",
+    "FRIBOURG",
+    "TICKET HELPDESK",
+    "TRIAGE",
+    "SARINE-SUR-GLÂNE"
+  ],
+  "legalRefs": [
+    {
+      "label": "LPD art. 24",
+      "title": "Obligation d'annoncer les violations de données — délai 72h"
+    },
+    {
+      "label": "Art. 320 CP",
+      "title": "Secret de fonction — applicable à l'administration communale"
+    },
+    {
+      "label": "LPD-FR (cantonale) art. 65",
+      "title": "Protection des données — autorités publiques cantonales et communales"
+    },
+    {
+      "label": "Contrat de mandat",
+      "title": "CO art. 394 — relation contractuelle entre la commune et la consultante DFIR"
+    },
+    {
+      "label": "Loi cybersécurité 2025 — exemption commune <1000 habitants",
+      "title": "Sarine-sur-Glâne (8'400 hab) = obligation d'annonce OFCS 24h applicable"
+    }
+  ],
+  "intro": "Lundi 11 mai 2026, 08h30. Vous êtes <strong>Maître Christine Boillat-Berger</strong>, 47 ans, consultante DFIR indépendante (cabinet à Bulle, mandats récents : 3 PME industrielles fribourgeoises post-ransomware, 1 commune jurassienne fuite données, 1 audit pré-déploiement Azure pour la Ville de Bulle). Formation : Licence en droit UNIFR + EJS Lausanne + certifications CCSP (Certified Cloud Security Professional) + GCFE (GIAC Certified Forensic Examiner) + 8 ans Helvecom avant indépendance 2022.<br><br>Vous avez gagné en novembre 2025 le marché public de la <strong>commune de Sarine-sur-Glâne</strong> pour une mission 'incident response on demand' (forfait annuel CHF 12'000 + tarif horaire CHF 245 si activation). La commune (8'400 habitants, district Sarine, FR) a un budget IT modeste (CHF 180k/an dont CHF 95k pour les services prestés par <strong>ITCom-FR</strong>, le prestataire IT cantonal fictif qui sert 23 communes fribourgeoises pour Microsoft 365 + Azure + bureautique).<br><br>Ce matin à 08h12, votre ligne professionnelle sonne. C'est <strong>Pierre Lehmann</strong>, le syndic (maire) de Sarine-sur-Glâne : <em>« Christine, je ne sais pas si c'est sérieux mais notre secrétaire communale Karine Bossy a laissé un ticket helpdesk samedi qu'on a vu ce matin en arrivant. Elle dit que des dossiers bizarres sont apparus dans sa boîte mail. ITCom-FR n'est pas joignable ce matin (occupé sur un autre incident). Vous pourriez passer ? J'ai mauvaise impression. »</em><br><br>Vous prenez le café avec vous, prenez votre laptop forensique (un Dell Latitude isolé, jamais connecté au réseau commune, Tails sur clé), et roulez. Sarine-sur-Glâne est à 18 minutes de Bulle. À 09h00, vous êtes dans le petit bureau de Karine Bossy, salle d'administration au 1er étage de la mairie.",
+  "alertLevel": "☁ TICKET HELPDESK · 'dossiers bizarres' boîte mail samedi · Prestataire IT cantonal occupé ailleurs · Mandataire DFIR seule sur site · 23 communes possiblement concernées",
+  "objectives": [
+    {
+      "icon": "🕵",
+      "text": "Évaluer si c'est un vrai incident ou un glitch Outlook"
+    },
+    {
+      "icon": "📊",
+      "text": "Examiner les sign-in logs Entra ID (Azure AD) de Karine Bossy"
+    },
+    {
+      "icon": "🔒",
+      "text": "Préserver les preuves volatiles sans paniquer la secrétaire"
+    },
+    {
+      "icon": "📞",
+      "text": "Décider de la posture vis-à-vis du prestataire ITCom-FR (occupé ailleurs — pourquoi ?)"
+    }
+  ],
+  "debrief": "<p><strong>Pédagogie de cette scène — Triage initial d'un signal faible cloud (M365/Azure).</strong></p><ul><li><strong>Signaux faibles cloud — les ignorer est la règle, les écouter est l'exception</strong>. Sur Microsoft 365 / Azure, des centaines de petits comportements 'bizarres' arrivent par semaine dans une organisation : dossiers Outlook qui se créent à cause de règles obsolètes, sync OneDrive qui ressuscite des fichiers anciens, Teams qui notifie des canaux abandonnés. <strong>Mais</strong> : certains de ces signaux faibles cachent une compromission. Les vrais drapeaux rouges : (a) <em>dossiers ou règles Outlook créées hors-heures</em> sans intervention utilisateur (typique de Business Email Compromise — l'attaquant crée des règles 'transférer mes mails vers external@gmail.com'), (b) <em>contacts envoyés / reçus inhabituels</em>, (c) <em>nouveaux delegates</em> sur la boîte sans autorisation, (d) <em>fichiers OneDrive renommés / supprimés / partagés massivement</em>. Un analyste DFIR mature ne 'pré-suppose' jamais glitch — il vérifie d'abord les <em>sign-in logs Entra ID</em>, qui sont les <em>logs primaires</em> sur lesquels tout repose en cloud.</li><li><strong>Entra ID sign-in logs — la mine d'or</strong>. Anciennement 'Azure AD sign-in logs', renommés 'Entra ID sign-in logs' depuis 2023. Chaque connexion d'utilisateur génère une entrée avec : <em>timestamp UTC</em>, <em>username</em>, <em>application accédée</em> (M365 Outlook Web App, Teams, SharePoint, Custom App via OAuth), <em>IP source</em> + géolocalisation, <em>device</em> (managed/non-managed), <em>auth method</em> (password, MFA push, MFA OTP, FIDO2), <em>conditional access result</em> (success/fail/blocked), <em>session ID</em>. <strong>Pour Karine Bossy à Sarine-sur-Glâne</strong> : query attendue 'logs entre samedi 9 mai 00h00 et lundi 11 mai 09h00, user karine.bossy@sarine-sur-glane.ch'. Les indicateurs typiques de compromission : (a) IP source <em>hors Suisse / Europe</em> (Roumanie, Russie, États-Unis souvent — pas légitimes pour secrétaire communale FR), (b) <em>impossible travel</em> (deux IPs géo très distantes en <2h = humain ne peut pas voyager), (c) <em>auth via 'legacy authentication'</em> (basic auth POP3/IMAP/SMTP — protocoles qui contournent MFA), (d) <em>auth method 'unfamiliar device'</em>.</li><li><strong>Le rôle du consultant DFIR seul</strong>. Différent du SOC d'entreprise (Aurora, équipe), différent du CSIRT externe (Helvecom, partenaire). Le consultant DFIR seul a : (1) <em>autonomie totale</em> sur sa méthodologie (pas de hiérarchie SOC), (2) <em>responsabilité civile professionnelle</em> directe (RC pro 5-10 M CHF souscrite obligatoirement), (3) <em>secret professionnel</em> par contrat de mandat (CO art. 394 + LPD art. 6), (4) <em>cadre légal art. 320 CP secret de fonction</em> si la mission concerne une administration publique (commune, canton — Sarine-sur-Glâne entre dans cette catégorie). <em>Conséquence</em> : Christine peut tout faire <em>seule</em> — elle décide, elle agit, elle documente. Mais elle doit aussi documenter de manière à pouvoir <em>justifier chaque décision</em> en cas de procès ou audit (PFPDT, autorité cantonale FR, conseil communal).</li><li><strong>ITCom-FR 'occupé ailleurs' — signal d'alarme</strong>. Quand un prestataire IT cantonal qui sert 23 communes est 'occupé ailleurs' un lundi matin à 08h12, deux hypothèses : (a) <em>incident technique chez ITCom lui-même</em> qui occupe ses équipes (panne réseau, problème serveur), (b) <em>ITCom-FR est lui-même victime d'un incident majeur</em> qui mobilise toute son équipe (ransomware, intrusion). L'<strong>hypothèse (b) est cruciale</strong> car si ITCom-FR est compromis, <em>toutes les 23 communes</em> qu'il sert peuvent l'être par effet de supply chain. Christine doit explorer cette hypothèse <em>en parallèle</em> de l'investigation Bossy. Le bon réflexe : appeler directement Pierre Lehmann (syndic) pour qu'il appelle son contact ITCom-FR de niveau dirigeant (pas le helpdesk générique), avec la question : <em>« Y a-t-il un incident chez ITCom-FR ? »</em>. La réponse est attendue sous 30 min.</li><li><strong>OPSEC physique en mission terrain</strong>. Christine est seule dans le bureau Bossy. Quelques règles : (1) <em>laptop forensique propre</em> (Tails Linux, jamais connecté au réseau commune — au lieu de regarder Outlook sur le PC Bossy, Christine accède aux logs via le portail Microsoft sur son laptop avec ses credentials admin externe), (2) <em>pas de connexion au Wi-Fi commune</em> (qui pourrait être compromise) — utilise sa connexion 4G via routeur portable, (3) <em>caméra du laptop couverte</em> (sticker physique), (4) <em>conversations à voix basse</em> (les bureaux administration partagent souvent les cloisons et acoustique faible), (5) <em>journal papier</em> ouvert sur le bureau pour chaque action (preuves indépendantes de toute traçabilité numérique). C'est de la cyberhygiène de base mais souvent négligée en mission terrain.</li><li><strong>Le ticket helpdesk de Bossy comme preuve</strong>. Le ticket déposé samedi est une <em>pièce horodatée</em>. Christine doit (a) en capturer une copie immédiate (PDF + screenshot horodatés), (b) vérifier si le ticket est encore présent dans le système helpdesk (a-t-il été modifié, supprimé ?), (c) examiner les <em>autres tickets</em> de la commune sur les 30 derniers jours (anomalies, schemas répétitifs ?). C'est un réflexe forensique : <em>toute trace volatile doit être préservée immédiatement</em>, avant que l'attaquant ne l'efface (s'il a accès admin au système helpdesk).</li></ul><p><em>Indice narratif</em> : Karine Bossy a 56 ans, travaille à la commune depuis 1996. Elle est <em>très peu</em> susceptible d'être la cible directe d'un attaquant ciblé. Le scénario probable n'est pas 'on a piraté Karine Bossy' mais 'on a piraté <em>quelque chose de plus haut</em>, et Bossy est l'un des nombreux comptes que cela a touchés'. La saga révélera dans la scène 3 que la compromission vient du <em>prestataire ITCom-FR</em> via un <em>Service Principal Azure</em> — un compte applicatif technique avec privilèges Global Reader sur tous les tenants des 23 communes. C'est la signature classique du <strong>cloud supply chain attack</strong>.</p>",
+  "steps": [
+    {
+      "phase": "🕵 09h10 — Interview Bossy",
+      "situation": "Karine Bossy est devant son PC, l'air fatiguée et inquiète. Elle vous montre Outlook ouvert. Dans son arborescence à gauche, vous voyez : <em>Boîte de réception</em>, <em>Éléments envoyés</em>, <em>Brouillons</em>, <em>Éléments supprimés</em>... et 3 nouveaux dossiers en bas : <code>Old Items</code>, <code>Archive 2023</code>, <code>Backup_KB</code>. Tous vides. Bossy : <em>« Je n'ai jamais créé ces dossiers. Et je n'ai jamais utilisé Outlook ces 3 jours, j'étais avec mes petits-enfants. »</em>",
+      "law": "<strong>Pratique entretien post-compromission</strong>. <strong>OPSEC mission terrain</strong>.",
+      "question": "<strong>Quelle est votre première action ?</strong>",
+      "choices": [
+        {
+          "text": "(1) <strong>Photographier l'écran</strong> de Bossy (smartphone perso, pas le sien) — preuve volatile que les dossiers existent et leur exact contenu à ce moment. (2) <strong>Ne pas toucher</strong> le PC Bossy — pas de clic, pas de double-clic sur les dossiers (risque de déclencher un script résiduel ou de modifier des timestamps). (3) <strong>Demander à Bossy</strong> de se déconnecter de la session Outlook (sans fermer Windows) — préservation état machine. (4) <strong>Sur votre propre laptop forensique</strong> (4G, pas Wi-Fi commune), vous vous connectez au portail admin Microsoft 365 (admin.microsoft.com) avec vos credentials de consultante externe (compte admin commune dédié, MFA hardware FIDO2), vous lancez la query Entra ID sign-in logs sur karine.bossy@... pour les 72 dernières heures. (5) <strong>Journal papier</strong> : 09h12, observation 3 dossiers Outlook anormaux, photo prise, ticket helpdesk consulté.",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ TRIAGE FORENSIQUE PROFESSIONNEL. Vous : (1) <em>preuve photographique</em> immédiate (sans utiliser le PC compromis), (2) <em>préservation état machine</em> (pas de touches, pas de clics), (3) <em>déconnexion propre</em> de la session (mais pas reboot — préserve mémoire), (4) <em>investigation depuis laptop propre</em> via portail admin (pas via le PC potentiellement compromis), (5) <em>journal papier</em>. C'est exactement la discipline d'un GCFE en mission terrain seule. Bossy est rassurée par votre méthode. Vous obtiendrez les sign-in logs en 30 secondes — et là, surprise.",
+          "legal": "RFC 3227, GCFE standards."
+        },
+        {
+          "text": "Je clique sur les dossiers suspects pour voir leur contenu et comprendre ce qui s'y trouve.",
+          "ok": false,
+          "pts": -30,
+          "fb": "❌ ERREUR FORENSIQUE GROSSIÈRE. (1) Cliquer sur les dossiers <em>modifie les timestamps</em> Last Accessed Time sur tous les éléments contenus (s'il y en a) — preuves altérées. (2) Si les dossiers contiennent un fichier malveillant programmé pour s'exécuter à l'ouverture, vous déclenchez l'infection. (3) Vous <em>utilisez le PC de la victime</em> pour faire la forensique — toute action depuis ce PC sera tracée comme provenant de Bossy, créant une confusion d'attribution. Christine, vous êtes une professionnelle DFIR depuis 12 ans — n'utilisez <em>jamais</em> le PC de la victime pour investiguer.",
+          "legal": "Standards préservation preuves."
+        },
+        {
+          "text": "Je demande à Bossy de fermer Outlook, redémarrer son PC, lancer un scan Windows Defender complet, et changer son mot de passe maintenant. Sécurisation immédiate, on regardera ensuite les détails de l'incident.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ DESTRUCTION DE PREUVES + REMÉDIATION PRÉMATURÉE. (1) <em>Redémarrer le PC</em> = perte de la mémoire vive qui contient peut-être des artefacts d'un script résidant (Cobalt Strike-like, AsyncRAT, ou similaire) — sans memory dump préalable, vous perdez 80% des indicateurs forensiques, (2) <em>Scan Windows Defender complet</em> = modifie les timestamps de tous les fichiers Bossy + peut déclencher l'effacement de zones malveillantes que vous n'avez pas encore analysées (ce sont vos preuves), (3) <em>Changement mot de passe immédiat</em> = vous prévenez l'attaquant que la compromission est détectée — il abandonnera ses sessions actives, basculera vers persistence cachée, et vous perdez la fenêtre d'observation du comportement attaquant en temps réel, (4) <em>Sans investigation préalable</em>, vous ne savez pas si le vecteur initial est Bossy elle-même (phishing) ou amont (cloud, prestataire) — un reset mot de passe Bossy ne corrige rien si le token OAuth est déjà compromis. La séquence DFIR standard est <strong>preserve → investigate → contain → eradicate</strong>, vous sautez les 2 premières étapes.",
+          "legal": "RFC 3227, NIST SP 800-61, séquence DFIR."
+        }
+      ]
+    },
+    {
+      "phase": "📊 09h25 — Sign-in logs Entra ID",
+      "situation": "Vous lancez la query KQL dans le portail Microsoft Entra :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 0.9rem;font-size:.78rem;font-family:monospace\">SigninLogs<br>| where TimeGenerated >= ago(72h)<br>| where UserPrincipalName == &quot;karine.bossy@sarine-sur-glane.ch&quot;<br>| project TimeGenerated, AppDisplayName, IPAddress, Location, AuthenticationDetails, RiskLevelAggregated, ConditionalAccessStatus<br>| order by TimeGenerated desc</div><br>Résultats : 14 entrées au total. Les 11 premières sont normales (lundi-vendredi heures de bureau, IP Sarine-sur-Glâne, MFA push réussi). Mais entrées 12-14 :<br><br><div style=\"background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:.6rem 0.9rem;font-size:.78rem;font-family:monospace\">2026-05-09 02:47:13 | OWA | 185.244.x.x | Bucharest RO | 'Token replay' | High | Success<br>2026-05-09 03:12:48 | Microsoft Graph | 185.244.x.x | Bucharest RO | 'Token replay' | High | Success<br>2026-05-09 04:22:01 | Exchange Online | 185.244.x.x | Bucharest RO | 'Token replay' | High | Success</div>",
+      "law": "<strong>Entra ID sign-in logs</strong>. <strong>OAuth token theft</strong>.",
+      "question": "<strong>Quelle est votre interprétation ?</strong>",
+      "choices": [
+        {
+          "text": "<strong>Compromission cloud confirmée — token theft (vol de jeton d'authentification OAuth)</strong>. (1) 3 connexions depuis Bucarest <em>samedi 9 mai 03h-04h</em> = heure d'inactivité Bossy + géo hors-Suisse. (2) Mention <em>'Token replay'</em> dans AuthenticationDetails = signal Microsoft que le sign-in s'est fait via réutilisation d'un token volé, pas via authentification MFA normale. (3) Apps accédées : OWA (Outlook Web), Microsoft Graph (API permettant lecture/écriture des données du tenant entier), Exchange Online (boîtes mail). (4) RiskLevelAggregated = High → Microsoft a détecté le risque mais <em>n'a pas bloqué</em> (Conditional Access ne semble pas configuré pour bloquer ces patterns). (5) <strong>Vecteur probable</strong> : un token OAuth a été volé via une autre voie (phishing AiTM, malware sur device managé, ou — plus inquiétant — compromission supply chain via Service Principal du prestataire ITCom-FR). Action urgente : vérifier <em>l'historique Microsoft Graph</em> — quelles données ont été lues/exfiltrées via cette session ? Et : pourquoi <em>seulement</em> Bossy, ou d'autres comptes touchés aussi ?",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ DIAGNOSTIC CLOUD MAÎTRISÉ. Vous : (1) <em>identifiez le mécanisme</em> (token replay vs auth MFA), (2) <em>caractérisez l'accès</em> par les apps utilisées (Graph = accès large, lecture potentielle annuaires + données), (3) <em>identifiez la faille policy</em> (Conditional Access permissif), (4) <em>tirez la conséquence</em> (vérifier exfiltration via Graph audit logs), (5) <em>élargissez l'hypothèse</em> (Bossy seule ou pattern plus large ?). C'est exactement la chaîne de pensée d'un CCSP en investigation cloud. Vous êtes désormais dans un <em>vrai</em> incident cloud, pas un glitch Outlook.",
+          "legal": "Entra ID, OAuth 2.0."
+        },
+        {
+          "text": "<strong>Tentative de phishing depuis la Roumanie</strong>. Bossy a probablement cliqué sur un lien dans un email il y a quelques jours, ses identifiants ont été volés, et l'attaquant utilise maintenant son compte depuis Bucarest. Action : reset urgent du mot de passe Bossy, activation MFA strict, formation utilisateur sur le phishing. Le périmètre est limité à Bossy.",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ MAUVAIS DIAGNOSTIC — TOKEN REPLAY ≠ PHISHING CLASSIQUE. (1) <em>« Token replay »</em> dans AuthenticationDetails est un signal Microsoft <em>spécifique</em> : l'attaquant utilise un jeton OAuth <em>déjà émis</em> qu'il a volé — pas un mot de passe. Reset du mot de passe Bossy <em>ne révoquera pas</em> les tokens existants (qui restent valides jusqu'à expiration, souvent 90 jours), (2) <em>Le MFA est déjà activé</em> sur Bossy (les 11 sign-ins normaux le confirment) — donc le vol n'est pas un phishing classique credential-only, c'est un vol de token <em>post-MFA</em> (techniques : AiTM proxy type Evilginx, malware sur device, ou compromission Service Principal amont), (3) <em>« Périmètre limité à Bossy »</em> est faux : si le token a été volé via Service Principal compromis chez ITCom-FR (vraisemblable vu le contexte), <em>toutes</em> les communes clientes peuvent être touchées par le même vecteur, (4) <em>Conditional Access permissif</em> ne se corrige pas par formation utilisateur — c'est une lacune policy admin. Le bon diagnostic identifie <strong>OAuth token theft</strong>, pas phishing — la différence change toute la stratégie de remédiation.",
+          "legal": "OAuth 2.0, AiTM, token revocation."
+        },
+        {
+          "text": "<strong>Faux positif probable Microsoft</strong>. Les algorithmes de détection Entra ID génèrent régulièrement des faux positifs sur 'Token replay' quand un utilisateur se connecte depuis un VPN ou un proxy géo-distant. Bossy a peut-être utilisé un VPN pour ses petits-enfants en vacances. Je marque l'incident 'à vérifier avec Bossy' et je reviens dans 2 jours pour confirmation.",
+          "ok": false,
+          "pts": -35,
+          "fb": "❌ DÉNI FORENSIQUE — INCIDENT CRITIQUE IGNORÉ. (1) <em>3 connexions depuis Bucarest à 02h-04h du matin un samedi</em> + <em>3 dossiers Outlook anormaux créés</em> + <em>'Token replay' explicite Microsoft</em> = pattern impossible à confondre avec VPN légitime, (2) <em>Bossy elle-même</em> dit qu'elle <em>n'a pas utilisé Outlook</em> ces 3 jours — sa déclaration est cohérente avec compromission, (3) <em>Microsoft Entra ID 'Token replay' RiskLevelAggregated High</em> n'est <em>pas</em> un faux positif courant — c'est un signal de très haute confiance basé sur empreinte token + IP + comportement, taux de faux positifs documenté <0.5% (Microsoft Security Research 2024), (4) <em>« Revenir dans 2 jours »</em> = vous donnez 48h aux attaquants pour exfiltrer toutes les données de la commune (LPD données personnelles + secrets municipaux + données fiscales 1247 contribuables), reconfigurer la persistence, et propager si possible aux autres communes ITCom-FR. (5) <em>Karine Bossy a payé un consultant DFIR pour identifier des incidents, pas pour les ignorer</em>. Christine perdrait sa réputation DFIR pour 10 ans avec cette décision.",
+          "legal": "Token replay détection, NIST IR escalation."
+        }
+      ]
+    },
+    {
+      "phase": "📞 10h00 — ITCom-FR 'occupé ailleurs'",
+      "situation": "Vous demandez à Pierre Lehmann (syndic) d'appeler directement <strong>Régis Wuilleret</strong> (CEO ITCom-FR, fictif). Pierre revient à 09h45 : <em>« Christine, j'ai eu Régis. Il a hésité, mais il m'a confirmé : ITCom-FR détecte des anomalies sur leur infrastructure Azure depuis vendredi soir. Ils n'ont pas encore communiqué publiquement, ils sont en investigation interne avec une équipe externe (PwC Forensic). Il m'a demandé de ne pas en parler avant qu'ils n'aient un premier diagnostic. »</em>",
+      "law": "<strong>Art. 320 CP secret de fonction</strong>. <strong>Contrats de mandat — devoir d'information</strong>. <strong>LPD art. 24</strong>.",
+      "question": "<strong>Quelle est votre position face à la demande de silence d'ITCom-FR ?</strong>",
+      "choices": [
+        {
+          "text": "<em>« Pierre, je comprends la demande de Régis mais elle ne nous lie pas. Trois raisons : (1) <strong>Nous avons</strong> une compromission confirmée sur le compte Bossy <em>indépendamment</em> du statut ITCom-FR — nos obligations LPD art. 24 (annonce PFPDT 72h si données personnelles) et Loi cybersécurité 2025 (annonce OFCS 24h, on est au-dessus de 1000 habitants) courent à partir de notre découverte aujourd'hui, pas à partir de la confirmation ITCom-FR. (2) <strong>Si ITCom-FR est lui-même compromis</strong> et que c'est la source de notre incident, alors les 22 autres communes clientes pourraient être dans la même situation — la rétention d'information par ITCom-FR pourrait constituer une <em>violation de leur propre devoir de notification</em> contractuel envers vous et les autres communes. (3) <strong>Cas de jurisprudence</strong> : silence post-incident = aggravation de la responsabilité civile et pénale. Je propose : (a) on lance immédiatement notre propre investigation indépendante (nous ne dépendons pas d'ITCom-FR pour ça), (b) on annonce OFCS et PFPDT dans 24h sans attendre ITCom, (c) on informe le canton (Service de l'informatique cantonal) pour qu'ils coordonnent avec les 22 autres communes si nécessaire. La décision finale est la vôtre comme syndic, mais ma recommandation est ferme. »</em>",
+          "ok": true,
+          "pts": 30,
+          "fb": "✅ POSTURE PROFESSIONNELLE INDÉPENDANTE. Vous : (1) <em>refusez l'omertà</em> ITCom (lien contractuel séparé, obligations distinctes), (2) <em>identifiez les obligations légales</em> propres à Sarine-sur-Glâne (LPD 72h, Loi cyber 24h), (3) <em>tirez la conséquence sectorielle</em> (22 autres communes), (4) <em>proposez plan d'action structuré</em> (investigation + annonce + canton). Le syndic Pierre Lehmann valide votre approche. Vous activez votre rôle de consultante indépendante <em>au service du mandant</em> (la commune), pas du prestataire. C'est exactement la valeur d'avoir mandaté un DFIR externe — l'indépendance face au prestataire IT.",
+          "legal": "LPD art. 24, art. 320 CP, CO art. 394."
+        },
+        {
+          "text": "<em>« Pierre, respectons la demande de Régis. ITCom-FR est un partenaire fiable depuis 8 ans, ils gèrent le portefeuille de 23 communes — leur jugement vaut mieux que le nôtre. Je suspends mes investigations jusqu'à leur premier diagnostic. On évite ainsi de faire double emploi et on coordonne mieux. Annonces OFCS et PFPDT après leur green light. »</em>",
+          "ok": false,
+          "pts": -28,
+          "fb": "❌ ABDICATION DE VOTRE MANDAT. (1) <em>Vous êtes mandatée par Sarine-sur-Glâne</em>, pas par ITCom-FR — votre devoir de loyauté contractuel (CO art. 394) est envers la commune, pas envers le prestataire IT en difficulté, (2) <em>« Suspendre les investigations »</em> = vous laissez Bossy compromise pendant 24-72h supplémentaires alors que l'attaquant peut continuer à accéder à des données, (3) <em>« Annonces après leur green light »</em> est une violation des délais légaux : LPD art. 24 (PFPDT 72h) et Loi cybersécurité 2025 (OFCS 24h) <em>commencent à courir dès la découverte</em> par Sarine-sur-Glâne — c'est la commune qui est légalement responsable, pas ITCom, et le délai s'écoule depuis 09h25 ce matin (pas depuis l'annonce ITCom qui n'a pas encore eu lieu), (4) <em>« Évite faire double emploi »</em> est faux : une investigation Sarine-sur-Glâne sur sa propre tenant M365 ne fait pas doublon avec une investigation ITCom-FR sur leur infrastructure backbone — ce sont 2 périmètres différents, (5) <em>Si ITCom-FR ne fait pas son annonce</em>, la commune n'aura pas la sienne non plus = double violation légale en chaîne. La fidélité au partenaire commercial ne doit jamais primer sur les obligations légales.",
+          "legal": "LPD art. 24, Loi cybersécurité 2025, CO art. 394."
+        },
+        {
+          "text": "<em>« Pierre, je vais plus loin que ce que vous demandez. Je propose de (1) appeler maintenant le journaliste de La Liberté pour briefing exclusif, (2) déposer plainte pénale immédiatement contre ITCom-FR pour rétention d'information et négligence, (3) publier un communiqué public Sarine-sur-Glâne dans la journée pour devancer ITCom-FR et préserver notre réputation. Si on bouge vite, on est les 'lanceurs d'alerte' ; sinon on est les 'victimes silencieuses'. »</em>",
+          "ok": false,
+          "pts": -25,
+          "fb": "❌ ESCALADE PUBLIQUE PRÉMATURÉE — DOMMAGES IRRÉVERSIBLES. (1) <em>« Journaliste La Liberté »</em> = communication publique avant même que vous ayez confirmé l'étendue de la compromission Sarine-sur-Glâne (vous avez 1 compte Bossy + 3 sign-ins, c'est peu) — vous risquez d'annoncer un incident qui se révèlera limité, perte de crédibilité, (2) <em>« Plainte pénale contre ITCom-FR »</em> avant investigation est juridiquement disproportionnée : aucune preuve à ce stade que ITCom-FR ait <em>fauté</em> (ils sont en investigation), porter plainte sans fondement = ITCom-FR vous attaque pour dénonciation calomnieuse art. 303 CP et procès en dommages-intérêts, (3) <em>« Communiqué public devancer ITCom »</em> = vous trahissez Régis qui a partagé une information sensible en confidence relationnelle, ITCom-FR ne travaillera plus jamais avec vous ni avec aucun client recommandé par vous = fin de votre carrière de consultante CH, (4) <em>« Lanceurs d'alerte vs victimes silencieuses »</em> est une fausse dichotomie : le bon réflexe est <strong>annonce institutionnelle régulière</strong> (OFCS + PFPDT + canton) qui n'est ni public ni silence — c'est la voie médiane légale. La communication publique appartient au syndic, pas à la consultante DFIR, et seulement quand les faits sont confirmés.",
+          "legal": "Art. 303 CP, déontologie consultante."
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    "ofcs_coordinator",
+    "ncsc_govcert_lead"
+  ]
+}
