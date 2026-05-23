@@ -29,7 +29,7 @@ SCENES_DIR = REPO / 'scenes'
 INDEX_FILE = SCENES_DIR / 'index.json'
 
 # Champs à extraire pour chaque scène
-INDEX_FIELDS = ['id', 'title', 'icon', 'difficulty', 'atmosphere',
+INDEX_FIELDS = ['id', 'title', 'icon', 'difficulty', 'atmosphere', 'role',
                 'tags', 'intro', 'alertLevel', 'legalRefs', 'npcs']
 
 
