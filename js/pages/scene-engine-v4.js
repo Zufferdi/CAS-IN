@@ -553,8 +553,9 @@
     const duration = estimateDuration(scene);
     const articles = extractCentralArticles(scene);
     const atmosphereLabels = {
-      legal: 'Légal', network: 'Réseau', ransomware: 'Ransomware',
-      crypto: 'Crypto', hospital: 'Hôpital', state: 'État', raid: 'Terrain'
+      investigation: 'Investigation', legal: 'Légal', network: 'Réseau',
+      incident: 'Incident', ransomware: 'Ransomware', crypto: 'Crypto',
+      hospital: 'Hôpital', state: 'État', raid: 'Terrain'
     };
     const atmLabel = atmosphereLabels[scene.atmosphere] || (scene.atmosphere || 'Standard');
     const diffLabel = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile', expert: 'Expert' }[scene.difficulty] || scene.difficulty;
