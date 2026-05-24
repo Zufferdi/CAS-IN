@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v469';
+const CACHE_VERSION = 'cas-in-v480';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1846,6 +1846,9 @@ const STATIC_ASSETS = [
   './tp/tp-engine-windows.js',
   './tp/tp-engine-meta.js',
   './tp/tp-engine-btree.js',
+  './tp/tp-engine-easy.js',
+  './tp/tp-engine-artefacts.js',
+  './tp/tp-engine-osint-detect.js',
 
   // ─── v2.93-v2.99 — Nouveaux modules (Dossiers, Sagas, Arcs, Dashboard...) ───
   './js/core/cas-in-skill-branches.js',
@@ -1908,6 +1911,29 @@ const STATIC_ASSETS = [
   './tp/tp-engine-disk.js',
   './tp/tp-engine-fat.js',
   './tp/tp-engine-ntfs.js',
+  //
+  // v93 (Niveau G — UX additionnelle) : panneaux atmosphères + affinités
+  './data/atmospheres.json',
+  './js/profile/profile-atmospheres.js',
+  './js/profile/profile-affinities.js',
+  './style/profile-atmospheres.css',
+  './style/profile-affinities.css',
+  //
+  // v94 (Niveau H — Fonctionnel) : notes scène + examen blanc + export CSV
+  './js/components/scene-notes.js',
+  './js/pages/scene-exam-app.js',
+  './js/profile/profile-export-csv.js',
+  './scene-exam.html',
+  //
+  // v94 (Niveau J — Accessibilité WCAG 2.2 AA)
+  './js/core/cas-in-a11y.js',
+  //
+  // v94 (Niveau I — i18n scaffolding)
+  './js/core/cas-in-i18n.js',
+  './data/i18n/fr.json',
+  './data/i18n/de.json',
+  './data/i18n/it.json',
+  './data/i18n/en.json',
 ];
 
 const OFFLINE_FALLBACK = './offline.html';
