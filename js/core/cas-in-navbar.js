@@ -17,10 +17,16 @@
 (function () {
   'use strict';
 
+  // v95 (I) — i18n helper avec fallback FR
+  function ti18n(key, fb) {
+    return (window.CASi18n && window.CASi18n.t) ? window.CASi18n.t(key, fb) : fb;
+  }
+
   // ── Configuration des sections ─────────────────────────────
   const SECTIONS = [
     { id: 'quiz',       label: 'Quiz',    icon: '💊', href: 'quiz.html',                 rootHref: '/CAS-IN/quiz.html' },
     { id: 'scene',      label: 'Scènes',  icon: '🔍', href: 'scene.html#campaigns',      rootHref: '/CAS-IN/scene.html#campaigns' },
+    { id: 'sagas',      label: 'Sagas',   icon: '📖', href: 'sagas.html',                rootHref: '/CAS-IN/sagas.html' },
     { id: 'tp',         label: 'TP',      icon: '🧪', href: 'tp.html',                   rootHref: '/CAS-IN/tp.html' },
     { id: 'fiches',     label: 'Fiches',  icon: '📄', href: 'fiches/index.html',         rootHref: '/CAS-IN/fiches/index.html' },
     { id: 'references', label: 'Réfs',    icon: '📚', href: 'references/index.html',    rootHref: '/CAS-IN/references/index.html' },
@@ -29,12 +35,13 @@
   const PAGE_TITLES = {
     quiz:         { icon: '💊', label: 'QUIZ' },
     scene:        { icon: '🔍', label: 'SCÈNES DFIR' },
+    sagas:        { icon: '📖', label: 'SAGAS NARRATIVES' },
     tp:           { icon: '🧪', label: 'TRAVAUX PRATIQUES' },
     fiches:       { icon: '📄', label: 'FICHES DE RÉVISION' },
     glossary:     { icon: '📚', label: 'GLOSSAIRE' },
     npcs:         { icon: '👥', label: 'PERSONNAGES' },
     tools:        { icon: '🛠', label: 'OUTILS FORENSIQUES' },
-    exam:         { icon: '📝', label: 'EXAMEN BLANC' },
+    exam:         { icon: '📝', label: 'EXAMEN BLANC SCÈNES' },
     // ── Cluster Références (v2.59) ──
     references:   { icon: '📚', label: 'RÉFÉRENCES' },
     artifacts:    { icon: '🗂', label: 'ARTEFACTS FORENSIQUES' },
@@ -124,15 +131,16 @@
     const homeLink = document.createElement('a');
     homeLink.href = homeHref;
     homeLink.className = 'cas-navbar__home';
-    homeLink.title = 'Retour à l\'accueil';
-    homeLink.innerHTML = '<span class="cas-navbar__home-icon">←</span> Accueil';
+    homeLink.title = ti18n('nav.home_title', 'Retour à l\'accueil');
+    homeLink.innerHTML = '<span class="cas-navbar__home-icon">←</span> ' + ti18n('nav.home', 'Accueil');
     bottom.appendChild(homeLink);
 
     // Titre (centre)
     const titleInfo = PAGE_TITLES[page] || { icon: '📋', label: page.toUpperCase() };
     const title = document.createElement('div');
     title.className = 'cas-navbar__title';
-    title.innerHTML = `<span class="cas-navbar__title-icon">${titleInfo.icon}</span>${titleInfo.label}`;
+    const pageTitleLabel = ti18n('page_title.' + page.replace(/-/g, '_'), titleInfo.label);
+    title.innerHTML = `<span class="cas-navbar__title-icon">${titleInfo.icon}</span>${pageTitleLabel}`;
     bottom.appendChild(title);
 
     // v2.79 — Tools : si la page expose un template <template id="cas-navbar-tools">,
@@ -177,8 +185,9 @@
 
       link.href = isActive ? '#' : href;
       link.className = 'cas-navbar__link' + (isActive ? ' cas-navbar__link--active' : '');
-      link.title = s.label;
-      link.innerHTML = `<span>${s.icon}</span><span>${s.label}</span>`;
+      const sectionLabel = ti18n('nav.' + s.id, s.label);
+      link.title = sectionLabel;
+      link.innerHTML = `<span>${s.icon}</span><span>${sectionLabel}</span>`;
       if (isActive) link.setAttribute('aria-current', 'page');
       links.appendChild(link);
     });
@@ -188,6 +197,40 @@
     // v2.92 — Bouton de bascule clair/sombre (à droite des liens)
     if (window.CasInTheme && typeof window.CasInTheme.injectButton === 'function') {
       window.CasInTheme.injectButton(bottom, { extraClass: 'cas-navbar__theme-toggle' });
+    }
+
+    // v94 (I — i18n scaffolding) — Sélecteur de langue (à côté du toggle thème)
+    if (window.CASi18n && typeof window.CASi18n.setLocale === 'function') {
+      const localeBtn = document.createElement('button');
+      localeBtn.type = 'button';
+      localeBtn.className = 'cas-navbar__locale-toggle';
+      localeBtn.setAttribute('aria-label', ti18n('nav.change_lang_aria', 'Changer la langue'));
+      localeBtn.title = ti18n('nav.lang_tooltip', 'Langue / Sprache / Lingua / Language');
+      const cur = window.CASi18n.getLocale ? window.CASi18n.getLocale() : 'fr';
+      localeBtn.textContent = cur.toUpperCase();
+      // Style inline minimal (cohérence avec theme toggle)
+      localeBtn.style.cssText = [
+        'background:transparent',
+        'border:1px solid rgba(255,255,255,.15)',
+        'color:var(--text,#ccd8f0)',
+        'padding:4px 8px',
+        'border-radius:6px',
+        'font-family:"Share Tech Mono",monospace',
+        'font-size:11px',
+        'font-weight:700',
+        'letter-spacing:.5px',
+        'cursor:pointer',
+        'margin-left:6px'
+      ].join(';');
+      localeBtn.addEventListener('click', () => {
+        const supported = window.CASi18n.getSupportedLocales();
+        const idx = supported.indexOf(window.CASi18n.getLocale());
+        const next = supported[(idx + 1) % supported.length];
+        window.CASi18n.setLocale(next).then(() => {
+          localeBtn.textContent = next.toUpperCase();
+        });
+      });
+      bottom.appendChild(localeBtn);
     }
 
     if (top) navbar.appendChild(top);
@@ -241,7 +284,6 @@
     if (!slot) return;
 
     const page = slot.dataset.page || 'quiz';
-
     // Capturer l'XP au boot
     if (window.Profile && typeof window.Profile.getXp === 'function') {
       _bootXp = window.Profile.getXp();
@@ -258,6 +300,21 @@
         flashDelta();
       });
     }
+
+    // v95 (I) — re-rendre la navbar quand la langue change
+    window.addEventListener('cas-locale-changed', function () {
+      // Stratégie simple : reconstruire la navbar dans le slot
+      // (le slot original a déjà été remplacé par _navbarEl — on remplace par un nouveau slot temporaire)
+      if (!_navbarEl) return;
+      const newSlot = document.createElement('div');
+      newSlot.id = 'cas-navbar';
+      newSlot.setAttribute('data-page', page);
+      // Recopier les data-attrs custom du _navbarEl
+      // (pas critique en pratique, le slot d'origine a transmis ses dataset à build)
+      _navbarEl.parentNode.replaceChild(newSlot, _navbarEl);
+      _navbarEl = null;
+      build(newSlot, page);
+    });
   }
 
   // ── Auto-init ──────────────────────────────────────────────
