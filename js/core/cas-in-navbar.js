@@ -26,7 +26,6 @@
   const SECTIONS = [
     { id: 'quiz',       label: 'Quiz',    icon: '💊', href: 'quiz.html',                 rootHref: '/CAS-IN/quiz.html' },
     { id: 'scene',      label: 'Scènes',  icon: '🔍', href: 'scene.html#campaigns',      rootHref: '/CAS-IN/scene.html#campaigns' },
-    { id: 'sagas',      label: 'Sagas',   icon: '📖', href: 'sagas.html',                rootHref: '/CAS-IN/sagas.html' },
     { id: 'tp',         label: 'TP',      icon: '🧪', href: 'tp.html',                   rootHref: '/CAS-IN/tp.html' },
     { id: 'fiches',     label: 'Fiches',  icon: '📄', href: 'fiches/index.html',         rootHref: '/CAS-IN/fiches/index.html' },
     { id: 'references', label: 'Réfs',    icon: '📚', href: 'references/index.html',    rootHref: '/CAS-IN/references/index.html' },
