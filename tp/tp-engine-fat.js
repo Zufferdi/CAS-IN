@@ -102,7 +102,7 @@ function genFAT() {
       </div>
       <div class="ex-input-row">
         <span class="ex-input-label">Chaîne (clusters séparés par →) :</span>
-        <input class="ex-input" id="ans-fat" placeholder="${chain[0]} → ${chain[1]} → … → EOC" style="min-width:200px" autocomplete="off">
+        <input class="ex-input" id="ans-fat" placeholder="${chain[0]} → ${chain[1]} → … → EOC" style="width:100%;max-width:340px;box-sizing:border-box" autocomplete="off">
       </div>
       <div class="ex-input-row" style="margin-top:.5rem">
         <button class="btn-hint" id="fat-hint-btn">💡 Indice</button>

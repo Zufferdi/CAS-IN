@@ -1,745 +1,929 @@
 // ═══════════════════════════════════════════════════════════════════
-// tp-engine-artefacts.js — CAS-IN Travaux Pratiques (delta v98)
-// 4 TP "artefacts" : EXT4, Windows Event Logs, Linux artefacts, macOS artefacts
-// Chargé APRÈS tp-engine.js (utilise rand, STATE, GENERATORS, helpers)
-// Réutilise buildQCMCard / handleChoice si déjà chargés (tp-engine-easy.js)
+// tp-engine-artefacts.js — CAS-IN TP delta v102 (REFONTE PRATIQUE)
+// 4 TP "artefacts OS" : EXT4, Windows Events, Linux, macOS
+// Chaque TP a 3 niveaux progressifs A → B → C
+// Artefact concret (hex/XML/log/SQLite output) + input + 3 indices
+// Chargé APRÈS tp-engine.js et tp-engine-easy.js (réutilise buildPracticeCard si dispo)
 // ═══════════════════════════════════════════════════════════════════
 
 (function () {
   'use strict';
 
   // ────────────────────────────────────────────────────────────────
-  // HELPER : buildQCMCard standalone (si tp-engine-easy.js absent)
+  // HELPERS partagés (autonomes — pas de dépendance à tp-engine-easy)
   // ────────────────────────────────────────────────────────────────
-  function buildQCMCard(opts) {
+  function buildPracticeCard(opts) {
     const id = opts.prefix;
     const div = document.createElement('div');
     div.className = 'ex-card';
-    const choicesHTML = opts.choices.map((c, i) => `
-      <button class="ex-choice" data-idx="${i}" id="ch-${id}-${i}">
-        <span class="ex-choice-letter">${String.fromCharCode(65+i)}</span>
-        <span class="ex-choice-text">${c.text}</span>
-      </button>`).join('');
 
     div.innerHTML = `
       <div class="ex-header">
         <div class="ex-num" id="ex-num-${id}">${opts.icon || '🧩'}</div>
         <div class="ex-title">${opts.title}</div>
-        <span class="ex-badge easy">${opts.badge || 'artefact'}</span>
+        <span class="ex-badge easy">${opts.badge || 'pratique'}</span>
       </div>
-      <div class="ex-scenario">${opts.scenario}</div>
-      <div class="ex-choices">${choicesHTML}</div>
-      ${opts.hintFn ? `<div style="margin-top:.6rem"><button class="btn-hint" id="btn-hint-${id}">💡 Indice</button></div>` : ''}
+      <div class="ex-scenario">${opts.question}</div>
+      <div style="margin:.7rem 0">${opts.artefactHTML}</div>
+      <div class="ex-input-row" style="flex-wrap:wrap;gap:8px">
+        ${opts.inputLabel ? `<span class="ex-input-label">${opts.inputLabel}</span>` : ''}
+        <input class="ex-input" id="inp-${id}" placeholder="${opts.placeholder || ''}" autocomplete="off" spellcheck="false" style="width:100%;max-width:340px;font-family:var(--mono);min-height:40px;box-sizing:border-box">
+        <button class="btn-hint" id="btn-hint1-${id}" type="button">💡 Méthode</button>
+        <button class="btn-hint" id="btn-hint2-${id}" type="button" disabled style="opacity:.4">💡💡 Où regarder</button>
+        <button class="btn-hint" id="btn-hint3-${id}" type="button" disabled style="opacity:.4">💡💡💡 Réponse</button>
+        <button class="btn-validate" id="btn-validate-${id}" type="button">Valider ✓</button>
+        <button class="btn-next" id="btn-next-${id}" type="button" style="display:none">Exercice suivant →</button>
+      </div>
       <div class="ex-feedback" id="ex-feedback-${id}"></div>
-      <button class="btn-next" id="btn-next-${id}" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
     `;
+
     setTimeout(() => {
-      opts.choices.forEach((c, i) => {
-        const btn = div.querySelector(`#ch-${id}-${i}`);
-        if (btn) btn.addEventListener('click', () => handleChoice(id, i, c.correct, c.explain, opts.choices));
-      });
-      if (opts.hintFn) {
-        const hb = div.querySelector(`#btn-hint-${id}`);
-        if (hb) hb.addEventListener('click', () => {
-          if (typeof markHintUsed === 'function') markHintUsed();
-          const fb = document.getElementById(`ex-feedback-${id}`);
-          if (fb) { fb.className = 'ex-feedback correct'; fb.innerHTML = `💡 ${opts.hintFn()}`; }
-        });
+      const inp = div.querySelector(`#inp-${id}`);
+      const fb  = div.querySelector(`#ex-feedback-${id}`);
+      const nextBtn = div.querySelector(`#btn-next-${id}`);
+      const valBtn  = div.querySelector(`#btn-validate-${id}`);
+      const normalize = opts.normalize || (v => v.trim().toLowerCase().replace(/\s+/g, ''));
+
+      function validate() {
+        if (!inp || !fb) return;
+        const got = normalize(inp.value);
+        const exp = normalize(opts.expected);
+        const ok  = got === exp;
+
+        if (ok) {
+          inp.className = 'ex-input correct';
+          valBtn.disabled = true;
+          nextBtn.style.display = 'inline-block';
+          const card = inp.closest('.ex-card');
+          if (card) card.className = 'ex-card solved';
+          const numEl = document.getElementById(`ex-num-${id}`);
+          if (numEl) numEl.className = 'ex-num solved';
+          fb.className = 'ex-feedback correct';
+          fb.innerHTML = `✓ Correct ! ${opts.explain || ''}`;
+          if (typeof STATE !== 'undefined' && !STATE.hintUsed && typeof incSolved === 'function') {
+            incSolved(STATE.cat);
+          }
+        } else {
+          inp.className = 'ex-input wrong';
+          fb.className = 'ex-feedback wrong';
+          fb.innerHTML = `✗ "<code>${escapeHTML(inp.value)}</code>" incorrect. Utilise les indices progressifs ou réessaie.`;
+          if (typeof breakStreak === 'function') breakStreak();
+          setTimeout(() => { if (inp) inp.className = 'ex-input'; }, 700);
+        }
       }
+
+      function showHint(level) {
+        if (typeof markHintUsed === 'function') markHintUsed();
+        if (!fb || !opts.hints || !opts.hints[level-1]) return;
+        fb.className = 'ex-feedback correct';
+        const labels = ['Méthode', 'Où regarder', 'Réponse étape par étape'];
+        fb.innerHTML = `💡 <strong>Niveau ${level} — ${labels[level-1]}</strong><br>${opts.hints[level-1]}`;
+        if (level < 3) {
+          const next = div.querySelector(`#btn-hint${level+1}-${id}`);
+          if (next) { next.disabled = false; next.style.opacity = '1'; }
+        }
+        const cur = div.querySelector(`#btn-hint${level}-${id}`);
+        if (cur) cur.style.opacity = '.4';
+      }
+
+      div.querySelector(`#btn-hint1-${id}`).addEventListener('click', () => showHint(1));
+      div.querySelector(`#btn-hint2-${id}`).addEventListener('click', () => showHint(2));
+      div.querySelector(`#btn-hint3-${id}`).addEventListener('click', () => showHint(3));
+      valBtn.addEventListener('click', validate);
+      nextBtn.addEventListener('click', () => { if (typeof newExercise === 'function') newExercise(); });
+      if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') validate(); });
     }, 50);
+
     return div;
   }
 
-  function handleChoice(prefix, idx, isCorrect, explain, allChoices) {
-    const fb = document.getElementById(`ex-feedback-${prefix}`);
-    const choiceBtn = document.getElementById(`ch-${prefix}-${idx}`);
-    const nextBtn = document.getElementById(`btn-next-${prefix}`);
-    if (!fb || !choiceBtn) return;
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
 
-    if (isCorrect) {
-      choiceBtn.classList.add('correct');
-      allChoices.forEach((_, i) => {
-        const b = document.getElementById(`ch-${prefix}-${i}`);
-        if (b) b.disabled = true;
-      });
-      fb.className = 'ex-feedback correct';
-      fb.innerHTML = `✓ Correct ! ${explain}`;
-      const card = choiceBtn.closest('.ex-card');
-      if (card) card.classList.add('solved');
-      const numEl = document.getElementById(`ex-num-${prefix}`);
-      if (numEl) numEl.classList.add('solved');
-      if (nextBtn) nextBtn.style.display = 'inline-flex';
-      if (typeof STATE !== 'undefined' && !STATE.hintUsed && typeof incSolved === 'function') {
-        incSolved(STATE.cat);
-      }
-    } else {
-      choiceBtn.classList.add('wrong');
-      choiceBtn.disabled = true;
-      fb.className = 'ex-feedback wrong';
-      fb.innerHTML = `✗ ${explain || 'Mauvaise réponse.'}`;
-      if (typeof breakStreak === 'function') breakStreak();
+  // Hexdump compact pour artefacts EXT4
+  function tinyHexDump(bytes, opts) {
+    opts = opts || {};
+    const title = opts.title || '';
+    const annotations = opts.annotations || [];
+    const cols = opts.cols || 8;
+    const baseOffset = opts.baseOffset || 0;
+
+    const hexCells = bytes.map((b, i) => {
+      const ann = annotations.find(a => a.from <= i && i <= a.to);
+      const color = ann ? `color:var(${ann.color || '--cyan'});font-weight:700;background:rgba(255,255,255,.05);border-radius:3px` : 'color:var(--text)';
+      const tip = ann ? ` title="${ann.label || ''}"` : '';
+      return `<span style="padding:2px 4px;display:inline-block;min-width:24px;text-align:center;${color}"${tip}>${b.toString(16).toUpperCase().padStart(2,'0')}</span>`;
+    });
+    const ascii = bytes.map(b => (b >= 0x20 && b < 0x7F) ? String.fromCharCode(b) : '.').join('');
+    const lines = [];
+    for (let i = 0; i < hexCells.length; i += cols) {
+      const offset = (baseOffset + i).toString(16).toUpperCase().padStart(4, '0');
+      const hexLine = hexCells.slice(i, i + cols).join('');
+      const asciiLine = ascii.slice(i, i + cols).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+      lines.push(`<tr>
+        <td style="padding:.25rem .6rem;color:var(--dim);font-size:.7rem;font-family:var(--mono);border-right:1px solid rgba(255,255,255,.05)">${offset}</td>
+        <td style="padding:.25rem .4rem;font-family:var(--mono);font-size:.85rem;letter-spacing:.04em">${hexLine}</td>
+        <td style="padding:.25rem .6rem;color:var(--dim);font-size:.75rem;font-family:var(--mono);border-left:1px solid rgba(255,255,255,.05)">${asciiLine}</td>
+      </tr>`);
     }
+    return `
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg);overflow-x:auto;-webkit-overflow-scrolling:touch">
+        ${title ? `<div style="padding:.4rem .8rem;font-size:.7rem;color:var(--gold);background:rgba(240,192,64,.05);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.05em;text-transform:uppercase">${title}</div>` : ''}
+        <table style="border-collapse:collapse;width:100%">${lines.join('')}</table>
+      </div>
+    `;
+  }
+
+  // Rendu d'un bloc texte type log/XML/output (monospace, scrollable)
+  function renderTextBlock(text, opts) {
+    opts = opts || {};
+    const title = opts.title || '';
+    const highlights = opts.highlights || []; // [{match: 'string', color: '--cyan'}]
+    const lines = text.split('\n').map(line => {
+      let cls = '';
+      for (const h of highlights) {
+        if (line.includes(h.match)) {
+          cls = `background:rgba(126,192,255,.08);border-left:3px solid var(${h.color || '--cyan'});padding-left:.4rem;display:block;margin-left:-.4rem`;
+          break;
+        }
+      }
+      return `<div style="${cls}">${escapeHTML(line) || '&nbsp;'}</div>`;
+    });
+    return `
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">
+        ${title ? `<div style="padding:.4rem .8rem;font-size:.7rem;color:var(--gold);background:rgba(240,192,64,.05);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.05em;text-transform:uppercase">${title}</div>` : ''}
+        <pre style="margin:0;padding:.7rem .8rem;font-family:var(--mono);font-size:.78rem;line-height:1.5;color:var(--text);overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:pre">${lines.join('')}</pre>
+      </div>
+    `;
+  }
+
+  // Convertir un int32 en 4 octets little-endian
+  function le32(v) {
+    return [v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF, (v >> 24) & 0xFF];
   }
 
   // ════════════════════════════════════════════════════════════════
-  // TP 1 : EXT4 / Inodes Linux
+  // TP 1 : EXT4 — Inode / superbloc
   // ════════════════════════════════════════════════════════════════
 
   function genEXT4() {
-    const qType = rand(0, 6);
-    const opts = { prefix: 'ext4', icon: '🐧', title: 'EXT2/EXT3/EXT4 — Inodes & journal', badge: 'artefact' };
+    const level = rand(0, 2);
+    const opts = { prefix: 'ext4', icon: '🐧', title: 'EXT4 — Superbloc & Inode' };
 
-    if (qType === 0) {
-      // Timestamps : EXT4 ajoute crtime
-      const choices = [
-        { text: '4 timestamps : <strong>atime, ctime, mtime, crtime</strong> (crtime = creation, EXT4 only)', correct: true,
-          explain: `EXT4 ajoute <strong>crtime</strong> (birth/creation time) par rapport à EXT2/EXT3 qui n'avaient que 3 timestamps. Lecture : <code>stat -c '%w'</code> (birth) sur Linux récent (kernel ≥ 4.11 et util-linux ≥ 2.32). <code>debugfs</code> permet de lire les 4 en hex (<code>stat &lt;inode&gt;</code>).` },
-        { text: '3 timestamps : atime, ctime, mtime', correct: false,
-          explain: `Vrai pour EXT2/EXT3, mais EXT4 ajoute crtime (creation/birth time) dans le champ <code>i_crtime</code> de l'inode.` },
-        { text: '5 timestamps : atime, ctime, mtime, dtime, crtime', correct: false,
-          explain: `dtime (deletion time) n'est plus utilisé en EXT4 (présent en EXT2/EXT3 mais fixé à 0 quand le fichier existe). On compte 4 timestamps actifs.` },
-        { text: '2 timestamps : ctime, mtime', correct: false,
-          explain: `Tous les systèmes de fichiers Unix modernes maintiennent au moins atime/ctime/mtime. EXT4 va plus loin avec crtime.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau A : magic number du superbloc (0xEF53) ──
+    if (level === 0) {
+      // Construire le bloc magic + s_state + s_errors typique
+      // En EXT4, le magic est à l'offset 0x38 du superbloc, sur 2 octets LE
+      // On stocke en disque : 53 EF (little endian)
+      const bytes = [];
+      // Quelques octets bidon avant le magic pour le contexte (offset 0x30-0x37)
+      const sLastMount = Math.floor(Date.now() / 1000) - 86400 * rand(10, 100);
+      const lmBytes = le32(sLastMount);
+      bytes.push(...lmBytes);              // offset 0x30 : s_lastcheck (4 octets)
+      bytes.push(0xFF, 0xFF, 0xFF, 0xFF);  // offset 0x34 : s_checkinterval (4 octets)
+      bytes.push(0x53, 0xEF);              // offset 0x38 : s_magic (le53EF = 0xEF53)
+      bytes.push(0x01, 0x00);              // offset 0x3A : s_state (1=clean)
+      bytes.push(0x01, 0x00);              // offset 0x3C : s_errors (1=continue)
+      bytes.push(0x00, 0x00);              // offset 0x3E : s_minor_rev_level
+      bytes.push(0x00, 0x00, 0x00, 0x00);  // padding pour aligner
+
+      const magicOffsetInDump = 8; // position du 0x53 dans le bytes[]
+
+      const artefactHTML = tinyHexDump(bytes, {
+        title: 'Superbloc EXT4 — offset 0x1030–0x1043 (extrait debugfs)',
+        baseOffset: 0x1030,
+        annotations: [{
+          from: magicOffsetInDump,
+          to: magicOffsetInDump + 1,
+          color: '--cyan',
+          label: 's_magic (2 octets LE)'
+        }],
+        cols: 8
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Combien de timestamps un <strong>inode EXT4</strong> contient-il, et lesquels ?`,
-        choices,
-        hintFn: () => `EXT2/3 : 3 timestamps (atime, ctime, mtime). EXT4 ajoute crtime (creation). Attention : ctime ≠ creation time, c'est <em>change time</em> = modif métadonnées inode.`
+        badge: 'lecture',
+        artefactHTML,
+        question: `Voici un extrait du superbloc d'un système de fichiers. Tu sais que c'est de la famille EXT (ext2/3/4). <strong>Quels sont les 2 octets du magic number en little-endian (sur disque)</strong>, exprimés en valeur hex 16-bits ?<br><span style="color:var(--dim);font-size:.85rem">Format attendu : <code>0xEF53</code> (la valeur 16-bit lue, pas les octets bruts).</span>`,
+        inputLabel: 's_magic =',
+        placeholder: '0xEF53',
+        expected: '0xEF53',
+        normalize: v => {
+          let s = v.trim().toUpperCase().replace(/\s/g, '');
+          if (!s.startsWith('0X')) s = '0X' + s;
+          // Nettoie 0X et zéros initiaux pour comparer numériquement
+          const num = parseInt(s.replace('0X', ''), 16);
+          return '0X' + num.toString(16).toUpperCase().padStart(4, '0');
+        },
+        hints: [
+          `Le superbloc EXT contient à l'offset <code>0x38</code> un champ <code>s_magic</code> sur 2 octets, en little-endian. Sur disque tu vois les octets dans l'ordre inverse de la valeur 16-bit.`,
+          `Les 2 octets surlignés sont <code>53 EF</code>. En little-endian, l'octet de poids faible est stocké en premier — donc la valeur lue est <code>0x[poids fort][poids faible]</code>.`,
+          `Octets disque : <code>53 EF</code> (LE) → valeur 16-bit = <code>0xEF53</code>. C'est le magic number EXT2/3/4 (FIPS-compatible signature).`
+        ],
+        explain: `Magic <strong>0xEF53</strong> à l'offset 0x38 du superbloc → famille EXT. Stocké LE : sur disque tu lis <code>53 EF</code>, mais la valeur 16-bit est bien <code>0xEF53</code>.`
       });
     }
 
-    if (qType === 1) {
-      // ctime vs crtime confusion
-      const choices = [
-        { text: '<strong>ctime</strong> = change time (métadonnées inode modifiées : permissions, owner, etc.). <strong>crtime</strong> = creation/birth time (date de création réelle).', correct: true,
-          explain: `Confusion classique : <strong>ctime</strong> change à chaque modif de l'inode (chmod, chown, mv, taille...) tandis que <strong>crtime/btime</strong> est fixé une seule fois à la création. <code>stat</code> affiche : Access (atime), Modify (mtime), Change (ctime), Birth (crtime).` },
-        { text: 'ctime et crtime sont identiques, deux noms du même timestamp', correct: false,
-          explain: `Faux. ctime change souvent (toute modif métadonnées). crtime est posé à la création et reste fixe.` },
-        { text: 'ctime = creation time, crtime = checked time (dernier fsck)', correct: false,
-          explain: `Erreur classique mais incorrecte. ctime = <strong>change</strong> time, pas creation. crtime n'a rien à voir avec fsck.` },
-        { text: 'ctime = clock time système, crtime = creation time par utilisateur', correct: false,
-          explain: `ctime se réfère bien à un horodatage, mais sa sémantique est "change time" (métadonnées). Pas un clock système.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau B : permissions inode (i_mode) en octal ──
+    if (level === 1) {
+      // i_mode est à l'offset 0x00 d'un inode, 2 octets LE
+      // Bits hauts : type fichier (0x8000 = regular, 0x4000 = directory)
+      // Bits bas : permissions UNIX (9 bits)
+      const fileType = [0x8000, 0x4000][rand(0, 1)];  // regular ou directory
+      const permsOctal = ['0644', '0755', '0600', '0700', '0666', '0777'][rand(0, 5)];
+      const permsNum = parseInt(permsOctal, 8);
+      const iMode = fileType | permsNum;
+      const iModeBytes = [iMode & 0xFF, (iMode >> 8) & 0xFF]; // LE
+
+      // Pad : i_uid (2), i_size (4), i_atime (4), i_ctime (4), i_mtime (4)
+      const bytes = [];
+      bytes.push(...iModeBytes);              // 0x00 : i_mode
+      bytes.push(rand(0, 255), rand(0, 255)); // 0x02 : i_uid (2 octets LE bas)
+      const sizeBytes = le32(rand(100, 50000));
+      bytes.push(...sizeBytes);               // 0x04 : i_size_lo (4)
+      const now = Math.floor(Date.now() / 1000);
+      bytes.push(...le32(now - 3600));        // 0x08 : i_atime
+      bytes.push(...le32(now - 7200));        // 0x0C : i_ctime
+      bytes.push(...le32(now - 86400));       // 0x10 : i_mtime
+
+      const artefactHTML = tinyHexDump(bytes, {
+        title: 'Inode EXT4 — début (debugfs : stat <inode>)',
+        baseOffset: 0x00,
+        annotations: [{
+          from: 0,
+          to: 1,
+          color: '--gold',
+          label: 'i_mode (type fichier + permissions, LE)'
+        }],
+        cols: 8
+      });
+
+      const typeLabel = fileType === 0x8000 ? 'fichier régulier' : 'répertoire';
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Quelle est la différence entre <strong>ctime</strong> et <strong>crtime</strong> sur EXT4 ?`,
-        choices,
-        hintFn: () => `Sur Unix, ctime = change time (métadonnées modifiées). crtime/btime = birth/creation time (uniquement EXT4, XFS, Btrfs récents). Confusion fréquente en forensique.`
+        badge: 'extraction',
+        artefactHTML,
+        question: `Voici le début d'un inode (${typeLabel}). Les 2 premiers octets sont <code>i_mode</code> en little-endian. <strong>Quelles sont les permissions UNIX</strong> de ce fichier en notation octale (4 chiffres) ?`,
+        inputLabel: 'Permissions :',
+        placeholder: '0755',
+        expected: permsOctal,
+        normalize: v => {
+          let s = v.trim().replace(/[^\d]/g, '');
+          if (s.length === 3) s = '0' + s; // accepter 755 ou 0755
+          return s;
+        },
+        hints: [
+          `<code>i_mode</code> contient 2 infos : les 4 bits de poids fort = type de fichier (<code>0x8</code>=regular, <code>0x4</code>=directory), les 9 bits de poids faible = permissions UNIX (rwxrwxrwx).`,
+          `Lis les 2 octets en little-endian : <code>${iModeBytes.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</code> = <code>0x${iMode.toString(16).toUpperCase().padStart(4,'0')}</code>. Garde les 9 bits de poids faible (mask <code>0x01FF</code>) et convertis en octal.`,
+          `<code>0x${iMode.toString(16).toUpperCase().padStart(4,'0')} AND 0x01FF</code> = <code>0x${permsNum.toString(16).toUpperCase().padStart(3,'0')}</code> = <strong>${permsOctal}</strong> en octal (= ${(permsNum & 0o400)?'r':'-'}${(permsNum & 0o200)?'w':'-'}${(permsNum & 0o100)?'x':'-'}${(permsNum & 0o040)?'r':'-'}${(permsNum & 0o020)?'w':'-'}${(permsNum & 0o010)?'x':'-'}${(permsNum & 0o004)?'r':'-'}${(permsNum & 0o002)?'w':'-'}${(permsNum & 0o001)?'x':'-'}).`
+        ],
+        explain: `<code>i_mode = 0x${iMode.toString(16).toUpperCase().padStart(4,'0')}</code> → type ${typeLabel} + perms <strong>${permsOctal}</strong>. Format identique à ce que renvoie <code>stat</code> ou <code>ls -l</code>.`
       });
     }
 
-    if (qType === 2) {
-      // Magic number superbloc
-      const choices = [
-        { text: '<strong>0xEF53</strong> (53EF en little-endian sur disque)', correct: true,
-          explain: `Le magic number EXT2/EXT3/EXT4 est <strong>0xEF53</strong> dans le superbloc à l'offset 0x38 (56 décimal) depuis le début du superbloc, lui-même à l'offset 1024 du début de la partition. Reconnaissable avec <code>hexdump -s 1080 -n 2 disk.img</code> ou <code>file -s</code>.` },
-        { text: '0x4D5A (MZ)', correct: false,
-          explain: `0x4D5A = "MZ" = magic d'un exécutable Windows PE. Aucun rapport avec EXT.` },
-        { text: '0xCAFEBABE', correct: false,
-          explain: `0xCAFEBABE = magic d'un fichier Java class ou d'un Mach-O Universal binary (fat binary). Pas EXT.` },
-        { text: '0xFEEDBABE', correct: false,
-          explain: `Pas un magic standard. (0xFEEDFACE = Mach-O 32-bit, 0xFEEDFACF = Mach-O 64-bit.)` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau C : timestamps inode → date ISO ──
+    {
+      // i_atime à l'offset 0x08 d'un inode EXT4, sur 4 octets LE (epoch Unix)
+      // Date plausible : entre 2020 et 2026
+      const epoch = rand(1577836800, 1748736000); // 2020-01-01 à 2025-05-31 environ
+      const d = new Date(epoch * 1000);
+      const iso = d.toISOString().split('T')[0]; // YYYY-MM-DD
+      const epochBytes = le32(epoch);
+
+      // Construire un inode partiel avec atime à 0x08
+      const bytes = [];
+      const iMode = 0x81A4; // regular + 0644
+      bytes.push(iMode & 0xFF, (iMode >> 8) & 0xFF);  // 0x00 : i_mode
+      bytes.push(0xE8, 0x03);                          // 0x02 : i_uid (1000)
+      bytes.push(...le32(4096));                       // 0x04 : i_size
+      bytes.push(...epochBytes);                       // 0x08 : i_atime ← cible
+
+      const artefactHTML = tinyHexDump(bytes, {
+        title: 'Inode EXT4 (extrait debugfs : stat <inode>)',
+        baseOffset: 0x00,
+        annotations: [{
+          from: 8,
+          to: 11,
+          color: '--purple',
+          label: 'i_atime (4 octets LE, epoch Unix seconds)'
+        }],
+        cols: 8
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Quel est le <strong>magic number</strong> du superbloc EXT2/EXT3/EXT4 ?`,
-        choices,
-        hintFn: () => `Offset 1080 (= 1024 + 56) du début de partition. Permet à <code>file -s</code> et aux outils forensiques d'identifier le FS. Stocké en little-endian : sur disque on voit "53 EF".`
+        badge: 'calcul',
+        artefactHTML,
+        question: `Le champ <code>i_atime</code> est à l'offset <code>0x08</code> d'un inode EXT4, sur 4 octets little-endian, en secondes Unix epoch. <strong>Quelle est la date (YYYY-MM-DD)</strong> de dernier accès à ce fichier ?`,
+        inputLabel: 'Date :',
+        placeholder: '2025-03-15',
+        expected: iso,
+        normalize: v => v.trim().replace(/[^\d-]/g, ''),
+        hints: [
+          `Lis les 4 octets en little-endian (inverser l'ordre). Le résultat est un nombre = secondes depuis le 1er janvier 1970 UTC (epoch Unix).`,
+          `Octets disque : <code>${epochBytes.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</code>. En LE : <code>0x${epochBytes.slice().reverse().map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join('')}</code> = <code>${epoch}</code> secondes depuis le 1970-01-01.`,
+          `<code>${epoch}</code> secondes après epoch = <strong>${iso}</strong>. Utilise <code>date -d @${epoch}</code> sur Linux ou <code>new Date(${epoch}*1000)</code> en JS pour vérifier.`
+        ],
+        explain: `Epoch <code>${epoch}</code> = <strong>${iso}</strong> ${d.toUTCString().split(' ').slice(0,4).join(' ')}. EXT4 stocke 4 timestamps : <code>i_atime</code>, <code>i_ctime</code>, <code>i_mtime</code>, <code>i_crtime</code> (crtime = nouveauté EXT4).`
       });
     }
-
-    if (qType === 3) {
-      // Journal EXT4 = jbd2
-      const choices = [
-        { text: '<strong>jbd2</strong> (Journaling Block Device 2)', correct: true,
-          explain: `<strong>jbd2</strong> est le système de journalisation de EXT4 (et XFS). Successeur de jbd (EXT3). Stocké dans un inode réservé (inode 8) dont le contenu est invisible via le FS normal. Format documenté dans le kernel Linux (fs/jbd2/). Analyse forensique : <code>debugfs</code> ou <code>jcat</code>.` },
-        { text: 'NTFS $LogFile', correct: false,
-          explain: `$LogFile est le journal de NTFS (Windows), pas EXT. Concept similaire mais format totalement différent.` },
-        { text: 'ZFS Intent Log (ZIL)', correct: false,
-          explain: `ZIL est le journal de ZFS, pas EXT4. EXT4 utilise jbd2.` },
-        { text: 'systemd-journald', correct: false,
-          explain: `systemd-journald gère les logs système (journalctl), pas la journalisation du système de fichiers. Confusion fréquente !` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Comment s'appelle le système de <strong>journalisation</strong> utilisé par EXT4 ?`,
-        choices,
-        hintFn: () => `EXT4 et XFS utilisent jbd2 (Journaling Block Device 2). EXT3 utilisait jbd (premier du nom). Inode réservé n°8. Permet recovery après crash.`
-      });
-    }
-
-    if (qType === 4) {
-      // Mode journal par défaut
-      const choices = [
-        { text: '<strong>ordered</strong> — métadonnées journalisées, données écrites <em>avant</em> que la transaction métadonnées soit committée', correct: true,
-          explain: `<strong>data=ordered</strong> est le mode par défaut depuis EXT3. Compromis performance/intégrité : seules les métadonnées sont dans le journal, mais l'ordre garantit qu'on ne voit jamais des métadonnées pointant vers des données non écrites. Les 2 autres modes : <strong>journal</strong> (data + métadonnées dans le journal, plus lent mais plus sûr) et <strong>writeback</strong> (pas d'ordre, plus rapide mais risque de corruption).` },
-        { text: 'journal — toutes les données ET métadonnées dans le journal', correct: false,
-          explain: `Mode <code>data=journal</code> existe mais n'est pas le défaut (plus sûr mais 2× plus lent : tout est écrit 2 fois). Activable explicitement.` },
-        { text: 'writeback — pas d\'ordre garanti, performance max', correct: false,
-          explain: `Mode <code>data=writeback</code> existe mais pas le défaut. Risque : voir des métadonnées pointant vers d'anciennes données après crash.` },
-        { text: 'sync — synchrone, pas de journal', correct: false,
-          explain: `Pas un mode EXT4 standard. <code>sync</code> est une option de mount qui force toute écriture synchrone, indépendamment du mode journal.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quel est le <strong>mode de journalisation par défaut</strong> de EXT4 ?`,
-        choices,
-        hintFn: () => `3 modes : journal (data + meta, lent), <strong>ordered</strong> (meta seulement + ordre, défaut), writeback (rapide, risqué). Voir <code>mount -o data=...</code> ou <code>/proc/mounts</code>.`
-      });
-    }
-
-    if (qType === 5) {
-      // Outil pour parser un inode
-      const choices = [
-        { text: '<strong>debugfs</strong> (e2fsprogs) — shell interactif sur image EXT', correct: true,
-          explain: `<code>debugfs disk.img</code> ouvre un shell où l'on peut faire <code>stat &lt;inode&gt;</code>, <code>cat &lt;inode&gt;</code>, <code>ls -l</code>, <code>logdump</code> pour le journal jbd2. <strong>The Sleuth Kit</strong> (<code>fls</code>, <code>icat</code>, <code>istat</code>) offre une alternative cross-FS plus orientée forensique.` },
-        { text: 'regedit', correct: false,
-          explain: `regedit = éditeur de registre Windows. Aucun rapport avec EXT4.` },
-        { text: 'Volatility', correct: false,
-          explain: `Volatility = analyse mémoire RAM, pas système de fichiers sur disque.` },
-        { text: 'Wireshark', correct: false,
-          explain: `Wireshark = analyse PCAP réseau.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quel outil permet d'<strong>inspecter directement</strong> un inode EXT4 (timestamps, blocs alloués, journal) ?`,
-        choices,
-        hintFn: () => `e2fsprogs fournit debugfs, dumpe2fs, e2fsck, mke2fs. Pour la forensique : The Sleuth Kit (icat, fls, istat) cross-FS. extundelete pour récupération de fichiers supprimés.`
-      });
-    }
-
-    // qType === 6 : extundelete vs alternatives
-    const choices = [
-      { text: '<strong>extundelete</strong> — récupère depuis le journal jbd2 et les inodes orphelins', correct: true,
-        explain: `<strong>extundelete</strong> est l'outil dédié pour EXT3/EXT4. Lit le journal pour retrouver les anciens états d'inodes (avant suppression). Limite : EXT4 zéroïse les pointeurs de blocs à la suppression, donc seul ce qui est encore dans le journal est récupérable. PhotoRec (carving par signature) peut compléter mais perd les noms.` },
-      { text: 'recuva.exe', correct: false,
-        explain: `Recuva est un outil Windows pour NTFS/FAT, ne lit pas EXT4.` },
-      { text: 'TestDisk pour la table des partitions', correct: false,
-        explain: `TestDisk récupère des partitions perdues, pas des fichiers supprimés à l'intérieur d'un FS EXT4 sain.` },
-      { text: 'foremost ne fonctionne que sur FAT', correct: false,
-        explain: `foremost est un carver générique (signatures) qui fonctionne sur tout type de support brut, EXT4 inclus. Mais il perd les métadonnées (noms, timestamps).` },
-    ].sort(() => Math.random() - 0.5);
-    return buildQCMCard({
-      ...opts,
-      scenario: `Quel outil tente de <strong>récupérer des fichiers supprimés</strong> sur EXT3/EXT4 en exploitant le journal ?`,
-      choices,
-      hintFn: () => `EXT4 efface les pointeurs de blocs à la suppression (contrairement à EXT3 qui les gardait). extundelete consulte le journal jbd2 pour retrouver les anciens états avant zéroïsation. PhotoRec/foremost en complément (carving par signature).`
-    });
   }
 
   // ════════════════════════════════════════════════════════════════
-  // TP 2 : Windows Event Logs (EVTX, Sysmon)
+  // TP 2 : Windows Event Logs — EVTX XML
   // ════════════════════════════════════════════════════════════════
+
+  const EVTX_FIXTURES = [
+    { logonType: 2,  desc: 'Interactive (console locale)' },
+    { logonType: 3,  desc: 'Network (SMB, IPC$)' },
+    { logonType: 4,  desc: 'Batch (tâche planifiée)' },
+    { logonType: 5,  desc: 'Service' },
+    { logonType: 7,  desc: 'Unlock (déverrouillage écran)' },
+    { logonType: 10, desc: 'RemoteInteractive (RDP)' },
+    { logonType: 11, desc: 'CachedInteractive (cred cachés)' }
+  ];
+
+  function _ipExt() {
+    // IP "externe" plausible
+    const ranges = [
+      [185, 220], [203, 0],   // exemple TOR, RFC 5737
+      [45, 33],   [193, 32],  // génériques
+      [104, 21],  [142, 250]  // CDN/Google
+    ];
+    const r = ranges[rand(0, ranges.length-1)];
+    return `${r[0]}.${r[1]}.${rand(0,255)}.${rand(1,254)}`;
+  }
+  function _ipInt() {
+    // IP "interne" RFC 1918
+    return `192.168.${rand(0,255)}.${rand(1,254)}`;
+  }
+
+  function _evtxXML(opts) {
+    const ts = opts.timestamp || '2025-09-12T14:23:47.142Z';
+    const eventID = opts.eventID || 4624;
+    const logonType = opts.logonType !== undefined ? opts.logonType : 10;
+    const account = opts.account || 'Administrator';
+    const ip = opts.ip || '185.220.101.42';
+    const workstation = opts.workstation || 'EXTERNE';
+    return `<Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+  <System>
+    <Provider Name="Microsoft-Windows-Security-Auditing" Guid="{54849625-5478-4994-A5BA-3E3B0328C30D}"/>
+    <EventID>${eventID}</EventID>
+    <Version>2</Version>
+    <Level>0</Level>
+    <Task>12544</Task>
+    <Opcode>0</Opcode>
+    <Keywords>0x8020000000000000</Keywords>
+    <TimeCreated SystemTime="${ts}"/>
+    <EventRecordID>184523</EventRecordID>
+    <Correlation/>
+    <Execution ProcessID="688" ThreadID="4296"/>
+    <Channel>Security</Channel>
+    <Computer>DC01.contoso.local</Computer>
+    <Security/>
+  </System>
+  <EventData>
+    <Data Name="SubjectUserSid">S-1-0-0</Data>
+    <Data Name="SubjectUserName">-</Data>
+    <Data Name="TargetUserSid">S-1-5-21-3623811015-3361044348-30300820-500</Data>
+    <Data Name="TargetUserName">${account}</Data>
+    <Data Name="TargetDomainName">CONTOSO</Data>
+    <Data Name="LogonType">${logonType}</Data>
+    <Data Name="LogonProcessName">User32</Data>
+    <Data Name="AuthenticationPackageName">Negotiate</Data>
+    <Data Name="WorkstationName">${workstation}</Data>
+    <Data Name="LogonGuid">{00000000-0000-0000-0000-000000000000}</Data>
+    <Data Name="ProcessName">C:\\Windows\\System32\\winlogon.exe</Data>
+    <Data Name="IpAddress">${ip}</Data>
+    <Data Name="IpPort">51234</Data>
+  </EventData>
+</Event>`;
+  }
 
   function genWinEvents() {
-    const qType = rand(0, 6);
-    const opts = { prefix: 'winev', icon: '📋', title: 'Windows — Event Logs', badge: 'artefact' };
+    const level = rand(0, 2);
+    const opts = { prefix: 'winev', icon: '📋', title: 'Windows Events — EVTX XML' };
 
-    if (qType === 0) {
-      // Event ID 4624
-      const events = [
-        { id: 4624, label: 'Logon réussi', wrong1: 4625, wrong2: 4634, wrong3: 4648 },
-        { id: 4625, label: 'Échec de logon', wrong1: 4624, wrong2: 4647, wrong3: 4776 },
-        { id: 4634, label: 'Logoff (déconnexion)', wrong1: 4624, wrong2: 4647, wrong3: 4625 },
-        { id: 4647, label: 'Logoff initié par l\'utilisateur', wrong1: 4634, wrong2: 4624, wrong3: 4648 },
-        { id: 4648, label: 'Logon avec credentials explicites (runas)', wrong1: 4624, wrong2: 4672, wrong3: 4688 },
-        { id: 4672, label: 'Privilèges spéciaux assignés au logon', wrong1: 4624, wrong2: 4625, wrong3: 4648 },
-        { id: 4688, label: 'Process creation', wrong1: 4689, wrong2: 4624, wrong3: 1 },
+    // ── Niveau A : extraire l'EventID ──
+    if (level === 0) {
+      const eventID = [4624, 4625, 4634, 4648, 4672, 4688][rand(0, 5)];
+      const xml = _evtxXML({ eventID, logonType: rand(2, 10), account: 'jdupont' });
+
+      const artefactHTML = renderTextBlock(xml, {
+        title: 'Sortie : Get-WinEvent -LogName Security | Select-Object -First 1 | Format-Xml',
+        highlights: [{ match: '<EventID>', color: '--cyan' }]
+      });
+
+      return buildPracticeCard({
+        ...opts,
+        badge: 'lecture',
+        artefactHTML,
+        question: `Voici un événement extrait du journal Security d'un poste Windows. <strong>Quel est son Event ID</strong> ?`,
+        inputLabel: 'Event ID :',
+        placeholder: '4624',
+        expected: String(eventID),
+        normalize: v => v.trim().replace(/[^\d]/g, ''),
+        hints: [
+          `L'Event ID est encodé dans la balise <code>&lt;EventID&gt;...&lt;/EventID&gt;</code> dans la section <code>&lt;System&gt;</code> du XML.`,
+          `Cherche la ligne <code>&lt;EventID&gt;...&lt;/EventID&gt;</code> juste après <code>&lt;Provider .../&gt;</code>.`,
+          `Event ID = <strong>${eventID}</strong>. ${eventID === 4624 ? 'Logon réussi.' : eventID === 4625 ? 'Échec de logon.' : eventID === 4634 ? 'Logoff.' : eventID === 4648 ? 'Logon avec credentials explicites (runas).' : eventID === 4672 ? 'Privilèges spéciaux assignés.' : 'Process Create.'}`
+        ],
+        explain: `Event ID <strong>${eventID}</strong> (${eventID === 4624 ? 'Logon réussi' : eventID === 4625 ? 'Échec logon' : eventID === 4634 ? 'Logoff' : eventID === 4648 ? 'Logon credentials explicites' : eventID === 4672 ? 'Privilèges spéciaux' : 'Process Create'}). Journal : <code>Security</code>.`
+      });
+    }
+
+    // ── Niveau B : extraire le LogonType ──
+    if (level === 1) {
+      const f = EVTX_FIXTURES[rand(0, EVTX_FIXTURES.length - 1)];
+      const ip = f.logonType === 10 ? _ipExt() : (f.logonType === 3 ? _ipInt() : _ipInt());
+      const xml = _evtxXML({
+        eventID: 4624,
+        logonType: f.logonType,
+        account: ['Administrator', 'jdupont', 'msmith', 'svc_backup'][rand(0,3)],
+        ip
+      });
+
+      const artefactHTML = renderTextBlock(xml, {
+        title: 'Event 4624 (Logon réussi) — extrait Security.evtx',
+        highlights: [
+          { match: 'LogonType', color: '--gold' },
+          { match: 'IpAddress', color: '--gold' }
+        ]
+      });
+
+      return buildPracticeCard({
+        ...opts,
+        badge: 'extraction',
+        artefactHTML,
+        question: `Voici un Event 4624 (logon réussi). Le champ <code>LogonType</code> indique <strong>comment</strong> l'utilisateur s'est connecté. <strong>Quelle est la valeur de LogonType</strong> ?`,
+        inputLabel: 'LogonType :',
+        placeholder: '10',
+        expected: String(f.logonType),
+        normalize: v => v.trim().replace(/[^\d]/g, ''),
+        hints: [
+          `Le LogonType est dans la section <code>&lt;EventData&gt;</code>, sous forme <code>&lt;Data Name="LogonType"&gt;X&lt;/Data&gt;</code>.`,
+          `Cherche dans <code>&lt;EventData&gt;</code> la balise dont l'attribut <code>Name="LogonType"</code>. La valeur est entre les balises.`,
+          `LogonType = <strong>${f.logonType}</strong> → <strong>${f.desc}</strong>.`
+        ],
+        explain: `LogonType <strong>${f.logonType}</strong> = ${f.desc}. Crucial en triage : LogonType 10 + IP externe = RDP exposé = signal fort de compromission ou de brute force.`
+      });
+    }
+
+    // ── Niveau C : identifier le scénario d'attaque ──
+    {
+      // 3 scénarios typés
+      const scenarios = [
+        {
+          ip: _ipExt(),
+          logonType: 10,
+          account: 'Administrator',
+          workstation: 'EXTERNE',
+          attackType: 'RDP externe',
+          aliases: ['rdp externe', 'rdp', 'remote desktop', 'rdp depuis internet', 'rdp non autorisé'],
+          desc: 'LogonType 10 + IP externe + compte privilégié = RDP exposé/abusé'
+        },
+        {
+          ip: _ipInt(),
+          logonType: 3,
+          account: 'svc_backup',
+          workstation: 'WORKSTATION-04',
+          attackType: 'lateral movement',
+          aliases: ['lateral movement', 'mouvement lateral', 'pivot smb', 'smb lateral'],
+          desc: 'LogonType 3 + IP interne + compte de service utilisé hors session = pivot SMB'
+        },
+        {
+          ip: '127.0.0.1',
+          logonType: 5,
+          account: 'SYSTEM',
+          workstation: '-',
+          attackType: 'service legitime',
+          aliases: ['service legitime', 'service système', 'service', 'normal', 'légitime'],
+          desc: 'LogonType 5 + IP loopback + compte SYSTEM = démarrage d\'un service Windows (bénin)'
+        }
       ];
-      const target = events[rand(0, events.length - 1)];
-      const wrongLabels = {
-        4624: 'Logon réussi', 4625: 'Échec de logon', 4634: 'Logoff (déconnexion)',
-        4647: 'Logoff initié par l\'utilisateur', 4648: 'Logon avec credentials explicites (runas)',
-        4672: 'Privilèges spéciaux assignés', 4688: 'Process creation', 4689: 'Process termination',
-        4776: 'Validation NTLM', 1: 'Sysmon — Process Create'
-      };
-      const choices = [
-        { text: target.label, correct: true,
-          explain: `<strong>Event ID ${target.id}</strong> dans le journal <code>Security</code> = <strong>${target.label}</strong>. Documentation Microsoft : <code>docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-${target.id}</code>.` },
-        { text: wrongLabels[target.wrong1] || ('Event ' + target.wrong1), correct: false,
-          explain: `${wrongLabels[target.wrong1]} = Event ID <strong>${target.wrong1}</strong>, pas ${target.id}.` },
-        { text: wrongLabels[target.wrong2] || ('Event ' + target.wrong2), correct: false,
-          explain: `${wrongLabels[target.wrong2]} = Event ID <strong>${target.wrong2}</strong>, pas ${target.id}.` },
-        { text: wrongLabels[target.wrong3] || ('Event ' + target.wrong3), correct: false,
-          explain: `${wrongLabels[target.wrong3]} = Event ID <strong>${target.wrong3}</strong>, pas ${target.id}.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+      const s = scenarios[rand(0, scenarios.length - 1)];
+      const xml = _evtxXML({
+        eventID: 4624,
+        logonType: s.logonType,
+        account: s.account,
+        ip: s.ip,
+        workstation: s.workstation
+      });
+
+      const artefactHTML = renderTextBlock(xml, {
+        title: 'Event 4624 (Logon) — triage forensique',
+        highlights: [
+          { match: 'LogonType', color: '--purple' },
+          { match: 'IpAddress', color: '--purple' },
+          { match: 'TargetUserName', color: '--purple' }
+        ]
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `À quoi correspond l'<strong>Event ID ${target.id}</strong> dans le journal Security de Windows ?`,
-        choices,
-        hintFn: () => `Logon : 4624 (succès) / 4625 (échec) / 4634 (logoff). Privilèges : 4672. Process : 4688 (create) / 4689 (terminate). Runas/explicit : 4648.`
+        badge: 'identification',
+        artefactHTML,
+        question: `Cet événement seul ne suffit pas à juger : il faut croiser <code>LogonType</code> + <code>IpAddress</code> + <code>TargetUserName</code>. <strong>Quelle interprétation</strong> correspond le mieux à ce contexte ?<br><span style="color:var(--dim);font-size:.85rem">Réponse attendue parmi : <code>RDP externe</code>, <code>lateral movement</code>, <code>service legitime</code></span>`,
+        inputLabel: 'Type :',
+        placeholder: 'RDP externe',
+        expected: s.attackType,
+        normalize: v => {
+          const norm = v.trim().toLowerCase().replace(/[éèê]/g, 'e').replace(/[\s\-_]/g, '');
+          // Vérifier contre tous les alias
+          for (const alias of s.aliases) {
+            const aliasNorm = alias.toLowerCase().replace(/[éèê]/g, 'e').replace(/[\s\-_]/g, '');
+            if (norm === aliasNorm) return s.attackType.toLowerCase().replace(/[\s]/g, '');
+          }
+          return norm;
+        },
+        hints: [
+          `Analyse les 3 champs clés ensemble : <code>LogonType</code> (comment), <code>IpAddress</code> (d'où), <code>TargetUserName</code> (qui). Chaque combinaison raconte une histoire différente.`,
+          `Ici : LogonType=<strong>${s.logonType}</strong> (${EVTX_FIXTURES.find(f=>f.logonType===s.logonType)?.desc || 'autre'}), IP=<code>${s.ip}</code>, compte=<code>${s.account}</code>. ${s.attackType === 'RDP externe' ? 'IP externe + compte privilégié = signal d\'alerte.' : s.attackType === 'lateral movement' ? 'IP interne + compte de service hors contexte = pivot.' : 'IP loopback + SYSTEM = boot service normal.'}`,
+          `Interprétation : <strong>${s.attackType}</strong>. ${s.desc}.`
+        ],
+        explain: `${s.desc}. Pattern reconnaissable au triage : combiner toujours LogonType + IP + compte cible pour distinguer normal vs malveillant.`
       });
     }
-
-    if (qType === 1) {
-      // LogonType
-      const types = [
-        { code: 2, label: 'Interactive — utilisateur à la console (clavier local)' },
-        { code: 3, label: 'Network — accès SMB, IPC$, partages réseau' },
-        { code: 4, label: 'Batch — tâche planifiée' },
-        { code: 5, label: 'Service — démarrage d\'un service Windows' },
-        { code: 7, label: 'Unlock — déverrouillage après lockscreen' },
-        { code: 8, label: 'NetworkCleartext — credentials en clair (rare)' },
-        { code: 10, label: 'RemoteInteractive — RDP / Terminal Server' },
-        { code: 11, label: 'CachedInteractive — credentials cachés (offline)' },
-      ];
-      const target = types[rand(0, types.length - 1)];
-      const others = types.filter(t => t !== target);
-      const distractors = [];
-      while (distractors.length < 3) {
-        distractors.push(others.splice(rand(0, others.length - 1), 1)[0]);
-      }
-      const choices = [
-        { text: target.label, correct: true,
-          explain: `<strong>LogonType ${target.code}</strong> = <strong>${target.label}</strong>. Champ critique des Event 4624/4625 pour la triage forensique (distinguer console vs RDP vs réseau).` },
-        ...distractors.map(d => ({
-          text: d.label, correct: false,
-          explain: `Ça c'est LogonType <strong>${d.code}</strong>, pas ${target.code}.`
-        }))
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Dans un Event ID 4624, le champ <strong>LogonType ${target.code}</strong> indique quel type de connexion ?`,
-        choices,
-        hintFn: () => `Types courants : 2 (interactive console), 3 (network/SMB), 4 (batch/task), 5 (service), 7 (unlock), 10 (RDP/RemoteInteractive), 11 (cached). Crucial en triage : 3 + IP externe = pivot SMB possible.`
-      });
-    }
-
-    if (qType === 2) {
-      // Format EVTX
-      const choices = [
-        { text: '<strong>.evtx</strong> — XML binaire compressé, depuis Windows Vista / Server 2008', correct: true,
-          explain: `Le format <strong>.evtx</strong> remplace l'ancien <code>.evt</code> binaire (XP/2003). Stockage : <code>C:\\Windows\\System32\\winevt\\Logs\\</code>. Lecture native : Event Viewer (eventvwr.msc), <code>wevtutil qe</code>, <code>Get-WinEvent</code> PowerShell. Outils forensiques tiers : <code>EvtxECmd</code> (Eric Zimmerman), <code>python-evtx</code>, libevtx.` },
-        { text: '.evt binaire propriétaire (depuis Windows 3.1)', correct: false,
-          explain: `.evt = format pré-Vista (NT 4.0, 2000, XP, 2003). Remplacé par .evtx en 2007.` },
-        { text: '.log texte ASCII rotatif', correct: false,
-          explain: `Format des logs Unix (/var/log/...), pas Windows. Windows utilise un format binaire structuré.` },
-        { text: '.syslog au format RFC 5424', correct: false,
-          explain: `Syslog est un protocole Unix (RFC 3164/5424), pas le format natif Windows. Windows peut <em>forwarder</em> ses events en syslog mais le stockage natif est .evtx.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Sous quel <strong>format de fichier</strong> Windows Vista et plus récent stocke-t-il ses journaux d'événements ?`,
-        choices,
-        hintFn: () => `EVTX = XML binaire (depuis Vista/2008). EVT = ancien format (XP/2003). Path : <code>%SystemRoot%\\System32\\winevt\\Logs\\</code>. Outils forensiques majeurs : EvtxECmd (Eric Zimmerman) et chainsaw (Sigma rules sur EVTX).`
-      });
-    }
-
-    if (qType === 3) {
-      // Localisation des EVTX
-      const choices = [
-        { text: '<code>C:\\Windows\\System32\\winevt\\Logs\\</code>', correct: true,
-          explain: `Path standard depuis Vista. Contient Security.evtx, System.evtx, Application.evtx, plus les journaux applicatifs (<code>Microsoft-Windows-*</code> dont Sysmon, PowerShell, TaskScheduler, etc.). Acquisition forensique = copier ce dossier entier.` },
-        { text: '<code>C:\\Windows\\System32\\config\\</code>', correct: false,
-          explain: `Ce dossier contient les <em>ruches du registre</em> (SAM, SYSTEM, SOFTWARE, SECURITY) — pas les EVTX. À acquérir aussi en forensique mais distinct.` },
-        { text: '<code>C:\\ProgramData\\EventLogs\\</code>', correct: false,
-          explain: `Path inventé. Aucun journal Windows n'y est stocké par défaut.` },
-        { text: '<code>%APPDATA%\\Microsoft\\Logs\\</code>', correct: false,
-          explain: `%APPDATA% est le profil utilisateur, alors que les EVTX sont machine-wide (System32).` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Où sont stockés les fichiers <strong>EVTX</strong> sur un système Windows moderne ?`,
-        choices,
-        hintFn: () => `Path canonique : <code>%SystemRoot%\\System32\\winevt\\Logs\\</code>. Indispensable à copier lors d'une acquisition forensique (avec C:\\Windows\\System32\\config\\ pour le registre).`
-      });
-    }
-
-    if (qType === 4) {
-      // Sysmon Event ID 1
-      const sysmon = [
-        { id: 1, label: 'Process Create — détail complet (CommandLine, hash, parent)' },
-        { id: 3, label: 'Network connection' },
-        { id: 7, label: 'Image loaded (DLL)' },
-        { id: 11, label: 'File create' },
-        { id: 13, label: 'Registry value set' },
-        { id: 22, label: 'DNS query' },
-      ];
-      const target = sysmon[rand(0, sysmon.length - 1)];
-      const others = sysmon.filter(s => s !== target);
-      const distractors = [];
-      while (distractors.length < 3) {
-        distractors.push(others.splice(rand(0, others.length - 1), 1)[0]);
-      }
-      const choices = [
-        { text: target.label, correct: true,
-          explain: `<strong>Sysmon Event ID ${target.id}</strong> = <strong>${target.label}</strong>. Journal dédié : <code>Microsoft-Windows-Sysmon/Operational</code>. Sysmon (Sysinternals, Mark Russinovich) enrichit massivement la télémétrie Windows pour la détection.` },
-        ...distractors.map(d => ({
-          text: d.label, correct: false,
-          explain: `Sysmon Event ID <strong>${d.id}</strong>, pas ${target.id}.`
-        }))
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Dans le journal Sysmon, à quoi correspond l'<strong>Event ID ${target.id}</strong> ?`,
-        choices,
-        hintFn: () => `Sysmon events principaux : 1 (process create), 3 (network), 7 (DLL load), 8 (CreateRemoteThread), 11 (file create), 13 (registry set), 22 (DNS), 25 (process tampering).`
-      });
-    }
-
-    if (qType === 5) {
-      // Quel journal pour PowerShell scripts
-      const choices = [
-        { text: '<code>Microsoft-Windows-PowerShell/Operational</code> — Event ID <strong>4104</strong> (script block logging)', correct: true,
-          explain: `Le journal <code>Microsoft-Windows-PowerShell/Operational</code> contient l'Event ID <strong>4104</strong> qui logue le <em>script block</em> exécuté (le code lui-même). Active par défaut depuis PS 5.0 (Windows 10). Crucial pour détecter des scripts obfusqués (la deobfuscation finale apparaît dans 4104).` },
-        { text: 'Security.evtx, Event 4688 uniquement', correct: false,
-          explain: `4688 (Process Create) loge l'exécution de <code>powershell.exe</code> et sa ligne de commande, mais pas le contenu du script lui-même. 4104 (PS Operational) loge le code exécuté.` },
-        { text: 'Application.evtx', correct: false,
-          explain: `Le journal Application ne capture pas spécifiquement PowerShell.` },
-        { text: 'C:\\Windows\\Temp\\powershell.log', correct: false,
-          explain: `Pas un emplacement standard. Le logging PowerShell se fait via Event Log, pas via fichier plat.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quel journal Windows contient le <strong>code des scripts PowerShell</strong> exécutés ?`,
-        choices,
-        hintFn: () => `PowerShell 5+ : Script Block Logging dans <code>Microsoft-Windows-PowerShell/Operational</code> Event 4104. Module Logging (4103) et Transcription (4105/4106) sont aussi des sources utiles. Configuration via GPO ou registre.`
-      });
-    }
-
-    // qType === 6 : Event ID 4624 vs 4625 — succès/échec
-    const isSuccess = Math.random() < 0.5;
-    const scenarioText = isSuccess ?
-      `Vous voyez dans Security.evtx un Event ID <strong>4624</strong>, LogonType=10, IpAddress=203.0.113.42 (IP externe), AccountName=Administrator. Que se passe-t-il ?` :
-      `Vous voyez dans Security.evtx <strong>500 Events 4625</strong> consécutifs, IpAddress=185.220.101.42, AccountName variant (admin, administrator, root, Administrator). Diagnostic ?`;
-    const choices = isSuccess ? [
-      { text: 'Connexion RDP <strong>réussie</strong> du compte Administrator depuis une IP externe — incident sérieux à investiguer', correct: true,
-        explain: `4624 = succès. LogonType 10 = RDP. IP externe + compte privilégié = potentiel compromission. Actions : vérifier l'historique des connexions de ce compte, isoler le poste, capturer mémoire, vérifier 4672 (privileges spéciaux) associé.` },
-      { text: 'Tentative de connexion RDP qui a échoué', correct: false,
-        explain: `4624 = succès. L'échec serait 4625.` },
-      { text: 'Configuration normale d\'un domaine', correct: false,
-        explain: `Configuration normale ≠ Administrator depuis IP externe. Anomalie majeure.` },
-      { text: 'Heartbeat système Windows toutes les 30s', correct: false,
-        explain: `Aucun heartbeat n'utilise 4624. Cet event est strictement un logon authentifié.` },
-    ] : [
-      { text: '<strong>Brute force RDP/SMB</strong> en cours — compte le plus probable : Administrator', correct: true,
-        explain: `500× 4625 + variations de username = brute force classique. Actions : bloquer l'IP au firewall, vérifier si des 4624 ont suivi (succès), examiner les comptes ciblés, activer account lockout policy.` },
-      { text: 'Synchronisation Active Directory normale', correct: false,
-        explain: `La synchronisation AD ne génère pas 500 échecs avec usernames variant.` },
-      { text: 'Mise à jour Windows en arrière-plan', correct: false,
-        explain: `Windows Update n'utilise pas le logon Windows.` },
-      { text: 'L\'utilisateur a oublié son mot de passe', correct: false,
-        explain: `500 tentatives + IP unique externe + variations de username = clairement automatisé, pas un humain.` },
-    ];
-    return buildQCMCard({
-      ...opts,
-      scenario: scenarioText,
-      choices: choices.sort(() => Math.random() - 0.5),
-      hintFn: () => `4624 (succès) vs 4625 (échec). LogonType 10 = RDP, 3 = network (SMB). Pattern brute force : centaines d'échecs depuis 1 IP avec usernames variés.`
-    });
   }
 
   // ════════════════════════════════════════════════════════════════
-  // TP 3 : Linux artefacts
+  // TP 3 : Linux — auth.log analyse
   // ════════════════════════════════════════════════════════════════
+
+  function _genAuthLogLine(opts) {
+    opts = opts || {};
+    const ts = opts.ts || 'Sep 12 14:23:47';
+    const host = opts.host || 'srv-web01';
+    const pid = opts.pid || rand(1000, 9999);
+    const type = opts.type || 'failed';
+    const ip = opts.ip || _ipExt();
+    const user = opts.user || 'root';
+    const port = opts.port || rand(40000, 60000);
+
+    if (type === 'failed') {
+      return `${ts} ${host} sshd[${pid}]: Failed password for ${user === 'invalid' ? 'invalid user ' + opts.invalidUser : user} from ${ip} port ${port} ssh2`;
+    } else if (type === 'accepted') {
+      return `${ts} ${host} sshd[${pid}]: Accepted password for ${user} from ${ip} port ${port} ssh2`;
+    } else if (type === 'sudo') {
+      return `${ts} ${host} sudo: ${user} : TTY=pts/0 ; PWD=/home/${user} ; USER=root ; COMMAND=${opts.cmd || '/usr/bin/cat /etc/shadow'}`;
+    } else if (type === 'session_open') {
+      return `${ts} ${host} sshd[${pid}]: pam_unix(sshd:session): session opened for user ${user} by (uid=0)`;
+    }
+    return '';
+  }
+
+  function _fakeTimestamps(count, baseHour) {
+    // Génère des timestamps consécutifs de quelques secondes d'écart
+    const ts = [];
+    let h = baseHour, m = rand(0, 59), s = rand(0, 59);
+    for (let i = 0; i < count; i++) {
+      ts.push(`Sep 12 ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
+      s += rand(1, 8);
+      if (s >= 60) { s -= 60; m++; }
+      if (m >= 60) { m -= 60; h++; }
+    }
+    return ts;
+  }
 
   function genLinuxArtefacts() {
-    const qType = rand(0, 6);
-    const opts = { prefix: 'linux', icon: '🐧', title: 'Linux — Artefacts forensiques', badge: 'artefact' };
+    const level = rand(0, 2);
+    const opts = { prefix: 'linux', icon: '🐧', title: 'Linux — Analyse auth.log' };
 
-    if (qType === 0) {
-      // bash_history
-      const choices = [
-        { text: '<code>~/.bash_history</code> — texte plat, une commande par ligne', correct: true,
-          explain: `<strong>~/.bash_history</strong> (= <code>/home/user/.bash_history</code>) sauvegarde l'historique des commandes bash à la sortie du shell (sauf si <code>HISTFILE</code> est vidé). Format texte plat. Variables associées : <code>HISTSIZE</code> (taille mémoire), <code>HISTFILESIZE</code> (taille fichier), <code>HISTCONTROL</code> (filtre ignoredups/ignorespace). Tu peux ajouter <code>HISTTIMEFORMAT</code> pour avoir des timestamps. Si <code>HISTFILE=/dev/null</code> ou <code>unset HISTFILE</code> : pas d'historique sauvé (anti-forensique).` },
-        { text: '<code>/var/log/bash.log</code> — log système', correct: false,
-          explain: `Pas un emplacement standard. Bash n'écrit pas dans /var/log par défaut.` },
-        { text: '<code>~/.shell_history</code> — base SQLite', correct: false,
-          explain: `Bash utilise un format texte plat, pas SQLite. .shell_history n'est pas standard.` },
-        { text: '<code>/etc/bash_history</code> — partagé entre tous les utilisateurs', correct: false,
-          explain: `bash_history est <em>par utilisateur</em> dans son home, jamais centralisé dans /etc/.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau A : extraire l'IP attaquant d'une ligne unique ──
+    if (level === 0) {
+      const ip = _ipExt();
+      const line = _genAuthLogLine({ type: 'failed', ip, user: 'root', port: rand(40000, 60000) });
+      const artefactHTML = renderTextBlock(line, {
+        title: 'Extrait : /var/log/auth.log',
+        highlights: [{ match: 'Failed password', color: '--cyan' }]
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Où est stocké l'<strong>historique des commandes bash</strong> sur un système Linux standard ?`,
-        choices,
-        hintFn: () => `<code>~/.bash_history</code> pour bash. <code>~/.zsh_history</code> pour zsh (macOS default). <code>~/.local/share/fish/fish_history</code> pour fish. Anti-forensique courante : <code>unset HISTFILE</code>, <code>ln -s /dev/null ~/.bash_history</code>, ou <code>export HISTSIZE=0</code>.`
+        badge: 'lecture',
+        artefactHTML,
+        question: `Voici une ligne unique extraite de <code>/var/log/auth.log</code> sur un serveur web exposé. <strong>Quelle est l'IP source de cette tentative de connexion</strong> ?`,
+        inputLabel: 'IP :',
+        placeholder: '192.168.1.1',
+        expected: ip,
+        normalize: v => v.trim().replace(/\s/g, ''),
+        hints: [
+          `Les lignes SSH d'échec ont le format <code>... Failed password for &lt;user&gt; from &lt;IP&gt; port &lt;port&gt; ssh2</code>. L'IP suit immédiatement le mot-clé <code>from</code>.`,
+          `Repère <code>from</code> dans la ligne — l'IP est le mot juste après.`,
+          `IP = <strong>${ip}</strong>. C'est la source de la tentative SSH.`
+        ],
+        explain: `IP attaquant = <strong>${ip}</strong>. Pour bloquer : <code>iptables -A INPUT -s ${ip} -j DROP</code> (ou via fail2ban / firewalld).`
       });
     }
 
-    if (qType === 1) {
-      // /var/log/auth.log
-      const choices = [
-        { text: 'Authentifications (SSH, sudo, su) et événements PAM', correct: true,
-          explain: `<strong>/var/log/auth.log</strong> (Debian/Ubuntu) ou <strong>/var/log/secure</strong> (RHEL/CentOS/Fedora) loge les tentatives d'auth : SSH (succès/échecs), sudo (commandes), su, login console, événements PAM. Critique en triage : SSH brute force, escalade sudo, login root direct, etc.` },
-        { text: 'Connexions HTTP du serveur web Apache/Nginx', correct: false,
-          explain: `Les logs web sont dans <code>/var/log/apache2/access.log</code> (Debian) ou <code>/var/log/nginx/access.log</code>. Pas auth.log.` },
-        { text: 'Boot logs du kernel', correct: false,
-          explain: `Boot logs : <code>/var/log/kern.log</code>, <code>/var/log/dmesg</code>, ou <code>journalctl -k</code>.` },
-        { text: 'Logs cron / tâches planifiées', correct: false,
-          explain: `<code>/var/log/cron.log</code> (Debian) ou <code>/var/log/cron</code> (RHEL). Pas auth.log.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau B : compter les tentatives échouées depuis 1 IP ──
+    if (level === 1) {
+      const targetIP = _ipExt();
+      const failCount = rand(5, 12);
+      const noiseCount = rand(2, 4); // lignes de "bruit" : autres événements
+      const lines = [];
+      const ts = _fakeTimestamps(failCount + noiseCount, rand(8, 22));
+
+      // Lignes d'échec depuis l'IP cible
+      const users = ['admin', 'administrator', 'root', 'pi', 'oracle', 'ubuntu', 'postgres'];
+      for (let i = 0; i < failCount; i++) {
+        lines.push(_genAuthLogLine({
+          ts: ts[i],
+          type: 'failed',
+          ip: targetIP,
+          user: users[rand(0, users.length-1)],
+          port: rand(40000, 60000)
+        }));
+      }
+      // Bruit : autres événements
+      for (let i = 0; i < noiseCount; i++) {
+        const t = ['accepted', 'sudo', 'session_open'][rand(0,2)];
+        if (t === 'sudo') lines.push(_genAuthLogLine({ ts: ts[failCount + i], type: 'sudo', user: 'jdupont' }));
+        else lines.push(_genAuthLogLine({ ts: ts[failCount + i], type: t, ip: _ipInt(), user: 'jdupont' }));
+      }
+      // Mélanger
+      lines.sort(() => Math.random() - 0.5);
+
+      const artefactHTML = renderTextBlock(lines.join('\n'), {
+        title: `Extrait : /var/log/auth.log (${lines.length} lignes)`,
+        highlights: [{ match: targetIP, color: '--gold' }]
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Que contient <code>/var/log/auth.log</code> (Debian/Ubuntu) ?`,
-        choices,
-        hintFn: () => `auth.log = authentifications (SSH, sudo, su, PAM). Sur RHEL/CentOS : /var/log/secure. Pour SSH spécifiquement : grep "sshd" auth.log. Crucial en post-incident.`
+        badge: 'extraction',
+        artefactHTML,
+        question: `<strong>Combien de tentatives de connexion SSH ÉCHOUÉES</strong> ont été faites depuis l'IP <code>${targetIP}</code> ? (Ignorer les autres événements : sudo, sessions, etc.)`,
+        inputLabel: 'Nombre :',
+        placeholder: '7',
+        expected: String(failCount),
+        normalize: v => v.trim().replace(/[^\d]/g, ''),
+        hints: [
+          `Cherche les lignes contenant à la fois <code>Failed password</code> ET l'IP cible. Le pattern shell typique : <code>grep "Failed password" auth.log | grep ${targetIP} | wc -l</code>.`,
+          `Compte uniquement les lignes <code>Failed password ... from ${targetIP}</code>. Les lignes <code>Accepted password</code>, <code>sudo:</code> ou <code>session opened</code> ne comptent pas même si l'IP y figure.`,
+          `Nombre de <code>Failed password</code> depuis ${targetIP} = <strong>${failCount}</strong>.`
+        ],
+        explain: `<strong>${failCount} tentatives échouées</strong> depuis ${targetIP}. Signature brute force SSH. Réaction : ban via fail2ban (<code>fail2ban-client set sshd banip ${targetIP}</code>) + investigation des autres logs.`
       });
     }
 
-    if (qType === 2) {
-      // Commandes last/lastb/who
-      const cmds = [
-        { name: 'last', file: '/var/run/utmp et /var/log/wtmp', purpose: 'logins/logouts <em>réussis</em>' },
-        { name: 'lastb', file: '/var/log/btmp', purpose: 'tentatives de login <em>échouées</em>' },
-        { name: 'who', file: '/var/run/utmp', purpose: 'utilisateurs <em>actuellement</em> connectés' },
-        { name: 'lastlog', file: '/var/log/lastlog', purpose: '<em>dernier</em> login de chaque utilisateur du système' },
-      ];
-      const target = cmds[rand(0, cmds.length - 1)];
-      const others = cmds.filter(c => c !== target);
-      const choices = [
-        { text: target.purpose.replace(/<\/?em>/g, ''), correct: true,
-          explain: `<code>${target.name}</code> lit ${target.file} et affiche ${target.purpose}. Forensique : <code>last -f /mnt/evidence/wtmp</code> permet d'analyser une copie hors-ligne.` },
-        ...others.slice(0, 3).map(c => ({
-          text: c.purpose.replace(/<\/?em>/g, ''), correct: false,
-          explain: `Ça c'est <code>${c.name}</code> (qui lit ${c.file}), pas ${target.name}.`
-        }))
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau C : identifier l'utilisateur ciblé en majorité ──
+    {
+      const ip = _ipExt();
+      const targets = ['root', 'admin', 'administrator', 'ubuntu'];
+      const targetUser = targets[rand(0, targets.length-1)];
+      // Le targetUser apparaît N fois, les autres 1-2 fois
+      const nTarget = rand(6, 10);
+      const lines = [];
+      const ts = _fakeTimestamps(nTarget + 6, rand(0, 23));
+
+      for (let i = 0; i < nTarget; i++) {
+        lines.push(_genAuthLogLine({
+          ts: ts[i], type: 'failed', ip, user: targetUser, port: rand(40000, 60000)
+        }));
+      }
+      // Autres utilisateurs (max 2 chacun pour ne pas concurrencer)
+      const others = targets.filter(u => u !== targetUser);
+      let idx = nTarget;
+      for (const u of others) {
+        const n = rand(1, 2);
+        for (let i = 0; i < n; i++) {
+          lines.push(_genAuthLogLine({
+            ts: ts[idx++], type: 'failed', ip, user: u, port: rand(40000, 60000)
+          }));
+        }
+      }
+      lines.sort(() => Math.random() - 0.5);
+
+      const artefactHTML = renderTextBlock(lines.join('\n'), {
+        title: `Extrait : /var/log/auth.log (${lines.length} lignes — toutes depuis ${ip})`,
+        highlights: [{ match: targetUser, color: '--purple' }]
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Que fait la commande <code>${target.name}</code> sur Linux ?`,
-        choices,
-        hintFn: () => `utmp = qui est connecté MAINTENANT (who). wtmp = historique TOUS logins (last). btmp = ÉCHECS (lastb). lastlog = dernier login par user. Tous binaires, lisibles avec leurs commandes dédiées ou strings.`
+        badge: 'identification',
+        artefactHTML,
+        question: `Toutes ces tentatives viennent de la même IP, mais ciblent différents comptes. <strong>Quel compte utilisateur est ciblé majoritairement</strong> (= le plus de fois) ?`,
+        inputLabel: 'Utilisateur :',
+        placeholder: 'root',
+        expected: targetUser,
+        normalize: v => v.trim().toLowerCase(),
+        hints: [
+          `Pour chaque ligne <code>Failed password for &lt;user&gt; from ...</code>, extrais le <code>&lt;user&gt;</code>. Compte les occurrences. Shell : <code>grep "Failed password" auth.log | awk '{print $9}' | sort | uniq -c | sort -rn</code>.`,
+          `Cherche le mot juste après <code>Failed password for</code> sur chaque ligne. Compte combien de fois chaque nom apparaît.`,
+          `Utilisateur le plus ciblé : <strong>${targetUser}</strong> (${nTarget} tentatives). Attaque par dictionnaire d'usernames sur compte privilégié.`
+        ],
+        explain: `<strong>${targetUser}</strong> ciblé ${nTarget} fois sur ${lines.length}. Compte privilégié = forte priorité pour l'attaquant. Recommandation : désactiver login SSH direct pour root (<code>PermitRootLogin no</code>) et n'autoriser que des clés.`
       });
     }
-
-    if (qType === 3) {
-      // sudoers logging
-      const choices = [
-        { text: '<code>/var/log/auth.log</code> (ou <code>/var/log/secure</code>) + parfois <code>/var/log/sudo.log</code> si configuré', correct: true,
-          explain: `Par défaut sudo loge via syslog → <code>auth.log</code> (Debian) ou <code>secure</code> (RHEL). Format : <code>sudo: user : TTY=pts/0 ; PWD=/home/user ; USER=root ; COMMAND=/usr/bin/whatever</code>. Un fichier dédié <code>/var/log/sudo.log</code> peut être configuré via <code>Defaults logfile=...</code> dans <code>/etc/sudoers</code>.` },
-        { text: '<code>/var/log/sudo.log</code> uniquement', correct: false,
-          explain: `Pas le défaut. Ce fichier n'existe que si configuré explicitement dans /etc/sudoers.` },
-        { text: '<code>/etc/sudoers</code> (qui agit comme log)', correct: false,
-          explain: `/etc/sudoers est la <em>configuration</em> de sudo (qui peut faire quoi), pas un log.` },
-        { text: '<code>~/.sudo_history</code> par utilisateur', correct: false,
-          explain: `N'existe pas. Sudo loge centralisé via syslog, pas par utilisateur.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Où sont logées par défaut les <strong>commandes sudo</strong> exécutées sur un système Linux ?`,
-        choices,
-        hintFn: () => `Sudo via syslog (facility = auth/authpriv) → auth.log/secure. Logging dédié activable avec <code>Defaults logfile=/var/log/sudo.log</code>. Pour de l'audit poussé : sudo_logsrvd (centralized) ou auditd.`
-      });
-    }
-
-    if (qType === 4) {
-      // journalctl avec systemd
-      const choices = [
-        { text: '<code>journalctl</code> — interface unique pour les logs systemd-journald (incluant kernel, services, boot)', correct: true,
-          explain: `<strong>journalctl</strong> lit le journal binaire de <code>systemd-journald</code> stocké dans <code>/var/log/journal/&lt;machine-id&gt;/</code>. Options forensiques : <code>--since</code>, <code>--until</code>, <code>-u service.service</code>, <code>-b</code> (boot courant), <code>-b -1</code> (boot précédent), <code>-o json</code> (export structuré). Persistant si /var/log/journal/ existe, volatile sinon (mémoire seulement).` },
-        { text: '<code>syslogd</code> — uniquement', correct: false,
-          explain: `syslogd est l'ancien (ou rsyslogd/syslog-ng). Sur systèmes systemd modernes (Debian 8+, RHEL 7+), journald est primaire. syslog peut coexister mais journalctl est l'outil natif.` },
-        { text: '<code>logreader</code>', correct: false,
-          explain: `N'existe pas comme outil standard.` },
-        { text: '<code>tail -f /var/log/messages</code>', correct: false,
-          explain: `tail -f sur /var/log/messages fonctionnait avant systemd. Avec systemd, le journal est binaire et nécessite journalctl.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quelle commande affiche les logs sur un système Linux moderne avec <strong>systemd</strong> ?`,
-        choices,
-        hintFn: () => `systemd-journald stocke un journal binaire structuré dans /var/log/journal/. journalctl est l'interface. Forensique : <code>journalctl -b -1</code> (boot précédent), <code>-o json</code> pour parser, <code>--since "2026-05-01 14:00:00"</code> pour filtrer.`
-      });
-    }
-
-    if (qType === 5) {
-      // .ssh/authorized_keys et persistance
-      const choices = [
-        { text: '<code>~/.ssh/authorized_keys</code> — clés publiques autorisées à se connecter sans mot de passe', correct: true,
-          explain: `<strong>authorized_keys</strong> liste les clés publiques SSH autorisées pour un compte. Format : <code>ssh-rsa AAAAB3... user@host</code>. Mécanisme de <strong>persistance majeur</strong> : un attaquant ajoute sa propre clé publique → accès permanent SSH même si le mot de passe est changé. Vérifier en triage : <code>find / -name authorized_keys 2>/dev/null</code> + comparer aux clés légitimes connues.` },
-        { text: '<code>~/.ssh/known_hosts</code>', correct: false,
-          explain: `known_hosts liste les <em>serveurs</em> auxquels tu t'es déjà connecté (avec leur fingerprint). N'autorise pas de logins, ne contient pas de clés privées d'auth.` },
-        { text: '<code>/etc/ssh/sshd_config</code>', correct: false,
-          explain: `Config du serveur SSH (ports, méthodes d'auth, etc.). Ne liste pas les clés.` },
-        { text: '<code>/root/.ssh/id_rsa</code>', correct: false,
-          explain: `id_rsa = clé privée. Permet à root de se connecter ailleurs, ne reçoit pas de connexions.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quel fichier permet à un utilisateur (ou un attaquant) de se connecter en SSH <strong>sans mot de passe</strong> grâce à une clé publique ?`,
-        choices,
-        hintFn: () => `~/.ssh/authorized_keys = clés publiques acceptées pour ce compte. Vecteur de persistance classique. Triage : lister, comparer, dater (stat ctime). authorized_keys2 (legacy) parfois utilisé aussi.`
-      });
-    }
-
-    // qType === 6 : Crontab user vs system
-    const choices = [
-      { text: '<code>/var/spool/cron/crontabs/&lt;user&gt;</code> (user) et <code>/etc/cron.{d,daily,hourly,...}/</code> + <code>/etc/crontab</code> (system)', correct: true,
-        explain: `Cron utilisateur : <code>/var/spool/cron/crontabs/user</code> (Debian) ou <code>/var/spool/cron/user</code> (RHEL), édité via <code>crontab -e</code>. Cron système : <code>/etc/crontab</code> + <code>/etc/cron.d/*</code> + dossiers <code>cron.{hourly,daily,weekly,monthly}/</code>. Vecteur de persistance classique : <code>crontab -l</code> par user + lister /etc/cron.* + systemd timers (<code>systemctl list-timers</code>) en complément.` },
-      { text: '<code>/root/.crontab</code> uniquement', correct: false,
-        explain: `Le crontab de root est dans /var/spool/cron/crontabs/root, pas /root/.crontab.` },
-      { text: '<code>~/.crontab</code> par utilisateur', correct: false,
-        explain: `Faux emplacement. La commande <code>crontab -e</code> édite /var/spool/cron/crontabs/&lt;user&gt;.` },
-      { text: '<code>/var/log/cron</code>', correct: false,
-        explain: `/var/log/cron est le log d'exécution, pas la configuration des tâches.` },
-    ].sort(() => Math.random() - 0.5);
-    return buildQCMCard({
-      ...opts,
-      scenario: `Où sont stockés les <strong>crontab</strong> (tâches planifiées) sur Linux ?`,
-      choices,
-      hintFn: () => `User : /var/spool/cron/crontabs/&lt;user&gt; (Debian) ou /var/spool/cron/&lt;user&gt; (RHEL). System : /etc/crontab + /etc/cron.d/* + /etc/cron.{daily,hourly,...}/. Ne pas oublier les systemd timers (<code>systemctl list-timers --all</code>) — vecteur de persistance moderne.`
-    });
   }
 
   // ════════════════════════════════════════════════════════════════
-  // TP 4 : macOS artefacts
+  // TP 4 : macOS — KnowledgeC.db query
   // ════════════════════════════════════════════════════════════════
 
+  const MACOS_APPS = [
+    { bundleId: 'com.apple.Safari',          name: 'Safari' },
+    { bundleId: 'com.apple.mail',            name: 'Mail' },
+    { bundleId: 'com.tinyspeck.slackmacgap', name: 'Slack' },
+    { bundleId: 'com.microsoft.Word',        name: 'Microsoft Word' },
+    { bundleId: 'com.google.Chrome',         name: 'Google Chrome' },
+    { bundleId: 'com.mozilla.firefox',       name: 'Firefox' },
+    { bundleId: 'com.apple.iCal',            name: 'Calendar' },
+    { bundleId: 'com.spotify.client',        name: 'Spotify' },
+    { bundleId: 'com.tor-project.TorBrowser',name: 'Tor Browser' },
+    { bundleId: 'org.signal.Signal',         name: 'Signal' },
+    { bundleId: 'com.protonmail.protonmail', name: 'ProtonMail' }
+  ];
+
+  function _macTimestamp(date) {
+    // Format : 2025-09-12 14:23:47
+    return date.toISOString().replace('T',' ').slice(0, 19);
+  }
+
+  function _kc_dbQuery(rows) {
+    // Format réaliste sqlite3 -separator '|'
+    return rows.map(r =>
+      `${r.start}|${r.end}|${r.bundleId}|${r.duration}`
+    ).join('\n');
+  }
+
   function genMacOSArtefacts() {
-    const qType = rand(0, 6);
-    const opts = { prefix: 'macos', icon: '🍎', title: 'macOS — Artefacts forensiques', badge: 'artefact' };
+    const level = rand(0, 2);
+    const opts = { prefix: 'macos', icon: '🍎', title: 'macOS — KnowledgeC.db' };
 
-    if (qType === 0) {
-      // unified.log
-      const choices = [
-        { text: '<strong>macOS 10.12 Sierra (2016)</strong>', correct: true,
-          explain: `Le <strong>unified logging system</strong> (Apple) remplace ASL et syslog depuis <strong>macOS Sierra (10.12, septembre 2016)</strong>. Stockage binaire compressé dans <code>/var/db/diagnostics/</code> et <code>/var/db/uuidtext/</code>. Lecture : <code>log show --predicate '...'</code> (live) ou <code>log collect</code> + outils forensiques (<code>UnifiedLogReader</code> de Sarah Edwards / mac4n6.com, <code>macos-UnifiedLogs</code> de Mandiant).` },
-        { text: 'macOS 10.10 Yosemite (2014)', correct: false,
-          explain: `Trop tôt. Yosemite utilisait encore ASL (Apple System Log).` },
-        { text: 'macOS 10.14 Mojave (2018)', correct: false,
-          explain: `Trop tard. Mojave est postérieur de 2 ans à l'introduction du unified log (Sierra 2016).` },
-        { text: 'macOS 11 Big Sur (2020)', correct: false,
-          explain: `Big Sur a apporté beaucoup de changements (CryptexFS, etc.) mais le unified logging existe depuis Sierra (2016).` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau A : 1 ligne, extraire bundle ID ──
+    if (level === 0) {
+      const app = MACOS_APPS[rand(0, MACOS_APPS.length - 1)];
+      const start = new Date(Date.now() - rand(1, 30) * 3600 * 1000);
+      const end = new Date(start.getTime() + rand(300, 3600) * 1000);
+      const duration = Math.floor((end - start) / 1000);
+
+      const query = `sqlite3 ~/Library/Application\\ Support/Knowledge/knowledgeC.db <<EOF
+.headers on
+.separator "|"
+SELECT
+  datetime(ZSTARTDATE+978307200, 'unixepoch', 'localtime') AS start,
+  datetime(ZENDDATE+978307200,   'unixepoch', 'localtime') AS end,
+  ZVALUESTRING AS bundle_id,
+  CAST(ZENDDATE - ZSTARTDATE AS INTEGER) AS duration_sec
+FROM ZOBJECT
+WHERE ZSTREAMNAME = '/app/inFocus'
+ORDER BY ZSTARTDATE DESC
+LIMIT 1;
+EOF
+
+start|end|bundle_id|duration_sec
+${_macTimestamp(start)}|${_macTimestamp(end)}|${app.bundleId}|${duration}`;
+
+      const artefactHTML = renderTextBlock(query, {
+        title: 'Output : analyse KnowledgeC.db (table ZOBJECT, stream /app/inFocus)',
+        highlights: [{ match: app.bundleId, color: '--cyan' }]
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `À partir de quelle version de macOS le <strong>unified logging system</strong> a-t-il remplacé ASL/syslog ?`,
-        choices,
-        hintFn: () => `macOS 10.12 Sierra, septembre 2016. Stockage : /var/db/diagnostics/ (traces .tracev3) + /var/db/uuidtext/ (chaînes UUID). Outils : log show (live), UnifiedLogReader (Mandiant, Sarah Edwards mac4n6.com).`
+        badge: 'lecture',
+        artefactHTML,
+        question: `Voici le résultat d'une requête SQLite sur <code>KnowledgeC.db</code> (artefact macOS qui trace l'activité utilisateur). Le stream <code>/app/inFocus</code> enregistre quelle application était au premier plan. <strong>Quel est le bundle ID de l'application</strong> utilisée ?`,
+        inputLabel: 'Bundle ID :',
+        placeholder: 'com.apple.Safari',
+        expected: app.bundleId,
+        normalize: v => v.trim().toLowerCase(),
+        hints: [
+          `Le bundle ID est dans la colonne <code>bundle_id</code> (= champ <code>ZVALUESTRING</code> dans la table <code>ZOBJECT</code>). Il commence typiquement par <code>com.</code>, <code>org.</code> ou similaire.`,
+          `Regarde la 3e colonne (séparée par <code>|</code>) sous l'en-tête.`,
+          `Bundle ID = <strong>${app.bundleId}</strong> (= ${app.name}).`
+        ],
+        explain: `<strong>${app.bundleId}</strong> = ${app.name}. KnowledgeC.db trace toutes les apps lancées + durée — mine d'or forensique documentée par Sarah Edwards (mac4n6.com). Outils : APOLLO, mac_apt.`
       });
     }
 
-    if (qType === 1) {
-      // KnowledgeC.db
-      const choices = [
-        { text: 'Une base SQLite qui trace l\'<strong>activité utilisateur</strong> : apps lancées, notifications, état Screen Time, Safari, devices Bluetooth', correct: true,
-          explain: `<strong>KnowledgeC.db</strong> est une base SQLite située à <code>/private/var/db/CoreDuet/Knowledge/knowledgeC.db</code> (system) et <code>~/Library/Application Support/Knowledge/knowledgeC.db</code> (user). Trace : applications lancées (<code>/app/inFocus</code>), notifications reçues, devices connectés, Screen Time, état batterie. Une mine d'or forensique documentée par Sarah Edwards (mac4n6.com). Parseurs : <code>APOLLO</code> (Sarah Edwards), <code>mac_apt</code>.` },
-        { text: 'Un cache de pages web Safari', correct: false,
-          explain: `Le cache Safari est dans <code>~/Library/Caches/com.apple.Safari/</code>. KnowledgeC trace les activités globales utilisateur, pas spécifiquement Safari.` },
-        { text: 'Les certificats X.509 acceptés par le keychain', correct: false,
-          explain: `Les certificats sont dans <code>~/Library/Keychains/</code>, pas dans KnowledgeC.` },
-        { text: 'L\'index Spotlight des fichiers indexés', correct: false,
-          explain: `Spotlight = <code>/.Spotlight-V100/</code> avec mdimporters et stores. KnowledgeC trace les activités, pas l'indexation de fichiers.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau B : plusieurs lignes, app à une heure donnée ──
+    if (level === 1) {
+      // 4 lignes, on demande l'app utilisée à une heure ciblée
+      const rows = [];
+      const apps = [...MACOS_APPS].sort(() => Math.random() - 0.5).slice(0, 4);
+      let cursor = new Date();
+      cursor.setHours(rand(8, 18), 0, 0, 0);
+      for (let i = 0; i < 4; i++) {
+        const start = new Date(cursor);
+        const dur = rand(600, 2400);
+        const end = new Date(start.getTime() + dur * 1000);
+        rows.push({
+          start: _macTimestamp(start),
+          end: _macTimestamp(end),
+          bundleId: apps[i].bundleId,
+          name: apps[i].name,
+          duration: dur
+        });
+        cursor = new Date(end.getTime() + rand(60, 300) * 1000);
+      }
+      // Choisir une heure dans la 2e ou 3e session
+      const target = rows[rand(1, 2)];
+      const midTime = new Date((new Date(target.start + 'Z').getTime() + new Date(target.end + 'Z').getTime()) / 2);
+      const probeTime = _macTimestamp(midTime);
+
+      const tableText = `start|end|bundle_id|duration_sec\n${_kc_dbQuery(rows)}`;
+      const artefactHTML = renderTextBlock(tableText, {
+        title: 'Output : sessions /app/inFocus (KnowledgeC.db, dernières 4 lignes)',
+        highlights: [{ match: target.bundleId, color: '--gold' }]
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Que contient <code>KnowledgeC.db</code> sur macOS et iOS ?`,
-        choices,
-        hintFn: () => `Base SQLite, /private/var/db/CoreDuet/Knowledge/knowledgeC.db (system) ou ~/Library/.../Knowledge/ (user). Trace énormément d'activité user. Outil de référence : APOLLO (Sarah Edwards, mac4n6.com).`
+        badge: 'extraction',
+        artefactHTML,
+        question: `À <strong>${probeTime}</strong>, quelle application était au premier plan ? <strong>Donne son bundle ID</strong>.`,
+        inputLabel: 'Bundle ID :',
+        placeholder: 'com.apple.Safari',
+        expected: target.bundleId,
+        normalize: v => v.trim().toLowerCase(),
+        hints: [
+          `Pour chaque ligne, regarde l'intervalle <code>[start, end]</code>. Trouve celle dont l'intervalle contient <code>${probeTime}</code>.`,
+          `Cherche la ligne où <code>start ≤ ${probeTime} ≤ end</code>. Plage cible : entre <code>${target.start}</code> et <code>${target.end}</code>.`,
+          `À <code>${probeTime}</code>, l'app active était <strong>${target.bundleId}</strong> (= ${target.name}).`
+        ],
+        explain: `App active à ${probeTime} : <strong>${target.bundleId}</strong> (${target.name}). KnowledgeC.db permet de reconstituer la timeline d'usage avec précision seconde par seconde.`
       });
     }
 
-    if (qType === 2) {
-      // FSEvents
-      const choices = [
-        { text: '<strong>FSEvents</strong> — log binaire des modifications du système de fichiers (creates/deletes/modifications)', correct: true,
-          explain: `<strong>FSEvents</strong> (<code>/.fseventsd/</code> par volume) enregistre les changements du FS pour Spotlight, Time Machine, et les apps qui s'y abonnent (API <code>FSEventStreamCreate</code>). Format binaire propriétaire. Parsing forensique : <code>FSEventsParser</code> (G-C Partners / David Cowen) ou <code>mac_apt</code>. Indique <em>qu'il y a eu une modif</em> sur un path, sans toujours dire quoi (selon le flag).` },
-        { text: 'inotify (équivalent macOS)', correct: false,
-          explain: `inotify est un mécanisme Linux. macOS utilise FSEvents (kqueue VNODE events à bas niveau, FSEvents API au-dessus).` },
-        { text: 'AuditLog du noyau XNU', correct: false,
-          explain: `BSM/audit existe sur macOS (<code>/var/audit/</code>) mais c'est distinct de FSEvents. BSM trace les syscalls audités, FSEvents les changements FS via une API dédiée.` },
-        { text: 'Spotlight metadata', correct: false,
-          explain: `Spotlight (.Spotlight-V100) consomme FSEvents pour savoir quoi réindexer. FSEvents est la source primaire.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau C : durée totale d'usage en minutes ──
+    {
+      const app = MACOS_APPS[rand(0, MACOS_APPS.length - 1)];
+      const others = MACOS_APPS.filter(a => a !== app).slice(0, 3);
+      // Sessions de l'app cible (3-4 sessions)
+      const nSessions = rand(3, 4);
+      const rows = [];
+      let cursor = new Date();
+      cursor.setHours(rand(8, 12), 0, 0, 0);
+      let totalAppSec = 0;
+
+      const sessionList = [];
+      for (let i = 0; i < nSessions; i++) {
+        sessionList.push({ isTarget: true, dur: rand(180, 900) });
+      }
+      // Ajouter des sessions d'autres apps
+      for (let i = 0; i < 3; i++) {
+        sessionList.push({ isTarget: false, dur: rand(120, 600), bundleId: others[i].bundleId });
+      }
+      sessionList.sort(() => Math.random() - 0.5);
+
+      for (const s of sessionList) {
+        const start = new Date(cursor);
+        const end = new Date(start.getTime() + s.dur * 1000);
+        rows.push({
+          start: _macTimestamp(start),
+          end: _macTimestamp(end),
+          bundleId: s.isTarget ? app.bundleId : s.bundleId,
+          duration: s.dur
+        });
+        if (s.isTarget) totalAppSec += s.dur;
+        cursor = new Date(end.getTime() + rand(30, 120) * 1000);
+      }
+      const totalMin = Math.round(totalAppSec / 60);
+
+      const tableText = `start|end|bundle_id|duration_sec\n${_kc_dbQuery(rows)}`;
+      const artefactHTML = renderTextBlock(tableText, {
+        title: `Output : toutes sessions /app/inFocus (${rows.length} lignes)`,
+        highlights: [{ match: app.bundleId, color: '--purple' }]
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Comment macOS trace-t-il les <strong>modifications du système de fichiers</strong> au niveau OS ?`,
-        choices,
-        hintFn: () => `FSEvents : /.fseventsd/ par volume, format binaire gzippé. Consommé par Spotlight, Time Machine, applis. Forensique : FSEventsParser, mac_apt. Indique le path modifié mais pas toujours le détail de la modif.`
+        badge: 'calcul',
+        artefactHTML,
+        question: `<strong>Quelle est la durée totale d'utilisation de <code>${app.bundleId}</code></strong> (en minutes, arrondi à l'entier le plus proche) sur cette période ?`,
+        inputLabel: 'Minutes :',
+        placeholder: '15',
+        expected: String(totalMin),
+        normalize: v => v.trim().replace(/[^\d]/g, ''),
+        hints: [
+          `Filtre les lignes où <code>bundle_id = ${app.bundleId}</code>. Pour chaque ligne, prends la colonne <code>duration_sec</code>. Additionne, puis divise par 60.`,
+          `Sessions de <code>${app.bundleId}</code> : ${rows.filter(r => r.bundleId === app.bundleId).map(r => r.duration + 's').join(' + ')} = ${totalAppSec}s. En minutes : ${totalAppSec} / 60.`,
+          `Total = ${totalAppSec} secondes = <strong>${totalMin} minutes</strong> (arrondi).`
+        ],
+        explain: `Durée d'usage de ${app.name} : <strong>${totalMin} minutes</strong> (${totalAppSec} sec sur ${nSessions} sessions). Méthode forensique standard pour reconstituer le temps réel passé sur une app.`
       });
     }
-
-    if (qType === 3) {
-      // Quarantine attribute
-      const choices = [
-        { text: '<code>com.apple.quarantine</code> — extended attribute attaché aux fichiers téléchargés', correct: true,
-          explain: `<strong>com.apple.quarantine</strong> est un <em>extended attribute</em> (xattr) ajouté par Safari, Mail, AirDrop, etc., aux fichiers téléchargés. Format : <code>0083;hex_timestamp;App;UUID</code>. Déclenche le Gatekeeper au premier lancement (« voulez-vous vraiment ouvrir ce fichier téléchargé d'Internet ? »). Lecture forensique : <code>xattr -p com.apple.quarantine fichier</code> ou <code>mdls fichier</code> (champ <code>kMDItemDownloadedDate</code>, etc.).` },
-        { text: '<code>.DS_Store</code>', correct: false,
-          explain: `.DS_Store stocke les préférences d'affichage Finder (icônes, position fenêtre). Pas la quarantaine.` },
-        { text: '<code>com.apple.metadata:kMDItemWhereFroms</code> uniquement', correct: false,
-          explain: `kMDItemWhereFroms est aussi un xattr utile (URL d'origine) mais distinct de quarantine. Souvent les deux coexistent sur un fichier téléchargé.` },
-        { text: '<code>.Trash/</code> seulement', correct: false,
-          explain: `~/.Trash/ est la corbeille. Sans rapport avec la quarantaine système.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quel mécanisme macOS marque les fichiers <strong>téléchargés depuis Internet</strong> pour déclencher l'avertissement Gatekeeper ?`,
-        choices,
-        hintFn: () => `Extended attribute (xattr) <code>com.apple.quarantine</code>. Ajouté par Safari/Mail/AirDrop. Format : flags;timestamp;app;uuid. Voir avec <code>xattr -p</code> ou <code>mdls</code>. Important en triage : tracer l'origine d'un payload malveillant.`
-      });
-    }
-
-    if (qType === 4) {
-      // Plist formats
-      const choices = [
-        { text: 'Soit <strong>XML lisible</strong> soit <strong>binaire compact</strong> (binary plist) — décodable avec <code>plutil -convert</code>', correct: true,
-          explain: `Les <strong>property lists (plist)</strong> existent en deux formats :<br>• <strong>XML</strong> (lisible avec un éditeur texte)<br>• <strong>Binary plist</strong> (bplist00, plus compact, défaut depuis OS X 10.4)<br>Conversion : <code>plutil -convert xml1 file.plist</code> ou <code>plutil -convert binary1</code>. Lecture forensique : <code>plistutil</code>, <code>plistlib</code> en Python, ou simplement <code>plutil -p</code>.` },
-        { text: 'JSON exclusivement', correct: false,
-          explain: `macOS n'utilise pas JSON pour ses plist (sauf nouvelles configurations modernes). Format XML ou binary plist.` },
-        { text: 'SQLite uniquement', correct: false,
-          explain: `Certains fichiers de configuration macOS sont SQLite (KnowledgeC, History.db, etc.), mais les .plist sont XML/binary plist, pas SQLite.` },
-        { text: 'Texte ASCII flat sans structure', correct: false,
-          explain: `Les plist sont structurés (clés/valeurs hiérarchiques) en XML ou binary. Pas du flat ASCII.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Sous quel format les fichiers de configuration <strong>.plist</strong> sont-ils stockés sur macOS ?`,
-        choices,
-        hintFn: () => `XML (lisible) ou bplist00 (binaire). <code>plutil -p file.plist</code> affiche en clair quel que soit le format. <code>plutil -convert xml1/binary1</code> pour convertir. Python : <code>plistlib</code>.`
-      });
-    }
-
-    if (qType === 5) {
-      // Spotlight metadata
-      const choices = [
-        { text: '<code>.Spotlight-V100/</code> à la racine du volume + métadonnées via <code>mdls</code> / <code>mdfind</code>', correct: true,
-          explain: `Spotlight indexe chaque volume dans <code>.Spotlight-V100/</code> (racine du volume) avec des fichiers <em>Store-V2</em>. Métadonnées par fichier : <code>mdls /path/file</code> (affiche kMDItem*). Recherche par contenu : <code>mdfind 'kMDItemContentType == "public.image"'</code>. Important en forensique : les métadonnées Spotlight survivent à la suppression du fichier original (cache).` },
-        { text: '<code>~/Library/Spotlight/</code>', correct: false,
-          explain: `Path inexistant. Spotlight indexe par volume, racine, dossier .Spotlight-V100.` },
-        { text: '<code>/private/var/spotlight/</code>', correct: false,
-          explain: `Path inexistant. Index Spotlight = .Spotlight-V100 à la racine du volume.` },
-        { text: '<code>/usr/local/spotlight/</code>', correct: false,
-          explain: `Pas un path Spotlight. /usr/local est pour les programmes installés par l'utilisateur (Homebrew, etc.).` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Où Spotlight stocke-t-il son <strong>index de métadonnées</strong> de fichiers sur macOS ?`,
-        choices,
-        hintFn: () => `<code>/.Spotlight-V100/</code> à la racine de chaque volume indexé. CLI : <code>mdls fichier</code> (lecture), <code>mdfind 'requête'</code> (recherche), <code>mdimport</code> (forcer indexation). Cache Spotlight peut persister après suppression du fichier !`
-      });
-    }
-
-    // qType === 6 : Time Machine
-    const choices = [
-      { text: 'Dossier <code>Backups.backupdb</code> sur le volume de sauvegarde, avec hardlinks pour les fichiers inchangés', correct: true,
-        explain: `<strong>Time Machine</strong> (depuis Mac OS X 10.5 Leopard, 2007) sauvegarde dans <code>/Volumes/&lt;disque&gt;/Backups.backupdb/&lt;hostname&gt;/&lt;timestamp&gt;/</code>. Sur HFS+ utilisait des hardlinks de dossiers (extension Apple). Sur APFS (depuis Big Sur, 2020) utilise des snapshots APFS. Forensique : chaque snapshot = état complet du système à un instant T, énorme valeur pour reconstituer la chronologie.` },
-      { text: 'Une image disque .dmg unique chiffrée', correct: false,
-        explain: `Time Machine produit une <em>arborescence</em> par snapshot, pas un .dmg monolithique. Sur APFS récent : snapshots APFS natifs.` },
-      { text: 'Backup cloud iCloud uniquement', correct: false,
-        explain: `Time Machine vise un disque externe ou un réseau (Time Capsule, Synology). iCloud Backup est différent (sauvegarde iOS / certains éléments macOS).` },
-      { text: 'Fichiers .tar.gz datés', correct: false,
-        explain: `Pas le format Time Machine. Snapshots HFS+/APFS, pas archive tar.` },
-    ].sort(() => Math.random() - 0.5);
-    return buildQCMCard({
-      ...opts,
-      scenario: `Comment <strong>Time Machine</strong> stocke-t-il ses sauvegardes sur le disque cible ?`,
-      choices,
-      hintFn: () => `HFS+ : Backups.backupdb avec hardlinks de dossiers (extension Apple unique). APFS : snapshots natifs (Big Sur+). Chaque snapshot ≈ état complet à un instant T → reconstitution de chronologie post-incident.`
-    });
   }
 
   // ════════════════════════════════════════════════════════════════
   // Enregistrement dans GENERATORS
   // ════════════════════════════════════════════════════════════════
   if (typeof window !== 'undefined' && window.GENERATORS) {
-    window.GENERATORS.ext4 = genEXT4;
+    window.GENERATORS.ext4  = genEXT4;
     window.GENERATORS.winev = genWinEvents;
     window.GENERATORS.linux = genLinuxArtefacts;
     window.GENERATORS.macos = genMacOSArtefacts;
   } else if (typeof GENERATORS !== 'undefined') {
-    GENERATORS.ext4 = genEXT4;
+    GENERATORS.ext4  = genEXT4;
     GENERATORS.winev = genWinEvents;
     GENERATORS.linux = genLinuxArtefacts;
     GENERATORS.macos = genMacOSArtefacts;

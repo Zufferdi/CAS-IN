@@ -1,832 +1,746 @@
 // ═══════════════════════════════════════════════════════════════════
-// tp-engine-easy.js — CAS-IN Travaux Pratiques (delta v97)
-// 4 TP "faciles" : CIDR/subnetting, AES, Cassage de hash, PKI X.509
-// Chargé APRÈS tp-engine.js (utilise rand, STATE, GENERATORS, helpers)
+// tp-engine-easy.js — CAS-IN TP delta v101 (REFONTE PRATIQUE)
+// 4 TP "faciles, progressifs" : CIDR, AES, Cassage, PKI
+// Chaque TP a 3 sous-types A → B → C (lecture → identification → calcul léger)
+// Style : artefact concret (hexdump, dump openssl, hash brut) + input + 3 indices
+// Chargé APRÈS tp-engine.js (utilise rand, STATE, renderHexDump, showTPHint, helpers)
 // ═══════════════════════════════════════════════════════════════════
 
 (function () {
   'use strict';
 
   // ────────────────────────────────────────────────────────────────
-  // HELPER : créer une carte QCM 4-choix standard
+  // HELPER : carte pratique standard (artefact + input + 3 indices)
   // ────────────────────────────────────────────────────────────────
-  function buildQCMCard(opts) {
-    // opts: { prefix, badge, scenario, choices: [{text, correct, explain}], hintFn }
+  // opts: {
+  //   prefix:  'cidr',
+  //   icon:    '🌐',
+  //   title:   'CIDR — Lecture IP',
+  //   badge:   'lecture' | 'identification' | 'calcul',
+  //   artefactHTML: '<div>...hexdump...</div>',   // le bloc visuel central
+  //   question: 'Quelle est l\'adresse IP ?',
+  //   inputLabel: 'Adresse :',
+  //   placeholder: '192.168.1.1',
+  //   expected: '192.168.1.10',                    // string attendue (comparaison normalisée)
+  //   normalize: v => v.trim().replace(/\s/g,''),  // optionnel : normaliser avant compare
+  //   hints: ['Méthode...', 'Où regarder...', 'Réponse étape par étape...'],
+  //   explain: '✅ Explication finale après bonne réponse'
+  // }
+  function buildPracticeCard(opts) {
     const id = opts.prefix;
     const div = document.createElement('div');
     div.className = 'ex-card';
-    const choicesHTML = opts.choices.map((c, i) => `
-      <button class="ex-choice" data-idx="${i}" id="ch-${id}-${i}">
-        <span class="ex-choice-letter">${String.fromCharCode(65+i)}</span>
-        <span class="ex-choice-text">${c.text}</span>
-      </button>`).join('');
 
     div.innerHTML = `
       <div class="ex-header">
-        <div class="ex-num" id="ex-num-${id}">${opts.icon || '🔐'}</div>
+        <div class="ex-num" id="ex-num-${id}">${opts.icon || '🔧'}</div>
         <div class="ex-title">${opts.title}</div>
-        <span class="ex-badge easy">${opts.badge || 'easy'}</span>
+        <span class="ex-badge easy">${opts.badge || 'pratique'}</span>
       </div>
-      <div class="ex-scenario">${opts.scenario}</div>
-      <div class="ex-choices">${choicesHTML}</div>
-      ${opts.hintFn ? `<div style="margin-top:.6rem"><button class="btn-hint" id="btn-hint-${id}">💡 Indice</button></div>` : ''}
+
+      <div class="ex-scenario">
+        ${opts.question}
+      </div>
+
+      <div style="margin:.7rem 0">
+        ${opts.artefactHTML}
+      </div>
+
+      <div class="ex-input-row" style="flex-wrap:wrap;gap:8px">
+        ${opts.inputLabel ? `<span class="ex-input-label">${opts.inputLabel}</span>` : ''}
+        <input class="ex-input" id="inp-${id}" placeholder="${opts.placeholder || ''}" autocomplete="off" spellcheck="false" style="width:100%;max-width:340px;font-family:var(--mono);min-height:40px;box-sizing:border-box">
+        <button class="btn-hint" id="btn-hint1-${id}" type="button">💡 Méthode</button>
+        <button class="btn-hint" id="btn-hint2-${id}" type="button" disabled style="opacity:.4">💡💡 Où regarder</button>
+        <button class="btn-hint" id="btn-hint3-${id}" type="button" disabled style="opacity:.4">💡💡💡 Réponse</button>
+        <button class="btn-validate" id="btn-validate-${id}" type="button">Valider ✓</button>
+        <button class="btn-next" id="btn-next-${id}" type="button" style="display:none">Exercice suivant →</button>
+      </div>
       <div class="ex-feedback" id="ex-feedback-${id}"></div>
-      <button class="btn-next" id="btn-next-${id}" onclick="newExercise()" style="display:none;margin-top:.5rem">Exercice suivant →</button>
     `;
+
     setTimeout(() => {
-      opts.choices.forEach((c, i) => {
-        const btn = div.querySelector(`#ch-${id}-${i}`);
-        if (btn) btn.addEventListener('click', () => handleChoice(id, i, c.correct, c.explain, opts.choices));
-      });
-      if (opts.hintFn) {
-        const hb = div.querySelector(`#btn-hint-${id}`);
-        if (hb) hb.addEventListener('click', () => {
-          if (typeof markHintUsed === 'function') markHintUsed();
-          const fb = document.getElementById(`ex-feedback-${id}`);
-          if (fb) { fb.className = 'ex-feedback correct'; fb.innerHTML = `💡 ${opts.hintFn()}`; }
-        });
+      const inp = div.querySelector(`#inp-${id}`);
+      const fb  = div.querySelector(`#ex-feedback-${id}`);
+      const nextBtn = div.querySelector(`#btn-next-${id}`);
+      const valBtn  = div.querySelector(`#btn-validate-${id}`);
+
+      const normalize = opts.normalize || (v => v.trim().toLowerCase().replace(/\s+/g, ''));
+
+      function validate() {
+        if (!inp || !fb) return;
+        const got = normalize(inp.value);
+        const exp = normalize(opts.expected);
+        const ok = got === exp;
+
+        if (ok) {
+          inp.className = 'ex-input correct';
+          valBtn.disabled = true;
+          nextBtn.style.display = 'inline-block';
+          const card = inp.closest('.ex-card');
+          if (card) card.className = 'ex-card solved';
+          const numEl = document.getElementById(`ex-num-${id}`);
+          if (numEl) numEl.className = 'ex-num solved';
+          fb.className = 'ex-feedback correct';
+          fb.innerHTML = `✓ Correct ! ${opts.explain || ''}`;
+          if (typeof STATE !== 'undefined' && !STATE.hintUsed && typeof incSolved === 'function') {
+            incSolved(STATE.cat);
+          }
+        } else {
+          inp.className = 'ex-input wrong';
+          fb.className = 'ex-feedback wrong';
+          fb.innerHTML = `✗ "<code>${escapeHTML(inp.value)}</code>" incorrect. Utilise les indices progressifs pour t'aider, ou réessaie.`;
+          if (typeof breakStreak === 'function') breakStreak();
+          setTimeout(() => { if (inp) inp.className = 'ex-input'; }, 700);
+        }
       }
+
+      function showHint(level) {
+        if (typeof markHintUsed === 'function') markHintUsed();
+        if (!fb || !opts.hints || !opts.hints[level-1]) return;
+        fb.className = 'ex-feedback correct';
+        const labels = ['Méthode', 'Où regarder', 'Réponse étape par étape'];
+        fb.innerHTML = `💡 <strong>Niveau ${level} — ${labels[level-1]}</strong><br>${opts.hints[level-1]}`;
+        // Déverrouiller le niveau suivant
+        if (level < 3) {
+          const next = div.querySelector(`#btn-hint${level+1}-${id}`);
+          if (next) { next.disabled = false; next.style.opacity = '1'; }
+        }
+        // Griser le niveau courant
+        const cur = div.querySelector(`#btn-hint${level}-${id}`);
+        if (cur) cur.style.opacity = '.4';
+      }
+
+      div.querySelector(`#btn-hint1-${id}`).addEventListener('click', () => showHint(1));
+      div.querySelector(`#btn-hint2-${id}`).addEventListener('click', () => showHint(2));
+      div.querySelector(`#btn-hint3-${id}`).addEventListener('click', () => showHint(3));
+      valBtn.addEventListener('click', validate);
+      nextBtn.addEventListener('click', () => { if (typeof newExercise === 'function') newExercise(); });
+      if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') validate(); });
     }, 50);
+
     return div;
   }
 
-  function handleChoice(prefix, idx, isCorrect, explain, allChoices) {
-    const fb = document.getElementById(`ex-feedback-${prefix}`);
-    const choiceBtn = document.getElementById(`ch-${prefix}-${idx}`);
-    const nextBtn = document.getElementById(`btn-next-${prefix}`);
-    if (!fb || !choiceBtn) return;
+  // Utilitaire : escape HTML pour affichage sûr d'entrée utilisateur dans le feedback
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
 
-    if (isCorrect) {
-      choiceBtn.classList.add('correct');
-      // Disable all
-      allChoices.forEach((_, i) => {
-        const b = document.getElementById(`ch-${prefix}-${i}`);
-        if (b) b.disabled = true;
-      });
-      fb.className = 'ex-feedback correct';
-      fb.innerHTML = `✓ Correct ! ${explain}`;
-      const card = choiceBtn.closest('.ex-card');
-      if (card) card.classList.add('solved');
-      const numEl = document.getElementById(`ex-num-${prefix}`);
-      if (numEl) numEl.classList.add('solved');
-      if (nextBtn) nextBtn.style.display = 'inline-flex';
-      if (typeof STATE !== 'undefined' && !STATE.hintUsed && typeof incSolved === 'function') {
-        incSolved(STATE.cat);
-      }
-    } else {
-      choiceBtn.classList.add('wrong');
-      choiceBtn.disabled = true;
-      fb.className = 'ex-feedback wrong';
-      fb.innerHTML = `✗ ${explain || 'Mauvaise réponse.'}`;
-      if (typeof breakStreak === 'function') breakStreak();
+  // Utilitaire : générer un hexdump simple en tableau (sans renderHexDump complet)
+  // Pour les petits dumps (< 32 octets) on a un rendu compact suffisant
+  function tinyHexDump(bytes, opts) {
+    opts = opts || {};
+    const title = opts.title || '';
+    const annotations = opts.annotations || []; // [{from, to, color, label}]
+    const cols = opts.cols || 8;
+
+    const hexCells = bytes.map((b, i) => {
+      const ann = annotations.find(a => a.from <= i && i <= a.to);
+      const color = ann ? `color:var(${ann.color || '--cyan'});font-weight:700;background:rgba(255,255,255,.05);border-radius:3px` : 'color:var(--text)';
+      const tip = ann ? ` title="${ann.label || ''}"` : '';
+      return `<span style="padding:2px 4px;display:inline-block;min-width:24px;text-align:center;${color}"${tip}>${b.toString(16).toUpperCase().padStart(2,'0')}</span>`;
+    });
+
+    // ASCII
+    const ascii = bytes.map(b => (b >= 0x20 && b < 0x7F) ? String.fromCharCode(b) : '.').join('');
+
+    // Découper en lignes de `cols` octets
+    const lines = [];
+    for (let i = 0; i < hexCells.length; i += cols) {
+      const offset = i.toString(16).toUpperCase().padStart(4, '0');
+      const hexLine = hexCells.slice(i, i + cols).join('');
+      const asciiLine = ascii.slice(i, i + cols).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+      lines.push(`<tr>
+        <td style="padding:.25rem .6rem;color:var(--dim);font-size:.7rem;font-family:var(--mono);border-right:1px solid rgba(255,255,255,.05)">${offset}</td>
+        <td style="padding:.25rem .4rem;font-family:var(--mono);font-size:.85rem;letter-spacing:.04em">${hexLine}</td>
+        <td style="padding:.25rem .6rem;color:var(--dim);font-size:.75rem;font-family:var(--mono);border-left:1px solid rgba(255,255,255,.05)">${asciiLine}</td>
+      </tr>`);
     }
+
+    return `
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">
+        ${title ? `<div style="padding:.4rem .8rem;font-size:.7rem;color:var(--gold);background:rgba(240,192,64,.05);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.05em;text-transform:uppercase">${title}</div>` : ''}
+        <table style="border-collapse:collapse;width:100%">${lines.join('')}</table>
+      </div>
+    `;
   }
 
   // ════════════════════════════════════════════════════════════════
-  // TP 1 : CIDR / Subnetting
+  // TP 1 : CIDR — Lecture d'IPv4 en hexadécimal
   // ════════════════════════════════════════════════════════════════
-
-  function _ipFromInt(n) {
-    return [(n>>>24)&255, (n>>>16)&255, (n>>>8)&255, n&255].join('.');
-  }
-  function _intFromIp(ip) {
-    const p = ip.split('.').map(Number);
-    return (((p[0]<<24)>>>0) + (p[1]<<16) + (p[2]<<8) + p[3]) >>> 0;
-  }
-  function _maskFromPrefix(p) {
-    return p === 0 ? 0 : (0xFFFFFFFF << (32 - p)) >>> 0;
-  }
-  function _maskToDotted(prefix) {
-    return _ipFromInt(_maskFromPrefix(prefix));
-  }
-  function _isRFC1918(ip) {
-    const n = _intFromIp(ip);
-    // 10.0.0.0/8 — comparaison unsigned (>>> 0 des deux côtés)
-    if (((n & 0xFF000000) >>> 0) === ((10 << 24) >>> 0)) return true;
-    // 172.16.0.0/12
-    if (((n & 0xFFF00000) >>> 0) === (((172 << 24) | (16 << 16)) >>> 0)) return true;
-    // 192.168.0.0/16
-    if (((n & 0xFFFF0000) >>> 0) === (((192 << 24) | (168 << 16)) >>> 0)) return true;
-    return false;
-  }
 
   function genCIDR() {
-    const qType = rand(0, 6);
-    const opts = { prefix: 'cidr', icon: '🌐', title: 'CIDR & Subnetting', badge: 'réseau' };
+    const level = rand(0, 2); // A, B, C
+    const opts = { prefix: 'cidr', icon: '🌐', title: 'CIDR — Lecture IP en hex' };
 
-    if (qType === 0) {
-      // Nombre d'adresses dans un /X
-      const prefix = rand(20, 30);
-      const total = Math.pow(2, 32 - prefix);
-      const correct = String(total);
-      // Distracteurs : 2^(33-p), 2^(31-p), 256 si proche
-      const distractors = [
-        String(Math.pow(2, 32 - prefix + 1)),  // *2
-        String(Math.pow(2, 32 - prefix - 1)),  // /2
-        String(total - 2),                      // total - 2 (souvent confondu avec hosts)
-      ].filter(d => d !== correct);
-      const choices = [
-        { text: correct, correct: true, explain: `Un /${prefix} contient 2^(32-${prefix}) = <strong>${total} adresses totales</strong> (réseau + broadcast + ${total-2} hôtes utilisables).` },
-        ...distractors.slice(0, 3).map(d => ({
-          text: d, correct: false,
-          explain: `${d} n'est pas le total. Formule : 2^(32-${prefix}). Attention à ne pas confondre <em>total d'adresses</em> et <em>hôtes utilisables</em> (= total − 2).`
-        }))
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Combien d'adresses au total contient un sous-réseau <strong>/${prefix}</strong> ?`,
-        choices,
-        hintFn: () => `Formule : 2^(32 − préfixe). Un /${prefix} a 32−${prefix} = ${32-prefix} bits d'hôte.`
-      });
-    }
-
-    if (qType === 1) {
-      // Masque dotted-decimal d'un préfixe
-      const prefix = [16, 20, 22, 23, 24, 25, 26, 27, 28, 30][rand(0, 9)];
-      const correct = _maskToDotted(prefix);
-      // Distracteurs : préfixes proches
-      const ds = new Set();
-      ds.add(_maskToDotted(prefix + 1));
-      ds.add(_maskToDotted(prefix - 1));
-      ds.add(_maskToDotted(prefix + 4));
-      const distractors = [...ds].filter(d => d !== correct).slice(0, 3);
-      const choices = [
-        { text: correct, correct: true,
-          explain: `Un /${prefix} = ${prefix} bits de réseau. En décimal pointé : <strong>${correct}</strong>. Méthode : convertir chaque octet en binaire (8 bits) et mettre 1 pour les ${prefix} premiers bits.` },
-        ...distractors.map(d => ({
-          text: d, correct: false,
-          explain: `${d} correspond à un autre préfixe. Recalcule : /${prefix} = ${prefix} bits à 1, ${32-prefix} bits à 0.`
-        }))
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quel est le <strong>masque en notation décimale pointée</strong> correspondant à un préfixe <strong>/${prefix}</strong> ?`,
-        choices,
-        hintFn: () => `/${prefix} signifie ${prefix} bits à 1, ${32-prefix} bits à 0. Conversion par octets : par exemple /24 = 11111111.11111111.11111111.00000000 = 255.255.255.0`
-      });
-    }
-
-    if (qType === 2) {
-      // Adresse de broadcast
-      const baseOctets = [
-        [192, 168, rand(0, 255), 0],
-        [10, rand(0, 255), rand(0, 255), 0],
-        [172, rand(16, 31), rand(0, 255), 0],
+    // ── Niveau A : convertir 4 octets hex → IP décimale ──
+    if (level === 0) {
+      const ipBytes = [
+        rand(1, 223), rand(0, 255), rand(0, 255), rand(1, 254)
       ];
-      const o = baseOctets[rand(0, 2)];
-      const prefix = [24, 25, 26, 27, 28][rand(0, 4)];
-      // Calcul broadcast
-      const net = _intFromIp(o.join('.')) & _maskFromPrefix(prefix);
-      const broadcast = (net | (~_maskFromPrefix(prefix) >>> 0)) >>> 0;
-      const correct = _ipFromInt(broadcast);
-      const netIp = _ipFromInt(net);
-      // Distracteurs : netIp (confusion réseau/broadcast), broadcast−1 (dernière hôte), broadcast+1
-      const distractors = [
-        netIp,
-        _ipFromInt((broadcast - 1) >>> 0),
-        _ipFromInt((broadcast + 1) >>> 0),
-      ].filter(d => d !== correct);
-      const choices = [
-        { text: correct, correct: true,
-          explain: `Adresse réseau : ${netIp}. Broadcast = dernière adresse du sous-réseau = <strong>${correct}</strong>. Méthode : tous les bits d'hôte à 1.` },
-        ...distractors.slice(0, 3).map(d => ({
-          text: d, correct: false,
-          explain: d === netIp ? `${d} est l'adresse <em>réseau</em>, pas le broadcast (tous bits hôte à 0 vs tous à 1).` : `${d} est dans la plage utilisable, mais pas le broadcast qui doit avoir tous les bits d'hôte à 1.`
-        }))
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+      // Éviter le 127.x.x.x (loopback) qui pourrait dérouter
+      if (ipBytes[0] === 127) ipBytes[0] = 10;
+      const ipStr = ipBytes.join('.');
+
+      const artefactHTML = tinyHexDump(ipBytes, {
+        title: 'Champ "Source IP" — paquet IPv4 (RFC 791)',
+        annotations: [{from: 0, to: 3, color: '--cyan', label: 'Source IP'}],
+        cols: 4
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Quelle est l'adresse de <strong>broadcast</strong> du sous-réseau <strong>${o.join('.')}/${prefix}</strong> ?`,
-        choices,
-        hintFn: () => `Broadcast = adresse réseau | inverse(masque). Étape 1 : trouver l'adresse réseau (IP AND masque). Étape 2 : remplacer les bits d'hôte par des 1.`
+        badge: 'lecture',
+        artefactHTML,
+        question: `Voici 4 octets bruts extraits d'un en-tête IPv4. <strong>Quelle est cette adresse IP en notation décimale pointée</strong> ?`,
+        inputLabel: 'IP :',
+        placeholder: 'x.x.x.x',
+        expected: ipStr,
+        normalize: v => v.trim().replace(/\s/g, ''),
+        hints: [
+          `Chaque octet hex se convertit indépendamment en décimal (0–255). Le format final est <code>X.X.X.X</code> séparé par des points.`,
+          `4 octets en hex : <code>${ipBytes.map(b => b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</code>. Convertis chacun en base 10.`,
+          `<code>${ipBytes.map(b => b.toString(16).toUpperCase().padStart(2,'0')).join('</code> = <code>')}</code> = <code>${ipBytes.join('</code>, <code>')}</code> → IP = <strong>${ipStr}</strong>`
+        ],
+        explain: `<code>${ipBytes.map(b => '0x'+b.toString(16).toUpperCase().padStart(2,'0')).join(', ')}</code> = <strong>${ipStr}</strong>. Chaque octet hex = 1 nombre décimal entre 0 et 255.`
       });
     }
 
-    if (qType === 3) {
-      // Hôtes utilisables
-      const prefix = [22, 24, 26, 28, 29, 30][rand(0, 5)];
-      const total = Math.pow(2, 32 - prefix);
-      const usable = total - 2;
-      const correct = String(usable);
-      const distractors = [String(total), String(usable - 1), String(usable + 1)].filter(d => d !== correct);
-      const choices = [
-        { text: correct, correct: true,
-          explain: `Hôtes utilisables = 2^(32-${prefix}) − 2 = ${total} − 2 = <strong>${usable}</strong>. On retire l'adresse réseau et l'adresse de broadcast (sauf en /31 et /32 — cas particuliers RFC 3021).` },
-        ...distractors.slice(0, 3).map(d => ({
-          text: d, correct: false,
-          explain: parseInt(d) === total ? `${d} est le total d'adresses, pas les utilisables. Il faut soustraire 2 (réseau + broadcast).` : `Recalcule : 2^(32-${prefix}) − 2.`
-        }))
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Combien d'<strong>hôtes utilisables</strong> dans un sous-réseau <strong>/${prefix}</strong> ?`,
-        choices,
-        hintFn: () => `Formule : 2^(32 − préfixe) − 2. On retire l'adresse réseau (tous bits hôte à 0) et l'adresse broadcast (tous à 1).`
-      });
-    }
-
-    if (qType === 4) {
-      // RFC 1918 ou non
-      const candidates = [
-        { ip: '10.5.3.42', priv: true, why: '10.0.0.0/8 (Classe A privée)' },
-        { ip: '172.16.10.1', priv: true, why: '172.16.0.0/12 (Classe B privée)' },
-        { ip: '192.168.1.1', priv: true, why: '192.168.0.0/16 (Classe C privée)' },
-        { ip: '172.32.5.1', priv: false, why: 'hors plage 172.16.0.0–172.31.255.255' },
-        { ip: '8.8.8.8', priv: false, why: 'Google Public DNS, plage publique' },
-        { ip: '52.219.12.1', priv: false, why: 'plage AWS publique' },
-        { ip: '169.254.10.5', priv: false, why: 'APIPA (RFC 3927) — link-local, pas RFC 1918' },
-        { ip: '100.64.5.5', priv: false, why: 'Carrier-Grade NAT (RFC 6598), pas RFC 1918' },
+    // ── Niveau B : IP + masque → notation CIDR /N ──
+    if (level === 1) {
+      const ipBytes = [
+        rand(1, 223), rand(0, 255), rand(0, 255), rand(1, 254)
       ];
-      const target = candidates[rand(0, candidates.length - 1)];
-      const choices = [
-        { text: 'Oui, adresse privée (RFC 1918)', correct: target.priv,
-          explain: target.priv ? `<strong>${target.ip}</strong> appartient à ${target.why}.` : `${target.ip} n'est PAS RFC 1918 — ${target.why}.` },
-        { text: 'Non, adresse publique routable sur Internet', correct: !target.priv && !target.why.includes('APIPA') && !target.why.includes('Carrier'),
-          explain: !target.priv ? `${target.ip} : ${target.why}.` : `${target.ip} est dans une plage RFC 1918 (privée).` },
-        { text: 'Non, adresse link-local APIPA (RFC 3927)', correct: target.why.includes('APIPA'),
-          explain: target.why.includes('APIPA') ? `Correct : 169.254.0.0/16 = link-local.` : `${target.ip} n'est pas link-local.` },
-        { text: 'Non, plage Carrier-Grade NAT (RFC 6598)', correct: target.why.includes('Carrier'),
-          explain: target.why.includes('Carrier') ? `Correct : 100.64.0.0/10 = CGN.` : `${target.ip} n'est pas CGN.` },
-      ];
-      // Garantir au moins une bonne réponse
-      if (!choices.some(c => c.correct)) {
-        choices[1].correct = true; // fallback "publique"
+      if (ipBytes[0] === 127) ipBytes[0] = 10;
+      const prefix = [8, 16, 24, 25, 26, 27, 28][rand(0, 6)];
+      const maskBytes = [];
+      let bits = prefix;
+      for (let i = 0; i < 4; i++) {
+        if (bits >= 8) { maskBytes.push(0xFF); bits -= 8; }
+        else if (bits > 0) { maskBytes.push((0xFF << (8 - bits)) & 0xFF); bits = 0; }
+        else { maskBytes.push(0); }
       }
-      return buildQCMCard({
+      const ipStr = ipBytes.join('.');
+      const cidrStr = `${ipStr}/${prefix}`;
+      const allBytes = [...ipBytes, ...maskBytes];
+
+      const artefactHTML = tinyHexDump(allBytes, {
+        title: 'Routing table entry (extrait pcap)',
+        annotations: [
+          {from: 0, to: 3, color: '--cyan',  label: 'IP source'},
+          {from: 4, to: 7, color: '--gold',  label: 'Subnet mask'}
+        ],
+        cols: 8
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `L'adresse <strong>${target.ip}</strong> appartient-elle à une plage privée RFC 1918 ?`,
-        choices: choices.sort(() => Math.random() - 0.5),
-        hintFn: () => `RFC 1918 = 10.0.0.0/8, 172.16.0.0/12 (172.16 à 172.31), 192.168.0.0/16. APIPA (169.254/16) et CGN (100.64/10) sont d'autres plages réservées, mais distinctes.`
+        badge: 'identification',
+        artefactHTML,
+        question: `Voici une entrée brute d'une table de routage : 4 octets d'IP suivis de 4 octets de masque. <strong>Quelle est l'adresse en notation CIDR</strong> (<code>x.x.x.x/y</code>) ?`,
+        inputLabel: 'CIDR :',
+        placeholder: '192.168.1.0/24',
+        expected: cidrStr,
+        normalize: v => v.trim().replace(/\s/g, ''),
+        hints: [
+          `Convertis d'abord les 4 premiers octets en IP décimale. Puis compte le nombre de bits à 1 dans le masque (= la valeur après le <code>/</code>).`,
+          `IP : <code>${ipBytes.map(b => b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</code> = <code>${ipStr}</code>. Masque : <code>${maskBytes.map(b => b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</code> — compte les <strong>1</strong> en binaire.`,
+          `Masque <code>${maskBytes.map(b => b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</code> = ${maskBytes.map(b => b.toString(2).padStart(8,'0')).join('.')} binaire = ${prefix} bits à 1 → /<strong>${prefix}</strong>. CIDR = <strong>${cidrStr}</strong>`
+        ],
+        explain: `IP <code>${ipStr}</code> + masque <code>${maskBytes.join('.')}</code> (= ${prefix} bits à 1) → <strong>${cidrStr}</strong>.`
       });
     }
 
-    if (qType === 5) {
-      // Combien de /26 dans un /24 ?
-      const big = [22, 23, 24][rand(0, 2)];
-      const small = big + rand(2, 4);
-      const count = Math.pow(2, small - big);
-      const correct = String(count);
-      const distractors = [String(count*2), String(Math.max(2, count/2)), String(count+1)].filter(d => d !== correct);
-      const choices = [
-        { text: correct, correct: true,
-          explain: `On ajoute ${small-big} bits de réseau → 2^${small-big} = <strong>${count}</strong> sous-réseaux /${small} dans un /${big}.` },
-        ...distractors.slice(0, 3).map(d => ({ text: d, correct: false, explain: `Recalcule : 2^(${small} − ${big}) = 2^${small-big}.` }))
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Combien de sous-réseaux <strong>/${small}</strong> peut-on créer dans un <strong>/${big}</strong> ?`,
-        choices,
-        hintFn: () => `Formule : 2^(préfixe_petit − préfixe_grand). Chaque bit supplémentaire de préfixe = ÷2 le sous-réseau.`
-      });
+    // ── Niveau C : IP + masque → adresse réseau (calcul léger) ──
+    const oct3 = rand(0, 255);
+    const ipBytes = [192, 168, oct3, rand(20, 254)];
+    const prefix = [24, 26, 27, 28][rand(0, 3)];
+    const maskBytes = [];
+    {
+      let bits = prefix;
+      for (let i = 0; i < 4; i++) {
+        if (bits >= 8) { maskBytes.push(0xFF); bits -= 8; }
+        else if (bits > 0) { maskBytes.push((0xFF << (8 - bits)) & 0xFF); bits = 0; }
+        else { maskBytes.push(0); }
+      }
     }
+    // Adresse réseau = IP AND masque
+    const netBytes = ipBytes.map((b, i) => b & maskBytes[i]);
+    const ipStr  = ipBytes.join('.');
+    const netStr = netBytes.join('.');
+    const allBytes = [...ipBytes, ...maskBytes];
 
-    // qType === 6 : adresse réseau d'une IP donnée
-    const ipCandidates = [
-      { ip: '192.168.10.42', p: 28 },
-      { ip: '10.5.32.130', p: 25 },
-      { ip: '172.16.100.200', p: 26 },
-      { ip: '192.168.5.99', p: 27 },
-    ];
-    const c = ipCandidates[rand(0, ipCandidates.length - 1)];
-    const net = (_intFromIp(c.ip) & _maskFromPrefix(c.p)) >>> 0;
-    const correct = _ipFromInt(net);
-    const distractors = [
-      _ipFromInt((net + 1) >>> 0),  // 1re hôte
-      _ipFromInt((net + Math.pow(2, 32-c.p) - 1) >>> 0),  // broadcast
-      c.ip,  // l'IP elle-même
-    ].filter(d => d !== correct);
-    const choices = [
-      { text: correct, correct: true,
-        explain: `IP ${c.ip} AND masque /${c.p} = adresse réseau <strong>${correct}</strong>. Méthode : convertir le 3e/4e octet de l'IP en binaire et garder les ${c.p % 8 || 8} bits de poids fort.` },
-      ...distractors.slice(0, 3).map(d => ({
-        text: d, correct: false,
-        explain: d === c.ip ? `${d} est l'IP donnée, pas l'adresse réseau. L'adresse réseau a tous les bits d'hôte à 0.` : `${d} fait partie du sous-réseau mais n'est pas l'adresse réseau (qui a tous les bits d'hôte à 0).`
-      }))
-    ].sort(() => Math.random() - 0.5);
-    return buildQCMCard({
+    const artefactHTML = tinyHexDump(allBytes, {
+      title: 'Firewall log — connexion',
+      annotations: [
+        {from: 0, to: 3, color: '--cyan', label: 'Client IP'},
+        {from: 4, to: 7, color: '--gold', label: 'Subnet mask'}
+      ],
+      cols: 8
+    });
+
+    return buildPracticeCard({
       ...opts,
-      scenario: `Quelle est l'<strong>adresse réseau</strong> de l'IP <strong>${c.ip}/${c.p}</strong> ?`,
-      choices,
-      hintFn: () => `Adresse réseau = IP AND masque. /${c.p} → masque = ${_maskToDotted(c.p)}. AND bit-à-bit avec l'IP donne l'adresse réseau (bits d'hôte mis à 0).`
+      badge: 'calcul',
+      artefactHTML,
+      question: `Une connexion est loguée avec son IP cliente et le masque de son sous-réseau. <strong>Quelle est l'adresse réseau (network address)</strong> de ce sous-réseau ?`,
+      inputLabel: 'Network :',
+      placeholder: '192.168.0.0',
+      expected: netStr,
+      normalize: v => v.trim().replace(/\s/g, ''),
+      hints: [
+        `L'adresse réseau s'obtient par <code>IP AND masque</code> (bit-à-bit). Tous les bits d'hôte (= bits à 0 dans le masque) deviennent 0.`,
+        `IP = <code>${ipStr}</code>. Masque = <code>${maskBytes.join('.')}</code> = /${prefix}. Sur chaque octet, garde les bits où le masque est à 1.`,
+        `Octet par octet : ${ipBytes.map((b, i) => `${b} AND ${maskBytes[i]} = ${b & maskBytes[i]}`).join(' | ')} → réseau = <strong>${netStr}</strong>`
+      ],
+      explain: `IP <code>${ipStr}</code> AND masque <code>${maskBytes.join('.')}</code> (/${prefix}) = <strong>${netStr}</strong>. Tous les bits d'hôte (les ${32-prefix} bits de poids faible) sont mis à 0.`
     });
   }
 
   // ════════════════════════════════════════════════════════════════
-  // TP 2 : AES (Chiffrement symétrique)
+  // TP 2 : AES — Décoder le header d'un fichier chiffré
   // ════════════════════════════════════════════════════════════════
 
   function genAES() {
-    const qType = rand(0, 6);
-    const opts = { prefix: 'aes', icon: '🔐', title: 'AES — Chiffrement symétrique', badge: 'crypto' };
+    const level = rand(0, 2);
+    const opts = { prefix: 'aes', icon: '🔐', title: 'AES — Décoder un header chiffré' };
 
-    if (qType === 0) {
-      // Taille de clé
-      const variants = [
-        { name: 'AES-128', bits: 128, bytes: 16 },
-        { name: 'AES-192', bits: 192, bytes: 24 },
-        { name: 'AES-256', bits: 256, bytes: 32 },
-      ];
-      const target = variants[rand(0, 2)];
-      const askBytes = Math.random() < 0.5;
-      const correctVal = askBytes ? target.bytes : target.bits;
-      const unit = askBytes ? 'octets' : 'bits';
-      const correct = String(correctVal);
-      const others = variants.filter(v => v !== target).map(v => askBytes ? v.bytes : v.bits);
-      const choices = [
-        { text: correct + ' ' + unit, correct: true,
-          explain: `${target.name} utilise une clé de <strong>${target.bits} bits</strong> = ${target.bytes} octets. Le nom du variant = taille de clé.` },
-        ...others.map(o => ({
-          text: o + ' ' + unit, correct: false,
-          explain: `${o} ${unit} = AES-${askBytes ? o*8 : o}. La question portait sur ${target.name}.`
-        })),
-        { text: (askBytes ? 16 : 128) + ' ' + unit + ' (taille de bloc)', correct: false,
-          explain: `Confusion classique : la <em>taille de bloc</em> AES est toujours 128 bits (16 octets) <em>quelle que soit la clé</em>. Mais ici la question porte sur la <em>clé</em> de ${target.name}.`
-        }
-      ].slice(0, 4).sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau A : magic header ASCII → identifier la version AES ──
+    if (level === 0) {
+      const variants = ['AES128', 'AES192', 'AES256'];
+      const variant = variants[rand(0, 2)];
+      // Header = ASCII bytes + 2 bytes padding 00
+      const headerBytes = [...variant].map(c => c.charCodeAt(0));
+      while (headerBytes.length < 8) headerBytes.push(0x00);
+
+      const artefactHTML = tinyHexDump(headerBytes, {
+        title: 'Premiers octets d\'un fichier .enc',
+        annotations: [{from: 0, to: 5, color: '--cyan', label: 'Magic ASCII'}],
+        cols: 8
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Quelle est la taille de la <strong>clé</strong> de <strong>${target.name}</strong> ?`,
-        choices,
-        hintFn: () => `AES-N : le nombre N est la taille de clé en bits. AES-128 → 128 bits = 16 octets. AES-256 → 256 bits = 32 octets. La taille de <em>bloc</em> est toujours 128 bits.`
+        badge: 'lecture',
+        artefactHTML,
+        question: `Voici les 8 premiers octets d'un fichier <code>.enc</code> trouvé sur un poste. Le <strong>magic header</strong> identifie l'algorithme et la taille de clé. <strong>Quel variant AES a été utilisé</strong> ?`,
+        inputLabel: 'Variant :',
+        placeholder: 'AES128',
+        expected: variant,
+        normalize: v => v.trim().toUpperCase().replace(/[\s\-_]/g, ''),
+        hints: [
+          `Les magic headers commencent souvent par des octets ASCII lisibles. Regarde la colonne ASCII à droite du dump hex.`,
+          `Les 6 premiers octets sont des caractères ASCII imprimables. Convertis chaque octet hex en caractère : <code>${headerBytes.slice(0,6).map(b => '0x'+b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</code>.`,
+          `<code>${headerBytes.slice(0,6).map(b => b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}</code> = ASCII <code>"${variant}"</code>. Réponse : <strong>${variant}</strong>`
+        ],
+        explain: `Le magic ASCII <code>"${variant}"</code> annonce <strong>${variant.replace('AES', 'AES-')}</strong>. Conventions courantes pour identifier l'algorithme + taille de clé en début de fichier chiffré.`
       });
     }
 
-    if (qType === 1) {
-      // Taille de bloc
-      const correct = '128 bits (16 octets)';
-      const choices = [
-        { text: correct, correct: true,
-          explain: `AES a une <strong>taille de bloc fixe de 128 bits</strong> (16 octets), peu importe la longueur de clé (128/192/256). C'est ce qui distingue AES de Rijndael originel qui permettait blocs variables.` },
-        { text: '256 bits (32 octets)', correct: false, explain: `Confusion avec AES-256 (taille de clé). Le <em>bloc</em> reste 128 bits.` },
-        { text: '64 bits (8 octets)', correct: false, explain: `64 bits = taille de bloc DES/3DES (ancien). AES = 128 bits.` },
-        { text: 'Variable selon la clé (128, 192 ou 256)', correct: false, explain: `Rijndael originel le permettait, mais le standard AES (FIPS 197) fixe le bloc à 128 bits.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau B : header + 16 octets IV → identifier la taille de clé en bits ──
+    if (level === 1) {
+      const sizes = [128, 192, 256];
+      const keyBits = sizes[rand(0, 2)];
+      const headerStr = `AES${keyBits}\0\0`;
+      const headerBytes = [...headerStr].map(c => c.charCodeAt(0));
+      const ivBytes = Array.from({length: 16}, () => rand(0, 255));
+      const allBytes = [...headerBytes, ...ivBytes];
+
+      const artefactHTML = tinyHexDump(allBytes, {
+        title: 'Fichier confidentiel.enc (24 premiers octets)',
+        annotations: [
+          {from: 0, to: 7,   color: '--cyan', label: 'Magic header (8 octets)'},
+          {from: 8, to: 23,  color: '--gold', label: 'IV — Initialization Vector (16 octets)'}
+        ],
+        cols: 8
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Quelle est la taille de <strong>bloc</strong> de AES (peu importe la clé) ?`,
-        choices,
-        hintFn: () => `Standard FIPS 197 (NIST, 2001). AES = bloc 128 bits fixe. Seule la <em>clé</em> varie : 128, 192 ou 256.`
+        badge: 'identification',
+        artefactHTML,
+        question: `Un fichier chiffré a été récupéré. Les 8 premiers octets sont un magic header ASCII, suivi de 16 octets d'IV. <strong>Quelle est la taille de la clé en bits</strong> ?`,
+        inputLabel: 'Bits :',
+        placeholder: '128',
+        expected: String(keyBits),
+        normalize: v => v.trim().replace(/[^\d]/g, ''),
+        hints: [
+          `La taille de clé est encodée dans le magic ASCII en début de fichier. AES-N = clé de N bits.`,
+          `Lis les 8 premiers octets en ASCII (colonne de droite). Tu y verras quelque chose comme <code>AESxxx</code>.`,
+          `Le header est <code>"${headerStr.replace(/\0/g, '·')}"</code> = AES${keyBits}. La taille de clé = <strong>${keyBits} bits</strong> = ${keyBits/8} octets.`
+        ],
+        explain: `Header <code>AES${keyBits}</code> → clé de <strong>${keyBits} bits</strong> (${keyBits/8} octets). L'IV suit immédiatement, sur 16 octets — taille de bloc AES fixe (FIPS 197).`
       });
     }
 
-    if (qType === 2) {
-      // Nombre de tours
-      const variants = [
-        { name: 'AES-128', rounds: 10 },
-        { name: 'AES-192', rounds: 12 },
-        { name: 'AES-256', rounds: 14 },
-      ];
-      const target = variants[rand(0, 2)];
-      const others = variants.filter(v => v !== target).map(v => v.rounds);
-      const choices = [
-        { text: target.rounds + ' tours', correct: true,
-          explain: `${target.name} effectue <strong>${target.rounds} tours</strong>. Mnémo : 10 (128) → 12 (192) → 14 (256). Plus la clé est longue, plus on ajoute de tours.` },
-        ...others.map(o => ({ text: o + ' tours', correct: false, explain: `${o} tours = AES-${o === 10 ? 128 : o === 12 ? 192 : 256}.` })),
-        { text: '16 tours', correct: false, explain: `AES ne dépasse jamais 14 tours. 16 c'est plus que ce qui est défini par FIPS 197.` },
-      ].slice(0, 4).sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau C : extraire l'IV en hex (sans espaces) ──
+    {
+      const keyBits = [128, 256][rand(0, 1)];
+      const headerStr = `AES${keyBits}\0\0`;
+      const headerBytes = [...headerStr].map(c => c.charCodeAt(0));
+      const ivBytes = Array.from({length: 16}, () => rand(0, 255));
+      const allBytes = [...headerBytes, ...ivBytes];
+      const ivHex = ivBytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join('');
+
+      const artefactHTML = tinyHexDump(allBytes, {
+        title: 'message_chiffre.enc — octets 0–23',
+        annotations: [
+          {from: 0, to: 7,   color: '--cyan', label: 'Magic header'},
+          {from: 8, to: 23,  color: '--gold', label: 'IV (Initialization Vector)'}
+        ],
+        cols: 8
+      });
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Combien de <strong>tours (rounds)</strong> effectue <strong>${target.name}</strong> ?`,
-        choices,
-        hintFn: () => `Règle : 10 / 12 / 14 tours pour AES-128 / 192 / 256. Chaque tour applique SubBytes, ShiftRows, MixColumns (sauf le dernier), AddRoundKey.`
+        badge: 'extraction',
+        artefactHTML,
+        question: `Pour déchiffrer ce fichier AES-${keyBits} en CBC, il te faut l'<strong>IV exact</strong>. Les 16 octets après le header sont l'IV. <strong>Extrais-les en hexadécimal continu</strong> (32 caractères, sans espaces).`,
+        inputLabel: 'IV (hex) :',
+        placeholder: '00112233445566778899AABBCCDDEEFF',
+        expected: ivHex,
+        normalize: v => v.trim().toUpperCase().replace(/[\s\-:]/g, ''),
+        hints: [
+          `L'IV fait toujours 16 octets pour AES (= taille de bloc, indépendamment de la taille de clé). Il commence à l'offset 8.`,
+          `Lis les 16 octets entre l'offset <code>0x08</code> et <code>0x17</code>. Recopie-les en hex sans les espaces.`,
+          `IV = <code style="font-size:.75rem;word-break:break-all">${ivHex}</code> (32 caractères hex = 16 octets).`
+        ],
+        explain: `IV de <strong>16 octets</strong> = ${ivHex}. Taille fixe AES (= taille de bloc, FIPS 197), indépendante de AES-128/192/256.`
       });
     }
-
-    if (qType === 3) {
-      // Mode ECB sécurité
-      const choices = [
-        { text: 'Non, le mode ECB révèle des motifs visibles (problème de l\'image du pingouin Tux chiffrée en ECB)', correct: true,
-          explain: `<strong>ECB chiffre chaque bloc indépendamment</strong> : deux blocs identiques produisent le même chiffré → fuite de structure. Démonstration classique : image bitmap d'un pingouin chiffrée en ECB reste reconnaissable. Toujours préférer CBC, CTR, ou idéalement GCM (AEAD).` },
-        { text: 'Oui, ECB est aussi sûr que CBC tant que la clé est secrète', correct: false,
-          explain: `Faux. La confidentialité d'une clé secrète ne suffit pas en ECB : la structure (motifs répétitifs) reste visible dans le chiffré.` },
-        { text: 'Oui, à condition d\'utiliser AES-256 et non AES-128', correct: false,
-          explain: `La taille de clé ne change rien au problème ECB : c'est le mode opératoire qui est défaillant, pas l'algorithme.` },
-        { text: 'Oui, en chiffrant l\'image deux fois (double ECB)', correct: false,
-          explain: `Double-encryption ne corrige pas le motif déterministe. Il faut un mode qui randomise (IV ou nonce).` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Le mode <strong>ECB</strong> (Electronic Codebook) est-il sûr pour chiffrer une <strong>image</strong> bitmap ?`,
-        choices,
-        hintFn: () => `ECB = chaque bloc chiffré indépendamment, sans chainage. Deux blocs identiques → même résultat. Image bitmap = beaucoup de blocs identiques (uniformes). Résultat : motifs visibles.`
-      });
-    }
-
-    if (qType === 4) {
-      // GCM apport
-      const choices = [
-        { text: 'Authentification (intégrité + authenticité) en plus de la confidentialité — AEAD', correct: true,
-          explain: `<strong>AES-GCM</strong> est un mode <em>AEAD</em> (Authenticated Encryption with Associated Data). En plus de chiffrer (confidentialité), il produit un <strong>tag d'authentification</strong> (typiquement 128 bits) qui détecte toute modification. Standard : NIST SP 800-38D. Largement utilisé : TLS 1.3, IPsec, SSH.` },
-        { text: 'Une clé deux fois plus longue automatiquement', correct: false,
-          explain: `Faux. GCM est un mode opératoire, indépendant de la taille de clé. AES-128-GCM, AES-256-GCM existent tous deux.` },
-        { text: 'Une résistance aux attaques quantiques', correct: false,
-          explain: `Faux. GCM ne résiste pas mieux qu'AES standard à Grover (qui divise la sécurité effective par √). Post-quantique = autre sujet (Kyber, Dilithium...).` },
-        { text: 'Une compression automatique du message', correct: false,
-          explain: `Faux. AES (et tous ses modes) ne compresse pas — la sortie a la même taille que l'entrée (+ tag + nonce pour GCM).` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Qu'apporte le mode <strong>AES-GCM</strong> par rapport à AES-CBC ?`,
-        choices,
-        hintFn: () => `GCM = Galois/Counter Mode. AEAD : Authenticated Encryption with Associated Data. Le "A" final = authentification — détection de modification du chiffré.`
-      });
-    }
-
-    if (qType === 5) {
-      // IV obligation
-      const modes = [
-        { name: 'CBC', needsIV: true, ivSize: '16 octets (= taille bloc)' },
-        { name: 'CTR', needsIV: true, ivSize: '8-12 octets (nonce)' },
-        { name: 'GCM', needsIV: true, ivSize: '12 octets (nonce, recommandé)' },
-        { name: 'ECB', needsIV: false, ivSize: 'aucun (ne devrait pas être utilisé)' },
-        { name: 'CFB', needsIV: true, ivSize: '16 octets' },
-        { name: 'OFB', needsIV: true, ivSize: '16 octets' },
-      ];
-      const target = modes[rand(0, modes.length - 1)];
-      const choices = [
-        { text: target.needsIV ? `Oui — IV de ${target.ivSize}` : 'Non — pas d\'IV requis', correct: true,
-          explain: target.needsIV ?
-            `<strong>${target.name}</strong> nécessite un <strong>IV/nonce de ${target.ivSize}</strong>. L'IV doit être unique (pour CTR/GCM) ou imprévisible (pour CBC) pour garantir la sécurité.` :
-            `<strong>${target.name}</strong> n'utilise pas d'IV. C'est aussi pour ça qu'il est déterministe et peu sûr (motifs visibles).` },
-        { text: target.needsIV ? 'Non — pas d\'IV requis' : 'Oui — IV de 16 octets', correct: false,
-          explain: target.needsIV ? `Faux. ${target.name} requiert un IV/nonce pour randomiser le chiffré.` : `Faux. ${target.name} ne prend pas d'IV.` },
-        { text: 'Optionnel — l\'IV améliore la sécurité sans être obligatoire', correct: false,
-          explain: `Pour les modes qui en requièrent un (CBC, CTR, GCM…), l'IV est <em>obligatoire</em>. Sans IV, le mode dégénère en ECB.` },
-        { text: 'Uniquement avec AES-256, pas AES-128', correct: false,
-          explain: `La nécessité d'un IV dépend du <em>mode</em>, pas de la taille de clé.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Le mode <strong>AES-${target.name}</strong> nécessite-t-il un IV (vecteur d'initialisation) ?`,
-        choices,
-        hintFn: () => `Seul ECB n'utilise pas d'IV (et c'est ce qui le rend inadapté). Tous les autres modes courants (CBC, CTR, CFB, OFB, GCM) requièrent un IV/nonce pour randomiser le chiffré.`
-      });
-    }
-
-    // qType === 6 : combien de blocs pour un message de N octets
-    const sizes = [10, 16, 17, 32, 64, 100, 1024];
-    const size = sizes[rand(0, sizes.length - 1)];
-    const blocks = Math.ceil(size / 16);
-    // PKCS#7 padding : même si size est multiple de 16, on ajoute un bloc complet de padding
-    const blocksWithPad = (size % 16 === 0) ? blocks + 1 : blocks;
-    const correct = String(blocksWithPad);
-    const distractors = [String(blocks), String(blocksWithPad + 1), String(Math.floor(size / 16))].filter(d => d !== correct);
-    const choices = [
-      { text: correct, correct: true,
-        explain: `Message ${size} octets, bloc AES = 16 octets. ${size % 16 === 0 ? `Cas spécial : ${size} est déjà un multiple de 16, mais <strong>PKCS#7 ajoute un bloc complet de padding</strong> pour distinguer la fin → ${blocksWithPad} blocs.` : `${size} / 16 = ${size/16} → on arrondit au supérieur = ${blocks} blocs (le dernier contient le padding PKCS#7).`}` },
-      ...distractors.slice(0, 3).map(d => ({
-        text: d, correct: false,
-        explain: parseInt(d) === blocks && size % 16 === 0 ?
-          `${d} blocs si on oublie le padding PKCS#7. Mais quand size est multiple de 16, PKCS#7 ajoute un bloc complet de padding pour signaler la fin.` :
-          `Recalcule : ceil(${size} / 16) blocs, +1 si size est multiple de 16 (padding PKCS#7).`
-      }))
-    ].sort(() => Math.random() - 0.5);
-    return buildQCMCard({
-      ...opts,
-      scenario: `Combien de blocs AES (de 16 octets) pour chiffrer un message de <strong>${size} octets</strong> avec padding PKCS#7 ?`,
-      choices,
-      hintFn: () => `Bloc AES = 16 octets. Formule : ceil(taille / 16). Si la taille est déjà multiple de 16, PKCS#7 ajoute un bloc <em>complet</em> de padding (pour signaler la fin sans ambiguïté).`
-    });
   }
 
   // ════════════════════════════════════════════════════════════════
-  // TP 3 : Cassage de hash (Cryptologie → Cassage et attaques)
+  // TP 3 : Cassage — Identifier un hash réel
   // ════════════════════════════════════════════════════════════════
+
+  // Générateurs de hash plausibles
+  function _randomHex(len) {
+    let s = '';
+    for (let i = 0; i < len; i++) s += '0123456789abcdef'[rand(0, 15)];
+    return s;
+  }
+  function _randomBcryptHash() {
+    // Format $2y$10$22charsSalt53charsHash (réaliste)
+    const cost = ['10', '12'][rand(0, 1)];
+    const b64chars = './0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    let salt = ''; for (let i = 0; i < 22; i++) salt += b64chars[rand(0, 63)];
+    let hash = ''; for (let i = 0; i < 31; i++) hash += b64chars[rand(0, 63)];
+    return `$2y$${cost}$${salt}${hash}`;
+  }
 
   function genCracking() {
-    const qType = rand(0, 6);
-    const opts = { prefix: 'crack', icon: '💥', title: 'Cassage de hash', badge: 'crypto' };
+    const level = rand(0, 2);
+    const opts = { prefix: 'crack', icon: '💥', title: 'Cassage — Identifier le hash' };
 
-    if (qType === 0) {
-      // Type d'attaque selon contexte
-      const choices = [
-        { text: 'Attaque par dictionnaire (wordlist comme rockyou.txt)', correct: true,
-          explain: `Une <strong>wordlist</strong> = liste de mots probables. Hashcat <code>-a 0</code> ou John <code>--wordlist=</code>. La rockyou.txt (~14M mots) est la wordlist de référence depuis la fuite RockYou 2009.` },
-        { text: 'Attaque brute force pure (toutes combinaisons)', correct: false,
-          explain: `Brute force teste <em>toutes</em> les combinaisons (Hashcat <code>-a 3</code>) — beaucoup plus lent qu'un dictionnaire. Utile uniquement pour passwords courts ou très contraints.` },
-        { text: 'Attaque par rainbow tables', correct: false,
-          explain: `Les rainbow tables sont des tables précalculées de (hash → password). Inefficaces contre les hash <em>salés</em>. Hashcat ne les utilise pas — outil dédié : RainbowCrack.` },
-        { text: 'Attaque par collision (deux entrées, même hash)', correct: false,
-          explain: `Collision = trouver deux <em>entrées différentes</em> donnant le même hash (cf. SHA-1 SHAttered, 2017). Sans rapport avec cracker un password.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Vous voulez casser des hash MD5 en testant les passwords issus de la fuite RockYou. Quelle attaque utilisez-vous ?`,
-        choices,
-        hintFn: () => `Dictionnaire = essayer des mots de passe probables (wordlist). Brute force = essayer toutes les combinaisons possibles. Rainbow tables = lookup précalculé (inefficace si salé).`
-      });
-    }
-
-    if (qType === 1) {
-      // Salt et rainbow tables
-      const choices = [
-        { text: 'Un sel <strong>aléatoire et unique par utilisateur</strong>, stocké en clair avec le hash', correct: true,
-          explain: `Avec un sel unique par utilisateur, chaque password produit un hash différent même si deux utilisateurs ont le même mot de passe. Les rainbow tables (précalculées pour un sel <em>fixe</em> ou aucun sel) deviennent inutilisables : il faudrait une table par sel.` },
-        { text: 'Augmenter la longueur du mot de passe à 20 caractères', correct: false,
-          explain: `La longueur ne neutralise pas les rainbow tables (elles peuvent être grandes). Mais combinée à un sel, c'est encore mieux.` },
-        { text: 'Utiliser SHA-512 au lieu de MD5', correct: false,
-          explain: `Un hash plus large rend la table plus grosse mais reste vulnérable aux rainbow tables si non salé. La taille du hash n'est pas le facteur clé.` },
-        { text: 'Garder le hash secret', correct: false,
-          explain: `Mauvaise hypothèse : on doit supposer que le hash sera exfiltré. C'est <em>justement</em> dans ce cas que le sel devient critique.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quelle mesure rend les <strong>rainbow tables</strong> inefficaces ?`,
-        choices,
-        hintFn: () => `Rainbow tables = précalcul (hash → password) pour un type de hash donné. Un sel aléatoire <em>par utilisateur</em> oblige à recalculer la table pour chaque sel — économiquement impraticable.`
-      });
-    }
-
-    if (qType === 2) {
-      // Hashcat mode
-      const modes = [
-        { id: 0, algo: 'MD5' },
-        { id: 100, algo: 'SHA-1' },
-        { id: 1400, algo: 'SHA-256' },
-        { id: 1700, algo: 'SHA-512' },
-        { id: 1000, algo: 'NTLM' },
-        { id: 3200, algo: 'bcrypt' },
-        { id: 22000, algo: 'WPA/WPA2 (PMKID/EAPOL)' },
+    // ── Niveau A : MD5 (32 hex) → identifier algo ──
+    if (level === 0) {
+      const hash = _randomHex(32);
+      const contexts = [
+        { src: 'fichiers téléchargés depuis le site officiel', note: 'Souvent fourni comme empreinte d\'intégrité (ex: téléchargement ISO Debian).' },
+        { src: 'cache d\'un proxy web', note: 'Ancien usage : empreinte de fichier pour cache.' },
+        { src: 'rapport antivirus VirusTotal (champ "MD5")', note: 'Standard pour identifier des binaires malveillants — bien que cryptographiquement cassé pour les passwords.' },
       ];
-      const target = modes[rand(0, modes.length - 1)];
-      const others = modes.filter(m => m !== target);
-      const distractors = [];
-      while (distractors.length < 3 && others.length) {
-        distractors.push(others.splice(rand(0, others.length - 1), 1)[0]);
-      }
-      const choices = [
-        { text: target.algo, correct: true,
-          explain: `Hashcat <strong>-m ${target.id}</strong> = <strong>${target.algo}</strong>. Hashcat utilise des numéros de mode pour chaque algorithme (voir <code>hashcat --help</code> ou docs hashcat.net).` },
-        ...distractors.map(d => ({
-          text: d.algo, correct: false,
-          explain: `${d.algo} = mode <strong>-m ${d.id}</strong> dans hashcat, pas -m ${target.id}.`
-        }))
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+      const ctx = contexts[rand(0, contexts.length - 1)];
+
+      const artefactHTML = `
+        <div style="border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:1rem">
+          <div style="font-size:.7rem;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">Hash extrait des ${ctx.src}</div>
+          <code style="display:block;font-family:var(--mono);color:var(--cyan);word-break:break-all;font-size:.95rem;letter-spacing:.04em;padding:.5rem;background:rgba(255,255,255,.03);border-radius:4px">${hash}</code>
+          <div style="margin-top:.5rem;font-size:.75rem;color:var(--dim)">Longueur : <strong>${hash.length} caractères hexadécimaux</strong></div>
+        </div>
+      `;
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Dans hashcat, <strong>-m ${target.id}</strong> correspond à quel algorithme ?`,
-        choices,
-        hintFn: () => `Modes hashcat courants : 0 = MD5, 100 = SHA-1, 1000 = NTLM, 1400 = SHA-256, 1700 = SHA-512, 3200 = bcrypt, 22000 = WPA/WPA2.`
+        badge: 'identification',
+        artefactHTML,
+        question: `Voici un hash trouvé en investigation. <strong>Quel algorithme l'a produit</strong> ? (Indice : sa longueur en hex est une signature claire.)`,
+        inputLabel: 'Algorithme :',
+        placeholder: 'MD5',
+        expected: 'MD5',
+        normalize: v => v.trim().toUpperCase().replace(/[\s\-_]/g, ''),
+        hints: [
+          `Compte les caractères hexadécimaux. Chaque algo produit une longueur fixe.`,
+          `${hash.length} caractères hex × 4 bits/caractère = <strong>${hash.length * 4} bits</strong>. Quel algo produit ${hash.length * 4} bits ?`,
+          `${hash.length * 4} bits = <strong>MD5</strong> (Message Digest 5). 32 hex = 128 bits, signature unique de MD5.`
+        ],
+        explain: `<strong>32 hex = 128 bits = MD5</strong>. ${ctx.note} (Cassé depuis 2004 pour les collisions, mais encore vu en intégrité de fichiers.)`
       });
     }
 
-    if (qType === 3) {
-      // bcrypt vs MD5 lenteur
-      const cost = [10, 12, 14][rand(0, 2)];
-      const factor = Math.pow(2, cost);
-      const correct = `~${factor.toLocaleString('fr-CH').replace(/\u202f/g, ' ')} fois plus lent`;
-      const distractors = [
-        `~${cost} fois plus lent (linéaire)`,
-        `~${factor*10} fois plus lent`,
-        `~${Math.floor(factor/2)} fois plus lent`,
+    // ── Niveau B : SHA-256 (64 hex) → identifier algo ──
+    if (level === 1) {
+      const hash = _randomHex(64);
+      const contexts = [
+        'manifest npm — champ <code>"integrity"</code> sha256-...',
+        'fichier <code>sha256sums.txt</code> d\'une distribution Linux',
+        'API Bitcoin — empreinte de bloc',
+        'output <code>shasum -a 256</code> sur un binaire malveillant',
       ];
-      const choices = [
-        { text: correct, correct: true,
-          explain: `bcrypt utilise un facteur de coût <em>exponentiel</em> : cost=${cost} signifie 2^${cost} = <strong>${factor} itérations</strong>. Conçu pour rester lent même sur GPU. À comparer aux ~50 GH/s de MD5 sur RTX 4090.` },
-        ...distractors.map(d => ({ text: d, correct: false, explain: `bcrypt cost est <strong>exponentiel</strong> : 2^cost, pas linéaire ni cost × N.` }))
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+      const ctx = contexts[rand(0, contexts.length - 1)];
+
+      const artefactHTML = `
+        <div style="border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:1rem">
+          <div style="font-size:.7rem;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">Hash extrait de : ${ctx}</div>
+          <code style="display:block;font-family:var(--mono);color:var(--cyan);word-break:break-all;font-size:.85rem;letter-spacing:.04em;padding:.5rem;background:rgba(255,255,255,.03);border-radius:4px">${hash}</code>
+          <div style="margin-top:.5rem;font-size:.75rem;color:var(--dim)">Longueur : <strong>${hash.length} caractères hexadécimaux</strong></div>
+        </div>
+      `;
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Un hash <strong>bcrypt avec cost=${cost}</strong> est combien de fois plus lent qu'un MD5 ?`,
-        choices,
-        hintFn: () => `bcrypt cost est exponentiel : nombre d'itérations = 2^cost. cost=12 → 4'096 itérations. C'est l'idée centrale des "slow hashes" : ralentir le cassage.`
+        badge: 'identification',
+        artefactHTML,
+        question: `<strong>Quel algorithme de hachage</strong> a produit ce condensat ?`,
+        inputLabel: 'Algorithme :',
+        placeholder: 'SHA-256',
+        expected: 'SHA-256',
+        normalize: v => v.trim().toUpperCase().replace(/[\s_]/g, '').replace('SHA256', 'SHA-256'),
+        hints: [
+          `Compte les caractères. Tableau de référence — MD5: 32, SHA-1: 40, SHA-256: 64, SHA-384: 96, SHA-512: 128.`,
+          `${hash.length} caractères hex = ${hash.length * 4} bits. Cherche dans le tableau.`,
+          `${hash.length * 4} bits = <strong>SHA-256</strong> (Secure Hash Algorithm 256 bits, famille SHA-2). Réponse : <strong>SHA-256</strong>.`
+        ],
+        explain: `<strong>64 hex = 256 bits = SHA-256</strong>. Algorithme NIST FIPS 180-4, largement utilisé pour les empreintes d'intégrité (npm, Linux, blockchain).`
       });
     }
 
-    if (qType === 4) {
-      // KDF moderne recommandée
-      const choices = [
-        { text: 'Argon2id (vainqueur PHC 2015) ou scrypt — protègent CPU + mémoire', correct: true,
-          explain: `<strong>Argon2id</strong> (RFC 9106, 2021) est recommandé par OWASP, NIST SP 800-63B. Variantes : Argon2d (anti-GPU), Argon2i (anti-side-channel), Argon2id (les deux). Alternatives : <strong>scrypt</strong>, <strong>bcrypt</strong>, <strong>PBKDF2</strong> (le plus ancien). MD5/SHA-1/SHA-256 simple = pas un KDF, trop rapides.` },
-        { text: 'SHA-256 itéré 1000 fois', correct: false,
-          explain: `Approche naïve. PBKDF2-SHA256 fait ça correctement (avec sel + nonce + format standardisé), mais 1000 itérations c'est trop peu en 2026. OWASP recommande ≥600 000.` },
-        { text: 'MD5 doublé (MD5(MD5(password)))', correct: false,
-          explain: `Mauvaise idée : MD5 est cassé (collisions), et doubler ne ralentit pas significativement. Utiliser un vrai KDF.` },
-        { text: 'AES-256 du password comme clé', correct: false,
-          explain: `AES n'est pas un KDF — c'est un chiffrement par bloc. Pour dériver une clé d'un password, utiliser PBKDF2/scrypt/Argon2.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau C : bcrypt → mode hashcat ──
+    {
+      const hash = _randomBcryptHash();
+      const cost = hash.split('$')[2];
+
+      const artefactHTML = `
+        <div style="border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:1rem">
+          <div style="font-size:.7rem;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">Ligne extraite de <code>/etc/shadow</code></div>
+          <div style="font-family:var(--mono);font-size:.85rem">
+            <span style="color:var(--text)">admin</span><span style="color:var(--dim)">:</span><code style="color:var(--cyan);word-break:break-all">${hash}</code><span style="color:var(--dim)">:19850:0:99999:7:::</span>
+          </div>
+          <div style="margin-top:.7rem;font-size:.75rem;color:var(--dim)">Tu veux tenter une attaque par dictionnaire avec <code>hashcat</code>.</div>
+        </div>
+      `;
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Quelle fonction de dérivation de clé (KDF) est <strong>recommandée en 2026</strong> pour stocker des mots de passe ?`,
-        choices,
-        hintFn: () => `KDF moderne = lent ET memory-hard (utilise beaucoup de RAM, anti-GPU). Argon2id (vainqueur Password Hashing Competition 2015) est la référence actuelle.`
+        badge: 'lookup',
+        artefactHTML,
+        question: `Pour cracker ce hash avec <code>hashcat</code>, tu dois spécifier le bon mode avec l'option <code>-m</code>. <strong>Quel est le numéro de mode hashcat</strong> pour ce type de hash ?`,
+        inputLabel: 'Mode -m :',
+        placeholder: '3200',
+        expected: '3200',
+        normalize: v => v.trim().replace(/[^\d]/g, ''),
+        hints: [
+          `Identifie d'abord le format. Le préfixe du hash (<code>$2a$</code>, <code>$2b$</code>, <code>$2y$</code>) trahit l'algorithme.`,
+          `<code>$2y$${cost}$...</code> = bcrypt (cost ${cost} = 2^${cost} itérations). Cherche "bcrypt" dans la doc hashcat (<code>hashcat --help | grep -i bcrypt</code>).`,
+          `bcrypt = mode hashcat <strong>3200</strong>. Commande : <code>hashcat -m 3200 hash.txt rockyou.txt</code>.`
+        ],
+        explain: `Préfixe <code>$2y$</code> = <strong>bcrypt</strong> → mode hashcat <strong>3200</strong>. Cost ${cost} = 2^${cost} = ${Math.pow(2, parseInt(cost))} itérations (volontairement lent, anti-GPU).`
       });
     }
-
-    if (qType === 5) {
-      // Identifier un hash par sa longueur
-      const samples = [
-        { hash: 'e10adc3949ba59abbe56e057f20f883e', algo: 'MD5', len: 32, bits: 128 },
-        { hash: '7c4a8d09ca3762af61e59520943dc26494f8941b', algo: 'SHA-1', len: 40, bits: 160 },
-        { hash: 'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3', algo: 'SHA-256', len: 64, bits: 256 },
-        { hash: '$2y$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', algo: 'bcrypt', len: 60, bits: 184 },
-        { hash: '8846F7EAEE8FB117AD06BDD830B7586C', algo: 'NTLM', len: 32, bits: 128 },
-      ];
-      const target = samples[rand(0, samples.length - 1)];
-      const others = samples.filter(s => s.algo !== target.algo);
-      const distractors = others.slice(0, 3).map(s => s.algo);
-      const choices = [
-        { text: target.algo, correct: true,
-          explain: `Longueur = ${target.len} ${target.algo === 'bcrypt' ? 'caractères au format <code>$2y$cost$salt+hash</code>' : 'caractères hexadécimaux'}. <strong>${target.algo}</strong> produit ${target.bits} bits${target.algo === 'NTLM' ? ' (même longueur que MD5 — contexte Windows nécessaire pour les distinguer)' : ''}.` },
-        ...distractors.map(d => {
-          const s = samples.find(x => x.algo === d);
-          return { text: d, correct: false, explain: `${d} ferait ${s.len} caractères (${s.bits} bits)${d === 'NTLM' && target.algo === 'MD5' ? ' — même longueur que MD5, indiscernable sans contexte' : ''}.` };
-        })
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quel algorithme a probablement produit ce hash ?<br><code style="color:var(--cyan);word-break:break-all;font-size:.7rem;display:block;margin-top:.4rem;padding:.4rem;background:var(--bg);border-radius:4px">${target.hash}</code>`,
-        choices,
-        hintFn: () => `MD5 = 32 hex. SHA-1 = 40 hex. SHA-256 = 64 hex. SHA-512 = 128 hex. NTLM = 32 hex (= MD5, indiscernables sans contexte). bcrypt commence par $2a$, $2b$ ou $2y$.`
-      });
-    }
-
-    // qType === 6 : John the Ripper vs Hashcat
-    const choices = [
-      { text: 'Hashcat est principalement GPU (CUDA/OpenCL), John the Ripper est principalement CPU', correct: true,
-        explain: `<strong>Hashcat</strong> est optimisé GPU (NVIDIA via CUDA, AMD via OpenCL) — typiquement 100×–1000× plus rapide qu'un CPU pour MD5/SHA. <strong>John the Ripper</strong> est historiquement CPU mais a une version "Jumbo" avec support GPU. Les deux utilisent dictionnaires, brute force, masks, rules.` },
-      { text: 'John the Ripper est GPU, Hashcat est CPU', correct: false,
-        explain: `Inversé. C'est Hashcat qui est principalement GPU.` },
-      { text: 'Ils sont identiques, juste deux noms pour le même outil', correct: false,
-        explain: `Deux outils distincts, créés indépendamment. Hashcat (Jens Steube, 2009). John the Ripper (Solar Designer, 1996).` },
-      { text: 'Hashcat ne supporte que les hashes Windows, John tous les autres', correct: false,
-        explain: `Faux. Hashcat supporte ~400 modes (Linux/Windows/Mac, WiFi, Office, ZIP, KeePass, etc.).` },
-    ].sort(() => Math.random() - 0.5);
-    return buildQCMCard({
-      ...opts,
-      scenario: `Quelle est la <strong>différence principale</strong> entre Hashcat et John the Ripper ?`,
-      choices,
-      hintFn: () => `Hashcat (2009, Jens Steube) = GPU first. John the Ripper (1996, Solar Designer) = CPU first. Les deux supportent dictionnaire, brute force, masks et règles.`
-    });
   }
 
   // ════════════════════════════════════════════════════════════════
-  // TP 4 : PKI / Certificats X.509
+  // TP 4 : PKI — Lire un dump openssl x509
   // ════════════════════════════════════════════════════════════════
+
+  // Données réalistes pour générer des dumps
+  const PKI_FIXTURES = [
+    {
+      cn: 'secure.bcv.ch',
+      sans: ['secure.bcv.ch', 'www.bcv.ch', 'api.bcv.ch'],
+      issuer: 'DigiCert Global Root CA',
+      issuerO: 'DigiCert Inc',
+      org: 'Banque Cantonale Vaudoise',
+      country: 'CH',
+      city: 'Lausanne'
+    },
+    {
+      cn: 'mail.unil.ch',
+      sans: ['mail.unil.ch', 'imap.unil.ch', 'smtp.unil.ch', 'webmail.unil.ch'],
+      issuer: 'Sectigo RSA Domain Validation Secure Server CA',
+      issuerO: 'Sectigo Limited',
+      org: 'Université de Lausanne',
+      country: 'CH',
+      city: 'Lausanne'
+    },
+    {
+      cn: 'app.swisscom.ch',
+      sans: ['app.swisscom.ch', 'login.swisscom.ch'],
+      issuer: 'GlobalSign RSA OV SSL CA 2018',
+      issuerO: 'GlobalSign nv-sa',
+      org: 'Swisscom (Schweiz) AG',
+      country: 'CH',
+      city: 'Bern'
+    },
+    {
+      cn: 'portal.fedpol.admin.ch',
+      sans: ['portal.fedpol.admin.ch', 'fedpol.admin.ch'],
+      issuer: 'SwissSign RSA TLS OV ICA 2022 - 1',
+      issuerO: 'SwissSign AG',
+      org: 'Office fédéral de la police',
+      country: 'CH',
+      city: 'Bern'
+    },
+    {
+      cn: 'api.crypto.ch',
+      sans: ['api.crypto.ch', 'docs.crypto.ch', 'dev.crypto.ch'],
+      issuer: 'Let\'s Encrypt R3',
+      issuerO: 'Let\'s Encrypt',
+      org: 'Crypto SA',
+      country: 'CH',
+      city: 'Zug'
+    }
+  ];
+
+  function _opensslDump(f) {
+    const sansLine = f.sans.map(d => `DNS:${d}`).join(', ');
+    return `Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            0d:e7:b5:3a:6c:8f:21:4e:9b:1c
+    Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C=US, O=${f.issuerO}, CN=${f.issuer}
+        Validity
+            Not Before: Mar 12 10:00:00 2025 GMT
+            Not After : Apr 14 10:00:00 2026 GMT
+        Subject: C=${f.country}, L=${f.city}, O=${f.org}, CN=${f.cn}
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                RSA Public-Key: (2048 bit)
+        X509v3 extensions:
+            X509v3 Subject Alternative Name:
+                ${sansLine}
+            X509v3 Key Usage: critical
+                Digital Signature, Key Encipherment
+            X509v3 Extended Key Usage:
+                TLS Web Server Authentication, TLS Web Client Authentication
+            X509v3 Basic Constraints: critical
+                CA:FALSE`;
+  }
+
+  function _renderOpensslDump(text, highlights) {
+    // Surligne les lignes contenant les patterns
+    const lines = text.split('\n').map(line => {
+      let cls = '';
+      for (const h of (highlights || [])) {
+        if (line.includes(h.match)) {
+          cls = `background:rgba(126,192,255,.08);border-left:3px solid var(${h.color || '--cyan'});padding-left:.4rem;display:block;margin-left:-.4rem`;
+          break;
+        }
+      }
+      return `<div style="${cls}">${escapeHTML(line) || '&nbsp;'}</div>`;
+    });
+    return `
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">
+        <div style="padding:.4rem .8rem;font-size:.7rem;color:var(--gold);background:rgba(240,192,64,.05);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.05em;text-transform:uppercase">Output : openssl x509 -in cert.pem -text -noout</div>
+        <pre style="margin:0;padding:.7rem .8rem;font-family:var(--mono);font-size:.78rem;line-height:1.5;color:var(--text);overflow-x:auto;-webkit-overflow-scrolling:touch">${lines.join('')}</pre>
+      </div>
+    `;
+  }
 
   function genPKI() {
-    const qType = rand(0, 6);
-    const opts = { prefix: 'pki', icon: '📜', title: 'PKI & Certificats X.509', badge: 'crypto' };
+    const level = rand(0, 2);
+    const opts = { prefix: 'pki', icon: '📜', title: 'PKI — Lire un dump X.509' };
+    const f = PKI_FIXTURES[rand(0, PKI_FIXTURES.length - 1)];
+    const dumpText = _opensslDump(f);
 
-    if (qType === 0) {
-      // CN
-      const choices = [
-        { text: 'Le <strong>Common Name</strong> — typiquement le FQDN du serveur (ex: <code>www.example.ch</code>)', correct: true,
-          explain: `Le <strong>CN (Common Name)</strong> identifie le sujet du certificat. Pour un cert TLS, c'est traditionnellement le FQDN principal. Depuis 2017 (politique CA/B Forum), les navigateurs <em>ignorent</em> le CN pour la validation et ne regardent que le SAN (Subject Alternative Name).` },
-        { text: 'Le nom de la CA qui a signé le certificat', correct: false,
-          explain: `Le nom de la CA émettrice est dans le champ <strong>Issuer</strong>, pas dans le CN du sujet.` },
-        { text: 'Le numéro de série unique du certificat', correct: false,
-          explain: `Le numéro de série est dans le champ <strong>Serial Number</strong> (séparé du CN).` },
-        { text: 'L\'algorithme de signature (ex: SHA-256 with RSA)', correct: false,
-          explain: `L'algo de signature est dans <strong>Signature Algorithm</strong>, pas dans le CN.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau A : extraire le CN du Subject ──
+    if (level === 0) {
+      const artefactHTML = _renderOpensslDump(dumpText, [
+        {match: 'Subject: C=', color: '--cyan'}
+      ]);
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Dans un certificat X.509, à quoi correspond le champ <strong>CN</strong> du Subject ?`,
-        choices,
-        hintFn: () => `Le sujet (Subject) contient CN, O (Organization), OU, L (Locality), ST (State), C (Country). Pour un cert TLS, le CN est traditionnellement le FQDN, mais les navigateurs modernes utilisent le SAN.`
+        badge: 'lecture',
+        artefactHTML,
+        question: `Voici la sortie de <code>openssl x509 -text</code> sur un certificat trouvé dans <code>/etc/letsencrypt/</code>. <strong>Quel est le Common Name (CN) du Subject</strong> ?`,
+        inputLabel: 'CN :',
+        placeholder: 'example.com',
+        expected: f.cn,
+        normalize: v => v.trim().toLowerCase(),
+        hints: [
+          `Cherche la ligne commençant par <code>Subject:</code>. Le CN est la dernière partie après <code>CN=</code>.`,
+          `Subject: <code>C=${f.country}, L=${f.city}, O=${f.org}, CN=${f.cn}</code>. Le CN suit immédiatement <code>CN=</code>.`,
+          `CN = <strong>${f.cn}</strong>. C'est le nom canonique du certificat — historiquement le FQDN, mais aujourd'hui les navigateurs préfèrent les SAN.`
+        ],
+        explain: `CN (Common Name) du Subject = <strong>${f.cn}</strong>. Champ historique du sujet. Depuis 2017 (RFC 6125 + politique CA/B Forum), les navigateurs valident via les SAN, pas le CN — mais il reste lisible.`
       });
     }
 
-    if (qType === 1) {
-      // SAN
-      const choices = [
-        { text: '<strong>Subject Alternative Name</strong> — liste de FQDN/IP/email couverts par le certificat', correct: true,
-          explain: `Le <strong>SAN</strong> (OID 2.5.29.17) liste tous les noms couverts par le certificat : DNS, IP, email, URI. Indispensable pour un cert multi-domaine (ex: <code>example.ch, www.example.ch, api.example.ch</code>). Depuis 2017 (RFC 6125 + politique CA/B Forum), les navigateurs ignorent le CN et exigent un SAN.` },
-        { text: 'Subject Authority Name — le nom de l\'autorité émettrice', correct: false,
-          explain: `Faux acronyme inventé. La CA émettrice est dans le champ <strong>Issuer</strong>, pas SAN.` },
-        { text: 'Secure Algorithm Name — l\'algorithme de chiffrement TLS négocié', correct: false,
-          explain: `Inventé. L'algorithme TLS est négocié à l'établissement de la session, pas stocké dans le cert.` },
-        { text: 'Signature Authority Number — un identifiant unique de la signature', correct: false,
-          explain: `Inventé. La signature numérique est dans <strong>Signature Value</strong>.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau B : compter les SAN DNS ──
+    if (level === 1) {
+      const artefactHTML = _renderOpensslDump(dumpText, [
+        {match: 'Subject Alternative Name', color: '--gold'},
+        {match: 'DNS:', color: '--gold'}
+      ]);
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Que signifie le champ <strong>SAN</strong> dans un certificat X.509 ?`,
-        choices,
-        hintFn: () => `SAN = Subject Alternative Name. Permet à un certificat de couvrir plusieurs domaines/IP/emails. OID 2.5.29.17. Critique depuis que les navigateurs ignorent le CN (2017+).`
+        badge: 'extraction',
+        artefactHTML,
+        question: `<strong>Combien d'entrées DNS</strong> ce certificat couvre-t-il dans son Subject Alternative Name (SAN) ?`,
+        inputLabel: 'Nombre :',
+        placeholder: '1',
+        expected: String(f.sans.length),
+        normalize: v => v.trim().replace(/[^\d]/g, ''),
+        hints: [
+          `Trouve la section <code>X509v3 Subject Alternative Name</code>. Compte les entrées <code>DNS:...</code>.`,
+          `SAN affiché : <code>${f.sans.map(d => 'DNS:' + d).join(', ')}</code>. Compte les <code>DNS:</code>.`,
+          `<strong>${f.sans.length}</strong> entrées DNS : ${f.sans.map(d => '<code>' + d + '</code>').join(', ')}.`
+        ],
+        explain: `SAN compte <strong>${f.sans.length}</strong> domaine(s). C'est ce qui permet au cert de couvrir plusieurs FQDN (un seul cert pour ${f.sans.join(', ')}). RFC 5280, OID 2.5.29.17.`
       });
     }
 
-    if (qType === 2) {
-      // CA root self-signed
-      const choices = [
-        { text: 'Oui, une CA root signe son propre certificat (self-signed)', correct: true,
-          explain: `Une <strong>CA root est par définition self-signed</strong> : son certificat racine est signé avec sa propre clé privée. La confiance vient de l'inclusion manuelle dans le <em>trust store</em> du système (Windows, macOS, Linux distros, Mozilla, etc.) — pas d'une autre CA au-dessus.` },
-        { text: 'Non, une CA root est toujours signée par une autorité supérieure', correct: false,
-          explain: `Faux. Par définition, il n'y a rien au-dessus d'une CA <em>root</em>. Si elle était signée par autre chose, ce ne serait pas une racine.` },
-        { text: 'Non, le cert root n\'est jamais signé — seulement empreinté', correct: false,
-          explain: `Faux. Le cert root <em>est</em> signé numériquement, par sa propre clé privée (self-signed). C'est la signature qui prouve qu'il n'a pas été altéré.` },
-        { text: 'Oui mais uniquement les CA gouvernementales', correct: false,
-          explain: `Faux. Toutes les CA root sont self-signed, qu'elles soient commerciales (DigiCert, Let's Encrypt), gouvernementales (SwissSign), ou privées (entreprise).` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
+    // ── Niveau C : extraire le CN de l'Issuer (pas le Subject) ──
+    {
+      const artefactHTML = _renderOpensslDump(dumpText, [
+        {match: 'Issuer: C=', color: '--purple'}
+      ]);
+
+      return buildPracticeCard({
         ...opts,
-        scenario: `Une <strong>CA racine</strong> (root) signe-t-elle son propre certificat ?`,
-        choices,
-        hintFn: () => `Hiérarchie PKI : Root CA → Intermediate CA → certificat final (end-entity). La racine est self-signed. La confiance vient du fait que son cert est pré-installé dans les trust stores.`
+        badge: 'identification',
+        artefactHTML,
+        question: `<strong>Quel est le Common Name (CN) de l'Issuer</strong> ? (= l'autorité de certification intermédiaire qui a signé ce certificat.)`,
+        inputLabel: 'Issuer CN :',
+        placeholder: 'Some CA',
+        expected: f.issuer,
+        normalize: v => v.trim().toLowerCase(),
+        hints: [
+          `Attention à ne pas confondre <code>Subject:</code> (qui possède le cert) et <code>Issuer:</code> (qui l'a signé). Tu cherches le CN de l'<strong>Issuer</strong>.`,
+          `Cherche la ligne <code>Issuer: C=US, O=${f.issuerO}, CN=...</code>. Le CN est tout à droite.`,
+          `Issuer CN = <strong>${f.issuer}</strong>. C'est une CA intermédiaire de <code>${f.issuerO}</code>.`
+        ],
+        explain: `Issuer CN = <strong>${f.issuer}</strong>. Hiérarchie PKI : Root CA → Intermediate CA (= cet Issuer) → certificat final (= ce Subject). La chaîne complète remonte jusqu'à une Root CA self-signed du trust store du navigateur.`
       });
     }
-
-    if (qType === 3) {
-      // Durée max cert TLS public 2026
-      const choices = [
-        { text: '398 jours (depuis septembre 2020, politique CA/B Forum)', correct: true,
-          explain: `Depuis le <strong>1er septembre 2020</strong>, le <em>CA/Browser Forum</em> limite les certs TLS publiquement de confiance à <strong>398 jours</strong> de validité. Apple a poussé cette mesure (initiée par Safari) pour forcer la rotation, limiter l'impact de fuites de clé, et fluidifier l'adoption d'algorithmes nouveaux.` },
-        { text: '825 jours (ancien plafond de 2018-2020)', correct: false,
-          explain: `825 jours était le plafond entre mars 2018 et août 2020. Désormais 398 jours pour les nouveaux certs.` },
-        { text: '5 ans (1825 jours)', correct: false,
-          explain: `Ancien plafond avant 2015. Plus autorisé depuis longtemps pour les certs publiquement de confiance.` },
-        { text: 'Pas de limite, dépend de la CA', correct: false,
-          explain: `Faux. Pour les certs reconnus par les navigateurs (Mozilla, Apple, Microsoft, Chrome trust stores), la limite est uniforme à 398 jours.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quelle est la <strong>durée de validité maximale</strong> d'un certificat TLS publiquement de confiance en 2026 ?`,
-        choices,
-        hintFn: () => `Politique CA/B Forum (CA/Browser Forum). Évolution : 5 ans (avant 2015) → 39 mois (2015) → 27 mois (2018) → 13 mois ≈ 398 jours (2020+). Un nouveau projet vise 47 jours d'ici 2029.`
-      });
-    }
-
-    if (qType === 4) {
-      // Algo signature courant 2026
-      const choices = [
-        { text: '<strong>SHA-256 with RSA</strong> ou <strong>ECDSA P-256 (SHA-256)</strong>', correct: true,
-          explain: `Les algorithmes courants en 2026 : <strong>RSA-2048/3072 + SHA-256</strong> (encore majoritaire) et <strong>ECDSA P-256 + SHA-256</strong> (plus performant, certs plus petits). RSA-4096 ou ECDSA P-384 pour les usages haute sécurité.` },
-        { text: 'MD5 with RSA', correct: false,
-          explain: `MD5 est cassé pour les signatures depuis 2008 (collisions Marc Stevens). Interdit dans les certs publics depuis 2012 par Mozilla/Microsoft.` },
-        { text: 'SHA-1 with RSA', correct: false,
-          explain: `SHA-1 déprécié dans les certs publics depuis 2017 (SHAttered, Google/CWI). Aucune CA publique ne le signe plus.` },
-        { text: 'DES-CBC', correct: false,
-          explain: `DES est un chiffrement par bloc, pas une signature. Et largement obsolète (clé 56 bits cassée trivialement).` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quel <strong>algorithme de signature</strong> est utilisé sur un certificat TLS moderne en 2026 ?`,
-        choices,
-        hintFn: () => `Signature courante : SHA-256 with RSA-2048+ ou ECDSA P-256 with SHA-256. SHA-1 et MD5 sont dépréciés. Post-quantique (Dilithium, etc.) en phase d'adoption mais pas déployé en production.`
-      });
-    }
-
-    if (qType === 5) {
-      // OCSP vs CRL
-      const choices = [
-        { text: '<strong>OCSP</strong> = requête en ligne par cert (réponse signée par la CA). <strong>CRL</strong> = liste complète des certs révoqués téléchargée périodiquement.', correct: true,
-          explain: `<strong>OCSP</strong> (Online Certificate Status Protocol, RFC 6960) : le client envoie le serial d'un cert au répondeur OCSP de la CA → réponse signée "good/revoked/unknown". <strong>CRL</strong> (Certificate Revocation List, RFC 5280) : liste complète des serials révoqués, téléchargée et cachée par le client. OCSP-Stapling : le serveur attache la réponse OCSP au handshake TLS (latence ↓, vie privée ↑).` },
-        { text: 'OCSP et CRL font la même chose, juste deux noms différents', correct: false,
-          explain: `Faux. Mécanismes distincts complémentaires. OCSP = on-demand par cert. CRL = liste complète prétéléchargée.` },
-        { text: 'OCSP révoque les certs, CRL les renouvelle', correct: false,
-          explain: `Aucun des deux ne révoque ni ne renouvelle : ils <em>vérifient le statut de révocation</em>. La révocation se fait via le CRL Distribution Point côté CA.` },
-        { text: 'OCSP est pour les certs RSA, CRL pour les certs ECDSA', correct: false,
-          explain: `Faux. Les deux protocoles sont agnostiques à l'algo de signature du cert.` },
-      ].sort(() => Math.random() - 0.5);
-      return buildQCMCard({
-        ...opts,
-        scenario: `Quelle est la <strong>différence entre OCSP et CRL</strong> ?`,
-        choices,
-        hintFn: () => `Vérifier qu'un cert n'a pas été révoqué. CRL = télécharger la liste complète (lourd). OCSP = demander cert par cert au répondeur de la CA (latence). OCSP-Stapling améliore les deux : le serveur joint la réponse au handshake.`
-      });
-    }
-
-    // qType === 6 : Key Usage
-    const choices = [
-      { text: '<strong>Key Usage</strong> (et Extended Key Usage) — définit à quoi sert la clé publique', correct: true,
-        explain: `<strong>Key Usage</strong> (OID 2.5.29.15) liste les usages permis : Digital Signature, Key Encipherment, Data Encipherment, Key Agreement, Cert Sign, CRL Sign, etc. <strong>Extended Key Usage</strong> (OID 2.5.29.37) précise : Server Authentication (1.3.6.1.5.5.7.3.1), Client Auth (.2), Code Signing (.3), Email Protection (.4)…` },
-      { text: 'Subject Alternative Name', correct: false,
-        explain: `SAN liste les noms couverts (DNS, IP, email), pas les usages permis de la clé.` },
-      { text: 'Basic Constraints', correct: false,
-        explain: `Basic Constraints (2.5.29.19) indique si le cert est une CA (<code>CA:TRUE</code>) ou non, et la profondeur max de la chaîne. Pas les usages cryptographiques.` },
-      { text: 'Subject Key Identifier', correct: false,
-        explain: `SKI (2.5.29.14) est un hash de la clé publique, utilisé pour matcher l'<em>Issuer Key Identifier</em> du cert enfant. Pas les usages.` },
-    ].sort(() => Math.random() - 0.5);
-    return buildQCMCard({
-      ...opts,
-      scenario: `Quelle extension X.509 indique <strong>à quoi peut servir la clé publique</strong> (signature, chiffrement, etc.) ?`,
-      choices,
-      hintFn: () => `Key Usage (2.5.29.15) = capacités cryptographiques permises. Extended Key Usage (2.5.29.37) = usages applicatifs (TLS server, code signing, etc.). Une CA aura "Certificate Sign + CRL Sign", un cert TLS server aura "Digital Signature + Key Encipherment".`
-    });
   }
 
   // ════════════════════════════════════════════════════════════════
-  // Enregistrement dans GENERATORS (require tp-engine.js chargé avant)
+  // Enregistrement dans GENERATORS
   // ════════════════════════════════════════════════════════════════
   if (typeof window !== 'undefined' && window.GENERATORS) {
-    window.GENERATORS.cidr = genCIDR;
-    window.GENERATORS.aes = genAES;
+    window.GENERATORS.cidr     = genCIDR;
+    window.GENERATORS.aes      = genAES;
     window.GENERATORS.cracking = genCracking;
-    window.GENERATORS.pki = genPKI;
+    window.GENERATORS.pki      = genPKI;
   } else if (typeof GENERATORS !== 'undefined') {
-    GENERATORS.cidr = genCIDR;
-    GENERATORS.aes = genAES;
+    GENERATORS.cidr     = genCIDR;
+    GENERATORS.aes      = genAES;
     GENERATORS.cracking = genCracking;
-    GENERATORS.pki = genPKI;
+    GENERATORS.pki      = genPKI;
   }
 
-  // Exporter pour console / debug
   if (typeof window !== 'undefined') {
-    window.genCIDR = genCIDR;
-    window.genAES = genAES;
+    window.genCIDR     = genCIDR;
+    window.genAES      = genAES;
     window.genCracking = genCracking;
-    window.genPKI = genPKI;
+    window.genPKI      = genPKI;
   }
 })();
