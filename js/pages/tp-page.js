@@ -57,6 +57,24 @@ const CAT_META = {
   lnk:         {icon:'🔗', name:'LNK (raccourcis)',      sub:'Header 0x4C, CLSID, LinkFlags, FileAttributes, FileSize'},
   hfsbtree:    {icon:'🌳', name:'B-Tree HFS+',           sub:'BTNodeDescriptor, CNID parent, fLink, récupération forensique — Big Endian'},
   ntfsindex:   {icon:'📇', name:'$INDEX NTFS',           sub:'INDX magic, Index Entry flags, MFT ref, VCN sub-node — B+Tree de répertoires'},
+  // ── v97 : Cryptologie & Réseau ──
+  cidr:        {icon:'🌐', name:'CIDR & Subnetting',     sub:'Masque, broadcast, hôtes utilisables, RFC 1918 — calculs réseau'},
+  aes:         {icon:'🔐', name:'AES',                   sub:'Taille de clé/bloc, tours, modes ECB/CBC/GCM, padding PKCS#7'},
+  rsa:         {icon:'🔓', name:'RSA',                   sub:'Chiffrement asymétrique : taille de clé, déchiffrement (c^d mod n), composants (n/e/d/p/q)'},
+  classic:     {icon:'🔤', name:'Crypto classique',       sub:'Base64 decode, César (shift inconnu), XOR 1-byte (known-plaintext)'},
+  stegano:     {icon:'🎭', name:'Stéganographie',         sub:'Whitespace (tab/espace), polyglot JPEG+ZIP, LSB extraction'},
+  cracking:    {icon:'💥', name:'Cassage de hash',       sub:'Hashcat -m, John the Ripper, dictionnaire, rainbow, bcrypt, Argon2'},
+  pki:         {icon:'📜', name:'PKI & X.509',           sub:'CN, SAN, OCSP/CRL, Key Usage, 398 jours CA/B Forum'},
+  // ── v98 : Artefacts OS ──
+  ext4:        {icon:'🐧', name:'EXT2/3/4 — Inodes',     sub:'atime/ctime/mtime/crtime, 0xEF53, jbd2, debugfs, extundelete'},
+  winev:       {icon:'📋', name:'Windows Event Logs',    sub:'Event ID 4624/4625/4688, LogonType, .evtx, Sysmon, PowerShell 4104'},
+  linux:       {icon:'🐧', name:'Linux — Artefacts',     sub:'.bash_history, auth.log, last/lastb, journalctl, authorized_keys, crontab'},
+  macos:       {icon:'🍎', name:'macOS — Artefacts',     sub:'Unified log, KnowledgeC.db, FSEvents, quarantine, plist, Spotlight'},
+  // ── v99 : OSINT & Détection ──
+  exif:        {icon:'🖼️', name:'OSINT — EXIF',          sub:'exiftool, GPS DMS, plateformes, champs OSINT, anti-forensique, PDF'},
+  osintdns:    {icon:'🌐', name:'OSINT — DNS & pivots',  sub:'Types DNS, WHOIS RGPD, Shodan, amass, reverse DNS, DNSSEC, CT logs'},
+  sigma:       {icon:'🛡️', name:'Sigma Rules',           sub:'YAML, detection/condition, modifiers, levels, logsources, MITRE tags'},
+  c2:          {icon:'🎯', name:'C2 Frameworks',         sub:'Cobalt Strike, beaconing, msagent_*, Sliver/Mythic, LOLBAS, MITRE TA'},
 };
 
 const CAT_MAX = {
@@ -66,7 +84,17 @@ const CAT_MAX = {
   email:5, network:5, ir:5, droitpenal:5, glossaire:5, examen:10,
   mbr:5, direntry:5, hexdump:5, slackspace:5,
   registry:5, prefetch:5, lnk:5,
-  hfsbtree:5, ntfsindex:5
+  hfsbtree:5, ntfsindex:5,
+  // v97
+  cidr:5, aes:5, cracking:5, pki:5,
+  // v104
+  rsa:5,
+  // v105
+  classic:5, stegano:5,
+  // v98
+  ext4:5, winev:5, linux:5, macos:5,
+  // v99
+  exif:5, osintdns:5, sigma:5, c2:5
 };
 
 let currentCat = 'endian';
@@ -97,8 +125,9 @@ function go(cat, btn) {
     'droitpenal':'grp-inv','glossaire':'grp-inv','examen':'grp-inv'
   };
   if (catGroup[cat]) { document.querySelectorAll('.sb-group').forEach(g=>g.classList.add('collapsed')); document.getElementById(catGroup[cat]).classList.remove('collapsed'); }
-  // Update mobile pills
-  document.querySelectorAll('.mob-pill').forEach(p => p.classList.toggle('active', p.dataset.cat === cat));
+  // v106 : sync du nouveau trigger mobile (remplace l'ancien mob-pills)
+  if (typeof syncMobTrigger === 'function') syncMobTrigger();
+  document.querySelectorAll('.mob-cat').forEach(p => p.classList.toggle('active', p.dataset.cat === cat));
   // Update context header
   const m = CAT_META[cat] || {icon:'📋', name:cat, sub:''};
   document.getElementById('ctx-icon').textContent = m.icon;
@@ -137,7 +166,16 @@ function showTool(tool, btn) {
     iframe.src = 'tools.html'; link.href = 'tools.html';
     title.textContent = '🔧 Calculateurs Forensiques';
   }
-  document.querySelectorAll('.mob-pill').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.mob-cat').forEach(p => p.classList.remove('active'));
+  // v106 : sync trigger pour refléter l'outil actif (Examen/Calculateurs)
+  if (typeof syncMobTrigger === 'function') {
+    const trigLabel = document.getElementById('mob-trigger-label');
+    const trigIcon  = document.getElementById('mob-trigger-icon');
+    const trigBadge = document.getElementById('mob-trigger-badge');
+    if (trigLabel) trigLabel.textContent = which === 'exam' ? 'Examen Blanc' : 'Calculateurs';
+    if (trigIcon)  trigIcon.textContent  = which === 'exam' ? '⏱' : '🔧';
+    if (trigBadge) { trigBadge.className = 'mob-trigger-badge'; trigBadge.textContent = '—'; }
+  }
 }
 
 // ── Groups collapse ────────────────────────────────────────────
@@ -230,6 +268,9 @@ function updateBadges() {
     const fill = Math.min(100, (totalSolved / (Object.values(CAT_MAX).reduce((a,b)=>a+b,0))) * 100);
     document.getElementById('sbf-fill').style.width = fill + '%';
     updateGroupProgress();
+    // v106 : sync du nouveau trigger mobile + badges du drawer
+    if (typeof syncMobTrigger === 'function') syncMobTrigger();
+    if (typeof syncMobCatBadges === 'function') syncMobCatBadges();
   } catch(e) {}
 }
 
@@ -253,31 +294,196 @@ function doReset() {
   newExercise();
 }
 
-// ── Mobile pill bar ────────────────────────────────────────────
-function buildMobBar() {
-  const bar = document.getElementById('mob-pills');
-  // Fix Phase 1 : exclure les cats _exam et _tools de l'itération — elles
-  // sont gérées séparément ci-dessous via showTool(). Sinon le map() émettait
-  // une pill brute (label = "_exam") avec onclick=go() au lieu de showTool().
-  const cats = [...document.querySelectorAll('.sb-cat[data-cat]')]
-    .filter(b => !b.dataset.cat.startsWith('_'));
-  bar.innerHTML = cats.map(b => {
-    const cat = b.dataset.cat;
-    if (!cat) return '';
-    const m = CAT_META[cat];
-    const label = m ? m.icon + ' ' + m.name : cat;
-    return `<div class="mob-pill${cat === currentCat ? ' active' : ''}" data-cat="${cat}" onclick="go('${cat}',this)">${label}</div>`;
+// ── Mobile drawer (v106 — remplace mob-pills) ──────────────────
+//
+// Architecture :
+//  - Le bouton sticky #mob-trigger affiche le TP actif (icône + nom + badge).
+//  - Le drawer #mob-drawer s'ouvre au tap, contient les 7 groupes pliables
+//    avec leurs catégories, identiques à la sidebar desktop.
+//  - La construction est faite UNE FOIS (buildMobDrawer), puis seuls badge
+//    et état "actif" sont mis à jour à chaque sélection.
+//
+// Groupes définis dans l'ordre d'affichage souhaité :
+const MOB_GROUPS = [
+  { id: 'fs',        icon: '💾', name: 'Systèmes de fichiers' },
+  { id: 'win',       icon: '🪟', name: 'Artefacts Windows' },
+  { id: 'calc',      icon: '📐', name: 'Calculs & Identification' },
+  { id: 'crypto',    icon: '🔐', name: 'Cryptologie & Réseau' },
+  { id: 'artefacts', icon: '🧩', name: 'Artefacts OS' },
+  { id: 'osintdet',  icon: '🎯', name: 'OSINT & Détection' },
+  { id: 'inv',       icon: '🔍', name: 'Investigation' }
+];
+
+function buildMobDrawer() {
+  const body = document.getElementById('mob-drawer-body');
+  if (!body) return;
+
+  // Pour chaque groupe desktop, récupérer les catégories qu'il contient
+  // depuis le DOM de la sidebar (déjà rendu dans tp.html)
+  const html = MOB_GROUPS.map(g => {
+    const grpEl = document.getElementById('grp-' + g.id);
+    if (!grpEl) return '';
+    const cats = [...grpEl.querySelectorAll('.sb-cat[data-cat]')]
+      .filter(b => !b.dataset.cat.startsWith('_'));
+    if (cats.length === 0) return '';
+
+    const catItems = cats.map(b => {
+      const cat = b.dataset.cat;
+      const m = CAT_META[cat];
+      const icon = m ? m.icon : '🔧';
+      const name = m ? m.name : cat;
+      return `<button class="mob-cat" data-cat="${cat}" type="button" onclick="mobChooseCat('${cat}')">
+        <span class="mob-cat-icon">${icon}</span>
+        <span class="mob-cat-name">${name}</span>
+        <span class="mob-cat-badge" id="mb-${cat}">—</span>
+      </button>`;
+    }).join('');
+
+    return `<div class="mob-grp" id="mob-grp-${g.id}">
+      <div class="mob-grp-header" onclick="mobToggleGrp('${g.id}')">
+        <span class="mob-grp-icon">${g.icon}</span>
+        <span class="mob-grp-name">${g.name}</span>
+        <span class="mob-grp-count">${cats.length}</span>
+        <span class="mob-grp-arrow">▾</span>
+      </div>
+      <div class="mob-grp-body">${catItems}</div>
+    </div>`;
   }).join('');
-  // Add tool pills (la seule source de pills pour _exam/_tools)
-  bar.innerHTML += `<div class="mob-pill" data-cat="_exam" onclick="showTool('exam',this)">⏱ Examen</div>`;
-  bar.innerHTML += `<div class="mob-pill" data-cat="_tools" onclick="showTool('tools',this)">🔧 Calculateurs</div>`;
+
+  body.innerHTML = html;
+
+  // Ouvrir d'office le groupe qui contient le TP actif
+  mobExpandGroupOfCurrent();
 }
+
+function mobToggleGrp(id) {
+  const grp = document.getElementById('mob-grp-' + id);
+  if (!grp) return;
+  const wasOpen = grp.classList.contains('open');
+  // Fermer tous les groupes
+  document.querySelectorAll('.mob-grp').forEach(g => g.classList.remove('open'));
+  if (!wasOpen) grp.classList.add('open');
+}
+
+function mobExpandGroupOfCurrent() {
+  // Trouver le groupe qui contient currentCat et l'ouvrir
+  for (const g of MOB_GROUPS) {
+    const grpEl = document.getElementById('grp-' + g.id);
+    if (!grpEl) continue;
+    const hasCat = !!grpEl.querySelector(`.sb-cat[data-cat="${currentCat}"]`);
+    if (hasCat) {
+      document.querySelectorAll('.mob-grp').forEach(x => x.classList.remove('open'));
+      const mobGrp = document.getElementById('mob-grp-' + g.id);
+      if (mobGrp) mobGrp.classList.add('open');
+      return;
+    }
+  }
+}
+
+function mobChooseCat(cat) {
+  go(cat); // appel existant : déclenche newExercise, etc.
+  closeMobDrawer();
+  syncMobTrigger();
+  // Marquer le bouton actif dans le drawer (utile si on rouvre)
+  document.querySelectorAll('.mob-cat').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+}
+
+function openMobDrawer() {
+  const dr = document.getElementById('mob-drawer');
+  if (!dr) return;
+  dr.classList.add('open');
+  dr.setAttribute('aria-hidden', 'false');
+  // S'assurer qu'on est sur le bon groupe
+  mobExpandGroupOfCurrent();
+  // Marquer la cat active
+  document.querySelectorAll('.mob-cat').forEach(b => b.classList.toggle('active', b.dataset.cat === currentCat));
+  // Empêcher le scroll body en arrière-plan
+  document.body.style.overflow = 'hidden';
+  // Focus search pour clavier rapide (mais sans forcer ouverture clavier sur mobile)
+  const s = document.getElementById('mob-search');
+  if (s) s.value = ''; // reset filtre
+  mobSearch(''); // tout réafficher
+}
+
+function closeMobDrawer() {
+  const dr = document.getElementById('mob-drawer');
+  if (!dr) return;
+  dr.classList.remove('open');
+  dr.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+function syncMobTrigger() {
+  // Met à jour le bouton sticky avec le TP actif + badge progression
+  const m = CAT_META[currentCat];
+  const iconEl  = document.getElementById('mob-trigger-icon');
+  const labelEl = document.getElementById('mob-trigger-label');
+  const badgeEl = document.getElementById('mob-trigger-badge');
+  if (iconEl)  iconEl.textContent  = m ? m.icon : '🔧';
+  if (labelEl) labelEl.textContent = m ? m.name : currentCat;
+  if (badgeEl) {
+    try {
+      const solved = JSON.parse(localStorage.getItem('tp_solved') || '{}');
+      const n = solved[currentCat] || 0;
+      const max = CAT_MAX[currentCat] || 5;
+      badgeEl.className = 'mob-trigger-badge';
+      if (n === 0) badgeEl.textContent = '—';
+      else if (n < max) { badgeEl.className += ' has-progress'; badgeEl.textContent = n + '/' + max; }
+      else { badgeEl.className += ' complete'; badgeEl.textContent = '✓ ' + n; }
+    } catch(_) {}
+  }
+}
+
+function syncMobCatBadges() {
+  // Met à jour le badge de chaque catégorie dans le drawer
+  try {
+    const solved = JSON.parse(localStorage.getItem('tp_solved') || '{}');
+    Object.entries(CAT_MAX).forEach(([cat, max]) => {
+      const el = document.getElementById('mb-' + cat);
+      if (!el) return;
+      const n = solved[cat] || 0;
+      el.className = 'mob-cat-badge';
+      if (cat === 'examen') { el.textContent = '★'; return; }
+      if (n === 0) el.textContent = '—';
+      else if (n < max) { el.className += ' has-progress'; el.textContent = n + '/' + max; }
+      else { el.className += ' complete'; el.textContent = '✓ ' + n; }
+    });
+  } catch(_) {}
+}
+
+function mobSearch(q) {
+  const norm = (q || '').trim().toLowerCase();
+  // Filtrer cats individuelles + masquer groupe si toutes ses cats sont masquées
+  const cats = document.querySelectorAll('.mob-cat[data-cat]');
+  cats.forEach(b => {
+    const cat = b.dataset.cat;
+    const m = CAT_META[cat];
+    const hay = (cat + ' ' + (m ? (m.name + ' ' + (m.sub || '')) : '')).toLowerCase();
+    b.classList.toggle('hidden', norm && !hay.includes(norm));
+  });
+  // Pour chaque groupe, masquer si toutes ses cats sont hidden ; ouvrir tous les groupes pertinents si recherche active
+  document.querySelectorAll('.mob-grp').forEach(g => {
+    const visible = [...g.querySelectorAll('.mob-cat')].filter(c => !c.classList.contains('hidden')).length;
+    g.classList.toggle('hidden', visible === 0);
+    if (norm) g.classList.add('open');
+  });
+}
+
+// Fermer le drawer avec touche Esc
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const dr = document.getElementById('mob-drawer');
+    if (dr && dr.classList.contains('open')) closeMobDrawer();
+  }
+});
 
 // ── Init ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   newExercise();
   updateBadges();
-  buildMobBar();
+  buildMobDrawer();
+  syncMobTrigger();
+  syncMobCatBadges();
   updateGroupProgress();
 
   // Patch progress updates to also refresh badges
