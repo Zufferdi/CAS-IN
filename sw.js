@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v488';
+const CACHE_VERSION = 'cas-in-v492';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1848,6 +1848,7 @@ const STATIC_ASSETS = [
   './tp/tp-engine-osint-detect.js',
   './tp/tp-engine-rsa.js',
   './tp/tp-engine-classic-crypto.js',
+  './tp/tp-engine-forensic-extras.js',
 
   // ─── v2.93-v2.99 — Nouveaux modules (Dossiers, Sagas, Arcs, Dashboard...) ───
   './js/core/cas-in-skill-branches.js',
