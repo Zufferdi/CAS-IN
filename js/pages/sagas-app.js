@@ -14,6 +14,11 @@
 
   const STAGE_THRESHOLD = 60;
 
+  // v95 (I) — i18n helper avec fallback FR
+  function t(key, fb) {
+    return (window.CASi18n && window.CASi18n.t) ? window.CASi18n.t(key, fb) : fb;
+  }
+
   // Couleurs par niveau de saga.
   // Système saga : stagiaire < inspecteur < enqueteur < expert
   // Alias easy/medium/hard/expert acceptés en fallback.
@@ -93,10 +98,17 @@
     const level = saga.level || 'medium';
     const color = LEVEL_COLORS[level] || LEVEL_COLORS.medium;
     const cta = progress.completed === 0
-      ? 'Démarrer'
-      : (progress.isCompleted ? 'Revoir' : 'Reprendre');
-    const href = progress.nextSceneId
-      ? `scene.html?scene=${encodeURIComponent(progress.nextSceneId)}`
+      ? t('sagas_page.cta_start', 'Démarrer')
+      : (progress.isCompleted ? t('sagas_page.cta_revisit', '🔄 Revisiter') : t('sagas_page.cta_resume', 'Reprendre'));
+    // v93 (G4) — Mode revisite : pour les sagas complétées à 100%,
+    // on cible la première scène de la saga (pas la "prochaine non complétée",
+    // puisqu'il n'y en a pas) avec le flag ?revisit=1 qui activera le bandeau
+    // de revisite et empêchera la double-comptabilisation d'XP.
+    const targetSceneId = progress.isCompleted
+      ? (saga.scenes && saga.scenes[0]) || progress.nextSceneId
+      : progress.nextSceneId;
+    const href = targetSceneId
+      ? `scene.html?scene=${encodeURIComponent(targetSceneId)}${progress.isCompleted ? '&revisit=1' : ''}`
       : 'scene.html#campaigns';
 
     const completedCls = progress.isCompleted ? ' completed' : '';
@@ -115,12 +127,12 @@
         <div class="sg-card-progress">
           <div class="sg-card-prog-line">
             <span class="sg-card-prog-num">${progress.completed} / ${progress.total} scènes</span>
-            <span class="sg-card-prog-pct">${progress.pctCatalog}%${progress.avgPct ? ' · moy. ' + progress.avgPct + '%' : ''}</span>
+            <span class="sg-card-prog-pct">${progress.pctCatalog}%${progress.avgPct ? ' · ' + t('sagas_page.avg_label', 'moy.') + ' ' + progress.avgPct + '%' : ''}</span>
           </div>
           <div class="sg-card-bar"><div class="sg-card-bar-fill" style="width: ${progress.pctCatalog}%"></div></div>
         </div>
         <div class="sg-card-cta">
-          <span>${progress.isCompleted ? '🏆 Saga complète' : ''}</span>
+          <span>${progress.isCompleted ? t('sagas_page.saga_complete_label', '🏆 Saga complète') : ''}</span>
           <span class="sg-card-cta-act">${cta} →</span>
         </div>
       </a>
@@ -206,4 +218,9 @@
   } else {
     init();
   }
+
+  // v95 (I) — re-render au changement de locale
+  window.addEventListener('cas-locale-changed', function () {
+    init();
+  });
 })();

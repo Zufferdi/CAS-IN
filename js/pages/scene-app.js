@@ -3168,7 +3168,23 @@ function showReport() {
   // Save result (keep best pct)
   const saved = lsGet('scene_results', {});
   const prev = saved[scene.id];
-  if (!prev || pct > prev.pct) {
+  // v93 (G4) — Mode revisite : on ne touche pas scene_results
+  // (préserve le meilleur score historique). Les autres effets de bord
+  // (XP, streak, achievements one-shot) restent inchangés volontairement :
+  // le mode revisite reste une vraie session jouable, juste sans
+  // re-comptabilisation des stats de scène.
+  const revisitMode = !!window.__casInRevisitMode;
+  // v94 (H2) — Mode examen blanc : side-channel pour scene-exam-app
+  // (le moteur d'examen est sur une autre page, il a besoin du score
+  // de la scène qu'il vient de lancer en revisit, sans toucher
+  // scene_results). On écrit `cas_last_exam_pct` qui sera lu et
+  // effacé par scene-exam-app lors du clic « Scène suivante ».
+  if (revisitMode && !!window.__casInExamMode) {
+    try {
+      lsSet('cas_last_exam_pct', { sceneId: scene.id, pct: pct, ts: Date.now() });
+    } catch (_) {}
+  }
+  if (!revisitMode && (!prev || pct > prev.pct)) {
     // v2.91 PACK L3 — On persiste maintenant les tags + difficulty pour
     // permettre les checks d'achievements role-only basés sur le tag.
     saved[scene.id] = {
@@ -3925,12 +3941,12 @@ function launchNextScene() {
 const CANTON_DATA = {
   GE: { name: "Genève", scenarios: ["sms-blasters", "darkmarket_2021", "cicr_2022", "crypto-stalking-airtag-emirats", "easy-premiere-perquisition", "eu-cronos-3", "eu-pegasus-spyware", "ia-generative-faux-titres", "supply_chain_sante", "swiss-air-cabin-crew-leak-geneve", "docker-supply-chain-saas-geneve"] },
   VD: { name: "Vaud", scenarios: ["ncmec-cypertip", "lockbit-victime", "comparis_2021", "unine_2022", "epfl-recherche-lai-fuite-chine", "epfl-laboratoire-ia-medicale-chine", "crypto-tinder-pig-butchering-vaud", "logitech-clop-zero-day-supply-chain", "72969-infractions-vaud", "adn-genealogique-cold-case", "cloud-aws-s3-leak", "easy-mobile-perdu-train", "eu-crypto-kidnapping", "eu-frontex-deepfake-asylum", "iot-camera-compromise", "mineur-etranger-garde-a-vue", "perquisition-conjugale", "revenge-porn-deepfake-vd", "mineur-auteur-defi-tiktok-deces-vd", "vd-affaire-modele-1-detection-onconet", "vd-affaire-modele-2-audit-forensique-ml", "vd-affaire-modele-3-competence-plainte", "vd-affaire-modele-4-identification-victimes", "vd-affaire-modele-6-perquisition", "vd-affaire-modele-7-audience-lausanne"] },
-  VS: { name: "Valais", scenarios: ["vetroz-akira", "sati-bec", "rajeunissement-ia", "saxon-curatelle", "competence-mpc-vs", "hydro-valais", "audit-prestataire-systemique", "bec-pme-geneve-italie", "easy-aide-grand-mere-arnaque", "referent-milice-ransomware", "valais-cascade-12-communes", "vs-affaire-viege-1-avalanche-saas", "vs-affaire-viege-2-osint-bricolage", "vs-affaire-viege-3-mercure-lonza", "vs-affaire-viege-4-scada-mattmark", "vs-affaire-viege-5-eimp-milano", "vs-affaire-viege-6-perquisition-brig", "vs-affaire-viege-7-audience-tribunal", "ge-affaire-gemmi-1-decouverte-wildstrubel", "ge-affaire-gemmi-2-cluster-wifi", "ge-affaire-gemmi-3-pivot-osint",
+  VS: { name: "Valais", scenarios: ["vetroz-akira", "sati-bec", "rajeunissement-ia", "saxon-curatelle", "competence-mpc-vs", "hydro-valais", "audit-prestataire-systemique", "bec-pme-geneve-italie", "easy-aide-grand-mere-arnaque", "referent-milice-ransomware", "valais-cascade-12-communes", "vs-affaire-viege-1-avalanche-saas", "vs-affaire-viege-2-osint-bricolage", "vs-affaire-viege-3-mercure-lonza", "vs-affaire-viege-4-scada-mattmark", "vs-affaire-viege-5-eimp-milano", "vs-affaire-viege-6-perquisition-brig", "vs-affaire-viege-7-audience-tribunal", "vs-affaire-gemmi-1-decouverte-wildstrubel", "vs-affaire-gemmi-2-cluster-wifi", "vs-affaire-gemmi-3-pivot-osint",
     ] },
   FR: { name: "Fribourg", scenarios: ["dab-villaz", "gruyere-coop-affinage-stuxnet", "hcfr-bec-transfer-deepfake", "cyber-justicier-vigilante-fr", "easy-pme-mot-passe-faible", "fr-affaire-sarine-1-premier-appel", "fr-affaire-sarine-2-eimp-stuttgart", "fr-affaire-sarine-3-coordination-cantons", "fr-affaire-sarine-4-expertise-unifr", "fr-affaire-sarine-5-audience-recevabilite", "secte-religieuse-fribourg-extorsion", "fr-affaire-singine-1-ransomware-akira", "fr-affaire-singine-2-continuite-coop", "fr-affaire-singine-3-tracking-crypto-recoupement", "fr-affaire-singine-4-eimp-mros-suspect-commun", "fr-affaire-singine-5-audience-jointe-tf-berne"] },
   NE: { name: "Neuchâtel", scenarios: ["faux-policiers", "harcelement-ne", "handala-hack-iran-rhne-stryker", "easy-suspicions-collegues", "evoting-cantonal", "exit-suicide-assiste-conteste", "unine_2022", "ne-affaire-csem-1-signalement-microcity", "ne-affaire-csem-2-hearc-romano", "ne-affaire-csem-3-monero-trace", "ne-affaire-csem-4-saignelegier-anpr", "ne-affaire-csem-5-perquisition-marin", "ne-affaire-csem-6-rogatoire-besancon", "ne-affaire-csem-7-audience-neuchatel"] },
   JU: { name: "Jura", scenarios: ["delemont-forum", "jura-vishing-1m", "eu-cer-directive-incident", "pcap-network-intrusion-jura", "ju-affaire-noirmont-1-cambriolage-quenard", "ju-affaire-noirmont-2-pontarlier", "ju-affaire-noirmont-3-vps-saint-imier", "ju-affaire-noirmont-4-marche-gris", "ju-affaire-noirmont-5-perquisition-bassecourt", "ju-affaire-noirmont-6-fedpol-berne", "ju-affaire-noirmont-7-audience-porrentruy", "prevote-3-grand-basculement", "ju-affaire-prevote-4-tenant-fantome", "ju-affaire-prevote-5-attribution-croisee", "ju-affaire-prevote-7-audience-porrentruy"] },
-  BE: { name: "Berne", scenarios: ["ruag_2016", "palais_federal", "deepfake-electoral", "src-fonctionnaire-russe-kaspersky", "swatch-2020-ot", "whistleblower-ddps", "hydra-darknet-acheteurs-suisses-bka-2022", "be-affaire-aar-frutigen-1-kantonnet-detection", "be-affaire-aar-frutigen-2-expert-forensique-jcfc", "be-affaire-aar-frutigen-3-coordination-47-communes", "be-affaire-aar-frutigen-4-suspect-ex-dev", "be-affaire-aar-frutigen-5-audience-tmc", "be-affaire-prevote-1-signal-kernel-moutier", "be-affaire-prevote-2-ad-miroir-casse", "ju-affaire-prevote-6-perquisition-bevilard", "ge-affaire-gemmi-4-perquisition-thoune", "ge-affaire-gemmi-5-audience-thoune",
+  BE: { name: "Berne", scenarios: ["ruag_2016", "palais_federal", "deepfake-electoral", "src-fonctionnaire-russe-kaspersky", "swatch-2020-ot", "whistleblower-ddps", "hydra-darknet-acheteurs-suisses-bka-2022", "be-affaire-aar-frutigen-1-kantonnet-detection", "be-affaire-aar-frutigen-2-expert-forensique-jcfc", "be-affaire-aar-frutigen-3-coordination-47-communes", "be-affaire-aar-frutigen-4-suspect-ex-dev", "be-affaire-aar-frutigen-5-audience-tmc", "be-affaire-prevote-1-signal-kernel-moutier", "be-affaire-prevote-2-ad-miroir-casse", "ju-affaire-prevote-6-perquisition-bevilard", "vs-affaire-gemmi-4-perquisition-thoune", "vs-affaire-gemmi-5-audience-thoune",
       "be-xz-utils-backdoor-ncsc-audit"
     ] },
   ZH: { name: "Zurich", scenarios: ["attribution", "bitlocker", "bitlocker_froid", "mini-natels-prison-pochwies", "cistec-2025-sante", "contrefacon-douanes-enquirus", "easy-fake-news-elections", "frontieres", "swissport_2022", "lufthansa-zurich-aviation-cyber", "swisslife-vadian-supply-chain-pensionskassen-2025", "antisemitisme-ligne-261bis-zh",
@@ -4292,6 +4308,56 @@ window.addEventListener('DOMContentLoaded', () => {
   if (window.location.hash === '#random') {
     loadSceneIndex().then(() => setTimeout(launchRandomScene, 300));
   }
+
+  // ─── v93 (G4) — Support des paramètres query ?scene= et ?revisit= ───
+  // scene-app.js historiquement ne lit que #scene=<id> (hash). De nombreux
+  // composants émettent pourtant scene.html?scene=<id> ou ?id=<id>. On
+  // normalise ici en réécrivant l'URL pour activer la logique hash existante.
+  // Le flag ?revisit=1 (mode revisite saga) est mémorisé en variable globale
+  // et inhibe l'écrasement des scene_results existants.
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const qScene = params.get('scene') || params.get('id');
+    const qRevisit = params.get('revisit') === '1';
+    const qExam = params.get('exam') === '1';
+    if (qExam) {
+      window.__casInExamMode = true;
+    }
+    if (qRevisit) {
+      window.__casInRevisitMode = true;
+      // Bandeau visuel — injecté après que le DOM soit prêt
+      const showRevisitBanner = () => {
+        if (document.getElementById('casin-revisit-banner')) return;
+        const banner = document.createElement('div');
+        banner.id = 'casin-revisit-banner';
+        banner.setAttribute('role', 'status');
+        banner.style.cssText = [
+          'position:sticky', 'top:0', 'z-index:9000',
+          'background:linear-gradient(90deg,rgba(201,125,245,.18),rgba(126,192,255,.12))',
+          'border-bottom:1px solid rgba(201,125,245,.35)',
+          'color:#e3d3ff', 'padding:8px 14px', 'text-align:center',
+          'font-family:"Share Tech Mono",monospace', 'font-size:12px',
+          'letter-spacing:.5px'
+        ].join(';');
+        banner.innerHTML = '🔄 <strong>Mode revisite</strong> — saga complétée, le score n\'est pas modifié et l\'XP n\'est pas créditée.';
+        document.body.insertBefore(banner, document.body.firstChild);
+      };
+      if (document.body) showRevisitBanner();
+      else document.addEventListener('DOMContentLoaded', showRevisitBanner, { once: true });
+    }
+    if (qScene && !window.location.hash.startsWith('#scene=')) {
+      // Réécrire en #scene=<id> pour réutiliser le bloc existant
+      // (sans recharger la page). Le bloc suivant capturera le hash.
+      try {
+        const newHash = '#scene=' + encodeURIComponent(qScene);
+        // pushState évite un rechargement et préserve ?revisit=1 dans l'URL visible
+        const newUrl = window.location.pathname + window.location.search + newHash;
+        window.history.replaceState(null, '', newUrl);
+      } catch (_) {
+        window.location.hash = '#scene=' + encodeURIComponent(qScene);
+      }
+    }
+  } catch (e) { /* URLSearchParams non supporté ? fallback silencieux */ }
 
   // v2.95 — Si l'URL contient #scene=<id>, AUTO-LANCER la scène
   // v3.0 — Distinguer SW_OFFLINE (cache périmé) d'une vraie 404
