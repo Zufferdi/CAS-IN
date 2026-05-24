@@ -48,7 +48,7 @@
 
       <div class="ex-input-row" style="flex-wrap:wrap;gap:8px">
         ${opts.inputLabel ? `<span class="ex-input-label">${opts.inputLabel}</span>` : ''}
-        <input class="ex-input" id="inp-${id}" placeholder="${opts.placeholder || ''}" autocomplete="off" spellcheck="false" style="width:100%;max-width:340px;font-family:var(--mono);min-height:40px;box-sizing:border-box">
+        <input class="ex-input" id="inp-${id}" placeholder="${opts.placeholder || ''}" autocomplete="off" spellcheck="false" >
         <button class="btn-hint" id="btn-hint1-${id}" type="button">💡 Méthode</button>
         <button class="btn-hint" id="btn-hint2-${id}" type="button" disabled style="opacity:.4">💡💡 Où regarder</button>
         <button class="btn-hint" id="btn-hint3-${id}" type="button" disabled style="opacity:.4">💡💡💡 Réponse</button>
@@ -160,7 +160,7 @@
     }
 
     return `
-      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg);overflow-x:auto;-webkit-overflow-scrolling:touch">
         ${title ? `<div style="padding:.4rem .8rem;font-size:.7rem;color:var(--gold);background:rgba(240,192,64,.05);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.05em;text-transform:uppercase">${title}</div>` : ''}
         <table style="border-collapse:collapse;width:100%">${lines.join('')}</table>
       </div>
@@ -592,6 +592,69 @@
       org: 'Crypto SA',
       country: 'CH',
       city: 'Zug'
+    },
+    {
+      cn: 'banking.raiffeisen.ch',
+      sans: ['banking.raiffeisen.ch', 'mobile.raiffeisen.ch', 'login.raiffeisen.ch', 'twint.raiffeisen.ch'],
+      issuer: 'QuoVadis Global SSL ICA G3',
+      issuerO: 'QuoVadis Trustlink Schweiz AG',
+      org: 'Raiffeisen Schweiz Genossenschaft',
+      country: 'CH',
+      city: 'St. Gallen'
+    },
+    {
+      cn: 'cas-in.ch',
+      sans: ['cas-in.ch', 'www.cas-in.ch'],
+      issuer: 'ISRG Root X1',
+      issuerO: 'Internet Security Research Group',
+      org: 'CAS Investigation Numérique',
+      country: 'CH',
+      city: 'Neuchâtel'
+    },
+    {
+      cn: 'secure.zkb.ch',
+      sans: ['secure.zkb.ch', 'app.zkb.ch', 'ebanking.zkb.ch'],
+      issuer: 'Entrust Certification Authority - L1K',
+      issuerO: 'Entrust Inc',
+      org: 'Zürcher Kantonalbank',
+      country: 'CH',
+      city: 'Zürich'
+    },
+    {
+      cn: 'webmail.epfl.ch',
+      sans: ['webmail.epfl.ch', 'mail.epfl.ch', 'smtp.epfl.ch', 'imap.epfl.ch', 'calendar.epfl.ch'],
+      issuer: 'DigiCert TLS RSA SHA256 2020 CA1',
+      issuerO: 'DigiCert Inc',
+      org: 'École polytechnique fédérale de Lausanne',
+      country: 'CH',
+      city: 'Lausanne'
+    },
+    {
+      cn: 'auth.sbb.ch',
+      sans: ['auth.sbb.ch', 'login.sbb.ch'],
+      issuer: 'GlobalSign GCC R6 AlphaSSL CA 2023',
+      issuerO: 'GlobalSign nv-sa',
+      org: 'Schweizerische Bundesbahnen SBB',
+      country: 'CH',
+      city: 'Bern'
+    },
+    {
+      cn: 'ehealth.bag.admin.ch',
+      sans: ['ehealth.bag.admin.ch', 'covidcert.admin.ch', 'vaccins.admin.ch'],
+      issuer: 'SwissSign RSA TLS EV ICA 2022 - 1',
+      issuerO: 'SwissSign AG',
+      org: 'Office fédéral de la santé publique',
+      country: 'CH',
+      city: 'Bern'
+    },
+    {
+      cn: 'partners.kudelski.com',
+      sans: ['partners.kudelski.com', 'cas.kudelski.com', 'cybersecurity.kudelski.com'],
+      issuer: 'GeoTrust TLS RSA CA G1',
+      issuerO: 'DigiCert Inc',
+      org: 'Kudelski SA',
+      country: 'CH',
+      city: 'Cheseaux-sur-Lausanne'
     }
   ];
 
@@ -635,7 +698,7 @@
       return `<div style="${cls}">${escapeHTML(line) || '&nbsp;'}</div>`;
     });
     return `
-      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg);overflow-x:auto;-webkit-overflow-scrolling:touch">
         <div style="padding:.4rem .8rem;font-size:.7rem;color:var(--gold);background:rgba(240,192,64,.05);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.05em;text-transform:uppercase">Output : openssl x509 -in cert.pem -text -noout</div>
         <pre style="margin:0;padding:.7rem .8rem;font-family:var(--mono);font-size:.78rem;line-height:1.5;color:var(--text);overflow-x:auto;-webkit-overflow-scrolling:touch">${lines.join('')}</pre>
       </div>

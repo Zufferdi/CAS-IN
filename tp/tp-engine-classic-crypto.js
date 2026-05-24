@@ -25,7 +25,7 @@
       <div style="margin:.7rem 0">${opts.artefactHTML}</div>
       <div class="ex-input-row" style="flex-wrap:wrap;gap:8px">
         ${opts.inputLabel ? `<span class="ex-input-label">${opts.inputLabel}</span>` : ''}
-        <input class="ex-input" id="inp-${id}" placeholder="${opts.placeholder || ''}" autocomplete="off" spellcheck="false" style="width:100%;max-width:340px;font-family:var(--mono);min-height:40px;box-sizing:border-box">
+        <input class="ex-input" id="inp-${id}" placeholder="${opts.placeholder || ''}" autocomplete="off" spellcheck="false" >
         <button class="btn-hint" id="btn-hint1-${id}" type="button">💡 Méthode</button>
         <button class="btn-hint" id="btn-hint2-${id}" type="button" disabled style="opacity:.4">💡💡 Où regarder</button>
         <button class="btn-hint" id="btn-hint3-${id}" type="button" disabled style="opacity:.4">💡💡💡 Réponse</button>
@@ -116,7 +116,7 @@
       return `<div style="${cls}">${escapeHTML(line) || '&nbsp;'}</div>`;
     });
     return `
-      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg);overflow-x:auto;-webkit-overflow-scrolling:touch">
         ${title ? `<div style="padding:.4rem .8rem;font-size:.7rem;color:var(--gold);background:rgba(240,192,64,.05);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.05em;text-transform:uppercase">${title}</div>` : ''}
         <pre style="margin:0;padding:.7rem .8rem;font-family:var(--mono);font-size:.78rem;line-height:1.5;color:var(--text);overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:pre">${lines.join('')}</pre>
       </div>
@@ -362,7 +362,8 @@
       const bits = charCode.toString(2).padStart(8, '0'); // ex: "01000001" pour 'A'
       // Construire un texte avec tabs/espaces selon les bits
       // Format : mot1 [tab/space selon bit 0] mot2 [tab/space selon bit 1] mot3 ...
-      const words = ['Hello', 'how', 'are', 'you', 'today', 'this', 'is', 'fine'];
+      // Il faut 9 mots : 1 initial + 8 séparateurs = 8 paires (mot, sep)
+      const words = ['Hello', 'how', 'are', 'you', 'today', 'this', 'is', 'fine', 'thanks'];
       const visualBits = bits.split('').map(b => b === '1' ? '⇥' : '·').join(' ');
       // Construire la ligne : mot suivi de tab (\t) si bit=1, espace ( ) si bit=0
       let line = words[0];
