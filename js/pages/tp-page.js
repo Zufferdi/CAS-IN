@@ -63,6 +63,9 @@ const CAT_META = {
   rsa:         {icon:'🔓', name:'RSA',                   sub:'Chiffrement asymétrique : taille de clé, déchiffrement (c^d mod n), composants (n/e/d/p/q)'},
   classic:     {icon:'🔤', name:'Crypto classique',       sub:'Base64 decode, César (shift inconnu), XOR 1-byte (known-plaintext)'},
   stegano:     {icon:'🎭', name:'Stéganographie',         sub:'Whitespace (tab/espace), polyglot JPEG+ZIP, LSB extraction'},
+  acquisition: {icon:'🔬', name:'Acquisition & Préservation', sub:'Hash dcfldd MD5/SHA-256, intégrité avant/après, chaîne de possession'},
+  llm:         {icon:'🤖', name:'LLM/IA & Deepfakes',     sub:'EXIF image IA (Stable Diffusion, Midjourney...), watermark Unicode, manifeste C2PA'},
+  dorks:       {icon:'🔎', name:'Google Dorks',           sub:'Opérateurs (site:, filetype:, intitle:...), construction, analyse d\'intention'},
   cracking:    {icon:'💥', name:'Cassage de hash',       sub:'Hashcat -m, John the Ripper, dictionnaire, rainbow, bcrypt, Argon2'},
   pki:         {icon:'📜', name:'PKI & X.509',           sub:'CN, SAN, OCSP/CRL, Key Usage, 398 jours CA/B Forum'},
   // ── v98 : Artefacts OS ──
@@ -91,6 +94,8 @@ const CAT_MAX = {
   rsa:5,
   // v105
   classic:5, stegano:5,
+  // v109
+  acquisition:5, llm:5, dorks:5,
   // v98
   ext4:5, winev:5, linux:5, macos:5,
   // v99
@@ -120,9 +125,20 @@ function go(cat, btn) {
     // Calculs & Identification
     'hextable':'grp-calc','fsidentify':'grp-calc','offset':'grp-calc',
     'bases':'grp-calc','hash':'grp-calc',
+    // Cryptologie & Réseau (v110 fix : manquaient depuis l'ajout des TP v101-v105)
+    'cidr':'grp-crypto','aes':'grp-crypto','rsa':'grp-crypto',
+    'cracking':'grp-crypto','pki':'grp-crypto',
+    'classic':'grp-crypto','stegano':'grp-crypto',
+    // Artefacts OS (v110 fix : manquaient depuis l'ajout v102)
+    'ext4':'grp-artefacts','winev':'grp-artefacts',
+    'linux':'grp-artefacts','macos':'grp-artefacts',
+    // OSINT & Détection (v110 fix : manquaient depuis l'ajout v103)
+    'exif':'grp-osintdet','osintdns':'grp-osintdet',
+    'sigma':'grp-osintdet','c2':'grp-osintdet',
     // Investigation
     'email':'grp-inv','network':'grp-inv','ir':'grp-inv',
-    'droitpenal':'grp-inv','glossaire':'grp-inv','examen':'grp-inv'
+    'droitpenal':'grp-inv','glossaire':'grp-inv','examen':'grp-inv',
+    'acquisition':'grp-inv','llm':'grp-inv','dorks':'grp-inv'
   };
   if (catGroup[cat]) { document.querySelectorAll('.sb-group').forEach(g=>g.classList.add('collapsed')); document.getElementById(catGroup[cat]).classList.remove('collapsed'); }
   // v106 : sync du nouveau trigger mobile (remplace l'ancien mob-pills)
