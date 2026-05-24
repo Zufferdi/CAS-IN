@@ -407,6 +407,9 @@ function mobChooseCat(cat) {
 function openMobDrawer() {
   const dr = document.getElementById('mob-drawer');
   if (!dr) return;
+  // v111 : retirer les défenses HTML qui forcent display:none au load
+  dr.removeAttribute('hidden');
+  dr.style.display = '';
   dr.classList.add('open');
   dr.setAttribute('aria-hidden', 'false');
   // S'assurer qu'on est sur le bon groupe
@@ -427,6 +430,7 @@ function closeMobDrawer() {
   dr.classList.remove('open');
   dr.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
+  // v111 : on laisse hidden/style retirés — le CSS gère display:none via .mob-drawer (pas .open)
 }
 
 function syncMobTrigger() {
