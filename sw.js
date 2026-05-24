@@ -1667,7 +1667,7 @@
 //       Stale-while-revalidate sur CSS/JS, channel postMessage 'GET_VERSION'.
 // v39..v21 : voir docs/CHANGELOG.md.
 
-const CACHE_VERSION = 'cas-in-v480';
+const CACHE_VERSION = 'cas-in-v488';
 
 // ─── Ressources critiques (HTML/JSON/CSS/JS) ───
 // Liste maintenue à la main car peu volatile. Les FICHES sont lues
@@ -1714,7 +1714,6 @@ const STATIC_ASSETS = [
   './data/parcours.json',
   './data/npcs.json',
   './data/npc-arcs.json',
-  './data/case-studies.json',
   './og-image.svg',
   './favicon.ico',
   './icon-192.png',
@@ -1751,7 +1750,6 @@ const STATIC_ASSETS = [
   './js/core/cas-in-role-careers.js',
   './js/core/cas-in-mastery.js',
   './js/core/cas-in-mastery-quiz.js',
-  './js/core/cas-in-unlocks.js',
   './js/core/cas-in-leaderboard.js',
   './js/core/cas-in-utils.js',
   './js/core/cas-in-counts.js',
@@ -1803,7 +1801,6 @@ const STATIC_ASSETS = [
   './js/components/quiz-share.js',
   './js/components/quest-banner.js',
   './js/components/gamification-toasts.js',
-  './js/components/rank-ceremony.js',
   './js/components/hub-activity.js',
   './js/components/hub-identity.js',
   './js/components/swiss-flags.js',
@@ -1849,6 +1846,8 @@ const STATIC_ASSETS = [
   './tp/tp-engine-easy.js',
   './tp/tp-engine-artefacts.js',
   './tp/tp-engine-osint-detect.js',
+  './tp/tp-engine-rsa.js',
+  './tp/tp-engine-classic-crypto.js',
 
   // ─── v2.93-v2.99 — Nouveaux modules (Dossiers, Sagas, Arcs, Dashboard...) ───
   './js/core/cas-in-skill-branches.js',
