@@ -67156,14 +67156,14 @@
     "opts": [
       "Requêtes <strong>TXT</strong> à haute fréquence vers un même domaine de niveau 2",
       "Requêtes AAAA avec adresses IPv6 ::1",
-      "Requêtes A vers des IPs RFC1918",
+      "Requêtes A vers des IPs RFC 1918",
       "Requêtes NS vers les root servers"
     ],
     "answers": [
       0
     ],
     "expl_ok": "Cobalt Strike DNS beacon utilise des requêtes <strong>TXT</strong> (data jusqu'à 255 bytes par réponse) pour exfiltrer des données et recevoir des tasks. Pattern : <em>haute fréquence de TXT vers un même domaine de second niveau</em>. Anomalie supplémentaire : le serveur peut répondre <strong><code>0.0.0.0</code></strong> quand il est busy.",
-    "expl_ko": "RFC1918 = adresses privées (LAN, pas Internet). IPv6 ::1 = loopback. NS vers root = trafic normal de résolution.",
+    "expl_ko": "RFC 1918 = adresses privées (LAN, pas Internet). IPv6 ::1 = loopback. NS vers root = trafic normal de résolution.",
     "refs": [
       "The DFIR Report — Cobalt Strike Defender's Guide"
     ],
@@ -72131,6 +72131,972 @@
       "hfs",
       "hfs_btree",
       "comparaison_fs"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "NTFS",
+    "diff": "easy",
+    "type": "single",
+    "q": "En NTFS, quel fichier système stocke <strong>les métadonnées de tous les fichiers</strong> du volume (taille, dates, ACL, position des données) ?",
+    "opts": [
+      "$Boot",
+      "$MFT (Master File Table)",
+      "$LogFile",
+      "$Bitmap"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>$MFT</strong> contient une entrée (1 KiB par défaut) pour chaque fichier et répertoire du volume. Les premières entrées (0-15) sont réservées aux fichiers système ($MFT lui-même, $MFTMirr, $LogFile, $Bitmap, $Boot, etc.). C'est la table centrale du système de fichiers NTFS — l'analogue de la FAT en NTFS.",
+    "expl_ko": "$Boot stocke le secteur de boot. $LogFile stocke le journal transactionnel. $Bitmap stocke l'allocation des clusters. C'est <strong>$MFT</strong> qui contient les métadonnées.",
+    "refs": [
+      "NTFS Master File Table"
+    ],
+    "feedback": {},
+    "fiches": [
+      "ntfs"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "NTFS",
+    "diff": "easy",
+    "type": "single",
+    "q": "Dans une entrée MFT NTFS, l'attribut <code>$STANDARD_INFORMATION</code> contient quels timestamps (les « SI times ») ?",
+    "opts": [
+      "Création, modification, accès, MFT modifié",
+      "Création et accès uniquement",
+      "Modification seule",
+      "Création et hash SHA-256"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "<strong>$STANDARD_INFORMATION</strong> stocke les 4 timestamps SI : <code>Created (C)</code>, <code>Modified (M)</code>, <code>Accessed (A)</code> et <code>MFT-Modified (E pour Entry)</code>. NTFS dispose en parallèle de <code>$FILE_NAME</code> qui stocke les 4 mêmes timestamps (« FN times ») — utile pour détecter le <em>timestomping</em> (modification de SI mais pas de FN par les outils comme <code>SetMACE</code>).",
+    "expl_ko": "Il y a bien 4 timestamps : Created, Modified, Accessed et MFT-Modified (Entry). Pas seulement 1 ou 2. Le hash n'est jamais stocké par NTFS — c'est l'outil forensique qui le calcule.",
+    "refs": [
+      "NTFS $STANDARD_INFORMATION"
+    ],
+    "feedback": {},
+    "fiches": [
+      "ntfs"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "NTFS",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce qu'un <strong>Alternate Data Stream (ADS)</strong> en NTFS ?",
+    "opts": [
+      "Un fichier de backup automatique",
+      "Un flux de données secondaire attaché à un fichier (syntaxe <code>nom.txt:caché</code>)",
+      "Une copie shadow VSS",
+      "Le journal $LogFile en lecture seule"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Un <strong>ADS</strong> est un flux de données NTFS attaché à un fichier ou un dossier, invisible avec <code>dir</code> classique. Syntaxe d'accès : <code>fichier.txt:flux_caché</code>. Historiquement utilisé par les malwares pour cacher des charges utiles. Détection : <code>dir /R</code> en CMD, <code>Get-Item -Stream *</code> en PowerShell, ou outils comme <code>streams.exe</code> (Sysinternals).",
+    "expl_ko": "Les backups Windows et VSS sont des mécanismes séparés. Le $LogFile est le journal transactionnel NTFS, sans rapport avec les ADS.",
+    "refs": [
+      "NTFS Alternate Data Streams",
+      "Sysinternals streams"
+    ],
+    "feedback": {},
+    "fiches": [
+      "ntfs"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Logiciels et outils forensiques",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel outil open-source du Volatility Foundation sert principalement à l'<strong>analyse forensique de mémoire vive (RAM)</strong> ?",
+    "opts": [
+      "Wireshark",
+      "Volatility 3",
+      "Autopsy",
+      "KAPE"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Volatility 3</strong> (réécriture Python 3, 2020) est l'outil de référence pour l'analyse de dumps RAM. Plugins courants : <code>windows.pslist</code>, <code>windows.malfind</code>, <code>windows.netscan</code>, <code>windows.hashdump</code>. Volatility 2 reste utilisé pour les anciens dumps mais n'est plus maintenu activement.",
+    "expl_ko": "Wireshark = analyse de captures réseau. Autopsy = front-end The Sleuth Kit pour disques. KAPE = collecte ciblée d'artefacts live (Eric Zimmerman).",
+    "refs": [
+      "Volatility Foundation",
+      "volatility 3"
+    ],
+    "feedback": {},
+    "fiches": [
+      "volatility_memory_forensics"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Logiciels et outils forensiques",
+    "diff": "easy",
+    "type": "single",
+    "q": "Que produit l'outil <strong>YARA</strong> dans un contexte forensique ?",
+    "opts": [
+      "Une signature de hash MD5 du fichier",
+      "Une chaîne de custody horodatée",
+      "Des règles de détection à base de patterns et de chaînes pour identifier malwares/familles",
+      "Un timeline auto-généré depuis $MFT"
+    ],
+    "answers": [
+      2
+    ],
+    "expl_ok": "<strong>YARA</strong> (créé par VirusTotal) permet d'écrire des règles de détection combinant <em>strings</em> (texte, hex, regex), <em>conditions</em> (Booléennes), et métadonnées. Format : <code>rule MaRegle { strings: $a = \"badstring\" condition: $a }</code>. Utilisé par tous les EDR, sandboxes, et analystes pour identifier des familles de malwares ou des artefacts spécifiques.",
+    "expl_ko": "Les hashes sont produits par <code>md5sum</code>, <code>sha256sum</code>, <code>FCIV</code>. La chaîne de custody est documentaire. Le timeline depuis $MFT est produit par <code>MFTECmd</code> ou <code>analyzeMFT</code>.",
+    "refs": [
+      "YARA",
+      "VirusTotal"
+    ],
+    "feedback": {},
+    "fiches": [
+      "yara"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Logiciels et outils forensiques",
+    "diff": "easy",
+    "type": "single",
+    "q": "<strong>The Sleuth Kit (TSK)</strong> de Brian Carrier comprend des outils en ligne de commande. Que fait <code>fls</code> ?",
+    "opts": [
+      "Liste les fichiers (y compris supprimés) sur une image disque",
+      "Calcule le hash MD5 du fichier",
+      "Convertit une image E01 en raw dd",
+      "Extrait les chaînes ASCII"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "<strong><code>fls</code></strong> (file list) liste les noms de fichiers et dossiers d'une image disque, incluant les <em>entrées supprimées</em> (marquées avec <code>*</code> dans la sortie). Combiné avec <code>-r</code> (récursif) et <code>-m</code> (format mactime), il produit un timeline complet. Cousin de <code>icat</code> (lit le contenu d'un inode/MFT entry par son numéro).",
+    "expl_ko": "Pour les hash : <code>md5sum</code>/<code>sha256sum</code>. Pour convertir E01→raw : <code>ewfexport</code>. Pour les strings : commande <code>strings</code> standard.",
+    "refs": [
+      "The Sleuth Kit",
+      "Brian Carrier"
+    ],
+    "feedback": {},
+    "fiches": [
+      "autopsy"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "C2 Frameworks & Post-Exploitation",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel framework C2 commercial est devenu un standard de fait pour les red teams (et abusé massivement par les groupes ransomware) ?",
+    "opts": [
+      "Empire",
+      "Cobalt Strike",
+      "Metasploit Pro",
+      "Covenant"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Cobalt Strike</strong> (Fortra, ex-HelpSystems) est <em>la</em> référence des frameworks C2 commerciaux. Beacon est son implant. Largement piraté/cracké et abusé par Conti, LockBit, Black Basta. Indicateurs : named pipes <code>\\\\.\\pipe\\msagent_*</code>, profile « Malleable C2 » personnalisable, sleep + jitter.",
+    "expl_ko": "Empire (PowerShell C2, abandonné 2019 puis repris par BC-SECURITY). Metasploit (Rapid7) est plutôt un framework d'exploitation. Covenant est .NET, plus confidentiel.",
+    "refs": [
+      "Cobalt Strike Fortra"
+    ],
+    "feedback": {},
+    "fiches": [
+      "c2_frameworks_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "C2 Frameworks & Post-Exploitation",
+    "diff": "easy",
+    "type": "single",
+    "q": "Dans un beacon Cobalt Strike, à quoi correspond le paramètre <strong>sleep</strong> ?",
+    "opts": [
+      "Le temps de boot de la machine cible",
+      "La durée d'attente entre deux check-ins du beacon vers le C2",
+      "La durée de vie de la session avant kill auto",
+      "Le timeout TCP du tunnel"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>sleep</strong> définit l'intervalle entre deux check-ins du beacon vers le serveur C2 (en secondes). Souvent combiné avec un <strong>jitter</strong> (variation aléatoire en %) pour rendre le pattern moins détectable. Sleep 60s + jitter 30% = check-in toutes les 42-78s. Détection : analyse de la périodicité dans les logs réseau (beaconing).",
+    "expl_ko": "Le temps de boot dépend du système, pas du framework C2. Les sessions Cobalt Strike ne timeout pas automatiquement (sauf si configuré). Le TCP timeout est un paramètre OS.",
+    "refs": [
+      "Cobalt Strike Beacon",
+      "Malleable C2"
+    ],
+    "feedback": {},
+    "fiches": [
+      "c2_frameworks_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "C2 Frameworks & Post-Exploitation",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel indicateur réseau est <strong>classique du beaconing C2</strong> ?",
+    "opts": [
+      "Trafic asynchrone aléatoire",
+      "Communications périodiques régulières vers une ou plusieurs IPs/domaines",
+      "Pic de trafic uniquement le weekend",
+      "Aucune connexion sortante"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le <strong>beaconing</strong> est la signature comportementale principale d'un C2 : connexions sortantes régulières (toutes les X secondes/minutes) vers des serveurs de commande. Détection : analyse statistique des intervalles (RITA, Zeek), entropie des destinations, durée des sessions. Cobalt Strike utilise sleep 60s + jitter 30% par défaut.",
+    "expl_ko": "Le trafic réellement aléatoire est rare (sauf jitter élevé). Le timing weekend est anecdotique. Et un C2 actif maintient évidemment des connexions sortantes.",
+    "refs": [
+      "Beaconing detection"
+    ],
+    "feedback": {},
+    "fiches": [
+      "c2_frameworks_forensique"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🔍",
+    "chapter": "Métadonnées et EXIF",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel outil en ligne de commande est <strong>la référence</strong> pour lire/écrire les métadonnées EXIF d'images ?",
+    "opts": [
+      "exiftool (Phil Harvey)",
+      "ImageMagick",
+      "GIMP",
+      "imagemeta"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "<strong>exiftool</strong> de Phil Harvey est l'outil universel pour lire/modifier les métadonnées EXIF, IPTC, XMP, GPS, etc. Sur plus de 200 formats. Usage : <code>exiftool photo.jpg</code>. Il extrait : date de prise, modèle d'appareil, géolocalisation GPS, logiciel éditeur, et bien plus.",
+    "expl_ko": "ImageMagick et GIMP éditent les images mais leur prise en charge des métadonnées est limitée. \"imagemeta\" n'est pas un outil reconnu.",
+    "refs": [
+      "exiftool"
+    ],
+    "feedback": {},
+    "fiches": [
+      "metadata_avancees"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🔍",
+    "chapter": "Métadonnées et EXIF",
+    "diff": "easy",
+    "type": "single",
+    "q": "Une photo JPEG prise avec un smartphone géolocalisé contient typiquement des métadonnées <strong>GPS</strong>. Quel champ EXIF stocke la latitude ?",
+    "opts": [
+      "GPSAltitudeRef",
+      "GPSLatitude + GPSLatitudeRef",
+      "GPSDate",
+      "GPSAccuracy"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>GPSLatitude</strong> stocke la valeur (degrés/minutes/secondes ou décimal), et <strong>GPSLatitudeRef</strong> indique l'hémisphère (N ou S). Symétriquement, <code>GPSLongitude</code> + <code>GPSLongitudeRef</code> (E ou W). Plupart des plateformes web (Facebook, Instagram) suppriment les GPS au upload par défaut, mais pas tous (ex: Flickr, certaines apps).",
+    "expl_ko": "GPSAltitudeRef indique l'altitude au-dessus/dessous du niveau de la mer. GPSDate est la date du fix GPS. GPSAccuracy est une précision (peu standardisée).",
+    "refs": [
+      "EXIF GPS tags"
+    ],
+    "feedback": {},
+    "fiches": [
+      "metadata_avancees"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🔍",
+    "chapter": "Métadonnées et EXIF",
+    "diff": "easy",
+    "type": "single",
+    "q": "Les fichiers PDF Word/Office contiennent des métadonnées XMP. Lesquelles sont particulièrement <strong>OSINT-utiles</strong> ?",
+    "opts": [
+      "Le nombre d'imprimantes installées",
+      "L'auteur, le logiciel de création, et l'horodatage",
+      "La résolution écran",
+      "L'adresse MAC de la carte réseau"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Les PDF (et docs Office) embarquent <strong>Author</strong> (nom utilisateur OS au moment de la création), <strong>Producer</strong>/<strong>Creator</strong> (logiciel), <strong>CreationDate</strong> et <strong>ModDate</strong>. Permet de pivoter sur un auteur (réutilisation du même Author sur d'autres documents publics). Exemple historique : doc Word « Tony.Blair » dossier WMD 2003.",
+    "expl_ko": "Les imprimantes ne sont pas stockées dans les métadonnées de fichier. La résolution écran et l'adresse MAC ne sont pas dans les métadonnées Office/PDF.",
+    "refs": [
+      "XMP metadata",
+      "Dossier dodgy"
+    ],
+    "feedback": {},
+    "fiches": [
+      "metadata_avancees"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Communications sans fil & RFID",
+    "diff": "easy",
+    "type": "single",
+    "q": "En forensique Wi-Fi, qu'est-ce qu'une <strong>probe request</strong> ?",
+    "opts": [
+      "Un mot de passe Wi-Fi crypté envoyé au routeur",
+      "Une trame émise par un appareil qui cherche les SSID qu'il connaît (« cherche-tu là, ssid_X ? »)",
+      "Un signal de balise (beacon) émis par l'AP",
+      "Un paquet PING ICMP wifi"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Les <strong>probe requests</strong> sont émises par les appareils Wi-Fi (smartphone, laptop) pour découvrir les SSID auxquels ils se sont déjà connectés. Elles contiennent l'<strong>adresse MAC</strong> de l'appareil et parfois le SSID recherché. C'est la base du <em>wifi tracking</em> et de l'identification de devices (Wigle, MAC randomization Android 11+/iOS 14+).",
+    "expl_ko": "Le mot de passe n'est jamais envoyé en clair (PSK est dérivé localement). Les beacons sont émis par l'AP, pas les clients. PING ICMP est différent (couche IP).",
+    "refs": [
+      "IEEE 802.11 probe request"
+    ],
+    "feedback": {},
+    "fiches": [
+      "wifi_bluetooth_rfid_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Communications sans fil & RFID",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle est la <strong>fréquence</strong> typique d'une carte RFID type Mifare (badge d'accès bureau, ski-pass) ?",
+    "opts": [
+      "13.56 MHz (HF)",
+      "125 kHz (LF)",
+      "868 MHz (UHF)",
+      "2.4 GHz"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Les <strong>Mifare</strong> (NXP) et autres ISO 14443 opèrent à <strong>13.56 MHz</strong> (HF — High Frequency). Cartes courantes : Mifare Classic, DESFire, Plus. À ne pas confondre avec les badges <strong>125 kHz</strong> (LF) type HID Prox, EM4100 — plus anciens, plus faciles à cloner avec un Proxmark3.",
+    "expl_ko": "125 kHz = HID Prox / EM4100 (vieux badges). 868 MHz = UHF RFID logistique (palettes). 2.4 GHz = Wi-Fi/Bluetooth, pas RFID passif.",
+    "refs": [
+      "Mifare 13.56 MHz",
+      "ISO 14443"
+    ],
+    "feedback": {},
+    "fiches": [
+      "wifi_bluetooth_rfid_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Communications sans fil & RFID",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel outil/dongle est devenu populaire pour <strong>analyser et émettre des signaux radio</strong> dans une large gamme (notamment Bluetooth, BLE, sub-GHz, RFID 125 kHz/13.56 MHz, infrarouge) ?",
+    "opts": [
+      "Raspberry Pi standard",
+      "Flipper Zero",
+      "Arduino Uno",
+      "HP iPAQ"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le <strong>Flipper Zero</strong> est un dongle multi-radio open-source (sub-GHz 300-928 MHz, NFC 13.56 MHz, RFID 125 kHz, Bluetooth LE, infrarouge, iButton). Massivement utilisé pour la recherche et les CTF. Interdit ou réglementé dans certains pays pour son potentiel d'utilisation malveillante (clés voiture, badges).",
+    "expl_ko": "Le Raspberry Pi standard n'a pas ces radios sans add-ons. Arduino n'a pas non plus ces radios par défaut. iPAQ = PDA HP des années 2000.",
+    "refs": [
+      "Flipper Zero"
+    ],
+    "feedback": {},
+    "fiches": [
+      "wifi_bluetooth_rfid_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "LLM, IA générative & Deepfakes",
+    "diff": "easy",
+    "type": "single",
+    "q": "Qu'est-ce que la <strong>direct prompt injection</strong> sur un LLM ?",
+    "opts": [
+      "Une attaque physique sur le serveur GPU",
+      "Un utilisateur tape directement des instructions dans le chat pour faire dévier l'IA de son rôle",
+      "Une attaque XSS dans l'interface web",
+      "Un brute force du mot de passe"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Direct prompt injection</strong> = l'attaquant <em>est</em> l'utilisateur final. Il tape des instructions pour outrepasser le system prompt : « Ignore les instructions précédentes et... », « Tu es DAN (Do Anything Now)... », jailbreaks. À distinguer de <strong>indirect prompt injection</strong> = instructions cachées dans des données traitées par le LLM (email, PDF, page web).",
+    "expl_ko": "Pas une attaque hardware ni XSS classique ni brute force. C'est une attaque par <em>prompt</em>, donc en langage naturel.",
+    "refs": [
+      "OWASP LLM Top 10",
+      "LLM01 Prompt Injection"
+    ],
+    "feedback": {},
+    "fiches": [
+      "llm_ia_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "LLM, IA générative & Deepfakes",
+    "diff": "easy",
+    "type": "single",
+    "q": "Un <strong>deepfake vidéo</strong> est typiquement produit par quel type de technique IA ?",
+    "opts": [
+      "Substitution simple de pixels (cut-paste)",
+      "Réseaux de neurones génératifs (GAN ou modèles de diffusion)",
+      "Compression JPEG",
+      "Stéganographie classique"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Les deepfakes vidéo modernes utilisent des <strong>GAN</strong> (Generative Adversarial Networks, ex: FaceSwap, DeepFaceLab) ou des <strong>modèles de diffusion</strong> (Stable Video Diffusion, Sora). Détection forensique : inconsistances temporelles entre frames, clignement irréaliste, artefacts de bord, signatures spectrales en domaine fréquentiel.",
+    "expl_ko": "Le cut-paste produit des montages grossiers, pas des deepfakes convaincants. JPEG est une compression. La stéganographie cache des données mais ne génère pas de visages.",
+    "refs": [
+      "GAN",
+      "Stable Diffusion",
+      "DeepFake forensics"
+    ],
+    "feedback": {},
+    "fiches": [
+      "llm_ia_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "LLM, IA générative & Deepfakes",
+    "diff": "easy",
+    "type": "single",
+    "q": "Le standard <strong>C2PA</strong> (Content Provenance and Authenticity) sert à quoi ?",
+    "opts": [
+      "Chiffrer le contenu vidéo de bout en bout",
+      "Attester cryptographiquement de l'origine et des modifications d'un média (photo, vidéo)",
+      "Compresser les fichiers HEIF",
+      "Convertir du HEIC vers JPEG"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>C2PA</strong> (Adobe, Microsoft, Intel, BBC, Sony, etc.) signe cryptographiquement les médias en y attachant un <em>Content Credentials</em> manifest : appareil de capture, chaîne d'édition (« généré par DALL-E », « édité par Photoshop »), signature du fabricant. Conçu pour lutter contre les deepfakes et la désinformation. Adopté par les iPhone 15 Pro, certains modèles Sony α.",
+    "expl_ko": "Le chiffrement bout-en-bout est différent. HEIF/HEIC = formats d'image, pas de l'authentification.",
+    "refs": [
+      "C2PA",
+      "Content Credentials"
+    ],
+    "feedback": {},
+    "fiches": [
+      "llm_ia_forensique"
+    ]
+  },
+  {
+    "theme": "Acquisition et analyse",
+    "theme_icon": "🔍",
+    "chapter": "Analyse et recovery",
+    "diff": "easy",
+    "type": "single",
+    "q": "Le <strong>file carving</strong> consiste à récupérer des fichiers en :",
+    "opts": [
+      "Lisant les entrées de la FAT/MFT",
+      "Cherchant les signatures (magic bytes) en début/fin de fichier dans l'espace non alloué",
+      "Demandant au système de restaurer ses backups",
+      "Récupérant la corbeille (Recycle Bin)"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le <strong>file carving</strong> reconstruit des fichiers à partir des <strong>signatures</strong> (magic bytes : <code>FF D8 FF E0</code> pour JPEG, <code>50 4B 03 04</code> pour ZIP, <code>25 50 44 46</code> pour PDF), sans dépendre des métadonnées du système de fichiers. Outils : <code>PhotoRec</code>, <code>Scalpel</code>, <code>foremost</code>, <code>bulk_extractor</code>. Crucial quand la FAT/MFT est endommagée ou que les fichiers ont été supprimés depuis longtemps.",
+    "expl_ko": "Lire la FAT/MFT, c'est de la récupération <em>basée métadonnées</em>, pas du carving. Les backups et la corbeille sont des mécanismes Windows distincts.",
+    "refs": [
+      "File carving",
+      "PhotoRec",
+      "magic bytes"
+    ],
+    "feedback": {},
+    "fiches": [
+      "data_carving"
+    ]
+  },
+  {
+    "theme": "Acquisition et analyse",
+    "theme_icon": "🔍",
+    "chapter": "Analyse et recovery",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel outil open-source est <strong>la référence du file carving</strong> grand public ?",
+    "opts": [
+      "Wireshark",
+      "PhotoRec (CGSecurity)",
+      "Volatility",
+      "Sleuth Kit fls"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>PhotoRec</strong> de Christophe Grenier (CGSecurity, ~2002) est le carver le plus populaire. Multi-plateforme, supporte des centaines de formats (image, audio, vidéo, archive, doc). Distribué avec <code>TestDisk</code> (récupération de partitions). Limite : ne reconstruit pas le nom du fichier (les noms vivent dans les métadonnées du FS).",
+    "expl_ko": "Wireshark = réseau. Volatility = mémoire. fls liste les entrées MFT/inode (récup basée métadonnées, pas carving).",
+    "refs": [
+      "PhotoRec",
+      "CGSecurity",
+      "TestDisk"
+    ],
+    "feedback": {},
+    "fiches": [
+      "data_carving"
+    ]
+  },
+  {
+    "theme": "Acquisition et analyse",
+    "theme_icon": "🔍",
+    "chapter": "Analyse et recovery",
+    "diff": "easy",
+    "type": "single",
+    "q": "Limite principale du <strong>file carving</strong> ?",
+    "opts": [
+      "Il faut le mot de passe administrateur",
+      "Il ne récupère que les fichiers contigus non fragmentés",
+      "Il ne fonctionne que sur NTFS",
+      "Il ne marche pas sur SSD"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le carving suppose que les fichiers sont stockés en blocs <strong>contigus</strong>. Sur un disque fragmenté (cas fréquent), les fichiers peuvent être incomplets ou corrompus. Les carvers avancés (<code>fragmented file carving</code>) essaient de reassembler, mais avec un taux de succès limité. Sur SSD avec TRIM actif, les blocs supprimés sont effacés par le contrôleur : le carving est en grande partie inefficace.",
+    "expl_ko": "Pas de mot de passe nécessaire (lecture brute des secteurs). Fonctionne sur tous systèmes de fichiers (par signature). Sur SSD avec TRIM c'est limité, mais ce n'est pas la limite principale énoncée typiquement.",
+    "refs": [
+      "Fragmented file carving"
+    ],
+    "feedback": {},
+    "fiches": [
+      "data_carving"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🔍",
+    "chapter": "Infrastructure, DNS et pivots",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quelle commande basique <strong>résout un nom de domaine en adresse IP</strong> ?",
+    "opts": [
+      "<code>traceroute</code>",
+      "<code>dig</code> ou <code>nslookup</code>",
+      "<code>netstat</code>",
+      "<code>ping6</code>"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong><code>dig nom.tld</code></strong> (Linux/macOS) ou <strong><code>nslookup nom.tld</code></strong> (Windows/Linux) interrogent les DNS. <code>dig +short</code> donne juste l'IP. Variantes utiles : <code>dig MX domain</code>, <code>dig TXT domain</code>, <code>dig @8.8.8.8 domain</code> pour forcer un resolver spécifique.",
+    "expl_ko": "<code>traceroute</code> mesure le chemin réseau. <code>netstat</code> liste les connexions locales. <code>ping6</code> est ping en IPv6 (résout aussi mais commande dédiée à la résolution = dig/nslookup).",
+    "refs": [
+      "dig (BIND)",
+      "nslookup"
+    ],
+    "feedback": {},
+    "fiches": [
+      "dns_forensique"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🔍",
+    "chapter": "Infrastructure, DNS et pivots",
+    "diff": "easy",
+    "type": "single",
+    "q": "<strong>WHOIS</strong> retourne quel type d'informations sur un domaine ?",
+    "opts": [
+      "La date de création, le registrar, les serveurs DNS, et (parfois) le contact",
+      "Le contenu HTML de la page d'accueil",
+      "Les utilisateurs connectés au serveur",
+      "L'historique des cookies"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "<strong>WHOIS</strong> (RFC 3912) interroge les bases des registrars. Champs typiques : <code>Domain Name</code>, <code>Registrar</code>, <code>Creation Date</code>, <code>Updated Date</code>, <code>Registry Expiry Date</code>, <code>Name Server</code>. Depuis le RGPD (mai 2018), les contacts WHOIS sont anonymisés par défaut sur les TLD européens (.fr, .de, .ch). Service complémentaire : <code>whois.icann.org</code>, <code>whoisxmlapi.com</code> (avec historique).",
+    "expl_ko": "Le HTML s'obtient avec curl/wget. Les utilisateurs connectés (rien de standard, sauf SSH). Les cookies sont navigateur-locaux.",
+    "refs": [
+      "WHOIS RFC 3912",
+      "RGPD WHOIS"
+    ],
+    "feedback": {},
+    "fiches": [
+      "dns_forensique"
+    ]
+  },
+  {
+    "theme": "OSINT",
+    "theme_icon": "🔍",
+    "chapter": "Infrastructure, DNS et pivots",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel service en ligne permet de <strong>cartographier les services exposés sur Internet</strong> par IP (banner grabbing à grande échelle) ?",
+    "opts": [
+      "Wikipedia",
+      "Shodan (et son concurrent Censys)",
+      "Stack Overflow",
+      "Pastebin"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Shodan</strong> (John Matherly, 2009) et <strong>Censys</strong> (Université du Michigan, 2015) sont les moteurs de recherche des appareils exposés sur Internet. Ils scannent en continu les ports communs (80, 443, 22, 3389, 5900, 102 Modbus, 502 Modbus/TCP, etc.) et indexent les bannières et certificats. Recherches courantes : <code>port:5900 country:CH</code> (VNC en Suisse), <code>org:\"Bank XYZ\"</code>.",
+    "expl_ko": "Wikipedia, Stack Overflow, Pastebin sont des sites de contenu, pas des moteurs de scan.",
+    "refs": [
+      "Shodan",
+      "Censys"
+    ],
+    "feedback": {},
+    "fiches": [
+      "dns_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Techniques et méthodologie",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel <strong>principe forensique fondamental</strong> dit que « tout contact laisse une trace » ?",
+    "opts": [
+      "Principe de Locard",
+      "Principe de Heisenberg",
+      "Loi de Murphy",
+      "Loi de Moore"
+    ],
+    "answers": [
+      0
+    ],
+    "expl_ok": "Le <strong>principe de Locard</strong> (Edmond Locard, criminologue lyonnais, début XXe siècle) : <em>« Tout contact laisse une trace »</em>. Transposé au numérique : une intrusion laisse des artefacts (logs, prefetch, $MFT, mémoire, NetFlow, etc.). Principe directeur du DFIR.",
+    "expl_ko": "Heisenberg = mécanique quantique. Murphy = humour ingénieur. Moore = densité de transistors.",
+    "refs": [
+      "Edmond Locard",
+      "principe de Locard"
+    ],
+    "feedback": {},
+    "fiches": [
+      "algorithmes_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Techniques et méthodologie",
+    "diff": "easy",
+    "type": "single",
+    "q": "L'<strong>ordre de volatilité</strong> en acquisition forensique impose de capturer en premier :",
+    "opts": [
+      "Le disque dur",
+      "La mémoire vive (RAM) et l'état système live",
+      "Les sauvegardes externes",
+      "Les emails archivés"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "L'<strong>ordre de volatilité</strong> (RFC 3227 « Guidelines for Evidence Collection and Archiving », D. Brezinski & T. Killalea, 2002) : 1) registres/cache CPU, 2) <strong>mémoire vive (RAM)</strong>, 3) tables routage/ARP/processus, 4) données temporaires, 5) disque, 6) logs distants, 7) configuration physique. On capture du plus volatil au moins volatil.",
+    "expl_ko": "Le disque, les sauvegardes et les archives sont les éléments les moins volatils — on les capture en dernier.",
+    "refs": [
+      "RFC 3227",
+      "ordre de volatilité"
+    ],
+    "feedback": {},
+    "fiches": [
+      "algorithmes_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Techniques et méthodologie",
+    "diff": "easy",
+    "type": "single",
+    "q": "Le terme <strong>chain of custody</strong> (chaîne de possession) désigne :",
+    "opts": [
+      "Le câble réseau d'une perquisition",
+      "La traçabilité documentée de toutes les manipulations d'une preuve (qui, quand, quoi, où)",
+      "Une technique d'analyse mémoire",
+      "Une certification IT internationale"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "La <strong>chain of custody</strong> documente <em>qui</em> a manipulé la preuve, <em>quand</em>, <em>pour faire quoi</em>, <em>où elle a été stockée</em>. Indispensable pour la recevabilité judiciaire. En Suisse : art. 192 ss CPP sur les pièces à conviction. Hash MD5/SHA-256 + horodatage signé + scellé physique. Une rupture de chaîne peut rendre la preuve irrecevable.",
+    "expl_ko": "Pas un câble, pas une technique d'analyse, pas une certification IT.",
+    "refs": [
+      "Art. 192 CPP",
+      "chain of custody",
+      "RFC 3227"
+    ],
+    "feedback": {},
+    "fiches": [
+      "algorithmes_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Sigma Rules & Detection Engineering",
+    "diff": "easy",
+    "type": "single",
+    "q": "Une règle <strong>Sigma</strong>, c'est :",
+    "opts": [
+      "Une signature antivirus binaire",
+      "Une règle de détection en YAML, traduisible vers Splunk/Elastic/Sentinel/etc.",
+      "Un format de capture réseau",
+      "Un outil de scan de vulnérabilités"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Sigma</strong> (Florian Roth, 2017) est un format de règles de détection en YAML, <em>indépendant du SIEM</em>. Une règle Sigma se compile (via <code>sigma-cli</code>) vers Splunk SPL, Elastic ESQL/EQL, Microsoft Sentinel KQL, etc. Permet le partage de détections cross-vendor. Repo principal : <code>SigmaHQ/sigma</code> sur GitHub.",
+    "expl_ko": "Pas une signature binaire (c'est plutôt YARA). Pas un format de capture (c'est PCAP). Pas un scanner (c'est Nessus/OpenVAS).",
+    "refs": [
+      "Sigma",
+      "SigmaHQ",
+      "Florian Roth"
+    ],
+    "feedback": {},
+    "fiches": [
+      "sigma_rules"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Sigma Rules & Detection Engineering",
+    "diff": "easy",
+    "type": "single",
+    "q": "Dans une règle Sigma, le bloc <code>detection:</code> contient :",
+    "opts": [
+      "Le hash SHA-256 du malware",
+      "Des sélections (selection, filter) combinées par un opérateur de condition",
+      "L'IP du C2",
+      "Le nom de l'auteur"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le bloc <code>detection:</code> définit des <em>sélections</em> (<code>selection_1</code>, <code>selection_2</code>, <code>filter</code>...) chacune avec des conditions sur les champs (Event ID, ProcessName, CommandLine, etc.), puis un <code>condition:</code> qui combine ces sélections (<code>selection_1 and not filter</code>). Le reste de la règle : <code>title</code>, <code>author</code>, <code>logsource</code>, <code>level</code>, <code>tags</code> (souvent MITRE ATT&CK).",
+    "expl_ko": "Le hash et l'IP sont dans des champs spécifiques, pas dans le bloc detection lui-même. L'auteur est dans la métadonnée <code>author:</code>.",
+    "refs": [
+      "Sigma Specification"
+    ],
+    "feedback": {},
+    "fiches": [
+      "sigma_rules"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "Sigma Rules & Detection Engineering",
+    "diff": "easy",
+    "type": "single",
+    "q": "Pour quelles sources de données Sigma est-il le plus utilisé ?",
+    "opts": [
+      "Captures vidéo de caméras IP",
+      "Logs Windows (Sysmon, Security 4624/4688, etc.) et logs Linux/macOS",
+      "Sondes RFID en entrepôt",
+      "Codes-barres"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Sigma cible massivement les <strong>logs d'événements OS</strong> : Windows Event Log (Security, System, Application, Sysmon — Microsoft-Windows-Sysmon/Operational), Linux <code>auditd</code>/syslog, macOS <code>unified log</code>. Aussi : logs proxy, EDR, cloud (AWS CloudTrail, GCP Audit Logs). Pas conçu pour vidéo/RFID/codes-barres.",
+    "expl_ko": "Pas des médias, pas des objets physiques. Sigma est un outil de détection d'événements de sécurité dans les logs.",
+    "refs": [
+      "Sigma logsources",
+      "Sysmon"
+    ],
+    "feedback": {},
+    "fiches": [
+      "sigma_rules"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "ICS / SCADA / OT Forensique",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel protocole industriel est extrêmement répandu (et historiquement <strong>sans authentification</strong> ni chiffrement) ?",
+    "opts": [
+      "HTTPS",
+      "Modbus",
+      "SSH",
+      "IMAPS"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Modbus</strong> (Schneider Electric, 1979), en variante série (RTU/ASCII) ou TCP (port 502), est <em>le</em> protocole industriel historique : automates Schneider, Siemens, Allen-Bradley, etc. Aucune authentification, aucun chiffrement par défaut. Un attaquant qui atteint le réseau OT peut lire/écrire les registres des PLC. Modbus/TCP Security (RFC-like) tente de combler mais peu déployé.",
+    "expl_ko": "HTTPS et SSH sont chiffrés. IMAPS = email chiffré, pas industriel.",
+    "refs": [
+      "Modbus",
+      "Schneider Electric"
+    ],
+    "feedback": {},
+    "fiches": [
+      "ics_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "ICS / SCADA / OT Forensique",
+    "diff": "easy",
+    "type": "single",
+    "q": "Le modèle <strong>Purdue</strong> sert à structurer un réseau industriel en :",
+    "opts": [
+      "1 seul niveau plat",
+      "5 niveaux (0=capteurs/actionneurs jusqu'à 4-5=IT/Internet)",
+      "OSI 7 couches",
+      "Une architecture peer-to-peer"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Le <strong>modèle Purdue</strong> (PERA, Theodore Williams, 1990) hiérarchise les réseaux industriels en niveaux : <strong>Niveau 0</strong> capteurs/actionneurs, <strong>1</strong> contrôle (PLC), <strong>2</strong> supervision (HMI/SCADA), <strong>3</strong> opérations site (MES, historians), <strong>3.5</strong> DMZ industrielle, <strong>4-5</strong> IT corporate. Norme de fait pour la segmentation OT/IT (IEC 62443).",
+    "expl_ko": "Le modèle Purdue est explicitement hiérarchique. OSI est un modèle réseau différent (couches 1-7).",
+    "refs": [
+      "Purdue model",
+      "IEC 62443"
+    ],
+    "feedback": {},
+    "fiches": [
+      "ics_forensique"
+    ]
+  },
+  {
+    "theme": "Forensique",
+    "theme_icon": "🔬",
+    "chapter": "ICS / SCADA / OT Forensique",
+    "diff": "easy",
+    "type": "single",
+    "q": "Pourquoi un <strong>scan Nmap classique</strong> est-il dangereux sur un réseau OT en production ?",
+    "opts": [
+      "Il consomme trop de bande passante",
+      "Il peut faire crasher d'anciens PLC ou perturber le procédé industriel",
+      "Il est interdit par la loi suisse",
+      "Il ne fonctionne pas sur Modbus"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "Les <strong>PLC anciens</strong> (notamment Siemens S7-300, certains Schneider Modicon) peuvent <em>crasher</em> sur un simple SYN scan ou sur les scripts NSE <code>--script vuln</code>. Vecteurs documentés : CVE-2015-5374 (Industroyer-related), DoS sur stack TCP/IP embarquée. Bonne pratique : IDS passif (Zeek + ICS protocols, Claroty/Nozomi) ou TAP optique passif, jamais scan actif en production.",
+    "expl_ko": "La bande passante n'est pas l'enjeu principal (PLC consomment peu). Pas de loi spécifique. Nmap fonctionne sur Modbus (NSE <code>modbus-discover</code>).",
+    "refs": [
+      "Nmap OT risks",
+      "CVE-2015-5374"
+    ],
+    "feedback": {},
+    "fiches": [
+      "ics_forensique"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Windows — Journaux et Event Logs",
+    "diff": "easy",
+    "type": "single",
+    "q": "L'Event ID <strong>4624</strong> dans le journal Security de Windows signifie :",
+    "opts": [
+      "Un échec de login",
+      "Une connexion utilisateur réussie (logon)",
+      "Un crash système",
+      "Un changement d'heure système"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>Event ID 4624</strong> = <em>An account was successfully logged on</em>. Champs clés : <code>LogonType</code> (2=interactive, 3=network, 10=RemoteInteractive RDP), <code>TargetUserName</code>, <code>WorkstationName</code>, <code>IpAddress</code>. À mettre en parallèle avec 4625 (échec), 4634/4647 (logoff), 4648 (logon avec credentials explicites — RunAs).",
+    "expl_ko": "Échec = 4625. Crash = 6008 (Event log service). Changement d'heure = 4616.",
+    "refs": [
+      "Windows Event ID 4624"
+    ],
+    "feedback": {},
+    "fiches": [
+      "logs_windows"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Windows — Journaux et Event Logs",
+    "diff": "easy",
+    "type": "single",
+    "q": "Quel format de fichier Windows Vista+ utilise pour les <strong>journaux d'événements</strong> ?",
+    "opts": [
+      ".evt (binaire EVT)",
+      ".evtx (XML binaire)",
+      ".log (texte ASCII)",
+      ".csv"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>.evtx</strong> (Event Trace XML, depuis Windows Vista/2008) remplace le vieux .evt (XP/2003). Format XML binaire compressé, stocké dans <code>C:\\Windows\\System32\\winevt\\Logs\\</code>. Lecture : Event Viewer GUI, <code>wevtutil</code> CLI, <code>Get-WinEvent</code> PowerShell, ou outils forensiques (<code>EvtxECmd</code> d'Eric Zimmerman, libevtx).",
+    "expl_ko": "EVT = pré-Vista. Les .log sont du texte ASCII (Apache, Linux). .csv n'est pas le format natif Windows.",
+    "refs": [
+      "EVTX format",
+      "wevtutil"
+    ],
+    "feedback": {},
+    "fiches": [
+      "logs_windows"
+    ]
+  },
+  {
+    "theme": "Spécificité des OS",
+    "theme_icon": "🖥️",
+    "chapter": "Windows — Journaux et Event Logs",
+    "diff": "easy",
+    "type": "single",
+    "q": "<strong>Sysmon</strong> (Sysinternals) est :",
+    "opts": [
+      "Un outil pour surveiller la température CPU",
+      "Un service qui ajoute des Event Logs détaillés (création de processus, connexions réseau, modif registre, etc.)",
+      "Un antivirus Microsoft",
+      "Un gestionnaire de tâches amélioré"
+    ],
+    "answers": [
+      1
+    ],
+    "expl_ok": "<strong>System Monitor (Sysmon)</strong>, par Mark Russinovich (Sysinternals/Microsoft), enrichit Windows Event Log avec un journal dédié <code>Microsoft-Windows-Sysmon/Operational</code>. Events les plus utilisés : <strong>1</strong> Process Create, <strong>3</strong> Network connection, <strong>7</strong> Image loaded (DLL), <strong>11</strong> File create, <strong>13</strong> Registry value set, <strong>22</strong> DNS query. Configuration via XML (config Olaf Hartong, SwiftOnSecurity sont des références publiques).",
+    "expl_ko": "Pas un thermomètre, pas un AV (c'est Defender), pas un task manager (c'est Process Explorer).",
+    "refs": [
+      "Sysmon Sysinternals",
+      "Mark Russinovich"
+    ],
+    "feedback": {},
+    "fiches": [
+      "logs_windows"
     ]
   }
 ]
