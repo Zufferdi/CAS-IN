@@ -62,6 +62,25 @@
     'Tools · Calculateurs',
     'Fiches · Lecture',
     'Secrets 🤫',
+    // v121c — 8 catégories doctrinales (72 trophées)
+    'Doctrine · Vauthier MP-VD',
+    'Doctrine · IBAN spoofing',
+    'Doctrine · Laufenburg',
+    'Doctrine · HPM EIMP',
+    'Doctrine · EncroChat/Sky ECC',
+    'Doctrine · Ransomware HRHP',
+    'Doctrine · Arc transversal',
+    'Doctrine · Maîtres doctrinaux',
+    // v122a — Saga Étoile noire (stations-service ATG)
+    'Doctrine · Étoile noire',
+    // v122b — Saga Source trouble (eau potable SCADA)
+    'Doctrine · Source trouble',
+    'Doctrine · Maillon faible',
+    // v121d — 2 catégories supplémentaires (réputation + narratifs)
+    'Doctrine · Réputation institutionnelle',
+    'Doctrine · Choix narratifs (secrets)',
+    // v121e — 1 catégorie supplémentaire (compétences techniques)
+    'Doctrine · Compétences techniques',
   ];
 
   // ─────────────────────────────────────────────────────────────
@@ -427,9 +446,1250 @@
   ];
 
   // ─────────────────────────────────────────────────────────────
+  // v121c — DOCTRINE (72 trophées doctrinaux liés aux sagas v114-v119)
+  //
+  // Récompensent la progression dans les 6 sagas majeures :
+  //   B2 Vauthier MP-VD, C1 IBAN spoofing, C2 Laufenburg,
+  //   A6 HPM EIMP, A2 EncroChat/Sky ECC, A1 Ransomware HRHP
+  // + 12 trophées transversaux (méta arc, doctrine globale)
+  //
+  // Évaluation : basée sur scene_results (pct ≥ 60) + scenesTagCount
+  // Pas de modification de scene-app.js requise.
+  // ─────────────────────────────────────────────────────────────
+
+  // Helpers spécifiques à la doctrine
+  function doctrineHasScene(sceneId, results) {
+    return !!(results && results[sceneId] && results[sceneId].pct >= 60);
+  }
+  function doctrineCountScenes(sceneIds, results) {
+    if (!results) return 0;
+    return sceneIds.filter(id => doctrineHasScene(id, results)).length;
+  }
+  function doctrineSceneResults() {
+    try { return JSON.parse(localStorage.getItem('scene_results') || '{}') || {}; }
+    catch (_) { return {}; }
+  }
+
+  // IDs des scènes par saga (référence centralisée)
+  const SAGA_SCENES = {
+    vauthier: [
+      'vd-affaire-vauthier-1-premier-dossier',
+      'vd-affaire-vauthier-2-premiere-audition',
+      'vd-affaire-vauthier-3-mandat-tmc-rejete',
+      'vd-affaire-vauthier-4-fuite-presse',
+      'vd-affaire-vauthier-5-analyses-forensiques',
+      'vd-affaire-vauthier-6-audience-scellement',
+      'vd-affaire-vauthier-7-decision-finale',
+    ],
+    iban: [
+      'ge-affaire-iban-1-decouverte-lundi-matin',
+      'ge-affaire-iban-2-recall-swift-forensique-mail',
+      'ge-affaire-iban-3-mros-instruction-146cp',
+      'ge-affaire-iban-4-tracage-crypto-usdt-tron',
+      'ge-affaire-iban-5-eimp-hong-kong-eurojust',
+      'ge-affaire-iban-6-audition-cfo-responsabilite-pme',
+      'ge-affaire-iban-7-recouvrement-final-bilan',
+    ],
+    laufenburg: [
+      'ag-affaire-laufenburg-1-detection-nocturne',
+      'ag-affaire-laufenburg-2-forensique-aeroscope-radar',
+      'ag-affaire-laufenburg-3-identification-operateur',
+      'ag-affaire-laufenburg-4-perquisition-munich',
+      'ag-affaire-laufenburg-5-forensique-disques-attribution',
+      'ag-affaire-laufenburg-6-cooperation-commanditaire',
+      'ag-affaire-laufenburg-7-proces-tpf-bilan',
+    ],
+    hpm: [
+      'hpm-affaire-eimp-1-reception-demande-francaise',
+      'hpm-affaire-eimp-2-negociation-proportionnalite-ofj',
+      'hpm-affaire-eimp-3-ordonnance-extraction-technique',
+      'hpm-affaire-eimp-4-mpc-suisse-parallele',
+      'hpm-affaire-eimp-5-fuite-presse-crise-utilisateurs',
+      'hpm-affaire-eimp-6-notification-postcloture-pfpdt',
+      'hpm-affaire-eimp-7-rapport-transparence-doctrine',
+    ],
+    encrochat: [
+      'a2-encrochat-1-reception-donnees-jit',
+      'a2-encrochat-2-identification-perquisition',
+      'a2-encrochat-3-audition-krasniqi-cooperation',
+      'a2-encrochat-4-mise-en-accusation-tribunal',
+      'a2-encrochat-5-manhart-premier-rdv-client',
+      'a2-encrochat-6-audition-bashkimi-consultation',
+      'a2-encrochat-7-proces-bashkimi-bilan-defense',
+    ],
+    hrhp: [
+      'a1-ransomware-1-detection-nuit-ransomware',
+      'a1-ransomware-2-deces-patiente-bascule-penale',
+      'a1-ransomware-3-decision-rancon-restauration',
+      'a1-ransomware-4-publication-donnees-notification',
+      'a1-ransomware-5-restauration-audit-post-incident',
+      'a1-ransomware-6-procedure-penale-internationale',
+      'a1-ransomware-7-bilan-doctrinal-parlement-cloture',
+    ],
+    etoile: [
+      'vd-affaire-etoile-noire-1-dimanche-decouverte',
+      'vd-affaire-etoile-noire-2-forensique-swissot',
+      'vd-affaire-etoile-noire-3-mpc-bascule-fed',
+      'vd-affaire-etoile-noire-4-pfpdt-supercard',
+      'vd-affaire-etoile-noire-5-fuite-presse-ofae',
+      'vd-affaire-etoile-noire-6-washington-eimp-ofac',
+      'vd-affaire-etoile-noire-7-parlement-doctrine',
+    ],
+    eau: [
+      'eau-source-trouble-1-ecran-ment',
+      'eau-source-trouble-2-forensique-hydrocontrol',
+      'eau-source-trouble-3-riverkeeper-revendique',
+      'eau-source-trouble-4-competence-cantonal-mpc',
+      'eau-source-trouble-5-avis-non-consommation',
+      'eau-source-trouble-6-six-communes-gouvernance',
+      'eau-source-trouble-7-grand-conseil-doctrine',
+    ],
+    supply: [
+      'supply-maillon-faible-1-terabyte',
+      'supply-maillon-faible-2-non-paiement',
+      'supply-maillon-faible-3-combien-personnes',
+      'supply-maillon-faible-4-etat-major-crise',
+      'supply-maillon-faible-5-contrat-responsabilite',
+      'supply-maillon-faible-6-survie-entreprise',
+      'supply-maillon-faible-7-cdg-doctrine',
+    ],
+  };
+
+  const DOCTRINE_ACH = [
+
+    // ═══════════════════════════════════════════════════════════
+    // SAGA B2 — Vauthier MP-VD (10 trophées)
+    // ═══════════════════════════════════════════════════════════
+    { id: 'doc_vauthier_premier_dossier',  emoji: '👶', name: 'Premier dossier',
+      desc: 'Démarrer Premier dossier — Vauthier au MP-VD',
+      category: 'Doctrine · Vauthier MP-VD',
+      check: (s) => doctrineHasScene('vd-affaire-vauthier-1-premier-dossier', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('vd-affaire-vauthier-1-premier-dossier', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_vauthier_audition_158',  emoji: '⚖️', name: 'Notification 158 CPP',
+      desc: 'Compléter la première audition Vauthier (acte 2)',
+      category: 'Doctrine · Vauthier MP-VD',
+      check: (s) => doctrineHasScene('vd-affaire-vauthier-2-premiere-audition', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('vd-affaire-vauthier-2-premiere-audition', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_vauthier_tmc_refus',  emoji: '🚫', name: 'Le TMC refuse',
+      desc: 'Encaisser le refus du TMC Vauthier (acte 3)',
+      category: 'Doctrine · Vauthier MP-VD',
+      check: (s) => doctrineHasScene('vd-affaire-vauthier-3-mandat-tmc-rejete', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('vd-affaire-vauthier-3-mandat-tmc-rejete', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_vauthier_presse',  emoji: '📰', name: 'Gérer la fuite',
+      desc: 'Gérer la fuite presse (Vauthier acte 4)',
+      category: 'Doctrine · Vauthier MP-VD',
+      check: (s) => doctrineHasScene('vd-affaire-vauthier-4-fuite-presse', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('vd-affaire-vauthier-4-fuite-presse', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_vauthier_forensique',  emoji: '🔬', name: 'Chaîne probatoire reprise',
+      desc: 'Reprendre la chaîne probatoire (Vauthier acte 5)',
+      category: 'Doctrine · Vauthier MP-VD',
+      check: (s) => doctrineHasScene('vd-affaire-vauthier-5-analyses-forensiques', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('vd-affaire-vauthier-5-analyses-forensiques', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_vauthier_scellement',  emoji: '🔒', name: 'Audience de scellement',
+      desc: 'Sortir de l\'audience de scellement (Vauthier acte 6)',
+      category: 'Doctrine · Vauthier MP-VD',
+      check: (s) => doctrineHasScene('vd-affaire-vauthier-6-audience-scellement', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('vd-affaire-vauthier-6-audience-scellement', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_vauthier_classement',  emoji: '📋', name: 'Décision finale',
+      desc: 'Prendre la décision finale (Vauthier acte 7)',
+      category: 'Doctrine · Vauthier MP-VD',
+      check: (s) => doctrineHasScene('vd-affaire-vauthier-7-decision-finale', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('vd-affaire-vauthier-7-decision-finale', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_vauthier_saga_complete',  emoji: '🎓', name: 'Procureure débutante diplômée',
+      desc: 'Terminer la saga Vauthier MP-VD (7 actes)',
+      category: 'Doctrine · Vauthier MP-VD',
+      check: (s) => doctrineCountScenes(SAGA_SCENES.vauthier, doctrineSceneResults()) === 7,
+      progress: () => ({ current: doctrineCountScenes(SAGA_SCENES.vauthier, doctrineSceneResults()), target: 7 }) },
+
+    { id: 'doc_vauthier_excellence',  emoji: '🏅', name: 'Excellence Vauthier',
+      desc: 'Compléter la saga Vauthier avec moyenne ≥ 85%',
+      category: 'Doctrine · Vauthier MP-VD',
+      check: (s) => {
+        const r = doctrineSceneResults();
+        const pcts = SAGA_SCENES.vauthier.map(id => (r[id] && r[id].pct) || 0);
+        if (pcts.some(p => p < 60)) return false;
+        const avg = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+        return avg >= 85;
+      },
+      progress: () => {
+        const r = doctrineSceneResults();
+        const pcts = SAGA_SCENES.vauthier.map(id => (r[id] && r[id].pct) || 0);
+        const avg = pcts.length > 0 ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : 0;
+        return { current: avg, target: 85 };
+      } },
+
+    { id: 'doc_vauthier_tags_cpp',  emoji: '📜', name: 'Maîtrise procédure CPP',
+      desc: 'Avoir complété 5 scènes Vauthier avec tag CPP',
+      category: 'Doctrine · Vauthier MP-VD',
+      check: (s) => (s.scenesTagCount && s.scenesTagCount['ART. 158 CPP'] || 0) +
+                    (s.scenesTagCount && s.scenesTagCount['ART. 244 CPP'] || 0) +
+                    (s.scenesTagCount && s.scenesTagCount['ART. 248 CPP'] || 0) +
+                    (s.scenesTagCount && s.scenesTagCount['ART. 264 CPP'] || 0) +
+                    (s.scenesTagCount && s.scenesTagCount['ART. 319 CPP'] || 0) >= 5,
+      progress: (s) => {
+        const tc = s.scenesTagCount || {};
+        const cur = (tc['ART. 158 CPP']||0) + (tc['ART. 244 CPP']||0) + (tc['ART. 248 CPP']||0) + (tc['ART. 264 CPP']||0) + (tc['ART. 319 CPP']||0);
+        return { current: cur, target: 5 };
+      } },
+
+    // ═══════════════════════════════════════════════════════════
+    // SAGA C1 — IBAN spoofing (10 trophées)
+    // ═══════════════════════════════════════════════════════════
+    { id: 'doc_iban_decouverte', emoji: '💸', name: 'Premier lundi POLGE',
+      desc: 'Démarrer IBAN spoofing — Découverte lundi matin',
+      category: 'Doctrine · IBAN spoofing',
+      check: (s) => doctrineHasScene('ge-affaire-iban-1-decouverte-lundi-matin', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('ge-affaire-iban-1-decouverte-lundi-matin', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_iban_swift_recall', emoji: '🏦', name: 'Recall SWIFT activé',
+      desc: 'Déclencher un Recall SWIFT (IBAN acte 2)',
+      category: 'Doctrine · IBAN spoofing',
+      check: (s) => doctrineHasScene('ge-affaire-iban-2-recall-swift-forensique-mail', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('ge-affaire-iban-2-recall-swift-forensique-mail', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_iban_mros', emoji: '🧾', name: 'Saisine MROS',
+      desc: 'Coordonner avec MROS (IBAN acte 3)',
+      category: 'Doctrine · IBAN spoofing',
+      check: (s) => doctrineHasScene('ge-affaire-iban-3-mros-instruction-146cp', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('ge-affaire-iban-3-mros-instruction-146cp', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_iban_crypto_tracing', emoji: '🪙', name: 'USDT-TRON tracé',
+      desc: 'Tracer le blanchiment crypto (IBAN acte 4)',
+      category: 'Doctrine · IBAN spoofing',
+      check: (s) => doctrineHasScene('ge-affaire-iban-4-tracage-crypto-usdt-tron', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('ge-affaire-iban-4-tracage-crypto-usdt-tron', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_iban_hk_eurojust', emoji: '🌏', name: 'Hong Kong via Eurojust',
+      desc: 'Coordination Hong Kong + Eurojust (IBAN acte 5)',
+      category: 'Doctrine · IBAN spoofing',
+      check: (s) => doctrineHasScene('ge-affaire-iban-5-eimp-hong-kong-eurojust', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('ge-affaire-iban-5-eimp-hong-kong-eurojust', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_iban_cfo_audition', emoji: '👔', name: 'Audition CFO',
+      desc: 'Auditionner le CFO sur la responsabilité PME (IBAN acte 6)',
+      category: 'Doctrine · IBAN spoofing',
+      check: (s) => doctrineHasScene('ge-affaire-iban-6-audition-cfo-responsabilite-pme', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('ge-affaire-iban-6-audition-cfo-responsabilite-pme', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_iban_recouvrement', emoji: '💰', name: 'Recouvrement bouclé',
+      desc: 'Conclure le bilan financier (IBAN acte 7)',
+      category: 'Doctrine · IBAN spoofing',
+      check: (s) => doctrineHasScene('ge-affaire-iban-7-recouvrement-final-bilan', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('ge-affaire-iban-7-recouvrement-final-bilan', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_iban_saga_complete', emoji: '🎯', name: 'Maître du BEC',
+      desc: 'Terminer la saga IBAN spoofing (7 actes)',
+      category: 'Doctrine · IBAN spoofing',
+      check: (s) => doctrineCountScenes(SAGA_SCENES.iban, doctrineSceneResults()) === 7,
+      progress: () => ({ current: doctrineCountScenes(SAGA_SCENES.iban, doctrineSceneResults()), target: 7 }) },
+
+    { id: 'doc_iban_146cp_tags', emoji: '⚖️', name: 'Art. 146 CP maîtrisé',
+      desc: 'Compléter 3+ scènes avec tag ART. 146 CP',
+      category: 'Doctrine · IBAN spoofing',
+      check: (s) => (s.scenesTagCount && s.scenesTagCount['ART. 146 CP'] || 0) >= 3,
+      progress: (s) => ({ current: (s.scenesTagCount && s.scenesTagCount['ART. 146 CP']) || 0, target: 3 }) },
+
+    { id: 'doc_iban_lba_tags', emoji: '🏛️', name: 'LBA appliquée',
+      desc: 'Compléter 2+ scènes avec tag ART. 9 LBA ou ART. 11 LBA',
+      category: 'Doctrine · IBAN spoofing',
+      check: (s) => ((s.scenesTagCount && s.scenesTagCount['ART. 9 LBA']) || 0) +
+                    ((s.scenesTagCount && s.scenesTagCount['ART. 11 LBA']) || 0) >= 2,
+      progress: (s) => {
+        const tc = s.scenesTagCount || {};
+        return { current: (tc['ART. 9 LBA']||0) + (tc['ART. 11 LBA']||0), target: 2 };
+      } },
+
+    // ═══════════════════════════════════════════════════════════
+    // SAGA C2 — Laufenburg (10 trophées)
+    // ═══════════════════════════════════════════════════════════
+    { id: 'doc_lauf_detection', emoji: '⚡', name: 'Nuit à Laufenburg',
+      desc: 'Démarrer Étoile de Laufenburg — Détection nocturne',
+      category: 'Doctrine · Laufenburg',
+      check: (s) => doctrineHasScene('ag-affaire-laufenburg-1-detection-nocturne', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('ag-affaire-laufenburg-1-detection-nocturne', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_lauf_aeroscope', emoji: '📡', name: 'AeroScope décodé',
+      desc: 'Exploiter AeroScope + radar SOI (Laufenburg acte 2)',
+      category: 'Doctrine · Laufenburg',
+      check: (s) => doctrineHasScene('ag-affaire-laufenburg-2-forensique-aeroscope-radar', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('ag-affaire-laufenburg-2-forensique-aeroscope-radar', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_lauf_dji_cloud', emoji: '☁️', name: 'DJI Cloud déchiffré',
+      desc: 'Identifier l\'opérateur via DJI Cloud (Laufenburg acte 3)',
+      category: 'Doctrine · Laufenburg',
+      check: (s) => doctrineHasScene('ag-affaire-laufenburg-3-identification-operateur', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('ag-affaire-laufenburg-3-identification-operateur', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_lauf_munich', emoji: '🇩🇪', name: 'Perquisition Munich',
+      desc: 'Coordonner la perquisition LKA-Bayern (Laufenburg acte 4)',
+      category: 'Doctrine · Laufenburg',
+      check: (s) => doctrineHasScene('ag-affaire-laufenburg-4-perquisition-munich', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('ag-affaire-laufenburg-4-perquisition-munich', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_lauf_attribution', emoji: '🎯', name: 'Attribution doctrinale',
+      desc: 'Établir l\'attribution OT (Laufenburg acte 5)',
+      category: 'Doctrine · Laufenburg',
+      check: (s) => doctrineHasScene('ag-affaire-laufenburg-5-forensique-disques-attribution', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('ag-affaire-laufenburg-5-forensique-disques-attribution', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_lauf_verstandigung', emoji: '🤝', name: 'Verständigung',
+      desc: 'Obtenir la coopération du commanditaire (Laufenburg acte 6)',
+      category: 'Doctrine · Laufenburg',
+      check: (s) => doctrineHasScene('ag-affaire-laufenburg-6-cooperation-commanditaire', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('ag-affaire-laufenburg-6-cooperation-commanditaire', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_lauf_tpf', emoji: '⚖️', name: 'TPF Bellinzone',
+      desc: 'Plaider au TPF (Laufenburg acte 7)',
+      category: 'Doctrine · Laufenburg',
+      check: (s) => doctrineHasScene('ag-affaire-laufenburg-7-proces-tpf-bilan', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('ag-affaire-laufenburg-7-proces-tpf-bilan', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_lauf_saga_complete', emoji: '🛰️', name: 'Doctrine OT-cyber suisse',
+      desc: 'Terminer la saga Laufenburg (7 actes)',
+      category: 'Doctrine · Laufenburg',
+      check: (s) => doctrineCountScenes(SAGA_SCENES.laufenburg, doctrineSceneResults()) === 7,
+      progress: () => ({ current: doctrineCountScenes(SAGA_SCENES.laufenburg, doctrineSceneResults()), target: 7 }) },
+
+    { id: 'doc_lauf_239cp', emoji: '🔐', name: 'Art. 239 CP — sabotage',
+      desc: 'Compléter 2+ scènes avec tag ART. 239 CP',
+      category: 'Doctrine · Laufenburg',
+      check: (s) => (s.scenesTagCount && s.scenesTagCount['ART. 239 CP'] || 0) >= 2,
+      progress: (s) => ({ current: (s.scenesTagCount && s.scenesTagCount['ART. 239 CP']) || 0, target: 2 }) },
+
+    { id: 'doc_lauf_swissgrid', emoji: '⚡', name: 'Partenariat Swissgrid',
+      desc: 'Compléter 3+ scènes avec tag SWISSGRID',
+      category: 'Doctrine · Laufenburg',
+      check: (s) => (s.scenesTagCount && s.scenesTagCount['SWISSGRID'] || 0) >= 3,
+      progress: (s) => ({ current: (s.scenesTagCount && s.scenesTagCount['SWISSGRID']) || 0, target: 3 }) },
+
+    // ═══════════════════════════════════════════════════════════
+    // SAGA A6 — HPM EIMP (10 trophées)
+    // ═══════════════════════════════════════════════════════════
+    { id: 'doc_hpm_reception', emoji: '📨', name: 'Demande française',
+      desc: 'Recevoir la demande EIMP française (HPM acte 1)',
+      category: 'Doctrine · HPM EIMP',
+      check: (s) => doctrineHasScene('hpm-affaire-eimp-1-reception-demande-francaise', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('hpm-affaire-eimp-1-reception-demande-francaise', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_hpm_proportionnalite', emoji: '⚖️', name: 'Proportionnalité OFJ',
+      desc: 'Négocier la proportionnalité (HPM acte 2)',
+      category: 'Doctrine · HPM EIMP',
+      check: (s) => doctrineHasScene('hpm-affaire-eimp-2-negociation-proportionnalite-ofj', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('hpm-affaire-eimp-2-negociation-proportionnalite-ofj', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_hpm_extraction', emoji: '💾', name: 'Extraction technique',
+      desc: 'Exécuter l\'ordonnance d\'extraction (HPM acte 3)',
+      category: 'Doctrine · HPM EIMP',
+      check: (s) => doctrineHasScene('hpm-affaire-eimp-3-ordonnance-extraction-technique', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('hpm-affaire-eimp-3-ordonnance-extraction-technique', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_hpm_mpc_parallele', emoji: '🔀', name: 'Double procédure',
+      desc: 'Gérer l\'enquête MPC parallèle (HPM acte 4)',
+      category: 'Doctrine · HPM EIMP',
+      check: (s) => doctrineHasScene('hpm-affaire-eimp-4-mpc-suisse-parallele', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('hpm-affaire-eimp-4-mpc-suisse-parallele', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_hpm_fuite_presse', emoji: '🚨', name: 'Crise utilisateurs',
+      desc: 'Gérer la fuite presse + crise utilisateurs (HPM acte 5)',
+      category: 'Doctrine · HPM EIMP',
+      check: (s) => doctrineHasScene('hpm-affaire-eimp-5-fuite-presse-crise-utilisateurs', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('hpm-affaire-eimp-5-fuite-presse-crise-utilisateurs', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_hpm_pfpdt', emoji: '🛡️', name: 'Notification PFPDT',
+      desc: 'Coopérer avec le PFPDT post-clôture (HPM acte 6)',
+      category: 'Doctrine · HPM EIMP',
+      check: (s) => doctrineHasScene('hpm-affaire-eimp-6-notification-postcloture-pfpdt', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('hpm-affaire-eimp-6-notification-postcloture-pfpdt', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_hpm_doctrine', emoji: '📚', name: 'Doctrine publiée',
+      desc: 'Publier le rapport doctrinal (HPM acte 7)',
+      category: 'Doctrine · HPM EIMP',
+      check: (s) => doctrineHasScene('hpm-affaire-eimp-7-rapport-transparence-doctrine', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('hpm-affaire-eimp-7-rapport-transparence-doctrine', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_hpm_saga_complete', emoji: '🔐', name: 'Maître de l\'EIMP',
+      desc: 'Terminer la saga HPM EIMP (7 actes)',
+      category: 'Doctrine · HPM EIMP',
+      check: (s) => doctrineCountScenes(SAGA_SCENES.hpm, doctrineSceneResults()) === 7,
+      progress: () => ({ current: doctrineCountScenes(SAGA_SCENES.hpm, doctrineSceneResults()), target: 7 }) },
+
+    { id: 'doc_hpm_eimp_tags', emoji: '🌐', name: 'Articles EIMP',
+      desc: 'Compléter 3+ scènes avec un tag ART. EIMP',
+      category: 'Doctrine · HPM EIMP',
+      check: (s) => {
+        const tc = s.scenesTagCount || {};
+        return (tc['ART. 64 EIMP']||0) + (tc['ART. 67 EIMP']||0) + (tc['ART. 80h EIMP']||0) >= 3;
+      },
+      progress: (s) => {
+        const tc = s.scenesTagCount || {};
+        return { current: (tc['ART. 64 EIMP']||0) + (tc['ART. 67 EIMP']||0) + (tc['ART. 80h EIMP']||0), target: 3 };
+      } },
+
+    { id: 'doc_hpm_iso27037', emoji: '🔬', name: 'ISO 27037',
+      desc: 'Compléter 1+ scène avec tag ISO 27037',
+      category: 'Doctrine · HPM EIMP',
+      check: (s) => (s.scenesTagCount && s.scenesTagCount['ISO 27037'] || 0) >= 1,
+      progress: (s) => ({ current: (s.scenesTagCount && s.scenesTagCount['ISO 27037']) || 0, target: 1 }) },
+
+    // ═══════════════════════════════════════════════════════════
+    // SAGA A2 — EncroChat/Sky ECC (10 trophées)
+    // ═══════════════════════════════════════════════════════════
+    { id: 'doc_encro_jit', emoji: '📱', name: 'JIT Eurojust',
+      desc: 'Recevoir les données JIT (EncroChat acte 1)',
+      category: 'Doctrine · EncroChat/Sky ECC',
+      check: (s) => doctrineHasScene('a2-encrochat-1-reception-donnees-jit', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('a2-encrochat-1-reception-donnees-jit', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_encro_perquisition', emoji: '🚔', name: 'Faisceau d\'indices',
+      desc: 'Identifier et perquisitionner (EncroChat acte 2)',
+      category: 'Doctrine · EncroChat/Sky ECC',
+      check: (s) => doctrineHasScene('a2-encrochat-2-identification-perquisition', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('a2-encrochat-2-identification-perquisition', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_encro_krasniqi', emoji: '🤝', name: '260ter al. 5',
+      desc: 'Auditionner Krasniqi en coopération (EncroChat acte 3)',
+      category: 'Doctrine · EncroChat/Sky ECC',
+      check: (s) => doctrineHasScene('a2-encrochat-3-audition-krasniqi-cooperation', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('a2-encrochat-3-audition-krasniqi-cooperation', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_encro_accusation', emoji: '⚖️', name: 'Mise en accusation',
+      desc: 'Mettre en accusation au tribunal (EncroChat acte 4)',
+      category: 'Doctrine · EncroChat/Sky ECC',
+      check: (s) => doctrineHasScene('a2-encrochat-4-mise-en-accusation-tribunal', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('a2-encrochat-4-mise-en-accusation-tribunal', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_encro_manhart', emoji: '🛡️', name: 'Premier RDV défense',
+      desc: 'Consultation client Manhart (EncroChat acte 5)',
+      category: 'Doctrine · EncroChat/Sky ECC',
+      check: (s) => doctrineHasScene('a2-encrochat-5-manhart-premier-rdv-client', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('a2-encrochat-5-manhart-premier-rdv-client', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_encro_bashkimi', emoji: '🤐', name: 'Stratégie silence',
+      desc: 'Préparer l\'audition Bashkimi (EncroChat acte 6)',
+      category: 'Doctrine · EncroChat/Sky ECC',
+      check: (s) => doctrineHasScene('a2-encrochat-6-audition-bashkimi-consultation', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('a2-encrochat-6-audition-bashkimi-consultation', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_encro_proces', emoji: '🎓', name: 'Procès Bashkimi',
+      desc: 'Plaider au procès Bashkimi (EncroChat acte 7)',
+      category: 'Doctrine · EncroChat/Sky ECC',
+      check: (s) => doctrineHasScene('a2-encrochat-7-proces-bashkimi-bilan-defense', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('a2-encrochat-7-proces-bashkimi-bilan-defense', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_encro_saga_complete', emoji: '📡', name: 'Contradictoire maîtrisé',
+      desc: 'Terminer la saga EncroChat/Sky ECC (7 actes)',
+      category: 'Doctrine · EncroChat/Sky ECC',
+      check: (s) => doctrineCountScenes(SAGA_SCENES.encrochat, doctrineSceneResults()) === 7,
+      progress: () => ({ current: doctrineCountScenes(SAGA_SCENES.encrochat, doctrineSceneResults()), target: 7 }) },
+
+    { id: 'doc_encro_141cpp', emoji: '❌', name: 'Art. 141 CPP',
+      desc: 'Compléter 2+ scènes avec tag ART. 141 CPP',
+      category: 'Doctrine · EncroChat/Sky ECC',
+      check: (s) => (s.scenesTagCount && s.scenesTagCount['ART. 141 CPP'] || 0) >= 2,
+      progress: (s) => ({ current: (s.scenesTagCount && s.scenesTagCount['ART. 141 CPP']) || 0, target: 2 }) },
+
+    { id: 'doc_encro_4_axes', emoji: '🎯', name: 'Doctrine des 4 axes',
+      desc: 'Compléter les actes 5+6+7 de la saga EncroChat',
+      category: 'Doctrine · EncroChat/Sky ECC',
+      check: (s) => {
+        const r = doctrineSceneResults();
+        return doctrineHasScene('a2-encrochat-5-manhart-premier-rdv-client', r) &&
+               doctrineHasScene('a2-encrochat-6-audition-bashkimi-consultation', r) &&
+               doctrineHasScene('a2-encrochat-7-proces-bashkimi-bilan-defense', r);
+      },
+      progress: () => {
+        const r = doctrineSceneResults();
+        const done = ['a2-encrochat-5-manhart-premier-rdv-client', 'a2-encrochat-6-audition-bashkimi-consultation', 'a2-encrochat-7-proces-bashkimi-bilan-defense']
+          .filter(id => doctrineHasScene(id, r)).length;
+        return { current: done, target: 3 };
+      } },
+
+    // ═══════════════════════════════════════════════════════════
+    // SAGA A1 — Ransomware HRHP (10 trophées)
+    // ═══════════════════════════════════════════════════════════
+    { id: 'doc_hrhp_detection', emoji: '🚨', name: 'Détection ransomware',
+      desc: 'Démarrer Ransomware HRHP — Détection nocturne',
+      category: 'Doctrine · Ransomware HRHP',
+      check: (s) => doctrineHasScene('a1-ransomware-1-detection-nuit-ransomware', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('a1-ransomware-1-detection-nuit-ransomware', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_hrhp_deces', emoji: '⚰️', name: 'Bascule pénale',
+      desc: 'Gérer le décès patiente (HRHP acte 2)',
+      category: 'Doctrine · Ransomware HRHP',
+      check: (s) => doctrineHasScene('a1-ransomware-2-deces-patiente-bascule-penale', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('a1-ransomware-2-deces-patiente-bascule-penale', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_hrhp_rancon', emoji: '💰', name: 'Décision rançon',
+      desc: 'Trancher sur la rançon (HRHP acte 3)',
+      category: 'Doctrine · Ransomware HRHP',
+      check: (s) => doctrineHasScene('a1-ransomware-3-decision-rancon-restauration', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('a1-ransomware-3-decision-rancon-restauration', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_hrhp_publication', emoji: '📢', name: '270k patients notifiés',
+      desc: 'Gérer la publication des données (HRHP acte 4)',
+      category: 'Doctrine · Ransomware HRHP',
+      check: (s) => doctrineHasScene('a1-ransomware-4-publication-donnees-notification', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('a1-ransomware-4-publication-donnees-notification', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_hrhp_audit', emoji: '🔧', name: 'Audit post-incident',
+      desc: 'Compléter l\'audit post-incident (HRHP acte 5)',
+      category: 'Doctrine · Ransomware HRHP',
+      check: (s) => doctrineHasScene('a1-ransomware-5-restauration-audit-post-incident', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('a1-ransomware-5-restauration-audit-post-incident', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_hrhp_interpol', emoji: '🌍', name: 'Akira identifié',
+      desc: 'Conduire la procédure internationale (HRHP acte 6)',
+      category: 'Doctrine · Ransomware HRHP',
+      check: (s) => doctrineHasScene('a1-ransomware-6-procedure-penale-internationale', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('a1-ransomware-6-procedure-penale-internationale', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_hrhp_parlement', emoji: '🏛️', name: 'Au Parlement',
+      desc: 'Présenter le bilan doctrinal au Parlement (HRHP acte 7)',
+      category: 'Doctrine · Ransomware HRHP',
+      check: (s) => doctrineHasScene('a1-ransomware-7-bilan-doctrinal-parlement-cloture', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('a1-ransomware-7-bilan-doctrinal-parlement-cloture', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_hrhp_saga_complete', emoji: '🏥', name: 'Doctrine santé-cyber',
+      desc: 'Terminer la saga Ransomware HRHP (7 actes)',
+      category: 'Doctrine · Ransomware HRHP',
+      check: (s) => doctrineCountScenes(SAGA_SCENES.hrhp, doctrineSceneResults()) === 7,
+      progress: () => ({ current: doctrineCountScenes(SAGA_SCENES.hrhp, doctrineSceneResults()), target: 7 }) },
+
+    { id: 'doc_hrhp_lcys', emoji: '🛡️', name: 'LCyS santé',
+      desc: 'Compléter 2+ scènes avec tag LCyS SANTÉ ou H+ SUISSE',
+      category: 'Doctrine · Ransomware HRHP',
+      check: (s) => ((s.scenesTagCount && s.scenesTagCount['LCyS SANTÉ']) || 0) +
+                    ((s.scenesTagCount && s.scenesTagCount['H+ SUISSE']) || 0) >= 2,
+      progress: (s) => {
+        const tc = s.scenesTagCount || {};
+        return { current: (tc['LCyS SANTÉ']||0) + (tc['H+ SUISSE']||0), target: 2 };
+      } },
+
+    { id: 'doc_hrhp_117cp', emoji: '⚖️', name: 'Art. 117 CP',
+      desc: 'Compléter 2+ scènes avec tag ART. 117 CP',
+      category: 'Doctrine · Ransomware HRHP',
+      check: (s) => (s.scenesTagCount && s.scenesTagCount['ART. 117 CP'] || 0) >= 2,
+      progress: (s) => ({ current: (s.scenesTagCount && s.scenesTagCount['ART. 117 CP']) || 0, target: 2 }) },
+
+    // ═══════════════════════════════════════════════════════════
+    // TRANSVERSAL (12 trophées) — Arc complet + maîtres
+    // ═══════════════════════════════════════════════════════════
+    { id: 'doc_arc_three_sagas', emoji: '📖', name: 'Trois sagas, un arc',
+      desc: 'Terminer 3 sagas v114-v119 complètes',
+      category: 'Doctrine · Arc transversal',
+      check: (s) => {
+        const r = doctrineSceneResults();
+        const sagasDone = ['vauthier', 'iban', 'laufenburg', 'hpm', 'encrochat', 'hrhp']
+          .filter(k => doctrineCountScenes(SAGA_SCENES[k], r) === 7).length;
+        return sagasDone >= 3;
+      },
+      progress: () => {
+        const r = doctrineSceneResults();
+        const sagasDone = ['vauthier', 'iban', 'laufenburg', 'hpm', 'encrochat', 'hrhp']
+          .filter(k => doctrineCountScenes(SAGA_SCENES[k], r) === 7).length;
+        return { current: sagasDone, target: 3 };
+      } },
+
+    { id: 'doc_arc_complete', emoji: '🌟', name: 'L\'arc complet',
+      desc: 'Terminer les 6 sagas v114-v119 (Vauthier, IBAN, Laufenburg, HPM, EncroChat, HRHP)',
+      category: 'Doctrine · Arc transversal',
+      check: (s) => {
+        const r = doctrineSceneResults();
+        return ['vauthier', 'iban', 'laufenburg', 'hpm', 'encrochat', 'hrhp']
+          .every(k => doctrineCountScenes(SAGA_SCENES[k], r) === 7);
+      },
+      progress: () => {
+        const r = doctrineSceneResults();
+        const sagasDone = ['vauthier', 'iban', 'laufenburg', 'hpm', 'encrochat', 'hrhp']
+          .filter(k => doctrineCountScenes(SAGA_SCENES[k], r) === 7).length;
+        return { current: sagasDone, target: 6 };
+      } },
+
+    { id: 'doc_arc_excellence', emoji: '🏆', name: 'Excellence arc complet',
+      desc: 'Terminer les 6 sagas v114-v119 avec moyenne ≥ 80%',
+      category: 'Doctrine · Arc transversal',
+      check: (s) => {
+        const r = doctrineSceneResults();
+        const all = [];
+        ['vauthier', 'iban', 'laufenburg', 'hpm', 'encrochat', 'hrhp'].forEach(k => {
+          SAGA_SCENES[k].forEach(id => all.push((r[id] && r[id].pct) || 0));
+        });
+        if (all.length === 0) return false;
+        if (all.some(p => p < 60)) return false;
+        const avg = all.reduce((a, b) => a + b, 0) / all.length;
+        return avg >= 80;
+      },
+      progress: () => {
+        const r = doctrineSceneResults();
+        const all = [];
+        ['vauthier', 'iban', 'laufenburg', 'hpm', 'encrochat', 'hrhp'].forEach(k => {
+          SAGA_SCENES[k].forEach(id => all.push((r[id] && r[id].pct) || 0));
+        });
+        const avg = all.length > 0 ? Math.round(all.reduce((a, b) => a + b, 0) / all.length) : 0;
+        return { current: avg, target: 80 };
+      } },
+
+    { id: 'doc_arc_furrer', emoji: '👩‍⚖️', name: 'Rencontrer Furrer',
+      desc: 'Compléter 3+ scènes avec tag MPC (vrai pour Furrer procureure)',
+      category: 'Doctrine · Arc transversal',
+      check: (s) => (s.scenesTagCount && s.scenesTagCount['MPC'] || 0) >= 3,
+      progress: (s) => ({ current: (s.scenesTagCount && s.scenesTagCount['MPC']) || 0, target: 3 }) },
+
+    { id: 'doc_arc_eurojust', emoji: '🇪🇺', name: 'Connecté à l\'Europe',
+      desc: 'Compléter 3+ scènes avec tag EUROJUST',
+      category: 'Doctrine · Arc transversal',
+      check: (s) => (s.scenesTagCount && s.scenesTagCount['EUROJUST'] || 0) >= 3,
+      progress: (s) => ({ current: (s.scenesTagCount && s.scenesTagCount['EUROJUST']) || 0, target: 3 }) },
+
+    { id: 'doc_arc_eimp', emoji: '🌐', name: 'Maître de l\'EIMP',
+      desc: 'Compléter 5+ scènes avec tag EIMP',
+      category: 'Doctrine · Arc transversal',
+      check: (s) => (s.scenesTagCount && s.scenesTagCount['EIMP'] || 0) >= 5,
+      progress: (s) => ({ current: (s.scenesTagCount && s.scenesTagCount['EIMP']) || 0, target: 5 }) },
+
+    { id: 'doc_arc_pfpdt', emoji: '🔒', name: 'Allié du PFPDT',
+      desc: 'Compléter 2+ scènes avec tag PFPDT',
+      category: 'Doctrine · Arc transversal',
+      check: (s) => (s.scenesTagCount && s.scenesTagCount['PFPDT'] || 0) >= 2,
+      progress: (s) => ({ current: (s.scenesTagCount && s.scenesTagCount['PFPDT']) || 0, target: 2 }) },
+
+    { id: 'doc_arc_ncsc', emoji: '🛡️', name: 'Partenaire NCSC',
+      desc: 'Compléter 2+ scènes avec tag NCSC',
+      category: 'Doctrine · Arc transversal',
+      check: (s) => (s.scenesTagCount && s.scenesTagCount['NCSC'] || 0) >= 2,
+      progress: (s) => ({ current: (s.scenesTagCount && s.scenesTagCount['NCSC']) || 0, target: 2 }) },
+
+    // Maîtres doctrinaux (4 trophées sommitaux)
+    { id: 'doc_master_procedure', emoji: '⚖️', name: 'Maître de la procédure',
+      desc: 'Compléter 10+ scènes avec un tag CPP (articles 141, 158, 244, 248, 264, 305, 319, 324, etc.)',
+      category: 'Doctrine · Maîtres doctrinaux',
+      check: (s) => {
+        const tc = s.scenesTagCount || {};
+        const cppTags = Object.keys(tc).filter(k => k.match(/ART\.\s*\d+(BIS|TER|QUATER|QUINQUIES)?\s*(CPP|CP)\b/i));
+        return cppTags.reduce((sum, k) => sum + tc[k], 0) >= 10;
+      },
+      progress: (s) => {
+        const tc = s.scenesTagCount || {};
+        const cppTags = Object.keys(tc).filter(k => k.match(/ART\.\s*\d+(BIS|TER|QUATER|QUINQUIES)?\s*(CPP|CP)\b/i));
+        const sum = cppTags.reduce((sumv, k) => sumv + tc[k], 0);
+        return { current: sum, target: 10 };
+      } },
+
+    { id: 'doc_master_international', emoji: '🌏', name: 'Maître international',
+      desc: 'Compléter 8+ scènes avec un tag international (EIMP, EUROJUST, FRANCE, ALLEMAGNE, HONG KONG, etc.)',
+      category: 'Doctrine · Maîtres doctrinaux',
+      check: (s) => {
+        const tc = s.scenesTagCount || {};
+        const intlKeys = ['EIMP', 'EUROJUST', 'FRANCE', 'ALLEMAGNE', 'HONG KONG', 'BKA', 'LKA-BAYERN', 'INTERPOL', 'JIT', 'OFAC', 'SINGAPOUR'];
+        const sum = intlKeys.reduce((s, k) => s + (tc[k] || 0), 0);
+        return sum >= 8;
+      },
+      progress: (s) => {
+        const tc = s.scenesTagCount || {};
+        const intlKeys = ['EIMP', 'EUROJUST', 'FRANCE', 'ALLEMAGNE', 'HONG KONG', 'BKA', 'LKA-BAYERN', 'INTERPOL', 'JIT', 'OFAC', 'SINGAPOUR'];
+        const sum = intlKeys.reduce((sv, k) => sv + (tc[k] || 0), 0);
+        return { current: sum, target: 8 };
+      } },
+
+    { id: 'doc_master_crisis', emoji: '🚨', name: 'Maître des crises',
+      desc: 'Compléter 5+ scènes avec un tag de crise (RANSOMWARE, CRISE, CELLULE DE CRISE, GESTION DE CRISE, PCA)',
+      category: 'Doctrine · Maîtres doctrinaux',
+      check: (s) => {
+        const tc = s.scenesTagCount || {};
+        const crisisKeys = ['RANSOMWARE', 'CRISE UTILISATEURS', 'CELLULE DE CRISE', 'GESTION DE CRISE', 'PCA', 'PLAN DE CONTINUITÉ', 'CRISE LPD'];
+        const sum = crisisKeys.reduce((s, k) => s + (tc[k] || 0), 0);
+        return sum >= 5;
+      },
+      progress: (s) => {
+        const tc = s.scenesTagCount || {};
+        const crisisKeys = ['RANSOMWARE', 'CRISE UTILISATEURS', 'CELLULE DE CRISE', 'GESTION DE CRISE', 'PCA', 'PLAN DE CONTINUITÉ', 'CRISE LPD'];
+        const sum = crisisKeys.reduce((sv, k) => sv + (tc[k] || 0), 0);
+        return { current: sum, target: 5 };
+      } },
+
+    { id: 'doc_master_doctrine', emoji: '📚', name: 'Maître doctrinal',
+      desc: 'Compléter 4+ scènes avec tag DOCTRINE',
+      category: 'Doctrine · Maîtres doctrinaux',
+      check: (s) => (s.scenesTagCount && s.scenesTagCount['DOCTRINE'] || 0) >= 4,
+      progress: (s) => ({ current: (s.scenesTagCount && s.scenesTagCount['DOCTRINE']) || 0, target: 4 }) },
+
+    // ─────────────────────────────────────────────────────────────
+    // v122a — ÉTOILE NOIRE (10 trophées : 7 actes + 1 tag iranien + 2 saga)
+    // Saga stations-service ATG, CISO Helvegaz Romanier, mai-juin 2026
+    // ─────────────────────────────────────────────────────────────
+    { id: 'doc_etoile_dimanche', emoji: '⛽', name: 'Dimanche, 09h14',
+      desc: 'Démarrer Étoile noire — la découverte dominicale (acte 1)',
+      category: 'Doctrine · Étoile noire',
+      check: (s) => doctrineHasScene('vd-affaire-etoile-noire-1-dimanche-decouverte', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('vd-affaire-etoile-noire-1-dimanche-decouverte', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_etoile_swissot', emoji: '🔬', name: 'SwissOT prend la main',
+      desc: 'Conduire le forensique OT (Étoile noire acte 2)',
+      category: 'Doctrine · Étoile noire',
+      check: (s) => doctrineHasScene('vd-affaire-etoile-noire-2-forensique-swissot', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('vd-affaire-etoile-noire-2-forensique-swissot', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_etoile_mpc', emoji: '⚖️', name: 'Compétence fédérale',
+      desc: 'Gérer la bascule MPC (Étoile noire acte 3)',
+      category: 'Doctrine · Étoile noire',
+      check: (s) => doctrineHasScene('vd-affaire-etoile-noire-3-mpc-bascule-fed', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('vd-affaire-etoile-noire-3-mpc-bascule-fed', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_etoile_pfpdt', emoji: '🔒', name: 'Données ExpressCard',
+      desc: 'Cartographier les données SuperCard (Étoile noire acte 4)',
+      category: 'Doctrine · Étoile noire',
+      check: (s) => doctrineHasScene('vd-affaire-etoile-noire-4-pfpdt-supercard', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('vd-affaire-etoile-noire-4-pfpdt-supercard', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_etoile_vevey', emoji: '🚨', name: '« 24h sans carburant »',
+      desc: 'Gérer la crise médiatique et OFAE (Étoile noire acte 5)',
+      category: 'Doctrine · Étoile noire',
+      check: (s) => doctrineHasScene('vd-affaire-etoile-noire-5-fuite-presse-ofae', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('vd-affaire-etoile-noire-5-fuite-presse-ofae', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_etoile_washington', emoji: '🇺🇸', name: 'Washington appelle',
+      desc: 'Naviguer EIMP US et OFAC (Étoile noire acte 6)',
+      category: 'Doctrine · Étoile noire',
+      check: (s) => doctrineHasScene('vd-affaire-etoile-noire-6-washington-eimp-ofac', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('vd-affaire-etoile-noire-6-washington-eimp-ofac', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_etoile_parlement', emoji: '🏛️', name: 'Le verdict parlementaire',
+      desc: 'Porter la doctrine ATG-CH 2026 au Parlement (Étoile noire acte 7)',
+      category: 'Doctrine · Étoile noire',
+      check: (s) => doctrineHasScene('vd-affaire-etoile-noire-7-parlement-doctrine', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('vd-affaire-etoile-noire-7-parlement-doctrine', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_etoile_iran_tags', emoji: '🌙', name: 'Spectre iranien',
+      desc: 'Compléter 3+ scènes Étoile noire avec tag IRAN ou IRGC',
+      category: 'Doctrine · Étoile noire',
+      check: (s) => ((s.scenesTagCount && s.scenesTagCount['IRAN']) || 0) +
+                    ((s.scenesTagCount && s.scenesTagCount['IRGC']) || 0) >= 3,
+      progress: (s) => {
+        const tc = s.scenesTagCount || {};
+        return { current: (tc['IRAN']||0) + (tc['IRGC']||0), target: 3 };
+      } },
+
+    { id: 'doc_etoile_saga_complete', emoji: '⛽', name: 'Doctrine ATG-CH',
+      desc: 'Terminer la saga Étoile noire (7 actes)',
+      category: 'Doctrine · Étoile noire',
+      check: (s) => doctrineCountScenes(SAGA_SCENES.etoile, doctrineSceneResults()) === 7,
+      progress: () => ({ current: doctrineCountScenes(SAGA_SCENES.etoile, doctrineSceneResults()), target: 7 }) },
+
+    { id: 'doc_etoile_excellence', emoji: '🌟', name: 'Excellence Étoile noire',
+      desc: 'Terminer Étoile noire avec une moyenne ≥85%',
+      category: 'Doctrine · Étoile noire',
+      check: (s) => {
+        const r = doctrineSceneResults();
+        if (doctrineCountScenes(SAGA_SCENES.etoile, r) !== 7) return false;
+        const pcts = SAGA_SCENES.etoile.map(id => (r[id] && r[id].pct) || 0);
+        const avg = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+        return avg >= 85;
+      },
+      progress: () => {
+        const r = doctrineSceneResults();
+        const pcts = SAGA_SCENES.etoile.map(id => (r[id] && r[id].pct) || 0);
+        const avg = Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length);
+        return { current: avg, target: 85 };
+      } },
+
+    // ─────────────────────────────────────────────────────────────
+    // v122b — SOURCE TROUBLE (10 trophées : 7 actes + 1 tag FDIA + 2 saga)
+    // Saga eau potable, directrice technique Voutaz, Eau Chablais, sept-oct 2026
+    // ─────────────────────────────────────────────────────────────
+    { id: 'doc_eau_ecran', emoji: '💧', name: 'L\'écran ment',
+      desc: 'Démarrer Source trouble — la divergence sondes/SCADA (acte 1)',
+      category: 'Doctrine · Source trouble',
+      check: (s) => doctrineHasScene('eau-source-trouble-1-ecran-ment', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('eau-source-trouble-1-ecran-ment', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_eau_hydrocontrol', emoji: '🔬', name: 'Forensique nocturne',
+      desc: 'Conduire le forensique OT eau (Source trouble acte 2)',
+      category: 'Doctrine · Source trouble',
+      check: (s) => doctrineHasScene('eau-source-trouble-2-forensique-hydrocontrol', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('eau-source-trouble-2-forensique-hydrocontrol', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_eau_riverkeeper', emoji: '🌊', name: 'RiverKeeper revendique',
+      desc: 'Qualifier la menace hacktiviste (Source trouble acte 3)',
+      category: 'Doctrine · Source trouble',
+      check: (s) => doctrineHasScene('eau-source-trouble-3-riverkeeper-revendique', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('eau-source-trouble-3-riverkeeper-revendique', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_eau_competence', emoji: '⚖️', name: 'Cantonal ou fédéral',
+      desc: 'Gérer la compétence cantonale et l\'art. 234 CP (Source trouble acte 4)',
+      category: 'Doctrine · Source trouble',
+      check: (s) => doctrineHasScene('eau-source-trouble-4-competence-cantonal-mpc', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('eau-source-trouble-4-competence-cantonal-mpc', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_eau_non_conso', emoji: '🚱', name: 'La décision sanitaire',
+      desc: 'Gérer l\'avis sanitaire avec le chimiste cantonal (Source trouble acte 5)',
+      category: 'Doctrine · Source trouble',
+      check: (s) => doctrineHasScene('eau-source-trouble-5-avis-non-consommation', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('eau-source-trouble-5-avis-non-consommation', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_eau_six_communes', emoji: '🏛️', name: 'Six communes, une crise',
+      desc: 'Tenir la gouvernance intercommunale (Source trouble acte 6)',
+      category: 'Doctrine · Source trouble',
+      check: (s) => doctrineHasScene('eau-source-trouble-6-six-communes-gouvernance', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('eau-source-trouble-6-six-communes-gouvernance', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_eau_doctrine', emoji: '💧', name: 'De la source à la doctrine',
+      desc: 'Porter la doctrine Eau-CH 2026 au Grand Conseil (Source trouble acte 7)',
+      category: 'Doctrine · Source trouble',
+      check: (s) => doctrineHasScene('eau-source-trouble-7-grand-conseil-doctrine', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('eau-source-trouble-7-grand-conseil-doctrine', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_eau_fdia', emoji: '🌙', name: '« Les capteurs mentaient »',
+      desc: 'Compléter 2+ scènes Source trouble avec tag FDIA ou FAUSSES DONNÉES',
+      category: 'Doctrine · Source trouble',
+      check: (s) => ((s.scenesTagCount && s.scenesTagCount['FDIA']) || 0) +
+                    ((s.scenesTagCount && s.scenesTagCount['FAUSSES DONNÉES']) || 0) >= 2,
+      progress: (s) => {
+        const tc = s.scenesTagCount || {};
+        return { current: (tc['FDIA']||0) + (tc['FAUSSES DONNÉES']||0), target: 2 };
+      } },
+
+    { id: 'doc_eau_saga_complete', emoji: '💧', name: 'Doctrine Eau-CH',
+      desc: 'Terminer la saga Source trouble (7 actes)',
+      category: 'Doctrine · Source trouble',
+      check: (s) => doctrineCountScenes(SAGA_SCENES.eau, doctrineSceneResults()) === 7,
+      progress: () => ({ current: doctrineCountScenes(SAGA_SCENES.eau, doctrineSceneResults()), target: 7 }) },
+
+    { id: 'doc_eau_excellence', emoji: '🌟', name: 'Excellence Source trouble',
+      desc: 'Terminer Source trouble avec une moyenne ≥85%',
+      category: 'Doctrine · Source trouble',
+      check: (s) => {
+        const r = doctrineSceneResults();
+        if (doctrineCountScenes(SAGA_SCENES.eau, r) !== 7) return false;
+        const pcts = SAGA_SCENES.eau.map(id => (r[id] && r[id].pct) || 0);
+        const avg = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+        return avg >= 85;
+      },
+      progress: () => {
+        const r = doctrineSceneResults();
+        const pcts = SAGA_SCENES.eau.map(id => (r[id] && r[id].pct) || 0);
+        const avg = Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length);
+        return { current: avg, target: 85 };
+      } },
+
+    // ─────────────────────────────────────────────────────────────
+    // v122c — MAILLON FAIBLE (10 trophées : 7 actes + 1 tag cascade + 2 saga)
+    // Saga supply chain / éditeur logiciel pour autorités, CEO Reber, Verax Software AG, oct-nov 2026
+    // ─────────────────────────────────────────────────────────────
+    { id: 'doc_supply_terabyte', emoji: '🔗', name: '1,4 To',
+      desc: 'Démarrer Maillon faible — la rançon Play (acte 1)',
+      category: 'Doctrine · Maillon faible',
+      check: (s) => doctrineHasScene('supply-maillon-faible-1-terabyte', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('supply-maillon-faible-1-terabyte', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_supply_nonpaiement', emoji: '🛡️', name: 'Doctrine du non-paiement',
+      desc: 'Tenir la doctrine NCSC non-paiement (Maillon faible acte 2)',
+      category: 'Doctrine · Maillon faible',
+      check: (s) => doctrineHasScene('supply-maillon-faible-2-non-paiement', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('supply-maillon-faible-2-non-paiement', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_supply_personnes', emoji: '👥', name: 'Combien de personnes ?',
+      desc: 'Notification de masse LPD ~480k personnes (Maillon faible acte 3)',
+      category: 'Doctrine · Maillon faible',
+      check: (s) => doctrineHasScene('supply-maillon-faible-3-combien-personnes', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('supply-maillon-faible-3-combien-personnes', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_supply_etatmajor', emoji: '🏛️', name: 'État-major de crise',
+      desc: 'État-major politico-stratégique du Conseil fédéral (Maillon faible acte 4)',
+      category: 'Doctrine · Maillon faible',
+      check: (s) => doctrineHasScene('supply-maillon-faible-4-etat-major-crise', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('supply-maillon-faible-4-etat-major-crise', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_supply_contrat', emoji: '📜', name: 'Responsabilité en cascade',
+      desc: 'Cartographie contractuelle (Maillon faible acte 5)',
+      category: 'Doctrine · Maillon faible',
+      check: (s) => doctrineHasScene('supply-maillon-faible-5-contrat-responsabilite', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('supply-maillon-faible-5-contrat-responsabilite', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_supply_survie', emoji: '🆘', name: 'Survivre ou disparaître',
+      desc: 'Recapitalisation ou rachat sous art. 102 CP (Maillon faible acte 6)',
+      category: 'Doctrine · Maillon faible',
+      check: (s) => doctrineHasScene('supply-maillon-faible-6-survie-entreprise', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('supply-maillon-faible-6-survie-entreprise', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_supply_doctrine', emoji: '🔗', name: 'Supply-CH 2026',
+      desc: 'Porter la doctrine devant la CdG (Maillon faible acte 7)',
+      category: 'Doctrine · Maillon faible',
+      check: (s) => doctrineHasScene('supply-maillon-faible-7-cdg-doctrine', doctrineSceneResults()),
+      progress: () => ({ current: doctrineHasScene('supply-maillon-faible-7-cdg-doctrine', doctrineSceneResults()) ? 1 : 0, target: 1 }) },
+
+    { id: 'doc_supply_cascade', emoji: '🌙', name: '« Le maillon faible »',
+      desc: 'Compléter 2+ scènes Maillon faible avec tag SUPPLY CHAIN ou MULTI-AUTORITÉS',
+      category: 'Doctrine · Maillon faible',
+      check: (s) => ((s.scenesTagCount && s.scenesTagCount['SUPPLY CHAIN']) || 0) +
+                    ((s.scenesTagCount && s.scenesTagCount['MULTI-AUTORITÉS']) || 0) >= 2,
+      progress: (s) => {
+        const tc = s.scenesTagCount || {};
+        return { current: (tc['SUPPLY CHAIN']||0) + (tc['MULTI-AUTORITÉS']||0), target: 2 };
+      } },
+
+    { id: 'doc_supply_saga_complete', emoji: '🔗', name: 'Doctrine Supply-CH',
+      desc: 'Terminer la saga Maillon faible (7 actes)',
+      category: 'Doctrine · Maillon faible',
+      check: (s) => doctrineCountScenes(SAGA_SCENES.supply, doctrineSceneResults()) === 7,
+      progress: () => ({ current: doctrineCountScenes(SAGA_SCENES.supply, doctrineSceneResults()), target: 7 }) },
+
+    { id: 'doc_supply_excellence', emoji: '🌟', name: 'Excellence Maillon faible',
+      desc: 'Terminer Maillon faible avec une moyenne ≥85%',
+      category: 'Doctrine · Maillon faible',
+      check: (s) => {
+        const r = doctrineSceneResults();
+        if (doctrineCountScenes(SAGA_SCENES.supply, r) !== 7) return false;
+        const pcts = SAGA_SCENES.supply.map(id => (r[id] && r[id].pct) || 0);
+        const avg = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+        return avg >= 85;
+      },
+      progress: () => {
+        const r = doctrineSceneResults();
+        const pcts = SAGA_SCENES.supply.map(id => (r[id] && r[id].pct) || 0);
+        const avg = Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length);
+        return { current: avg, target: 85 };
+      } },
+
+  ];
+
+  // ─────────────────────────────────────────────────────────────
+  // v121d — RÉPUTATION (8 trophées institutionnels)
+  //
+  // Évaluation contre window.Reputation (cas-in-reputation.js)
+  // ─────────────────────────────────────────────────────────────
+  function repGet(id) {
+    if (!window.Reputation || typeof window.Reputation.get !== 'function') return 0;
+    return window.Reputation.get(id);
+  }
+  function repAbove50Count() {
+    if (!window.Reputation) return 0;
+    const all = window.Reputation.getAll();
+    return Object.values(all).filter(v => (v || 0) >= 50).length;
+  }
+
+  const REPUTATION_ACH = [
+    { id: 'rep_mpc_50', emoji: '⚖️', name: 'Reconnue au MPC',
+      desc: 'Atteindre 50+ de réputation auprès du MPC',
+      category: 'Doctrine · Réputation institutionnelle',
+      check: () => repGet('MPC') >= 50,
+      progress: () => ({ current: repGet('MPC'), target: 50 }) },
+
+    { id: 'rep_mpc_100', emoji: '⚖️', name: 'Référence MPC',
+      desc: 'Atteindre 100/100 de réputation auprès du MPC',
+      category: 'Doctrine · Réputation institutionnelle',
+      check: () => repGet('MPC') >= 100,
+      progress: () => ({ current: repGet('MPC'), target: 100 }) },
+
+    { id: 'rep_ncsc_50', emoji: '🛡️', name: 'Partenaire NCSC',
+      desc: 'Atteindre 50+ de réputation auprès du NCSC',
+      category: 'Doctrine · Réputation institutionnelle',
+      check: () => repGet('NCSC') >= 50,
+      progress: () => ({ current: repGet('NCSC'), target: 50 }) },
+
+    { id: 'rep_pfpdt_50', emoji: '🔒', name: 'Allié du PFPDT',
+      desc: 'Atteindre 50+ de réputation auprès du PFPDT',
+      category: 'Doctrine · Réputation institutionnelle',
+      check: () => repGet('PFPDT') >= 50,
+      progress: () => ({ current: repGet('PFPDT'), target: 50 }) },
+
+    { id: 'rep_eurojust_50', emoji: '🇪🇺', name: 'Voix européenne',
+      desc: 'Atteindre 50+ de réputation auprès d\'Eurojust',
+      category: 'Doctrine · Réputation institutionnelle',
+      check: () => repGet('EUROJUST') >= 50,
+      progress: () => ({ current: repGet('EUROJUST'), target: 50 }) },
+
+    { id: 'rep_5_above_50', emoji: '🌟', name: 'Multi-référente',
+      desc: '5 institutions à 50+ de réputation',
+      category: 'Doctrine · Réputation institutionnelle',
+      check: () => repAbove50Count() >= 5,
+      progress: () => ({ current: repAbove50Count(), target: 5 }) },
+
+    { id: 'rep_all_above_50', emoji: '🏛️', name: 'Pilier institutionnel',
+      desc: 'Les 10 institutions à 50+ de réputation',
+      category: 'Doctrine · Réputation institutionnelle',
+      check: () => repAbove50Count() >= 10,
+      progress: () => ({ current: repAbove50Count(), target: 10 }) },
+
+    { id: 'rep_grand_total', emoji: '👑', name: 'Grande figure publique',
+      desc: 'Atteindre 700+ de réputation cumulée (sur 1000)',
+      category: 'Doctrine · Réputation institutionnelle',
+      check: () => {
+        if (!window.Reputation) return false;
+        const stats = window.Reputation.getStats();
+        return stats.total >= 700;
+      },
+      progress: () => {
+        if (!window.Reputation) return { current: 0, target: 700 };
+        const stats = window.Reputation.getStats();
+        return { current: stats.total, target: 700 };
+      } },
+  ];
+
+  // ─────────────────────────────────────────────────────────────
+  // v121d — NARRATIVE SECRETS (10 trophées narratifs spécifiques)
+  //
+  // Évaluation basée sur scene_results[sceneId].choices_made[stepIdx]
+  // qui contient l'index du choix sélectionné à chaque étape (persisté
+  // depuis v121d). Cachés jusqu'au déblocage.
+  // ─────────────────────────────────────────────────────────────
+  function getChoiceMade(sceneId, stepIdx) {
+    try {
+      const results = JSON.parse(localStorage.getItem('scene_results') || '{}') || {};
+      const r = results[sceneId];
+      if (!r || !Array.isArray(r.choices_made)) return null;
+      return r.choices_made[stepIdx];
+    } catch (_) { return null; }
+  }
+
+  const NARRATIVE_SECRET_ACH = [
+    // A1 Ransomware HRHP
+    { id: 'narr_hrhp_no_payment', emoji: '🛡️', name: '« On ne paie pas »',
+      desc: 'Doctrine de non-paiement appliquée à HRHP',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        // Acte 3 — décision rançon. Choix 0 = non-paiement (selon ordre original)
+        const c = getChoiceMade('a1-ransomware-3-decision-rancon-restauration', 0);
+        return c === 0;
+      } },
+
+    { id: 'narr_hrhp_117cp', emoji: '⚖️', name: 'Art. 117 CP retenu',
+      desc: 'Acte 2 — qualification 117 CP face au décès patiente',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        const c = getChoiceMade('a1-ransomware-2-deces-patiente-bascule-penale', 0);
+        return c === 0;
+      } },
+
+    // A2 EncroChat
+    { id: 'narr_encro_acquittement', emoji: '🛡️', name: 'Le doute raisonnable',
+      desc: 'Acquittement obtenu au procès Bashkimi',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        const c = getChoiceMade('a2-encrochat-7-proces-bashkimi-bilan-defense', 0);
+        return c === 0;
+      } },
+
+    { id: 'narr_encro_krasniqi_coop', emoji: '🤝', name: '« 260ter al. 5 »',
+      desc: 'Coopération significative obtenue de Krasniqi',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        const c = getChoiceMade('a2-encrochat-3-audition-krasniqi-cooperation', 0);
+        return c === 0;
+      } },
+
+    { id: 'narr_encro_4_axes', emoji: '🎯', name: 'Plaidoirie 4 axes',
+      desc: 'Plaidoirie EncroChat sur les 4 axes doctrinaux',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        const c = getChoiceMade('a2-encrochat-7-proces-bashkimi-bilan-defense', 1);
+        return c === 0;
+      } },
+
+    // A6 HPM
+    { id: 'narr_hpm_creative_commons', emoji: '📖', name: 'Doctrine pour tous',
+      desc: 'Publication du HPM Doctrine Manual sous Creative Commons',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        const c = getChoiceMade('hpm-affaire-eimp-7-rapport-transparence-doctrine', 0);
+        return c === 0;
+      } },
+
+    { id: 'narr_hpm_pfpdt_coop', emoji: '🔒', name: 'Allié du PFPDT',
+      desc: 'Coopération avec le PFPDT en post-clôture',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        const c = getChoiceMade('hpm-affaire-eimp-6-notification-postcloture-pfpdt', 0);
+        return c === 0;
+      } },
+
+    // C2 Laufenburg
+    { id: 'narr_lauf_doctrine', emoji: '⚡', name: 'Doctrine DRQA',
+      desc: 'Formalisation doctrinale du procès TPF Laufenburg',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        const c = getChoiceMade('ag-affaire-laufenburg-7-proces-tpf-bilan', 0);
+        return c === 0;
+      } },
+
+    // A1 Parlement
+    { id: 'narr_hrhp_parlement', emoji: '🏛️', name: 'Voix du Parlement',
+      desc: 'Intervention au Parlement sur la cybersécurité santé',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        const c = getChoiceMade('a1-ransomware-7-bilan-doctrinal-parlement-cloture', 0);
+        return c === 0;
+      } },
+
+    { id: 'narr_hrhp_salamin', emoji: '🌙', name: '« Mme Salamin honorée »',
+      desc: 'Bilan personnel mature dans l\'acte 7 HRHP',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        const c = getChoiceMade('a1-ransomware-7-bilan-doctrinal-parlement-cloture', 1);
+        return c === 0;
+      } },
+
+    // v122a — Étoile noire (3 narratifs secrets)
+    { id: 'narr_etoile_piege_forensique', emoji: '🎣', name: 'Le piège forensique',
+      desc: 'Maintenir le piège forensique plutôt que couper (Étoile noire acte 1)',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        // Acte 1 step 2 : choix (β) piège forensique = index 1
+        const c = getChoiceMade('vd-affaire-etoile-noire-1-dimanche-decouverte', 1);
+        return c === 1;
+      } },
+
+    { id: 'narr_etoile_face_camera', emoji: '📺', name: 'Face caméra',
+      desc: 'Romanier assume l\'interview RTS en personne (Étoile noire acte 5)',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        // Acte 5 step 1 : choix (α) conférence + interview Romanier = index 0
+        const c = getChoiceMade('vd-affaire-etoile-noire-5-fuite-presse-ofae', 0);
+        return c === 0;
+      } },
+
+    { id: 'narr_etoile_reconnaissance', emoji: '🏛️', name: 'L\'aveu courageux',
+      desc: 'Reconnaissance pleine + plaidoyer doctrinal au Parlement (Étoile noire acte 7)',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        // Acte 7 step 1 : choix (α) reconnaissance pleine = index 0
+        const c = getChoiceMade('vd-affaire-etoile-noire-7-parlement-doctrine', 0);
+        return c === 0;
+      } },
+
+    // v122b — Source trouble (3 narratifs secrets)
+    { id: 'narr_eau_prudence', emoji: '🔬', name: 'L\'instinct de l\'ingénieure',
+      desc: 'Triangulation physique avant toute conclusion (Source trouble acte 1)',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        // Acte 1 step 0 : choix (α) triangulation immédiate = index 0
+        const c = getChoiceMade('eau-source-trouble-1-ecran-ment', 0);
+        return c === 0;
+      } },
+
+    { id: 'narr_eau_avis_assume', emoji: '🚱', name: 'À chacun son rôle',
+      desc: 'Respecter la compétence du chimiste cantonal, données honnêtes (Source trouble acte 5)',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        // Acte 5 step 0 : choix (α) dossier complet sans empiéter = index 0
+        const c = getChoiceMade('eau-source-trouble-5-avis-non-consommation', 0);
+        return c === 0;
+      } },
+
+    { id: 'narr_eau_fonds', emoji: '💧', name: 'Le fonds de la mutualisation',
+      desc: 'Plaidoyer pour le fonds intercantonal au Grand Conseil (Source trouble acte 7)',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        // Acte 7 step 0 : choix (α) reconnaissance + plaidoyer Eau-CH 2026 = index 0
+        const c = getChoiceMade('eau-source-trouble-7-grand-conseil-doctrine', 0);
+        return c === 0;
+      } },
+
+    // ─── v122c MAILLON FAIBLE — 3 narratifs ───
+    { id: 'narr_supply_transparence', emoji: '📞', name: 'Prévenir les clients',
+      desc: 'Prévenir immédiatement les clients dès la découverte de la rançon (Maillon faible acte 1)',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        // Acte 1 step 2 : choix (α) prévenir clients immédiatement = index 0
+        const c = getChoiceMade('supply-maillon-faible-1-terabyte', 2);
+        return c === 0;
+      } },
+
+    { id: 'narr_supply_cooperation', emoji: '🤝', name: 'Coopération sans réserve',
+      desc: 'Reconnaissance lucide + document confidentiel sans réticence (Maillon faible acte 5)',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        // Acte 5 step 0 : choix (α) reconnaissance lucide + cooperation = index 0
+        const c = getChoiceMade('supply-maillon-faible-5-contrat-responsabilite', 0);
+        return c === 0;
+      } },
+
+    { id: 'narr_supply_doctrine', emoji: '🏛️', name: 'La voix qu\'on écoute',
+      desc: 'Reconnaissance lucide + plaidoyer Supply-CH 2026 devant la CdG (Maillon faible acte 7)',
+      category: 'Doctrine · Choix narratifs (secrets)',
+      check: () => {
+        // Acte 7 step 0 : choix (α) reconnaissance + plaidoyer doctrinal = index 0
+        const c = getChoiceMade('supply-maillon-faible-7-cdg-doctrine', 0);
+        return c === 0;
+      } },
+  ];
+
+  // ─────────────────────────────────────────────────────────────
+  // v121e — COMPÉTENCES TECHNIQUES (8 trophées de maîtrise par domaine)
+  //
+  // Évaluation contre window.Competences (cas-in-competences.js)
+  // ─────────────────────────────────────────────────────────────
+  function compGet(id) {
+    if (!window.Competences || typeof window.Competences.get !== 'function') return null;
+    return window.Competences.get(id);
+  }
+  function compCountAtLevel(minScore) {
+    if (!window.Competences) return 0;
+    const all = window.Competences.getAll();
+    return all.filter(c => c.score >= minScore).length;
+  }
+
+  const COMPETENCES_ACH = [
+    // Compétences individuelles maîtrisées
+    { id: 'comp_eimp_master', emoji: '🌐', name: 'Maîtresse de l\'EIMP',
+      desc: 'Atteindre 95%+ en compétence EIMP (entraide pénale internationale)',
+      category: 'Doctrine · Compétences techniques',
+      check: () => { const c = compGet('EIMP'); return c && c.score >= 0.95; },
+      progress: () => { const c = compGet('EIMP'); return { current: c ? Math.round(c.score * 100) : 0, target: 95 }; } },
+
+    { id: 'comp_lpd_master', emoji: '🔒', name: 'Maîtresse de la LPD',
+      desc: 'Atteindre 95%+ en compétence LPD + PFPDT',
+      category: 'Doctrine · Compétences techniques',
+      check: () => { const c = compGet('LPD'); return c && c.score >= 0.95; },
+      progress: () => { const c = compGet('LPD'); return { current: c ? Math.round(c.score * 100) : 0, target: 95 }; } },
+
+    { id: 'comp_141cpp_master', emoji: '⚖️', name: 'Maîtresse de l\'Art. 141 CPP',
+      desc: 'Atteindre 95%+ en compétence Preuves illicites (Art. 141 CPP)',
+      category: 'Doctrine · Compétences techniques',
+      check: () => { const c = compGet('ART_141_CPP'); return c && c.score >= 0.95; },
+      progress: () => { const c = compGet('ART_141_CPP'); return { current: c ? Math.round(c.score * 100) : 0, target: 95 }; } },
+
+    { id: 'comp_crise_master', emoji: '🚨', name: 'Maîtresse des crises cyber',
+      desc: 'Atteindre 95%+ en compétence Gestion de crise cyber',
+      category: 'Doctrine · Compétences techniques',
+      check: () => { const c = compGet('GESTION_CRISE_CYBER'); return c && c.score >= 0.95; },
+      progress: () => { const c = compGet('GESTION_CRISE_CYBER'); return { current: c ? Math.round(c.score * 100) : 0, target: 95 }; } },
+
+    // Polyvalence
+    { id: 'comp_5_at_50', emoji: '🌟', name: 'Polyvalente',
+      desc: '5 compétences à 50%+ (Confirmé·e ou plus)',
+      category: 'Doctrine · Compétences techniques',
+      check: () => compCountAtLevel(0.50) >= 5,
+      progress: () => ({ current: compCountAtLevel(0.50), target: 5 }) },
+
+    { id: 'comp_all_started', emoji: '📚', name: 'Exploratrice du droit',
+      desc: 'Avoir commencé les 10 compétences techniques',
+      category: 'Doctrine · Compétences techniques',
+      check: () => compCountAtLevel(0.01) >= 10,
+      progress: () => ({ current: compCountAtLevel(0.01), target: 10 }) },
+
+    { id: 'comp_all_at_50', emoji: '🥈', name: 'Généraliste de référence',
+      desc: '10 compétences à 50%+ (Confirmé·e ou plus)',
+      category: 'Doctrine · Compétences techniques',
+      check: () => compCountAtLevel(0.50) >= 10,
+      progress: () => ({ current: compCountAtLevel(0.50), target: 10 }) },
+
+    { id: 'comp_all_at_75', emoji: '💎', name: 'Expert·e pluridisciplinaire',
+      desc: '10 compétences à 75%+ (Expert·e ou plus)',
+      category: 'Doctrine · Compétences techniques',
+      check: () => compCountAtLevel(0.75) >= 10,
+      progress: () => ({ current: compCountAtLevel(0.75), target: 10 }) },
+  ];
+  // ─────────────────────────────────────────────────────────────
   // Tableau plat
   // ─────────────────────────────────────────────────────────────
-  const ACHIEVEMENTS_META = [].concat(QUIZ_ACH, SCENE_ACH, TP_ACH, TOOLS_ACH, FICHE_ACH);
+  const ACHIEVEMENTS_META = [].concat(QUIZ_ACH, SCENE_ACH, TP_ACH, TOOLS_ACH, FICHE_ACH, DOCTRINE_ACH, REPUTATION_ACH, NARRATIVE_SECRET_ACH, COMPETENCES_ACH);
 
   // Index par id
   const _byId = {};
@@ -482,12 +1742,33 @@
 
   function getAchievementTier(achId) {
     const id = String(achId || '');
-    // Platine (très rares)
+    // v121e — Compétences techniques
+    if (id === 'comp_all_at_75') return 'platine';
+    if (id === 'comp_all_at_50' || /^comp_[a-z0-9_]+_master$/.test(id)) return 'or';
+    if (id === 'comp_5_at_50') return 'argent';
+    if (/^comp_/.test(id)) return 'argent';
+    // v121d — Réputation : platine pour all_above_50 et grand_total, or pour 100, argent sinon
+    if (id === 'rep_all_above_50' || id === 'rep_grand_total') return 'platine';
+    if (id === 'rep_mpc_100' || id === 'rep_5_above_50') return 'or';
+    if (/^rep_/.test(id)) return 'argent';
+    // v121d — Narratifs secrets : tous "or" (choix narratifs marquants)
+    if (/^narr_/.test(id)) return 'or';
+    // v121c — Trophées doctrinaux
+    // Platine (sommitaux, exigeants)
+    if (id === 'doc_arc_complete' || id === 'doc_arc_excellence' || id === 'doc_master_procedure') return 'platine';
+    // Or (saga complète, maîtres, excellence sectorielle)
+    if (/^doc_.+_saga_complete$|^doc_.+_excellence$|^doc_master_|doc_arc_three_sagas|doc_encro_4_axes/.test(id)) return 'or';
+    // Argent (trophées de tag transversal, milestones de saga)
+    if (/^doc_arc_(furrer|eurojust|eimp|pfpdt|ncsc)$|^doc_.+_tags$|^doc_.+_146cp|^doc_.+_eimp_|^doc_.+_141cpp|^doc_.+_239cp|^doc_.+_117cp|doc_iban_lba_tags|doc_hpm_iso27037|doc_lauf_swissgrid|doc_hrhp_lcys|doc_vauthier_tags_cpp|doc_eau_fdia/.test(id)) return 'argent';
+    // Bronze (autres trophées doctrinaux : actes individuels de saga)
+    if (/^doc_/.test(id)) return 'bronze';
+
+    // Platine existant (très rares)
     if (id === 'completionist' || id === 'allthemes' || id === 'legend_dfir' ||
         /full_saga_or|all_sagas|book100|marathon_complete/.test(id)) return 'platine';
-    // Or (paliers exigeants)
+    // Or existant (paliers exigeants)
     if (/250|500|1000|expert_clean|all_themes|streak_20|streak_30|daily30|daily14|book25|acc95/.test(id)) return 'or';
-    // Argent (paliers intermédiaires)
+    // Argent existant (paliers intermédiaires)
     if (/50|100|streak10|daily7|book10|acc90|combo|tp_streak15|tp_categories15/.test(id)) return 'argent';
     // Bronze par défaut (paliers d'entrée + arcs NPC)
     return 'bronze';

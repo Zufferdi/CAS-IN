@@ -35,6 +35,8 @@
     quiz:         { icon: '💊', label: 'QUIZ' },
     scene:        { icon: '🔍', label: 'SCÈNES DFIR' },
     sagas:        { icon: '📖', label: 'SAGAS NARRATIVES' },
+    collections:  { icon: '📚', label: 'COLLECTIONS THÉMATIQUES' },
+    succes:       { icon: '🏆', label: 'SUCCÈS' },
     tp:           { icon: '🧪', label: 'TRAVAUX PRATIQUES' },
     fiches:       { icon: '📄', label: 'FICHES DE RÉVISION' },
     glossary:     { icon: '📚', label: 'GLOSSAIRE' },
