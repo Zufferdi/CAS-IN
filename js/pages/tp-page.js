@@ -132,13 +132,14 @@ function go(cat, btn) {
     // Artefacts OS (v110 fix : manquaient depuis l'ajout v102)
     'ext4':'grp-artefacts','winev':'grp-artefacts',
     'linux':'grp-artefacts','macos':'grp-artefacts',
-    // OSINT & Détection (v110 fix : manquaient depuis l'ajout v103)
+    // OSINT & Détection (v110 fix + v112 réorg : LLM + Dorks déplacés depuis Investigation)
     'exif':'grp-osintdet','osintdns':'grp-osintdet',
     'sigma':'grp-osintdet','c2':'grp-osintdet',
+    'llm':'grp-osintdet','dorks':'grp-osintdet',
     // Investigation
     'email':'grp-inv','network':'grp-inv','ir':'grp-inv',
     'droitpenal':'grp-inv','glossaire':'grp-inv','examen':'grp-inv',
-    'acquisition':'grp-inv','llm':'grp-inv','dorks':'grp-inv'
+    'acquisition':'grp-inv'
   };
   if (catGroup[cat]) { document.querySelectorAll('.sb-group').forEach(g=>g.classList.add('collapsed')); document.getElementById(catGroup[cat]).classList.remove('collapsed'); }
   // v106 : sync du nouveau trigger mobile (remplace l'ancien mob-pills)

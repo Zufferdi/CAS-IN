@@ -2990,7 +2990,9 @@ function selectChoice(choiceIdx, btn) {
   const hintUsedThisStep = G.hintUsedForStep && G.hintUsedForStep[G.stepIdx] !== undefined;
   G.decisions[G.stepIdx] = {
     ok: choice.ok, pts, fb: choice.fb, legal: choice.legal, critical: choice.critical,
-    firstChoiceOk: choice.ok && !hintUsedThisStep
+    firstChoiceOk: choice.ok && !hintUsedThisStep,
+    // v121d — persistance du choix individuel pour trophées narratifs spécifiques
+    choiceIdx: choiceIdx
   };
 
   if (choice.critical) {
@@ -3187,11 +3189,16 @@ function showReport() {
   if (!revisitMode && (!prev || pct > prev.pct)) {
     // v2.91 PACK L3 — On persiste maintenant les tags + difficulty pour
     // permettre les checks d'achievements role-only basés sur le tag.
+    // v121d — On persiste aussi choices_made (tableau des indices de choix
+    // sélectionnés à chaque étape) pour permettre les trophées narratifs
+    // spécifiques (« hrhp_no_payment », « bashkimi_acquitted », etc.)
+    const choicesMade = (G.decisions || []).map(d => (d && typeof d.choiceIdx === 'number') ? d.choiceIdx : null);
     saved[scene.id] = {
       pct, custodyPct, score, mode: G.mode,
       date: new Date().toLocaleDateString('fr'),
       tags: (scene.tags || []).slice(),
-      difficulty: scene.difficulty || 'medium'
+      difficulty: scene.difficulty || 'medium',
+      choices_made: choicesMade
     };
     lsSet('scene_results', saved);
 
@@ -3349,6 +3356,17 @@ function showReport() {
     }
   }
 
+  // v121d — Réputation institutionnelle : appliquer les deltas basés sur les tags
+  // Calcule les deltas, les persiste, et expose le résultat pour l'encart UI.
+  let reputationDeltas = {};
+  if (window.Reputation && typeof window.Reputation.recordSceneOutcome === 'function') {
+    try {
+      reputationDeltas = window.Reputation.recordSceneOutcome(scene, pct) || {};
+    } catch (e) {
+      console.warn('Reputation.recordSceneOutcome failed:', e);
+    }
+  }
+
   // Custody result text
   let custodyClass, custodyText;
   if (custodyPct >= 80) {
@@ -3412,6 +3430,73 @@ function showReport() {
       }).join('')}
     </div>
   ` : '';
+
+  // v121d — Encart "Impact sur votre profil" : Réputation + Compétences renforcées
+  // Affiche uniquement si pct ≥ 60 (scène réussie) et qu'il y a au moins une donnée
+  const _hasReputation = reputationDeltas && Object.keys(reputationDeltas).length > 0;
+  // Compétences renforcées : on identifie les tags de la scène qui correspondent
+  // à des "domaines de compétence" reconnaissables (EIMP, LPD, 141 CPP, etc.)
+  const _COMPETENCE_TAGS = {
+    'EIMP':                  { icon: '🌐', label: 'Entraide pénale internationale (EIMP)' },
+    'LPD':                   { icon: '🔒', label: 'Protection des données (LPD)' },
+    'ART. 141 CPP':          { icon: '⚖️', label: 'Preuves illicites (Art. 141 CPP)' },
+    'ART. 260TER CP':        { icon: '🏛️', label: 'Organisation criminelle (Art. 260ter CP)' },
+    'ART. 146 CP':           { icon: '💸', label: 'Escroquerie (Art. 146 CP)' },
+    'ART. 117 CP':           { icon: '⚰️', label: 'Homicide par négligence (Art. 117 CP)' },
+    'ART. 239 CP':           { icon: '⚡', label: 'Sabotage (Art. 239 CP)' },
+    'LCYS':                  { icon: '🛡️', label: 'LCyS — Notification incidents' },
+    'LCYS SANTÉ':            { icon: '🏥', label: 'LCyS Santé — Plan SKI 3' },
+    'PLAN SKI':              { icon: '🛡️', label: 'Plan SKI — Sécurité de l\'information' },
+    'RANSOMWARE':            { icon: '🚨', label: 'Gestion de crise ransomware' },
+    'ENCROCHAT':             { icon: '📱', label: 'Doctrine EncroChat / Sky ECC' },
+    'SKY ECC':               { icon: '📱', label: 'Doctrine EncroChat / Sky ECC' },
+    'FAISCEAU CONTRAIRE':    { icon: '🎯', label: 'Doctrine des 4 axes — défense' },
+    'ATTRIBUTION':           { icon: '🎯', label: 'Doctrine d\'attribution' },
+    'CHAÎNE DE POSSESSION':  { icon: '🔬', label: 'Chaîne de possession (ISO 27037)' },
+    'ISO 27037':             { icon: '🔬', label: 'ISO 27037 — Forensique numérique' },
+  };
+  const _renforcees = [];
+  if (pct >= 60 && Array.isArray(scene.tags)) {
+    const seenLabels = new Set();
+    scene.tags.forEach(rawTag => {
+      const tag = String(rawTag || '').toUpperCase().trim();
+      const comp = _COMPETENCE_TAGS[tag];
+      if (comp && !seenLabels.has(comp.label)) {
+        seenLabels.add(comp.label);
+        _renforcees.push(comp);
+      }
+    });
+  }
+
+  const impactHTML = (pct >= 60 && (_hasReputation || _renforcees.length > 0)) ? `
+    <div class="impact-section" style="margin:14px 0;padding:14px 16px;background:linear-gradient(135deg,rgba(126,192,255,.08),rgba(168,85,247,.06));border:1px solid rgba(126,192,255,.25);border-radius:12px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);font-weight:700;margin-bottom:10px">📊 Impact sur votre profil</div>
+      ${_renforcees.length > 0 ? `
+        <div style="margin-bottom:${_hasReputation ? '12px' : '0'}">
+          <div style="font-size:12px;color:var(--text);font-weight:600;margin-bottom:6px">🎓 Compétences renforcées</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${_renforcees.map(c => `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(48,232,138,.10);border:1px solid rgba(48,232,138,.30);color:#30e88a;padding:4px 10px;border-radius:8px;font-size:11px"><span>${c.icon}</span><span>${c.label}</span></span>`).join('')}
+          </div>
+        </div>
+      ` : ''}
+      ${_hasReputation ? `
+        <div>
+          <div style="font-size:12px;color:var(--text);font-weight:600;margin-bottom:6px">🏛️ Réputation institutionnelle</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${Object.entries(reputationDeltas).map(([instId, delta]) => {
+              const inst = (window.Reputation && window.Reputation.INSTITUTIONS) ? window.Reputation.INSTITUTIONS.find(i => i.id === instId) : null;
+              if (!inst) return '';
+              const newVal = window.Reputation ? window.Reputation.get(instId) : 0;
+              const color = delta > 0 ? '#30e88a' : '#ff4060';
+              const sign = delta > 0 ? '+' : '';
+              return `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(126,192,255,.10);border:1px solid rgba(126,192,255,.30);padding:4px 10px;border-radius:8px;font-size:11px"><span>${inst.icon}</span><span style="color:var(--text)">${inst.label}</span><strong style="color:${color}">${sign}${delta}</strong><span style="color:var(--dim);font-size:10px">→ ${newVal}</span></span>`;
+            }).join('')}
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  ` : '';
+
 
   // Leaderboard HTML
   const leaderboardHTML = lbAfter.length > 0 ? `
@@ -3523,6 +3608,8 @@ function showReport() {
     ${comboBonusHTML}
 
     ${newBadgesHTML}
+
+    ${impactHTML}
 
     <div class="custody-result ${custodyClass}">${custodyText}</div>
 
